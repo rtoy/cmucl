@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.29 2003/04/26 01:49:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.30 2003/04/26 12:53:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1697,19 +1697,53 @@
 	   (emit-byte segment (dpb opcode (byte 3 3) #b10000011))
 	   (emit-ea segment src (reg-tn-encoding index))))))
 
+;; Bit Test (BT) instructions
+;; Ignoring the case with a src as a register, we have
+;;
+;;   0F A3 reg/mem  BT
+;;   0F BB reg/mem  BTC
+;;   0F B3 reg/mem
+;;   0F AB reg/mem
+;;
+;; A3 = 10100011
+;; BB = 10111011
+;; B3 = 10110011
+;; AB = 10101011
+;;
+;; So the pattern is 10xxx011
+;;
+;; The instruction format is then (little-endian)
+;;
+;; |reg/mem|10ooo011|00001111
+(disassem:define-instruction-format
+    (bit-test-reg/mem 24
+		      :default-printer '(:name :tab reg/mem ", " reg))
+  (prefix	:field (byte 8 0)	:value #b0001111)
+  (op		:field (byte 3 11))
+  ;;(test		:fields (list (byte 2 14) (byte 3 8)))
+  (reg/mem	:fields (list (byte 2 22) (byte 3 16))
+		:type 'reg/mem)
+  (reg		:field (byte 3 19) :type 'reg)
+  ;; optional fields
+  (imm))
+
 (define-instruction bt (segment src index)
+  (:printer bit-test-reg/mem ((op #b100)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b100)))
 
 (define-instruction btc (segment src index)
+  (:printer bit-test-reg/mem ((op #b111)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b111)))
 
 (define-instruction btr (segment src index)
+  (:printer bit-test-reg/mem ((op #b110)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b110)))
 
 (define-instruction bts (segment src index)
+  (:printer bit-test-reg/mem ((op #b101)))
   (:emitter
    (emit-bit-test-and-mumble segment src index #b101)))
 
