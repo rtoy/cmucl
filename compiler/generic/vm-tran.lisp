@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.19 1990/07/28 01:05:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.20 1990/10/04 23:26:10 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -21,37 +21,6 @@
 ;;;
 (def-source-transform short-float-p (x) `(single-float-p ,x))
 (def-source-transform long-float-p (x) `(double-float-p ,x))
-
-
-;;; Some hacks to let us implement structures as simple-vectors without
-;;; confusing type inference too much.
-;;;
-(kernel::def-builtin-type 'structure-vector
-  (kernel::make-named-type :name 'structure-vector
-			   :supertypes '(structure-vector t)
-			   :subclasses '(structure)))
-
-(defknown structure-vector-p (t) boolean)
-
-(define-type-predicate structure-vector-p structure-vector)
-
-(def-source-transform structurep (x)
-  (once-only ((n-x x))
-    `(and (structure-vector-p ,n-x)
-	  (eql (truly-the (unsigned-byte 24)
-			  (%primitive get-vector-subtype ,n-x))
-	       vm:vector-structure-subtype))))
-
-(define-vop (structure-vector-p simple-vector-p)
-  (:translate structure-vector-p))
-
-#-new-compiler
-(set 'lisp::type-pred-alist
-     (adjoin (cons 'structure-vector 'simple-vector-p)
-	     (symbol-value 'lisp::type-pred-alist)
-	     :key #'car))
-
-
 
 (def-source-transform compiled-function-p (x)
   `(functionp ,x))
