@@ -1,0 +1,41 @@
+#!/bin/csh
+
+set target = "@sys"
+set subdir = alpha
+
+while ($#argv > 0)
+    switch ($argv[1])
+
+# Select what system to compile, and how:
+	case "-target":
+		set target = $argv[2]
+		shift
+		breaksw
+	case "-release":
+		set subdir = $argv[2]
+		shift
+		breaksw
+	default:
+		echo "Bogus switch: $argv[1]"
+	    cat <<END_HELP
+Deletes *.*f, *.fasl, *.assem, *.log and *.log.OLD in the destination.
+Options:
+  -target	[@sys]	
+	The machine to compile for: pmax_mach, sun4c_41 ...
+
+  -release	[alpha]
+	Which source tree to compile: alpha, exp/foo...
+
+END_HELP
+		exit
+	endsw
+    shift
+end
+
+set dest = /afs/cs/project/clisp/build/$target/$subdir
+
+echo "Cleaning up binaries and logs in $dest ..."
+(cd  $dest;\
+ find . \( -name '*.*f' -o -name '*.assem' -o -name '*.fasl' \) \
+	 -print -exec rm {} \; ;\
+ rm *.log *.log.OLD)
