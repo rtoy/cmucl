@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.4 1991/02/08 13:33:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.5 1991/05/22 15:35:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,6 +82,7 @@
   addr-list)
 
 (defun host-entry-addr (host)
+  (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
 
@@ -186,7 +187,8 @@
 
 (defun connect-to-inet-socket (host port &optional (kind :stream))
   (let ((socket (create-inet-socket kind))
-	(hostent (lookup-host-entry host)))
+	(hostent (or (lookup-host-entry host)
+		     (error "Unknown host: ~S." host))))
     (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
       (setf (alien-access (inet-sockaddr-family (alien-value sockaddr)))
 	    af-inet)
