@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.20 1994/02/11 13:36:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.21 1994/02/14 13:14:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,7 @@
 (defun save-lisp (core-file-name &key
 				 (purify t)
 				 (root-structures ())
-				 (constants nil)
+				 (environment-name "Auxiliary")
 				 (init-function #'%top-level)
 				 (load-init-file t)
 				 (site-init "library:site-init")
@@ -120,14 +120,16 @@
       If true (the default), do a purifying GC which moves all dynamically
   allocated objects into static space so that they stay pure.  This takes
   somewhat longer than the normal GC which is otherwise done, but GC's will
-  done less often and take less time in the resulting core file.
+  done less often and take less time in the resulting core file.  See
+  EXT:PURIFY.
 
   :root-structures
-  :constants
-      These should be a list of the main entry points in any newly loaded
-  systems and a list of any large data structures that will never again
-  be changed.  These need not be supplied, but locality and/or GC performance
-  will be better if they are.  They are meaningless if :purify is NIL.
+      This should be a list of the main entry points in any newly loaded
+  systems.  This need not be supplied, but locality and/or GC performance
+  will be better if they are.  Meaningless if :purify is NIL.  See EXT:PURIFY.
+
+  :environment-name
+      Also passed to EXT:PURIFY when :PURIFY is T.  Rarely used.
   
   :init-function
       This is the function that starts running when the created core file is
@@ -148,7 +150,8 @@
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
   (if purify
-      (purify :root-structures root-structures :constants constants)
+      (purify :root-structures root-structures
+	      :environment-name environment-name)
       (gc))
   (flet
       ((restart-lisp ()
