@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.9 1994/02/12 13:29:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.10 1994/02/13 17:01:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,10 +23,12 @@
 ;;; We would appreciate it if each site establishes a local maintainer who can
 ;;; filter bug reports from novice users to make sure that they really have
 ;;; found a bug.  Fill in the maintainer's address here..
-(setf (getf *herald-items* :bugs)
-      '("Send bug reports and questions to your local CMU CL maintainer, or to
-cmucl-bugs@cs.cmu.edu.
-Loaded subsystems:"))
+(rplaca
+ (cdr (member :bugs *herald-items*))
+ '("Send bug reports and questions to your local CMU CL maintainer, "
+   "or to" terpri
+   "cmucl-bugs@cs.cmu.edu." terpri
+   "Loaded subsystems:" terpri))
 
 ;;; If you have sources installed on your system, un-comment the following form
 ;;; and change it to point to the source location.  This will allow the Hemlock
