@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.9 1991/10/17 16:12:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.10 1992/05/22 19:13:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,11 +31,15 @@
 
 ;;;; Definition of *hemlock-version*.
 
-(defvar *hemlock-version* "3.5")
+(defvar *hemlock-version*
+  (concatenate 'string *hemlock-version* "3.5 "
+		    "(" *lisp-implementation-version* ")"))
 
 
 
 ;;;; %INIT-HEMLOCK.
+
+(defvar *hemlock-initialized* nil)
 
 (defun %init-hemlock ()
   "Initialize hemlock's internal data structures."
@@ -55,8 +59,8 @@
   (%init-syntax-table)
   ;;
   ;; Define print representations for funny characters.
-  (%init-line-image))
-
+  (%init-line-image)
+  (setq *hemlock-initialized* t))
 
 
 ;;;; Define some globals.
@@ -367,3 +371,6 @@
     (when default (return default))
     (format t "~A:~@[ [~A]~] " prompt default)
     (force-output)))
+
+(unless *hemlock-initialized*
+  (%init-hemlock))
