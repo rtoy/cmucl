@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.21 1998/04/03 03:45:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.22 1998/05/09 22:16:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,42 +356,52 @@
     (rplacd 2nd 3rd)))
 
 (defun butlast (list &optional (n 1))
-  "Returns a new list the same as List without the N last elements."
+  "Returns a new list the same as List without the last N conses.
+   List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (1- (length list))))
+  (let ((length (do ((list list (cdr list))
+		     (i 0 (1+ i)))
+		    ((atom list) (1- i)))))
     (declare (type index length))
-    (if (< length n)
-        ()
-        (do* ((top (cdr list) (cdr top))
-              (result (list (car list)))
-              (splice result)
-              (count length (1- count)))
-             ((= count n) result)
-          (declare (type index count))
-          (setq splice (cdr (rplacd splice (list (car top)))))))))
+    (unless (< length n)
+      (do* ((top (cdr list) (cdr top))
+	    (result (list (car list)))
+	    (splice result)
+	    (count length (1- count)))
+	   ((= count n) result)
+	(declare (type index count))
+	(setq splice (cdr (rplacd splice (list (car top)))))))))
 
 (defun nbutlast (list &optional (n 1))
-  "Modifies List to remove the last N elements."
+  "Modifies List to remove the last N conses. List must not be circular."
   (declare (list list) (type index n))
-  (let ((length (1- (length list))))
+  (let ((length (do ((list list (cdr list))
+		     (i 0 (1+ i)))
+		    ((atom list) (1- i)))))
     (declare (type index length))
-    (if (< length n) ()
-        (do ((1st (cdr list) (cdr 1st))
-             (2nd list 1st)
-             (count length (1- count)))
-            ((= count n)
-             (rplacd 2nd ())
-             list)
-          (declare (type index count))))))
+    (unless (< length n)
+      (do ((1st (cdr list) (cdr 1st))
+	   (2nd list 1st)
+	   (count length (1- count)))
+	  ((= count n)
+	   (rplacd 2nd ())
+	   list)
+	(declare (type index count))))))
 
-(defun ldiff (list sublist)
+(defun ldiff (list object)
   "Returns a new list, whose elements are those of List that appear before
-   Sublist.  If Sublist is not a tail of List, a copy of List is returned."
+   Object.  If Object is not a tail of List, a copy of List is returned.
+   List must be a proper list or a dotted list."
   (do* ((list list (cdr list))
 	(result (list ()))
 	(splice result))
-       ((or (null list) (eq list sublist)) (cdr result))
-    (setq splice (cdr (rplacd splice (list (car list)))))))
+       ((atom list)
+	(if (eql list object)
+	    (cdr result)
+	    (progn (rplacd splice list) (cdr result))))
+    (if (eql list object)
+	(return (cdr result))
+	(setq splice (cdr (rplacd splice (list (car list))))))))
 
 ;;; Functions to alter list structure
 
@@ -653,12 +663,12 @@
     (if (not (funcall test (apply-key key (car list))))
 	(return list))))
 
-(defun tailp (sublist list)
-  "Returns T if (EQL Sublist (NTHCDR <n> List)) for some value of <n>, NIL
-  otherwise."
+(defun tailp (object list)
+  "Returns true if Object is the same as some tail of List, otherwise
+   returns false. List must be a proper list or a dotted list."
   (do ((list list (cdr list)))
-      ((atom list) (eql list sublist))
-    (if (eql sublist list)
+      ((atom list) (eql list object))
+    (if (eql object list)
 	(return t))))
 
 (defun adjoin (item list &key key (test #'eql) (test-not nil notp))
