@@ -11,6 +11,7 @@
 ;;;
 ;;; Re-Written by Rob MacLachlan.  Earlier version written by
 ;;; Lee Schumacher.  Apropos & iteration macros courtesy of Skef Wholey.
+;;; Defpackage by Dan Zigmond.  With-Package-Iterator by Blaine Burks. 
 ;;;
 (in-package 'lisp)
 (export '(package packagep *package* make-package in-package find-package
@@ -19,7 +20,7 @@
 	  list-all-packages intern find-symbol unintern export
 	  unexport import shadowing-import shadow use-package
 	  unuse-package find-all-symbols do-symbols with-package-iterator
-	  do-external-symbols do-all-symbols apropos apropos-list))
+	  do-external-symbols do-all-symbols apropos apropos-list defpackage))
 
 (in-package "EXTENSIONS")
 (export '(*keyword-package* *lisp-package*))
@@ -36,20 +37,28 @@
 		 (multiple-value-bind (eu et) (external-symbol-count s)
 		   (format stream
 			   "#<The ~A package, ~D/~D internal, ~D/~D external>"
-			   (package-name s) iu it eu et))))))
+			   (package-%name s) iu it eu et))))))
   "Standard structure for the description of a package.  Consists of 
    a list of all hash tables, the name of the package, the nicknames of
    the package, the use-list for the package, the used-by- list, hash-
    tables for the internal and external symbols, and a list of the
    shadowing symbols."
   (tables (list nil))	; A list of all the hashtables for inherited symbols.
-  name			; The string name of the package.
-  nicknames		; List of nickname strings.
-  (use-list ())		; List of packages we use.
-  (used-by-list ())	; List of packages that use this package.
+  %name			; The string name of the package.
+  %nicknames		; List of nickname strings.
+  (%use-list ())		; List of packages we use.
+  (%used-by-list ())	; List of packages that use this package.
   internal-symbols	; Hashtable of internal symbols.
   external-symbols	; Hashtable of external symbols.
-  (shadowing-symbols ())) ; List of shadowing symbols.
+  (%shadowing-symbols ())) ; List of shadowing symbols.
+
+(macrolet ((frob (ext real)
+	     `(defun ,ext (x) (,real (package-or-lose x)))))
+  (frob package-name package-%name)
+  (frob package-nicknames package-%nicknames)
+  (frob package-use-list package-%use-list)
+  (frob package-used-by-list package-%used-by-list)
+  (frob package-shadowing-symbols package-%shadowing-symbols))
 
 (defvar *package* () "The current package.")
 
@@ -344,8 +353,8 @@
 	 (inherits (gensym))
 	 (this-inherit (gensym)))
     `(prog* ((,n-package (package-or-lose ,package))
-	     (,shadowed (package-shadowing-symbols ,n-package))
-	     (,inherits (package-use-list ,n-package))
+	     (,shadowed (package-%shadowing-symbols ,n-package))
+	     (,inherits (package-%use-list ,n-package))
 	     ,var ,@vars ,this-inherit)
        ,@decls
        ,@(make-do-symbols-code
@@ -454,7 +463,7 @@
 	    (,vector nil)
 	    (,package-use-list nil))
        ,(if (member :inherited ordered-types)
-	    `(setf ,package-use-list (package-use-list (car ,packages)))
+	    `(setf ,package-use-list (package-%use-list (car ,packages)))
 	    `(declare (ignore ,package-use-list)))
        (macrolet ((,init-macro (next-kind)
  	 (let ((symbols (gensym)))
@@ -544,12 +553,184 @@
 					  (when (endp ,',packages)
 					    (return-from ,',BLOCK))
 					  (setf ,',package-use-list
-						(package-use-list
+						(package-%use-list
 						 (car ,',packages)))
 					  (,',init-macro ,(car ',ordered-types)))
 					 (t (,',init-macro :inherited)
 					    (setf ,',counter nil)))))))))))))
 	       ,@body)))))))
+
+
+;;;; DEFPACKAGE:
+
+(defmacro defpackage (package &rest arguments)
+  "Defines a new package called PACKAGE.  ARGUMENTS should a list of forms,
+   each of with is one of:
+       (:SIZE <integer>)
+       (:NICKNAMES {package-name}*)
+       (:SHADOW {symbol-name}*)
+       (:SHADOWING-IMPORT-FROM <package-name> {symbol-name}*)
+       (:USE {package-name}*)
+       (:IMPORT-FROM <package-name> {symbol-name}*)
+       (:INTERN {symbol-name}*)
+       (:EXPORT {symbol-name}*)
+   All keywords except :SIZE can be used multiple times."
+  (let ((body nil)
+	(n-package (gensym))
+	(package-name
+	 (etypecase package
+	   ;; Make sure we have a good package name to use.
+	   (string package)
+	   (symbol (symbol-name package)))))
+    (multiple-value-bind
+	(nicknames uses shadows imports shadowed-imports exports interns size)
+	(parse-defpackage-keywords arguments n-package)
+      ;; We set up the body of the form to return first things first
+      ;; for readability, even though (since we're using PUSH) we
+      ;; then have to NREVERSE at the end.  The order of operations
+      ;; must be: 1. :shadow and :shadowing-import-from
+      ;;          2. :use
+      ;;          3. :import-from and :return
+      ;;          4. :export
+      (when shadows
+	(push `(shadow (list ,@shadows) ,n-package)
+	      body))
+      (when shadowed-imports
+	(push `(shadowing-import (list ,@shadowed-imports) ,n-package)
+	      body))
+      (when uses
+	(push `(use-package (list ,@uses) ,n-package)
+	      body))
+      (when imports
+	(push `(import (list ,@imports) ,n-package)
+	      body))
+      (when interns
+	(dolist (symbol interns)
+	  (push `(intern ,symbol ,n-package)
+		body)))
+      (when exports
+	(push `(export (list ,@exports) ,n-package)
+	      body))
+      ;;
+      ;; We do :nicknames and :sizeat the top (where it's convenient).
+      ;; :Size is not implemented very well.  We assume, for absolutely
+      ;; no good reason, that approximates 1/5 of the symbols in a
+      ;; package will be external.
+      `(let ((,n-package
+	      (or (find-package ,package-name)
+		  (make-package
+		   ,package-name
+		   ,@(if nicknames `(:nicknames (list ,@nicknames)))
+		   ,@(if size `(:internal-symbols ,(round size 5/4)
+				:external-symbols ,(round size 5)))))))
+	 ,@(nreverse body)
+	 ,n-package))))
+
+
+(defun parse-defpackage-keywords (rest-list n-package)
+  "Parses the arguments to DEFPACKAGE.  Returns eight arguments:
+       1. A list of the package's nicknames.
+       2. A list of the other packages that this package uses.
+       3. A list of shadows.
+       4. A list of lists of the form (package-name {symbol-name}*)
+          describing the symbols to be imported from package-name
+	  and placed on the shadowed symbols list.
+       5. A list of lists as above of symbols to be imported.
+       6. A list of symbols to export.
+       7. A list of symbols to intern.
+       8. The declared size of the package.
+   Nil is returned as any of these eight values if no value is provided
+   by the user.  Only mimimal error checking is done here."
+  (do* ((symbols-in nil)
+	(symbols-out)
+	(nicknames nil)
+	(uses nil)
+	(shadows nil)
+	(imports nil)
+	(shadowed-imports nil)
+	(exports nil)
+	(interns nil)
+	(size nil)
+	(remaining-args rest-list (rest remaining-args))
+	(current-keyword (first (first remaining-args))
+			 (first (first remaining-args)))
+	(current-args (rest (first remaining-args))
+		      (rest (first remaining-args))))
+       ((endp remaining-args)
+	(values nicknames
+		uses
+		shadows
+		imports
+		shadowed-imports
+		exports
+		interns
+		size))
+    (case current-keyword
+      (:nicknames
+       (setf nicknames (append nicknames (stringify-symbols current-args))))
+      (:use
+       (setf uses (append uses (stringify-symbols current-args))))
+      (:shadow
+       (setf current-args (stringify-symbols current-args))
+       (setf symbols-in (append-but-lose-if-overlap symbols-in current-args))
+       (dolist (string current-args)
+	 (push string shadows)))
+      (:shadowing-import-from
+       (setf current-args (stringify-symbols current-args))
+       (setf symbols-in (append-but-lose-if-overlap symbols-in
+						    (rest current-args)))
+       (dolist (string (rest current-args))
+	 (push `(find-symbol-or-lose ,string ,(first current-args))
+	       shadowed-imports)))
+      (:import-from
+       (setf current-args (stringify-symbols current-args))
+       (setf symbols-in (append-but-lose-if-overlap symbols-in
+						    (rest current-args)))
+       (dolist (string (rest current-args))
+	 (push `(find-symbol-or-lose ,string ,(first current-args))
+	       imports)))
+      (:export
+       (setf symbols-out (append-but-lose-if-overlap symbols-out
+						     (rest current-args)))
+       (dolist (string (stringify-symbols current-args))
+	 (push `(intern ,string ,n-package)
+	       exports)))
+      (:intern
+       (setf current-args (stringify-symbols current-args))
+       (setf symbols-in (append-but-lose-if-overlap symbols-in current-args))
+       (setf symbols-out (append-but-lose-if-overlap symbols-out current-args))
+       (setf interns (append interns current-args)))
+      (:size
+       (if (null size)
+	   (if (= (length current-args) 1)
+	       (setf size (first current-args))
+	       (error "Too many arguments to :SIZE keyword in DEFPACAKGE."))
+	   (error ":SIZE keyword used more than once in DEFPACKAGE.")))
+      (otherwise
+       (error "Bad keyword passed to DEFPACKAGE: ~S." current-keyword)))))
+
+(defun find-symbol-or-lose (symbol package)
+  "Tries to find SYMBOL in PACKAGE, but signals a continuable error if
+   it's not there."
+  (or (find-symbol symbol package)
+      (cerror "Ignore this symbol." "Can't find the symbol named ~S in ~S."
+	      symbol package)))
+
+(defun stringify-symbols (symbols)
+  "Takes a list of symbols and/or strings and returns a list of
+   strings using SYMBOL-NAME for any necessary coersion."
+  (mapcar #'(lambda (x)
+	      (etypecase x
+		(string x)
+		(symbol (symbol-name x))))
+	  symbols))
+
+(defun append-but-lose-if-overlap (list-one list-two &key (test #'string=))
+  "APPENDs two lists but screams if they intersect at all.
+   Uses STRING= as default test because that's what DEFPACKAGE wants to use."
+  (if (intersection list-one list-two :test test)
+      (error "Overlap found in argument lists.")
+      (append list-one list-two)))
 
 
 ;;; Enter-New-Nicknames  --  Internal
@@ -565,18 +746,18 @@
 	   (found (gethash n *package-names*)))
       (cond ((not found)
 	     (setf (gethash n *package-names*) package)
-	     (push n (package-nicknames package)))
+	     (push n (package-%nicknames package)))
 	    ((eq found package))
-	    ((string= (package-name found) n)
+	    ((string= (package-%name found) n)
 	     (cerror "Ignore this nickname."
 		     "~S is a package name, so it cannot be a nickname for ~S."
-		     n (package-name package)))
+		     n (package-%name package)))
 	    (t
 	     (cerror "Redefine this nickname."
 		     "~S is already a nickname for ~S."
-		     n (package-name found))
+		     n (package-%name found))
 	     (setf (gethash n *package-names*) package)
-	     (push n (package-nicknames package)))))))
+	     (push n (package-%nicknames package)))))))
 
 
 ;;; Make-Package  --  Public
@@ -596,7 +777,7 @@
     (error "A package named ~S already exists" name))
   (let* ((name (string name))
 	 (package (internal-make-package
-		   :name name
+		   :%name name
 		   :internal-symbols (make-package-hashtable internal-symbols)
 		   :external-symbols (make-package-hashtable external-symbols))))
     (if *in-package-init*
@@ -640,12 +821,12 @@
 	 (found (find-package name)))
     (unless (or (not found) (eq found package))
       (error "A package named ~S already exists." name))
-    (remhash (package-name package) *package-names*)
-    (setf (package-name package) name)
+    (remhash (package-%name package) *package-names*)
+    (setf (package-%name package) name)
     (setf (gethash name *package-names*) package)
-    (dolist (n (package-nicknames package))
+    (dolist (n (package-%nicknames package))
       (remhash n *package-names*))
-    (setf (package-nicknames package) ())
+    (setf (package-%nicknames package) ())
     (enter-new-nicknames package nicknames)
     package))
 
@@ -762,14 +943,14 @@
   package, then it is made uninterned."
   (let* ((package (package-or-lose package))
 	 (name (symbol-name symbol))
-	 (shadowing-symbols (package-shadowing-symbols package)))
+	 (shadowing-symbols (package-%shadowing-symbols package)))
     (declare (list shadowing-symbols) (simple-string name))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
     ;; one of the accessible symbols.
     (when (member symbol shadowing-symbols)
       (let ((cset ()))
-	(dolist (p (package-use-list package))
+	(dolist (p (package-%use-list package))
 	  (multiple-value-bind (s w) (find-external-symbol name p)
 	    (when w (pushnew s cset))))
 	(when (cdr cset)
@@ -788,7 +969,7 @@
 	      (t
 	       (shadowing-import sym package)
 	       (return-from unintern t)))))))
-      (setf (package-shadowing-symbols package)
+      (setf (package-%shadowing-symbols package)
 	    (delete symbol shadowing-symbols)))
 
     (multiple-value-bind (s w) (find-symbol name package)
@@ -824,13 +1005,13 @@
 ;;; uninterned since they do not cause conflicts.
 ;;;
 (defun moby-unintern (symbol package)
-  (unless (member symbol (package-shadowing-symbols package))
+  (unless (member symbol (package-%shadowing-symbols package))
     (or (unintern symbol package)
 	(let ((name (symbol-name symbol)))
 	  (multiple-value-bind (s w) (find-symbol name package)
 	    (declare (ignore s))
 	    (when (eq w :inherited)
-	      (dolist (q (package-use-list package))
+	      (dolist (q (package-%use-list package))
 		(multiple-value-bind (u x) (find-external-symbol name q)
 		  (declare (ignore u))
 		  (when x
@@ -854,7 +1035,7 @@
 	(unless (or w (member sym syms)) (push sym syms))))
     ;;
     ;; Find symbols and packages with conflicts.
-    (let ((used-by (package-used-by-list package))
+    (let ((used-by (package-%used-by-list package))
 	  (cpackages ())
 	  (cset ()))
       (dolist (sym syms)
@@ -862,14 +1043,14 @@
 	  (dolist (p used-by)
 	    (multiple-value-bind (s w) (find-symbol name p)
 	      (when (and w (not (eq s sym))
-			 (not (member s (package-shadowing-symbols p))))
+			 (not (member s (package-%shadowing-symbols p))))
 		(pushnew sym cset)
 		(pushnew p cpackages))))))
       (when cset
 	(restart-case
 	    (error "Exporting these symbols from the ~A package:~%~S~%~
 		    results in name conflicts with these packages:~%~{~A ~}"
-		   (package-name package) cset (mapcar #'package-name cpackages))
+		   (package-%name package) cset (mapcar #'package-%name cpackages))
 	  (unintern-conflicting-symbols ()
 	   :report "Unintern conflicting symbols."
 	   (dolist (p cpackages)
@@ -889,7 +1070,7 @@
       (when missing
 	(cerror "Import these symbols into the ~A package."
 		"These symbols are not accessible in the ~A package:~%~S"
-		(package-name package) missing)
+		(package-%name package) missing)
 	(import missing package))
       (import imports package))
     ;;
@@ -914,7 +1095,7 @@
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
 	       (error "~S is not accessible in the ~A package."
-		      sym (package-name package)))
+		      sym (package-%name package)))
 	      ((eq w :external) (pushnew sym syms)))))
 
     (let ((internal (package-internal-symbols package))
@@ -951,7 +1132,7 @@
       (cerror
        "Import these symbols with Shadowing-Import."
        "Importing these symbols into the ~A package causes a name conflict:~%~S"
-       (package-name package) cset))
+       (package-%name package) cset))
     ;;
     ;; Add the new symbols to the internal hashtable.
     (let ((internal (package-internal-symbols package)))
@@ -980,11 +1161,11 @@
 	  (when (or (eq w :internal) (eq w :external))
 	    ;;
 	    ;; If it was shadowed, we don't want Unintern to flame out...
-	    (setf (package-shadowing-symbols package)
-		  (delete s (the list (package-shadowing-symbols package))))
+	    (setf (package-%shadowing-symbols package)
+		  (delete s (the list (package-%shadowing-symbols package))))
 	    (unintern s package))
 	  (add-symbol internal sym))
-	(pushnew sym (package-shadowing-symbols package)))))
+	(pushnew sym (package-%shadowing-symbols package)))))
   t)
 
 
@@ -999,14 +1180,13 @@
   not already present."
   (let* ((package (package-or-lose package))
 	 (internal (package-internal-symbols package)))
-    (dolist (sym (symbol-listify symbols))
-      (let ((name (symbol-name sym)))
-	(multiple-value-bind (s w) (find-symbol name package)
-	  (when (or (not w) (eq w :inherited))
-	    (setq s (make-symbol name))
-	    (%primitive c::set-package s package)
-	    (add-symbol internal s))
-	  (pushnew s (package-shadowing-symbols package))))))
+    (dolist (name (mapcar #'string symbols))
+      (multiple-value-bind (s w) (find-symbol name package)
+	(when (or (not w) (eq w :inherited))
+	  (setq s (make-symbol name))
+	  (%primitive c::set-package s package)
+	  (add-symbol internal s))
+	(pushnew s (package-%shadowing-symbols package))))))
   t)
 
 ;;; Use-Package  --  Public
@@ -1023,10 +1203,10 @@
     ;;
     ;; Loop over each package, use'ing one at a time...
     (dolist (pkg packages)
-      (unless (member pkg (package-use-list package))
+      (unless (member pkg (package-%use-list package))
 	(let ((cset ())
-	      (shadowing-symbols (package-shadowing-symbols package))
-	      (use-list (package-use-list package)))
+	      (shadowing-symbols (package-%shadowing-symbols package))
+	      (use-list (package-%use-list package)))
 	  ;;
 	  ;;   If the number of symbols already accessible is less than the
 	  ;; number to be inherited then it is faster to run the test the
@@ -1067,12 +1247,12 @@
 	    (cerror
 	     "unintern the conflicting symbols in the ~2*~A package."
 	     "Use'ing package ~A results in name conflicts for these symbols:~%~S"
-	     (package-name pkg) cset (package-name package))
+	     (package-%name pkg) cset (package-%name package))
 	    (dolist (s cset) (moby-unintern s package))))
 
-	(push pkg (package-use-list package))
+	(push pkg (package-%use-list package))
 	(push (package-external-symbols pkg) (cdr (package-tables package)))
-	(push package (package-used-by-list pkg)))))
+	(push package (package-%used-by-list pkg)))))
   t)
 
 ;;; Unuse-Package  --  Public
@@ -1082,13 +1262,13 @@
   "Remove Packages-To-Unuse from the use list for Package."
   (let ((package (package-or-lose package)))
     (dolist (p (package-listify packages-to-unuse))
-      (setf (package-use-list package)
-	    (delete p (the list (package-use-list package))))
+      (setf (package-%use-list package)
+	    (delete p (the list (package-%use-list package))))
       (setf (package-tables package)
 	    (delete (package-external-symbols p)
 		    (the list (package-tables package))))
-      (setf (package-used-by-list p)
-	    (delete package (the list (package-used-by-list p)))))
+      (setf (package-%used-by-list p)
+	    (delete package (the list (package-%used-by-list p)))))
     t))
 
 ;;; Find-All-Symbols --  Public
@@ -1211,7 +1391,7 @@
 	  (add-symbol external symbol))
 	;;
 	;; Put shadowing symbols in the shadowing symbols list.
-	(setf (package-shadowing-symbols pkg) (sixth spec))))
+	(setf (package-%shadowing-symbols pkg) (sixth spec))))
 
     (makunbound '*initial-symbols*) ; So it gets GC'ed.
     
