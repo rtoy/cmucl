@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.6 2000/09/20 00:35:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18.2.7 2000/11/06 13:07:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,7 +466,7 @@ struct in_addr {
   (let ((handlers (assoc fd *oob-handlers*)))
     (declare (list handlers))
     (when handlers
-      (let ((remaining (delete char handlers
+      (let ((remaining (delete char (cdr handlers)
 			       :test #'eql
 			       :key #'car)))
 	(declare (list remaining))
