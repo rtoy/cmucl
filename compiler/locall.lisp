@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.37 1992/09/22 00:04:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.38 1992/09/22 14:10:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,13 +881,34 @@
 			nil
 			(insert-let-body fun call))))
     (move-return-stuff fun call next-block)
-    (merge-lets fun call))
+    (merge-lets fun call)))
 
+
+;;; REOPTIMIZE-CALL  --  Internal
+;;;
+;;;    Reoptimize all of Call's args and its result.
+;;;
+(defun reoptimize-call (call)
+  (declare (type basic-combination call))
   (dolist (arg (basic-combination-args call))
     (when arg
       (reoptimize-continuation arg)))
   (reoptimize-continuation (node-cont call))
   (undefined-value))
+
+;;;  OK-INITIAL-CONVERT-P  --  Internal
+;;;
+;;; We also don't convert calls to named functions which appear in the initial
+;;; component, delaying this until optimization.  This minimizes the likelyhood
+;;; that we well let-convert a function which may have references added due to
+;;; later local inline expansion
+;;;
+(defun ok-initial-convert-p (fun)
+  (not (and (leaf-name fun)
+	    (eq (component-kind
+		 (block-component
+		  (node-block (lambda-bind fun))))
+		:initial))))
 
 
 ;;; Maybe-Let-Convert  --  Interface
@@ -909,10 +930,7 @@
 ;;;
 ;;;    We don't attempt to convert calls to functions that have an XEP, since
 ;;; we might be embarrassed later when we want to convert a newly discovered
-;;; local call.  We also don't convert calls to named functions which appear in
-;;; the initial component, delaying this until optimization.  This minimizes
-;;; the likelyhood that we well let-convert a function which may have
-;;; references added due to later local inline expansion.
+;;; local call.  Also, see OK-INITIAL-CONVERT-P.
 ;;;
 (defun maybe-let-convert (fun)
   (declare (type clambda fun))
@@ -926,15 +944,13 @@
 		   (eq (basic-combination-fun dest) ref-cont)
 		   (eq (basic-combination-kind dest) :local)
 		   (not (block-delete-p (node-block dest)))
-		   (cond ((and (leaf-name fun)
-			       (eq (component-kind
-				    (block-component
-				     (continuation-block ref-cont)))
-				   :initial))
+		   (cond ((ok-initial-convert-p fun) t)
+			 (t
 			  (reoptimize-continuation ref-cont)
-			  nil)
-			 (t t)))
-	  (let-convert fun dest)
+			  nil)))
+	  (unless (eq (functional-kind fun) :assignment)
+	    (let-convert fun dest))
+	  (reoptimize-call dest)
 	  (setf (functional-kind fun)
 		(if (mv-combination-p dest) :mv-let :let))))
       t)))
@@ -1002,6 +1018,7 @@
 ;;; -- The function is a normal, non-entry function, and
 ;;; -- Except for one call, all calls must be tail recursive calls in the
 ;;;    called function (i.e. are self-recursive tail calls)
+;;; -- OK-INITIAL-CONVERT-P is true.
 ;;;
 ;;;    There may be one outside call, and it need not be tail-recursive.  Since
 ;;; all tail local calls have already been converted to direct transfers, the
@@ -1020,18 +1037,20 @@
 	     (not (functional-entry-function fun)))
     (let ((non-tail nil)
 	  (call-fun nil))
-      (when (dolist (ref (leaf-refs fun) t)
-	      (let ((dest (continuation-dest (node-cont ref))))
-		(when (block-delete-p (node-block dest)) (return nil))
-		(let ((home (node-home-lambda ref)))
-		  (unless (eq home fun)
-		    (when call-fun (return nil))
-		    (setq call-fun home))
-		  (unless (node-tail-p dest)
-		    (when (or non-tail (eq home fun)) (return nil))
-		    (setq non-tail dest)))))
+      (when (and (dolist (ref (leaf-refs fun) t)
+		   (let ((dest (continuation-dest (node-cont ref))))
+		     (when (block-delete-p (node-block dest)) (return nil))
+		     (let ((home (node-home-lambda ref)))
+		       (unless (eq home fun)
+			 (when call-fun (return nil))
+			 (setq call-fun home))
+		       (unless (node-tail-p dest)
+			 (when (or non-tail (eq home fun)) (return nil))
+			 (setq non-tail dest)))))
+		 (ok-initial-convert-p fun))
 	(setf (functional-kind fun) :assignment)
 	(let-convert fun (or non-tail
 			     (continuation-dest
 			      (node-cont (first (leaf-refs fun))))))
+	(when non-tail (reoptimize-call non-tail))
 	t))))
