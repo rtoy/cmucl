@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.1 1992/07/28 20:14:38 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.2 1992/09/08 20:25:21 wlott Exp $
  *
  */
 
@@ -97,7 +97,9 @@ void main(int argc, char *argv[], char *envp[])
     char *core = NULL, *default_core;
     boolean restore_state, monitor;
 
+#ifdef MACH
     mach_init();
+#endif
 #ifdef parisc
     printf("lisp running, pid=%d\n", getpid());
 #endif
