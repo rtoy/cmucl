@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.15 1997/03/05 04:19:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.16 1997/06/26 19:19:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,6 @@
 
 ;;;; Float parameters:
 
-#-alpha
 (progn
   (defconstant least-positive-single-float (single-from-bits 0 0 1))
   (defconstant least-positive-short-float least-positive-single-float)
