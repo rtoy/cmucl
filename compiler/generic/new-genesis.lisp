@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.15 1994/10/24 22:51:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.16 1994/10/24 23:07:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1632,7 +1632,7 @@
 		    #.c:sgi-fasl-file-implementation)
 		   "")
 		  (#.c:sparc-fasl-file-implementation
-		   (if (member :svr4 (c:backend-features c:*backend*))
+		   (if (c:backend-featurep :svr4)
 		       "_"
 		       "")))
 		name)))
