@@ -670,7 +670,7 @@
                      PCL::LEGAL-QUALIFIERS-P PCL::ADD-BOUNDP-METHOD
                      PCL::LEGAL-LAMBDA-LIST-P
                      PCL::|SETF PCL GENERIC-FUNCTION-NAME|
-                     PCL::DESCRIBE-OBJECT PCL::CLASS-INITIALIZE-INFO
+                     PCL:DESCRIBE-OBJECT PCL::CLASS-INITIALIZE-INFO
                      PCL::MAKE-WRITER-METHOD-FUNCTION
                      PCL::|SETF PCL GF-DFUN-STATE|
                      PCL::|SETF PCL SLOT-DEFINITION-NAME|
