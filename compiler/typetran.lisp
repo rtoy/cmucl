@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.43 2003/04/27 14:52:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.44 2003/07/03 18:44:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,18 +274,20 @@
 ;;;
 (defun source-transform-union-typep (object type)
   (let* ((types (union-type-types type))
-	 (ltype (specifier-type 'list))
-	 (mtype (find-if #'member-type-p types)))
-    (cond ((and mtype (csubtypep ltype type))
-	   (let ((members (member-type-members mtype)))
-	     (once-only ((n-obj object))
-	       `(if (listp ,n-obj)
-		    t
-		    (typep ,n-obj 
-			   '(or ,@(mapcar #'type-specifier
-					  (remove (specifier-type 'cons)
-						  (remove mtype types)))
-				(member ,@(remove nil members))))))))
+	 (list-type (specifier-type 'list))
+	 (cons-type (specifier-type 'cons))
+	 (mtype (find-if #'member-type-p types))
+	 (members (when mtype (member-type-members mtype))))
+    (cond ((and mtype 
+		(memq nil members)
+		(memq cons-type types))
+	   (once-only ((n-obj object))
+	     `(or (listp ,n-obj)
+		  (typep ,n-obj 
+			 '(or ,@(mapcar #'type-specifier
+				        (remove cons-type
+					        (remove mtype types)))
+			   (member ,@(remove nil members)))))))
 	  (t
 	   (once-only ((n-obj object))
 	     `(or ,@(mapcar #'(lambda (x)
