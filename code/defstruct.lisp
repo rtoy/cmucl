@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.56 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.57 1996/05/07 20:21:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -90,10 +90,37 @@
 (defun funcallable-instance-function (fin)
   (%funcallable-instance-lexenv fin))
 
+;;; The heart of the magic of funcallable instances.  The function for a FIN
+;;; must be a magical INSTANCE-LAMBDA form.  When called (as with any other
+;;; function), we grab the code pointer, and call it, leaving the original
+;;; function object in LEXENV (in case it was a closure).  If it is actually a
+;;; FIN, then we need to do an extra indirection with
+;;; funcallable-instance-lexenv to get at any closure environment.  This extra
+;;; indirection is set up when accessing the closure environment of an
+;;; INSTANCE-LAMBDA.  Note that the original FIN pointer is lost, so if the
+;;; called function wants to get at the original object to do some slot
+;;; accesses, it must close over the FIN object.
+;;;
+;;; If we set the FIN function to be a FIN, we directly copy across both the
+;;; code pointer and the lexenv, since that code pointer (for an
+;;; instance-lambda) is expecting that lexenv to be accessed.  This effectively
+;;; pre-flattens what would otherwise be a chain of indirections.  Lest this
+;;; sound like an excessively obscure case, note that it happens when PCL
+;;; dispatch functions are byte-compiled.  
+;;;
+;;; The only loss is that if someone accesses the
+;;; funcallable-instance-function, then won't get a FIN back.  This probably
+;;; doesn't matter, since PCL only sets the FIN function.  And the only reason
+;;; that interpreted functions are FINs instead of bare closures is for
+;;; debuggability.
+;;;
 (defun (setf funcallable-instance-function) (new-value fin)
   (setf (%funcallable-instance-function fin)
 	(%closure-function new-value))
-  (setf (%funcallable-instance-lexenv fin) new-value))
+  (setf (%funcallable-instance-lexenv fin)
+	(if (funcallable-instance-p new-value)
+	    (%funcallable-instance-lexenv new-value)
+	    new-value)))
 
 (defsetf %instance-ref %instance-set)
 (defsetf %raw-ref-single %raw-set-single)
