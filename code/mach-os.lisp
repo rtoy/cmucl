@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.5 1992/02/19 16:28:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.6 1992/02/20 23:03:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,5 +61,5 @@
 ;;;    Return the system page size.
 ;;;
 (defun get-page-size ()
-  (gr-call* mach:vm_statistics *task-self*))
+  (mach:gr-call* mach:vm_statistics *task-self*))
 
