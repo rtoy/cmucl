@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.20 1993/04/04 10:06:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.21 1993/04/04 12:50:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -424,19 +424,22 @@
 	   :state :read-only)
 	  (funcallable-instance :inherits (function)  :state :read-only)
 	  
-	  (collection :hierarchical nil)
-	  (explicit-key-collection :inherits (collection))
-	  (mutable-collection :inherits (collection))
-	  (generic-sequence :inherits (collection))
+	  (collection :hierarchical nil  :state :read-only)
+	  (explicit-key-collection :inherits (collection)  :state :read-only)
+	  (mutable-collection :inherits (collection)  :state :read-only)
+	  (generic-sequence :inherits (collection)  :state :read-only)
 	  (mutable-explicit-key-collection
+	   :state :read-only
 	   :inherits (explicit-key-collection mutable-collection collection))
 	  (mutable-sequence
+	   :state :read-only
 	   :inherits (mutable-collection generic-sequence collection))
 	  (sequence
 	   :translation (or cons (member nil) vector)
 	   :inherits (mutable-sequence mutable-collection generic-sequence
 		      collection))
 	  (generic-array
+	   :state :read-only
 	   :inherits (mutable-explicit-key-collection explicit-key-collection
 		      mutable-collection collection))
 	  (array
@@ -448,6 +451,7 @@
 	   :inherits (array generic-array mutable-explicit-key-collection
 		      explicit-key-collection mutable-collection collection))
 	  (generic-vector
+	   :state :read-only
 	   :inherits (generic-array mutable-explicit-key-collection
 		      explicit-key-collection mutable-sequence
 		      mutable-collection generic-sequence collection))
@@ -525,6 +529,7 @@
 		      mutable-explicit-key-collection explicit-key-collection
 		      mutable-collection collection))
 	  (generic-string
+	   :state :read-only
 	   :inherits (mutable-sequence mutable-collection generic-sequence
 		      collection))
 	  (string
