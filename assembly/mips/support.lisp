@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.12 1993/05/25 21:22:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.13 1993/08/25 18:05:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,16 +19,14 @@
 (def-vm-support-routine generate-call-sequence (name style vop)
   (ecase style
     (:raw
-     (values
-      `((inst jal (make-fixup ',name :assembly-routine))
-	(inst nop))
-      #+gengc
-      (let ((ra (make-symbol "RA")))
-	`((:temporary (:sc descriptor-reg :from (:eval 0) :to (:eval 1)
+     (let (#+gengc (ra (make-symbol "RA")))
+       (values
+	`((inst jal #+gengc ra (make-fixup ',name :assembly-routine))
+	  (inst nop))
+	`(#+gengc
+	  (:temporary (:sc descriptor-reg :from (:eval 0) :to (:eval 1)
 		       :offset ra-offset)
-		      ,ra)
-	  (:ignore ,ra)))
-      #-gengc nil))
+		      ,ra)))))
     (:full-call
      (let ((temp (make-symbol "TEMP"))
 	   (nfp-save (make-symbol "NFP-SAVE"))
