@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.3 1990/08/24 18:11:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.4 1990/10/17 03:38:02 ram Exp $
 ;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
@@ -100,7 +100,10 @@
 
 (defun software-version ()
   "Returns a string describing version of the supporting software."
-  NIL)
+  (string-trim
+   '(#\newline)
+   (with-output-to-string (stream)
+     (run-program "/usr/cs/etc/version" nil :output stream))))
 
 (defun short-site-name ()
   "Returns a string with the abbreviated site name."
