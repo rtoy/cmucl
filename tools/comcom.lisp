@@ -5,23 +5,23 @@
 (with-compiler-log-file ("c:compile-compiler.log")
 
 (unless *new-compile*
-  (comf "ncode:fdefinition")
-  (load "ncode:extensions.lisp")
+  (comf "code:fdefinition")
+  (load "code:extensions.lisp")
   (comf "c:globaldb" :load t)
   (unless (boundp 'ext::*info-environment*)
     (c::globaldb-init))
 
   (comf "c:patch")
 
-  (comf "ncode:macros" :load t)
-  (comf "ncode:extensions" :bootstrap-macros :both)
-  (load "ncode:extensions.fasl")
-  (comf "ncode:struct" :load t)
+  (comf "code:macros" :load t)
+  (comf "code:extensions" :bootstrap-macros :both)
+  (load "code:extensions.fasl")
+  (comf "code:struct" :load t)
   (comf "c:macros" :load t :bootstrap-macros :both))
 
 (when *new-compile*
-  (comf "ncode:globals" :always-once t) ; For global variables.
-  (comf "ncode:struct" :always-once t) ; For structures.
+  (comf "code:globals" :always-once t) ; For global variables.
+  (comf "code:struct" :always-once t) ; For structures.
   (comf "c:globals" :always-once t)
   (comf "c:proclaim" :always-once t)) ; For COOKIE structure.
 
@@ -66,14 +66,14 @@
       :bootstrap-macros :both
       :always-once *new-compile*)
 
-(comf "ncode:debug-info"
+(comf "code:debug-info"
       :load t
       :bootstrap-macros :both
       :always-once *new-compile*)
 
 (comf "c:rt/assem-insts" :load t)
 
-#+new-compiler
+
 (when *new-compile*
   (comf "c:eval-comp")
   (comf "c:eval" :bootstrap-macros :both)
@@ -85,7 +85,7 @@
 (comf "c:debug-dump")
 
 (unless *new-compile*
-  (comf "ncode:constants" :load t :proceed t)
+  (comf "code:constants" :load t :proceed t)
   (comf "assem:rompconst" :load t :proceed t)
   (comf "assem:assembler")
   (comf "c:fop"))
@@ -132,18 +132,18 @@
 (comf "c:rt/genesis")
 
 (unless *new-compile*
-  (comf "ncode:defstruct")
-  (comf "ncode:error")
-  (comf "ncode:defrecord")
-  (comf "ncode:defmacro")
-  (comf "ncode:alieneval")
-  (comf "ncode:c-call")
-  (comf "ncode:salterror")
-  (comf "ncode:sysmacs")
-  (comf "ncode:machdef")
-  (comf "ncode:mmlispdefs")
-  (comf "nicode:machdefs")
-  (comf "nicode:netnamedefs")
+  (comf "code:defstruct")
+  (comf "code:error")
+  (comf "code:defrecord")
+  (comf "code:defmacro")
+  (comf "code:alieneval")
+  (comf "code:c-call")
+  (comf "code:salterror")
+  (comf "code:sysmacs")
+  (comf "code:machdef")
+  (comf "code:mmlispdefs")
+  (comf "icode:machdefs")
+  (comf "icode:netnamedefs")
   (comf "c:globaldb" :output-file "c:boot-globaldb.fasl"
 	:bootstrap-macros :both))
 
