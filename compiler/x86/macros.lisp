@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.11 1999/03/04 11:54:48 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.12 1999/11/25 17:50:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -253,46 +253,31 @@
 
 ;;;; Error Code
 
-(defvar *adjustable-vectors* nil)
-
-(defmacro with-adjustable-vector ((var) &rest body)
-  `(let ((,var (or (pop *adjustable-vectors*)
-		   (make-array 16
-			       :element-type '(unsigned-byte 8)
-			       :fill-pointer 0
-			       :adjustable t))))
-     (setf (fill-pointer ,var) 0)
-     (unwind-protect
-	 (progn
-	   ,@body)
-       (push ,var *adjustable-vectors*))))
-
 (eval-when (compile load eval)
   (defun emit-error-break (vop kind code values)
-    (let ((vector (gensym)))
+    (let ((vector (gensym))
+	  (length (gensym)))
       `((inst int 3)				; i386 breakpoint instruction
 	;; The return PC points here; note the location for the debugger.
 	(let ((vop ,vop))
   	  (when vop
 		(note-this-location vop :internal-error)))
 	(inst byte ,kind)			; eg trap_Xyyy
-	(with-adjustable-vector (,vector)	; interr arguments
+	(let ((,vector (make-array 8 :element-type '(unsigned-byte 8)
+				   :fill-pointer 0 :adjustable t)))
 	  (write-var-integer (error-number-or-lose ',code) ,vector)
 	  ,@(mapcar #'(lambda (tn)
 			`(let ((tn ,tn))
 			   (write-var-integer
-			    (make-sc-offset (sc-number
-					     (tn-sc tn))
-			     ;; zzzzz jrd here.  tn-offset
-			     ;; is zero for constant tns.
-			     ;; (tn-offset tn)
-			     (or (tn-offset tn) 0)
-			     )
+			    (make-sc-offset (sc-number (tn-sc tn))
+			     ;; tn-offset is zero for constant tns.
+			     (or (tn-offset tn) 0))
 			    ,vector)))
 		    values)
-	  (inst byte (length ,vector))
-	  (dotimes (i (length ,vector))
-	    (inst byte (aref ,vector i))))))))
+	  (let ((,length (length ,vector)))
+	    (inst byte ,length)
+	    (dotimes (i ,length)
+	      (inst byte (aref ,vector i)))))))))
 
 (defmacro error-call (vop error-code &rest values)
   "Cause an error.  ERROR-CODE is the error to cause."
