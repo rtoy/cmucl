@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.74 2002/03/31 14:48:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.75 2002/04/07 00:14:13 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -383,7 +383,7 @@
 	      "FASL FILE output from ~A.~@
 	       Compiled ~A on ~A~@
 	       Compiler ~A, Lisp ~A~@
-	       Targeted for ~A, FASL version ~D~%"
+	       Targeted for ~A, FASL version ~X~%"
 	      where
 	      (ext:format-universal-time nil (get-universal-time))
 	      (machine-instance) compiler-version
@@ -394,7 +394,7 @@
       (dump-byte 255 res)
       ;;
       ;; Specify code format.
-      (dump-fop 'lisp::fop-code-format res)
+      (dump-fop 'lisp::fop-long-code-format res)
       (dump-byte f-imp res)
       (dump-unsigned-32 f-vers res))
     res))

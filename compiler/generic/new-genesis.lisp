@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.45 2002/03/31 14:48:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.46 2002/04/07 00:14:13 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1582,9 +1582,9 @@
   (pop-stack))
 
 ;;; must be compatible with the function OPEN-FASL-FILE in compiler/dump.lisp
-(define-cold-fop (fop-code-format :nope)
+(clone-cold-fop (fop-long-code-format :nope) (fop-code-format)
   (let ((implementation (read-arg 1))
-	(version (read-arg 4)))
+	(version (clone-arg)))
     (unless (= implementation (c:backend-fasl-file-implementation c:*backend*))
       (cerror
        "Load ~A anyway"
