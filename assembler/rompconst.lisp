@@ -455,7 +455,8 @@
 (defmacro escape-routine (symbol-offset nargs)
   (unless (<= 0 nargs 4)
     (error "Losing NARGS: ~D." nargs))
-  `((cal SP SP (* 4 %escape-frame-size)) ; Allocate frame
+  ;; Allocate frame+1 to preserve the assembly-level stack top.
+  `((cal SP SP (* 4 (1+ %escape-frame-size)))
     ;; Clear type bits in unboxed registers so that GC doesn't gag.  If these
     ;; hold user fixnum or string-char variables, then this won't destroy the
     ;; info.
@@ -464,19 +465,19 @@
     ;; Save all registers...
     (stm NL0 CS (* 4 (- (- %escape-frame-size
 			   %escape-frame-general-register-start-slot))))
-    ;; Save current CONT as OLD-CONT.
-    (storew CONT SP (* 4 (+ (- %escape-frame-size) c::old-cont-save-offset)))
+    ;; Save current FP as OLD-FP.
+    (storew FP SP (* 4 (+ (- %escape-frame-size) c::old-fp-save-offset)))
     ;; Compute escape frame start from SP.
-    (cal CONT SP (* 4 (- %escape-frame-size)))
+    (cal FP SP (* 4 (- %escape-frame-size)))
     ;; Store escape frame start in to register save area as old SP, since we
     ;; trashed SP before saving registers.
-    (storew CONT CONT (* 4 (+ %escape-frame-general-register-start-slot
+    (storew FP FP (* 4 (+ %escape-frame-general-register-start-slot
 			      c::sp-offset)))
     ;; Zero ENV save area to indicate an escape frame.
     (loadi NL1 0)
-    (storew NL1 CONT (* 4 c::env-save-offset))
+    (storew NL1 FP (* 4 c::env-save-offset))
     ;; Save miscop return PC as PC escape frame is returning to.
-    (storew PC CONT (* 4 c::return-pc-save-offset))
+    (storew PC FP (* 4 c::return-pc-save-offset))
 
     ;; Get definition
     (load-symbol-offset ENV ,symbol-offset symbol-definition)
@@ -486,8 +487,8 @@
     (loadw NL1 ENV (+ g-vector-header-size (* 4 %function-code-slot)))
     ;; Compute entry PC.
     (cas PC PC NL1)
-    (lr OLD-CONT CONT) ; OLD-CONT gets escape frame.
-    (lr CONT SP) ; So escape frame doesn't get overwritten.
+    (lr OLD-FP FP) ; OLD-FP gets escape frame.
+    (lr FP SP) ; So escape frame doesn't get overwritten.
     ;;
     ;; If 4 args, set up arg frame.
     ,@(when (= nargs 4)
@@ -500,8 +501,8 @@
     (noop)
     (cal 0 0 0) ; 32bit noop for single-value return.
     ;; Now restore all registers except for A<N> and NL<N>.
-    ;; CONT should be restored to the escape frame by returning function.
-    (lm SP CONT (* 4 (+ %escape-frame-general-register-start-slot
+    ;; FP should be restored to the escape frame by returning function.
+    (lm SP FP (* 4 (+ %escape-frame-general-register-start-slot
 			c::sp-offset)))
     ;; Return to caller.
     (br PC)))
@@ -866,12 +867,12 @@
 (register l2 9)			; Boxed Temporary
 (register name 9)		; Name of function we are trying to call
 (register l3 10)		; Boxed Temporary
-(register old-cont 10)		; Cont to return to
+(register old-fp 10)		; Fp to return to
 (register l4 11)		; Boxed Temporary
 (register args 11)		; Pointer to stack arguments
 (register bs 12)		; Binding Stack Pointer
 (register fp 13)		; Active Frame Pointer (old name)
-(register cont 13)		; Current Cont
+(register fp 13)		; Current Fp
 (register af 14)		; Active Function Pointer (old name)
 (register env 14)		; Current constant pool, called function.
 (register pc 15)		; PC, Return PC for misc-ops, and
