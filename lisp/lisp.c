@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.5 1994/01/28 17:22:29 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.6 1994/03/10 16:34:14 wlott Exp $
  *
  */
 
@@ -109,9 +109,6 @@ void main(int argc, char *argv[], char *envp[])
     if (default_core == NULL)
 	default_core = "lisp.core";
 
-    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired into */
-    /* the lisp code in .../code/save.lisp. */
-
     if (core == NULL) {
 	extern char *getenv(char *var);
 	static char buf[MAXPATHLEN];
@@ -135,8 +132,10 @@ void main(int argc, char *argv[], char *envp[])
 	    } while (*lib++ == ':');
 	}
 	if (core == NULL) {
+	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
+	    /* into the lisp code in .../code/save.lisp. */
 #ifdef hpux
-	    strcpy(buf, "/usr/local/cmucl/lib/");
+	    strcpy(buf, "/usr/local/lib/cmucl/lib/");
 #else
 	    strcpy(buf, "/usr/misc/.cmucl/lib/");
 #endif
