@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.41 2000/07/10 06:31:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.42 2001/02/22 20:49:43 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -830,9 +830,13 @@ a host-structure or string."
 	   (values (or logical-host null)))
   (let ((colon-pos (position #\: namestr :start start :end end)))
     (if colon-pos
-	(values (gethash (nstring-upcase (subseq namestr start colon-pos))
-			 *logical-hosts*))
-	nil)))
+	(values (let ((thing (nstring-upcase (subseq namestr start colon-pos))))
+		  (or (gethash (logical-word-or-lose thing)
+			       *logical-hosts*)
+		      (and (load-logical-pathname-translations thing)
+			   (gethash (logical-word-or-lose thing)
+				    *logical-hosts*)))))
+      nil)))
 
 
 ;;; PARSE-NAMESTRING -- Interface
@@ -1486,8 +1490,12 @@ a host-structure or string."
 (defun find-logical-host (thing &optional (errorp t))
   (etypecase thing
     (string
-     (let ((found (gethash (logical-word-or-lose thing)
-			   *logical-hosts*)))
+     (let ((found (or (gethash (logical-word-or-lose thing)
+			       *logical-hosts*)
+		      (and errorp
+			   (load-logical-pathname-translations thing)
+			   (gethash (logical-word-or-lose thing)
+			       *logical-hosts*)))))
        (if (or found (not errorp))
 	   found
 	   (error 'simple-file-error
@@ -1495,7 +1503,6 @@ a host-structure or string."
 		  :format-control "Logical host not yet defined: ~S"
 		  :format-arguments (list thing)))))
     (logical-host thing)))
-
 
 ;;; INTERN-LOGICAL-HOST -- Internal
 ;;;
@@ -1809,7 +1816,6 @@ a host-structure or string."
 	   (values list))
   (logical-host-translations (find-logical-host host)))
 
-
 ;;; (SETF LOGICAL-PATHNAME-TRANSLATIONS) -- Public
 ;;;
 (defun (setf logical-pathname-translations) (translations host)
@@ -1839,17 +1845,19 @@ a host-structure or string."
    successfully, T is returned, else error."
   (declare (type string host)
 	   (values (member t nil)))
-  (unless (find-logical-host host nil)
-    (with-open-file (in-str (make-pathname :defaults "library:"
-					   :name host
-					   :type "translations"))
-      (if *load-verbose*
-	  (format *error-output*
-		  ";; Loading pathname translations from ~A~%"
-		  (namestring (truename in-str))))
-      (setf (logical-pathname-translations host) (read in-str)))
-    t))
-
+  (when (and (find-logical-host "library" nil)
+	     (not (find-logical-host host nil)))
+    (let ((filename (make-pathname :defaults "library:"
+				   :name (logical-word-or-lose host)
+				   :type (logical-word-or-lose "translations"))))
+      (when (probe-file filename)
+	(with-open-file (in-str filename)
+	  (if *load-verbose*
+	      (format *error-output*
+		      ";; Loading pathname translations from ~A~%"
+		      (namestring (translate-logical-pathname filename))))
+	  (setf (logical-pathname-translations host) (read in-str)))
+	t))))
 
 ;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
 ;;;
