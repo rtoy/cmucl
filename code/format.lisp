@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.49 2003/05/01 10:50:33 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.50 2003/08/07 10:05:00 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2472,12 +2472,19 @@
 	     (return (values min-req max-req)))
 	   (when (format-directive-p dir)
 	     (incf-both (count :arg (format-directive-params dir) :key #'cdr))
-	     (let ((c (format-directive-character dir)))
+	     (let ((c (format-directive-character dir))
+		   close)
 	       (cond ((find c "ABCDEFGORSWX$/")
 		      (incf-both))
 		     ((char= c #\P)
 		      (unless (format-directive-colonp dir)
 			(incf-both)))
+		     ((and (char= c #\<)
+			   (not (format-directive-atsignp dir))
+			   (setq close (find-directive directives #\> nil))
+			   (format-directive-colonp close))
+		      (incf-both)
+		      (setq directives (cdr (member close directives))))
 		     ((or (find c "IT%&|_<>();") (char= c #\newline)))
 		     ((char= c #\[)
 		      (multiple-value-bind (min max remaining)
