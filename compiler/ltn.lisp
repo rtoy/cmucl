@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.23 1991/04/15 00:16:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.24 1991/04/23 16:24:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -947,8 +947,10 @@
 		       (leaf-name
 			(environment-function
 			 (node-environment call))))
-		   (not (function-info-ir2-convert
-			 (basic-combination-kind call))))
+		   (let ((info (basic-combination-kind call)))
+		     (not (or (function-info-ir2-convert info)
+			      (ir1-attributep (function-info-attributes info)
+					      recursive)))))
 	  (let ((*compiler-error-context* call))
 	    (compiler-warning "Recursive known function definition.")))
 	(ltn-default-call call policy)
