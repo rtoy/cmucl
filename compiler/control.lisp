@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.5 1991/02/20 14:56:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.6 1991/11/08 15:28:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,14 +39,59 @@
   (undefined-value))
 
 
+;;; FIND-ROTATED-LOOP-HEAD  --  Internal
+;;;
+;;;    If Block looks like the head of a loop, then attempt to rotate it.  A
+;;; block looks like a loop head if the number of some predecessor is less than
+;;; the block's number.  Since blocks are numbered in reverse DFN, this will
+;;; identify loop heads in a reducible flow graph.
+;;;
+;;;    When we find a suspected loop head, we scan back from the tail to find
+;;; an alternate loop head.  This substitution preserves the correctness of the
+;;; walk, since the old head can be reached from the new head.  We determine
+;;; the new head by scanning as far back as we can find increasing block
+;;; numbers.  Beats me if this is in general optimal, but it works in simple
+;;; cases.
+;;;
+(defun find-rotated-loop-head (block)
+  (declare (type cblock block))
+  (let* ((num (block-number block))
+	 (env (block-environment block))
+	 (pred (dolist (pred (block-pred block) nil)
+		 (when (and (not (block-flag pred))
+			    (eq (block-environment pred) env)
+			    (< (block-number pred) num))
+		   (return pred)))))
+    (cond
+     (pred
+      (let ((current pred)
+	    (current-num (block-number pred)))
+	(block DONE
+	  (loop
+	    (dolist (pred (block-pred current) (return-from DONE))
+	      (when (eq pred block)
+		(return-from DONE))
+	      (when (and (not (block-flag pred))
+			 (eq (block-environment pred) env)
+			 (> (block-number pred) current-num))
+		(setq current pred   current-num (block-number pred))
+		(return)))))
+	(assert (not (block-flag current)))
+	current))
+     (t
+      block))))
+	  
+
 ;;; Control-Analyze-Block  --  Internal
 ;;;
-;;;    Do a graph walk linking blocks into the emit order as we go.  We treat
-;;; blocks ending in tail local calls specially.  We can't walked the called
-;;; function immediately, since it is in a different function and we must keep
-;;; the code for a function contiguous.   Instead, we return the function that
-;;; we want to call so that it can be walked as soon as possible, which is
-;;; hopefully immediately.
+;;;    Do a graph walk linking blocks into the emit order as we go.  We call
+;;; FIND-ROTATED-LOOP-HEAD to do while-loop optimization.
+;;;
+;;;    We treat blocks ending in tail local calls specially.  We can't walked
+;;; the called function immediately, since it is in a different function and we
+;;; must keep the code for a function contiguous.  Instead, we return the
+;;; function that we want to call so that it can be walked as soon as possible,
+;;; which is hopefully immediately.
 ;;;
 ;;;    If any of the recursive calls ends in a tail local call, then we return
 ;;; the last such function, since it is the only one we can possibly drop
@@ -56,22 +101,23 @@
 (defun control-analyze-block (block tail)
   (declare (type cblock block) (type ir2-block tail))
   (unless (block-flag block)
-    (setf (block-flag block) t)
-    (assert (and (block-component block) (not (block-delete-p block))))
-    (add-to-emit-order (or (block-info block)
-			   (setf (block-info block) (make-ir2-block block)))
-		       (ir2-block-prev tail))
-
-    (let ((last (block-last block)))
-      (cond ((and (combination-p last) (node-tail-p last)
-		  (eq (basic-combination-kind last) :local))
-	     (combination-lambda last))
-	    (t
-	     (let ((fun nil))
-	       (dolist (succ (block-succ block))
-		 (let ((res (control-analyze-block succ tail)))
-		   (when res (setq fun res))))
-	       fun))))))
+    (let ((block (find-rotated-loop-head block)))
+      (setf (block-flag block) t)
+      (assert (and (block-component block) (not (block-delete-p block))))
+      (add-to-emit-order (or (block-info block)
+			     (setf (block-info block) (make-ir2-block block)))
+			 (ir2-block-prev tail))
+      
+      (let ((last (block-last block)))
+	(cond ((and (combination-p last) (node-tail-p last)
+		    (eq (basic-combination-kind last) :local))
+	       (combination-lambda last))
+	      (t
+	       (let ((fun nil))
+		 (dolist (succ (block-succ block))
+		   (let ((res (control-analyze-block succ tail)))
+		     (when res (setq fun res))))
+		 fun)))))))
 
 
 ;;; CONTROL-ANALYZE-1-FUN  --  Internal
@@ -83,7 +129,7 @@
 ;;; will never reach the bind block, so we will always get to insert it at the
 ;;; beginning.
 ;;;
-;;;    If the talk from the bind node encountered a tail local call, then we
+;;;    If the walk from the bind node encountered a tail local call, then we
 ;;; start over again there to help the call drop through.  Of course, it will
 ;;; never get a drop-through if either function has NLX code.
 ;;;
@@ -111,7 +157,7 @@
 ;;;
 ;;;    When we are done, we delete all blocks that weren't reached during our
 ;;; walk.  This allows IR2 phases to assume that all IR1 blocks in the DFO have
-;;; valid IR2 blocks in their Info.  We delete all deleted blocks from the
+;;; valid IR2 blocks in their Info.  We remove all deleted blocks from the
 ;;; IR2-COMPONENT VALUES-RECEIVERS so that stack analysis won't get confused.
 ;;;
 (defun control-analyze (component)
