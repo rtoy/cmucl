@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.8 1997/12/05 06:55:30 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.9 1997/12/11 17:41:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -294,3 +294,120 @@
   RETURN-T
   (load-symbol res t))
 
+
+;;; Support for the Mersenne Twister, MT19937, random number generator
+;;; due to Matsumoto and Nishimura.
+;;;
+;;; Makoto Matsumoto and T. Nishimura, "Mersenne twister: A
+;;; 623-dimensionally equidistributed uniform pseudorandom number
+;;; generator.", ACM Transactions on Modeling and Computer Simulation,
+;;; 1997, to appear.
+;;;
+;;; State:
+;;;  0-1:   Constant matrix A. [0, #x9908b0df] (not used here)
+;;;  2:     Index; init. to 1.
+;;;  3-626: State.
+;;;
+
+;;; This assembly routine is called from the inline VOP and updates
+;;; the state vector with new random numbers. The state vector is
+;;; passed in the EAX register.
+;;;
+#+assembler ; we don't want a vop for this one.
+(define-assembly-routine
+    (random-mt19937-update)
+    ((:temp state dword-reg eax-offset)
+     (:temp k dword-reg ebx-offset)
+     (:temp y dword-reg ecx-offset)
+     (:temp tmp dword-reg edx-offset))
+
+  ;; Save the temporary registers.
+  (inst push k)
+  (inst push y)
+  (inst push tmp)
+
+  ;; Generate a new set of results.
+  (inst xor k k)
+  LOOP1
+  (inst mov y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state :index k :scale 4
+			 :disp (- (* (+ 1 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip1)
+  (inst xor y #x9908b0df)
+  SKIP1
+  (inst xor y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 397 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state :index k :scale 4
+		     :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+  (inst inc k)
+  (inst cmp k (- 624 397))
+  (inst jmp :b loop1)
+  LOOP2
+  (inst mov y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state :index k :scale 4
+			 :disp (- (* (+ 1 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip2)
+  (inst xor y #x9908b0df)
+  SKIP2
+  (inst xor y (make-ea :dword :base state :index k :scale 4
+		       :disp (- (* (+ (- 397 624) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state :index k :scale 4
+		     :disp (- (* (+ 3 vm:vector-data-offset) vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+  (inst inc k)
+  (inst cmp k (- 624 1))
+  (inst jmp :b loop2)
+  
+  (inst mov y (make-ea :dword :base state
+		       :disp (- (* (+ (- 624 1) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov tmp (make-ea :dword :base state
+			 :disp (- (* (+ 0 3 vm:vector-data-offset)
+				     vm:word-bytes)
+				  vm:other-pointer-type)))
+  (inst and y #x80000000)
+  (inst and tmp #x7fffffff)
+  (inst or y tmp)
+  (inst shr y 1)
+  (inst jmp :nc skip3)
+  (inst xor y #x9908b0df)
+  SKIP3
+  (inst xor y (make-ea :dword :base state
+		       :disp (- (* (+ (- 397 1) 3 vm:vector-data-offset)
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+  (inst mov (make-ea :dword :base state
+		     :disp (- (* (+ (- 624 1) 3 vm:vector-data-offset)
+				 vm:word-bytes)
+			      vm:other-pointer-type))
+	y)
+
+  ;; Restore the temporary registers and return.
+  (inst pop tmp)
+  (inst pop y)
+  (inst pop k)
+  (inst ret))
