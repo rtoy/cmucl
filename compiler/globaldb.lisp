@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.2 1993/01/27 12:56:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.3 1993/02/04 22:39:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1038,9 +1038,12 @@
 ;;; function.
 (define-info-type function ir1-transform (or function null))
 
-;;; If a function is a defstruct slot accessor or setter, then this is the
-;;; defstruct-definition for the structure that it belongs to.
-(define-info-type function accessor-for (or kernel:defstruct-description null)
+;;; If a function is a slot accessor or setter, then this is the class that it
+;;; accesses slots of.
+;;;
+(define-info-type function accessor-for
+  #+ns-boot (or c::defstruct-description class null)
+  #-ns-boot (or class null)
   nil)
 
 ;;; If a function is "known" to the compiler, then this is FUNCTION-INFO
@@ -1094,7 +1097,10 @@
 ;;; The kind of type described.  We return :Instance for standard types that
 ;;; are implemented as structures.
 ;;;
-(define-info-type type kind (member :primitive :defined :instance nil) nil)
+(define-info-type type kind (member :primitive :defined :instance
+				    #+ns-boot :structure
+				    nil)
+  nil)
 
 ;;; Expander function for a defined type.
 (define-info-type type expander (or function null) nil)
@@ -1121,6 +1127,17 @@
 ;;; that for built-in classes, the kind may be :PRIMITIVE and not :INSTANCE.
 ;;;
 (define-info-type type class (or class null) nil)
+
+#+ns-boot
+(define-info-type type printer (or function symbol null) nil)
+#+ns-boot
+(define-info-type type load-form-maker (or function symbol null) nil)
+
+#+ns-boot
+(define-info-type type structure-info (or defstruct-description null) nil)
+#+ns-boot
+(define-info-type type defined-structure-info (or defstruct-description null)
+  nil)
 
 (define-info-class typed-structure)
 (define-info-type typed-structure info t nil)

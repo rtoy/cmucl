@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.2 1993/01/23 14:16:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.3 1993/02/04 22:36:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,8 @@
 ;;;
 
 (in-package "KERNEL")
-(export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p))
+(export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p
+		     %typep))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
@@ -114,60 +115,27 @@
 ;;;
 ;;; Return the specifier for the type of object.  This is not simply
 ;;; (type-specifier (ctype-of object)) because ctype-of has different goals
-;;; than type-of.
+;;; than type-of.  In particular, speed is more important than precision, and
+;;; it is not permitted to return member types.
 ;;; 
+#-reload
 (defun type-of (object)
   "Return the type of OBJECT."
-  (typecase object
-    ;; First the ones that we can tell by testing the lowtag
-    (fixnum 'fixnum)
-    (function (type-specifier (ctype-of object)))
-    (null 'null)
-    (list 'cons)
+  (if (typep object '(or function array))
+      (type-specifier (ctype-of object))
+      (let* ((class (layout-class (layout-of object)))
+	     (name (class-name class)))
+	(if #-ns-boot(%instancep object)
+	    #+ns-boot(structurep object)
+	    (case name
+	      (alien-internals:alien-value
+	       `(alien:alien
+		 ,(alien-internals:unparse-alien-type
+		   (alien-internals:alien-value-type object))))
+	      (t
+	       (class-proper-name class)))
+	    name))))
 
-    ;; Any other immediates.
-    (character
-     (typecase object
-       (standard-char 'standard-char)
-       (base-char 'base-char)
-       (t 'character)))
-
-    ;; And now for the complicated ones.
-    (number
-     (etypecase object
-       (fixnum 'fixnum)
-       (bignum 'bignum)
-       (float
-	(etypecase object
-	  (double-float 'double-float)
-	  (single-float 'single-float)
-	  (short-float 'short-float)
-	  (long-float 'long-float)))
-       (ratio 'ratio)
-       (complex 'complex)))
-    (symbol
-     (if (eq (symbol-package object)
-	     (symbol-package :foo))
-	 'keyword
-	 'symbol))
-    (instance
-     (let ((name (class-proper-name (layout-class (%instance-layout object))))
-       (case name
-	 (alien-internals:alien-value
-	  `(alien:alien
-	    ,(alien-internals:unparse-alien-type
-	      (alien-internals:alien-value-type object))))
-	 (t name)))))
-    (array (type-specifier (ctype-of object)))
-    (system-area-pointer 'system-area-pointer)
-    (weak-pointer 'weak-pointer)
-    (code-component 'code-component)
-    (lra 'lra)
-    (fdefn 'fdefn)
-    (scavenger-hook 'scavenger-hook)
-    (t
-     (warn "Can't figure out the type of ~S" object)
-     t)))
 
 ;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public
 ;;;
@@ -276,7 +244,7 @@
     (member-type
      (if (member object (member-type-members type)) t))
     (class
-     (%instance-typep (layout-of object) type))
+     (class-typep (layout-of object) type))
     (union-type
      (dolist (type (union-type-types type))
        (when (%%typep object type)
@@ -332,7 +300,7 @@
     (error "TYPEP on obsolete object (was class ~S)."
 	   (class-proper-name (layout-class obj-layout))))
   (let* ((layout (class-layout class))
-	 (subclasses (class-subclasses layout)))
+	 (subclasses (class-subclasses class)))
     (when (layout-invalid layout)
       (error "Class is currently invalid: ~S" class))
     (if (or (eq obj-layout layout)
@@ -400,6 +368,7 @@
 	      (equalp (cdr x) (cdr y))))
 	((pathnamep x)
 	 (and (pathnamep y) (pathname= x y)))
+	#-ns-boot
 	((%instancep x)
 	 (let* ((layout-x (%instance-layout x))
 		(length (layout-length layout-x)))
@@ -414,6 +383,17 @@
 		    (unless (or (eq x-el y-el)
 				(equalp x-el y-el))
 		      (return nil)))))))
+	#+ns-boot
+	((structurep x)
+	 (let ((length (structure-length x)))
+	   (and (structurep y)
+		(= length (structure-length y))
+		(dotimes (i length t)
+		  (let ((x-el (structure-ref x i))
+			(y-el (structure-ref y i)))
+		    (unless (or (eq x-el y-el)
+				(equalp x-el y-el))
+		      (return nil)))))))	
 	((vectorp x)
 	 (let ((length (length x)))
 	   (and (vectorp y)
