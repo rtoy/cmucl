@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.27 1991/03/20 02:59:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.28 1991/03/23 17:38:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.27 1991/03/20 02:59:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.28 1991/03/23 17:38:18 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -814,10 +814,8 @@
 ;;;
 (clone-fop (fop-alter-code 140 nil) (fop-byte-alter-code 141)
   (let ((value (pop-stack))
-	(code (pop-stack))
-	(index (- (clone-arg) vm:code-constants-offset)))
-    (declare (type index index))
-    (%primitive code-constant-set code index value)
+	(code (pop-stack)))
+    (setf (code-header-ref code (clone-arg)) value)
     (undefined-value)))
 
 (define-fop (fop-function-entry 142)
