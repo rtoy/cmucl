@@ -656,8 +656,8 @@
 ;;; Read-Source-Form  --  Internal
 ;;;
 ;;;    Read the next form from the source designated by Info.  The second value
-;;; is the initial source path for the read form.  The third value is true when
-;;; at EOF.
+;;; is the top-level form number of the read form.  The third value is true
+;;; when at EOF.
 ;;;
 ;;;   We carefully read from the current source file.  If it is at EOF, we
 ;;; advance to the next file and try again.  When we get a form, we enter it
@@ -677,7 +677,7 @@
 				 (file-info-source-root file))))
 	    (vector-push-extend res forms)
 	    (vector-push-extend pos (file-info-positions file))
-	    (return (values res (list current-idx) nil))))
+	    (return (values res current-idx nil))))
 
 	(unless (advance-source-file info)
 	  (return (values nil nil t)))))))
@@ -708,9 +708,9 @@
 ;;; form, but delay compilation, pushing the result on *TOP-LEVEL-LAMBDAS*
 ;;; instead.
 ;;; 
-(defun convert-and-maybe-compile (form path object)
-  (declare (list path) (type object object))
-  (let ((tll (ir1-top-level form path nil)))
+(defun convert-and-maybe-compile (form tlf-num object)
+  (declare (type index tlf-num) (type object object))
+  (let ((tll (ir1-top-level form tlf-num nil)))
     (cond (*block-compile* (push tll *top-level-lambdas*))
 	  (t
 	   (compile-top-level (list tll) object)
@@ -720,17 +720,13 @@
 ;;; PROCESS-PROGN  --  Internal
 ;;;
 ;;;    Process a PROGN-like portion of a top-level form.  Forms is a list of
-;;; the forms, and Path is the source path that lead to the immediately
-;;; enclosing form.  Offset is added to the position within Forms when
-;;; computing the source path of the subforms.
+;;; the forms, and TLF-Num is the top-level form number of the form they came
+;;; out of.
 ;;;
-(defun process-progn (forms path offset object)
-  (declare (list forms path) (type unsigned-byte offset)
-	   (type object object))
-  (do ((i offset (1+ i))
-       (form forms (cdr form)))
-      ((endp form))
-    (process-form (car form) (cons i path) object)))
+(defun process-progn (forms tlf-num object)
+  (declare (list forms) (type index tlf-num) (type object object))
+  (dolist (form forms)
+    (process-form form tlf-num object)))
 
 
 (proclaim '(special *compiler-error-bailout*))
@@ -744,18 +740,23 @@
 ;;; ### At least for now, always dump package frobbing as interpreted cold load
 ;;; forms.  This might want to be on a switch someday.
 ;;;
-(defun process-form (form path object)
-  (declare (list path) (type object object))
+(defun process-form (form tlf-num object)
+  (declare (type index tlf-num) (type object object))
   (catch 'process-form-error-abort
-    (let ((*compiler-error-bailout*
-	   #'(lambda ()
-	       (convert-and-maybe-compile
-		`(error "Execution of a form compiled with errors:~% ~S"
-		       ',form)
-		path object)
-	       (throw 'process-form-error-abort nil))))
+    (let* ((*compiler-error-bailout*
+	    #'(lambda ()
+		(convert-and-maybe-compile
+		 `(error "Execution of a form compiled with errors:~% ~S"
+			 ',form)
+		 tlf-num object)
+		(throw 'process-form-error-abort nil)))
+	   (form
+	    (handler-case (macroexpand form *fenv*)
+	      (error (condition)
+		     (compiler-error "(during macroexpansion)~%~A"
+				     condition)))))
       (if (atom form)
-	  (convert-and-maybe-compile form path object)
+	  (convert-and-maybe-compile form tlf-num object)
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
@@ -769,17 +770,17 @@
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms path 2 object))))
+		  (process-progn forms tlf-num object))))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
 	       (compiler-error "MACROLET form is too short: ~S." form))
 	     (do-macrolet-stuff
 	      (cadr form)
 	      #'(lambda ()
-		  (process-progn (cddr form) path 2 object))))
-	    (progn (process-progn (cdr form) path 1 object))
+		  (process-progn (cddr form) tlf-num object))))
+	    (progn (process-progn (cdr form) tlf-num object))
 	    (t
-	     (convert-and-maybe-compile form path object))))))
+	     (convert-and-maybe-compile form tlf-num object))))))
       
   (undefined-value))
 
@@ -822,10 +823,12 @@
 	       (*last-format-args* nil)
 	       (*last-message-count* 0))
 	  (loop
-	    (multiple-value-bind (form path eof-p)
+	    (multiple-value-bind (form tlf eof-p)
 				 (read-source-form info)
 	      (when eof-p (return))
-	      (process-form form path object)))
+	      (clrhash *source-paths*)
+	      (find-source-paths form tlf)
+	      (process-form form tlf object)))
 	  
 	  (when *block-compile*
 	    (compile-top-level (nreverse *top-level-lambdas*) object)
@@ -1066,34 +1069,35 @@
 	     (*last-format-string* nil)
 	     (*last-format-args* nil)
 	     (*last-message-count* 0)
-	     (object (make-core-object))
-	     (lambda (ir1-top-level form '(0) t)))
-	
-	(compile-fix-function-name lambda name)
-	(let* ((component
-		(block-component (node-block (lambda-bind lambda))))
-	       (*all-components* (list component)))
-	  (local-call-analyze component))
-	
-	(let* ((components (find-initial-dfo (list lambda)))
-	       (*all-components* components))
-	  (dolist (component components)
-	    (compile-component component object)
-	    (clear-ir2-info component)))
-	
-	(fix-core-source-info *source-info* object)
-	(let* ((res (core-call-top-level-lambda lambda object))
-	       (return (or name res)))
-	  (when name
-	    (setf (fdefinition name) res))
+	     (object (make-core-object)))
+	(find-source-paths form 0)
+	(let ((lambda (ir1-top-level form 0 t)))
 	  
-	  (cond ((or (> *compiler-error-count* start-errors)
-		     (> *compiler-warning-count* start-warnings))
-		 (values return t t))
-		((> *compiler-note-count* start-notes)
-		 (values return t nil))
-		(t
-		 (values return nil nil)))))))))
+	  (compile-fix-function-name lambda name)
+	  (let* ((component
+		  (block-component (node-block (lambda-bind lambda))))
+		 (*all-components* (list component)))
+	    (local-call-analyze component))
+	  
+	  (let* ((components (find-initial-dfo (list lambda)))
+		 (*all-components* components))
+	    (dolist (component components)
+	      (compile-component component object)
+	      (clear-ir2-info component)))
+	  
+	  (fix-core-source-info *source-info* object)
+	  (let* ((res (core-call-top-level-lambda lambda object))
+		 (return (or name res)))
+	    (when name
+	      (setf (fdefinition name) res))
+	    
+	    (cond ((or (> *compiler-error-count* start-errors)
+		       (> *compiler-warning-count* start-warnings))
+		   (values return t t))
+		  ((> *compiler-note-count* start-notes)
+		   (values return t nil))
+		  (t
+		   (values return nil nil)))))))))
 
 #+new-compiler
 ;;; UNCOMPILE  --  Public
