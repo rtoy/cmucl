@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.10 1991/05/23 15:01:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.11 1991/05/23 16:30:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -268,14 +268,17 @@
   ;; First, check any X displays for any pending events.
   #+clx
   (dolist (d/h *display-event-handlers*)
-    (let ((d (car d/h)))
+    (let* ((d (car d/h))
+	   (disp-fd (fd-stream-fd (xlib::display-input-stream d))))
       (declare (inline member))
       ;;
       ;; If in the *descriptor-handlers*, then we are already waiting for input
       ;; on that display, and we don't want to do it recursively.
-      (when (and (not (member (fd-stream-fd (xlib::display-input-stream d))
-			      *descriptor-handlers*
-			      :key #'handler-descriptor))
+      (when (and (dolist (hand *descriptor-handlers* t)
+		   (when (and (eql (handler-descriptor hand) disp-fd)
+			      (not (eq (handler-function hand)
+				       #'ext::call-display-event-handler)))
+		     (return nil)))
 		 (xlib::event-listen d))
 	(handler-bind ((error #'(lambda (condx)
 				  (declare (ignore condx))
@@ -288,12 +291,7 @@
       (wait-for-event timeout)
     (declare (type (unsigned-byte 32) readable writeable))
     ;; Now see what it was (if anything)
-    (cond #+nil
-	  ((eq value server-unique-object)
-	   ;; The interrupt handler fired.
-	   (grab-message-loop)
-	   t)
-	  ((fixnump value)
+    (cond ((fixnump value)
 	   (unless (zerop value)
 	     ;; Check the descriptors.
 	     (let ((result nil))
