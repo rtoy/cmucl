@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.16 1994/10/29 03:08:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.17 1994/10/30 21:50:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,8 +19,8 @@
 
 ;;; If CLX and PCL have not been loaded, then load them.
 ;;;
-#-clx(load "target:clx/clx-library")
 #-pcl(load "target:pcl/pclload")
+#-clx(load "target:clx/clx-library")
 
 (pushnew :motif *features*)
 
