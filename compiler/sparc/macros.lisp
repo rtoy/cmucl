@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.28 2003/10/27 16:59:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.29 2003/12/03 17:52:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.28 2003/10/27 16:59:31 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.29 2003/12/03 17:52:17 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -220,7 +220,7 @@
 	  ;; space.
 
 	  ;; Make sure the temp-tn is a non-descriptor register!
-	  (assert (sc-is ,temp-tn non-descriptor-reg))
+	  (assert (and ,temp-tn (sc-is ,temp-tn non-descriptor-reg)))
 	  (inst add ,temp-tn csp-tn vm:lowtag-mask)
 	  (inst andn ,temp-tn vm:lowtag-mask)
 	  (inst or ,result-tn ,temp-tn ,lowtag)
@@ -289,7 +289,7 @@
 	      (lowtag lowtag))
     `(pseudo-atomic ()
        (allocation ,result-tn (pad-data-block ,size) ,lowtag
-	           #+gencgc :temp-tn #+gencgc ,temp-tn
+	           :temp-tn ,temp-tn
 	           :stack-p ,stack-p)
       (when ,type-code
 	(inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
