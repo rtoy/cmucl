@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.17 1993/03/12 15:18:43 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.18 1993/08/19 23:19:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -295,7 +295,9 @@
       (let ((entry (aref constants i)))
 	(when (and (consp entry)
 		   (eq (car entry) kind)
-		   (eq (cdr entry) info))
+		   (or (eq (cdr entry) info)
+		       (and (consp info)
+			    (equal (cdr entry) info))))
 	  (setf (tn-offset res) i)
 	  (return))))
 
