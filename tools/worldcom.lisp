@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.60 1993/08/19 15:35:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.61 1993/08/19 17:17:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,11 +82,9 @@
 (comf "target:code/lispinit")
 (comf "target:code/fdefinition")
 
-(comf "target:code/error" :byte-compile nil)
+(comf "target:code/error")
 #+small
-(with-compilation-unit (:optimize '(optimize (speed 0)))
-  (comf "target:code/error" :byte-compile :maybe
-	:output-file "target:code/bc-error.fasl"))
+(comf "target:code/error" :byte-compile t)
 
 ;;; prevent deftypes from taking effect at compile time so that we don't
 ;;; install interpreted type expanders causing the compiler to infinitely
@@ -232,9 +230,7 @@
 ;;;
 (let ((c:*compile-time-define-macros* nil))
   (comf "target:code/defstruct")
-  (comf "target:code/defmacro")
-  #+small
-  (comf "target:code/defmacro" :byte-compile t)
+  (comf "target:code/defmacro" :byte-compile *byte-compile*)
   (comf "target:compiler/globaldb")
   ;; We can't compile anything after macros, 'cause it breaks the running lisp.
   (comf "target:code/macros"))
