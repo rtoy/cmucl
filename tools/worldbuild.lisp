@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.29 1993/08/31 11:15:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.30 1993/08/31 13:46:57 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,6 +45,11 @@
 	  "target:assembly/x86/array.assem"
 	  "target:assembly/x86/arith.assem"
 	  "target:assembly/x86/alloc.assem"))
+    ,@(when (c:backend-featurep :alpha)
+	'("target:assembly/alpha/assem-rtns.assem"
+	  "target:assembly/alpha/array.assem"
+	  "target:assembly/alpha/arith.assem"
+	  "target:assembly/alpha/alloc.assem"))
 
     "target:code/type-boot"
     "target:code/fdefinition"
@@ -104,6 +109,8 @@
 	'("target:code/sunos-os"))
     ,@(when (c:backend-featurep :hpux)
         '("target:code/hpux-os"))
+    ,@(when (c:backend-featurep :osf1)
+	'("target:code/osf1-os"))
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
@@ -123,6 +130,8 @@
 	'("target:code/hppa-vm"))
     ,@(when (c:backend-featurep :x86)
 	'("target:code/x86-vm"))
+    ,@(when (c:backend-featurep :alpha)
+	'("target:code/alpha-vm"))
 
     "target:code/signal"
     "target:code/interr"
