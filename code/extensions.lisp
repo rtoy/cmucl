@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.11 1991/05/04 12:29:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.12 1991/07/11 16:31:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
 	    (bindings)
 	    (cond ((null bindings) body)
 		  (t (multiple-value-bind (dummies vals newval setter getter)
-					  (lisp::foo-get-setf-method (caar bindings) env)
+					  (get-setf-method (caar bindings) env)
 		       (let ((save (gensym)))
 			 `((let* (,@(mapcar #'list dummies vals)
 				  (,(car newval) ,(cadar bindings))
@@ -114,7 +114,7 @@
 	(cond ((null bindings) body)
 	      (t (let ((binding (car bindings)))
 		   (multiple-value-bind (dummies vals newval setter getter)
-					(lisp::foo-get-setf-method (car binding) env)
+					(get-setf-method (car binding) env)
 		     (let ((save (gensym)))
 		       (mapcar #'(lambda (a b) (push (list a b) temps))
 			       dummies vals) 
@@ -132,7 +132,7 @@
 
 (define-setf-method logbitp (index int &environment env)
   (multiple-value-bind (temps vals stores store-form access-form)
-		       (lisp::foo-get-setf-method int env)
+		       (get-setf-method int env)
     (let ((ind (gensym))
 	  (store (gensym))
 	  (stemp (first stores)))
@@ -164,7 +164,7 @@
 
 (defmacro deletef (elt list &rest keys &environment env)
   (multiple-value-bind (dummies vals newval setter getter)
-		       (lisp::foo-get-setf-method list env)
+		       (get-setf-method list env)
     (let ((eltsym (gensym))
 	  (listsym (gensym)))
       `(let* ((,eltsym ,elt)
