@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.50 1992/08/20 16:29:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.51 1992/09/23 13:43:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1222,7 +1222,7 @@ default-value-8
   (:info fixed)
   (:results
    (context :scs (descriptor-reg))
-   (count :scs (any-reg)))
+   (count :scs (any-reg descriptor-reg)))
   (:generator 5
     (inst addu count supplied (fixnum (- fixed)))
     (inst subu context csp-tn count)))
