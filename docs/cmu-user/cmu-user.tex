@@ -14,12 +14,12 @@
 %% distribution, and must be obtained from a repository. At this time
 %% I was able to fetch from
 %% ftp.cdrom.com:pub/tex/ctan/macros/latex/contrib/supported/
-%%			camel/index.ins
-%%			camel/index.dtx
-%%			calc/calc.ins
-%%			calc/calc.dtx
-%%			changebar/changebar.ins
-%%			changebar/changebar.dtx
+%%                     camel/index.ins
+%%                     camel/index.dtx
+%%                     calc/calc.ins
+%%                     calc/calc.dtx
+%%                     changebar/changebar.ins
+%%                     changebar/changebar.dtx
 %% One runs latex on the .ins file to produce .tex and/or .sty
 %% files that must be put in a path searched by latex.
 %%
@@ -27,16 +27,17 @@
 %% and a current version of latex2html can be obtained from:
 %% http://saftsack.fs.uni-bayreuth.de/~latex2ht/
 
+%% Delete "[a4paper]" if you don't want this formatted for A4 paper.
 \documentclass[a4paper]{report}
-\usepackage[T1]{fontenc}
+%\usepackage[T1]{fontenc}
 \usepackage{xspace}
 \usepackage{alltt}
 \usepackage{index}
 \usepackage{ifthen}
 \usepackage{calc}
+\usepackage[hyperindex=false,colorlinks=false,urlcolor=blue]{hyperref}
 \usepackage{html}
 \usepackage{varioref}
-\usepackage[hyperindex=false,colorlinks=false,urlcolor=blue]{hyperref}
 
 \input{macros}
 
