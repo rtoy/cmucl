@@ -37,7 +37,6 @@
 (in-package :pcl)
 
 (defun allocate-standard-instance (wrapper &optional (slots-init nil slots-init-p))
-  #-new-kcl-wrapper (declare (special *slot-unbound*))
   #-new-kcl-wrapper
   (let ((instance (%%allocate-instance--class))
 	(no-of-slots (wrapper-no-of-instance-slots wrapper)))

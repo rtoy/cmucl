@@ -180,14 +180,16 @@
    (etypecase index
      (fixnum (if fsc-p
 		 #'(lambda (instance)
-		     (not (eq *slot-unbound*
-			      (%instance-ref (fsc-instance-slots instance) index))))
+		     (not (eq (%instance-ref (fsc-instance-slots instance)
+					     index)
+			      *slot-unbound*)))
 		 #'(lambda (instance)
-		     (not (eq *slot-unbound* 
-			      (%instance-ref (std-instance-slots instance) index))))))
+		     (not (eq (%instance-ref (std-instance-slots instance)
+					     index)
+			      *slot-unbound*)))))
      (cons   #'(lambda (instance)
 		 (declare (ignore instance))
-		 (not (eq *slot-unbound* (cdr index))))))
+		 (not (eq (cdr index) *slot-unbound*)))))
    `(boundp ,slot-name)))
 
 (defun make-optimized-structure-slot-value-using-class-method-function (function)
@@ -285,15 +287,17 @@
     (fixnum (if fsc-p
 		#'(lambda (class instance slotd)
 		    (declare (ignore class slotd))
-		    (not (eq *slot-unbound* 
-			     (%instance-ref (fsc-instance-slots instance) index))))
+		    (not (eq (%instance-ref (fsc-instance-slots instance)
+					    index)
+			     *slot-unbound* )))
 		#'(lambda (class instance slotd)
 		    (declare (ignore class slotd))
-		    (not (eq *slot-unbound* 
-			     (%instance-ref (std-instance-slots instance) index))))))
+		    (not (eq (%instance-ref (std-instance-slots instance)
+					    index)
+			     *slot-unbound* )))))
     (cons   #'(lambda (class instance slotd)
 		(declare (ignore class instance slotd))
-		(not (eq *slot-unbound* (cdr index)))))))
+		(not (eq (cdr index) *slot-unbound*))))))
 
 (defun get-accessor-from-svuc-method-function (class slotd sdfun name)
   (macrolet ((emf-funcall (emf &rest args)
