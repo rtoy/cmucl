@@ -12,4 +12,4 @@ export CMUCLLIB
 
 #
 # Run Lisp with these environment variables set.
-exec /<<your-cmucl-path>>/bin/lisp $@
+exec /<<your-cmucl-path>>/bin/lisp "$@"
