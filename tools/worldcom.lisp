@@ -18,7 +18,7 @@
        (cons (intern (c:backend-name c:*backend*)
 		     (find-package "KEYWORD"))
 	     (remove-if #'(lambda (x)
-			    (member x '(:pmax :sparc)))
+			    (member x '(:pmax :sparc :rt)))
 			*features*))))
 
 
@@ -40,6 +40,11 @@
   (comf "target:assembly/sparc/arith" :assem t)
   (comf "target:assembly/sparc/alloc" :assem t))
 
+(when (string= (c:backend-name c:*backend*) "RT")
+  (comf "target:assembly/rt/assem-rtns" :assem t)
+  (comf "target:assembly/rt/array" :assem t)
+  (comf "target:assembly/rt/arith" :assem t)
+  (comf "target:assembly/rt/alloc" :assem t))
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
@@ -77,6 +82,9 @@
 (when (string= (c:backend-name c:*backend*) "SPARC")
   (comf "target:code/sparc-machdef")
   (comf "target:code/sparc-vm"))
+(when (string= (c:backend-name c:*backend*) "RT")
+  (comf "target:code/rt-machdef")
+  (comf "target:code/rt-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")
