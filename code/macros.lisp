@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.58 1998/07/17 12:10:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.59 1998/12/19 16:07:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1515,7 +1515,7 @@
        (setqs nil)
        (pairs pairs (cddr pairs)))
       ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs))))
+       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
     (let ((gen (gensym)))
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)
