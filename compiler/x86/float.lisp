@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.21 1998/02/19 19:34:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.22 1998/02/21 18:24:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,14 +138,12 @@
 ;;; Anyhow, might as well use the feature. It can be turned
 ;;; off by hacking the "immediate-constant-sc" in vm.lisp.
 (define-move-function (load-fp-constant 2) (vop x y)
-  ((fp-single-constant)(single-reg)
-   (fp-double-constant)(double-reg))
-
+  ((fp-constant) (single-reg double-reg))
   (let ((value (c::constant-value (c::tn-leaf x))))
     (with-empty-tn@fp-top(y)
       (cond ((zerop value)
 	     (inst fldz))
-	    ((or (= value 1f0)(= value 1d0))
+	    ((= value 1l0)
 	     (inst fld1))
 	    (t (warn "Ignoring bogus i387 Constant ~a" value))))))
 
@@ -308,16 +306,6 @@
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
 
-(define-vop (move-from-fp-single-const)
-  (:args (x :scs (fp-single-constant)))
-  (:results (y :scs (descriptor-reg)))
-  (:generator 2
-     (ecase (c::constant-value (c::tn-leaf x))
-       (0f0 (load-symbol-value y *fp-constant-0s0*))
-       (1f0 (load-symbol-value y *fp-constant-1s0*)))))
-(define-move-vop move-from-fp-single-const :move
-  (fp-single-constant) (descriptor-reg))
-
 (define-vop (move-from-double)
   (:args (x :scs (double-reg) :to :save))
   (:results (y :scs (descriptor-reg)))
@@ -330,15 +318,17 @@
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
 
-(define-vop (move-from-fp-double-const)
-  (:args (x :scs (fp-double-constant)))
+(define-vop (move-from-fp-constant)
+  (:args (x :scs (fp-constant)))
   (:results (y :scs (descriptor-reg)))
   (:generator 2
      (ecase (c::constant-value (c::tn-leaf x))
+       (0f0 (load-symbol-value y *fp-constant-0s0*))
+       (1f0 (load-symbol-value y *fp-constant-1s0*))
        (0d0 (load-symbol-value y *fp-constant-0d0*))
        (1d0 (load-symbol-value y *fp-constant-1d0*)))))
-(define-move-vop move-from-fp-double-const :move
-  (fp-double-constant) (descriptor-reg))
+(define-move-vop move-from-fp-constant :move
+  (fp-constant) (descriptor-reg))
 
 ;;;
 ;;; Move from a descriptor to a float register

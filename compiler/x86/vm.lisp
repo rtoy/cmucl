@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.7 1998/02/14 21:09:52 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.8 1998/02/21 18:24:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,17 +106,6 @@
 (defreg fr7 7 :float)
 (defregset float-regs fr0 fr1 fr2 fr3 fr4 fr5 fr6 fr7)
 
-;(defvar *double-float-register-names* (make-array 8 :initial-element nil))
-;(defreg dfr0 0 :double-float)
-;(defreg dfr1 1 :double-float)
-;(defreg dfr2 2 :double-float)
-;(defreg dfr3 3 :double-float)
-;(defreg dfr4 4 :double-float)
-;(defreg dfr5 5 :double-float)
-;(defreg dfr6 6 :double-float)
-;(defreg dfr7 7 :double-float)
-;(defregset double-float-regs dfr0 dfr1 dfr2 dfr3 dfr4 dfr5 dfr6 dfr7)
-
 
 ;;;; SB definitions.
 
@@ -168,10 +157,8 @@
   ;; Non-immediate contstants in the constant pool
   (constant constant)
 
-    ;; Some FP constants can be generated in the i387 silicon.
-
-    (fp-single-constant immediate-constant)
-    (fp-double-constant immediate-constant)
+  ;; Some FP constants can be generated in the i387 silicon.
+  (fp-constant immediate-constant)
     
   (immediate immediate-constant)
 
@@ -190,7 +177,7 @@
   #+complex-float
   (complex-single-stack stack :element-size 2)	; complex-single-floats
   #+complex-float
-  (complex-double-stack stack :element-size 4)	; complex-double-floats.
+  (complex-double-stack stack :element-size 4)	; complex-double-floats
 
   ;; **** Magic SCs.
 
@@ -219,8 +206,7 @@
 		  :locations #.dword-regs
 		  :element-size 2
 ;		  :reserve-locations (#.eax-offset)
-		  :constant-scs
-		  (constant immediate)
+		  :constant-scs (constant immediate)
 		  :save-p t
 		  :alternate-scs (control-stack))
 
@@ -258,11 +244,6 @@
 		:alternate-scs (unsigned-stack))
 
   ;; Random objects that must not be seen by GC.  Used only as temporaries.
-  (dword-reg registers
-	     :locations #.dword-regs
-	     :element-size 2
-;	     :reserve-locations (#.eax-offset)
-	     )
   (word-reg registers
 	    :locations #.word-regs
 	    :element-size 2
@@ -278,14 +259,14 @@
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
 	      :locations (0 1 2 3 4 5 6 7)
-	      :constant-scs (fp-single-constant)
+	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
 	      :locations (0 1 2 3 4 5 6 7)
-	      :constant-scs (fp-double-constant)
+	      :constant-scs (fp-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
 
@@ -314,8 +295,8 @@
 (defconstant byte-sc-names '(base-char-reg byte-reg base-char-stack))
 (defconstant word-sc-names '(word-reg))
 (defconstant dword-sc-names
-  '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg dword-reg
-    control-stack signed-stack unsigned-stack sap-stack single-stack constant))
+  '(any-reg descriptor-reg sap-reg signed-reg unsigned-reg control-stack
+    signed-stack unsigned-stack sap-stack single-stack constant))
 
 ;;;
 ;;; added by jrd.  I guess the right thing to do is to treat floats
@@ -343,7 +324,7 @@
 				    :offset ,reg-offset-name)))))
       `(progn ,@(forms)))))
 
-(def-random-reg-tns dword-reg eax ebx ecx edx ebp esp edi esi)
+(def-random-reg-tns unsigned-reg eax ebx ecx edx ebp esp edi esi)
 (def-random-reg-tns word-reg ax bx cx dx bp sp di si)
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
@@ -352,16 +333,10 @@
 
 ;; Added by pw.
 
-(defparameter fp-single-constant-tn
+(defparameter fp-constant-tn
   (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'fp-single-constant)
+		  :sc (sc-or-lose 'fp-constant)
 		  :offset 31))		; Offset doesn't get used.
-(defparameter fp-double-constant-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'fp-single-constant)
-		  :offset 31))
-
-
 
 
 ;;; Immediate-Constant-SC
@@ -374,15 +349,14 @@
     ((or fixnum system-area-pointer character)
      (sc-number-or-lose 'immediate *backend*))
     (symbol
-     (if (static-symbol-p value)
-	 (sc-number-or-lose 'immediate *backend*)
-	 nil))
+     (when (static-symbol-p value)
+       (sc-number-or-lose 'immediate *backend*)))
     (single-float
      (when (or (eql value 0f0) (eql value 1f0))
-       (sc-number-or-lose 'fp-single-constant *backend*)))
+       (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
      (when (or (eql value 0d0) (eql value 1d0))
-       (sc-number-or-lose 'fp-double-constant *backend*)))))
+       (sc-number-or-lose 'fp-constant *backend*)))))
 
 
 ;;;; Function Call Parameters
@@ -439,7 +413,6 @@
 		  (< -1 offset (length name-vec))
 		  (svref name-vec offset))
 	     (format nil "<Unknown Reg: off=~D, sc=~A>" offset sc-name))))
-      ;; (float-registers "FloatStackTop")
       (float-registers (format nil "FR~D" offset))
       (stack (format nil "S~D" offset))
       (constant (format nil "Const~D" offset))
