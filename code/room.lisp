@@ -7,18 +7,18 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.5 1991/04/09 14:20:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.6 1991/04/14 16:49:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.5 1991/04/09 14:20:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.6 1991/04/14 16:49:54 ram Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
-		       structure-usage find-holes))
+		       structure-usage find-holes print-allocated-objects))
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -541,4 +541,64 @@
        space)
       (when start-addr
 	(format t "~D bytes at #x~X~%" total-bytes start-addr))))
+  (values))
+
+
+;;; Print allocated objects:
+
+(defun pagesize ()
+  (nth-value 1 (mach:vm_statistics system:*task-self*)))
+
+(defun print-allocated-objects (space &key (percent 0) (pages 5)
+				      (stream *standard-output*))
+  (declare (type (integer 0 99) percent) (type c::index pages)
+	   (type stream stream) (type spaces space)) 
+  (multiple-value-bind (start-sap end-sap)
+		       (space-bounds space)
+    (let* ((space-start (sap-int start-sap))
+	   (space-end (sap-int end-sap))
+	   (space-size (- space-end space-start))
+	   (pagesize (pagesize))
+	   (start (+ space-start (round (* space-size percent) 100)))
+	   (pages-so-far 0)
+	   (last-page 0))
+      (declare (type (unsigned-byte 32) last-page start)
+	       (fixnum pages-so-far pagesize))
+      (map-allocated-objects
+       #'(lambda (obj type size)
+	   (declare (ignore size) (optimize (speed 3) (safety 0)))
+	   (let ((addr (get-lisp-obj-address obj)))
+	     (when (and (>= addr start)
+			(<= pages-so-far pages))
+	       (let ((this-page (* (the (unsigned-byte 32)
+					(truncate addr pagesize))
+				   pagesize)))
+		 (declare (type (unsigned-byte 32) this-page))
+		 (when (/= this-page last-page)
+		   (when (< pages-so-far pages)
+		     (format stream "~2&**** Page ~D, address ~X:~%"
+			     pages-so-far addr))
+		   (setq last-page this-page)
+		   (incf pages-so-far)))
+		   
+	       (case type
+		 (#.code-header-type
+		  (let ((dinfo (code-debug-info obj)))
+		    (format stream "~&Code object: ~S~%"
+			    (if dinfo
+				(c::compiled-debug-info-name dinfo)
+				"No debug info."))))
+		 (#.symbol-header-type
+		  (format stream "~&~S~%" obj))
+		 (#.list-pointer-type
+		  (write-char #\. stream))
+		 (t
+		  (fresh-line stream)
+		  (let ((str (write-to-string obj :level 5 :length 10
+					      :pretty nil)))
+		    (unless (eql type structure-header-type)
+		      (format stream "~S: " (type-of obj)))
+		    (format stream "~A~%"
+			    (subseq str 0 (min (length str) 60)))))))))
+       space)))
   (values))
