@@ -444,7 +444,7 @@
 ;;;
 ;;;    Call the function that is the definition of the symbol at the specifed
 ;;; offset, passing Nargs arguments.  The arguments should already be set up in
-;;; A0..A2.  The function must take no more than 3 arguments and return no more
+;;; A0..A3.  The function must take no more than 4 arguments and return no more
 ;;; than 3 values.  We make an "escape frame" and save the entire register set
 ;;; in it.  If the called function returns, we restore the saved registers
 ;;; *except* for A<N> and NL<N>.  This is so that we return the values returned
@@ -453,6 +453,8 @@
 ;;; the benefit of the debugger.
 ;;;
 (defmacro escape-routine (symbol-offset nargs)
+  (unless (<= 0 nargs 4)
+    (error "Losing NARGS: ~D." nargs))
   `((cal SP SP (* 4 %escape-frame-size)) ; Allocate frame
     ;; Clear type bits in unboxed registers so that GC doesn't gag.  If these
     ;; hold user fixnum or string-char variables, then this won't destroy the
@@ -486,6 +488,12 @@
     (cas PC PC NL1)
     (lr OLD-CONT CONT) ; OLD-CONT gets escape frame.
     (lr CONT SP) ; So escape frame doesn't get overwritten.
+    ;;
+    ;; If 4 args, set up arg frame.
+    ,@(when (= nargs 4)
+	'((cal SP SP (* 4 4))
+	  (storew A3 SP -4)))
+    ;; 
     ;; Call, giving this miscop as return PC for escape frame.
     (balrx PC PC)
     (lis NARGS ,nargs) ; Load argument count
