@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.15 1992/05/07 09:57:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.16 1992/05/15 17:53:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -342,6 +342,7 @@
 		     (hash-table-bucket-next bucket))
 	       (setf (svref vector index)
 		     (hash-table-bucket-next bucket)))
+	   (decf (hash-table-number-entries hash-table))
 	   (return t)))))))
 
 ;;; CLRHASH -- public.
