@@ -42,6 +42,8 @@
 	  package-error package-error-package division-by-zero
 	  floating-point-overflow floating-point-underflow))
 
+(in-package "EXTENSIONS")
+(export '(floating-point-inexact floating-point-invalid))
 
 (in-package "CONDITIONS")
 
@@ -805,12 +807,20 @@ The previous version is uglier, but it sets up unique run-time tags.
 	     (format stream "The function ~S is undefined."
 		     (cell-error-name condition)))))
 
-(define-condition arithmetic-error (error) (operation operands))
+(define-condition arithmetic-error (error) (operation operands)
+  (:report (lambda (condition stream)
+	     (format stream "Arithmetic error ~S signalled."
+		     (type-of condition))
+	     (when (arithmetic-error-operation condition)
+	       (format stream "~%Operation was ~S, operands ~S."
+		       (arithmetic-error-operation condition)
+		       (arithmetic-error-operands condition))))))
 
 (define-condition division-by-zero         (arithmetic-error) ())
 (define-condition floating-point-overflow  (arithmetic-error) ())
 (define-condition floating-point-underflow (arithmetic-error) ())
-
+(define-condition floating-point-inexact   (arithmetic-error) ())
+(define-condition floating-point-invalid   (arithmetic-error) ())
 
 
 ;;;; HANDLER-CASE and IGNORE-ERRORS.
