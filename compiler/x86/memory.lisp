@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.5 1999/03/04 11:49:22 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.6 1999/03/08 00:53:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,7 +92,7 @@
 		   :from (:argument 1) :to :result :target result)  eax)
   (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
   (:variant-vars offset lowtag)
-  (:results (result :scs (descriptor-reg)))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:generator 4
     (move eax old-value)
     (move temp new-value)
@@ -162,7 +162,7 @@
 		   :from (:argument 1) :to :result :target result)  eax)
   (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
   (:variant-vars base lowtag)
-  (:results (result :scs (descriptor-reg)))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:info offset)
   (:generator 4
     (move eax old-value)

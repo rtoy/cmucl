@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.7 1999/03/04 11:49:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.8 1999/03/08 00:53:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,7 +332,7 @@
   (:temporary (:sc descriptor-reg :offset eax-offset
 		   :from (:argument 2) :to :result :target result)  eax)
   (:temporary (:sc descriptor-reg :from (:argument 3) :to :result) temp)
-  (:results (result :scs (descriptor-reg)))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:policy :fast-safe)
   (:generator 5
     (move eax old-value)
