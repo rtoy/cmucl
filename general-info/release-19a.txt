@@ -53,6 +53,7 @@ New in this release:
      - When a profiled function is redefined, it is re-profiled.
      - A basic implementation of simple-streams added.  Some
        functionality may be missing.
+     - UNIX:UNIX-LSEEK working with files > 2G on BSDs.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'

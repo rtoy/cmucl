@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.87 2003/06/06 18:41:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.88 2003/06/07 09:39:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,8 +17,7 @@
 (use-package "SYSTEM")
 (use-package "EXT")
 
-(export '(
-	  daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
+(export '(daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
 	  timeval tv-sec tv-usec timezone tz-minuteswest tz-dsttime
 	  itimerval it-interval it-value tchars t-intrc t-quitc t-startc
 	  t-stopc t-eofc t-brkc ltchars t-suspc t-dsuspc t-rprntc t-flushc
@@ -179,39 +178,69 @@
 
 ;;;; Common machine independent structures.
 
-#+bsd
-(def-alien-type quad-t (array unsigned-long 2))
-
 ;;; From sys/types.h
 
-(def-alien-type daddr-t #-(or linux alpha) long #+(or linux alpha) int)
-(def-alien-type caddr-t (* char))
-(def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
-(def-alien-type swblk-t long)
-(def-alien-type size-t #-(or linux alpha) long #+linux unsigned-int 
-  #+alpha unsigned-long)
-(def-alien-type time-t #-(or linux alpha) unsigned-long #+linux long
-  #+alpha unsigned-int)
+(def-alien-type int64-t (signed 64))
+(def-alien-type u-int64-t (unsigned 64))
 
-(def-alien-type dev-t #-(or alpha svr4 bsd linux) short #+linux unsigned-short
-	 #+alpha int #+(and (not linux) (or bsd svr4)) unsigned-long)
+(def-alien-type daddr-t
+    #-(or linux alpha) long
+    #+(or linux alpha) int)
+
+(def-alien-type caddr-t (* char))
+
+(def-alien-type ino-t
+    #-alpha unsigned-long
+    #+alpha unsigned-int)
+
+(def-alien-type swblk-t long)
+
+(def-alien-type size-t
+    #-(or linux alpha) long
+    #+linux unsigned-int 
+    #+alpha unsigned-long)
+
+(def-alien-type time-t
+    #-(or linux alpha) unsigned-long
+    #+linux long
+    #+alpha unsigned-int)
+
+(def-alien-type dev-t
+    #-(or alpha svr4 bsd linux) short
+    #+linux unsigned-short
+    #+alpha int
+    #+(and (not linux) (or bsd svr4)) unsigned-long)
+
 #-BSD
-(def-alien-type off-t #-alpha long #+alpha unsigned-long)
+(progn
+  (deftype file-offset () '(signed-byte 32))
+  (def-alien-type off-t
+      #-alpha long
+      #+alpha unsigned-long)		;??? very dubious
+  (def-alien-type uid-t
+      #-(or alpha svr4) unsigned-short
+      #+alpha unsigned-int
+      #+svr4 long)
+  (def-alien-type gid-t
+      #-(or alpha svr4) unsigned-short
+      #+alpha unsigned-int
+      #+svr4 long))
+
 #+BSD
-(def-alien-type off-t quad-t)
-#-BSD
-(def-alien-type uid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
-  #+svr4 long)
-#+BSD
-(def-alien-type uid-t unsigned-long)
-#-BSD
-(def-alien-type gid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
-  #+svr4 long)
-#+BSD
-(def-alien-type gid-t unsigned-long)
-(def-alien-type mode-t #-(or alpha svr4) unsigned-short
-  #+alpha unsigned-int #+svr4 unsigned-long)
-(def-alien-type nlink-t #-svr4 unsigned-short #+svr4 unsigned-long)
+(progn
+  (deftype file-offset () '(signed-byte 64))
+  (def-alien-type off-t int64-t)
+  (def-alien-type uid-t unsigned-long)
+  (def-alien-type gid-t unsigned-long))
+
+(def-alien-type mode-t
+    #-(or alpha svr4) unsigned-short
+    #+alpha unsigned-int
+    #+svr4 unsigned-long)
+
+(def-alien-type nlink-t
+    #-svr4 unsigned-short
+    #+svr4 unsigned-long)
 
 (defconstant FD-SETSIZE
   #-(or hpux alpha linux FreeBSD) 256
@@ -836,75 +865,6 @@
       (svref *unix-errors* error-number)
       (format nil "Unknown error [~d]" error-number)))
 
-
-
-;;;; Memory-mapped files
-
-(defconstant +null+ (sys:int-sap 0))
-
-(defconstant prot_read 1)		; Readable
-(defconstant prot_write 2)		; Writable
-(defconstant prot_exec 4)		; Executable
-(defconstant prot_none 0)		; No access
-
-(defconstant map_shared 1)		; Changes are shared
-(defconstant map_private 2)		; Changes are private
-(defconstant map_fixed 16)		; Fixed, user-defined address
-(defconstant map_noreserve #x40)	; Don't reserve swap space
-(defconstant map_anonymous
-  #+solaris #x100			; Solaris
-  #+linux 32				; Linux
-  #+freebsd #x1000)
-
-;; The return value from mmap that means mmap failed.
-(defconstant map_failed -1)
-
-#-freebsd
-(defun unix-mmap (addr length prot flags fd offset)
-  (declare (type (or null system-area-pointer) addr)
-	   (type (unsigned-byte 32) length)
-           (type (integer 1 7) prot)
-	   (type (unsigned-byte 32) flags)
-	   (type unix-fd fd)
-	   (type (signed-byte 32) offset))
-  ;; Can't use syscall, because the address that is returned could be
-  ;; "negative".  Hence we explicitly check for mmap returning
-  ;; MAP_FAILED.
-  (let ((result
-	 (alien-funcall (extern-alien "mmap" (function int system-area-pointer
-						       size-t int int int off-t))
-			(or addr +null+) length prot flags (or fd -1) offset)))
-    (if (= result map_failed)
-	(values nil unix-errno)
-	(sys:int-sap result))))
-
-#+freebsd
-(defun unix-mmap (addr length prot flags fd offset)
-  (declare (type (or null system-area-pointer) addr)
-	   (type (unsigned-byte 32) length)
-           (type (integer 1 7) prot)
-	   (type (unsigned-byte 32) flags)
-	   (type unix-fd fd)
-	   (type (signed-byte 32) offset))
-  ;; Can't use syscall, because the address that is returned could be
-  ;; "negative".  Hence we explicitly check for mmap returning
-  ;; MAP_FAILED.
-  (let ((result
-	 (alien-funcall
-	  (extern-alien "mmap"
-			(function int system-area-pointer
-				  size-t int int int
-				  unsigned-long unsigned-long))
-	  (or addr +null+) length prot flags (or fd -1) offset 0)))
-    (if (= result map_failed)
-	(values nil unix-errno)
-	(sys:int-sap result))))
-
-(defun unix-munmap (addr length)
-  (declare (type system-area-pointer addr)
-	   (type (unsigned-byte 32) length))
-  (syscall ("munmap" system-area-pointer size-t) t addr length))
-
 
 ;;;; Lisp types used by syscalls.
 
@@ -978,13 +938,16 @@
 
 ;;;; System calls.
 
-
-(defmacro syscall ((name &rest arg-types) success-form &rest args)
-  `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
-				,@args)))
-     (if (minusp result)
+(defmacro %syscall ((name (&rest arg-types) result-type)
+		    success-form &rest args)
+  `(let* ((fn (extern-alien ,name (function ,result-type ,@arg-types)))
+	  (result (alien-funcall fn ,@args)))
+     (if (eql -1 result)
 	 (values nil unix-errno)
 	 ,success-form)))
+
+(defmacro syscall ((name &rest arg-types) success-form &rest args)
+  `(%syscall (,name (,@arg-types) int) ,success-form ,@args))
 
 ;;; Like syscall, but if it fails, signal an error instead of returing error
 ;;; codes.  Should only be used for syscalls that will never really get an
@@ -993,7 +956,7 @@
 (defmacro syscall* ((name &rest arg-types) success-form &rest args)
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
 				,@args)))
-     (if (minusp result)
+     (if (eql -1 result)
 	 (error "Syscall ~A failed: ~A" ,name (get-unix-error-msg))
 	 ,success-form)))
 
@@ -1003,6 +966,53 @@
 (defmacro int-syscall ((name &rest arg-types) &rest args)
   `(syscall (,name ,@arg-types) (values result 0) ,@args))
 
+(defmacro off-t-syscall ((name arg-types) &rest args)
+  `(%syscall (,name ,arg-types off-t) (values result 0) ,@args))
+
+
+;;;; Memory-mapped files
+
+(defconstant +null+ (sys:int-sap 0))
+
+(defconstant prot_read 1)		; Readable
+(defconstant prot_write 2)		; Writable
+(defconstant prot_exec 4)		; Executable
+(defconstant prot_none 0)		; No access
+
+(defconstant map_shared 1)		; Changes are shared
+(defconstant map_private 2)		; Changes are private
+(defconstant map_fixed 16)		; Fixed, user-defined address
+(defconstant map_noreserve #x40)	; Don't reserve swap space
+(defconstant map_anonymous
+  #+solaris #x100			; Solaris
+  #+linux 32				; Linux
+  #+freebsd #x1000)
+
+;; The return value from mmap that means mmap failed.
+(defconstant map_failed -1)
+
+(defun unix-mmap (addr length prot flags fd offset)
+  (declare (type (or null system-area-pointer) addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot)
+	   (type (unsigned-byte 32) flags)
+	   (type unix-fd fd)
+	   (type file-offset offset))
+  ;; Can't use syscall, because the address that is returned could be
+  ;; "negative".  Hence we explicitly check for mmap returning
+  ;; MAP_FAILED.
+  (let ((result
+	 (alien-funcall (extern-alien "mmap" (function int system-area-pointer
+						       size-t int int int off-t))
+			(or addr +null+) length prot flags (or fd -1) offset)))
+    (if (= result map_failed)
+	(values nil unix-errno)
+	(sys:int-sap result))))
+
+(defun unix-munmap (addr length)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length))
+  (syscall ("munmap" system-area-pointer size-t) t addr length))
 
 ;;; Unix-access accepts a path and a mode.  It returns two values the
 ;;; first is T if the file is accessible and NIL otherwise.  The second
@@ -1261,13 +1271,9 @@
    l_xtnd       Extend the file size.
   "
   (declare (type unix-fd fd)
-	   (type (signed-byte 32) offset)
+	   (type file-offset offset)
 	   (type (integer 0 2) whence))
-  #-(and x86 bsd) (int-syscall ("lseek" int off-t int) fd offset whence)
-  ;; Need a 64-bit return value type for this. TBD. For now,
-  ;; don't use this with any 2G+ partitions.
-  #+(and bsd x86) (int-syscall ("lseek" int unsigned-long unsigned-long int)
-		     fd offset 0 whence))
+  (off-t-syscall ("lseek" (int off-t int)) fd offset whence))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
 ;;; corresponding directory with mode mode.
