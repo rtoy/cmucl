@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.9 1992/08/03 08:18:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.10 1992/09/07 15:33:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,13 +146,12 @@
    ((setf (block-component structure) *current-component*)
     (setf (block-start structure) start)))
   
-  ((ref (derived-type leaf inlinep)) node-source-path
+  ((ref (derived-type leaf)) node-source-path
    ((node-deinits)
     (setf (ref-leaf structure) *undefined*))
    ((node-inits)
     (setf (node-derived-type structure) derived-type)
-    (setf (ref-leaf structure) leaf)
-    (setf (ref-inlinep structure) inlinep)))
+    (setf (ref-leaf structure) leaf)))
   
   ((combination (fun)) node-source-path
    ((node-deinits)
