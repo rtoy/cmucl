@@ -2,9 +2,13 @@
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
-;;; Carnegie Mellon University, and has been placed in the public
-;;; domain.  If you want to use this code or any part of CMU Common
-;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.8 1991/07/23 12:14:00 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; Description of the IBM RT instruction set.
@@ -1079,3 +1083,313 @@
   (inst mc68881-store-status-inst data temp
 	(do-68881-inst :move temp :creg creg :data data
 		       :class :scr-to-mem)))
+
+;;; AFPA instruction set details:
+
+;;; Support for the AFPA on IBM RT PC (APC and EAPC models).
+
+(defconstant afpa-opcodes
+  '((:absl . #x74)
+    (:abss . #x75)
+    (:addl . #x40)
+    (:adds . #x41)
+    (:coml . #x48)
+    (:coms . #x49)
+    (:comtl . #x4A)
+    (:comts . #x4B)
+    (:csl  . #x1B)
+    (:cls  . #x16)
+    (:cwl  . #x03)
+    (:cws  . #x07)
+    (:copl . #x44)
+    (:cops . #x45)
+    (:divl . #x60)
+    (:divs . #x61)
+    (:flw  . #x3B)
+    (:fsw  . #x3F)
+    (:mull . #x70)
+    (:muls . #x71)
+    (:negl . #x54)
+    (:negs . #x55)
+    (:noop . #x9F)
+    (:rdfr . #xBC) ; type = ld
+    (:rlw  . #x23)
+    (:rsw  . #x27)
+    (:subl . #x50)
+    (:subs . #x51)
+    (:tlw  . #x2B)
+    (:tsw  . #x2F)
+    (:wtfr . #x94)))
+  
+(defconstant afpa-special-opcodes
+  '((:wtstr . #.(ash #x10FEE 2)) ; DS = #b01, OP1, OP2 = #xE.
+    (:rdstr . #.(ash #x137EE 2)) ; DS = #b01, OP1, OP2 = #xE, type = ld
+    (:rddma . #.(ash #xF9F00 2)))) ; DS = #b11, OP2 = #x30
+
+(defconstant afpa-ds-codes
+  '((:register . #b00)
+    (:fr1-immediate . #b10)
+    (:fr2-immediate . #b01)))
+
+(defconstant afpa-ts-codes
+  '((:pio . #b00)
+    (:word . #b01)
+    (:single . #b01)
+    (:double . #b10)
+    (:multiple . #b11)))
+
+#|
+(defconstant afpa-atanl #x0D4)
+(defconstant afpa-cosl #x0C2)
+(defconstant afpa-expl #x0D8)
+(defconstant afpa-log10l #x0DE)
+(defconstant afpa-logl #x0DC)
+(defconstant afpa-sinl #x0C0)
+(defconstant afpa-sqrl #x064)
+(defconstant afpa-sqrs #x065)
+(defconstant afpa-tanl #x0C4)
+|#
+
+(defun afpa-fp-reg-p (object)
+  (and (tn-p object)
+       (eq (sb-name (sc-sb (tn-sc object)))
+	   'afpa-float-registers)))
+
+(define-argument-type afpa-fp-reg
+  :type '(satisfies afpa-fp-reg-p)
+  :function tn-offset)
+
+;;; These are really L and ST (load and store word) instructions, but we have
+;;; magic extra arguments to represent the reading and writing of the FP
+;;; registers.  R3 will already have been set up with the high bits of the FP
+;;; instruction by a preceding CAL.
+;;;
+(define-format (afpa-l-inst 32)
+  (fr2 (byte 0 0) :default 0)
+  (fr1 (byte 0 0) :read t)
+  (op (byte 8 24) :default #xCD)
+  (r2 (byte 4 20) :write t)
+  (r3 (byte 4 16) :read t)
+  (i (byte 16 0)))
+;;;
+(define-format (afpa-st-inst 32)
+  (fr2 (byte 0 0) :read t :write t)
+  (fr1 (byte 0 0) :read t)
+  (op (byte 8 24) :default #xDD)
+  (r2 (byte 4 20) :read t)
+  (r3 (byte 4 16) :read t)
+  (i (byte 16 0)))
+
+
+;;; DO-AFPA-INST  --  Internal
+;;;
+;;;    Utility used to emit a afpa operation.  We emit the CAU that sets up
+;;; the high bits of the operation in Temp, and we return the low bits that
+;;; should be passed as the I field of the actual FP operation instruction.
+;;;
+;;; Note: FR2 is the modified register (if any), and the *first* operand to
+;;; binops (I didn't make this up.)
+;;;
+(defun do-afpa-inst (op temp &key fr1 fr2 (ds :register) (ts :pio)
+			data odd)
+  (when fr1
+    (assert (afpa-fp-reg-p fr1)))
+  (when fr2
+    (assert (afpa-fp-reg-p fr2)))
+  (when data
+    (assert (and (tn-p data)
+		 (eq (sb-name (sc-sb (tn-sc data))) 'registers)
+		 (not (and fr1 fr2)))))
+  (when odd (assert data))
+  (let* ((inc (if odd 1 0))
+	 (fr1-offset (if fr1 (+ (tn-offset fr1) inc) 0))
+	 (fr2-offset (if fr2 (+ (tn-offset fr2) inc) 0))
+	 (opcode
+	  (logior (ash (if (eq ts :pio) #xFF #xFE) 24)
+		  (ash (ldb (byte 2 4) fr1-offset) 22)
+		  (ash (ldb (byte 2 4) fr2-offset) 20)
+		  (ash (or (cdr (assoc ds afpa-ds-codes))
+			   (error "Unknown DS code: ~S." ds))
+		       18)
+		  (let ((res (cdr (assoc op afpa-opcodes))))
+		    (if res
+			(ash res 10)
+			(or (cdr (assoc op afpa-special-opcodes))
+			    (error "Unknown opcode: ~S." op))))
+		  (ash (ldb (byte 4 0) fr1-offset) 6)
+		  (ash (ldb (byte 4 0) fr2-offset) 2)
+		  (or (cdr (assoc ts afpa-ts-codes))
+		      (error "Unknown TS code: ~S." ts))))
+	 (low (logand opcode #xFFFF))
+	 (high (+ (logand (ash opcode -16) #xFFFF)
+		  (if (eql (logand low #x8000) 0) 0 1))))
+    (inst cau temp 0 high)
+    low))
+
+
+;;; The AFPA-BINOP pseudo-instruction emits a floating-point binop on the afpa.
+;;; FR2 is the destination float register (and first arg).  FR1 is the source
+;;; float register.  Op is the afpa opcode.  Temp is a sap-reg (i.e. non-zero,
+;;; non-descriptor) register that we form the FP instruction in.
+;;;
+(define-instruction (afpa-binop-inst)
+  (afpa-st-inst
+   (fr2 :argument afpa-fp-reg)
+   (fr1 :argument afpa-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+;;;
+(define-pseudo-instruction afpa-binop 64 (fr2 fr1 op temp)
+  (inst afpa-binop-inst fr2 fr1 temp
+	(do-afpa-inst op temp :fr1 fr1 :fr2 fr2)))
+
+
+;;; Unop is like binop, but we don't read FR2 before we write it.
+;;;
+(define-instruction (afpa-unop-inst)
+  (afpa-st-inst
+   (fr2 :argument afpa-fp-reg :read nil)
+   (fr1 :argument afpa-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-unop 64 (fr2 fr1 op temp)
+  (inst afpa-unop-inst fr2 fr1 temp
+	(do-afpa-inst op temp :fr1 fr1 :fr2 fr2)))
+
+;;; Sugar up the move a bit...
+(define-pseudo-instruction afpa-move 64 (fr2 fr1 format temp)
+  (inst afpa-unop fr2 fr1
+	(ecase format
+	  (:single :cops)
+	  (:double :copl))
+	temp))
+
+;;; Compare is like binop, but we don't write FR2.
+;;;
+(define-instruction (afpa-compare-inst)
+  (afpa-st-inst
+   (fr2 :argument afpa-fp-reg :write nil)
+   (fr1 :argument afpa-fp-reg)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-compare 64 (fr2 fr1 op temp)
+  (inst afpa-compare-inst fr2 fr1 temp
+	(do-afpa-inst op temp :fr1 fr1 :fr2 fr2)))
+
+
+;;; Noop is used to wait for DMA operations (load and store) to complete.
+;;;
+(define-instruction (afpa-noop-inst :pinned t)
+  (afpa-st-inst
+   (fr1 :constant 0)
+   (fr2 :constant 0)
+   (r2 :constant null-offset)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-noop 64 (temp)
+  (inst afpa-noop-inst temp
+	(do-afpa-inst :noop temp)))
+
+
+;;; Load = WTFR (write float reg) + DMA.
+;;;
+(define-instruction (afpa-load-inst :use (memory))
+  (afpa-st-inst
+   (fr2 :argument afpa-fp-reg :read nil)
+   (fr1 :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-load 64 (fr2 data ts temp)
+  (inst afpa-load-inst fr2 data temp
+	(do-afpa-inst :wtfr temp :fr2 fr2 :data data :ts ts)))
+
+
+;;; Store = RDDMA
+;;;
+(define-instruction (afpa-store-inst :clobber (memory))
+  (afpa-st-inst
+   (fr2 :constant 0)
+   (fr1 :argument afpa-fp-reg)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-store 64 (fr1 data ts temp)
+  (inst afpa-store-inst fr1 data temp
+	(do-afpa-inst :rddma temp :fr1 fr1 :data data :ts ts)))
+
+
+;;; Get float = RDFR
+;;;
+(define-instruction (afpa-get-float-inst :clobber (float-status))
+  (afpa-l-inst
+   (fr2 :constant 0)
+   (fr1 :argument afpa-fp-reg)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-get-float 64 (data fr1 temp)
+  (inst afpa-get-float-inst fr1 data temp
+	(do-afpa-inst :rdfr temp :fr1 fr1 :data data)))
+
+(define-pseudo-instruction afpa-get-float-odd 64 (data fr1 temp)
+  (inst afpa-get-float-inst fr1 data temp
+	(do-afpa-inst :rdfr temp :fr1 fr1 :data data :odd t)))
+
+
+;;; Put float = WTFR
+;;;
+(define-instruction (afpa-put-float-inst)
+  (afpa-st-inst
+   (fr2 :argument afpa-fp-reg)
+   (fr1 :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-put-float 64 (fr2 data temp)
+  (inst afpa-put-float-inst fr2 data temp
+	(do-afpa-inst :wtfr temp :fr2 fr2 :data data)))
+
+(define-pseudo-instruction afpa-put-float-odd 64 (fr2 data temp)
+  (inst afpa-put-float-inst fr2 data temp
+	(do-afpa-inst :wtfr temp :fr2 fr2 :data data :odd t)))
+
+
+;;; Get status = RDSTR
+;;;
+(define-instruction (afpa-get-status-inst :clobber (float-status))
+  (afpa-l-inst
+   (fr2 :constant 0)
+   (fr1 :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-get-status 64 (data temp)
+  (inst afpa-get-status-inst data temp
+	(do-afpa-inst :rdstr temp :data data)))
+
+
+;;; Put status = WTSTR
+;;;
+(define-instruction (afpa-put-status-inst :use (float-status))
+  (afpa-st-inst
+   (fr2 :constant 0)
+   (fr1 :constant 0)
+   (r2 :argument register)
+   (r3 :argument address-register)
+   (i :argument (unsigned-byte 16))))
+
+(define-pseudo-instruction afpa-put-status 64 (data temp)
+  (inst afpa-put-status-inst data temp
+	(do-afpa-inst :wtstr temp :data data)))
