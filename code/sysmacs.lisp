@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.26 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.27 2003/07/20 11:11:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,11 +115,13 @@
 ;;; Execute the appropriate code for each stream subtype
 (defmacro stream-dispatch (stream simple lisp &optional (gray nil gray-p))
   `(locally (declare (type stream ,stream))
-    (cond
-      ((lisp-stream-p ,stream) ,lisp)
-      ((typep ,stream 'stream:simple-stream) ,simple)
-      ((typep ,stream 'ext:fundamental-stream)
-       ,(if gray-p gray `(no-gray-streams ,stream))))))
+     (etypecase ,stream
+       (lisp-stream
+	,lisp)
+       (stream:simple-stream
+	,simple)
+       (ext:fundamental-stream
+	,(if gray-p gray `(no-gray-streams ,stream))))))
 
 
 ;;;; These are hacks to make the reader win.
