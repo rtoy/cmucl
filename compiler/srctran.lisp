@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.132 2003/09/12 11:29:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.133 2003/09/12 12:55:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2439,7 +2439,7 @@
 	(let ((size-high (numeric-type-high size))
 	      (posn-high (numeric-type-high posn)))
 	  (if (and size-high posn-high
-		   (<= (+ size-high posn-high) vm:word-bits))
+		   (<= 1 (+ size-high posn-high) vm:word-bits))
 	      (specifier-type `(unsigned-byte ,(+ size-high posn-high)))
 	      (specifier-type 'unsigned-byte)))
 	*universal-type*)))
