@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.26 1992/04/07 19:26:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.27 1992/04/15 17:05:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,7 +250,7 @@
 		 (double-float (typep object 'double-float))
 		 (long-float (typep object 'long-float))
 		 ((nil) (floatp num))))
-	      (nil t)))
+	      ((nil) t)))
 	  (flet ((bound-test (val)
 			     (let ((low (numeric-type-low type))
 				   (high (numeric-type-high type)))
