@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.28 1993/02/10 22:29:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.29 1993/02/11 14:09:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1219,7 +1219,8 @@
 ;;; 
 (defstruct (local-alien-info
 	    (:print-function %print-local-alien-info)
-	    (:make-load-form-fun :just-dump-it-normally))
+	    (:make-load-form-fun :just-dump-it-normally)
+	    (:constructor make-local-alien-info (&key type force-to-memory-p)))
   ;; The type of the local alien.
   (type (required-argument) :type alien-type)
   ;; T if this local alien must be forced into memory.  Using the ADDR macro
