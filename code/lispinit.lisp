@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.3 2000/05/23 16:36:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.49.2.4 2000/09/14 14:35:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -537,6 +537,7 @@
   +, ///, //, /, and -."
   (setf - form)
   (let ((results (multiple-value-list (eval form))))
+    (finish-standard-output-streams)
     (setf /// //
 	  // /
 	  / results
