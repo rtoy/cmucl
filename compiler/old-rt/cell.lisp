@@ -144,3 +144,22 @@
 
 (define-vop (structure-ref slot-ref))
 (define-vop (structure-set slot-set))
+
+
+;;;; Number hackery:
+
+(define-vop (realpart cell-ref)
+  (:policy :fast-safe)
+  (:variant (/ clc::complex-realpart 4)))
+
+(define-vop (imagpart cell-ref)
+  (:policy :fast-safe)
+  (:variant (/ clc::complex-imagpart 4)))
+
+(define-vop (numerator cell-ref)
+  (:policy :fast-safe)
+  (:variant (/ clc::ratio-numerator 4)))
+
+(define-vop (denominator cell-ref)
+  (:policy :fast-safe)
+  (:variant (/ clc::ratio-denominator 4)))
