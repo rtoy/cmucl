@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.87 1993/03/01 23:28:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.88 1993/05/02 14:52:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,10 @@
 (if (find-package "PCL")
     (rename-package "PCL" "PCL" 'nil)
     (make-package "PCL" :nicknames 'nil :use nil))
-(shadow '("DOCUMENTATION" "DESTRUCTURING-BIND") "PCL")
+(shadow '("DOCUMENTATION" "DESTRUCTURING-BIND"  "FIND-CLASS" "CLASS-NAME"
+	  "CLASS-OF" "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
+	  "STRUCTURE-OBJECT")
+	"PCL")
 (if (find-package "FORMAT")
     (rename-package "FORMAT" "FORMAT" 'nil)
     (make-package "FORMAT" :nicknames 'nil :use nil))
@@ -452,12 +455,15 @@
 (intern "FUNCALLABLE-INSTANCE-P" "KERNEL")
 (defpackage "PCL"
             (:import-from "KERNEL" "FUNCALLABLE-INSTANCE-P")
-            (:shadow "DESTRUCTURING-BIND" "DOCUMENTATION")
-            (:export "ADD-METHOD" "BUILT-IN-CLASS" "CALL-METHOD"
-             "CALL-NEXT-METHOD" "CHANGE-CLASS" "CLASS-NAME" "CLASS-OF"
+            (:shadow "DESTRUCTURING-BIND" "DOCUMENTATION"
+		     "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
+		     "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
+		     "STRUCTURE-OBJECT")
+            (:export "ADD-METHOD" "CALL-METHOD"
+             "CALL-NEXT-METHOD" "CHANGE-CLASS"
              "COMPUTE-APPLICABLE-METHODS" "DEFCLASS" "DEFGENERIC"
              "DEFINE-METHOD-COMBINATION" "DEFMETHOD" "ENSURE-GENERIC-FUNCTION"
-             "FIND-CLASS" "FIND-METHOD" "FUNCTION-KEYWORDS" "GENERIC-FLET"
+	     "FIND-METHOD" "FUNCTION-KEYWORDS" "GENERIC-FLET"
              "GENERIC-LABELS" "INITIALIZE-INSTANCE" "INVALID-METHOD-ERROR"
              "MAKE-INSTANCE" "MAKE-INSTANCES-OBSOLETE"
              "METHOD-COMBINATION-ERROR" "METHOD-QUALIFIERS" "NEXT-METHOD-P"
@@ -466,7 +472,7 @@
              "SLOT-BOUNDP" "SLOT-EXISTS-P" "SLOT-MAKUNBOUND" "SLOT-MISSING"
              "SLOT-UNBOUND" "SLOT-VALUE" "STANDARD" "STANDARD-CLASS"
              "STANDARD-GENERIC-FUNCTION" "STANDARD-METHOD" "STANDARD-OBJECT"
-             "STRUCTURE-CLASS" "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
+	     "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
              "UPDATE-INSTANCE-FOR-REDEFINED-CLASS" "WITH-ACCESSORS"
              "WITH-ADDED-METHODS" "WITH-SLOTS"))
 (defpackage "FORMAT")
