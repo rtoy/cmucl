@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.13 1990/09/24 18:09:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.14 1990/09/25 10:22:43 wlott Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -144,7 +144,6 @@
       (values nil t)
       `(truncate ,x 1)))
 
-(def-source-transform logeqv-two-arg (x y) `(lognot (logxor ,x ,y)))
 (def-source-transform lognand (x y) `(lognot (logand ,x ,y)))
 (def-source-transform lognor (x y) `(lognot (logior ,x ,y)))
 (def-source-transform logandc1 (x y) `(logand (lognot ,x) ,y))
@@ -1291,8 +1290,11 @@
 (def-source-transform logior (&rest args) (source-transform-transitive 'logior args 0))
 (def-source-transform logxor (&rest args) (source-transform-transitive 'logxor args 0))
 (def-source-transform logand (&rest args) (source-transform-transitive 'logand args -1))
+
 (def-source-transform logeqv (&rest args)
-  (source-transform-transitive 'logeqv args -1 'logeqv-two-arg))
+  (if (evenp (length args))
+      `(lognot (logxor ,@args))
+      `(logxor ,@args)))
 
 ;;; Note: we can't use source-transform-transitive for GCD and LCM because when
 ;;; they are given one argument, they return it's absolute value.
