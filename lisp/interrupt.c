@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.21 1999/11/11 16:14:16 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.22 2000/04/12 17:31:19 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -508,46 +508,16 @@ void interrupt_install_low_level_handler
     sa.sa_sigaction = handler;
     sigemptyset(&sa.sa_mask);
     FILLBLOCKSET(&sa.sa_mask);
-#if defined(__linux__)
-    /*
-     * Don't want the SIGINFO flag on linux as it causes the creation
-     * of real-time interrupt frames.
-     */
-    sa.sa_flags = SA_RESTART;
-#else
-    sa.sa_flags = SA_RESTART | SA_SIGINFO;
-#endif
+    sa.sa_flags = SA_RESTART | USE_SA_SIGINFO;
 
     sigaction(signal, &sa, NULL);
-#else
-#if defined __FreeBSD__ && 0	/* hack in progress */
-/* sort of like POSIX -- maybe fixed in new release */
-#define FILLBLOCKSET(s) (sigaddset(s, SIGHUP), sigaddset(s, SIGINT), \
-		   sigaddset(s, SIGQUIT), sigaddset(s, SIGPIPE), \
-		   sigaddset(s, SIGALRM), sigaddset(s, SIGURG), \
-		   sigaddset(s, SIGTSTP), sigaddset(s, SIGCHLD), \
-		   sigaddset(s, SIGIO), sigaddset(s, SIGXCPU), \
-                   sigaddset(s, SIGXFSZ), sigaddset(s, SIGVTALRM), \
-		   sigaddset(s, SIGPROF), sigaddset(s, SIGWINCH), \
-		   sigaddset(s, SIGUSR1), sigaddset(s,S IGUSR2))
-
-    struct sigaction sa;
-    sa.sa_handler = handler;
-    sigemptyset(&sa.sa_mask);
-    FILLBLOCKSET(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART | SA_SIGINFO;
-    sa.sa_flags |= SA_ONSTACK;
 #else
     struct sigvec sv;
 
     sv.sv_handler = handler;
     sv.sv_mask = BLOCKABLE;
     sv.sv_flags = 0;
-#if defined USE_SIG_STACK
-    sv.sv_flags |= SV_ONSTACK;	/* use separate stack */
-#endif
     sigvec(signal, &sv, NULL);
-#endif
 #endif    
     interrupt_low_level_handlers[signal] =
       (handler == (void (*)(HANDLER_ARGS)) SIG_DFL) ? 0 : handler;
@@ -579,15 +549,7 @@ unsigned long install_handler(int signal,
 
 	sigemptyset(&sa.sa_mask);
 	FILLBLOCKSET(&sa.sa_mask);
-#if defined(__linux__)
-	/*
-	 * Don't want the SIGINFO flag on linux as it causes the
-	 * creation of real-time interrupt frames.
-	 */
-	sa.sa_flags = SA_RESTART;
-#else
-	sa.sa_flags = SA_SIGINFO | SA_RESTART;
-#endif
+	sa.sa_flags = USE_SA_SIGINFO | SA_RESTART;
 
 	sigaction(signal, &sa, NULL);
     }
@@ -618,9 +580,6 @@ unsigned long install_handler(int signal,
 
 	sv.sv_mask = BLOCKABLE;
 	sv.sv_flags = 0;
-#if defined USE_SIG_STACK
-	sv.sv_flags = SV_ONSTACK;
-#endif
 	sigvec(signal, &sv, NULL);
     }
 

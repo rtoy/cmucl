@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.9 1998/01/25 05:58:55 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.10 2000/04/12 17:31:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -144,8 +144,11 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
     /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
     /* use debugger breakpoints anywhere in here. */
+#if defined POSIX_SIGS
+    sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
+#else
     sigsetmask(scp->sc_mask);
-
+#endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
 	     code,
@@ -194,8 +197,11 @@ void *handle_function_end_breakpoint(int signal, int subcode,
 
     /* Don't disallow recursive breakpoint traps.  Otherwise, we can't
      * use debugger breakpoints anywhere in here. */
+#if defined POSIX_SIGS
+    sigprocmask(SIG_SETMASK,&scp->sc_mask,NULL);
+#else
     sigsetmask(scp->sc_mask);
-
+#endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
 	     code,

@@ -1,12 +1,13 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.2 1997/11/30 12:08:52 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.h,v 1.3 2000/04/12 17:31:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
 */
 
+#include <osreldate.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/signal.h>
@@ -25,8 +26,20 @@ typedef int os_vm_prot_t;
 
 #define OS_VM_DEFAULT_PAGESIZE	4096
 
+/* I *think* this is when things became incompatible with old
+   signals.
+*/
+#if __FreeBSD_version > 400010
+#define POSIX_SIGS
 int
+/* If we used SA_SIGINFO in sigaction() the third argument to signal
+   handlers would be a struct ucontext_t.  (The manpage for
+   sigaction(2) is wrong!)  Sigcontext and ucontext_t are
+   "compatible", but access to registers in a ucontext_t goes through
+   the uc_mcontext field, so we just won't bother.
+*/
+#define USE_SA_SIGINFO 0
+#define uc_sigmask sc_mask
 sc_reg(struct sigcontext*,int);
-void
-os_save_context();
-#define SAVE_CONTEXT os_save_context
+#endif
+

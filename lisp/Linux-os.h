@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.11 1999/09/22 14:42:08 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.h,v 1.12 2000/04/12 17:31:19 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -57,6 +57,11 @@ typedef struct sigcontext_struct sigcontext;
 #endif
 
 #define POSIX_SIGS
+
+/* Don't want the SIGINFO flag on linux as it causes the creation
+   of real-time interrupt frames.
+*/
+#define USE_SA_SIGINFO 0
 
 /* Alpha uses OSF/1 signals which are the defaults in os.h,
    so there is no need to define the following for Alpha 
