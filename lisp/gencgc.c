@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.39 2003/09/29 16:29:03 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.40 2003/10/08 16:49:34 toy Exp $
  *
  */
 
@@ -2172,6 +2172,10 @@ void scavenge_interrupt_contexts(void)
 {
   int i, index;
   struct sigcontext *context;
+
+#ifdef PRINTNOISE
+  printf("Scavenging interrupt contexts ...\n");
+#endif
 
   index = fixnum_value(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX));
 
@@ -6172,6 +6176,46 @@ static void write_protect_generation_pages(int generation)
 }
 
 
+static void
+scavenge_interrupt_handlers()
+{
+  int i;
+  
+#ifdef PRINTNOISE
+  printf("Scavenging interrupt handlers (%d bytes) ...\n",
+         sizeof(interrupt_handlers));
+#endif
+
+  for (i = 0; i < NSIG; i++)
+    {
+      union interrupt_handler handler = interrupt_handlers[i];
+      if (handler.c != (void (*) (HANDLER_ARGS)) SIG_IGN
+          && handler.c != (void (*) (HANDLER_ARGS)) SIG_DFL)
+        scavenge((lispobj *) (interrupt_handlers + i), 1);
+    }
+}
+
+#ifndef x86
+static void
+scavenge_control_stack()
+{
+    unsigned long control_stack_size;
+    
+    control_stack_size = current_control_stack_pointer - control_stack;
+
+#ifdef PRINTNOISE
+    printf("Scavenging the control stack (%d bytes) ...\n",
+           control_stack_size * sizeof(lispobj));
+#endif
+
+    scavenge(control_stack, control_stack_size);
+
+#ifdef PRINTNOISE
+    printf("Done scavenging the control stack.\n");
+#endif
+}
+#endif
+
 /*
  * Garbage collect a generation. If raise is 0 the remains of the
  * generation are not raised to the next generation.
@@ -6279,41 +6323,14 @@ garbage_collect_generation (int generation, int raise)
 
 #ifndef i386
   /*
-   * If not x86, scavenge the interrupt context(s) and the control
-   * stack.
+   * If not x86, we need to scavenge the interrupt context(s) and the
+   * control stack.
    */
-#ifdef PRINTNOISE
-  printf("Scavenging interrupt contexts ...\n");
-#endif
   scavenge_interrupt_contexts();
-#ifdef PRINTNOISE
-  printf("Scavenging interrupt handlers (%d bytes) ...\n",
-         sizeof(interrupt_handlers));
+  scavenge_control_stack();
 #endif
-  scavenge((lispobj *) interrupt_handlers,
-           sizeof(interrupt_handlers) / sizeof(lispobj));
-  {
-    unsigned long control_stack_size;
-    
-    control_stack_size = current_control_stack_pointer - control_stack;
-#ifdef PRINTNOISE
-    printf("Scavenging the control stack (%d bytes) ...\n",
-           control_stack_size * sizeof(lispobj));
-#endif
-    scavenge(control_stack, control_stack_size);
-#ifdef PRINTNOISE
-    printf("Done scavenging the control stack.\n");
-#endif
-  }
-  
-#else /* x86 */
-  for (i = 0; i < NSIG; i++) {
-    union interrupt_handler handler = interrupt_handlers[i];
-    if (handler.c != (void (*) (HANDLER_ARGS)) SIG_IGN
-	&& handler.c != (void (*) (HANDLER_ARGS)) SIG_DFL)
-      scavenge((lispobj *) (interrupt_handlers + i), 1);
-  }
-#endif
+
+  scavenge_interrupt_handlers();
         
 #ifdef PRINTNOISE
   printf("Scavenging the binding stack (%d bytes) ...\n",
