@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.5 1990/07/19 18:44:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.6 1990/08/07 16:06:02 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -256,7 +256,6 @@
     single-reg single-float :single
     double-reg double-float :double))
 
-(defknown %unary-truncate (float) integer (movable foldable flushable))
 
 (macrolet ((frob (name from-sc from-type from-format)
 	     `(define-vop (,name)
