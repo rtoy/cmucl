@@ -82,9 +82,9 @@
 
 (with-compilation-unit
   (:optimize '(optimize (safety 1)))
-  (comf "target:code/list"))
+  (comf "target:code/list")
+  (comf "target:code/seq")) ; seq must come after list
 
-(comf "target:code/seq") ; seq must come after list
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
