@@ -1,6 +1,6 @@
 ;;; -*- Mode: CLtL -*-
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/timer-support.lisp,v 1.2 1994/10/28 22:15:28 ram Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/timer-support.lisp,v 1.3 1994/10/28 22:35:00 ram Rel $")
 
 ;;; timers-support.lisp --
 ;;; Extension to CMUCL Motif Interface. Adding missing call for
@@ -111,7 +111,7 @@
 (defun add-timeout (interval timer-callback &rest args)
   (declare (type (signed-byte 32) interval))
   (let ((new-timer (make-timer timer-callback args)))
-    (add-timer new-timer (motif-connection-timers-table *motif-connection*))
+    (add-timer new-timer (motif-connection-timer-table *motif-connection*))
     (setf (timer-interval-id new-timer)
 	  (%add-timeout interval (timer-id new-timer)))
     new-timer))
@@ -120,6 +120,6 @@
 (defun remove-timeout (timer)
   (%remove-timeout (timer-interval-id timer))
   (remove-timer (timer-id timer)
-		(motif-connection-timers-table *motif-connection*))
+		(motif-connection-timer-table *motif-connection*))
   t
   )
