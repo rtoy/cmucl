@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.40 1996/07/25 14:59:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.41 1996/07/25 15:38:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1260,17 +1260,6 @@
 		(alien:alien-sap (alien:addr alien-pgrp)))))
 
 (defun tcgetpgrp (fd)
-  "Get the tty-process-group for the unix file-descriptor FD."
-  (alien:with-alien ((alien-pgrp c-call:int))
-    (multiple-value-bind (ok err)
-	(unix-ioctl fd
-		     tiocgpgrp
-		     (alien:alien-sap (alien:addr alien-pgrp)))
-      (if ok
-	  (values alien-pgrp nil)
-	  (values nil err)))))
-
-(defun  (fd)
   "Get the tty-process-group for the unix file-descriptor FD."
   (alien:with-alien ((alien-pgrp c-call:int))
     (multiple-value-bind (ok err)
