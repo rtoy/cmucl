@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.41 1991/02/04 18:44:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.42 1991/02/11 17:33:32 ram Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -55,13 +55,15 @@
 (defreg lexenv 15)
 (defreg nfp 16)
 (defreg ocfp 17)
-(defconstant old-fp-offset 17) ; for backwards compatibility
+(eval-when (compile load eval)
+  (defconstant old-fp-offset 17)) ; for backwards compatibility
 (defreg lra 18)
 (defreg l0 19)
 (defreg null 20)
 (defreg bsp 21)
 (defreg cfp 22)
-(defconstant fp-offset 22) ; for backwards compatibility
+(eval-when (compile load eval)
+  (defconstant fp-offset 22)) ; for backwards compatibility
 (defreg csp 23)
 (defreg l1 24)
 (defreg alloc 25)
