@@ -29,7 +29,10 @@
 (defun makunbound (variable)
   "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
   removing any value it may currently have."
-  (makunbound variable))
+  (set variable
+       (%primitive make-other-immediate-type
+		   0
+		   vm:unbound-marker-type)))
 
 (defun symbol-value (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current special
