@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.42 1997/11/15 04:38:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.43 1997/11/29 20:13:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,7 +128,7 @@
 ;;; 
 (defun type-of (object)
   "Return the type of OBJECT."
-  (if (typep object '(or function array))
+  (if (typep object '(or function array #+complex-float complex))
       (type-specifier (ctype-of object))
       (let* ((class (layout-class (layout-of object)))
 	     (name (class-name class)))
