@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.4.2.1 1997/08/26 02:25:00 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -578,6 +578,7 @@ void print(lispobj obj)
 void brief_print(lispobj obj)
 {
     skip_newline = TRUE;
+    cur_depth = 0;
     max_depth = 1;
     max_lines = 5000;
 
