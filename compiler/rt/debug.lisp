@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.1 1991/02/18 15:07:50 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.2 1992/03/09 20:42:10 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -44,9 +44,59 @@
     (move res cfp-tn)))
 
 
-(define-system-ref read-control-stack 2 di::stack-ref descriptor-reg *)
+(define-vop (read-control-stack-c)
+  (:policy :fast-safe)
+  (:translate di::stack-ref)
+  (:args (base :scs (sap-reg)))
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:arg-types system-area-pointer (:constant (unsigned-byte 13)))
+  (:info offset)
+  (:generator 5
+    (inst l result base (* offset word-bytes))))
 
-(define-system-set write-control-stack 2 di::%set-stack-ref (descriptor-reg) *)
+(define-vop (read-control-stack)
+  (:policy :fast-safe)
+  (:translate di::stack-ref)
+  (:args (object :scs (sap-reg) :target base)
+	 (offset :scs (any-reg)))
+  (:results (result :scs (,result-sc)))
+  (:arg-types system-area-pointer positive-fixnum)
+  (:result-types ,result-type)
+  (:temporary (:scs (sap-reg) :from (:argument 0) :to :eval) base)
+  (:generator 7
+    (move base object)
+    (inst a base offset)
+    (inst l result base 0)))
+
+(define-vop (write-control-stack-c)
+  (:policy :fast-safe)
+  (:translate di::%set-stack-ref)
+  (:args (base :scs (sap-reg))
+	 (data :scs (descriptor-reg) :target result :to (:result 0)))
+  (:arg-types system-area-pointer (:constant (unsigned-byte 13)) *)
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:info offset)
+  (:generator 5
+    (inst st data base (* offset word-bytes))
+    (move result data)))
+
+(define-vop (write-control-stack)
+  (:policy :fast-safe)
+  (:translate di::%set-stack-ref)
+  (:args (object :scs (sap-reg) :target base)
+	 (offset :scs (any-reg))
+	 (data :scs (descriptor-reg) :target result))
+  (:arg-types system-area-pointer positive-fixnum *)
+  (:temporary (:scs (sap-reg) :from (:argument 0) :to :eval) base)
+  (:results (result :scs (descriptor-reg)))
+  (:result-types *)
+  (:generator 7
+    (move base object)
+    (inst cas base base offset)
+    (inst st data base 0)
+    (move result data)))
 
 
 (define-vop (code-from-mumble)
