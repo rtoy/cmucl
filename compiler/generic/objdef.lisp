@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.18 1992/04/12 19:39:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.19 1992/04/14 02:56:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.18 1992/04/12 19:39:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.19 1992/04/14 02:56:45 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -36,6 +36,7 @@
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type closure-header-type
 	  closure-function-header-type return-pc-header-type
+	  byte-code-function-type byte-code-closure-type
 	  value-cell-header-type symbol-header-type base-char-type
 	  sap-type unbound-marker-type weak-pointer-type
 	  structure-header-type funcallable-instance-header-type
@@ -130,8 +131,8 @@
   function-header
   closure-header
   funcallable-instance-header
-  unused-function-header-1
-  unused-function-header-2
+  byte-code-function
+  byte-code-closure
   unused-function-header-3
   closure-function-header
   return-pc-header
