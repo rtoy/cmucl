@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.67 1993/08/19 21:33:19 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.68 1993/08/19 21:40:27 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,12 @@
 
 (in-package "LISP")
 
+;;; Get some data on this core.
+;;;
+(write-string "What is the current lisp-implementation-version? ")
+(force-output)
+(set '*lisp-implementation-version* (read-line))
+
 ;;; Load the rest of the reader (may be byte-compiled.)
 (load "target:code/sharpm")
 (sharp-init)
@@ -27,10 +33,6 @@
 (load "target:code/extensions")
 (load "target:code/defmacro")
 (load "target:code/sysmacs")
-
-;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
-(load "target:code/debug.*bytef" :if-does-not-exist nil)
-(load "target:code/error.*bytef" :if-does-not-exist nil)
 
 ;;; Define a bunch of search lists relative to target:
 ;;;
@@ -59,12 +61,6 @@
 ;;;
 (load "code:exports")
 
-;;; Get some data on this core.
-;;;
-(write-string "What is the current lisp-implementation-version? ")
-(force-output)
-(set '*lisp-implementation-version* (read-line))
-
 ;;; Load random code sources.
 
 (load "code:format-time")
@@ -91,6 +87,10 @@
 (load "code:setf-funs")
 (load "code:module")
 (load "code:room")
+
+;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
+(load "target:code/debug.*bytef" :if-does-not-exist nil)
+(load "target:code/error.*bytef" :if-does-not-exist nil)
 
 (defvar *old-ie*)
 
