@@ -119,6 +119,8 @@ New in this release:
      - SLOT-VALUE, (SETF SLOT-VALUE), SLOT-BOUNDP working with conditions.
      - (SETF SLOT-VALUE) working on read-only structure slots like
        in other implementations.
+     - The declaration identifiers SLOTS, AUTO-COMPILE,
+       NOT-AUTO-COMPILE have been moved from PCL to EXT.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

@@ -1905,11 +1905,11 @@ will occur if \code{value} is not a \code{fixnum}.  In method
 \cindex{slot access optimization}
 \cindex{slot declarations}
 
-The declaration \code{pcl:slots} is used for optimizing slot access in
+The declaration \code{ext:slots} is used for optimizing slot access in
 methods.
 
 \begin{example}
-declare (pcl:slots specifier*)
+declare (ext:slots specifier*)
 
 specifier   ::= (quality class-entry*)
 quality     ::= SLOT-BOUNDP | INLINE
@@ -1937,7 +1937,7 @@ Example:
   (a b))
 
 (defmethod bar ((x foo))
-  (declare (pcl:slots (slot-boundp foo)))
+  (declare (ext:slots (slot-boundp foo)))
   (list (slot-value x 'a) (slot-value x 'b)))
 \end{example}
 
@@ -1962,7 +1962,7 @@ Example:
   (a b))
 
 (defmethod bar ((x foo))
-  (declare (pcl:slots (inline (foo a))))
+  (declare (ext:slots (inline (foo a))))
   (list (slot-value x 'a) (slot-value x 'b)))
 \end{example}
 
@@ -1978,7 +1978,7 @@ If a class is \code{proclaim}ed to use inline slot access before it is
 defined, the class is defined at compile time.  Example:
 
 \begin{example}
-(declaim (pcl:slots (inline (foo slot-a))))
+(declaim (ext:slots (inline (foo slot-a))))
 (defclass foo () ...)
 (defclass bar (foo) ...)
 \end{example}
@@ -2042,8 +2042,8 @@ class changes.  Two declarations control which methods are
 automatically recompiled.
 
 \begin{example}
-declaim (pcl:auto-compile specifier*)
-declaim (pcl:not-auto-compile specifier*)
+declaim (ext:auto-compile specifier*)
+declaim (ext:not-auto-compile specifier*)
 
 specifier   ::= gf-name | (gf-name qualifier* (specializer*))
 gf-name     ::= the name of a generic function
@@ -2061,7 +2061,7 @@ of that generic function.
 Examples:
 
 \begin{example}
-(declaim (pcl:auto-compile foo))
+(declaim (ext:auto-compile foo))
 (defmethod foo :around ((x bar)) ...)
 \end{example}
 
@@ -2069,7 +2069,7 @@ The around-method \code{foo} will be automatically recompiled because
 the declamation applies to all methods with name \code{foo}.
 
 \begin{example}
-(declaim (pcl:auto-compile (foo (bar))))
+(declaim (ext:auto-compile (foo (bar))))
 (defmethod foo :around ((x bar)) ...)
 (defmethod foo ((x bar)) ...)
 \end{example}
@@ -2078,8 +2078,8 @@ The around-method will not be automatically recompiled, but the
 primary method will.
 
 \begin{example}
-(declaim (pcl:auto-compile foo))
-(declaim (pcl:not-auto-compile (foo :around (bar)))  
+(declaim (ext:auto-compile foo))
+(declaim (ext:not-auto-compile (foo :around (bar)))  
 (defmethod foo :around ((x bar)) ...)
 (defmethod foo ((x bar)) ...)
 \end{example}

@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.5 2003/05/07 17:14:24 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.6 2003/05/20 20:08:04 gerd Exp $")
 
 (in-package "PCL")
 
@@ -525,7 +525,6 @@
 ;;; Set up SLOTS, AUTO-COMPILE, and NOT-AUTO-COMPILE as a recognizable
 ;;; declaration.
 ;;;
-(export '(slots auto-compile not-auto-compile))
 (declaim (declaration slots auto-compile not-auto-compile))
 (pushnew 'slots *variable-declarations-with-argument*)
 (pushnew 'slots walker:*variable-declarations*)
