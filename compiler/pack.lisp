@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.35 1991/04/01 16:29:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.36 1991/04/09 19:36:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,6 +368,8 @@
 				   (vop-parse-or-lose
 				    (vop-info-name  (vop-info vop))))
 				  temp))))
+     ((eq (tn-kind tn) :component)
+      `("~2D: ~A (component live)" ,loc ,name))
      (t
       `("~2D: not referenced?" ,loc)))))
 
@@ -381,25 +383,33 @@
   (declare (type sc sc) (type tn-ref op))
   (collect ((used)
 	    (unused))
-    (assert (eq (sb-kind (sc-sb sc)) :finite))
-    (dolist (el (sc-locations sc))
-      (let ((conf (load-tn-conflicts-in-sc op sc el t)))
-	(if conf
-	    (used (describe-tn-use el conf op))
-	    (unused el))))
+    (let* ((sb (sc-sb sc))
+	   (confs (finite-sb-live-tns sb)))
+      (assert (eq (sb-kind sb) :finite))
+      (dolist (el (sc-locations sc))
+	(let ((conf (load-tn-conflicts-in-sc op sc el t)))
+	  (if conf
+	      (used (describe-tn-use el conf op))
+	      (loop for i from el
+		as victim = (svref confs i)
+		repeat (sc-element-size sc) do
+		(when (and victim (eq (tn-kind victim) :component))
+		  (used (describe-tn-use el victim op))
+		  (return t))
+		finally (unused el))))))
 	
     (multiple-value-bind (arg-p n more-p costs load-scs incon)
 			 (get-operand-info op)
       (declare (ignore costs load-scs))
       (assert (not more-p))
       (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
-              ~:[result~;argument~] to~@
-	      the ~S VOP,~@
-	      ~:[since all SC elements are in use:~:{~%~@?~}~%~;~
-	         ~:*but these SC elements are not in use:~%  ~S~%Bug?~*~]~
-	      ~:[~;~@
-	      Current cost info inconsistent with that in effect at compile ~
-	      time.  Recompile.~%Compilation order may be incorrect.~]"
+             ~:[result~;argument~] to~@
+	     the ~S VOP,~@
+	     ~:[since all SC elements are in use:~:{~%~@?~}~%~;~
+	     ~:*but these SC elements are not in use:~%  ~S~%Bug?~*~]~
+	     ~:[~;~@
+	     Current cost info inconsistent with that in effect at compile ~
+	     time.  Recompile.~%Compilation order may be incorrect.~]"
 	     (sc-name sc)
 	     n arg-p
 	     (vop-info-name (vop-info (tn-ref-vop op)))
@@ -1236,7 +1246,7 @@
       (unless (load-tn-conflicts-in-sc op sc loc t)
 	(let ((spills (delete-duplicates
 		       (loop for i from loc
-			     as victim = (svref (finite-sb-live-tns sb) loc)
+			     as victim = (svref (finite-sb-live-tns sb) i)
 			     repeat (sc-element-size sc)
 			     when victim
 			     collect victim))))
