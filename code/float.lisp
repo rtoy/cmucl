@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.27 2002/05/08 15:38:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.28 2002/07/22 17:01:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -362,8 +362,8 @@
 (defun float-radix (f)
   "Returns (as an integer) the radix b of its floating-point
    argument."
-  (declare (float f)(ignorable f))
-  2)
+  (number-dispatch ((f float))
+    ((float) 2)))
 
 
 
