@@ -225,6 +225,7 @@
 		 (unless ptype-exact (setq exact nil))
 		 (unless (eq ptype res)
 		   (return (values *any-primitive-type* nil)))))))))
+    (function-type (values (primitive-type-or-lose 'function) t))
     (ctype
      (values *any-primitive-type* nil))))
 
