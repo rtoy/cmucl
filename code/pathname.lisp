@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.63 2004/01/18 14:06:40 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.64 2004/04/01 16:26:35 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1933,7 +1933,8 @@ a host-structure or string."
 	   (values list))
 
   (let ((maybe-search-list-host (concatenate 'string host ":")))
-    (when (search-list-defined-p maybe-search-list-host)
+    (when (and (not (logical-pathname-p (pathname maybe-search-list-host)))
+	       (search-list-defined-p maybe-search-list-host))
       (cerror "Clobber search-list host with logical pathname host"
 	      "~S names a CMUCL search-list"
 	      host)))
