@@ -270,8 +270,6 @@
 				     :low (when n-low (ash n-low shift))
 				     :high (when n-high (ash n-high shift))))
 		(let ((s-type (continuation-type shift)))
-		  (format *trace-output* "~&n-type: ~S~%s-type: ~S~%"
-			  n-type s-type)
 		  (when (numeric-type-p s-type)
 		    (let ((s-low (numeric-type-low s-type))
 			  (s-high (numeric-type-high s-type)))
