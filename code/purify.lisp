@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.14 1994/02/14 12:27:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.15 1994/02/14 13:13:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,14 +23,29 @@
   (static-roots c-call:unsigned-long)
   (read-only-roots c-call:unsigned-long))
 
-(defun purify (&key root-structures)
+(defun purify (&key root-structures (environment-name "Auxiliary"))
   "This function optimizes garbage collection by moving all currently live
    objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
    objects which should be copied first to maximize locality.
 
    DEFSTRUCT structures defined with the (:PURE T) option are moved into
    read-only storage, further reducing GC cost.  List and vector slots of pure
-   structures are also moved into read-only storage."
+   structures are also moved into read-only storage.
+
+   ENVIRONMENT-NAME is gratuitous documentation for compacted version of the
+   current global environment (as seen in C::*INFO-ENVIRONMENT*.)  If NIL is
+   supplied, then environment compaction is inhibited."
+  (when environment-name
+    (let ((old-ie (car *info-environment*)))
+      (setq *info-environment*
+	    (list* (make-info-environment :name "Working")
+		   (compact-info-environment (first *info-environment*)
+					     :name environment-name)
+		   (rest *info-environment*)))
+      ;; next 2 lines for GC.
+      (shrink-vector (c::volatile-info-env-table *old-ie*) 0)
+      (setq old-ie nil)))
+
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
 	     (declare (ignore bytes-in-use))
