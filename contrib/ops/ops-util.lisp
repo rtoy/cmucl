@@ -20,9 +20,9 @@
 ;;;; modules.  This must be loaded first so commonlisp systems that
 ;;;; expand macros early have them available.
 
+(unless (find-package "OPS") (make-package "OPS"))
+
 (in-package "OPS")
-
-
 
 ;;; Assq is included in some Common Lisp implementations (like Spice Lisp and
 ;;; the Zetalisp CLCP) as an extension.  We'll use ASSOC if it's not there.
@@ -109,52 +109,53 @@
 
 
 (defun ce-gelm (x k)
-  (declare (optimize speed))
+  (declare (fixnum k))
+  (declare (optimize (speed 3) (safety 0)))
   (prog nil
     loop (and (== k 1.) (return (car x)))
     (setq k (1- k))
     (setq x (cdr x))
     (go loop))) 
 
+(defconstant encode-pair-shift 14)
+
 ; The loops in gelm were unwound so that fewer calls on DIFFERENCE
 ; would be needed
 
 (defun gelm (x k)
-  ; (locally) 				;@@@ locally isn't implemented yet
-  (declare (optimize speed))
-  (prog (ce sub)
-    (setq ce (truncate  k 10000.))		;use multiple-value-setq???
-    (setq sub (- k (* ce 10000.)))		;@@@ ^
-    
-    celoop (and (eq ce 0.) (go ph2))
+  (declare (optimize speed (safety 0)) (fixnum k))
+  (prog ((ce (ash k (- encode-pair-shift)))
+	 (sub (ldb (byte 14 0) k)))
+    (declare (fixnum ce sub))
+    celoop (and (eql ce 0.) (go ph2))
     (setq x (cdr x))
-    (and (eq ce 1.) (go ph2))
+    (and (eql ce 1.) (go ph2))
     (setq x (cdr x))
-    (and (eq ce 2.) (go ph2))
+    (and (eql ce 2.) (go ph2))
     (setq x (cdr x))
-    (and (eq ce 3.) (go ph2))
+    (and (eql ce 3.) (go ph2))
     (setq x (cdr x))
-    (and (eq ce 4.) (go ph2))
+    (and (eql ce 4.) (go ph2))
     (setq ce (- ce 4.))
     (go celoop)
     ph2  (setq x (car x))
-    subloop (and (eq sub 0.) (go finis))
+    subloop (and (eql sub 0.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 1.) (go finis))
+    (and (eql sub 1.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 2.) (go finis))
+    (and (eql sub 2.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 3.) (go finis))
+    (and (eql sub 3.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 4.) (go finis))
+    (and (eql sub 4.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 5.) (go finis))
+    (and (eql sub 5.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 6.) (go finis))
+    (and (eql sub 6.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 7.) (go finis))
+    (and (eql sub 7.) (go finis))
     (setq x (cdr x))
-    (and (eq sub 8.) (go finis))
+    (and (eql sub 8.) (go finis))
     (setq sub (- sub 8.))
     (go subloop)
     finis (return (car x))) ) ;  )  	;end prog,< locally >, defun
@@ -213,7 +214,9 @@
 ;@@@ revision suggested by sf/inc. by gdw
 (defun variablep (x)
   (and (symbolp x)
-       (char= (char (symbol-name x) 0) #\< )))
+       (let ((name (symbol-name x)))
+	 (and (>= (length name) 1)
+	      (char= (char name 0) #\<)))))
 
 
 
