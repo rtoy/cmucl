@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.10 1991/11/07 15:46:07 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.11 1992/02/24 00:47:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,4 +274,4 @@
   (function-name-dispatch name
     (fmakunbound (the symbol name))
     (remhash (cadr name) *setf-functions*))
-  t)
+  name)
