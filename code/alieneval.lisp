@@ -477,7 +477,7 @@
 ;;; by hand.
 ;;;
 (defun naturalize-integer (signed sap offset size form)
-  (multiple-value-bind (q r) (truncate offset address-alignment)
+  (multiple-value-bind (q r) (truncate offset alien-alignment)
     (cond
      ((and (= size 32) (zerop r))
       (if signed
@@ -785,31 +785,35 @@
   (let ((n-sap (gensym))
 	(n-offset (gensym))
 	(n-size (gensym)))
-    `(%define-alien-access
-      ',lisp-type '(,atype ,@more-types)
-      #'(lambda (,n-sap ,n-offset ,n-size ,alien-var ,kind-var ,value-var
-			,source-var)
-	  ,@(unless source-p
-	     `((declare (ignore ,source-var))))
-
-	  (unless (memq (mostcar ,alien-var) '(,atype ,@more-types))
-	    (error "Wrong Alien type ~S, should have been ~S~
-	            ~{~#[~; or~:;,~] ~S~}."
-		   ,alien-var ',atype ',more-types))
-	  
-	  (macrolet ((with-alien ((sap)
-				  (offset &key
-					  ((:unit ounit) 32))
-				  (size &key
-					((:constant sconst) nil)
-					((:minimum smin) nil)
-					((:unit sunit) 32))
-				  &body (body decls))
-		       (%with-alien sap offset ounit
-				    size sconst smin sunit
-				    ',n-sap ',n-offset ',n-size
-				    body decls)))
-	    ,@body)))))
+    `(progn
+       (%define-alien-access
+	',lisp-type '(,atype ,@more-types)
+	#'(lambda (,n-sap ,n-offset ,n-size ,alien-var ,kind-var ,value-var
+			  ,source-var)
+	    ,@(unless source-p
+		`((declare (ignore ,source-var))))
+	    
+	    (unless (memq (mostcar ,alien-var) '(,atype ,@more-types))
+	      (error "Wrong Alien type ~S, should have been ~S~
+	      ~{~#[~; or~:;,~] ~S~}."
+		     ,alien-var ',atype ',more-types))
+	    
+	    (macrolet ((with-alien ((sap)
+				    (offset &key
+					    ((:unit ounit) 32))
+				    (size &key
+					  ((:constant sconst) nil)
+					  ((:minimum smin) nil)
+					  ((:unit sunit) 32))
+				    &body (body decls))
+				   (%with-alien sap offset ounit
+						size sconst smin sunit
+						',n-sap ',n-offset ',n-size
+						body decls)))
+	      ,@body)))
+       #-new-compile
+       (eval-when (compile)
+	 (clc::clc-mumble "alien-access ~S compiled.~%" lisp-type)))))
 
 
 (eval-when (compile load eval)
