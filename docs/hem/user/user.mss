@@ -2,7 +2,7 @@
 @Device[postscript]
 @Style(Spacing = 1.2 lines)
 @Style(StringMax = 5000)
-@Use(Database "/usr/lisp/scribe/database/")
+@Use(Database "/afs/cs/project/clisp/new-compiler/scribe/database/")
 @Style(FontFamily=TimesRoman)
 @Style(Date="March 1952")
 @style(DOUBLESIDED)
@@ -75,10 +75,12 @@ and has been ported to other implementations.
 
 @section[Introduction]
 
-@index[files]@index[buffers]@index[windows]@hemlock provides three
-different abstractions which are used in combination to solve the
-text-editing problem, while other editors tend to mash these ideas together
-into two or even one.
+@index[files]
+@index[buffers]
+@index[windows]
+@hemlock provides three different abstractions which are used in combination to
+solve the text-editing problem, while other editors tend to mash these ideas
+together into two or even one.
 @begin[description]
 File@\A file provides permanent storage of text.  @hemlock has commands
 to read files into buffers and write buffers out into files.
@@ -185,6 +187,10 @@ This command displays a message indicating whether the current buffer is modifie
 This command changes the flag that allows the current buffer to be modified.
 If a buffer is read-only, any attempt to modify it will result in an error.  The
 buffer may be made writable again by repeating this command.
+@enddefcom
+
+@defcom[com "Set Buffer Writable"]
+This command ensures the current buffer is modifiable.
 @enddefcom
 
 @defcom[com "Insert Buffer"]
@@ -463,7 +469,7 @@ Mode@\The argument is a comma-separated list of the names of modes to turn on
 in the buffer that the file is read into.
 
 Package@\The argument is the name of the package to be used for reading code in
-the file.  This is only meaningful for @llisp code (see page
+the file.  This is only meaningful for Lisp code (see page
 @pageref[lisp-package].)
 
 Editor@\The handler for this option ignores its argument and turns on
@@ -479,27 +485,23 @@ above.  This is useful when the options have been changed or when a file is
 created.
 @enddefcom
 
-@section[Windows]
 
-@index[windows]When running under @windows, each @hemlock window is a
-separate window, so window manager commands can be used to move and reshape
-windows.
+@section[Windows]
+@index[windows]
+
+@hemlock windows display a portion of a buffer's text.  See the section on
+@i[window groups], @ref[groups], for a discussion of managing windows on bitmap
+device.
 
 @defcom[com "New Window", bind (C-x C-n)]
-@defcom1[com "Split Window", bind (C-x 2)]
-@defcom1[com "Stack Window"]
-@hid[New Window] creates a new window on the screen that displays the current
-window.  The dimensions of the window are determined by asking the user.
-
-@hid[Split Window] is the same as @hid[New Window] except that it creates the
-new window by splitting the current window in half.  If the current window is
-too small to be reasonably split, the command may fail; however, on some
-devices, @hemlock will make a window the same size as the current window,
-placing it on the screen shifted downward vertically a small amount.
-
-@hid[Stack Window] is the same as @i[New Window], except that it makes a window
-exactly superimposed on the current window.  This is not supported on on all
+This command prompts users for a new window which they can place anywhere on
+the screen.  This window is in its own group.  This only works with bitmap
 devices.
+@enddefcom
+
+@defcom[com "Split Window", bind (C-x 2)]
+This command splits the current window roughly in half to make two windows.  If
+the current window is too small to be split, the command signals a user error.
 @enddefcom
 
 @defcom[com "Next Window", bind (C-x n)]
@@ -515,6 +517,17 @@ next window is, in general, unrelated to that of the current window.
 @hid[Delete Window] makes the current window go away, making the next window
 current.  @hid[Delete Next Window] deletes the next window, leaving the current
 window unaffected.
+
+On bitmap devices, if there is only one window in the group, either command
+deletes the group, making some window in another group the current window.  If
+there are no other groups, they signal a user error.
+@enddefcom
+
+@defcom[com "Go to One Window"]
+This command deletes all window groups leaving one with the @hid[Default
+Initial Window X], @hid[Default Initial Window Y], @hid[Default Initial Window
+Width], and @hid[Default Initial Window Height].  This remaining window
+retains the contents of the current window.
 @enddefcom
 
 @defcom[com "Line to Top of Window", bind (M-!)]
@@ -1363,18 +1376,18 @@ matching from Scribe mode and indents lines under the previous line.
 
 @chap[Editing Lisp]
 @index[lisp, editing]
-@hemlock provides a large number of powerful commands for editing @llisp code.
+@hemlock provides a large number of powerful commands for editing Lisp code.
 It is possible for a text editor to provide a much higher level of support for
-editing @llisp than ordinary programming languages, since its syntax is much
+editing Lisp than ordinary programming languages, since its syntax is much
 simpler.
 
 
 @section[Lisp Mode]
 @index[lisp mode]
 @index[modes, lisp]
-@hid[Lisp] mode is a major mode used for editing @llisp code.  Although most
-@llisp specific commands are globally bound, @hid[Lisp] mode is necessary to
-enable @llisp indentation, commenting, and parenthesis-matching.  Whenever the
+@hid[Lisp] mode is a major mode used for editing Lisp code.  Although most
+Lisp specific commands are globally bound, @hid[Lisp] mode is necessary to
+enable Lisp indentation, commenting, and parenthesis-matching.  Whenever the
 user or some @hemlock mechanism turns on @hid[Lisp] mode, the mode's setup
 includes locally setting @hid[Current Package] (see section @ref[lisp-package])
 in that buffer if its value is non-existent there; the value used is
@@ -1387,7 +1400,7 @@ This command sets the major mode of the current buffer to @hid[Lisp].
 
 @section[Form Manipulation]
 @index[form manipulation]
-These commands manipulate @llisp forms, the printed representations of @llisp
+These commands manipulate Lisp forms, the printed representations of Lisp
 objects.  A form is either an expression balanced with respect to parentheses
 or an atom such as a symbol or string.
 
@@ -1496,19 +1509,23 @@ This command puts the point at the beginning and the mark at the end of the
 current or next defun.
 @enddefcom
 
+
+
 @section[Indentation]
 
-@index[indentation, lisp]One of the most important features provided by
-@hid[Lisp] mode is automatic indentation of @llisp code, since unindented
-@llisp is unreadable, poorly indented @llisp is ugly, and inconsistently
-indented @llisp is subtly misleading.  See section @ref[indentation] for a
-description of the general-purpose indentation commands.  These are the
-indentation rules used:
+@index[indentation, lisp]
+One of the most important features provided by @hid[Lisp] mode is automatic
+indentation of Lisp code.  Since unindented Lisp is unreadable, poorly indented
+Lisp is hard to manage, and inconsistently indented Lisp is subtly misleading.
+See section @ref[indentation] for a description of the general-purpose
+indentation commands.  @hid[Lisp] mode uses these indentation rules:
 @begin[itemize]
-If in a semicolon (@f[;]) comment, then the standard comment indentation rules
-are used.  See page @pageref[comment-indentation].
+If in a semicolon (@f[;]) comment, then use the standard comment indentation
+rules.  See page @pageref[comment-indentation].
 
-If in a quoted string, copy the indentation from the previous line.
+If in a quoted string, then indent to the column one greater than the column
+containing the opening double quote.  This is exactly what you want in function
+documentation strings and wrapping @f[error] strings.
 
 If there is no enclosing list, then use no indentation.
 
@@ -1535,6 +1552,21 @@ arguments will be indented one space.
 @defcom[com "Indent Form", bind (C-M-q)]
 This command indents all the lines in the current form, leaving the point
 unmoved.  This is undo-able.
+@enddefcom
+
+@defcom[com "Fill Lisp Comment Paragraph",
+	stuff <bound to @bf[M-q] in @hid[Lisp] mode>]
+ This command fills a flushleft or indented Lisp comment.  This also fills
+lines all beginning with the same initial, non-empty blankspace, so it is
+useful for string literals and in general for indented paragraphs.  However, it
+will not fill with the first line of a string literal when the additional lines
+are indented one column further than the opening double quote.
+
+When filling a comment, the current line is used to determine a fill prefix by
+taking all the initial whitespace on the line, the semicolons, and the first
+initial whitespace character following the semicolons.  If there is no comment,
+we simply take all the initial whitespace on the current line.  Then every
+adjacent line, above and below, with the prefix is filled as one paragraph.
 @enddefcom
 
 @defcom[com "Defindent", bind (C-M-#)]
@@ -1585,31 +1617,31 @@ disabled by setting @hid[Paren Pause Period] to @nil.
 
 The initial values shown for @hid[Highlight Open Parens] and @hid[Paren Pause
 Period] are only approximately correct.  Since paren highlighting is only
-meaningful in @llisp mode, @hid[Highlight Open Parens] is false globally, and
-has a mode-local value of @true in @llisp mode.  It it redundant to do both
+meaningful in Lisp mode, @hid[Highlight Open Parens] is false globally, and
+has a mode-local value of @true in Lisp mode.  It it redundant to do both
 kinds of paren matching, so there is also a binding of @hid[Paren Pause Period]
-to @false in @llisp mode.
+to @false in Lisp mode.
 
 Paren highlighting is only supported under @windows, so the above defaults are
 conditional on the device type.  If @hemlock is started on a terminal, the
-initialization code makes @llisp mode bindings of @false and @f[0.5] for
+initialization code makes Lisp mode bindings of @false and @f[0.5] for
 @hid[Highlight Open Parens] and @hid[Paren Pause Period].  Since these
 alternate default bindings are made at initialization time, the only way to
 affect them is to use the @f[after-editor-initializations] macro.
 
 
 @section[Parsing Lisp]
-@llisp mode has a fairly complete knowledge of @llisp syntax, but since it does
+Lisp mode has a fairly complete knowledge of Lisp syntax, but since it does
 not use the reader, and must work incrementally, it can be confused by legal
-constructs.  @llisp mode totally ignores the read-table, so user-defined read
+constructs.  Lisp mode totally ignores the read-table, so user-defined read
 macros have no effect on the editor.  In some cases, the values the @hid[Lisp
 Syntax] character attribute can be changed to get a similar effect.
 
-@llisp commands consistently treat semicolon (@f[;]) style comments as
-whitespace when parsing, so a @llisp command used in a comment will affect the
+Lisp commands consistently treat semicolon (@f[;]) style comments as
+whitespace when parsing, so a Lisp command used in a comment will affect the
 next (or previous) form outside of the comment.  Since @f[#| ... |#] comments
 are not recognized, they can used to comment out code, while still allowing
-@llisp editing commands to be used.
+Lisp editing commands to be used.
 
 Strings are parsed similarly to symbols.  When within a string, the next form
 is after the end of the string, and the previous form is the beginning of the
@@ -1619,8 +1651,8 @@ string.
 @defhvar[var "Defun Parse Goal", val {2}]
 @defhvar1[var "Maximum Lines Parsed", val {500}]
 @defhvar1[var "Minimum Lines Parsed", val {50}]
-In order to save time, @llisp mode does not parse the entire buffer every time
-a @llisp command is used.  Instead, it uses a heuristic to guess the region of
+In order to save time, Lisp mode does not parse the entire buffer every time
+a Lisp command is used.  Instead, it uses a heuristic to guess the region of
 the buffer that is likely to be interesting.  These variables control the
 heuristic.
 
@@ -1634,7 +1666,7 @@ stopped if no defuns were found.
 
 When the heuristic fails, and does not parse enough of the buffer, then
 commands usually act as though a syntax error was detected.  If the parse
-starts in a bad place (such as in the middle of a string), then @llisp commands
+starts in a bad place (such as in the middle of a string), then Lisp commands
 will be totally confused.  Such problems can usually be eliminated by
 increasing the values of some of these variables.
 @enddefhvar
@@ -1782,7 +1814,7 @@ replace the region.  This command is undoable.
 @chap[Simple Customization]
 
 @index[customization]@hemlock can be customized and extended to a very
-large degree, but in order to do much of this a knowledge of @llisp is
+large degree, but in order to do much of this a knowledge of Lisp is
 required.  These advanced aspects of customization are discussed in the
 @i[Hemlock Command Implementor's Manual], while simpler methods of
 customization are discussed here.
@@ -1928,9 +1960,9 @@ to the new definition.
 @hemlock customizations are normally put in @hemlock's initialization file,
 "@f[hemlock-init.lisp]", or when compiled "@f[hemlock-init.fasl]".  When
 starting up Lisp, use the @f[-hinit] switch to indicate a particular file.  The
-contents of the init file must be @llisp code, but there is a fairly
+contents of the init file must be Lisp code, but there is a fairly
 straightforward correspondence between the basic customization commands and the
-equivalent @llisp code.  Rather than describe these functions in depth here, a
+equivalent Lisp code.  Rather than describe these functions in depth here, a
 brief example follows:
 @begin[programexample]
 ;;; -*- Mode: Lisp; Package: Hemlock -*-
