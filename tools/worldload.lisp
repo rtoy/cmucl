@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.25 1991/05/08 15:49:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.26 1991/05/15 16:36:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,6 +109,8 @@
 (xlib:load-clx (pathname "clx:"))
 #-no-clx
 (load "code:clx-ext")
+#-no-clx
+(load "code:inspect")
 
 ;;; Hemlock.
 ;;;
