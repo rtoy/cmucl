@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.9 1990/11/26 15:54:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.10 1990/11/26 18:25:58 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -231,7 +231,7 @@
 
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")
-(define-signal-handler sigtrap-handler "SIGTRAP")
+(define-signal-handler sigtrap-handler "Breakpoint/Trap")
 (define-signal-handler sigiot-handler "SIGIOT")
 (define-signal-handler sigemt-handler "SIGEMT")
 (define-signal-handler sigbus-handler "Bus Error")
@@ -249,12 +249,8 @@
   (unless (member "-monitor" lisp::lisp-command-line-list :test #'string=)
     (enable-interrupt :sigint #'sigint-handler))
   (enable-interrupt :sigquit #'sigquit-handler)
-  (enable-interrupt :sigill
-		    #+sparc #'kernel::internal-error
-		    #-sparc #'sigill-handler)
-  (enable-interrupt :sigtrap
-		    #+pmax #'kernel::internal-error
-		    #-pmax #'sigtrap-handler)
+  (enable-interrupt :sigill #'sigill-handler)
+  (enable-interrupt :sigtrap #'sigtrap-handler)
   (enable-interrupt :sigiot #'sigiot-handler)
   (enable-interrupt :sigemt #'sigemt-handler)
   (enable-interrupt :sigfpe #'vm:sigfpe-handler)
