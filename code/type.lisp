@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.25 1998/01/08 23:47:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.26 1998/01/21 00:55:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1263,7 +1263,7 @@
 		 (and (eql low-value -0d0) (eql high-bound 0d0))
 		 (and (eql low-value 0d0) (eql high-bound -0d0))))
 	   #+negative-zero-is-not-zero
-	   (eql (car low-value) high-bound))
+	   (eql (car low-bound) high-bound))
 	  ((consp high-bound)
 	   #-negative-zero-is-not-zero
 	   (let ((high-value (car high-bound)))
@@ -1273,7 +1273,7 @@
 		 (and (eql high-value -0d0) (eql low-bound 0d0))
 		 (and (eql high-value 0d0) (eql low-bound -0d0))))
 	   #+negative-zero-is-not-zero
-	   (eql (car high-value) low-bound))
+	   (eql (car high-bound) low-bound))
 	  #+negative-zero-is-not-zero
 	  ((or (and (eql low-bound -0f0) (eql high-bound 0f0))
 	       (and (eql low-bound -0d0) (eql high-bound 0d0))))
