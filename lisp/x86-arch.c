@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.8 1997/11/30 12:04:37 dtc Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.9 1998/02/19 15:19:11 dtc Exp $ 
  *
  */
 
@@ -215,11 +215,16 @@ sigtrap_handler(HANDLER_ARGS)
       break;
       
     case trap_Halt:
-      fake_foreign_function_call(context);
-      lose("%%primitive halt called; the party is over.\n");
-      undo_fake_foreign_function_call(context);
-      arch_skip_instruction(context);
-      break;
+      {
+	int fpu_state[27];
+	fpu_save(fpu_state);
+	fake_foreign_function_call(context);
+	lose("%%primitive halt called; the party is over.\n");
+	undo_fake_foreign_function_call(context);
+	fpu_restore(fpu_state);
+	arch_skip_instruction(context);
+	break;
+      }
       
     case trap_Error:
     case trap_Cerror:
