@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.37 1997/02/06 00:34:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.38 1997/02/07 20:27:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,7 +302,7 @@
 (defun class-typep (obj-layout class object)
   (declare (optimize speed))
   (when (layout-invalid obj-layout)
-    (if (and (typep class 'standard-class) object)
+    (if (and (typep (class-of object) 'standard-class) object)
 	(setq obj-layout (pcl::check-wrapper-validity object))
 	(error "TYPEP on obsolete object (was class ~S)."
 	       (class-proper-name (layout-class obj-layout)))))
