@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.5 1990/08/24 18:10:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.6 1990/09/06 19:40:38 wlott Exp $
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
@@ -239,9 +239,9 @@
 
 (def-output-routines ("OUTPUT-CHAR-~A-BUFFERED"
 		      1
-		      (:none base-character)
-		      (:line base-character)
-		      (:full base-character))
+		      (:none character)
+		      (:line character)
+		      (:full character))
   (if (eq (char-code byte)
 	  (char-code #\Newline))
       (setf (fd-stream-char-pos stream) 0)
@@ -514,12 +514,12 @@
 	   (nconc *input-routines*
 		  (list (list ',type ',name ',size))))))
 
-;;; INPUT-BASE-CHARACTER -- internal
+;;; INPUT-CHARACTER -- internal
 ;;;
 ;;;   Routine to use in stream-in slot for reading string chars.
 ;;;
-(def-input-routine input-base-character
-		   (base-character 1 sap head)
+(def-input-routine input-character
+		   (character 1 sap head)
   (code-char (sap-ref-8 sap head)))
 
 ;;; INPUT-UNSIGNED-8BIT-BYTE -- internal
@@ -846,7 +846,19 @@
        (push (fd-stream-ibuf-sap stream) *available-buffers*)
        (setf (fd-stream-ibuf-sap stream) nil))
      (lisp::set-closed-flame stream))
-    (:clear-input)
+    (:clear-input
+     (setf (fd-stream-ibuf-head stream) 0)
+     (setf (fd-stream-ibuf-tail stream) 0)
+     (loop
+       (multiple-value-bind
+	   (count errno)
+	   (mach:unix-select (1+ fd) (ash 1 fd) 0 0 0)
+	 (cond ((eql count 1)
+		(do-input stream)
+		(setf (fd-stream-ibuf-head stream) 0)
+		(setf (fd-stream-ibuf-tail stream) 0))
+	       (t
+		(return))))))
     (:force-output
      (flush-output-buffer stream))
     (:finish-output
