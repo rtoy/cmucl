@@ -5,5 +5,5 @@
 #+sparc
 (in-package :sparc)
 #+sparc
-(defconstant pseudo-atomic-trap 16))
+(defconstant pseudo-atomic-trap 16)
 
