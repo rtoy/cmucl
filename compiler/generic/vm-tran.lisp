@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.5 1990/03/22 17:49:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.6 1990/03/23 21:44:47 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -71,6 +71,22 @@
 (def-primitive-translator header-length (obj)
   (warn "Someone used HEADER-LENGTH.")
   `(%primitive vector-length ,obj))
+
+
+
+;;;; Charater support.
+
+;;; There are really only base-chars.
+;;;
+(def-source-transform characterp (obj)
+  `(base-char-p ,obj))
+
+;;; Keep this around in case someone uses it.
+;;;
+(def-source-transform %string-char-p (obj)
+  (warn "Someone used %string-char-p.")
+  `(base-char-p ,obj))
+
 
 
 
