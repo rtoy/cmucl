@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.7 2001/12/08 18:42:40 pmai Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.8 2002/02/06 22:43:01 pmai Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -113,32 +113,32 @@ certain OSF vendor keysyms that Motif wants to use.
 .SH FILES
 
 The following pathnames are specified relative to the directory where CMU CL is
-installed.
+installed, e.g. /usr/local.
 
 .TP 10n
-.BR doc/*
+.BR doc/cmucl/*
 Various postscript and text documentation files.
 .TP
 .BR bin/lisp
 The lisp startup program.  This directory should be in PATH.
 .TP
-.BR lib/lisp.core
+.BR lib/cmucl/lib/lisp.core
 The suspended Lisp image.
 .TP
-.BR lib/site-init.lisp
+.BR lib/cmucl/lib/site-init.lisp
 Site specific initialization (see README file.)
 .TP
-.BR lib/hemlock11.*, lib/mh-scan, lib/spell-dictionary.bin
+.BR lib/cmucl/lib/hemlock11.*, lib/cmucl/lib/mh-scan, lib/cmucl/lib/spell-dictionary.bin
 Hemlock files.
 .TP
-.BR lib/fonts/ 
+.BR lib/cmucl/lib/fonts/
 X11 fonts for Hemlock.
 .TP
-.BR lib/XKeysymDB
+.BR lib/cmucl/lib/XKeysymDB
 Database of X Keysym names for Motif.
 .TP
-.BR lib/load-foreign.csh
-Script used by LOAD-FOREIGN to run "ld".
+.BR lib/cmucl/lib/load-foreign.csh
+Script used by LOAD-FOREIGN to run "ld" on some platforms.
 .TP
 .BR ~/init.lisp,~/.cmucl-init.lisp
 User customization files loaded at lisp startup; either name is acceptable.
@@ -159,9 +159,10 @@ the ``Hemlock Command Implementor's Manual''
 
 .SH BUGS
 
-Bug reports should be sent to cmucl-bugs@cs.cmu.edu.  Please consult
-your local CMU CL maintainer or Common Lisp expert to verify that 
-the problem really is a bug before sending to this list.
+Consult http://www.cons.org/cmucl/support.html for support
+information, including mechanisms for bug reporting.  Please consult
+your local CMU CL maintainer or Common Lisp expert if any to verify
+that a problem really is a bug before reporting it.
 
 Known problems with this version:
 .TP 3
