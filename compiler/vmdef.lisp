@@ -1279,8 +1279,8 @@
 ;;; with the SC restriction.]
 ;;;
 (defun check-operand-types (ops more-op types what)
-  (declare (list ops types) (type (or operand-parse null) more-op)
-	   (string what))
+  (declare (list ops) (type (or list (member :unspecified)) types)
+	   (type (or operand-parse null) more-op) (string what))
   (let ((num (+ (length ops) (if more-op 1 0))))
     (unless (or (eq types :unspecified) (= (length types) num))
       (error "Expected ~D ~A type~P: ~S." num what types num)))
