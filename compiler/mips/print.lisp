@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.4 1990/06/26 03:50:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/print.lisp,v 1.5 1990/07/20 00:40:19 wlott Exp $
 ;;;
 ;;; This file contains temporary printing utilities and similar noise.
 ;;;
@@ -17,10 +17,11 @@
 
 
 (define-vop (print)
-  (:args (object :scs (descriptor-reg)))
+  (:args (object :scs (descriptor-reg) :target a0))
   (:results (result :scs (descriptor-reg)))
   (:save-p t)
   (:temporary (:sc any-reg :offset 2) v0)
+  (:temporary (:sc descriptor-reg :offset 4 :from (:argument 0)) a0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -29,10 +30,10 @@
   (:generator 0
     (let ((lra-label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
+      (move a0 object)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
       (inst addu nsp-tn nsp-tn -16)
-      (storew object nsp-tn 0)
       (inst compute-lra-from-code lra code lra-label temp)
       (inst li v0 (make-fixup "debug_print" :foreign))
       (inst li temp (make-fixup "call_into_c" :foreign))
