@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.4 1993/02/08 22:24:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.5 1993/02/10 23:40:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 
 (in-package "KERNEL")
 (export '(%instancep instance fixnump bignump bitp ratiop weak-pointer-p
-		     %typep))
+		     %typep class-typep))
 
 (in-package "SYSTEM")
 (export '(system-area-pointer system-area-pointer-p))
@@ -371,7 +371,7 @@
 	#-ns-boot
 	((%instancep x)
 	 (let* ((layout-x (%instance-layout x))
-		(length (layout-length layout-x)))
+		(len (layout-length layout-x)))
 	   (and (%instancep y)
 		(eq layout-x (%instance-layout y))
 		(structure-class-p (layout-class layout-x))
