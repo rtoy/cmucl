@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.7 1992/03/10 12:24:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.8 1992/03/10 12:33:14 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -57,11 +57,11 @@
       (int-result state 'signed-byte-32 'signed-reg)
       (int-result state 'unsigned-byte-32 'unsigned-reg)))
 
-(def-alien-type-method (sap :arg-tn) (type state)
+(def-alien-type-method (system-area-pointer :arg-tn) (type state)
   (declare (ignore type))
   (int-arg state 'system-area-pointer 'sap-stack))
 
-(def-alien-type-method (sap :result-tn) (type state)
+(def-alien-type-method (system-area-pointer :result-tn) (type state)
   (declare (ignore type))
   (int-result state 'system-area-pointer 'sap-reg))
 
