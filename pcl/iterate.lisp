@@ -26,13 +26,14 @@
 ;;; 
 ;;; Original source {pooh/n}<pooh>vanmelle>lisp>iterate;4 created 27-Sep-88 12:35:33
 
-(in-package :iterate :use '(:lisp :walker))
-   
+(defpackage "ITERATE" (:use :common-lisp :walker)
+  (:export "ITERATE" "ITERATE*" "GATHERING" "GATHER" "WITH-GATHERING"
+	   "INTERVAL" "ELEMENTS" "LIST-ELEMENTS" "LIST-TAILS"
+	   "PLIST-ELEMENTS" "EACHTIME" "WHILE" "UNTIL"
+	   "COLLECTING" "JOINING" "MAXIMIZING" "MINIMIZING" "SUMMING"
+	   "*ITERATE-WARNINGS*"))
 
-(export '(iterate iterate* gathering gather with-gathering interval elements 
-                list-elements list-tails plist-elements eachtime while until 
-                collecting joining maximizing minimizing summing 
-                *iterate-warnings*))
+(in-package "ITERATE")
 
 (defvar *iterate-warnings* :any "Controls whether warnings are issued for iterate/gather forms that aren't optimized.
 NIL => never; :USER => those resulting from user code; T => always, even if it's the iteration macro that's suboptimal."
@@ -295,7 +296,8 @@ NIL => never; :USER => those resulting from user code; T => always, even if it's
                  let-bindings
                  (list (list gvar
                              (cond
-                              (leftover-body
+			      #-cmu ; Python thinks this is unreachable.
+			      (leftover-body
                                                ; Have to use this up
                                `(progn ,@(prog1 leftover-body (setq 
                                                                   leftover-body
