@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.16 1993/03/13 14:38:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.17 1993/03/13 14:46:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -380,8 +380,7 @@
 ;;; for the object is invalid and signal an error if so.
 ;;;
 (defun source-transform-structure-typep (obj layout pred get-layout)
-  (let ((class (layout-class layout))
-	(idepth (layout-inheritance-depth layout))
+  (let ((idepth (layout-inheritance-depth layout))
 	(n-layout (gensym)))
     (once-only ((object obj))
       `(and (,pred ,object)
