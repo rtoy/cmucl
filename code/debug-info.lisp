@@ -116,9 +116,41 @@
   (undefined-value))
 
 
-;;;; Compiled debug locations:
+;;;; Packed bit vectors:
 ;;;
-;;;    Compiled debug locations are in a packed binary representation in the
+
+;;; READ-PACKED-BIT-VECTOR  --  Interface
+;;;
+;;;    Read the specified number of Bytes out of Vec at Index and convert them
+;;; to a bit-vector.  Index is incremented.
+;;;
+(defmacro read-packed-bit-vector (bytes vec index)
+  (once-only ((n-bytes bytes))
+    (once-only ((n-res `(make-array (* ,n-bytes 8) :element-type 'bit)))
+      `(progn
+	 (%primitive byte-blt ,vec ,index ,n-res 0 ,n-bytes)
+	 (incf ,index ,n-bytes)
+	 ,n-res))))
+
+
+;;; WRITE-PACKED-BIT-VECTOR  --  Interface
+;;;
+;;;    Write Bits out to Vec.  Bits must be an eight-bit multiple.
+;;;
+(defmacro write-packed-bit-vector (bits vec)
+  (declare (type simple-bit-vector bits))
+  (let ((len (ash (length bits) -3))
+	(start (fill-pointer vec)))
+    (dotimes (i len)
+      (vector-push-extend 0 vec))
+    (lisp::with-array-data (data vec)
+      (%primitive byte-blt bits 0 data start (+ start len))))
+  (undefined-value))
+
+
+;;;; Compiled debug variables:
+;;;
+;;;    Compiled debug variables are in a packed binary representation in the
 ;;; DEBUG-FUNCTION-VARIABLES:
 ;;;    single byte of boolean flags:
 ;;;        uninterned name
@@ -134,11 +166,36 @@
 ;;;    SC-Offset of primary location (as var-length integer)
 ;;;    [If has save SC, SC-Offset of save location (as var-length integer)]
 
-(defconstant compiled-location-uninterned	#b00000001)
-(defconstant compiled-location-packaged		#b00000010)
-(defconstant compiled-location-environment-live	#b00000100)
-(defconstant compiled-location-save-loc-p	#b00001000)
-(defconstant compiled-location-id-p		#b00010000)
+(defconstant compiled-debug-variable-uninterned		#b00000001)
+(defconstant compiled-debug-variable-packaged		#b00000010)
+(defconstant compiled-debug-variable-environment-live	#b00000100)
+(defconstant compiled-debug-variable-save-loc-p		#b00001000)
+(defconstant compiled-debug-variable-id-p		#b00010000)
+
+
+;;;; Compiled debug blocks:
+;;;
+;;;    Compiled debug blocks are in a packed binary representation in the
+;;; DEBUG-FUNCTION-BLOCKS:
+;;;    number of successors + bit flags (single byte)
+;;;        elsewhere-p
+;;;    ...ordinal number of each successor in the function's blocks vector...
+;;;    kind of location (single byte)
+;;;    delta from previous PC (or from 0 if first location in function.)
+;;;    [offset of first top-level form, if no function TLF-NUMBER]
+;;;    form number of first source form
+;;;    first live mask (length in bytes determined by number of VARIABLES)
+;;;    ...more <PC, top-level form offset, form-number, live-set> tuples...
+
+
+(defconstant compiled-debug-block-nsucc-byte (byte 2 0))
+(defconstant compiled-debug-block-elsewhere-p #b00000100)
+
+(defconstant compiled-code-location-kind-byte (byte 3 0))
+(defconstant compiled-code-location-kinds
+  '#(:unknown-return :known-return :internal-error :non-local-exit
+		     :block-start))
+
 
 
 ;;;; Debug function:
@@ -168,6 +225,11 @@
   ;; block is the start of the function.  This slot may be NIL to save space.
   (blocks nil :type (or (simple-array (unsigned-byte 8) (*)) null))
   ;;
+  ;; If all code locations in this function are in the same top-level form,
+  ;; then this is the number of that form, otherwise NIL.  If NIL, then each
+  ;; code location represented in the BLOCKS specifies the TLF number.
+  (tlf-number nil :type (or index null))
+  ;;
   ;; A vector describing the variables that the argument values are stored in
   ;; within this function.  The locations are represented by the ordinal number
   ;; of the entry in the VARIABLES.  The locations are in the order that the
@@ -192,8 +254,9 @@
   ;;    The following location is the value of the keyword argument with the
   ;;    specified name.
   ;;
-  ;; This may be NIL to save space.
-  (arguments nil :type (or simple-vector null))
+  ;; This may be NIL to save space.  If no symbols are present, then this will
+  ;; be represented with an I-vector with sufficiently large element type.
+  (arguments nil :type (or (simple-array * (*)) null))
   ;;
   ;; There are three alternatives for this slot:
   ;; 
@@ -211,7 +274,11 @@
   ;;
   ;; SC-Offsets describing where the return PC and return CONT are kept.
   (return-pc nil :type sc-offset)
-  (old-cont nil :type sc-offset))
+  (old-cont nil :type sc-offset)
+  ;;
+  ;; The earliest PC in this function at which the environment is properly
+  ;; initialized (arguments moved from passing locations, etc.)
+  (start-pc nil :type unsigned-byte))
 
 
 (defstruct debug-source
