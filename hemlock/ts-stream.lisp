@@ -151,7 +151,7 @@
 ;;; Output a single character to stream.
 ;;;
 (defun %ts-stream-out (stream char)
-  (declare (string-char char))
+  (declare (base-character char))
   (when (= (ts-stream-output-buffer-index stream)
 	   ts-stream-output-buffer-size)
     (%ts-stream-flsbuf stream))

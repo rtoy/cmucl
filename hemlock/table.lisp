@@ -70,7 +70,7 @@
 	    (:print-function print-string-table))
   "This structure is used to implement the Hemlock string-table type."
   ;; Character used to 
-  (separator #\Space :type string-char)	   ; character used for word separator
+  (separator #\Space :type base-character) ; character used for word separator
   (num-nodes 0 :type fixnum)		   ; number of nodes in string table
   (value-nodes (make-array initial-string-table-size)) ; value node array
   (first-word-table (make-word-table)))	   ; pointer to first WORD-TABLE
@@ -83,7 +83,7 @@
   "Creates and returns a Hemlock string-table.  If Intitial-Contents is
   supplied in the form of an A-list of string-value pairs, these pairs
   will be used to initialize the table.  If Separator, which must be a
-  string-char, is specified then it will be used to distinguish word
+  base-character, is specified then it will be used to distinguish word
   boundaries."
   (let ((table (%make-string-table separator)))
     (dolist (x initial-contents)
@@ -261,7 +261,7 @@
 ) ; eval-when
 
 (defun with-folded-munge-string (str separator)
-  (declare (simple-string str) (string-char separator))
+  (declare (simple-string str) (base-character separator))
   (let ((str-len (length str))
 	(sep-pos nil)
 	(buf-pos 0))
@@ -567,7 +567,7 @@
   (values nil nil))
 
 (defun compute-field-pos (given best separator)
-  (declare (simple-string given best) (string-char separator))
+  (declare (simple-string given best) (base-character separator))
   (let ((give-pos 0)
 	(best-pos 0))
     (loop
@@ -581,7 +581,7 @@
 ;;;; Find-Longest-Completion
 
 (defun find-longest-completion (strings separator)
-  (declare (string-char separator))
+  (declare (base-character separator))
   (let ((first (car strings))
 	(rest-strings (cdr strings))
 	(punt-p nil)
