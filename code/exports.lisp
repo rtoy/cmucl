@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.154 1998/05/09 22:13:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.155 1998/05/27 03:32:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,8 +13,11 @@
 ;;;
 
 (in-package "LISP")
-(unless (find-package "PCL")
-  (make-package "PCL"))
+
+(if (find-package "PCL")
+    (rename-package "PCL" "PCL" 'nil)
+    (make-package "PCL" :nicknames 'nil :use nil))
+(shadow 'class "PCL")
 
 (if (find-package "C-CALL")
     (rename-package "C-CALL" "C-CALL" 'nil)
