@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.24 2001/01/19 23:19:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.25 2001/05/18 16:22:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -528,7 +528,7 @@
        (inst sra temp number amount))
       (immediate
        (inst sra temp number (tn-value amount))))
-    (inst andn result temp 3)))
+    (inst andn result temp fixnum-tag-mask)))
     
 
 
@@ -598,7 +598,7 @@
     ;; */signed=>signed.  Why?  A fixnum product using signed=>signed
     ;; has to convert both args to signed-nums.  But using this, we
     ;; don't have to and that saves an instruction.
-    (inst sra temp y 2)
+    (inst sra temp y fixnum-tag-bits)
     (inst smul r x temp)))
 
 (define-vop (fast-v8-*/signed=>signed fast-signed-binop)
@@ -624,7 +624,7 @@
   (:translate *)
   (:guard (backend-featurep :sparc-64))
   (:generator 4
-    (inst sra temp y 2)
+    (inst sra temp y fixnum-tag-bits)
     (inst mulx r x temp)))
 
 (define-vop (fast-v9-*/signed=>signed fast-signed-binop)
@@ -1080,7 +1080,7 @@
   (:results (digit :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:generator 1
-    (inst sra digit fixnum 2)))
+    (inst sra digit fixnum fixnum-tag-bits)))
 
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
@@ -1170,7 +1170,7 @@
   (:generator 1
     (sc-case res
       (any-reg
-       (inst sll res digit 2))
+       (inst sll res digit fixnum-tag-bits))
       (signed-reg
        (move res digit)))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.7 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.8 2001/05/18 16:22:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -103,7 +103,7 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:generator 1
-    (inst sll res ch 2)))
+    (inst sll res ch fixnum-tag-bits)))
 
 (define-vop (code-char)
   (:translate code-char)
@@ -113,7 +113,7 @@
   (:results (res :scs (base-char-reg)))
   (:result-types base-char)
   (:generator 1
-    (inst srl res code 2)))
+    (inst srl res code fixnum-tag-bits)))
 
 
 ;;; Comparison of base-chars.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.21 1998/07/24 17:22:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.22 2001/05/18 16:22:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,9 @@
       (inst add ndescr rank (fixnum (1- vm:array-dimensions-offset)))
       (inst sll ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)
-      (inst srl ndescr ndescr 2)
+      ;; Remove the extraneous fixnum tag bits because TYPE and RANK
+      ;; were fixnums
+      (inst srl ndescr ndescr fixnum-tag-bits)
       (storew ndescr header 0 vm:other-pointer-type))
     (move result header)))
 
@@ -74,7 +76,7 @@
     (loadw temp x 0 vm:other-pointer-type)
     (inst sra temp vm:type-bits)
     (inst sub temp (1- vm:array-dimensions-offset))
-    (inst sll res temp 2)))
+    (inst sll res temp fixnum-tag-bits)))
 
 
 
@@ -175,7 +177,7 @@
 	 (:temporary (:scs (non-descriptor-reg) :to (:result 0)) temp result)
 	 (:generator 20
 	   (inst srl temp index ,bit-shift)
-	   (inst sll temp 2)
+	   (inst sll temp fixnum-tag-bits)
 	   (inst add temp (- (* vm:vector-data-offset vm:word-bytes)
 			     vm:other-pointer-type))
 	   (inst ld result object temp)
@@ -224,7 +226,7 @@
 	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
 	   (inst srl offset index ,bit-shift)
-	   (inst sll offset 2)
+	   (inst sll offset fixnum-tag-bits)
 	   (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			       vm:other-pointer-type))
 	   (inst ld old object offset)
