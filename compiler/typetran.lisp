@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.13 1992/03/21 19:41:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14 1992/04/27 19:46:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,7 +368,8 @@
 			  t
 			  ,(if frozen
 			       (when included
-				 `(member ,n-name ',included :test #'eq))
+				 `(if (member ,n-name ',included :test #'eq)
+				      t nil))
 			       `(locally (declare (notinline ,predicate))
 				  (,predicate ,object)))))))
 	    `(lisp::structure-typep ,obj ',type)))))))
