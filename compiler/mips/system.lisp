@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.17 1990/05/25 20:04:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.18 1990/05/27 16:50:48 ch Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -147,6 +147,15 @@
        (inst sll res val (- vm:type-bits 2))
        (inst or res res temp)))))
 
+
+;;;; Allocation
+
+(define-vop (dynamic-space-free-pointer)
+  (:results (int :scs (sap-reg)))
+  (:translate dynamic-space-free-pointer)
+  (:policy :fast-safe)
+  (:generator 1
+    (move int alloc-tn)))
 
 
 ;;;; Code object frobbing.
