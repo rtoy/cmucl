@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.24 1991/12/20 21:17:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.25 1992/01/30 16:23:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,9 +281,12 @@
 				   (string= dir ".."))
 			      (dirs :up)
 			      (dirs dir))))))
-		  (if (dirs)
-		      (cons (if absolute :absolute :relative) (dirs))
-		      nil))
+		  (cond (absolute
+			 (cons :absolute (dirs)))
+			((dirs)
+			 (cons :relative (dirs)))
+			(t
+			 nil)))
 		name
 		type
 		version)))))
