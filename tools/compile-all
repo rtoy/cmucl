@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.8 1992/03/03 10:42:17 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.9 1992/03/04 09:55:21 wlott Exp $
 
 set features = ()
 set misfeatures = ()
@@ -135,7 +135,7 @@ set thissrc = /afs/cs/project/clisp/src/$subdir
 
 nother_source:
 
-set src = ($src $thissrc/)
+set src = ($src \"$thissrc/\")
 
 if (-e $thissrc/FEATURES) then
         set tmp = (`cat $thissrc/FEATURES`)
@@ -196,11 +196,11 @@ echo "Compiling setup and bootstrap ..."
 $lisp -noinit -eval '(eval (read))' << EOF
 (progn
   (setf *features*
-	(set-difference (list* '($features) *features*) '($misfeatures)))
-  (setf (search-list "target:") '("$dest/" "$src"))
+	(set-difference (list* $features *features*) '($misfeatures)))
+  (setf (search-list "target:") '("$dest/" $src))
   (setq *compile-verbose* nil *compile-print* nil) 
-  (load "target:tools/setup")
-  (comf "target:tools/setup")
+  (load "target:tools/setup" :if-source-newer :load-source)
+  (comf "target:tools/setup" :load t)
   (when (probe-file "${bootstrap}.lisp") (comf "$bootstrap"))
   (quit))
 EOF
@@ -223,8 +223,8 @@ while ($#sysinfo > 0)
 	$lisp -noinit -eval '(eval (read))' << EOF
 (progn
   (setf *features*
-	(set-difference (list* '($features) *features*) '($misfeatures)))
-  (setf (search-list "target:") '("$dest/" "$src"))
+	(set-difference (list* $features *features*) '($misfeatures)))
+  (setf (search-list "target:") '("$dest/" $src))
   (setq *compile-verbose* nil *compile-print* nil) 
   (load "target:tools/setup")
   (load "$bootstrap" :if-does-not-exist nil)
