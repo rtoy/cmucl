@@ -7,12 +7,15 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    This file contains the RT definitions for array operations.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.2 1990/03/07 00:22:33 wlott Exp $
 ;;;
-;;; Written by Rob MacLachlan
+;;;    This file contains the MIPS definitions for array operations.
 ;;;
-(in-package 'c)
+;;; Written by William Lott
+;;;
+(in-package "C")
 
+#|
 (define-miscop aref1 (a i) :translate aref)
 (define-miscop caref2 (a i j) :translate aref)
 (define-miscop caref3 (a i j k) :translate aref)
@@ -31,79 +34,81 @@
   :arg-types (simple-bit-vector t))
 (define-miscop sbitset (v i val) :translate %aset
   :arg-types (simple-bit-vector t t))
-(define-miscop g-vector-length (v) :translate length
-  :arg-types (simple-vector))
-(define-miscop simple-string-length (s) :translate length
-  :arg-types (simple-string))
-(define-miscop simple-bit-vector-length (b) :translate length
-  :arg-types (simple-bit-vector))
-(define-miscop length (s) :translate length :cost 50)
+|#
 
-(define-vop (fast-length/simple-string)
-  (:args (vec :scs (descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:translate length)
-  (:arg-types simple-string)
-  (:policy :fast-safe)
-  #+nil
-  (:generator 6
-    (loadw res vec (/ clc::string-header-entries 4))
-    (inst niuo res res clc::i-vector-entries-mask-16)))
+
+(macrolet ((frob (type)
+	     `(define-vop (,(intern (concatenate 'simple-string
+						 "FAST-LENGTH/"
+						 (string type)))
+			   vector-length)
+		(:translate length)
+		(:arg-types ,type)
+		(:policy :fast-safe))))
+  (frob simple-string)
+  (frob simple-bit-vector)
+  (frob simple-vector)
+  (frob simple-array-unsigned-byte-2)
+  (frob simple-array-unsigned-byte-4)
+  (frob simple-array-unsigned-byte-8)
+  (frob simple-array-unsigned-byte-16)
+  (frob simple-array-unsigned-byte-32)
+  (frob simple-array-single-float)
+  (frob simple-array-double-float))
+
+
+
 
 (define-vop (fast-schar byte-index-ref)
-  (:results (value :scs (string-char-reg)))
-  (:variant clc::i-vector-header-size)
+  (:results (value :scs (base-character-reg)))
+  (:variant vm:vector-base-size vm:other-pointer-type)
   (:translate aref)
   (:policy :fast)
-  (:arg-types simple-string *)
-  (:result-types string-char))
+  (:arg-types simple-string *))
 
 (define-vop (fast-scharset byte-index-set)
   (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg descriptor-reg short-immediate
-			      unsigned-immediate))
-	 (value :scs (string-char-reg)))
-  (:results (result :scs (string-char-reg)))
-  (:variant clc::i-vector-header-size)
+	 (index :scs (any-reg descriptor-reg immediate unsigned-immediate))
+	 (value :scs (base-character-reg)))
+  (:results (result :scs (base-character-reg)))
+  (:variant vm:vector-base-size vm:other-pointer-type)
   (:translate %aset)
   (:policy :fast)
-  (:arg-types simple-string * string-char)
-  (:result-types string-char))
+  (:arg-types simple-string * base-character))
 
-(define-vop (header-length)
-  (:args (vec :scs (descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
-  #+nil
-  (:generator 6
-    (loadw res vec (/ clc::g-vector-header-words 4))
-    (inst dec res clc::g-vector-header-size-in-words)
-    (inst niuo res res clc::g-vector-words-mask-16)))
-
-(define-vop (fast-length/simple-vector header-length)
-  (:translate length)
-  (:policy :fast-safe)
-  (:arg-types simple-vector))
 
 (define-vop (get-vector-subtype)
   (:args (x :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
   (:results (res :scs (any-reg descriptor-reg)))
-  #+nil
   (:generator 6
-    (loadc res x clc::vector-subtype-byte)
-    (inst nilz res res clc::right-shifted-subtype-mask-16)))
-	 
-(define-vop (header-ref word-index-ref)
-  (:variant clc::g-vector-header-size-in-words))
+    (loadw temp x 0 vm:other-pointer-type)
+    (inst sra temp temp vm:type-bits)
+    (inst sll res temp 2)))
 
-(define-vop (fast-svref header-ref)
+(define-vop (set-vector-subtype)
+  (:args (x :scs (descriptor-reg) :target res)
+	 (subtype :scs (any-reg descriptor-reg)))
+  (:results (res :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:generator 6
+    (loadw t1 x 0 vm:other-pointer-type)
+    (loadi t2 vm:type-mask)
+    (inst and t1 t1 t2)
+    (inst sra t2 subtype 2)
+    (inst or t1 t1 t2)
+    (storew t1 x 0 vm:other-pointer-type)
+    (move res x)))
+
+
+(define-vop (fast-svref word-index-ref)
+  (:variant vm:vector-base-size vm:other-pointer-type)
   (:translate aref)
   (:arg-types simple-vector *)
   (:policy :fast))
 
-(define-vop (header-set word-index-set)
-  (:variant clc::g-vector-header-size-in-words))
-
-(define-vop (fast-svset header-set)
+(define-vop (fast-svset word-index-set)
+  (:variant vm:vector-base-size vm:other-pointer-type)
   (:translate %aset)
   (:arg-types simple-vector * *)
   (:policy :fast))
