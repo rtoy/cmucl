@@ -63,6 +63,12 @@ New in this release:
        circular constant lists to fasl files.
      - COMPILE-FILE-PATHNAME's BYTE-COMPILE keyword arg defaulting
        to *BYTE-COMPILE-DEFAULT* like COMPILE-FILE.
+     - Added VOPs for CHAR=, CHAR<, and CHAR> when the second arg is a
+       constant character.
+     - Added missing VOPs for Sparc for array refs with a constant
+       index. 
+     - Lisp binary will also look at the PATH envvar to find out it's
+       own location which is used to find other needed files.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
@@ -136,6 +142,7 @@ New in this release:
      - LAST, BUTLAST, NBUTLAST accepting bignum counts.
      - WITH-OUTPUT-TO-STRING accepting :ELEMENT-TYPE.
      - FIXNUM no longer naming a function.
+     - MAKE-STRING-OUTPUT-STREAM accepts :ELEMENT-TYPE.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
@@ -150,6 +157,10 @@ New in this release:
      - Structure predicates no longer signaling an error when applied
        to obsolete instances.
      - A DEFTRANSFORM for array bounds checking had an off-by-1 error.
+     - Compiler was not properly deriving the type of FTRUNCATE in all
+       cases.
+     - Fixed error wherein certain uses of 2 arg ATAN caused a
+       compiler error on x86.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
@@ -158,21 +169,21 @@ New in this release:
      - the signature of *COMPILER-NOTIFICATION-FUNCTION* has changed;
        it now has an extra argument that describes the nature of the
        error or warning. 
-     - File versioning occurs when the version component is :newest,
+     - File versioning occurs when the version component is :NEWEST,
        and Emacs style file versions are created:  foo.bar.~N~, where
        the larger N is newer.  foo.bar is the newest version.
      - Converting namestrings to pathnames now get a version component
        of NIL instead of :NEWEST.
-     - *default-pathname-defaults* has a version component of
-       :unspecific instead of :newest so versioning is disabled by
+     - *DEFAULT-PATHNAME-DEFAULTS* has a version component of
+       :UNSPECIFIC instead of :NEWEST so versioning is disabled by
        default to preserve current behavior.  Set the version to
-       :newest to create versions.
+       :NEWEST to create versions.
      - LDB backtrace on x86.
-     - On x86, the &REST arg list of a non-local function is allocated
-       on the stack if declared DYNAMIC-EXTENT, and speed is >=
-       safety.  Be warned that all bets are off if a stack-allocated
-       object or parts of it escape; CMUCL might crash or format your
-       hard disk.
+     - On x86 and sparc, the &REST arg list of a non-local function is
+       allocated on the stack if declared DYNAMIC-EXTENT, and speed is
+       >= safety.  Be warned that all bets are off if a
+       stack-allocated object or parts of it escape; CMUCL might crash
+       or format your hard disk.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
