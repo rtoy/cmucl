@@ -36,14 +36,15 @@
 (with-compiler-log-file
     ("target:compile-hemlock.log"
      :optimize
-     '(optimize (debug-info #-small 2 #+small 1) 
+     '(optimize (debug-info #-small 2 #+small .5) 
 		(speed 2) (inhibit-warnings 2)
 		(safety #-small 1 #+small 0))
      :optimize-interface
-     '(optimize-interface (debug-info 1))
+     '(optimize-interface (debug-info .5))
      :context-declarations
      '(((:or :external (:match "$%SET-"))
-	(declare (optimize (safety 2))))))
+	(declare (optimize (safety 2))
+		 (optimize-interface (debug-info 1))))))
 
 (comf "target:code/globals")
 (comf "target:code/struct")
