@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.3 1997/02/10 15:45:17 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.4 1997/05/08 17:08:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -419,10 +419,17 @@
   (:policy :fast-safe)
   (:translate ash)
   (:note nil)
-  (:args (number :scs (signed-reg unsigned-reg) :target result))
+  (:args (number :scs (signed-reg unsigned-reg) :target result
+		 :load-if (not (and (sc-is number signed-stack unsigned-stack)
+				    (sc-is result signed-stack unsigned-stack)
+				    (location= number result)))))
   (:info amount)
   (:arg-types (:or signed-num unsigned-num) (:constant integer))
-  (:results (result :scs (signed-reg unsigned-reg)))
+  (:results (result :scs (signed-reg unsigned-reg)
+		    :load-if (not
+			      (and (sc-is number signed-stack unsigned-stack)
+				   (sc-is result signed-stack unsigned-stack)
+				   (location= number result)))))
   (:result-types (:or signed-num unsigned-num))
   (:generator 2
     (cond ((and (= amount 1)
@@ -440,7 +447,7 @@
 		  ;; We don't have to worry about overflow because of the
 		  ;; result type restriction.
 		  (inst shl result amount))
-		 ((sc-is number signed-reg)
+		 ((sc-is number signed-reg signed-stack)
 		  ;; If the amount is greater than 31, only shift by 31.  We
 		  ;; have to do this because the shift instructions only look
 		  ;; at the low five bits of the result.
