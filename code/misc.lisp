@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.6 1991/01/12 23:45:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.7 1991/02/03 11:20:11 wlott Exp $
 ;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
@@ -81,14 +81,6 @@
 (defun lisp-implementation-version ()
   "Returns a string describing the implementation version."
   *lisp-implementation-version*)
-
-(defun machine-type ()
-  "Returns a string describing the type of the local machine."
-  "DECstation 3100")
-
-(defun machine-version ()
-  "Returns a string describing the version of the local machine."
-  "DECstation 3100")
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."

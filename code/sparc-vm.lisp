@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.6 1990/12/17 19:34:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.7 1991/02/03 11:20:08 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -22,6 +22,18 @@
 (pushnew :SPARCstation *features*)
 (pushnew :sparc *features*)
 (pushnew :sun4 *features*)
+
+
+
+;;;; MACHINE-TYPE and MACHINE-VERSION
+
+(defun machine-type ()
+  "Returns a string describing the type of the local machine."
+  "SPARCstation")
+
+(defun machine-version ()
+  "Returns a string describing the version of the local machine."
+  "SPARCstation")
 
 
 

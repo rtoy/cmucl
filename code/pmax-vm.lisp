@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.5 1990/12/06 17:39:33 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.6 1991/02/03 11:19:52 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
@@ -21,6 +21,18 @@
 
 (pushnew :decstation-3100 *features*)
 (pushnew :pmax *features*)
+
+
+
+;;;; MACHINE-TYPE and MACHINE-VERSION
+
+(defun machine-type ()
+  "Returns a string describing the type of the local machine."
+  "DECstation")
+
+(defun machine-version ()
+  "Returns a string describing the version of the local machine."
+  "DECstation")
 
 
 
