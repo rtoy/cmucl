@@ -42,6 +42,7 @@ New in this release:
      - RESTART-CASE's interaction with local macros fixed.
      - Interaction of COMPUTE-RESTARTS and RESTART-CASE fixed in
        presence of multiple restarts having the same name.
+     - Condition slot readers/writers are generic functions.
 
   * Numerous bugfixes:
 

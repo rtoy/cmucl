@@ -46,3 +46,8 @@
 	    (ctor-class-name ctor)
 	    (ctor-initargs ctor)
 	    (ctor-state ctor))))
+
+(/show "Converting condition accessors")
+(when (fboundp 'conditions::make-early-condition-accessors-generic)
+  (let ((*compile-print* nil))
+    (conditions::make-early-condition-accessors-generic)))

@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.26 2003/04/06 09:39:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.27 2003/04/18 10:24:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,8 +23,12 @@
   (setf (compiler-macro-function 'slot-value) nil)
   (setf (compiler-macro-function 'slot-boundp) nil)
   ;;
-  ;; Undefine all generic functions exported from Lisp so that bootstrapping
-  ;; doesn't get confused.
+  ;; Undefine all generic functions exported from Lisp so that
+  ;; bootstrapping doesn't get confused, but convert condition
+  ;; accessor gfs to normal functions beforehand, for the obvious
+  ;; reason.
+  (when (fboundp 'conditions::make-early-condition-accessors-generic)
+    (conditions::make-early-condition-accessors-generic nil))
   (let ((class (kernel::find-class 'generic-function nil)))
     (when class
       (do-external-symbols (sym "LISP")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.71 2003/04/17 13:12:28 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.72 2003/04/18 10:24:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -640,6 +640,45 @@
 		 (res (copy-structure sslot)))))))
     (res)))
 
+(eval-when (compile load eval)
+  (defvar *make-condition-accessor-methods* nil))
+
+;;;
+;;; List of condition slot readers and writers defined early.  Used to
+;;; change them to generic functions when PCL is ready to do so.
+;;; Alas, we have to keep this list around after readers/writers have
+;;; been made generic functions because the PCL build process requires
+;;; us to undefine generic functions, so we need to change the
+;;; accessors back to normal functions when building PCL.
+;;;
+(defvar *early-condition-accessors* ())
+
+(defun make-early-condition-accessors-generic (&optional (generic-p t))
+  (dolist (elt *early-condition-accessors*)
+    (destructuring-bind (condition slot accessor kind) elt
+      (fmakunbound accessor)
+      (let ((new (make-condition-accessor accessor condition slot
+					  kind generic-p))) 
+	(when generic-p
+	  (eval new)))))
+  (setq *make-condition-accessor-methods* generic-p))
+
+(defun make-condition-accessor (accessor condition slot kind generic-p)
+  (if generic-p
+      (if (eq kind 'reader)
+	  `(defmethod ,accessor ((x ,condition))
+	     (condition-reader-function x ',slot))
+	  `(defmethod ,accessor (nv (x ,condition))
+	     (condition-writer-function x nv ',slot)))
+      (progn
+	(pushnew (list condition slot accessor kind)
+		 *early-condition-accessors* :test #'equal)
+	(setf (fdefinition accessor)
+	      (if (eq kind 'reader)
+		  (lambda (x)
+		    (condition-reader-function x slot))
+		  (lambda (nv x)
+		    (condition-writer-function x nv slot)))))))
 
 (defun %define-condition (name slots documentation report default-initargs)
   (let ((class (kernel::find-class name)))
@@ -649,19 +688,13 @@
     (setf (condition-class-default-initargs class) default-initargs)
     (setf (documentation name 'type) documentation)
     
-    (dolist (slot slots)
-      ;;
-      ;; Set up reader & writer functions.
-      (let ((name (condition-slot-name slot)))
-	(dolist (reader (condition-slot-readers slot))
-	  (setf (fdefinition reader)
-		#'(lambda (condition)
-		    (condition-reader-function condition name))))
-	(dolist (writer (condition-slot-writers slot))
-	  (setf (fdefinition writer)
-		#'(lambda (new-value condition)
-		    (condition-writer-function condition new-value name))))))
-
+    (unless *make-condition-accessor-methods*
+      (dolist (slot slots)
+	(let ((slot-name (condition-slot-name slot)))
+	  (dolist (reader (condition-slot-readers slot))
+	    (make-condition-accessor reader name slot-name 'reader nil))
+	  (dolist (writer (condition-slot-writers slot))
+	    (make-condition-accessor writer name slot-name 'writer nil)))))
     ;;
     ;; Compute effective slots and set up the class and hairy slots (subsets of
     ;; the effective slots.)
@@ -723,6 +756,7 @@
 	 (layout (find-condition-layout name parent-types))
 	 (documentation nil)
 	 (report nil)
+	 (slot-name/accessors ())
 	 (default-initargs ()))
     (collect ((slots)
 	      (all-readers nil append)
@@ -765,6 +799,7 @@
 		   (simple-program-error "Unknown slot option:~%  ~S"
                                          (first options))))))
 
+	    (push (list slot-name (readers) (writers)) slot-name/accessors)
 	    (all-readers (readers))
 	    (all-writers (writers))
 	    (slots `(make-condition-slot
@@ -811,6 +846,18 @@
 
 	 (declaim (ftype (function (t) t) ,@(all-readers)))
 	 (declaim (ftype (function (t t) t) ,@(all-writers)))
+
+	 ,@(when *make-condition-accessor-methods*
+	     (collect ((methods))
+	       (dolist (elt slot-name/accessors)
+		 (destructuring-bind (slot-name readers writers) elt
+		   (dolist (reader readers)
+		     (methods (make-condition-accessor
+			       reader name slot-name 'reader t)))
+		   (dolist (writer writers)
+		     (methods (make-condition-accessor
+			       writer name slot-name 'writer t)))))
+	       (methods)))
 
 	 (%define-condition ',name
 			    (list ,@(slots))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.85 2003/04/11 15:28:12 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.86 2003/04/18 10:24:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,9 @@
 
 (defvar *byte-compile* #+small t #-small :maybe)
 (defvar *original-%deftype* #'lisp::%deftype)
+
+(when (boundp 'conditions::*make-condition-accessor-methods*)
+  (setq conditions::*make-condition-accessor-methods* nil))
 
 (with-compiler-log-file
     ("target:compile-lisp.log"
