@@ -5,12 +5,13 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.32 1998/05/05 00:14:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.33 1998/05/15 01:03:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
+;;; Gray streams support by Douglas Crosher, 1998.
 ;;;
 ;;; This file contains the OS-independent stream functions.
 ;;;
@@ -255,40 +256,39 @@
   newline character."
   (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (prepare-for-fast-read-char stream
-         (let ((res (make-string 80))
-	       (len 80)
-	       (index 0))
-	   (loop
-	    (let ((ch (fast-read-char nil nil)))
-	      (cond (ch
-		     (when (char= ch #\newline)
-		       (done-with-fast-read-char)
-		       (return (values (shrink-vector res index) nil)))
-		     (when (= index len)
-		       (setq len (* len 2))
-		       (let ((new (make-string len)))
-			 (replace new res)
-			 (setq res new)))
-		     (setf (schar res index) ch)
-		     (incf index))
-		    ((zerop index)
-		     (done-with-fast-read-char)
-		     (return (values (eof-or-lose stream eof-errorp eof-value)
-				     t)))
-		    ;; since fast-read-char hit already the eof char, we
-		    ;; shouldn't do another read-char
-		    (t
-		     (done-with-fast-read-char)
-		     (return (values (shrink-vector res index) t)))))))))
-      (fundamental-stream
-       (multiple-value-bind (string eof)
-	   (stream-read-line stream)
-	 (if (and eof (zerop (length string)))
-	     (values (eof-or-lose stream eof-errorp eof-value) t)
-	     (values string eof)))))))
+    (if (lisp-stream-p stream)
+	(prepare-for-fast-read-char stream
+          (let ((res (make-string 80))
+		(len 80)
+		(index 0))
+	    (loop
+	     (let ((ch (fast-read-char nil nil)))
+	       (cond (ch
+		      (when (char= ch #\newline)
+			(done-with-fast-read-char)
+			(return (values (shrink-vector res index) nil)))
+		      (when (= index len)
+			(setq len (* len 2))
+			(let ((new (make-string len)))
+			  (replace new res)
+			  (setq res new)))
+		      (setf (schar res index) ch)
+		      (incf index))
+		     ((zerop index)
+		      (done-with-fast-read-char)
+		      (return (values (eof-or-lose stream eof-errorp eof-value)
+				      t)))
+		     ;; since fast-read-char hit already the eof char, we
+		     ;; shouldn't do another read-char
+		     (t
+		      (done-with-fast-read-char)
+		      (return (values (shrink-vector res index) t))))))))
+	;; Fundamental-stream.
+	(multiple-value-bind (string eof)
+	    (stream-read-line stream)
+	  (if (and eof (zerop (length string)))
+	      (values (eof-or-lose stream eof-errorp eof-value) t)
+	      (values string eof))))))
 
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
 ;;; so, except in this file, they are not inline by default, but they can be.
@@ -299,35 +299,33 @@
   "Inputs a character from Stream and returns it."
   (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (prepare-for-fast-read-char stream
-         (prog1
-	     (fast-read-char eof-errorp eof-value)
-	   (done-with-fast-read-char))))
-      (fundamental-stream
-       (let ((char (stream-read-char stream)))
-	 (if (eq char :eof)
-	     (eof-or-lose stream eof-errorp eof-value)
-	     char))))))
+    (if (lisp-stream-p stream)
+	(prepare-for-fast-read-char stream
+          (prog1
+	      (fast-read-char eof-errorp eof-value)
+	    (done-with-fast-read-char)))
+	;; Fundamental-stream.
+	(let ((char (stream-read-char stream)))
+	  (if (eq char :eof)
+	      (eof-or-lose stream eof-errorp eof-value)
+	      char)))))
 
 (defun unread-char (character &optional (stream *standard-input*))
   "Puts the Character back on the front of the input Stream."
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (let ((index (1- (lisp-stream-in-index stream)))
-	     (buffer (lisp-stream-in-buffer stream)))
-	 (declare (fixnum index))
-	 (when (minusp index) (error "Nothing to unread."))
-	 (cond (buffer
-		(setf (aref buffer index) (char-code character))
-		(setf (lisp-stream-in-index stream) index))
-	       (t
-		(funcall (lisp-stream-misc stream) stream 
-			 :unread character)))))
-      (fundamental-stream
-       (stream-unread-char stream character))))
+    (if (lisp-stream-p stream)
+	(let ((index (1- (lisp-stream-in-index stream)))
+	      (buffer (lisp-stream-in-buffer stream)))
+	  (declare (fixnum index))
+	  (when (minusp index) (error "Nothing to unread."))
+	  (cond (buffer
+		 (setf (aref buffer index) (char-code character))
+		 (setf (lisp-stream-in-index stream) index))
+		(t
+		 (funcall (lisp-stream-misc stream) stream 
+			  :unread character))))
+	;; Fundamental-stream
+	(stream-unread-char stream character)))
   nil)
 
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
@@ -335,102 +333,97 @@
   "Peeks at the next character in the input Stream.  See manual for details."
   (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (let ((char (read-char stream eof-errorp eof-value)))
-	 (cond ((eq char eof-value) char)
-	       ((characterp peek-type)
-		(do ((char char (read-char stream eof-errorp eof-value)))
-		    ((or (eq char eof-value) (char= char peek-type))
-		     (unless (eq char eof-value)
-		       (unread-char char stream))
-		     char)))
-	       ((eq peek-type t)
-		(do ((char char (read-char stream eof-errorp eof-value)))
-		    ((or (eq char eof-value) (not (whitespace-char-p char)))
-		     (unless (eq char eof-value)
-		       (unread-char char stream))
-		     char)))
-	       (t
-		(unread-char char stream)
-		char))))
-      (fundamental-stream
-       (cond ((characterp peek-type)
-	      (do ((char (stream-read-char stream) (stream-read-char stream)))
-		  ((or (eq char :eof) (char= char peek-type))
-		   (cond ((eq char :eof)
-			  (eof-or-lose stream eof-errorp eof-value))
-			 (t
-			  (stream-unread-char stream char)
-			  char)))))
-	     ((eq peek-type t)
-	      (do ((char (stream-read-char stream) (stream-read-char stream)))
-		  ((or (eq char :eof) (not (whitespace-char-p char)))
-		   (cond ((eq char :eof)
-			  (eof-or-lose stream eof-errorp eof-value))
-			 (t
-			  (stream-unread-char stream char)
-			  char)))))
-	     (t
-	      (let ((char (stream-peek-char stream)))
-		(if (eq char :eof)
-		    (eof-or-lose stream eof-errorp eof-value)
-		    char))))))))
+    (if (lisp-stream-p stream)
+	(let ((char (read-char stream eof-errorp eof-value)))
+	  (cond ((eq char eof-value) char)
+		((characterp peek-type)
+		 (do ((char char (read-char stream eof-errorp eof-value)))
+		     ((or (eq char eof-value) (char= char peek-type))
+		      (unless (eq char eof-value)
+			(unread-char char stream))
+		      char)))
+		((eq peek-type t)
+		 (do ((char char (read-char stream eof-errorp eof-value)))
+		     ((or (eq char eof-value) (not (whitespace-char-p char)))
+		      (unless (eq char eof-value)
+			(unread-char char stream))
+		      char)))
+		(t
+		 (unread-char char stream)
+		 char)))
+	;; Fundamental-stream.
+	(cond ((characterp peek-type)
+	       (do ((char (stream-read-char stream) (stream-read-char stream)))
+		   ((or (eq char :eof) (char= char peek-type))
+		    (cond ((eq char :eof)
+			   (eof-or-lose stream eof-errorp eof-value))
+			  (t
+			   (stream-unread-char stream char)
+			   char)))))
+	      ((eq peek-type t)
+	       (do ((char (stream-read-char stream) (stream-read-char stream)))
+		   ((or (eq char :eof) (not (whitespace-char-p char)))
+		    (cond ((eq char :eof)
+			   (eof-or-lose stream eof-errorp eof-value))
+			  (t
+			   (stream-unread-char stream char)
+			   char)))))
+	      (t
+	       (let ((char (stream-peek-char stream)))
+		 (if (eq char :eof)
+		     (eof-or-lose stream eof-errorp eof-value)
+		     char)))))))
 
 (defun listen (&optional (stream *standard-input*))
   "Returns T if a character is availible on the given Stream."
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
-	   ;; Test for t explicitly since misc methods return :eof sometimes.
-	   (eq (funcall (lisp-stream-misc stream) stream :listen) t)))
-      (fundamental-stream
-       (stream-listen stream)))))
+    (if (lisp-stream-p stream)
+	(or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
+	    ;; Test for t explicitly since misc methods return :eof sometimes.
+	    (eq (funcall (lisp-stream-misc stream) stream :listen) t))
+	;; Fundamental-stream.
+	(stream-listen stream))))
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)
   "Returns the next character from the Stream if one is availible, or nil."
   (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (if (funcall (lisp-stream-misc stream) stream :listen)
-	   ;; On t or :eof get READ-CHAR to do the work.
-	   (read-char stream eof-errorp eof-value)
-	   nil))
-      (fundamental-stream
-       (let ((char (stream-read-char-no-hang stream)))
-	 (if (eq char :eof)
-	     (eof-or-lose stream eof-errorp eof-value)
-	     char))))))
+    (if (lisp-stream-p stream)
+	(if (funcall (lisp-stream-misc stream) stream :listen)
+	    ;; On t or :eof get READ-CHAR to do the work.
+	    (read-char stream eof-errorp eof-value)
+	    nil)
+	;; Fundamental-stream.
+	(let ((char (stream-read-char-no-hang stream)))
+	  (if (eq char :eof)
+	      (eof-or-lose stream eof-errorp eof-value)
+	      char)))))
 
 
 (defun clear-input (&optional (stream *standard-input*))
   "Clears any buffered input associated with the Stream."
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (setf (lisp-stream-in-index stream) in-buffer-length)
-       (funcall (lisp-stream-misc stream) stream :clear-input))
-      (fundamental-stream
-       (stream-clear-input stream))))
+    (cond ((lisp-stream-p stream)
+	   (setf (lisp-stream-in-index stream) in-buffer-length)
+	   (funcall (lisp-stream-misc stream) stream :clear-input))
+	  (t
+	   (stream-clear-input stream))))
   nil)
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
   (let ((stream (in-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (prepare-for-fast-read-byte stream
-         (prog1
-	     (fast-read-byte eof-errorp eof-value t)
-	   (done-with-fast-read-byte))))
-      (fundamental-stream
-       (let ((char (stream-read-byte stream)))
-	 (if (eq char :eof)
-	     (eof-or-lose stream eof-errorp eof-value)
-	     char))))))
+    (if (lisp-stream-p stream)
+	(prepare-for-fast-read-byte stream
+          (prog1
+	      (fast-read-byte eof-errorp eof-value t)
+	    (done-with-fast-read-byte)))
+	;; Fundamental-stream.
+	(let ((char (stream-read-byte stream)))
+	  (if (eq char :eof)
+	      (eof-or-lose stream eof-errorp eof-value)
+	      char)))))
 
 (defun read-n-bytes (stream buffer start numbytes &optional (eof-errorp t))
   "Reads Numbytes bytes into the Buffer starting at Start, returning the number
@@ -541,13 +534,12 @@
   "Outputs a new line to the Stream if it is not positioned at the begining of
    a line.  Returns T if it output a new line, nil otherwise."
   (let ((stream (out-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (when (/= (or (charpos stream) 1) 0)
-	 (funcall (lisp-stream-out stream) stream #\newline)
-	 t))
-      (fundamental-stream
-       (stream-fresh-line stream)))))
+    (if (lisp-stream-p stream)
+	(when (/= (or (charpos stream) 1) 0)
+	  (funcall (lisp-stream-out stream) stream #\newline)
+	  t)
+	;; Fundamental-stream.
+	(stream-fresh-line stream))))
 
 (defun write-string (string &optional (stream *standard-output*)
 			    &key (start 0) (end (length (the vector string))))
@@ -558,17 +550,16 @@
 			     (start 0) (end (length (the vector string))))
   (declare (fixnum start end))
   (let ((stream (out-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (if (array-header-p string)
-	   (with-array-data ((data string) (offset-start start)
-			     (offset-end end))
-	     (funcall (lisp-stream-sout stream)
-		      stream data offset-start offset-end))
-	   (funcall (lisp-stream-sout stream) stream string start end))
-       string)
-      (fundamental-stream
-       (stream-write-string stream string start end)))))
+    (cond ((lisp-stream-p stream)
+	   (if (array-header-p string)
+	       (with-array-data ((data string) (offset-start start)
+				 (offset-end end))
+		 (funcall (lisp-stream-sout stream)
+			  stream data offset-start offset-end))
+	       (funcall (lisp-stream-sout stream) stream string start end))
+	   string)
+	  (t	; Fundamental-stream.
+	   (stream-write-string stream string start end)))))
 
 (defun write-line (string &optional (stream *standard-output*)
 			  &key (start 0) (end (length string)))
@@ -579,18 +570,17 @@
 			   (start 0) (end (length string)))
   (declare (fixnum start end))
   (let ((stream (out-synonym-of stream)))
-    (etypecase stream
-      (lisp-stream
-       (if (array-header-p string)
-	   (with-array-data ((data string) (offset-start start)
-			     (offset-end end))
-	     (with-out-stream stream (lisp-stream-sout data offset-start
-						       offset-end)))
-	   (with-out-stream stream (lisp-stream-sout string start end)))
-       (funcall (lisp-stream-out stream) stream #\newline))
-      (fundamental-stream
-       (stream-write-string stream string start end)
-       (stream-write-char stream #\Newline)))
+    (cond ((lisp-stream-p stream)
+	   (if (array-header-p string)
+	       (with-array-data ((data string) (offset-start start)
+				 (offset-end end))
+		 (with-out-stream stream (lisp-stream-sout data offset-start
+							   offset-end)))
+	       (with-out-stream stream (lisp-stream-sout string start end)))
+	   (funcall (lisp-stream-out stream) stream #\newline))
+	  (t	; Fundamental-stream.
+	   (stream-write-string stream string start end)
+	   (stream-write-char stream #\Newline)))
     string))
 
 (defun charpos (&optional (stream *standard-output*))
@@ -628,6 +618,47 @@
   (with-out-stream stream (lisp-stream-bout integer) (stream-write-byte))
   integer)
 
+
+;;; Stream-misc-dispatch
+;;;
+;;; Called from lisp-steam routines that encapsulate CLOS streams to
+;;; handle the misc routines and dispatch to the appropriate Gray
+;;; stream functions.
+;;;
+(defun stream-misc-dispatch (stream operation &optional arg1 arg2)
+  (declare (type fundamental-stream stream)
+	   (ignore arg2))
+  (case operation
+    (:listen
+     ;; Return true is input available, :eof for eof-of-file, otherwise Nil.
+     (let ((char (stream-read-char-no-hang stream)))
+       (when (characterp char)
+	 (stream-unread-char stream char))
+       char))
+    (:unread
+     (stream-unread-char stream arg1))
+    (:close
+     (close stream))
+    (:clear-input
+     (stream-clear-input stream))
+    (:force-output
+     (stream-force-output stream))
+    (:finish-output
+     (stream-finish-output stream))
+    (:element-type
+     (stream-element-type stream))
+    (:interactive-p
+     (interactive-stream-p stream))
+    (:line-length
+     (stream-line-length stream))
+    (:charpos
+     (stream-line-column stream))
+    (:file-length
+     (file-length stream))
+    (:file-position
+     (file-position stream arg1))))
+
+
 ;;;; Broadcast streams:
 
 (defstruct (broadcast-stream (:include lisp-stream
@@ -647,37 +678,43 @@
   (declare (ignore s d))
   (write-string "#<Broadcast Stream>" stream))
 
-(macrolet ((out-fun (fun method &rest args)
+(macrolet ((out-fun (fun method stream-method &rest args)
 	     `(defun ,fun (stream ,@args)
 		(dolist (stream (broadcast-stream-streams stream))
-		  (funcall (,method stream) stream ,@args)))))
-  (out-fun broadcast-out lisp-stream-out char)
-  (out-fun broadcast-bout lisp-stream-bout byte)
-  (out-fun broadcast-sout lisp-stream-sout string start end))
+		  (if (lisp-stream-p stream)
+		      (funcall (,method stream) stream ,@args)
+		      (,stream-method stream ,@args))))))
+  (out-fun broadcast-out lisp-stream-out stream-write-char char)
+  (out-fun broadcast-bout lisp-stream-bout stream-write-byte byte)
+  (out-fun broadcast-sout lisp-stream-sout stream-write-string
+	   string start end))
 
 (defun broadcast-misc (stream operation &optional arg1 arg2)
   (let ((streams (broadcast-stream-streams stream)))
     (case operation
       (:charpos
        (dolist (stream streams)
-	 (let ((charpos (funcall (lisp-stream-misc stream) stream :charpos)))
+	 (let ((charpos (charpos stream)))
 	   (if charpos (return charpos)))))
       (:line-length
        (let ((min nil))
 	 (dolist (stream streams min)
-	   (let ((res (funcall (lisp-stream-misc stream) stream :line-length)))
+	   (let ((res (line-length stream)))
 	     (when res (setq min (if min (min res min) res)))))))
       (:element-type
        (let (res)
 	 (dolist (stream streams (if (> (length res) 1) `(and ,@res) res))
-	   (pushnew (funcall (lisp-stream-misc stream) stream :element-type) res
-		    :test #'equal))))
+	   (pushnew (stream-element-type stream) res :test #'equal))))
       (:close)
       (t
        (let ((res nil))
 	 (dolist (stream streams res)
-	   (setq res (funcall (lisp-stream-misc stream) stream operation
-			      arg1 arg2))))))))
+	   (setq res
+		 (if (lisp-stream-p stream)
+		     (funcall (lisp-stream-misc stream) stream operation
+			      arg1 arg2)
+		     (stream-misc-dispatch stream operation arg1 arg2)))))))))
+
 
 ;;;; Synonym Streams:
 
@@ -705,14 +742,16 @@
 ;;; The output simple output methods just call the corresponding method
 ;;; in the synonymed stream.
 ;;;
-(macrolet ((out-fun (name slot &rest args)
+(macrolet ((out-fun (name slot stream-method &rest args)
 	     `(defun ,name (stream ,@args)
 		(declare (optimize (safety 1)))
 		(let ((syn (symbol-value (synonym-stream-symbol stream))))
-		  (funcall (,slot syn) syn ,@args)))))
-  (out-fun synonym-out lisp-stream-out ch)
-  (out-fun synonym-bout lisp-stream-bout n)
-  (out-fun synonym-sout lisp-stream-sout string start end))
+		  (if (lisp-stream-p syn)
+		      (funcall (,slot syn) syn ,@args)
+		      (,stream-method syn ,@args))))))
+  (out-fun synonym-out lisp-stream-out stream-write-char ch)
+  (out-fun synonym-bout lisp-stream-bout stream-write-byte n)
+  (out-fun synonym-sout lisp-stream-sout stream-write-string string start end))
 
 
 ;;; Bind synonym stream to this so that SPIO can turn on the right frob in
@@ -743,11 +782,14 @@
   (declare (optimize (safety 1)))
   (let ((syn (symbol-value (synonym-stream-symbol stream)))
 	(*previous-stream* stream))
-    (case operation
-      (:listen (or (/= (the fixnum (lisp-stream-in-index syn)) in-buffer-length)
-		   (funcall (lisp-stream-misc syn) syn :listen)))
-      (t
-       (funcall (lisp-stream-misc syn) syn operation arg1 arg2)))))
+    (if (lisp-stream-p syn)
+	(case operation
+	  (:listen (or (/= (the fixnum (lisp-stream-in-index syn))
+			   in-buffer-length)
+		       (funcall (lisp-stream-misc syn) syn :listen)))
+	  (t
+	   (funcall (lisp-stream-misc syn) syn operation arg1 arg2)))
+	(stream-misc-dispatch syn operation arg1 arg2))))
 
 ;;;; Two-Way streams:
 
@@ -777,13 +819,15 @@
   "Returns a bidirectional stream which gets its input from Input-Stream and
    sends its output to Output-Stream.")
 
-(macrolet ((out-fun (name slot &rest args)
+(macrolet ((out-fun (name slot stream-method &rest args)
 	     `(defun ,name (stream ,@args)
 		(let ((syn (two-way-stream-output-stream stream)))
-		  (funcall (,slot syn) syn ,@args)))))
-  (out-fun two-way-out lisp-stream-out ch)
-  (out-fun two-way-bout lisp-stream-bout n)
-  (out-fun two-way-sout lisp-stream-sout string start end))
+		  (if (lisp-stream-p syn)
+		      (funcall (,slot syn) syn ,@args)
+		      (,stream-method syn ,@args))))))
+  (out-fun two-way-out lisp-stream-out stream-write-char ch)
+  (out-fun two-way-bout lisp-stream-bout stream-write-byte n)
+  (out-fun two-way-sout lisp-stream-sout stream-write-string string start end))
 
 (macrolet ((in-fun (name fun &rest args)
 	     `(defun ,name (stream ,@args)
@@ -795,26 +839,38 @@
 
 (defun two-way-misc (stream operation &optional arg1 arg2)
   (let* ((in (two-way-stream-input-stream stream))
-	 (in-method (lisp-stream-misc in))
 	 (out (two-way-stream-output-stream stream))
-	 (out-method (lisp-stream-misc out)))
+	 (in-lisp-stream-p (lisp-stream-p in))
+	 (out-lisp-stream-p (lisp-stream-p out)))
     (case operation
-      (:listen (or (/= (the fixnum (lisp-stream-in-index in)) in-buffer-length)
-		   (funcall in-method in :listen)))
+      (:listen
+       (if in-lisp-stream-p
+	   (or (/= (the fixnum (lisp-stream-in-index in)) in-buffer-length)
+	       (funcall (lisp-stream-misc in) in :listen))
+	   (stream-listen in)))
       ((:finish-output :force-output :clear-output)
-       (funcall out-method out operation arg1 arg2))
+       (if out-lisp-stream-p
+	   (funcall (lisp-stream-misc out) out operation arg1 arg2)
+	   (stream-misc-dispatch out operation arg1 arg2)))
       ((:clear-input :unread)
-       (funcall in-method in operation arg1 arg2))
+       (if in-lisp-stream-p
+	   (funcall (lisp-stream-misc in) in operation arg1 arg2)
+	   (stream-misc-dispatch in operation arg1 arg2)))
       (:element-type
-       (let ((in-type (funcall in-method in :element-type))
-	     (out-type (funcall out-method out :element-type)))
+       (let ((in-type (stream-element-type in))
+	     (out-type (stream-element-type out)))
 	 (if (equal in-type out-type)
 	     in-type `(and ,in-type ,out-type))))
-      (:close 
+      (:close
        (set-closed-flame stream))
       (t
-       (or (funcall in-method in operation arg1 arg2)
-	   (funcall out-method out operation arg1 arg2))))))
+       (or (if in-lisp-stream-p
+	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
+	       (stream-misc-dispatch in operation arg1 arg2))
+	   (if out-lisp-stream-p
+	       (funcall (lisp-stream-misc out) out operation arg1 arg2)
+	       (stream-misc-dispatch out operation arg1 arg2)))))))
+
 
 ;;;; Concatenated Streams:
 
@@ -856,12 +912,14 @@
 (defun concatenated-misc (stream operation &optional arg1 arg2)
   (let ((left (concatenated-stream-current stream)))
     (when left
-      (let* ((current (car left))
-	     (misc (lisp-stream-misc current)))
+      (let* ((current (car left)))
 	(case operation
 	  (:listen
 	   (loop
-	     (let ((stuff (funcall misc current :listen)))
+	     (let ((stuff (if (lisp-stream-p current)
+			      (funcall (lisp-stream-misc current) current
+				       :listen)
+			      (stream-misc-dispatch current :listen))))
 	       (cond ((eq stuff :eof)
 		      ;; Advance current, and try again.
 		      (pop (concatenated-stream-current stream))
@@ -869,8 +927,7 @@
 			    (car (concatenated-stream-current stream)))
 		      (unless current
 			;; No further streams.  EOF.
-			(return :eof))
-		      (setf misc (lisp-stream-misc current)))
+			(return :eof)))
 		     (stuff
 		      ;; Stuff's available.
 		      (return t))
@@ -880,7 +937,10 @@
 	  (:close
 	   (set-closed-flame stream))
 	  (t
-	   (funcall misc current operation arg1 arg2)))))))
+	   (if (lisp-stream-p current)
+	       (funcall (lisp-stream-misc current) current operation arg1 arg2)
+	       (stream-misc-dispatch current operation arg1 arg2))))))))
+
 
 ;;;; Echo Streams:
 
@@ -895,37 +955,46 @@
   unread-stuff)
 
 
-(macrolet ((in-fun (name fun out-slot &rest args)
+(macrolet ((in-fun (name fun out-slot stream-method &rest args)
 	     `(defun ,name (stream ,@args)
 		(or (pop (echo-stream-unread-stuff stream))
 		    (let* ((in (echo-stream-input-stream stream))
 			   (out (echo-stream-output-stream stream))
 			   (result (,fun in ,@args)))
-		      (funcall (,out-slot out) out result)
+		      (if (lisp-stream-p out)
+			  (funcall (,out-slot out) out result)
+			  (,stream-method out result))
 		      result)))))
-  (in-fun echo-in read-char lisp-stream-out eof-errorp eof-value)
-  (in-fun echo-bin read-byte lisp-stream-bout eof-errorp eof-value))
+  (in-fun echo-in read-char lisp-stream-out stream-write-char
+	  eof-errorp eof-value)
+  (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte
+	  eof-errorp eof-value))
 
 (defun echo-misc (stream operation &optional arg1 arg2)
   (let* ((in (two-way-stream-input-stream stream))
-	 (in-method (lisp-stream-misc in))
-	 (out (two-way-stream-output-stream stream))
-	 (out-method (lisp-stream-misc out)))
+	 (out (two-way-stream-output-stream stream)))
     (case operation
-      (:listen (or (not (null (echo-stream-unread-stuff stream)))
-		   (/= (the fixnum (lisp-stream-in-index in)) in-buffer-length)
-		   (funcall in-method in :listen)))
+      (:listen
+       (or (not (null (echo-stream-unread-stuff stream)))
+	   (if (lisp-stream-p in)
+	       (or (/= (the fixnum (lisp-stream-in-index in)) in-buffer-length)
+		   (funcall (lisp-stream-misc in) in :listen))
+	       (stream-misc-dispatch in :listen))))
       (:unread (push arg1 (echo-stream-unread-stuff stream)))
       (:element-type
-       (let ((in-type (funcall in-method in :element-type))
-	     (out-type (funcall out-method out :element-type)))
+       (let ((in-type (stream-element-type in))
+	     (out-type (stream-element-type out)))
 	 (if (equal in-type out-type)
 	     in-type `(and ,in-type ,out-type))))
       (:close
        (set-closed-flame stream))
       (t
-       (or (funcall in-method in operation arg1 arg2)
-	   (funcall out-method out operation arg1 arg2))))))
+       (or (if (lisp-stream-p in)
+	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
+	       (stream-misc-dispatch in operation arg1 arg2))
+	   (if (lisp-stream-p out)
+	       (funcall (lisp-stream-misc out) out operation arg1 arg2)
+	       (stream-misc-dispatch out operation arg1 arg2)))))))
 
 (defun %print-echo-stream (s stream d)
   (declare (ignore d))
@@ -1262,34 +1331,31 @@
 
 (defun indenting-misc (stream operation &optional arg1 arg2)
   (let ((sub-stream (indenting-stream-stream stream)))
-    (etypecase sub-stream
-      (lisp-stream
-       (let ((method (lisp-stream-misc sub-stream)))
-	 (case operation
-	   (:line-length
-	    (let ((line-length (funcall method sub-stream operation)))
-	      (if line-length
-		  (- line-length (indenting-stream-indentation stream)))))
-	   (:charpos
-	    (let ((charpos (funcall method sub-stream operation)))
-	      (if charpos
-		  (- charpos (indenting-stream-indentation stream)))))       
-	   (t
-	    (funcall method sub-stream operation arg1 arg2)))))
-      (fundamental-stream
-       (case operation
-	 (:line-length
-	  (let ((line-length (stream-line-length sub-stream)))
-	    (if line-length
-		(- line-length (indenting-stream-indentation stream)))))
-	 (:charpos
-	  (let ((charpos (stream-line-column sub-stream)))
-	    (if charpos
-		(- charpos (indenting-stream-indentation stream)))))
-	 (t
-	  ;; XX TODO 
-	  (format t "* Warning: ignoring ~s ~s ~s on ~s~%"
-		  operation arg1 arg2 sub-stream)))))))
+    (if (lisp-stream-p sub-stream)
+	(let ((method (lisp-stream-misc sub-stream)))
+	  (case operation
+	    (:line-length
+	     (let ((line-length (funcall method sub-stream operation)))
+	       (if line-length
+		   (- line-length (indenting-stream-indentation stream)))))
+	    (:charpos
+	     (let ((charpos (funcall method sub-stream operation)))
+	       (if charpos
+		   (- charpos (indenting-stream-indentation stream)))))       
+	    (t
+	     (funcall method sub-stream operation arg1 arg2))))
+	;; Fundamental-stream.
+	(case operation
+	  (:line-length
+	   (let ((line-length (stream-line-length sub-stream)))
+	     (if line-length
+		 (- line-length (indenting-stream-indentation stream)))))
+	  (:charpos
+	   (let ((charpos (stream-line-column sub-stream)))
+	     (if charpos
+		 (- charpos (indenting-stream-indentation stream)))))
+	  (t
+	   (stream-misc-dispatch sub-stream operation arg1 arg2))))))
 
 
 (proclaim '(maybe-inline read-char unread-char read-byte listen))
@@ -1345,14 +1411,18 @@
     (:close)
     (t
      (let ((target (case-frob-stream-target stream)))
-       (funcall (lisp-stream-misc target) target op arg1 arg2)))))
-
+       (if (lisp-stream-p target)
+	   (funcall (lisp-stream-misc target) target op arg1 arg2)
+	   (stream-misc-dispatch target op arg1 arg2))))))
 
 (defun case-frob-upcase-out (stream char)
   (declare (type case-frob-stream stream)
 	   (type base-char char))
-  (let ((target (case-frob-stream-target stream)))
-    (funcall (lisp-stream-out target) target (char-upcase char))))
+  (let ((target (case-frob-stream-target stream))
+	(char (char-upcase char)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-out target) target char)
+	(stream-write-char target char))))
 
 (defun case-frob-upcase-sout (stream str start end)
   (declare (type case-frob-stream stream)
@@ -1361,19 +1431,23 @@
 	   (type (or index null) end))
   (let* ((target (case-frob-stream-target stream))
 	 (len (length str))
-	 (end (or end len)))
-    (funcall (lisp-stream-sout target) target
-	     (if (and (zerop start) (= len end))
-		 (string-upcase str)
-		 (nstring-upcase (subseq str start end)))
-	     0
-	     (- end start))))
+	 (end (or end len))
+	 (string (if (and (zerop start) (= len end))
+		     (string-upcase str)
+		     (nstring-upcase (subseq str start end))))
+	 (string-len (- end start)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-sout target) target string 0 string-len)
+	(stream-write-string target string 0 string-len))))
 
 (defun case-frob-downcase-out (stream char)
   (declare (type case-frob-stream stream)
 	   (type base-char char))
-  (let ((target (case-frob-stream-target stream)))
-    (funcall (lisp-stream-out target) target (char-downcase char))))
+  (let ((target (case-frob-stream-target stream))
+	(char (char-downcase char)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-out target) target char)
+	(stream-write-char target char))))
 
 (defun case-frob-downcase-sout (stream str start end)
   (declare (type case-frob-stream stream)
@@ -1382,26 +1456,31 @@
 	   (type (or index null) end))
   (let* ((target (case-frob-stream-target stream))
 	 (len (length str))
-	 (end (or end len)))
-    (funcall (lisp-stream-sout target) target
-	     (if (and (zerop start) (= len end))
-		 (string-downcase str)
-		 (nstring-downcase (subseq str start end)))
-	     0
-	     (- end start))))
+	 (end (or end len))
+	 (string (if (and (zerop start) (= len end))
+		     (string-downcase str)
+		     (nstring-downcase (subseq str start end))))
+	 (string-len (- end start)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-sout target) target string 0 string-len)
+	(stream-write-string target string 0 string-len))))
 
 (defun case-frob-capitalize-out (stream char)
   (declare (type case-frob-stream stream)
 	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
-	   (funcall (lisp-stream-out target) target (char-upcase char))
-	   (setf (case-frob-stream-out stream)
-		 #'case-frob-capitalize-aux-out)
+	   (let ((char (char-upcase char)))
+	     (if (lisp-stream-p target)
+		 (funcall (lisp-stream-out target) target char)
+		 (stream-write-char target char)))
+	   (setf (case-frob-stream-out stream) #'case-frob-capitalize-aux-out)
 	   (setf (case-frob-stream-sout stream)
 		 #'case-frob-capitalize-aux-sout))
 	  (t
-	   (funcall (lisp-stream-out target) target char)))))
+	   (if (lisp-stream-p target)
+	       (funcall (lisp-stream-out target) target char)
+	       (stream-write-char target char))))))
 
 (defun case-frob-capitalize-sout (stream str start end)
   (declare (type case-frob-stream stream)
@@ -1426,16 +1505,23 @@
 	    #'case-frob-capitalize-aux-out)
       (setf (case-frob-stream-sout stream)
 	    #'case-frob-capitalize-aux-sout))
-    (funcall (lisp-stream-sout target) target str 0 len)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-sout target) target str 0 len)
+	(stream-write-string target str 0 len))))
 
 (defun case-frob-capitalize-aux-out (stream char)
   (declare (type case-frob-stream stream)
 	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
-	   (funcall (lisp-stream-out target) target (char-downcase char)))
+	   (let ((char (char-downcase char)))
+	     (if (lisp-stream-p target)
+		 (funcall (lisp-stream-out target) target char)
+		 (stream-write-char target char))))
 	  (t
-	   (funcall (lisp-stream-out target) target char)
+	   (if (lisp-stream-p target)
+	       (funcall (lisp-stream-out target) target char)
+	       (stream-write-char target char))
 	   (setf (case-frob-stream-out stream)
 		 #'case-frob-capitalize-out)
 	   (setf (case-frob-stream-sout stream)
@@ -1464,20 +1550,27 @@
 	    #'case-frob-capitalize-out)
       (setf (case-frob-stream-sout stream)
 	    #'case-frob-capitalize-sout))
-    (funcall (lisp-stream-sout target) target str 0 len)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-sout target) target str 0 len)
+	(stream-write-string target str 0 len))))
 
 (defun case-frob-capitalize-first-out (stream char)
   (declare (type case-frob-stream stream)
 	   (type base-char char))
   (let ((target (case-frob-stream-target stream)))
     (cond ((alphanumericp char)
-	   (funcall (lisp-stream-out target) target (char-upcase char))
+	   (let ((char (char-upcase char)))
+	     (if (lisp-stream-p target)
+		 (funcall (lisp-stream-out target) target char)
+		 (stream-write-char target char)))
 	   (setf (case-frob-stream-out stream)
 		 #'case-frob-downcase-out)
 	   (setf (case-frob-stream-sout stream)
 		 #'case-frob-downcase-sout))
 	  (t
-	   (funcall (lisp-stream-out target) target char)))))
+	   (if (lisp-stream-p target)
+	       (funcall (lisp-stream-out target) target char)
+	       (stream-write-char target char))))))
 
 (defun case-frob-capitalize-first-sout (stream str start end)
   (declare (type case-frob-stream stream)
@@ -1499,7 +1592,9 @@
 	  (setf (case-frob-stream-sout stream)
 		#'case-frob-downcase-sout)
 	  (return))))
-    (funcall (lisp-stream-sout target) target str 0 len)))
+    (if (lisp-stream-p target)
+	(funcall (lisp-stream-sout target) target str 0 len)
+	(stream-write-string target str 0 len))))
 
 
 ;;;; Public interface from "EXTENSIONS" package.
