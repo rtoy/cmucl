@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.7 2004/07/09 21:54:30 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.8 2004/07/10 15:46:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -381,7 +381,9 @@
 	  (char-to-octets (sm external-format stream) character
 			  (sm co-state stream) #'output))
 	(setf (sm buffpos stream) buffpos)
-	(incf (sm charpos stream)))))
+	(sc-set-dirty stream)
+	(when (sm charpos stream)
+	  (incf (sm charpos stream))))))
   character)
 
 (declaim (ftype j-write-chars-fn (sc write-chars :ef)))
@@ -409,7 +411,9 @@
 		   (incf buffpos)))
 	    (char-to-octets ef char (sm co-state stream) #'output))
 	  (setf (sm buffpos stream) buffpos)
-	  (incf (sm charpos stream)))))))
+	  (when (sm charpos stream)
+	    (incf (sm charpos stream)))
+	  (sc-set-dirty stream))))))
 
 
 ;;;; Dual-Channel-Simple-Stream strategy functions
