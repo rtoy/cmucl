@@ -353,9 +353,9 @@ __sigtramp:
         std     %g4, [%sp+IREGSOFF+16]
         std     %g6, [%sp+IREGSOFF+24]
         std     %o0, [%sp+IREGSOFF+32]
-        ld      [%sp+ORIGSCPOFF], %o0
         std     %o2, [%sp+IREGSOFF+40]
-	ld	[%o0+SC_SP], %o0
+        ld      [%sp+ORIGSCPOFF], %o2
+	ld	[%o2+SC_SP], %o0
         std     %o4, [%sp+IREGSOFF+48]
         st      %o0, [%sp+IREGSOFF+56]
         st      %o7, [%sp+IREGSOFF+60]
@@ -378,6 +378,7 @@ __sigtramp:
         std     %i6, [%sp+IREGSOFF+120]
 
         ! Check to see if we need to save the fp regs.
+	ld	[%o2+SC_PSR], %l5	! get psr
 	set	PSR_EF, %l0
 	mov	%y, %l2			! save y
 	btst	%l0, %l5		! is FPU enabled?
@@ -409,7 +410,7 @@ __sigtramp:
 	sll	%o0, 2, %g2		! scale signal number for index
 	ld	[%g1+%g2], %g1		! get func
 	ld	[%sp+ORIGCODEOFF], %o1	! get code
-        ld	[%sp+ORIGSCPOFF], %o2	! get scp
+	! %o2 is already loaded with scp
 	add	%sp, REGSAVEOFF, %o3	! compute pointer to reg save area
 	st	%o3, [%o2 + SC_G1]	! save in sc_g1.
 	call	%g1			! (*_sigfunc[sig])(sig,code,scp,addr)
