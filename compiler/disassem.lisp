@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.44 2004/01/09 04:42:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.45 2004/11/10 18:38:59 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2643,11 +2643,10 @@
 (defstruct (source-form-cache (:conc-name sfcache-))
   (debug-source nil :type (or null di:debug-source))
   (top-level-form-index -1 :type fixnum)
-  (top-level-form nil :type list)
+  (top-level-form nil :type (or list string))
   (form-number-mapping-table nil :type (or null (vector list)))
   (last-location-retrieved nil :type (or null di:code-location))
-  (last-form-retrieved -1 :type fixnum)
-  )
+  (last-form-retrieved -1 :type fixnum))
 
 (defun get-top-level-form (debug-source tlf-index)
   (let ((name (di:debug-source-name debug-source)))
@@ -2717,7 +2716,7 @@
 	    (sfcache-form-number-mapping-table cache) mapping-table))
     (cond ((null top-level-form)
 	   nil)
-	  ((> form-number (length mapping-table))
+	  ((>= form-number (length mapping-table))
 	   (warn "Bogus form-number in form!  The source file has probably ~@
 		  been changed too much to cope with")
 	   (when cache
