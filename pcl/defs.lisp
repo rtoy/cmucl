@@ -390,7 +390,6 @@
 	   (subtypep type1 (if c2 (class-name c2) type2))))))
 
 (defun do-satisfies-deftype (name predicate)
-#|
   (let* ((specifier `(satisfies ,predicate))
 	 (expand-fn #'(lambda (&rest ignore)
 			(declare (ignore ignore))
@@ -406,12 +405,11 @@
 	(setf (get name 'excl::deftype-expander) expand-fn)
 	#+:coral
 	(setf (get name 'ccl::deftype-expander) expand-fn)
-|#
 	;; This is the default for ports for which we don't know any
 	;; better.  Note that for most ports, providing this definition
 	;; should just speed up class definition.  It shouldn't have an
 	;; effect on performance of most user code.
-	(eval `(deftype ,name () '(satisfies ,predicate))))
+	(eval `(deftype ,name () '(satisfies ,predicate))))))
 
 
 (defun make-type-predicate-name (name)
