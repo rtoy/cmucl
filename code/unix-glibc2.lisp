@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2 1998/06/16 06:58:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.3 1999/02/15 12:05:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3088,28 +3088,53 @@ in at a time in poll.")
 
 (eval-when (compile load eval)
 
-(defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
-  (declare (ignore arg parm-type))
-  `(eval-when (eval load compile)
-     (defconstant ,name ,(logior (ash (- (char-code dev) #x20) 8) cmd)))))
+(defconstant iocparm-mask #x3fff)
+(defconstant ioc_void #x00000000)
+(defconstant ioc_out #x40000000)
+(defconstant ioc_in #x80000000)
+(defconstant ioc_inout (logior ioc_in ioc_out))
+
+(defmacro define-ioctl-command (name dev cmd &optional arg parm-type)
+  "Define an ioctl command. If the optional ARG and PARM-TYPE are given
+  then ioctl argument size and direction are included as for ioctls defined
+  by _IO, _IOR, _IOW, or _IOWR. If DEV is a character then the ioctl type
+  is the characters code, else DEV may be an integer giving the type."
+  (let* ((type (if (characterp dev)
+		   (char-code dev)
+		   dev))
+	 (code (logior (ash type 8) cmd)))
+    (when arg
+      (setf code `(logior (ash (logand (alien-size ,arg :bytes) ,iocparm-mask)
+			       16)
+			  ,code)))
+    (when parm-type
+      (let ((dir (ecase parm-type
+		   (:void ioc_void)
+		   (:in ioc_in)
+		   (:out ioc_out)
+		   (:inout ioc_inout))))
+	(setf code `(logior ,dir ,code))))
+    `(eval-when (eval load compile)
+       (defconstant ,name ,code))))
+
+)
 
 ;;; TTY ioctl commands.
 
-(define-ioctl-command TIOCGWINSZ #\t #x13 (struct winsize) :out)
-(define-ioctl-command TIOCSWINSZ #\t #x14 (struct winsize) :in)
-(define-ioctl-command TIOCNOTTY  #\t #x22 nil :void)
-(define-ioctl-command TIOCSPGRP  #\t #x10 int :in)
-(define-ioctl-command TIOCGPGRP  #\t #x0F int :out)
+(define-ioctl-command TIOCGWINSZ #\T #x13)
+(define-ioctl-command TIOCSWINSZ #\T #x14)
+(define-ioctl-command TIOCNOTTY  #\T #x22)
+(define-ioctl-command TIOCSPGRP  #\T #x10)
+(define-ioctl-command TIOCGPGRP  #\T #x0F)
 
 ;;; File ioctl commands.
-(define-ioctl-command FIONREAD #\t #x1B int :out)
+(define-ioctl-command FIONREAD #\T #x1B)
 
 ;;; asm/sockios.h
 
 ;;; Socket options.
 
-;;; should be #x8902
-(define-ioctl-command SIOCSPGRP #.(code-char #x89) #x02 int :in)
+(define-ioctl-command SIOCSPGRP #x89 #x02)
 
 (defun siocspgrp (fd pgrp)
   "Set the socket process-group for the unix file-descriptor FD to PGRP."
