@@ -280,11 +280,13 @@ _undefined_tramp:
         /* Number of argument bytes */
         .byte	4
         .byte	UNDEFINED_SYMBOL_ERROR
-        /* Escape to create 16bit BE number from following two values */
+        /* Escape to create 16bit number from following two bytes, 
+	   in little-endian order */
         .byte	254
         /* SC_OFFSET(sc_DescriptorReg,reg_FDEFN) */
-	.byte	sc_DescriptorReg
-	.byte	3
+	.byte	SC_OFFSET_LO(sc_DescriptorReg,reg_FDEFN_NUM)
+	.byte	SC_OFFSET_HI(sc_DescriptorReg,reg_FDEFN_NUM)
+		
 	.align	4
 1:
 	ld	[reg_FDEFN+FDEFN_RAW_ADDR_OFFSET], reg_CODE
@@ -405,8 +407,6 @@ _resolve_linkage_tramp:
 		
 	.global _undefined_foreign_symbol_trap
 	FUNCDEF(_undefined_foreign_symbol_trap)
-#define	SC_OFFSET_HI(sc, reg)	((sc | (reg << 5)) >> 8)
-#define	SC_OFFSET_LO(sc, reg)	((sc | (reg << 5)) & 0xff)
 /*
  * When we get called, %o0 contains the address of the data_vector object 
  * which is a string naming the bad symbol.
@@ -434,14 +434,11 @@ _undefined_foreign_symbol_trap:
 	unimp	trap_Error
 	.byte	4	/* Number of argument bytes */
 	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
-        /* Escape to create 16bit BE number from following two values
-	   but bytes are given in little-endian order (!) */
+        /* Escape to create 16bit number from following two bytes, in 
+	   little-endian order */
         .byte	254
-        /* SC_OFFSET(sc_DescriptorReg,A0) = (offset << 5) | sc_DescriptorReg */
-	/* reg_A0 = 16.  See the defref for a0 in sparc/vm.lisp */
-		
-	.byte	SC_OFFSET_LO(sc_DescriptorReg, 16)
-	.byte	SC_OFFSET_HI(sc_DescriptorReg, 16)
+	.byte	SC_OFFSET_LO(sc_DescriptorReg, reg_A0_NUM)
+	.byte	SC_OFFSET_HI(sc_DescriptorReg, reg_A0_NUM)
 	.align	4
 					
 #endif
