@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.31 2003/03/30 00:48:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.32 2003/03/30 13:42:06 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -518,13 +518,17 @@
 		  nil name :metaclass metaclass :name name
 		  :direct-superclasses supers))))
 	 (slot-initargs-from-structure-slotd (slotd)
-	   `(:name ,(structure-slotd-name slotd)
-	     :defstruct-accessor-symbol ,(structure-slotd-accessor-symbol slotd)
-	     :internal-reader-function ,(structure-slotd-reader-function slotd)
-	     :internal-writer-function ,(structure-slotd-writer-function slotd)
-	     :type ,(or (structure-slotd-type slotd) t)
-	     :initform ,(structure-slotd-init-form slotd)
-	     :initfunction ,(eval-form (structure-slotd-init-form slotd)))))
+	   (let ((accessor (structure-slotd-accessor-symbol slotd)))
+	     `(:name ,(structure-slotd-name slotd)
+	       :defstruct-accessor-symbol ,accessor
+	       ,@(when (fboundp accessor)
+		   `(:internal-reader-function
+		     ,(structure-slotd-reader-function slotd)
+		     :internal-writer-function
+		     ,(structure-slotd-writer-function slotd)))
+	       :type ,(or (structure-slotd-type slotd) t)
+	       :initform ,(structure-slotd-init-form slotd)
+	       :initfunction ,(eval-form (structure-slotd-init-form slotd))))))
     (cond ((structure-type-p name)
 	   (ensure 'structure-class
 		   (mapcar #'slot-initargs-from-structure-slotd
