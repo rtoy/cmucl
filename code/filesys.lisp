@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.62 2001/03/11 22:00:38 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.63 2001/03/12 12:44:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,12 +204,17 @@
 		  (values version where))
 		 ((and (char= (schar namestr (- end 1)) #\*)
 		       (char= (schar namestr (- end 2)) #\.)
-		       (find #\. namestr :start start :end (- end 2)))
+		       (find #\. namestr
+			     :start (min (1+ start) (- end 2))
+			     :end (- end 2)))
 		  (values :wild (- end 2)))
 		 (t (values version where)))))
        (any-type (namestr start end)
-	 ;; process end of string looking for a type.
-	 (let ((where (position #\. namestr :start start :end end :from-end t)))
+	 ;; Process end of string looking for a type. A leading "."
+	 ;; is part of the name.
+	 (let ((where (position #\. namestr
+				:start (min (1+ start) end)
+				:end end :from-end t)))
 	   (when where
 	     (values where end))))
        (any-name (namestr start end)
