@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.25 1991/07/08 16:36:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.26 1991/12/11 16:47:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -594,15 +594,14 @@
 
     (if (external-entry-point-p fun)
 	(setf (compiled-debug-function-returns dfun) :standard)
-	(let ((tails (lambda-tail-set fun)))
-	  (when tails
-	    (let ((info (tail-set-info tails)))
-	      (cond ((eq (return-info-kind info) :unknown)
-		     (setf (compiled-debug-function-returns dfun)
-			   :standard))
-		    ((/= level 0)
-		     (setf (compiled-debug-function-returns dfun)
-			   (compute-debug-returns fun))))))))
+	(let ((info (tail-set-info (lambda-tail-set fun))))
+	  (when info
+	    (cond ((eq (return-info-kind info) :unknown)
+		   (setf (compiled-debug-function-returns dfun)
+			 :standard))
+		  ((/= level 0)
+		   (setf (compiled-debug-function-returns dfun)
+			 (compute-debug-returns fun)))))))
     dfun))
 
 
