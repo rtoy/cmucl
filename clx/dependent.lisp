@@ -78,6 +78,9 @@
 ;;; declaration is available, it would be a good idea to make it here when
 ;;; *buffer-speed* is 3 and *buffer-safety* is 0.
 (defun declare-buffun ()
+  #+(and cmu clx-debugging)
+  '(declare (optimize (speed 1) (safety 1)))
+  #-(and cmu clx-debugging)
   `(declare (optimize (speed ,*buffer-speed*) (safety ,*buffer-safety*))))
 
 )
@@ -1258,7 +1261,8 @@
   (let ((server-fd (connect-to-server host display)))
     (unless (plusp server-fd)
       (error "Failed to connect to X11 server: ~A (display ~D)" host display))
-    server-fd))
+    (system:make-fd-stream server-fd :input t :output t
+			   :element-type '(unsigned-byte 8))))
 
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
@@ -1342,135 +1346,27 @@
 		  (return t)
 		  (setf (aref vector index) (the card8 c)))))))))
 
-;;;
+
 ;;; BUFFER-READ-DEFAULT for CMU Common Lisp.
 ;;;
-
-;;; Jim Healy comments:
+;;;    If timeout is 0, then we call LISTEN to see if there is any input.
+;;; Timeout 0 is the only case where READ-INPUT dives into BUFFER-READ without
+;;; first calling BUFFER-INPUT-WAIT-DEFAULT.
 ;;;
-;;; I don't know if all this buffering is necessary, but I think that other CLX
-;;; code and buffer-read-default should be redefined so that it can return the
-;;; actual number read.  Then we could read into the passed array directly
-;;; without fear (assuming the higher-level routines are used appropriately).
-;;; Although I guess there wouldn't be a problem if BSD 4.3 let you see how
-;;; many characters were on a socket without reading.
-;;;
-;;; I believe that the vector we write into expects numbers for the bytes.
-;;;
-;;; The BUFFER defstruct in depdefs.lisp was changed to include an internal
-;;; buffer.  (used here only).  It's not circular; byte 0 is in byte 0.
-;;;
-;;; Timeout, when non-nil, is in seconds. (can it be a float?)  Null timeout
-;;; means don't come back until you're done.  Returns non-nil if EOF
-;;; encountered Returns :TIMEOUT when timeout exceeeded.
-
-;;; Bill Chiles comments:
-;;;
-;;; I think we can do away with the alien stuff and read into an array of
-;;; unsigned-byte eight.  We might even be able to read directly into the
-;;; CLX buffer.  I don't know why Healy is going to all this trouble, but
-;;; I'll save worrying about this until we get this stuff up under the new
-;;; compiler.
-;;;
-
-#+CMU
-(extensions::def-c-array clx-buff (unsigned-byte 8))
-
-#+CMU
-(defun buffer-to-byte-array (display array start length)
-  (system::alien-bind ((buffer (display-internal-buffer display) clx-buff t))
-    (let ((ilength (display-internal-buffer-length display)))
-      (dotimes (i length)
-	(setf (aref (the buffer-bytes array) (+ i start))
-	      (system::alien-access (clx-buff-ref (system::alien-value buffer)
-						  i))))
-      (setf (display-internal-buffer-length display)
-	    (- ilength length))
-      (dotimes (i (- ilength length))
-	(setf (system::alien-access (clx-buff-ref (system::alien-value buffer)
-						  (+ i length)))
-	      (system::alien-access (clx-buff-ref (system::alien-value buffer) 
-						  i)))))))
-#+CMU
-(defun verify-internal-buffer-size (display size)
-  (let ((length (display-internal-buffer-length display))
-	(buffer (display-internal-buffer display)))
-    (cond ((null buffer)
-	   (setf (display-internal-buffer display)
-		 (setq buffer (make-clx-buff (max size 4096)))))
-	  ((< (system::alien-size buffer) size)
-	   (system::alien-bind ((new (make-clx-buff size) clx-buff t)
-				(buffer buffer clx-buff))
-	     (dotimes (i length)
-	       (setf (system::alien-access 
-		       (clx-buff-ref (system::alien-value new) i))
-		     (system::alien-access 
-		       (clx-buff-ref (system::alien-value buffer) i))))
-	     (system:dispose-alien buffer)
-	     (setf (display-internal-buffer display)
-		   (system::alien-value new)))))))
- 
-#+CMU   
-(defun read-into-ibuff (display number)
-  (lisp::alien-bind ((ibuff (display-internal-buffer display) clx-buff t))
-    (let ((ilength (display-internal-buffer-length display)))
-      (multiple-value-bind (length err)
-	  (mach:unix-read (display-input-stream display) 
-			  (system::alien-sap 
-			    (clx-buff-ref (system::alien-value ibuff) ilength))
-			  number)
-	(when length
-	  (setf (display-internal-buffer-length display)
-		(setq ilength (+ ilength length))))
-	(values length err)))))
-
 #+CMU
 (defun buffer-read-default (display vector start end timeout)
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout))
+	   (type (or null fixnum) timeout))
   #.(declare-buffun)
-  (let* ((fd (display-input-stream display))
-	 (wanted (- end start)))
-    (verify-internal-buffer-size display wanted)
-    (let ((saved (display-internal-buffer-length display)))
-      (when (>= saved wanted)
-	(buffer-to-byte-array display vector start wanted)
-	(return-from buffer-read-default nil))
-      (let ((endtime (when (and timeout (not (zerop timeout)))
-		       (+ (get-internal-real-time)
-			  (truncate (* timeout
-				       internal-time-units-per-second)))))
-	    (needed (- wanted saved)))
-	(loop
-	  (let ((available-p
-		  (cond ((and timeout (zerop timeout))
-			 (call-unix-select (1+ fd) (ash 1 fd) 0 0 0))
-			(timeout
-			  (let ((remaining (- endtime (get-internal-real-time))))
-			    (when (minusp remaining) (return :TIMEOUT))
-			    (multiple-value-bind (secs rem)
-				(truncate remaining
-					  internal-time-units-per-second)
-			      (let ((msecs (truncate (* 1000000 rem))))
-				(call-unix-select (1+ fd) (ash 1 fd) 0 0
-						   secs msecs)))))
-			(t (call-unix-select (1+ fd) (ash 1 fd) 0 0 nil)))))
-	    (when (not (zerop available-p))
-	      (multiple-value-bind (length err) (read-into-ibuff display needed)
-		(cond ((null length)
-		       (error "CLX read err: ~A" (mach:get-unix-error-msg err)))
-		      ((zerop length) 
-		       (return :EOF))
-		      (t (cond ((= length needed)
-				(buffer-to-byte-array display vector
-						      start wanted)
-				(return nil))
-			       (t (setq needed (- needed length))))))))
-	    (when (and timeout (zerop timeout))
-	      (return :timeout))))))))
-
+  (cond ((and (eql timeout 0)
+	      (not (listen (display-input-stream display))))
+	 :timeout)
+	(t
+	 (system:read-n-bytes (display-input-stream display)
+			      vector start (- end start))
+	 nil)))
 
 
 ;;; WARNING:
@@ -1568,15 +1464,8 @@
 	   (type display display)
 	   (type array-index start end))
   #.(declare-buffun)
-  (multiple-value-bind (length error-number)
-		       (mach:unix-write (display-output-stream display)
-					vector start end)
-    (cond ((null length)
-	   ;; This error possibly should go through the CLX error system.
-	   (error "Can't write to server: ~A"
-		  (mach:get-unix-error-msg error-number)))
-	  (t nil))))
-
+  (system:output-raw-bytes (display-output-stream display) vector start end)
+  nil)
 
 ;;; buffer-force-output-default - force output to the X stream
 
@@ -1585,12 +1474,7 @@
   ;; buffer-write-default does the actual writing.
   (declare (ignore display)))
 
-#+CMU
-(defun buffer-force-output-default (display)
-  (declare (type display display))
-  (mach:unix-ioctl (display-output-stream display) mach:tiocflush 0))
-
-#-(or excl CMU)
+#-(or excl)
 (defun buffer-force-output-default (display)
   ;; The default buffer force-output function for use with common-lisp streams
   (declare (type display display))
@@ -1609,14 +1493,7 @@
   #.(declare-buffun)
   (excl::filesys-checking-close (display-output-stream display)))
 
-#+CMU
-(defun buffer-close-default (display &key abort)
-  (declare (type display display) (ignore abort))
-  #.(declare-buffun)
-  (mach:unix-ioctl (display-output-stream display) mach:tiocflush 0)
-  (mach:unix-close (display-output-stream display)))
-
-#-(or excl CMU)
+#-(or excl)
 (defun buffer-close-default (display &key abort)
   ;; The default buffer close function for use with common-lisp streams
   (declare (type display display))
@@ -1665,33 +1542,16 @@
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
 	   (type (or null number) timeout))
-  (declare (values timeout))
-  (let ((fd (display-input-stream display)))
-    (cond ((null fd))
-	  ((or (null timeout) (= timeout 0))
-	   (if (zerop (call-unix-select (1+ fd) (ash 1 fd) 0 0 timeout))
-	       :timeout
-	       nil))
+  (let ((stream (display-input-stream display)))
+    (declare (type (or null stream) stream))
+    (cond ((null stream))
+	  ((listen stream) nil)
+	  ((eql timeout 0) :timeout)
 	  (t
-	   (multiple-value-bind (secs rem) (truncate timeout)
-	     (let ((usecs (truncate (* 1000000 rem))))
-	       (if (zerop (call-unix-select (1+ fd) (ash 1 fd) 0 0 secs usecs))
-		   :timeout
-		   nil)))))))
-
-#+CMU
-;;; CALL-UNIX-SELECT -- Internal.
-;;;
-;;; Since all our calls to MACH:UNIX-SELECT are within a WITHOUT-INTERRUPTS,
-;;; it returns nil when someone interrupts the system.  It gets interrupted
-;;; since it is a system call.  We loop over it whenever it returns nil to
-;;; simulate the WITHOUT-INTERRUPTS.
-;;;
-(defun call-unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
-  (loop
-    (let ((res (mach:unix-select nfds rdfds wrfds xpfds to-secs to-usecs)))
-      (when res (return res)))))
-
+	   (if (system:wait-until-fd-usable (system:fd-stream-fd stream)
+					    :input timeout)
+	       nil
+	       :timeout)))))
 
 #+Genera
 (defun buffer-input-wait-default (display timeout)
@@ -1816,7 +1676,7 @@
 ;;; buffer. This should never block, so it can be called from the scheduler.
 
 ;;; The default implementation is to just use listen.
-#-(or excl CMU)
+#-(or excl)
 (defun buffer-listen-default (display)
   (declare (type display display))
   (let ((stream (display-input-stream display)))
@@ -1824,11 +1684,6 @@
     (if (null stream)
 	t
       (listen stream))))
-
-#+CMU
-(defun buffer-listen-default (display)
-  (declare (type display display))
-  (not (buffer-input-wait-default display 0)))
 
 #+excl 
 (defun buffer-listen-default (display)
@@ -1912,6 +1767,18 @@
 	      (setf (aref target-sequence target-index)
 		(aref source-sequence source-index))))))
 
+#+cmu
+(defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
+  (declare (type buffer-bytes buf1 buf2)
+	   (type array-index start1 end1 start2))
+  #.(declare-buffun)
+  (kernel:bit-bash-copy
+   buf2 (+ (* start2 vm:byte-bits)
+	   (* vm:vector-data-offset vm:word-bits))
+   buf1 (+ (* start1 vm:byte-bits)
+	   (* vm:vector-data-offset vm:word-bits))
+   (* (- end1 start1) vm:byte-bits)))
+
 #+lucid
 ;;;The compiler is *supposed* to optimize calls to replace, but in actual
 ;;;fact it does not.
@@ -1930,7 +1797,7 @@
 	   (type array-index start1 end1 start2))
   (replace buf1 buf2 :start1 start1 :end1 end1 :start2 start2))
 
-#-(or lispm lucid excl clx-overlapping-arrays)
+#-(or lispm lucid excl cmu clx-overlapping-arrays)
 (defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
   (declare (type buffer-bytes buf1 buf2)
 	   (type array-index start1 end1 start2))
@@ -2573,6 +2440,16 @@
 		 (the (unsigned-byte ,count) ,it))))
     `(the card8 ,it)))
 
+#+cmu
+(progn
+  (declaim (inline underlying-simple-vector))
+  (defun underlying-simple-vector (x)
+    (lisp::with-array-data ((res x)
+			    (start)
+			    (end))
+      (declare (ignore start end))
+      res)))
+
 ;;; If you can write fast routines that can read and write pixarrays out of a
 ;;; buffer-bytes, do it!  It makes the image code a lot faster.  The
 ;;; FAST-READ-PIXARRAY, FAST-WRITE-PIXARRAY and FAST-COPY-PIXARRAY routines
@@ -2580,7 +2457,7 @@
 
 ;;; FAST-READ-PIXARRAY - fill part of a pixarray from a buffer of card8s
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-1 (buffer-bbuf index array x y width height  
 			     padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2595,15 +2472,17 @@
 			 (index-ceiling x 8))
 		 (index+ start padded-bytes-per-line))
 	  (y 0 (index1+ y))
-	  (left-bits (index-mod (index- x) 8))
+	  (left-bits (the array-index (mod (the fixnum (- x)) 8)))
 	  (right-bits (index-mod (index- width left-bits) 8))
-	  (middle-bits (index- width left-bits right-bits))
+	  (middle-bits (the fixnum (- (the fixnum (- width left-bits))
+				      right-bits)))
 	  (middle-bytes (index-floor middle-bits 8)))
 	 ((index>= y height))
       (declare (type (simple-array pixarray-1-element-type (*)) vector)
+	       (fixnum middle-bits)
 	       (type array-index start y
-		     left-bits right-bits middle-bits middle-bytes))
-      (cond ((index< middle-bits 0)
+		     left-bits right-bits middle-bytes))
+      (cond ((< middle-bits 0)
 	     (let ((byte (aref buffer-bbuf (index1- start)))
 		   (x (array-row-major-index array y left-bits)))
 	       (declare (type card8 byte)
@@ -2714,7 +2593,7 @@
 	     ))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-4 (buffer-bbuf index array x y width height 
 			     padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2729,7 +2608,8 @@
 			 (index-ceiling x 2))
 		 (index+ start padded-bytes-per-line))
 	  (y 0 (index1+ y))
-	  (left-nibbles (index-mod (index- x) 2))
+	  (left-nibbles (the array-index (mod (the fixnum (- (the fixnum x)))
+					2)))
 	  (right-nibbles (index-mod (index- width left-nibbles) 2))
 	  (middle-nibbles (index- width left-nibbles right-nibbles))
 	  (middle-bytes (index-floor middle-nibbles 2)))
@@ -2758,7 +2638,7 @@
       ))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-8 (buffer-bbuf index array x y width height 
 			     padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2785,7 +2665,7 @@
  	      (the card8 (aref buffer-bbuf i))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-16 (buffer-bbuf index array x y width height 
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2844,7 +2724,7 @@
 		(aref buffer-bbuf (index+ i 2)))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-24 (buffer-bbuf index array x y width height 
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2874,7 +2754,7 @@
 		(aref buffer-bbuf (index+ i 2)))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-read-pixarray-32 (buffer-bbuf index array x y width height 
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -2942,7 +2822,7 @@
     (when (= bits-per-pixel 24)
       (fast-read-pixarray-24
 	bbuf boffset pixarray x y width height padded-bytes-per-line))
-    #+(or lcl3.0 excl)
+    #+(or lcl3.0 excl cmu)
     (funcall
       (ecase bits-per-pixel 
 	(1 #'fast-read-pixarray-1) (4 #'fast-read-pixarray-4)
@@ -2953,7 +2833,7 @@
 
 ;;; FAST-WRITE-PIXARRAY - copy part of a pixarray into an array of CARD8s
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-1 (buffer-bbuf index array x y width height
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3017,7 +2897,7 @@
 		(aref vector (index+ x 7)))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-4 (buffer-bbuf index array x y width height
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3055,7 +2935,7 @@
 		(aref vector (index+ x 1)))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-8 (buffer-bbuf index array x y width height
 			      padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3080,7 +2960,7 @@
 	(setf (aref buffer-bbuf i) (the card8 (aref vector x))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-16 (buffer-bbuf index array x y width height
 			       padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3142,7 +3022,7 @@
 		(write-image-load-byte 16 pixel 24))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-24 (buffer-bbuf index array x y width height
 			       padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3174,7 +3054,7 @@
 		(write-image-load-byte 16 pixel 24))))))
   t)
 
-#+(or lcl3.0 excl)
+#+(or lcl3.0 excl cmu)
 (defun fast-write-pixarray-32 (buffer-bbuf index array x y width height
 			       padded-bytes-per-line)
   (declare (type buffer-bytes buffer-bbuf)
@@ -3243,7 +3123,7 @@
     (when (= bits-per-pixel 24)
       (fast-write-pixarray-24
 	bbuf boffset pixarray x y width height padded-bytes-per-line))
-    #+(or lcl3.0 excl)
+    #+(or lcl3.0 excl cmu)
     (funcall
       (ecase bits-per-pixel 
 	(1 #'fast-write-pixarray-1) (4 #'fast-write-pixarray-4)
@@ -3294,7 +3174,7 @@
 	  (setf (sys:%1d-aref dest dst-idx)
 		(sys:%1d-aref src src-idx))))
       t)
-    #+(or lcl3.0 excl)
+    #+(or lcl3.0 excl cmu)
     (macrolet
       ((copy (type element-type)
 	 `(let* ((pixarray pixarray)
