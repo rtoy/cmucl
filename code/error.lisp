@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.58 2000/10/25 17:16:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.59 2001/01/09 05:21:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -498,6 +498,8 @@
       (if (eq val *empty-slot*)
 	  (let ((actual-initargs (condition-actual-initargs condition))
 		(slot (find-slot (condition-class-cpl class) name)))
+	    (unless slot
+	      (error "Slot ~S of ~S missing." name condition))
 	    (dolist (initarg (condition-slot-initargs slot))
 	      (let ((val (getf actual-initargs initarg *empty-slot*)))
 		(unless (eq val *empty-slot*)
