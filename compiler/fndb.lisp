@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.116 2003/07/01 15:04:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.117 2003/07/01 15:44:40 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1050,7 +1050,7 @@
 ;;;; In the "Errors" chapter:
 
 (defknown error (t &rest t) nil) ; Never returns...
-(defknown cerror (string t &rest t) null)
+(defknown cerror ((or string function) t &rest t) null)
 (defknown warn (t &rest t) null)
 (defknown break (&optional t &rest t) null)
 

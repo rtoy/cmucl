@@ -128,6 +128,7 @@ New in this release:
        returning values specified by the standard when SLOT-UNBOUND
        or SLOT-MISSING are called and return.
      - NTH and NTHCDR accepting bignums as first argument.
+     - First arg of CERROR may be a function.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
