@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.32 2003/05/13 15:22:48 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/setup.lisp,v 1.33 2003/05/31 23:58:12 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,13 @@
 (in-package "LISP")
 (defparameter *enable-package-locked-errors* nil)
 
+(define-condition genesis-c-header-file-changed (warning)
+  ((name :initarg :name :reader genesis-c-header-file-name))
+  (:report
+   (lambda (c s)
+     (format s "The C header file ~S has changed.~%~
+                Be sure to re-compile the startup code."
+             (genesis-c-header-file-name c)))))
 
 (in-package "USER")
 

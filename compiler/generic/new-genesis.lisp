@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.56 2003/05/29 13:25:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.57 2003/05/31 23:58:12 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2343,7 +2343,8 @@
       (emit-c-header-aux))
     (cond ((not (probe-file name))
 	   (unix:unix-chmod unix-newname #o444)
-	   (rename-file new-name name))
+	   (rename-file new-name name)
+	   (warn 'genesis-c-header-file-changed :name name))
 	  ((files-differ name new-name)
 	   (rename-file name
 			(concatenate 'simple-string
@@ -2351,9 +2352,7 @@
 				     ".OLD"))
 	   (unix:unix-chmod unix-newname #o444)
 	   (rename-file new-name name)
-	   (format t "The C header file has changed.~%~
-                      Be sure to re-compile the startup code.")
-	   (unix:unix-exit 1))
+	   (warn 'genesis-c-header-file-changed :name name))
 	  (t
 	   (unix:unix-unlink unix-newname))))
   (undefined-value))
