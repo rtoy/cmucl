@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.37 1992/02/21 21:59:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.38 1992/02/21 23:14:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2811,7 +2811,7 @@
 	     (specs `(,name (debug-signal 'ambiguous-variable-name :name ',name
 					  :frame ,n-frame)))))))
       (let ((res (coerce `(lambda (,n-frame)
-			    (declare (ext:ignorable ,n-frame))
+			    (declare (ignorable ,n-frame))
 			    (symbol-macrolet ,(specs) ,form))
 			 'function)))
 	#'(lambda (frame)
