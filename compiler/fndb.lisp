@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.44 1992/03/11 21:16:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.45 1992/04/02 02:15:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,7 +188,8 @@
 (defknown (export import) (symbols &optional packagelike) truth)
 (defknown unintern (symbol &optional packagelike) boolean)
 (defknown unexport (symbols &optional packagelike) truth)
-(defknown (shadowing-import shadow) (symbols &optional packagelike) truth)
+(defknown shadowing-import (symbols &optional packagelike) truth)
+(defknown shadow ((or symbol string list) &optional packagelike) truth)
 (defknown (use-package unuse-package) ((or list packagelike) &optional packagelike) truth)
 (defknown find-all-symbols (stringlike) list (flushable))
 
