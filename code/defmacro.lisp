@@ -46,7 +46,8 @@
 				   (doc-string-allowed t)
 				   ((:environment env-arg-name))
 				   ((:default-default *default-default*))
-				   ((:key-finder *key-finder*)))
+				   ((:key-finder *key-finder*))
+				   error-fun)
   "Returns as multiple-values a parsed body, any local-declarations that
    should be made where this body is inserted, and a doc-string if there is
    one."
@@ -58,7 +59,7 @@
       (multiple-value-bind
 	  (env-arg-used minimum maximum)
 	  (parse-defmacro-lambda-list lambda-list arg-list-name name
-				      error-kind (not annonymousp)
+				      error-kind error-fun (not annonymousp)
 				      nil env-arg-name)
 	(values
 	 `(let* ,(nreverse *system-lets*)
@@ -74,8 +75,9 @@
 	 maximum)))))
 
 
-(defun parse-defmacro-lambda-list (lambda-list arg-list-name name error-kind
-			  &optional top-level env-illegal env-arg-name)
+(defun parse-defmacro-lambda-list
+       (lambda-list arg-list-name name error-kind error-fun
+		    &optional top-level env-illegal env-arg-name)
   (let ((path (if top-level `(cdr ,arg-list-name) arg-list-name))
 	(now-processing :required)
 	(maximum 0)
@@ -190,7 +192,7 @@
 		    (push-sub-list-binding sub-list-name `(car ,path) var
 					   name error-kind)
 		    (parse-defmacro-lambda-list var sub-list-name name
-						error-kind))
+						error-kind error-fun))
 		  (setf path `(cdr ,path))
 		  (incf minimum)
 		  (incf maximum))
@@ -202,7 +204,7 @@
 			    var))
 		  (push-optional-binding (car var) (cadr var) (caddr var)
 					 `(not (null ,path)) `(car ,path)
-					 name error-kind)
+					 name error-kind error-fun)
 		  (setf path `(cdr ,path))
 		  (incf maximum))
 		 (:keywords
@@ -219,21 +221,24 @@
 								,rest-name)
 					   `(keyword-argument ,keyword
 							      ,rest-name)
-					   name error-kind)
+					   name error-kind error-fun)
 		    (push keyword keys)))
 		 (:auxs (push-let-binding (car var) (cadr var) nil)))))))
-    (push `(destructuring-arg-count-test ,(if top-level
-					      `(cdr ,arg-list-name)
-					      arg-list-name)
-					 ,minimum
-					 ,(or (not (null restp)) maximum)
-					 ',lambda-list
-					 ',name
-					 ',error-kind)
+    (push `(verify-arg-counts ,(if top-level
+				   `(cdr ,arg-list-name)
+				   arg-list-name)
+			      ,minimum
+			      ,(or (not (null restp)) maximum)
+			      ',lambda-list
+			      ',name
+			      ',error-kind
+			      ,@(if error-fun `(#',error-fun)))
 	  *arg-tests*)
     (if keys
-	(push `(destructuring-key-test ,rest-name
-				       ,(if allow-other-keys-p t `',keys))
+	(push `(verify-valid-keys ,rest-name
+				  ,(if allow-other-keys-p t `',keys)
+				  ',name ',error-kind
+				  ,@(if error-fun `(#',error-fun)))
 	      *arg-tests*))
     (values env-arg-used minimum (if (null restp) maximum nil))))
 
@@ -255,66 +260,79 @@
 	(push let-form *user-lets*))))
 
 (defun push-optional-binding (value-var init-form supplied-var condition path
-					name error-kind)
+					name error-kind error-fun)
   (unless supplied-var
     (setf supplied-var (gensym "SUPLIEDP-")))
   (push-let-binding supplied-var condition t)
   (cond ((consp value-var)
 	 (let ((whole-thing (gensym "OPTIONAL-SUBLIST-")))
 	   (push-let-binding whole-thing path t supplied-var init-form)
-	   (parse-defmacro-lambda-list value-var whole-thing name error-kind)))
+	   (parse-defmacro-lambda-list value-var whole-thing name
+				       error-kind error-fun)))
 	((symbolp value-var)
 	 (push-let-binding value-var path nil supplied-var init-form))
 	(t
 	 (error "Illegal optional variable name: ~S" value-var))))
 
-(defun defmacro-error (location kind)
-  (error "Illegal or ill-formed ~A argument in ~S." kind location))
+(defun defmacro-error (name kind)
+  (error "Illegal or ill-formed ~A argument in ~S." kind name))
 
 
 
 ;;;; Destructuring argument testing routines.
 
-(proclaim '(inline destructuring-arg-count-error))
-;;;
-(defun destructuring-arg-count-error (string name error-kind &rest args)
-  (error "While expanding ~A ~A:~%  ~?" error-kind name string args))
-
 ;;; DESTRUCTURING-ARG-COUNT-TEST tests an argument list against a maximum
 ;;; and minimum number of arguments.  NIL for maximum means there is no
 ;;; limit.  Keywords are checked.  T for keylist means allow-other-keys.
 ;;;
-(defun destructuring-arg-count-test (arg-list minimum maximum lambda-list
-					      name error-kind)
+(defun verify-arg-counts
+       (arg-list minimum maximum lambda-list name error-kind
+		 &optional (error-fun #'destructuring-arg-count-error))
   (unless (listp arg-list)
-    (destructuring-arg-count-error
-     "~S should have been a list of arguments for lambda-list ~S."
-     name error-kind arg-list lambda-list))
+    (funcall error-fun nil
+	     "~S should have been a list of arguments for lambda-list ~S."
+	     name error-kind arg-list lambda-list))
   (let ((length (length arg-list)))
     (cond ((< length minimum)
-	   (destructuring-arg-count-error
-	    "Too few arguments in ~S to satisfy lambda-list ~S.~%  Expected at ~
-	    least ~D."
-	    name error-kind arg-list lambda-list minimum))
+	   (funcall error-fun nil
+		    "Too few arguments in ~S to satisfy lambda-list ~S.~%  ~
+		    Expected at least ~D."
+		    name error-kind arg-list lambda-list minimum))
 	  ((and (not (eq maximum t))
 		(> length maximum))
-	   (destructuring-arg-count-error
-	    "Too many arguments in ~S to satisfy lambda-list ~S.~%  Expected ~
-	    no more than ~D."
-	    name error-kind arg-list lambda-list maximum)))))
+	   (funcall error-fun nil
+		    "Too many arguments in ~S to satisfy lambda-list ~S.~%  ~
+		    Expected no more than ~D."
+		    name error-kind arg-list lambda-list maximum)))))
 
-(defun destructuring-key-test (key-bindings valid-keys)
+(defun verify-valid-keys
+       (key-bindings valid-keys name kind
+		     &optional (error-fun #'destructuring-arg-count-error))
   (when (keyword-argument :allow-other-keys key-bindings)
     (setf valid-keys t))
   (do ((test-key key-bindings (cddr test-key)))
       ((endp test-key))
     (let ((key (car test-key)))
-      (unless (and (keywordp key)
-		   (or (eq valid-keys t)
-		       (member key valid-keys)))
-	(cerror "Ignore it."
-		"~S is not an allowed keyword."
-		(car test-key))))))
+      (unless (keywordp key)
+	(funcall error-fun name kind "Ignore it." "Bogus keyword: ~S" key))
+      (unless (or (eq valid-keys t)
+		  (member key valid-keys))
+	(funcall error-fun name kind "Ignore it." "Unknown keyword: ~S" key)))))
+
+
+;;; DESTRUCTURING-ARG-COUNT-ERROR --- internal.
+;;;
+;;; Default error function for destructuring-arg-count-test.
+;;; 
+(defun destructuring-arg-count-error (name kind continue string &rest args)
+  (if continue
+      (cerror "~4*~?"
+	      "While expanding ~A ~S:~%  ~?"
+	      kind name string args
+	      continue args)
+      (error "While expanding ~A ~S:~%  ~?"
+	     kind name string args)))
+
 
 
 
