@@ -79,9 +79,6 @@ struct sigcontext *context;
       /* Skip lisp error arg data bytes */
       while(vlen-- > 0) 
 	(char*)context->sc_pc++;
-      /* Align 2 */
-      /* (char*)context->sc_pc += 0x3;
-      context->sc_pc &= ~0x03; */
       break;
 
     case trap_Breakpoint:		/* Not tested */
@@ -94,7 +91,7 @@ struct sigcontext *context;
       break;
 
     default:
-      DPRINTF(1,(stderr,"[arch_skip_inst invalid code %d\n]\n",code));
+      fprintf(stderr,"[arch_skip_inst invalid code %d\n]\n",code);
       break;
     }
 
@@ -124,88 +121,117 @@ arch_set_pseudo_atomic_interrupted(struct sigcontext *context)
 unsigned long 
 arch_install_breakpoint(void *pc)
 {
-  char*ptr = (char*)pc;
-  unsigned long result = *(unsigned long*)ptr;
-  *ptr++ = BREAKPOINT_INST;		/* x86 INT3       */
-  *ptr++ = trap_Breakpoint;		/* Lisp trap code */
-  *ptr++ = 1;				/* vector length  */
-  *ptr++ = 0;				/* junk data      */
-  
-  os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
+  unsigned long result = *(unsigned long*)pc;
 
+  *(char*)pc = BREAKPOINT_INST;		/* x86 INT3       */
+  *((char*)pc+1) = trap_Breakpoint;		/* Lisp trap code */
+  
   return result;
 }
 
 void 
 arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
-  unsigned int *ptr=(unsigned int*)pc;
-  *ptr = orig_inst;
-  os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
+  *((char *)pc) = orig_inst & 0xff;
+  *((char *)pc + 1) = (orig_inst & 0xff00) >> 8;
 }
 
-static unsigned int *skipped_break_addr, displaced_after_inst,
-     after_breakpoint;
-static int orig_sigmask;
-
-unsigned int
-emulate_branch(struct sigcontext *context,unsigned long orig_inst)
-{
-  /* This has to be invented for the X86. Maybe figure out how
-   * to use the trace trap. Shouldn't be hard. Gdb does it.
-   */
-  int next_pc = context->sc_pc;
-  return next_pc;
-}
 
 #ifdef __linux__
 _syscall1(int,sigreturn,struct sigcontext *,context)
 #endif
 
 
+/* When single stepping single_stepping holds the original instruction
+   pc location. */
+unsigned int *single_stepping=NULL;
+#ifndef __linux__
+unsigned int  single_step_save1;
+unsigned int  single_step_save2;
+unsigned int  single_step_save3;
+#endif
+
 void 
-arch_do_displaced_inst(struct sigcontext *context,
-				   unsigned long orig_inst)
+arch_do_displaced_inst(struct sigcontext *context, unsigned long orig_inst)
 {
-  /* Ditto the above for X86.
-   */
   unsigned int *pc = (unsigned int*)context->sc_pc;
-  unsigned int *next_pc;
-  unsigned int next_inst;
-  DPRINTF(0,(stderr,"[arch_do_displaced_inst %x %x NOT YET!]\n",
-	     context,orig_inst));
-  sigreturn(context);
+  unsigned int flags = context->sc_efl;
+
+  /* Put the original instruction back. */
+  *((char *)pc) = orig_inst & 0xff;
+  *((char *)pc + 1) = (orig_inst & 0xff00) >> 8;
+
+#ifdef __linux__
+  context->eflags |= 0x100;
+#else
+  /* Install helper instructions for the single step:
+     pushf; or [esp],0x100; popf. */
+  single_step_save1 = *(pc-3);
+  single_step_save2 = *(pc-2);
+  single_step_save3 = *(pc-1);
+  *(pc-3) = 0x9c909090;
+  *(pc-2) = 0x00240c81;
+  *(pc-1) = 0x9d000001;
+#endif
+
+  single_stepping=(unsigned int*)pc;
+
+#ifndef __linux__
+  (unsigned int*)context->sc_pc = ((char *)pc-9);
+#endif
 }
 
-#define AfterBreakpoint 100	/* pfw - what is this?? */
 
 void 
 sigtrap_handler(HANDLER_ARGS)
 {
+  unsigned int  trap;
+  
 #ifdef __linux__
   GET_CONTEXT
 #endif
+    /*
+    fprintf(stderr,"x86sigtrap: %8x %x\n",
+	    context->sc_pc, *(unsigned char *)(context->sc_pc-1));
+  fprintf(stderr,"sigtrap(%d %d %x)\n",signal,code,context);*/
 
-#ifdef __linux__
-    __setfpucw(contextstruct.fpstate->cw);
+  if (single_stepping && (signal==SIGTRAP))
+    {
+      /* fprintf(stderr,"* Single step trap %x\n", single_stepping); */
+
+#ifndef __linux__
+      /* Un-install single step helper instructions. */
+      *(single_stepping-3) = single_step_save1;
+      *(single_stepping-2) = single_step_save2;
+      *(single_stepping-1) = single_step_save3;
+#else  
+       context->eflags ^= 0x100;
 #endif
+      /* Re-install the breakpoint if possible. */
+      if ((int)context->sc_pc == (int)single_stepping + 1)
+	fprintf(stderr,"* Breakpoint not re-install\n");
+      else
+	{
+	  char*ptr = (char*)single_stepping;
+	  *((char *)single_stepping) = BREAKPOINT_INST;	/* x86 INT3 */
+	  *((char *)single_stepping+1) = trap_Breakpoint;
+	}
 
-  /*fprintf(stderr,"x86sigtrap: %8x %x\n", context->sc_pc, *(char*)(context->sc_pc-1));
-   */
-  DPRINTF(0,(stderr,"sigtrap(%d %d %x)\n",signal,code,context));
+      single_stepping=NULL;
+      return;
+    }
+
   SAVE_CONTEXT();
+
   /* this is just for info in case monitor wants to print an approx */
   current_control_stack_pointer = (unsigned long*)context->sc_sp;
+
  /* On entry %eip points just after the INT3 byte and aims at the
   * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a
   * number of bytes will follow, the first is the length of the byte
   * arguments to follow.  */
-  if( *(unsigned char*)(context->sc_pc-1) == BREAKPOINT_INST)
-    {
-      if(after_breakpoint) code = AfterBreakpoint; /* ?? */
-      else code = (int)*(char*)context->sc_pc;
-    } 
-  switch (code)
+  trap = *(unsigned char *)(context->sc_pc);
+  switch (trap)
     {
     case trap_PendingInterrupt:
       DPRINTF(0,(stderr,"<trap Pending Interrupt.>\n"));
@@ -230,27 +256,16 @@ sigtrap_handler(HANDLER_ARGS)
 #endif
       break;
       
-    case trap_Breakpoint:		/* Not tested */
+    case trap_Breakpoint:
+      /*      fprintf(stderr,"*C break\n");*/
       (char*)context->sc_pc -= 1;
       handle_breakpoint(signal, code, context);
+      /*      fprintf(stderr,"*C break return\n");*/
       break;
       
-    case trap_FunctionEndBreakpoint:	/* not tested */
+    case trap_FunctionEndBreakpoint:
       (char*)context->sc_pc -= 1;
       context->sc_pc = (int)handle_function_end_breakpoint(signal, code, context);
-      break;
-      
-    case AfterBreakpoint:		/* not tested */
-      DPRINTF(1,(stderr,"[C--AfterBreakpoint NOT TESTED]\n"));
-      (char*)context->sc_pc -= 1;
-      *skipped_break_addr = BREAKPOINT_INST;
-      os_flush_icache((os_vm_address_t)skipped_break_addr,
-		      sizeof(unsigned long));
-      skipped_break_addr = NULL;
-      *(unsigned int *)context->sc_pc = displaced_after_inst;
-      os_flush_icache((os_vm_address_t)context->sc_pc, sizeof(unsigned long));
-      context->sc_mask = orig_sigmask;
-      after_breakpoint=NULL;
       break;
       
     default:

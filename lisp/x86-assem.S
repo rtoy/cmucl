@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.5 1997/11/04 09:11:23 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.6 1997/11/25 15:53:32 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -311,10 +311,8 @@ Llra:
 	ret
 	.size	GNAME(call_into_lisp), . - GNAME(call_into_lisp)
 
-
-/* Fdefn objects for undefined functions have a 'raw' slot
-   pointing here. The RISC systems seem to have this set up
-   as an actual function object instead.
+/*
+ * The undefined-function trampoline.
  */
 	.text
 	.align	align_4byte,0x90
@@ -322,48 +320,61 @@ Llra:
 	.type	GNAME(undefined_tramp),@function
 GNAME(undefined_tramp):
 	int3
-	.byte	trap_Cerror
+	.byte	trap_Error
         .byte   2
         .byte   23
         .byte   sc_DescriptorReg # EAX in the Descriptor-reg SC.
 	ret
 	.size	GNAME(undefined_tramp), .-GNAME(undefined_tramp)
 
-/* This apparently gets called to hack on something in closures
-   that can't get done by the compiler.
-*/
-	.align align_4byte,0x90
+/*
+ * The closure trampoline.
+ */
+	.text
+	.align	align_4byte,0x90
 	.global GNAME(closure_tramp)
 	.type	GNAME(closure_tramp),@function
 GNAME(closure_tramp):
 	movl	FDEFN_FUNCTION_OFFSET(%eax),%eax
 	jmp	CLOSURE_FUNCTION_OFFSET(%eax)
-
 	.size	GNAME(closure_tramp), .-GNAME(closure_tramp)
 
-	.align align_4byte
-	.global GNAME(function_end_breakpoint_trap)
-	.global GNAME(function_end_breakpoint_end)
+/*
+ * Function-end breakpoint magic.
+ */
+	.text
 	.global	GNAME(function_end_breakpoint_guts)
-
-GNAME(function_end_breakpoint_trap):
-	ret
-	.align align_4byte
-GNAME(function_end_breakpoint_guts):
-	ret
-	.align align_4byte
-GNAME(function_end_breakpoint_end):
-	ret
-
-	.global	GNAME(test_point)
 	.align	align_4byte
-GNAME(test_point):
-	ret
+GNAME(function_end_breakpoint_guts):
+	/* Multiple Value return */
+	jmp	multiple_value_return
+	/* Single value return */
+
+	/* The eventual return will now be a multi-value return so
+	   setup for it. Multi-value returns are not in general valid
+	   for one value so convert to 2 values. Perhaps the
+	   convertion should be changed? */
+	movl	$8,%ecx		# Setup ecx=2 for the debugger.
+	movl	$NIL,%edi	# Second value
+	movl	%esp,%ebx	# ebx has the ofp
+	subl	$8,%esp		# needed?
+		
+multiple_value_return:
+	
+	.global GNAME(function_end_breakpoint_trap)
+GNAME(function_end_breakpoint_trap):
+	int3
+	.byte 	trap_FunctionEndBreakpoint
+
+	/* Never returns here. */
+	.global GNAME(function_end_breakpoint_end)
+GNAME(function_end_breakpoint_end):
+	hlt
 
 
 	.global	GNAME(do_pending_interrupt)
 	.type	GNAME(do_pending_interrupt),@function
-	.align align_4byte,0x90
+	.align	align_4byte,0x90
 GNAME(do_pending_interrupt):
 	int3
 	.byte 	trap_PendingInterrupt
