@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.13 1990/05/26 22:48:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.14 1990/05/27 14:55:48 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -1057,10 +1057,10 @@ default-value-5
 (define-vop (listify-rest-args)
   (:args (context-arg :target context :scs (any-reg descriptor-reg))
 	 (count-arg :target count :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0)) context)
-  (:temporary (:scs (any-reg) :type fixnum :from (:argument 1)) count)
-  (:temporary (:scs (descriptor-reg) :from :eval) temp dst)
-  (:temporary (:scs (non-descriptor-reg) :type random :from :eval) ndescr)
+  (:temporary (:scs (any-reg) :from (:argument 0)) context)
+  (:temporary (:scs (any-reg) :from (:argument 1)) count)
+  (:temporary (:scs (descriptor-reg) :from :eval) temp)
+  (:temporary (:scs (non-descriptor-reg) :from :eval) ndescr dst)
   (:results (result :scs (any-reg descriptor-reg)))
   (:translate %listify-rest-args)
   (:policy :safe)
