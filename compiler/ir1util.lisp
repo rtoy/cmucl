@@ -373,6 +373,7 @@
 ;;; Node-Ends-Block  --  Interface
 ;;;
 ;;;    Makes Node the Last node in its block, splitting the block if necessary.
+;;; The new block is added to the DFO immediately following Node's block.
 ;;;
 ;;;    If the mess-up for one of Block's End-Cleanups is moved into the new
 ;;; block, then we must adjust the end/start cleanups of the new and old blocks
@@ -598,16 +599,24 @@
 
 ;;; Delete-Return  --  Interface
 ;;;
-;;;    Do stuff to indicate that the return node Node is being deleted.
+;;;    Do stuff to indicate that the return node Node is being deleted.  We set
+;;; the RETURN to NIL and remove the function from its tail set.
+;;;
+;;;    As a rather random special case, we leave the function in the tail set
+;;; when there are uses of the result continuation marked TAIL-P.  This is done
+;;; to prevent the tail set from being blown away when the back end deletes the
+;;; return because it discovers that all calls are tail-recursive.
 ;;;
 (defun delete-return (node)
   (declare (type creturn node))
   (let* ((fun (return-lambda node))
 	 (tail-set (lambda-tail-set fun)))
     (assert (lambda-return fun))
-    (setf (tail-set-functions tail-set)
-	  (delete fun (tail-set-functions tail-set)))
-    (setf (lambda-tail-set fun) nil)
+    (unless (do-uses (use (return-result node) nil)
+	      (when (node-tail-p use) (return t)))
+      (setf (tail-set-functions tail-set)
+	    (delete fun (tail-set-functions tail-set)))
+      (setf (lambda-tail-set fun) nil))
     (setf (lambda-return fun) nil))
   (undefined-value))
 
@@ -1320,6 +1329,58 @@
       (let ((*print-level* 2)
 	    (*print-pretty* nil))
 	(format nil "~{~{~S~^ ~}~^ => ~}" context)))))
+
+
+;;;; Undefined warnings:
+
+
+;;; A list of UNDEFINED-WARNING structures representing the calls to unknown
+;;; functions.  This is bound by WITH-COMPILATION-UNIT.
+;;;
+(defvar *undefined-warnings*)
+(proclaim '(list *undefined-warnings*))
+
+(defvar *undefined-warning-limit* 3
+  "If non-null, then an upper limit on the number of unknown function or type
+  warnings that the compiler will print for any given name in a single
+  compilation.  This prevents excessive amounts of output when there really is
+  a missing definition (as opposed to a typo in the use.)")
+
+
+;;; NOTE-UNDEFINED-REFERENCE  --  Interface
+;;;
+;;;    Make an entry in the *UNDEFINED-WARNINGS* describing a reference to Name
+;;; of the specified Kind.  If we have exceeded the warning limit, then just
+;;; increment the count, otherwise note the current error context.
+;;;
+(defun note-undefined-reference (name kind)
+  (let* ((found (dolist (warn *undefined-warnings* nil)
+		  (when (and (equal (undefined-warning-name warn) name)
+			     (eq (undefined-warning-kind warn) kind))
+		    (return warn))))
+	 (res (or found
+		  (make-undefined-warning :name name :kind kind))))
+    (unless found (push res *undefined-warnings*))
+    (when (or (not *undefined-warning-limit*)
+	      (< (undefined-warning-count res) *undefined-warning-limit*))
+	(push (find-error-context)
+	      (undefined-warning-warnings res)))
+    (incf (undefined-warning-count res)))
+  (undefined-value))
+
+
+;;; NOTE-NAME-DEFINED  --  Interface
+;;;
+;;;    Delete any undefined warnings for Name and Kind.
+;;;
+(defun note-name-defined (name kind)
+  (setq *undefined-warnings*
+	(delete-if #'(lambda (x)
+		       (and (equal (undefined-warning-name x) name)
+			    (eq (undefined-warning-kind x) kind)))
+		   *undefined-warnings*))
+
+  (undefined-value))
 
 
 ;;;; Careful call:
