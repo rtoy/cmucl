@@ -996,7 +996,7 @@
   (prepare-for-fast-read-byte *fasl-file*
     (let* ((len (fast-read-u-integer 4))
 	   (size (fast-read-byte))
-	   (ac (integer-length size))
+	   (ac (1- (integer-length size)))
 	   (res (%primitive alloc-i-vector len ac)))
       (done-with-fast-read-byte)
       (unless (and (<= ac 5) (= size (ash 1 ac)))
