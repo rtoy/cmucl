@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.22 1993/06/24 13:59:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.23 1993/06/24 14:09:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,11 +35,11 @@
 	  restart-case restart-bind restart-name restart-name find-restart
 	  compute-restarts invoke-restart invoke-restart-interactively abort
 	  continue muffle-warning store-value use-value invoke-debugger restart
-	  condition warning serious-condition simple-condition simple-warning
-	  simple-error simple-condition-format-control
+	  condition warning style-warning serious-condition simple-condition
+	  simple-warning simple-error simple-condition-format-control
 	  simple-condition-format-arguments storage-condition
 	  type-error type-error-datum
-	  type-error-expected-type simple-type-error program-error
+	  type-error-expected-type simple-type-error program-error parse-error
 	  control-error stream-error stream-error-stream end-of-file file-error
 	  file-error-pathname cell-error cell-error-name unbound-variable
 	  undefined-function
@@ -604,7 +604,7 @@ The previous version is uglier, but it sets up unique run-time tags.
   nil)
 
 (define-condition warning (condition) ())
-
+(define-condition style-warning (warning) ())
 
 (defun warn (datum &rest arguments)
   "Warns about a situation by signalling a condition formed by datum and
@@ -743,7 +743,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 (define-condition program-error (error) ())
-
+(define-condition parse-error (error) ())
 
 (defun print-control-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
