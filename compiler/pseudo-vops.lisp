@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pseudo-vops.lisp,v 1.5 1991/02/20 14:59:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pseudo-vops.lisp,v 1.6 1992/06/04 15:52:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,8 +24,10 @@
 ;;;
 (define-vop (note-environment-start)
   (:info start-lab)
+  (:vop-var vop)
   (:generator 0
-    (emit-label start-lab)))
+    (emit-label start-lab)
+    (note-debug-location vop start-lab :non-local-entry)))
 
 
 ;;; Call a move function.  Used for register save/restore and spilling.
