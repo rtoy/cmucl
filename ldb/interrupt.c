@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.15 1990/11/26 19:44:32 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.16 1990/11/27 10:05:06 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -246,6 +246,7 @@ struct sigcontext *context;
 	crap_out("%primitive halt called; the party is over.\n");
 
       case trap_Error:
+	sigsetmask(context->sc_mask);
 	fake_foreign_function_call(context);
 	args = current_control_stack_pointer;
 	current_control_stack_pointer += 2;
@@ -256,6 +257,7 @@ struct sigcontext *context;
 	break;
 
       case trap_Cerror:
+	sigsetmask(context->sc_mask);
 	fake_foreign_function_call(context);
 	args = current_control_stack_pointer;
 	current_control_stack_pointer += 2;
