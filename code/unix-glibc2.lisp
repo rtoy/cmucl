@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.8 1999/12/04 15:59:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.9 2000/07/31 09:53:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,7 +142,8 @@
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
-	  unix-recv unix-send unix-getpeername unix-getsockname))
+	  unix-recv unix-send unix-getpeername unix-getsockname
+	  unix-getsockopt unix-setsockopt))
 
 (pushnew :unix *features*)
 (pushnew :glibc2 *features*)
@@ -2524,6 +2525,20 @@ in at a time in poll.")
   (socket int)
   (sockaddr (* t))
   (len (* unsigned)))
+
+(def-alien-routine ("getsockopt" unix-getsockopt) int
+  (socket int)
+  (level int)
+  (optname int)
+  (optval (* t))
+  (optlen unsigned :in-out))
+
+(def-alien-routine ("setsockopt" unix-setsockopt) int
+  (socket int)
+  (level int)
+  (optname int)
+  (optval (* t))
+  (optlen unsigned))
 
 ;;; sys/select.h
 
