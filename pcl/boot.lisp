@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.41 2002/11/21 18:42:30 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.42 2002/11/22 00:15:48 pmai Exp $")
 
 (in-package :pcl)
 
@@ -522,22 +522,19 @@ work during bootstrapping.
 		(mapcar (lambda (r s) (declare (ignore s)) r)
 			parameters
 			specializers))
+	       (specialized-parameters
+	        (loop for s in specialized-lambda-list
+		      for p in required-parameters
+		      when (listp s) collect p))
 	       (slots (mapcar #'list required-parameters))
 	       (calls (list nil))
-	       (parameters-to-reference
-		(make-parameter-references specialized-lambda-list
-					   required-parameters
-					   declarations
-					   method-name
-					   specializers))
 	       (class-declarations
 		`(declare
-		  ,@(remove nil
-			    (mapcar (lambda (a s) (and (symbolp s)
-						       (neq s t)
-						       `(class ,a ,s)))
-				    parameters
-				    specializers))))
+		  ,@(mapcan (lambda (a s)
+			      (when (and (symbolp s) (neq s t))
+				(list `(class ,a ,s))))
+			    parameters
+			    specializers)))
 	       (method-lambda
 		  ;; Remove the documentation string and insert the
 		  ;; appropriate class declarations.  The documentation
@@ -547,9 +544,9 @@ work during bootstrapping.
 		  ;; are inserted to communicate the class of the method's
 		  ;; arguments to the code walk.
 		  `(lambda ,lambda-list
+		     (declare (ignorable ,@specialized-parameters))
 		     ,class-declarations
 		     ,@declarations
-		     (progn ,@parameters-to-reference)
 		     (block ,(if (listp generic-function-name)
 				 (cadr generic-function-name)
 				 generic-function-name)
@@ -1041,27 +1038,6 @@ work during bootstrapping.
        (if (eq *boot-state* 'complete)
 	   (standard-generic-function-p (gdefinition name))
 	   (funcallable-instance-p (gdefinition name)))))
-
-(defun make-parameter-references (specialized-lambda-list
-				  required-parameters
-				  declarations
-				  method-name
-				  specializers)
-  (flet ((ignoredp (symbol)
-	   (dolist (form declarations)
-	     (dolist (decl (cdr form))
-	       (when (and (eq (car decl) 'ignore)
-			  (memq symbol (cdr decl)))
-	         (return-from ignoredp t))))))
-    (loop for s in specialized-lambda-list
-	  and p in required-parameters
-	  when (listp s)
-	    if (ignoredp (car s)) do
-	      (warn "In defmethod ~S, there is a~%~
-                     redundant ignore declaration for the parameter ~S."
-		    method-name specializers (car s))
-	    else
-	      collect (car s))))
 
 
 

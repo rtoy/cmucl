@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.21 2002/10/29 16:20:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.22 2002/11/22 00:15:48 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -989,7 +989,7 @@
       `(list* :fast-function
 	(lambda (.pv-cell. .next-method-call. ,@args+rest-arg)
 	  ,@outer-decls
-	  .pv-cell. .next-method-call.
+	  (declare (ignorable .pv-cell. .next-method-call.))
 	  (macrolet ((pv-env ((pv calls pv-table-symbol pv-parameters)
 			      &rest forms)
 		       (declare (ignore pv-table-symbol pv-parameters))
