@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.5.2.3 2000/10/24 13:34:06 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.5.2.4 2000/10/27 19:34:38 dtc Exp $
  *
  * Memory Validation
  */
@@ -20,27 +20,6 @@ static void ensure_space(lispobj *start, unsigned long size)
 	exit(1);
     }
 }
-
-#ifdef HOLES
-
-static os_vm_address_t holes[] = HOLES;
-
-static void make_holes(void)
-{
-    int i;
-
-    for (i = 0; i < sizeof(holes)/sizeof(holes[0]); i++) {
-	if (os_validate(holes[i], HOLE_SIZE) == NULL) {
-	    fprintf(stderr,
-		    "ensure_space: Failed to validate %ld bytes at 0x%08X\n",
-		    HOLE_SIZE,
-		    (unsigned long)holes[i]);
-	    exit(1);
-	}
-	os_protect(holes[i], HOLE_SIZE, 0);
-    }
-}
-#endif
 
 void validate(void)
 {
@@ -81,7 +60,7 @@ void validate(void)
 	binding_stack = (lispobj *) BINDING_STACK_START;
 	ensure_space(binding_stack, BINDING_STACK_SIZE);
 
-#ifdef HOLES
+#ifdef sparc
 	make_holes();
 #endif
 
