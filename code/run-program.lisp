@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.10 1992/02/17 03:11:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.11 1992/02/18 02:20:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,10 +290,10 @@
       (push master *close-on-error*)
       (push slave *close-in-parent*)
       (when (streamp pty)
-	(multiple-value-bind (won new-fd) (unix:unix-dup master)
-	  (unless won
+	(multiple-value-bind (new-fd errno) (unix:unix-dup master)
+	  (unless new-fd
 	    (error "Could not UNIX:UNIX-DUP ~D: ~A"
-		   master (unix:get-unix-error-msg new-fd)))
+		   master (unix:get-unix-error-msg errno)))
 	  (push new-fd *close-on-error*)
 	  (copy-descriptor-to-stream new-fd pty cookie)))
       (values name
@@ -315,7 +315,7 @@
 	(when pty-name
 	  (let ((old-tty (unix:unix-open "/dev/tty" unix:o_rdwr 0)))
 	    (when old-tty
-	      (unix:unix-ioctl old-tty unix:TIOCNOTTY 0)
+	      (unix:unix-ioctl old-tty unix:TIOCNOTTY nil)
 	      (unix:unix-close old-tty)))
 	  (let ((new-tty (unix:unix-open pty-name unix:o_rdwr 0)))
 	    (when new-tty
@@ -613,14 +613,15 @@
 		     direction)))))
 	((or (pathnamep object) (stringp object))
 	 (with-open-stream (file (apply #'open object keys))
-	   (multiple-value-bind (won fd)
-				(unix:unix-dup (system:fd-stream-fd file))
-	     (cond (won
+	   (multiple-value-bind
+	       (fd errno)
+	       (unix:unix-dup (system:fd-stream-fd file))
+	     (cond (fd
 		    (push fd *close-in-parent*)
 		    (values fd nil))
 		   (t
 		    (error "Could not duplicate file descriptor: ~A"
-			   (unix:get-unix-error-msg fd)))))))
+			   (unix:get-unix-error-msg errno)))))))
 	((system:fd-stream-p object)
 	 (values (system:fd-stream-fd object) nil))
 	((streamp object)
