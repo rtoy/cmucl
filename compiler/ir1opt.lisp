@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.44 1992/04/14 18:09:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.45 1992/06/03 19:57:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -767,6 +767,7 @@
 		   (reoptimize-continuation cont))))
 	
 	(unlink-blocks block (first (block-succ block)))
+	(setf (component-reanalyze (block-component block)) t)
 	(assert (not (block-succ block)))
 	(link-blocks block tail)
 	(add-continuation-use call (make-continuation))
