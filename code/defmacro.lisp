@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.16 1993/08/30 21:19:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.17 1994/02/04 15:23:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,8 +325,11 @@
 ;;;; Conditions signaled at runtime by the resultant body.
 
 (define-condition defmacro-lambda-list-bind-error (error)
-  ((kind :reader defmacro-lambda-list-bind-error-kind :initarg :kind)
-   (name :reader defmacro-lambda-list-bind-error-name :initarg :name)))
+  ((kind :reader defmacro-lambda-list-bind-error-kind
+	 :initarg :kind)
+   (name :reader defmacro-lambda-list-bind-error-name
+	 :initarg :name
+	 :initform nil)))
 
 (defun print-defmacro-ll-bind-error-intro (condition stream)
   (if (null (defmacro-lambda-list-bind-error-name condition))
