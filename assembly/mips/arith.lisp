@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.7 1990/11/23 15:23:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.8 1991/02/01 18:37:47 ram Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -211,9 +211,11 @@
 	  DONE)))
 
   (define-cond-assem-rtn generic-< < two-arg-< (inst slt temp x y) nil)
-  (define-cond-assem-rtn generic-<= <= two-arg-<= (inst slt temp y x) t)
+; <=, >= should never be emitted.
+;  (define-cond-assem-rtn generic-<= <= two-arg-<= (inst slt temp y x) t)
   (define-cond-assem-rtn generic-> > two-arg-> (inst slt temp y x) nil)
-  (define-cond-assem-rtn generic->= >= two-arg->= (inst slt temp x y) t))
+;  (define-cond-assem-rtn generic->= >= two-arg->= (inst slt temp x y) t)
+  )
 
 
 (define-assembly-routine (generic-eql
