@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.48 2003/04/30 16:48:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.49 2003/05/01 10:50:33 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2485,6 +2485,17 @@
 			(setq directives remaining)
 			(incf min-req min)
 			(incf max-req max)))
+		     ((char= c #\{)
+		      (multiple-value-bind (min max remaining)
+			  (%min/max-iteration-args dir directives)
+			(setq directives remaining)
+			(incf min-req min)
+			(incf max-req max)))
+		     ((char= c #\?)
+		      (cond ((format-directive-atsignp dir)
+			     (incf min-req)
+			     (setq max-req most-positive-fixnum))
+			    (t (incf-both 2))))
 		     (t (throw 'give-up nil))))))))))
 
 ;;;
@@ -2510,5 +2521,14 @@
 	    (t
 	     (setq max-req (1+ sub-max))))
       (values min-req max-req remaining))))
+
+(defun %min/max-iteration-args (iteration directives)
+  (let* ((close (find-directive directives #\} nil))
+	 (posn (position close directives))
+	 (remaining (nthcdr (1+ posn) directives)))
+    (if (format-directive-atsignp iteration)
+	(values (if (zerop posn) 1 0) most-positive-fixnum remaining)
+	(let ((nreq (if (zerop posn) 2 1)))
+	  (values nreq nreq remaining)))))
 
 
