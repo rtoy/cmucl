@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.62 1993/09/14 22:14:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.63 1993/11/13 01:17:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1057,19 +1057,20 @@
 
 (defknown get-decoded-time ()
   (values (integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
-	  (integer 1 12) unsigned-byte (integer 0 6) boolean (rational 0 (24)))
+	  (integer 1 12) unsigned-byte (integer 0 6) boolean (rational -24 24))
   (flushable))
 
 (defknown get-universal-time () unsigned-byte (flushable))
 
-(defknown decode-universal-time (unsigned-byte &optional (integer 0 23))
+(defknown decode-universal-time
+	  (unsigned-byte &optional (or null (rational -24 24)))
   (values (integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
-	  (integer 1 12) unsigned-byte (integer 0 6) boolean (rational 0 (24)))
+	  (integer 1 12) unsigned-byte (integer 0 6) boolean (rational -24 24))
   (flushable))
 
 (defknown encode-universal-time
   ((integer 0 59) (integer 0 59) (integer 0 23) (integer 1 31)
-   (integer 1 12) unsigned-byte &optional (rational 0 (24)))
+   (integer 1 12) unsigned-byte &optional (or null (rational -24 24)))
   unsigned-byte
   (flushable))
 
