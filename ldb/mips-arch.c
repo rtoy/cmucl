@@ -54,11 +54,20 @@ static void sigtrap_handler(signal, code, context)
 	undo_fake_foreign_function_call(context);
 	break;
 
+      case trap_FunctionEndBreakpoint:
+	sigsetmask(context->sc_mask);
+	fake_foreign_function_call(context);
+	handle_function_end_breakpoint(signal, code, context);
+	undo_fake_foreign_function_call(context);
+	break;
+
       default:
 	interrupt_handle_now(signal, code, context);
 	break;
     }
 }
+
+#define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
 
 static void sigfpe_handler(signal, code, context)
 int signal, code;
@@ -130,5 +139,5 @@ struct sigcontext *context;
 void arch_install_interrupt_handlers()
 {
     interrupt_install_low_level_handler(SIGTRAP,sigtrap_handler);
-    interrupt_install_low_level_handler(SIGEMT,sigemt_handler);
+    interrupt_install_low_level_handler(SIGEMT,sigfpe_handler);
 }
