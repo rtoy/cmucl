@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.44 1997/12/05 16:32:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.45 1997/12/06 18:47:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1181,11 +1181,9 @@
 	    (specifier-type 'complex)))))
 
 (macrolet ((frob (op type)
-	     `(progn
-	       (deftransform ,op ((w z) ((complex ,type) (complex ,type))
-				  (complex ,type))
-		 '(complex (,op (realpart w) (realpart z))
-		           (,op (imagpart w) (imagpart z)))))))
+	     `(deftransform ,op ((w z) ((complex ,type) (complex ,type)) *)
+	        '(complex (,op (realpart w) (realpart z))
+			  (,op (imagpart w) (imagpart z))))))
   ;; Complex addition and subtraction
   (frob + single-float)
   (frob + double-float)
@@ -1194,46 +1192,34 @@
 
 (macrolet ((frob (type)
 	     `(progn
-	       (deftransform + ((w z) ((complex ,type) ,type)
-				  (complex ,type))
-		 '(complex (+ (realpart w) z)
-		           (imagpart w)))
-	       (deftransform + ((z w) (,type (complex ,type))
-				  (complex ,type))
-		 '(complex (+ (realpart w) z)
-		           (imagpart w))))))
-
+	       (deftransform + ((w z) ((complex ,type) ,type) *)
+		 '(complex (+ (realpart w) z) (imagpart w)))
+	       (deftransform + ((z w) (,type (complex ,type)) *)
+		 '(complex (+ (realpart w) z) (imagpart w))))))
   ;; Add and sub between a complex number and a float.
   (frob single-float)
   (frob double-float))
 
 (macrolet ((frob (type)
 	     `(progn
-	       (deftransform - ((w z) ((complex ,type) ,type)
-				  (complex ,type))
-		 '(complex (- (realpart w) z)
-		           (imagpart w)))
-	       (deftransform - ((z w) (,type (complex ,type))
-				  (complex ,type))
-		 '(complex (- z (realpart w))
-		           (- (imagpart w)))))))
-
+	       (deftransform - ((w z) ((complex ,type) ,type) *)
+		 '(complex (- (realpart w) z) (imagpart w)))
+	       (deftransform - ((z w) (,type (complex ,type)) *)
+		 '(complex (- z (realpart w)) (- (imagpart w)))))))
   ;; Add and sub between a complex number and a float.
   (frob single-float)
   (frob double-float))
 
 (macrolet ((frob (type)
 	     `(progn
-	       (deftransform * ((x y) ((complex ,type) (complex ,type))
-				(complex ,type))
+	       (deftransform * ((x y) ((complex ,type) (complex ,type)) *)
 		 '(let* ((rx (realpart x))
 			 (ix (imagpart x))
 			 (ry (realpart y))
 			 (iy (imagpart y)))
 		    (complex (- (* rx ry) (* ix iy))
 			     (+ (* rx iy) (* ix ry)))))
-	       (deftransform / ((x y) ((complex ,type) (complex ,type))
-				(complex ,type))
+	       (deftransform / ((x y) ((complex ,type) (complex ,type)) *)
 		 '(let* ((rx (realpart x))
 			 (ix (imagpart x))
 			 (ry (realpart y))
@@ -1246,35 +1232,31 @@
 			(let* ((r (/ ry iy))
 			       (dn (* iy (+ 1 (* r r)))))
 			  (complex (/ (+ (* rx r) ix) dn)
-				   (/ (- (* ix r) rx) dn))))))
-	       )))
+				   (/ (- (* ix r) rx) dn)))))))))
   ;; Multiplication and division for complex numbers
   (frob single-float)
   (frob double-float))
 
 (macrolet ((frob (type)
 	     `(progn
-	       (deftransform * ((w z) ((complex ,type) ,type)
-				(complex ,type))
-		 '(complex (* (realpart w) z)
-		           (* (imagpart w) z)))
-	       (deftransform * ((z w) (,type (complex ,type))
-				(complex ,type))
-		 '(complex (* (realpart w) z)
-		           (* (imagpart w) z))))))
+	       (deftransform * ((w z) ((complex ,type) ,type) *)
+		 '(complex (* (realpart w) z) (* (imagpart w) z)))
+	       (deftransform * ((z w) (,type (complex ,type)) *)
+		 '(complex (* (realpart w) z) (* (imagpart w) z))))))
   (frob single-float)
   (frob double-float))
 
 (macrolet ((frob (type)
-	     `(progn
-	       (deftransform / ((w z) ((complex ,type) ,type)
-				(complex ,type))
-		 '(complex (/ (realpart w) z)
-		           (/ (imagpart w) z))))))
-  
+	     `(deftransform / ((w z) ((complex ,type) ,type) *)
+	       '(complex (/ (realpart w) z) (/ (imagpart w) z)))))
   (frob single-float)
   (frob double-float))
 	   
+(macrolet ((frob (type)
+	     `(deftransform conjugate ((z) ((complex ,type)) *)
+	       '(complex (realpart z) (- (imagpart z))))))
+  (frob single-float)
+  (frob double-float))
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
