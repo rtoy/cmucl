@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.11 1993/05/15 18:26:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.12 1993/05/17 10:14:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,13 +167,12 @@
 
 ;;;; System constants, Xops, and inline functions.
 
-(defvar *system-constants* (make-array 256))
-(defvar *system-constant-codes* (make-hash-table :test #'eq))
+;;; If (%fdefinition-marker% . name), then the value is the fdefinition 
+(defvar *system-constant-codes* (make-hash-table :test #'equal))
 
 (eval-when (compile eval)
   (defmacro def-system-constant (index form)
     `(let ((val ,form))
-       (setf (svref *system-constants* ,index) val)
        (setf (gethash val *system-constant-codes*) ,index))))
 
 (def-system-constant 0 nil)
@@ -186,6 +185,23 @@
 (def-system-constant 7 :key)
 (def-system-constant 8 :from-end)
 (def-system-constant 9 :type)
+(def-system-constant 10 '(%fdefinition-marker% . error))
+(def-system-constant 11 '(%fdefinition-marker% . format))
+(def-system-constant 12 '(%fdefinition-marker% . %typep))
+(def-system-constant 13 '(%fdefinition-marker% . eql))
+(def-system-constant 14 '(%fdefinition-marker% . %negate))
+
+(def-system-constant 15 '(%fdefinition-marker% . %%defun))
+(def-system-constant 16 '(%fdefinition-marker% . %%defmacro))
+(def-system-constant 17 '(%fdefinition-marker% . %%defconstant))
+(def-system-constant 18 '(%fdefinition-marker% . length))
+(def-system-constant 19 '(%fdefinition-marker% . equal))
+(def-system-constant 20 '(%fdefinition-marker% . append))
+(def-system-constant 21 '(%fdefinition-marker% . reverse))
+(def-system-constant 22 '(%fdefinition-marker% . nreverse))
+(def-system-constant 23 '(%fdefinition-marker% . nconc))
+(def-system-constant 24 '(%fdefinition-marker% . list))
+(def-system-constant 25 '(%fdefinition-marker% . list*))
 
 (defparameter *xop-names*
   '(breakpoint; 0
@@ -212,41 +228,79 @@
 
 
 (defstruct inline-function-info
-  function
-  number
-  type)
+  ;;
+  ;; Name of the function that we convert into calls to this.
+  (function (required-argument) :type symbol)
+  ;;
+  ;; Name of function that the interpreter should call to implement this.  May
+  ;; not be the same as above if extra safety checks are required.
+  (interpreter-function (required-argument) :type symbol)
+  ;;
+  ;; Inline operation number.
+  (number (required-argument) :type (mod 32))
+  ;;
+  ;; Type calls must statisfy.
+  (type (required-argument) :type function-type)
+  ;;
+  ;; If true, arg type checking need not be done.
+  (safe (required-argument) :type (member t nil)))
 
-(defparameter *inline-functions*
-  (let ((number -1))
-    (mapcar #'(lambda (stuff)
-		(destructuring-bind (name arg-types result-type) stuff
-		  (make-inline-function-info
-		   :function name
-		   :number (incf number)
-		   :type (specifier-type
-			  `(function ,arg-types ,result-type)))))
-	    '((+ (fixnum fixnum) fixnum)
-	      (- (fixnum fixnum) fixnum)
-	      (make-value-cell (t) t)
-	      (value-cell-ref (t) t)
-	      (value-cell-setf (t t) t)
-	      (symbol-value (symbol) t)
-	      (setf-symbol-value (t symbol) t)
-	      (%byte-special-bind (t symbol) (values))
-	      (%byte-special-unbind () (values))
-	      (cons-unique-tag () t)))))
+(defparameter *inline-functions* (make-array 32 :initial-element nil))
+(defparameter *inline-function-table* (make-hash-table :test #'eq))
+(let ((number 0))
+  (dolist (stuff
+	   '((+ (fixnum fixnum) fixnum)
+	     (- (fixnum fixnum) fixnum)
+	     (make-value-cell (t) t)
+	     (value-cell-ref (t) t)
+	     (value-cell-setf (t t) (values))
+	     (symbol-value (symbol) t :interpreter-function %byte-symbol-value)
+	     (setf-symbol-value (t symbol) (values))
+	     (%byte-special-bind (t symbol) (values))
+	     (%byte-special-unbind () (values))
+	     (cons-unique-tag () t); obsolete...
+	     (%negate (fixnum) fixnum)
+	     (< (fixnum fixnum) t)
+	     (> (fixnum fixnum) t)
+	     (car (t) t :interpreter-function %byte-car :safe t)
+	     (cdr (t) t :interpreter-function %byte-cdr :safe t)
+	     (length (list) t)
+	     (cons (t t) t)
+	     (list (t t) t)
+	     (list* (t t t) t)))
+    (destructuring-bind (name arg-types result-type
+			      &key (interpreter-function name) alias safe)
+			stuff
+      (let ((info
+	     (make-inline-function-info
+	      :function name
+	      :number number
+	      :interpreter-function interpreter-function
+	      :type (specifier-type `(function ,arg-types ,result-type))
+	      :safe safe)))
+	(setf (svref *inline-functions* number) info)
+	(setf (gethash name *inline-function-table*) info))
+      (unless alias (incf number)))))
+
 
 (defun inline-function-number-or-lose (function)
-  (let ((info (find function *inline-functions*
-		    :key #'inline-function-info-function)))
+  (let ((info (gethash function *inline-function-table*)))
     (if info
 	(inline-function-info-number info)
 	(error "Unknown inline function: ~S" function))))
 
+
+;;;; Byte-code specific transforms:
+
+(deftransform eql ((x y) ((or fixnum character) (or fixnum character))
+		   * :when :byte)
+  '(eq x y))
+
+(deftransform char= ((x y) * * :when :byte)
+  '(eq x y))
 
 
 ;;;; Annotations hung off the IR1 while compiling.
-
 
 (defstruct byte-component-info
   (constants (make-array 10 :adjustable t :fill-pointer 0)))
@@ -387,21 +441,24 @@
 ;;; ANNOTATE-FULL-CALL  --  Internal
 ;;;
 ;;;    Annotate the values for any :full combination.  This includes inline
-;;; functions, multiple value calls & throw.  If a real full call, clear any
-;;; type-check annotations.  When we are done, remove jump to return for tail
-;;; calls.
+;;; functions, multiple value calls & throw.  If a real full call or a safe
+;;; inline operation, then clear any type-check annotations.  When we are done,
+;;; remove jump to return for tail calls.
 ;;;
 (defun annotate-full-call (call)
   (let* ((fun (basic-combination-fun call))
 	 (name (continuation-function-name fun))
-	 (info (find name *inline-functions*
-		     :key #'inline-function-info-function)))
+	 (info (gethash name *inline-function-table*)))
     (cond ((and info
 		(valid-function-use call (inline-function-info-type info)))
 	   (annotate-basic-combination-args call)
 	   (setf (node-tail-p call) nil)
 	   (setf (basic-combination-info call) info)
-	   (annotate-continuation fun 0))
+	   (annotate-continuation fun 0)
+	   (when (inline-function-info-safe info)
+	     (dolist (arg (basic-combination-args call))
+	       (when (continuation-type-check arg)
+		 (setf (continuation-%type-check arg) :deleted)))))
 	  ((and (mv-combination-p call) (eq name '%throw))
 	   (let ((args (basic-combination-args call)))
 	     (assert (= (length args) 2))
@@ -1015,10 +1072,23 @@
 	       (two-arg-char> char>)
 	       (two-arg-char-equal char-equal)
 	       (two-arg-char-lessp char-lessp)
-	       (two-arg-char-greaterp char-greaterp)))
+	       (two-arg-char-greaterp char-greaterp)
+	       (two-arg-string= string=)
+	       (two-arg-string< string<)
+	       (two-arg-string> string>)))
 
   (setf (gethash (second fun) *two-arg-functions*) (first fun)))
 
+
+;;; If a system constant, push that, otherwise use a load-time constant.
+;;;
+(defun output-push-fdefinition (segment name)
+  (let ((offset (gethash `(%fdefinition-marker% . ,name)
+			 *system-constant-codes*)))
+    (if offset
+	(output-byte-with-operand segment byte-push-system-constant
+				  offset)
+	(output-push-load-time-constant segment :fdefinition name))))
 
 (defun generate-byte-code-for-ref (segment ref cont)
   (declare (type new-assem:segment segment) (type ref ref)
@@ -1035,8 +1105,8 @@
 			   :global-function)))
 	  (let* ((name (global-var-name leaf))
 		 (found (gethash name *two-arg-functions*)))
-	    (output-push-load-time-constant
-	     segment :fdefinition
+	    (output-push-fdefinition
+	     segment
 	     (if (and found
 		      (= (length (combination-args (continuation-dest cont)))
 			 2))
@@ -1074,9 +1144,7 @@
 		(output-push-constant segment (global-var-name leaf))
 		(output-do-inline-function segment 'symbol-value))
 	       (:global-function
-		(output-push-load-time-constant segment
-						:fdefinition
-						(global-var-name leaf))
+		(output-push-fdefinition segment (global-var-name leaf))
 		(output-do-xop segment 'fdefn-function-or-lose)))))
 	  (checked-canonicalize-values segment cont 1))))))
   (undefined-value))
@@ -1339,7 +1407,11 @@
 	(let ((kind (cleanup-kind (nlx-info-cleanup nlx-info))))
 	  (when (member kind '(:block :tagbody))
 	    ;; Generate a unique tag.
-	    (output-do-inline-function segment 'cons-unique-tag)
+	    (output-push-constant
+	     segment
+	     (format nil "Tag for ~A" (component-name *compile-component*)))
+	    (output-push-constant segment nil)
+	    (output-do-inline-function segment 'cons)
 	    ;; Save it so people can close over it.
 	    (output-do-xop segment 'dup)
 	    (output-byte-with-operand segment
@@ -2048,5 +2120,4 @@
 	      ;; inline
 	      (note "inline ~A"
 		    (inline-function-info-function
-		     (nth (ldb (byte 5 0) byte) *inline-functions*)))))))))))
-
+		     (svref *inline-functions* (ldb (byte 5 0) byte))))))))))))
