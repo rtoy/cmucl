@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.2 1990/02/06 17:48:25 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.3 1990/02/09 19:10:08 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -108,7 +108,6 @@
 		(message "Checking in ~A ..." (namestring pathname))
 		(in-directory pathname
 		  (do-command "rcsci" `(,@(if keep-lock '("-l"))
-					"-U"
 					,(file-namestring pathname))
 			      :input (make-hemlock-region-stream
 				      (buffer-region buffer))))
@@ -121,10 +120,15 @@
 (defun rcs-check-out-file (pathname lock)
   (message "Checking out ~A ..." (namestring pathname))
   (in-directory pathname
-    (let ((backup (lisp::pick-backup-name (namestring pathname))))
-      (rename-file pathname backup)
+    (let ((backup
+	   (if (probe-file pathname)
+	       (lisp::pick-backup-name (namestring pathname))
+	       nil)))
+      (when backup
+	(rename-file pathname backup))
       (do-command "rcsco" `(,@(if lock '("-l")) ,(file-namestring pathname)))
-      (delete-file backup))))
+      (when backup
+	(delete-file backup)))))
 
 
 
@@ -284,3 +288,72 @@
     (change-to-buffer buffer)
     (buffer-start (current-point))
     (setf (buffer-modified buffer) nil)))
+
+
+(defcommand "RCS Update Directory" (p)
+  "Prompt for a directory and check out all files that are older than the
+  corresponding RCS file.  With an argument, never ask about overwriting
+  writable files."
+  "Prompt for a directory and check out all files that are older than the
+  corresponding RCS file.  With an argument, never ask about overwriting
+  writable files."
+  (let* ((def (buffer-default-pathname (current-buffer)))
+	 (dir (prompt-for-file :prompt "Directory to update: "
+			       :default (make-pathname
+					 :host (pathname-host def)
+					 :device (pathname-device def)
+					 :directory (pathname-directory def)
+					 :defaults nil)
+			       :must-exist nil)))
+    (unless (directoryp dir)
+      (let ((with-slash (parse-namestring (concatenate 'simple-string
+						       (namestring dir)
+						       "/"))))
+	(unless (directoryp with-slash)
+	  (editor-error "~S is not a directory" (namestring dir)))
+	(setf dir with-slash)))
+    (let ((rcsdir
+	   (make-pathname :host (pathname-host dir)
+			  :device (pathname-device dir)
+			  :directory (concatenate 'simple-vector
+						  (pathname-directory dir)
+						  (vector "RCS"))))
+	  (did-any nil))
+      (unless (directoryp rcsdir)
+	(editor-error "Could not find the RCS directory."))
+      (dolist (rcsfile (directory rcsdir))
+	(let ((rcsname (file-namestring rcsfile)))
+	  (when (string= rcsname ",v" :start1 (- (length rcsname) 2))
+	    (let* ((name (subseq rcsname 0 (- (length rcsname) 2)))
+		   (file (merge-pathnames (parse-namestring name)
+					  dir)))
+	      (when (< (file-write-date file) (file-write-date rcsfile))
+		(multiple-value-bind
+		    (won dev inode mode)
+		    (mach:unix-stat (namestring file))
+		  (declare (ignore dev inode))
+		  (when (and won (not (zerop (logand mode mach:writeown))))
+		    (cond ((or p
+			       (not (prompt-for-y-or-n
+				     :prompt
+				     (format nil
+					     "~S is writable, overwrite? "
+					     (namestring file))
+				     :default nil
+				     :default-string "n")))
+			   (let ((private
+				  (merge-pathnames (concatenate
+						    'simple-string
+						    (file-namestring file)
+						    ".private")
+						   file)))
+			     (message "Renaming ~S to ~S"
+				      (namestring file)
+				      (namestring private))
+			     (rename-file file private)))
+			  (t
+			   (delete-file file))))
+		  (setf did-any t)
+		  (rcs-check-out-file file nil)))))))
+      (unless did-any
+	(message "No files are out of date.")))))
