@@ -93,7 +93,7 @@
 	(code (fill-pointer *request-table*)))
     `(progn
        (eval-when (compile load eval)
-	 (vector-push-extend string-name *request-table*)
+	 (vector-push-extend ,string-name *request-table*)
 	 (defun ,symbol-name ()
 	   (let* ((message (prepare-request ,code ,options 0))
 		  (reply (send-request-to-server message ,options)))
