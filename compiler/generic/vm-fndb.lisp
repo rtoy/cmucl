@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.45 1992/12/13 14:43:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.46 1992/12/15 20:09:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,6 +71,8 @@
 (defknown %sxhash-simple-substring (simple-string index) index
   (foldable flushable))
 
+
+(defknown vector-length (vector) index (flushable))
 
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
   (flushable))
@@ -286,6 +288,8 @@
 
 (defknown %make-funcallable-instance (index function) function (unsafe))
 
+(defknown %set-funcallable-instance-function (function function) function
+  (unsafe))
 (defknown %set-funcallable-instance-info (function index t) t (unsafe))
 
 
