@@ -108,6 +108,6 @@
 #+small
 ;;;
 ;;; If we want a small core, blow away the meta-compile time VOP info.
-(setf (backend-parsed-vops *backend*) (make-hash-table #'eq))
+(setf (backend-parsed-vops *backend*) (make-hash-table :test #'eq))
 
 (%proclaim '(optimize (speed 1) (safety 1)))
