@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.26 2003/03/30 00:48:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.27 2003/04/06 09:10:09 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -312,7 +312,8 @@
 ;;; lisp:class and pcl::class objects.
 ;;;
 (defun make-wrapper (length class)
-  (cond ((typep class 'std-class)
+  (cond ((or (typep class 'std-class)
+	     (typep class 'forward-referenced-class))
 	 (kernel:initialize-layout-hash
 	  (make-wrapper-internal
 	   :length length
@@ -320,7 +321,8 @@
 	   (let ((owrap (class-wrapper class)))
 	     (cond (owrap
 		    (kernel:layout-class owrap))
-		   ((*subtypep (class-of class) *the-class-standard-class*)
+		   ((or (*subtypep (class-of class) *the-class-standard-class*)
+			(typep class 'forward-referenced-class))
 		    (cond ((and *pcl-class-boot*
 				(eq (slot-value class 'name) *pcl-class-boot*))
 			   (let ((found (kernel::find-class

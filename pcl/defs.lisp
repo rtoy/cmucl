@@ -474,7 +474,10 @@
     :initform (cons nil nil))
    (predicate-name
     :initform nil
-    :reader class-predicate-name)))
+    :reader class-predicate-name)
+   (finalized-p
+    :initform nil
+    :reader class-finalized-p)))
 
 ;;;
 ;;; The class PCL-CLASS is an implementation-specific common superclass of

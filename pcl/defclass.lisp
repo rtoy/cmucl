@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.25 2003/03/22 16:15:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.26 2003/04/06 09:10:09 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -177,10 +177,7 @@
 	      (progn
 		(set-class-info name metaclass info-slots)
 		(when (eq *boot-state* 'complete)
-		  (when (eq metaclass 'standard-class)
-		    ;; a funcallable-standard-class metaclass here causes
-		    ;; a compiler crash in construct.lisp
-		    (inform-type-system-about-std-class name)))
+		  (inform-type-system-about-std-class name))
 		defclass-form)))))))
 
 (defun make-initfunction (initform)

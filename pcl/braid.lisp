@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.33 2003/03/30 18:43:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.34 2003/04/06 09:10:09 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -263,6 +263,7 @@
 	 (set-slot (slot-name value)
 	   (bootstrap-set-slot metaclass-name class slot-name value)))
     (set-slot 'name name)
+    (set-slot 'finalized-p t)
     (set-slot 'source source)
     (set-slot 'type (if (eq class (find-class t))
 			t
@@ -644,7 +645,7 @@
       (if olclass
 	  (assert (eq lclass olclass))
 	  (setf (kernel::find-class name) lclass))
-
+      
       (set-class-translation class name)))
 
   (/show "Boot state BRAID reached")

@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.2 2003/03/22 16:15:16 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.3 2003/04/06 09:10:09 gerd Exp $")
 
 (in-package "PCL")
 
@@ -663,6 +663,11 @@
 
 (pushnew 'proclamation-hook c::*proclamation-hooks*)
 
+(defun class-has-a-forward-referenced-superclass-p (class)
+  (or (forward-referenced-class-p class)
+      (some #'class-has-a-forward-referenced-superclass-p
+	    (class-direct-superclasses class))))	 
+      
 ;;;
 ;;; Return true if class CLASS-NAME should be defined at compile time.
 ;;; Called from EXPAND-DEFCLASS.  ENV is the environment in which the
@@ -674,7 +679,7 @@
       (some (lambda (super)
 	      (let ((class (find-class super nil)))
 		(and class
-		     (not (forward-referenced-class-p class))
+		     (not (class-has-a-forward-referenced-superclass-p class))
 		     (some (lambda (c)
 			     (slot-declaration env 'inline c))
 			   (class-precedence-list class)))))

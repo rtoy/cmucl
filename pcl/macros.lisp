@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.22 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.23 2003/04/06 09:10:09 gerd Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -151,9 +151,6 @@
 (defmacro find-class-cell-predicate (cell)
   `(cadr ,cell))
 
-(defmacro find-class-cell-make-instance-function-keys (cell)
-  `(cddr ,cell))
-
 (defmacro make-find-class-cell (class-name)
   (declare (ignore class-name))
   '(list* nil #'function-returning-nil nil))
@@ -227,18 +224,20 @@
 			  (find-class-from-cell ',symbol ,class-cell nil))))))
       form))
 
-(defun (setf find-class) (new-value symbol)
-  (if (legal-class-name-p symbol)
-      (let ((cell (find-class-cell symbol)))
+(defun (setf find-class) (new-value name &optional errorp environment)
+  (declare (ignore errorp environment))
+  (if (legal-class-name-p name)
+      (let ((cell (find-class-cell name)))
 	(setf (find-class-cell-class cell) new-value)
-	(when (or (eq *boot-state* 'complete)
-		  (eq *boot-state* 'braid))
+	(when (and (eq *boot-state* 'complete) (null new-value))
+	  (setf (kernel::find-class name) nil))
+	(when (memq *boot-state* '(complete braid))
 	  (when (and new-value (class-wrapper new-value))
 	    (setf (find-class-cell-predicate cell)
 		  (fdefinition (class-predicate-name new-value))))
-	  (update-ctors 'setf-find-class :class new-value :name symbol))
+	  (update-ctors 'setf-find-class :class new-value :name name))
 	new-value)
-      (error "~S is not a legal class name." symbol)))
+      (error "~S is not a legal class name." name)))
 
 (defun (setf find-class-predicate) (new-value symbol)
   (if (legal-class-name-p symbol)

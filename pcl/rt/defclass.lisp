@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.3 2003/04/03 11:46:20 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.4 2003/04/06 09:10:09 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -188,4 +188,68 @@
 	  t)
       (values r (null c)))
   t t)
-      
+
+;;;
+;;; TYPEP and SUBTYPEP used to fail with forward-referenced/unfinalized
+;;; classes.
+;;;
+(deftest defclass-types.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr5 (dfr6) ())
+	  (typep t (find-class 'dfr6)))
+      (values r (null c)))
+  nil t)
+
+(deftest defclass-types.2
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr7 (dfr8) ())
+	  (multiple-value-list
+	   (subtypep (find-class 'dfr7) (find-class 'dfr8))))
+      (values r (null c)))
+  (t t) t)
+
+(deftest defclass-types.3
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr7 (dfr8) ())
+	  (multiple-value-list
+	   (subtypep (find-class 'dfr8) (find-class 'dfr7))))
+      (values r (null c)))
+  (nil t) t)
+
+(deftest defclass-types.4
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr9 (dfr10) ())
+	  (defclass dfr11 (dfr9 dfr12) ())
+	  (append
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr9) (find-class 'dfr10)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr11) (find-class 'dfr10)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr11) (find-class 'dfr9)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr11) (find-class 'dfr12)))))
+      (values r (null c)))
+  (t t t t t t t t) t)
+
+(deftest defclass-types.5
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr13 () ())
+	  (defclass dfr14 (dfr15 dfr13) ())
+	  (defclass dfr16 (dfr14 dfr17) ())
+	  (append
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr16) (find-class 'dfr14)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr16) (find-class 'dfr17)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr16) (find-class 'dfr15)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr16) (find-class 'dfr13)))))
+      (values r (null c)))
+  (t t t t t t t t) t)

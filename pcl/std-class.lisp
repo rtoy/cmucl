@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.49 2003/04/03 11:40:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.50 2003/04/06 09:10:09 gerd Exp $")
 
 (in-package :pcl)
 
@@ -153,10 +153,6 @@
 ;;; Various class accessors that are a little more complicated than can be
 ;;; done with automatically generated reader methods.
 ;;;
-(defmethod class-finalized-p ((class pcl-class))
-  (with-slots (wrapper) class
-    (not (null wrapper))))
-
 (defmethod class-prototype ((class std-class))
   (with-slots (prototype) class
     (or prototype (setq prototype (allocate-instance class)))))
@@ -389,16 +385,17 @@
 		      *the-class-standard-class*)
 		     (t
 		      (class-of class)))))  
-    (flet ((fix-super (s)
-	     (cond ((classp s) s)
-		   ((not (legal-class-name-p s))
-		    (simple-program-error
-		     "~@<~S is not a class or a legal class name.~@:>" s))
+    (flet ((fix-super (super)
+	     (cond ((classp super)
+		    super)
+		   ((legal-class-name-p super)
+		    (or (find-class super nil)
+			(make-instance 'forward-referenced-class
+				       :name super)))
 		   (t
-		    (or (find-class s nil)
-			(setf (find-class s)
-			      (make-instance 'forward-referenced-class
-					     :name s)))))))
+		    (simple-program-error
+		     "~@<~S is not a class or a legal class name.~@:>"
+		     super)))))
       ;;
       ;; CLHS: signal PROGRAM-ERROR, if
       ;; (a) there are any duplicate slot names
@@ -490,11 +487,14 @@
   (setq direct-slots
 	(if direct-slots-p
 	    (setf (slot-value class 'direct-slots)
-		  (mapcar (lambda (pl) (make-direct-slotd class pl)) direct-slots))
+		  (mapcar (lambda (pl) (make-direct-slotd class pl))
+			  direct-slots))
 	    (slot-value class 'direct-slots)))
   (if direct-default-initargs-p
-      (setf (plist-value class 'direct-default-initargs) direct-default-initargs)
-      (setq direct-default-initargs (plist-value class 'direct-default-initargs)))
+      (setf (plist-value class 'direct-default-initargs)
+	    direct-default-initargs)
+      (setq direct-default-initargs
+	    (plist-value class 'direct-default-initargs)))
   (setf (plist-value class 'class-slot-cells)
 	(let ((collected ()))
 	  (dolist (dslotd direct-slots (nreverse collected))
@@ -514,7 +514,42 @@
   (add-direct-subclasses class direct-superclasses)
   (make-class-predicate class predicate-name)
   (update-class class nil)
-  (add-slot-accessors class direct-slots))
+  (add-slot-accessors class direct-slots)
+  (make-preliminary-layout class))
+
+(defmethod shared-initialize :after ((class forward-referenced-class)
+				     slot-names &key &allow-other-keys)
+  (declare (ignore slot-names))
+  (make-preliminary-layout class))
+
+;;;
+;;; Give CLASS a preliminary layout, if it doesn't have a layout
+;;; already.  This is done to make CLASS known to the type system
+;;; before the class is finalized, and is a consequence of the class
+;;; schizophrenia we are suffering from.
+;;;
+(defvar *allow-forward-referenced-classes-in-cpl-p* nil)
+
+(defun make-preliminary-layout (class)
+  (flet ((compute-preliminary-cpl (root)
+	   (let ((*allow-forward-referenced-classes-in-cpl-p* t))
+	     (compute-class-precedence-list root))))
+    (unless (class-finalized-p class)
+      (let ((name (class-name class)))
+	(setf (find-class name) class)
+	(inform-type-system-about-class class name)
+	(let ((layout (make-wrapper 0 class))
+	      (kernel-class (kernel::find-class name)))
+	  (setf (kernel:layout-class layout) kernel-class)
+	  (setf (kernel:%class-pcl-class kernel-class) class)
+	  (setf (slot-value class 'wrapper) layout)
+	  (let ((cpl (compute-preliminary-cpl class)))
+	    (setf (kernel:layout-inherits layout)
+		  (kernel:order-layout-inherits
+		   (map 'simple-vector #'class-wrapper
+			(reverse (rest cpl))))))
+	  (kernel:register-layout layout :invalidate t)
+	  (setf (kernel:%class-layout kernel-class) layout))))))
 
 (defmethod shared-initialize :before ((class class) slot-names &key name)
   (declare (ignore slot-names name))
@@ -646,6 +681,7 @@
   (let ((lclass (kernel::find-class (class-name class))))
     (setf (kernel:%class-pcl-class lclass) class)
     (setf (slot-value class 'wrapper) (kernel:%class-layout lclass)))
+  (setf (slot-value class 'finalized-p) t)
   (update-pv-table-cache-info class)
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
@@ -710,11 +746,6 @@
    class))
 
 
-(defun class-has-a-forward-referenced-superclass-p (class)
-  (or (forward-referenced-class-p class)
-      (some #'class-has-a-forward-referenced-superclass-p
-	    (class-direct-superclasses class))))	 
-      
 ;;;
 ;;; Called by :after shared-initialize whenever a class is initialized or 
 ;;; reinitialized.  The class may or may not be finalized.
@@ -816,6 +847,7 @@
 	      (wrapper-class-slots nwrapper) nwrapper-class-slots
 	      (wrapper-no-of-instance-slots nwrapper) nslots
 	      wrapper nwrapper))
+      (setf (slot-value class 'finalized-p) t)
 
       (unless (eq owrapper nwrapper)
 	(update-inline-access class)
@@ -1160,8 +1192,12 @@
 (defmethod inform-type-system-about-class ((class condition-class) name)
   (set-class-translation class name))
 
-
+(defmethod inform-type-system-about-class ((class forward-referenced-class)
+					   name)
+  (inform-type-system-about-std-class name)
+  (set-class-translation class name))
 
+
 (defmethod compatible-meta-class-change-p (class proto-new-class)
   (eq (class-of class) (class-of proto-new-class)))
 
@@ -1505,6 +1541,7 @@
     (with-slots (wrapper class-precedence-list prototype predicate-name
 			 (direct-supers direct-superclasses))
 	class
+      (setf (slot-value class 'finalized-p) t)
       (setf (kernel:%class-pcl-class kernel-class) class)
       (setq direct-supers direct-superclasses)
       (setq wrapper (kernel:%class-layout kernel-class))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.11 2003/03/22 16:15:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.12 2003/04/06 09:10:09 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -132,7 +132,9 @@
 	       (or (gethash c table)
 		   (setf (gethash c table) (make-cpd))))
 	     (walk (c supers)
-	       (if (forward-referenced-class-p c)
+	       (declare (special *allow-forward-referenced-classes-in-cpl-p*))
+	       (if (and (forward-referenced-class-p c)
+			(not *allow-forward-referenced-classes-in-cpl-p*))
 		   (cpl-forward-referenced-class-error class c)
 		   (let ((cpd (get-cpd c)))
 		     (unless (cpd-class cpd)	;If we have already done this
