@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.21 1990/06/20 17:52:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.22 1990/06/25 21:13:07 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -278,15 +278,15 @@ default-value-5
       (progn
 	(move csp-tn old-fp-tn)
 	(inst nop)
-	(inst compute-code-from-lra code-tn code-tn lra-label))
+	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label)))
 	;; Branch off to the MV case.
 	(inst b regs-defaulted)
-	(inst compute-code-from-lra code-tn code-tn lra-label)
+	(inst nop)
 	
 	;; Do the single value calse.
-	(inst compute-code-from-lra code-tn code-tn lra-label)
+	(inst compute-code-from-lra code-tn code-tn lra-label temp)
 	(do ((i 1 (1+ i))
 	     (val (tn-ref-across values) (tn-ref-across val)))
 	    ((= i (min nvals register-arg-count)))
@@ -296,6 +296,7 @@ default-value-5
 	  (move old-fp-tn csp-tn))
 	
 	(emit-label regs-defaulted)
+	(inst compute-code-from-lra code-tn code-tn lra-label temp)
 	
 	(when (> nvals register-arg-count)
 	  (inst addu temp nargs-tn (fixnum (- register-arg-count)))
@@ -349,14 +350,14 @@ default-value-5
 ;;; explicitly allocate these TNs, since their lifetimes overlap with the
 ;;; results Start and Count (also, it's nice to be able to target them).
 ;;;
-(defun receive-unknown-values (args nargs start count lra-label)
-  (declare (type tn args nargs start count))
+(defun receive-unknown-values (args nargs start count lra-label temp)
+  (declare (type tn args nargs start count temp))
   (let ((variable-values (gen-label))
 	(done (gen-label)))
     (inst b variable-values)
-    (inst compute-code-from-lra code-tn code-tn lra-label)
+    (inst nop)
     
-    (inst compute-code-from-lra code-tn code-tn lra-label)
+    (inst compute-code-from-lra code-tn code-tn lra-label temp)
     (inst addu csp-tn csp-tn 4)
     (storew (first register-arg-tns) csp-tn -1)
     (inst addu start csp-tn -4)
@@ -366,6 +367,7 @@ default-value-5
     
     (assemble (*elsewhere*)
       (emit-label variable-values)
+      (inst compute-code-from-lra code-tn code-tn lra-label temp)
       (do ((arg register-arg-tns (rest arg))
 	   (i 0 (1+ i)))
 	  ((null arg))
@@ -388,8 +390,9 @@ default-value-5
 		   :from :eval :to (:result 0))
 	      values-start)
   (:temporary (:sc any-reg :offset nargs-offset
-	       :from :eval  :to (:result 1))
-	      nvals))
+	       :from :eval :to (:result 1))
+	      nvals)
+  (:temporary (:scs (non-descriptor-reg)) temp))
 
 
 
@@ -420,7 +423,7 @@ default-value-5
   (:ignore arg-locs args nfp)
   (:vop-var vop)
   (:temporary (:scs (descriptor-reg)) move-temp)
-  (:temporary (:scs (any-reg) :type fixnum) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 5
     (let ((label (gen-label))
@@ -431,7 +434,8 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
+      (inst compute-lra-from-code
+	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
@@ -452,7 +456,7 @@ default-value-5
   (:save-p t)
   (:move-args :local-call)
   (:info save callee target)
-  (:ignore args save nfp)
+  (:ignore args save)
   (:vop-var vop)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 20
@@ -464,12 +468,13 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
+      (inst compute-lra-from-code
+	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
       (note-this-location vop :unknown-return)
-      (receive-unknown-values values-start nvals start count label)
+      (receive-unknown-values values-start nvals start count label temp)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
 
@@ -490,6 +495,7 @@ default-value-5
   (:ignore args res save)
   (:vop-var vop)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
@@ -499,7 +505,8 @@ default-value-5
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
-      (inst compute-lra-from-code (callee-return-pc-tn callee) code-tn label)
+      (inst compute-lra-from-code
+	    (callee-return-pc-tn callee) code-tn label temp)
       (inst b target)
       (inst nop)
       (note-this-location vop :known-return)
@@ -646,11 +653,11 @@ default-value-5
 			 ,name))
 		 register-arg-names register-arg-offsets))
      ,@(when (eq return :fixed)
-	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)
-	   (:temporary (:scs (any-reg) :type fixnum :from :eval) temp)))
+	 '((:temporary (:scs (descriptor-reg) :from :eval) move-temp)))
 
      ,@(unless (eq return :tail)
-	 '((:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
+	 '((:temporary (:scs (non-descriptor-reg) :from :eval) temp)
+	   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)))
 
      (:temporary (:scs (interior-reg) :type interior) lip)
 
@@ -678,7 +685,8 @@ default-value-5
 	     ,@(unless (eq return :tail)
 		 '((lra-label (gen-label)))))
 	 ,@(unless (eq return :tail)
-	     `((inst compute-lra-from-code return-pc-pass code-tn lra-label)))
+	     `((inst compute-lra-from-code
+		     return-pc-pass code-tn lra-label temp)))
 
 	 (loadw function lexenv vm:closure-function-slot
 		vm:function-pointer-type)
@@ -718,7 +726,7 @@ default-value-5
 	     (:unknown
 	      '((note-this-location vop :unknown-return)
 		(receive-unknown-values values-start nvals start count
-					lra-label)
+					lra-label temp)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:tail))))))
@@ -1008,9 +1016,10 @@ default-value-5
 ;;;
 (define-vop (setup-environment)
   (:info label)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn label)))
+    (inst compute-code-from-fn code-tn code-tn label temp)))
 
 ;;; Return the current Env as our result, then indirect throught the closure
 ;;; and the closure-entry to find the constant pool
@@ -1019,11 +1028,12 @@ default-value-5
   (:temporary (:sc descriptor-reg :offset lexenv-offset :target closure
 	       :to (:result 0))
 	      lexenv)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:results (closure :scs (descriptor-reg)))
   (:info label)
   (:generator 6
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn code-tn label)
+    (inst compute-code-from-fn code-tn code-tn label temp)
     ;; Get result.
     (move closure lexenv)))
 
