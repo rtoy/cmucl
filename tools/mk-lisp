@@ -1,8 +1,8 @@
-#!/bin/csh -f
+#!/bin/csh -fx
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.12 1992/03/21 19:12:43 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.13 1992/03/23 22:55:04 wlott Exp $
 
 if ($#argv) then
     if ($argv[1] == "-now") then
@@ -16,14 +16,16 @@ else
 endif
 
 if ($later) then
-    foreach minutes (5 1 0)
-	foreach name (`who | sed -e 's/\([^ ]*\)  *\([^ ]*\) .*/\1:\2/'`)
-	    echo Building core in $minutes minutes | \
-		write `echo $name | sed -e 's/:/ /'`
-	end
-	@ seconds = $minutes * 60
-	sleep $seconds
+    set delay = (205 45 15 0)
+    set msg = ("in 5 minutes" "in 1 minute" "in 15 seconds" "now")
+  nextmsg:
+    foreach name (`who | sed -e 's/\([^ ]*\)  *\([^ ]*\) .*/\1:\2/'`)
+	echo Building core $msg[1] | write `echo $name | sed -e 's/:/ /'`
     end
+    sleep $delay[1]
+    shift delay
+    shift msg
+    if ($#delay) goto nextmsg
 endif
 
 if ($#argv) then
