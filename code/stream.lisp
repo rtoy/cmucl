@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.12 1991/06/10 16:57:47 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.13 1991/11/29 19:47:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.12 1991/06/10 16:57:47 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.13 1991/11/29 19:47:19 wlott Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -1106,7 +1106,218 @@
       (t
        (funcall method sub-stream operation arg1 arg2)))))
 
-(proclaim '(notinline read-char unread-char read-byte listen))
+(proclaim '(maybe-inline read-char unread-char read-byte listen))
+
+
+
+;;;; Case frobbing streams, used by format ~(...~).
+
+(in-package "EXT")
+(export '(make-case-frob-stream))
+(in-package "LISP")
+
+(defstruct (case-frob-stream
+	    (:include stream
+		      (:misc #'case-frob-misc))
+	    (:constructor %make-case-frob-stream (target out sout)))
+  (target (required-argument) :type stream))
+
+(defun make-case-frob-stream (target kind)
+  "Returns a stream that sends all output to the stream TARGET, but modifies
+   the case of letters, depending on KIND, which should be one of:
+     :upcase - convert to upper case.
+     :downcase - convert to lower case.
+     :capitalize - convert the first letter of words to upper case and the
+        rest of the word to lower case.
+     :capitalize-first - convert the first letter of the first word to upper
+        case and everything else to lower case."
+  (declare (type stream target)
+	   (type (member :upcase :downcase :capitalize :capitalize-first)
+		 kind)
+	   (values stream))
+  (if (case-frob-stream-p target)
+      ;; If we are going to be writing to a stream that already does case
+      ;; frobbing, why bother frobbing the case just so it can frob it
+      ;; again?
+      target
+      (multiple-value-bind
+	  (out sout)
+	  (ecase kind
+	    (:upcase
+	     (values #'case-frob-upcase-out
+		     #'case-frob-upcase-sout))
+	    (:downcase
+	     (values #'case-frob-downcase-out
+		     #'case-frob-downcase-sout))
+	    (:capitalize
+	     (values #'case-frob-capitalize-out
+		     #'case-frob-capitalize-sout))
+	    (:capitalize-first
+	     (values #'case-frob-capitalize-first-out
+		     #'case-frob-capitalize-first-sout)))
+	(%make-case-frob-stream target out sout))))
+
+(defun case-frob-misc (stream op &optional arg1 arg2)
+  (declare (type case-frob-stream stream))
+  (case op
+    (:close)
+    (t
+     (let ((target (case-frob-stream-target stream)))
+       (funcall (stream-misc target) target op arg1 arg2)))))
+
+
+(defun case-frob-upcase-out (stream char)
+  (declare (type case-frob-stream stream)
+	   (type base-character char))
+  (let ((target (case-frob-stream-target stream)))
+    (funcall (stream-out target) target (char-upcase char))))
+
+(defun case-frob-upcase-sout (stream str start end)
+  (declare (type case-frob-stream stream)
+	   (type simple-base-string str)
+	   (type index start)
+	   (type (or index null) end))
+  (let* ((target (case-frob-stream-target stream))
+	 (len (length str))
+	 (end (or end len)))
+    (funcall (stream-sout target) target
+	     (if (and (zerop start) (= len end))
+		 (string-upcase str)
+		 (nstring-upcase (subseq str start end)))
+	     0
+	     (- end start))))
+
+(defun case-frob-downcase-out (stream char)
+  (declare (type case-frob-stream stream)
+	   (type base-character char))
+  (let ((target (case-frob-stream-target stream)))
+    (funcall (stream-out target) target (char-downcase char))))
+
+(defun case-frob-downcase-sout (stream str start end)
+  (declare (type case-frob-stream stream)
+	   (type simple-base-string str)
+	   (type index start)
+	   (type (or index null) end))
+  (let* ((target (case-frob-stream-target stream))
+	 (len (length str))
+	 (end (or end len)))
+    (funcall (stream-sout target) target
+	     (if (and (zerop start) (= len end))
+		 (string-downcase str)
+		 (nstring-downcase (subseq str start end)))
+	     0
+	     (- end start))))
+
+(defun case-frob-capitalize-out (stream char)
+  (declare (type case-frob-stream stream)
+	   (type base-character char))
+  (let ((target (case-frob-stream-target stream)))
+    (cond ((alphanumericp char)
+	   (funcall (stream-out target) target (char-upcase char))
+	   (setf (case-frob-stream-out stream)
+		 #'case-frob-capitalize-aux-out)
+	   (setf (case-frob-stream-sout stream)
+		 #'case-frob-capitalize-aux-sout))
+	  (t
+	   (funcall (stream-out target) target char)))))
+
+(defun case-frob-capitalize-sout (stream str start end)
+  (declare (type case-frob-stream stream)
+	   (type simple-base-string str)
+	   (type index start)
+	   (type (or index null) end))
+  (let* ((target (case-frob-stream-target stream))
+	 (str (subseq str start end))
+	 (len (length str))
+	 (inside-word nil))
+    (dotimes (i len)
+      (let ((char (schar str i)))
+	(cond ((not (alphanumericp char))
+	       (setf inside-word nil))
+	      (inside-word
+	       (setf (schar str i) (char-downcase char)))
+	      (t
+	       (setf inside-word t)
+	       (setf (schar str i) (char-upcase char))))))
+    (when inside-word
+      (setf (case-frob-stream-out stream)
+	    #'case-frob-capitalize-aux-out)
+      (setf (case-frob-stream-sout stream)
+	    #'case-frob-capitalize-aux-sout))
+    (funcall (stream-sout target) target str 0 len)))
+
+(defun case-frob-capitalize-aux-out (stream char)
+  (declare (type case-frob-stream stream)
+	   (type base-character char))
+  (let ((target (case-frob-stream-target stream)))
+    (cond ((alphanumericp char)
+	   (funcall (stream-out target) target (char-downcase char)))
+	  (t
+	   (funcall (stream-out target) target char)
+	   (setf (case-frob-stream-out stream)
+		 #'case-frob-capitalize-out)
+	   (setf (case-frob-stream-sout stream)
+		 #'case-frob-capitalize-sout)))))
+
+(defun case-frob-capitalize-aux-sout (stream str start end)
+  (declare (type case-frob-stream stream)
+	   (type simple-base-string str)
+	   (type index start)
+	   (type (or index null) end))
+  (let* ((target (case-frob-stream-target stream))
+	 (str (subseq str start end))
+	 (len (length str))
+	 (inside-word t))
+    (dotimes (i len)
+      (let ((char (schar str i)))
+	(cond ((not (alphanumericp char))
+	       (setf inside-word nil))
+	      (inside-word
+	       (setf (schar str i) (char-downcase char)))
+	      (t
+	       (setf inside-word t)
+	       (setf (schar str i) (char-upcase char))))))
+    (unless inside-word
+      (setf (case-frob-stream-out stream)
+	    #'case-frob-capitalize-out)
+      (setf (case-frob-stream-sout stream)
+	    #'case-frob-capitalize-sout))
+    (funcall (stream-sout target) target str 0 len)))
+
+(defun case-frob-capitalize-first-out (stream char)
+  (declare (type case-frob-stream stream)
+	   (type base-character char))
+  (let ((target (case-frob-stream-target stream)))
+    (cond ((alphanumericp char)
+	   (funcall (stream-out target) target (char-upcase char))
+	   (setf (case-frob-stream-out stream)
+		 #'case-frob-downcase-out)
+	   (setf (case-frob-stream-sout stream)
+		 #'case-frob-downcase-sout))
+	  (t
+	   (funcall (stream-out target) target char)))))
+
+(defun case-frob-capitalize-first-sout (stream str start end)
+  (declare (type case-frob-stream stream)
+	   (type simple-base-string str)
+	   (type index start)
+	   (type (or index null) end))
+  (let* ((target (case-frob-stream-target stream))
+	 (str (subseq str start end))
+	 (len (length str)))
+    (dotimes (i len)
+      (let ((char (schar str i)))
+	(when (alphanumericp char)
+	  (setf (schar str i) (char-upcase char))
+	  (do ((i (1+ i) (1+ i)))
+	      ((= i len))
+	    (setf (schar str i) (char-downcase (schar str i))))
+	  (setf (case-frob-stream-out stream)
+		#'case-frob-downcase-out)
+	  (setf (case-frob-stream-sout stream)
+		#'case-frob-downcase-sout)
+	  (return))))
+    (funcall (stream-sout target) target str 0 len)))
 
 
 
