@@ -848,6 +848,7 @@ Assume we have the C function below that we wish to use:
     for (k = 0; k < n; ++k) \{
       sum += x[k] * y[k];
     \}
+    return sum;
   \}
 \end{example}
 
@@ -857,25 +858,29 @@ possible using \code{malloc} or \code{make-alien} since we need about
 16 MB of memory to hold the two arrays.
 
 \begin{example}
-  (def-alien-routine "dotprod" double
+  (alien:def-alien-routine "dotprod" c-call:double
     (x (* double-float) :in)
     (y (* double-float) :in)
-    (n int :in))
+    (n c-call:int :in))
     
-  (let ((x (make-array 1000000 :element-type 'double-float))
-        (y (make-array 1000000 :element-type 'double-float)))
-    ;; Initialize X and Y somehow
-    (let ((x-addr (system:int-sap (array-data-address x)))
-          (y-addr (system:int-sap (array-data-address y))))
-      (dotprod x-addr y-addr 1000000)))    
+  (defun test-dotprod ()
+    (let ((x (make-array 10000 :element-type 'double-float :initial-element 2d0))
+          (y (make-array 10000 :element-type 'double-float :initial-element 10d0)))
+        (sys:without-gcing
+          (let ((x-addr (sys:vector-sap x))
+                (y-addr (sys:vector-sap y)))
+            (dotprod x-addr y-addr 10000)))))
 \end{example}
 
-In this example, it may be useful to wrap the inner \code{let}
-expression in an \code{unwind-protect} that first turns off garbage
-collection and then turns garbage collection on afterwards.  This will
-prevent garbage collection from moving \code{x} and \code{y} after we
-have obtained the (now erroneous) addresses but before the call to
-\code{dotprod} is made.
+In this example, we have used \code{sys:vector-sap} instead of
+\code{array-data-address}, but we could have used \code{(sys:int-sap
+  (array-data-address x))} as well.
+
+Also, we have wrapped the inner \code{let} expression in a
+\code{sys:without-gcing} that disables garbage collection for the
+duration of the body.  This will prevent garbage collection from
+moving \code{x} and \code{y} arrays after we have obtained the (now
+erroneous) addresses but before the call to \code{dotprod} is made.
 
 
 \section{Step-by-Step Alien Example}
