@@ -183,4 +183,5 @@ Don't install any dir translations, 'cause we want the real things.
 				lisp::%top-level
 				extensions:save-lisp
 				,lisp::fop-codes
-				compile-file)))
+				compile-file)
+	     :constants (cadr *info-environment*)))
