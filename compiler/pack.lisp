@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.49 1993/08/12 20:46:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.50 1994/01/06 16:32:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1077,7 +1077,7 @@
       (declare (type index i end))
       (let ((res (or (when (>= i size) :overflow)
 		     (and (not ignore-live)
-			  (svref (finite-sb-live-tns sb) offset))
+			  (svref (finite-sb-live-tns sb) i))
 		     (load-tn-offset-conflicts-in-sb op sb i))))
 	(when res (return res))))))
 
@@ -1285,13 +1285,15 @@
 ;;;
 (defun pack-load-tns (block)
   (catch 'unpacked-tn
-    (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
-	((null vop))
-      (let ((info (vop-info vop)))
-	(check-operand-restrictions (vop-info-result-load-scs info)
-				    (vop-results vop))
-	(check-operand-restrictions (vop-info-arg-load-scs info)
-				    (vop-args vop)))))
+    (let ((*live-block* nil)
+	  (*live-vop* nil))
+      (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
+	  ((null vop))
+	(let ((info (vop-info vop)))
+	  (check-operand-restrictions (vop-info-result-load-scs info)
+				      (vop-results vop))
+	  (check-operand-restrictions (vop-info-arg-load-scs info)
+				      (vop-args vop))))))
   (undefined-value))
 
 
@@ -1594,26 +1596,22 @@
     ;;
     ;; Do load TN packing and emit saves.
     (let ((*repack-blocks* nil))
-      (let ((*live-block* nil)
-	    (*live-vop* nil))
-	(cond ((and optimize pack-optimize-saves)
-	       (optimized-emit-saves component)
-	       (do-ir2-blocks (block component)
-		 (pack-load-tns block)))
-	      (t
-	       (do-ir2-blocks (block component)
-		 (emit-saves block)
-		 (pack-load-tns block)))))
+      (cond ((and optimize pack-optimize-saves)
+	     (optimized-emit-saves component)
+	     (do-ir2-blocks (block component)
+	       (pack-load-tns block)))
+	    (t
+	     (do-ir2-blocks (block component)
+	       (emit-saves block)
+	       (pack-load-tns block))))
       (when *repack-blocks*
 	(loop
 	  (when (zerop (hash-table-count *repack-blocks*)) (return))
-	  (let ((*live-block* nil)
-		(*live-vop* nil))
-	    (maphash #'(lambda (block v)
-			 (declare (ignore v))
-			 (remhash block *repack-blocks*)
-			 (event repack-block)
-			 (pack-load-tns block))
-		     *repack-blocks*)))))
+	  (maphash #'(lambda (block v)
+		       (declare (ignore v))
+		       (remhash block *repack-blocks*)
+		       (event repack-block)
+		       (pack-load-tns block))
+		   *repack-blocks*)))))
 
-    (undefined-value)))
+  (undefined-value))
