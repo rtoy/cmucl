@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.26 2003/05/03 21:15:38 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.27 2003/05/04 13:39:19 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,7 +144,7 @@
 		       "&environment only valid at top level of lambda-list.")))
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
-		      (push-let-binding (car rest-of-args) env-arg-name nil)
+		      (append-let-binding (car rest-of-args) env-arg-name nil)
 		      (setf env-arg-used t))
 		     (t
 		      (defmacro-error "&ENVIRONMENT" error-kind name))))
@@ -341,13 +341,22 @@
 	  *system-lets*)))
 
 (defun push-let-binding (variable path systemp &optional condition
-				  (init-form *default-default*))
+			 (init-form *default-default*))
   (let ((let-form (if condition
 		      `(,variable (if ,condition ,path ,init-form))
 		      `(,variable ,path))))
     (if systemp
 	(push let-form *system-lets*)
 	(push let-form *user-lets*))))
+
+(defun append-let-binding (variable path systemp &optional condition
+			 (init-form *default-default*))
+  (let ((let-form (if condition
+		      `(,variable (if ,condition ,path ,init-form))
+		      `(,variable ,path))))
+    (if systemp
+	(setq *system-lets* (nconc *system-lets* (list let-form)))
+	(setq *user-lets* (nconc *user-lets* (list let-form))))))
 
 (defun push-optional-binding (value-var init-form supplied-var condition path
 					name error-kind error-fun)
