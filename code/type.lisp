@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.48 2002/12/07 16:54:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.49 2003/02/03 15:19:38 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2371,21 +2371,31 @@
 		      (:print-function %print-type))
   ;;
   ;; The car element type.
-  (car-type *wild-type* :type ctype)
+  (car-type *universal-type* :type ctype)
   ;;
   ;; The cdr element type.
-  (cdr-type *wild-type* :type ctype))
+  (cdr-type *universal-type* :type ctype))
 
 (define-type-class cons)
 
 (def-type-translator cons (&optional car-type cdr-type)
-  (make-cons-type :car-type (specifier-type car-type)
-		  :cdr-type (specifier-type cdr-type)))
+  (let ((car-spec (specifier-type car-type))
+	(cdr-spec (specifier-type cdr-type)))
+    ;; (cons nil x) and (cons x nil) are the empty type.
+    ;;
+    ;; A type '* is the same as T.  Smash it to type T.
+    (if (or (eq car-spec *empty-type*) (eq cdr-spec *empty-type*))
+	*empty-type*
+	(make-cons-type :car-type (if (eq car-spec *wild-type*) *universal-type* car-spec)
+			:cdr-type (if (eq cdr-spec *wild-type*) *universal-type* cdr-spec)))))
 
 (define-type-method (cons :unparse) (type)
   (let ((car-eltype (type-specifier (cons-type-car-type type)))
 	(cdr-eltype (type-specifier (cons-type-cdr-type type))))
-    (cond ((and (eq car-eltype '*) (eq cdr-eltype '*))
+    ;; We test for '* just in case it snuck through somehow; it's not
+    ;; supposed to happen though.
+    (cond ((or (and (eq car-eltype '*) (eq cdr-eltype '*))
+	       (and (eq car-eltype t) (eq cdr-eltype t)))
 	   'cons)
 	  (t
 	   `(cons ,car-eltype ,cdr-eltype)))))
