@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.38 1991/03/27 14:19:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.39 1991/07/22 19:22:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.38 1991/03/27 14:19:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.39 1991/07/22 19:22:34 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -52,28 +52,9 @@
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
-	   weak-pointer-p funcallable-instance-p)
+	   weak-pointer-p scavenger-hook-p code-component-p lra-p
+	   funcallable-instance-p)
   (t) boolean (movable foldable flushable))
-
-;;; Introduce these predicates into the old compiler.  This is necessary
-;;; 'cause they are marked as foldable.
-;;; 
-#-new-compiler
-(macrolet ((frob (name type)
-	     `(defun ,name (thing)
-		(typep thing ',type))))
-  (frob simple-array-unsigned-byte-2-p (simple-array (unsigned-byte 2) (*)))
-  (frob simple-array-unsigned-byte-4-p (simple-array (unsigned-byte 4) (*)))
-  (frob simple-array-unsigned-byte-8-p (simple-array (unsigned-byte 8) (*)))
-  (frob simple-array-unsigned-byte-16-p (simple-array (unsigned-byte 16) (*)))
-  (frob simple-array-unsigned-byte-32-p (simple-array (unsigned-byte 32) (*)))
-  (frob simple-array-single-float-p (simple-array single-float (*)))
-  (frob simple-array-double-float-p (simple-array double-float (*)))
-  (frob system-area-pointer-p system-area-pointer)
-  (frob realp real)
-  (frob unsigned-byte-32-p (unsigned-byte 32))
-  (frob signed-byte-32-p (signed-byte 32))
-  (frob weak-pointer-p weak-pointer))
 
 
 ;;;; Miscellaneous "sub-primitives":
@@ -141,6 +122,8 @@
 
 
 (defknown %make-weak-pointer (t boolean) weak-pointer
+  (flushable))
+(defknown %make-scavenger-hook (t function) scavenger-hook
   (flushable))
 (defknown %make-complex (real real) complex
   (flushable movable))
