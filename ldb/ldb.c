@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.9 1990/09/21 06:03:26 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.10 1990/10/23 00:05:51 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -92,6 +92,12 @@ char *envp[];
     /* Convert the argv and envp to something Lisp can grok. */
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
+
+#ifndef mips
+    /* Turn on pseudo atomic for when we call into lisp. */
+    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, fixnum(1));
+    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, fixnum(0));
+#endif
 
     /* Snag a few of the signal */
     test_init();
