@@ -1,0 +1,90 @@
+================ C M U C L =============================================
+        
+  CMUCL is a free, high performance implementation of the Common Lisp
+  programming language which runs on most major Unix platforms. It
+  mainly conforms to the ANSI Common Lisp standard. CMUCL provides a
+  sophisticated native code compiler; a powerful foreign function
+  interface; an implementation of CLOS; the Common Lisp Object System;
+  which includes multimethods and a metaobject protocol; a source-level
+  debugger and code profiler; and an Emacs-like editor implemented in
+  Common Lisp. CMUCL is maintained by a team of volunteers collaborating
+  over the Internet, and is in the public domain.
+
+
+=== Installation instructions ==========================================
+
+  For each supported platform there are two gzipped tar archives, one
+  containing the base system, and the other (with extra in the name)
+  containing optional additional files supporting CLX, Hemlock, Gray
+  streams and so on.
+  
+  For the Solaris/SPARC platform, the release binaries should work with
+  SunOS 5.5, 5.7 and 5.8 (also known respectively as Solaris 2.5,
+  Solaris 7 and Solaris 8). If you have an UltraSPARC processor you can
+  get the v9 binaries, which use instructions which are only present on
+  SPARC-v9 implementations; otherwise you should get the binaries
+  without v9 in the name of the tarball. If you have an UltraSPARC the
+  command uname -m will say sun4u, if you have an older machine such as
+  a SparcStation it will probably say sun4m.
+  
+  Download the gzipped tar archives corresponding to your platform. You
+  can check the integrity of the files you have downloaded by comparing
+  the output of md5sum <filename> with that given in the file
+  md5sums.txt.
+  
+  The release tarballs extract to the following directory structure:
+  
+     bin/lisp
+     lib/cmucl/lib/lisp.core
+     doc/cmucl/README (this file)
+     man/man1/cmucl.1
+     ...
+  
+  This allows you to install CMUCL directly under /usr/local, for
+  example using
+  
+     cd /usr/local
+     tar xzf /path/to/cmucl-18d-<platform>.tar.gz
+     
+  or alternatively, install under a directory in /opt, for example
+  
+     mkdir /opt/cmucl-18d
+     cd /opt/cmucl-18d
+     tar xzf /path/to/cmucl-18d-<platform>.tar.gz
+  
+  In the second case you will need to create a shell script to invoke
+  CMUCL. Copy the file /opt/cmucl-18d/bin/sample-wrapper to a directory
+  in your PATH (naming it cmucl for example), and replace both
+  occurrences of <<your-cmucl-path>> by /opt/cmucl-18d. Make sure that
+  this shell script is executable (using "chmod +x scriptname").
+  
+  You can now invoke CMUCL: this should display a banner then show a
+  prompt (the default prompt is an asterisk).
+  
+     % cmucl
+     CMU Common Lisp 18d, running on myhost
+     See <URL:http://www.cons.org/cmucl/support.html> for information.
+     Loaded subsystems:
+        Python 1.0, target SPARCstation/Solaris 2
+        CLOS based on PCL version:  September 16 92 PCL (f)
+     * (format t "~&Hello, world!~%")
+     Hello, world!
+     NIL
+     * 
+  
+  You may wish to edit your site initialization file (in
+  /usr/local/lib/cmucl/site-init.lisp).
+
+   
+
+=== Further information ================================================
+
+   The best source for information on CMUCL is the web site,
+   <URL:http://www.cons.org/cmucl/>. You will find pointers to
+   documentation and tips on using CMUCL, and information regarding
+   mailing lists and bug reporting. 
+
+   Enjoy using CMUCL!
+
+
+2001-12-18
