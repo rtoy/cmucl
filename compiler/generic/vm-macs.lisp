@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.3 1991/03/15 04:08:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.4 1991/04/23 21:32:32 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.3 1991/03/15 04:08:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.4 1991/04/23 21:32:32 chiles Exp $
 ;;;
 ;;;    This file contains some macros and constants that are object-format
 ;;; specific or are used for defining the object format.
@@ -20,9 +20,22 @@
 ;;; 
 (in-package "VM")
 
+(export '(*assembly-unit-length*))
+
+
+
+;;;; Other random stuff.
+
+;;; PAD-DATA-BLOCK -- Internal Interface.
+;;;
+;;; This returns a form that returns a dual-word aligned number of bytes when
+;;; given a number of words.
+;;;
 (defmacro pad-data-block (words)
   `(logandc2 (+ (ash ,words word-shift) lowtag-mask) lowtag-mask))
 
+;;; DEFENUM -- Internal Interface.
+;;;
 (defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
 		   &rest identifiers)
   (let ((results nil)
@@ -46,6 +59,7 @@
       (incf index))
     `(eval-when (compile load eval)
        ,@(nreverse results))))
+
 
 
 ;;;; Some general constant definitions:
