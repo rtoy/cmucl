@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.55 1997/11/01 22:58:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.56 1997/11/07 17:11:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,8 +46,11 @@
 ;;;    Simple typep uses that don't have any standard predicate are translated
 ;;; into non-standard unary predicates.
 
-(defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p complex-single-float-p complex-double-float-p
+(defknown (fixnump bignump ratiop
+	   short-float-p single-float-p double-float-p long-float-p
+	   #+complex-float complex-float-p
+	   #+complex-float complex-single-float-p
+	   #+complex-float complex-double-float-p
 	   base-char-p %string-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.40 1997/11/01 22:58:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.41 1997/11/07 17:11:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,6 +54,7 @@
       consp
       compiled-function-p
       complexp
+      #+complex-float complex-float-p
       #+complex-float complex-single-float-p
       #+complex-float complex-double-float-p
       double-float-p
