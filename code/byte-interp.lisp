@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.20 1993/06/24 12:40:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.21 1993/07/21 23:37:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -835,7 +835,7 @@
 ;;;    Check the type of the value on the top of the stack.  The type is
 ;;; designated by an entry in the constants.  If the value is a function, then
 ;;; it is called as a type predicate.  Otherwise, the value is a CTYPE object,
-;;; and we call %%TYPEP on it.
+;;; and we call %TYPEP on it.
 ;;;
 (define-xop type-check (component old-pc pc fp)
   (declare (type code-component component)
@@ -852,7 +852,7 @@
 				 (+ operand vm:code-constants-offset))))
       (unless (if (functionp type)
 		  (funcall type value)
-		  (lisp::%%typep value type))
+		  (kernel:%typep value type))
 	(with-debugger-info (component old-pc fp)
 	  (error 'type-error
 		 :datum value
