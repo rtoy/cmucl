@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.40 2003/01/03 20:17:49 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.41 2003/01/03 20:33:01 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -657,6 +657,11 @@
 ;;;
 (defmethod finalize-inheritance ((class std-class))
   (update-class class t))
+
+(defmethod finalize-inheritance ((class forward-referenced-class))
+  (simple-program-error
+   "Forward-referenced classes cannot be finalized: ~A"
+   class))
 
 
 (defun class-has-a-forward-referenced-superclass-p (class)
