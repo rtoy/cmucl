@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.65 1994/04/06 17:02:40 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.66 1994/06/22 13:21:40 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1095,7 +1095,7 @@
 			   vm:other-pointer-type)
 			code-header-len)))
 	       ;; Check to see if we were executing in a branch delay slot.
-	       #+pmax  ; pmax only
+	       #+(or pmax sgi) ; pmax only
 	       (when (logbitp 31 (alien:slot scp 'mips::sc-cause))
 		 (incf pc-offset vm:word-bytes))
 	       (unless (<= 0 pc-offset
