@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.139 2003/03/22 16:15:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.140 2003/03/30 00:41:07 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -941,7 +941,8 @@
 ;;; lexically apparent functions.
 ;;;
 (defun process-ftype-declaration (spec res names fvars)
-  (declare (list spec names fvars) (type lexenv res))
+  (declare (list names fvars) (type lexenv res)
+	   (type (or symbol list) spec))
   (let ((type (specifier-type spec)))
     (collect ((res nil cons))
       (dolist (name names)
