@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.33 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.34 1997/04/16 18:11:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -532,7 +532,7 @@
 ;;;
 (defstruct (compact-info-env
 	    (:include info-env)
-	    (:pure t)
+	    (:pure :substructure)
 	    (:print-function %print-info-environment))
   ;;
   ;; If this value is EQ to the name we want to look up, then the cache hit
