@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.25 1992/04/09 20:09:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.26 1992/04/14 16:24:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -727,10 +727,17 @@
 ;;; FUN is the function we are calling, CALL is a call to FUN, and NEXT-BLOCK
 ;;; is the return point for a non-tail call, or NULL if call is a tail call.
 ;;;
+;;; If the call is not a tail call, then we must do UNCONVERT-TAIL-CALLS, since
+;;; a tail call is a call which returns its value out of the enclosing non-let
+;;; function.  When call is non-TR, we must convert it back to an ordinary
+;;; local call, since the value must be delivered to the receiver of CALL's
+;;; value.
+;;;
 ;;; We do different things depending on whether the caller and callee have
 ;;; returns left:
-;;; -- If the callee has no return, it doesn't return, so we just do
-;;;    MOVE-LET-CALL-CONT.
+;;; -- If the callee has no return we just do MOVE-LET-CALL-CONT.  Either the
+;;;    function doesn't return, or all returns are via tail-recursive local
+;;;    calls.
 ;;; -- If CALL is a non-tail call, or if both have returns, then we
 ;;;    delete the callee's return, move its uses to the call's result
 ;;;    continuation, and transfer control to the appropriate return point.
@@ -752,7 +759,6 @@
 			       (or next-block (node-block call-return)))))
 	  (t
 	   (assert (node-tail-p call))
- (break "Yow!")
 	   (setf (lambda-return call-fun) return)
 	   (setf (return-lambda return) call-fun))))
   (move-let-call-cont fun)
