@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.24 2003/06/17 09:45:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.25 2003/08/25 20:10:41 gerd Exp $")
 
 (in-package :pcl)
 
@@ -182,10 +182,11 @@
 	(ioa (short-combination-identity-with-one-argument combin))
 	(order (car (method-combination-options combin)))
 	(around ())
-	(primary ()))
+	(primary ())
+	(invalid ()))
     (dolist (m applicable-methods)
       (let ((qualifiers (method-qualifiers m)))
-	(flet ((lose (method why)
+	(labels ((lose (method why)
 		 (invalid-method-error
 		   method
 		   "~@<The method ~S ~A.  ~
@@ -194,17 +195,21 @@
 		    either the single qualifier ~S or the single qualifier ~
 		    ~s.~@:>"
 		   method why type 'define-method-combination type
-		   :around)))
+		   :around))
+		 (invalid-method (method why)
+		   (if *in-precompute-effective-methods-p*
+		       (push method invalid)
+		       (lose method why))))
 	  (cond ((null qualifiers)
-		 (lose m "has no qualifiers"))
+		 (invalid-method m "has no qualifiers"))
 		((cdr qualifiers)
-		 (lose m "has more than one qualifier"))
+		 (invalid-method m "has more than one qualifier"))
 		((eq (car qualifiers) :around)
 		 (push m around))
 		((eq (car qualifiers) type)
 		 (push m primary))
 		(t
-		 (lose m "has an illegal qualifier"))))))
+		 (invalid-method m "has an illegal qualifier"))))))
     (setq around (nreverse around))
     (unless (eq order :most-specific-last)
       (setq primary (nreverse primary)))
@@ -214,9 +219,12 @@
 		`(call-method ,(car primary) ())
 		`(,operator ,@(mapcar (lambda (m) `(call-method ,m ()))
 				      primary)))))
-      (cond ((null primary)
+      (cond (invalid
+	     `(%invalid-qualifiers ',gf ',combin .args. ',invalid))
+	    ((null primary)
 	     `(%no-primary-method ',gf .args.))
-	    ((null around) main-method)
+	    ((null around)
+	     main-method)
 	    (t
 	     `(call-method ,(car around)
 			   (,@(cdr around) (make-method ,main-method))))))))

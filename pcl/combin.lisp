@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.18 2003/05/30 09:14:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.19 2003/08/25 20:10:41 gerd Exp $")
 
 (in-package "PCL")
 
@@ -84,71 +84,71 @@
 
 (defun standard-compute-effective-method (gf combin applicable-methods)
   (declare (ignore combin))
-  (let ((before ())
-	(primary ())
-	(after ())
-	(around ()))
-    (flet ((lose (method why)
-	     (invalid-method-error
-	      method
-	      "~@<The method ~S ~A.  ~
-               Standard method combination requires all methods to have one ~
-               of the single qualifiers ~s, ~s and ~s or to have no qualifier ~
-               at all.~@:>"
-	      method why :around :before :after)))
+  (collect ((before) (primary) (after) (around) (invalid))
+    (labels ((lose (method why)
+	       (invalid-method-error
+		method
+		"~@<The method ~S ~A.  ~
+                 Standard method combination requires all methods to have ~
+                 one of the single qualifiers ~s, ~s and ~s or to have ~
+                 no qualifier at all.~@:>"
+		method why :around :before :after))
+	     (invalid-method (method why)
+	       (if *in-precompute-effective-methods-p*
+		   (invalid method)
+		   (lose method why))))
       (dolist (m applicable-methods)
 	(let ((qualifiers (if (listp m)
 			      (early-method-qualifiers m)
 			      (method-qualifiers m))))
 	  (cond ((null qualifiers)
-		 (push m primary))
+		 (primary m))
 		((cdr qualifiers)
-		 (lose m "has more than one qualifier"))
+		 (invalid-method m "has more than one qualifier"))
 		((eq (car qualifiers) :around)
-		 (push m around))
+		 (around m))
 		((eq (car qualifiers) :before)
-		 (push m before))
+		 (before m))
 		((eq (car qualifiers) :after)
-		 (push m after))
+		 (after m))
 		(t
-		 (lose m "has an illegal qualifier"))))))
-    (setq before  (reverse before)
-	  after   (reverse after)
-	  primary (reverse primary)
-	  around  (reverse around))
-    (cond ((null primary)
-	   `(%no-primary-method ',gf .args.))
-	  ((and (null before) (null after) (null around))
-	   ;;
-	   ;; By returning a single CALL-METHOD form here, we enable
-	   ;; an important implementation-specific optimization, which
-	   ;; uses fast-method functions directly for effective method
-	   ;; functions.  (Which is also the reason emfs have a
-	   ;; lambda-list like fast method functionts.)
-	   ;;
-	   ;; This cannot be done if the gf requires keyword argument
-	   ;; checking as in CLHS 7.6.5 because we can't tell in
-	   ;; method functions if they are used as emfs only.  If they
-	   ;; are not used as emfs only, they should accept any keyword
-	   ;; argumests, per CLHS 7.6.4, for instance.
-	   (let ((call-method `(call-method ,(first primary) ,(rest primary))))
-	     (if (emfs-must-check-applicable-keywords-p gf)
-		 `(progn ,call-method)
-		 call-method)))
-	  (t
-	   (let ((main-effective-method
-		   (if (or before after)
-		       `(multiple-value-prog1
-			  (progn
-			    ,(make-call-methods before)
-			    (call-method ,(first primary) ,(rest primary)))
-			  ,(make-call-methods (reverse after)))
-		       `(call-method ,(first primary) ,(rest primary)))))
-	     (if around
-		 `(call-method ,(first around)
-			       (,@(rest around)
-				  (make-method ,main-effective-method)))
-		 main-effective-method))))))
+		 (invalid-method m "has an invalid qualifier")))))
+      (cond ((invalid)
+	     `(%invalid-qualifiers ',gf ',combin .args. ',(invalid)))
+	    ((null (primary))
+	     `(%no-primary-method ',gf .args.))
+	    ((and (null (before)) (null (after)) (null (around)))
+	     ;;
+	     ;; By returning a single CALL-METHOD form here, we enable
+	     ;; an important implementation-specific optimization, which
+	     ;; uses fast-method functions directly for effective method
+	     ;; functions.  (Which is also the reason emfs have a
+	     ;; lambda-list like fast method functionts.)
+	     ;;
+	     ;; This cannot be done if the gf requires keyword argument
+	     ;; checking as in CLHS 7.6.5 because we can't tell in
+	     ;; method functions if they are used as emfs only.  If they
+	     ;; are not used as emfs only, they should accept any keyword
+	     ;; argumests, per CLHS 7.6.4, for instance.
+	     (let ((call-method `(call-method ,(first (primary))
+					      ,(rest (primary)))))
+	       (if (emfs-must-check-applicable-keywords-p gf)
+		   `(progn ,call-method)
+		   call-method)))
+	    (t
+	     (let ((main-effective-method
+		    (if (or (before) (after))
+			`(multiple-value-prog1
+			     (progn
+			       ,(make-call-methods (before))
+			       (call-method ,(first (primary)) ,(rest (primary))))
+			   ,(make-call-methods (reverse (after))))
+			`(call-method ,(first (primary)) ,(rest (primary))))))
+	       (if (around)
+		   `(call-method ,(first (around))
+				 (,@(rest (around))
+				    (make-method ,main-effective-method)))
+		   main-effective-method)))))))
 
 (defvar *invalid-method-error*
 	(lambda (&rest args)
@@ -438,7 +438,8 @@
 	  (check-applicable-keywords
 	   (when (and applyp (emfs-must-check-applicable-keywords-p gf))
 	     '((check-applicable-keywords))))
-	  (error-p (eq (first body) '%no-primary-method))
+	  (error-p
+	   (memq (first body) '(%no-primary-method %invalid-qualifiers)))
 	  (mc-args-p
 	   (when (eq *boot-state* 'complete)
 	     ;; Otherwise the METHOD-COMBINATION slot is not bound.

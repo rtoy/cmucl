@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.33 2003/07/28 14:13:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.34 2003/08/25 20:10:41 gerd Exp $")
 
 (in-package :pcl)
 
@@ -769,11 +769,10 @@ And so, we are saved.
 ;;; 
 (defvar *early-p* nil)
 
-(defvar *max-emf-precomputation-methods* 0
+(defvar *max-emf-precomputation-methods* 100
   "Precompute effective methods at method load time if the generic
-   function has less than this number of methods.  The default value
-   of 0 means do not precompute effective methods at method load time,
-   which seems to be the behavior required by ANSI.")
+   function has less than this number of methods.  If zero,
+   no effective methods are precomputed at method load time.")
 
 ;;;
 ;;; Try to finalize all unfinalized class specializers of all methods

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.47 2003/08/16 14:02:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.48 2003/08/25 20:10:41 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -720,3 +720,17 @@
 
 (defun %no-primary-method (gf args)
   (apply #'no-primary-method gf args))
+
+(defun %invalid-qualifiers (gf combin args methods)
+  (invalid-qualifiers gf combin args methods))
+
+(defmethod invalid-qualifiers ((gf generic-function) combin args methods)
+  (if (null (cdr methods))
+      (error "~@<In a call to ~s with arguments ~:s: ~
+              The method ~s has invalid qualifiers for method ~
+              combination ~s.~@:>"
+	 gf args (car methods) combin)
+      (error "~@<In a call to ~s with arguments ~:s: ~
+              The methods ~{~s~^, ~} have invalid qualifiers for ~
+              method combination ~s.~@:>"
+	 gf args methods combin)))

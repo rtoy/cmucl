@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.27 2003/06/11 19:17:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.28 2003/08/25 20:10:41 gerd Rel $")
 ;;;
 
 (in-package :pcl)
@@ -736,28 +736,9 @@
 ;          (slot-class t)
 
 (defgeneric reinitialize-instance (gf &rest args &key &allow-other-keys))
-;          (slot-object)
-;  :before (slot-class)
-;  :after  (slot-class)
-;          (standard-method)
-;  :after  (standard-generic-function)
 
-(defgeneric shared-initialize (generic-function slot-names &key &allow-other-keys))
-;          (slot-object t)
-;  :after  (documentation-mixin t)
-;  :after  (class-eq-specializer t)
-;  :after  (eql-specializer t)
-;  :after  (std-class t)
-;  :before (class t)
-;  :after  (structure-class t)
-;  :before (built-in-class t)
-;  :after  (standard-slot-definition t)
-;  :after  (structure-slot-definition t)
-;  :before (standard-method t)
-;  :before (standard-accessor-method t)
-;  :after  (standard-method t)
-;  :after  (standard-accessor-method t)
-;  :before (standard-generic-function t)
+(defgeneric shared-initialize (generic-function slot-names
+						&key &allow-other-keys))
 
 (defgeneric update-dependent (metaobject dependent &rest initargs))
 
@@ -769,6 +750,7 @@
 	      &key &allow-other-keys))
 
 (defgeneric writer-method-class (class direct-slot &rest initargs))
-;          (slot-class t)
+
+(defgeneric invalid-qualifiers (gf combin args methods))
 
 
