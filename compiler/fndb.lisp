@@ -955,11 +955,12 @@
 ;;;; In the "Miscellaneous" Chapter.
 
 ;;; ### Compiler interface non-standard...
-(defknown compile (symbol &optional list t) (or function null))
+(defknown compile (symbol &optional (or list function null))
+  (values (or function null) boolean boolean))
 (defknown compile-file
-  (&optional filename &key (output-file filename) (error-file filename)
-	     (lap-file filename) (errors-to-terminal t) (load t))
-  void)
+  ((or filename list) &key (output-file filename) (error-file filename)
+   (trace-file filename) (errors-output t) (load t) (block-compile t))
+  (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
 
 (defknown documentation (symbol (member variable function structure type setf))
