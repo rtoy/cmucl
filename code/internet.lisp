@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.18 1997/01/18 14:30:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.19 1997/12/01 16:52:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,10 +219,8 @@ struct in_addr {
 		      (results))
 		     (t
 		      (results 
-#-linux (deref (deref (slot hostent 'addr-list) index))
-#+linux (ntohl (deref (deref (slot hostent 'addr-list) index)))
-                      )
-		      (repeat (1+ index))))))))))) 
+		       (deref (deref (slot hostent 'addr-list) index)))
+		      (repeat (1+ index)))))))))))
 
 (defun create-unix-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
