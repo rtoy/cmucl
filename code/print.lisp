@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.13 1990/10/05 13:11:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.14 1990/11/19 05:06:13 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -74,7 +74,7 @@
 ;;; the variable so bound.  This function used to be part of Common Lisp, but
 ;;; is no more.  It lives on in the printer, though.
 ;;;
-(defmacro dostring ((variable init-form terminate-form) &rest body)
+(defmacro dostring ((variable init-form &optional terminate-form) &rest body)
   (let ((str (gensym))
 	(end (gensym))
 	(index (gensym)))
