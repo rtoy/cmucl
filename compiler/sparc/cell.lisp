@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.13 1992/12/16 14:49:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.14 1992/12/16 20:27:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,7 @@
 (define-vop (closure-ref slot-ref)
   (:variant closure-info-offset function-pointer-type))
 
-(define-vop (closure-set slot-set)
+(define-vop (closure-init slot-set)
   (:variant closure-info-offset function-pointer-type))
 
 
