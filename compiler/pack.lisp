@@ -433,7 +433,7 @@
   (emit-load-template node block
 		      (template-or-lose 'move-operand)
 		      src dest
-		      (list (or (svref (sc-load-functions (tn-sc dest))
+		      (list (or (svref (sc-move-functions (tn-sc dest))
 				       (sc-number (tn-sc src)))
 				(no-load-function-error src dest)))
 		      after)
