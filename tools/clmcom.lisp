@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.18 1994/11/02 17:39:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.19 1997/11/04 16:29:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,8 @@
 #-clx
 (progn
   (load "target:clx/clx-library")
-  (ext:purify))
+  #+gencgc (gc :full t)
+  #-gencgc (ext:purify))
 
 (pushnew :motif *features*)
 
