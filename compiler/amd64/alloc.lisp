@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/alloc.lisp,v 1.2 2004/06/10 01:37:20 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/alloc.lisp,v 1.3 2004/07/06 20:09:05 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,8 +176,9 @@
     (with-fixed-allocation (result fdefn-type fdefn-size temp node)
       (storew name result fdefn-name-slot other-pointer-type)
       (storew nil-value result fdefn-function-slot other-pointer-type)
-      (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign)
-	      result fdefn-raw-addr-slot other-pointer-type))))
+      (inst mov-imm temp
+	    (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+      (storew temp result fdefn-raw-addr-slot other-pointer-type))))
 
 
 (define-vop (make-closure)
