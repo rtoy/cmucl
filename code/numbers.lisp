@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.40 2002/02/25 16:23:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.41 2002/03/14 21:29:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -795,23 +795,9 @@
 
 (defun fround (number &optional (divisor 1))
   "Same as ROUND, but returns first value as a float."
-  (if (eql divisor 1)
-      (round number)
-      (multiple-value-bind (tru rem)
-	  (ftruncate number divisor)
-	(let ((thresh (/ (abs divisor) 2)))
-	  (cond ((or (> rem thresh)
-		     (and (= rem thresh) (oddp tru)))
-		 (if (minusp divisor)
-		     (values (- tru 1) (+ rem divisor))
-		     (values (+ tru 1) (- rem divisor))))
-		((let ((-thresh (- thresh)))
-		   (or (< rem -thresh)
-		       (and (= rem -thresh) (oddp tru))))
-		 (if (minusp divisor)
-		     (values (+ tru 1) (- rem divisor))
-		     (values (- tru 1) (+ rem divisor))))
-		(t (values tru rem)))))))
+  (multiple-value-bind (res rem)
+      (round number divisor)
+    (values (float res (if (floatp rem) rem 1.0)) rem)))
 
 ;;;; Comparisons:
 
