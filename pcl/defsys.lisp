@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.12.2.3 2000/05/23 16:38:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.12.2.4 2000/06/06 10:07:02 dtc Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -468,7 +468,7 @@ and load your system with:
            *pcl-directory*
   ;;
   ;; file         load           compile      files which       port
-  ;;              environment    environment  force the of
+  ;;              environment    environment  force the
   ;;                                          recompilation
   ;;                                          of this file
   ;;                                          
@@ -512,6 +512,9 @@ and load your system with:
    (cmucl-documentation t			    t () CMU)
    (precom1     (dlisp)                             t (defs low cache fin dfun))
    (precom2     (dlisp)                             t (defs low cache fin dfun))
+
+   (gray-streams-class  t            t            ()                   CMU)
+   (gray-streams        t            t            (gray-streams-class) CMU)
    ))
 
 (defun compile-pcl (&optional m)
