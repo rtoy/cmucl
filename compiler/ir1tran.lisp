@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.67 1992/03/11 21:23:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.68 1992/04/01 15:22:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,7 +507,15 @@
 		(if (eq inlinep :inline)
 		    var
 		    fun))
-	  (ir1-convert-combination start cont form fun)))
+	  (let ((res (ir1-convert-combination start cont form fun))
+		(type (leaf-type var))
+		(where-from (leaf-where-from var)))
+	    (when (function-type-p type)
+	      (when (eq where-from :declared)
+		(assert-definition-type fun type
+					:warning-function #'compiler-note
+					:where "previous declaration"))
+	      (assert-call-type res type)))))
       (ir1-convert-ok-combination start cont form var)))
 
 
