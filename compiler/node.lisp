@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.32 1993/09/10 19:09:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.33 1994/01/05 16:33:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -447,9 +447,11 @@
   (lambdas () :type list)
   ;;
   ;; A list of Functional structures for functions that are newly converted,
-  ;; and haven't been local-call analyzed yet.  Unanalyzed functions aren't in
-  ;; the Lambdas list.  Functions are moved into the Lambdas as they are
-  ;; analysed.
+  ;; and haven't been local-call analyzed yet.  Initially functions are not in
+  ;; the Lambdas list.  LOCAL-CALL-ANALYZE moves them there (possibly as LETs,
+  ;; or implicitly as XEPs if an OPTIONAL-DISPATCH.)  Between runs of
+  ;; LOCAL-CALL-ANALYZE there may be some debris of converted or even deleted
+  ;; functions in this list.
   (new-functions () :type list)
   ;;
   ;; If true, then there is stuff in this component that could benefit from
