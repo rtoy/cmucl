@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.26 2004/10/19 18:13:16 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.27 2004/10/21 02:31:08 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -781,7 +781,11 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 	   (pify (l) (if (null (cdr l)) (car l) `(progn ,@l)))
 	   (makebody ()
 	     (let ((form `(tagbody
-			    ,@(psimp (append prologue (nreverse rbefore)))
+			     ;; ANSI CL 6.1.7.2 says that initially clauses are
+			     ;; evaluated in the loop prologue, which precedes
+			     ;; all loop code except for the initial settings
+			     ;; provided by with, for, or as.
+			     ,@(psimp (append (nreverse rbefore) prologue))
 			 next-loop
 			    ,@(psimp (append main-body (nreconc rafter `((go next-loop)))))
 			 end-loop
@@ -1635,7 +1639,35 @@ collected result will be returned as the value of the LOOP."
 	 `(() (,var ,(loop-get-form)) () ()
 	   () (,var ,val) () ()))
 	(t ;;We are the same as "FOR x = y".
-	 `(() (,var ,val) () ()))))
+	 ;; Let me document here what this is returning.  Look at
+	 ;; loop-hack-iteration for more info.  But anyway, we return a list of
+	 ;; 8 items, in this order: PRE-STEP-TESTS, STEPS, POST-STEP-TESTS,
+	 ;; PSEUDO-STEPS, PRE-LOOP-PRE-STEP-TESTS, PRE-LOOP-STEPS,
+	 ;; PRE-LOOP-POST-STEP-TESTS, PRE-LOOP-PSEUDO-STEPS.  (We should add
+	 ;; something to make it easier to figure out what these args are!)
+	 ;;
+	 ;; For a "FOR x = y" clause without the THEN, we want the STEPS item to
+	 ;; step the variable VAR with the value VAL.  This gets placed in the
+	 ;; body of the loop.  The original code just did that.  It seems that
+	 ;; the STEPS form is placed in *loop-before-loop* and in
+	 ;; *loop-after-loop*.  Loop optimization would then see the same form
+	 ;; in both, and move them into the beginning of body.  This is ok,
+	 ;; except that if there are :initially forms that were placed into the
+	 ;; loop prologue, the :initially forms might refer to incorrectly
+	 ;; initialized variables, because the optimizer moved STEPS from from
+	 ;; *loop-before-loop* into the body.
+	 ;;
+	 ;; To solve this, we add a PRE-LOOP-PSEUDO-STEP form that is identical
+	 ;; to the STEPS form.  This gets placed in *loop-before-loop*.  But
+	 ;; this won't match any *loop-after-loop* form, so it won't get moved,
+	 ;; and we maintain the proper sequencing such that the
+	 ;; PRE-LOOP-PSEUDO-STEP form is in *loop-before-loop*, before any
+	 ;; :initially clauses that might refer to this.  So all is well. Whew.
+	 ;;
+	 ;; I hope this doesn't break anything else.
+	 `(() (,var ,val) () ()
+	   () () () (,var ,val))
+	 )))
 
 
 (defun loop-for-across (var val data-type)
@@ -1654,7 +1686,17 @@ collected result will be returned as the value of the LOOP."
       (let* ((length 0)
 	     (length-form (cond ((not constantp)
 				 (let ((v (loop-gentemp 'loop-across-limit-)))
-				   (push `(setq ,v (length ,vector-var)) *loop-prologue*)
+				   ;; This used to just push the length
+				   ;; computation into the prologue code.  I
+				   ;; (rtoy) don't think that's right,
+				   ;; especially since the prologue is supposed
+				   ;; to happen AFTER other initializations.
+				   ;; So, this puts the computation in
+				   ;; *loop-before-body*.  We need a matching
+				   ;; entry for *loop-after-body*, so stuff a
+				   ;; NIL there.
+				   (push `(setq ,v (length ,vector-var)) *loop-before-loop*)
+				   (push nil *loop-after-body*)
 				   (loop-make-variable v 0 'fixnum)))
 				(t (setq length (length vector-value)))))
 	     (first-test `(>= ,index-var ,length-form))
