@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.10 1990/08/24 18:11:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.11 1990/09/06 19:43:28 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -107,7 +107,7 @@
 			      ',lambda-list ,doc)))))))
 
 
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 
 ;;; %Defmacro, %%Defmacro  --  Internal
 ;;;
@@ -255,6 +255,12 @@
 	       #'(lambda (,whole ,environment)
 		   ,@local-decs
 		   (block ,access-fn ,body)))
+	 ,@(unless (member :new-compiler *features*)
+	     `((remprop ',access-fn 'setf-inverse)
+	       (setf (get ',access-fn 'setf-method-expander)
+		     #'(lambda (,whole ,environment)
+			 ,@local-decs
+			 (block ,access-fn ,body)))))
 	 ,@(when doc
 	     `((setf (documentation ',access-fn 'setf) ,doc)))
 	 ',access-fn))))
@@ -511,8 +517,6 @@
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
 
-(eval-when (compile load eval)
-
 ;;; ### bootstrap hack...
 ;;; Rename get-setf-method so that we don't blow away setf in the bootstrap
 ;;; lisp.  All references in this file are to the renamed function, and should
@@ -521,6 +525,8 @@
 #+new-compiler
 (defun get-setf-method (form &optional environment)
   (foo-get-setf-method form environment))
+
+(eval-when (compile load eval)
 ;;;
 (defun foo-get-setf-method (form &optional environment)
   "Returns five values needed by the SETF machinery: a list of temporary
