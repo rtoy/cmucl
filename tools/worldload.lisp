@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.21 1991/04/29 07:41:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.22 1991/05/04 14:57:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,6 +74,7 @@
 (load "code:describe")
 (load "code:rand")
 (load "code:trace")
+(load "code:profile")
 (load "code:weak")
 (load "code:sysmacs")
 (load "code:pprint")
