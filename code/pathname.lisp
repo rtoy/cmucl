@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.36 1999/01/09 11:20:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.37 1999/02/11 12:24:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1156,8 +1156,28 @@ a host-structure or string."
 ;;;
 (defun translate-directories (source from to diddle-case)
   (if (not (and source to from))
-      (or (and to (null source) (remove :wild-inferiors to))
-	  (mapcar #'(lambda (x) (maybe-diddle-case x diddle-case)) source))
+      (let ((source (mapcar #'(lambda (x) (maybe-diddle-case x diddle-case))
+			    source)))
+	(if (null to)
+	    source
+	    (collect ((res))
+	      (res (cond ((null source) (first to))
+			 ((eq (first to) :absolute) :absolute)
+			 (t (first source))))
+	      (let ((match (rest source)))
+		(dolist (to-part (rest to))
+		  (cond ((eq to-part :wild)
+			 (when match
+			   (res (first match))
+			   (setf match nil)))
+			((eq to-part :wild-inferiors)
+			 (when match
+			   (dolist (src-part match)
+			     (res src-part))
+			   (setf match nil)))
+			(t
+			 (res to-part)))))
+	      (res))))
       (collect ((res))
 	(res (if (eq (first to) :absolute)
 		 :absolute
