@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.32 2001/03/04 20:12:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.33 2002/01/11 16:26:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -971,8 +971,8 @@
 ;;;
 (macrolet ((frob (counter vto vfrom fto ffrom)
 	     `(progn
-		(defvar ,vto)
-		(defvar ,vfrom)
+		(defvar ,vto (make-hash-table :test #'eq))
+		(defvar ,vfrom (make-hash-table :test #'eql))
 		(declaim (hash-table ,vto ,vfrom))
 		(defvar ,counter 0)
 		(declaim (fixnum ,counter))
