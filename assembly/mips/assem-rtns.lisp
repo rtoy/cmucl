@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.4 1990/04/23 20:44:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.5 1990/04/24 03:14:04 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -35,15 +35,13 @@
   (align vm:lowtag-bits)
   (inst word vm:function-header-type)
   (dotimes (i (1- vm:function-header-code-offset))
-    (nop))
+    (inst word 0))
   ;; Cause the error.
   (cerror-call continue di:undefined-symbol-error cname)
 
   continue
 
-  (let ((not-sym (generate-cerror-code 'undefined-function
-				       di:object-not-symbol-error
-				       cname)))
+  (let ((not-sym (generate-cerror-code di:object-not-symbol-error cname)))
     (test-simple-type cname temp not-sym t vm:symbol-header-type))
 
   (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
@@ -64,13 +62,13 @@
 				 (:temp target-uwp :sc any-reg :type fixnum))
   (declare (ignore start count))
 
-  (let ((error (generate-error-code 'unwind-error di:invalid-unwind-error)))
+  (let ((error (generate-error-code di:invalid-unwind-error)))
     (inst beq block zero-tn error))
   
   (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
   (loadw target-uwp block vm:unwind-block-current-uwp-slot)
   (inst bne cur-uwp target-uwp do-uwp)
-  (nop)
+  (inst nop)
       
   (move cur-uwp block)
 
@@ -84,7 +82,7 @@
   do-uwp
 
   (loadw next-uwp cur-uwp vm:unwind-block-current-uwp-slot)
-  (b do-exit)
+  (inst b do-exit)
   (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))
 
 
@@ -100,22 +98,19 @@
     
   loop
     
-  (let ((error (generate-error-code 'throw-error
-				    di:unseen-throw-tag-error
-				    target)))
+  (let ((error (generate-error-code di:unseen-throw-tag-error target)))
     (inst beq catch zero-tn error)
-    (nop))
+    (inst nop))
     
   (loadw tag catch vm:catch-block-tag-slot)
   (inst beq tag target exit)
-  (nop)
-  (b loop)
+  (inst nop)
+  (inst b loop)
   (loadw catch catch vm:catch-block-previous-catch-slot)
     
   exit
 
   (move target catch)
-  (inst load-assembly-address ndescr 'unwind)
-  (inst jr ndescr)
-  (nop))
-
+  (inst li ndescr (make-fixup 'unwind :assembly-routine))
+  (inst j ndescr)
+  (inst nop))

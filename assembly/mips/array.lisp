@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.6 1990/04/19 23:56:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.7 1990/04/24 03:13:54 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -18,14 +18,14 @@
 
 (defmacro allocate-vector (type length words vector ndescr)
   `(pseudo-atomic (,ndescr)
-     (inst ori ,vector alloc-tn vm:other-pointer-type)
-     (inst addiu alloc-tn alloc-tn (+ (1- (ash 1 vm:lowtag-bits))
+     (inst or ,vector alloc-tn vm:other-pointer-type)
+     (inst addu alloc-tn alloc-tn (+ (1- (ash 1 vm:lowtag-bits))
 				      (* vm:vector-data-offset vm:word-bytes)))
      (inst addu alloc-tn alloc-tn ,words)
-     (loadi ,ndescr (lognot vm:lowtag-mask))
+     (inst li ,ndescr (lognot vm:lowtag-mask))
      (inst and alloc-tn alloc-tn ,ndescr)
      ,(if (constantp type)
-	  `(loadi ,ndescr ,type)
+	  `(inst li ,ndescr ,type)
 	  `(inst srl ,ndescr ,type vm:word-shift))
      (storew ,ndescr ,vector 0 vm:other-pointer-type)
      (storew ,length ,vector vm:vector-length-slot vm:other-pointer-type)))
@@ -61,15 +61,15 @@
 
   (allocate-vector vm:simple-vector-type length length vector ndescr)
   (inst beq length zero-tn done)
-  (inst addiu lip vector (- (* vm:vector-data-offset vm:word-bytes)
-			    vm:other-pointer-type))
+  (inst addu lip vector (- (* vm:vector-data-offset vm:word-bytes)
+			   vm:other-pointer-type))
 
   loop
 
   (storew fill lip)
-  (inst addiu length length (fixnum -1))
+  (inst addu length length (fixnum -1))
   (inst bne length zero-tn loop)
-  (inst addiu lip lip vm:word-bytes)
+  (inst addu lip lip vm:word-bytes)
 
   done
 
@@ -100,7 +100,7 @@
   ;;    8	2	3	12
   ;;
   (inst sra words length (+ vm:word-shift 2))
-  (inst addiu words words 1)
+  (inst addu words words 1)
   (inst sll words words 2)
   (allocate-vector vm:simple-string-type length words vector ndescr)
   (maybe-invoke-gc vector words)
@@ -122,28 +122,28 @@
 			  (:temp data :sc non-descriptor-reg :type random)
 			  (:temp byte :sc non-descriptor-reg :type random))
   (loadw length string vm:vector-length-slot vm:other-pointer-type)
-  (inst addiu lip string
+  (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
-  (b test)
+  (inst b test)
   (move accum zero-tn)
 
   loop
 
-  (inst andi byte data #xff)
+  (inst and byte data #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
   (inst srl byte data 8)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
   (inst srl byte data 16)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -155,25 +155,25 @@
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
-  (inst addiu lip lip 4)
+  (inst addu lip lip 4)
 
   test
 
-  (inst addiu length length (fixnum -4))
+  (inst addu length length (fixnum -4))
   (inst lw data lip 0)
   (inst bgez length loop)
-  (nop)
+  (inst nop)
 
-  (inst addiu length length (fixnum 3))
+  (inst addu length length (fixnum 3))
   (inst beq length zero-tn one-more)
-  (inst addiu length length (fixnum -1))
+  (inst addu length length (fixnum -1))
   (inst beq length zero-tn two-more)
-  (inst addiu length length (fixnum -1))
+  (inst addu length length (fixnum -1))
   (inst bne length zero-tn done)
-  (nop)
+  (inst nop)
 
   (inst srl byte data 16)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -182,7 +182,7 @@
   two-more
 
   (inst srl byte data 8)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -190,7 +190,7 @@
 
   one-more
 
-  (inst andi byte data #xff)
+  (inst and byte data #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -212,28 +212,28 @@
 			  (:temp data :sc non-descriptor-reg :type random)
 			  (:temp byte :sc non-descriptor-reg :type random))
   (loadw length string vm:vector-length-slot vm:other-pointer-type)
-  (inst addiu lip string
+  (inst addu lip string
 	(- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))
-  (b test)
+  (inst b test)
   (move accum zero-tn)
 
   loop
 
-  (inst andi byte data #xff)
+  (inst and byte data #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
   (inst srl byte data 8)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
   (inst srl byte data 16)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -245,25 +245,25 @@
   (inst srl accum accum 27)
   (inst or accum accum byte)
 
-  (inst addiu lip lip 4)
+  (inst addu lip lip 4)
 
   test
 
-  (inst addiu length length (fixnum -4))
+  (inst addu length length (fixnum -4))
   (inst lw data lip 0)
   (inst bgez length loop)
-  (nop)
+  (inst nop)
 
-  (inst addiu length length (fixnum 3))
+  (inst addu length length (fixnum 3))
   (inst beq length zero-tn one-more)
-  (inst addiu length length (fixnum -1))
+  (inst addu length length (fixnum -1))
   (inst beq length zero-tn two-more)
-  (inst addiu length length (fixnum -1))
+  (inst addu length length (fixnum -1))
   (inst bne length zero-tn done)
-  (nop)
+  (inst nop)
 
   (inst srl byte data 16)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -272,7 +272,7 @@
   two-more
 
   (inst srl byte data 8)
-  (inst andi byte byte #xff)
+  (inst and byte byte #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
@@ -280,7 +280,7 @@
 
   one-more
 
-  (inst andi byte data #xff)
+  (inst and byte data #xff)
   (inst xor accum accum byte)
   (inst sll byte accum 5)
   (inst srl accum accum 27)
