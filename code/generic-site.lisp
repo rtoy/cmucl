@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.3 1991/10/22 16:15:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.4 1992/05/23 02:00:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 ;;; The following Hemlock initializations will error if run in a core without
 ;;; hemlock.
-
+#+hemlock (progn
 ;;; If you have sources installed on your system, un-comment the following form
 ;;; and change it to point to the source location.  This will allow the Hemlock
 ;;; "Edit Definition" command to find sources for functions in the core.  If
@@ -45,3 +45,5 @@
 (hi:setv ed::default-font "*-courier-medium-r-normal--*-120-*")
 (hi:setv ed::active-region-highlighting-font
 	 "*-courier-medium-o-normal--*-120-*")
+
+); #+hemlock
