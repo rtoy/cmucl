@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.36 2001/12/07 03:10:33 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.37 2002/07/22 17:02:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,6 +172,9 @@
 	      (&aux (aux arg))
 	      (t
 	       (compiler-error "Found garbage in lambda-list when expecting a keyword: ~S." arg)))))
+
+      (when (eq state '&rest)
+	(compiler-error "&rest not followed by required variable."))
       
       (values (required) (optional) restp rest keyp (keys) allowp (aux)
 	      morep more-context more-count))))
