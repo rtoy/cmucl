@@ -398,7 +398,8 @@
 	       (tn (probe-file pn)))
 	  (cond
 	   (tn
-	    (if (string-equal (pathname-type tn) "nfasl")
+	    (if (or (string-equal (pathname-type tn) "nfasl")
+		    (string-equal (pathname-type tn) "fasl"))
 		(with-open-file (file tn
 				      :direction :input
 				      :element-type '(unsigned-byte 8))
