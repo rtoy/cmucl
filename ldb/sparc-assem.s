@@ -14,7 +14,7 @@
         sethi %hi(NAME(sym)), L0; st reg, [L0+%lo(NAME(sym))]
 
 
-#define FRAMESIZE (SA(MINFRAME)+SA(4))
+#define FRAMESIZE (SA(WINDOWSIZE+4))
 
         .seg    "text"
         .global NAME(call_into_lisp)
