@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.2 1993/02/04 22:34:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.3 1993/02/08 22:20:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,7 @@
 ;;;
 (defun (setf find-class) (new-value name)
   (ecase (info type kind name)
-    (nil)
+    ((nil))
     (#+ns-boot (:instance :structure) #-ns-boot :instance
      (let ((old (class-of (info type class name)))
 	   (new (class-of new-value)))
@@ -364,11 +364,44 @@
 
 
 ;;;; Built-in classes & class-of:
+;;;
+;;;    The BUILT-IN-CLASSES list is a data structure which configures the
+;;; creation of all the built-in classes.  It contains all the info that we
+;;; need to maintain the mapping between classes, compile-time types and
+;;; run-time type codes.  These options are defined:
+;;;
+;;; :TRANSLATION (default none)
+;;;     When this class is "parsed" as a type specifier, it is translated into
+;;;     the specified internal type representation, rather than being left as a
+;;;     class.  This is used for types which we want to canonicalize to
+;;;     some other kind of type object because in general we want to be able to
+;;;     include more information than just the class (e.g. for numeric types.)
+;;;     Default none.
+;;;
+;;; :ENUMERABLE (default NIL)
+;;;     The value of the :ENUMERABLE slot in the created class.  Meaningless in
+;;;     translated classes.
+;;;
+;;; :STATE (default :SEALED)
+;;;     The value of CLASS-STATE which we want on completion, indicating
+;;;     whether subclasses can be created at run-time.
+;;;
+;;; :HIERARCHICAL (default T)
+;;;     True if we can assign this class a unique INHERITANCE-DEPTH.
+;;;
+;;; :CODES (default none)
+;;;     Run-time type codes which should be translated back to this class by
+;;;     CLASS-OF.  Unspecified for abstract classes.
+;;;
+;;; :INHERITS (default this class & T)
+;;;     The class-precedence list for this class, with this class and T
+;;;     implicit.
+;;; 
 
 (defvar built-in-classes)
 (cold-load-init
   (setq built-in-classes
-	'((t :state :read-only)
+	'((t :state :read-only :translation t)
 	  (character :enumerable t :codes (#.vm:base-char-type))
 	  
 	  (array :translation array
