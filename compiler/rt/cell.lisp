@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.1 1991/02/18 15:07:46 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.2 1991/04/20 17:08:40 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of various primitive memory access
 ;;; VOPs for the IBM RT.
@@ -178,7 +178,7 @@
   (:generator 30
     (let ((closure (gen-label))
 	  (normal-fn (gen-label)))
-      (load-type type function (- vm:function-pointer-type))
+      (load-type type function vm:function-pointer-type)
       (inst c type vm:closure-header-type)
       (inst bc :eq closure)
       (inst c type vm:function-header-type)
