@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.112 1999/02/25 13:03:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.113 2000/02/28 18:36:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -635,7 +635,7 @@
     (etypecase var
       (leaf
        (when (and (lambda-var-p var) (lambda-var-ignorep var))
-	 (compiler-warning "Reading an ignored variable: ~S." name))
+	 (compiler-note "Reading an ignored variable: ~S." name))
        (reference-leaf start cont var))
       (cons
        (assert (eq (car var) 'MACRO))
@@ -976,9 +976,8 @@
 	   (compiler-error "Declaring symbol-macro ~S special." name))
 	  (lambda-var
 	   (when (lambda-var-ignorep var)
-	     (compiler-warning
-	      "Ignored variable ~S is being declared special."
-	      name))
+	     (compiler-note "Ignored variable ~S is being declared special."
+			    name))
 	   (setf (lambda-var-specvar var)
 		 (specvar-for-binding name)))
 	  (null
@@ -1070,16 +1069,17 @@
     (let ((var (find-in-bindings-or-fbindings name vars fvars)))
       (cond
        ((not var)
-	(compiler-warning
-	 "Ignore declaration for unknown variable ~S." name))
+	(if (or (lexenv-find name variables) (lexenv-find name functions))
+	    (compiler-note "Ignoring free ignore declaration for ~S." name)
+	    (compiler-warning "Ignore declaration for unknown variable ~S."
+			      name)))
        ((and (consp var) (consp (cdr var)) (eq (cadr var) 'macro))
 	;; Just ignore the ignore decl.
 	)
        ((functional-p var)
 	(setf (leaf-ever-used var) t))
        ((lambda-var-specvar var)
-	(compiler-warning
-	 "Declaring special variable ~S to be ignored." name))
+	(compiler-note "Declaring special variable ~S to be ignored." name))
        ((eq (first spec) 'ignorable)
 	(setf (leaf-ever-used var) t))
        (t
@@ -1154,8 +1154,7 @@
 			     (string= (symbol-name what) "CLASS"))) ; pcl hack
 		   (or (info type kind what)
 		       (and (consp what) (info type translator (car what)))))
-	      (unless (policy nil (= brevity 3))
-		(compiler-note "Abbreviated type declaration: ~S." spec))
+	      (compiler-note "Abbreviated type declaration: ~S." spec)
 	      (process-type-declaration spec res vars))
 	     ((info declaration recognized what)
 	      res)
@@ -2982,7 +2981,7 @@
 	       (compiler-error "Attempt to set constant ~S." name))
 	     (when (and (lambda-var-p leaf)
 			(lambda-var-ignorep leaf))
-	       (compiler-warning "Setting an ignored variable: ~S." name))
+	       (compiler-note "Setting an ignored variable: ~S." name))
 	     (set-variable start cont leaf (second things)))
 	    (cons
 	     (assert (eq (car leaf) 'MACRO))

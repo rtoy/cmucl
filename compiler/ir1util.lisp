@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.78 1998/02/24 19:19:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.79 2000/02/28 18:36:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1067,10 +1067,8 @@
     (unless (or (leaf-ever-used var)
 		(lambda-var-ignorep var))
       (let ((*compiler-error-context* (lambda-bind fun)))
-	(unless (policy *compiler-error-context* (= brevity 3))
-	  (compiler-warning "Variable ~S defined but never used."
-			    (leaf-name var)))
-	(setf (leaf-ever-used var) t))))
+	(compiler-note "Variable ~S defined but never used." (leaf-name var)))
+      (setf (leaf-ever-used var) t)))
   (undefined-value))
 
 
