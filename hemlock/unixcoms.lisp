@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.5 1991/08/01 11:35:44 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.6 1991/09/04 14:24:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
    The program should act like lpr: if a filename is given as an argument,
    it should print that file, and if no name appears, standard input should
    be assumed."
-  :value "/usr/cs/bin/lpr")
+  :value "lpr")
 
 (defhvar "Print Utility Switches"
   "Switches to pass to the \"Print Utility\" program.  This should be a list
@@ -146,7 +146,7 @@
 
 (defhvar "Scribe Utility"
   "Program name to invoke (via EXT:RUN-PROGRAM) to do text formatting."
-  :value "/usr/misc/bin/scribe")
+  :value "scribe")
 
 (defhvar "Scribe Utility Switches"
   "Switches to pass to the \"Scribe Utility\" program.  This should be a list
