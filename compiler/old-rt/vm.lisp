@@ -22,34 +22,6 @@
 (define-storage-base immediate-constant :non-packed)
 
 ;;;
-;;; Objects that can be stored in any register (immediate objects).
-(define-storage-class any-reg 0 registers
-  :locations (0 1 2 3 4 5 7 8 9 10 11 15))
-
-;;;
-;;; Pointer objects that must be seen by GC.
-(define-storage-class descriptor-reg 1 registers
-  :locations (1 3 4 5 7 8 9 10 11 15))
-
-;;;
-;;; Objects that must not be seen by GC (unboxed numbers).
-(define-storage-class non-descriptor-reg 2 registers
-  :locations (0 2))
-
-;;;
-;;; String-chars represented without tag bits (looks like a fixnum).
-(define-storage-class string-char-reg 3 registers
-  :locations (0 1 2 3 4 5 7 8 9 10 11 15))
-
-;;;
-;;; Descriptor objects stored on the stack.
-(define-storage-class stack 4 stack)
-
-;;;
-;;; Untagged string-chars stored on the stack.
-(define-storage-class string-char-stack 5 stack)
-
-;;;
 ;;; Non-immediate constants in the constant pool.
 (define-storage-class constant 6 constant)
 
@@ -81,42 +53,49 @@
 ;;;
 (define-storage-class random-immediate 11 immediate-constant)
 
+;;;
+;;; Descriptor objects stored on the stack.
+(define-storage-class stack 4 stack
+  :constant-scs (constant short-immediate unsigned-immediate immediate
+			  immediate-string-char random-immediate))
+
+;;;
+;;; Untagged string-chars stored on the stack.
+(define-storage-class string-char-stack 5 stack
+  :constant-scs (immediate-string-char))
+
+;;;
+;;; Objects that can be stored in any register (immediate objects).
+(define-storage-class any-reg 0 registers
+  :locations (0 1 2 3 4 5 7 8 9 10 11 15)
+  :constant-scs (constant short-immediate unsigned-immediate immediate
+			  immediate-string-char random-immediate)
+  :alternate-scs (stack))
+
+;;;
+;;; Pointer objects that must be seen by GC.
+(define-storage-class descriptor-reg 1 registers
+  :locations (1 3 4 5 7 8 9 10 11 15)
+  :constant-scs (constant short-immediate unsigned-immediate immediate
+			  immediate-string-char random-immediate)
+  :alternate-scs (stack))
+
+;;;
+;;; Objects that must not be seen by GC (unboxed numbers).
+(define-storage-class non-descriptor-reg 2 registers
+  :locations (0 2))
+
+;;;
+;;; String-chars represented without tag bits (looks like a fixnum).
+(define-storage-class string-char-reg 3 registers
+  :locations (0 1 2 3 4 5 7 8 9 10 11 15)
+  :constant-scs (immediate-string-char)
+  :alternate-scs (string-char-stack))
 
 ;;; A catch or unwind block.
 ;;;
 (define-storage-class catch-block 12 stack
   :element-size system:%catch-block-size)
-
-
-;;;
-;;; Set up the cost information for operand loading.
-(define-move-costs
-  ((any-reg descriptor-reg non-descriptor-reg)
-   (1 any-reg descriptor-reg non-descriptor-reg)
-   (2 string-char-reg)
-   (5 stack))
-  ((stack constant)
-   (5 any-reg descriptor-reg non-descriptor-reg)
-   (6 string-char-reg))
-  ((immediate short-immediate unsigned-immediate random-immediate)
-   (1 any-reg descriptor-reg non-descriptor-reg))
-  ((immediate-string-char)
-   (1 string-char-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg))
-  ((string-char-stack)
-   (5 string-char-reg))
-  ((string-char-reg)
-   (1 string-char-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg)
-   (5 string-char-stack)
-   (6 stack)))
-
-;;;
-;;; Non-descriptor registers can't be saved, since we don't have an unboxed
-;;; stack.  There had better not be any need to do such saving...
-(define-save-scs
-    (stack any-reg descriptor-reg)
-    (string-char-stack string-char-reg))
 
 
 ;;;; Primitive type definition:
@@ -127,44 +106,23 @@
 (def-primitive-type t (descriptor-reg stack))
 (defvar *any-primitive-type* (primitive-type-or-lose 't))
 
-(def-primitive-type simple-string (descriptor-reg stack))
-(def-primitive-type simple-vector (descriptor-reg stack))
-(def-primitive-type simple-bit-vector (descriptor-reg stack))
+(def-primitive-type simple-string (descriptor-reg))
+(def-primitive-type simple-vector (descriptor-reg))
+(def-primitive-type simple-bit-vector (descriptor-reg))
 
-(def-primitive-type string-char
-		    (string-char-reg string-char-stack any-reg stack))
-(def-primitive-type fixnum (any-reg stack))
-(def-primitive-type short-float (any-reg stack))
-(def-primitive-type long-float (descriptor-reg stack))
-(def-primitive-type bignum (descriptor-reg stack))
-(def-primitive-type ratio (descriptor-reg stack))
-(def-primitive-type complex (descriptor-reg stack))
-(def-primitive-type function (descriptor-reg stack))
+(def-primitive-type string-char (string-char-reg any-reg))
+(def-primitive-type fixnum (any-reg))
+(def-primitive-type short-float (any-reg))
+(def-primitive-type long-float (descriptor-reg))
+(def-primitive-type bignum (descriptor-reg))
+(def-primitive-type ratio (descriptor-reg))
+(def-primitive-type complex (descriptor-reg))
+(def-primitive-type function (descriptor-reg))
 
 ;;; We make List a primitive type, since it is useful for discrimination of
 ;;; generic sequence function arguments.  This means that Cons and Symbol can't
 ;;; be primitive types.
-(def-primitive-type list (descriptor-reg stack))
-
-;;; This primitive type is used for random unboxed temporary registers.
-;;;
-(def-primitive-type random (non-descriptor-reg) :type nil)
-
-;;; This primitive type is used for making unwind blocks.
-;;;
-(def-primitive-type catch-block (catch-block) :type nil)
-
-
-;;; Primitive-Type-Of  --  Interface
-;;;
-;;;    Return the most restrictive primitive type that contains Object.
-;;;
-(defun primitive-type-of (object)
-  (let ((type (ctype-of object)))
-    (cond ((not (member-type-p type)) (primitive-type type))
-	  ((equal (member-type-members type) '(nil))
-	   (primitive-type-or-lose 'list))
-	  (t *any-primitive-type*))))
+(def-primitive-type list (descriptor-reg))
 
 
 ;;; Primitive-Type  --  Interface
@@ -229,9 +187,10 @@
 		 (setq res (primitive-type-union res ptype))))
 	     (values res exact)))))
     (member-type
-     (values (reduce #'primitive-type-union
-		     (mapcar #'primitive-type-of 
-			     (member-type-members type)))
+     (values (primitive-type
+	      (reduce #'type-union
+		      (mapcar #'ctype-of 
+			      (member-type-members type))))
 	     nil))
     (named-type
      (case (named-type-name type)
@@ -250,7 +209,7 @@
 ;;;; Totally magical registers:
 
 ;;; Pointer to the current frame: 
-(defparameter cont-tn
+(defparameter fp-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset 13))
@@ -327,16 +286,15 @@
 (eval-when (compile load eval)
   (defconstant return-pc-offset 15)
   (defconstant env-offset 14)
-  (defconstant argument-pointer-offset 11)
   (defconstant argument-count-offset 0)
-  (defconstant old-cont-offset 10)
+  (defconstant old-fp-offset 10)
   (defconstant sp-offset 6)
   (defconstant call-name-offset 9))
 
 ;;; Offsets of special stack frame locations...
 ;;;
 (eval-when (compile load eval)
-  (defconstant old-cont-save-offset 0)
+  (defconstant old-fp-save-offset 0)
   (defconstant return-pc-save-offset 1)
   (defconstant env-save-offset 2))
 
@@ -345,11 +303,6 @@
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
 		  :offset argument-count-offset))
-
-(defparameter args-tn
-  (make-random-tn :kind :normal
-		  :sc (sc-or-lose 'descriptor-reg)
-		  :offset argument-pointer-offset))
 
 
 (defparameter pc-tn
