@@ -1050,10 +1050,10 @@ explicitly marked saying who wrote it.
 		     (kernel:%closure-index-ref new-value i))))
 	      (kernel:%set-funcallable-instance-function
 	       fin
-	       (kernel:%closure-function new-value))
-	      new-value))))
+	       (kernel:%closure-function new-value))))))
     (#.vm:function-header-type
-     (kernel:%set-funcallable-instance-function fin new-value))))
+     (kernel:%set-funcallable-instance-function fin new-value)))
+  new-value)
 
 
 ;;; FUNCALLABLE-INSTANCE-NAME, SET-FUNCALLABLE-INSTANCE-NAME  --  Interface
@@ -1090,13 +1090,16 @@ explicitly marked saying who wrote it.
 ;;;
 (defmacro %set-funcallable-instance-data-1 (fin slot new-value)
   (ext:once-only ((n-fin fin)
-		  (n-slot slot))
-    `(kernel:%set-funcallable-instance-info
-      ,n-fin
-      (+ (or (position ,n-slot funcallable-instance-data)
-	     (error "Unknown slot: ~S." ,n-slot))
-	 fin-data-offset)
-      ,new-value)))
+		  (n-slot slot)
+		  (n-val new-value))
+    `(progn
+       (kernel:%set-funcallable-instance-info
+	,n-fin
+	(+ (or (position ,n-slot funcallable-instance-data)
+	       (error "Unknown slot: ~S." ,n-slot))
+	   fin-data-offset)
+	,n-val)
+       ,n-val)))
 ;;;
 (defsetf funcallable-instance-data-1 %set-funcallable-instance-data-1)
 		
