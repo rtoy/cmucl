@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.30 1991/11/13 19:41:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.31 1991/11/15 13:53:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -714,20 +714,25 @@
 ;;; MAYBE-TERMINATE-BLOCK  --  Interface
 ;;;
 ;;;    If Call is to a function that doesn't return (type NIL), then terminate
-;;; the block there, and link it to the component tail.
-;;;
-;;; We also change the call's CONT to be a dummy continuation to prevent the
-;;; use from confusing things.
+;;; the block there, and link it to the component tail.  We also change the
+;;; call's CONT to be a dummy continuation to prevent the use from confusing
+;;; things.
 ;;;
 ;;; Except when called during IR1, we delete the continuation if it has no
 ;;; other uses.  (If it does have other uses, we reoptimize.)
+;;;
+;;; Termination on the basis of a continuation type assertion is inhibited
+;;; when:
+;;; -- The continuation is deleted (hence the assertion is spurious), or
+;;; -- We are in IR1 conversion (where THE assertions are subject to
+;;;    weakening.)
 ;;;
 (defun maybe-terminate-block (call ir1-p)
   (declare (type basic-combination call))
   (let ((block (node-block call))
 	(cont (node-cont call)))
-    (when (or (and (eq (continuation-derived-type cont) *empty-type*)
-		   (not (eq (continuation-kind cont) :deleted)))
+    (when (or (and (eq (continuation-asserted-type cont) *empty-type*)
+		   (not (or ir1-p (eq (continuation-kind cont) :deleted))))
 	      (eq (node-derived-type call) *empty-type*))
       (cond (ir1-p
 	     (delete-continuation-use call)
@@ -1273,31 +1278,35 @@
 ;;;    Do stuff to notice a change to a MV combination node.
 ;;;
 (defun ir1-optimize-mv-combination (node)
-  (if (eq (basic-combination-kind node) :local)
-      (let ((arg (first (basic-combination-args node))))
-	(when (continuation-reoptimize arg)
-	  (unless (convert-mv-bind-to-let node)
-	    (ir1-optimize-mv-bind node))))
-      (let* ((fun (basic-combination-fun node))
-	     (fun-changed (continuation-reoptimize fun))
-	     (args (basic-combination-args node)))
-	(when fun-changed
-	  (setf (continuation-reoptimize fun) nil)
-	  (let ((type (continuation-type fun)))
-	    (when (function-type-p type)
-	      (derive-node-type node (function-type-returns type))))
-	  (maybe-terminate-block node nil)
-	  (let ((use (continuation-use fun)))
-	    (when (and (ref-p use) (functional-p (ref-leaf use))
-		       (not (eq (ref-inlinep use) :notinline)))
-	      (convert-call-if-possible use node)
-	      (maybe-let-convert (ref-leaf use)))))
-	(when (and (not (eq (basic-combination-kind node) :local))
-		   (or fun-changed (find-if #'continuation-reoptimize args))
-		   (not (eq (continuation-function-name fun) '%throw)))
-	  (ir1-optimize-mv-call node))
-	(dolist (arg args)
-	  (setf (continuation-reoptimize arg) nil))))
+  (cond
+   ((eq (basic-combination-kind node) :local)
+    (let ((fun (basic-combination-fun node)))
+      (when (continuation-reoptimize fun)
+	(setf (continuation-reoptimize fun) nil)
+	(maybe-let-convert (combination-lambda node))))
+    (setf (continuation-reoptimize (first (basic-combination-args node))) nil)
+    (unless (convert-mv-bind-to-let node)
+      (ir1-optimize-mv-bind node)))
+   (t
+    (let* ((fun (basic-combination-fun node))
+	   (fun-changed (continuation-reoptimize fun))
+	   (args (basic-combination-args node)))
+      (when fun-changed
+	(setf (continuation-reoptimize fun) nil)
+	(let ((type (continuation-type fun)))
+	  (when (function-type-p type)
+	    (derive-node-type node (function-type-returns type))))
+	(maybe-terminate-block node nil)
+	(let ((use (continuation-use fun)))
+	  (when (and (ref-p use) (functional-p (ref-leaf use))
+		     (not (eq (ref-inlinep use) :notinline)))
+	    (convert-call-if-possible use node)
+	    (maybe-let-convert (ref-leaf use)))))
+      (unless (or (eq (basic-combination-kind node) :local)
+		  (eq (continuation-function-name fun) '%throw))
+	(ir1-optimize-mv-call node))
+      (dolist (arg args)
+	(setf (continuation-reoptimize arg) nil)))))
   (undefined-value))
 
   
@@ -1336,7 +1345,10 @@
 ;;; What we do is change the function in the MV-CALL to be a lambda that "looks
 ;;; like an MV bind", which allows IR1-OPTIMIZE-MV-COMBINATION to notice that
 ;;; this call can be converted (the next time around.)  This new lambda just
-;;; calls the actual function with the MV-BIND variables as arguments.
+;;; calls the actual function with the MV-BIND variables as arguments.  Note
+;;; that this new MV bind is not let-converted immediately, as there are going
+;;; to be stray references from the entry-point functions until they get
+;;; deleted.
 ;;;
 ;;; In order to avoid loss of argument count checking, we only do the
 ;;; transformation according to a known number of expected argument if safety
@@ -1402,7 +1414,6 @@
 		(assert (eq (basic-combination-kind node) :full))
 		(local-call-analyze *current-component*)
 		(assert (eq (basic-combination-kind node) :local)))))))))
-
   (undefined-value))
 
 
@@ -1418,7 +1429,7 @@
 ;;;      ...)
 ;;;
 ;;; What we actually do is convert the VALUES combination into a normal let
-;;; combination calling the orignal :MV-LET lambda.  If there are extra args to
+;;; combination calling the original :MV-LET lambda.  If there are extra args to
 ;;; VALUES, discard the corresponding continuations.  If there are insufficient
 ;;; args, insert references to NIL.
 ;;;
