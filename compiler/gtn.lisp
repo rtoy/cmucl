@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.10 1991/02/20 14:57:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.11 1991/12/11 16:54:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,11 +109,13 @@
 ;;;
 (defun has-full-call-use (fun)
   (declare (type clambda fun))
-  (do-uses (use (return-result (lambda-return fun)) nil)
-    (when (and (node-tail-p use)
-	       (basic-combination-p use)
-	       (eq (basic-combination-kind use) :full))
-      (return t))))
+  (let ((return (lambda-return fun)))
+    (and return
+	 (do-uses (use (return-result return) nil)
+	   (when (and (node-tail-p use)
+		      (basic-combination-p use)
+		      (eq (basic-combination-kind use) :full))
+	     (return t))))))
 
 
 ;;; Use-Standard-Returns  --  Internal
@@ -202,16 +204,16 @@
 
 ;;; Assign-Return-Locations  --  Internal
 ;;;
-;;;    If Env has a Tail-Set, and the Tail-Set doesn't have any Info, then make
-;;; a Return-Info for it.  If we choose a return convention other than
-;;; :Unknown, and this environment is for an XEP, then break tail recursion on
-;;; the XEP calls, since we must always use unknown values when returning from
-;;; an XEP.
+;;;    If Env has a Tail-Set with a non-empty type, and the Tail-Set doesn't
+;;; have any Info, then make a Return-Info for it.  If we choose a return
+;;; convention other than :Unknown, and this environment is for an XEP, then
+;;; break tail recursion on the XEP calls, since we must always use unknown
+;;; values when returning from an XEP.
 ;;;
 (defun assign-return-locations (fun)
   (declare (type clambda fun))
   (let ((tails (lambda-tail-set fun)))
-    (when tails
+    (unless (eq (tail-set-type tails) *empty-type*)
       (let ((returns (or (tail-set-info tails)
 			 (setf (tail-set-info tails)
 			       (return-info-for-set tails)))))
