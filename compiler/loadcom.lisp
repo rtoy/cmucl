@@ -94,6 +94,7 @@
 
 (load "c:vm" :verbose t)
 (load "c:move" :verbose t)
+(load "c:char" :verbose t)
 (load "c:miscop" :verbose t)
 (load "c:subprim" :verbose t)
 (load "c:print" :verbose t)
@@ -105,12 +106,13 @@
 (load "c:array" :verbose t)
 (load "c:pred" :verbose t)
 (load "c:system" :verbose t)
-(load "c:char" :verbose t)
 (load "c:type-vops" :verbose t)
 (load "c:arith" :verbose t)
 ); #+RT-TARGET PROGN
 
+(load "c:pseudo-vops" :verbose t)
 (load "c:debug" :verbose t)
+(load "c:represent" :verbose t)
 
 #+new-compiler
 (load "c:eval-comp" :verbose t)
