@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.14 1992/05/07 09:12:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.15 1992/05/07 09:57:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,7 @@
 (defun %print-hash-table (ht stream depth)
   (declare (ignore depth))
   (print-unreadable-object (ht stream :identity t)
-    (format stream "~A hash table, ~D entries"
+    (format stream "~A hash table, ~D entr~@:P"
 	    (symbol-name (hash-table-test ht))
 	    (hash-table-number-entries ht))))
 
@@ -294,6 +294,8 @@
 	    (test-fun (hash-table-test-fun hash-table)))
        (do ((bucket first-bucket (hash-table-bucket-next bucket)))
 	   ((null bucket)
+	    (when eq-based
+	      (set-header-data vector vm:vector-valid-hashing-subtype))
 	    (setf (svref vector index)
 		  (make-hash-table-bucket
 		   :hash (unless eq-based hashing)
