@@ -992,17 +992,20 @@
       (write-indexed result index (pop-stack)))))
 
 
-(define-cold-fop (fop-int-vector :nope)
-  (fop-int-vector)
-  (with-fop-stack t
-    (let ((res (pop-stack)))
+(define-cold-fop (fop-int-vector)
+  (prepare-for-fast-read-byte *fasl-file*
+    (let* ((len (fast-read-u-integer 4))
+	   (size (fast-read-byte))
+	   (ac (integer-length size))
+	   (res (%primitive alloc-i-vector len ac)))
+      (done-with-fast-read-byte)
+      (unless (and (<= ac 5) (= size (ash 1 ac)))
+	(error "Losing element size ~S." size))
+      (read-n-bytes *fasl-file* res 0 (ash (+ (ash len ac) 7) -3))
       (i-vector-to-core (if (typep res 'simple-bit-vector)
 			    (dynamic bit-vector-ltype)
 			    (dynamic integer-vector-ltype))
-			(ash 1 (%primitive get-vector-access-code res))
-			(length res)
-			0
-			res))))
+			size len 0 res))))
 			
 
 (not-cold-fop fop-uniform-vector)
