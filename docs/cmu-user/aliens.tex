@@ -727,20 +727,112 @@ and two return values (\var{a} and \var{i}).
 
 \subsection{Calling Lisp from C}
 
-Calling Lisp functions from C is sometimes possible, but is rather hackish.
-See \code{funcall0} ... \code{funcall3} in the \file{lisp/arch.h}.  The
-arguments must be valid \cmucl{} object descriptors (e.g.  fixnums must be
-left-shifted by 2.)  See \file{compiler/generic/objdef.lisp} or the derived
-file \file{lisp/internals.h} for details of the object representation.
-\file{lisp/internals.h} is mechanically generated, and is not part of the
-source distribution.  It is distributed in the \file{docs/} directory of the
-binary distribution.
+% Calling Lisp functions from C is sometimes possible, but is rather hackish.
+% See \code{funcall0} ... \code{funcall3} in the \file{lisp/arch.h}.  The
+% arguments must be valid \cmucl{} object descriptors (e.g.  fixnums must be
+% left-shifted by 2.)  See \file{compiler/generic/objdef.lisp} or the derived
+% file \file{lisp/internals.h} for details of the object representation.
+% \file{lisp/internals.h} is mechanically generated, and is not part of the
+% source distribution.  It is distributed in the \file{docs/} directory of the
+% binary distribution.
 
-Note that the garbage collector moves objects, and won't be able to fix up any
-references in C variables, so either turn GC off or don't keep Lisp pointers
-in C data unless they are to statically allocated objects.  You can use
-\funref{purify} to place live data structures in static space so that they
-won't move during GC.
+% Note that the garbage collector moves objects, and won't be able to fix up any
+% references in C variables, so either turn GC off or don't keep Lisp pointers
+% in C data unless they are to statically allocated objects.  You can use
+% \funref{purify} to place live data structures in static space so that they
+% won't move during GC.
+
+\cmucl{} supports calling Lisp from C via the \funref{def-callback}
+macro:
+
+\begin{defmac}{alien:}{def-callback}{\var{name} (\var{return-type}
+    \mstar{(arg-name arg-type)})}
+  This macro defines a Lisp function that can be called from C and a
+  Lisp variable.  The arguments to the function must be alien types,
+  and the return type must also be an alien type.  This Lisp function
+  can be accessed via the \funref{callback} macro.
+
+  \var{name} is the name of the Lisp function.  It is also the name of
+  a variable to be used by the \code{callback} macro.
+
+  \var{return-type} is the return type of the function.  This must be
+  a recognized alien type.
+
+  \var{arg-name} specifies the name of the argument to the function,
+  and the argument has type \var{arg-type}, which must be an alien type.
+\end{defmac}
+
+\begin{defmac}{alien:}{callback}{\var{callback-symbol}}
+  This macro extracts the appropriate information for the function
+  named \var{callback-symbol} so that it can be called by a C
+  function.  \var{callback-symbol} must be a symbol created by the
+  \code{def-callback} macro.
+\end{defmac}
+
+\subsection{Callback Example}
+
+Here is a simple example of using callbacks.
+\begin{lisp}
+(use-package :alien)
+(use-package :c-call)
+
+(def-callback foo (int (arg1 int) (arg2 int))
+  (format t "~&foo: ~S, ~S~%" arg1 arg2)
+  (+ arg1 arg2))
+
+(defun test-foo ()
+  (alien-funcall (sap-alien (callback foo) (function int int int))
+                 555 444444))
+\end{lisp}
+
+In this example, the callback function \code{foo} is defined which
+takes two C \code{int} parameters and returns a \code{int}.  As this
+shows, we can use arbitrary Lisp inside the function.
+
+The function \code{test-foo} shows how we can call this callback
+function from Lisp.  The macro \code{callback} extracts the necessary
+information for the callback function \code{foo} which can be
+converted into a pointer which we can call via \code{alien-funcall}.
+
+The following code is a more complete example where a foreign routine
+calls our Lisp routine.
+\begin{lisp}
+(use-package :alien)
+(use-package :c-call)
+
+(def-alien-routine qsort void
+  (base (* t))
+  (nmemb int)
+  (size int)
+  (compar (* (function int (* t) (* t)))))
+
+(def-callback my< (int (arg1 (* double))
+                       (arg2 (* double)))
+  (let ((a1 (deref arg1))
+        (a2 (deref arg2)))
+    (cond ((= a1 a2)  0)
+          ((< a1 a2) -1)
+          (t         +1))))
+
+(defun test-qsort ()
+  (let ((a (make-array 10 :element-type 'double-float
+                       :initial-contents '(0.1d0 0.5d0 0.2d0 1.2d0 1.5d0
+                                           2.5d0 0.0d0 0.1d0 0.2d0 0.3d0))))
+    (print a)
+    (qsort (sys:vector-sap a)
+           (length a)
+           (alien-size double :bytes)
+           (alien:callback my<))
+    (print a)))
+\end{lisp}
+
+We define the alien routine, \code{qsort}, and a callback, \code{my<},
+to determine whether two \code{double}'s are less than, greater than
+or equal to each other.
+
+The test function \code{test-qsort} shows how we can call the alien
+sort routine with our Lisp comparison routine to produce a sorted
+array.
 
 \subsection{Accessing Lisp Arrays}
 
