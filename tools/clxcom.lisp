@@ -7,7 +7,7 @@
 (when (find-package "PCL")
   (rename-package (find-package "PCL") "NO-PCL-HERE"))
 
-#+nil
+#+bootstrap
 (unless (find-package "OLD-XLIB")
   (when (find-package "XLIB")
     (rename-package (find-package "XLIB") "OLD-XLIB"))
@@ -28,6 +28,7 @@
        ((:and :external :macro)
 	(declare (optimize (safety 2))))))
   (let ((c::*suppress-values-declaration* t))
+    (comf "clx:package" :load t)
     (comf "clx:defsystem" :load t)
     (comf "clx:depdefs" :load t)
     (comf "clx:clx" :load t)
