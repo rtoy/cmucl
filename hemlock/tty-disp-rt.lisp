@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.2 1991/02/08 16:38:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.3 1991/03/14 16:25:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,38 @@
     (setf *hemlock-input-handler* nil))
   (standard-device-exit))
 
+
+;;;; Get terminal attributes:
 
+(defvar *terminal-baud-rate* nil)
+(declaim (type (or (unsigned-byte 16) null) *terminal-baud-rate*))
+
+(defalien sgtty mach:sgtty (record-size 'mach:sgtty))
+(defalien winsize mach:winsize (record-size 'mach:winsize))
+
+;;; GET-TERMINAL-ATTRIBUTES  --  Interface
+;;;
+;;;    Get terminal attributes from Unix.  Return as values, the lines,
+;;; columns and speed.  If any value is inaccessible, return NIL for that
+;;; value.  We also sleazily cache the speed in *terminal-baud-rate*, since I
+;;; don't want to figure out how to get my hands on the TTY-DEVICE at the place
+;;; where I need it.  Currently, there really can only be one TTY anyway, since
+;;; the buffer is in a global.
+;;;
+(defun get-terminal-attributes (&optional (fd 1))
+  (mach::with-trap-arg-block mach:winsize winsize
+    (mach::with-trap-arg-block mach:sgtty sgtty
+      (let ((size-win (mach:unix-ioctl fd mach:TIOCGWINSZ (alien-sap winsize)))
+	    (speed-win (mach:unix-ioctl fd mach:TIOCGETP (alien-sap sgtty))))
+	(values
+	 (and size-win
+	      (alien-access (mach:winsize-ws_row winsize)))
+	 (and size-win
+	      (alien-access (mach:winsize-ws_col winsize)))
+	 (and speed-win
+	      (setq *terminal-baud-rate*
+		    (svref mach:terminal-speeds
+			   (alien-access (mach:sgtty-ospeed sgtty))))))))))
 
 ;;;; Output routines and buffering.
 
@@ -58,13 +89,6 @@
 
 (defvar *redisplay-output-buffer-index* 0)
 (proclaim '(fixnum *redisplay-output-buffer-index*))
-
-(defvar *terminal-baud-rate* 9600
-  "If true, this is an integer indicating the speed of the terminal.  This used
-  to keep redisplay from getting ahead of the terminal, allowing redisplays in
-  progress to aborted when there is new command input.")
-(proclaim '(type (or (unsigned-byte 16) null) *terminal-baud-rate*))
-
 
 ;;; WRITE-AND-MAYBE-WAIT  --  Internal
 ;;;
