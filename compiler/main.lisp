@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.58 1992/04/21 04:13:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.59 1992/05/15 17:39:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -987,10 +987,10 @@
       (if (atom form)
 	  (convert-and-maybe-compile form path)
 	  (case (car form)
-	    ((make-package in-package shadow shadowing-import export
+	    ((make-package old-in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
 	     (process-cold-load-form form path t))
-	    ((error cerror break signal)
+	    ((error cerror break signal %in-package)
 	     (process-cold-load-form form path nil))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
