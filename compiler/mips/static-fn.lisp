@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.6 1990/04/24 02:56:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.7 1990/04/27 19:23:57 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -118,7 +118,7 @@
 
 
 (expand
- (collect ((templates '(progn)))
+ (collect ((templates (list 'progn)))
    (dotimes (i register-arg-count)
      (templates (static-function-template-vop i 1)))
    (templates)))
