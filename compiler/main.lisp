@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.105 1994/09/30 01:42:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.106 1994/10/05 16:30:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1310,7 +1310,7 @@
 		       (loop for (name form) on (cdr info) by #'cddr
 			 collect name into names
 			 collect form into forms
-			 finally do
+			 finally
 			 (compile-make-load-form-init-forms
 			  forms
 			  (format nil "Init Form~:[~;s~] for ~{~A~^, ~}"
