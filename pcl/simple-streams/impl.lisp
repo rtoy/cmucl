@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.5 2004/07/09 21:54:30 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.6 2004/07/11 03:49:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,8 +102,8 @@
 			      (otherwise position))))
 	  (simple-stream-dispatch stream
 	    ;; single-channel-simple-stream
-	    (when (> (sm mode stream) 0)
-	      (device-write stream :flush 0 nil t))
+	    (when (sc-dirty-p stream)
+	      (flush-buffer stream t))
 	    ;; dual-channel-simple-stream
 	    (with-stream-class (dual-channel-simple-stream stream)
 	      (when (> (sm outpos stream) 0)
@@ -112,7 +112,7 @@
 	    nil)
 
 	  (setf (sm last-char-read-size stream) 0)
-	  (setf (sm buffpos stream) 0	; set pointer to 0 to force a read
+	  (setf (sm buffpos stream) 0   ; set pointer to 0 to force a read
 		(sm buffer-ptr stream) 0)
 	  (setf (sm charpos stream) nil)
 	  (remove-stream-instance-flags stream :eof)
@@ -126,20 +126,19 @@
 			      (the lisp::index (second queued))))))
 	    (simple-stream-dispatch stream
 	      ;; single-channel-simple-stream
-	      (when (> (sm buffer-ptr stream) 0)
-		(case (sm mode stream)
-		  ((0 3)		; read, read-modify
-		   (decf posn (- (sm buffer-ptr stream) (sm buffpos stream))))
-		  (1			; write
-		   (incf posn (sm buffpos stream)))))
-	      ;; dual-channel-simple-stream
-	      (with-stream-class (dual-channel-simple-stream stream)
-		(incf posn (sm outpos stream))
-		(when (>= (sm buffer-ptr stream) 0)
-		  (decf posn (- (sm buffer-ptr stream) (sm buffpos stream)))))
-	      ;; string-simple-stream
-	      nil))
-	  posn))))
+	      (case (sm mode stream)
+		((0 3)			; read, read-modify
+		 (decf posn (- (sm buffer-ptr stream) (sm buffpos stream))))
+		(1			; write
+		 (incf posn (sm buffpos stream))))
+	    ;; dual-channel-simple-stream
+	    (with-stream-class (dual-channel-simple-stream stream)
+	      (incf posn (sm outpos stream))
+	      (when (>= (sm buffer-ptr stream) 0)
+		(decf posn (- (sm buffer-ptr stream) (sm buffpos stream)))))
+	    ;; string-simple-stream
+	    nil))
+	posn))))
 
 (defun %file-length (stream)
   (declare (type simple-stream stream))
@@ -465,7 +464,8 @@
 	  (when (>= ptr (sm buf-len stream))
 	    (setf ptr (flush-buffer stream t)))
 	  (setf (sm buffpos stream) (1+ ptr))
-	  (setf (bref (sm buffer stream) ptr) integer)))
+	  (setf (bref (sm buffer stream) ptr) integer)
+	  (sc-set-dirty stream)))
       ;; dual-channel-simple-stream
       (with-stream-class (dual-channel-simple-stream stream)
 	(let ((ptr (sm outpos stream)))
