@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.28 1998/05/01 00:53:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29 1998/05/19 02:08:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1435,9 +1435,9 @@
 ;;; Wait until FD is usable for DIRECTION.
 ;;;
 (defun process-wait-until-fd-usable (fd direction &optional timeout)
-  "Wait until FD is usable for DIRECTION. DIRECTION should be either :INPUT or
-  :OUTPUT. TIMEOUT, if supplied, is the number of seconds to wait before giving
-  up."
+  "Wait until FD is usable for DIRECTION and return True. DIRECTION should be
+  either :INPUT or :OUTPUT. TIMEOUT, if supplied, is the number of seconds to
+  wait before giving up and returing NIL."
   (declare (type kernel:index fd)
 	   (type (or real null) timeout)
 	   (optimize (speed 3)))
