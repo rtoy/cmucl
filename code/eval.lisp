@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.28 1998/12/19 16:00:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.29 1999/01/09 11:10:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,11 +179,25 @@
 		     :format-control "Wrong number of args to FUNCTION:~% ~S."
 		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
-	      (if (or (atom name)
-		      (and (consp name)
-			   (eq (car name) 'setf)))
-		  (fdefinition name)
-		  (eval:make-interpreted-function name))))
+	      (cond ((consp name)
+		     (if (eq (car name) 'setf)
+			 (fdefinition name)
+			 (eval:make-interpreted-function name)))
+		    ((macro-function name)
+		     (error 'simple-type-error
+			    :datum name
+			    :expected-type '(not (satisfies macro-function))
+			    :format-control "~S is a macro."
+			    :format-arguments (list name)))
+		    ((special-operator-p name)
+		     (error 'simple-type-error
+			    :datum name
+			    :expected-type '(not
+					     (satisfies special-operator-p))
+			    :format-control "~S is a special operator."
+			    :format-arguments (list name)))
+		    (t
+		     (fdefinition name)))))
 	   (quote
 	    (unless (= args 1)
 	      (error 'simple-program-error
