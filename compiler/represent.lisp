@@ -390,21 +390,21 @@
 	 (other-scn (sc-number other-sc))
 	 (any-ptype (backend-any-primitive-type *backend*))
 	 (op-ptype (tn-primitive-type op-tn)))
-    (dolist (info (if write-p
-		      (svref (funcall slot op-sc) other-scn)
-		      (svref (funcall slot other-sc) op-scn))
-		  nil)
-      (when (and (operand-restriction-ok
-		  (first (template-arg-types info))
-		  (if (or write-p (eq op-ptype any-ptype))
-		      other-ptype op-ptype)
-		  :tn op-tn :t-ok nil)
-		 (operand-restriction-ok
-		  (first (template-result-types info))
-		  (if (or write-p (eq other-ptype any-ptype))
-		      op-ptype other-ptype)
-		  :t-ok nil))
-	(return info)))))
+    (let ((other-ptype (if (eq other-ptype any-ptype) op-ptype other-ptype))
+	  (op-ptype (if (eq op-ptype any-ptype) other-ptype op-ptype)))
+      (dolist (info (if write-p
+			(svref (funcall slot op-sc) other-scn)
+			(svref (funcall slot other-sc) op-scn))
+		    nil)
+	(when (and (operand-restriction-ok
+		    (first (template-arg-types info))
+		    (if write-p other-ptype op-ptype)
+		    :tn op-tn :t-ok nil)
+		   (operand-restriction-ok
+		    (first (template-result-types info))
+		    (if write-p op-ptype other-ptype)
+		    :t-ok nil))
+	  (return info))))))
 
 	
 ;;; EMIT-COERCE-VOP  --  Internal
