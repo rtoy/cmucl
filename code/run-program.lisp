@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.12 1992/07/28 00:22:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.13 1993/08/04 11:51:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -299,54 +299,69 @@
       (values name
 	      (system:make-fd-stream master :input t :output t)))))
 
-;;; SETUP-CHILD -- internal
-;;;
-;;;   Execs the program after setting up the environment correctly. This
-;;; routine never returns under any condition.
-;;;
-(defun setup-child (pfile args env stdin stdout stderr pty-name before-execve)
-  (unwind-protect
-      (handler-bind ((error #'(lambda (condition)
-				(declare (ignore condition))
-				(unix:unix-exit 2))))
-	;; Put us in our own pgrp.
-	(unix:unix-setpgrp 0 (unix:unix-getpid))
-	;; If we want a pty, set it up.
-	(when pty-name
-	  (let ((old-tty (unix:unix-open "/dev/tty" unix:o_rdwr 0)))
-	    (when old-tty
-	      (unix:unix-ioctl old-tty unix:TIOCNOTTY nil)
-	      (unix:unix-close old-tty)))
-	  (let ((new-tty (unix:unix-open pty-name unix:o_rdwr 0)))
-	    (when new-tty
-	      (unix:unix-dup2 new-tty 0)
-	      (unix:unix-dup2 new-tty 1)
-	      (unix:unix-dup2 new-tty 2))))
-	;; Setup the three standard descriptors.
-	(when stdin
-	  (unix:unix-dup2 stdin 0))
-	(when stdout
-	  (unix:unix-dup2 stdout 1))
-	(when stderr
-	  (unix:unix-dup2 stderr 2))
-	;; Arange for all the unused FD's to be closed.
-	(do ((fd (1- (unix:unix-getdtablesize))
-		 (1- fd)))
-	    ((= fd 3))
-	  (unix:unix-fcntl fd unix:f-setfd 1))
-	;; Do the before-execve
-	(when before-execve
-	  (funcall before-execve))
-	;; Exec the program
-	(multiple-value-bind
-	    (okay errno)
-	    (unix:unix-execve pfile args env)
-	  (declare (ignore okay))
-	  ;; If the magic number if bogus, try just a shell script.
-	  (when (eql errno unix:ENOEXEC)
-	    (unix:unix-execve "/bin/sh" (cons pfile args) env))))
-    ;; If exec returns, we lose.
-    (unix:unix-exit 1)))
+
+(defmacro round-bytes-to-words (n)
+  `(logand (the fixnum (+ (the fixnum ,n) 3)) (lognot 3)))
+
+(defun string-list-to-c-strvec (string-list)
+  ;;
+  ;; Make a pass over string-list to calculate the amount of memory
+  ;; needed to hold the strvec.
+  (let ((string-bytes 0)
+	;; We need an extra for the null, and an extra 'cause exect clobbers
+	;; argv[-1].
+	(vec-bytes (* 4 (+ (length string-list) 2))))
+    (declare (fixnum string-bytes vec-bytes))
+    (dolist (s string-list)
+      (check-type s simple-string)
+      (incf string-bytes (round-bytes-to-words (1+ (length s)))))
+    ;;
+    ;; Now allocate the memory and fill it in.
+    (let* ((total-bytes (+ string-bytes vec-bytes))
+	   (vec-sap (system:allocate-system-memory total-bytes))
+	   (string-sap (sap+ vec-sap vec-bytes))
+	   (i 4))
+      (declare (type (and unsigned-byte fixnum) total-bytes i)
+	       (type system:system-area-pointer vec-sap string-sap))
+      (dolist (s string-list)
+	(declare (simple-string s))
+	(let ((n (length s)))
+	  ;; 
+	  ;; Blast the string into place
+	  (kernel:copy-to-system-area (the simple-string s)
+				      (* vm:vector-data-offset vm:word-bits)
+				      string-sap 0
+				      (* (1+ n) vm:byte-bits))
+	  ;; 
+	  ;; Blast the pointer to the string into place
+	  (setf (sap-ref-sap vec-sap i) string-sap)
+	  (setf string-sap (sap+ string-sap (round-bytes-to-words (1+ n))))
+	  (incf i 4)))
+      ;; Blast in last null pointer
+      (setf (sap-ref-sap vec-sap i) (int-sap 0))
+      (values vec-sap (sap+ vec-sap 4) total-bytes))))
+
+
+(defmacro with-c-strvec ((var str-list) &body body)
+  (let ((sap (gensym "SAP-"))
+	(size (gensym "SIZE-")))
+    `(multiple-value-bind
+	 (,sap ,var ,size)
+	 (string-list-to-c-strvec ,str-list)
+       (unwind-protect
+	   (progn
+	     ,@body)
+	 (system:deallocate-system-memory ,sap ,size)))))
+
+(alien:def-alien-routine spawn c-call:int
+  (program c-call:c-string)
+  (argv (* c-call:c-string))
+  (envp (* c-call:c-string))
+  (pty-name c-call:c-string)
+  (stdin c-call:int)
+  (stdout c-call:int)
+  (stderr c-call:int))
+
 
 ;;; RUN-PROGRAM -- public
 ;;;
@@ -387,8 +402,7 @@
 (defun run-program (program args
 		    &key (env *environment-list*) (wait t) pty input
 		    if-input-does-not-exist output (if-output-exists :error)
-		    (error :output) (if-error-exists :error) status-hook
-		    before-execve)
+		    (error :output) (if-error-exists :error) status-hook)
   "Run-program creates a new process and runs the unix progam in the
    file specified by the simple-string program.  Args are the standard
    arguments that can be passed to a Unix program, for no arguments
@@ -423,7 +437,7 @@
            nil (default) - return nil from run-program.
      :output -
         Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard
-	input for the current process is inherited.  If NIL, /dev/null
+	output for the current process is inherited.  If NIL, /dev/null
 	is used.  If a pathname, the file so specified is used.  If a stream,
 	all the output from the process is written to this stream. If
 	:STREAM, the PROCESS-OUTPUT slot is filled in with a stream that can
@@ -440,10 +454,7 @@
 	same place as normal output.
      :status-hook -
         This is a function the system calls whenever the status of the
-        process changes.  The function takes the process as an argument.
-     :before-execve -
-        This is a function, without arguments, RUN-PROGRAM runs in the child
-        process just before turning it into the specified program."
+        process changes.  The function takes the process as an argument."
 
   ;; Make sure the interrupt handler is installed.
   (system:enable-interrupt unix:sigchld #'sigchld-handler)
@@ -456,7 +467,7 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile (namestring (truename (merge-pathnames program "path:"))))
+	(let ((pfile (unix-namestring (merge-pathnames program "path:")))
 	      (cookie (list 0)))
 	  (multiple-value-bind
 	      (stdin input-stream)
@@ -477,29 +488,30 @@
 		  ;; Make sure we are not notified about the child death before
 		  ;; we have installed the process struct in *active-processes*
 		  (system:without-interrupts
-		    (multiple-value-bind
-			(child-pid errno)
-			(unix:unix-fork)
-		      (cond ((null child-pid)
-			     ;; This should only happen if the bozo has too
-			     ;; many running procs.
-			     (error "Could not fork child process: ~A"
-				    (unix:get-unix-error-msg errno)))
-			    ((zerop child-pid)
-			     ;; We are the child. Note: setup-child NEVER
-			     ;; returns
-			     (setup-child pfile args env stdin stdout stderr
-					  pty-name before-execve))
-			    (t
-			     ;; We are the parent.
-			     (setf proc (make-process :pid child-pid
-						      :%status :running
-						      :pty pty-stream
-						      :input input-stream
-						      :output output-stream
-						      :error error-stream
-						      :status-hook status-hook
-						      :cookie cookie))
+		    (with-c-strvec (argv args)
+		      (with-c-strvec
+			  (envp (mapcar #'(lambda (entry)
+					    (concatenate
+					     'string
+					     (symbol-name (car entry))
+					     "="
+					     (cdr entry)))
+					env))
+			(let ((child-pid
+			       (without-gcing
+				(spawn pfile argv envp pty-name
+				       stdin stdout stderr))))
+			  (when (< child-pid 0)
+			    (error "Could not fork child process: ~A"
+				   (unix:get-unix-error-msg)))
+			  (setf proc (make-process :pid child-pid
+						   :%status :running
+						   :pty pty-stream
+						   :input input-stream
+						   :output output-stream
+						   :error error-stream
+						   :status-hook status-hook
+						   :cookie cookie))
 			     (push proc *active-processes*))))))))))
       (dolist (fd *close-in-parent*)
 	(unix:unix-close fd))
@@ -573,7 +585,7 @@
 				  &allow-other-keys)
   (cond ((eq object t)
 	 ;; No new descriptor is needed.
-	 (values nil nil))
+	 (values -1 nil))
 	((eq object nil)
 	 ;; Use /dev/null.
 	 (multiple-value-bind
