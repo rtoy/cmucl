@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.58 1998/01/02 05:08:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.59 1998/01/05 05:54:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,9 +280,11 @@
 			   :high new-hi)))))
 ;;;
 (defoptimizer (scale-single-float derive-type) ((f ex))
-  (two-arg-derive-type f ex #'scale-float-derive-type-aux #'scale-single-float))
+  (two-arg-derive-type f ex #'scale-float-derive-type-aux
+		       #'scale-single-float t))
 (defoptimizer (scale-double-float derive-type) ((f ex))
-  (two-arg-derive-type f ex #'scale-float-derive-type-aux #'scale-double-float))
+  (two-arg-derive-type f ex #'scale-float-derive-type-aux
+		       #'scale-double-float t))
 	     
 ;;; toy@rtp.ericsson.se:
 ;;;
@@ -593,10 +595,16 @@
 ;;;; function, based on the domain of the input.
 ;;;;
 
-;;; Handle these monotonic increasing functions whose domain is
-;;; possibly part of the real line
-
-(defun elfun-derive-type-simple (arg fcn cond default-lo default-hi)
+;;; ELFUN-DERIVE-TYPE-SIMPLE
+;;; 
+;;; Handle monotonic increasing functions of a single variable whose
+;;; domain is possibly part of the real line.  ARG is the variable,
+;;; FCN is the function, and CSPEC is a specifier that gives the
+;;; (real) domain of the function.  If ARG is not a subtype of CSPEC,
+;;; then the function is assumed to return either a float or a complex
+;;; number.  DEFAULT-LO and DEFAULT-HI are the lower and upper bounds
+;;; if we can't compute the bounds using FCN.
+(defun elfun-derive-type-simple (arg fcn cspec default-lo default-hi)
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
@@ -606,7 +614,7 @@
 	   ((numeric-type-real-p arg)
 	    (let ((lo (numeric-type-low arg))
 		  (hi (numeric-type-high arg)))
-	      (if (funcall cond lo hi)
+	      (if (csubtypep arg cspec)
 		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
 		    (make-numeric-type
 		     :class 'float
@@ -620,82 +628,40 @@
 	    (float-or-complex-type arg default-lo default-hi))))))
 
 (macrolet
-    ((frob (name cond def-lo-bnd def-hi-bnd)
+    ((frob (name cspec def-lo-bnd def-hi-bnd)
        (let ((num (gensym)))
 	 `(defoptimizer (,name derive-type) ((,num))
 	   (one-arg-derive-type
 	    ,num
 	    #'(lambda (arg)
 		(elfun-derive-type-simple arg #',name
-					  ,cond
+					  ,cspec
 					  ,def-lo-bnd ,def-hi-bnd))
 	    #',name)))))
   ;; These functions are easy because they are defined for the whole
   ;; real line.
-  (frob exp (constantly t)
+  (frob exp (specifier-type 'real)
 	0 nil)
-  (frob sinh (constantly t)
+  (frob sinh (specifier-type 'real)
 	nil nil)
-  (frob tanh (constantly t)
+  (frob tanh (specifier-type 'real)
 	-1 1)
-  (frob asinh (constantly t)
+  (frob asinh (specifier-type 'real)
 	nil nil)
 
   ;; These functions are only defined for part of the real line.  The
-  ;; condition selects the desired part of the line.  The default
-  ;; return value of (OR FLOAT (COMPLEX FLOAT)) is ok as the default.
-  (frob asin #'(lambda (lo hi)
-		 (and lo hi
-		      (>= (bound-value lo) -1)
-		      (<= (bound-value hi) 1)))
+  ;; condition selects the desired part of the line.  
+  (frob asin (specifier-type '(real -1d0 1d0))
 	#.(- (/ pi 2)) #.(/ pi 2))
-  (frob acosh #'(lambda (lo hi)
-		  (declare (ignore hi))
-		  (and lo (>= (bound-value lo) 1)))
+  (frob acosh (specifier-type '(real 1d0))
 	nil nil)
-  (frob atanh #'(lambda (lo hi)
-		  (and lo hi
-		       (>= (bound-value lo) -1)
-		       (<= (bound-value hi) 1)))
-	-1 1))
-
-
-;;; Note must assume that a type including 0.0 may also include -0.0
-;;; and thus the result may be complex.
-;;;
-(defun sqrt-derive-type-aux (arg)
-  (etypecase arg
-    (numeric-type
-     (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
-	   ((numeric-type-real-p arg)
-	    (let* ((lo (numeric-type-low arg))
-		   (lo-val (and lo (bound-value lo)))
-		   (hi (numeric-type-high arg)))
-	      (if (typecase lo-val
-		    (rational
-		     (>= lo-val 0))
-		    (float
-		     (if (consp lo)
-			 (>= lo-val 0)
-			 (> lo-val 0))))
-		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
-		    (make-numeric-type
-		     :class 'float
-		     :format f-type
-		     :low (cond ((> lo-val 0) (bound-func #'sqrt lo))
-				((consp lo) (list (coerce 0 f-type)))
-				(t (coerce 0 f-type)))
-		     :high (bound-func #'sqrt hi)))
-		  (float-or-complex-type arg 0))))
-	   (t
-	    (float-or-complex-type arg 0))))))
-;;;
-(defoptimizer (sqrt derive-type) ((num))
-  (one-arg-derive-type num #'sqrt-derive-type-aux #'sqrt))
-
+  (frob atanh (specifier-type '(real -1d0 1d0))
+	-1 1)
+  (frob sqrt (specifier-type
+	      #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
+	      #+negative-zero-is-not-zero '(real 0d0))
+	0 nil))
+ 
 
 ;;; Acos is monotonic decreasing, so we need to swap the function
 ;;; values at the lower and upper bounds of the input domain.
@@ -741,7 +707,7 @@
 
 ;;; Handle the case when x >= 1
 (defun interval-expt-> (x y)
-  (case (c::interval-range-info y)
+  (case (c::interval-range-info y 0d0)
     ('+
      ;; Y is positive and log X >= 0.  The range of exp(y * log(x)) is
      ;; obviously non-negative.  We just have to be careful for
@@ -769,7 +735,7 @@
 
 ;;; Handle the case when x <= 1
 (defun interval-expt-< (x y)
-  (case (c::interval-range-info x 0)
+  (case (c::interval-range-info x 0d0)
     ('+
      ;; The case of 0 <= x <= 1 is easy
      (case (c::interval-range-info y)
@@ -874,7 +840,7 @@
 	   (integer
 	    ;; Positive rational to an integer power is always a rational
 	    (specifier-type `(rational ,(or (interval-low bnd) '*)
-			      ,(or (interval-high bnd) '*))))
+				       ,(or (interval-high bnd) '*))))
 	   (rational
 	    ;; Positive rational to rational power is either a rational
 	    ;; or a single-float.
@@ -964,33 +930,13 @@
 ;;; Note must assume that a type including 0.0 may also include -0.0
 ;;; and thus the result may be complex -infinity + i*pi.
 ;;;
-(defun log-derive-type-aux-1 (arg)
-  (etypecase arg
-    (numeric-type
-     (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
-	   ((numeric-type-real-p arg)
-	    (let* ((lo (numeric-type-low arg))
-		   (lo-val (and lo (bound-value lo)))
-		   (hi (numeric-type-high arg)))
-	      (if (typecase lo-val
-		    (rational
-		     (>= lo-val 0))
-		    (float
-		     (if (consp lo)
-			 (>= lo-val 0)
-			 (> lo-val 0))))
-		  (let ((f-type (or (numeric-type-format arg) 'single-float)))
-		    (make-numeric-type
-		     :class 'float
-		     :format f-type
-		     :low (and (> lo-val 0) (bound-func #'log lo))
-		     :high (bound-func #'log hi)))
-		  (float-or-complex-type arg))))
-	   (t
-	    (float-or-complex-type arg))))))
+(defun log-derive-type-aux-1 (x)
+  (elfun-derive-type-simple
+   x #'log
+   (specifier-type
+    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
+    #+negative-zero-is-not-zero '(real 0d0))
+   nil nil))
 
 (defun log-derive-type-aux-2 (x y same-arg)
   (let ((log-x (log-derive-type-aux-1 x))
@@ -1014,7 +960,7 @@
 
 (defun atan-derive-type-aux-1 (y)
   (elfun-derive-type-simple
-   y #'atan (constantly t) #.(- (/ pi 2)) #.(/ pi 2)))
+   y #'atan (specifier-type 'real) #.(- (/ pi 2)) #.(/ pi 2)))
 
 (defun atan-derive-type-aux-2 (y x same-arg)
   (declare (ignore same-arg))
@@ -1034,28 +980,26 @@
 	 (float-or-complex-type (numeric-contagion x y)))))
 
 (defoptimizer (atan derive-type) ((y &optional x))
-  (cond ((null x)
-	 (one-arg-derive-type y #'atan-derive-type-aux-1 #'atan))
-	(t
-	 (two-arg-derive-type y x #'atan-derive-type-aux-2 #'atan))))
+  (if x
+      (two-arg-derive-type y x #'atan-derive-type-aux-2 #'atan)
+      (one-arg-derive-type y #'atan-derive-type-aux-1 #'atan)))
 
 
 (defun cosh-derive-type-aux (x)
+  ;; We note that cosh x = cosh |x| for all real x.
   (elfun-derive-type-simple
    (if (numeric-type-real-p x)
        (abs-derive-type-aux x)
        x)
-   #'cosh (constantly t) 0 nil))
+   #'cosh (specifier-type 'real) 0 nil))
 
 (defoptimizer (cosh derive-type) ((num))
   (one-arg-derive-type num #'cosh-derive-type-aux #'cosh))
 
 
 (defun phase-derive-type-aux (type)
-  ;; Warning: This optimizer doesn't yet handle the case of -0.0.
-  ;; It returns 0 for this case instead of pi.  Need to fix this.
   (cond ((numeric-type-real-p type)
-	 (case (interval-range-info (numeric-type->interval type))
+	 (case (interval-range-info (numeric-type->interval type) 0.0)
 	   ('+
 	    ;; The number is positive, so the phase is 0.
 	    (make-numeric-type :class 'float
@@ -1256,7 +1200,7 @@
 	       ;; Divide a complex by a float
 	       (deftransform / ((w z) ((complex ,type) ,type) *)
 		 '(complex (/ (realpart w) z) (/ (imagpart w) z)))
-	       ;; Conjugate of a float or complex number
+	       ;; Conjugate of complex number
 	       (deftransform conjugate ((z) ((complex ,type)) *)
 		 '(complex (realpart z) (- (imagpart z))))
 	       ;; Cis.
