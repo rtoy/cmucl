@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.54 1990/11/13 23:22:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.55 1990/11/16 04:37:10 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -291,6 +291,7 @@
 	  %set-sap-ref-single %set-sap-ref-double
 	  make-single-float make-double-float single-float-bits
 	  double-float-high-bits double-float-low-bits
+	  single-float-p double-float-p base-char-p simple-array-p
 	  %raw-bits %set-raw-bits %sp-set-definition
 
 	  ))
