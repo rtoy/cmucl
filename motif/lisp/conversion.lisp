@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.3 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.4 2000/02/14 11:52:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,8 +201,16 @@
 	      (packet-write-string (message-fill-packet message)
 				   string 0 length))
 	     (t
-	      (break "Attempt to write a string larger than *packet-size*.
-		      Come back later to get this to work.")))
+	      (do ((next 0)
+		   (len (min length (- *packet-size* (packet-length packet)))
+			(min length (- *packet-size* (packet-length packet)))))
+		  ((not (plusp length)))
+		(packet-write-string packet string next len)
+		(incf next len)
+		(decf length len)
+		(when (plusp length)
+		  (message-add-packet message)
+		  (setf packet (message-fill-packet message))))))
 	    (let ((pad (- 4 (mod (packet-fill packet) 4))))
 	      (unless (> pad 3)
 		(dotimes (i pad)

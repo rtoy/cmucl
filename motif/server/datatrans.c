@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.6 1997/12/31 18:57:53 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.7 2000/02/14 11:52:25 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -280,14 +280,23 @@ String really_read_string(message_t message,int length)
   int pad,i;
   packet_t packet=message->packets;
   String string;
-
-  /* Check to see if the string is in this packet or not */
-  if( length > packet->length-(packet->fill-packet->data) )
+  if( length <= packet->length - (packet->fill - packet->data)){
+    string = packet->fill;
+    packet->fill += length;
+  }
+  else if (length < (PACKET_SIZE - HEADER_LENGTH)){
     packet = message->packets = packet->next;
+    string = packet->fill;
+    packet->fill += length;
+  }
+  else {
+    string = XtMalloc(length * sizeof(*string));
+    register_garbage(string, GarbageData);
+    for(i=0; i<length; i++)
+      string[i] = message_get_byte(message);
+    packet = message->packets;
+  }
 
-  /***** We will IGNORE strings spanning packets for now *******/
-  string = packet->fill;
-  for(i=0;i<length;i++) packet->fill++;
   /*
    * This is a pretty gross way of finding out how many padding bytes
    * there should be.  The outermost %4 should perhaps be replaced with
