@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.34 2004/07/13 00:26:22 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.35 2004/09/21 11:59:17 emarsden Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -289,7 +289,7 @@ F(getpwuid_r)
 F(getgrnam_r)
 F(getgrgid_r)
 #endif
-#if defined(__NetBSD__)
+#if defined(__NetBSD__) || defined(DARWIN)
 F(getpwnam)
 F(getpwuid)
 F(getgrnam)

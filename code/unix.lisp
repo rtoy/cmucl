@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.98 2004/08/31 12:39:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.99 2004/09/21 11:59:16 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,8 +202,9 @@
     #+alpha unsigned-long)
 
 (def-alien-type time-t
-    #-(or linux alpha) unsigned-long
+    #-(or bsd linux alpha) unsigned-long
     #+linux long
+    #+bsd long
     #+alpha unsigned-int)
 
 (def-alien-type dev-t
@@ -1024,14 +1025,14 @@
             (pw-expire int)             ; account expiration
             (pw-fields int)))           ; internal
 
-#+netbsd
+#+(or netbsd darwin)
 (def-alien-type nil
     (struct passwd
 	    (pw-name (* char))          ; user's login name
 	    (pw-passwd (* char))        ; no longer used
 	    (pw-uid uid-t)              ; user id
 	    (pw-gid gid-t)              ; group id
-            (pw-change int)             ; password change time
+            (pw-change time-t)          ; password change time
             (pw-class (* char))         ; user access class
 	    (pw-gecos (* char))         ; typically user's full name
 	    (pw-dir (* char))           ; user's home directory
@@ -3062,7 +3063,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+(or FreeBSD NetBSD)
+#+(or FreeBSD NetBSD darwin)
 (defun unix-getpwnam (login)
   "Return a USER-INFO structure for the user identified by LOGIN, or NIL if not found."
   (declare (type simple-string login))
@@ -3078,7 +3079,7 @@
        :password (string (cast (slot result 'pw-passwd) c-call:c-string))
        :uid (slot result 'pw-uid)
        :gid (slot result 'pw-gid)
-       :change (slot result 'pw-change)
+       #-darwin :change #-darwin (slot result 'pw-change)
        :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
        :dir (string (cast (slot result 'pw-dir) c-call:c-string))
        :shell (string (cast (slot result 'pw-shell) c-call:c-string))))))
@@ -3113,7 +3114,7 @@
 	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
 	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))
 
-#+(or FreeBSD NetBSD)
+#+(or FreeBSD NetBSD darwin)
 (defun unix-getpwuid (uid)
   "Return a USER-INFO structure for the user identified by UID, or NIL if not found."
   (declare (type unix-uid uid))

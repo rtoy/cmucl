@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.17 2004/07/13 00:26:22 pmai Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.18 2004/09/21 11:59:17 emarsden Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -197,6 +197,12 @@ PVE_stub_ ## fct: ;\
  doe(getpwuid_r)
  doe(getgrnam_r)
  doe(getgrgid_r)
+
+#if defined(DARWIN)
+ doe(getpwuid)
+ doe(getpwnam)
+#endif
+
 #ifndef DARWIN
  doe(open64)
  doe(creat64)
