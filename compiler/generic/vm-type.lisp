@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.26 1991/04/24 12:24:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.27 1991/11/09 02:40:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.26 1991/04/24 12:24:57 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.27 1991/11/09 02:40:14 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -28,11 +28,6 @@
 ;;; This is be expanded before the translator gets a chance, so we will get
 ;;; precedence.
 ;;;
-;;; ### Bootstrap hack: if we frob these types in the old compiler environment,
-;;; subtypep will break.
-;;; 
-(compiler-let ((lisp::*bootstrap-deftype* t))
-
 (setf (info type kind 'long-float) :defined)
 (deftype long-float (&optional low high)
   `(double-float ,low ,high))
@@ -41,20 +36,14 @@
 (deftype short-float (&optional low high)
   `(single-float ,low ,high))
 
-); compiler-let
 ;;; Compiled-function is the same as function in this implementation.
 ;;;
 (deftype compiled-function () 'function)
 
-;;; Character is the same as base-character.
-;;; ### Bootstrap hack: base characters don't exist in the old compiler,
-;;; so leave characters alone.  Also, make string-char look like base-char.
-(compiler-let ((lisp::*bootstrap-deftype* t))
-  (setf (info type builtin 'character) nil)
-  (setf (info type kind 'character) :defined)
-  (deftype character () 'base-character)
-  #-new-compiler
-  (deftype string-char () 'base-character))
+;;; Character is the same as base-char.
+(setf (info type builtin 'character) nil)
+(setf (info type kind 'character) :defined)
+(deftype character () 'base-char)
 
 ;;;
 ;;; An index into an integer.
@@ -105,7 +94,7 @@
 ;;;
 (defparameter specialized-array-element-types
   '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8) (unsigned-byte 16)
-	(unsigned-byte 32) base-character single-float double-float))
+	(unsigned-byte 32) base-char single-float double-float))
 
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
