@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.13 1992/09/03 12:52:51 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.14 1992/09/03 12:58:42 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1681,7 +1681,7 @@
 ;;; The search mechanism for loading pathname translations uses the CMUCL
 ;;; extension of search-lists.  The user can add to the library: search-list
 ;;; using setf.  The file for translations should have the name defined by
-;;; the host name (a string) and with type component "translations".
+;;; the hostname (a string) and with type component "translations".
 
 ;;; SAVE-LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
