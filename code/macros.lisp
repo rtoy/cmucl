@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.15 1990/11/19 06:18:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.16 1990/11/19 06:53:12 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -488,24 +488,23 @@
   "Like Get-Setf-Method, but may return multiple new-value variables."
   (get-setf-method form environment))
 
-(defun defsetter (fn rest env)
+(defun defsetter (fn rest)
   (let ((arglist (car rest))
 	(arglist-var (gensym "ARGS-"))
 	(new-var (car (cadr rest))))
     (multiple-value-bind
 	(body local-decs doc)
-	(parse-defmacro arglist arglist-var (cddr rest) fn 'defsetf
-			:environment env)
+	(parse-defmacro arglist arglist-var (cddr rest) fn 'defsetf)
       (values 
        `(lambda (,arglist-var ,new-var)
 	  ,@local-decs
-	  ,@body)
+	  ,body)
        doc))))
 
 ) ; End of Eval-When.
 
 
-(defmacro defsetf (access-fn &rest rest &environment env)
+(defmacro defsetf (access-fn &rest rest)
   "Associates a SETF update function or macro with the specified access
   function or macro.  The format is complex.  See the manual for
   details."
@@ -522,7 +521,7 @@
 	     (cerror "Ignore the extra items in the list."
 		     "Only one new-value variable allowed in DEFSETF."))
 	 (multiple-value-bind (setting-form-generator doc)
-			      (defsetter access-fn rest env)
+			      (defsetter access-fn rest)
 	   `(eval-when (load compile eval)
 	      (setf (info setf inverse ',access-fn) nil)
 	      (setf (info setf expander ',access-fn)
