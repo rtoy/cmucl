@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.44 1996/05/08 13:48:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.45 1997/02/12 20:09:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1261,8 +1261,16 @@ See the CMU Common Lisp User's Manual for more information.
 (defvar *cached-source-stream* nil)
 (declaim (type (or stream null) *cached-source-stream*))
 
+;;; To suppress the read-time evaluation #. macro during source read
+;;; the *readtable* is modified. The *readtable* is cached to avoid
+;;; copying it each time, and invalidated when the
+;;; *cached-debug-source* has changed.
+(defvar *cached-readtable* nil)
+(declaim (type (or readtable null) *cached-readtable*))
+
 (pushnew #'(lambda ()
-	     (setq *cached-debug-source* nil *cached-source-stream* nil))
+	     (setq *cached-debug-source* nil *cached-source-stream* nil
+		   *cached-readtable* nil))
 	 ext:*before-save-initializations*)
 
 
@@ -1319,6 +1327,7 @@ See the CMU Common Lisp User's Manual for more information.
       (unless (and *cached-source-stream*
 		   (equal (pathname *cached-source-stream*)
 			  (pathname name)))
+	(setq *cached-readtable* nil)
 	(when *cached-source-stream* (close *cached-source-stream*))
 	(setq *cached-source-stream* (open name :if-does-not-exist nil))
 	(unless *cached-source-stream*
@@ -1340,7 +1349,17 @@ See the CMU Common Lisp User's Manual for more information.
       (let ((*read-suppress* t))
 	(dotimes (i local-tlf-offset)
 	  (read *cached-source-stream*)))))
-    (read *cached-source-stream*)))
+    (unless *cached-readtable*
+      (setq *cached-readtable* (copy-readtable))
+      (set-dispatch-macro-character
+       #\# #\.
+       #'(lambda (stream sub-char &rest rest)
+	   (declare (ignore rest sub-char))
+	   (let ((token (read stream t nil t)))
+	     (format nil "#.~s" token)))
+       *cached-readtable*))
+    (let ((*readtable* *cached-readtable*))
+      (read *cached-source-stream*))))
 
 
 ;;; PRINT-CODE-LOCATION-SOURCE-FORM -- Internal.
