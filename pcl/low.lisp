@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.14 2001/04/17 17:30:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.15 2001/09/22 13:57:42 pw Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -332,6 +332,9 @@ the compiler as completely as possible.  Currently this means that
   (and (symbolp type)
        (let ((class  (lisp:find-class type nil)))
 	 (and class
+	      ;; class may not be complete if created by
+	      ;; inform-type-system-aboutd-std-class
+	      (kernel:class-layout class)
 	      (typep (kernel:layout-info (kernel:class-layout class))
 		     'kernel:defstruct-description)))))
 

@@ -1,4 +1,4 @@
-;;;-*-Mode:LISP; Package:(PCL LISP 1000); Base:10; Syntax:Common-lisp -*-
+;;;-*-Mode:LISP; Package:PCL  -*-
 ;;;
 ;;; *************************************************************************
 ;;; Copyright (c) 1985, 1986, 1987, 1988, 1989, 1990 Xerox Corporation.
@@ -192,7 +192,6 @@
   ;; skeleton class will be replaced at load-time with the correct object.
   ;; Earlier revisions (<= 1.17) of this function were essentially NOOPs.
   (declare (ignorable name))
-  #+nil ;; This is causing problems with native compile of defcombin.lisp
   (when (and (eq *boot-state* 'complete)
 	     (null (lisp:find-class name nil)))
     (setf (lisp:find-class name)
