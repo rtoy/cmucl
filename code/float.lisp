@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.10 1992/12/10 01:28:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.11 1993/05/07 12:10:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -653,14 +653,75 @@
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)
-		   (let ((num (numerator x))
-			 (den (denominator x)))
-		     (if (and (fixnump num) (fixnump den))
-			 (/ (coerce num ',type) (coerce den ',type))
-			 (float-bignum-ratio x ',type))))))))
+		   (float-ratio x ',type))))))
   (frob %single-float single-float)
   (frob %double-float double-float))
 
+
+;;; FLOAT-RATIO  --  Internal
+;;;
+;;;    Convert a ratio to a float.  We avoid any rounding error by doing an
+;;; integer division.  Accuracy is important to preserve read/print
+;;; consistency, since this is ultimately how the reader reads a float.  We
+;;; scale the numerator by a power of two until the division results in the
+;;; desired number of fraction bits, then do round-to-nearest.
+;;;
+(defun float-ratio (x format)
+  (let* ((signed-num (numerator x))
+	 (plusp (plusp signed-num))
+	 (num (if plusp signed-num (- signed-num)))
+	 (den (denominator x))
+	 (digits (float-format-digits format))
+	 (scale 0))
+    (declare (fixnum digits scale))
+    ;;
+    ;; Strip any trailing zeros from the denominator and move it into the scale
+    ;; factor (to minimize the size of the operands.)
+    (let ((den-twos (1- (integer-length (logxor den (1- den))))))
+      (declare (fixnum den-twos))
+      (decf scale den-twos)
+      (setq den (ash den (- den-twos))))
+    ;;
+    ;; Guess how much we need to scale by from the magnitudes of the numerator
+    ;; and denominator.  We want one extra bit for a guard bit.
+    (let* ((num-len (integer-length num))
+	   (den-len (integer-length den))
+	   (delta (- den-len num-len))
+	   (shift (1+ (the fixnum (+ delta digits))))
+	   (shifted-num (ash num shift)))
+      (declare (fixnum delta shift))
+      (decf scale delta)
+      (labels ((float-and-scale (bits)
+		 (let* ((bits (ash bits -1))
+			(len (integer-length bits)))
+		   (cond ((> len digits)
+			  (assert (= len (the fixnum (1+ digits))))
+			  (scale-float (floatit (ash bits -1)) (1+ scale)))
+			 (t
+			  (scale-float (floatit bits) scale)))))
+	       (floatit (bits)
+		 (let ((sign (if plusp 0 1)))
+		   (if (eq format 'single-float)
+		       (single-from-bits sign vm:single-float-bias bits)
+		       (double-from-bits sign vm:double-float-bias bits)))))
+	(loop
+	  (multiple-value-bind (fraction-and-guard rem)
+			       (truncate shifted-num den)
+	    (let ((extra (- (integer-length fraction-and-guard) digits)))
+	      (declare (fixnum extra))
+	      (cond ((/= extra 1)
+		     (assert (> extra 1)))
+		    ((oddp fraction-and-guard)
+		     (if (zerop rem)
+			 (float-and-scale
+			  (if (zerop (logand fraction-and-guard 2))
+			      fraction-and-guard
+			      (1+ fraction-and-guard)))
+			 (return (float-and-scale (1+ fraction-and-guard)))))
+		    (t
+		     (return (float-and-scale fraction-and-guard)))))
+	    (setq shifted-num (ash shifted-num -1))
+	    (incf scale)))))))
 
 #|
 These might be useful if we ever have a machine w/o float/integer conversion
