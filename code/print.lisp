@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.59 1993/08/20 08:10:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.60 1993/08/20 08:19:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1105,8 +1105,9 @@
 
 (defun output-instance (instance stream)
   (let ((layout (typecase instance
-		  (funcallable-instance (%instance-ref instance 0))
-		  (instance (%funcallable-instance-layout instance)))))
+		  (instance (%instance-ref instance 0))
+		  (funcallable-instance
+		   (%funcallable-instance-layout instance)))))
 
     (if (typep layout 'layout)
 	(let ((class (layout-class layout)))
