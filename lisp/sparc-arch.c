@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.20 2004/01/09 05:07:39 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.21 2004/07/01 16:25:12 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -510,89 +510,9 @@ static void sigill_handler(HANDLER_ARGS)
       }
 }
 
-static void sigemt_handler(HANDLER_ARGS)
-{
-    unsigned long badinst;
-    boolean subtract, immed;
-    int rd, rs1, op1, rs2, op2, result;
-
-    badinst = *(unsigned long *)SC_PC(context);
-    if ((badinst >> 30) != 2 || ((badinst >> 20) & 0x1f) != 0x11) {
-	/* It wasn't a tagged add.  Pass the signal into lisp. */
-	interrupt_handle_now(signal, code, context);
-	return;
-    }
-
-    fprintf(stderr, "SIGEMT trap handler with tagged op instruction!\n");
-    
-    /* Extract the parts of the inst. */
-    subtract = badinst & (1<<19);
-    rs1 = (badinst>>14) & 0x1f;
-    op1 = SC_REG(context, rs1);
-
-    /* If the first arg is $ALLOC then it is really a signal-pending note */
-    /* for the pseudo-atomic noise. */
-    if (rs1 == reg_ALLOC) {
-	/* Perform the op anyway. */
-	op2 = badinst & 0x1fff;
-	if (op2 & (1<<12))
-	    op2 |= -1<<13;
-	if (subtract)
-	    result = op1 - op2;
-	else
-	    result = op1 + op2;
-	SC_REG(context, reg_ALLOC) = result & ~lowtag_Mask;
-	arch_skip_instruction(context);
-	interrupt_handle_pending(context);
-	return;
-    }
-
-    if ((op1 & 3) != 0) {
-	/* The first arg wan't a fixnum. */
-	interrupt_internal_error(signal, code, context, FALSE);
-	return;
-    }
-
-    if (immed = badinst & (1<<13)) {
-	op2 = badinst & 0x1fff;
-	if (op2 & (1<<12))
-	    op2 |= -1<<13;
-    }
-    else {
-	rs2 = badinst & 0x1f;
-	op2 = SC_REG(context, rs2);
-    }
-
-    if ((op2 & 3) != 0) {
-	/* The second arg wan't a fixnum. */
-	interrupt_internal_error(signal, code, context, FALSE);
-	return;
-    }
-
-    rd = (badinst>>25) & 0x1f;
-    if (rd != 0) {
-	/* Don't bother computing the result unless we are going to use it. */
-	if (subtract)
-	    result = (op1>>2) - (op2>>2);
-	else
-	    result = (op1>>2) + (op2>>2);
-
-        current_dynamic_space_free_pointer =
-            (lispobj *) SC_REG(context, reg_ALLOC);
-
-	SC_REG(context, rd) = alloc_number(result);
-
-	SC_REG(context, reg_ALLOC) =
-	    (unsigned long) current_dynamic_space_free_pointer;
-    }
-
-    arch_skip_instruction(context);
-}
-
 void arch_install_interrupt_handlers()
 {
     interrupt_install_low_level_handler(SIGILL,sigill_handler);
-    interrupt_install_low_level_handler(SIGEMT,sigemt_handler);
 }
 
 
