@@ -35,8 +35,7 @@
     (let ((block (ir2-block-block (vop-block vop))))
     (when (ir2-environment-number-stack-p
 	   (environment-info
-	    (lambda-environment
-	     (block-lambda block))))
+	    (block-environment block)))
       (ir2-component-nfp (component-info (block-component block)))))))
 
 
@@ -64,11 +63,11 @@
 (defun generate-code (component)
   (let ((prev-env nil))
     (do-ir2-blocks (block component)
-      (let* ((1block (ir2-block-block block))
-	     (lambda (block-lambda 1block)))
-	(when (and (eq (block-info 1block) block) lambda)
+      (let ((1block (ir2-block-block block)))
+	(when (and (eq (block-info 1block) block)
+		   (block-start 1block))
 	  (emit-label (block-label 1block))
-	  (let ((env (lambda-environment lambda)))
+	  (let ((env (block-environment 1block)))
 	    (unless (eq env prev-env)
 	      (let ((lab (gen-label)))
 		(setf (ir2-environment-elsewhere-start (environment-info env))
