@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.29 1993/02/26 08:25:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.30 1993/03/01 20:08:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,8 +125,7 @@
       (type-specifier (ctype-of object))
       (let* ((class (layout-class (layout-of object)))
 	     (name (class-name class)))
-	(if #-ns-boot(%instancep object)
-	    #+ns-boot(structurep object)
+	(if (%instancep object)
 	    (case name
 	      (alien-internals:alien-value
 	       `(alien:alien
@@ -368,7 +367,6 @@
 	      (equalp (cdr x) (cdr y))))
 	((pathnamep x)
 	 (and (pathnamep y) (pathname= x y)))
-	#-ns-boot
 	((%instancep x)
 	 (let* ((layout-x (%instance-layout x))
 		(len (layout-length layout-x)))
@@ -383,17 +381,6 @@
 		    (unless (or (eq x-el y-el)
 				(equalp x-el y-el))
 		      (return nil)))))))
-	#+ns-boot
-	((structurep x)
-	 (let ((length (structure-length x)))
-	   (and (structurep y)
-		(= length (structure-length y))
-		(dotimes (i length t)
-		  (let ((x-el (structure-ref x i))
-			(y-el (structure-ref y i)))
-		    (unless (or (eq x-el y-el)
-				(equalp x-el y-el))
-		      (return nil)))))))	
 	((vectorp x)
 	 (let ((length (length x)))
 	   (and (vectorp y)
