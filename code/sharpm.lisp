@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.7 1991/11/28 21:08:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.8 1991/11/30 03:16:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -406,7 +406,6 @@
     (set-dispatch-macro-character #\# #\* #'sharp-star)
     (set-dispatch-macro-character #\# #\: #'sharp-colon)
     (set-dispatch-macro-character #\# #\. #'sharp-dot)
-    (set-dispatch-macro-character #\# #\, #'sharp-comma)
     (set-dispatch-macro-character #\# #\R #'sharp-R)
     (set-dispatch-macro-character #\# #\r #'sharp-R)
     (set-dispatch-macro-character #\# #\B #'sharp-B)
