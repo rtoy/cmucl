@@ -163,12 +163,14 @@ And so, we are saved.
 							    ,iregs
 							    ,vregs
 							    ,tregs
-							    ,lap))))))))))))  
+							    ,lap)))))))))
+      (invalidate-uncompiled-discriminating-functions))))
 
 
 
 (defun make-initial-dfun (generic-function)
   #'(lambda (&rest args)
+      #+Genera (declare (dbg:invisible-frame :pcl-internals))
       (initial-dfun args generic-function)))
     
 
@@ -462,6 +464,7 @@ And so, we are saved.
 ;;; as state transitions.
 ;;; 
 (defun initial-dfun (args generic-function)
+  #+Genera (declare (dbg:invisible-frame :pcl-internals))
   (protect-cache-miss-code generic-function
 			   args
     (multiple-value-bind (wrappers invalidp nfunction applicable)
@@ -469,7 +472,7 @@ And so, we are saved.
       (multiple-value-bind (ntype nindex)
 	  (accessor-miss-values generic-function applicable args)
 	(cond ((null applicable)
-	       (no-applicable-method generic-function args))
+	       (apply #'no-applicable-method generic-function args))
 	      (invalidp
 	       (apply nfunction args))
 	      ((and ntype nindex)
@@ -533,7 +536,7 @@ And so, we are saved.
 		       (funcall update-fn nfield ncache)))))
 
 	    (cond ((null nfunction)
-                   (no-applicable-method gf args))
+                   (apply #'no-applicable-method gf args))
 		  ((null ntype)
 		   (checking)
 		   (apply nfunction args))
@@ -583,7 +586,7 @@ And so, we are saved.
 	(cond (invalidp
 	       (apply nfunction args))
 	      ((null nfunction)
-	       (no-applicable-method generic-function args))
+	       (apply #'no-applicable-method generic-function args))
 	      ((eq ofunction nfunction)
 	       (multiple-value-bind (nfield ncache)
 		   (fill-cache field cache nkeys nil #'checking-limit-fn wrappers nil)
@@ -606,7 +609,7 @@ And so, we are saved.
 	(cond (invalidp
 	       (apply function args))
 	      ((null function)
-	       (no-applicable-method generic-function args))
+	       (apply #'no-applicable-method generic-function args))
 	      (t
 	       (multiple-value-bind (nfield ncache)
 		   (fill-cache ofield ocache nkeys t #'caching-limit-fn wrappers function)
@@ -661,9 +664,18 @@ And so, we are saved.
 ;;;
 (defun cache-miss-values (generic-function args)
   (declare (values wrappers invalidp function applicable))
+  (multiple-value-bind (function appl arg-info)
+      (get-secondary-dispatch-function generic-function args)
+    (multiple-value-bind (wrappers invalidp)
+	(get-wrappers generic-function args arg-info)
+      (values wrappers invalidp 
+	      (cache-miss-values-function generic-function function)
+	      appl))))
+
+(defun get-wrappers (generic-function args &optional arg-info)
   (let* ((invalidp nil)
 	 (wrappers ())
-	 (arg-info (gf-arg-info generic-function))
+	 (arg-info (or arg-info (gf-arg-info generic-function)))
 	 (metatypes (arg-info-metatypes arg-info))
 	 (nkeys (arg-info-nkeys arg-info)))
     (flet ((get-valid-wrapper (x)
@@ -682,19 +694,49 @@ And so, we are saved.
 			(return-from collect-wrappers
 			  (get-valid-wrapper arg))
 			(gather1 (get-valid-wrapper arg))))))))
-      (multiple-value-bind (function appl)
-	  (get-secondary-dispatch-function generic-function args)
-	(values wrappers invalidp function appl)))))
+      (values wrappers invalidp))))
+
+(defun cache-miss-values-function (generic-function function)
+  #+(and excl sun4) 
+  (when (and (consp function) 
+	     (eq 'lambda (car function)))
+    (setq function (comp::.primcall 'make-interp-function-obj function)))
+  (if (eq *generate-random-code-segments* generic-function)
+      (progn
+	(setq *generate-random-code-segments* nil) 
+	#'(lambda (&rest args) (declare (ignore args)) nil))
+      function))
+
+(defun generate-random-code-segments (generic-function)
+  (dolist (arglist (generate-arglists generic-function))
+    (let ((*generate-random-code-segments* generic-function))
+      (apply generic-function arglist))))
+
+(defun generate-arglists (generic-function)
+  ;;Generate arglists using class-prototypes and specializer-objects
+  ;;to get all the "different" values that could be returned by 
+  ;;get-secondary-dispatch-function for this generic-function.
+  nil)
 
 (defun accessor-miss-values (generic-function applicable args)
   (declare (values type index))
-  (let ((type
-	  (and (eq (generic-function-method-combination generic-function)
-		   *standard-method-combination*)
-	       (every #'(lambda (m) (null (method-qualifiers m))) applicable)
-	       (cond ((standard-reader-method-p (car applicable)) 'reader)
-		     ((standard-writer-method-p (car applicable)) 'writer)
-		     (t nil)))))
+  (let ((type (and (eq (generic-function-method-combination generic-function)
+		       *standard-method-combination*)
+		   (every #'(lambda (m) (null (method-qualifiers m))) applicable)
+		   (let ((method (car applicable)))
+		     (cond ((standard-reader-method-p method)
+			    (and (optimize-slot-value-by-class-p
+				  (class-of (car args))
+				  (accessor-method-slot-name method)
+				  'slot-value)
+				 'reader))
+			   ((standard-writer-method-p method)
+			    (and (optimize-slot-value-by-class-p
+				  (class-of (cadr args))
+				  (accessor-method-slot-name method)
+				  'set-slot-value)
+				 'writer))
+			   (t nil))))))
     (values type
 	    (and type
 		 (let ((wrapper (wrapper-of (case type
@@ -703,3 +745,4 @@ And so, we are saved.
 		       (slot-name (accessor-method-slot-name (car applicable))))
 		   (or (instance-slot-index wrapper slot-name)
 		       (assq slot-name (wrapper-class-slots wrapper))))))))
+

@@ -651,3 +651,5 @@ Several things are worth noting:
 	     (- 16 2)
 	     #'(lambda (a)
 		 (declare (pcl-fast-call) (ignore a))
+		 (break "Trap")))))
+

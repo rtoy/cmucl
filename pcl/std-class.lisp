@@ -103,10 +103,6 @@
 (defmethod class-slot-cells ((class std-class))
   (plist-value class 'class-slot-cells))
 
-(defmethod find-slot-definition ((class std-class) slot-name)
-  (dolist (eslotd (class-slots class))
-    (when (eq (slotd-name eslotd) slot-name) (return eslotd))))
-
 
 ;;;
 ;;; Class accessors that are even a little bit more complicated than those
@@ -176,33 +172,33 @@
 ;;; This hash table is used to store the direct methods and direct generic
 ;;; functions of EQL specializers.  Each value in the table is the cons.
 ;;; 
-(defvar *eql-specializer-methods* (make-hash-table :test #'eql))
+(defvar *specializer-with-object-methods* (make-hash-table :test #'eql))
 
-(defmethod add-method-on-specializer ((method method) (specializer eql-specializer))
-  (let* ((object (eql-specializer-object specializer))
-	 (entry (gethash object *eql-specializer-methods*)))
+(defmethod add-method-on-specializer ((method method) (specializer specializer-with-object))
+  (let* ((object (specializer-object specializer))
+	 (entry (gethash object *specializer-with-object-methods*)))
     (unless entry
       (setq entry
-	    (setf (gethash object *eql-specializer-methods*)
+	    (setf (gethash object *specializer-with-object-methods*)
 		  (cons nil nil))))
     (setf (car entry) (adjoin method (car entry))
 	  (cdr entry) ())
     method))
 
-(defmethod remove-method-on-specializer ((method method) (specializer eql-specializer))
-  (let* ((object (eql-specializer-object specializer))
-	 (entry (gethash object *eql-specializer-methods*)))
+(defmethod remove-method-on-specializer ((method method) (specializer specializer-with-object))
+  (let* ((object (specializer-object specializer))
+	 (entry (gethash object *specializer-with-object-methods*)))
     (when entry
       (setf (car entry) (remove method (car entry))
 	    (cdr entry) ()))
     method))
 
-(defmethod specializer-methods ((specializer eql-specializer))  
-  (car (gethash (eql-specializer-object specializer) *eql-specializer-methods*)))
+(defmethod specializer-methods ((specializer specializer-with-object))  
+  (car (gethash (specializer-object specializer) *specializer-with-object-methods*)))
 
-(defmethod specializer-generic-functions ((specializer eql-specializer))
-  (let* ((object (eql-specializer-object specializer))
-	 (entry (gethash object *eql-specializer-methods*)))
+(defmethod specializer-generic-functions ((specializer specializer-with-object))
+  (let* ((object (specializer-object specializer))
+	 (entry (gethash object *specializer-with-object-methods*)))
     (when entry
       (or (cdr entry)
 	  (setf (cdr entry)
@@ -289,17 +285,24 @@
 (defmethod shared-initialize :after
 	   ((class std-class)
 	    slot-names
-	    &key direct-superclasses
-		 direct-slots
-		 direct-default-initargs)
+	    &key (direct-superclasses nil direct-superclasses-p)
+		 (direct-slots nil direct-slots-p)
+		 (direct-default-initargs nil direct-default-initargs-p))
   (declare (ignore slot-names))
-  (when (null direct-superclasses)
-    (setq direct-superclasses  (list *the-class-standard-object*)))
-  (setq direct-slots 
-	(mapcar #'(lambda (pl) (make-direct-slotd class pl)) direct-slots))
-  (setf (slot-value class 'direct-superclasses) direct-superclasses
-	(slot-value class 'direct-slots) direct-slots)
-  (setf (plist-value class 'direct-default-initargs) direct-default-initargs)
+  (setq direct-superclasses
+	(if direct-superclasses-p
+	    (setf (slot-value class 'direct-superclasses)
+		  (or direct-superclasses
+		      (list *the-class-standard-object*)))
+	    (slot-value class 'direct-superclasses)))
+  (setq direct-slots
+	(if direct-slots-p
+	    (setf (slot-value class 'direct-slots)
+		  (mapcar #'(lambda (pl) (make-direct-slotd class pl)) direct-slots))
+	    (slot-value class 'direct-slots)))
+  (if direct-default-initargs-p
+      (setf (plist-value class 'direct-default-initargs) direct-default-initargs)
+      (setq direct-default-initargs (plist-value class 'direct-default-initargs)))
   (setf (plist-value class 'class-slot-cells)
 	(gathering1 (collecting)
 	  (dolist (dslotd direct-slots)
@@ -315,7 +318,7 @@
 					       direct-slots
 					       direct-default-initargs)
   (declare (ignore direct-default-initargs))
-  (remove-direct-subclasses class direct-superclasses)
+  (remove-direct-subclasses class (class-direct-superclasses class))
   (remove-slot-accessors    class (class-direct-slots class)))
 
 (defmethod reinitialize-instance :after ((class std-class)
@@ -425,7 +428,12 @@
 	      slots eslotds
 	      (wrapper-instance-slots-layout nwrapper) nlayout
 	      (wrapper-class-slots nwrapper) nwrapper-class-slots
-	      wrapper nwrapper)))))
+	      wrapper nwrapper))
+      (dolist (eslotd eslotds)
+	(when (typep eslotd 'standard-effective-slot-definition)
+	  (setf (slotd-class eslotd) class)
+	  (setf (slotd-instance-index eslotd)
+		(instance-slot-index nwrapper (slotd-name eslotd))))))))
 
 (defun compute-storage-info (cpl eslotds)
   (let ((instance ())
@@ -629,16 +637,11 @@
 
 (defun make-std-reader-method-function (slot-name)
   #'(lambda (instance)
-      (slot-value-using-class (wrapper-class (get-wrapper instance))
-			      instance
-			      slot-name)))
+      (slot-value instance slot-name)))
 
 (defun make-std-writer-method-function (slot-name)
   #'(lambda (nv instance)
-      (setf (slot-value-using-class (wrapper-class (get-wrapper instance))
-				    instance
-				    slot-name)
-	    nv)))
+      (setf (slot-value instance slot-name) nv)))
   
 
 
@@ -972,3 +975,5 @@
 
 (defmethod map-dependents ((metaobject dependent-update-mixin) function)
   (dolist (dependent (plist-value metaobject 'dependents))
+    (funcall function dependent)))
+

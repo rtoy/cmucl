@@ -247,3 +247,141 @@ dw::
 		  (values nil nil deftype typep atomic-subtype-parent non-atomic-deftype)))
 	  (symbol (values nil nil nil nil frob)))))))
 
+;;;
+;;; The variable zwei::*sectionize-line-lookahead* controls how many lines the parser
+;;;  is willing to look ahead while trying to parse a definition.  Even 2 lines is enough
+;;;  for just about all cases, but there isn't much overhead, and 10 should be enough
+;;;  to satisfy pretty much everyone... but feel free to change it.
+;;;        - MT 880921
+;;;
+
+zwei:
+(defvar *sectionize-line-lookahead* 3)
+
+zwei:
+(DEFMETHOD (:SECTIONIZE-BUFFER MAJOR-MODE :DEFAULT)
+	   (FIRST-BP LAST-BP BUFFER STREAM INT-STREAM ADDED-COMPLETIONS)
+  ADDED-COMPLETIONS ;ignored, obsolete
+  (WHEN STREAM
+    (SEND-IF-HANDLES STREAM :SET-RETURN-DIAGRAMS-AS-LINES T))
+  (INCF *SECTIONIZE-BUFFER*)
+  (LET ((BUFFER-TICK (OR (SEND-IF-HANDLES BUFFER :SAVE-TICK) *TICK*))
+	OLD-CHANGED-SECTIONS)
+    (TICK)
+    ;; Flush old section nodes.  Also collect the names of those that are modified, they are
+    ;; the ones that will be modified again after a revert buffer.
+    (DOLIST (NODE (NODE-INFERIORS BUFFER))
+      (AND (> (NODE-TICK NODE) BUFFER-TICK)
+	   (PUSH (LIST (SECTION-NODE-FUNCTION-SPEC NODE)
+		       (SECTION-NODE-DEFINITION-TYPE NODE))
+		 OLD-CHANGED-SECTIONS))
+      (FLUSH-BP (INTERVAL-FIRST-BP NODE))
+      (FLUSH-BP (INTERVAL-LAST-BP NODE)))
+    (DO ((LINE (BP-LINE FIRST-BP) (LINE-NEXT INT-LINE))
+	 (LIMIT (BP-LINE LAST-BP))
+	 (EOFFLG)
+	 (ABNORMAL T)
+	 (DEFINITION-LIST NIL)
+	 (BP (COPY-BP FIRST-BP))
+	 (FUNCTION-SPEC)
+	 (DEFINITION-TYPE)
+	 (STR)
+	 (INT-LINE)
+	 (first-time t)
+	 (future-line)				; we actually read into future line
+	 (future-int-line)
+	 (PREV-NODE-START-BP FIRST-BP)
+	 (PREV-NODE-DEFINITION-LINE NIL)
+	 (PREV-NODE-FUNCTION-SPEC NIL)
+	 (PREV-NODE-TYPE 'HEADER)
+	 (PREVIOUS-NODE NIL)
+	 (NODE-LIST NIL)
+	 (STATE (SEND SELF :INITIAL-SECTIONIZATION-STATE)))
+	(NIL)
+      ;; If we have a stream, read another line.
+      (when (AND STREAM (NOT EOFFLG))
+	(let ((lookahead (if future-line 1 *sectionize-line-lookahead*)))
+	  (dotimes (i lookahead)		; startup lookahead
+	    (MULTIPLE-VALUE (future-LINE EOFFLG)
+	      (LET ((DEFAULT-CONS-AREA *LINE-AREA*))
+		(SEND STREAM ':LINE-IN LINE-LEADER-SIZE)))
+	    (IF future-LINE (SETQ future-INT-LINE (FUNCALL INT-STREAM ':LINE-OUT future-LINE)))
+	    (when first-time
+	      (setq first-time nil)
+	      (setq line future-line)
+	      (setq int-line future-int-line))
+	    (when eofflg
+	      (return)))))
+
+      (SETQ INT-LINE LINE)
+
+      (when int-line
+	(MOVE-BP BP INT-LINE 0))		;Record as potentially start-bp for a section
+
+      ;; See if the line is the start of a defun.
+      (WHEN (AND LINE
+		 (LET (ERR)
+		   (MULTIPLE-VALUE (FUNCTION-SPEC DEFINITION-TYPE STR ERR STATE)
+		     (SEND SELF ':SECTION-NAME INT-LINE BP STATE))
+		   (NOT ERR)))
+	(PUSH (LIST FUNCTION-SPEC DEFINITION-TYPE) DEFINITION-LIST)
+	(SECTION-COMPLETION FUNCTION-SPEC STR NIL)
+	;; List methods under both names for user ease.
+	(LET ((OTHER-COMPLETION (SEND SELF ':OTHER-SECTION-NAME-COMPLETION
+				      FUNCTION-SPEC INT-LINE)))
+	  (WHEN OTHER-COMPLETION
+	    (SECTION-COMPLETION FUNCTION-SPEC OTHER-COMPLETION NIL)))
+	(LET ((PREV-NODE-END-BP (BACKWARD-OVER-COMMENT-LINES BP ':FORM-AS-BLANK)))
+	  ;; Don't make a section node if it's completely empty.  This avoids making
+	  ;; a useless Buffer Header section node. Just set all the PREV variables
+	  ;; so that the next definition provokes the *right thing*
+	  (UNLESS (BP-= PREV-NODE-END-BP PREV-NODE-START-BP)
+	    (SETQ PREVIOUS-NODE
+		  (ADD-SECTION-NODE PREV-NODE-START-BP
+				    (SETQ PREV-NODE-START-BP PREV-NODE-END-BP)
+				    PREV-NODE-FUNCTION-SPEC PREV-NODE-TYPE
+				    PREV-NODE-DEFINITION-LINE BUFFER PREVIOUS-NODE
+				    (IF (LOOP FOR (FSPEC TYPE) IN OLD-CHANGED-SECTIONS
+					      THEREIS (AND (EQ PREV-NODE-FUNCTION-SPEC FSPEC)
+							   (EQ PREV-NODE-TYPE TYPE)))
+					*TICK* BUFFER-TICK)
+				    BUFFER-TICK))
+	    (PUSH PREVIOUS-NODE NODE-LIST)))
+	(SETQ PREV-NODE-FUNCTION-SPEC FUNCTION-SPEC
+	      PREV-NODE-TYPE DEFINITION-TYPE
+	      PREV-NODE-DEFINITION-LINE INT-LINE))
+      ;; After processing the last line, exit.
+      (WHEN (OR #+ignore EOFFLG (null line) (AND (NULL STREAM) (EQ LINE LIMIT)))
+	;; If reading a stream, we should not have inserted a CR
+	;; after the eof line.
+	(WHEN STREAM
+	  (DELETE-INTERVAL (FORWARD-CHAR LAST-BP -1 T) LAST-BP T))
+	;; The rest of the buffer is part of the last node
+	(UNLESS (SEND SELF ':SECTION-NAME-TRIVIAL-P)
+	  ;; ---oh dear, what sort of section will this be? A non-empty HEADER
+	  ;; ---node.  Well, ok for now.
+	  (PUSH (ADD-SECTION-NODE PREV-NODE-START-BP LAST-BP
+				  PREV-NODE-FUNCTION-SPEC PREV-NODE-TYPE
+				  PREV-NODE-DEFINITION-LINE BUFFER PREVIOUS-NODE
+				  (IF (LOOP FOR (FSPEC TYPE) IN OLD-CHANGED-SECTIONS
+					    THEREIS (AND (EQ PREV-NODE-FUNCTION-SPEC FSPEC)
+							 (EQ PREV-NODE-TYPE TYPE)))
+				      *TICK* BUFFER-TICK)
+				  BUFFER-TICK)
+		NODE-LIST)
+	  (SETF (LINE-NODE (BP-LINE LAST-BP)) (CAR NODE-LIST)))
+	(SETF (NODE-INFERIORS BUFFER) (NREVERSE NODE-LIST))
+	(SETF (NAMED-BUFFER-WITH-SECTIONS-FIRST-SECTION BUFFER) (CAR (NODE-INFERIORS BUFFER)))
+	(SETQ ABNORMAL NIL)			;timing windows here
+	;; Speed up completion if enabled.
+	(WHEN SI:*ENABLE-AARRAY-SORTING-AFTER-LOADS*
+	  (SI:SORT-AARRAY *ZMACS-COMPLETION-AARRAY*))
+	(SETQ *ZMACS-COMPLETION-AARRAY*
+	      (FOLLOW-STRUCTURE-FORWARDING *ZMACS-COMPLETION-AARRAY*))
+	(RETURN
+	  (VALUES 
+	    (CL:SETF (ZMACS-SECTION-LIST BUFFER)
+		     (NREVERSE DEFINITION-LIST))
+	    ABNORMAL))))))
+
+

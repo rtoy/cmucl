@@ -258,7 +258,6 @@
 ;;; idea.
 ;;; 
 (eval-when (compile load eval)
-
 (defconstant wrapper-layout
 	     '(number
 	       number
@@ -272,6 +271,9 @@
 	       instance-slots-layout
 	       class-slots
 	       class))
+)
+
+(eval-when (compile load eval)
 
 (defun wrapper-field (type)
   (position type wrapper-layout))
@@ -353,6 +355,8 @@
        ;; kind of transitivity of wrapper updates.
        ;; 
        (dolist (previous (gethash owrapper *previous-nwrappers*))
+	 (when (eq state 'obsolete)
+	   (setf (car previous) 'obsolete))
 	 (setf (cadr previous) nwrapper)
 	 (push previous new-previous))
        
@@ -441,7 +445,7 @@
 ;;; compute the primary location of an entry.  
 ;;;
 (defun compute-primary-cache-location (field mask wrappers)
-  (if (not (consp wrappers))
+  (if (not (listp wrappers))
       (logand mask (wrapper-ref wrappers field))
       (let ((location 0))
 	(iterate ((wrapper (list-elements wrappers))
@@ -541,9 +545,8 @@
 	(built-in  (find-class 'built-in-class)))
     (flet ((specializer->metatype (x)
 	     (let ((meta-specializer 
-		     (if (and (eq *boot-state* 'complete)
-			      (eql-specializer-p x))
-			 (class-of (class-of (eql-specializer-object x)))
+		     (if (eq *boot-state* 'complete)
+			 (class-of (specializer-class x))
 			 (class-of x))))
 	       (cond ((eq x *the-class-t*) t)
 		     ((*subtypep meta-specializer standard)  'standard-instance)
@@ -778,22 +781,23 @@
 	    (not (null (cache-ref (cache) (line-location line)))))
 	  ;;
 	  ;; Given a line number, return true IFF the line is full and
-	  ;; there are no invalid wrappers in the line.  An error is
-	  ;; signalled if the line is reserved.
+	  ;; there are no invalid wrappers in the line, and the line's
+	  ;; wrappers are different from wrappers.
+	  ;; An error is signalled if the line is reserved.
 	  ;;
-	  (line-valid-p (line)
+	  (line-valid-p (line wrappers)
 	    (when (line-reserved-p line) (error "Line is reserved."))
-	    (let ((loc (line-location line)))
-	      (dotimes (i (nkeys) t)
+	    (let ((loc (line-location line))
+		  (wrappers-mismatch-p (null wrappers)))
+	      (dotimes (i (nkeys) wrappers-mismatch-p)
 		(let ((wrapper (cache-ref (cache) (+ loc i))))
 		  (when (or (null wrapper)
-;***			    (numberp wrapper)	          ;Think of this as an optimized:
-						          ; (and (zerop i)
-						          ;      (= (nkeys) 1)
-						          ;      (null (valuep))
-						          ;      (numberp wrapper))
 			    (invalid-wrapper-p wrapper))
-		    (return nil))))))
+		    (return nil))
+		  (unless (and wrappers
+			       (eq wrapper
+				   (if (consp wrappers) (pop wrappers) wrappers)))
+		    (setq wrappers-mismatch-p t))))))
 	  ;;
 	  ;; How many unreserved lines separate line-1 and line-2.
 	  ;;
@@ -915,9 +919,6 @@
 	(*valuep* valuep)
 	(*limit-fn* limit-fn))
     (with-local-cache-functions (cache)
-;     (when (entry-in-cache-p field cache wrappers value)
-;	(cerror "But, you can keep going (report that this happened)."
-;		"Bad shit."))
       (flet ((4-values-please (f c)
 	       (multiple-value-bind (mask size)
 		   (compute-cache-parameters *nkeys* *valuep* c)
@@ -938,12 +939,9 @@
 ;;;
 (defun fill-cache-p (forcep field cache wrappers value)
   (with-local-cache-functions (cache)
-;   (when (entry-in-cache-p field cache wrappers value)
-;     (cerror "But, you can keep going (report that this happened)."
-;	      "Really bad shit."))
     (let* ((primary (location-line (compute-primary-cache-location field (mask) wrappers))))
       (multiple-value-bind (free emptyp)
-	  (find-free-cache-line primary field cache)
+	  (find-free-cache-line primary field cache wrappers)
 	(when (or forcep emptyp) (fill-line free wrappers value) t)))))
 
 (defun fill-cache-from-cache-p (forcep field cache from-cache from-line)
@@ -984,7 +982,7 @@
 		   (fill-cache-p nil nfield ncache wrappers value)))
 	  (if (and (dotimes (i (nlines) t)
 		     (when (and (null (line-reserved-p i))
-				(line-valid-p i))
+				(line-valid-p i wrappers))
 		       (unless (try-one-fill-from-line i) (return nil))))
 		   (try-one-fill wrappers value))
 	      (return (values nfield ncache))
@@ -1014,7 +1012,7 @@
 		   (fill-cache-p nil nfield ncache wrappers value)))
 	  (dotimes (i (nlines))
 	    (when (and (null (line-reserved-p i))
-		       (line-valid-p i))
+		       (line-valid-p i wrappers))
 	      (do-one-fill-from-line i)))
 	  (unless (try-one-fill wrappers value)
 	    (do-one-fill wrappers value))
@@ -1030,7 +1028,7 @@
 ;;;   <line>
 ;;;   <empty?>           is <line> in fact empty?
 ;;;
-(defun find-free-cache-line (primary field cache)
+(defun find-free-cache-line (primary field cache &optional wrappers)
   (declare (values line empty?))
   (with-local-cache-functions (cache)
     (let ((limit (funcall (limit-fn) (nlines)))
@@ -1045,8 +1043,8 @@
 		 (do* ((line s (next-line line))
 		       (nsep (line-separation p s) (1+ nsep)))
 		      (())
-		   (if (null (line-valid-p line))	;If this line is empty or
-		       (return (values line t))	        ;invalid, just use it.
+		   (if (null (line-valid-p line wrappers)) ;If this line is empty or
+		       (return (values line t))	           ;invalid, just use it.
 
 		       (let ((osep (line-separation (line-primary field line) line)))
 			 (if (and wrappedp (>= line primary))
@@ -1078,3 +1076,5 @@
 		     (find-free (line-primary field line) (next-line line))
 		   (when dempty? (copy-line line dline) t))))
 	
+	(find-free primary primary)))))
+

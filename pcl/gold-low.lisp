@@ -47,3 +47,5 @@
 ;;; in succession.
 ;;;
 (dolist (x '(defmethod defgeneric defclass precompile-random-code-segments))
+  (setf (get x 'gcl::compile-separately) t))
+

@@ -64,7 +64,7 @@ int n; object cc;
 {  object env;
    if(n<0)return Cnil;
    if(type_of(cc)!=t_cclosure)return Cnil;
-   env=cc->cc_env;
+   env=cc->cc.cc_env;
    while(n-->0)
      {if(type_of(env)!=t_cons)return Cnil;
       env=env->c.c_cdr;}
@@ -79,7 +79,7 @@ int n; object cc;
    if(n<0)return Cnil;
    if(type_of(cc)!=t_cclosure)return Cnil;
    if((turbo=cc->cc.cc_turbo)==NULL)
-     {env=cc->cc_env;
+     {env=cc->cc.cc_env;
       while(n-->0)
         {if(type_of(env)!=t_cons)return Cnil;
          env=env->c.c_cdr;}
@@ -172,4 +172,6 @@ object result_cc,value_cc; int available_size;
 #endif
   return result_cc;
 }")
+
+(defentry %set-cclosure (object object int) (object set_cclosure))
 

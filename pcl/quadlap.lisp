@@ -1,6 +1,6 @@
 ;;				-[Thu Mar  1 10:54:27 1990 by jkf]-
 ;; pcl to quad translation
-;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.1 1990/08/12 03:48:14 wlott Exp $
+;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/quadlap.lisp,v 1.1.1.1 1991/10/19 16:45:45 ram Exp $
 ;;
 ;; copyright (c) 1990 Franz Inc.
 ;;
@@ -576,8 +576,9 @@
 			(qe lsl :u (list (get-treg-of op1) shiftamt)
 			    :d (list op-treg)))
 		 else (setq op-treg (get-treg-of op1)))
-			
-	      (qe return :u (list op-treg))))
+
+	      (qe move :u (list op-treg) :d *mv-treg-target*)
+	      (qe return :u *mv-treg-target*)))
 
 	  (:go
 	   (qe bra :arg (cadr lap)))
@@ -615,3 +616,4 @@
 
 
   
+

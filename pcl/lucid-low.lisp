@@ -275,3 +275,5 @@
 
 
 ;;; (UNDECLARE-MACHINE-CLASS)
+(restore-compiler-params)
+

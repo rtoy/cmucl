@@ -95,7 +95,7 @@
   "Return the full name of the method"
   (let ((specializers (mapcar #'(lambda (x)
 		                  (cond ((eq x 't) t)
-		                        ((and (consp x) (eq (car x) 'eql)) x)
+		                        ((consp x) x)
 		                        (t (class-name x))))
 		       (method-type-specifiers method))))
     ;; Now go through some hair to make sure that specializer is
@@ -1626,3 +1626,4 @@ window"
   (when (boundp (quote il:*pfi-types*))
     (pfi-install-pcl))
   )
+

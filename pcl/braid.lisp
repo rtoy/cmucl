@@ -197,7 +197,10 @@
 	      (cond ((eq name 't)
 		     (setq *the-wrapper-of-t* wrapper
 			   *the-class-t* class))
-		    ((memq name '(standard-object standard-class))
+		    ((memq name '(standard-object 
+				  standard-class
+				  funcallable-standard-class
+				  standard-effective-slot-definition))
 		     (set (intern (format nil "*THE-CLASS-~A*" (symbol-name name))
 				  *the-pcl-package*)
 			  class)))
@@ -214,11 +217,11 @@
 	      (setf (std-instance-wrapper proto) wrapper)
 	    
 	      (setq direct-slots
-		    (bootstrap-make-slot-definitions direct-slots
-						     direct-slotd-wrapper))
+		    (bootstrap-make-slot-definitions 
+		      name class direct-slots direct-slotd-wrapper nil))
 	      (setq slots
-		    (bootstrap-make-slot-definitions slots
-						     effective-slotd-wrapper))
+		    (bootstrap-make-slot-definitions 
+		      name class slots effective-slotd-wrapper t))
 	      
 	      (bootstrap-initialize-std-class
 		class name source
@@ -306,11 +309,15 @@
     (set-slot 'class-precedence-list (classes cpl))
     (set-slot 'wrapper wrapper)))
 
-(defun bootstrap-make-slot-definitions (slots wrapper)
-  (mapcar #'(lambda (slot) (bootstrap-make-slot-definition slot wrapper))
-          slots))
+(defun bootstrap-make-slot-definitions (name class slots wrapper effective-p)
+  (let ((index -1))
+    (mapcar #'(lambda (slot)
+		(incf index)
+		(bootstrap-make-slot-definition
+		  name class slot wrapper effective-p index))
+	    slots)))
 
-(defun bootstrap-make-slot-definition (slot wrapper)  
+(defun bootstrap-make-slot-definition (name class slot wrapper effective-p index)  
   (let ((slotd (%allocate-instance--class (length *std-slotd-slots*))))
     (setf (std-instance-wrapper slotd) wrapper)
     (flet ((get-val (name) (getf slot name))
@@ -323,6 +330,14 @@
       (set-val 'writers      (get-val :writers))
       (set-val 'allocation   :instance)
       (set-val 'type         (get-val :type))
+      (set-val 'class        (and effective-p class))
+      (set-val 'instance-index (and effective-p index))
+      (when (and (eq name 'standard-class)
+		 (eq (get-val :name) 'slots) effective-p)
+	(setq *the-eslotd-standard-class-slots* slotd))
+      (when (and (eq name 'funcallable-standard-class)
+		 (eq (get-val :name) 'slots) effective-p)
+	(setq *the-eslotd-funcallable-standard-class-slots* slotd))
       slotd)))
 
 (defun bootstrap-built-in-classes ()
@@ -513,4 +528,5 @@
 	(slot-value slotd 'type) type
 	(slot-value slotd 'readers) readers
 	(slot-value slotd 'writers) writers))
+
 

@@ -164,3 +164,5 @@
 		 (setf (symbol-value ,sym) (first ,vals))
 		 (makunbound ,sym)))
 	 (dolist (,sym ,symbols-lst)
+	   ,(PORTABLE-PROGV-UNBIND sym old-vals unbound-holder))))))
+

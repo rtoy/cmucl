@@ -6,3 +6,4 @@
 (eval-when (load eval)
     (format t "~&;;; Resetting *MACROEXPAND-HOOK* to #'FUNCALL~%")
     (setq lisp::*macroexpand-hook* #'funcall))
+
