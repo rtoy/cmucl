@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.17 1990/06/16 15:35:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.18 1990/07/02 16:37:32 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -59,14 +59,6 @@
   (let ((nfp (current-nfp-tn vop)))
     (loadw y nfp (tn-offset x))))
 
-(define-move-function (load-single 5) (vop x y)
-  ((single-stack) (single-reg))
-  (cerror "Do nothing." "Not yet." x y))
-
-(define-move-function (load-double 7) (vop x y)
-  ((double-stack) (double-reg))
-  (cerror "Do nothing." "Not yet." x y))
-
 (define-move-function (store-stack 5) (vop x y)
   ((any-reg descriptor-reg) (control-stack))
   (store-stack-tn y x))
@@ -78,15 +70,6 @@
    (unsigned-reg) (unsigned-stack))
   (let ((nfp (current-nfp-tn vop)))
     (storew x nfp (tn-offset y))))
-
-(define-move-function (store-single 5) (vop x y)
-  ((single-reg) (single-stack))
-  (cerror "Do nothing." "Not yet." x y))
-
-(define-move-function (store-double 7) (vop x y)
-  ((double-reg) (double-stack))
-  (cerror "Do nothing." "Not yet." x y))
-
 
 
 ;;;; The Move VOP:
