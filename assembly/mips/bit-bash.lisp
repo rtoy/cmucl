@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.12 1991/02/02 18:26:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.13 1991/02/02 22:50:15 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
@@ -294,18 +294,17 @@
 		   (inst sra ntemp3 src-shift 2)
 		   (inst subu ntemp3 zero-tn ntemp3)
 		   (inst srl ntemp1 ntemp3)
-		   (emit-label done-load)
-		   (inst subu src 4))))))
+		   (emit-label done-load))))))
        (wide-copy-right-aux)
        (inst b done)
        (inst nop))
 
      (macrolet
 	 ((get-src (where)
-	    (declare (ignore where))
-	    '(progn
+	    `(progn
 	       (inst lw ntemp1 src)
-	       (inst subu src 4))))
+	       ,@(unless (eq where :right)
+		   '((inst subu src 4))))))
        (emit-label aligned)
        (wide-copy-right-aux))))
 
@@ -330,6 +329,7 @@
 
      (emit-label right-aligned)
      (inst subu dst 4)
+     (inst subu src 4)
 
      (inst subu ntemp1 length final-bits)
      (inst srl ntemp1 7)
