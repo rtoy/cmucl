@@ -2,6 +2,7 @@
 ;;; This file compiles all of Hemlock.
 ;;;
 
+(c::%proclaim '(optimize (debug-info 2)))
 #|
 (when (ext:get-command-line-switch "slave")
   (error "Cannot compile Hemlock in a slave due to its clobbering needed
@@ -31,6 +32,9 @@
 (in-package "SYSTEM")
 (export '(%sp-byte-blt %sp-find-character %sp-find-character-with-attribute
 		       %sp-reverse-find-character-with-attribute))
+
+(in-package "C")
+(export 'compile-from-stream)
 
 (in-package "HI")
 
@@ -63,8 +67,8 @@
 (comf "hem:charmacs" :always-once t)
 ;; keytran and keytrandefs used to be in rompsite, but they are too big now.
 ;; They also need to go after charmacs due to the funny characters named.
-(comf "hem:keytran")
-(comf "hem:keytrandefs")
+;(comf "hem:keytran")
+;(comf "hem:keytrandefs")
 (comf "hem:macros" :always-once t)
 (comf "hem:line" :always-once t)
 (comf "hem:ring")
@@ -79,17 +83,17 @@
 (comf "hem:cursor")
 (comf "hem:syntax")
 (comf "hem:winimage")
-(comf "hem:hunk-draw")
+;(comf "hem:hunk-draw")
 ;(comf "hem:bit-stream")
 (comf "hem:termcap")
 (comf "hem:display")
-(comf "hem:bit-display")
+;(comf "hem:bit-display")
 (comf "hem:tty-disp-rt")
 (comf "hem:tty-display")
 ;(comf "hem:tty-stream")
 (comf "hem:pop-up-stream")
 (comf "hem:screen")
-(comf "hem:bit-screen")
+;(comf "hem:bit-screen")
 (comf "hem:tty-screen")
 (comf "hem:window")
 (comf "hem:font")
@@ -149,5 +153,6 @@
 (comf "hem:completion")
 (comf "hem:shell")
 (comf "hem:bindings")
+(comf "hem:hacks")
 
 ); With-Compiler-Log-File

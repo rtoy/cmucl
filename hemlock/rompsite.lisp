@@ -193,7 +193,7 @@
 ;;; 
 (defvar *editor-windowed-input* nil)
 
-
+#|
 ;;; These are used for selecting X events.
 ;;; 
 ;;; This says to send :key-press, :button-press, :button-release, :enter-notify,
@@ -231,7 +231,7 @@
   '("/usr/misc/.lisp/lib/fonts/"
     "/afs/cs.cmu.edu/unix/rt_mach/omega/usr/misc/.lisp/lib/fonts/"))
 
-
+|#
 ;;; INIT-RAW-IO  --  Internal
 ;;;
 ;;;    This function should be called whenever the editor is entered in a new
@@ -239,7 +239,7 @@
 ;;;
 (defun init-raw-io (display)
   (setf *editor-windowed-input* nil)
-  (cond (display
+  (cond #+nil(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
 	 (setf *editor-input* (make-editor-window-input-stream))
 	 (ext:carefully-add-font-paths *editor-windowed-input*
@@ -263,6 +263,7 @@
 (proclaim '(declaration values))
 (proclaim '(special *default-font-family*))
 
+#|
 ;;; font-map-size should be defined in font.lisp, but SETUP-FONT-FAMILY would
 ;;; assume it to be special, issuing a nasty warning.
 ;;;
@@ -322,7 +323,7 @@
      (warn "Cannot open font -- ~S" font-name)
      nil)))
 
-
+|#
 
 ;;;; HEMLOCK-BEEP.
 
@@ -338,29 +339,31 @@
 
 (proclaim '(special *current-window*))
 
+#|
 ;;; BITMAP-BEEP is used in Hemlock for beeping when running under windowed
 ;;; input.
 ;;;
-(defun bitmap-beep (display stream)
+(defun bitmap-beep (device stream)
   (declare (ignore stream))
-  (ecase (variable-value 'ed::bell-style)
-    (:border-flash
-     (flash-window-border *current-window*))
-    (:feep
-     (xlib:bell display)
-     (xlib:display-force-output display))
-    (:border-flash-and-feep
-     (xlib:bell display)
-     (xlib:display-force-output display)
-     (flash-window-border *current-window*))
-    (:flash
-     (flash-window *current-window*))
-    (:flash-and-feep
-     (xlib:bell display)
-     (xlib:display-force-output display)
-     (flash-window *current-window*))
-    ((nil) ;Do nothing.
-     )))
+  (let ((display (bitmap-device-display device)))
+    (ecase (variable-value 'ed::bell-style)
+      (:border-flash
+       (flash-window-border *current-window*))
+      (:feep
+       (xlib:bell display)
+       (xlib:display-force-output display))
+      (:border-flash-and-feep
+       (xlib:bell display)
+       (xlib:display-force-output display)
+       (flash-window-border *current-window*))
+      (:flash
+       (flash-window *current-window*))
+      (:flash-and-feep
+       (xlib:bell display)
+       (xlib:display-force-output display)
+       (flash-window *current-window*))
+      ((nil) ;Do nothing.
+       ))))
 
 (proclaim '(special *foreground-background-xor*))
 
@@ -405,12 +408,12 @@
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display))))
 
-
+|#
 
 (defun hemlock-beep (stream)
   "Using the current window, calls the device's beep function on stream."
   (let ((device (device-hunk-device (window-hunk (current-window)))))
-    (funcall (device-beep device) (bitmap-device-display device) stream)))
+    (funcall (device-beep device) device stream)))
 
 
 
@@ -473,6 +476,7 @@
 	 (cond ((not *editor-windowed-input*)
 		,@body)
 	       (t
+#+nil
 		(ext:with-clx-event-handling
 		    (*editor-windowed-input* #'ext:object-set-event-handler)
 		  ,@body)))))
@@ -487,6 +491,7 @@
 
 (proclaim '(special *echo-area-window*))
 
+#|
 ;;; Maybe bury/unbury hemlock window when we go to and from Lisp.
 ;;; This should do something more sophisticated when we know what that is.
 ;;; 
@@ -499,8 +504,9 @@
 	  (t (setf (xlib:window-priority ewin) :below)
 	     (setf (xlib:window-priority win) :below))))
   (xlib:display-force-output display))
+|#
 
-(defvar *hemlock-window-mngt* #'default-hemlock-window-mngt
+(defvar *hemlock-window-mngt* nil;#'default-hemlock-window-mngt
   "This function is called by HEMLOCK-WINDOW, passing its arguments.  This may
    be nil.")
 
@@ -863,6 +869,7 @@
 
 ;;;; Editor window input streams.
 
+#|
 (defstruct (editor-window-input-stream
 	    (:include editor-input-stream
 		      (:in #'editor-window-in)
@@ -906,7 +913,7 @@
   (declare (ignore eof-value))
   (editor-input-method-macro))
 
-
+|#
 
 ;;; LAST-KEY-EVENT-CURSORPOS  --  Public
 ;;;
@@ -931,7 +938,6 @@
 ;;;
 (defun window-input-handler (hunk char x y)
   (q-event *real-editor-input* char x y hunk))
-
 
 
 ;;;; Event scheduling.
@@ -1092,6 +1098,7 @@
 	   t)
 	(t nil)))
 
+#|
 (defun bitmap-show-mark (window x y time)
   (cond ((listen *editor-input*))
 	(x (let* ((hunk (window-hunk window))
@@ -1105,7 +1112,7 @@
 	     t))
 	(t nil)))
 
-
+|#
 
 ;;;; Funny character stuff.
 
@@ -1166,17 +1173,15 @@
   (typecase function
     (symbol (fun-defined-from-pathname (careful-symbol-function function)))
     (compiled-function
-     (let* ((string (%primitive header-ref function
-				system:%function-defined-from-slot))
-	    (file (subseq string 0 (position #\space string :test #'char=))))
-       (declare (simple-string file))
-       (if (or (char= #\# (schar file 0))
-	       (string-equal file "lisp"))
-	   nil
-	   (if (string= file "/.." :end1 3)
-	       (pathname (subseq file
-				 (position #\/ file :test #'char= :start 4)))
-	       (pathname file)))))
+     (let* ((source
+	     (first
+	      (c::compiled-debug-info-source
+	       (%primitive header-ref
+			   (%primitive header-ref function
+				       system:%function-entry-constants-slot)
+			   %function-constants-debug-info-slot)))))
+       (when (eq (c::debug-source-from source) :file)
+	 (c::debug-source-name source))))
     (t nil)))
 
 
@@ -1201,6 +1206,7 @@
    then this also outputs any 'function documentation for sym to
    *standard-output*."
   (describe fun)
+  #+nil
   (when (and (compiled-function-p fun)
 	     (not (eq (%primitive header-ref fun %function-name-slot) sym)))
     (let ((doc (documentation sym 'function)))
@@ -1216,7 +1222,7 @@
 
 
 ;;;; X Stuff.
-
+#|
 ;;; Setting window cursors ...
 ;;; 
 
@@ -1318,7 +1324,7 @@
   (xlib:set-standard-properties (bitmap-hunk-xwindow (window-hunk window))
 				:icon-name (buffer-name new-buffer)))
 
-
+|#
 
 ;;;; Some hacks for supporting Hemlock under Mach.
 

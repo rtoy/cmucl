@@ -417,14 +417,12 @@
 (defcommand "Dired Next File" (p)
   "Moves to next undeleted file."
   "Moves to next undeleted file."
-  (declare (ignore p))
   (unless (dired-line-offset (current-point) (or p 1))
     (editor-error "Not enough lines.")))
 
 (defcommand "Dired Previous File" (p)
   "Moves to previous undeleted file."
   "Moves to next undeleted file."
-  (declare (ignore p))
   (unless (dired-line-offset (current-point) (or p -1))
     (editor-error "Not enough lines.")))
 

@@ -193,7 +193,6 @@
   (let* ((dl first-changed)
 	 flags ;(dis-line-flags (car dl))) flags bound for NEXT-DIS-LINE.
 	 prev)
-    (declare (ignore flags))
     ;;
     ;; Skip old, unchanged, unmoved lines.
     ;; (loop
@@ -227,7 +226,7 @@
 	   (si-line-length (si-line-length screen-image-line))
 	   (findex (string/= dl-chars si-line-chars
 			     :end1 dl-len :end2 si-line-length)))
-      (declare (fixnum findex) (simple-string si-line-chars))
+      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -720,7 +719,7 @@
 	   (si-line-length (si-line-length screen-image-line))
 	   (findex (string/= dl-chars si-line-chars
 			      :end1 dl-len :end2 si-line-length)))
-      (declare (fixnum findex) (simple-string si-line-chars))
+      (declare (type (or fixnum null) findex) (simple-string si-line-chars))
       ;;
       ;; When the dis-line and screen chars are not string=.
       (when findex
@@ -1028,7 +1027,7 @@
 	 (char-end-string (tty-device-insert-char-end-string device))
 	 (ces-len (if char-end-string (length char-end-string)))
 	 (end-string (tty-device-insert-end-string device)))
-    (declare (simple-string char-init-string char-end-string))
+    (declare (type (or simple-string null) char-init-string char-end-string))
     (when init-string (device-write-string init-string))
     (if char-init-string
 	(do ((i start (1+ i)))
@@ -1078,7 +1077,8 @@
 	(delete-char-string (tty-device-delete-char-string device))
 	(clear-to-eol-string (tty-device-clear-to-eol-string device))
 	(cost 0))
-    (declare (simple-string init-string end-string delete-char-string)
+    (declare (type (or simple-string null) init-string end-string
+		   delete-char-string)
 	     (fixnum cost))
     (when init-string (incf cost (the fixnum (length init-string))))
     (when end-string (incf cost (the fixnum (length end-string))))

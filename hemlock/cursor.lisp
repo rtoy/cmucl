@@ -49,6 +49,7 @@
 ;;; if not.
 ;;;
 (defmacro find-line (line offset charpos ypos dis-lines dis-line)
+  (declare (ignore charpos))
   `(cond
     ;; No lines at all, fail.
     ((eq ,dis-lines the-sentinel) nil)
@@ -83,6 +84,7 @@
 ;;;
 (defmacro find-charpos (line offset charpos length ypos dis-line width
 			     fun chars)
+  (declare (ignore chars))
   `(cond
     ((= ,charpos ,length)
      (find-last ,line ,ypos ,dis-line)
@@ -116,7 +118,8 @@
        (losing 0)
        (dy 0))
       ((= start end) (values xpos ypos))
-    (declare (fixnum xpos ypos losing dy) (simple-string chars))
+    (declare (fixnum xpos ypos dy) (simple-string chars)
+	     (type (or fixnum null) losing))
     (setq losing (%fcwa chars start end losing-char))
     (when (null losing)
       (multiple-value-setq (dy xpos) (truncate (+ xpos (- end start)) width))
@@ -156,7 +159,8 @@
 	 (losing 0)
 	 (dy 0))
 	(())
-      (declare (fixnum xpos ypos losing dy))
+      (declare (fixnum xpos ypos dy)
+	       (type (or fixnum null) losing))
       (when (= start bound)
 	(when (= start end) (return (values xpos ypos)))
 	(setq start right-open-pos  bound end))

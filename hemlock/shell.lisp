@@ -319,7 +319,6 @@
 (defcommand "Stop Buffer Subprocess" (p)
   "Stop the subprocess currently executing in this shell."
   "Stop the subprocess currently executing in this shell."
-  (declare (ignore p))
   (unless (hemlock-bound-p 'process :buffer (current-buffer))
     (editor-error "Not in a process buffer."))  
   (deliver-signal-to-subprocess (if p :SIGSTOP :SIGTSTP) (value process)))

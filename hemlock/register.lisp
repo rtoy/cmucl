@@ -71,7 +71,6 @@
 ;;; 
 (defun flush-reg-references-to-deleted-buffer (buffer)
   (do-registers (name value)
-    (declare (ignore name))
     (etypecase value
       (mark (when (eq (line-buffer (mark-line value)) buffer)
 	      (free-register name)))

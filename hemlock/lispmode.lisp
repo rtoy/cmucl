@@ -1016,7 +1016,6 @@ according to the FORWARDP flag."
   of special arguments for the form.  Examples: 2 for Do, 1 for Dolist.
   If a prefix argument is supplied, then delete the indentation information."
   "Do a defindent, man!"
-  (declare (ignore p))
   (with-mark ((m (current-point)))
     (pre-command-parse-check m)
     (unless (backward-up-list m) (editor-error))

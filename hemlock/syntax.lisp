@@ -468,7 +468,8 @@
 	(line (mark-line mark))
 	(mask 0)
 	vector end-wins)
-    (declare (type (or (simple-array (mod 256)) null) vector) (fixnum mask))
+    (declare (type (or (simple-array (mod 256)) null) vector) (fixnum mask)
+	     (type (or fixnum null) charpos))
     (cached-attribute-lookup attribute test vector mask end-wins)
     (cond
      ((cond
@@ -536,7 +537,7 @@
   (let* ((charpos (mark-charpos mark))
 	 (line (mark-line mark)) vector mask end-wins)
     (declare (type (or (simple-array (mod 256)) null) vector)
-	     (fixnum charpos))
+	     (type (or fixnum null) charpos))
     (cached-attribute-lookup attribute test vector mask end-wins)
     (cond 
      ((cond

@@ -369,13 +369,13 @@
 		     :key #'buffer-pathname :test #'equal)))
     (cond ((not found)
 	   (let* ((name (pathname-to-buffer-name trial-pathname))
-		  (buffer (getstring name *buffer-names*))
-		  (use (if buffer
+		  (found (getstring name *buffer-names*))
+		  (use (if found
 			   (prompt-for-buffer
 			    :prompt "Buffer to use: "
 			    :help
   "Buffer name in use; give another buffer name, or confirm to reuse."
-			    :default buffer :must-exist nil)
+			    :default found :must-exist nil)
 			   (make-buffer name)))
 		  (buffer (if (stringp use) (make-buffer use) use)))
 	     (when (and (buffer-modified buffer)
