@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.18 1992/02/24 01:43:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.19 1992/02/28 15:12:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -865,7 +865,16 @@
   (element-type (required-argument) :type alien-type)
   (dimensions (required-argument) :type list))
 
-(def-alien-type-translator array (ele-type &rest dims) 
+(def-alien-type-translator array (ele-type &rest dims)
+  (when dims
+    (unless (typep (first dims) '(or kernel:index null))
+      (error "First dimension is not a non-negative fixnum or NIL: ~S"
+	     (first dims)))
+    (let ((loser (find-if-not #'(lambda (x) (typep x 'kernel:index))
+			      (rest dims))))
+      (when loser
+	(error "Dimension is not a non-negative fixnum: ~S" loser))))
+	
   (let ((type (parse-alien-type ele-type)))
     (make-alien-array-type
      :element-type type
