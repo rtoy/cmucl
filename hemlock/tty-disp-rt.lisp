@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.5 1992/02/14 23:51:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.6 1992/02/15 01:06:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,8 +64,10 @@
 (defun get-terminal-attributes (&optional (fd 1))
   (alien:with-alien ((winsize (alien:struct unix:winsize))
 		     (sgtty (alien:struct unix:sgttyb)))
-    (let ((size-win (unix:unix-ioctl fd mach:TIOCGWINSZ (alien-sap winsize)))
-	  (speed-win (unix:unix-ioctl fd mach:TIOCGETP (alien-sap sgtty))))
+    (let ((size-win (unix:unix-ioctl fd unix:TIOCGWINSZ
+				     (alien:alien-sap winsize)))
+	  (speed-win (unix:unix-ioctl fd unix:TIOCGETP
+				      (alien:alien-sap sgtty))))
       (flet ((frob (val)
 	       (if (and size-win (not (zerop val)))
 		   val
