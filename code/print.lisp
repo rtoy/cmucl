@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.87 2004/04/15 01:34:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.88 2004/04/22 14:26:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1638,6 +1638,15 @@
     (write-string " NaN" stream)))
 
 
+(defconstant output-float-free-format-exponent-min -3
+  "Minimum power of 10 that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+(defconstant output-float-free-format-exponent-max 8
+  "Maximum power of 10 that allows the float printer to use free format,
+   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
+   in the ANSI CL standard.")
+
 ;;; OUTPUT-FLOAT  --  Internal
 ;;;
 ;;;    Functioned called by OUTPUT-OBJECT to handle floats.
@@ -1660,17 +1669,11 @@
 	(write-string "0.0" stream)
 	(print-float-exponent x 0 stream))
        (t
-	(output-float-aux x stream)))))))
+	(output-float-aux x stream
+			  output-float-free-format-exponent-min
+			  output-float-free-format-exponent-max)))))))
 
-(defconstant output-float-free-format-min 1/1000
-  "Minimum magnitute that allows the float printer to use free format,
-   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
-   in the ANSI CL standard.")
-(defconstant output-float-free-format-max 10000000
-  "Maximum magnitute that allows the float printer to use free format,
-   instead of exponential format.  See section 22.1.3.1.3: Printing Floats
-   in the ANSI CL standard.")
-
+#+(or)
 (defmacro output-float-free-format-p (x)
   "Returns true if x can be printed in free format, as per ANSI CL."
   (loop with x-var = (gensym)
@@ -1686,6 +1689,7 @@
 	     (etypecase ,x-var
 	       ,@clauses)))))
 
+#+(or)
 (defun output-float-aux (x stream)
   (if (output-float-free-format-p x)
       ;;free format
@@ -1707,6 +1711,113 @@
 	  (when tpoint (write-char #\0 stream))
 	  ;; subtract out scale factor of 1 passed to flonum-to-string
 	  (print-float-exponent x (1- ex) stream)))))
+
+;; Smallest possible (unbiased) exponents
+(defconstant double-float-min-e
+  (nth-value 1 (decode-float least-positive-double-float)))
+(defconstant single-float-min-e
+  (nth-value 1 (decode-float least-positive-single-float)))
+
+;;; Implementation of Figure 1 from Burger and Dybvig, 1996.  As the
+;;; implementation of the Dragon from Classic CMUCL says: "DO NOT EVEN
+;;; THINK OF ATTEMPTING TO UNDERSTAND THIS CODE WITHOUT READING THE
+;;; PAPER!"
+(defun flonum-to-digits (v)
+  (let ((print-base 10) ; B
+	(float-radix 2) ; b
+	(float-digits (float-digits v)) ; p
+	(min-e
+	 (etypecase v
+	   (single-float single-float-min-e)
+	   (double-float double-float-min-e))))
+    (multiple-value-bind (f e)
+	(integer-decode-float v)
+      (let (;; FIXME: these even tests assume normal IEEE rounding
+	    ;; mode.  I wonder if we should cater for non-normal?
+	    (high-ok (evenp f))
+	    (low-ok (evenp f))
+	    (result (make-array 50 :element-type 'base-char
+				:fill-pointer 0 :adjustable t)))
+	(labels ((scale (r s m+ m-)
+		   (do ((k 0 (1+ k))
+			(s s (* s print-base)))
+		       ((not (or (> (+ r m+) s)
+				 (and high-ok (= (+ r m+) s))))
+			(do ((k k (1- k))
+			     (r r (* r print-base))
+			     (m+ m+ (* m+ print-base))
+			     (m- m- (* m- print-base)))
+			    ((not (or (< (* (+ r m+) print-base) s)
+				      (and high-ok (= (* (+ r m+) print-base) s))))
+			     (values k (generate r s m+ m-)))))))
+		 (generate (r s m+ m-)
+		   (multiple-value-bind (d r)
+		       (truncate (* r print-base) s)
+		     (let ((m+ (* m+ print-base))
+			   (m- (* m- print-base)))
+		       (let ((tc1 (or (< r m-) (and low-ok (= r m-))))
+			     (tc2 (or (> (+ r m+) s)
+				      (and high-ok (= (+ r m+) s)))))
+			 (cond
+			   ((and (not tc1) (not tc2))
+			    (vector-push-extend (char *digits* d) result)
+			    ;; FIXME sucky tail recursion.  This whole
+			    ;; kaboodle should be DO*/LOOPified.
+			    (generate r s m+ m-))
+			   ;; pedantically keeping all the conditions
+			   ;; in so that we can move them around.
+			   ((and (not tc1) tc2)
+			    (vector-push-extend (char *digits* (1+ d)) result)
+			    result)
+			   ((and tc1 (not tc2))
+			    (vector-push-extend (char *digits* d) result)
+			    result)
+			   ((and tc1 tc2)
+			    (vector-push-extend (char *digits*
+						      (if (< (* r 2) s) d (1+ d)))
+						result)
+			    result)))))))
+	  (if (>= e 0)
+	      (if (/= f (expt float-radix (1- float-digits)))
+		  (let ((be (expt float-radix e)))
+		    (scale (* f be 2) 2 be be))
+		  (let* ((be (expt float-radix e))
+			 (be1 (* be float-radix)))
+		    (scale (* f be1 2) (* float-radix 2) be1 be)))
+	      (if (or (= e min-e) (/= f (expt float-radix (1- float-digits))))
+		  (scale (* f 2) (* (expt float-radix (- e)) 2) 1 1)
+		  (scale (* f float-radix 2)
+			 (* (expt float-radix (- 1 e)) 2) float-radix 1))))))))
+
+(defun output-float-aux (x stream e-min e-max)
+  (multiple-value-bind (e string)
+      (flonum-to-digits x)
+    (cond
+      ((< e-min e e-max)
+       ;; free format
+       (cond ((plusp e)
+	      (write-string string stream :end (min (length string) e))
+	      (dotimes (i (- e (length string)))
+		(write-char #\0 stream))
+	      (write-char #\. stream)
+	      (write-string string stream :start (min (length string) e))
+	      (when (<= (length string) e)
+		(write-char #\0 stream))
+	      (print-float-exponent x 0 stream))
+	     (t
+	      (write-string "0." stream)
+	      (dotimes (i (- e))
+		(write-char #\0 stream))
+	      (write-string string stream)
+	      (print-float-exponent x 0 stream))))
+      (t
+       ;; Exponential format
+       (write-string string stream :end 1)
+       (write-char #\. stream)
+       (write-string string stream :start 1)
+       (when (= (length string) 1)
+	 (write-char #\0 stream))
+       (print-float-exponent x (1- e) stream)))))
 
 
 ;;;; Other leaf objects.

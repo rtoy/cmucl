@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.44 2003/11/24 18:54:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.45 2004/04/22 14:26:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,9 @@
   (defconstant multiple-escape 10)
   (defconstant package-delimiter 11)
   ;;fake attribute for use in read-unqualified-token
-  (defconstant delimiter 12))
+  (defconstant delimiter 12)
+  (defconstant constituent-decimal-digit 13)
+  (defconstant constituent-digit-or-expt 14))
 
 
 ;;;; Package specials.
@@ -812,8 +814,10 @@
 	 #.delimiter
 	 (if (digit-char-p ,char (max *read-base* 10))
 	     (if (digit-char-p ,char *read-base*)
-		 constituent-digit
-		 constituent)
+		 (if (= att #.constituent-expt)
+		     constituent-digit-or-expt
+		     constituent-digit)
+		 constituent-decimal-digit)
 	     att))))
 
 
@@ -873,6 +877,7 @@
 	       (cond (all-lower (raise-em))
 		     (all-upper (lower-em))))))))))))
   
+#+(or)
 (defun read-token (stream firstchar)
   "This function is just an fsm that recognizes numbers and symbols."
   ;;check explicitly whether firstchar has entry for non-terminating
@@ -1207,6 +1212,405 @@
 			     "Symbol ~S not found in the ~A package.")))
 		(return (intern name found)))))))))
 
+(defun read-token (stream firstchar)
+  "This function is just an fsm that recognizes numbers and symbols."
+  ;; Check explicitly whether FIRSTCHAR has an entry for
+  ;; NON-TERMINATING in CHARACTER-ATTRIBUTE-TABLE and
+  ;; READ-DOT-NUMBER-SYMBOL in CMT. Report an error if these are
+  ;; violated. (If we called this, we want something that is a
+  ;; legitimate token!) Read in the longest possible string satisfying
+  ;; the Backus-Naur form for "unqualified-token". Leave the result in
+  ;; the *READ-BUFFER*. Return next char after token (last char read).
+  (when *read-suppress*
+    (internal-read-extended-token stream firstchar nil)
+    (return-from read-token nil))
+  (let ((attribute-table (character-attribute-table *readtable*))
+	(package-designator nil)
+	(colons 0)
+	(possibly-rational t)
+	(seen-digit-or-expt nil)
+	(possibly-float t)
+	(was-possibly-float nil)
+	(escapes ())
+	(seen-multiple-escapes nil))
+    (reset-read-buffer)
+    (prog ((char firstchar))
+      (case (char-class3 char attribute-table)
+	(#.constituent-sign (go SIGN))
+	(#.constituent-digit (go LEFTDIGIT))
+	(#.constituent-digit-or-expt
+	 (setq seen-digit-or-expt t)
+	 (go LEFTDIGIT))
+	(#.constituent-decimal-digit (go LEFTDECIMALDIGIT))
+	(#.constituent-dot (go FRONTDOT))
+	(#.escape (go ESCAPE))
+	(#.package-delimiter (go COLON))
+	(#.multiple-escape (go MULT-ESCAPE))
+	;; can't have eof, whitespace, or terminating macro as first char!
+	(t (go SYMBOL)))
+     SIGN ; saw "sign"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (setq possibly-rational t
+	    possibly-float t)
+      (case (char-class3 char attribute-table)
+	(#.constituent-digit (go LEFTDIGIT))
+	(#.constituent-digit-or-expt
+	 (setq seen-digit-or-expt t)
+	 (go LEFTDIGIT))
+	(#.constituent-decimal-digit (go LEFTDECIMALDIGIT))
+	(#.constituent-dot (go SIGNDOT))
+	(#.escape (go ESCAPE))
+	(#.package-delimiter (go COLON))
+	(#.multiple-escape (go MULT-ESCAPE))	
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(t (go SYMBOL)))
+     LEFTDIGIT ; saw "[sign] {digit}+"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (make-integer)))
+      (setq was-possibly-float possibly-float)
+      (case (char-class3 char attribute-table)
+	(#.constituent-digit (go LEFTDIGIT))
+	(#.constituent-decimal-digit (if possibly-float
+						     (go LEFTDECIMALDIGIT)
+						     (go SYMBOL)))
+	(#.constituent-dot (if possibly-float
+					   (go MIDDLEDOT)
+					   (go SYMBOL)))
+	(#.constituent-digit-or-expt
+	 (if (or seen-digit-or-expt (not was-possibly-float))
+	     (progn (setq seen-digit-or-expt t) (go LEFTDIGIT))
+	     (progn (setq seen-digit-or-expt t) (go LEFTDIGIT-OR-EXPT))))
+	(#.constituent-expt
+	 (if was-possibly-float
+	     (go EXPONENT)
+	     (go SYMBOL)))
+	(#.constituent-slash (if possibly-rational
+					     (go RATIO)
+					     (go SYMBOL)))
+	(#.delimiter (unread-char char stream)
+				 (return (make-integer)))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     LEFTDIGIT-OR-EXPT
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (make-integer)))
+      (case (char-class3 char attribute-table)
+	(#.constituent-digit (go LEFTDIGIT))
+	(#.constituent-decimal-digit (error "impossible!"))
+	(#.constituent-dot (go SYMBOL))
+	(#.constituent-digit-or-expt (go LEFTDIGIT))
+	(#.constituent-expt (go SYMBOL))
+	(#.constituent-sign (go EXPTSIGN))
+	(#.constituent-slash (if possibly-rational
+					     (go RATIO)
+					     (go SYMBOL)))
+	(#.delimiter (unread-char char stream)
+				 (return (make-integer)))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     LEFTDECIMALDIGIT ; saw "[sign] {decimal-digit}+"
+      (assert possibly-float)
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go LEFTDECIMALDIGIT))
+	(#.constituent-dot (go MIDDLEDOT))
+	(#.constituent-expt (go EXPONENT))
+	(#.constituent-slash (assert (not possibly-rational))
+					 (go SYMBOL))
+	(#.delimiter (unread-char char stream)
+				 (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     MIDDLEDOT ; saw "[sign] {digit}+ dot"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (let ((*read-base* 10))
+			     (make-integer))))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go RIGHTDIGIT))
+	(#.constituent-expt (go EXPONENT))
+	(#.delimiter
+	 (unread-char char stream)
+	 (return (let ((*read-base* 10))
+		   (make-integer))))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     RIGHTDIGIT ; saw "[sign] {decimal-digit}* dot {digit}+"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (make-float)))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go RIGHTDIGIT))
+	(#.constituent-expt (go EXPONENT))
+	(#.delimiter
+	 (unread-char char stream)
+	 (return (make-float)))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     SIGNDOT ; saw "[sign] dot"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go RIGHTDIGIT))
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(t (go SYMBOL)))
+     FRONTDOT ; saw "dot"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (%reader-error stream "dot context error"))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go RIGHTDIGIT))
+	(#.constituent-dot (go DOTS))
+	(#.delimiter  (%reader-error stream "dot context error"))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     EXPONENT
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (setq possibly-float t)
+      (case (char-class char attribute-table)
+	(#.constituent-sign (go EXPTSIGN))
+	(#.constituent-digit (go EXPTDIGIT))
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     EXPTSIGN ; got to EXPONENT, and saw a sign character
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go EXPTDIGIT))
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     EXPTDIGIT ; got to EXPONENT, saw "[sign] {digit}+"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (make-float)))
+      (case (char-class char attribute-table)
+	(#.constituent-digit (go EXPTDIGIT))
+	(#.delimiter
+	 (unread-char char stream)
+	 (return (make-float)))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     RATIO ; saw "[sign] {digit}+ slash"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class2 char attribute-table)
+	(#.constituent-digit (go RATIODIGIT))
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     RATIODIGIT ; saw "[sign] {digit}+ slash {digit}+"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (return (make-ratio)))
+      (case (char-class2 char attribute-table)
+	(#.constituent-digit (go RATIODIGIT))
+	(#.delimiter
+	 (unread-char char stream)
+	 (return (make-ratio)))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     DOTS ; saw "dot {dot}+"
+      (ouch-read-buffer char)
+      (setq char (read-char stream nil nil))
+      (unless char (%reader-error stream "too many dots"))
+      (case (char-class char attribute-table)
+	(#.constituent-dot (go DOTS))
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream "too many dots"))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+     SYMBOL ; not a dot, dots, or number
+      (let ((stream (in-synonym-of stream)))
+	(stream-dispatch stream
+	    ;; simple-stream
+	    (prog ()
+	       SYMBOL-LOOP
+	       (ouch-read-buffer char)
+	       (setq char (fast-read-char nil nil))
+	       (unless char (go RETURN-SYMBOL))
+	       (case (char-class char attribute-table)
+		 (#.escape (go ESCAPE))
+		 (#.delimiter (stream::%unread-char stream char)
+			      (go RETURN-SYMBOL))
+		 (#.multiple-escape (go MULT-ESCAPE))
+		 (#.package-delimiter (go COLON))
+		 (t (go SYMBOL-LOOP))))
+	    ;; lisp stream
+	    (prepare-for-fast-read-char stream
+	      (prog ()
+	       SYMBOL-LOOP
+	       (ouch-read-buffer char)
+	       (setq char (fast-read-char nil nil))
+	       (unless char (go RETURN-SYMBOL))
+	       (case (char-class char attribute-table)
+		 (#.escape (done-with-fast-read-char)
+				       (go ESCAPE))
+		 (#.delimiter (done-with-fast-read-char)
+					  (unread-char char stream)
+					  (go RETURN-SYMBOL))
+		 (#.multiple-escape (done-with-fast-read-char)
+						(go MULT-ESCAPE))
+		 (#.package-delimiter (done-with-fast-read-char)
+						  (go COLON))
+		 (t (go SYMBOL-LOOP)))))
+	    ;; fundamental-stream
+	    (prog ()
+	     SYMBOL-LOOP
+	     (ouch-read-buffer char)
+	     (setq char (read-char stream nil :eof))
+	     (when (eq char :eof) (go RETURN-SYMBOL))
+	     (case (char-class char attribute-table)
+	       (#.escape (go ESCAPE))
+	       (#.delimiter (unread-char char stream)
+			    (go RETURN-SYMBOL))
+	       (#.multiple-escape (go MULT-ESCAPE))
+	       (#.package-delimiter (go COLON))
+	       (t (go SYMBOL-LOOP))))))
+     ESCAPE ; saw an escape
+      ;; Don't put the escape in the read buffer.
+      ;; READ-NEXT CHAR, put in buffer (no case conversion).
+      (let ((nextchar (read-char stream nil nil)))
+	(unless nextchar
+	  (reader-eof-error stream "after escape character"))
+	(push *ouch-ptr* escapes)
+	(ouch-read-buffer nextchar))
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class char attribute-table)
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+      MULT-ESCAPE
+      (setq seen-multiple-escapes t)
+      (do ((char (read-char stream t) (read-char stream t)))
+	  ((multiple-escape-p char))
+	(if (escapep char) (setq char (read-char stream t)))
+	(push *ouch-ptr* escapes)
+	(ouch-read-buffer char))
+      (setq char (read-char stream nil nil))
+      (unless char (go RETURN-SYMBOL))
+      (case (char-class char attribute-table)
+	(#.delimiter (unread-char char stream) (go RETURN-SYMBOL))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go COLON))
+	(t (go SYMBOL)))
+      COLON
+      (casify-read-buffer escapes)
+      (unless (zerop colons)
+	(%reader-error stream "too many colons in ~S"
+		      (read-buffer-to-string)))
+      (setq colons 1)
+      (setq package-designator
+	    (if (plusp *ouch-ptr*)
+		;; FIXME: It seems inefficient to cons up a package
+		;; designator string every time we read a symbol with an
+		;; explicit package prefix. Perhaps we could implement
+		;; a FIND-PACKAGE* function analogous to INTERN*
+		;; and friends?
+		(read-buffer-to-string)
+		(if seen-multiple-escapes
+		    (read-buffer-to-string)
+		    *keyword-package*)))
+      (reset-read-buffer)
+      (setq escapes ())
+      (setq char (read-char stream nil nil))
+      (unless char (reader-eof-error stream "after reading a colon"))
+      (case (char-class char attribute-table)
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream
+			"illegal terminating character after a colon: ~S"
+			char))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter (go INTERN))
+	(t (go SYMBOL)))
+      INTERN
+      (setq colons 2)
+      (setq char (read-char stream nil nil))
+      (unless char
+	(reader-eof-error stream "after reading a colon"))
+      (case (char-class char attribute-table)
+	(#.delimiter
+	 (unread-char char stream)
+	 (%reader-error stream
+			"illegal terminating character after a colon: ~S"
+			char))
+	(#.escape (go ESCAPE))
+	(#.multiple-escape (go MULT-ESCAPE))
+	(#.package-delimiter
+	 (%reader-error stream
+			"too many colons after ~S name"
+			package-designator))
+	(t (go SYMBOL)))
+      RETURN-SYMBOL
+      (casify-read-buffer escapes)
+      (let ((found (if package-designator
+		       (find-package package-designator)
+		       *package*)))
+	(unless found
+	  (error 'reader-package-error :stream stream
+		 :format-arguments (list package-designator)
+		 :format-control "package ~S not found"))
+
+	(if (or (zerop colons) (= colons 2) (eq found *keyword-package*))
+	    (return (intern* *read-buffer* *ouch-ptr* found))
+	    (multiple-value-bind (symbol test)
+		(find-symbol* *read-buffer* *ouch-ptr* found)
+	      (when (eq test :external) (return symbol))
+	      (let ((name (read-buffer-to-string)))
+		(with-simple-restart (continue "Use symbol anyway.")
+		  (error 'reader-package-error :stream stream
+			 :format-arguments (list name (package-name found))
+			 :format-control
+			 (if test
+			     "The symbol ~S is not external in the ~A package."
+			     "Symbol ~S not found in the ~A package.")))
+		(return (intern name found)))))))))
+
 
 (defun read-extended-token (stream &optional (*readtable* *readtable*))
   "For semi-external use: returns 3 values: the string for the token,
@@ -1310,6 +1714,7 @@
 
 
 
+#+(or)
 (defun make-float ()
   ;;assume that the contents of *read-buffer* are a legal float, with nothing
   ;;else after it.
@@ -1405,6 +1810,73 @@
 		 (setq num (* num (expt 10 exponent)))
 		 (return-from make-float (if negative-fraction (- num) num))))))
 	  ;;should never happen:	
+	  (t (error "Internal error in floating point reader.")))))
+
+(defun make-float ()
+  ;; Assume that the contents of *read-buffer* are a legal float, with nothing
+  ;; else after it.
+  (read-unwind-read-buffer)
+  (let ((negative-fraction nil)
+        (number 0)
+        (divisor 1)
+        (negative-exponent nil)
+        (exponent 0)
+        (float-char ())
+        (char (inch-read-buffer)))
+    (if (cond ((char= char #\+) t)
+              ((char= char #\-) (setq negative-fraction t)))
+        ;; Flush it.
+        (setq char (inch-read-buffer)))
+    ;; Read digits before the dot.
+    (do* ((ch char (inch-read-buffer))
+          (dig (digit-char-p ch) (digit-char-p ch)))
+         ((not dig) (setq char ch))
+      (setq number (+ (* number 10) dig)))
+    ;; Deal with the dot, if it's there.
+    (when (char= char #\.)
+      (setq char (inch-read-buffer))
+      ;; Read digits after the dot.
+      (do* ((ch char (inch-read-buffer))
+            (dig (and (not (eofp ch)) (digit-char-p ch))
+                 (and (not (eofp ch)) (digit-char-p ch))))
+           ((not dig) (setq char ch))
+        (setq divisor (* divisor 10))
+        (setq number (+ (* number 10) dig))))
+    ;; Is there an exponent letter?
+    (cond ((eofp char)
+           ;; If not, we've read the whole number.
+           (let ((num (make-float-aux number divisor
+                                      *read-default-float-format*)))
+             (return-from make-float (if negative-fraction (- num) num))))
+          ((exponent-letterp char)
+           (setq float-char char)
+           ;; Build exponent.
+           (setq char (inch-read-buffer))
+           ;; Check leading sign.
+           (if (cond ((char= char #\+) t)
+                     ((char= char #\-) (setq negative-exponent t)))
+               ;; Flush sign.
+               (setq char (inch-read-buffer)))
+           ;; Read digits for exponent.
+           (do* ((ch char (inch-read-buffer))
+                 (dig (and (not (eofp ch)) (digit-char-p ch))
+                      (and (not (eofp ch)) (digit-char-p ch))))
+                ((not dig)
+                 (setq exponent (if negative-exponent (- exponent) exponent)))
+             (setq exponent (+ (* exponent 10) dig)))
+           ;; Generate and return the float, depending on FLOAT-CHAR:
+           (let* ((float-format (case (char-upcase float-char)
+                                  (#\E *read-default-float-format*)
+                                  (#\S 'short-float)
+                                  (#\F 'single-float)
+                                  (#\D 'double-float)
+                                  (#\L 'long-float)))
+                  num)
+	     (setq num (make-float-aux (* (expt 10 exponent) number) divisor float-format))
+
+	     (return-from make-float (if negative-fraction
+                                             (- num)
+                                             num))))
 	  (t (error "Internal error in floating point reader.")))))
 
 (defun make-float-aux (number divisor float-format)
