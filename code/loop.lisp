@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.24 2004/01/18 13:47:55 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.25 2004/10/05 21:55:12 rtoy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1696,7 +1696,7 @@ collected result will be returned as the value of the LOOP."
   (multiple-value-bind (list constantp list-value) (loop-constant-fold-if-possible val)
     (let ((listvar var))
       (cond ((and var (symbolp var)) (loop-make-iteration-variable var list data-type))
-	    (t (loop-make-variable (setq listvar (loop-gentemp)) list 'list)
+	    (t (loop-make-variable (setq listvar (loop-gentemp)) list 't)
 	       (loop-make-iteration-variable var nil data-type)))
       (multiple-value-bind (list-step step-function) (loop-list-step listvar)
 	(declare #+(and (not LOOP-Prefer-POP) (not CLOE)) (ignore step-function))
