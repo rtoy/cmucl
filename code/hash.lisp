@@ -414,7 +414,8 @@
   (typecase s-expr
     ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
-    (fixnum (abs s-expr))
+    (fixnum
+     (ldb (byte 23 0) s-expr))
     #+nil
     (structure ???)
     ;; Other-pointer types.
