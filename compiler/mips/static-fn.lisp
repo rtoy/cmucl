@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.16 1992/03/11 21:26:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.17 1992/05/21 02:12:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.16 1992/03/11 21:26:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.17 1992/05/21 02:12:53 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -96,10 +96,10 @@
 	       (store-stack-tn nfp-save cur-nfp))
 	     (inst move old-fp cfp-tn)
 	     (inst compute-lra-from-code lra code-tn lra-label temp)
+	     (note-this-location vop :call-site)
 	     (inst j lip)
 	     (inst move cfp-tn csp-tn)
 	     (emit-return-pc lra-label)
-	     (note-this-location vop :unknown-return)
 	     ,(collect ((bindings) (links))
 		(do ((temp (temp-names) (cdr temp))
 		     (name 'values (gensym))
@@ -112,7 +112,7 @@
 		    (links `(setf (tn-ref-across ,prev) ,name))))
 		`(let ,(bindings)
 		   ,@(links)
-		   (default-unknown-values
+		   (default-unknown-values vop
 		       ,(if (zerop num-results) nil 'values)
 		       ,num-results move-temp temp lra-label)))
 	     (when cur-nfp

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.44 1992/04/27 20:03:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.45 1992/05/21 02:12:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.44 1992/04/27 20:03:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.45 1992/05/21 02:12:38 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -294,7 +294,7 @@ default-value-8
         nop
 |#
 ;;;
-(defun default-unknown-values (values nvals move-temp temp lra-label)
+(defun default-unknown-values (vop values nvals move-temp temp lra-label)
   (declare (type (or tn-ref null) values)
 	   (type unsigned-byte nvals) (type tn move-temp temp))
   (if (<= nvals 1)
@@ -302,10 +302,14 @@ default-value-8
 	(move csp-tn old-fp-tn)
 	(inst nop)
 	(inst entry-point)
+	;; Note that this is a single-value return point.
+	(note-this-location vop :single-value-return)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label))
 	    (default-stack-vals (gen-label)))
+	;; Note that this is an unknown-values return point.
+	(note-this-location vop :unknown-return)
 	;; Branch off to the MV case.
 	(inst b regs-defaulted)
 	;; If there are no stack results, clear the stack now.
@@ -485,8 +489,7 @@ default-value-8
       (inst b target)
       (inst nop)
       (emit-return-pc label)
-      (note-this-location vop :unknown-return)
-      (default-unknown-values values nvals move-temp temp label)
+      (default-unknown-values vop values nvals move-temp temp label)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))
     (trace-table-entry trace-table-normal)))
@@ -522,6 +525,7 @@ default-value-8
       (maybe-load-stack-tn fp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
+      (note-this-location vop :call-site)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
@@ -565,6 +569,7 @@ default-value-8
       (maybe-load-stack-tn fp-tn fp)
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
+      (note-this-location vop :call-site)
       (inst b target)
       (inst nop)
       (emit-return-pc label)
@@ -845,14 +850,15 @@ default-value-8
 		 (do-next-filler)
 		 (return)))
 	   
+	   (note-this-location vop :call-site)
 	   (inst j lip)
 	   (do-next-filler))
 
 	 ,@(ecase return
 	     (:fixed
 	      '((emit-return-pc lra-label)
-		(note-this-location vop :unknown-return)
-		(default-unknown-values values nvals move-temp temp lra-label)
+		(default-unknown-values vop values nvals
+					move-temp temp lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:unknown
