@@ -245,7 +245,16 @@
     (setf (global-conflicts-kind structure) kind)
     (setf (global-conflicts-tn structure) tn)
     (setf (global-conflicts-block structure) block)
-    (setf (global-conflicts-number structure) number))))
+    (setf (global-conflicts-number structure) number)))
+
+  ((instruction (prev info . #.assem::instruction-slot-order))
+   ((setf (assem::node-next structure) nil))
+   ((setf (assem::node-vop structure) assem::*current-vop*)
+    (setf (assem::node-prev structure) prev)
+    (setf (assem::instruction-info structure) info)
+    . #.(mapcar #'(lambda (slot)
+		    `(setf (,slot structure) ,slot)
+		    assem::instruction-slot-order)))))
 
 
 ;;; NUKE-IR2-COMPONENT  --  Interface
