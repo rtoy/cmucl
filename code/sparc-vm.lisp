@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.11 1992/03/02 00:05:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.12 1992/03/26 03:08:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.11 1992/03/02 00:05:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.12 1992/03/26 03:08:37 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -107,8 +107,7 @@
 	  ((and (= op #b10) (= op3 #b111010))
 	   (args-for-tcc-inst bad-inst))
 	  (t
-	   (values (error-number-or-lose 'unknown-error)
-		   nil)))))
+	   (values #.(error-number-or-lose 'unknown-error) nil)))))
 
 (defun args-for-unimp-inst (scp)
   (declare (type (alien (* sigcontext)) scp))
@@ -141,15 +140,13 @@
 	    (let* ((rs2 (ldb (byte 5 0) bad-inst))
 		   (op2 (di::make-lisp-obj (sigcontext-register scp rs2))))
 	      (if (fixnump op2)
-		  (values (error-number-or-lose 'unknown-error)
-			  nil)
-		  (values (error-number-or-lose 'object-not-fixnum-error)
+		  (values #.(error-number-or-lose 'unknown-error) nil)
+		  (values #.(error-number-or-lose 'object-not-fixnum-error)
 			  (list (c::make-sc-offset
 				 sparc:descriptor-reg-sc-number
 				 rs2)))))
-	    (values (error-number-or-lose 'unknown-error)
-		    nil))
-	(values (error-number-or-lose 'object-not-fixnum-error)
+	    (values #.(error-number-or-lose 'unknown-error) nil))
+	(values #.(error-number-or-lose 'object-not-fixnum-error)
 		(list (c::make-sc-offset sparc:descriptor-reg-sc-number
 					 rs1))))))
 
@@ -158,11 +155,11 @@
 	 (reg (ldb (byte 5 8) bad-inst)))
     (values (case trap-number
 	      (#.sparc:object-not-list-trap
-	       (error-number-or-lose 'object-not-list-error))
+	       #.(error-number-or-lose 'object-not-list-error))
 	      (#.sparc:object-not-structure-trap
-	       (error-number-or-lose 'object-not-structure-error))
+	       #.(error-number-or-lose 'object-not-structure-error))
 	      (t
-	       (error-number-or-lose 'unknown-error)))
+	       #.(error-number-or-lose 'unknown-error)))
 	    (list (c::make-sc-offset sparc:descriptor-reg-sc-number reg)))))
 
 
