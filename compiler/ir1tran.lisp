@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.6 2000/07/09 14:03:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109.2.7 2000/07/13 17:30:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2555,12 +2555,15 @@
 	     (type-specifier type) name (type-specifier old-type))))))
 
     (dolist (var (get-old-vars names))
-      (let ((new (etypecase var
-		   (global-var (copy-global-var var))
-		   (constant (copy-constant var)))))
-	(setf (leaf-type new) type)
-	(setf (leaf-where-from new) :declared)
-	(setf (gethash (leaf-name var) *free-variables*) new)))))
+      (let ((name (leaf-name var)))
+	(setf (gethash name *free-variables*)
+	      (etypecase var
+		(global-var
+		 (make-global-var :name name :type type :where-from :declared
+				  :kind (global-var-kind var)))
+		(constant
+		 (make-constant :name name :type type :where-from :declared
+				:value (constant-value var)))))))))
 
 
 
@@ -2579,12 +2582,16 @@
       (null)
       (slot-accessor)
       (global-var
-       (let ((new (if (defined-function-p var)
-		      (copy-defined-function var)
-		      (copy-global-var var))))
-	 (setf (leaf-type new) type)
-	 (setf (leaf-where-from new) :declared)
-	 (setf (gethash name *free-functions*) new))
+       (setf (gethash name *free-functions*)
+	     (let ((kind (global-var-kind var)))
+	       (if (defined-function-p var)
+		   (make-defined-function
+		    :name name :type type :where-from :declared :kind kind
+		    :inlinep (defined-function-inlinep var)
+		    :inline-expansion (defined-function-inline-expansion var)
+		    :functional (defined-function-functional var))
+		   (make-global-var :name name :type type :where-from :declared
+				    :kind kind))))
        (when (defined-function-p var)
 	 (let ((fun (defined-function-functional var)))
 	   (when fun
@@ -2629,24 +2636,26 @@
       (let ((form (eval what)))
 	(unless (consp form)
 	  (compiler-error "Malformed PROCLAIM spec: ~S." form))
-	
-	(let ((name (first form))
+
+	(let ((identifier (first form))
 	      (args (rest form))
 	      (ignore nil))
-	  (case name
+	  (case identifier
 	    (special
 	     (dolist (old (get-old-vars (rest form)))
-	       (when (or (constant-p old)
-			 (eq (global-var-kind old) :constant))
-		 (compiler-error
-		  "Attempt to proclaim constant ~S to be special." name))
-	       
-	       (ecase (global-var-kind old)
-		 (:special)
-		 (:global
-		  (let ((new (copy-global-var old)))
-		    (setf (global-var-kind new) :special)
-		    (setf (gethash name *free-variables*) new))))))
+	       (let ((name (leaf-name old)))
+		 (when (or (constant-p old)
+			   (eq (global-var-kind old) :constant))
+		   (compiler-error
+		    "Attempt to proclaim constant ~S to be special." name))
+
+		 (ecase (global-var-kind old)
+		   (:special)
+		   (:global
+		    (setf (gethash name *free-variables*)
+			  (make-global-var :name name :type (leaf-type old)
+					   :where-from (leaf-where-from old)
+					   :kind :special)))))))
 	    (type
 	     (when (endp args)
 	       (compiler-error "Malformed TYPE proclamation: ~S." form))
@@ -2661,7 +2670,7 @@
 	       (compiler-error "Malformed FTYPE proclamation: ~S." form))
 	     (process-ftype-proclamation (first args) (rest args)))
 	    ((inline notinline maybe-inline)
-	     (process-inline-proclamation name args))
+	     (process-inline-proclamation identifier args))
 	    ;;
 	    ;; No non-global state to be updated.
 	    ((optimize optimize-interface declaration freeze-type
@@ -2671,9 +2680,9 @@
 	    ((start-block end-block)
 	     (setq ignore t))
 	    (t
-	     (cond ((member name type-specifier-symbols)
-		    (process-type-proclamation name args))
-		   ((info declaration recognized name)
+	     (cond ((member identifier type-specifier-symbols)
+		    (process-type-proclamation identifier args))
+		   ((info declaration recognized identifier)
 		    (setq ignore t))
 		   (t
 		    (setq ignore t)
