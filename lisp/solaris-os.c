@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.5 2002/10/24 20:38:59 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.6 2002/11/13 13:10:22 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -453,16 +453,6 @@ void make_holes(void)
   os_protect(hole, HOLE_SIZE, 0);
 }
 
-/* Some symbols, most notably stat and lstat, don't appear at all in
-   the glibc .so files as a result of preprocessor and linker magic /
-   braindamage.  So, try falling back to a stub in linux-stubs.S that
-   will call the proper function if it's one of those. */
-
-static void *dlsym_fallback(void *handle, const char *name)
-{
-  fprintf(stderr, "dlsym_fallback name = %s\n", name);
-}
-
 void *os_dlsym(const char *sym_name, lispobj lib_list)
 {
     static void *program_handle;
@@ -485,9 +475,6 @@ void *os_dlsym(const char *sym_name, lispobj lib_list)
 	}
     }
     sym_addr = dlsym(program_handle, sym_name);
-    if (!sym_addr && dlerror()) {
-	return dlsym_fallback(program_handle,sym_name);
-    } else {
-	return sym_addr;
-    }
+
+    return sym_addr;
 }
