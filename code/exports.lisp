@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.1 1997/08/30 18:24:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.2 1997/09/04 13:13:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -579,7 +579,7 @@
 (dolist
     (name
      '("%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD"
-       "%SBITSET" "%SCHARSET" "%SET-DOCUMENTATION" "%SET-FDEFINITION"
+       "%SBITSET" "%SCHARSET" "%SET-FDEFINITION"
        "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF" "%SETELT" "%SETNTH"
        "%SP-STRING-COMPARE" "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
        "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
@@ -603,7 +603,7 @@
 			#+sgi "OLD-SGI")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
-             "%SET-DOCUMENTATION" "%SET-FDEFINITION" "%SET-FILL-POINTER"
+             "%SET-FDEFINITION" "%SET-FILL-POINTER"
              "%SET-ROW-MAJOR-AREF" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
              "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
              "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
@@ -1013,7 +1013,7 @@
 (dolist
     (name
      '("%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET" "%PUT"
-       "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET" "%SET-DOCUMENTATION"
+       "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
        "%SET-FDEFINITION" "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
        "%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
        "%SVSET" "%TYPEP" "LONG-FLOAT-P" "SHORT-FLOAT-P"
@@ -1024,7 +1024,7 @@
   (:nicknames "OLD-C")
   (:import-from "LISP" "%ARRAY-TYPEP" "%ASET"
 		"%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD" "%SBITSET"
-		"%SCHARSET" "%SET-DOCUMENTATION" "%SET-FDEFINITION"
+		"%SCHARSET" "%SET-FDEFINITION"
 		"%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
 		"%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH"
 		"%SP-STRING-COMPARE"
