@@ -7,15 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.1.1.3 1990/03/27 17:02:25 wlott Exp $
-;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
 ;;; simpler code that can be compiled inline.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package "C")
+(in-package 'c)
 
 
 ;;;; Type predicate translation:
@@ -98,7 +96,6 @@
 ;;;    Flush %Typep tests whose result is known at compile time.
 ;;;
 (deftransform %typep ((object type))
-  (unless (constant-continuation-p type) (give-up))
   (ir1-transform-type-predicate
    object
    (specifier-type (continuation-value type))))
@@ -155,6 +152,28 @@
   `(not (consp ,x)))
 
 
+;;;; Internal predicates:
+;;;
+;;;    These type predicates are used to implement simple cases of typep.  They
+;;; shouldn't be used explicitly.
+
+;;; Numeric type predicates:
+;;;
+(define-type-predicate bignump bignum)
+(define-type-predicate double-float-p double-float)
+(define-type-predicate fixnump fixnum)
+(define-type-predicate long-float-p long-float)
+(define-type-predicate ratiop ratio)
+(define-type-predicate short-float-p short-float)
+(define-type-predicate single-float-p single-float)
+
+;;; Character type predicates.  Unlike the un-%'ed versions, these are true
+;;; type predicates, accepting any type object.
+;;;
+(define-type-predicate %string-char-p string-char)
+(define-type-predicate %standard-char-p standard-char)
+
+
 ;;;; Typep source transform:
 
 ;;; Transform-Numeric-Bound-Test  --  Internal
@@ -209,8 +228,7 @@
 		      'fixnum
 		      'integer))
 		 (rational 'rational)
-		 (float (or (numeric-type-format type) 'float))
-		 ((nil) 'number))))
+		 (float (or (numeric-type-format type) 'float)))))
     (once-only ((n-object object))
       (ecase (numeric-type-complexp type)
 	(:real
@@ -229,24 +247,25 @@
 
 ;;; Source-Transform-Hairy-Typep  --  Internal
 ;;;
-;;;    Do the source transformation for a test of a known hairy type.  AND,
-;;; SATISFIES and NOT are converted into the obvious code.  We convert
-;;; anything else to %TYPEP.
+;;;    Do the source transformation for a test of a hairy type.  AND, SATISFIES
+;;; and NOT are converted into the obvious code.  We convert unknown types to
+;;; %TYPEP, emitting an efficiency note if appropriate.
 ;;;
 (defun source-transform-hairy-typep (object type)
   (declare (type hairy-type type))
   (let ((spec (hairy-type-specifier type)))
-    (cond ((or (atom spec)
-	       (not (member (first spec) '(and not satisfies))))
-	   (compiler-warning "Unknown type specifier: ~S." spec)
+    (cond ((unknown-type-p type)
+	   (when (policy nil (> speed brevity))
+	     (compiler-note "Can't open-code test of unknown type ~S." type))
 	   `(%typep ,object ',spec))
-	  ((and (eq (first spec) 'satisfies) (consp (rest spec)))
-	   `(funcall ',(second spec) ,object))
 	  (t
-	   (once-only ((n-obj object))
-	     `(,(first spec) ,@(mapcar #'(lambda (x) 
-					   `(typep ,n-obj ',x))
-				       (rest spec))))))))
+	   (ecase (first spec)
+	     (satisfies `(funcall #',(second spec) ,object))
+	     ((not and)
+	      (once-only ((n-obj object))
+		`(,(first spec) ,@(mapcar #'(lambda (x) 
+					      `(typep ,n-obj ',x))
+					  (rest spec))))))))))
 
 
 ;;; Source-Transform-Union-Typep  --  Internal
