@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.8 1998/01/16 16:05:04 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.9 1998/01/25 05:58:55 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -117,6 +117,23 @@ static int compute_offset(struct sigcontext *scp, lispobj code)
     }
 }
 
+#ifndef i386
+void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
+{
+    lispobj code;
+
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     alloc_sap(scp));
+
+    undo_fake_foreign_function_call(scp);
+}
+#else
 void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 {
     lispobj code, scp_sap=alloc_sap(scp);
@@ -125,11 +142,9 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
     code = find_code(scp);
 
-#ifdef i386
     /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
     /* use debugger breakpoints anywhere in here. */
     sigsetmask(scp->sc_mask);
-#endif
 
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
@@ -138,12 +153,13 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
 
     undo_fake_foreign_function_call(scp);
 }
+#endif
 
 #ifndef i386
 void *handle_function_end_breakpoint(int signal, int subcode,
 				     struct sigcontext *scp)
 {
-    lispobj code, lra, scp_sap=alloc_sap(scp);
+    lispobj code, lra;
     struct code *codeptr;
 
     fake_foreign_function_call(scp);
@@ -154,7 +170,7 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
 	     code,
-	     scp_sap);
+	     alloc_sap(scp));
 
     lra = codeptr->constants[REAL_LRA_SLOT];
 #ifdef reg_CODE
