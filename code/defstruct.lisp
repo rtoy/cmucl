@@ -68,8 +68,8 @@
 	   ;; So the print function is in the right lexical environment, and
 	   ;; can be compiled...
 	   (let ((new ',defstruct))
-	     ,@(when (consp (dd-print-function defstruct))
-		 `((setf (dd-print-function new)
+	     ,@(when (dd-print-function defstruct)
+		 `((setf (info type printer ',name)
 			 #',(dd-print-function defstruct))))
 	     (%defstruct new))
 	   ',name)
@@ -272,6 +272,8 @@
 ;;;
 (defun %defstruct (info)
   (declare (type defstruct-description info))
+  (setf (info type defined-structure-info (dd-name info)) info)
+  
   (dolist (slot (dd-slots info))
     (let ((dsd slot))
       (setf (symbol-function (dsd-accessor slot))
@@ -321,7 +323,6 @@
 		  (declare (fixnum i))
 		  (%primitive header-set res i
 			      (%primitive header-ref structure i)))))))
-
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info))))
 
@@ -547,7 +548,7 @@
   (prin1 (svref structure 0) stream)
   (do ((index 1 (1+ index))
        (length (length structure))
-       (slots (dd-slots (info type structure-info (svref structure 0)))
+       (slots (dd-slots (info type defined-structure-info (svref structure 0)))
 	      (cdr slots)))
       ((or (= index length)
 	   (and *print-length*
