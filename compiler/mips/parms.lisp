@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.34 1990/03/26 22:53:34 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.35 1990/03/28 23:03:20 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -95,19 +95,11 @@
 
 ;;;; Description of the target address space.
 
-;;; Where to put the different spaces and stacks.
+;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x20000000)
 (defparameter target-static-space-start #x30000000)
 (defparameter target-dynamic-space-start #x40000000)
-(defparameter target-control-stack-start #x50000000)
-(defparameter target-binding-stack-start #x60000000)
-
-;;; How much memory to validate for lisp.
-;;; 
-(defparameter target-heap-address-space
-  '((#x20000000 . #x50000000)))
-
 
 
 ;;;; Type definitions:
@@ -492,14 +484,10 @@
     lisp::%initial-function
     lisp::*the-undefined-function*
 
-    ;; Values needed for interfacing C and LISP.
-    lisp::*foreign-function-call-active*
-    lisp::*saved-global-pointer*
-    lisp::*saved-control-stack-pointer*
-    lisp::*saved-binding-stack-pointer*
-    lisp::*saved-allocation-pointer*
-    lisp::*saved-flags-register*
-    lisp::*static-space-allocation-pointer*
+    ;; Free Pointers
+    lisp::*read-only-space-free-pointer*
+    lisp::*static-space-free-pointer*
+    lisp::*initial-dynamic-space-free-pointer*
 
     ;; Things needed for non-local-exit.
     lisp::*current-catch-block*
