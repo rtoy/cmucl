@@ -219,7 +219,7 @@
   (%instance-ref (fsc-instance-slots instance) location))
 
 (defmethod slot-value-using-class ((class std-class)
-                                   (object standard-object)
+                                   (object std-object)
                                    (slotd standard-effective-slot-definition))
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
@@ -245,7 +245,7 @@
 
 (defmethod (setf slot-value-using-class)
 	   (new-value (class std-class)
-		      (object standard-object)
+		      (object std-object)
 		      (slotd standard-effective-slot-definition))
   (let ((location (slot-definition-location slotd)))
     (typecase location
@@ -268,7 +268,7 @@
 
 (defmethod slot-boundp-using-class
 	   ((class std-class) 
-	    (object standard-object) 
+	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
@@ -292,7 +292,7 @@
 
 (defmethod slot-makunbound-using-class
 	   ((class std-class)
-	    (object standard-object) 
+	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
   (let ((location (slot-definition-location slotd)))
     (typecase location

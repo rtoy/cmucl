@@ -415,11 +415,11 @@
   (if direct-superclasses-p
       (progn
         (setq direct-superclasses (or direct-superclasses
-                                      (list *the-class-standard-object*)))
+				      (list *the-class-standard-object*)))
         (dolist (superclass direct-superclasses)
 	  (unless (validate-superclass class superclass)
 	    (error "The class ~S was specified as a~%super-class of the class ~S;~%~
-                    but the meta-classes ~S and~%~S are incompatible.~%
+                    but the meta-classes ~S and~%~S are incompatible.~@
                     Define a method for ~S to avoid this error."
 		   superclass class (class-of superclass) (class-of class)
                    'validate-superclass)))
@@ -1256,7 +1256,7 @@
 	   'standard-class))
   (change-class-internal instance new-class))
 
-(defmethod change-class ((instance standard-object)
+(defmethod change-class ((instance funcallable-standard-object)
 			 (new-class funcallable-standard-class))
   (unless (fsc-instance-p instance)
     (error "Can't change the class of ~S to ~S~@

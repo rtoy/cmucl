@@ -183,8 +183,7 @@
 ;;;
 ;;; The actual constructor objects.
 ;;; 
-#+nil	;  Class definition moved to defs.lisp.
-(defclass constructor (standard-object #+cmu17 kernel:funcallable-instance)
+(defclass constructor (funcallable-standard-object)
      ((class					;The class with which this
 	:initarg :class				;constructor is associated.
 	:reader constructor-class)		;The actual class object,

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.32 1998/02/05 18:51:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.33 1998/06/05 02:53:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,7 @@
   (format t "~&~S is a ~S." x (type-of x)))
 
 (defun describe-instance (x &optional (kind :structure))
-  (cond ((let ((so-class (find-class 'standard-object nil)))
+  (cond ((let ((so-class (find-class 'pcl::std-object nil)))
 	   (and so-class (typep x so-class)))
 	 (fresh-line *standard-output*)
 	 (describe-object x *standard-output*))

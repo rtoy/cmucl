@@ -121,6 +121,12 @@
 	(boundp (make-structure-slot-boundp-function slotd)))
       (let* ((fsc-p (cond ((standard-class-p class) nil)
 			  ((funcallable-standard-class-p class) t)
+			  ((std-class-p class)
+			   ;; Shouldn't be using the optimized-std-accessors
+			   ;; in this case.
+			   #+nil (format t "* Warning: ~s ~s~%   ~s~%"
+				   name slotd class)
+			   nil)
 			  (t (error "~S is not a standard-class" class))))
 	     (slot-name (slot-definition-name slotd))
 	     (index (slot-definition-location slotd))

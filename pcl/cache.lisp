@@ -930,6 +930,7 @@
 ;;;  
 (defun raise-metatype (metatype new-specializer)
   (let ((slot      (find-class 'slot-class))
+	(std       (find-class 'std-class))
 	(standard  (find-class 'standard-class))
 	(fsc       (find-class 'funcallable-standard-class))
 	(structure (find-class 'structure-class))
@@ -940,6 +941,7 @@
 			 (class-of (specializer-class x))
 			 (class-of x))))
 	       (cond ((eq x *the-class-t*) t)
+		     ((*subtypep meta-specializer std)  'standard-instance)
 		     ((*subtypep meta-specializer standard)  'standard-instance)
 		     ((*subtypep meta-specializer fsc)       'standard-instance)
 		     ((*subtypep meta-specializer structure) 'structure-instance)

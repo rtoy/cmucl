@@ -185,13 +185,16 @@
 		    *the-class-stream*
 
                     *the-class-slot-object*
-                    *the-class-standard-object*
                     *the-class-structure-object*
+                    *the-class-std-object*
+                    *the-class-standard-object*
+                    *the-class-funcallable-standard-object*
                     *the-class-class*
                     *the-class-generic-function*
                     *the-class-built-in-class*
                     *the-class-slot-class*
                     *the-class-structure-class*
+                    *the-class-std-class*
                     *the-class-standard-class*
                     *the-class-funcallable-standard-class*
                     *the-class-method*
@@ -627,41 +630,51 @@
   (defclass stream (t) ()
     (:metaclass built-in-class)))
 
-(defclass slot-object (#-cmu17 t #+cmu17 kernel:instance) ()
+(defclass slot-object (t) ()
   (:metaclass slot-class))
 
-(defclass structure-object (slot-object) ()
+(defclass structure-object (slot-object #+cmu17 kernel:instance) ()
   (:metaclass structure-class))
 
 (defstruct (#-cmu17 structure-object #+cmu17 dead-beef-structure-object
 	     (:constructor |STRUCTURE-OBJECT class constructor|)))
 
 
-(defclass standard-object (slot-object) ())
+(defclass std-object (slot-object) ()
+  (:metaclass std-class))
 
-(defclass metaobject (standard-object) ())
+(defclass standard-object (std-object #+cmu17 kernel:instance) ())
 
-(defclass specializer (metaobject) 
+(defclass funcallable-standard-object (std-object
+				       #+cmu17 kernel:funcallable-instance)
+     ()
+  (:metaclass funcallable-standard-class))
+
+(defclass specializer (standard-object) 
      ((type
         :initform nil
         :reader specializer-type)))
 
-(defclass definition-source-mixin (standard-object)
+(defclass definition-source-mixin (std-object)
      ((source
 	:initform (load-truename)
 	:reader definition-source
-	:initarg :definition-source)))
+	:initarg :definition-source))
+  (:metaclass std-class))
 
-(defclass plist-mixin (standard-object)
+(defclass plist-mixin (std-object)
      ((plist
 	:initform ()
-	:accessor object-plist)))
+	:accessor object-plist))
+  (:metaclass std-class))
 
 (defclass documentation-mixin (plist-mixin)
-     ())
+     ()
+  (:metaclass std-class))
 
 (defclass dependent-update-mixin (plist-mixin)
-    ())
+    ()
+  (:metaclass std-class))
 
 ;;;
 ;;; The class CLASS is a specified basic class.  It is the common superclass
@@ -774,7 +787,7 @@
 ;;;
 ;;; Slot definitions.
 ;;;
-(defclass slot-definition (metaobject) 
+(defclass slot-definition (standard-object) 
      ((name
 	:initform nil
 	:initarg :name
@@ -862,7 +875,7 @@
 					       effective-slot-definition)
   ())
 
-(defclass method (metaobject) ())
+(defclass method (standard-object) ())
 
 (defclass standard-method (definition-source-mixin plist-mixin method)
      ((generic-function
@@ -910,8 +923,7 @@
 (defclass generic-function (dependent-update-mixin
 			    definition-source-mixin
 			    documentation-mixin
-			    metaobject
-			    #+cmu17 kernel:funcallable-instance)
+			    funcallable-standard-object)
      ()
   (:metaclass funcallable-standard-class))
     
@@ -943,7 +955,7 @@
   (:default-initargs :method-class *the-class-standard-method*
 		     :method-combination *standard-method-combination*))
 
-(defclass method-combination (metaobject) ())
+(defclass method-combination (standard-object) ())
 
 (defclass standard-method-combination
 	  (definition-source-mixin method-combination)
@@ -954,43 +966,6 @@
       (options       :reader method-combination-options
 	             :initarg :options)))
 
-;;;
-;;; The constructor objects. See construct.lisp.
-;;; 
-(defclass constructor (standard-object #+cmu17 kernel:funcallable-instance)
-     ((class					;The class with which this
-	:initarg :class				;constructor is associated.
-	:reader constructor-class)		;The actual class object,
-						;not the class name.
-						;      
-      (name					;The name of this constructor.
-	:initform nil				;This is the symbol in whose
-	:initarg :name				;function cell the constructor
-	:reader constructor-name)		;usually sits.  Of course, this
-						;is optional.  defconstructor
-						;makes named constructors, but
-						;it is possible to manipulate
-						;anonymous constructors also.
-						;
-      (code-type				;The type of code currently in
-	:initform nil				;use by this constructor.  This
-	:accessor constructor-code-type)	;is mostly for debugging and
-						;analysis purposes.
-						;The lazy installer sets this
-						;to LAZY.  The most basic and
-						;least optimized type of code
-						;is called FALLBACK.
-						;
-      (supplied-initarg-names			;The names of the initargs this
-	:initarg :supplied-initarg-names	;constructor supplies when it
-	:reader					;"calls" make-instance.
-	   constructor-supplied-initarg-names)	;
-						;
-      (code-generators				;Generators for the different
-	:initarg :code-generators		;types of code this constructor
-	:reader constructor-code-generators))	;could use.
-  (:metaclass funcallable-standard-class))
-
 (defparameter *early-class-predicates*
   '((specializer specializerp)
     (exact-class-specializer exact-class-specializer-p)
@@ -998,6 +973,7 @@
     (eql-specializer eql-specializer-p)
     (class classp)
     (slot-class slot-class-p)
+    (std-class std-class-p)
     (standard-class standard-class-p)
     (funcallable-standard-class funcallable-standard-class-p)
     (structure-class structure-class-p)
