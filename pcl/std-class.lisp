@@ -114,7 +114,8 @@
     (setf (plist-value object 'documentation) documentation)))
 
 (defmethod documentation (object &optional doc-type)
-  (lisp:documentation object doc-type))
+  (declare (ignore object doc-type))
+  nil)
 
 (defmethod (setf documentation) (new-value object &optional doc-type)
   (declare (ignore new-value doc-type))
