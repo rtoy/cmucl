@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.16 1990/10/03 17:34:40 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.17 1990/10/05 14:54:52 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1066,10 +1066,8 @@
 		    (and (csubtypep x-type y-type)
 			 (not (csubtypep y-type x-type)))))
 	   '(eql y x))
-	  ((csubtypep y-type (specifier-type 'fixnum))
-	   (give-up))
 	  (t
-	   (give-up "Not enough type information to open-code.")))))
+	   (give-up)))))
 
 
 ;;; = IR1 Transform  --  Internal
