@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.12 1990/06/08 01:18:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.13 1990/06/09 13:54:31 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -184,3 +184,35 @@
 	   (simple-unboxed-array (*)) index index)
   null
   ())
+
+
+
+;;;; Automatic defknowns for primitive objects.
+
+(vm:define-for-each-primitive-object (obj)
+  (collect ((forms))
+    (let* ((options (vm:primitive-object-options obj))
+	   (obj-type (getf options :type t)))
+      (dolist (slot (vm:primitive-object-slots obj))
+	(let* ((name (vm:slot-name slot))
+	       (slot-opts (vm:slot-options slot))
+	       (slot-type (getf slot-opts :type t))
+	       (ref-trans (getf slot-opts :ref-trans))
+	       (ref-known (getf slot-opts :ref-known))
+	       (set-trans (getf slot-opts :set-trans))
+	       (set-known (getf slot-opts :set-known)))
+	  (when ref-known
+	    (if ref-trans
+		(forms `(defknown (,ref-trans) (,obj-type) ,slot-type
+			  ,ref-known))
+		(error "Can't spec a :ref-known with no :ref-trans. ~S in ~S"
+		       name (vm:primitive-object-name obj))))
+	  (when set-known
+	    (if set-trans
+		(forms `(defknown (,set-trans) (,obj-type ,slot-type)
+			  ,slot-type ,set-known))
+		(error "Can't spec a :set-known with no :set-trans. ~S in ~S"
+		       name (vm:primitive-object-name obj)))))))
+    (when (forms)
+      `(progn
+	 ,@(forms)))))

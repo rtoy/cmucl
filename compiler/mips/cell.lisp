@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.35 1990/06/04 05:23:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.36 1990/06/09 13:52:14 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -22,140 +22,48 @@
 
 ;;;; Data object definition macros.
 
-
 (vm:define-for-each-primitive-object (obj)
   (collect ((forms))
     (let* ((options (vm:primitive-object-options obj))
-	   (obj-type (getf options :type t))
-	   (alloc-trans (getf options :alloc-trans))
-	   (alloc-vop (getf options :alloc-vop alloc-trans))
-	   (header (vm:primitive-object-header obj))
-	   (lowtag (vm:primitive-object-lowtag obj))
-	   (size (vm:primitive-object-size obj))
-	   (variable-length (vm:primitive-object-variable-length obj))
-	   (need-unbound-marker nil))
-      (collect ((args) (init-forms))
-	(when (and alloc-vop variable-length)
-	  (args 'extra-words))
-	(dolist (slot (vm:primitive-object-slots obj))
-	  (let* ((name (vm:slot-name slot))
-		 (offset (vm:slot-offset slot))
-		 (rest-p (vm:slot-rest-p slot))
-		 (slot-opts (vm:slot-options slot))
-		 (slot-type (getf slot-opts :type t))
-		 (ref-trans (getf slot-opts :ref-trans))
-		 (ref-vop (getf slot-opts :ref-vop ref-trans))
-		 (ref-known (getf slot-opts :ref-known))
-		 (set-trans (getf slot-opts :set-trans))
-		 (setf-vop (getf slot-opts :setf-vop
-				 (when (and (listp set-trans)
-					    (= (length set-trans) 2)
-					    (eq (car set-trans) 'setf))
-				   (intern (concatenate
-					    'simple-string
-					    "SET-"
-					    (string (cadr set-trans)))))))
-		 (set-vop (getf slot-opts :set-vop
-				(if setf-vop nil set-trans)))
-		 (set-known (getf slot-opts :set-known)))
-	    (when ref-known
-	      (if ref-trans
-		  (forms `(defknown (,ref-trans) (,obj-type) ,slot-type
-			    ,ref-known))
-		  (error "Can't spec a :ref-known with no :ref-trans. ~S in ~S"
-			 name (vm:primitive-object-name obj))))
-	    (when ref-vop
-	      (forms `(define-vop (,ref-vop ,(if rest-p 'slot-ref 'cell-ref))
-			(:variant ,offset ,lowtag)
-			,@(when ref-trans
-			    `((:translate ,ref-trans))))))
-	    (when set-known
-	      (if set-trans
-		  (forms `(defknown (,set-trans) (,obj-type ,slot-type)
-			    ,slot-type ,set-known))
-		  (error "Can't spec a :set-known with no :set-trans. ~S in ~S"
-			 name (vm:primitive-object-name obj))))
-	    (when (or set-vop setf-vop)
-	      (forms `(define-vop ,(cond ((and rest-p setf-vop)
-		  (error "Can't automatically generate a setf VOP for :rest-p ~
-		          slots: ~S in ~S"
-			 name
-			 (vm:primitive-object-name obj)))
-					 (rest-p `(,set-vop slot-set))
-					 (set-vop `(,set-vop cell-set))
-					 (t `(,setf-vop cell-setf)))
-			(:variant ,offset ,lowtag)
-			,@(when set-trans
-			    `((:translate ,set-trans))))))
-	    (ecase (getf (vm:slot-options slot) :init :zero)
-	      (:zero)
-	      (:null
-	       (init-forms `(storew null-tn result ,offset ,lowtag)))
-	      (:unbound
-	       (setf need-unbound-marker t)
-	       (init-forms `(storew temp result ,offset ,lowtag)))
-	      (:arg
-	       (args (vm:slot-name slot))
-	       (init-forms `(storew ,name result ,offset ,lowtag))))))
-	(when (and (null alloc-vop) (args))
-	  (error "Slots ~S want to be initialized, but there is no alloc vop ~
-	          defined for ~S."
-		 (args) (vm:primitive-object-name obj)))
-	(when alloc-vop
-	  (forms
-	   `(define-vop (,alloc-vop)
-	      (:args ,@(mapcar #'(lambda (name)
-				   `(,name :scs (any-reg descriptor-reg)))
-			       (args)))
-	      (:temporary (:scs (non-descriptor-reg) :type random)
-			  ndescr
-			  ,@(when (or need-unbound-marker header
-				      variable-length)
-			      '(temp)))
-	      (:temporary (:scs (descriptor-reg) :to (:result 0)
-				:target real-result) result)
-	      (:results (real-result :scs (descriptor-reg)))
-	      (:policy :fast-safe)
-	      ,@(when alloc-trans
-		  `((:translate ,alloc-trans)))
-	      (:generator 37
-		(pseudo-atomic (ndescr)
-		  (inst addu result alloc-tn ,lowtag)
-		  ,@(cond ((and header variable-length)
-			   `((inst addu temp extra-words
-				   (fixnum (1- ,size)))
-			     (inst addu alloc-tn alloc-tn temp)
-			     (inst sll temp temp
-				   (- vm:type-bits vm:word-shift))
-			     (inst or temp temp ,header)
-			     (storew temp result 0 ,lowtag)
-			     (inst addu alloc-tn alloc-tn
-				   (+ (fixnum 1) vm:lowtag-mask))
-			     (inst li temp (lognot vm:lowtag-mask))
-			     (inst and alloc-tn alloc-tn temp)))
-			  (variable-length
-			   (error ":REST-P T with no header in ~S?"
-				  (vm:primitive-object-name obj)))
-			  (header
-			   `((inst addu alloc-tn alloc-tn
-				   (vm:pad-data-block ,size))
-			     (inst li temp
-				   ,(logior (ash (1- size) vm:type-bits)
-					    (if (integerp header)
-						header
-						0)))
-			     (storew temp result 0 ,lowtag)))
-			  (t
-			   `((inst addu alloc-tn alloc-tn
-				   (vm:pad-data-block ,size)))))
-		  ,@(when need-unbound-marker
-		      `((inst li temp vm:unbound-marker-type)))
-		  ,@(init-forms)
-		  (move real-result result))))))))
+	   (lowtag (vm:primitive-object-lowtag obj)))
+      (dolist (slot (vm:primitive-object-slots obj))
+	(let* ((name (vm:slot-name slot))
+	       (offset (vm:slot-offset slot))
+	       (rest-p (vm:slot-rest-p slot))
+	       (slot-opts (vm:slot-options slot))
+	       (ref-trans (getf slot-opts :ref-trans))
+	       (ref-vop (getf slot-opts :ref-vop ref-trans))
+	       (set-trans (getf slot-opts :set-trans))
+	       (setf-vop (getf slot-opts :setf-vop
+			       (when (and (listp set-trans)
+					  (= (length set-trans) 2)
+					  (eq (car set-trans) 'setf))
+				 (intern (concatenate
+					  'simple-string
+					  "SET-"
+					  (string (cadr set-trans)))))))
+	       (set-vop (getf slot-opts :set-vop
+			      (if setf-vop nil set-trans))))
+	  (when ref-vop
+	    (forms `(define-vop (,ref-vop ,(if rest-p 'slot-ref 'cell-ref))
+				(:variant ,offset ,lowtag)
+		      ,@(when ref-trans
+			  `((:translate ,ref-trans))))))
+	  (when (or set-vop setf-vop)
+	    (forms `(define-vop ,(cond ((and rest-p setf-vop)
+					(error "Can't automatically generate a setf VOP for :rest-p ~
+					slots: ~S in ~S"
+					       name
+					       (vm:primitive-object-name obj)))
+				       (rest-p `(,set-vop slot-set))
+				       (set-vop `(,set-vop cell-set))
+				       (t `(,setf-vop cell-setf)))
+				(:variant ,offset ,lowtag)
+		      ,@(when set-trans
+			  `((:translate ,set-trans)))))))))
     (when (forms)
       `(progn
 	 ,@(forms)))))
-
 
 
 
@@ -228,10 +136,6 @@
   (:generator 10
     (loadw value object vm:symbol-function-slot vm:other-pointer-type)
     (test-simple-type value temp target not-p vm:function-pointer-type)))
-
-#+nil
-(def-source-transform makunbound (x)
-  `(set ,x (%primitive make-immediate-type 0 system:%trap-type)))
 
 
 (define-vop (fast-symbol-value cell-ref)
