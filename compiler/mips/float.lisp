@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.14 1992/02/21 22:02:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.15 1992/07/08 20:56:37 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,7 @@
 		  (:note "float move")
 		  (:generator 0
 		    (unless (location= y x)
-		      (inst move ,format y x))))
+		      (inst fmove ,format y x))))
 		(define-move-vop ,vop :move (,sc) (,sc)))))
   (frob single-move single-reg :single)
   (frob double-move double-reg :double))
@@ -121,7 +121,7 @@
 		    (sc-case y
 		      (,sc
 		       (unless (location= x y)
-			 (inst move ,format y x)))
+			 (inst fmove ,format y x)))
 		      (,stack-sc
 		       (let ((offset (* (tn-offset y) vm:word-bytes)))
 			 (inst swc1 x nfp offset)

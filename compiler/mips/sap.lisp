@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.24 1992/02/25 04:17:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.25 1992/07/08 20:56:59 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,12 +246,12 @@
 	       (:single
 		'((inst swc1 value sap 0)
 		  (unless (location= result value)
-		    (inst move :single result value))))
+		    (inst fmove :single result value))))
 	       (:double
 		'((inst swc1 value sap 0)
 		  (inst swc1-odd value sap vm:word-bytes)
 		  (unless (location= result value)
-		    (inst move :double result value)))))))
+		    (inst fmove :double result value)))))))
        (define-vop (,set-name-c)
 	 (:translate ,set-name)
 	 (:policy :fast-safe)
@@ -281,12 +281,12 @@
 	       (:single
 		'((inst swc1 value object offset)
 		  (unless (location= result value)
-		    (inst move :single result value))))
+		    (inst fmove :single result value))))
 	       (:double
 		'((inst swc1 value object offset)
 		  (inst swc1-odd value object (+ offset vm:word-bytes))
 		  (unless (location= result value)
-		    (inst move :double result value))))))))))
+		    (inst fmove :double result value))))))))))
 
 ); eval-when (compile eval)
 

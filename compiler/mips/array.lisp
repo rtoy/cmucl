@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.33 1991/11/09 02:37:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.34 1992/07/08 20:55:30 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.33 1991/11/09 02:37:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.34 1992/07/08 20:55:30 hallgren Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -363,7 +363,7 @@
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
     (unless (location= result value)
-      (inst move :single result value))))
+      (inst fmove :single result value))))
 
 (define-vop (data-vector-ref/simple-array-double-float)
   (:note "inline array access")
@@ -409,7 +409,7 @@
 		vm:other-pointer-type)
 	     vm:word-bytes))
     (unless (location= result value)
-      (inst move :double result value))))
+      (inst fmove :double result value))))
 
 
 
