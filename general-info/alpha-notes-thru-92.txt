@@ -1,3 +1,87 @@
+3/7/92 to 3/23/92
+
+Code:
+
+Several debugger improvements:
+- The debugger now checks a new special DEBUG:*STACK-TOP-HINT* for a hint
+as to what it should use for the top of the stack.  INTERNAL-ERROR, ERROR,
+BREAK, etc. all bind this before calling INVOKE-DEBUGGER so that there are
+not zillions of irrelevent stack frames at the top of the stack.
+- Fixed def-debugger-command to remove the old definition when a command
+is redefined.
+- Merged Miles' changes that allow the use of restart names as debugger
+commands.
+- Added ``DESCRIBE'' debugger command, which calls DESCRIBE on the function
+in the current frame.
+
+Two fixes/changes to the new breakpoint based trace facility:
+- Protected function-end-cookie-valid-p against running across interpreted
+frames.  This was causing it to flame out.
+- Don't bother warning about dynamic flow of control, because it is obvious
+from the call depth numbers and the warning can happen at real confusing
+times.
+
+More DEFSTRUCT changes:
+- Make stuff work when conc-names make a subtype slot accessor have the
+same name as the supertype accessor.
+- Fixed PARSE-1-DSD to correctly recognize conc-name accessor duplication
+when there is multi-level inheritance.  Now we look at the ACCESSOR-FOR
+info and see if it is an accessor for the same slot.
+- In PARSE-1-DSD, don't blow away the accessor when we are just redefining
+the same structure.  For shadowing to be a problem, the accessor must be of
+a supertype.
+- In DSD-NAME, intern the symbol in *PACKAGE* if the accessor is NIL.  
+- In DEFAULT-STRUCTURE-PRINT, directly use DSD-%NAME, rather than messing
+around creating a symbol.
+
+A few more improvements to the new aliens stuff.
+
+Declare the BACKQ-mumble's INLINE to avoid gratuitous pessimization.
+
+Fixed define-condition to clean up the slot description before handing it
+to defstruct now that defstruct is less forgiving.
+
+Added partial support for FDEFN objects.
+
+Export FEATUREP from EXT.
+
+Changed WITH-SYMBOL package hashtable lookup to not repeated call REM when
+going down a collision chain.
+
+In TIME, fixed display of consing and page faults in the case where no GC time
+is displayed.
+
+Added SEARCH-LIST-DEFINED-P, a predicate that tells if the search list is
+currently defined.
+
+
+Compiler:
+
+Redid the way compiler backend specific data structures are accessed to
+simplify changing the set of backend specific data structures.
+
+
+Hemlock:
+
+Fixed GET-EDITOR-TTY-INPUT to read the data into an c-call:unsigned-char
+buffer instead of a c-call:char so that when we access the elements from
+it, we don't get negative numbers, which make code-char unhappy.
+
+
+C runtime support code:
+
+Fixed a bug in os_allocate_at that was causing load-foreign to lose.
+
+
+Construction scripts:
+
+Changed ``mk-lisp'' to pause for 5 minutes before actually building the
+core to allow people to clear out.  This can be overridden by supplying
+``-now'' as the first argument.
+
+
+
+
 3/4/92 to 3/7/92
 
 Code:
