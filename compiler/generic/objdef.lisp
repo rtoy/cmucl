@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.7 1990/11/25 20:59:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.8 1990/12/11 21:39:59 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -168,10 +168,11 @@
 (defun make-slot (name &rest options
 		       &key docs rest-p (length (if rest-p 0 1))
 		       &allow-other-keys)
-  (remf options :docs)
-  (remf options :rest-p)
-  (remf options :length)
-  (%make-slot name docs rest-p length options))
+  (let ((options (copy-list options)))
+    (remf options :docs)
+    (remf options :rest-p)
+    (remf options :length)
+    (%make-slot name docs rest-p length options)))
 
 (defstruct (primitive-object
 	    )
