@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.40 2002/02/23 01:48:57 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.41 2002/08/12 21:13:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1414,17 +1414,42 @@
 
 
 (def-type-translator complex (&optional spec)
-  (if (eq spec '*)
-      (make-numeric-type :complexp :complex)
-      (let ((type (specifier-type spec)))
-	(unless (numeric-type-p type)
-	  (error "Component type for Complex is not numeric: ~S." spec))
-	(when (eq (numeric-type-complexp type) :complex)
-	  (error "Component type for Complex is complex: ~S." spec))
-
-	(let ((res (copy-numeric-type type)))
-	  (setf (numeric-type-complexp res) :complex)
-	  res))))
+  (cond
+    ((eq spec '*)
+     (make-numeric-type :complexp :complex))
+    (t
+     (flet ((complex-type-error (type)
+	      (error "Component type for Complex is not real: ~S." spec)))
+       (let* ((type (specifier-type spec))
+	      (res (copy-numeric-type
+		    (cond ((numeric-type-p type)
+			   ;; For simple numeric types, try to preserve
+			   ;; as much info as possible.
+			   (when (eq (numeric-type-complexp type) :complex)
+			     (complex-type-error spec))
+			   type)
+			  ((csubtypep type (specifier-type 'rational))
+			   ;; This case also handles things like (eql
+			   ;; 1), etc.
+			   (specifier-type 'rational))
+			  ((csubtypep type (specifier-type 'single-float))
+			   (specifier-type 'single-float))
+			  ((csubtypep type (specifier-type 'double-float))
+			   (specifier-type 'double-float))
+			  ((csubtypep type (specifier-type 'float))
+			   (specifier-type 'float))
+			  ((csubtypep type (specifier-type 'real))
+			   (specifier-type 'real))
+			  ((kernel::hairy-type-p type)
+			   ;; Do we really want to produce an error here?
+			   (cerror "Assume type is a subtype of REAL anyway."
+				   "Cannot determine if ~S is a subtype of REAL"
+				   spec)
+			   (specifier-type 'real))
+			  (t
+			   (complex-type-error spec))))))
+	 (setf (numeric-type-complexp res) :complex)
+	 res)))))
 
 
 ;;; Check-Bound  --  Internal
