@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.83 1997/12/30 16:32:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.84 1998/01/16 16:05:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,7 +838,7 @@
 ;;;
 (defsetf kernel:stack-ref kernel:%set-stack-ref)
 
-(proclaim '(inline cstack-pointer-valid-p))
+(declaim (inline cstack-pointer-valid-p))
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
   #-:x86
@@ -869,7 +869,9 @@
 ;;;; X86 support.
 
 #+x86
-(defun compute-lra-data-from-pc(pc)
+(progn
+
+(defun compute-lra-data-from-pc (pc)
   (declare (type system-area-pointer pc))
   (let ((component-ptr (component-ptr-from-pc pc)))
     (unless (sap= component-ptr (int-sap #x0))
@@ -882,17 +884,13 @@
 ;	 (format t "c-lra-fpc ~a ~a ~a~%" pc code pc-offset)
 	 (values pc-offset code)))))
 
-
-#+x86
 (defconstant vm::nargs-offset #.vm::ecx-offset)
 
 ;;; Check for a valid return address - it could be any valid C/Lisp
 ;;; address.
 ;;;
 ;;; XX Could be a little smarter.
-#+x86
-(proclaim '(inline cstack-pointer-valid-p))
-#+x86
+(declaim (inline ra-pointer-valid-p))
 (defun ra-pointer-valid-p (ra)
   (declare (type system:system-area-pointer ra))
   (and
@@ -913,7 +911,6 @@
 ;;; XX Should handle interrupted frames, both Lisp and C. A present it
 ;;; manages to find a fp trail, see linux hack below.
 ;;;
-#+x86
 (defun x86-call-context (fp &key (depth 8))
   (declare (type system-area-pointer fp)
 	   (fixnum depth))
@@ -971,6 +968,8 @@
 	    (t
 ;	     (format t "Debug: no valid fp found ~s ~s~%" lisp-ocfp c-ocfp)
 	     nil))))))
+
+) ; end progn x86
 
 
 ;;; DESCRIPTOR-SAP -- internal
@@ -1246,22 +1245,21 @@
 ;	       (format t "ccf2: escaped ~s ~s~%" code pc-offset)
 	       (when (and (kernel:code-component-p code)
 			  (eq (kernel:%code-debug-info code) :bogus-lra))
-		     ;; If :bogus-lra grab the real lra.
-		     (let ((real-ra
-			    (kernel:code-header-ref code real-lra-slot)))
-		       (multiple-value-setq (pc-offset code)
-			 (compute-lra-data-from-pc real-ra))
-;		       (format t "ccf3 :bogus-lra ~s ~s~%" code pc-offset)
-		       (assert code))))
+		 ;; If :bogus-lra grab the real lra.
+		 (setq code (kernel:code-header-ref code real-lra-slot))
+		 (setq pc-offset (kernel:code-header-ref code
+							 (1+ real-lra-slot)))
+;		 (format t "ccf3 :bogus-lra ~s ~s~%" code pc-offset)
+		 (assert code)))
 	      (t
 	       ;; Not escaped
 	       (multiple-value-setq (pc-offset code)
 		 (compute-lra-data-from-pc ra))
 ;	       (format t "ccf4 ~s ~s~%" code pc-offset)
 	       (unless code
-		       (setf code :foreign-function
-			     pc-offset 0
-			     escaped nil))))
+		 (setf code :foreign-function
+		       pc-offset 0
+		       escaped nil))))
 
 	(let ((d-fun (case code
 			   (:undefined-function
@@ -4178,8 +4176,8 @@
 ;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
 ;;;
 
-(defconstant bogus-lra-constants 2)
-(defconstant known-return-p-slot (+ vm:code-constants-offset 1))
+(defconstant bogus-lra-constants #-x86 2 #+x86 3)
+(defconstant known-return-p-slot (+ vm:code-constants-offset #-x86 1 #+x86 2))
 
 ;;; MAKE-BOGUS-LRA -- Interface.
 ;;;
@@ -4209,7 +4207,13 @@
      (setf (kernel:%code-debug-info code-object) :bogus-lra)
      (setf (kernel:code-header-ref code-object vm:code-trace-table-offset-slot)
 	   length)
+     #-x86
      (setf (kernel:code-header-ref code-object real-lra-slot) real-lra)
+     #+x86
+     (multiple-value-bind (code offset)
+	 (compute-lra-data-from-pc real-lra)
+       (setf (kernel:code-header-ref code-object real-lra-slot) code)
+       (setf (kernel:code-header-ref code-object (1+ real-lra-slot)) offset))
      (setf (kernel:code-header-ref code-object known-return-p-slot)
 	   known-return-p)
      (kernel:system-area-copy src-start 0 dst-start 0 (* length vm:byte-bits))

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.7 1997/11/25 15:53:30 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.8 1998/01/16 16:05:04 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -21,8 +21,13 @@
 #include "breakpoint.h"
 
 #define REAL_LRA_SLOT 0
+#ifndef i386
 #define KNOWN_RETURN_P_SLOT 1
 #define BOGUS_LRA_CONSTANTS 2
+#else
+#define KNOWN_RETURN_P_SLOT 2
+#define BOGUS_LRA_CONSTANTS 3
+#endif
 
 static void *compute_pc(lispobj code_obj, int pc_offset)
 {
@@ -134,6 +139,7 @@ void handle_breakpoint(int signal, int subcode, struct sigcontext *scp)
     undo_fake_foreign_function_call(scp);
 }
 
+#ifndef i386
 void *handle_function_end_breakpoint(int signal, int subcode,
 				     struct sigcontext *scp)
 {
@@ -145,12 +151,6 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     code = find_code(scp);
     codeptr = (struct code *)PTR(code);
 
-#ifdef i386
-    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
-    /* use debugger breakpoints anywhere in here. */
-    sigsetmask(scp->sc_mask);
-#endif
-
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
 	     compute_offset(scp, code),
 	     code,
@@ -161,21 +161,33 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
 	SC_REG(scp, reg_CODE) = lra;
 #endif
+    undo_fake_foreign_function_call(scp);
+    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
+}
+#else
+void *handle_function_end_breakpoint(int signal, int subcode,
+				     struct sigcontext *scp)
+{
+    lispobj code, scp_sap=alloc_sap(scp);
+    struct code *codeptr;
+
+    fake_foreign_function_call(scp);
+
+    code = find_code(scp);
+    codeptr = (struct code *)PTR(code);
+
+    /* Don't disallow recursive breakpoint traps.  Otherwise, we can't
+     * use debugger breakpoints anywhere in here. */
+    sigsetmask(scp->sc_mask);
+
+    funcall3(SymbolFunction(HANDLE_BREAKPOINT),
+	     compute_offset(scp, code),
+	     code,
+	     scp_sap);
 
     undo_fake_foreign_function_call(scp);
 
-#ifdef i386
-    /* On the x86 the saved lra is a SAP; extract the return
-       address. */
-    if (!Pointerp(lra) || !(LowtagOf(lra)==type_OtherPointer))
-      fprintf(stderr,"* Return address not a SAP!\n");
-    {
-      struct sap *sap = (struct sap *)PTR(lra);
-      if (TypeOf(sap->header)!=type_Sap)
-	fprintf(stderr,"* Return address not a SAP!\n");
-      return (void *)(sap->pointer);
-    }
-#else
-    return (void *)(lra-type_OtherPointer+sizeof(lispobj));
-#endif
+    return compute_pc(codeptr->constants[REAL_LRA_SLOT],
+		      fixnum_value(codeptr->constants[REAL_LRA_SLOT+1]));
 }
+#endif
