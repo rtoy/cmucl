@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.7 1993/08/31 09:02:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.8 1993/09/01 00:15:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -294,6 +294,7 @@
 ;;;
 (defstruct (ctype (:conc-name type-)
 		  (:constructor make-type)
+		  (:make-load-form-fun make-type-load-form)
 		  (:pure t))
   ;;
   ;; The class of this type.
@@ -311,6 +312,13 @@
 (defun %print-type (s stream d)
   (declare (ignore d))
   (format stream "#<~A ~S>" (type-of s) (type-specifier s)))
+
+;;; Make-Type-Load-Form -- Internal
+;;;
+;;; Just dump it as a specifier, and convert it back upon loading.
+;;;
+(defun make-type-load-form (type)
+  `(specifier-type ',(type-specifier s)))
 
 
 ;;;; Utilities:
