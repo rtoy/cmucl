@@ -20,7 +20,7 @@ OS_SRC = ppc-darwin-dlshim.c os-common.c Darwin-os.c
 # The seg1addr should be somewhere above our spaces.  This is where
 # the C runtime code goes, I think.
 
-OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x10000000
+OS_LINK_FLAGS = -g -dynamic -Wl,-sectcreate,CMUCLRO,core,/dev/null -Wl,-segaddr,CMUCLRO,0x01000000 -Wl,-seg1addr,0x1a000000
 OS_LIBS = -lSystem -lc -lm
 GC_SRC = gc.c
 all: adjustlisp

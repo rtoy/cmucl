@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.2 2004/10/16 23:45:50 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.3 2004/10/20 11:30:47 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -16,7 +16,7 @@
 #define READ_ONLY_SPACE_START	(0x01000000)
 #define READ_ONLY_SPACE_SIZE	(0x07ff8000) /* 128 MB, almost */
   
-#define STATIC_SPACE_START  	(0x08000000)
+#define STATIC_SPACE_START  	(0x10000000)
 #define STATIC_SPACE_SIZE   	(0x07ff8000) /* 128 MB, almost */
 
 #define CONTROL_STACK_START 	(0x30000000)
