@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.27 2003/01/23 21:05:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.28 2003/01/26 22:09:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,10 +205,10 @@ this, the functions are listed.  If NIL, then always list the functions.")
 (defvar *profile-info* (make-hash-table :test #'equal))
 (defstruct profile-info
   (name nil)
-  (old-definition (required-argument) :type function)
-  (new-definition (required-argument) :type function)
-  (read-time (required-argument) :type function)
-  (reset-time (required-argument) :type function))
+  (old-definition (ext:required-argument) :type function)
+  (new-definition (ext:required-argument) :type function)
+  (read-time (ext:required-argument) :type function)
+  (reset-time (ext:required-argument) :type function))
 
 ;;; PROFILE-INFO-OR-LOSE  --  Internal
 ;;;
