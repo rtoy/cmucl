@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.4 2003/05/04 13:11:21 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.5 2003/05/17 19:38:57 gerd Exp $")
 
 (in-package "PCL")
 
@@ -141,6 +141,7 @@
       ;; because we can only have one wrapper for each method
       ;; parameter the pv-table cache.
       (unless (case nreq
+		(0 t)
 		((1 2) (info-accessor-p gf-name))
 		(t nil))
 	(loop with optimizable-p = t

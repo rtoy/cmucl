@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.31 2003/05/13 10:16:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.32 2003/05/17 19:38:57 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -137,7 +137,7 @@
     (declare (fixnum x))
     (the fixnum (ash 1 (integer-length (1- x)))))
   
-  (defconstant *nkeys-limit* 256))
+  (defconstant +nkeys-limit+ 256))
 
 (defstruct (cache
 	     (:print-function print-cache)
@@ -146,7 +146,7 @@
   (owner nil)
   ;;
   ;; Number of wrappers used as keys in each cache line.
-  (nkeys 1 :type (integer 1 #.*nkeys-limit*))
+  (nkeys 1 :type (integer 1 #.+nkeys-limit+))
   ;;
   ;; True if keys are followed by a value in the cache.
   (valuep nil :type (member nil t))
@@ -167,7 +167,7 @@
   (size 0 :type fixnum)
   ;;
   ;; The size of a line in the cache.
-  (line-size 1 :type (integer 1 #.(power-of-two-ceiling (1+ *nkeys-limit*))))
+  (line-size 1 :type (integer 1 #.(power-of-two-ceiling (1+ +nkeys-limit+))))
   ;;
   ;; Start index of the last cache line (cache entry) in VECTOR.
   (max-location 0 :type fixnum)
