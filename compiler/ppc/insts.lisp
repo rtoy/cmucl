@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.4 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.5 2004/10/07 02:45:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,8 @@
     (error "~S isn't a floating-point register." tn))
   (tn-offset tn))
 
-(disassem:set-disassem-params :instruction-alignment 32)
+(disassem:set-disassem-params :instruction-alignment 32
+			      :opcode-column-width 8)
 
 (defvar *disassem-use-lisp-reg-names* t)
 
@@ -560,8 +561,6 @@
 
 (def-ppc-iformat (m-sh '(:name :tab ra "," rs "," sh "," mb "," me))
   rs ra sh mb me rc)
-
-
 
 
 ;;;; Primitive emitters.
@@ -1247,15 +1246,65 @@
   (:emitter
    (emit-a-form-inst segment 20 (reg-tn-encoding rs) (reg-tn-encoding ra) sh mb me 1)))
 
+(eval-when (compile load eval)
+  (defun rlwinm-printer (value stream dstate)
+    ;; This arg printer is meant to be used by rlwinm printer.  It
+    ;; should print out the arg as a decimal number, but also add a
+    ;; note if this rlwinm instruction has a different, but clearer
+    ;; mnenomic.  This is really just a hack until (when?) I can
+    ;; figure out how to get the disassembler to print out the
+    ;; mnenomic instead of RLWINM.
+    (format stream "~D" value)
+    ;; Get the instruction word and extract out the values for the ra,
+    ;; rs, sh, mb, and me fields.
+    (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+					(disassem:dstate-cur-offs dstate)
+					vm:word-bytes
+					(disassem::dstate-byte-order dstate))))
+      (let ((rs (ldb (byte 5 21) word))
+	    (ra (ldb (byte 5 16) word))
+	    (sh (ldb (byte 5 11) word))
+	    (mb (ldb (byte 5 6) word))
+	    (me (ldb (byte 5 1) word))
+	    (rc (if (zerop (ldb (byte 1 0) word))
+		    ""
+		    ".")))
+	(cond ((and (= me 31) (= sh (- 32 mb)))
+	       ;; srwi inst
+	       (let ((note (format nil "~A~A ~A, ~A, ~A"
+				   'srwi
+				   rc
+				   (aref reg-symbols ra)
+				   (aref reg-symbols rs)
+				   mb)))
+		 (disassem:note note dstate)))
+	      ((and (zerop mb) (= me (- 31 sh)))
+	       (let ((note (format nil "~A~A ~A, ~A, ~A"
+				   'slwi
+				   rc
+				   (aref reg-symbols ra)
+				   (aref reg-symbols rs)
+				   sh)))
+		 (disassem:note note dstate)))
+	      ((and (zerop sh) (zerop mb))
+	       (let ((note (format nil "~A~A ~A, ~A, ~A"
+				   'clrrwi
+				   rc
+				   (aref reg-symbols ra)
+				   (aref reg-symbols rs)
+				   (- 31 me))))
+		 (disassem:note note dstate)))))))
+  )
+
 (define-instruction rlwinm (segment ra rs sh mb me)
-  (:printer m-sh ((op 21) (rc 0)))
+  (:printer m-sh ((op 21) (rc 0) (sh nil :printer #'rlwinm-printer)))
   (:delay 1)
   (:dependencies (reads rs) (writes ra))
   (:emitter
    (emit-a-form-inst segment 21 (reg-tn-encoding rs) (reg-tn-encoding ra) sh mb me 0)))
 
 (define-instruction rlwinm. (segment ra rs sh mb me)
-  (:printer m-sh ((op 21) (rc 1)))
+  (:printer m-sh ((op 21) (rc 1) (sh nil :printer #'rlwinm-printer)))
   (:delay 1)
   (:dependencies (reads rs) (writes ra) (writes :ccr))
   (:emitter
@@ -1929,15 +1978,10 @@
 (define-instruction-macro bula (target)
   `(inst bcla :bo-u 0 ,target))
 
+|#
 
 (define-instruction-macro blrl ()
   `(inst bclrl :bo-u 0))
-
-
-
-|#
-
-
 
 
 
