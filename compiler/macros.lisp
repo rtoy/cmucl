@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.33 1993/01/14 21:33:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.34 1993/05/11 13:56:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,7 +397,7 @@
 (defmacro deftransform (name (lambda-list &optional (arg-types '*)
 					  (result-type '*)
 					  &key result policy node defun-only
-					  eval-name important)
+					  eval-name important (when :native))
 			     &body (body decls doc))
   "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
                Declaration* [Doc-String] Form*
@@ -453,7 +453,10 @@
     :Important
             - If supplied and non-NIL, note this transform as ``important,''
               which means effeciency notes will be generated when this
-              transform fails even if brevity=speed (but not if brevity>speed)"
+              transform fails even if brevity=speed (but not if brevity>speed)
+    :When {:Native | :Byte | :Both}
+            - Indicates whether this transform applies to native code,
+              byte-code or both (default :native.)"
 
   (when (and eval-name defun-only)
     (error "Can't specify both DEFUN-ONLY and EVAL-NAME."))
@@ -492,7 +495,8 @@
 		   `'(function ,arg-types ,result-type))
 	      #'(lambda ,@stuff)
 	      ,doc
-	      ,(if important t nil)))))))
+	      ,(if important t nil)
+              ,when))))))
 
 ;;;; Defknown, Defoptimizer:
 
