@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.32 1997/08/30 18:21:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.33 1997/09/05 02:32:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,27 +256,29 @@
 ;;;
 ;;; Defoptimizers for %single-float and %double-float.  This makes the
 ;;; FLOAT function return the correct ranges if the input has some
-;;; defined range.  Quite useful if we want to convert some time of
+;;; defined range.  Quite useful if we want to convert some type of
 ;;; bounded integer into a float.
 
 (macrolet ((frob (fun type)
 	     `(defoptimizer (,fun derive-type) ((num))
 	       (let ((num-type (continuation-type num)))
-		 (when (numeric-type-p num-type)
-		   ;; We are trying to float some number to a float
-		   ;; type. The result is obviously a float with the
-		   ;; same range as NUM.
-		   (make-numeric-type
-		    :class 'float
-		    :format ',type
-		    :low (numeric-type-low num-type)
-		    :high (numeric-type-high num-type)))))
-	     ))
+		 (if (or (numeric-type-p num-type)
+			   (union-type-p num-type))
+		     (elfun-derive-type-union
+		      num-type
+		      (constantly t)
+		      #'(lambda (lo hi)
+			  ;; When converting a number to a float, the
+			  ;; limits on the resulting float are obviously
+			  ;; the same as the original number.
+			  (values lo hi ',type))
+		      (specifier-type ',type))
+		     *universal-type*)))))
   (frob %single-float single-float)
   (frob %double-float double-float))
 
 ) ; end progn  
-  
+
 
 ;;;; Float contagion:
 
@@ -498,6 +500,77 @@
       (float pi x)
       (float 0 x)))
 
+#+(or propagate-float-type propagate-fun-type)
+(progn
+;;; Functions to handle most cases of computing the bounds for a
+;;; function.
+;;;
+;;; NUM is a numeric type representing the argument to the
+;;; function.
+;;;
+;;; COND is an function that returns T when the number satisfies the
+;;; desired condition.  It should take two arguments LO and HI which
+;;; are the lower and upper bounds of the numeric-type.
+;;;
+;;; LIMIT-FUN is a function that returns the lower and upper
+;;; bounds.after applying the desired function. Also, the limit
+;;; function can return the preferred type of float, if
+;;; necessary. This feature is used by the float optimizer to
+;;; determine the desired result type.
+;;;
+;;; DEFAULT-TYPE is the specifier-type of the result if COND should
+;;; return NIL.
+
+
+(defun elfun-derive-type-1 (num cond limit-fun default-type)
+  (declare (type numeric-type num))
+  (cond ((and (numeric-type-real-p num)
+	      (funcall cond (numeric-type-low num) (numeric-type-high num)))
+	 (with-float-traps-masked (:underflow :overflow)
+	   ;; The call to the limit-fun has (most) traps disabled.  It
+	   ;; can naively compute the result and return infinity for
+	   ;; the value.  We convert the infinity to nil as needed.
+	   (multiple-value-bind (lo-lim hi-lim float-type)
+	       (funcall limit-fun
+			(numeric-type-low num)
+			(numeric-type-high num))
+	     (make-numeric-type :class 'float
+				:format (or float-type
+					    (elfun-float-format
+					     (numeric-type-format num)))
+				:complexp :real
+				:low (if (and (floatp lo-lim)
+					      (float-infinity-p lo-lim))
+					 nil
+					 lo-lim)
+				:high (if (and (floatp hi-lim)
+					       (float-infinity-p hi-lim))
+					  nil
+					  hi-lim)))))
+	(t
+	 default-type)))
+
+;;; Same as ELFUN-DERIVE-TYPE-1 except we can handle simple
+;;; NUMERIC-TYPEs and UNION-TYPEs.
+(defun elfun-derive-type-union
+    (type cond limit-fun
+	  &optional (default-type
+			(specifier-type '(or float (complex float)))))
+  (cond ((union-type-p type)
+	 ;; For a UNION-TYPE, run down the list of unions and derive
+	 ;; the resulting type of each union and make a UNION-TYPE of
+	 ;; the results.
+	 (let ((result '()))
+	   (dolist (interval (union-type-types type))
+	     (push (elfun-derive-type-1 interval cond limit-fun default-type)
+		   result))
+	   (make-union-type (derive-merged-union-types result))))
+	((numeric-type-p type)
+	 (elfun-derive-type-1 type cond limit-fun default-type))
+	(t
+	 default-type)))
+)  ; end progn
+
 #+propagate-fun-type
 (progn
 ;;;; Optimizers for elementary functions
@@ -513,53 +586,6 @@
   (and (numeric-type-p type)
        (eq (numeric-type-complexp type) :real)))
 
-;;; Macro to handle most cases of computing the bounds for a
-;;; function.
-;;;
-;;; NUM is a continuation representing the argument to the
-;;; function.
-;;;
-;;; COND is an sexp that returns T when the number satisfies the
-;;; desired condition.  The sexp can refer to the two variables, LO
-;;; and HI, which are set to the lower and upper bounds of NUM.
-;;;
-;;; LIMIT-FUN is a function that returns the lower and upper bounds.
-
-(defmacro elfun-derive-type (num cond limit-fun)
-  (let ((type (gensym))
-	(lo-lim (gensym))
-	(hi-lim (gensym)))
-    `(let ((,type (continuation-type ,num)))
-      (when (numeric-type-real-p ,type)
-	(let ((lo (numeric-type-low ,type))
-	      (hi (numeric-type-high ,type)))
-	  (when ,cond
-	    ;; Disable all traps except for :invalid.  We want
-	    ;; standard IEEE handling to return the appropriate value
-	    ;; which we will handle later.  However, for :invalid,
-	    ;; there's probably nothing we can do about it.  We don't
-	    ;; need to do anything else because we don't check any
-	    ;; other flags and they get restored later.
-	    (with-float-traps-masked (:underflow :overflow :inexact
-				      :divide-by-zero)
-	      ;; The call to the limit-fun has (most) traps disabled.
-	      ;; It can naively compute the result, and return
-	      ;; infinity for the value.  We convert the infinity to
-	      ;; nil, as needed.
-	      (multiple-value-bind (,lo-lim ,hi-lim)
-		  (funcall ,limit-fun lo hi)
-		(make-numeric-type :class 'float
-				   :format (elfun-float-format
-					    (numeric-type-format ,type))
-				   :complexp :real
-				   :low (if (and (floatp ,lo-lim)
-						 (float-infinity-p ,lo-lim))
-					    nil
-					    ,lo-lim)
-				   :high (if (and (floatp ,hi-lim)
-						  (float-infinity-p ,hi-lim))
-					     nil
-					     ,hi-lim))))))))))
 
 ;;; Handle these monotonic increasing functions whose domain is
 ;;; possibly part of the real line
@@ -568,8 +594,8 @@
 		   (lo-bnd (gensym))
 		   (hi-bnd (gensym)))
 	       `(defoptimizer (,name derive-type) ((,num))
-		 (elfun-derive-type
-		  ,num
+		 (elfun-derive-type-union
+		  (continuation-type ,num)
 		  ,cond
 		  #'(lambda (,lo-bnd ,hi-bnd)
 		      ;; Since the function is monotonic increasing, the
@@ -581,39 +607,202 @@
 
   ;; These functions are easy because they are defined for the whole
   ;; real line.
-  (frob exp t 0 nil)
-  (frob sinh t nil nil)
-  (frob tanh t -1 1)
-  (frob asinh t nil nil)
+  (frob exp (constantly t)
+	0 nil)
+  (frob sinh (constantly t)
+	nil nil)
+  (frob tanh (constantly t)
+	-1 1)
+  (frob asinh (constantly t)
+	nil nil)
 
   ;; These functions are only defined for part of the real line.  The
-  ;; condition selects the desired part of the line.
-  (frob sqrt (and lo
-		  (>= (bound-value lo) 0))
+  ;; condition selects the desired part of the line.  The default
+  ;; return value of (OR FLOAT (COMPLEX FLOAT)) is ok as the default.
+  (frob sqrt #'(lambda (lo hi)
+		 (declare (ignore hi))
+		 (and lo
+		      (>= (bound-value lo) 0)))
 	0 nil)
-  (frob asin (and lo hi
-		  (>= (bound-value lo) -1)
-		  (<= (bound-value hi) 1))
+  (frob asin #'(lambda (lo hi)
+		 (and lo hi
+		      (>= (bound-value lo) -1)
+		      (<= (bound-value hi) 1)))
 	#.(- (/ pi 2)) #.(/ pi 2))
-  (frob acosh (and lo (>= (bound-value lo) 1))
+  (frob acosh #'(lambda (lo hi)
+		  (declare (ignore hi))
+		  (and lo (>= (bound-value lo) 1)))
 	nil nil)
-  (frob atanh (and lo hi
-		   (>= (bound-value lo) -1)
-		   (<= (bound-value hi) 1))
+  (frob atanh #'(lambda (lo hi)
+		  (and lo hi
+		       (>= (bound-value lo) -1)
+		       (<= (bound-value hi) 1)))
 	-1 1))
 
 
 ;;; acos is monotonic decreasing, so we need to swap the function
 ;;; values at the lower and upper bounds of the input domain.
 (defoptimizer (acos derive-type) ((num))
-  (elfun-derive-type
-   num
-   (and lo hi
-	(>= (bound-value lo) -1)
-	(<= (bound-value hi) 1))
+  (elfun-derive-type-union
+   (continuation-type num)
+   #'(lambda (lo hi)
+       (and lo hi
+	    (>= (bound-value lo) -1)
+	    (<= (bound-value hi) 1)))
    #'(lambda (lo hi)
        (values (bound-func #'acos hi)
 	       (bound-func #'acos lo)))))
+
+
+;;; Optimizer for expt 
+#+notyet
+(progn
+;;; Compute bounds for (expt x y).  This should be easy since (expt x
+;;; y) = (exp (* y (log x))).  However, computations done this way
+;;; have too much roundoff.  Thus we have to do it the hard way.
+  
+(defun safe-expt (x y)
+  (handler-case
+      (expt x y)
+    (error ()
+      nil)))
+
+;;; Handle the case when x >= 1
+(defun interval-expt-> (x y)
+  (case (c::interval-range-info y)
+    ('+
+     ;; Y is positive and log X >= 0.  The range of exp(y * log(x)) is
+     ;; obvious.  We just have to be careful for infinite bounds
+     ;; (given by nil).
+     (let ((lo (safe-expt (c::bound-value (c::interval-low x))
+			  (c::bound-value (c::interval-low y))))
+	   (hi (safe-expt (c::bound-value (c::interval-high x))
+			  (c::bound-value (c::interval-high y)))))
+       (c::make-interval :low lo :high hi)))
+    ('-
+     ;; Y is negative and log x >= 0.  The range of exp(y * log(x)) is
+     ;; obvious.  However, underflow (nil) means 0 is the result
+     (let ((lo (safe-expt (c::bound-value (c::interval-high x))
+			  (c::bound-value (c::interval-low y))))
+	   (hi (safe-expt (c::bound-value (c::interval-low x))
+			  (c::bound-value (c::interval-high y)))))
+       (c::make-interval :low (or lo 0) :high (or hi 0))))
+    (t
+     ;; Split the interval in half
+     (destructuring-bind (y- y+)
+	 (c::interval-split 0 y t)
+       (list (interval-expt-> x y-)
+	     (interval-expt-> x y+))))))
+
+;;; Handle the case when 0<= x <= 1
+(defun interval-expt-< (x y)
+  (case (c::interval-range-info y)
+    ('+
+     ;; Y is positive and log X <= 0.  The range of exp(y * log(x)) is
+     ;; obvious.  We just have to be careful for infinite bounds
+     ;; (given by nil).
+     (let ((lo (safe-expt (c::bound-value (c::interval-low x))
+			  (c::bound-value (c::interval-high y))))
+	   (hi (safe-expt (c::bound-value (c::interval-high x))
+			  (c::bound-value (c::interval-low y)))))
+       (c::make-interval :low lo :high hi)))
+    ('-
+     ;; Y is negative and log x <= 0.  The range of exp(y * log(x)) is
+     ;; obvious.
+     (let ((hi (safe-expt (c::bound-value (c::interval-low x))
+			  (c::bound-value (c::interval-low y))))
+	   (lo (safe-expt (c::bound-value (c::interval-high x))
+			  (c::bound-value (c::interval-high y)))))
+       (c::make-interval :low (or lo 0) :high (or hi 0))))
+    (t
+     ;; Split the interval in half
+     (destructuring-bind (y- y+)
+	 (c::interval-split 0 y t)
+       (list (interval-expt-< x y-)
+	     (interval-expt-< x y+))))))
+
+;;; Compute bounds for (expt x y)
+(defun interval-expt (x y)
+  (cond
+	((or (c::interval-< x (c::make-interval :low 1 :high 1))
+	     (and (c::interval-high x)
+		  (<= (c::bound-value (c::interval-high x)) 1)))
+	 ;; X is definitely less than or equal 1
+	 (interval-expt-< x y))
+	((or (c::interval-< (c::make-interval :low 1 :high 1) x)
+	     (and (c::interval-low x)
+		  (>= (c::bound-value (c::interval-low x))) 1))
+	 ;; X definitely greater than or equal to 1
+	 (interval-expt-> x y))
+	(
+	 ;; Interval contains 1, so we need to break the problem into
+	 ;; two pieces
+	 (destructuring-bind (left right)
+	     (c::interval-split 1 x t t)
+	   (list (interval-expt left y)
+		 (interval-expt right y))))))
+
+;; Derive the type of (expt x-type y-type)
+(defun expt-derive-type-aux (x-type y-type)
+  (let ((x-int (numeric-type->interval x-type))
+	(y-int (numeric-type->interval y-type)))
+    (if (or (eq (numeric-type-complexp x-type) :complex)
+	    (eq (numeric-type-complexp y-type) :complex))
+	(numeric-contagion x-type y-type)
+	;; Several cases to consider
+	(cond ((>= (bound-value (interval-low x-int)) 0)
+	       ;; A positive number to some power is fairly easy to handle.
+	       (let ((bnd (interval-expt x-int y-int)))
+		 (cond ((atom bnd)
+			(fixup-interval-expt bnd x-int y-int x-type y-type))
+		       ((listp bnd)
+			(let ((union '()))
+			  (dolist (type bnd (first (merge-types-aux union)))
+			    (push (fixup-interval-expt type x-int y-int x-type y-type)
+				  union))))
+		       (t
+			(error "Shouldn't happen!")))))
+	      (t
+	       ;; A number to some power.  We punt here.
+	       (c::specifier-type '(or float (complex float))))))))
+		       
+  
+(defun fixup-interval-expt (bnd x-int y-int x-type y-type)
+  (let ((lo (bound-value (interval-low bnd)))
+	(hi (bound-value (interval-high bnd))))
+    ;; Figure out what the return type should be
+    (multiple-value-bind (class format)
+	(cond ((eq (numeric-type-class x-type) 'integer)
+	       (case (numeric-type-class y-type)
+		 (integer
+		  ;; Positive integer to a integer power
+		  (if (>= (bound-value (interval-low y-int)) 0)
+		      (values 'integer nil)
+		      (values 'rational nil)))
+		 ((or rational float)
+		  ;; Integer to rational or float power is a float.
+		  (values 'float (or (numeric-type-format y-type) 'single-float)))))
+	      (t
+	       ;; Rational or float to a power is general numeric contagion
+	       (values 'float (numeric-type-format (numeric-contagion x-type y-type)))))
+      (when (member format '(single-float double-float))
+	(setf lo (coerce lo format))
+	(setf hi (coerce hi format)))
+      (make-numeric-type
+       :class class
+       :format format
+       :low lo
+       :high hi))))
+  
+(defoptimizer (expt derive-type) ((x y))
+  (let ((x-type (continuation-type x))
+	(y-type (continuation-type y)))
+    (derive-real-numeric-or-union-type x-type y-type #'expt-derive-type-aux)))
+
+
+
+)  ; end progn
+
 
 ;;; Compute return type for EXPT.  No bounds are computed because
 ;;; that's pretty complicated in general.  We only return a lower
@@ -690,93 +879,98 @@
 
 
 (defoptimizer (log derive-type) ((x &optional y))
-  ;; We only handle the case where both x and y are non-negative reals.
-  (when (and (csubtypep (continuation-type x)
-			(specifier-type '(real 0.0)))
-	     (or (null y)
-		 (csubtypep (continuation-type y)
-			    (specifier-type '(real 0.0)))))
-    ;; If we get here, x must be a numeric type like (real 0.0).
-    (cond (y
-	   ;; The base is given.  We punt on this case and just say
-	   ;; the result is a float.
-	   (specifier-type 'float))
-
-	  (t
-	   ;; We have (log x) for non-negative x.  Get the bounds
-	   ;; on the result.
-	   (elfun-derive-type
-	    x
-	    t
-	    #'(lambda (lo hi)
-		(values (if (zerop (bound-value lo))
+  (cond ((null y)
+	 ;; The easy one arg case
+	 (elfun-derive-type-union
+	  (continuation-type x)
+	  #'(lambda (lo hi)
+	      (declare (ignore hi))
+	      (and lo
+		   (>= (bound-value lo) 0)))
+	  #'(lambda (lo hi)
+	      (values (if (zerop (bound-value lo))
+			  nil
+			  (set-bound (log (bound-value lo)) (consp lo)))
+		      (if hi
+			  (set-bound (log (bound-value hi)) (consp hi))
+			  nil)))))
+	(t
+	 ;; The hard case with a base given.  Use the definition of
+	 ;; (log x y) = (/ (log x) (log y)) to figure out what the
+	 ;; answer should be.
+	 (flet ((derive-type (arg)
+		  (elfun-derive-type-union
+		   (continuation-type arg)
+		   #'(lambda (lo hi)
+		       (declare (ignore hi))
+		       (and lo
+			    (>= (bound-value lo) 0)))
+		   #'(lambda (lo hi)
+		       (values
+			(if (zerop (bound-value lo))
 			    nil
 			    (set-bound (log (bound-value lo)) (consp lo)))
 			(if hi
 			    (set-bound (log (bound-value hi)) (consp hi))
-			    nil))))))))
+			    nil)))
+		   (specifier-type 'complex))))
+	   (let ((log-x (derive-type x))
+		 (log-y (derive-type y)))
+	     ;; This stolen from the optimizer for /. 
+	     (derive-real-numeric-or-union-type
+	      log-x log-y
+	      #'(lambda (x y)
+		  (declare (type numeric-type x y))
+		  (let ((result (interval-div (numeric-type->interval x)
+					      (numeric-type->interval y)))
+			(result-type (numeric-contagion x y)))
+		    ;; If the result type is a float, we need to be sure to
+		    ;; coerce the bounds into the correct type.
+		    (when (eq (numeric-type-class result-type) 'float)
+		      (setf result (interval-func
+				    #'(lambda (x)
+					(coerce x (or (numeric-type-format result-type)
+						      'float)))
+				    result)))
+		    (values (interval-low result)
+			    (interval-high result)
+			    (numeric-type-class result-type)
+			    (numeric-type-format result-type))))))))))
+	 
+  
 
   
 (defoptimizer (atan derive-type) ((y &optional x))
-  ;; We only handle the case where both x and y are real
-  (let ((y-type (continuation-type y)))
-    (when (numeric-type-real-p y-type)
-      (cond ((and x (numeric-type-real-p (continuation-type x)))
-	     ;; We punt on this case and just return the max bounds
-	     (make-numeric-type
-	      :class 'float
-	      :format (float-format-max
-		       (numeric-type-format y-type)
-		       (numeric-type-format (continuation-type x)))
-	      :complexp :real
-	      :low #.(- pi)
-	      :high #.pi))
-	    (t
-	     ;; One arg case is easy to handle.
-	     (elfun-derive-type
-	      y
-	      t
-	      #'(lambda (lo hi)
-		  (values (or (bound-func #'atan lo) #.(- (/ pi 2)))
-			  (or (bound-func #'atan hi) #.(/ pi 2))))))))))
-
-#+nil
-(defoptimizer (cosh derive-type) ((num))
-  (let ((type (continuation-type num)))
-    (when (numeric-type-real-p type)
-      (multiple-value-bind (lo hi)
-	  (extract-bounds type)
-	(let* ((max-bnd (max-bound (bound-abs lo) (bound-abs hi)))
-	       (min-bnd (min-bound (bound-abs lo) (bound-abs hi))))
-	  ;; Disable all traps except for :invalid.  We want standard
-	  ;; IEEE handling to return the appropriate value which we
-	  ;; will handle later. However, for :invalid, there's
-	  ;; probably nothing we can do about it.  We don't need to do
-	  ;; anything else because we don't check any other flags and
-	  ;; they get restored later.
-	  (with-float-traps-masked (:underflow :overflow :inexact
-				    :divide-by-zero)
-	    (make-numeric-type
-	     :class 'float
-	     :format (elfun-float-format (numeric-type-format type))
-	     :complexp :real
-	     :low (if (and (bound-< lo 0) (bound-< 0 hi))
-		      ;; If zero is in the input domain, then the
-		      ;; lower bound is cosh(0).  Otherwise it's the
-		      ;; min of the bounds.
-		      1
-		      (if (symbolp min-bnd)
-			  nil
-			  (set-bound (cosh (bound-value min-bnd))
-				     (consp min-bnd))))
-	     :high (if (symbolp max-bnd)
-		       nil
-		       (set-bound (cosh (bound-value max-bnd))
-				  (consp max-bnd))))))))))
+  (cond ((null x)
+	 ;; Let's handle the easy one arg case
+	 (elfun-derive-type-union
+	  (continuation-type y)
+	  #'(lambda (lo hi)
+	      (declare (ignore lo hi))
+	      t)
+	  #'(lambda (lo hi)
+	      (values (or (bound-func #'atan lo) #.(- (/ pi 2)))
+		      (or (bound-func #'atan hi) #.(/ pi 2))))))
+	(t
+	 ;; Here is the hard case with two args.  However, we punt on
+	 ;; it, and just return the max bounds.
+	 (when (numeric-type-real-p (continuation-type x))
+	   (make-numeric-type
+	    :class 'float
+	    :format (float-format-max
+		     (numeric-type-format (continuation-type y))
+		     (numeric-type-format (continuation-type x)))
+	    :complexp :real
+	    :low #.(- pi)
+	    :high #.pi)))))
+      
 
 (defoptimizer (cosh derive-type) ((num))
-  (elfun-derive-type
-   num t
+  (elfun-derive-type-union
+   (continuation-type num)
+   #'(lambda (lo hi)
+       (declare (ignore lo hi))
+       t)
    #'(lambda (lo hi)
        ;; Note that cosh(x) = cosh(|x|), and that cosh is monotonic
        ;; increasing for the positive line.
@@ -784,99 +978,72 @@
 	 (values (bound-func #'cosh (interval-low x))
 		 (bound-func #'cosh (interval-high x)))))))
 
-#+nil
-(defoptimizer (phase derive-type) ((num))
-  (let ((type (continuation-type num)))
-    (cond ((numeric-type-real-p type)
-	   ;; Taking the phase of a real number.  The answer is either 0 or pi.
-	   (multiple-value-bind (lo hi)
-	       (extract-bounds type)
-	     ;; If 0 is contained in the bounds, the answer is either
-	     ;; 0 or pi, but we don't know which, so return a float of
-	     ;; the appropriate type.
-	     (cond ((bound-< hi 0)
-		    ;; The upper bound is less than 0, so we know that
-		    ;; the phase must be pi.
-		    (make-numeric-type :class 'float
-				       :format (elfun-float-format
-						(numeric-type-format type))
-				       :complexp :real
-				       :low pi
-				       :high pi))
-		   ((bound-< 0 lo)
-		    ;; The lower bound is greater than zero,
-		    ;; so the answer must be zero.
-		    (make-numeric-type :class 'float
-				       :format (elfun-float-format
-						(numeric-type-format type))
-				       :complexp :real
-				       :low 0
-				       :high 0))
-		   (t
-		    ;; The bounds must contain zero.  The answer is 0 or pi.
-		    (make-numeric-type :class 'float
-				       :format (elfun-float-format
-						(numeric-type-format type))
-				       :complexp :real
-				       :low 0
-				       :high pi)))))
-	  (t
-	   ;; We have a complex number.  The answer is the range -pi
-	   ;; to pi.  (-pi is included because we have -0.)
-	   (make-numeric-type :class 'float
-			      :format (elfun-float-format
-				       (numeric-type-format type))
-			      :complexp :real
-			      :low #.(- pi)
-			      :high pi)))))
+
+(defun phase-derive-type-aux (type)
+  ;; Warning: This optimizer doesn't yet handle the case of -0.0.
+  ;; It returns 0 for this case instead of pi.  Need to fix this.
+  (cond ((numeric-type-real-p type)
+	 (case (interval-range-info (numeric-type->interval type))
+	   ('+
+	    ;; The number is positive, so the phase is 0.
+	    (make-numeric-type :class 'float
+			       :format (elfun-float-format
+					(numeric-type-format type))
+			       :complexp :real
+			       :low 0
+			       :high 0))
+	   ('-
+	    ;; The number is always negative, so the phase is pi
+	    (make-numeric-type :class 'float
+			       :format (elfun-float-format
+					(numeric-type-format type))
+			       :complexp :real
+			       :low pi
+			       :high pi))
+	   (t
+	    ;; We can't tell.  The result is 0 or pi.  Use a union
+	    ;; type for this
+	    (list
+	     (make-numeric-type :class 'float
+				:format (elfun-float-format
+					 (numeric-type-format type))
+				:complexp :real
+				:low 0
+				:high 0)
+	     (make-numeric-type :class 'float
+				:format (elfun-float-format
+					 (numeric-type-format type))
+				:complexp :real
+				:low pi
+				:high pi)))))
+	(t
+	 ;; We have a complex number.  The answer is the range -pi
+	 ;; to pi.  (-pi is included because we have -0.)
+	 (make-numeric-type :class 'float
+			    :format (elfun-float-format
+				     (numeric-type-format type))
+			    :complexp :real
+			    :low #.(- pi)
+			    :high pi))))
 
 (defoptimizer (phase derive-type) ((num))
   (let ((type (continuation-type num)))
-    ;; Warning: This optimizer doesn't yet handle the case of -0.0.
-    ;; It returns 0 for this case instead of pi.  Need to fix this.
     (cond ((numeric-type-real-p type)
-	   (case (interval-range-info (numeric-type->interval type))
-	     ('+
-	      ;; The number is positive, so the phase is 0.
-	      (make-numeric-type :class 'float
-				 :format (elfun-float-format
-					  (numeric-type-format type))
-				 :complexp :real
-				 :low 0
-				 :high 0))
-	     ('-
-	      ;; The number is always negative, so the phase is pi
-	      (make-numeric-type :class 'float
-				 :format (elfun-float-format
-					  (numeric-type-format type))
-				 :complexp :real
-				 :low pi
-				 :high pi))
-	     (t
-	      ;; We can't tell.  The result is 0 or pi.  Use a union type for this
-	      (make-union-type
-	       (list
-		(make-numeric-type :class 'float
-				   :format (elfun-float-format
-					    (numeric-type-format type))
-				   :complexp :real
-				   :low 0
-				   :high 0)
-		(make-numeric-type :class 'float
-				   :format (elfun-float-format
-					    (numeric-type-format type))
-				   :complexp :real
-				   :low pi
-				   :high pi))))))
-	  (t
-	   ;; We have a complex number.  The answer is the range -pi
-	   ;; to pi.  (-pi is included because we have -0.)
-	   (make-numeric-type :class 'float
-			      :format (elfun-float-format
-				       (numeric-type-format type))
-			      :complexp :real
-			      :low #.(- pi)
-			      :high pi)))))
+	   (let ((res (phase-derive-type-aux type)))
+	     (if (listp res)
+		 (make-union-type res)
+		 res)))
+	  ((union-type-p type)
+	   ;; Run down the list and process each type
+	   (let ((result '()))
+	     (dolist (interval (union-type-types type))
+	       (let ((res-1 (phase-derive-type-aux interval)))
+		 (cond ((listp res-1)
+			(push (first res-1) result)
+			(push (second res-1) result))
+		       (t
+			(push res-1 result)))))
+	     (make-union-type (derive-merged-union-types result)))))))
 		 
 ) ;end progn for propagate-fun-type
 
