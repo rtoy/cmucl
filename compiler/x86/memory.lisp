@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.2 1997/02/08 21:30:11 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.3 1997/09/29 04:40:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 
 (in-package :x86)
@@ -98,9 +98,46 @@
 ;;;
 (define-vop (slot-set)
   (:args (object :scs (descriptor-reg))
-	 (value :scs (descriptor-reg any-reg)))
+	 (value :scs (descriptor-reg any-reg immediate)))
   (:variant-vars base lowtag)
   (:info offset)
   (:generator 4
-    (storew value object (+ base offset) lowtag)))
+     (if (sc-is value immediate)
+	 (let ((val (tn-value value)))
+           (etypecase val
+	     (integer
+	      (inst mov
+		    (make-ea :dword :base object
+			     :disp (- (* (+ base offset) word-bytes) lowtag))
+		    (fixnum val)))
+	     (symbol
+	      (inst mov
+		    (make-ea :dword :base object
+			     :disp (- (* (+ base offset) word-bytes) lowtag))
+		    (+ nil-value (static-symbol-offset val))))
+	     (character
+	      (inst mov
+		    (make-ea :dword :base object
+			     :disp (- (* (+ base offset) word-bytes) lowtag))
+		    (logior (ash (char-code val) type-bits)
+			    base-char-type)))))
+	 ;; Else, value not immediate.
+	 (storew value object (+ base offset) lowtag))))
 
+(define-vop (slot-set-conditional)
+  (:args (object :scs (descriptor-reg) :to :eval)
+	 (old-value :scs (descriptor-reg any-reg) :target eax)
+	 (new-value :scs (descriptor-reg any-reg) :target temp))
+  (:temporary (:sc descriptor-reg :offset eax-offset
+		   :from (:argument 1) :to :result :target result)  eax)
+  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
+  (:variant-vars base lowtag)
+  (:results (result :scs (descriptor-reg)))
+  (:info offset)
+  (:generator 4
+    (move eax old-value)
+    (move temp new-value)
+    (inst cmpxchg (make-ea :dword :base object
+			   :disp (- (* (+ base offset) word-bytes) lowtag))
+	  temp)
+    (move result eax)))

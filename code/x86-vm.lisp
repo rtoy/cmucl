@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 ;(ext:file-comment
-;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.3 1997/09/24 15:49:54 dtc Exp $")
+;  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.4 1997/09/29 04:40:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -390,3 +390,11 @@
 ;;; The current alien stack pointer; saved/restored for non-local
 ;;; exits.
 (defvar *alien-stack*)
+
+;;;
+(defun kernel::%instance-set-conditional (object slot test-value new-value)
+  (declare (type instance object)
+	   (type index slot))
+  "Atomically compare object's slot value to test-value and if EQ store
+   new-value in the slot. The original value of the slot is returned."
+  (kernel::%instance-set-conditional object slot test-value new-value))

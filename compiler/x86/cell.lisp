@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2 1997/02/13 01:20:32 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.3 1997/09/29 04:40:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;; 
 
 (in-package :x86)
@@ -290,6 +291,37 @@
 
 (define-full-setter instance-index-set * instance-slots-offset
   instance-pointer-type (any-reg descriptor-reg) * %instance-set)
+
+(export 'kernel::%instance-set-conditional "KERNEL")
+(defknown kernel::%instance-set-conditional (instance index t t) t
+  (unsafe))
+
+(define-vop (instance-set-conditional-c slot-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::%instance-set-conditional)
+  (:variant instance-slots-offset instance-pointer-type)
+  (:arg-types instance (:constant index) * *))
+
+(define-vop (instance-set-conditional)
+  (:translate kernel::%instance-set-conditional)
+  (:args (object :scs (descriptor-reg) :to :eval)
+	 (slot :scs (any-reg) :to :result)
+	 (old-value :scs (descriptor-reg any-reg) :target eax)
+	 (new-value :scs (descriptor-reg any-reg) :target temp))
+  (:arg-types instance positive-fixnum * *)
+  (:temporary (:sc descriptor-reg :offset eax-offset
+		   :from (:argument 1) :to :result :target result)  eax)
+  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:policy :fast-safe)
+  (:generator 5
+    (move eax old-value)
+    (move temp new-value)
+    (inst cmpxchg (make-ea :dword :base object :index slot :scale 4
+			   :disp (- (* instance-slots-offset word-bytes)
+				    instance-pointer-type))
+	  temp)
+    (move result eax)))
 
 
 
