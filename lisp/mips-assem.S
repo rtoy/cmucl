@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.5 1994/07/19 19:51:10 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.6 1994/07/20 16:52:41 hallgren Exp $ */
 #ifdef mach
 #include <machine/regdef.h>
 #else
@@ -209,8 +209,8 @@ call_into_c:
 	move	t7, zero
 	move	t8, zero
 	move	s0, zero
-	move	s1, zero
 	move	s2, zero
+	move	s3, zero
 	move	ra, zero
 
 	/* Turn on pseudo-atomic. */
