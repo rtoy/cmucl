@@ -992,7 +992,7 @@
       (write-indexed result index (pop-stack)))))
 
 
-(define-cold-vop (fop-int-vector :nope)
+(define-cold-fop (fop-int-vector :nope)
   (fop-int-vector)
   (with-fop-stack t
     (let ((res (pop-stack)))
