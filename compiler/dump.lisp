@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64.2.3 2002/03/23 18:50:18 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64.2.4 2002/03/31 14:46:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,7 +396,7 @@
       ;; Specify code format.
       (dump-fop 'lisp::fop-code-format res)
       (dump-byte f-imp res)
-      (dump-byte f-vers res))
+      (dump-unsigned-32 f-vers res))
     res))
 
 

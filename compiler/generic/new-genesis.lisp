@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.4 2002/03/23 18:50:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23.2.5 2002/03/31 14:46:03 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1581,21 +1581,27 @@
 (define-cold-fop (fop-sanctify-for-execution)
   (pop-stack))
 
+;;; must be compatible with the function OPEN-FASL-FILE in compiler/dump.lisp
 (define-cold-fop (fop-code-format :nope)
   (let ((implementation (read-arg 1))
-	(version (read-arg 1)))
+	(version (read-arg 4)))
     (unless (= implementation (c:backend-fasl-file-implementation c:*backend*))
-      (error
+      (cerror
+       "Load ~A anyway"
        "~A was compiled for a ~A, but we are trying to build a core for a ~A"
        *Fasl-file*
-       (or (elt c:fasl-file-implementations implementation)
+       (if (< -1 implementation (length c:fasl-file-implementations))
+           (elt c:fasl-file-implementations implementation)
 	   "unknown machine")
-       (or (elt c:fasl-file-implementations
+       (if (< -1 implementation (length c:fasl-file-implementations))
+           (elt c:fasl-file-implementations
 		(c:backend-fasl-file-implementation c:*backend*))
 	   "unknown machine")))
-    (unless (= version (c:backend-fasl-file-version c:*backend*))
-      (error
-       "~A was compiled for a fasl-file version ~A, but we need version ~A"
+    (unless (or *skip-fasl-file-version-check*
+                (eql version (c:backend-fasl-file-version c:*backend*)))
+      (cerror
+       "Load ~A anyway"
+       "~A was compiled for a fasl-file version ~X, but we need version ~X"
        *Fasl-file* version (c:backend-fasl-file-version c:*backend*)))))
 
 (not-cold-fop fop-make-byte-compiled-function)
@@ -2077,7 +2083,7 @@
       (#.c:sgi-fasl-file-implementation
        (ecase kind
 	 (:jump
-	  (assert (zerop (ash value -28)))
+	  ;; emarsden2002-03-05 (assert (zerop (ash value -28)))
 	  (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	    (setf (ldb (byte 26 0) inst) (ash value -2))
 	    (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
