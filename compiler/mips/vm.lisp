@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.50 1997/08/23 16:00:17 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.51 1998/03/04 15:08:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,6 +145,12 @@
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack :element-size 2) ; double floats.
+  #+complex-float
+  ;; complex-single-floats
+  (complex-single-stack non-descriptor-stack :element-size 2)
+  #+complex-float
+  ;; complex-double-floats.
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
   ;; **** Things that can go in the integer registers.
@@ -226,6 +232,24 @@
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+   :element-size 2
+   :reserve-locations (26 28 30)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+   :locations (0 4 8 12 16 20 24 28)
+   :element-size 4
+   :reserve-locations (24 28)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-stack))
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size)

@@ -5,18 +5,20 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.21 1997/08/23 16:00:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.22 1998/03/04 15:08:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
 ;;; Written by Rob MacLachlan
+;;; Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "MIPS")
 
 
 ;;;; Move functions:
+
 
 (define-move-function (load-single 1) (vop x y)
   ((single-stack) (single-reg))
@@ -28,30 +30,36 @@
   (inst swc1 x (current-nfp-tn vop) (* (tn-offset y) word-bytes)))
 
 
+(defun ld-double (r base offset)
+  (ecase (backend-byte-order *backend*)
+    (:big-endian
+     (inst lwc1 r base (+ offset word-bytes))
+     (inst lwc1-odd r base offset))
+    (:little-endian
+     (inst lwc1 r base offset)
+     (inst lwc1-odd r base (+ offset word-bytes)))))
+  
 (define-move-function (load-double 2) (vop x y)
   ((double-stack) (double-reg))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset x) word-bytes)))
-    (ecase (backend-byte-order *backend*)
-      (:big-endian
-       (inst lwc1 y nfp (+ offset word-bytes))
-       (inst lwc1-odd y nfp offset))
-      (:little-endian
-       (inst lwc1 y nfp offset)
-       (inst lwc1-odd y nfp (+ offset word-bytes)))))
+    (ld-double y nfp offset))
   (inst nop))
+
+(defun str-double (x base offset)
+  (ecase (backend-byte-order *backend*)
+    (:big-endian
+     (inst swc1 x base (+ offset word-bytes))
+     (inst swc1-odd x base offset))
+    (:little-endian
+     (inst swc1 x base offset)
+     (inst swc1-odd x base (+ offset word-bytes)))))
 
 (define-move-function (store-double 2) (vop x y)
   ((double-reg) (double-stack))
   (let ((nfp (current-nfp-tn vop))
 	(offset (* (tn-offset y) word-bytes)))
-    (ecase (backend-byte-order *backend*)
-      (:big-endian
-       (inst swc1 x nfp (+ offset word-bytes))
-       (inst swc1-odd x nfp offset))
-      (:little-endian
-       (inst swc1 x nfp offset)
-       (inst swc1-odd x nfp (+ offset word-bytes))))))
+    (str-double x nfp offset)))
 
 
 
@@ -83,19 +91,9 @@
   (:note "float to pointer coercion")
   (:generator 13
     (with-fixed-allocation (y pa-flag ndescr type size)
-      (ecase (backend-byte-order *backend*)
-	(:big-endian
-	 (cond
-	  (double-p
-	   (inst swc1 x y (- (* (1+ data) word-bytes) other-pointer-type))
-	   (inst swc1-odd x y (- (* data word-bytes) other-pointer-type)))
-	  (t
-	   (inst swc1 x y (- (* data word-bytes) other-pointer-type)))))
-	(:little-endian
-	 (inst swc1 x y (- (* data word-bytes) other-pointer-type))
-	 (when double-p
-	   (inst swc1-odd x y (- (* (1+ data) word-bytes)
-				 other-pointer-type))))))))
+      (if double-p
+	  (str-double x y (- (* data word-bytes) other-pointer-type))
+	  (inst swc1 x y (- (* data word-bytes) other-pointer-type))))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -174,11 +172,242 @@
   (frob move-single-float-argument single-reg single-stack :single nil)
   (frob move-double-float-argument double-reg double-stack :double t))
 
+
+;;;; Complex float move functions
+#+complex-float
+(progn
+
+(defun complex-single-reg-real-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
+		  :offset (tn-offset x)))
+(defun complex-single-reg-imag-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg *backend*)
+		  :offset (1+ (tn-offset x))))
+
+(defun complex-double-reg-real-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (tn-offset x)))
+(defun complex-double-reg-imag-tn (x)
+  (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
+		  :offset (+ (tn-offset x) 2)))
+
+
+(define-move-function (load-complex-single 2) (vop x y)
+  ((complex-single-stack) (complex-single-reg))
+  (let ((real-tn (complex-single-reg-real-tn y)))
+    (inst lwc1 real-tn (current-nfp-tn vop) (* (tn-offset x) vm:word-bytes)))
+  (let ((imag-tn (complex-single-reg-imag-tn y)))
+    (inst lwc1 imag-tn (current-nfp-tn vop) (* (1+ (tn-offset x))
+					       vm:word-bytes)))
+  (inst nop))
+
+(define-move-function (store-complex-single 2) (vop x y)
+  ((complex-single-reg) (complex-single-stack))
+  (let ((real-tn (complex-single-reg-real-tn x)))
+    (inst swc1 real-tn (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes)))
+  (let ((imag-tn (complex-single-reg-imag-tn x)))
+    (inst swc1 imag-tn (current-nfp-tn vop) (* (1+ (tn-offset y))
+					       vm:word-bytes))))
+
+
+(define-move-function (load-complex-double 4) (vop x y)
+  ((complex-double-stack) (complex-double-reg))
+  (let ((nfp (current-nfp-tn vop))
+	(offset (* (tn-offset x) vm:word-bytes)))
+    (let ((real-tn (complex-double-reg-real-tn y)))
+      (ld-double real-tn nfp offset))
+    (let ((imag-tn (complex-double-reg-imag-tn y)))
+      (ld-double imag-tn nfp (+ offset (* 2 vm:word-bytes))))
+    (inst nop)))
+
+(define-move-function (store-complex-double 4) (vop x y)
+  ((complex-double-reg) (complex-double-stack))
+  (let ((nfp (current-nfp-tn vop))
+	(offset (* (tn-offset y) vm:word-bytes)))
+    (let ((real-tn (complex-double-reg-real-tn x)))
+      (str-double real-tn nfp offset))
+    (let ((imag-tn (complex-double-reg-imag-tn x)))
+      (str-double real-tn nfp (+ offset (* 2 word-bytes))))))
+
+;;;
+;;; Complex float register to register moves.
+;;;
+(define-vop (complex-single-move)
+  (:args (x :scs (complex-single-reg) :target y
+	    :load-if (not (location= x y))))
+  (:results (y :scs (complex-single-reg) :load-if (not (location= x y))))
+  (:note "complex single float move")
+  (:generator 0
+     (unless (location= x y)
+       ;; Note the complex-float-regs are aligned to every second
+       ;; float register so there is not need to worry about overlap.
+       (let ((x-real (complex-single-reg-real-tn x))
+	     (y-real (complex-single-reg-real-tn y)))
+	 (inst fmove :single y-real x-real))
+       (let ((x-imag (complex-single-reg-imag-tn x))
+	     (y-imag (complex-single-reg-imag-tn y)))
+	 (inst fmove :single y-imag x-imag)))))
+;;;
+(define-move-vop complex-single-move :move
+  (complex-single-reg) (complex-single-reg))
+
+(define-vop (complex-double-move)
+  (:args (x :scs (complex-double-reg)
+	    :target y :load-if (not (location= x y))))
+  (:results (y :scs (complex-double-reg) :load-if (not (location= x y))))
+  (:note "complex double float move")
+  (:generator 0
+     (unless (location= x y)
+       ;; Note the complex-float-regs are aligned to every second
+       ;; float register so there is not need to worry about overlap.
+       (let ((x-real (complex-double-reg-real-tn x))
+	     (y-real (complex-double-reg-real-tn y)))
+	 (inst fmove :double y-real x-real))
+       (let ((x-imag (complex-double-reg-imag-tn x))
+	     (y-imag (complex-double-reg-imag-tn y)))
+	 (inst fmove :double y-imag x-imag)))))
+;;;
+(define-move-vop complex-double-move :move
+  (complex-double-reg) (complex-double-reg))
+
+;;;
+;;; Move from a complex float to a descriptor register allocating a
+;;; new complex float object in the process.
+;;;
+(define-vop (move-from-complex-single)
+  (:args (x :scs (complex-single-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:note "complex single float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y ndescr vm:complex-single-float-type
+			       vm:complex-single-float-size))
+     (let ((real-tn (complex-single-reg-real-tn x)))
+       (swc1 real-tn y (- (* vm:complex-single-float-real-slot
+			     vm:word-bytes)
+			  vm:other-pointer-type)))
+     (let ((imag-tn (complex-single-reg-imag-tn x)))
+       (swc1 imag-tn y (- (* vm:complex-single-float-imag-slot
+			     vm:word-bytes)
+			  vm:other-pointer-type)))))
+;;;
+(define-move-vop move-from-complex-single :move
+  (complex-single-reg) (descriptor-reg))
+
+(define-vop (move-from-complex-double)
+  (:args (x :scs (complex-double-reg) :to :save))
+  (:results (y :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:note "complex double float to pointer coercion")
+  (:generator 13
+     (with-fixed-allocation (y ndescr vm:complex-double-float-type
+			       vm:complex-double-float-size))
+     (let ((real-tn (complex-double-reg-real-tn x)))
+       (str-double real-tn y (- (* vm:complex-double-float-real-slot
+				   vm:word-bytes)
+				vm:other-pointer-type)))
+     (let ((imag-tn (complex-double-reg-imag-tn x)))
+       (str-double imag-tn y (- (* vm:complex-double-float-imag-slot
+				   vm:word-bytes)
+				vm:other-pointer-type)))))
+;;;
+(define-move-vop move-from-complex-double :move
+  (complex-double-reg) (descriptor-reg))
+
+;;;
+;;; Move from a descriptor to a complex float register
+;;;
+(define-vop (move-to-complex-single)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-single-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (let ((real-tn (complex-single-reg-real-tn y)))
+      (inst lwc1 real-tn x (- (* complex-single-float-real-slot word-bytes)
+			      other-pointer-type)))
+    (let ((imag-tn (complex-single-reg-imag-tn y)))
+      (inst lwc1 imag-tn x (- (* complex-single-float-imag-slot word-bytes)
+			      other-pointer-type)))
+    (inst nop)))
+(define-move-vop move-to-complex-single :move
+  (descriptor-reg) (complex-single-reg))
+
+(define-vop (move-to-complex-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-double-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (let ((real-tn (complex-double-reg-real-tn y)))
+      (ld-double real-tn x (- (* complex-double-float-real-slot word-bytes)
+			      other-pointer-type)))
+    (let ((imag-tn (complex-double-reg-imag-tn y)))
+      (ld-double imag-tn x (- (* complex-double-float-imag-slot word-bytes)
+			      other-pointer-type)))
+    (inst nop)))
+(define-move-vop move-to-complex-double :move
+  (descriptor-reg) (complex-double-reg))
+
+;;;
+;;; Complex float move-argument vop
+;;;
+(define-vop (move-complex-single-float-argument)
+  (:args (x :scs (complex-single-reg) :target y)
+	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-single-reg))))
+  (:results (y))
+  (:note "complex single-float argument move")
+  (:generator 1
+    (sc-case y
+      (complex-single-reg
+       (unless (location= x y)
+	 (let ((x-real (complex-single-reg-real-tn x))
+	       (y-real (complex-single-reg-real-tn y)))
+	   (inst fmove :single y-real x-real))
+	 (let ((x-imag (complex-single-reg-imag-tn x))
+	       (y-imag (complex-single-reg-imag-tn y)))
+	   (inst fmove :single y-imag x-imag))))
+      (complex-single-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+	 (let ((real-tn (complex-single-reg-real-tn x)))
+	   (inst stc1 real-tn nfp offset))
+	 (let ((imag-tn (complex-single-reg-imag-tn x)))
+	   (inst stc1 imag-tn nfp (+ offset word-bytes))))))))
+(define-move-vop move-complex-single-float-argument :move-argument
+  (complex-single-reg descriptor-reg) (complex-single-reg)))))
+
+(define-vop (move-complex-double-float-argument)
+  (:args (x :scs (complex-double-reg) :target y)
+	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-double-reg))))
+  (:results (y))
+  (:note "complex double-float argument move")
+  (:generator 2
+    (sc-case y
+      (complex-double-reg
+       (unless (location= x y)
+	 (let ((x-real (complex-double-reg-real-tn x))
+	       (y-real (complex-double-reg-real-tn y)))
+	   (inst fmove :double y-real x-real))
+	 (let ((x-imag (complex-double-reg-imag-tn x))
+	       (y-imag (complex-double-reg-imag-tn y)))
+	   (inst fmove :double y-imag x-imag))))
+      (complex-double-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+	 (let ((real-tn (complex-double-reg-real-tn x)))
+	   (str-double real-tn nfp offset))
+	 (let ((imag-tn (complex-double-reg-imag-tn x)))
+	   (str-double imag-tn nfp (+ offset (* 2 word-bytes)))))))))
+(define-move-vop move-complex-double-float-argument :move-argument
+  (complex-double-reg descriptor-reg) (complex-double-reg)))))
+
+) ; progn complex-float
+
 
 (define-move-vop move-argument :move-argument
-  (single-reg double-reg) (descriptor-reg))
+  (single-reg double-reg
+   #+complex-float complex-single-reg #+complex-float complex-double-reg)
+  (descriptor-reg))
 
-;; stuff for c-call float-in-int-register arguments
+
+;;;; stuff for c-call float-in-int-register arguments
 
 (define-vop (move-to-single-int-reg)
   (:args (x :scs (single-reg descriptor-reg)))
@@ -522,3 +751,94 @@
   (:generator 3
     (inst ctc1 res 31)
     (move res new)))
+
+
+;;;; Complex float VOPs
+
+#+complex-float
+(progn
+
+(define-vop (make-complex-single-float)
+  (:translate complex)
+  (:args (x :scs (single-reg) :target r)
+	 (y :scs (single-reg) :to :save))
+  (:arg-types single-float single-float)
+  (:results (r :scs (complex-single-reg) :from (:argument 0)))
+  (:result-types complex-single-float)
+  (:note "inline complex single-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (let ((r-real (complex-single-reg-real-tn r)))
+      (unless (location= x r-real)
+	(inst fmove :single r-real x)))
+    (let ((r-imag (complex-single-reg-imag-tn r)))
+      (unless (location= y r-imag)
+	(inst fmove :single r-imag y)))))
+
+(define-vop (make-complex-double-float)
+  (:translate complex)
+  (:args (x :scs (double-reg) :target r)
+	 (y :scs (double-reg) :to :save))
+  (:arg-types double-float double-float)
+  (:results (r :scs (complex-double-reg) :from (:argument 0)))
+  (:result-types complex-double-float)
+  (:note "inline complex double-float creation")
+  (:policy :fast-safe)
+  (:generator 5
+    (let ((r-real (complex-double-reg-real-tn r)))
+      (unless (location= x r-real)
+	(inst fmove :double r-real x)))
+    (let ((r-imag (complex-double-reg-imag-tn r)))
+      (unless (location= y r-imag)
+	(inst fmove :double r-imag y)))))
+
+
+(define-vop (complex-single-float-value)
+  (:args (x :scs (complex-single-reg) :target r))
+  (:arg-types complex-single-float)
+  (:results (r :scs (single-reg)))
+  (:result-types single-float)
+  (:variant-vars offset)
+  (:policy :fast-safe)
+  (:generator 3
+     (let ((value-tn (make-random-tn :kind :normal
+				     :sc (sc-or-lose 'single-reg *backend*)
+				     :offset (+ offset (tn-offset x)))))
+       (unless (location= value-tn r)
+	 (inst fmove :single r value-tn)))))
+
+(define-vop (realpart/complex-single-float complex-single-float-value)
+  (:translate realpart)
+  (:note "complex single float realpart")
+  (:variant 0))
+
+(define-vop (imagpart/complex-single-float complex-single-float-value)
+  (:translate imagpart)
+  (:note "complex single float imagpart")
+  (:variant 1))
+
+(define-vop (complex-double-float-value)
+  (:args (x :scs (complex-double-reg) :target r))
+  (:arg-types complex-double-float)
+  (:results (r :scs (double-reg)))
+  (:result-types double-float)
+  (:variant-vars offset)
+  (:policy :fast-safe)
+  (:generator 3
+     (let ((value-tn (make-random-tn :kind :normal
+				     :sc (sc-or-lose 'double-reg *backend*)
+				     :offset (+ offset (tn-offset x)))))
+       (unless (location= value-tn r)
+	 (inst fmove :double r value-tn)))))
+
+(define-vop (realpart/complex-double-float complex-double-float-value)
+  (:translate realpart)
+  (:note "complex double float realpart")
+  (:variant 0))
+
+(define-vop (imagpart/complex-double-float complex-double-float-value)
+  (:translate imagpart)
+  (:note "complex double float imagpart")
+  (:variant 2))
+
+) ; progn complex-float
