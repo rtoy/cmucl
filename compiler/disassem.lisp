@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.30 2001/06/04 18:41:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.31 2001/06/25 16:47:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,6 +83,7 @@
 	  maybe-note-nil-indexed-symbol-slot-ref
 	  maybe-note-nil-indexed-object
 	  maybe-note-assembler-routine
+	  maybe-note-static-function
 	  maybe-note-single-storage-ref
 	  maybe-note-associated-storage-ref
 	  handle-break-args
@@ -3678,6 +3679,20 @@ symbol object that we know about.")
 		    (princ name stream)))
 	    dstate))
     name))
+
+(defun maybe-note-static-function (nil-byte-offset dstate)
+  "If NIL-BYTE-OFFSET is the offset of static function, store a note
+  describing which one, to be printed as an end-of-line comment after
+  the current instruction is disassembled.  Returns non-NIL iff a note
+  was recorded."
+  (declare (type offset nil-byte-offset)
+	   (type disassem-state dstate))
+  (let ((sym (ignore-errors (vm::offset-static-function nil-byte-offset))))
+    (when sym
+      (note #'(lambda (stream)
+		  (princ sym stream))
+	    dstate))
+    sym))
 
 (defun maybe-note-single-storage-ref (offset sc-name dstate)
   "If there's a valid mapping from OFFSET in the storage class SC-NAME to a
