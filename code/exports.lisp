@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.56 1990/11/18 12:31:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.57 1990/11/21 07:15:32 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -504,13 +504,6 @@
 	  float-sign-shift single-float-digits double-float-digits
 	  register-save-penalty symbol-raw-function-addr-slot
 	  symbol-setf-function-slot structure-header-type
-	  sxhash-simple-string sxhash-simple-substring check-cons
-	  check-symbol check-fixnum check-signed-byte-32
-	  check-unsigned-byte-32 check-function-or-symbol check-function
-	  code-constant-set allocate-code-object
-	  code-instructions compute-function
-
-	  get-vector-subtype set-vector-subtype
 	  ))
 
 (in-package "LISP")
@@ -641,6 +634,13 @@
 	  xep-allocate-frame
 
 	  catch-block
+
+	  sxhash-simple-string sxhash-simple-substring check-cons
+	  check-symbol check-fixnum check-signed-byte-32
+	  check-unsigned-byte-32 check-function-or-symbol check-function
+	  code-constant-set allocate-code-object
+	  code-instructions compute-function
+	  get-vector-subtype set-vector-subtype
 	  ))
 
 (in-package "LISP")
@@ -680,9 +680,6 @@
 	  string=*
 	  string/=*
 	  %sp-string-compare
-	  make-fixnum
-	  make-other-immediate-type
-	  halt
 	  )
 	"C")
 
