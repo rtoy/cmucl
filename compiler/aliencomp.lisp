@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.27 2002/02/08 16:14:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.28 2004/05/24 22:52:34 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,7 +365,7 @@
     (unless bits
       (abort-transform "Unknown size: ~S" (unparse-alien-type alien-type)))
     (if (local-alien-info-force-to-memory-p info)
-	(if (backend-featurep :x86)
+	(if (or (backend-featurep :x86) (backend-featurep :amd64))
 	    `(truly-the system-area-pointer
 			(%primitive alloc-alien-stack-space
 				    ,(ceiling (alien-type-bits alien-type)
@@ -446,7 +446,7 @@
   (let* ((info (continuation-value info))
 	 (alien-type (local-alien-info-type info)))
     (if (local-alien-info-force-to-memory-p info)
-	(if (backend-featurep :x86)
+	(if (or (backend-featurep :x86)	(backend-featurep :amd64))
 	    `(%primitive dealloc-alien-stack-space
 			 ,(ceiling (alien-type-bits alien-type)
 				   vm:byte-bits))

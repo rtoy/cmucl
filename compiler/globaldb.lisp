@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.49 2004/05/17 17:22:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.50 2004/05/24 22:52:34 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,8 +289,8 @@
 (defun info-hash (x)
   (cond
    ((symbolp x)
-    #-(or gengc x86 sparc) (%sxhash-simple-string (symbol-name x))
-    #+(or gengc x86 sparc) (sxhash x))
+    #-(or gengc x86 amd64 sparc) (%sxhash-simple-string (symbol-name x))
+    #+(or gengc x86 amd64 sparc) (sxhash x))
    ((and (listp x)
 	 (eq (car x) 'setf)
 	 (let ((next (cdr x)))
@@ -299,8 +299,8 @@
 	       (when (and (symbolp name) (null (cdr next)))
 		 (let ((sym name))
 		   (declare (symbol sym))
-		   (logxor #-(or gengc x86 sparc) (%sxhash-simple-string (symbol-name sym))
-			   #+(or gengc x86 sparc) (sxhash sym)
+		   (logxor #-(or gengc x86 amd64 sparc) (%sxhash-simple-string (symbol-name sym))
+			   #+(or gengc x86 amd64 sparc) (sxhash sym)
 			   110680597))))))))
    (t
     (sxhash x))))
@@ -494,11 +494,11 @@
 ;;; Not needed with the gengc system, because we use an address independent
 ;;; hashing.
 ;;; 
-#-(or gengc x86)
+#-(or gengc x86 amd64)
 (defun info-cache-gc-hook ()
   (setq *cached-info-environment* nil))
 ;;;
-#-(or gengc x86)
+#-(or gengc x86 amd64)
 (pushnew 'info-cache-gc-hook *after-gc-hooks*)
 
 

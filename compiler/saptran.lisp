@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.16 2003/10/15 13:16:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.17 2004/05/24 22:52:35 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,7 +141,7 @@
   (flushable))
 (defknown sap-ref-double (system-area-pointer fixnum) double-float
   (flushable))
-#+(or x86 long-float)
+#+(or x86 amd64 long-float)
 (defknown sap-ref-long (system-area-pointer fixnum) long-float
   (flushable))
 

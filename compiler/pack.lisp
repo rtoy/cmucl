@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.58 2002/12/07 18:19:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.59 2004/05/24 22:52:35 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1567,7 +1567,7 @@
     ;; For non x86 ports the presence of a save-tn associated with a
     ;; tn is used to identify the old-fp and return-pc tns. It depends
     ;; on the old-fp and return-pc being passed in registers.
-    (unless (backend-featurep :x86)
+    (unless (or (backend-featurep :x86) (backend-featurep :amd64))
       (when (and (not (eq (tn-kind tn) :specified-save))
 		 (conflicts-in-sc original sc offset))
 	    (error "~S wired to a location that it conflicts with." tn)))
@@ -1590,7 +1590,7 @@
 		  original 
 		  (tn-save-tn tn) (tn-kind (tn-save-tn tn))))
     
-    (when (backend-featurep :x86)
+    (when (or (backend-featurep :x86) (backend-featurep :amd64))
        ;; On the x86 ports the old-fp and return-pc are often passed
        ;; on the stack so the above hack for the other ports does not
        ;; always work.  Here the old-fp and return-pc tns are
