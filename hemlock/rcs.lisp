@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.14 1990/03/03 01:24:42 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.15 1990/03/16 19:39:05 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;; 
@@ -8,11 +8,6 @@
 
 
 ;;;;
-
-(defhvar "RCS Check Out Keep Original As Backup"
-  "If non-NIL, all comamnds which perform an RCS check out will rename
-  any existing original file to a backup filename."
-  :value nil)
 
 (defun current-buffer-pathname ()
   (let ((pathname (buffer-pathname (current-buffer))))
@@ -237,8 +232,7 @@
       (when backup (rename-file pathname backup))
       (do-command "rcsco" `(,@(if lock '("-l")) ,(file-namestring pathname)))
       (invoke-hook rcs-check-out-file-hook buffer pathname)
-      (when (and backup (not (value rcs-check-out-keep-original-as-backup)))
-	(delete-file backup)))))
+      (when backup (delete-file backup)))))
 
 (defun pick-temp-file (defaults)
   (let ((index 0))
