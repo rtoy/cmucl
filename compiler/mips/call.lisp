@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.22 1990/06/25 21:13:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.23 1990/06/27 06:43:46 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -286,7 +286,6 @@ default-value-5
 	(inst nop)
 	
 	;; Do the single value calse.
-	(inst compute-code-from-lra code-tn code-tn lra-label temp)
 	(do ((i 1 (1+ i))
 	     (val (tn-ref-across values) (tn-ref-across val)))
 	    ((= i (min nvals register-arg-count)))
@@ -301,31 +300,31 @@ default-value-5
 	(when (> nvals register-arg-count)
 	  (inst addu temp nargs-tn (fixnum (- register-arg-count)))
 	  (collect ((defaults))
-		   (do ((i register-arg-count (1+ i))
-			(val (do ((i 0 (1+ i))
-				  (val values (tn-ref-across val)))
-				 ((= i register-arg-count) val))
-			     (tn-ref-across val)))
-		       ((null val))
-		     
-		     (let ((default-lab (gen-label))
-			   (tn (tn-ref-tn val)))
-		       (defaults (cons default-lab tn))
-		       
-		       (inst bltz temp default-lab)
-		       (inst addu temp temp (fixnum -1))
-		       (loadw move-temp old-fp-tn i)
-		       (store-stack-tn tn move-temp)))
-		   
-		   (emit-label defaulting-done)
-		   (move csp-tn old-fp-tn)
-		   
-		   (assemble (*elsewhere*)
-		     (dolist (def (defaults))
-		       (emit-label (car def))
-		       (store-stack-tn (cdr def) null-tn))
-		     (inst b defaulting-done)
-		     (inst nop))))))
+	    (do ((i register-arg-count (1+ i))
+		 (val (do ((i 0 (1+ i))
+			   (val values (tn-ref-across val)))
+			  ((= i register-arg-count) val))
+		      (tn-ref-across val)))
+		((null val))
+	      
+	      (let ((default-lab (gen-label))
+		    (tn (tn-ref-tn val)))
+		(defaults (cons default-lab tn))
+		
+		(inst bltz temp default-lab)
+		(inst addu temp temp (fixnum -1))
+		(loadw move-temp old-fp-tn i)
+		(store-stack-tn tn move-temp)))
+	    
+	    (emit-label defaulting-done)
+	    (move csp-tn old-fp-tn)
+	    
+	    (assemble (*elsewhere*)
+	      (dolist (def (defaults))
+		(emit-label (car def))
+		(store-stack-tn (cdr def) null-tn))
+	      (inst b defaulting-done)
+	      (inst nop))))))
   (undefined-value))
 
 
