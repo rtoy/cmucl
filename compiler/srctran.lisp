@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.137 2003/09/26 02:26:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.138 2003/09/26 03:52:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2365,7 +2365,7 @@
 			  (specifier-type '(double-float -0d0 0d0)))
 			 ((nil)
 			  (specifier-type '(float -0d0 0d0))))
-		       (list (specifier-type '(eql 0))))))
+		       (specifier-type '(eql 0)))))
 	(case range-info
 	  (+ (if contains-0-p
 	       (type-union zero plus)
