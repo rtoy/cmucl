@@ -17,7 +17,9 @@ char *arch_init(void)
     return NULL;
 }
 
-os_vm_address_t arch_get_bad_addr(struct sigcontext *scp)
+os_vm_address_t arch_get_bad_addr(int signal,
+				  int code,
+				  struct sigcontext *scp)
 {
     struct hp800_thread_state *state;
     os_vm_address_t addr;
