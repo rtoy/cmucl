@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.10 1992/02/14 23:45:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.11 1993/03/01 15:24:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,25 +199,6 @@
 	 (exp (/ (log number) 2))
 	 (%sqrt number)))
     ((complex) (exp (/ (log number) 2)))))
-
-;;; ISQRT:  Integer square root - isqrt(n)**2 <= n
-;;; Upper and lower bounds on the result are estimated using integer-length.
-;;; On each iteration, one of the bounds is replaced by their mean.
-;;; The lower bound is returned when the bounds meet or differ by only 1.
-;;; Initial bounds guarantee that lg(sqrt(n)) = lg(n)/2 iterations suffice.
-
-(defun isqrt (n)
-  "Returns the root of the nearest integer less than
-   n which is a perfect square."
-  (if (and (integerp n) (not (minusp n)))
-      (do* ((lg (integer-length n))
-	    (lo (ash 1 (ash (1- lg) -1)))
-	    (hi (+ lo (ash lo (if (oddp lg) -1 0))))) ;tighten by 3/4 if possible.
-	   ((<= (1- hi) lo) lo)
-	(let ((mid (ash (+ lo hi) -1)))
-	  (if (<= (* mid mid) n) (setq lo mid) (setq hi mid))))
-      (error "Isqrt: ~S argument must be a nonnegative integer" n)))
-
 
 
 ;;;; Trigonometic and Related Functions
