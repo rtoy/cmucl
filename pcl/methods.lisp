@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.31 2003/05/12 11:27:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.32 2003/05/20 18:39:36 gerd Exp $")
 
 (in-package :pcl)
 
@@ -225,10 +225,16 @@
       "is not a non-null atom"))
 
 (defmethod legal-slot-name-p ((object standard-method) x)
-  (cond ((not (symbolp x)) "is not a symbol and so cannot be bound")
-	((keywordp x)      "is a keyword and so cannot be bound")
-	((memq x '(t nil)) "cannot be bound")
-	((constantp x)     "is a constant and so cannot be bound")
+  (cond ((not (symbolp x))
+	 "is not a symbol and so cannot be bound")
+	((keywordp x)
+	 (if *allow-keyword-slot-names*
+	     t
+	     "is a keyword and so cannot be bound"))
+	((memq x '(t nil))
+	 "cannot be bound")
+	((constantp x)
+	 "is a constant and so cannot be bound")
 	(t t)))
 
 (defmethod legal-specializers-p ((object standard-method) x)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.86 2003/05/12 21:54:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.87 2003/05/20 18:39:36 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -266,6 +266,9 @@
    ;; a list of (NAME . INDEX) pairs for accessors of included structures
    (inherited-accessor-alist () :type list))
 
+(defun print-defstruct-description (structure stream depth)
+  (declare (ignore depth))
+  (format stream "#<Defstruct-Description for ~S>" (dd-name structure)))
 
 ;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
 ;;; slots.
@@ -275,7 +278,9 @@
              (:print-function print-defstruct-slot-description)
 	     (:pure t)
 	     (:make-load-form-fun :just-dump-it-normally))
-  %name				; string name of slot
+  ;;
+  ;; The name of the slot, a symbol.
+  name
   ;;
   ;; its position in the implementation sequence
   (index (required-argument) :type fixnum)
@@ -292,10 +297,12 @@
 			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
-(defun print-defstruct-description (structure stream depth)
+(defun print-defstruct-slot-description (structure stream depth)
   (declare (ignore depth))
-  (format stream "#<Defstruct-Description for ~S>" (dd-name structure)))
+  (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
 
+(defun dsd-%name (dsd)
+  (symbol-name (dsd-name dsd)))
 
 ;;; CLASS-STRUCTURE-P  --  Internal
 ;;;
@@ -316,20 +323,6 @@
 	  ((not (typep (layout-info res) 'defstruct-description))
 	   (error "Class is not a structure class: ~S" name))
 	  (t res))))
-
-
-;;; DSD-Name  --  External
-;;;
-;;;    Return the name of a defstruct slot as a symbol.  We store it
-;;; as a string to avoid creating lots of worthless symbols at load time.
-;;;
-(defun dsd-name (dsd)
-  (intern (string (dsd-%name dsd))
-	  (symbol-package (dsd-accessor dsd))))
-
-(defun print-defstruct-slot-description (structure stream depth)
-  (declare (ignore depth))
-  (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
 
 (defun dd-maybe-make-print-method (defstruct)
   ;; Maybe generate CLOS DEFMETHOD forms for :print-function/:print-object.
@@ -674,30 +667,27 @@
 ;;;
 (defun parse-1-dsd (defstruct spec &optional
 		     (islot (make-defstruct-slot-description
-			     :%name "" :index 0 :type t)))
-  (multiple-value-bind
-      (name default default-p type type-p read-only ro-p)
-      (cond
-       ((listp spec)
-	(destructuring-bind (name &optional (default nil default-p)
-				  &key (type nil type-p) (read-only nil ro-p))
-			    spec
-	  (values name default default-p type type-p read-only ro-p)))
-       (t
-	(when (keywordp spec)
-	  (warn "Keyword slot name indicates probable syntax ~
-		 error in DEFSTRUCT -- ~S."
-		spec))
-	spec))
+			     :name nil :index 0 :type t)))
+  (multiple-value-bind (name default default-p type type-p read-only ro-p)
+      (cond ((listp spec)
+	     (destructuring-bind (name &optional (default nil default-p)
+				       &key (type nil type-p)
+				       (read-only nil ro-p))
+		 spec
+	       (values name default default-p type type-p read-only ro-p)))
+	    (t
+	     (when (keywordp spec)
+	       (warn "Keyword slot name indicates probable syntax ~
+		      error in DEFSTRUCT -- ~S."
+		     spec))
+	     spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
       (error 'simple-program-error
 	     :format-control "Duplicate slot name ~S."
 	     :format-arguments (list name)))
-    (setf (dsd-%name islot) (string name))
+    (setf (dsd-name islot) name)
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
-
     (setf (dsd-accessor islot) (concat-pnames (dd-conc-name defstruct) name))
-
     (when default-p
       (setf (dsd-default islot) default))
     (when type-p

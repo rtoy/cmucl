@@ -81,6 +81,7 @@ New in this release:
      - Standard methods for STANDARD-OBJECT and STRUCTURE-OBJECT
        defined on MAKE-LOAD-FORM.
      - Compliant MAKE-LOAD-FORM-SAVING-SLOTS.
+     - DEFSTRUCT recording slot-names as specified by users.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
