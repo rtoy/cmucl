@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.2 1990/07/05 11:58:36 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.3 1990/07/05 17:15:11 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -522,7 +522,6 @@
 
 
 (defun %negate (n)
-  (declare (number n))
   (number-dispatch ((n number))
     (((foreach fixnum single-float double-float))
      (%negate n))
@@ -553,8 +552,9 @@
       ((fixnum bignum)
        (values 0 number))
       ((ratio (or float rational))
-       (truncate (numerator number)
-		 (* (denominator number) divisor)))
+       (let ((q (truncate (numerator number)
+			  (* (denominator number) divisor))))
+	 (values q (- number (* q divisor)))))
       ((bignum fixnum)
        (bignum-truncate number (make-small-bignum divisor)))
       ((bignum bignum)
@@ -1261,18 +1261,22 @@
 	  number
 	  (coerce number 'single-float))))
 
+
 (macrolet ((frob (name type bigfun)
 	     `(defun ,name (x)
 		(number-dispatch ((x real))
 		  (((foreach single-float double-float fixnum))
 		   (coerce x ',type))
 		  ((bignum)
-		   (,bigfun x))
+		   (bignum-to-float x ',type))
 		  ((ratio)
-		   (/ (coerce (numerator x) ',type)
-		      (coerce (denominator x) ',type)))))))
-  (frob %single-float single-float bignum-to-single-float)
-  (frob %double-float double-float bignum-to-double-float))
+		   (let ((num (numerator x))
+			 (den (denominator x)))
+		     (if (and (fixnump num) (fixnump den))
+			 (/ (coerce num ',type) (coerce den ',type))
+			 (float-bignum-ratio x ',type))))))))
+  (frob %single-float single-float)
+  (frob %double-float double-float))
 
 
 (defun float-sign (float1 &optional (float2 (float 1 float1)))
