@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.2 1997/02/10 08:01:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,15 +188,12 @@
 			     (:translate ,translate)
 			     (:save-p t))
 			    ((:arg x (descriptor-reg any-reg) edx-offset)
-			     (:arg y (descriptor-reg any-reg)
-			      #+nil esi-offset
-			      edi-offset)
+			     (:arg y (descriptor-reg any-reg) edi-offset)
 			     
 			     (:res res descriptor-reg edx-offset)
 
 			     (:temp eax dword-reg eax-offset)
-			     (:temp ecx dword-reg ecx-offset)
-			     )
+			     (:temp ecx dword-reg ecx-offset))
     (inst test x 3)
     (inst jmp :nz DO-STATIC-FN)
     (inst test y 3)
@@ -230,7 +227,6 @@
 (define-cond-assem-rtn generic-< < two-arg-< :l)
 (define-cond-assem-rtn generic-> > two-arg-> :g)
 
-#+pfw-obsolete????
 (define-assembly-routine (generic-eql
 			  (:cost 10)
 			  (:return-style :full-call)
@@ -238,13 +234,12 @@
 			  (:translate eql)
 			  (:save-p t))
 			 ((:arg x (descriptor-reg any-reg) edx-offset)
-			  (:arg y (descriptor-reg any-reg) esi-offset)
+			  (:arg y (descriptor-reg any-reg) edi-offset)
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
-			  (:temp eax dword-reg eax-offset)	; zzz added by jrd
-			  (:temp ecx dword-reg ecx-offset)	; zzz added by jrd
-			  )
+			  (:temp eax dword-reg eax-offset)
+			  (:temp ecx dword-reg ecx-offset))
   (inst cmp x y)
   (inst jmp :e RETURN-T)
   (inst test x 3)
@@ -265,9 +260,9 @@
   (inst sub esp-tn (fixnum 3))		; pw -- was 2
   (inst push eax)
   (inst mov ecx (fixnum 2))
+
   (inst mov eax (make-ea :dword
-			 :disp (+ nil-value
-				  (static-function-offset 'two-arg-eql))))
+			 :disp (+ nil-value (static-function-offset 'eql))))
   (inst jmp eax)
   
   RETURN-T
@@ -280,9 +275,7 @@
 			  (:translate =)
 			  (:save-p t))
 			 ((:arg x (descriptor-reg any-reg) edx-offset)
-			  (:arg y (descriptor-reg any-reg)
-				#+nil esi-offset
-				edi-offset)
+			  (:arg y (descriptor-reg any-reg) edi-offset)
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
