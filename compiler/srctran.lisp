@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.58 1997/10/08 10:39:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.59 1997/10/09 21:21:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -855,6 +855,8 @@
 	(cond ((and cur-interval this
 		    (eq (numeric-type-class cur) 
 			(numeric-type-class this-interval))
+		    (eq (numeric-type-format cur)
+			(numeric-type-format this-interval))
 		    (or (interval-intersect-p cur-interval this)
 			(interval-adjacent-p cur-interval this)))
 	       (let ((result (interval-merge-pair cur-interval this)))
