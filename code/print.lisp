@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.16 1990/11/21 10:10:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.17 1990/11/27 15:51:00 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1348,6 +1348,8 @@
 	      (write-string "Closure Over " stream)
 	      (output-function-object (%primitive c::closure-function object)
 				      stream))))
+	   (#.vm:funcallable-instance-header-type
+	    (pcl::print-object object stream))
 	   (#.vm:value-cell-header-type
 	    (write-string "Value Cell" stream))
 	   (#.vm:unbound-marker-type
