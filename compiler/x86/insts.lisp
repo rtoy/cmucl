@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.2 1997/02/08 21:18:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.3 1997/03/26 20:25:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2369,15 +2369,22 @@
     (emit-byte segment #b11011001)
     (emit-fp-op segment source #b001)))
 ;;;
-;;; added by pfw
-;;;
 ;;;
 ;;; push 32-bit integer to st0
-(define-instruction fild(segment source)
+;;;
+(define-instruction fild (segment source)
   (:printer floating-point ((op '(#b011 #b000))))
   (:emitter
    (emit-byte segment #b11011011)
    (emit-fp-op segment source #b000)))
+;;;
+;;; push 64-bit integer to st0
+;;;
+(define-instruction fildl (segment source)
+  (:printer floating-point ((op '(#b111 #b101))))
+  (:emitter
+   (emit-byte segment #b11011111)
+   (emit-fp-op segment source #b101)))
 ;;;
 ;;; store 32-bit integer
 ;;;
@@ -2386,8 +2393,9 @@
   (:emitter
    (emit-byte segment #b11011011)
    (emit-fp-op segment dest #b010)))
-
+;;;
 ;;; Store and pop 32-bit interger
+;;;
 (define-instruction fistp (segment dest)
   (:printer floating-point ((op '(#b011 #b011))))
   (:emitter
