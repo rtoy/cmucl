@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.31 2000/08/10 10:55:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.32 2001/03/01 21:45:33 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,12 +128,6 @@
 (in-package "LISP")
 
 ;;;
-;;; This flag is used by EVAL-WHEN to keep track of when code has already been
-;;; evaluated so that it can avoid multiple evaluation of nested EVAL-WHEN
-;;; (COMPILE)s.
-(defvar *already-evaled-this* nil)
-
-;;;
 ;;; This needs to be initialized in the cold load, since the top-level catcher
 ;;; will always restore the initial value.
 (defvar *eval-stack-top* 0)
@@ -151,9 +145,7 @@
 
 ;;; EVAL  --  Public
 ;;;
-;;;    Pick off a few easy cases, and call INTERNAL-EVAL for the rest.  If
-;;; *ALREADY-EVALED-THIS* is true, then we bind it to NIL before doing a call
-;;; so that the effect is confined to the lexical scope of the EVAL-WHEN.
+;;;    Pick off a few easy cases, and call INTERNAL-EVAL for the rest.
 ;;;
 (defun eval (original-exp)
   "Evaluates its single arg in a null lexical environment, returns the
@@ -249,10 +241,7 @@
 		(collect ((args))
 		  (dolist (arg (rest exp))
 		    (args (eval arg)))
-		  (if *already-evaled-this*
-		      (let ((*already-evaled-this* nil))
-			(apply (symbol-function name) (args)))
-		      (apply (symbol-function name) (args))))
+		  (apply (symbol-function name) (args)))
 		(eval:internal-eval original-exp))))))
       (t
        exp))))

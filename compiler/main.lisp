@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.119 2000/08/09 13:23:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.120 2001/03/01 21:45:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,7 +1104,8 @@
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms path))))
+		  (process-progn forms path))
+	      t))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
 	       (compiler-error "MACROLET form is too short: ~S." form))

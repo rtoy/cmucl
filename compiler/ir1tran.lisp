@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.120 2000/10/06 15:10:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.121 2001/03/01 21:45:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2212,12 +2212,6 @@
       (ir1-convert-progn-body start cont body))))
 
 
-;;; This flag is used by Eval-When to keep track of when code has already been
-;;; evaluated so that it can avoid multiple evaluation of nested Eval-When
-;;; (Compile)s.
-;;;
-(proclaim '(special lisp::*already-evaled-this*))
-
 ;;; DO-EVAL-WHEN-STUFF  --  Interface
 ;;;
 ;;;    Do stuff to do an EVAL-WHEN.  This is split off from the IR1 convert
@@ -2225,46 +2219,36 @@
 ;;; processing code.  We play with the dynamic environment and eval stuff, then
 ;;; call Fun with a list of forms to be processed at load time.
 ;;;
-;;; Note: the EVAL situation is always ignored: this is conceptually a
-;;; compile-only implementation.
-;;;
-;;; We have to interact with the interpreter to ensure that the forms get
-;;; eval'ed exactly once.  We bind *already-evaled-this* to true to inhibit
-;;; evaluation of any enclosed EVAL-WHENs, either by IR1 conversion done by
-;;; EVAL, or by conversion of the body for load-time processing.  If
-;;; *already-evaled-this* is true then we *do not* eval since some enclosing
-;;; eval-when already did.
-;;;
-;;;    We know we are eval'ing for load since we wouldn't get called otherwise.
-;;; If LOAD is a situation we call Fun on body. If we aren't evaluating for
-;;; load, then we call Fun on NIL for the result of the EVAL-WHEN.
-;;;
-(defun do-eval-when-stuff (situations body fun)
+(defun do-eval-when-stuff (situations body fun toplevel-p)
   (when (or (not (listp situations))
 	    (set-difference situations
 			    '(compile load eval
 			      :compile-toplevel :load-toplevel :execute)))
     (compiler-error "Bad Eval-When situation list: ~S." situations))
 
-  (let* ((do-eval (and (intersection '(compile :compile-toplevel) situations)
-		       (not lisp::*already-evaled-this*)))
-	 (lisp::*already-evaled-this* t))
-    (when do-eval
-      (eval `(progn ,@body)))
-    (if (or (intersection '(:load-toplevel load) situations)
-	    (and *converting-for-interpreter*
-		 (intersection '(:execute eval) situations)))
-	(funcall fun body)
-	(funcall fun '(nil)))))
-
+  (if toplevel-p
+      ;; Can only get here from compile-file.
+      (progn
+	(when (intersection '(compile :compile-toplevel) situations)
+	  (eval `(progn ,@body)))
+	;; Maybe generate code for load-time or run-time eval
+	(if (or (intersection '(:load-toplevel load) situations)
+		(and *converting-for-interpreter*
+		     (intersection '(:execute eval) situations)))
+	    (funcall fun body)
+	    (funcall fun '(nil))))
+      ;; Not toplevel, only :execute counts.
+      (if (intersection '(eval :execute) situations)
+	  (funcall fun body)
+	  (funcall fun '(nil)))))
   
 (def-ir1-translator eval-when ((situations &rest body) start cont)
   "EVAL-WHEN (Situation*) Form*
-  Evaluate the Forms in the specified Situations, any of COMPILE, LOAD, EVAL.
-  This is conceptually a compile-only implementation, so EVAL is a no-op."
-  (do-eval-when-stuff situations body
-		      #'(lambda (forms)
-			  (ir1-convert-progn-body start cont forms))))
+  Evaluate the Forms in the specified Situations, any of :COMPILE-TOPLEVEL,
+  :LOAD-TOPLEVEL, :EXECUTE."
+  (do-eval-when-stuff
+   situations body #'(lambda (forms) (ir1-convert-progn-body start cont forms))
+   nil))
 
 
 ;;; DO-MACROLET-STUFF  --  Interface
