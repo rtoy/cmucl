@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.58 1993/06/18 06:15:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.59 1993/07/05 01:06:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,6 +186,11 @@
 ;;; Don't include the search lists used for loading in the resultant core.
 ;;;
 (lisp::clear-all-search-lists)
+;;;
+;;; Set up a default for modules:
+;;; 
+(setf (search-list "modules:") '("./"))
+
 
 ;; set up the initial info environment.
 (setq *old-ie* (car *info-environment*))
