@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.42 1992/03/07 17:14:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.43 1992/04/14 02:57:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.42 1992/03/07 17:14:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.43 1992/04/14 02:57:18 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -29,6 +29,7 @@
 	  funcallable-instance-p %set-funcallable-instance-info
 	  code-header-ref code-header-set code-instructions
 	  shift-towards-start shift-towards-end
+	  function-subtype
 
 	  32bit-logical-not
 	  32bit-logical-and 32bit-logical-nand
@@ -266,6 +267,13 @@
 (defknown code-instructions (t) system-area-pointer (flushable movable))
 (defknown code-header-ref (t index) t (flushable))
 (defknown code-header-set (t index t) t ())
+
+(defknown function-subtype (function) (unsigned-byte #.vm:type-bits)
+  (flushable))
+(defknown ((setf function-subtype))
+	  ((unsigned-byte #.vm:type-bits) function)
+  (unsigned-byte #.vm:type-bits)
+  ())
 
 (defknown make-fdefn (t) fdefn (flushable movable))
 (defknown fdefn-p (t) boolean (movable foldable flushable))
