@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.3 1991/08/02 03:40:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/wrlist.lisp,v 1.4 1991/08/03 01:26:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,11 +252,17 @@
     (loadw csp-tn mutator-tn mutator-control-stack-pointer-slot)
     (loadw cfp-tn mutator-tn mutator-control-frame-pointer-slot)
 
+    ;; We can't restore the return address yet, because code hasn't been
+    ;; restored.  But if we wait until after code has been restored,
+    ;; then l0 will have been trashed.  So we have to move the value
+    ;; out of l0 and into nl0.
+    (inst move nl0 l0)
+
     ;; Restore all the saved regs. (by dropping out of the save-regs-on-stack)
     )
 
   ;; Regenerate the return address from the saved offset.
-  (inst addu lip-tn l0 code-tn)
+  (inst addu lip-tn nl0 code-tn)
     
   ;; Because we turned off pseudo-atomic, we might have taken an interrupt,
   ;; so we can't be sure the write-list will be empty.
