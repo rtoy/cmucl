@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.62 2002/07/25 14:49:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.63 2002/08/22 22:23:29 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -675,12 +675,20 @@
 				 &body options)
   "DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
    Define NAME as a condition type.  This new type inherits slots and its
-   report function from the specified PARENT-TYPEs.  A slot spec is a list of:
-     (slot-name :reader <rname> :initarg <iname> {Option Value}*
+   report function from the specified PARENT-TYPEs.  A slot spec is either
+   a symbol denoting the name of the slot, or a list of the form:
 
-   The DEFINE-CLASS slot options :ALLOCATION, :INITFORM, [slot] :DOCUMENTATION
-   and :TYPE and the overall options :DEFAULT-INITARGS and 
-   [type] :DOCUMENTATION are also allowed.
+     (slot-name {slot-option value}*)
+
+   where slot-option is one of :READER, :WRITER, :ACCESSOR, :ALLOCATION,
+   :INITARG, :INITFORM, and :TYPE.
+
+   Each overall option is of the form
+
+     (option-name {value}*)
+
+   where option-name is one of :DEFAULT-INITARGS, :DOCUMENTATION,
+   and :REPORT.
 
    The :REPORT option is peculiar to DEFINE-CONDITION.  Its argument is either
    a string or a two-argument lambda or function name.  If a function, the
@@ -733,14 +741,6 @@
 		  (t
 		   (error "Unknown slot option:~%  ~S" (first options))))))
 
-	    (unless (or (initargs) initform-p)
-	      (warn "Probable error: no initargs or initform for condition ~
-		     slot:~%  ~S"
-		    slot-name))
-	    (unless (readers)
-	      (warn "Probable error: no readers for condition slot:~%  ~S"
-		    slot-name))
-
 	    (all-readers (readers))
 	    (all-writers (writers))
 	    (slots `(make-condition-slot
@@ -781,10 +781,6 @@
 	  (t
 	   (error "Unknown option: ~S" (first option)))))
 
-      (when (all-writers)
-	(warn "Condition slot setters probably not allowed in ANSI CL:~%  ~S"
-	      (all-writers)))
-      
       `(progn
 	 (eval-when (compile load eval)
 	   (%compiler-define-condition ',name ',parent-types ',layout))
