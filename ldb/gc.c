@@ -1,13 +1,12 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.3 1990/04/02 00:30:22 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.4 1990/05/10 17:29:15 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
 
 #include <stdio.h>
-#include <mach.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <signal.h>
@@ -84,23 +83,6 @@ gc_lose()
 
 /* Copying Objects */
 
-#if defined(DEBUG_USE_ANAL_BCOPY)
-
-static bcopy(src, dest, length)
-char *src, *dest;
-int length;
-{
-	while (length-- > 0) {
-		if (*dest != 0) {
-			fprintf(stderr, "GC lossage.  Copying into non-zero memory!\n");
-			gc_lose();
-		}
-		*dest++ = *src++;
-	}
-}
-
-#endif
-
 static lispobj
 copy_object(object, nwords)
 lispobj object;
@@ -108,6 +90,7 @@ int nwords;
 {
 	int tag;
 	lispobj *new;
+	lispobj *source, *dest;
 
 	gc_assert(pointerp(object));
 	gc_assert(from_space_p(object));
@@ -120,8 +103,15 @@ int nwords;
 	new = new_space_free_pointer;
 	new_space_free_pointer += nwords;
 
-	/* copy object */
-	bcopy((char *) PTR(object), (char *) new, nwords * 4);
+	dest = new;
+	source = (lispobj *) PTR(object);
+
+	/* copy the object */
+	while (nwords > 0) {
+		*dest++ = *source++;
+		*dest++ = *source++;
+		nwords -= 2;
+	}
 
 	/* return lisp pointer of new object */
 	return ((lispobj) new) | tag;
@@ -202,7 +192,8 @@ collect_garbage()
 	       static_space_size * sizeof(lispobj));
 	scavenge(static_space, static_space_size);
 
-	printf("Scavenging new space ...\n");
+	printf("Scavenging new space (%d bytes) ...\n",
+	       (new_space_free_pointer - new_space) * sizeof(lispobj));
 	scavenge_newspace();
 
 #if defined(DEBUG_PRINT_GARBAGE)
@@ -216,6 +207,11 @@ collect_garbage()
 
 	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
 	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
+
+	/* Zero stack */
+	printf("Zeroing empty part of control stack ...\n");
+	os_zero(current_control_stack_pointer,
+		CONTROL_STACK_SIZE - control_stack_size * sizeof(lispobj));
 
 	(void) sigsetmask(oldmask);
 
