@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.54 2000/07/06 04:36:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.55 2000/07/06 05:48:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,14 +232,14 @@
 ;;;
 (defmacro entry-hash (length sxhash)
   `(the fixnum
-	(+ (the fixnum
-		(values (rem (the fixnum
-				  (logxor ,length
-					  ,sxhash
-					  (the fixnum (ash ,sxhash -8))
-					  (the fixnum (ash ,sxhash -16))
-					  (the fixnum (ash ,sxhash -19))))
-			     254)))
+	(+ (the (values fixnum t)
+		(rem (the fixnum
+			  (logxor ,length
+				  ,sxhash
+				  (the fixnum (ash ,sxhash -8))
+				  (the fixnum (ash ,sxhash -16))
+				  (the fixnum (ash ,sxhash -19))))
+		     254))
 	   2)))
 
 ;;; Make-Package-Hashtable  --  Internal
@@ -301,9 +301,8 @@
 	 (hash (package-hashtable-hash table))
 	 (len (length vec))
 	 (sxhash (%sxhash-simple-string (symbol-name symbol)))
-	 (h2 (the fixnum (1+ (the fixnum
-				  (values (rem sxhash
-					       (the fixnum (- len 2)))))))))
+	 (h2 (the fixnum (1+ (the (values fixnum t)
+				  (rem sxhash (the fixnum (- len 2))))))))
     (declare (simple-vector vec)
 	     (type (simple-array (unsigned-byte 8)) hash)
 	     (fixnum len sxhash h2))
@@ -346,8 +345,8 @@
     `(let* ((,vec (package-hashtable-table ,table))
 	    (,hash (package-hashtable-hash ,table))
 	    (,len (length ,vec))
-	    (,h2 (1+ (the index (values (rem (the index ,sxhash)
-					     (the index (- ,len 2))))))))
+	    (,h2 (1+ (the (values index t) (rem (the index ,sxhash)
+						(the index (- ,len 2)))))))
        (declare (type (simple-array (unsigned-byte 8) (*)) ,hash)
 		(simple-vector ,vec)
 		(type index ,len ,h2))
