@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.26 1997/10/24 18:08:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.27 1998/02/03 19:02:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -919,7 +919,7 @@
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
 		 :eof))
-    (:element-type 'string-char)))
+    (:element-type 'base-char)))
   
 (defun make-string-input-stream (string &optional
 					(start 0) (end (length string)))
@@ -1001,7 +1001,7 @@
 		(fixnum index count))
        (if (char= (schar string index) #\newline)
 	   (return count))))
-    (:element-type 'string-char)))
+    (:element-type 'base-char)))
 
 (defun get-output-stream-string (stream)
   "Returns a string of all the characters sent to a stream made by
@@ -1103,7 +1103,7 @@
 	   (if found
 	       (- end (the fixnum found))
 	       current)))))
-     (:element-type 'string-char)))
+     (:element-type 'base-char)))
 
 ;;;; Indenting streams:
 

@@ -2096,7 +2096,7 @@ collected result will be returned as the value of the LOOP."
 				   ratio rational readtable sequence short-float
 				   simple-array simple-bit-vector simple-string
 				   simple-vector single-float standard-char
-				   stream string string-char
+				   stream string base-char
 				   symbol t vector)
 	     :type-keywords nil
 	     :ansi (if extended-p :extended t))))
