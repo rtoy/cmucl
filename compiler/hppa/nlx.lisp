@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.1 1992/07/13 03:48:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.2 1992/07/13 16:08:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,11 +242,11 @@
     ;; Establish results.
     (sc-case new-start
       (any-reg (move dst new-start))
-      (control-stack (store-stack-tn dst new-start)))
+      (control-stack (store-stack-tn new-start dst)))
     (inst comb := num zero-tn done)
     (sc-case new-count
       (any-reg (inst move num new-count))
-      (control-stack (store-stack-tn num new-count)))
+      (control-stack (store-stack-tn new-count num)))
     ;; Load the first word.
     (inst ldwm word-bytes src temp)
 
