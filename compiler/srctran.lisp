@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.39 1992/12/13 15:18:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.40 1993/02/03 18:26:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1504,84 +1504,30 @@
 
 
 ;;;; FORMAT transform:
-
-;;; A transform for FORMAT, based on the original (courtesy of Skef.)
 ;;;
-(deftransform format ((stream control &rest args)
-		      ((or (member t) stream) simple-string &rest t))
-  "convert to output primitives"
+;;; If the control string is a compile-time constant, then replace it with
+;;; a use of the FORMATTER macro so that the control string is ``compiled.''
+;;; Furthermore, if the destination is either a stream or T and the control
+;;; string is a function (i.e. formatter), then convert the call to format to
+;;; just a funcall of that function.
+;;; 
+(deftransform format ((dest control &rest args) (t simple-string &rest t))
   (unless (constant-continuation-p control)
     (give-up "Control string is not a constant."))
-  (let* ((control (continuation-value control))
-	 (end (length control))
-	 (penultimus (1- end))
-	 (stream-form (if (csubtypep (continuation-type stream)
-				     (specifier-type 'stream))
-			  `(stream)
-			  ()))
-	 (arg-vars (mapcar #'(lambda (x)
-			       (declare (ignore x))
-			       (gensym))
-			   args))
-	 (args arg-vars)
-	 (index 0))
-    (declare (simple-string control))
-    (collect ((forms))
-      (loop
-	(let ((command-index (position #\~ control :start index)))
-	  (unless command-index
-	    ;; Write out the final part of the string.
-	    (forms `(write-string ,(subseq control index end)
-				  ,@stream-form))
-	    (when args
-	      (compiler-warning "~R extra format argument~:P.  Ignoring..."
-				(length args))
-	      (forms `(progn ,@args)))
-
-	    (return `(lambda (stream control ,@arg-vars)
-		       (declare (ignorable stream control))
-		       ,@(forms)
-		       nil)))
-
-	  (when (= command-index penultimus)
-	    (abort-transform "FORMAT control string ends in a ~~: ~S"
-			     control))
-
-	  ;; Non-command stuff gets write-string'ed out.
-	  (when (/= index command-index)
-	    (forms `(write-string
-		     ,(subseq control index command-index)
-		     ,@stream-form)))
-	  
-	  ;; Get the format directive.
-	  (flet ((next-arg ()
-		   (unless args
-		     (abort-transform "Missing FORMAT argument."))
-		   (pop args)))
-	    (forms
-	     (case (schar control (1+ command-index))
-	       ((#\b #\B) `(let ((*print-base* 2))
-			     (princ ,(next-arg) ,@stream-form)))
-	       ((#\o #\O) `(let ((*print-base* 8))
-			     (princ ,(next-arg) ,@stream-form)))
-	       ((#\d #\D) `(let ((*print-base* 10))
-			     (princ ,(next-arg) ,@stream-form)))
-	       ((#\x #\X) `(let ((*print-base* 16))
-			     (princ ,(next-arg) ,@stream-form)))
-	       ((#\a #\A) `(princ ,(next-arg) ,@stream-form))
-	       ((#\s #\S) `(prin1 ,(next-arg) ,@stream-form))
-	       (#\% `(terpri ,@stream-form))
-	       (#\& `(fresh-line ,@stream-form))
-	       (#\| `(write-char #\form ,@stream-form))
-	       (#\~ `(write-char #\~ ,@stream-form))
-	       (#\newline
-		(let ((new-pos (position-if-not
-				#'lisp::whitespace-char-p
-				control
-				:start (+ command-index 2))))
-		  (if new-pos
-		      (setq command-index (- new-pos 2)))))
-	       (t
-		(give-up)))))
-
-	  (setq index (+ command-index 2)))))))
+  (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
+    `(lambda (dest control ,@arg-names)
+       (declare (ignore control))
+       (format dest (formatter ,(continuation-value control)) ,@arg-names))))
+;;;
+(deftransform format ((stream control &rest args) (stream function &rest t))
+  (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
+    `(lambda (stream control ,@arg-names)
+       (funcall control stream ,@arg-names)
+       nil)))
+;;;
+(deftransform format ((tee control &rest args) ((member t) function &rest t))
+  (let ((arg-names (mapcar #'(lambda (x) (declare (ignore x)) (gensym)) args)))
+    `(lambda (tee control ,@arg-names)
+       (declare (ignore tee))
+       (funcall control *standard-output* ,@arg-names)
+       nil)))
