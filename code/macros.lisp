@@ -189,12 +189,18 @@
 					 :error-string 'deftype-error-string
 					 )
       `(eval-when (compile load eval)
-	 (setf (info type kind ',name) :defined)
-	 (setf (info type expander ',name)
-	       #'(lambda (,whole) ,@local-decs (block ,name ,body)))
-	 ,@(when doc
-	     `((setf (documentation ',name 'type) ,doc)))
-	 ',name))))
+	 (%deftype ',name
+		   #'(lambda (,whole) ,@local-decs (block ,name ,body))
+		   ,@(when doc `(,doc)))))))
+;;;
+(defun %deftype (name expander &optional doc)
+  (setf (info type kind name) :defined)
+  (setf (info type expander name) expander)
+  (when doc
+    (setf (documentation name 'type) doc))
+  (c::%note-type-defined name)
+  name)
+
 
 ;;; And so is DEFINE-SETF-METHOD.
 
