@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.63 1993/11/07 23:42:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.64 1993/11/08 00:22:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3628,6 +3628,7 @@
       ;; to the C code.
       (breakpoint-do-displaced-inst signal-context
 				    (breakpoint-data-instruction data))
+      #-hpux ; Under HPUX we can't sigreturn so bp-do-disp-i has to return.
       (error "BREAKPOINT-DO-DISPLACED-INST returned?"))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset)
@@ -3739,6 +3740,7 @@
 	new-lra
 	(logandc2 (+ vm:code-constants-offset bogus-lra-constants 1)
 		  1))
+       (vm:sanctify-for-execution code-object)
        (values new-lra code-object (system:sap- trap-loc src-start))))))
 
 
