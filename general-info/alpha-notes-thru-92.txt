@@ -1,3 +1,115 @@
+3/29/92 to 4/7/92
+
+Code:
+
+Changed the default structure printer to print slot names as keywords
+instead of unqualified symbols as per X3J13 cleanup STRUCTURE-READ-PRINT-
+SYNTAX:KEYWORDS.
+
+Added COMPILER-MACRO-FUNCTION, COMPILER-MACROEXPAND, COMPILER-
+MACROEXPAND-1, and DEFINE-COMPILER-MACRO.
+
+Fixed things that invoke *MACROEXPAND-HOOK* to coerce it to a function
+before calling it as per X3J13 cleanup FUNCTION-TYPE:X3J13- MARCH-88 by
+introducing KERNEL:INVOKE-MACROEXPAND-HOOK, which does that and then
+funcalls it.
+
+Fixed MACRO-FUNCTION to take an environment argument as per X3J13 cleanup
+MACRO-FUNCTION-ENVIRONMENT:YES.
+
+Added BYTES-CONSED-BETWEEN-GCS, a function that returns (and sets when 
+used with setf) *BYTES-CONSED-BETWEEN-GCS*.  Additionally, it changes
+*GC-TRIGGER* immediately to reflect the new values of *bytes-consed...*.
+
+Changed GET-SETF-METHOD-MULTIPLE-VALUE to try to macroexpand-1 the form
+when it's an atom in case it's a symbol-macro as per the X3J13 cleanup
+SYMBOL-MACROLET-SEMANTICS:SPECIAL-FORM.  Now you can safely INCF, etc.
+symbol macros where the macroexpansion has side effects.
+
+Fixed SETF of GETF to evaluate the various parts in the correct order as
+per X3J13 cleanup SETF-SUB-METHODS:DELAYED-ACCESS-STORES.
+
+Fixed bug in NTH-VALUE where it expanded into bogus code unless ``n'' was a
+constant integer.
+
+X3J13 cleanup SETF-MULTIPLE-STORE-VARIABLES:
+
+  Extend the semantics of the macros SETF, PSETF, SHIFTF, ROTATEF, and
+  ASSERT to allow "places" whose SETF methods have more than one "store
+  variable".  In such cases, the macros accept as many values from the
+  newvalue form as there are store variables.  As usual, extra values
+  are ignored and missing values default to NIL.
+
+  Extend the long form of DEFSETF to allow the specification of more
+  than one "store variable", with the obvious semantics.
+
+  Clarify that GET-SETF-METHOD signals an error if there would be more
+  than one store-variable.
+
+Added real support for the REAL type.
+
+Export REALP from LISP now that it's a real function.  Minor tweek to
+bounds testing in %%typep of complex numbers.
+
+Changed the return value of SET-SYNTAX-FROM-CHAR from NIL to T as per X3J13
+cleanup RETURN-VALUES-UNSPECIFIED:SPECIFY.  [Hard to believe nobody has
+complained about not conforming to this one.]
+
+Removed the :enable-gc from save-lisp option, as it's no longer needed.
+
+Allow SHADOW to take strings in addition to symbols as per X3J13 cleanup
+SHADOW-ALREADY-PRESENT:WORKS.
+
+
+Compiler:
+
+Fixed a bug in DEFAULT-UNKNOWN-VALUES where it wasn't resetting the stack
+if between 2 and 6 (inclusive) values were expected.  Also, spiffed up the
+case where > 6 values were expected.  [On the RT, change 6 to 3]
+
+Fixed NUMERIC-CONTAGION with respect to (COMPLEX RATIONAL).
+
+Fixed the ``fold identity operation'' for *, /, and EXPT to no longer
+consider #C(0 1) identity.
+
+BARF is not return type NIL, since it calls CERROR.
+Fixed function consistency checking to work better on deleted functions.
+Added a condition handler in PRINT-ALL-BLOCKS.
+
+Fixed RETURN-VALUE-EFFICENCY-NOTE not to flame out when some functions in the
+tail set have no RETURN.
+
+Changed SUBSTITUTE-SINGLE-USE-CONTINUATION to not substitute if the
+continuation type assertions conflict.
+
+Added optimization which deletes MV-BINDS when all variables have been deleted.
+
+Minor tweeks to conform to X3J13 cleanup MACRO-DECLARATIONS:MAKE-EXPLICIT.
+
+Added noise to support compiler-macros.  Removed #+/- new-compiler
+conditialization.
+
+Fixed SYMBOL-MACROLET to allow declarations as per X3J13 cleanup SYMBOL-
+MACROLET-DECLARE:ALLOW.  When declaring things about symbol macros, type
+declarations just wrap (the type ...) around the expansion, special
+declarations signal an error, and ignore/ignorable declarations are
+ignored.
+
+Apply global function type declarations to calls and definitions of global
+inline functions.
+
+Changed CONVERT-AND-MAYBE-COMPILE to temporarily increate *bytes-consed-
+between-gcs* by a factor of 4 instead of turning off all garbage
+collection.
+
+
+Construction Tools:
+
+Changed the way the garbage collector gets turned on.
+
+
+
+
 3/23/92 to 3/29/92
 
 Code:
