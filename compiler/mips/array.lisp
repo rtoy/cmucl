@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.15 1990/05/15 01:17:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.16 1990/06/02 16:06:44 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -27,9 +27,12 @@
   (:generator 0
     (pseudo-atomic (ndescr)
       (inst addu header alloc-tn vm:other-pointer-type)
-      (inst addu alloc-tn alloc-tn
-	    (* vm:array-dimensions-offset vm:word-bytes))
-      (inst addu alloc-tn alloc-tn rank)
+      (inst addu alloc-tn
+	    (+ (* vm:array-dimensions-offset vm:word-bytes)
+	       vm:lowtag-mask))
+      (inst addu alloc-tn rank)
+      (inst li ndescr (lognot vm:lowtag-mask))
+      (inst and alloc-tn ndescr)
       (inst sll ndescr rank vm:type-bits)
       (inst or ndescr ndescr type)
       (inst srl ndescr ndescr 2)
