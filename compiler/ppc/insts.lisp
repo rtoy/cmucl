@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.5 2004/10/07 02:45:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/insts.lisp,v 1.6 2004/10/09 00:09:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2122,3 +2122,24 @@
 		      #'(lambda (label posn delta-if-after)
 			  (+ (label-position label posn delta-if-after)
 			     (component-header-length))))))
+(define-instruction mftb (segment dst)
+  (:printer x-9 ((op 31) (ra #b01100) (sh #b01000) (xo 371) (rc 0))
+                 '(:name :tab rs))
+  (:dependencies (writes dst))
+  (:emitter (emit-x-form-inst segment 
+			      31
+			      (reg-tn-encoding dst)
+			      #b01100
+			      #b01000
+			      371 0)))
+
+(define-instruction mftbu (segment dst)
+  (:printer x-9 ((op 31) (ra #b01101) (sh #b01000) (xo 371) (rc 0))
+                 '(:name :tab rs))
+  (:dependencies (writes dst))
+  (:emitter (emit-x-form-inst segment
+			      31
+			      (reg-tn-encoding dst)
+			      #b01101
+			      #b01000
+			      371 0)))
