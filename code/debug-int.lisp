@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.85 1998/01/19 05:48:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.86 1998/01/25 03:36:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2961,14 +2961,14 @@
 	       `(if escaped
 		    (let ((,var (vm:sigcontext-register
 				 escaped
-				 (c::sc-offset-offset sc-offset))))
+				 (c:sc-offset-offset sc-offset))))
 		      ,@forms)
 		    :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
 		    (vm:sigcontext-float-register
 		     escaped
-		     (c::sc-offset-offset sc-offset)
+		     (c:sc-offset-offset sc-offset)
 		     ',format)
 		    :invalid-value-for-unescaped-register-storage))
 	     (with-nfp ((var) &body body)
@@ -2984,7 +2984,7 @@
 				 (system:sap-ref-32 fp (* vm::nfp-save-offset
 							  vm:word-bytes))))))
 		  ,@body)))
-    (ecase (c::sc-offset-scn sc-offset)
+    (ecase (c:sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
 	#.vm:descriptor-reg-sc-number
 	#+rt #.vm:word-pointer-reg-sc-number)
@@ -3013,31 +3013,66 @@
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
+      #+complex-float
+      (#.vm:complex-single-reg-sc-number
+       (if escaped
+	   (complex
+	    (vm:sigcontext-float-register
+	     escaped (c:sc-offset-offset sc-offset) 'single-float)
+	    (vm:sigcontext-float-register
+	     escaped (1+ (c:sc-offset-offset sc-offset)) 'single-float))
+	   :invalid-value-for-unescaped-register-storage))
+      #+complex-float
+      (#.vm:complex-double-reg-sc-number
+       (if escaped
+	   (complex
+	    (vm:sigcontext-float-register
+	     escaped (c:sc-offset-offset sc-offset) 'double-float)
+	    (vm:sigcontext-float-register
+	     escaped (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+	     'double-float))
+	   :invalid-value-for-unescaped-register-storage))
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-single nfp (* (vm::sc-offset-offset sc-offset)
+	 (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
 				       vm:word-bytes))))
       (#.vm:double-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-double nfp (* (c::sc-offset-offset sc-offset)
+	 (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
 				       vm:word-bytes))))
+      #+complex-float
+      (#.vm:complex-single-stack-sc-number
+       (with-nfp (nfp)
+	 (complex
+	  (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
+					vm:word-bytes))
+	  (system:sap-ref-single nfp (* (1+ (c:sc-offset-offset sc-offset))
+					vm:word-bytes)))))
+      #+complex-float
+      (#.vm:complex-double-stack-sc-number
+       (with-nfp (nfp)
+	 (complex
+	  (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
+					vm:word-bytes))
+	  (system:sap-ref-double nfp (* (+ (c:sc-offset-offset sc-offset) 2)
+					vm:word-bytes)))))
       (#.vm:control-stack-sc-number
-       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
+       (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
-	 (code-char (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (code-char (system:sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 					      vm:word-bytes)))))
       (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (system:sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 				   vm:word-bytes))))
       (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
-	 (system:signed-sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (system:signed-sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 					  vm:word-bytes))))
       (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
-	 (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
+	 (system:sap-ref-sap nfp (* (c:sc-offset-offset sc-offset)
 				    vm:word-bytes)))))))
 
 #+x86
@@ -3046,22 +3081,22 @@
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
 		 (let ((,var (vm:sigcontext-register
-			      escaped (c::sc-offset-offset sc-offset))))
+			      escaped (c:sc-offset-offset sc-offset))))
 		   ,@forms)
 		 :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
 		 (vm:sigcontext-float-register
-		  escaped (c::sc-offset-offset sc-offset) ',format)
+		  escaped (c:sc-offset-offset sc-offset) ',format)
 		 :invalid-value-for-unescaped-register-storage))
 	     #+complex-float
 	     (escaped-complex-float-value (format)
 	       `(if escaped
 		 (complex
 		  (vm:sigcontext-float-register
-		   escaped (c::sc-offset-offset sc-offset) ',format)
+		   escaped (c:sc-offset-offset sc-offset) ',format)
 		  (vm:sigcontext-float-register
-		   escaped (1+ (c::sc-offset-offset sc-offset)) ',format))
+		   escaped (1+ (c:sc-offset-offset sc-offset)) ',format))
 		 :invalid-value-for-unescaped-register-storage))
 	     ;; The debug variable locations are not always valid, and
 	     ;; on the x86 locations can contain raw values.  To
@@ -3083,7 +3118,7 @@
 		      (< (lisp::read-only-space-start) ,val #x11000000)))
 		 (kernel:make-lisp-obj ,val)
 		 :invalid-object)))
-    (ecase (c::sc-offset-scn sc-offset)
+    (ecase (c:sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(with-escaped-value (val)
@@ -3110,46 +3145,46 @@
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
-      (#.vm:single-stack-sc-number
-       (system:sap-ref-single fp (- (* (1+ (c::sc-offset-offset sc-offset))
-				       vm:word-bytes))))
-      (#.vm:double-stack-sc-number
-       (system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
-				       vm:word-bytes))))
       #+complex-float
       (#.vm:complex-single-reg-sc-number
        (escaped-complex-float-value single-float))
       #+complex-float
       (#.vm:complex-double-reg-sc-number
        (escaped-complex-float-value double-float))
+      (#.vm:single-stack-sc-number
+       (system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
+				       vm:word-bytes))))
+      (#.vm:double-stack-sc-number
+       (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
+				       vm:word-bytes))))
       #+complex-float
       (#.vm:complex-single-stack-sc-number
        (complex
-	(system:sap-ref-single fp (- (* (1+ (c::sc-offset-offset sc-offset))
+	(system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					vm:word-bytes)))
-	(system:sap-ref-single fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
+	(system:sap-ref-single fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))))
       #+complex-float
       (#.vm:complex-double-stack-sc-number
        (complex
-	(system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
+	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 					vm:word-bytes)))
-	(system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 4)
+	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
       (#.vm:control-stack-sc-number
-       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
+       (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number
        (code-char
-	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+	(system:sap-ref-32 fp (- (* (1+ (c:sc-offset-offset sc-offset))
 				    vm:word-bytes)))))
       (#.vm:unsigned-stack-sc-number
-       (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (system:sap-ref-32 fp (- (* (1+ (c:sc-offset-offset sc-offset))
 				   vm:word-bytes))))
       (#.vm:signed-stack-sc-number
-       (system:signed-sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (system:signed-sap-ref-32 fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					  vm:word-bytes))))
       (#.vm:sap-stack-sc-number
-       (system:sap-ref-sap fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (system:sap-ref-sap fp (- (* (1+ (c:sc-offset-offset sc-offset))
 				    vm:word-bytes)))))))
 
 
@@ -3208,14 +3243,14 @@
 	       `(if escaped
 		    (setf (vm:sigcontext-register
 			   escaped
-			   (c::sc-offset-offset sc-offset))
+			   (c:sc-offset-offset sc-offset))
 			  ,val)
 		    value))
 	     (set-escaped-float-value (format val)
 	       `(if escaped
 		    (setf (vm:sigcontext-float-register
 			   escaped
-			   (c::sc-offset-offset sc-offset)
+			   (c:sc-offset-offset sc-offset)
 			   ',format)
 			  ,val)
 		    value))
@@ -3234,7 +3269,7 @@
 						    (* vm::nfp-save-offset
 						       vm:word-bytes))))))
 		  ,@body)))
-    (ecase (c::sc-offset-scn sc-offset)
+    (ecase (c:sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
 	#.vm:descriptor-reg-sc-number
 	#+rt #.vm:word-pointer-reg-sc-number)
@@ -3257,36 +3292,79 @@
        (set-escaped-float-value single-float value))
       (#.vm:double-reg-sc-number
        (set-escaped-float-value double-float value))
+      #+complex-float
+      (#.vm:single-reg-sc-number
+       (cond (escaped
+	      (setf (vm:sigcontext-float-register
+		     escaped (c:sc-offset-offset sc-offset) 'single-float)
+		    (realpart value))
+	      (setf (vm:sigcontext-float-register
+		     escaped (1+ (c:sc-offset-offset sc-offset))
+		     'single-float)
+		    (imagpart value)))
+	     (t
+	      value)))
+      #+complex-float
+      (#.vm:double-reg-sc-number
+       (cond (escaped
+	      (setf (vm:sigcontext-float-register
+		     escaped (c:sc-offset-offset sc-offset) 'double-float)
+		    (realpart value))
+	      (setf (vm:sigcontext-float-register
+		     escaped
+		     (+ (c:sc-offset-offset sc-offset) #+sparc 2 #-sparc 1)
+		     'double-float)
+		    (imagpart value)))
+	     (t
+	      value)))
       (#.vm:single-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-single nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:sap-ref-single nfp (* (c:sc-offset-offset sc-offset)
 					     vm:word-bytes))
 	       (the single-float value))))
       (#.vm:double-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-double nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:sap-ref-double nfp (* (c:sc-offset-offset sc-offset)
 					     vm:word-bytes))
 	       (the double-float value))))
+      #+complex-float
+      (#.vm:complex-single-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (system:sap-ref-single
+		nfp (* (c:sc-offset-offset sc-offset) vm:word-bytes))
+	       (the single-float (realpart value)))
+	 (setf (system:sap-ref-single
+		nfp (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes))
+	       (the single-float (realpart value)))))
+      #+complex-float
+      (#.vm:complex-double-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (system:sap-ref-double
+		nfp (* (c:sc-offset-offset sc-offset) vm:word-bytes))
+	       (the double-float (realpart value)))
+	 (setf (system:sap-ref-double
+		nfp (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes))
+	       (the double-float (realpart value)))))
       (#.vm:control-stack-sc-number
-       (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
+       (setf (kernel:stack-ref fp (c:sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 					 vm:word-bytes))
 	       (char-code (the character value)))))
       (#.vm:unsigned-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 					 vm:word-bytes))
 	       (the (unsigned-byte 32) value))))
       (#.vm:signed-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:signed-sap-ref-32 nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:signed-sap-ref-32 nfp (* (c:sc-offset-offset sc-offset)
 						vm:word-bytes))
 	       (the (signed-byte 32) value))))
       (#.vm:sap-stack-sc-number
        (with-nfp (nfp)
-	 (setf (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
+	 (setf (system:sap-ref-sap nfp (* (c:sc-offset-offset sc-offset)
 					  vm:word-bytes))
 	       (the system:system-area-pointer value)))))))
 
@@ -3296,16 +3374,10 @@
 	       `(if escaped
 		    (setf (vm:sigcontext-register
 			   escaped
-			   (c::sc-offset-offset sc-offset))
+			   (c:sc-offset-offset sc-offset))
 			  ,val)
 		    value)))
-    #+nil ;; debug
-    (format t "~&sdvs ~a ~a ~a  <= ~a~%" 
-	    (sc-number-name (c::sc-offset-scn sc-offset))
-	    (disassem::get-sc-name sc-offset c:*native-backend*)
-	    (not (null escaped))
-	    value)
-    (ecase (c::sc-offset-scn sc-offset)
+    (ecase (c:sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(set-escaped-value
@@ -3330,44 +3402,44 @@
        (set-escaped-float-value double-float value))
       (#.vm:single-stack-sc-number
        (setf (system:sap-ref-single
-	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
+	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
 	     (the single-float value)))
       (#.vm:double-stack-sc-number
        (setf (system:sap-ref-double
-	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
+	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (the double-float value)))
       #+complex-float
       (#.vm:complex-single-stack-sc-number
        (setf (system:sap-ref-single
-	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
+	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
 	     (realpart (the (complex single-float) value)))
        (setf (system:sap-ref-single
-	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
+	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (imagpart (the (complex single-float) value))))
       #+complex-float
       (#.vm:complex-double-stack-sc-number
        (setf (system:sap-ref-double
-	      fp (- (* (+ (c::sc-offset-offset sc-offset) 2) vm:word-bytes)))
+	      fp (- (* (+ (c:sc-offset-offset sc-offset) 2) vm:word-bytes)))
 	     (realpart (the (complex double-float) value)))
        (setf (system:sap-ref-double
-	      fp (- (* (+ (c::sc-offset-offset sc-offset) 4) vm:word-bytes)))
+	      fp (- (* (+ (c:sc-offset-offset sc-offset) 4) vm:word-bytes)))
 	     (imagpart (the (complex double-float) value))))
       (#.vm:control-stack-sc-number
-       (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
+       (setf (kernel:stack-ref fp (c:sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
-       (setf (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (setf (system:sap-ref-32 fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					 vm:word-bytes)))
 	     (char-code (the character value))))
       (#.vm:unsigned-stack-sc-number
-       (setf (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (setf (system:sap-ref-32 fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					 vm:word-bytes)))
 	     (the (unsigned-byte 32) value)))
       (#.vm:signed-stack-sc-number
        (setf (system:signed-sap-ref-32
-	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
+	      fp (- (* (1+ (c:sc-offset-offset sc-offset)) vm:word-bytes)))
 	     (the (signed-byte 32) value)))
       (#.vm:sap-stack-sc-number
-       (setf (system:sap-ref-sap fp (- (* (1+ (c::sc-offset-offset sc-offset))
+       (setf (system:sap-ref-sap fp (- (* (1+ (c:sc-offset-offset sc-offset))
 					  vm:word-bytes)))
 	     (the system:system-area-pointer value))))))
 
