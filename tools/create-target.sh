@@ -1,47 +1,73 @@
 #!/bin/sh
 
-if [ "$1" = "" -o "$2" = "" ]
-then
-	echo "Usage: $0 target-directory lisp-variant [motif-variant]"
-	# List the available lisp-variants
-	echo Possible lisp-variants:
-	( cd src/lisp/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
-		pr -3at -o 8
-	echo Possible Motif-variants:
-	( cd src/motif/server/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
-		pr -3at -o 8
-	exit 1
+LISP_VARIANT=
+MOTIF_VARIANT=
+TARGET_DIR=
+
+if [ $# = 1 ]; then
+    # Only target directory given.  Try to deduce the lisp-variant
+    TARGET_DIR="$1"
+    case `uname -s` in
+    SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
+    Linux) LISP_VARIANT=linux_gencgc ;;
+    # Please fill in some other common systems
+    *) echo "Sorry, please specify the desired Lisp variant." 
+       exit 1 ;;
+    esac
+elif [ $# = 2 ]; then
+    # Target directory and lisp-variant given 
+    TARGET_DIR="$1"
+    LISP_VARIANT="$2"
+elif [ $# = 3 ]; then
+    # Target directory, lisp-variant, and motif variant given 
+    TARGET_DIR="$1"
+    LISP_VARIANT="$2"
+    MOTIF_VARIANT="$3"
+else
+    echo "Usage: $0 target-directory [lisp-variant [motif-variant]]"
+    # List the available lisp-variants
+    echo Possible lisp-variants:
+    ( cd src/lisp/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
+	    pr -3at -o 8
+    echo Possible Motif-variants:
+    ( cd src/motif/server/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
+	    pr -3at -o 8
+    exit 1
 fi
 
-[ -d $1 ] && echo "Error: $1 exists already!" && exit 2
+[ -d $1 ] && echo "Error: Directory $1 exists already!" && exit 2
 
-TARGET="`echo $1 | sed 's:/*$::'`"
+TARGET="`echo $TARGET_DIR | sed 's:/*$::'`"
 
 # Make sure the given variants exist
-if [ ! -f src/lisp/Config.$2 ]; then
-	echo "No such lisp-variant could be found: Config.$2"
+if [ ! -f src/lisp/Config.$LISP_VARIANT ]; then
+	echo "No such lisp-variant could be found: Config.$LISP_VARIANT"
 	exit 1
 fi
 
 # From the given variant, try to derive a motif variant
-if [ "$3" = "" ]; then
-    case $2 in
-      alpha_linux) motif=alpha_linux ;;
-      alpha_osf1) motif=alpha_osf1 ;;
-      FreeBSD*) motif=FreeBSD ;;
-      NetBSD*) motif=NetBSD ;;
-      OpenBSD*) motif=OpenBSD ;;
-      sun4_solaris*) motif=solaris ;;
-      sun4c*) motif=sun4c_411 ;;
-      hp700*) motif=hpux_cc ;;
-      pmax_mach) motif=pmax_mach ;;
-      sgi*) motif=irix ;;
-      linux*) motif=x86 ;;
+if [ "$MOTIF_VARIANT" = "" ]; then
+    case $LISP_VARIANT in
+      alpha_linux) MOTIF_VARIANT=alpha_linux ;;
+      alpha_osf1) MOTIF_VARIANT=alpha_osf1 ;;
+      FreeBSD*) MOTIF_VARIANT=FreeBSD ;;
+      NetBSD*) MOTIF_VARIANT=NetBSD ;;
+      OpenBSD*) MOTIF_VARIANT=OpenBSD ;;
+      sun4_solaris*) MOTIF_VARIANT=solaris ;;
+      sun4c*) MOTIF_VARIANT=sun4c_411 ;;
+      hp700*) MOTIF_VARIANT=hpux_cc ;;
+      pmax_mach) MOTIF_VARIANT=pmax_mach ;;
+      sgi*) MOTIF_VARIANT=irix ;;
+      linux*) MOTIF_VARIANT=x86 ;;
     esac
-elif [ ! -f src/motif/server/Config.$3 ]; then
-	echo "No such motif-variant could be found: Config.$3"
-	exit 1
+elif [ ! -f src/motif/server/Config.$MOTIF_VARIANT ]; then
+    echo "No such motif-variant could be found: Config.$MOTIF_VARIANT"
+    exit 1
 fi
+
+# Tell user what's we've configured
+echo "Lisp = $LISP_VARIANT"
+echo "Motif = $MOTIF_VARIANT"
 
 # Create a directory tree that mirrors the source directory tree
 find src -name 'CVS' -prune -o -type d -print \
@@ -49,7 +75,7 @@ find src -name 'CVS' -prune -o -type d -print \
 
 # Link Makefile and Config files
 ( cd $TARGET/lisp ; ln -s ../../src/lisp/GNUmakefile ./Makefile )
-( cd $TARGET/lisp ; ln -s ../../src/lisp/Config.$2 ./Config )
+( cd $TARGET/lisp ; ln -s ../../src/lisp/Config.$LISP_VARIANT ./Config )
 
 # Create empty initial map file
 echo 'Map file for lisp version 0' > $TARGET/lisp/lisp.nm
@@ -57,127 +83,39 @@ echo 'Map file for lisp version 0' > $TARGET/lisp/lisp.nm
 # Create dummy internals.h so we get warned to recompile
 echo '#error You need to run genesis (via build-world.sh) before compiling the startup code!' > $TARGET/lisp/internals.h
 
+SETENV=src/tools/setenv-scripts
+
 # Create sample setenv.lisp file
-cat <<EOF > $TARGET/setenv.lisp
-;;; Put code to massage *features* list here...
-;;; This is read early in the build process so don't include complicated
-;;; things there.  pushnew, setf, remove, are ok.  In particular, reader
-;;; conditionals aren't supported.
-;;;
-;;; Most of these don't need to be set explicitly anymore unless you're 
-;;; changing the features.
-(in-package :cl-user)
-
-;; Specific features that most people want:
-
-;;(pushnew :hash-new *features*)
-;;(pushnew :random-mt19937 *features*)
-;;(pushnew :conservative-float-type *features*)
-;;(pushnew :relative-package-names *features*)
-
-;; Version tags
-
-;;(pushnew :cmu18e *features*)
-;;(pushnew :cmu18 *features*)
-;;(setf *features* (remove :cmu17 *features*))
-;;(setf *features* (remove :cmu18c *features*))
-;;(setf *features* (remove :cmu18d *features*))
-
-;; Select the target platform and OS here
-
-EOF
+cat $SETENV/base-features.lisp > $TARGET/setenv.lisp
 
 # Put in some platform specific items
-case $2 in
+case $LISP_VARIANT in
   *linux*)
-      case $2 in
+      case $$LISP_VARIANT in
         *_gencgc*) gcname=":gencgc" ;;
 	*) gcname=":cgc" ;;
       esac
-      cat <<EOF >> $TARGET/setenv.lisp
-;; e.g. for Linux on x86 you probably want:
-;;(pushnew :x86 *features*)
-;;(pushnew :linux *features*)
-;; Note! If you are still running glibc 2.1, you need the following:
-;; (pushnew :glibc2.1 *features*)
-;; Otherwise, i.e. for glibc 2.2 and later you want:
-(setf *features* (remove :glibc2.1 *features*))
-
-;; Select conservative GC:
-;;(pushnew $gcname *features*)
-;; This X86 port supports multiprocessing and linkage-table
-;;(pushnew :mp *features*)
-;;(pushnew :linkage-table *features*)
-
-;; CPU selection:
-;; i486 gives you faster locking
-;;(pushnew :i486 *features*)
-;; Pentium gives you CPU cyclecounts in time
-;;(pushnew :pentium *features*)
-EOF
+      sed "s;@@gcname@@;$gcname;" $SETENV/linux-features.lisp >> $TARGET/setenv.lisp
       ;;
   *OpenBSD*)
-      case $2 in
+      case $LISP_VARIANT in
         *_gencgc*) gcname=":gencgc" ;;
 	*) gcname=":cgc" ;;
       esac
-      cat <<EOF >> $TARGET/setenv.lisp
-;; e.g. for OpenBSD on x86 you probably want:
-;;(pushnew :x86 *features*)
-;;(pushnew :openbsd *features*)
-;;(pushnew :bsd *features*)
-
-;; Select conservative GC:
-;;(pushnew $gcname *features*)
-;; This X86 port supports multiprocessing
-;;(pushnew :mp *features*)
-
-;; CPU selection:
-;; i486 gives you faster locking
-;;(pushnew :i486 *features*)
-;; Pentium gives you CPU cyclecounts in time
-;;(pushnew :pentium *features*)
-EOF
+      sed "s;@@gcname@@;$gcname;" $SETENV/openbsd-features.lisp >> $TARGET/setenv.lisp
       ;;
   *solaris*)
-      cat <<EOF >> $TARGET/setenv.lisp
-;; e.g. for Solaris on sparc you probably want some of these:
-;;(pushnew :sparc *features*)
-;;(pushnew :svr4 *features*)
-
-;; Solaris supports linkage-table
-;;(pushnew :linkage-table *features*)
-
-;; CPU selection:
-;; Sparc-v7 gives us fsqrt instruction
-;;(pushnew :sparc-v7 *features*)
-;;(setf *features* (remove :sparc-v7 *features*))
-;; Sparc-v8 gives us fast fixnum multiplies and divides
-;;(pushnew :sparc-v8 *features*)
-;;(setf *features* (remove :sparc-v8 *features*))
-;; Sparc-v9 gives us the extra FP registers, fast bignum multiply and
-;; floor, other float operations available on the Sparc V9, and other
-;; assorted V9 features.
-;;(pushnew :sparc-v9 *features*)
-;;(setf *features* (remove :sparc-v9 *features*))
-
-;;(pushnew :complex-fp-vops *features*)
-EOF
+      cat $SETENV/solaris-features.lisp >> $TARGET/setenv.lisp
       ;;
   *)
-      cat <<EOF >> $TARGET/setenv.lisp
-
-;; Select some appropriate features for the $2 platform, otherwise you'll
-;; run into problems later on.
-EOF
+      sed "s;@@LISP@@;$LISP_VARIANT;" $SETENV/unknown.lisp >> $TARGET/setenv.lisp
       ;;
 esac
 
 
-echo Motif = $motif
 # Do Motif setup
-if [ "$motif" != "" ]
+if [ "$MOTIF_VARIANT" != "" ]
 then
-	( cd $TARGET/motif/server ; ln -s ../../../src/motif/server/GNUmakefile ./Makefile )
-	( cd $TARGET/motif/server ; ln -s ../../../src/motif/server/Config.$motif ./Config )
+    ( cd $TARGET/motif/server ; ln -s ../../../src/motif/server/GNUmakefile ./Makefile )
+    ( cd $TARGET/motif/server ; ln -s ../../../src/motif/server/Config.$MOTIF_VARIANT ./Config )
 fi
