@@ -176,7 +176,7 @@
   (dotimes (i sc-number-limit)
     (let ((sc (svref *sc-numbers* i)))
       (when sc
-	(let ((moves (sc-load-functions sc)))
+	(let ((moves (sc-move-functions sc)))
 	  (dolist (const (sc-constant-scs sc))
 	    (unless (svref moves (sc-number const))
 	      (error "No move function defined to load SC ~S from constant ~
@@ -188,7 +188,7 @@
 	      (error "No move function defined to load SC ~S from alternate ~
 	              SC ~S."
 		     (sc-name sc) (sc-name alt)))
-	    (unless (svref (sc-load-functions alt) i)
+	    (unless (svref (sc-move-functions alt) i)
 	      (error "No move function defined to save SC ~S to alternate ~
 	              SC ~S."
 		     (sc-name sc) (sc-name alt)))))))))
@@ -392,11 +392,11 @@
 		      (nfp-tn)
 		      (t
 		       (assert (eq how :known-return))
-		       (setq nfp-tn
-			     (make-representation-tn
-			      *any-primitive-type*
-			      (first (primitive-type-scs
-				      *any-primitive-type*))))
+		       (setq nfp-tn (make-number-stack-pointer-tn))
+		       (setf (tn-sc nfp-tn)
+			     (svref *sc-numbers*
+				    (first (primitive-type-scs
+					    (tn-primitive-type nfp-tn)))))
 		       (emit-context-template
 			node block
 			(template-or-lose 'compute-old-nfp)
