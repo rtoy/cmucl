@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.27 2000/05/02 04:44:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.28 2000/07/06 12:56:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,20 +127,17 @@
 	       *universal-type*)))))
 
 
-;;; NO-FUNCTION-VALUES-TYPES  --  Internal
+;;; NO-FUNCTION-TYPES  --  Internal
 ;;;
-;;;    Like VALUES-TYPES, only mash any complex function types to FUNCTION.
+;;;    Mash any complex function types to FUNCTION.
 ;;;
-(defun no-function-values-types (type)
-  (declare (type ctype type))
-  (multiple-value-bind (res count)
-		       (values-types type)
-    (values (mapcar #'(lambda (type)
-			(if (function-type-p type)
-			    (specifier-type 'function)
-			    type))
-		    res)
-	    count)))
+(defun no-function-types (types)
+  (declare (type list types))
+  (mapcar #'(lambda (type)
+	      (if (function-type-p type)
+		  (specifier-type 'function)
+		  type))
+	  types))
 
 
 ;;; Switch to disable check complementing, for evaluation.
@@ -168,7 +165,7 @@
   (declare (type continuation cont) (list types))
   (multiple-value-bind
       (ptypes count)
-      (no-function-values-types (continuation-proven-type cont))
+      (values-types (continuation-proven-type cont))
     (if (eq count :unknown)
 	(if (and (every #'type-check-template types) (not force-hairy))
 	    (values :simple types)
@@ -177,15 +174,17 @@
 				(list nil (maybe-weaken-check x cont) x))
 			    types)))
 	(let ((res (mapcar #'(lambda (p c)
-			       (let ((diff (type-difference p c))
-				     (weak (maybe-weaken-check c cont)))
-				 (if (and diff
-					  (< (type-test-cost diff)
-					     (type-test-cost weak))
-					  *complement-type-checks*)
-				     (list t diff c)
-				     (list nil weak c))))
-			   ptypes types)))
+			       (if (csubtypep p c)
+				   (list nil *universal-type* c)
+				   (let ((diff (type-difference p c))
+					 (weak (maybe-weaken-check c cont)))
+				     (if (and diff
+					      (< (type-test-cost diff)
+						 (type-test-cost weak))
+					      *complement-type-checks*)
+					 (list t diff c)
+					 (list nil weak c)))))
+			   (no-function-types ptypes) types)))
 	  (cond ((or force-hairy (find-if #'first res))
 		 (values :hairy res))
 		((every #'type-check-template types)
@@ -236,25 +235,27 @@
 ;;;
 (defun continuation-check-types (cont)
   (declare (type continuation cont))
-  (let ((type (continuation-asserted-type cont))
+  (let ((atype (continuation-asserted-type cont))
 	(dest (continuation-dest cont)))
-    (assert (not (eq type *wild-type*)))
+    (assert (not (eq atype *wild-type*)))
     (multiple-value-bind (types count)
-			 (no-function-values-types type)
+	(values-types atype)
       (cond ((not (eq count :unknown))
-	     (if (or (exit-p dest)
-		     (and (return-p dest)
-			  (multiple-value-bind
-			      (ignore count)
-			      (values-types (return-result-type dest))
-			    (declare (ignore ignore))
-			    (eq count :unknown))))
-		 (maybe-negate-check cont types t)
-		 (maybe-negate-check cont types nil)))
+	     (let ((types (no-function-types types)))
+	       (if (or (exit-p dest)
+		       (and (return-p dest)
+			    (multiple-value-bind
+				  (ignore count)
+				(values-types (return-result-type dest))
+			      (declare (ignore ignore))
+			      (eq count :unknown))))
+		   (maybe-negate-check cont types t)
+		   (maybe-negate-check cont types nil))))
 	    ((and (mv-combination-p dest)
 		  (eq (basic-combination-kind dest) :local))
-	     (assert (values-type-p type))
-	     (maybe-negate-check cont (args-type-optional type) nil))
+	     (assert (values-type-p atype))
+	     (assert (null (args-type-required atype)))
+	     (maybe-negate-check cont (args-type-optional atype) nil))
 	    (t
 	     (values :too-hairy nil))))))
 
