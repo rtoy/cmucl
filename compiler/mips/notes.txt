@@ -1,5 +1,5 @@
 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/notes.txt,v 1.1 1990/02/02 21:11:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/notes.txt,v 1.2 1990/02/07 14:05:49 ram Rel $
 
 
 
@@ -36,6 +36,10 @@ as if all the arguments were stored at it, e.g. the first stack arg is at
 ARGS[n] where n is number of register args.  Because of this, ARGS is the
 same as the callers CONT (OLD-CONT at the time of the call for non-tail
 call).
+[RAM: note that this must be set up even when NARGS<=n, since the callee may be
+expecting more arguments (due to optionals or a bad call.)  ARGS must be
+pointing to some valid chunk of memory, since the callee moves all of the
+positional args before checking to see if they are actually supplied.]
 
 LRA:  Holds the lisp-return-address object that the call should be returned
 to.  Calculated for non-tail call, and left as is for tail call.
@@ -43,6 +47,8 @@ to.  Calculated for non-tail call, and left as is for tail call.
 CSP:  Left as is.  The callee will set this as necessary based on CONT.
 
 NSP:  ???
+[RAM: will be managed similarly to CSP, i.e. callee has to allocate and is
+required to deallocate.]
 
 CONT:  The callee's context pointer.  Established as CSP for non-tail call,
 and left as is for tail call.
@@ -58,6 +64,7 @@ A0:  The value.
 CODE:  The lisp-return-address we returned to.
 
 CSP:  Restored from CONT.
+[RAM: i.e. stack is guaranteed to be clean.  No SP frobbing is necessary.]
 
 CONT:  Restored from OLD-CONT.
 
@@ -69,6 +76,9 @@ NARGS:  Number of values being returned.
 A0...An:  The first n+1 values, or NIL if there are less than n+1 values.
 
 ARGS:  Pointer to the rest of the values.  The returnee's CONT.
+[RAM: i.e. as with ARGS in call, points n+1 words before the first stack
+value.]
+
 
 CSP:  CONT + NARGS*4
 
@@ -131,6 +141,10 @@ Returner:
 
   unknown variable values (return-multiple VOP):
     copy the args from wherever to the top of the stack.
+[RAM: I would phrase this "to the beginning of the current (returner's) frame".
+They will already be there except with RETURN-MULTIPLE (when they *will* be on
+the stack top.)  But then after any copy, we adjust CSP so that the values are
+once again on stack top.]
     nil out unused arg regs
     ARGS = CONT
     CSP = CONT + NARGS * word-bytes
