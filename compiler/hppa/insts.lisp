@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.1 1992/07/13 03:48:23 wlott Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.2 1992/10/16 15:10:00 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,6 +131,359 @@
        (byte 2 1)
        (ldb (byte 1 2) space)))
 
+
+;;;; Initial disassembler setup.
+
+(disassem:set-disassem-params :instruction-alignment 32)
+
+(defvar *disassem-use-lisp-reg-names* t)
+
+(defparameter reg-symbols
+  (map 'vector
+       #'(lambda (name)
+	   (cond ((null name) nil)
+		 (t (make-symbol (concatenate 'string "$" name)))))
+       *register-names*))
+
+(disassem:define-argument-type reg
+  :printer #'(lambda (value stream dstate)
+	       (declare (stream stream) (fixnum value))
+	       (let ((regname (aref reg-symbols value)))
+		 (princ regname stream)
+		 (disassem:maybe-note-associated-storage-ref
+		  value
+		  'registers
+		  regname
+		  dstate))))
+
+(defparameter float-reg-symbols
+  (coerce
+   (loop for n from 0 to 31 collect (make-symbol (format nil "$F~d" n)))
+   'vector))
+
+(disassem:define-argument-type fp-reg
+  :printer #'(lambda (value stream dstate)
+               (declare (stream stream) (fixnum value))
+               (let ((regname (aref float-reg-symbols value)))
+                 (princ regname stream)
+                 (disassem:maybe-note-associated-storage-ref
+                  value
+                  'float-registers
+                  regname
+                  dstate))))
+
+(disassem:define-argument-type fp-fmt-0c
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (ecase value
+		 (0 (format stream ",SGL"))
+		 (1 (format stream ",DBL"))
+		 (3 (format stream ",QUAD")))))
+
+(defun low-sign-extend (x n)
+  (let ((normal (dpb x (byte 1 (1- n)) (ldb (byte (1- n) 1) x))))
+    (if (logbitp 0 x)
+	(logior (ash -1 (1- n)) normal)
+	normal)))
+
+(defun sign-extend (x n)
+  (if (logbitp (1- n) x)
+      (logior (ash -1 (1- n)) x)
+      x))
+
+(defun assemble-bits (x list)
+  (let ((result 0)
+	(offset 0))
+    (dolist (e (reverse list))
+      (setf result (logior result (ash (ldb e x) offset)))
+      (incf offset (byte-size e)))
+    result))
+
+(defmacro define-imx-decode (name bits)
+  `(disassem:define-argument-type ,name
+     :printer #'(lambda (value stream dstate)
+		  (declare (ignore dstate) (stream stream) (fixnum value))
+		  (format stream "~S" (low-sign-extend value ,bits)))))
+
+(define-imx-decode im5 5)
+(define-imx-decode im11 11)
+(define-imx-decode im14 14)
+
+(disassem:define-argument-type im3
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (format stream "~S" (assemble-bits value `(,(byte 1 0)
+							  ,(byte 2 1))))))
+
+(disassem:define-argument-type im21
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (format stream "~S"
+		       (assemble-bits value `(,(byte 1 0) ,(byte 11 1)
+					      ,(byte 2 14) ,(byte 5 16)
+					      ,(byte 2 12))))))
+
+(disassem:define-argument-type cp
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (format stream "~S" (- 31 value))))
+
+(disassem:define-argument-type clen
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (format stream "~S" (- 32 value))))
+
+(disassem:define-argument-type compare-condition
+  :printer #("" ",=" ",<" ",<=" ",<<" ",<<=" ",SV" ",OD" ",TR" ",<>" ",>="
+	     ",>" ",>>=" ",>>" ",NSV" ",EV"))
+
+(disassem:define-argument-type add-condition
+  :printer #("" ",=" ",<" ",<=" ",NUV" ",ZNV" ",SV" ",OD" ",TR" ",<>" ",>="
+	     ",>" ",UV" ",VNZ" ",NSV" ",EV"))
+
+(disassem:define-argument-type logical-condition
+  :printer #("" ",=" ",<" ",<=" "" "" "" ",OD" ",TR" ",<>" ",>=" ",>" "" ""
+	     "" ",EV"))
+
+(disassem:define-argument-type unit-condition
+  :printer #("" "" ",SBZ" ",SHZ" ",SDC" ",SBC" ",SHC" ",TR" "" ",NBZ" ",NHZ"
+	     ",NDC" ",NBC" ",NHC"))
+
+(disassem:define-argument-type extract/deposit-condition
+  :printer #("" ",=" ",<" ",OD" ",TR" ",<>" ",>=" ",EV"))
+
+(disassem:define-argument-type nullify
+  :printer #("" ",N"))
+
+(disassem:define-argument-type fcmp-cond
+  :printer #("false?" "false" "?" "!<=>" "=" "=T" "?=" "!<>" "!?>=" "<" "?<"
+	     "!>=" "!?>" "<=" "?<=" "!>" "!?<=" ">" "?>" "!<=" "!?<" ">="
+	     "?>=" "!<" "!?=" "<>" "!=" "!=T" "!?" "<=>" "true?" "true"))
+
+(disassem:define-argument-type integer
+  :printer #'(lambda (value stream dstate)
+	       (declare (ignore dstate) (stream stream) (fixnum value))
+	       (format stream "~S" value)))
+
+
+;;;; Define-instruction-formats for disassembler.
+
+(disassem:define-instruction-format
+    (load/store 32)
+  (op   :field (byte 6 26))
+  (b    :field (byte 5 21) :type 'reg)
+  (t/r  :field (byte 5 16) :type 'reg)
+  (s    :field (byte 2 14))
+  (im14 :field (byte 14 0) :type 'im14))
+
+(defconstant cmplt-index-print '((:cond ((u :constant 1) ",S"))
+				 (:cond ((m :constant 1) ",M"))))
+
+(defconstant cmplt-disp-print '((:cond ((m :constant 1)
+				  (:cond ((s :constant 0) ",MA")
+					 (t ",MB"))))))
+
+(defconstant cmplt-store-print '((:cond ((s :constant 0) ",B")
+					 (t ",E"))
+				  (:cond ((m :constant 1) ",M"))))
+
+(disassem:define-instruction-format
+    (extended-load/store 32)
+  (op1     :field (byte 6 26) :value 3)
+  (b       :field (byte 5 21) :type 'reg)
+  (x/im5/r :field (byte 5 16) :type 'reg)
+  (s       :field (byte 2 14))
+  (u       :field (byte 1 13))
+  (op2     :field (byte 3 10))
+  (ext4/c  :field (byte 4 6))
+  (m       :field (byte 1 5))
+  (t/im5   :field (byte 5 0) :type 'reg))
+
+(disassem:define-instruction-format
+    (ldil 32 :default-printer '(:name :tab im21 "," t))
+  (op    :field (byte 6 26))
+  (t   :field (byte 5 21) :type 'reg)
+  (im21 :field (byte 21 0) :type 'im21))
+
+(disassem:define-instruction-format
+    (branch17 32)
+  (op1 :field (byte 6 26))
+  (t   :field (byte 5 21) :type 'reg)
+  (w   :fields `(,(byte 5 16) ,(byte 11 2) ,(byte 1 0))
+       :use-label
+       #'(lambda (value dstate)
+	   (declare (type disassem:disassem-state dstate) (list value))
+	   (let ((x (logior (ash (first value) 12) (ash (second value) 1)
+			    (third value))))
+	     (+ (ash (sign-extend
+		      (assemble-bits x `(,(byte 1 0) ,(byte 5 12) ,(byte 1 1)
+					 ,(byte 10 2))) 17) 2)
+		(disassem:dstate-cur-addr dstate) 8))))
+  (op2 :field (byte 3 13))
+  (n   :field (byte 1 1) :type 'nullify))
+
+(disassem:define-instruction-format
+    (branch12 32)
+  (op1 :field (byte 6 26))
+  (r2  :field (byte 5 21) :type 'reg)
+  (r1  :field (byte 5 16) :type 'reg)
+  (w   :fields `(,(byte 11 2) ,(byte 1 0))
+       :use-label
+       #'(lambda (value dstate)
+	   (declare (type disassem:disassem-state dstate) (list value))
+	   (let ((x (logior (ash (first value) 1) (second value))))
+	     (+ (ash (sign-extend
+		      (assemble-bits x `(,(byte 1 0) ,(byte 1 1) ,(byte 10 2)))
+		      12) 2)
+		(disassem:dstate-cur-addr dstate) 8))))
+  (c   :field (byte 3 13))
+  (n   :field (byte 1 1) :type 'nullify))
+
+(disassem:define-instruction-format
+    (branch 32)
+  (op1 :field (byte 6 26))
+  (t   :field (byte 5 21) :type 'reg)
+  (x   :field (byte 5 15) :type 'reg)
+  (op2 :field (byte 3 13))
+  (x1  :field (byte 11 2))
+  (n   :field (byte 1 1) :type 'nullify)
+  (x2  :field (byte 1 0)))
+
+(disassem:define-instruction-format
+     (r3-inst 32 :default-printer '(:name c :tab r1 "," r2 "," t))
+  (r3 :field (byte 6 26) :value 2)
+  (r2 :field (byte 5 21) :type 'reg)
+  (r1 :field (byte 5 16) :type 'reg)
+  (c  :field (byte 3 13))
+  (f  :field (byte 1 12))
+  (op :field (byte 7 5))
+  (t  :field (byte 5 0) :type 'reg))
+
+(disassem:define-instruction-format
+    (imm-inst 32 :default-printer '(:name c :tab im11 "," r "," t))
+  (op   :field (byte 6 26))
+  (r    :field (byte 5 21) :type 'reg)
+  (t    :field (byte 5 16) :type 'reg)
+  (c    :field (byte 3 13))
+  (f    :field (byte 1 12))
+  (o    :field (byte 1 11))
+  (im11 :field (byte 11 0) :type 'im11))
+
+(disassem:define-instruction-format
+    (extract/deposit-inst 32)
+  (op1    :field (byte 6 26))
+  (r2     :field (byte 5 21) :type 'reg)
+  (r1     :field (byte 5 16) :type 'reg)
+  (c      :field (byte 3 13) :type 'extract/deposit-condition)
+  (op2    :field (byte 3 10))
+  (cp     :field (byte 5 5) :type 'cp)
+  (t/clen :field (byte 5 0) :type 'clen))
+
+(disassem:define-instruction-format
+    (break 32 :default-printer '(:name :tab im13 "," im5))
+  (op1  :field (byte 6 26) :value 0)
+  (im13 :field (byte 13 13))
+  (q2   :field (byte 8 5) :value 0)
+  (im5  :field (byte 5 0)))
+
+(defun snarf-error-junk (sap offset &optional length-only)
+  (let* ((length (system:sap-ref-8 sap offset))
+         (vector (make-array length :element-type '(unsigned-byte 8))))
+    (declare (type system:system-area-pointer sap)
+             (type (unsigned-byte 8) length)
+             (type (simple-array (unsigned-byte 8) (*)) vector))
+    (cond (length-only
+           (values 0 (1+ length) nil nil))
+          (t
+           (kernel:copy-from-system-area sap (* hppa:byte-bits (1+ offset))
+                                         vector (* hppa:word-bits
+                                                   hppa:vector-data-offset)
+                                         (* length hppa:byte-bits))
+           (collect ((sc-offsets)
+                     (lengths))
+             (lengths 1)                ; the length byte
+             (let* ((index 0)
+                    (error-number (c::read-var-integer vector index)))
+               (lengths index)
+               (loop
+                 (when (>= index length)
+                   (return))
+                 (let ((old-index index))
+                   (sc-offsets (c::read-var-integer vector index))
+                   (lengths (- index old-index))))
+               (values error-number
+                       (1+ length)
+                       (sc-offsets)
+                       (lengths))))))))
+
+(defun break-control (chunk inst stream dstate)
+  (declare (ignore inst))
+  (flet ((nt (x) (if stream (disassem:note x dstate))))
+    (case (break-im5 chunk dstate)
+      (#.vm:error-trap
+       (nt "Error trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:cerror-trap
+       (nt "Cerror trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (#.vm:breakpoint-trap
+       (nt "Breakpoint trap"))
+      (#.vm:pending-interrupt-trap
+       (nt "Pending interrupt trap"))
+      (#.vm:halt-trap
+       (nt "Halt trap"))
+      (#.vm:function-end-breakpoint-trap
+       (nt "Function end breakpoint trap"))
+    )))
+
+(disassem:define-instruction-format
+    (system-inst 32)
+  (op1 :field (byte 6 26) :value 0)
+  (r1  :field (byte 5 21) :type 'reg)
+  (r2  :field (byte 5 16) :type 'reg)
+  (s   :field (byte 3 13))
+  (op2 :field (byte 8 5))
+  (r3  :field (byte 5 0) :type 'reg))
+
+(disassem:define-instruction-format
+    (fp-load/store 32)
+  (op :field (byte 6 26))
+  (b  :field (byte 5 21) :type 'reg)
+  (x  :field (byte 5 16) :type 'reg)
+  (s  :field (byte 2 14))
+  (u  :field (byte 1 13))
+  (x1 :field (byte 1 12))
+  (x2 :field (byte 2 10))
+  (x3 :field (byte 1 9))
+  (x4 :field (byte 3 6))
+  (m  :field (byte 1 5))
+  (t  :field (byte 5 0) :type 'fp-reg))
+
+(disassem:define-instruction-format
+    (fp-class-0-inst 32)
+  (op1 :field (byte 6 26))
+  (r   :field (byte 5 21) :type 'fp-reg)
+  (x1  :field (byte 5 16) :type 'fp-reg)
+  (op2 :field (byte 3 13))
+  (fmt :field (byte 2 11) :type 'fp-fmt-0c)
+  (x2  :field (byte 2 9))
+  (x3  :field (byte 3 6))
+  (x4  :field (byte 1 5))
+  (t   :field (byte 5 0) :type 'fp-reg))
+
+(disassem:define-instruction-format
+    (fp-class-1-inst 32)
+  (op1 :field (byte 6 26))
+  (r   :field (byte 5 21) :type 'fp-reg)
+  (x1  :field (byte 4 17) :value 0)
+  (x2  :field (byte 2 15))
+  (df  :field (byte 2 13) :type 'fp-fmt-0c)
+  (sf  :field (byte 2 11) :type 'fp-fmt-0c)
+  (x3  :field (byte 2 9) :value 1)
+  (x4  :field (byte 3 6) :value 0)
+  (x5  :field (byte 1 5) :value 0)
+  (t   :field (byte 5 0) :type 'fp-reg))
+
 
 
 ;;;; Load and Store stuff.
@@ -159,6 +512,8 @@
     `(define-instruction ,name (segment disp base reg)
        (:declare (type tn reg base)
 		 (type (or fixup (signed-byte 14)) disp))
+       (:printer load/store ((op ,opcode) (s 0))
+		 '(:name :tab im14 "(" s "," b ")," t/r))
        (:emitter
 	(emit-load/store segment ,opcode
 			 (reg-tn-encoding base) (reg-tn-encoding reg) 0
@@ -167,6 +522,8 @@
     `(define-instruction ,name (segment reg disp base)
        (:declare (type tn reg base)
 		 (type (or fixup (signed-byte 14)) disp))
+       (:printer load/store ((op ,opcode) (s 0))
+		 '(:name :tab t/r "," im14 "(" s "," b ")"))
        (:emitter
 	(emit-load/store segment ,opcode
 			 (reg-tn-encoding base) (reg-tn-encoding reg) 0
@@ -191,6 +548,10 @@
     `(define-instruction ,name (segment index base reg &key modify scale)
        (:declare (type tn reg base index)
 		 (type (member t nil) modify scale))
+       (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'reg)
+				      (op2 0))
+				      `(:name ,@cmplt-index-print :tab x/im5/r
+					      "(" s "," b ")" t/im5))
        (:emitter
 	(emit-extended-load/store
 	 segment #x03 (reg-tn-encoding base) (reg-tn-encoding index)
@@ -220,6 +581,10 @@
        (:declare (type tn base reg)
 		 (type (or fixup (signed-byte 5)) disp)
 		 (type (member :before :after nil) modify))
+       (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'im5)
+				      (op2 4))
+				      `(:name ,@cmplt-disp-print :tab x/im5/r
+					      "(" s "," b ")" t/im5))
        (:emitter
 	(multiple-value-bind
 	    (m a)
@@ -236,6 +601,10 @@
        (:declare (type tn reg base)
 		 (type (or fixup (signed-byte 5)) disp)
 		 (type (member :before :after nil) modify))
+       (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'im5)
+				      (op2 4))
+				      `(:name ,@cmplt-disp-print :tab x/im5/r
+					      "," t/im5 "(" s "," b ")"))
        (:emitter
 	(multiple-value-bind
 	    (m a)
@@ -262,6 +631,8 @@
 	    (type (signed-byte 5) disp)
 	    (type (member :begin :end) where)
 	    (type (member t nil) modify))
+  (:printer extended-load/store ((ext4/c #xC) (t/im5 nil :type 'im5) (op2 4))
+	    `(:name ,@cmplt-store-print :tab x/im5/r "," t/im5 "(" s "," b ")"))
   (:emitter
    (emit-extended-load/store segment #x03 (reg-tn-encoding base)
 			     (reg-tn-encoding reg) 0
@@ -296,6 +667,7 @@
 (define-instruction ldil (segment value reg)
   (:declare (type tn reg)
 	    (type (or (signed-byte 21) (unsigned-byte 21) fixup) value))
+  (:printer ldil ((op #x08)))
   (:emitter
    (emit-ldil segment #x08 (reg-tn-encoding reg)
 	      (immed-21-encoding segment value))))
@@ -303,6 +675,7 @@
 (define-instruction addil (segment value reg)
   (:declare (type tn reg)
 	    (type (or (signed-byte 21) (unsigned-byte 21) fixup) value))
+  (:printer ldil ((op #x0A)))
   (:emitter
    (emit-ldil segment #x0A (reg-tn-encoding reg)
 	      (immed-21-encoding segment value))))
@@ -358,11 +731,13 @@
 
 (define-instruction bl (segment target reg &key nullify)
   (:declare (type tn reg) (type label target) (type (member t nil) nullify))
+  (:printer branch17 ((op1 #x3A) (op2 0)) '(:name n :tab w "," t))
   (:emitter
    (emit-relative-branch segment #x3A (reg-tn-encoding reg) 0 target nullify)))
 
 (define-instruction gateway (segment target reg &key nullify)
   (:declare (type tn reg) (type label target) (type (member t nil) nullify))
+  (:printer branch17 ((op1 #x3A) (op2 1)) '(:name n :tab w "," t))
   (:emitter
    (emit-relative-branch segment #x3A (reg-tn-encoding reg) 1 target nullify)))
 
@@ -372,6 +747,7 @@
   (:declare (type tn base)
 	    (type (member t nil) nullify)
 	    (type (or tn null) offset))
+  (:printer branch ((op1 #x3A) (op2 6)) '(:name n :tab x "," t))
   (:emitter
    (emit-branch segment #x3A (reg-tn-encoding base)
 		(if offset (reg-tn-encoding offset) 0)
@@ -382,6 +758,8 @@
 	    (type tn base)
 	    (type (unsigned-byte 3) space)
 	    (type (member t nil) nullify))
+  (:printer branch17 ((op1 #x38) (op2 nil :type 'im3))
+	    '(:name n :tab w "(" op2 "," t ")"))
   (:emitter
    (multiple-value-bind
        (w1 w2 w)
@@ -394,6 +772,8 @@
 	    (type tn base)
 	    (type (unsigned-byte 3) space)
 	    (type (member t nil) nullify))
+  (:printer branch17 ((op1 #x39) (op2 nil :type 'im3))
+	    '(:name n :tab w "(" op2 "," t ")"))
   (:emitter
    (multiple-value-bind
        (w1 w2 w)
@@ -427,6 +807,12 @@
 		     (type tn r1 r2)
 		     (type label target)
 		     (type (member t nil) nullify))
+	   (:printer branch12 ((op1 ,r-opcode) (c nil :type ',conditional))
+		     '(:name "T" c n :tab r1 "," r2 "," w))
+	   ,@(unless (= r-opcode #x32)
+	       `((:printer branch12 ((op1 ,(+ 2 r-opcode))
+				     (c nil :type ',conditional))
+			 '(:name "F" c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -440,6 +826,13 @@
 		     (type (signed-byte 5) imm)
 		     (type tn reg)
 		     (type (member t nil) nullify))
+	   (:printer branch12 ((op1 ,i-opcode) (r1 nil :type 'im5)
+			       (c nil :type ',conditional))
+		     '(:name "T" c n :tab r1 "," r2 w))
+	   ,@(unless (= r-opcode #x32)
+	       `((:printer branch12 ((op1 ,(+ 2 i-opcode))
+				     (c nil :type ',conditional))
+			 '(:name "F" c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -457,11 +850,13 @@
   (:declare (type (member t nil) cond nullify)
 	    (type tn reg)
 	    (type (or (member :variable) (unsigned-byte 5)) posn))
+  (:printer branch12 ((op1 30) (c nil :type 'extract/deposit-condition))
+		      '("BVB" c n :tab r1 "," w))
   (:emitter
    (multiple-value-bind
        (opcode posn-encoding)
        (if (eq posn :variable)
-	   (values  0)
+	   (values #x30 0)
 	   (values #x31 posn))
      (emit-conditional-branch segment opcode posn-encoding
 			      (reg-tn-encoding reg)
@@ -478,6 +873,9 @@
   (defmacro define-r3-inst (name cond-kind opcode)
     `(define-instruction ,name (segment r1 r2 res &optional cond)
        (:declare (type tn res r1 r2))
+       (:printer r3-inst ((op ,opcode) (c nil :type ',(symbolicate
+						       cond-kind 
+						       "-CONDITION"))))
        (:emitter
 	(multiple-value-bind
 	    (cond false)
@@ -534,6 +932,9 @@
     `(define-instruction ,name (segment imm src dst &optional cond)
        (:declare (type tn dst src)
 		 (type (signed-byte 11) imm))
+       (:printer imm-inst ((op ,opcode) (o ,subcode)
+			   (c nil :type 
+			      ',(symbolicate cond-kind "-CONDITION"))))
        (:emitter
 	(multiple-value-bind
 	    (cond false)
@@ -558,6 +959,10 @@
 (define-instruction shd (segment r1 r2 count res &optional cond)
   (:declare (type tn res r1 r2)
 	    (type (or (member :variable) (integer 0 31)) count))
+  (:printer extract/deposit-inst ((op1 #x34) (op2 2) (t/clen nil :type 'reg))
+	    '(:name c :tab r1 "," r2 "," cp "," t/clen))
+  (:printer extract/deposit-inst ((op1 #x34) (op2 0) (t/clen nil :type 'reg))
+	    '("VSHD" c :tab r1 "," r2 "," t/clen))
   (:emitter
    (etypecase count
      ((member :variable)
@@ -578,6 +983,11 @@
        (:declare (type tn res src)
 		 (type (or (member :variable) (integer 0 31)) posn)
 		 (type (integer 1 32) len))
+       (:printer extract/deposit-inst ((op1 #x34) (cp nil :type 'integer)
+				       (op2 ,opcode))
+		 '(:name c :tab r2 "," cp "," t/clen "," r1))
+       (:printer extract/deposit-inst ((op1 #x34) (op2 ,(- opcode 2)))
+		 '("V" :name c :tab r2 "," t/clen "," r1))
        (:emitter
 	(etypecase posn
 	  ((member :variable)
@@ -601,6 +1011,20 @@
 		 (type (or tn (signed-byte 5)) src)
 		 (type (or (member :variable) (integer 0 31)) posn)
 		 (type (integer 1 32) len))
+       (:printer extract/deposit-inst ((op1 #x35) (op2 ,opcode))
+		 ',(let ((base '("VDEP" c :tab r1 "," t/clen "," r2)))
+		     (if (= opcode 0) (cons "Z" base) base)))
+       (:printer extract/deposit-inst ((op1 #x35) (op2 ,(+ 2 opcode)))
+		 ',(let ((base '("DEP" c :tab r1 "," cp "," t/clen "," r2)))
+		     (if (= opcode 0) (cons "Z" base) base)))
+       (:printer extract/deposit-inst ((op1 #x35) (r1 nil :type 'im5)
+				       (op2 ,(+ 4 opcode)))
+		 ',(let ((base '("VDEPI" c :tab r1 "," t/clen "," r2)))
+		     (if (= opcode 0) (cons "Z" base) base)))
+       (:printer extract/deposit-inst ((op1 #x35) (r1 nil :type 'im5)
+				       (op2 ,(+ 6 opcode)))
+		 ',(let ((base '( "DEPI" c :tab r1 "," cp "," t/clen "," r2)))
+		     (if (= opcode 0) (cons "Z" base) base)))
        (:emitter
 	(multiple-value-bind
 	    (opcode src-encoding)
@@ -634,6 +1058,7 @@
 (define-instruction break (segment &optional (im5 0) (im13 0))
   (:declare (type (unsigned-byte 13) im13)
 	    (type (unsigned-byte 5) im5))
+  (:printer break () :default :control #'break-control)
   (:emitter
    (emit-break segment 0 im13 0 im5)))
 
@@ -643,18 +1068,22 @@
 (define-instruction ldsid (segment res base &optional (space 0))
   (:declare (type tn res base)
 	    (type (integer 0 3) space))
+  (:printer system-inst ((op2 #x85) (s nil  :printer #(0 0 1 1 2 2 3 3)))
+	    `(:name :tab "(" s "," r1 ")," r3))
   (:emitter
    (emit-system-inst segment 0 (reg-tn-encoding base) 0 (ash space 1) #x85
 		     (reg-tn-encoding res))))
 
 (define-instruction mtsp (segment reg space)
   (:declare (type tn reg) (type (integer 0 7) space))
+  (:printer system-inst ((op2 #xC1)) '(:name :tab r2 "," s))
   (:emitter
    (emit-system-inst segment 0 0 (reg-tn-encoding reg) (space-encoding space)
 		     #xC1 0)))
 
 (define-instruction mfsp (segment space reg)
   (:declare (type tn reg) (type (integer 0 7) space))
+  (:printer system-inst ((op2 #x25)) '(:name :tab s "," r3))
   (:emitter
    (emit-system-inst segment 0 0 0 (space-encoding space) #x25
 		     (reg-tn-encoding reg))))
@@ -672,12 +1101,14 @@
 
 (define-instruction mtctl (segment reg ctrl-reg)
   (:declare (type tn reg) (type control-reg ctrl-reg))
+  (:printer system-inst ((op2 #xC2)) '(:name :tab r2 "," r1))
   (:emitter
    (emit-system-inst segment 0 (control-reg ctrl-reg) (reg-tn-encoding reg)
 		     0 #xC2 0)))
 
 (define-instruction mfctl (segment ctrl-reg reg)
   (:declare (type tn reg) (type control-reg ctrl-reg))
+  (:printer system-inst ((op2 #x45)) '(:name :tab r1 "," r3))
   (:emitter
    (emit-system-inst segment 0 (control-reg ctrl-reg) 0 0 #x45
 		     (reg-tn-encoding reg))))
@@ -694,6 +1125,10 @@
   (:declare (type tn index base result)
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
+  (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 0))
+	    `("FLDDX" ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
+  (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 0))
+	    `("FLDWX" ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -709,6 +1144,10 @@
   (:declare (type tn index base value)
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
+  (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 1))
+	    `("FSTDX",@cmplt-index-print :tab t "," x "(" s "," b ")"))
+  (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 1))
+	    `("FSTWX" ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
@@ -725,6 +1164,10 @@
 	    (type (signed-byte 5) disp)
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
+  (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
+	    `("FLDDS" ,@cmplt-disp-print :tab x "(" s "," b ")," t))
+  (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
+	    `("FLDWS" ,@cmplt-disp-print :tab x "(" s "," b ")," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -742,6 +1185,10 @@
 	    (type (signed-byte 5) disp)
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
+  (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
+	    `("FSTDS" ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
+  (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
+	    `("FSTWS" ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
@@ -774,6 +1221,14 @@
 (define-instruction funop (segment op from to)
   (:declare (type funop op)
 	    (type tn from to))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 2) (x2 0))
+	    '("FCPY" fmt :tab r "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 3) (x2 0))
+	    '("FABS" fmt  :tab r "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 4) (x2 0))
+	    '("FSQRT" fmt :tab r "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 5) (x2 0))
+	    '("FRND" fmt :tab r "," t))
   (:emitter
    (multiple-value-bind
        (from-encoding from-double-p)
@@ -790,6 +1245,8 @@
   (defmacro define-class-1-fp-inst (name subcode)
     `(define-instruction ,name (segment from to)
        (:declare (type tn from to))
+       (:printer fp-class-1-inst ((op1 #x0C) (x2 ,subcode))
+		 '(:name sf df :tab r "," t))
        (:emitter
 	(multiple-value-bind
 	    (from-encoding from-double-p)
@@ -809,6 +1266,8 @@
 (define-instruction fcmp (segment cond r1 r2)
   (:declare (type (unsigned-byte 5) cond)
 	    (type tn r1 r2))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 0) (x2 2) (t nil :type 'fcmp-cond))
+	    '(:name fmt t :tab r "," x1))
   (:emitter
    (multiple-value-bind
        (r1-encoding r1-double-p)
@@ -821,6 +1280,7 @@
 			     (if r1-double-p 1 0) 2 0 0 cond)))))
 
 (define-instruction ftest (segment)
+  (:printer fp-class-0-inst ((op1 #x0c) (op2 1) (x2 2)) '(:name))
   (:emitter
    (emit-fp-class-0-inst segment #x0C 0 0 1 0 2 0 1 0)))
 
@@ -832,6 +1292,14 @@
 (define-instruction fbinop (segment op r1 r2 result)
   (:declare (type fbinop op)
 	    (type tn r1 r2 result))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 0) (x2 3))
+	    '("FADD" fmt :tab r "," x1 "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 1) (x2 3))
+	    '("FSUB" fmt :tab r "," x1 "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 2) (x2 3))
+	    '("FMPY" fmt :tab r "," x1 "," t))
+  (:printer fp-class-0-inst ((op1 #x0C) (op2 3) (x2 3))
+	    '("FDIV" fmt :tab r "," x1 "," t))
   (:emitter
    (multiple-value-bind
        (r1-encoding r1-double-p)
