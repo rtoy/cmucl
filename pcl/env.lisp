@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.23 2003/05/17 19:02:37 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.24 2003/05/17 19:08:10 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -303,8 +303,6 @@
       (error "~@<Can't use anonymous or undefined class as constant: ~S~:@>"
 	     class))
     `(find-class ',name)))
-
-(defgeneric make-load-form-saving-slots (object &key slot-names environment))
 
 (defun make-load-form-saving-slots (object &key slot-names environment)
   (declare (ignore environment))
