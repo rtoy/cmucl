@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.40 1990/07/19 18:43:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.41 1990/08/15 02:55:52 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -34,10 +34,11 @@
 	       (ref-trans (getf slot-opts :ref-trans))
 	       (ref-vop (getf slot-opts :ref-vop ref-trans))
 	       (set-trans (getf slot-opts :set-trans))
+	       (setf-function-p (and (listp set-trans)
+				     (= (length set-trans) 2)
+				     (eq (car set-trans) 'setf)))
 	       (setf-vop (getf slot-opts :setf-vop
-			       (when (and (listp set-trans)
-					  (= (length set-trans) 2)
-					  (eq (car set-trans) 'setf))
+			       (when setf-function-p
 				 (intern (concatenate
 					  'simple-string
 					  "SET-"
@@ -51,14 +52,22 @@
 			  `((:translate ,ref-trans))))))
 	  (when (or set-vop setf-vop)
 	    (forms `(define-vop ,(cond ((and rest-p setf-vop)
-					(error "Can't automatically generate a setf VOP for :rest-p ~
+					(error "Can't automatically generate ~
+					a setf VOP for :rest-p ~
 					slots: ~S in ~S"
 					       name
 					       (vm:primitive-object-name obj)))
 				       (rest-p `(,set-vop slot-set))
+				       ((and set-vop setf-function-p)
+					(error "Setf functions (list ~S) must ~
+					use :setf-vops."
+					       set-trans))
 				       (set-vop `(,set-vop cell-set))
-				       (t `(,setf-vop cell-setf)))
-				(:variant ,offset ,lowtag)
+				       (setf-function-p
+					`(,setf-vop cell-setf-function))
+				       (t
+					`(,setf-vop cell-setf)))
+		      (:variant ,offset ,lowtag)
 		      ,@(when set-trans
 			  `((:translate ,set-trans)))))))))
     (when (forms)
