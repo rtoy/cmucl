@@ -28,13 +28,10 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/pkg.lisp,v 1.2 2003/03/22 16:15:14 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/pkg.lisp,v 1.3 2003/04/14 21:45:22 gerd Rel $")
 
 (defpackage "PCL-TEST"
-  (:use "COMMON-LISP" #+cmu "PCL" #+sbcl "SB-PCL" "RT")
-  (:shadowing-import-from
-   #+cmu "PCL" #+sbcl "SB-PCL"
-   "FIND-CLASS" "CLASS-OF" "CLASS-NAME" "BUILT-IN-CLASS"))
+  (:use "COMMON-LISP" #+cmu "PCL" #+sbcl "SB-PCL" "RT"))
 
 #+sbcl
 (progn

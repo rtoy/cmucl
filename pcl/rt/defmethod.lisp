@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.3 2003/04/06 09:34:39 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defmethod.lisp,v 1.4 2003/04/14 21:45:22 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -101,3 +101,18 @@
 	  t)
       (values r (null c)))
   t t)
+
+(deftest defmethod-metacircle.0
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dmm.0 () ())
+	  (defclass dmm.1 () ())
+	  (defclass dmm.0+1 (dmm.0 dmm.1) ())
+	  (defmethod dmm.0 ((x dmm.0) (y dmm.1)) 1)
+	  (defmethod dmm.0 ((x dmm.1) (y dmm.0)) 2)
+	  (dmm.0 (make-instance 'dmm.0+1) (make-instance 'dmm.0+1))
+	  (defmethod dmm.0 ((x dmm.0+1) (y dmm.0+1)) 3)
+	  (dmm.0 (make-instance 'dmm.0+1) (make-instance 'dmm.0+1)))
+      (values r (null c)))
+  3 t)
+

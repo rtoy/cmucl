@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.23 2003/04/13 16:39:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.24 2003/04/14 21:45:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1120,7 +1120,9 @@ And so, we are saved.
 (defvar *cmv-stack* ())
 
 (defun cache-miss-values-internal (gf arg-info wrappers classes types state)
-  (if (and wrappers (equal wrappers (cdr (assq gf *cmv-stack*))))
+  (if (and (eq state 'accessor)
+	   wrappers
+	   (equal wrappers (cdr (assq gf *cmv-stack*))))
       (break-vicious-metacircle gf classes arg-info)
       (let ((*cmv-stack* (cons (cons gf wrappers) *cmv-stack*))
 	    (cam-std-p (or (null arg-info)

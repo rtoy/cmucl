@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defgeneric.lisp,v 1.3 2003/04/13 16:39:22 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defgeneric.lisp,v 1.4 2003/04/14 21:45:22 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -70,6 +70,6 @@
 	  (defgeneric method-class.0.gf (x)
 	    (:method-class method-class.0))
 	  (defmethod method-class.0.gf ((x integer)) x)
-	  t)
+	  (method-class.0.gf 1))
       (values r (null c)))
-  t t)
+  1 t)
