@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.27 1998/02/13 16:09:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.28 1998/12/19 16:00:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,7 +175,9 @@
 	 (case name
 	   (function
 	    (unless (= args 1)
-	      (error "Wrong number of args to FUNCTION:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Wrong number of args to FUNCTION:~% ~S."
+		     :format-arguments (list exp)))
 	    (let ((name (second exp)))
 	      (if (or (atom name)
 		      (and (consp name)
@@ -184,11 +186,15 @@
 		  (eval:make-interpreted-function name))))
 	   (quote
 	    (unless (= args 1)
-	      (error "Wrong number of args to QUOTE:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Wrong number of args to QUOTE:~% ~S."
+		     :format-arguments (list exp)))
 	    (second exp))
 	   (setq
 	    (unless (evenp args)
-	      (error "Odd number of args to SETQ:~% ~S." exp))
+	      (error 'simple-program-error
+		     :format-control "Odd number of args to SETQ:~% ~S."
+		     :format-arguments (list exp)))
 	    (unless (zerop args)
 	      (do ((name (cdr exp) (cddr name)))
 		  ((null name)
@@ -360,7 +366,9 @@
   (setf (info function macro-function symbol) function)
   (setf (symbol-function symbol)
 	#'(lambda (&rest args) (declare (ignore args))
-	    (error "Cannot funcall macro functions.")))
+	    (error 'simple-undefined-function
+		   :name symbol
+		   :format-control "Cannot funcall macro functions.")))
   function)
 
 ;;; Macroexpand-1  --  Public
