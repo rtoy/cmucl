@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.80 2003/01/29 13:45:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.81 2003/02/23 15:32:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1445,14 +1445,20 @@
    if the call is unsuccessful."
   (declare (type unix-pathname name)
 	   (type (unsigned-byte 32) len))
-  (void-syscall ("truncate" c-string int) name len))
+  #-(and bsd x86)
+  (void-syscall ("truncate" c-string int) name len)
+  #+(and bsd x86)
+  (void-syscall ("truncate" c-string unsigned-long unsigned-long) name len 0))
 
 (defun unix-ftruncate (fd len)
   "Unix-ftruncate is similar to unix-truncate except that the first
    argument is a file descriptor rather than a file name."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) len))
-  (void-syscall ("ftruncate" int int) fd len))
+  #-(and bsd x86)
+  (void-syscall ("ftruncate" int int) fd len)
+  #+(and bsd x86)
+  (void-syscall ("ftruncate" int unsigned-long unsigned-long) fd len 0))
 
 (defun unix-symlink (name1 name2)
   "Unix-symlink creates a symbolic link named name2 to the file
