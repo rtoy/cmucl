@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.4 1990/05/24 17:46:03 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.5 1990/05/25 15:57:38 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -88,6 +88,7 @@ struct sigcontext *csp;
 {
     unsigned long pc;
 
+    info->interrupted = 1;
     if (LowtagOf(csp->sc_regs[CODE]) == type_FunctionPointer) {
         /* We tried to call a function, but crapped out before $CODE could be fixed up.  Probably an undefined function. */
         info->frame = (struct call_frame *)csp->sc_regs[OLDCONT];
@@ -102,7 +103,8 @@ struct sigcontext *csp;
         pc = csp->sc_pc;
     }
     if (info->code != NULL)
-        info->pc = pc - (unsigned long) info->code - HEADER_LENGTH(info->code->header);
+        info->pc = pc - (unsigned long) info->code -
+            (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
     else
         info->pc = 0;
 }
@@ -123,6 +125,7 @@ struct call_info *info;
     this_frame = info->frame;
     info->lra = this_frame->saved_lra;
     info->frame = this_frame->old_cont;
+    info->interrupted = 0;
 
     if (info->frame == NULL || info->frame == this_frame)
         return 0;
@@ -137,10 +140,10 @@ struct call_info *info;
             if ((struct call_frame *)(csp->sc_regs[CONT]) == info->frame)
                 info_from_sigcontext(info, csp);
         }
-        info->interrupted = 1;
     }
     else if (info->code != NULL)
-        info->pc = ((unsigned long)PTR(info->lra) - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+        info->pc = (unsigned long)PTR(info->lra) - (unsigned long)info->code -
+            (HEADER_LENGTH(info->code->header) * sizeof(lispobj));
     else
         info->pc = 0;
 
