@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.5 2004/08/09 03:30:48 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/move.lisp,v 1.6 2004/10/06 13:57:35 rtoy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -263,6 +263,7 @@
 	(inst bge one-word)
 	(inst li temp (logior (ash 2 type-bits) bignum-type))
 	(emit-label one-word)
+	(storew temp y 0 other-pointer-type)
 	(storew x y bignum-digits-offset other-pointer-type))
       (emit-label done))))
 ;;;
