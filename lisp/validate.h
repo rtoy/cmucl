@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.h,v 1.3 2002/05/02 21:10:53 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.h,v 1.4 2004/05/18 22:22:59 cwang Exp $ */
 
 #if !defined(_INCLUDE_VALIDATE_H_)
 #define _INCLUDE_VALIDATE_H_
@@ -19,7 +19,7 @@
 #include "sparc-validate.h"
 #endif
 
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
 #include "x86-validate.h"
 #endif
 
