@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.64 1997/12/14 14:10:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.65 1997/12/17 19:09:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2518,7 +2518,7 @@
     ;; multiplication and division for small integral powers.
     (unless (not-more-contagious y x)
       (give-up))
-    (cond ((zerop val) 1) ; X should be coerced to the correct type.
+    (cond ((zerop val) '(float 1 x))
 	  ((= val 2) '(* x x))
 	  ((= val -2) '(/ (* x x)))
 	  ((= val 3) '(* x x x))
