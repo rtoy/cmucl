@@ -187,10 +187,7 @@
 			     (type-specifier type))
 	       nil)
 	      ((eq ctype *empty-type*)
-	       (note-lossage "The ~:R argument is a ~S, not a ~S." n
-			     (type-specifier (continuation-proven-type cont))
-			     (type-specifier
-			      (continuation-asserted-type cont)))
+	       (note-slime "The ~:R argument never returns a value." n)
 	       nil)
 	      (t t)))))
     ((not (constant-continuation-p cont))
@@ -564,32 +561,30 @@
 
 ;;;; ASSERT-DEFINITION-TYPE
 
-
 ;;; TRY-TYPE-INTERSECTIONS  --  Internal
 ;;;
 ;;;    Intersect Lambda's var types with Types, giving a warning if there is a
 ;;; mismatch.  If all intersections are non-null, we return lists of the
 ;;; variables, intersections and T.
 ;;;
-(defun try-type-intersections (vars types)
-  (declare (list vars types))
+(defun try-type-intersections (vars types where)
+  (declare (list vars types) (string where))
   (collect ((res))
     (mapc #'(lambda (var type)
 	      (let* ((vtype (leaf-type var))
 		     (int (type-intersection vtype type)))
 		(cond
 		 ((eq int *empty-type*)
-		  (compiler-warning
-		   "Declared type for variable ~A:~%  ~S~@
-		   conflicts with this type from previous FTYPE ~
-		   declaration:~%  ~S"
+		  (note-lossage
+		   "Definition's declared type for variable ~A:~%  ~S~@
+		   conflicts with this type from previous ~A:~%  ~S"
 		   (leaf-name var) (type-specifier vtype)
-		   (type-specifier type))
-		  (return-from try-type-intersections (values nil nil nil)))
+		   where (type-specifier type))
+		  (return-from try-type-intersections (values nil nil)))
 		 (t
 		  (res int)))))
 	  vars types)
-    (values vars (res) t)))
+    (values vars (res))))
 
 
 ;;; FIND-OPTIONAL-DISPATCH-TYPES  --  Internal
@@ -599,27 +594,25 @@
 ;;; should be applied to the variables of the main entry.  The second is a
 ;;; boolean flag true when no syntax problems were detected.
 ;;;
-(defun find-optional-dispatch-types (od type)
-  (declare (type optional-dispatch od) (type function-type type))
+(defun find-optional-dispatch-types (od type where)
+  (declare (type optional-dispatch od) (type function-type type)
+	   (string where))
   (let* ((min (optional-dispatch-min-args od))
 	 (req (function-type-required type))
-	 (opt (function-type-optional type))
-	 (win t))
+	 (opt (function-type-optional type)))
     (flet ((frob (x y what)
 	     (unless (= x y)
-	       (compiler-warning
-		"Definition has ~R ~A args, but previous declaration had ~R."
-		x what y)
-	       (setq win nil))))
+	       (note-lossage
+		"Definition has ~R ~A arg~P, but previous ~A had ~R."
+		x what x where y))))
       (frob min (length req) "fixed")
       (frob (- (optional-dispatch-max-args od) min) (length opt) "optional"))
     (flet ((frob (x y what)
 	     (unless (eq x y)
-	       (compiler-warning
+	       (note-lossage
 		"Definition ~:[doesn't have~;has~] ~A, but previous ~
-		declaration ~:[doesn't~;does~]."
-		x what y)
-	       (setq win nil))))
+		~A ~:[doesn't~;does~]."
+		x what where y))))
       (frob (optional-dispatch-keyp od) (function-type-keyp type)
 	    "keyword args")
       (frob (and (not (null (optional-dispatch-more-entry od)))
@@ -629,40 +622,46 @@
       (frob (optional-dispatch-allowp od) (function-type-allowp type)
 	    "&allow-other-keys"))
 
-    (unless win (return-from find-optional-dispatch-types (values nil nil)))
+    (when *lossage-detected*
+      (return-from find-optional-dispatch-types (values nil nil)))
+
     (collect ((res)
 	      (vars))
       (let ((keys (function-type-keywords type))
 	    (arglist (optional-dispatch-arglist od)))
 	(dolist (arg arglist)
-	  (let ((info (lambda-var-arg-info arg)))
-	    (cond
-	     (info
+	  (cond
+	   ((lambda-var-arg-info arg)
+	    (let* ((info (lambda-var-arg-info arg))
+		   (default (arg-info-default info))
+		   (def-type (if (constantp default)
+				 (ctype-of (eval default))
+				 *universal-type*)))
 	      (ecase (arg-info-kind info)
 		(:keyword
 		 (let* ((key (arg-info-keyword info))
 			(kinfo (find key keys :key #'key-info-name)))
-		   (cond (kinfo (res (key-info-type kinfo)))
-			 (t
-			  (compiler-warning
-			   "Defining a ~S keyword not present in ~
-			   previous declaration."
-			   key)
-			  (res *universal-type*)
-			  (setq win nil)))))
+		   (cond
+		    (kinfo
+		     (res (type-union (key-info-type kinfo)
+				      def-type)))
+		    (t
+		     (note-lossage
+		      "Defining a ~S keyword not present in previous ~A."
+		      key where)
+		     (res *universal-type*)))))
 		(:required (res (pop req)))
-		(:optional (res (pop opt)))
+		(:optional (res (type-union (pop opt) def-type)))
 		(:rest
-		 (let ((rest (function-type-rest type)))
-		   (when rest
-		     (res rest)))))
+		 (when (function-type-rest type)
+		   (res (specifier-type 'list)))))
 	      (vars arg)
 	      (when (arg-info-supplied-p info)
 		(res *universal-type*)
-		(vars (arg-info-supplied-p info))))
-	     (t
-	      (res (pop req))
-	      (vars arg)))))
+		(vars (arg-info-supplied-p info)))))
+	   (t
+	    (res (pop req))
+	    (vars arg))))
 
 	(dolist (key keys)
 	  (unless (find (key-info-name key) arglist
@@ -670,72 +669,77 @@
 				 (let ((info (lambda-var-arg-info x)))
 				   (when info
 				     (arg-info-keyword info)))))
-	    (compiler-warning
-	     "Definition lacks the ~S keyword present in previous ~
-	     declaration."
-	     (key-info-name key)))))
+	    (note-lossage
+	     "Definition lacks the ~S keyword present in previous ~A."
+	     (key-info-name key) where))))
 
-      (if win
-	  (try-type-intersections (vars) (res))
-	  (values nil nil nil)))))
+      (try-type-intersections (vars) (res) where))))
 
 
 ;;; FIND-LAMBDA-TYPES  --  Internal
 ;;;
 ;;;    Check that Type doesn't specify any funny args, and do the intersection.
 ;;; 
-(defun find-lambda-types (lambda type)
-  (declare (type clambda lambda) (type function-type type))
-  (let ((win t))
-    (flet ((frob (x what)
-	     (when x
-	       (compiler-warning
-		"Definition has no ~A, but the prior FTYPE declaration did."
-		what)
-	       (setq win nil))))
-      (frob (function-type-optional type) "optional args")
-      (frob (function-type-keyp type) "keyword args")
-      (frob (function-type-rest type) "rest arg")
-      (if win
-	  (try-type-intersections (lambda-vars lambda)
-				  (function-type-required type))
-	  (values nil nil nil)))))
+(defun find-lambda-types (lambda type where)
+  (declare (type clambda lambda) (type function-type type) (string where))
+  (flet ((frob (x what)
+	   (when x
+	     (note-lossage
+	      "Definition has no ~A, but the previous ~A did."
+	      what where))))
+    (frob (function-type-optional type) "optional args")
+    (frob (function-type-keyp type) "keyword args")
+    (frob (function-type-rest type) "rest arg")
+    (try-type-intersections (lambda-vars lambda) (function-type-required type)
+			    where)))
 
 
 ;;; ASSERT-DEFINITION-TYPE  --  Interface
 ;;;
-;;;    Propagate type constraints from Type to the variables and result of
-;;; Functional.
+;;;    Check for syntactic and type conformance between the definition
+;;; Functional and the specified Function-Type.  If they are compatible and
+;;; Really-Assert is T, then add type assertions to the defintion from the
+;;; Function-Type.
 ;;;
-(proclaim '(function assert-definition-type (functional function-type) void))
-(defun assert-definition-type (functional type)
-  (multiple-value-bind
-      (vars types winp)
-      (if (function-type-wild-args type)
-	  (values nil nil t)
-	  (etypecase functional
-	    (optional-dispatch
-	     (find-optional-dispatch-types functional type))
-	    (clambda
-	     (find-lambda-types functional type))))
-    (let* ((return (lambda-return (main-entry functional)))
-	   (type-returns (function-type-returns type))
-	   (atype (when return
-		    (continuation-asserted-type (return-result return))))
-	   (result (if return
-		       (values-type-intersection type-returns atype)
-		       type-returns)))
-      (cond
-       ((eq result *empty-type*)
-	(compiler-warning
-	 "The result type from FTYPE declaration:~%  ~S~@
-	  conflicts with the definition's result type assertion:~%  ~S"
-	 (type-specifier type-returns) (type-specifier atype)))
-       ((not winp) nil)
-       (t
-	(when return
-	  (assert-continuation-type (return-result return) result))
-	(mapc #'(lambda (var type)
-		  (setf (leaf-type var) type))
-	      vars types)
-	t)))))
+;;;    If there is a syntactic or type problem, then we call Error-Function
+;;; with an error message using Where as context describing where Function-Type
+;;; came from.
+;;;
+;;;    If there is no problem, we return T (even if Really-Assert was false).
+;;; If there was a problem, we return NIL.
+;;;
+(defun assert-definition-type
+       (functional type &key (really-assert t)
+		   ((:error-function *error-function*) #'compiler-warning)
+		   (where "declaration"))
+  (declare (type functional functional) (type function *error-function*)
+	   (string where))
+  (let ((*lossage-detected* nil))
+    (multiple-value-bind
+	(vars types)
+	(if (function-type-wild-args type)
+	    (values nil nil)
+	    (etypecase functional
+	      (optional-dispatch
+	       (find-optional-dispatch-types functional type where))
+	      (clambda
+	       (find-lambda-types functional type where))))
+      (let* ((type-returns (function-type-returns type))
+	     (return (lambda-return (main-entry functional)))
+	     (atype (when return
+		      (continuation-asserted-type (return-result return)))))
+	(cond
+	 ((and atype (not (values-types-intersect atype type-returns)))
+	  (note-lossage
+	   "The result type from ~A:~%  ~S~@
+	   conflicts with the definition's result type assertion:~%  ~S"
+	   where (type-specifier type-returns) (type-specifier atype)))
+	 (*lossage-detected* nil)
+	 ((not really-assert) t)
+	 (t
+	  (when atype
+	    (assert-continuation-type (return-result return) atype))
+	  (mapc #'(lambda (var type)
+		    (setf (leaf-type var) type))
+		vars types)
+	  t))))))
