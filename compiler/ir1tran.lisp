@@ -391,8 +391,9 @@
 	   (expansion
 	    (ir1-convert-global-inline start cont form var inlinep expansion))
 	   (t
-	    (when (and (eq inlinep :inline) (policy nil (> speed brevity)))
-	      (compiler-note "~S is declared globally inline, but has no expansion."
+	    (when (and (eq inlinep :inline) (policy nil (> speed brevity))
+		       (not (info function info name)))
+	      (compiler-note "~S is declared inline, but has no expansion."
 			     name))
 	    (ir1-convert-ok-combination start cont form var)))))))))
 
@@ -738,29 +739,31 @@
 ;;; Process-Type-Declaration  --  Internal
 ;;;
 ;;;    Called by Process-Declarations to deal with a variable type declaration.
+;;; We return a list of new *TYPE-RESTRICTIONS*.
 ;;;
 (proclaim '(function process-type-declaration (list list) void))
 (defun process-type-declaration (decl vars)
   (let ((type (specifier-type (first decl))))
-    (dolist (var-name (rest decl))
-      (let ((var (find-in-bindings vars var-name)))
-	(cond
-	 ((not var)
-	  (compiler-warning "Type declaration for unbound variable: ~S."
-			    var-name))
-	 ((or (function-type-p type)
-	      (function-type-p (leaf-type var)))
-	  ;;
-	  ;; ### For now, just quietly set type...
-	  (setf (leaf-type var) type))
-	 (t
-	  (let ((int (type-intersection (leaf-type var) type)))
-	    (if (eq int *empty-type*)
-		(compiler-warning
-		 "Conflicting type declarations ~S and ~S for ~S."
-		 (type-specifier (leaf-type var))
-		 (type-specifier type) var-name)
-		(setf (leaf-type var) int)))))))))
+    (collect ((res))
+      (dolist (var-name (rest decl))
+	(let* ((bound-var (find-in-bindings vars var-name))
+	       (var (or bound-var
+			(cdr (assoc var-name *venv*))
+			(find-free-variable var-name)))
+	       (old-type (or (cdr (assoc var *type-restrictions*))
+			     (leaf-type var)))
+	       (int (if (or (function-type-p type)
+			    (function-type-p old-type))
+			type
+			(type-intersection old-type type))))
+	  (cond ((eq int *empty-type*)
+		 (compiler-warning
+		  "Conflicting type declarations ~S and ~S for ~S."
+		  (type-specifier old-type) (type-specifier type) var-name))
+		(bound-var (setf (leaf-type bound-var) int))
+		(t
+		 (res (cons var int))))))
+      (res))))
 
 
 ;;; Process-Ftype-Declaration  --  Internal
@@ -864,14 +867,15 @@
 	    (optimize
 	     (setq new-cookie (process-optimize-declaration spec new-cookie)))
 	    (type
-	     (process-type-declaration (cdr spec) vars))
+	     (new-restrictions (process-type-declaration (cdr spec) vars)))
 	    (t
 	     (let ((what (first spec)))
 	       (cond ((member what type-specifier-symbols)
-		      (process-type-declaration spec vars))
+		      (new-restrictions (process-type-declaration spec vars)))
 		     ((info declaration recognized what))
 		     (t
-		      (compiler-warning "Unrecognized declaration: ~S." spec))))))))
+		      (compiler-warning "Unrecognized declaration: ~S."
+					spec))))))))
 
       (values (nconc (new-venv) *venv*) (nconc (new-inlines) *inlines*)
 	      (new-restrictions) new-cookie))))
@@ -1151,9 +1155,8 @@
 	      (n-value-temp (gensym))
 	      (n-allowp (gensym))
 	      (n-losep (gensym))
-	      (allowp
-	       (or (optional-dispatch-allowp res)
-		   (policy nil (or (> space safety) (> speed safety))))))
+	      (allowp (or (optional-dispatch-allowp res)
+			  (policy nil (zerop safety)))))
 	  
 	  (temps `(,n-index 0) n-key n-value-temp)
 	  (body `(declare (fixnum ,n-index) (ignorable ,n-key ,n-value-temp)))
@@ -1525,7 +1528,7 @@
 	    (type (info variable type name))
 	    (where-from (info variable where-from name)))
 	(when (and (eq where-from :assumed) (eq kind :global))
-	  (compiler-warning "Unknown variable: ~S." name))
+	  (note-undefined-reference name :variable))
 
 	(multiple-value-bind (val valp)
 			     (info variable constant-value name)
