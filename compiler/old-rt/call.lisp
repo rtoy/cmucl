@@ -378,6 +378,7 @@ default-value-5
   (:info save return-pc target nvals)
   (:ignore args save)
   (:node-var node)
+  (:vop-var vop)
   (:temporary (:scs (descriptor-reg)) move-temp nil-temp)
   (:temporary (:sc stack
 	       :offset env-save-offset)
@@ -387,6 +388,7 @@ default-value-5
     (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
     (inst cal sp-tn sp-tn (current-frame-size))
+    (note-this-location vop :unknown-return)
     (unassemble
       (default-unknown-values node values nvals move-temp nil-temp))
     (load-stack-tn env-tn env-save)))
@@ -401,6 +403,7 @@ default-value-5
   (:save-p t)
   (:info save return-pc target)
   (:ignore args save)
+  (:vop-var vop)
   (:temporary (:sc stack
 	       :offset env-save-offset)
 	      env-save)
@@ -409,6 +412,7 @@ default-value-5
     (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
     (inst cal sp-tn sp-tn (current-frame-size))
+    (note-this-location vop :unknown-return)
     (unassemble
       (receive-unknown-values node values-start nvals start count))
     (load-stack-tn env-tn env-save)))
@@ -427,10 +431,12 @@ default-value-5
   (:save-p t)
   (:info save return-pc target)
   (:ignore args res save)
+  (:vop-var vop)
   (:generator 5
     (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
-    (inst cal sp-tn sp-tn (current-frame-size))))
+    (inst cal sp-tn sp-tn (current-frame-size))
+    (note-this-location vop :known-return)))
 
 
 ;;; Return from known values call.  We receive the return locations as
@@ -516,6 +522,7 @@ default-value-5
      ,@(unless (eq return :tail)
 	 '((:save-p t)
 	   (:node-var node)
+	   (:vop-var vop)
 	   (:temporary (:sc stack
 			:offset env-save-offset)
 		       env-save)))
@@ -631,10 +638,12 @@ default-value-5
        
        ,@(ecase return
 	   (:fixed
-	    '((unassemble
+	    '((note-this-location vop :unknown-return)
+	      (unassemble
 	       (default-unknown-values node values nvals move-temp nil-temp))))
 	   (:unknown
-	    '((unassemble
+	    '((note-this-location vop :unknown-return)
+	      (unassemble
 	       (receive-unknown-values node values-start nvals start count))))
 	   (:tail))
        
@@ -942,10 +951,11 @@ default-value-5
   (:args
    (nargs :scs (any-reg descriptor-reg)))
   (:info count)
-  (:node-var node)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 3
-    (let ((err-lab (generate-error-code
-		    node clc::error-wrong-number-args nargs)))
+    (let ((err-lab (generate-error-code vop clc::error-wrong-number-args
+					nargs)))
       (cmpi nargs count)
       (inst bnb :eq err-lab))))
 
@@ -954,5 +964,8 @@ default-value-5
 ;;;
 (define-vop (argument-count-error)
   (:args (nargs :scs (any-reg descriptor-reg)))
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
-    (error-call clc::error-wrong-number-args nargs)))
+    (error-call clc::error-wrong-number-args nargs)
+    (note-this-location vop :internal-error)))
