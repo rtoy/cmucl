@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.45 1991/11/14 00:58:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.46 1991/11/18 12:52:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1168,6 +1168,50 @@
     (delete-block block))
   (undefined-value))
   
+
+;;; EXTRACT-FUNCTION-ARGS -- interface
+;;;
+;;; Convert code of the form (foo ... (fun ...) ...) to (foo ... ... ...).
+;;; In other words, replace the function combination fun by it's arguments.
+;;; If there are any problems with doing this, use GIVE-UP to blow out of
+;;; whatever transform called this.  Note, as the number of arguments changes,
+;;; the transform must be prepared to return a lambda with a new lambda-list
+;;; with the correct number of arguments.
+;;; 
+(defun extract-function-args (cont fun num-args)
+  "If CONT is a call to FUN with NUM-ARGS args, change those arguments
+   to feed directly to the continuation-dest of CONT, which must be
+   a combination."
+  (declare (type continuation cont)
+	   (type symbol fun)
+	   (type index num-args))
+  (let ((outside (continuation-dest cont))
+	(inside (continuation-use cont)))
+    (assert (combination-p outside))
+    (unless (combination-p inside)
+      (give-up))
+    (let ((inside-fun (combination-fun inside)))
+      (unless (eq (continuation-function-name inside-fun) fun)
+	(give-up))
+      (let ((inside-args (combination-args inside)))
+	(unless (= (length inside-args) num-args)
+	  (give-up))
+	(let* ((outside-args (combination-args outside))
+	       (arg-position (position cont outside-args))
+	       (before-args (subseq outside-args 0 arg-position))
+	       (after-args (subseq outside-args (1+ arg-position))))
+	  (dolist (arg inside-args)
+	    (setf (continuation-dest arg) outside))
+	  (setf (combination-args inside) nil)
+	  (setf (combination-args outside)
+		(append before-args inside-args after-args))
+	  (change-ref-leaf (continuation-use inside-fun)
+			   (find-free-function 'list "???"))
+	  (setf (combination-kind inside) :full)
+	  (flush-dest cont)
+	  (undefined-value))))))
+
+
 
 ;;;; Leaf hackery:
 
