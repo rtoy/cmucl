@@ -1,8 +1,8 @@
 CPPFLAGS = -I. -I/usr/misc/.X11/include -DSUNOS
 CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
 CPP = /lib/cpp
-CFLAGS = -g
-ASFLAGS = -g
+CFLAGS = -O
+ASFLAGS = -O
 NM = nm -gp
 ASSEM_SRC = sparc-assem.S
 ARCH_SRC = sparc-arch.c
