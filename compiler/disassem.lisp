@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.34 2003/01/06 15:10:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.35 2003/02/14 17:21:54 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3217,9 +3217,7 @@
     (compile nil lambda)))
 
 (defun compiled-function-or-lose (thing &optional (name thing))
-  (cond ((or (symbolp thing)
-	     (and (listp thing)
-		  (eq (car thing) 'lisp:setf)))
+  (cond ((valid-function-name-p thing)
 	 (compiled-function-or-lose (fdefinition thing) thing))
 	((eval:interpreted-function-p thing)
 	 (compile-function-lambda-expr thing))
