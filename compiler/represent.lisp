@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.22 1991/02/20 14:59:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.23 1991/04/24 11:24:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -359,15 +359,16 @@
 		  (op-note (or (template-note op-info)
 			       (template-name op-info)))
 		  (arg-p (not (tn-ref-write-p op)))
-		  (name (get-operand-name op-tn arg-p)))
-	     (multiple-value-bind (ignore pos)
-				  (get-operand-info op)
-	       (declare (ignore ignore))
-	       (compiler-note
-		"Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
-		The ~:R ~:[result~;argument~] of ~A."
-		note cost name arg-p name
-		pos arg-p op-note))))
+		  (name (get-operand-name op-tn arg-p))
+		  (pos (position-in #'tn-ref-across op
+				    (if arg-p
+					(vop-args op-vop)
+					(vop-results op-vop)))))
+	     (compiler-note
+	      "Doing ~A (cost ~D)~:[~2*~; ~:[to~;from~] ~S~], for:~%~6T~
+	       The ~:R ~:[result~;argument~] of ~A."
+	      note cost name arg-p name
+	      pos arg-p op-note)))
 	  (t
 	   (compiler-note "Doing ~A (cost ~D)~@[ from ~S~]~@[ to ~S~]."
 			  note cost (get-operand-name op-tn t)
