@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.10 1990/10/29 14:13:33 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.11 1991/04/27 18:22:50 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -285,6 +285,10 @@ call_into_c:
 
 	.end	call_into_c
 
+	.text
+	.globl	start_of_tramps
+start_of_tramps:
+
 /*
  * The undefined-function trampoline.
  */
@@ -314,3 +318,7 @@ closure_tramp:
         add     LIP, L0, FUNCTION_HEADER_CODE_OFFSET
         j       LIP
         .end    closure_tramp
+
+	.text
+	.globl	end_of_tramps
+end_of_tramps:
