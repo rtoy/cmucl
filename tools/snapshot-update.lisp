@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/snapshot-update.lisp,v 1.1 1992/01/07 17:24:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/snapshot-update.lisp,v 1.2 1992/02/24 14:23:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,11 +19,13 @@
 (defun snapshot-updates (&key (snapshot-file "RCSSNAP")
 			      (output
 			       (make-pathname
-				:defaults (pathname-name snapshot-file)
-				:type "updates")))
+				:defaults (pathname snapshot-file)
+				:type "updates"))
+			      from)
   "Write to :OUTPUT a summary of the RCS change long entries since the
    since the specified :SNAPSHOT was made.  :OUTPUT is passed through to
-   run-program, and should be a stream or pathname."
+   run-program, and should be a stream or pathname.  If true, :FROM is a string
+   in RCS date format.  Only revisions after that date will be reported."
   (with-open-file (script "/tmp/update-script" :direction :output)
     (with-open-file (in snapshot-file :direction :input)
       (loop
@@ -31,9 +33,10 @@
 	  (unless line (return))
 	  (let* ((tab (position #\tab line))
 		 (dot (position #\. line :from-end t)))
-	    (format script "rlog -r~A~D- ~A~%"
+	    (format script "rlog -r~A~D- ~@['-d>~A' ~]~A~%"
 		    (subseq line (1+ tab) (1+ dot))
 		    (1+ (parse-integer (subseq line (1+ dot))))
+		    from
 		    (subseq line 0 tab)))))))
 
   (let ((cmd (format nil
