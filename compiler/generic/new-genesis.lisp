@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.34 1998/06/07 17:52:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.35 1998/06/11 21:27:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1979,7 +1979,10 @@
 	  (setf (sap-ref-16 sap 2)
 		(maybe-byte-swap-short (ldb (byte 16 0) value))))))
       (#.c:x86-fasl-file-implementation
-       (let* ((disp (maybe-byte-swap (sap-ref-32 sap 0)))
+       (let* ((disp (logior (sap-ref-8 sap 0)
+			    (ash (sap-ref-8 sap 1) 8)
+			    (ash (sap-ref-8 sap 2) 16)
+			    (ash (sap-ref-8 sap 3) 24)))
 	      (obj-start-addr (logandc2 (descriptor-bits code-object)
 					vm:lowtag-mask)))
 	 (ecase kind
