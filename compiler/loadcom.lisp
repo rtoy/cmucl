@@ -50,7 +50,7 @@
 (load "c:assembler")
 (load "assem:assemfile")
 (load "assem:support")
-(load "vm:dismips")
+(load "code:pmax-disassem")
 (load "vm:mips-insts")
 (load "vm:mips-macs")
 (load "vm:utils")
