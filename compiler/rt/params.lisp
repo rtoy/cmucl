@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.6 1991/05/24 20:37:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.7 1991/07/23 12:00:18 ram Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -45,11 +45,20 @@
 
 (eval-when (compile eval load)
 
+#-afpa (progn
 (setf (backend-name *target-backend*) "RT")
-(setf (backend-version *target-backend*) "IBM RT/Mach 0.0")
+(setf (backend-version *target-backend*) "IBM RT/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "rtf")
 (setf (backend-fasl-file-implementation *target-backend*)
-      rt-fasl-file-implementation)
+      rt-fasl-file-implementation))
+
+#+afpa (progn
+(setf (backend-name *target-backend*) "RT")
+(setf (backend-version *target-backend*) "IBM RT EAPC/Mach 1.0")
+(setf (backend-fasl-file-type *target-backend*) "eapcf")
+(setf (backend-fasl-file-implementation *target-backend*)
+      rt-afpa-fasl-file-implementation))
+
 (setf (backend-fasl-file-version *target-backend*) 1)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
@@ -110,70 +119,6 @@
 ); eval-when
 
 
-
-
-;;;; Status register formats, goes in parms.
-
-;;; We squeeze the two 68881 float status registers into a one-word result for
-;;; FLOATING-POINT-MODES.  We also canonicalize the exceptions so that the
-;;; "portable" float trap code will work.
-;;;
-
-(eval-when (compile eval load)
-
-;;; The actual positions of the info in the mc68881 FPCR and FPSR.
-;;;
-(defconstant mc68881-fpcr-rounding-mode-byte (byte 2 4))
-(defconstant mc68881-fpcr-rounding-precision-byte (byte 2 6))
-(defconstant mc68881-fpcr-traps-byte (byte 8 8))
-(defconstant mc68881-fpsr-accrued-exceptions-byte (byte 5 3))
-(defconstant mc68881-fpsr-current-exceptions-byte (byte 8 8))
-(defconstant mc68881-fpsr-condition-code-byte (byte 4 24))
-
-;;; Amount to shift by the get the condition code, - 16.
-;;;
-(defconstant mc68881-fpsr-condition-code-shift-16 8)
-
-;;; The condition code bits.
-;;;
-(defconstant mc68881-nan-condition (ash 1 0))
-(defconstant mc68881-infinity-condition (ash 1 1))
-(defconstant mc68881-zero-condition (ash 1 2))
-(defconstant mc68881-negative-condition (ash 1 3))
-
-;;; Masks that map the extended set of exceptions implemented by the 68881 to
-;;; the IEEE exceptions.  This extended format is used for the enabled traps
-;;; and the current exceptions.
-;;;
-(defconstant mc68881-invalid-exception (ash #b111 5))
-(defconstant mc68881-overflow-exception (ash 1 4))
-(defconstant mc68881-underflow-exception (ash 1 3))
-(defconstant mc68881-divide-zero-exception (ash 1 2))
-(defconstant mc68881-inexact-exception (ash #b11 0))
-
-;;; Encoding of float exceptions in the FLOATING-POINT-MODES result.  This is
-;;; also the encoding used in the mc68881 accrued exceptions.
-;;;
-(defconstant float-inexact-trap-bit (ash 1 0))
-(defconstant float-divide-by-zero-trap-bit (ash 1 1))
-(defconstant float-underflow-trap-bit (ash 1 2))
-(defconstant float-overflow-trap-bit (ash 1 3))
-(defconstant float-invalid-trap-bit (ash 1 4))
-
-(defconstant float-round-to-nearest 0)
-(defconstant float-round-to-zero 1)
-(defconstant float-round-to-negative 2)
-(defconstant float-round-to-positive 3)
-
-;;; Positions of bits in the FLOATING-POINT-MODES result.
-;;;
-(defconstant float-rounding-mode (byte 2 0))
-(defconstant float-sticky-bits (byte 5 2))
-(defconstant float-traps-byte (byte 5 7))
-(defconstant float-exceptions-byte (byte 5 12))
-(defconstant float-fast-bit 0)
-
-); eval-when
 
 
 ;;;; Description of the target address space.
