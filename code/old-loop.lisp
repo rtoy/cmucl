@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.6 1991/02/08 13:34:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.7 1991/02/24 19:08:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.6 1991/02/08 13:34:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.7 1991/02/24 19:08:03 ram Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -288,8 +288,8 @@
 		     (nconc *body-forms*
 			    (let ((temp (gensym "THEREIS-")))
 			      `((let ((,temp ,(pop *remaining-stuff*)))
-				  `(when ,temp
-				     (return-from ,name ,temp))))))))
+				  (when ,temp
+				    (return-from ,name ,temp))))))))
 	      (t
 	       (push clause *remaining-stuff*)
 	       (or (maybe-parse-unconditional)
