@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.42 1992/02/13 13:19:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.43 1992/02/24 00:41:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,8 +37,6 @@
 	  %set-row-major-aref
 	  %setelt
 	  %setnth
-	  %sp-set-definition
-	  %sp-set-plist
 	  %standard-char-p
 	  %svset
 	  %typep
@@ -1097,6 +1095,8 @@
 (defknown kernel:%with-array-data (array index (or index null))
   (values (simple-array * (*)) index index index)
   (foldable flushable))
+(defknown %set-symbol-function (symbol function) function (unsafe))
+(defknown %set-symbol-package (symbol t) t (unsafe))
 
 ;;; Structure slot accessors or setters are magically "known" to be these
 ;;; functions, although the var remains the Slot-Accessor describing the actual
@@ -1119,8 +1119,9 @@
 (defknown %sbitset (simple-bit-vector &rest index) bit (unsafe))
 (defknown %charset (string index character) character (unsafe))
 (defknown %scharset (simple-string index character) character (unsafe))
-(defknown %sp-set-definition (symbol function) function (unsafe))
-(defknown %sp-set-plist (symbol t) t (unsafe))
+(defknown %set-symbol-value (symbol t) t (unsafe))
+(defknown fset (symbol function) function (unsafe))
+(defknown %set-symbol-plist (symbol t) t (unsafe))
 (defknown %set-documentation ((or symbol cons) symbol (or string null))
   (or string null)
   ())
