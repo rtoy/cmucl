@@ -10,118 +10,94 @@
 ;;;    This file contains the RT VM definition of character operations.
 ;;;
 ;;; Written by Rob MacLachlan
+;;; Converted for the MIPS R2000 by Christopher Hoover.
 ;;;
 (in-package 'c)
 
-(define-vop (string-char-move)
+(define-vop (base-character-move)
   (:args (x :target y
-	    :scs (string-char-reg)
+	    :scs (base-character-reg)
 	    :load nil))
-  (:results (y :scs (string-char-reg)
+  (:results (y :scs (base-character-reg)
 	       :load nil))
-  (:temporary (:scs (string-char-reg) :type string-char
-	       :from :argument  :to :result)
+  (:temporary (:scs (base-character-reg) :type base-character
+		    :from :argument  :to :result)
 	      temp)
   (:effects)
   (:affected)
-  #+nil
   (:generator 0
-    (sc-case x ((string-char-reg string-char-stack immediate-string-char
-				 descriptor-reg any-reg stack)))
-    (sc-case y ((string-char-reg string-char-stack
-				 descriptor-reg any-reg stack)))
+    (sc-case x ((base-character-reg base-character-stack
+				    immediate-base-character descriptor-reg
+				    any-reg control-stack)))
+    (sc-case y ((base-character-reg base-character-stack
+				 descriptor-reg any-reg control-stack)))
 
-    (let* ((x-char (sc-is x string-char-reg string-char-stack
-			  immediate-string-char))
-	   (y-char (sc-is y string-char-reg string-char-stack))
+    (let* ((x-char (sc-is x base-character-reg base-character-stack
+			  immediate-base-character))
+	   (y-char (sc-is y base-character-reg base-character-stack))
 	   (same-rep (if x-char y-char (not y-char)))
-	   (src (if (sc-is x stack string-char-stack immediate-string-char)
+	   (src (if (sc-is x control-stack base-character-stack
+			   immediate-base-character)
 		    temp x))
-	   (dest (if (sc-is y stack string-char-stack) temp y)))
+	   (dest (if (sc-is y control-stack base-character-stack) temp y)))
 
       (unless (and same-rep (location= x y))
 
 	(unless (eq x src)
 	  (sc-case x
-	    ((string-char-stack stack)
+	    ((base-character-stack control-stack)
 	     (load-stack-tn src x))
-	    (immediate-string-char
+	    (immediate-base-character
 	     (loadi src (char-code (tn-value x))))))
 
-	(if same-rep
-	    (unless (location= src dest)
-	      (inst lr dest src))
-	    (if x-char
-		(inst oiu dest src (ash system:%string-char-type
-					clc::type-shift-16))
-		(inst nilz dest src system:%character-code-mask)))
+	(cond (same-rep
+	       (move dest src))
+	      (x-char
+	       (inst sll dest src vm:type-bits)
+	       (inst ori dest src vm:base-character-type))
+	      (t
+	       (inst srl dest src vm:type-bits)))
 
 	(unless (eq y dest)
-	  (store-stack-tn y dest)))))) 
+	  (store-stack-tn y dest))))))
 
-(primitive-type-vop string-char-move (:coerce-to-t :coerce-from-t :move)
-  string-char)
+(primitive-type-vop base-character-move (:coerce-to-t :coerce-from-t :move)
+  base-character)
 
 (define-vop (char-code)
-  (:args (ch :scs (string-char-reg) :target res))
+  (:args (ch :scs (base-character-reg) :target res))
   (:results (res :scs (any-reg descriptor-reg)))
-  (:arg-types string-char)
+  (:arg-types base-character)
   (:translate char-code)
   (:policy :fast-safe)
-  #+nil
   (:generator 0
-    (unless (location= ch res)
-      (inst lr res ch))))
+    (move res ch)))
 
 (define-vop (code-char)
   (:args (code :scs (any-reg descriptor-reg) :target res))
-  (:results (res :scs (string-char-reg)))
-  (:result-types string-char)
+  (:results (res :scs (base-character-reg)))
+  (:result-types base-character)
   (:translate code-char)
   (:policy :fast-safe)
-  #+nil
   (:generator 0
-    (unless (location= code res)
-      (inst lr res code))))
+    (move res code)))
 
-;;; For comparison of string-chars, we require both operands to be in the
-;;; untagged string-char-reg representation.  This will be a pessimization if
-;;; both operands are tagged, but this won't happen often, and not in
-;;; performance-critical cases.
+;;; Comparison of base-characters -- works for boxed and unboxed
+;;; characters since we don't have bits, etc.
 ;;;
-(define-vop (string-char-compare pointer-compare)
-  (:args (x :scs (string-char-reg))
-	 (y :scs (string-char-reg)))
-  (:arg-types string-char string-char))
+(define-vop (base-character-compare pointer-compare)
+  (:args (x :scs (base-character-reg))
+	 (y :scs (base-character-reg)))
+  (:arg-types base-character base-character))
 
-(define-vop (fast-char=/string-char string-char-compare)
+(define-vop (fast-char=/base-character base-character-compare)
   (:translate char=)
   (:variant :eq))
 
-(define-vop (fast-char</string-char string-char-compare)
+(define-vop (fast-char</base-character base-character-compare)
   (:translate char<)
   (:variant :lt))
 
-(define-vop (fast-char>/string-char string-char-compare)
-  (:translate char>)
-  (:variant :gt))
-
-;;; If we don't know that both operands are string-chars, then we just compare
-;;; the whole boxed object.  This assume that the hairy character type code is
-;;; greater than the string-char type, since a string-char must always be less
-;;; than a hairy char.
-;;;
-(define-vop (char-compare pointer-compare)
-  (:variant-cost 5))
-
-(define-vop (fast-char= char-compare)
-  (:translate char=)
-  (:variant :eq))
-
-(define-vop (fast-char< char-compare)
-  (:translate char<)
-  (:variant :lt))
-
-(define-vop (fast-char> char-compare)
+(define-vop (fast-char>/base-character base-character-compare)
   (:translate char>)
   (:variant :gt))
