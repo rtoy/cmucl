@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.11 1990/07/10 10:23:07 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.12 1990/07/12 12:52:12 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -960,10 +960,9 @@
 ;;; a displaced array looks like, we can fix this.
 ;;;
 (defun dump-array (array file)
-  (unless (zerop #-new-compiler
-		 (%primitive header-ref array %array-displacement-slot)
-		 #+new-compiler
-		 (lisp::%array-displaced-p array))
+  (unless #-new-compiler (zerop (%primitive header-ref
+					    array %array-displacement-slot))
+          #+new-compiler (not (lisp::%array-displaced-p array))
     (compiler-error
      "Attempt to dump an array with a displacement, you lose big."))
   (let ((rank (array-rank array)))
