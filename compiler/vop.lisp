@@ -135,7 +135,7 @@
   ;;
   ;; The IR2-Block's number, which differs from Block's Block-Number if any
   ;; blocks are split.  This is assigned by lifetime analysis.
-  (number nil :type (or unsigned-byte null))
+  (number nil :type (or index null))
   ;;
   ;; The IR1 block that this block is in the Info for.  
   (block nil :type cblock)
@@ -271,7 +271,7 @@
 (defstruct ir2-component
   ;;
   ;; The counter used to allocate global TN numbers.
-  (global-tn-counter 0 :type unsigned-byte)
+  (global-tn-counter 0 :type index)
   ;;
   ;; Normal-TNs is the head of the list of all the normal TNs that need to be
   ;; packed, linked through the Next slot.  We place TNs on this list when we
@@ -342,7 +342,15 @@
   (entries nil :type list)
   ;;
   ;; Head of the list of :ALIAS TNs in this component, threaded by TN-NEXT.
-  (alias-tns nil :type (or tn null)))
+  (alias-tns nil :type (or tn null))
+  ;;
+  ;; Spilled-VOPs is a hashtable translating from "interesting" VOPs to a list
+  ;; of the TNs spilled at that VOP.  This is used when computing debug info so
+  ;; that we don't consider the TN's value to be valid when it is in fact
+  ;; somewhere else.  Spilled-TNs has T for every "interesting" TN that is ever
+  ;; spilled, providing a representation that is more convenient some places.
+  (spilled-vops (make-hash-table :test #'eq) :type hash-table)
+  (spilled-tns (make-hash-table :test #'eq) :type hash-table))
 
 
 ;;; The Entry-Info structure condenses all the information that the dumper
@@ -441,7 +449,7 @@
   ;; The number of values returned, or :Unknown if we don't know.  Count may be
   ;; known when Kind is :Unknown, since we may choose the standard return
   ;; convention for other reasons.
-  (count nil :type (or unsigned-byte (member :unknown)))
+  (count nil :type (or index (member :unknown)))
   ;;
   ;; If count isn't :Unknown, then this is a list of the primitive-types of
   ;; each value.
@@ -679,7 +687,7 @@
   ;;
   ;; The base cost for this template, given optimistic assumptions such as no
   ;; operand loading, etc.
-  (cost nil :type unsigned-byte)
+  (cost nil :type index)
   ;;
   ;; If true, then a short noun-like phrase describing what this VOP "does",
   ;; i.e. the implementation strategy.  This is for use in efficiency notes.
@@ -688,7 +696,7 @@
   ;; The number of trailing arguments to VOP or %Primitive that we bundle into
   ;; a list and pass into the emit function.  This provides a way to pass
   ;; uninterpreted stuff directly to the code generator.
-  (info-arg-count 0 :type unsigned-byte)
+  (info-arg-count 0 :type index)
   ;;
   ;; A function that emits the VOPs for this template.  Arguments:
   ;;  1] Node for source context.
@@ -814,7 +822,7 @@
   ;;
   ;; The number of elements in the SB.  If finite, this is the total size.  If
   ;; unbounded, this is the size that the SB is initially allocated at.
-  (size 0 :type unsigned-byte))
+  (size 0 :type index))
 
 (defprinter sb
   name)
@@ -828,12 +836,12 @@
   ;;
   ;;
   ;; The number of locations currently allocated in this SB.
-  (current-size 0 :type unsigned-byte)
+  (current-size 0 :type index)
   ;;
   ;; The last location packed in, used by pack to scatter TNs to prevent a few
   ;; locations from getting all the TNs, and thus getting overcrowded, reducing
   ;; the possiblilities for targeting.
-  (last-offset 0 :type unsigned-byte)
+  (last-offset 0 :type index)
   ;;
   ;; A vector containing, for each location in this SB, a vector indexed by IR2
   ;; block numbers, holding local conflict bit vectors.  A TN must not be
@@ -867,7 +875,7 @@
   (sb nil :type (or sb null))
   ;;
   ;; The size of elements in this SC, in units of locations in the SB.
-  (element-size 0 :type unsigned-byte)
+  (element-size 0 :type index)
   ;;
   ;; If our SB is finite, a list of the locations in this SC.
   (locations nil :type list)
@@ -1044,7 +1052,7 @@
   ;;
   ;; The offset within the SB that this TN is packed into.  This is what
   ;; indicates that the TN is packed.
-  (offset nil :type (or unsigned-byte null))
+  (offset nil :type (or index null))
   ;;
   ;; Some kind of info about how important this TN is.
   (cost 0 :type fixnum)
