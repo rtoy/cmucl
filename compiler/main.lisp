@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.43 1991/07/09 14:02:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.44 1991/08/25 18:11:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,6 +255,10 @@
     (maybe-mumble "Pack ")
     (pack component)
 
+    (when *check-consistency*
+      (maybe-mumble "CheckP ")
+      (check-pack-consistency component))
+
     (when *compiler-trace-output*
       (describe-component component *compiler-trace-output*))
     
@@ -267,7 +271,7 @@
 	(format *compiler-trace-output*
 		"~|~%Assembly code for ~S~2%"
 		component)
-	(dump-segment *code-segment* *compiler-trace-output*))
+	(dump-segment *code-segment* :stream *compiler-trace-output*))
 
       (when *count-vop-usages*
 	(count-vops component))
