@@ -41,3 +41,12 @@
 
 (deftype boolean ()
   '(member t nil))
+
+;;; Define this so that we can define the type system.
+(in-package "KERNEL")
+(defun ctype-p (thing)
+  (and (structurep thing)
+       (member (%primitive structure-ref thing 0)
+	       '(ctype hairy-type named-type numeric-type array-type
+		       member-type structure-type union-type args-type
+		       values-type function-type))))
