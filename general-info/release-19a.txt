@@ -176,6 +176,7 @@ New in this release:
      - Wrong byte-code being generated for (APPLY #'+ <X> <Y>) and
        similar cases.
      - GCD sometimes returning a negative value.
+     - LCM sometimes returning a negative value, or signaling division-by-zero.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
