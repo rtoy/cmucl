@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.13 1998/03/21 07:54:36 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.14 1998/07/24 15:21:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,12 +84,15 @@
 
 ;;;; Bounds checking routine.
 
+;;; Note that the immediate SC for the index argument is disabled
+;;; because it is not possible to generate a valid error code SC for
+;;; an immediate value.
 (define-vop (check-bound)
   (:translate %check-bound)
   (:policy :fast-safe)
   (:args (array :scs (descriptor-reg))
 	 (bound :scs (any-reg descriptor-reg))
-	 (index :scs (any-reg descriptor-reg immediate) :target result))
+	 (index :scs (any-reg descriptor-reg #+nil immediate) :target result))
   (:arg-types * positive-fixnum tagged-num)
   (:results (result :scs (any-reg descriptor-reg)))
   (:result-types positive-fixnum)
