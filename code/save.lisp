@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.35 1998/05/04 00:05:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.36 1998/06/24 20:30:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,8 +163,8 @@
 	    (with-simple-restart (abort "Skip remaining initializations.")
 	      (catch 'top-level-catcher
 		(reinit)
-		(dolist (f *after-save-initializations*) (funcall f))
 		(environment-init)
+		(dolist (f *after-save-initializations*) (funcall f))
 		(when process-command-line
 		  (ext::process-command-strings))
 		(setf *editor-lisp-p* nil)
