@@ -1855,3 +1855,330 @@ way to browse the library.
     for some function names.
   \end{itemize}
 \end{defun}
+
+
+
+\section{CLOS}
+
+\subsection{Slot Type Checking}
+\cindex{slot type checking}
+
+Declared slot types are used when 
+
+\begin{itemize}
+\item reading slot values with \code{slot-value} in methods, or
+
+\item setting slots with \code{(setf slot-value)} in methods, or 
+  
+\item creating instances with \code{make-instance}, when slots are
+  initialized from initforms.  This currently depends on PCL being
+  able to use its internal \code{make-instance} optimization, which it
+  usually can.
+\end{itemize}
+
+Example:
+
+\begin{example}
+(defclass foo ()
+  ((a :type fixnum)))
+
+(defmethod bar ((object foo) value)
+  (with-slots (a) object
+    (setf a value)))
+
+(defmethod baz ((object foo))
+  (< (slot-value object 'a) 10))
+\end{example}
+
+In method \code{bar}, and with a suitable safety setting, a type error
+will occur if \code{value} is not a \code{fixnum}.  In method
+\code{baz}, a \code{fixnum} comparison can be used by the compiler.
+  
+\begin{defvar}{pcl::}{use-slot-types-p}
+  Slot type checking can be turned off by setting this variable to
+  \false, which can be useful for compiling code containing incorrect
+  slot type declarations.
+\end{defvar}
+
+
+\subsection{Slot Access Optimization}
+\cindex{slot access optimization}
+\cindex{slot declarations}
+
+The declaration \code{pcl:slots} is used for optimizing slot access in
+methods.
+
+\begin{example}
+declare (pcl:slots specifier*)
+
+specifier   ::= (quality class-entry*)
+quality     ::= SLOT-BOUNDP | INLINE
+class-entry ::= class | (class slot-name*)
+class       ::= the name of a class
+slot-name   ::= the name of a slot
+\end{example}
+
+The \code{slot-boundp} quality specifies that all or some slots of a
+class are always bound.
+
+The \code{inline} quality specifies that access to all or some slots
+of a class should be inlined, using compile-time knowledge of class
+layouts.
+
+
+
+\subsubsection{\code{slot-boundp} Declaration}
+\cpsubindex{slot declaration}{slot-boundp}
+
+Example:
+
+\begin{example}
+(defclass foo ()
+  (a b))
+
+(defmethod bar ((x foo))
+  (declare (pcl:slots (slot-boundp foo)))
+  (list (slot-value x 'a) (slot-value x 'b)))
+\end{example}
+
+The \code{slot-boundp} declaration in method \code{bar} specifies that
+the slots \code{a} and \code{b} accessed through parameter \code{x} in
+the scope of the declaration are always bound, because parameter
+\code{x} is specialized on class \code{foo} to which the
+\code{slot-boundp} declaration applies.  The PCL-generated code for
+the \code{slot-value} forms will thus not contain tests for the slots
+being bound or not.  The consequences are undefined should one of the
+accessed slots not be bound.
+
+
+
+\subsubsection{\code{inline} Declaration}
+\cpsubindex{slot declaration}{inline}
+
+Example:
+
+\begin{example}
+(defclass foo ()
+  (a b))
+
+(defmethod bar ((x foo))
+  (declare (pcl:slots (inline (foo a))))
+  (list (slot-value x 'a) (slot-value x 'b)))
+\end{example}
+
+The \code{inline} declaration in method \code{bar} tells PCL to use
+compile-time knowledge of slot locations for accessing slot \code{a}
+of class \code{foo}, in the scope of the declaration.
+
+Class \code{foo} must be known at compile time for this optimization
+to be possible.  PCL prints a warning and uses normal slot access If
+the class is not defined at compile time.
+
+If a class is \code{proclaim}ed to use inline slot access before it is
+defined, the class is defined at compile time.  Example:
+
+\begin{example}
+(declaim (pcl:slots (inline (foo slot-a))))
+(defclass foo () ...)
+(defclass bar (foo) ...)
+\end{example}
+  
+Class \code{foo} will be defined at compile time because it is
+declared to use inline slot access; methods accessing slot
+\code{slot-a} of \code{foo} will use inline slot access if otherwise
+possible.  Class \code{bar} will be defined at compile time because
+its superclass \code{foo} is declared to use inline slot access.  PCL
+uses compile-time information from subclasses to warn about situations
+where using inline slot access is not possible.
+
+Normal slot access will be used if PCL finds, at method compilation
+time, that
+
+\begin{itemize}
+\item class \code{foo} has a subclass in which slot \code{a} is at a
+  different location, or
+
+\item there exists a \code{slot-value-using-class} method for
+  \code{foo} or a subclass of \code{foo}.
+\end{itemize}
+  
+When the declaration is used to optimize calls to slot accessor
+generic functions in methods, as opposed to \code{slot-value} or
+\code{(setf slot-value)}, the optimization is additionally not used if
+
+\begin{itemize}
+\item there exist, at compile time, applicable methods on the
+  reader/writer generic function that are not standard accessor
+  methods (for instance, there exist around-methods), or
+  
+\item applicable reader/writer methods access different slots in a
+  class accessed inline, and one of its subclasses.
+\end{itemize}
+
+The consequences are undefined if the compile-time environment is not
+the same as the run-time environment in these respects, or if the
+definition of class \code{foo} or any subclass of \code{foo} is
+changed in an incompatible way, that is, if slot locations change.
+
+The effect of the \code{inline} optimization combined with the
+\code{slot-boundp} optimization is that CLOS slot access becomes as
+fast as structure slot access, which is an order of magnitude faster
+than normal CLOS slot access.
+
+\begin{defvar}{pcl::}{optimize-inline-slot-access-p}
+  This variable controls if inline slot access optimizations are
+  performed.  It is true by default.
+\end{defvar}
+
+
+
+\subsubsection{Automatic Method Recompilation}
+\cindex{methods}
+\cpsubindex{methods}{auto-compilation}
+\cpsubindex{slot declaration}{method recompilation}
+  
+Methods using inline slot access can be automatically recompiled after
+class changes.  Two declarations control which methods are
+automatically recompiled.
+
+\begin{example}
+declaim (pcl:auto-compile specifier*)
+declaim (pcl:not-auto-compile specifier*)
+
+specifier   ::= gf-name | (gf-name qualifier* (specializer*))
+gf-name     ::= the name of a generic function
+qualifier   ::= a method qualifier
+specializer ::= a method specializer
+\end{example}
+
+If no specifier is given, auto-compilation is by default done/not done
+for all methods of all generic functions using inline slot access;
+current default is that it is not done.  This global policy can be
+overridden on a generic function and method basis.  If
+\code{specifier} is a generic function name, it applies to all methods
+of that generic function.
+
+Examples:
+
+\begin{example}
+(declaim (pcl:auto-compile foo))
+(defmethod foo :around ((x bar)) ...)
+\end{example}
+
+The around-method \code{foo} will be automatically recompiled because
+the declamation applies to all methods with name \code{foo}.
+
+\begin{example}
+(declaim (pcl:auto-compile (foo (bar))))
+(defmethod foo :around ((x bar)) ...)
+(defmethod foo ((x bar)) ...)
+\end{example}
+
+The around-method will not be automatically recompiled, but the
+primary method will.
+
+\begin{example}
+(declaim (pcl:auto-compile foo))
+(declaim (pcl:not-auto-compile (foo :around (bar)))  
+(defmethod foo :around ((x bar)) ...)
+(defmethod foo ((x bar)) ...)
+\end{example}
+
+The around-method will not be automatically recompiled, because it
+is explicitly declaimed not to be.  The primary method will be
+automatically recompiled because the first declamation applies to
+it.
+
+Auto-recompilation works by recording method bodies using inline slot
+access.  When PCL determines that a recompilation is necessary, a
+\code{defmethod} form is constructed and evaluated.
+
+Auto-compilation can only be done for methods defined in a null
+lexical environment.  PCL prints a warning and doesn't record the
+method body if a method using inline slot access is defined in a
+non-null lexical environment.  Instead of doing a recompilation on
+itself, PCL will then print a warning that the method must be
+recompiled manually when classes are changed.
+
+
+\subsection{Sealing}
+\cindex{sealing}
+\cpsubindex{sealing}{subclasses}
+\cpsubindex{sealing}{methods}
+\cpsubindex{methods}{sealing}
+
+Support for sealing classes and generic functions have been
+implemented.  Please note that this interface is subject to change.
+
+\begin{defmac}{pcl:}{seal}{name (var) \amprest\ specifiers}
+  Seal \code{name} with respect to the given specifiers; \code{name}
+  can be the name of a class or generic-function.
+
+  Supported specifiers are \kwd{subclasses} for classes,
+  which prevents changing subclasses of a class, and \kwd{methods}
+  which prevents changing the methods of a generic function.
+  
+  Sealing violations signal an error of type \code{pcl:sealed-error}.
+\end{defmac}
+
+\begin{defun}{pcl:}{unseal}{name-or-object}
+  Remove seals from \code{name-or-object}.
+\end{defun}
+
+
+
+\subsection{Method Tracing and Profiling}
+\cindex{tracing}
+\cpsubindex{tracing}{methods}
+\cindex{profiling}
+\cpsubindex{profiling}{methods}
+\cpsubindex{methods}{tracing}
+\cpsubindex{methods}{profiling}
+
+Methods can be traced with \code{trace}, using function names of the
+form \code{(method <qualifiers> <specializers>)}.  Example:
+
+\begin{example}
+(defmethod foo ((x integer)) x)
+(defmethod foo :before ((x integer)) x)
+
+(trace (method foo (integer)))
+(trace (method foo :before (integer)))
+(untrace (method foo :before (integer)))
+\end{example}
+  
+\code{trace} and \code{untrace} also allow a name specifier
+\code{:methods gf-form} for tracing all methods of a generic function:
+
+\begin{example}
+(trace :methods 'foo)
+(untrace :methods 'foo)
+\end{example}
+
+Method profiling is done analogously to \code{trace}:
+
+\begin{example}
+(defmethod foo ((x integer)) x)
+(defmethod foo :before ((x integer)) x)
+
+(profile:profile (method foo (integer)))
+(profile:profile (method foo :before (integer)))
+(profile:unprofile (method foo :before (integer)))
+
+(profile:profile :methods 'foo)
+(profile:unprofile :methods 'foo)
+
+(profile:profile-all :methods t)
+\end{example}
+
+
+
+\subsection{Misc}
+\cpsubindex{methods}{interpreted}
+
+\begin{defvar}{pcl::}{compile-interpreted-methods-p}
+  This variable controls compilation of interpreted method functions,
+  e.g. for methods defined interactively at the REPL.  Default is
+  true, that is, method functions are compiled.
+\end{defvar}
+
