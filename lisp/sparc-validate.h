@@ -21,3 +21,6 @@
 #define NUMBER_STACK_START	(0xf0000000)
 #endif
 #define NUMBER_STACK_SIZE	(0x00100000)
+
+#define HOLES {0x0bffe000, 0x0fffe000, 0x17ffe000, 0x1fffe000}
+#define HOLE_SIZE 0x2000
