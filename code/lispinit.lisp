@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.46 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.47 1995/07/26 14:56:20 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -543,11 +543,13 @@
 			   (prin1 result)))
 		       (setf number-of-eofs 0))
 		      ((eql (incf number-of-eofs) 1)
-		       (let ((stream (make-synonym-stream '*terminal-io*)))
-			 (setf *standard-input* stream)
-			 (setf *standard-output* stream)
-			 (format t "~&Received EOF on *standard-input*, ~
-				    switching to *terminal-io*.~%")))
+		       (if *batch-mode*
+			   (quit 0)
+			   (let ((stream (make-synonym-stream '*terminal-io*)))
+			     (setf *standard-input* stream)
+			     (setf *standard-output* stream)
+			     (format t "~&Received EOF on *standard-input*, ~
+					switching to *terminal-io*.~%"))))
 		      ((> number-of-eofs eofs-before-quit)
 		       (format t "~&Received more than ~D EOFs; Aborting.~%"
 			       eofs-before-quit)
@@ -555,6 +557,15 @@
 		      (t
 		       (format t "~&Received EOF.~%")))))))))))
 
+(defun %handled-top-level ()
+  "Wrap %top-level read-eval-print loop in an error handler for *batch-mode*."
+  (handler-case
+      (progn
+	(%top-level)
+	(quit 0))
+    (error (cond)
+	   (format t "Error in batch processing")
+	   (quit 1))))
 
 
 ;;; %Halt  --  Interface
