@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.38 1991/12/20 20:47:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.39 1992/01/25 14:05:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -480,7 +480,8 @@
 		    (immediately-used-p result use))
 	       (when (merge-tail-sets use tails)
 		 (setq retry t))
-	       (maybe-convert-tail-local-call use))
+	       (when (combination-p use)
+		 (maybe-convert-tail-local-call use)))
 	      (t
 	       (use-union (node-derived-type use)))))
       (let ((int (values-type-intersection
