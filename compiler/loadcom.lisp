@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.45 1993/03/01 23:15:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.46 1993/08/19 12:43:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,7 +38,6 @@
 (load "c:locall")
 (load "c:dfo")
 (load "c:ir1opt")
-;(load "c:loop")
 (load "c:checkgen")
 (load "c:constraint")
 (load "c:envanal")
@@ -47,7 +46,6 @@
 (load "c:bit-util")
 (load "c:life")
 (load "c:vmdef")
-(load "c:meta-vmdef")
 (load "c:gtn")
 (load "c:ltn")
 (load "c:stack")
@@ -57,12 +55,10 @@
 (load "vm:vm-ir2tran")
 (load "c:pack")
 (load "c:dyncount")
-(load "c:statcount")
 (load "c:codegen")
 (load "c:main")
 (load "c:disassem")
 (load "c:new-assem")
-(load "assem:assemfile")
 (load "c:aliencomp")
 (load "c:ltv")
 (load "c:debug-dump")
