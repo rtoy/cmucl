@@ -49,6 +49,10 @@
 
 ;;;; Localify
 
+(defconstant marked-bit		#b001)
+(defconstant worthwhile-bit	#b010)
+(defconstant referenced-bit	#b100)
+
 (eval-when (compile eval)
 ;;; Peek, Poke  --  Internal
 ;;;
@@ -74,10 +78,6 @@
      (%primitive set-allocation-space %dynamic-space)
      (prog1 (setf (get ,sym 'purify-symbol-bits) ,val)
 	    (%primitive set-allocation-space space))))
-
-(defconstant marked-bit		#b001)
-(defconstant worthwhile-bit	#b010)
-(defconstant referenced-bit	#b100)
 
 ;;; Do-Allocated-Symbols  --  Internal
 ;;;
@@ -288,7 +288,8 @@
       (when (and def (not (purep def)))
 	(let ((length (%primitive header-length def)))
 	  (transport-function-object def)
-	  (do ((i %function-constants-constants-offset (1+ i)))
+	  (do ((i 0 ;%function-constants-constants-offset
+		  (1+ i)))
 	      ((= i length))
 	    (let ((const (%primitive header-ref def i)))
 	      (typecase const
@@ -300,7 +301,7 @@
 		(compiled-function
 		 (transport-function const))
 		(simple-vector
-		 (transport-g-vector const))))))))))
+		 (transport-g-vector const t))))))))))
 
 
 ;;; TRANSPORT-FUNCTION-OBJECT  --  Internal
@@ -346,8 +347,8 @@
 
 ;;; Transport-G-Vector  --  Internal
 ;;;
-;;;    Transport a G-Vector into static space.  We only bother with
-;;; the top level, and leave the rest to GC.
+;;;    Transport a G-Vector into static or read-only space.  We only bother
+;;; with the top level, and leave the rest to GC.
 ;;;
 (defun transport-g-vector (vec &optional read-only)
   (unless (purep vec)
