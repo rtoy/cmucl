@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.2 1990/12/01 22:33:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.3 1990/12/02 02:10:59 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the SPARC.
 ;;;
@@ -250,14 +250,6 @@
 (defregtn ocfp any-reg)
 (defregtn nsp any-reg)
 
-
-
-;;;; Side-Effect Classes
-
-(export '(vop-attributes))
-
-(def-boolean-attribute vop
-  any)
 
 
 ;;; Immediate-Constant-SC  --  Interface
