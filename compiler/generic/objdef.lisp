@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.5 1990/11/23 08:52:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.6 1990/11/24 09:22:51 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -380,7 +380,8 @@
 			  :alloc-trans %make-funcallable-instance)
   (function :init :arg
 	    :set-vop set-funcallable-instance-function
-	    :set-trans %set-funcallable-instance-function)
+	    :set-trans %set-funcallable-instance-function
+	    :set-known (unsafe))
   (info :rest-p t))
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
