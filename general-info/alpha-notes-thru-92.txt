@@ -43,7 +43,7 @@ breakpoints.
 
 Compiler:
 
-Several internal changes in preperation for supporting the x86.
+Several internal changes in preperation for supporting future ports.
 
 
 CLX:
