@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.2 1990/11/18 11:43:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.3 1990/11/23 08:37:03 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -608,12 +608,48 @@
 		 (when value-var
 		   (queue-var *for-as-sub-vars* value-var value-type
 			      :stepper value-temp))))))
-	  ((loop-keyword-p clause "SYMBOL" "SYMBOLS")
-	   (error "can't deal with packages yet."))
+	  ((loop-keyword-p clause "SYMBOL" "PRESENT-SYMBOL" "EXTERNAL-SYMBOL"
+			   "SYMBOLS" "PRESENT-SYMBOLS" "EXTERNAL-SYMBOLS")
+	   (let ((package
+		  (if (preposition-p "IN" "OF")
+		      (pop *remaining-stuff*)
+		      '*package*))
+		 (iterator (gensym (format nil "~A-ITERATOR-" name)))
+		 (exists-temp (gensym (format nil "~A-EXISTS-TEMP-" name)))
+		 (symbol-temp (gensym (format nil "~A-SYMBOL-TEMP-" name))))
+	     (setf *outside-bindings*
+		   (splice-in-subform
+		    *outside-bindings*
+		    `(with-package-iterator
+			 (,iterator
+			  ,package
+			  ,@(cond ((loop-keyword-p clause "SYMBOL" "SYMBOLS")
+				   '(:internal :external :inherited))
+				  ((loop-keyword-p clause "PRESENT-SYMBOL"
+						   "PRESENT-SYMBOLS")
+				   '(:internal))
+				  ((loop-keyword-p clause "EXTERNAL-SYMBOL"
+						   "EXTERNAL-SYMBOLS")
+				   '(:external))
+				  (t
+				   (error "Don't know how to deal with ~A?  ~
+				           Bug in LOOP?" clause))))
+		       ,*magic-cookie*)))
+	     (setf *inside-bindings*
+		   (splice-in-subform
+		    *inside-bindings*
+		    `(multiple-value-bind
+			 (,exists-temp ,symbol-temp)
+			 (,iterator)
+		       ,*magic-cookie*)))
+	     (push `(not ,exists-temp) *for-as-term-tests*)
+	     (queue-var *for-as-sub-vars* name type :stepper symbol-temp)))
 	  (t
-	   (error "Unknown sub-clause, ~A, for BEING.  Must be one of:~%  ~
-	           HASH-KEY HASH-KEYS HASH-VALUE HASH-VALUES SYMBOL SYMBOLS"
-		  (symbol-name clause))))))
+	   (error
+	    "Unknown sub-clause, ~A, for BEING.  Must be one of:~%  ~
+	     HASH-KEY HASH-KEYS HASH-VALUE HASH-VALUES SYMBOL SYMBOLS~%  ~
+	     PRESENT-SYMBOL PRESENT-SYMBOLS EXTERNAL-SYMBOL EXTERNAL-SYMBOLS"
+	    (symbol-name clause))))))
 
 
 
