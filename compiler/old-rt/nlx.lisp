@@ -171,7 +171,9 @@
   (:ignore start count values nl0 nl1 a2 a3 misc-pc)
   (:variant-vars)
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
+    (note-this-location vop :non-local-exit)
     (unless (location= a0 top)
       (inst lr a0 top))
     (inst miscopx 'clc::nlx-entry-default-values)
@@ -186,7 +188,9 @@
   (:ignore start count nl0 nl1 a2 a3 misc-pc)
   (:variant-vars)
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
+    (note-this-location vop :non-local-exit)
     (unless (location= a0 top)
       (inst lr a0 top))
     (inst miscop 'clc::nlx-entry-receive-values)
@@ -202,4 +206,6 @@
   (:save-p :force-to-stack)
   (:results (block) (start) (count))
   (:ignore block start count)
-  (:generator 0))
+  (:vop-var vop)
+  (:generator 0
+    (note-this-location vop :non-local-exit)))
