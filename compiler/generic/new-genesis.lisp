@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.8 1993/05/13 18:20:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.9 1993/08/31 11:52:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,6 +166,17 @@
   "Return the bits of DES."
   (logior (ash (descriptor-high des) descriptor-low-bits)
 	  (descriptor-low des)))
+
+#+nil; unused
+(defun descriptor-eq (x y)
+  (and (eql (descriptor-high x) (descriptor-high y))
+       (eql (descriptor-low x) (descriptor-low y))))
+
+(defun descriptor-fixnum (x)
+  (let ((bits (descriptor-bits x)))
+    (if (logbitp (1- vm:word-bits) bits)
+	(logior (ash bits -2) (ash -1 (1- vm:word-bits)))
+	(ash bits -2))))
 
 (defun descriptor-sap (des)
   "Return a SAP pointing to the piece of memory DES refers to.  The lowtag
@@ -824,9 +835,15 @@
 ;;; only thing that's tricky is initializing layout's layout, which must point
 ;;; to itself.
 
-;;; Table mapping from class names to descriptors for their layouts.
+;;; Table mapping from class names to lists of:
+;;;    (descriptor name length inherits depth)
 ;;;
 (defvar *cold-layouts* (make-hash-table :test #'equal))
+
+;;; Table mapping DESCRIPTOR-BITS of cold layouts to the name, for inverting
+;;; mapping.
+;;;
+(defvar *cold-layout-names* (make-hash-table :test #'eql)) 
 
 ;;; The descriptor for layout's layout, which we need when making layouts.
 ;;;
@@ -850,8 +867,44 @@
       (write-indexed result (+ base 4) length)
       (write-indexed result (+ base 5) *nil-descriptor*); info
       (write-indexed result (+ base 6) *nil-descriptor*)); pure
-    (setf (gethash name *cold-layouts*) result)
+    (setf (gethash name *cold-layouts*)
+	  (list result name (descriptor-fixnum length)
+		(listify-cold-inherits inherits)
+		(descriptor-fixnum depth)))
+    (setf (gethash (descriptor-bits result) *cold-layout-names*) name)
     result))
+
+(defun listify-cold-inherits (x)
+  (let ((len (descriptor-fixnum (read-indexed x vm:vector-length-slot))))
+    (collect ((res))
+      (dotimes (i len)
+	(let* ((des (read-indexed x (+ vm:vector-data-offset i)))
+	       (found (gethash (descriptor-bits des) *cold-layout-names*)))
+	  (if found
+	      (res found)
+	      (res (format nil "Unknown descriptor, bits = ~8,'0X"
+			   (descriptor-bits des))))))
+      (res))))
+  
+(defun cold-layout-redefined (old inherits depth length)
+  (destructuring-bind (descriptor name olength oinherits-l odepth)
+		      old
+    (declare (ignore descriptor))
+    (let ((result nil))
+      (unless (eql (descriptor-fixnum length) olength)
+	(warn "Changing ~S length from ~D to ~D."
+	      name olength (descriptor-fixnum length))
+	(setq result t))
+      (unless (eql (descriptor-fixnum depth) odepth)
+	(warn "Changing ~S inheritance-depth from ~D to ~D."
+	      name odepth (descriptor-fixnum depth))
+	(setq result t))
+      (let ((inherits-l (listify-cold-inherits inherits)))
+	(unless (equal inherits-l oinherits-l)
+	  (warn "Changing ~S inherits from:~%  ~S~%To:~%  ~S"
+		name oinherits-l inherits-l)
+	  (setq result t)))
+      result)))
 
 
 ;;; INITIALIZE-LAYOUTS  --  Internal
@@ -866,7 +919,7 @@
   (setq *layout-layout* *nil-descriptor*)
   (setq *layout-layout*
 	(make-cold-layout 'layout (number-to-core target-layout-length)
-			  *nil-descriptor* (number-to-core 3)))
+			  (cold-vector) (number-to-core 3)))
   (write-indexed *layout-layout* vm:instance-slots-offset *layout-layout*)
   (let* ((t-layout
 	  (make-cold-layout 't (number-to-core 0)
@@ -878,9 +931,12 @@
 	  (make-cold-layout 'structure-object (number-to-core 1)
 			    (cold-vector t-layout inst-layout)
 			    (number-to-core 2))))
-    (write-indexed *layout-layout*
-		   (+ vm:instance-slots-offset layout-hash-length 1 2)
-		   (cold-vector t-layout inst-layout so-layout))))
+    (let ((layout-inh (cold-vector t-layout inst-layout so-layout)))
+      (setf (fourth (gethash 'layout *cold-layouts*))
+	    (listify-cold-inherits layout-inh))
+      (write-indexed *layout-layout*
+		     (+ vm:instance-slots-offset layout-hash-length 1 2)
+		     layout-inh))))
 
 
 ;;; LIST-ALL-LAYOUTS  --  Internal
@@ -889,8 +945,9 @@
 ;;;
 (defun list-all-layouts ()
   (let ((result *nil-descriptor*))
-    (maphash #'(lambda (key value)
-		 (cold-push (allocate-cons *dynamic* (cold-intern key) value)
+    (maphash #'(lambda (key stuff)
+		 (cold-push (allocate-cons *dynamic* (cold-intern key)
+					   (first stuff))
 			    result))
 	     *cold-layouts*)
     result))
@@ -973,13 +1030,48 @@
       (write-indexed result (+ index vm:instance-slots-offset) (pop-stack)))
     result))
 
+;;; Check for layout redefinition, and possibly clobber old layout w/ new info.
+;;;
 (define-cold-fop (fop-layout)
-  (let ((length (pop-stack))
-	(depth (pop-stack))
-	(inherits (pop-stack))
-	(name (pop-stack)))
-    (or (gethash name *cold-layouts*)
-	(make-cold-layout name length inherits depth))))
+  (let* ((length (pop-stack))
+	 (depth (pop-stack))
+	 (inherits (pop-stack))
+	 (name (pop-stack))
+	 (old (gethash name *cold-layouts*)))
+    (cond
+     (old
+      (when (cold-layout-redefined old inherits depth length)
+	(restart-case
+	    (error "Loading a reference to class ~S when the compile~
+		    ~%  time definition was incompatible with the current ~
+		    one."
+		   name)
+	  (use-current ()
+	    :report "Ignore the incompatibility, leave class alone."
+	    (warn "Assuming the current definition of ~S is correct, and~@
+		   that the loaded code doesn't care about the ~
+		   incompatibility."
+		  name))
+	  (clobber-it ()
+	    :report "Smash current layout, preserving old code."
+	    (warn "Any old ~S instances will be in a bad way.~@
+		   I hope you know what you're doing..."
+		  name)
+	    
+	    (let ((base (+ vm:instance-slots-offset
+			   kernel:layout-hash-length
+			   1))
+		  (desc (first old)))
+	      (write-indexed desc (+ base 2) inherits)
+	      (write-indexed desc (+ base 3) depth)
+	      (write-indexed desc (+ base 4) length)
+	      (setf (gethash name *cold-layouts*)
+		    (list desc name (descriptor-fixnum length)
+			  (listify-cold-inherits inherits)
+			  (descriptor-fixnum depth)))))))
+      (first old))
+     (t
+      (make-cold-layout name length inherits depth)))))
 
 
 ;;; Loading symbols...
@@ -1951,19 +2043,20 @@
 		   (integer (prin1-to-string name))
 		   (list (key (second name))))))
 	(dolist (fun (sort undefs #'string< :key #'key))
-	  (format t "~S~%" fun)))
+	  (if (integerp fun)
+	      (format t "~8,'0X~%" fun)
+	      (format t "~S~%" fun))))))
+  
+  (format t "~%~|~%Layout names:~2%")
+  (collect ((stuff))
+    (maphash #'(lambda (name gorp)
+		 (declare (ignore name))
+		 (stuff (cons (descriptor-bits (car gorp))
+			      (cdr gorp))))
+	     *cold-layouts*)
+    (dolist (x (sort (stuff) #'< :key #'car))
+      (apply #'format t "~8,'0X: ~S[~D]~%~10T~S~%" x)))
 
-      (format t "~%~|~%Layout names:~2%")
-      (collect ((stuff))
-	(maphash #'(lambda (name desc)
-		     (stuff (cons (logior (ash (descriptor-high desc)
-					       descriptor-low-bits)
-					  (descriptor-low desc))
-				  name)))
-		 *cold-layouts*)
-	(dolist (x (sort (stuff) #'< :key #'car))
-	  (format t "~8,'0X: ~S~%" (car x) (cdr x))))))
-	      
   (undefined-value))
 
 
@@ -2075,4 +2168,3 @@
       (write-long 2)))
   (format t "done]~%")
   (force-output))
-
