@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.35 1993/07/21 14:29:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.36 1993/07/21 14:36:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -763,14 +763,17 @@
 ;;; WITH-IR1-NAMESPACE  --  Interface
 ;;;
 ;;;    Bind the hashtables used for keeping track of global variables,
-;;; functions, &c.
+;;; functions, &c.  Also establish condition handlers.
 ;;;
 (defmacro with-ir1-namespace (&body forms)
   `(let ((*free-variables* (make-hash-table :test #'eq))
 	 (*free-functions* (make-hash-table :test #'equal))
 	 (*constants* (make-hash-table :test #'equal))
 	 (*source-paths* (make-hash-table :test #'eq)))
-     ,@forms))
+     (handler-bind ((compiler-error #'compiler-error-handler)
+		    (style-warning #'compiler-style-warning-handler)
+		    (warning #'compiler-warning-handler))
+       ,@forms)))
 
 
 ;;; LEXENV-FIND  --  Interface
@@ -1163,14 +1166,3 @@
 	       (setf (event-info-count v) 0))
 	   *event-info*)
   (values))
-
-
-;;;; WITH-COMPILER-ERROR-HANDLERS  --  Interface
-;;;
-;;;  Establish the compiler's condition handlers.
-;;;
-(defmacro with-compiler-error-handlers (&body body)
-  `(handler-bind ((compiler-error #'compiler-error-handler)
-		  (style-warning #'compiler-style-warning-handler)
-		  (warning #'compiler-warning-handler))
-     ,@body))
