@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.42 1998/04/20 11:32:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.43 1998/05/01 10:37:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -403,7 +403,7 @@
 			(when (>= (aref hash-vec i) 2)
 			  (let ((sym (aref sym-vec i)))
 			    (declare (inline member))
-			    (unless (member sym ignore :test #'eq)
+			    (unless (member sym ignore :test #'string=)
 			      (,flet-name sym))))))))
 	     (iterate-over-hash-table (package-internal-symbols package) nil)
 	     (iterate-over-hash-table (package-external-symbols package) nil)
@@ -627,8 +627,6 @@
 	(imports nil)
 	(interns nil)
 	(exports nil)
-	(incomming nil)
-	(outgoing nil)
 	(doc nil))
     (dolist (option options)
       (unless (consp option)
@@ -653,12 +651,10 @@
 		 :format-arguments (list (second option))))))
 	(:shadow
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf incomming (append-unique new incomming :shadow))
 	   (setf shadows (append shadows new))))
 	(:shadowing-import-from
 	 (let ((package-name (stringify-name (second option) "package"))
 	       (names (stringify-names (cddr option) "symbol")))
-	   (setf incomming (append-unique names incomming :shadowing-import))
 	   (let ((assoc (assoc package-name shadowing-imports
 			       :test #'string=)))
 	     (if assoc
@@ -672,7 +668,6 @@
 	(:import-from
 	 (let ((package-name (stringify-name (second option) "package"))
 	       (names (stringify-names (cddr option) "symbol")))
-	   (setf incomming (append-unique names incomming :import-from))
 	   (let ((assoc (assoc package-name imports
 			       :test #'string=)))
 	     (if assoc
@@ -680,12 +675,9 @@
 		 (setf imports (acons package-name names imports))))))
 	(:intern
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf incomming (append-unique new incomming :intern))
-	   (setf outgoing (append-unique new outgoing :intern))
 	   (setf interns (append interns new))))
 	(:export
 	 (let ((new (stringify-names (cdr option) "symbol")))
-	   (setf outgoing (append-unique new outgoing :export))
 	   (setf exports (append exports new))))
 	(:documentation
 	 (when doc
@@ -696,16 +688,37 @@
 	 (error 'program-error
 		:format-control "Bogus DEFPACKAGE option: ~S"
 		:format-arguments (list option)))))
+    (check-disjoint `(:intern ,@interns) `(:export  ,@exports))
+    (check-disjoint `(:intern ,@interns)
+		    `(:import-from
+		      ,@(apply #'append (mapcar #'rest imports)))
+		    `(:shadow ,@shadows)
+		    `(:shadowing-import-from
+		      ,@(apply #'append (mapcar #'rest shadowing-imports))))
     `(eval-when (compile load eval)
        (%defpackage ,(stringify-name package "package") ',nicknames ',size
 		    ',shadows ',shadowing-imports ',(if use-p use :default)
 		    ',imports ',interns ',exports ',doc))))
+
+(defun check-disjoint(&rest args)
+  ;; An arg is (:key . set)
+  (do ((list args (cdr list)))
+      ((endp list))
+    (loop
+      with x = (car list)
+      for y in (rest list)
+      for z = (remove-duplicates (intersection (cdr x)(cdr y) :test #'string=))
+      when z do (error 'program-error
+		       :format-control "Parameters ~S and ~S must be disjoint ~
+					but have common elements ~%   ~S"
+		       :format-arguments (list (car x)(car y) z)))))
 
 (defun stringify-name (name kind)
   (typecase name
     (simple-string name)
     (string (coerce name 'simple-string))
     (symbol (symbol-name name))
+    (base-char (string name))
     (t
      (error "Bogus ~A name: ~S" kind name))))
 
@@ -713,14 +726,6 @@
   (mapcar #'(lambda (name)
 	      (stringify-name name kind))
 	  names))
-
-(defun append-unique (new old list)
-  (dolist (name new)
-    (if (member name old)
-	(cerror "Ignore it."
-		"Duplicate name in the ~S list: ~A" list name)
-	(push name old)))
-  old)
 
 (defun %defpackage (name nicknames size shadows shadowing-imports
 			 use imports interns exports doc-string)
@@ -797,7 +802,7 @@
       (find-symbol name package)
     (cond (how
 	   symbol)
-	  (t
+	  (t ; @@@ This should be a correctable PACKAGE-ERROR
 	   (cerror "INTERN it."
 		   "~A does not contain a symbol ~A"
 		   (package-name package)
