@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.58 2004/04/10 04:51:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.59 2004/08/23 16:15:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1541,3 +1541,10 @@ significant bit of INTEGER is bit 0."
 	   (type (integer 0 31) count))
   (bignum::%ashl (ldb (byte 32 0) integer) count))
 
+#+modular-arith
+(defun vm::ash-mod32 (integer count)
+  (declare (type integer integer)
+	   (type (integer -31 31) count))
+  (if (minusp count)
+      (bignum::%digit-logical-shift-right (ldb (byte 32 0) integer) (- count))
+      (bignum::%ashl (ldb (byte 32 0) integer) count)))
