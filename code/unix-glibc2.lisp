@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.31 2004/06/01 23:16:00 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.32 2004/07/25 19:32:38 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -312,19 +312,21 @@
 
 
 ;;;; System calls.
-(def-alien-variable ("errno" unix-errno) int)
+(def-alien-variable ("errno" unix-internal-errno) int)
 
 ;;; later...
 (defun unix-get-errno ())
 
+(defun unix-errno () (unix-get-errno) unix-internal-errno)
+(defun (setf unix-errno) (newvalue) (setf unix-internal-errno newvalue))
+
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
-(defun get-unix-error-msg (&optional (error-number unix-errno))
+(defun get-unix-error-msg (&optional (error-number (unix-errno)))
   "Returns a string describing the error number which was returned by a
   UNIX system call."
   (declare (type integer error-number))
   
-  (unix-get-errno)
   (if (array-in-bounds-p *unix-errors* error-number)
       (svref *unix-errors* error-number)
       (format nil "Unknown error [~d]" error-number)))
@@ -333,9 +335,7 @@
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
 				,@args)))
      (if (minusp result)
-         (progn 
-           (unix-get-errno)
-	   (values nil unix-errno))
+	 (values nil (unix-errno))
 	 ,success-form)))
 
 ;;; Like syscall, but if it fails, signal an error instead of returning error
@@ -469,8 +469,7 @@
 						     c-string))
 			     pathname)))
 	 (if (zerop (sap-int dir-struct))
-             (progn (unix-get-errno)
-	            (values nil unix-errno))
+	     (values nil (unix-errno))
 	     (make-directory :name pathname :dir-struct dir-struct))))
       ((nil)
        (values nil enoent))
@@ -1854,9 +1853,7 @@ length LEN and type TYPE."
                  (extern-alien "lseek64" (function off-t int off-t int))
                  fd offset whence)))
     (if (minusp result)
-        (progn
-          (unix-get-errno)
-          (values nil unix-errno))
+        (values nil (unix-errno))
         (values result 0))))
 
 

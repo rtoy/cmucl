@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.49 2004/07/07 15:03:11 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.50 2004/07/25 19:32:37 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 (defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
-#-(or openbsd linux irix)
+#-(or linux bsd svr4 irix)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
 
 (defun pick-temporary-file-name (&optional (base "/tmp/tmp~D~C"))
@@ -86,7 +86,7 @@
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(or linux bsd svr4)
+#+(or linux (and bsd (not darwin)) svr4)
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
@@ -206,7 +206,57 @@
         (unix:unix-read fd (alien:alien-sap header) (alien:alien-size eheader :bytes))
         (when (elf-p (alien:slot header 'elf-ident))
           (eql et-shared-object (alien:slot header 'elf-type)))))))
-) ;; #+(or linux bsd svr4)
+) ;; #+(or linux (and bsd (not darwin)) svr4)
+
+
+
+;; Darwin loading of foreign code.  This uses the dlopen shims and thus
+;; appears like ELF to the rest of the code in this file.  However testing
+;; for shared libs obviously needs to test for Mach-O dylibs, and not
+;; ELF shared libraries...
+#+darwin
+(progn
+
+(alien:def-alien-type machheader
+  (alien:struct nil
+    (magic       (alien:unsigned 32))
+    (cputype	 (alien:signed 32))
+    (cpusubtype  (alien:signed 32))
+    (filetype    (alien:unsigned 32))
+    (ncmds       (alien:unsigned 32))
+    (sizeofcmds  (alien:unsigned 32))
+    (flags       (alien:unsigned 32))))
+
+;; values for magic
+(defconstant mh-magic	#xfeedface)
+
+;; values for filetype
+(defconstant mh-object        #x1)
+(defconstant mh-execute       #x2)
+(defconstant mh-fvmlib        #x3)
+(defconstant mh-core          #x4)
+(defconstant mh-preload       #x5)
+(defconstant mh-dylib         #x6)
+(defconstant mh-dylinker      #x7)
+(defconstant mh-bundle        #x8)
+(defconstant mh-dylib-stub    #x9)
+
+(defun mach-o-p (h)
+  "Make sure the header starts with the mach-o magic value."
+  (eql (alien:slot h 'magic) mh-magic))
+
+(defun file-shared-library-p (pathname)
+  (with-open-file (obj pathname
+                       :direction :input
+                       :element-type '(unsigned-byte 8))
+    (let ((fd (lisp::fd-stream-fd obj)))
+      (alien:with-alien ((header machheader))
+        (unix:unix-read fd (alien:alien-sap header)
+	                (alien:alien-size machheader :bytes))
+        (when (mach-o-p header)
+	  (or (eql mh-dylib (alien:slot header 'filetype))
+	      (eql mh-bundle (alien:slot header 'filetype))))))))
+) ; #+darwin
 
 
 
@@ -706,11 +756,13 @@ environment passed to Lisp."
                         (list*
                          #+(or solaris linux FreeBSD4) "-G"
                          #+(or OpenBSD NetBSD irix) "-shared"
+			 #+darwin "-dylib"
                          "-o"
                          output-file
                          ;; Cause all specified libs to be loaded in full
                          #+(or OpenBSD linux FreeBSD4 NetBSD) "--whole-archive"
                          #+solaris "-z" #+solaris "allextract"
+			 #+darwin "-all_load"
                          (append (mapcar
                                   #'(lambda (name)
                                       (or (unix-namestring name)

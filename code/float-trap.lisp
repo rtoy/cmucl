@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.24 2004/03/24 13:26:18 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.25 2004/07/25 19:32:37 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,6 +130,8 @@
     (when precision-control-p
       (warn "Precision control only available for x86"))
     
+    ;; Temporarily disabled on darwin due to strange breakage
+    #-darwin
     (setf (floating-point-modes) modes))
     
   (values))

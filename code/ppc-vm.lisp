@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.1 2001/02/11 14:22:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.2 2004/07/25 19:32:38 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; This file contains the SPARC specific runtime stuff.
+;;; This file contains the PPC specific runtime stuff.
 ;;;
 (in-package "PPC")
 (use-package "SYSTEM")
@@ -26,6 +26,7 @@
 ;;;; The sigcontext structure.
 ;;;; Note that the layout of this thing matches the word offsets PT_xxx, not
 ;;;; (necessarily) the pt_regs structure.
+#-darwin
 (def-alien-type sigcontext-regs
   (struct nil
     (regs (array unsigned-long 32))
@@ -46,6 +47,37 @@
     (pad2 unsigned-long)
     (fpscr unsigned-long)))
 
+;; In reality on darwin this is an instance of struct mcontext, which
+;; contains 4 sub-structures, all defined in mach/thread_status.h.
+;; For our purposes we just combine this into one structure, defining
+;; types and layout as we see fit.
+#+darwin
+(def-alien-type sigcontext-regs
+  (struct nil
+    (dar unsigned-long)
+    (dsisr unsigned-long)
+    (exception unsigned-long)
+    (pad1 unsigned-long)
+    (pad2 (array unsigned-long 4))
+    (pc system-area-pointer)
+    (msr unsigned-long)
+    (regs (array unsigned-long 32))
+    (cr unsigned-long)
+    (xer unsigned-long)
+    (lr unsigned-long)
+    (ctr unsigned-long)
+    (mq unsigned-long)
+    (vrsave unsigned-long)
+    (fpregs (array unsigned-long 64))
+    (pad3 unsigned-long)
+    (fpscr unsigned-long)
+    (vrregs (array unsigned-long 128))
+    (vscr (array unsigned-long 4))
+    (pad4 (array unsigned-long 4))
+    (vrvalid unsigned-long)
+    (pad5 (array unsigned-long 7))))
+
+#-darwin
 (def-alien-type sigcontext
   (struct nil
     (sc-unused (array unsigned-long 4))
@@ -54,6 +86,18 @@
     (sc-oldmask unsigned-long)
     (sc-regs (* sigcontext-regs))))
 
+;; Use the ucontext_t structure for Darwin
+#+darwin
+(def-alien-type sigcontext
+  (struct nil
+    (sc-onstack int)
+    (sc-mask int)
+    (sc-ss-sp int)
+    (sc-ss-size int)
+    (sc-ss-flags int)
+    (sc-link int)
+    (sc-mcsize int)
+    (sc-regs (* sigcontext-regs))))
 
 
 ;;;; Add machine specific features to *features*
@@ -238,7 +282,27 @@
 ;;; 
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
+  #+darwin
+  (concatenate 'string "_" name)
+  #-darwin
   (concatenate 'string "" name))
+
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (declare (ignore flavor))
+  (multiple-value-bind (value found)
+      (gethash name lisp::*foreign-symbols* 0)
+    (if found
+        value
+        (multiple-value-bind (value found)
+            (gethash  
+             (concatenate 'string "ldso_stub__" name)
+             lisp::*foreign-symbols* 0)
+          (if found 
+              value
+              (let ((value (system:alternate-get-global-address name)))
+                (when (zerop value)
+                  (error "Unknown foreign symbol: ~S" name))
+                value))))))
 
 
 

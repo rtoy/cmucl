@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.95 2004/07/15 16:26:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.96 2004/07/25 19:32:38 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -484,7 +484,7 @@
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
-#+BSD
+#+(and :BSD (not :darwin))
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -501,6 +501,37 @@
     (st-sizeh   unsigned-long)		;
     (st-blocks  unsigned-long)		; really quad
     (st-blocksh unsigned-long)
+    (st-blksize unsigned-long)
+    (st-flags   unsigned-long)
+    (st-gen     unsigned-long)
+    (st-lspare  long)
+    (st-qspare (array long 4))))
+
+#+(and :BSD :darwin)
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-ino ino-t)
+    (st-mode mode-t)
+    (st-nlink nlink-t)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-atime (struct timespec-t))
+    (st-mtime (struct timespec-t))
+    (st-ctime (struct timespec-t))
+    #+LONG-STAT
+    (st-size off-t)
+    #-LONG-STAT
+    (st-sizeh unsigned-long)
+    #-LONG-STAT
+    (st-size unsigned-long)
+    #+LONG-STAT
+    (st-blocks int64-t)
+    #-LONG-STAT
+    (st-blocksh unsigned-long)
+    #-LONG-STAT
+    (st-blocks unsigned-long)
     (st-blksize unsigned-long)
     (st-flags   unsigned-long)
     (st-gen     unsigned-long)
@@ -909,11 +940,21 @@
 ;;; And now for something completely different ...
 (emit-unix-errors)
 
-(def-alien-variable ("errno" unix-errno) int)
+#-darwin
+(progn
+(def-alien-variable ("errno" unix-internal-errno) int)
+(defun unix-errno () unix-internal-errno)
+(defun (setf unix-errno) (newvalue) (setf unix-internal-errno newvalue)))
+#+darwin
+(progn
+(def-alien-routine ("os_get_errno" unix-get-errno) int)
+(def-alien-routine ("os_set_errno" unix-set-errno) int (newvalue int))
+(defun unix-errno () (unix-get-errno))
+(defun (setf unix-errno) (newvalue) (unix-set-errno newvalue)))
 
 ;;; GET-UNIX-ERROR-MSG -- public.
 ;;; 
-(defun get-unix-error-msg (&optional (error-number unix-errno))
+(defun get-unix-error-msg (&optional (error-number (unix-errno)))
   "Returns a string describing the error number which was returned by a
   UNIX system call."
   (declare (type integer error-number))
@@ -1014,7 +1055,7 @@
   `(let* ((fn (extern-alien ,name (function ,result-type ,@arg-types)))
 	  (result (alien-funcall fn ,@args)))
      (if (eql -1 result)
-	 (values nil unix-errno)
+	 (values nil (unix-errno))
 	 ,success-form)))
 
 (defmacro syscall ((name &rest arg-types) success-form &rest args)
@@ -1081,7 +1122,7 @@
 						       size-t int int int off-t))
 			(or addr +null+) length prot flags (or fd -1) offset)))
     (if (= result map_failed)
-	(values nil unix-errno)
+	(values nil (unix-errno))
 	(sys:int-sap result))))
 
 (defun unix-munmap (addr length)
@@ -2438,7 +2479,7 @@
 						     c-string))
 			     pathname)))
 	 (if (zerop (sap-int dir-struct))
-	     (values nil unix-errno)
+	     (values nil (unix-errno))
 	     (make-directory :name pathname :dir-struct dir-struct))))
       ((nil)
        (values nil enoent))

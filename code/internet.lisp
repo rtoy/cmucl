@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.40 2004/04/23 12:42:04 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.41 2004/07/25 19:32:38 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -436,7 +436,7 @@ struct in_addr {
   (with-alien ((optval signed))
     (if (minusp (unix:unix-getsockopt socket level optname
 				      (alien-sap (addr optval)) 4))
-	(values nil unix:unix-errno)
+	(values nil (unix:unix-errno))
 	(values optval 0))))
 
 (defun set-socket-option (socket level optname optval)
@@ -446,7 +446,7 @@ struct in_addr {
   (with-alien ((optval signed optval))
     (if (minusp (unix:unix-setsockopt socket level optname
 				      (alien-sap (addr optval)) 4))
-	(values nil unix:unix-errno)
+	(values nil (unix:unix-errno))
 	(values optval 0))))
 
 (defun create-inet-listener (port &optional (kind :stream)
@@ -508,7 +508,7 @@ struct in_addr {
     (when (minusp (unix:unix-getpeername fd (alien-sap sockaddr)
 					 (alien-sap length)))
       (error "Error ~s getting peer host and port on FD ~d."
-	     (unix:get-unix-error-msg unix:unix-errno) fd))
+	     (unix:get-unix-error-msg (unix:unix-errno)) fd))
     (values (ext:ntohl (slot sockaddr 'addr))
 	    (ext:ntohs (slot sockaddr 'port)))))
 
@@ -519,7 +519,7 @@ struct in_addr {
     (when (minusp (unix:unix-getsockname fd (alien-sap sockaddr)
 					 (alien-sap length)))
       (error "Error ~s getting socket host and port on FD ~d."
-	     (unix:get-unix-error-msg unix:unix-errno) fd))
+	     (unix:get-unix-error-msg (unix:unix-errno)) fd))
     (values (ext:ntohl (slot sockaddr 'addr))
 	    (ext:ntohs (slot sockaddr 'port)))))
 

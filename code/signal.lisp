@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.35 2003/08/31 10:50:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.36 2004/07/25 19:32:38 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,7 +174,7 @@
    id pid.  Signal should be a valid signal number or a keyword of the
    standard UNIX signal name."
   (if (minusp (real-unix-kill pid (unix-signal-number signal)))
-      (values nil unix-errno)
+      (values nil (unix-errno))
       t))
 
 (declaim (inline real-unix-killpg))
@@ -188,7 +188,7 @@
   group PGRP.  Signal should be a valid signal number or a keyword of
   the standard UNIX signal name."
   (if (minusp (real-unix-killpg pgrp (unix-signal-number signal)))
-      (values nil unix-errno)
+      (values nil (unix-errno))
       t))
 
 (alien:def-alien-routine ("sigblock" unix-sigblock) c-call:unsigned-long
