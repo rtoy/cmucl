@@ -1715,11 +1715,7 @@
 (defun set-up-function-translation (parse n-template)
   (declare (type vop-parse parse))
   (mapcar #'(lambda (name)
-	      `(let ((info
-		      (let ((*info-environment*
-			     (or (backend-info-environment *target-backend*)
-				 *info-environment*)))
-			(function-info-or-lose ',name))))
+	      `(let ((info (function-info-or-lose ',name)))
 		 (setf (function-info-templates info)
 		       (adjoin-template ,n-template
 					(function-info-templates info)))
