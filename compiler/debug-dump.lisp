@@ -399,7 +399,7 @@
   (collect ((vars))
     (labels ((frob-leaf (leaf tn gensym-p)
 	       (let ((name (leaf-name leaf)))
-		 (when (and name (leaf-refs leaf)
+		 (when (and name (leaf-refs leaf) (tn-offset tn)
 			    (or gensym-p (symbol-package name)))
 		   (vars (cons leaf tn)))))
 	     (frob-lambda (x gensym-p)
@@ -449,7 +449,8 @@
   (let ((res (gethash var var-locs)))
     (cond (res)
 	  (t
-	   (assert (null (leaf-refs var)))
+	   (assert (or (null (leaf-refs var))
+		       (not (tn-offset (leaf-info var)))))
 	   'deleted))))
 
 
