@@ -131,8 +131,8 @@
 ;;;
 ;;;
 (defmacro define-storage-class (name number sb-name &key (element-size '1)
-				     (alignment '1) locations save-p
-				     alternate-scs constant-scs)
+				     (alignment '1) locations reserve-locations
+				     save-p alternate-scs constant-scs)
   "Define-Storage-Class Name Number Storage-Base {Key Value}*
   Define a storage class Name that uses the named Storage-Base.  Number is a
   small, non-negative integer that is used as an alias.  The following
@@ -149,6 +149,10 @@
   :Locations (Location*)
       If the SB is :Finite, then this is a list of the offsets within the SB
       that are in this SC.
+
+  :Reserve-Locations (Location*)
+      A subset of the Locations that the register allocator should try to
+      reserve for operand loading (instead of to hold variable values.)
 
   :Save-P {T | NIL}
       If T, then values stored in this SC must be saved in one of the
@@ -169,6 +173,7 @@
   (check-type number sc-number)
   (check-type sb-name symbol)
   (check-type locations list)
+  (check-type reserve-locations list)
   (check-type save-p boolean)
   (check-type alternate-scs list)
   (check-type constant-scs list)
@@ -184,6 +189,9 @@
 	      (error "SC element ~D out of bounds for ~S." el sb))))
 	(when locations
 	  (error ":Locations is meaningless in a ~S SB." (sb-kind sb))))
+
+    (unless (subsetp reserve-locations locations)
+      (error "Reserve-Locations not a subset of Locations."))
 
     (when (and (or alternate-scs constant-scs)
 	       (eq (sb-kind sb) :non-packed))
@@ -204,6 +212,7 @@
 			     :element-size ,element-size
 			     :alignment ,alignment
 			     :locations ',locations
+			     :reserve-locations ',reserve-locations
 			     :save-p ',save-p
 			     :number-stack-p ,nstack-p
 			     :alternate-scs (mapcar #'meta-sc-or-lose
