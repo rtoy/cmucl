@@ -7,15 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.23 1991/04/09 10:45:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.24 1991/05/06 15:10:21 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file contains the implementation of the programmer's interface
 ;;; to writing debugging tools.
 ;;;
-;;; Written by Bill Chiles.
-;;; Designed by Rob Maclachlan and Bill Chiles.
+;;; Written by Bill Chiles and Rob Maclachlan.
 ;;;
 
 (in-package "DEBUG-INTERNALS" :nicknames '("DI"))
@@ -48,8 +47,9 @@
 	  debug-block-p debug-block-elsewhere-p
 
 	  make-breakpoint activate-breakpoint deactivate-breakpoint
-	  breakpoint-hook-function breakpoint-info breakpoint-kind
-	  breakpoint-what breakpoint breakpoint-p
+	  breakpoint-active-p breakpoint-hook-function breakpoint-info
+	  breakpoint-kind breakpoint-what breakpoint breakpoint-p
+	  delete-breakpoint
 
 	  code-location-debug-function code-location-debug-block
 	  code-location-top-level-form-offset code-location-form-number
@@ -240,7 +240,8 @@
 ;;; These exist for caching data stored in packed binary form in compiler
 ;;; debug-functions.  Debug-functions store these.
 ;;;
-(defstruct (debug-variable (:print-function print-debug-variable))
+(defstruct (debug-variable (:print-function print-debug-variable)
+			   (:constructor nil))
   ;;
   ;; String name of variable.
   (name nil :type simple-string)
@@ -301,7 +302,7 @@
 
 ;;; These represents call-frames on the stack.
 ;;;
-(defstruct frame
+(defstruct (frame (:constructor nil))
   ;;
   ;; Next frame up.  Null when top frame.
   (up nil :type (or frame null))
@@ -562,14 +563,72 @@
 ;;; Breakpoints.
 ;;;
 
+;;; This is an internal structure that manages information about a breakpoint
+;;; locations.  See *component-breakpoint-offsets*.
+;;;
+(defstruct (breakpoint-data (:print-function print-breakpoint-data)
+			    (:constructor make-breakpoint-data
+					  (component offset)))
+  ;;
+  ;; This is the component in which the breakpoint lies.
+  component
+  ;;
+  ;; This is the byte offset into the component.
+  (offset nil :type c::index)
+  ;;
+  ;; The original instruction replaced by the breakpoint.
+  (instruction nil :type (or null (unsigned-byte 32)))
+  ;;
+  ;; This saves the sigmask while we execute the instruction replaced by
+  ;; a user break.  When we hit the after-breakpoint, we restore this mask.
+  (sigmask nil :type (or null (unsigned-byte 32)))
+  ;;
+  ;; A list of user breakpoints at this location.
+  (breakpoints nil :type list)
+  ;;
+  ;; An after-breakpoint might be at this location too.
+  (after-breakpoint nil :type (or null after-breakpoint)))
+;;;
+(defun print-breakpoint-data (obj str n)
+  (declare (ignore n))
+  (format str "#<Breakpoint-Data ~S at ~S>"
+	  (debug-function-name
+	   (debug-function-from-pc (breakpoint-data-component obj)
+				   (breakpoint-data-offset obj)))
+	  (breakpoint-data-offset obj)))
+  
 (defstruct (breakpoint (:print-function print-breakpoint)
-		       (:constructor %make-breakpoint))
-  hook-function	      ;Function takes frame, breakpoint, and optional values.
-  what		      ;Code-location or debug-function.
-  kind		      ;:code-location, :function-start, or :function-end.
-  info		      ;User settable and usable information.
-  active-p)	      ;Whether this breakpoint is in effect.
-
+		       (:constructor %make-breakpoint
+				     (hook-function what kind %info)))
+  ;;
+  ;; This is the function invoked when execution encounters the breakpoint.  It
+  ;; takes a frame, the breakpoint, and optionally a list of values.  Values
+  ;; are supplied for :function-end breakpoints as values to return for the
+  ;; function containing the breakpoint.
+  (hook-function nil :type function)
+  ;;
+  ;; Code-location or debug-function.
+  (what nil :type (or code-location debug-function))
+  ;;
+  ;; :code-location, :function-start, or :function-end.
+  (kind nil :type (member :code-location :function-start :function-end))
+  ;;
+  ;; Status helps the user and the implementation.
+  (status :inactive :type (member :active :inactive :deleted))
+  ;;
+  ;; This is a backpointer to a breakpoint-data.
+  (internal-data nil :type (or null breakpoint-data))
+  ;;
+  ;; With code-locations whose type is :unknown-return, execution flows through
+  ;; starting at one of two instructions.  In this situation, we make two
+  ;; breakpoints, giving the user one, and link them together through this
+  ;; slot.  If execution goes from one instruction to the other, we must make
+  ;; sure we only invoke the hook-functions once.
+  (unknown-return-partner nil :type (or null breakpoint))
+  ;;
+  ;; This slot users can set with whatever information they find useful.
+  %info)
+;;;
 (defun print-breakpoint (obj str n)
   (declare (ignore n))
   (let ((what (breakpoint-what obj)))
@@ -581,11 +640,50 @@
 	      (code-location nil)
 	      (debug-function (breakpoint-kind obj))))))
 
+(setf (documentation 'breakpoint-hook-function 'function)
+  "Returns the breakpoint's function the system calls when execution encounters
+   the breakpoint, and it is active.  This is SETF'able.")
+
+(setf (documentation 'breakpoint-what 'function)
+  "Returns the breakpoint's what specification.")
+
+(setf (documentation 'breakpoint-kind 'function)
+  "Returns the breakpoint's kind specification.")
+
+;;; This is an internal structure.
+;;;
+(defstruct (after-breakpoint (:print-function print-after-breakpoint)
+			     (:constructor
+			      make-after-breakpoint
+			      (previous-data internal-data &optional partner)))
+  ;;
+  ;; This is the data for the location which this after-breakpoint follows.
+  ;; When execution flows through this after-breakpoint, the breakpoint
+  ;; mechanism re-establishes the break instruction at this location, and
+  ;; replaces the after-breakpoint's break instruction with the instruction
+  ;; that should run as part of the original program.
+  (previous-data nil :type breakpoint-data)
+  ;;
+  ;; This is a backpointer to a breakpoint-data.
+  (internal-data nil :type (or null breakpoint-data))
+  ;;
+  ;; When breakpoint is where a branching instruction used to be, partner is an
+  ;; after-breakpoint at the other code location at which execution could have
+  ;; gone.  In addition to what is describe for the previous slot, the
+  ;; breakpoint mechanism has to remove partner as well as this
+  ;; after-breakpoint.
+  (partner nil :type (or null after-breakpoint)))
+
+(defun print-after-breakpoint (obj str n)
+  (declare (ignore obj n))
+  (format str "#<After-Breakpoint ...>"))
+
 ;;;
 ;;; Code-locations.
 ;;;
 
-(defstruct (code-location (:print-function print-code-location))
+(defstruct (code-location (:print-function print-code-location)
+			  (:constructor nil))
   ;;
   ;; This is the debug-function containing code-location.
   (debug-function nil :type debug-function)
@@ -1447,47 +1545,48 @@
       (let ((vars (debug-function-debug-variables debug-function))
 	    (i 0)
 	    (len (length args))
-	    (res nil))
+	    (res nil)
+	    (optionalp nil))
 	(declare (type (or null simple-vector) vars))
 	(loop
 	  (when (>= i len) (return))
 	  (let ((ele (aref args i)))
-	    (if (symbolp ele)
-		(case ele
-		  (c::deleted
-		   ;; Deleted required arg at beginning of args array.
-		   (push :deleted res))
-		  (c::optional-args
-		   ;; When I fill this in, I can remove the (typep last 'cons)
-		   ;; below.
-		   )
-		  (c::supplied-p
-		   ;; supplied-p var immediately following keyword or optional.
-		   ;; Stick the extra var in the result element representing
-		   ;; the keyword or optional.
-		   ;; ACTUALLY, WE DON'T HANDLE OPTIONALS CORRECTLY YET. ???
-		   (let ((last (car res))
-			 (v (compiled-debug-function-lambda-list-var
-			     args (incf i) vars)))
-		     (if (typep last 'cons)
-			 (nconc last (list v))
-			 (setf (car res) (list :optional last v)))))
-		  (c::rest-arg
-		   (push (list :rest
-			       (compiled-debug-function-lambda-list-var
-				args (incf i) vars))
-			 res))
-		  (c::more-arg
-		   (error "I thought I'd never see a more-arg?"))
-		  (t
-		   ;; Keyword arg.
-		   (push (list :keyword
-			       ele
-			       (compiled-debug-function-lambda-list-var
-				args (incf i) vars))
-			 res)))
-		;; Required arg at beginning of args array.
-		(push (svref vars ele) res)))
+	    (cond
+	     ((symbolp ele)
+	      (case ele
+		(c::deleted
+		 ;; Deleted required arg at beginning of args array.
+		 (push :deleted res))
+		(c::optional-args
+		 (setf optionalp t))
+		(c::supplied-p
+		 ;; supplied-p var immediately following keyword or optional.
+		 ;; Stick the extra var in the result element representing
+		 ;; the keyword or optional, which is the previous one.
+		 (nconc (car res)
+			(list (compiled-debug-function-lambda-list-var
+			       args (incf i) vars))))
+		(c::rest-arg
+		 (push (list :rest
+			     (compiled-debug-function-lambda-list-var
+			      args (incf i) vars))
+		       res))
+		(c::more-arg
+		 (error "I thought I'd never see a more-arg?"))
+		(t
+		 ;; Keyword arg.
+		 (push (list :keyword
+			     ele
+			     (compiled-debug-function-lambda-list-var
+			      args (incf i) vars))
+		       res))))
+	     (optionalp
+	      ;; We saw an optional marker, so the following non-symbols are
+	      ;; indexes indicating optional variables.
+	      (push (list :optional (svref vars ele)) res))
+	     (t
+	      ;; Required arg at beginning of args array.
+	      (push (svref vars ele) res))))
 	  (incf i))
 	(values (nreverse res) t))))))
 
@@ -2248,7 +2347,7 @@
 ;;;
 (defun debug-variable-value (debug-var frame)
   "Returns the value stored for debug-variable in frame.  The value may be
-   invalid."
+   invalid.  This is SETF'able."
   (etypecase debug-var
     (compiled-debug-variable
      (check-type frame compiled-frame)
@@ -2306,7 +2405,9 @@
 				(sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
-      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
+      ((#.vm:any-reg-sc-number
+	#.vm:descriptor-reg-sc-number
+	#+rt #.vm:word-pointer-reg-sc-number)
        (system:without-gcing
 	(with-escaped-value (val)
 	  (make-lisp-obj val))))
@@ -2425,7 +2526,9 @@
 				(sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
-      ((#.vm:any-reg-sc-number #.vm:descriptor-reg-sc-number)
+      ((#.vm:any-reg-sc-number
+	#.vm:descriptor-reg-sc-number
+	#+rt #.vm:word-pointer-reg-sc-number)
        (system:without-gcing
 	(set-escaped-value
 	  (get-lisp-obj-address value))))
