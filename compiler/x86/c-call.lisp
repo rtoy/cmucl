@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.5 1997/11/04 09:10:59 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.6 1997/11/25 15:29:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,10 +160,6 @@
 	   (move eax-tn function)
 	   (inst call (make-fixup (extern-alien-name "call_into_c") :foreign)))
 	  (t
-	   (inst mov (make-ea :dword :disp (make-fixup
-					    (extern-alien-name
-					     "foreign_function_call_active")
-					    :foreign))  1)
 	   ;; Setup the NPX for C; all the FP registers need to be
 	   ;; empty; pop them all.
 	   (inst fstp fr0-tn)
@@ -193,11 +189,7 @@
 	       ;; The return result is in fr0.
 	       (inst fxch fr7-tn) ; move the result back to fr0
 	       (inst fldz)) ; insure no regs are empty
-	   
-	   (inst mov (make-ea :dword :disp (make-fixup
-					    (extern-alien-name
-					     "foreign_function_call_active")
-					    :foreign))  0)))))
+	   ))))
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
