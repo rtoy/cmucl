@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.23 2001/01/03 15:07:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.24 2001/01/19 23:19:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -399,7 +399,7 @@
 	  (:translate ash)
 	  (:policy :fast-safe)
 	  (:temporary (:sc non-descriptor-reg) ndesc)
-	  (:generator 3
+	  (:generator 5
 	    (sc-case amount
 	      (signed-reg
 	       (cond ((backend-featurep :sparc-v9)
@@ -447,17 +447,15 @@
   (frob fast-ash/unsigned=>unsigned unsigned-reg unsigned-num srl))
 
 ;; Some special cases where we know we want a left shift.  Just do the
-;; shift, instead of checking for the sign of the shift.  The case for
-;; a known constant shift is handled very nicely by the fast-ash VOP
-;; above, so there's nothing here for us to add.
+;; shift, instead of checking for the sign of the shift.
 (macrolet
     ((frob (name sc-type type result-type cost)
        `(define-vop (,name)
 	 (:note "inline ASH")
 	 (:translate ash)
 	 (:args (number :scs (,sc-type))
-	        (amount :scs (unsigned-reg)))
-	 (:arg-types ,type unsigned-num)
+	        (amount :scs (signed-reg unsigned-reg immediate)))
+	 (:arg-types ,type positive-fixnum)
 	 (:results (result :scs (,result-type)))
 	 (:result-types ,type)
 	 (:policy :fast-safe)
@@ -465,10 +463,16 @@
 	  ;; The result-type assures us that this shift will not
 	  ;; overflow. And for fixnum's, the zero bits that get
 	  ;; shifted in are just fine for the fixnum tag.
-	  (inst sll result number amount)))))
-  (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 2)
-  ;;(frob fast-ash-left/fixnum=>signed any-reg tagged-num signed-reg 1)
-  (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 2))
+	  (sc-case amount
+	   ((signed-reg unsigned-reg)
+	    (inst sll result number amount))
+	   (immediate
+	    (let ((amount (tn-value amount)))
+	      (assert (>= amount 0))
+	      (inst sll result number amount))))))))
+  (frob fast-ash-left/signed=>signed signed-reg signed-num signed-reg 3)
+  (frob fast-ash-left/fixnum=>fixnum any-reg tagged-num any-reg 2)
+  (frob fast-ash-left/unsigned=>unsigned unsigned-reg unsigned-num unsigned-reg 3))
 
 (defknown ash-right-signed ((signed-byte #.vm:word-bits)
 			    (and fixnum unsigned-byte))
@@ -489,14 +493,14 @@
 	 (:note "inline right ASH")
 	 (:translate ,trans)
 	 (:args (number :scs (,sc-type))
-	        (amount :scs (unsigned-reg immediate)))
-	 (:arg-types ,type unsigned-num)
+	        (amount :scs (signed-reg unsigned-reg immediate)))
+	 (:arg-types ,type positive-fixnum)
 	 (:results (result :scs (,sc-type)))
 	 (:result-types ,type)
 	 (:policy :fast-safe)
 	 (:generator ,cost
 	    (sc-case amount
-	     (unsigned-reg
+	     ((signed-reg unsigned-reg)
 		(inst ,shift-inst result number amount))
 	     (immediate
 	      (let ((amt (tn-value amount)))
@@ -510,8 +514,8 @@
     (:note "inline right ASH")
   (:translate ash-right-signed)
   (:args (number :scs (any-reg))
-	 (amount :scs (unsigned-reg immediate)))
-  (:arg-types tagged-num unsigned-num)
+	 (amount :scs (signed-reg unsigned-reg immediate)))
+  (:arg-types tagged-num positive-fixnum)
   (:results (result :scs (any-reg)))
   (:result-types tagged-num)
   (:temporary (:sc non-descriptor-reg :target result) temp)
@@ -520,7 +524,7 @@
     ;; Shift the fixnum right by the desired amount.  Then zap out the
     ;; 2 LSBs to make it a fixnum again.  (Those bits are junk.)
     (sc-case amount
-      (unsigned-reg
+      ((signed-reg unsigned-reg)
        (inst sra temp number amount))
       (immediate
        (inst sra temp number (tn-value amount))))
