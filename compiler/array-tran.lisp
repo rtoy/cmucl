@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.5 1990/11/16 06:01:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.6 1990/11/23 16:21:05 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -196,18 +196,18 @@
 		      (give-up "Cannot open-code creation of ~S" spec))
 	  (when (csubtypep eltype-type (specifier-type (car info)))
 	    (return (values-list (cdr info)))))
-      (let ((constructor
-	     `(truly-the
-	       ,spec
-	       (allocate-vector
-		,typecode
-		length
-		(truncate (+ (* ,(if (eq 'vm:simple-string-type typecode)
-				     '(1+ length)
-				     'length)
-				,element-size)
-			     (1- vm:word-bits))
-			  vm:word-bits)))))
+      (let* ((nwords-form
+	      (if (>= element-size vm:word-bits)
+		  `(* length ,(/ element-size vm:word-bits))
+		  (let ((elements-per-word (/ 32 element-size)))
+		    `(truncate (+ length
+				  ,(if (eq 'vm:simple-string-type typecode)
+				       elements-per-word
+				       (1- elements-per-word)))
+			       ,elements-per-word))))
+	     (constructor
+	      `(truly-the ,spec
+			  (allocate-vector ,typecode length ,nwords-form))))
 	(values
 	 (if (and default-initial-element
 		  (or (null initial-element)
@@ -231,7 +231,7 @@
     (give-up "Dimension list not constant; cannot open code array creation"))
   (let ((dims (continuation-value dims)))
     (unless (every #'integerp dims)
-      (give-up "Dimension list contains sometime other than an integer: ~S"
+      (give-up "Dimension list contains something other than an integer: ~S"
 	       dims))
     (if (= (length dims) 1)
 	`(make-array ',(car dims)
