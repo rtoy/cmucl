@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.22 1993/07/25 21:17:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.23 1993/08/23 01:35:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -968,11 +968,20 @@
 ;;;
 (defun set-leaf-value (node frame-ptr closure value)
   (let ((var (c::set-var node)))
-    (typecase var
+    (etypecase var
+      (c::lambda-var
+       (set-leaf-value-lambda-var node var frame-ptr closure value))
       (c::global-var
        (setf (symbol-value (c::global-var-name var)) value))
-      (c::lambda-var
-       (set-leaf-value-lambda-var node var frame-ptr closure value)))))
+      (c::dylan-var
+       (locally
+	 (declare (optimize (inhibit-warnings 3)))
+	 (setf (dylan::value-datum
+		(dylan::lookup-varinfo-value (c::dylan-var-name var)
+					     (dylan::find-module
+					      (c::dylan-var-module-name var))
+					     t))
+	       value))))))
 
 ;;; SET-LEAF-VALUE-LAMBDA-VAR -- Internal Interface.
 ;;;
@@ -1003,6 +1012,7 @@
 ;;; types:
 ;;;    constant   -- It knows its own value.
 ;;;    global-var -- It's either a value or function reference.  Get it right.
+;;;    dylan-var  -- Global dylan variable.  Just ask dylan.
 ;;;    local-var  -- This may on the stack or in the current closure, the
 ;;; 		     environment for the lambda INTERNAL-APPLY is currently
 ;;;		     executing.  If the leaf's home environment is the same
@@ -1027,7 +1037,7 @@
 ;;;
 (defun leaf-value (node frame-ptr closure)
   (let ((leaf (c::ref-leaf node)))
-    (typecase leaf
+    (etypecase leaf
       (c::constant
        (c::constant-value leaf))
       (c::global-var
@@ -1038,6 +1048,14 @@
 		   (symbol-function name)
 		   (fdefinition name)))
 	     (symbol-value (c::global-var-name leaf)))))
+      (c::dylan-var
+       (locally
+	 (declare (optimize (inhibit-warnings 3)))
+	 (dylan::value-datum
+	  (dylan::lookup-varinfo-value (c::dylan-var-name leaf)
+				       (dylan::find-module
+					(c::dylan-var-module-name leaf))
+				       t))))
       (c::lambda-var
        (leaf-value-lambda-var node leaf frame-ptr closure))
       (c::functional
