@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.25 1991/01/22 12:11:15 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.26 1991/01/30 23:21:37 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -36,6 +36,45 @@
 ;;; first value of its argument.  Ditto for Values with one arg.
 (def-source-transform identity (x) `(prog1 ,x))
 (def-source-transform values (x) `(prog1 ,x))
+
+;;; CONSTANTLY source transform  --  Internal
+;;;
+;;;    Bind the values and make a closure that returns them.
+;;;
+(def-source-transform constantly (value &rest values)
+  (let ((temps (loop repeat (1+ (length values))
+		     collect (gensym)))
+	(dum (gensym)))
+    `(let ,(loop for temp in temps and
+	         value in (list* value values)
+	         collect `(,temp ,value))
+       #'(lambda (&rest ,dum)
+	   (declare (ignore ,dum))
+	   (values ,@temps)))))
+
+
+;;; COMPLEMENT IR1 transform  --  Internal
+;;;
+;;;    If the function has a known number of arguments, then return a lambda
+;;; with the appropriate fixed number of args.  If the destination is a
+;;; FUNCALL, then do the &REST APPLY thing, and let MV optimization figure
+;;; things out.
+;;;
+(deftransform complement ((fun) * * :node node)
+  (multiple-value-bind (min max)
+		       (function-type-nargs (continuation-type fun))
+    (cond
+     ((and min (eql min max))
+      (let ((dums (loop repeat min collect (gensym))))
+	`#'(lambda ,dums (not (funcall fun ,@dums)))))
+     ((let* ((cont (node-cont node))
+	     (dest (continuation-dest cont)))
+	(and (combination-p dest)
+	     (eq (combination-fun dest) cont)))
+      '#'(lambda (&rest args)
+	   (not (apply fun args))))
+     (t
+      (give-up "Can't open-code COMPLEMENT of a non-fixed arg function.")))))
 
 
 ;;;; List hackery:
