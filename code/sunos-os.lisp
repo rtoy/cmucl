@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.6 1992/05/15 17:52:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sunos-os.lisp,v 1.7 1993/02/07 21:17:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,28 +21,20 @@
 (pushnew :sunos *features*)
 (setq *software-type* "SunOS")
 
-(defconstant foreign-segment-start #x00C00000) ; ### Not right???
-(defconstant foreign-segment-size  #x00400000)
-
 (defvar *software-version* nil "Version string for supporting software")
+
 (defun software-version ()
   "Returns a string describing version of the supporting software."
   (unless *software-version*
     (setf *software-version*
-	  (let ((version-line
-		 (with-output-to-string (stream)
-		   (run-program
-		    "/bin/sh"
-		    '("-c" "strings /vmunix|grep -i 'sunos release'")
-		    :output stream
-		    :pty nil
-		    :error nil))))
-	    (let* ((first-space (position #\Space version-line))
-		   (second-space (position #\Space version-line
-					   :start (1+ first-space)))
-		   (third-space (position #\Space version-line
-					  :start (1+ second-space))))
-	      (subseq version-line (1+ second-space) third-space)))))
+          (let ((version-line
+                 (with-output-to-string (stream)
+                   (run-program "/usr/bin/uname"
+                                '("-r" )
+                                :output stream
+                                :pty nil
+                                :error nil))))
+            (subseq version-line 0 (1- (length version-line))))))
   *software-version*)
 
 
@@ -52,7 +44,7 @@
 ;;; 
 (defun os-init ()
   ;; Decache version on save, because it might not be the same when we restart.
-  (setq *software-version* nil))
+  (setf *software-version* nil))
 
 ;;; GET-SYSTEM-INFO  --  Interface
 ;;;
