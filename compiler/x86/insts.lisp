@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.21 2001/05/08 12:32:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.22 2001/06/04 17:58:35 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -431,9 +431,25 @@
 								      dstate))
 		    (disassem:maybe-note-assembler-routine offset
 							   nil
-							   dstate)))
+							   dstate)
+		    (let ((offs (- offset disassem::nil-addr)))
+		      (when (typep offs 'offset)
+			(disassem::maybe-note-nil-indexed-symbol-slot-ref offs
+									  dstate)))))
 	      (princ offset stream))))))
   (write-char #\] stream))
+
+(defun print-imm-data (value stream dstate)
+  (let ((offset (- value disassem::nil-addr)))
+    (if (zerop offset)
+	(format stream "#x~X" value)
+	(format stream "~A" value))
+    (when (typep offset 'offset)
+      (or (disassem::maybe-note-nil-indexed-object offset dstate)
+	  (disassem::maybe-note-assembler-routine value stream dstate)
+	  (nth-value 1
+		     (disassem::note-code-constant-absolute offset
+							    dstate))))))
 
 (defun print-reg/mem (value stream dstate)
   (declare (type (or list reg) value)
@@ -586,6 +602,7 @@
 		 (disassem:read-suffix
 		  (width-bits (disassem:dstate-get-prop dstate 'width))
 		  dstate))
+  :printer #'print-imm-data
   )
 
 (disassem:define-argument-type signed-imm-data
