@@ -1222,10 +1222,11 @@
     (#.%function-closure-subtype
      (if (eval:interpreted-function-p subr)
 	 (multiple-value-bind
-	     (ig1 ig2 name)
+	     (def ignore name)
 	     (eval:interpreted-function-lambda-expression subr)
-	   (declare (ignore ig1 ig2))
-	   (format t "Interpreted Function ~S" name))
+	   (declare (ignore ignore))
+	   (let ((*print-level* 3))
+	     (format t "Interpreted Function ~S" (or name def))))
 	 (format t "Closure ~S"
 		 (%primitive header-ref name %function-name-slot))))
     (#.%function-closure-entry-subtype
