@@ -126,9 +126,10 @@
 	       (inst sli16 r (- n 16))
 	       (inst sli r n)))
 	  ((minusp n)
-	   (if (> n 15)
-	       (inst sari16 r (- n 16))
-	       (inst sari r n))))
+	   (let ((n (- n)))
+	     (if (> n 15)
+		 (inst sari16 r (- n 16))
+		 (inst sari r n)))))
 
     (unless (location= i r)
       (inst lr r i))))
