@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.25 1991/04/27 22:40:48 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.26 1991/05/05 02:21:17 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -595,8 +595,17 @@ static boolean gc_trigger_hit(context)
 #endif
 
 #ifdef ibmrt
-    /* ### Don't know where to look on the RT. */
-    badaddr = NULL;
+    if (!SymbolValue(PSEUDO_ATOMIC_ATOMIC))
+	/* If we are not pseudo-atomic, then we could only have hit the */
+	/* trigger if the allocation pointer points beyond the trigger. */
+	badaddr = (lispobj *)SymbolValue(ALLOCATION_POINTER);
+    else
+	/* Otherwise, we might be inside an allocator.  The best we can do */
+	/* is to try turning off the trigger and seeing if the problem goes */
+	/* away.  If it does, then we guessed right.  If it doesn't, we will */
+	/* end up back here, except current_auto_gc_trigger will be NULL, */
+	/* so we will take the sigbus at that time. */
+	return TRUE;
 #endif
 
     return (badaddr >= current_auto_gc_trigger &&
@@ -658,19 +667,23 @@ int (*handler)();
         sv.sv_handler = sigtrap_handler;
     else if (signal == SIGFPE)
         sv.sv_handler = sigfpe_handler;
+    else if (signal == SIGBUS || signal == SIGSEGV)
+        sv.sv_handler = sigbus_handler;
 #endif
 #ifdef sparc
     if (signal == SIGILL)
 	sv.sv_handler = sigill_handler;
     else if (signal == SIGEMT)
 	sv.sv_handler = sigemt_handler;
+    else if (signal == SIGBUS)
+        sv.sv_handler = sigbus_handler;
 #endif
 #ifdef ibmrt
     if (signal == SIGTRAP)
 	sv.sv_handler = sigtrap_handler;
-#endif
-    else if (signal == SIGBUS || signal == SIGSEGV)
+    else if (signal == SIGBUS)
         sv.sv_handler = sigbus_handler;
+#endif
     else if (handler == SIG_DFL || handler == SIG_IGN)
         sv.sv_handler = handler;
     else if (sigmask(signal)&BLOCKABLE)
