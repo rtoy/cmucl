@@ -7,12 +7,10 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.9 1991/04/23 17:01:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.10 1991/05/04 16:58:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.9 1991/04/23 17:01:34 ram Exp $
-;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
 (in-package "VM")
@@ -122,6 +120,14 @@
      (values (int-sap (current-dynamic-space-start))
 	     (dynamic-space-free-pointer)))))
 
+;;; SPACE-BYTES  --  Internal
+;;;
+;;;    Return the total number of bytes used in Space.
+;;;
+(defun space-bytes (space)
+  (multiple-value-bind (start end)
+		       (space-bounds space)
+    (- (sap-int end) (sap-int start))))
 
 ;;; ROUND-TO-DUALWORD  --  Internal
 ;;;
@@ -165,77 +171,81 @@
 (proclaim '(maybe-inline map-allocated-objects))
 (defun map-allocated-objects (fun space)
   (declare (type function fun) (type spaces space))
-  (multiple-value-bind (start end)
-		       (space-bounds space)
-    (declare (optimize (speed 3) (safety 0)))
-    (let ((current start)
-	  (prev nil))
-      (loop
-	(let* ((header (sap-ref-32 current 0))
-	       (header-type (logand header #xFF))
-	       (info (svref *room-info* header-type)))
-	  (cond
-	   ((or (not info)
-		(eq (room-info-kind info) :lowtag))
-	    (let ((size (* cons-size word-bytes)))
-	      (funcall fun
-		       (make-lisp-obj (logior (sap-int current)
-					      list-pointer-type))
-		       list-pointer-type
-		       size)
-	      (setq current (sap+ current size))))
-	   ((eql header-type closure-header-type)
-	    (let* ((obj (make-lisp-obj (logior (sap-int current)
-					       function-pointer-type)))
-		   (size (round-to-dualword
-			  (* (the fixnum (1+ (get-closure-length obj)))
-			     word-bytes))))
-	      (funcall fun obj header-type size)
-	      (setq current (sap+ current size))))
-	   ((eq (room-info-kind info) :structure)
-	    (let* ((obj (make-lisp-obj
-			 (logior (sap-int current) structure-pointer-type)))
-		   (size (round-to-dualword
-			  (* (+ (c::structure-length obj) 1) word-bytes))))
-	      (declare (fixnum size))
-	      (funcall fun obj header-type size)
-	      (assert (zerop (logand size lowtag-mask)))
-	      (when (> size 200000) (break "Implausible size, prev ~S" prev))
-	      (setq prev current)
-	      (setq current (sap+ current size))))
-	   (t
-	    (let* ((obj (make-lisp-obj
-			 (logior (sap-int current) other-pointer-type)))
-		   (size (ecase (room-info-kind info)
-			   (:fixed
-			    (assert (or (eql (room-info-length info)
-					     (1+ (get-header-data obj)))
-					(floatp obj)))
-			    (round-to-dualword
-			     (* (room-info-length info) word-bytes)))
-			   ((:vector :string)
-			    (vector-total-size obj info))
-			   (:header
-			    (round-to-dualword
-			     (* (1+ (get-header-data obj)) word-bytes)))
-			   (:code
-			    (+ (the fixnum
-				    (* (get-header-data obj) word-bytes))
-			       (round-to-dualword
-				(* (the fixnum
-					(%primitive code-code-size obj))
-				   word-bytes)))))))
-	      (declare (fixnum size))
-	      (funcall fun obj header-type size)
-	      (assert (zerop (logand size lowtag-mask)))
-	      (when (> size 200000) (break "Implausible size, prev ~S" prev))
-	      (setq prev current)
-	      (setq current (sap+ current size))))))
-	(unless (pointer< current end)
-	  (assert (not (pointer> current end)))
-	  (return)))
-
-      prev)))
+  (without-gcing
+    (multiple-value-bind (start end)
+			 (space-bounds space)
+      (declare (optimize (speed 3) (safety 0)))
+      (let ((current start)
+	    (prev nil))
+	(loop
+	  (let* ((header (sap-ref-32 current 0))
+		 (header-type (logand header #xFF))
+		 (info (svref *room-info* header-type)))
+	    (cond
+	     ((or (not info)
+		  (eq (room-info-kind info) :lowtag))
+	      (let ((size (* cons-size word-bytes)))
+		(funcall fun
+			 (make-lisp-obj (logior (sap-int current)
+						list-pointer-type))
+			 list-pointer-type
+			 size)
+		(setq current (sap+ current size))))
+	     ((eql header-type closure-header-type)
+	      (let* ((obj (make-lisp-obj (logior (sap-int current)
+						 function-pointer-type)))
+		     (size (round-to-dualword
+			    (* (the fixnum (1+ (get-closure-length obj)))
+			       word-bytes))))
+		(funcall fun obj header-type size)
+		(setq current (sap+ current size))))
+	     ((eq (room-info-kind info) :structure)
+	      (let* ((obj (make-lisp-obj
+			   (logior (sap-int current) structure-pointer-type)))
+		     (size (round-to-dualword
+			    (* (+ (c::structure-length obj) 1) word-bytes))))
+		(declare (fixnum size))
+		(funcall fun obj header-type size)
+		(assert (zerop (logand size lowtag-mask)))
+		#+nil
+		(when (> size 200000) (break "Implausible size, prev ~S" prev))
+		(setq prev current)
+		(setq current (sap+ current size))))
+	     (t
+	      (let* ((obj (make-lisp-obj
+			   (logior (sap-int current) other-pointer-type)))
+		     (size (ecase (room-info-kind info)
+			     (:fixed
+			      (assert (or (eql (room-info-length info)
+					       (1+ (get-header-data obj)))
+					  (floatp obj)))
+			      (round-to-dualword
+			       (* (room-info-length info) word-bytes)))
+			     ((:vector :string)
+			      (vector-total-size obj info))
+			     (:header
+			      (round-to-dualword
+			       (* (1+ (get-header-data obj)) word-bytes)))
+			     (:code
+			      (+ (the fixnum
+				      (* (get-header-data obj) word-bytes))
+				 (round-to-dualword
+				  (* (the fixnum
+					  (%primitive code-code-size obj))
+				     word-bytes)))))))
+		(declare (fixnum size))
+		(funcall fun obj header-type size)
+		(assert (zerop (logand size lowtag-mask)))
+		#+nil
+		(when (> size 200000)
+		  (break "Implausible size, prev ~S" prev))
+		(setq prev current)
+		(setq current (sap+ current size))))))
+	  (unless (pointer< current end)
+	    (assert (not (pointer> current end)))
+	    (return)))
+	
+	prev))))
 
 
 ;;;; MEMORY-USAGE:
@@ -330,15 +340,49 @@
 		summary-total-bytes summary-total-objects)))))
 
 
+;;; REPORT-SPACE-TOTAL  --  Internal
+;;;
+;;;    Report object usage for a single space.
+;;;
+(defun report-space-total (space-total cutoff)
+  (declare (list space-total) (type (or single-float null) cutoff))
+  (format t "~2&Breakdown for ~(~A~) space:~%" (car space-total))
+  (let* ((types (cdr space-total))
+	 (total-bytes (reduce #'+ (mapcar #'first types)))
+	 (total-objects (reduce #'+ (mapcar #'second types)))
+	 (cutoff-point (if cutoff
+			   (truncate (* (float total-bytes) cutoff))
+			   0))
+	 (reported-bytes 0)
+	 (reported-objects 0))
+    (declare (fixnum total-objects total-bytes cutoff-point reported-objects
+		     reported-bytes))
+    (loop for (bytes objects name) in types do
+      (when (<= bytes cutoff-point)
+	(format t "  ~10:D bytes for ~9:D other object~2:*~P.~%"
+		(- total-bytes reported-bytes)
+		(- total-objects reported-objects))
+	(return))
+      (incf reported-bytes bytes)
+      (incf reported-objects objects)
+      (format t "  ~10:D bytes for ~9:D ~(~A~) object~2:*~P.~%"
+	      bytes objects name))
+    (format t "  ~10:D bytes for ~9:D ~(~A~) object~2:*~P (space total.)~%"
+	    total-bytes total-objects (car space-total))))
+
+
 ;;; MEMORY-USAGE  --  Public
 ;;;
 (defun memory-usage (&key print-spaces (count-spaces '(:dynamic))
-			  (print-summary t))
+			  (print-summary t) cutoff)
   "Print out information about the heap memory in use.  :Print-Spaces is a list
   of the spaces to print detailed information for.  :Count-Spaces is a list of
   the spaces to scan.  For either one, T means all spaces (:Static, :Dyanmic
   and :Read-Only.)  If :Print-Summary is true, then summary information will be
-  printed.  The defaults print only summary information for dynamic space."
+  printed.  The defaults print only summary information for dynamic space.
+  If true, Cutoff is a fraction of the usage in a report below which types will
+  be combined as OTHER."
+  (declare (type (or single-float null) cutoff))
   (let* ((spaces (if (eq count-spaces t)
 		     '(:static :dynamic :read-only)
 		     count-spaces))
@@ -349,17 +393,7 @@
     (dolist (space-total totals)
       (when (or (eq print-spaces t)
 		(member (car space-total) print-spaces))
-	(format t "~2&Breakdown for ~(~A~) space:~2%" (car space-total))
-	(let ((total-objects 0)
-	      (total-bytes 0))
-	  (declare (fixnum total-objects total-bytes))
-	  (dolist (total (cdr space-total))
-	    (incf total-bytes (first total))
-	    (incf total-objects (second total))
-	    (format t "~%~A:~%    ~:D bytes, ~:D object~:P.~%"
-		    (third total) (first total) (second total)))
-	  (format t "~%Space total:~%    ~:D bytes, ~:D object~:P.~%"
-		  total-bytes total-objects))))
+	(report-space-total space-total cutoff)))
 
     (when print-summary (print-summary spaces totals)))
 
@@ -467,6 +501,7 @@
   "Print a breakdown by structure type of all the structures allocated in
   Space.  If TOP-N is true, print only information for the the TOP-N types with
   largest usage."
+  (format t "~2&~@[Top ~D ~]~(~A~) structure types:~%" top-n space)
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
 	(total-bytes 0))
@@ -501,17 +536,17 @@
 		(objects (cadr what)))
 	    (incf printed-bytes bytes)
 	    (incf printed-objects objects)
-	    (format t "~S: ~:D bytes, ~D object~:P.~%" (car what)
+	    (format t "  ~S: ~:D bytes, ~D object~:P.~%" (car what)
 		    bytes objects)))
 
 	(let ((residual-objects (- total-objects printed-objects))
 	      (residual-bytes (- total-bytes printed-bytes)))
 	  (unless (zerop residual-objects)
-	    (format t "Other types: ~:D bytes, ~D: object~:P.~%"
+	    (format t "  Other types: ~:D bytes, ~D: object~:P.~%"
 		    residual-bytes residual-objects))))
 
-      (format t "Structure total: ~:D bytes, ~:D object~:P.~%"
-	      total-bytes total-objects)))
+      (format t "  ~:(~A~) structure total: ~:D bytes, ~:D object~:P.~%"
+	      space total-bytes total-objects)))
 
   (values))
 
