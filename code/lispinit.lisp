@@ -20,7 +20,7 @@
 			       ++ +++ ** *** // ///))
 
 
-(in-package "SYSTEM")
+(in-package "SYSTEM" :nicknames '("SYS"))
 (export '(add-port-death-handler remove-port-death-handler sap-int
 	  int-sap sap-ref-8 sap-ref-16 sap-ref-32 without-gcing
 	  *in-the-compiler* compiler-version *pornography-of-death*
@@ -34,12 +34,12 @@
 	  *nameserverport* *usertypescript* *userwindow* *typescriptport*
 	  *task-self* *task-data* *task-notify* *file-input-handlers*
 	  with-interrupts with-enabled-interrupts enable-interrupt
-	  ignore-interrupt default-interrupt serve-all))
+	  ignore-interrupt default-interrupt))
 
 (in-package "EXTENSIONS")
 (export '(quit *prompt* print-herald save-lisp gc-on gc-off
 	       *before-save-initializations* *after-save-initializations*
-	       *editor-lisp-p* *clx-server-displays* *display-event-handlers*))
+	       *editor-lisp-p* *clx-server-displays*))
 
 (in-package "LISP")
 
@@ -107,27 +107,27 @@
 
 (defvar server-unique-object (cons 1 2))
 
-(defconstant lockout-interrupts (logior (mach:sigmask mach:sigint)
-					(mach:sigmask mach:sigquit)
-					(mach:sigmask mach:sigfpe)
-					(mach:sigmask mach:sigsys)
-					(mach:sigmask mach:sigpipe)
-					(mach:sigmask mach:sigalrm)
-					(mach:sigmask mach:sigurg)
-					(mach:sigmask mach:sigstop)
-					(mach:sigmask mach:sigtstp)
-					(mach:sigmask mach:sigcont)
-					(mach:sigmask mach:sigchld)
-					(mach:sigmask mach:sigttin)
-					(mach:sigmask mach:sigttou)
-					(mach:sigmask mach:sigio)
-					(mach:sigmask mach:sigxcpu)
-					(mach:sigmask mach:sigxfsz)
-					(mach:sigmask mach:sigvtalrm)
-					(mach:sigmask mach:sigprof)
-					(mach:sigmask mach:sigwinch)
-					(mach:sigmask mach:sigmsg)
-					(mach:sigmask mach:sigemsg)))
+(defconstant lockout-interrupts (logior (mach:sigmask :sigint)
+					(mach:sigmask :sigquit)
+					(mach:sigmask :sigfpe)
+					(mach:sigmask :sigsys)
+					(mach:sigmask :sigpipe)
+					(mach:sigmask :sigalrm)
+					(mach:sigmask :sigurg)
+					(mach:sigmask :sigstop)
+					(mach:sigmask :sigtstp)
+					(mach:sigmask :sigcont)
+					(mach:sigmask :sigchld)
+					(mach:sigmask :sigttin)
+					(mach:sigmask :sigttou)
+					(mach:sigmask :sigio)
+					(mach:sigmask :sigxcpu)
+					(mach:sigmask :sigxfsz)
+					(mach:sigmask :sigvtalrm)
+					(mach:sigmask :sigprof)
+					(mach:sigmask :sigwinch)
+					(mach:sigmask :sigmsg)
+					(mach:sigmask :sigemsg)))
 
 (defconstant interrupt-stack-size 4096
   "Size of stack for Unix interrupts.")
@@ -354,7 +354,7 @@
 ;;; dealing with interrupts and there funny at best.
 (defun ih-sigmsg (signal code scp)
   (declare (ignore signal code scp))
-  (mach:unix-sigsetmask (mach:sigmask mach:sigmsg))
+  (mach:unix-sigsetmask (mach:sigmask :sigmsg))
   (default-interrupt mach:sigmsg)
   (when *in-server*
     (setq *in-server* nil)
@@ -589,181 +589,6 @@
 ;;;
 (defsetf object-set-operation %set-object-set-operation
   "Sets the handler function for an object set operation.")
-
-;;;; Server function:
-;;;
-;;; SERVER makes use of a defined alien, server-event, that lives at address 0.
-;;; This is a bogus alien used just as a dynamic variable that is declared
-;;; appropriately for the compiler.  This alien variable is bound to stuff in
-;;; an alien stack by the same name, server-event, which contains elements much
-;;; bigger than necessary to accommodate whatever will come back in the future
-;;; from waiting across ports, sockets, file descriptors, etc.  The defined
-;;; alien operators allow easy access to server-event as different types of
-;;; event by declaring the necessary type for the compiler when the operator
-;;; is used.
-
-
-;;;    Currently the server message is 4k bytes, thus serving larger requests
-;;; is impossible.  If anyone is bothered by this, the size can be increased.
-;;; X events are only 24 bytes.
-;;; 
-
-(defconstant server-message-size 4096)
-(defalien server-message server-message (bytes server-message-size) 0)
-
-(define-alien-stack server-message server-message (bytes server-message-size))
-
-(defrecord server-message
-  (msg mach:msg #.(record-size 'mach:msg)))
-
-(defvar *file-input-handlers* ()
-  "Is an association list of file descriptors and functions to call when
-  input is available on the particular file descriptor.")
-
-(defvar *clx-server-displays* ()
-  "Is a list of CLX displays that may have some activity on them.")
-
-(defvar *display-event-handlers* nil
-  "This is an alist mapping displays to user functions to be called when
-   SYSTEM:SERVER notices input on a display connection.  Do not modify this
-   directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display should be
-   represented here only once.")
-
-
-;;; Default-Default-Handler  --  Internal
-;;;
-;;;    If no such operation defined, signal an error.
-;;;
-(defun default-default-handler (object)
-  (alien-bind ((msg (server-message-msg server-message)))
-    (error "No operation for ID ~D on ~S in ~S."
-	   (alien-access (mach:msg-id (alien-value msg))) object
-	   (car (gethash (alien-access (mach:msg-localport (alien-value msg)))
-			 *port-table*)))))
-
-
-;;; Server  --  Public
-;;;
-(defun server (&optional (timeout 0 todef))
-  "Receive on all ports and Xevents and dispatch to the appropriate handler
-  function.  If timeout is specified, server will wait the specified time
-  and then return, otherwise it will wait until something happens.  Server
-  returns T if something happened and NIL otherwise."
-  (cond ((dolist (d/h ext::*display-event-handlers* nil)
-	   (let ((d (car d/h)))
-	     (when (xlib::event-listen d)
-	       (handler-bind ((error #'(lambda (condx)
-					 (declare (ignore condx))
-					 (flush-display-events d))))
-		 (funcall (cdr d/h) d))
-	       (return t))))
-	 T)
-	(T
-	 (let* ((to (if todef (round (* timeout 1000000))))
-		(fd-mask 0)
-		(omask 0)
-		(value (catch 'server-catch
-			 (unwind-protect
-			     (progn
-			       (setq omask (mach:unix-sigsetmask
-					    (mach:sigmask mach:sigmsg)))
-			       (unless (grab-message-loop)
-				 (let ((*in-server* T))
-				   (enable-interrupt mach:sigmsg #'ih-sigmsg)
-				   (multiple-value-bind
-				       (to1 to2)
-				       (if todef (truncate to 1000000))
-				     (multiple-value-bind
-					 (nfd fdm)
-					 (get-fd-info)
-				       (mach:unix-sigsetmask 0)
-				       (multiple-value-bind
-					   (nfnd rfdm)
-					   (mach:unix-select nfd fdm 0 0
-							     to1 to2)
-					 (mach:unix-sigsetmask
-					  (mach:sigmask mach:sigmsg))
-					 (default-interrupt mach:sigmsg)
-					 (setq fd-mask rfdm)
-					 nfnd))))))
-			   (default-interrupt mach:sigmsg)
-			   (mach:unix-sigsetmask omask)))))
-	   (cond ((or (null value) (and todef (eq value 0))) NIL)
-		 ((eq value server-unique-object)
-		  (grab-message-loop)
-		  T)
-		 ((file-descriptor-ready fd-mask) T))))))
-
-;;; Get-fd-info turns the association list in *file-input-handlers*
-;;; into information that unix-select can be called with.
-(defun Get-fd-info ()
-  (do* ((fdl *file-input-handlers* (cdr fdl)) ; 
-	(FD (caar fdl) (caar fdl))
-	(mfd 0)
-	(fdm 0))
-       ((null fdl)
-	(values (1+ mfd) fdm))
-    (setq mfd (max mfd fd))
-    (setq fdm (logior fdm (ash 1 fd)))))
-
-;;; File-descriptor-ready is called when server determines that a file
-;;; descriptor has input ready on one ore more of them.  It calls the
-;;; appropriate handler with the file-descriptor as its argument.
-;;; It checks for an xevent first, so they are handled as quickly as
-;;; possible.
-(defun file-descriptor-ready (rfdm)
-  (do ((fd 0 (1+ fd))
-       (ms rfdm (ash ms -1)))
-      ((eq ms 0))
-    (when (/= (the fixnum (logand ms 1)) 0)
-      (let ((info (assoc fd *file-input-handlers* :test #'eq)))
-	(when info
-	  (funcall (cdr info) fd)))))
-  T)
-
-;;; Grab-message-loop calls the appropiate handler for an IPC message.
-(defun grab-message-loop ()
-  (do* ((gr (server-grab-message) (server-grab-message))
-	(flag (/= gr mach:rcv-timed-out)
-	      (if (/= gr mach:rcv-timed-out) t flag)))
-       ((= gr mach:rcv-timed-out) flag)))
-
-(defun server-grab-message ()
-  (with-stack-alien (sm server-message)
-    (alien-bind ((msg (server-message-msg (alien-value sm))))
-      (setf (alien-access (mach:msg-msgsize (alien-value msg)))
-	    server-message-size)
-      (setf (alien-access (mach:msg-localport (alien-value msg)))
-	    mach::port-enabled)
-      (let ((gr (mach:msg-receive (alien-value sm) mach::rcv-timeout 0)))
-	(when (eql gr mach:rcv-timed-out)
-	  (return-from server-grab-message gr))
-	(unless (eql gr mach:rcv-success)
-	  (gr-error 'mach:msg-receive gr))
-	(let* ((server-message (alien-value sm))
-	       (port (alien-access (mach:msg-localport (alien-value msg))))
-	       (id (alien-access (mach:msg-id (alien-value msg))))
-	       (x (gethash port *port-table*))
-	       (set (cdr x)))
-	  (unless x
-	    (error "~D is not known to server (operation: ~D)." port id))
-	  (let ((gr (funcall (gethash id (object-set-table set)
-				      (object-set-default-handler set))
-			     (car x))))
-	    (unless (eql gr mach:kern-success)
-	      (gr-error 'server gr)))))))
-  mach:kern-success)
-
-(defun serve-all (&optional (timeout 0))
-  "Serve-all calls server with the specified timeout.  If server does
-  something (returns T) it loops over server with timeout 0 until all
-  events have been served.  Serve-all returns T if server did something
-  and other NIL."
-  (do ((res NIL)
-       (sval (server timeout) (server 0)))
-      ((null sval) res)
-    (setq res T)))
-
 
 ;;;; Emergency Message Handling:
 ;;;
