@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.149 1998/03/26 14:07:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.150 1998/03/30 03:05:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1416,7 +1416,7 @@
 	   "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"
 	   "%CALLER-FRAME-AND-PC" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
 	   "%CLOSURE-INDEX-REF" "%COS" "%COS-QUICK" "%COSH" "%DEPOSIT-FIELD"
-	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%FUNCTION-HEADER-ARGLIST"
+	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%EXPM1" "%FUNCTION-HEADER-ARGLIST"
 	   "%FUNCTION-HEADER-NAME" "%FUNCTION-HEADER-TYPE" "%HYPOT" "%LDB"
 	   "%LOG" "%LOGB" "%LOG10" "%LOG1P" "%LONG-FLOAT"
 	   "%MAKE-COMPLEX" "%MAKE-FUNCALLABLE-INSTANCE" "%MAKE-RATIO"

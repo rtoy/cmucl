@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.27 1998/03/30 02:41:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.28 1998/03/30 03:05:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2484,9 +2484,9 @@
   (:generator 5
      (note-this-location vop :internal-error)
      (unless (zerop (tn-offset x))
-	     (inst fxch x)		; x to top of stack
-	     (unless (location= x y)
-		     (inst fst x)))	; maybe save it
+       (inst fxch x)		; x to top of stack
+       (unless (location= x y)
+	 (inst fst x)))	; maybe save it
      ;; Check for Inf or NaN
      (inst fxam)
      (inst fnstsw)
@@ -2515,6 +2515,68 @@
      DONE
      (unless (zerop (tn-offset y))
 	     (inst fstd y))))
+
+;;; Expm1 = exp(x) - 1.
+;;; Handles the following special cases:
+;;;   expm1(+Inf) is +Inf; expm1(-Inf) is -1.0; expm1(NaN) is NaN.
+(define-vop (fexpm1)
+  (:translate %expm1)
+  (:args (x :scs (double-reg) :target fr0))
+  (:temporary (:sc word-reg :offset eax-offset :from :eval :to :result) temp)
+  (:temporary (:sc long-reg :offset fr0-offset
+		   :from :argument :to :result) fr0)
+  (:temporary (:sc long-reg :offset fr1-offset
+		   :from :argument :to :result) fr1)
+  (:temporary (:sc long-reg :offset fr2-offset
+		   :from :argument :to :result) fr2)
+  (:results (y :scs (double-reg)))
+  (:arg-types double-float)
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:note "inline expm1 function")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:ignore temp)
+  (:generator 5
+     (note-this-location vop :internal-error)
+     (unless (zerop (tn-offset x))
+       (inst fxch x)		; x to top of stack
+       (unless (location= x y)
+	 (inst fst x)))	; maybe save it
+     ;; Check for Inf or NaN
+     (inst fxam)
+     (inst fnstsw)
+     (inst sahf)
+     (inst jmp :nc NOINFNAN)            ; Neither Inf or NaN.
+     (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
+     (inst and ah-tn #x02)              ; Test sign of Inf.
+     (inst jmp :z DONE)                 ; +Inf gives +Inf.
+     (inst fstp fr0)                    ; -Inf gives -1.0
+     (inst fld1)
+     (inst fchs)
+     (inst jmp-short DONE)
+     NOINFNAN
+     ;; Free two stack slots leaving the argument on top.
+     (inst fstp fr2)
+     (inst fstp fr0)
+     (inst fldl2e)
+     (inst fmul fr1)	; Now fr0 = x log2(e)
+     (inst fst fr1)
+     (inst frndint)
+     (inst fsub-sti fr1)
+     (inst fxch fr1)
+     (inst f2xm1)
+     (inst fscale)
+     (inst fxch fr1)
+     (inst fld1)
+     (inst fscale)
+     (inst fstp fr1)
+     (inst fld1)
+     (inst fsub fr1)
+     (inst fsubr fr2)
+     DONE
+     (unless (zerop (tn-offset y))
+       (inst fstd y))))
 
 (define-vop (flog)
   (:translate %log)
@@ -3538,6 +3600,68 @@
      DONE
      (unless (zerop (tn-offset y))
 	     (inst fstd y))))
+
+;;; Expm1 = exp(x) - 1.
+;;; Handles the following special cases:
+;;;   expm1(+Inf) is +Inf; expm1(-Inf) is -1.0; expm1(NaN) is NaN.
+(define-vop (fexpm1)
+  (:translate %expm1)
+  (:args (x :scs (long-reg) :target fr0))
+  (:temporary (:sc word-reg :offset eax-offset :from :eval :to :result) temp)
+  (:temporary (:sc long-reg :offset fr0-offset
+		   :from :argument :to :result) fr0)
+  (:temporary (:sc long-reg :offset fr1-offset
+		   :from :argument :to :result) fr1)
+  (:temporary (:sc long-reg :offset fr2-offset
+		   :from :argument :to :result) fr2)
+  (:results (y :scs (long-reg)))
+  (:arg-types long-float)
+  (:result-types long-float)
+  (:policy :fast-safe)
+  (:note "inline expm1 function")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:ignore temp)
+  (:generator 5
+     (note-this-location vop :internal-error)
+     (unless (zerop (tn-offset x))
+       (inst fxch x)		; x to top of stack
+       (unless (location= x y)
+	 (inst fst x)))	; maybe save it
+     ;; Check for Inf or NaN
+     (inst fxam)
+     (inst fnstsw)
+     (inst sahf)
+     (inst jmp :nc NOINFNAN)            ; Neither Inf or NaN.
+     (inst jmp :np NOINFNAN)            ; NaN gives NaN? Continue.
+     (inst and ah-tn #x02)              ; Test sign of Inf.
+     (inst jmp :z DONE)                 ; +Inf gives +Inf.
+     (inst fstp fr0)                    ; -Inf gives -1.0
+     (inst fld1)
+     (inst fchs)
+     (inst jmp-short DONE)
+     NOINFNAN
+     ;; Free two stack slots leaving the argument on top.
+     (inst fstp fr2)
+     (inst fstp fr0)
+     (inst fldl2e)
+     (inst fmul fr1)	; Now fr0 = x log2(e)
+     (inst fst fr1)
+     (inst frndint)
+     (inst fsub-sti fr1)
+     (inst fxch fr1)
+     (inst f2xm1)
+     (inst fscale)
+     (inst fxch fr1)
+     (inst fld1)
+     (inst fscale)
+     (inst fstp fr1)
+     (inst fld1)
+     (inst fsub fr1)
+     (inst fsubr fr2)
+     DONE
+     (unless (zerop (tn-offset y))
+       (inst fstd y))))
 
 (define-vop (flog)
   (:translate %log)
