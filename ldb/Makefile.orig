@@ -1,6 +1,5 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.16 1990/10/23 00:09:59 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.17 1990/11/28 11:11:06 wlott Exp $ */
 INCLS = -I.
-CFLAGS = -g ${INCLS}
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o vars.o assem.o parse.o interrupt.o test.o \
@@ -8,14 +7,17 @@ OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	regnames.o backtrace.o bitbash.o save.o purify.o socket.o
 
 #ifdef mips
+CFLAGS = -O ${INCLS}
 UNDEFSYMPATTERN=&
 ASSEMFILE='mips-assem.s'
 #endif
 #ifdef ibmrt
+CFLAGS = -g ${INCLS}
 UNDEFSYMPATTERN=_&
 ASSEMFILE='rt-assem.s'
 #endif
 #ifdef sparc
+CFLAGS = -g ${INCLS}
 UNDEFSYMPATTERN=_&
 ASSEMFILE='sparc-assem.s'
 #endif
