@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.76 2004/04/15 16:25:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.77 2004/04/16 20:20:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1386,7 +1386,6 @@ output to Output-stream"
 	(t
 	 (write-sequence buffer (echo-stream-output-stream stream)
 			 :start new-start :end (+ new-start bytes-read))
-	 (aver (= numbytes (+ new-start bytes-read)))
 	 numbytes)))))
 
 (defun %print-echo-stream (s stream d)
