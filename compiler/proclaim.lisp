@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.35 2001/03/04 20:12:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.36 2001/12/07 03:10:33 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -324,7 +324,7 @@
 (defun %declaim (x)
   (proclaim x))
 
-;;; %declaim  --  Interface
+;;; PROCLAIM  --  Public
 ;;;
 ;;;    This function is the guts of proclaim, since it does the global
 ;;; environment updating.
@@ -340,6 +340,26 @@
        (dolist (name args)
 	 (unless (symbolp name)
 	   (error "Variable name is not a symbol: ~S." name))
+	 (unless (or (member (info variable kind name) '(:global :special))
+		     ;; If we are still in cold-load, and the package system
+		     ;; is not set up, the global db will claim all variables
+		     ;; are keywords/constants, because all symbols have the
+		     ;; same package nil.  Proceed normally in this case:
+		     (null (symbol-package :end)))
+	   (cond
+	     ((eq name 'nil)
+	      (error "Nihil ex nihil, can't declare ~S special." name))
+	     ((eq name 't)
+	      (error "Veritas aeterna, can't declare ~S special." name))
+	     ((keywordp name)
+	      (error "Can't declare ~S special, it is a keyword." name))
+	     (t
+	      (cerror "Proceed anyway."
+		      "Trying to declare ~S special, which is ~A." name
+		      (ecase (info variable kind name)
+			(:constant "a constant")
+			(:alien "an alien variable")
+			(:macro "a symbol macro"))))))
 	 (clear-info variable constant-value name)
 	 (setf (info variable kind name) :special)))
       (type
