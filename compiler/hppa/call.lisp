@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.1 1992/07/13 03:48:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.2 1992/10/13 13:15:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,7 +202,7 @@
 	  csp-tn csp-tn)
     (when (ir2-environment-number-stack-p callee)
       (move nsp-tn nfp)
-      (inst addi (- (bytes-needed-for-non-descriptor-stack-frame))
+      (inst addi (bytes-needed-for-non-descriptor-stack-frame)
 	    nsp-tn nsp-tn))))
 
 ;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
@@ -597,8 +597,7 @@ default-value-8
     (move cfp-tn csp-tn)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
-	(inst addi (- (bytes-needed-for-non-descriptor-stack-frame))
-	      nsp-tn cur-nfp)))
+	(move cur-nfp nsp-tn)))
     (inst addi (- word-bytes other-pointer-type) return-pc-temp lip)
     (inst bv lip)
     (move old-fp-temp cfp-tn)
@@ -1174,12 +1173,18 @@ default-value-8
 ;;; supplied - fixed, and return a pointer that many words below the current
 ;;; stack top.
 ;;;
+(setf (info function source-transform 'c::%more-arg-context) nil)
+;;;
 (define-vop (more-arg-context)
+  (:policy :fast-safe)
+  (:translate c::%more-arg-context)
   (:args (supplied :scs (any-reg)))
-  (:arg-types positive-fixnum)
+  (:arg-types tagged-num (:constant fixnum))
   (:info fixed)
   (:results (context :scs (descriptor-reg))
 	    (count :scs (any-reg)))
+  (:result-types t tagged-num)
+  (:note "more-arg-context")
   (:generator 5
     (inst addi (fixnum (- fixed)) supplied count)
     (inst sub csp-tn count context)))
