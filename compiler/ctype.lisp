@@ -102,20 +102,29 @@
 	 (rest (function-type-rest type))
 	 (keyp (function-type-keyp type)))
     
-    (cond ((< nargs min-args)
-	   (note-lossage "Function called with ~R argument~:P, but wants at least ~R."
-			 nargs min-args))
-	  ((<= nargs max-args)
-	   (check-fixed-and-rest args (append required optional) rest))
-	  ((not (or keyp rest))
-	   (note-lossage "Function called with ~R argument~:P, but wants at most ~R."
-			 nargs max-args))
-	  ((and keyp (oddp (- nargs max-args)))
-	   (note-lossage "Function has an odd number of arguments in the keyword portion."))
-	  (t
-	   (check-fixed-and-rest args (append required optional) rest)
-	   (when keyp
-	     (check-keywords args max-args type))))
+    (cond
+     ((function-type-wild-args type)
+      (do ((i 1 (1+ i))
+	   (arg args (cdr arg)))
+	  ((null arg))
+	(check-arg (car arg) *wild-type* i)))
+     ((< nargs min-args)
+      (note-lossage
+       "Function called with ~R argument~:P, but wants at least ~R."
+       nargs min-args))
+     ((<= nargs max-args)
+      (check-fixed-and-rest args (append required optional) rest))
+     ((not (or keyp rest))
+      (note-lossage
+       "Function called with ~R argument~:P, but wants at most ~R."
+       nargs max-args))
+     ((and keyp (oddp (- nargs max-args)))
+      (note-lossage
+       "Function has an odd number of arguments in the keyword portion."))
+     (t
+      (check-fixed-and-rest args (append required optional) rest)
+      (when keyp
+	(check-keywords args max-args type))))
     
     (let* ((dtype (node-derived-type call))
 	   (return-type (function-type-returns type))
@@ -144,23 +153,52 @@
 ;;;
 ;;;    Check that the derived type of the continuation Cont is compatible with
 ;;; Type.  N is the arg number, for error message purposes.  We return true if
-;;; arg is definitely o.k.
+;;; arg is definitely o.k.  If the type is a magic CONSTANT-TYPE, then we check
+;;; for the argument being a constant value of the specified type.  If there is
+;;; a manfest type error (DERIVED-TYPE = NIL), then we flame about the asserted
+;;; type even when our type is satisfied under the test.
 ;;;
-(proclaim '(function check-arg-type (continuation type fixnum) void))
 (defun check-arg-type (cont type n)
-  (let ((ctype (continuation-type cont)))
-    (multiple-value-bind (int win)
-			 (funcall *test-function* ctype type)
-      (cond ((not win)
-	     (note-slime "Can't tell whether the ~:R argument is a ~S." n
-			 (type-specifier type))
-	     nil)
-	    ((not int)
-	     (note-lossage "The ~:R argument is a ~S, not a ~S." n
-			   (type-specifier ctype)
+  (declare (type continuation cont) (type ctype type) (type index n))
+  (cond
+   ((not (constant-type-p type))
+    (let ((ctype (continuation-type cont)))
+      (multiple-value-bind (int win)
+			   (funcall *test-function* ctype type)
+	(cond ((not win)
+	       (note-slime "Can't tell whether the ~:R argument is a ~S." n
 			   (type-specifier type))
-	     nil)
-	    (t t)))))
+	       nil)
+	      ((not int)
+	       (note-lossage "The ~:R argument is a ~S, not a ~S." n
+			     (type-specifier ctype)
+			     (type-specifier type))
+	       nil)
+	      ((eq ctype *empty-type*)
+	       (note-lossage "The ~:R argument is a ~S, not a ~S." n
+			     (type-specifier (continuation-proven-type cont))
+			     (type-specifier
+			      (continuation-asserted-type cont)))
+	       nil)
+	      (t t))))
+    ((not (constant-continuation-p cont))
+     (note-slime "The ~:R argument is not a constant." n)
+     nil)
+    (t
+     (let ((val (continuation-value cont))
+	   (type (constant-type-type type)))
+       (multiple-value-bind (res win)
+			    (ctypep val type)
+	 (cond ((not win)
+		(note-slime "Can't tell whether the ~:R argument is a ~
+		             constant ~S:~%  ~S"
+			    n (type-specifier type) val)
+		nil)
+	       ((not res)
+		(note-lossage "The ~:R argument is not a constant ~S:~%  ~S"
+			      n (type-specifier type) val)
+		nil)
+	       (t t))))))))
 
   
 ;;; Check-Fixed-And-Rest  --  Internal
@@ -200,15 +238,19 @@
       (check-arg-type k (specifier-type 'symbol) n)
       (cond ((not (check-arg-type k (specifier-type 'keyword) n)))
 	    ((not (constant-continuation-p k))
-	     (note-slime "The keyword for the ~:R argument is not a constant." n))
+	     (note-slime "The keyword for the ~:R argument is not a constant."
+			 n))
 	    (t
 	     (let* ((name (continuation-value k))
-		    (info (find name (function-type-keywords type) :key #'key-info-name)))
+		    (info (find name (function-type-keywords type)
+				:key #'key-info-name)))
 	       (cond ((not info)
 		      (unless (function-type-allowp type)
-			(note-lossage "~S is not a known argument keyword." name)))
+			(note-lossage "~S is not a known argument keyword."
+				      name)))
 		     (t
-		      (check-arg-type (second key) (key-info-type info) n)))))))))
+		      (check-arg-type (second key) (key-info-type info)
+				      n)))))))))
 
 
 ;;; Lambda-Result-Type  --  Internal
@@ -359,7 +401,8 @@
 		(let ((old (find-if
 			    #'(lambda (x)
 				(and (eq (approximate-key-info-name x) name)
-				     (= (approximate-key-info-position x) pos)))
+				     (= (approximate-key-info-position x)
+					pos)))
 			    (keys)))
 		      (val-type (continuation-type val))) 
 		  (cond (old
@@ -384,7 +427,8 @@
 		     (approximate-function-type function-type &optional
 						function function function)
 		     (values boolean boolean)))
-(defun valid-approximate-type (call-type type &optional (*test-function* #'types-intersect)
+(defun valid-approximate-type (call-type type &optional
+					 (*test-function* #'types-intersect)
 					 (*error-function* #'compiler-warning)
 					 (*warning-function* #'compiler-note))
   (let* ((*lossage-detected* nil)
@@ -395,6 +439,9 @@
 	 (max-args (+ min-args (length optional)))
 	 (rest (function-type-rest type))
 	 (keyp (function-type-keyp type)))
+
+    (when (function-type-wild-args type)
+      (return-from valid-approximate-type (values t t)))
 
     (let ((call-min (approximate-function-type-min-args call-type)))
       (when (< call-min min-args)
@@ -416,7 +463,8 @@
       (when (and keyp (> call-max max-args))
 	(check-approximate-keywords call-type max-args type)))
 
-    (check-approximate-fixed-and-rest call-type (append required optional) rest)
+    (check-approximate-fixed-and-rest call-type (append required optional)
+				      rest)
 
     (cond (*lossage-detected* (values nil t))
 	  (*slime-detected* (values nil nil))
@@ -451,7 +499,7 @@
   (let ((losers *empty-type*))
     (dolist (ctype call-types)
       (multiple-value-bind (int win)
-			   (funcall *test-function* ctype decl-type)			   
+			   (funcall *test-function* ctype decl-type)
 	(cond
 	 ((not win)
 	  (note-slime "Can't tell whether previous ~? argument type ~S is a ~S."
