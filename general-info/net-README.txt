@@ -33,16 +33,16 @@ FTP compressed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
-As of 5/27/92, the latest SunOS Sparc release is:
-    16d-sun4c_41.tar.Z (6.5 meg)
-    16d-extra-sun4c_41.tar.Z (3.5 meg)
+As of 8/6/92, the latest SunOS Sparc release is:
+    16e-sun4c_41.tar.Z (6.5 meg)
+    16e-extra-sun4c_41.tar.Z (3.5 meg)
 
 The first file holds binaries and documentation for the basic Lisp system,
 while the second `-extra' file contains the Hemlock editor, the graphical
 inspector and the CLX interface to X11.  The basic configuration takes 16
 megabytes of disk space; adding the extras takes another 8 megabytes.  For
-installation directions, see the section "site initialization" in README file
-at the root of the tree.
+installation directions, see the section "site initialization" in the README
+file at the root of the tree.
 
 If poor network connections make it difficult to transfer a 10 meg file, the
 release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
@@ -57,12 +57,6 @@ is enough volume to warrant a comp.lang.lisp.cmu.
 SunOS credit:
 
 The SunOS support was written by Miles Bader and Ted Dunning.
-
-SPARC Notes:
-
-We have not done much SPARC-specific tuning.  Performance will improve from
-10-30% when we add low-level optimizations such as instruction scheduling.  At
-least 16 meg of memory is recommended, and more is better.
 
 Site initialization:
 
@@ -81,7 +75,10 @@ output is to overwrite library:lisp.core.  To avoid overwriting the running
 Lisp image, any existing image is renamed to `lisp.core.BAK'; this file may be
 manually deleted to save disk space.
 
-TMPFS NOTE:
+SunOS/SPARC Notes:
+
+At least 16 meg of memory is recommended, and more is better.  Your system
+maintainer may need to configure extra paging space for large Lisp application.
 
 It is not possible to mmap a file in a tmpfs filesystem.  If /tmp is a "tmpfs"
 filesystem, then you must setenv CMUCL_EMPTYFILE to the pathname of some file
@@ -107,8 +104,8 @@ packages: PCL and CLX.  Although these packages are copyrighted, they may be
 freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
-".lisp" source files used to build version 16d:
-    16d-source.tar.Z (3.6 meg)
+".lisp" source files used to build version 16e:
+    16e-source.tar.Z (3.6 meg)
 
 All of our files (including the release area) are actually in the AFS file
 system.  On the release machines, the FTP server's home is the release
