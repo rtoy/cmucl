@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.30 1993/08/19 23:10:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.31 1993/08/21 09:57:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,9 +386,8 @@
 
 (defun %print-block (s stream d)
   (declare (ignore d))
-  (format stream "#<Block ~X, Start = c~D>" (system:%primitive make-fixnum s)
-	  (cont-num (block-start s))))
-
+  (print-unreadable-object (s stream :type t :identity t)
+    (format stream "Start = c~D" (cont-num (block-start s)))))
 
 ;;; The Block-Annotation structure is shared (via :include) by different
 ;;; block-info annotation structures so that code (specifically control
