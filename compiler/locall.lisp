@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.16 1991/03/10 18:35:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.17 1991/04/04 14:10:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -268,19 +268,13 @@
   (loop
     (unless (component-new-functions component) (return))
     (let ((fun (pop (component-new-functions component))))
-      (cond ((eq (functional-kind fun) :deleted))
-	    ((and (null (leaf-refs fun))
-		  (ecase (functional-kind fun)
-		    ((nil :escape :cleanup) t)
-		    ((:optional :top-level) nil)))
-	     (delete-functional fun))
-	    (t
-	     (when (lambda-p fun)
-	       (push fun (component-lambdas component)))
-	     (local-call-analyze-1 fun)
-	     (when (lambda-p fun)
-	       (maybe-let-convert fun))))))
-
+      (unless (eq (functional-kind fun) :deleted)
+	(when (lambda-p fun)
+	  (push fun (component-lambdas component)))
+	(local-call-analyze-1 fun)
+	(when (lambda-p fun)
+	  (maybe-let-convert fun)))))
+  
   (undefined-value))
 
 
@@ -608,12 +602,21 @@
 ;;; Component-Lambdas.  We set Component-Reanalyze to true to indicate that the
 ;;; DFO should be recomputed.
 ;;;
+;;;    If the lambda is is a different component than the call, then we call
+;;; JOIN-COMPONENTS.  This only happens before the FIND-INITIAL-DFO in block
+;;; compilation.
+;;;
 (defun insert-let-body (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (setf (lambda-call-lexenv fun) (node-lexenv call))
   (let* ((call-block (node-block call))
 	 (bind-block (node-block (lambda-bind fun)))
 	 (component (block-component call-block)))
+    (let ((fun-component (block-component bind-block)))
+      (unless (eq fun-component component)
+	(assert (eq (component-kind component) :initial))
+	(join-components component fun-component)))
+
     (let ((*current-component* component))
       (node-ends-block call))
     (setf (component-lambdas component)
