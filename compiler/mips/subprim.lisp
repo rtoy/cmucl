@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.7 1990/04/25 23:34:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.8 1990/04/25 23:40:24 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -85,7 +85,7 @@
 
 (define-vop (foreign-symbol-address)
   (:info foreign-symbol)
-  (:result (res :scs (sap-reg)))
+  (:results (res :scs (sap-reg)))
   (:generator 2
     (inst li res (make-fixup foreign-symbol :foreign))))
 
