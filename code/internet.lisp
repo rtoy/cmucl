@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.10 1992/07/15 11:38:40 garland Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.11 1992/07/15 11:43:13 garland Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,9 +23,10 @@
 
 (export '(htonl ntohl htons ntohs lookup-host-entry host-entry host-entry-name
 	  host-entry-aliases host-entry-addr-list host-entry-addr
-	  create-inet-socket connect-to-inet-socket create-inet-listener
-	  accept-tcp-connection close-socket ipproto-tcp ipproto-udp inaddr-any
-	  add-oob-handler remove-oob-handler remove-all-oob-handlers
+	  create-unix-socket connect-to-unix-socket create-inet-socket
+	  connect-to-inet-socket create-inet-listener accept-tcp-connection
+	  close-socket ipproto-tcp ipproto-udp inaddr-any add-oob-handler
+	  remove-oob-handler remove-all-oob-handlers
 	  send-character-out-of-band))
 
 
