@@ -7,17 +7,15 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.21 1991/04/20 14:20:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.22 1991/05/08 16:30:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.21 1991/04/20 14:20:06 ram Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
 ;;;
 ;;; Written by Scott Fahlman and Rob MacLachlan.
-;;; Modified by Bill Chiles to adhere to
+;;; Modified by Bill Chiles to adhere to the wall.
 ;;;
 (in-package "LISP")
 (export '(defvar defparameter defconstant when unless setf
@@ -169,15 +167,37 @@
 					 'define-setf-method
 					 :environment environment)
       `(eval-when (load compile eval)
-	 (setf (info setf inverse ',access-fn) nil)
-	 (setf (info setf expander ',access-fn)
-	       #'(lambda (,whole ,environment)
-		   ,@local-decs
-		   (block ,access-fn ,body)))
-	 ,@(when doc
-	     `((setf (documentation ',access-fn 'setf) ,doc)))
-	 ',access-fn))))
+	 (%define-setf-macro
+	  ',access-fn
+	  #'(lambda (,whole ,environment)
+	      ,@local-decs
+	      (block ,access-fn ,body))
+	  nil
+	  ',doc)))))
 
+
+;;; %DEFINE-SETF-MACRO  --  Internal
+;;;
+;;;    Do stuff for defining a setf macro.
+;;;
+(defun %define-setf-macro (name expander inverse doc)
+  (cond ((not (fboundp `(setf ,name))))
+	((info function accessor-for name)
+	 (warn "Defining setf macro for destruct slot accessor; redefining as ~
+	        a normal function:~%  ~S"
+	       name)
+	 (c::define-function-name name))
+	((not (eq (symbol-package name) (symbol-package 'aref)))
+	 (warn "Defining setf macro for ~S, but ~S is fbound."
+	       name `(setf ,name))))
+  (when (or inverse (info setf inverse name))
+    (setf (info setf inverse name) inverse))
+  (when (or expander (info setf expander name))
+    (setf (info setf expander name) expander))
+  (when doc
+    (setf (documentation name 'setf) doc))
+  name)
+  
 
 ;;;; Destructuring-bind
 
@@ -470,8 +490,9 @@
     (cond ((symbolp form)
 	   (let ((new-var (gensym)))
 	     (values nil nil (list new-var) `(setq ,form ,new-var) form)))
-	  ((atom form)
-	   (error "~S illegal atomic form for GET-SETF-METHOD." form))
+	  ((and environment
+		(assoc (car form) (c::lexenv-functions environment)))
+	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
 	  ;;
 	  ;; ### Bootstrap hack...
 	  ;; Ignore any DEFSETF info for structure accessors.
@@ -531,12 +552,9 @@
   details."
   (cond ((not (listp (car rest)))
 	 `(eval-when (load compile eval)
-	    (setf (info setf inverse ',access-fn) ',(car rest))
-	    (setf (info setf expander ',access-fn) nil)
-	    ,@(if (and (car rest) (stringp (cadr rest)))
-		  `((eval-when (load eval)
-		      (%put ',access-fn '%setf-documentation ,(cadr rest)))))
-	    ',access-fn))
+	    (%define-setf-macro ',access-fn nil ',(car rest)
+				,(when (and (car rest) (stringp (cadr rest)))
+				   `',(cadr rest)))))
 	((and (listp (car rest)) (cdr rest) (listp (cadr rest)))
 	 (if (not (= (length (cadr rest)) 1))
 	     (cerror "Ignore the extra items in the list."
@@ -544,32 +562,26 @@
 	 (multiple-value-bind (setting-form-generator doc)
 			      (defsetter access-fn rest)
 	   `(eval-when (load compile eval)
-	      (setf (info setf inverse ',access-fn) nil)
-	      (setf (info setf expander ',access-fn)
-		    #'(lambda (access-form environment)
-			(declare (ignore environment))
-			(do* ((args (cdr access-form) (cdr args))
-			      (dummies nil (cons (gensym) dummies))
-			      (newval-var (gensym))
-			      (new-access-form nil))
-			     ((atom args)
-			      (setq new-access-form 
-				    (cons (car access-form) dummies))
-			      (values
-			       dummies
-			       (cdr access-form)
-			       (list newval-var)
-			       (funcall (function ,setting-form-generator)
-					new-access-form newval-var)
-			       new-access-form)))))
-	      ,@(if doc
-		    `((eval-when (load eval)
-			(setf (info setf documentation ',access-fn) ',doc)))
-		    `((eval-when (load eval)
-			(or (clear-info setf documentation ',access-fn)
-			    (setf (info setf documentation ',access-fn)
-				  nil)))))
-	      ',access-fn)))
+	      (%define-setf-macro
+	       ',access-fn
+	       #'(lambda (access-form environment)
+		   (declare (ignore environment))
+		   (do* ((args (cdr access-form) (cdr args))
+			 (dummies nil (cons (gensym) dummies))
+			 (newval-var (gensym))
+			 (new-access-form nil))
+			((atom args)
+			 (setq new-access-form 
+			       (cons (car access-form) dummies))
+			 (values
+			  dummies
+			  (cdr access-form)
+			  (list newval-var)
+			  (funcall (function ,setting-form-generator)
+				   new-access-form newval-var)
+			  new-access-form))))
+	       nil
+	       ',doc))))
 	(t (error "Ill-formed DEFSETF for ~S." access-fn))))
 
 (defmacro setf (&rest args &environment env)
@@ -577,33 +589,31 @@
   is the value that is supposed to go into that place.  Returns the last
   value.  The place argument may be any of the access forms for which SETF
   knows a corresponding setting form."
-  (let ((temp (length args)))
-    (cond ((= temp 2)
-	   (cond ((atom (car args))
-		  `(setq ,(car args) ,(cadr args)))
-		 ((info function accessor-for (caar args))
-		  `(funcall #'(setf ,(caar args)) ,(cadr args) ,@(cdar args)))
-		 ((setq temp (info setf inverse (caar args)))
-		  `(,temp ,@(cdar args) ,(cadr args)))
-		 (t (multiple-value-bind (dummies vals newval setter getter)
-					 (get-setf-method (car args) env)
-		      (declare (ignore getter))
-		      (do* ((d dummies (cdr d))
-			    (v vals (cdr v))
-			    (let-list nil))
-			   ((null d)
-			    (setq let-list
-				  (nreverse (cons (list (car newval)
-							(cadr args))
-						  let-list)))
-			    `(let* ,let-list ,setter))
-			(setq let-list
-			      (cons (list (car d) (car v)) let-list)))))))
-	  ((oddp temp) 
-	   (error "Odd number of args to SETF."))
-	  (t (do ((a args (cddr a)) (l nil))
-		 ((null a) `(progn ,@(nreverse l)))
-	       (setq l (cons (list 'setf (car a) (cadr a)) l)))))))
+  (let ((nargs (length args)))
+    (cond
+     ((= nargs 2)
+      (if (atom (car args))
+	  `(setq ,(car args) ,(cadr args))
+	  (multiple-value-bind (dummies vals newval setter getter)
+			       (get-setf-method (car args) env)
+	    (declare (ignore getter))
+	    (do* ((d dummies (cdr d))
+		  (v vals (cdr v))
+		  (let-list nil))
+		 ((null d)
+		  (setq let-list
+			(nreverse (cons (list (car newval)
+					      (cadr args))
+					let-list)))
+		  `(let* ,let-list ,setter))
+	      (setq let-list
+		    (cons (list (car d) (car v)) let-list))))))
+     ((oddp nargs) 
+      (error "Odd number of args to SETF."))
+     (t
+      (do ((a args (cddr a)) (l nil))
+	  ((null a) `(progn ,@(nreverse l)))
+	(setq l (cons (list 'setf (car a) (cadr a)) l)))))))
 
 
 (defmacro psetf (&rest args &environment env)
@@ -947,39 +957,35 @@
 	  ,v))
 
 
-;;; Evil hack invented by the gnomes of Vassar Street.  The function
-;;; arg must be constant.  Get a setf method for this function, pretending
-;;; that the final (list) arg to apply is just a normal arg.  If the
-;;; setting and access forms produced in this way reference this arg at
-;;; the end, then just splice the APPLY back onto the front and the right
-;;; thing happens.
-
+;;; Evil hack invented by the gnomes of Vassar Street.  The function arg must
+;;; be constant.  Get a setf method for this function, pretending that the
+;;; final (list) arg to apply is just a normal arg.  If the setting and access
+;;; forms produced in this way reference this arg at the end, then just splice
+;;; the APPLY back onto the front and the right thing happens.
+;;;
+;;; We special-case uses functions in the Lisp package so that APPLY AREF works
+;;; even though %ASET takes the new-value last.  (there is (SETF AREF) as well
+;;; as a setf method, etc.)
+;;;
 (define-setf-method apply (function &rest args &environment env)
-  (if (and (listp function)
-	   (= (list-length function) 2)
-	   (eq (first function) 'function)
-	   (symbolp (second function)))
-      (setq function (second function))
-      (error
-       "Setf of Apply is only defined for function args of form #'symbol."))
-  (multiple-value-bind (dummies vals newval setter getter)
-		       (get-setf-method (cons function args) env)
-    ;; Special case aref and svref.
-    (cond ((or (eq function 'aref) (eq function 'svref))
-	   (let ((nargs (subseq setter 0 (1- (length setter))))
-		 (fcn (if (eq function 'aref) 'lisp::%apply-aset 'lisp::%apply-svset)))
-	     (values dummies vals newval
-		     `(apply (function ,fcn) ,(car newval) ,@(cdr nargs))
-		     `(apply (function ,function) ,@(cdr getter)))))
-	  ;; Make sure the place is one that we can handle.
-	  (T (unless (and (eq (car (last args)) (car (last vals)))
-			  (eq (car (last getter)) (car (last dummies)))
-			  (eq (car (last setter)) (car (last dummies))))
-	       (error "Apply of ~S not understood as a location for Setf."
-		      function))
-	     (values dummies vals newval
-		     `(apply (function ,(car setter)) ,@(cdr setter))
-		     `(apply (function ,(car getter)) ,@(cdr getter)))))))
+  (unless (and (listp function)
+	       (= (list-length function) 2)
+	       (eq (first function) 'function)
+	       (symbolp (second function)))
+    (error "Setf of Apply is only defined for function args like #'symbol."))
+  (let ((function (second function)))
+    (multiple-value-bind
+	(dummies vals newval setter getter)
+	(if (eq (symbol-package function) (symbol-package 'aref))
+	    (get-setf-method-inverse (cons function args) `((setf ,function)) t)
+	    (get-setf-method (cons function args) env))
+      (unless (and (eq (car (last args)) (car (last vals)))
+		   (eq (car (last getter)) (car (last dummies)))
+		   (eq (car (last setter)) (car (last dummies))))
+	(error "Apply of ~S not understood as a location for Setf." function))
+      (values dummies vals newval
+	      `(apply (function ,(car setter)) ,@(cdr setter))
+	      `(apply (function ,(car getter)) ,@(cdr getter))))))
 
 
 ;;; Special-case a BYTE bytespec so that the compiler can recognize it.
