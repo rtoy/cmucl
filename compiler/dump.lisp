@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.15 1990/10/10 22:02:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.16 1990/10/11 14:33:27 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -606,11 +606,13 @@
 	      (eq-save-object x file))
 |#
 	     (t
-	      (compiler-error
-	       "This object cannot be dumped into a fasl file:~% ~S"
-	       x))))))
+	      ;;
+	      ;; This probably never happens, since bad things are detected
+	      ;; during IR1 conversion.
+	      (error "This object cannot be dumped into a fasl file:~% ~S"
+		     x))))))
 
-  (undefined-value))
+  (undefined-value)
 
 
 ;;; Sub-Dump-Object  --  Internal
@@ -705,7 +707,7 @@
 ;;;
 (defun load-time-eval (x file)
   (when *compile-to-lisp*
-    (compiler-error "#,~S in a bad place." (third x)))
+    (error "#,~S in a bad place." (third x)))
   (assemble-one-lambda (cadr x))
   (dump-fop 'lisp::fop-funcall file)
   (dump-byte 0 file))
@@ -964,8 +966,7 @@
   (unless #-new-compiler (zerop (%primitive header-ref
 					    array %array-displacement-slot))
           #+new-compiler (not (lisp::%array-displaced-p array))
-    (compiler-error
-     "Attempt to dump an array with a displacement, you lose big."))
+    (error "Attempt to dump an array with a displacement, you lose big."))
   (let ((rank (array-rank array)))
     (dotimes (i rank)
       (dump-integer (array-dimension array i) file))
@@ -1008,16 +1009,9 @@
     (dump-fop 'lisp::fop-int-vector file)
     (quick-dump-number len 4 file)
     (dump-byte size file)
-    #+new-compiler
-    (if (eq target-byte-order native-byte-order)
-	(system:output-raw-bytes (fasl-file-stream file)
-				 vec 0 bytes)
-	(compiler-error "Can't byte-swap on the MIPS yet."))
-    #-new-compiler
     (cond ((or (eq target-byte-order native-byte-order)
 	       (= size 8))
-	   (dotimes (i bytes)
-	     (dump-byte (%primitive typed-vref 3 vec i) file)))
+	   (system:output-raw-bytes (fasl-file-stream file) vec 0 bytes))
 	  ((> size 8)
 	   (ecase target-byte-order
 	     (:little-endian
