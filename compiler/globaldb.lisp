@@ -213,10 +213,13 @@
 ;;; %Define-Info-Type  --  Internal
 ;;;
 ;;;    If there is no such type, create it.  In any case, set the type
-;;; specifier for the value.  The class must exist.
+;;; specifier for the value.  The class must exist.  We bump *TYPE-COUNTER* to
+;;; after our number so that it won't be reused by any new info type
+;;; definition.
 ;;;
 (defun %define-info-type (class type type-spec number)
   (declare (simple-string class type) (type type-number number))
+  (setq *type-counter* (max *type-counter* (1+ number)))
   (let* ((class-info (class-info-or-lose class))
 	 (old (find-type-info type class-info))
 	 (res (or old
