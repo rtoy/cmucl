@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.32 2001/01/05 05:43:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.33 2001/05/14 14:22:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -463,7 +463,8 @@ to skip undefined symbols which don't have an address."
 			    (merge-pathnames *command-line-utility-name*
 					     "path:")
 			    #+hpux "library:cmucl.orig")
-			   (env ext:*environment-list*))
+			   (env ext:*environment-list*)
+		           (verbose *load-verbose*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
   specified as namestrings or as pathnames.  The libraries argument should be a
@@ -478,8 +479,9 @@ to skip undefined symbols which don't have an address."
 	(error-output (make-string-output-stream))
 	(files (if (atom files) (list files) files)))
 
-    (format t ";;; Running library:load-foreign.csh...~%")
-    (force-output)
+    (when verbose
+      (format t ";;; Running library:load-foreign.csh...~%")
+      (force-output))
     #+hpux
     (dolist (f files)
       (with-open-file (stream f :element-type '(unsigned-byte 16))
@@ -532,7 +534,9 @@ to skip undefined symbols which don't have an address."
 	(setf *previous-linked-object-file* output-file)
 	(when old-file
 	  (unix:unix-unlink old-file)))))
-  (format t ";;; Done.~%"))
+  (when verbose
+    (format t ";;; Done.~%")
+    (force-output)))
 
 
 (export '(alternate-get-global-address))
@@ -616,7 +620,8 @@ to skip undefined symbols which don't have an address."
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file nil)
-			   (env ext:*environment-list*))
+			   (env ext:*environment-list*)
+		           (verbose *load-verbose*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
   specified as namestrings or as pathnames.  The libraries argument should be a
@@ -632,9 +637,11 @@ to skip undefined symbols which don't have an address."
   (let ((output-file (pick-temporary-file-name
 		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
- 
-    (format t ";;; Running ~A...~%" *dso-linker*)
-    (force-output)
+
+    (when verbose
+      (format t ";;; Running ~A...~%" *dso-linker*)
+      (force-output))
+    
     (let ((proc (ext:run-program
 		 *dso-linker*
 		 (list*
@@ -667,5 +674,7 @@ to skip undefined symbols which don't have an address."
       (load-object-file output-file)
       (unix:unix-unlink output-file)
       ))
-  (format t ";;; Done.~%"))
+  (when verbose
+    (format t ";;; Done.~%")
+    (force-output)))
 )
