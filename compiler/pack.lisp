@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.38 1991/07/10 17:52:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.39 1991/07/17 23:05:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,42 +379,43 @@
 ;;;    If load TN packing fails, try to give a helpful error message.  We find
 ;;; a TN in each location that conflicts, and print it.
 ;;;
-(defun failed-to-pack-load-tn-error (sc op)
-  (declare (type sc sc) (type tn-ref op))
+(defun failed-to-pack-load-tn-error (scs op)
+  (declare (list scs) (type tn-ref op))
   (collect ((used)
 	    (unused))
-    (let* ((sb (sc-sb sc))
-	   (confs (finite-sb-live-tns sb)))
-      (assert (eq (sb-kind sb) :finite))
-      (dolist (el (sc-locations sc))
-	(let ((conf (load-tn-conflicts-in-sc op sc el t)))
-	  (if conf
-	      (used (describe-tn-use el conf op))
-	      (loop for i from el
-		as victim = (svref confs i)
-		repeat (sc-element-size sc) do
-		(when (and victim (eq (tn-kind victim) :component))
-		  (used (describe-tn-use el victim op))
-		  (return t))
-		finally (unused el))))))
-	
+    (dolist (sc scs)
+      (let* ((sb (sc-sb sc))
+	     (confs (finite-sb-live-tns sb)))
+	(assert (eq (sb-kind sb) :finite))
+	(dolist (el (sc-locations sc))
+	  (let ((conf (load-tn-conflicts-in-sc op sc el t)))
+	    (if conf
+		(used (describe-tn-use el conf op))
+		(loop for i from el
+		      as victim = (svref confs i)
+		      repeat (sc-element-size sc) do
+		  (when (and victim (eq (tn-kind victim) :component))
+		    (used (describe-tn-use el victim op))
+		    (return t))
+		  finally (unused el)))))))
+      
     (multiple-value-bind (arg-p n more-p costs load-scs incon)
 			 (get-operand-info op)
-      (declare (ignore costs load-scs))
-      (assert (not more-p))
-      (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
-             ~:[result~;argument~] to~@
-	     the ~S VOP,~@
-	     ~:[since all SC elements are in use:~:{~%~@?~}~%~;~
-	     ~:*but these SC elements are not in use:~%  ~S~%Bug?~*~]~
-	     ~:[~;~@
-	     Current cost info inconsistent with that in effect at compile ~
-	     time.  Recompile.~%Compilation order may be incorrect.~]"
-	     (sc-name sc)
-	     n arg-p
-	     (vop-info-name (vop-info (tn-ref-vop op)))
-	     (unused) (used)
-	     incon)))
+	(declare (ignore costs load-scs))
+	(assert (not more-p))
+	(error "Unable to pack a Load-TN in SC ~{~A~#[~^~;, or ~:;,~]~} ~
+		for the ~:R ~:[result~;argument~] to~@
+		the ~S VOP,~@
+		~:[since all SC elements are in use:~:{~%~@?~}~%~;~
+		~:*but these SC elements are not in use:~%  ~S~%Bug?~*~]~
+		~:[~;~@
+		Current cost info inconsistent with that in effect at compile ~
+		time.  Recompile.~%Compilation order may be incorrect.~]"
+	       (mapcar #'sc-name scs)
+	       n arg-p
+	       (vop-info-name (vop-info (tn-ref-vop op)))
+	       (unused) (used)
+	       incon)))
   (undefined-value))
 
 
@@ -891,7 +892,6 @@
     (if (and (eq target-sb (sc-sb sc))
 	     (or (eq (sb-kind target-sb) :unbounded)
 		 (member loc (sc-locations sc)))
-	     (not (member loc (sc-reserve-locations sc)))
 	     (= (sc-element-size target-sc) (sc-element-size sc))
 	     (not (conflicts-in-sc tn sc loc))
 	     (zerop (mod loc (sc-alignment sc))))
@@ -1001,6 +1001,12 @@
 (defvar *live-block*)
 (defvar *live-vop*)
 
+;;; If we unpack some TNs, then we mark all affected blocks by sticking them in
+;;; this hash-table.  This is initially null.  We create the hashtable if we do
+;;; any unpacking.
+;;;
+(defvar *repack-blocks*)
+(declaim (type (or hash-table null) *repack-blocks*))
 
 ;;; Init-Live-TNs  --  Internal
 ;;;
@@ -1178,97 +1184,93 @@
       (return loc))))
 
 
-(defevent spill-conditional-arg-tn
-	  "Spilled a TN that was an arg to a :CONDITIONAL VOP.")
+(defevent unpack-tn "Unpacked a TN to satisfy operand SC restriction.")
 
-;;; SPILL-CONDITIONAL-ARG-TN  --  Internal
+;;; UNPACK-TN  --  Internal
 ;;;
-;;;    Fix things up when we spill a TN for loading of an argument to a
-;;; conditional VOP.  We have to insert a block on the branch target path that
-;;; restores the spilled value.  In addition to inserting a block in the IR1
-;;; flow graph, we must also insert an IR2 block into the emit order and frob
-;;; the assembly level control flow by emitting or modifying branches.
+;;;    Make TN's location the same as for its save TN (allocating a save TN if
+;;; necessary.)  Delete any save/restore code that has been emitted thus far.
+;;; Mark all blocks containing references as needing to be repacked.
 ;;;
-;;;    We change the conditional's target label to be the new block's label.
-;;; We insert the new block in the emit order immediately after the conditional
-;;; block.  In order to do this, we must insert a branch at the end of the
-;;; conditional block if it currently drops through.
-;;;
-(defun spill-conditional-arg-tn (victim vop)
-  (declare (type tn victim) (type vop vop))
-  (let* ((info-args (vop-codegen-info vop))
-	 (lab (first info-args))
-	 (node (vop-node vop))
-	 (2block (vop-block vop))
-	 (block (ir2-block-block 2block))
-	 (succ (find lab (block-succ block) :key #'block-label))
-	 (new (insert-cleanup-code block succ node
-				   "<conditional spill hack>"))
-	 (new-2block (make-ir2-block new)))
-    (event spill-conditional-arg-tn node)
-    (setf (block-info new) new-2block)
-    (setf (first info-args) (block-label new))
-    (emit-operand-load node new-2block (tn-save-tn victim) victim nil)
-    (vop branch node new-2block lab)
-    
-    (let ((next-lab (block-label (ir2-block-block (ir2-block-next 2block)))))
-      (add-to-emit-order new-2block 2block)
-      (unless (eq (vop-info-name (vop-info (ir2-block-last-vop 2block)))
-		  'branch)
-	(vop branch node 2block next-lab)))
-    (undefined-value)))
+(defun unpack-tn (tn)
+  (event unpack-tn)
+  (let ((stn (or (tn-save-tn tn)
+		 (pack-save-tn tn))))
+    (setf (tn-sc tn) (tn-sc stn))
+    (setf (tn-offset tn) (tn-offset stn))
+    (flet ((zot (refs)
+	     (do ((ref refs (tn-ref-next ref)))
+		 ((null ref))
+	       (let ((vop (tn-ref-vop ref)))
+		 (if (eq (vop-info-name (vop-info vop)) 'move-operand)
+		     (delete-vop vop)
+		     (setf (gethash (vop-block vop) *repack-blocks*) t))))))
+      (zot (tn-reads tn))
+      (zot (tn-writes tn))))
 
+  (undefined-value))
 
-(defevent spill-tn "Spilled a TN to satisfy operand SC restriction.")
+(defevent unpack-fallback "Unpacked some random operand TN.")
 
-;;; Spill-And-Pack-Load-TN  --  Internal
+;;; UNPACK-FOR-LOAD-TN  --  Internal
 ;;;
-;;;     Handle the case of Pack-Load-TN where there isn't any location free
-;;; that we can pack into.  What we do is spill some live TN to memory, and
-;;; then pack the load TN in the freed location.
+;;;     Called by Pack-Load-TN where there isn't any location free that we can
+;;; pack into.  What we do is move some live TN in one of the specified SCs to
+;;; memory, then mark this block all blocks that reference the TN as needing
+;;; repacking.  If we suceed, we throw to UNPACKED-TN.  If we fail, we return
+;;; NIL.
 ;;;
-;;; When we find any location in SC that isn't in use within the VOP, we spill
-;;; the TN in that location.  There must be some TN live in every location,
-;;; since normal load TN packing failed.
+;;; We can unpack any live TN that appears in the NORMAL-TNs list (isn't wired
+;;; or restricted.)  We prefer to unpack TNs that are not used by the VOP.  If
+;;; we can't find any such TN, then we unpack some random argument or result
+;;; TN.  The only way we can fail is if all locations in SC are used by
+;;; load-TNs or temporaries in VOP.
 ;;;
-;;; We never spill component TNs, since there are used magically within VOPs.
-;;; Spilling is done using the same mechanism as register saving.  We mark the
-;;; spilled TN for the debugger, so that it doesn't think it is valid when the
-;;; value has been moved elsewhere.
-;;;
-(defun spill-and-pack-load-tn (sc op)
+(defun unpack-for-load-tn (sc op)
   (declare (type sc sc) (type tn-ref op))
-  (let ((vop (tn-ref-vop op))
-	(sb (sc-sb sc)))
-    
-    (dolist (loc (sc-locations sc)
-		 (failed-to-pack-load-tn-error sc op))
-      (declare (type index loc))
-      (unless (load-tn-conflicts-in-sc op sc loc t)
-	(let ((spills (delete-duplicates
-		       (loop for i from loc
-			     as victim = (svref (finite-sb-live-tns sb) i)
-			     repeat (sc-element-size sc)
-			     when victim
-			     collect victim))))
-	  (assert spills)
-	  (unless (find :component spills :key #'tn-kind)
-	    (dolist (victim spills)
-	      (event spill-tn (vop-node vop))
-	      (basic-save-tn victim vop)
-	      (note-spilled-tn victim vop)
-	      (when (eq (template-result-types (vop-info vop)) :conditional)
-		(spill-conditional-arg-tn victim vop)))
+  (let ((sb (sc-sb sc))
+	(normal-tns (ir2-component-normal-tns
+		     (component-info *compile-component*)))
+	(fallback nil))
+    (flet ((unpack-em (victims)
+	     (unless *repack-blocks*
+	       (setq *repack-blocks* (make-hash-table :test #'eq)))
+	     (setf (gethash (vop-block (tn-ref-vop op)) *repack-blocks*) t)
+	     (dolist (victim victims)
+	       (unpack-tn victim))
+	     (throw 'unpacked-tn nil)))
+      (dolist (loc (sc-locations sc))
+	(declare (type index loc))
+	(block SKIP
+	  (collect ((victims nil adjoin))
+	    (loop for i from loc
+	      as victim = (svref (finite-sb-live-tns sb) i)
+	      repeat (sc-element-size sc) do
+	      (when victim
+		(unless (find-in #'tn-next victim normal-tns)
+		  (return-from SKIP))
+		(victims victim)))
 	    
-	    (let ((res (make-tn 0 :load nil sc)))
-	      (setf (tn-offset res) loc)
-	      (return res))))))))
+	    (let ((conf (load-tn-conflicts-in-sc op sc loc t)))
+	      (cond ((not conf)
+		     (unpack-em (victims)))
+		    ((eq conf :overflow))
+		    ((not fallback)
+		     (if (find conf (victims))
+			 (setq fallback (victims))
+			 (setq fallback (list conf)))))))))
+      
+      (when fallback
+	(event unpack-fallback)
+	(unpack-em fallback))))
+
+  nil)
 
 
 ;;; Pack-Load-TN  --  Internal
 ;;;
-;;;    Try to pack a load TN in the SCs indicated by Load-SCs.  If this fails,
-;;; then we let Spill-And-Pack-Load-TN do its thing.  We return the packed load
+;;;    Try to pack a load TN in the SCs indicated by Load-SCs.  If we run out
+;;; of SCs, then we unpack some TN and try again.  We return the packed load
 ;;; TN.
 ;;;
 ;;; Note: we allow a Load-TN to be packed in the target location even if that
@@ -1285,31 +1287,38 @@
     (compute-live-tns (vop-block vop) vop))
   
   (let* ((tn (tn-ref-tn op))
-	 (ptype (tn-primitive-type tn)))
-    (let ((scs (svref load-scs (sc-number (tn-sc tn))))
-	  (allowed nil))
+	 (ptype (tn-primitive-type tn))
+	 (scs (svref load-scs (sc-number (tn-sc tn)))))
+    (let ((current-scs scs)
+	  (allowed ()))
       (loop
-	(when (null scs)
-	  (unless allowed (no-load-scs-allowed-by-primitive-type-error op))
-	  (return (spill-and-pack-load-tn allowed op)))
-	
-	(let* ((sc (svref (backend-sc-numbers *backend*) (pop scs)))
-	       (target (find-load-tn-target op sc)))
-	  (when (or target (sc-allowed-by-primitive-type sc ptype))
-	    (setq allowed sc)
-	    (let ((loc (or target
-			   (select-load-tn-location op sc))))
-	      (when loc
-		(let ((res (make-tn 0 :load nil sc)))
-		  (setf (tn-offset res) loc)
-		  (return res))))))))))
+	(cond
+	 ((null current-scs)
+	  (unless allowed
+	    (no-load-scs-allowed-by-primitive-type-error op))
+	  (dolist (sc allowed (failed-to-pack-load-tn-error allowed op))
+	    (when (unpack-for-load-tn sc op) (return)))
+	  (setq current-scs scs  allowed ()))
+	(t
+	 (let* ((sc (svref (backend-sc-numbers *backend*) (pop current-scs)))
+		(target (find-load-tn-target op sc)))
+	   (when (or target (sc-allowed-by-primitive-type sc ptype))
+	     (let ((loc (or target
+			    (select-load-tn-location op sc))))
+	       (when loc
+		 (let ((res (make-tn 0 :load nil sc)))
+		   (setf (tn-offset res) loc)
+		   (return res))))
+	     (push sc allowed)))))))))
 
 
 ;;; Check-Operand-Restrictions  --  Internal
 ;;;
 ;;;    Scan a list of load-SCs vectors and a list of TN-Refs threaded by
 ;;; TN-Ref-Across.  When we find a reference whose TN doesn't satisfy the
-;;; restriction, we pack a Load-TN and load the operand into it.
+;;; restriction, we pack a Load-TN and load the operand into it.  If a load-tn
+;;; has already been allocated, we can assume that the restriction is
+;;; satisfied.
 ;;;
 (proclaim '(inline check-operand-restrictions))
 (defun check-operand-restrictions (scs ops)
@@ -1317,9 +1326,13 @@
   (do ((scs scs (cdr scs))
        (op ops (tn-ref-across op)))
       ((null scs))
-    (let ((ref-scn (sc-number (tn-sc (tn-ref-tn op)))))
-      (unless (eq (svref (car scs) ref-scn) t)
-	(setf (tn-ref-load-tn op) (pack-load-tn (car scs) op)))))
+    (let* ((load-tn (tn-ref-load-tn op))
+	   (load-scs (svref (car scs)
+			    (sc-number (tn-sc (or load-tn (tn-ref-tn op)))))))
+      (if load-tn
+	  (assert (eq load-scs t))
+	  (unless (eq load-scs t)
+	    (setf (tn-ref-load-tn op) (pack-load-tn (car scs) op))))))
   (undefined-value))
 	
 
@@ -1330,13 +1343,14 @@
 ;;; later, and our conflict analysis is a backward scan.
 ;;;
 (defun pack-load-tns (block)
-  (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
-      ((null vop))
-    (let ((info (vop-info vop)))
-      (check-operand-restrictions (vop-info-result-load-scs info)
-				  (vop-results vop))
-      (check-operand-restrictions (vop-info-arg-load-scs info)
-				  (vop-args vop))))
+  (catch 'unpacked-tn
+    (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
+	((null vop))
+      (let ((info (vop-info vop)))
+	(check-operand-restrictions (vop-info-result-load-scs info)
+				    (vop-results vop))
+	(check-operand-restrictions (vop-info-arg-load-scs info)
+				    (vop-args vop)))))
   (undefined-value))
 
 
@@ -1419,9 +1433,12 @@
     (add-location-conflicts original sc offset)))
 
 
+(defevent repack-block "Repacked a block due to TN unpacking.")
+
 ;;; Pack  --  Interface
 ;;;
 (defun pack (component)
+  (assert (not *in-pack*))
   (let ((*in-pack* t)
 	(optimize (policy nil (or (>= speed cspeed) (>= space cspeed))))
 	(2comp (component-info component)))
@@ -1480,15 +1497,27 @@
 	(pack-tn tn nil)))
     ;;
     ;; Do load TN packing and emit saves.
-    (let ((*live-block* nil)
-	  (*live-vop* nil))
-      (cond ((and optimize pack-optimize-saves)
-	     (optimized-emit-saves component)
-	     (do-ir2-blocks (block component)
-	       (pack-load-tns block)))
-	    (t
-	     (do-ir2-blocks (block component)
-	       (emit-saves block)
-	       (pack-load-tns block)))))
-    
+    (let ((*repack-blocks* nil))
+      (let ((*live-block* nil)
+	    (*live-vop* nil))
+	(cond ((and optimize pack-optimize-saves)
+	       (optimized-emit-saves component)
+	       (do-ir2-blocks (block component)
+		 (pack-load-tns block)))
+	      (t
+	       (do-ir2-blocks (block component)
+		 (emit-saves block)
+		 (pack-load-tns block)))))
+      (when *repack-blocks*
+	(loop
+	  (when (zerop (hash-table-count *repack-blocks*)) (return))
+	  (let ((*live-block* nil)
+		(*live-vop* nil))
+	    (maphash #'(lambda (block v)
+			 (declare (ignore v))
+			 (remhash block *repack-blocks*)
+			 (event repack-block)
+			 (pack-load-tns block))
+		     *repack-blocks*)))))
+
     (undefined-value)))
