@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.2 1990/05/24 17:46:05 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.3 1990/09/08 11:00:32 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -7,7 +7,9 @@
 
 int foreign_function_call_active;
 
+#ifdef mips
 unsigned long saved_global_pointer;
+#endif
 
 lispobj *current_control_stack_pointer;
 lispobj *current_control_frame_pointer;
@@ -29,8 +31,10 @@ globals_init()
 	/* Space, stack, and free pointer vars are initialized by
 	   validate() and coreparse(). */
 
+#ifdef mips
 	/* Get the current value of GP. */
 	saved_global_pointer = current_global_pointer();
+#endif
 
 	/* Set foreign function call active. */
 	foreign_function_call_active = 1;

@@ -1,8 +1,10 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.7 1990/08/30 16:39:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.8 1990/09/08 10:59:34 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
+#ifdef mips
 #include <mips/cpu.h>
+#endif
 
 #include "lisp.h"
 #include "ldb.h"
@@ -29,6 +31,7 @@ struct sigcontext *context;
 
     printf("Hit with %s, code = %d, context = 0x%x\n", signames[signal], code, context);
 
+#ifdef mips
     if (context->sc_cause & CAUSE_BD)
         ptr = (unsigned long *)(context->sc_pc + 4);
     else
@@ -146,6 +149,7 @@ struct sigcontext *context;
                 break;
         }
     }
+#endif
 
     mask = sigsetmask(0);
 
@@ -158,6 +162,7 @@ struct sigcontext *context;
 
 #define FIXNUM_VALUE(lispobj) (((int)lispobj)>>2)
 
+#ifdef mips
 static sigfpe_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
@@ -216,6 +221,7 @@ struct sigcontext *context;
     else
         context->sc_pc += 4;
 }
+#endif
 
 
 
@@ -249,15 +255,18 @@ test_init()
 
     install_handler(SIGINT, signal_handler);
     install_handler(SIGTRAP, signal_handler);
+#ifdef mips
     install_handler(SIGFPE, sigfpe_handler);
+#endif
 }
 
 
+#ifdef mips
 cacheflush()
 {
     /* This is supposed to be defined, but is not. */
 }
-
+#endif
 
 lispobj debug_print(string)
 lispobj string;

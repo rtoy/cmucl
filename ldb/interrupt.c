@@ -1,9 +1,11 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.7 1990/07/18 10:52:17 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.8 1990/09/08 11:00:52 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
 #include <signal.h>
+#ifdef mips
 #include <mips/cpu.h>
+#endif
 
 #include "lisp.h"
 #include "ldb.h"
@@ -78,8 +80,10 @@ struct sigcontext *context;
                 current_control_frame_pointer[2] =
                     (lispobj)context->sc_regs[CODE];
 
+#ifdef mips
 		/* Restore the GP */
 		set_global_pointer(saved_global_pointer);
+#endif
 
 		/* Do dynamic binding of the active interrupt context index
 		   and save the context in the context array. */
