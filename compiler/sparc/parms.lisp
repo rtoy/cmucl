@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.36 2002/10/24 20:38:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.37 2002/10/25 21:49:08 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,6 +278,7 @@
     unix::*interrupt-pending*
 
     ;; Foreign linkage stuff
+    #+linkage-table
     lisp::*linkage-table-data*
     ))
 
