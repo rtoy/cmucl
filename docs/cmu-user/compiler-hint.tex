@@ -3095,9 +3095,7 @@ Although they are not specially implemented, \code{short-float} and
 synonyms for the \code{single-float} and \code{double-float} types,
 respectively.
 
-Some versions of \cmucl{} include extra support for floating
-point arithmetic.  In particular, if \code{*features*} includes
-\kwd{propagate-float-type}, list-style float type specifiers such as
+In \cmucl{}, list-style float type specifiers such as
 \w{\code{(single-float 0.0 1.0)}} will be used to good effect.
 
 For example, in this function,
@@ -3121,13 +3119,9 @@ Many union types are also supported so that
 
 has the inferred type \code{(or (integer 11 11) (integer 15 15)
   (integer 21 21) (integer 25 25))}.  This also works for
-floating-point numbers.  Member types, however, are not because in
-general the member elements do not have to be numbers.  Thus,
-instead of \code{(member 1 4)}, you should write \code{(or (integer
-  1 1) (integer 4 4))}.
+floating-point numbers.  Member types are also supported.
   
-In addition, if \kwd{propagate-fun-type} is in \code{*features*},
-\python{} knows how to infer types for many mathematical functions
+\cmucl{} can also infer types for many mathematical functions
 including square root, exponential and logarithmic functions,
 trignometric functions and their inverses, and hyperbolic functions
 and their inverses.  For numeric code, this can greatly enhance
@@ -3140,8 +3134,8 @@ a complex-valued number.
 For example, consider the function
 \begin{example}
   (defun fun (x)
-    (declare (type (single-float 0f0 100f0) x))
-    (values (sqrt x) (log x 10f0)))
+    (declare (type (single-float (0f0) 100f0) x))
+    (values (sqrt x) (log x)))
 \end{example}
 With this declaration, the compiler can determine that the argument
 to \code{sqrt} and \code{log} are always non-negative so that the result 
@@ -3150,11 +3144,9 @@ function is derived to be \code{(values (single-float 0f0 10f0)
     (single-float * 2f0))}.
 
 If the declaration were reduced to just \w{\code{(declare
-    single-float x)}}, the argument to \code{sqrt} and \code{log}
+    (single-float x))}}, the argument to \code{sqrt} and \code{log}
 could be negative.  This forces the use of the generic versions of
 these functions because the result could be a complex number.
-
-Union types are not yet supported for functions.  
 
 We note, however, that proper interval arithmetic is not fully
 implemented in the compiler so the inferred types may be slightly in
@@ -3177,6 +3169,40 @@ descriptor representation.  See sections \ref{specialized-array-types},
 
 \xlref{ieee-float} for information on the extensions to support IEEE
 floating point.
+
+\subsubsection{Signed Zeroes and Special Functions}
+
+\cmucl{} supports IEEE signed zeroes.  In typical usage, the signed
+zeroes are not a problem and can be treated as an unsigned zero.
+However, some of the special functions have branch points at zero, so
+care must be taken.
+
+For example, suppose we have the function
+\begin{example}
+  (defun fun (x)
+    (declare (type (single-float 0f0) x))
+    (log x))
+\end{example}
+The derived result of the function is \code{(OR SINGLE-FLOAT
+(COMPLEX SINGLE-FLOAT))} because the declared values for
+\code{x} includes both $-0.0$ and $0.0$ and \code{(log -0.0)} is
+actually a complex number.  Because of this, the generic complex log
+routine is used.
+
+If the declaration for \code{x} were \code{(single-float (0f0))} so 0
+is not included or \code{(or (single-float (0f0)) (member 0f0))} so
+  $+0.0$ is include but not $-0.0$, the derived type would be
+  \code{single-float} for both cases.  By declaring \code{x} this way,
+  the log can be implemented using a fast real-valued log routine
+  instead of the generic log routine.
+
+\cmucl{} implements the branch cuts and values given by
+Kahan\footnote{Kahan, W., ``Branch Cuts for Complex Elementary
+Functions, or Much Ado About Nothing's Sign Bit''
+in Iserles and Powell (eds.) \textit{The State of the Art
+in Numerical Analysis}, pp. 165-211, Clarendon
+Press, 1987}.
+  
 
 
 \subsection{Specialized Arrays}
