@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.79 2003/10/06 12:39:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.80 2003/10/11 11:58:28 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,7 +67,9 @@
 	       ((null current) res))
 	   *empty-type*)))
     (:inside-block
-     (node-derived-type (continuation-use cont)))))
+     (node-derived-type (continuation-use cont)))
+    (:unused
+     *empty-type*)))
 
 
 ;;; Continuation-Derived-Type  --  Interface
