@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.8 1990/07/23 19:43:45 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.9 1990/09/21 05:53:39 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -117,8 +117,10 @@ call_into_lisp:
 	lw	CODE, 4-1(LEXENV)
 
 	/* Jump into lisp land. */
-	addu	$2, CODE, 6*4 - type_FunctionPointer
-	j	$2
+        .set    noat
+	addu	LIP, CODE, 6*4 - type_FunctionPointer
+	j	LIP
+        .set    at
 
 	.set	noreorder
 
@@ -280,3 +282,35 @@ call_into_c:
 	j	a0
 
 	.end	call_into_c
+
+/*
+ * The undefined-function trampoline.
+ */
+        .text
+        .globl  undefined_tramp
+        .ent    undefined_tramp
+undefined_tramp:
+        break   10
+        .byte    255
+        .byte    4
+        .byte    23
+        .byte    254
+        .byte    208
+        .byte    1
+        .align 2
+        .end    undefined_tramp
+
+/*
+ * The closure trampoline.
+ */
+        .text
+        .globl  closure_tramp
+        .ent    closure_tramp
+closure_tramp:
+        lw      LEXENV, SYMBOL_FUNCTION_OFFSET(CNAME)
+        lw      L0, CLOSURE_FUNCTION_OFFSET(LEXENV)
+        .set    noat
+        add     LIP, L0, FUNCTION_HEADER_CODE_OFFSET
+        j       LIP
+        .set     at
+        .end    closure_tramp
