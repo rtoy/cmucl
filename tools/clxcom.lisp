@@ -49,7 +49,7 @@
   (comf "target:hemlock/key-event" :load t)
   (comf "target:hemlock/keysym-defs" :load t)
 
-  #-no-pcl
+  #+pcl
   (comf "target:code/inspect"))
 
 (ext:run-program
@@ -84,8 +84,7 @@
 	   "target:code/clx-ext"
 	   "target:hemlock/charmacs"
 	   "target:hemlock/key-event"
-	   "target:hemlock/keysym-defs"
-	   #-no-pcl "target:code/inspect"))
+	   "target:hemlock/keysym-defs"))
  :if-output-exists :supersede
  :output (make-pathname :defaults "target:clx/clx-library"
 			:type (c:backend-fasl-file-type c:*target-backend*)))
