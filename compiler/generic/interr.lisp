@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.1 1992/03/21 19:42:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.2 1992/03/22 17:30:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 			      '(nil . "unused")))
 		      errors)))
     `(progn
-       (export ',(remove nil (macar #'car info)))
+       (export ',(remove nil (mapcar #'car info)))
        (setf (c:backend-internal-errors c:*target-backend*)
 	     ',(coerce info 'vector))
        nil)))
