@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.22 1991/12/18 23:15:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.23 1991/12/20 15:35:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -742,10 +742,15 @@
 
 ;;; DIRECTORY  --  public.
 ;;; 
-(defun directory (pathname &key (all t) (check-for-subdirs t))
+(defun directory (pathname &key (all t) (check-for-subdirs t)
+			   (follow-links t))
   "Returns a list of pathnames, one for each file that matches the given
-   pathname.  Supplying :all as nil causes this to ignore Unix dot files.  This
-   never includes Unix dot and dot-dot in the result."
+   pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
+   never includes Unix dot and dot-dot in the result.  If :FOLLOW-LINKS is NIL,
+   then symblolic links in the result are not expanded.  This is not the
+   default because TRUENAME does follow links, and the result pathnames are
+   defined to be the TRUENAME of the pathname (the truename of a link may well
+   be in another directory.)"
   (let ((results nil))
     (enumerate-search-list
 	(pathname (merge-pathnames pathname
@@ -761,10 +766,12 @@
 	  (push name results))))
     (let ((*ignore-wildcards* t))
       (mapcar #'(lambda (name)
-		  (if (and check-for-subdirs
-			   (eq (mach:unix-file-kind name) :directory))
-		      (truename (concatenate 'string name "/"))
-		      (truename name)))
+		  (let ((name (if (and check-for-subdirs
+				       (eq (mach:unix-file-kind name)
+					   :directory))
+				  (concatenate 'string name "/")
+				  name)))
+		    (if follow-links (truename name) (pathname name))))
 	      (sort (delete-duplicates results :test #'string=) #'string<)))))
 
 
@@ -785,7 +792,8 @@
 	(print-directory-formatted pathname all return-list))))
 
 (defun print-directory-verbose (pathname all return-list)
-  (let ((contents (directory pathname :all all :check-for-subdirs nil))
+  (let ((contents (directory pathname :all all :check-for-subdirs nil
+			     :follow-links nil))
 	(result nil))
     (format t "Directory of ~A :~%" (namestring pathname))
     (dolist (file contents)
@@ -860,7 +868,7 @@
 	(names ())
 	(cnt 0)
 	(max-len 0)
-	(result (directory pathname :all all)))
+	(result (directory pathname :all all :follow-links nil)))
     (declare (list names) (fixnum max-len cnt))
     ;;
     ;; Get the data.
@@ -988,7 +996,8 @@
 (defun complete-file (pathname &key (defaults *default-pathname-defaults*)
 			       ignore-types)
   (let ((files (directory (complete-file-directory-arg pathname defaults)
-			  :check-for-subdirs nil)))
+			  :check-for-subdirs nil
+			  :follow-links nil)))
     (cond ((null files)
 	   (values nil nil))
 	  ((null (cdr files))
@@ -1056,6 +1065,7 @@
    We look in the directory specified by Defaults as well as looking down
    the search list."
   (directory (complete-file-directory-arg pathname defaults)
+	     :follow-links nil
 	     :check-for-subdirs nil))
 
 
