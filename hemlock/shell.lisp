@@ -353,7 +353,7 @@
   (unless (hemlock-bound-p 'process :buffer (current-buffer))
     (editor-error "Not in a process buffer."))
   (let ((stream (ext:process-pty (value process))))
-    (write-char (int-char 4) stream)
+    (write-char (code-char 4) stream)
     (force-output stream)))
 
 (defcommand "Interrupt Buffer Subprocess" (p)
