@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.45 1992/05/03 21:45:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.46 1993/08/05 15:38:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,6 +160,7 @@
 ;;;
 (defun init-sb-vectors (component)
   (let ((nblocks (ir2-block-count component)))
+    (declare (type index nblocks))
     (dolist (sb (backend-sb-list *backend*))
       (unless (eq (sb-kind sb) :non-packed)
 	(let* ((conflicts (finite-sb-conflicts sb))
@@ -171,8 +172,10 @@
 	      (when (> nblocks current-size)
 		(let ((new-size (max nblocks (* current-size 2))))
 		  (dotimes (i (length conflicts))
+		    (declare (type index i))
 		    (let ((new-vec (make-array new-size)))
 		      (dotimes (j new-size)
+			(declare (type index j))
 			(setf (svref new-vec j)
 			      (make-array local-tn-limit :element-type 'bit)))
 		      (setf (svref conflicts i) new-vec))
@@ -180,8 +183,11 @@
 			  (make-array new-size :element-type 'bit))))))
 	    
 	    (dotimes (i (length conflicts))
+	      (declare (type index i))
 	      (let ((conf (svref conflicts i)))
+		(declare (simple-vector conf))
 		(dotimes (j (length conf))
+		  (declare (type index j))
 		  (clear-bit-vector (svref conf j))))
 	      (clear-bit-vector (svref always-live i)))))
 
