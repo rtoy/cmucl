@@ -34,30 +34,46 @@
 		   (not (eq (mod ,sym 400) 0))))
 	     (T T)))))
 
+
+;;; The base number of seconds for our internal "epoch".  We initialize this to
+;;; the time of the first call to G-I-R-T, and then subtract this out of the
+;;; result.
+;;;
+(defvar *internal-real-time-base-seconds* nil)
+(declaim (type (or (unsigned-byte 32) null) *internal-real-time-base-seconds*))
+
 ;;; Get-Internal-Real-Time  --  Public
 ;;;
 (defun get-internal-real-time ()
   "Return the real time in the internal time format.  This is useful for
   finding elapsed time.  See Internal-Time-Units-Per-Second."
-  (multiple-value-bind (result seconds useconds) (mach:unix-gettimeofday)
-    (if result
-	(+ (* seconds internal-time-units-per-second)
-	   (truncate useconds micro-seconds-per-internal-time-unit))
-	(error "Unix system call gettimeofday failed: ~A"
-	       (mach:get-unix-error-msg seconds)))))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (multiple-value-bind (ignore seconds useconds) (mach:unix-gettimeofday)
+      (declare (ignore ignore))
+      (let ((base *internal-real-time-base-seconds*)
+	    (uint (truncate useconds
+			    micro-seconds-per-internal-time-unit)))
+	(declare (type (unsigned-byte 32) uint))
+	(cond (base
+	       (+ (* (the (unsigned-byte 32) (- seconds base))
+		     internal-time-units-per-second)
+		  uint))
+	      (t
+	       (setq *internal-real-time-base-seconds* seconds)
+	       uint))))))
+
 
 ;;; Get-Internal-Run-Time  --  Public
 ;;;
 (defun get-internal-run-time ()
   "Return the run time in the internal time format.  This is useful for
   finding CPU usage."
-  (multiple-value-bind (result utime stime)
-		       (mach:unix-getrusage mach:rusage_self)
-    (if result
-	(values (truncate (+ utime stime)
-			  micro-seconds-per-internal-time-unit))
-	(error "Unix system call getrusage failed: ~A"
-	       (mach:get-unix-error-msg utime)))))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (multiple-value-bind (ignore utime stime)
+			 (mach:unix-getrusage mach:rusage_self)
+      (declare (ignore ignore))
+      (values (truncate (the (unsigned-byte 32) (+ utime stime))
+			micro-seconds-per-internal-time-unit)))))
 
 
 ;;; Subtract from the returned Internal_Time to get the universal time.
