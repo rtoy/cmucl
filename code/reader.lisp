@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.15 1992/05/15 17:51:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.16 1992/06/04 17:03:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1266,14 +1266,17 @@
 		 (push (cons char (make-char-dispatch-table)) dalist))))))
 
 (defun set-dispatch-macro-character
-  (disp-char sub-char function &optional (rt *readtable*))
+       (disp-char sub-char function &optional (rt *readtable*))
   "Causes function to be called whenever the reader reads
    disp-char followed by sub-char. Set-dispatch-macro-character
    returns T."
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
-  (let ((dpair (find disp-char (dispatch-tables rt)
-		     :test #'char= :key #'car)))
+  (when (digit-char-p sub-char)
+    (error "Sub-Char must not be a decibal digit: ~S" sub-char))
+  (let* ((sub-char (char-upcase sub-char))
+	 (dpair (find disp-char (dispatch-tables rt)
+		      :test #'char= :key #'car)))
     (if dpair
 	(setf (elt (the simple-vector (cdr dpair))
 		   (char-code sub-char))
@@ -1282,14 +1285,16 @@
 
 (defun get-dispatch-macro-character (disp-char sub-char &optional rt)
   "Returns the macro character function for sub-char under disp-char
-  or nil if there is no associated function."
-  (let* ((rt (or rt *readtable*))
-	 (dpair (find disp-char (dispatch-tables rt)
-		      :test #'char= :key #'car)))
-    (if dpair
-	(elt (the simple-vector (cdr dpair))
-	     (char-code sub-char))
-	(error "~S is not a dispatch char." disp-char))))
+   or nil if there is no associated function."
+  (unless (digit-char-p sub-char)
+    (let* ((sub-char (char-upcase sub-char))
+	   (rt (or rt *readtable*))
+	   (dpair (find disp-char (dispatch-tables rt)
+			:test #'char= :key #'car)))
+      (if dpair
+	  (elt (the simple-vector (cdr dpair))
+	       (char-code sub-char))
+	  (error "~S is not a dispatch char." disp-char)))))
 
 (defun read-dispatch-char (stream char)
   ;;read some digits
@@ -1304,9 +1309,9 @@
 	  ;;take care of the extra char.
 	  (if (eofp ch)
 	      (reader-eof-error stream "inside dispatch character")
-	      (setq sub-char ch)))
-	 (setq numargp t)
-	 (setq numarg (+ (* numarg 10) dig)))
+	      (setq sub-char (char-upcase ch))))
+      (setq numargp t)
+      (setq numarg (+ (* numarg 10) dig)))
     ;;look up the function and call it.
     (let ((dpair (find char (dispatch-tables *readtable*)
 		       :test #'char= :key #'car)))
