@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.69 2001/06/03 14:11:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.70 2001/06/13 14:43:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,9 @@
       (let ((form (car tail)))
 	(cond ((and (stringp form) (cdr tail))
 	       (if doc-string-allowed
-		   (setq doc form)
+		   (setq doc form
+			 ;; Only one doc string is allowed.
+			 doc-string-allowed nil)
 		   (return (values tail (nreverse decls) doc))))
 	      ((not (and (consp form) (symbolp (car form))))
 	       (return (values tail (nreverse decls) doc)))
