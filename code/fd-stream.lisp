@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.22 1992/12/10 01:09:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.23 1993/02/17 16:30:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,6 +113,7 @@
 (define-condition io-timeout (stream-error) (direction)
   (:report
    (lambda (condition stream)
+     (declare (stream stream))
      (format stream "Timeout ~(~A~)ing ~S."
 	     (io-timeout-direction condition)
 	     (stream-error-stream condition)))))
@@ -155,7 +156,7 @@
 	       (push base *available-buffers*)))
 	    ((not (null count)) ; Sorta worked.
 	     (push (list base
-			 (+ start count)
+			 (the index (+ start count))
 			 end)
 		   (fd-stream-output-later stream))))))
   (unless (fd-stream-output-later stream)
@@ -209,7 +210,8 @@
 		     (error "While writing ~S: ~A"
 			    stream (unix:get-unix-error-msg errno))))
 		((not (eql count length))
-		 (output-later stream base (+ start count) end reuse-sap)))))))
+		 (output-later stream base (the index (+ start count))
+			       end reuse-sap)))))))
 
 
 ;;; FLUSH-OUTPUT-BUFFER -- internal
@@ -228,6 +230,7 @@
 ;;; given bufferings. Use body to do the actual output.
 ;;;
 (defmacro def-output-routines ((name size &rest bufferings) &body body)
+  (declare (optimize (speed 1)))
   (cons 'progn
 	(mapcar
 	    #'(lambda (buffering)
@@ -450,7 +453,7 @@
     (setf (fd-stream-listen stream) nil)
     (multiple-value-bind
 	(count errno)
-	(unix:unix-select (1+ fd) (ash 1 fd) 0 0 0)
+	(unix:unix-select (1+ fd) (the (unsigned-byte 32) (ash 1 fd)) 0 0 0)
       (case count
 	(1)
 	(0
@@ -933,7 +936,8 @@ non-server method is also significantly more efficient for large reads.
 	 (fd-stream-listen stream)
 	 (setf (fd-stream-listen stream)
 	       (eql (unix:unix-select (1+ (fd-stream-fd stream))
-				      (ash 1 (fd-stream-fd stream))
+				      (the (unsigned-byte 32)
+					   (ash 1 (fd-stream-fd stream)))
 				      0
 				      0
 				      0)
@@ -997,7 +1001,8 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-ibuf-tail stream) 0)
      (loop
        (let ((count (unix:unix-select (1+ (fd-stream-fd stream))
-				      (ash 1 (fd-stream-fd stream))
+				      (the (unsigned-byte 32)
+					   (ash 1 (fd-stream-fd stream)))
 				      0 0 0)))
 	 (cond ((eql count 1)
 		(do-input stream)
@@ -1031,9 +1036,9 @@ non-server method is also significantly more efficient for large reads.
 	 (error "Error fstating ~S: ~A"
 		stream
 		(unix:get-unix-error-msg dev)))
-       (if (zerop mode)
-	 nil
-	 (truncate size (fd-stream-element-size stream)))))
+       (if (zerop (the index mode))
+	   nil
+	   (truncate (the index size) (fd-stream-element-size stream)))))
     (:file-position
      (fd-stream-file-position stream arg1))
     (:file-name
@@ -1080,7 +1085,8 @@ non-server method is also significantly more efficient for large reads.
 		   (error "Error lseek'ing ~S: ~A"
 			  stream
 			  (unix:get-unix-error-msg errno)))))))
-      (let (offset origin)
+      (let ((offset 0) origin)
+	(declare (type index offset))
 	;; Make sure we don't have any output pending, because if we move the
 	;; file pointer before writing this stuff, it will be written in the
 	;; wrong location.
