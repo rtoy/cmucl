@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.35 1992/02/13 13:37:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.36 1992/02/13 16:01:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 (declaim (type (member :load-object :load-source :query :compile)
 	       *load-if-source-newer*))
 
-(defvar *load-source-types* '("lisp" "l" "cl" "lsp")
+(defvar *load-source-types* '("lisp" "l" "cl" "lsp" nil)
   "The source file types which LOAD recognizes.")
 
 (defvar *load-object-types*
@@ -284,12 +284,18 @@
 
 ;;; Fasload:
 
+(defun do-load-verbose (stream)
+  (when *load-verbose*
+    (load-fresh-line)
+    (let ((name (file-name stream)))
+      (if name
+	  (format t "Loading ~S.~%" name)
+	  (format t "Loading stuff from ~S.~%" stream)))))
+
 (defun fasload (stream)
   (when (zerop (file-length stream))
     (error "Attempt to load an empty FASL FILE:~%  ~S" (namestring stream)))
-  (when *load-verbose*
-    (load-fresh-line)
-    (format t "Loading stuff from ~S.~%" stream))
+  (do-load-verbose stream)
   (let* ((*fasl-file* stream)
 	 (*current-fop-table* (pop *free-fop-tables*))
 	 (*current-fop-table-size* ())
@@ -419,9 +425,7 @@
 ;;; Sloload loads a text file into the given Load-Package.
 
 (defun sloload (stream)
-  (when *load-verbose*
-    (load-fresh-line)
-    (format t "Loading stuff from ~S.~%" stream))
+  (do-load-verbose stream)
   (do ((sexpr (read stream nil load-eof-value)
 	      (read stream nil load-eof-value)))
       ((eq sexpr load-eof-value))
@@ -507,39 +511,66 @@
 		   (sloload filename))
 	       (let ((pn (merge-pathnames (pathname filename)
 					  *default-pathname-defaults*)))
-		 (internal-load pn (probe-file pn) if-does-not-exist
-				contents)))))))))
+		 (cond ((wild-pathname-p pn)
+			(dolist (file (directory pn) t)
+			  (internal-load pn file if-does-not-exist contents)))
+		       ((pathname-type pn)
+			(internal-load pn (probe-file pn) if-does-not-exist
+				       contents))
+		       (t
+			(internal-load-default-type
+			 pn if-does-not-exist)))))))))))
 
-;;; INTERNAL-LOAD-EXISTS  --  Internal
+
+;;; INTERNAL-LOAD  --  Internal
 ;;;
-;;;    Handle INTERNAL-LOAD where the specifed file exists.
+;;;    Load the stuff in a file when we have got the name.
 ;;;
-(defun internal-load-exists (pathname truename if-does-not-exist contents)
-  (case contents
-    (:source
-     (with-open-file (file truename :direction :input)
-       (sloload file)))
-    (:binary
-     (with-open-file (file truename
-			   :direction :input
-			   :element-type '(unsigned-byte 8))
-       (fasload file)))
-    (t
-     (let ((first-line (with-open-file (file truename :direction :input)
-			 (read-line file nil))))
-       (cond
-	((and first-line
-	      (>= (length first-line) 9)
-	      (string= first-line "FASL FILE" :end1 9))
-	 (internal-load pathname truename if-does-not-exist :binary))
-	(t
-	 (when (member (pathname-type truename) *load-object-types*
-		       :test #'string=)
-	   (cerror
-	    "Load it as a source file."
-	    "File has a fasl file type, but no fasl file header:~%  ~S"
-	    (namestring truename)))
-	 (internal-load pathname truename if-does-not-exist :source)))))))
+(defun internal-load (pathname truename if-does-not-exist contents)
+  (unless truename
+    (return-from
+     internal-load
+     (ecase if-does-not-exist
+       (:error
+	(restart-case (error "~S does not exist." (namestring pathname))
+	  (check-again () :report "See if it exists now."
+	    (load pathname))
+	  (use-value () :report "Prompt for a new name."
+	    (write-string "New name: " *query-io*)
+	    (force-output *query-io*)
+	    (load (read-line *query-io*)))))
+       ((nil) nil))))
+
+  (let ((*load-truename* truename)
+	(*load-pathname* pathname))
+    (case contents
+      (:source
+       (with-open-file (file pathname
+			     :direction :input
+			     :if-does-not-exist if-does-not-exist)
+	 (sloload file)))
+      (:binary
+       (with-open-file (file pathname
+			     :direction :input
+			     :if-does-not-exist if-does-not-exist
+			     :element-type '(unsigned-byte 8))
+	 (fasload file)))
+      (t
+       (let ((first-line (with-open-file (file truename :direction :input)
+			   (read-line file nil))))
+	 (cond
+	  ((and first-line
+		(>= (length first-line) 9)
+		(string= first-line "FASL FILE" :end1 9))
+	   (internal-load pathname truename if-does-not-exist :binary))
+	  (t
+	   (when (member (pathname-type truename) *load-object-types*
+			 :test #'string=)
+	     (cerror
+	      "Load it as a source file."
+	      "File has a fasl file type, but no fasl file header:~%  ~S"
+	      (namestring truename)))
+	   (internal-load pathname truename if-does-not-exist :source))))))))
 
 
 ;;; TRY-DEFAULT-TYPES  --  Internal
@@ -567,13 +598,13 @@
 	     (> (file-write-date src-tn) (file-write-date obj-tn)))
 	(ecase *load-if-source-newer*
 	  (:load-object
-	   (warn "Loading object file ~A, which is~%  ~
-		  older than the presumed source:~% ~A."
+	   (warn "Loading object file ~A,~@
+		  which is older than the presumed source:~%  ~A."
 		 (namestring obj-tn) (namestring src-tn))
 	   (internal-load obj-pn obj-tn if-does-not-exist :binary))
 	  (:load-source
-	   (warn "Loading source file ~A, which is~%  ~
-		  newer than the presumed object file, ~A."
+	   (warn "Loading source file ~A,~@
+		  which is newer than the presumed object file:~%  ~A."
 		 (namestring src-tn) (namestring obj-tn))
 	   (internal-load src-pn src-tn if-does-not-exist :source))
 	  (:compile
@@ -583,8 +614,8 @@
 	     (internal-load src-pn obj-tn :error :binary)))
 	  (:query
 	   (restart-case
-	       (error "Object file ~A is~%  ~
-		       older than the presumed source:~% ~A."
+	       (error "Object file ~A is~@
+		       older than the presumed source:~%  ~A."
 		      (namestring obj-tn) (namestring src-tn))
 	     (continue () :report "load source file"
 	       (internal-load src-pn src-tn if-does-not-exist :source))
@@ -592,26 +623,10 @@
 	       (internal-load src-pn obj-tn if-does-not-exist :binary))))))
        (obj-tn
 	(internal-load obj-pn obj-tn if-does-not-exist :binary))
+       (src-pn
+	(internal-load src-pn src-tn if-does-not-exist :source))
        (t
-	(internal-load src-pn src-tn if-does-not-exist :source))))))
-
-
-;;; INTERNAL-LOAD  --  Internal
-;;;
-;;;    Decide if and how to default a file.
-;;;
-(defun internal-load (pathname truename if-does-not-exist contents)
-  (let ((*load-truename* truename)
-	(*load-pathname* pathname))
-    (cond
-     (truename (internal-load-exists pathname truename if-does-not-exist
-				     contents))
-     ((pathname-type pathname)
-      (with-open-file (stream pathname :direction :input
-			      :if-does-not-exist if-does-not-exist)
-	(sloload stream)))
-     (t
-      (internal-load-default-type pathname if-does-not-exist)))))
+	(internal-load pathname nil if-does-not-exist nil))))))
 
 
 ;;;; Actual FOP definitions:
