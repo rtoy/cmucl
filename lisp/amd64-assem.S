@@ -1,6 +1,6 @@
-### x86-assem.S -*- Mode: Asm; -*-
+### amd64-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.6 2004/07/14 21:32:32 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.7 2004/07/15 18:01:26 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -461,23 +461,22 @@ l1:	nop
 
    All registers must be preserved except the destination.
    The C conventions will preserve rbx, r12-r15, and rbp.
-   So only rax, rdi, rsi, rdx, rcx, and r8-r11 need special care here. */
+   Linkage table will trash r11.
+   So only rax, rdi, rsi, rdx, rcx, and r8-r10 need special care here. */
 		
 	.globl	GNAME(alloc_to_rax)
 	.type	GNAME(alloc_to_rax),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rax):
-	pushq	%rcx	# Save rcx, rdx, rdi, rsi, r8-r11 as C could destroy them.
+	pushq	%rcx	# Save rcx, rdx, rdi, rsi, r8-r10 as C could destroy them.
 	pushq	%rdx
 	pushq	%rdi
 	pushq	%rsi
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	movq	%rax, %rdi	# Pass arg 1
 	call	GNAME(alloc)	# return value is in %rax
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -492,18 +491,16 @@ GNAME(alloc_to_rax):
 	.type	GNAME(alloc_to_rcx),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rcx):
-	pushq	%rax	# Save rax, rdi, rsi, rdx, and r8-r11 as C could destroy them.
+	pushq	%rax	# Save rax, rdi, rsi, rdx, and r8-r10 as C could destroy them.
 	pushq	%rdi
 	pushq	%rsi
 	pushq	%rdx
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	movq	%rcx, %rdi	# Pass the size
 	call	GNAME(alloc)
 	movq	%rax, %rcx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -518,18 +515,16 @@ GNAME(alloc_to_rcx):
 	.type	GNAME(alloc_to_rdx),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rdx):
-	pushq	%rax	# Save rax, rcx, rdi, rsi, r8-r11 as C could destroy them.
+	pushq	%rax	# Save rax, rcx, rdi, rsi, r8-r10 as C could destroy them.
 	pushq	%rcx
 	pushq	%rdi
 	pushq	%rsi
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	mov	%rdx, %rdi	# move the size to arg 1
 	call	GNAME(alloc)
 	movq	%rax, %rdx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -544,7 +539,7 @@ GNAME(alloc_to_rdx):
 	.type	GNAME(alloc_to_rbx),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rbx):
-	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8-r11 as C could destroy them.
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8-r10 as C could destroy them.
 	pushq	%rcx
 	pushq	%rdx
 	pushq	%rdi
@@ -552,17 +547,15 @@ GNAME(alloc_to_rbx):
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	movq	%rbx, %rdi	# Pass the size
 	call	GNAME(alloc)
 	movq	%rax, %rbx	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
 	popq	%rsi
 	popq	%rdi	
-	popq	%rdx	# Restore rax, rcx, rdx, rdi, rsi, r8-r11.
+	popq	%rdx	# Restore rax, rcx, rdx, rdi, rsi, r8-r10.
 	popq	%rcx
 	popq	%rax
 	ret
@@ -572,18 +565,16 @@ GNAME(alloc_to_rbx):
 	.type	GNAME(alloc_to_rsi),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rsi):
-	pushq	%rax	# Save rax, rcx, rdx, rdi, r8-r11 as C could destroy them.
+	pushq	%rax	# Save rax, rcx, rdx, rdi, r8-r10 as C could destroy them.
 	pushq	%rcx
 	pushq	%rdx
 	pushq	%rdi
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	mov	%rsi, %rdi	# move the size to arg 1
 	call	GNAME(alloc)
 	movq	%rax,%rsi	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -598,17 +589,15 @@ GNAME(alloc_to_rsi):
 	.type	GNAME(alloc_to_rdi),@function
 	.align	align_4byte,0x90
 GNAME(alloc_to_rdi):
-	pushq	%rax	# Save rax, rcx, rdx, rsi, r8-r11 as C could destroy them.
+	pushq	%rax	# Save rax, rcx, rdx, rsi, r8-r10 as C could destroy them.
 	pushq	%rcx
 	pushq	%rdx
 	pushq	%rsi
 	pushq	%r8
 	pushq	%r9
 	pushq	%r10
-	pushq	%r11
 	call	GNAME(alloc)
 	movq	%rax, %rdi	# setup the destination.
-	popq	%r11
 	popq	%r10
 	popq	%r9
 	popq	%r8
@@ -619,6 +608,129 @@ GNAME(alloc_to_rdi):
 	ret
 	.size	GNAME(alloc_to_rdi),.-GNAME(alloc_to_rdi)
 		
+	.globl	GNAME(alloc_to_r8)
+	.type	GNAME(alloc_to_r8),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_r8):
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r9, r10 as C could destroy them.
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r9
+	pushq	%r10
+	movq	%r8, %rdi	# Pass the size
+	call	GNAME(alloc)
+	movq	%rax, %r8	# setup the destination.
+	popq	%r10
+	popq	%r9
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rax, rcx and rdx.
+	popq	%rcx
+	popq	%rax
+	ret
+	.size	GNAME(alloc_to_r8),.-GNAME(alloc_to_r8)
+	
+	.globl	GNAME(alloc_to_r9)
+	.type	GNAME(alloc_to_r9),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_r9):
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8, r10 as C could destroy them.
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r10
+	movq	%r9, %rdi	# Pass the size
+	call	GNAME(alloc)
+	movq	%rax, %r9	# setup the destination.
+	popq	%r10
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rax, rcx and rdx.
+	popq	%rcx
+	popq	%rax
+	ret
+	.size	GNAME(alloc_to_r9),.-GNAME(alloc_to_r9)
+	
+	.globl	GNAME(alloc_to_r10)
+	.type	GNAME(alloc_to_r10),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_r10):
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8-r9 as C could destroy them.
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	movq	%r10, %rdi	# Pass the size
+	call	GNAME(alloc)
+	movq	%rax, %r10	# setup the destination.
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rax, rcx and rdx.
+	popq	%rcx
+	popq	%rax
+	ret
+	.size	GNAME(alloc_to_r10),.-GNAME(alloc_to_r10)
+	
+	.globl	GNAME(alloc_to_r12)
+	.type	GNAME(alloc_to_r12),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_r12):
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8-r10 as C could destroy them.
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	movq	%r12, %rdi	# Pass the size
+	call	GNAME(alloc)
+	movq	%rax, %r12	# setup the destination.
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rax, rcx and rdx.
+	popq	%rcx
+	popq	%rax
+	ret
+	.size	GNAME(alloc_to_r12),.-GNAME(alloc_to_r12)
+
+	.globl	GNAME(alloc_to_r13)
+	.type	GNAME(alloc_to_r13),@function
+	.align	align_4byte,0x90
+GNAME(alloc_to_r13):
+	pushq	%rax	# Save rax, rcx, rdx, rdi, rsi, r8-r10 as C could destroy them.
+	pushq	%rcx
+	pushq	%rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	movq	%r13, %rdi	# Pass the size
+	call	GNAME(alloc)
+	movq	%rax, %r13	# setup the destination.
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rax, rcx and rdx.
+	popq	%rcx
+	popq	%rax
+	ret
+	.size	GNAME(alloc_to_r13),.-GNAME(alloc_to_r13)
 
 
 #ifdef GENCGC
