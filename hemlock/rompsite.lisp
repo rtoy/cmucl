@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.26 1992/12/18 07:44:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.27 1993/07/23 13:24:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -385,7 +385,8 @@
 	       (xlib:draw-rectangle xwin gcontext side-border 0
 				    top-width top-border t)))
 	(zot)
-	(xlib:display-finish-output display)
+	(xlib:display-force-output display)
+	(sleep 0.1)
 	(zot)
 	(xlib:display-force-output display)))))
 
@@ -401,7 +402,8 @@
     (xlib:with-gcontext (gcontext :function xlib::boole-xor
 				  :foreground *foreground-background-xor*)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
-      (xlib:display-finish-output display)
+      (xlib:display-force-output display)
+      (sleep 0.1)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display))))
 
