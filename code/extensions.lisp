@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.25 2001/03/13 16:52:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.26 2002/09/19 17:48:17 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,7 +172,7 @@
 	 ,setter))))
 
 
-(defmacro dovector ((elt vector) &rest forms)
+(defmacro dovector ((elt vector &optional default) &rest forms)
   "Just like dolist, but with one-dimensional arrays."
   (let ((index (gensym))
 	(length (gensym))
@@ -180,7 +180,7 @@
     `(let ((,vec ,vector))
        (do ((,index 0 (1+ ,index))
 	    (,length (length ,vec)))
-	   ((>= ,index ,length) nil)
+	   ((>= ,index ,length) ,default)
 	 (let ((,elt (aref ,vec ,index)))
 	   ,@forms)))))
 
