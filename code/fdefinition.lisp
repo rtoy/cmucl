@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.7 1991/10/31 21:03:13 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.8 1991/11/01 11:37:00 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 (in-package "EXTENSIONS")
 
 (export '(encapsulate unencapsulate encapsulated-p encapsulated-definition
-	  argument-list basic-definition))
+	  argument-list basic-definition *setf-fdefinition-hook*))
 
 
 (in-package "LISP")
@@ -211,24 +211,34 @@
       (basic-def name (or (gethash (cadr name) *setf-functions*)
 			  (error "Undefined function: ~S." name))))))
 
-(defsetf fdefinition %set-fdefinition)
+(defvar *setf-fdefinition-hook* nil
+  "This holds functions that (SETF FDEFINITION) invokes before storing the
+   new value.  These functions take the function name and the new value.")
 
 (defun %set-fdefinition (name new-value)
   "Set name's global function definition."
   (declare (type function new-value))
   (macrolet ((set-basic-def (name new-value form)
 	       `(let ((encap-info (gethash ,name *encapsulation-info*)))
-		  (if encap-info
-		      (loop
-			(when (not (encapsulation-info-next encap-info))
-			  (return
-			   (setf (encapsulation-info-definition encap-info)
-				 ,new-value)))
-			(setf encap-info (encapsulation-info-next encap-info)))
-		      (setf ,form ,new-value)))))
+		  (cond (encap-info
+			 (loop
+			   (when (not (encapsulation-info-next encap-info))
+			     (dolist (f *setf-fdefinition-hook*)
+			       (funcall f ,name ,new-value))
+			     (return
+			      (setf (encapsulation-info-definition encap-info)
+				    ,new-value)))
+			   (setf encap-info
+				 (encapsulation-info-next encap-info))))
+			(t
+			 (dolist (f *setf-fdefinition-hook*)
+			   (funcall f ,name ,new-value))
+			 (setf ,form ,new-value))))))
     (function-name-dispatch name
       (set-basic-def name new-value (symbol-function name))
       (set-basic-def name new-value (gethash (cadr name) *setf-functions*)))))
+;;;
+(defsetf fdefinition %set-fdefinition)
 
 
 
