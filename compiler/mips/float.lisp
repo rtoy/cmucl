@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.13 1991/05/23 15:36:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.14 1992/02/21 22:02:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,41 +391,6 @@
   (:generator 2
     (inst mfc1 lo-bits float)
     (inst nop)))
-
-
-;;;; SAP accessors/setters
-
-(define-vop (sap-ref-single sap-ref)
-  (:translate sap-ref-single)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:variant :single nil))
-
-(define-vop (sap-set-single sap-set)
-  (:translate %set-sap-ref-single)
-  (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (any-reg negative-immediate zero immediate))
-	 (value :scs (single-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum single-float)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
-  (:variant :single))
-
-(define-vop (sap-ref-double sap-ref)
-  (:translate sap-ref-double)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:variant :double nil))
-
-(define-vop (sap-set-double sap-set)
-  (:translate %set-sap-ref-double)
-  (:args (object :scs (sap-reg) :target sap)
-	 (offset :scs (any-reg negative-immediate zero immediate))
-	 (value :scs (double-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum double-float)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
-  (:variant :double))
 
 
 ;;;; Float mode hackery:
