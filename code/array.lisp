@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23.2.1 1998/06/23 11:21:32 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23.2.2 1998/07/19 01:05:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -612,7 +612,12 @@
   (declare (vector vector))
   (if (and (array-header-p vector) (%array-fill-pointer-p vector))
       (%array-fill-pointer vector)
-      (error "~S is not an array with a fill-pointer." vector)))
+      (error 'simple-type-error
+	     :datum vector
+	     :expected-type '(and vector (satisfies array-has-fill-pointer-p))
+	     :format-control
+	     "~S is not an array with a fill-pointer."
+	     :format-arguments (list vector))))
 
 (defun %set-fill-pointer (vector new)
   (declare (vector vector) (fixnum new))
@@ -621,7 +626,11 @@
 	(error "New fill pointer, ~S, is larger than the length of the vector."
 	       new)
 	(setf (%array-fill-pointer vector) new))
-      (error "~S is not an array with a fill-pointer." vector)))
+      (error 'simple-type-error
+	     :datum vector
+	     :expected-type '(and vector (satisfies array-has-fill-pointer-p))
+	     :format-control "~S is not an array with a fill-pointer."
+	     :format-arguments (list vector))))
 
 (defun vector-push (new-el array)
   "Attempts to set the element of Array designated by the fill pointer

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.37.2.2 1998/06/23 11:22:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.37.2.3 1998/07/19 01:06:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,6 +38,9 @@
   "The list of packages to use by default of no :USE argument is supplied
    to MAKE-PACKAGE or other package creation forms.")
 
+;;; INTERNAL conditions
+(define-condition simple-package-error (simple-condition package-error)())
+(define-condition simple-program-error (simple-condition program-error)())
 
 (defstruct (package
 	    (:constructor internal-make-package)
@@ -774,7 +777,7 @@
 				     :internal-symbols (or size 10)
 				     :external-symbols (length exports))))))
     (unless (string= (the string (package-name package)) name)
-      (error 'package-error
+      (error 'simple-package-error
 	     :package name
 	     :format-control "~A is a nick-name for the package ~A"
 	     :format-arguments (list name (package-name name))))
@@ -835,7 +838,7 @@
 	   symbol)
 	  (t
 	   (with-simple-restart (continue "INTERN it.")
-	     (error 'package-error
+	     (error 'simple-package-error
 		    :package package
 		    :format-control "~A does not contain a symbol ~A"
 		    :format-arguments (list (package-name package) name)))
@@ -859,13 +862,15 @@
 	    ((eq found package))
 	    ((string= (the string (package-%name found)) n)
 	     (with-simple-restart (continue "Ignore this nickname.")
-	       (error 'program-error
+	       (error 'simple-package-error
+		      :package package
 		      :format-control
 		      "~S is a package name, so it cannot be a nickname for ~S."
 		      :format-arguments (list n (package-%name package)))))
 	    (t
 	     (with-simple-restart (continue  "Redefine this nickname.")
-	       (error 'program-error
+	       (error 'simple-package-error
+		      :package package
 		      :format-control "~S is already a nickname for ~S."
 		      :format-arguments (list n (package-%name found))))
 	     (setf (gethash n *package-names*) package)
@@ -935,7 +940,7 @@
   (let ((package (find-package name)))
     (unless package
       (with-simple-restart (continue "Make this package.")
-	(error 'package-error
+	(error 'simple-package-error
 	       :package name
 	       :format-control "The package named ~S doesn't exist."
 	       :format-arguments (list name)))
@@ -972,7 +977,7 @@
 		     (find-package package-or-name))))
     (cond ((not package)
 	   (with-simple-restart (continue "Return NIL")
-	     (error 'package-error
+	     (error 'simple-package-error
 		    :package package-or-name
 		    :format-control "No package of name ~S."
 		    :format-arguments (list package-or-name)))
@@ -983,7 +988,7 @@
 	     (when use-list
 	       (with-simple-restart
 		   (continue "Remove dependency in other packages.")
-		 (error 'package-error
+		 (error 'simple-package-error
 			:package package
 			:format-control
 			"Package ~S is used by package(s):~%  ~S"
@@ -1221,7 +1226,7 @@
       (when cset
 	(restart-case
 	    (error
-	     'package-error
+	     'simple-package-error
 	     :package package
 	     :format-control
 	     "Exporting these symbols from the ~A package:~%~S~%~
@@ -1249,7 +1254,7 @@
 	(with-simple-restart
 	    (continue "Import these symbols into the ~A package."
 	      (package-%name package))
-	  (error 'package-error
+	  (error 'simple-package-error
 		 :package package
 		 :format-control
 		 "These symbols are not accessible in the ~A package:~%~S"
@@ -1278,7 +1283,7 @@
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
-	       (error 'package-error
+	       (error 'simple-package-error
 		      :package package
 		      :format-control "~S is not accessible in the ~A package."
 		      :format-arguments (list sym (package-%name package))))
@@ -1317,7 +1322,7 @@
     (when cset
       (with-simple-restart
 	  (continue "Import these symbols with Shadowing-Import.")
-	(error 'package-error
+	(error 'simple-package-error
 	       :package package
 	       :format-control
 	       "Importing these symbols into the ~A package ~

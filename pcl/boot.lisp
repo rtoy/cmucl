@@ -24,6 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.12.2.2 1998/07/19 01:06:14 dtc Exp $")
 
 (in-package :pcl)
 
@@ -162,66 +165,16 @@ work during bootstrapping.
 ;;;
 (defmacro defgeneric (function-specifier lambda-list &body options)
   (expand-defgeneric function-specifier lambda-list options))
-#+nil ;; original version
-(defun expand-defgeneric (function-specifier lambda-list options)
-  (when (listp function-specifier) (do-standard-defsetf-1 (cadr function-specifier)))
-  (let ((initargs ()))
-    (flet ((duplicate-option (name)
-	     (error "The option ~S appears more than once." name)))
-      ;;
-      ;; INITARG takes this screwy new argument to get around a bad
-      ;; interaction between lexical macros and setf in the Lucid
-      ;; compiler.
-      ;; 
-      (macrolet ((initarg (key &optional new)
-		   (if new
-		       `(setf (getf initargs ,key) ,new)
-		       `(getf initargs ,key))))
-	(dolist (option options)
-	  (ecase (car option)
-	    (:argument-precedence-order
-	      (if (initarg :argument-precedence-order)
-		  (duplicate-option :argument-precedence-order)
-		  (initarg :argument-precedence-order `',(cdr option))))
-	    (declare
-	      (initarg :declarations
-		       (append (cdr option) (initarg :declarations))))
-	    (:documentation
-	      (if (initarg :documentation)
-		  (duplicate-option :documentation)
-		  (initarg :documentation `',(cadr option))))
-	    (:method-combination
-	      (if (initarg :method-combination)
-		  (duplicate-option :method-combination)
-		  (initarg :method-combination `',(cdr option))))
-	    (:generic-function-class
-	      (if (initarg :generic-function-class)
-		  (duplicate-option :generic-function-class)
-		  (initarg :generic-function-class `',(cadr option))))
-	    (:method-class
-	      (if (initarg :method-class)
-		  (duplicate-option :method-class)
-		  (initarg :method-class `',(cadr option))))
-	    (:method
-	      (error
-		"DEFGENERIC doesn't support the :METHOD option yet."))))
 
-	(let ((declarations (initarg :declarations)))
-	  (when declarations (initarg :declarations `',declarations)))))
-    `(progn
-       (proclaim-defgeneric ',function-specifier ',lambda-list)
-       ,(make-top-level-form `(defgeneric ,function-specifier)
-	  *defgeneric-times*
-	  `(load-defgeneric ',function-specifier ',lambda-list ,@initargs)))))
-
-;; pw--Enhanced to support :method options.
 (defun expand-defgeneric (function-specifier lambda-list options)
   (when (listp function-specifier)
     (do-standard-defsetf-1 (cadr function-specifier)))
   (let ((initargs ())
 	(methods ()))
     (flet ((duplicate-option (name)
-	     (error "The option ~S appears more than once." name))
+	     (error 'kernel:simple-program-error
+		    :format-control "The option ~S appears more than once."
+		    :format-arguments (list name)))
 	   (define-method(gf-name q-a-b)
 	     (let* ((arg-pos (position-if #'listp q-a-b))
 		    (arglist (elt q-a-b arg-pos))
@@ -243,7 +196,7 @@ work during bootstrapping.
 		       `(setf (getf initargs ,key) ,new)
 		       `(getf initargs ,key))))
 	(dolist (option options)
-	  (ecase (car option)
+	  (case (car option)
 	    (:argument-precedence-order
 	      (if (initarg :argument-precedence-order)
 		  (duplicate-option :argument-precedence-order)
@@ -268,10 +221,11 @@ work during bootstrapping.
 		  (duplicate-option :method-class)
 		  (initarg :method-class `',(cadr option))))
 	    (:method
-	     #+nil
-	      (error
-		"DEFGENERIC doesn't support the :METHOD option yet.")
-	      (push (cdr option) methods))))
+	     (push (cdr option) methods))
+	    (t ;unsuported things must get a 'program-error
+	     (error 'kernel:simple-program-error
+		    :format-control "Unsupported option ~S."
+		    :format-arguments (list option)))))
 
 	(let ((declarations (initarg :declarations)))
 	  (when declarations (initarg :declarations `',declarations))))
@@ -1333,12 +1287,22 @@ work during bootstrapping.
 
 (defun generic-clobbers-function (function-specifier)
   #+Lispm (zl:signal 'generic-clobbers-function :name function-specifier)
-  #-Lispm (error "~S already names an ordinary function or a macro,~%~
-                  you may want to replace it with a generic function, but doing so~%~
-                  will require that you decide what to do with the existing function~%~
-                  definition.~%~
-                  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
-		 function-specifier))
+  #+cmu
+  (error 'kernel:simple-program-error
+	 :format-control
+	 "~S already names an ordinary function or a macro,~%~
+	  you may want to replace it with a generic function, but doing so~%~
+	  will require that you decide what to do with the existing function~%~
+	  definition.~%~
+	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
+	 :format-arguments (list function-specifier))
+  #-(or lispm cmu)
+  (error "~S already names an ordinary function or a macro,~%~
+	  you may want to replace it with a generic function, but doing so~%~
+	  will require that you decide what to do with the existing function~%~
+	  definition.~%~
+	  The PCL-specific function MAKE-SPECIALIZABLE may be useful to you."
+	 function-specifier))
 
 #+Lispm
 (zl:defflavor generic-clobbers-function (name) (si:error)

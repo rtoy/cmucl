@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.3 1998/06/23 11:22:27 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.4 1998/07/19 01:06:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,20 +65,31 @@
 ;;;    Given an arbitrary type specifier, return a sane sequence type specifier
 ;;; that we can directly match.
 ;;;
-(defun result-type-or-lose (type &optional nil-ok)
-  (let ((type (specifier-type type)))
+(defun result-type-or-lose (itype &optional nil-ok)
+  (let ((type (specifier-type itype))
+	(expected-type  '(or list string vector bit-vector)))
     (cond
       ((csubtypep type (specifier-type 'nil))
        (if nil-ok
 	   nil
-	   (error "NIL output type invalid for this sequence function.")))
+	   (error 'simple-type-error
+		  :datum itype
+		  :expected-type expected-type
+		  :format-control
+		  "NIL output type invalid for this sequence function."
+		  :format-arguments ())))
       ((dolist (seq-type '(list string simple-vector bit-vector))
 	 (when (csubtypep type (specifier-type seq-type))
 	   (return seq-type))))
       ((csubtypep type (specifier-type 'vector))
        (type-specifier type))
       (t
-       (error "~S is a bad type specifier for sequence functions." type)))))
+       (error 'simple-type-error
+	      :datum itype
+	      :expected-type expected-type
+	      :format-control
+	      "~S is a bad type specifier for sequence functions."
+	      :format-arguments (list itype))))))
 
 (define-condition index-too-large-error (type-error)
   ()
@@ -177,14 +188,24 @@
                              (array-type-specialized-element-type type)))
                      (vlen (car (array-type-dimensions type))))
                  (if (and (numberp vlen) (/= vlen length))
-                   (error "The length of ~S does not match the specified length  of ~S."
-                          (type-specifier type) length))
+                   (error 'simple-type-error
+			  ;; these two are under-specified by ANSI
+			  :datum (type-specifier type)
+			  :expected-type (type-specifier type)
+			  :format-control
+			  "The length of ~S does not match the specified length  of ~S."
+			  :format-arguments
+			  (list (type-specifier type) length)))
 		 (if iep
 		     (make-array length :element-type etype
 				 :initial-element initial-element)
 		     (make-array length :element-type etype)))
 	       (make-array length :initial-element initial-element)))
-	  (t (error "~S is a bad type specifier for sequences." type)))))
+	  (t (error 'simple-type-error
+		    :datum type
+		    :expected-type 'sequence
+		    :format-control "~S is a bad type specifier for sequences."
+		    :format-arguments (list type))))))
 
 
 

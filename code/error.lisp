@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.1 1998/06/23 11:21:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46.2.2 1998/07/19 01:06:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,8 @@
 (use-package "KERNEL")
 
 (in-package "KERNEL")
-(export '(layout-invalid simple-style-warning condition-function-name))
+(export '(layout-invalid simple-style-warning condition-function-name
+			 simple-program-error simple-file-error))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -435,6 +436,9 @@
 
 ;;;; Condition reporting:
 
+;;; 7/13/98 BUG? CPL is not sorted and results here depend on order of
+;;; superclasses in define-condition call!
+
 (defun %print-condition (s stream d)
   (declare (ignore d))
   (if *print-escape*
@@ -510,13 +514,15 @@
 
 (defun make-condition (thing &rest args)
   "Make an instance of a condition object using the specified initargs."
+  ;; Note: ANSI specifies no exceptional situations in this function.
+  ;; signalling simple-type-error would not be wrong.
   (let* ((thing (if (symbolp thing)
 		    (find-class thing)
 		    thing))
 	 (class (typecase thing
 		  (condition-class thing)
 		  (class
-		   (error "~S is not a condition class."))
+		   (error "~S is not a condition class." thing))
 		  (t
 		   (error "Bad thing for class arg:~%  ~S" thing))))
 	 (res (make-condition-object args)))
@@ -815,48 +821,8 @@
 
 
 ;;;; Condition definitions.
-;;; 4/18/98 pw wants to make format-control and format-arguments
-;;; slots in the condition class so this facility is available
-;;; for all conditions internally -- however, that presents an
-;;; un-nice bootstrap problem. So, for now, lets have 
-;;; serious-condition-xxx so they are easy to grep and get the
-;;; new stuff working, then change to just condition-format-control etc.
-;;;
-;;; On the other hand, we have these two classes serious-condition
-;;; and simple-condition so that default report schemes can be different
-;;; if desired.
 
-(defun serious-condition-printer (condition stream)
-  (apply #'format stream (serious-condition-format-control condition)
-	 		 (serious-condition-format-arguments condition)))
-
-;;; The CLHS 9.1.3.1.5 says that the name of the containing function
-;;; should generally not be mentioned in report printers assuming that
-;;; the debugger will make that info available when appropriate. I (pw)
-;;; do so here because many CMUCL error conditions were previously signaled
-;;; using (error "format-string" (format-args..)) and thus invoking
-;;; the simple-error system. Now that we are changing to providing
-;;; the correct condition type, using this default reporter retains
-;;; the familiar behavior. It is a candidate for change some day.
-;;; Perhaps better would be do define subtypes of file-error and
-;;; package-error with their own :report functions as is done in
-;;; other places (debug-int format ...)
-
-(defun print-serious-condition (condition stream)
-  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
-	  (condition-function-name condition)
-	  (serious-condition-format-control condition)
-	  (serious-condition-format-arguments condition)))
-
-(define-condition serious-condition (condition)
-  ((format-control :reader serious-condition-format-control
-		   :initarg :format-control
-		   :initform "")
-   (format-arguments :reader serious-condition-format-arguments
-		     :initarg :format-arguments
-		     :initform '()))
-  (:report print-serious-condition))
-
+(define-condition serious-condition (condition)())
 
 (define-condition error (serious-condition) ())
 
@@ -938,6 +904,10 @@
 
 (define-condition file-error (error)
   ((pathname :reader file-error-pathname :initarg :pathname)))
+
+;;; INTERNAL
+(define-condition simple-file-error   (simple-condition file-error)())
+(define-condition simple-program-error(simple-condition program-error)())
 
 (define-condition package-error (error)
   ((package :reader package-error-package :initarg :package)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.1 1998/06/23 11:21:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40.2.2 1998/07/19 01:06:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1398,9 +1398,11 @@ non-server method is also significantly more efficient for large reads.
 		   (case if-does-not-exist
 		     (:error
 		      (cerror "Return NIL."
-			      "Error opening ~S, ~A."
-			      pathname
-			      (unix:get-unix-error-msg errno)))
+			      'simple-file-error
+			      :pathname pathname
+			      :format-control "Error opening ~S, ~A."
+			      :format-arguments
+			      (list pathname (unix:get-unix-error-msg errno))))
 		     (:create
 		      (cerror "Return NIL."
 			      "Error creating ~S, path does not exist."
@@ -1409,9 +1411,11 @@ non-server method is also significantly more efficient for large reads.
 		  ((eql errno unix:eexist)
 		   (unless (eq nil if-exists)
 		     (cerror "Return NIL."
-			     "Error opening ~S, ~A."
-			     pathname
-			     (unix:get-unix-error-msg errno)))
+			     'simple-file-error
+			     :pathname pathname
+			     :format-control "Error opening ~S, ~A."
+			     :format-arguments
+			     (list pathname (unix:get-unix-error-msg errno))))
 		   (return nil))
 		  ((eql errno unix:eacces)
 		   (cerror "Try again."

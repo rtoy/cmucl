@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.3 1998/06/23 11:22:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.4 1998/07/19 01:06:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,14 +196,14 @@
   "Syntax like DEFMACRO, but creates a Setf-Method generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
-    (error "~S -- Access-function name not a symbol in DEFINE-SETF-METHOD."
+    (error "~S -- Access-function name not a symbol in DEFINE-SETF-EXPANDER."
 	   access-fn))
 
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro lambda-list whole body access-fn
-					 'define-setf-method
+					 'define-setf-expander
 					 :environment environment)
       `(eval-when (load compile eval)
 	 (%define-setf-macro
@@ -519,7 +519,7 @@
 ;;; new-value arg at the end.
 ;;;
 ;;; A SETF method expander is created by the long form of DEFSETF or
-;;; by DEFINE-SETF-METHOD.  It is a function that is called on the reference
+;;; by DEFINE-SETF-EXPANDER.  It is a function that is called on the reference
 ;;; form and that produces five values: a list of temporary variables, a list
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
@@ -824,25 +824,18 @@
 	      `(let* ,(nreverse let-list)
 		 ,setter)))))))
 
-
-
 (defmacro push (obj place &environment env)
   "Takes an object and a location holding a list.  Conses the object onto
-  the list, returning the modified list."
+  the list, returning the modified list.  OBJ is evaluated before PLACE."
   (if (symbolp place)
       `(setq ,place (cons ,obj ,place))
       (multiple-value-bind (dummies vals newval setter getter)
-			   (get-setf-method place env)
-	(do* ((d dummies (cdr d))
-	      (v vals (cdr v))
-	      (let-list nil))
-	     ((null d)
-	      (push (list (car newval) `(cons ,obj ,getter))
-		    let-list)
-	      `(let* ,(nreverse let-list)
-		 ,setter))
-	  (push (list (car d) (car v)) let-list)))))
-
+	  (get-setf-method place env)
+	(let ((g (gensym)))
+	  `(let* ((,g ,obj)
+		  ,@(mapcar #'list dummies vals)
+		  (,(car newval) (cons ,g ,getter)))
+	    ,setter)))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
   "Takes an object and a location holding a list.  If the object is already
@@ -1002,7 +995,7 @@
 #+long-float
 (defsetf sap-ref-long %set-sap-ref-long)
 
-(define-setf-method getf (place prop &optional default &environment env)
+(define-setf-expander getf (place prop &optional default &environment env)
   (multiple-value-bind (temps values stores set get)
 		       (get-setf-method place env)
     (let ((newval (gensym))
@@ -1016,7 +1009,7 @@
 		 ,newval)
 	      `(getf ,get ,ptemp ,@(if default `(,def-temp)))))))
 
-(define-setf-method get (symbol prop &optional default)
+(define-setf-expander get (symbol prop &optional default)
   (let ((symbol-temp (gensym))
 	(prop-temp (gensym))
 	(def-temp (gensym))
@@ -1027,7 +1020,7 @@
 	    `(%put ,symbol-temp ,prop-temp ,newval)
 	    `(get ,symbol-temp ,prop-temp ,@(if default `(,def-temp))))))
 
-(define-setf-method gethash (key hashtable &optional default)
+(define-setf-expander gethash (key hashtable &optional default)
   (let ((key-temp (gensym))
 	(hashtable-temp (gensym))
 	(default-temp (gensym))
@@ -1048,7 +1041,7 @@
 ;;; it used to be.)  The function arg must be constant, and is converted to an
 ;;; APPLY of ther SETF function, which ought to exist.
 ;;;
-(define-setf-method apply (function &rest args)
+(define-setf-expander apply (function &rest args)
   (unless (and (listp function)
 	       (= (list-length function) 2)
 	       (eq (first function) 'function)
@@ -1067,7 +1060,7 @@
 
 ;;; Special-case a BYTE bytespec so that the compiler can recognize it.
 ;;;
-(define-setf-method ldb (bytespec place &environment env)
+(define-setf-expander ldb (bytespec place &environment env)
   "The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this
   place with bits from the low-order end of the new value."
@@ -1096,7 +1089,7 @@
 		  `(ldb ,btemp ,getter))))))
 
 
-(define-setf-method mask-field (bytespec place &environment env)
+(define-setf-expander mask-field (bytespec place &environment env)
   "The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this place
   with bits from the corresponding position in the new value."
@@ -1113,7 +1106,7 @@
 	      `(mask-field ,btemp ,getter)))))
 
 
-(define-setf-method the (type place &environment env)
+(define-setf-expander the (type place &environment env)
   (multiple-value-bind (dummies vals newval setter getter)
 		       (get-setf-method place env)
       (values dummies
@@ -1121,6 +1114,22 @@
 	      newval
 	      (subst `(the ,type ,(car newval)) (car newval) setter)
 	      `(the ,type ,getter))))
+
+(define-setf-expander values (&rest places &environment env)
+  (collect ((setters) (getters))
+    (let ((all-dummies '())
+	  (all-vals '())
+	  (newvals '()))
+      (dolist (place places)
+	(multiple-value-bind (dummies vals newval setter getter)
+	    (get-setf-expansion place env)
+	  (setf all-dummies (append all-dummies dummies))
+	  (setf all-vals (append all-vals vals))
+	  (setf newvals (append newvals newval))
+	  (setters setter)
+	  (getters getter)))
+      (values all-dummies all-vals newvals
+	      `(values ,@(setters)) `(values ,@(getters))))))
 
 
 ;;;; CASE, TYPECASE, & Friends.
@@ -1139,6 +1148,12 @@
 ;;; RESTART-CASE allowing keyform to be set and retested.
 ;;;
 (defun case-body (name keyform cases multi-p test errorp proceedp)
+  (when (null cases)
+    (error 'simple-type-error
+	   :datum cases
+	   :expected-type 'list
+	   :format-control "~S was called without any clauses."
+	   :format-arguments (list name)))
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
@@ -1500,7 +1515,7 @@
        (setqs nil)
        (pairs pairs (cddr pairs)))
       ((atom (cdr pairs))
-       `(let ,(nreverse lets) (setq ,@(nreverse setqs)) nil))
+       `(let ,(nreverse lets) (setq ,@(nreverse setqs))))
     (let ((gen (gensym)))
       (push `(,gen ,(cadr pairs)) lets)
       (push (car pairs) setqs)

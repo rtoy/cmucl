@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.1 1998/06/23 11:22:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.2 1998/07/19 01:06:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,16 +66,32 @@
 
 (defun ill-in (stream &rest ignore)
   (declare (ignore ignore))
-  (error "~S is not a character input stream." stream))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies input-stream-p)
+	 :format-control "~S is not a character input stream."
+	 :format-arguments (list stream)))
 (defun ill-out (stream &rest ignore)
   (declare (ignore ignore))
-  (error "~S is not a character output stream." stream))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies output-stream-p)
+	 :format-control "~S is not a character output stream."
+	 :format-arguments (list stream)))
 (defun ill-bin (stream &rest ignore)
   (declare (ignore ignore))
-  (error "~S is not a binary input stream." stream))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies input-stream-p)
+	 :format-control "~S is not a binary input stream."
+	 :format-arguments (list stream)))
 (defun ill-bout (stream &rest ignore)
   (declare (ignore ignore))
-  (error "~S is not a binary output stream." stream))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies output-stream-p)
+	 :format-control "~S is not a binary output stream."
+	 :format-arguments (list stream)))
 (defun closed-flame (stream &rest ignore)
   (declare (ignore ignore))
   (error "~S is closed." stream))
