@@ -21,7 +21,7 @@
 
 (define-condition toolkit-error (error) ())
 
-(define-condition simple-toolkit-error (toolkit-error simple-condition)
+(define-condition simple-toolkit-error (toolkit-error simple-condition) ()
   (:documentation "An error has occurred in the X Toolkit code.")
   (:report (lambda (condition stream)
 	     (declare (stream stream))
