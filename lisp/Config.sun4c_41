@@ -7,5 +7,5 @@ NM = nm -gp
 ASSEM_SRC = sparc-assem.S
 ARCH_SRC = sparc-arch.c
 OS_SRC = sunos-os.c os-common.c
-OS_LINK_FLAGS=-Bstatic
+OS_LINK_FLAGS= -Xlinker -Bstatic
 OS_LIBS=
