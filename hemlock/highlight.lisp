@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.4 1991/10/27 08:28:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/highlight.lisp,v 1.5 1994/02/12 13:25:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,11 +32,6 @@
    if the mark is not after a close paren, or two (temporary) marks
    surrounding the corresponding open paren."
   :value 'lisp-open-paren-finder-function)
-
-(defhvar "Open Paren Highlighting Font"
-  "The string name of the font to be used for highlighting open parens.
-   The font is loaded when initializing Hemlock."
-  :value nil)
 
 
 (defvar *open-paren-font-marks* nil
@@ -91,11 +86,6 @@
 
 
 ;;;; Active regions.
-
-(defhvar "Active Region Highlighting Font"
-  "The string name of the font to be used for highlighting active regions.
-   The font is loaded when initializing Hemlock."
-  :value nil)
 
 (defvar *active-region-font-marks* nil)
 (defvar *active-region-highlight-font* 3
