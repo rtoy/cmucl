@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.4 1991/04/21 19:49:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.5 1991/05/04 18:29:38 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -197,6 +197,7 @@
 	   (inst a lip temp)
 	   (loadw result lip vm:vector-data-offset vm:other-pointer-type)
 	   (inst nilz temp index ,(1- elements-per-word))
+	   (inst xil temp ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
 	       `((inst sl temp ,(1- (integer-length bits)))))
 	   (inst sr result temp)
@@ -214,6 +215,7 @@
 	 (:result-types positive-fixnum)
 	 (:generator 15
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     (setf extra (logxor extra (1- ,elements-per-word)))
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 16))
@@ -329,6 +331,7 @@
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
 	 (:generator 20
 	   (multiple-value-bind (word extra) (floor index ,elements-per-word)
+	     (setf extra (logxor extra (1- ,elements-per-word)))
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 16))
