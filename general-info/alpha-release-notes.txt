@@ -1,0 +1,197 @@
+2/2/92 to 2/4/93:
+
+Compiler:
+
+Fixed VALIDATE-CALL-TYPE to correctly handle calls where there is no
+function type guarding the call (for example, calls to lambdas).  In this
+case, we still want to call RECOGNIZE-KNOWN-CALL, since it will figure
+out what leaf we are referencing, and might also do something else
+interesting: inline expansion, etc.
+
+Replaced the FORMAT transform with one that uses FORMATTER for more
+complete handling of format directives.
+
+Fixed make-array-header to not seg fault.
+
+Changed more references to function-header-code-offset to
+function-code-offset.
+
+
+Motif Stuff:
+
+Fixed things up so that the StringTable.h file gets written out
+properly with all the other header files.
+
+The debugger should now notice the absence of the Motif server and
+print an error message to that effect.
+
+
+
+1/13/93 to 2/2/93:
+
+Code:
+
+Fixed COMPUTE-CALLING-FRAME to not try using %CODE-DEBUG-INFO on things
+that arn't code components.  This broke backtracing in the debugger.
+
+Don't deftype POSITION, because it is a CL symbol.
+
+
+Compiler:
+
+Changed internal error signaling vops to be :translates instead of being
+accessed via %primitive.
+
+Fixed a problem with ASSERT-DEFINITION-TYPE when we have a keyword arg with a
+non-constant default.
+
+Added (values) to the end of %verify-argument-count so it matched the
+defknown.
+
+Changed the defknown for %verify-argument-count to be more precise.
+
+Chagned make-xep-lambda to declare the number of supplied arguments as an
+index instead of a fixnum, because it cannot be negative.
+
+Changed def-source-transform to work with setf functions also.
+
+Removed source-transforms for internal error things, because we just
+:translate to them now.  Removed header-ref and %string-char-p source-
+transforms, because we don't need them anymore.
+
+
+Startup Code:
+
+Allocate, but protect against reading or writing, the page following each
+of the heaps or stacks.  This keeps os_allocate from deciding to use one
+of those pages for something else.
+
+
+
+12/5/92 to 1/13/93
+
+Code:
+
+Backed out the new LOOP, because it breaks something which causes the
+compiler to generate bad code.
+
+Export ARRAY-DISPLACEMENT from the CL package.
+
+Changed kernel:code-debug-info to kernel:%code-debug-info.
+
+Changed several uses of %primitive to eqv functions now that eqv functions
+exist.
+
+Added COPY-STRUCTURE.
+
+Changed %function-header-mumble to %function-mumble.
+
+Exported FLOATING-POINT-INEXACT from CL, and renamed & exported
+FLOATING-POINT-INVALID-OPERATION.
+
+Changed di::code-debug-info to kernel:%code-debug-info.
+
+Added DO-HASH
+
+Export FILE-STREAM from LISP as a synonym for FD-STREAM.  Add :INTERACTIVE-P
+misc method.
+
+Call *setf-fdefinition-hook* before we check for encapsulation, since the
+hook might change the encapsulation.
+
+Changed (code-header-ref component vm:code-debug-info-slot) to
+(%code-debug-info component).
+
+Added a #.vm:dylan-function-header-type branch to OUTPUT-FUNCTION.  Also
+added a T branch that prints "Unknown Function" so we get some output when
+we stumble across unknown functions.
+
+Added :cmu17 to the features list so that PCL can tell if it is in a
+version 16 or a version 17 series core.
+
+Fixed a bug in pprint-let that caused to to barf on (let (nil) ...).
+
+Added support for dylan funciton subtypes.
+
+Changed %print-request-server to use print-unreadable-object to get rid of
+a spelling error in the old version from pre-puo days.
+
+Weaken type declaration on third SELECT result, since it can be NIL if we get
+an error.
+
+Delete #+CLX conditional on HANDLE-QUEUED-CLX-EVENT, since we want to be able
+to load-time conditionalize whether CLX is present.
+
+Exported various slot accessors of streams now part of the standard.  Made
+these read-only slots.  Added open-stream-p and interactive-stream-p.
+
+Fixed GENTEMP to use its own counter, instead of *gensym-counter*.
+
+Added pretty-printer directives to trace so that arg lists and results
+print better.
+
+Fixed untrace-1 not to flame out when untracing untraced functions.
+
+Added module.lisp back in, because ANSI added provide and require back in.
+
+
+Compiler:
+
+Re-worked the way allocation and primitive slot access are compiled, which
+should (hopefully) reduce the size of the backend.
+
+Fixed defknown of %verify-argument-count to have * for the result type
+instead of nil.
+
+Extended INFO to take the env-list as an optional fourth argument so that
+we don't have to re-bind *info-environment* to get at info environemnts
+other then the regular one.
+
+In FINALIZE-XEP-DEFINITION, if not the current global definition, just leave
+the defined type alone, instead of clobbering it with FUNCTION.  A benefit of
+this is that COMPILE doesn't trash the function type.
+
+Allow non-keyword keyword names when the &key keyword is specified separately
+from the variable.
+
+Prevent recursive opportunistic inline expansion during IR1 conversion by
+temporarily clearing the DEFINED-FUNCTION-INLINE-EXPANSION when doing the
+conversion.
+
+Changed the make-closure vop to take the length as an info argument because
+it is always known at compile time.  Changed the set vop to not have a result
+because we don't want it.
+
+Added ANNOTATE-FUNNY-CALL for use with new define-primitive-object stuff.
+
+
+Startup code:
+
+Increased the size of the sparc's heap.
+
+Changed "environment too big" message to suggest probably a sparc 10.
+
+
+PCL:
+
+September-16-92-PCL-e has been incorporated into the CMUCL sources thanks
+to Rick Harris. 
+
+
+
+11/23/92 to 12/5/92:
+
+Code:
+
+Minor fixes to LOOP and DELETE-PACKAGE.
+
+Low level support for various subtypes of function for use with Dylan.
+
+
+
+Pre 12/5/92:
+
+For the release notes corresponding to releases prior to 12/5/92, please
+see the file:
+
+	alpha-notes-thru-92.txt
