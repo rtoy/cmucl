@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.6 2003/07/01 20:02:01 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/char.lisp,v 1.7 2003/07/08 13:50:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -190,7 +190,7 @@
   (:translate char<)
   (:variant :b :nb))
 
-(define-vop (fast-char>-c/base-char/c base-char-compare-c)
+(define-vop (fast-char>-c/base-char base-char-compare-c)
   (:translate char>)
   (:variant :a :na))
 
