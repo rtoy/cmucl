@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.29 1990/11/24 09:03:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.30 1990/11/24 09:20:40 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -18,7 +18,7 @@
 (import '(lisp::%raw-bits lisp::simple-array-p))
 
 (in-package "KERNEL")
-(export '(%set-funcallable-instance-info funcallable-instance-p))
+(export '(funcallable-instance-p %set-funcallable-instance-info))
 
 (in-package "C")
 
@@ -76,7 +76,11 @@
 (defknown %closure-index-ref (function index) t
   (flushable))
 
+
+(defknown %make-funcallable-instance (index function) function (unsafe))
+
 (defknown %set-funcallable-instance-info (function index t) t (unsafe))
+
 
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
   (flushable))
