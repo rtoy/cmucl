@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.5 1997/11/21 12:14:27 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.6 1997/11/22 14:46:36 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,6 +173,39 @@
     (format t "~s~%" buf)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; Interrupt contexts.
+
+;;; Save the interrupt contexts.
+(defun save-interrupt-contexts (save-vector)
+  (declare (type (simple-array (unsigned-byte 32) (*)) save-vector)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((size lisp::*free-interrupt-context-index*))
+    (declare (type (unsigned-byte 29) size))
+    ;; Grow save-stack if necessary.
+    (when (< (length save-vector) size)
+      (setq save-vector
+	    (adjust-array save-vector size :element-type '(unsigned-byte 32))))
+    (alien:with-alien
+	((lisp-interrupt-contexts (array alien:unsigned nil) :extern))
+      (dotimes (index size)
+	(setf (aref save-vector index)
+	      (alien:deref lisp-interrupt-contexts index))))
+    save-vector))
+
+;;; Restore the interrupt contexts.
+(defun restore-interrupt-contexts (save-vector)
+  (declare (type (simple-array (unsigned-byte 32) (*)) save-vector)
+	   (optimize (speed 3) (safety 0)))
+  (let* ((size lisp::*free-interrupt-context-index*))
+    (declare (type (unsigned-byte 29) size))
+    (alien:with-alien
+	((lisp-interrupt-contexts (array alien:unsigned nil) :extern))
+      (dotimes (index size)
+	(setf (alien:deref lisp-interrupt-contexts index)
+	      (aref save-vector index)))))
+  (values))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;
 
 ;;; The control stacks need special handling on the x86 as they
@@ -217,6 +250,10 @@
   ;; Eval-stack
   (eval-stack nil :type (or (simple-array t (*)) null))
   (eval-stack-top 0 :type fixnum)
+  ;;
+  ;; Interrupt contexts
+  (interrupt-contexts nil :type (or (simple-array (unsigned-byte 32) (*))
+				    null))
   ;; Resumer
   (resumer nil :type (or stack-group null)))
 
@@ -254,6 +291,7 @@
 	 :control-stack-id 0
 	 :binding-stack #()
 	 :alien-stack (make-array 0 :element-type '(unsigned-byte 32))
+	 :interrupt-contexts (make-array 0 :element-type '(unsigned-byte 32))
 	 :eval-stack #()))
   (setf *initial-stack-group* *current-stack-group*))
 
@@ -322,38 +360,45 @@
 	     (setf (aref x86::*control-stacks* control-stack-id) control-stack)
 	     (values control-stack control-stack-id)))
 	 (allocate-child-stack-group (control-stack-id)
-	   ;; Save the binding stack.
-	   (unbind-binding-stack)
-	   (multiple-value-bind (binding-stack binding-stack-size)
-	       (save-binding-stack #())
-	     (rebind-binding-stack)
-	     ;; Save the Alien stack
-	     (multiple-value-bind (alien-stack alien-stack-size
-					       alien-stack-pointer)
-		 (save-alien-stack
-		  (make-array 0 :element-type '(unsigned-byte 32)))
-	       ;; Allocate a stack-group structure.
-	       (%make-stack-group
-		:name name
-		:state :active
-		:control-stack-id control-stack-id
-		;; Save the Eval stack.
-		:eval-stack (copy-seq (the (simple-array t (*))
-					   kernel:*eval-stack*))
-		:eval-stack-top kernel:*eval-stack-top*
-		;; Misc stacks.
-		:current-catch-block lisp::*current-catch-block*
-		:current-unwind-protect-block
-		lisp::*current-unwind-protect-block*
-		;; Alien stack.
-		:alien-stack alien-stack
-		:alien-stack-size alien-stack-size
-		:alien-stack-pointer alien-stack-pointer
-		;; Binding stack.
-		:binding-stack binding-stack
-		:binding-stack-size binding-stack-size
-		;; Resumer
-		:resumer resumer)))))
+	   ;; Save the interrupt-contexts while the size is still
+	   ;; bound.
+	   (let ((interrupt-contexts
+		  (save-interrupt-contexts
+		   (make-array 0 :element-type '(unsigned-byte 32)))))
+	     ;; Save the binding stack.
+	     (unbind-binding-stack)
+	     (multiple-value-bind (binding-stack binding-stack-size)
+		 (save-binding-stack #())
+	       (rebind-binding-stack)
+	       ;; Save the Alien stack
+	       (multiple-value-bind (alien-stack alien-stack-size
+						 alien-stack-pointer)
+		   (save-alien-stack
+		    (make-array 0 :element-type '(unsigned-byte 32)))
+		 ;; Allocate a stack-group structure.
+		 (%make-stack-group
+		  :name name
+		  :state :active
+		  :control-stack-id control-stack-id
+		  ;; Save the Eval stack.
+		  :eval-stack (copy-seq (the (simple-array t (*))
+					     kernel:*eval-stack*))
+		  :eval-stack-top kernel:*eval-stack-top*
+		  ;; Misc stacks.
+		  :current-catch-block lisp::*current-catch-block*
+		  :current-unwind-protect-block
+		  lisp::*current-unwind-protect-block*
+		  ;; Alien stack.
+		  :alien-stack alien-stack
+		  :alien-stack-size alien-stack-size
+		  :alien-stack-pointer alien-stack-pointer
+		  ;; Interrupt contexts
+		  :interrupt-contexts interrupt-contexts
+		  ;; Binding stack.
+		  :binding-stack binding-stack
+		  :binding-stack-size binding-stack-size
+		  ;; Resumer
+		  :resumer resumer))))))
     (let ((child-stack-group nil))
       (let ((unix::*interrupts-enabled* nil)
 	    (lisp::*gc-inhibit* t))
@@ -369,6 +414,8 @@
 	      (unwind-protect
 		   (progn
 		     (setq *current-stack-group* child-stack-group)
+		     (assert (eq *current-stack-group*
+				 (process-stack-group *current-process*)))
 		     ;; Child start with interrupts and GC enabled.
 		     (let ((unix::*interrupts-enabled* t)
 			   (lisp::*gc-inhibit* nil))
@@ -382,6 +429,8 @@
 		  ;; Verify the resumer.
 		  (unless (and resumer
 			       (eq (stack-group-state resumer) :active))
+		    (format t "*Resuming stack-group ~s instead of ~s~%"
+			    *initial-stack-group* resumer)
 		    (setq resumer *initial-stack-group*))
 		  ;; Restore the resumer state.
 		  (setq *current-stack-group* resumer)
@@ -405,6 +454,9 @@
 		   (stack-group-alien-stack resumer)
 		   (stack-group-alien-stack-size resumer)
 		   (stack-group-alien-stack-pointer resumer))
+		  ;; Interrupt-contexts.
+		  (restore-interrupt-contexts
+		   (stack-group-interrupt-contexts resumer))
 		  ;; 
 		  (let ((new-control-stack
 			 (aref x86::*control-stacks*
@@ -428,6 +480,7 @@
   (declare (type stack-group new-stack-group))
   (assert (and (eq (stack-group-state new-stack-group) :active)
 	       (not (eq new-stack-group *current-stack-group*))))
+  (assert (eq new-stack-group (process-stack-group *current-process*)))
   (let ((unix::*interrupts-enabled* nil)
 	(lisp::*gc-inhibit* t))
     (let* (;; Save the current stack-group on its stack.
@@ -474,6 +527,11 @@
       (setf lisp::*current-unwind-protect-block*
 	    (stack-group-current-unwind-protect-block new-stack-group))
       
+      ;; Save the interrupt-contexts.
+      (setf (stack-group-interrupt-contexts stack-group)
+	    (save-interrupt-contexts
+	     (stack-group-interrupt-contexts stack-group)))
+
       ;; The binding stack.
       (unbind-binding-stack)
       (multiple-value-bind (stack size)
@@ -484,6 +542,10 @@
 			     (stack-group-binding-stack-size new-stack-group))
       (rebind-binding-stack)
       
+      ;; Restore the interrupt-contexts.
+      (restore-interrupt-contexts
+       (stack-group-interrupt-contexts new-stack-group))
+
       ;; The Alien stack
       (multiple-value-bind (save-stack size alien-stack)
 	  (save-alien-stack (stack-group-alien-stack stack-group))
@@ -502,6 +564,7 @@
 	(x86:control-stack-resume control-stack new-control-stack))
       ;; Thread returns.
       (setq *current-stack-group* stack-group)))
+  (assert (eq *current-stack-group* (process-stack-group *current-process*)))
   (when (and unix::*interrupts-enabled* unix::*interrupt-pending*)
     (unix::do-pending-interrupt))
   (when (and lisp::*need-to-collect-garbage* (not lisp::*gc-inhibit*))
@@ -764,6 +827,7 @@
     ;; Inhibit recursive entry of the scheduler.
     (setf *inhibit-scheduling* t)
     (assert (eq (first *remaining-processes*) *current-process*))
+    (assert (eq *current-stack-group* (process-stack-group *current-process*)))
     (loop
      ;; Rotate the queue.
      (setf *remaining-processes*
@@ -890,8 +954,11 @@
   (setf (alien:extern-alien "enable_pointer_filter" alien:unsigned) 0)
   (flet ((sigalrm-handler (signal code scp)
 	   (declare (ignore signal code scp))
-	   (when (<= lisp::*free-interrupt-context-index* 1)
-	     (process-yield))))
+	   (cond ((<= lisp::*free-interrupt-context-index* 1)
+		  #+nil (format t ".~%")
+		  (process-yield))
+		 (t
+		  #+nil (format t "-~%")))))
     (sys:enable-interrupt :sigalrm #'sigalrm-handler))
   (unix:unix-setitimer :real sec usec 0 1)
   (values))
