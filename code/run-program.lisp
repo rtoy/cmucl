@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.8 1992/02/14 23:45:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.9 1992/02/15 12:50:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,7 +164,7 @@
       (cond ((not okay)
 	     (values nil errno))
 	    ((and (eql pid (process-pid proc))
-		  (= (unix-signal-number signal) unix:sigcont))
+		  (= (unix:unix-signal-number signal) unix:sigcont))
 	     (setf (process-%status proc) :running)
 	     (setf (process-exit-code proc) nil)
 	     (when (process-status-hook proc)
