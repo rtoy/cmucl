@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: RT; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.3 1991/04/15 15:40:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.4 1991/04/21 19:49:12 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -21,6 +21,8 @@
 ;;;; Allocator for the array header.
 
 (define-vop (make-array-header)
+  (:translate make-array-header)
+  (:policy :fast-safe)
   (:args (type :scs (any-reg descriptor-reg))
 	 (rank :scs (any-reg descriptor-reg)))
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
@@ -47,7 +49,7 @@
       ;; Shift the fixnum representation of the length, then OR in the fixnum
       ;; rep of the type code, and then shift off the two extra fixnum zeros.
       (inst sl ndescr vm:type-bits)
-      (inst oil ndescr type)
+      (inst o ndescr type)
       (inst sr ndescr 2)
       (storew ndescr header 0 vm:other-pointer-type))
     (move result header)))
