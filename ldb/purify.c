@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.7 1990/10/02 23:04:59 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.8 1990/11/12 02:39:02 wlott Exp $ */
 
 
 #include <mach.h>
@@ -378,7 +378,7 @@ static lispobj ptrans_struct(thing, header, constant)
      boolean constant;
 {
     /* Shouldn't be any structures in dynamic space. */
-    gc_assert(0);
+    gc_abort();
     return NIL;
 }
 
@@ -446,7 +446,7 @@ static lispobj ptrans_otherptr(thing, header, constant)
 
       default:
         /* Should only come across other pointers to the above stuff. */
-        gc_assert(0);
+        gc_abort();
     }
 }
 
@@ -520,7 +520,7 @@ static lispobj *pscav(addr, nwords, constant)
 
                       default:
                         /* It was a pointer, but not one of them? */
-                        gc_assert(0);
+                        gc_abort();
                     }
                 }
                 *addr = thing;
@@ -597,10 +597,7 @@ static lispobj *pscav(addr, nwords, constant)
                 break;
 
               case type_CodeHeader:
-                gc_assert(0); /* No code headers in static space */
-#if 0
-                count = pscav_code(addr, thing);
-#endif
+                gc_abort(); /* No code headers in static space */
                 break;
 
               case type_FunctionHeader:
@@ -608,7 +605,7 @@ static lispobj *pscav(addr, nwords, constant)
               case type_ReturnPcHeader:
                 /* We should never hit any of these, 'cause they occure */
                 /* buried in the middle of code objects. */
-                gc_assert(0);
+                gc_abort();
 
               case type_WeakPointer:
                 /* Weak pointers get preserved during purify, 'cause I don't */
