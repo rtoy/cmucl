@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.9 1997/11/29 19:52:32 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.10 1998/01/19 09:01:59 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -269,16 +269,14 @@ GNAME(closure_tramp):
 GNAME(function_end_breakpoint_guts):
 	/* Multiple Value return */
 	jmp	multiple_value_return
-	/* Single value return */
-
-	/* The eventual return will now be a multi-value return so
-	   setup for it. Multi-value returns are not in general valid
-	   for one value so convert to 2 values. Perhaps the
-	   convertion should be changed? */
-	movl	$8,%ecx		# Setup ecx=2 for the debugger.
-	movl	$NIL,%edi	# Second value
-	movl	%esp,%ebx	# ebx has the ofp
-	subl	$8,%esp		# needed?
+	/* Single value return: The eventual return will now use the
+	   multiple values return convention but with a return values
+	   count of one. */
+	movl	%esp,%ebx	# Setup ebx - the ofp.
+	subl	$4,%esp		# Allocate one stack slot for the return value
+	movl	$4,%ecx		# Setup ecx for one return value.
+	movl	$NIL,%edi	# Default second value
+	movl	$NIL,%esi	# Default third value
 		
 multiple_value_return:
 	
@@ -286,11 +284,10 @@ multiple_value_return:
 GNAME(function_end_breakpoint_trap):
 	int3
 	.byte 	trap_FunctionEndBreakpoint
+	hlt			# Should never return here.
 
-	/* Never returns here. */
 	.global GNAME(function_end_breakpoint_end)
 GNAME(function_end_breakpoint_end):
-	hlt
 
 
 	.global	GNAME(do_pending_interrupt)
