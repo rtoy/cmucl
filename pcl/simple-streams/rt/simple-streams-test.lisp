@@ -166,6 +166,24 @@
         (string= content seq))))
   t)
 
+(deftest write-read-large-sc-read-seq-2
+  (let* ((stream (make-instance 'file-simple-stream
+                                :filename *test-file* :direction :output
+                                :if-exists :overwrite
+                                :if-does-not-exist :create))
+         (length (1+ (* 3 (device-buffer-length stream))))
+         (content (make-string length)))
+    (dotimes (i (length content))
+      (setf (aref content i) (code-char (random 256))))
+    (with-open-stream (s stream)
+      (write-string content s))
+    (with-test-file (s *test-file* :class 'file-simple-stream
+                       :direction :input :if-does-not-exist :error)
+      (let ((seq (make-string length)))
+        (read-sequence seq s)
+        (string= content seq))))
+  t)
+
 (deftest write-read-large-sc-3
   (let* ((stream (make-instance 'file-simple-stream
                                 :filename *test-file* :direction :output
@@ -183,6 +201,24 @@
         #+nil (read-sequence seq s)
         #-nil (dotimes (i length)
                 (setf (aref seq i) (read-byte s)))
+        (equalp content seq))))
+  t)
+
+(deftest write-read-large-sc-read-seq-3
+  (let* ((stream (make-instance 'file-simple-stream
+                                :filename *test-file* :direction :output
+                                :if-exists :overwrite
+                                :if-does-not-exist :create))
+         (length (1+ (* 3 (device-buffer-length stream))))
+         (content (make-array length :element-type '(unsigned-byte 8))))
+    (dotimes (i (length content))
+      (setf (aref content i) (random 256)))
+    (with-open-stream (s stream)
+      (write-sequence content s))
+    (with-test-file (s *test-file* :class 'file-simple-stream
+                       :direction :input :if-does-not-exist :error)
+      (let ((seq (make-array length :element-type '(unsigned-byte 8))))
+        (read-sequence seq s)
         (equalp content seq))))
   t)
 
@@ -346,3 +382,32 @@
            (equalp uvector result-uvector)
            (equalp svector result-svector)))
   T)
+
+(deftest create-read-mapped-file-read-seq-1
+    ;; Read data via a mapped-file-simple-stream object using
+    ;; read-sequence.
+    (let ((result t))
+      (with-test-file (s *test-file* :class 'mapped-file-simple-stream
+			 :direction :input :if-does-not-exist :error
+			 :initial-content *dumb-string*)
+	(let ((seq (make-string (length *dumb-string*))))
+	  (read-sequence seq s)
+	  (setf result (and result (string= seq *dumb-string*)))))
+      result)
+  t)
+
+(deftest create-read-mapped-file-read-seq-2
+    ;; Read data via a mapped-file-simple-stream object using
+    ;; read-sequence.
+    (let ((result t))
+      (with-test-file (s *test-file* :class 'mapped-file-simple-stream
+			 :direction :input :if-does-not-exist :error
+			 :initial-content *dumb-string*)
+	(let ((seq (make-string (+ 10 (length *dumb-string*)))))
+	  (read-sequence seq s)
+	  (setf result (and result
+			    (string= seq *dumb-string*
+				     :end1 (length *dumb-string*))))))
+      result)
+  t)
+
