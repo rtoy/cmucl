@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.12 1991/04/09 17:21:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.13 1991/04/22 18:24:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -477,6 +477,11 @@
        (specifier-type type))
       (port
        (specifier-type '(unsigned-byte 32)))
+      (values
+       (values-specifier-type
+	`(values ,@(mapcar #'type-specifier
+			   (mapcar #'alien-type-type
+				   (cdr type))))))
       (t
        (error "Alien type ~S has no corresponding Lisp type." type)))))
 
@@ -534,11 +539,11 @@
 				    temp-tn nsp tn)))
 	(assert (null args)))
 
-      (let ((results (when return-type
-		       (list (make-call-out-result-tn return-type)))))
+      (let ((results (and return-type (make-call-out-result-tn return-type))))
 	(vop* call-out call block
 	      ((reference-tn-list arg-tns nil))
-	      ((reference-tn-list results t))
+	      ((reference-tn-list (if (listp results) results (list results))
+				  t))
 	      name)
 	(vop dealloc-number-stack-space call block stack-frame-size)
 	(move-continuation-result call block results cont)))))
