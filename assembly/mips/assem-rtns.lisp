@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.22 1990/10/18 23:07:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.23 1990/10/19 14:16:43 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -112,6 +112,7 @@
      ;; These are needed by the blitting code.
      (:temp src any-reg nl1-offset)
      (:temp dst any-reg nl2-offset)
+     (:temp count any-reg nl3-offset)
      (:temp temp descriptor-reg l0-offset)
 
      ;; Needed for the jump
@@ -155,8 +156,8 @@
 	
   DONE
   ;; We are done.  Do the jump.
-  (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
-  (lisp-jump temp lip))
+  (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
+  (lisp-jump function lip))
 
 
 
