@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.31 1997/11/16 13:59:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.32 1997/12/04 03:58:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.31 1997/11/16 13:59:56 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.32 1997/12/04 03:58:31 dtc Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -257,11 +257,24 @@
 
 ;;;; Complexes:
 
+#-complex-float
 (defun upgraded-complex-part-type (spec)
   "Returns the element type of the most specialized COMPLEX number type that
    can hold parts of type Spec.  This is currently always T."
   (declare (ignore spec))
   t)
+
+#+complex-float
+(defun upgraded-complex-part-type (spec)
+  "Returns the element type of the most specialized COMPLEX number type that
+   can hold parts of type Spec."
+  (cond ((subtypep spec 'single-float)
+	 'single-float)
+	((subtypep spec 'double-float)
+	 'double-float)
+	((subtypep spec 'rational)
+	 'rational)
+	(t)))
 
 #-complex-float
 (defun complex (realpart &optional (imagpart 0))
