@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.38 1993/10/25 13:53:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.39 1993/10/25 14:00:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -661,7 +661,9 @@
 		     (dolist (initarg (condition-slot-initargs slot) nil)
 		       (when (functionp (getf initarg e-def-initargs))
 			 (return t))))
-	     (push slot (condition-class-hairy-slots class))))))))
+	     (push slot (condition-class-hairy-slots class))))
+	  ((nil)
+	   (setf (condition-slot-allocation slot) :instance))))))
   name)
 
 
