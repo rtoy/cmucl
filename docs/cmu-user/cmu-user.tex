@@ -1540,7 +1540,7 @@ macro is useful.
   \item On the x86, setting the accrued exceptions of an unmasked
     exception would cause a FP trap. The macro behaviour of restoring
     the accrued exceptions ensures than if an accrued exception is
-    initial not flagged and occurs within the body it will be
+    initially not flagged and occurs within the body it will be
     restored/cleared at the exit of the body and thus not cause a
     trap.
     
@@ -1549,13 +1549,13 @@ macro is useful.
     \code{wait} instruction (\code{x86::float-wait}) if using the lisp
     conditions to catch trap within a \code{handler-bind}.  The
     \code{handler-bind} macro does the right thing and inserts a
-    float-wait at the end of its body on the x86).  The masking and
+    float-wait (at the end of its body on the x86).  The masking and
     noting of exceptions is also safe here.
     
   \item The setting of the FP flags uses the
     \code{(floating-point-modes)} and the \code{(set
       (floating-point-modes)\ldots)} VOPs. These VOPs blindly update
-    the flags which many include other state.  We assume this state
+    the flags which may include other state.  We assume this state
     hasn't changed in between getting and setting the state. For
     example, if you used the FP unit between the above calls, the
     state may be incorrectly restored! The
