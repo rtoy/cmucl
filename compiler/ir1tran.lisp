@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.5 1993/02/10 23:18:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.6 1993/02/16 10:53:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,7 +221,8 @@
 			  (find-free-really-function name))
 			 (structure-class
 			  #+ns-boot
-			  (if (layout-info (class-layout info))
+			  (if (layout-info (info type compiler-layout
+						 (class-name info)))
 			      (find-structure-slot-accessor info name)
 			      (find-free-really-function name))
 			  #-ns-boot
