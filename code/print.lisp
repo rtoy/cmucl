@@ -240,9 +240,7 @@
 	    ;; If a list, go through element by element, being careful
 	    ;; about not running over the printlength
 	    (list
-	     (if (clos::funcallable-instance-p object)
-		 (clos::print-object object stream (1+ currlevel))
-		 (output-list object stream (1+ currlevel))))
+	     (output-list object stream (1+ currlevel)))
 	    (string
 	     (if *print-escape*
 		 (quote-string object stream)
@@ -703,6 +701,7 @@
 (defun output-structure (structure stream currlevel)
   (funcall (or (info type printer (svref structure 0))
 	       #'c::default-structure-print)
+	   structure stream currlevel))
 
 
 ;;;; Functions to help print strings.
@@ -1252,7 +1251,7 @@
 ;;; Functions Objects and other implmentation specific objects 
 ;;; are output here. 
 
-(defun output-random (object)
+(defun output-random (object stream)
   (write-string "#<" stream)
   (if (compiled-function-p object)
       (output-function-object object stream)
