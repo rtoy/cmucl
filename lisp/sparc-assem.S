@@ -184,6 +184,12 @@ _call_into_c:
         call    reg_CFUNC
         nop
 
+	/*
+	 * Note: C calling conventions (32-bit) say that %o0 and %o1
+	 * are used to return function results.  In particular 64-bit
+	 * results are in %o0 (hi) and %o1 (low).  
+	 */
+	
         /* Re-establish NIL */
         set     NIL, reg_NIL
 
@@ -191,12 +197,12 @@ _call_into_c:
 	set	4, reg_ALLOC
 
         /* No longer in foreign function call. */
-        sethi   %hi(_foreign_function_call_active), reg_NL1
-        st      reg_ZERO, [reg_NL1+%lo(_foreign_function_call_active)]
+        sethi   %hi(_foreign_function_call_active), reg_NL2
+        st      reg_ZERO, [reg_NL2+%lo(_foreign_function_call_active)]
 
         /* Load the rest of lisp state. */
-        load(_current_dynamic_space_free_pointer, reg_NL1)
-	add	reg_NL1, reg_ALLOC, reg_ALLOC
+        load(_current_dynamic_space_free_pointer, reg_NL2)
+	add	reg_NL2, reg_ALLOC, reg_ALLOC
         load(_current_binding_stack_pointer, reg_BSP)
         load(_current_control_stack_pointer, reg_CSP)
         load(_current_control_frame_pointer, reg_CFP)
