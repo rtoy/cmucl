@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.37 1993/08/06 11:57:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.38 1993/08/11 16:33:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -604,7 +604,9 @@
 
 (defun quick-integer-to-string (n)
   (declare (type integer n))
-  (cond ((zerop n) "0")
+  (cond ((not (fixnump n))
+	 (write-to-string n :base 10 :radix nil))
+	((zerop n) "0")
 	((eql n 1) "1")
 	((minusp n)
 	 (concatenate 'simple-string "-"
@@ -620,7 +622,7 @@
 	       (replace res res :start2 i :end2 len)
 	       (shrink-vector res (- len i)))
 	   (declare (simple-string res)
-		    (fixnum len i r))
+		    (fixnum len i r q))
 	   (multiple-value-setq (q r) (truncate q 10))
 	   (setf (schar res i) (schar "0123456789" r))))))
 
