@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.14 2003/05/14 14:38:39 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.15 2004/09/11 19:18:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -259,8 +259,17 @@
 (define-vop (alloc-number-stack-space)
   (:info amount)
   (:results (result :scs (sap-reg any-reg)))
+  (:node-var node)
   (:generator 0
     (assert (location= result esp-tn))
+    ;; Set the rounding precision to 64-bits when calling out to C.
+    (when (policy node (= float-accuracy 3))
+      (inst sub esp-tn 4)
+      (inst fnstcw (make-ea :word :base esp-tn))
+      (inst wait)
+      (inst or (make-ea :word :base esp-tn) #x300)
+      (inst fldcw (make-ea :word :base esp-tn))
+      (inst wait))
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
 	(inst sub esp-tn delta)))
@@ -268,10 +277,19 @@
 
 (define-vop (dealloc-number-stack-space)
   (:info amount)
+  (:node-var node)
   (:generator 0
     (unless (zerop amount)
       (let ((delta (logandc2 (+ amount 3) 3)))
-	(inst add esp-tn delta)))))
+	(inst add esp-tn delta)))
+    ;; Reset the rounding precision to 53-bits
+    (when (policy node (= float-accuracy 3))
+      (inst fnstcw (make-ea :word :base esp-tn))
+      (inst wait)
+      (inst and (make-ea :word :base esp-tn) #xfeff)
+      (inst fldcw (make-ea :word :base esp-tn))
+      (inst wait)
+      (inst add esp-tn 4))))
 
 (define-vop (alloc-alien-stack-space)
   (:info amount)

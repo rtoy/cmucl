@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.20 2004/07/08 04:10:09 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.21 2004/09/11 19:18:02 rtoy Exp $
  *
  */
 
@@ -44,6 +44,7 @@
 #include <netdb.h>
 #include <link.h>
 #include <dlfcn.h>
+#include <fpu_control.h>
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -83,7 +84,16 @@ void os_init(void)
   os_vm_page_size = getpagesize();
 
 #if defined(i386) || defined(__x86_64)
-  setfpucw(0x1372|4|8|16|32); /* No interrupts */
+#if 0
+  setfpucw(0x1272|4|8|16|32); /* No interrupts */
+#else
+  /*
+   * Round to nearest, double-float precision (not extended!), disable
+   * interrupts for everything except invalid.
+   */
+  setfpucw(_FPU_RC_NEAREST | _FPU_DOUBLE | _FPU_MASK_PM | _FPU_MASK_UM |
+	   _FPU_MASK_OM | _FPU_MASK_ZM | _FPU_MASK_DM);
+#endif
 #endif
 }
 

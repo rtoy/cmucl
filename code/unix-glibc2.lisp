@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.33 2004/08/31 12:39:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.34 2004/09/11 19:18:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -332,22 +332,26 @@
       (format nil "Unknown error [~d]" error-number)))
 
 (defmacro syscall ((name &rest arg-types) success-form &rest args)
-  `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
-				,@args)))
-     (if (minusp result)
-	 (values nil (unix-errno))
-	 ,success-form)))
+  `(locally
+    (declare (optimize (ext::float-accuracy 0)))
+    (let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
+				 ,@args)))
+      (if (minusp result)
+	  (values nil (unix-errno))
+	  ,success-form))))
 
 ;;; Like syscall, but if it fails, signal an error instead of returning error
 ;;; codes.  Should only be used for syscalls that will never really get an
 ;;; error.
 ;;;
 (defmacro syscall* ((name &rest arg-types) success-form &rest args)
-  `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
-				,@args)))
-     (if (minusp result)
-	 (error "Syscall ~A failed: ~A" ,name (get-unix-error-msg))
-	 ,success-form)))
+  `(locally
+    (declare (optimize (ext::float-accuracy 0)))
+    (let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
+				 ,@args)))
+      (if (minusp result)
+	  (error "Syscall ~A failed: ~A" ,name (get-unix-error-msg))
+	  ,success-form))))
 
 (defmacro void-syscall ((name &rest arg-types) &rest args)
   `(syscall (,name ,@arg-types) (values t 0) ,@args))
