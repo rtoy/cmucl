@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.1 1992/07/28 20:13:58 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.2 1992/08/19 02:49:35 wlott Exp $
 
 all: lisp.nm
 
@@ -49,7 +49,7 @@ internals.h:
 	@false
 
 clean:
-	rm -f Depends lisp.h undefineds *.o lisp lisp.nm
+	rm -f Depends undefineds *.o lisp lisp.nm
 
 depend:
 	$(CC) -MM ${CFLAGS} ${CPPFLAGS} ${SRCS} > ,depends
