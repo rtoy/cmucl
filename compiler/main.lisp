@@ -266,11 +266,11 @@
   (undefined-value))
 
 
-;;; CLEAR-STUFF  --  Internal
+;;; CLEAR-STUFF  --  Interface
 ;;;
 ;;;    Clear all the global variables used by the compiler.
 ;;;
-(defun clear-stuff ()
+(defun clear-stuff (&optional (debug-too t))
   ;;
   ;; Clear global tables.
   (clrhash *free-functions*)
@@ -282,15 +282,17 @@
   (clrhash *seen-blocks*)
   (clrhash *seen-functions*)
   (clrhash *list-conflicts-table*)
-  (clrhash *continuation-numbers*)
-  (clrhash *number-continuations*)
-  (setq *continuation-number* 0)
-  (clrhash *tn-ids*)
-  (clrhash *id-tns*)
-  (setq *tn-id* 0)
-  (clrhash *label-ids*)
-  (clrhash *id-labels*)
-  (setq *label-id* 0)
+
+  (when debug-too
+    (clrhash *continuation-numbers*)
+    (clrhash *number-continuations*)
+    (setq *continuation-number* 0)
+    (clrhash *tn-ids*)
+    (clrhash *id-tns*)
+    (setq *tn-id* 0)
+    (clrhash *label-ids*)
+    (clrhash *id-labels*)
+    (setq *label-id* 0))
   ;;
   ;; Clear some Pack data structures (for GC purposes only.)
   (dolist (sb *sb-list*)
@@ -298,7 +300,9 @@
       (fill (finite-sb-live-tns sb) nil)))
   ;;
   ;; Reset Gensym.
-  (setq lisp:*gensym-counter* 0))
+  (setq lisp:*gensym-counter* 0)
+
+  (values))
 
 
 ;;; PRINT-SUMMARY  --  Interface
@@ -311,38 +315,50 @@
 ;;;
 (defun print-summary (abort-p abort-count)
   (unless abort-p
-    (let ((funs (sort *undefined-warnings* #'string<
-		      :key #'(lambda (x)
-			       (let ((x (undefined-warning-name x)))
-				 (if (symbolp x)
-				     (symbol-name x)
-				     (prin1-to-string x)))))))
-      (dolist (fun funs)
-	(let ((name (undefined-warning-name fun))
-	      (kind (undefined-warning-kind fun))
-	      (warnings (undefined-warning-warnings fun))
-	      (count (undefined-warning-count fun)))
+    (let ((undefs (sort *undefined-warnings* #'string<
+			:key #'(lambda (x)
+				 (let ((x (undefined-warning-name x)))
+				   (if (symbolp x)
+				       (symbol-name x)
+				       (prin1-to-string x)))))))
+      (dolist (undef undefs)
+	(let ((name (undefined-warning-name undef))
+	      (kind (undefined-warning-kind undef))
+	      (warnings (undefined-warning-warnings undef))
+	      (count (undefined-warning-count undef)))
 	  (dolist (*compiler-error-context* warnings)
 	    (compiler-warning "Undefined ~(~A~): ~S" kind name))
 	  
 	  (let ((warn-count (length warnings)))
-	    (when (> count warn-count)
+	    (when (and warnings (> count warn-count))
 	      (let ((more (- count warn-count)))
-		(compiler-warning
-		 "~D ~:[~;more ~]use~P of undefined ~(~A~) ~S."
-		 more warnings more kind name))))))))
-
-  (compiler-mumble
-   "~2&Compilation unit ~:[finished~;aborted~].~
-    ~[~:;~:*~&  ~D fatal error~:P~]~
-    ~[~:;~:*~&  ~D error~:P~]~
-    ~[~:;~:*~&  ~D warning~:P~]~
-    ~[~:;~:*~&  ~D note~:P~]~2%"
-   abort-p
-   abort-count
-   *compiler-error-count*
-   *compiler-warning-count*
-   *compiler-note-count*))
+		(compiler-warning "~D more use~P of undefined ~(~A~) ~S."
+				  more warnings more kind name))))))
+      
+      (dolist (kind '(:variable :function :type))
+	(let ((summary (mapcar #'undefined-warning-name
+			       (remove kind undefs :test-not #'eq
+				       :key #'undefined-warning-kind))))
+	  (when summary
+	    (compiler-warning
+	     "Undefined ~(~A~) summary:~%  ~{~<~%  ~1:;~S~>~^ ~}"
+	     kind summary))))))
+  
+  (unless (and (not abort-p) (zerop abort-count)
+	       (zerop *compiler-error-count*)
+	       (zerop *compiler-warning-count*)
+	       (zerop *compiler-note-count*))
+    (compiler-mumble
+     "~2&Compilation unit ~:[finished~;aborted~].~
+      ~[~:;~:*~&  ~D fatal error~:P~]~
+      ~[~:;~:*~&  ~D error~:P~]~
+      ~[~:;~:*~&  ~D warning~:P~]~
+      ~[~:;~:*~&  ~D note~:P~]~2%"
+     abort-p
+     abort-count
+     *compiler-error-count*
+     *compiler-warning-count*
+     *compiler-note-count*)))
    
    
 ;;; Describe-Component  --  Internal
@@ -972,6 +988,45 @@
       (close-source-info info))))
 
 
+(defun elapsed-time-to-string (it)
+  (let ((tsec (truncate it internal-time-units-per-second)))
+    (multiple-value-bind (tmin sec)
+			 (truncate tsec 60)
+      (multiple-value-bind (thr min)
+			   (truncate tmin 60)
+	(format nil "~D:~2,'0D:~2,'0D" thr min sec)))))
+
+
+;;; START-ERROR-OUTPUT, FINISH-ERROR-OUTPUT  --  Internal
+;;;
+;;;    Print some junk at the beginning and end of compilation.
+;;;
+(defun start-error-output (source-info)
+  (declare (type source-info source-info))
+  (compiler-mumble "~2&Python version ~A, VM ~A on ~A.~%"
+		   compiler-version vm-version
+		   (ext:format-universal-time nil (get-universal-time)
+					      :print-weekday nil
+					      :print-timezone nil))
+  (dolist (x (source-info-files source-info))
+    (compiler-mumble "Compiling: ~A ~A~%"
+		     (namestring (file-info-name x))
+		     (ext:format-universal-time nil (file-info-write-date x)
+						:print-weekday nil
+						:print-timezone nil)))
+  (compiler-mumble "~%")
+  (undefined-value))
+;;;
+(defun finish-error-output (source-info won)
+  (declare (type source-info source-info))
+  (compiler-mumble "Compilation ~:[aborted after~;finished in] ~A.~&"
+		   won
+		   (elapsed-time-to-string
+		    (- (get-universal-time)
+		       (source-info-start-time source-info))))
+  (undefined-value))
+
+
 ;;; COMPILE-FILE  --  Public
 ;;;
 ;;;    Open some files and call SUB-COMPILE-FILE.  If the compile is unwound
@@ -1015,6 +1070,7 @@
 	 (source (verify-source-files source))
 	 (source-info (make-file-source-info source))
 	 (default (pathname (first source))))
+    (start-error-output source-info)
     (unwind-protect
 	(progn
 	  #-new-compiler
@@ -1058,7 +1114,12 @@
       (close-source-info source-info)
 
       (when fasl-file
-	(close-fasl-file fasl-file (not compile-won)))
+	(close-fasl-file fasl-file (not compile-won))
+	(when compile-won
+	  (compiler-mumble "~&~A written.~%"
+			   (namestring (truename output-file-name)))))
+
+      (finish-error-output source-info compile-won)
 
       (when error-file-stream
 	(let ((name (pathname error-file-stream)))
@@ -1159,11 +1220,12 @@
 		 (*all-components* (list component)))
 	    (local-call-analyze component))
 	  
-	  (let* ((components (find-initial-dfo (list lambda)))
-		 (*all-components* components))
-	    (dolist (component components)
-	      (compile-component component object)
-	      (clear-ir2-info component)))
+	  (multiple-value-bind (components top-components)
+			       (find-initial-dfo (list lambda))
+	    (let ((*all-components* (append components top-components)))
+	      (dolist (component *all-components*)
+		(compile-component component object)
+		(clear-ir2-info component))))
 	  
 	  (fix-core-source-info *source-info* object)
 	  (let* ((res (core-call-top-level-lambda lambda object))
