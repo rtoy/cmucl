@@ -7,7 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    This file contains impelemtentation-dependent transforms.
+;;;    This file contains impelemtentation-dependent transforms, IR2 convert
+;;; methods, etc.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
@@ -31,3 +32,50 @@
 
 (def-source-transform char-int (x)
   `(truly-the char-int (%primitive make-fixnum ,x)))
+
+
+;;;; Funny function implementations:
+
+;;; Convert these funny functions into a %Primitive use, letting %Primitive
+;;; deal with evaluating the "Fixed" codegen-info arguments.
+;;;
+(def-source-transform %more-arg-context (&rest foo)
+  `(%primitive more-arg-context ,@foo))
+;;;
+(def-source-transform %verify-argument-count (&rest foo)
+  `(%primitive verify-argument-count ,@foo))
+
+
+;;; Error funny functions:
+;;;
+;;; Mark these as as not returning by using TRULY-THE NIL.
+
+(def-source-transform %type-check-error (obj type)
+  `(truly-the nil (%primitive error2 clc::error-object-not-type ,obj ,type)))
+
+(def-source-transform %odd-keyword-arguments-error ()
+  '(truly-the nil (%primitive error0 clc::error-odd-keyword-arguments)))
+
+(def-source-transform %unknown-keyword-argument-error (key)
+  `(truly-the nil (%primitive error1 clc::error-unknown-keyword-argument ,key)))
+
+(def-source-transform %argument-count-error (&rest foo)
+  `(truly-the nil (%primitive argument-count-error ,@foo)))
+
+
+;;;; Syscall:
+
+(def-primitive-translator syscall (&rest args) `(%syscall ,@args))
+(defknown %syscall (&rest t) *)
+
+(defoptimizer (%syscall ir2-convert) ((&rest args) node block)
+  (let* ((refs (move-full-call-args node block))
+	 (cont (node-cont node))
+	 (res (continuation-result-tns
+	       cont
+	       (list *any-primitive-type* *any-primitive-type*))))
+    (vop* syscall node block
+	  (refs)
+	  ((first res) (second res) nil)
+	  (length args))
+    (move-continuation-result node block res cont)))  
