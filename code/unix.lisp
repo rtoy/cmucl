@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.57 1998/01/29 07:22:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.58 1998/01/29 07:41:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,9 @@
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
-	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
+	  unix-ftruncate unix-symlink
+	  #+(and sparc svr4) unix-times
+	  unix-unlink unix-write unix-ioctl
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
 	  #-hpux tty-cbreak #-(or hpux linux) tty-tandem
