@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.46 2003/10/17 10:06:30 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.47 2004/04/06 20:44:01 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,6 +280,16 @@
     (values (copy-seq *byte-buffer*) tlf-num)))
 
 
+(defun namestring-for-debug-source (file-info)
+  "Extract the namestring from FILE-INFO for the DEBUG-SOURCE.  
+Return FILE-INFO's untruename (e.g., target:foo) if it is absolute;
+otherwise the truename."
+  (let* ((untruename (file-info-untruename file-info))
+	 (dir (pathname-directory untruename)))
+    (namestring (if (and dir (eq (first dir) :absolute))
+		    untruename
+		    (file-info-name file-info)))))
+
 ;;; DEBUG-SOURCE-FOR-INFO  --  Interface
 ;;;
 ;;;    Return a list of DEBUG-SOURCE structures containing information derived
@@ -308,13 +318,8 @@
 		   (setf (debug-source-name res)
 			 (coerce (file-info-forms x) 'simple-vector)))
 		  (pathname
-		   (let* ((untruename (file-info-untruename x))
-			  (dir (pathname-directory untruename)))
-		     (setf (debug-source-name res)
-			   (namestring
-			    (if (and dir (eq (first dir) :absolute))
-				untruename
-				name))))))
+		   (setf (debug-source-name res)
+			 (namestring-for-debug-source x))))
 		res))
 	  (source-info-files info)))
 
