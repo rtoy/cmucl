@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.135 2003/05/12 16:30:42 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.136 2003/07/15 10:24:06 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1833,7 +1833,7 @@
 ;;;
 ;;;    Find the function that is being compiled by COMPILE and bash its name to
 ;;; NAME.  We also substitute for any references to name so that recursive
-;;; calls will be compiled direct.  Lambda is the top-level lambda for the
+;;; calls will be compiled direct.  LAMBDA is the top-level lambda for the
 ;;; compilation.  A REF for the real function is the only thing in the
 ;;; top-level lambda other than the bind and return, so it isn't too hard to
 ;;; find.
@@ -1853,9 +1853,9 @@
 ;;; COMPILE  --  Public
 ;;;
 (defun compile (name &optional (definition (fdefinition name)))
-  "Compiles the function whose name is Name.  If Definition is supplied,
+  "Compiles the function whose name is NAME.  If DEFINITION is supplied,
   it should be a lambda expression that is compiled and then placed in the
-  function cell of Name.  If Name is Nil, the compiled code object is
+  function cell of NAME.  If NAME is Nil, the compiled code object is
   returned."
   (with-compilation-unit ()
     (with-ir1-namespace
@@ -1954,7 +1954,7 @@
 ;;; The output-file, if given, is merged with the input-file.
 (defun compile-file-pathname (input-file
 			      &key
-			      byte-compile
+			      (byte-compile *byte-compile-default*)
 			      (output-file t output-file-supplied-p)
 			      &allow-other-keys)
   "Return a pathname describing what file COMPILE-FILE would write to given
