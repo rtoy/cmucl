@@ -149,7 +149,7 @@
 
 (defun fix-class (name)
   (let* ((new-value (find-class name))
-	 (new-layout (kernel::class-layout new-value))
+	 (new-layout (kernel::%class-layout new-value))
 	 (new-cell (kernel::find-class-cell name))
 	 (*info-environment* (c:backend-info-environment c:*target-backend*)))
     (remhash name kernel::*forward-referenced-layouts*)
