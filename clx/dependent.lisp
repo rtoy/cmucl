@@ -2270,7 +2270,7 @@
 			       (symbol-package type))))
     (apply make-function slot-initializations)))
 
-#-(or ansi-common-lisp excl lcl3.0)
+#-(or ansi-common-lisp excl lcl3.0 CMU)
 (define-condition type-error (x-error)
   (datum
    expected-type)
