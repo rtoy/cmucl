@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/support.lisp,v 1.1 1991/02/18 15:43:35 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/support.lisp,v 1.2 1991/04/22 10:13:28 chiles Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -35,7 +35,11 @@
 	    (inst bala (make-fixup ',name :assembly-routine))
 	    (emit-return-pc lra-label)
 	    (note-this-location ,vop :unknown-return)
-	    (move csp-tn ocfp-tn)
+	    ;; Don't use MOVE.  Use a known 32-bit long instruction, so the
+	    ;; returner can know how many bytes we used here in the
+	    ;; multiple-value return case.  The returner wants to add a known
+	    ;; quantity to LRA indicating how many values it returned.
+	    (inst cal csp-tn ocfp-tn 0)
 	    (inst compute-code-from-lra code-tn code-tn lra-label)
 	    (when cur-nfp
 	      (load-stack-tn cur-nfp ,nfp-save))))
@@ -57,5 +61,5 @@
     (:raw
      `((inst b lip-tn)))
     (:full-call
-     `((lisp-return lra-tn lip-tn :offset 2)))
+     `((lisp-return lra-tn lip-tn :offset 1)))
     (:none)))
