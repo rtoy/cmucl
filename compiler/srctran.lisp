@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.79 1998/02/13 17:15:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.80 1998/02/19 04:28:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -260,13 +260,6 @@
 #+propagate-float-type
 (progn
 
-(defun elfun-float-format (format)
-  (if format
-      (if (eq format 'double-float)
-	  'double-float
-	  'single-float)))
-
-  
 ;;; The basic interval type.  It can handle open and closed intervals.
 ;;; A bound is open if it is a list containing a number, just like
 ;;; Lisp says.  NIL means unbounded.
@@ -1495,12 +1488,15 @@
   (cond ((eq (numeric-type-complexp type) :complex)
 	 ;; The absolute value of a complex number is always a
 	 ;; non-negative float.
-	 (make-numeric-type :class 'float
-			    :format (elfun-float-format
-				     (numeric-type-format type))
-			    :complexp :real
-			    :low 0
-			    :high nil))
+	 (let* ((format (case (numeric-type-class type)
+			  ((integer rational) 'single-float)
+			  (t (numeric-type-format type))))
+		(bound-format (or format 'float)))
+	   (make-numeric-type :class 'float
+			      :format format
+			      :complexp :real
+			      :low (coerce 0 bound-format)
+			      :high nil)))
 	(t
 	 ;; The absolute value of a real number is a non-negative real
 	 ;; of the same type.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.61 1998/02/05 16:55:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.62 1998/02/19 04:28:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -151,9 +151,9 @@
 	 (let ((n-f1 (gensym)))
 	   `(let ((,n-f1 ,float1))
 	      (declare (float ,n-f1))
-	      (if (minusp (if (typep ,n-f1 'single-float)
-			      (single-float-bits ,n-f1)
-			      (double-float-high-bits ,n-f1)))
+	      (if (etypecase ,n-f1
+		    (single-float (minusp (single-float-bits ,n-f1)))
+		    (double-float (minusp (double-float-high-bits ,n-f1))))
 		  (float -1 ,n-f1)
 		  (float 1 ,n-f1)))))))
 
@@ -319,7 +319,7 @@
 
 ;;; FLOAT-CONTAGION-ARG1, ARG2  --  Internal
 ;;;
-;;;    Do some stuff to recognize when the luser is doing mixed float and
+;;;    Do some stuff to recognize when the loser is doing mixed float and
 ;;; rational arithmetic, or different float types, and fix it up.  If we don't,
 ;;; he won't even get so much as an efficency note.
 ;;;
@@ -547,7 +547,7 @@
 (progn
 
 ;;; The number is of type REAL.
-(proclaim '(inline numeric-type-real-p))
+(declaim (inline numeric-type-real-p))
 (defun numeric-type-real-p (type)
   (and (numeric-type-p type)
        (eq (numeric-type-complexp type) :real)))
@@ -572,18 +572,26 @@
 ;;; DEFAULT-TYPE is the specifier-type of the result if COND should
 ;;; return NIL.
 
+;;; Coerce a numeric type bound to the given type while handling
+;;; exclusive bounds.
+(defun coerce-numeric-bound (bound type)
+  (if (consp bound)
+      (consp (coerce (car bound) type))
+      (coerce bound type)))
 
 ;;; Compute a specifier like '(or float (complex float)), except float
 ;;; should be the right kind of float.  Allow bounds for the float
 ;;; part too.
-(defun float-or-complex-type (num &optional lo hi)
-  (declare (type numeric-type num))
-  (let* ((f-type (or (numeric-type-format num) 'float))
-	 (lo (and lo (coerce lo f-type)))
-	 (hi (and hi (coerce hi f-type))))
-    (specifier-type `(or (,f-type ,(or lo '*)
-			          ,(or hi '*))
-			 (complex ,f-type)))))
+(defun float-or-complex-type (arg &optional lo hi)
+  (declare (type numeric-type arg))
+  (let* ((format (case (numeric-type-class arg)
+		   ((integer rational) 'single-float)
+		   (t (numeric-type-format arg))))
+	 (float-type (or format 'float))
+	 (lo (and lo (coerce-numeric-bound lo float-type)))
+	 (hi (and hi (coerce-numeric-bound hi float-type))))
+    (specifier-type `(or (,float-type ,(or lo '*) ,(or hi '*))
+		         (complex ,float-type)))))
 
 )  ; end progn
 
@@ -595,16 +603,18 @@
 ;;;; function, based on the domain of the input.
 ;;;;
 
-;;; ELFUN-DERIVE-TYPE-SIMPLE
+;;; Elfun-Derive-Type-Simple
 ;;; 
-;;; Handle monotonic increasing functions of a single variable whose
-;;; domain is possibly part of the real line.  ARG is the variable,
-;;; FCN is the function, and CSPEC is a specifier that gives the
-;;; (real) domain of the function.  If ARG is not a subtype of CSPEC,
-;;; then the function is assumed to return either a float or a complex
-;;; number.  DEFAULT-LO and DEFAULT-HI are the lower and upper bounds
-;;; if we can't compute the bounds using FCN.
-(defun elfun-derive-type-simple (arg fcn cspec default-lo default-hi)
+;;; Handle monotonic functions of a single variable whose domain is
+;;; possibly part of the real line.  ARG is the variable, FCN is the
+;;; function, and CSPEC is a specifier that gives the (real) domain of
+;;; the function.  If ARG is not a subtype of CSPEC, then the function
+;;; is assumed to return either a float or a complex number.
+;;; DEFAULT-LO and DEFAULT-HI are the lower and upper bounds if we
+;;; can't compute the bounds using FCN.
+;;;
+(defun elfun-derive-type-simple (arg fcn cspec default-lo default-hi
+				     &optional (increasingp t))
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
@@ -612,48 +622,31 @@
 			       :format (numeric-type-format arg)
 			       :complexp :complex))
 	   ((numeric-type-real-p arg)
-	    (let ((lo (numeric-type-low arg))
-		  (hi (numeric-type-high arg)))
-	      (if (csubtypep arg cspec)
-		  (let ((res-lo (bound-func fcn lo))
-			(res-hi (bound-func fcn hi)))
-		    (if (csubtypep arg (specifier-type 'rational))
-			;; For a rational argument the default result
-			;; type is a single-float.
-			(let ((f-type (or (numeric-type-format arg)
-					  'single-float)))
-			  (make-numeric-type
-			   :class 'float
-			   :format f-type
-			   :low (or res-lo
-				    (and default-lo
-					 (coerce default-lo f-type)))
-			   :high (or res-hi
-				     (and default-hi
-					  (coerce default-hi f-type)))))
-			;; However for a real argument the default
-			;; result type is a float.
-			(make-numeric-type
-			 :class 'float
-			 :format (numeric-type-format arg)
-			 :low (or res-lo
-				  (when default-lo
-				    (if (numeric-type-format arg)
-					(coerce default-lo
-						(numeric-type-format arg))
-					default-lo)))
-			 :high (or res-hi
-				   (when default-hi
-				     (if (numeric-type-format arg)
-					 (coerce default-hi
-						 (numeric-type-format arg))
-					 default-hi))))))
-		  (float-or-complex-type arg))))
+	    (if (csubtypep arg cspec)
+		(let* ((low (numeric-type-low arg))
+		       (high (numeric-type-high arg))
+		       (res-lo (or (bound-func fcn (if increasingp low high))
+				   default-lo))
+		       (res-hi (or (bound-func fcn (if increasingp high low))
+				   default-hi))
+		       ;; Result specifier type.
+		       (format (case (numeric-type-class arg)
+				 ((integer rational) 'single-float)
+				 (t (numeric-type-format arg))))
+		       (bound-type (or format 'float)))
+		  (make-numeric-type
+		   :class 'float
+		   :format format
+		   :low (and res-lo
+			     (coerce-numeric-bound res-lo bound-type))
+		   :high (and res-hi
+			      (coerce-numeric-bound res-hi bound-type))))
+		(float-or-complex-type arg)))
 	   (t
 	    (float-or-complex-type arg default-lo default-hi))))))
 
 (macrolet
-    ((frob (name cspec def-lo-bnd def-hi-bnd)
+    ((frob (name cspec def-lo-bnd def-hi-bnd &key (increasingp t))
        (let ((num (gensym)))
 	 `(defoptimizer (,name derive-type) ((,num))
 	   (one-arg-derive-type
@@ -661,65 +654,30 @@
 	    #'(lambda (arg)
 		(elfun-derive-type-simple arg #',name
 					  ,cspec
-					  ,def-lo-bnd ,def-hi-bnd))
+					  ,def-lo-bnd ,def-hi-bnd
+					  ,increasingp))
 	    #',name)))))
   ;; These functions are easy because they are defined for the whole
   ;; real line.
-  (frob exp (specifier-type 'real)
-	0 nil)
-  (frob sinh (specifier-type 'real)
-	nil nil)
-  (frob tanh (specifier-type 'real)
-	-1 1)
-  (frob asinh (specifier-type 'real)
-	nil nil)
+  (frob exp (specifier-type 'real) 0 nil)
+  (frob sinh (specifier-type 'real) nil nil)
+  (frob tanh (specifier-type 'real) -1 1)
+  (frob asinh (specifier-type 'real) nil nil)
 
   ;; These functions are only defined for part of the real line.  The
   ;; condition selects the desired part of the line.  
-  (frob asin (specifier-type '(real -1d0 1d0))
-	#.(- (/ pi 2)) #.(/ pi 2))
-  (frob acosh (specifier-type '(real 1d0))
-	nil nil)
-  (frob atanh (specifier-type '(real -1d0 1d0))
-	-1 1)
+  (frob asin (specifier-type '(real -1l0 1l0)) (- (/ pi 2)) (/ pi 2))
+  ;; Acos is monotonic decreasing, so we need to swap the function
+  ;; values at the lower and upper bounds of the input domain.
+  (frob acos (specifier-type '(real -1l0 1l0)) 0 pi :increasingp nil)
+  (frob acosh (specifier-type '(real 1l0)) nil nil)
+  (frob atanh (specifier-type '(real -1l0 1l0))	-1 1)
   (frob sqrt (specifier-type
-	      #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
-	      #+negative-zero-is-not-zero '(real 0d0))
+	      #-negative-zero-is-not-zero '(or (member 0f0 0d0)
+					       (real (0l0)))
+	      #+negative-zero-is-not-zero '(real 0l0))
 	0 nil))
  
-
-;;; Acos is monotonic decreasing, so we need to swap the function
-;;; values at the lower and upper bounds of the input domain.
-;;;
-(defun acos-derive-type-aux (arg)
-  (etypecase arg
-    (numeric-type
-     (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
-	   ((numeric-type-real-p arg)
-	    (let ((float-type (or (numeric-type-format arg) 'float))
-		  (lo (numeric-type-low arg))
-		  (hi (numeric-type-high arg)))
-	      (cond
-		((and lo hi
-		      (>= (bound-value lo) -1)
-		      (<= (bound-value hi) 1))
-		 (setf lo (or (bound-func #'acos (numeric-type-high arg)) 0))
-		 (setf hi (or (bound-func #'acos (numeric-type-low arg)) pi))
-		 (specifier-type `(,float-type
-				   ,(and lo (coerce lo float-type))
-				   ,(and hi (coerce hi float-type)))))
-		(t
-		 (float-or-complex-type arg 0 pi)))))
-	   (t
-	    (float-or-complex-type arg 0 pi))))))
-;;;
-(defoptimizer (acos derive-type) ((num))
-  (one-arg-derive-type num #'acos-derive-type-aux #'acos))
-
-
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x
 ;;; y) = (exp (* y (log x))).  However, computations done this way
 ;;; have too much roundoff.  Thus we have to do it the hard way.
@@ -940,7 +898,7 @@
 	 ;; A real raised to a non-integral power can be a float or a
 	 ;; complex number.
 	 (cond ((or (csubtypep x (specifier-type '(rational 0)))
-		    (csubtypep x (specifier-type '(float (0d0)))))
+		    (csubtypep x (specifier-type '(float (0l0)))))
 		;; But a positive real to any power is well-defined.
 		(merged-interval-expt x y))
 	       (t
@@ -959,7 +917,7 @@
   (elfun-derive-type-simple
    x #'log
    (specifier-type
-    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0d0)))
+    #-negative-zero-is-not-zero '(or (member 0f0 0d0) (real (0l0)))
     #+negative-zero-is-not-zero '(real 0d0))
    nil nil))
 
@@ -985,24 +943,26 @@
 
 (defun atan-derive-type-aux-1 (y)
   (elfun-derive-type-simple
-   y #'atan (specifier-type 'real) #.(- (/ pi 2)) #.(/ pi 2)))
+   y #'atan (specifier-type 'real) (- (/ pi 2)) (/ pi 2)))
 
 (defun atan-derive-type-aux-2 (y x same-arg)
   (declare (ignore same-arg))
   ;; The hard case with two args.  We just return the max bounds.
-  (cond ((and (numeric-type-real-p x)
-	      (numeric-type-real-p y))
-	 (make-numeric-type
-	  :class 'float
-	  :format (float-format-max
-		   (numeric-type-format y)
-		   (numeric-type-format x))
-	  :complexp :real
-	  :low #.(- pi)
-	  :high #.pi))
-	(t
-	 ;; The result is a float or a complex number
-	 (float-or-complex-type (numeric-contagion x y)))))
+  (let ((result-type (numeric-contagion y x)))
+    (cond ((and (numeric-type-real-p x)
+		(numeric-type-real-p y))
+	   (let* ((format (case (numeric-type-class result-type)
+			    ((integer rational) 'single-float)
+			    (t (numeric-type-format result-type))))
+		  (bound-format (or format 'float)))
+	     (make-numeric-type :class 'float
+				:format format
+				:complexp :real
+				:low (coerce (- pi) bound-format)
+				:high (coerce pi bound-format))))
+	  (t
+	   ;; The result is a float or a complex number
+	   (float-or-complex-type result-type)))))
 
 (defoptimizer (atan derive-type) ((y &optional x))
   (if x
@@ -1022,50 +982,49 @@
   (one-arg-derive-type num #'cosh-derive-type-aux #'cosh))
 
 
-(defun phase-derive-type-aux (type)
-  (cond ((numeric-type-real-p type)
-	 (case (interval-range-info (numeric-type->interval type) 0.0)
-	   ('+
-	    ;; The number is positive, so the phase is 0.
-	    (make-numeric-type :class 'float
-			       :format (elfun-float-format
-					(numeric-type-format type))
-			       :complexp :real
-			       :low 0
-			       :high 0))
-	   ('-
-	    ;; The number is always negative, so the phase is pi
-	    (make-numeric-type :class 'float
-			       :format (elfun-float-format
-					(numeric-type-format type))
-			       :complexp :real
-			       :low pi
-			       :high pi))
-	   (t
-	    ;; We can't tell.  The result is 0 or pi.  Use a union
-	    ;; type for this
-	    (list
-	     (make-numeric-type :class 'float
-				:format (elfun-float-format
-					 (numeric-type-format type))
-				:complexp :real
-				:low 0
-				:high 0)
-	     (make-numeric-type :class 'float
-				:format (elfun-float-format
-					 (numeric-type-format type))
-				:complexp :real
-				:low pi
-				:high pi)))))
-	(t
-	 ;; We have a complex number.  The answer is the range -pi
-	 ;; to pi.  (-pi is included because we have -0.)
-	 (make-numeric-type :class 'float
-			    :format (elfun-float-format
-				     (numeric-type-format type))
-			    :complexp :real
-			    :low #.(- pi)
-			    :high pi))))
+(defun phase-derive-type-aux (arg)
+  (let* ((format (case (numeric-type-class arg)
+		   ((integer rational) 'single-float)
+		   (t (numeric-type-format arg))))
+	 (bound-type (or format 'float)))
+    (cond ((numeric-type-real-p arg)
+	   (case (interval-range-info (numeric-type->interval arg) 0.0)
+	     ('+
+	      ;; The number is positive, so the phase is 0.
+	      (make-numeric-type :class 'float
+				 :format format
+				 :complexp :real
+				 :low (coerce 0 bound-type)
+				 :high (coerce 0 bound-type)))
+	     ('-
+	      ;; The number is always negative, so the phase is pi
+	      (make-numeric-type :class 'float
+				 :format format
+				 :complexp :real
+				 :low (coerce pi bound-type)
+				 :high (coerce pi bound-type)))
+	     (t
+	      ;; We can't tell.  The result is 0 or pi.  Use a union
+	      ;; type for this
+	      (list
+	       (make-numeric-type :class 'float
+				  :format format
+				  :complexp :real
+				  :low (coerce 0 bound-type)
+				  :high (coerce 0 bound-type))
+	       (make-numeric-type :class 'float
+				  :format format
+				  :complexp :real
+				  :low (coerce pi bound-type)
+				  :high (coerce pi bound-type))))))
+	  (t
+	   ;; We have a complex number.  The answer is the range -pi
+	   ;; to pi.  (-pi is included because we have -0.)
+	   (make-numeric-type :class 'float
+			      :format format
+			      :complexp :real
+			      :low (coerce (- pi) bound-type)
+			      :high (coerce pi bound-type))))))
 
 (defoptimizer (phase derive-type) ((num))
   (one-arg-derive-type num #'phase-derive-type-aux #'phase))
@@ -1085,11 +1044,13 @@
 ;;; should help a lot in optimized code.
 
 (defun realpart-derive-type-aux (type)
+  (let ((class (numeric-type-class type))
+	(format (numeric-type-format type)))
     (cond ((numeric-type-real-p type)
 	   ;; The realpart of a real has the same type and range as
 	   ;; the input.
-	   (make-numeric-type :class (numeric-type-class type)
-			      :format (numeric-type-format type)
+	   (make-numeric-type :class class
+			      :format format
 			      :complexp :real
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type)))
@@ -1097,33 +1058,36 @@
 	   ;; We have a complex number.  The result has the same type
 	   ;; as the real part, except that it's real, not complex,
 	   ;; obviously.
-	   (make-numeric-type :class (numeric-type-class type)
-			      :format (numeric-type-format type)
+	   (make-numeric-type :class class
+			      :format format
 			      :complexp :real
 			      :low (numeric-type-low type)
-			      :high (numeric-type-high type)))))
+			      :high (numeric-type-high type))))))
 
 (defoptimizer (realpart derive-type) ((num))
   (one-arg-derive-type num #'realpart-derive-type-aux #'realpart))
 
 (defun imagpart-derive-type-aux (type)
-  (cond ((numeric-type-real-p type)
-	 ;; The imagpart of a real has the same type as the input,
-	 ;; except that it's zero
-	 (make-numeric-type :class (numeric-type-class type)
-			    :format (numeric-type-format type)
-			    :complexp :real
-			    :low 0
-			    :high 0))
-	(t
-	 ;; We have a complex number.  The result has the same type as
-	 ;; the imaginary part, except that it's real, not complex,
-	 ;; obviously.
-	 (make-numeric-type :class (numeric-type-class type)
-			    :format (numeric-type-format type)
-			    :complexp :real
-			    :low (numeric-type-low type)
-			    :high (numeric-type-high type)))))
+  (let ((class (numeric-type-class type))
+	(format (numeric-type-format type)))
+    (cond ((numeric-type-real-p type)
+	   ;; The imagpart of a real has the same type as the input,
+	   ;; except that it's zero
+	   (let ((bound-format (or format class 'real)))
+	     (make-numeric-type :class class
+				:format format
+				:complexp :real
+				:low (coerce 0 bound-format)
+				:high (coerce 0 bound-format))))
+	  (t
+	   ;; We have a complex number.  The result has the same type as
+	   ;; the imaginary part, except that it's real, not complex,
+	   ;; obviously.
+	   (make-numeric-type :class class
+			      :format format
+			      :complexp :real
+			      :low (numeric-type-low type)
+			      :high (numeric-type-high type))))))
 
 (defoptimizer (imagpart derive-type) ((num))
   (one-arg-derive-type num #'imagpart-derive-type-aux #'imagpart))
@@ -1235,7 +1199,6 @@
   (frob single-float)
   (frob double-float))
 
-
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
 ;;; produce a minimal range for the result; the result is the widest
 ;;; possible answer.  This gets around the problem of doing range
@@ -1253,7 +1216,10 @@
 			       :format (numeric-type-format arg)
 			       :complexp :complex))
 	   ((numeric-type-real-p arg)
-	    (let ((float-type (or (numeric-type-format arg) 'float)))
+	    (let* ((format (case (numeric-type-class arg)
+			     ((integer rational) 'single-float)
+			     (t (numeric-type-format arg))))
+		   (bound-type (or format 'float)))
 	      ;; If the argument is a subset of the "principal" domain
 	      ;; of the function, we can compute the bounds because
 	      ;; the function is monotonic.  We can't do this in
@@ -1262,20 +1228,20 @@
 	      ;; exactly the same way as the functions themselves do
 	      ;; it.
 	      (if (csubtypep arg domain)
-		  (let ((lo (bound-func fcn (numeric-type-low arg)))
-			(hi (bound-func fcn (numeric-type-high arg))))
+		  (let ((res-lo (bound-func fcn (numeric-type-low arg)))
+			(res-hi (bound-func fcn (numeric-type-high arg))))
 		    (unless increasingp
-		      (rotatef lo hi))
-	      (specifier-type `(,float-type
-				      ,(or lo *)
-				      ,(or hi *))))
-		  (specifier-type `(,float-type
-				    ,(if def-lo
-					 (coerce def-lo float-type)
-					 '*)
-				    ,(if def-hi
-					 (coerce def-hi float-type)
-					 '*))))))
+		      (rotatef res-lo res-hi))
+		    (make-numeric-type
+		     :class 'float
+		     :format format
+		     :low (coerce-numeric-bound res-lo bound-type)
+		     :high (coerce-numeric-bound res-hi bound-type)))
+		  (make-numeric-type
+		   :class 'float
+		   :format format
+		   :low (and def-lo (coerce def-lo bound-type))
+		   :high (and def-hi (coerce def-hi bound-type))))))
 	   (t
 	    (float-or-complex-type arg def-lo def-hi))))))
 
@@ -1286,7 +1252,7 @@
        ;; Derive the bounds if the arg is in [-pi/2, pi/2]
        (trig-derive-type-aux
 	arg
-	(specifier-type `(float ,#.(- (/ pi 2)) ,#.(/ pi 2)))
+	(specifier-type `(float ,(- (/ pi 2)) ,(/ pi 2)))
 	#'sin
 	-1 1))
    #'sin))
@@ -1297,7 +1263,7 @@
    #'(lambda (arg)
        ;; Derive the bounds if the arg is in [0, pi]
        (trig-derive-type-aux arg
-			     (specifier-type `(float 0d0 ,pi))
+			     (specifier-type `(float 0l0 ,pi))
 			     #'cos
 			     -1 1
 			     nil))
@@ -1309,7 +1275,7 @@
    #'(lambda (arg)
        ;; Derive the bounds if the arg is in [-pi/2, pi/2]
        (trig-derive-type-aux arg
-			     (specifier-type `(float ,#.(- (/ pi 2)) ,#.(/ pi 2)))
+			     (specifier-type `(float ,(- (/ pi 2)) ,(/ pi 2)))
 			     #'tan
 			     nil nil))
    #'tan))
