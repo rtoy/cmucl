@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.1 1993/01/15 15:31:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.26.1.2 1993/01/23 14:39:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,6 +21,8 @@
 
 (in-package "EXTENSIONS")
 (export '(inhibit-warnings freeze-type optimize-interface constant-function))
+(in-package "KERNEL")
+(export '(note-name-defined *type-system-initialized*))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -234,28 +236,6 @@
 
   (note-if-setf-function-and-macro name)
   name)
-
-
-;;; UNDEFINE-FUNCTION-NAME  --  Interface
-;;;
-;;;    Make Name no longer be a function name: clear everything back to the
-;;; default.
-;;;
-(defun undefine-function-name (name)
-  (when name
-    (macrolet ((frob (type &optional val)
-		 `(unless (eq (info function ,type name) ,val)
-		    (setf (info function ,type name) ,val))))
-      (frob info)
-      (frob type (specifier-type 'function))
-      (frob where-from :assumed)
-      (frob inlinep)
-      (frob kind)
-      (frob accessor-for)
-      (frob inline-expansion)
-      (frob source-transform)
-      (frob assumed-type)))
-  (undefined-value))
 
 
 ;;; Process-Optimize-Declaration  --  Interface

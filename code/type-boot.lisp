@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.6 1991/02/08 13:36:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.6.1.1 1993/01/23 14:30:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,51 +16,8 @@
 ;;;
 (in-package "C")
 
-;;; Make these types be sort-of-defined to allow bootstrapping.
-(setf (info type defined-structure-info 'defstruct-description)
-      (make-defstruct-description))
-
-(setf (info type defined-structure-info 'defstruct-slot-description)
-      (make-defstruct-description))
-
-
-;;; Define this now so that EQUAL works:
-;;;
-(defun pathnamep (x)
-  (and (structurep x) (eq (structure-ref x 0) 'pathname)))
-
-;;; Define so that we can test for VOLATILE-INFO-ENVs from the beginning of
-;;; initialization.
-;;;
-(defun volatile-info-env-p (x)
-  (and (structurep x) (eq (structure-ref x 0) 'volatile-info-env)))
-
-
 (deftype inlinep ()
   '(member :inline :maybe-inline :notinline nil))
 
 (deftype boolean ()
   '(member t nil))
-
-;;; Define this so that we can define the type system.
-(in-package "KERNEL")
-(defun ctype-p (thing)
-  (and (structurep thing)
-       (member (c::structure-ref thing 0)
-	       '(ctype hairy-type named-type numeric-type array-type
-		       member-type structure-type union-type args-type
-		       values-type function-type))))
-
-(defun values-type-p (thing)
-  (and (structurep thing) (eq (c::structure-ref thing 0) 'values-type)))
-
-;;; Define this so that we can copy type-class structures before the defstruct
-;;; for type-class runs.
-;;;
-(defun copy-type-class (tc)
-  (let ((new (make-type-class)))
-    (dotimes (i (c::structure-length tc))
-      (declare (type index i))
-      (setf (c::structure-ref new i)
-	    (c::structure-ref tc i)))
-    new))

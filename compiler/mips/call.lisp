@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.1 1993/01/15 14:16:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.2 1993/01/23 14:48:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1264,6 +1264,7 @@ default-value-8
 		  (error-call vop ,error ,@args)))))
   (frob argument-count-error invalid-argument-count-error nargs)
   (frob type-check-error object-not-type-error object type)
+  (frob layout-invalid-error layout-invalid-error object layout)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error)
   (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
   (frob nil-function-returned-error nil-function-returned-error fun))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27.1.1 1993/01/14 21:02:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.27.1.2 1993/01/23 14:45:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,7 @@
 		`(truly-the nil
 			    (%primitive ,',primitive ,@foo)))))
   (frob %type-check-error type-check-error)
+  (frob %layout-invalid-error layout-invalid-error)
   (frob %odd-keyword-arguments-error odd-keyword-arguments-error)
   (frob %unknown-keyword-argument-error unknown-keyword-argument-error)
   (frob %argument-count-error argument-count-error))

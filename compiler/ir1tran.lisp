@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.1 1993/01/15 15:31:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.2 1993/01/23 14:42:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2596,13 +2596,13 @@
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
 ;;;
 ;;;    This is a frob that DEFMACRO expands into to establish the compiler
-;;; semantics.  %COMPILER-ONLY-DEFSTRUCT and %%COMPILER-DEFSTRUCT do most of
-;;; the work, we just clear all of the functions out of *FREE-FUNCTIONS* to
-;;; keep things in synch.  %%COMPILER-DEFSTRUCT is also called at load-time.
+;;; semantics.  The other code in the expansion and %%COMPILER-DEFSTRUCT do
+;;; most of the work, we just clear all of the functions out of
+;;; *FREE-FUNCTIONS* to keep things in synch.  %%COMPILER-DEFSTRUCT is also
+;;; called at load-time.
 ;;;
 (def-ir1-translator %compiler-defstruct ((info) start cont :kind :function)
   (let* ((info (eval info)))
-    (%compiler-only-defstruct info)
     (%%compiler-defstruct info)
     (dolist (slot (dd-slots info))
       (let ((fun (dsd-accessor slot)))

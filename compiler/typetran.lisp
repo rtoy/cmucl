@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.1 1993/01/15 15:32:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.2 1993/01/23 14:34:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
   (define-type-predicate simple-string-p simple-string)
   (define-type-predicate simple-vector-p simple-vector)
   (define-type-predicate stringp string)
-  (define-type-predicate structurep structure)
+  (define-type-predicate instancep instance)
   (define-type-predicate symbolp symbol)
   (define-type-predicate vectorp vector))
 

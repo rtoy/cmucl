@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26 1992/12/17 11:31:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.1 1993/01/23 14:41:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 (in-package "EXTENSIONS")
 (export '(info clear-info define-info-class define-info-type
 	       make-info-environment do-info *info-environment*
-	       compact-info-environment))
+	       compact-info-environment undefine-function-name))
 
 (in-package "C")
 
@@ -1091,36 +1091,17 @@
 
 (define-info-class type)
 
-;;; The kind of type described.  We return :Structure for standard types that
+;;; The kind of type described.  We return :Instance for standard types that
 ;;; are implemented as structures.
 ;;;
-(define-info-type type kind (member :primitive :defined :structure nil)
-  (if (or (info type builtin name)
-	  (info type translator name))
-      :primitive
-      nil))
+(define-info-type type kind (member :primitive :defined :instance nil) nil)
 
 ;;; Expander function for a defined type.
 (define-info-type type expander (or function null) nil)
 
-;;; Print function for a type.
-(define-info-type type printer (or function symbol null) nil)
-
-;;; Make-load-form function for a type.
-(define-info-type type load-form-maker (or function symbol null) nil)
-
-;;; Defstruct description information for a structure type.  DEFINED is the
-;;; current global definition, and is not shadowed by compilation of
-;;; structure definitions.
+;;; Layout for this type being used by the compiler.
 ;;;
-(define-info-type type structure-info (or defstruct-description null) nil)
-(define-info-type type defined-structure-info (or defstruct-description null)
-  nil)
-
-;;; True if this type has been frozen with the FREEZE-TYPE declaration.  Only
-;;; interesting for structure types.
-;;;
-(define-info-type type frozen boolean nil)
+(define-info-type type compiler-layout (or layout null) nil)
 
 (define-info-type type documentation (or string null))
 
@@ -1128,10 +1109,21 @@
 ;;;
 (define-info-type type translator (or function null) nil)
 
-;;; If true, then the type coresponding to this name.
+;;; If true, then the type coresponding to this name.  Note that if this is a
+;;; built-in class with a translation, then this is the translation, not the
+;;; class object.  This info type keeps track of random atomic types (NIL etc.)
+;;; and also serves as a cache to ensure that common standard types (atomic and
+;;; otherwise) are only consed once.
 ;;;
 (define-info-type type builtin (or ctype null) nil)
 
+;;; If this type is a class name, then this is the corresponding class.  Note
+;;; that for built-in classes, the kind may be :PRIMITIVE and not :INSTANCE.
+;;;
+(define-info-type type class (or class null) nil)
+
+(define-info-class typed-structure)
+(define-info-type typed-structure info)
 
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)
@@ -1160,3 +1152,26 @@
 (define-info-type random-documentation stuff list ())
 
 ); defun other-info-init
+
+;;;; Random utilities:
+
+;;; UNDEFINE-FUNCTION-NAME  --  Interface
+;;;
+;;;    Make Name no longer be a function name: clear everything back to the
+;;; default.
+;;;
+(defun undefine-function-name (name)
+  (when name
+    (macrolet ((frob (type &optional val)
+		 `(unless (eq (info function ,type name) ,val)
+		    (setf (info function ,type name) ,val))))
+      (frob info)
+      (frob type (specifier-type 'function))
+      (frob where-from :assumed)
+      (frob inlinep)
+      (frob kind)
+      (frob accessor-for)
+      (frob inline-expansion)
+      (frob source-transform)
+      (frob assumed-type)))
+  (undefined-value))
