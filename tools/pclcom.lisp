@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.12.2.5 2000/06/06 10:07:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.12.2.6 2000/06/29 07:52:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,11 @@
   ;; Blow away make-instance optimizer so that it doesn't confuse
   ;; bootstrapping.
   (setf (compiler-macro-function 'make-instance) nil)
+  ;;
+  ;; Blow away other compiler-macros exported from Lisp so that bootstrapping
+  ;; doesn't get confused.
+  (setf (compiler-macro-function 'slot-value) nil)
+  (setf (compiler-macro-function 'slot-boundp) nil)
   ;;
   ;; Undefine all generic functions exported from Lisp so that bootstrapping
   ;; doesn't get confused.
