@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.76 2002/10/28 19:36:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.77 2002/10/29 16:42:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -886,42 +886,52 @@
 (defmacro push (obj place &environment env)
   "Takes an object and a location holding a list.  Conses the object onto
   the list, returning the modified list.  OBJ is evaluated before PLACE."
-  (multiple-value-bind (dummies vals newval setter getter)
-      (get-setf-method place env)
-    (let ((g (gensym)))
-      `(let* ((,g ,obj)
-	      ,@(mapcar #'list dummies vals)
-	      (,(car newval) (cons ,g ,getter)))
-	,setter))))
+  (if (and (symbolp place)
+	   (eq place (macroexpand place env)))
+      `(setq ,place (cons ,obj ,place))
+      (multiple-value-bind (dummies vals newval setter getter)
+	  (get-setf-expansion place env)
+	(let ((g (gensym)))
+	  `(let* ((,g ,obj)
+		  ,@(mapcar #'list dummies vals)
+		  (,(car newval) (cons ,g ,getter)))
+	    ,setter)))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
   "Takes an object and a location holding a list.  If the object is already
   in the list, does nothing.  Else, conses the object onto the list.  Returns
   NIL.  If there is a :TEST keyword, this is used for the comparison."
-  (multiple-value-bind (vars vals stores setter getter)
-      (get-setf-method place env)
-    (let ((tem (gensym)))
-      `(let* ((,tem ,obj)
-	      ,@(mapcar #'list vars vals)
-	      (,(car stores) (adjoin ,tem ,getter ,@keys)))
-	,setter))))
+  (if (and (symbolp place)
+	   (eq place (macroexpand place env)))
+      `(setq ,place (adjoin ,obj ,place ,@keys))
+      (multiple-value-bind (vars vals stores setter getter)
+	  (get-setf-method place env)
+	(let ((tem (gensym)))
+	  `(let* ((,tem ,obj)
+		  ,@(mapcar #'list vars vals)
+		  (,(car stores) (adjoin ,tem ,getter ,@keys)))
+	    ,setter)))))
 
 
 (defmacro pop (place &environment env)
   "The argument is a location holding a list.  Pops one item off the front
   of the list and returns it."
-  (multiple-value-bind (dummies vals newval setter getter)
-      (get-setf-method place env)
-    (do* ((d dummies (cdr d))
-	  (v vals (cdr v))
-	  (let-list nil))
-	 ((null d)
-	  (push (list (car newval) getter) let-list)
-	  `(let* ,(nreverse let-list)
-	     (prog1 (car ,(car newval))
-	       (setq ,(car newval) (cdr ,(car newval)))
-	       ,setter)))
-      (push (list (car d) (car v)) let-list))))
+  (if (and (symbolp place)
+	   (eq place (macroexpand place env)))
+      `(prog1 (car ,place)
+	      (setq ,place (cdr ,place)))
+      (multiple-value-bind (dummies vals newval setter getter)
+	  (get-setf-method place env)
+	(do* ((d dummies (cdr d))
+	      (v vals (cdr v))
+	      (let-list nil))
+	     ((null d)
+	      (push (list (car newval) getter) let-list)
+	      `(let* ,(nreverse let-list)
+		(prog1 (car ,(car newval))
+		  (setq ,(car newval) (cdr ,(car newval)))
+		  ,setter)))
+	  (push (list (car d) (car v)) let-list)))))
 
 
 (define-modify-macro incf (&optional (delta 1)) +
