@@ -63,7 +63,7 @@
 ;;;
 #+new-compiler
 (defun core-function-or-lose (fun object)
-  (declare (type clambda fun) (type core-object object))
+  (declare (type functional fun) (type core-object object))
   (let ((res (gethash (leaf-info fun) (core-object-entry-table object))))
     (assert res () "Unresolved forward function reference?")
     res))
@@ -158,11 +158,11 @@
 ;;; CORE-CALL-TOP-LEVEL-LAMBDA  --  Interface
 ;;;
 ;;;    Call the top-level lambda function dumped for Entry, returning the
-;;; values.
+;;; values.  Entry may be a 
 ;;;
 #+new-compiler
 (defun core-call-top-level-lambda (entry object)
-  (declare (type clambda entry) (type core-object object))
+  (declare (type functional entry) (type core-object object))
   (funcall (core-function-or-lose entry object)))
 
 
@@ -172,9 +172,11 @@
 ;;; SOURCE-INFO list.
 ;;;
 #+new-compiler
-(defun fix-core-source-info (info object)
+(defun fix-core-source-info (info object source-info)
   (declare (type source-info info) (type core-object object))
   (let ((res (debug-source-for-info info)))
+    (dolist (sinfo res)
+      (setf (debug-source-info sinfo) source-info))
     (dolist (info (core-object-debug-info object))
       (setf (compiled-debug-info-source info) res))
     (setf (core-object-debug-info object) ()))
