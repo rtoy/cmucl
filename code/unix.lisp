@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.36 1994/10/30 18:26:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.37 1994/10/30 23:49:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -808,7 +808,7 @@
    FEXCL           Error if already created.
    "
   (declare (type unix-fd fd)
-	   (type (integer 0 6) cmd)
+	   (type (uneigned-byte 16) cmd)
 	   (type (unsigned-byte 16) arg))
   (int-syscall ("fcntl" int int int) fd cmd arg))
 
