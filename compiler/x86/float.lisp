@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.40 2003/04/27 14:52:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.41 2003/07/03 02:14:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3191,6 +3191,11 @@
 	  (descriptor-reg
 	   (fp-pop)
 	   (inst fldd (ea-for-df-desc y)))))
+      ;; y in fr0, x in fr0
+      ((and (sc-is y double-reg) (zerop (tn-offset y))
+	    (sc-is x double-reg) (zerop (tn-offset x)))
+       ;; Copy x to fr1, leave y in fr0
+       (inst fst fr1))
       ;; y in fr0; x not in fr1
       ((and (sc-is y double-reg) (zerop (tn-offset y)))
        (inst fxch fr1)
