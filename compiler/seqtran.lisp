@@ -89,14 +89,150 @@
 			     (<= (length val) 5))))
       (give-up))
     `(or ,@(mapcar #'(lambda (x) `(funcall test e ',x))
-		   val))))       
+		   val))))
+
+
+
+#|Inline expansion is available...
+
+;;; For Adjoin, just turn into a member and let the member transform
+;;; worry about it.
+;;;
+(deftransform adjoin ((item list &key (key #'identity) test test-not))
+  `(if (member (funcall key item) list
+	       ,@(when test '(:test test))
+	       ,@(when test-not '(:test-not test-not))
+	       :key key)
+       list
+       (cons item list)))
+|#
+
 
 #|
 member map concatenate position find
 |#
 
 
+;;;; Simple string transforms:
+
+
+(deftransform subseq ((seq start &optional (end nil))
+		      (simple-string t &optional t))
+  '(let* ((length (- (or end (length string))
+		     start))
+	  (result (make-string length)))
+     (%primitive byte-blt string start result 0 length)
+     result))
+
+
+(deftransform copy-seq ((seq) (simple-string))
+  '(let* ((length (length seq))
+	  (res (make-string length)))
+     (%primitive byte-blt seq 0 res 0 length)
+     res))
+
+
+(deftransform replace ((string1 string2 &key (start1 0) (start2 0)
+				end1 end2)
+		       (simple-string simple-string &rest t))
+  '(progn
+     (%primitive byte-blt string2 start2 string1 start1
+		 (+ start1
+		    (min (- (or end1 (length string1))
+			    start1)
+			 (- (or end2 (length string2))
+			    start2))))
+     string1))
+
+
+(deftransform concatenate ((rtype &rest sequences)
+			   (t &rest simple-string)
+			   simple-string)
+  (collect ((lets)
+	    (forms)
+	    (all-lengths)
+	    (args))
+    (dolist (seq sequences)
+      (let ((n-seq (gensym))
+	    (n-length (gensym)))
+	(args n-seq)
+	(lets `(,n-length (length ,n-seq)))
+	(all-lengths n-length)
+	(forms `(setq start end  end (+ start ,n-length))
+	       forms)
+	(push `(%primitive byte-blt ,n-seq 0 ,n-res start end)
+	      forms)))
+    `(lambda (rtype ,@(args))
+       (declare (ignore rtype))
+       (let* (,@(lets)
+	      (res (make-string (+ ,@(all-lengths))))
+	      (start 0)
+	      (end 0))
+	 (declare (type index start end))
+	 ,@(forms)
+	 res))))
+
+
+;;; Names of predicates that compute the same value as CHAR= when applied to
+;;; characters.
+;;; 
+(defconstant char=-functions '(eql equal char=))
+
+
+(deftransform position ((item sequence &key from-end test (start 0) end)
+			(t simple-string &rest t))
+  (unless (or (not test)
+	      (continuation-function-is test char=-functions))
+    (give-up))
+  `(and (string-char-p item)
+	(,@(if (constant-value-or-lose from-end)
+	       '(lisp::%sp-reverse-find-character)
+	       '(%primitive find-character))
+	 sequence start (or end (length sequence))
+	 item)))
+
+
+(deftransform find ((item sequence &key from-end (test #'eql) (start 0) end)
+		    (t simple-string &rest t))
+  `(if (find item sequence
+	     ,@(when from-end `(:from-end from-end))
+	     :test test :start start :end end)
+       item
+       nil))
+
+
 ;;;; Utilities:
+
+
+;;; CONTINUATION-FUNCTION-IS  --  Interface
+;;;
+;;;    Return true if Cont's only use is a non-notinline reference to a global
+;;; function with one of the specified Names.
+;;;
+(defun continuation-function-is (cont names)
+  (declare (type continuation cont) (list names))
+  (let ((use (continuation-use cont)))
+    (and (ref-p use)
+	 (let ((leaf (ref-leaf use)))
+	   (and (global-var-p leaf)
+		(eq (global-var-kind leaf) :global-function)
+		(not (null (member (leaf-name leaf) names :test #'equal))))))))
+
+
+;;; CONSTANT-VALUE-OR-LOSE  --  Interface
+;;;
+;;;    If Cont is a constant continuation, the return the constant value.  If
+;;; it is null, then return default, otherwise quietly GIVE-UP.
+;;; ### Probably should take an ARG and flame using the NAME.
+;;;
+(defun constant-value-or-lose (cont &optional default)
+  (declare (type (or continuation null) cont))
+  (cond ((not cont) default)
+	((constant-continuation-p cont)
+	 (continuation-value cont))
+	(t
+	 (give-up))))
+
 #|
 ;;; MAKE-ARG, ARG-CONT, ARG-NAME  --  Interface
 ;;;
