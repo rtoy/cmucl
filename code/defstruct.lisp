@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.77 2002/12/09 16:52:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.78 2003/01/03 18:02:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,7 +261,10 @@
   ;;
   ;; Value of the :PURE option, or :UNSPECIFIED.  Only meaningful if
   ;; CLASS-STRUCTURE-P = T.
-  (pure :unspecified :type (member t nil :substructure :unspecified)))
+  (pure :unspecified :type (member t nil :substructure :unspecified))
+   ;;
+   ;; a list of (NAME . INDEX) pairs for accessors of included structures
+   (inherited-accessor-alist () :type list))
 
 
 ;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
@@ -411,6 +414,9 @@
 	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
 	    `((setf (structure-class-constructor (find-class ',name))
 		    #',def-con)))))))
+
+(defun accessor-inherited-data (name defstruct)
+  (assoc name (dd-inherited-accessor-alist defstruct) :test #'eq))
 
 
 ;;; DEFSTRUCT  --  Public
@@ -778,6 +784,10 @@
 	  (setf (dd-pure defstruct) (dd-pure included-structure)))
 	(setf (dd-raw-index defstruct) (dd-raw-index included-structure))
 	(setf (dd-raw-length defstruct) (dd-raw-length included-structure)))
+
+      #-bootstrap-conc-name
+      (setf (dd-inherited-accessor-alist defstruct)
+	    (dd-inherited-accessor-alist included-structure))
       
       (dolist (islot (dd-slots included-structure))
 	(let* ((iname (dsd-name islot))
@@ -785,6 +795,19 @@
 				   :key #'(lambda (x) (if (atom x) x (car x)))
 				   :test #'string=)
 			     `(,iname))))
+	  ;;
+	  ;; We stash away an alist of accessors to parents' slots
+	  ;; that have already been created to avoid conflicts later
+	  ;; so that structures with :INCLUDE and :CONC-NAME (and
+	  ;; other edge cases) can work as specified.
+	  #-bootstrap-conc-name
+	  (when (dsd-accessor islot)
+	    ;; the "oldest" (i.e. highest up the tree of inheritance)
+	    ;; will prevail, so don't push new ones on if they
+	    ;; conflict.
+	    (pushnew (cons (dsd-accessor islot) (dsd-index islot))
+		     (dd-inherited-accessor-alist defstruct)
+		     :test #'eq :key #'car))
 	  (parse-1-dsd defstruct modified
 		       (copy-defstruct-slot-description islot)))))))
 
@@ -1207,6 +1230,7 @@
   (collect ((stuff))
     (let ((ltype (dd-lisp-type defstruct)))
       (dolist (slot (dd-slots defstruct))
+	#+bootstrap-conc-name
 	(let ((aname (dsd-accessor slot))
 	      (index (dsd-index slot))
 	      (slot-type `(and ,(dsd-type slot)
@@ -1219,7 +1243,31 @@
 	    (stuff
 	     `(defun (setf ,aname) (new-value structure)
 		(declare (type ,ltype structure) (type ,slot-type new-value))
-		(setf (elt structure ,index) new-value)))))))
+		(setf (elt structure ,index) new-value)))))
+	#-bootstrap-conc-name
+	(let* ((aname (dsd-accessor slot))
+	       (index (dsd-index slot))
+	       (slot-type `(and ,(dsd-type slot)
+			    ,(dd-element-type defstruct)))
+	       (inherited (accessor-inherited-data aname defstruct)))
+	  (cond ((not inherited)
+		 (stuff `(declaim (inline ,aname (setf ,aname))))
+		 (stuff `(defun ,aname (structure)
+			  (declare (type ,ltype structure))
+			  (the ,slot-type (elt structure ,index))))
+		 (unless (dsd-read-only slot)
+		   (stuff
+		    `(defun (setf ,aname) (new-value structure)
+		      (declare (type ,ltype structure) (type ,slot-type new-value))
+		      (setf (elt structure ,index) new-value)))))
+		((not (= (cdr inherited) index))
+		 (warn 'simple-style-warning
+		       :format-control
+		       "~@<Non-overwritten accessor ~S does not access ~
+                        slot with name ~S (accessing an inherited slot ~
+                        instead).~:@>"
+		       :format-arguments (list aname (dsd-%name slot))))))
+	))
     (stuff)))
 
 
@@ -1388,13 +1436,25 @@
       (dolist (slot (dd-slots info))
 	(unless (or (dsd-inherited-p info slot)
 		    (not (eq (dsd-raw-type slot) 't)))
+	  #+bootstrap-conc-name
 	  (let ((aname (dsd-accessor slot)))
 	    (setf (symbol-function aname)
 		  (structure-slot-accessor layout slot))
 
 	    (unless (dsd-read-only slot)
 	      (setf (fdefinition `(setf ,aname))
-		    (structure-slot-setter layout slot))))))
+		    (structure-slot-setter layout slot))))
+	  #-bootstrap-conc-name
+	  (let* ((aname (dsd-accessor slot))
+		 (inherited (accessor-inherited-data aname info)))
+	    (unless inherited
+	      (setf (symbol-function aname)
+		    (structure-slot-accessor layout slot))
+	      (unless (dsd-read-only slot)
+		(setf (fdefinition `(setf ,aname))
+		      (structure-slot-setter layout slot)))))
+	  
+	  ))
 
       (when (dd-predicate info)
 	(setf (symbol-function (dd-predicate info))
@@ -1575,9 +1635,18 @@
 	(dolist (slot (dd-slots info))
 	  (unless (dsd-inherited-p info slot)
 	    (let ((aname (dsd-accessor slot)))
-	      (undefine-function-name aname)
-	      (unless (dsd-read-only slot)
-		(undefine-function-name `(setf ,aname)))))))
+	      #+bootstrap-conc-name
+	      (progn
+		(undefine-function-name aname)
+		(unless (dsd-read-only slot)
+		  (undefine-function-name `(setf ,aname))))
+	      #-bootstrap-conc-name
+	      (unless (accessor-inherited-data aname info)
+		(undefine-function-name aname)
+		(unless (dsd-read-only slot)
+		  (undefine-function-name `(setf ,aname))))))))
+	      
+	      ))))
       ;;
       ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
       ;; unknown types.
@@ -1696,14 +1765,38 @@
 
     (dolist (slot (dd-slots info))
       (let* ((aname (dsd-accessor slot))
-	     (setf-fun `(setf ,aname)))
+	     (setf-fun `(setf ,aname))
+	     #-bootstrap-conc-name
+ 	     (inherited (and aname (accessor-inherited-data aname info)))
+	     )
+
+	#+bootstrap-conc-name
 	(unless (or (dsd-inherited-p info slot)
 		    (not (eq (dsd-raw-type slot) 't)))
 	  (define-defstruct-name aname)
 	  (setf (info function accessor-for aname) class)
 	  (unless (dsd-read-only slot)
 	    (define-defstruct-name setf-fun)
-	    (setf (info function accessor-for setf-fun) class))))))
+	    (setf (info function accessor-for setf-fun) class)))
+	#-bootstrap-conc-name
+	(cond (inherited
+	       (unless (= (cdr inherited) (dsd-index slot))
+		 (warn 'simple-style-warning
+		       :format-control
+		       "~@<Non-overwritten accessor ~S does not access ~
+                        slot with name ~S (accessing an inherited slot ~
+                        instead).~:@>"
+		       :format-arguments (list aname (dsd-%name slot)))))
+	      (t
+	       (unless (or (dsd-inherited-p info slot)
+			   (not (eq (dsd-raw-type slot) 't)))
+		 (define-defstruct-name aname)
+		 (setf (info function accessor-for aname) class)
+		 (unless (dsd-read-only slot)
+		   (define-defstruct-name setf-fun)
+		   (setf (info function accessor-for setf-fun) class)))))
+	
+	)))
   
   (undefined-value))
 
