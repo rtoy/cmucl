@@ -162,7 +162,11 @@ New in this release:
      - MACROLET now accepts declarations, as prescribed by ANSI CL.
      - MAKE-PATHNAME signals an error on invalid combinations
        (:absolute or :wild-inferiors followed by :back or :up).
-     
+     - PEEK-CHAR skips whitespace based on the readtable instead of
+       using hard-wired values.
+     - PEEK-CHAR signals an end-of-file error if necessary when
+       RECURSIVE-P is true.
+
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
        wrt to duplicate elements.
@@ -198,6 +202,8 @@ New in this release:
        line up better too.
      - READ-SEQUENCE was returning too soon when reading from files
        into simple-strings even though there were data available.
+     - READ-SEQUENCE was returning the wrong value when reading into
+       simple-strings and when the :START value was not zero.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
@@ -231,7 +237,6 @@ New in this release:
        for all platforms now.
      - A continuable error is signaled when defining a logical
        pathname host that has the same name as a search-list host. 
-
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
        AMOP non-compliances, and adds various new optimizations (also
