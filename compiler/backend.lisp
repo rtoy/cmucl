@@ -18,7 +18,7 @@
 	   backend-name backend-version backend-fasl-file-type
 	   backend-fasl-file-implementation backend-fasl-file-version
 	   backend-register-save-penalty backend-byte-order
-	   backend-any-primitive-type
+	   backend-any-primitive-type backend-info-environment
 
 	   ;; The various backends need to call these support routines
 	   make-stack-pointer-tn primitive-type primitive-type-of))
@@ -168,6 +168,9 @@
   ;; Hashtable translating from VOP names to the corresponding VOP-Parse
   ;; structures.  This information is only used at meta-compile time.
   (parsed-vops (make-hash-table :test #'eq) :type hash-table)
+
+  ;; The backend specific aspects of the info environment.
+  (info-environment (make-info-environment :name "Backend Info"))
 
   . #.(mapcar #'(lambda (slot)
 		  `(,(intern slot) nil :type (or null function)))
