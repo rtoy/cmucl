@@ -967,65 +967,140 @@ explicitly marked saying who wrote it.
 );end of Vaxlisp (and dec vax common)
 
 
-;;; Implementation of funcallable instances for CMU Common Lisp.
+;;;; Implementation of funcallable instances for CMU Common Lisp:
 ;;;
+;;;    We represent a FIN like a closure, but the header has a distinct type
+;;; tag.  The FIN data slots are stored at the end of a fixed-length closure
+;;; (at FIN-DATA-OFFSET.)  When the function is set to a closure that has no
+;;; more than FIN-DATA-OFFSET slots, we can just replace the slots in the FIN
+;;; with the closure slots.  If the closure has too many slots, we must
+;;; indirect through a trampoline with a rest arg.  For non-closures, we just
+;;; set the function slot.
+;;;
+;;;    We can get away with this efficient and relatively simple scheme because
+;;; the compiler currently currently only references closure slots during the
+;;; initial call and on entry into the function.  So we don't have to worry
+;;; about bad things happening when the FIN is clobbered (the problem JonL
+;;; flames about somewhere...)
+;;;
+;;;    We also stick in a slot for the function name at the end, but before the
+;;; data slots.
 
-#+:CMU
+#+CMU
+(import 'kernel:funcallable-instance-p)
+
+#+CMU
 (progn
 
-(defstruct funcallable-instance-info
-  (function #'(lambda (&rest args) (declare (ignore args))
-		(called-fin-without-function))
-	    :type function)
-  (name "Unnamed funcallable instance")
-  . #.funcallable-instance-data)
-
-(proclaim '(inline funcallable-instance-info funcallable-instance-p))
-
-
-(defun funcallable-instance-info (fin)
-  (system:find-if-in-closure #'funcallable-instance-info-p fin))
+(eval-when (compile load eval)
+  ;;; The offset of the function's name & the max number of real closure slots.
+  ;;;
+  (defconstant fin-name-slot 14)
+  
+  ;;; The offset of the data slots.
+  ;;;
+  (defconstant fin-data-offset 15))
 
 
+;;; ALLOCATE-FUNCALLABLE-INSTANCE-1  --  Interface
+;;;
+;;;    Allocate a funcallable instance, setting the function to an error
+;;; function and initializing the data slots to NIL.
+;;;
 (defun allocate-funcallable-instance-1 ()
-  (let ((info (make-funcallable-instance-info)))
-    #'(lambda (&rest args)
-	(apply (funcallable-instance-info-function info) args))))
+  (let* ((len (+ (length funcallable-instance-data) fin-data-offset))
+	 (res (kernel:%make-funcallable-instance
+	       len
+	       #'called-fin-without-function)))
+    (dotimes (i (length funcallable-instance-data))
+      (kernel:%set-funcallable-instance-info res (+ i fin-data-offset) nil))
+    (kernel:%set-funcallable-instance-info res fin-name-slot nil)
+    res))
 
 
-(defun funcallable-instance-p (thing)
-  (and (functionp thing)
-       (= (kernel:get-type thing) vm:closure-header-type)
-       (funcallable-instance-info thing)
-       t))
+;;; FUNCALLABLE-INSTANCE-P  --  Interface
+;;;
+;;;    Return true if X is a funcallable instance.  This is an interpreter
+;;; stub; the compiler directly implements this function.
+;;;
+(defun funcallable-instance-p (x) (funcallable-instance-p x))
 
 
+;;; SET-FUNCALLABLE-INSTANCE-FUNCTION  --  Interface
+;;;
+;;;    Set the function that is called when FIN is called.
+;;;
 (defun set-funcallable-instance-function (fin new-value)
-  (setf (funcallable-instance-info-function (funcallable-instance-info fin))
-	new-value))
+  (assert (funcallable-instance-p fin))
+  (ecase (kernel:get-type new-value)
+    (#.vm:closure-header-type
+     (let ((len (- (kernel:get-closure-length new-value)
+		   (1- vm:closure-info-offset))))
+       (cond ((> len fin-name-slot)
+	      (set-funcallable-instance-function
+	       fin
+	       #'(lambda (&rest args)
+		   (apply new-value args))))
+	     (t
+	      (dotimes (i fin-data-offset)
+		(kernel:%set-funcallable-instance-info
+		 fin i
+		 (if (>= i len)
+		     nil
+		     (kernel:%closure-index-ref new-value i))))
+	      (kernel:%set-funcallable-instance-function
+	       fin
+	       (kernel:%closure-function new-value))
+	      new-value))))
+    (#.vm:function-header-type
+     (kernel:%set-funcallable-instance-function fin new-value))))
 
 
+;;; FUNCALLABLE-INSTANCE-NAME, SET-FUNCALLABLE-INSTANCE-NAME  --  Interface
+;;;
+;;;    Read or set the name slot in a funcallable instance.
+;;;
 (defun funcallable-instance-name (fin)
-  (funcallable-instance-info-name (funcallable-instance-info fin)))
-
+  (kernel:%closure-index-ref fin fin-name-slot))
+;;;
 (defun set-funcallable-instance-name (fin new-value)
-  (setf (funcallable-instance-info-name (funcallable-instance-info fin))
-	new-value))
-
+  (kernel:%set-funcallable-instance-info fin fin-name-slot new-value)
+  new-value)
+;;;
 (defsetf funcallable-instance-name set-funcallable-instance-name)
 
 
+;;; FUNCALLABLE-INSTANCE-DATA-1  --  Interface
+;;;
+;;;    If the slot is constant, use CLOSURE-REF with the appropriate offset,
+;;; otherwise do a run-time lookup of the slot offset.
+;;;
 (defmacro funcallable-instance-data-1 (fin slot)
-  (unless (and (listp slot) (eq (car slot) 'quote))
-    (error "Non-constant name for funcallable-instance-data-1: ~S" slot))
-  `(,(intern (concatenate 'simple-string
-			  "FUNCALLABLE-INSTANCE-INFO-"
-			  (string (cadr slot)))
-	     *the-pcl-package*)
-    (funcallable-instance-info ,fin)))
-
-
-); End of :CMU
+  (if (constantp slot)
+      `(sys:%primitive c:closure-ref ,fin
+		       (+ (or (position ,slot funcallable-instance-data)
+			      (error "Unknown slot: ~S." ,slot))
+			  fin-data-offset))
+      (ext:once-only ((n-slot slot))
+	`(kernel:%closure-index-ref
+	  ,fin
+	  (+ (or (position ,n-slot funcallable-instance-data)
+		 (error "Unknown slot: ~S." ,n-slot))
+	     fin-data-offset)))))
+;;;
+(defmacro %set-funcallable-instance-data-1 (fin slot new-value)
+  (ext:once-only ((n-fin fin)
+		  (n-slot slot))
+    `(kernel:%set-funcallable-instance-info
+      ,n-fin
+      (+ (or (position ,n-slot funcallable-instance-data)
+	     (error "Unknown slot: ~S." ,n-slot))
+	 fin-data-offset)
+      ,new-value)))
+;;;
+(defsetf funcallable-instance-data-1 %set-funcallable-instance-data-1)
+		
+); End of #+cmu progn
 
 
 
