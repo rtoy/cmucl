@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.4 1992/02/26 00:20:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.5 1992/03/07 13:30:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,25 +17,28 @@
 (in-package "C")
 
 (load "vm:vm-macs")
-(if (string= (c:backend-name c:*target-backend*) "RT")
+(if (target-featurep :rt)
     (load "vm:params")
     (load "vm:parms"))
 (load "vm:objdef")
 (load "assem:support")
 (load "vm:macros")
+(when (target-featurep :gengc)
+  (load "vm:vm-utils"))
 (load "vm:utils")
 
 (load "vm:vm")
 (load "vm:insts")
-(unless (string= (c:backend-name c:*target-backend*) "RT")
+(unless (target-featurep :rt)
   (load "vm:primtype"))
 (load "vm:move")
 (load "vm:sap")
 (load "vm:system")
 (load "vm:char")
-(if (string= (c:backend-name c:*target-backend*) "RT")
-    #+afpa (load "vm:afpa")
-    #-afpa (load "vm:mc68881")
+(if (target-featurep :rt)
+    (if (target-featurep :afpa)
+	(load "vm:afpa")
+	(load "vm:mc68881"))
     (load "vm:float"))
 
 (load "vm:memory")
@@ -56,11 +59,13 @@
 
 (load "assem:assem-rtns")
 
-(unless (string= (c:backend-name c:*target-backend*) "RT")
+(unless (or (target-featurep :rt)
+	    (target-featurep :gengc))
   (load "assem:bit-bash"))
 (load "assem:array")
 (load "assem:arith")
-(load "assem:alloc")
+(unless (target-featurep :gengc)
+  (load "assem:alloc"))
 
 (load "c:pseudo-vops")
 
