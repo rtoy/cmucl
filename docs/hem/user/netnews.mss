@@ -201,6 +201,12 @@ Message Scroll Down).
    name is acceptable, and fields that do not exist are ignored.
 @enddefhvar   
 
+@defcom[com "Netnews Show Whole Header", stuff (bound to @bf[w] in @hid{News-Headers} and @hid{News-Message} modes.)]
+This command displays the entire header for the message currently being
+read.  This is to undo the effects of @hid{Netnews Message Header Fields}
+for the current message.
+@enddefcom
+
 @defcom[com "Netnews Next Line", stuff (bound to @bf[C-n] and @bf[Downarrow] in @hid{News-Headers} mode)]
 @defhvar1[var "Netnews Last Header Style", val {:next-headers}]
 This command moves the current point to the next line.  If you are on the
