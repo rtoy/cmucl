@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3 1997/03/17 20:28:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3 1997/03/17 20:28:02 pw Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -509,8 +509,9 @@
   (:translate 32bit-logical-not)
   (:args (x :scs (unsigned-reg)))
   (:arg-types unsigned-num)
-  (:generator 1
-    (inst not x r)))
+  (:generator 2
+    (inst not x r)
+    (inst mskll r 4 r)))
 
 (define-vop (32bit-logical-and 32bit-logical)
   (:translate 32bit-logical-and)
@@ -527,8 +528,9 @@
 
 (define-vop (32bit-logical-nor 32bit-logical)
   (:translate 32bit-logical-nor)
-  (:generator 1
-    (inst ornot x y r)))
+  (:generator 2
+    (inst ornot x y r)
+    (inst mskll r 4 r)))
 
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
