@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.3 1997/06/26 16:57:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.4 1998/08/05 09:03:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,18 +180,25 @@
   (inst xor temp hi temp)
   (inst bne temp two-words)
 
-  ;; Only need one word, fix the header and zero the high-word.
+  ;; Only need one word, fix the header.
   (inst li (logior (ash 1 type-bits) bignum-type) temp2)
-  (inst li 0 hi)
+  ;; Allocate one word.
+  (pseudo-atomic (:extra (pad-data-block (1+ bignum-digits-offset)))
+    (inst bis alloc-tn other-pointer-type res)
+    (storew temp2 res 0 other-pointer-type))
+  ;; Store one word
+  (storew lo res bignum-digits-offset other-pointer-type)
+  ;; Out of here
+  (lisp-return lra lip :offset 2)
 
   TWO-WORDS
+  ;; Allocate two words.
   (pseudo-atomic (:extra (pad-data-block (+ 2 bignum-digits-offset)))
     (inst bis alloc-tn other-pointer-type res)
     (storew temp2 res 0 other-pointer-type))
-
+  ;; Store two words.
   (storew lo res bignum-digits-offset other-pointer-type)
   (storew hi res (1+ bignum-digits-offset) other-pointer-type)
-
   ;; Out of here
   (lisp-return lra lip :offset 2)
 

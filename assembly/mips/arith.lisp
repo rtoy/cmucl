@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.15 1997/10/25 16:31:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.16 1998/08/05 09:03:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,11 +144,33 @@
   (inst sra temp lo 31)
   (inst xor temp hi)
   (inst bne temp two-words)
+  ;; Assume a two word header.
   (inst li temp (logior (ash 2 type-bits) bignum-type))
 
-  ;; Only need one word, fix the header and zero the high-word.
+  ;; Only need one word, fix the header.
   (inst li temp (logior (ash 1 type-bits) bignum-type))
-  (inst li hi 0)
+
+  #-gengc
+  (pseudo-atomic (pa-flag :extra (pad-data-block (+ 1 bignum-digits-offset)))
+    (inst or res alloc-tn other-pointer-type)
+    (storew temp res 0 other-pointer-type))
+  #+gengc
+  (without-scheduling ()
+    (inst or res alloc-tn other-pointer-type)
+    (storew temp alloc-tn)
+    (inst addu alloc-tn (pad-data-block (+ 1 bignum-digits-offset))))
+
+  (storew lo res bignum-digits-offset other-pointer-type)
+
+  ;; Out of here
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
+  (lisp-return lra lip :offset 2)
+
 
   TWO-WORDS
   #-gengc
@@ -172,6 +194,7 @@
     (inst nop))
   #-gengc
   (lisp-return lra lip :offset 2)
+
 
   DO-STATIC-FUN
   (inst lw lip null-tn (static-function-offset 'two-arg-*))
