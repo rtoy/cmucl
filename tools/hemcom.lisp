@@ -3,12 +3,15 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.11 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.12 2003/07/18 11:15:19 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; This file compiles all of Hemlock.
 ;;;
+
+(when (boundp 'conditions::*make-condition-accessor-methods*)
+  (setq conditions::*make-condition-accessor-methods* t))
 
 #+bootstrap
 (progn
