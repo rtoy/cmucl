@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.2 1990/02/03 15:14:14 wlott Exp $
+;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
 ;;;
@@ -14,7 +16,101 @@
 ;;;
 ;;; Converted by William Lott.
 ;;; 
-(in-package 'c)
+(in-package "C")
+
+
+;;;; Data object definition macros.
+
+(eval-when (compile eval load)
+  (defun parse-slot (slot)
+    (if (atom slot)
+	(values slot nil nil nil nil nil)
+	(values (car slot)
+		(getf (cdr slot) :ref-vop)
+		(getf (cdr slot) :ref-trans)
+		(getf (cdr slot) :set-vop)
+		(getf (cdr slot) :set-trans)
+		(getf (cdr slot) :docs)))))
+
+(defmacro defslots ((name &key (header t) (lowtag 0)) &rest slots)
+  (let ((compile-time nil)
+	(load-time nil)
+	(index (if header 1 0))
+	(rest nil))
+    (dolist (slot slots)
+      (if (eq slot '&rest)
+	  (setf rest t)
+	  (multiple-value-bind
+	      (slot-name ref-vop ref-trans set-vop set-trans docs)
+	      (parse-slot slot)
+	    (let ((const (intern (concatenate 'simple-string
+					      (string name)
+					      "-"
+					      (string slot-name)
+					      (if rest "-OFFSET" "-SLOT")))))
+	      (push `(defconstant ,const
+		       ,index
+		       ,@(if docs (list docs)))
+		    compile-time)
+	      (when (or set-vop set-trans ref-vop ref-trans)
+		(push `(define-cell-accessors ,const ,lowtag
+			 ,ref-vop ,ref-trans ,set-vop ,set-trans)
+		      load-time))
+	      (if rest
+		  (setf rest nil)
+		  (incf index))))))
+    `(progn
+       (eval-when (compile load eval)
+	 ,@(nreverse compile-time))
+       ,@(nreverse load-time))))
+
+
+(defslots (%cons :lowtag list-pointer-type :header nil)
+  (car :ref-vop car :ref-trans car
+       :set-vop set-car :set-trans %rplaca)
+  (cdr :ref-vop cdr :ref-trans cdr
+       :set-vop set-cdr :set-trans %rplacd))
+
+
+(defslots (%symbol :lowtag other-pointer-type)
+  (value :set-vop set :set-trans set)
+  (function :set-vop set-symbol-function :set-trans %sp-set-definition)
+  (plist :ref-vop symbol-plist :ref-trans symbol-plist
+	 :set-vop set-symbol-plist :set-trans %sp-set-plist)
+  (name :ref-vop symbol-name :ref-trans symbol-name)
+  (package :ref-vop symbol-package :ref-trans symbol-package
+	   :set-vop set-package))
+
+
+(defslots (%array)
+  fill-pointer
+  elements
+  data
+  displacement
+  displaced-p
+  &rest
+  dimensions)
+
+(defslots (%code)
+  code-size
+  entry-points
+  debug-info
+  &rest
+  constants)
+  
+(defslots (%function-header)
+  self
+  next
+  name
+  arglist
+  type
+  &rest
+  code)
+
+(defslots (%closure)
+  code)
+
+
 
 
 ;;;; Symbol hacking VOPs:
@@ -34,11 +130,10 @@
 ;;;
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
-  #+nil
   (:generator 9
-    (unless (location= obj-temp object)
-      (inst or obj-temp object zero-tn))
-    (lw value obj-temp (/ clc::symbol-value 4))
+    (move obj-temp object)
+    (loadw value obj-temp %symbol-value-slot)
+    #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-unbound
 					obj-temp)))
       (test-special-value value temp '%trap-object err-lab nil))))
@@ -48,11 +143,10 @@
 ;;;
 (define-vop (symbol-function checked-cell-ref)
   (:translate symbol-function)
-  #+nil
   (:generator 10
-    (unless (location= obj-temp object)
-      (inst lr obj-temp object))
-    (loadw value obj-temp (/ clc::symbol-definition 4))
+    (move obj-temp object)
+    (loadw value obj-temp %symbol-function-slot)
+    #+nil
     (let ((err-lab (generate-error-code node clc::error-symbol-undefined
 					obj-temp)))
       (test-simple-type value temp err-lab t system:%function-type))))
@@ -90,65 +184,64 @@
     (loadw value object (/ clc::symbol-definition 4))
     (test-simple-type value temp target not-p system:%function-type)))
 
+#+nil
 (def-source-transform makunbound (x)
   `(set ,x (%primitive make-immediate-type 0 system:%trap-type)))
 
 
 (define-vop (fast-symbol-value cell-ref)
-  (:variant (/ clc::symbol-value 4))
+  (:variant %symbol-value-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-value))
 
 (define-vop (fast-symbol-function cell-ref)
-  (:variant (/ clc::symbol-definition 4))
+  (:variant %symbol-function-slot other-pointer-type)
   (:policy :fast)
   (:translate symbol-function))
 
-(define-cell-accessors (/ clc::symbol-value 4) nil nil set set)
-(define-cell-accessors (/ clc::symbol-definition 4)
-  nil nil set-symbol-function %sp-set-definition)
-(define-cell-accessors (/ clc::symbol-property-list 4)
-  symbol-plist symbol-plist set-symbol-plist %sp-set-plist)
-(define-cell-accessors (/ clc::symbol-print-name 4)
-  symbol-name symbol-name nil nil)
-(define-cell-accessors (/ clc::symbol-package 4)
-  symbol-package symbol-package set-package nil)
 
-
+#+nil
 (define-miscop bind (val symbol) :results ())
+
+#+nil
 (define-miscop unbind (num) :results ())
 
 
 ;;;; List hackery:
 
-(define-cell-accessors (/ clc::list-car 4)
-  car car set-car %rplaca)
-(define-cell-accessors (/ clc::list-cdr 4)
-  cdr cdr set-cdr %rplacd)
-
+#+nil
 (define-miscop cons (x y) :translate cons)
 
 
 ;;;; Value cell and closure hackery:
 
+#+nil
 (define-miscop make-value-cell (val))
+#+nil
 (define-miscop make-closure (nvars entry))
 
+#+nil
 (define-vop (value-cell-ref cell-ref)
   (:variant (+ clc::g-vector-header-size-in-words
 	       system:%function-value-cell-value-slot)))
 
+#+nil
 (define-vop (value-cell-set cell-set)
   (:variant (+ clc::g-vector-header-size-in-words
 	       system:%function-value-cell-value-slot)))
 
+#+nil
 (define-vop (closure-init slot-set))
+#+nil
 (define-vop (closure-ref slot-ref))
 
 
 ;;;; Structure hackery:
 
+#+nil
 (define-vop (structure-ref slot-ref)
   (:variant vector-header-length other-pointer-type))
+
+#+nil
 (define-vop (structure-set slot-set)
   (:variant vector-header-length other-pointer-type))
