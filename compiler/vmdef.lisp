@@ -1909,8 +1909,7 @@
 (defmacro do-live-tns ((tn-var live block &optional result) &body body)
   "DO-LIVE-TNS (TN-Var Live Block [Result]) Form*
   Iterate over all the TNs live at some point, with the live set represented by
-  a local conflicts bit-vector and the IR2-Block containing the location.
-  :More TNs are ignored, but :More TNs never appear in save-sets."
+  a local conflicts bit-vector and the IR2-Block containing the location."
   (let ((n-conf (gensym))
 	(n-bod (gensym))
 	(i (gensym))
@@ -1925,20 +1924,24 @@
 			     (environment-info
 			      (ir2-block-environment ,n-block))))
 	     (,n-bod ,tn-var))
-	   ;;
-	   ;; Do TNs always-live in this block.
-	   (do ((,n-conf (ir2-block-global-tns ,n-block)
-			 (global-conflicts-next ,n-conf)))
-	       ((null ,n-conf))
-	     (when (eq (global-conflicts-kind ,n-conf) :live)
-	       (,n-bod (global-conflicts-tn ,n-conf))))
-	   ;;
-	   ;; Do TNs locally live in the designated live set.
+	   
 	   (let ((,ltns (ir2-block-local-tns ,n-block)))
+	     ;;
+	     ;; Do TNs always-live in this block and live :More TNs.
+	     (do ((,n-conf (ir2-block-global-tns ,n-block)
+			   (global-conflicts-next ,n-conf)))
+		 ((null ,n-conf))
+	       (when (or (eq (global-conflicts-kind ,n-conf) :live)
+			 (let ((,i (global-conflicts-number ,n-conf)))
+			   (and (eq (svref ,ltns ,i) :more)
+				(not (zerop (sbit ,n-live ,i))))))
+		 (,n-bod (global-conflicts-tn ,n-conf))))
+	     ;;
+	     ;; Do TNs locally live in the designated live set.
 	     (dotimes (,i (ir2-block-local-tn-count ,n-block) ,result)
-	       (unless (zerop (sbit ,n-live ,i))
-		 (let ((,tn-var (svref ,ltns ,i)))
-		   (when (and ,tn-var (not (eq ,tn-var :more)))
+	       (let ((,tn-var (svref ,ltns ,i)))
+		 (when (and ,tn-var (not (eq ,tn-var :more)))
+		   (unless (zerop (sbit ,n-live ,i))
 		     (,n-bod ,tn-var)))))))))))
 
 
