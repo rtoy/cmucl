@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: c.log -*-
+;;; -*- Package: RT; Log: c.log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -296,8 +296,8 @@
 				    :test #'eql)
 			    (copy-list lowtags))
 			#'<))
-	 (hdrs (sort hdrs #'<))
-	 (immed (sort immed #'<)))
+	 (hdrs (sort (copy-list hdrs) #'<))
+	 (immed (sort (copy-list immed) #'<)))
     (append
      (when immed
        `((inst nilz ,temp ,reg type-mask)
@@ -387,7 +387,6 @@
 		       (t
 			,@(test-type-aux n-reg n-temp n-target drop-through nil
 					 lowtags immediates headers)))))
-	 (inst no-op)
 	 (emit-label ,drop-through)))))
 
 
