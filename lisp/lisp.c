@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.30 2003/02/25 15:51:17 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.31 2003/04/28 23:07:38 cracauer Exp $
  *
  */
 
@@ -99,11 +99,12 @@ static char* cmucllib_search_list[] =
  * default for CMUCLLIB
  */
 char *
-default_cmucllib(char* argv0)
+default_cmucllib(const char const* argv0arg)
 {
     char* p;
     char* defpath;
     char* cwd;
+    char *argv0 = strdup(argv0arg);
     
     /*
      * From argv[0], create the appropriate directory by lopping off the
@@ -183,7 +184,8 @@ default_cmucllib(char* argv0)
 	    abort();
 	}
     }
-    
+
+    free(argv0);
     free(cwd);
 
     return defpath;
