@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.81 1993/05/08 00:43:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.82 1993/05/11 14:05:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,9 @@
 (in-package "C")
 (in-package "EXTENSIONS")
 (export '(*compile-progress* compile-from-stream *block-compile-default*
-			     start-block end-block))
+			     start-block end-block
+			     *byte-compile-default*
+			     *byte-compile-top-level*))
 (in-package "LISP")
 (export '(*compile-verbose* *compile-print* *compile-file-pathname*
 			    *compile-file-truename*))
@@ -39,14 +41,29 @@
 		    *last-source-form* *last-format-string* *last-format-args*
 		    *last-message-count* *lexical-environment*))
 
+;;; Exported:
 (defvar *block-compile-default* :specified
   "The default value for the :Block-Compile argument to COMPILE-FILE.")
+(declaim (type (member t nil :specified) *block-compile-default*))
 
-(defvar *byte-compile* :maybe
-  "Whether or not to use the byte-compiler.  Can be T, NIL, or :MAYBE")
-(defvar *byte-compiling* nil
-  "Bound by COMPILE-COMPONENT to T when byte-compiling, and NIL when
-   native compiling.")
+;;; Exported:
+(defvar *byte-compile-default* :maybe
+  "The default value for the :Byte-Compile argument to COMPILE-FILE.")
+
+;;; Exported:
+(defvar *byte-compile-top-level* t
+  "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
+   forms (evaluated at load-time.)  If T, byte-compile top-level forms (unless
+   :BYTE-COMPILE nil was specified.")
+
+;;; Value of the :byte-compile argument to the compiler.
+(defvar *byte-compile* :maybe)
+
+;;; Bound by COMPILE-COMPONENT to T when byte-compiling, and NIL when
+;;; native compiling.
+;;;
+(defvar *byte-compiling*)
+
 
 (defvar compiler-version "1.0")
 (pushnew :python *features*)
@@ -283,7 +300,8 @@
 	    (check-pack-consistency component))
 	  
 	  (when *compiler-trace-output*
-	    (describe-component component *compiler-trace-output*))
+	    (describe-component component *compiler-trace-output*)
+	    (describe-ir2-component component *compiler-trace-output*))
 	  
 	  (maybe-mumble "Code ")
 	  (multiple-value-bind
@@ -337,7 +355,7 @@
 	    (:maybe
 	     (dolist (fun (component-lambdas component) t)
 	       (unless (policy (lambda-bind fun)
-			       (eql (max space cspeed) 3))
+			       (zerop speed) (<= debug 1))
 		 (return nil)))))))
 
     (when *compile-print*
@@ -522,33 +540,34 @@
      *compiler-note-count*)))
 
    
+;;;; Trace output:
+
 ;;; Describe-Component  --  Internal
 ;;;
 ;;;    Print out some useful info about Component to Stream.
 ;;;
-(defun describe-component (component &optional
-				     (*standard-output* *standard-output*))
+(defun describe-component (component *standard-output*)
   (declare (type component component))
   (format t "~|~%;;;; Component: ~S~2%" (component-name component))
-  (print-blocks component)
+  (print-blocks component)  
+  (undefined-value))
+
+
+(defun describe-ir2-component (component *standard-output*)
+  (format t "~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
   
-  (typecase (component-info component)
-    (ir2-component
-     (format t "~%~|~%;;;; IR2 component: ~S~2%" (component-name component))
+  (format t "Entries:~%")
+  (dolist (entry (ir2-component-entries (component-info component)))
+    (format t "~4TL~D: ~S~:[~; [Closure]~]~%"
+	    (label-id (entry-info-offset entry))
+	    (entry-info-name entry)
+	    (entry-info-closure-p entry)))
   
-     (format t "Entries:~%")
-     (dolist (entry (ir2-component-entries (component-info component)))
-       (format t "~4TL~D: ~S~:[~; [Closure]~]~%"
-	       (label-id (entry-info-offset entry))
-	       (entry-info-name entry)
-	       (entry-info-closure-p entry)))
-  
-     (terpri)
-     (pre-pack-tn-stats component *standard-output*)
-     (terpri)
-     (print-ir2-blocks component)
-     (terpri)))
-  
+  (terpri)
+  (pre-pack-tn-stats component *standard-output*)
+  (terpri)
+  (print-ir2-blocks component)
+  (terpri)
   (undefined-value))
 
 
@@ -1278,7 +1297,8 @@
       (multiple-value-bind (component tll)
 			   (merge-top-level-lambdas pending)
 	(setq *pending-top-level-lambdas* ())
-	(compile-component component)
+	(let ((*byte-compile* (and *byte-compile* *byte-compile-top-level*)))
+	  (compile-component component))
 	(clear-ir1-info component)
 	(object-call-top-level-lambda tll))))
   (undefined-value))
@@ -1479,6 +1499,7 @@
 	       ((:progress *compile-progress*) *compile-progress*)
 	       ((:block-compile *block-compile*) *block-compile-default*)
 	       ((:entry-points *entry-points*) nil)
+	       ((:byte-compile *byte-compile*) *byte-compile-default*)
 	       source-info)
   "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
@@ -1489,10 +1510,13 @@
   :Trace-Stream
       The stream that we write compiler trace output to, or NIL (the default)
       to inhibit trace output.
-  :Block-Compile
-        If true, then function names will be resolved at compile time.
+  :Block-Compile {T, NIL, :SPECIFIED}
+        If true, then function names may be resolved at compile time.
   :Source-Info
-        Some object to be placed in the DEBUG-SOURCE-INFO."
+        Some object to be placed in the DEBUG-SOURCE-INFO.
+  :Byte-Compile {T, NIL, :MAYBE}
+        If true, then may compile to interpreted byte code."
+
   (let ((info (make-stream-source-info stream))
 	(*backend* *native-backend*))
     (unwind-protect
@@ -1560,7 +1584,9 @@
 			    ((:progress *compile-progress*) *compile-progress*)
 			    ((:block-compile *block-compile*)
 			     *block-compile-default*)
-			    ((:entry-points *entry-points*) nil))
+			    ((:entry-points *entry-points*) nil)
+			    ((:byte-compile *byte-compile*)
+			     *byte-compile-default*))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
    of files, in which case the files are compiled as a unit, producing a single
    .FASL file.  The output file names are defaulted from the first (or only)
@@ -1586,13 +1612,19 @@
       With :SPECIFIED, an explicit START-BLOCK declaration will enable block
       compilation.  A value of T indicates that all forms in the file(s) should
       be compiled as a unit.  The default is the value of
-      *BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
+      EXT:*BLOCK-COMPILE-DEFAULT*, which is initially :SPECIFIED.
    :Entry-Points
       This specifies a list of function names for functions in the file(s) that
       must be given global definitions.  This only applies to block
       compilation, and is useful mainly when :BLOCK-COMPILE T is specified on a
       file that lacks START-BLOCK declarations.  If the value is NIL (the
-      default) then all functions will be globally defined."
+      default) then all functions will be globally defined.
+   :Byte-Compile {T | NIL | :MAYBE}
+      Determines whether to compile into interpreted byte code instead of
+      machine instructions.  Byte code is several times smaller, but much
+      slower.  If :MAYBE, then only byte-compile when SPEED is 0 and
+      DEBUG <= 1.  The default is the value of EXT:*BYTE-COMPILE-DEFAULT*,
+      which is initially :MAYBE."
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-name nil)
@@ -1613,7 +1645,9 @@
 	    (when output-file
 	      (setq output-file-name
 		    (frob output-file
-		      (backend-fasl-file-type *backend*)))
+		      (if (eq *byte-compile* t)
+			  (backend-byte-fasl-file-type *backend*)
+			  (backend-fasl-file-type *backend*))))
 	      (setq fasl-file (open-fasl-file output-file-name
 					      (namestring (first source)))))
 	    
