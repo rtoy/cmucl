@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.34 1991/12/04 18:20:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.35 1992/02/13 13:37:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,23 +15,53 @@
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "LISP")
-(export '(load *load-verbose*))
+(export '(load *load-verbose* *load-print* *load-truename* *load-pathname*))
 
 (in-package "EXTENSIONS")
-(export '*load-if-source-newer*)
+(export '(*load-if-source-newer* *load-source-types* *load-object-types*))
 
 (in-package "SYSTEM")
 (export 'foreign-symbol-address)
 
 (in-package "LISP")
 
+
+;;;; Variables:
 
-;;;; Random state variables:
+;;; Public:
+
+(defvar *load-if-source-newer* :load-object
+  "The default for the :IF-SOURCE-NEWER argument to load."))
+
+(declaim (type (member :load-object :load-source :query :compile)
+	       *load-if-source-newer*))
+
+(defvar *load-source-types* '("lisp" "l" "cl" "lsp")
+  "The source file types which LOAD recognizes.")
+
+(defvar *load-object-types*
+  '(#.(c:backend-fasl-file-type c:*backend*) "fasl")
+  "A list of the object file types recognized by LOAD.")
+
+(declaim (list *load-source-types* *load-object-types*))
 
 (defvar *load-verbose* ()
-  "The default for the :Verbose argument to Load.")
-(defvar *load-print-stuff* ()
-  "True if we're gonna mumble about what we're loading.")
+  "The default for the :VERBOSE argument to Load.")
+
+(defvar *load-print* ()
+  "The default for the :PRINT argument to Load.")
+
+(defvar *load-truename* nil
+  "The TRUENAME of the file that LOAD is currently loading.")
+
+(defvar *load-pathname* nil
+  "The defaulted pathname that LOAD is currently loading.")
+
+(declaim (type (or pathname null) *load-truename* *load-pathname*)) 
+
+
+;;; Internal state variables:
+
 (defvar *load-depth* 0
   "Count of the number of recursive loads.")
 (defvar *fasl-file* ()
@@ -39,13 +69,7 @@
 (defvar *current-code-format*
   "The code format that we think we are loading.")
 
-(defvar *load-if-source-newer* :load-object
-  "The value of *load-if-source-newer* determines what happens when the
-  source file is newer than the object file.  The possible values are:
-  :load-object - load object file (default), :load-source - load the source
-  file, :compile - compile the source and then load the object file, or
-  :query - ask the user if he wants to load the source or object file.")
-
+
 ;;; LOAD-FRESH-LINE -- internal.
 ;;;
 ;;; Output the corrent number of semicolons after a fresh-line.
@@ -401,114 +425,193 @@
   (do ((sexpr (read stream nil load-eof-value)
 	      (read stream nil load-eof-value)))
       ((eq sexpr load-eof-value))
-    (if *load-print-stuff*
+    (if *load-print*
 	(let ((results (multiple-value-list (eval sexpr))))
 	  (load-fresh-line)
 	  (format t "~{~S~^, ~}~%" results))
 	(eval sexpr)))
   t)
 
-;;; Load:
-
-(defun load (filename &key ((:verbose *load-verbose*) *load-verbose*)
-		      ((:print *load-print-stuff*) *load-print-stuff*)
+
+;;; LOAD  --  Public
+;;;
+;;;    This function mainly sets up special bindings and then calls
+;;; sub-functions.  We conditionally bind the switches with PROGV so that
+;;; people can set them in their init files and have the values take effect.
+;;; If the compiler is loaded, we make the compiler-policy local to LOAD by
+;;; binding it to itself.
+;;;
+(defun load (filename &key (verbose nil verbose-p) (print nil print-p)
+		      (if-source-newer nil if-source-newer-p)
 		      (if-does-not-exist :error) contents)
-  "Loads the file named by Filename into the Lisp environment.  See manual
-   for details."
-  (declare (type (or null (member :source :binary)) contents))
-  (let ((*package* *package*)
-	(*load-depth* (1+ *load-depth*)))
-    (values 
-     (with-simple-restart (continue "Return NIL from load of ~S." filename)
-       (if (streamp filename)
-	   (if (or (eq contents :binary)
-		   (and (null contents)
-			(equal (stream-element-type filename)
-			       '(unsigned-byte 8))))
-	       (fasload filename)
-	       (sloload filename))
-	   (let ((pn (merge-pathnames (pathname filename)
-				      *default-pathname-defaults*)))
-	     (internal-load pn (probe-file pn) if-does-not-exist
-			    contents)))))))
+  "Loads the file named by Filename into the Lisp environment.  The file type
+   (a.k.a extension) is defaulted if missing.  These options are defined:
 
-(defun internal-load (pathname truename if-does-not-exist contents)
-  (cond
-   (truename
-    (case contents
-      (:source
-       (with-open-file (file truename :direction :input)
-	 (sloload file)))
-      (:binary
-       (with-open-file (file truename
-			     :direction :input
-			     :element-type '(unsigned-byte 8))
-	 (fasload file)))
-      (t
-       (let ((first-line (with-open-file (file truename :direction :input)
-			   (read-line file nil))))
-	 (cond
-	  ((and first-line
-		(>= (length first-line) 9)
-		(string= first-line "FASL FILE" :end1 9))
-	   (internal-load pathname truename if-does-not-exist :binary))
-	  (t
-	   (when (member (pathname-type truename)
-			 '(#.(c:backend-fasl-file-type c:*backend*) "fasl")
-			 :test #'string=)
-	     (cerror
-	      "Load it as a source file."
-	      "File has a fasl file type, but no fasl file header:~%  ~S"
-	      (namestring truename)))
-	   (internal-load pathname truename if-does-not-exist :source)))))))
-   ((pathname-type pathname)
-    (with-open-file (stream pathname :direction :input
-			    :if-does-not-exist if-does-not-exist)
-      (sloload stream)))
-   (t
-    (let* ((srcn (make-pathname :type "lisp" :defaults pathname))
-	   (src (probe-file srcn))
-	   (obj (or (probe-file (make-pathname
-				 :type #.(c:backend-fasl-file-type c:*backend*)
-				 :defaults pathname))
-		    (probe-file (make-pathname :type "fasl"
-					       :defaults pathname)))))
+   :IF-SOURCE-NEWER <keyword>
+	If the file type is not specified, and both source and object files
+        exist, then this argument controls which is loaded:
+	    :LOAD-OBJECT - load object file (default),
+	    :LOAD-SOURCE - load the source file,
+	    :COMPILE - compile the source and then load the object file, or
+	    :QUERY - ask the user which to load.
+
+   :IF-DOES-NOT-EXIST {:ERROR | NIL}
+       If :ERROR (the default), signal an error if the file can't be located.
+       If NIL, simply return NIL (LOAD normally returns T.)
+
+   :VERBOSE {T | NIL}
+       If true, print a line describing each file loaded.
+
+   :PRINT {T | NIL}
+       If true, print information about loaded values.  When loading the
+       source, the result of evaluating each top-level form is printed.
+
+   :CONTENTS {NIL | :SOURCE | :BINARY}
+       Forces the input to be interpreted as a source or object file, instead
+       of guessing based on the file type.  Probably only necessary if you have
+       source files with a \"fasl\" type.
+
+   The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER*
+   determine the defaults for the corresponding keyword arguments.  These
+   variables are also bound to the specified argument values, so specifying a
+   keyword affects nested loads.  The variables EXT:*LOAD-SOURCE-TYPES* and
+   EXT:*LOAD-OBJECT-TYPES* determine the file types that we use for defaulting
+   when none is specified."
+  (declare (type (or null (member :source :binary)) contents))
+  (collect ((vars)
+	    (vals))
+    (macrolet ((frob (wot)
+		 `(when ,(concat-pnames wot '-p)
+		    (vars ',(intern (format nil "*LOAD-~A*" wot)))
+		    (vals ,wot))))
+      (frob if-source-newer)
+      (frob verbose)
+      (frob print))
+
+    (when (boundp 'c::*default-cookie*)
+      (vars 'c::*default-cookie* 'c::*default-interface-cookie*)
+      (vals c::*default-cookie* c::*default-interface-cookie*))
+
+    (progv (vars) (vals)
+      (let ((*package* *package*)
+	    (*readtable* *readtable*)
+	    (*load-depth* (1+ *load-depth*)))
+	(values 
+	 (with-simple-restart (continue "Return NIL from load of ~S." filename)
+	   (if (streamp filename)
+	       (if (or (eq contents :binary)
+		       (and (null contents)
+			    (equal (stream-element-type filename)
+				   '(unsigned-byte 8))))
+		   (fasload filename)
+		   (sloload filename))
+	       (let ((pn (merge-pathnames (pathname filename)
+					  *default-pathname-defaults*)))
+		 (internal-load pn (probe-file pn) if-does-not-exist
+				contents)))))))))
+
+;;; INTERNAL-LOAD-EXISTS  --  Internal
+;;;
+;;;    Handle INTERNAL-LOAD where the specifed file exists.
+;;;
+(defun internal-load-exists (pathname truename if-does-not-exist contents)
+  (case contents
+    (:source
+     (with-open-file (file truename :direction :input)
+       (sloload file)))
+    (:binary
+     (with-open-file (file truename
+			   :direction :input
+			   :element-type '(unsigned-byte 8))
+       (fasload file)))
+    (t
+     (let ((first-line (with-open-file (file truename :direction :input)
+			 (read-line file nil))))
+       (cond
+	((and first-line
+	      (>= (length first-line) 9)
+	      (string= first-line "FASL FILE" :end1 9))
+	 (internal-load pathname truename if-does-not-exist :binary))
+	(t
+	 (when (member (pathname-type truename) *load-object-types*
+		       :test #'string=)
+	   (cerror
+	    "Load it as a source file."
+	    "File has a fasl file type, but no fasl file header:~%  ~S"
+	    (namestring truename)))
+	 (internal-load pathname truename if-does-not-exist :source)))))))
+
+
+;;; TRY-DEFAULT-TYPES  --  Internal
+;;;
+(defun try-default-types (pathname types)
+  (dolist (type types (values nil nil))
+    (let* ((pn (make-pathname :type type :defaults pathname))
+	   (tn (probe-file pn)))
+      (when tn (return (values pn tn))))))
+
+
+;;; INTERNAL-LOAD-DEFAULT-TYPE  --  Internal
+;;;
+;;;    Handle the case of INTERNAL-LOAD where the file does not exist.
+;;;
+(defun internal-load-default-type (pathname if-does-not-exist)
+  (multiple-value-bind
+      (src-pn src-tn)
+      (try-default-types pathname *load-source-types*)
+    (multiple-value-bind
+	(obj-pn obj-tn)
+	(try-default-types pathname *load-object-types*)
       (cond
-       (obj
-	(cond
-	 ((and src (> (file-write-date src) (file-write-date obj)))
-	  (case *load-if-source-newer*
-	    (:load-object
-	     (warn "Loading object file ~A, which is~%  ~
-	            older than the presumed source:~% ~A."
-		   (namestring obj)
-		   (namestring src))
-	     (internal-load obj obj if-does-not-exist :binary))
-	    (:load-source
-	     (warn "Loading source file ~A, which is~%  ~
-	            newer than the presumed object file, ~A."
-		   (namestring src)
-		   (namestring obj))
-	     (internal-load obj obj if-does-not-exist :source))
-	    (:compile
-	     (compile-file (namestring src) :output-file obj)
-	     (internal-load obj obj if-does-not-exist :binary))
-	    (:query
-	     (if (y-or-n-p "Load source file ~A which is newer~%  ~
-	                    than presumed object file ~A? "
-			   (namestring src)
-			   (namestring obj))
-		 (internal-load obj obj if-does-not-exist :source)
-		 (internal-load obj obj if-does-not-exist :binary)))
-	    (T
-	     (error
-	      "*Load-if-source-newer* contains ~A which is not one of:~%  ~
-	       :load-object, :load-source, :compile, or :query."
-	      *load-if-source-newer*))))
-	 (t
-	  (internal-load obj obj if-does-not-exist :binary))))
+       ((and obj-tn src-tn
+	     (> (file-write-date src-tn) (file-write-date obj-tn)))
+	(ecase *load-if-source-newer*
+	  (:load-object
+	   (warn "Loading object file ~A, which is~%  ~
+		  older than the presumed source:~% ~A."
+		 (namestring obj-tn) (namestring src-tn))
+	   (internal-load obj-pn obj-tn if-does-not-exist :binary))
+	  (:load-source
+	   (warn "Loading source file ~A, which is~%  ~
+		  newer than the presumed object file, ~A."
+		 (namestring src-tn) (namestring obj-tn))
+	   (internal-load src-pn src-tn if-does-not-exist :source))
+	  (:compile
+	   (let ((obj-tn (compile-file src-pn)))
+	     (unless obj-tn
+	       (error "Compile of source failed, cannot load object."))
+	     (internal-load src-pn obj-tn :error :binary)))
+	  (:query
+	   (restart-case
+	       (error "Object file ~A is~%  ~
+		       older than the presumed source:~% ~A."
+		      (namestring obj-tn) (namestring src-tn))
+	     (continue () :report "load source file"
+	       (internal-load src-pn src-tn if-does-not-exist :source))
+	     (load-object () :report "load object file"
+	       (internal-load src-pn obj-tn if-does-not-exist :binary))))))
+       (obj-tn
+	(internal-load obj-pn obj-tn if-does-not-exist :binary))
        (t
-	(internal-load srcn src if-does-not-exist :source)))))))
+	(internal-load src-pn src-tn if-does-not-exist :source))))))
+
+
+;;; INTERNAL-LOAD  --  Internal
+;;;
+;;;    Decide if and how to default a file.
+;;;
+(defun internal-load (pathname truename if-does-not-exist contents)
+  (let ((*load-truename* truename)
+	(*load-pathname* pathname))
+    (cond
+     (truename (internal-load-exists pathname truename if-does-not-exist
+				     contents))
+     ((pathname-type pathname)
+      (with-open-file (stream pathname :direction :input
+			      :if-does-not-exist if-does-not-exist)
+	(sloload stream)))
+     (t
+      (internal-load-default-type pathname if-does-not-exist)))))
 
 
 ;;;; Actual FOP definitions:
@@ -762,7 +865,7 @@
 
 (define-fop (fop-eval 53)
   (let ((result (eval (pop-stack))))
-    (when *load-print-stuff*
+    (when *load-print*
       (load-fresh-line)
       (prin1 result)
       (terpri))
@@ -770,7 +873,7 @@
 
 (define-fop (fop-eval-for-effect 54 nil)
   (let ((result (eval (pop-stack))))
-    (when *load-print-stuff*
+    (when *load-print*
       (load-fresh-line)
       (prin1 result)
       (terpri))))
@@ -902,7 +1005,7 @@
       (%primitive set-function-name fun name)
       (%primitive set-function-arglist fun arglist)
       (%primitive set-function-type fun type)
-      (when *load-print-stuff*
+      (when *load-print*
 	(load-fresh-line)
 	(format t "~S defined~%" fun))
       fun)))
