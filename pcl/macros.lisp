@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.12 1999/04/15 22:38:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.13 1999/04/25 12:46:28 pw Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -447,10 +447,12 @@
        (not (keywordp x))))
 
 (defun find-class (symbol &optional (errorp t) environment)
+  "Returns the PCL class metaobject named by SYMBOL. An error of type
+   SIMPLE-ERROR is signaled if the class does not exist unless ERRORP
+   is NIL in which case NIL is returned. SYMBOL cannot be a keyword."
   (declare (ignore environment))
-  (let ((cell (find-class-cell symbol (not errorp))))
-    (when cell
-      (find-class-from-cell symbol cell errorp))))
+  (find-class-from-cell
+   symbol (find-class-cell symbol t) errorp))
 
 (defun find-class-predicate (symbol &optional (errorp t) environment)
   (declare (ignore environment))
