@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.35 1992/09/07 16:01:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.36 1992/09/21 15:37:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,9 +328,21 @@
 	   (inline-expansion-ok call))
       (with-ir1-environment call
 	(let* ((*lexical-environment* (functional-lexenv fun))
-	       (res (ir1-convert-lambda (functional-inline-expansion fun))))
-	  (change-ref-leaf ref res)
-	  res))
+	       (won nil)
+	       (res (catch 'local-call-lossage
+		      (prog1
+			  (ir1-convert-lambda (functional-inline-expansion fun))
+			(setq won t)))))
+	  (cond (won
+		 (change-ref-leaf ref res)
+		 res)
+		(t
+		 (let ((*compiler-error-context* call))
+		   (compiler-note "Couldn't inline expand because expansion ~
+				   calls this let-converted local function:~
+				   ~%  ~S"
+				  (leaf-name res)))
+		 fun))))
       fun))
 
 
@@ -893,7 +905,10 @@
 ;;;
 ;;;    We don't attempt to convert calls to functions that have an XEP, since
 ;;; we might be embarrassed later when we want to convert a newly discovered
-;;; local call.
+;;; local call.  We also don't convert calls to named functions which appear in
+;;; the initial component, delaying this until optimization.  This minimizes
+;;; the likelyhood that we well let-convert a function which may have
+;;; references added due to later local inline expansion.
 ;;;
 (defun maybe-let-convert (fun)
   (declare (type clambda fun))
@@ -906,7 +921,15 @@
 	(when (and (basic-combination-p dest)
 		   (eq (basic-combination-fun dest) ref-cont)
 		   (eq (basic-combination-kind dest) :local)
-		   (not (block-delete-p (node-block dest))))
+		   (not (block-delete-p (node-block dest)))
+		   (cond ((and (leaf-name fun)
+			       (eq (component-kind
+				    (block-component
+				     (continuation-block ref-cont)))
+				   :initial))
+			  (reoptimize-continuation ref-cont)
+			  nil)
+			 (t t)))
 	  (let-convert fun dest)
 	  (setf (functional-kind fun)
 		(if (mv-combination-p dest) :mv-let :let))))
