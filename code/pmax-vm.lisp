@@ -7,20 +7,27 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.1 1990/10/23 02:03:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-vm.lisp,v 1.2 1990/10/23 14:44:19 wlott Exp $
 ;;;
 ;;; This file contains the PMAX specific runtime stuff.
 ;;;
 (in-package "VM")
+(use-package "SYSTEM")
 
 (export '(fixup-code-object))
 
+
+;;;; Add machine specific features to *features*
+
+(pushnew :decstation-3100 *features*)
+(pushnew :pmax *features*)
+
+
+
+;;; FIXUP-CODE-OBJECT -- Interface
+;;;
 (defun fixup-code-object (code offset fixup kind)
-  ;; Currently, the only kind of fixup we can have is a lui followed by an
-  ;; addi.
-  (multiple-value-bind
-      (word-offset rem)
-      (truncate offset vm:word-bytes)
+  (multiple-value-bind (word-offset rem) (truncate offset word-bytes)
     (unless (zerop rem)
       (error "Unaligned instruction?  offset=#x~X." offset))
     (system:without-gcing
