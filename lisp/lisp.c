@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.5 2000/10/24 11:03:22 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.11.2.6 2000/10/24 13:34:05 dtc Exp $
  *
  */
 
@@ -101,24 +101,50 @@ void main(int argc, char *argv[], char *envp[])
     set_lossage_handler(ldb_monitor);
 
     monitor = FALSE;
+#ifdef DEFAULT_DYNAMIC_SPACE_SIZE
+    dynamic_space_size = DEFAULT_DYNAMIC_SPACE_SIZE;
+#else
+    dynamic_space_size = DYNAMIC_SPACE_SIZE;
+#endif
 
     argptr = argv;
-    while ((arg = *++argptr) != NULL) {
-        if (strcmp(arg, "-core") == 0) {
-            if (core != NULL) {
+    while ((arg = *++argptr) != NULL)
+      {
+        if (strcmp(arg, "-core") == 0)
+	  {
+            if (core != NULL)
+	      {
                 fprintf(stderr, "can only specify one core file.\n");
                 exit(1);
-            }
+	      }
             core = *++argptr;
-            if (core == NULL) {
-                fprintf(stderr, "-core must be followed by the name of the core file to use.\n");
+            if (core == NULL)
+	      {
+		fprintf(stderr, "-core must be followed by the name of the core file to use.\n");
                 exit(1);
-            }
-        }
-	else if (strcmp(arg, "-monitor") == 0) {
+	      }
+	  }
+        else if (strcmp(arg, "-dynamic-space-size") == 0)
+	  {
+            char *str = *++argptr;
+            if (str == NULL)
+	      {
+                fprintf(stderr, "-dynamic-space-size must be followed by the size to use in MBytes.\n");
+                exit(1);
+	      }
+	    dynamic_space_size = atoi(str) * 1024 * 1024;
+	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE)
+	      {
+                fprintf(stderr, "-dynamic-space-size must be no greater than %d MBytes.\n",
+			DYNAMIC_SPACE_SIZE / (1024 * 1024));
+                exit(1);
+	      }
+	  }
+	else if (strcmp(arg, "-monitor") == 0)
+	  {
 	    monitor = TRUE;
-	}
-    }
+	  }
+      }
 
     default_core = arch_init();
     if (default_core == NULL)

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.3.2.2 2000/05/23 16:38:12 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-arch.c,v 1.3.2.3 2000/10/24 13:33:55 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -48,7 +48,7 @@ os_vm_address_t arch_get_bad_addr(int sig, int code, struct sigcontext *scp)
   if( (scp->sc_pc < READ_ONLY_SPACE_START ||
        scp->sc_pc >= READ_ONLY_SPACE_START+READ_ONLY_SPACE_SIZE) && 
       ((lispobj *)scp->sc_pc < current_dynamic_space ||
-       (lispobj *)scp->sc_pc >= current_dynamic_space + DYNAMIC_SPACE_SIZE))
+       (lispobj *)scp->sc_pc >= current_dynamic_space + dynamic_space_size))
     return NULL;
 
   badinst = *(unsigned int *)scp->sc_pc;

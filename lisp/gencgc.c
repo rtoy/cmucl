@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.11.2.4 2000/10/21 12:51:04 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.11.2.5 2000/10/24 13:33:56 dtc Exp $
  *
  */
 
@@ -140,11 +140,16 @@ static int new_space;
  */
 
 /*
+ * Number of pages within the dynamic heap, setup from the size of the
+ * dynamic space.
+ */
+unsigned dynamic_space_pages;
+
+/*
  * An array of page structures is statically allocated.
  * This helps quickly map between an address its page structure.
- * NUM_PAGES is set from the size of the dynamic space.
  */
-struct page page_table[NUM_PAGES];
+struct page *page_table;
 
 /*
  * Heap base, needed for mapping addresses to page structures.
@@ -169,7 +174,7 @@ inline int find_page_index(void *addr)
 
   if (index >= 0) {
     index = (unsigned int) index / PAGE_SIZE;
-    if (index < NUM_PAGES)
+    if (index < dynamic_space_pages)
       return index;
   }
 
@@ -566,7 +571,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
      * not write protected, or marked dont_move.
      */
 
-    while (first_page < NUM_PAGES) {
+    while (first_page < dynamic_space_pages) {
       int flags = page_table[first_page].flags;
       if (!(flags & PAGE_ALLOCATED_MASK)
 	  || ((flags & mmask) == mflags &&
@@ -576,7 +581,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
     }
 
     /* Check for a failure */
-    if (first_page >= NUM_PAGES) {
+    if (first_page >= dynamic_space_pages) {
       fprintf(stderr, "*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
       print_generation_stats(1);
       exit(1);
@@ -599,7 +604,7 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
     bytes_found = PAGE_SIZE - page_table[first_page].bytes_used;
     num_pages = 1;
     while ((bytes_found < nbytes || num_pages < 2)
-	   && last_page < NUM_PAGES - 1
+	   && last_page < dynamic_space_pages - 1
 	   && !PAGE_ALLOCATED(last_page + 1)) {
       last_page++;
       num_pages++;
@@ -619,10 +624,10 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
     restart_page = last_page + 1;
   }
-  while (restart_page < NUM_PAGES && bytes_found < nbytes);
+  while (restart_page < dynamic_space_pages && bytes_found < nbytes);
 
   /* Check for a failure */
-  if (restart_page >= NUM_PAGES && bytes_found < nbytes) {
+  if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
     fprintf(stderr, "*A1 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
     print_generation_stats(1);
     exit(1);
@@ -1007,10 +1012,10 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
     first_page = restart_page;
 
     if (large)
-      while (first_page < NUM_PAGES && PAGE_ALLOCATED(first_page))
+      while (first_page < dynamic_space_pages && PAGE_ALLOCATED(first_page))
 	first_page++;
     else
-      while (first_page < NUM_PAGES) {
+      while (first_page < dynamic_space_pages) {
 	int flags = page_table[first_page].flags;
 	if (!(flags & PAGE_ALLOCATED_MASK)
 	    || ((flags & mmask) == mflags &&
@@ -1020,7 +1025,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
       }
 
     /* Check for a failure */
-    if (first_page >= NUM_PAGES) {
+    if (first_page >= dynamic_space_pages) {
       fprintf(stderr, "*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
       print_generation_stats(1);
       exit(1);
@@ -1037,7 +1042,7 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
     bytes_found = PAGE_SIZE - page_table[first_page].bytes_used;
     num_pages = 1;
     while (bytes_found < nbytes
-	   && last_page < NUM_PAGES - 1
+	   && last_page < dynamic_space_pages - 1
 	   && !PAGE_ALLOCATED(last_page + 1)) {
       last_page++;
       num_pages++;
@@ -1057,10 +1062,10 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
 
     restart_page = last_page + 1;
   }
-  while ((restart_page < NUM_PAGES) && (bytes_found < nbytes));
+  while ((restart_page < dynamic_space_pages) && (bytes_found < nbytes));
 
   /* Check for a failure */
-  if (restart_page >= NUM_PAGES && bytes_found < nbytes) {
+  if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
     fprintf(stderr, "*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
     print_generation_stats(1);
     exit(1);
@@ -1434,7 +1439,7 @@ static inline boolean from_space_p(lispobj obj)
 {
   int page_index = (void*) obj - heap_base;
   return page_index >= 0
-    && (page_index = (unsigned int) page_index / PAGE_SIZE) < NUM_PAGES
+    && (page_index = (unsigned int) page_index / PAGE_SIZE) < dynamic_space_pages
     && PAGE_GENERATION(page_index) == from_space;
 }
 
@@ -1442,7 +1447,7 @@ static inline boolean new_space_p(lispobj obj)
 {
   int page_index = (void*) obj - heap_base;
   return page_index >= 0
-    && (page_index = (unsigned int) page_index / PAGE_SIZE) < NUM_PAGES
+    && (page_index = (unsigned int) page_index / PAGE_SIZE) < dynamic_space_pages
     && PAGE_GENERATION(page_index) == new_space;
 }
 
@@ -4863,7 +4868,7 @@ static void scavenge_generation(int generation)
 #define SC_GEN_CK 0
 #if SC_GEN_CK
   /* Clear the write_protected_cleared flags on all pages */
-  for (i = 0; i < NUM_PAGES; i++)
+  for (i = 0; i < dynamic_space_pages; i++)
     page_table[i].flags &= ~PAGE_WRITE_PROTECTED_CLEADED_MASK;
 #endif
 
@@ -4936,7 +4941,7 @@ static void scavenge_generation(int generation)
    * Check that none of the write_protected pages in this generation
    * have been written to.
    */
-  for (i = 0; i < NUM_PAGES; i++)
+  for (i = 0; i < dynamic_space_pages; i++)
     if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
 	&& PAGE_GENERATION(i) == generation
@@ -5110,7 +5115,7 @@ static void scavenge_newspace_generation(int generation)
 #define SC_NS_GEN_CK 0
 #if SC_NS_GEN_CK
   /* Clear the write_protected_cleared flags on all pages */
-  for (i = 0; i < NUM_PAGES; i++)
+  for (i = 0; i < dynamic_space_pages; i++)
     page_table[i].flags &= ~PAGE_WRITE_PROTECTED_CLEARED;
 #endif
 
@@ -5229,7 +5234,7 @@ static void scavenge_newspace_generation(int generation)
    * Check that none of the write_protected pages in this generation
    * have been written to.
    */
-  for (i = 0; i < NUM_PAGES; i++)
+  for (i = 0; i < dynamic_space_pages; i++)
     if (PAGE_ALLOCATED(i)
 	&& page_table[i].bytes_used != 0
 	&& PAGE_GENERATION(i) == generation
@@ -5935,7 +5940,7 @@ int	update_x86_dynamic_space_free_pointer(void)
   int last_page = -1;
   int i;
 
-  for (i = 0; i < NUM_PAGES; i++)
+  for (i = 0; i < dynamic_space_pages; i++)
     if (PAGE_ALLOCATED(i) && page_table[i].bytes_used != 0)
       last_page = i;
 
@@ -6111,7 +6116,7 @@ void	gc_free_heap(void)
   if (gencgc_verbose > 1)
     fprintf(stderr, "Free heap\n");
 
-  for (page = 0; page < NUM_PAGES; page++)
+  for (page = 0; page < dynamic_space_pages; page++)
     /* Skip Free pages which should already be zero filled. */
     if (PAGE_ALLOCATED(page)) {
       void *page_start, *addr;
@@ -6207,8 +6212,19 @@ void gc_init(void)
 
   heap_base = (void*) DYNAMIC_0_SPACE_START;
 
+  /* The number of pages needed for the dynamic space - rounding up. */
+  dynamic_space_pages = (dynamic_space_size + (PAGE_SIZE - 1)) / PAGE_SIZE;
+
+  page_table = (struct page *)malloc(dynamic_space_pages*sizeof(struct page));
+  if (page_table == NULL)
+    {
+      fprintf(stderr, "Unable to allocate page table.\n");
+      exit(1);
+    }
+
   /* Initialise each page structure. */
-  for (i = 0; i < NUM_PAGES; i++) {
+
+  for (i = 0; i < dynamic_space_pages; i++) {
     /* Initial all pages as free. */
     page_table[i].flags &= ~PAGE_ALLOCATED_MASK;
     page_table[i].bytes_used = 0;
