@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.51 2004/12/14 23:57:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.52 2004/12/21 18:00:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1760,6 +1760,7 @@
     ;; CLOS things
     (defclass pprint-defclass)
     (defmethod pprint-defmethod)
+    (defgeneric pprint-defgeneric)
     (with-slots pprint-with-like)
     (with-accessors pprint-with-like)
     
