@@ -38,7 +38,8 @@
 	 clear-ir2-info
 	 macerate-ir1-component
 	 merge-top-level-lambdas
-	 ir1-finalize
+	 check-free-function
+	 note-failed-optimization
 	 clear-stuff
 	 read-source-form
 	 fasl-dump-source-info
