@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.3 1990/09/28 06:41:54 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.4 1990/10/18 02:53:50 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -176,12 +176,16 @@
 
 ;;; Prevent zerop, plusp, minusp from losing horribly.  We can't in general do
 ;;; float contagion on args to comparison, since Common Lisp semantics says we
-;;; are supposed to compare as rationals.  But I think this is harmless, since
-;;; 0 will have a precise representation in any float format.
+;;; are supposed to compare as rationals, but we can do it for any rational
+;;; that has a precise representation as a float (such as 0).
 ;;;
 (macrolet ((frob (op)
-	     `(deftransform ,op ((x y) (float (constant-argument (member 0))))
-		`(,',op x (float 0 x)))))
+	     `(deftransform ,op ((x y) (float (constant-argument rational)))
+		(let ((val (continuation-value y)))
+		  (unless (eql (rational (float val)) val)
+		    (give-up "~S doesn't have a precise float representation."
+			     val)))
+		`(,',op x (float y x)))))
   (frob <)
   (frob >)
   (frob =))
@@ -195,3 +199,54 @@
 			(* &optional (constant-argument (member 1))))
   '(let ((res (%unary-truncate x)))
      (values res (- x res))))
+
+
+;;;; Irrational stuff:
+
+(defknown (%sin %cos %tan %asin %acos %atan %sinh %cosh %tanh %asinh
+		%acosh %atanh %exp %expm1 %log %log10 %log1p %cbrt %sqrt)
+	  (double-float) double-float
+  (movable foldable flushable))
+
+(defknown (%atan2 %pow %hypot)
+	  (double-float double-float) double-float
+  (movable foldable flushable))
+
+
+(defmacro def-irrat-transforms (name prim args &optional assert-result)
+  (flet ((frob (type)
+	   (mapcar #'(lambda (x)
+		       (declare (ignore x))
+		       type)
+		   args)))
+    (let ((rtype (when assert-result '(float))))
+      `(progn
+	 (deftransform ,name (,args ,(frob 'single-float) ,@rtype)
+	   '(coerce (,prim ,@(mapcar #'(lambda (arg)
+					 `(coerce ,arg 'double-float))
+				     args))
+		    'single-float))
+	   (deftransform ,name (,args ,(frob 'double-float) ,@rtype)
+	     '(,prim ,@args))))))
+
+(def-irrat-transforms exp %exp (x))
+(def-irrat-transforms expt %pow (x y) t)
+(def-irrat-transforms log %log (x) t)
+
+(deftransform log ((x y) (float float) float)
+  '(/ (log x) (log y)))
+
+(def-irrat-transforms sqrt %sqrt (x) t)
+(def-irrat-transforms sin %sin (x))
+(def-irrat-transforms cos %cos (x))
+(def-irrat-transforms tan %tan (x))
+(def-irrat-transforms asin %asin (x) t)
+(def-irrat-transforms acos %acos (x) t)
+(def-irrat-transforms atan %atan (x) t)
+(def-irrat-transforms atan %atan2 (x y) t)
+(def-irrat-transforms sinh %sinh (x))
+(def-irrat-transforms cosh %cosh (x))
+(def-irrat-transforms tanh %tanh (x))
+(def-irrat-transforms asinh %asinh (x))
+(def-irrat-transforms acosh %acosh (x) t)
+(def-irrat-transforms atanh %atanh (x) t)
