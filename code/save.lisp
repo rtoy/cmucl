@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.45 2003/01/29 19:47:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.46 2003/01/30 17:18:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,6 +162,11 @@
   switch will invoke batch-mode processing.  If true, the produced core
   will always be in batch-mode, regardless of any command-line switches."
 
+  (unless (probe-file (directory-namestring core-file-name))
+    (error 'simple-file-error
+           :format-control "Directory ~S does not exist"
+           :format-arguments (list (directory-namestring core-file-name))))
+  
   #+mp (mp::shutdown-multi-processing)
   (when (fboundp 'eval:flush-interpreted-function-cache)
     (eval:flush-interpreted-function-cache))
