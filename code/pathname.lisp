@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.42 2001/02/22 20:49:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.43 2001/03/08 21:06:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -812,7 +812,7 @@ a host-structure or string."
 	  (when (and host new-host (not (eq new-host host)))
 	    (error "Host in namestring: ~S~@
 		    does not match explicit host argument: ~S"
-		   host))
+		   namestr host))
 	  (let ((pn-host (or new-host parse-host)))
 	    (values (%make-pathname-object
 		     pn-host device directory file type version)
@@ -830,13 +830,9 @@ a host-structure or string."
 	   (values (or logical-host null)))
   (let ((colon-pos (position #\: namestr :start start :end end)))
     (if colon-pos
-	(values (let ((thing (nstring-upcase (subseq namestr start colon-pos))))
-		  (or (gethash (logical-word-or-lose thing)
-			       *logical-hosts*)
-		      (and (load-logical-pathname-translations thing)
-			   (gethash (logical-word-or-lose thing)
-				    *logical-hosts*)))))
-      nil)))
+	(values (gethash (nstring-upcase (subseq namestr start colon-pos))
+			 *logical-hosts*))
+	nil)))
 
 
 ;;; PARSE-NAMESTRING -- Interface
@@ -1283,6 +1279,14 @@ a host-structure or string."
 ;;; 
 (defvar *search-lists* (make-hash-table :test #'equal))
 
+;;; FIND-SEARCH-LIST -- internal
+;;;
+(defun find-search-list (name &optional (flame-not-found-p t))
+  (let ((search-list (gethash (string-downcase name) *search-lists*)))
+    (if search-list search-list
+	(when flame-not-found-p
+	  (error "Search-list ~a not defined." name)))))
+
 ;;; INTERN-SEARCH-LIST -- internal interface.
 ;;;
 ;;; When search-lists are encountered in namestrings, they are converted to
@@ -1301,7 +1305,7 @@ a host-structure or string."
 ;;;
 ;;; Clear the definition.  Note: we can't remove it from the hash-table
 ;;; because there may be pathnames still refering to it.  So we just clear
-;;; out the expansions and ste defined to NIL.
+;;; out the expansions and set defined to NIL.
 ;;; 
 (defun clear-search-list (name)
   "Clear the current definition for the search-list NAME.  Returns T if such
@@ -1490,12 +1494,8 @@ a host-structure or string."
 (defun find-logical-host (thing &optional (errorp t))
   (etypecase thing
     (string
-     (let ((found (or (gethash (logical-word-or-lose thing)
-			       *logical-hosts*)
-		      (and errorp
-			   (load-logical-pathname-translations thing)
-			   (gethash (logical-word-or-lose thing)
-			       *logical-hosts*)))))
+     (let ((found (gethash (logical-word-or-lose thing)
+			   *logical-hosts*)))
        (if (or found (not errorp))
 	   found
 	   (error 'simple-file-error
@@ -1503,6 +1503,7 @@ a host-structure or string."
 		  :format-control "Logical host not yet defined: ~S"
 		  :format-arguments (list thing)))))
     (logical-host thing)))
+
 
 ;;; INTERN-LOGICAL-HOST -- Internal
 ;;;
@@ -1695,9 +1696,14 @@ a host-structure or string."
       (let ((res (parse-namestring pathspec nil *logical-pathname-defaults*)))
 	(when (eq (%pathname-host res)
 		  (%pathname-host *logical-pathname-defaults*))
-	  (error "Logical namestring does not specify a host:~%  ~S"
-		 pathspec))
+	  (error
+	   'simple-type-error
+	   :format-control "Logical namestring does not specify a host:~%  ~S"
+	   :format-arguments (list pathspec)
+	   :datum pathspec
+	   :expected-type '(satisfies logical-pathname-namestring-p)))
 	res)))
+
 
 
 ;;;; Logical pathname unparsing:
@@ -1838,6 +1844,7 @@ a host-structure or string."
 
 ;;; LOAD-LOGICAL-PATHNAME-TRANSLATIONS -- Public
 ;;;
+#+ORIGINAL
 (defun load-logical-pathname-translations (host)
   "Search for a logical pathname named host, if not already defined. If already
    defined no attempt to find or load a definition is attempted and NIL is
@@ -1845,19 +1852,73 @@ a host-structure or string."
    successfully, T is returned, else error."
   (declare (type string host)
 	   (values (member t nil)))
-  (when (and (find-logical-host "library" nil)
-	     (not (find-logical-host host nil)))
-    (let ((filename (make-pathname :defaults "library:"
-				   :name (logical-word-or-lose host)
-				   :type (logical-word-or-lose "translations"))))
-      (when (probe-file filename)
-	(with-open-file (in-str filename)
-	  (if *load-verbose*
+  (unless (find-logical-host host nil)
+    (with-open-file (in-str (make-pathname :defaults "library:"
+					   :name host
+					   :type "translations"))
+      (if *load-verbose*
+	  (format *error-output*
+		  ";; Loading pathname translations from ~A~%"
+		  (namestring (truename in-str))))
+      (setf (logical-pathname-translations host) (read in-str)))
+    t))
+
+(defun load-logical-pathname-translations (host)
+  "Search for a logical pathname named host, if not already defined. If already
+   defined no attempt to find or load a definition is attempted and NIL is
+   returned. If host is not already defined, but definition is found and loaded
+   successfully, T is returned, else error."
+
+  (declare (type string host)
+	   (values (member t nil)))
+  (unless (find-logical-host host nil)
+    (let* ((filename
+	    (cond #+notyet
+		  ((find-logical-host "LIBRARY" nil)
+		   (make-pathname
+		    :defaults #p"LIBRARY:"
+		    :name (logical-word-or-lose host)
+		    :type (logical-word-or-lose "translations")))
+		  ((find-search-list "library" nil)
+		   (make-pathname :defaults #p"library:"
+				  :name host
+				  :type "translations"))
+		  (t (error
+		      'simple-file-error
+		      :format-control
+		      "No search-list for #p\"library:\"."
+		      :pathname "library:"))))
+	   (truename (and filename (probe-file filename))))
+      (if truename
+	  (with-open-file (in-str truename)
+	    (when *load-verbose*
 	      (format *error-output*
-		      ";; Loading pathname translations from ~A~%"
-		      (namestring (translate-logical-pathname filename))))
-	  (setf (logical-pathname-translations host) (read in-str)))
-	t))))
+		      ";; Loading pathname translations from ~s~%"
+		      (namestring truename)))
+	    (let ((definition (read in-str)))
+	      (declare (list definition))
+	      (unless (and (every #'listp definition)
+			   (loop for item in definition
+			     unless (and (<= 2 (length item))
+					 (typep (first item) 'string)
+					 (typep (second item) 'string))
+			     do (return nil)
+			     finally (return t)))
+		(error 'simple-file-error
+		       :format-control 
+		       "Bad syntax for logical-pathname-translations: ~S"
+		       :format-arguments (list definition)))
+	      (unless (plusp (length definition))
+		(warn
+		 "Loading NULL definition for logical-pathname-host ~A."
+		 host))
+	      (setf (logical-pathname-translations host) definition))
+	    t)
+	  (error 'simple-file-error
+		 :format-control
+		 "Logical-pathname-translation file ~A not found."
+		 :format-arguments (list filename)
+		 :pathname filename)))))
 
 ;;; TRANSLATE-LOGICAL-PATHNAME  -- Public
 ;;;
