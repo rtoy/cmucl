@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.101 2005/02/02 17:58:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.102 2005/02/08 17:31:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -546,6 +546,9 @@
      (output-code-component object stream))
     (fdefn
      (output-fdefn object stream))
+    #+gencgc
+    (scavenger-hook
+     (output-scavhook object stream))
     (t
      (output-random object stream))))
 
@@ -1864,6 +1867,9 @@ radix-R.  If you have a power-list then pass it in as PL."
     (write-string "FDEFINITION object for " stream)
     (output-object (fdefn-name fdefn) stream)))
 
+#+gencgc
+(defun output-scavhook (scav stream)
+  (print-unreadable-object (scav stream :identity t :type t)))
 
 
 ;;;; Various flavors of function pointers.
