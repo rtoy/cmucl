@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.7 1991/02/08 13:36:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.8 1991/05/15 16:31:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,9 +50,7 @@
       (cdr (nth (+ n parts-offset) parts))
       (nth (+ n parts-offset) parts)))
 
-;;; ### Change name back to tty-inspect when we have the real inspector up.
-;;; 
-(defun inspect (object)
+(defun tty-inspect (object)
   (unwind-protect
       (input-loop object (describe-parts object) *standard-output*)
     (setf *tty-object-stack* nil)))
