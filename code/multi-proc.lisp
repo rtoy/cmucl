@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.29 1998/05/19 02:08:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.30 1998/08/14 07:15:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1085,7 +1085,7 @@
 
 ;;; Run-Idle-Process-P  --  Internal.
 ;;;
-;;; Decide when the allow the idle process to run.
+;;; Decide when to allow the idle process to run.
 ;;;
 (defun run-idle-process-p ()
   ;; Check if there are any other runnable processes.
@@ -1162,6 +1162,8 @@
   ;; Ensure the *idle-process* is setup.
   (unless *idle-process*
     (setf *idle-process* *current-process*))
+  ;; Adjust the process name.
+  (setf (process-name *current-process*) "Idle Loop")
   (do ()
       (*quitting-lisp*)
     ;; Calculate the wait period.
@@ -1553,7 +1555,7 @@
 	(magic-eof-cookie (cons :eof nil)))
     (loop
       (with-simple-restart (abort "Return to Top-Level.")
-	(catch 'top-level-catcher
+	(catch 'lisp::top-level-catcher
 	  (unix:unix-sigsetmask 0)
 	  (let ((lisp::*in-top-level-catcher* t))
 	    (loop
@@ -1573,6 +1575,22 @@
 			   (prin1 result))))
 		      (t
 		       (throw '%end-of-the-process nil)))))))))))
+
+;;; Startup-Idle-and-Top-Level-Loops -- Internal
+;;;
+(defun startup-idle-and-top-level-loops ()
+  "Enter the idle loop, starting a new process to run the top level loop.
+  The awaking of sleeping processes is timed better with the idle loop process
+  running, and starting a new process for the top level loop supports a
+  simultaneous interactive session. Such an initialisation will likely be the
+  default when there is better MP debug support etc."
+  (assert (eq *current-process* *initial-process*) ()
+	  "Only the *initial-process* is intended to run the idle loop")
+  (init-multi-processing)	; Initialise in case MP had been shutdown.
+  ;; Start a new Top Level loop.
+  (make-process #'top-level :name "Top Level Loop") 
+  ;; Enter the idle loop.
+  (idle-process-loop))
 
 ;;; Start-Lisp-Connection-Listener
 ;;;
