@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.21 2004/09/11 19:18:02 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.22 2004/10/19 19:12:03 cwang Exp $
  *
  */
 
@@ -120,11 +120,7 @@ int sc_reg(struct sigcontext_struct *c, int offset)
 #endif
 
 #ifdef __x86_64
-#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
 int sc_reg(struct sigcontext *c, int offset)
-#else
-int sc_reg(struct sigcontext_struct *c, int offset)
-#endif
 {
   switch(offset)
     {
@@ -136,6 +132,14 @@ int sc_reg(struct sigcontext_struct *c, int offset)
     case 10: return c->rbp;
     case 12: return c->rsi;
     case 14: return c->rdi;
+    case 16: return c->r8;
+    case 18: return c->r9;
+    case 20: return c->r10;
+    case 22: return c->r11;
+    case 24: return c->r12;
+    case 26: return c->r13;
+    case 28: return c->r14;
+    case 30: return c->r15;
     }
   return 0;
 }

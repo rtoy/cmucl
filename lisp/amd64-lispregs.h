@@ -1,5 +1,5 @@
 /* x86-lispregs.h -*- Mode: C; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.1 2004/05/18 22:06:04 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-lispregs.h,v 1.2 2004/10/19 19:07:17 cwang Exp $
  */
 
 /* These register names and offsets correspond to definitions
@@ -8,7 +8,7 @@
  * os dependent function.
  */
 
-#define NREGS	(8)
+#define NREGS	(16)
 
 #ifdef LANGUAGE_ASSEMBLY
 #define REG(num) $ ## num
@@ -24,15 +24,23 @@
 #define reg_RBP REG(10)
 #define reg_RSI REG(12)
 #define reg_RDI REG(14)
+#define reg_R8  REG(16)
+#define reg_R9  REG(18)
+#define reg_R10 REG(20)
+#define reg_R11 REG(22)
+#define reg_R12 REG(24)
+#define reg_R13 REG(26)
+#define reg_R14 REG(28)
+#define reg_R15 REG(30)
 
 #define reg_SP reg_RSP
 #define reg_FP reg_RBP
 
-#define REGNAMES "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI"
+#define REGNAMES "RAX", "RCX", "RDX", "RBX", "RSP", "RBP", "RSI", "RDI", "R8", "R9", "R10", "R11", "R12", "R13", "R14", "R15"
 
 /* These registers can contain lisp object pointers */
 #define BOXED_REGISTERS {\
-  reg_RAX, reg_RCX, reg_RDX, reg_RBX, reg_RSI, reg_RDI \
+  reg_RAX, reg_RCX, reg_RDX, reg_RBX, reg_RSI, reg_RDI, reg_R8, reg_R9, reg_R10, reg_R11, reg_R12, reg_R13, reg_R14, reg_R15 \
   }
 
 /* N is offset in storage class (SC) as defined in vm.lisp.
