@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.12 1990/05/25 20:11:43 wlott Exp $
+;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
 ;;;
@@ -128,24 +130,39 @@
 	   (type index offset))
   (signed-sap-ref-32 sap offset))
 
-(defun (setf sap-ref-8) (sap offset new-value)
+(defsetf sap-ref-8 %set-sap-ref-8)
+(defsetf signed-sap-ref-8 %set-sap-ref-8)
+
+(defsetf sap-ref-16 %set-sap-ref-16)
+(defsetf signed-sap-ref-16 %set-sap-ref-16)
+
+(defsetf sap-ref-32 %set-sap-ref-32)
+(defsetf signed-sap-ref-32 %set-sap-ref-32)
+
+(defsetf sap-ref-sap %set-sap-ref-sap)
+
+(defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type index offset))
+	   (type index offset)
+	   (type (or (signed-byte 8) (unsigned-byte 8)) new-value))
   (setf (sap-ref-8 sap offset) new-value))
 
-(defun (setf sap-ref-16) (sap offset new-value)
+(defun %set-sap-ref-16 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type index offset))
+	   (type index offset)
+	   (type (or (signed-byte 16) (unsigned-byte 16)) new-value))
   (setf (sap-ref-16 sap offset) new-value))
 
-(defun (setf sap-ref-32) (sap offset new-value)
+(defun %set-sap-ref-32 (sap offset new-value)
   (declare (type system-area-pointer sap)
-	   (type index offset))
+	   (type index offset)
+	   (type (or (signed-byte 32) (unsigned-byte 32)) new-value))
   (setf (sap-ref-32 sap offset) new-value))
 
-(defun (setf sap-ref-sap) (sap offset new-value)
+(defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)
-	   (type index offset))
+	   (type index offset)
+	   (type system-area-pointer new-value))
   (setf (sap-ref-sap sap offset) new-value))
 
 ); #+New-Compiler
@@ -326,15 +343,19 @@
     alien))
 
 
-;;; DO-VALIDATE  --  Internal Interface.
+;;; ALLOCATE-SYSTEM-MEMORY -- public
 ;;;
-;;; Do a ValidateMemory on our kernel port and flame out if error.
+;;; Allocate random memory from the system area.
+;;; 
+(defun allocate-system-memory (bytes)
+  (gr-call* mach:vm_allocate *task-self* (int-sap 0) bytes t))
+
+;;; DEALLOCATE-SYSTEM-MEMORY -- public
 ;;;
-;;; Hemlock and other code files use this, even though it is not exported from
-;;; a more appropriate package.
-;;;
-(defun do-validate (addr bytes mask)
-  (gr-call* mach::vm_allocate *task-self* addr bytes (if (eq mask -1) t NIL)))
+;;; Deallocate that memory.
+;;; 
+(defun deallocate-system-memory (addr bytes)
+  (gr-call* mach:vm_deallocate *task-self* addr bytes))
 
 
 ;;; Make-Alien  --  Public
@@ -349,7 +370,7 @@
   supplied then memory is allocated to contain the data."
   (case address
     (:dynamic
-     (setq address (do-validate 0 (ash size (- alien-address-shift)) -1)))
+     (setq address (allocate-system-memory (ash size (- alien-address-shift)))))
     (:static
      (setq address (allocate-static-alien size)))
     (t
@@ -380,7 +401,7 @@
 	 (length (alien-value-size alien))
 	 (bytes (ash (+ length offset alien-alignment -1)
 		     (- alien-address-shift)))
-	 (new (int-sap (do-validate 0 bytes -1))))
+	 (new (allocate-system-memory bytes)))
     (%primitive byte-blt
 		(alien-value-sap alien) (ash offset (- alien-address-shift))
 		new 0 bytes)
