@@ -1,7 +1,5 @@
 ========================== C M U C L  18 d =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 18d.
 This is a major release which contains numerous enhancements and
 bugfixes from the 18d release.
