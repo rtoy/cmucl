@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.41 2004/08/02 16:19:47 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.42 2004/10/15 19:28:49 cwang Exp $ */
 
 /* Interrupt handling magic. */
 
@@ -315,7 +315,7 @@ interrupt_handle_now(HANDLER_ARGS)
         fake_foreign_function_call(context);
     
     if (handler.c == (void (*)(HANDLER_ARGS)) SIG_DFL)
-	/* This can happen if someone tries to ignore or default on of the */
+	/* This can happen if someone tries to ignore or default on one of the */
 	/* signals we need for runtime support, and the runtime support */
 	/* decides to pass on it.  */
 	lose("interrupt_handle_now: No handler for signal %d?\n", signal);
