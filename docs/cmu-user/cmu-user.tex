@@ -7,20 +7,17 @@
 \newindex{ky}
 
 \def\theabstract{
-CMU Common Lisp is an implementation of that Common Lisp is currently
-supported on MIPS-processor DECstations, Sparc-based workstations from
-Sun and the IBM RT PC, and other ports are planned.  All architectures
-are supported under Mach, a Berkeley Unix 4.3 binary compatible
-operating system.  The Sparc is also supported under SunOS.  The largest
-single part of this document describes the Python compiler and the
-programming styles and techniques that the compiler encourages.  The
-rest of the document describes extensions and the implementation
-dependent choices made in developing this implementation of Common Lisp.
-We have added several extensions, including a source level debugger, an
-interface to Unix system calls, a foreign function call interface,
-support for interprocess communication and remote procedure call, and
-other features that provide a good environment for developing Lisp code.
-}
+
+CMU Common Lisp is an implementation of that Common Lisp runs on various Unix
+workstations.  See the README file in the distribution for current platforms.
+The largest single part of this document describes the Python compiler and the
+programming styles and techniques that the compiler encourages.  The rest of
+the document describes extensions and the implementation dependent choices
+made in developing this implementation of Common Lisp.  We have added several
+extensions, including a source level debugger, an interface to Unix system
+calls, a foreign function call interface, support for interprocess
+communication and remote procedure call, and other features that provide a
+good environment for developing Lisp code.  }
 
 \begin{iftex}
 \pagestyle{empty}
@@ -492,16 +489,13 @@ DI Exceptional Conditions
 \node Introduction, Design Choices and Extensions, Top, Top
 \chapter{Introduction}
 
-CMU Common Lisp is a public-domain implementation of Common Lisp
-developed in the Computer Science Department of Carnegie Mellon
-University.  CMU Common Lisp is currently supported on MIPS-processor
-DECstations, Sparc-based workstations from Sun and the IBM RT PC, and
-other ports are planned.  Currently, it runs under CMU's Mach operating
-system, OSF/1 or SunOS.  This document describes the implementation
-based on the Python compiler.  Previous versions of CMU Common Lisp ran
-on the IBM RT PC and (when known as Spice Lisp) on the Perq workstation.
-See \code{man cmucl} (\file{man/man1/cmucl.1}) for other general
-information.
+CMU Common Lisp is a public-domain implementation of Common Lisp developed in
+the Computer Science Department of Carnegie Mellon University.  \cmucl{} runs
+on various Unix workstations --- see the README file in the distribution for
+current platforms.  This document describes the implementation based on the
+Python compiler.  Previous versions of CMU Common Lisp ran on the IBM RT PC
+and (when known as Spice Lisp) on the Perq workstation.  See \code{man cmucl}
+(\file{man/man1/cmucl.1}) for other general information.
 
 \cmucl{} sources and executables are freely available via anonymous FTP; this
 software is ``as is'', and has no warranty of any kind.  CMU and the
@@ -521,12 +515,9 @@ state of the release you have.
 \node Support, Local Distribution of CMU Common Lisp, Introduction, Introduction
 \section{Support}
 
-The CMU Common Lisp project's goal is to develop a high quality public
-domain system, so we want your bug reports, bug fixes and enhancements.
-However, staff limitations prevent us from providing extensive support
-to people outside of CMU.  We are looking for university and industrial
-affiliates to help us with porting and maintenance for hardware and
-software that is not widely used at CMU.
+The CMU Common Lisp project is no longer funded, so only minimal support is
+being done at CMU.  There is a net community of \cmucl{} users and maintainers
+who communicate via comp.lang.lisp and the cmucl-bugs@cs.cmu.edu mailing list.
 
 This manual contains only implementation-specific information about \cmucl.
 Users will also need a separate manual describing the \clisp{} standard.
@@ -552,34 +543,26 @@ Implementor's Manual}.
 \node Local Distribution of CMU Common Lisp, Net Distribution of CMU Common Lisp, Support, Introduction
 \section{Local Distribution of CMU Common Lisp}
 
-At CMU, you can get Common Lisp by running \code{modmisc}:
-\begin{example}
-    /usr/cs/etc/modmisc - cs.misc.cmucl
-\end{example}
-
-This establishes \file{/usr/misc/.cmucl} as a symbolic link to the release area.
-In your \file{.login}, add CMU CL to your path:
-\begin{example}
-setpath -i /usr/misc/.cmucl
-\end{example}
-Then run \samp{lisp}.  Note that the first time you run Lisp, it
-will take AFS several minutes to copy the image into its local cache.
-Subsequent starts will be much faster.
+In CMU CS, \cmucl{} should be runnable as \file{/usr/local/bin/cmucl}.  The
+full binary distribution should appear under \file{/usr/local/lib/cmucl/}.
+Note that the first time you run Lisp, it will take AFS several minutes to
+copy the image into its local cache.  Subsequent starts will be much faster.
 
 Or, you can run directly out of the AFS release area (which may be
 necessary on SunOS machines).  Put this in your \file{.login} shell
 script:
 \begin{example}
 setenv CMUCLLIB "/afs/cs/misc/cmucl/@sys/beta/lib"
-setpath -i /afs/cs/misc/cmucl/@sys/beta
+setenv PATH ${PATH}:/afs/cs/misc/cmucl/@sys/beta/bin
 \end{example}
 
-After setting your path, `\code{man cmucl}' will give an introduction
-to CMU CL and \samp{man lisp} will describe command line options.
-For SunOS installation notes, see the \file{README} file in the SunOS
-release area.
+If you also set \code{MANPATH} or \code{MPATH} (depending on the Unix) to
+point to \file{/usr/local/lib/cmucl/man/}, then `\code{man cmucl}' will give
+an introduction to CMU CL and \samp{man lisp} will describe command line
+options.  For installation notes, see the \file{README} file in the release
+area.
 
-See \file{/usr/misc/.cmucl/doc} for release notes and documentation.
+See \file{/usr/local/lib/cmucl/doc} for release notes and documentation.
 Hardcopy documentation is available in the document room.
 Documentation supplements may be available for recent additions: see
 the \file{README} file.
@@ -636,8 +619,8 @@ Lisp and documentation sources are available via anonymous FTP ftp to any CMU
 CS machine.  All CMU written code is public domain, but CMU CL also makes use
 of two imported packages: PCL and CLX.  Although these packages are
 copyrighted, they may be freely distributed without any licensing agreement or
-fee.  See the \file{README} file in the binary distribution for up-to-date source
-pointers.
+fee.  See the \file{README} file in the binary distribution for up-to-date
+source pointers.
 
 The release area contains a source distribution, which is an image of all the
 \file{.lisp} source files used to build a particular system \var{version}:
@@ -664,7 +647,7 @@ Currently Lisp accepts the following switches:
 
 \item[\code{-core}] requires an argument that should be the name of a
 core file.  Rather than using the default core file
-(\file{/usr/misc/.lisp/lib/lisp.core}), the specified core file is
+(\file{lib/lisp.core}), the specified core file is
 loaded.
 
 \item[\code{-edit}] specifies to enter Hemlock.  A file to edit may be
@@ -730,26 +713,31 @@ lisp -core mylisp.core}
 Since 1981 many people have contributed to the development of CMU Common
 Lisp.  The currently active members are:
 \begin{display}
+Marco Antoniotti
 David Axmark
 Miles Bader
-Ted Dunning
+Casper Dik
 Scott Fahlman * (fearless leader)		
-Mike Garland +
 Paul Gleichauf *
-Sean Hallgren +
+Richard Harris
+Joerg-Cyril Hoehl
+Chris Hoover
 Simon Leinen
+Sandra Loosemore
 William Lott *
 Robert A. Maclachlan *
-Tim Moore
 \end{display}
 \noindent
 Many people are voluntarily working on improving CMU Common Lisp.  ``*''
 means a full-time CMU employee, and ``+'' means a part-time student
 employee.  A partial listing of significant past contributors follows:
 \begin{display}
+Tim Moore
+Sean Hallgren +
+Mike Garland +
+Ted Dunning
 Rick Busdiecker
 Bill Chiles *
-Chris Hoover +
 John Kolojejchick
 Todd Kaufmann +
 Dave McDonald *
@@ -1208,7 +1196,8 @@ would have GC'ed while automatic GC was inhibited, then this will call
 \code{ext:gc}.
 \enddefun
 
-
+\node
+\subsection{GC Parameters}
 The following variables control the behavior of the garbage collector:
 
 \defvar{bytes-consed-between-gcs}[extensions]
@@ -1272,6 +1261,43 @@ occurs.  The system provides these purely for side-effect, and the functions
 take no arguments.
 \enddefvar
 
+\node
+\subsection{Weak Pointers}
+
+A weak pointer provides a way to maintain a reference to an object without
+preventing an object from being garbage collected.  If the garbage collector
+discovers that the only pointers to an object are weak pointers, then it
+breaks the weak pointers and deallocates the object.  
+
+\defun{make-weak-pointer}[extensions]{\args{\var{object}}}
+\defunx{weak-pointer-value}[extensions]{\args{\var{weak-pointer}}}
+\code{make-weak-pointer} returns a weak pointer to an object.
+\code{weak-pointer-value} follows a weak pointer, returning the two values:
+the object pointed to (or \false{} if broken) and a boolean value which is
+true if the pointer has been broken.
+\enddefun
+
+\node
+\subsection{Finalization}
+
+Finalization provides a ``hook'' that is triggered when the garbage collector
+reclaims an object.  It is usually used to recover non-Lisp resources that
+were allocated to implement the finalized Lisp object.  For example, when a
+unix file-descriptor stream is collected, finalization is used to close the
+underlying file descriptor.
+
+\defun{finalize}[extensions]{\args{\var{object} \var{function}}}
+This function registers \var{object} for finalization.  \var{function} is
+called with no arguments when \var{object} is reclaimed.  Normally
+\var{function} will be a closure over the underlying state that needs to be
+freed, e.g. the unix file descriptor in the fd-stream case.  Note that
+\var{function} must not close over \var{object} itself, as this prevents the
+object from ever becoming garbage.
+\enddefun
+
+\defun{cancel-finalization}[extensions]{\args{\var{object}}}
+This function cancel any finalization request for \var{object}.
+\enddefun.
 
 \node Describe, The Inspector, Garbage Collection, Design Choices and Extensions
 \section{Describe}
@@ -1463,7 +1489,7 @@ This variable determines the default value of the \var{if-source-newer}
 argument to \code{load}.  Its initial value is \code{:load-object}.
 \enddefvar
 
-\node The Reader, Running Programs from Lisp, Load, Design Choices and Extensions
+\node The Reader, Stream Extensions, Load, Design Choices and Extensions
 \section{The Reader}
 
 \defvar{ignore-extra-close-parentheses}[extensions]
@@ -1472,7 +1498,29 @@ warning when an extra close parenthesis is detected (instead of signalling an
 error.)
 \enddefvar
 
+\node Stream Extensions, Running Programs from Lisp, The Reader, Design Choices and Extensions
+\section{Stream Extensions}
+\defun{read-n-bytes}[extensions]{
+	\args{\var{stream buffer start numbytes} 
+	      \&optional{} \var{eof-error-p}}}
 
+On streams that support it, this function reads multiple bytes of data into a
+buffer.  The buffer must be a \code{simple-string} or 
+\code{(simple-array (unsigned-byte 8) (*))}.  The argument \var{nbytes}
+specifies the desired number of bytes, and the return value is the number of
+bytes actually read.
+\begin{itemize}
+\item
+If \var{eof-error-p} is true, an \tindexed{end-of-file} condition is signalled
+if end-of-file is encountered before \var{count} bytes have been read.
+
+\item
+If \var{eof-error-p} is false, \code{read-n-bytes reads} as much data is
+currently available (up to count bytes.)  On pipes or similar devices, this
+function returns as soon as any data is available, even if the amount
+read is less than \var{count} and eof has not been hit.  See also
+\funref{make-fd-stream}.
+\end{itemize}
 
 \node Running Programs from Lisp, Saving a Core Image, The Reader, Design Choices and Extensions
 \section{Running Programs from Lisp}
@@ -1706,21 +1754,12 @@ core image in \var{file}.  The keyword arguments have the following meaning:
 
 \item[\kwd{purify}]
 If non-NIL (the default), the core image is purified before it is
-saved.  This means moving accessible Lisp objects from dynamic space into
-read-only and static space.  This reduces the amount of work the garbage
+saved (see \funref{purify}.)  This reduces the amount of work the garbage
 collector must do when the resulting core image is being run.  Also, if
 more than one Lisp is running on the same machine, this maximizes the
-amount of memory that can be shared between the two processes.  Objects in
-read-only and static space can never be reclaimed, even if all pointers to
-them are dropped.
+amount of memory that can be shared between the two processes.
 
 \item[\kwd{root-structures}]
-This should be a list of the main entry points for
-the resulting core image.  The purification process tries to localize
-symbols, functions, etc., in the core image so that paging performance
-is improved.  The default value is NIL which means that Lisp objects will
-still be localized but probably not as optimally as they could be.  This
-argument has no meaning if \kwd{purify} is NIL.
 
 \item[\kwd{init-function}]
 This is the function that starts running when the created core file is
@@ -1752,6 +1791,32 @@ To resume a saved file, type:
 \begin{example}
 lisp -core file
 \end{example}
+
+\defun{purify}[extensions]{
+       \args{\var{file}}
+       \keys{:root-structures :environment-name}}
+
+This function optimizes garbage collection by moving all currently live
+objects into non-collected storage.  Once statically allocated, the objects
+can never be reclaimed, even if all pointers to them are dropped.  This
+function should generally be called after a large system has been loaded and
+initialized.
+
+\var{root-structures} is an optional list of objects which should be copied
+first to maximize locality.  This should be a list of the main entry points
+for the resulting core image.  The purification process tries to localize
+symbols, functions, etc., in the core image so that paging performance is
+improved.  The default value is NIL which means that Lisp objects will still
+be localized but probably not as optimally as they could be.
+
+\findexed{defstruct} structures defined with the (:PURE T) option are moved
+into read-only storage, further reducing GC cost.  List and vector slots of
+pure structures are also moved into read-only storage.
+
+\var{environment-name} is gratuitous documentation for the compacted version
+of the current global environment (as seen in \code{c::*info-environment*}.)
+If \false{} is supplied, then environment compaction is inhibited.
+\enddefun
 
 \node Pathnames, Filesystem Operations, Saving a Core Image, Design Choices and Extensions
 \section{Pathnames}
@@ -8748,7 +8813,29 @@ switch has no equal sign, then this is null.
 Returns a list of the words between this switch and the next switch or the end
 of the command line.
 \enddefun
+\defun{cmd-switch-arg}[extensions]{\args{\var{switch}}}
+Returns the first non-null value from \code{cmd-switch-value}, the first
+element in \code{cmd-switch-words}, or the first word in
+\var{command-line-words}.
+\enddefun
 
+\defun{get-command-line-switch}[extensions]{\args{\var{sname}}}
+This function takes the name of a switch as a string and returns the value of
+the switch given on the command line.  If no value was specified, then any
+following words are returned.  If there are no following words, then \true{} is
+returned.  If the switch was not specified, then \false{} is returned.
+\enddefun
+
+\defmac{defswitch}[extensions]{\args{\var{name} \&optional{} \var{function}}}
+This macro causes \var{function} to be called when the switch \var{name}
+appears in the command line.  Name is a simple-string that does not begin with
+a hyphen (unless the switch name really does begin with one.)
+
+If \var{function} is not supplied, then the switch is parsed into
+\var{command-line-switches}, but otherwise ignored.  This suppresses the
+undefined switch warning which would otherwise take place.  THe warning can
+also be globally suppressed by \var{complain-about-illegal-switches}.
+\enddefmac
 
 \node Useful Variables, Lisp Equivalents for C Routines, Reading the Command Line, UNIX Interface
 
@@ -8929,7 +9016,7 @@ This function returns a string describing the Unix error number \var{error}.
 
 Many of the UNIX system calls return file descriptors.  Instead of using other
 UNIX system calls to perform I/O on them, you can create a stream around them.
-For this purpose, fd-streams exist.
+For this purpose, fd-streams exist.  See also \funref{read-n-bytes}.
 
 \defun{make-fd-stream}[system]{\args{\var{descriptor}}
          \keys{:input :output :element-type}
@@ -10214,7 +10301,7 @@ replacing hyphens with underscores.
 \item Both the Lisp symbol and Alien string names may be separately
 specified by using a list of the form:
 \begin{lisp}
-(\var{lisp-symbol} \var{alien-string})
+(\var{alien-string} \var{lisp-symbol})
 \end{lisp}
 \end{itemize}
 
@@ -10431,7 +10518,7 @@ specification, which translates the C pass-by-reference idiom into additional
 return values.
 
 \var{name} is usually a string external symbol, but may also be a symbol Lisp
-name or a list of the Lisp name and the foreign name.  If only one name is
+name or a list of the foreign name and the Lisp name.  If only one name is
 specified, the other is automatically derived,
 (\pxlref{external-aliens}.)
 
@@ -10479,7 +10566,7 @@ avoiding consing (\pxlref{non-descriptor}.)
 
 Consider the C function \code{cfoo} with the following calling convention:
 \begin{example}
-cfoo (a, i)
+cfoo (str, a, i)
     char *str;
     char *a; /* update */
     int *i; /* out */
@@ -10501,13 +10588,19 @@ and two return values (\var{a} and \var{i}).
 \subsection{Calling Lisp from C}
 
 Calling Lisp functions from C is sometimes possible, but is rather hackish.
-See \code{call_into_lisp} and \code{funcall0} ... \code{funcall3} in the C
-startup code.  The arguments must be valid CMU CL object descriptors (e.g.
-fixnums must be left-shifted by 2.)  See \file{compiler/generic/objdef.lisp} or
-the derived file \file{lisp/internals.h} for details of the object
-representation.  Note that the garbage collector moves objects, and won't be
-able to fix up any references in C variables, so either turn GC off or don't
-keep Lisp pointers in C data unless they are to statically allocated objects.
+See \code{funcall0} ... \code{funcall3} in the \file{lisp/arch.h}.  The
+arguments must be valid CMU CL object descriptors (e.g.  fixnums must be
+left-shifted by 2.)  See \file{compiler/generic/objdef.lisp} or the derived
+file \file{lisp/internals.h} for details of the object representation.
+\file{lisp/internals.h} is mechanically generated, and is not part of the
+source distribution.  It is distributed in the \file{docs/} directory of the
+binary distribution.
+
+Note that the garbage collector moves objects, and won't be able to fix up any
+references in C variables, so either turn GC off or don't keep Lisp pointers
+in C data unless they are to statically allocated objects.  You can use
+\funref{purify} to place live data structures in static space so that they
+won't move during GC.
 
 
 \node Step-by-Step Alien Example,  , Alien Function Calls, Alien Objects
