@@ -21,11 +21,32 @@
 (def-source-transform single-float-p (x) `(short-float-p ,x))
 (def-source-transform double-float-p (x) `(long-float-p ,x))
 
+
+;;; Some hacks to let us implement structures as simple-vectors without
+;;; confusing type inference too much.
+;;;
+(def-builtin-type 'structure-vector
+  (make-named-type :name 'structure-vector
+		   :supertypes '(structure-vector t)
+		   :subclasses '(structure)))
+
+(defknown structure-vector-p (t) boolean)
+
+(define-type-predicate structure-vector-p structure-vector)
+
 (def-source-transform structurep (x)
   (once-only ((n-x x))
-    `(and (simple-vector-p ,n-x)
+    `(and (structure-vector-p ,n-x)
 	  (eql (%primitive get-vector-subtype ,n-x)
 	       system:%g-vector-structure-subtype))))
+
+(define-vop (structure-vector-p simple-vector-p)
+  (:translate structure-vector-p))
+
+(set 'lisp::type-pred-alist
+     (adjoin (cons 'structure-vector 'simple-vector-p)
+	     (symbol-value 'lisp::type-pred-alist)
+	     :key #'car))
 
 (def-source-transform compiled-function-p (x)
   `(functionp ,x))
