@@ -55,14 +55,11 @@
 
 ;;;
 ;;; Descriptor objects stored on the stack.
-(define-storage-class stack 4 stack
-  :constant-scs (constant short-immediate unsigned-immediate immediate
-			  immediate-string-char random-immediate))
+(define-storage-class stack 4 stack)
 
 ;;;
 ;;; Untagged string-chars stored on the stack.
-(define-storage-class string-char-stack 5 stack
-  :constant-scs (immediate-string-char))
+(define-storage-class string-char-stack 5 stack)
 
 ;;;
 ;;; Objects that can be stored in any register (immediate objects).
@@ -70,6 +67,7 @@
   :locations (0 1 2 3 4 5 7 8 9 10 11 15)
   :constant-scs (constant short-immediate unsigned-immediate immediate
 			  immediate-string-char random-immediate)
+  :save-p t
   :alternate-scs (stack))
 
 ;;;
@@ -78,6 +76,7 @@
   :locations (1 3 4 5 7 8 9 10 11 15)
   :constant-scs (constant short-immediate unsigned-immediate immediate
 			  immediate-string-char random-immediate)
+  :save-p t
   :alternate-scs (stack))
 
 ;;;
@@ -90,6 +89,7 @@
 (define-storage-class string-char-reg 3 registers
   :locations (0 1 2 3 4 5 7 8 9 10 11 15)
   :constant-scs (immediate-string-char)
+  :save-p t
   :alternate-scs (string-char-stack))
 
 ;;; A catch or unwind block.
@@ -103,7 +103,7 @@
 ;;;    For now, the primitive types we support are primarily for discrimination
 ;;; rather than representation selection.
 
-(def-primitive-type t (descriptor-reg stack))
+(def-primitive-type t (descriptor-reg))
 (defvar *any-primitive-type* (primitive-type-or-lose 't))
 
 (def-primitive-type simple-string (descriptor-reg))
@@ -123,6 +123,18 @@
 ;;; generic sequence function arguments.  This means that Cons and Symbol can't
 ;;; be primitive types.
 (def-primitive-type list (descriptor-reg))
+
+
+;;; Primitive-Type-Of  --  Interface
+;;;
+;;;    Return the most restrictive primitive type that contains Object.
+;;;
+(defun primitive-type-of (object)
+  (let ((type (ctype-of object)))
+    (cond ((not (member-type-p type)) (primitive-type type))
+	  ((equal (member-type-members type) '(nil))
+	   (primitive-type-or-lose 'list))
+	  (t *any-primitive-type*))))
 
 
 ;;; Primitive-Type  --  Interface
@@ -184,14 +196,15 @@
 	       (multiple-value-bind (ptype ptype-exact)
 				    (primitive-type type)
 		 (unless ptype-exact (setq exact nil))
-		 (setq res (primitive-type-union res ptype))))
+		 (unless (eq ptype res)
+		   (return (values *any-primitive-type* nil)))))
 	     (values res exact)))))
     (member-type
-     (values (primitive-type
-	      (reduce #'type-union
-		      (mapcar #'ctype-of 
-			      (member-type-members type))))
-	     nil))
+     (let* ((members (member-type-members type))
+	    (res (primitive-type-of (first members))))
+       (dolist (mem (rest members) (values res nil))
+	 (unless (eq (primitive-type-of mem) res)
+	   (return (values *any-primitive-type* nil))))))
     (named-type
      (case (named-type-name type)
        ((t bignum ratio string-char function)
@@ -287,6 +300,7 @@
   (defconstant return-pc-offset 15)
   (defconstant env-offset 14)
   (defconstant argument-count-offset 0)
+  (defconstant argument-pointer-offset 11)
   (defconstant old-fp-offset 10)
   (defconstant sp-offset 6)
   (defconstant call-name-offset 9))
@@ -304,7 +318,11 @@
 		  :sc (sc-or-lose 'any-reg)
 		  :offset argument-count-offset))
 
-
+(defparameter old-fp-tn
+  (make-random-tn :kind :normal
+		  :sc (sc-or-lose 'any-reg)
+		  :offset old-fp-offset))
+  
 (defparameter pc-tn
   (make-random-tn :kind :normal
 		  :sc (sc-or-lose 'any-reg)
@@ -337,3 +355,18 @@
 			      :sc (sc-or-lose 'descriptor-reg)
 			      :offset n))
 	  register-arg-offsets))
+
+
+;;; LOCATION-PRINT-NAME  --  Interface
+;;;
+;;;    This function is called by debug output routines that want a pretty name
+;;; for a TN's location.  It returns a thing that can be printed with PRINC.
+;;;
+(defun location-print-name (tn)
+  (declare (type tn tn))
+  (let ((sb (sb-name (sc-sb (tn-sc tn)))))
+    (if (eq sb 'registers)
+	(svref '#(NL0 A0 NL1 A1 A3 A2 SP L0 L1 L2 L3 L4
+		      BS CONT ENV PC)
+	       (tn-offset tn))
+	(format nil "~A~D" (char (string sb) 0) (tn-offset tn)))))
