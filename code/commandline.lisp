@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.4 1995/07/26 16:43:37 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.5 1995/08/18 17:03:03 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,7 +184,7 @@
 
 (defun batch-switch-demon (switch)
   (setq *batch-mode* t)
-  (setq (cmd-switch-value switch) t)
+  (setf (cmd-switch-value switch) t)
   (defswitch "batch" #'batch-switch-demon))
 
 (defun cmd-switch-arg (switch)
