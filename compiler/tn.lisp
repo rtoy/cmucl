@@ -446,7 +446,6 @@
 (defun tn-value (tn)
   (declare (type tn tn))
   (assert (member (tn-kind tn) '(:constant :cached-constant)))
-  (assert (/= (sc-number (tn-sc tn)) (sc-number-or-lose 'constant)))
   (constant-value (tn-leaf tn)))
 
 
