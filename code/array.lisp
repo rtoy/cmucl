@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.15 1991/12/02 17:10:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.16 1992/03/24 11:03:16 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,7 +180,7 @@
 		       length))
 	      (replace array initial-contents))
 	    array))
-	;; It's either a complex array or a multidemsional array.
+	;; It's either a complex array or a multidimensional array.
 	(let* ((total-size (reduce #'* dimensions))
 	       (data (or displaced-to
 			 (data-vector-from-inits
@@ -392,18 +392,16 @@
   (setf (row-major-aref array (%array-row-major-index array subscripts))
 	new-value))
 
-
 (defun row-major-aref (array index)
   "Returns the element of array corressponding to the row-major index.  This is
    SETF'able."
   (declare (optimize (safety 1)))
   (row-major-aref array index))
 
+
 (defun %set-row-major-aref (array index new-value)
   (declare (optimize (safety 1)))
   (setf (row-major-aref array index) new-value))
-
-
 
 (defun svref (simple-vector index)
   "Returns the Index'th element of the given Simple-Vector."
@@ -532,11 +530,17 @@
       (%array-available-elements array)
       (length (the vector array))))
 
+(defun array-displacement (array)
+  "Returns values of :displaced-to and :displaced-index-offset options to
+   make-array, or the defaults nil and 0 if not a displaced array."
+  (declare (array array))
+  (values (%array-data-vector array) (%array-displacement array)))
 
 (defun adjustable-array-p (array)
-  "Returns T if the given Array is adjustable, or NIL otherwise."
+  "Returns T if (adjust-array array...) would return an array identical
+   to the argument, this happens for complex arrays."
   (declare (array array))
-  (array-header-p array))
+  (not (typep array '(simple-array * (*)))))
 
 
 ;;;; Fill pointer frobbing stuff.
@@ -615,9 +619,7 @@
 			   displaced-to displaced-index-offset)
   "Adjusts the Array's dimensions to the given Dimensions and stuff."
   (let ((dimensions (if (listp dimensions) dimensions (list dimensions))))
-    (cond ((not (array-header-p array))
-	   (error "~S is not an adjustable array." array))
-	  ((/= (the fixnum (length (the list dimensions)))
+    (cond ((/= (the fixnum (length (the list dimensions)))
 	       (the fixnum (array-rank array)))
 	   (error "Number of dimensions not equal to rank of array."))
 	  ((not (subtypep element-type (array-element-type array)))
@@ -628,6 +630,7 @@
       (when (and fill-pointer (> array-rank 1))
 	(error "Multidimensional arrays can't have fill pointers."))
       (cond (initial-contents
+	     ;; Array former contents replaced by initial-contents.
 	     (if (or initial-element-p displaced-to)
 		 (error "Initial contents may not be specified with ~
 		 the :initial-element or :displaced-to option."))
@@ -636,12 +639,19 @@
 				 dimensions array-size element-type
 				 initial-contents initial-element
 				 initial-element-p)))
-	       (set-array-header array array-data array-size
+	       (if (adjustable-array-p array)
+		   (set-array-header array array-data array-size
 				 (get-new-fill-pointer array array-size
 						       fill-pointer)
-				 0 dimensions nil)))
+				 0 dimensions nil)
+		   (if (array-header-p array)
+		       ;; Simple multidimensional or single dimensional array.
+		       (make-array dimensions
+				   :element-type element-type
+				   :initial-contents initial-contents)
+		       array-data))))
 	    (displaced-to
-	     ;; no initial-contents supplied is already known
+	     ;; No initial-contents supplied is already established.
 	     (when initial-element
 	       (error "The :initial-element option may not be specified ~
 	       with :displaced-to."))
@@ -655,12 +665,20 @@
 	       (if (< (the fixnum (array-total-size displaced-to))
 		      (the fixnum (+ displacement array-size)))
 		   (error "The :displaced-to array is too small."))
-	       (set-array-header array displaced-to array-size
-				 (get-new-fill-pointer array array-size
-						       fill-pointer)
-				 displacement dimensions t)))
+	       (if (adjustable-array-p array)
+		   ;; None of the original contents appear in adjusted array.
+		   (set-array-header array displaced-to array-size
+				     (get-new-fill-pointer array array-size
+							   fill-pointer)
+				     displacement dimensions t)
+		   ;; Simple multidimensional or single dimensional array.
+		   (make-array dimensions
+			       :element-type element-type
+			       :displaced-to displaced-to
+			       :displaced-index-offset
+			       displaced-index-offset))))
 	    ((= array-rank 1)
-	     (let ((old-length (%array-available-elements array))
+	     (let ((old-length (array-total-size array))
 		   (new-length (car dimensions))
 		   new-data)
 	       (declare (fixnum old-length new-length))
@@ -677,10 +695,12 @@
 				 :start2 old-start :end2 old-end))
 		       (t (setf new-data
 				(shrink-vector old-data new-length))))
-		 (set-array-header array new-data new-length
-				   (get-new-fill-pointer array new-length
-							 fill-pointer)
-				   0 dimensions nil))))
+		 (if (adjustable-array-p array)
+		     (set-array-header array new-data new-length
+				       (get-new-fill-pointer array new-length
+							     fill-pointer)
+				       0 dimensions nil)
+		     new-data))))
 	    (t
 	     (let ((old-length (%array-available-elements array))
 		   (new-length (apply #'* dimensions)))
@@ -699,8 +719,7 @@
 				   new-data dimensions new-length element-type
 				   initial-element initial-element-p)
 		   (set-array-header array new-data new-length
-				     new-length 0 dimensions nil))))))))
-  array)
+				     new-length 0 dimensions nil)))))))))
 
 (defun get-new-fill-pointer (old-array new-array-size fill-pointer)
   (cond ((not fill-pointer)
@@ -713,7 +732,7 @@
 	((not (array-has-fill-pointer-p old-array))
 	 (error "Cannot supply a non-NIL value (~S) for :fill-pointer ~
 		        in adjust-array unless the array (~S) was originally ~
-			created with a fill pointer."
+ 			created with a fill pointer."
 		       fill-pointer
 		       old-array))
 	((numberp fill-pointer)
@@ -752,6 +771,8 @@
 	((simple-array (unsigned-byte 32) (*)) 0)
 	((simple-array single-float (*)) (coerce 0 'single-float))
 	((simple-array double-float (*)) (coerce 0 'double-float)))))
+  ;; Only arrays have fill-pointers, but vectors have their length parameter
+  ;; in the same place.
   (setf (%array-fill-pointer vector) new-size)
   vector)
 
