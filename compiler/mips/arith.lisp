@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.46 1992/07/28 20:37:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.47 1992/08/04 14:10:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.46 1992/07/28 20:37:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.47 1992/08/04 14:10:53 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -248,7 +248,9 @@
   (:generator 1
     (cond ((< count 0)
 	   ;; It is a right shift.
-	   (inst sra result number (min (- count) 31)))
+	   (sc-case number
+	     (signed-reg (inst sra result number (min (- count) 31)))
+	     (unsigned-reg (inst srl result number (min (- count) 31)))))
 	  ((> count 0)
 	   ;; It is a left shift.
 	   (inst sll result number (min count 31)))
