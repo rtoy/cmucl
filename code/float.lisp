@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.11 1993/05/07 12:10:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.12 1994/04/06 17:10:33 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,14 +84,16 @@
 
 ;;;; Float parameters:
 
-(defconstant least-positive-single-float (single-from-bits 0 0 1))
-(defconstant least-positive-short-float least-positive-single-float)
-(defconstant least-negative-single-float (single-from-bits 1 0 1))
-(defconstant least-negative-short-float least-negative-single-float)
-(defconstant least-positive-double-float (double-from-bits 0 0 1))
-(defconstant least-positive-long-float least-positive-double-float)
-(defconstant least-negative-double-float (double-from-bits 1 0 1))
-(defconstant least-negative-long-float least-negative-double-float)
+#-alpha
+(progn
+  (defconstant least-positive-single-float (single-from-bits 0 0 1))
+  (defconstant least-positive-short-float least-positive-single-float)
+  (defconstant least-negative-single-float (single-from-bits 1 0 1))
+  (defconstant least-negative-short-float least-negative-single-float)
+  (defconstant least-positive-double-float (double-from-bits 0 0 1))
+  (defconstant least-positive-long-float least-positive-double-float)
+  (defconstant least-negative-double-float (double-from-bits 1 0 1))
+  (defconstant least-negative-long-float least-negative-double-float))
 
 (defconstant least-positive-normalized-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-min 0))
