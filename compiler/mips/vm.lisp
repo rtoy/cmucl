@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.27 1990/05/19 09:45:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.28 1990/05/23 06:10:04 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -403,14 +403,34 @@
 (eval-when (compile eval load)
   (defconstant zero-offset 0)
   (defconstant lip-offset 1)
+  (defconstant nl0-offset 2)
+  (defconstant nl1-offset 3)
+  (defconstant nl2-offset 4)
+  (defconstant nl3-offset 5)
+  (defconstant nl4-offset 6)
+  (defconstant nargs-offset 7)
+  (defconstant a0-offset 8)
+  (defconstant a1-offset 9)
+  (defconstant a2-offset 10)
+  (defconstant a3-offset 11)
+  (defconstant a4-offset 12)
+  (defconstant a5-offset 13)
+  (defconstant cname-offset 14)
+  (defconstant lexenv-offset 15)
+  (defconstant args-offset 16)
+  (defconstant old-fp-offset 17)
+  (defconstant lra-offset 18)
+  (defconstant l0-offset 19)
   (defconstant null-offset 20)
   (defconstant bsp-offset 21)
   (defconstant fp-offset 22)
   (defconstant csp-offset 23)
   (defconstant flags-offset 24)
   (defconstant alloc-offset 25)
+  (defconstant l1-offset 28)
   (defconstant nsp-offset 29)
-  (defconstant code-offset 30))
+  (defconstant code-offset 30)
+  (defconstant l2-offset 31))
 
 ;;; 
 ;;; Wired Zero
@@ -540,25 +560,6 @@
 (defconstant control-stack-arg-scn (sc-number-or-lose 'control-stack))
 
 (eval-when (compile load eval)
-
-;;; Offset of special registers used during calls
-;;;
-(defconstant nargs-offset 7)
-(defconstant cname-offset 14)
-(defconstant lexenv-offset 15)
-(defconstant args-offset 16)
-(defconstant old-fp-offset 17)
-(defconstant lra-offset 18)
-
-;;; A few additional registers distinct from all the linkage regs.  These are
-;;; needed by copy-more-args.
-;;;
-(defconstant nl0-offset 2)
-(defconstant nl1-offset 3)
-(defconstant nl2-offset 4)
-(defconstant nl3-offset 5)
-(defconstant l0-offset 19)
-(defconstant l1-offset 28)
 
 ;;; Offsets of special stack frame locations
 (defconstant old-fp-save-offset 0)
