@@ -323,8 +323,8 @@
   ;;  :Stream - from a non-file stream (Compile-From-Stream)
   (from nil :type (member :file :stream :lisp))
   ;;
-  ;; If :File, the file name, if :Lisp, the form evaluated/compiled, otherwise
-  ;; some descriptive string.  When from COMPILE, this is #'(LAMBDA ...).
+  ;; If :File, the file name, if :Lisp or :Stream, then a vector of the
+  ;; top-level forms.  When from COMPILE, form 0 is #'(LAMBDA ...).
   (name nil)
   ;;
   ;; File comment for this file, if any.
@@ -343,7 +343,12 @@
   ;; The file-positions of each truly top-level form read from this file (if
   ;; applicable).  The vector element type will be chosen to hold the largest
   ;; element.  May be null to save space.
-  (start-positions nil :type (or (simple-array * (*)) null)))
+  (start-positions nil :type (or (simple-array * (*)) null))
+  ;;
+  ;; If from :LISP, this is the function whose source is form 0.
+  ;; If from :STREAM, this is whatever was the :SOURCE-INFO argument to
+  ;; COMPILE-FROM-STREAM.
+  (info nil))
 
 
 (defstruct debug-info)
