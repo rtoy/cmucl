@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.42 2001/06/17 19:10:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.43 2002/03/07 16:44:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1286,7 +1286,7 @@
 			     (lisp::flonum-to-string number nil d nil)
 	  (declare (ignore ig2 ig3))
 	  (when colon (write-string signstr stream))
-	  (dotimes (i (- w signlen (- n pointplace) strlen))
+	  (dotimes (i (- w signlen (max 0 (- n pointplace)) strlen))
 	    (write-char pad stream))
 	  (unless colon (write-string signstr stream))
 	  (dotimes (i (- n pointplace)) (write-char #\0 stream))
