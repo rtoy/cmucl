@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.22 2001/06/04 17:58:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.23 2001/06/26 03:14:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -434,8 +434,9 @@
 							   dstate)
 		    (let ((offs (- offset disassem::nil-addr)))
 		      (when (typep offs 'offset)
-			(disassem::maybe-note-nil-indexed-symbol-slot-ref offs
-									  dstate)))))
+			(or (disassem::maybe-note-nil-indexed-symbol-slot-ref offs
+									      dstate)
+			    (disassem::maybe-note-static-function offs dstate))))))
 	      (princ offset stream))))))
   (write-char #\] stream))
 
