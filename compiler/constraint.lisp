@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.17 1997/02/12 22:12:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.17.2.1 1997/09/08 00:11:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,7 +291,12 @@
 		 (greater (1+ x))
 		 (t (1- x))))
 	 (bound (x)
-	   (if greater (numeric-type-low x) (numeric-type-high x))))
+	   (if greater (numeric-type-low x) (numeric-type-high x)))
+	 (validate (x)
+	   (if (and (numeric-type-low x) (numeric-type-high x)
+		    (> (numeric-type-low x) (numeric-type-high x)))
+	       *empty-type*
+	       x)))
     (let* ((x-bound (bound x))
 	   (y-bound (exclude (bound y)))
 	   (new-bound (cond ((not x-bound) y-bound)
@@ -302,7 +307,7 @@
       (if greater
 	  (setf (numeric-type-low res) new-bound)
 	  (setf (numeric-type-high res) new-bound))
-      res)))
+      (validate res))))
 
   
 ;;; FLOAT-TYPE-P  --  Internal
@@ -350,10 +355,13 @@
 	       ;; upper bound because the open bound doesn't
 	       ;; contain the bound, so choose an open lower
 	       ;; bound.
-	       (set-bound res (or (consp x) (consp y))))))
-    #+nil
-    (format t "~%constraint-float-type:~%  ~s~%  ~s~%  ~s~%  ~s~%"
-	    x y greater or-equal)
+	       (set-bound res (or (consp x) (consp y)))))
+	   (validate (x)
+	     (let ((x-lo (numeric-type-low x))
+		   (x-hi (numeric-type-high x)))
+	       (if (and x-lo x-hi (> (bound-value x-lo) (bound-value x-hi)))
+		   *empty-type*
+		   x))))
     (let* ((x-bound (bound x))
 	   (y-bound (exclude (bound y)))
 	   (new-bound (cond ((not x-bound)
@@ -365,15 +373,10 @@
 			    (t
 			     (min-upper-bound x-bound y-bound))))
 	   (res (copy-numeric-type x)))
-      #+nil
-      (format t "x-bound, y-bound, new-bound = ~s, ~s, ~s~%"
-	      x-bound y-bound new-bound)
       (if greater
 	  (setf (numeric-type-low res) new-bound)
 	  (setf (numeric-type-high res) new-bound))
-      #+nil
-      (format t "~&constrain-float-type returns ~s~%" res)
-      res)))
+      (validate res))))
 
   
 ;;; CONSTRAIN-REF-TYPE  --  Internal
