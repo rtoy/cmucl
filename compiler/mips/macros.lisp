@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.51 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.52 2003/03/02 18:55:56 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,8 +309,8 @@
        (inst addu alloc-tn 1))
      ,@forms
      (without-scheduling ()
+       (inst nop)
        (inst add alloc-tn ,flag-tn))))
-
 
 
 ;;;; Memory accessor vop generators

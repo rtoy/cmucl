@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.115 2003/02/12 15:53:48 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.116 2003/03/02 18:55:56 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,13 +131,17 @@
 
 (export '(target-read-only-space-start
 	  target-static-space-start
-	  target-dynamic-space-start))
+	  target-dynamic-space-start
+	  target-foreign-linkage-space-start
+	  target-foreign-linkage-entry-size))
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x05000000)
-(defparameter target-dynamic-space-start   #x07000000)
+(defparameter target-read-only-space-start       #x01000000)
+(defparameter target-static-space-start          #x05000000)
+(defparameter target-dynamic-space-start         #x07000000)
+(defparameter target-foreign-linkage-space-start #x0fc00000)
+(defconstant  target-foreign-linkage-entry-size 8)
 
 ;;; LARGE-OBJECT-CUTOFF -- Size in words where we start allocating in the
 ;;; large object space instead.  Must be less then a page.
@@ -221,6 +225,14 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+
+    ;; Make the ..slot-unbound.. symbol static to optimise the
+    ;; common slot unbound check.
+    pcl::..slot-unbound..
+
+    ;; These are filled in the C run-time.
+    lisp::*cmucl-lib*
+    lisp::*cmucl-core-path*
     ))
 
 #+gengc

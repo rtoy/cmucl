@@ -1,10 +1,10 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.18 2002/10/01 20:10:49 toy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.19 2003/03/02 18:55:57 toy Exp $
 
 all: lisp.nm
 
 CC = gcc
 
-DEPEND_FLAGS =
+DEPEND = $(CC) -MM -E
 
 include Config
 

@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.98 2002/11/05 22:45:53 cracauer Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.99 2003/03/02 18:56:43 toy Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -97,7 +97,7 @@
 #+alpha
 (rename-package "ALPHA" "ALPHA" '("VM" "OLD-ALPHA"))
 #+sgi
-(rename-package "SGI" "SGI" '("VM" "OLD-SGI"))
+(rename-package "SGI" "SGI" '("VM" "MIPS" "OLD-SGI"))
 #+ppc
 (rename-package "PPC" "PPC" '("VM" "OLD-PPC"))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.19 2002/01/14 21:25:52 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.20 2003/03/02 18:55:55 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -250,4 +250,5 @@
 	(setf (floating-point-modes)
 	      (logior (logand ,orig-modes ,(logior traps exceptions))
 		      (logand (floating-point-modes)
-			      ,(logand trap-mask exception-mask))))))))
+			      ,(logand trap-mask exception-mask)
+		       #+mips ,(dpb 0 float-exceptions-byte #xffffffff))))))))
