@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.30 1992/06/02 18:48:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.31 1992/06/04 17:42:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package :c)
 
 
 ;;; Propagate-To-Args  --  Interface
@@ -56,12 +56,42 @@
   (undefined-value))
 
 
+;;; Merge-Tail-Sets  --  Interface
+;;;
+;;;    This function handles merging the tail sets if Call is potentially
+;;; tail-recursive, and is a call to a function with a different TAIL-SET than
+;;; Call's Fun.  This must be called whenever we alter IR1 so as to place a
+;;; local call in what might be a TR context.  Note that any call which returns
+;;; its value to a RETURN is considered potentially TR, since any implicit
+;;; MV-PROG1 might be optimized away.
+;;;
+;;; We destructively modify the set for the calling function to represent both,
+;;; and then change all the functions in callee's set to reference the first.
+;;; If we do merge, we reoptimize the RETURN-RESULT continuation to cause
+;;; IR1-OPTIMIZE-RETURN to recompute the tail set type.
+;;;
+(defun merge-tail-sets (call)
+  (declare (type basic-combination call))
+  (let ((return (continuation-dest (node-cont call))))
+    (when (return-p return)
+      (let ((call-set (lambda-tail-set (node-home-lambda call)))
+	    (fun-set (lambda-tail-set (combination-lambda call))))
+	(unless (eq call-set fun-set)
+	  (let ((funs (tail-set-functions fun-set)))
+	    (dolist (fun funs)
+	      (setf (lambda-tail-set fun) call-set))
+	    (setf (tail-set-functions call-set)
+		  (nconc (tail-set-functions call-set) funs)))
+	  (reoptimize-continuation (return-result return))
+	  t)))))
+
+
 ;;; Convert-Call  --  Internal
 ;;;
-;;;    Convert a combination into a local call.  We Propagate-To-Args, set the
+;;;    Convert a combination into a local call.  We PROPAGATE-TO-ARGS, set the
 ;;; combination kind to :Local, add Fun to the Calls of the function that the
-;;; call is in, then replace the function in the Ref node with the new
-;;; function.
+;;; call is in, replace the function in the Ref node with the new function,
+;;; then MERGE-TAIL-SETS.
 ;;;
 ;;;    We change the Ref last, since changing the reference can trigger let
 ;;; conversion of the new function, but will only do so if the call is local.
@@ -72,6 +102,7 @@
   (setf (basic-combination-kind call) :local)
   (pushnew fun (lambda-calls (node-home-lambda call)))
   (change-ref-leaf ref fun)
+  (merge-tail-sets call)
   (undefined-value))
 
 
@@ -345,7 +376,8 @@
       (setf (basic-combination-kind call) :local)
       (pushnew ep (lambda-calls (node-home-lambda call)))
       (change-ref-leaf ref ep)
-
+      (merge-tail-sets call)
+      
       (assert-continuation-type
        (first (basic-combination-args call))
        (make-values-type :optional (mapcar #'leaf-type (lambda-vars ep))
@@ -708,7 +740,8 @@
 ;;;    We are converting Fun to be a let when the call is in a non-tail
 ;;; position.  Any previously tail calls in Fun are no longer tail calls, and
 ;;; must be restored to normal calls which transfer to Next-Block (Fun's
-;;; return point.)
+;;; return point.)  We can't do this by DO-USES on the RETURN-RESULT, because
+;;; the return might have been deleted (if all calls were TR.)
 ;;;
 ;;;    The called function might be an assignment in the case where we are
 ;;; currently converting that function.  In steady-state, assignments never
@@ -865,9 +898,11 @@
 
 ;;; MAYBE-CONVERT-TAIL-LOCAL-CALL  --  Interface
 ;;;
-;;;    If possible, convert a tail-local call to jump directly to the called
-;;; function.  We also call MAYBE-CONVERT-TO-ASSIGNMENT.  We can switch the
-;;; succesor (potentially deleting the RETURN node) unless:
+;;;    If a potentially TR local call really is TR, then convert it to jump
+;;; directly to the called function.  We also call MAYBE-CONVERT-TO-ASSIGNMENT.
+;;; We can switch the succesor (potentially deleting the RETURN node) unless:
+;;; -- The call has already been converted.
+;;; -- The call isn't TR (random implicit MV PROG1.)
 ;;; -- The call is in an XEP (thus we might decide to make it non-tail so that
 ;;;    we can use known return inside the component.)
 ;;; -- There is a change in the cleanup between the call in the return, so we
@@ -878,6 +913,7 @@
   (let ((return (continuation-dest (node-cont call))))
     (assert (return-p return))
     (when (and (not (node-tail-p call))
+	       (immediately-used-p (return-result return) call)
 	       (not (eq (functional-kind (node-home-lambda call))
 			:external))
 	       (only-harmless-cleanups (node-block call)
