@@ -52,11 +52,11 @@
 
 (comf "code:globals" :always-once t)
 (comf "code:struct" :always-once t)
+(comf "hem:charmacs" :always-once t)
 (comf "hem:key-event" :load t)
 (comf "hem:struct" :always-once t)
 (comf "hem:struct-ed" :always-once t)
 (comf "hem:rompsite" :always-once t)
-(comf "hem:charmacs" :always-once t)
 ;;;
 ;;; This is necessary since all the #k uses in Hemlock will expand into
 ;;; EXT:MAKE-KEY-EVENT calls with keysyms and bits from the compiling Lisp, not
