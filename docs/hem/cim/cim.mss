@@ -2192,18 +2192,21 @@ Holds a list of all the window objects made with @funref[make-window].
 
 @defun[fun {make-window}, args {@i[mark]},
 	keys {[modelinep][window][ask-user]},
-	morekeys {[x][y][width][height]}]
+	morekeys {[x][y][width][height]},
+	morekeys {[proportion]}]
 @defhvar1[var {Default Window Width}]
 @defhvar1[var {Default Window Height}]
 @defhvar1[var {Make Window Hook}]
+
+@comment[NOTE, we purposefully do not document the font-family or device
+	 arguments since we don't officially support fonts or devices.]
+
 @f[make-window] returns a window displaying text starting at @i[mark], which
 must point into a buffer.  If it could not make a window on the device, it
-returns nil.  The default action is to split the current window to make room
-for the new window.
+returns nil.  The default action is to make the new window a proportion of the
+@f[current-window]'s height to make room for the new window.
 
 @i[Modelinep] specifies whether the window should display buffer modelines.
-
-Window is a X window to be used with the Hemlock window.
 
 @i[Window] is a device dependent window to be used with the Hemlock window.
 The device may not support this argument.  @i[Window] becomes the parent window
@@ -2217,6 +2220,10 @@ argument.  Non-null values other than @f[t] may have device dependent meanings.
 @i[X] and @i[y] are in pixel units, but @i[width] and @i[height] are characters
 units.  @hid[Default Window Width] and @hid[Default Window Height] are the
 default values for the @i[width] and @i[height] arguments.
+
+@i[Proportion] determines what proportion of the @f[current-window]'s height
+the new window will use.  The @f[current-window] retains whatever space left
+after accommodating the new one.  The default is to split the window in half.
 
 This invokes @hid[Make Window Hook] with the new window.
 @enddefun
@@ -3038,13 +3045,20 @@ This inserts the file named by @i[pathname] at @i[mark].
 @enddefun
 
 @defun[fun {write-file}, args {@i[region] @i[pathname]},
-	keys {[keep-backup][access]}]
+	keys {[keep-backup][access][append]}]
 @defhvar1[var {Keep Backup Files}, val {@nil}]
-@f[write-file] writes the contents of @i[region] to the file named by
+This function writes the contents of @i[region] to the file named by
 @i[pathname].  This writes @i[region] using a stream as if it were opened with
-@kwd[if-exists] supplied as @kwd[rename-and-delete].  When @i[keep-backup],
-which defaults to the value of @hid[Keep Backup Files], is non-nil, it is as if
-the stream were opened with @kwd[if-exists] supplied as @kwd[rename].
+@kwd[if-exists] supplied as @kwd[rename-and-delete].
+
+When @i[keep-backup], which defaults to the value of @hid[Keep Backup Files],
+is non-@nil, this opens the stream as if @kwd[if-exists] were @kwd[rename].  If
+@i[append] is non-@nil, this writes the file as if it were opened with
+@kwd[if-exists] supplied as @kwd[append].
+
+This signals an error if both @i[append] and @i[keep-backup] are supplied as
+non-@nil.
+
 @i[Access] is an implementation dependent value that is suitable for setting
 @i[pathname]'s access or protection bits.
 @enddefun
