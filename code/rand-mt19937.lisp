@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.6 1998/03/21 08:12:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.7 1998/12/19 16:10:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,16 +300,16 @@
   (declare (inline %random-single-float %random-double-float
 		   #+long-float %long-float))
   (cond
-    ((and (fixnump arg) (<= arg random-fixnum-max))
+    ((and (fixnump arg) (<= arg random-fixnum-max) (> arg 0))
      (rem (random-chunk state) arg))
-    ((typep arg 'single-float)
+    ((and (typep arg 'single-float) (> arg 0.0F0))
      (%random-single-float arg state))
-    ((typep arg 'double-float)
+    ((and (typep arg 'double-float) (> arg 0.0D0))
      (%random-double-float arg state))
     #+long-float
-    ((typep arg 'long-float)
+    ((and (typep arg 'long-float) (> arg 0.0L0))
      (%random-long-float arg state))
-    ((integerp arg)
+    ((and (integerp arg) (> arg 0))
      (%random-integer arg state))
     (t
      (error 'simple-type-error
