@@ -2490,7 +2490,7 @@
 	  (if ignore
 	      (ir1-convert start cont nil)
 	      (ir1-convert start cont `(%proclaim ,what)))))
-      (ir1-convert start cont nil)))
+      (ir1-convert start cont `(%proclaim ,what))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
