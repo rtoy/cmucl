@@ -607,10 +607,11 @@
 ;;;
 ;;;    With keywords, we exploit our knowledge about how hairy keyword
 ;;; defaulting is done when computing the type assertion to put on the
-;;; main-entry argument.  If the default is hairy (non-constant), then the
-;;; value of the main-entry arg in the unsupplied case is NIL, whatever the
-;;; actual default value is.  So we only have to union in NULL, and not totally
-;;; blow off doing any type assertion.
+;;; main-entry argument.  In the case of hairy keywords, the default has been
+;;; clobbered with NIL, which is the value of the main-entry arg in the
+;;; unsupplied case, whatever the actual default value is.  So we can just
+;;; assume the default is constant, effectively unioning in NULL, and not
+;;; totally blow off doing any type assertion.
 ;;;
 (defun find-optional-dispatch-types (od type where)
   (declare (type optional-dispatch od) (type function-type type)
@@ -660,8 +661,7 @@
 			(kinfo (find key keys :key #'key-info-name)))
 		   (cond
 		    (kinfo
-		     (res (type-union (key-info-type kinfo)
-				      (or def-type (specifier-type 'null)))))
+		     (res (type-union (key-info-type kinfo) def-type)))
 		    (t
 		     (note-lossage
 		      "Defining a ~S keyword not present in previous ~A."
