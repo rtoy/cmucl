@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.6 1990/05/09 06:39:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.7 1990/05/10 04:40:58 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -797,8 +797,8 @@ default-value-5
 (expand
  `(define-vop (return)
     (:args
-     (old-fp :scs (descriptor-reg any-reg))
-     (return-pc :scs (descriptor-reg))
+     (old-fp :scs (any-reg) :load-if (not (sc-is old-fp control-stack)))
+     (return-pc :scs (descriptor-reg) :to (:eval 1))
      (values :more t))
     (:ignore values)
     (:info nvals)
@@ -807,8 +807,8 @@ default-value-5
 				    :from (:eval 0) :to (:eval 1))
 			       ,name))
 	      register-arg-names register-arg-offsets)
-    (:temporary (:sc descriptor-reg :offset nargs-offset) nargs)
-    (:temporary (:sc descriptor-reg :offset old-fp-offset) val-ptr)
+    (:temporary (:sc any-reg :offset nargs-offset) nargs)
+    (:temporary (:sc any-reg :offset old-fp-offset) val-ptr)
     (:temporary (:scs (interior-reg) :type interior) lip)
     (:vop-var vop)
     (:generator 6
@@ -817,7 +817,11 @@ default-value-5
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
-	     (move fp-tn old-fp)
+	     (sc-case old-fp
+	       (any-reg
+		(move fp-tn old-fp))
+	       (control-stack
+		(load-stack-tn fp-tn old-fp)))
 	     (inst addu lip return-pc (- (* 3 word-bytes) other-pointer-type))
 	     (inst j lip)
 	     (move code-tn return-pc))
@@ -825,7 +829,11 @@ default-value-5
 	     (inst li nargs (fixnum nvals))
 	     (move val-ptr fp-tn)
 	     (inst addu csp-tn val-ptr (* nvals word-bytes))
-	     (move fp-tn old-fp)
+	     (sc-case old-fp
+	       (any-reg
+		(move fp-tn old-fp))
+	       (control-stack
+		(load-stack-tn fp-tn old-fp)))
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (move nsp-tn cur-nfp)))
