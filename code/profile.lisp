@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.15 1997/02/11 18:46:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.16 1997/02/13 09:31:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
 (in-package "PROFILE")
 
 (export '(*timed-functions* profile profile-all unprofile report-time
-	  report-times reset-time))
+	  reset-time))
 
 
 ;;;; Implementation dependent interfaces:
