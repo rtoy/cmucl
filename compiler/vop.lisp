@@ -916,16 +916,22 @@
   (load-costs (make-array sc-number-limit :initial-element nil)
 	      :type sc-vector)
   ;;
-  ;; Vector mapping from SC numbers to representation move and coerce VOPs.  If
-  ;; an entry is non-null, then it is the VOP-INFO for the VOP that coerces an
-  ;; object in the index SC's representation info this SC's representation.  If
-  ;; null, no special VOP is necessary: just use MOVE.  This vector is filled
-  ;; out with entries for all SCs that can somehow be coerced into this SC, not
-  ;; just those VOPs defined to directly move into this SC (i.e. it allows for
-  ;; operand loading on the move VOP's operands.)
+  ;; Vector mapping from SC numbers to possibly representation-specific move
+  ;; and coerce VOPs.  Each entry is a list of VOP-INFOs for VOPs that
+  ;; move/coerce an object in the index SC's representation into this SC's
+  ;; representation.  This vector is filled out with entries for all SCs that
+  ;; can somehow be coerced into this SC, not just those VOPs defined to
+  ;; directly move into this SC (i.e. it allows for operand loading on the move
+  ;; VOP's operands.)
   ;;
-  ;; If there are special non-coercing moves (i.e. non-null entries for this SC
-  ;; or its alternates), then they should not use any wired temporaries.
+  ;; When there are multiple applicable VOPs, the template arg and result type
+  ;; restrictions are used to determine which one to use.  The list is sorted
+  ;; by increasing cost, so the first applicable VOP should be used.
+  ;;
+  ;; Move (or move-arg) VOPs with descriptor results shouldn't have TNs wired
+  ;; in the standard argument registers, since there may already be live TNs
+  ;; wired in those locations holding the values that we are setting up for
+  ;; unknown-values return.
   (move-vops (make-array sc-number-limit :initial-element nil)
 	     :type sc-vector)
   ;;
