@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.1 1997/01/18 14:31:23 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.2 1997/02/13 01:20:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,10 +182,10 @@
 	 (symbol :scs (descriptor-reg)))
   (:temporary (:sc dword-reg) temp bsp)
   (:generator 5
-    (load-symbol-value bsp lisp::*binding-stack-pointer*)
+    (load-symbol-value bsp *binding-stack-pointer*)
     (loadw temp symbol symbol-value-slot other-pointer-type)
     (inst add bsp (* binding-size word-bytes))
-    (store-symbol-value bsp lisp::*binding-stack-pointer*)
+    (store-symbol-value bsp *binding-stack-pointer*)
     (storew temp bsp (- binding-value-slot binding-size))
     (storew symbol bsp (- binding-symbol-slot binding-size))
     (storew val symbol symbol-value-slot other-pointer-type)))
@@ -193,20 +193,20 @@
 (define-vop (unbind)
   (:temporary (:sc dword-reg) symbol value bsp)
   (:generator 0
-    (load-symbol-value bsp lisp::*binding-stack-pointer*)
+    (load-symbol-value bsp *binding-stack-pointer*)
     (loadw symbol bsp (- binding-symbol-slot binding-size))
     (loadw value bsp (- binding-value-slot binding-size))
     (storew value symbol symbol-value-slot other-pointer-type)
     (storew 0 bsp (- binding-symbol-slot binding-size))
     (inst sub bsp (* binding-size word-bytes))
-    (store-symbol-value bsp lisp::*binding-stack-pointer*)))
+    (store-symbol-value bsp *binding-stack-pointer*)))
 
 
 (define-vop (unbind-to-here)
   (:args (where :scs (descriptor-reg any-reg)))
   (:temporary (:sc dword-reg) symbol value bsp)
   (:generator 0
-    (load-symbol-value bsp lisp::*binding-stack-pointer*)
+    (load-symbol-value bsp *binding-stack-pointer*)
     (inst cmp where bsp)
     (inst jmp :e done)
 
@@ -222,7 +222,7 @@
     (inst sub bsp (* binding-size word-bytes))
     (inst cmp where bsp)
     (inst jmp :ne loop)
-    (store-symbol-value bsp lisp::*binding-stack-pointer*)
+    (store-symbol-value bsp *binding-stack-pointer*)
 
     DONE))
 

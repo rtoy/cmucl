@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.2 1997/02/11 16:16:08 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.3 1997/02/13 01:20:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,7 +168,7 @@
   (:translate dynamic-space-free-pointer)
   (:policy :fast-safe)
   (:generator 1
-    (load-symbol-value int lisp::*allocation-pointer*)))
+    (load-symbol-value int *allocation-pointer*)))
 
 (define-vop (binding-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
@@ -176,7 +176,7 @@
   (:translate binding-stack-pointer-sap)
   (:policy :fast-safe)
   (:generator 1
-    (load-symbol-value int lisp::*binding-stack-pointer*)))
+    (load-symbol-value int *binding-stack-pointer*)))
 
 (define-vop (control-stack-pointer-sap)
   (:results (int :scs (sap-reg)))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.3 1997/02/12 23:03:25 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4 1997/02/13 01:20:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,13 +210,13 @@
 ;;;
 ;;; pfw X86 doesn't have enough registers to keep these things there.
 ;;;     Note these spaces grow from low to high addresses.
-(defvar lisp::*allocation-pointer*)
-(defvar lisp::*binding-stack-pointer*)
-(defvar lisp::*x86-cgc-active-p*)
-(defvar lisp::*static-blue-bag* nil)
+(defvar *allocation-pointer*)
+(defvar *binding-stack-pointer*)
+(defvar *x86-cgc-active-p*)
+(defvar *static-blue-bag* nil)
 
 (defparameter static-symbols
-    `(t
+    '(t
 
       ;; The C startup code must fill these in.
       lisp::lisp-environment-list
@@ -246,10 +246,10 @@
       unix::*interrupt-pending*
 
       ;; added by pfw
-      lisp::*allocation-pointer*
-      lisp::*binding-stack-pointer*
-      lisp::*x86-cgc-active-p*
-      lisp::*internal-gc-trigger*	; Keep C code happy
+      *allocation-pointer*
+      *binding-stack-pointer*
+      *x86-cgc-active-p*
+      *internal-gc-trigger*	; Keep C code happy
 
       *fp-constant-1s0*
       *fp-constant-1d0*
@@ -267,7 +267,7 @@
       *unused-static-2*
       *unused-static-1*
 
-      lisp::*static-blue-bag*		; Must be last or change C code
+      *static-blue-bag*		; Must be last or change C code
       ))
 
 (defparameter static-functions

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.2 1997/02/12 21:01:25 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.3 1997/02/13 01:20:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,9 +114,9 @@
 #-cgc
 (defmacro with-allocation ((alloc) &body body)
   `(progn
-    (load-symbol-value ,alloc lisp::*allocation-pointer*)
+    (load-symbol-value ,alloc *allocation-pointer*)
     ,@body
-    (store-symbol-value ,alloc lisp::*allocation-pointer*)))
+    (store-symbol-value ,alloc *allocation-pointer*)))
 
 #-cgc
 (defmacro with-fixed-allocation ((result alloc type-code size) &body body)

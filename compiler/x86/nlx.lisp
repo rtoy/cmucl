@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.2 1997/02/08 21:35:06 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.3 1997/02/13 01:20:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,7 @@
 (define-vop (current-binding-pointer)
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 1
-    (load-symbol-value res lisp::*binding-stack-pointer*)))
+    (load-symbol-value res *binding-stack-pointer*)))
 
 
 ;;;; Unwind block hackery:
