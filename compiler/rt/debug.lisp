@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.2 1992/03/09 20:42:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/debug.lisp,v 1.3 1992/03/10 08:58:26 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -60,7 +60,7 @@
   (:translate di::stack-ref)
   (:args (object :scs (sap-reg) :target base)
 	 (offset :scs (any-reg)))
-  (:results (result :scs (,result-sc)))
+  (:results (result :scs (descriptor-reg)))
   (:arg-types system-area-pointer positive-fixnum)
   (:result-types ,result-type)
   (:temporary (:scs (sap-reg) :from (:argument 0) :to :eval) base)
