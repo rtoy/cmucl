@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.20 1991/12/11 17:21:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.21 1991/12/14 18:14:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -548,7 +548,9 @@
 ;;; non-local exits.  This is effectively an annotation on the Continuation,
 ;;; although it is accessed by searching in the Environment-Nlx-Info.
 ;;;
-(defstruct (nlx-info (:print-function %print-nlx-info))
+(defstruct (nlx-info
+	    (:print-function %print-nlx-info)
+	    (:make-load-form-fun :ignore-it))
   ;;
   ;; The cleanup associated with this exit.  In a catch or unwind-protect, this
   ;; is the :Catch or :Unwind-Protect cleanup, and not the cleanup for the
@@ -589,7 +591,8 @@
 ;;; us to easily substitute one for the other without actually hacking the flow
 ;;; graph.
 
-(defstruct leaf
+(defstruct (leaf
+	    (:make-load-form-fun :ignore-it))
   ;;
   ;; Some name for this leaf.  The exact significance of the name depends on
   ;; what kind of leaf it is.  In a Lambda-Var or Global-Var, this is the
