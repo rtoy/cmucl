@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.46 2003/10/13 16:07:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.47 2003/10/18 14:05:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -230,6 +230,12 @@ about function addresses and register values.")
 	 (#b000000
 	  (when (= reg rs1)
 	    (handle-add-inst rs1 immed-val rd dstate immed-p)))
+	 (#b000010
+	  (when (= reg rs1)
+	    (handle-or-inst rs1 immed-val rd dstate immed-p)))
+	 (#b000101
+	  (when (= reg rs1)
+	    (handle-andn-inst rs1 immed-val rd dstate immed-p)))
 	 (#b111000
 	  (when (= reg rs1)
 	    (handle-jmpl-inst rs1 immed-val rd dstate)))
@@ -309,6 +315,34 @@ about function addresses and register values.")
 	 (when type
 	   (disassem:note (format nil "Header word ~A, size ~D?" type size)
 			  dstate)))))))
+
+(defun handle-or-inst (rs1 immed-val rd dstate immed-p)
+  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
+    (cond
+      ((= rs1 alloc-offset)
+       ;; OR %ALLOC, n.  This must be some allocation or
+       ;; pseudo-atomic stuff
+       (cond ((and immed-p
+		   (= immed-val pseudo-atomic-value)
+		   (= rd alloc-offset)
+		   (not *pseudo-atomic-set*))
+	      ;; "OR 4, %ALLOC" sets the flag
+	      (disassem:note "Set pseudo-atomic flag" dstate)
+	      (setf *pseudo-atomic-set* t)))))))
+
+(defun handle-andn-inst (rs1 immed-val rd dstate immed-p)
+  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
+    (cond
+      ((= rs1 alloc-offset)
+       ;; ANDN %ALLOC, n.  Resetting pseudo-atomic
+       (cond ((and immed-p
+		   (= immed-val pseudo-atomic-value)
+		   (= rd alloc-offset)
+		   *pseudo-atomic-set*)
+	      ;; "ANDN 4, %ALLOC" resets the flag
+	      ;;(format t "Got reset~%")
+	      (disassem:note "Reset pseudo-atomic flag" dstate)
+	      (setf *pseudo-atomic-set* nil)))))))
 
 (defun handle-jmpl-inst (rs1 immed-val rd dstate)
   (declare (ignore rd))
@@ -1591,7 +1625,9 @@ about function addresses and register values.")
 #+sparc-v9
 (define-instruction b (segment cond-or-target &optional target pred cc)
   (:declare (type (or label branch-condition) cond-or-target)
-	    (type (or label null) target))
+	    (type (or label null) target)
+	    (type (or null (member :icc :xcc)) cc)
+	    (type (or null (member :pt :pn)) pred))
   (:printer format-2-branch-pred ((op #b00) (op2 #b001))
 	    branch-pred-printer
 	    :print-name 'bp)
@@ -1617,7 +1653,9 @@ about function addresses and register values.")
 #+sparc-v9
 (define-instruction ba (segment cond-or-target &optional target pred cc)
   (:declare (type (or label branch-condition) cond-or-target)
-	    (type (or label null) target))
+	    (type (or label null) target)
+	    (type (or null (member :icc :xcc)) cc)
+	    (type (or null (member :pt :pn)) pred))
   (:printer format-2-branch ((op #b00) (op2 #b001) (a 1))
             nil
             :print-name 'bp)
@@ -1626,6 +1664,17 @@ about function addresses and register values.")
   (:delay 0)
   (:emitter
    (emit-relative-branch-integer segment 1 #b001 cond-or-target target (or cc :icc) (or pred :pt))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun trap-arg-printer (value stream dstate)
+    ;; We just print a note, if it's one of our recognized traps
+    (let ((*package* (find-package :vm)))
+      (case value
+	(#.pseudo-atomic-trap
+	 (disassem:note "Pseudo atomic interrupted trap?" dstate))
+	(#.allocation-trap
+	 (disassem:note "Allocation trap" dstate)))
+      (format stream "~A" value))))
 
 ;; The Sparc Compliance Definition 2.4.1 says only trap numbers 16-31
 ;; are allowed for user code.  All other trap numbers have other
@@ -1646,7 +1695,8 @@ about function addresses and register values.")
   (:printer format-4-trap-immed ((op #b10)
 				 (rd nil :type 'branch-condition)
 				 (op3 #b111010)
-				 (i 1))
+				 (i 1)
+				 (immed nil :printer #'trap-arg-printer))
 	    trap-immed-printer)
   (:printer format-4-trap ((op #b10)
 			   (rd nil :type 'branch-condition)
