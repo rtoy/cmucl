@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.12 1990/09/21 06:01:57 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.13 1990/09/26 15:11:32 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1023,7 +1023,7 @@ scav_symbol(where, object)
 lispobj *where, object;
 {
     struct symbol *symbol;
-#define RAW_ADDR_OFFSET (sizeof(struct function_header)-1-type_FunctionHeader)
+#define RAW_ADDR_OFFSET (6*sizeof(lispobj) - type_FunctionPointer)
 
     symbol = (struct symbol *)where;
     
