@@ -14,6 +14,8 @@
 ;;;
 (in-package 'c)
 
+(export '(*compile-time-define-macros* *compiling-for-interpreter*))
+
 (in-package 'ext)
 (export '(ignorable truly-the maybe-inline))
 
@@ -145,6 +147,12 @@
 ;;; stuff.
 ;;;
 (defvar *converting-for-interpreter* nil)
+
+;;; *Compile-Time-Define-Macros* is true when we want DEFMACRO definitions to
+;;; be installed in the compilation environment as interpreted functions.  We
+;;; set this to false when compiling some parts of the system.
+;;;
+(defvar *compile-time-define-macros* t)
 
 
 ;;; IR1-Error-Bailout  --  Internal
@@ -2847,9 +2855,11 @@
 
     (setf (info function kind name) :macro)
     (setf (info function where-from name) :defined)
-    (setf (info function macro-function name)
-	  #+new-compiler (coerce def 'function)
-	  #-new-compiler def)
+
+    (when *compile-time-define-macros*
+      (setf (info function macro-function name)
+	    #+new-compiler (coerce def 'function)
+	    #-new-compiler def))
 
     (let ((fun (ir1-convert-lambda def)))
       (setf (leaf-name fun)
