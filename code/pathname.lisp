@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.1 1991/12/16 10:29:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.2 1991/12/18 11:40:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -351,8 +351,8 @@
 			(defaults *default-pathname-defaults*)
 			(default-version :newest))
   (with-pathname (defaults defaults)
-    (with-pathname (pathname (let ((*default-pathname-defaults* defaults))
-			       pathname))
+    (let ((pathname (let ((*default-pathname-defaults* defaults))
+		      (pathname pathname))))
       (let* ((default-host (%pathname-host defaults))
 	     (pathname-host (%pathname-host pathname))
 	     (diddle-case
