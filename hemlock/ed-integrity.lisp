@@ -1,5 +1,16 @@
 ;;; -*- Package: hemlock; Log: hemlock.log; Mode: Lisp -*-
-
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ed-integrity.lisp,v 1.2 1991/02/14 00:25:30 ram Exp $")
+;;;
+;;; **********************************************************************
+;;;
 ;;; This stuff can be used for testing tty redisplay.  There are four
 ;;; commands that, given "Setup Tty Buffer", that test
 ;;; HI::COMPUTE-TTY-CHANGES: "Two Deletes", "Two Inserts", "One Delete One
