@@ -2,158 +2,172 @@
 ;;;
 (in-package "USER")
 
-(c::%proclaim '(optimize (speed 2) (space 2) (c::brevity 2)))
-(setq *print-pretty* nil)
+#+bootstrap
+(copy-packages '("ASSEM" "MIPS" "C"))
+#+bootstrap
+(export '(assem::nop) "ASSEM")
 
-;(with-compiler-log-file ("c:compile-compiler.log")
-#+nil
-(unless *new-compile*
-  (comf "code:fdefinition")
-  (load "code:extensions.lisp")
-  (comf "c:globaldb" :load t)
-  (unless (boundp 'ext::*info-environment*)
-    (c::globaldb-init))
+;;; Import so that these types which appear in the globldb are the same...
+#+bootstrap
+(import '(old-c::approximate-function-type
+	  old-c::function-info old-c::defstruct-description
+	  old-c::defstruct-slot-description)
+	"C")
 
-  (comf "c:patch")
+(with-compiler-log-file ("target:compile-compiler.log")
 
-  (comf "code:macros" :load t)
-  (comf "code:extensions" :bootstrap-macros :both)
-  (load "code:extensions.fasl")
-  (comf "code:struct" :load t)
-  (comf "c:macros" :load t :bootstrap-macros :both))
+(declaim (optimize (speed 2) (space 2) (inhibit-warnings 2)))
 
-;(when *new-compile*
-  (comf "code:globals" :always-once t) ; For global variables.
-  (comf "code:struct" :always-once t) ; For structures.
-  (comf "c:globals" :always-once t)
-  (comf "c:proclaim" :always-once t) ; For COOKIE structure.
-  (let ((c:*compile-time-define-macros* nil))
-    (comf "c:macros" :load t)))
+(comf "target:compiler/macros" :load t)
+(comf "target:compiler/generic/vm-macs" :load t :proceed t)
+(comf "target:compiler/backend" :load t :proceed t)
 
-(comf "c:type" :always-once *new-compile*)
-(comf "c:rt/vm-type")
-(comf "c:type-init")
-(comf "c:sset" :always-once *new-compile*)
-(comf "c:node" :always-once *new-compile*)
-(comf "c:ctype")
-#-new-compiler
-(comf "c:knownfun" :always-once *new-compile*)
-(comf "c:vop" :always-once *new-compile*)
-(comf "c:alloc")
-(comf "c:knownfun")
-(comf "c:fndb")
-(comf "c:main")
-(comf "c:vmdef" :load t :bootstrap-macros :both)
+(defvar c::*target-backend* (c::make-backend))
 
-#-new-compiler
-(unless *new-compile*
-  (comf "c:proclaim" :load t))
+(when (string= (old-c:backend-name old-c:*backend*) "PMAX")
+  (comf "target:compiler/mips/parms" :proceed t)
+  (comf "target:compiler/generic/objdef" :proceed t))
+(when (string= (old-c:backend-name old-c:*backend*) "SPARC")
+  (comf "target:compiler/sparc/parms" :proceed t)
+  (comf "target:compiler/generic/objdef" :proceed t))
 
-(comf "c:ir1tran")
-(comf "c:ir1util" :bootstrap-macros :both)
-(comf "c:ir1opt")
-(comf "c:ir1final")
-(comf "c:srctran")
-(comf "c:seqtran")
-(comf "c:typetran")
-(comf "c:locall")
-(comf "c:dfo")
-(comf "c:checkgen")
-(comf "c:constraint")
-(comf "c:envanal")
-(comf "c:rt/parms")
+(comf "target:code/struct") ; For defstruct description structures.
+(comf "target:compiler/proclaim") ; For COOKIE structure.
+(comf "target:compiler/globals")
 
-(comf "c:tn" :bootstrap-macros :both)
-(comf "c:bit-util")
-(comf "c:life")
+(comf "target:compiler/type")
+(comf "target:compiler/generic/vm-type")
+(comf "target:compiler/type-init")
+(comf "target:compiler/sset")
+(comf "target:compiler/node")
+(comf "target:compiler/ctype")
+(comf "target:compiler/vop" :proceed t)
+(comf "target:compiler/vmdef" :load t :proceed t)
 
-(comf "c:assembler"
-      :load t
-      :bootstrap-macros :both
-      :always-once *new-compile*)
+(comf "target:compiler/assembler" :proceed t) 
+(comf "target:compiler/alloc")
+(comf "target:compiler/knownfun")
+(comf "target:compiler/fndb")
+(comf "target:compiler/generic/vm-fndb")
+(comf "target:compiler/main")
 
-(comf "code:debug-info"
-      :load t
-      :bootstrap-macros :both
-      :always-once *new-compile*)
+(comf "target:compiler/ir1tran")
+(comf "target:compiler/ir1util")
+(comf "target:compiler/ir1opt")
+(comf "target:compiler/ir1final")
+(comf "target:compiler/srctran")
+(comf "target:compiler/array-tran")
+(comf "target:compiler/seqtran")
+(comf "target:compiler/typetran")
+(comf "target:compiler/generic/vm-typetran")
+(comf "target:compiler/float-tran")
+(comf "target:compiler/locall")
+(comf "target:compiler/dfo")
+(comf "target:compiler/checkgen")
+(comf "target:compiler/constraint")
+(comf "target:compiler/envanal")
 
-(comf "c:rt/assem-insts" :load t)
+(comf "target:compiler/tn")
+(comf "target:compiler/bit-util")
+(comf "target:compiler/life")
 
+(comf "target:code/debug-info")
 
-;(when *new-compile*
-  (comf "c:eval-comp")
-  (comf "c:eval" :bootstrap-macros :both))
+(comf "target:compiler/debug-dump")
+(comf "target:compiler/generic/utils")
+(comf "target:assembly/assemfile" :load t)
 
+(when (string= (old-c:backend-name old-c:*backend*) "PMAX")
+  (comf "target:compiler/mips/mips-insts")
+  (comf "target:compiler/mips/mips-macs" :load t)
+  (comf "target:compiler/mips/vm")
+  (comf "target:compiler/generic/primtype")
+  (comf "target:assembly/mips/support" :load t)
+  (comf "target:compiler/mips/move")
+  (comf "target:compiler/mips/sap")
+  (comf "target:compiler/mips/system")
+  (comf "target:compiler/mips/char")
+  (comf "target:compiler/mips/float")
+  (comf "target:compiler/mips/memory")
+  (comf "target:compiler/mips/static-fn")
+  (comf "target:compiler/mips/arith")
+  (comf "target:compiler/mips/subprim")
+  (comf "target:compiler/mips/debug")
+  (comf "target:compiler/mips/c-call")
+  (comf "target:compiler/mips/cell")
+  (comf "target:compiler/mips/values")
+  (comf "target:compiler/mips/alloc")
+  (comf "target:compiler/mips/call")
+  (comf "target:compiler/mips/nlx")
+  (comf "target:compiler/mips/print")
+  (comf "target:compiler/mips/array")
+  (comf "target:compiler/mips/pred")
+  (comf "target:compiler/mips/type-vops")
 
-(comf "c:aliencomp")
-(comf "c:debug-dump")
+  (comf "target:assembly/mips/assem-rtns")
+  (comf "target:assembly/mips/bit-bash")
+  (comf "target:assembly/mips/array")
+  (comf "target:assembly/mips/arith")
+  (comf "target:assembly/mips/alloc"))
 
-#+nil
-(unless *new-compile*
-  (comf "code:constants" :load t :proceed t)
-  (comf "assem:rompconst" :load t :proceed t)
-  (comf "assem:assembler")
-  (comf "c:fop"))
+(when (string= (old-c:backend-name old-c:*backend*) "SPARC")
+  (comf "target:compiler/sparc/insts")
+  (comf "target:compiler/sparc/macros" :load t)
+  (comf "target:compiler/sparc/vm")
+  (comf "target:compiler/generic/primtype")
+  (comf "target:compiler/sparc/move")
+  (comf "target:compiler/sparc/sap")
+  (comf "target:compiler/sparc/system")
+  (comf "target:compiler/sparc/char")
+  (comf "target:compiler/sparc/float")
+  (comf "target:compiler/sparc/memory")
+  (comf "target:compiler/sparc/static-fn")
+  (comf "target:compiler/sparc/arith")
+  (comf "target:compiler/sparc/subprim")
+  (comf "target:compiler/sparc/debug")
+  (comf "target:compiler/sparc/c-call")
+  (comf "target:compiler/sparc/cell")
+  (comf "target:compiler/sparc/values")
+  (comf "target:compiler/sparc/alloc")
+  (comf "target:compiler/sparc/call")
+  (comf "target:compiler/sparc/nlx")
+  (comf "target:compiler/sparc/print")
+  (comf "target:compiler/sparc/array")
+  (comf "target:compiler/sparc/pred")
+  (comf "target:compiler/sparc/type-vops")
 
-(comf "c:rt/assem-macs" :load t :bootstrap-macros :both)
+  (comf "target:assembly/sparc/support")
+  (comf "target:assembly/sparc/assem-rtns")
+  (comf "target:assembly/sparc/bit-bash")
+  (comf "target:assembly/sparc/array")
+  (comf "target:assembly/sparc/arith")
+  (comf "target:assembly/sparc/alloc"))
 
-(comf "c:rt/dump")
+(comf "target:compiler/pseudo-vops")
 
-;(when *new-compile*
-  (comf "c:rt/core"))
+(comf "target:compiler/aliencomp")
+(comf "target:compiler/gtn")
+(comf "target:compiler/ltn")
+(comf "target:compiler/stack")
+(comf "target:compiler/control")
+(comf "target:compiler/entry")
+(comf "target:compiler/ir2tran")
+(comf "target:compiler/copyprop")
+(comf "target:compiler/assem-opt")
+(comf "target:compiler/represent")
+(comf "target:compiler/generic/vm-tran")
+(comf "target:compiler/pack")
+(comf "target:compiler/codegen")
+(comf "target:compiler/debug")
+(comf "target:compiler/statcount")
+(comf "target:compiler/dyncount")
 
-(comf "c:rt/vm" :always-once *new-compile*)
-(comf "c:rt/move")
-(comf "c:rt/char")
-(comf "c:rt/miscop")
-(comf "c:rt/subprim")
-(comf "c:rt/values")
-(comf "c:rt/memory")
-(comf "c:rt/cell")
-(comf "c:rt/call")
-(comf "c:rt/nlx")
-(comf "c:rt/print")
-(comf "c:rt/array")
-(comf "c:rt/pred")
-(comf "c:rt/type-vops")
-(comf "c:rt/arith")
-(comf "c:rt/system")
-(comf "c:pseudo-vops")
-(comf "c:gtn")
-(comf "c:ltn")
-(comf "c:stack")
-(comf "c:control")
-(comf "c:entry")
-(comf "c:ir2tran")
-(comf "c:represent")
-(comf "c:rt/vm-tran")
-(comf "c:pack")
-(comf "c:codegen")
-(comf "c:debug")
+(comf "target:compiler/dump")
 
-#-new-compiler
-(unless *new-compile* 
-  (comf "c:rt/genesis"))
+(comf "target:compiler/generic/core")
+(comf "target:compiler/generic/genesis")
 
-#+new-compiler
-(comf "c:rt/genesis")
-
-#+nil
-(unless *new-compile*
-  (comf "code:defstruct")
-  (comf "code:error")
-  (comf "code:defrecord")
-  (comf "code:defmacro")
-  (comf "code:alieneval")
-  (comf "code:c-call")
-  (comf "code:salterror")
-  (comf "code:sysmacs")
-  (comf "code:machdef")
-  (comf "code:mmlispdefs")
-  (comf "icode:machdefs")
-  (comf "icode:netnamedefs")
-  (comf "c:globaldb" :output-file "c:boot-globaldb.fasl"
-	:bootstrap-macros :both))
-
+(comf "target:compiler/eval-comp")
+(comf "target:compiler/eval")
 
 ); with-compiler-error-log
