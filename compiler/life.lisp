@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.19 1991/02/20 14:58:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/life.lisp,v 1.20 1991/08/29 18:38:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -309,10 +309,12 @@
 ;;;     We don't have to worry about getting the correct conflict kind, since
 ;;; Init-Global-Conflict-Kind will fix things up.
 ;;;
-;;;     We also set the Local and Local-Number slots in each TN.
+;;;     We also set the Local and Local-Number slots in each TN.  It is
+;;; possible that there are no operands in any given call to this function, but
+;;; there had better be either some more args or more results.
 ;;;
 (defun coalesce-more-ltn-numbers (block ops fixed)
-  (declare (type ir2-block block) (type tn-ref ops) (list fixed))
+  (declare (type ir2-block block) (type (or tn-ref null) ops) (list fixed))
   (let ((num (ir2-block-local-tn-count block)))
     (assert (< num local-tn-limit))
     (incf (ir2-block-local-tn-count block))
