@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.12 2001/09/23 19:02:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.13 2002/08/13 21:15:24 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -259,9 +259,10 @@
 			   (declare (ignore nms cm-args))
 			   (apply
 			    #'(lambda (generic-function type options)
-				(declare (ignore generic-function options))
+				(declare (ignore generic-function))
 				(make-instance 'long-method-combination
 					       :type type
+					       :options options
 					       :documentation doc))
 			    args))
 	 :definition-source `((define-method-combination ,type)
