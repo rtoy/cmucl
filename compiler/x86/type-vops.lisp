@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.7 1997/12/20 19:29:20 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.8 1998/01/06 16:48:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -122,37 +122,45 @@
 ;;; value is one of the four low registers (eax, ebx, ecx, edx) or the
 ;;; control-stack.
 ;;;
-(defun maybe-byte-test (value immed)
+(defun generate-fixnum-test (value)
   (let ((offset (tn-offset value)))
-    (cond ((> immed #xff)
-	   (inst test value 3))
-	  ((and (sc-is value any-reg descriptor-reg)
+    (cond ((and (sc-is value any-reg descriptor-reg)
 		(or (= offset eax-offset) (= offset ebx-offset)
 		    (= offset ecx-offset) (= offset edx-offset)))
 	   (inst test (make-random-tn :kind :normal
 				      :sc (sc-or-lose 'byte-reg)
 				      :offset offset)
-		 immed))
+		 3))
 	  ((sc-is value control-stack)
 	   (inst test (make-ea :byte :base ebp-tn
 			       :disp (- (* (1+ offset) vm:word-bytes)))
-		 immed))
+		 3))
 	  (t
 	   (inst test value 3)))))
 
 (defun %test-fixnum (value target not-p)
-  (maybe-byte-test value 3)
+  (generate-fixnum-test value)
   (inst jmp (if not-p :nz :z) target))
 
 (defun %test-fixnum-and-headers (value target not-p headers)
   (let ((drop-through (gen-label)))
-    (maybe-byte-test value 3)
+    (generate-fixnum-test value)
     (inst jmp :z (if not-p drop-through target))
     (%test-headers value target not-p nil headers drop-through)))
 
 (defun %test-immediate (value target not-p immediate)
-  (move eax-tn value)
-  (inst cmp al-tn immediate)
+  ;; Code a single instruction byte test if possible.
+  (let ((offset (tn-offset value)))
+    (cond ((and (sc-is value any-reg descriptor-reg)
+		(or (= offset eax-offset) (= offset ebx-offset)
+		    (= offset ecx-offset) (= offset edx-offset)))
+	   (inst cmp (make-random-tn :kind :normal
+				     :sc (sc-or-lose 'byte-reg)
+				     :offset offset)
+		 immediate))
+	  (t
+	   (move eax-tn value)
+	   (inst cmp al-tn immediate))))
   (inst jmp (if not-p :ne :e) target))
 
 (defun %test-lowtag (value target not-p lowtag &optional al-loaded)
@@ -576,7 +584,7 @@
 	(if not-p
 	    (values not-target target)
 	    (values target not-target))
-      (maybe-byte-test value 3)
+      (generate-fixnum-test value)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -592,7 +600,7 @@
     (let ((nope (generate-error-code vop
 				     object-not-signed-byte-32-error
 				     value)))
-      (maybe-byte-test value 3)
+      (generate-fixnum-test value)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -620,7 +628,7 @@
 	      (values not-target target)
 	      (values target not-target))
 	;; Is it a fixnum?
-	(maybe-byte-test value 3)
+	(generate-fixnum-test value)
 	(move eax-tn value)
 	(inst jmp :e fixnum)
 
@@ -663,7 +671,7 @@
 	  (single-word (gen-label)))
 
       ;; Is it a fixnum?
-      (maybe-byte-test value 3)
+      (generate-fixnum-test value)
       (move eax-tn value)
       (inst jmp :e fixnum)
 
