@@ -47,7 +47,7 @@
 				   ((:environment env-arg-name))
 				   ((:default-default *default-default*))
 				   ((:key-finder *key-finder*))
-				   error-fun)
+				   (error-fun 'error))
   "Returns as multiple-values a parsed body, any local-declarations that
    should be made where this body is inserted, and a doc-string if there is
    one."
@@ -104,7 +104,7 @@
 		      (setf rest-of-args (cdr rest-of-args))
 		      (push-let-binding (car rest-of-args) arg-list-name nil))
 		     (t
-		      (defmacro-error name "&whole"))))
+		      (defmacro-error "&WHOLE" error-kind name))))
 	      ((eq var '&environment)
 	       (cond (env-illegal
 		      (error "&Environment not valid with ~S." error-kind))
@@ -116,7 +116,7 @@
 		      (push-let-binding (car rest-of-args) env-arg-name nil)
 		      (setf env-arg-used t))
 		     (t
-		      (defmacro-error name "&environment"))))
+		      (defmacro-error "&ENVIRONMENT" error-kind name))))
 	      ((or (eq var '&rest) (eq var '&body))
 	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
@@ -154,7 +154,7 @@
 			  (push-let-binding doc-string-name
 					    `(caddr ,parse-body-values) nil))))
 		     (t
-		      (defmacro-error name (symbol-name var)))))
+		      (defmacro-error (symbol-name var) error-kind name))))
 	      ((eq var '&optional)
 	       (setf now-processing :optionals))
 	      ((eq var '&key)
@@ -179,7 +179,7 @@
 		  (setf path `(cdr ,path)))
 		 (:keywords
 		  (let ((key (make-keyword var)))
-		    (push-let-binding var `(keyword-argument ,key ,rest-name)
+		    (push-let-binding var `(lookup-keyword ,key ,rest-name)
 				      nil)
 		    (push key keys)))
 		 (:auxs
@@ -225,22 +225,36 @@
 					   name error-kind error-fun)
 		    (push keyword keys)))
 		 (:auxs (push-let-binding (car var) (cadr var) nil)))))))
-    (push `(verify-arg-counts ,(if top-level
-				   `(cdr ,arg-list-name)
-				   arg-list-name)
-			      ,minimum
-			      ,(or (not (null restp)) maximum)
-			      ',lambda-list
-			      ',name
-			      ',error-kind
-			      ,@(if error-fun `(#',error-fun)))
+    (push `(unless (<= ,minimum
+		       (length ,(if top-level
+				    `(cdr ,arg-list-name)
+				    arg-list-name))
+		       ,@(unless restp
+			   (list maximum)))
+	     (,error-fun 'defmacro-ll-arg-count-error
+			 :kind ',error-kind
+			 ,@(when name `(:name ',name))
+			 :argument ,(if top-level
+					`(cdr ,arg-list-name)
+					arg-list-name)
+			 :lambda-list ',lambda-list
+			 :minimum ,minimum
+			 ,@(unless restp `(:maximum ,maximum))))
 	  *arg-tests*)
     (if keys
-	(push `(verify-valid-keys ,rest-name
-				  ,(if allow-other-keys-p t `',keys)
-				  ',name ',error-kind
-				  ,@(if error-fun `(#',error-fun)))
-	      *arg-tests*))
+	(let ((problem (gensym "KEY-PROBLEM-"))
+	      (info (gensym "INFO-")))
+	  (push `(multiple-value-bind
+		     (,problem ,info)
+		     (verify-keywords ,rest-name ',keys ',allow-other-keys-p)
+		   (when ,problem
+		     (,error-fun
+		      'defmacro-ll-broken-key-list-error
+		      :kind ',error-kind
+		      ,@(when name `(:name ',name))
+		      :problem ,problem
+		      :info ,info)))
+		*arg-tests*)))
     (values env-arg-used minimum (if (null restp) maximum nil))))
 
 (defun push-sub-list-binding (variable path object name error-kind)
@@ -275,100 +289,113 @@
 	(t
 	 (error "Illegal optional variable name: ~S" value-var))))
 
-(defun defmacro-error (name kind)
-  (error "Illegal or ill-formed ~A argument in ~S." kind name))
-
-
-
-;;;; Destructuring argument testing routines.
-
-;;; DESTRUCTURING-ARG-COUNT-TEST tests an argument list against a maximum
-;;; and minimum number of arguments.  NIL for maximum means there is no
-;;; limit.  Keywords are checked.  T for keylist means allow-other-keys.
-;;;
-(defun verify-arg-counts
-       (arg-list minimum maximum lambda-list name error-kind
-		 &optional (error-fun #'destructuring-arg-count-error))
-  (unless (listp arg-list)
-    (funcall error-fun nil
-	     "~S should have been a list of arguments for lambda-list ~S."
-	     name error-kind arg-list lambda-list))
-  (let ((length (length arg-list)))
-    (cond ((< length minimum)
-	   (funcall error-fun nil
-		    "Too few arguments in ~S to satisfy lambda-list ~S.~%  ~
-		    Expected at least ~D."
-		    name error-kind arg-list lambda-list minimum))
-	  ((and (not (eq maximum t))
-		(> length maximum))
-	   (funcall error-fun nil
-		    "Too many arguments in ~S to satisfy lambda-list ~S.~%  ~
-		    Expected no more than ~D."
-		    name error-kind arg-list lambda-list maximum)))))
-
-(defun verify-valid-keys
-       (key-bindings valid-keys name kind
-		     &optional (error-fun #'destructuring-arg-count-error))
-  (when (keyword-argument :allow-other-keys key-bindings)
-    (setf valid-keys t))
-  (do ((test-key key-bindings (cddr test-key)))
-      ((endp test-key))
-    (let ((key (car test-key)))
-      (unless (keywordp key)
-	(funcall error-fun name kind "Ignore it." "Bogus keyword: ~S" key))
-      (unless (or (eq valid-keys t)
-		  (member key valid-keys))
-	(funcall error-fun name kind "Ignore it." "Unknown keyword: ~S" key)))))
-
-
-;;; DESTRUCTURING-ARG-COUNT-ERROR --- internal.
-;;;
-;;; Default error function for destructuring-arg-count-test.
-;;; 
-(defun destructuring-arg-count-error (name kind continue string &rest args)
-  (if continue
-      (cerror "~4*~?"
-	      "While expanding ~A ~S:~%  ~?"
-	      kind name string args
-	      continue args)
-      (error "While expanding ~A ~S:~%  ~?"
-	     kind name string args)))
-
-
-
-
-;;;; Helpful Keyword Routines.
-
 (defun make-keyword (symbol)
   "Takes a non-keyword symbol, symbol, and returns the corresponding keyword."
   (intern (symbol-name symbol) *keyword-package*))
 
+(defun defmacro-error (problem kind name)
+  (error "Illegal or ill-formed ~A argument in ~A~@[ ~S~]."
+	 problem kind name))
+
+
+
+;;;; Routines used at runtime by the resultant body.
+
+;;; VERIFY-KEYWORDS -- internal
+;;;
+;;; Determine if key-list is a valid list of keyword/value pairs.  Do not
+;;; signal the error directly, 'cause we don't know how it should be signaled.
+;;; 
+(defun verify-keywords (key-list valid-keys allow-other-keys)
+  (do ((already-processed nil)
+       (unknown-keyword nil)
+       (remaining key-list (cddr key-list)))
+      ((null remaining)
+       (if (and unknown-keyword
+		(not allow-other-keys)
+		(not (lookup-keyword :allow-other-keys key-list)))
+	   (values :unknown-keyword (list unknown-keyword valid-keys))
+	   (values nil nil)))
+    (cond ((not (and (consp remaining) (listp (cdr remaining))))
+	   (return (values :dotted-list key-list)))
+	  ((null (cdr remaining))
+	   (return (values :odd-length key-list)))
+	  ((member (car remaining) already-processed)
+	   (return (values :duplicate (car remaining))))
+	  ((or (eq (car remaining) :allow-other-keys)
+	       (member (car remaining) valid-keys))
+	   (push (car remaining) already-processed))
+	  (t
+	   (setf unknown-keyword (car remaining))))))
+
+(defun lookup-keyword (keyword key-list)
+  (do ((remaining key-list (cddr key-list)))
+      ((endp remaining))
+    (when (eq keyword (car key-list))
+      (return (cadr key-list)))))
+
 (defun keyword-supplied-p (keyword key-list)
-  "Return T iff the given keyword is a key in key-list. Signal an error if it
-  appears twice."
-  (let ((foundp nil))
-    (do ((keys key-list (cddr keys)))
-	((endp keys) foundp)
-      (let ((key (car keys)))
-	(cond ((not (eq key keyword)))
-	      (foundp
-	       (cerror "Use first occurrence."
-		       "Keyword ~S appears in keyword-list ~S more than once."
-		       key key-list)
-	       (return t))
-	      ((consp (cdr keys))
-	       (setf foundp t))
-	      (t
-	       (cerror
-		"Stick a NIL on the end and go on."
-		"Unpaired item in keyword portion of macro call.")
-	       (setf (cdr keys) (list nil))))))))
-
-(defun keyword-argument (keyword key-list)
-  "If keyword is present in the keylist, return it's associated value."
-  (do ((keys key-list (cddr keys)))
-      ((endp keys))
-    (when (eq (car keys) keyword)
-      (return (cadr keys)))))
+  (do ((remaining key-list (cddr key-list)))
+      ((endp remaining))
+    (when (eq keyword (car key-list))
+      (return (cadr key-list)))))
 
 
+
+;;;; Conditions signaled at runtime by the resultant body.
+
+(define-condition defmacro-lambda-list-bind-error (error) (kind name))
+
+(defun print-defmacro-ll-bind-error-intro (condition stream)
+  (if (null (defmacro-lambda-list-bind-error-name condition))
+      (format stream
+	      "Error while parsing arguments to ~A in ~S:~%"
+	      (defmacro-lambda-list-bind-error-kind condition)
+	      (defmacro-lambda-list-bind-error-function-name condition))
+      (format stream
+	      "Error while parsing arguments to ~A ~S:~%"
+	      (defmacro-lambda-list-bind-error-kind condition)
+	      (defmacro-lambda-list-bind-error-name condition))))
+
+(define-condition defmacro-ll-arg-count-error (defmacro-lambda-list-bind-error)
+  (argument lambda-list minimum maximum)
+  (:report
+   (lambda (condition stream)
+     (print-defmacro-ll-bind-error-intro condition stream)
+     (format stream
+	     "Invalid number of elements in:~%  ~:S~%~
+	     to satisfy lambda-list:~%  ~:S~%"
+	     (defmacro-ll-arg-count-error-argument condition)
+	     (defmacro-ll-arg-count-error-lambda-list condition))
+     (cond ((null (defmacro-ll-arg-count-error-maximum condition))
+	    (format stream "Expected at least ~D"
+		    (defmacro-ll-arg-count-error-minimum condition)))
+	   ((= (defmacro-ll-arg-count-error-minimum condition)
+	       (defmacro-ll-arg-count-error-maximum condition))
+	    (format stream "Expected exactly ~D"
+		    (defmacro-ll-arg-count-error-minimum condition)))
+	   (t
+	    (format stream "Expected between ~D and ~D"
+		    (defmacro-ll-arg-count-error-minimum condition)
+		    (defmacro-ll-arg-count-error-maximum condition))))
+     (format stream ", but got ~D."
+	     (length (defmacro-ll-arg-count-error-argument condition))))))
+
+
+(define-condition defmacro-ll-broken-key-list-error
+		  (defmacro-lambda-list-bind-error)
+  (problem info)
+  (:report (lambda (condition stream)
+	     (print-defmacro-ll-bind-error-intro condition stream)
+	     (format stream
+		     (ecase
+			 (defmacro-ll-broken-key-list-error-problem condition)
+		       (:dotted-list
+			"Keyword/value list is dotted: ~S")
+		       (:odd-length
+			"Odd number of elements in keyword/value list: ~S")
+		       (:duplicate
+			"Duplicate keyword: ~S")
+		       (:unknown-keyword
+			"~{Unknown keyword: ~S; expected one of ~{~S~^, ~}~}"))
+		     (defmacro-ll-broken-key-list-error-info condition)))))
