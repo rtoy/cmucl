@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.7 1993/02/26 08:49:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.8 1993/02/26 17:32:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -132,8 +132,7 @@
 (defstruct (hemlock-region-stream
 	    (:include stream
 		      (:in #'region-in)
-		      (:misc #'region-misc)
-		      (:in-buffer (make-string lisp::in-buffer-length)))
+		      (:misc #'region-misc))
 	    (:print-function %print-region-stream)
 	    (:constructor internal-make-hemlock-region-stream (region mark)))
   ;;
@@ -154,8 +153,7 @@
    region (copy-mark (region-start region) :right-inserting)))
 
 (defun modify-hemlock-region-stream (stream region)
-  (setf (hemlock-region-stream-region stream) region
-	(lisp::stream-in-index stream) lisp::in-buffer-length)
+  (setf (hemlock-region-stream-region stream) region)
   (let* ((mark (hemlock-region-stream-mark stream))
 	 (start (region-start region))
 	 (start-line (mark-line start)))
@@ -177,7 +175,6 @@
   (case operation
     (:listen (mark< (hemlock-region-stream-mark stream)
 		    (region-end (hemlock-region-stream-region stream))))
-    (:read-line (region-readline stream arg1 arg2))
     (:clear-input (move-mark
                    (hemlock-region-stream-mark stream)
                    (region-end (hemlock-region-stream-region stream))))
