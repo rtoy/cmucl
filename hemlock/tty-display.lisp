@@ -784,7 +784,8 @@
 				  hunk dl-len dl-pos)))))
 	       (t
 		(if (and (tty-device-insert-string device)
-			 (worth-using-insert-mode device (- dindex sindex)))
+			 (worth-using-insert-mode device (- dindex sindex)
+						  (- dl-len sindex)))
 		    (funcall (tty-device-insert-string device)
 			     hunk sindex dl-pos dl-chars sindex dindex)
 		    (funcall (tty-device-display-string device)
@@ -1043,7 +1044,7 @@
     (setf (tty-device-cursor-x device)
 	  (the fixnum (+ x (the fixnum (- end start)))))))
 
-(defun worth-using-insert-mode (device insert-char-num)
+(defun worth-using-insert-mode (device insert-char-num chars-saved)
   (let* ((init-string (tty-device-insert-init-string device))
 	 (char-init-string (tty-device-insert-char-init-string device))
 	 (char-end-string (tty-device-insert-char-end-string device))
@@ -1058,7 +1059,7 @@
 							char-end-string))
 					   0)))))
     (when end-string (incf cost (length (the simple-string end-string))))
-    (< cost insert-char-num)))
+    (< cost chars-saved)))
 
 (defun delete-char (hunk x y &optional (n 1))
   (declare (fixnum x y n))
