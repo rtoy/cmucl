@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.2 2004/06/10 01:45:07 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -129,10 +129,10 @@
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
-  (+ (byte-size double-float-significand-byte) word-bits 1))
+  (+ (byte-size double-float-significand-byte) 32 1))
 
 (defconstant long-float-digits
-  (+ (byte-size long-float-significand-byte) word-bits 1))
+  (+ (byte-size long-float-significand-byte) 32 1))
 
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
@@ -170,10 +170,10 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x10000000)
-(defparameter target-static-space-start    #x28000000)
-(defparameter target-dynamic-space-start   #x48000000)
-(defparameter target-foreign-linkage-space-start #xB0000000)
+(defconstant target-read-only-space-start #x10000000)
+(defconstant target-static-space-start    #x28000000)
+(defconstant target-dynamic-space-start   #x48000000)
+(defconstant target-foreign-linkage-space-start #xB0000000)
 (defconstant target-foreign-linkage-entry-size 16) ;In bytes.  Duh.
 
 ;;; Given that NIL is the first thing allocated in static space, we
@@ -186,6 +186,8 @@
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
+	  dynamic-space-overflow-error-trap
+	  dynamic-space-overflow-warning-trap
 	  single-step-breakpoint-trap
           object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
@@ -198,7 +200,9 @@
   cerror
   breakpoint
   function-end-breakpoint
-  single-step-breakpoint)
+  single-step-breakpoint
+  dynamic-space-overflow-warning
+  dynamic-space-overflow-error)
 
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
@@ -246,6 +250,8 @@
       kernel::internal-error
       #+stack-checking kernel::yellow-zone-hit
       #+stack-checking kernel::red-zone-hit
+      #+heap-overflow-check kernel::dynamic-space-overflow-warning-hit
+      #+heap-overflow-check kernel::dynamic-space-overflow-error-hit
       di::handle-breakpoint
       lisp::fdefinition-object
 
