@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.35 1991/11/26 23:00:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.36 1992/01/18 02:02:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.35 1991/11/26 23:00:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.36 1992/01/18 02:02:57 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -28,7 +28,17 @@
 (use-package "ASSEM")
 (use-package "EXT")
 
-(disassem:set-disassem-params :instruction-alignment 32) 
+(disassem:set-disassem-params
+ :instruction-alignment 32
+ :storage-class-sets '((register any-reg descriptor-reg base-char-reg
+				 sap-reg signed-reg unsigned-reg
+				 non-descriptor-reg interior-reg)
+		       (float-reg single-reg double-reg)
+		       (control-stack control-stack)
+		       (number-stack signed-stack unsigned-stack
+				     base-char-stack sap-stack
+				     single-stack double-stack))
+ )
 
 
 ;;;; Resources.
@@ -54,29 +64,50 @@
     (null null-offset)
     (t (tn-offset tn))))
 
-(defconstant reg-name-vec
+(defconstant reg-symbols
   (map 'vector
        #'(lambda (name)
 	   (cond ((null name) nil)
-		 (t (make-symbol name))))
+		 (t (make-symbol (concatenate 'string "$" name)))))
        *register-names*))
 
 (define-argument-type register
   :type '(satisfies register-p)
   :function tn-register-number
   :disassem-printer #'(lambda (value stream dstate)
-			(declare (ignore dstate))
-			(format stream "$~A" (aref reg-name-vec value))))
+			(declare (stream stream) (fixnum value))
+			(let ((regname (aref reg-symbols value)))
+			  (princ regname stream)
+			  (disassem:maybe-note-associated-storage-ref
+			   value
+			   'register
+			   regname
+			   dstate)))
+  )
 
 (defun fp-reg-p (object)
   (and (tn-p object)
        (eq (sb-name (sc-sb (tn-sc object)))
 	   'float-registers)))
 
+(defconstant float-reg-symbols
+  (coerce 
+   (loop for n from 0 to 31 collect (make-symbol (format nil "$F~d" n)))
+   'vector))
+
 (define-argument-type fp-reg
   :type '(satisfies fp-reg-p)
   :function tn-offset
-  :disassem-printer "$f~D")
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (stream stream) (fixnum value))
+			(let ((regname (aref float-reg-symbols value)))
+			  (princ regname stream)
+			  (disassem:maybe-note-associated-storage-ref
+			   value
+			   'float-reg
+			   regname
+			   dstate)))
+  )
 
 (define-argument-type odd-fp-reg
   :type '(satisfies fp-reg-p)
@@ -139,8 +170,9 @@
 
 
 (defconstant float-operations '(+ - * /))
-(defconstant float-operations-vec
-  (apply #'vector float-operations))
+(defconstant float-operation-names
+  ;; this gets used for output only
+  #(add sub mul div))
 
 (defun float-operation (op)
   (or (position op float-operations)
@@ -151,9 +183,13 @@
 (define-argument-type float-operation
   :type `(member ,@float-operations)
   :function float-operation
-  :disassem-printer float-operations-vec)
+  :disassem-printer float-operation-names)
 
-(define-fixup-type :jump :disassem-use-label t)
+(define-fixup-type :jump
+  :disassem-printer #'(lambda (value stream dstate)
+			(let ((addr (ash value 2)))
+			  (disassem:maybe-note-assembler-routine addr dstate)
+			  (write addr :base 16 :radix t :stream stream))))
 (define-fixup-type :lui :disassem-printer "#x~4,'0X")
 (define-fixup-type :addi)
 
@@ -202,7 +238,7 @@
 
 (define-format (break 32
 		:disassem-printer
-		'(:name :tab code (:unless (:constant 0) subcode)))
+		  '(:name :tab code (:unless (:constant 0) subcode)))
   (op (byte 6 26) :default special-op)
   (code (byte 10 16))
   (subcode (byte 10 6) :default 0)
@@ -216,10 +252,13 @@
   (funct (byte 10 16))
   (offset (byte 16 0)))
 
+(defconstant float-fmt-printer
+  '((:unless :constant funct)
+    (:choose (:unless :constant sub-funct) nil)
+    "." format))
+
 (defconstant float-printer
-  '(:name (:unless :constant funct)
-	  (:choose (:unless :constant sub-funct) nil)
-	  "." format
+  `(:name ,@float-fmt-printer
 	  :tab
 	  fd
 	  (:unless (:same-as fd) ", " fs)
@@ -305,6 +344,37 @@
 (define-math-inst slt #b101010 #b001010 :signed)
 (define-math-inst sltu #b101011 #b001011 :signed)
 
+(defstruct lui-note
+  target-reg
+  high-bits
+  following-addr)
+
+(defun look-at-lui-note (chunk inst stream dstate)
+  (when stream
+    (let ((lui-note (disassem:dstate-get-prop dstate 'lui-note)))
+      (when (and lui-note
+		 (= (disassem:dstate-curpos dstate)
+		    (lui-note-following-addr lui-note))
+		 (= (disassem:arg-value 'rd chunk inst)
+		    (lui-note-target-reg lui-note)))
+	(let ((value
+	       (+ (lui-note-high-bits lui-note)
+		  (disassem:arg-value 'immediate
+				      chunk inst))))
+	(or (disassem:maybe-note-assembler-routine value dstate)
+	    (disassem:note #'(lambda (stream)
+			       (format stream "#x~x (~d)"
+				       value
+				       (disassem:sign-extend value 32)))
+			   dstate))))))) 
+
+(disassem:specialize (or :disassem-control #'look-at-lui-note)
+  immediate)
+(disassem:specialize (add :disassem-control #'look-at-lui-note)
+  immediate)
+
+;;; note: this must be after the above, because the disassem-controls
+;;; are exclusive
 (disassem:specialize (add
 		      :disassem-control
 		        #'(lambda (chunk inst stream dstate)
@@ -401,10 +471,71 @@
 		 (funct :constant #x101)
 		 (offset :argument relative-label)))
 
-(define-instruction (break :pinned t)
+;;; ----------------------------------------------------------------
+
+(defun snarf-error-junk (sap offset &optional length-only)
+  (let* ((length (system:sap-ref-8 sap offset))
+	 (vector (make-array length :element-type '(unsigned-byte 8))))
+    (declare (type system:system-area-pointer sap)
+	     (type (unsigned-byte 8) length)
+	     (type (simple-array (unsigned-byte 8) (*)) vector))
+    (cond (length-only
+	   (values 0 (1+ length) nil nil))
+	  (t
+	   (kernel:copy-from-system-area sap (* mips:byte-bits (1+ offset))
+					 vector (* mips:word-bits
+						   mips:vector-data-offset)
+					 (* length mips:byte-bits))
+	   (collect ((sc-offsets)
+		     (lengths))
+	     (lengths 1)		; the length byte
+	     (let* ((index 0)
+		    (error-number (c::read-var-integer vector index)))
+	       (lengths index)
+	       (loop
+		 (when (>= index length)
+		   (return))
+		 (let ((old-index index))
+		   (sc-offsets (c::read-var-integer vector index))
+		   (lengths (- index old-index))))
+	       (values error-number
+		       (1+ length)
+		       (sc-offsets)
+		       (lengths))))))))
+
+(defmacro break-cases (breaknum &body cases)
+  (let ((bn-temp (gensym)))
+    (collect ((clauses))
+      (dolist (case cases)
+	(clauses `((= ,bn-temp ,(car case)) ,@(cdr case))))
+      `(let ((,bn-temp ,breaknum))
+	 (cond ,@(clauses))))))
+
+(defun break-control (chunk inst stream dstate)
+  (flet ((nt (x) (if stream (disassem:note x dstate))))
+    (break-cases (disassem:arg-value 'code chunk inst)
+      (vm:error-trap
+       (nt "Error trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (vm:cerror-trap
+       (nt "Cerror trap")
+       (disassem:handle-break-args #'snarf-error-junk stream dstate))
+      (vm:breakpoint-trap
+       (nt "Breakpoint trap"))
+      (vm:pending-interrupt-trap
+       (nt "Pending interrupt trap"))
+      (vm:halt-trap
+       (nt "Halt trap"))
+      (vm:function-end-breakpoint-trap
+       (nt "Function end breakpoint trap"))
+    )))
+
+(define-instruction (break :pinned t :disassem-control #'break-control)
   (break (code :argument (unsigned-byte 10)))
   (break (code :argument (unsigned-byte 10))
 	 (subcode :argument (unsigned-byte 10))))
+
+;;; ----------------------------------------------------------------
 
 (defconstant divmul-printer '(:name :tab rs ", " rt))
 
@@ -497,6 +628,31 @@
 (define-load/store-instruction swc1 nil #o71 fp-reg)
 (define-load/store-instruction swc1-odd nil #o71 odd-fp-reg)
 
+;;; ----------------------------------------------------------------
+;;; Disassembler annotation
+
+(defun note-niss-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-nil-indexed-symbol-slot-ref
+     (disassem:arg-value 'immediate chunk inst)
+     dstate)))
+
+(defun note-control-stack-var-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-single-storage-ref
+     (disassem:arg-value 'immediate chunk inst)
+     'control-stack
+     dstate))
+  )
+
+(defun note-number-stack-var-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-single-storage-ref
+     (disassem:arg-value 'immediate chunk inst)
+     'number-stack
+     dstate))
+  )
+
 (disassem:specialize (lw
 		      :disassem-control
 		        #'(lambda (chunk inst stream dstate)
@@ -507,28 +663,51 @@
   immediate
   (rs :constant code-offset))
 
-(disassem:specialize (lw
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
-			       (disassem:arg-value 'immediate chunk inst)
-			       dstate))))
+(disassem:specialize (lw :disassem-control #'note-niss-ref)
   immediate
   (rs :constant null-offset))
+(disassem:specialize (lw :disassem-control #'note-control-stack-var-ref)
+  immediate
+  (rs :constant cfp-offset))
+(disassem:specialize (lw :disassem-control #'note-number-stack-var-ref)
+  immediate
+  (rs :constant nfp-offset))
 
-(disassem:specialize (st
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
-			       (disassem:arg-value 'immediate chunk inst)
- 			       dstate))))
+(disassem:specialize (sw :disassem-control #'note-niss-ref)
   immediate
   (rs :constant null-offset))
+(disassem:specialize (sw :disassem-control #'note-control-stack-var-ref)
+  immediate
+  (rs :constant cfp-offset))
+(disassem:specialize (sw :disassem-control #'note-number-stack-var-ref)
+  immediate
+  (rs :constant nfp-offset))
+
+;;; floating point
+(disassem:specialize (lwc1 :disassem-control #'note-number-stack-var-ref)
+  immediate
+  (rs :constant nfp-offset))
+(disassem:specialize (swc1 :disassem-control #'note-number-stack-var-ref)
+  immediate
+  (rs :constant nfp-offset))
 
 
-(define-instruction (lui)
+(defun lui-note (chunk inst stream dstate)
+  (when stream
+    (let ((lui-note (disassem:dstate-get-prop dstate 'lui-note)))
+      (when (null lui-note)
+	(setf lui-note (make-lui-note)
+	      (disassem:dstate-get-prop dstate 'lui-note) lui-note))
+      (setf (lui-note-target-reg lui-note)
+	    (disassem:arg-value 'rt chunk inst))
+      (setf (lui-note-high-bits lui-note)
+	    (ash (disassem:arg-value 'immediate chunk inst) 10))
+      (setf (lui-note-following-addr lui-note)
+	    (disassem:dstate-nextpos dstate)))))
+
+;;; ----------------------------------------------------------------
+
+(define-instruction (lui :disassem-control #'lui-note)
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
 	     (rt :argument register)
@@ -710,7 +889,13 @@
 	    (rd :argument control-register :write nil)
 	    (funct :constant 0)))
 
-(define-instruction (float-op)
+(define-instruction (float-op
+		     :disassem-printer
+		       '('f funct "." format
+			    :tab
+			    fd
+			    (:unless (:same-as fd) ", " fs)
+			    ", " ft))
   (float (funct :argument float-operation :mask #b11)
 	 (format :argument float-format)
 	 (fd :argument fp-reg)
@@ -718,7 +903,10 @@
 	 (ft :argument fp-reg)))
 
 
-(define-instruction (fabs)
+(defconstant float-unop-printer
+  `(:name ,@float-fmt-printer :tab fd (:unless (:same-as fd) ", " fs)))
+
+(define-instruction (fabs :disassem-printer float-unop-printer)
   (float (format :argument float-format)
 	 (ft :constant 0)
 	 (fd :argument fp-reg)
@@ -730,7 +918,7 @@
 	 (fs :same-as fd)
 	 (funct :constant #b000101)))
 
-(define-instruction (fneg)
+(define-instruction (fneg :disassem-printer float-unop-printer)
   (float (format :argument float-format)
 	 (ft :constant 0)
 	 (fd :argument fp-reg)
@@ -742,8 +930,11 @@
 	 (fs :same-as fd)
 	 (funct :constant #b000111)))
 
-
-(define-instruction (fcvt)
+(define-instruction (fcvt
+		     :disassem-printer
+		       `(:name "." sub-funct "." format
+			       :tab
+			       fd ", " fs))
   (float-aux (sub-funct :argument float-format)
 	     (format :argument float-format)
 	     (fd :argument fp-reg)
@@ -751,7 +942,11 @@
 	     (funct :constant #b10)))
 
   
-(define-instruction (fcmp)
+(define-instruction (fcmp
+		     :disassem-printer
+		       `(:name "-" sub-funct "." format
+			       :tab
+			       fs ", " ft))
   (float-aux (sub-funct :argument compare-kind)
 	     (format :argument float-format)
 	     (fd :constant 0)
@@ -796,7 +991,8 @@
 
 (define-instruction (b :pinned t
 		       :attributes (relative-branch unconditional-branch
-						    delayed-branch))
+						    delayed-branch)
+		       :disassem-printer '(:name :tab immediate))
   (immediate (op :constant #b000100)
 	     (rs :constant 0)
 	     (rt :constant 0)
