@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.5 1992/02/21 22:04:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.6 1992/02/24 04:00:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,10 +42,10 @@
 
 
 (defmacro sapref (sap offset)
-  `(system:sap-ref-16 ,sap (ash ,offset 2)))
+  `(system:sap-ref-16 ,sap (* ,offset 2)))
 
 (defsetf sapref (sap offset) (value)
-  `(setf (system:sap-ref-16 ,sap (ash ,offset 2)) ,value))
+  `(setf (system:sap-ref-16 ,sap (* ,offset 2)) ,value))
 
 
 (defmacro sap-replace (dst-string src-string src-start dst-start dst-end)
