@@ -146,6 +146,18 @@
 	    (bit-ior (svref loc-confs num) (tn-local-conflicts tn) t))))))))
 
 
+;;; IR2-BLOCK-COUNT  --  Internal
+;;;
+;;;    Return the total number of IR2 blocks in Component.
+;;;
+(defun ir2-block-count (component)
+  (declare (type component component))
+  (1+ (ir2-block-number
+       (block-info
+	(block-next
+	 (component-head component))))))
+
+
 ;;; Init-SB-Vectors  --  Internal
 ;;;
 ;;;    Ensure that the conflicts vectors for each :Finite SB are large enough
@@ -153,31 +165,30 @@
 ;;; the current size to the initial size.
 ;;;
 (defun init-sb-vectors (component)
-  (let ((nblocks (1+ (ir2-block-number
-		      (block-info
-		       (block-next
-			(component-head component)))))))
+  (let ((nblocks (ir2-block-count component)))
     (dolist (sb *sb-list*)
       (unless (eq (sb-kind sb) :non-packed)
-	(let* ((conflicts (finite-sb-conflicts sb))
-	       (always-live (finite-sb-always-live sb))
-	       (current-size (length (svref conflicts 0))))
-	  (when (> nblocks current-size)
-	    (let ((new-size (max nblocks (* current-size 2))))
-	      (dotimes (i (length conflicts))
-		(let ((new-vec (make-array new-size)))
-		  (dotimes (j new-size)
-		    (setf (svref new-vec j)
-			  (make-array local-tn-limit :element-type 'bit)))
-		  (setf (svref conflicts i) new-vec))
-		(setf (svref always-live i)  
-		      (make-array new-size :element-type 'bit)))))
-
-	  (dotimes (i (length conflicts))
-	    (let ((conf (svref conflicts i)))
-	      (dotimes (j (length conf))
-		(clear-bit-vector (svref conf j))))
-	    (clear-bit-vector (svref always-live i))))
+	(let ((conflicts (finite-sb-conflicts sb))
+	      (always-live (finite-sb-always-live sb))
+	      (max-locs (length conflicts)))
+	  (unless (zerop max-locs)
+	    (let ((current-size (length (svref conflicts 0))))
+	      (when (> nblocks current-size)
+		(let ((new-size (max nblocks (* current-size 2))))
+		  (dotimes (i (length conflicts))
+		    (let ((new-vec (make-array new-size)))
+		      (dotimes (j new-size)
+			(setf (svref new-vec j)
+			      (make-array local-tn-limit :element-type 'bit)))
+		      (setf (svref conflicts i) new-vec))
+		    (setf (svref always-live i)  
+			  (make-array new-size :element-type 'bit))))))
+	    
+	    (dotimes (i (length conflicts))
+	      (let ((conf (svref conflicts i)))
+		(dotimes (j (length conf))
+		  (clear-bit-vector (svref conf j))))
+	      (clear-bit-vector (svref always-live i)))))
 
 	(setf (finite-sb-current-size sb) (sb-size sb))
 	(setf (finite-sb-last-offset sb) 0)))))
@@ -196,7 +207,9 @@
 	 (inc (max (sb-size sb) (sc-element-size sc) (- needed-size size)))
 	 (new-size (+ size inc))
 	 (conflicts (finite-sb-conflicts sb))
-	 (block-size (length (svref conflicts 0))))
+	 (block-size (if (zerop (length conflicts))
+			 (ir2-block-count *compile-component*)
+			 (length (svref conflicts 0)))))
     (assert (eq (sb-kind sb) :unbounded))
 
     (when (> new-size (length conflicts))
