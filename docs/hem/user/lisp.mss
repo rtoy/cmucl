@@ -296,6 +296,7 @@ which buffer is waiting for input.
 
 @defcom[com "Typescript Slave BREAK", bind (Typescript: H-b)]
 @defcom1[com "Typescript Slave to Top Level", bind (Typescript: H-g)]
+@defcom1[com "Typescript Slave Status", bind (Typescript: H-s)]
 Some typescripts have associated information which these commands access
 allowing @hemlock to control the process which uses the typescript.
 
@@ -306,6 +307,16 @@ or @f[^\] in the editor process).
 @hid[Typescript Slave to Top Level] causes the current process to throw to the
 top-level @f[read-eval-print] loop.  This is similar in effect to a quit signal
 (@f[^\]).
+
+@hid[Typescript Slave Status] causes the current process to print status
+information on @var[error-output]:
+@lisp
+; Used 0:06:03, 3851 faults.  In: SYSTEM:SERVE-EVENT
+@endlisp
+The message displays the process run-time, the total number of page faults and
+the name of the currently running function.   This command is useful for
+determining whether the slave is in an infinite loop, waiting for input, or
+whatever.
 @enddefcom
 
 
