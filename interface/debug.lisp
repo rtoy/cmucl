@@ -525,33 +525,48 @@
     (multiple-value-bind (shell connection)
 			 (create-interface-shell)
       (declare (ignore shell))
-      (with-motif-connection (connection)
-	(let ((pane (find-interface-pane condition))
-	      (*current-frame* frame))
-	  (unless pane
-	    (setf pane (create-debugger condition)))
-	  (unless (is-managed pane)
-	    (popup-interface-pane pane))
-	  (setf (dd-info-level *current-debug-display*) *debug-command-level*)
-	  (setf (dd-info-connection *current-debug-display*) connection)
-	  (unwind-protect
-	      (handler-case
-		  (loop
-		    (system:serve-event))
-		(error (err)
-		       (if *flush-debug-errors*
-			   (interface-error (format nil "~a" err) pane)
-			   (interface-error
-			    "Do not yet support recursive debugging" pane))))
-	    (when (and connection *current-debug-display*)
-	      (with-motif-connection (connection)
-		(close-motif-debugger condition)))))))))
+      (if connection
+	  (with-motif-connection (connection)
+	    (let ((pane (find-interface-pane condition))
+		  (*current-frame* frame))
+	      (unless pane
+		(setf pane (create-debugger condition)))
+	      (unless (is-managed pane)
+		(popup-interface-pane pane))
+	      (setf (dd-info-level *current-debug-display*)
+		    *debug-command-level*)
+	      (setf (dd-info-connection *current-debug-display*) connection)
+	      (unwind-protect
+		  (handler-case
+		      (loop
+			(system:serve-event))
+		    (error (err)
+			   (if *flush-debug-errors*
+			       (interface-error (format nil "~a" err) pane)
+			       (interface-error
+				"Do not yet support recursive debugging"
+				pane))))
+		(when (and connection *current-debug-display*)
+		  (with-motif-connection (connection)
+		    (close-motif-debugger condition))))))
+	  (invoke-tty-debugger condition)))))
 
 
 
 ;;; Used to prevent recursive invocations of the windowing debugger.
 ;;;
 (defvar *in-windowing-debugger* nil)
+
+
+;;; INVOKE-TTY-DEBUGGER  --  Internal
+;;;
+;;;    Print condition and invoke the TTY debugger.
+;;;
+(defun invoke-tty-debugger (condition)
+  (format *error-output* "~2&~A~2&" *debug-condition*)
+  (unless (typep condition 'step-condition)
+    (show-restarts *debug-restarts* *error-output*))
+  (internal-debug))
 
 ;;; INVOKE-DEBUGGER -- Public
 ;;;
@@ -578,11 +593,7 @@
     (if (or (not (use-graphics-interface))
 	    *in-windowing-debugger*
 	    (typep condition 'xti:toolkit-error))
-	(progn
-	  (format *error-output* "~2&~A~2&" *debug-condition*)
-	  (unless (typep condition 'step-condition)
-	    (show-restarts *debug-restarts* *error-output*))
-	  (internal-debug))
+	(invoke-tty-debugger condition)
 	(let ((*in-windowing-debugger* t))
 	  (write-line "Invoking debugger...")
 	  (invoke-motif-debugger condition)))))
