@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.4 1993/02/16 21:26:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.5 1993/02/23 11:32:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,7 +300,8 @@
 ;;; apply to all types.
 ;;;
 (defstruct (ctype (:conc-name type-)
-		  (:constructor make-type))
+		  (:constructor make-type)
+		  (:pure t))
   ;;
   ;; The class of this type.
   (class-info (required-argument) :type type-class)
