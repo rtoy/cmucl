@@ -2666,11 +2666,12 @@
   (let* ((ctype (values-specifier-type type))
 	 (old-type (or (lexenv-find cont type-restrictions)
 		       *wild-type*))
+	 (intersects (values-types-intersect old-type ctype))
 	 (int (values-type-intersection old-type ctype))
-	 (new (if (eq int *empty-type*) old-type int)))
+	 (new (if intersects int old-type)))
     (when (null (find-uses cont))
       (setf (continuation-asserted-type cont) new))
-    (when (and (eq int *empty-type*)
+    (when (and (not intersects)
 	       (not (policy nil (= brevity 3))))
       (compiler-warning
        "Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
@@ -3040,32 +3041,34 @@
 			   '(:inline :maybe-inline))
 		   (in-null-environment))
 	      (cadr def) nil))
-	 (*current-path* (revert-source-path 'defun)))
+	 (*current-path* (revert-source-path 'defun))
+	 (save-type (info function type name))
+	 (where-from (info function where-from name))
+	 (function-info (info function info name)))
     (setf (info function inline-expansion name) expansion)
     ;;
-    ;; If function has type information from a previous DEFUN, blow it away.
-    (when (eq (info function where-from name) :defined)
-      (setf (info function type name) (specifier-type 'function))
-      (remhash name *free-functions*))
-    ;;
-    ;; If there is a previous defun for Name in the same compilation, disown
-    ;; the leaf for it.
-    (let ((old (gethash name *free-functions*)))
-      (when (functional-p old) (remhash name *free-functions*)))
+    ;; If *FREE-FUNCTIONS* has type information from a previous DEFUN, or a
+    ;; previous DEFUN itself, then blow away the entry.  Unless :DECLARED, also
+    ;; clear the recorded function type so that we don't pull possibly
+    ;; bogus information back in.
+    (when (or (eq where-from :defined)
+	      (functional-p (gethash name *free-functions*)))
+      (remhash name *free-functions*)
+      (unless (eq where-from :declared)
+	(setf (info function type name) (specifier-type 'function))))
     ;;
     ;; Convert definition.  If in the null environment and definitely not an
     ;; interpreter stub, then substitute for any references that aren't
     ;; :NOTINLINE.
     (let ((fun (ir1-convert-lambda (cadr def)))
-	  (new (gethash name *free-functions*))
-	  (info (info function info name)))
+	  (new (gethash name *free-functions*)))
       (setf (leaf-name fun) name)
       (cond ((and (in-null-environment t)
 		  (not (eq (info function inlinep name) :notinline))
-		  (or (not info)
-		      (and (null (function-info-transforms info))
-			   (null (function-info-templates info))
-			   (not (function-info-ir2-convert info)))))
+		  (or (not function-info)
+		      (and (null (function-info-transforms function-info))
+			   (null (function-info-templates function-info))
+			   (not (function-info-ir2-convert function-info)))))
 	     (setf (gethash name *free-functions*) fun)
 	     (when new
 	       (substitute-leaf-if 
@@ -3079,11 +3082,18 @@
 	     ;; ### Not so good for inferring result types.
 	     (setf (leaf-type fun) (definition-type fun))
 	     (check-free-function name fun)))
-
-      (when (eq (info function where-from name) :declared)
-	(let ((type (info function type name)))
-	  (when (function-type-p type)
-	    (assert-definition-type fun type))))
+      ;;
+      ;; Check for consistency with previous declaration or definition, and
+      ;; assert argument/result types if appropriate.
+      ;; ### For now, assertion is suppressed for all known functions so that
+      ;; we don't defeat explicit argument type checking.
+      (when (function-type-p save-type)
+	(let ((for-real (eq where-from :declared)))
+	  (assert-definition-type
+	   fun save-type
+	   :error-function (if for-real #'compiler-warning #'compiler-note)
+	   :really-assert (and for-real (not function-info))
+	   :where (if for-real "declaration" "definition"))))
 
       (ir1-convert start cont
 		   `(%%defun ',name ,fun ,doc
