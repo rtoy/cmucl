@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.1.1.2 1990/04/11 17:16:14 wlott Exp $
+;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
@@ -32,7 +34,7 @@
 	  coerce-to-motion-event coerce-to-expose-event
 	  coerece-to-exposecopy-event coerce-to-focuschange-event server
 	  *nameserverport* *usertypescript* *userwindow* *typescriptport*
-	  *task-self* *task-data* *task-notify* *file-input-handlers*
+	  *task-self* *task-data* *task-notify*
 	  with-interrupts with-enabled-interrupts enable-interrupt
 	  ignore-interrupt default-interrupt))
 
@@ -67,13 +69,13 @@
 ;;; Random information:
 
 (defvar compiler-version "???")
-(defvar *lisp-implementation-version* "3.0(?)")
+(defvar *lisp-implementation-version* "4.0(?)")
 
 (defvar *in-the-compiler* nil
   "Bound to T while running code inside the compiler.  Macros may test this to
   see where they are being expanded.")
 
-(defparameter %fasl-code-format vm:target-fasl-code-format)
+(defparameter %fasl-code-format #.vm:target-fasl-code-format)
 
 
 ;;;; Global ports:
@@ -91,8 +93,6 @@
 
 ;;; GC stuff.
 
-#| Again, will be different.
-
 (defvar *gc-inhibit* nil)	; Inhibits GC's.
 
 (defvar *already-maybe-gcing* nil) ; Inhibits recursive GC's.
@@ -100,8 +100,6 @@
 (defvar *need-to-collect-garbage* nil
   "*Need-to-collect-garbage* is set to T when GC is disabled, but the system
   needs to do a GC.  When GC is enabled again, the GC is done then.")
-
-|#
 
 
 
@@ -189,6 +187,7 @@
 
 
 ;;;; Server stuff:
+#|
 ;;;
 ;;;    There is a fair amount of stuff to support Matchmaker RPC servers
 ;;; and asynchonous message service.  RPC message service needs to be
@@ -311,6 +310,7 @@
 ;;;
 (defsetf object-set-operation %set-object-set-operation
   "Sets the handler function for an object set operation.")
+|#
 
 
 
@@ -491,7 +491,7 @@
   (print-and-call c::globaldb-init)
 
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep...
-  (print-and-call subtypep-init)
+  (print-and-call type-init)
 
   (setq *lisp-initialization-functions*
 	(nreverse *lisp-initialization-functions*))
@@ -501,20 +501,31 @@
   (makunbound '*lisp-initialization-functions*)	; So it gets GC'ed.
 
   (print-and-call os-init)
+  #+nil
   (print-and-call filesys-init)
+  #+nil
   (print-and-call conditions::error-init)
 
+  #+nil
   (print-and-call reader-init)
+  #+nil
   (print-and-call backq-init)
+  #+nil
   (print-and-call sharp-init)
   ;; After the various reader subsystems have done their thing to the standard
   ;; readtable, copy it to *readtable*.
+  #+nil
   (setq *readtable* (copy-readtable std-lisp-readtable))
 
+  #+nil
   (print-and-call stream-init)
+  #+nil
   (print-and-call random-init)
+  #+nil
   (print-and-call format-init)
+  #+nil
   (print-and-call package-init)
+  #+nil
   (print-and-call pprint-init)
 
   (setq *already-maybe-gcing* nil)
@@ -529,6 +540,7 @@
     (loop
      (%top-level)
      (write-line "You're certainly a clever child.")))
+  #+nil
   (mach:unix-exit 0))
 
 
@@ -542,11 +554,16 @@
   (without-interrupts
    (setq *already-maybe-gcing* t)
    (os-init)
+   #+nil
    (stream-reinit)
    (setq *already-maybe-gcing* nil))
+  #+nil
   (setq *task-notify* (mach:mach-task_notify))
+  #+nil
   (mach:port_enable (mach:mach-task_self) *task-notify*)
+  #+nil
   (add-port-object *task-notify* nil *kernel-messages*)
+  #+nil
   (init-mach-signals))
 
 
@@ -555,7 +572,9 @@
 ;;; that set up the argument blocks for the server interfaces.
 
 (defun os-init ()
+  #+nil
   (setq *task-self* (mach:mach-task_self))
+  #+nil
   (setq *task-data* (mach:mach-task_data)))
 
 
@@ -670,10 +689,6 @@
 (defun quit (&optional recklessly-p)
   "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
   non-Nil."
-;  (reset-keyboard 0)
-  (dolist (x (if (boundp 'extensions::temporary-foreign-files)
-		 extensions::temporary-foreign-files))
-    (mach:unix-unlink x))
   (if recklessly-p
       (mach:unix-exit 0)
       (throw '%end-of-the-world nil)))
