@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.15 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.16 1996/07/08 19:17:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,11 +366,11 @@
 
 (defun acosh (number)
   "Return the hyperbolic arc cosine of NUMBER."
-  (log (+ number (* (1+ number) (sqrt (/ (1- number) (1+ number)))))))
+  (* 2 (log (+ (sqrt (/ (1+ number) 2)) (sqrt (/ (1- number) 2))))))
 
 (defun atanh (number)
   "Return the hyperbolic arc tangent of NUMBER."
-  (log (* (1+ number) (sqrt (/ (- 1 (* number number)))))))
+  (/ (- (log (1+ number)) (log (- 1 number))) 2))
 
 
 ;;; HP-UX does not supply C versions of asinh, acosh, and atanh, so just
@@ -388,13 +388,12 @@
   (declare (type double-float number)
 	   (values double-float)
 	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (log (+ number
-	  (* (1+ number)
-	     (the double-float (sqrt (/ (1- number) (1+ number))))))))
+  (* 2 (log (+ (the double-float (sqrt (/ (1+ number) 2)))
+	       (the double-float (sqrt (/ (1- number) 2)))))))
 
 #+hpux
 (defun %atanh (number)
   (declare (type double-float number)
 	   (values double-float)
 	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (log (* (1+ number) (the double-float (sqrt (/ (- 1 (* number number))))))))
+  (/ (- (log (1+ number)) (log (- 1 number))) 2))
