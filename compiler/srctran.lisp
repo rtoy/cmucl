@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.80 1998/02/19 04:28:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.81 1998/02/19 04:42:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1384,7 +1384,7 @@
 		  (when (numeric-type-p s-type)
 		    (let ((s-low (numeric-type-low s-type))
 			  (s-high (numeric-type-high s-type)))
-		      (if (and s-low s-high (<= s-low 32) (<= s-high 32))
+		      (if (and s-low s-high (<= s-low 64) (<= s-high 64))
 			  (make-numeric-type :class 'integer  :complexp :real
 					     :low (when n-low
 						    (min (ash n-low s-high)
@@ -1405,7 +1405,7 @@
 		 (n-high (numeric-type-high n-type))
 		 (s-low (numeric-type-low shift))
 		 (s-high (numeric-type-high shift)))
-	     (if (and s-low s-high (<= s-low 32) (<= s-high 32))
+	     (if (and s-low s-high (<= s-low 64) (<= s-high 64))
 		 (make-numeric-type :class 'integer  :complexp :real
 				    :low (when n-low
 					   (min (ash n-low s-high)
