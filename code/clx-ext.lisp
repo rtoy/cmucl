@@ -17,7 +17,7 @@
 
 (export '(open-clx-display with-clx-event-handling enable-clx-event-handling
 	  disable-clx-event-handling object-set-event-handler
-	  default-clx-event-handler *display-event-handlers*
+	  default-clx-event-handler
 	  flush-display-events carefully-add-font-paths
 
 	  serve-key-press serve-key-release serve-button-press
@@ -122,12 +122,6 @@
    structures.  For every CLX file descriptor know to SYSTEM:SERVE-EVENT,
    there must be a mapping from that file descriptor to its CLX display
    structure when events are handled via SYSTEM:SERVE-EVENT.")
-
-(defvar *display-event-handlers* nil
-  "This is an alist mapping displays to user functions to be called when
-   SYSTEM:SERVE-EVENT notices input on a display connection.  Do not modify
-   this directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display
-   should be represented here only once.")
 
 (defmacro with-clx-event-handling ((display handler) &rest body)
   "Evaluates body in a context where events are handled for the display
