@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.57 1997/12/20 15:40:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.58 1998/01/02 05:08:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -825,43 +825,109 @@
 
 (defun fixup-interval-expt (bnd x-int y-int x-type y-type)
   (declare (ignore x-int))
-  (let ((lo (bound-value (interval-low bnd)))
-	(hi (bound-value (interval-high bnd))))
-    ;; Figure out what the return type should be
-    (multiple-value-bind (class format)
-	(cond ((eq (numeric-type-class x-type) 'integer)
-	       (case (numeric-type-class y-type)
-		 (integer
-		  ;; Positive integer to a integer power
-		  (if (and (interval-low y-int)
-			   (>= (bound-value (interval-low y-int)) 0))
-		      (values 'integer nil)
-		      (values 'rational nil)))
-		 ((or rational float)
-		  ;; Integer to rational or float power is a float.
-		  (values 'float
-			  (or (numeric-type-format y-type) 'single-float)))))
-	      ((eq (numeric-type-class x-type) 'rational)
-	       ;; Rational to a power
-	       (case (numeric-type-class y-type)
-		 (integer
-		  (values 'rational nil))
-		 (float
-		  (values 'float
-			  (or (numeric-type-format y-type) 'single-float)))))
-	      (t
-	       ;; Rational or float to a power is general numeric contagion
-	       (values 'float
-		       (numeric-type-format
-			(numeric-contagion x-type y-type)))))
-      (when (member format '(single-float double-float))
-	(setf lo (if lo (coerce lo format) lo))
-	(setf hi (if hi (coerce hi format) hi)))
-      (make-numeric-type
-       :class class
-       :format format
-       :low lo
-       :high hi))))
+  ;; Figure out what the return type should be, given the argument
+  ;; types and bounds and the result type and bounds.
+  (cond ((csubtypep x-type (specifier-type 'integer))
+	 ;; An integer to some power.  Cases to consider:
+	 (case (numeric-type-class y-type)
+	   (integer
+	    ;; Positive integer to an integer power is either an
+	    ;; integer or a rational.
+	    (let ((lo (or (interval-low bnd) '*))
+		  (hi (or (interval-high bnd) '*)))
+	      (if (and (interval-low y-int)
+		       (>= (bound-value (interval-low y-int)) 0))
+		  (specifier-type `(integer ,lo ,hi))
+		  (specifier-type `(rational ,lo ,hi)))))
+	   (rational
+	    ;; Positive integer to rational power is either a rational
+	    ;; or a single-float.
+	    (let* ((lo (interval-low bnd))
+		   (hi (interval-high bnd))
+		   (int-lo (if lo
+			       (floor (bound-value lo))
+			       '*))
+		   (int-hi (if hi
+			       (ceiling (bound-value hi))
+			       '*))
+		   (f-lo (if lo
+			     (bound-func #'float lo)
+			     '*))
+		   (f-hi (if hi
+			     (bound-func #'float hi)
+			     '*)))
+	      (specifier-type `(or (rational ,int-lo ,int-hi)
+				(single-float ,f-lo, f-hi)))))
+	   (float
+	    ;; Positive integer to a float power is a float
+	    (let ((res (copy-numeric-type y-type)))
+	      (setf (numeric-type-low res) (interval-low bnd))
+	      (setf (numeric-type-high res) (interval-high bnd))
+	      res))
+	   (t
+	    ;; Positive integer to a number is a number (for now)
+	    (specifier-type 'number)))
+	 )
+	((csubtypep x-type (specifier-type 'rational))
+	 ;; A rational to some power
+	 (case (numeric-type-class y-type)
+	   (integer
+	    ;; Positive rational to an integer power is always a rational
+	    (specifier-type `(rational ,(or (interval-low bnd) '*)
+			      ,(or (interval-high bnd) '*))))
+	   (rational
+	    ;; Positive rational to rational power is either a rational
+	    ;; or a single-float.
+	    (let* ((lo (interval-low bnd))
+		   (hi (interval-high bnd))
+		   (int-lo (if lo
+			       (floor (bound-value lo))
+			       '*))
+		   (int-hi (if hi
+			       (ceiling (bound-value hi))
+			       '*))
+		   (f-lo (if lo
+			     (bound-func #'float lo)
+			     '*))
+		   (f-hi (if hi
+			     (bound-func #'float hi)
+			     '*)))
+	      (specifier-type `(or (rational ,int-lo ,int-hi)
+				(single-float ,f-lo, f-hi)))))
+	   (float
+	    ;; Positive rational to a float power is a float
+	    (let ((res (copy-numeric-type y-type)))
+	      (setf (numeric-type-low res) (interval-low bnd))
+	      (setf (numeric-type-high res) (interval-high bnd))
+	      res))
+	   (t
+	    ;; Positive rational to a number is a number (for now)
+	    (specifier-type 'number)))
+	 )
+	((csubtypep x-type (specifier-type 'float))
+	 ;; A float to some power
+	 (case (numeric-type-class y-type)
+	   ((or integer rational)
+	    ;; Positive float to an integer or rational power is always a float
+	    (make-numeric-type
+	     :class 'float
+	     :format (numeric-type-format x-type)
+	     :low (interval-low bnd)
+	     :high (interval-high bnd)))
+	   (float
+	    ;; Positive float to a float power is a float of the higher type
+	    (make-numeric-type
+	     :class 'float
+	     :format (float-format-max (numeric-type-format x-type)
+				       (numeric-type-format y-type))
+	     :low (interval-low bnd)
+	     :high (interval-high bnd)))
+	   (t
+	    ;; Positive float to a number is a number (for now)
+	    (specifier-type 'number))))
+	(t
+	 ;; A number to some power is a number.
+	 (specifier-type 'number))))
   
 (defun merged-interval-expt (x y)
   (let* ((x-int (numeric-type->interval x))
@@ -872,9 +938,9 @@
 
 (defun expt-derive-type-aux (x y same-arg)
   (declare (ignore same-arg))
-  (cond ((or (eq (numeric-type-complexp x) :complex)
-	     (eq (numeric-type-complexp x) :complex))
-	 ;; Use numeric contagion if either is complex
+  (cond ((or (not (numeric-type-real-p x))
+	     (not (numeric-type-real-p y)))
+	 ;; Use numeric contagion if either is not real
 	 (numeric-contagion x y))
 	((csubtypep y (specifier-type 'integer))
 	 ;; A real raised to an integer power is well-defined
@@ -882,7 +948,8 @@
 	(t
 	 ;; A real raised to a non-integral power can be a float or a
 	 ;; complex number.
-	 (cond ((csubtypep x (specifier-type '(real 0d0)))
+	 (cond ((or (csubtypep x (specifier-type '(rational 0)))
+		    (csubtypep x (specifier-type '(float (0d0)))))
 		;; But a positive real to any power is well-defined.
 		(merged-interval-expt x y))
 	       (t
@@ -890,7 +957,6 @@
 		;; or a complex.
 		(float-or-complex-type (numeric-contagion x y)))))))
 
-#+nil
 (defoptimizer (expt derive-type) ((x y))
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
@@ -1182,7 +1248,7 @@
 			       (dn (* iy (+ 1 (* r r)))))
 			  (complex (/ (+ (* rx r) ix) dn)
 				   (/ (- (* ix r) rx) dn))))))
-	       ;; Multiplye a complex by a float or vice versa
+	       ;; Multiply a complex by a float or vice versa
 	       (deftransform * ((w z) ((complex ,type) ,type) *)
 		 '(complex (* (realpart w) z) (* (imagpart w) z)))
 	       (deftransform * ((z w) (,type (complex ,type)) *)
