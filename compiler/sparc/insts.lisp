@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.7 1991/12/08 07:13:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.8 1992/03/06 11:01:37 wlott Exp $
 ;;;
 ;;; Description of the SPARC architecture.
 ;;;
@@ -427,7 +427,7 @@
       (when (and sethi-note
 		 (= (disassem:dstate-curpos dstate)
 		    (sethi-note-following-addr sethi-note))
-		 (= (disassem:arg-value 'rd chunk inst)
+		 (= (disassem:arg-value 'rs1 chunk inst)
 		    (sethi-note-target-reg sethi-note)))
 	(let ((value
 	       (+ (sethi-note-high-bits sethi-note)
@@ -579,7 +579,15 @@
 		  (rd :argument reg)
 		  (op3 :constant #b111000)
 		  (rs1 :argument reg)
-		  (immed :argument (signed-byte 13))))
+		  (immed :argument (signed-byte 13)))
+  (format-3-immed (op :constant #b10)
+		  (rd :argument reg)
+		  (op3 :constant #b111000)
+		  (rs1 :argument reg)
+		  (immed :argument add-fixup)))
+
+(disassem:specialize (jal :disassem-control #'look-at-sethi-note)
+  immed)
 
 (define-instruction (j :disassem-printer jal-printer)
   (format-3-reg (op :constant #b10)
@@ -596,7 +604,15 @@
 		  (rd :constant 0)
 		  (op3 :constant #b111000)
 		  (rs1 :argument reg)
-		  (immed :argument (signed-byte 13))))
+		  (immed :argument (signed-byte 13)))
+  (format-3-immed (op :constant #b10)
+		  (rd :constant 0)
+		  (op3 :constant #b111000)
+		  (rs1 :argument reg)
+		  (immed :argument add-fixup)))
+
+(disassem:specialize (j :disassem-control #'look-at-sethi-note)
+  immed)
 
 (define-instruction (rdy :disassem-printer '('RD :tab '%Y ", " rd))
   (format-3-immed (op :constant #b10)
@@ -799,6 +815,24 @@
     (fixup
      (inst sethi reg value)
      (inst add reg value))))
+
+;;; Jal to a full 32-bit address.  Tmpreg is trashed.
+(define-pseudo-instruction jali 64 (link tmpreg value)
+  (etypecase value
+    ((signed-byte 13)
+     (inst jal link zero-tn value))
+    ((or (signed-byte 32) (unsigned-byte 32))
+     (let ((hi (ldb (byte 22 10) value))
+	   (lo (ldb (byte 10 0) value)))
+       (inst sethi tmpreg hi)
+       (inst jal link tmpreg lo)))
+    (fixup
+     (inst sethi tmpreg value)
+     (inst jal link tmpreg value))))
+
+;;; Jump to a full 32-bit address.  Tmpreg is trashed.
+(define-pseudo-instruction ji 64 (tmpreg value)
+  (inst jali zero-tn tmpreg value))
 
 (define-instruction (nop :disassem-printer '(:name))
   (format-2-immed (rd :constant 0)
