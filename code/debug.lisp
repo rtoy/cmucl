@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.53 2001/07/12 20:10:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.54 2001/12/12 20:18:25 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -623,6 +623,20 @@ See the CMU Common Lisp User's Manual for more information.
 	(di:debug-condition (ignore) ignore)
 	(error (cond) (format t "Error finding source: ~A" cond))))))
 
+;;; SAFE-CONDITION-MESSAGE  --  Internal
+;;;
+;;;    Safely print condition to a string, handling any errors during
+;;;    printing.
+;;;
+(defun safe-condition-message (condition)
+  (handler-case
+      (princ-to-string condition)
+    (error (cond)
+      ;; Beware of recursive errors in printing, so only use the condition
+      ;; if it is printable itself:
+      (format nil "Unable to display error condition~@[: ~A~]"
+	      (ignore-errors (princ-to-string cond))))))
+
 
 ;;;; Invoke-debugger.
 
@@ -637,6 +651,29 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;
 (defvar *debug-restarts*)
 (defvar *debug-condition*)
+
+;;; INVOKE-TTY-DEBUGGER  --  Internal
+;;;
+;;;    Print condition and invoke the TTY debugger.
+;;;
+(defun invoke-tty-debugger (condition)
+  (format *error-output* "~2&~A~2&"
+	  (safe-condition-message *debug-condition*))
+  (unless (typep condition 'step-condition)
+    (show-restarts *debug-restarts* *error-output*))
+  (internal-debug))
+
+;;; REAL-INVOKE-DEBUGGER  --  Internal
+;;;
+;;;    This function really invokes the current standard debugger.
+;;;    This is overwritten by e.g. the Motif Interface code.  It is a
+;;;    function and not a special variable hook, because users are
+;;;    supposed to use *debugger-hook*, and this is supposed to be the
+;;;    safe fall-back, which should be fairly secure against
+;;;    accidental mishaps.
+;;;
+(defun real-invoke-debugger (condition)
+  (invoke-tty-debugger condition))
 
 ;;; INVOKE-DEBUGGER -- Public.
 ;;;
@@ -656,10 +693,7 @@ See the CMU Common Lisp User's Manual for more information.
 	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
 	 (*read-eval* t))
-    (format *error-output* "~2&~A~2&" *debug-condition*)
-    (unless (typep condition 'step-condition)
-      (show-restarts *debug-restarts* *error-output*))
-    (internal-debug)))
+    (real-invoke-debugger condition)))
 
 ;;; SHOW-RESTARTS -- Internal.
 ;;;
@@ -1223,7 +1257,7 @@ See the CMU Common Lisp User's Manual for more information.
 (def-debug-command-alias "?" "HELP")
 
 (def-debug-command "ERROR" ()
-  (format t "~A~%" *debug-condition*)
+  (format t "~A~%" (safe-condition-message *debug-condition*))
   (show-restarts *debug-restarts*))
 
 (def-debug-command "BACKTRACE" ()
