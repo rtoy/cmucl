@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.3 2004/07/06 20:12:08 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/cell.lisp,v 1.4 2004/07/29 20:14:53 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,18 +89,35 @@
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
 ;;;
+;;; This is a slow version. We don't need to check for nil if we move to 4-bit
+;;; low-tag.
 (define-vop (symbol-value)
   (:translate symbol-value)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg) :to (:result 1)))
   (:results (value :scs (descriptor-reg any-reg)))
+  (:temporary (:sc unsigned-reg) temp)
   (:vop-var vop)
   (:save-p :compute-only)
   (:generator 9
-    (let ((err-lab (generate-error-code vop unbound-symbol-error object)))
+    (let ((err-lab (generate-error-code vop unbound-symbol-error object))
+	  (itsnil (gen-label))
+	  (done (gen-label)))
+
+      (inst mov temp nil-value)
+      (inst cmp object temp)
+      (inst jmp :e itsnil)
+
+      ;; not nil
       (loadw value object symbol-value-slot other-pointer-type)
       (inst cmp value unbound-marker-type)
-      (inst jmp :e err-lab))))
+      (inst jmp :e err-lab)
+      (inst jmp done)
+      
+      (emit-label itsnil)
+      (inst mov value nil-value)
+
+      (emit-label done))))
 
 (define-vop (fast-symbol-value cell-ref)
   (:variant symbol-value-slot other-pointer-type)
