@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.107 2003/11/25 04:40:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.108 2004/04/01 17:06:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2139,9 +2139,11 @@
 		 ;; supplied-p var immediately following keyword or optional.
 		 ;; Stick the extra var in the result element representing
 		 ;; the keyword or optional, which is the previous one.
-		 (nconc (car res)
-			(list (compiled-debug-function-lambda-list-var
-			       args (incf i) vars))))
+		 (cond ((eq (car res) :deleted)) ; no nothing 
+		       (t
+			(let ((var (compiled-debug-function-lambda-list-var
+				    args (incf i) vars)))
+			  (setf (car res) (append (car res) (list var)))))))
 		(c::rest-arg
 		 (push (list :rest
 			     (compiled-debug-function-lambda-list-var
