@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.20 1996/07/25 20:38:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.21 1997/02/08 15:20:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,7 +162,8 @@
     (multiple-value-bind
 	(okay errno)
 	(case whom
-	  ((#+hpux :pty-process-group)
+	  #+hpux
+	  (:pty-process-group
 	   (unix:unix-ioctl (system:fd-stream-fd (process-pty proc))
 			    unix:TIOCSIGSEND
 			    (system:int-sap
