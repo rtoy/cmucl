@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.32 1990/10/23 02:25:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.33 1990/11/03 03:23:04 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Converted for the MIPS by William Lott.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Interfaces to IR2 conversion:
@@ -25,7 +25,7 @@
 ;;;    Return a wired TN describing the N'th full call argument passing
 ;;; location.
 ;;;
-(defun standard-argument-location (n)
+(def-vm-support-routine standard-argument-location (n)
   (declare (type unsigned-byte n))
   (if (< n register-arg-count)
       (make-wired-tn *any-primitive-type*
@@ -42,7 +42,7 @@
 ;;; location.  Even in the non-standard case, this may be restricted by a
 ;;; desire to use a subroutine call instruction.
 ;;;
-(defun make-return-pc-passing-location (standard)
+(def-vm-support-routine make-return-pc-passing-location (standard)
   (if standard
       (make-wired-tn *any-primitive-type* register-arg-scn lra-offset)
       (make-restricted-tn *any-primitive-type* register-arg-scn)))
@@ -54,7 +54,7 @@
 ;;; totally unrestricted in non-standard conventions, since we can always fetch
 ;;; it off of the stack using the arg pointer.
 ;;;
-(defun make-old-fp-passing-location (standard)
+(def-vm-support-routine make-old-fp-passing-location (standard)
   (if standard
       (make-wired-tn *fixnum-primitive-type* immediate-arg-scn old-fp-offset)
       (make-normal-tn *fixnum-primitive-type*)))
@@ -65,14 +65,14 @@
 ;;; function.  We treat these specially so that the debugger can find them at a
 ;;; known location.
 ;;;
-(defun make-old-fp-save-location (env)
+(def-vm-support-routine make-old-fp-save-location (env)
   (specify-save-tn
    (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
    (make-wired-tn *fixnum-primitive-type*
 		  control-stack-arg-scn
 		  old-fp-save-offset)))
 ;;;
-(defun make-return-pc-save-location (env)
+(def-vm-support-routine make-return-pc-save-location (env)
   (specify-save-tn
    (environment-debug-live-tn (make-normal-tn *any-primitive-type*) env)
    (make-wired-tn *any-primitive-type*
@@ -85,7 +85,7 @@
 ;;; need to make the standard location, since a count is never passed when we
 ;;; are using non-standard conventions.
 ;;;
-(defun make-argument-count-location ()
+(def-vm-support-routine make-argument-count-location ()
   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nargs-offset))
 
 
@@ -94,18 +94,18 @@
 ;;;    Make a TN to hold the number-stack frame pointer.  This is allocated
 ;;; once per component, and is component-live.
 ;;;
-(defun make-nfp-tn ()
+(def-vm-support-routine make-nfp-tn ()
   (component-live-tn
    (make-wired-tn *fixnum-primitive-type* immediate-arg-scn nfp-offset)))
 
 ;;; MAKE-STACK-POINTER-TN ()
 ;;; 
-(defun make-stack-pointer-tn ()
+(def-vm-support-routine make-stack-pointer-tn ()
   (make-normal-tn *fixnum-primitive-type*))
 
 ;;; MAKE-NUMBER-STACK-POINTER-TN ()
 ;;; 
-(defun make-number-stack-pointer-tn ()
+(def-vm-support-routine make-number-stack-pointer-tn ()
   (make-normal-tn *fixnum-primitive-type*))
 
 ;;; Make-Unknown-Values-Locations  --  Interface
@@ -113,7 +113,7 @@
 ;;;    Return a list of TNs that can be used to represent an unknown-values
 ;;; continuation within a function.
 ;;;
-(defun make-unknown-values-locations ()
+(def-vm-support-routine make-unknown-values-locations ()
   (list (make-stack-pointer-tn)
 	(make-normal-tn *fixnum-primitive-type*)))
 
@@ -125,7 +125,7 @@
 ;;; placeholder entries in the Constants to leave room for additional
 ;;; noise in the code object header.
 ;;;
-(defun select-component-format (component)
+(def-vm-support-routine select-component-format (component)
   (declare (type component component))
   (dotimes (i code-constants-offset)
     (vector-push-extend nil

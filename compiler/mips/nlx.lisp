@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,20 +7,20 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.12 1990/09/06 17:45:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.13 1990/11/03 03:21:47 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 ;;; MAKE-NLX-SP-TN  --  Interface
 ;;;
 ;;;    Make an environment-live stack TN for saving the SP for NLX entry.
 ;;;
-(defun make-nlx-sp-tn (env)
+(def-vm-support-routine make-nlx-sp-tn (env)
   (environment-live-tn
    (make-representation-tn *fixnum-primitive-type* immediate-arg-scn)
    env))
@@ -42,7 +42,7 @@
 ;;;    Return a list of TNs that can be used to snapshot the dynamic state for
 ;;; use with the Save/Restore-Dynamic-Environment VOPs.
 ;;;
-(defun make-dynamic-state-tns ()
+(def-vm-support-routine make-dynamic-state-tns ()
   (make-n-tns 5 *any-primitive-type*))
 
 (define-vop (save-dynamic-state)
