@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.36 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.37 1996/05/07 20:47:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,38 +276,57 @@
 		      (:none character)
 		      (:line character)
 		      (:full character))
-  (if (eq (char-code byte)
-	  (char-code #\Newline))
+  (if (char= byte #\Newline)
       (setf (fd-stream-char-pos stream) 0)
       (incf (fd-stream-char-pos stream)))
   (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	(char-code byte)))
 
-(def-output-routines ("OUTPUT-BYTE-~A-BUFFERED"
+(def-output-routines ("OUTPUT-UNSIGNED-BYTE-~A-BUFFERED"
 		      1
-		      (:none (signed-byte 8) (unsigned-byte 8))
-		      (:full (signed-byte 8) (unsigned-byte 8)))
-  (when (characterp byte)
-    (if (eq (char-code byte)
-	    (char-code #\Newline))
-      (setf (fd-stream-char-pos stream) 0)
-      (incf (fd-stream-char-pos stream))))
+		      (:none (unsigned-byte 8))
+		      (:full (unsigned-byte 8)))
   (setf (sap-ref-8 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	byte))
 
-(def-output-routines ("OUTPUT-SHORT-~A-BUFFERED"
+(def-output-routines ("OUTPUT-SIGNED-BYTE-~A-BUFFERED"
+		      1
+		      (:none (signed-byte 8))
+		      (:full (signed-byte 8)))
+  (setf (signed-sap-ref-8 (fd-stream-obuf-sap stream)
+			  (fd-stream-obuf-tail stream))
+	byte))
+
+(def-output-routines ("OUTPUT-UNSIGNED-SHORT-~A-BUFFERED"
 		      2
-		      (:none (signed-byte 16) (unsigned-byte 16))
-		      (:full (signed-byte 16) (unsigned-byte 16)))
+		      (:none (unsigned-byte 16))
+		      (:full (unsigned-byte 16)))
   (setf (sap-ref-16 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	byte))
 
-(def-output-routines ("OUTPUT-LONG-~A-BUFFERED"
+(def-output-routines ("OUTPUT-SIGNED-SHORT-~A-BUFFERED"
+		      2
+		      (:none (signed-byte 16))
+		      (:full (signed-byte 16)))
+  (setf (signed-sap-ref-16 (fd-stream-obuf-sap stream)
+			   (fd-stream-obuf-tail stream))
+	byte))
+
+(def-output-routines ("OUTPUT-UNSIGNED-LONG-~A-BUFFERED"
 		      4
-		      (:none (signed-byte 32) (unsigned-byte 32))
-		      (:full (signed-byte 32) (unsigned-byte 32)))
+		      (:none (unsigned-byte 32))
+		      (:full (unsigned-byte 32)))
   (setf (sap-ref-32 (fd-stream-obuf-sap stream) (fd-stream-obuf-tail stream))
 	byte))
+
+(def-output-routines ("OUTPUT-SIGNED-LONG-~A-BUFFERED"
+		      4
+		      (:none (signed-byte 32))
+		      (:full (signed-byte 32)))
+  (setf (signed-sap-ref-32 (fd-stream-obuf-sap stream)
+			   (fd-stream-obuf-tail stream))
+	byte))
+
 
 ;;; OUTPUT-RAW-BYTES -- public
 ;;;
