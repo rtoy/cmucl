@@ -492,7 +492,7 @@
 	  (let* ((2env (environment-info (lambda-environment fun)))
 		 (dispatch (lambda-optional-dispatch fun))
 		 (main-p (and dispatch
-			      (eq fun (optional-dispatch-main-entry fun))))
+			      (eq fun (optional-dispatch-main-entry dispatch))))
 		 (dfun (make-compiled-debug-function
 			:name (cond ((leaf-name fun))
 				    ((let ((ef (functional-entry-function
