@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.70 2003/06/26 13:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.71 2003/08/05 11:00:49 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -937,7 +937,7 @@
       (multiple-value-bind (okay err) (unix:unix-rename original filename)
 	(unless okay
 	  (cerror "Go on as if nothing bad happened."
-		  "Could not restore ~S to it's original contents: ~A"
+		  "Could not restore ~S to its original contents: ~A"
 		  filename (unix:get-unix-error-msg err))))
       (multiple-value-bind (okay err) (unix:unix-unlink filename)
 	(unless okay

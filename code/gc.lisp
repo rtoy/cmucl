@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.35 2003/05/29 12:35:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.36 2003/08/05 11:00:49 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -413,7 +413,7 @@
 	;; optimizing the test away because of the type declaim for
 	;; *bytes-consed-between-gcs*.
 	(warn "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
-	       integer.  Reseting it to ~D." *bytes-consed-between-gcs*
+	       integer.  Resetting it to ~D." *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
       (when (and *gc-trigger* (> pre-gc-dyn-usage *gc-trigger*))
