@@ -52,6 +52,9 @@
     (comf "target:clx/image" :load t)
     (comf "target:clx/resource" :load t))
   (comf "target:code/clx-ext")
+  (comf "target:hemlock/key-event")
+  (comf "target:hemlock/keysym-defs")
+
   #-no-pcl
   (comf "target:code/inspect"))
 
@@ -85,6 +88,8 @@
 	   "target:clx/image"
 	   "target:clx/resource"
 	   "target:code/clx-ext"
+	   "target:hemlock/key-event"
+	   "target:hemlock/keysym-defs"
 	   "target:code/inspect"))
  :output (make-pathname :defaults "target:clx/clx-library"
 			:type (c:backend-fasl-file-type c:*target-backend*)))
