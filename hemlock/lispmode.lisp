@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.6 1991/06/15 16:55:12 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.7 1991/06/26 17:30:56 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -903,6 +903,47 @@
 (defindent "muffle-warning" 1)
 (defindent "abort" 1)
 (defindent "continue" 1)
+
+;;; Debug-internals forms.
+;;;
+(defindent "do-blocks" 1)
+(defindent "di:do-blocks" 1)
+(defindent "do-debug-function-variables" 1)
+(defindent "di:do-debug-function-variables" 1)
+(defindent "do-debug-block-locations" 1)
+(defindent "di:do-debug-block-locations" 1)
+;;;
+;;; Debug-internals conditions
+;;; (define these to make uses of HANDLER-CASE indent branches correctly.)
+;;;
+(defindent "debug-condition" 1)
+(defindent "di:debug-condition" 1)
+(defindent "no-debug-info" 1)
+(defindent "di:no-debug-info" 1)
+(defindent "no-debug-function-returns" 1)
+(defindent "di:no-debug-function-returns" 1)
+(defindent "no-debug-blocks" 1)
+(defindent "di:no-debug-blocks" 1)
+(defindent "lambda-list-unavailable" 1)
+(defindent "di:lambda-list-unavailable" 1)
+(defindent "no-debug-variables" 1)
+(defindent "di:no-debug-variables" 1)
+(defindent "invalid-value" 1)
+(defindent "di:invalid-value" 1)
+(defindent "ambiguous-variable-name" 1)
+(defindent "di:ambiguous-variable-name" 1)
+(defindent "debug-error" 1)
+(defindent "di:debug-error" 1)
+(defindent "unhandled-condition" 1)
+(defindent "di:unhandled-condition" 1)
+(defindent "unknown-code-location" 1)
+(defindent "di:unknown-code-location" 1)
+(defindent "unknown-debug-variable" 1)
+(defindent "di:unknown-debug-variable" 1)
+(defindent "invalid-control-stack-pointer" 1)
+(defindent "di:invalid-control-stack-pointer" 1)
+(defindent "frame-function-mismatch" 1)
+(defindent "di:frame-function-mismatch" 1)
 
 ;;; Xlib forms.
 ;;;
