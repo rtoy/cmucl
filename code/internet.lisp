@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.23 2000/08/04 00:33:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.24 2000/08/07 13:55:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,10 +280,10 @@ struct in_addr {
       socket)))
 
 ;;; Socket levels.
-(defconstant sol-socket #+linux 1 #+solaris #xffff)
+(defconstant sol-socket #+linux 1 #+(or solaris freebsd) #xffff)
 
 ;;; Socket options.
-(defconstant so-reuseaddr #+linux 2 #+solaris 4)
+(defconstant so-reuseaddr #+linux 2 #+(or solaris freebsd) 4)
 
 (defun get-socket-option (socket level optname)
   "Get an integer value socket option."
