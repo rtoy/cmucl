@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.77 1998/02/02 18:01:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.78 1998/02/11 06:06:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1044,6 +1044,8 @@
 ;;; member type to get the resulting member type result.
 ;;;
 (defun one-arg-derive-type (arg derive-fcn fcn &optional (convert-type t))
+  #+negative-zero-is-not-zero
+  (declare (ignore convert-type))
   (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
       (flet ((deriver (x)
@@ -1087,6 +1089,8 @@
 ;;;
 (defun two-arg-derive-type (arg1 arg2 derive-fcn fcn
 				 &optional (convert-type t))
+  #+negative-zero-is-not-zero
+  (declare (ignore convert-type))
   (labels ((convert-member-type (arg)
 	     (let* ((val (first (member-type-members arg)))
 		    (val-type (type-of val)))
