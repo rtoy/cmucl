@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47.1.2 1993/02/08 22:19:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47.1.3 1993/02/10 23:19:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,27 +89,28 @@
   (unsafe))
 
 
-(defknown %make-instance (instance-index) instance
+(defknown %make-instance (index) instance
   (unsafe))
 (defknown %instance-layout (instance) layout
   (foldable flushable))
 (defknown %set-instance-layout (instance layout) layout
   (unsafe))
-(defknown %instance-length (instance) instance-index
+(defknown %instance-length (instance) index
   (foldable flushable))
-(defknown %instance-ref (instance instance-index) t
+(defknown %instance-ref (instance index) t
   (flushable))
-(defknown %instance-set (instance instance-index t) t
+(defknown %instance-set (instance index t) t
   (unsafe))
 (defknown %layout-invalid-error (t layout) nil)
 
-(defknown %raw-ref-single (t index) single-float
+(deftype raw-vector () '(simple-array (unsigned-byte 32) (*)))
+(defknown %raw-ref-single (raw-vector index) single-float
   (foldable flushable))
-(defknown %raw-ref-double (t index) double-float
+(defknown %raw-ref-double (raw-vector index) double-float
   (foldable flushable))
-(defknown %raw-set-single (t index single-float) single-float
+(defknown %raw-set-single (raw-vector index single-float) single-float
   (unsafe))
-(defknown %raw-set-double (t index double-float) double-float
+(defknown %raw-set-double (raw-vector index double-float) double-float
   (unsafe))
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)

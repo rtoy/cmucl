@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: VM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8.1.1 1993/02/08 22:18:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.8.1.2 1993/02/10 23:19:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,15 +243,15 @@
 	 ((t *) (values *any-primitive-type* t))
 	 ((nil) (values *any-primitive-type* nil))))
       (built-in-class
-       (ecase (class-name type)
+       (case (class-name type)
 	 ((complex function generic-function instance
 		   system-area-pointer weak-pointer)
 	  (values (primitive-type-or-lose (class-name type) *backend*) t))
-	 (character
+	 (base-char
 	  (exactly base-char))
 	 (cons
 	  (part-of list))
-	 (symbol
+	 (t
 	  (any))))
       (function-type
        (exactly function))
