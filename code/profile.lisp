@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.12 1994/02/10 21:25:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.13 1994/02/11 14:47:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -493,7 +493,17 @@
     (when no-call
       (format *trace-output*
 	      "~%These functions were not called:~%~{~<~%~:; ~S~>~}~%"
-	      (sort no-call #'string< :key #'symbol-name)))
+	      (sort no-call #'string<
+		    :key #'(lambda (n)
+			     (cond ((symbolp n)
+				    (symbol-name n))
+				   ((and (listp n)
+					 (eq (car n) 'setf)
+					 (consp (cdr n))
+					 (symbolp (cadr n)))
+				    (symbol-name (cadr n)))
+				   (t
+				    (princ-to-string n)))))))
     (values)))
 
 
