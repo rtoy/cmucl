@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.13 1991/11/30 22:55:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.14 1991/11/30 23:51:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -179,7 +179,7 @@
 
 ;;;; FORMAT
 
-(defun my-format (destination control-string &rest format-arguments)
+(defun format (destination control-string &rest format-arguments)
   "Provides various facilities for formatting output.
   CONTROL-STRING contains a string to be output, possibly with embedded
   directives, which are flagged with the escape character \"~\".  Directives
