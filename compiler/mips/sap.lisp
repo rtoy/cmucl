@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.21 1992/02/21 23:13:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.22 1992/02/21 23:20:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,11 +243,11 @@
 (def-system-ref-and-set sap-ref-8 %set-sap-ref-8
   unsigned-reg positive-fixnum :byte nil)
 (def-system-ref-and-set signed-sap-ref-8 %set-signed-sap-ref-8
-  signed-reg positive-fixnum :byte t)
+  signed-reg tagged-num :byte t)
 (def-system-ref-and-set sap-ref-16 %set-sap-ref-16
   unsigned-reg positive-fixnum :short nil)
 (def-system-ref-and-set signed-sap-ref-16 %set-signed-sap-ref-16
-  signed-reg positive-fixnum :short t)
+  signed-reg tagged-num :short t)
 (def-system-ref-and-set sap-ref-32 %set-sap-ref-32
   unsigned-reg unsigned-num :long nil)
 (def-system-ref-and-set signed-sap-ref-32 %set-signed-sap-ref-32
