@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71.2.3 2000/11/06 17:48:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.71.2.4 2000/11/06 18:08:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -947,13 +947,11 @@
 						   :depth (1+ depth)))
 		   (c-path-fp (x86-call-context c-ocfp :depth (1+ depth))))
 	       (cond ((and lisp-path-fp c-path-fp)
-		      ;; Both still seem valid - choose the smallest.
+		      ;; Both still seem valid - choose the lisp fram.
 		      (when (zerop depth)
 			(format t "Debug: Both still valid ~s ~s ~s ~s~%"
 				lisp-ocfp lisp-ra c-ocfp c-ra))
-		      (if (sap< lisp-ocfp c-ocfp)
-			  (values lisp-ra lisp-ocfp)
-			(values c-ra c-ocfp)))
+		      (values lisp-ra lisp-ocfp))
 		     (lisp-path-fp
 		      ;; The lisp convention is looking good.
 ;		      (format t "*C lisp-ocfp ~s ~s~%" lisp-ocfp lisp-ra)
