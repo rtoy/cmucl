@@ -122,7 +122,7 @@
 (progn
   #+rt-target
   (load "assem:assembler" :verbose t)
-  (%proclaim '(optimize (debug-info 0)))
+  (%proclaim '(optimize (debug-info 2)))
 
   (setq *info-environment*
 	(list (make-info-environment :name "Working")
