@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.3 1990/07/31 17:22:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.4 1990/10/18 02:56:15 ram Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -27,12 +27,15 @@
   (let ((function (intern (concatenate 'simple-string
 				       "%"
 				       (string-upcase name)))))
-    `(def-c-routine (,name ,function) (double-float)
-       ,@(let ((results nil))
-	   (dotimes (i num-args (nreverse results))
-	     (push (list (intern (format nil "ARG-~D" i))
-			 'double-float)
-		   results))))))
+    `(progn
+       (proclaim '(maybe-inline ,function))
+       (export ',function)
+       (def-c-routine (,name ,function) (double-float)
+	 ,@(let ((results nil))
+	     (dotimes (i num-args (nreverse results))
+	       (push (list (intern (format nil "ARG-~D" i))
+			   'double-float)
+		     results)))))))
 
 (eval-when (compile load eval)
 
@@ -77,6 +80,10 @@
 
 
 ;;;; Power functions.
+
+;;; Let the C stubs be opportunistically inline expanded.
+;;;
+(proclaim '(optimize (space 0)))
 
 (defun exp (number)
   "Return e raised to the power NUMBER."
@@ -316,19 +323,11 @@
   "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
   (if xp
       (if (and (zerop x) (zerop y))
-	  (multiple-value-bind
-	      (mag exp sign-x)
-	      (integer-decode-float (float x))
-	    (declare (ignore mag exp))
-	    (if (plusp sign-x)
-		y
-		(multiple-value-bind
-		    (mag exp sign-y)
-		    (integer-decode-float (float y))
-		  (declare (ignore mag exp))
-		  (if (minusp sign-y)
-		      (- pi)
-		      pi))))
+	  (if (plusp (float-sign (float x)))
+	      y
+	      (if (minusp (float-sign (float y)))
+		  (- pi)
+		  pi))
 	  (number-dispatch ((y real) (x real))
 	    (((foreach fixnum bignum ratio single-float)
 	      (foreach fixnum bignum ratio single-float))
@@ -376,3 +375,4 @@
   "Return the hyperbolic arc tangent of NUMBER."
   (log (* (1+ number) (sqrt (/ (- 1 (* number number)))))))
 
+(proclaim '(optimize (space 1)))
