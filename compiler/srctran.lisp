@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.83 1998/02/24 09:57:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.84 1998/03/21 08:08:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -994,6 +994,13 @@
       (if (member-type-p type)
 	  (setf members (union members (member-type-members type)))
 	  (push type misc-types)))
+    #+long-float
+    (when (null (set-difference '(-0l0 0l0) members))
+      #-negative-zero-is-not-zero
+      (push (specifier-type '(long-float 0l0 0l0)) misc-types)
+      #+negative-zero-is-not-zero
+      (push (specifier-type '(long-float -0l0 0l0)) misc-types)
+      (setf members (set-difference members '(-0l0 0l0))))
     (when (null (set-difference '(-0d0 0d0) members))
       #-negative-zero-is-not-zero
       (push (specifier-type '(double-float 0d0 0d0)) misc-types)
@@ -1635,13 +1642,14 @@
 		  (values 'integer nil))
 		 (rational
 		  (values 'rational nil))
-		 ((or single-float double-float)
+		 ((or single-float double-float #+long-float long-float)
 		  (values 'float rem-type))
 		 (float
 		  (values 'float nil))
 		 (real
 		  (values nil nil)))
-	     (when (member rem-type '(float single-float double-float))
+	     (when (member rem-type '(float single-float double-float
+				      	    #+long-float long-float))
 	       (setf rem (interval-func #'(lambda (x)
 					    (coerce x rem-type))
 					rem)))
@@ -1737,13 +1745,14 @@
 		      (values 'integer nil))
 		     (rational
 		      (values 'rational nil))
-		     ((or single-float double-float)
+		     ((or single-float double-float #+long-float long-float)
 		      (values 'float result-type))
 		     (float
 		      (values 'float nil))
 		     (real
 		      (values nil nil)))
-		 (when (member result-type '(float single-float double-float))
+		 (when (member result-type '(float single-float double-float
+					     #+long-float long-float))
 		   ;; Make sure the limits on the interval have
 		   ;; the right type.
 		   (setf rem (interval-func #'(lambda (x)

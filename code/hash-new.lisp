@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.1 1997/11/03 16:08:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2 1998/03/21 08:11:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -909,6 +909,19 @@
 	       (logxor (ash lo (- sxmash-rotate-bits))
 		       (ash hi (- sxmash-rotate-bits))
 		       lo hi))))
+       #+long-float
+       (long-float
+	(let* ((val s-expr)
+	       (lo (long-float-low-bits val))
+	       #+sparc (mid (long-float-mid-bits val))
+	       (hi (long-float-high-bits val))
+	       (exp (long-float-exp-bits val)))
+	  (ldb sxhash-bits-byte
+	       (logxor (ash lo (- sxmash-rotate-bits))
+		       #+sparc (ash mid (- sxmash-rotate-bits))
+		       (ash hi (- sxmash-rotate-bits))
+		       (ash exp (- sxmash-rotate-bits))
+		       lo hi exp))))
        (ratio (logxor (internal-sxhash (numerator s-expr) 0)
 		      (internal-sxhash (denominator s-expr) 0)))
        (complex (logxor (internal-sxhash (realpart s-expr) 0)

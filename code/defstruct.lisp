@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.60 1998/03/03 17:35:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.61 1998/03/21 08:11:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,6 +61,11 @@
   (declare (type index index))
   (%raw-ref-double vec index))
 
+#+long-float
+(defun %raw-ref-long (vec index)
+  (declare (type index index))
+  (%raw-ref-long vec index))
+
 (defun %raw-set-single (vec index val)
   (declare (type index index))
   (%raw-set-single vec index val))
@@ -68,6 +73,11 @@
 (defun %raw-set-double (vec index val)
   (declare (type index index))
   (%raw-set-double vec index val))
+
+#+long-float
+(defun %raw-set-long (vec index val)
+  (declare (type index index))
+  (%raw-set-long vec index val))
 
 #+complex-float
 (progn
@@ -80,6 +90,11 @@
   (declare (type index index))
   (%raw-ref-complex-double vec index))
 
+#+long-float
+(defun %raw-ref-complex-long (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-long vec index))
+
 (defun %raw-set-complex-single (vec index val)
   (declare (type index index))
   (%raw-set-complex-single vec index val))
@@ -87,6 +102,11 @@
 (defun %raw-set-complex-double (vec index val)
   (declare (type index index))
   (%raw-set-complex-double vec index val))
+
+#+long-float
+(defun %raw-set-complex-long (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-long vec index val))
 
 ) ; end progn complex-float
 
@@ -145,10 +165,14 @@
 (defsetf %instance-ref %instance-set)
 (defsetf %raw-ref-single %raw-set-single)
 (defsetf %raw-ref-double %raw-set-double)
+#+long-float
+(defsetf %raw-ref-long %raw-set-long)
 #+complex-float
 (defsetf %raw-ref-complex-single %raw-set-complex-single)
 #+complex-float
 (defsetf %raw-ref-complex-double %raw-set-complex-double)
+#+(and complex-float long-float)
+(defsetf %raw-ref-complex-long %raw-set-complex-long)
 (defsetf %instance-layout %set-instance-layout)
 (defsetf %funcallable-instance-info %set-funcallable-instance-info)
 
@@ -262,9 +286,10 @@
   (type t)			; declared type specifier
   ;;
   ;; If a raw slot, what it holds.  T means not raw.
-  (raw-type t :type (member t single-float double-float
+  (raw-type t :type (member t single-float double-float #+long-float long-float
 			    #+complex-float complex-single-float
 			    #+complex-float complex-double-float
+			    #+(and complex-float long-float) complex-long-float
 			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
@@ -592,12 +617,18 @@
 	       (values 'single-float 1))
 	      ((subtypep type 'double-float)
 	       (values 'double-float 2))
+	      #+long-float
+	      ((subtypep type 'long-float)
+	       (values 'long-float #+x86 3 #+sparc 4))
 	      #+complex-float
 	      ((subtypep type '(complex single-float))
 	       (values 'complex-single-float 2))
 	      #+complex-float
 	      ((subtypep type '(complex double-float))
 	       (values 'complex-double-float 4))
+	      #+(and long-float complex-float)
+	      ((subtypep type '(complex long-float))
+	       (values 'complex-long-float #+x86 6 #+sparc 8))
 	      (t (values nil nil)))
 
       (cond ((not raw-type)
@@ -962,16 +993,26 @@
      (ecase rtype
        (single-float '%raw-ref-single)
        (double-float '%raw-ref-double)
+       #+long-float
+       (long-float '%raw-ref-long)
        #+complex-float
        (complex-single-float '%raw-ref-complex-single)
        #+complex-float
        (complex-double-float '%raw-ref-complex-double)
+       #+(and complex-float long-float)
+       (complex-long-float '%raw-ref-complex-long)
        (unsigned-byte 'aref)
        ((t)
 	(if (eq (dd-type defstruct) 'funcallable-structure)
 	    '%funcallable-instance-info
 	    '%instance-ref)))
      (case rtype
+       #+(and complex-float long-float)
+       (complex-long-float
+	(truncate (dsd-index slot) #+x86 6 #+sparc 8))
+       #+long-float
+       (long-float
+	(truncate (dsd-index slot) #+x86 3 #+sparc 4))
        (double-float
 	(ash (dsd-index slot) -1))
        #+complex-float

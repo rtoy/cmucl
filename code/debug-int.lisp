@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.88 1998/02/14 21:09:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.89 1998/03/21 08:11:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3141,18 +3141,28 @@
        (escaped-float-value single-float))
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
+      #+long-float
+      (#.vm:long-reg-sc-number
+       (escaped-float-value long-float))
       #+complex-float
       (#.vm:complex-single-reg-sc-number
        (escaped-complex-float-value single-float))
       #+complex-float
       (#.vm:complex-double-reg-sc-number
        (escaped-complex-float-value double-float))
+      #+(and complex-float long-float)
+      (#.vm:complex-long-reg-sc-number
+       (escaped-complex-float-value long-float))
       (#.vm:single-stack-sc-number
        (system:sap-ref-single fp (- (* (1+ (c:sc-offset-offset sc-offset))
 				       vm:word-bytes))))
       (#.vm:double-stack-sc-number
        (system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 2)
 				       vm:word-bytes))))
+      #+long-float
+      (#.vm:long-stack-sc-number
+       (system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
+				     vm:word-bytes))))
       #+complex-float
       (#.vm:complex-single-stack-sc-number
        (complex
@@ -3167,6 +3177,13 @@
 					vm:word-bytes)))
 	(system:sap-ref-double fp (- (* (+ (c:sc-offset-offset sc-offset) 4)
 					vm:word-bytes)))))
+      #+(and complex-float long-float)
+      (#.vm:complex-long-stack-sc-number
+       (complex
+	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 3)
+				      vm:word-bytes)))
+	(system:sap-ref-long fp (- (* (+ (c:sc-offset-offset sc-offset) 6)
+				      vm:word-bytes)))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c:sc-offset-offset sc-offset)))
       (#.vm:base-char-stack-sc-number

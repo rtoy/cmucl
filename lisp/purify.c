@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.15 1998/01/18 15:45:35 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.16 1998/03/21 08:15:01 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -124,6 +124,9 @@ maybe_can_move_p(lispobj thing)
       case type_Bignum:
       case type_SingleFloat:
       case type_DoubleFloat:
+#ifdef type_LongFloat
+      case type_LongFloat:
+#endif
       case type_Sap:
       case type_SimpleVector:
       case type_SimpleString:
@@ -147,11 +150,17 @@ maybe_can_move_p(lispobj thing)
 #endif
       case type_SimpleArraySingleFloat:
       case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+      case type_SimpleArrayLongFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
       case type_SimpleArrayComplexSingleFloat:
 #endif
 #ifdef type_SimpleArrayComplexDoubleFloat
       case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+      case type_SimpleArrayComplexLongFloat:
 #endif
       case type_CodeHeader:
       case type_FunctionHeader:
@@ -324,6 +333,9 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
 #ifdef type_ComplexDoubleFloat
     case type_ComplexDoubleFloat:
 #endif
+#ifdef type_ComplexLongFloat
+    case type_ComplexLongFloat:
+#endif
     case type_SimpleArray:
     case type_ComplexString:
     case type_ComplexBitVector:
@@ -336,6 +348,9 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
     case type_Bignum:
     case type_SingleFloat:
     case type_DoubleFloat:
+#ifdef type_LongFloat
+    case type_LongFloat:
+#endif
     case type_SimpleString:
     case type_SimpleBitVector:
     case type_SimpleArrayUnsignedByte2:
@@ -357,11 +372,17 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
 #endif
     case type_SimpleArraySingleFloat:
     case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+    case type_SimpleArrayLongFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
     case type_SimpleArrayComplexSingleFloat:
 #endif
 #ifdef type_SimpleArrayComplexDoubleFloat
     case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+    case type_SimpleArrayComplexLongFloat:
 #endif
     case type_Sap:
     case type_WeakPointer:
@@ -926,11 +947,17 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_Bignum:
       case type_SingleFloat:
       case type_DoubleFloat:
+#ifdef type_LongFloat
+      case type_LongFloat:
+#endif
 #ifdef type_ComplexSingleFloat
       case type_ComplexSingleFloat:
 #endif
 #ifdef type_ComplexDoubleFloat
       case type_ComplexDoubleFloat:
+#endif
+#ifdef type_ComplexLongFloat
+      case type_ComplexLongFloat:
 #endif
       case type_Sap:
         return ptrans_unboxed(thing, header);
@@ -995,13 +1022,34 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_SimpleArrayDoubleFloat:
         return ptrans_vector(thing, 64, 0, FALSE, constant);
 
+#ifdef type_SimpleArrayLongFloat
+      case type_SimpleArrayLongFloat:
+#ifdef i386
+        return ptrans_vector(thing, 96, 0, FALSE, constant);
+#endif
+#ifdef sparc
+        return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
+#endif
+
 #ifdef type_SimpleArrayComplexSingleFloat
       case type_SimpleArrayComplexSingleFloat:
         return ptrans_vector(thing, 64, 0, FALSE, constant);
 #endif
+
 #ifdef type_SimpleArrayComplexDoubleFloat
       case type_SimpleArrayComplexDoubleFloat:
         return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
+
+#ifdef type_SimpleArrayComplexLongFloat
+      case type_SimpleArrayComplexLongFloat:
+#ifdef i386
+        return ptrans_vector(thing, 192, 0, FALSE, constant);
+#endif
+#ifdef sparc
+        return ptrans_vector(thing, 256, 0, FALSE, constant);
+#endif
 #endif
 
       case type_CodeHeader:
@@ -1163,6 +1211,9 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_Bignum:
               case type_SingleFloat:
               case type_DoubleFloat:
+#ifdef type_LongFloat
+              case type_LongFloat:
+#endif
               case type_Sap:
                 /* It's an unboxed simple object. */
                 count = HeaderValue(thing)+1;
@@ -1235,10 +1286,34 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                 count = fixnum_value(vector->length)*2+2;
                 break;
 
+#ifdef type_SimpleArrayLongFloat
+              case type_SimpleArrayLongFloat:
+                vector = (struct vector *)addr;
+#ifdef i386
+                count = fixnum_value(vector->length)*3+2;
+#endif
+#ifdef sparc
+                count = fixnum_value(vector->length)*4+2;
+#endif
+                break;
+#endif
+
 #ifdef type_SimpleArrayComplexDoubleFloat
               case type_SimpleArrayComplexDoubleFloat:
                 vector = (struct vector *)addr;
                 count = fixnum_value(vector->length)*4+2;
+                break;
+#endif
+
+#ifdef type_SimpleArrayComplexLongFloat
+              case type_SimpleArrayComplexLongFloat:
+                vector = (struct vector *)addr;
+#ifdef i386
+                count = fixnum_value(vector->length)*6+2;
+#endif
+#ifdef sparc
+                count = fixnum_value(vector->length)*8+2;
+#endif
                 break;
 #endif
 

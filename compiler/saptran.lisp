@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.9 1998/03/04 14:56:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.10 1998/03/21 08:08:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,7 @@
   (flushable))
 (defknown sap-ref-double (system-area-pointer fixnum) double-float
   (flushable))
-#+x86
+#+(or x86 long-float)
 (defknown sap-ref-long (system-area-pointer fixnum) long-float
   (flushable))
 
@@ -111,6 +111,10 @@
   ())
 (defknown %set-sap-ref-double
 	  (system-area-pointer fixnum double-float) double-float
+  ())
+#+long-float
+(defknown %set-sap-ref-long
+	  (system-area-pointer fixnum long-float) long-float
   ())
 
 
@@ -142,7 +146,8 @@
 	       sap-ref-sap %set-sap-ref-sap
 	       sap-ref-single %set-sap-ref-single
 	       sap-ref-double %set-sap-ref-double
-	       #+x86 sap-ref-long))
+	       #+(or x86 long-float) sap-ref-long
+	       #+long-float %set-sap-ref-long))
   (deftransform fun ((sap offset) '* '* :eval-name t)
     (extract-function-args sap 'sap+ 2)
     `(lambda (sap offset1 offset2)

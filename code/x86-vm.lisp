@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.13 1998/02/19 10:52:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.14 1998/03/21 08:12:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -343,6 +343,7 @@
     (let ((reg-sap (alien-sap (deref (slot (deref (slot scp 'fpstate) 0)
 					    'fpreg)
 				     index))))
+      (declare (ignorable reg-sap))
       #+not-yet
       (setf (sys:sap-ref-long reg-sap 0) (coerce new-value 'long-float))
       (coerce new-value format))))
@@ -410,9 +411,8 @@
 
 ;;; SANCTIFY-FOR-EXECUTION -- Interface.
 ;;;
-;;; Do whatever is necessary to make the given code component executable.
-;;; On the sparc, we don't need to do anything, because the i and d caches
-;;; are unified.
+;;; Do whatever is necessary to make the given code component
+;;; executable - nothing on the x86.
 ;;; 
 (defun sanctify-for-execution (component)
   (declare (ignore component))
@@ -422,21 +422,29 @@
 ;;;
 ;;; This is used in error.lisp to insure floating-point  exceptions
 ;;; are properly trapped. The compiler translates this to a VOP.
-;;; Note: if you are compiling this from an old version you may need
-;;; to disable this until the float-wait VOP is entrenched.
+;;;
 (defun float-wait()
   (float-wait))
 
 ;;; FLOAT CONSTANTS
 ;;;
-;;; These are used by the FP move-from-{single|double} VOPs
-;;; rather than the i387 load constant instructions to avoid
-;;; consing in some cases.
-
-(defvar *fp-constant-0s0* 0s0)
-(defvar *fp-constant-0d0* 0d0)
-(defvar *fp-constant-1s0* 1s0)
-(defvar *fp-constant-1d0* 1d0)
+;;; These are used by the FP move-from-{single|double} VOPs rather
+;;; than the i387 load constant instructions to avoid consing in some
+;;; cases. Note these are initialise by genesis as they are needed
+;;; early.
+;;;
+(defvar *fp-constant-0s0*)
+(defvar *fp-constant-1s0*)
+(defvar *fp-constant-0d0*)
+(defvar *fp-constant-1d0*)
+;;; The long-float constants.
+(defvar *fp-constant-0l0*)
+(defvar *fp-constant-1l0*)
+(defvar *fp-constant-pi*)
+(defvar *fp-constant-l2t*)
+(defvar *fp-constant-l2e*)
+(defvar *fp-constant-lg2*)
+(defvar *fp-constant-ln2*)
 
 ;;; Enable/Disable scavenging of the read-only space.
 (defvar *scavenge-read-only-space* nil)

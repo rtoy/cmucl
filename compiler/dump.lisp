@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.69 1998/03/10 18:34:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.70 1998/03/21 08:08:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1044,6 +1044,46 @@
   (sub-dump-object (denominator x) file)
   (dump-fop 'lisp::fop-ratio file))
 
+;;; Dump a long-float in the current *backend* format which may
+;;; require conversion from the native backend format.
+;;;
+#+(and long-float x86)
+(defun dump-long-float (float file)
+  (declare (long-float float))
+  (let ((exp-bits (long-float-exp-bits float))
+	(high-bits (long-float-high-bits float))
+	(low-bits (long-float-low-bits float)))
+    (cond ((backend-featurep :x86)	; Native dump.
+	   (dump-unsigned-32 low-bits file)
+	   (dump-unsigned-32 high-bits file)
+	   (dump-var-signed exp-bits 2 file))
+	  ((backend-featurep :sparc)
+	   ;; Some format converstion will be needed, just dump 0l0
+	   ;; for now.
+	   (unless (zerop float)
+	     (format t "Warning: dumping ~s as 0l0~%" float))
+	   (dump-unsigned-32 0 file)
+	   (dump-unsigned-32 0 file)
+	   (dump-unsigned-32 0 file)
+	   (dump-var-signed 0 4 file))
+	  (t
+	   (error "Unable to dump long-float")))))
+
+#+(and long-float sparc)
+(defun dump-long-float (float file)
+  (declare (long-float float))
+  (let ((exp-bits (long-float-exp-bits float))
+	(high-bits (long-float-high-bits float))
+	(mid-bits (long-float-mid-bits float))
+	(low-bits (long-float-low-bits float)))
+    (cond ((backend-featurep :sparc)	; Native dump
+	   (dump-unsigned-32 low-bits file)
+	   (dump-unsigned-32 mid-bits file)
+	   (dump-unsigned-32 high-bits file)
+	   (dump-var-signed exp-bits 4 file))
+	  (t
+	   (error "Unable to dump long-float")))))
+	   
 ;;; Or a complex...
 
 #+complex-float
@@ -1063,6 +1103,11 @@
        (declare (double-float im))
        (dump-unsigned-32 (double-float-low-bits im) file)
        (dump-var-signed (double-float-high-bits im) 4 file)))
+    #+long-float
+    ((complex long-float)
+     (dump-fop 'lisp::fop-complex-long-float file)
+     (dump-long-float (realpart x) file)
+     (dump-long-float (imagpart x) file))
     (t
      (sub-dump-object (realpart x) file)
      (sub-dump-object (imagpart x) file)
@@ -1103,7 +1148,11 @@
      (let ((x x))
        (declare (double-float x))
        (dump-unsigned-32 (double-float-low-bits x) file)
-       (dump-var-signed (double-float-high-bits x) 4 file)))))
+       (dump-var-signed (double-float-high-bits x) 4 file)))
+    #+long-float
+    (long-float
+     (dump-fop 'lisp::fop-long-float file)
+     (dump-long-float x file))))
 
 
 ;;;; Symbol Dumping:
@@ -1312,6 +1361,10 @@
       ((simple-array double-float (*))
        (dump-double-float-vector simple-version file)
        (eq-save-object x file))
+      #+long-float
+      ((simple-array long-float (*))
+       (dump-long-float-vector simple-version file)
+       (eq-save-object x file))
       #+complex-float
       ((simple-array (complex single-float) (*))
        (dump-complex-single-float-vector simple-version file)
@@ -1319,6 +1372,10 @@
       #+complex-float
       ((simple-array (complex double-float) (*))
        (dump-complex-double-float-vector simple-version file)
+       (eq-save-object x file))
+      #+(and complex-float long-float)
+      ((simple-array (complex long-float) (*))
+       (dump-complex-long-float-vector simple-version file)
        (eq-save-object x file))
       (t
        (dump-i-vector simple-version file)
@@ -1442,6 +1499,17 @@
     (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2)
 				   (* vm:word-bytes 2) file)))
 
+;;; DUMP-LONG-FLOAT-VECTOR  --  internal.
+;;; 
+#+long-float
+(defun dump-long-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-long-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping
+     vec (* length vm:word-bytes #+x86 3 #+sparc 4)
+     (* vm:word-bytes #+x86 3 #+sparc 4) file)))
+
 ;;; DUMP-COMPLEX-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 
 #+complex-float
@@ -1461,6 +1529,17 @@
     (dump-unsigned-32 length file)
     (dump-data-maybe-byte-swapping vec (* length vm:word-bytes 2 2)
 				   (* vm:word-bytes 2) file)))
+
+;;; DUMP-COMPLEX-LONG-FLOAT-VECTOR  --  internal.
+;;; 
+#+(and complex-float long-float)
+(defun dump-complex-long-float-vector (vec file)
+  (let ((length (length vec)))
+    (dump-fop 'lisp::fop-complex-long-float-vector file)
+    (dump-unsigned-32 length file)
+    (dump-data-maybe-byte-swapping
+     vec (* length vm:word-bytes #+x86 3 #+sparc 4 2)
+     (* vm:word-bytes #+x86 3 #+sparc 4) file)))
 
 ;;; DUMP-DATA-BITS-MAYBE-BYTE-SWAPPING  --  internal.
 ;;;

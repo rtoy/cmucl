@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.12 1998/02/21 16:52:20 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.13 1998/03/21 08:15:03 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -136,8 +136,15 @@ GNAME(call_into_lisp):
 	fwait			# Catch any pending NPX exceptions.
 	subl	$108,%esp	# Make room for the NPX state.
 	fnsave	(%esp)		# Resets NPX
+
+	movl	(%esp),%eax	# Load NPX control word
+	andl	$0xfffff3ff,%eax	# Set rounding mode to nearest
+	orl	$0x00000300,%eax	# Set precision to 64 bits
+	pushl	%eax
 	fldcw	(%esp)		# Recover modes
-	fldz			# insure no regs are not empty
+	popl	%eax
+
+	fldz			# insure no FP regs are empty
 	fldz
 	fldz
 	fldz
@@ -263,7 +270,11 @@ GNAME(undefined_tramp):
 	int3
 	.byte	trap_Error
         .byte   2
+#ifdef type_LongFloat
+        .byte   24
+#else
         .byte   23
+#endif
         .byte   sc_DescriptorReg # EAX in the Descriptor-reg SC.
 	ret
 	.size	GNAME(undefined_tramp), .-GNAME(undefined_tramp)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.45 1998/02/03 19:22:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.46 1998/03/21 08:12:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,10 +54,11 @@
       consp
       compiled-function-p
       complexp
-      #+complex-float complex-rational-p
-      #+complex-float complex-float-p
-      #+complex-float complex-single-float-p
       #+complex-float complex-double-float-p
+      #+complex-float complex-float-p
+      #+(and complex-float long-float) complex-long-float-p
+      #+complex-float complex-rational-p
+      #+complex-float complex-single-float-p
       double-float-p
       fdefn-p
       fixnump
@@ -99,8 +100,10 @@
       #+signed-array simple-array-signed-byte-32-p
       simple-array-single-float-p
       simple-array-double-float-p
+      #+long-float simple-array-long-float-p
       #+complex-float simple-array-complex-single-float-p
       #+complex-float simple-array-complex-double-float-p
+      #+(and complex-float long-float) simple-array-complex-long-float-p
       dylan::dylan-function-p
       )))
 

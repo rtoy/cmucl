@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.68 1998/03/01 21:46:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.69 1998/03/21 08:11:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -804,6 +804,23 @@
 	  (complex re im))
       (done-with-fast-read-byte))))
 
+#+(and complex-float long-float)
+(define-fop (fop-complex-long-float 67)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((re-lo (fast-read-u-integer 4))
+	       #+sparc (re-mid (fast-read-u-integer 4))
+	       (re-hi (fast-read-u-integer 4))
+	       (re-exp (fast-read-s-integer #+x86 2 #+sparc 4))
+	       (re (make-long-float re-exp re-hi #+sparc re-mid re-lo))
+	       (im-lo (fast-read-u-integer 4))
+	       #+sparc (im-mid (fast-read-u-integer 4))
+	       (im-hi (fast-read-u-integer 4))
+	       (im-exp (fast-read-s-integer #+x86 2 #+sparc 4))
+	       (im (make-long-float im-exp im-hi #+sparc im-mid im-lo)))
+	  (complex re im))
+      (done-with-fast-read-byte))))
+
 (define-fop (fop-single-float 46)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1 (make-single-float (fast-read-s-integer 4))
@@ -814,6 +831,17 @@
     (prog1
 	(let ((lo (fast-read-u-integer 4)))
 	  (make-double-float (fast-read-s-integer 4) lo))
+      (done-with-fast-read-byte))))
+
+#+long-float
+(define-fop (fop-long-float 52)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let ((lo (fast-read-u-integer 4))
+	      #+sparc (mid (fast-read-u-integer 4))
+	      (hi (fast-read-u-integer 4))
+	      (exp (fast-read-s-integer #+x86 2 #+sparc 4)))
+	  (make-long-float exp hi #+sparc mid lo))
       (done-with-fast-read-byte))))
 
 
@@ -905,6 +933,14 @@
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
     result))
 
+#+long-float
+(define-fop (fop-long-float-vector 88)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'long-float)))
+    (read-n-bytes *fasl-file* result 0
+		  (* length vm:word-bytes #+x86 3 #+sparc 4))
+    result))
+
 #+complex-float
 (define-fop (fop-complex-single-float-vector 86)
   (let* ((length (read-arg 4))
@@ -917,6 +953,14 @@
   (let* ((length (read-arg 4))
 	 (result (make-array length :element-type '(complex double-float))))
     (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2 2))
+    result))
+
+#+(and complex-float long-float)
+(define-fop (fop-complex-long-float-vector 89)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type '(complex long-float))))
+    (read-n-bytes *fasl-file* result 0
+		  (* length vm:word-bytes #+x86 3 #+sparc 4 2))
     result))
 
 ;;; FOP-INT-VECTOR  --  Internal

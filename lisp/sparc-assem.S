@@ -229,7 +229,13 @@ _undefined_tramp:
 
 	b	1f
         unimp   trap_Cerror
-	.byte	4, 23, 254, sc_DescriptorReg, 3
+	.byte	4
+#ifdef type_LongFloat
+        .byte   24
+#else
+	.byte	23
+#endif
+	.byte	254, sc_DescriptorReg, 3
 	.align	4
 1:
 	ld	[reg_FDEFN+FDEFN_RAW_ADDR_OFFSET], reg_CODE

@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.5 1998/01/13 19:18:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.6 1998/03/21 08:12:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,6 +232,35 @@
 	   (vm::random-mt19937 state-vector))
 	  1d0))))
 
+#+long-float
+(declaim (inline %random-long-float))
+#+long-float
+(declaim (ftype (function ((long-float (0l0)) random-state) (long-float 0l0))
+		%random-long-float))
+
+;;; Using a faster inline VOP.
+#+(and long-float x86)
+(defun %random-long-float (arg state)
+  (declare (type (long-float (0l0)) arg)
+	   (type random-state state))
+  (let ((state-vector (random-state-state state)))
+    (* arg
+       (- (lisp::make-long-float
+	   (lisp::long-float-exp-bits 1l0)
+	   (logior (vm::random-mt19937 state-vector) vm:long-float-hidden-bit)
+	   (vm::random-mt19937 state-vector))
+	  1l0))))
+
+#+(and long-float sparc)
+(defun %random-long-float (arg state)
+  (declare (type (long-float (0l0)) arg)
+	   (type random-state state))
+  (* arg
+     (- (lisp::make-long-float
+	 (lisp::long-float-exp-bits 1l0)	; X needs more work
+	 (random-chunk state) (random-chunk state) (random-chunk state))
+	1l0)))
+
 
 ;;;; Random integers:
 
@@ -268,7 +297,8 @@
 (defun random (arg &optional (state *random-state*))
   "Generate a uniformly distributed pseudo-random number between zero
   and Arg.  State, if supplied, is the random state to use."
-  (declare (inline %random-single-float %random-double-float))
+  (declare (inline %random-single-float %random-double-float
+		   #+long-float %long-float))
   (cond
     ((and (fixnump arg) (<= arg random-fixnum-max))
      (rem (random-chunk state) arg))
@@ -276,6 +306,9 @@
      (%random-single-float arg state))
     ((typep arg 'double-float)
      (%random-double-float arg state))
+    #+long-float
+    ((typep arg 'long-float)
+     (%random-long-float arg state))
     ((integerp arg)
      (%random-integer arg state))
     (t

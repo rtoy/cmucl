@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.17 1998/02/19 03:49:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.18 1998/03/21 08:11:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;; that assumes there are only two float formats: IEEE single and double.
 ;;;
 ;;; Author: Rob MacLachlan
+;;; Long-float support by Douglas Crosher, 1998.
 ;;; 
 (in-package "KERNEL")
 (export '(%unary-truncate %unary-round))
@@ -78,6 +79,14 @@
 			  (dpb (ash sig -32) vm:double-float-significand-byte
 			       (if (zerop sign) 0 -1)))
 		     (ldb (byte 32 0) sig)))
+;;;
+#+(and long-float x86)
+(defun long-from-bits (sign exp sig)
+  (declare (type bit sign) (type (unsigned-byte 64) sig)
+	   (type (unsigned-byte 15) exp))
+  (make-long-float (logior (ash sign 15) exp)
+		   (ldb (byte 32 32) sig)
+		   (ldb (byte 32 0) sig)))
 					
 
 ;;;; Float parameters:
@@ -87,9 +96,15 @@
 (defconstant least-negative-single-float (single-from-bits 1 0 1))
 (defconstant least-negative-short-float least-negative-single-float)
 (defconstant least-positive-double-float (double-from-bits 0 0 1))
+#-long-float
 (defconstant least-positive-long-float least-positive-double-float)
+#+(and long-float x86)
+(defconstant least-positive-long-float (long-from-bits 0 0 1))
 (defconstant least-negative-double-float (double-from-bits 1 0 1))
+#-long-float
 (defconstant least-negative-long-float least-negative-double-float)
+#+(and long-float x86)
+(defconstant least-negative-long-float (long-from-bits 1 0 1))
 
 (defconstant least-positive-normalized-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-min 0))
@@ -101,12 +116,22 @@
   least-negative-normalized-single-float)
 (defconstant least-positive-normalized-double-float
   (double-from-bits 0 vm:double-float-normal-exponent-min 0))
+#-long-float
 (defconstant least-positive-normalized-long-float
   least-positive-normalized-double-float)
+#+(and long-float x86)
+(defconstant least-positive-normalized-long-float
+  (long-from-bits 0 vm:long-float-normal-exponent-min
+		  (ash vm:long-float-hidden-bit 32)))
 (defconstant least-negative-normalized-double-float
   (double-from-bits 1 vm:double-float-normal-exponent-min 0))
+#-long-float
 (defconstant least-negative-normalized-long-float
   least-negative-normalized-double-float)
+#+(and long-float x86)
+(defconstant least-negative-normalized-long-float
+  (long-from-bits 1 vm:long-float-normal-exponent-min
+		  (ash vm:long-float-hidden-bit 32)))
 
 (defconstant most-positive-single-float
   (single-from-bits 0 vm:single-float-normal-exponent-max
@@ -119,11 +144,21 @@
 (defconstant most-positive-double-float
   (double-from-bits 0 vm:double-float-normal-exponent-max
 		    (ldb (byte vm:double-float-digits 0) -1)))
+#-long-float
 (defconstant most-positive-long-float most-positive-double-float)
+#+(and long-float x86)
+(defconstant most-positive-long-float
+  (long-from-bits 0 vm:long-float-normal-exponent-max
+		  (ldb (byte vm:long-float-digits 0) -1)))
 (defconstant most-negative-double-float
   (double-from-bits 1 vm:double-float-normal-exponent-max
 		    (ldb (byte vm:double-float-digits 0) -1)))
+#-long-float
 (defconstant most-negative-long-float most-negative-double-float)
+#+(and long-float x86)
+(defconstant most-negative-long-float
+  (long-from-bits 1 vm:long-float-normal-exponent-max
+		  (ldb (byte vm:long-float-digits 0) -1)))
 
 (defconstant single-float-positive-infinity
   (single-from-bits 0 (1+ vm:single-float-normal-exponent-max) 0))
@@ -133,10 +168,20 @@
 (defconstant short-float-negative-infinity single-float-negative-infinity)
 (defconstant double-float-positive-infinity
   (double-from-bits 0 (1+ vm:double-float-normal-exponent-max) 0))
+#-long-float
 (defconstant long-float-positive-infinity double-float-positive-infinity)
+#+(and long-float x86)
+(defconstant long-float-positive-infinity
+  (long-from-bits 0 (1+ vm:long-float-normal-exponent-max)
+		  (ash vm:long-float-hidden-bit 32)))
 (defconstant double-float-negative-infinity
   (double-from-bits 1 (1+ vm:double-float-normal-exponent-max) 0))
+#-long-float
 (defconstant long-float-negative-infinity double-float-negative-infinity)
+#+(and long-float x86)
+(defconstant long-float-negative-infinity
+  (long-from-bits 1 (1+ vm:long-float-normal-exponent-max)
+		  (ash vm:long-float-hidden-bit 32)))
 
 (defconstant single-float-epsilon
   (single-from-bits 0 (- vm:single-float-bias (1- vm:single-float-digits)) 1))
@@ -146,10 +191,20 @@
 (defconstant short-float-negative-epsilon single-float-negative-epsilon)
 (defconstant double-float-epsilon
   (double-from-bits 0 (- vm:double-float-bias (1- vm:double-float-digits)) 1))
+#-long-float
 (defconstant long-float-epsilon double-float-epsilon)
+#+(and long-float x86)
+(defconstant long-float-epsilon
+  (long-from-bits 0 (- vm:long-float-bias (1- vm:long-float-digits))
+		  (+ 1 (ash vm:long-float-hidden-bit 32))))
 (defconstant double-float-negative-epsilon
   (double-from-bits 0 (- vm:double-float-bias vm:double-float-digits) 1))
+#-long-float
 (defconstant long-float-negative-epsilon double-float-negative-epsilon)
+#+(and long-float x86)
+(defconstant long-float-negative-epsilon
+  (long-from-bits 0 (- vm:long-float-bias vm:long-float-digits)
+		  (+ 1 (ash vm:long-float-hidden-bit 32))))
 
 
 ;;;; Float predicates and environment query:
@@ -168,9 +223,13 @@
     ((double-float)
      (and (zerop (ldb vm:double-float-exponent-byte
 		      (double-float-high-bits x)))
+	  (not (zerop x))))
+    #+(and long-float x86)
+    ((long-float)
+     (and (zerop (ldb vm:long-float-exponent-byte (long-float-exp-bits x)))
 	  (not (zerop x))))))
 
-(macrolet ((frob (name doc single double)
+(macrolet ((frob (name doc single double #+(and long-float x86) long)
 	     `(defun ,name (x)
 		,doc
 		(number-dispatch ((x float))
@@ -185,16 +244,31 @@
 		     (declare (ignorable lo))
 		     (and (> (ldb vm:double-float-exponent-byte hi)
 			     vm:double-float-normal-exponent-max)
-			  ,double)))))))
+			  ,double)))
+		  #+(and long-float x86)
+		  ((long-float)
+		   (let ((exp (long-float-exp-bits x))
+			 (hi (long-float-high-bits x))
+			 (lo (long-float-low-bits x)))
+		     (declare (ignorable lo))
+		     (and (> (ldb vm:long-float-exponent-byte exp)
+			     vm:long-float-normal-exponent-max)
+			  ,long)))))))
 
   (frob float-infinity-p "Return true if the float X is an infinity (+ or -)."
     (zerop (ldb vm:single-float-significand-byte bits))
     (and (zerop (ldb vm:double-float-significand-byte hi))
+	 (zerop lo))
+    #+(and long-float x86)
+    (and (zerop (ldb vm:long-float-significand-byte hi))
 	 (zerop lo)))
 
   (frob float-nan-p "Return true if the float X is a NaN (Not a Number)."
     (not (zerop (ldb vm:single-float-significand-byte bits)))
     (or (not (zerop (ldb vm:double-float-significand-byte hi)))
+	(not (zerop lo)))
+    #+(and long-float x86)
+    (or (not (zerop (ldb vm:long-float-significand-byte hi)))
 	(not (zerop lo))))
 
   (frob float-trapping-nan-p
@@ -202,7 +276,10 @@
     (zerop (logand (ldb vm:single-float-significand-byte bits)
 		   vm:single-float-trapping-nan-bit))
     (zerop (logand (ldb vm:double-float-significand-byte hi)
-		   vm:double-float-trapping-nan-bit))))
+		   vm:double-float-trapping-nan-bit))
+    #+(and long-float x86)
+    (zerop (logand (ldb vm:long-float-significand-byte hi)
+		   vm:long-float-trapping-nan-bit))))
 
 
 ;;; FLOAT-PRECISION  --  Public
@@ -231,7 +308,11 @@
 	 integer-decode-single-denorm))
       ((double-float)
        (frob vm:double-float-digits vm:double-float-bias
-	 integer-decode-double-denorm)))))
+	 integer-decode-double-denorm))
+      #+long-float
+      ((long-float)
+       (frob vm:long-float-digits vm:long-float-bias
+	 integer-decode-long-denorm)))))
 
 
 (defun float-sign (float1 &optional (float2 (float 1 float1)))
@@ -239,12 +320,21 @@
    float1 and, if float2 is given, has the same absolute value
    as float2."
   (declare (float float1 float2))
-  (float-sign float1 float2))
+  (* (if (etypecase float1
+	   (single-float (minusp (single-float-bits float1)))
+	   (double-float (minusp (double-float-high-bits float1)))
+	   #+long-float
+	   (long-float (minusp (long-float-exp-bits float1))))
+	 (float -1 float1)
+	 (float 1 float1))
+     (abs float2)))
 
 (defun float-format-digits (format)
   (ecase format
     ((short-float single-float) vm:single-float-digits)
-    ((double-float long-float) vm:double-float-digits)))
+    ((double-float #-long-float long-float) vm:double-float-digits)
+    #+long-float
+    (long-float vm:long-float-digits)))
 
 (proclaim '(inline float-digits float-radix))
 
@@ -254,7 +344,9 @@
    by Guy Steele for more details."
   (number-dispatch ((f float))
     ((single-float) vm:single-float-digits)
-    ((double-float) vm:double-float-digits)))
+    ((double-float) vm:double-float-digits)
+    #+long-float
+    ((long-float) vm:long-float-digits)))
 
 (defun float-radix (f)
   "Returns (as an integer) the radix b of its floating-point
@@ -378,6 +470,63 @@
 	    biased sign)))))
 
 
+;;; INTEGER-DECODE-LONG-DENORM  --  Internal
+;;;
+#+(and long-float x86)
+(defun integer-decode-long-denorm (x)
+  (declare (type long-float x))
+  (let* ((high-bits (long-float-high-bits (abs x)))
+	 (sig-high (ldb vm:long-float-significand-byte high-bits))
+	 (low-bits (long-float-low-bits x))
+	 (sign (if (minusp (float-sign x)) -1 1))
+	 (biased (- (- vm:long-float-bias) vm:long-float-digits)))
+    (if (zerop sig-high)
+	(let ((sig low-bits)
+	      (extra-bias (- vm:long-float-digits 33))
+	      (bit (ash 1 31)))
+	  (declare (type (unsigned-byte 32) sig) (fixnum extra-bias))
+	  (loop
+	    (unless (zerop (logand sig bit)) (return))
+	    (setq sig (ash sig 1))
+	    (incf extra-bias))
+	  (values (ash sig (- vm:long-float-digits 32))
+		  (truly-the fixnum (- biased extra-bias))
+		  sign))
+	(let ((sig (ash sig-high 1))
+	      (extra-bias 0))
+	  (declare (type (unsigned-byte 32) sig) (fixnum extra-bias))
+	  (loop
+	    (unless (zerop (logand sig vm:long-float-hidden-bit))
+	      (return))
+	    (setq sig (ash sig 1))
+	    (incf extra-bias))
+	  (values (logior (ash sig 32) (ash low-bits (1- extra-bias)))
+		  (truly-the fixnum (- biased extra-bias))
+		  sign)))))
+
+
+;;; INTEGER-DECODE-LONG-FLOAT  --  Internal
+;;;
+#+(and long-float x86)
+(defun integer-decode-long-float (x)
+  (declare (long-float x))
+  (let* ((hi (long-float-high-bits x))
+	 (lo (long-float-low-bits x))
+	 (exp-bits (long-float-exp-bits x))
+	 (exp (ldb vm:long-float-exponent-byte exp-bits))
+	 (sign (if (minusp exp-bits) -1 1))
+	 (biased (- exp vm:long-float-bias vm:long-float-digits)))
+    (declare (fixnum biased))
+    (unless (<= exp vm:long-float-normal-exponent-max)
+      (error "Can't decode NAN or infinity: ~S." x))
+    (cond ((and (zerop exp) (zerop hi) (zerop lo))
+	   (values 0 biased sign))
+	  ((< exp vm:long-float-normal-exponent-min)
+	   (integer-decode-long-denorm x))
+	  (t
+	   (values (logior (ash hi 32) lo) biased sign)))))
+
+
 ;;; INTEGER-DECODE-FLOAT  --  Public
 ;;;
 ;;;    Dispatch to the correct type-specific i-d-f function.
@@ -394,7 +543,10 @@
     ((single-float)
      (integer-decode-single-float x))
     ((double-float)
-     (integer-decode-double-float x))))
+     (integer-decode-double-float x))
+    #+long-float
+    ((long-float)
+     (integer-decode-long-float x))))
 
 
 (proclaim '(maybe-inline decode-single-float decode-double-float))
@@ -484,6 +636,45 @@
 		   biased sign)))))
 
 
+;;; DECODE-LONG-DENORM  --  Internal
+;;;
+#+(and long-float x86)
+(defun decode-long-denorm (x)
+  (declare (long-float x))
+  (multiple-value-bind (sig exp sign)
+		       (integer-decode-long-denorm x)
+    (values (make-long-float vm:long-float-bias (ash sig -32)
+			     (ldb (byte 32 0) sig))
+	    (truly-the fixnum (+ exp vm:long-float-digits))
+	    (float sign x))))
+
+
+;;; DECODE-LONG-FLOAT  --  Public
+;;;
+#+(and long-float x86)
+(defun decode-long-float (x)
+  (declare (long-float x))
+  (let* ((hi (long-float-high-bits x))
+	 (lo (long-float-low-bits x))
+	 (exp-bits (long-float-exp-bits x))
+	 (exp (ldb vm:long-float-exponent-byte exp-bits))
+	 (sign (if (minusp exp-bits) -1l0 1l0))
+	 (biased (truly-the long-float-exponent (- exp vm:long-float-bias))))
+    (unless (<= exp vm:long-float-normal-exponent-max)
+      (error "Can't decode NAN or infinity: ~S." x))
+    (cond ((zerop x)
+	   (values 0.0l0 biased sign))
+	  ((< exp vm:long-float-normal-exponent-min)
+	   (decode-long-denorm x))
+	  (t
+	   (values (make-long-float
+		    (dpb vm:long-float-bias vm:long-float-exponent-byte
+			 exp-bits)
+		    hi
+		    lo)
+		   biased sign)))))
+
+
 ;;; DECODE-FLOAT  --  Public
 ;;;
 ;;;    Dispatch to the appropriate type-specific function.
@@ -498,7 +689,10 @@
     ((single-float)
      (decode-single-float f))
     ((double-float)
-     (decode-double-float f))))
+     (decode-double-float f))
+    #+long-float
+    ((long-float)
+     (decode-long-float f))))
 
 
 ;;;; SCALE-FLOAT:
@@ -611,6 +805,10 @@
       (make-double-float (dpb new-exp vm:double-float-exponent-byte hi)
 			 lo)))))
 
+#+(and x86 long-float)
+(defun scale-long-float (x exp)
+  (declare (long-float x) (fixnum exp))
+  (scale-float x exp))
 
 ;;; SCALE-FLOAT  --  Public
 ;;;
@@ -623,7 +821,10 @@
     ((single-float)
      (scale-single-float f ex))
     ((double-float)
-     (scale-double-float f ex))))
+     (scale-double-float f ex))
+    #+long-float
+    ((long-float)
+     (scale-long-float f ex))))
 
 
 ;;;; Converting to/from floats:
@@ -634,8 +835,8 @@
   result is the same float format as OTHER."
   (if otherp
       (number-dispatch ((number real) (other float))
-	(((foreach rational single-float double-float)
-	  (foreach single-float double-float))
+	(((foreach rational single-float double-float #+long-float long-float)
+	  (foreach single-float double-float #+long-float long-float))
 	 (coerce number '(dispatch-type other))))
       (if (floatp number)
 	  number
@@ -645,14 +846,17 @@
 (macrolet ((frob (name type)
 	     `(defun ,name (x)
 		(number-dispatch ((x real))
-		  (((foreach single-float double-float fixnum))
+		  (((foreach single-float double-float #+long-float long-float
+			     fixnum))
 		   (coerce x ',type))
 		  ((bignum)
 		   (bignum-to-float x ',type))
 		  ((ratio)
 		   (float-ratio x ',type))))))
   (frob %single-float single-float)
-  (frob %double-float double-float))
+  (frob %double-float double-float)
+  #+long-float
+  (frob %long-float long-float))
 
 
 ;;; FLOAT-RATIO  --  Internal
@@ -698,9 +902,14 @@
 			  (scale-float (floatit bits) scale)))))
 	       (floatit (bits)
 		 (let ((sign (if plusp 0 1)))
-		   (if (eq format 'single-float)
-		       (single-from-bits sign vm:single-float-bias bits)
-		       (double-from-bits sign vm:double-float-bias bits)))))
+		   (case format
+		     (single-float
+		      (single-from-bits sign vm:single-float-bias bits))
+		     (double-float
+		      (double-from-bits sign vm:double-float-bias bits))
+		     #+long-float
+		     (long-float
+		      (long-from-bits sign vm:long-float-bias bits))))))
 	(loop
 	  (multiple-value-bind (fraction-and-guard rem)
 			       (truncate shifted-num den)
@@ -800,7 +1009,7 @@ rounding modes & do ieee round-to-integer.
   (number-dispatch ((number real))
     ((integer) number)
     ((ratio) (values (truncate (numerator number) (denominator number))))
-    (((foreach single-float double-float))
+    (((foreach single-float double-float #+long-float long-float))
      (if (< (float most-negative-fixnum number)
 	    number
 	    (float most-positive-fixnum number))
@@ -826,7 +1035,7 @@ rounding modes & do ieee round-to-integer.
   (number-dispatch ((number real))
     ((integer) number)
     ((ratio) (values (round (numerator number) (denominator number))))
-    (((foreach single-float double-float))
+    (((foreach single-float double-float #+long-float long-float))
      (if (< (float most-negative-fixnum number)
 	    number
 	    (float most-positive-fixnum number))
@@ -851,7 +1060,7 @@ rounding modes & do ieee round-to-integer.
   more efficient than RATIONALIZE, but it assumes that floating-point is
   completely accurate, giving a result that isn't as pretty."
   (number-dispatch ((x real))
-    (((foreach single-float double-float))
+    (((foreach single-float double-float #+long-float long-float))
      (multiple-value-bind (bits exp)
 			  (integer-decode-float x)
        (if (eql bits 0)
@@ -871,7 +1080,7 @@ rounding modes & do ieee round-to-integer.
   their precision.  RATIONALIZE (and also RATIONAL) preserve the invariant:
       (= x (float (rationalize x) x))"
   (number-dispatch ((x real))
-    (((foreach single-float double-float))
+    (((foreach single-float double-float #+long-float long-float))
      ;; Thanks to Kim Fateman, who stole this function rationalize-float
      ;; from macsyma's rational. Macsyma'a rationalize was written
      ;; by the legendary Gosper (rwg). Gosper is now working for Symbolics.
@@ -882,9 +1091,11 @@ rounding modes & do ieee round-to-integer.
      (cond ((minusp x) (- (rationalize (- x))))
 	   ((zerop x) 0)
 	   (t
-	    (let ((eps (if (typep x 'single-float)
-			   single-float-epsilon
-			   double-float-epsilon))
+	    (let ((eps (etypecase x
+			   (single-float single-float-epsilon)
+			   (double-float double-float-epsilon)
+			   #+long-float
+			   (long-float long-float-epsilon)))
 		  (y ())
 		  (a ()))
 	      (do ((xx x (setq y (/ (float 1.0 x) (- xx (float a x)))))

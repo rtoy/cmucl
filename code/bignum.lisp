@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.24 1998/03/01 21:45:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.25 1998/03/21 08:11:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1049,6 +1049,17 @@
 	 hi
 	 (logior hi (ash -1 vm:float-sign-shift)))
      (%bignum-ref bits 1))))
+;;;
+#+(and long-float x86)
+(defun long-float-from-bits (bits exp plusp)
+  (declare (fixnum exp))
+  (declare (optimize (ext:inhibit-warnings 3)))
+  (make-long-float
+   (if plusp
+       exp
+       (logior exp (ash 1 15)))
+   (%bignum-ref bits 2)
+   (%bignum-ref bits 1)))
 
 
 ;;; BIGNUM-TO-FLOAT   --  Interface
@@ -1089,6 +1100,13 @@
 		   bits
 		   (check-exponent len vm:double-float-bias
 		                   vm:double-float-normal-exponent-max)
+		   plusp))
+		 #+long-float
+		 (long-float
+		  (long-float-from-bits
+		   bits
+		   (check-exponent len vm:long-float-bias
+		                   vm:long-float-normal-exponent-max)
 		   plusp))))
 	     (check-exponent (exp bias max)
 	       (declare (type bignum-index len))

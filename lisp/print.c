@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.7 1998/03/10 18:31:12 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.8 1998/03/21 08:15:00 dtc Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -36,12 +36,18 @@ char *subtype_Names[] = {
     "ratio",
     "single float",
     "double float",
+#ifdef type_LongFloat
+    "long float",
+#endif
     "complex",
 #ifdef type_ComplexSingleFloat
     "complex single float",
 #endif
 #ifdef type_ComplexDoubleFloat
     "complex double float",
+#endif
+#ifdef type_ComplexLongFloat
+    "complex long float",
 #endif
     "simple-array",
     "simple-string",
@@ -66,11 +72,17 @@ char *subtype_Names[] = {
 #endif
     "(simple-array single-float (*))",
     "(simple-array double-float (*))",
+#ifdef type_SimpleArrayLongFloat
+    "(simple-array long-float (*))",
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
     "(simple-array (complex single-float) (*))",
 #endif
 #ifdef type_SimpleArrayComplexDoubleFloat
     "(simple-array (complex double-float) (*))",
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+    "(simple-array (complex long-float) (*))",
 #endif
     "complex-string",
     "complex-bit-vector",
@@ -448,6 +460,13 @@ static void print_otherptr(lispobj obj)
                 printf("%g", ((struct double_float *)PTR(obj))->value);
                 break;
 
+#ifdef type_LongFloat
+            case type_LongFloat:
+                NEWLINE;
+                printf("%Lg", ((struct long_float *)PTR(obj))->value);
+                break;
+#endif
+
 #ifdef type_ComplexSingleFloat
             case type_ComplexSingleFloat:
                 NEWLINE;
@@ -463,6 +482,15 @@ static void print_otherptr(lispobj obj)
                 printf("%g", ((struct complex_double_float *)PTR(obj))->real);
                 NEWLINE;
                 printf("%g", ((struct complex_double_float *)PTR(obj))->imag);
+                break;
+#endif
+
+#ifdef type_ComplexLongFloat
+            case type_ComplexLongFloat:
+                NEWLINE;
+                printf("%Lg", ((struct complex_long_float *)PTR(obj))->real);
+                NEWLINE;
+                printf("%Lg", ((struct complex_long_float *)PTR(obj))->imag);
                 break;
 #endif
 
@@ -508,11 +536,17 @@ static void print_otherptr(lispobj obj)
 #endif
             case type_SimpleArraySingleFloat:
             case type_SimpleArrayDoubleFloat:
+#ifdef type_SimpleArrayLongFloat
+            case type_SimpleArrayLongFloat:
+#endif
 #ifdef type_SimpleArrayComplexSingleFloat
 	    case type_SimpleArrayComplexSingleFloat:
 #endif
 #ifdef type_SimpleArrayComplexDoubleFloat
 	    case type_SimpleArrayComplexDoubleFloat:
+#endif
+#ifdef type_SimpleArrayComplexLongFloat
+	    case type_SimpleArrayComplexLongFloat:
 #endif
             case type_ComplexString:
             case type_ComplexBitVector:
