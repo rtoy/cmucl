@@ -223,6 +223,9 @@
 	(event reoptimize-maxed-out)
 	(return))
       (incf loop-count)))
+  
+  (maphash #'note-failed-optimization *failed-optimizations*)
+  (clrhash *failed-optimizations*)
   (undefined-value))
 
 
@@ -997,7 +1000,7 @@
 	(dolist (component components)
 	  (clear-ir1-info component)))))
     
-  (ir1-finalize)
+  (maphash #'check-free-function *free-functions*)
   (undefined-value))
 
 
