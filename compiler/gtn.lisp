@@ -139,6 +139,38 @@
 		  (return-from punt nil)))))))))
 
 
+;;; RETURN-VALUE-EFFICENCY-NOTE  --  Internal
+;;;
+;;;    If policy indicates, give an efficency note about our inability to use
+;;; the known return convention.  We try to find a function in the tail set
+;;; with non-constant return values to use as context.  If there is no such
+;;; function, then be more vague.
+;;;
+(defun return-value-efficency-note (tails)
+  (declare (type tail-set tails))
+  (let ((funs (tail-set-functions tails)))
+    (when (policy (lambda-bind (first funs)) (> (max speed space) brevity))
+      (dolist (fun funs
+		   (let ((*compiler-error-context* (lambda-bind (first funs))))
+		     (compiler-note
+		      "Return value count mismatch prevents known return ~
+		       from these functions:~
+		      ~{~%  ~A~}"
+		      (remove nil (mapcar #'leaf-name funs)))))
+	(let ((rtype (return-result-type (lambda-return fun))))
+	  (multiple-value-bind (ignore count)
+			       (values-types rtype)
+	    (declare (ignore ignore))
+	    (when (eq count :unknown)
+	      (let ((*compiler-error-context* (lambda-bind fun)))
+		(compiler-note
+		 "Return type not fixed values, so can't use known return ~
+		 convention:~%  ~S"
+		 (type-specifier rtype)))
+	      (return)))))))
+  (undefined-value))
+
+
 ;;; Return-Info-For-Set  --  Internal
 ;;;
 ;;;    Return a Return-Info structure describing how we should return from
@@ -151,9 +183,11 @@
   (declare (type tail-set tails))
   (multiple-value-bind (types count)
 		       (values-types (tail-set-type tails))
-    (let ((ptypes (mapcar #'primitive-type types)))
-      (if (or (eq count :unknown)
-	      (use-standard-returns tails))
+    (let ((ptypes (mapcar #'primitive-type types))
+	  (use-standard (use-standard-returns tails)))
+      (when (and (eq count :unknown) (not use-standard))
+	(return-value-efficency-note tails))
+      (if (or (eq count :unknown) use-standard)
 	  (make-return-info :kind :unknown  :count count  :types ptypes)
 	  (make-return-info
 	   :kind :fixed
