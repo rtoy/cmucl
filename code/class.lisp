@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.54 2003/04/13 11:57:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.55 2003/04/26 18:24:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -549,6 +549,14 @@
 	   (> (count-if #'class-p (intersection-type-types type1)) 1))
       (values nil nil)
       (invoke-complex-subtypep-arg1-method type1 class2 nil t)))
+
+(define-type-method (class :complex-subtypep-arg1) (type1 type2)
+  (if (and (function-type-p type2)
+	   (eq type1 (specifier-type 'function))
+	   (function-type-wild-args type2)
+	   (eq *wild-type* (function-type-returns type2)))
+      (values t t)
+      (values nil t)))
 
 (define-type-method (class :unparse) (type)
   (class-proper-name type))

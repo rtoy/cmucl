@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.59 2003/04/24 10:32:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.60 2003/04/26 18:24:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1255,6 +1255,16 @@
 	 ;; separately. The full TYPE-INTERSECTION function knows how
 	 ;; to do that, so let it handle it.
 	 (type-intersection type1 type2))
+	;;
+	;; (AND (FUNCTION (T) T) GENERIC-FUNCTION) for instance.
+	((let ((function (specifier-type 'function)))
+	   (or (and (function-type-p type1)
+		    (csubtypep type2 function)
+		    (not (csubtypep function type2)))
+	       (and (function-type-p type2)
+		    (csubtypep type1 function)
+		    (not (csubtypep function type1)))))
+	 nil)
 	(t
 	 (flet ((1way (x y)
 		  (invoke-type-method :simple-intersection

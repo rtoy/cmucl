@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.41 2003/04/13 11:57:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.42 2003/04/26 18:24:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -568,7 +568,11 @@
 		   (numeric-type
 		    (source-transform-numeric-typep object type))
 		   (class
-		    `(%instance-typep ,object ,spec))
+		    (let ((function (specifier-type 'function)))
+		      (if (and (csubtypep type function)
+			       (not (csubtypep function type)))
+			`(%typep ,object ,spec)
+			`(%instance-typep ,object ,spec))))
 		   (array-type
 		    (source-transform-array-typep object type))
 		   (cons-type
