@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.6 1990/07/02 05:21:34 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.7 1990/07/18 10:52:17 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -47,7 +47,7 @@ struct sigcontext *context;
                         (lispobj *) context->sc_regs[CSP];
                 if ((lispobj *)context->sc_regs[CONT] == current_control_frame_pointer) {
                     /* There is a small window during call where the callee's frame isn't built yet. */
-                    if (TypeOf(context->sc_regs[CODE]) == type_FunctionPointer) {
+                    if (LowtagOf(context->sc_regs[CODE]) == type_FunctionPointer) {
                         /* We have called, but not built the new frame, so
                           build it for them. */
                         current_control_frame_pointer[0] =
