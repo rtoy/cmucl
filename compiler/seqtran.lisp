@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.28 2003/08/25 20:50:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.29 2004/12/09 21:49:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -571,3 +571,13 @@
 	   *null-type*)
 	  ((cons-type-p type)
 	   (cons-type-cdr-type type)))))
+
+(defoptimizer (map derive-type) ((output-spec function seq &rest more-seq))
+  ;; The result type of MAP is OUTPUT-SPEC, except when OUTPUT-SPEC is
+  ;; NIL, in which case the result-type is NULL.
+  (when (constant-continuation-p output-spec)
+    (let ((spec (continuation-value output-spec)))
+      (if spec
+	  (specifier-type spec)
+	  (specifier-type 'null)))))
+    
