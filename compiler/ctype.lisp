@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.24 1991/12/11 23:45:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.25 1991/12/11 23:49:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -308,7 +308,7 @@
 	   :required (req)  :optional (opt)  :rest rest  :keywords (keys)
 	   :keyp (optional-dispatch-keyp functional)
 	   :allowp (optional-dispatch-allowp functional)
-	   :returns (tail-set-type-type
+	   :returns (tail-set-type
 		     (lambda-tail-set
 		      (optional-dispatch-main-entry functional))))))))
 
