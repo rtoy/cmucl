@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.29 1999/01/09 11:10:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.30 1999/03/04 12:32:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 	  macroexpand-1 macroexpand block return-from
 	  compiler-macro-function
 	  return function setq psetq apply funcall
-	  compiler-let progv flet labels macrolet
+	  progv flet labels macrolet
 	  mapcar maplist mapc mapl mapcan mapcon
 	  tagbody prog prog* go 
 	  values multiple-values-limit
