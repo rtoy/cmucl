@@ -19,7 +19,12 @@ vpath %.S .:$(PATH1)
 #CC_V8PLUS = -xarch=v8plus
 #AS_V8PLUS = -Wa
 
-CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS)
+# Enable support for :linkage-table feature.
+
+LINKAGE = -DLINKAGE_TABLE
+
+CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE)
+
 CC = gcc
 CPP = gcc -E
 CFLAGS = -g $(AS_V8PLUS)
