@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.52 2003/02/16 15:41:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.53 2003/03/17 22:13:50 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -855,8 +855,8 @@
 	    (write-indexed fdefn vm:fdefn-function-slot *nil-descriptor*)
 	    (write-indexed fdefn vm:fdefn-raw-addr-slot
 			   (make-random-descriptor
-			    (lookup-maybe-prefix-foreign-symbol
-			     "undefined_tramp"))))
+			    (lookup-foreign-symbol
+			     (vm::extern-alien-name "undefined_tramp")))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -874,7 +874,8 @@
 			      (ash vm:function-code-offset vm:word-shift)))))
 		     (#.vm:closure-header-type
 		      (make-random-descriptor
-		       (lookup-maybe-prefix-foreign-symbol "closure_tramp")))))
+		       (lookup-foreign-symbol
+		        (vm::extern-alien-name "closure_tramp"))))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -1740,7 +1741,7 @@
     (read-n-bytes *fasl-file* sym 0 len)
     (let ((offset (read-arg 4))
 	  (value #+linkage-table (cold-register-foreign-linkage sym :code)
-		 #-linkage-table (lookup-maybe-prefix-foreign-symbol sym)))
+		 #-linkage-table (lookup-foreign-symbol sym)))
       (do-cold-fixup code-object offset value kind))
     code-object))
 
@@ -1877,19 +1878,10 @@
 			    (eq (c:backend-fasl-file-implementation c:*backend*)
 				#.c:alpha-fasl-file-implementation))
 			(c:backend-featurep :linux)))
-	  (bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			  #.c:x86-fasl-file-implementation)
-		      (c:backend-featurep :bsd)))
-	  (bsd-elf-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			      #.c:x86-fasl-file-implementation)
-			  (c:backend-featurep :bsd)
-			  (c:backend-featurep :elf)))
 	  (freebsd4-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			       #.c:x86-fasl-file-implementation)
 			   (c:backend-featurep :freebsd4))))
       (cond
-	((and bsd-p (not bsd-elf-p)
-	      (lookup-sym (concatenate 'string "_" name))))
 	((and #+linkage-table nil
 	      (or linux-p freebsd4-p)
 	      (lookup-sym (concatenate 'string "PVE_stub_" name))))
@@ -1901,45 +1893,13 @@
 	   (when (and (numberp value) (zerop value))
 	     (warn "Not-really-defined foreign symbol: ~S" name))
 	   value))
+	;; Are those still necessary?
 	((and linux-p (lookup-sym (concatenate 'string "__libc_" name))))
 	((and linux-p (lookup-sym (concatenate 'string "__" name))))
 	((and linux-p (lookup-sym (concatenate 'string "_" name))))
 	(t
 	 (warn "Undefined foreign symbol: ~S" name)
 	 0)))))
-
-
-;; FreeBSD wants C language symbols prefixed with "_" including all the
-;; syscalls and Unix library things. Linux doesn't or maybe does
-;; depending on things I don't know about yet? FreeBSD version 3
-;; is ELF based and looks more like the other systems.
-;; For the moment we assume all non-elf BSDs are the same as non-elf FreeBSD.
-;; Maybe these x86 hacks can be fixed when the non-elf's are obsoleted.
-
-(defun lookup-maybe-prefix-foreign-symbol (name)
-  (lookup-foreign-symbol
-   (concatenate 'string
-		(ecase (c:backend-fasl-file-implementation c:*backend*)
-		  ((#.c:pmax-fasl-file-implementation
-		    #.c:rt-fasl-file-implementation
-		    #.c:rt-afpa-fasl-file-implementation
-		    #.c:hppa-fasl-file-implementation
-		    #.c:alpha-fasl-file-implementation
-		    #.c:sgi-fasl-file-implementation
-		    #.c:ppc-fasl-file-implementation)
-		   "")
-		  (#.c:sparc-fasl-file-implementation
-		   (if (c:backend-featurep :svr4)
-		       ""
-		       "_"))
-		  (#.c:x86-fasl-file-implementation
-		   (if (and (c:backend-featurep :bsd)
-			    (not (c:backend-featurep :elf))
-			    (not (c:backend-featurep :netbsd)))
-		       "_" ; older FreeBSD, OpenBSD
-		       "")) ; Linux and ELF FreeBSD V3+, NetBSD
-		  )
-		name)))
 
 (defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
 (defvar *cold-foreign-hash* (make-hash-table :test #'equal))
