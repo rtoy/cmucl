@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6 2005/02/12 03:08:51 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.6.2.1 2005/02/12 16:14:12 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -482,6 +482,8 @@
 ;;; to correct alloc-tn.
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
+    ;; We're depending on extra being zero here and, currently, no
+    ;; sets extra.  We should enforce it later on.
     `(let ((,n-extra ,extra))
        (without-scheduling ()
 	;; Extra debugging stuff:
@@ -489,12 +491,16 @@
 	(progn
 	  (inst andi. ,flag-tn alloc-tn 7)
 	  (inst twi :ne ,flag-tn 0))
-	(inst lr ,flag-tn (- ,n-extra 4))
+	;; Set the PA flag
 	(inst addi alloc-tn alloc-tn 4))
       ,@forms
       (without-scheduling ()
-       (inst add alloc-tn alloc-tn ,flag-tn)
-       (inst twi :lt alloc-tn 0))
+       ;; Grab PA interrupted bit from alloc-tn, and save it in
+       ;; flag-tn.
+       (inst andi. ,flag-tn alloc-tn 1)
+       ;; Remove PA bit			  
+       (inst subi alloc-tn alloc-tn 4)			  
+       (inst twi :ne ,flag-tn 0))
       #+debug
       (progn
 	(inst andi. ,flag-tn alloc-tn 7)
