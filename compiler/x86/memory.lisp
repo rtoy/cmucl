@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.1 1997/01/18 14:31:21 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/memory.lisp,v 1.2 1997/02/08 21:30:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;; 
 
 (in-package :x86)
@@ -45,10 +46,8 @@
 ;;;
 (define-vop (cell-setf)
   (:args (object :scs (descriptor-reg))
-	 (value :scs (descriptor-reg any-reg)
-		:target result))
-  (:results (result :scs (descriptor-reg any-reg
-			  descriptor-stack immediate-stack)))
+	 (value :scs (descriptor-reg any-reg) :target result))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
@@ -56,11 +55,9 @@
     (move result value)))
 ;;;
 (define-vop (cell-setf-function)
-  (:args (value :scs (descriptor-reg any-reg)
-		:target result)
+  (:args (value :scs (descriptor-reg any-reg) :target result)
 	 (object :scs (descriptor-reg)))
-  (:results (result :scs (descriptor-reg any-reg
-			  descriptor-stack immediate-stack)))
+  (:results (result :scs (descriptor-reg any-reg)))
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
   (:generator 4
