@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.33 2003/02/12 18:35:29 cracauer Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.34 2003/04/11 15:17:45 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,13 +209,13 @@
 
 ;;; The default value of *BYTES-CONSED-BETWEEN-GCS* and *GC-TRIGGER*.
 ;;; 
-(defconstant default-bytes-consed-between-gcs 2000000)
+(defconstant default-bytes-consed-between-gcs 12000000)
 
 ;;; This variable is the user-settable variable that specifices the
 ;;; minimum amount of dynamic space which must be consed before a GC
 ;;; will be triggered.
 ;;; 
-(defvar *bytes-consed-between-gcs* default-bytes-consed-between-gcs
+(defparameter *bytes-consed-between-gcs* default-bytes-consed-between-gcs
   "This number specifies the minimum number of bytes of dynamic space
    that must be consed before the next gc will occur.")
 ;;;

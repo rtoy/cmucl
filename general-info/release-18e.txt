@@ -1,7 +1,5 @@
 ========================== C M U C L  18 e =============================
 
-[--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
-
 The CMUCL project is pleased to announce the release of CMUCL 18e.
 This is a major release which contains numerous enhancements and
 bugfixes from the 18d release.
@@ -22,9 +20,9 @@ New in this release:
      - Karatsuba multiplier added to give faster multiplication for
        big bignums.
      - Better support for linking foreign libraries. You can now dump
-       cores with foreign libraries and reload the core without having
-       to reload the libraries. Available if the feature
-       :linkage-table is present.
+       cores with foreign libraries and reload this core and the
+       libraries, without having to reload code that uses those
+       libraries.  Available if the feature :linkage-table is present.
      - A cross-referencing facility has been added to the compiler,
        providing WHO-CALLS, WHO-BINDS, WHO-REFERENCES, WHO-SETS
        information. See the corresponding chapter of the User's Manual
@@ -39,8 +37,11 @@ New in this release:
      - Access to the hardware cycle counters on Pentium and UltraSPARC
        processors has been added, and is reported by the TIME macro.
      - On Linux, it is possible to read and write files larger than 2GiB
-       (Large File Support implementation). Full support for this
-       requires a 2.4 or a 2.2 kernel with LFS patches.
+       (Large File Support implementation) using the low-level functions
+       in the UNIX package.  Use of ANSI CL functions to process such files
+       may work, but the code base hasn't been audited for this.
+       Full support for this requires a 2.4 or a 2.2 kernel with LFS
+       patches.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
@@ -150,6 +151,12 @@ New in this release:
        code has been fixed.
 
   * Other changes:
+     - The default value for EXT:*BYTES-CONSED-BETWEEN-GCS* has been
+       increased from 2000000 to 12000000, which should improve GC
+       performance for many applications out of the box.  Of course
+       people are encouraged to tune the GC parameters to match their
+       application requirements (e.g. interactive response times),
+       and their hardware environment.
      - The sparc port has experimental support for native 64-bit
        integers (unsigned-byte 64) and (signed-byte 64) on sparc v9
        (64-bit) architectures.  Enabled if the feature :sparc-v8plus
