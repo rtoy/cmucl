@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.7 1991/09/28 12:43:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.8 1991/10/01 14:36:56 ram Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -338,7 +338,7 @@
   (signed-reg unsigned-reg) (:or signed-num unsigned-num))
 
 ;;; Ugly, because there are only 2 free sap-regs.  We stash the data value in
-;;; NL0 to free up a sap-reg for BASE.
+;;; NARGS to free up a sap-reg for BASE.
 ;;;
 (define-vop (sap-system-set)
   (:policy :fast-safe)
@@ -348,7 +348,7 @@
 	 (data :scs (sap-reg sap-stack)))
   (:arg-types system-area-pointer positive-fixnum system-area-pointer)
   (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 1)) base)
-  (:temporary (:scs (non-descriptor-reg) :offset nl0-offset
+  (:temporary (:scs (non-descriptor-reg) :offset nargs-offset
 	       :from (:eval 0) :to (:eval 1))
 	      save)
   (:vop-var vop)
