@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.14 2001/04/26 16:33:50 pw Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.15 2001/04/26 17:20:28 pw Exp $
 
 all: lisp.nm
 
@@ -25,8 +25,9 @@ OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 ### Special target used to make a lisp.nm file for genesis.
 ### Use when internals.h does not yet exist.
-initial-map:
-	echo 'Map file for lisp version 0' > ,lisp.nm
+### This is the same 'lisp.nm' but not depending on an existing build.
+initial-map: version
+	echo 'Map file for lisp version ' `cat version` > ,lisp.nm
 	$(NM) lisp | grep -v " F \| U " >> ,lisp.nm
 	mv ,lisp.nm lisp.nm
 
