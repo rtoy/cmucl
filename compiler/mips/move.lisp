@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.31 1992/08/03 15:12:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.32 1992/08/15 15:18:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,13 +255,12 @@
     (pseudo-atomic
 	(pa-flag :extra (pad-data-block (+ bignum-digits-offset 2)))
       (inst or y alloc-tn other-pointer-type)
-      (inst sltu temp x zero-tn)
+      (inst slt temp x zero-tn)
       (inst sll temp type-bits)
       (inst addu temp (logior (ash 1 type-bits) bignum-type))
       (storew temp y 0 other-pointer-type)
       (storew x y bignum-digits-offset other-pointer-type))
     DONE))
-  
 ;;;
 (define-move-vop move-from-unsigned :move
   (unsigned-reg) (descriptor-reg))
