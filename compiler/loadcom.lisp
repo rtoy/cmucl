@@ -103,6 +103,7 @@
 (load "c:pseudo-vops")
 (load "vm:vm-tran")
 (load "c:debug")
+(load "c:assem-check")
 (load "c:copyprop")
 (load "c:represent")
 
