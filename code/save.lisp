@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.4 1990/07/13 20:38:56 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.5 1990/07/26 19:12:33 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -46,7 +46,7 @@
 
 
 (def-c-routine "save" (boolean)
-  (file (pointer simple-string)))
+  (file null-terminated-string))
 
 
 (defun save-lisp (core-file-name &key
