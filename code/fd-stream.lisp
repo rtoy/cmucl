@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.79 2004/04/23 15:08:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.80 2004/09/23 22:04:34 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -766,7 +766,9 @@
 			  do (setf result
 				   (+ (* 256 result)
 				      (sap-ref-8 sap (+ head j))))
-			  finally (return (dpb result (byte i 0) -1))))))
+		          finally (return (if (logbitp (1- i) result)
+					      (dpb result (byte i 0) -1)
+					      result))))))
 	      `(signed-byte ,i)
 	      (/ i 8)))))
 
