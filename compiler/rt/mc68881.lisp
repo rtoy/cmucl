@@ -486,7 +486,7 @@
   (:generator 20
     (inst cal addr (current-nfp-tn vop)
 	  (* (tn-offset stack-temp) vm:word-bytes))
-    (inst mc68881-store float addr :single scratch)
+    (inst mc68881-store float addr :double scratch)
     (inst mc68881-wait)
     (loadw bits (current-nfp-tn vop) (+ (tn-offset stack-temp) offset))))
 
