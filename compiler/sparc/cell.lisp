@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.3 1991/01/09 02:10:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.4 1991/01/24 18:21:37 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the SPARC.
@@ -196,6 +196,8 @@
       (load-type type function (- vm:function-pointer-type))
       (inst nop)
       (inst cmp type vm:closure-header-type)
+      (inst b :eq closure)
+      (inst cmp type vm:funcallable-instance-header-type)
       (inst b :eq closure)
       (inst cmp type vm:function-header-type)
       (inst b :eq normal-fn)
