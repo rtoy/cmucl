@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.1 1991/02/18 15:07:30 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.2 1991/04/20 17:01:34 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the IBM RT port.
 ;;;
@@ -108,7 +108,7 @@
       (store-symbol-value alloc *allocation-pointer*)
       (move ndescr boxed)
       (inst sl ndescr (- type-bits word-shift))
-      (inst o ndescr code-header-type)
+      (inst oil ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)
       (storew unboxed result code-code-size-slot other-pointer-type)
       (storew null-tn result code-entry-points-slot other-pointer-type)
