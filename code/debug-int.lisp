@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.45 1992/05/24 01:52:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.46 1992/05/26 10:33:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2928,6 +2928,12 @@
        (:function-start
 	(%make-breakpoint hook-function what kind info))
        (:function-end
+	(unless (eq (c::compiled-debug-function-returns
+		     (compiled-debug-function-compiler-debug-fun what))
+		    :standard)
+	  (error ":FUNCTION-END breakpoints are currently unsupported ~
+		  for the known return convention."))
+		  
 	(let* ((bpt (%make-breakpoint hook-function what kind info))
 	       (starter (compiled-debug-function-end-starter what)))
 	  (unless starter
