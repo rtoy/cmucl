@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.46 1992/08/25 17:44:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.47 1993/08/20 00:00:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,11 @@
 (defun sc-number-or-lose (x &optional (backend *target-backend*))
   (the sc-number (sc-number (sc-or-lose x backend))))
 
+;;; Define the meta-ops to be the same as the non-meta, so that we can load
+;;; uses of meta-vmdef macros without meta-vmdef being loaded.
+;;;
+(setf (fdefinition 'meta-sc-or-lose) (fdefinition 'sc-or-lose))
+(setf (fdefinition 'meta-sb-or-lose) (fdefinition 'sb-or-lose))
 
 
 ;;;; Side-Effect Classes
