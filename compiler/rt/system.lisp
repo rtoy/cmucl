@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.2 1991/04/21 19:55:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.3 1991/04/23 17:00:07 chiles Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -240,6 +240,8 @@
 ;;;; Code object frobbing.
 
 (define-vop (code-instructions)
+  (:translate code-instructions)
+  (:policy :fast-safe)
   (:args (code :scs (descriptor-reg) :target sap))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (sap :scs (sap-reg)))
