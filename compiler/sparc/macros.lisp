@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.32 2004/05/14 14:50:18 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33 2004/08/12 21:21:00 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.32 2004/05/14 14:50:18 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.33 2004/08/12 21:21:00 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -252,7 +252,7 @@
 	  (load-symbol-value ,result-tn *current-region-end-addr*)
 
 	  ;; Sometimes the size is an known constant, but won't fit in
-	  ;; the immeidiate field of an instruction.  Hence we have to
+	  ;; the immediate field of an instruction.  Hence we have to
 	  ;; do this to get it.
 	  (cond ((and (tn-p ,temp-tn)
 		      (numberp ,size)
@@ -280,16 +280,15 @@
 	    ;; an instruction.  Need to do this complicated thing.
 			      
             (cond ((and (tn-p ,temp-tn)
-			    (numberp ,size)
-			    (not (typep ,size '(signed-byte 13))))
-		       (inst li ,result-tn ,size)
-		       (inst sub ,result-tn ,temp-tn ,result-tn))
-		      (t
-		       (inst sub ,result-tn ,temp-tn ,size)))
+			(numberp ,size)
+			(not (typep ,size '(signed-byte 13))))
+		   (inst li ,result-tn ,size)
+		   (inst sub ,result-tn ,temp-tn ,result-tn))
+		  (t
+		   (inst sub ,result-tn ,temp-tn ,size)))
 	    (inst t :gt allocation-trap))
 	  ;; Set lowtag appropriately
-	  (inst or ,result-tn ,lowtag))
-	 ))
+	  (inst or ,result-tn ,lowtag))))
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size
 					    &key (lowtag other-pointer-type)
