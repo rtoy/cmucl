@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.69 2004/09/09 17:13:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.70 2004/10/09 14:41:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -972,8 +972,11 @@ a host-structure or string."
       (stream
        (let ((name (file-name thing)))
 	 (unless name
-	   (error "Can't figure out the file associated with stream:~%  ~S"
-		  thing))
+	   (error 'simple-type-error
+		  :datum thing
+		  :expected-type 'pathname
+		  :format-control "Can't figure out the file associated with stream:~%  ~S"
+		  :format-arguments (list thing)))
 	 (values name nil))))))
 
 
