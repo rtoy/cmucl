@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.35 1997/09/05 18:23:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.36 1997/09/08 20:26:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -500,8 +500,18 @@
       (float pi x)
       (float 0 x)))
 
+
+
 #+(or propagate-float-type propagate-fun-type)
 (progn
+
+;;; The number is of type REAL.
+(proclaim '(inline numeric-type-real-p))
+(defun numeric-type-real-p (type)
+  (and (numeric-type-p type)
+       (eq (numeric-type-complexp type) :real)))
+
+
 ;;; Functions to handle most cases of computing the bounds for a
 ;;; function.
 ;;;
@@ -578,14 +588,6 @@
 ;;;; These optimizers compute the output range of the elementary
 ;;;; function, based on the domain of the input.
 ;;;;
-
-;;; The number is of type REAL.
-
-(proclaim '(inline numeric-type-real-p))
-(defun numeric-type-real-p (type)
-  (and (numeric-type-p type)
-       (eq (numeric-type-complexp type) :real)))
-
 
 ;;; Handle these monotonic increasing functions whose domain is
 ;;; possibly part of the real line
