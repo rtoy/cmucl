@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.15 1990/09/27 18:27:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.16 1990/10/03 17:34:40 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1456,7 +1456,7 @@
 		 ((nil)
 		  '(length array))
 		 (*
-		  (give-up "Can't tell if ~S is simple" array))))
+		  (give-up "Can't tell if array is simple."))))
 	      (t
 	       '(%array-dimension array axis)))))))
 
