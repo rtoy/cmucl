@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.4 1994/10/25 17:31:52 ram Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.5 2000/10/27 19:25:54 dtc Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -245,9 +245,7 @@ backtrace(int nframes)
 
 #else
 
-void
-backtrace(nframes)
-int nframes;
+void backtrace(int nframes)
 {
     printf("Can't backtrace on this hardware platform.\n");
 }

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.21 2000/10/24 17:45:57 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.22 2000/10/27 19:25:55 dtc Exp $
  *
  */
 
@@ -25,6 +25,7 @@
 #include "gc.h"
 #include "monitor.h"
 #include "validate.h"
+#include "interr.h"
 #if defined GENCGC
 #include "gencgc.h"
 #endif

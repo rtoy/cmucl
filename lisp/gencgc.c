@@ -7,20 +7,21 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.23 2000/10/24 13:32:31 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.24 2000/10/27 19:25:55 dtc Exp $
  *
  */
 
 #include <stdio.h>
 #include <signal.h>
 #include "lisp.h"
+#include "arch.h"
 #include "internals.h"
 #include "os.h"
 #include "globals.h"
 #include "interrupt.h"
 #include "validate.h"
 #include "lispregs.h"
-
+#include "interr.h"
 #include "gencgc.h"
 
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
@@ -4194,7 +4195,7 @@ static lispobj* search_static_space(lispobj *pointer)
  * Faster version for searching the dynamic space. This will work even
  * if the object is in a current allocation region.
  */
-lispobj* search_dynamic_space(lispobj *pointer)
+lispobj *search_dynamic_space(lispobj *pointer)
 {
   int  page_index = find_page_index(pointer);
   lispobj *start;
@@ -5810,7 +5811,7 @@ static void	garbage_collect_generation(int generation, int raise)
 	   (lispobj *) SymbolValue(BINDING_STACK_POINTER) - binding_stack);
 
   /*
-   * Scavenge the scavenge_hooks in case this refers to a hooks added
+   * Scavenge the scavenge_hooks in case this refers to a hook added
    * in a prior generation GC. From here on the scavenger_hook will
    * only be updated with hooks already scavenged so this only needs
    * doing here.
@@ -5979,7 +5980,7 @@ void	collect_garbage(unsigned last_gen)
   if (gencgc_verbose > 1)
     print_generation_stats(0);
 
-  scavenger_hooks = (struct scavenger_hook *) NIL;
+  scavenger_hooks = NIL;
 
   do {
     /* Collect the generation */

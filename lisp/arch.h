@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.4 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/arch.h,v 1.5 2000/10/27 19:25:54 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -29,5 +29,8 @@ extern lispobj funcall1(lispobj function, lispobj arg0);
 extern lispobj funcall2(lispobj function, lispobj arg0, lispobj arg1);
 extern lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1,
 			lispobj arg2);
+
+extern void fpu_save(void *);
+extern void fpu_restore(void *);
 
 #endif /* __ARCH_H__ */

@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.13 2000/10/21 12:42:46 dtc Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.14 2000/10/27 19:25:56 dtc Exp $ 
  *
  */
 
@@ -55,7 +55,7 @@ void arch_skip_instruction(struct sigcontext *context)
       vlen = *(char*) context->sc_pc++;
       /* Skip lisp error arg data bytes */
       while(vlen-- > 0) 
-	(char*) context->sc_pc++;
+	((char*) context->sc_pc)++;
       break;
 
     case trap_Breakpoint:
@@ -290,8 +290,6 @@ void  sigtrap_handler(HANDLER_ARGS)
 }
 
 #define FIXNUM_VALUE(lispobj) (((int) lispobj) >> 2)
-
-extern void first_handler();
 
 void arch_install_interrupt_handlers()
 {

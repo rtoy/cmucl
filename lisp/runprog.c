@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.2 1994/10/25 00:12:10 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.3 2000/10/27 19:25:56 dtc Exp $
  *
  * Support for run-program.
  *
@@ -8,7 +8,7 @@
 #include <sys/file.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
-#ifdef SVR4
+#if defined(SVR4) || defined(__linux__)
 #include <unistd.h>
 #endif
 
@@ -24,7 +24,7 @@ int spawn(char *program, char *argv[], char *envp[], char *pty_name,
     /* Put us in our own process group. */
 #if defined(hpux)
     setsid();
-#elif defined(SVR4)
+#elif defined(SVR4) || defined(__linux__)
     setpgrp();
 #else
     setpgrp(0, getpid());

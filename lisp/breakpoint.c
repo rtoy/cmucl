@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.11 2000/09/05 08:51:51 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.12 2000/10/27 19:25:54 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -19,6 +19,9 @@
 #include "globals.h"
 #include "alloc.h"
 #include "breakpoint.h"
+#if defined GENCGC
+#include "gencgc.h"
+#endif
 
 #define REAL_LRA_SLOT 0
 #ifndef i386
@@ -82,12 +85,12 @@ static lispobj find_code(struct sigcontext *scp)
 #ifdef i386
 static lispobj find_code(struct sigcontext *scp)
 {
-  lispobj codeptr = component_ptr_from_pc(SC_PC(scp));
+  lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
 
   if (codeptr == NULL)
     return NIL;
   else
-    return codeptr + type_OtherPointer;
+    return (lispobj) codeptr | type_OtherPointer;
 }
 #endif
 

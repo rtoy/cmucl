@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.19 2000/10/24 13:32:32 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.20 2000/10/27 19:25:55 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -18,6 +18,7 @@
 #include <stdlib.h>
 
 #include "lisp.h"
+#include "arch.h"
 #include "os.h"
 #include "internals.h"
 #include "globals.h"
@@ -414,28 +415,34 @@ lispobj *valid_stack_ra_locations[MAX_STACK_RETURN_ADDRESSES];
 lispobj *valid_stack_ra_code_objects[MAX_STACK_RETURN_ADDRESSES];
 unsigned int num_valid_stack_ra_locations;
 
-/* Identify valid stack slots. */
-static void
-setup_i386_stack_scav(lispobj *lowaddr, lispobj *base)
+/*
+ * Identify valid stack slots.
+ */
+
+static void  setup_i386_stack_scav(lispobj *lowaddr, lispobj *base)
 {
   lispobj *sp = lowaddr;
+
   num_valid_stack_locations = 0;  
   num_valid_stack_ra_locations = 0;  
+
   for (sp = lowaddr; sp < base; sp++) {
     lispobj thing = *sp;
     lispobj* start_addr;
     /* Find the object start address */
-    if ((start_addr = search_dynamic_space((void *)thing)) != NULL) {
-      /* Need to allow raw pointers into Code objects for return
-	 addresses. This will also pickup pointers to functions in code
-	 objects. */
+    if ((start_addr = search_dynamic_space((void *) thing)) != NULL) {
+      /*
+       * Need to allow raw pointers into Code objects for return
+       * addresses. This will also pickup pointers to functions in code
+       * objects.
+       */
       if (TypeOf(*start_addr) == type_CodeHeader) {
 	gc_assert(num_valid_stack_ra_locations < MAX_STACK_RETURN_ADDRESSES);
 	valid_stack_ra_locations[num_valid_stack_ra_locations] = sp;
 	valid_stack_ra_code_objects[num_valid_stack_ra_locations++] =
-	  (lispobj *)((int)start_addr + type_OtherPointer);
+	  (lispobj *) ((int) start_addr + type_OtherPointer);
       } else {
-	if (valid_dynamic_space_pointer((void *)thing, start_addr)) {
+	if (valid_dynamic_space_pointer((void *) thing, start_addr)) {
 	  gc_assert(num_valid_stack_locations < MAX_STACK_POINTERS);
 	  valid_stack_locations[num_valid_stack_locations++] = sp;
 	}
@@ -450,8 +457,7 @@ setup_i386_stack_scav(lispobj *lowaddr, lispobj *base)
   }
 }
 
-static void
-pscav_i386_stack(void)
+static void pscav_i386_stack(void)
 {
   int i;
 
@@ -462,14 +468,14 @@ pscav_i386_stack(void)
     lispobj code_obj = valid_stack_ra_code_objects[i];
     pscav(&code_obj, 1, FALSE);
     if (pointer_filter_verbose)
-      fprintf(stderr,"*C moved RA %x to %x; for code object %x to %x\n",
+      fprintf(stderr, "*C moved RA %x to %x; for code object %x to %x\n",
 	      *valid_stack_ra_locations[i],
-	      (int)(*valid_stack_ra_locations[i])
-	      - ((int)valid_stack_ra_code_objects[i] - (int)code_obj),
+	      (int) (*valid_stack_ra_locations[i])
+	      - ((int) valid_stack_ra_code_objects[i] - (int)code_obj),
 	      valid_stack_ra_code_objects[i], code_obj);
     *valid_stack_ra_locations[i] = 
-      (lispobj *)((int)(*valid_stack_ra_locations[i])
-		  - ((int)valid_stack_ra_code_objects[i] - (int)code_obj));
+      (lispobj *)((int) (*valid_stack_ra_locations[i])
+		  - ((int) valid_stack_ra_code_objects[i] - (int) code_obj));
   }
 }
 #endif
@@ -1137,7 +1143,7 @@ static struct scavenger_hook *scavenger_hooks=NIL;
 
 static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
 {
-  lispobj *old_value = scav_hook->value;
+  lispobj old_value = scav_hook->value;
 
   /* Scavenge the value */
   pscav((lispobj *)scav_hook+1, 1, FALSE);
