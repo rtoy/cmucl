@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.9 1993/02/16 10:52:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.10 1993/02/16 20:51:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -656,9 +656,9 @@
        (let ((,temp (truly-the ,(dd-name defstruct)
 			       (%make-instance ,(dd-length defstruct))))
 	     ,@(when n-raw-data
-		 `(,n-raw-data
-		   (make-array ,(dd-raw-length defstruct)
-			       :element-type '(unsigned-byte 32)))))
+		 `((,n-raw-data
+		    (make-array ,(dd-raw-length defstruct)
+				:element-type '(unsigned-byte 32))))))
 	 (setf (%instance-layout ,temp)
 	       (%get-compiler-layout ,(dd-name defstruct)))
 	 ,@(when n-raw-data
@@ -1326,13 +1326,11 @@
 #-ns-boot
 (defun copy-structure (structure)
   "Return a copy of Structure with the same (EQL) slot values."
-  (declare (type instance structure) (optimize (speed 3) (safety 0)))
+  (declare (type structure-object structure) (optimize (speed 3) (safety 0)))
   (let* ((len (%instance-length structure))
 	 (res (%make-instance len))
 	 (layout (%instance-layout structure)))
     (declare (type structure-index len))
-    (unless (structure-class-p (layout-class layout))
-      (error "Not a structure-class object:~%  ~S" structure))
     (when (layout-invalid layout)
       (error "Copying an obsolete structure:~%  ~S" structure))
     
