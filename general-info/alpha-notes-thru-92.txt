@@ -1,3 +1,71 @@
+4/7/92 to 4/30/92
+
+**** FASL files have been incompatibly changed in this release.  You must
+recompile all your fasl files.
+
+
+Big Change:
+
+Function call is now different.  Specifically, named-call has been changed
+so that it can be used for both regular functions and setf functions.
+Named calls to setf functions are now just as efficient as named calls to
+regular functions.
+
+
+
+Code:
+
+Changed the handler-bind in debug-loop to not invoke the debugger directly.
+Otherwise, debug:*stack-top-hint* never gets set for errors received while
+debugging.
+
+Fixed MACROEXPAND-1 to pass the environment into MACRO-FUNCTION when
+checking to see if the form has a macro defintion.  Otherwise,
+macroexpanding macrolets doesn't work.
+
+Fixed doc string for maphash to indicate that it returns NIL instead of T.
+
+Changed the undefined-symbol-error handler to use fdefn-name to extract out
+the name from the fdefn object when its really a fdefn object that was
+undefined instead of a symbol.
+
+Added function-subtype and (setf function-subtype).  These functions can be
+used to retrieve and set the header type for functions and closures.
+
+Moved lots of exports from lispinit.lisp into the files that contain the
+thing being exported.  Moved the object-set stuff into serve-event.lisp.
+
+Added a call to GC-INIT to REINIT to facilitate making sure set-auto-gc-
+trigger gets called.
+
+Added the start of stuff necessary to support byte compiled functions.
+
+Export REALP from LISP now that it's a real function.  Minor tweek to
+bounds testing in %%typep of complex numbers.
+
+Chagned the unmatched close parenthesis warning to include the file
+position so that it is easier to track them down.
+
+
+Compiler:
+
+Lots of changes to support the new function call, and to fix bugs exposed
+by these changes.
+
+On the SPARC, fixed sap+ not to flame out when the second argument is an
+immediate that doesn't fit in a signed-byte 13 offset.
+
+Don't substitute out LET variables when the initial value is a reference to a
+:NOTINLINE functional.  The inlinep information must be retained, since we
+count on :NOTLININE calls never being local call converted.
+
+Removed some debugger code that accedently got left behind.
+
+Fixed SOURCE-TRANSFORM-STRUCTURE-TYPEP to return T-or-NIL in the frozen
+included case, and not some random non-null lists.
+
+
+
 3/29/92 to 4/7/92
 
 Code:
