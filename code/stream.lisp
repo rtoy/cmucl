@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.21 1994/08/23 18:36:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.22 1994/09/28 13:40:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,7 +275,9 @@
 		 (incf index))
 		((zerop index)
 		 (done-with-fast-read-char)
-		 (return (eof-or-lose stream eof-errorp eof-value)))
+		 (return (values (eof-or-lose (in-synonym-of stream)
+					      eof-errorp eof-value)
+				 t)))
 		;; since fast-read-char hit already the eof char, we
 	        ;; shouldn't do another read-char
 		(t
