@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.16 2004/07/07 22:22:59 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.17 2005/02/06 19:43:15 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -143,9 +143,17 @@ void os_foreign_linkage_init (void)
          * init-foreign-linkage in new-genesis does!
          */
 	if (i == 0) {
-#ifdef sparc
+#if defined(sparc)
 	    if (type != 1 || strcmp((char *)symbol_name->data,
 				    "call_into_c")) {
+                fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
+                        (char*)symbol_name->data);
+		lose("First element of linkage_data is bogus.\n");
+	    }
+	    arch_make_linkage_entry(i, &call_into_c, 1);
+#elif defined(DARWIN)
+	    if (type != 1 || strcmp((char *)symbol_name->data,
+				    "_call_into_c")) {
                 fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
                         (char*)symbol_name->data);
 		lose("First element of linkage_data is bogus.\n");
@@ -242,7 +250,7 @@ unsigned long os_link_one_symbol(long entry)
     type = fixnum_value(data_vector->data[table_index + 1]);
     target_addr = os_dlsym((char *)symbol_name->data,
 			   data_vector->data[table_index + 2]);
-#if 0
+#if 1
     fprintf(stderr, "Looked up %s symbol %s at %lx\n",
             type == 1 ? "code" : "data",
             (char*) symbol_name->data, (unsigned long) target_addr);

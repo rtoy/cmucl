@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.3 2004/09/08 02:10:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/cell.lisp,v 1.4 2005/02/06 19:43:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,7 +147,13 @@
                  (- (ash vm:function-code-offset vm:word-shift)
 		    function-pointer-type))
       (inst beq normal-fn)
-      (inst lr lip  (make-fixup (extern-alien-name "closure_tramp") :foreign))
+      ;; For the linkage-table stuff, we need to look up the address
+      ;; from the linkage table instead of using the address directly.
+      (inst lr lip  (make-fixup (extern-alien-name "closure_tramp")
+				#-linkage-table :foreign
+				#+linkage-table :foreign-data))
+      #+linkage-table
+      (loadw lip lip)
       (emit-label normal-fn)
       ;;PRM:FIXME? Order of following stores is reversed in SBCL
       (storew function fdefn fdefn-function-slot other-pointer-type)
@@ -162,7 +168,13 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+    ;; For the linkage-table stuff, we need to look up the address
+    ;; from the linkage table instead of using the address directly.
+    (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp")
+			       #-linkage-table :foreign
+			       #+linkage-table :foreign-data))
+    #+linkage-table
+    (loadw temp temp)
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 

@@ -486,3 +486,120 @@ _closure_tramp:
 	blr
 	SET_SIZE(ppc_flush_cache_line)
 
+#ifdef LINKAGE_TABLE
+/*
+ * Call into C code to resolve a linkage entry.
+ *
+ * We get here by Lisp calling call_into_c with an address of the
+ * desired function which is contained in the register reg_CFUNC (aka
+ * %i4, aka %r28).  This is the address of the entry in the linkage
+ * table, which is what we need to figure out what function we really
+ * wanted.
+ *
+ * Note that because we get here from call_into_c, all necessary live
+ * registers have been saved, including FP registers.  Hence, no need
+ * to save them.
+ */
+	.globl _lazy_resolve_linkage
+	GFUNCDEF(resolve_linkage_tramp)
+	/*
+	 * We need to call lazy_resolve_linkage.  reg_A0 (= r24)
+	 * (see ppc-arch.c) contains the address of the linkage entry.  
+	 */
+	/*
+	 * Need to save all parameter regs to the stack because we 
+	 * need them for later.
+	 */
+	subi	r1, r1, 8*4+8
+	stw	r3, 0(r1)
+	stw	r4, 4(r1)
+	stw	r5, 8(r1)
+	stw	r6, 12(r1)
+	stw	r7, 16(r1)
+	stw	r8, 20(r1)
+	stw	r9, 24(r1)
+	stw	r10, 28(r1)
+	
+	mr	reg_NL0, reg_A0
+
+	stwu	r1, (-(24+4))(r1)
+	/*
+	 * At this point reg_NIL should be available to us.  
+	 * Call lazy_resolve_linkage to figure out the real function address.
+	 */
+	lis	reg_NULL, hi16(_lazy_resolve_linkage)
+	ori	reg_NULL, reg_NULL, lo16(_lazy_resolve_linkage)
+	mtctr	reg_NULL
+	mflr	reg_CODE
+	bctrl
+
+	addi	r1,r1,24+4
+	
+	/*
+	 * The desired function is in r3 (NL0), so save it
+	 * and restore the real arg parameters
+	 */
+
+	mtctr	reg_NL0
+	lwz	r3, 0(r1)
+	lwz	r4, 4(r1)
+	lwz	r5, 8(r1)
+	lwz	r6, 12(r1)
+	lwz	r7, 16(r1)
+	lwz	r8, 20(r1)
+	lwz	r9, 24(r1)
+	lwz	r10, 28(r1)
+
+	/*
+	 * Got it, so we can now jump directly to the desired function.
+	 * reg_NL0 contains the result.  Restore the stack and go!
+	 */
+
+	mtlr	reg_CODE
+	
+	/* Back to C */
+	/*	mtlr	reg_CODE*/
+	bctr
+	
+	SET_SIZE(resolve_linkage_tramp)
+	
+
+/*
+ * When we get called, r3 (reg_NL0) contains the address of the
+ * data_vector object which is a string naming the bad symbol.
+ */
+	GFUNCDEF(undefined_foreign_symbol_trap)
+
+	/*
+	   Need to restore all the global registers with the Lisp values that 
+	   were saved away in call_into_c.  (This routine is only called from 
+	   os_link_one_symbol, which is called from resolve_linkage_tramp, which 
+	   is called from call_into_c.)
+
+	   The global registers are volatile across function calls, so who
+	   knows what values have been they contain now!
+		
+	*/
+
+	load(reg_ALLOC, _current_dynamic_space_free_pointer)
+        load(reg_BSP, _current_binding_stack_pointer)
+        load(reg_CSP, _current_control_stack_pointer)
+        load(reg_CFP, _current_control_frame_pointer)
+
+	lis reg_NULL,hi16(NIL)
+	ori reg_NULL,reg_NULL,lo16(NIL)
+	/* And reg_ZERO */
+	li reg_ZERO,0
+
+	mr	reg_NL0, reg_A0			
+	twllei	reg_ZERO, trap_Error
+	.byte	4	/* Number of argument bytes */
+	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
+        /* Escape to create 16bit number from following two bytes, in 
+	   little-endian order */
+        .byte	254
+	.byte	SC_OFFSET_LO(sc_DescriptorReg, reg_A0_NUM)
+	.byte	SC_OFFSET_HI(sc_DescriptorReg, reg_A0_NUM)
+	.align	4
+					
+#endif	

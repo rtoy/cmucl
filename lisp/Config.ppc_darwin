@@ -8,8 +8,13 @@ LD = ld
 NM = $(PATH1)/darwin-nm
 CPP = cpp -no-cpp-precomp
 DEPEND = $(CC) -MM
-CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc
-ASFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc
+ifdef FEATURE_LINKAGE_TABLE
+LINKAGE = -DLINKAGE_TABLE
+endif
+
+CFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE)
+ASFLAGS = -g -O3 -no-cpp-precomp -DDARWIN -Dppc $(LINKAGE)
+
 UNDEFSYMPATTERN = -Xlinker -u -Xlinker &
 ASSEM_SRC = ppc-assem.S linux-stubs.S
 ARCH_SRC = ppc-arch.c

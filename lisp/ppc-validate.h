@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.4 2005/01/13 19:55:00 fgilham Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-validate.h,v 1.5 2005/02/06 19:43:15 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -9,6 +9,27 @@
 
 #ifndef _PPC_VALIDATE_H_
 #define _PPC_VALIDATE_H_
+
+#ifdef LINKAGE_TABLE
+/*
+ * This space start better match the value of
+ * target-foreign-linkage-space-start defined in sparc/parms.lisp!
+ *
+ * See the notes there!
+ */
+
+#ifdef LinkageSpaceStart
+#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)
+#else
+#define FOREIGN_LINKAGE_SPACE_START (0x17000000)
+#endif
+/*
+ * This allows for about 510K symbols (assuming each entry is 16 bytes
+ * long).  Hope that's enough!  Make sure this doesn't overlap the
+ * READ_ONLY_SPACE_START!
+ */
+#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000) /* 8 MB */
+#endif
 
 /* 
  * The read-only space must be in low memory because the BA

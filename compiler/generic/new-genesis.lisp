@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.74 2004/09/21 11:59:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.75 2005/02/06 19:43:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -898,7 +898,7 @@
 			   (make-random-descriptor
 			    (lookup-foreign-symbol
 			     (vm::extern-alien-name "undefined_tramp")
-			     #+sparc :data))))
+			     #+(or sparc ppc) :data))))
 	  fdefn))))
   
 (defun cold-fset (name defn)
@@ -919,7 +919,7 @@
 		      (make-random-descriptor
 		       (lookup-foreign-symbol
 		        (vm::extern-alien-name "closure_tramp")
-			#+sparc :data)))))
+			#+(or sparc ppc) :data)))))
     fdefn))
 
 (defun initialize-static-fns ()
@@ -1945,7 +1945,7 @@
 	   (when (and (numberp value) (zerop value))
 	     (warn "Not-really-defined foreign symbol: ~S" name))
 	   value)
-	 #+sparc
+	 #+(or sparc ppc)
 	 (let ((address (lookup-sym name)))
 	   ;; If the link-type is :data, need to lookup and return the
 	   ;; value, not the address of NAME in the linkage table.
@@ -1957,7 +1957,7 @@
 	   ;; routines.
 	   (if (eq link-type :code)
 	       address
-	       (sys:sap-ref-32 (sys:int-sap address) 0))))
+	     (sys:sap-ref-32 (sys:int-sap address) 0))))
 	;; Are those still necessary?
 	((and linux-p (lookup-sym (concatenate 'string "__libc_" name))))
 	((and linux-p (lookup-sym (concatenate 'string "__" name))))
@@ -1985,11 +1985,11 @@
   ;; os_foreign_linkage_init does!
   #+(or x86 amd64)
   (cold-register-foreign-linkage "resolve_linkage_tramp" :code)
-  #+sparc
+  #+(or sparc ppc)
   (progn
-    (cold-register-foreign-linkage "call_into_c" :code)
-    (cold-register-foreign-linkage "undefined_tramp" :data)
-    (cold-register-foreign-linkage "closure_tramp" :data)
+    (cold-register-foreign-linkage (vm::extern-alien-name "call_into_c") :code)
+    (cold-register-foreign-linkage (vm::extern-alien-name "undefined_tramp") :data)
+    (cold-register-foreign-linkage (vm::extern-alien-name "closure_tramp") :data)
     ))
 
 (defvar *cold-assembler-routines* nil)

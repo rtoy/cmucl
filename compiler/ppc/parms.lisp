@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.8 2004/10/20 11:30:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/parms.lisp,v 1.9 2005/02/06 19:43:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,8 +148,11 @@
 (defparameter target-read-only-space-start #x01000000)
 (defparameter target-static-space-start    #x10000000)
 (defparameter target-dynamic-space-start   #x40000000)
-(defparameter target-foreign-linkage-space-start #x0fc00000)
-(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
+;; We're sticking this at the end of the static space for now for the
+;; first linkage-table build because it's mapped with the
+;; static-space.  We can move it later once linkage-table is built.
+(defparameter target-foreign-linkage-space-start #x17000000)
+(defconstant target-foreign-linkage-entry-size 32) ;In bytes.  Duh.
 
 
 
@@ -235,8 +238,13 @@
     lisp::*cmucl-lib*
     lisp::*cmucl-core-path*
       
+    ;; Foreign linkage stuff
+    #+linkage-table
+    lisp::*linkage-table-data*
+
     ;; Spare symbols.  Rename these when you need to add some static
     ;; symbols and don't want to do a cross-compile.
+    spare-9
     spare-8
     spare-7
     spare-6
@@ -245,6 +253,7 @@
     spare-3
     spare-2
     spare-1
+    spare-0
 
     #|kernel::*current-thread*|#
     ))

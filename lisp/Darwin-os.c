@@ -14,7 +14,7 @@
  * Frobbed for OpenBSD by Pierre R. Mai, 2001.
  * Frobbed for Darwin by Pierre R. Mai, 2003.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.1 2004/07/13 00:26:22 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Darwin-os.c,v 1.2 2005/02/06 19:43:15 rtoy Exp $
  *
  */
 
@@ -258,4 +258,35 @@ map_core_sections(char *exec_name)
 {
 	fprintf(stderr,"Linked cores not supported for Darwin!\n");
 	exit(1);
+}
+
+#define RTLD_LAZY 1
+#define RTLD_NOW 2
+#define RTLD_GLOBAL 0x100
+
+
+void *os_dlsym(const char *sym_name, lispobj lib_list)
+{
+    static void *program_handle;
+    void *sym_addr = 0;
+
+    if (!program_handle)
+	program_handle = dlopen((void *)0, RTLD_LAZY | RTLD_GLOBAL);
+    if (lib_list != NIL) {
+	lispobj lib_list_head;
+
+	for (lib_list_head = lib_list;
+	     lib_list_head != NIL;
+	     lib_list_head = (CONS(lib_list_head))->cdr) {
+	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
+	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
+
+	    sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
+	    if (sym_addr)
+		return sym_addr;
+	}
+    }
+    sym_addr = dlsym(program_handle, sym_name);
+
+    return sym_addr;
 }

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.1 2004/07/13 00:26:22 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/ppc-arch.c,v 1.2 2005/02/06 19:43:15 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -278,3 +278,154 @@ ppc_flush_icache(os_vm_address_t address, os_vm_size_t length)
     address += 32;
   }
 }
+
+#ifdef LINKAGE_TABLE
+/* Linkage tables for PowerPC
+ *
+ * Linkage entry size is 16, because we need at least 4 instructions to
+ * implement a jump.
+ */
+
+/*
+ * This had better match lisp::target-foreign-linkage-entry-size in
+ * ppco/parms.lisp!  Each entry is 6 instructions long, so at least
+ * 24 bytes.
+ */
+#ifndef LinkageEntrySize
+#define LinkageEntrySize (8*4)
+#endif
+
+/*
+ * Define the registers to use in the linkage jump table. Can be the
+ * same. Some care must be exercised when choosing these. It has to be
+ * a register that is not otherwise being used. reg_NFP is a good
+ * choice. call_into_c trashes reg_NFP without preserving it, so we can
+ * trash it in the linkage jump table.
+ */
+#define LINKAGE_TEMP_REG        reg_NFP
+#define LINKAGE_ADDR_REG        reg_A0
+
+/*
+ * Insert the necessary jump instructions at the given address.
+ */
+void
+arch_make_jump_entry(void* reloc_addr, void *target_addr)
+{
+  /*
+   * Make JMP to function entry.
+   *
+   * The instruction sequence is:
+   *
+   *        addis temp, 0, (hi part of reloc)
+   *        ori   temp, temp, (lo part of reloc)
+   *        addis addr, 0, (hi part of addr)
+   *        ori   addr, addr, (low part of addr)
+   *        mtctr addr
+   *        bctr
+   *        
+   */
+  int* inst_ptr;
+  unsigned long hi;                   /* Top 16 bits of address */
+  unsigned long lo;                   /* Low 16 bits of address */
+  unsigned int inst;
+
+  inst_ptr = (int*) reloc_addr;
+
+  /*
+   * Split the target address into hi and lo parts for the addis/ori
+   * instructions.
+   */
+  hi = (unsigned long) reloc_addr;
+  lo = hi & 0xffff;
+  hi >>= 16;
+
+  /*
+   * addis 3, 0, (hi part)
+   */
+  inst = (15 << 26) | (LINKAGE_ADDR_REG << 21) | (0 << 16) | hi;
+  *inst_ptr++ = inst;
+
+  /*
+   * ori 3, 3, (lo part)
+   */
+
+  inst = (24 << 26) | (LINKAGE_ADDR_REG << 21) | (LINKAGE_ADDR_REG << 16) | lo;
+  *inst_ptr++ = inst;
+      
+  /*
+   * Split the target address into hi and lo parts for the addis/ori
+   * instructions.
+   */
+
+  hi = (unsigned long) target_addr;
+  lo = hi & 0xffff;
+  hi >>= 16;
+
+  /*
+   * addis 13, 0, (hi part)
+   */
+      
+  inst = (15 << 26) | (LINKAGE_TEMP_REG << 21) | (0 << 16) | hi;
+  *inst_ptr++ = inst;
+
+  /*
+   * ori 13, 13, (lo part)
+   */
+
+  inst = (24 << 26) | (LINKAGE_TEMP_REG << 21) | (LINKAGE_TEMP_REG << 16) | lo;
+  *inst_ptr++ = inst;
+  
+  /*
+   * mtctr 13
+   */
+
+  inst = (31 << 26) | (LINKAGE_TEMP_REG << 21) | (9 << 16) | (467 << 1);
+  *inst_ptr++ = inst;
+
+  /*
+   * bctr
+   */
+
+  inst = (19 << 26) | (20 << 21) | (528 << 1);
+  *inst_ptr++ = inst;
+
+
+  *inst_ptr++ = inst;
+  
+  os_flush_icache((os_vm_address_t) reloc_addr, (char*) inst_ptr - (char*) reloc_addr);
+}
+
+void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
+{
+  int *reloc_addr = (int *)(FOREIGN_LINKAGE_SPACE_START
+                            + linkage_entry * LinkageEntrySize);
+
+  if (type == 1)
+    {			/* code reference */
+      arch_make_jump_entry(reloc_addr, target_addr);
+    }
+  else if (type == 2)
+    {
+      *(unsigned long *)reloc_addr = (unsigned long)target_addr;
+    }
+}
+
+/* Make a the entry a jump to resolve_linkage_tramp. */
+
+extern void resolve_linkage_tramp(void);
+
+void arch_make_lazy_linkage(long linkage_entry)
+{
+  arch_make_linkage_entry(linkage_entry, (void*) resolve_linkage_tramp, 1);
+}
+
+/* Get linkage entry.  We're given the return address which should be
+   the address of the jmpl instruction (2nd word) of the linkage
+   entry.  Figure out which entry this address belong to. */
+
+long arch_linkage_entry(unsigned long retaddr)
+{
+  return (retaddr - (FOREIGN_LINKAGE_SPACE_START))
+    / LinkageEntrySize;
+}
+#endif

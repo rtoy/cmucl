@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.5 2004/10/24 16:58:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/c-call.lisp,v 1.6 2005/02/06 19:43:15 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,7 @@
 				    ,@(new-args))))))
 	(c::give-up))))
 
-
+#-linkage-table
 (define-vop (foreign-symbol-address)
   (:translate foreign-symbol-address)
   (:policy :fast-safe)
@@ -275,6 +275,33 @@
   (:result-types system-area-pointer)
   (:generator 2
     (inst lr res  (make-fixup (extern-alien-name foreign-symbol) :foreign))))
+
+(define-vop (foreign-symbol-code-address)
+  (:translate #+linkage-table foreign-symbol-code-address
+	      #-linkage-table foreign-symbol-address)
+  (:policy :fast-safe)
+  (:args)
+  (:arg-types (:constant simple-string))
+  (:info foreign-symbol)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:generator 2
+    (inst lr res (make-fixup (extern-alien-name foreign-symbol)
+			     :foreign))))
+
+(define-vop (foreign-symbol-data-address)
+  (:translate foreign-symbol-data-address)
+  (:policy :fast-safe)
+  (:args)
+  (:arg-types (:constant simple-string))
+  (:info foreign-symbol)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:temporary (:scs (non-descriptor-reg)) addr)
+  (:generator 2
+    (inst lr addr (make-fixup (extern-alien-name foreign-symbol)
+			      :foreign-data))
+    (loadw res addr)))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg) :target cfunc)

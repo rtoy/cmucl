@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.4 2004/07/30 01:05:59 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.5 2005/02/06 19:43:13 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,6 +293,7 @@
   #-darwin
   (concatenate 'string "" name))
 
+#-linkage-table
 (defun lisp::foreign-symbol-address-aux (name flavor)
   (declare (ignore flavor))
   (multiple-value-bind (value found)
@@ -310,6 +311,21 @@
                   (error "Unknown foreign symbol: ~S" name))
                 value))))))
 
+#+linkage-table
+(progn
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (let ((entry-num (lisp::register-foreign-linkage name flavor)))
+    (+ #.vm:target-foreign-linkage-space-start
+       (* entry-num vm:target-foreign-linkage-entry-size))))
+
+(defun lisp::find-foreign-symbol (addr)
+  (declare (type (unsigned-byte 32) addr))
+  (when (>= addr vm:target-foreign-linkage-space-start)
+    (let ((entry (/ (- addr vm:target-foreign-linkage-space-start)
+		    vm:target-foreign-linkage-entry-size)))
+      (when (< entry (lisp::foreign-linkage-symbols))
+	(lisp::foreign-linkage-entry entry)))))
+)
 
 
 ;;; SANCTIFY-FOR-EXECUTION -- Interface.

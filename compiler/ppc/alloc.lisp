@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.8 2004/10/23 18:10:23 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.9 2005/02/06 19:43:14 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,15 @@
   (:translate make-fdefn)
   (:generator 37
     (with-fixed-allocation (result pa-flag temp fdefn-type fdefn-size)
-      (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+      ;; For the linkage-table stuff, we need to look up the address
+      ;; of undefined_tramp from the linkage table instead of using
+      ;; the address directly.
+      ()
+      (inst lr temp  (make-fixup (extern-alien-name "undefined_tramp")
+				 #-linkage-table :foreign
+				 #+linkage-table :foreign-data))
+      #+linkage-table
+      (loadw temp temp)
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))
