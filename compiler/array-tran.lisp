@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.36 2004/05/05 16:37:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.37 2005/01/07 21:47:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -108,7 +108,24 @@
 ;;;
 (defoptimizer (%aset derive-type) ((array &rest stuff))
   (assert-array-rank array (1- (length stuff)))
-  (assert-new-value-type (car (last stuff)) array))
+  (assert-new-value-type (car (last stuff)) array)
+  ;; Without the following,  this function
+  ;;
+  ;;   (defun fn-492 (r p1)
+  ;;     (declare (optimize speed (safety 1))
+  ;;		(type (simple-array (signed-byte 8) nil) r) (type (integer * 22050378) p1))
+  ;;     (setf (aref r) (lognand (the (integer 19464371) p1) 2257))
+  ;;     (values))
+  ;;
+  ;; causes the compiler to delete (values) as unreachable and in so
+  ;; doing, deletes the return, so we just run off the end.  I (rtoy)
+  ;; think this is caused by some confusion in type-derivation.  The
+  ;; derived result of the lognand is bigger than a (signed-byte 8).
+  ;;
+  ;; I think doing this also causes some loss, because we return the
+  ;; element-type of the array, even though the result of the aset is
+  ;; the new value.
+  (array-type-specialized-element-type (continuation-type array)))
 
 ;;; DATA-VECTOR-REF  --  derive-type optimizer.
 ;;;
