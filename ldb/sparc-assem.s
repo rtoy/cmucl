@@ -1,6 +1,7 @@
 
 #include <machine/asm_linkage.h>
 #include <machine/psl.h>
+#include <machine/trap.h>
 
 #define LANGUAGE_ASSEMBLY
 #include "lispregs.h"
@@ -13,10 +14,15 @@
         sethi %hi(NAME(sym)), L0; st reg, [L0+%lo(NAME(sym))]
 
 
+#define FRAMESIZE (SA(MINFRAME)+SA(4))
+
         .seg    "text"
         .global NAME(call_into_lisp)
 NAME(call_into_lisp):
-        save    %sp, -(SA(MINFRAME)+SA(4)), %sp
+        save    %sp, -FRAMESIZE, %sp
+
+	/* Flush all of C's register windows to the stack. */
+	ta	ST_FLUSH_WINDOWS
 
         /* Save the return address. */
         st      %i7, [%fp-4]
@@ -119,9 +125,9 @@ lra:
 1:
 
         /* Back to C we go. */
-        ld      [%fp-4], %i7
+	ld	[%sp+FRAMESIZE-4], %i7
         ret
-        restore
+        restore	%sp, FRAMESIZE, %sp
 
 
 
@@ -427,7 +433,7 @@ _sigreturn:
 	ldd	[%o0 + 160+(26*4)], %f26
 	ldd	[%o0 + 160+(28*4)], %f28
 	ldd	[%o0 + 160+(30*4)], %f30
-	ld	[%o0 + 160+(32*4)], %fsr	! restore old fsr
+	ld	[%o0 + 160+(33*4)], %fsr	! restore old fsr
 2:
 
 	! The locals and in are restored from the stack, so we have to put
