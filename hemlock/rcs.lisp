@@ -1,10 +1,9 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.9 1990/03/03 00:04:41 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.10 1990/03/03 00:32:00 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
-
 (in-package "HEMLOCK")
 
 
