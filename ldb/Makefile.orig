@@ -1,7 +1,9 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.4 1990/03/08 20:38:24 ch Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.5 1990/03/28 23:00:25 ch Exp $
 CFLAGS = -g
 
-OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o os.o vars.o assem.o parse.o interrupt.o test.o search.o
+OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
+	os.o vars.o assem.o parse.o interrupt.o test.o \
+	search.o validate.o gc.o gc_debug.o globals.o
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
@@ -26,6 +28,9 @@ version:
 interrupt.o: interrupt.c
 	cc ${CFLAGS} -G 0 -c interrupt.c
 
+assem.o: assem.s
+	as -G 0 -o $@ $>
+
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
 	@false
@@ -43,14 +48,42 @@ alloc.o: alloc.c
 alloc.o: lisp.h
 alloc.o: ldb.h
 alloc.o: alloc.h
+alloc.o: globals.h
+alloc.o: lisp.h
 assem.o: assem.s
 assem.o: lisp.h
 assem.o: lispregs.h
+assem.o: globals.h
+assem.o: lisp.h
 coreparse.o: coreparse.c
+coreparse.o: lisp.h
+coreparse.o: globals.h
+coreparse.o: lisp.h
 egets.o: egets.c
+except.o: except.c
+gc.o: gc.c
+gc.o: lisp.h
+gc.o: ldb.h
+gc.o: gc.h
+gc.o: lisp.h
+gc.o: globals.h
+gc.o: lisp.h
+gc_debug.o: gc_debug.c
+gc_debug.o: lisp.h
+gc_debug.o: ldb.h
+gc_debug.o: gc.h
+gc_debug.o: lisp.h
+gc_debug.o: globals.h
+gc_debug.o: lisp.h
+globals.o: globals.c
+globals.o: lisp.h
+globals.o: globals.h
+globals.o: lisp.h
 interrupt.o: interrupt.c
 interrupt.o: lisp.h
 interrupt.o: ldb.h
+interrupt.o: globals.h
+interrupt.o: lisp.h
 interrupt.o: lispregs.h
 ldb.o: ldb.c
 ldb.o: ldb.h
@@ -60,12 +93,16 @@ ldb.o: vars.h
 monitor.o: monitor.c
 monitor.o: ldb.h
 monitor.o: lisp.h
+monitor.o: globals.h
+monitor.o: lisp.h
 monitor.o: vars.h
 monitor.o: parse.h
 os.o: os.c
 os.o: ldb.h
 parse.o: parse.c
 parse.o: ldb.h
+parse.o: lisp.h
+parse.o: globals.h
 parse.o: lisp.h
 parse.o: vars.h
 parse.o: parse.h
@@ -80,6 +117,10 @@ search.o: ldb.h
 test.o: test.c
 test.o: lisp.h
 test.o: ldb.h
+validate.o: validate.c
+validate.o: lisp.h
+validate.o: globals.h
+validate.o: lisp.h
 vars.o: vars.c
 vars.o: ldb.h
 vars.o: lisp.h
