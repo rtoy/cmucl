@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.42 2004/07/14 15:00:41 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.43 2004/07/15 18:08:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2390,33 +2390,24 @@
 
 ;; Handle (ldb (byte 32 0) (- x)).  The (- x) gets converted to
 ;; (%negate x), so we build modular functions for %negate.
-(defun %negate-mod32 (x)
-  (declare (integer x))
-  (ldb (byte 32 0) (- x)))
-
-(defknown %negate-mod32 (integer)
-  (unsigned-byte 32)
-  (movable foldable flushable))
 
 (c::define-modular-fun %negate-mod32 (x) kernel:%negate 32)
 
-(define-vop (%negate-mod32/unsigned=>unsigned)
+(define-vop (%negate-mod32/unsigned=>unsigned fast-safe-arith-op)
   (:translate %negate-mod32)
-  (:args (x :scs (unsigned-reg)))
+  (:args (x :scs (unsigned-reg) :target res))
   (:arg-types unsigned-num)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:policy :fast-safe)
   (:generator 1
     (inst neg res x)))
 
-(define-vop (%negate-mod32/signed=>unsigned)
+(define-vop (%negate-mod32/signed=>unsigned fast-safe-arith-op)
   (:translate %negate-mod32)
   (:args (x :scs (signed-reg)))
   (:arg-types signed-num)
   (:results (res :scs (unsigned-reg)))
   (:result-types unsigned-num)
-  (:policy :fast-safe)
   (:generator 1
     (inst neg res x)))
 
