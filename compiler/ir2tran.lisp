@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.43 1992/06/02 19:08:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.44 1992/07/14 17:51:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,8 +1496,7 @@
       (when (and info
 		 (member (cleanup-kind (nlx-info-cleanup info))
 			 '(:block :tagbody)))
-	(emit-nlx-start node block info nil)
-	(return))))
+	(emit-nlx-start node block info nil))))
   (undefined-value))
 
 
