@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.9 1991/04/23 12:10:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.10 1991/04/25 00:49:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,7 +192,8 @@
 
 ;;; RESULT-TYPE-xxx-ARG  --  Interface
 ;;;
-;;;    Derive the type to be the type of the xxx'th arg.
+;;;    Derive the type to be the type of the xxx'th arg.  This can normally
+;;; only be done when the result value is that argument.
 ;;;
 (defun result-type-first-arg (call)
   (declare (type combination call))
@@ -205,12 +206,33 @@
     (when cont (continuation-type cont))))
 
 
-;;; RESULT-TYPE-SPECIFIER-FIRST-ARG  --  Interface
+;;; SEQUENCE-RESULT-NTH-ARG  --  Internal
 ;;;
-;;;    Derive the type to be the type specifier which is the first arg.
+;;;    Return a closure usable as a derive-type method for accessing the N'th
+;;; argument.  If arg is a list, result is a list.  If arg is a vector, result
+;;; is a vector with the same element type.
+;;;
+(defun sequence-result-nth-arg (n)
+  #'(lambda (call)
+      (declare (type combination call))
+      (let ((cont (nth (1- n) (combination-args call))))
+	(when cont
+	  (let ((type (continuation-type cont)))
+	    (if (array-type-p type)
+		(specifier-type
+		 `(vector ,(type-specifier (array-type-element-type type))))
+		(let ((ltype (specifier-type 'list)))
+		  (when (csubtypep type ltype)
+		    ltype))))))))
+
+
+;;; RESULT-TYPE-SPECIFIER-NTH-ARG  --  Interface
+;;;
+;;;    Derive the type to be the type specifier which is the N'th arg.
 ;;; 
-(defun result-type-specifier-first-arg (call)
-  (declare (type combination call))
-  (let ((cont (car (last (combination-args call)))))
-    (when (and cont (constant-continuation-p cont))
-      (specifier-type (continuation-value cont)))))
+(defun result-type-specifier-nth-arg (n)
+  #'(lambda (call)
+      (declare (type combination call))
+      (let ((cont (nth (1- n) (combination-args call))))
+	(when (and cont (constant-continuation-p cont))
+	  (specifier-type (continuation-value cont))))))
