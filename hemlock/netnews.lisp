@@ -1711,11 +1711,11 @@
     (setf (buffer-minor-mode buffer "Post") t)
     (write-line "Newsgroups: " stream)
     (write-line "Subject: " stream)
-    (write-string "Date: " stream)
-    (format stream "~A~%" (string-capitalize
-			   (format-universal-time nil (get-universal-time)
-						  :style :government
-						  :print-weekday nil)))
+;   (write-string "Date: " stream)
+;   (format stream "~A~%" (string-capitalize
+;			   (format-universal-time nil (get-universal-time)
+;						  :style :government
+;						  :print-weekday nil)))
     (write-char #\newline stream)
     (write-char #\newline stream)
     buffer))
