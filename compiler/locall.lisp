@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.38 1992/09/22 14:10:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.39 1992/11/03 07:06:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -982,7 +982,9 @@
 ;;;
 ;;;    If a potentially TR local call really is TR, then convert it to jump
 ;;; directly to the called function.  We also call MAYBE-CONVERT-TO-ASSIGNMENT.
-;;; We can switch the succesor (potentially deleting the RETURN node) unless:
+;;; The first value is true if we tail-convert.  The second is the value of
+;;; M-C-T-A.  We can switch the succesor (potentially deleting the RETURN node)
+;;; unless:
 ;;; -- The call has already been converted.
 ;;; -- The call isn't TR (random implicit MV PROG1.)
 ;;; -- The call is in an XEP (thus we might decide to make it non-tail so that
