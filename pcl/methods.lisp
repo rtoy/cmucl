@@ -464,6 +464,11 @@
 	   (error "No method on ~S with qualifiers ~:S and specializers ~:S."
 		  generic-function qualifiers specializers)))))
 
+(defmethod find-method ((generic-function standard-generic-function)
+			qualifiers specializers &optional (errorp t))
+  (real-get-method generic-function qualifiers
+		   (parse-specializers specializers) errorp))
+  
 
 ;;;
 ;;; Compute various information about a generic-function's arglist by looking

@@ -708,6 +708,9 @@
 (defgeneric get-method (generic-function qualifiers specializers &optional (errorp t)))
 ;          (standard-generic-function t t)
 
+(defgeneric find-method (generic-function qualifiers specializers &optional (errorp t)))
+;          (standard-generic-function t t)
+
 (defgeneric remove-named-method (generic-function-name argument-specifiers &optional extra))
 ;          (t t)
 
