@@ -42,31 +42,22 @@ NAME(call_into_lisp):
         /* Establish NIL */
         set     NIL, NULLREG
 
-        /* No longer in foreign function call. */
-        /* Note: the atomic flag should still be set. */
+	/* Set the pseudo-atomic flag. */
+	set	4, ALLOC
+
+	/* Turn off foreign function call. */
         sethi   %hi(NAME(foreign_function_call_active)), NL0
         st      ZERO, [NL0+%lo(NAME(foreign_function_call_active))]
 
         /* Load the rest of lisp state. */
-        load(current_dynamic_space_free_pointer, ALLOC)
+        load(current_dynamic_space_free_pointer, NL0)
+	add	NL0, ALLOC
         load(current_binding_stack_pointer, BSP)
         load(current_control_stack_pointer, CSP)
         load(current_control_frame_pointer, OCFP)
 
-        /* No longer atomic. */
-        sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), NL0
-        st      ZERO, [NL0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
-
-        /* Were we interrupted? */
-        sethi   %hi(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET), NL0
-        ld      [NL0+%lo(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET)], NL0
-        tst     NL0
-        beq     1f
-        nop
-
-        /* Yep, we were. */
-        unimp   trap_PendingInterrupt
-1:
+        /* No longer atomic, and check for interrupt. */
+	tsubcctv	ALLOC, 4, ALLOC
 
         /* Pass in the args. */
         /* Note: CNAME and LEXENV already hold the correct values. */
@@ -100,12 +91,11 @@ lra:
         mov     A0, %i0
 
         /* Turn on pseudo_atomic */
-        set     1, NL1
-        sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), L0
-        st      NL1, [L0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
+	add	ALLOC, 4, ALLOC
 
         /* Store LISP state */
-        store(ALLOC,current_dynamic_space_free_pointer)
+	andn	ALLOC, 7, NL1
+        store(NL1,current_dynamic_space_free_pointer)
         store(BSP,current_binding_stack_pointer)
         store(CSP,current_control_stack_pointer)
         store(CFP,current_control_frame_pointer)
@@ -114,15 +104,7 @@ lra:
         store(NL1,foreign_function_call_active)
 
         /* Were we interrupted? */
-        sethi   %hi(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET), L0
-        ld      [L0+%lo(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET)], L0
-        tst     L0
-        beq     1f
-        nop
-
-        /* Yep, we were. */
-        unimp   trap_PendingInterrupt
-1:
+	tsubcctv	ALLOC, 4, ALLOC
 
         /* Back to C we go. */
 	ld	[%sp+FRAMESIZE-4], %i7
@@ -141,8 +123,7 @@ _call_into_c:
         st      CODE, [CFP+8]
 
         /* Turn on pseudo-atomic. */
-        sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), L0
-        st      CSP, [L0+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
+	add	ALLOC, 4, ALLOC
 
 	/* Convert the return address to an offset and save it on the stack. */
 	sub	LIP, CODE, L0
@@ -150,7 +131,8 @@ _call_into_c:
 	st	L0, [CFP+4]
 
         /* Store LISP state */
-        store(ALLOC,current_dynamic_space_free_pointer)
+	andn	ALLOC, 7, L0
+        store(L0,current_dynamic_space_free_pointer)
         store(BSP,current_binding_stack_pointer)
         store(CSP,current_control_stack_pointer)
         store(CFP,current_control_frame_pointer)
@@ -159,15 +141,7 @@ _call_into_c:
         store(CSP,foreign_function_call_active)
 
         /* Were we interrupted? */
-        sethi   %hi(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET), L0
-        ld      [L0+%lo(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET)], L0
-        tst     L0
-        beq     1f
-        nop
-
-        /* Yep, we were. */
-        unimp   trap_PendingInterrupt
-1:
+	tsubcctv	ALLOC, 4, ALLOC
 
         /* Into C we go. */
         call    CFUNC
@@ -176,13 +150,16 @@ _call_into_c:
         /* Re-establish NIL */
         set     NIL, NULLREG
 
+	/* Atomic. */
+	set	4, ALLOC
+
         /* No longer in foreign function call. */
-        /* Note: the atomic flag should still be set. */
         sethi   %hi(NAME(foreign_function_call_active)), NL1
         st      ZERO, [NL1+%lo(NAME(foreign_function_call_active))]
 
         /* Load the rest of lisp state. */
-        load(current_dynamic_space_free_pointer, ALLOC)
+        load(current_dynamic_space_free_pointer, NL1)
+	add	NL1, ALLOC
         load(current_binding_stack_pointer, BSP)
         load(current_control_stack_pointer, CSP)
         load(current_control_frame_pointer, CFP)
@@ -194,19 +171,7 @@ _call_into_c:
 	sub	LIP, type_OtherPointer, LIP
 
         /* No longer atomic. */
-        sethi   %hi(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET), NL1
-        st      ZERO, [NL1+%lo(PSEUDO_ATOMIC_ATOMIC+SYMBOL_VALUE_OFFSET)]
-
-        /* Were we interrupted? */
-        sethi   %hi(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET), NL1
-        ld      [NL1+%lo(PSEUDO_ATOMIC_INTERRUPTED+SYMBOL_VALUE_OFFSET)], NL1
-        tst     NL1
-        beq     1f
-        nop
-
-        /* Yep, we were. */
-        unimp   trap_PendingInterrupt
-1:
+	tsubcctv	ALLOC, 4, ALLOC	
 
         /* Reset the lisp stack. */
         /* Note: OCFP is in one of the locals, it gets preserved across C. */
