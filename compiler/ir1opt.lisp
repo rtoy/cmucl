@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.54 1992/09/23 13:45:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.55 1992/09/24 16:41:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -634,6 +634,11 @@
 ;;;    (IF (IF A B C) D E) ==>
 ;;;    (IF A (IF B D E) (IF C D E))
 ;;;
+;;;    We clobber the NODE-SOURCE-PATH of both the original and the new node so
+;;; that dead code deletion notes will definitely not consider either node to
+;;; be part of the original source.  One node might become unreachable,
+;;; resulting in a spurious note.
+;;;
 (defun convert-if-if (use node)
   (declare (type node use) (type cif node))
   (with-ir1-environment node
@@ -659,6 +664,9 @@
       
       (link-blocks new-block cblock)
       (link-blocks new-block ablock)
+
+      (push "<IF Duplication>" (node-source-path node))
+      (push "<IF Duplication>" (node-source-path new-node))
 
       (reoptimize-continuation test)
       (reoptimize-continuation new-cont)
