@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.11 1992/10/11 10:54:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.12 1992/12/05 21:57:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -179,6 +179,9 @@
 
 (def-type-vops funcallable-instance-p nil nil nil
   vm:funcallable-instance-header-type)
+
+(def-type-vops dylan::dylan-function-p nil nil nil
+  dylan-function-header-type)
 
 (def-type-vops array-header-p nil nil nil
   vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
