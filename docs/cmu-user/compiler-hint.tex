@@ -3210,19 +3210,15 @@ bit
 (unsigned-byte 8)
 (unsigned-byte 16)
 (unsigned-byte 32)
-base-character
-single-float
-double-float
-\end{lisp}
-
-Some versions of \cmucl{}\footnote{Currently, this includes the x86
-  and Sparc versions which are compiled with the \kwd{signed-array}
-  feature.} also support the following specialized element types:
-\begin{lisp}
 (signed-byte 8)
 (signed-byte 16)
 (signed-byte 30)
 (signed-byte 32)
+base-character
+single-float
+double-float
+(complex single-float)
+(complex double-float)
 \end{lisp}
 
 Although a \code{simple-vector} can hold any type of object, \true{}
