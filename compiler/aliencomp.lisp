@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.19 1992/02/22 01:59:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.20 1992/02/23 21:16:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -488,6 +488,11 @@
   (if (constant-continuation-p type)
       (make-alien-type-type (continuation-value type))
       *wild-type*))
+
+(deftransform %sap-alien ((sap type) * * :important t)
+  (give-up "Could not optimize away %SAP-ALIEN: forced to do runtime ~@
+	    allocation of alien-value structure."))
+
 
 
 ;;;; Extract/deposit magic
