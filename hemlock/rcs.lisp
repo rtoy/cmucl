@@ -1,8 +1,10 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.15 1990/03/16 19:39:05 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.16 1990/05/30 16:27:22 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
+;;;
+;;; Written by William Lott and Christopher Hoover.
 ;;; 
 (in-package "HEMLOCK")
 
@@ -26,24 +28,31 @@
 	 (setf (ext:default-directory) ,cwd)))))
 
 
-(defvar *error-stream* (make-string-output-stream))
+(defvar *last-rcs-command-name* nil)
+(defvar *last-rcs-command-output-string* nil)
+(defvar *rcs-output-stream* (make-string-output-stream))
 
-(defmacro do-command (&rest args)
-  (let ((proc (gensym)))
-    `(progn
-       (get-output-stream-string *error-stream*)
-       (let ((,proc (ext:run-program ,@args :error *error-stream*)))
-	 (case (ext:process-status ,proc)
-	   (:exited
-	    (unless (zerop (ext:process-exit-code ,proc))
-	      (editor-error "~A" (get-output-stream-string *error-stream*))))
-	   (:signaled
-	    (editor-error "~A killed with signal ~A ~@[core dumped]"
-			  ',(car args)
-			  (ext:process-exit-code ,proc)
-			  (ext:process-core-dumped ,proc)))
-	   (t
-	    (editor-error "~S still alive?" ,proc)))))))
+(defmacro do-command (command &rest args)
+  `(progn
+     (setf *last-rcs-command-name* ',command)
+     (get-output-stream-string *rcs-output-stream*)
+     (let ((process (ext:run-program ',command ,@args
+				     :error *rcs-output-stream*)))
+       (setf *last-rcs-command-output-string*
+	     (get-output-stream-string *rcs-output-stream*))
+       (case (ext:process-status process)
+	 (:exited
+	  (unless (zerop (ext:process-exit-code process))
+	    (editor-error "~A aborted with an error; ~
+	    use the ``RCS Last Command Output'' command for more ~
+	    information" ',command)))
+	 (:signaled
+	  (editor-error "~A killed with signal ~A~@[ (core dumped)]."
+			',command
+			(ext:process-exit-code process)
+			(ext:process-core-dumped process)))
+	 (t
+	  (editor-error "~S still alive?" process))))))
 
 (defun buffer-different-from-file (buffer filename)
   (with-open-file (file filename)
@@ -244,6 +253,19 @@
 	       (return name)))))))
 
 
+;;;; Last Command Output
+
+(defcommand "RCS Last Command Output" (p)
+  "Print the full output of the last RCS command."
+  "Print the full output of the last RCS command."
+  (declare (ignore p))
+  (unless (and *last-rcs-command-name* *last-rcs-command-output-string*)
+    (editor-error "No RCS commands have executed!"))
+  (with-pop-up-display (s :buffer-name "*RCS Command Output*")
+    (format s "Output from ``~A'':~%~%" *last-rcs-command-name*)
+    (write-line *last-rcs-command-output-string* s)))
+
+
 ;;;; Checking In / Checking Out and Locking / Unlocking 
 
 (defcommand "RCS Lock Buffer File" (p)
@@ -257,11 +279,11 @@
     (unwind-protect
 	(progn
 	  (in-directory file
-	    (do-command "rcsco" `("-p" ,(file-namestring file))
+  	    (do-command "rcsco" `("-p" ,(file-namestring file))
 			:output (namestring name)))
 	  (when (buffer-different-from-file buffer name)
 	    (message
-	     "RCS file is different: be sure to merge in your changes."))
+	     "RCS file is different; be sure to merge in your changes."))
 	  (setf (buffer-writable buffer) t)
 	  (message "Buffer is now writable."))
       (when (probe-file name)
@@ -480,3 +502,85 @@
 	     (format s "Directory: ~A~%~%" (namestring directory))
 	     (dolist (file out-of-date-files)
 	       (format s "~A~%" (file-namestring file))))))))
+
+
+;;;; Status and Modeline Frobs.
+
+(defhvar "RCS Status"
+  "RCS status of this buffer.  Either nil, :locked, :out-of-date, or
+  :unlocked."
+  :value nil)
+
+;;;
+;;; Note: This doesn't behave correctly w/r/t to branched files.
+;;; 
+(defun rcs-file-status (pathname)
+  (let* ((directory (directory-namestring pathname))
+	 (filename (file-namestring pathname))
+	 (rcs-file (concatenate 'simple-string directory
+				"RCS/" filename ",v")))
+    (if (probe-file rcs-file)
+	;; This is an RCS file
+	(let ((probe-file (probe-file pathname)))
+	  (cond ((and probe-file (file-writable pathname))
+		 :locked)
+		((or (not probe-file)
+		     (< (file-write-date pathname)
+			(file-write-date rcs-file)))
+		 :out-of-date)
+		(t
+		 :unlocked))))))
+
+(defun rcs-update-buffer-status (buffer &optional tn)
+  (unless (hemlock-bound-p 'rcs-status :buffer buffer)
+    (defhvar "RCS Status"
+      "RCS Status of this buffer."
+      :buffer buffer
+      :value nil))
+  (let ((tn (or tn (buffer-pathname buffer))))
+    (setf (variable-value 'rcs-status :buffer buffer)
+	  (if tn (rcs-file-status tn))))
+  (hi::update-modelines-for-buffer buffer))
+;;; 
+(add-hook read-file-hook 'rcs-update-buffer-status)
+(add-hook write-file-hook 'rcs-update-buffer-status)
+
+(defcommand "RCS Update All RCS Status Variables" (p)
+  "Update the ``RCS Status'' variable for all buffers."
+  "Update the ``RCS Status'' variable for all buffers."
+  (declare (ignore p))
+  (dolist (buffer *buffer-list*)
+    (rcs-update-buffer-status buffer))
+  (dolist (window *window-list*)
+    (update-modeline-fields (window-buffer window) window)))
+
+;;; 
+;;; Action Hooks
+(defun rcs-action-hook (buffer pathname)
+  (cond (buffer
+	 (rcs-update-buffer-status buffer))
+	(t
+	 (let ((pathname (probe-file pathname)))
+	   (when pathname
+	     (dolist (buffer *buffer-list*)
+	       (let ((buffer-pathname (buffer-pathname buffer)))
+		 (when (equal pathname buffer-pathname)
+		   (rcs-update-buffer-status buffer)))))))))
+;;; 
+(add-hook rcs-check-in-file-hook 'rcs-action-hook)
+(add-hook rcs-check-out-file-hook 'rcs-action-hook)
+(add-hook rcs-lock-file-hook 'rcs-action-hook)
+(add-hook rcs-unlock-file-hook 'rcs-action-hook)
+
+
+;;;
+;;; RCS Modeline Field
+(make-modeline-field
+ :name :rcs-status
+ :function #'(lambda (buffer window)
+	       (declare (ignore buffer window))
+	       (ecase (value rcs-status)
+		 (:out-of-date "[OLD]  ")
+		 (:locked "[LOCKED]  ")
+		 (:unlocked "[RCS]  ")
+		 ((nil) ""))))
