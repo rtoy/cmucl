@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.65 1992/02/14 23:47:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.66 1992/02/24 01:25:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3366,15 +3366,23 @@
 	(newval (eval value)))
     (unless (symbolp name)
       (compiler-error "Constant name is not a symbol: ~S." name))
+    (when (eq name t)
+      (compiler-error "Can't change T."))
+    (when (eq name nil)
+      (compiler-error "Nilhil ex nilhil (Can't change NIL)."))
+    (when (keywordp name)
+      (compiler-error "Can't change the value of keywords."))
 
-    (ecase (info variable kind name)
-      (:constant
-       (unless (equalp newval (info variable constant-value name))
-	 (compiler-warning "Redefining constant ~S as:~%  ~S"
-			   name newval)))
-      (:special
-       (compiler-warning "Redefining special ~S to be a constant." name))
-      (:global))
+    (let ((kind (info variable kind name)))
+      (case kind
+	(:constant
+	 (unless (equalp newval (info variable constant-value name))
+	   (compiler-warning "Redefining constant ~S as:~%  ~S"
+			     name newval)))
+	(:global)
+	(t
+	 (compiler-warning "Redefining ~(~A~) ~S to be a constant."
+			   kind name))))
 
     (setf (info variable kind name) :constant)
     (setf (info variable where-from name) :defined)
