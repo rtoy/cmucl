@@ -1,3 +1,309 @@
+3/11/94 to 3/20/94
+
+Code:
+ -- Debugger Enhancement from Harris to not abort printing of a frame when
+    printing one arg gets an error.
+ -- In OUTPUT-INSTANCE, check for the layout being invalid before calling the
+    print function, since the print function might error.
+ -- Tweak read-line to work better on a non-persistent EOF (e.g. ^D on TTY)
+
+Compiler:
+ -- In byte compilation, don't call valid-function-use on mv-combinations.
+    Don't annotate mv-calls to inline functions or slot accessors as though
+    they were non-mv calls.
+
+Tools:
+ -- In inst-lisp, allow separate specification of source and destination
+    releases.
+
+Hemlock:
+ -- Deleted some setting of *hack-hunk-replace-line* to T, since we may want it
+    explicitly disabled in the init file.
+
+PCL:
+ -- Better handling of obsolete structure instances in generic function
+    dispatch.
+
+
+2/15/94 to 3/11/94
+
+Code:
+
+Changed the default for library: under hpux to be /usr/local/lib/cmucl/lib.
+
+Bind *break-on-signals* to NIL even before doing the type test so that we don't
+wedge the error system if the type is malformed or undefined.
+
+
+Compiler:
+
+Changed return to return-from assert-definition-type.
+
+Changed assert-definition-type to quietly ignore non function-types.
+
+Allow stream arg to compile-file.
+
+Deleted incorrect type declaration in process-1-ftype-proclamation.  Deleted
+test for function-type-p around call to assert-definition-type, since this is
+now folded into the function.  Previously several calls weren't doing this
+necessary check.
+
+Do DFO-AS-NEEDED in BYTE-COMPILE-COMPONENT (as it is done in
+NATIVE-COMPILE-COMPONENT) to ensure that cleanup code has block numbers.
+Also added some MAYBE-MUMBLE calls for *COMPILE-PROGRESS*.
+
+
+PCL:
+
+Patch from Harris.
+
+
+Motif Interface:
+
+Don't byte-compile if not :small.
+
+Changed ~A to ~D when formatting socket file in case the base isn't 10.
+
+Added some fflushes to motifd.
+
+Add INVOKE-TTY-DEBUGGER.  Don't try to invoke motif debugger if we didn't
+succeed in opening a connection.
+
+Print warning in status hook when server dies.  Simplified boolen expression.
+
+
+
+2/9/94 to 2/14/94
+
+Profile:
+ -- Fixed %report-times to not choak if any of the function names are not
+    symbols (e.g. setf functions).
+ -- Don't warn about &rest consing if we can't figure out what the argument
+    signature is, because we don't use &rest anymore.
+ -- GET-INTERNAL-RUN-TIME now works under hpux, so go ahead and use it.  In
+    cmucl, use &more instead of &rest to avoid consing the &rest arg list.
+
+Small runtime (w/o compiler) hacks:
+ -- Add dummy stubs for EVAL:INTERNAL-EVAL, etc. which signal errors when the
+    IR1 interpreter hasn't been loaded. 
+ -- Don't try to do verbose ROOM if it isn't loaded.
+ -- Export EXT:PURIFY and remove the :CONSTANTS argument.
+ -- Move environment compacting into PURIFY instead of doing it at top-level in
+    worldload.  Now users can do it too.
+ -- Allow pretty-printer to work without compiler loaded.
+
+
+Code:
+ -- Fixed TWO-ARG-GCD to correctly handle most-negative-fixnum.  Was choaking
+    because someone declared (- most-negative-fixnum) to be a fixnum.
+ -- Fixed the warning in defpackage about no longer using some packages to
+    actually work.
+ -- Fixed COERCE to use subtypep to analyze the output type spec instead of
+    checking for magic symbols.
+ -- Changed vector to inherit from array before generic-vector.  Fixed
+    simple-string to list string in the inherits list.
+ -- Add TTY-IXON mode for HPux.
+
+    
+Compiler:
+ -- Changed coerce-to-smallest-eltype to call coerce with a vector type
+    specifier instead of an array type specifier. (necessitated by "fix" to
+    coerce.)
+ -- Tweak CONVERT-CALL-IF-POSSIBLE to not try to convert calls in top-level
+    code which call code in another component (because we already failed to
+    convert the call before.)
+ -- In BYTE-COMPILING, always return T when :BYTE-COMPILE T was specified.
+    This was causing byte-compiled PROGV to flame out.
+ -- Add DELETE-IF-NO-ENTRIES to blow away components that can't be reached
+    before we try to generate IR2.  This avoids some internal errors when
+    unreachable local functions are deleted.
+
+Tools:
+ -- Changed worldload.lisp to use :RUNTIME feature to suppress loading
+    everything, and to use the new maybe-byte-load and byte-load-over
+    functions to load lots of byte code when RUNTIME is present.
+ -- In worldcom, when NO-RUNTIME feature is absent, compile various subsystems
+    byte-coded as well as native coded so that we can choose at system build
+    time.
+
+Hemlock:
+ -- Move the new_compiler branch onto the trunk.
+ -- In READ-BUFFER-FILE, set BUFFER-WRITABLE to T before doing anything so
+    that we don't get spurious read-only errors.
+ -- Move all font name defhvars to rompsite and give them the actual default
+    as their initial value.  Change those defaults to be courier, flushing all
+    mention of 8x13.
+ -- Un-conditionalize TIOCSLTC ltchars hacks for HpUx, since they are needed
+    to suppress dsusp.
+ -- Turn off ^s/^q under tty for HPux with IXON off.  
+
+PCL:
+    Call UPDATE-LISP-CLASS-LAYOUT instead of REGISTER-LAYOUT, since the bare
+    R-L doesn't update the inherits from the CPL.  This caused LAYOUT-INHERITS
+    to be left empty when a class was redefined.
+
+Motif:
+ -- Added some extra protection against recursive invocation of the windowing
+    debugger.
+ -- Tried to make starting the Motif server more robust, or at least give some
+    intelligible error message.
+
+
+1/28/94 to 2/9/94
+
+Changed step to set-step-breakpoint because step is supposed to be the
+exported step macro, not some internal routine.
+
+Default the name slot in defmacro-lambda-list-bind-errors to NIL.
+
+Added an executable-only optional to unix-namestring so that we can expand
+path:foo into the first executable in the path named foo, not just the
+first file.
+
+Changed run-program to only try to run executables, and to flame out if
+it can't be found in path:.
+
+Fixed defpackage to combine multiple use, export, and import options
+correctly.
+
+Fixed coerce to call type-expand so that people can coerce to deftypes.
+
+Changed the byte-function and byte-closure funcallable-instances to use
+&more args instead of a &rest arg.
+
+Changed main-entry to use etypecase instead of assuming that the arg is
+always either a lambda or an optional dispatch, because sometimes raw
+functionals get passed in.  This way we will get a better error message.
+
+Give a sensible error message if we can't find the slave utility (e.g.
+lisp) to run.
+
+
+1/6/94 to 1/28/94
+
+Code:
+
+Re-frobbed fd-stream-read-n-bytes to preserve the property of returning less
+than the requested number of bytes when eof-error-p is NIL and that is what
+unix-read read.
+
+
+Startup C code:
+
+Use /usr/local/cmucl instead of /usr/misc/.cmucl on hpux.
+
+
+Hemlock:
+
+Restored the behavior of scribe-file to cd to the directory of the .mss
+file before running scribe.  This was accidentally removed in an attempt to
+clean up some compiler warnings.
+
+
+
+12/11/93 to 1/6/94
+
+In read-n-bytes, only signal EOF when we read and got 0 bytes, not never read
+returns less than we wanted.  Also, fix the case of small reads with an empty
+buffer not to leave garbled buffer pointers if we have to do more than one
+read.  These changes affect primarily people who read form pipes, like Xlib and
+Motif.
+
+Added all of the ANSI CL features that seemed plausible, since we're closer to
+ANSI CL than any other version of CL.  Any non-ANSI compliance is now a bug,
+not a feature...
+
+YES-OR-NO-P and Y-OR-N-P now force output.
+
+Added a derive-type defoptimizer for log.
+
+In propagate-local-call-args, don't do anything if there is an
+optional-dispatch specified.  The last fixed entry point won't be referenced by
+the XEP, so we can't count on that providing a T type input.  This caused bogus
+argument types to be inferred in byte-compiled code.
+
+In UNCONVERT-TAIL-CALLS, do ENSURE-BLOCK-START so that we can manipulate the
+use list.  Fixes an assertion failure in the compiler.
+
+Call local-call-analyze whenever there's new-functions.  This got lost
+when component-reanalyze-functions was added.  Fixes an assertion failure in
+the compiler, and may result in better optimization.
+
+Fix LOAD-TN-CONFLICTS-IN-SC to work for multi-location SCs.  Moved bind-to-nil
+of *LIVE-BLOCK* and *LIVE-VOP* into PACK-LOAD-TNS to better ensure the live-tns
+are invalidated between two packings of the same block (e.g. for repacking.)
+These problems showed up with the X86, but could possibly happen elsewhere.
+
+Add some hacks to PCL for coercing lisp:class objects to pcl:class.
+
+Export make-load-form-saving-slots, not make-load-form-dumping-slots.
+
+
+12/2/93 to 12/11/93
+
+The Hemlock commands "Typescript Slave Break", "Typescript Slave to Top
+Level", and other things that send out-of-band data to slaves running on
+the HP should now work.  [That is, the slave will now notice them.]
+
+
+11/16/93 to 12/2/93
+
+Code:
+
+Fixed arg ordering for getf in MAKE-CONDITION.
+
+Picked up Miles' changes to apropos and apropos-list that allows one to
+supply NIL for the package, meaning all packages.
+
+Declare hi::%set-variable-value to be a function so that we don't get undefined
+warnings on loading into a non-hemlock lisp.
+
+
+Compiler:
+
+[Sparc] Fixed %more-arg-values to return the count instead of always
+returning 0.
+
+Increase *inline-expansion-limit* from 50 to 200.
+
+Change "inline expansion count exceeded" warning to be a note.
+
+Don't inline expand when *converting-for-interpreter*.
+
+Fixed SOURCE-TRANSFORM-NUMERIC-TYPEP to test against REAL instead of NUMBER
+when testing reals.  Added a define-type-predicate for REAL, so SOURCE-
+TRANSFORM-NUMERIC-TYPEP can use it.
+
+
+Tools:
+
+Changed to make the release arg to inst-lisp useful.
+
+
+Hemlock:
+
+Changed from using sed to ul in the "Manual Entry" command, since
+this works better on HP, etc.
+
+Changed rcsci and rcsco to ci and co, which now work at CS, and
+also work in the rest of the world.
+
+
+Motif Stuff:
+
+Added an optional STYLE arg to the graphical inspector to make the
+function consistent with its doc string (as well as the old inspector).
+
+
+C Start-up Code:
+
+Compile -O
+
+Don't pass CFLAGS to the linker, since this may clash with the
+OS_LINK_FLAGS
+
+
+
 9/14/93 to 11/16/93
 
 Added breakpoint support and inverse hyperbolic trig functions for the HP.
