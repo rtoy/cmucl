@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.4 1991/09/19 22:56:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.5 1991/11/07 22:18:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -191,6 +191,18 @@
 (deftermcap "os" :boolean :overstrikes)
 (deftermcap "ul" :boolean :underlines)
 
+;;; font related stuff, added by William
+(deftermcap "ae" :string :end-alternate-char-set)
+(deftermcap "as" :string :start-alternate-char-set)
+(deftermcap "mb" :string :start-blinking-attribute)
+(deftermcap "md" :string :start-bold-attribute)
+(deftermcap "me" :string :end-all-attributes)
+(deftermcap "mh" :string :start-half-bright-attribute)
+(deftermcap "mk" :string :start-blank-attribute)
+(deftermcap "mp" :string :start-protected-attribute)
+(deftermcap "mr" :string :start-reverse-video-attribute)
+(deftermcap "ue" :string :end-underscore-mode)
+(deftermcap "us" :string :start-underscore-mode)
 
 
 ;;;; Parsing an entry.
