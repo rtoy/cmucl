@@ -1,9 +1,10 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.6 1990/03/28 23:05:44 ch Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.7 1990/03/29 21:17:49 ch Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o vars.o assem.o parse.o interrupt.o test.o \
-	search.o validate.o gc.o gc_debug.o globals.o
+	search.o validate.o gc.o globals.o dynbind.o \
+	regnames.o
 
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
@@ -59,8 +60,12 @@ coreparse.o: coreparse.c
 coreparse.o: lisp.h
 coreparse.o: globals.h
 coreparse.o: lisp.h
+dynbind.o: dynbind.c
+dynbind.o: ldb.h
+dynbind.o: lisp.h
+dynbind.o: globals.h
+dynbind.o: lisp.h
 egets.o: egets.c
-except.o: except.c
 gc.o: gc.c
 gc.o: lisp.h
 gc.o: ldb.h
@@ -68,6 +73,9 @@ gc.o: gc.h
 gc.o: lisp.h
 gc.o: globals.h
 gc.o: lisp.h
+gc.o: interrupt.h
+gc.o: validate.h
+gc.o: lispregs.h
 gc_debug.o: gc_debug.c
 gc_debug.o: lisp.h
 gc_debug.o: ldb.h
@@ -85,6 +93,7 @@ interrupt.o: ldb.h
 interrupt.o: globals.h
 interrupt.o: lisp.h
 interrupt.o: lispregs.h
+interrupt.o: interrupt.h
 ldb.o: ldb.c
 ldb.o: ldb.h
 ldb.o: lisp.h
@@ -97,6 +106,8 @@ monitor.o: globals.h
 monitor.o: lisp.h
 monitor.o: vars.h
 monitor.o: parse.h
+monitor.o: interrupt.h
+monitor.o: lispregs.h
 os.o: os.c
 os.o: ldb.h
 parse.o: parse.c
@@ -111,6 +122,8 @@ print.o: ldb.h
 print.o: print.h
 print.o: lisp.h
 print.o: vars.h
+regnames.o: regnames.c
+regnames.o: lispregs.h
 search.o: search.c
 search.o: lisp.h
 search.o: ldb.h
@@ -121,6 +134,7 @@ validate.o: validate.c
 validate.o: lisp.h
 validate.o: globals.h
 validate.o: lisp.h
+validate.o: validate.h
 vars.o: vars.c
 vars.o: ldb.h
 vars.o: lisp.h
