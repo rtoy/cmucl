@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.39 1997/02/25 19:47:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.40 1997/03/25 17:07:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -932,6 +932,9 @@ non-server method is also significantly more efficient for large reads.
     (:close
      (cond (arg1
 	    ;; We got us an abort on our hands.
+	    (when (fd-stream-handler stream)
+		  (system:remove-fd-handler (fd-stream-handler stream))
+		  (setf (fd-stream-handler stream) nil))
 	    (when (and (fd-stream-file stream)
 		       (fd-stream-obuf-sap stream))
 	      ;; Can't do anything unless we know what file were dealing with,
