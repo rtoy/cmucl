@@ -172,7 +172,7 @@
 	  ((any-reg descriptor-reg)
 	   (move ,n-reg ,n-stack))
 	  ((control-stack)
-	   (loadw ,n-reg fp-tn (tn-offset ,n-stack))))))))
+	   (loadw ,n-reg cfp-tn (tn-offset ,n-stack))))))))
 
 
 
