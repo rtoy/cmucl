@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.5 1990/10/23 00:02:45 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/lispregs.h,v 1.6 1990/11/24 07:47:01 wlott Exp $ */
 
 #ifdef LANGUAGE_ASSEMBLY
 #ifdef mips
@@ -65,7 +65,7 @@ extern char *lisp_register_names[];
 #define NL4 REG(12)
 #define NL5 REG(13)
 #define NSP REG(14)
-#define NARGS REG(16)
+#define NARGS REG(15)
 #define A0 REG(16)
 #define A1 REG(17)
 #define A2 REG(18)
