@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: Lisp -*-
+;;; -*- Log: code.log; Package: VM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.8 1991/02/08 13:31:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.9 1991/04/13 21:04:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 
-(in-package "LISP")
+(in-package "VM")
 
 
 
@@ -25,7 +25,7 @@
 
 (eval-when (compile load eval)
 
-(defconstant unit-bits 32
+(defconstant unit-bits vm:word-bits
   "The number of bits to process at a time.")
 
 (defconstant max-bits (ash most-positive-fixnum -2)
@@ -41,6 +41,9 @@
 (deftype bit-offset ()
   `(integer 0 (,unit-bits)))
 
+(deftype bit-count ()
+  `(integer 1 (,unit-bits)))
+
 (deftype word-offset ()
   `(integer 0 (,(ceiling max-bits unit-bits))))
 
@@ -49,335 +52,425 @@
 
 
 
-;;;; Macros for generating bit-bashing routines.
+;;;; Support routines.
+
+;;; A particular implementation must offer either VOPs to translate these, or
+;;; deftransforms to convert them into something supported by the architecture.
+;;;
+(macrolet ((frob (name &rest args)
+	     `(defun ,name ,args
+		(,name ,@args))))
+  (frob 32bit-logical-not x)
+  (frob 32bit-logical-and x y)
+  (frob 32bit-logical-or x y)
+  (frob 32bit-logical-xor x y)
+  (frob 32bit-logical-nor x y)
+  (frob 32bit-logical-eqv x y)
+  (frob 32bit-logical-nand x y)
+  (frob 32bit-logical-andc1 x y)
+  (frob 32bit-logical-andc2 x y)
+  (frob 32bit-logical-orc1 x y)
+  (frob 32bit-logical-orc2 x y))
 
 
 (eval-when (compile eval)
+  (defmacro byte-order-dispatch (big-endian little-endian)
+    (ecase (c:backend-byte-order c:*target-backend*)
+      (:big-endian big-endian)
+      (:little-endian little-endian))))
 
-(defmacro end-bits (count)
-  "Returns the byte spec for COUNT bits at the end of a word, i.e. the bits
-  at the largest address."
-  (ecase (c:backend-byte-order c:*backend*)
-    (:little-endian `(byte ,count (- unit-bits ,count)))
-    (:big-endian `(byte ,count 0))))
+(defun shift-towards-start (number count)
+  "Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing
+  bits from the ``start.''  On big-endian machines this is a left-shift and
+  on little-endian machines this is a right-shift.  Note: only the low 5 bits
+  of count are significant."
+  (declare (type unit number) (fixnum count))
+  (let ((count (ldb (byte (1- (integer-length unit-bits)) 0) count)))
+    (declare (type bit-offset count))
+    (if (zerop count)
+	number
+	(byte-order-dispatch
+	 (ash (ldb (byte (- unit-bits count) 0) number) count)
+	 (ash number (- count))))))
 
-(defmacro start-bits (count)
-  "Returns the byte spec for COUNT bits at the start of a word, i.e. the bits
-  at the smallest address."
-  (ecase (c:backend-byte-order c:*backend*)
-    (:little-endian `(byte ,count 0))
-    (:big-endian `(byte ,count (- unit-bits ,count)))))
+(defun shift-towards-end (number count)
+  "Shift NUMBER by COUNT bits, adding zero bits at the ``start'' and removing
+  bits from the ``end.''  On big-endian machines this is a right-shift and
+  on little-endian machines this is a left-shift."
+  (declare (type unit number) (fixnum count))
+  (let ((count (ldb (byte (1- (integer-length unit-bits)) 0) count)))
+    (declare (type bit-offset count))
+    (if (zerop count)
+	number
+	(byte-order-dispatch
+	 (ash number (- count))
+	 (ash (ldb (byte (- unit-bits count) 0) number) count)))))
 
-(defmacro middle-bits (count where)
-  "Return the byte spec for COUNT bits starting at bit WHERE.  WHERE of zero
-  corresponds to the start of the word (lowest address) and WHERE of
-  unit-bits corresponds to the end of the word (highest address).  In other
-  words, act like :little-endian"
-  (ecase (c:backend-byte-order c:*backend*)
-    (:little-endian `(byte ,count ,where))
-    (:big-endian `(byte ,count (- unit-bits ,where ,count)))))
+(proclaim '(inline start-mask end-mask))
+(defun start-mask (count)
+  "Produce a mask that contains 1's for the COUNT ``start'' bits and 0's for
+  the remaining ``end'' bits.  Only the lower 5 bits of COUNT are significant."
+  (declare (fixnum count))
+  (shift-towards-start (1- (ash 1 unit-bits)) (- count)))
 
-
-(defmacro bit-bash-bindings (&body guts)
-  `(let* ((final-bits (mod (+ len dst-bit-offset) unit-bits))
-	  (interior (floor (- len final-bits) unit-bits)))
-     (declare (type bit-offset final-bits)
-	      (type word-offset interior))
-     ,@guts))
-
-(defmacro bind-srcs ((kind incf-p ref-fn) &body body)
-  (ecase kind
-    (:constant `(progn
-		  ,@body
-		  ,@(when incf-p
-		      `((incf dst-word-offset)))))
-    (:unary `(let ((next-1 (,ref-fn src-1 src-1-word-offset)))
-	       (declare (type unit next-1))
-	       ,@body
-	       ,@(when incf-p
-		   '((incf dst-word-offset)
-		     (incf src-1-word-offset)))))
-    (:binary `(let ((next-1 (,ref-fn src-1 src-1-word-offset))
-		    (next-2 (,ref-fn src-2 src-2-word-offset)))
-		(declare (type unit next-1 next-2))
-		,@body
-		,@(when incf-p
-		   '((incf dst-word-offset)
-		     (incf src-1-word-offset)
-		     (incf src-2-word-offset)))))))
-
-
-(defmacro bit-bash-loop (kind ref-fn set-fn function &optional update)
-  `(progn
-     (unless (zerop dst-bit-offset)
-       (bind-srcs (,kind t ,ref-fn)
-	 (setf (,set-fn dst dst-word-offset)
-	       (the unit
-		    (dpb ,function
-			 (end-bits (the (integer (0) (#.unit-bits))
-					(- unit-bits dst-bit-offset)))
-			 (,set-fn dst dst-word-offset))))
-	 ,update))
-     (dotimes (count interior)
-       (declare (type word-offset count))
-       (bind-srcs (,kind t ,ref-fn)
-	 (setf (,set-fn dst dst-word-offset) ,function)
-	 ,update))
-     (unless (zerop final-bits)
-       (bind-srcs (,kind nil ,ref-fn)
-	 (setf (,set-fn dst dst-word-offset)
-	       (the unit
-		    (dpb ,function
-			 (start-bits (the (integer (0) (#.unit-bits))
-					  final-bits))
-			 (,set-fn dst dst-word-offset))))))))
-
-
-(defun pick-args (op kind arg1 arg2)
-  (ecase kind
-    (:constant
-     op)
-    (:unary
-     (list op arg1))
-    (:binary
-     (list op arg1 arg2))))
-
-(defmacro def-bit-basher (name op &optional (kind :binary) (ref-fn '%raw-bits)
-			       (set-fn ref-fn))
-  (let ((form
-	 `(cond
-	   ((<= (+ dst-bit-offset len) unit-bits)
-	    ;; It's narrow.
-	    (setf (,set-fn dst dst-word-offset)
-		  (the unit
-		       (dpb (the unit
-				 ,(pick-args op kind
-				    `(the unit
-					  (ldb (middle-bits (the bit-offset len)
-							    src-1-bit-offset)
-					       (,ref-fn src-1
-							src-1-word-offset)))
-				    `(the unit
-					  (ldb (middle-bits (the bit-offset len)
-							    src-2-bit-offset)
-					       (,ref-fn src-2
-							src-2-word-offset)))))
-			    (middle-bits len dst-bit-offset)
-			    (,set-fn dst dst-word-offset)))))
-	   (,(ecase kind
-	       (:constant t)
-	       (:unary '(= src-1-bit-offset dst-bit-offset))
-	       (:binary '(= src-1-bit-offset src-2-bit-offset dst-bit-offset)))
-	    ;; Everything is aligned evenly.
-	    (bit-bash-bindings
-	     (bit-bash-loop ,kind ,ref-fn ,set-fn
-	       ,(pick-args op kind 'next-1 'next-2))))
-	   ,@(when (eq kind :binary)
-	       `(((= src-1-bit-offset dst-bit-offset)
-		  ;; Src1 and the destination are aligned, but src2 is not.
-		  (bit-bash-bindings
-		   (when (> dst-bit-offset src-2-bit-offset)
-		     (decf src-2-word-offset))
-		   (let* ((src-2-shift
-			   (mod (- dst-offset src-2-offset) unit-bits))
-			  (prev-2 (,ref-fn src-2 src-2-word-offset)))
-		     (declare (type bit-offset src-2-shift))
-		     (declare (type unit prev-2))
-		     (incf src-2-word-offset)
-		     (bit-bash-loop ,kind ,ref-fn ,set-fn
-		       (,op next-1 (merge-bits src-2-shift prev-2 next-2))
-		       (setf prev-2 next-2)))))
-		 ((= src-2-bit-offset
-		     dst-bit-offset)
-		  ;; Src2 and the destination are aligned, but src1 is not.
-		  (bit-bash-bindings
-		   (when (> dst-bit-offset src-1-bit-offset)
-		     (decf src-1-word-offset))
-		   (let* ((src-1-shift
-			   (mod (- dst-offset src-1-offset) unit-bits))
-			  (prev-1 (,ref-fn src-1 src-1-word-offset)))
-		     (declare (type bit-offset src-1-shift))
-		     (declare (type unit prev-1))
-		     (incf src-1-word-offset)
-		     (bit-bash-loop ,kind ,ref-fn ,set-fn
-		       (,op (merge-bits src-1-shift prev-1 next-1) next-2)
-		       (setf prev-1 next-1)))))))
-	   ,@(unless (eq kind :constant)
-	       `((t
-		  ;; Nothing is aligned. Ack.
-		  (bit-bash-bindings
-		   (when (> dst-bit-offset src-1-bit-offset)
-		     (decf src-1-word-offset))
-		   ,@(when (eq kind :binary)
-		       '((when (> dst-bit-offset src-2-bit-offset)
-			   (decf src-2-word-offset))))
-		   (let* ((src-1-shift
-			   (mod (- dst-offset src-1-offset) unit-bits))
-			  (prev-1 (,ref-fn src-1 src-1-word-offset))
-			  ,@(when (eq kind :binary)
-			      `((src-2-shift
-				 (mod (- dst-offset src-2-offset) unit-bits))
-				(prev-2 (,ref-fn src-2 src-2-word-offset)))))
-		     (declare (type bit-offset src-1-shift
-				    ,@(when (eq kind :binary)
-					'(src-2-shift)))
-			      (type unit prev-1
-				    ,@(when (eq kind :binary) '(prev-2))))
-		     (incf src-1-word-offset)
-		     ,@(when (eq kind :binary)
-			 '((incf src-2-word-offset)))
-		     (bit-bash-loop ,kind ,ref-fn ,set-fn
-		       ,(pick-args op kind
-				   '(merge-bits src-1-shift prev-1 next-1)
-				   '(merge-bits src-2-shift prev-2 next-2))
-		       (setf prev-1 next-1
-			     ,@(when (eq kind :binary)
-				 '(prev-2 next-2)))))))))))
-	(function-args '(len))
-	(function-decls '(len)))
-    (dolist (arg (ecase kind
-		   (:constant '(dst))
-		   (:unary '(dst src-1))
-		   (:binary '(dst src-2 src-1))))
-      (let* ((name (string arg))
-	     (offset
-	      (intern (concatenate 'simple-string name "-OFFSET")))
-	     (bit-offset
-	      (intern (concatenate 'simple-string name "-BIT-OFFSET")))
-	     (word-offset
-	      (intern (concatenate 'simple-string name "-WORD-OFFSET"))))
-	(setf form
-	      `(multiple-value-bind (,word-offset ,bit-offset)
-				    (floor ,offset unit-bits)
-		 (declare (type word-offset ,word-offset)
-			  (type bit-offset ,bit-offset))
-		 ,form))
-	(push offset function-args)
-	(push offset function-decls)
-	(push arg function-args)))
-    `(defun ,name ,function-args
-       (declare (type offset ,@function-decls))
-       ,form)))
-
-); eval when
+(defun end-mask (count)
+  "Produce a mask that contains 1's for the COUNT ``end'' bits and 0's for
+  the remaining ``start'' bits.  Only the lower 5 bits of COUNT are
+  significant."
+  (declare (fixnum count))
+  (shift-towards-end (1- (ash 1 unit-bits)) (- count)))
 
 
-;;;; Support routines.
+;;;; DO-CONSTANT-BIT-BASH
 
-;;; These are compiler primitives.
+(proclaim '(inline do-constant-bit-bash))
+(defun do-constant-bit-bash (dst dst-offset length value dst-ref-fn dst-set-fn)
+  "Fill DST with VALUE starting at DST-OFFSET and continuing for LENGTH bits."
+  (declare (type offset dst-offset) (type unit value)
+	   (type function dst-ref-fn dst-set-fn))
+  (multiple-value-bind (dst-word-offset dst-bit-offset)
+		       (floor dst-offset unit-bits)
+    (declare (type word-offset dst-word-offset)
+	     (type bit-offset dst-bit-offset))
+    (multiple-value-bind (words final-bits)
+			 (floor (+ dst-bit-offset length) unit-bits)
+      (declare (type word-offset words) (type bit-offset final-bits))
+      (if (zerop words)
+	  (unless (zerop length)
+	    (funcall dst-set-fn dst dst-word-offset
+		     (if (= length unit-bits)
+			 value
+			 (let ((mask (shift-towards-end (start-mask length)
+							dst-bit-offset)))
+			   (declare (type unit mask))
+			   (32bit-logical-or
+			    (32bit-logical-and value mask)
+			    (32bit-logical-andc2
+			     (funcall dst-ref-fn dst dst-word-offset)
+			     mask))))))
+	  (let ((interior (floor (- length final-bits) unit-bits)))
+	    (unless (zerop dst-bit-offset)
+	      (let ((mask (end-mask (- dst-bit-offset))))
+		(declare (type unit mask))
+		(funcall dst-set-fn dst dst-word-offset
+			 (32bit-logical-or
+			  (32bit-logical-and value mask)
+			  (32bit-logical-andc2
+			   (funcall dst-ref-fn dst dst-word-offset)
+			   mask))))
+	      (incf dst-word-offset))
+	    (dotimes (i interior)
+	      (funcall dst-set-fn dst dst-word-offset value)
+	      (incf dst-word-offset))
+	    (unless (zerop final-bits)
+	      (let ((mask (start-mask final-bits)))
+		(declare (type unit mask))
+		(funcall dst-set-fn dst dst-word-offset
+			 (32bit-logical-or
+			  (32bit-logical-and value mask)
+			  (32bit-logical-andc2
+			   (funcall dst-ref-fn dst dst-word-offset)
+			   mask)))))))))
+  (undefined-value))
 
-(defun %raw-bits (object offset)
-  (declare (type index offset))
-  (%raw-bits object offset))
+
+;;;; DO-UNARY-BIT-BASH
 
-(defun %set-raw-bits (object offset value)
-  (declare (type index offset)
-	   (type unit value))
-  (setf (%raw-bits object offset) value))
-
-(defun merge-bits (shift prev next)
-  "Return (ldb (byte 32 0) (ash (logior (ash prev 32) next) (- shift))) but
-  stay out of bignum land."
-  (declare (type bit-offset shift)
-	   (type unit prev next))
-  (merge-bits shift prev next))
-
-
-;;; These are supported as primitives.
-
-(defun 32bit-logical-not (x)
-  (32bit-logical-not x))
-
-(defun 32bit-logical-and (x y)
-  (32bit-logical-and x y))
-
-(defun 32bit-logical-or (x y)
-  (32bit-logical-or x y))
-
-(defun 32bit-logical-xor (x y)
-  (32bit-logical-or x y))
-
-(defun 32bit-logical-nor (x y)
-  (32bit-logical-nor x y))
-
-
-;;; These are not supported as primitives.
-
-(proclaim '(inline 32bit-logical-eqv 32bit-logical-nand 32bit-logical-andc1
-		   32bit-logical-andc2 32bit-logical-orc1 32bit-logical-orc2))
-
-(defun 32bit-logical-eqv (x y)
-  (32bit-logical-not (32bit-logical-xor x y)))
-
-(defun 32bit-logical-nand (x y)
-  (32bit-logical-not (32bit-logical-and x y)))
-
-(defun 32bit-logical-andc1 (x y)
-  (32bit-logical-and (32bit-logical-not x) y))
-
-(defun 32bit-logical-andc2 (x y)
-  (32bit-logical-and x (32bit-logical-not y)))
-
-(defun 32bit-logical-orc1 (x y)
-  (32bit-logical-or (32bit-logical-not x) y))
-
-(defun 32bit-logical-orc2 (x y)
-  (32bit-logical-or x (32bit-logical-not y)))
-
+(proclaim '(inline do-unary-bit-bash))
+(defun do-unary-bit-bash (src src-offset dst dst-offset length
+			      dst-ref-fn dst-set-fn src-ref-fn)
+  (declare (type offset src-offset dst-offset length)
+	   (type function dst-ref-fn dst-set-fn src-ref-fn))
+  (multiple-value-bind (dst-word-offset dst-bit-offset)
+		       (floor dst-offset unit-bits)
+    (declare (type word-offset dst-word-offset)
+	     (type bit-offset dst-bit-offset))
+    (multiple-value-bind (src-word-offset src-bit-offset)
+			 (floor src-offset unit-bits)
+      (declare (type word-offset src-word-offset)
+	       (type bit-offset src-bit-offset))
+      (cond
+       ((<= (+ dst-bit-offset length) unit-bits)
+	;; We are only writing one word, so it doesn't matter what order
+	;; we do it in.  But we might be reading from multiple words, so take
+	;; care.
+	(cond
+	 ((zerop length)
+	  ;; Actually, we arn't even writing one word.  This is real easy.
+	  )
+	 ((= length unit-bits)
+	  ;; dst-bit-offset must be equal to zero, or we would be writing
+	  ;; multiple words.  If src-bit-offset is also zero, then we
+	  ;; just transfer the single word.  Otherwise we have to extract bits
+	  ;; from two src words.
+	  (funcall dst-set-fn dst dst-word-offset
+		   (if (zerop src-bit-offset)
+		       (funcall src-ref-fn src src-word-offset)
+		       (32bit-logical-or
+			(shift-towards-start
+			 (funcall src-ref-fn src src-word-offset)
+			 src-bit-offset)
+			(shift-towards-end
+			 (funcall src-ref-fn src (1+ src-word-offset))
+			 (- src-bit-offset))))))
+	 (t
+	  ;; We are only writing some portion of the dst word, so we need to
+	  ;; preserve the extra bits.  Also, we still don't know if we need
+	  ;; one or two source words.
+	  (let ((mask (shift-towards-end (start-mask length) dst-bit-offset))
+		(orig (funcall dst-ref-fn dst dst-word-offset))
+		(value
+		 (if (> src-bit-offset dst-bit-offset)
+		     ;; The source starts further into the word than does
+		     ;; the dst, so the source could extend into the next
+		     ;; word.  If it does, we have to merge the two words,
+		     ;; and if not, we can just shift the first word.
+		     (let ((src-bit-shift (- src-bit-offset dst-bit-offset)))
+		       (if (> (+ src-bit-offset length) unit-bits)
+			   (32bit-logical-or
+			    (shift-towards-start
+			     (funcall src-ref-fn src src-word-offset)
+			     src-bit-shift)
+			    (shift-towards-end
+			     (funcall src-ref-fn src (1+ src-word-offset))
+			     (- src-bit-shift)))
+			   (shift-towards-start
+			    (funcall src-ref-fn src src-word-offset)
+			    src-bit-shift)))
+		     ;; The dst starts further into the word than does the
+		     ;; source, so we know the source can not extend into
+		     ;; a second word (or else the dst would too, and we
+		     ;; wouldn't be in this branch.
+		     (shift-towards-end
+		      (funcall src-ref-fn src src-word-offset)
+		      (- dst-bit-offset src-bit-offset)))))
+	    (declare (type unit mask orig value))
+	    ;; Replace the dst word.
+	    (funcall dst-set-fn dst dst-word-offset
+		     (32bit-logical-or
+		      (32bit-logical-and value mask)
+		      (32bit-logical-andc2 orig mask)))))))
+       ((= src-bit-offset dst-bit-offset)
+	;; The source and dst are aligned, so we don't need to shift
+	;; anything.  But we have to pick the direction of the loop
+	;; in case the source and dst are really the same thing.
+	(multiple-value-bind (words final-bits)
+			     (floor (+ dst-bit-offset length) unit-bits)
+	  (declare (type word-offset words) (type bit-offset final-bits))
+	  (let ((interior (floor (- length final-bits) unit-bits)))
+	    (declare (type word-offset interior))
+	    (cond
+	     ((<= dst-offset src-offset)
+	      ;; We need to loop from left to right
+	      (unless (zerop dst-bit-offset)
+		;; We are only writing part of the first word, so mask off the
+		;; bits we want to preserve.
+		(let ((mask (end-mask (- dst-bit-offset)))
+		      (orig (funcall dst-ref-fn dst dst-word-offset))
+		      (value (funcall src-ref-fn src src-word-offset)))
+		  (declare (type unit mask orig value))
+		  (funcall dst-set-fn dst dst-word-offset
+			   (32bit-logical-or (32bit-logical-and value mask)
+					     (32bit-logical-andc2 orig mask))))
+		(incf src-word-offset)
+		(incf dst-word-offset))
+	      ;; Just copy the interior words.
+	      (dotimes (i interior)
+		(funcall dst-set-fn dst dst-word-offset
+			 (funcall src-ref-fn src src-word-offset))
+		(incf src-word-offset)
+		(incf dst-word-offset))
+	      (unless (zerop final-bits)
+		;; We are only writing part of the last word.
+		(let ((mask (start-mask final-bits))
+		      (orig (funcall dst-ref-fn dst dst-word-offset))
+		      (value (funcall src-ref-fn src src-word-offset)))
+		  (declare (type unit mask orig value))
+		  (funcall dst-set-fn dst dst-word-offset
+			   (32bit-logical-or
+			    (32bit-logical-and value mask)
+			    (32bit-logical-andc2 orig mask))))))
+	     (t
+	      ;; We need to loop from right to left.
+	      (incf dst-word-offset words)
+	      (incf src-word-offset words)
+	      (unless (zerop final-bits)
+		(let ((mask (start-mask final-bits))
+		      (orig (funcall dst-ref-fn dst dst-word-offset))
+		      (value (funcall src-ref-fn src src-word-offset)))
+		  (declare (type unit mask orig value))
+		  (funcall dst-set-fn dst dst-word-offset
+			   (32bit-logical-or
+			    (32bit-logical-and value mask)
+			    (32bit-logical-andc2 orig mask)))))
+	      (dotimes (i interior)
+		(decf src-word-offset)
+		(decf dst-word-offset)
+		(funcall dst-set-fn dst dst-word-offset
+			 (funcall src-ref-fn src src-word-offset)))
+	      (unless (zerop dst-bit-offset)
+		(decf src-word-offset)
+		(decf dst-word-offset)
+		(let ((mask (end-mask (- dst-bit-offset)))
+		      (orig (funcall dst-ref-fn dst dst-word-offset))
+		      (value (funcall src-ref-fn src src-word-offset)))
+		  (declare (type unit mask orig value))
+		  (funcall dst-set-fn dst dst-word-offset
+			   (32bit-logical-or
+			    (32bit-logical-and value mask)
+			    (32bit-logical-andc2 orig mask))))))))))
+       (t
+	;; They arn't aligned.
+	(multiple-value-bind (words final-bits)
+			     (floor (+ dst-bit-offset length) unit-bits)
+	  (declare (type word-offset words) (type bit-offset final-bits))
+	  (let ((src-shift (mod (- src-bit-offset dst-bit-offset) unit-bits))
+		(interior (floor (- length final-bits) unit-bits)))
+	    (declare (type bit-offset src-shift)
+		     (type word-offset interior))
+	    (cond
+	     ((<= dst-offset src-offset)
+	      ;; We need to loop from left to right
+	      (let ((prev 0)
+		    (next (funcall src-ref-fn src src-word-offset)))
+		(declare (type unit prev next))
+		(flet ((get-next-src ()
+			 (setf prev next)
+			 (setf next (funcall src-ref-fn src
+					     (incf src-word-offset)))))
+		  (declare (inline get-next-src))
+		  (unless (zerop dst-bit-offset)
+		    (when (> src-bit-offset dst-bit-offset)
+		      (get-next-src))
+		    (let ((mask (end-mask (- dst-bit-offset)))
+			  (orig (funcall dst-ref-fn dst dst-word-offset))
+			  (value (32bit-logical-or
+				  (shift-towards-start prev src-shift)
+				  (shift-towards-end next (- src-shift)))))
+		      (declare (type unit mask orig value))
+		      (funcall dst-set-fn dst dst-word-offset
+			       (32bit-logical-or
+				(32bit-logical-and value mask)
+				(32bit-logical-andc2 orig mask)))
+		      (incf dst-word-offset)))
+		  (dotimes (i interior)
+		    (get-next-src)
+		    (let ((value (32bit-logical-or
+				  (shift-towards-end next (- src-shift))
+				  (shift-towards-start prev src-shift))))
+		      (declare (type unit value))
+		      (funcall dst-set-fn dst dst-word-offset value)
+		      (incf dst-word-offset)))
+		  (unless (zerop final-bits)
+		    (let ((value
+			   (if (> (+ final-bits src-shift) unit-bits)
+			       (shift-towards-start next src-shift)
+			       (progn
+				 (get-next-src)
+				 (32bit-logical-or
+				  (shift-towards-end next (- src-shift))
+				  (shift-towards-start prev src-shift)))))
+			  (mask (start-mask final-bits))
+			  (orig (funcall dst-ref-fn dst dst-word-offset)))
+		      (declare (type unit mask orig value))
+		      (funcall dst-set-fn dst dst-word-offset
+			       (32bit-logical-or
+				(32bit-logical-and value mask)
+				(32bit-logical-andc2 orig mask))))))))
+	     (t
+	      ;; We need to loop from right to left.
+	      (incf dst-word-offset words)
+	      (incf src-word-offset
+		    (floor (+ src-bit-offset length) unit-bits))
+	      (let ((next 0)
+		    (prev (funcall src-ref-fn src src-word-offset)))
+		(declare (type unit prev next))
+		(flet ((get-next-src ()
+		       (setf next prev)
+		       (setf prev (funcall src-ref-fn src
+					   (decf src-word-offset)))))
+		  (declare (inline get-next-src))
+		  (unless (zerop final-bits)
+		    (unless (> (- unit-bits src-shift) final-bits)
+		      (get-next-src))
+		    (let ((value (32bit-logical-or
+				  (shift-towards-end next (- src-shift))
+				  (shift-towards-start prev src-shift)))
+			  (mask (start-mask final-bits))
+			  (orig (funcall dst-ref-fn dst dst-word-offset)))
+		      (declare (type unit mask orig value))
+		      (funcall dst-set-fn dst dst-word-offset
+			       (32bit-logical-or
+				(32bit-logical-and value mask)
+				(32bit-logical-andc2 orig mask)))))
+		  (decf dst-word-offset)
+		  (dotimes (i interior)
+		    (get-next-src)
+		    (let ((value (32bit-logical-or
+				  (shift-towards-end next (- src-shift))
+				  (shift-towards-start prev src-shift))))
+		      (declare (type unit value))
+		      (funcall dst-set-fn dst dst-word-offset value)
+		      (decf dst-word-offset)))
+		  (unless (zerop dst-bit-offset)
+		    (if (> src-bit-offset dst-bit-offset)
+			(get-next-src)
+			(setf next prev prev 0))
+		    (let ((mask (end-mask (- dst-bit-offset)))
+			  (orig (funcall dst-ref-fn dst dst-word-offset))
+			  (value (32bit-logical-or
+				  (shift-towards-start prev src-shift)
+				  (shift-towards-end next (- src-shift)))))
+		      (declare (type unit mask orig value))
+		      (funcall dst-set-fn dst dst-word-offset
+			       (32bit-logical-or
+				(32bit-logical-and value mask)
+				(32bit-logical-andc2 orig mask)))))))))))))))
+  (undefined-value))
 
 
 ;;;; The actual bashers.
 
-#|
+(defun bit-bash-fill (value dst dst-offset length)
+  (declare (type unit value) (type offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-constant-bit-bash dst dst-offset length value
+			 #'%raw-bits #'%set-raw-bits)))
 
-(proclaim '(optimize (speed 3) (safety 0)))
-
-(def-bit-basher bit-bash-clear 0 :constant)
-(def-bit-basher bit-bash-set (1- (ash 1 unit-bits)) :constant)
-
-(def-bit-basher bit-bash-not 32bit-logical-not :unary)
-
-(def-bit-basher bit-bash-and 32bit-logical-and)
-(def-bit-basher bit-bash-ior 32bit-logical-or)
-(def-bit-basher bit-bash-xor 32bit-logical-xor)
-(def-bit-basher bit-bash-eqv 32bit-logical-eqv)
-(def-bit-basher bit-bash-nand 32bit-logical-nand)
-(def-bit-basher bit-bash-nor 32bit-logical-nor)
-(def-bit-basher bit-bash-andc1 32bit-logical-andc1)
-(def-bit-basher bit-bash-andc2 32bit-logical-andc2)
-(def-bit-basher bit-bash-orc1 32bit-logical-orc1)
-(def-bit-basher bit-bash-orc2 32bit-logical-orc2)
-
-
-;;; Sap-ref-32 can be used to index into SAP objects.
-
-(def-bit-basher system-area-clear 0 :constant sap-ref-32)
-
-|#
-
-
-;;;; Copy routines.
-
-;;; These are written in assembler.
-
-(defun copy-to-system-area (src src-offset dst dst-offset length)
-  (declare (type (simple-unboxed-array (*)) src)
-	   (type system-area-pointer dst)
-	   (type index src-offset dst-offset length))
-  (copy-to-system-area src src-offset dst dst-offset length))
-
-(defun copy-from-system-area (src src-offset dst dst-offset length)
-  (declare (type system-area-pointer src)
-	   (type (simple-unboxed-array (*)) dst)
-	   (type index src-offset dst-offset length))
-  (copy-from-system-area src src-offset dst dst-offset length))
-
-(defun system-area-copy (src src-offset dst dst-offset length)
-  (declare (type system-area-pointer src dst)
-	   (type index src-offset dst-offset length))
-  (system-area-copy src src-offset dst dst-offset length))
+(defun system-area-fill (value dst dst-offset length)
+  (declare (type unit value) (type offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-constant-bit-bash dst dst-offset length value
+			 #'sap-ref-32 #'%set-sap-ref-32)))
 
 (defun bit-bash-copy (src src-offset dst dst-offset length)
-  (declare (type (simple-unboxed-array (*)) src dst)
-	   (type index src-offset dst-offset length))
-  (bit-bash-copy src src-offset dst dst-offset length))
+  (declare (type offset src-offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0))
+	    (inline do-unary-bit-bash))
+   (do-unary-bit-bash src src-offset dst dst-offset length
+		      #'%raw-bits #'%set-raw-bits #'%raw-bits)))
+
+(defun system-area-copy (src src-offset dst dst-offset length)
+  (declare (type offset src-offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-unary-bit-bash src src-offset dst dst-offset length
+		      #'sap-ref-32 #'%set-sap-ref-32 #'sap-ref-32)))
+
+(defun copy-to-system-area (src src-offset dst dst-offset length)
+  (declare (type offset src-offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-unary-bit-bash src src-offset dst dst-offset length
+		      #'sap-ref-32 #'%set-sap-ref-32 #'%raw-bits)))
+
+(defun copy-from-system-area (src src-offset dst dst-offset length)
+  (declare (type offset src-offset dst-offset length))
+  (locally
+   (declare (optimize (speed 3) (safety 0)))
+   (do-unary-bit-bash src src-offset dst dst-offset length
+		      #'%raw-bits #'%set-raw-bits #'sap-ref-32)))
+
