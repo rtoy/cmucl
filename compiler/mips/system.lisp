@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.46 1992/07/28 20:37:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.47 1993/01/13 16:02:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,6 +248,48 @@
     (inst addu ndescr offset)
     (inst addu ndescr (- function-pointer-type other-pointer-type))
     (inst addu func code ndescr)))
+
+#+gengc
+(progn
+
+(define-vop (%function-self)
+  (:policy :fast-safe)
+  (:translate (setf %function-self))
+  (:args (function :scs (descriptor-reg)))
+  (:temporary (:scs (any-reg)) temp)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 3
+    (loadw temp function function-entry-point-slot function-pointer-type)
+    (inst addu result temp
+	  (- function-pointer-type (* function-code-offset word-bytes)))))
+
+(defknown %set-function-self (function function) (values) (unsafe))
+
+(define-vop (%set-function-self)
+  (:policy :fast-safe)
+  (:translate %set-function-self)
+  (:args (function :scs (descriptor-reg))
+	 (new-self :scs (descriptor-reg)))
+  (:temporary (:scs (any-reg)) temp)
+  (:generator 3
+    (inst addu temp new-self
+	  (- (* function-code-offset word-bytes) function-pointer-type))
+    (storew temp function function-entry-point-slot function-pointer-type)))
+
+(def-source-transform %closure-function (closure)
+  `(%function-self ,closure))
+
+(def-source-transform (setf %function-self) (new-self fun)
+  `(let ((new-self ,new-self) (fun ,fun))
+     (%set-function-self fun new-self)
+     new-self))
+
+(def-source-transform %set-funcallable-instance-function (fin fun)
+  `(let ((fin ,fin) (fun ,fun))
+     (%set-function-self fin fun)
+     fun))
+
+); #+gengc progn
 
 
 ;;;; Other random VOPs.

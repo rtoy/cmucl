@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.46 1992/07/28 20:38:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.47 1993/01/13 15:59:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,8 @@
 ); eval-when
 
 (defreg zero 0)
-(defreg nl3 1)
+#-gengc (defreg nl3 1)
+#+gengc (defreg lip 1)
 (defreg cfunc 2)
 (defreg nl4 3)
 (defreg nl0 4) ; First C argument reg.
@@ -61,23 +62,28 @@
 ;; First saved reg
 (defreg nfp 16)
 (defreg ocfp 17)
-(defreg lra 18)
+#-gengc (defreg lra 18)
+#+gengc (defreg mutator 18)
 (defreg l0 19)
 (defreg null 20)
 (defreg bsp 21)
 (defreg cfp 22)
 (defreg csp 23)
-(defreg l1 24)
+#-gengc (defreg l1 24)
+#+gengc (defreg ssb 24)
 (defreg alloc 25)
 (defreg nsp 29)
 (defreg code 30)
+#-gengc
 (defreg lip 31)
+#+gengc
+(defreg ra 31)
 
 (defregset non-descriptor-regs
-  nl0 nl1 nl2 nl3 nl4 cfunc nargs)
+  nl0 nl1 nl2 ra nl4 cfunc nargs)
 
 (defregset descriptor-regs
-  a0 a1 a2 a3 a4 a5 fdefn lexenv nfp ocfp lra l0 l1)
+  a0 a1 a2 a3 a4 a5 fdefn lexenv nfp ocfp #-gengc lra l0 #-gengc l1)
 
 (defregset register-arg-offsets
   a0 a1 a2 a3 a4 a5)
@@ -248,6 +254,8 @@
 (defregtn code descriptor-reg)
 (defregtn alloc any-reg)
 (defregtn null descriptor-reg)
+#+gengc (defregtn mutator sap-reg)
+#+gengc (defregtn ssb sap-reg)
 
 (defregtn nargs any-reg)
 (defregtn fdefn descriptor-reg)
@@ -259,7 +267,7 @@
 (defregtn ocfp any-reg)
 (defregtn nsp any-reg)
 (defregtn nfp any-reg)
-
+#+gengc (defregtn ra any-reg)
 
 
 ;;;
@@ -298,8 +306,10 @@
 
 ;;; Offsets of special stack frame locations
 (defconstant ocfp-save-offset 0)
-(defconstant lra-save-offset 1)
+#-gengc (defconstant lra-save-offset 1)
+#+gengc (defconstant ra-save-offset 1)
 (defconstant nfp-save-offset 2)
+#+gengc (defconstant code-save-offset 3)
 
 
 ;;; The number of arguments/return values passed in registers.

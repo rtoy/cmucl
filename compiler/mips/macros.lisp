@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.47 1992/07/28 20:37:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.48 1993/01/13 16:08:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,39 +49,28 @@
 ;;; 
 (def-mem-op loadw lw word-shift t)
 (def-mem-op storew sw word-shift nil)
-
+#+gengc
+(def-mem-op storew-and-remember-slot sw-and-remember-slot word-shift nil)
+#+gengc
+(def-mem-op storew-and-remember-object sw-and-remember-object word-shift nil)
 
 (defmacro load-symbol (reg symbol)
-  `(inst add ,reg null-tn (static-symbol-offset ,symbol)))
+  `(inst addu ,reg null-tn (static-symbol-offset ,symbol)))
 
-(macrolet
-    ((frob (slot)
-       (let ((loader (intern (concatenate 'simple-string
-					  "LOAD-SYMBOL-"
-					  (string slot))))
-	     (storer (intern (concatenate 'simple-string
-					  "STORE-SYMBOL-"
-					  (string slot))))
-	     (offset (intern (concatenate 'simple-string
-					  "SYMBOL-"
-					  (string slot)
-					  "-SLOT")
-			     (find-package "VM"))))
-	 `(progn
-	    (defmacro ,loader (reg symbol)
-	      `(progn
-		 (inst lw ,reg null-tn
-		       (+ (static-symbol-offset ',symbol)
-			  (ash ,',offset word-shift)
-			  (- other-pointer-type)))
-		 (inst nop)))
-	    (defmacro ,storer (reg symbol)
-	      `(inst sw ,reg null-tn
-		     (+ (static-symbol-offset ',symbol)
-			(ash ,',offset word-shift)
-			(- other-pointer-type))))))))
-  (frob value)
-  (frob function))
+#-gengc
+(defmacro load-symbol-value (reg symbol)
+  `(progn
+     (inst lw ,reg null-tn
+	   (+ (static-symbol-offset ',symbol)
+	      (ash symbol-value-slot word-shift)
+	      (- other-pointer-type)))
+     (inst nop)))
+#-gengc
+(defmacro store-symbol-value (reg symbol)
+  `(inst sw ,reg null-tn
+	 (+ (static-symbol-offset ',symbol)
+	    (ash symbol-value-slot word-shift)
+	    (- other-pointer-type))))
 
 (defmacro load-type (target source &optional (offset 0))
   "Loads the type bits of a pointer into target independent of
@@ -99,15 +88,17 @@
 ;;; Macros to handle the fact that we cannot use the machine native call and
 ;;; return instructions. 
 
+#-gengc
 (defmacro lisp-jump (function lip)
   "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
   `(progn
-     (inst addu ,lip ,function (- (ash function-header-code-offset
-					word-shift)
-				   function-pointer-type))
+     (inst addu ,lip ,function (- (ash vm:function-header-code-offset
+					vm:word-shift)
+				   vm:function-pointer-type))
      (inst j ,lip)
      (move code-tn ,function)))
 
+#-gengc
 (defmacro lisp-return (return-pc lip &key (offset 0) (frob-code t))
   "Return to RETURN-PC.  LIP is an interior-reg temporary."
   `(progn
@@ -118,11 +109,14 @@
 	  `(move code-tn ,return-pc)
 	  '(inst nop))))
 
+
 (defmacro emit-return-pc (label)
   "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
   `(progn
+     #-gengc
      (align lowtag-bits)
      (emit-label ,label)
+     #-gengc
      (inst lra-header-word)))
 
 
@@ -167,6 +161,7 @@
 
 ;;;; Storage allocation:
 
+#-gengc
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
@@ -178,6 +173,23 @@
      (inst or ,result-tn alloc-tn other-pointer-type)
      (inst li ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
      (storew ,temp-tn ,result-tn 0 other-pointer-type)
+     ,@body))
+
+#+gengc
+(defun fixed-allocate (result temp type-code size)
+  (assemble ()
+    (without-scheduling ()
+      (inst li temp (logior (ash (1- size) type-bits) type-code))
+      (inst or result alloc-tn other-pointer-type)
+      (inst sw temp alloc-tn)
+      (inst addu alloc-tn alloc-tn (pad-data-block size)))))
+
+#+gengc
+(defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size)
+				 &body body)
+  (declare (ignore flag-tn))
+  `(progn
+     (fixed-allocate ,result-tn ,temp-tn ,type-code ,size)
      ,@body))
 
 
@@ -290,10 +302,13 @@
 ;;; PSEUDO-ATOMIC -- Handy macro for making sequences look atomic.
 ;;;
 (defmacro pseudo-atomic ((flag-tn &key (extra 0)) &rest forms)
+  #+gengc
+  (unless (eql extra 0)
+    (error "Can't allocate any extra with pseudo-atomic in the gengc system."))
   `(progn
      (assert (= (tn-offset ,flag-tn) nl4-offset))
      (without-scheduling ()
-       (inst li ,flag-tn (1- ,extra))
+       (inst li ,flag-tn #-gengc (1- ,extra) #+gengc -1)
        (inst addu alloc-tn 1))
      ,@forms
      (without-scheduling ()
@@ -346,7 +361,7 @@
 	 (inst nop)))))
 
 (defmacro define-full-setter (name type offset lowtag scs el-type
-				   &optional translate)
+				   &optional translate #+gengc (remember t))
   `(progn
      (define-vop (,name)
        ,@(when translate
@@ -361,7 +376,8 @@
        (:result-types ,el-type)
        (:generator 2
 	 (inst add lip object index)
-	 (inst sw value lip (- (* ,offset word-bytes) ,lowtag))
+	 (inst #+gengc ,(if remember 'sw-and-remember-slot 'sw) #-gengc sw
+	       value lip (- (* ,offset word-bytes) ,lowtag))
 	 (move result value)))
      (define-vop (,(symbolicate name "-C"))
        ,@(when translate
@@ -377,7 +393,8 @@
        (:results (result :scs ,scs))
        (:result-types ,el-type)
        (:generator 1
-	 (inst sw value object (- (* (+ ,offset index) word-bytes) ,lowtag))
+	 (inst #+gengc ,(if remember 'sw-and-remember-slot 'sw) #-gengc sw
+	       value object (- (* (+ ,offset index) word-bytes) ,lowtag))
 	 (move result value)))))
 
 

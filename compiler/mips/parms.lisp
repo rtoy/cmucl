@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.105 1992/07/28 20:37:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.106 1993/01/13 16:04:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,9 @@
 (eval-when (compile eval load)
 
 (setf (backend-name *target-backend*) "PMAX")
-(setf (backend-version *target-backend*) "DECstation 3100/Mach 1.0")
+(setf (backend-version *target-backend*)
+      #-gengc "DECstation 3100/Mach 1.0"
+      #+gengc "DECstation 3100/Mach 1.0 (gengc)")
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
@@ -134,6 +136,13 @@
 (defparameter target-static-space-start    #x05000000)
 (defparameter target-dynamic-space-start   #x07000000)
 
+;;; LARGE-OBJECT-CUTOFF -- Size in words where we start allocating in the
+;;; large object space instead.  Must be less then a page.
+;;;
+#+gengc
+(export 'large-object-cutoff)
+#+gengc
+(defparameter large-object-cutoff 1024)
 
 
 
@@ -177,6 +186,7 @@
 ;;; space directly after the static symbols.  That way, the raw-addr
 ;;; can be loaded directly out of them by indirecting relative to NIL.
 ;;;
+#-gengc
 (defparameter static-symbols
   '(t
 
@@ -207,6 +217,24 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+    ))
+
+#+gengc
+(defparameter static-symbols
+  '(t
+
+    ;; Random stuff needed for initialization.
+    lisp::lisp-environment-list
+    lisp::lisp-command-line-list
+    lisp::*initial-fdefn-objects*
+
+    ;; Functions that the C code needs to call
+    lisp::%initial-function
+    kernel::internal-error
+    di::handle-breakpoint
+    di::handle-function-end-breakpoint
+    lisp::fdefinition-object
+    apply
     ))
 
 (defparameter static-functions

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.38 1992/12/05 21:54:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.39 1993/01/13 16:00:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,13 +327,13 @@
   object-not-weak-pointer-error weak-pointer-type)
 
 (def-type-vops scavenger-hook-p nil nil nil
-  0)
+  #-gengc 0 #+gengc scavenger-hook-type)
 
 (def-type-vops code-component-p nil nil nil
   code-header-type)
 
 (def-type-vops lra-p nil nil nil
-  return-pc-header-type)
+  #-gengc return-pc-header-type #+gengc 0)
 
 (def-type-vops fdefn-p nil nil nil
   fdefn-type)

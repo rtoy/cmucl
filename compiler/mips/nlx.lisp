@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.18 1992/07/28 20:37:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.19 1993/01/13 16:05:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,12 +54,18 @@
 	    (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 13
+    #-gengc
     (load-symbol-value catch lisp::*current-catch-block*)
+    #+gengc
+    (loadw catch mutator-tn mutator-current-catch-block-slot)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(move nfp cur-nfp)))
     (move nsp nsp-tn)
-    (load-symbol-value eval lisp::*eval-stack-top*)))
+    #-gengc
+    (load-symbol-value eval lisp::*eval-stack-top*)
+    #+gengc
+    (loadw eval mutator-tn mutator-eval-stack-top-slot)))
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (descriptor-reg))
@@ -68,8 +74,14 @@
 	 (eval :scs (descriptor-reg)))
   (:vop-var vop)
   (:generator 10
+    #-gengc
     (store-symbol-value catch lisp::*current-catch-block*)
+    #+gengc
+    (storew catch mutator-tn mutator-current-catch-block-slot)
+    #-gengc
     (store-symbol-value eval lisp::*eval-stack-top*)
+    #+gengc
+    (storew eval mutator-tn mutator-eval-stack-top-slot)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(move cur-nfp nfp)))
@@ -100,11 +112,17 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 22
     (inst addu block cfp-tn (* (tn-offset tn) vm:word-bytes))
+    #-gengc
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
+    #+gengc
+    (loadw temp mutator-tn mutator-current-unwind-protect-slot)
     (storew temp block vm:unwind-block-current-uwp-slot)
     (storew cfp-tn block vm:unwind-block-current-cont-slot)
     (storew code-tn block vm:unwind-block-current-code-slot)
+    #-gengc
     (inst compute-lra-from-code temp code-tn entry-label ndescr)
+    #+gengc
+    (inst compute-ra-from-code temp code-tn entry-label ndescr)
     (storew temp block vm:catch-block-entry-pc-slot)))
 
 
@@ -121,17 +139,29 @@
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:generator 44
     (inst addu result cfp-tn (* (tn-offset tn) vm:word-bytes))
+    #-gengc
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
+    #+gengc
+    (loadw temp mutator-tn mutator-current-unwind-protect-slot)
     (storew temp result vm:catch-block-current-uwp-slot)
     (storew cfp-tn result vm:catch-block-current-cont-slot)
     (storew code-tn result vm:catch-block-current-code-slot)
+    #-gengc
     (inst compute-lra-from-code temp code-tn entry-label ndescr)
+    #+gengc
+    (inst compute-ra-from-code temp code-tn entry-label ndescr)
     (storew temp result vm:catch-block-entry-pc-slot)
 
     (storew tag result vm:catch-block-tag-slot)
+    #-gengc
     (load-symbol-value temp lisp::*current-catch-block*)
+    #+gengc
+    (loadw temp mutator-tn mutator-current-catch-block-slot)
     (storew temp result vm:catch-block-previous-catch-slot)
+    #-gengc
     (store-symbol-value result lisp::*current-catch-block*)
+    #+gengc
+    (storew result mutator-tn mutator-current-catch-block-slot)
 
     (move block result)))
 
@@ -144,7 +174,10 @@
   (:temporary (:scs (descriptor-reg)) new-uwp)
   (:generator 7
     (inst addu new-uwp cfp-tn (* (tn-offset tn) vm:word-bytes))
-    (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)))
+    #-gengc
+    (store-symbol-value new-uwp lisp::*current-unwind-protect-block*)
+    #+gengc
+    (storew new-uwp mutator-tn mutator-current-unwind-protect-slot)))
 
 
 (define-vop (unlink-catch-block)
@@ -152,18 +185,30 @@
   (:policy :fast-safe)
   (:translate %catch-breakup)
   (:generator 17
+    #-gengc
     (load-symbol-value block lisp::*current-catch-block*)
+    #+gengc
+    (loadw block mutator-tn mutator-current-catch-block-slot)
     (loadw block block vm:catch-block-previous-catch-slot)
-    (store-symbol-value block lisp::*current-catch-block*)))
+    #-gengc
+    (store-symbol-value block lisp::*current-catch-block*)
+    #+gengc
+    (storew block mutator-tn mutator-current-catch-block-slot)))
 
 (define-vop (unlink-unwind-protect)
   (:temporary (:scs (any-reg)) block)
   (:policy :fast-safe)
   (:translate %unwind-protect-breakup)
   (:generator 17
+    #-gengc
     (load-symbol-value block lisp::*current-unwind-protect-block*)
+    #+gengc
+    (loadw block mutator-tn mutator-current-unwind-protect-slot)
     (loadw block block vm:unwind-block-current-uwp-slot)
-    (store-symbol-value block lisp::*current-unwind-protect-block*)))
+    #-gengc
+    (store-symbol-value block lisp::*current-unwind-protect-block*)
+    #+gengc
+    (storew block mutator-tn mutator-current-unwind-protect-slot)))
 
 
 ;;;; NLX entry VOPs:
