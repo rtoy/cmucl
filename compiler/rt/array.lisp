@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.9 1991/11/09 02:37:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.10 1992/01/29 20:22:12 ram Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -430,7 +430,6 @@
     (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
 		     vm:other-pointer-type))
     (inst mc68881-store value lip :single scratch)
-    (inst mc68881-wait)
     (unless (location= result value)
       (inst mc68881-move result value scratch))))
 
@@ -470,9 +469,90 @@
     (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
 		     vm:other-pointer-type))
     (inst mc68881-store value lip :double scratch)
-    (inst mc68881-wait)
     (unless (location= result value)
       (inst mc68881-move result value scratch))))
+)
+
+#+afpa(progn
+(define-vop (data-vector-ref/simple-array-afpa-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-single-float positive-fixnum)
+  (:results (value :scs (afpa-single-reg)))
+  (:result-types afpa-single-float)
+  (:temporary (:sc sap-reg :from :eval) scratch)
+  (:temporary (:scs (interior-reg)) lip)
+  (:generator 20
+    (inst cas lip object index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst afpa-load value lip :single scratch)
+    (inst afpa-noop scratch)))
+
+(define-vop (data-vector-set/simple-array-afpa-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (afpa-single-reg) :target result))
+  (:arg-types simple-array-single-float positive-fixnum afpa-single-float)
+  (:results (result :scs (afpa-single-reg)))
+  (:result-types afpa-single-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
+  (:generator 20
+    (inst cas lip object index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst afpa-store value lip :single scratch)
+    (inst afpa-noop scratch)
+    (unless (location= result value)
+      (inst afpa-move result value :single scratch))))
+
+(define-vop (data-vector-ref/simple-array-afpa-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-double-float positive-fixnum)
+  (:results (value :scs (afpa-double-reg)))
+  (:result-types afpa-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
+  (:generator 20
+    (inst cas lip object index)
+    (inst cas lip lip index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst afpa-load value lip :double scratch)
+    (inst afpa-noop scratch)))
+
+(define-vop (data-vector-set/simple-array-afpa-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (afpa-double-reg) :target result))
+  (:arg-types simple-array-double-float positive-fixnum afpa-double-float)
+  (:results (result :scs (afpa-double-reg)))
+  (:result-types afpa-double-float)
+  (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
+  (:generator 20
+    (inst cas lip object index)
+    (inst cas lip lip index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst afpa-store value lip :double scratch)
+    (inst afpa-noop scratch)
+    (unless (location= result value)
+      (inst afpa-move result value :double scratch))))
 )
 
 
