@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.17 1992/03/12 15:23:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.18 1992/04/12 19:39:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.17 1992/03/12 15:23:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.18 1992/04/12 19:39:18 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -421,13 +421,13 @@
 				 :alloc-trans make-symbol)
   (value :set-trans %set-symbol-value
 	 :setf-vop set
-	 :init :arg)
+	 :init :unbound)
   unused
   (plist :ref-trans symbol-plist
 	 :setf-vop %set-symbol-plist
 	 :set-trans %set-symbol-plist
 	 :init :null)
-  (name :ref-trans symbol-name :init :null)
+  (name :ref-trans symbol-name :init :arg)
   (package :ref-trans symbol-package
 	   :setf-vop %set-symbol-package
 	   :set-trans %set-symbol-package
