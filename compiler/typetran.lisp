@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.17 1993/03/13 14:46:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.18 1993/03/13 17:27:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,6 +138,7 @@
   (define-type-predicate simple-vector-p simple-vector)
   (define-type-predicate stringp string)
   (define-type-predicate %instancep instance)
+  (define-type-predicate funcallable-instance-p funcallable-instance)
   (define-type-predicate symbolp symbol)
   (define-type-predicate vectorp vector))
 
@@ -369,7 +370,7 @@
        (t
 	(once-only ((object obj))
 	  `(and (,pred ,object)
-		(class-typep (,layout ,object) ',class))))))))
+		(class-typep (,get-layout ,object) ',class))))))))
 
 
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
