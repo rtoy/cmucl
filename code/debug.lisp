@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.21 1991/10/16 11:39:26 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.22 1991/12/12 13:49:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,11 @@
 	 (*debug-abort* (find-restart 'abort))
 	(handler-case
 	    (progn
-	 (*error-output* *debug-io*))
+	      (di:code-location-debug-block loc)
+	      (format t "~%Source: ")
+	 (*current-level* 0)
+	  (di:debug-condition (ignore) ignore))))))
+
 
 ;;;; Invoke-debugger.
 
