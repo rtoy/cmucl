@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.30 2002/09/04 14:04:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.31 2003/03/25 14:53:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -725,6 +725,39 @@
     ;; don't have to and that saves an instruction.
     (inst sra temp y fixnum-tag-bits)
     (inst smul r x temp)))
+
+;; Multiplication by a constant.
+(define-vop (fast-v8-*-c/unsigned=>unsigned fast-unsigned-binop-c)
+  (:translate *)
+  (:guard (or (backend-featurep :sparc-v8)
+	      (and (backend-featurep :sparc-v9)
+		   (not (backend-featurep :sparc-64)))))
+  (:generator 1
+    (inst mul r x y)))
+
+(define-vop (fast-v8-*-c/signed=>signed fast-signed-binop-c)
+  (:translate *)
+  (:guard (or (backend-featurep :sparc-v8)
+	      (and (backend-featurep :sparc-v9)
+		   (not (backend-featurep :sparc-64)))))
+  (:generator 1
+    (inst smul r x y)))
+
+(define-vop (fast-v8-*-c/fixnum=>fixnum fast-safe-arith-op)
+  (:args (x :target r :scs (any-reg zero)))
+  (:info y)
+  (:arg-types tagged-num
+	      (:constant (and (signed-byte 15) (not (integer 0 0)))))
+  (:results (r :scs (any-reg)))
+  (:result-types tagged-num)
+  (:note "inline fixnum arithmetic")
+  (:translate *)
+  (:guard (or (backend-featurep :sparc-v8)
+	      (and (backend-featurep :sparc-v9)
+		   (not (backend-featurep :sparc-64)))))
+  (:generator 1
+    (inst smul r x (ash (tn-value y) -2))))
+
 
 (define-vop (fast-v8-*/signed=>signed fast-signed-binop)
   (:translate *)
