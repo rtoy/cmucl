@@ -233,7 +233,7 @@
 (defun note-number-stack-tn (refs)
   (declare (type (or tn-ref null) refs))
   
-  (do ((ref refs (tn-ref-next refs)))
+  (do ((ref refs (tn-ref-next ref)))
       ((null ref))
     (let* ((lambda (block-lambda
 		    (ir2-block-block
