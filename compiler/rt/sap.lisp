@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.13 1992/03/10 12:23:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.14 1992/03/11 18:32:49 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -207,17 +207,16 @@
        (define-vop (,name)
 	 (:policy :fast-safe)
 	 (:translate ,translate)
-	 (:args (object :scs (sap-reg) :to (:eval 0))
+	 (:args (object :scs (sap-reg))
 		(offset :scs (unsigned-reg) :target base))
 	 (:results (result :scs (,result-sc)))
 	 (:arg-types system-area-pointer positive-fixnum)
 	 (:result-types ,result-type)
-	 (:temporary (:scs (sap-reg) :from (:argument 1)) base)
+	 (:temporary (:scs (sap-reg) :from (:argument 1) :to :eval) base)
 	 (:variant-vars signed)
 	 (:variant nil)
 	 (:generator 7
-	   (move base offset)
-	   (inst a base object)
+	   (inst cas base offset object)
 	   (let ((offset 0))
 	     ,@access-form)))
        
@@ -288,17 +287,15 @@
        (define-vop (,name)
 	 (:policy :fast-safe)
 	 (:translate ,translate)
-	 (:args (object :scs (sap-reg) :to (:eval 0))
-		(offset :scs (unsigned-reg) :target base)
-		(data :scs (,data-sc) :target result
-		      :to (:eval 1)))
+	 (:args (object :scs (sap-reg))
+		(offset :scs (unsigned-reg))
+		(data :scs (,data-sc) :target result))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
-	 (:temporary (:scs (sap-reg) :from (:argument 1) :to (:eval 2)) base)
+	 (:temporary (:scs (sap-reg) :from (:argument 1)) base)
 	 (:results (result :scs (,data-sc)))
 	 (:result-types ,data-type)
 	 (:generator 7
-	   (move base offset)
-	   (inst cas base base object)
+	   (inst cas base offset object)
 	   (let ((offset 0))
 	     ,set-form)
 	   (move result data))))))
@@ -322,6 +319,15 @@
 
 (define-system-set signed-32bit-system-set :word %set-signed-sap-ref-32
   signed-reg signed-num)
+
+
+(define-system-set sap-system-set :word %set-sap-ref-sap
+  sap-reg system-area-pointer)
+
+#| 
+
+Maybe we can get away with using define-system-set now that offsets don't 
+need to be shifted.
 
 ;;; Ugly, because there are only 2 free sap-regs.  We stash the data value in
 ;;; NARGS to free up a sap-reg for BASE.
@@ -364,6 +370,8 @@
   (:generator 4
     (inst st data object offset)
     (move result data)))
+
+|#
 
 ;;; fake the presence of sap-ref-single and sap-ref-double.
 
