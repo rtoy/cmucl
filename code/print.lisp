@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.38 1992/03/08 18:32:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.39 1992/03/09 08:45:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1704,13 +1704,13 @@
 	       (output-object (c::compiled-debug-info-name dinfo) stream)))))))
 
 (defun output-lra (lra stream)
-  (print-unreadable-object (object stream :identity t)
+  (print-unreadable-object (lra stream :identity t)
     (write-string "Return PC Object" stream)))
 
 (defun output-fdefn (fdefn stream)
-  (print-unreadable-object (object stream)
-    (write-string "FDEFINITION object for ")
-    (output-object (fdefn-name fdefn))))
+  (print-unreadable-object (fdefn stream)
+    (write-string "FDEFINITION object for " stream)
+    (output-object (fdefn-name fdefn) stream)))
 
 
 
