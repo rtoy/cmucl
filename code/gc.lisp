@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.12 1992/03/26 03:24:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.13 1992/03/26 05:55:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,8 +88,8 @@
   (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
   (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage))
   (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
-  (format t "Garbage collection is currently ~:[DISABLED~;enabled.~]~%"
-	  *gc-trigger*))
+  (format t "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
+	  *gc-inhibit*))
 
 (defun room-intermediate-info ()
   (room-minimal-info)
