@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.31 2003/07/15 17:52:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.32 2003/07/16 15:33:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,6 +84,7 @@
 		       (new)))
       (new (car tail)))))
 
+(declaim (inline dotted-list-length))
 (defun dotted-list-length (list)
   (loop for tail on list until (atom tail) count t))
 
