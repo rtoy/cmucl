@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.117 1997/04/02 17:16:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.118 1997/05/16 11:45:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -347,7 +347,8 @@
              "DOCUMENTATION" "DOLIST" "DOTIMES" "DOUBLE-FLOAT"
              "DOUBLE-FLOAT-EPSILON" "DOUBLE-FLOAT-NEGATIVE-EPSILON" "DPB"
              "DRIBBLE" "ECASE" "ED" "EIGHTH" "ELT" "ENCODE-UNIVERSAL-TIME"
-             "END-OF-FILE" "ENDP" "ENOUGH-NAMESTRING" "EQ" "EQL" "EQUAL"
+             "END-OF-FILE" "ENDP" "ENOUGH-NAMESTRING"
+	     "ENSURE-DIRECTORIES-EXIST" "EQ" "EQL" "EQUAL"
              "EQUALP" "ERROR" "ETYPECASE" "EVAL" "EVAL-WHEN" "EVENP"
              "EVERY" "EXP" "EXPORT" "EXPT" "EXTENDED-CHAR" "FBOUNDP" "FCEILING"
              "FDEFINITION" "FFLOOR" "FIFTH" "FILE-AUTHOR" "FILE-ERROR"

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.41 1997/01/18 14:30:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.42 1997/05/16 11:45:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1168,3 +1168,27 @@
 	(%make-pathname *unix-host* nil nil nil nil :newest))
   (setf (search-list "default:") (default-directory))
   nil)
+
+;;; Ensure-Directories-Exist  --  Public
+;;;
+(defun ensure-directories-exist (pathspec &key verbose (mode #o777))
+  (let ((dir (pathname-directory pathspec))
+	(created-p nil))
+    (when (wild-pathname-p (make-pathname :host (pathname-host pathspec)
+					  :device (pathname-device pathspec)
+					  :directory (pathname-directory pathspec)))
+      (error (make-condition 'file-error :pathname pathspec)))
+    (loop for i from 1 upto (length dir)
+	do (let ((newpath (make-pathname :host (pathname-host pathspec)
+					 :device (pathname-device pathspec)
+					 :directory (subseq dir 0 i))))
+	     (unless (probe-file newpath)
+	       (let ((namestring (namestring newpath)))
+		 (when verbose
+		   (format *standard-output* "~&Creating directory: ~A~%"
+			   namestring))
+		 (unix:unix-mkdir namestring mode)
+		 (unless (probe-file namestring)
+		   (error (make-condition 'file-error :pathname pathspec)))
+		 (setf created-p t)))))
+    (values (truename pathspec) created-p)))
