@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.20 1990/07/12 12:42:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.21 1990/07/13 12:01:09 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -82,7 +82,7 @@
 (defknown get-type (t) (unsigned-byte #.vm:type-bits)
   (flushable movable))
 
-(defknown get-header-data (t) (unsigned-byte 24)
+(defknown (get-header-data get-closure-length) (t) (unsigned-byte 24)
   (flushable))
 (defknown set-header-data (t (unsigned-byte 24)) t
   (unsafe))
