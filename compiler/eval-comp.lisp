@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.22 1992/11/25 10:32:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.23 1993/01/17 20:59:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,7 +273,8 @@
 (defun %verify-argument-count (supplied-args defined-args)
   (unless (= supplied-args defined-args)
     (error "Wrong argument count, wanted ~D and got ~D."
-	   defined-args supplied-args)))
+	   defined-args supplied-args))
+  (values))
 
 ;;; Use (SETF SYMBOL-FUNCTION) insetad of DEFUN so that the compiler
 ;;; doesn't try to compile the hidden %THROW MV-CALL in the throw below as
