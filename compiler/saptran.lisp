@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.8 1998/02/19 10:52:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.9 1998/03/04 14:56:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,79 +38,79 @@
   system-area-pointer (movable))
 
 
-(defknown sap-ref-8 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (unsigned-byte 8)
+(defknown sap-ref-8 (system-area-pointer fixnum) (unsigned-byte 8)
   (flushable))
-(defknown %set-sap-ref-8 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (unsigned-byte 8))
+(defknown %set-sap-ref-8 (system-area-pointer fixnum (unsigned-byte 8))
   (unsigned-byte 8)
   ())
 
-(defknown sap-ref-16 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (unsigned-byte 16)
+(defknown sap-ref-16 (system-area-pointer fixnum) (unsigned-byte 16)
   (flushable))
-(defknown %set-sap-ref-16 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (unsigned-byte 16))
+(defknown %set-sap-ref-16 (system-area-pointer fixnum (unsigned-byte 16))
   (unsigned-byte 16)
   ())
 
-(defknown sap-ref-32 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (unsigned-byte 32)
+(defknown sap-ref-32 (system-area-pointer fixnum) (unsigned-byte 32)
   (flushable))
-(defknown %set-sap-ref-32 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (unsigned-byte 32))
+(defknown %set-sap-ref-32 (system-area-pointer fixnum (unsigned-byte 32))
   (unsigned-byte 32)
   ())
 
 #+alpha
-(defknown sap-ref-64 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (unsigned-byte 64)
+(defknown sap-ref-64 (system-area-pointer fixnum) (unsigned-byte 64)
   (flushable))
 #+alpha
-(defknown %set-sap-ref-64 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (unsigned-byte 64))
+(defknown %set-sap-ref-64 (system-area-pointer fixnum (unsigned-byte 64))
   (unsigned-byte 64)
   ())
 
 
-(defknown signed-sap-ref-8 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (signed-byte 8)
+(defknown signed-sap-ref-8 (system-area-pointer fixnum) (signed-byte 8)
   (flushable))
-(defknown %set-signed-sap-ref-8 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (signed-byte 8))
+(defknown %set-signed-sap-ref-8 (system-area-pointer fixnum (signed-byte 8))
   (signed-byte 8)
   ())
 
-(defknown signed-sap-ref-16 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (signed-byte 16)
+(defknown signed-sap-ref-16 (system-area-pointer fixnum) (signed-byte 16)
   (flushable))
-(defknown %set-signed-sap-ref-16 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (signed-byte 16))
+(defknown %set-signed-sap-ref-16 (system-area-pointer fixnum (signed-byte 16))
   (signed-byte 16)
   ())
 
-(defknown signed-sap-ref-32 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (signed-byte 32)
+(defknown signed-sap-ref-32 (system-area-pointer fixnum) (signed-byte 32)
   (flushable))
-(defknown %set-signed-sap-ref-32 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (signed-byte 32))
+(defknown %set-signed-sap-ref-32 (system-area-pointer fixnum (signed-byte 32))
   (signed-byte 32)
   ())
 
 #+alpha
-(defknown signed-sap-ref-64 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) (signed-byte 64)
+(defknown signed-sap-ref-64 (system-area-pointer fixnum) (signed-byte 64)
   (flushable))
 #+alpha
-(defknown %set-signed-sap-ref-64 (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index (signed-byte 64))
+(defknown %set-signed-sap-ref-64 (system-area-pointer fixnum (signed-byte 64))
   (signed-byte 64)
   ())
 
 
-(defknown sap-ref-sap (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) system-area-pointer
+(defknown sap-ref-sap (system-area-pointer fixnum) system-area-pointer
   (flushable))
-(defknown %set-sap-ref-sap (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index system-area-pointer)
+(defknown %set-sap-ref-sap (system-area-pointer fixnum system-area-pointer)
   system-area-pointer
   ())
 
-(defknown sap-ref-single (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) single-float
+(defknown sap-ref-single (system-area-pointer fixnum) single-float
   (flushable))
-(defknown sap-ref-double (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index) double-float
+(defknown sap-ref-double (system-area-pointer fixnum) double-float
   (flushable))
 #+x86
 (defknown sap-ref-long (system-area-pointer fixnum) long-float
   (flushable))
 
 (defknown %set-sap-ref-single
-	  (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index single-float) single-float
+	  (system-area-pointer fixnum single-float) single-float
   ())
 (defknown %set-sap-ref-double
-	  (system-area-pointer #+(or x86 sparc) fixnum #-(or x86 sparc) index double-float) double-float
+	  (system-area-pointer fixnum double-float) double-float
   ())
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/sap.lisp,v 1.3 1997/04/26 20:04:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/sap.lisp,v 1.4 1998/03/04 14:56:38 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,8 +161,8 @@
 		   (:translate ,ref-name)
 	 (:policy :fast-safe)
 	 (:args (object :scs (sap-reg) :target sap)
-		(offset :scs (unsigned-reg)))
-	 (:arg-types system-area-pointer unsigned-num)
+		(offset :scs (signed-reg)))
+	 (:arg-types system-area-pointer signed-num)
 	 ,@(when (or (eq size :byte) (eq size :short))
 	     `((:temporary (:sc non-descriptor-reg) temp)
 	       (:temporary (:sc non-descriptor-reg) temp1)))
@@ -252,9 +252,9 @@
 		   (:translate ,set-name)
 	 (:policy :fast-safe)
 	 (:args (object :scs (sap-reg) :target sap)
-		(offset :scs (unsigned-reg))
+		(offset :scs (signed-reg))
 		(value :scs (,sc) :target result))
-	 (:arg-types system-area-pointer unsigned-num ,type)
+	 (:arg-types system-area-pointer signed-num ,type)
 	 (:results (result :scs (,sc)))
 	 (:result-types ,type)
 	 (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
