@@ -7,13 +7,18 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;;    This file contains the VM definition of type testing and checking VOPs
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.2 1990/02/26 20:59:15 ch Exp $
+;;; 
+;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+;;; Converted for the MIPS R2000 by Christopher Hoover.
+;;;
+(in-package "C")
 
+
 ;;;; Simple type checking and testing:
 ;;;
 ;;;    These types are represented by a single type code, so are easily
@@ -27,13 +32,11 @@
    (result :scs (any-reg descriptor-reg)))
   (:variant-vars type-code error-code)
   (:node-var node)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  #+nil
+  (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:generator 4
     (let ((err-lab (generate-error-code node error-code value)))
       (test-simple-type value temp err-lab t type-code)
-      (unless (location= value result)
-	(inst lr result value)))))
+      (move result value))))
 
 (define-vop (simple-type-predicate)
   (:args
@@ -42,11 +45,9 @@
   (:info target not-p)
   (:variant-vars type-code)
   (:policy :fast-safe)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  #+nil
+  (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:generator 4
     (test-simple-type value temp target not-p type-code)))
-
 
 (macrolet ((frob (pred-name check-name ptype type-code error-code)
 	     `(progn
@@ -59,49 +60,69 @@
 			(:variant ,type-code ,error-code))
 		      (primitive-type-vop ,check-name (:check) ,ptype))))))
 
-  (frob array-header-p nil nil system:%array-type nil)
+  ;; ### Want to tweek costs so that checks that do dereferences are
+  ;; more expensive.
+  ;; 
+  ;; ### May want to add all of the (simple-array <mumble> (*))
+  ;; primitive types.
+  ;;
+  ;; ### May need to add array-header-p and friends.  Whoever ports the
+  ;; array code will probably have to frob stuff here.
+  ;; 
+  (frob functionp check-function function
+    vm:function-pointer-type di:object-not-function-error)
+
+  (frob listp check-list list
+    vm:list-pointer-type di:object-not-list-error)
+
+  (frob bignump check-bigunm bignum
+    vm:bignum-type di:object-not-bignum-error)
+
+  (frob ratiop check-ratio ratio
+    vm:ratio-type di:object-not-ratio-error)
+
+  (frob single-float-p check-single-float single-float
+    vm:single-float-type di:object-not-single-float-error)
+
+  (frob double-float-p check-double-float double-float
+    vm:double-float-type di:object-not-double-float-error)
 
   (frob simple-string-p check-simple-string simple-string
-    system:%string-type clc::error-object-not-simple-string)
-
-  (frob simple-vector-p check-simple-vector simple-vector
-    system:%general-vector-type clc::error-object-not-simple-vector)
+    vm:simple-string-type di:object-not-simple-string-error)
 
   (frob simple-bit-vector-p check-simple-bit-vector simple-bit-vector
-    system:%bit-vector-type clc::error-object-not-simple-bit-vector)
+    vm:simple-bit-vector-type di:object-not-simple-bit-vector-error)
 
-  (frob functionp check-function function
-    system:%function-type clc::error-illegal-function)
+  (frob simple-vector-p check-simple-vector simple-vector
+    vm:simple-vector-type di:object-not-simple-vector-error)
 
-  (frob listp check-list list system:%list-type clc::error-not-list)
+  (frob base-character-p check-base-character base-character
+    vm:base-character-type di:object-not-base-character-error)
 
-  (frob long-float-p check-long-float long-float
-    system:%long-float-type clc::error-object-not-long-float)
+  (frob sap-p check-sap sap
+    vm:sap-type di:object-no-sap-error))
 
-  (frob %string-char-p check-string-char string-char
-    system:%string-char-type clc::error-object-not-string-char)
+;;; Slightly tenser versions for FIXNUM's
+;;; 
+(define-vop (check-fixnum check-simple-type)
+  (:ignore type-code error-code)
+  (:generator 3
+    (let ((err-lab (generate-error-code node di:object-not-fixnum-error
+					value)))
+      (inst andi temp value #x3)
+      (inst bne temp zero-tn err-lab)
+      (move result value t))))
 
-  (frob bignump nil bignum system:%bignum-type nil)
-  (frob ratiop nil ratio system:%ratio-type nil)
-  (frob complexp nil complex system:%complex-type nil))
+(define-vop (fixnump simple-type-predicate)
+  (:ignore type-code)
+  (:generator 3
+    (inst andi temp value #x3)
+    (if not-p
+	(inst bne temp zero-tn target)
+	(inst beq temp zero-tn target))
+    (nop)))
 
-#|
-simple-integer-vector-p?
-|#
-
-
-
-;;;; Type checking and testing via miscops:
-;;;
-;;;    These operations seem too complex to be worth open-coding.
-
-(macrolet ((frob (name)
-	     `(define-vop (,name one-arg-conditional-miscop)
-		(:translate ,name)
-		(:variant ',name :eq))))
-  (frob vectorp)
-  (frob stringp)
-  (frob bit-vector-p))
+(primitive-type-vop check-fixnum (:check) fixnum)
 
 
 ;;;; Hairy type tests:
@@ -116,10 +137,7 @@ simple-integer-vector-p?
   (:conditional)
   (:info target not-p)
   (:policy :fast-safe)
-  (:temporary (:scs (any-reg)
-		    :type fixnum
-		    :from (:argument 0))
-	      temp))
+  (:temporary (:type random :scs (non-descriptor-reg)) temp))
 
 (define-vop (check-hairy-type)
   (:args
@@ -127,10 +145,13 @@ simple-integer-vector-p?
 	:target res))
   (:results
    (res :scs (any-reg descriptor-reg)))
-  (:temporary (:scs (any-reg) :type fixnum) temp)
+  (:temporary (:type random :scs (non-descriptor-reg)) temp)
   (:node-var node))
 
-  
+;;; ### This belongs in compiler/fundb.lisp
+;;; 
+(defknown realp (t) boolean (movable foldable flushable))
+
 (macrolet ((frob (pred-name check-name error-code &rest types)
 	     (let ((cost (* (+ (length types)
 			       (count-if #'consp types))
@@ -139,53 +160,56 @@ simple-integer-vector-p?
 		  ,@(when pred-name
 		      `((define-vop (,pred-name hairy-type-predicate)
 			  (:translate ,pred-name)
-			  #+nil
 			  (:generator ,cost
 			    (test-hairy-type obj temp target not-p ,@types)))))
 			
 		  ,@(when check-name
 		      `((define-vop (,check-name check-hairy-type)
-			  #+nil
 			  (:generator ,cost
 			    (let ((err-lab (generate-error-code
 					    node ,error-code obj)))
 			      (test-hairy-type obj temp err-lab t ,@types))
-			    (unless (location= obj res)
-			      (inst lr res obj))))))))))
+			    (move res obj)))))))))
 
-  (frob nil check-function-or-symbol clc::error-object-not-function-or-symbol
-    system:%function-type system:%symbol-type)
+  (frob nil check-function-or-symbol di:object-not-function-or-symbol-error
+    vm:function-pointer-type vm:symbol-header-type)
 
-  (frob arrayp nil nil (system:%string-type system:%array-type))
+  (frob vectorp check-vector di:object-not-vector-error
+    (vm:simple-string-type vm:simple-array-double-float-type))
 
-  (frob numberp nil nil
-    system:%+-fixnum-type system:%--fixnum-type
-    (system:%bignum-type system:%long-float-type))
+  (frob stringp check-string di:object-not-string-error
+    vm:simple-string-type vm:complex-string-type)
 
-  (frob rationalp nil nil
-    system:%+-fixnum-type system:%--fixnum-type
-    system:%ratio-type system:%bignum-type)
+  (frob bit-vector-p check-bit-vector di:object-not-bit-vector-error
+    vm:simple-bit-vector-type vm:complex-bit-vector-type)
 
-  (frob floatp nil nil (system:%short-+-float-type system:%long-float-type))
+  (frob arrayp check-array di:object-not-array-error
+    (vm:simple-array-type vm:complex-array-type))
 
-  (frob integerp nil nil
-    system:%+-fixnum-type system:%--fixnum-type system:%bignum-type)
+  (frob numberp check-number di:object-not-number-error
+    vm:even-fixnum-type vm:odd-fixnum-type
+    (vm:bignum-type vm:complex-type))
 
-  (frob characterp nil nil system:%bitsy-char-type system:%string-char-type)
+  (frob rationalp check-rational di:object-not-rational-error
+    vm:even-fixnum-type vm:odd-fixnum-type
+    vm:ratio-type vm:bignum-type)
+
+  (frob floatp check-float di:object-not-float-error
+    vm:single-float-type vm:double-float-type)
+
+  (frob realp check-real di:object-not-real-error
+    vm:even-fixnum-type vm:odd-fixnum-type
+    vm:ratio-type vm:bignum-type
+    vm:single-float-type vm:double-float-type)
   
-  (frob fixnump check-fixnum clc::error-object-not-fixnum
-    system:%+-fixnum-type system:%--fixnum-type)
-
-  (frob short-float-p check-short-float clc::error-object-not-short-float
-    system:%short---float-type system:%short-+-float-type))
-
-(primitive-type-vop check-fixnum (:check) fixnum)
-(primitive-type-vop check-short-float (:check) short-float)
+  ;; ### May want to make this more tense.
+  (frob integerp check-integer di:object-not-integer-error
+    vm:even-fixnum-type vm:odd-fixnum-type
+    vm:bignum-type))
 
 
 ;;;; List/symbol types:
-
-
+;;; 
 ;;; symbolp (or symbol (eq nil))
 ;;; consp (and list (not (eq nil)))
 
@@ -205,60 +229,64 @@ simple-integer-vector-p?
 	     `(progn
 		(define-vop (,pred-name list-symbol-predicate)
 		  (:translate ,pred-name)
-		  #+nil
-		  (:generator 12
+		  (:generator 8
 		    ,@body))
 		(define-vop (,check-name check-list-symbol)
-		  #+nil
-		  (:generator 12
+		  (:generator 8
 		    (let ((target (generate-error-code node ,error-code obj))
 			  (not-p t))
 		      ,@body
-		      (unless (location= obj res)
-			(inst lr res obj))))))))
+		      (move res obj)))))))
 
-  (frob symbolp check-symbol clc::error-not-symbol
+  (frob symbolp check-symbol di:object-not-symbol-error
     (let* ((drop-thru (gen-label))
-	   (in-lab (if not-p drop-thru target)))
-      (test-simple-type obj temp in-lab nil system:%symbol-type)
-      (test-special-value obj temp nil target not-p)
+	   (is-symbol-label (if not-p drop-thru target)))
+      (inst beq obj null-tn is-symbol-label)
+      (nop)
+      (test-simple-type obj temp target not-p vm:symbol-header-type)
       (emit-label drop-thru)))
 
-  (frob consp check-cons clc::error-object-not-cons
+  (frob consp check-cons di:object-not-cons-error
     (let* ((drop-thru (gen-label))
-	   (out-lab (if not-p target drop-thru)))
-      (test-simple-type obj temp out-lab t system:%list-type)
-      (test-special-value obj temp nil target (not not-p))
+	   (is-not-cons-label (if not-p target drop-thru)))
+      (inst beq obj null-tn is-not-cons-label)
+      (nop)
+      (test-simple-type obj temp target not-p vm:list-pointer-type)
       (emit-label drop-thru))))
 
 
-;;;; Function coercion:
+;;;; Function Coercion
 
 ;;; If not a function, get the symbol value and test for that being a function.
 ;;; Since we test for a function rather than the unbound marker, this works on
 ;;; NIL.
 ;;;
 (define-vop (coerce-to-function)
-  (:args (thing :scs (descriptor-reg)
-		:target res))
-  (:results (res :scs (descriptor-reg)))
+  (:args (object :scs (descriptor-reg)
+		:target result))
+  (:results (result :scs (descriptor-reg)))
   (:node-var node)
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg)) thing-temp)
-  #+nil
+  (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
+  (:temporary (:scs (descriptor-reg)) saved-object)
   (:generator 0
-    (let ((not-fun-lab (gen-label))
-	  (done-lab (gen-label)))
-      (test-simple-type thing temp not-fun-lab t system:%function-type)
-      (unless (location= thing res)
-	(inst lr res thing))
-      (emit-label done-lab)
+    (let ((not-function-label (gen-label))
+	  (not-coercable-label (gen-label))
+	  (done-label (gen-label)))
+      (test-simple-type object nd-temp not-function-label t
+			vm:function-pointer-type)
+      (move result object)
+      (emit-label done-label)
 
       (unassemble
 	(assemble-elsewhere node
-	  (emit-label not-fun-lab)
-	  (inst lr thing-temp thing)
-	  (loadw res thing (/ clc::symbol-definition 4))
-	  (test-simple-type res temp done-lab nil system:%function-type)
-	  (error-call clc::error-symbol-undefined thing-temp))))))
+	  (emit-label not-function-label)
+	  (test-simple-type object nd-temp not-coercable-label t
+			    vm:symbol-header-type)
+	  (move saved-object object)
+	  (loadw result object vm:symbol-function-slot vm:other-pointer-type)
+	  (test-simple-type result nd-temp done-label nil
+			    vm:function-pointer-type)
+	  (error-call di:undefined-symbol-error saved-object)
 
+	  (emit-label not-coercable-label)
+	  (error-call di:object-not-coercable-to-function object))))))
