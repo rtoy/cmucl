@@ -66,6 +66,10 @@ Other bug-fixes:
  -- Fixed a bug in the FASL dumper's byte-swapping.  This affects only
     implementors who do cross-compilation.
 
+Also, a new heap-groveling tools was used to locate a major reason for the
+spurious retention of deleted Hemlock buffers.  This has now been fixed.  Stay
+tuned for more memory leaks.
+
 
 12/13/91 to 12/19/91
 
