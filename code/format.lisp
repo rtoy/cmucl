@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.17 1991/12/02 18:56:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.18 1991/12/02 23:58:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,16 +19,12 @@
 
 (in-package "FORMAT")
 (use-package "EXT")
+(import 'kernel:index)
 
 (in-package "LISP")
 (export '(format formatter))
 
 (in-package "FORMAT")
-
-(deftype boolean ()
-  '(member t nil))
-(deftype index ()
-  '(and unsigned-byte fixnum))
 
 (defstruct (format-directive
 	    (:print-function %print-format-directive))
