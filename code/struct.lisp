@@ -16,6 +16,14 @@
 
 (in-package 'c)
 
+#+new-compiler
+(proclaim '(inline structurify))
+#+new-compiler
+(defun structurify (structure)
+  "Frobs a vector to turn it into a named structure.  Returns the vector."
+  (set-header-data structure vm:vector-structure-subtype))
+
+
 (defstruct (defstruct-description
              (:conc-name dd-)
              (:print-function print-defstruct-description))
@@ -106,10 +114,7 @@
 	       (declare (ignore s d))
 	       (format stream "#<Alien stack info>"))))
   type
-  size
-  head
-  current
-  grow)
+  size)
 
 
 (defstruct enumeration-info
