@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/macros.lisp,v 1.2 1994/10/31 04:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/macros.lisp,v 1.3 1998/01/21 22:30:44 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -441,8 +441,9 @@
 		    `((inst ldq_u temp (- (+ (* ,offset word-bytes)
 					     (* index ,scale)) ,lowtag)
 			    object)
-		      (inst lda temp1  (- (+ (* ,offset word-bytes)
-					     (* index ,scale)) ,lowtag))
+		      (inst lda temp1 (- (+ (* ,offset word-bytes)
+					    (* index ,scale)) ,lowtag)
+			    object)
 		      (inst extwl temp temp1 temp)
 		      (inst sll temp 48 temp)
 		      (inst sra temp 48 value))
