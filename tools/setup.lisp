@@ -183,7 +183,7 @@
 		(c::assemble-file src :output-file obj)
 		(compile-file src  :error-file nil  :output-file obj))
 	    (when load
-	      (load name :verbose t)))
+	      (load obj :verbose t)))
 	   (t
 	    (handler-bind
 		((error #'(lambda (condition)
@@ -205,7 +205,7 @@
 		  (c::assemble-file src :output-file obj)
 		  (compile-file src  :error-file nil  :output-file obj))
 	      (when load
-		(load name :verbose t))))))))))
+		(load obj :verbose t))))))))))
 
 
 
