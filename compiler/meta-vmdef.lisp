@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.4 1993/08/12 10:56:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.5 1993/08/20 00:12:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,37 +22,12 @@
 ;;;
 (in-package :c)
 
-(export '(meta-sc-or-lose meta-sb-or-lose meta-sc-number-or-lose
-	  define-storage-base define-storage-class define-move-function
+(export '(define-storage-base define-storage-class define-move-function
 	  define-move-function define-move-vop 
 	  meta-primitive-type-or-lose
 	  def-primitive-type def-primitive-type-alias
 	  primitive-type-vop define-vop sc-case sc-is
 	  note-this-location note-next-instruction))
-
-
-
-;;;; 
-
-;;; META-SC-OR-LOSE, META-SB-OR-LOSE, META-SC-NUMBER-OR-LOSE  --  Internal
-;;;
-;;;    Like the non-meta versions, but go for the meta-compile-time info.
-;;; These should not be used after load time, since compiling the compiler
-;;; changes the definitions.
-;;;
-(defun meta-sc-or-lose (x)
-  (the sc
-       (or (gethash x (backend-meta-sc-names *target-backend*))
-	   (error "~S is not a defined storage class." x))))
-;;;
-(defun meta-sb-or-lose (x)
-  (the sb
-       (or (gethash x (backend-meta-sb-names *target-backend*))
-	   (error "~S is not a defined storage base." x))))
-;;;
-(defun meta-sc-number-or-lose (x)
-  (the sc-number (sc-number (meta-sc-or-lose x))))
-
 
 
 ;;;; Storage class and storage base definition:
