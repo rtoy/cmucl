@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.2 1990/09/27 06:11:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.3 1990/10/12 15:08:16 wlott Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
@@ -36,7 +36,7 @@
   ;;
   ;; Kind of type (how we determine length).
   (kind nil :type (member :lowtag :fixed :header :vector
-			  :string :code :closure))
+			  :string :code :closure :structure))
   ;;
   ;; Length if fixed-length, shift amount for element size if :vector.
   (length nil :type (or fixnum null)))
@@ -94,6 +94,9 @@
 
 (setf (svref *room-info* code-header-type)
       (make-room-info :name 'code  :kind :code))
+
+(setf (svref *room-info* structure-header-type)
+      (make-room-info :name 'structure :kind :structure))
 
 (deftype spaces () '(member :static :dynamic :read-only))
 
@@ -198,6 +201,9 @@
 			     (* (room-info-length info) word-bytes)))
 			   ((:vector :string)
 			    (vector-total-size obj info))
+			   (:structure
+			    (round-to-dualword
+			     (* (+ (c::structure-length obj) 2) word-bytes)))
 			   (:header
 			    (round-to-dualword
 			     (* (1+ (get-header-data obj)) word-bytes)))
@@ -230,20 +236,12 @@
 ;;;
 (defun type-breakdown (space)
   (let ((sizes (make-array 256 :initial-element 0 :element-type 'fixnum))
-	(counts (make-array 256 :initial-element 0 :element-type 'fixnum))
-	(structure-count 0)
-	(structure-size 0))
-    (declare (fixnum structure-size structure-count))
+	(counts (make-array 256 :initial-element 0 :element-type 'fixnum)))
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
-	 (cond ((and (eql type simple-vector-type)
-		     (eql (get-header-data obj) vector-structure-subtype))
-		(incf structure-count)
-		(incf structure-size size))
-	       (t
-		(incf (aref sizes type) size)
-		(incf (aref counts type)))))
+	 (incf (aref sizes type) size)
+	 (incf (aref counts type)))
      space)
 
     (let ((totals (make-hash-table :test #'eq)))
@@ -265,7 +263,6 @@
 		     (declare (ignore k))
 		     (totals-list v))
 		 totals)
-	(totals-list (list structure-size structure-count 'structure))
 	(sort (totals-list) #'> :key #'first)))))
 
 
