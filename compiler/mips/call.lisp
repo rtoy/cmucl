@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.26 1990/07/20 14:23:28 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.27 1990/08/23 18:48:04 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -134,6 +134,16 @@
 
 ;;;; Frame hackery:
 
+;;; BYTES-NEEDED-FOR-NON-DESCRIPTOR-STACK-FRAME -- internal
+;;;
+;;; Return the number of bytes needed for the current non-descriptor stack
+;;; frame.  Non-descriptor stack frames must be multiples of 8 bytes on
+;;; the PMAX.
+;;; 
+(defun bytes-needed-for-non-descriptor-stack-frame ()
+  (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
+     vm:word-bytes))
+
 ;;; Used for setting up the Old-FP in local call.
 ;;;
 (define-vop (current-fp)
@@ -150,9 +160,7 @@
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
-	(inst addu val nfp
-	      (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		 vm:word-bytes))))))
+	(inst addu val nfp (bytes-needed-for-non-descriptor-stack-frame))))))
 
 
 (define-vop (xep-allocate-frame)
@@ -171,8 +179,7 @@
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
 	(inst addu nsp-tn nsp-tn
-	      (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		    vm:word-bytes)))
+	      (- (bytes-needed-for-non-descriptor-stack-frame)))
 	(move nfp-tn nsp-tn)))))
 
 (define-vop (allocate-frame)
@@ -185,8 +192,7 @@
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
     (when (ir2-environment-number-stack-p callee)
       (inst addu nsp-tn nsp-tn
-	    (- (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		  vm:word-bytes)))
+	    (- (bytes-needed-for-non-descriptor-stack-frame)))
       (move nfp nsp-tn))))
 
 ;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
@@ -411,9 +417,13 @@ default-value-5
 ;;; Target is a continuation pointing to the start of the called function.
 ;;; Nvals is the number of values received.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers may be tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN.
+;;;
 (define-vop (call-local)
-  (:args (fp :scs (any-reg))
-	 (nfp :scs (any-reg))
+  (:args (fp)
+	 (nfp)
 	 (args :more t))
   (:results (values :more t))
   (:save-p t)
@@ -429,7 +439,7 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (move fp-tn fp)
+      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
@@ -448,9 +458,13 @@ default-value-5
 ;;; to the unknown values convention.  The results are the start of the values
 ;;; glob and the number of values received.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers may be tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN.
+;;;
 (define-vop (multiple-call-local unknown-values-receiver)
-  (:args (fp :scs (any-reg))
-	 (nfp :scs (any-reg))
+  (:args (fp)
+	 (nfp)
 	 (args :more t))
   (:save-p t)
   (:move-args :local-call)
@@ -463,7 +477,7 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (move fp-tn fp)
+      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
@@ -483,9 +497,13 @@ default-value-5
 ;;; Non-TR local call with known return locations.  Known-value return works
 ;;; just like argument passing in local call.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers may be tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN.
+;;;
 (define-vop (known-call-local)
-  (:args (fp :scs (any-reg))
-	 (nfp :scs (any-reg))
+  (:args (fp)
+	 (nfp)
 	 (args :more t))
   (:results (res :more t))
   (:move-args :local-call)
@@ -500,7 +518,7 @@ default-value-5
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (move fp-tn fp)
+      (maybe-load-stack-tn fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
@@ -517,25 +535,32 @@ default-value-5
 ;;; arguments to terminate their lifetimes in the returning function.  We
 ;;; restore FP and CSP and jump to the Return-PC.
 ;;;
+;;; Note: we can't use normal load-tn allocation for the fixed args, since all
+;;; registers may be tied up by the more operand.  Instead, we use
+;;; MAYBE-LOAD-STACK-TN.
+;;;
 (define-vop (known-return)
-  (:args (old-fp :scs (any-reg))
-	 (return-pc :scs (descriptor-reg))
+  (:args (old-fp :target old-fp-temp)
+	 (return-pc :target return-pc-temp)
 	 (vals :more t))
+  (:temporary (:sc any-reg :from (:argument 0)) old-fp-temp)
+  (:temporary (:sc descriptor-reg :from (:argument 1)) return-pc-temp)
   (:temporary (:scs (interior-reg) :type interior) lip)
   (:move-args :known-return)
   (:info val-locs)
   (:ignore val-locs vals)
   (:vop-var vop)
   (:generator 6
+    (maybe-load-stack-tn old-fp-temp old-fp)
+    (maybe-load-stack-tn return-pc-temp return-pc)
     (move csp-tn fp-tn)
     (let ((cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(inst addu nsp-tn cur-nfp
-	      (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack)) 1)
-		 vm:word-bytes))))
-    (inst addu lip return-pc (- vm:word-bytes vm:other-pointer-type))
+	      (bytes-needed-for-non-descriptor-stack-frame))))
+    (inst addu lip return-pc-temp (- vm:word-bytes vm:other-pointer-type))
     (inst j lip)
-    (move fp-tn old-fp)))
+    (move fp-tn old-fp-temp)))
 
 
 ;;;; Full call:
@@ -698,10 +723,7 @@ default-value-5
 		 (move return-pc-pass return-pc)
 		 (when cur-nfp
 		   (inst addu nsp-tn cur-nfp
-			 (* (logandc2 (1+ (sb-allocated-size
-					   'non-descriptor-stack))
-				      1)
-			    vm:word-bytes)))
+			 (bytes-needed-for-non-descriptor-stack-frame)))
 		 (inst j lip)
 		 (move code-tn function))
 	       `((move old-fp-pass fp-tn)
@@ -807,9 +829,7 @@ default-value-5
 	(let ((cur-nfp (current-nfp-tn vop)))
 	  (when cur-nfp
 	    (inst addu nsp-tn cur-nfp
-		  (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack))
-			       1)
-		     vm:word-bytes))))
+		  (bytes-needed-for-non-descriptor-stack-frame))))
 
 	;; We are done.  Do the jump.
 	(loadw function lexenv vm:closure-function-slot
@@ -856,10 +876,7 @@ default-value-5
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (inst addu nsp-tn cur-nfp
-		       (* (logandc2 (1+ (sb-allocated-size
-					 'non-descriptor-stack))
-				    1)
-			  vm:word-bytes))))
+		       (bytes-needed-for-non-descriptor-stack-frame))))
 	     (move csp-tn fp-tn)
 	     ;; Reset the frame pointer.
 	     (move fp-tn old-fp)
@@ -873,10 +890,7 @@ default-value-5
 	     (let ((cur-nfp (current-nfp-tn vop)))
 	       (when cur-nfp
 		 (inst addu nsp-tn cur-nfp
-		       (* (logandc2 (1+ (sb-allocated-size
-					 'non-descriptor-stack))
-				    1)
-			  vm:word-bytes))))
+		       (bytes-needed-for-non-descriptor-stack-frame))))
 	     (move val-ptr fp-tn)
 	     ;; Reset the frame pointer.
 	     (move fp-tn old-fp)
@@ -942,9 +956,7 @@ default-value-5
 	  (let ((cur-nfp (current-nfp-tn vop)))
 	    (when cur-nfp
 	      (inst addu nsp-tn cur-nfp
-		    (* (logandc2 (1+ (sb-allocated-size 'non-descriptor-stack))
-				 1)
-		       vm:word-bytes))))
+		    (bytes-needed-for-non-descriptor-stack-frame))))
 
 	  ;; Single case?
 	  (inst li count (fixnum 1))
