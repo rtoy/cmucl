@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.28 1991/02/04 18:41:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.29 1991/02/20 14:49:52 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -85,7 +85,7 @@
   (op (byte 6 26) :default #b010001)
   (filler-1 (byte 1 25) :default #b1)
   (format (byte 4 21))
-  (ft (byte 5 16) :default 0)
+  (ft (byte 5 16) :read t :default 0)
   (fs (byte 5 11) :read t)
   (fd (byte 5 6) :write t)
   (funct (byte 2 4))
@@ -396,11 +396,11 @@
 (define-instruction (lui)
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
-	     (rt :argument register :read t)
+	     (rt :argument register)
 	     (immediate :argument (or (unsigned-byte 16) (signed-byte 16))))
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
-	     (rt :argument register :read t)
+	     (rt :argument register)
 	     (immediate :argument lui-fixup)))
 
 
@@ -544,8 +544,8 @@
 	     `(define-instruction (,name :attributes (delayed-load))
 		(register (op :constant #b010001)
 			  (rs :constant #b00000)
-			  (rt :argument register)
-			  (rd :argument ,kind)
+			  (rt :argument register :read nil :write t)
+			  (rd :argument ,kind :write nil :read t)
 			  (funct :constant 0)))))
   (frob mfc1 fp-reg)
   (frob mfc1-odd odd-fp-reg))
