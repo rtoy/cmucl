@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.9 1992/05/29 13:59:41 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.10 1993/07/26 18:09:24 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -185,8 +185,8 @@ more detail.
 
 .SH THE DEBUGGER
 
-In addition to a basic command-line interface, the debugger also has several
-powerful new features:
+In addition to a Motif-based windowing interface and a basic command-line
+interface, the debugger also has several powerful new features:
 .TP 3
 \--
 The "source" and "vsource" commands print the *precise* original source
@@ -202,6 +202,9 @@ at some locations in the variable's scope, the debugger always errs on the
 side of discretion, refusing to display possibly incorrect values.
 .TP 3
 \--
+Compiled code can be stepped, stopping at each control transfer.
+.TP 3
+\--
 Integration with the Hemlock editor.  In a slave, the "edit" command causes the
 editor edit the source for the current code location.  The editor can also send
 non-line-mode input to the debugger using C-M-H bindings.  Try apropos "debug"
@@ -209,6 +212,29 @@ in Hemlock.
 .PP
 See the debugger chapter in the user manual for more details.  We are working
 on integrating the debugger with Hemlock and X windows.
+
+.SH THE GRAPHICAL INTERFACE
+
+CMU Common Lisp has an interface to Motif which is functionally similar to
+CLM, but works better in CMU CL.  See:
+.IP "" .2i
+.br
+    doc/motif-toolkit.doc
+.br
+    doc/motif-internals.doc
+.PP
+
+This motif interface has been used to write the inspector and graphical
+debugger.  There is also a Lisp control panel with a simple file management
+facility, apropos and inspector dialogs, and controls for setting global
+options.
+
+Call INTERFACE:LISP-CONTROL-PANEL to create the control panel.  When
+INTERFACE:*INTERFACE-STYLE* is :GRAPHICS (the default) and the DISPLAY
+environment variable is defined, the graphical inspector and debugger will be
+invoked by INSPECT or when an error is signalled.  Possible values are
+:GRAPHICS and :TTY.  If the value is :GRAPHICS, but there is no X display,
+then we quietly use the TTY interface.
 
 .SH THE INTERPRETER
 
