@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.114 2000/06/18 15:45:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.115 2000/07/06 18:37:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -745,8 +745,8 @@
   (declare (type continuation fun-cont cont) (list args))
   (let ((node (make-combination fun-cont)))
     (setf (continuation-dest fun-cont) node)
-    (assert-continuation-type fun-cont
-			      (specifier-type '(or function symbol)))
+    (assert-continuation-type
+     fun-cont (values-specifier-type '(values (or function symbol) &rest t)))
     (collect ((arg-conts))
       (let ((this-start fun-cont))
 	(dolist (arg args)
@@ -1138,9 +1138,9 @@
      (if *suppress-values-declaration*
 	 res
 	 (let ((types (cdr spec)))
-	   (do-the-stuff (if (eql (length types) 1)
-			     (car types)
-			     `(values ,@types))
+	   (do-the-stuff (values-specifier-type (if (eql (length types) 1)
+						    (car types)
+						    `(values ,@types)))
 			 cont res 'values))))
     (dynamic-extent
      (when (policy nil (> speed brevity))
@@ -2470,7 +2470,8 @@
 (def-ir1-translator %funcall ((function &rest args) start cont)
   (let ((fun-cont (make-continuation)))
     (ir1-convert start fun-cont function)
-    (assert-continuation-type fun-cont (specifier-type 'function))
+    (assert-continuation-type
+     fun-cont (values-specifier-type '(values function &rest t)))
     (ir1-convert-combination-args fun-cont cont args)))
 
 ;;; This source transform exists to reduce the amount of work for the compiler.
@@ -2884,7 +2885,7 @@
 ;;;
 ;;;    This is somewhat involved, since a type assertion may only be made on a
 ;;; continuation, not on a node.  We can't just set the continuation asserted
-;;; type and let it go at that, since there may be paralell THE's for the same
+;;; type and let it go at that, since there may be parallel THE's for the same
 ;;; continuation, i.e.:
 ;;;     (if ...
 ;;;         (the foo ...)
@@ -2908,10 +2909,9 @@
 ;;; COND branches.  We can't do it here, since we don't know how many branches
 ;;; there are going to be.
 ;;;
-(defun do-the-stuff (type cont lexenv name)
-  (declare (type continuation cont) (type lexenv lexenv))
-  (let* ((ctype (values-specifier-type type))
-	 (old-type (or (lexenv-find cont type-restrictions)
+(defun do-the-stuff (ctype cont lexenv name)
+  (declare (type ctype ctype) (type continuation cont) (type lexenv lexenv))
+  (let* ((old-type (or (lexenv-find cont type-restrictions)
 		       *wild-type*))
 	 (intersects (values-types-intersect old-type ctype))
 	 (int (values-type-intersection old-type ctype))
@@ -2929,13 +2929,21 @@
 
 ;;; THE IR1 Convert  --  Internal
 ;;;
+;;; A THE declaration for a single value type is internally converted
+;;; into (values &optional type &rest t) as this is the commonly
+;;; expected behavior.
+;;;
 (def-ir1-translator the ((type value) start cont)
   "THE Type Form
   Assert that Form evaluates to the specified type (which may be a VALUES
   type.)"
-  (let ((*lexical-environment*
-	 (do-the-stuff type cont *lexical-environment* 'the)))
-      (ir1-convert start cont value)))
+  (let ((ctype (values-specifier-type type)))
+    (unless (values-type-p ctype)
+      (setf ctype (make-values-type :optional (list ctype)
+				    :rest *universal-type*)))
+    (let ((*lexical-environment*
+	   (do-the-stuff ctype cont *lexical-environment* 'the)))
+      (ir1-convert start cont value))))
 
 
 ;;; Truly-The IR1 convert  --  Internal
@@ -3006,8 +3014,10 @@
 ;;;
 (defun set-variable (start cont var value)
   (declare (type continuation start cont) (type basic-var var))
-  (let ((dest (make-continuation)))
-    (setf (continuation-asserted-type dest) (leaf-type var))
+  (let ((dest (make-continuation))
+	(opt-type (make-values-type :optional (list (leaf-type var))
+				    :rest *universal-type*)))
+    (setf (continuation-asserted-type dest) opt-type)
     (ir1-convert start dest value)
     (let ((res (make-set :var var :value dest)))
       (setf (continuation-dest dest) res)
@@ -3168,8 +3178,8 @@
 			    ,fun
 			    (%coerce-to-function ,fun)))))
     (setf (continuation-dest fun-cont) node)
-    (assert-continuation-type fun-cont
-			      (specifier-type '(or function symbol)))
+    (assert-continuation-type
+     fun-cont (values-specifier-type '(values (or function symbol) &rest t)))
     (collect ((arg-conts))
       (let ((this-start fun-cont))
 	(dolist (arg args)
@@ -3481,7 +3491,7 @@
 ;;;
 ;;;    Check a new global function definition for consistency with previous
 ;;; declaration or definition, and assert argument/result types if appropriate.
-;;; This this assertion is suppressed by the EXPLICIT-CHECK attribute, which is
+;;; This assertion is suppressed by the EXPLICIT-CHECK attribute, which is
 ;;; specified on functions that check their argument types as a consequence of
 ;;; type dispatching.  This avoids redundant checks such as NUMBERP on the args
 ;;; to +, etc.

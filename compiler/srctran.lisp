@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.99 2000/06/21 17:01:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.100 2000/07/06 18:37:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,8 @@
 ;;;
 ;;;    Endp is just NULL with a List assertion.
 ;;;
-(def-source-transform endp (x) `(null (the list ,x)))
+(def-source-transform endp (x)
+  `(null (the (values &optional list &rest t) ,x)))
 
 ;;; We turn Identity into Prog1 so that it is obvious that it just returns the
 ;;; first value of its argument.  Ditto for Values with one arg.
@@ -206,13 +207,13 @@
 ;;; use a primitive to handle the cell access case.
 ;;;
 (def-source-transform numerator (num)
-  (once-only ((n-num `(the rational ,num)))
+  (once-only ((n-num `(the (values rational &rest t) ,num)))
     `(if (ratiop ,n-num)
 	 (%numerator ,n-num)
 	 ,n-num)))
 ;;;
 (def-source-transform denominator (num)
-  (once-only ((n-num `(the rational ,num)))
+  (once-only ((n-num `(the (values rational &rest t) ,num)))
     `(if (ratiop ,n-num)
 	 (%denominator ,n-num)
 	 1)))
@@ -3662,14 +3663,14 @@
 (def-source-transform gcd (&rest args)
   (case (length args)
     (0 0)
-    (1 `(abs (the integer ,(first args))))
+    (1 `(abs (the (values integer &rest t) ,(first args))))
     (2 (values nil t))
     (t (associate-arguments 'gcd (first args) (rest args)))))
 
 (def-source-transform lcm (&rest args)
   (case (length args)
     (0 1)
-    (1 `(abs (the integer ,(first args))))
+    (1 `(abs (the (values integer &rest t) ,(first args))))
     (2 (values nil t))
     (t (associate-arguments 'lcm (first args) (rest args)))))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.35 2000/07/06 04:35:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.36 2000/07/06 18:36:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -524,13 +524,24 @@
 ;;; Coerce-To-Values  --  Internal
 ;;;
 ;;; If Type isn't a values type, then make it into one:
-;;;    <type>  ==>  (values type &rest t)
+;;;    <type>  ==>  (values type)
 ;;;
 (defun coerce-to-values (type)
   (declare (type ctype type))
   (if (values-type-p type)
       type
-      (make-values-type :required (list type) :rest *universal-type*)))
+      (make-values-type :required (list type))))
+
+
+;;; Make-canonical-values-type  --  Internal
+;;;
+;;; Make a single value type is possible, otherwise a values-type.
+;;;    (values type)  ==>  <type>
+;;;
+(defun make-canonical-values-type (required optional rest)
+  (if (and required (endp (rest required)) (not optional) (not rest))
+      (first required)
+      (make-values-type :required required :optional optional :rest rest)))
 
 
 ;;; Args-Type-Op  --  Internal
@@ -587,12 +598,12 @@
 					   :from-end t)))
 		  (if (find *empty-type* required :test #'type=)
 		      (values *empty-type* t)
-		      (values (make-values-type
-			       :required required
-			       :optional (if opt-last
-					     (subseq opt 0 (1+ opt-last))
-					     ())
-			       :rest (if (eq rest *empty-type*) nil rest))
+		      (values (make-canonical-values-type
+			       required
+			       (if opt-last
+				   (subseq opt 0 (1+ opt-last))
+				   ())
+			       (if (eq rest *empty-type*) nil rest))
 			      (and rest-exact res-exact)))))))))
       (funcall operation type1 type2)))
 

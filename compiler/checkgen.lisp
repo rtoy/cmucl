@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.28 2000/07/06 12:56:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.29 2000/07/06 18:37:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,6 +140,47 @@
 	  types))
 
 
+;;; Values-types-asserted  --  Internal
+;;;
+;;;    Like values-types, but when an argument is proven to be delivered,
+;;; convert asserted optional and rest arguments to required arguments. This
+;;; makes it clear that these required arguments may all be type checked.
+;;;
+(defun values-types-asserted (atype ptype)
+  (declare (type ctype atype ptype))
+  (cond ((eq atype *wild-type*)
+	 (values nil :unknown))
+	((not (values-type-p atype))
+	 (values (list atype) 1))
+	((or (args-type-keyp atype)
+	     (args-type-allowp atype))
+	 (values nil :unknown))
+	(t
+	 (let* ((ptype (kernel::coerce-to-values ptype))
+		(preq (args-type-required ptype))
+		(popt (args-type-optional ptype))
+		(prest (args-type-rest ptype)))
+	   (collect ((types))
+	     (do ((args (args-type-required atype) (rest args)))
+		 ((endp args))
+	       (if (or (pop preq) (pop popt) prest)
+		   (types (single-value-type (first args)))
+		   (return-from values-types-asserted (values nil :unknown))))
+	     (do ((args (args-type-optional atype) (rest args)))
+		 ((endp args))
+	       (if (pop preq)
+		   (types (single-value-type (first args)))
+		   (return-from values-types-asserted (values nil :unknown))))
+	     (let ((arest (args-type-rest atype)))
+	       (when arest
+		 (do ((arg (pop preq) (pop preq)))
+		     ((null arg))
+		   (types (single-value-type arest)))
+		 (when (or popt prest)
+		   (return-from values-types-asserted (values nil :unknown)))))
+	     (values (types) (length (types))))))))
+
+
 ;;; Switch to disable check complementing, for evaluation.
 ;;;
 (defvar *complement-type-checks* t)
@@ -239,7 +280,7 @@
 	(dest (continuation-dest cont)))
     (assert (not (eq atype *wild-type*)))
     (multiple-value-bind (types count)
-	(values-types atype)
+	(values-types-asserted atype (continuation-proven-type cont))
       (cond ((not (eq count :unknown))
 	     (let ((types (no-function-types types)))
 	       (if (or (exit-p dest)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.48 1999/12/03 16:28:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.49 2000/07/06 18:37:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
     (let ((arg (car args))
 	  (var (car vars)))
       (cond ((leaf-refs var)
-	     (assert-continuation-type arg (leaf-type var)))
+	     (assert-continuation-optional-type arg (leaf-type var)))
 	    (t
 	     (flush-dest arg)
 	     (setf (car args) nil)))))

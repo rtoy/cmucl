@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.61 2000/04/14 03:50:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.62 2000/07/06 18:36:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -497,11 +497,12 @@
            (declare (ignore ,@dummy-list))
            ,keeper))
       (once-only ((n n))
-	`(case (the fixnum ,n)
+	`(case (the (values fixnum &rest t) ,n)
 	   (0 (nth-value 0 ,form))
 	   (1 (nth-value 1 ,form))
 	   (2 (nth-value 2 ,form))
-	   (T (nth (the fixnum ,n) (multiple-value-list ,form)))))))
+	   (T (nth (the (values fixnum &rest t) ,n)
+			(multiple-value-list ,form)))))))
 
 
 ;;;; SETF and friends.

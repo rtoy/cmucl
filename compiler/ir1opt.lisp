@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.69 2000/07/06 18:06:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.70 2000/07/06 18:37:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,7 +200,8 @@
 	  (reoptimize-continuation (node-cont node))))))
   (undefined-value))
 
-(declaim (start-block assert-continuation-type assert-call-type))
+(declaim (start-block assert-continuation-type
+		      assert-continuation-optional-type assert-call-type))
 
 ;;; Assert-Continuation-Type  --  Interface
 ;;;
@@ -224,6 +225,18 @@
   (undefined-value))
 
 
+;;; Assert-continuation-optional-type  --  Interface
+;;;
+;;;    Similar to Assert-Continuation-Type, but asserts that the type is
+;;; for an optional argument and that other arguments may be received.
+;;;
+(defun assert-continuation-optional-type (cont type)
+  (declare (type continuation cont) (type ctype type))
+  (let ((opt-type (make-values-type :optional (list type)
+				    :rest *universal-type*)))
+    (assert-continuation-type cont opt-type)))
+
+
 ;;; Assert-Call-Type  --  Interface
 ;;;
 ;;;    Assert that Call is to a function of the specified Type.  It is assumed
@@ -236,23 +249,23 @@
     (dolist (req (function-type-required type))
       (when (null args) (return-from assert-call-type))
       (let ((arg (pop args)))
-	(assert-continuation-type arg req)))
+	(assert-continuation-optional-type arg req)))
     (dolist (opt (function-type-optional type))
       (when (null args) (return-from assert-call-type))
       (let ((arg (pop args)))
-	(assert-continuation-type arg opt)))
+	(assert-continuation-optional-type arg opt)))
 
     (let ((rest (function-type-rest type)))
       (when rest
 	(dolist (arg args)
-	  (assert-continuation-type arg rest))))
+	  (assert-continuation-optional-type arg rest))))
 
     (dolist (key (function-type-keywords type))
       (let ((name (key-info-name key)))
 	(do ((arg args (cddr arg)))
 	    ((null arg))
 	  (when (eq (continuation-value (first arg)) name)
-	    (assert-continuation-type
+	    (assert-continuation-optional-type
 	     (second arg) (key-info-type key)))))))
   (undefined-value))
 
@@ -538,9 +551,8 @@
 		   (return-from find-result-type (undefined-value)))))
 	      (t
 	       (use-union (node-derived-type use)))))
-      (let ((int (values-type-intersection
-		  (continuation-asserted-type result)
-		  (use-union))))
+      (let ((int (values-type-intersection (continuation-asserted-type result)
+					   (use-union))))
 	(setf (return-result-type node) int))))
   (undefined-value))
 
