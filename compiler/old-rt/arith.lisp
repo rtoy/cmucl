@@ -23,7 +23,7 @@
      (:translate ,translate)
      (:generator 1
        (sc-case y
-	 ((any-reg descriptor-reg)
+	 ((any-reg)
 	  (cond ((location= x r)
 		 (inst ,op x y))
 		,@(when commute-op
@@ -51,11 +51,10 @@
 
 (define-vop (fast-binop/fixnum)
   (:args (x :target r
-	    :scs (any-reg descriptor-reg))
+	    :scs (any-reg))
 	 (y :target r
-	    :scs (any-reg descriptor-reg
-			  short-immediate unsigned-immediate immediate)))
-  (:results (r :scs (any-reg descriptor-reg)))
+	    :scs (any-reg short-immediate unsigned-immediate immediate)))
+  (:results (r :scs (any-reg)))
   (:arg-types fixnum fixnum)
   (:result-types fixnum)
   (:effects)
@@ -71,8 +70,8 @@
 
 
 (define-vop (fixnum-unop)
-  (:args (x :scs (any-reg descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
+  (:args (x :scs (any-reg)))
+  (:results (res :scs (any-reg)))
   (:note "inline fixnum arithmetic")
   (:arg-types fixnum)
   (:result-types fixnum)
@@ -99,10 +98,9 @@
 ;;;
 (define-vop (fast-logic-binop/fixnum fast-binop/fixnum)
   (:args (x :target r
-	    :scs (any-reg descriptor-reg))
+	    :scs (any-reg))
 	 (y :target r
-	    :scs (any-reg descriptor-reg short-immediate unsigned-immediate)))
-  (:result-types *))
+	    :scs (any-reg short-immediate unsigned-immediate))))
 
 (define-fixnum-binop fast-logior/fixnum fast-logic-binop/fixnum logior o
   :immed-op oil :unsigned t :commute-op o)
@@ -115,7 +113,7 @@
 
 
 (define-vop (fast-ash/fixnum fast-binop/fixnum)
-  (:args (i :scs (any-reg descriptor-reg)
+  (:args (i :scs (any-reg)
 	    :target r))
   (:arg-types fixnum (:constant (integer -31 31)))
   (:info n)
@@ -147,9 +145,8 @@
 ;;;; Binary conditional VOPs:
 
 (define-vop (fast-conditional/fixnum)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg
-			  short-immediate unsigned-immediate immediate)))
+  (:args (x :scs (any-reg))
+	 (y :scs (any-reg short-immediate unsigned-immediate immediate)))
   (:arg-types fixnum fixnum)
   (:conditional)
   (:info target not-p)
@@ -164,7 +161,7 @@
        (inst cis x (tn-value y)))
       ((immediate unsigned-immediate)
        (inst ci x (tn-value y)))
-      ((any-reg descriptor-reg)
+      (any-reg
        (inst c x y)))
 
     (if not-p
