@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.70 2003/04/17 12:55:57 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.71 2003/04/17 13:12:28 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,8 +237,8 @@
 ;;; Wrap the restart-case expression in a with-condition-restarts if
 ;;; appropriate.  Gross, but it's what the book seems to say...
 ;;;
-(defun munge-restart-case-expression (expression data)
-  (let ((exp (macroexpand expression)))
+(defun munge-restart-case-expression (expression data env)
+  (let ((exp (macroexpand expression env)))
     (if (consp exp)
 	(let* ((name (car exp))
 	       (args (if (eq name 'cerror) (cddr exp) (cdr exp))))
@@ -261,7 +261,7 @@
 
 ); eval-when (compile load eval)
 
-(defmacro restart-case (expression &body clauses)
+(defmacro restart-case (expression &body clauses &environment env)
   "(RESTART-CASE form
    {(case-name arg-list {keyword value}* body)}*)
    The form is evaluated in a dynamic context where the clauses have special
@@ -317,7 +317,7 @@
 				       ,@keys)))
 			 data)
 	      (return-from ,block-tag
-			   ,(munge-restart-case-expression expression data)))
+			   ,(munge-restart-case-expression expression data env)))
 	    ,@(mapcan #'(lambda (datum)
 			  (let ((tag  (nth 1 datum))
 				(bvl  (nth 3 datum))
