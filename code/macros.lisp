@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.17 1990/12/11 12:45:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.18 1991/01/30 15:50:26 ram Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -22,7 +22,7 @@
 	  with-open-stream with-input-from-string with-output-to-string
 	  locally etypecase ctypecase ecase ccase
 	  get-setf-method get-setf-method-multiple-value
-          define-modify-macro destructuring-bind
+          define-modify-macro destructuring-bind nth-value
           otherwise)) ; Sacred to CASE and related macros.
 
 (in-package "EXTENSIONS")
@@ -412,6 +412,24 @@
 ;;;
 (defmacro multiple-value-list (value-form)
   `(multiple-value-call #'list ,value-form))
+
+
+(defmacro nth-value (n form)
+  "Evaluates FORM and returns the Nth value (zero based).  This involves no
+  consing when N is a trivial constant integer."
+  (if (integerp n)
+      (let ((dummy-list nil)
+	    (wendy (gensym)))
+	;; We build DUMMY-LIST, a list of variables to bind to useless
+	;; values, then we explicitly IGNORE those bindings and return 
+	;; WENDY, the only thing we're really interested in right now.
+	(dotimes (i n)
+	  (push (gensym) dummy-list))
+	`(multiple-value-bind (,@dummy-list ,wendy)
+			      ,form
+	   (declare (ingore ,@dummy-list))
+	   ,wendy))
+      `(nth ,n (multiple-value-list ,form))))
 
 
 ;;;; SETF and friends.
