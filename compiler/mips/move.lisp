@@ -7,12 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.2 1990/02/03 17:09:09 wlott Exp $
+;;;
 ;;;    This file contains the RT VM definition of operand loading/saving and
 ;;; the Move VOP.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 ;;; Load-Constant-TN  --  Internal
 ;;;
@@ -46,9 +48,9 @@
       (constant
        (sc-case y
 	 ((any-reg descriptor-reg)
-	  (load-slot y env-tn (tn-offset x)))
+	  (load-slot y code-tn (tn-offset x)))
 	 (control-stack
-	  (load-slot temp env-tn (tn-offset x))
+	  (load-slot temp code-tn (tn-offset x))
 	  (store-stack-tn y temp)))))))
 
 
