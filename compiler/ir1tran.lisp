@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.2 1993/01/23 14:42:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.3 1993/02/08 22:08:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,12 +141,33 @@
 		     :where-from where)))
 
 
-;;; Find-Slot-Accessor  --  Internal
+;;; Find-Structure-Slot-Accessor  --  Internal
 ;;;
 ;;;    Return a Slot-Accessor structure usable for referencing the slot
-;;; accessor Name.  Info is the structure definition.
+;;; accessor Name.  Class is the structure class.
 ;;;
-(defun find-slot-accessor (info name)
+(defun find-structure-slot-accessor (class name)
+  (declare (type class class))
+  (let* ((info (layout-info
+		(or (info type compiler-layout (class-name class))
+		    (class-layout class))))
+	 (accessor (if (listp name) (cadr name) name))
+	 (slot (find accessor (kernel:dd-slots info)
+		     :key #'kernel:dsd-accessor))
+	 (type (kernel:dd-name info))
+	 (slot-type (kernel:dsd-type slot)))
+    (assert slot () "Can't find slot ~S." type)
+    (make-slot-accessor
+     :name name
+     :type (specifier-type
+	    (if (listp name)
+		`(function (,slot-type ,type) ,slot-type)
+		`(function (,type) ,slot-type)))
+     :for class
+     :slot slot)))
+
+#+ns-boot
+(defun find-old-slot-accessor (info name)
   (declare (type defstruct-description info))
   (let* ((accessor (if (listp name) (cadr name) name))
 	 (slot (find accessor (dd-slots info)
@@ -193,9 +214,15 @@
 					    :inlinep inlinep
 					    :type (info function type name))
 		     (let ((info (info function accessor-for name)))
-		       (if info
-			   (find-slot-accessor info name)
-			   (find-free-really-function name))))))))))
+		       (etypecase info
+			 (null
+			  (find-free-really-function name))
+			 (structure-class
+			  (find-structure-slot-accessor info name))
+			 #+ns-boot
+			 (defstruct-description
+			  (find-old-slot-accessor info name)))))))))))
+
 
 ;;; Find-Lexically-Apparent-Function  --  Internal
 ;;;
@@ -2601,9 +2628,10 @@
 ;;; *FREE-FUNCTIONS* to keep things in synch.  %%COMPILER-DEFSTRUCT is also
 ;;; called at load-time.
 ;;;
-(def-ir1-translator %compiler-defstruct ((info) start cont :kind :function)
+(def-ir1-translator kernel:%compiler-defstruct
+		    ((info) start cont :kind :function)
   (let* ((info (eval info)))
-    (%%compiler-defstruct info)
+    (kernel:%%compiler-defstruct info)
     (dolist (slot (dd-slots info))
       (let ((fun (dsd-accessor slot)))
 	(remhash fun *free-functions*)
@@ -2611,7 +2639,7 @@
 	  (remhash `(setf ,fun) *free-functions*))))
     (remhash (dd-predicate info) *free-functions*)
     (remhash (dd-copier info) *free-functions*)
-    (ir1-convert start cont `(%%compiler-defstruct ',info))))
+    (ir1-convert start cont `(kernel:%%compiler-defstruct ',info))))
 
 
 ;;;; Let and Let*:
