@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.31 1997/06/06 06:48:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.32 1997/10/02 18:31:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,7 +87,7 @@
   ;; Slot holds the host, at present either a UNIX or logical host.
   (host nil :type (or host null))
   ;; Device is the name of a logical or physical device holding files.
-  (device nil :type component-tokens)
+  (device nil :type (or simple-string component-tokens))
   ;; A list of strings that are the component subdirectory components.
   (directory nil :type list)
   ;; The filename.
@@ -611,7 +611,7 @@
   "Makes a new pathname from the component arguments.  Note that host is
 a host-structure or string."
   (declare (type (or string host component-tokens) host)
-	   (type component-tokens device)
+	   (type (or string component-tokens) device)
 	   (type (or list string pattern component-tokens) directory)
 	   (type (or string pattern component-tokens) name type)
 	   (type (or integer component-tokens (member :newest)) version)

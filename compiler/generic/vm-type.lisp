@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.32 1997/04/01 19:24:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.33 1997/10/02 18:32:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
 ;;;
 ;;; Pathname pieces, as returned by the PATHNAME-xxx functions.
 (deftype pathname-host () '(or lisp::host null))
-(deftype pathname-device () '(member nil :unspecific))
+(deftype pathname-device () '(or simple-string (member nil :unspecific)))
 (deftype pathname-directory () 'list)
 (deftype pathname-name ()
   '(or simple-string lisp::pattern (member nil :unspecific :wild)))

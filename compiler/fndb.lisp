@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.73 1997/09/03 20:27:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.74 1997/10/02 18:31:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -948,7 +948,7 @@
 (defknown make-pathname
  (&key (:defaults pathnamelike)
        (:host (or string pathname-host))
-       (:device pathname-device)
+       (:device (or string pathname-device))
        (:directory (or pathname-directory string (member :wild)))
        (:name (or pathname-name string (member :wild)))
        (:type (or pathname-type string (member :wild)))
