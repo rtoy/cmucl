@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.33 1999/03/06 03:42:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.34 1999/03/13 15:13:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -769,8 +769,11 @@
   (let ((state (process-state process)))
     (or (eq state :active) (eq state :inactive))))
 
-(declaim (type (or null process) *current-process*))
-(defvar *current-process* nil)
+;;; A dummy initial process is defined so that locks will work before
+;;; multi-processing has been started.
+(declaim (type process *current-process*))
+(defvar *current-process*
+  (%make-process :name "Startup" :state :inactive :stack-group nil))
 
 ;;; Current-Process  --  Public
 ;;;
@@ -1103,40 +1106,41 @@
   chance to unwinding, before shutting down multi-processing. This is
   currently necessary before a purify and is performed before a save-lisp.
   Multi-processing can be restarted by calling init-multi-processing."
-  (assert (eq *current-process* *initial-process*) ()
-	  "Only the *initial-process* can shutdown multi-processing")
+  (when *initial-process*
+    (assert (eq *current-process* *initial-process*) ()
+	    "Only the *initial-process* can shutdown multi-processing")
 
-  (let ((destroyed-processes nil))
-    (do ((cnt 0 (1+ cnt)))
-	((> cnt 10))
-      (declare (type kernel:index cnt))
-      (dolist (process *all-processes*)
-	(when (and (not (eq process *current-process*))
-		   (process-active-p process)
-		   (not (member process destroyed-processes)))
-	  (destroy-process process)
-	  (push process destroyed-processes)))
-      (unless (rest *all-processes*)
-	(return))
-      (format t "Destroyed ~d process~:P; remaining ~d~%"
-	      (length destroyed-processes) (length *all-processes*))
-      (process-yield)))
+    (let ((destroyed-processes nil))
+      (do ((cnt 0 (1+ cnt)))
+	  ((> cnt 10))
+	(declare (type kernel:index cnt))
+	(dolist (process *all-processes*)
+	  (when (and (not (eq process *current-process*))
+		     (process-active-p process)
+		     (not (member process destroyed-processes)))
+	    (destroy-process process)
+	    (push process destroyed-processes)))
+	(unless (rest *all-processes*)
+	  (return))
+	(format t "Destroyed ~d process~:P; remaining ~d~%"
+		(length destroyed-processes) (length *all-processes*))
+	(process-yield)))
 
-  (start-sigalrm-yield 0 0)	; Off with the interrupts.
-  ;; Reset the multi-processing state.
-  (setf *inhibit-scheduling* t)
-  (setf *initial-process* nil)
-  (setf *idle-process* nil)
-  (setf *current-process* nil)
-  (setf *all-processes* nil)
-  (setf *remaining-processes* nil)
-  ;; Cleanup the stack groups.
-  (setf x86::*control-stacks*
-	(make-array 0 :element-type '(or null (unsigned-byte 32))
-		    :initial-element nil))
-  (setf *current-stack-group* nil)
-  (setf *initial-stack-group* nil))
-
+    (start-sigalrm-yield 0 0)	; Off with the interrupts.
+    ;; Reset the multi-processing state.
+    (setf *inhibit-scheduling* t)
+    (setf *initial-process* nil)
+    (setf *idle-process* nil)
+    (setf *current-process*
+	  (%make-process :name "Startup" :state :inactive :stack-group nil))
+    (setf *all-processes* nil)
+    (setf *remaining-processes* nil)
+    ;; Cleanup the stack groups.
+    (setf x86::*control-stacks*
+	  (make-array 0 :element-type '(or null (unsigned-byte 32))
+		      :initial-element nil))
+    (setf *current-stack-group* nil)
+    (setf *initial-stack-group* nil)))
 
 ;;; Idle-Process-Loop  --  Internal
 ;;;
