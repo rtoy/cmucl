@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.13 2002/10/19 14:41:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.14 2002/10/19 15:26:10 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -164,10 +164,8 @@
 (defun make-optimized-structure-slot-value-using-class-method-function (function)
   (declare (type function function))
   (lambda (class object slotd)
-    (let ((value (funcall function object)))
-      (if (eq value +slot-unbound+)
-	  (slot-unbound class object (slot-definition-name slotd))
-	  value))))	    
+    (declare (ignore class slotd))
+    (funcall function object)))
 
 (defun make-optimized-structure-setf-slot-value-using-class-method-function (function)
   (declare (type function function))
@@ -175,11 +173,11 @@
     (declare (ignore class slotd))
     (funcall function nv object)))
 
-(defun make-optimized-structure-slot-boundp-using-class-method-function (function)
+(defun make-optimized-structure-slot-boundp-using-class-method-function ()
   (declare (type function function))
   (lambda (class object slotd)
-    (declare (ignore class slotd))
-    (not (eq (funcall function object) +slot-unbound+))))
+    (declare (ignore class object slotd))
+    t))
 
 (defun get-optimized-std-slot-value-using-class-method-function (class slotd name)
   (if (structure-class-p class)
@@ -188,8 +186,7 @@
 		 (slot-definition-internal-reader-function slotd)))
 	(writer (make-optimized-structure-setf-slot-value-using-class-method-function
 		 (slot-definition-internal-writer-function slotd)))
-	(boundp (make-optimized-structure-slot-boundp-using-class-method-function
-		 (slot-definition-internal-writer-function slotd))))
+	(boundp (make-optimized-structure-slot-boundp-using-class-method-function)))
       (let* ((fsc-p (cond ((standard-class-p class) nil)
 			  ((funcallable-standard-class-p class) t)
 			  (t (error "~S is not a standard-class" class))))
