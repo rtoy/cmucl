@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.12 1990/10/11 18:05:21 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.13 1990/12/15 14:07:00 wlott Exp $
 ;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
@@ -576,6 +576,7 @@
 		       (princ "Bottom of stack encountered.")
 		       prev)
       (write-string "Restart number: ")
+		      (return prev))))))
 	  (t
     (invoke-restart-interactively (nth num *debug-restarts*))))
 ;;;
@@ -603,6 +604,7 @@
 				      (string= (symbol-name sym1)
 					       (symbol-name sym2)))))
       (format t "~%Q for quit: ")
+		      (format t "~S is invalid as a restart name.~%" num)
 		      (return-from restart-debug-command nil)))))
       (if restart
 	  (invoke-restart-interactively restart)
@@ -759,8 +761,9 @@
 	  (format t "Note: previous breakpoint removed.~%"))
 	(push new-bp-info *breakpoints*))
       (print-breakpoint-info (first *breakpoints*))
-  (if (not (ext:listen-skip-whitespace in))
-      (princ prompt out))
+      (format t "~&Added."))))
+
+(def-debug-command-alias "BP" "BREAKPOINT")
 
 ;;; list all breakpoints set
 (def-debug-command "LIST-BREAKPOINTS" ()
