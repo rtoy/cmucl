@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.21 1997/11/01 22:58:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.22 1998/01/09 10:07:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -238,13 +238,18 @@
 	      `(truly-the ,spec
 			  (allocate-vector ,typecode length ,nwords-form))))
 	(values
-	 (if (and default-initial-element
-		  (or (null initial-element)
-		      (and (constant-continuation-p initial-element)
-			   (eql (continuation-value initial-element)
-				default-initial-element))))
-	     constructor
-	     `(truly-the ,spec (fill ,constructor initial-element)))
+	 (cond ((and default-initial-element
+		     (or (null initial-element)
+			 (and (constant-continuation-p initial-element)
+			      (eql (continuation-value initial-element)
+				   default-initial-element))))
+		(unless (csubtypep (ctype-of default-initial-element)
+				   eltype-type)
+		  (compiler-note "Default initial element ~s is not a ~s."
+				 default-initial-element eltype))
+		constructor)
+	       (t
+		`(truly-the ,spec (fill ,constructor initial-element))))
 	 '((declare (type index length))))))))
 
 ;;; MAKE-ARRAY  --  transform.
