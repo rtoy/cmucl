@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.14 1990/10/09 23:25:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.15 1990/10/15 01:09:35 ram Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -78,21 +78,19 @@
     (parse-slot-descriptions defstruct slot-descriptions)
     (if (eq (dd-type defstruct) 'structure)
 	`(progn
+	   (%defstruct ',defstruct)
 	   (%compiler-defstruct ',defstruct)
 	   ,@(define-constructor defstruct)
 	   ,@(define-boa-constructors defstruct)
-	   
 	   ;;
 	   ;; So the print function is in the right lexical environment, and
 	   ;; can be compiled...
-	   (let ((new ',defstruct))
-	     ,@(let ((pf (dd-print-function defstruct)))
-		 (when pf
-		   `((setf (info type printer ',name)
-			   ,(if (symbolp pf)
-				`',pf
-				`#',pf)))))
-	     (%defstruct new))
+	   ,@(let ((pf (dd-print-function defstruct)))
+	       (when pf
+		 `((setf (info type printer ',name)
+			 ,(if (symbolp pf)
+			      `',pf
+			      `#',pf)))))
 	   ',name)
 	`(progn
 	   (eval-when (compile load eval)
@@ -312,6 +310,36 @@
 	 (or (eq name (dd-name info))
 	     (member name (dd-included-by info) :test #'eq)))))
 
+
+;;; %REDEFINE-DEFSTRUCT  --  Internal
+;;;
+;;;    This function is called when we are redefining a structure from Old to
+;;; New.  If the slots are different, we flame loudly, but give the luser a
+;;; chance to proceed.  We flame especially loudly if there are structures that
+;;; include this one.  If proceeded, we FMAKUNBOUND all the old accessors.
+;;;
+(defun %redefine-defstruct (old new)
+  (declare (type defstruct-description old new))
+  (unless (equalp (dd-slots old) (dd-slots new))
+    (let ((name (dd-name old))
+	  (included-by (dd-included-by old)))
+      (cerror
+       "Recklessly proceed with wanton disregard for Lisp and limb."
+       "Structure ~S is being incompatibly redefined.  If proceeded, you must~@
+       recompile all uses this structure's accessors.~:[~;~@
+       ~S is included by these structures:~
+       ~%  ~S~@
+       You must also recompile these DEFSTRUCTs and all the uses of their ~
+       accessors.~]"
+       name included-by name included-by)
+
+      (dolist (slot (dd-slots old))
+	(fmakunbound (dsd-accessor slot))
+	(unless (dsd-read-only slot)
+	  (fmakunbound `(setf ,(dsd-accessor slot)))))))
+
+  (undefined-value))
+
 #+new-compiler
 ;;; %Defstruct  --  Internal
 ;;;
@@ -321,8 +349,23 @@
 ;;;
 (defun %defstruct (info)
   (declare (type defstruct-description info))
-  (setf (info type defined-structure-info (dd-name info)) info)
-  
+  (let* ((name (dd-name info))
+	 (old (info type defined-structure-info name)))
+    ;;
+    ;; Don't flame about dd structures, since they are hackishly defined in
+    ;; type-boot...
+    (when (and old
+	       (not (member name '(defstruct-description
+				   defstruct-slot-description))))
+      (%redefine-defstruct old info))
+    
+    (setf (info type defined-structure-info name) info)
+    (dolist (include (dd-includes info))
+      (let ((iinfo (info type defined-structure-info include)))
+	(unless iinfo
+	  (error "~S includes ~S, but it is not defined." name include))
+	(pushnew name (dd-included-by iinfo)))))
+    
   (dolist (slot (dd-slots info))
     (let ((dsd slot))
       (setf (symbol-function (dsd-accessor slot))
