@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: VM; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.18 1991/02/20 15:15:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.19 1991/05/21 18:31:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.18 1991/02/20 15:15:08 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -27,6 +25,7 @@
 (define-vop (move-to-sap)
   (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (sap-reg)))
+  (:note "system area pointer indirection")
   (:generator 1
     (loadw y x vm:sap-pointer-slot vm:other-pointer-type)))
 
@@ -42,7 +41,8 @@
   (:temporary (:scs (sap-reg) :from (:argument 0)) sap)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
   (:results (y :scs (descriptor-reg)))
-  (:generator 1
+  (:note "system area pointer allocation")
+  (:generator 20
     (move sap x)
     (pseudo-atomic (ndescr)
       (inst addu y alloc-tn vm:other-pointer-type)
