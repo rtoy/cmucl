@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.10 1990/03/03 00:32:00 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.11 1990/03/03 00:40:10 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -161,7 +161,7 @@
 	(cond (dev
 	       (multiple-value-bind
 		   (wonp errno)
-		   (mach:unix-utimes rcs-filename (list atime mtime))
+		   (mach:unix-utimes filename (list atime 0 mtime 0))
 		 (unless wonp
 		   (editor-error "MACH:UNIX-UTIMES failed: ~A"
 				 (mach:get-unix-error-msg errno)))))
