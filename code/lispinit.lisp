@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.1.1.2 1990/04/11 17:16:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.1.1.3 1990/04/17 22:00:55 wlott Exp $
 ;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -477,7 +477,7 @@
 (eval-when (compile)
   (defmacro print-and-call (name)
     `(progn
-       (%primitive print ',name)
+       (%primitive print ,(symbol-name name))
        (,name))))
 
 (defun %initial-function ()
@@ -497,6 +497,7 @@
 	(nreverse *lisp-initialization-functions*))
   (%primitive print "Calling top-level forms.")
   (dolist (fun *lisp-initialization-functions*)
+    (%primitive print fun)
     (funcall fun))
   (makunbound '*lisp-initialization-functions*)	; So it gets GC'ed.
 
