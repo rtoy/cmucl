@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.14 1993/07/05 01:47:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.15 1994/09/29 13:51:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
   (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
 	 (addr (int-sap *foreign-segment-free-pointer*))
-	 (new-ptr (+ *foreign-segment-free-pointer* bytes)))
+	 (new-ptr (+ *foreign-segment-free-pointer* memory-needed)))
     (when (> new-ptr (+ foreign-segment-start foreign-segment-size))
       (error "Not enough memory left."))
     (setf *foreign-segment-free-pointer* new-ptr)
