@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.36 2003/10/27 18:30:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.37 2004/04/16 04:49:25 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,8 +204,12 @@
 	(inst add csp-tn vm:word-bytes))
       )
     ;; Build our stack frames.
-    (inst add csp-tn cfp-tn
-	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
+    (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
+      (cond ((typep size '(signed-byte 13))
+	     (inst add csp-tn cfp-tn size))
+	    (t
+	     (inst li temp size)
+	     (inst add csp-tn cfp-tn temp))))
     (let ((nfp-tn (current-nfp-tn vop)))
       (when nfp-tn
 	(inst sub nsp-tn (bytes-needed-for-non-descriptor-stack-frame))
@@ -233,8 +237,12 @@
 	(inst b :gt zero-out-loop)
 	(inst stn zero-tn csp-tn temp)
 	))
-    (inst add csp-tn csp-tn
-	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
+    (let ((size (* vm:word-bytes (sb-allocated-size 'control-stack))))
+      (cond ((typep size '(signed-byte 13))
+	     (inst add csp-tn csp-tn size))
+	    (t
+	     (inst li temp size)
+	     (inst add csp-tn csp-tn temp))))
     (when (ir2-environment-number-stack-p callee)
       (inst sub nsp-tn (bytes-needed-for-non-descriptor-stack-frame))
       (inst add nfp nsp-tn number-stack-displacement))
