@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.21 1992/08/01 14:00:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.22 1992/09/15 17:46:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,7 +57,7 @@
 		    (and *byte-compiling* (eq kind :optional)))
 	  (assert (member kind '(:optional :cleanup :escape)))
 	  (setf (functional-kind fun) nil)
-	  (delete-lambda fun)))))
+	  (delete-functional fun)))))
 
   (undefined-value))
 
