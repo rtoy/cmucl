@@ -145,21 +145,26 @@
 			 (get-operand-info op)
       (declare (ignore costs more-p))
       (collect ((load-lose)
+		(no-move-scs)
 		(move-lose))
 	(dotimes (i sc-number-limit)
 	  (let ((i-sc (svref (backend-sc-numbers *backend*) i)))
 	    (when (eq (svref load-scs i) t)
 	      (cond ((not (sc-allowed-by-primitive-type i-sc ptype))
 		     (load-lose i-sc))
-		    ((not (if write-p
-			      (svref (sc-move-vops op-sc) i)
-			      (svref (sc-move-vops i-sc) op-scn)))
-		     (move-lose i-sc))
+		    ((not (find-move-vop op-tn write-p i-sc ptype
+					 #'sc-move-vops))
+		     (let ((vops (if write-p
+				     (svref (sc-move-vops op-sc) i)
+				     (svref (sc-move-vops i-sc) op-scn))))
+		       (if vops
+			   (dolist (vop vops) (move-lose (template-name vop)))
+			   (no-move-scs i-sc))))
 		    (t
 		     (error "Representation selection flamed out for no ~
 		             obvious reason."))))))
 	
-	(unless (or (load-lose) (move-lose))
+	(unless (or (load-lose) (no-move-scs) (move-lose))
 	  (error "Representation selection flamed out for no obvious reason.~@
 	          Try again after recompiling the VM definition."))
 
@@ -169,6 +174,8 @@
 		~@[The primitive type disallows these loadable SCs:~%  ~S~%~]~
 		~@[No move VOPs are defined to coerce to these allowed SCs:~
 		~%  ~S~%~]~
+		~@[These move VOPs couldn't be used due to operand type ~
+		restrictions:~%  ~S~%~]~
 		~:[~;~@
 		Current cost info inconsistent with that in effect at compile ~
 		time.  Recompile.~%Compilation order may be incorrect.~]"
@@ -177,7 +184,8 @@
 	       (primitive-type-name ptype)
 	       (mapcar #'sc-name (listify-restrictions load-scs))
 	       (mapcar #'sc-name (load-lose))
-	       (mapcar #'sc-name (move-lose))
+	       (mapcar #'sc-name (no-move-scs))
+	       (move-lose)
 	       incon)))))
 
 
@@ -359,6 +367,45 @@
   (undefined-value))
 
 
+;;; FIND-MOVE-VOP  --  Internal
+;;;
+;;;    Find a move VOP to move from the operand OP-TN to some other
+;;; representation corresponding to OTHER-SC and OTHER-PTYPE.  Slot is the SC
+;;; slot that we grab from (move or move-argument).  Write-P indicates that OP
+;;; is a VOP result, so OP is the move result and other is the arg, otherwise
+;;; OP is the arg and other is the result.
+;;;
+;;;    If an operand is of primitive type T, then we use the type of the other
+;;; operand instead, effectively intersecting the argument and result type
+;;; assertions.  This way, a move VOP can restrict whichever operand makes more
+;;; sense, without worrying about which operand has the type info.
+;;;
+(defun find-move-vop (op-tn write-p other-sc other-ptype slot)
+  (declare (type tn op-tn) (type sc other-sc)
+	   (type primitive-type other-ptype)
+	   (type function slot))
+  (let* ((op-sc (tn-sc op-tn))
+	 (op-scn (sc-number op-sc))
+	 (other-scn (sc-number other-sc))
+	 (any-ptype (backend-any-primitive-type *backend*))
+	 (op-ptype (tn-primitive-type op-tn)))
+    (dolist (info (if write-p
+		      (svref (funcall slot op-sc) other-scn)
+		      (svref (funcall slot other-sc) op-scn))
+		  nil)
+      (when (and (operand-restriction-ok
+		  (first (template-arg-types info))
+		  (if (or write-p (eq op-ptype any-ptype))
+		      other-ptype op-ptype)
+		  :tn op-tn :t-ok nil)
+		 (operand-restriction-ok
+		  (first (template-result-types info))
+		  (if (or write-p (eq other-ptype any-ptype))
+		      op-ptype other-ptype)
+		  :t-ok nil))
+	(return info)))))
+
+	
 ;;; EMIT-COERCE-VOP  --  Internal
 ;;;
 ;;;    Emit a coercion VOP for Op Before the specifed VOP or die trying.  SCS
@@ -381,8 +428,6 @@
   (declare (type tn-ref op) (type sc-vector scs) (type (or vop null) before)
 	   (type (or tn null) dest-tn))
   (let* ((op-tn (tn-ref-tn op))
-	 (op-sc (tn-sc op-tn))
-	 (op-scn (sc-number op-sc))
 	 (ptype (tn-primitive-type op-tn))
 	 (write-p (tn-ref-write-p op))
 	 (vop (tn-ref-vop op))
@@ -392,9 +437,7 @@
       (let ((i-sc (svref (backend-sc-numbers *backend*) i)))
 	(when (and (eq (svref scs i) t)
 		   (sc-allowed-by-primitive-type i-sc ptype))
-	  (let ((res (if write-p
-			 (svref (sc-move-vops op-sc) i)
-			 (svref (sc-move-vops i-sc) op-scn))))
+	  (let ((res (find-move-vop op-tn write-p i-sc ptype #'sc-move-vops)))
 	    (when res
 	      (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
 		(do-coerce-efficency-note res op dest-tn))
@@ -403,7 +446,8 @@
 		(cond
 		 ((not write-p)
 		  (emit-move-template node block res op-tn temp before))
-		 ((null (tn-reads op-tn)))
+		 ((and (null (tn-reads op-tn))
+		       (eq (tn-kind op-tn) :normal)))
 		 (t
 		  (emit-move-template node block res temp op-tn before))))
 	      (return))))))))
@@ -470,8 +514,9 @@
       (let* ((val-tn (tn-ref-tn val))
 	     (pass-tn (first pass))
 	     (pass-sc (tn-sc pass-tn))
-	     (res (svref (sc-move-arg-vops pass-sc)
-			 (sc-number (tn-sc val-tn)))))
+	     (res (find-move-vop val-tn nil pass-sc
+				 (tn-primitive-type pass-tn)
+				 #'sc-move-arg-vops)))
 	(unless res
 	  (bad-move-arg-error val-tn pass-tn))
 	
@@ -506,6 +551,8 @@
 ;;;
 ;;;    Scan the IR2 looking for move operations that need to be replaced with
 ;;; special-case VOPs and emitting coercion VOPs for operands of normal VOPs.
+;;; We delete moves to TNs that are never read at this point, rather than
+;;; possibly converting them to some expensive move operation.
 ;;;
 (defun emit-moves-and-coercions (block)
   (declare (type ir2-block block))
@@ -520,9 +567,13 @@
 	(let* ((args (vop-args vop))
 	       (x (tn-ref-tn args))
 	       (y (tn-ref-tn (vop-results vop)))
-	       (res (svref (sc-move-vops (tn-sc y))
-			   (sc-number (tn-sc x)))))
-	  (cond (res
+	       (res (find-move-vop x nil (tn-sc y) (tn-primitive-type y)
+				   #'sc-move-vops)))
+	  (cond ((and (null (tn-reads y))
+		      (eq (tn-kind y) :normal))
+		 (delete-vop vop))
+		((eq res info))
+		(res
 		 (when (>= (vop-info-cost res) *efficency-note-cost-threshold*)
 		   (do-coerce-efficency-note res args y))
 		 (emit-move-template node block res x y vop)
