@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.55 1991/10/23 12:50:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.56 1991/11/05 14:38:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1438,14 +1438,21 @@
 		 aux-vars aux-vals)
 	   (type (or continuation null) cont))
   (cond ((not vars)
-	 (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
-					     aux-vars aux-vals cont)))
-	   (setf (optional-dispatch-main-entry res) fun)
-	   (push (if supplied-p-p
-		     (convert-optional-entry fun entry-vars entry-vals ())
-		     fun)
-		 (optional-dispatch-entry-points res))
-	   fun))
+	 (if (optional-dispatch-keyp res)
+	     ;;
+	     ;; Handle &key with no keys...
+	     (ir1-convert-more res default-vars default-vals
+			       entry-vars entry-vals
+			       nil vars supplied-p-p body aux-vars
+			       aux-vals cont)
+	     (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
+						 aux-vars aux-vals cont)))
+	       (setf (optional-dispatch-main-entry res) fun)
+	       (push (if supplied-p-p
+			 (convert-optional-entry fun entry-vars entry-vals ())
+			 fun)
+		     (optional-dispatch-entry-points res))
+	       fun)))
 	((not (lambda-var-arg-info (first vars)))
 	 (let* ((arg (first vars))
 		(nvars (cons arg default-vars))
