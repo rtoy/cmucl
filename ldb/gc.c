@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.6 1990/05/13 22:36:23 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.7 1990/05/24 18:04:14 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -467,6 +467,7 @@ lispobj *from_space, *from_space_free_pointer;
 
 static lispobj trans_function_header();
 static lispobj trans_closure_function_header();
+static lispobj trans_boxed();
 
 static
 scav_function_pointer(where, object)
@@ -484,22 +485,31 @@ lispobj *where, object;
 		
 		if (!(Pointerp(first) && new_space_p(first))) {
 			int type;
+			lispobj copy;
 
 			/* must transport object -- object may point */
-			/* to either a function header or to a closure */
-			/* header. */
+			/* to either a function header, a closure */
+			/* function header, or to a closure header. */
 			
 			type = TypeOf(first);
-			if (type == type_FunctionHeader)
-				first = *first_pointer = trans_function_header(object);
-			else if (type == type_ClosureHeader)
-				first = *first_pointer = trans_closure_function_header(object);
-			else {
+			switch (type) {
+			case type_FunctionHeader:
+				copy = trans_function_header(object);
+				break;
+			case type_ClosureFunctionHeader:
+				copy = trans_closure_function_header(object);
+				break;
+			case type_ClosureHeader:
+				copy = trans_boxed(object);
+				break;
+			default:
 				fprintf(stderr, "GC lossage.  Bogus function pointer.\n");
 				fprintf(stderr, "Pointer: 0x%08x, Header: 0x%08x\n",
 					(unsigned long) object, (unsigned long) first);
 				gc_lose();
 			}
+
+			first = *first_pointer = copy;
 		}
 
 		gc_assert(Pointerp(first));
