@@ -5,6 +5,12 @@
 ;;;
 (in-package "USER")
 
+#+new-compiler
+(proclaim '(optimize (debug-info 2)))
+
+(in-package "EXT")
+(export '(debug *gc-verbose*))
+
 (in-package "EVAL")
 (export '(internal-eval interpreted-function-p
 			interpreted-function-lambda-expression
@@ -29,7 +35,8 @@
 #-new-compiler
 (export '(compile-for-eval lambda-eval-info-frame-size
 	  lambda-eval-info-args-passed lambda-eval-info-entries
-	  entry-node-info-st-top entry-node-info-nlx-tag))
+	  entry-node-info-st-top entry-node-info-nlx-tag
+	  *compile-time-define-macros*))
 
 #-new-compiler
 (setq clc::*peep-enable* t)
@@ -57,6 +64,7 @@
   (zap-sym "CONCAT-PNAMES" "LISP")
   (zap-sym "ONCE-ONLY" "COMPILER")
   (zap-sym "UNIX-PIPE" "COMPILER")
+  (zap-sym "CONSTANT" "COMPILER")
   (zap-sym "MAKE-UNIX-PIPE" "MACH")
   (zap-sym "UNIX-PIPE-P" "MACH"))
   
@@ -156,13 +164,6 @@
 
 (setq *gc-notify-after* #'list)
 
-(setf (ext:search-list "lisp:") '("/afs/cs/project/clisp/new-compiler/"))
-(setf (ext:search-list "c:") '("lisp:compiler/" "lisp:compiler/rt/"))
-(setf (ext:search-list "ncode:") '("lisp:ncode/" "lisp:code/"))
-(setf (ext:search-list "assem:") '("lisp:assembler/"))
-(setf (ext:search-list "nmiscops:") '("lisp:nmiscops/" "lisp:miscops/"))
-(setf (ext:search-list "nicode:") '("lisp:nicode/" "lisp:icode/"))
-
 
 ;;;; Compile utility:
 
@@ -172,6 +173,7 @@
 (defvar *new-compile* t) ; Use new compiler?
 
 (defvar *log-file* nil)
+(defvar *last-file-position*)
 (defvar *compiled-files* (make-hash-table :test #'equal))
 
 
@@ -183,7 +185,8 @@
 			       :if-exists :append
 			       :if-does-not-exist :create)))
 	 (unwind-protect
-	     (let ((*error-output* *log-file*))
+	     (let ((*error-output* *log-file*)
+		   (*last-file-position* (file-position *log-file*)))
 	       (with-compilation-unit ()
 		 ,@forms))
 	   (close *log-file*)))))
@@ -195,6 +198,10 @@
 		  ((:bootstrap-macros lisp::*bootstrap-defmacro*) nil))
   #+new-compiler
   (declare (ignore always-once))
+  (when (and *log-file*
+	     (> (- (file-position *log-file*) *last-file-position*) 10000))
+    (setq *last-file-position* (file-position *log-file*))
+    (force-output *log-file*))
 
   (let* ((src (pathname (concatenate 'string name ".lisp")))
 	 (obj (if output-file
@@ -204,10 +211,15 @@
 	 (compiler #+new-compiler #'compile-file
 		   #-new-compiler (if *new-compile*
 				      #'c::ncompile-file
-				      #'compile-file)))
+				      #'compile-file))
+	 (obj-pn (probe-file obj)))
 
-    (unless (and (probe-file obj)
-		 (>= (file-write-date obj) (file-write-date src))
+    (unless (and obj-pn
+		 (>= (file-write-date obj-pn) (file-write-date src))
+		 #+nil
+		 (equalp (pathname-directory
+			  (lisp::sub-probe-file (first (search-list src))))
+			 (pathname-directory obj-pn))
 		 #-new-compiler
 		 (or (gethash src *compiled-files*)
 		     (not always-once)))
