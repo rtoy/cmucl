@@ -216,7 +216,7 @@
     `(progn
        (eval-when (compile load eval)
 	 (let ((res (make-sc :name ',name :number ',number
-			     :sb (meta-sc-or-lose ',sb-name)
+			     :sb (meta-sb-or-lose ',sb-name)
 			     :element-size ,element-size
 			     :locations ',locations
 			     :save-p ',save-p
@@ -228,14 +228,15 @@
 	   (setf (gethash ',name *meta-sc-names*) res)
 	   (setf (svref *meta-sc-numbers* ',number) res)
 	   (setf (svref (sc-load-costs res) ',number) 0)))
-       
+
        (let ((old (svref *sc-numbers* ',number)))
 	 (when (and old (not (eq (sc-name old) ',name)))
 	   (warn "Redefining SC number ~D from ~S to ~S." ',number
 		 (sc-name old) ',name)))
        
        (setf (svref *sc-numbers* ',number) (meta-sc-or-lose ',name))
-       (setf (svref *sc-names* ',name) (meta-sc-or-lose ',name))
+       (setf (gethash ',name *sc-names*) (meta-sc-or-lose ',name))
+       (setf (sc-sb (sc-or-lose ',name)) (sb-or-lose ',sb-name))
        ',name)))
 
 
