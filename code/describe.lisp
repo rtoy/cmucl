@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.26 1993/07/20 15:36:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.27 1993/08/17 22:31:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -271,10 +271,10 @@
 ;;;
 ;;;    Print information from the debug-info about where X was compiled from.
 ;;;
-(defun print-compiled-from (x)
-  (let ((info (kernel:%code-debug-info (kernel:function-code-header x))))
+(defun print-compiled-from (code-obj)
+  (let ((info (kernel:%code-debug-info code-obj)))
     (when info
-      (let ((sources (c::compiled-debug-info-source info)))
+      (let ((sources (c::debug-info-source info)))
 	(format t "~&On ~A it was compiled from:"
 		(format-universal-time nil
 				       (c::debug-source-compiled
@@ -313,14 +313,36 @@
     (desc-doc name 'function kind)
     (unless (eq kind :macro)
       (describe-function-name name (%function-type x))))
-    
-  (print-compiled-from x))
+
+  (print-compiled-from (kernel:function-code-header x)))
 
 
-(defun describe-funcallabe-instance (fin)
-  (describe-instance fin :funcallable-instance))
+(defun describe-function-byte-compiled (x kind name)
+  (unless (eq kind :macro)
+    (etypecase x
+      (c::simple-byte-function
+       (format t "~&Function may be called with ~R argument~:P."
+	       (c::simple-byte-function-num-args x)))
+      (c::hairy-byte-function
+       (let ((min (c::hairy-byte-function-min-args x))
+	     (max (c::hairy-byte-function-max-args x)))
+	 (format t "~&Function may be called with ~R~:[~*~; to ~R~] ~
+		    positional arguments~
+		    ~:[~;,~%  any number of &rest arguments~]~
+		    ~:[~*~;, and these keywords:~%  ~S~]."
+		 min (/= min max) max
+		 (c::hairy-byte-function-rest-arg-p x)
+		 (c::hairy-byte-function-keywords-p x)
+		 (mapcar #'first (c::hairy-byte-function-keywords x)))))))
+
+  (let ((name (or name (c::byte-function-name x))))
+    (desc-doc name 'function kind)
+    (unless (eq kind :macro)
+      (describe-function-name name 'function)))
+
+  (print-compiled-from (c::byte-function-component x)))
+
   
-
 ;;; DESCRIBE-FUNCTION  --  Internal
 ;;;
 ;;;    Describe a function with the specified kind and name.  The latter
@@ -348,7 +370,19 @@
     ((#.vm:function-header-type #.vm:closure-function-header-type)
      (describe-function-compiled x kind name))
     (#.vm:funcallable-instance-header-type
-     (describe-funcallabe-instance x))
+     (typecase x
+       (kernel:byte-function
+	(describe-function-byte-compiled x kind name))
+       (kernel:byte-closure
+	(describe-function-byte-compiled (byte-closure-function x)
+					 kind name)
+	(format t "~&Its closure environment is:")
+	(indenting-further *standard-output* 8)
+	(let ((data (byte-closure-data x)))
+	  (dotimes (i (length data))
+	    (format t "~&~D: ~S" i (svref data i)))))
+       (t
+	 (describe-instance x :funcallable-instance))))
     (t
      (format t "~&It is an unknown type of function."))))
 
