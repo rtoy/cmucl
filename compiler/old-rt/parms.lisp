@@ -19,7 +19,7 @@
 
 ;;; Maximum number of SCs allowed.
 ;;;
-(defconstant sc-number-limit 15)
+(defconstant sc-number-limit 32)
 
 ;;; The inclusive upper bound on a cost.  We want to write cost frobbing
 ;;; code so that it is portable, but works on fixnums.  This constant should be
