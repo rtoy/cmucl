@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.9 1992/02/26 12:09:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.10 1992/03/02 02:27:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,7 +64,7 @@
     (when (> new-ptr (+ foreign-segment-start foreign-segment-size))
       (error "Not enough memory left."))
     (setf *foreign-segment-free-pointer* new-ptr)
-    (mach:gr-call* mach:vm_allocate *task-self* addr memory-needed nil)
+    (allocate-system-memory-at addr memory-needed)
     addr))
 
 #+sparc
