@@ -182,6 +182,22 @@
   (declare (type bignum-element-type x y))
   (%multiply x y))
 
+;;; %MULTIPLY-AND-ADD  --  Internal.
+;;;
+;;; This multiplies x-digit and y-digit, producing high and low digits
+;;; manifesting the result.  Then it adds the low digit, res-digit, and
+;;; carry-in-digit.  Any carries (note, you still have to add two digits at a
+;;; time possibly producing two carries) from adding these three digits get
+;;; added to the high digit from the multiply, producing the next carry digit.
+;;; Res-digit is optional since two uses of this primitive multiplies a single
+;;; digit bignum by a multiple digit bignum, and in this situation there is no
+;;; need for a result buffer accumulating partial results which is where the
+;;; res-digit comes from.
+;;;
+(defun %multiply-and-add (x-digit y-digit carry-in-digit &optional (res-digit 0))
+  (declare (type bignum-element-type x-digit y-digit res-digit carry-in-digit))
+  (%multiple-and-add x-digit y-digit carry-in-digit res-digit))
+
 ;;; %LOGNOT -- Internal.
 ;;;
 (defun %lognot (digit)
@@ -402,7 +418,7 @@
   (declare (type bignum-type a b))
   (let* ((len-a (%bignum-length a))
 	 (len-b (%bignum-length b))
-	 (len-res (max len-a len-b))
+	 (len-res (1+ (max len-a len-b)))
 	 (res (%allocate-bignum len-res)))
     (declare (type bignum-index len-a len-b len-res)) ;Test len-res for bounds?
     (subtract-bignum-loop a len-a b len-b res len-res %normalize-bignum)))
@@ -466,26 +482,21 @@
     (declare (type bignum-index len-a len-a-1 len-b len-res))
     (dotimes (i len-a)
       (declare (type bignum-index i))
-      (let ((carry 0)
+      (let ((carry-digit 0)
 	    (x (%bignum-ref a i))
 	    (k i))
-	(declare (type bignum-index k))
+	(declare (type bignum-index k)
+		 (type bignum-element-type carry-digit x))
 	(dotimes (j len-b
 		    (unless (= i len-a-1)
-		      (setf (%bignum-ref res (1+ k)) carry)))
-	  (multiple-value-bind (high-digit low-digit)
-			       (%multiply x (%bignum-ref b j))
-	    (multiple-value-bind (res-low-digit temp-carry)
-				 (%add-with-carry low-digit (%bignum-ref res k)
-						  carry)
-	      (setf (%bignum-ref res k) res-low-digit)
-	      (incf k)
-	      (multiple-value-bind (res-high-digit temp-carry)
-				   (%add-with-carry high-digit
-						    (%bignum-ref res k)
-						    temp-carry)
-		(setf (%bignum-ref res k) res-high-digit)
-		(setf carry temp-carry)))))))
+		      (setf (%bignum-ref res k) carry-digit)))
+	  (multiple-value-bind (res-digit big-carry)
+			       (%multiply-and-add x (%bignum-ref b j)
+						  (%bignum-ref res k)
+						  carry-digit)
+	    (setf (%bignum-ref res k) final-low-digit)
+	    (setf carry-digit big-carry)
+	    (incf k)))))
     (when negate-res (negate-bignum-in-place res))
     (%normalize-bignum res len-res)))
 
@@ -497,27 +508,22 @@
 	 (bignum-len (%bignum-length bignum))
 	 (fixnum (%fixnum-to-digit (if fixnum-plus-p fixnum (- fixnum))))
 	 (result (%allocate-bignum (1+ bignum-len)))
-	 (carry 0))
+	 (carry-digit 0))
     (declare (type bignum-type bignum result)
 	     (type bignum-index bignum-len)
-	     (type bignum-element-type fixnum carry))
+	     (type bignum-element-type fixnum carry-digit))
     (dotimes (index bignum-len)
       (declare (type bignum-index index))
       (multiple-value-bind
-	  (high low)
-	  (%multiply (%bignum-ref bignum index) fixnum)
-	(declare (type bignum-element-type high low))
-	(multiple-value-bind
-	    (digit new-carry)
-	    (%add-with-carry low carry 0)
-	  (declare (type bignum-element-type digit new-carry))
-	  (setf (%bignum-ref result index) digit)
-	  (setf carry (%add-with-carry high new-carry 0))))
-      (setf (%bignum-ref result bignum-len) carry))
+	  (next-digit low)
+	  (%multiply-and-add (%bignum-ref bignum index) fixnum carry-digit)
+	(declare (type bignum-element-type next-digit low))
+	(setf carry-digit next-digit)
+	(setf (%bignum-ref result index) low)))
+    (setf (%bignum-ref result bignum-len) carry-digit)
     (unless (eq bignum-plus-p fixnum-plus-p)
       (negate-bignum-in-place result))
     (%normalize-bignum result (1+ bignum-len))))
-
 
 (defun multiply-fixnums (a b)
   (declare (fixnum a b))
@@ -538,6 +544,7 @@
 	    (%bignum-set res 1 high)
 	    (unless (eq a-minusp b-minusp) (negate-bignum-in-place res))
 	    (%normalize-bignum res 2))))))
+
 
 
 ;;;; GCD.
@@ -595,8 +602,12 @@
 
 (defun bignum-gcd (a b)
   (declare (type bignum-type a b))
-  (let* ((a (if (%bignum-0-or-plusp a (%bignum-length a)) a (negate-bignum a)))
-	 (b (if (%bignum-0-or-plusp b (%bignum-length b)) b (negate-bignum b)))
+  (let* ((a (if (%bignum-0-or-plusp a (%bignum-length a))
+		a
+		(negate-bignum a nil)))
+	 (b (if (%bignum-0-or-plusp b (%bignum-length b))
+		b
+		(negate-bignum b nil)))
 	 (len-a (%bignum-length a))
 	 (len-b (%bignum-length b)))
       (declare (type bignum-index len-a len-b))
@@ -729,7 +740,12 @@
 
 ) ;EVAL-WHEN
 
-(defun negate-bignum (x)
+;;; NEGATE-BIGNUM -- Public.
+;;;
+;;; Fully-normalize is an internal optional.  It cause this to always return
+;;; a bignum, without any extraneous digits, and it never returns a fixnum.
+;;;
+(defun negate-bignum (x &optional (fully-normalize t))
   (declare (type bignum-type x))
   (let* ((len-x (%bignum-length x))
 	 (len-res (1+ len-x))
@@ -738,7 +754,9 @@
     (let ((carry (bignum-negate-loop x len-x res)))
       (setf (%bignum-ref res len-x)
 	    (%add-with-carry (%lognot (%sign-digit x len-x)) 0 carry)))
-    (%normalize-bignum res len-res)))
+    (if fully-normalize
+	(%normalize-bignum res len-res)
+	(%mostly-normalize-bignum res len-res))))
 
 ;;; NEGATE-BIGNUM-IN-PLACE -- Internal.
 ;;;
@@ -1111,35 +1129,6 @@
 
 
 ;;;; Integer length and logcount
-
-#| Original Bill code:
-
-(defun bignum-integer-length (bignum)
-  (declare (type bignum-type bignum))
-  (let* ((len (%bignum-length bignum))
-	 (len-1 (1- len))
-	 (plusp (%bignum-0-or-plusp bignum len)))
-    (if plusp
-	(let ((digit (%bignum-ref bignum len-1)))
-	  (declare (type bignum-element-type digit))
-	  (if (zerop digit)
-	      (* len-1 digit-size)
-	      (+ (* len-1 digit-size)
-		 (dotimes (i digit-size)
-		   (when (zerop digit) (return i))
-		   (setf digit (ash digit -1))))))
-	(multiple-value-bind (carry last-digit)
-			     (bignum-negate-loop bignum len)
-	  (declare (type bignum-element-type last-digit))
-	  (unless (zerop carry)
-	    (error "Unexpected non-zero negation carry."))
-	  (+ (* len-1 digit-size)
-	     (dotimes (i digit-size digit-size)
-	       (when (zerop last-digit) (return i))
-	       (setf last-digit (ash last-digit -1))))))))
-
-
-|#
 
 (defun bignum-integer-length (bignum)
   (declare (type bignum-type bignum))
@@ -1933,8 +1922,8 @@
   (declare (type bignum-type x y))
   (let* ((x-plusp (%bignum-0-or-plusp x (%bignum-length x)))
 	 (y-plusp (%bignum-0-or-plusp y (%bignum-length y)))
-	 (x (if x-plusp x (negate-bignum x)))
-	 (y (if y-plusp y (negate-bignum y)))
+	 (x (if x-plusp x (negate-bignum x nil)))
+	 (y (if y-plusp y (negate-bignum y nil)))
 	 (len-x (%bignum-length x))
 	 (len-y (%bignum-length y)))
     (multiple-value-bind
@@ -2058,33 +2047,26 @@
 (defun try-bignum-truncate-guess (guess len-y low-x-digit)
   (declare (type bignum-index low-x-digit len-y)
 	   (type bignum-element-type guess))
-  (let ((carry 0)
-	(guess*y-hold 0)
+  (let ((carry-digit 0)
 	(borrow 1)
 	(i low-x-digit))
-    (declare (type bignum-element-type guess*y-hold)
+    (declare (type bignum-element-type carry-digit)
 	     (type bignum-index i)
-	     (fixnum carry borrow))
+	     (fixnum borrow))
     ;; Multiply guess and divisor, subtracting from dividend simultaneously.
     (dotimes (j len-y)
       (multiple-value-bind (high-digit low-digit)
-			   (%multiply guess (%bignum-ref *truncate-y* j))
+			   (%multiply-and-add guess (%bignum-ref *truncate-y* j)
+					      carry-digit)
 	(declare (type bignum-element-type high-digit low-digit))
-	(multiple-value-bind (low-digit temp-carry)
-			     (%add-with-carry low-digit guess*y-hold carry)
-	  (declare (type bignum-element-type low-digit))
-	  (multiple-value-bind (high-digit temp-carry)
-			       (%add-with-carry high-digit temp-carry 0)
-	    (declare (type bignum-element-type high-digit))
-	    (setf guess*y-hold high-digit)
-	    (setf carry temp-carry)
-	    (multiple-value-bind (x temp-borrow)
-				 (%subtract-with-borrow
-				  (%bignum-ref *truncate-x* i)
-				  low-digit borrow)
-	      (declare (type bignum-element-type x))
-	      (setf (%bignum-ref *truncate-x* i) x)
-	      (setf borrow temp-borrow)))))
+	(setf carry-digit high-digit)
+	(multiple-value-bind (x temp-borrow)
+			     (%subtract-with-borrow (%bignum-ref *truncate-x* i)
+						    low-digit borrow)
+	  (declare (type bignum-element-type x)
+		   (fixnum temp-borrow))
+	  (setf (%bignum-ref *truncate-x* i) x)
+	  (setf borrow temp-borrow)))
       (incf i))
     (setf (%bignum-ref *truncate-x* i)
 	  (%subtract-with-borrow (%bignum-ref *truncate-x* i)
@@ -2556,3 +2538,19 @@
 	      (%fixnum-digit-with-correct-sign digit)
 	      result))
 	result)))
+
+;;; %MOSTLY-NORMALIZE-BIGNUM -- Internal.
+;;;
+;;; This drops the last digit if it is unnecessary sign information.  It
+;;; repeats this as needed, possibly ending with a fixnum magnitude but never
+;;; returning a fixnum.
+;;;
+(defun %mostly-normalize-bignum (result len)
+  (declare (type bignum-type result)
+	   (type bignum-index len)
+	   #+nil(inline %normalize-bignum-buffer))
+  (let ((newlen (%normalize-bignum-buffer result len)))
+    (declare (type bignum-index newlen))
+    (unless (= newlen len)
+      (%bignum-set-length result newlen))
+    result))
