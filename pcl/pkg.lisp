@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.28 2003/06/17 09:45:40 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.29 2003/07/28 10:43:15 gerd Rel $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -92,7 +92,8 @@
 	   "WITH-SLOTS"
 	   )
 
-  (:export "SEAL" "UNSEAL" "SEALED-ERROR")
+  (:export "SEAL" "UNSEAL" "SEALED-ERROR"
+	   "*MAX-EMF-PRECOMPUTATION-METHODS*")
 
   ;; Function names.
   (:export "EFFECTIVE-METHOD" "FAST-METHOD" "SLOT-ACCESSOR"

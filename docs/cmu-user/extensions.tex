@@ -2187,6 +2187,31 @@ provided for forcing such an update of effective methods.
 
 
 
+\subsection{Effective Method Precomputation}
+\cpsubindex{effective method}{precomputation}
+\cpsubindex{methods}{load time}
+\cpsubindex{methods}{emf precomputation}
+
+When a generic function is called, the generic function's
+discriminating function computes the set of methods applicable to
+actual arguments and constructs an effective method function from
+applicable methods, using the generic function's method combination.
+
+Effective methods can be precomputed at method load time instead of
+when the generic function is called by setting
+\code{pcl:*max-emf-precomputation-methods*} to a nonzero number.
+
+\begin{defvar}{pcl:}{*max-emf-precomputation-methods*}
+  If nonzero, precompute effective methods when methods are loaded,
+  and the method's generic function has less than the specified
+  number of methods.
+  
+  If zero, the default, compute effective methods only when the
+  generic function is called.
+\end{defvar}
+
+
+
 \subsection{Sealing}
 \cindex{sealing}
 \cpsubindex{sealing}{subclasses}
