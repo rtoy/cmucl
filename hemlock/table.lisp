@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.2 1991/02/08 16:38:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.3 1991/04/23 11:53:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,7 @@
 
 (defparameter initial-string-table-size 20
   "Initial size of string table array for value nodes.")
-(defparameter initial-word-table-size 10
+(defparameter initial-word-table-size 2
   "Inital size of each word table array for each tree node.")
 
 (defstruct (string-table
