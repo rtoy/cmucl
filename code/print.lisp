@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.45 1992/08/13 12:53:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.46 1992/12/06 20:17:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1720,7 +1720,11 @@
 	(t
 	 (write-string "Closure Over " stream)
 	 (output-function-object (%primitive c::closure-function function)
-				 stream)))))))
+				 stream))))
+      (#.vm:dylan-function-header-type
+       (write-string "Dylan Function" stream))
+      (t
+       (write-string "Unknown Function" stream)))))
 
 
 ;;;; Catch-all for unknown things.
