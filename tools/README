@@ -1,0 +1,409 @@
+Building CMU CL (Version 2.4)
+=============================
+
+So now you've downloaded the set of scripts that I use to compile and
+maintain CMU CL, this README is intended to give you a general
+overview of the build process (i.e. what needs to be done, in what
+order, and what is it generally called).  It will also tell you how to
+set up a suitable build environment, how the individual scripts fit
+into the general scheme of things, and give you a couple of examples.
+
+General Requirements
+--------------------
+
+In order to build CMU CL, you will need:
+
+a) A working CMU CL binary.  There is no way around this requirement!
+
+   This binary can either be for the platform you want to target, in
+   that case you can either recompile or cross-compile, or for another
+   supported platform, in that case you must cross-compile, obviously.
+
+b) A supported C compiler for the C runtime code.
+
+   Most of the time, this means GNU gcc, though for some ports it
+   means the vendor-supplied C compiler.  The compiler must be
+   available under the name specified by your ports Config file.
+
+c) GNU make
+
+   This has to be available either as gmake or make in your PATH, or
+   the MAKE environment variable has to be set to point to the correct
+   binary.
+
+d) The CMU CL source code
+
+   Here you can either use one of the release source tarballs, or
+   check out the source code directly from the public CMUCL CVS
+   repository.
+
+If you want to build CMU CL's Motif interface/toolkit, you'll need a
+working version of the Motif libraries, either true-blue OSF/Motif, or
+OpenMotif, or Lesstif.  The code was developed against 1.2 Motif,
+though recompilation against 2.x Motif probably works as well.
+
+Setting up a build environment
+------------------------------
+
+1.) Create a base directory and change to it
+
+    mkdir cmucl ; cd cmucl
+
+2.) Extract/move the build tools into that directory
+
+    tar xzf /tmp/build-tools.tgz
+
+3.) Fetch the sources and put them into the base directory
+
+    tar xzf /tmp/cmucl-18d.source.tar.gz
+
+    or, if you want to use the CVS sources directly:
+
+    export CVSROOT=:pserver:anonymous@cvs2.cons.org:/home/anoncvs/CVS-cmucl
+    cvs login  (password is `anonymous')
+    cvs co src
+
+    Whatever you do, the sources must be in a directory named src
+    inside the base directory.  Since the build tools keep all
+    generated files in separate target directories, the src directory
+    can be read-only (e.g. mounted read-only via NFS, etc.)
+
+That's it, you are now ready to build CMU CL.
+
+
+A general outline of the build process
+--------------------------------------
+
+Building CMU CL can happen in one of two ways:  Normal recompilation,
+and cross-compilation.  We'll first look at normal recompilation:
+
+The recompilation process basically consists of 4 phases/parts:
+
+a) Compiling the lisp files that make up the standard kernel.
+
+   This happens in your current CMU CL process, using your current
+   CMU CL's normal file compiler.  This phase currently consists of 3
+   sub-phases, namely those controlled by src/tools/worldcom.lisp,
+   which compiles all the runtime files, src/tools/comcom.lisp, which
+   compiles the compiler (including your chosen backend), and finally
+   src/tools/pclcom.lisp, which compiles PCL, CMU CL's CLOS
+   implementation.  The whole phase is often called "world-compile",
+   or "compiling up a world", based on the name of the first
+   sub-phase.
+
+b) Building a new kernel.core file out of the so created files
+
+   This process, which is generally called genesis, and which is
+   controlled by src/tools/worldbuild.lisp, uses the newly compiled
+   files in order to build a new, basic core file, which is then used
+   by the last phase to create a fully functional normal core file.
+   It does this by "loading" the compiled files into an in-core
+   representation of a new core file, which is then dumped out to
+   disk, together with lots of fixups that need to happen once the new
+   core is started.
+
+   As part of this process, it also creates the file internals.h,
+   which contains information about the general memory layout of the
+   new core and its basic types, their type tags, and the location of
+   several important constants and other variables, that are needed by
+   the C runtime code to work with the given core.
+
+   So going through genesis is needed to create internals.h, which is
+   needed to compile the C runtime code (i.e. the "lisp" binary).
+   However there is a slight circularity here, since genesis needs as
+   one of its inputs the file target:lisp/lisp.nm, which contains the
+   (slightly pre-treated) output of running nm on the new lisp
+   binary.  Genesis uses this information to fixup the addresses of C
+   runtime support functions for calls from Lisp code.
+
+   However the circularity isn't complete, since genesis can work with
+   an empty/bogus lisp.nm file.  While the kernel.core it then
+   produces is unusable, it will create a usable internals.h file,
+   which can be used to recompile the C runtime code, producing a
+   usable lisp.nm file, which in turn can be used to restart genesis,
+   producing a working kernel.core file.
+
+   Genesis also checks whether the newly produced internals.h file
+   differs from a pre-existing internals.h file (this might be caused
+   by an empty internals.h file if you are rebuilding for the first
+   time, or by changes in the lisp sources that cause differences in
+   the memory layout of the kernel.core), and informs you of this, so
+   that you can recompile the C runtime code, and restart genesis.
+
+   If it doesn't inform you of this, you can skip directly to the last
+   phase d).
+
+c) Recompiling the C runtime code, producing the "lisp" binary file
+
+   This step is only needed if you haven't yet got a suitable lisp
+   binary, or if the internals.h file has changed during genesis (of
+   which genesis informs you), or when you made changes to the C
+   sources that you want to take effect.
+
+   Recompiling the C runtime code is controlled by a GNU Makefile, and
+   your target's Config file.  It depends on a correct internals.h
+   file as produced by genesis.
+
+   Note that whenever you recompile the runtime code, for whatever
+   reason, you must redo phase b).  Note that if you make changes to
+   the C sources and recompile because of this, you can do that before
+   Phase b), so that you don't have to perform that phase twice.
+
+d) Populating the kernel.core, and dumping a new lisp.core file.
+
+   In this phase, which is controlled by src/tools/worldload.lisp, and
+   hence often called world-load, the kernel.core file is started up
+   using the (possibly new) lisp binary, the remaining files which
+   were compiled in phase a) are loaded into it, and a new lisp.core
+   file is dumped out.
+
+When cross-compiling, there is additional phase at the beginning, and
+some of the phases happen with different hosts/platforms.  The initial
+phase is setting up and compiling the cross-compilation backend, using
+your current compiler.  The new backend is then loaded, and all
+compilation in phase a) happens using this compiler backend.  The
+creation of the kernel.core file in phase b) happens as usual, while
+phase c) of course happens on the target platform (if that differs
+from the host platform), as does the final phase d).  Another major
+difference is that you can't compile PCL using the cross-compiler, so
+one usually does a normal rebuild using the cross-compiled core on the
+target platform to get a full CMU CL core.
+
+So, now you know all about CMU CL compilation, how does that map onto
+the scripts included with this little text?
+
+Overview of the included build scripts
+--------------------------------------
+
+* create-target.sh target-directory lisp-variant [motif-variant]
+
+This script creates a new target directory, which is a shadow of the
+source directory, that will contain all the files that are created by
+the build process.  Thus each target's files are completely separate
+from the src directory, which could, in fact, be read-only.  Hence you
+can simultaneously build CMUCL for different targets from the same
+source directory.
+
+The arguments are the name of the target directory to create, the
+lisp-variant (i.e. the suffix of the src/lisp/Config.* to use as the
+target's Config file), and optionally the motif-variant (again the
+suffix of the src/motif/server/Config.* file to use as the Config file
+for the target's CMUCL/Motif server code).
+
+The script will generate the target directory tree, link the relevant
+Config files, and generate place-holder files for various files, in
+order to ensure proper operation of the other build-scripts.  It also
+creates a sample setenv.lisp file in the target directory, which is
+used by the build and load processes to set up the correct list of
+*features* for your target lisp core.
+
+IMPORTANT:  You will normally have to modify the sample setenv.lisp
+file, to include code that puts at least a minimal set of features
+onto the list (use PUSHNEW and/or REMOVE).  You can use the current
+set of *features* of your lisp as a first guide.  The sample
+setenv.lisp includes a set of features that should work for
+Linux/x86.
+
+* clean-target.sh target-directory
+
+Cleans the given target directory, so that all created files will be
+removed.  This is useful to force recompilation.
+
+* build-world.sh target-directory [build-binary] [build-flags...]
+
+Starts a complete world build for the given target, using the lisp
+binary/core specified as a build host.  The recompilation step will
+only recompile changed files, or files for which the fasl files are
+missing.  It will also not recompile the C runtime code (the lisp
+binary).  If a (re)compilation of that code is needed, the genesis
+step of the world build will inform you of that fact.  In that case,
+you'll have to use the rebuild-lisp.sh script, and then restart the
+world build process with build-world.sh
+
+* rebuild-lisp.sh target-directory
+
+This script will force a complete recompilation of the C runtime code
+of CMU CL (aka the lisp executable).  Doing this will necessitate
+building a new kernel.core file, using build-world.sh.
+
+* load-world.sh target-directory version
+
+This will finish the CMU CL rebuilding process, by loading the
+remaining compiled files generated in the world build process into the
+kernel.core file, that also resulted from that process, creating the
+final lisp.core file.
+
+You have to pass the version string as a second argument.  The dumped
+core will anounce itself using that string.  Please don't use a string
+consisting of an official release name only, (e.g. "18d"), since those
+are reserved for official release builds.  Including the build-date in
+ISO8601 format is often a good idea, e.g. "18d+ 2002-05-06" for a
+binary that is based on sources current on the 6th May, 2002, which is
+post the 18d release.
+
+* build-utils.sh target-directory
+
+This script will build auxiliary libraries packaged with CMU CL,
+including CLX, CMUCL/Motif, the Motif debugger, inspector, and control
+panel, and the Hemlock editor.  It will use the lisp executable and
+core of the given target.
+
+* make-dist.sh target-directory version arch os
+
+This script creates both main and extra distribution tarballs from the
+given target directory, using the make-main-dist.sh and
+make-extra-dist.sh scripts.
+
+* make-main-dist.sh target-directory version arch os
+
+This script creates a main distribution tarball (both in gzipped and
+bzipped variants) from the given target directory.  This will include
+all the stuff that is normally included in official release tarballs.
+
+* make-extra-dist.sh target-directory version arch os
+
+This script creates an extra distribution tarball (both in gzipped and
+bzipped variants) from the given target directory.  This will include
+all the stuff that is normally included in official extra release
+tarballs, i.e. the auxiliary libraries.
+
+* cross-build-world.sh target-directory cross-directory cross-script 
+                       [build-binary] [build-flags...]
+
+This is a script that can be used instead of build-world.sh for
+cross-compiling CMUCL.  In addition to the arguments of build-world.sh
+it takes two further required arguments:  The name of a directory that
+will contain the cross-compiler backend (the directory is created if
+it doesn't exist, and must not be the same as the target-directory),
+and the name of a Lisp cross-compilation script, which is responsible
+for setting up, compiling, and loading the cross-compiler backend.
+The latter argument is needed because each host/target combination of
+platform's needs slightly different code to produce a working
+cross-compiler.
+
+We include a number of working examples of cross-compiler scripts in
+the cross-scripts directory.  You'll have to edit the features section
+of the given scripts, to specify the features that should be removed
+from the current set of features in the host lisp, and those that
+should be added, so that the backend features are correct for the
+intended target.
+
+You can look at Eric Marsden's collection of build scripts for the
+basis of more cross-compiler scripts.
+
+Step-by-Step Example of recompiling CMUCL for OpenBSD
+-----------------------------------------------------
+
+Set up everything as described in the setup section above. Then
+execute:
+
+# Create a new target directory structure/config for OpenBSD:
+./create-target.sh openbsd OpenBSD_gencgc OpenBSD
+
+# edit openbsd/setenv.lisp to contain what we want:
+cat <<EOF > openbsd/setenv.lisp
+;;; Put code to massage *features* list here...
+
+(in-package :user)
+
+(pushnew :openbsd *features*)
+(pushnew :bsd *features*)
+(pushnew :i486 *features*)
+(pushnew :mp *features*)
+(pushnew :hash-new *features*)
+(pushnew :random-mt19937 *features*)
+(pushnew :conservative-float-type *features*)
+(pushnew :gencgc *features*)
+
+;;; Version tags
+
+(pushnew :cmu18d *features*)
+(pushnew :cmu18 *features*)
+(setf *features* (remove :cmu17 *features*))
+(setf *features* (remove :cmu18c *features*))
+EOF
+
+# Recompile the lisp world, and dump a new kernel.core:
+./build-world.sh openbsd lisp # Or whatever you need to invoke your 
+                              # current lisp binary+core
+
+# If build-world tells you (as it will the first time) that:
+# "The C header file has changed. Be sure to re-compile the startup
+# code."
+# You 'll need to start rebuild-lisp.sh to do that, and then reinvoke
+# build-world.sh:
+
+# Recompile lisp binary itself:
+./rebuild-lisp.sh openbsd
+
+# Restart build-world.sh now:
+./build-world.sh openbsd lisp
+
+# Now we populate the kernel.core with further compiled files,
+# and dump the final lisp.core file:
+
+./load-world.sh openbsd "18d+ 2002-05-06"
+
+# The second argument above is the version number that the built
+# core will announce.  Please always put the build-date and some
+# other information in there, to make it possible to differentiate
+# those builds from official builds, which only contain the release.
+
+Now you should have a new lisp.core, which you can start with
+
+./openbsd/lisp/lisp -core ./openbsd/lisp/lisp.core -noinit -nositeinit
+
+Compiling sources that contain disruptive changes
+-------------------------------------------------
+
+The above instructions should always work as-is for recompiling CMU CL
+using matching binaries and source files.  They also work quite often
+when recompiling newer sources.  However, every so often, some change
+to the CMU CL sources necessitates some form of bootstrapping, so that
+binaries built from earlier sources can compile the sources containing
+that change.  There are two forms of boostrapping that can be
+required:
+
+a) Bootfiles
+
+   The maintainers try to make bootfiles available, that allow going
+   from an old release to the next release.  These are located in the
+   src/bootfiles/<old-release>/ directory of the CMU CL sources.
+
+   I.e. if you have binaries that match release 18d, then you'll need
+   to use all the bootfiles in src/bootfiles/18d/ in order to go to
+   the next release (or current sources, if no release has been made
+   yet).  If you already used some of the bootstrap files to compile
+   your current lisp, you obviously don't need to use those to get to
+   later versions.
+
+   You can use the bootfiles by concatenating them into a file called
+   bootstrap.lisp in the target directory (i.e. target:bootstrap.lisp)
+   in the order they are numbered.  Be sure to remove the bootstrap
+   file once it is no longer needed.
+
+
+b) Cross-compiling
+
+   Under certain rare circumstances (i.e. hasn't happened since before
+   18c), bootstrap code will not be sufficient, and a cross-compilation
+   is needed.  In that case you will have to use cross-build-world.sh,
+   instead of build-world.sh.  Please read the instructions of that
+   script for details of the more complex procedure.
+
+   << This isn't really true anymore, and we should place a more
+      elaborate description of the cross-compiling process here >>
+
+   When cross-compiling, there are two sorts of bootscripts that can be
+   used:  Those that want to be executed prior to compiling and loading
+   the cross-compiler, which should be placed in the file called
+   target:cross-bootstrap.lisp, and those that should happen after the
+   cross-compiler has been compiled and loaded, just prior to compiling
+   the target, which should be placed in target:bootstrap.lisp, just
+   like when doing a normal recompile.
+
+   Additionally, sometimes customized cross-compiler setup scripts
+   (to be used in place of e.g. cross-x86-x86.lisp) are required,
+   which are also placed in one of the bootfiles/*/* files.  In those
+   cases follow the instructions provided in that file, possibly merging
+   the changed contents thereof with your normal cross-script.
