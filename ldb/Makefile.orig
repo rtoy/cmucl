@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.9 1990/05/10 17:50:58 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.10 1990/05/12 16:41:10 ch Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -40,6 +40,8 @@ assem.o: assem.s
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
 	@false
+
+depend: depends
 
 depends:
 	rm -f Makefile.BAK
@@ -122,6 +124,8 @@ parse.o: globals.h
 parse.o: lisp.h
 parse.o: vars.h
 parse.o: parse.h
+parse.o: interrupt.h
+parse.o: lispregs.h
 print.o: print.c
 print.o: ldb.h
 print.o: print.h
