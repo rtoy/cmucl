@@ -8,7 +8,7 @@ ASFLAGS = -g
 UNDEFSYMPATTERN=-u &
 ASSEM_SRC = hppa-assem.S
 ARCH_SRC = hppa-arch.c
-OS_SRC = mach-os.c os-common.c
+OS_SRC = mach-os.c os-common.c undefineds.c
 OS_LINK_FLAGS=
 OS_LIBS=-lmach -lthreads
 

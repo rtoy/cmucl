@@ -13,7 +13,7 @@
  * Much hacked by Paul Werkowski
  * Morfed from the FreeBSD file by Peter Van Eynde (July 1996)
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.1 1997/01/21 00:28:13 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.2 1997/06/07 15:25:38 pw Exp $
  *
  */
 
@@ -85,7 +85,11 @@ __setfpucw(0x1372|4|8|16|32); /*no interrupts */
 }
 
 int
+#if LINUX_VERSION_CODE >= linuxversion(2,1,0)
+sc_reg(struct sigcontext *c, int offset)
+#else
 sc_reg(struct sigcontext_struct *c, int offset)
+#endif
 {
   switch(offset)
     {

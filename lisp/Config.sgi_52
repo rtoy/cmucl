@@ -15,6 +15,6 @@ NM = irix-nm
 UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
 ASSEM_SRC = mips-assem.S
 ARCH_SRC = mips-arch.c
-OS_SRC = irix-os.c os-common.c
+OS_SRC = irix-os.c os-common.c undefineds.c
 OS_LINK_FLAGS= -non_shared
 OS_LIBS=

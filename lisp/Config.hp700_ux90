@@ -8,7 +8,7 @@ ASFLAGS = -O -DNEW_FORMAT
 UNDEFSYMPATTERN=-u &
 ASSEM_SRC = hppa-assem.S
 ARCH_SRC = hppa-arch.c
-OS_SRC = hpux-os.c
+OS_SRC = hpux-os.c undefineds.c
 OS_LINK_FLAGS= -Wl,-a,archive
 OS_LIBS= -lBSD /lib/pa1.1/libm.a
 

@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.17 1997/05/05 23:13:59 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.18 1997/06/07 15:25:41 pw Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -75,9 +75,7 @@ mknod,
 mount,
 open,
 pipe,
-#ifndef __linux__
 profil,
-#endif
 ptrace,
 #ifdef mach
 quota,
@@ -110,7 +108,7 @@ setpgrp,
 #if !defined(SVR4) ||  defined(SOLARIS25)
 setpriority,
 #endif
-#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(__linux__) && !defined(SUNOS) && !defined(osf1) && !defined(irix)
+#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix)
 setquota,
 #endif
 #if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
@@ -130,10 +128,8 @@ sigreturn,
 #endif
 #if !defined(SVR4) && !defined(__FreeBSD__)
 sigsetmask,
-#ifndef __linux__
 sigstack,
 sigvec,
-#endif
 #endif
 socket,
 socketpair,
@@ -144,7 +140,7 @@ swapon,
 symlink,
 sync,
 syscall,
-#if defined(__linux__) || defined(hpux) || defined(SVR4)
+#if defined(hpux) || defined(SVR4)
 closedir,
 opendir,
 readdir,
@@ -211,14 +207,14 @@ gethostbyname,
 gethostbyaddr,
 
 /* Other random things. */
-#if defined(SVR4) || defined(__linux__)
+#if defined(SVR4) 
 setpgid,
 getpgid,
 timezone,
 altzone,
 daylight,
 tzname,
-#if !defined(__linux__) && !defined (irix)
+#if !defined (irix)
 dlopen,
 dlsym,
 dlclose,

@@ -9,6 +9,6 @@ NM = alpha-nm
 UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
 ASSEM_SRC = alpha-assem.S
 ARCH_SRC = alpha-arch.c
-OS_SRC = osf1-os.c os-common.c
+OS_SRC = osf1-os.c os-common.c undefineds.c
 OS_LINK_FLAGS=-static
 OS_LIBS=
