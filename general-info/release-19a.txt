@@ -184,6 +184,7 @@ New in this release:
        all cases of *print-base* and *print-radix*.
      - Symbol printer should print better with unusual settings of
        *print-case* and friends.
+     - Stream element-type can go up to 1024 bits.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
