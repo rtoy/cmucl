@@ -1098,6 +1098,11 @@ cmucl(1).  Currently Lisp accepts the following switches:
   \item[\code{-batch}] specifies batch mode, where all input is
     directed from standard-input.  An error code of 0 is returned upon
     encountering an EOF and 1 otherwise.
+  \item[\code{-quiet}] enters quiet mode. This implies setting the
+  variables \code{*load-verbose*}, \code{*compile-verbose*},
+  \code{*compile-print*}, \code{*compile-progress*},
+  \code{*require-verbose*} and \code{*gc-verbose*} to NIL, and
+  disables the printing of the startup banner.
   \end{changebar}
 \item[\code{-core}] requires an argument that should be the name of a
   core file.  Rather than using the default core file
