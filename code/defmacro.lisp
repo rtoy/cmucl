@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.19 1996/05/08 13:24:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,10 @@
 (defvar *default-default* nil
   "Unsupplied optional and keyword arguments get this value defaultly.")
 
+;; Temps that we introduce and might not reference.
+(defvar *ignorable-vars*)
+  
+
 
 ;;;; Stuff to parse DEFMACRO, MACROLET, DEFINE-SETF-METHOD, and DEFTYPE.
 
@@ -51,7 +55,8 @@
 		       (parse-body code nil doc-string-allowed)
     (let* ((*arg-tests* ())
 	   (*user-lets* ())
-	   (*system-lets* ()))
+	   (*system-lets* ())
+	   (*ignorable-vars* ()))
       (multiple-value-bind
 	  (env-arg-used minimum maximum)
 	  (parse-defmacro-lambda-list lambda-list arg-list-name name
@@ -59,13 +64,14 @@
 				      nil env-arg-name)
 	(values
 	 `(let* ,(nreverse *system-lets*)
+	   ,@(when *ignorable-vars*
+	       `((declare (ignorable ,@*ignorable-vars*))))
 	    ,@*arg-tests*
 	    (let* ,(nreverse *user-lets*)
 	      ,@declarations
 	      ,@body))
-	 (if (and env-arg-name (not env-arg-used))
-	     `((declare (ignore ,env-arg-name)))
-	     nil)
+	 `(,@(when (and env-arg-name (not env-arg-used))
+	       `((declare (ignore ,env-arg-name)))))
 	 documentation
 	 minimum
 	 maximum)))))
@@ -156,6 +162,7 @@
 	      ((eq var '&key)
 	       (setf now-processing :keywords)
 	       (setf rest-name (gensym "KEYWORDS-"))
+	       (push rest-name *ignorable-vars*)
 	       (setf restp t)
 	       (push-let-binding rest-name path t))
 	      ((eq var '&allow-other-keys)
