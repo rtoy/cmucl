@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.28 1991/06/10 16:30:12 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.29 1991/06/10 16:33:43 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,7 @@
 (setf (ext:search-list "hem:") '("lisp:hemlock/"))
 (setf (ext:search-list "clx:") '("lisp:clx/"))
 (setf (ext:search-list "pcl:") '("lisp:pcl/"))
+(setf (ext:search-list "tools:") '("lisp:tools/"))
 
 ;;; This must be here, because it's where assert-user-package is defined.
 (load "code:save")
@@ -112,7 +113,7 @@
 ;;; Hemlock.
 ;;;
 #-no-hemlock
-(load "hem:hemload.lisp")
+(load "tools:hemload.lisp")
 #-no-hemlock
 (load "hem:rompsite") ;Contains site-init stuff called at load time.
 #-no-hemlock
