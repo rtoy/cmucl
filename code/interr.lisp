@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.6 1990/06/09 00:55:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.7 1990/08/12 00:40:55 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -97,13 +97,45 @@
 
 
 (defmacro deferr (name description args &rest body)
-  `(%deferr ',name
-	    ,(meta-error-number name)
-	    ,description
-	    #'(lambda ,args
-		,@body)))
+  (let* ((rest-pos (position '&rest args))
+	 (required (if rest-pos (subseq args 0 rest-pos) args))
+	 (fp (gensym))
+	 (sigcontext (gensym))
+	 (sc-offsets (gensym))
+	 (temp (gensym)))
+    `(%deferr ',name
+	      ,(meta-error-number name)
+	      ,description
+	      #'(lambda (name ,fp ,sigcontext ,sc-offsets)
+		  (macrolet ((set-value (var value)
+			       (let ((pos (position var ',required)))
+				 (unless pos
+				   (error "~S isn't one of the required args."
+					  var))
+				 `(let ((,',temp ,value))
+				    (di::sub-set-debug-var-slot
+				     ,',fp (nth ,pos ,',sc-offsets)
+				     ,',temp ,',sigcontext)
+				    (setf ,var ,',temp)))))
+		    (let (,@(let ((offset -1))
+			      (mapcar #'(lambda (var)
+					  `(,var (di::sub-access-debug-var-slot
+						  ,fp
+						  (nth ,(incf offset)
+						       ,sc-offsets)
+						  ,sigcontext)))
+				      required))
+			  ,@(when rest-pos
+			      `((,(nth (1+ rest-pos) args)
+				 (mapcar #'(lambda (sc-offset)
+					     (di::sub-access-debug-var-slot
+					      ,fp
+					      sc-offset
+					      ,sigcontext))
+					 (nthcdr ,rest-pos ,sc-offsets))))))
+		      ,@body))))))
 
-)
+) ; Eval-When (Compile Eval)
 
 (defun %deferr (name number description function)
   (when (>= number (length *internal-errors*))
@@ -116,7 +148,7 @@
 			 :function function))
   name)
 
-) ; Eval-When (Compile Load Eval)
+
 
 
 (deferr unknown-error
@@ -126,8 +158,8 @@
 
 (deferr object-not-function-error
   "Object is not of type FUNCTION."
-  (&rest args)
-  (error "object-not-function:~{ ~S~}" args))
+  (object)
+  (error "Expected a function, but got: ~S" object))
 
 (deferr object-not-list-error
   "Object is not of type LIST."
@@ -246,8 +278,8 @@
 
 (deferr invalid-argument-count-error
   "Invalid argument count."
-  (&rest args)
-  (error "invalid-argument-count:~{ ~S~}" args))
+  (nargs)
+  (error "Invalid number of arguments: ~S" nargs))
 
 (deferr bogus-argument-to-values-list-error
   "Bogus argument to VALUES-LIST."
@@ -419,22 +451,74 @@
 				    (alien-value sc))))
 			 4
 			 0)))
-	   #+nil (bad-inst (sap-ref-32 pc 0))
 	   (number (sap-ref-8 pc 4))
-	   (info (svref *internal-errors* number))
-	   (args nil))
-      (do ((ptr (sap+ pc 5) (sap+ ptr 1)))
-	  ((zerop (sap-ref-8 ptr 0)))
-	(without-gcing
-	 (push (di::make-lisp-obj
-		(alien-access (mach:int-array-ref (alien-value regs)
-						  (sap-ref-8 ptr 0))))
-	       args)))
-      (error 'simple-error
-	     :format-string "~A [~D]:~{ ~S~}"
-	     :format-arguments (list (if info
-					 (error-info-description info)
-					 "Unknown error")
-				     number
-				     (nreverse args))
-	     :function-name (find-interrupted-name)))))
+	   (name (find-interrupted-name)))
+      (cond ((= number 255)
+	     (let* ((length (sap-ref-8 pc 5))
+		    (vector (make-array length
+					:element-type '(unsigned-byte 8))))
+	       (copy-from-system-area pc (* vm:byte-bits 6)
+				      vector (* vm:word-bits
+						vm:vector-data-offset)
+				      (* length vm:byte-bits))
+	       (let* ((index 0)
+		      (error-number (c::read-var-integer vector index))
+		      (info (and (< -1 error-number (length *internal-errors*))
+				 (svref *internal-errors* error-number)))
+		      (fp (int-sap (di::escape-register (alien-value sc)
+							c::fp-offset))))
+		 (collect ((sc-offsets))
+		   (loop
+		     (when (>= index length)
+		       (return))
+		     (sc-offsets (c::read-var-integer vector index)))
+		   (cond ((null info)
+			  (error 'simple-error
+				 :function-name name
+				 :format-string
+				 "Unknown internal error, ~D?  args=~S"
+				 :format-arguments
+				 (list error-number
+				       (mapcar
+					#'(lambda (sc-offset)
+					    (di::sub-access-debug-var-slot
+					     fp
+					     sc-offset
+					     (alien-value sc)))
+					(sc-offsets)))))
+			 ((null (error-info-function info))
+			  (error 'simple-error
+				 :function-name name
+				 :format-string
+				 "Internal error ~D: ~A.  args=~S"
+				 :format-arguments
+				 (list error-number
+				       (error-info-description info)
+				       (mapcar
+					#'(lambda (sc-offset)
+					    (di::sub-access-debug-var-slot
+					     fp
+					     sc-offset
+					     (alien-value sc)))
+					(sc-offsets)))))
+			 (t
+			  (funcall (error-info-function info)
+				   name fp (alien-value sc) (sc-offsets))))))))
+	    (t
+	     (let ((info (svref *internal-errors* number))
+		   (args nil))
+	       (do ((ptr (sap+ pc 5) (sap+ ptr 1)))
+		   ((zerop (sap-ref-8 ptr 0)))
+		 (without-gcing
+		  (push (di::make-lisp-obj
+			 (alien-access (mach:int-array-ref (alien-value regs)
+							   (sap-ref-8 ptr 0))))
+			args)))
+	       (error 'simple-error
+		      :format-string "~A [~D]:~{ ~S~}"
+		      :format-arguments (list (if info
+						  (error-info-description info)
+						  "Unknown error")
+					      number
+					      (nreverse args))
+		      :function-name name)))))))
