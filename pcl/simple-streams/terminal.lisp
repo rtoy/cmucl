@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/terminal.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/terminal.lisp,v 1.2 2003/06/26 13:27:43 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,23 +25,26 @@
   (with-stream-class (terminal-simple-stream stream)
     (when (getf options :input-handle)
       (setf (sm input-handle stream) (getf options :input-handle))
-      (add-stream-instance-flags stream :simple :interactive :dual :input)
+      (add-stream-instance-flags stream :simple :dual :input)
+      (when (unix:unix-isatty (sm input-handle stream))
+	(add-stream-instance-flags stream :interactive))
       (unless (sm buffer stream)
         (let ((length (device-buffer-length stream)))
-          (setf (sm buffer stream) (make-string length)
+          (setf (sm buffer stream) (allocate-buffer length)
                 (sm buf-len stream) length)))
       (setf (sm control-in stream) *terminal-control-in-table*))
     (when (getf options :output-handle)
       (setf (sm output-handle stream) (getf options :output-handle))
-      (add-stream-instance-flags stream :simple :interactive :dual :output)
+      (add-stream-instance-flags stream :simple :dual :output)
       (unless (sm out-buffer stream)
         (let ((length (device-buffer-length stream)))
           (setf (sm out-buffer stream) (make-string length)
                 (sm max-out-pos stream) length)))
       (setf (sm control-out stream) *std-control-out-table*))
-    (install-dual-channel-character-strategy
-     stream (getf options :external-format :default)))
-  #| do something |#
+    (let ((efmt (getf options :external-format :default)))
+      (compose-encapsulating-streams stream efmt)
+      (install-dual-channel-character-strategy
+       (melding-stream stream) efmt)))
   stream)
 
 (defmethod device-read ((stream terminal-simple-stream) buffer
@@ -50,4 +53,10 @@
     (if (= result -1) -2 result)))
 
 (defmethod device-clear-input ((stream terminal-simple-stream) buffer-only)
-  )
+  (unless buffer-only
+    (let ((buffer (allocate-buffer lisp::bytes-per-buffer)))
+      (unwind-protect
+	   (loop until (<= (read-octets stream buffer
+					0 lisp::bytes-per-buffer nil)
+			   0))
+	(free-buffer buffer)))))

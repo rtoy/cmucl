@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/file.lisp,v 1.4 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,20 +15,37 @@
 
 (export '(file-simple-stream mapped-file-simple-stream probe-simple-stream))
 
+(def-stream-class file-simple-stream (single-channel-simple-stream)
+  ((pathname :initform nil :initarg :pathname)
+   (filename :initform nil :initarg :filename)
+   (original :initform nil :initarg :original)
+   (delete-original :initform nil :initarg :delete-original)))
+
 (def-stream-class mapped-file-simple-stream (file-simple-stream
 					     direct-simple-stream)
   ())
 
 (def-stream-class probe-simple-stream (simple-stream)
-  ())
+  ((pathname :initform nil :initarg :pathname)))
+
+(defmethod print-object ((object file-simple-stream) stream)
+  (print-unreadable-object (object stream :type nil :identity nil)
+    (with-stream-class (file-simple-stream object)
+      (cond ((not (any-stream-instance-flags object :simple))
+	   (princ "Invalid " stream))
+	  ((not (any-stream-instance-flags object :input :output))
+	   (princ "Closed " stream)))
+      (format stream "~:(~A~) for ~S"
+	      (type-of object) (sm filename object)))))
 
 (defun open-file-stream (stream options)
   (let ((filename (getf options :filename))
 	(direction (getf options :direction :input))
 	(if-exists (getf options :if-exists))
-	(if-exists-given (not (getf options :if-exists t)))
+	(if-exists-given (not (eq (getf options :if-exists t) t)))
 	(if-does-not-exist (getf options :if-does-not-exist))
-	(if-does-not-exist-given (not (getf options :if-does-not-exist t))))
+	(if-does-not-exist-given
+			     (not (eq (getf options :if-does-not-exist t) t))))
     (with-stream-class (file-simple-stream stream)
       (ecase direction
 	(:input (add-stream-instance-flags stream :input))
@@ -62,7 +79,9 @@
 		   (lambda ()
 		     (unix:unix-close fd)
 		     (format *terminal-io* "~&;;; ** closed ~S (fd ~D)~%"
-			     namestring fd)))
+			     namestring fd)
+		     (when original
+		       (lisp::revert-file namestring original))))
 		 stream)))))))
 
 
@@ -82,56 +101,60 @@
       ;;   issue."
       (unless (sm buffer stream)
 	(let ((length (device-buffer-length stream)))
-	  ;; Buffer should be array of (unsigned-byte 8), in general
-	  ;; use strings for now so it's easy to read the content...
-	  (setf (sm buffer stream) (make-string length)
+	  (setf (sm buffer stream) (allocate-buffer length)
 		(sm buffpos stream) 0
 		(sm buffer-ptr stream) 0
 		(sm buf-len stream) length)))
       (when (any-stream-instance-flags stream :output)
 	(setf (sm control-out stream) *std-control-out-table*))
-      (let ((efmt (getf options :external-format :default)))
-	(compose-encapsulating-streams stream efmt)
-	(install-single-channel-character-strategy stream efmt nil))
+      (setf (stream-external-format stream)
+	    (getf options :external-format :default))
       stream)))
 
 (defmethod device-close ((stream file-simple-stream) abort)
   (with-stream-class (file-simple-stream stream)
     (let ((fd (or (sm input-handle stream) (sm output-handle stream))))
-      (cond (abort
-	     ;; Remove any fd-handler
-	     (when (any-stream-instance-flags stream :output)
-	       (lisp::revert-file (sm filename stream) (sm original stream))))
-	    (t
-	     (when (sm delete-original stream)
-	       (lisp::delete-original (sm filename stream)
-				      (sm original stream)))))
-      (unix:unix-close fd)
-      ;; if buffer is a sap, put it back on cl::*available-buffers*
-      (setf (sm buffer stream) nil)))
+      (when (lisp::fixnump fd)
+	(cond (abort
+	       (when (any-stream-instance-flags stream :output)
+		 (lisp::revert-file (sm filename stream)
+				    (sm original stream))))
+	      (t
+	       (when (sm delete-original stream)
+		 (lisp::delete-original (sm filename stream)
+					(sm original stream)))))
+	(unix:unix-close fd))
+      (when (sm buffer stream)
+	(free-buffer (sm buffer stream))
+	(setf (sm buffer stream) nil))))
   t)
 
 (defmethod device-file-position ((stream file-simple-stream))
   (with-stream-class (file-simple-stream stream)
-    (values (unix:unix-lseek (or (sm input-handle stream)
-				 (sm output-handle stream))
-			     0
-			     unix:l_incr))))
+    (let ((fd (or (sm input-handle stream) (sm output-handle stream))))
+      (if (lisp::fixnump fd)
+	  (values (unix:unix-lseek fd 0 unix:l_incr))
+	  (file-position fd)))))
 
 (defmethod (setf device-file-position) (value (stream file-simple-stream))
   (declare (type fixnum value))
   (with-stream-class (file-simple-stream stream)
-    (values (unix:unix-lseek (or (sm input-handle stream)
-				 (sm output-handle stream))
-			     value
-			     (if (minusp value) unix:l_xtnd unix:l_set)))))
+    (let ((fd (or (sm input-handle stream) (sm output-handle stream))))
+      (if (lisp::fixnump fd)
+	  (values (unix:unix-lseek fd
+				   (if (minusp value) (1+ value) value)
+				   (if (minusp value) unix:l_xtnd unix:l_set)))
+	  (file-position fd value)))))
 
 (defmethod device-file-length ((stream file-simple-stream))
   (with-stream-class (file-simple-stream stream)
-    (multiple-value-bind (okay dev ino mode nlink uid gid rdev size)
-	(unix:unix-fstat (sm input-handle stream))
-      (declare (ignore dev ino mode nlink uid gid rdev))
-      (if okay size nil))))
+    (let ((fd (or (sm input-handle stream) (sm output-handle stream))))
+      (if (lisp::fixnump fd)
+	  (multiple-value-bind (okay dev ino mode nlink uid gid rdev size)
+	      (unix:unix-fstat (sm input-handle stream))
+	    (declare (ignore dev ino mode nlink uid gid rdev))
+	    (if okay size nil))
+	  (file-length fd)))))
 
 
 (defmethod device-open ((stream mapped-file-simple-stream) options)
@@ -142,6 +165,8 @@
 	     (prot (logior (if input unix:prot_read 0)
 			   (if output unix:prot_write 0)))
 	     (fd (or (sm input-handle stream) (sm output-handle stream))))
+	(unless (lisp::fixnump fd)
+	  (error "Can't memory-map an encapsulated stream."))
 	(multiple-value-bind (okay dev ino mode nlink uid gid rdev size)
 	    (unix:unix-fstat fd)
 	  (declare (ignore ino mode nlink uid gid rdev))
@@ -156,8 +181,8 @@
 	    ;; BUF-MAX and BUF-PTR have to be the same, which means
 	    ;; number-consing every time BUF-PTR moves...
 	    ;; Probably don't have the address space available to map
-	    ;; bigger files, anyway.  Maybe DEVICE-EXTEND can adjust
-	    ;; the mapped portion of the file?
+	    ;; bigger files, anyway.  Maybe DEVICE-READ can adjust
+	    ;; the mapped portion of the file when necessary?
 	    (warn "Unable to memory-map entire file.")
 	    (setf size most-positive-fixnum))
 	  (let ((buffer
@@ -170,8 +195,12 @@
 		  (sm buffpos stream) 0
 		  (sm buffer-ptr stream) size
 		  (sm buf-len stream) size)
-	    (install-single-channel-character-strategy
-	     stream (getf options :external-format :default) 'mapped)
+	    (when (any-stream-instance-flags stream :output)
+	      (setf (sm control-out stream) *std-control-out-table*))
+	    (let ((efmt (getf options :external-format :default)))
+	      (compose-encapsulating-streams stream efmt)
+	      (install-single-channel-character-strategy
+	       (melding-stream stream) efmt 'mapped))
 	    (ext:finalize stream
 	      (lambda ()
 		(unix:unix-munmap buffer size)
@@ -183,14 +212,20 @@
     (when (sm buffer stream)
       (unix:unix-munmap (sm buffer stream) (sm buf-len stream))
       (setf (sm buffer stream) nil))
-    (cond (abort
-	   ;; remove any fd handler
-	   ;; if it has an original name (is this possible for mapped files?)
-	   ;;   revert the file
-	   )
-	  (t
-	   ;; if there's an original name and delete-original is set (again,
-	   ;;   is this even possible?), kill the original
-	   ))
-    (unix:unix-close (sm input-handle stream)))
+    (unix:unix-close (or (sm input-handle stream) (sm output-handle stream))))
   t)
+
+(defmethod device-write ((stream mapped-file-simple-stream) buffer
+			 start end blocking)
+  (assert (eq buffer :flush) (buffer)) ; finish/force-output
+  (with-stream-class (mapped-file-simple-stream stream)
+    (unix:unix-msync (sm buffer stream) (sm buf-len stream)
+		     (if blocking unix:ms_sync unix:ms_async))))
+
+(defmethod device-open ((stream probe-simple-stream) options)
+  (let ((pathname (getf options :filename)))
+    (with-stream-class (probe-simple-stream stream)
+      (add-stream-instance-flags stream :simple)
+      (when (unix:unix-access (ext:unix-namestring pathname nil) unix:f_ok)
+	(setf (sm pathname stream) pathname)
+	t))))

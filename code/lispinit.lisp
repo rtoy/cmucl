@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.69 2003/05/29 22:03:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.70 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -583,11 +583,10 @@
 (defun interactive-eval (form)
   "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
   +, ///, //, /, and -."
+  (when (and (fboundp 'commandp) (funcall 'commandp form))
+    (return-from interactive-eval (funcall 'invoke-command-interactive form)))
   (setf - form)
-  (let ((results (multiple-value-list
-		  (if (and (fboundp 'commandp)(funcall 'commandp form))
-		      (funcall 'invoke-command-interactive form)
-		      (eval form)))))
+  (let ((results (multiple-value-list (eval form))))
     (finish-standard-output-streams)
     (setf /// //
 	  // /

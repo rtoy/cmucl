@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.88 2003/06/07 09:39:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.89 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,8 @@
 
 	  prot_read prot_write prot_exec prot_none
 	  map_shared map_private map_fixed map_anonymous
-	  unix-mmap unix-munmap
+	  ms_async ms_sync ms_invalidate
+	  unix-mmap unix-munmap unix-msync
 
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
@@ -988,6 +989,10 @@
   #+linux 32				; Linux
   #+freebsd #x1000)
 
+(defconstant ms_async 1)
+(defconstant ms_sync 4)
+(defconstant ms_invalidate 2)
+
 ;; The return value from mmap that means mmap failed.
 (defconstant map_failed -1)
 
@@ -1013,6 +1018,12 @@
   (declare (type system-area-pointer addr)
 	   (type (unsigned-byte 32) length))
   (syscall ("munmap" system-area-pointer size-t) t addr length))
+
+(defun unix-msync (addr length flags)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length)
+	   (type (signed-byte 32) flags))
+  (syscall ("msync" system-area-pointer size-t int) t addr length flags))
 
 ;;; Unix-access accepts a path and a mode.  It returns two values the
 ;;; first is T if the file is accessible and NIL otherwise.  The second

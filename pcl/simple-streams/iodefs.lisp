@@ -5,7 +5,7 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/iodefs.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/iodefs.lisp,v 1.3 2003/06/26 13:27:43 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,4 +124,27 @@
 		 (t
 		  ,string)))))))
 
+(defmacro simple-stream-dispatch-2 (stream non-string string)
+  (let ((s (gensym "STREAM")))
+    `(let ((,s ,stream))
+       (with-stream-class (simple-stream ,s)
+	 (let ((%flags (sm %flags ,s)))
+	   (cond ((zerop (logand %flags ,(%flags '(:string))))
+		  ,non-string)
+		 (t
+		  ,string)))))))
+
 (provide :iodefs)
+
+
+;;;; Franz source-compatibility
+
+(defpackage "EXCL"
+  (:use "STREAM")
+  (:import-from "STREAM"
+        BUFFER BUFFPOS BUFFER-PTR
+        OUT-BUFFER MAX-OUT-POS
+        INPUT-HANDLE OUTPUT-HANDLE
+        MELDED-STREAM
+	CONTROL-IN CONTROL-OUT
+        J-READ-CHARS))

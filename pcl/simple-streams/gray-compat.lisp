@@ -5,7 +5,7 @@
 ;;; domain.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/gray-compat.lisp,v 1.1 2003/06/06 16:23:46 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/gray-compat.lisp,v 1.2 2003/06/26 13:27:43 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
   (finish-output stream))
 
 (define-gray-stream-method ext:stream-listen ((stream simple-stream))
-  (listen stream))
+  (listen stream 'character))
 
 (define-gray-stream-method ext:stream-write-string ((stream simple-stream)
 						    string

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.69 2003/06/11 13:00:17 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.70 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1080,7 +1080,7 @@
 		 ;; Adjust for buffered output:
 		 ;;  If there is any output buffered, the *real* file position
 		 ;; will be larger than reported by lseek because lseek
-		 ;; obviously cannot take< into account output we have not
+		 ;; obviously cannot take into account output we have not
 		 ;; sent yet.
 		 (dolist (later (fd-stream-output-later stream))
 		   (incf posn (- (the index (caddr later))
@@ -1198,8 +1198,9 @@
       (finalize stream
 		#'(lambda ()
 		    (unix:unix-close fd)
-		    (format *terminal-io* "** Closed file descriptor ~D~%"
-			    fd))))
+		    (format *terminal-io* "** Closed ~A~%" name)
+		    (when original
+		      (revert-file file original)))))
     stream))
 
 
@@ -1277,7 +1278,7 @@
 ;;;
 ;;;    Rename Namestring to Original.  First, check if we have write access,
 ;;; since we don't want to trash unwritable files even if we technically can.
-;;; We return true if we suceed in renaming.
+;;; We return true if we succeed in renaming.
 ;;;
 (defun do-old-rename (namestring original)
   (unless (unix:unix-access namestring unix:w_ok)
@@ -1550,13 +1551,14 @@
            (apply #'open-fd-stream filespec options))
 	  ((subtypep class 'stream:simple-stream)
 	   (when element-type-given
-             (error "Can't create simple-streams with an element-type."))
-           (when (and (eq class 'file-simple-stream) mapped)
-             (setq class 'mapped-file-simple-stream)
-             (setf (getf options :class) 'mapped-file-simple-stream))
-           (when (subtypep class 'file-simple-stream)
+             (cerror "Do it anyway."
+		     "Can't create simple-streams with an element-type."))
+           (when (and (eq class 'stream:file-simple-stream) mapped)
+             (setq class 'stream:mapped-file-simple-stream)
+             (setf (getf options :class) 'stream:mapped-file-simple-stream))
+           (when (subtypep class 'stream:file-simple-stream)
              (when (eq direction :probe)
-               (setq class 'probe-simple-stream)))
+               (setq class 'stream:probe-simple-stream)))
            (apply #'make-instance class :filename filespec options))
 	  ((subtypep class 'ext:fundamental-stream)
 	   (remf options :class)

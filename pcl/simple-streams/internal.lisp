@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.4 2003/06/26 13:27:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,7 +13,8 @@
 
 (in-package "STREAM")
 
-(declaim (inline buffer-sap bref (setf bref) buffer-copy))
+(declaim (inline buffer-sap bref (setf bref) buffer-copy
+		 allocate-buffer free-buffer))
 
 (defun buffer-sap (thing &optional offset)
   (declare (type simple-stream-buffer thing) (type (or fixnum null) offset)
@@ -88,11 +89,174 @@
 
 
 
-(defun find-external-format (name)
-  nil)
+(defvar *default-external-format* :iso8859-1)
+
+(defvar *external-formats* (make-hash-table))
+(defvar *external-format-aliases* (make-hash-table))
+
+(defstruct (external-format
+	     (:conc-name ef-)
+	     (:print-function %print-external-format)
+             (:constructor make-external-format (name octets-to-char
+                                                      char-to-octets)))
+  (name (ext:required-argument) :type keyword :read-only t)
+  (octets-to-char (ext:required-argument) :type function :read-only t)
+  (char-to-octets (ext:required-argument) :type function :read-only t))
+
+(defun %print-external-format (ef stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (ef stream :type t :identity t)
+    (princ (ef-name ef) stream)))
+
+(defmacro define-external-format (name octets-to-char char-to-octets)
+  `(macrolet ((octets-to-char ((state input unput) &body body)
+	        `(lambda (,state ,input ,unput)
+		   (declare (type (function () (unsigned-byte 8)) ,input)
+			    (type (function (lisp::index) t) ,unput)
+			    (ignorable ,state ,input ,unput)
+			    (values character lisp::index t))
+		   ,@body))
+	      (char-to-octets ((char state output) &body body)
+	        `(lambda (,char ,state ,output)
+		   (declare (type character ,char)
+			    (type (function ((unsigned-byte 8)) t) ,output)
+			    (ignorable state ,output)
+			    (values t))
+		   ,@body)))
+     (setf (gethash ,name *external-formats*)
+	   (make-external-format ,name ,octets-to-char ,char-to-octets))))
+
+(defun load-external-format-aliases ()
+  (let ((*package* (find-package "KEYWORD")))
+    (with-open-file (stm "ef:aliases" :if-does-not-exist nil)
+      (when stm
+	(do ((alias (read stm nil stm) (read stm nil stm))
+	     (value (read stm nil stm) (read stm nil stm)))
+	    ((or (eq alias stm) (eq value stm))
+	     (unless (eq alias stm)
+	       (warn "External-format aliases file ends early.")))
+	  (if (and (keywordp alias) (keywordp value))
+	      (setf (gethash alias *external-format-aliases*) value)
+	      (warn "Bad entry in external-format aliases file: ~S => ~S."
+		    alias value)))))))
+
+(defun find-external-format (name &optional (error-p t))
+  (when (external-format-p name)
+    (return-from find-external-format name))
+
+  (when (eq name :default)
+    (setq name *default-external-format*))
+
+  (unless (ext:search-list-defined-p "ef:")
+    (setf (ext:search-list "ef:") '("library:ef/")))
+
+  (when (zerop (hash-table-count *external-format-aliases*))
+    (setf (gethash :latin1 *external-format-aliases*) :iso8859-1)
+    (setf (gethash :latin-1 *external-format-aliases*) :iso8859-1)
+    (setf (gethash :iso-8859-1 *external-format-aliases*) :iso8859-1)
+    (load-external-format-aliases))
+
+  (do ((tmp (gethash name *external-format-aliases*)
+	    (gethash tmp *external-format-aliases*))
+       (cnt 0 (1+ cnt)))
+      ((or (null tmp) (= cnt 50))
+       (unless (null tmp)
+	 (error "External-format aliasing depth exceeded.")))
+    (setq name tmp))
+
+  (or (gethash name *external-formats*)
+      (and (let ((*package* (find-package "STREAM")))
+	     (load (format nil "ef:~(~A~)" name) :if-does-not-exist nil))
+	   (gethash name *external-formats*))
+      (if error-p (error "External format ~S not found." name) nil)))
+
+(define-condition void-external-format (error)
+  ()
+  (:report
+    (lambda (condition stream)
+      (declare (ignore condition))
+      (format stream "Attempting I/O through void external-format."))))
+
+(define-external-format :void
+    (octets-to-char (state input unput)
+      (declare (ignore state input unput))
+      (error 'void-external-format))
+  (char-to-octets (char state output)
+    (declare (ignore char state output))
+    (error 'void-external-format)))
+
+(define-external-format :iso8859-1
+    (octets-to-char (state input unput)
+      (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+      (values (code-char (funcall input)) 1 state))
+  (char-to-octets (char state output)
+    (declare (optimize (speed 3) (space 0) (safety 0) (debug 0)))
+    (let ((code (char-code char)))
+      #-(or)
+      (funcall output code)
+      #+(or)
+      (if (< code 256)
+	  (funcall output code)
+	  (funcall output (char-code #\?))))
+    state))
+
+(defmacro octets-to-char (external-format state count input unput)
+  (let ((tmp1 (gensym)) (tmp2 (gensym)) (tmp3 (gensym)))
+    `(multiple-value-bind (,tmp1 ,tmp2 ,tmp3)
+	 (funcall (ef-octets-to-char ,external-format) ,state ,input ,unput)
+       (setf ,state ,tmp3 ,count ,tmp2)
+       ,tmp1)))
+
+(defmacro char-to-octets (external-format char state output)
+  `(progn
+     (setf ,state (funcall (ef-char-to-octets ,external-format)
+			   ,char ,state ,output))
+     nil))
+
+(defun string-to-octets (string &key (start 0) end (external-format :default))
+  (declare (type string string)
+	   (type lisp::index start)
+	   (type (or null lisp::index) end))
+  (let ((ef (find-external-format external-format))
+	(buffer (make-array (length string) :element-type '(unsigned-byte 8)))
+	(ptr 0)
+	(state nil))
+    (flet ((out (b)
+	     (setf (aref buffer ptr) b)
+	     (when (= (incf ptr) (length buffer))
+	       (setq buffer (adjust-array buffer (* 2 ptr))))))
+      (dotimes (i (- (or end (length string)) start))
+	(declare (type lisp::index i))
+	(char-to-octets ef (char string (+ start i)) state #'out))
+      (lisp::shrink-vector buffer ptr))))
+
+(defun octets-to-string (octets &key (start 0) end (external-format :default))
+  (declare (type vector octets)
+	   (type lisp::index start)
+	   (type (or null lisp::index) end))
+  (let ((ef (find-external-format external-format))
+	(end (1- (or end (length octets))))
+	(string (make-string (length octets)))
+	(ptr (1- start))
+	(pos -1)
+	(count 0)
+	(state nil))
+    (flet ((input ()
+	     (aref octets (incf ptr)))
+	   (unput (n)
+	     (decf ptr n)))
+      (loop until (>= ptr end)
+	    do (setf (schar string (incf pos))
+		 (octets-to-char ef state count #'input #'unput))))
+    (lisp::shrink-vector string (1+ pos))))
 
 
 
+#-(or big-endian little-endian)
+(eval-when (:compile-toplevel)
+  (push (c::backend-byte-order c::*backend*) *features*))
+
+#-big-endian
 (defun vector-elt-width (vector)
   ;; Return octet-width of vector elements
   (etypecase vector
@@ -114,7 +278,8 @@
 
 (defun endian-swap-value (vector endian-swap)
   (case endian-swap
-    (:network-order (1- (vector-elt-width vector)))
+    (:network-order #+big-endian 0
+		    #+little-endian (1- (vector-elt-width vector)))
     (:byte-8 0)
     (:byte-16 1)
     (:byte-32 3)
@@ -122,49 +287,18 @@
     (:byte-128 15)
     (otherwise endian-swap)))
 
-
 
-(defun read-vector (vector stream &key (start 0) end (endian-swap :byte-8))
+#+(or)
+(defun %read-vector (vector stream start end endian-swap blocking)
   (declare (type (kernel:simple-unboxed-array (*)) vector)
 	   (type stream stream))
-  ;; START and END are octet offsets, not vector indices!  [Except for strings]
-  ;; Return value is index of next octet to be read into (i.e., start+count)
-  (etypecase stream
-    (simple-stream
-     (with-stream-class (simple-stream stream)
-       (if (stringp vector)
-	   (let* ((start (or start 0))
-		  (end (or end (length vector)))
-		  (char (funcall-stm-handler j-read-char stream nil nil t)))
-	     (when char
-	       (setf (schar vector start) char)
-	       (incf start)
-	       (+ start (funcall-stm-handler j-read-chars stream vector nil
-					     start end nil))))
-	   (do* ((j-read-byte
-		  (cond ((any-stream-instance-flags stream :string)
-			 (error "Can't READ-BYTE on string streams."))
-			((any-stream-instance-flags stream :dual)
-			 #'dc-read-byte)
-			(t
-			 #'sc-read-byte)))
-		 (index (or start 0) (1+ index))
-		 (end (or end (* (length vector) (vector-elt-width vector))))
-		 (endian-swap (endian-swap-value vector endian-swap))
-		 (byte (funcall j-read-byte stream nil nil t)
-		       (funcall j-read-byte stream nil nil nil)))
-		((or (null byte) (>= index end)) index)
-	     (setf (bref vector (logxor index endian-swap)) byte)))))
-    ((or lisp-stream #+GRAY-STREAMS fundamental-stream)
-     (unless (typep vector '(or string
-			     (simple-array (signed-byte 8) (*))
-			     (simple-array (unsigned-byte 8) (*))))
-       (error "Bad vector."))
-     (read-sequence vector stream :start (or start 0) :end end))))
+  ;; move code from read-vector
+  )
 
-#|(defun write-vector ...)|#
-
-
+#+(or)
+(defun %write-vector (... blocking)
+  ;; implement me
+  )
 
 (defun read-octets (stream buffer start end blocking)
   (declare (type simple-stream stream)
@@ -172,7 +306,7 @@
 	   (type fixnum start)
 	   (type (or null fixnum) end)
 	   (optimize (speed 3) (space 2) (safety 0) (debug 0)))
-  (with-stream-class (single-channel-simple-stream stream) ;@@
+  (with-stream-class (simple-stream stream)
     (let ((fd (sm input-handle stream))
 	  (end (or end (sm buf-len stream)))
 	  (buffer (or buffer (sm buffer stream))))
@@ -221,17 +355,22 @@
 				      (t (return (- -10 errno)))))
 			       ((zerop count) (return -1))
 			       (t (return count)))))))))))
-	(t (error "implement me"))))))
+	(t (%read-vector buffer fd start end :byte-8
+			 (if blocking :bnb nil)))))))
 
 (defun write-octets (stream buffer start end blocking)
   (declare (type simple-stream stream)
-	   (type (or null simple-stream-buffer) buffer)
+	   (type simple-stream-buffer buffer)
 	   (type fixnum start)
 	   (type (or null fixnum) end))
   (with-stream-class (simple-stream stream)
+    (when (sm handler stream)
+      (do ()
+	  ((null (sm pending stream)))
+	(system:serve-all-events)))
+
     (let ((fd (sm output-handle stream))
-	  (end (or end (error "WRITE-OCTETS: end=NIL")))
-	  (buffer (or buffer (error "WRITE-OCTETS: buffer=NIL"))))
+	  (end (or end (length buffer))))
       (typecase fd
 	(fixnum
 	 (let ((flag #+MP (mp:process-wait-until-fd-usable fd :output
@@ -258,3 +397,58 @@
 				    (t (return (- -10 errno)))))
 			     (t (return count)))))))))))
 	(t (error "implement me"))))))
+
+
+
+(defun do-some-output (stream)
+  ;; Do some pending output; return T if completed, NIL if more to do
+  (with-stream-class (simple-stream stream)
+    (let ((fd (sm output-handle stream)))
+      (loop
+	(let ((list (pop (sm pending stream))))
+	  (unless list
+	    (sys:remove-fd-handler (sm handler stream))
+	    (setf (sm handler stream) nil)
+	    (return t))
+	  (let* ((buffer (first list))
+		 (start (second list))
+		 (end (third list))
+		 (len (- end start)))
+	    (declare (type simple-stream-buffer buffer)
+		     (type lisp::index start end len))
+	    (tagbody again
+	       (multiple-value-bind (bytes errno)
+		   (unix:unix-write fd (buffer-sap buffer) start len)
+		 (cond ((null bytes)
+			(if (= errno unix:eintr)
+			    (go again)
+			    (progn (push list (sm pending stream))
+				   (return nil))))
+		       ((< bytes len)
+			(setf (second list) (+ start bytes))
+			(push list (sm pending stream))
+			(return nil))
+		       ((= bytes len)
+			(free-buffer buffer)))))))))))
+
+(defun queue-write (stream buffer start end)
+  ;; Queue a write; return T if buffer needs changing, NIL otherwise
+  (declare (type simple-stream stream)
+	   (type simple-stream-buffer buffer)
+	   (type lisp::index start end))
+  (with-stream-class (simple-stream stream)
+    (when (sm handler stream)
+      (unless (do-some-output stream)
+	(let ((last (last (sm pending stream))))
+	  (setf (cdr last) (list (list buffer start end)))
+	  (return-from queue-write t))))
+    (let ((bytes (write-octets stream buffer start end nil)))
+      (unless (or (= bytes (- end start)) ; completed
+		  (= bytes -3))	; empty buffer; shouldn't happen
+	(setf (sm pending stream) (list (list buffer start end)))
+	(setf (sm handler stream)
+	      (sys:add-fd-handler (sm output-handle stream) :output
+				  (lambda (fd)
+				    (declare (ignore fd))
+				    (do-some-output stream))))
+	t))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.27 2003/06/06 16:23:45 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.28 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,10 +13,10 @@
 ;;; on unix.lisp 1.56, converted for glibc2 by Peter Van Eynde (1998).
 ;;; Alpha support by Julian Dolby, 1999.
 ;;;
-;;; All the functions with #+nil in front are work in progress,
+;;; All the functions with #+(or) in front are work in progress,
 ;;; and mostly don't work.
 ;;;
-;; Todo: #+nil'ed stuff and ioctl's
+;; Todo: #+(or)'ed stuff and ioctl's
 ;;
 ;;
 ;; Large File Support (LFS) added by Pierre Mai and Eric Marsden, Feb
@@ -80,7 +80,8 @@
 	  unix-errno get-unix-error-msg
 	  prot_read prot_write prot_exec prot_none
 	  map_shared map_private map_fixed map_anonymous
-	  unix-mmap unix-munmap
+	  ms_async ms_sync ms_invalidate
+	  unix-mmap unix-munmap unix-msync
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
 	  unix-access r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
@@ -238,21 +239,31 @@
 (defconstant map_fixed 16)
 (defconstant map_anonymous 32)
 
+(defconstant ms_async 1)
+(defconstant ms_sync 4)
+(defconstant ms_invalidate 2)
+
 (defun unix-mmap (addr length prot flags fd offset)
   (declare (type (or null system-area-pointer) addr)
-          (type (unsigned-byte 32) length)
+	   (type (unsigned-byte 32) length)
            (type (integer 1 7) prot)
-          (type (unsigned-byte 32) flags)
-          (type unix-fd fd)
-          (type (signed-byte 32) offset))
+	   (type (unsigned-byte 32) flags)
+	   (type unix-fd fd)
+	   (type (signed-byte 32) offset))
   (syscall ("mmap" system-area-pointer size-t int int int off-t)
-          (sys:int-sap result)
-          (or addr +null+) length prot flags (or fd -1) offset))
+	   (sys:int-sap result)
+	   (or addr +null+) length prot flags (or fd -1) offset))
 
 (defun unix-munmap (addr length)
   (declare (type system-area-pointer addr)
-          (type (unsigned-byte 32) length))
+	   (type (unsigned-byte 32) length))
   (syscall ("munmap" system-area-pointer size-t) t addr length))
+
+(defun unix-msync (addr length flags)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length)
+	   (type (signed-byte 32) flags))
+  (syscall ("msync" system-area-pointer size-t int) t addr length flags))
 
 ;;;; Lisp types used by syscalls.
 
@@ -682,17 +693,17 @@
 
 ;;;  POSIX Standard: 9.2.1 Group Database Access	<grp.h>
 
-#+nil
+#+(or)
 (defun unix-setgrend ()
   "Rewind the group-file stream."
   (void-syscall ("setgrend")))
 
-#+nil
+#+(or)
 (defun unix-endgrent ()
   "Close the group-file stream."
   (void-syscall ("endgrent")))
 
-#+nil
+#+(or)
 (defun unix-getgrent ()
   "Read an entry from the group-file stream, opening it if necessary."
   
@@ -831,7 +842,7 @@
 
 ;;;  mathcalls.h
 
-#+nil
+#+(or)
 (defmacro def-math-rtn (name num-args)
   (let ((function (intern (concatenate 'simple-string
 				       "%"
@@ -846,7 +857,7 @@
 			   'double-float)
 		     results)))))))
 
-#+nil
+#+(or)
 (defmacro def-math-rtn-int-double (name num-args)
   (let ((function (intern (concatenate 'simple-string
 				       "%"
@@ -858,53 +869,53 @@
 	 (ARG-1 'integer)
 	 (ARG-2 'double)))))
 
-#+nil
+#+(or)
 (def-math-rtn "expm1" 1) ;Return exp(X) - 1.
 
-#+nil
+#+(or)
 (def-math-rtn "log1p" 1) ;Return log(1 + X).
 
 
-#+nil
+#+(or)
 (def-math-rtn "logb" 1) ;Return the base 2 signed integral exponent of X.
 
-#+nil
+#+(or)
 (def-math-rtn "cbrt" 1) ; returns cuberoot
 
-#+nil
+#+(or)
 (def-math-rtn "copysign" 2) ;Return X with its signed changed to Y's. 
 
-#+nil
+#+(or)
 (def-math-rtn "cabs" 2) ;Return `sqrt(X*X + Y*Y)'.
 
-#+nil
+#+(or)
 (def-math-rtn "erf" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "erfc" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "gamma" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "j0" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "j1" 1)
 
-#+nil
+#+(or)
 (def-math-rtn-int-double "jn")
 
-#+nil
+#+(or)
 (def-math-rtn "lgamma" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "y0" 1)
 
-#+nil
+#+(or)
 (def-math-rtn "y1" 1)
 
-#+nil
+#+(or)
 (def-math-rtn-int-double "yn")
 
 ;;; netdb.h
@@ -941,18 +952,18 @@
 	    (h_length int)           ; Length of address.
 	    (h-addr-list (* c-string)))) ; List of addresses from name server.
 
-#+nil
+#+(or)
 (defun unix-sethostent (stay-open)
   "Open host data base files and mark them as staying open even after
 a later search if STAY_OPEN is non-zero."
   (void-syscall ("sethostent" int) stay-open))
 
-#+nil
+#+(or)
 (defun unix-endhostent ()
   "Close host data base files and clear `stay open' flag."
   (void-syscall ("endhostent")))
 
-#+nil
+#+(or)
 (defun unix-gethostent ()
   "Get next entry from host data base file.  Open data base if
 necessary."
@@ -963,7 +974,7 @@ necessary."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-gethostbyaddr(addr length type)
   "Return entry from host data base which address match ADDR with
 length LEN and type TYPE."
@@ -976,7 +987,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-gethostbyname (name)
   "Return entry from host data base for host with NAME."
     (let ((result (alien-funcall (extern-alien "gethostbyname"
@@ -988,7 +999,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-gethostbyname2 (name af)
   "Return entry from host data base for host with NAME.  AF must be
    set to the address type which as `AF_INET' for IPv4 or `AF_INET6'
@@ -1013,20 +1024,20 @@ length LEN and type TYPE."
 	    (n-addrtype int) ;  Net address type.
 	    (n-net unsigned-long))) ; Network number.
 
-#+nil
+#+(or)
 (defun unix-setnetent (stay-open)
   "Open network data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setnetent" int) stay-open))
 
 
-#+nil
+#+(or)
 (defun unix-endnetent ()
   "Close network data base files and clear `stay open' flag."
   (void-syscall ("endnetent")))
 
 
-#+nil
+#+(or)
 (defun unix-getnetent ()
   "Get next entry from network data base file.  Open data base if
    necessary."
@@ -1038,7 +1049,7 @@ length LEN and type TYPE."
       result)))
 
 
-#+nil
+#+(or)
 (defun unix-getnetbyaddr (net type)
   "Return entry from network data base which address match NET and
    type TYPE."
@@ -1051,7 +1062,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getnetbyname (name)
   "Return entry from network data base for network with NAME."
     (let ((result (alien-funcall (extern-alien "getnetbyname"
@@ -1071,19 +1082,19 @@ length LEN and type TYPE."
 	    (s-port int) ; Port number.
 	    (s-proto c-string))) ; Protocol to use.
 
-#+nil
+#+(or)
 (defun unix-setservent (stay-open)
   "Open service data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setservent" int) stay-open))
 
-#+nil
+#+(or)
 (defun unix-endservent (stay-open)
   "Close service data base files and clear `stay open' flag."
   (void-syscall ("endservent")))
 
 
-#+nil
+#+(or)
 (defun unix-getservent ()
   "Get next entry from service data base file.  Open data base if
    necessary."
@@ -1094,7 +1105,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getservbyname (name proto)
   "Return entry from network data base for network with NAME and
    protocol PROTO."
@@ -1107,7 +1118,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getservbyport (port proto)
   "Return entry from service data base which matches port PORT and
    protocol PROTO."
@@ -1128,18 +1139,18 @@ length LEN and type TYPE."
 	    (p-aliases (* c-string)) ; Alias list.
 	    (p-proto int))) ; Protocol number.
 
-#+nil
+#+(or)
 (defun unix-setprotoent (stay-open)
   "Open protocol data base files and mark them as staying open even
    after a later search if STAY_OPEN is non-zero."
   (void-syscall ("setprotoent" int) stay-open))
 
-#+nil
+#+(or)
 (defun unix-endprotoent ()
   "Close protocol data base files and clear `stay open' flag."
   (void-syscall ("endprotoent")))
 
-#+nil
+#+(or)
 (defun unix-getprotoent ()
   "Get next entry from protocol data base file.  Open data base if
    necessary."
@@ -1150,7 +1161,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getprotobyname (name)
   "Return entry from protocol data base for network with NAME."
     (let ((result (alien-funcall (extern-alien "getprotobyname"
@@ -1162,7 +1173,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getprotobynumber (proto)
   "Return entry from protocol data base which number is PROTO."
     (let ((result (alien-funcall (extern-alien "getprotobynumber"
@@ -1174,24 +1185,24 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-setnetgrent (netgroup)
   "Establish network group NETGROUP for enumeration."
   (int-syscall ("setservent" c-string) netgroup))
 
-#+nil
+#+(or)
 (defun unix-endnetgrent ()
   "Free all space allocated by previous `setnetgrent' call."
   (void-syscall ("endnetgrent")))
 
-#+nil
+#+(or)
 (defun unix-getnetgrent (hostp userp domainp)
   "Get next member of netgroup established by last `setnetgrent' call
    and return pointers to elements in HOSTP, USERP, and DOMAINP."
   (int-syscall ("getnetgrent" (* c-string) (* c-string) (* c-string))
 	       hostp userp domainp))
 
-#+nil
+#+(or)
 (defun unix-innetgr (netgroup host user domain)
   "Test whether NETGROUP contains the triple (HOST,USER,DOMAIN)."
   (int-syscall ("innetgr" c-string c-string c-string c-string)
@@ -1229,7 +1240,7 @@ length LEN and type TYPE."
 (defconstant eai_system -11 "System error returned in errno.")
 
 
-#+nil
+#+(or)
 (defun unix-getaddrinfo (name service req pai)
   "Translate name of a service location and/or a service name to set of
    socket addresses."
@@ -1238,7 +1249,7 @@ length LEN and type TYPE."
 	       name service req pai))
 
 
-#+nil
+#+(or)
 (defun unix-freeaddrinfo (ai)
   "Free `addrinfo' structure AI including associated storage."
   (void-syscall ("freeaddrinfo" (* struct addrinfo))
@@ -1247,7 +1258,7 @@ length LEN and type TYPE."
 
 ;;; pty.h
 
-#+nil
+#+(or)
 (defun unix-openpty (amaster aslave name termp winp)
   "Create pseudo tty master slave pair with NAME and set terminal
    attributes according to TERMP and WINP and return handles for both
@@ -1256,7 +1267,7 @@ length LEN and type TYPE."
 			  (* (struct winsize)))
 	       amaster aslave name termp winp))
 
-#+nil
+#+(or)
 (defun unix-forkpty (amaster name termp winp)
   "Create child process and establish the slave pseudo terminal as the
    child's controlling terminal."
@@ -1267,17 +1278,17 @@ length LEN and type TYPE."
 
 ;; POSIX Standard: 9.2.2 User Database Access <pwd.h>
 
-#+nil
+#+(or)
 (defun unix-setpwent ()
   "Rewind the password-file stream."
   (void-syscall ("setpwent")))
 
-#+nil
+#+(or)
 (defun unix-endpwent ()
   "Close the password-file stream."
   (void-syscall ("endpwent")))
 
-#+nil
+#+(or)
 (defun unix-getpwent ()
   "Read an entry from the password-file stream, opening it if necessary."
     (let ((result (alien-funcall (extern-alien "getpwent"
@@ -1332,26 +1343,26 @@ length LEN and type TYPE."
 
 ;;; sched.h
 
-#+nil
+#+(or)
 (defun unix-sched_setparam (pid param)
   "Rewind the password-file stream."
   (int-syscall ("sched_setparam" pid-t (struct psched-param))
 		pid param))
 
-#+nil
+#+(or)
 (defun unix-sched_getparam (pid param)
   "Rewind the password-file stream."
   (int-syscall ("sched_getparam" pid-t (struct psched-param))
 		pid param))
 
 
-#+nil
+#+(or)
 (defun unix-sched_setscheduler (pid policy param)
   "Set scheduling algorithm and/or parameters for a process."
   (int-syscall ("sched_setscheduler" pid-t int (struct psched-param))
 		pid policy param))
 
-#+nil
+#+(or)
 (defun unix-sched_getscheduler (pid)
   "Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_getscheduler" pid-t)
@@ -1361,13 +1372,13 @@ length LEN and type TYPE."
   "Retrieve scheduling algorithm for a particular purpose."
   (int-syscall ("sched_yield")))
 
-#+nil
+#+(or)
 (defun unix-sched_get_priority_max (algorithm)
   "Get maximum priority value for a scheduler."
   (int-syscall ("sched_get_priority_max" int)
 		algorithm))
 
-#+nil
+#+(or)
 (defun unix-sched_get_priority_min (algorithm)
   "Get minimum priority value for a scheduler."
   (int-syscall ("sched_get_priority_min" int)
@@ -1375,7 +1386,7 @@ length LEN and type TYPE."
 
 
 
-#+nil
+#+(or)
 (defun unix-sched_rr_get_interval (pid t)
   "Get the SCHED_RR interval for the named process."
   (int-syscall ("sched_rr_get_interval" pid-t (* (struct timespec)))
@@ -1419,17 +1430,17 @@ length LEN and type TYPE."
 	    (sp-expire long)   ; Number of days since 1970-01-01 until account expires.
 	    (sp-flags long)))  ; Reserved.
 
-#+nil
+#+(or)
 (defun unix-setspent ()
   "Open database for reading."
   (void-syscall ("setspent")))
 
-#+nil
+#+(or)
 (defun unix-endspent ()
   "Close database."
   (void-syscall ("endspent")))
 
-#+nil
+#+(or)
 (defun unix-getspent ()
   "Get next entry from database, perhaps after opening the file."
     (let ((result (alien-funcall (extern-alien "getspent"
@@ -1439,7 +1450,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-getspnam (name)
   "Get shadow entry matching NAME."
     (let ((result (alien-funcall (extern-alien "getspnam"
@@ -1451,7 +1462,7 @@ length LEN and type TYPE."
 	nil
       result)))
 
-#+nil
+#+(or)
 (defun unix-sgetspent (string)
   "Read shadow entry from STRING."
     (let ((result (alien-funcall (extern-alien "sgetspent"
@@ -1465,13 +1476,13 @@ length LEN and type TYPE."
 
 ;; 
 
-#+nil
+#+(or)
 (defun unix-lckpwdf ()
   "Protect password file against multi writers."
   (void-syscall ("lckpwdf")))
 
 
-#+nil
+#+(or)
 (defun unix-ulckpwdf ()
   "Unlock password file."
   (void-syscall ("ulckpwdf")))
@@ -1979,17 +1990,17 @@ length LEN and type TYPE."
   (declare (type (signed-byte 32) code))
   (void-syscall ("exit" int) code))
 
-#+nil
+#+(or)
 (defun unix-pathconf (path name)
   "Get file-specific configuration information about PATH."
   (int-syscall ("pathconf" c-string int) path name))
 
-#+nil
+#+(or)
 (defun unix-sysconf (name)
   "Get the value of the system variable NAME."
   (int-syscall ("sysconf" c-string) name))
 
-#+nil
+#+(or)
 (defun unix-confstr (name)
   "Get the value of the string-valued system variable NAME."
   (with-alien ((buf (array char 1024)))
@@ -2033,14 +2044,14 @@ length LEN and type TYPE."
    group leader. NIL and an error number are returned upon failure."
   (void-syscall ("setpgid" int int) pid pgrp))
 
-#+nil
+#+(or)
 (defun unix-setsid ()
   "Create a new session with the calling process as its leader.
    The process group IDs of the session and the calling process
    are set to the process ID of the calling process, which is returned."
   (void-syscall ( "setsid")))
 
-#+nil
+#+(or)
 (defun unix-getsid ()
   "Return the session ID of the given process."
   (int-syscall ( "getsid")))
@@ -2049,7 +2060,7 @@ length LEN and type TYPE."
   "Unix-getuid returns the real user-id associated with the
    current process.")
 
-#+nil
+#+(or)
 (def-alien-routine ("geteuid" unix-getuid) int
   "Get the effective user ID of the calling process.")
 
@@ -2064,13 +2075,13 @@ length LEN and type TYPE."
 ;   of its supplementary groups in LIST and return the number written.  */
 ;extern int getgroups __P ((int __size, __gid_t __list[]));
 
-#+nil
+#+(or)
 (defun unix-group-member (gid)
   "Return nonzero iff the calling process is in group GID."
   (int-syscall ( "group-member" gid-t) gid))
 
 
-#+nil
+#+(or)
 (defun unix-setuid (uid)
   "Set the user ID of the calling process to UID.
    If the calling process is the super-user, set the real
@@ -2089,7 +2100,7 @@ length LEN and type TYPE."
    if the call fails."
   (void-syscall ("setreuid" int int) ruid euid))
 
-#+nil
+#+(or)
 (defun unix-setgid (gid)
   "Set the group ID of the calling process to GID.
    If the calling process is the super-user, set the real
@@ -2228,7 +2239,7 @@ length LEN and type TYPE."
   supplied, FD defaults to /dev/tty."
   `(%set-tty-process-group ,pgrp ,fd))
 
-#+nil
+#+(or)
 (defun unix-getlogin ()
   "Return the login name of the user."
     (let ((result (alien-funcall (extern-alien "getlogin"
@@ -2268,19 +2279,19 @@ length LEN and type TYPE."
 	      (cast buf c-string)
 	      (cast buf (* char)) 256)))
 
-#+nil
+#+(or)
 (defun unix-sethostname (name len)
   (int-syscall ("sethostname" c-string size-t) name len))
 
-#+nil
+#+(or)
 (defun unix-sethostid (id)
   (int-syscall ("sethostid" long) id))
 
-#+nil
+#+(or)
 (defun unix-getdomainname (name len)
   (int-syscall ("getdomainname" c-string size-t) name len))
 
-#+nil
+#+(or)
 (defun unix-setdomainname (name len)
   (int-syscall ("setdomainname" c-string size-t) name len))
 
@@ -2294,20 +2305,20 @@ length LEN and type TYPE."
   (void-syscall ("fsync" int) fd))
 
 
-#+nil
+#+(or)
 (defun unix-vhangup ()
  "Revoke access permissions to all processes currently communicating
   with the control terminal, and then send a SIGHUP signal to the process
   group of the control terminal." 
  (int-syscall ("vhangup")))
 
-#+nil
+#+(or)
 (defun unix-revoke (file)
  "Revoke the access of all descriptors currently open on FILE."
  (int-syscall ("revoke" c-string) file))
 
 
-#+nil
+#+(or)
 (defun unix-chroot (path)
  "Make PATH be the root directory (the starting point for absolute paths).
    This call is restricted to the super-user."
@@ -2350,7 +2361,7 @@ length LEN and type TYPE."
 	   (type (unsigned-byte 64) length))
   (void-syscall ("ftruncate64" int off-t) fd length))
 
-#+nil
+#+(or)
 (defun unix-getdtablesize ()
   "Return the maximum number of file descriptors
    the current process could possibly have."
@@ -2432,13 +2443,13 @@ length LEN and type TYPE."
 
 ;;; sys/fsuid.h
 
-#+nil
+#+(or)
 (defun unix-setfsuid (uid)
   "Change uid used for file access control to UID, without affecting
    other priveledges (such as who can send signals at the process)."
   (int-syscall ("setfsuid" uid-t) uid))
 
-#+nil
+#+(or)
 (defun unix-setfsgid (gid)
   "Change gid used for file access control to GID, without affecting
    other priveledges (such as who can send signals at the process)."
@@ -2475,7 +2486,7 @@ length LEN and type TYPE."
 (defconstant +npollfile+ 30 "Canonical number of polling requests to read
 in at a time in poll.")
 
-#+nil
+#+(or)
 (defun unix-poll (fds nfds timeout)
  " Poll the file descriptors described by the NFDS structures starting at
    FDS.  If TIMEOUT is nonzero and not -1, allow TIMEOUT milliseconds for
@@ -2550,7 +2561,7 @@ in at a time in poll.")
 		      (slot usage 'ru-nivcsw))
 	      who (addr usage))))
 
-#+nil
+#+(or)
 (defun unix-ulimit (cmd newlimit)
  "Function depends on CMD:
   1 = Return the limit on the size of a file, in units of 512 bytes.
@@ -2561,7 +2572,7 @@ in at a time in poll.")
   Returns -1 on errors."
  (int-syscall ("ulimit" int long) cmd newlimit))
 
-#+nil
+#+(or)
 (defun unix-getpriority (which who)
   "Return the highest priority of any process specified by WHICH and WHO
    (see above); if WHO is zero, the current process, process group, or user
@@ -2570,7 +2581,7 @@ in at a time in poll.")
   (int-syscall ("getpriority" int int)
 	       which who))
 
-#+nil
+#+(or)
 (defun unix-setpriority (which who)
   "Set the priority of all processes specified by WHICH and WHO (see above)
    to PRIO.  Returns 0 on success, -1 on errors."
@@ -2837,7 +2848,7 @@ in at a time in poll.")
 	   (type unix-file-mode mode))
   (void-syscall ("mkdir" c-string int) name mode))
 
-#+nil
+#+(or)
 (defun unix-makedev (path mode dev)
  "Create a device file named PATH, with permission and special bits MODE
   and device number DEV (which can be constructed from major and minor
@@ -2847,7 +2858,7 @@ in at a time in poll.")
   (void-syscall ("makedev" c-string mode-t dev-t) name mode dev))
 
 
-#+nil
+#+(or)
 (defun unix-fifo (name mode)
   "Create a new FIFO named PATH, with permission bits MODE."
   (declare (type unix-pathname name)
@@ -2856,7 +2867,7 @@ in at a time in poll.")
 
 ;;; sys/statfs.h
 
-#+nil
+#+(or)
 (defun unix-statfs (file buf)
   "Return information about the filesystem on which FILE resides."
   (int-syscall ("statfs64" c-string (* (struct statfs)))
@@ -2864,13 +2875,13 @@ in at a time in poll.")
 
 ;;; sys/swap.h
 
-#+nil
+#+(or)
 (defun unix-swapon (path flags)
  "Make the block special device PATH available to the system for swapping.
   This call is restricted to the super-user."
  (int-syscall ("swapon" c-string int) path flags))
 
-#+nil
+#+(or)
 (defun unix-swapoff (path)
  "Make the block special device PATH available to the system for swapping.
   This call is restricted to the super-user."
@@ -2878,7 +2889,7 @@ in at a time in poll.")
 
 ;;; sys/sysctl.h
 
-#+nil
+#+(or)
 (defun unix-sysctl (name nlen oldval oldlenp newval newlen)
   "Read or write system parameters."
   (int-syscall ("sysctl" int int (* void) (* void) (* void) size-t)
@@ -2910,13 +2921,13 @@ in at a time in poll.")
 	    (tm-gmtoff long) ;  Seconds east of UTC.
 	    (tm-zone c-string))) ; Timezone abbreviation.  
 
-#+nil
+#+(or)
 (defun unix-clock ()
   "Time used by the program so far (user time + system time).
    The result / CLOCKS_PER_SECOND is program time in seconds."
   (int-syscall ("clock")))
 
-#+nil
+#+(or)
 (defun unix-time (timer)
   "Return the current time and put it in *TIMER if TIMER is not NULL."
   (int-syscall ("time" time-t) timer))
@@ -3066,7 +3077,7 @@ in at a time in poll.")
 	    (timezone int)     ; Minutes west of GMT.
 	    (dstflag short)))  ; Nonzero if Daylight Savings Time used. 
 
-#+nil
+#+(or)
 (defun unix-fstime (timebuf)
   "Fill in TIMEBUF with information about the current time."
   (int-syscall ("ftime" (* (struct timeb))) timebuf))
@@ -3083,7 +3094,7 @@ in at a time in poll.")
 	    (tms-cutime clock-t) ; User CPU time of dead children.
 	    (tms-cstime clock-t))) ; System CPU time of dead children.
 
-#+nil
+#+(or)
 (defun unix-times (buffer)
   "Store the CPU time used by this process and all its
    dead children (and their dead children) in BUFFER.
@@ -3093,13 +3104,13 @@ in at a time in poll.")
 
 ;;; sys/wait.h
 
-#+nil
+#+(or)
 (defun unix-wait (status)
   "Wait for a child to die.  When one does, put its status in *STAT_LOC
    and return its process ID.  For errors, return (pid_t) -1."
   (int-syscall ("wait" (* int)) status))
 
-#+nil
+#+(or)
 (defun unix-waitpid (pid status options)
   "Wait for a child matching PID to die.
    If PID is greater than 0, match any process whose process ID is PID.

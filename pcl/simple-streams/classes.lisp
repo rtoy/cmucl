@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.3 2003/06/18 09:23:08 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/classes.lisp,v 1.4 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,12 +16,6 @@
 (eval-when (:compile-toplevel)
   (pushnew 'compile pcl::*defclass-times*)
   (pushnew 'compile pcl::*defgeneric-times*))
-
-#+(or)
-(declaim (ext:slots (inline simple-stream single-channel-simple-stream
-			    dual-channel-simple-stream string-simple-stream)
-		    (slot-boundp (simple-stream %flags plist mode
-						input-handle output-handle))))
 
 
 ;;;; Types for buffer and strategy functions
@@ -64,9 +58,10 @@
    (j-write-char :initform #'lisp::ill-out-any :type j-write-char-fn) ;@@
    (j-write-chars :initform #'lisp::ill-out-any :type j-write-chars-fn) ;@@
 
-   (external-format :initform :default)
+   (oc-state :initform nil)
+   (co-state :initform nil)
+   (external-format :initform (find-external-format :default))
 
-   (mode :initform 0 :type fixnum)
    (input-handle :initform nil :initarg :input-handle
 		 :type (or null fixnum stream)
 		 :accessor stream-input-handle)
@@ -83,31 +78,27 @@
    (last-char-read-size :initform 0 :type fixnum)
    (charpos :initform 0 :type (or null integer)
 	    :accessor stream-line-column)
-   (record-end :initform nil :type (or null fixnum))))
+   (record-end :initform nil :type (or null fixnum))
 
-(def-stream-class single-channel-simple-stream (simple-stream)
-  ((buffer :initform nil :type (or simple-stream-buffer null))
-   (buffpos :initform 0 :type fixnum)
-   (buffer-ptr :initform 0 :type fixnum)
-   (buf-len :initform 0 :type fixnum)))
-
-(def-stream-class dual-channel-simple-stream (simple-stream)
-  ((buffer :initform nil :type (or simple-stream-buffer null))
+   (buffer :initform nil :type (or simple-stream-buffer null))
    (buffpos :initform 0 :type fixnum)
    (buffer-ptr :initform 0 :type fixnum)
    (buf-len :initform 0 :type fixnum)
-   (out-buffer :initform nil :type (or simple-stream-buffer null))
+
+   (pending :initform nil :type list)
+   (handler :initform nil :type (or null lisp::handler))))
+
+(def-stream-class single-channel-simple-stream (simple-stream)
+  ((mode :initform 0 :type fixnum)))
+
+(def-stream-class dual-channel-simple-stream (simple-stream)
+  ((out-buffer :initform nil :type (or simple-stream-buffer null))
    (outpos :initform 0 :type fixnum)
    (max-out-pos :initform 0 :type fixnum)))
 
 (def-stream-class string-simple-stream (simple-stream)
   ())
 
-(def-stream-class file-simple-stream (single-channel-simple-stream)
-  ((pathname :initform nil :initarg :pathname)
-   (filename :initform nil :initarg :filename)
-   (original :initform nil :initarg :original)
-   (delete-original :initform nil :initarg :delete-original)))
 
 ;;;; Generic function definitions
 
@@ -163,34 +154,19 @@
 	   (princ "Closed " stream)))
     (format stream "~:(~A~)" (type-of object))))
 
-(defmethod print-object ((object file-simple-stream) stream)
-  (print-unreadable-object (object stream :type nil :identity nil)
-    (with-stream-class (file-simple-stream object)
-      (cond ((not (any-stream-instance-flags object :simple))
-	   (princ "Invalid " stream))
-	  ((not (any-stream-instance-flags object :input :output))
-	   (princ "Closed " stream)))
-      (format stream "~:(~A~) for ~S"
-	      (type-of object) (sm filename object)))))
-
 (defmethod device-close :around ((stream simple-stream) abort)
   (with-stream-class (simple-stream stream)
     (when (any-stream-instance-flags stream :input :output)
       (when (any-stream-instance-flags stream :output)
-	(if abort
-	    (clear-output stream)
-	    (finish-output stream)))
+	(ignore-errors (if abort
+			   (clear-output stream)
+			   (finish-output stream))))
       (call-next-method)
       (setf (sm input-handle stream) nil
-	    (sm output-handle stream) nil
-	    (sm j-listen stream) #'lisp::closed-flame
-	    (sm j-read-char stream) #'lisp::closed-flame
-	    (sm j-read-chars stream) #'lisp::closed-flame
-	    (sm j-unread-char stream) #'lisp::closed-flame
-	    (sm j-write-char stream) #'lisp::closed-flame	;@@
-	    (sm j-write-chars stream) #'lisp::closed-flame) ;@@
+	    (sm output-handle stream) nil)
       (remove-stream-instance-flags stream :input :output)
-      (ext:cancel-finalization stream))))
+      (ext:cancel-finalization stream)
+      (setf (stream-external-format stream) :void))))
 
 (defmethod device-close ((stream simple-stream) abort)
   (declare (ignore abort))
@@ -201,45 +177,38 @@
 
 (defmethod device-file-position ((stream simple-stream))
   (with-stream-class (simple-stream stream)
-    (cond ((any-stream-instance-flags stream :dual)
-	   (with-stream-class (dual-channel-simple-stream stream)
-	     (sm buffpos stream)))
-	  ((any-stream-instance-flags stream :string)
-	   (with-stream-class (string-simple-stream stream)
-	     (sm buffpos stream)))
-	  (t
-	   (with-stream-class (single-channel-simple-stream stream)
-	     (sm buffpos stream))))))
+    (sm buffpos stream)))
 
 (defmethod (setf device-file-position) (value (stream simple-stream))
   (with-stream-class (simple-stream stream)
-    (cond ((any-stream-instance-flags stream :dual)
-	   (with-stream-class (dual-channel-simple-stream stream)
-	     (setf (sm buffpos stream) value)))
-	  ((any-stream-instance-flags stream :string)
-	   (with-stream-class (string-simple-stream stream)
-	     (setf (sm buffpos stream) value)))
-	  (t
-	   (with-stream-class (single-channel-simple-stream stream)
-	     (setf (sm buffpos stream) value))))))
+    (setf (sm buffpos stream) value)))
 
 (defmethod device-file-length ((stream simple-stream))
   nil)
 
+(defmethod (setf stream-external-format) :before (value (stream simple-stream))
+  ;; (unless (eq value (sm external-format stream))
+  ;;   flush out the existing external-format
+  )
+
+(defmethod (setf stream-external-format) :after
+    (value (stream single-channel-simple-stream))
+  (compose-encapsulating-streams stream value)
+  (install-single-channel-character-strategy (melding-stream stream)
+					     value nil))
+
+(defmethod (setf stream-external-format) :after
+    (value (stream dual-channel-simple-stream))
+  (compose-encapsulating-streams stream value)
+  (install-dual-channel-character-strategy (melding-stream stream) value))
+
+
 (defmethod device-read ((stream single-channel-simple-stream) buffer
                         start end blocking)
-;;  (when (and (null buffer) (not (eql start end)))
-;;    (with-stream-class (single-channel-simple-stream stream)
-;;      (setq buffer (sm buffer stream))
-;;      (setq end (sm buf-len stream))))
   (read-octets stream buffer start end blocking))
 
 (defmethod device-read ((stream dual-channel-simple-stream) buffer
                         start end blocking)
-  (when (null buffer)
-    (with-stream-class (dual-channel-simple-stream stream)
-      (setq buffer (sm buffer stream))
-      (setq end (- (sm buf-len stream) start))))
   (read-octets stream buffer start end blocking))
 
 (defmethod device-clear-input ((stream simple-stream) buffer-only)
@@ -248,7 +217,9 @@
 
 (defmethod device-write ((stream single-channel-simple-stream) buffer
                          start end blocking)
-  (when (and (null buffer) (not (eql start end)))
+  ;; buffer may be :flush to force/finish-output
+  (when (or (and (null buffer) (not (eql start end)))
+	    (eq buffer :flush))
     (with-stream-class (single-channel-simple-stream stream)
       (setf buffer (sm buffer stream))
       (setf end (sm buffpos stream))))
@@ -256,7 +227,9 @@
 
 (defmethod device-write ((stream dual-channel-simple-stream) buffer
                          start end blocking)
-  (when (and (null buffer) (not (eql start end)))
+  ;; buffer may be :flush to force/finish-output
+  (when (or (and (null buffer) (not (eql start end)))
+	    (eq buffer :flush))
     (with-stream-class (dual-channel-simple-stream stream)
       (setf buffer (sm out-buffer stream))
       (setf end (sm outpos stream))))

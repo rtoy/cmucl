@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/string.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/string.lisp,v 1.3 2003/06/26 13:27:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,17 +18,10 @@
 	  xp-simple-stream annotation-output-simple-stream))
 
 (def-stream-class string-input-simple-stream (string-simple-stream)
-  ((buffer :initform nil :type (or simple-stream-buffer null))
-   (buffpos :initform 0 :type fixnum)
-   (buffer-ptr :initform 0 :type fixnum)
-   (buf-len :initform 0 :type fixnum)))
+  ())
 
 (def-stream-class string-output-simple-stream (string-simple-stream)
-  ((buffer :initform nil :type (or simple-stream-buffer null))
-   (buffpos :initform 0 :type fixnum)
-   (buffer-ptr :initform 0 :type fixnum)
-   (buf-len :initform 0 :type fixnum)
-   (out-buffer :initform nil :type (or simple-stream-buffer null))
+  ((out-buffer :initform nil :type (or simple-stream-buffer null))
    (outpos :initform 0 :type fixnum)
    (max-out-pos :initform 0 :type fixnum)))
 
@@ -46,6 +39,7 @@
   ())
 
 (defmethod device-open :before ((stream string-input-simple-stream) options)
+  ;; Taken with permission from ftp://ftp.franz.com/pub/duane/Simp-stms.ppt
   (with-stream-class (string-input-simple-stream stream)
     (let ((string (getf options :string)))
       (when (and string (null (sm buffer stream)))
@@ -58,6 +52,7 @@
     (add-stream-instance-flags stream :string :input :simple)))
 
 (defmethod device-open :before ((stream string-output-simple-stream) options)
+  ;; Taken with permission from ftp://ftp.franz.com/pub/duane/Simp-stms.ppt
   (with-stream-class (string-output-simple-stream stream)
     (unless (sm out-buffer stream)
       (let ((string (getf options :string)))
@@ -72,38 +67,55 @@
     (install-string-output-character-strategy stream)
     (add-stream-instance-flags stream :string :output :simple)))
 
+(defmethod device-open ((stream string-simple-stream) options)
+  (declare (ignore options))
+  (with-stream-class (string-simple-stream stream)
+    (if (and (any-stream-instance-flags stream :simple)
+	     (any-stream-instance-flags stream :input :output))
+	t
+	nil)))
+
 (defmethod device-file-position ((stream string-simple-stream))
-  ;; get string length (of input or output buffer?)
-  )
+  (with-stream-class (simple-stream stream)
+    (sm buffpos stream)))
 
 (defmethod (setf device-file-position) (value (stream string-simple-stream))
-  ;; set string length (of input or output buffer?)
-  )
+  (with-stream-class (simple-stream stream)
+    (cond ((or (> value (sm buffer-ptr stream))
+	       (< value (- -1 (sm buffer-ptr stream))))
+	   nil)
+	  ((>= value 0)
+	   (setf (sm buffpos stream) value)
+	   t)
+	  (t
+	   (setf (sm buffpos stream) (+ (sm buffer-ptr stream) value 1))
+	   t))))
 
 (defmethod device-file-length ((stream string-simple-stream))
-  ;; return string length
-  )
+  (with-stream-class (simple-stream stream)
+    (sm buffer-ptr stream)))
 
-(defmethod device-open ((stream string-input-simple-stream) options)
-  #| do something |#
-  stream)
-
-(defmethod device-open ((stream string-output-simple-stream) options)
-  #| do something |#
-  stream)
 
 (defmethod device-open ((stream fill-pointer-output-simple-stream) options)
   #| do something |#
   stream)
 
 (defmethod device-file-position ((stream fill-pointer-output-simple-stream))
-  ;; get fill pointer (of input or output buffer?)
-  )
+  (with-stream-class (fill-pointer-output-simple-stream stream)
+    (fill-pointer (sm out-buffer stream))))
 
 (defmethod (setf device-file-position)
     (value (stream fill-pointer-output-simple-stream))
-  ;; set fill pointer (of input or output buffer?)
-  )
+  (with-stream-class (fill-pointer-output-simple-stream stream)
+    (let ((buffer (sm out-buffer stream)))
+      (cond ((or (> value (array-total-size buffer))
+		 (< value (- -1 (array-total-size buffer))))
+	     nil)
+	    ((>= value 0)
+	     (setf (fill-pointer buffer) value))
+	    (t
+	     (setf (fill-pointer buffer)
+		   (+ (array-total-size buffer) value 1)))))))
 
 (defmethod device-open ((stream xp-simple-stream) options)
   #| do something |#

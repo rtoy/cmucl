@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.37 2003/06/15 12:16:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.38 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -344,23 +344,31 @@
   ;; This flushes whitespace chars, returning the last char it read (a
   ;; non-white one).  It always gets an error on end-of-file.
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-char stream
-	  (do ((attribute-table (character-attribute-table *readtable*))
-	       (char (fast-read-char t) (fast-read-char t)))
-	      ((/= (the fixnum (aref attribute-table (char-code char)))
-		   #.whitespace)
-	       (done-with-fast-read-char)
-	       char)))
-	;; Fundamental-stream.
+    (stream-dispatch stream
+      ;; simple-stream
+      (do ((attribute-table (character-attribute-table *readtable*))
+	   (char (stream::%read-char stream t nil t t)
+		 (stream::%read-char stream t nil t t)))
+	  ((/= (the fixnum (aref attribute-table (char-code char)))
+	       #.whitespace)
+	   char))
+      ;; lisp-stream
+      (prepare-for-fast-read-char stream
 	(do ((attribute-table (character-attribute-table *readtable*))
-	     (char (stream-read-char stream) (stream-read-char stream)))
-	    ((or (eq char :eof)
-		 (/= (the fixnum (aref attribute-table (char-code char)))
-		     #.whitespace))
-	     (if (eq char :eof)
-		 (error 'end-of-file :stream stream)
-		 char))))))
+	     (char (fast-read-char t) (fast-read-char t)))
+	    ((/= (the fixnum (aref attribute-table (char-code char)))
+		 #.whitespace)
+	     (done-with-fast-read-char)
+	     char)))
+      ;; fundamental-stream
+      (do ((attribute-table (character-attribute-table *readtable*))
+	   (char (stream-read-char stream) (stream-read-char stream)))
+	  ((or (eq char :eof)
+	       (/= (the fixnum (aref attribute-table (char-code char)))
+		   #.whitespace))
+	   (if (eq char :eof)
+	       (error 'end-of-file :stream stream)
+	       char))))))
 
 
 ;;;; Temporary initialization hack.
@@ -551,16 +559,21 @@
 (defun read-comment (stream ignore)
   (declare (ignore ignore))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-char stream
-          (do ((char (fast-read-char nil nil)
-		     (fast-read-char nil nil)))
-	      ((or (not char) (char= char #\newline))
-	       (done-with-fast-read-char))))
-	;; Fundamental-stream.
-	(do ((char (stream-read-char stream) (stream-read-char stream)))
-	    ((or (eq char :eof) (char= char #\newline))))))
-  ;;don't return anything
+    (stream-dispatch stream
+      ;; simple-stream
+      (do ((char (stream::%read-char stream nil nil t t)
+		 (stream::%read-char stream nil nil t t)))
+	  ((or (not char) (char= char #\newline))))
+      ;; lisp-stream
+      (prepare-for-fast-read-char stream
+        (do ((char (fast-read-char nil nil)
+		   (fast-read-char nil nil)))
+	    ((or (not char) (char= char #\newline))
+	     (done-with-fast-read-char))))
+      ;; fundamental-stream
+      (do ((char (stream-read-char stream) (stream-read-char stream)))
+	  ((or (eq char :eof) (char= char #\newline))))))
+  ;; don't return anything
   (values))
 
 (defun read-list (stream ignore)
@@ -612,23 +625,30 @@
   ;;for a very long string, this could end up bloating the read buffer.
   (reset-read-buffer)
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-char stream
-          (do ((char (fast-read-char t) (fast-read-char t)))
-	      ((char= char closech)
-	       (done-with-fast-read-char))
-	    (if (escapep char) (setq char (fast-read-char t)))
-	    (ouch-read-buffer char)))
-	;; Fundamental-stream.
-	(do ((char (stream-read-char stream) (stream-read-char stream)))
-	    ((or (eq char :eof) (char= char closech))
-	     (if (eq char :eof)
-		 (error 'end-of-file :stream stream)))
-	  (when (escapep char)
-	    (setq char (stream-read-char stream))
-	    (if (eq char :eof)
-		(error 'end-of-file :stream stream)))
-	  (ouch-read-buffer char))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (do ((char (stream::%read-char stream t nil t t)
+		 (stream::%read-char stream t nil t t)))
+	  ((char= char closech))
+	(if (escapep char) (setq char (stream::%read-char stream t nil t t)))
+	(ouch-read-buffer char))
+      ;; lisp-stream
+      (prepare-for-fast-read-char stream
+        (do ((char (fast-read-char t) (fast-read-char t)))
+	    ((char= char closech)
+	     (done-with-fast-read-char))
+	  (if (escapep char) (setq char (fast-read-char t)))
+	  (ouch-read-buffer char)))
+      ;; fundamental-stream
+      (do ((char (stream-read-char stream) (stream-read-char stream)))
+	  ((or (eq char :eof) (char= char closech))
+	   (if (eq char :eof)
+	       (error 'end-of-file :stream stream)))
+	(when (escapep char)
+	  (setq char (stream-read-char stream))
+	  (if (eq char :eof)
+	      (error 'end-of-file :stream stream)))
+	(ouch-read-buffer char))))
   (read-buffer-to-string))
 
 (defun read-right-paren (stream ignore)
@@ -998,37 +1018,51 @@
      SYMBOL
       ;;not a dot, dots, or number.
       (let ((stream (in-synonym-of stream)))
-	(if (lisp-stream-p stream)
-	    (prepare-for-fast-read-char stream
-	      (prog ()
-	       SYMBOL-LOOP
-	       (ouch-read-buffer char)
-	       (setq char (fast-read-char nil nil))
-	       (unless char (go RETURN-SYMBOL))
-	       (case (char-class char attribute-table)
-		 (#.escape (done-with-fast-read-char)
-			   (go ESCAPE))
-		 (#.delimiter (done-with-fast-read-char)
-			      (unread-char char stream)
-			      (go RETURN-SYMBOL))
-		 (#.multiple-escape (done-with-fast-read-char)
-				    (go MULT-ESCAPE))
-		 (#.package-delimiter (done-with-fast-read-char)
-				      (go COLON))
-		 (t (go SYMBOL-LOOP)))))
-	    ;; Fundamental-stream.
+	(stream-dispatch stream
+	  ;; simple-stream
+	  (prog ()
+	   SYMBOL-LOOP
+	   (ouch-read-buffer char)
+	   (setq char (stream::%read-char stream nil nil t t))
+	   (unless char (go RETURN-SYMBOL))
+	   (case (char-class char attribute-table)
+	     (#.escape (go ESCAPE))
+	     (#.delimiter (stream::%unread-char stream char)
+			  (go RETURN-SYMBOL))
+	     (#.multiple-escape (go MULT-ESCAPE))
+	     (#.package-delimiter (go COLON))
+	     (t (go SYMBOL-LOOP))))
+	  ;; lisp-stream
+	  (prepare-for-fast-read-char stream
 	    (prog ()
 	     SYMBOL-LOOP
 	     (ouch-read-buffer char)
-	     (setq char (stream-read-char stream))
-	     (when (eq char :eof) (go RETURN-SYMBOL))
+	     (setq char (fast-read-char nil nil))
+	     (unless char (go RETURN-SYMBOL))
 	     (case (char-class char attribute-table)
-	       (#.escape (go ESCAPE))
-	       (#.delimiter (stream-unread-char stream char)
+	       (#.escape (done-with-fast-read-char)
+			 (go ESCAPE))
+	       (#.delimiter (done-with-fast-read-char)
+			    (unread-char char stream)
 			    (go RETURN-SYMBOL))
-	       (#.multiple-escape (go MULT-ESCAPE))
-	       (#.package-delimiter (go COLON))
-	       (t (go SYMBOL-LOOP))))))
+	       (#.multiple-escape (done-with-fast-read-char)
+				  (go MULT-ESCAPE))
+	       (#.package-delimiter (done-with-fast-read-char)
+				    (go COLON))
+	       (t (go SYMBOL-LOOP)))))
+	  ;; fundamental-stream
+	  (prog ()
+	   SYMBOL-LOOP
+	   (ouch-read-buffer char)
+	   (setq char (stream-read-char stream))
+	   (when (eq char :eof) (go RETURN-SYMBOL))
+	   (case (char-class char attribute-table)
+	     (#.escape (go ESCAPE))
+	     (#.delimiter (stream-unread-char stream char)
+			  (go RETURN-SYMBOL))
+	     (#.multiple-escape (go MULT-ESCAPE))
+	     (#.package-delimiter (go COLON))
+	     (t (go SYMBOL-LOOP))))))
      ESCAPE
       ;;saw an escape.
       ;;don't put the escape in the read-buffer.

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.60 2003/06/18 09:23:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.61 2003/06/26 13:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -875,13 +875,14 @@ See the CMU Common Lisp User's Manual for more information.
    forms that explicitly control this kind of evaluation.")
 
 (defun debug-eval-print (exp)
+  (when (and (fboundp 'lisp::commandp) (funcall 'lisp::commandp exp))
+    (return-from debug-eval-print
+      (funcall 'lisp::invoke-command-interactive exp)))
   (setq +++ ++ ++ + + - - exp)
   (let* ((values (multiple-value-list
-		  (cond ((and (fboundp 'lisp::commandp)(funcall 'lisp::commandp exp))
-			 (funcall 'lisp::invoke-command-interactive exp))
-			((and (fboundp 'compile) *auto-eval-in-frame*)
-			 (di:eval-in-frame *current-frame* -))
-			(t (eval -)))))
+		     (if (and (fboundp 'compile) *auto-eval-in-frame*)
+			 (di:eval-in-frame *current-frame* -)
+			 (eval -))))
 	 (*standard-output* *debug-io*))
     (fresh-line)
     (if values (prin1 (car values)))
