@@ -349,7 +349,8 @@
     (:static
      (setq address (allocate-static-alien size)))
     (t
-     (check-type address (or system-area-pointer (rational 0)))))
+     (check-type address (or #+new-compiler system-area-pointer
+			     (rational 0)))))
   (check-type size (integer 0))
   (if (numberp address)
       (multiple-value-bind (base frac) (truncate address)
