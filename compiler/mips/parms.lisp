@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.2 1990/02/03 18:14:59 wlott Exp $
+;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
 ;;; and loaded earlier.
@@ -36,7 +38,7 @@
 	  complex-bit-vector-type complex-vector-type complex-array-type
 	  code-header-type function-header-type return-pc-header-type
 	  closure-header-type symbol-header-type character-type SAP-type
-	  unbound-marker-type *assembly-unit-length*
+	  unbound-marker-type fixnum *assembly-unit-length*
 	  target-fasl-code-format vm-version))
 	  
 
@@ -180,6 +182,15 @@
   character
   SAP
   unbound-marker)
+
+;;; Handy routine for making fixnums.
+
+(defun fixnum (num)
+  "Make a fixnum out of NUM.  (i.e. shift by two bits if it will fit.)"
+  (if (<= #x-20000000 num #x1fffffff)
+      (ash num 2)
+      (error "~D is too big for a fixnum." num)))
+
 
 
 ;;;; Assembler parameters:
