@@ -48,7 +48,7 @@
 ;;; location: some place where we are likely to end up in the debugger, and
 ;;; thus want debug info.
 ;;;
-(defun note-vop-debug-location (vop label kind)
+(defun note-debug-location (vop label kind)
   (declare (type vop vop) (type label label) (type location-kind kind))
   (setf (ir2-block-locations (vop-block vop))
 	(nconc (ir2-block-locations (vop-block vop))
@@ -73,7 +73,7 @@
 (defun compute-live-vars (live block var-locs)
   (declare (type ir2-block block) (type local-tn-bit-vector live)
 	   (type hash-table var-locs))
-  (let ((res (make-array (logandc2 (+ (hash-table-count var-locs) 7) #xFF)
+  (let ((res (make-array (logandc2 (+ (hash-table-count var-locs) 7) 7)
 			 :element-type 'bit
 			 :initial-element 0)))
     (do-live-tns (tn live block)
@@ -101,7 +101,9 @@
 	   (type hash-table var-locs))
   
   (vector-push-extend
-   (dpb (position kind compiled-location-kinds) compiled-location-kind-byte 0)
+   (dpb (position kind compiled-code-location-kinds)
+	compiled-code-location-kind-byte
+	0)
    *byte-buffer*)
   
   (let ((loc (label-location label)))
@@ -146,7 +148,8 @@
 ;;;    determining if all locations are in the same TLF.
 ;;; -- Scan all blocks, dumping the header and successors followed by all the
 ;;;    non-elsewhere locations.
-;;; -- Dump the elsewhere block header and all the elsewhere locations.
+;;; -- Dump the elsewhere block header and all the elsewhere locations (if
+;;;    any.)
 ;;;
 (defun compute-debug-blocks (fun var-locs)
   (declare (type clambda fun) (type hash-table var-locs))
@@ -170,29 +173,42 @@
 	      (setq tlf-num nil))))))
 
     (collect ((elsewhere))
-      (do-environment-ir2-blocks (2block (lambda-environment fun))
-	(let ((block (ir2-block-block 2block)))
-	  (when (eq (block-info block) 2block)
-	    (let ((succ (block-succ block)))
-	      (vector-push-extend
-	       (dpb (length succ) compiled-debug-block-nsucc-byte 0)
-	       *byte-buffer*)
-	      (dolist (b succ)
-		(write-var-integer (block-flag b) *byte-buffer*)))
-	    (dump-1-location (continuation-next (block-start block))
-			     2block :block-start tlf-num
-			     (ir2-block-%label 2block)
-			     (ir2-block-live-out 2block)
-			     var-locs))
-	  
-	  (dolist (loc (ir2-block-locations 2block))
-	    (if (label-elsewhere-p (location-info-label loc))
-		(elsewhere loc)
-		(dump-location-from-info loc tlf-num var-locs)))))
-      
-      (vector-push-extend compiler-debug-block-elsewhere-p *byte-buffer*)
-      (dolist (loc (elsewhere))
-	(dump-location-from-info loc tlf-num)))
+      (let ((tail (component-tail
+		   (block-component (node-block (lambda-bind fun))))))
+	(do-environment-ir2-blocks (2block (lambda-environment fun))
+	  (let ((block (ir2-block-block 2block)))
+	    (when (eq (block-info block) 2block)
+	      (let ((succ (let ((s (block-succ block)))
+			    (if (eq (car s) tail)
+				()
+				s))))
+		(vector-push-extend
+		 (dpb (length succ) compiled-debug-block-nsucc-byte 0)
+		 *byte-buffer*)
+		(dolist (b succ)
+		  (write-var-integer (block-flag b) *byte-buffer*)))
+
+	      (collect ((here))
+		(dolist (loc (ir2-block-locations 2block))
+		  (if (label-elsewhere-p (location-info-label loc))
+		      (elsewhere loc)
+		      (here loc)))
+		(write-var-integer (1+ (length (here))) *byte-buffer*)
+	      
+		(dump-1-location (continuation-next (block-start block))
+				 2block :block-start tlf-num
+				 (ir2-block-%label 2block)
+				 (ir2-block-live-out 2block)
+				 var-locs)
+		
+		(dolist (loc (here))
+		  (dump-location-from-info loc tlf-num var-locs)))))))
+
+      (when (elsewhere)
+	(vector-push-extend compiled-debug-block-elsewhere-p *byte-buffer*)
+	(write-var-integer (length (elsewhere)) *byte-buffer*)
+	(dolist (loc (elsewhere))
+	  (dump-location-from-info loc tlf-num var-locs))))
 
     (values (copy-seq *byte-buffer*) tlf-num)))
 
@@ -277,15 +293,15 @@
 	 (save-tn (tn-save-tn tn))
 	 (flags 0))
     (unless package
-      (setq flags (logior flags compiled-location-uninterned)))
+      (setq flags (logior flags compiled-debug-variable-uninterned)))
     (when package-p
-      (setq flags (logior flags compiled-location-packaged)))
+      (setq flags (logior flags compiled-debug-variable-packaged)))
     (when (eq (tn-kind tn) :environment)
-      (setq flags (logior flags compiled-location-environment-live)))
+      (setq flags (logior flags compiled-debug-variable-environment-live)))
     (when save-tn
-      (setq flags (logior flags compiled-location-save-loc-p)))
+      (setq flags (logior flags compiled-debug-variable-save-loc-p)))
     (unless (zerop id)
-      (setq flags (logior flags compiled-location-id-p)))
+      (setq flags (logior flags compiled-debug-variable-id-p)))
     (vector-push-extend flags buffer)
     (write-var-string (symbol-name name) buffer)
     (when package-p
@@ -352,13 +368,15 @@
 ;;; DEBUG-LOCATION-FOR  --  Internal
 ;;;
 ;;;    Return Var's relative position in the function's variables (determined
-;;; from the Var-Locs hashtable.)
+;;; from the Var-Locs hashtable.)  If Var is deleted, the return DELETED.
 ;;;
 (defun debug-location-for (var var-locs)
   (declare (type lambda-var var) (type hash-table var-locs))
   (let ((res (gethash var var-locs)))
-    (assert res () "No location for ~S?" var)
-    res))
+    (cond (res)
+	  (t
+	   (assert (null (leaf-refs var)))
+	   'deleted))))
 
 
 ;;;; Arguments/returns:
@@ -401,8 +419,8 @@
 
 ;;; COMPUTE-DEBUG-RETURNS  --  Internal
 ;;;
-;;;    Return a list of COMPILED-LOCATION structures for the fixed-values
-;;; return from Fun.
+;;;    Return a vector of SC offsets describing Fun's return locations.  (Must
+;;; be known values return...)
 ;;;
 (defun compute-debug-returns (fun)
   (coerce-to-smallest-eltype 
@@ -453,8 +471,8 @@
 	    (when (>= level 2)
 	      (multiple-value-bind (blocks tlf-num)
 				   (compute-debug-blocks fun var-locs)
-		(setf (debug-function-tlf-number dfun) tlf-num)
-		(setf (debug-function-blocks dfun) blocks)))
+		(setf (compiled-debug-function-tlf-number dfun) tlf-num)
+		(setf (compiled-debug-function-blocks dfun) blocks)))
 
 	    (let ((tails (lambda-tail-set fun)))
 	      (when tails
