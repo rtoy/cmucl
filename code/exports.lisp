@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.30 1990/06/03 18:55:50 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.31 1990/06/08 15:06:50 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -518,6 +518,48 @@
 	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
 	  lambda-eval-info-args-passed lambda-eval-info-entries
 	  lambda-eval-info-frame-size))
+
+(in-package "LISP")
+(import '(
+	  %aset
+	  %bitset
+	  %charset
+	  %primitive
+	  %put
+	  %raw-bits
+	  %rplaca
+	  %rplacd
+	  %sbitset
+	  %scharset
+	  %set-documentation
+	  %set-fdefinition
+	  %set-fill-pointer
+	  %set-row-major-aref
+	  %setelt
+	  %setnth
+	  %sp-set-definition
+	  %sp-set-plist
+	  %standard-char-p
+	  %string-char-p
+	  %svset
+	  %typep
+	  %array-typep
+	  array-header-p
+	  base-char-p
+	  double-float-p
+	  long-float-p
+	  short-float-p
+	  simple-array-p
+	  single-float-p
+	  string<*
+	  string>*
+	  string<=*
+	  string>=*
+	  string=*
+	  string/=*
+	  %sp-string-compare
+	  )
+	"C")
 
 
 (in-package "ASSEM")
