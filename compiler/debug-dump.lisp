@@ -71,18 +71,24 @@
 ;;; compute a bit-vector representing the set of live variables.  If the TN is
 ;;; environment-live, we only mark it as live when it is in scope at Node.
 ;;;
-(defun compute-live-vars (live node block var-locs)
+(defun compute-live-vars (live node block var-locs vop)
   (declare (type ir2-block block) (type local-tn-bit-vector live)
-	   (type hash-table var-locs) (type node node))
+	   (type hash-table var-locs) (type node node)
+	   (type (or vop null) vop))
   (let ((res (make-array (logandc2 (+ (hash-table-count var-locs) 7) 7)
 			 :element-type 'bit
-			 :initial-element 0)))
+			 :initial-element 0))
+	(spilled (gethash vop
+			  (ir2-component-spilled-vops
+			   (component-info *compile-component*)))))
     (do-live-tns (tn live block)
       (let ((leaf (tn-leaf tn)))
 	(when (and (lambda-var-p leaf)
 		   (or (not (member (tn-kind tn)
 				    '(:environment :debug-environment)))
-		       (rassoc leaf (lexenv-variables (node-lexenv node)))))
+		       (rassoc leaf (lexenv-variables (node-lexenv node))))
+		   (or (null spilled)
+		       (not (member tn spilled))))
 	  (let ((num (gethash leaf var-locs)))
 	    (when num
 	      (setf (sbit res num) 1))))))
@@ -92,17 +98,19 @@
 ;;; The PC for the location most recently dumped.
 ;;;
 (defvar *previous-location*)
+(proclaim '(type index *previous-location*))
 
 ;;; DUMP-1-LOCATION  --  Internal
 ;;;
 ;;;    Dump a compiled debug-location into *BYTE-BUFFER* that describes the
-;;; code/source map and live info.
+;;; code/source map and live info.  If true, VOP is the VOP associated with
+;;; this location, for use in determining whether TNs are spilled.
 ;;;
-(defun dump-1-location (node block kind tlf-num label live var-locs)
+(defun dump-1-location (node block kind tlf-num label live var-locs vop)
   (declare (type node node) (type ir2-block block)
 	   (type local-tn-bit-vector live) (type label label)
 	   (type location-kind kind) (type (or index null) tlf-num)
-	   (type hash-table var-locs))
+	   (type hash-table var-locs) (type (or vop null) vop))
   
   (vector-push-extend
    (dpb (position kind compiled-code-location-kinds)
@@ -119,7 +127,7 @@
       (write-var-integer (source-path-tlf-number path) *byte-buffer*))
     (write-var-integer (source-path-form-number path) *byte-buffer*))
   
-  (write-packed-bit-vector (compute-live-vars live node block var-locs)
+  (write-packed-bit-vector (compute-live-vars live node block var-locs vop)
 			   *byte-buffer*)
   
   (undefined-value))
@@ -140,7 +148,8 @@
 		     tlf-num
 		     (location-info-label loc)
 		     (vop-save-set vop)
-		     var-locs))
+		     var-locs
+		     vop))
   (undefined-value))
 
 
@@ -153,6 +162,7 @@
   (declare (type clambda fun))
   (let ((res (source-path-tlf-number (node-source-path (lambda-bind fun))))
 	(num 0))
+    (declare (type index num) (type (or index null) res))
     (do-environment-ir2-blocks (2block (lambda-environment fun))
       (let ((block (ir2-block-block 2block)))
 	(when (eq (block-info block) 2block)
@@ -186,7 +196,8 @@
 		     2block :block-start tlf-num
 		     (ir2-block-%label 2block)
 		     (ir2-block-live-out 2block)
-		     var-locs))
+		     var-locs
+		     nil))
   (dolist (loc locations)
     (dump-location-from-info loc tlf-num var-locs))
   (undefined-value))
@@ -263,7 +274,8 @@
 ;;; DEBUG-SOURCE-FOR-INFO  --  Interface
 ;;;
 ;;;    Return a list of DEBUG-SOURCE structures containing information derived
-;;; from Info.
+;;; from Info.  We always dump the Start-Positions, since it is too hard
+;;; figure out whether we need them or not.
 ;;;
 (defun debug-source-for-info (info)
   (declare (type source-info info))
@@ -277,9 +289,8 @@
 			  :compiled (source-info-start-time info)
 			  :source-root (file-info-source-root x)
 			  :start-positions
-			  (when (policy nil (>= debug 2))
-			    (coerce-to-smallest-eltype
-			     (file-info-positions x))))))
+			  (coerce-to-smallest-eltype
+			   (file-info-positions x)))))
 		(cond ((pathnamep name)
 		       (setf (debug-source-name res) name))
 		      (t
@@ -297,9 +308,11 @@
 ;;; possible.
 ;;;
 (defun coerce-to-smallest-eltype (seq)
+  (declare (type sequence seq))
   (let ((max 0))
+    (declare (type (or index null) max))
     (macrolet ((frob ()
-		 '(if (and (integerp val) (>= val 0) max)
+		 '(if (and (typep val 'index) max)
 		      (when (> val max)
 			(setq max val))
 		      (setq max nil))))
@@ -339,7 +352,7 @@
 ;;; everywhere in that case.
 ;;;
 (defun dump-1-variable (fun var tn id buffer)
-  (declare (type lambda-var var) (type tn tn) (type unsigned-byte id)
+  (declare (type lambda-var var) (type tn tn) (type index id)
 	   (type clambda fun))
   (let* ((name (leaf-name var))
 	 (package (symbol-package name))
@@ -347,6 +360,7 @@
 	 (save-tn (tn-save-tn tn))
 	 (kind (tn-kind tn))
 	 (flags 0))
+    (declare (type index flags))
     (unless package
       (setq flags (logior flags compiled-debug-variable-uninterned)))
     (when package-p
@@ -354,6 +368,8 @@
     (when (and (or (eq kind :environment)
 		   (and (eq kind :debug-environment)
 			(null (basic-var-sets var))))
+	       (not (gethash tn (ir2-component-spilled-tns
+				 (component-info *compile-component*))))
 	       (eq (lambda-var-home var) fun))
       (setq flags (logior flags compiled-debug-variable-environment-live)))
     (when save-tn
@@ -408,7 +424,8 @@
 	  (prev-name nil)
 	  (id 0)
 	  (i 0))
-      (declare (type (or simple-string null) prev-name))
+      (declare (type (or simple-string null) prev-name)
+	       (type index id i))
       (dolist (x sorted)
 	(let* ((var (car x))
 	       (name (symbol-name (leaf-name var))))
@@ -500,8 +517,7 @@
 ;;; 
 (defun debug-info-for-component (component)
   (declare (type component component))
-  (let ((level (cookie-debug *default-cookie*))
-	(res (make-compiled-debug-info :name (component-name component)
+  (let ((res (make-compiled-debug-info :name (component-name component)
 				       :package (package-name *package*))))
     (collect ((dfuns))
       (let ((var-locs (make-hash-table :test #'eq)))
@@ -529,7 +545,11 @@
 
 			:elsewhere-pc
 			(label-position
-			 (ir2-environment-elsewhere-start 2env)))))
+			 (ir2-environment-elsewhere-start 2env))))
+		 (level (cookie-debug
+			 (lexenv-cookie
+			  (node-lexenv
+			   (lambda-bind fun))))))
 	    
 	    (when (>= level 1)
 	      (setf (compiled-debug-function-variables dfun)
@@ -567,6 +587,7 @@
 	(do ((i -1 (+ i 2))
 	     (sorted sorted (cdr sorted)))
 	    ((= i len))
+	  (declare (fixnum i))
 	  (let ((dfun (car sorted)))
 	    (unless (minusp i)
 	      (setf (svref funs-vec i) (car dfun)))
