@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.109 2002/03/11 16:52:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.110 2002/05/01 16:31:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2885,7 +2885,18 @@
     ;; multiplication and division for small integral powers.
     (unless (not-more-contagious y x)
       (give-up))
-    (cond ((zerop val) '(float 1 x))
+    (cond ((zerop val)
+	   ;; Watch out.  We need to return a 1 of the same type as
+	   ;; X. So floats should return a floating point 1, complex
+	   ;; numbers with float components should return a complex 1
+	   ;; with the desired floating-point type.  For all other
+	   ;; cases, a simple 1 is the right answer.
+	   '(cond ((floatp x)
+		   (float 1 x))
+	          ((and (complexp x) (floatp (realpart x)))
+		   (complex (float 1 (realpart x))))
+	          (t
+		   1)))
 	  ((= val 2) '(* x x))
 	  ((= val -2) '(/ (* x x)))
 	  ((= val 3) '(* x x x))
