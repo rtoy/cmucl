@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.9 1998/01/21 10:10:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.10 1998/03/11 17:00:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
 ;;;; SB and SC definition:
 
 (define-storage-base registers :finite :size 32)
-(define-storage-base float-registers :finite :size 32)
+(define-storage-base float-registers :finite :size 64)
 (define-storage-base control-stack :unbounded :size 8)
 (define-storage-base non-descriptor-stack :unbounded :size 0)
 (define-storage-base constant :non-packed)
