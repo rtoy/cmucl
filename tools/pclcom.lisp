@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.25 2003/03/30 18:43:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.26 2003/04/06 09:39:24 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,9 +70,6 @@
     (make-package "PCL")
     (import slot-unbound "PCL")
     (kernel:%set-symbol-package slot-unbound (find-package "PCL"))))
-
-(when (find-package  "SLOT-ACCESSOR-NAME")
-  (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
 
 (when (find-package "CLOS-MOP")
   (rename-package "CLOS-MOP" "OLD-CLOS-MOP"))
