@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.32 1990/03/22 06:46:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.33 1990/03/22 17:37:33 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -431,6 +431,7 @@
 				 :header symbol-header-type
 				 :alloc-trans make-symbol)
   (value :set-trans set
+	 :setf-vop set
 	 :init :unbound)
   (function :setf-vop c::set-symbol-function
 	    :set-trans c::%sp-set-definition
