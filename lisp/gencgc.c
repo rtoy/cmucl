@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.11 1998/03/21 07:45:51 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.12 1998/12/16 12:38:05 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -5795,7 +5795,7 @@ gc_free_heap(void)
       gc_assert(page_table[page].allocated == FREE_PAGE);
       gc_assert(page_table[page].bytes_used == 0);
       
-      page_start = (int *)page_address(i);
+      page_start = (int *)page_address(page);
 
       for(i=0; i<1024; i++)
 	if (page_start[i] != 0)
