@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.85 2003/06/18 09:23:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.86 2003/08/12 21:33:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1081,11 +1081,11 @@
     (cond (*print-readably*
 	   (write-string "#A(" stream)
 	   (output-object (array-element-type array) stream)
-	   (write-char #\Space)
+	   (write-char #\Space stream)
 	   (output-object (array-dimensions array) stream)
-	   (write-char #\Space)
+	   (write-char #\Space stream)
 	   (sub-output-array-guts data (array-dimensions array) stream start)
-	   (write-char #\)))
+	   (write-char #\) stream))
 	  (t
 	   (write-char #\# stream)
 	   (let ((*print-base* 10))
