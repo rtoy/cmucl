@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.33 1993/08/03 13:57:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.34 1993/08/04 09:37:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -504,25 +504,22 @@
 	 ,result))))
 
 (defun %enumerate-matches (pathname verify-existance function)
-  (let ((pathname (if (typep pathname 'logical-pathname)
-		      (translate-logical-pathname pathname)
-		      pathname)))
-    (when (pathname-type pathname)
-      (unless (pathname-name pathname)
-	(error "Cannot supply a type without a name:~%  ~S" pathname)))
-    (when (and (integerp (pathname-version pathname))
-	       (member (pathname-type pathname) '(nil :unspecific)))
-      (error "Cannot supply a version without a type:~%  ~S" pathname))
-    (let ((directory (pathname-directory pathname)))
-      (if directory
-	  (ecase (car directory)
-	    (:absolute
-	     (%enumerate-directories "/" (cdr directory) pathname
-				     verify-existance function))
-	    (:relative
-	     (%enumerate-directories "" (cdr directory) pathname
-				     verify-existance function)))
-	  (%enumerate-files "" pathname verify-existance function)))))
+  (when (pathname-type pathname)
+    (unless (pathname-name pathname)
+      (error "Cannot supply a type without a name:~%  ~S" pathname)))
+  (when (and (integerp (pathname-version pathname))
+	     (member (pathname-type pathname) '(nil :unspecific)))
+    (error "Cannot supply a version without a type:~%  ~S" pathname))
+  (let ((directory (pathname-directory pathname)))
+    (if directory
+	(ecase (car directory)
+	  (:absolute
+	   (%enumerate-directories "/" (cdr directory) pathname
+				   verify-existance function))
+	  (:relative
+	   (%enumerate-directories "" (cdr directory) pathname
+				   verify-existance function)))
+	(%enumerate-files "" pathname verify-existance function))))
 
 (defun %enumerate-directories (head tail pathname verify-existance function)
   (if tail
