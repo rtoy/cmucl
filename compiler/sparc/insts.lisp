@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.33 2002/03/21 19:38:49 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.34 2002/05/02 21:07:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -797,7 +797,22 @@ about function addresses and register values.")
   (immed :field (byte 10 0) :sign-extend t))
 
 (defconstant trap-printer
-  `(:name rd :tab cc ", " immed))
+  `(:name rd :tab cc ", " rs1 "+" rs2))
+
+(defconstant trap-immed-printer
+  `(:name rd :tab cc ", " (:unless (rs1 :constant 0) rs1 "+") immed))
+
+
+(disassem:define-instruction-format
+    (format-4-trap-immed 32 :default-printer trap-immed-printer)
+  (op    :field (byte 2 30))
+  (rd    :field (byte 5 25) :type 'reg)
+  (op3   :field (byte 6 19))
+  (rs1   :field (byte 5 14) :type 'reg)
+  (i     :field (byte 1 13) :value 1)
+  (cc    :field (byte 2 11) :type 'integer-condition-register)
+  (immed :field (byte 11 0)))
+
 
 (disassem:define-instruction-format
     (format-4-trap 32 :default-printer trap-printer)
@@ -805,9 +820,9 @@ about function addresses and register values.")
   (rd    :field (byte 5 25) :type 'reg)
   (op3   :field (byte 6 19))
   (rs1   :field (byte 5 14) :type 'reg)
-  (i     :field (byte 1 13) :value 1)
+  (i     :field (byte 1 13) :value 0)
   (cc    :field (byte 2 11) :type 'integer-condition-register)
-  (immed :field (byte 11 0) :sign-extend t))	; usually sign extended
+  (rs2   :field (byte 11 0) :type 'reg))
 
 
 (defconstant cond-fp-move-integer-printer
@@ -1420,46 +1435,73 @@ about function addresses and register values.")
   (:emitter
    (emit-relative-branch-integer segment 1 #b001 cond-or-target target (or cc :icc) (or pred :pt))))
 
-;; This doesn't cover all of the possible formats for the trap
-;; instruction.  We really only want a trap with a immediate trap
-;; value and with RS1 = register 0.  Also, the Sparc Compliance
-;; Definition 2.4.1 says only trap numbers 16-31 are allowed for user
-;; code.  All other trap numbers have other uses.  The restriction on
-;; target will prevent us from using bad trap numbers by mistake.
-#-sparc-v9
-(define-instruction t (segment condition target)
+;; The Sparc Compliance Definition 2.4.1 says only trap numbers 16-31
+;; are allowed for user code.  All other trap numbers have other
+;; uses. The restriction on target will prevent us from using bad trap
+;; numbers by mistake.
+;;
+;; Note that the V9 architecture only allows 7 bits for the immediate
+;; trap number.  Previous architectures allowed 13 bits. CMUCL doesn't
+;; need all 13 bits, and the SCD only allows 16-31, so we only allow
+;; for those now.
+(define-instruction t (segment condition src1-or-imm &optional src2
+			       #+sparc-v9 (cc #-sparc-64 :icc #+sparc-64 :xcc))
   (:declare (type branch-condition condition)
-	    (type (integer 16 31) target))
-  (:printer format-3-immed ((op #b10)
-                            (rd nil :type 'branch-condition)
-                            (op3 #b111010)
-                            (rs1 0))
-            '(:name rd :tab immed))
-  (:attributes branch)
-  (:dependencies (reads :psr))
-  (:delay 0)
-  (:emitter (emit-format-3-immed segment #b10 (branch-condition condition)
-				 #b111010 0 1 target)))
-
-#+sparc-v9
-(define-instruction t (segment condition target &optional (cc #-sparc-64 :icc #+sparc-64 :xcc))
-  (:declare (type branch-condition condition)
-	    (type (integer 16 31) target)
+	    (type (or tn (unsigned-byte 8)) src1-or-imm)
+	    (type (or null tn (unsigned-byte 8)) src2)
 	    (type integer-condition-register cc))
+  (:printer format-4-trap-immed ((op #b10)
+				 (rd nil :type 'branch-condition)
+				 (op3 #b111010)
+				 (i 1))
+	    trap-immed-printer)
   (:printer format-4-trap ((op #b10)
-                            (rd nil :type 'branch-condition)
-                            (op3 #b111010)
-                            (rs1 0))
-            trap-printer)
+			   (rd nil :type 'branch-condition)
+			   (op3 #b111010)
+			   (i 0)
+			   (rs2 nil :type 'reg))
+	    trap-printer)
   (:attributes branch)
   (:dependencies (reads :psr))
   (:delay 0)
-  (:emitter (emit-format-4-trap segment
-				#b10
-				(branch-condition condition)
-				#b111010 0 1
-				(integer-condition cc)
-				target)))
+  (:emitter
+   (etypecase src1-or-imm
+     (integer
+      ;; src2 shouldn't be given (or should be NIL) in this case.
+      (assert (null src2))
+      (unless (typep src1-or-imm '(integer 16 31))
+	(cerror "Use it anyway"
+		"Immediate trap number ~A specified, but only trap numbers
+   16 to 31 are available to the application"
+		src1-or-imm))
+      (emit-format-4-trap segment
+			  #b10
+			  (branch-condition condition)
+			  #b111010 0 1
+			  (integer-condition cc)
+			  src1-or-imm))
+     (tn
+      ;; src1 is a register.  src2 must be given.
+      (etypecase src2
+	(integer
+	 (emit-format-4-trap segment
+			     #b10
+			     (branch-condition condition)
+			     #b111010
+			     (reg-tn-encoding src1-or-imm)
+			     1
+			     (integer-condition cc)
+			     src2))
+	(tn
+	 (emit-format-4-trap segment
+			     #b10
+			     (branch-condition condition)
+			     #b111010
+			     (reg-tn-encoding src1-or-imm)
+			     0
+			     (integer-condition cc)
+			     (reg-tn-encoding src2)))))))
+  )
 
 ;; Same as for the branch instructions.  On the Sparc V9, we will use
 ;; the FP branch with prediction instructions instead.
