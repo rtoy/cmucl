@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.40 2002/10/19 15:18:47 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.41 2002/11/21 18:42:30 pmai Exp $")
 
 (in-package :pcl)
 
@@ -1519,21 +1519,25 @@ work during bootstrapping.
 ;;;    
 (defun ensure-generic-function-using-class (existing spec &rest keys
 					    &key (lambda-list nil lambda-list-p)
+					    argument-precedence-order
 					    &allow-other-keys)
   (declare (ignore keys))
   (cond ((and existing (early-gf-p existing))
 	 existing)
 	((assoc spec *generic-function-fixups* :test #'equal)
 	 (if existing
-	     (make-early-gf spec lambda-list lambda-list-p existing)	       
+	     (make-early-gf spec lambda-list lambda-list-p existing
+	                    argument-precedence-order)
 	     (error "The function ~S is not already defined" spec)))
 	(existing
 	 (error "~S should be on the list ~S" spec '*generic-function-fixups*))
 	(t
 	 (pushnew spec *early-generic-functions* :test #'equal)
-	 (make-early-gf spec lambda-list lambda-list-p))))
+	 (make-early-gf spec lambda-list lambda-list-p nil
+	                argument-precedence-order))))
 
-(defun make-early-gf (spec &optional lambda-list lambda-list-p function)
+(defun make-early-gf (spec &optional lambda-list lambda-list-p function
+                                     argument-precedence-order)
   (let ((fin (allocate-funcallable-instance *sgf-wrapper* *sgf-slots-init*)))
     (set-funcallable-instance-function 
      fin 
@@ -1554,7 +1558,11 @@ work during bootstrapping.
       (setf (early-gf-arg-info fin) arg-info)
       (when lambda-list-p
 	(proclaim-defgeneric spec lambda-list)
-	(set-arg-info fin :lambda-list lambda-list)))
+	(if argument-precedence-order
+	    (set-arg-info fin
+	                  :lambda-list lambda-list
+			  :argument-precedence-order argument-precedence-order)
+	    (set-arg-info fin :lambda-list lambda-list))))
     fin))
 
 (defun set-dfun (gf &optional dfun cache info)
