@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.18 1992/04/28 21:37:25 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.19 1992/04/28 21:49:00 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -12,6 +12,8 @@
 #include "alloc.h"
 #include "vars.h"
 #include "globals.h"
+#include "os.h"
+#include "arch.h"
 
 lispobj lisp_nil_reg = NIL;
 char *lisp_csp_reg, *lisp_bsp_reg;
@@ -101,7 +103,7 @@ char *envp[];
 	    } while (*lib++ == ':');
 	}
 	if (core == NULL) {
-	    strcpy(buf, "/usr/misc/.cmucl/lib/";
+	    strcpy(buf, "/usr/misc/.cmucl/lib/");
 	    strcat(buf, default_core);
 	}
     }
