@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.27 2003/04/15 14:55:20 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.28 2003/04/25 13:51:44 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,7 +659,7 @@
 (eval-when (compile load eval)
 (defun print-fp-reg (value stream dstate)
   (declare (ignore dstate))
-  (format stream "FR~D" value))
+  (format stream "ST(~D)" value))
 
 (defun prefilter-fp-reg (value dstate)
   ;; just return it
@@ -2666,7 +2666,8 @@
 ;;;
 ;;; Restore FP State
 ;;;
-(define-instruction frstor(segment src)
+(define-instruction frstor (segment src)
+  ;; This conflicts with fucom due to the mod bits
   (:printer floating-point ((op '(#b101 #b100))))
   (:emitter
    (emit-byte segment #b11011101)
@@ -2674,7 +2675,7 @@
 ;;;
 ;;; Clear exceptions
 ;;;
-(define-instruction fnclex(segment)
+(define-instruction fnclex (segment)
   (:printer floating-point-5 ((op #b00010)))
   (:emitter
    (emit-byte segment #b11011011)
@@ -2721,8 +2722,8 @@
 ;;; Unordered comparison
 ;;;
 (define-instruction fucom (segment src)
-  ;; XX Printer conflicts with frstor
-  ;; (:printer floating-point ((op '(#b101 #b100))))
+  ;; XX Printer conflicts with frstor due to the mod bits
+  (:printer floating-point-fp ((op '(#b101 #b100))))
   (:emitter
    (assert (fp-reg-tn-p src))
    (emit-byte segment #b11011101)
@@ -2767,43 +2768,43 @@
 ;;; 80387 Specials
 ;;;
 ;;;
-(define-instruction fsqrt(segment)
+(define-instruction fsqrt (segment)
   (:printer floating-point-no ((op #b11010)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11111010)))
 
-(define-instruction fscale(segment)
+(define-instruction fscale (segment)
   (:printer floating-point-no ((op #b11101)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11111101)))
 
-(define-instruction fxtract(segment)
+(define-instruction fxtract (segment)
   (:printer floating-point-no ((op #b10100)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11110100)))
 
-(define-instruction fsin(segment)
+(define-instruction fsin (segment)
   (:printer floating-point-no ((op #b11110)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11111110)))
 
-(define-instruction fcos(segment)
+(define-instruction fcos (segment)
   (:printer floating-point-no ((op #b11111)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11111111)))
 
-(define-instruction fprem1(segment)
+(define-instruction fprem1 (segment)
   (:printer floating-point-no ((op #b10101)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11110101)))
 
-(define-instruction fprem(segment)
+(define-instruction fprem (segment)
   (:printer floating-point-no ((op #b11000)))
   (:emitter
    (emit-byte segment #b11011001)
@@ -2819,31 +2820,31 @@
 ;;; in any VOPs that use them. See the book.
 
 ;; st0 <- st1*log2(st0)
-(define-instruction fyl2x(segment)	; POPS STACK
+(define-instruction fyl2x (segment)	; POPS STACK
   (:printer floating-point-no ((op #b10001)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11110001)))
 
-(define-instruction fyl2xp1(segment)
+(define-instruction fyl2xp1 (segment)
   (:printer floating-point-no ((op #b11001)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11111001)))
 
-(define-instruction f2xm1(segment)
+(define-instruction f2xm1 (segment)
   (:printer floating-point-no ((op #b10000)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11110000)))
 
-(define-instruction fptan(segment)	; st(0) <- 1; st(1) <- tan
+(define-instruction fptan (segment)	; st(0) <- 1; st(1) <- tan
   (:printer floating-point-no ((op #b10010)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11110010)))
 
-(define-instruction fpatan(segment)	; POPS STACK
+(define-instruction fpatan (segment)	; POPS STACK
   (:printer floating-point-no ((op #b10011)))
   (:emitter
    (emit-byte segment #b11011001)
@@ -2851,43 +2852,43 @@
 
 ;;; load constant
 
-(define-instruction fldz(segment)
+(define-instruction fldz (segment)
   (:printer floating-point-no ((op #b01110)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101110)))
 
-(define-instruction fld1(segment)
+(define-instruction fld1 (segment)
   (:printer floating-point-no ((op #b01000)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101000)))
 
-(define-instruction fldpi(segment)
+(define-instruction fldpi (segment)
   (:printer floating-point-no ((op #b01011)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101011)))
 
-(define-instruction fldl2t(segment)
+(define-instruction fldl2t (segment)
   (:printer floating-point-no ((op #b01001)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101001)))
 
-(define-instruction fldl2e(segment)
+(define-instruction fldl2e (segment)
   (:printer floating-point-no ((op #b01010)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101010)))
 
-(define-instruction fldlg2(segment)
+(define-instruction fldlg2 (segment)
   (:printer floating-point-no ((op #b01100)))
   (:emitter
    (emit-byte segment #b11011001)
    (emit-byte segment #b11101100)))
 
-(define-instruction fldln2(segment)
+(define-instruction fldln2 (segment)
   (:printer floating-point-no ((op #b01101)))
   (:emitter
    (emit-byte segment #b11011001)
