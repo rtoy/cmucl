@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.5 1993/05/31 20:26:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.6 1993/07/30 23:35:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,6 +144,7 @@
 ;;; RPC routine saying it is okay to return to the editor's top level.
 ;;;
 (defvar *debug-editor-source-data* nil)
+(defvar *in-debug-edit-source* nil)
 
 (defcommand "Debug Edit Source" (p)
   "Given the \"Current Eval Server\"'s current debugger frame, place the user
@@ -162,10 +163,12 @@
     (wire:wire-force-output wire)
     ;;
     ;; Wait for the source info.
-    (let ((*debug-editor-source-data* nil))
-      (loop
-	(system:serve-event)
-	(when *debug-editor-source-data* (return))))))
+    (let ((*debug-editor-source-data* nil)
+	  (*in-debug-edit-source* t))
+      (catch 'blow-debug-edit-source
+	(loop
+	  (system:serve-event)
+	  (when *debug-editor-source-data* (return)))))))
 
 ;;; EDIT-SOURCE-LOCATION -- Internal Interface.
 ;;;
@@ -233,8 +236,9 @@
 ;;; slave cannot give the editor source information.
 ;;;
 (defun cannot-edit-source-location ()
-  (throw 'editor-top-level nil))
-
+  (loud-message "Can't edit source.")
+  (when *in-debug-edit-source*
+    (throw 'blow-debug-edit-source nil)))
 
 
 ;;;; Breakpoints.
