@@ -234,7 +234,7 @@ simple-integer-vector-p?
 ;;; Since we test for a function rather than the unbound marker, this works on
 ;;; NIL.
 ;;;
-(define-vop (coerce-to-function)
+(define-vop (fast-safe-coerce-to-function)
   (:args (thing :scs (descriptor-reg)
 		:target res))
   (:results (res :scs (descriptor-reg)))
@@ -257,3 +257,31 @@ simple-integer-vector-p?
 	  (test-simple-type res temp done-lab nil system:%function-type)
 	  (error-call clc::error-symbol-undefined thing-temp))))))
 
+
+(define-vop (coerce-to-function)
+  (:args (thing :scs (descriptor-reg)
+		:target res))
+  (:results (res :scs (descriptor-reg)))
+  (:node-var node)
+  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (descriptor-reg)) thing-temp)
+  (:generator 0
+    (let ((not-fun-lab (gen-label))
+	  (done-lab (gen-label))
+	  (not-sym-lab (gen-label)))
+      (test-simple-type thing temp not-fun-lab t system:%function-type)
+      (unless (location= thing res)
+	(inst lr res thing))
+      (emit-label done-lab)
+
+      (unassemble
+	(assemble-elsewhere node
+	  (emit-label not-fun-lab)
+	  (test-simple-type thing temp not-sym-lab t system:%symbol-type)
+	  (inst lr thing-temp thing)
+	  (loadw res thing (/ clc::symbol-definition 4))
+	  (test-simple-type res temp done-lab nil system:%function-type)
+	  (error-call clc::error-symbol-undefined thing-temp)
+
+	  (emit-label not-sym-lab)
+	  (error-call clc::error-object-not-function-or-symbol thing))))))
