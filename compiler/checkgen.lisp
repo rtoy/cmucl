@@ -127,6 +127,9 @@
 ;;; that test negated.  Otherwise, we try to do a simple test, and if that is
 ;;; impossible, we do a hairy test with non-negated types.
 ;;;
+;;;    When doing a non-negated hairy check, we call MAYBE-WEAKEN-CHECK to
+;;; weaken the test to a convenient supertype (conditional on policy.)
+;;;
 (defun maybe-negate-check (cont types)
   (declare (type continuation cont) (list types))
   (multiple-value-bind (ptypes count)
@@ -139,12 +142,13 @@
 				(list nil (maybe-weaken-check x cont) x))
 			    types)))
 	(let ((res (mapcar #'(lambda (p c)
-			       (let ((diff (type-difference p c)))
+			       (let ((diff (type-difference p c))
+				     (weak (maybe-weaken-check c cont)))
 				 (if (and diff
 					  (< (type-test-cost diff)
-					     (type-test-cost c)))
-				     (list t (maybe-weaken-check diff cont) c)
-				     (list nil (maybe-weaken-check c cont) c))))
+					     (type-test-cost weak)))
+				     (list t diff c)
+				     (list nil weak c))))
 			   ptypes types)))
 	  (if (and (not (find-if #'first res))
 		   (every #'type-check-template types))
