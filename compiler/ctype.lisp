@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.20 1991/05/21 22:29:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.21 1991/06/07 15:04:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,9 +386,9 @@
 	 (types (approximate-function-type-types type))
 	 (args (combination-args call))
 	 (nargs (length args))
-	 (allowp (find-if #'(lambda (x)
-			      (and (constant-continuation-p x)
-				   (eq (continuation-value x) :allow-other-keys)))
+	 (allowp (some #'(lambda (x)
+			   (and (constant-continuation-p x)
+				(eq (continuation-value x) :allow-other-keys)))
 			  args)))
 
     (setf (approximate-function-type-min-args type)
