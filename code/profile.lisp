@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.9 1993/08/17 16:40:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.10 1993/08/19 12:33:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -296,15 +296,13 @@
 
 ;;; Precompute some encapsulation functions:
 ;;;
-(eval-when (compile eval)
-  (defconstant precomputed-encapsulations 8))
-;;;
 (macrolet ((frob ()
 	     (let ((res ()))
-	       (dotimes (i precomputed-encapsulations)
+	       (dotimes (i 4)
 		 (push `(setf (gethash '(,i . nil) *existing-encapsulations*)
 			      #',(make-profile-encapsulation i nil))
-		       res)
+		       res))
+	       (dotimes (i 2)
 		 (push `(setf (gethash '(,i . t) *existing-encapsulations*)
 			      #',(make-profile-encapsulation i t))
 		       res))
@@ -424,6 +422,7 @@
 
 
 (defun %report-times (names)
+  (declare (optimize (speed 0)))
   (unless (boundp '*call-overhead*)
     (compute-time-overhead))
   (let ((info ())
