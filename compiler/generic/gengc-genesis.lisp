@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.8 1993/05/23 20:39:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.9 1993/05/25 19:09:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -558,10 +558,7 @@
 	   (type index index)
 	   (type (member :nothing :slot :object) remember))
   (if (eq (descriptor-%sap value) :load-time-cookie)
-      (note-load-time-value-reference
-       (int-sap (+ (logandc2 (descriptor-bits address) vm:lowtag-mask)
-		   (ash index vm:word-shift)))
-       value)
+      (note-load-time-value-reference address index value)
       (let ((bits (descriptor-bits value)))
 	(write-bits address index bits)
 	(unless (eq remember :nothing)
@@ -1489,14 +1486,16 @@
     (setf *load-time-value-counter* (1+ counter))
     (make-pointer-descriptor counter :load-time-cookie nil)))
 
-(defun note-load-time-value-reference (address marker)
+(defun note-load-time-value-reference (address index marker)
   (cold-push (cold-cons
 	      (cold-intern :load-time-value-fixup)
 	      (cold-cons
-	       (sap-to-core address)
+	       address
 	       (cold-cons
-		(number-to-core (descriptor-bits marker))
-		*nil-descriptor*)))
+		(make-fixnum-descriptor index)
+		(cold-cons
+		 (number-to-core (descriptor-bits marker))
+		 *nil-descriptor*))))
 	     *current-init-functions-cons*))
 
 (defun finalize-load-time-value-noise ()
