@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.13 1993/02/17 18:18:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.14 1993/02/17 19:47:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1041,7 +1041,7 @@
     (dolist (slot (dd-slots info))
       (let ((dsd slot))
 	(when (and (dsd-accessor slot)
-		   (not (eq (dsd-raw-type slot) 'T)))
+		   (eq (dsd-raw-type slot) 't))
 	  (setf (symbol-function (dsd-accessor slot))
 		(structure-slot-accessor layout dsd))
 	  
