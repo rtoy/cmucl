@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.98 1993/08/20 17:42:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.99 1993/08/20 22:56:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2400,7 +2400,7 @@
 ;;; be open-coded even if FUNCALL is :NOTINLINE.
 ;;;
 
-(deftransform funcall ((function &rest args))
+(deftransform funcall ((function &rest args) * * :when :both)
   (collect ((arg-names))
     (dolist (arg args)
       (declare (ignore arg))
