@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.49 1993/03/12 15:32:33 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.50 1993/05/08 00:46:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -691,7 +691,7 @@
 		 (handle
 		  (dump-push handle file))
 		 (t
-		  (entry-patches (cons info i))
+		  (entry-patches (cons info (+ i vm:code-constants-offset))) 
 		  (dump-fop 'lisp::fop-misc-trap file)))))
 	     (:load-time-value
 	      (dump-push (cdr entry) file))
