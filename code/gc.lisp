@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.39 2004/01/09 04:22:48 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.40 2004/08/02 16:03:54 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,16 +79,18 @@
 (c-var-frob dynamic-usage "bytes_allocated")
 
 (defun static-space-usage ()
-  (- (* lisp::*static-space-free-pointer* vm:word-bytes)
+  (- (* lisp::*static-space-free-pointer* #-amd64 vm:word-bytes
+	#+amd64 4) ; won't be necessary when amd64 uses 4-bit lowtag
      (static-space-start)))
 
 (defun read-only-space-usage ()
-  (- (* lisp::*read-only-space-free-pointer* vm:word-bytes)
+  (- (* lisp::*read-only-space-free-pointer* #-amd64 vm:word-bytes
+	#+amd64 4) ; won't be necessary when amd64 uses 4-bit lowtag
      (read-only-space-start)))
 
 (defun control-stack-usage ()
-#-x86 (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack-start))
-#+x86 (- (control-stack-end) (system:sap-int (c::control-stack-pointer-sap))) )
+#-(or x86 amd64) (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack-start))
+#+(or x86 amd64) (- (control-stack-end) (system:sap-int (c::control-stack-pointer-sap))) )
 
 (defun binding-stack-usage ()
   (- (system:sap-int (c::binding-stack-pointer-sap)) (binding-stack-start)))
