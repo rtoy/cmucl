@@ -1,0 +1,380 @@
+/*
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.1 1997/09/04 08:46:02 dtc Exp $
+ *
+ * OS-dependent routines.  This file (along with os.h) exports an
+ * OS-independent interface to the operating system VM facilities.
+ * Suprisingly, this interface looks a lot like the Mach interface
+ * (but simpler in some places).  For some operating systems, a subset
+ * of these functions will have to be emulated.
+ *
+ * This is an experimental Solaris version based on sunos-os.c but
+ * without the VM hack of unmapped pages for the GC trigger which
+ * caused trouble when system calls were passed unmapped pages.
+ *
+ */
+
+#define DEBUG
+
+#include <stdio.h>
+
+#include <signal.h>
+#include <sys/file.h>
+
+#include <unistd.h>
+#include <errno.h>
+#include <sys/param.h>
+#define OS_PROTERR		SEGV_ACCERR
+#define OS_MAPERR		SEGV_MAPERR
+#define OS_HASERRNO(code)	((code)->si_errno != 0)
+#define OS_ERRNO(code)		((code)->si_errno)
+
+#include "os.h"
+
+/* block size must be larger than the system page size */
+#define SPARSE_BLOCK_SIZE (1<<15)
+#define SPARSE_SIZE_MASK (SPARSE_BLOCK_SIZE-1)
+
+#define PROT_DEFAULT OS_VM_PROT_ALL
+
+#define OFFSET_NONE ((os_vm_offset_t)(~0))
+
+#define EMPTYFILE "/tmp/empty"
+#define ZEROFILE "/dev/zero"
+
+#define INITIAL_MAX_SEGS 32
+#define GROW_MAX_SEGS 16
+
+extern char *getenv();
+
+/* ---------------------------------------------------------------- */
+
+#define ADJ_OFFSET(off,adj) (((off)==OFFSET_NONE) ? OFFSET_NONE : ((off)+(adj)))
+
+long os_vm_page_size=(-1);
+static long os_real_page_size=(-1);
+
+static int zero_fd=(-1), empty_fd=(-1);
+
+static os_vm_size_t real_page_size_difference=0;
+
+static void os_init_bailout(arg)
+char *arg;
+{
+    char buf[500];
+    sprintf(buf,"os_init: %s",arg);
+    perror(buf);
+    exit(1);
+}
+
+void os_init()
+{
+    char *empty_file=getenv("CMUCL_EMPTYFILE");
+
+    if(empty_file==NULL)
+	empty_file=EMPTYFILE;
+
+    empty_fd=open(empty_file,O_RDONLY|O_CREAT);
+    if(empty_fd<0)
+	os_init_bailout(empty_file);
+    unlink(empty_file);
+
+    zero_fd=open(ZEROFILE,O_RDONLY);
+    if(zero_fd<0)
+	os_init_bailout(ZEROFILE);
+
+    os_vm_page_size = os_real_page_size = sysconf(_SC_PAGESIZE);
+
+    if(os_vm_page_size>OS_VM_DEFAULT_PAGESIZE){
+	fprintf(stderr,"os_init: Pagesize too large (%d > %d)\n",
+		os_vm_page_size,OS_VM_DEFAULT_PAGESIZE);
+	exit(1);
+    }else{
+	/*
+	 * we do this because there are apparently dependencies on
+	 * the pagesize being OS_VM_DEFAULT_PAGESIZE somewhere...
+	 * but since the OS doesn't know we're using this restriction,
+	 * we have to grovel around a bit to enforce it, thus anything
+	 * that uses real_page_size_difference.
+	 */
+	real_page_size_difference=OS_VM_DEFAULT_PAGESIZE-os_vm_page_size;
+	os_vm_page_size=OS_VM_DEFAULT_PAGESIZE;
+    }
+}
+
+/* ---------------------------------------------------------------- */
+
+os_vm_address_t
+os_validate(os_vm_address_t addr, os_vm_size_t len)
+{
+  int flags = MAP_PRIVATE|MAP_NORESERVE;
+
+  if(addr) flags|=MAP_FIXED;
+
+  if((addr=mmap(addr,len,OS_VM_PROT_ALL,flags,zero_fd,0)) == (os_vm_address_t) -1)
+    perror("mmap");
+
+  return addr;
+}
+
+void
+os_invalidate(os_vm_address_t addr, os_vm_size_t len)
+{
+  if(munmap(addr,len) == -1)
+    perror("munmap");
+}
+
+os_vm_address_t
+os_map(int fd, int offset, os_vm_address_t addr, os_vm_size_t len)
+{
+  if((addr=mmap(addr,len,OS_VM_PROT_ALL,MAP_PRIVATE|MAP_FIXED,fd,
+		(off_t) offset)) == (os_vm_address_t) -1)
+    perror("mmap");
+  
+  return addr;
+}
+
+void os_flush_icache(address, length)
+os_vm_address_t address;
+os_vm_size_t length;
+{
+  static int flushit = -1;
+  /*
+   * On some systems, iflush needs to be emulated in the kernel
+   * On those systems, it isn't necessary
+   * Call getenv() only once.
+   */
+  if (flushit == -1)
+    flushit = getenv("CMUCL_NO_SPARC_IFLUSH") == 0;
+  
+  if (flushit) {
+    static int traceit = -1;
+    if (traceit == -1)
+      traceit = getenv("CMUCL_TRACE_SPARC_IFLUSH") != 0;
+    
+    if (traceit)
+      fprintf(stderr,";;;iflush %p - %x\n", address,length);
+    flush_icache(address,length);
+  }
+}
+
+void
+os_protect(os_vm_address_t address, os_vm_size_t length, os_vm_prot_t prot)
+{
+  if(mprotect(address, length, prot) == -1)
+    perror("mprotect");
+}
+
+boolean valid_addr(test)
+os_vm_address_t test;
+{
+  /* XXX needs implementing */
+  return 1;
+}
+
+/* ---------------------------------------------------------------- */
+
+static boolean maybe_gc(HANDLER_ARGS)
+{
+    /*
+     * It's necessary to enable recursive SEGVs, since the handler is
+     * used for multiple things (e.g., both gc-trigger & faulting in pages).
+     * We check against recursive gc's though...
+     */
+
+    boolean did_gc;
+    static already_trying=0;
+
+    if(already_trying)
+	return FALSE;
+
+    SAVE_CONTEXT();
+
+#ifdef POSIX_SIGS
+    sigprocmask(SIG_SETMASK, &context->uc_sigmask,0);
+#else
+    sigsetmask(context->sc_mask);
+#endif
+
+    already_trying=TRUE;
+    did_gc=interrupt_maybe_gc(signal, code, context);
+    already_trying=FALSE;
+
+    return did_gc;
+}
+
+/*
+ * The primary point of catching segmentation violations is to allow 
+ * read only memory to be re-mapped with more permissions when a write
+ * is attempted.  this greatly decreases the residency of the program
+ * in swap space since read only areas don't take up room
+ *
+ * Running into the gc trigger page will also end up here...
+ */
+void segv_handler(HANDLER_ARGS)
+{
+    caddr_t addr = code->si_addr;
+
+    SAVE_CONTEXT();
+
+    if(maybe_gc(signal, code, context))
+      /* we just garbage collected */
+      return;
+    else{
+      /* a *real* protection fault */
+      fprintf(stderr,
+	      "segv_handler: Real protection violation: 0x%08x\n",
+	      addr);
+      interrupt_handle_now(signal,code,context);
+    }
+}
+
+void os_install_interrupt_handlers()
+{
+    interrupt_install_low_level_handler(SIGSEGV,segv_handler);
+}
+
+
+/* function defintions for register lvalues */
+
+int * solaris_register_address(struct ucontext *context, int reg)
+{
+    if (reg == 0) {
+	static int zero;
+
+	zero = 0;
+
+	return &zero;
+    } else if (reg < 16) {
+	return &context->uc_mcontext.gregs[reg+3];
+    } else if (reg < 32) {
+	int *sp = (int*) context->uc_mcontext.gregs[REG_SP];
+	return &sp[reg-16];
+    } else
+	return 0;
+}
+/* function defintions for backward compatibilty and static linking */
+
+/* For now we put in some porting functions */
+
+#ifndef SOLARIS25
+int
+getdtablesize(void)
+{
+    return sysconf(_SC_OPEN_MAX);
+}
+
+char *
+getwd(char *path)
+{
+    return getcwd(path, MAXPATHLEN);
+}
+
+int
+getpagesize(void)
+{
+    return sysconf(_SC_PAGESIZE);
+}
+
+
+#include <sys/procfs.h>
+/* Old rusage definition */
+struct  rusage {
+        struct timeval ru_utime;        /* user time used */
+        struct timeval ru_stime;        /* system time used */
+        long    ru_maxrss;
+#define ru_first        ru_ixrss
+        long    ru_ixrss;               /* XXX: 0 */
+        long    ru_idrss;               /* XXX: sum of rm_asrss */
+        long    ru_isrss;               /* XXX: 0 */
+        long    ru_minflt;              /* any page faults not requiring I/O */
+        long    ru_majflt;              /* any page faults requiring I/O */
+        long    ru_nswap;               /* swaps */
+        long    ru_inblock;             /* block input operations */
+        long    ru_oublock;             /* block output operations */
+        long    ru_msgsnd;              /* messages sent */
+        long    ru_msgrcv;              /* messages received */
+        long    ru_nsignals;            /* signals received */
+        long    ru_nvcsw;               /* voluntary context switches */
+        long    ru_nivcsw;              /* involuntary " */
+#define ru_last         ru_nivcsw
+};
+
+
+int
+getrusage(int who, struct rusage *rp)
+{
+    memset(rp, 0, sizeof(struct rusage));
+    return 0;
+}
+
+int
+setreuid()
+{
+    fprintf(stderr,"setreuid unimplemented\n");
+    errno = ENOSYS;
+    return -1;
+}
+
+int
+setregid()
+{
+    fprintf(stderr,"setregid unimplemented\n");
+    errno = ENOSYS;
+    return -1;
+}
+
+int
+gethostid()
+{
+    fprintf(stderr,"gethostid unimplemented\n");
+    errno = ENOSYS;
+    return -1;
+}
+
+int
+killpg(int pgrp, int sig)
+{
+    if (pgrp < 0) {
+	errno = ESRCH;
+	return -1;
+    }
+    return kill(-pgrp, sig);
+}
+#endif
+
+int
+sigblock(int mask)
+{
+    sigset_t old, new;
+
+    sigemptyset(&new);
+    new.__sigbits[0] = mask;
+
+    sigprocmask(SIG_BLOCK, &new, &old);
+
+    return old.__sigbits[0];
+}
+
+#ifndef SOLARIS25
+int
+wait3(int *status, int options, struct rusage *rp)
+{
+    if (rp)
+	memset(rp, 0, sizeof(struct rusage));
+    return waitpid(-1, status, options);
+}
+#endif
+
+int
+sigsetmask(int mask)
+{
+    sigset_t old, new;
+
+    sigemptyset(&new);
+    new.__sigbits[0] = mask;
+
+    sigprocmask(SIG_SETMASK, &new, &old);
+
+    return old.__sigbits[0];
+
+}
