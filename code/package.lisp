@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.27 1992/11/30 16:41:45 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.28 1993/02/16 16:26:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;; Defpackage by Dan Zigmond.  With-Package-Iterator by Blaine Burks. 
 ;;; Defpackage and do-mumble-symbols macros re-written by William Lott.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 (export '(package packagep *package* make-package in-package find-package
 	  package-name package-nicknames rename-package delete-package
 	  package-use-list package-used-by-list package-shadowing-symbols
@@ -33,7 +33,7 @@
 (in-package "KERNEL")
 (export '(%in-package old-in-package))
 
-(in-package 'lisp)
+(in-package "LISP")
 
 (defvar *default-package-use-list* '("COMMON-LISP")
   "The list of packages to use by default of no :USE argument is supplied
@@ -43,14 +43,7 @@
 (defstruct (package
 	    (:constructor internal-make-package)
 	    (:predicate packagep)
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore d) (stream stream))
-	       (multiple-value-bind (iu it) (internal-symbol-count s)
-		 (multiple-value-bind (eu et) (external-symbol-count s)
-		   (format stream
-			   "#<The ~A package, ~D/~D internal, ~D/~D external>"
-			   (package-%name s) iu it eu et)))))
+	    (:print-function %print-package)
 	    (:make-load-form-fun
 	     (lambda (package)
 	       (values `(package-or-lose ',(package-name package))
@@ -61,17 +54,45 @@
    tables for the internal and external symbols, and a list of the
    shadowing symbols."
   (tables (list nil))	; A list of all the hashtables for inherited symbols.
-  %name			; The string name of the package.
-  %nicknames		; List of nickname strings.
-  (%use-list ())		; List of packages we use.
-  (%used-by-list ())	; List of packages that use this package.
-  internal-symbols	; Hashtable of internal symbols.
-  external-symbols	; Hashtable of external symbols.
-  (%shadowing-symbols ())) ; List of shadowing symbols.
+  ;;
+  ;; The string name of the package.
+  (%name nil :type (or simple-string null))
+  ;;
+  ;; List of nickname strings.
+  (%nicknames () :type list)
+  ;;
+  ;; List of packages we use.
+  (%use-list () :type list)
+  ;;
+  ;; List of packages that use this package.
+  (%used-by-list () :type list)
+  ;;
+  ;; Hashtables of internal & external symbols.
+  (internal-symbols (required-argument) :type package-hashtable)
+  (external-symbols (required-argument) :type package-hashtable)
+  ;;
+  ;; List of shadowing symbols.
+  (%shadowing-symbols () :type list))
+
+
+(defun %print-package (s stream d)
+  (declare (ignore d) (stream stream))
+  (if (package-%name s)
+      (multiple-value-bind (iu it) (internal-symbol-count s)
+	(multiple-value-bind (eu et) (external-symbol-count s)
+	  (print-unreadable-object (s stream)
+	    (format stream "#<The ~A package, ~D/~D internal, ~D/~D external>"
+		    (package-%name s) iu it eu et))))
+      (print-unreadable-object (s stream :identity t)
+	(format stream "#<deleted package>"))))
+
+;;; Can get the name (NIL) of a deleted package.
+;;;
+(defun package-name (x)
+  (package-%name (if (packagep x) x (package-or-lose x))))
 
 (macrolet ((frob (ext real)
 	     `(defun ,ext (x) (,real (package-or-lose x)))))
-  (frob package-name package-%name)
   (frob package-nicknames package-%nicknames)
   (frob package-use-list package-%use-list)
   (frob package-used-by-list package-%used-by-list)
@@ -120,14 +141,16 @@
 ;;;    Take a package-or-string-or-symbol and return a package.
 ;;;
 (defun package-or-lose (thing)
-  (if (packagep thing)
-      thing
-      (let ((thing (string thing)))
-	(cond ((gethash thing *package-names*))
-	      (t
-	       (cerror "Make this package."
-		       "~S is not the name of a package." thing)
-	       (make-package thing))))))
+  (cond ((packagep thing)
+	 (unless (package-%name thing)
+	   (error "Can't do anything to a deleted package: ~S" thing))
+	 thing)
+	(t
+	 (cond ((gethash thing *package-names*))
+	       (t
+		(cerror "Make this package."
+			"~S is not the name of a package." thing)
+		(make-package thing))))))
 
 
 ;;;; Package-Hashtables
@@ -147,22 +170,34 @@
 ;;; the the entry is unused.  If it is one, then it is deleted.
 ;;; Double-hashing is used for collision resolution.
 
+(deftype hash-vector () '(simple-array (unsigned-byte 8) (*)))
+
 (defstruct (package-hashtable
 	    (:constructor internal-make-package-hashtable ())
 	    (:copier nil)
 	    (:print-function
 	     (lambda (table stream d)
-	       (declare (ignore d))
+	       (declare (ignore d) (stream stream))
 	       (format stream
 		       "#<Package-Hashtable: Size = ~D, Free = ~D, Deleted = ~D>"
 		       (package-hashtable-size table)
 		       (package-hashtable-free table)
 		       (package-hashtable-deleted table)))))
-  table		; The g-vector of symbols.
-  hash		; The i-vector of pname hash values.
-  size		; The maximum number of entries allowed.
-  free		; The entries that can be made before we have to rehash.
-  deleted)	; The number of deleted entries.
+  ;;
+  ;; The g-vector of symbols.
+  (table nil :type (or simple-vector null))
+  ;;
+  ;; The i-vector of pname hash values.
+  (hash nil :type (or hash-vector null))
+  ;;
+  ;; The maximum number of entries allowed.
+  (size 0 :type index)
+  ;;
+  ;; The entries that can be made before we have to rehash.
+  (free 0 :type index)
+  ;;
+  ;; The number of deleted entries.
+  (deleted 0 :type index))
 
 
 ;;; The maximum density we allow in a package hashtable.
@@ -289,14 +324,14 @@
     `(let* ((,vec (package-hashtable-table ,table))
 	    (,hash (package-hashtable-hash ,table))
 	    (,len (length ,vec))
-	    (,h2 (1+ (the fixnum (rem (the fixnum ,sxhash)
-				      (the fixnum (- ,len 2)))))))
+	    (,h2 (1+ (the index (rem (the index ,sxhash)
+				      (the index (- ,len 2)))))))
        (declare (type (simple-array (unsigned-byte 8) (*)) ,hash)
 		(simple-vector ,vec)
-		(fixnum ,len ,h2))
-       (prog ((,index-var (rem (the fixnum ,sxhash) ,len))
+		(type index ,len ,h2))
+       (prog ((,index-var (rem (the index ,sxhash) ,len))
 	      ,symbol-var ,ehash)
-	 (declare (type (or fixnum null) ,index-var))
+	 (declare (type (or index null) ,index-var))
 	 LOOP
 	 (setq ,ehash (aref ,hash ,index-var))
 	 (cond ((eql ,ehash ,entry-hash)
@@ -304,7 +339,7 @@
 		(let* ((,name (symbol-name ,symbol-var))
 		       (,name-len (length ,name)))
 		  (declare (simple-string ,name)
-			   (fixnum ,name-len))
+			   (type index ,name-len))
 		  (when (and (= ,name-len ,length)
 			     (string= ,string ,name  :end1 ,length
 				      :end2 ,name-len))
@@ -328,7 +363,7 @@
   (let* ((length (length string))
 	 (hash (%sxhash-simple-string string))
 	 (ehash (entry-hash length hash)))
-    (declare (fixnum length hash))
+    (declare (type index length hash))
     (with-symbol (index symbol table string length hash ehash)
       (setf (aref (package-hashtable-hash table) index) 1)
       (setf (aref (package-hashtable-table table) index) nil)
@@ -664,7 +699,7 @@
 				     :use nil
 				     :internal-symbols (or size 10)
 				     :external-symbols (length exports))))))
-    (unless (string= (package-name name) name)
+    (unless (string= (the string (package-name package)) name)
       (error "~A is a nick-name for the package ~A"
 	     name (package-name name)))
     (enter-new-nicknames package nicknames)
@@ -734,13 +769,13 @@
 (defun enter-new-nicknames (package nicknames)
   (check-type nicknames list)
   (dolist (n nicknames)
-    (let* ((n (string n))
+    (let* ((n (package-namify n))
 	   (found (gethash n *package-names*)))
       (cond ((not found)
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))
 	    ((eq found package))
-	    ((string= (package-%name found) n)
+	    ((string= (the string (package-%name found)) n)
 	     (cerror "Ignore this nickname."
 		     "~S is a package name, so it cannot be a nickname for ~S."
 		     n (package-%name package)))
@@ -750,6 +785,16 @@
 		     n (package-%name found))
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))))))
+
+
+;;; PACKAGE-NAMIFY  --  Internal
+;;;
+;;;    Make a package name into a simple-string.
+;;;
+(defun package-namify (n)
+  (if (symbolp n)
+      (symbol-name n)
+      (coerce n 'simple-string)))
 
 
 ;;; Make-Package  --  Public
@@ -767,7 +812,7 @@
   will ultimately be present in the package."
   (when (find-package name)
     (error "A package named ~S already exists" name))
-  (let* ((name (string name))
+  (let* ((name (package-namify name))
 	 (package (internal-make-package
 		   :%name name
 		   :internal-symbols (make-package-hashtable internal-symbols)
@@ -936,10 +981,10 @@
 ;;;
 (defun find-symbol* (string length package)
   (declare (simple-string string)
-	   (fixnum length))
+	   (type index length))
   (let* ((hash (%sxhash-simple-substring string length))
 	 (ehash (entry-hash length hash)))
-    (declare (fixnum hash ehash))
+    (declare (type index hash ehash))
     (with-symbol (found symbol (package-internal-symbols package)
 			string length hash ehash)
       (when found
@@ -969,7 +1014,7 @@
   (let* ((length (length string))
 	 (hash (%sxhash-simple-string string))
 	 (ehash (entry-hash length hash)))
-    (declare (fixnum length hash))
+    (declare (type index length hash))
     (with-symbol (found symbol (package-external-symbols package)
 			string length hash ehash)
       (values symbol found))))
@@ -1351,7 +1396,7 @@
        ((> index terminus)
 	nil)
     (declare (simple-string name)
-	     (fixnum index terminus length))
+	     (type index index terminus length))
     (if (do ((jndex 0 (1+ jndex))
 	     (kndex index (1+ kndex)))
 	    ((= jndex length)
