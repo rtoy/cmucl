@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.12 1992/03/08 18:30:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.13 1992/03/09 09:10:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,7 +171,7 @@
       (setf (fdefn-function fdefn)
 	    #'(lambda (&rest argument-list)
 		(declare (special argument-list))
-		(let ((basic-definition (encapsulation-info-function info)))
+		(let ((basic-definition (encapsulation-info-definition info)))
 		  (declare (special basic-definition))
 		  (eval body)))))))
 
@@ -212,7 +212,7 @@
 	   ;; It must be an interior one, so find it.
 	   (loop
 	     (let ((next-info (encapsulation-info
-			       (encapsulation-info-function encap-info))))
+			       (encapsulation-info-definition encap-info))))
 	       (unless next-info
 		 ;; Not there, so don't worry about it.
 		 (return))
@@ -231,7 +231,7 @@
   (let ((fdefn (fdefinition-object name nil)))
     (do ((encap-info (encapsulation-info (fdefn-function fdefn))
 		     (encapsulation-info
-		      (encapsulation-info-function encap-info))))
+		      (encapsulation-info-definition encap-info))))
 	((null encap-info) nil)
       (declare (type (or encapsulation-info null) encap-info))
       (when (eq (encapsulation-info-type encap-info) type)
@@ -248,7 +248,7 @@
     (loop
       (let ((encap-info (encapsulation-info fun)))
 	(if encap-info
-	    (setf fun (encapsulation-info-function encap-info))
+	    (setf fun (encapsulation-info-definition encap-info))
 	    (return fun))))))
 
 (defvar *setf-fdefinition-hook* nil
@@ -271,7 +271,7 @@
 	     (loop
 	       (let ((more-info
 		      (encapsulation-info
-		       (encapsulation-info-function encap-info))))
+		       (encapsulation-info-definition encap-info))))
 		 (if more-info
 		     (setf encap-info more-info)
 		     (return
