@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.29 1998/05/09 22:15:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.30 1998/06/18 07:06:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -819,76 +819,78 @@
 
 (defun coerce (object output-type-spec)
   "Coerces the Object to an object of type Output-Type-Spec."
-  (let ((type (specifier-type output-type-spec)))
-    (cond
-     ((%typep object output-type-spec)
-      object)
-     ((csubtypep type (specifier-type 'character))
-      (character object))
-     ((csubtypep type (specifier-type 'function))
-      (eval `#',object))
-     ((numberp object)
-      (let ((res
-	     (cond
-	      ((csubtypep type (specifier-type 'single-float))
-	       (%single-float object))
-	      ((csubtypep type (specifier-type 'double-float))
-	       (%double-float object))
-	      #+long-float
-	      ((csubtypep type (specifier-type 'long-float))
-	       (%long-float object))
-	      ((csubtypep type (specifier-type 'float))
-	       (%single-float object))
-	      ((csubtypep type (specifier-type '(complex single-float)))
-	       (complex (%single-float (realpart object))
-			(%single-float (imagpart object))))
-	      ((csubtypep type (specifier-type '(complex double-float)))
-	       (complex (%double-float (realpart object))
-			(%double-float (imagpart object))))
-	      #+long-float
-	      ((csubtypep type (specifier-type '(complex long-float)))
-	       (complex (%long-float (realpart object))
-			(%long-float (imagpart object))))
-	      ((csubtypep type (specifier-type 'complex))
-	       (complex object))
-	      (t
-	       (error "~S can't be converted to type ~S."
-		      object output-type-spec)))))
-	;; If RES has the wrong type, that means that rule of
-	;; canonical representation for complex rationals was invoked.
-	;; According to the Hyperspec, (coerce 7/2 'complex) returns
-	;; 7/2.  Thus, if the object was a rational, there is no error
-	;; here.
-	(unless (or (typep res output-type-spec) (rationalp object))
-	  (error "~S can't be converted to type ~S."
-		 object output-type-spec))
-	res))
-     ((csubtypep type (specifier-type 'list))
-      (if (vectorp object)
-	  (vector-to-list* object)
-	  (error "~S can't be converted to type ~S."
-		 object output-type-spec)))
-     ((csubtypep type (specifier-type 'string))
-      (typecase object
-	(list (list-to-string* object))
-	(string (string-to-simple-string* object))
-	(vector (vector-to-string* object))
+  (flet ((coerce-error ()
+	   (error 'simple-type-error
+		  :format-control "~S can't be converted to type ~S."
+		  :format-arguments (list object output-type-spec))))
+    (let ((type (specifier-type output-type-spec)))
+      (cond
+	((%typep object output-type-spec)
+	 object)
+	((eq type *empty-type*)
+	 (coerce-error))
+	((csubtypep type (specifier-type 'character))
+	 (character object))
+	((csubtypep type (specifier-type 'function))
+	 (eval `#',object))
+	((numberp object)
+	 (let ((res
+		(cond
+		  ((csubtypep type (specifier-type 'single-float))
+		   (%single-float object))
+		  ((csubtypep type (specifier-type 'double-float))
+		   (%double-float object))
+		  #+long-float
+		  ((csubtypep type (specifier-type 'long-float))
+		   (%long-float object))
+		  ((csubtypep type (specifier-type 'float))
+		   (%single-float object))
+		  ((csubtypep type (specifier-type '(complex single-float)))
+		   (complex (%single-float (realpart object))
+			    (%single-float (imagpart object))))
+		  ((csubtypep type (specifier-type '(complex double-float)))
+		   (complex (%double-float (realpart object))
+			    (%double-float (imagpart object))))
+		  #+long-float
+		  ((csubtypep type (specifier-type '(complex long-float)))
+		   (complex (%long-float (realpart object))
+			    (%long-float (imagpart object))))
+		  ((csubtypep type (specifier-type 'complex))
+		   (complex object))
+		  (t
+		   (coerce-error)))))
+	   ;; If RES has the wrong type, that means that rule of canonical
+	   ;; representation for complex rationals was invoked.  According to
+	   ;; the Hyperspec, (coerce 7/2 'complex) returns 7/2.  Thus, if the
+	   ;; object was a rational, there is no error here.
+	   (unless (or (typep res output-type-spec) (rationalp object))
+	     (coerce-error))
+	   res))
+	((csubtypep type (specifier-type 'list))
+	 (if (vectorp object)
+	     (vector-to-list* object)
+	     (coerce-error)))
+	((csubtypep type (specifier-type 'string))
+	 (typecase object
+	   (list (list-to-string* object))
+	   (string (string-to-simple-string* object))
+	   (vector (vector-to-string* object))
+	   (t
+	    (coerce-error))))
+	((csubtypep type (specifier-type 'bit-vector))
+	 (typecase object
+	   (list (list-to-bit-vector* object))
+	   (vector (vector-to-bit-vector* object))
+	   (t
+	    (coerce-error))))
+	((csubtypep type (specifier-type 'vector))
+	 (typecase object
+	   (list (list-to-vector* object output-type-spec))
+	   (vector (vector-to-vector* object output-type-spec))
+	   (t
+	    (coerce-error))))
 	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     ((csubtypep type (specifier-type 'bit-vector))
-      (typecase object
-	(list (list-to-bit-vector* object))
-	(vector (vector-to-bit-vector* object))
-	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     ((csubtypep type (specifier-type 'vector))
-      (typecase object
-	(list (list-to-vector* object output-type-spec))
-	(vector (vector-to-vector* object output-type-spec))
-	(t
-	 (error "~S can't be converted to type ~S." object output-type-spec))))
-     (t
-      (error "~S can't be converted to type ~S." object output-type-spec)))))
+	 (coerce-error))))))
 
 
 ;;; Internal Frobs:
