@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.15 1990/06/06 14:36:52 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.16 1990/06/11 13:57:41 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -315,8 +315,8 @@
 			(let ((temp (make-normal-tn to-type)))
 			  (if assertion
 			      (emit-type-check node block from temp assertion)
-			      (emit-move node block from temp)
-			      temp)))
+			      (emit-move node block from temp))
+			  temp))
 		    locs ptypes
 		    (if (< ntypes nlocs)
 			(append types (make-list (- nlocs ntypes)
@@ -1172,7 +1172,7 @@
 ;;;
 (defun ir2-convert-mv-bind (node block)
   (declare (type mv-combination node) (type ir2-block block))
-  (let* ((cont (continuation-info (first (basic-combination-args node))))
+  (let* ((cont (first (basic-combination-args node)))
 	 (fun (ref-leaf (continuation-use (basic-combination-fun node))))
 	 (vars (lambda-vars fun)))
     (assert (eq (functional-kind fun) :mv-let))
