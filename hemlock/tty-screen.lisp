@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.2 1991/02/08 16:38:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.3 1991/03/14 16:26:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -115,15 +115,20 @@
     (setf (device-finish-output device) #'tty-finish-output)
     (setf (device-beep device) #'tty-beep)
     ;;
-    ;; A few useful values.
+    ;; Do we have insert/delete line?
     (setf (tty-device-dumbp device)
 	  (not (and (termcap :open-line termcap)
 		    (termcap :delete-line termcap))))
-    (setf (tty-device-lines device) (termcap :lines termcap))
-    (setf (tty-device-columns device)
-	  (if (termcap :auto-margins-p termcap)
-	      (1- (termcap :columns termcap))
-	      (termcap :columns termcap)))
+    ;;
+    ;; Get size and speed.
+    (multiple-value-bind  (lines cols speed)
+			  (get-terminal-attributes)
+      (setf (tty-device-lines device) (or lines (termcap :lines termcap)))
+      (let ((cols (or cols (termcap :columns termcap))))
+	(setf (tty-device-columns device)
+	      (if (termcap :auto-margins-p termcap)
+		  (1- cols) cols)))
+      (setf (tty-device-speed device) speed))
     ;;
     ;; Some function slots.
     (setf (tty-device-display-string device)
