@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.33 1992/04/02 02:28:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.34 1992/06/14 07:29:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -678,46 +678,45 @@
   (declare (ignore depth))
   (let* ((type (structure-ref structure 0))
 	 (dd (info type defined-structure-info type)))
-    (cond (*print-pretty*
-	   (pprint-logical-block (stream structure :allow-atoms t
-					 :prefix "#S(" :suffix ")")
-	     (prin1 type stream)
-	     (let ((slots (dd-slots dd)))
-	       (when slots
-		 (write-char #\space stream)
-		 (pprint-indent :block 2 stream)
-		 (pprint-newline :linear stream)
-		 (loop
-		   (pprint-pop)
-		   (let ((slot (pop slots)))
-		     (write-char #\: stream)
-		     (output-symbol-name (dsd-%name slot) stream)
-		     (write-char #\space stream)
-		     (pprint-newline :miser stream)
-		     (output-object (structure-ref structure (dsd-index slot))
-				    stream)
-		     (when (null slots)
-		       (return))
-		     (write-char #\space stream)
-		     (pprint-newline :linear stream)))))))
-	  (t
-	   (write-string "#S(" stream)
-	   (prin1 type stream)
-	   (do ((index 1 (1+ index))
-		(length (structure-length structure))
-		(slots (dd-slots dd) (cdr slots)))
-	       ((or (= index length)
-		    (and *print-length*
-			 (= index *print-length*)))
-		(if (= index length)
-		    (write-string ")" stream)
-		    (write-string "...)" stream)))
-	     (declare (type index index))
-	     (write-char #\space stream)
-	     (write-char #\: stream)
-	     (output-symbol-name (dsd-%name (car slots)) stream)
-	     (write-char #\space stream)
-	     (output-object (structure-ref structure index) stream))))))
+    (if *print-pretty*
+	(pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	  (prin1 type stream)
+	  (let ((slots (dd-slots dd)))
+	    (when slots
+	      (write-char #\space stream)
+	      (pprint-indent :block 2 stream)
+	      (pprint-newline :linear stream)
+	      (loop
+		(pprint-pop)
+		(let ((slot (pop slots)))
+		  (write-char #\: stream)
+		  (output-symbol-name (dsd-%name slot) stream)
+		  (write-char #\space stream)
+		  (pprint-newline :miser stream)
+		  (output-object (structure-ref structure (dsd-index slot))
+				 stream)
+		  (when (null slots)
+		    (return))
+		  (write-char #\space stream)
+		  (pprint-newline :linear stream))))))
+	(descend-into (stream)
+	  (write-string "#S(" stream)
+	  (prin1 type stream)
+	  (do ((index 1 (1+ index))
+	       (length (structure-length structure))
+	       (slots (dd-slots dd) (cdr slots)))
+	      ((or (= index length)
+		   (and *print-length*
+			(= index *print-length*)))
+	       (if (= index length)
+		   (write-string ")" stream)
+		   (write-string "...)" stream)))
+	    (declare (type index index))
+	    (write-char #\space stream)
+	    (write-char #\: stream)
+	    (output-symbol-name (dsd-%name (car slots)) stream)
+	    (write-char #\space stream)
+	    (output-object (structure-ref structure index) stream))))))
 
 
 (defun make-structure-load-form (structure)
