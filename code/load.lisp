@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.40 1992/03/08 18:31:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.41 1992/04/19 13:11:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1027,6 +1027,10 @@
 	(load-fresh-line)
 	(format t "~S defined~%" fun))
       fun)))
+
+(define-fop (fop-make-byte-compiled-function 143)
+  (c::make-byte-compiled-function (pop-stack)))
+
 
 
 ;;;; Linkage fixups.
