@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.10 1991/05/04 16:58:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.11 1991/08/30 17:11:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -582,9 +582,6 @@
 
 ;;; Print allocated objects:
 
-(defun pagesize ()
-  (nth-value 1 (mach:vm_statistics system:*task-self*)))
-
 (defun print-allocated-objects (space &key (percent 0) (pages 5)
 				      type larger smaller count
 				      (stream *standard-output*))
@@ -596,7 +593,7 @@
     (let* ((space-start (sap-int start-sap))
 	   (space-end (sap-int end-sap))
 	   (space-size (- space-end space-start))
-	   (pagesize (pagesize))
+	   (pagesize (system:get-page-size))
 	   (start (+ space-start (round (* space-size percent) 100)))
 	   (pages-so-far 0)
 	   (count-so-far 0)
