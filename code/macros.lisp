@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.78 2002/10/30 18:08:32 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.79 2002/11/01 17:41:53 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -894,15 +894,28 @@
       `(setq ,place (cons ,obj ,place))
       (multiple-value-bind (dummies vals newval setter getter)
 	  (get-setf-expansion place env)
-	;; Handle multiple values
-	`(let* (,@(mapcar #'list dummies vals))
-	   (multiple-value-bind ,newval
-	       ,(if (cdr newval)
-		    `(values ,@(rest (mapcar #'(lambda (a b)
-						 (list 'cons a b))
-					     obj getter)))
-		    `(cons ,obj ,getter))
-	     ,setter)))))
+	(cond
+	  ((cdr newval)
+	   ;; Handle multiple values
+	   (let ((g (mapcar #'(lambda (x)
+				(declare (ignore x))
+				(gensym))
+			    (rest obj))))
+	     `(multiple-value-bind ,g
+		  ,obj
+		(let* (,@(mapcar #'list dummies vals))
+		  (multiple-value-bind ,newval
+		      (values ,@(mapcar #'(lambda (a b)
+					     (list 'cons a b))
+					 g (rest getter)))
+		    ,setter)))))
+	  (t
+	   ;; A single value
+	   (let ((g (gensym)))
+	     `(let* ((,g ,obj)
+		     ,@(mapcar #'list dummies vals)
+		     (,@newval (cons ,g ,getter)))
+	       ,setter)))))))
 
 (defmacro pushnew (obj place &rest keys &environment env)
   "Takes an object and a location holding a list.  If the object is already
@@ -913,15 +926,28 @@
       `(setq ,place (adjoin ,obj ,place ,@keys))
       (multiple-value-bind (vars vals stores setter getter)
 	  (get-setf-expansion place env)
-	`(let* (,@(mapcar #'list vars vals))
-	   (multiple-value-bind ,stores
-	       ,(if (cdr stores)
-		    `(values ,@(rest (mapcar #'(lambda (a b)
-						 `(adjoin ,a ,b ,@keys))
-					     obj getter)))
-		    `(adjoin ,obj ,getter ,@keys))
-	     ,setter)))))
-
+	(cond
+	  ((cdr stores)
+	   ;; Multiple values
+	   (let ((g (mapcar #'(lambda (x)
+				(declare (ignore x))
+				(gensym))
+			    (rest obj))))
+	     `(multiple-value-bind ,g
+		  ,obj
+		(let* (,@(mapcar #'list vars vals))
+		  (multiple-value-bind ,stores
+		      (values ,@(mapcar #'(lambda (a b)
+					    `(adjoin ,a ,b ,@keys))
+					g (rest getter)))
+		  ,setter)))))
+	  (t
+	   ;; Single value
+	   (let ((g (gensym)))
+	     `(let* ((,g ,obj)
+		     ,@(mapcar #'list vars vals)
+		     (,@stores (adjoin ,g ,getter ,@keys)))
+		,setter)))))))
 
 (defmacro pop (place &environment env)
   "The argument is a location holding a list.  Pops one item off the front
