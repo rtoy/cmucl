@@ -7,14 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.16 1991/03/07 17:48:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.17 1991/05/27 11:45:45 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.16 1991/03/07 17:48:06 wlott Exp $
-;;;
-;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
-;;; debugger.
+;;; CMU Common Lisp Debugger.  This includes a basic command-line oriented
+;;; debugger interface as well as support for Hemlock to deliver debugger
+;;; commands to a slave Lisp.
 ;;;
 ;;; Written by Bill Chiles.
 ;;;
@@ -23,9 +22,12 @@
 
 (export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
 	  *debug-print-level* *debug-print-length* *debug-prompt*
-	  
-	  *auto-eval-in-frame* var arg))
+	  *help-line-scroll-count*
 
+	  *auto-eval-in-frame* var arg
+	  *only-block-start-locations* *print-location-kind*
+
+	  do-debug-command))
 
 (in-package "LISP")
 (export '(invoke-debugger *debugger-hook*))
@@ -316,11 +318,29 @@
 	    (let ((level *debug-command-level*))
       (clear-input *debug-io*)
       (format *debug-io* "~2&Debug  (type H for help)~2%"))
-		(let* ((exp (read))
-		       (cmd-fun (debug-command-p exp)))
-		  (if cmd-fun
-		      (funcall cmd-fun)
-		      (debug-eval-print exp)))))))))))
+    (debug-loop)))
+
+
+					 (stream-command-name input))))
+			   (cond ((not cmd-fun)
+				  (error "Unknown stream-command -- ~S." input))
+				 ((consp cmd-fun)
+				  (error "Ambiguous debugger command: ~S."
+					 cmd-fun))
+				 (t
+				  (apply cmd-fun (stream-command-args input))))))
+	 (*real-stack-top* (di:top-frame))
+	 (*stack-top* (or *stack-top-hint* *real-stack-top*))
+				(cmd-fun (debug-command-p exp)))
+	 (*current-frame* *stack-top*))
+    (handler-bind ((di:debug-condition #'(lambda (condition)
+					   (princ condition *debug-io*)
+					   (throw 'debug-loop-catcher nil))))
+      (fresh-line)
+      (print-frame-call *current-frame* :verbosity 2)
+      (loop
+	(catch 'debug-loop-catcher
+	  (handler-bind ((error #'(lambda (condition)
 				    (when *flush-debug-errors*
 				      (clear-input *debug-io*)
 				      (princ condition)
@@ -355,7 +375,85 @@
 				  (dolist (ele cmd-fun)
 				    (format t "   ~A~%" ele)))
 				 (t
+				  (funcall cmd-fun)))))))))))))))
 
+(defvar *auto-eval-in-frame* t
+  "When set (the default), evaluations in the debugger's command loop occur
+   relative to the current frame's environment without the need of debugger
+   forms that explicitly control this kind of evaluation.")
+
+(defun debug-eval-print (exp)
+  (setq +++ ++ ++ + + - - exp)
+  (let* ((values (multiple-value-list
+		  (if (and (fboundp 'eval:internal-eval) *auto-eval-in-frame*)
+		      (di:eval-in-frame *current-frame* -)
+		      (eval -))))
+	 (*standard-output* *debug-io*))
+    (fresh-line)
+    (if values (prin1 (car values)))
+    (dolist (x (cdr values))
+      (fresh-line)
+      (prin1 x))
+    (setq /// // // / / values)
+    (setq *** ** ** * * (car values))
+    ;; Make sure nobody passes back an unbound marker.
+    (unless (boundp '*)
+      (setq * nil)
+      (fresh-line)
+      (princ "Setting * to NIL -- was unbound marker."))))
+
+
+
+;;;; Debug loop functions.
+
+;;; These commands are function, not really commands, so users can get their
+;;; hands on the values returned.
+;;;
+
+(eval-when (eval compile)
+
+(defmacro define-var-operation (ref-or-set &optional value-var)
+  `(let* ((temp (etypecase name
+		  (symbol (di:debug-function-symbol-variables
+			   (di:frame-debug-function *current-frame*)
+			   name))
+		  (simple-string (di:ambiguous-debug-variables
+				  (di:frame-debug-function *current-frame*)
+				  name))))
+	  (location (di:frame-code-location *current-frame*))
+	  ;; Let's only deal with valid variables.
+	  (vars (remove-if-not #'(lambda (v)
+				   (eq (di:debug-variable-validity v location)
+				       :valid))
+			       temp)))
+     (declare (list vars))
+     (cond ((null vars)
+	    (error "No known valid variables match ~S." name))
+	   ((= (length vars) 1)
+	    ,(ecase ref-or-set
+	       (:ref
+		'(di:debug-variable-value (car vars) *current-frame*))
+	       (:set
+		`(setf (di:debug-variable-value (car vars) *current-frame*)
+		       ,value-var))))
+	   (t
+	    ;; Since we have more than one, first see if we have any
+	    ;; variables that exactly match the specification.
+	    (let* ((name (etypecase name
+			   (symbol (symbol-name name))
+			   (simple-string name)))
+		   (exact (remove-if-not #'(lambda (v)
+					     (string= (di:debug-variable-name v)
+						      name))
+					 vars))
+		   (vars (or exact vars)))
+	      (declare (simple-string name)
+		       (list exact vars))
+	      (cond
+	       ;; Check now for only having one variable.
+	       ((= (length vars) 1)
+		,(ecase ref-or-set
+		   (:ref
 		    '(di:debug-variable-value (car vars) *current-frame*))
 		   (:set
 		    `(setf (di:debug-variable-value (car vars) *current-frame*)
@@ -373,66 +471,14 @@
 			       (delete-duplicates
 				vars :test #'string=
 				:key #'di:debug-variable-name))))
-   information."
-  (let* ((temp (etypecase name
-		 (symbol (di:debug-function-symbol-variables
-			  (di:frame-debug-function *current-frame*)
-			  name))
-		 (simple-string (di:ambiguous-debug-variables
-				 (di:frame-debug-function *current-frame*)
-				 name))))
-	 (location (di:frame-code-location *current-frame*))
-	 ;; Let's only deal with valid variables.
-	 (vars (remove-if-not #'(lambda (v)
-				  (eq (di:debug-variable-validity v location)
-				      :valid))
-			      temp)))
-    (declare (list vars))
-    (cond ((null vars)
-	   (error "No known valid variables match ~S." name))
-	  ((= (length vars) 1)
-	   (di:debug-variable-value (car vars) *current-frame*))
-	  (t
-	   ;; Since we have more than one, first see if we have any variables
-	   ;; that exactly match the specification.
-	   (let* ((name (etypecase name
-			  (symbol (symbol-name name))
-			  (simple-string name)))
-		  (exact (remove-if-not #'(lambda (v)
-					    (string= (di:debug-variable-name v)
-						     name))
-					vars))
-		  (vars (or exact vars)))
-	     (declare (simple-string name)
-		      (list exact vars))
-	     (cond
-	      ;; Check now for only having one variable.
-	      ((= (length vars) 1)
-	       (di:debug-variable-value (car vars) *current-frame*))
-	      ;; If there weren't any exact matches, flame about ambiguity
-	      ;; unless all the variables have the same name.
-	      ((and (not exact)
-		    (find-if-not
-		     #'(lambda (v)
-			 (string= (di:debug-variable-name v)
-				  (di:debug-variable-name (car vars))))
-		     (cdr vars)))
-	       (error "Specification ambiguous:~%~{   ~A~%~}"
-		      (mapcar #'di:debug-variable-name
-			      (delete-duplicates
-			       vars :test #'string=
-			       :key #'di:debug-variable-name))))
-	      ;; All names are the same, so see if the user ID'ed one of them.
-	      (id-supplied
-	       (let ((v (find id vars :key #'di:debug-variable-id)))
-		 (unless v
-		   (error "Invalid variable ID, ~D, should have been one of ~S."
-			  id (mapcar #'di:debug-variable-id vars)))
-		 (di:debug-variable-value v *current-frame*)))
-	      (t
-	       (error "Specify variable ID to disambiguate ~S.  Use one of ~S."
-		      name (mapcar #'di:debug-variable-id vars)))))))))
+	       ;; All names are the same, so see if the user ID'ed one of them.
+	       (id-supplied
+		(let ((v (find id vars :key #'di:debug-variable-id)))
+		  (unless v
+		    (error "Invalid variable ID, ~D, should have been one of ~S."
 			   id (mapcar #'di:debug-variable-id vars)))
+		  ,(ecase ref-or-set
+		     (:ref
 		      '(di:debug-variable-value v *current-frame*))
 		     (:set
 		      `(setf (di:debug-variable-value v *current-frame*)
@@ -490,52 +536,106 @@
 ;;; NTH-ARG -- Internal.
 ;;;
 ;;; This returns the n'th arg as the user sees it from args, the result of
-;;; Interface to *debug-commands*.
-;;; 
-(defmacro def-debug-command (name &rest body)
+;;; DI:DEBUG-FUNCTION-LAMBDA-LIST.  If this returns a potential debug-variable
+;;; from the lambda-list, then the second value is t.  If this returns a
+;;; keyword symbol or a value from a rest arg, then the second value is nil.
+;;;
+(defun nth-arg (count args)
+  (let ((n count))
     (dolist (ele args (error "Argument specification out of range -- ~S." n))
       (lambda-list-element-dispatch ele
-      (defun ,fun-name () ,@body)
-      (push (cons ,name #',fun-name) *debug-commands*)
+	:required ((if (zerop n) (return (values ele t))))
+	 (warn "Redefining ~S debugger command." ,name))
+			((zerop (decf n))
+			 (return (values (third ele) t)))))
+	:deleted ((if (zerop n) (return (values ele t))))
+	:rest ((let ((var (second ele)))
+		 (lambda-var-dispatch var
 				      (di:frame-code-location *current-frame*)
 		   (error "Unused rest-arg before n'th argument.")
+		   (dolist (value
+			    (di:debug-variable-value var *current-frame*)
+			    (error "Argument specification out of range -- ~S."
+				   n))
+		     (if (zerop n)
+			 (return-from nth-arg (values value nil))
+			 (decf n)))
+		   (error "Invalid rest-arg before n'th argument.")))))
+      (decf n))))
+
+
+
+;;;; Debug loop command definition:
+
+(defvar *debug-commands* nil)
+
+;;; DEF-DEBUG-COMMAND -- Internal.
 (defun debug-command-p (form)
-  (and (symbolp form)
-       (cdr (assoc (symbol-name form) *debug-commands* :test #'string=))))
+  (if (symbolp form)
+      (let* ((name (symbol-name form))
+    `(progn
+       (when (assoc ,name *debug-commands* :test #'string=)
+	 (warn "Redefining ~S debugger command." ,name)
+	 (setf *debug-commands*
+	       (remove ,name *debug-commands* :key #'car :test #'string=)))
+       (defun ,fun-name ,args
+	 (unless *in-the-debugger*
+	(dolist (ele *debug-commands*)
+	  (let* ((str (car ele))
+		 (str-len (length str)))
+	    (declare (simple-string str)
+		     (fixnum str-len))
+	    (cond ((< str-len len))
+		  ((= str-len len)
+		   (when (string= name str :end1 len :end2 len)
+		     (return-from debug-command-p (cdr ele))))
+		  ((string= name str :end1 len :end2 len)
+		   (push ele res)))))
+;;; DEBUG-COMMAND-P -- Internal.
+;;;
+;;; This takes a symbol and uses its name to find a debugger command, using
+;;; initial substring matching.  It returns the command function if form
+;;; identifies only one command, but if form is ambiguous, this returns a list
+;;; of the command names.  If there are no matches, this returns nil.  Whenever
+;;; the loop that looks for a set of possibilities encounters an exact name
+;;; match, we return that command function immediately.
+;;;
 (defun debug-command-p (form &optional other-commands)
       (let* ((name
 	  (mapc #'match-command other-commands))
 	;;
 	;; Return the right value.
-(def-debug-command "U"
+	(cond ((not res) nil)
 	      ((= (length res) 1)
     (if next
 	(print-frame-call (setf *current-frame* next))
-	(princ "Top of stack."))))
+	(format t "~&Top of stack."))))
 
-(def-debug-command "D"
+;;;
 ;;; Returns a list of debug commands (in the same format as *debug-commands*)
     (if next
 	(print-frame-call (setf *current-frame* next))
-	(princ "Bottom of stack."))))
+	(format t "~&Bottom of stack."))))
 (defun make-restart-commands (&optional (restarts *debug-restarts*))
-(def-debug-command "T"
+    (dolist (restart restarts)
   (print-frame-call
    (setf *current-frame*
 	 (do ((prev *current-frame* lead)
 	      (lead (di:frame-up *current-frame*) (di:frame-up lead)))
 	     ((null lead) prev)))))
 	    (push (cons (format nil "~d" num) restart-fun) commands))))
-(def-debug-command "B"
+      (incf num))
   (print-frame-call
    (setf *current-frame*
 	 (do ((prev *current-frame* lead)
 	      (lead (di:frame-down *current-frame*) (di:frame-down lead)))
 	     ((null lead) prev)))))
 
-(def-debug-command "F"
-  (let ((n (read-prompting-maybe "Frame number: "))
-	(current (di:frame-number *current-frame*)))
+  (let ((next (di:frame-up *current-frame*)))
+    (cond (next
+	   (setf *current-frame* next)
+	   (print-frame-call next))
+	  (t
   
 (def-debug-command "DOWN" ()
   (let ((next (di:frame-down *current-frame*)))
@@ -562,21 +662,23 @@
        (print-frame-call prev))))
 
 
+(def-debug-command-alias "B" "BOTTOM")
+
 (def-debug-command "FRAME" (&optional
 			    (n (read-prompting-maybe "Frame number: ")))
   (let ((current (di:frame-number *current-frame*)))
-(def-debug-command "Q"
+    (cond ((= n current)
 	   (princ "You are here."))
 	  ((> n current)
-(def-debug-command "GO"
+	   (print-frame-call
 	    (setf *current-frame*
 		  (do ((prev *current-frame* lead)
 
-(def-debug-command "ABORT"
+(def-debug-command "ABORT" ()
   ;; There's always at least one abort restart due to the top-level one.
   (invoke-restart *debug-abort*))
 		       (lead (di:frame-down *current-frame*)
-(def-debug-command "RESTART"
+			     (di:frame-down lead)))
 		      ((null lead)
 		       (princ "Bottom of stack encountered.")
 		       prev)
@@ -589,9 +691,11 @@
 ;;;
 
 (def-debug-command "QUIT" ()
-(defvar *help-line-scroll-count* 20)
+  (throw 'lisp::top-level-catcher nil))
+
+(def-debug-command "GO" ()
   (continue)
-(def-debug-command "H"
+  (error "No restart named continue."))
 
 (def-debug-command "RESTART" ()
   (let ((num (read-if-available :prompt)))
@@ -608,26 +712,32 @@
 			    :test #'(lambda (sym1 sym2)
 				      (string= (symbol-name sym1)
 					       (symbol-name sym2)))))
-      (format t "~%Q for quit: ")
+		     (t
 		      (format t "~S is invalid as a restart name.~%" num)
 		      (return-from restart-debug-command nil)))))
       (if restart
 	  (invoke-restart-interactively restart)
 	  (princ "No such restart.")))))
-(def-debug-command "ERROR"
+
+
+;;;
 ;;; Information commands.
 ;;;
  
-(def-debug-command "BACKTRACE"
+(defvar *help-line-scroll-count* 20
   "This controls how many lines the debugger's help command prints before
    printing a prompting line to continue with output.")
-(def-debug-command "P"
+
 (def-debug-command "HELP" ()
   (let* ((end -1)
-(def-debug-command "PP"
+	 (len (length debug-help-string))
+	 (len-1 (1- len)))
+    (loop
   (print-frame-call *current-frame* nil nil))
 	    (count *help-line-scroll-count*))
-(def-debug-command "L"
+	(loop
+	  (setf end (position #\newline debug-help-string :start (1+ end)))
+	  (cond ((or (not end) (= end len-1))
 		 (setf end len)
 		 (return))
 		((or (zerop (decf count)) (= end len))
@@ -655,15 +765,15 @@
 
 (def-debug-command-alias "P" "PRINT")
 
-	    (format t "All variables ~@[starting with ~A~ ]currently ~
+(def-debug-command "VPRINT" ()
   (print-frame-call *current-frame* :print-level nil :print-length nil
 		    :verbosity (read-if-available 2)))
 
 (def-debug-command-alias "PP" "VPRINT")
-(def-debug-command "SOURCE"
+
   (print-frame-source-form *current-frame* (read-if-available 0)))
 	      (*print-length* (or *debug-print-length* *print-level*))
-(def-debug-command "VSOURCE"
+	      (*standard-output* *debug-io*)
   (print-frame-source-form *current-frame* (read-if-available 0) t))
 			d-fun
 
@@ -716,10 +826,12 @@
 (pushnew #'(lambda ()
 	 (let* ((tlf-offset (di:code-location-top-level-form-offset
 			     location))
+	 ext:*before-save-initializations*)
+
 		(char-offset (aref (or (di:debug-source-start-positions
 					d-source)
 ;;; We also cache the last top-level form that we printed a source for so that
-				   tlf-offset)))
+;;; we don't have to do repeated reads and calls to FORM-NUMBER-TRANSLATIONS.
 ;;;
 (defvar *cached-top-level-form-offset* nil)
 (declaim (type (or kernel:index null) *cached-top-level-form-offset*))
@@ -729,7 +841,7 @@
 
 ;;; GET-TOP-LEVEL-FORM  --  Internal
 ;;;
-	       (dotimes (i tlf-offset)
+	       (dotimes (i local-tlf-offset)
 		 (read f))))
 ;;;
 (defun get-top-level-form (location)
@@ -738,8 +850,7 @@
 	     (eql (di:code-location-top-level-form-offset location)
 		  *cached-top-level-form-offset*))
 	(values *cached-form-number-translations* *cached-top-level-form*)
-  (let ((translations (di:form-number-translations
-		       tlf tlf-offset))
+  (let ((translations (di:form-number-translations tlf tlf-offset))
 	(*print-level* (if verbose
 	       (res
 		(ecase (di:debug-source-from d-source)
@@ -756,10 +867,11 @@
 			 *default-breakpoint-debug-function*))))))
 	   (setup-function-start ()
 	     (let ((code-loc (di:debug-function-start-location place)))
-(def-debug-command "FLUSH"
+	       (setf bp (di:make-breakpoint #'main-hook-function place
 					    :kind :function-start))
 	       (setf break (di:preprocess-for-eval break code-loc))
-      (write-line "Errors now not flushed.")))
+	       (setf condition (di:preprocess-for-eval condition code-loc))
+	     (old-bp-info (location-in-list new-bp-info *breakpoints*)))
 	(when old-bp-info
 	  (di:deactivate-breakpoint (breakpoint-info-breakpoint old-bp-info))
 	  (setf *breakpoints* (remove old-bp-info *breakpoints*))
