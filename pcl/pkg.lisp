@@ -26,11 +26,11 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.25 2003/03/26 17:15:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.26 2003/05/04 13:11:21 gerd Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
-(defpackage "WALKER" (:use :common-lisp)
+(defpackage "WALKER" (:use :common-lisp :ext)
   (:export "DEFINE-WALKER-TEMPLATE"
 	   "WALK-FORM"
 	   "WALK-FORM-EXPAND-MACROS-P"
@@ -43,7 +43,7 @@
 	   "MACROEXPAND-ALL"))
 
 (defpackage "PCL"
-  (:use :common-lisp :walker)
+  (:use :common-lisp :walker :ext)
   (:import-from :kernel "FUNCALLABLE-INSTANCE-P" "SIMPLE-PROGRAM-ERROR")
   (:shadow "DOCUMENTATION")
   (:export "ADD-METHOD"

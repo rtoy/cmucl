@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.22 2003/03/22 16:15:17 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.23 2003/05/04 13:11:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -121,11 +121,11 @@
 
 (defun set-random-documentation (type doc-type doc)
   (let ((pair (assoc doc-type
-		     (ext:info random-documentation stuff type))))
+		     (info random-documentation stuff type))))
     (if pair
 	(setf (cdr pair) doc)
 	(push (cons doc-type doc)
-	      (ext:info random-documentation stuff type)))))
+	      (info random-documentation stuff type)))))
 
 (defun load-short-defcombin (type operator ioa doc)
   (let* ((specializers

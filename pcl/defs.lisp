@@ -266,15 +266,15 @@
 
 (defun get-built-in-class-symbol (class-name)
   (or (cadr (assq class-name *built-in-class-symbols*))
-      (let ((symbol (symbolicate *the-pcl-package*
-				 '*the-class- class-name '*)))
+      (let ((symbol (symbolicate* *the-pcl-package*
+				  '*the-class- class-name '*)))
 	(push (list class-name symbol) *built-in-class-symbols*)
 	symbol)))
 
 (defun get-built-in-wrapper-symbol (class-name)
   (or (cadr (assq class-name *built-in-wrapper-symbols*))
-      (let ((symbol (symbolicate *the-pcl-package*
-				 '*the-wrapper-of- class-name '*)))
+      (let ((symbol (symbolicate* *the-pcl-package*
+				  '*the-wrapper-of- class-name '*)))
 	(push (list class-name symbol) *built-in-wrapper-symbols*)
 	symbol)))
 
@@ -352,15 +352,15 @@
 				(kernel:%class-layout class))))
 		 (list (svref inherits (1- (length inherits)))))))
 	 (direct-subs (class)
-	   (ext:collect ((res))
+	   (collect ((res))
 	     (let ((subs (kernel:%class-subclasses class)))
 	       (when subs
-		 (ext:do-hash (sub v subs)
+		 (do-hash (sub v subs)
 		   (declare (ignore v))
 		   (when (member class (direct-supers sub))
 		     (res sub)))))
 	     (res))))
-  (ext:collect ((res))
+  (collect ((res))
     (dolist (bic kernel::built-in-classes)
       (let* ((name (car bic))
 	     (class (kernel::find-class name)))

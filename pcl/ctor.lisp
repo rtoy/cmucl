@@ -45,8 +45,8 @@
 ;;; for classes whose definitions are known at the time the function
 ;;; is called.
 
-(ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.7 2003/05/02 16:25:51 gerd Exp $")
+(file-comment
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.8 2003/05/04 13:11:22 gerd Exp $")
 
 (in-package "PCL")
 
@@ -109,7 +109,7 @@
 	unless (constantp value) collect value))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (ext:define-function-name-syntax ctor (name)
+  (define-function-name-syntax ctor (name)
     (when (symbolp (cadr name))
       (values t (cadr name)))))
 
@@ -212,10 +212,10 @@
 	  ;;
 	  ;; Prevent compiler warnings for calling the ctor.
 	  (c::define-function-name function-name)
-	  (when (eq (ext:info function where-from function-name) :assumed)
-	    (setf (ext:info function where-from function-name) :defined)
-	    (when (ext:info function assumed-type function-name)
-	      (setf (ext:info function assumed-type function-name) nil)))
+	  (when (eq (info function where-from function-name) :assumed)
+	    (setf (info function where-from function-name) :defined)
+	    (when (info function assumed-type function-name)
+	      (setf (info function assumed-type function-name) nil)))
 	  ;;
 	  ;; Return code constructing a ctor at load time, which, when
 	  ;; called, will set its funcallable instance function to an
@@ -385,8 +385,7 @@
 	(flet ((method-calls (methods args)
 		 (loop for method in methods
 		       as fn = (method-function method)
-		       collect `(funcall (ext:truly-the function ,fn)
-					 ,args ()))))
+		       collect `(funcall (truly-the function ,fn) ,args ()))))
 	  (values
 	   `(let (,@(when (or ii-before ii-after)
 		     `((.ii-args. (list .instance. ,@initargs))))
@@ -559,7 +558,7 @@
 			 (instance-init-forms slot-vector before-method-p))))
 	    (class-init-forms
 	     (unless structure-p
-	       (ext:collect ((forms))
+	       (collect ((forms))
 		 (dolist (init class-inits (forms))
 		   (destructuring-bind (location type value slot-type) init
 		     (forms

@@ -4,8 +4,8 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.9 2003/03/22 16:15:16 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.10 2003/05/04 13:11:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,6 +422,6 @@
 ;; Announce ourselves to the world
 (pushnew :gray-streams *features*)
 
-(setf (getf ext:*herald-items* :gray-streams)
+(setf (getf *herald-items* :gray-streams)
       '("    Gray Streams Protocol Support"))
 

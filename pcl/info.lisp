@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.3 2003/04/06 09:10:09 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.4 2003/05/04 13:11:21 gerd Exp $")
 
 (in-package "PCL")
 
@@ -99,20 +99,20 @@
 ;;;
 ;;; Declare some new INFO type, under class PCL, plus nicer accessors.
 ;;;
-(ext:define-info-class pcl)
-(ext:define-info-type pcl class (or null class-info) nil)
-(ext:define-info-type pcl gf (or null gf-info) nil)
-(ext:define-info-type pcl seal (or null seal-info) nil)
+(define-info-class pcl)
+(define-info-type pcl class (or null class-info) nil)
+(define-info-type pcl gf (or null gf-info) nil)
+(define-info-type pcl seal (or null seal-info) nil)
 
 (declaim (inline class-info (setf class-info)
 		 gf-info (setf gf-info)
 		 seal-info (setf seal-info)))
 
 (defun class-info (class-name)
-  (ext:info pcl class class-name))
+  (info pcl class class-name))
 
 (defun (setf class-info) (new-value class-name)
-  (setf (ext:info pcl class class-name) new-value))
+  (setf (info pcl class class-name) new-value))
 
 (defun class-info-or-make (class-name)
   (let ((info (class-info class-name)))
@@ -120,10 +120,10 @@
 	(setf (class-info class-name) (make-class-info)))))
 
 (defun gf-info (gf-name)
-  (ext:info pcl gf gf-name))
+  (info pcl gf gf-name))
 
 (defun (setf gf-info) (new-value gf-name)
-  (setf (ext:info pcl gf gf-name) new-value))
+  (setf (info pcl gf gf-name) new-value))
 
 (defun gf-info-or-make (gf-name)
   (let ((info (gf-info gf-name)))
@@ -131,10 +131,10 @@
 	(setf (gf-info gf-name) (make-gf-info)))))
 
 (defun seal-info (name)
-  (ext:info pcl seal name))
+  (info pcl seal name))
 
 (defun (setf seal-info) (new-value name)
-  (setf (ext:info pcl seal name) new-value))
+  (setf (info pcl seal name) new-value))
 
 (defun seal-info-or-make (name)
   (let ((info (seal-info name)))
@@ -360,7 +360,7 @@
 ;;; Return true if NAME is the name of a known generic function.
 ;;;
 (defun info-gf-name-p (name)
-  (when (ext:valid-function-name-p name)
+  (when (valid-function-name-p name)
     (or (gf-info name)
 	(when (and (fboundp name)
 		   (eq *boot-state* 'complete))
@@ -635,7 +635,7 @@
 	       (warn "~@<Invalid auto-compile declaration ~s.~@:>"
 		     form)))
 	 (gf-name-p (name)
-	   (ext:valid-function-name-p name)))
+	   (valid-function-name-p name)))
     (if (null (cdr form))
 	(setq *auto-compile-global-default* compilep)
 	(dolist (specifier (cdr form))

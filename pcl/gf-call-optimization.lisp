@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.3 2003/04/13 16:39:22 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gf-call-optimization.lisp,v 1.4 2003/05/04 13:11:21 gerd Exp $")
 
 (in-package "PCL")
 
@@ -158,8 +158,8 @@
   ;;
   ;; Small quirk here: set this flag so that GET-METHOD-FUNCTION
   ;; won't try to use the PV cache while it's being computed.
-  (ext:letf (((pv-table-computing-cache-p table) t))
-    (ext:collect ((emfs))
+  (letf (((pv-table-computing-cache-p table) t))
+    (collect ((emfs))
       (dolist (call call-list (coerce (emfs) 'simple-vector))
 	(emfs (compute-call call all-method-wrappers))))))
 

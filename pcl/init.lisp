@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.21 2003/05/04 00:37:33 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.22 2003/05/04 13:11:21 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.

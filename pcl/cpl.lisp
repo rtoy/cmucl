@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.12 2003/04/06 09:10:09 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.13 2003/05/04 13:11:22 gerd Rel $")
 ;;;
 
 (in-package :pcl)

@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.24 2003/04/18 08:54:41 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.25 2003/05/04 13:11:21 gerd Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -43,13 +43,13 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
   ;; (CLASS-PREDICATE <CLASS-NAME>
-  (ext:define-function-name-syntax class-predicate (name)
+  (define-function-name-syntax class-predicate (name)
     (when (symbolp (cadr name))
       (values t (cadr name))))
 
   ;; (SLOT-ACCESSOR <CLASS> <SLOT> <READER/WRITER/BOUNDP>)
   ;; <CLASS> is :GLOBAL for functions used by ACCESSOR-SLOT-VALUE etc.
-  (ext:define-function-name-syntax slot-accessor (name)
+  (define-function-name-syntax slot-accessor (name)
     (values (and (symbolp (cadr name))
 		 (consp (cddr name))
 		 (symbolp (caddr name))
@@ -58,48 +58,29 @@
 	    (caddr name)))
 
   ;; (METHOD NAME QUALIFIERS (SPECIALIZERS))
-  (ext:define-function-name-syntax method (name)
-    (ext:valid-function-name-p (cadr name)))
+  (define-function-name-syntax method (name)
+    (valid-function-name-p (cadr name)))
 
   ;; (FAST-METHOD NAME QUALIFIERS (SPECIALIZERS))
-  (ext:define-function-name-syntax fast-method (name)
-    (ext:valid-function-name-p (cadr name)))
+  (define-function-name-syntax fast-method (name)
+    (valid-function-name-p (cadr name)))
 
   ;; (EFFECTIVE-METHOD GF-NAME METHOD-SPEC ...)
-  (ext:define-function-name-syntax effective-method (name)
-    (ext:valid-function-name-p (cadr name)))
+  (define-function-name-syntax effective-method (name)
+    (valid-function-name-p (cadr name))))
 
-  ;; (CALL FUNCTION)?
-  )
+(import '(cl::make-keyword))
 
-;;;
-;;; Age old functions which CommonLisp cleaned-up away.  They probably exist
-;;; in other packages in all CommonLisp implementations, but I will leave it
-;;; to the compiler to optimize into calls to them.
-;;;
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defmacro memq (item list) `(member ,item ,list :test #'eq))
-  (defmacro assq (item list) `(assoc ,item ,list :test #'eq))
-  (defmacro rassq (item list) `(rassoc ,item ,list :test #'eq))
-  (defmacro delq (item list) `(delete ,item ,list :test #'eq))
-  (defmacro posq (item list) `(position ,item ,list :test #'eq))
-  (defmacro neq (x y) `(not (eq ,x ,y))))
+(defmacro posq (item list)
+  `(position ,item ,list :test #'eq))
 
-(defun true (&rest ignore) (declare (ignore ignore)) t)
-(defun false (&rest ignore) (declare (ignore ignore)) nil)
-(defun zero (&rest ignore) (declare (ignore ignore)) 0)
+(defmacro neq (x y)
+  `(not (eq ,x ,y))))
 
-(defun get-declaration (name declarations &optional default)
-  (dolist (d declarations default)
-    (dolist (form (cdr d))
-      (when (and (consp form) (eq (car form) name))
-	(return-from get-declaration (cdr form))))))
-
-
-(defvar *keyword-package* (find-package "KEYWORD"))
-
-(defun make-keyword (symbol)
-  (intern (symbol-name symbol) *keyword-package*))
+(declaim (inline car-safe))
+(defun car-safe (obj)
+  (when (consp obj)
+    (car obj)))
 
 (defmacro doplist ((key val) plist &body body &environment env)
   (multiple-value-bind (bod decls doc)
@@ -114,28 +95,7 @@
 	     (setq ,val (pop .plist-tail.))
 	     (progn ,@bod)))))
 
-(defmacro dolist-carefully ((var list improper-list-handler) &body body)
-  `(let ((,var nil)
-         (.dolist-carefully. ,list))
-     (loop (when (null .dolist-carefully.) (return nil))
-           (if (consp .dolist-carefully.)
-               (progn
-                 (setq ,var (pop .dolist-carefully.))
-                 ,@body)
-               (,improper-list-handler)))))
-
-  ;;   
-;;;;;; printing-random-thing
-  ;;
-;;; Similar to printing-random-object in the lisp machine but much simpler
-;;; and machine independent.
-(defmacro printing-random-thing ((thing stream) &body body)
-  `(print-unreadable-object (,thing ,stream :identity t) ,@body))
-
-(defun printing-random-thing-internal (thing stream)
-  (declare (ignore thing stream))
-  nil)
-
+
 ;;;
 ;;; FIND-CLASS
 ;;;
@@ -254,12 +214,6 @@
 
 
 (defsetf slot-value set-slot-value)
-
-(declaim (inline car-safe))
-
-(defun car-safe (obj)
-  (when (consp obj)
-    (car obj)))
 
 (defvar *cold-boot-state* nil)
 

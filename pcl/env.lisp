@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.20 2003/03/26 17:15:22 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.21 2003/05/04 13:11:21 gerd Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -218,7 +218,7 @@
     (map-all-generic-functions
      (lambda (gf)
        (multiple-value-bind (valid base)
-	   (ext:valid-function-name-p (generic-function-name gf))
+	   (valid-function-name-p (generic-function-name gf))
 	 (declare (ignore valid))
 	 (when (and (symbolp base)
 		    (eq (symbol-package base) pkg))

@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.28 2003/04/13 16:39:22 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.29 2003/05/04 13:11:22 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -179,11 +179,11 @@
   ;; List of entries not fitting in VECTOR.
   (overflow nil :type list))
 
-(declaim (ext:freeze-type cache))
+(declaim (freeze-type cache))
 
 (defun print-cache (cache stream depth)
   (declare (ignore depth))
-  (printing-random-thing (cache stream)
+  (print-unreadable-object (cache stream :identity t)
     (format stream "cache ~D ~S ~D" 
 	    (cache-nkeys cache) (cache-valuep cache) (cache-nlines cache))))
 
@@ -259,7 +259,7 @@
   ;; shared with subclasses inheriting a class slot.
   (class-slots nil :type list))
 
-(declaim (ext:freeze-type wrapper))
+(declaim (freeze-type wrapper))
 
 (defmacro wrapper-class (wrapper)
   `(kernel:%class-pcl-class (kernel:layout-class ,wrapper)))
@@ -346,7 +346,7 @@
 
 (defun print-wrapper (wrapper stream depth)
   (declare (ignore depth))
-  (printing-random-thing (wrapper stream)
+  (print-unreadable-object (wrapper stream :identity t)
     (format stream "Wrapper ~S" (wrapper-class wrapper))))
 
 (defmacro wrapper-class* (wrapper)

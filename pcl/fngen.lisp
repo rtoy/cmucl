@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.10 2003/03/22 16:15:16 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.11 2003/05/04 13:11:21 gerd Exp $")
 
 (in-package :pcl)
 

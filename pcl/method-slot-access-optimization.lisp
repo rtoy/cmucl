@@ -51,8 +51,8 @@
 ;;; - Prevent PV lookup if only inline access is done?
 ;;;
 
-(ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.2 2003/03/22 16:15:16 gerd Exp $")
+(file-comment
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/method-slot-access-optimization.lisp,v 1.3 2003/05/04 13:11:21 gerd Exp $")
  
 (in-package "PCL")
 
@@ -585,7 +585,7 @@
 		  '(consp .location.)
 		  slot-type)
 	  (values `(%svref ,slots-variable .location.)
-		  '(ext:fixnump .location.)
+		  '(fixnump .location.)
 		  slot-type))))
 
 

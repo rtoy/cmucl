@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.26 2003/04/06 09:10:09 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.27 2003/05/04 13:11:22 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -133,8 +133,8 @@
 		      options))
 	    (defstruct-p
 	     (and (eq *boot-state* 'complete)
-		  (not (or (ext:featurep :loadable-pcl)
-			   (ext:featurep :bootable-pcl)))
+		  (not (or (featurep :loadable-pcl)
+			   (featurep :bootable-pcl)))
 		  (let ((mclass (find-class metaclass nil)))
 		    (and mclass
 			 (*subtypep mclass 
@@ -179,6 +179,10 @@
 		(when (eq *boot-state* 'complete)
 		  (inform-type-system-about-std-class name))
 		defclass-form)))))))
+
+(defun true (&rest ignore) (declare (ignore ignore)) t)
+(defun false (&rest ignore) (declare (ignore ignore)) nil)
+(defun zero (&rest ignore) (declare (ignore ignore)) 0)
 
 (defun make-initfunction (initform)
   (declare (special *initfunctions*))

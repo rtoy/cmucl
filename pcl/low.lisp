@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.23 2003/03/26 17:15:22 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.24 2003/05/04 13:11:21 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -36,7 +36,7 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defvar *optimize-speed* '(optimize (speed 3) (safety 0)
-			     (ext:inhibit-warnings 3) #+small (debug 0.5))))
+			     (inhibit-warnings 3) #+small (debug 0.5))))
 
 ;;; Various macros that include necessary declarations for maximum
 ;;; performance.
@@ -51,7 +51,7 @@
 (defmacro %set-svref (vector index new-value)
   ;; Do it this way so that the evaluation of NEW-VALUE doesn't fall
   ;; under the *OPTIMIZE-SPEED*.
-  (ext:once-only ((value new-value))
+  (once-only ((value new-value))
     `(locally (declare #.*optimize-speed* (inline svref))
        (setf (svref (the simple-vector ,vector) (the fixnum ,index))
 	     ,value))))
@@ -104,7 +104,7 @@
 (defun set-function-name (function new-name)
   "Set the name of a compiled function object and return the function."
   (declare (special *boot-state* *the-class-standard-generic-function*))
-  (when (ext:valid-function-name-p function)
+  (when (valid-function-name-p function)
     (setq function (fdefinition function)))
   (when (funcallable-instance-p function)
     (if (if (eq *boot-state* 'complete)
@@ -123,9 +123,9 @@
     (setf (fdefinition new-name) function))
   function)
 	
-(defun symbolicate (pkg &rest things)
+(defun symbolicate* (pkg &rest things)
   (let ((*package* pkg))
-    (apply #'ext:symbolicate things)))
+    (apply #'symbolicate things)))
 
 
 ;;;
@@ -235,13 +235,13 @@ the compiler as completely as possible.  Currently this means that
 (defmacro built-in-or-structure-wrapper (x) `(kernel:layout-of ,x))
 
 (defmacro get-wrapper (inst)
-  (ext:once-only ((wrapper `(wrapper-of ,inst)))
+  (once-only ((wrapper `(wrapper-of ,inst)))
     `(progn
        (assert (typep ,wrapper 'wrapper) () "What kind of instance is this?")
        ,wrapper)))
 
 (defmacro get-instance-wrapper-or-nil (inst)
-  (ext:once-only ((wrapper `(wrapper-of ,inst)))
+  (once-only ((wrapper `(wrapper-of ,inst)))
     `(if (typep ,wrapper 'wrapper)
 	 ,wrapper
 	 nil)))
@@ -257,15 +257,15 @@ the compiler as completely as possible.  Currently this means that
 	 (t (internal-error "What kind of instance is this?"))))
 
 (defmacro get-slots-or-nil (inst)
-  (ext:once-only ((n-inst inst))
+  (once-only ((n-inst inst))
     `(when (pcl-instance-p ,n-inst)
        (if (std-instance-p ,n-inst)
 	   (std-instance-slots ,n-inst)
 	   (fsc-instance-slots ,n-inst)))))
 
-(defun print-std-instance (instance stream depth) ;A temporary definition used
-  (declare (ignore depth))		          ;for debugging the bootstrap
-  (printing-random-thing (instance stream)        ;code of PCL (See high.lisp).
+(defun print-std-instance (instance stream depth)
+  (declare (ignore depth))
+  (print-unreadable-object (instance stream :identity t)
     (let ((class (class-of instance)))
       (if (or (eq class (find-class 'standard-class nil))
 	      (eq class (find-class 'funcallable-standard-class nil))

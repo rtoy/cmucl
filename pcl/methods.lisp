@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.28 2003/05/04 00:37:33 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.29 2003/05/04 13:11:21 gerd Exp $")
 
 (in-package :pcl)
 
@@ -36,7 +36,7 @@
 
 (defun named-object-print-function (instance stream
 				    &optional (extra nil extra-p))
-  (printing-random-thing (instance stream)
+  (print-unreadable-object (instance stream :identity t)
     (if extra-p					
 	(format stream "~A ~S ~:S"
 		(class-name (class-of instance))
@@ -47,7 +47,7 @@
 		(slot-value-or-default instance 'name)))))
 
 (defmethod print-object (instance stream)
-  (printing-random-thing (instance stream)
+  (print-unreadable-object (instance stream :identity t)
     (let ((name (class-name (class-of instance))))
       (if name
 	  (format stream "~S" name)
@@ -60,14 +60,14 @@
   (named-object-print-function slotd stream))
 
 (defmethod print-object ((mc standard-method-combination) stream)
-  (printing-random-thing (mc stream)
+  (print-unreadable-object (mc stream :identity t)
     (format stream
 	    "Method-Combination ~S ~S"
 	    (slot-value-or-default mc 'type)
 	    (slot-value-or-default mc 'options))))
 
 (defmethod print-object ((method standard-method) stream)
-  (printing-random-thing (method stream)
+  (print-unreadable-object (method stream :identity t)
     (if (slot-boundp method 'generic-function)
 	(let ((gf (method-generic-function method))
 	      (class-name (class-name (class-of method))))
@@ -79,7 +79,7 @@
 	(call-next-method))))
 
 (defmethod print-object ((method standard-accessor-method) stream)
-  (printing-random-thing (method stream)
+  (print-unreadable-object (method stream :identity t)
     (if (slot-boundp method 'generic-function)
 	(let ((gf (method-generic-function method))
 	      (class-name (class-name (class-of method))))
@@ -213,14 +213,11 @@
       "is not a function"))
 
 (defmethod legal-qualifiers-p ((object standard-method) x)
-  (flet ((improper-list ()
-	   (return-from legal-qualifiers-p "Is not a proper list.")))
-    (dolist-carefully (q x improper-list)
-      (let ((ok (legal-qualifier-p object q)))
-	(unless (eq ok t)
-	  (return-from legal-qualifiers-p
-	    (format nil "Contains ~S which ~A" q ok)))))
-    t))
+  (dolist (q x t)
+    (let ((ok (legal-qualifier-p object q)))
+      (unless (eq ok t)
+	(return-from legal-qualifiers-p
+	  (format nil "Contains ~S which ~A" q ok))))))
 
 (defmethod legal-qualifier-p ((object standard-method) x)
   (if (and x (atom x))
@@ -235,14 +232,11 @@
 	(t t)))
 
 (defmethod legal-specializers-p ((object standard-method) x)
-  (flet ((improper-list ()
-	   (return-from legal-specializers-p "is not a proper list.")))
-    (dolist-carefully (s x improper-list)
-      (let ((ok (legal-specializer-p object s)))
-	(unless (eq ok t)
-	  (return-from legal-specializers-p
-	    (format nil "Contains ~S which ~A" s ok)))))
-    t))
+  (dolist (s x t)
+    (let ((ok (legal-specializer-p object s)))
+      (unless (eq ok t)
+	(return-from legal-specializers-p
+	  (format nil "Contains ~S which ~A" s ok))))))
 
 (defmethod legal-specializer-p ((object standard-method) x)
   (if (if *allow-experimental-specializers-p*

@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.34 2003/04/06 09:10:09 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.35 2003/05/04 13:11:22 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -89,7 +89,7 @@
 (defmacro initial-classes-and-wrappers (&rest classes)
   `(progn
      ,@(mapcar (lambda (class)
-		 (let ((wr (symbolicate *the-pcl-package* class '-wrapper)))
+		 (let ((wr (symbolicate* *the-pcl-package* class '-wrapper)))
 		   `(setf ,wr ,(if (eq class 'standard-generic-function)
 				   '*sgf-wrapper*
 				   `(boot-make-wrapper
@@ -109,12 +109,12 @@
       (null)
       (kernel::built-in-class
        (let ((translation (kernel::built-in-class-translation kernel-class)))
-	 (setf (ext:info type translator class)
+	 (setf (info type translator class)
 	       (if translation
 		   (lambda (spec) (declare (ignore spec)) translation)
 		   (lambda (spec) (declare (ignore spec)) kernel-class)))))
       (kernel::class
-       (setf (ext:info type translator class)
+       (setf (info type translator class)
 	     (lambda (spec) (declare (ignore spec)) kernel-class))))))
 
 (defun bootstrap-meta-braid ()
@@ -190,7 +190,7 @@
 				   (boot-make-wrapper (length slots) name))))
 		   (proto nil))
 	      (when (eq name t) (setq *the-wrapper-of-t* wrapper))
-	      (set (symbolicate *the-pcl-package* '*the-class- name '*)
+	      (set (symbolicate* *the-pcl-package* '*the-class- name '*)
 		   class)
 	      (dolist (slot slots)
 		(unless (eq (getf slot :allocation :instance) :instance)
@@ -630,7 +630,7 @@
   (bootstrap-built-in-classes)
 
   (/show "  class layouts")
-  (ext:do-hash (name x *find-class*)
+  (do-hash (name x *find-class*)
     (let* ((class (find-class-from-cell name x))
 	   (layout (class-wrapper class))
 	   (lclass (kernel:layout-class layout))

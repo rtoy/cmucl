@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.50 2003/05/04 00:37:34 gerd Exp $")
+(file-comment
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.51 2003/05/04 13:11:22 gerd Exp $")
 
 (in-package :pcl)
 
@@ -554,6 +554,12 @@ work during bootstrapping.
   (declare (ignore proto-gf proto-method))
   (make-method-lambda-internal method-lambda env))
 
+(defun get-declaration (name declarations &optional default)
+  (dolist (d declarations default)
+    (dolist (form (cdr d))
+      (when (and (consp form) (eq (car form) name))
+	(return-from get-declaration (cdr form))))))
+
 (defun make-method-lambda-internal (method-lambda &optional env)
   (unless (and (consp method-lambda) (eq (car method-lambda) 'lambda))
     (error "~@<The ~s argument to ~s, ~s, is not a lambda form.~@:>"
@@ -580,7 +586,7 @@ work during bootstrapping.
 				(list `(class ,a ,s))))
 			    parameters
 			    specializers)))
-	       (block-name (nth-value 1 (ext:valid-function-name-p
+	       (block-name (nth-value 1 (valid-function-name-p
 					 generic-function-name)))
 	       (method-lambda
 		  ;; Remove the documentation string and insert the
@@ -730,7 +736,7 @@ work during bootstrapping.
   (function #'identity :type function)
   call-method-args)
 
-(declaim (ext:freeze-type method-call))
+(declaim (freeze-type method-call))
 
 (defmacro invoke-method-call1 (function args cm-args)
   `(let ((.function. ,function)
@@ -753,7 +759,7 @@ work during bootstrapping.
   next-method-call
   arg-info)
 
-(declaim (ext:freeze-type fast-method-call))
+(declaim (freeze-type fast-method-call))
 
 (defmacro invoke-fast-method-call (method-call &rest required-args+rest-arg)
   `(function-funcall (fast-method-call-function ,method-call)
@@ -764,7 +770,7 @@ work during bootstrapping.
 (defstruct fast-instance-boundp
   (index 0 :type fixnum))
 
-(declaim (ext:freeze-type fast-instance-boundp))
+(declaim (freeze-type fast-instance-boundp))
 
 (defmacro invoke-effective-method-function-fast
     (emf restp &rest required-args+rest-arg)
@@ -1066,7 +1072,7 @@ work during bootstrapping.
 			 (info-accessor-p `(setf ,(caadr form))))
 		    (optimize-slot-writer form required-parameters slots env))
 		   ;;
-		   ((and (ext:valid-function-name-p (car form))
+		   ((and (valid-function-name-p (car form))
 			 (info-gf-name-p (car form)))
 		    (optimize-gf-call form required-parameters calls env))
 		   (t
@@ -1078,7 +1084,7 @@ work during bootstrapping.
 
 
 (defun generic-function-name-p (name)
-  (and (ext:valid-function-name-p name)
+  (and (valid-function-name-p name)
        (fboundp name)
        (if (eq *boot-state* 'complete)
 	   (standard-generic-function-p (gdefinition name))
@@ -1376,7 +1382,7 @@ work during bootstrapping.
   (gf-info-c-a-m-emf-std-p t)
   gf-info-fast-mf-p)
 
-(declaim (ext:freeze-type arg-info))
+(declaim (freeze-type arg-info))
 
 (defun arg-info-valid-p (arg-info)
   (not (null (arg-info-number-optional arg-info))))
@@ -1536,7 +1542,7 @@ work during bootstrapping.
 		    (early-gf-name gf))))
       (setf (gf-precompute-dfun-and-emf-p arg-info)
 	    (multiple-value-bind (valid sym)
-		(ext:valid-function-name-p name)
+		(valid-function-name-p name)
 	      (and valid sym
 		   (symbolp sym)
 		   (let ((pkg (symbol-package sym))
@@ -1600,8 +1606,8 @@ work during bootstrapping.
      (or function
 	 (if (eq spec 'print-object)
 	     #'(kernel:instance-lambda (instance stream)
-		 (printing-random-thing (instance stream)
-					(format stream "std-instance")))
+		 (print-unreadable-object (instance stream :identity t)
+		   (format stream "std-instance")))
 	     #'(kernel:instance-lambda (&rest args)
 		 (declare (ignore args))
 		 (error "~@<The function of the funcallable instance ~S ~
@@ -2167,7 +2173,7 @@ work during bootstrapping.
     (declare (ignore more-context more-count))
     (when morep
       (error "~@<~s is not allowed in specialized lambda-lists~@:>" :more))
-    (ext:collect ((req) (spec))
+    (collect ((req) (spec))
       (dolist (x required)
 	(req (if (consp x) (car x) x))
 	(spec (if (consp x) (cadr x) t)))

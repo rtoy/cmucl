@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.25 2003/03/31 11:13:22 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.26 2003/05/04 13:11:20 gerd Rel $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -338,7 +338,7 @@
 ;;;
 
 (defun variable-globally-special-p (symbol)
-  (eq (ext:info variable kind symbol) :special))
+  (eq (info variable kind symbol) :special))
 
 
   ;;   
@@ -424,7 +424,7 @@
 
 (define-walker-template BLOCK                (NIL NIL REPEAT (EVAL)))
 (define-walker-template CATCH                (NIL EVAL REPEAT (EVAL)))
-(define-walker-template ext:COMPILER-LET     walk-compiler-let)
+(define-walker-template COMPILER-LET         walk-compiler-let)
 (define-walker-template DECLARE              walk-unexpected-declare)
 (define-walker-template EVAL-WHEN            (NIL QUOTE REPEAT (EVAL)))
 (define-walker-template FLET                 walk-flet)
@@ -449,7 +449,7 @@
 (define-walker-template SYMBOL-MACROLET      walk-symbol-macrolet)
 (define-walker-template TAGBODY              walk-tagbody)
 (define-walker-template THE                  (NIL QUOTE EVAL))
-(define-walker-template EXT:TRULY-THE        (NIL QUOTE EVAL))
+(define-walker-template TRULY-THE            (NIL QUOTE EVAL))
 (define-walker-template THROW                (NIL EVAL EVAL))
 (define-walker-template UNWIND-PROTECT       (NIL RETURN REPEAT (EVAL)))
 
@@ -630,7 +630,7 @@
         (SET
           (walk-form-internal form :SET env))
         ((LAMBDA CALL)
-	 (cond ((ext:valid-function-name-p form) form)
+	 (cond ((valid-function-name-p form) form)
 	       (t (walk-form-internal form context env)))))
       (case (car template)
         (REPEAT

@@ -24,8 +24,8 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.25 2003/04/30 18:42:23 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.26 2003/05/04 13:11:21 gerd Exp $")
 
 (in-package :pcl)
 
@@ -281,7 +281,7 @@ And so, we are saved.
 
 (defun print-dfun-info (dfun-info stream depth)
   (declare (ignore depth) (stream stream))
-  (printing-random-thing (dfun-info stream)
+  (print-unreadable-object (dfun-info stream :identity t)
     (format stream "~A" (type-of dfun-info))))
 
 (defstruct (no-methods
@@ -376,7 +376,7 @@ And so, we are saved.
      (lambda (new arg)
        (accessor-miss gf new arg dfun-info)))))
 
-(declaim (ext:freeze-type dfun-info))
+(declaim (freeze-type dfun-info))
 
 
 ;;;

@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.60 2003/05/04 00:37:33 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.61 2003/05/04 13:11:20 gerd Exp $")
 
 (in-package :pcl)
 
@@ -157,7 +157,7 @@
 
 (defmethod (setf documentation) (doc (gf generic-function) type)
   (declare (ignore type))
-  (setf (ext:info function documentation (generic-function-name gf))
+  (setf (info function documentation (generic-function-name gf))
 	doc))
 
 
@@ -511,7 +511,7 @@
   ;; Initialize shared slots.  A class may inherit initforms for
   ;; shared slots from superclasses.  Such initializations are
   ;; done in UPDATE-CLASS-SLOT-VALUES.
-  (ext:collect ((cells))
+  (collect ((cells))
     (dolist (dslotd direct-slots)
       (when (eq (slot-definition-allocation dslotd) :class)
 	(let ((initfn (slot-definition-initfunction dslotd)))
@@ -611,7 +611,7 @@
 			      (when defstruct-p
 				(let* ((slot-name (getf pl :name))
 				       (accessor
-					(symbolicate
+					(symbolicate*
 					 *package*
 					 (if (symbol-package name)
 					     (package-name (symbol-package name))
@@ -624,18 +624,18 @@
 	(setq direct-slots (slot-value class 'direct-slots)))
     (if defstruct-p
 	(let* ((include (car (slot-value class 'direct-superclasses)))
-	       (conc-name (symbolicate *package*
-				       (if (symbol-package name)
-					   (package-name (symbol-package name))
-					   "")
-				       "::" name " structure class "))
+	       (conc-name (symbolicate* *package*
+					(if (symbol-package name)
+					    (package-name (symbol-package name))
+					    "")
+					"::" name " structure class "))
 	       ;;
 	       ;; It's not possible to use a generalized name for the
 	       ;; constructor function.  It shouldn't matter though, I think,
 	       ;; like for the slot names above, because this stuff is not
 	       ;; supposed to be used by users directly.
 	       (constructor
-		(symbolicate *package* conc-name " constructor"))
+		(symbolicate* *package* conc-name " constructor"))
 	       (defstruct `(defstruct (,name
 					,@(when include
 					    `((:include ,(class-name include))))
@@ -857,7 +857,7 @@
   (member class2 (class-can-precede-list class1)))
 
 (defun update-slots (class eslotds)
-  (ext:collect ((instance-slots) (class-slots))
+  (collect ((instance-slots) (class-slots))
     (dolist (eslotd eslotds)
       (ecase (slot-definition-allocation eslotd)
 	(:instance (instance-slots eslotd))
@@ -969,7 +969,7 @@
 ;;; The list is in most-specific-first order.
 ;;;
 (defmethod compute-slots ((class std-class))
-  (ext:collect ((names/slots) (effective))
+  (collect ((names/slots) (effective))
     (dolist (c (reverse (class-precedence-list class)))
       (dolist (slot (class-direct-slots c))
 	(let* ((name (slot-definition-name slot))

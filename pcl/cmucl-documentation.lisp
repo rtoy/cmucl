@@ -3,8 +3,8 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the public domain, and is provided 'as is'.
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.11 2003/03/22 16:15:18 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.12 2003/05/04 13:11:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,36 +24,36 @@
   (lisp::function-doc x))
 
 (defmethod documentation ((x list) (doc-type (eql 'function)))
-  (when (ext:valid-function-name-p x)
+  (when (valid-function-name-p x)
     (if (eq (car x) 'setf)
-	(or (values (ext:info setf documentation (cadr x)))
+	(or (values (info setf documentation (cadr x)))
 	    (and (fboundp x)
 		 (documentation (fdefinition x) t)))
-	(or (values (ext:info function documentation x))
+	(or (values (info function documentation x))
 	    (and (fboundp x)
 		 (documentation (fdefinition x) t))))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'function)))
-  (or (values (ext:info function documentation x))
+  (or (values (info function documentation x))
       ;; Try the pcl function documentation.
       (and (fboundp x) (documentation (fdefinition x) 't))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'setf)))
-  (values (ext:info setf documentation x)))
+  (values (info setf documentation x)))
 
 (defmethod (setf documentation) (new-value (x list) (doc-type (eql 'function)))
-  (unless (ext:valid-function-name-p x)
+  (unless (valid-function-name-p x)
     (error "Invalid function name ~s" x))
   (if (eq 'setf (cadr x))
-      (setf (ext:info setf documentation (cadr x)) new-value)
-      (setf (ext:info function documentation x) new-value))
+      (setf (info setf documentation (cadr x)) new-value)
+      (setf (info function documentation x) new-value))
   new-value)
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'function)))
-  (setf (ext:info function documentation x) new-value))
+  (setf (info function documentation x) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'setf)))
-  (setf (ext:info setf documentation x) new-value))
+  (setf (info setf documentation x) new-value))
 
 ;;; Packages.
 (defmethod documentation ((x package) (doc-type (eql 't)))
@@ -64,74 +64,74 @@
 
 ;;; Types, classes, and structure names.
 (defmethod documentation ((x kernel::structure-class) (doc-type (eql 't)))
-  (values (ext:info type documentation (kernel:%class-name x))))
+  (values (info type documentation (kernel:%class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 't)))
-  (values (ext:info type documentation (class-name x))))
+  (values (info type documentation (class-name x))))
 
 (defmethod documentation ((x kernel::standard-class) (doc-type (eql 't)))
-  (or (values (ext:info type documentation (kernel:%class-name x)))
+  (or (values (info type documentation (kernel:%class-name x)))
       (let ((pcl-class (kernel:%class-pcl-class x)))
 	(and pcl-class (plist-value pcl-class 'documentation)))))
 
 (defmethod documentation ((x kernel::structure-class) (doc-type (eql 'type)))
-  (values (ext:info type documentation (kernel:%class-name x))))
+  (values (info type documentation (kernel:%class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 'type)))
-  (values (ext:info type documentation (class-name x))))
+  (values (info type documentation (class-name x))))
 
 (defmethod documentation ((x kernel::standard-class) (doc-type (eql 'type)))
-  (or (values (ext:info type documentation (kernel:%class-name x)))
+  (or (values (info type documentation (kernel:%class-name x)))
       (let ((pcl-class (kernel:%class-pcl-class x)))
 	(and pcl-class (plist-value pcl-class 'documentation)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'type)))
-  (or (values (ext:info type documentation x))
+  (or (values (info type documentation x))
       (let ((class (find-class x nil)))
 	(when class
 	  (plist-value class 'documentation)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'structure)))
-  (when (eq (ext:info type kind x) :instance)
-    (values (ext:info type documentation x))))
+  (when (eq (info type kind x) :instance)
+    (values (info type documentation x))))
 
 (defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 't)))
-  (setf (ext:info type documentation (kernel:%class-name x)) new-value))
+  (setf (info type documentation (kernel:%class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x structure-class) (doc-type (eql 't)))
-  (setf (ext:info type documentation (class-name x)) new-value))
+  (setf (info type documentation (class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x kernel::structure-class) (doc-type (eql 'type)))
-  (setf (ext:info type documentation (kernel:%class-name x)) new-value))
+  (setf (info type documentation (kernel:%class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x structure-class) (doc-type (eql 'type)))
-  (setf (ext:info type documentation (class-name x)) new-value))
+  (setf (info type documentation (class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'type)))
   (if (or (structure-type-p x) (condition-type-p x))
-      (setf (ext:info type documentation x) new-value)
+      (setf (info type documentation x) new-value)
       (let ((class (find-class x nil)))
 	(if class
 	    (setf (plist-value class 'documentation) new-value)
-	    (setf (ext:info type documentation x) new-value)))))
+	    (setf (info type documentation x) new-value)))))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
-  (unless (eq (ext:info type kind x) :instance)
+  (unless (eq (info type kind x) :instance)
     (error "~@<~S is not the name of a structure type.~@:>" x))
-  (setf (ext:info type documentation x) new-value))
+  (setf (info type documentation x) new-value))
 
 ;;; Variables.
 (defmethod documentation ((x symbol) (doc-type (eql 'variable)))
-  (values (ext:info variable documentation x)))
+  (values (info variable documentation x)))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
-  (setf (ext:info variable documentation x) new-value))
+  (setf (info variable documentation x) new-value))
 
 ;;; CMUCL random documentation. Compiler-macro documentation is stored
 ;;; as random-documentation and handled here.
 (defmethod documentation ((x symbol) (doc-type symbol))
   (cdr (assoc doc-type
-	      (values (ext:info random-documentation stuff x)))))
+	      (values (info random-documentation stuff x)))))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type symbol))
   (set-random-documentation x doc-type new-value)

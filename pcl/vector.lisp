@@ -25,8 +25,8 @@
 ;;; *************************************************************************
 ;;;
 
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.27 2003/03/22 16:15:15 gerd Exp $")
+(file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.28 2003/05/04 13:11:20 gerd Exp $")
 
 (in-package :pcl)
 
@@ -104,7 +104,7 @@
   ;; the pv-table cache.
   (computing-cache-p nil :type boolean))
 
-(declaim (ext:freeze-type pv-table))
+(declaim (freeze-type pv-table))
 
 
 ;;;
