@@ -1,20 +1,16 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.2 1997/02/05 17:53:37 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.3 1997/02/27 21:06:26 pw Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
- * Copyright (c) Paul F Werkowski, 1996.
- *
- * There is absolutely NO WARRANTY associated with this code! Use
- * at your own risk! If you can't handle the fact that this may 
- * not work the way you want then just DELETE THIS FILE NOW!
- *
  * This code is based on software written by William Lott, and
- * Public Domain codes from Carnegie Mellon University.
+ * Public Domain codes from Carnegie Mellon University, and has
+ * been placed in the Public Domain.
  *
  * Received from William 27 Jul 95.
  *
  * Debug, FreeBSD hooks, and integration by Paul Werkowski
+ *
  *
  */
 #include <stdio.h>
