@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.19 1991/11/09 20:49:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.20 1992/01/21 17:25:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.19 1991/11/09 20:49:49 ram Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -21,7 +19,8 @@
 
 (in-package "KERNEL")
 
-(export '(error-number-or-lose))
+(export '(error-number-or-lose infinite-error-protect find-caller-name
+			       *maximum-error-depth*))
 
 (export '(unknown-error object-not-function-error object-not-list-error
 	  object-not-bignum-error object-not-ratio-error
@@ -586,9 +585,81 @@
 
 
 
-;;;; internal-error signal handler.
+;;; INFINITE-ERROR-PROTECT is used by ERROR and friends to keep us out of
+;;; hyperspace.
+;;;
+(defmacro infinite-error-protect (&rest forms)
+  `(if (and (boundp '*error-system-initialized*)
+	    (numberp *current-error-depth*))
+       (let ((*current-error-depth* (1+ *current-error-depth*)))
+	 (if (> *current-error-depth* *maximum-error-depth*)
+	     (error-error "Help! " *current-error-depth* " nested errors."
+			  "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded.")
+	     (progn ,@forms)))
+       (%primitive halt)))
 
-(defvar *finding-name* nil)
+;;; Track the depth of recursive errors.
+;;;
+(defvar *maximum-error-depth* 10
+  "The maximum number of nested errors allowed.  Internal errors are
+   double-counted.")
+(defvar *current-error-depth* 0 "The current number of nested errors.")
+
+;;; These specials are used by ERROR-ERROR to track the success of recovery
+;;; attempts.
+;;;
+(defvar *error-error-depth* 0)
+(defvar *error-throw-up-count* 0)
+
+;;; This protects against errors that happen before we run this top-level form.
+;;;
+(defvar *error-system-initialized* t)
+
+;;; ERROR-ERROR can be called when the error system is in trouble and needs
+;;; to punt fast.  Prints a message without using format.  If we get into
+;;; this recursively, then halt.
+;;;
+(defun error-error (&rest messages)
+  (let ((*error-error-depth* (1+ *error-error-depth*)))
+    (when (> *error-throw-up-count* 50)
+      (%primitive halt)
+      (throw 'lisp::top-level-catcher nil))
+    (case *error-error-depth*
+      (1)
+      (2
+       (lisp::stream-init))
+      (3
+       (incf *error-throw-up-count*)
+       (throw 'lisp::top-level-catcher nil))
+      (t
+       (%primitive halt)
+       (throw 'lisp::top-level-catcher nil)))
+
+    (with-standard-io-syntax
+      (dolist (item messages) (princ item *terminal-io*))
+      (debug:internal-debug))))
+
+
+;;;; Fetching errorful function name.
+
+;;; Used to prevent infinite recursive lossage when we can't find the caller
+;;; for some reason.
+;;;
+(defvar *finding-caller* nil)
+
+;;; FIND-CALLER-NAME  --  Internal
+;;;
+(defun find-caller-name ()
+  (if *finding-caller*
+      "<error finding name>"
+      (handler-case
+	  (let ((*finding-caller* t))
+	    (di:debug-function-name
+	     (di:frame-debug-function
+	      (di:frame-down (di:frame-down (di:top-frame))))))
+	(error () "<error finding name>")
+	(di:debug-condition () "<error finding name>"))))
+
 
 (defun find-interrupted-name ()
   (if *finding-name*
@@ -606,48 +677,53 @@
 	(error () "<error finding name>")
 	(di:debug-condition () "<error finding name>"))))
 
+
+;;;; internal-error signal handler.
 
 (defun internal-error (scp continuable)
   (declare (ignore continuable))
-  (alien-bind ((sc (make-alien 'mach:sigcontext
-			       #.(c-sizeof 'mach:sigcontext)
-			       scp)
-		   mach:sigcontext
-		   t))
-    (multiple-value-bind
-	(error-number arguments)
-	(vm:internal-error-arguments (alien-value sc))
-      (let ((fp (int-sap (di::escape-register (alien-value sc)
-					      vm::cfp-offset)))
-	    (name (find-interrupted-name))
-	    (info (and (< -1 error-number (length *internal-errors*))
-		       (svref *internal-errors* error-number))))
-	(cond ((null info)
-	       (error 'simple-error
-		      :function-name name
-		      :format-string
-		      "Unknown internal error, ~D?  args=~S"
-		      :format-arguments
-		      (list error-number
-			    (mapcar #'(lambda (sc-offset)
-					(di::sub-access-debug-var-slot
-					 fp
-					 sc-offset
-					 (alien-value sc)))
-				    arguments))))
-	      ((null (error-info-function info))
-	       (error 'simple-error
-		      :function-name name
-		      :format-string
-		      "Internal error ~D: ~A.  args=~S"
-		      :format-arguments
-		      (list error-number
-			    (error-info-description info)
-			    (mapcar #'(lambda (sc-offset)
-					(di::sub-access-debug-var-slot
-					 fp
-					 sc-offset
-					 (alien-value sc)))
-				    arguments))))
-	      (t
-	       (funcall (error-info-function info) name fp sc arguments)))))))
+  (infinite-error-protect
+    (alien-bind ((sc (make-alien 'mach:sigcontext
+				 #.(c-sizeof 'mach:sigcontext)
+				 scp)
+		     mach:sigcontext
+		     t))
+      (multiple-value-bind
+	  (error-number arguments)
+	  (vm:internal-error-arguments (alien-value sc))
+	(let ((fp (int-sap (di::escape-register (alien-value sc)
+						vm::cfp-offset)))
+	      (name (find-interrupted-name))
+	      (info (and (< -1 error-number (length *internal-errors*))
+			 (svref *internal-errors* error-number))))
+	  (cond ((null info)
+		 (error 'simple-error
+			:function-name name
+			:format-string
+			"Unknown internal error, ~D?  args=~S"
+			:format-arguments
+			(list error-number
+			      (mapcar #'(lambda (sc-offset)
+					  (di::sub-access-debug-var-slot
+					   fp
+					   sc-offset
+					   (alien-value sc)))
+				      arguments))))
+		((null (error-info-function info))
+		 (error 'simple-error
+			:function-name name
+			:format-string
+			"Internal error ~D: ~A.  args=~S"
+			:format-arguments
+			(list error-number
+			      (error-info-description info)
+			      (mapcar #'(lambda (sc-offset)
+					  (di::sub-access-debug-var-slot
+					   fp
+					   sc-offset
+					   (alien-value sc)))
+				      arguments))))
+		(t
+		 (funcall (error-info-function info) name fp sc
+			  arguments))))))))
+
