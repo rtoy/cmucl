@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.15 1990/06/06 21:03:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.16 1990/06/16 14:39:43 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -93,7 +93,7 @@
 
 (define-assembly-routine (throw
 			  ()
-			  (:arg target any-reg a0-offset)
+			  (:arg target descriptor-reg a0-offset)
 			  (:arg start any-reg old-fp-offset)
 			  (:arg count any-reg nargs-offset)
 			  (:temp catch any-reg a1-offset)
