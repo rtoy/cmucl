@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.3 1992/09/07 16:10:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.4 1993/03/01 20:02:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -668,9 +668,8 @@
 (defun load-type-predicate (desc)
   (or (gethash desc *byte-type-predicates*)
       (let ((type (specifier-type desc)))
-	(if (structure-type-p type)
-	    (let ((info (info type defined-structure-info
-			      (structure-type-name type))))
+	(if (typep type 'structure-class)
+	    (let ((info (layout-info (class-layout type))))
 	      (if (and info (eq (dd-type info) 'structure))
 		  (let ((pred (dd-predicate info)))
 		    (if (and pred (fboundp pred))
