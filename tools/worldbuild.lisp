@@ -26,6 +26,11 @@
 	  "target:assembly/sparc/bit-bash.assem"
 	  "target:assembly/sparc/arith.assem"
 	  "target:assembly/sparc/alloc.assem"))
+    ,@(when (string= (c:backend-name c:*backend*) "RT")
+	'("target:assembly/rt/assem-rtns.assem"
+	  "target:assembly/rt/array.assem"
+	  "target:assembly/rt/arith.assem"
+	  "target:assembly/rt/alloc.assem"))
 
     "target:code/fdefinition"
     "target:code/eval"
@@ -87,6 +92,9 @@
     ,@(when (string= (c:backend-name c:*backend*) "SPARC")
 	'("target:code/sparc-vm"
 	  "target:code/sparc-machdef"))
+    ,@(when (string= (c:backend-name c:*backend*) "RT")
+	'("target:code/rt-vm"
+	  "target:code/rt-machdef"))
     "target:code/filesys"
     "target:code/search-list"
 
@@ -98,7 +106,7 @@
     ))
 
 (setf *genesis-core-name*
-      #+mips "target:ldb/kernel.core"
+      #-sparc "target:ldb/kernel.core"
       #+sparc "/usr/tmp/kernel.core")
 (setf *genesis-c-header-name* "target:ldb/lisp.h")
 (setf *genesis-map-name* "target:ldb/lisp.map")
