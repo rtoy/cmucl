@@ -536,6 +536,9 @@ C -->
 ****************************************************************
 |  Offset from code header (24)  |   Function-Header-Type (8)  |
 ----------------------------------------------------------------
+|  x86/amd64/sparc: Address of start of instructions for       |
+|  function (non-descriptor)                                   |
+|  other architectures:                                        |
 |  Self-pointer back to previous word (with other-pointer tag) |
 ----------------------------------------------------------------
 |  Pointer to next function (other-pointer low-tag) or NIL     |
@@ -592,6 +595,13 @@ The following are detailed slot descriptions:
       The immediate header-word data is the word offset from the enclosing code
       data-block's header-word to this word.  This is the same as for the
       return-PC header-word.
+   \item[Address of start of instructions for function:] This is
+     implemented on x86, amd64, and sparc only. In a non-closure
+     function, this address allows the call sequence to always
+     indirect through the second word in a user callable function.
+     See section ``Closure Format''.  With a closure, indirecting
+     through the second word also gets you the start of instructions
+     of a function.  This pointer is a raw address, not a descriptor.
    \item[Self-pointer back to header-word:]
       In a non-closure function, this self-pointer to the previous header-word
       allows the call sequence to always indirect through the second word in a
