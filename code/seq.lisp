@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.32 1998/07/16 13:30:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.33 1998/07/19 01:41:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,16 +65,15 @@
 ;;;    Given an arbitrary type specifier, return a sane sequence type specifier
 ;;; that we can directly match.
 ;;;
-(defun result-type-or-lose (itype &optional nil-ok)
-  (let ((type (specifier-type itype))
-	(expected-type  '(or list string vector bit-vector)))
+(defun result-type-or-lose (type &optional nil-ok)
+  (let ((type (specifier-type type)))
     (cond
-      ((csubtypep type (specifier-type 'nil))
+      ((eq type *empty-type*)
        (if nil-ok
 	   nil
 	   (error 'simple-type-error
-		  :datum itype
-		  :expected-type expected-type
+		  :datum type
+		  :expected-type '(or vector cons)
 		  :format-control
 		  "NIL output type invalid for this sequence function."
 		  :format-arguments ())))
@@ -85,11 +84,11 @@
        (type-specifier type))
       (t
        (error 'simple-type-error
-	      :datum itype
-	      :expected-type expected-type
+	      :datum type
+	      :expected-type 'sequence
 	      :format-control
 	      "~S is a bad type specifier for sequence functions."
-	      :format-arguments (list itype))))))
+	      :format-arguments (list type))))))
 
 (define-condition index-too-large-error (type-error)
   ()
