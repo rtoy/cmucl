@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.13 1990/10/09 23:03:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.14 1990/10/09 23:25:51 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -31,7 +31,7 @@
 (defun structure-ref (struct index)
   "Return the value from the INDEXth slot of STRUCT.  0 corresponds to the
   type.  This is SETFable."
-  (structure-ref struct index)
+  (structure-ref struct index))
 
 (defun structure-set (struct index new-value)
   "Set the INDEXth slot of STRUCT to NEW-VALUE."
