@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.15 1993/02/26 08:39:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.16 1993/03/13 14:38:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,27 +340,33 @@
 ;;; SOURCE-TRANSFORM-INSTANCE-TYPEP  --  Internal
 ;;;
 ;;;    Transform a type test against some instance type.  If not properly
-;;; named, error.  If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, call
-;;; CLASS-TYPEP at run-time with the layout and class object.
+;;; named, error.  If sealed and has no subclasses, just test for layout-EQ.
+;;; If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, call CLASS-TYPEP at
+;;; run-time with the layout and class object.
 ;;;
 (defun source-transform-instance-typep (obj class)
   (let* ((name (class-name class))
-	 (layout (info type compiler-layout name)))
-    (cond
-     ((not (and name (eq (find-class name) class)))
-      (compiler-error "Can't compile TYPEP of anonymous or undefined ~
-		       class:~%  ~S"
-		      class))
-     ((and (structure-class-p class)
-	   layout
-	   (member (layout-invalid layout) '(:compiler nil)))
-      (source-transform-structure-typep obj layout))
-     (t
-      (multiple-value-bind
-	  (pred layout)
-	  (if (csubtypep class (specifier-type 'generic-function))
-	      (values 'funcallable-instance-p 'funcallable-instance-layout)
-	      (values '%instancep '%instance-layout))
+	 (layout (let ((res (info type compiler-layout name)))
+		   (if (and res
+			    (member (layout-invalid res) '(:compiler nil)))
+		       res
+		       nil))))
+    (multiple-value-bind
+	(pred get-layout)
+	(if (csubtypep class (specifier-type 'funcallable-instance))
+	    (values 'funcallable-instance-p '%funcallable-instance-layout)
+	    (values '%instancep '%instance-layout))
+      (cond
+       ((not (and name (eq (find-class name) class)))
+	(compiler-error "Can't compile TYPEP of anonymous or undefined ~
+			 class:~%  ~S"
+			class))
+       ((and (eq (class-state class) :sealed) layout
+	     (not (class-subclasses class)))
+	(source-transform-sealed-typep obj layout pred get-layout))
+       ((and (typep class 'basic-structure-class) layout)
+	(source-transform-structure-typep obj layout pred get-layout))
+       (t
 	(once-only ((object obj))
 	  `(and (,pred ,object)
 		(class-typep (,layout ,object) ',class))))))))
@@ -369,30 +375,41 @@
 ;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
 ;;;
 ;;;    Transform a call to an actual structure type predicate with the
-;;; specified layout.  If sealed and has no subclasses, just test for
-;;; layout-EQ, otherwise do the EQ test and then a general test based on
+;;; specified layout.  Do the EQ test and then a general test based on
 ;;; layout-inherits.  If safety is important, then we also check if the layout
 ;;; for the object is invalid and signal an error if so.
 ;;;
-(defun source-transform-structure-typep (obj layout)
+(defun source-transform-structure-typep (obj layout pred get-layout)
   (let ((class (layout-class layout))
 	(idepth (layout-inheritance-depth layout))
 	(n-layout (gensym)))
     (once-only ((object obj))
-      `(and (%instancep ,object)
-	    (let ((,n-layout (%instance-layout ,object)))
+      `(and (,pred ,object)
+	    (let ((,n-layout (,get-layout ,object)))
 	      ,@(when (policy nil (>= safety speed))
 		  `((when (layout-invalid ,n-layout)
 		      (%layout-invalid-error ,object ',layout))))
-	      ,(if (and (eq (class-state class) :sealed)
-			(not (class-subclasses class)))
-		   `(eq ,n-layout ',layout)
-		   `(if (eq ,n-layout ',layout)
-			t
-			(and (> (layout-inheritance-depth ,n-layout) ,idepth)
-			     (locally (declare (optimize (safety 0)))
-			       (eq (svref (layout-inherits ,n-layout) ,idepth)
-				   ',layout))))))))))
+	      (if (eq ,n-layout ',layout)
+		  t
+		  (and (> (layout-inheritance-depth ,n-layout) ,idepth)
+		       (locally (declare (optimize (safety 0)))
+				(eq (svref (layout-inherits ,n-layout) ,idepth)
+				    ',layout)))))))))
+
+
+;;; SOURCE-TRANSFORM-SEALED-TYPEP  --  Internal
+;;;
+;;;    Transform a typep test of any sealed class w/ no subclasses.
+;;;
+(defun source-transform-sealed-typep (obj layout pred get-layout)
+  (let ((n-layout (gensym)))
+    (once-only ((object obj))
+      `(and (,pred ,object)
+	    (let ((,n-layout (,get-layout ,object)))
+	      ,@(when (policy nil (>= safety speed))
+		  `((when (layout-invalid ,n-layout)
+		      (%layout-invalid-error ,object ',layout))))
+	      (eq ,n-layout ',layout))))))
 
 
 ;;; Source-Transform-Typep  --  Internal
