@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.2 1990/12/03 19:21:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.3 1990/12/11 22:16:03 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -123,79 +123,79 @@
 
 (eval-when (compile load eval)
 
-(defmacro define-binop (translate cost op)
+(defmacro define-binop (translate untagged-penalty op)
   `(progn
      (define-vop (,(symbolicate "FAST-" translate "/FIXNUM=>FIXNUM")
 		  fast-fixnum-binop)
        (:translate ,translate)
-       (:generator ,(1+ cost)
+       (:generator 2
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate 'fast- translate '-c/fixnum=>fixnum)
 		  fast-fixnum-binop-c)
        (:translate ,translate)
-       (:generator ,cost
+       (:generator 1
 	 (inst ,op r x (fixnum y))))
      (define-vop (,(symbolicate "FAST-" translate "/SIGNED=>SIGNED")
 		  fast-signed-binop)
        (:translate ,translate)
-       (:generator ,(+ cost 3)
+       (:generator ,(1+ untagged-penalty)
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate 'fast- translate '-c/signed=>signed)
 		  fast-signed-binop-c)
        (:translate ,translate)
-       (:generator ,(+ cost 2)
+       (:generator ,untagged-penalty
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate "FAST-" translate "/UNSIGNED=>UNSIGNED")
 		  fast-unsigned-binop)
        (:translate ,translate)
-       (:generator ,(+ cost 3)
+       (:generator ,(1+ untagged-penalty)
 	 (inst ,op r x y)))
      (define-vop (,(symbolicate 'fast- translate '-c/unsigned=>unsigned)
 		  fast-unsigned-binop-c)
        (:translate ,translate)
-       (:generator ,(+ cost 2)
+       (:generator ,untagged-penalty
 	 (inst ,op r x y)))))
 
 ); eval-when
 
-(define-binop + 2 add)
-(define-binop - 2 sub)
-(define-binop logand 1 and)
-(define-binop logandc2 1 andn)
-(define-binop logior 1 or)
-(define-binop logorc2 1 orn)
-(define-binop logxor 1 xor)
-(define-binop logeqv 1 xnor)
+(define-binop + 4 add)
+(define-binop - 4 sub)
+(define-binop logand 2 and)
+(define-binop logandc2 2 andn)
+(define-binop logior 2 or)
+(define-binop logorc2 2 orn)
+(define-binop logxor 2 xor)
+(define-binop logeqv 2 xnor)
 
 ;;; Special case fixnum + and - that trap on overflow.  Useful when we
 ;;; don't know that the output type is a fixnum.
 
 (define-vop (fast-+/fixnum fast-+/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:result-types *)
   (:note nil)
-  (:generator 1
+  (:generator 4
     (inst taddcctv r x y)))
 
 (define-vop (fast-+-c/fixnum fast-+-c/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:result-types *)
   (:note nil)
-  (:generator 1
+  (:generator 3
     (inst taddcctv r x y)))
 
 (define-vop (fast--/fixnum fast--/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:result-types *)
   (:note nil)
-  (:generator 1
+  (:generator 4
     (inst tsubcctv r x y)))
 
 (define-vop (fast---c/fixnum fast---c/fixnum=>fixnum)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:result-types *)
   (:note nil)
-  (:generator 1
+  (:generator 3
     (inst tsubcctv r x y)))
 
 ;;; Shifting
