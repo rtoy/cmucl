@@ -492,41 +492,3 @@
        (inst bc :eq ,label)
        (inst break pending-interrupt-trap)
        (emit-label ,label))))
-
-
-
-;;;; Other random stuff.
-
-;;; PAD-DATA-BLOCK -- Internal Interface.
-;;;
-;;; This returns a form that returns a dual-word aligned number of bytes when
-;;; given a number of words.
-;;;
-(defmacro pad-data-block (words)
-  `(logandc2 (+ (ash ,words vm:word-shift) lowtag-mask) lowtag-mask))
-
-
-
-(defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
-		   &rest identifiers)
-  (let ((results nil)
-	(index 0)
-	(start (eval start))
-	(step (eval step)))
-    (dolist (id identifiers)
-      (when id
-	(multiple-value-bind
-	    (root docs)
-	    (if (consp id)
-		(values (car id) (cdr id))
-		(values id nil))
-	  (push `(defconstant ,(intern (concatenate 'simple-string
-						    (string prefix)
-						    (string root)
-						    (string suffix)))
-		   ,(+ start (* step index))
-		   ,@docs)
-		results)))
-      (incf index))
-    `(eval-when (compile load eval)
-       ,@(nreverse results))))
