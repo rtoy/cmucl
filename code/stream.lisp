@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.6 1990/10/17 03:46:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.7 1991/01/12 15:50:40 ram Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -642,11 +642,11 @@
     (setf (concatenated-stream-current stream) current)
     (let ((this (car current)))
       (multiple-value-bind (result eofp)
-			   (read-line this nil nil)
-	(declare (simple-string result))
+			   (read-line this nil :eof)
+	(declare (type (or simple-string (member :eof)) result))
 	;; Once we have found some input, we loop until we either find a 
 	;; line not terminated by eof or hit eof on the last stream.
-	(when result
+	(unless (eq result :eof)
 	  (do ((current (cdr current) (cdr current))
 	       (new ""))
 	      ((or (not eofp) (null current))
@@ -656,9 +656,9 @@
 	    (let ((this (car current)))
 	      (multiple-value-setq (new eofp)
 		(read-line this nil :eof))
-	      (if new
-		  (setq result (concatenate 'simple-string result new))
-		  (setq eofp t)))))))))
+	      (if (eq new :eof)
+		  (setq eofp t)
+		  (setq result (concatenate 'simple-string result new))))))))))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
   (if (eq operation :read-line)

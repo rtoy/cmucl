@@ -648,7 +648,7 @@
      (format-error "Flags and parameters not allowed"))
    (let ((str (catch 'format-escape
 		(format-stringify-output (sub-format prev tilde)))))
-     (declare (string str))
+     (declare (type (or string null) str))
      (if str
 	 (if (char= cmd #\;)
 	     (multiple-value-bind
