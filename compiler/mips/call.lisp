@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.11 1990/05/19 09:42:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.12 1990/05/25 12:25:27 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -710,10 +710,10 @@ default-value-5
 (expand
  `(define-vop (tail-call-variable)
     (:args
+     (args :scs (descriptor-reg) :to (:result 0))
      (function-arg :scs (descriptor-reg) :target lexenv)
      (old-fp-arg :scs (descriptor-reg) :target old-fp)
-     (return-pc-arg :scs (descriptor-reg) :target return-pc)
-     (args :scs (descriptor-reg)))
+     (return-pc-arg :scs (descriptor-reg) :target return-pc))
     (:temporary (:sc any-reg :offset lexenv-offset :from (:argument 0))
 		lexenv)
     (:temporary (:sc any-reg :offset old-fp-offset :from (:argument 1))
