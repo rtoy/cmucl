@@ -2532,7 +2532,7 @@
 	       (names (cons spec var)) 
 	       (vals nil)))
 	    (t
-	     (when (/= (length spec) 2)
+	     (unless (<= 1 (length spec) 2)
 	       (compiler-error "Malformed ~S binding spec: ~S." context spec))
 	     (let* ((name (first spec))
 		    (var (varify-lambda-arg name (names))))
