@@ -33,7 +33,9 @@
   ;; that may be functions.
   call
   ;;
-  ;; May incorporate arguments in the result or somehow pass them upward.
+  ;; May incorporate function or number arguments into the result or somehow
+  ;; pass them upward.  Note that this applies to any argument that *might* be
+  ;; a function or number, not just the arguments that always are.
   unsafe
   ;;
   ;; May fail to return during correct execution.  Errors are O.K.
@@ -45,7 +47,11 @@
   any
   ;;
   ;; May be constant-folded.  The function has no side effects, but may be
-  ;; affected by side effects on the arguments.  e.g. SVREF, MAPC.
+  ;; affected by side effects on the arguments.  e.g. SVREF, MAPC.  Functions
+  ;; that side-effect their arguments are not considered to be foldable.
+  ;; Although it would be "legal" to constant fold them (since it "is an error"
+  ;; to modify a constant), we choose not to mark theses functions as foldable
+  ;; in this database.
   foldable
   ;;
   ;; May be eliminated if value is unused.  The function has no side effects
