@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.19 1992/07/27 16:55:57 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.20 1992/10/20 23:37:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1192,12 +1192,15 @@ default-value-8
 ;;; stack top.
 ;;;
 (define-vop (more-arg-context)
+  (:policy :fast-safe)
+  (:translate c::%more-arg-context)
   (:args (supplied :scs (any-reg)))
-  (:arg-types positive-fixnum)
+  (:arg-types tagged-num (:constant fixnum))
   (:info fixed)
-  (:results
-   (context :scs (descriptor-reg))
-   (count :scs (any-reg)))
+  (:results (context :scs (descriptor-reg))
+	    (count :scs (any-reg)))
+  (:result-types t tagged-num)
+  (:note "more-arg-context")
   (:generator 5
     (inst sub count supplied (fixnum fixed))
     (inst sub context csp-tn count)))
