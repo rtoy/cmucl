@@ -7,12 +7,10 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.9 1991/04/23 12:49:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.10 1991/05/08 14:33:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.9 1991/04/23 12:49:01 ram Exp $
-;;;    
 (in-package "LISP")
 (export '(eval constantp quote proclaim
 	  eval-when progn prog1 prog2 let let*
@@ -231,25 +229,33 @@
 ;;;    The Env is a LEXENV or NIL (the null environment.)
 ;;;
 (defun macroexpand-1 (form &optional env)
-  "If form is a macro, expands it once.  Returns two values, the
-  expanded form and a T-or-NIL flag indicating whether the form was,
-  in fact, a macro.  Env is the lexical environment to expand in,
-  which defaults to the null environment."
-  (let ((fenv (when env (c::lexenv-functions env))))
-    (if (and (consp form) (symbolp (car form)))
-	(let ((local-def (cdr (assoc (car form) fenv))))
-	  (if local-def
-	      (if (and (consp local-def) (eq (car local-def) 'MACRO))
-		  (values (funcall *macroexpand-hook* (cdr local-def)
-				   form env)
-			  t)
-		  (values form nil))
-	      (let ((global-def (macro-function (car form))))
-		(if global-def
-		    (values (funcall *macroexpand-hook* global-def form env)
-			    t)
-		    (values form nil)))))
-	(values form nil))))
+  "If form is a macro (or symbol macro), expands it once.  Returns two values,
+  the expanded form and a T-or-NIL flag indicating whether the form was, in
+  fact, a macro.  Env is the lexical environment to expand in, which defaults
+  to the null environment."
+  (cond ((and (consp form) (symbolp (car form)))
+	 (let* ((fenv (when env (c::lexenv-functions env)))
+		(local-def (cdr (assoc (car form) fenv))))
+	   (if local-def
+	       (if (and (consp local-def) (eq (car local-def) 'MACRO))
+		   (values (funcall *macroexpand-hook* (cdr local-def)
+				    form env)
+			   t)
+		   (values form nil))
+	       (let ((global-def (macro-function (car form))))
+		 (if global-def
+		     (values (funcall *macroexpand-hook* global-def form env)
+			     t)
+		     (values form nil))))))
+	((symbolp form)
+	 (let* ((venv (when env (c::lexenv-variables env)))
+		(local-def (cdr (assoc form venv))))
+	   (if (and (consp local-def)
+		    (eq (car local-def) 'macro))
+	       (values (cdr local-def) t)
+	       (values form nil))))
+	(t
+	 (values form nil))))
 
 
 (defun macroexpand (form &optional env)
