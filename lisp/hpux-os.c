@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.2 1993/08/02 19:56:26 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.3 1993/08/02 20:20:35 hallgren Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -318,15 +318,15 @@ getrusage(int who,struct rusage *rusage)
     return;
   }
   if(who == RUSAGE_SELF) {
-    rusage.ru_utime.tv_sec=buf.tms_utime/clk_tck;
-    rusage.ru_utime.tv_usec=(buf.tms_utime%clk) * 100000;
-    rusage.ru_stime.tv_sec=buf.tms_stime/clk_tck;
-    rusage.ru_stime.tv_usec=(buf.tms_stime%clk_tck) * 100000;
+    rusage->ru_utime.tv_sec=buf.tms_utime/clk_tck;
+    rusage->ru_utime.tv_usec=(buf.tms_utime%clk_tck) * 100000;
+    rusage->ru_stime.tv_sec=buf.tms_stime/clk_tck;
+    rusage->ru_stime.tv_usec=(buf.tms_stime%clk_tck) * 100000;
   } else if(who == RUSAGE_CHILDREN) {
-    rusage.ru_utime.tv_sec=buf.tms_cutime/clk_tck;
-    rusage.ru_utime.tv_usec=(buf.tms_cutime%clk) * 100000;
-    rusage.ru_stime.tv_sec=buf.tms_cstime/clk_tck;
-    rusage.ru_stime.tv_usec=(buf.tms_cstime%clk_tck) * 100000;
+    rusage->ru_utime.tv_sec=buf.tms_cutime/clk_tck;
+    rusage->ru_utime.tv_usec=(buf.tms_cutime%clk_tck) * 100000;
+    rusage->ru_stime.tv_sec=buf.tms_cstime/clk_tck;
+    rusage->ru_stime.tv_usec=(buf.tms_cstime%clk_tck) * 100000;
   }
 }
 
@@ -364,4 +364,10 @@ gethostid(void)
 	 ((unsigned char *)(hostent->h_addr))[3];
 
   return addr;
+}
+
+int
+getpagesize(void)
+{
+  return os_vm_page_size;
 }
