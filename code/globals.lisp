@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.7 1993/08/25 01:13:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.8 1994/10/02 22:36:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,4 +50,13 @@
 		  c::%%defun c::%%defmacro c::%%defconstant c::%defstruct
 		  c::%%compiler-defstruct c::%proclaim c::get-info-value
 		  c::set-info-value find-keyword keyword-test assert-error
-		  assert-prompt check-type-error case-body-error))
+		  assert-prompt check-type-error case-body-error
+		  extensions::call-display-event-handler
+		  hemlock-internals::current-window
+		  hemlock-internals::device-exit
+		  hemlock-internals::device-hunk-device
+		  hemlock-internals::device-init disable-clx-event-handling
+		  xlib::display-input-stream xlib:event-listen
+		  flush-display-events
+		  hemlock::ts-stream-p hemlock::ts-stream-wire
+		  hemlock-internals::window-hunk))
