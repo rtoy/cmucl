@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.5 2004/07/15 17:57:54 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.6 2004/10/19 19:16:20 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,7 +278,8 @@
 (defun dynamic-extent-allocation (alloc-tn nbytes temp-tn)
   (inst sub rsp-tn nbytes)
   (inst mov temp-tn #xfffffffffffffff0)
-  (inst and rsp-tn temp-tn) ; alignment
+  (inst and rsp-tn temp-tn) ; alignment, not necessary for 3 bit low-tag
+					; but necessary if we go to 4 bit
   (inst mov alloc-tn rsp-tn)
   (values))
 
