@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.15 1992/03/14 02:16:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.16 1992/08/05 00:36:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,17 +412,17 @@
 ;;; version.  This is an IR1 transform so that we don't have to worry about
 ;;; changing the order of evaluation.
 ;;;
-(loop for (fun pred*) in
-      '((string< string<*)
-	(string> string>*)
-	(string<= string<=*)
-	(string>= string>=*)
-	(string= string=*)
-	(string/= string/=*)) do
-  (deftransform fun ((string1 string2 &key (start1 0) end1
-			      (start2 0) end2)
-		     '* '* :eval-name t)
-    `(,pred* string1 string2 start1 end1 start2 end2)))
+(dolist (stuff '((string< string<*)
+		 (string> string>*)
+		 (string<= string<=*)
+		 (string>= string>=*)
+		 (string= string=*)
+		 (string/= string/=*)))
+  (destructuring-bind (fun pred*) stuff
+    (deftransform fun ((string1 string2 &key (start1 0) end1
+				(start2 0) end2)
+		       '* '* :eval-name t)
+      `(,pred* string1 string2 start1 end1 start2 end2))))
 
 
 ;;; STRING-xxx* transform  --  Internal
@@ -431,39 +431,40 @@
 ;;; ordering relationship specified by Lessp and Equalp.  The start and end are
 ;;; also gotten from the environment.  Both strings must be simple strings.
 ;;;
-(loop for (name lessp equalp) in
-      '((string<* t nil)
-	(string<=* t t)
-	(string>* nil nil)
-	(string>=* nil t)) do
-  (deftransform name ((string1 string2 start1 end1 start2 end2)
-		      '(simple-string simple-string t t t t) '*
-		      :eval-name t)
-    `(let* ((end1 (if (not end1) (length string1) end1))
-	    (end2 (if (not end2) (length string2) end2))
-	    (index (lisp::%sp-string-compare
-		    string1 start1 end1 string2 start2 end2)))
-       (if index
-	   (cond ((= index ,(if lessp 'end1 'end2)) index)
-		 ((= index ,(if lessp 'end2 'end1)) nil)
-		 ((,(if lessp 'char< 'char>)
-		   (schar string1 index)
-		   (schar string2
-			  (truly-the index
-				     (+ index (truly-the fixnum
-							 (- start2 start1))))))
-		  index)
-		 (t nil))
-	   ,(if equalp 'end1 'nil)))))
+(dolist (stuff '((string<* t nil)
+		 (string<=* t t)
+		 (string>* nil nil)
+		 (string>=* nil t)))
+  (destructuring-bind (name lessp equalp) stuff
+    (deftransform name ((string1 string2 start1 end1 start2 end2)
+			'(simple-string simple-string t t t t) '*
+			:eval-name t)
+      `(let* ((end1 (if (not end1) (length string1) end1))
+	      (end2 (if (not end2) (length string2) end2))
+	      (index (lisp::%sp-string-compare
+		      string1 start1 end1 string2 start2 end2)))
+	 (if index
+	     (cond ((= index ,(if lessp 'end1 'end2)) index)
+		   ((= index ,(if lessp 'end2 'end1)) nil)
+		   ((,(if lessp 'char< 'char>)
+		     (schar string1 index)
+		     (schar string2
+			    (truly-the index
+				       (+ index
+					  (truly-the fixnum
+						     (- start2 start1))))))
+		    index)
+		   (t nil))
+	     ,(if equalp 'end1 'nil))))))
 
 
-(loop for (name result-fun) in
-      '((string=* not)
-	(string/=* identity)) do
-  (deftransform name ((string1 string2 start1 end1 start2 end2)
-		      '(simple-string simple-string t t t t) '*
-		      :eval-name t)
-    `(,result-fun
-      (lisp::%sp-string-compare
-       string1 start1 (or end1 (length string1))
-       string2 start2 (or end2 (length string2))))))
+(dolist (stuff '((string=* not)
+		 (string/=* identity)))
+  (destructuring-bind (name result-fun) stuff
+    (deftransform name ((string1 string2 start1 end1 start2 end2)
+			'(simple-string simple-string t t t t) '*
+			:eval-name t)
+      `(,result-fun
+	(lisp::%sp-string-compare
+	 string1 start1 (or end1 (length string1))
+	 string2 start2 (or end2 (length string2)))))))
