@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.4 1993/02/03 18:47:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.5 1993/05/15 18:24:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,6 +16,13 @@
 ;;;
 
 (in-package "USER")
+
+#-clx
+;;; If CLX has not been loaded, but has been compiled, then load it.
+;;;
+(when (probe-file (make-pathname :defaults "target:clx/clx-library"
+				 :type (c:backend-fasl-file-type c:*backend*)))
+  (load "target:clx/clx-library"))
 
 (pushnew :motif-toolkit *features*)
 
