@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.57 2000/08/08 13:41:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.58 2000/10/25 17:16:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -813,7 +813,7 @@
 				bindings))
 		*handler-clusters*)))
      (multiple-value-prog1
-      ,@forms
+      (progn ,@forms)
       ;; Wait for any float exceptions
       #+x86 (float-wait))))
 
