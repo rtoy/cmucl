@@ -287,10 +287,9 @@
   
   (do ((ref refs (tn-ref-next ref)))
       ((null ref))
-    (let* ((lambda (lambda-home
-		    (block-lambda
-		     (ir2-block-block
-		      (vop-block (tn-ref-vop ref))))))
+    (let* ((lambda (block-home-lambda
+		    (ir2-block-block
+		     (vop-block (tn-ref-vop ref)))))
 	   (tails (lambda-tail-set lambda)))
       (flet ((frob (fun)
 	       (setf (ir2-environment-number-stack-p
