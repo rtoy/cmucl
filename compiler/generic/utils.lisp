@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.8 2003/10/13 15:56:40 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.9 2004/05/24 23:18:37 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,8 @@
       (let ((posn (position symbol static-symbols)))
 	(unless posn (error "~S is not a static symbol." symbol))
 	(+ (* posn (pad-data-block symbol-size))
-	   (pad-data-block (1- symbol-size))
+	   (pad-data-block #+amd64 symbol-size
+			   #-amd64 (1- symbol-size))
 	   other-pointer-type
 	   (- list-pointer-type)))
       0))
@@ -55,7 +56,8 @@
       (multiple-value-bind
 	  (n rem)
 	  (truncate (+ offset list-pointer-type (- other-pointer-type)
-		       (- (pad-data-block (1- symbol-size))))
+		       (- (pad-data-block #+amd64 symbol-size
+					  #-amd64 (1- symbol-size))))
 		    (pad-data-block symbol-size))
 	(unless (and (zerop rem) (<= 0 n (1- (length static-symbols))))
 	  (error "Byte offset, ~D, is not correct." offset))
@@ -69,7 +71,8 @@
     (unless static-function-index
       (error "~S isn't a static function." name))
     (+ (* static-syms (pad-data-block symbol-size))
-       (pad-data-block (1- symbol-size))
+       (pad-data-block #+amd64 symbol-size
+		       #-amd64 (1- symbol-size))
        (- list-pointer-type)
        (* static-function-index (pad-data-block fdefn-size))
        (* fdefn-raw-addr-slot word-bytes))))
@@ -79,7 +82,8 @@
    symbol."
   (let* ((static-syms (length static-symbols))
 	 (offsets (+ (* static-syms (pad-data-block symbol-size))
-		     (pad-data-block (1- symbol-size))
+		     (pad-data-block #+amd64 symbol-size
+				     #-amd64 (1- symbol-size))
 		     (- list-pointer-type)
 		     (* fdefn-raw-addr-slot word-bytes))))
     (multiple-value-bind (index rmdr)

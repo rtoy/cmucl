@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.64 2003/03/22 16:15:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.65 2004/05/24 23:20:47 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,9 +148,10 @@
   (complex long-float)
   (unsafe))
 
-(defknown %raw-bits (t fixnum) (unsigned-byte 32)
+(defknown %raw-bits (t fixnum) (unsigned-byte #+amd64 64 #-amd64 32)
   (foldable flushable))
-(defknown (%set-raw-bits) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
+(defknown (%set-raw-bits) (t fixnum (unsigned-byte #+amd64 64 #-amd64 32))
+  (unsigned-byte #+amd64 64 #-amd64 32)
   (unsafe))
 
 
@@ -214,8 +215,9 @@
   (foldable flushable movable))
 
 
-(defknown (shift-towards-start shift-towards-end) ((unsigned-byte 32) fixnum)
-  (unsigned-byte 32)
+(defknown (shift-towards-start shift-towards-end)
+    ((unsigned-byte #+amd64 64 #-amd64 32) fixnum)
+  (unsigned-byte #+amd64 64 #-amd64 32)
   (foldable flushable movable))
 
 
@@ -275,7 +277,7 @@
   (foldable flushable movable))
 
 (defknown (%ashl %ashr %digit-logical-shift-right)
-	  (bignum-element-type (mod 32)) bignum-element-type
+	  (bignum-element-type (mod #+amd64 64 #-amd64 32)) bignum-element-type
   (foldable flushable movable))
 
 

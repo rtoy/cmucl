@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.55 2004/05/18 02:28:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.56 2004/05/24 23:12:30 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,10 +84,10 @@
 ); eval-when
 
 
-(defparameter target-most-positive-fixnum (1- (ash 1 29))
+(defparameter target-most-positive-fixnum (1- (ash 1 #-amd64 29 #+amd64 61))
   "most-positive-fixnum in the target architecture.")
 
-(defparameter target-most-negative-fixnum (ash -1 29)
+(defparameter target-most-negative-fixnum (ash -1 #-amd64 29 #+amd64 61)
   "most-negative-fixnum in the target architecture.")
 
 
@@ -466,15 +466,15 @@
 
 ;;;; Symbols
 
-#+(or gengc sparc x86)
+#+(or gengc sparc x86 amd64)
 (defknown %make-symbol (fixnum simple-string) symbol
   (flushable movable))
 
-#+(or gengc sparc x86)
+#+(or gengc sparc x86 amd64)
 (defknown symbol-hash (symbol) fixnum
   (flushable movable))
 
-#+(or gencgc sparc x86)
+#+(or gencgc sparc x86 amd64)
 (defknown %set-symbol-hash  (symbol index)
   t (unsafe))
 
@@ -482,23 +482,35 @@
 (defknown symbol-hash (symbol) lisp::hash
   (flushable movable))
 
+#+amd64
+(defknown %symbol-name (symbol) simple-string (movable foldable flushable))
+
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type
 				 :alloc-trans
-				 #-(or gengc x86 sparc) make-symbol
-				 #+(or gengc x86 sparc) %make-symbol)
+				 #-(or gengc x86 amd64 sparc) make-symbol
+				 #+(or gengc x86 amd64 sparc) %make-symbol)
   (value :set-trans %set-symbol-value
 	 :init :unbound)
-  #-(or gengc x86 sparc) unused
-  #+(or gengc x86 sparc)
+  #-(or gengc x86 amd64 sparc) unused
+  #+(or gengc x86 amd64 sparc)
   (hash :init :arg)
   (plist :ref-trans symbol-plist
 	 :set-trans %set-symbol-plist
 	 :init :null)
-  (name :ref-trans symbol-name :init :arg)
+  (name :ref-trans #-amd64 symbol-name #+amd64 %symbol-name :init :arg)
   (package :ref-trans symbol-package
 	   :set-trans %set-symbol-package
 	   :init :null))
+
+;; We couldn't use the nil/symbol trick in 32-bit, because the difference
+;; between the low tags of nil and symbol is 4 but the word-size is 8. This is
+;; a slow workaround.
+#+amd64
+(deftransform symbol-name ((symbol) (*))
+	      '(if (eq symbol nil)
+		"NIL"
+		(%symbol-name symbol)))
 
 (define-primitive-object (complex-single-float
 			  :lowtag other-pointer-type

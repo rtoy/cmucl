@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.23 2003/03/22 16:15:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.24 2004/05/24 23:15:31 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,25 +29,25 @@
 ;;; Primitive integer types that fit in registers.
 ;;;
 (def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg)
-  :type (unsigned-byte 29))
-#-alpha
+  :type (unsigned-byte #-amd64 29 #+amd64 61))
+#-(or alpha amd64)
 (def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 31))
-#-alpha
+#-(or alpha amd64)
 (def-primitive-type unsigned-byte-32 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 32))
-#+alpha
+#+(or alpha amd64)
 (def-primitive-type unsigned-byte-63 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 63))
-#+alpha
+#+(or alpha amd64)
 (def-primitive-type unsigned-byte-64 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 64))
 (def-primitive-type fixnum (any-reg signed-reg)
-  :type (signed-byte 30))
-#-alpha
+  :type (signed-byte #-amd64 30 #+amd64 62))
+#-(or alpha amd64)
 (def-primitive-type signed-byte-32 (signed-reg descriptor-reg)
   :type (signed-byte 32))
-#+alpha
+#+(or alpha amd64)
 (def-primitive-type signed-byte-64 (signed-reg descriptor-reg)
   :type (signed-byte 64))
 
@@ -55,16 +55,16 @@
 (defvar *fixnum-primitive-type* (primitive-type-or-lose 'fixnum))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
-(def-primitive-type-alias unsigned-num (:or #-alpha unsigned-byte-32
-					    #-alpha unsigned-byte-31
-					    #+alpha unsigned-byte-64
-					    #+alpha unsigned-byte-63
+(def-primitive-type-alias unsigned-num (:or #-(or alpha amd64) unsigned-byte-32
+					    #-(or alpha amd64) unsigned-byte-31
+					    #+(or alpha amd64) unsigned-byte-64
+					    #+(or alpha amd64) unsigned-byte-63
 					    positive-fixnum))
-(def-primitive-type-alias signed-num (:or #-alpha signed-byte-32
-					  #+alpha signed-byte-64
+(def-primitive-type-alias signed-num (:or #-(or alpha amd64) signed-byte-32
+					  #+(or alpha amd64) signed-byte-64
 					  fixnum
-					  #-alpha unsigned-byte-31
-					  #+alpha unsigned-byte-63
+					  #-(or alpha amd64) unsigned-byte-31
+					  #+(or alpha amd64) unsigned-byte-63
 					  positive-fixnum))
 #+(and sparc-v9 sparc-v8plus)
 (progn
@@ -134,6 +134,8 @@
   :type (simple-array (signed-byte 16) (*)))
 (def-primitive-type simple-array-signed-byte-30 (descriptor-reg)
   :type (simple-array (signed-byte 30) (*)))
+(def-primitive-type simple-array-signed-byte-62 (descriptor-reg)
+  :type (simple-array (signed-byte 62) (*)))
 (def-primitive-type simple-array-signed-byte-32 (descriptor-reg)
   :type (simple-array (signed-byte 32) (*)))
 (def-primitive-type simple-array-single-float (descriptor-reg)
@@ -190,7 +192,8 @@
     ((unsigned-byte 32) . simple-array-unsigned-byte-32)
     ((signed-byte 8) . simple-array-signed-byte-8)
     ((signed-byte 16) . simple-array-signed-byte-16)
-    (fixnum . simple-array-signed-byte-30)
+    (fixnum . #-amd64 simple-array-signed-byte-30
+     #+amd64 simple-array-signed-byte-62)
     ((signed-byte 32) . simple-array-signed-byte-32)
     (single-float . simple-array-single-float)
     (double-float . simple-array-double-float)
@@ -236,12 +239,12 @@
 	       (case t1-name
 		 (positive-fixnum
 		  (if (or (eq t2-name 'fixnum)
-			  (eq t2-name #-alpha 'signed-byte-32
-				      #+alpha 'signed-byte-64)
-			  (eq t2-name #-alpha 'unsigned-byte-31
-				      #+alpha 'unsigned-byte-63)
-			  (eq t2-name #-alpha 'unsigned-byte-32
-				      #+alpha 'unsigned-byte-64)
+			  (eq t2-name #-(or alpha amd64) 'signed-byte-32
+				      #+(or alpha amd64) 'signed-byte-64)
+			  (eq t2-name #-(or alpha amd64) 'unsigned-byte-31
+				      #+(or alpha amd64) 'unsigned-byte-63)
+			  (eq t2-name #-(or alpha amd64) 'unsigned-byte-32
+				      #+(or alpha amd64) 'unsigned-byte-64)
 			  #+(and sparc-v9 sparc-v8plus)
 			  (eq t2-name 'signed-byte-64)
 			  #+(and sparc-v9 sparc-v8plus)
@@ -250,23 +253,32 @@
 		      t2))
 		 (fixnum
 		  (case t2-name
-		    (#-alpha signed-byte-32 #+alpha signed-byte-64 t2)
+		    (#-(or alpha amd64) signed-byte-32
+		       #+(or alpha amd64) signed-byte-64 t2)
+
 		    #+(and sparc-v9 sparc-v8plus)
 		    (signed-byte-64 t2)
-		    (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63 
+
+		    (#-(or alpha amd64) unsigned-byte-31
+		       #+(or alpha amd64) unsigned-byte-63 
 		     (primitive-type-or-lose
-		      #-alpha 'signed-byte-32 #+alpha 'signed-byte-64
+		      #-(or alpha amd64) 'signed-byte-32
+		      #+(or alpha amd64) 'signed-byte-64
 		      *backend*))))
-		 (#-alpha signed-byte-32 #+alpha signed-byte-64
-		  (if (eq t2-name #-alpha 'unsigned-byte-31
-				  #+alpha 'unsigned-byte-63)
+		 
+		 (#-(or alpha amd64) signed-byte-32
+		    #+(or alpha amd64) signed-byte-64
+		  (if (eq t2-name #-(or alpha amd64) 'unsigned-byte-31
+				  #+(or alpha amd64) 'unsigned-byte-63)
 		      t1))
 		 #+(and sparc-v9 sparc-v8plus)
 		 (signed-byte-64
 		  t1)
-		 (#-alpha unsigned-byte-31 #+alpha unsigned-byte-63
-		  (if (eq t2-name #-alpha 'unsigned-byte-32
-				  #+alpha 'unsigned-byte-64)
+
+		 (#-(or alpha amd64) unsigned-byte-31
+		    #+(or alpha amd64) unsigned-byte-63
+		  (if (eq t2-name #-(or alpha amd64) 'unsigned-byte-32
+				  #+(or alpha amd64) 'unsigned-byte-64)
 		      t2))))))
       (etypecase type
 	(numeric-type
@@ -278,24 +290,33 @@
 		(integer
 		 (cond ((and hi lo)
 			(dolist (spec
-				  '((positive-fixnum 0 #.(1- (ash 1 29)))
-				    #-alpha
+				  '((positive-fixnum 0 #.(1- (ash 1 #-amd64 29
+								  #+amd64 61)))
+
+				    #-(or alpha amd64)
 				    (unsigned-byte-31 0 #.(1- (ash 1 31)))
-				    #-alpha
+
+				    #-(or alpha amd64)
 				    (unsigned-byte-32 0 #.(1- (ash 1 32)))
-				    #+(or alpha (and sparc-v9 sparc-v8plus))
+
+				    #+(or alpha amd64 (and sparc-v9 sparc-v8plus))
 				    (unsigned-byte-63 0 #.(1- (ash 1 63)))
-				    #+(or alpha (and sparc-v9 sparc-v8plus))
+
+				    #+(or alpha amd64 (and sparc-v9 sparc-v8plus))
 				    (unsigned-byte-64 0 #.(1- (ash 1 64)))
-				    (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
-				    #-alpha
+
+				    (fixnum #.(ash -1 #-amd64 29 #+amd64 61)
+				     #.(1- (ash 1 #-amd64 29 #+amd64 61)))
+
+				    #-(or alpha amd64)
 				    (signed-byte-32 #.(ash -1 31)
 						    #.(1- (ash 1 31)))
-				    #+(or alpha (and sparc-v9 sparc-v8plus))
+
+				    #+(or alpha amd64 (and sparc-v9 sparc-v8plus))
 				    (signed-byte-64 #.(ash -1 63)
 						    #.(1- (ash 1 63))))
-				 (if (or (< hi (ash -1 29))
-					 (> lo (1- (ash 1 29))))
+				 (if (or (< hi (ash -1 #-amd64 29 #+amd64 61))
+					 (> lo (1- (ash 1 #-amd64 29 #+amd64 61))))
 				     (part-of bignum)
 				     (any)))
 			  (let ((type (car spec))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.19 2002/10/07 14:31:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.20 2004/05/24 23:22:51 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,8 @@
 ;;; given a number of words.
 ;;;
 (defmacro pad-data-block (words)
-  `(logandc2 (+ (ash ,words word-shift) lowtag-mask) lowtag-mask))
+  `(logandc2 (+ (ash ,words word-shift) #+amd64 15 #-amd64 lowtag-mask)
+    #+amd64 15 #-amd64 lowtag-mask))
 
 ;;; DEFENUM -- Internal Interface.
 ;;;
@@ -235,14 +236,15 @@
 	  little-endian-fasl-file-implementation
 	  alpha-fasl-file-implementation
 	  sgi-fasl-file-implementation
-	  ppc-fasl-file-implementation))
+	  ppc-fasl-file-implementation
+	  amd64-fasl-file-implementation))
 
 ;;; Constants for the different implementations.  These are all defined in
 ;;; one place to make sure they are all unique.
 
 (defparameter fasl-file-implementations
   '(nil "Pmax" "Sparc" "RT" "RT/AFPA" "x86" "HPPA"
-	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI" "PPC"))
+	"Big-endian byte-code" "Little-endian byte-code" "Alpha" "SGI" "PPC" "AMD64"))
 (defconstant pmax-fasl-file-implementation 1)
 (defconstant sparc-fasl-file-implementation 2)
 (defconstant rt-fasl-file-implementation 3)
@@ -254,6 +256,7 @@
 (defconstant alpha-fasl-file-implementation 9)
 (defconstant sgi-fasl-file-implementation 10)
 (defconstant ppc-fasl-file-implementation 11)
+(defconstant amd64-fasl-file-implementation 12)
 
 ;;; The maximum number of SCs in any implementation.
 (defconstant sc-number-limit 32)
