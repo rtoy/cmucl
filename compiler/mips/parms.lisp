@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.76 1990/10/13 16:16:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.77 1990/10/13 20:23:09 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -23,7 +23,7 @@
 (export '(float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit single-float-trapping-nan-bit
-	  double-float-trapping-nan-bit))
+	  double-float-trapping-nan-bit *fixup-values*))
 
 ;(eval-when (compile load eval)
 
@@ -632,6 +632,10 @@
 ;;; The number of bits per element in the assemblers code vector.
 ;;;
 (defparameter *assembly-unit-length* 8)
+
+(defparameter *fixup-values*
+  '((:jump . 0) (:lui . 1) (:addi . 2)))
+
 
 
 ;;;; Other parameters:
