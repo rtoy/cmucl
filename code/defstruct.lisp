@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.51 1993/08/03 07:36:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.52 1993/08/03 16:29:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1474,7 +1474,8 @@
 		      (output-symbol-name (dsd-%name slot) stream)
 		      (write-char #\space stream)
 		      (pprint-newline :miser stream)
-		      (output-object (%instance-ref structure (dsd-index slot))
+		      (output-object (funcall (fdefinition (dsd-accessor slot))
+					      structure)
 				     stream)
 		      (when (null slots)
 			(return))
