@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.9 2001/09/25 21:28:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.10 2003/07/01 18:47:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -142,6 +142,31 @@
   (:variant :ltu :geu))
 
 (define-vop (fast-char>/base-char base-char-compare)
+  (:translate char>)
+  (:variant :gtu :leu))
+
+(define-vop (base-char-compare-c)
+  (:args (x :scs (base-char-reg)))
+  (:arg-types base-char (:constant base-char))
+  (:conditional)
+  (:info target not-p y)
+  (:policy :fast-safe)
+  (:note "inline comparison")
+  (:variant-vars condition not-condition)
+  (:generator 2
+    (inst cmp x (char-code y))
+    (inst b (if not-p not-condition condition) target)
+    (inst nop)))
+
+(define-vop (fast-char=-c/base-char base-char-compare-c)
+  (:translate char=)
+  (:variant :eq :ne))
+
+(define-vop (fast-char<-c/base-char base-char-compare-c)
+  (:translate char<)
+  (:variant :ltu :geu))
+
+(define-vop (fast-char>-c/base-char/c base-char-compare-c)
   (:translate char>)
   (:variant :gtu :leu))
 
