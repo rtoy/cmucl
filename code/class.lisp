@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.57 2003/08/05 14:04:53 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.58 2004/10/12 16:53:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -394,7 +394,11 @@
   (let ((res (class-cell-class (find-class-cell name))))
     (if (or res (not errorp))
 	res
-	(error "Class not yet defined:~%  ~S" name))))
+	(error 'simple-type-error
+	       :datum name
+	       :expected-type t		; Not really
+	       :format-control "Class not yet defined:~%  ~S"
+	       :format-arguments (list name)))))
 ;;;
 (defun (setf find-class) (new-value name &optional (errorp t) environment)
   (declare (type (or null class) new-value) (ignore errorp environment))
