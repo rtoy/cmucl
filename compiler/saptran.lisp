@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.3 1992/12/18 20:40:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/saptran.lisp,v 1.4 1994/04/06 16:45:50 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,8 +34,10 @@
 (defknown sap- (system-area-pointer system-area-pointer) (signed-byte 32)
   (movable flushable))
 
-(defknown sap-int (system-area-pointer) (unsigned-byte 32) (movable flushable))
-(defknown int-sap ((unsigned-byte 32)) system-area-pointer (movable))
+(defknown sap-int (system-area-pointer) (unsigned-byte #-alpha 32 #+alpha 64)
+  (movable flushable))
+(defknown int-sap ((unsigned-byte #-alpha 32 #+alpha 64))
+  system-area-pointer (movable))
 
 
 (defknown sap-ref-8 (system-area-pointer index) (unsigned-byte 8)
@@ -56,6 +58,14 @@
   (unsigned-byte 32)
   ())
 
+#+alpha
+(defknown sap-ref-64 (system-area-pointer index) (unsigned-byte 64)
+  (flushable))
+#+alpha
+(defknown %set-sap-ref-64 (system-area-pointer index (unsigned-byte 64))
+  (unsigned-byte 64)
+  ())
+
 
 (defknown signed-sap-ref-8 (system-area-pointer index) (signed-byte 8)
   (flushable))
@@ -73,6 +83,14 @@
   (flushable))
 (defknown %set-signed-sap-ref-32 (system-area-pointer index (signed-byte 32))
   (signed-byte 32)
+  ())
+
+#+alpha
+(defknown signed-sap-ref-64 (system-area-pointer index) (signed-byte 64)
+  (flushable))
+#+alpha
+(defknown %set-signed-sap-ref-64 (system-area-pointer index (signed-byte 64))
+  (signed-byte 64)
   ())
 
 
