@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.6 1991/06/14 20:01:48 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.7 1991/06/15 12:44:43 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,8 +28,7 @@
     (defhvar "Process Output Stream"
       "The process structure for this buffer."
       :buffer buffer
-      :value (make-shell-filter-stream
-	      buffer (make-hemlock-output-stream mark :full)))
+      :value (make-hemlock-output-stream mark :full))
     (defhvar "Interactive History"
       "A ring of the regions input to an interactive mode (Eval or Typescript)."
       :buffer buffer
@@ -221,7 +220,12 @@
     (update-process-buffer buffer)
     (when (and (not (value current-shell)) set-current-shell-p)
       (setf (value current-shell) buffer))
-    (change-to-buffer buffer)))
+    (change-to-buffer buffer)
+    (let ((stream (value process-output-stream)))
+      ;; If we re-used an old shell buffer, this isn't necessary.
+      (when (hemlock-output-stream-p stream)
+	(setf (value process-output-stream)
+	      (make-shell-filter-stream buffer stream))))))
 
 ;;; GET-COMMAND-LINE -- Internal.
 ;;;
