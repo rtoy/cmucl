@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.10 1991/02/20 14:57:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.11 1991/04/04 14:01:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,14 +40,19 @@
     (do-blocks-backwards (block component :both)
       (if (block-flag block)
 	  (setf (block-number block) (incf num))
-	  (delete-block block))))
+	  (setf (block-delete-p block) t)))
+    (do-blocks (block component)
+      (unless (block-flag block)
+	(delete-block block))))
   (setf (component-reanalyze component) nil))
 
 
-;;; Join-Components  --  Internal
+;;; Join-Components  --  Interface
 ;;;
 ;;;    Move all the code and entry points from Old to New.  The code in Old is
-;;; inserted at the head of New.
+;;; inserted at the head of New.  This is also called during let conversion
+;;; when we are about in insert the body of a let in a different component.  [A
+;;; local call can be to a different component before FIND-INITIAL-DFO runs.]
 ;;;
 (proclaim '(function join-components (component component) void))
 (defun join-components (new old)
@@ -235,6 +240,8 @@
       component)
      (t
       (push fun (component-lambdas component))
+      (setf (component-lambdas this)
+	    (delete fun (component-lambdas this)))
       (link-blocks (component-head component) bind-block)
       (unlink-blocks (component-head this) bind-block)
       (when return
@@ -264,20 +271,6 @@
 	     (find-if #'entry-exits entries)))))
 
 
-;;; DELETE-COMPONENT-BLOCKS  --  Internal
-;;;
-;;;    Delete all the blocks in Component.  We scan first marking the blocks as
-;;; delete-p to prevent weird stuff from being triggered by deletion.
-;;;
-(defun delete-component-blocks (component)
-  (declare (type component component))
-  (do-blocks (block component)
-    (setf (block-delete-p block) t))
-  (do-blocks (block component)
-    (delete-block block))
-  (undefined-value))
-
-
 ;;; FIND-TOP-LEVEL-COMPONENTS  --  Internal
 ;;;
 ;;;    Compute the result of FIND-INITIAL-DFO given the list of all resulting
@@ -296,7 +289,8 @@
       (unless (eq (block-next (component-head com)) (component-tail com))
 	(let* ((funs (component-lambdas com))
 	       (has-top (find :top-level funs :key #'functional-kind)))
-	  (cond ((find-if #'has-xep-or-nlx funs)
+	  (cond ((or (find-if #'has-xep-or-nlx funs)
+		     (and has-top (rest funs)))
 		 (setf (component-name com) (find-component-name com))
 		 (real com)
 		 (when has-top (real-top com)))
@@ -305,7 +299,7 @@
 		 (setf (component-name com) "Top-Level Form")
 		 (top com))
 		(t
-		 (delete-component-blocks com))))))
+		 (delete-component com))))))
 
     (values (real) (top) (real-top))))
 
@@ -320,16 +314,11 @@
 ;;;
 ;;;     We iterate over the lambdas in each initial component, trying to put
 ;;; each function in its own component, but joining it to an existing component
-;;; if we find that there are references between them.
+;;; if we find that there are references between them.  Any code that is left
+;;; in an initial component must be unreachable, so we can delete it.
 ;;;
-;;;    When we are done, we assign DFNs and delete any components that are
-;;; empty due to having been merged with another component.  Since all
-;;; functions are walked, moving all reachable code to another component, all
-;;; blocks remaining in the initial component may be deleted.  The only code
-;;; left will be in deleted functions or not reachable from the entry to the
-;;; function.
-;;;
-;;;    We then call FIND-TOP-LEVEL-COMPONENTS to pull out top-level code.
+;;;    When we are done, we assign DFNs and call FIND-TOP-LEVEL-COMPONENTS to
+;;; pull out top-level code.
 ;;;
 (defun find-initial-dfo (lambdas)
   (declare (list lambdas))
@@ -345,7 +334,9 @@
 	      (when (eq res new)
 		(components new)
 		(setq new (make-empty-component)))))
-	  (delete-component-blocks component))))
+	  (when (eq (component-kind component) :initial)
+	    (assert (null (component-lambdas component)))
+	    (delete-component component)))))
 
     (dolist (com (components))
       (let ((num 0))
