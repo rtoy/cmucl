@@ -747,14 +747,15 @@
 (defun preprocessor-macroexpand (form)
   (handler-case #+new-compiler (macroexpand-1 form *lexical-environment*)
                 #-new-compiler
-                (if (consp form)
-		    (let* ((name (car form))
-			   (exp (or (cddr (assoc name *fenv*))
-				    (info function macro-function name))))
-		      (if exp
-			  (funcall exp form *fenv*)
-			  form))
-		    form)
+                (let ((fenv (lexenv-functions *lexical-environment*)))
+		  (if (consp form)
+		      (let* ((name (car form))
+			     (exp (or (cddr (assoc name fenv))
+				      (info function macro-function name))))
+			(if exp
+			    (funcall exp form fenv)
+			    form))
+		      form))
     (error (condition)
        (compiler-error "(during macroexpansion)~%~A" condition))))
 
