@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.73 2002/07/25 14:50:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.74 2002/08/07 15:19:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1204,14 +1204,19 @@
 ;;; to omit errorp, and the ERROR form generated is executed within a
 ;;; RESTART-CASE allowing keyform to be set and retested.
 ;;;
-(defun case-body (name keyform cases multi-p test errorp proceedp)
+;;; If ALLOW-OTHERWISE, then we allow T and OTHERWISE clauses and also
+;;; generate an ERROR form.  (This is for CCASE and ECASE which allow
+;;; using T and OTHERWISE as regular keys.)
+;;;
+(defun case-body (name keyform cases multi-p test errorp proceedp &optional allow-otherwise)
   (let ((keyform-value (gensym))
 	(clauses ())
 	(keys ()))
     (dolist (case cases)
       (cond ((atom case)
 	     (error "~S -- Bad clause in ~S." case name))
-	    ((memq (car case) '(t otherwise))
+	    ((and (not allow-otherwise)
+		 (memq (car case) '(t otherwise)))
 	     (if errorp
 		 (error "No default clause allowed in ~S: ~S" name case)
 		 (push `(t nil ,@(rest case)) clauses)))
@@ -1223,10 +1228,14 @@
 		     nil ,@(rest case))
 		   clauses))
 	    (t
+	     (when (and allow-otherwise
+			(memq (car case) '(t otherwise)))
+	       (warn "Bad style to use T or OTHERWISE in ECASE or CCASE"))
 	     (push (first case) keys)
 	     (push `((,test ,keyform-value
 			    ',(first case)) nil ,@(rest case)) clauses))))
     (case-body-aux name keyform keyform-value clauses keys errorp proceedp
+		   allow-otherwise
 		   `(,(if multi-p 'member 'or) ,@keys))))
 
 ;;; CASE-BODY-AUX provides the expansion once CASE-BODY has groveled all the
@@ -1237,7 +1246,7 @@
 ;;; any function using the case macros, regardless of whether they are needed.
 ;;;
 (defun case-body-aux (name keyform keyform-value clauses keys
-		      errorp proceedp expected-type)
+		      errorp proceedp allow-otherwise expected-type)
   (if proceedp
       (let ((block (gensym))
 	    (again (gensym)))
@@ -1259,7 +1268,7 @@
 	 ,keyform-value ; prevent warnings when key not used eg (case key (t))
 	 (cond
 	  ,@(nreverse clauses)
-	  ,@(if errorp
+	  ,@(if (or errorp allow-otherwise)
 		`((t (error 'conditions::case-failure
 			    :name ',name
 			    :datum ,keyform-value
@@ -1293,13 +1302,13 @@
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then a correctable error is
   signalled."
-  (case-body 'ccase keyform cases t 'eql t t))
+  (case-body 'ccase keyform cases t 'eql nil t t))
 
 (defmacro ecase (keyform &body cases)
   "ECASE Keyform {({(Key*) | Key} Form*)}*
   Evaluates the Forms in the first clause with a Key EQL to the value of
   Keyform.  If none of the keys matches then an error is signalled."
-  (case-body 'ecase keyform cases t 'eql t nil))
+  (case-body 'ecase keyform cases t 'eql nil nil t))
 
 (defmacro typecase (keyform &body cases)
   "TYPECASE Keyform {(Type Form*)}*
