@@ -29,7 +29,6 @@
 
 %% Delete "[a4paper]" if you don't want this formatted for A4 paper.
 \documentclass[a4paper]{report}
-%\usepackage[T1]{fontenc}
 \usepackage{xspace}
 \usepackage{alltt}
 \usepackage{index}
@@ -46,26 +45,50 @@
 \newcommand{\keywords}{lisp, Common Lisp, manual, compiler, programming
 language implementation, programming environment}
 
+\date{CMUCL snapshot from \today{}}
+% \date{March 18, 2003 \\ Release 18e}
+
 
 \begin{document}
 
-\date{\bigskip % \today %% Don't usually want that!
-  % Use the release date, whatever that might be
-  March 18, 2003 \\
-  Release 18e 
-  \\
-  \vspace{0.5in} \textbf{Abstract} \medskip
-  \begin{quote}
-  CMUCL is a free, high-performance implementation of the Common Lisp
-  programming language, which runs on most major Unix platforms. It
-  mainly conforms to the ANSI Common Lisp Standard. CMUCL features a
-  sophisticated native-code compiler, a foreign function interface, a
-  graphical source-level debugger, an interface to the X11 Window
-  System, and an Emacs-like editor.
-  \end{quote}
+\begin{titlepage}
+  \makeatletter
+  \vspace{60pt}
+  \begin{center}
+    \rule{\linewidth}{0.7mm}
+    \vspace{3em}
+    {\Huge \@title \par}
+    \vspace{4em}
+     {\large
+       \begin{tabular}[t]{c}
+         \@author
+       \end{tabular}\par}
+       \vspace{2em}
+     {\large \@date \par}
+     \vspace{2em}
+    \rule{\linewidth}{0.7mm}
+  \end{center}
   \vfill
-  {\bf Keywords}: \keywords}
 
+  \begin{quotation}
+    \cmucl{} is a free, high-performance implementation of the Common Lisp
+    programming language, which runs on most major Unix platforms. It
+    mainly conforms to the ANSI Common Lisp Standard. \cmucl{} features a
+    sophisticated native-code compiler, a foreign function interface, a
+    graphical source-level debugger, an interface to the X11 Window
+    System, and an Emacs-like editor.
+
+    \medskip \textbf{Keywords}: \keywords
+  \end{quotation}
+
+  \vspace{5cm}
+  
+  This manual is based on CMU Technical Report CMU-CS-92-161, edited by
+  Robert A. MacLachlan, dated July 1992.
+
+  \thispagestyle{empty}
+  \makeatother
+\end{titlepage}
 
 \ifpdf
 \pdfinfo{
@@ -79,7 +102,7 @@ language implementation, programming environment}
             bookmarksopenlevel=2}
 \fi
 
-\maketitle
+% \maketitle
 
 \pagestyle{headings}
 \pagenumbering{roman}

@@ -112,7 +112,8 @@
 \newenvironment{lisp}
   {\@open{BLOCKQUOTE}{CLASS=lisp} \begin{alltt}}
   {\end{alltt}\@close{BLOCKQUOTE}}
-
+\newcommand{\cmucl}{CMUCL}
+  
 
 % there are no page numbers in HTML, so we need to override certain
 % cross-referencing macros

@@ -457,14 +457,13 @@ your own signal handlers.
 \section{Implementation-specific Packages}
 
 When \cmucl{} is first started up, the default package is the
-\code{common-lisp-user} package.  The \code{common-lisp-user} package
-uses the \code{common-lisp}, \code{extensions}, and \code{pcl}
-packages. The symbols exported from these three packages can be
-referenced without package qualifiers. This section describes packages
-which have exported interfaces that may concern users. The numerous
-internal packages which implement parts of the system are not
-described here. Package nicknames are in parenthesis after the full
-name.
+\code{common-lisp-user} package. The \code{common-lisp-user} package
+uses the \code{common-lisp} and \code{extensions} packages. The
+symbols exported from these three packages can be referenced without
+package qualifiers. This section describes packages which have
+exported interfaces that may concern users. The numerous internal
+packages which implement parts of the system are not described here.
+Package nicknames are in parenthesis after the full name.
 
 \begin{Lentry}
 \item[\code{alien}, \code{c-call}] Export the features of the Alien
@@ -473,7 +472,11 @@ name.
 \item[\code{pcl}] This package contains PCL (Portable CommonLoops),
   which is a portable implementation of CLOS (the Common Lisp Object
   System.)  This implements most (but not all) of the features in the
-  CLOS chapter of \cltltwo.
+  CLOS chapter of \cltltwo{}.
+
+\item[\code{clos-mop (mop)}] This package contains an implementation
+  of the CLOS Metaobject Protocol, as per the book \textit{The Art of
+  the Metaobject Protocol}.
   
 \item[\code{debug}] The \code{debug} package contains the command-line
   oriented debugger.  It exports utility various functions and
@@ -503,10 +506,10 @@ name.
 \item[\code{profile}] The \code{profile} package exports a simple
   run-time profiling facility (\pxlref{profiling}).
   
-\item[\code{common-lisp (cl lisp)}] The \code{common-lisp} package
+\item[\code{common-lisp (cl)}] The \code{common-lisp} package
   exports all the symbols defined by \cltl{} and only those symbols.
   Strictly portable Lisp code will depend only on the symbols exported
-  from the \code{lisp} package.
+  from the \code{common-lisp} package.
   
 \item[\code{unix}] This package exports system call
   interfaces to Unix (\pxlref{unix-interface}).
@@ -530,6 +533,8 @@ name.
 
 
 \input{hierarchical-packages}
+
+\input{package-locks}
 
 
 
