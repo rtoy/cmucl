@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.30 1993/02/11 14:12:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.31 1993/02/12 19:05:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,7 +198,7 @@
 ;;; We define a keyword "BOA" constructor so that we can reference the slots
 ;;; names in init forms.
 ;;;
-(defmacro def-alien-type-class ((name &key include) &rest slots)
+(defmacro def-alien-type-class ((name &key include include-args) &rest slots)
   (let ((defstruct-name
 	 (intern (concatenate 'string "ALIEN-" (symbol-name name) "-TYPE"))))
     (multiple-value-bind
@@ -231,7 +231,8 @@
 			 (&key class bits alignment
 			       ,@(mapcar #'(lambda (x)
 					     (if (atom x) x (car x)))
-					 slots))))
+					 slots)
+			       ,@include-args)))
 	   ,@slots)))))
 
 (defmacro def-alien-type-method ((class method) lambda-list &rest body)
@@ -650,7 +651,7 @@
 
 ;;;; The BOOLEAN type.
 
-(def-alien-type-class (boolean :include integer))
+(def-alien-type-class (boolean :include integer :include-args (signed)))
 
 (def-alien-type-translator boolean (&optional (bits vm:word-bits))
   (make-alien-boolean-type :bits bits :signed nil))
@@ -673,7 +674,8 @@
 
 ;;;; The ENUM type.
 
-(def-alien-type-class (enum :include (integer (:bits 32)))
+(def-alien-type-class (enum :include (integer (:bits 32))
+			    :include-args (signed))
   name		; name of this enum (if any)
   from		; alist from keywords to integers.
   to		; alist or vector from integers to keywords.
@@ -822,7 +824,8 @@
   value)
 
 
-(def-alien-type-class (single-float :include (float (:bits 32))))
+(def-alien-type-class (single-float :include (float (:bits 32))
+				    :include-args (type)))
 
 (def-alien-type-translator single-float ()
   (make-alien-single-float-type :type 'single-float))
@@ -832,7 +835,8 @@
   `(sap-ref-single ,sap (/ ,offset vm:byte-bits)))
 
 
-(def-alien-type-class (double-float :include (float (:bits 64))))
+(def-alien-type-class (double-float :include (float (:bits 64))
+				    :include-args (type)))
 
 (def-alien-type-translator double-float ()
   (make-alien-double-float-type :type 'double-float))
