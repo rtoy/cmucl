@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.23 1993/06/24 14:09:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.24 1993/07/02 15:06:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,7 @@
 	  ;; proposal has been accepted.
 	  *break-on-signals* *debugger-hook* signal handler-case handler-bind
 	  ignore-errors define-condition make-condition with-simple-restart
+	  with-condition-restarts
 	  restart-case restart-bind restart-name restart-name find-restart
 	  compute-restarts invoke-restart invoke-restart-interactively abort
 	  continue muffle-warning store-value use-value invoke-debugger restart
@@ -84,25 +85,49 @@
 
 ;;;; Restarts.
 
+;;; A list of lists of restarts.
+;;;
 (defvar *restart-clusters* '())
 
-(defun compute-restarts ()
+;;;  An ALIST (condition . restarts) which records the restarts currently
+;;; associated with Condition.
+;;;
+(defvar *condition-restarts* ())
+
+(defun compute-restarts (&optional condition)
   "Return a list of all the currently active restarts ordered from most
-   recently established to less recently established."
-  (copy-list (apply #'append *restart-clusters*)))
+   recently established to less recently established.  If Condition is
+   specified, then only restarts associated with Condition (or with no
+   condition) will be returned."
+  (let ((associated ())
+	(other ()))
+    (dolist (alist *condition-restarts*)
+      (if (eq (car alist) condition)
+	  (setq associated (cdr alist))
+	  (setq other (append (cdr alist) other))))
+    (collect ((res))
+      (dolist (restart-cluster *restart-clusters*)
+	(dolist (restart restart-cluster)
+	  (when (and (or (not condition)
+			 (member restart associated)
+			 (not (member restart other)))
+		     (funcall (restart-test-function restart) condition))
+	    (res restart))))
+      (res))))
+
 
 (defun restart-print (restart stream depth)
   (declare (ignore depth))
   (if *print-escape*
-      (format stream "#<~S.~X>"
-	      (type-of restart) (system:%primitive lisp::make-fixnum restart))
+      (print-unreadable-object (restart stream :type t :identity t))
       (restart-report restart stream)))
 
 (defstruct (restart (:print-function restart-print))
   name
   function
   report-function
-  interactive-function)
+  interactive-function
+  (test-function #'(lambda (cond) (declare (ignore cond)) t)))
 
 (setf (documentation 'restart-name 'function)
       "Returns the name of the given restart object.")
@@ -114,6 +139,21 @@
 		     (if name (format stream "~S" name)
 			      (format stream "~S" restart)))))
            stream))
+
+(defmacro with-condition-restarts (condition-form restarts-form &body body)
+  "WITH-CONDITION-RESTARTS Condition-Form Restarts-Form Form*
+   Evaluates the Forms in a dynamic environment where the restarts in the list
+   Restarts-Form are associated with the condition returned by Condition-Form.
+   This allows FIND-RESTART, etc., to recognize restarts that are not related
+   to the error currently being debugged.  See also RESTART-CASE."
+  (let ((n-cond (gensym)))
+    `(let ((*condition-restarts*
+	    (cons (let ((,n-cond ,condition-form))
+		    (cons ,n-cond
+			  (append ,restarts-form
+				  (cdr (assoc ,n-cond *condition-restarts*)))))
+		  *condition-restarts*)))
+       ,@body)))
 
 (defmacro restart-bind (bindings &body forms)
   "Executes forms in a dynamic context where the given restart bindings are
@@ -136,15 +176,16 @@
 		*restart-clusters*)))
      ,@forms))
 
-(defun find-restart (name)
+(defun find-restart (name &optional condition)
   "Returns the first restart named name.  If name is a restart, it is returned
    if it is currently active.  If no such restart is found, nil is returned.
-   It is an error to supply nil as a name."
-  (dolist (restart-cluster *restart-clusters*)
-    (dolist (restart restart-cluster)
-      (when (or (eq restart name) (eq (restart-name restart) name))
-	(return-from find-restart restart)))))
-  
+   It is an error to supply nil as a name.  If Condition is specified and not
+   NIL, then only restarts associated with that condition (or with no
+   condition) will be returned."
+  (find-if #'(lambda (x)
+	       (or (eq x name)
+		   (eq (restart-name x) name)))
+	   (compute-restarts condition)))
 
 (defun invoke-restart (restart &rest values)
   "Calls the function associated with the given restart, passing any given
@@ -173,6 +214,9 @@
 		 (funcall interactive-function)
 		 '())))))
 
+
+#|
+This hack of using catch w/ conses should no longer be necessary...
 
 (defmacro restart-case (expression &body clauses)
   "(RESTART-CASE form
@@ -236,9 +280,38 @@
 			     `(,tag
 			       (apply #'(lambda ,bvl ,@body) ,temp-var))))
 		       data)))))))
-#|
-This macro doesn't work in our system due to lossage in closing over tags.
-The previous version is uglier, but it sets up unique run-time tags.
+|#
+
+(eval-when (compile load eval)
+;;; Wrap the restart-case expression in a with-condition-restarts if
+;;; appropriate.  Gross, but it's what the book seems to say...
+;;;
+(defun munge-restart-case-expression (expression data)
+  (let ((exp (macroexpand expression)))
+    (if (consp exp)
+	(let* ((name (car exp))
+	       (args (if (eq name 'cerror) (cddr exp) (cdr exp))))
+	  (if (member name '(signal error cerror warn))
+	      (once-only ((n-cond `(coerce-to-condition
+				    ,(first args)
+				    (list ,@(rest args))
+				    ',(case name
+					(warn 'simple-warning)
+					(signal 'simple-condition)
+					(t 'simple-error))
+				    ',name)))
+		`(with-condition-restarts
+		     ,n-cond
+		     (list ,@(mapcar #'(lambda (da)
+					 `(find-restart ',(nth 0 da)))
+				     data))
+		   ,(if (eq name 'cerror)
+			`(cerror ,(second expression) ,n-cond)
+			`(,name ,n-cond))))
+	      expression))
+	expression)))
+
+); eval-when (compile load eval)
 
 (defmacro restart-case (expression &body clauses)
   "(RESTART-CASE form
@@ -246,8 +319,10 @@ The previous version is uglier, but it sets up unique run-time tags.
    The form is evaluated in a dynamic context where the clauses have special
    meanings as points to which control may be transferred (see INVOKE-RESTART).
    When clauses contain the same case-name, FIND-RESTART will find the first
-   such clause."
-  (flet ((transform-keywords (&key report interactive)
+   such clause.  If Expression is a call to SIGNAL, ERROR, CERROR or WARN (or
+   macroexpands into such) then the signalled condition will be associated with
+   the new restarts."
+  (flet ((transform-keywords (&key report interactive test)
 	   (let ((result '()))
 	     (when report
 	       (setq result (list* (if (stringp report)
@@ -260,45 +335,55 @@ The previous version is uglier, but it sets up unique run-time tags.
 	       (setq result (list* `#',interactive
 				   :interactive-function
 				   result)))
+	     (when test
+	       (setq result (list* `#',test
+				   :test-function
+				   result)))
 	     (nreverse result))))
     (let ((block-tag (gensym))
 	  (temp-var  (gensym))
 	  (data
-	    (mapcar #'(lambda (clause)
-			(with-keyword-pairs ((report interactive &rest forms)
-					     (cddr clause))
-			  (list (car clause)			   ;name=0
-				(gensym)			   ;tag=1
-				(transform-keywords :report report ;keywords=2
-						    :interactive interactive)
-				(cadr clause)			   ;bvl=3
-				forms)))			   ;body=4
-		    clauses)))
+	   (mapcar #'(lambda (clause)
+		       (with-keyword-pairs ((report interactive test
+						    &rest forms)
+					    (cddr clause))
+			 (list (car clause) ;name=0
+			       (gensym) ;tag=1
+			       (transform-keywords :report report ;keywords=2
+						   :interactive interactive
+						   :test test)
+			       (cadr clause) ;bvl=3
+			       forms))) ;body=4
+		   clauses)))
       `(block ,block-tag
 	 (let ((,temp-var nil))
 	   (tagbody
-	     (restart-bind
-	       ,(mapcar #'(lambda (datum)
-			    (let ((name (nth 0 datum))
-				  (tag  (nth 1 datum))
-				  (keys (nth 2 datum)))
-			      `(,name #'(lambda (&rest temp)
-					  (setq ,temp-var temp)
-					  (go ,tag))
-				,@keys)))
-			data)
-	       (return-from ,block-tag ,expression))
-	     ,@(mapcan #'(lambda (datum)
-			   (let ((tag  (nth 1 datum))
-				 (bvl  (nth 3 datum))
-				 (body (nth 4 datum)))
-			     (list tag
-				   `(return-from ,block-tag
-				      (apply #'(lambda ,bvl ,@body)
-					     ,temp-var)))))
-		       data)))))))
-|#
+	    (restart-bind
+		,(mapcar #'(lambda (datum)
+			     (let ((name (nth 0 datum))
+				   (tag  (nth 1 datum))
+				   (keys (nth 2 datum)))
+			       `(,name #'(lambda (&rest temp)
+					   (setq ,temp-var temp)
+					   (go ,tag))
+				       ,@keys)))
+			 data)
+	      (return-from ,block-tag
+			   ,(munge-restart-case-expression expression data)))
+	    ,@(mapcan #'(lambda (datum)
+			  (let ((tag  (nth 1 datum))
+				(bvl  (nth 3 datum))
+				(body (nth 4 datum)))
+			    (list tag
+				  `(return-from ,block-tag
+						(apply #'(lambda ,bvl ,@body)
+						       ,temp-var)))))
+		      data)))))))
 
+
+;;; If just one body form, then don't use progn.  This allows restart-case to
+;;; "see" calls to error, etc.
+;;;
 (defmacro with-simple-restart ((restart-name format-string
 					     &rest format-arguments)
 			       &body forms)
@@ -307,7 +392,7 @@ The previous version is uglier, but it sets up unique run-time tags.
    If restart-name is not invoked, then all values returned by forms are
    returned.  If control is transferred to this restart, it immediately
    returns the values nil and t."
-  `(restart-case (progn ,@forms)
+  `(restart-case ,(if (= (length forms) 1) (car forms) `(progn ,@forms))
      (,restart-name ()
         :report (lambda (stream)
 		  (format stream ,format-string ,@format-arguments))
@@ -932,26 +1017,26 @@ The previous version sets up unique run-time tags.
 ;;; ABORT signals an error in case there was a restart named abort that did
 ;;; not tranfer control dynamically.  This could happen with RESTART-BIND.
 ;;;
-(defun abort ()
+(defun abort (&optional condition)
   "Transfers control to a restart named abort, signalling a control-error if
    none exists."
-  (invoke-restart 'abort)
+  (invoke-restart (find-restart 'abort condition))
   (error 'abort-failure))
 
 
-(defun muffle-warning ()
+(defun muffle-warning (&optional condition)
   "Transfers control to a restart named muffle-warning, signalling a
    control-error if none exists."
-  (invoke-restart 'muffle-warning))
+  (invoke-restart (find-restart 'muffle-warning condition)))
 
 
 ;;; DEFINE-NIL-RETURNING-RESTART finds the restart before invoking it to keep
 ;;; INVOKE-RESTART from signalling a control-error condition.
 ;;;
 (defmacro define-nil-returning-restart (name args doc)
-  `(defun ,name ,args
+  `(defun ,name (,@args &optional condition)
      ,doc
-     (if (find-restart ',name) (invoke-restart ',name ,@args))))
+     (if (find-restart ',name condition) (invoke-restart ',name ,@args))))
 
 (define-nil-returning-restart continue ()
   "Transfer control to a restart named continue, returning nil if none exists.")
