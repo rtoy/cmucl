@@ -283,7 +283,8 @@
 (comf "target:compiler/entry")
 (with-compilation-unit
     (:optimize '(optimize (debug-info 2) (safety 1)))
-  (comf "target:compiler/ir2tran"))
+  (comf "target:compiler/ir2tran")
+  (comf "target:compiler/generic/vm-ir2tran"))
 (comf "target:compiler/copyprop")
 (with-compilation-unit
     (:optimize '(optimize (debug-info 2) (safety 1)))
