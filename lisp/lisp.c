@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.4 1993/04/28 01:58:33 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.5 1994/01/28 17:22:29 wlott Exp $
  *
  */
 
@@ -135,7 +135,11 @@ void main(int argc, char *argv[], char *envp[])
 	    } while (*lib++ == ':');
 	}
 	if (core == NULL) {
+#ifdef hpux
+	    strcpy(buf, "/usr/local/cmucl/lib/");
+#else
 	    strcpy(buf, "/usr/misc/.cmucl/lib/");
+#endif
 	    strcat(buf, default_core);
 	    core = buf;
 	}
