@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.39 1992/02/21 23:54:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.40 1992/03/04 13:44:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3438,8 +3438,9 @@
 	       cookie))))
 
 (defun get-function-end-breakpoint-values (scp)
-  (let ((ocfp (system:int-sap (escape-register scp vm::ocfp-offset)))
-	(nargs (kernel:make-lisp-obj (escape-register scp vm::nargs-offset)))
+  (let ((ocfp (system:int-sap (vm:sigcontext-register scp vm::ocfp-offset)))
+	(nargs (kernel:make-lisp-obj
+		(vm:sigcontext-register scp vm::nargs-offset)))
 	(reg-arg-offsets vm::register-arg-offsets)
 	(results nil))
     (system:without-gcing
