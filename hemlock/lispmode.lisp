@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.5 1991/06/13 21:59:46 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.6 1991/06/15 16:55:12 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -938,10 +938,10 @@
 
 ;;; LISP-INDENTATION -- Internal Interface.
 ;;;
-;;; Compute number of spaces which mark should be indented according to
-;;; local context and lisp grinding conventions.
-;;;
 (defun lisp-indentation (mark)
+  "Compute number of spaces which mark should be indented according to
+   local context and lisp grinding conventions.  This assumes mark is at the
+   beginning of the line to be indented."
   (with-mark ((m mark)
 	      (temp mark))
     (unless (valid-spot m nil)
@@ -983,15 +983,28 @@
 		(t
 		 (mark-column start))))))))
 
+;;; LISP-GENERIC-INDENTATION -- Internal.
+;;;
+;;; LISP-INDENTATION calls this when mark is in a invalid spot, or quoted
+;;; context.  If we are inside a string, we return the column one greater
+;;; than the opening double quote.  Otherwise, we just use the indentation
+;;; of the first preceding non-blank line.
+;;;
 (defun lisp-generic-indentation (mark)
-  (let* ((line (mark-line mark))
-	 (prev (do ((line (line-previous line) (line-previous line)))
-		   ((or (null line) (not (blank-line-p line))) line))))
-    (cond (prev 
-	   (line-start mark prev)
-	   (find-attribute mark :space #'zerop)
-	   (mark-column mark))
-	  (t 0))))
+  (with-mark ((m mark))
+    (form-offset m -1)
+    (cond ((eq (character-attribute :lisp-syntax (next-character m))
+	       :string-quote)
+	   (1+ (mark-column m)))
+	  (t
+	   (let* ((line (mark-line mark))
+		  (prev (do ((line (line-previous line) (line-previous line)))
+			    ((not (and line (blank-line-p line))) line))))
+	     (cond (prev
+		    (line-start mark prev)
+		    (find-attribute mark :space #'zerop)
+		    (mark-column mark))
+		   (t 0)))))))
 
 ;;; Skip-Valid-Space  --  Internal
 ;;;
