@@ -1,8 +1,19 @@
 ;;;; -*- Mode: Lisp ; Package: Interface -*-
 ;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+;;; **********************************************************************
+;;;
+;;; Written by Michael Garland
+;;;
 ;;; This provides utilities used for building Lisp interface components
 ;;; using the Motif toolkit.  Specifically, it is meant to be used by the
 ;;; inspector and the debugger.
+;;;
 
 (in-package "INTERFACE")
 
@@ -713,9 +724,34 @@
       (popup-interface-pane pane))))
 
 (defun lisp-control-panel ()
-  (verify-system-server-exists)
-  (multiple-value-bind (shell connection)
-		       (create-interface-shell)
-    (declare (ignore shell))
-    (with-motif-connection (connection)
-      (verify-control-pane-displayed))))
+  (when (use-graphics-interface)
+    (verify-system-server-exists)
+    (multiple-value-bind (shell connection)
+			 (create-interface-shell) 
+      (declare (ignore shell))
+      (with-motif-connection (connection)
+	(verify-control-pane-displayed)))))
+
+
+
+;;;; Fix up QUIT
+
+(defun cleanup-motif ()
+  (when (and *system-motif-server*
+	     (ext:process-alive-p *system-motif-server*))
+    (ext:process-kill *system-motif-server* :sigint))
+
+  (when (and xt::*local-motif-server*
+	     (ext:process-alive-p xt::*local-motif-server*))
+    (ext:process-kill xt::*local-motif-server* :sigint)))
+
+(in-package "LISP")
+
+(defun quit (&optional recklessly-p)
+  "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
+  non-Nil."
+  (if recklessly-p
+      (unix:unix-exit 0)
+      (progn
+	(interface::cleanup-motif)
+	(throw '%end-of-the-world nil))))
