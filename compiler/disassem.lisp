@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.37 2003/04/26 01:51:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.38 2003/04/27 14:00:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1825,12 +1825,12 @@
   (etypecase inst-space
     (null)
     (instruction
-     (format t "~vt[~a(~a)~40t" indent
+     (format t "~vt[~a(~a)~45t" indent
 	     (inst-name inst-space)
 	     (inst-format-name inst-space))
      (print-inst-bits inst-space)
      (dolist (inst (inst-specializers inst-space))
-       (format t "~%~vt:~a~40t" indent (inst-name inst))
+       (format t "~%~vt:~a~45t" indent (inst-name inst))
        (print-inst-bits inst))
      (write-char #\])
      (terpri))
