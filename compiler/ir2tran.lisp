@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.70 2002/11/21 21:51:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.71 2002/12/07 18:19:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,7 @@ compilation policy")
 
 ;;; Find-In-Environment  --  Internal
 ;;;
-;;;    Return the TN that holds the value of Thing in the environment Env.
+;;;    Return the TN that holds the value of THING in the environment ENV.
 ;;;
 (defun find-in-environment (thing env)
   (declare (type (or nlx-info lambda-var) thing) (type environment env)
@@ -103,8 +103,8 @@ compilation policy")
 	 (leaf-info thing))
 	(nlx-info
 	 (assert (eq env (block-environment (nlx-info-target thing))))
-	 (ir2-nlx-info-home (nlx-info-info thing))))))
-
+	 (ir2-nlx-info-home (nlx-info-info thing))))
+      (error "~@<~2I~_~S ~_not found in ~_~S~:>" thing env)))
 
 ;;; Constant-TN  --  Internal
 ;;;

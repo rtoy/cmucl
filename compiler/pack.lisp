@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.57 2002/07/10 16:14:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.58 2002/12/07 18:19:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1342,12 +1342,14 @@
 
 ;;; Target-If-Desirable  --  Internal
 ;;;
-;;;    Link the TN-Refs Read and Write together using the TN-Ref-Target when
+;;;    Link the TN-Refs READ and WRITE together using the TN-Ref-Target when
 ;;; this seems like a good idea.  Currently we always do, as this increases the
 ;;; sucess of load-TN targeting.
 ;;;
 (defun target-if-desirable (read write)
   (declare (type tn-ref read write))
+  (assert (eq (tn-ref-write-p read)
+              (not (tn-ref-write-p write))))
   (setf (tn-ref-target read) write)
   (setf (tn-ref-target write) read))
 

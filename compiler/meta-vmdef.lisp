@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.7 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.8 2002/12/07 18:19:34 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -564,9 +564,9 @@
 
 ;;; Find-Operand  --  Internal
 ;;;
-;;;    Find the operand or temporary with the specifed Name in the VOP Parse.
+;;;    Find the operand or temporary with the specifed NAME in the VOP PARSE.
 ;;; If there is no such operand, signal an error.  Also error if the operand
-;;; kind isn't one of the specified Kinds.  If Error-P is NIL, just return NIL
+;;; kind isn't one of the specified KINDS.  If ERROR-P is NIL, just return NIL
 ;;; if there is no such operand.
 ;;;
 (defun find-operand (name parse &optional
@@ -715,6 +715,7 @@
 		   (operand-parse-name op)))
 	  (let ((target (find-operand (operand-parse-target op) parse
 				      '(:temporary :result))))
+            ;; keep this magic consistent with %EMIT-GENERIC-VOP
 	    (targets (+ (* index max-vop-tn-refs)
 			(ecase (operand-parse-kind target)
 			  (:result
@@ -722,6 +723,7 @@
 			      num-args))
 			  (:temporary
 			   (+ (* (eposition target (vop-parse-temps parse)) 2)
+                              1
 			      num-args num-results)))))))
 	(let ((born (operand-parse-born op))
 	      (dies (operand-parse-dies op)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.132 2002/11/25 22:07:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.133 2002/12/07 18:19:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,9 +71,6 @@
 (defvar *constants*)
 (declaim (hash-table *constants*))
 
-;;; When compiling Dylan, we don't coalesce constants, because the dylan
-;;; test suite implies that doing so is a bozo-no-no.
-;;;
 (defvar *coalesce-constants*)
 (declaim (type (member t nil) *coalesce-constants*))
 
@@ -1784,8 +1781,9 @@
 	     (default (arg-info-default info))
 	     (hairy-default (not (constantp default)))
 	     (supplied-p (arg-info-supplied-p info))
-	     (n-val (make-symbol (format nil "~A-DEFAULTING-TEMP"
-					 (leaf-name key))))
+	     (n-val (with-standard-io-syntax
+                      (make-symbol (format nil "~A-DEFAULTING-TEMP"
+                                           (leaf-name key)))))
 	     (key-type (leaf-type key))
 	     (val-temp (make-lambda-var
 			:name n-val
@@ -3570,8 +3568,8 @@
 ;;; Also, emit top-level code to install the definition.
 ;;;
 ;;; This is one of the major places where the semantics of block compilation is
-;;; handled.  Substituion for global names is totally inhibited if
-;;; *block-compile* it NIL.  And if *block-compile* us true and entry points
+;;; handled.  Substitution for global names is totally inhibited if
+;;; *block-compile* is NIL.  And if *block-compile* is true and entry points
 ;;; are specified, then we don't install global definitions for non-entry
 ;;; functions (effectively turning them into local lexical functions.)
 ;;;

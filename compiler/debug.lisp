@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.34 2002/08/27 22:18:26 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.35 2002/12/07 18:19:33 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,16 +137,26 @@
 
     (maphash #'(lambda (k v)
 		 (declare (ignore k))
+                 (cond ((alien::heap-alien-info-p v)
+                        ;; objects of type HEAP-ALIEN-INFO may be
+                        ;; present in *FREE-VARIABLES* due to the way
+                        ;; that the alien machinery automatically
+                        ;; dereferences an alien variable's name to
+                        ;; its value. Just ignore them.
+                        t)
+                       ((leaf-p v)
 		 (unless (or (constant-p v)
 			     (and (global-var-p v)
 				  (member (global-var-kind v)
 					  '(:global :special :constant))))
-		   (barf "Strange *free-variables* entry: ~S." v))
+                          (barf "Strange *FREE-VARIABLES* entry: ~S." v))
 		 (dolist (n (leaf-refs v))
 		   (check-node-reached n))
 		 (when (basic-var-p v)
 		   (dolist (n (basic-var-sets v))
 		     (check-node-reached n))))
+                       (t
+                        (barf "Member of *FREE-VARIABLES* is of unexpected type: ~S" v))))
 	     *free-variables*)
 
     (maphash #'(lambda (k v)
@@ -402,11 +412,11 @@
 	   (when dest
 	     (check-node-reached dest)))
 	 (unless (member last (block-start-uses cont-block))
-	   (barf "Last in ~S is missing from uses of it's Cont." block)))
+	   (barf "Last in ~S is missing from uses of its Cont." block)))
 	(:block-start
 	 (check-node-reached (continuation-next last-cont))
 	 (unless (member last (block-start-uses cont-block))
-	   (barf "Last in ~S is missing from uses of it's Cont." block)))
+	   (barf "Last in ~S is missing from uses of its Cont." block)))
 	(:inside-block
 	 (unless (eq cont-block block)
 	   (barf "Cont of Last in ~S is in a different block." block))
@@ -499,8 +509,8 @@
 
 ;;; Check-Dest  --  Internal
 ;;;
-;;;    Check that the Dest for Cont is the specified Node.  We also mark the
-;;; block Cont is in as Seen.
+;;;    Check that the Dest for CONT is the specified NODE.  We also mark the
+;;; block that CONT is in as having been Seen.
 ;;;
 (defun check-dest (cont node)
   (declare (type continuation cont) (type node node))
@@ -518,6 +528,7 @@
 	 (barf "~S receives ~S, which is in an unknown block." node cont))
        (unless (eq (continuation-dest cont) node)
 	 (barf "DEST for ~S should be ~S." cont node))))))
+
 
 
 ;;; Check-Node-Consistency  --  Internal
@@ -711,12 +722,12 @@
 
 ;;; Check-IR2-Consistency  --  Interface
 ;;;
-;;;    Check stuff about the IR2 representation of Component.  This assumes the
+;;;    Check stuff about the IR2 representation of COMPONENT.  This assumes the
 ;;; sanity of the basic flow graph.
 ;;;
 ;;; [### Also grovel global TN data structures?  Assume pack not
-;;; done yet?  Have separate check-tn-consistency for pre-pack and
-;;; check-pack-consistency for post-pack?]
+;;; done yet?  Have separate CHECK-TN-CONSISTENCY for pre-pack and
+;;; CHECK-PACK-CONSISTENCY for post-pack?]
 ;;;
 (defun check-ir2-consistency (component)
   (declare (type component component))
@@ -783,7 +794,7 @@
 
 ;;; Check-More-TN-Entry  --  Internal
 ;;;
-;;;    If the entry in Local-TNs for TN in Block is :More, then do some checks
+;;;    If the entry in Local-TNs for TN in BLOCK is :MORE, then do some checks
 ;;; for the validity of the usage.
 ;;;
 (defun check-more-tn-entry (tn block)
@@ -1115,7 +1126,7 @@
 ;;; Print-TN  --  Internal
 ;;;
 ;;;    Print a useful representation of a TN.  If the TN has a leaf, then do a
-;;; Print-Leaf on that, otherwise print a generated ID.
+;;; PRINT-LEAF on that, otherwise print a generated ID.
 ;;;
 (defun print-tn (tn &optional (stream *standard-output*))
   (declare (type tn tn))
@@ -1131,8 +1142,8 @@
 
 ;;; Print-Operands  --  Internal
 ;;;
-;;;    Print the TN-Refs representing some operands to a VOP, linked by
-;;; TN-Ref-Across.
+;;;    Print the TN-REFS representing some operands to a VOP, linked by
+;;; TN-REF-ACROSS.
 ;;;
 (defun print-operands (refs)
   (declare (type (or tn-ref null) refs))
@@ -1153,7 +1164,7 @@
 
 ;;; Print-Vop -- internal
 ;;;
-;;; Print the vop, putting args, info and results on separate lines, if
+;;; Print the VOP, putting args, info and results on separate lines, if
 ;;; necessary.
 ;;;
 (defun print-vop (vop)
