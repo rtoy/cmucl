@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.5 1991/07/19 16:54:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.6 1991/10/24 16:01:34 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -467,7 +467,7 @@
 		(* (tn-offset stack-temp) vm:word-bytes)))
 	 (double-stack
 	  (inst ld lo-bits (current-nfp-tn vop)
-		(* (tn-offset float) vm:word-bytes)))
+		(* (1+ (tn-offset float)) vm:word-bytes)))
 	 (descriptor-reg
 	  (loadw lo-bits float (1+ vm:double-float-value-slot)
 		 vm:other-pointer-type))))
