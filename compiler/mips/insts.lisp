@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.21 1990/06/25 23:44:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.22 1990/07/02 16:34:30 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -99,7 +99,7 @@
        (eq (sb-name (sc-sb (tn-sc object))) 'registers)))
 
 (define-argument-type register
-  :type (satisfies register-p)
+  :type '(satisfies register-p)
   :function tn-offset)
 
 (defun fp-reg-p (object)
@@ -108,11 +108,11 @@
 	   'float-registers)))
 
 (define-argument-type fp-reg
-  :type (satisfies fp-reg-p)
+  :type '(satisfies fp-reg-p)
   :function tn-offset)
 
 (define-argument-type odd-fp-reg
-  :type (satisfies fp-reg-p)
+  :type '(satisfies fp-reg-p)
   :function (lambda (tn)
 	      (1+ (tn-offset tn))))
 
@@ -120,7 +120,7 @@
   (1- (ash (- (label-position label) *current-position*) -2)))
 
 (define-argument-type relative-label
-  :type label
+  :type 'label
   :function label-offset)
 
 
@@ -132,7 +132,7 @@
     ((:w :word) 4)))
 
 (define-argument-type float-format
-  :type (member :s :single :d :double :w :word)
+  :type '(member :s :single :d :double :w :word)
   :function float-format-value)
 
 
@@ -152,7 +152,7 @@
 	     compare-kinds)))
 
 (define-argument-type compare-kind
-  :type (member #.compare-kinds)
+  :type `(member ,@compare-kinds)
   :function compare-kind)
 
 (defun float-operation (op)
@@ -162,7 +162,7 @@
 	     float-operations)))
 
 (define-argument-type float-operation
-  :type (member #.float-operations)
+  :type `(member ,@float-operations)
   :function float-operation)
 
 
