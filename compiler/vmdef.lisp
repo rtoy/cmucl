@@ -2367,12 +2367,6 @@
 			      (block-component
 			       (ir2-block-block ,n-block)))))
 	     (,n-bod ,tn-var))
-	   ;;
-	   ;; Do environment-live TNs.
-	   (dolist (,tn-var (ir2-environment-live-tns
-			     (environment-info
-			      (ir2-block-environment ,n-block))))
-	     (,n-bod ,tn-var))
 	   
 	   (let ((,ltns (ir2-block-local-tns ,n-block)))
 	     ;;
