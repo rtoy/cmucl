@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.14 1991/11/18 15:50:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/tn.lisp,v 1.15 1991/11/24 23:47:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -244,6 +244,19 @@
     (setf (tn-leaf res) constant)
     res))
 
+
+;;; MAKE-LOAD-TIME-VALUE-TN  --  interface.
+;;;
+(defun make-load-time-value-tn (handle type)
+  (let* ((component (component-info *compile-component*))
+	 (sc (svref (backend-sc-numbers *backend*)
+		    (sc-number-or-lose 'constant *backend*)))
+	 (res (make-tn 0 :constant (primitive-type type) sc))
+	 (constants (ir2-component-constants component)))
+    (setf (tn-offset res) (fill-pointer constants))
+    (vector-push-extend (cons :load-time-value handle) constants)
+    (push-in tn-next res (ir2-component-constant-tns component))
+    res))
 
 ;;; MAKE-ALIAS-TN  --  Interface
 ;;;
