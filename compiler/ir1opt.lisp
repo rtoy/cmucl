@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.71 2000/07/07 09:33:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.72 2000/08/09 12:56:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1050,7 +1050,10 @@
 		      (record-optimization-failure node transform args))
 		    (setf (gethash node table)
 			  (remove transform (gethash node table) :key #'car)))
-		t))))
+		t)
+	       (:delayed
+		(remhash node table)
+		nil))))
 	  ((and flame
 		(valid-function-use node type
 				    :argument-test #'types-intersect
@@ -1062,7 +1065,7 @@
 
 (declaim (end-block))
 
-;;; GIVE-UP, ABORT-TRANSFORM  --  Interface
+;;; give-up, abort-transform  --  Interface
 ;;;
 ;;;    Just throw the severity and args...
 ;;;
@@ -1079,6 +1082,50 @@
   call to the function at run time.  No further optimizations will be
   attempted."
   (throw 'give-up (values :aborted args)))
+
+(defvar *delayed-transforms*)
+
+;;; delay-transform  --  Interface
+;;;
+(defun delay-transform (node &rest reasons)
+  "This function is used to throw out of an IR1 transform, and delay the
+  transform on the node until later. The reasons specifies when the transform
+  will be later retried. The :optimize reason causes the transform to be
+  delayed until after the current IR1 optimization pass. The :constraint
+  reason causes the transform to be delayed until after constraint
+  propagation."
+  (let ((assoc (assoc node *delayed-transforms*)))
+    (cond ((not assoc)
+	   (setf *delayed-transforms*
+		 (acons node reasons *delayed-transforms*))
+	   (throw 'give-up :delayed))
+	  ((cdr assoc)
+	   (dolist (reason reasons)
+	     (pushnew reason (cdr assoc)))
+	   (throw 'give-up :delayed)))))
+
+;;; retry-delayed-transforms  --  Interface.
+;;;
+;;; Clear any delayed transform with no reasons - these should have been tried
+;;; in the last pass. Then remove the reason from the delayed transform
+;;; reasons, and if any become empty then set reoptimize flags for the
+;;; node. Returns true if any transforms are to be retried.
+;;;
+(defun retry-delayed-transforms (reason)
+  (setf *delayed-transforms* (remove-if-not #'cdr *delayed-transforms*))
+  (let ((reoptimize nil))
+    (dolist (assoc *delayed-transforms*)
+      (let ((reasons (remove reason (cdr assoc))))
+	(setf (cdr assoc) reasons)
+	(unless reasons
+	  (let ((node (car assoc)))
+	    (unless (node-deleted node)
+	      (setf reoptimize t)
+	      (setf (node-reoptimize node) t)
+	      (let ((block (node-block node)))
+		(setf (block-reoptimize block) t)
+		(setf (component-reoptimize (block-component block)) t)))))))
+    reoptimize))
 
 
 ;;; Transform-Call  --  Internal

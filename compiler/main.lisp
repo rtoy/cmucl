@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.117 2000/05/23 05:45:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.118 2000/08/09 12:56:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,7 +146,7 @@
 
 ;;;; Component compilation:
 
-(defparameter max-optimize-iterations 3
+(defparameter max-optimize-iterations 6
   "The upper limit on the number of times that we will consecutively do IR1
   optimization that doesn't introduce any new code.  A finite limit is
   necessary, since type inference may take arbitrarily long to converge.")
@@ -158,7 +158,7 @@
 ;;;
 ;;;    Repeatedly optimize Component until no further optimizations can be
 ;;; found or we hit our iteration limit.  When we hit the limit, we clear the
-;;; component and block REOPTIMIZE flags to discourage following the next
+;;; component and block REOPTIMIZE flags to discourage the following
 ;;; optimization attempt from pounding on the same code.
 ;;;
 (defun ir1-optimize-until-done (component)
@@ -169,29 +169,37 @@
 	(cleared-reanalyze nil))
     (loop
       (when (component-reanalyze component)
-	(setq count 0)
-	(setq cleared-reanalyze t)
+	(setf count 0)
+	(setf cleared-reanalyze t)
 	(setf (component-reanalyze component) nil))
       (setf (component-reoptimize component) nil)
       (ir1-optimize component)
-      (unless (component-reoptimize component)
-	(maybe-mumble " ")
-	(return))
-      (incf count)
-      (when (= count max-optimize-iterations)
-	(event ir1-optimize-maxed-out)
-	(maybe-mumble "* ")
-	(setf (component-reoptimize component) nil)
-	(do-blocks (block component)
-	  (setf (block-reoptimize block) nil))
-	(return))
+      (cond ((component-reoptimize component)
+	     (incf count)
+	     (when (= count max-optimize-iterations)
+	       (maybe-mumble "*")
+	       (cond ((retry-delayed-transforms :optimize)
+		      (maybe-mumble "+")
+		      (setf count 0))
+		     (t
+		      (event ir1-optimize-maxed-out)
+		      (setf (component-reoptimize component) nil)
+		      (do-blocks (block component)
+			(setf (block-reoptimize block) nil))
+		      (return)))))
+	    ((retry-delayed-transforms :optimize)
+	     (setf count 0)
+	     (maybe-mumble "+"))
+	    (t
+	     (return)))
       (maybe-mumble "."))
     (when cleared-reanalyze
-      (setf (component-reanalyze component) t)))
+      (setf (component-reanalyze component) t))
+    (maybe-mumble " "))
   (undefined-value))
 
 (defparameter *constraint-propagate* t)
-(defparameter *reoptimize-after-type-check-max* 5)
+(defparameter *reoptimize-after-type-check-max* 10)
 
 (defevent reoptimize-maxed-out
   "*REOPTIMIZE-AFTER-TYPE-CHECK-MAX* exceeded.")
@@ -221,38 +229,40 @@
 (defun ir1-phases (component)
   (declare (type component component))
   (let ((*constraint-number* 0)
-	(loop-count 1))
+	(loop-count 1)
+	(*delayed-transforms* nil))
     (declare (special *constraint-number*))
     (loop
-      (ir1-optimize-until-done component)
-      (when (or (component-new-functions component)
-		(component-reanalyze-functions component))
-	(maybe-mumble "Locall ")
-	(local-call-analyze component))
-      (dfo-as-needed component)
-      (when *constraint-propagate*
-	(maybe-mumble "Constraint ")
-	(constraint-propagate component))
-      (maybe-mumble "Type ")
-      ;; Delay the generation of type checks until the type
-      ;; constraints have had time to propagate, else the compiler can
-      ;; confuse itself.
-      (unless (and (or (component-reoptimize component)
-		       (component-reanalyze component)
-		       (component-new-functions component)
-		       (component-reanalyze-functions component))
-		   (< loop-count (- *reoptimize-after-type-check-max* 2)))
-	      (generate-type-checks component)
-	      (unless (or (component-reoptimize component)
-			  (component-reanalyze component)
-			  (component-new-functions component)
-			  (component-reanalyze-functions component))
-		      (return)))
-      (when (>= loop-count *reoptimize-after-type-check-max*)
-	(maybe-mumble "[Reoptimize Limit]")
-	(event reoptimize-maxed-out)
-	(return))
-      (incf loop-count)))
+     (ir1-optimize-until-done component)
+     (when (or (component-new-functions component)
+	       (component-reanalyze-functions component))
+       (maybe-mumble "Locall ")
+       (local-call-analyze component))
+     (dfo-as-needed component)
+     (when *constraint-propagate*
+       (maybe-mumble "Constraint ")
+       (constraint-propagate component))
+     (when (retry-delayed-transforms :constraint)
+       (maybe-mumble "Rtran "))
+     ;; Delay the generation of type checks until the type constraints have
+     ;; had time to propagate, else the compiler can confuse itself.
+     (unless (and (or (component-reoptimize component)
+		      (component-reanalyze component)
+		      (component-new-functions component)
+		      (component-reanalyze-functions component))
+		  (< loop-count (- *reoptimize-after-type-check-max* 4)))
+       (maybe-mumble "Type ")
+       (generate-type-checks component)
+       (unless (or (component-reoptimize component)
+		   (component-reanalyze component)
+		   (component-new-functions component)
+		   (component-reanalyze-functions component))
+	 (return)))
+     (when (>= loop-count *reoptimize-after-type-check-max*)
+       (maybe-mumble "[Reoptimize Limit]")
+       (event reoptimize-maxed-out)
+       (return))
+     (incf loop-count)))
 
   (ir1-finalize component)
   (undefined-value))
