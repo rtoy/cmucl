@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.22 1991/11/15 13:41:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.23 1991/12/11 17:14:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -567,17 +567,59 @@
 ;;;    longer in effect.
 
 
+;;; Insert-Let-Body  --  Internal
+;;;
+;;;    Set up the control transfer to the called lambda.  We split the call
+;;; block immediately after the call, and link the head of Fun to the call
+;;; block.  The successor block after splitting (where we return to) is
+;;; returned.
+;;;
+;;;    If the lambda is is a different component than the call, then we call
+;;; JOIN-COMPONENTS.  This only happens in block compilation before
+;;; FIND-INITIAL-DFO.
+;;;
+(defun insert-let-body (fun call)
+  (declare (type clambda fun) (type basic-combination call))
+  (let* ((call-block (node-block call))
+	 (bind-block (node-block (lambda-bind fun)))
+	 (component (block-component call-block)))
+    (let ((fun-component (block-component bind-block)))
+      (unless (eq fun-component component)
+	(assert (eq (component-kind component) :initial))
+	(join-components component fun-component)))
+
+    (let ((*current-component* component))
+      (node-ends-block call))
+    (assert (= (length (block-succ call-block)) 1))
+    (let ((next-block (first (block-succ call-block))))
+      (unlink-blocks call-block next-block)
+      (link-blocks call-block bind-block)
+      next-block)))
+
+
 ;;; Merge-Lets  --  Internal
 ;;;
 ;;;    Handle the environment semantics of let conversion.  We add the lambda
-;;; and its lets to lets for the call's home function.  We merge the calls for
+;;; and its lets to lets for the Call's home function.  We merge the calls for
 ;;; Fun with the calls for the home function, removing Fun in the process.  We
 ;;; also merge the Entries.
 ;;;
+;;;   We also unlink the function head from the component head and set
+;;; Component-Reanalyze to true to indicate that the DFO should be recomputed.
+;;;
 (defun merge-lets (fun call)
   (declare (type clambda fun) (type basic-combination call))
-  (let* ((prev (node-prev call))
-	 (home (block-home-lambda (continuation-block prev)))
+  (let ((component (block-component (node-block call))))
+    (unlink-blocks (component-head component) (node-block (lambda-bind fun)))
+    (setf (component-lambdas component)
+	  (delete fun (component-lambdas component)))
+    (setf (component-reanalyze component) t))
+  (setf (lambda-call-lexenv fun) (node-lexenv call))
+  (let ((tails (lambda-tail-set fun)))
+    (setf (tail-set-functions tails)
+	  (delete fun (tail-set-functions tails))))
+  (setf (lambda-tail-set fun) nil)
+  (let* ((home (node-home-lambda call))
 	 (home-env (lambda-environment home)))
     (push fun (lambda-lets home))
     (setf (lambda-home fun) home)
@@ -602,53 +644,11 @@
   (undefined-value))
 
 
-;;; Insert-Let-Body  --  Internal
-;;;
-;;;    Handle the control semantics of let conversion.  We split the call block
-;;; immediately after the call, and link the head and tail of Fun to the call
-;;; block and the following block.  We also unlink the function head and tail
-;;; from the component head and tail and flush the function from the
-;;; Component-Lambdas.  We set Component-Reanalyze to true to indicate that the
-;;; DFO should be recomputed.
-;;;
-;;;    If the lambda is is a different component than the call, then we call
-;;; JOIN-COMPONENTS.  This only happens before the FIND-INITIAL-DFO in block
-;;; compilation.
-;;;
-(defun insert-let-body (fun call)
-  (declare (type clambda fun) (type basic-combination call))
-  (setf (lambda-call-lexenv fun) (node-lexenv call))
-  (let* ((call-block (node-block call))
-	 (bind-block (node-block (lambda-bind fun)))
-	 (component (block-component call-block)))
-    (let ((fun-component (block-component bind-block)))
-      (unless (eq fun-component component)
-	(assert (eq (component-kind component) :initial))
-	(join-components component fun-component)))
-
-    (let ((*current-component* component))
-      (node-ends-block call))
-    (setf (component-lambdas component)
-	  (delete fun (component-lambdas component)))
-    (assert (= (length (block-succ call-block)) 1))
-    (let ((next-block (first (block-succ call-block))))
-      (unlink-blocks call-block next-block)
-      (unlink-blocks (component-head component) bind-block)
-      (link-blocks call-block bind-block)
-      (let ((return (lambda-return fun)))
-	(when return
-	  (let ((return-block (node-block return)))
-	    (unlink-blocks return-block (component-tail component))
-	    (link-blocks return-block next-block)))))
-    (setf (component-reanalyze component) t))
-  (undefined-value))
-
-
 ;;; Move-Return-Uses  --  Internal
 ;;;
-;;;    Handle the value semantics of let conversion.  When Fun has a return
-;;; node, we delete it and move all the uses of the result continuation to
-;;; Call's Cont.
+;;;    Handle the value semantics of let conversion.  Delete Fun's return node,
+;;; and change the control flow to transfer to Next-Block instead.  Move all
+;;; the uses of the result continuation to Call's Cont.
 ;;;
 ;;;    If the actual continuation is only used by the let call, then we
 ;;; intersect the type assertion on the dummy continuation with the assertion
@@ -659,26 +659,76 @@
 ;;; all the dummy continuation's uses.  This serves mainly to propagate
 ;;; TRULY-THE through lets.
 ;;;
-(defun move-return-uses (fun call)
-  (declare (type clambda fun) (type basic-combination call))
-  (let ((return (lambda-return fun)))
+(defun move-return-uses (fun call next-block)
+  (declare (type clambda fun) (type basic-combination call)
+	   (type cblock next-block))
+  (let* ((return (lambda-return fun))
+	 (return-block (node-block return)))
+    (unlink-blocks return-block
+		   (component-tail (block-component return-block)))
+    (link-blocks return-block next-block)
+    (unlink-node return)
+    (delete-return return)
+    (let ((result (return-result return))
+	  (cont (node-cont call))
+	  (call-type (node-derived-type call)))
+      (when (eq (continuation-use cont) call)
+	(assert-continuation-type cont (continuation-asserted-type result)))
+      (unless (eq call-type *wild-type*)
+	(do-uses (use result)
+	  (derive-node-type use call-type)))
+      (substitute-continuation-uses cont result)))
+  (undefined-value))
+
+
+
+;;; MOVE-LET-CALL-CONT  --  Internal
+;;;
+;;;    Change all Cont for all the calls to Fun to be the start continuation
+;;; for the bind node.  This allows the blocks to be joined if the caller count
+;;; ever goes to one.
+;;;
+(defun move-let-call-cont (fun)
+  (declare (type clambda fun))
+  (let ((new-cont (node-prev (lambda-bind fun))))
+    (dolist (ref (leaf-refs fun))
+      (let ((dest (continuation-dest (node-cont ref))))
+	(delete-continuation-use dest)
+	(add-continuation-use dest new-cont))))
+  (undefined-value))
+
+
+;;; MOVE-RETURN-STUFF  --  Internal
+;;;
+;;;    Deal with returning from a let or assignment that we are converting.
+;;; FUN is the function we are calling, CALL is a call to FUN, and NEXT-BLOCK
+;;; is the return point for a non-tail call, or NULL if call is a tail call.
+;;;
+;;; We do different things depending on whether the caller and callee have
+;;; returns left:
+;;; -- If the callee has no return, it doesn't return, so we just do
+;;;    MOVE-LET-CALL-CONT.
+;;; -- If CALL is a non-tail call, or if both have returns, then we
+;;;    delete the callee's return, move its uses to the call's result
+;;;    continuation, and transfer control to the appropriate return point.
+;;; -- If the callee has a return, but the caller doesn't, then we move the
+;;;    return to the caller.  [Note: here CALL is always TR.]
+;;;
+(defun move-return-stuff (fun call next-block)
+  (declare (type clambda fun) (type basic-combination call)
+	   (type (or cblock null) next-block))
+  (let* ((return (lambda-return fun))
+	 (call-fun (node-home-lambda call))
+	 (call-return (lambda-return call-fun)))
     (when return
-      (unlink-node return)
-      (delete-return return)
-
-      (let ((result (return-result return))
-	    (cont (node-cont call))
-	    (call-type (node-derived-type call)))
-	(when (eq (continuation-use cont) call)
-	  (assert-continuation-type cont (continuation-asserted-type result)))
-	(unless (eq call-type *wild-type*)
-	  (do-uses (use result)
-	    (derive-node-type use call-type)))
-	  
-	(delete-continuation-use call)
-	(add-continuation-use call (node-prev (lambda-bind fun)))
-	(substitute-continuation-uses cont result))))
-
+      (cond ((or next-block call-return)
+	     (unless (block-delete-p (node-block return))
+	       (move-return-uses fun call
+				 (or next-block (node-block call-return)))))
+	    (t
+	     (setf (lambda-return call-fun) return)
+	     (setf (return-lambda return) call-fun))))
+    (move-let-call-cont fun))
   (undefined-value))
 
 
@@ -693,9 +743,12 @@
 ;;;
 (defun let-convert (fun call)
   (declare (type clambda fun) (type basic-combination call))
-  (insert-let-body fun call)
-  (merge-lets fun call)
-  (move-return-uses fun call)
+  (let ((next-block (if (node-tail-p call)
+			nil
+			(insert-let-body fun call))))
+    (merge-lets fun call)
+    (move-return-stuff fun call next-block))
+
   (maybe-remove-free-function fun)
   (dolist (arg (basic-combination-args call))
     (when arg
@@ -711,13 +764,15 @@
 ;;; call analysis, and also when a reference is deleted.  We only convert to a
 ;;; let when the function is a normal local function, has no XEP, and is
 ;;; referenced in exactly one local call.  Conversion is also inhibited if the
-;;; only reference is in a block about to be deleted.
+;;; only reference is in a block about to be deleted.  We return true if we
+;;; converted.
 ;;;
 ;;;    These rules may seem unnecessarily restrictive, since there are some
 ;;; cases where we could do the return with a jump that don't satisfy these
 ;;; requirements.  The reason for doing things this way is that it makes the
-;;; concept of a let much more useful at the level of IR1 semantics.  Low-level
-;;; control and environment optimizations can always be done later on.
+;;; concept of a let much more useful at the level of IR1 semantics.  The
+;;; :ASSIGNMENT function kind provides another way to optimize calls to
+;;; single-return/multiple call functions.
 ;;;
 ;;;    We don't attempt to convert calls to functions that have an XEP, since
 ;;; we might be embarrassed later when we want to convert a newly discovered
@@ -728,7 +783,7 @@
   (let ((refs (leaf-refs fun)))
     (when (and refs (null (rest refs))
 	       (not (block-delete-p (node-block (first refs))))
-	       (not (functional-kind fun))
+	       (member (functional-kind fun) '(nil :assignment))
 	       (not (functional-entry-function fun)))
       (let* ((ref-cont (node-cont (first refs)))
 	     (dest (continuation-dest ref-cont)))
@@ -737,5 +792,92 @@
 		   (eq (basic-combination-kind dest) :local))
 	  (let-convert fun dest)
 	  (setf (functional-kind fun)
-		(if (mv-combination-p dest) :mv-let :let))))))
-  (undefined-value))
+		(if (mv-combination-p dest) :mv-let :let))))
+      t)))
+
+
+;;;; Tail local calls and assignments:
+
+;;; ONLY-HARMLESS-CLEANUPS  --  Internal
+;;;
+;;;    Return T if there are no cleanups between Block1 and Block2, or if they
+;;; definitely won't generate any cleanup code.  Currently we recognize lexical
+;;; entry points that are only used locally (if at all).
+;;;
+(defun only-harmless-cleanups (block1 block2)
+  (declare (type cblock block1 block2))
+  (or (eq block1 block2)
+      (let ((cleanup2 (block-start-cleanup block2)))
+	(do ((cleanup (block-end-cleanup block1)
+		      (node-enclosing-cleanup (cleanup-mess-up cleanup))))
+	    ((eq cleanup cleanup2) t)
+	  (case (cleanup-kind cleanup)
+	    ((:block :tagbody)
+	     (unless (null (entry-exits (cleanup-mess-up cleanup)))
+	       (return nil)))
+	    (t (return nil)))))))
+
+
+;;; MAYBE-CONVERT-TAIL-LOCAL-CALL  --  Interface
+;;;
+;;;    If possible, convert a tail-local call to jump directly to the called
+;;; function.  We also call MAYBE-CONVERT-TO-ASSIGNMENT.  We can switch the
+;;; succesor (potentially deleting the RETURN node) unless:
+;;; -- The call is in an XEP (thus we might decide to make it non-tail so that
+;;;    we can use known return inside the component.)
+;;; -- There is a change in the cleanup between the call in the return, so we
+;;;    might need to introduce cleanup code.
+;;;
+(defun maybe-convert-tail-local-call (call)
+  (declare (type combination call))
+  (let ((return (continuation-dest (node-cont call))))
+    (assert (return-p return))
+    (when (and (not (node-tail-p call))
+	       (not (eq (functional-kind (node-home-lambda call))
+			:external))
+	       (only-harmless-cleanups (node-block call)
+				       (node-block return)))
+      (node-ends-block call)
+      (let ((block (node-block call))
+	    (fun (combination-lambda call)))
+	(setf (node-tail-p call) t)
+	(unlink-blocks block (first (block-succ block)))
+	(link-blocks block (node-block (lambda-bind fun)))
+	(values t (maybe-convert-to-assignment fun))))))
+
+
+;;; MAYBE-CONVERT-TO-ASSIGNMENT  --  Interface
+;;;
+;;;    Called when we believe it might make sense to convert Fun to an
+;;; assignment.  We can convert when:
+;;; -- The function is a normal, non-entry function, and
+;;; -- There is at most one non-tail call (which must not be recursive), and
+;;; -- All calls are self-recursive or appear in at most one other function (so
+;;;    we can be sure that we can merge all the code into a single
+;;;    environment.)
+;;;
+;;; If there is one non-tail call, then we convert exactly like a let.  If
+;;; there are no non-tail calls, then we merge the environments and deal with
+;;; the return.
+;;;
+(defun maybe-convert-to-assignment (fun)
+  (declare (type clambda fun))
+  (when (and (not (functional-kind fun))
+	     (not (functional-entry-function fun)))
+    (let ((non-tail nil)
+	  (call-fun nil))
+      (when (dolist (ref (leaf-refs fun) t)
+	      (let ((dest (continuation-dest (node-cont ref))))
+		(when (block-delete-p (node-block dest)) (return nil))
+		(let ((home (node-home-lambda ref)))
+		  (unless (eq home fun)
+		    (when call-fun (return nil))
+		    (setq call-fun home))
+		  (unless (node-tail-p dest)
+		    (when (or non-tail (eq home fun)) (return nil))
+		    (setq non-tail dest)))))
+	(let-convert fun (or non-tail
+			     (continuation-dest
+			      (node-cont (first (leaf-refs fun))))))
+	(setf (functional-kind fun) :assignment)
+	t))))
