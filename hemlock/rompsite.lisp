@@ -187,8 +187,9 @@
 ;;; and :leave-notify events.
 ;;;
 #+clx
-(defconstant input/boundary-xevents-selection-keys
-  '(:key-press :button-press :button-release :enter-window :leave-window))
+(eval-when (compile load eval)
+  (defconstant input/boundary-xevents-selection-keys
+    '(:key-press :button-press :button-release :enter-window :leave-window)))
 #+clx
 (defconstant input/boundary-xevents-mask
   (apply #'xlib:make-event-mask input/boundary-xevents-selection-keys))
@@ -199,10 +200,12 @@
 ;;; about :exposure and :configure-notify.
 ;;;
 #+clx
-(defconstant interesting-xevents-receive-keys
-  '(:key-press :button-press :button-release :enter-notify :leave-notify
-    :exposure :graphics-exposure :configure-notify :destroy-notify :unmap-notify
-    :map-notify :reparent-notify :gravity-notify :circulate-notify))
+(eval-when (compile load eval)
+  (defconstant interesting-xevents-receive-keys
+    '(:key-press :button-press :button-release :enter-notify :leave-notify
+		 :exposure :graphics-exposure :configure-notify :destroy-notify
+		 :unmap-notify :map-notify :reparent-notify :gravity-notify
+		 :circulate-notify)))
 #+clx
 (defconstant interesting-xevents-mask
   (apply #'xlib:make-event-mask
@@ -912,21 +915,12 @@
 	       (ext:char-key-event (schar buf i)))
       (incf i))))
 
-;;; This is used to get listening during smart redisplay to pick up input
-;;; in between displaying each line by listening longer (or slowing down
-;;; line output depending on your model).  10-20 seems to be good for 9600
-;;; baud, and 250 seems to do it with 1200 baud.
-;;; 
-(defparameter listen-iterations-hack 1) ; 10-20 seems to really pick up input.
-
 (defun editor-tty-listen (stream)
   (with-stack-alien (nc (signed-byte 32) 32)
-    (dotimes (i listen-iterations-hack nil)
-      (when (and (mach::Unix-ioctl (tty-editor-input-fd stream)
-				   mach::FIONREAD
-				   (alien-sap (alien-value nc)))
-		 (> (alien-access (alien-value nc)) 0))
-	(return t)))))
+    (and (mach::Unix-ioctl (tty-editor-input-fd stream)
+			   mach::FIONREAD
+			   (alien-sap (alien-value nc)))
+	 (> (alien-access (alien-value nc)) 0))))
 
 
 (defvar old-flags)
