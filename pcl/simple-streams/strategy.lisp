@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.5 2003/06/26 13:27:43 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.6 2003/07/19 15:32:58 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -399,6 +399,7 @@
 (defun (str read-char :e-crlf) (stream eof-error-p eof-value blocking)
   (with-stream-class (composing-stream stream)
     (let* ((encap (sm melded-stream stream))
+	   (ctrl (sm control-in stream))
            (char (funcall-stm-handler j-read-char encap nil stream blocking)))
       ;; if CHAR is STREAM, we hit EOF; if NIL, blocking is NIL and no
       ;; character was available...
