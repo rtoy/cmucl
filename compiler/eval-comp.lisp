@@ -282,3 +282,7 @@
 
 (defun %unknown-keyword-argument-error (keyword)
   (error "Unknown keyword argument -- ~S." keyword))
+
+(defun %progv (vars vals fun)
+  (progv vars vals
+    (funcall fun)))
