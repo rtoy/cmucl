@@ -321,3 +321,8 @@
 (define-static-function two-arg-/= (x y) :translate /=)
 
 (define-static-function %negate (x) :translate %negate)
+
+(define-static-function two-arg-and (x y) :translate logand)
+(define-static-function two-arg-ior (x y) :translate logior)
+(define-static-function two-arg-xor (x y) :translate logxor)
+
