@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.7 1992/06/08 21:09:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadbackend.lisp,v 1.8 1993/01/13 18:26:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,8 +24,6 @@
 (load "vm:interr")
 (load "assem:support")
 (load "vm:macros")
-(when (target-featurep :gengc)
-  (load "vm:vm-utils"))
 (load "vm:utils")
 
 (load "vm:vm")
@@ -62,8 +60,7 @@
 
 (load "assem:array")
 (load "assem:arith")
-(unless (target-featurep :gengc)
-  (load "assem:alloc"))
+(load "assem:alloc")
 
 (load "c:pseudo-vops")
 
