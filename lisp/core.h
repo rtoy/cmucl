@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.3 1994/03/27 15:17:54 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/core.h,v 1.4 2004/05/18 22:13:07 cwang Exp $ */
 
 #ifndef _CORE_H_
 #define _CORE_H_
@@ -19,7 +19,7 @@
 #define READ_ONLY_SPACE_ID (3)
 
 struct ndir_entry {
-#ifndef alpha
+#if !(defined(alpha) || defined(__x86_64))
 	long identifier;
 	long nwords;
 	long data_page;
