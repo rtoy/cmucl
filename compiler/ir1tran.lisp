@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109 1997/02/05 16:01:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.110 1997/08/21 18:38:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2480,7 +2480,7 @@
 ;;;; Symbol macros:
 
 (def-ir1-translator symbol-macrolet ((specs &body (body decls)) start cont)
-  "SYMBOL-MACROLET {(Name Expansion)}* Decl* Form*
+  "SYMBOL-MACROLET ({(Name Expansion)}*) Decl* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
   (collect ((res))
