@@ -861,7 +861,7 @@
 
 ;;; MAKE-PROCESS-LOCK: Creating a process lock.
 
-#-(or LispM excl Minima)
+#-(or LispM excl Minima (and cmu mp))
 (defun make-process-lock (name)
   (declare (ignore name))
   nil)
@@ -882,6 +882,10 @@
 (defun make-process-lock (name)
   (minima:make-lock name :recursive t))
 
+#+(and cmu mp)
+(defun make-process-lock (name)
+  (mp:make-lock name))
+
 ;;; HOLDING-LOCK: Execute a body of code with a lock held.
 
 ;;; The holding-lock macro takes a timeout keyword argument.  EVENT-LISTEN
@@ -890,7 +894,7 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or lispm excl lcl3.0 Minima CMU)
+#-(or lispm excl lcl3.0 Minima (and CMU mp))
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
@@ -904,7 +908,7 @@
 ;;; display connection.  We inhibit GC notifications since display of them
 ;;; could cause recursive entry into CLX.
 ;;;
-#+CMU
+#+(and CMU (not mp))
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
 			&body body)
   `(let ((ext:*gc-verbose* nil)
@@ -913,6 +917,16 @@
 	 (ext:*after-gc-hooks* nil))
      ,locator ,display ,whostate ,timeout
      (system:without-interrupts (progn ,@body))))
+
+;;; HOLDING-LOCK for CMU Common Lisp with multi-processes.
+;;;
+#+(and cmu mp)
+(defmacro holding-lock ((lock display &optional (whostate "CLX wait")
+			      &key timeout)
+			&body body)
+  (declare (ignore display))
+  `(mp:with-lock-held (,lock ,whostate ,@(and timeout `(:timeout ,timeout)))
+    ,@body))
 
 #+Genera
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
@@ -1059,7 +1073,7 @@
 ;;; Caller guarantees that PROCESS-WAKEUP will be called after the predicate's
 ;;; value changes.
 
-#-(or lispm excl lcl3.0 Minima)
+#-(or lispm excl lcl3.0 Minima (and cmu mp))
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (ignore whostate))
   (or (apply predicate predicate-args)
@@ -1101,11 +1115,17 @@
 	   (dynamic-extent predicate))
   (apply #'minima:process-wait whostate predicate predicate-args))
 
+#+(and cmu mp)
+(defun process-block (whostate predicate &rest predicate-args)
+  (declare (type function predicate))
+  (mp:process-wait whostate #'(lambda ()
+				(apply predicate predicate-args))))
+
 ;;; PROCESS-WAKEUP: Check some other process' wait function.
 
 (declaim (inline process-wakeup))
 
-#-(or excl Genera Minima)
+#-(or excl Genera Minima (and cmu mp))
 (defun process-wakeup (process)
   (declare (ignore process))
   nil)
@@ -1130,6 +1150,11 @@
   (when process
     (minima:process-wakeup process)))
 
+#+(and cmu mp)
+(defun process-wakeup (process)
+  (declare (ignore process))
+  (mp:process-yield))
+
 ;;; CURRENT-PROCESS: Return the current process object for input locking and
 ;;; for calling PROCESS-WAKEUP.
 
@@ -1137,7 +1162,7 @@
 
 ;;; Default return NIL, which is acceptable even if there is a scheduler.
 
-#-(or lispm excl lcl3.0 Minima)
+#-(or lispm excl lcl3.0 Minima (and cmu mp))
 (defun current-process ()
   nil)
 
@@ -1158,9 +1183,13 @@
 (defun current-process ()
   (minima:current-process))
 
+#+(and cmu mp)
+(defun current-process ()
+  mp:*current-process*)
+
 ;;; WITHOUT-INTERRUPTS -- provide for atomic operations.
 
-#-(or lispm excl lcl3.0 Minima)
+#-(or lispm excl lcl3.0 Minima cmu)
 (defmacro without-interrupts (&body body)
   `(progn ,@body))
 
@@ -1179,6 +1208,10 @@
 #+Minima
 (defmacro without-interrupts (&body body)
   `(minima:with-no-other-processes ,@body))
+
+#+cmu
+(defmacro without-interrupts (&body body)
+  `(sys:without-interrupts ,@body))
 
 ;;; CONDITIONAL-STORE:
 
@@ -1690,8 +1723,10 @@
 	  ((listen stream) nil)
 	  ((eql timeout 0) :timeout)
 	  (t
-	   (if (system:wait-until-fd-usable (system:fd-stream-fd stream)
-					    :input timeout)
+	   (if #-mp (system:wait-until-fd-usable (system:fd-stream-fd stream)
+						 :input timeout)
+	       #+mp (mp:process-wait-until-fd-usable
+		     (system:fd-stream-fd stream) :input timeout)
 	       nil
 	       :timeout)))))
 
@@ -2128,7 +2163,7 @@
   (declare (dbg:error-reporter))
   (apply #'sys:signal condition :continue-format-string proceed-format-string keyargs))
 
-#+(or clx-ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0 (and CMU mp))
 (defun x-error (condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'error condition keyargs))
@@ -2147,7 +2182,7 @@
 ;;; descriptors, Mach messages, etc.) to come through one routine anyone can
 ;;; use to wait for input.
 ;;;
-#+CMU
+#+(and CMU (not mp))
 (defun x-error (condition &rest keyargs)
   (let ((condx (apply #'make-condition condition keyargs)))
     (when (eq condition 'closed-display)
