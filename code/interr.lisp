@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.10 1990/09/06 19:41:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.11 1990/10/03 09:57:23 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -46,7 +46,8 @@
 	  object-not-simple-array-unsigned-byte-32-error
 	  object-not-simple-array-single-float-error
 	  object-not-simple-array-double-float-error
-	  object-not-complex-error object-not-weak-pointer-error))
+	  object-not-complex-error object-not-weak-pointer-error
+	  object-not-structure-error))
 
 
 
@@ -412,6 +413,14 @@
   "Object is not a WEAK-POINTER."
   (&rest args)
   (error "object-not-weak-pointer:~{ ~S~}" args))
+
+(deferr object-not-structure-error
+	"Object is not a STRUCTURE."
+  (object)
+  (error 'simple-error
+	 :function-name name
+	 :format-string "~S isn't a structure."
+	 :format-arguments (list object)))
 
 
 
