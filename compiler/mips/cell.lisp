@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.28 1990/03/21 23:23:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.29 1990/04/01 20:17:33 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -260,18 +260,18 @@
   (:generator 5
     (loadw temp symbol vm:symbol-value-slot vm:other-pointer-type)
     (inst addiu bsp-tn bsp-tn (* 2 vm:word-bytes))
-    (storew temp bsp-tn (- binding-value-slot binding-size))
-    (storew symbol bsp-tn (- binding-symbol-slot binding-size))
+    (storew temp bsp-tn (- vm:binding-value-slot vm:binding-size))
+    (storew symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
     (storew val symbol vm:symbol-value-slot vm:other-pointer-type)))
 
 
 (define-vop (unbind)
   (:temporary (:scs (descriptor-reg)) symbol value)
   (:generator 0
-    (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
-    (loadw value bsp-tn (- binding-value-slot binding-size))
+    (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
+    (loadw value bsp-tn (- vm:binding-value-slot vm:binding-size))
     (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-    (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
+    (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
     (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))))
 
 
@@ -286,18 +286,18 @@
 	  (done (gen-label)))
       (move where arg)
       (inst beq where bsp-tn done)
-      (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
+      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label loop)
       (inst beq symbol zero-tn skip)
-      (loadw value bsp-tn (- binding-symbol-slot binding-size))
+      (loadw value bsp-tn (- vm:binding-symbol-slot vm:binding-size))
       (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-      (storew zero-tn bsp-tn (- binding-symbol-slot binding-size))
+      (storew zero-tn bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label skip)
       (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))
       (inst bne where bsp-tn loop)
-      (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
+      (loadw symbol bsp-tn (- vm:binding-symbol-slot vm:binding-size))
 
       (emit-label done))))
 
