@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.25 2001/05/18 16:22:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.26 2001/10/12 15:27:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1262,12 +1262,12 @@
 (defun ash-right-signed (num shift)
   (declare (type (signed-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
-  (sparc::ash-right-signed num shift))
+  (ash num (- shift)))
 
 (defun ash-right-unsigned (num shift)
   (declare (type (unsigned-byte #.vm:word-bits) num)
 	   (type (integer 0 #.(1- vm:word-bits)) shift))
-  (sparc::ash-right-unsigned num shift))
+  (ash num (- shift)))
 
 ;; If we can prove that we have a right shift, just do the right shift
 ;; instead of calling the inline ASH which has to check for the
