@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.18 2003/08/05 14:04:51 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/macros.lisp,v 1.19 2003/08/05 19:46:53 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,7 +261,7 @@
    appropriate, allocate from the stack."
   (cond ((and inline
 	      dynamic-extent
-	      (policy inline (> speed safety)))
+	      (policy inline (>= speed safety)))
 	 (stack-allocation alloc-tn size))
 	((and *maybe-use-inline-allocation*
 	      (or (null inline)
