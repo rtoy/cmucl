@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.4 2003/06/26 13:27:43 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/internal.lisp,v 1.5 2003/06/27 15:12:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -256,7 +256,6 @@
 (eval-when (:compile-toplevel)
   (push (c::backend-byte-order c::*backend*) *features*))
 
-#-big-endian
 (defun vector-elt-width (vector)
   ;; Return octet-width of vector elements
   (etypecase vector
