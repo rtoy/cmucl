@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.55 2003/10/02 19:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.56 2003/10/11 09:44:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -845,7 +845,8 @@
     (when (lambda-p called)
       (dolist (ref (leaf-refs called))
 	(let ((this-call (continuation-dest (node-cont ref))))
-	  (when (and (node-tail-p this-call)
+	  (when (and this-call
+		     (node-tail-p this-call)
 		     (eq (node-home-lambda this-call) fun))
 	    (setf (node-tail-p this-call) nil)
 	    (ecase (functional-kind called)
