@@ -29,6 +29,12 @@
 
 (in-package 'pcl)
 
+
+;;; Print the object addr in default printers.
+;;;
+(defun printing-random-thing-internal (thing stream)
+  (format stream "{~X}" (sys:%primitive c:make-fixnum thing)))
+
   ;;   
 ;;;;;; Cache No's
   ;;  
@@ -40,14 +46,13 @@
 	  (the fixnum mask)))
 
 
-
 (defun function-arglist (fcn)
   "Returns the argument list of a compiled function, if possible."
   (cond ((symbolp fcn)
 	 (when (fboundp fcn)
 	   (function-arglist (symbol-function fcn))))
 	((eval:interpreted-function-p fcn)
-	 (eval:interpreted-function-name fcn))
+	 (eval:interpreted-function-arglist fcn))
 	((functionp fcn)
 	 (let ((lambda-expr (function-lambda-expression fcn)))
 	   (if lambda-expr
@@ -71,11 +76,6 @@
 	 fcn)
 	(t
 	 (let ((header (kernel:%closure-function fcn)))
-	   (system:%primitive c::set-function-name header
-			      (if (symbolp new-name)
-				  new-name
-				  (let ((*package* *the-pcl-package*)
-					(*print-case* :upcase)
-					(*print-gensym* 't))
-				    (prin1-to-string new-name)))))
+	   (system:%primitive c::set-function-name header new-name))
 	 fcn)))
+
