@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.55 1998/01/16 07:22:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.56 1998/04/10 11:42:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -354,7 +354,7 @@
   (print-and-call loader-init)
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
-  (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
+  (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
 
   (set-floating-point-modes :traps '(:overflow #-x86 :underflow :invalid
 					       :divide-by-zero))
@@ -421,7 +421,7 @@
     (stream-reinit)
     (kernel::signal-init)
     (gc-init)
-    (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
+    (setf (alien:extern-alien "internal_errors_enabled" boolean) t)
     (set-floating-point-modes :traps
 			      '(:overflow #-x86 :underflow :invalid
 					  :divide-by-zero))

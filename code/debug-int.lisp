@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.90 1998/03/21 23:21:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.91 1998/04/10 11:42:38 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,7 +267,7 @@
   (id 0 :type c::index)
   ;;
   ;; Whether the variable always has a valid value.
-  (alive-p nil :type c::boolean))
+  (alive-p nil :type boolean))
 
 (defun print-debug-variable (obj str n)
   (declare (ignore n))
@@ -512,7 +512,7 @@
   ;; block has no start code-location.  In an interpreted-debug-block, this is
   ;; always nil.  This slot is in all debug-blocks since it is an exported
   ;; interface.
-  (elsewhere-p nil :type c::boolean))
+  (elsewhere-p nil :type boolean))
 
 (defun print-debug-block (obj str n)
   (declare (ignore n))

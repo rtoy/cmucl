@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.150 1998/03/30 03:05:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.151 1998/04/10 11:42:40 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,7 +328,7 @@
              "ATOM" "BASE-CHAR" "BASE-STRING" "BIGNUM"
              "BIT" "BIT-AND" "BIT-ANDC1" "BIT-ANDC2" "BIT-EQV" "BIT-IOR"
              "BIT-NAND" "BIT-NOR" "BIT-NOT" "BIT-ORC1" "BIT-ORC2"
-             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" #|"BOOLEAN"|#
+             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" "BOOLEAN"
              "BOOLE-1" "BOOLE-2" "BOOLE-AND" "BOOLE-ANDC1" "BOOLE-ANDC2"
              "BOOLE-C1" "BOOLE-C2" "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR"
              "BOOLE-NAND" "BOOLE-NOR" "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET"
@@ -1270,12 +1270,12 @@
 	     "ALTERNATE-GET-GLOBAL-ADDRESS"))
 (dolist
     (name
-     '("*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION" "INTEGER" "LONG-FLOAT"
+     '("*" "ARRAY" "BOOLEAN" "DOUBLE-FLOAT" "FUNCTION" "INTEGER" "LONG-FLOAT"
        "SINGLE-FLOAT" "UNION" "VALUES"))
   (intern name "LISP"))
 (defpackage "ALIEN"
             (:import-from "LISP" "*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION"
-             "INTEGER" "LONG-FLOAT" "SINGLE-FLOAT" "UNION" "VALUES")
+             "BOOLEAN" "INTEGER" "LONG-FLOAT" "SINGLE-FLOAT" "UNION" "VALUES")
             (:export "*" "ADDR" "ALIEN" "ALIEN-FUNCALL" "ALIEN-SAP"
              "ALIEN-SIZE" "ARRAY" "BOOLEAN" "CAST" "DEF-ALIEN-ROUTINE"
              "DEF-ALIEN-TYPE" "DEF-ALIEN-VARIABLE" "DEF-BUILTIN-ALIEN-TYPE"

@@ -138,6 +138,7 @@
 ;  (declare (type <mumble> <mumble>-1 <mumble>-2)
 ;	   (clx-values boolean)))
 
+#-ANSI-CL
 (deftype boolean () '(or null (not null)))
 
 (deftype card32 () '(unsigned-byte 32))
