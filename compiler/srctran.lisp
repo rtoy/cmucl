@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.146 2004/04/07 02:47:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.147 2004/04/07 15:03:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3641,7 +3641,11 @@
                             (not (and (eq fun-name 'logand)
                                       (csubtypep
                                        (single-value-type (node-derived-type node))
-                                       (specifier-type `(unsigned-byte ,width))))))
+				       ;; This is (unsigned-byte
+				       ;; width), but if width is 0,
+				       ;; (unsigned-byte 0) isn't
+				       ;; valid.
+                                       (specifier-type `(integer 0 ,(1- (ash 1 width))))))))
 		   (let ((name (etypecase modular-fun
 				 ((eql :good) fun-name)
 				 (modular-fun-info
