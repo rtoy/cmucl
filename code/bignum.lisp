@@ -1,11 +1,10 @@
 ;;; -*- Mode: completion; Log: code.log; Package: bignum -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public
+;;; domain.  If you want to use this code or any part of CMU Common
+;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
 ;;; This file contains code to implement bignum support.
@@ -99,9 +98,9 @@
 
 (eval-when (compile load eval) ;Necessary for DEFTYPE.
 
-(defconstant digit-size vm:word-bits)
+(defconstant digit-size 32)
 
-(defconstant maximum-bignum-length (1- (ash 1 (- vm:word-bits vm:type-bits))))
+(defconstant maximum-bignum-length (1- (ash 1 (- 32 vm:type-bits))))
 
 ) ;eval-when
 
@@ -235,6 +234,10 @@
 ;;;
 ;;; This takes three digits and returns the FLOOR'ed result of dividing the
 ;;; first two as a 64-bit integer by the third.
+;;;
+;;; DO WEIRD let AND setq STUFF TO SLIME THE COMPILER INTO ALLOWING THE %FLOOR
+;;; TRANSFORM TO EXPAND INTO PSEUDO-ASSEMBLER FOR WHICH THE COMPILER CAN LATER
+;;; CORRECTLY ALLOCATE REGISTERS.
 ;;;
 (defun %floor (a b c)
   (let ((a a) (b b) (c c))
@@ -523,8 +526,12 @@
 
 
 
-;;;; GCD.
+;;;; BIGNUM-REPLACE and WITH-BIGNUM-BUFFERS.
 
+(eval-when (compile eval)
+
+;;; BIGNUM-REPLACE -- Internal.
+;;;
 (defmacro bignum-replace (dest src &key (start1 '0) end1 (start2 '0) end2
 			       from-end)
   (ext:once-only ((n-dest dest)
@@ -556,7 +563,7 @@
 			    (%bignum-ref ,n-src ,i2))))))))
 
 
-;;; WITH-BIGNUM-BUFFERS  --  Internal
+;;; WITH-BIGNUM-BUFFERS  --  Internal.
 ;;;
 ;;; Could do freelisting someday.
 ;;;
@@ -575,6 +582,11 @@
        ,@(inits)
        ,@body)))
 
+) ;EVAL-WHEN
+
+
+
+;;;; GCD.
 
 (defun bignum-gcd (a b)
   (declare (type bignum-type a b))
@@ -1300,10 +1312,14 @@
     (setf (%bignum-ref res i) (%logxor sign (%bignum-ref b i))))
   (%normalize-bignum res len-b))
 
+
 
 ;;;; LDB (load byte)
 
 #|
+FOR NOW WE DON'T USE LDB OR DPB.  WE USE SHIFTS AND MASKS IN NUMBERS.LISP WHICH
+IS LESS EFFICIENT BUT EASIER TO MAINTAIN.  BILL SAYS THIS CODE CERTAINLY WORKS!
+
 
 (defconstant maximum-fixnum-bits #+ibm-rt-pc 27 #-ibm-rt-pc 30)
 
@@ -1798,8 +1814,6 @@
 		      ;; shift or a correct unsigned-byte-32 one.
 		      low-mask))))))
 
-
-
 |#
 
 
@@ -1912,6 +1926,9 @@
 		   (setf (%bignum-ref res i) (%bignum-ref x i)))
 		 (values 0 res)))
 	      (t
+	       ;; SHIFT-AND-STORE-TRUNCATE-BUFFERS relies on this routine
+	       ;; starting these buffers at five or greater.  I think that's
+	       ;; what Rob meant. ???
 	       (with-bignum-buffers ((*truncate-x* 5)
 				     (*truncate-y* 5))
 		 (let ((y-shift (shift-y-for-truncate y)))
@@ -1921,19 +1938,26 @@
 		     (declare (type bignum-index len-x len-y))
 		     (values (do-truncate len-x len-y)
 			     ;; DO-TRUNCATE must execute first.
-			     (shift-right-unaligned
-			      *truncate-x* 0 y-shift len-y
-			      ((= j res-len-1)
-			       (setf (%bignum-ref res j)
-				     (%ashr (%bignum-ref *truncate-x* i)
-					    y-shift))
-			       (%normalize-bignum res res-len))
-			      res)))))))
+			     (cond
+			      ((zerop y-shift)
+			       (let ((res (%allocate-bignum len-y)))
+				 (declare (type bignum-type res))
+				 (bignum-replace res *truncate-x* :end2 len-y)
+				 (%normalize-bignum res len-y)))
+			      (t
+			       (shift-right-unaligned
+				*truncate-x* 0 y-shift len-y
+				((= j res-len-1)
+				 (setf (%bignum-ref res j)
+				       (%ashr (%bignum-ref *truncate-x* i)
+					      y-shift))
+				 (%normalize-bignum res res-len))
+				res)))))))))
       (let ((quotient (cond ((eq x-plusp y-plusp) q)
-			    ((typep q 'fixnum) (- q))
+			    ((typep q 'fixnum) (the fixnum (- q)))
 			    (t (negate-bignum-in-place q))))
 	    (rem (cond (x-plusp r)
-		       ((typep r 'fixnum) (- r))
+		       ((typep r 'fixnum) (the fixnum (- r)))
 		       (t (negate-bignum-in-place r)))))
 	(values (if (typep quotient 'fixnum)
 		    quotient
@@ -2032,8 +2056,7 @@
     ;; Multiply guess and divisor, subtracting from dividend simultaneously.
     (dotimes (j len-y)
       (multiple-value-bind (high-digit low-digit)
-			   (%multiply-and-add guess
-					      (%bignum-ref *truncate-y* j)
+			   (%multiply-and-add guess (%bignum-ref *truncate-y* j)
 					      carry-digit)
 	(declare (type bignum-element-type high-digit low-digit))
 	(setf carry-digit high-digit)
@@ -2057,11 +2080,10 @@
 	   (let ((i low-x-digit)
 		 (carry 0))
 	     (dotimes (j len-y)
-	       (multiple-value-bind
-		   (v k)
-		   (%add-with-carry (%bignum-ref *truncate-y* j)
-				    (%bignum-ref *truncate-x* i)
-				    carry)
+	       (multiple-value-bind (v k)
+				    (%add-with-carry (%bignum-ref *truncate-y* j)
+						     (%bignum-ref *truncate-x* i)
+						     carry)
 		 (declare (type bignum-element-type v))
 		 (setf (%bignum-ref *truncate-x* i) v)
 		 (setf carry k))
@@ -2155,30 +2177,49 @@
 ;;; doing the subtraction; just make sure x is one greater.
 ;;;
 (defun shift-and-store-truncate-buffers (x len-x y len-y shift)
-  (declare (type bignum-index len-x len-y))
-  (let ((len-x+1 (1+ len-x))
-	(len-y+1 (1+ len-y)))
-    (macrolet ((frob (var len)
-		 `(progn
-		    (when (< (the bignum-index (%bignum-length ,var)) ,len)
-		      (setf ,var (%allocate-bignum ,len)))
-		    (setf (%bignum-ref ,var (1- ,len)) 0))))
-      (frob *truncate-x* len-x+1)
-      (frob *truncate-y* len-y+1)
-      (let ((len-x (bignum-ashift-left-unaligned x 0 shift len-x+1
-						 *truncate-x*))
-	    (len-y (bignum-ashift-left-unaligned y 0 shift len-y+1
-						 *truncate-y*)))
-	(when (< len-x 3)
-	  (setf (%bignum-ref *truncate-x* len-x) 0)
-	  (setf len-x 3))
-	(when (= len-x len-y)
-	  (let ((old-x *truncate-x*)
-		(len-x+2 (1+ len-x+1)))
-	    (frob *truncate-x* len-x+2)
-	    (bignum-replace *truncate-x* old-x :end1 len-x+1)
-	    (setf len-x len-x+2)))
-	(values len-x len-y)))))
+  (declare (type bignum-index len-x len-y)
+	   (type (integer 0 (#.digit-size)) shift))
+  (macrolet ((frob (var len)
+	       `(progn
+		  (when (< (%bignum-length ,var) ,len)
+		    (setf ,var (%allocate-bignum ,len)))
+		  (setf (%bignum-ref ,var (1- ,len)) 0))))
+    (multiple-value-bind
+	(buf-len-x buf-len-y)
+	(cond ((zerop shift)
+	       (frob *truncate-x* len-x)
+	       (frob *truncate-y* len-y)
+	       (bignum-replace *truncate-x* x :end1 len-x)
+	       (bignum-replace *truncate-y* y :end1 len-y)
+	       (values len-x len-y))
+	      (t
+	       (let ((len-x+1 (1+ len-x))
+		     (len-y+1 (1+ len-y)))
+		 (declare (type bignum-index len-x+1 len-y+1))
+		 (frob *truncate-x* len-x+1)
+		 (frob *truncate-y* len-y+1)
+		 (values (bignum-ashift-left-unaligned x 0 shift len-x+1
+						       *truncate-x*)
+			 (bignum-ashift-left-unaligned y 0 shift len-y+1
+						       *truncate-y*)))))
+      (declare (type bignum-index buf-len-x buf-len-y))
+      (when (< buf-len-x 3)
+	;; These two lines work because BIGNUM-TRUNCATE ensures
+	;; *truncate-x* starts with at least five elements.  I think
+	;; that's what Rob meant. ???
+	(assert (= buf-len-x 2))
+	(setf (%bignum-ref *truncate-x* 2) 0)
+	(setf buf-len-x 3))
+      (if (= buf-len-x buf-len-y)
+	  (let ((buf-len-x+1 (1+ buf-len-x)))
+	    (declare (type bignum-index buf-len-x+1))
+	    (when (< (%bignum-length *truncate-x*) buf-len-x+1)
+	      (let ((old-x *truncate-x*))
+		(setf *truncate-x* (%allocate-bignum buf-len-x+1))
+		(bignum-replace *truncate-x* old-x :end1 buf-len-x)))
+	    (setf (%bignum-ref *truncate-x* buf-len-x) 0)
+	    (values buf-len-x+1 buf-len-y))
+	  (values buf-len-x buf-len-y)))))
 
 
 
