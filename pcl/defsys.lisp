@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.12.2.4 2000/06/06 10:07:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.12.2.5 2000/06/14 06:22:41 dtc Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -512,24 +512,44 @@ and load your system with:
    (cmucl-documentation t			    t () CMU)
    (precom1     (dlisp)                             t (defs low cache fin dfun))
    (precom2     (dlisp)                             t (defs low cache fin dfun))
+   ))
 
+(defsystem gray-streams
+           *pcl-directory*
+  ;;
+  ;; file         load           compile      files which       port
+  ;;              environment    environment  force the
+  ;;                                          recompilation
+  ;;                                          of this file
+  ;;                                          
+  (
    (gray-streams-class  t            t            ()                   CMU)
    (gray-streams        t            t            (gray-streams-class) CMU)
    ))
 
 (defun compile-pcl (&optional m)
-  (cond ((null m)        (operate-on-system 'pcl :compile))
-	((eq m :print)   (operate-on-system 'pcl :compile () t))
-	((eq m :query)   (operate-on-system 'pcl :query-compile))
-	((eq m :confirm) (operate-on-system 'pcl :confirm-compile))
-	((eq m 't)       (operate-on-system 'pcl :recompile))        
-	((listp m)       (operate-on-system 'pcl :compile-from m))
-	((symbolp m)     (operate-on-system 'pcl :recompile-some `(,m)))))
+  (cond ((null m)
+	 (operate-on-system 'pcl :compile)
+	 (operate-on-system 'gray-streams :compile))
+	((eq m :print)
+	 (operate-on-system 'pcl :compile () t))
+	((eq m :query)
+	 (operate-on-system 'pcl :query-compile))
+	((eq m :confirm)
+	 (operate-on-system 'pcl :confirm-compile))
+	((eq m 't)
+	 (operate-on-system 'pcl :recompile)
+	 (operate-on-system 'gray-streams :recompile))
+	((listp m)
+	 (operate-on-system 'pcl :compile-from m))
+	((symbolp m)
+	 (operate-on-system 'pcl :recompile-some `(,m)))))
 
 (defun load-pcl (&optional m)
-  (cond ((null m)      (operate-on-system 'pcl :load))
-	((eq m :query) (operate-on-system 'pcl :query-load))))
-
+  (cond ((null m)
+	 (operate-on-system 'pcl :load))
+	((eq m :query)
+	 (operate-on-system 'pcl :query-load))))
 
 (defun bug-report-info (&optional (stream *standard-output*))
   (format stream "~&PCL system date: ~A~
