@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.8 1997/11/28 14:58:23 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.9 1997/11/29 19:52:32 dtc Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -357,7 +357,6 @@ Lend:
 	popl	%ebp
 	ret
 	.size	GNAME(fastcopy16),.-GNAME(fastcopy16)
-	.end
 #endif
 
 #ifdef GENCGC
@@ -689,8 +688,6 @@ GNAME(alloc_16_to_edi):
 	ret
 	.size	GNAME(alloc_16_to_edi),.-GNAME(alloc_16_to_edi)
 		
-	.end
-
 
 
 #ifdef GENCGC
@@ -826,3 +823,5 @@ GNAME(alloc_overflow_edi):
 	.size	 GNAME(alloc_overflow_edi),.-GNAME(alloc_overflow_edi)
 
 #endif
+
+	.end
