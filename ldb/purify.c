@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.3 1990/07/18 10:57:55 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.4 1990/09/21 06:04:43 wlott Exp $ */
 
 
 #include <mach.h>
@@ -354,6 +354,20 @@ static lispobj ptrans_otherptr(thing, header)
     }
 }
 
+static int pscav_symbol(symbol)
+     struct symbol *symbol;
+{
+#define RAW_ADDR_OFFSET (sizeof(struct function_header)-1-type_FunctionHeader)
+
+    if ((char *)(symbol->function + RAW_ADDR_OFFSET) == symbol->raw_function_addr) {
+        pscav(&symbol->value, sizeof(struct symbol)/sizeof(lispobj) - 1);
+        symbol->raw_function_addr = (char *)(symbol->function + RAW_ADDR_OFFSET);
+        return sizeof(struct symbol) / sizeof(lispobj);
+    }
+    else
+        return 1;
+}
+
 static int pscav_code(addr)
      lispobj *addr;
 {
@@ -423,6 +437,11 @@ static lispobj *pscav(addr, nwords)
               case type_Sap:
                 /* It's an unboxed simple object. */
                 count = HeaderValue(thing)+1;
+                break;
+
+              case type_SymbolHeader:
+                /* Symbols must have the raw function addr fixed up. */
+                count = pscav_symbol((struct symbol *)addr);
                 break;
 
               case type_SimpleVector:
