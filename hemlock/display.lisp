@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.7 1991/05/27 12:03:35 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.8 1991/11/11 18:12:44 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -112,7 +112,13 @@
 	     (funcall (device-force-output ,device)))
 	   ,@(if afterp
 		 `((when (device-after-redisplay ,device)
-		     (funcall (device-after-redisplay ,device) ,device))))
+		     (funcall (device-after-redisplay ,device) ,device)
+		     ;; The after method may have queued input that the input
+		     ;; loop won't see until the next input arrives, so check
+		     ;; here to return the correct value as per the redisplay
+		     ;; contract.
+		     (when (listen-editor-input *real-editor-input*)
+		       (setf ,n-res :editor-input)))))
 	   ,n-res)))))
 
 ) ;eval-when
