@@ -118,6 +118,22 @@
 	       *universal-type*)))))
 
 
+;;; NO-FUNCTION-VALUES-TYPES  --  Internal
+;;;
+;;;    Like VALUES-TYPES, only mash any complex function types to FUNCTION.
+;;;
+(defun no-function-values-types (type)
+  (declare (type ctype type))
+  (multiple-value-bind (res count)
+		       (values-types type)
+    (values (mapcar #'(lambda (type)
+			(if (function-type-p type)
+			    (specifier-type 'function)
+			    type))
+		    res)
+	    count)))
+
+
 ;;; MAYBE-NEGATE-CHECK  --  Internal
 ;;;
 ;;;    Cont is a continuation we are doing a type check on and Types is a list
@@ -133,8 +149,9 @@
 ;;;
 (defun maybe-negate-check (cont types)
   (declare (type continuation cont) (list types))
-  (multiple-value-bind (ptypes count)
-		       (values-types (continuation-proven-type cont))
+  (multiple-value-bind
+      (ptypes count)
+      (no-function-values-types (continuation-proven-type cont))
     (if (eq count :unknown)
 	(if (every #'type-check-template types)
 	    (values :simple types)
@@ -190,7 +207,7 @@
 	(dest (continuation-dest cont)))
     (assert (not (eq type *wild-type*)))
     (multiple-value-bind (types count)
-			 (values-types type)
+			 (no-function-values-types type)
       (cond ((not (eq count :unknown))
 	     (maybe-negate-check cont types))
 	    ((and (mv-combination-p dest)
