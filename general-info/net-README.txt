@@ -40,7 +40,7 @@ directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
 The latest SunOS Sparc release is:
-    -rw-r--r--  1 ram       9257951 Jan 23 17:42 15c-sun4c_41.tar.Z
+    -rw-r--r--  1 ram       9248115 Feb  2 17:13 15d-sun4c_41.tar.Z
 
 The resulting tree is 23 megabytes.  For installation directions, see the
 section "site initialization" in README file at the root of the tree.
@@ -76,9 +76,13 @@ template that sets up environment variables and then runs CMU CL.
 TMPFS NOTE:
 
 It is not possible to mmap a file in a tmpfs filesystem.  If /tmp is a "tmpfs"
-filesystem, then you must setenv CMUCL_EMPTYFILE to a pathname that can be
-used instead of /tmp/empty.  If this problem exists on your system, you will
-get map failures on Lisp startup.
+filesystem, then you must setenv CMUCL_EMPTYFILE to a pathname (in a normal
+filesystem) that can be used instead of /tmp/empty.  The "df" command will
+show tmpfs filesystems as mounted on "swap".  If this problem exists on
+your system, lisp will get an error like:
+    mapin: mmap: Invalid argument
+    ensure_space: Failed to validate 67108864 bytes at 0x01000000
+
 
 Running CMU CL:
 
@@ -96,27 +100,27 @@ packages are copyrighted, they may be freely distributed without any licensing
 agreement or fee.
 
 Also in /afs/cs/project/clisp/release:
--rw-r--r--  1 ram       3619669 Jan 23 17:24 15c-source.tar.Z
-	Image of all ".lisp" source files used to build version 15c.
+-rw-r--r--  1 ram       3626581 Feb  2 16:59 15d-source.tar.Z
+	Image of all ".lisp" source files used to build version 15d.
 
 Totally machine-independent compiler code:
-    /afs/cs/project/clisp/src/alpha/compiler/*.lisp
+    /afs/cs/project/clisp/src/beta/compiler/*.lisp
 See especially node.lisp and ir1tran.lisp for the front end.  vop.lisp,
 vmdef.lisp and ir2tran.lisp for the back end.
 
 Stuff that is dependent on our choice of object format, but not
 particularly machine-dependent:
-    /afs/cs/project/clisp/src/alpha/compiler/generic/*.lisp
+    /afs/cs/project/clisp/src/beta/compiler/generic/*.lisp
 
 Compiler back-end for the PMAX and SPARC:
-    /afs/cs/project/clisp/src/alpha/compiler/mips/*.lisp
-    /afs/cs/project/clisp/src/alpha/compiler/sparc/*.lisp
+    /afs/cs/project/clisp/src/beta/compiler/mips/*.lisp
+    /afs/cs/project/clisp/src/beta/compiler/sparc/*.lisp
 
 Miscellaneous Lisp run-time code:
-    /afs/cs/project/clisp/src/alpha/code/*.lisp
+    /afs/cs/project/clisp/src/beta/code/*.lisp
 
 C run-time code:
-    /afs/cs/project/clisp/src/alpha/ldb/*
+    /afs/cs/project/clisp/src/beta/ldb/*
 
 A very drafty version of an internal design document: (160 pages) Some of
 the "tex" files may be more humanly readable, since many formatting
