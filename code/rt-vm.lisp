@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.1 1991/04/16 19:33:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.2 1991/04/22 19:22:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.1 1991/04/16 19:33:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.2 1991/04/22 19:22:51 wlott Exp $
 ;;;
 ;;; This file contains the RT specific runtime stuff.
 ;;;
@@ -44,7 +44,24 @@
 ;;; FIXUP-CODE-OBJECT -- Interface
 ;;;
 (defun fixup-code-object (code offset fixup kind)
-  (error "Not yet." code offset fixup kind))
+  (declare (type index offset) (type (unsigned-byte 32) fixup))
+  (system:without-gcing
+   (let ((sap (sap+ (kernel:code-instructions code) offset)))
+     (ecase kind
+       (:cal
+	(setf (sap-ref-16 sap 1)
+	      (ldb (byte 16 0) fixup)))
+       (:cau
+	(let ((high (ldb (byte 16 16) fixup)))
+	  (setf (sap-ref-16 sap 1)
+		(if (logbitp 15 fixup) (1+ high) high))))
+       (:ba
+	(unless (zerop (ash fixup -24))
+	  (warn "#x~8,'0X out of range for branch-absolute." fixup))
+	(setf (sap-ref-8 sap 1)
+	      (ldb (byte 8 16) fixup))
+	(setf (sap-ref-16 sap 1)
+	      (ldb (byte 16 0) fixup)))))))
 
 
 
