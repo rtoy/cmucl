@@ -58,6 +58,7 @@
 (comf "target:compiler/globals")
 
 (comf "target:compiler/sset")
+(comf "target:compiler/bit-util")
 (comf "target:compiler/node")
 (comf "target:compiler/ctype")
 (comf "target:compiler/vop" :proceed t)
@@ -93,7 +94,6 @@
 (comf "target:compiler/envanal")
 
 (comf "target:compiler/tn")
-(comf "target:compiler/bit-util")
 (comf "target:compiler/life")
 
 (comf "target:code/debug-info")
