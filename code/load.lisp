@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47.1.1 1993/01/15 16:13:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47.1.2 1993/01/23 14:18:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -660,12 +660,12 @@
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
   (let* ((size (clone-arg))
-	 (res (make-structure size)))
+	 (res (%make-instance size)))
     (declare (type index size))
     (do ((n (1- size) (1- n)))
 	((minusp n))
       (declare (type (integer -1 #.most-positive-fixnum) n))
-      (setf (structure-ref res n) (pop-stack)))
+      (setf (%instance-ref res n) (pop-stack)))
     res))
 
 (define-fop (fop-layout 45)
@@ -945,13 +945,13 @@
 	 (obj (svref *current-fop-table* obi))
 	 (idx (read-arg 4))
 	 (val (pop-stack)))
-    (if (structurep obj)
-	(setf (c::structure-ref obj idx) val)
+    (if (%instancep obj)
+	(setf (%instance-ref obj idx) val)
 	(setf (svref obj idx) val))))
 
 (define-fop (fop-structset 204 nil)
-  (setf (c::structure-ref (svref *current-fop-table* (read-arg 4))
-			  (read-arg 4))
+  (setf (%instance-ref (svref *current-fop-table* (read-arg 4))
+		       (read-arg 4))
 	(pop-stack)))
 
 (define-fop (fop-nthcdr 203 t)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.1 1993/01/15 15:29:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.28.1.2 1993/01/23 14:16:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -282,13 +282,12 @@
        (when (%%typep object type)
 	 (return t))))
     (unknown-type
-     ;; Type may be unknown to the compiler (and SPECIFIER-TYPE), yet be
-     ;; a defined structure in the core.
-     (let ((orig-spec (unknown-type-specifier type)))
-       (if (and (symbolp orig-spec)
-		(info type defined-structure-info orig-spec))
-	   (structure-typep object orig-spec)
-	   (error "Unknown type specifier: ~S" orig-spec))))
+     ;; Parse it again to make sure it's really undefined.
+     (let ((reparse (specifier-type (unknown-type-specifier type))))
+       (if (typep reparse 'unknown-type)
+	   (error "Unknown type specifier: ~S"
+		  (unknown-type-specifier reparse))
+	   (%%typep object reparse))))
     (hairy-type
      ;; Now the tricky stuff.
      (let* ((hairy-spec (hairy-type-specifier type))
