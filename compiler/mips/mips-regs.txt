@@ -1,0 +1,39 @@
+  Reg	CN  PR	C Usage			Lisp Name	Lisp Usage			GC
+-------------------------------------------------------------------------------------------------
+  R0	-   -	Wired Zero		ZERO		Wired Zero			N
+  R1	-   N	Assembler Temp		LIP		Lisp Interior Pointer		Special
+  R2	v0  N	{ Expr Eval, Results }	NL0		Non-Lisp Reg			N
+  R3	v1  N	{ Static Link }		NL1		Non-Lisp Reg			N
+  R4	a0  N	Integer Arg		NL2		Non-Lisp Reg			N
+  R5	a1  N	Integer Arg		NL3		Non-Lisp Reg			N
+  R6	a2  N	Integer Arg		NL4		Non-Lisp Reg			N
+  R7	a3  N	Integer Arg		NL5/NARGS	Non-Lisp Reg / Arg Count	N
+  R8	t0  N	Temporary Reg		L0		Lisp Reg			Y
+  R9	t1  N	Temporary Reg		L1		Lisp Reg			Y
+  R10	t2  N	Temporary Reg		L2		Lisp Reg			Y
+  R11	t3  N	Temporary Reg		L3		Lisp Reg			Y
+  R12	t4  N	Temporary Reg		L4		Lisp Reg			Y
+  R13	t5  N	Temporary Reg		L5/LEXENV	Lisp Reg / Lexical Environment	Y
+  R14	t6  N	Temporary Reg		L6/OLD-CONT	Lisp Reg / Old Continuation	Y
+  R15	t7  N	Temporary Reg		L7/CALL-NAME	Lisp Reg / Call Name		Y
+  R16	s0  Y	Saved Temporary Reg	L8/A0		Lisp Reg / Arg			Y
+  R17	s1  Y	Saved Temporary Reg	L9/A1		Lisp Reg / Arg			Y
+  R18	s2  Y	Saved Temporary Reg	L10/A2		Lisp Reg / Arg			Y
+  R19	s3  Y	Saved Temporary Reg	L11/A3		Lisp Reg / Arg			Y
+  R20	s4  Y	Saved Temporary Reg	L12/A4		Lisp Reg / Arg			Y
+  R21	s5  Y	Saved Temporary Reg	L13/A5		Lisp Reg / Arg			Y
+  R22	s6  Y	Saved Temporary Reg	L14/ARGS	Lisp Reg / Argument Pointer	Y   
+  R23	s7  Y	Saved Temporary Reg	L15/LRA		Lisp Reg / Lisp Return Addr	Y
+  R24	t8  N	Temporary Reg		BSP		Binding Stack Pointer		Special
+  R25   t9  N	Temporary Reg		CSP		Control Stack Pointer		Special
+  R26	k0  -	Kernel Reg (reserved)	-		Kernel Reg (reserved)		N
+  R27	k1  -	Kernel Reg (reserved)	-		Kernel Reg (reserved)		N
+  R28	gp  -	Global 	Pointer		NULL		Null / Nil Constant		Y
+  R29   sp  -	Stack Pointer		NSP		Number Stack Pointer		N
+  R30	s8  Y	Saved Temporary Reg	CODE		Code Pointer			Y
+  R31	ra  N	Return Addr / Temp	CONT		Current Continuation		Special
+
+Key:
+	CN == C/UNIX name
+	PR == Preserved on C function call (callee saves)
+	GC == Considered as a root for GC
