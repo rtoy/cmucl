@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.13 1990/05/13 21:49:29 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.14 1990/05/14 02:00:23 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -89,7 +89,8 @@
       (inst and ndescr object vm:type-mask)
       
       (emit-label other-ptr)
-      (load-type ndescr object)
+      (load-type ndescr object (- vm:other-pointer-type))
+      (inst nop)
       
       (emit-label shift)
       (inst sll result ndescr 2))))
