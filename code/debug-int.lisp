@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.77 1997/11/25 16:18:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.78 1997/11/29 16:11:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -4240,9 +4240,12 @@
 	  (trap-loc (system:foreign-symbol-address
 		     "function_end_breakpoint_trap"))
 	  (length (system:sap- src-end src-start))
-	  (code-object (system:%primitive #-x86 c:allocate-code-object #+x86 c::allocate-dynamic-code-object
-					  (1+ bogus-lra-constants)
-					  length))
+	  (code-object
+	   (system:%primitive
+	    #-(and x86 gencgc) c:allocate-code-object
+	    #+(and x86 gencgc) c::allocate-dynamic-code-object
+	    (1+ bogus-lra-constants)
+	    length))
 	  (dst-start (kernel:code-instructions code-object)))
      (declare (type system:system-area-pointer
 		    src-start src-end dst-start trap-loc)
