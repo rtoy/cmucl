@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.55 2002/11/13 02:50:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.56 2002/11/19 14:30:57 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -366,51 +366,94 @@
 	(stream-unread-char stream character)))
   nil)
 
+;;; In the interest of ``once and only once'' this macro contains the
+;;; framework necessary to implement a peek-char function, which has
+;;; two special-cases (one for gray streams and one for echo streams)
+;;; in addition to the normal case.
+;;;
+;;; All arguments are forms which will be used for a specific purpose
+;;; PEEK-TYPE - the current peek-type as defined by ANSI CL
+;;; EOF-VALUE - the eof-value argument to peek-char
+;;; CHAR-VAR - the variable which will be used to store the current character
+;;; READ-FORM - the form which will be used to read a character
+;;; UNREAD-FORM - ditto for unread-char
+;;; SKIPPED-CHAR-FORM - the form to execute when skipping a character
+;;; EOF-DETECTED-FORM - the form to execute when EOF has been detected
+;;;                     (this will default to CHAR-VAR)
+(defmacro generalized-peeking-mechanism (peek-type eof-value char-var read-form unread-form
+						   &optional (skipped-char-form nil)
+						   (eof-detected-form nil))
+  `(let ((,char-var ,read-form))
+    (cond ((eql ,char-var ,eof-value) 
+	   ,(if eof-detected-form
+		eof-detected-form
+		char-var))
+	  ((characterp ,peek-type)
+	   (do ((,char-var ,char-var ,read-form))
+	       ((or (eql ,char-var ,eof-value) 
+		    (char= ,char-var ,peek-type))
+		(cond ((eql ,char-var ,eof-value)
+		       ,(if eof-detected-form
+			    eof-detected-form
+			    char-var))
+		      (t ,unread-form
+			 ,char-var)))
+	     ,skipped-char-form))
+	  ((eql ,peek-type t)
+	   (do ((,char-var ,char-var ,read-form))
+	       ((or (eql ,char-var ,eof-value)
+		    (not (whitespace-char-p ,char-var)))
+		(cond ((eql ,char-var ,eof-value)
+		       ,(if eof-detected-form
+			    eof-detected-form
+			    char-var))
+		      (t ,unread-form
+			 ,char-var)))
+	     ,skipped-char-form))
+	  ((null ,peek-type)
+	   ,unread-form
+	   ,char-var)
+	  (t
+	   (error "Impossible case reached in PEEK-CHAR")))))
+
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
 			    (eof-errorp t) eof-value recursive-p)
   "Peeks at the next character in the input Stream.  See manual for details."
   (declare (ignore recursive-p))
+  ;; FIXME: The type of PEEK-TYPE is also declared in a DEFKNOWN, but
+  ;; the compiler doesn't seem to be smart enough to go from there to
+  ;; imposing a type check. Figure out why (because PEEK-TYPE is an
+  ;; &OPTIONAL argument?) and fix it, and then this explicit type
+  ;; check can go away.
+  (unless (typep peek-type '(or character boolean))
+    (error 'simple-type-error
+	   :datum peek-type
+	   :expected-type '(or character boolean)
+	   :format-control "~@<bad PEEK-TYPE=~S, ~_expected ~S~:>"
+	   :format-arguments (list peek-type '(or character boolean))))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(let ((char (read-char stream eof-errorp eof-value)))
-	  (cond ((eq char eof-value) char)
-		((characterp peek-type)
-		 (do ((char char (read-char stream eof-errorp eof-value)))
-		     ((or (eq char eof-value) (char= char peek-type))
-		      (unless (eq char eof-value)
-			(unread-char char stream))
-		      char)))
-		((eq peek-type t)
-		 (do ((char char (read-char stream eof-errorp eof-value)))
-		     ((or (eq char eof-value) (not (whitespace-char-p char)))
-		      (unless (eq char eof-value)
-			(unread-char char stream))
-		      char)))
-		(t
-		 (unread-char char stream)
-		 char)))
-	;; Fundamental-stream.
-	(cond ((characterp peek-type)
-	       (do ((char (stream-read-char stream) (stream-read-char stream)))
-		   ((or (eq char :eof) (char= char peek-type))
-		    (cond ((eq char :eof)
-			   (eof-or-lose stream eof-errorp eof-value))
-			  (t
-			   (stream-unread-char stream char)
-			   char)))))
-	      ((eq peek-type t)
-	       (do ((char (stream-read-char stream) (stream-read-char stream)))
-		   ((or (eq char :eof) (not (whitespace-char-p char)))
-		    (cond ((eq char :eof)
-			   (eof-or-lose stream eof-errorp eof-value))
-			  (t
-			   (stream-unread-char stream char)
-			   char)))))
-	      (t
-	       (let ((char (stream-peek-char stream)))
-		 (if (eq char :eof)
-		     (eof-or-lose stream eof-errorp eof-value)
-		     char)))))))
+    (cond ((typep stream 'echo-stream)
+	   (echo-misc stream 
+		      :peek-char
+		      peek-type
+		      (list eof-errorp eof-value)))
+	  ((lisp-stream-p stream)
+	   (generalized-peeking-mechanism
+	    peek-type eof-value char
+	    (read-char stream eof-errorp eof-value)
+	    (unread-char char stream)))
+	  (t
+	   ;; by elimination, must be Gray streams FUNDAMENTAL-STREAM
+	   (generalized-peeking-mechanism
+	    peek-type :eof char
+	    (if (null peek-type)
+		(stream-peek-char stream)
+		(stream-read-char stream))
+	    (if (null peek-type)
+		()
+		(stream-unread-char stream char))
+	    ()
+	    (eof-or-lose stream eof-errorp eof-value))))))
 
 (defun listen (&optional (stream *standard-input*))
   "Returns T if a character is availible on the given Stream."
@@ -1060,6 +1103,7 @@ output to Output-stream"
   (in-fun echo-in read-char lisp-stream-out stream-write-char)
   (in-fun echo-bin read-byte lisp-stream-bout stream-write-byte))
 
+
 (defun echo-misc (stream operation &optional arg1 arg2)
   (let* ((in (two-way-stream-input-stream stream))
 	 (out (two-way-stream-output-stream stream)))
@@ -1078,6 +1122,33 @@ output to Output-stream"
 	     in-type `(and ,in-type ,out-type))))
       (:close
        (set-closed-flame stream))
+      (:peek-char
+       ;; For the special case of peeking into an echo-stream
+       ;; arg1 is peek-type, arg2 is (eof-errorp eof-value)
+       ;; returns peeked-char, eof-value, or errors end-of-file
+       (let ((unread-char-p nil))
+	 (destructuring-bind (eof-errorp eof-value)
+	     arg2
+	   (flet ((outfn (c)
+		    (unless unread-char-p
+		      (if (lisp-stream-p out)
+			  (funcall (lisp-stream-out out) out c)
+			  ;; gray-stream
+			  (stream-write-char out c))))
+		  (infn ()
+		    ;; Obtain input from unread buffer or input stream,
+		    ;; and set the flag appropriately.
+		    (cond ((not (null (echo-stream-unread-stuff stream)))
+			   (setf unread-char-p t)
+			   (pop (echo-stream-unread-stuff stream)))
+			  (t
+			   (setf unread-char-p nil)
+			   (read-char in eof-errorp eof-value)))))
+	     (generalized-peeking-mechanism
+	      arg1 eof-value char
+	      (infn)
+	      (unread-char char in)
+	      (outfn char))))))
       (t
        (or (if (lisp-stream-p in)
 	       (funcall (lisp-stream-misc in) in operation arg1 arg2)
