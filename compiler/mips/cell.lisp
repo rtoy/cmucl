@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.48 1990/11/25 21:00:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.49 1990/11/29 00:51:50 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -197,7 +197,11 @@
       (inst nop)
       (inst xor type vm:closure-header-type)
       (inst beq type zero-tn closure)
-      (inst xor type (logxor vm:closure-header-type vm:function-header-type))
+      (inst xor type (logxor closure-header-type
+			     funcallable-instance-header-type))
+      (inst beq type zero-tn closure)
+      (inst xor type (logxor funcallable-instance-header-type
+			     function-header-type))
       (inst beq type zero-tn normal-fn)
       (inst addu temp function
 	    (- (ash vm:function-header-code-offset vm:word-shift)
