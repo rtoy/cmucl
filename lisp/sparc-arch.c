@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.22 2004/07/07 18:07:53 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.23 2004/07/29 16:47:40 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -293,6 +293,7 @@ void handle_allocation_trap(struct sigcontext *context)
   target = 0;
   size = 0;
   
+#if 0
   /*
    * Block all blockable signals.  Need to do this because
    * sigill_handler enables the signals.  When the handler returns,
@@ -302,7 +303,18 @@ void handle_allocation_trap(struct sigcontext *context)
   sigemptyset(&block);
   FILLBLOCKSET(&block);
   sigprocmask(SIG_BLOCK, &block, 0);
-      
+#else
+  /*
+   * Well, maybe not.  sigill_handler probably shouldn't be unblocking
+   * all signals.  So, let's enable just the signals we need.  Since
+   * alloc might call GC, we need to have SIGILL enabled so we can do
+   * allocation.  Do we need more?
+   */
+  sigemptyset(&block);
+  sigaddset(&block, SIGILL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
+#endif
+  
   pc = (unsigned int*) SC_PC(context);
   or_inst = pc[-1];
 
@@ -412,7 +424,22 @@ static void sigill_handler(HANDLER_ARGS)
     SAVE_CONTEXT();
 
 #ifdef POSIX_SIGS
+    /*
+     * Do we really want to have the same signals as in the context?
+     * This would typically enable all signals, I think.  But there
+     * are comments in interrupt_handle_now that says we want to
+     * alloc_sap while interrupts are disabled.  The interrupt
+     * handlers that eventually get called from here will re-enable
+     * interrupts at the appropriate time, so we don't do anything
+     * here.
+     *
+     * (I'm guessing here.  I don't really know if this is right or
+     * not, but it doesn't seem to cause harm, and it does seem to be
+     * a bad idea to have interrupts enabled here.)
+     */
+#if 0
     sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#endif
 #else
     sigsetmask(context->sc_mask);
 #endif
