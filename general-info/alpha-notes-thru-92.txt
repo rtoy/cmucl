@@ -1,3 +1,62 @@
+2/24/92 to 3/2/92
+
+Code:
+
+Added some dimension type checking to parsing of alien array types.
+
+Fixed a bug where the size of single-floats and double-floats wasn't know
+by the new aliens stuff.
+
+Really make sure compute-time-overhead-ax has function type info in
+profile.
+
+Reworked the SETQ branch of EVAL to pass more cases (like setting alien
+vars or constants) off to the real interpreter.
+
+Fixed FMAKUNBOUND to return the symbol instead of T.
+
+Moved OS-INIT into mumble-os.lisp, so that different OSes can do different
+things for initialization.
+
+SET now protects against setting T, NIL, and keywords.  (SETF
+SYMBOL-FUNCTION) now expands into FSET, which protects against defining
+NIL.  %SET-SYMBOL-PACKAGE is a new function that sets the symbol package.
+%SP-SET-PLIST has been renamed %SET-SYMBOL-PLIST.
+
+Fixed the ``mumble doesn't start with a search-list'' error message.
+
+Fixed the MIPS disassembler OR control to look at the RT field instead of
+the RD field.
+
+
+Compiler:
+
+Weakened component kind type assertion in JOIN-COMPONENTS.
+
+Changed the %DEFCONSTANT transform to protect against trying to change T,
+NIL, or keywords.
+
+Changed LET* and &AUX to allow duplicate variable names.
+
+Re-wrote the SAP-REF-mumble VOPs for better immediate support.
+
+
+CLX:
+
+Don't try to set char-bits for CMU, because we don't have any.
+
+
+C runtime support:
+
+Instead of using os_zero to zero the control stack after a GC, fill it with
+zeros ourselves.
+
+Whenever we allocate a chunk of memory, set the protections to include
+VM_PROT_EXECUTE so that we can execute code on it.  This is so we can run
+under MACH 3.0.
+
+
+
 2/18/92 to 2/23/92
 
 Code:
