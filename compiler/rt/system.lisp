@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.1 1991/02/18 15:08:18 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.2 1991/04/21 19:55:59 wlott Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -106,7 +106,7 @@
       (inst nilz result object type-mask)
 
       (emit-label function-ptr)
-      (load-type result object (- function-pointer-type))
+      (load-type result object function-pointer-type)
       (inst b done)
 
       (emit-label lowtag-only)
@@ -114,7 +114,7 @@
       (inst nilz result object lowtag-mask)
 
       (emit-label other-ptr)
-      (load-type result object (- other-pointer-type))
+      (load-type result object other-pointer-type)
       
       (emit-label done))))
 
@@ -184,7 +184,7 @@
     (move temp ptr)
     (inst sl temp 3)
     (inst sr temp 1)
-    (move temp res)))
+    (move res temp)))
 
 (define-vop (make-other-immediate-type)
   (:args (val :scs (any-reg descriptor-reg) :target vtemp)
