@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.5 2003/05/03 14:46:12 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.6 2003/05/13 10:22:09 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -135,7 +135,9 @@
 	 (si (pcl::compute-applicable-methods
 	      #'shared-initialize (list proto t))))
     (setf (pcl::ctor-class ctor) class)
-    (funcall generator ctor ii si)))
+    (if (eq generator #'pcl::fallback-generator)
+	(funcall generator ctor)
+	(funcall generator ctor ii si))))
      
 (deftest fallback-generator.0
     (let ((fn (call-generator #'pcl::fallback-generator
