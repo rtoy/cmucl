@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.35 1998/07/24 17:17:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.36 1998/12/19 16:12:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,7 +348,8 @@
 			    (eof-errorp t) eof-value recursive-p)
   "Peeks at the next character in the input Stream.  See manual for details."
   (declare (ignore recursive-p))
-  (let ((stream (in-synonym-of stream)))
+  (let ((stream (in-synonym-of stream))
+	(eof-errorp (or eof-errorp recursive-p)))
     (if (lisp-stream-p stream)
 	(let ((char (read-char stream eof-errorp eof-value)))
 	  (cond ((eq char eof-value) char)
