@@ -1,8 +1,8 @@
 CPPFLAGS = -I. -I/usr/misc/.X11/include
 CC = gcc # -Wall -Wstrict-prototypes -Wmissing-prototypes
 CPP = /usr/cs/lib/cpp
-CFLAGS = -g
-ASFLAGS = -g
+CFLAGS = -O
+ASFLAGS = -O
 NM = nm -gp
 UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
 ASSEM_SRC = mips-assem.S
