@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.16 1998/03/03 16:35:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.17 1998/03/04 15:00:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,68 +270,86 @@
 ;;;
 ;;; Move from a descriptor to a complex float register
 ;;;
-(macrolet ((frob (name sc double-p real-value imag-value)
-	     `(progn
-		(define-vop (,name)
-		  (:args (x :scs (descriptor-reg)))
-		  (:results (y :scs (,sc)))
-		  (:note "pointer to complex float coercion")
-		  (:generator 2
-		    (let ((real-tn ,(if double-p 
-					'(complex-double-reg-real-tn y)
-					'(complex-single-reg-real-tn y))))
-		      (inst ,(if double-p 'lddf 'ldf) real-tn x
-			    (- (* ,real-value vm:word-bytes)
-			       vm:other-pointer-type)))
-		    (let ((imag-tn ,(if double-p
-					'(complex-double-reg-imag-tn y)
-					'(complex-single-reg-imag-tn y))))
-		      (inst ,(if double-p 'lddf 'ldf) imag-tn x
-			    (- (* ,imag-value vm:word-bytes)
-			       vm:other-pointer-type)))))
-		(define-move-vop ,name :move (descriptor-reg) (,sc)))))
-	  (frob move-to-complex-single complex-single-reg nil
-		complex-single-float-real-slot complex-single-float-imag-slot)
-	  (frob move-to-complex-double complex-double-reg t
-		complex-double-float-real-slot complex-double-float-imag-slot))
+(define-vop (move-to-complex-single)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-single-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (let ((real-tn (complex-single-reg-real-tn y)))
+      (inst ldf real-tn x (- (* complex-single-float-real-slot word-bytes)
+			     other-pointer-type)))
+    (let ((imag-tn (complex-single-reg-imag-tn y)))
+      (inst ldf imag-tn x (- (* complex-single-float-imag-slot word-bytes)
+			     other-pointer-type)))))
+(define-move-vop move-to-complex-single :move
+  (descriptor-reg) (complex-single-reg))
+
+(define-vop (move-to-complex-double)
+  (:args (x :scs (descriptor-reg)))
+  (:results (y :scs (complex-double-reg)))
+  (:note "pointer to complex float coercion")
+  (:generator 2
+    (let ((real-tn (complex-double-reg-real-tn y)))
+      (inst lddf real-tn x (- (* complex-double-float-real-slot word-bytes)
+			      other-pointer-type)))
+    (let ((imag-tn (complex-double-reg-imag-tn y)))
+      (inst lddf imag-tn x (- (* complex-double-float-imag-slot word-bytes)
+			      other-pointer-type)))))
+(define-move-vop move-to-complex-double :move
+  (descriptor-reg) (complex-double-reg))
 
 ;;;
 ;;; Complex float move-argument vop
 ;;;
-(macrolet ((frob (name sc stack-sc double-p)
-	     `(progn
-		(define-vop (,name)
-		  (:args (x :scs (,sc) :target y)
-			 (nfp :scs (any-reg)
-			      :load-if (not (sc-is y ,sc))))
-		  (:results (y))
-		  (:note "float argument move")
-		  (:generator ,(if double-p 2 1)
-		    (sc-case y
-		      (,sc
-		       (unless (location= x y)
-			 (let ((x-real (complex-double-reg-real-tn x))
-			       (y-real (complex-double-reg-real-tn y)))
-			   (inst fmovs y-real x-real)
-			   ,@(when double-p
-			       '((inst fmovs-odd y-real x-real))))
-			 (let ((x-imag (complex-double-reg-imag-tn x))
-			       (y-imag (complex-double-reg-imag-tn y)))
-			   (inst fmovs y-imag x-imag)
-			   ,@(when double-p
-			       '((inst fmovs-odd y-imag x-imag))))))
-		      (,stack-sc
-		       (let ((offset (* (tn-offset y) vm:word-bytes)))
-			 (let ((real-tn (complex-double-reg-real-tn x)))
-			   (inst ,(if double-p 'stdf 'stf) real-tn nfp offset))
-			 (let ((imag-tn (complex-double-reg-imag-tn x)))
-			   (inst ,(if double-p 'stdf 'stf) imag-tn nfp offset)))))))
-		(define-move-vop ,name :move-argument
-		  (,sc descriptor-reg) (,sc)))))
-  (frob move-complex-single-float-argument
-	complex-single-reg complex-single-stack nil)
-  (frob move-complex-double-float-argument
-	complex-double-reg complex-double-stack t))
+(define-vop (move-complex-single-float-argument)
+  (:args (x :scs (complex-single-reg) :target y)
+	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-single-reg))))
+  (:results (y))
+  (:note "complex single-float argument move")
+  (:generator 1
+    (sc-case y
+      (complex-single-reg
+       (unless (location= x y)
+	 (let ((x-real (complex-single-reg-real-tn x))
+	       (y-real (complex-single-reg-real-tn y)))
+	   (inst fmovs y-real x-real))
+	 (let ((x-imag (complex-single-reg-imag-tn x))
+	       (y-imag (complex-single-reg-imag-tn y)))
+	   (inst fmovs y-imag x-imag))))
+      (complex-single-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+	 (let ((real-tn (complex-double-reg-real-tn x)))
+	   (inst stf real-tn nfp offset))
+	 (let ((imag-tn (complex-double-reg-imag-tn x)))
+	   (inst stf imag-tn nfp (+ offset word-bytes))))))))
+(define-move-vop move-complex-single-float-argument :move-argument
+  (complex-single-reg descriptor-reg) (complex-single-reg)))))
+
+(define-vop (move-complex-double-float-argument)
+  (:args (x :scs (complex-double-reg) :target y)
+	 (nfp :scs (any-reg) :load-if (not (sc-is y complex-double-reg))))
+  (:results (y))
+  (:note "complex double-float argument move")
+  (:generator 2
+    (sc-case y
+      (complex-double-reg
+       (unless (location= x y)
+	 (let ((x-real (complex-double-reg-real-tn x))
+	       (y-real (complex-double-reg-real-tn y)))
+	   (inst fmovs y-real x-real)
+	   (inst fmovs-odd y-real x-real))
+	 (let ((x-imag (complex-double-reg-imag-tn x))
+	       (y-imag (complex-double-reg-imag-tn y)))
+	   (inst fmovs y-imag x-imag)
+	   (inst fmovs-odd y-imag x-imag))))
+      (complex-double-stack
+       (let ((offset (* (tn-offset y) word-bytes)))
+	 (let ((real-tn (complex-double-reg-real-tn x)))
+	   (inst stdf real-tn nfp offset))
+	 (let ((imag-tn (complex-double-reg-imag-tn x)))
+	   (inst stdf imag-tn nfp (+ offset (* 2 word-bytes)))))))))
+(define-move-vop move-complex-double-float-argument :move-argument
+  (complex-double-reg descriptor-reg) (complex-double-reg)))))
 
 ) ; progn complex-float
 
