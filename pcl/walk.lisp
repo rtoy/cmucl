@@ -1352,6 +1352,9 @@
 			  newnewnewform)))
 		   ((and (symbolp fn)
 			 (not (fboundp fn))
+			 #+cmu17
+			 (special-operator-p fn)
+			 #-cmu17
 			 (special-form-p fn))
 		    (error
 		     "~S is a special form, not defined in the CommonLisp.~%~
