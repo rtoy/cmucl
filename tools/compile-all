@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.13 1993/08/19 13:22:42 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.14 1994/07/26 17:37:17 hallgren Exp $
 
 set features = ()
 set misfeatures = ()
@@ -201,7 +201,7 @@ if ($?LISP) then
 endif
 
 echo "Compiling setup and bootstrap ..."
-$lisp -noinit -eval '(eval (read))' << EOF
+sed -e 's/\\//g' << EOF | $lisp -noinit -eval '(eval (read))'
 (progn
   (when (find-package "INTERFACE")
     (set (intern "*INTERFACE-STYLE*" "INTERFACE") :tty))
@@ -232,7 +232,7 @@ while ($#sysinfo > 0)
     if ($systems =~ *${this_system}* || \
         ($systems == "" && $nosystems !~ *${this_system}*)) then
 	echo "Compiling $this_system ..."
-	$lisp -noinit -eval '(eval (read))' << EOF
+	sed -e 's/\\//g' << EOF | $lisp -noinit -eval '(eval (read))'
 (progn
   (when (find-package "INTERFACE")
     (set (intern "*INTERFACE-STYLE*" "INTERFACE") :tty))
