@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.8 1991/02/08 13:32:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.9 1991/04/24 20:30:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,11 +305,10 @@
 ;;;
 (defmacro once-only (specs &body body)
   "Once-Only ({(Var Value-Expression)}*) Form*
-  Create Let which evaluates each Value-Expression, binding a temporary
-  variable to the result, and wrapping the Let around the result of the
+  Create a Let* which evaluates each Value-Expression, binding a temporary
+  variable to the result, and wrapping the Let* around the result of the
   evaluation of Body.  Within the body, each Var is bound to the corresponding
-  temporary variable.  If the Value-Expression is a constant, then we just pass
-  it through."
+  temporary variable."
   (let ((n-binds (gensym))
 	(n-temp (gensym)))
     (collect ((names)
@@ -324,10 +323,10 @@
 	   `(let ((,n-temp (gensym)))
 	      (,n-binds `(,,n-temp ,,name))
 	      (setq ,name ,n-temp)))))
-      `(let ,(names)
+      `(let* ,(names)
 	 (collect ((,n-binds))
 	   ,@(temp-binds)
-	   (list 'let (,n-binds) (progn ,@body)))))))
+	   (list 'let* (,n-binds) (progn ,@body)))))))
 
 
 ;;;; DO-ANONYMOUS:
