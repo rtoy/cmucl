@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.21 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.22 1997/09/05 19:12:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2309,6 +2309,8 @@
 (deftype keyword ()
   "Type for any keyword symbol."
   '(satisfies keywordp))
+
+(deftype eql (n) `(member ,n))
 
 
 ;;;; Some types that we use in defining the standard functions:
