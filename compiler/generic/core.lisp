@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.13 1992/04/21 04:20:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.14 1992/05/22 15:32:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,6 +136,7 @@
 	   (type index length)
 	   (list trace-table)
 	   (type core-object object))
+  (assert (not (backend-featurep :new-assembler)))
   (without-gcing
     (let* ((2comp (component-info component))
 	   (constants (ir2-component-constants 2comp))
@@ -146,7 +147,7 @@
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
 	   (code-obj (%primitive allocate-code-object box-num total-length))
 	   (inst-stream (make-code-instruction-stream code-obj))
-	   (fixups (emit-code-vector inst-stream segment)))
+	   (fixups (assem:emit-code-vector inst-stream segment)))
       (declare (type index box-num total-length))
 
       (do-core-fixups code-obj fixups)
