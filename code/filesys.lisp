@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.30 1993/07/15 17:59:50 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.31 1993/07/31 01:07:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,9 +160,13 @@
 	    (flush-pending-regulars)))
 	(cond ((null (pattern))
 	       "")
-	      ((and (null (cdr (pattern)))
-		    (simple-string-p (car (pattern))))
-	       (car (pattern)))
+	      ((null (cdr (pattern)))
+	       (let ((piece (first (pattern))))
+		 (typecase piece
+		   ((member :multi-char-wild) :wild)
+		   (simple-string piece)
+		   (t
+		    (make-pattern (pattern))))))
 	      (t
 	       (make-pattern (pattern)))))))
 
@@ -205,23 +209,24 @@
 		   nil
 		   version)))))
 
-(defun split-at-slashes (namestr start end &optional (char #\/))
-  "Take a string and return a list of cons cells that mark the char
-   separated subseq. The first value t if absolute directories location."
-    (declare (type simple-base-string namestr)
+;;; Take a string and return a list of cons cells that mark the char
+;;; separated subseq. The first value t if absolute directories location.
+;;;
+(defun split-at-slashes (namestr start end)
+  (declare (type simple-base-string namestr)
 	   (type index start end))
   (let ((absolute (and (/= start end)
-		       (char= (schar namestr start) char))))
+		       (char= (schar namestr start) #\/))))
     (when absolute
       (incf start))
-    ;; Next, split the remainder into ; separated chunks.
+    ;; Next, split the remainder into slash seperated chunks.
     (collect ((pieces))
       (loop
-	(let ((char-pos (position char namestr :start start :end end)))
-	  (pieces (cons start (or char-pos end)))
-	  (unless char-pos
+	(let ((slash (position #\/ namestr :start start :end end)))
+	  (pieces (cons start (or slash end)))
+	  (unless slash
 	    (return))
-	  (setf start (1+ char-pos))))
+	  (setf start (1+ slash))))
       (values absolute (pieces)))))
 
 (defun maybe-extract-search-list (namestr start end)
@@ -276,13 +281,16 @@
 		    (let ((piece-start (car piece))
 			  (piece-end (cdr piece)))
 		      (unless (= piece-start piece-end)
-			(let ((dir (maybe-make-pattern namestr
-						       piece-start
-						       piece-end)))
-			  (if (and (simple-string-p dir)
-				   (string= dir ".."))
-			      (dirs :up)
-			      (dirs dir))))))
+			(cond ((string= namestr ".." :start1 piece-start
+					:end1 piece-end)
+			       (dirs :up))
+			      ((string= namestr "**" :start1 piece-start
+					:end1 piece-end)
+			       (dirs :wild-inferiors))
+			      (t
+			       (dirs (maybe-make-pattern namestr
+							 piece-start
+							 piece-end)))))))
 		  (cond (absolute
 			 (cons :absolute (dirs)))
 			((dirs)
@@ -300,10 +308,7 @@
 
 (defun unparse-unix-piece (thing)
   (etypecase thing
-    (keyword
-     (cond ((eq thing ':wild) "*")
-	   ((eq thing ':wild-inferiors) "**")
-	   (t (error "Invalid keyword piece: ~S~%" thing))))
+    ((member :wild) "*")
     (simple-string
      (let* ((srclen (length thing))
 	    (dstlen srclen))
@@ -329,15 +334,11 @@
 	   (simple-string
 	    (strings piece))
 	   (symbol
-	    (case piece
-	      (:wild
-	       (strings "*"))
+	    (ecase piece
 	      (:multi-char-wild
 	       (strings "*"))
 	      (:single-char-wild
-	       (strings "?"))
-	      (t
-	       (error "Invalid pattern piece: ~S" piece))))
+	       (strings "?"))))
 	   (cons
 	    (case (car piece)
 	      (:character-set
@@ -370,6 +371,8 @@
 	   (pieces "../"))
 	  ((member :back)
 	   (error ":BACK cannot be represented in namestrings."))
+	  ((member :wild-inferiors)
+	   (pieces "**/"))
 	  ((or simple-string pattern)
 	   (pieces (unparse-unix-piece dir))
 	   (pieces "/"))
@@ -717,13 +720,11 @@
 ;;;
 ;;;    Return Home:, which is set up for us at initialization time.
 ;;;
-#|
 (defun user-homedir-pathname (&optional host)
   "Returns the home directory of the logged in user as a pathname.
   This is obtained from the logical name \"home:\"."
   (declare (ignore host))
   #p"home:")
-|#
 
 ;;; File-Write-Date  --  Public
 ;;;
