@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.34 2004/01/16 03:13:10 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.35 2004/05/05 19:59:33 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -935,7 +935,7 @@
   (initial-p *building-initial-table* :type (member t nil))
   ;;
   ;; And the associated function.
-  (function (required-argument) :type function))
+  (function (required-argument) :type (or symbol function)))
 
 (defun %print-pprint-dispatch-entry (entry stream depth)
   (declare (ignore depth))
@@ -1075,7 +1075,7 @@
 
 (defun set-pprint-dispatch (type function &optional
 			    (priority 0) (table *print-pprint-dispatch*))
-  (declare (type (or null function) function)
+  (declare (type (or null symbol function) function)
 	   (type real priority)
 	   (type pprint-dispatch-table table))
   (if function
