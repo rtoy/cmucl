@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.17 2004/05/19 22:37:40 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.18 2004/05/20 00:32:24 cwang Exp $
  *
  */
 
@@ -231,7 +231,11 @@ void sigsegv_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
 
+#if (LINUX_VERSION_CODE >= linuxversion(2,1,0)) || (__GNU_LIBRARY__ >= 6)
+  int  fault_addr = ((struct sigcontext *) (&contextstruct))->cr2;
+#else
   int  fault_addr = ((struct sigcontext_struct *) (&contextstruct))->cr2;
+#endif
   int  page_index = find_page_index((void *) fault_addr);
 
 #ifdef RED_ZONE_HIT

@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.39 2004/05/19 22:42:53 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.40 2004/05/20 00:32:25 cwang Exp $
  *
  */
 
@@ -577,7 +577,7 @@ int main(int argc, char *argv[], char *envp[])
     if(builtin_image_flag != 0) {
       extern int image_dynamic_space_size;
       long allocation_pointer = (long) dynamic_0_space + (int)&image_dynamic_space_size;
-#ifdef i386
+#if defined(i386) || defined(__x86_64)
       SetSymbolValue(ALLOCATION_POINTER, (lispobj)allocation_pointer);
 #else
       current_dynamic_space_free_pointer = (lispobj*)allocation_pointer;
