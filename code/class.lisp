@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.30 1993/08/22 22:20:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.31 1993/08/24 23:26:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,6 +285,11 @@
 ;;;
 (defstruct (class-cell
 	    (:constructor make-class-cell (name &optional class))
+	    (:print-function
+	     (lambda (s stream d)
+	       (declare (ignore d))
+	       (print-unreadable-object (s stream :type t) 
+		 (prin1 (class-cell-name s) stream))))
 	    (:make-load-form-fun
 	     (lambda (cell)
 	       `(find-class-cell ',(class-cell-name cell)))))
