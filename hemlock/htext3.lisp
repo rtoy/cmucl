@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/htext3.lisp,v 1.1.1.2 1991/02/08 16:35:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/htext3.lisp,v 1.1.1.3 1991/11/09 03:05:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 
 (defun insert-character (mark character)
   "Inserts the Character at the specified Mark."
-  (declare (type base-character character))
+  (declare (type base-char character))
   (let* ((line (mark-line mark))
 	 (buffer (line-%buffer line)))
     (modifying-buffer buffer

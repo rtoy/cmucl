@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-build.lisp,v 1.1.1.5 1991/02/08 16:37:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-build.lisp,v 1.1.1.6 1991/11/09 03:05:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,6 +243,6 @@
 	  (write-byte (aref dictionary i) s))
 	(dotimes (i descriptors-size)
 	  (write-byte (aref descriptors i) s))))
-    (with-open-file (s f :direction :output :element-type 'base-character
+    (with-open-file (s f :direction :output :element-type 'base-char
 		         :if-exists :append)
       (write-string string-table s :end string-table-length))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.6 1991/06/21 19:42:58 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.7 1991/11/09 03:05:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,7 +59,7 @@
 ;;; Doesn't do anything special, but it should fast and not waste any time
 ;;; checking type and whatnot.
 (defmacro search-char-upcase (ch)
-  `(char-upcase (the base-character ,ch)))
+  `(char-upcase (the base-char ,ch)))
 
 
 

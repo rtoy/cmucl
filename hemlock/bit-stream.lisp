@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.1.1.2 1991/02/08 16:33:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.1.1.3 1991/11/09 03:05:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,7 +89,7 @@
 	 (funcall (device-force-output device)))))
     (:line-length
      (bitmap-hunk-char-width (bitmap-hunk-output-stream-hunk stream)))
-    (:element-type 'base-character)))
+    (:element-type 'base-char)))
 
 
 ;;; Bitmap-Hunk-Out  --  Internal

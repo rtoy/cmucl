@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.4 1991/02/08 16:38:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.5 1991/11/09 03:05:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -127,7 +127,7 @@
     ((:finish-output :force-output)
      (redisplay-windows-from-mark (hemlock-output-stream-mark stream)))
     (:close (setf (hemlock-output-stream-mark stream) nil))
-    (:element-type 'base-character)))
+    (:element-type 'base-char)))
 
 (defstruct (hemlock-region-stream
 	    (:include stream
@@ -261,7 +261,7 @@
     (:close
      (delete-mark (hemlock-region-stream-mark stream))
      (setf (hemlock-region-stream-region stream) nil))
-    (:element-type 'base-character)))
+    (:element-type 'base-char)))
 
 ;;;; Stuff to support keyboard macros.
 
