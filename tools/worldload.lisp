@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.34 1991/10/13 14:33:46 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.35 1991/12/05 05:29:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,10 +104,10 @@
 
 ;;; Load the pretty printer after the compiler, 'cause it compiles stuff
 ;;; at load time.
-#-no-xp
-(load "code:xp")
-#-no-xp
-(pprint-init)
+#-no-pp
+(load "code:pprint")
+#-no-pp
+(pp::pprint-init)
 
 ;;; CLX.
 ;;;
