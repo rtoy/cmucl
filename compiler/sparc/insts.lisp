@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.1 1990/11/30 17:04:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.2 1990/12/06 17:36:17 ram Exp $
 ;;;
 ;;; Description of the SPARC architecture.
 ;;;
@@ -212,7 +212,19 @@
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 (define-f3-inst swap #b11 #b001111 :load-store t)
 
+(define-instruction (ldfsr)
+  (format-3-immed (op :constant #b11)
+		  (rd :constant 0)
+		  (op3 :constant #b100001)
+		  (rs1 :argument reg)
+		  (immed :argument (signed-byte 13))))
 
+(define-instruction (stfsr)
+  (format-3-immed (op :constant #b11)
+		  (rd :constant 0)
+		  (op3 :constant #b100101)
+		  (rs1 :argument reg)
+		  (immed :argument (signed-byte 13))))
 
 (define-f3-inst add #b10 #b000000 :fixup t)
 (define-f3-inst addcc #b10 #b010000)
