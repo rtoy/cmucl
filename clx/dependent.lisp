@@ -1446,7 +1446,7 @@
 	(loop
 	  (let ((available-p
 		  (cond ((and timeout (zerop timeout))
-			 (mach::unix-select (1+ fd) (ash 1 fd) 0 0 0))
+			 (call-unix-select (1+ fd) (ash 1 fd) 0 0 0))
 			(timeout
 			  (let ((remaining (- endtime (get-internal-real-time))))
 			    (when (minusp remaining) (return :TIMEOUT))
@@ -1454,10 +1454,9 @@
 				(truncate remaining
 					  internal-time-units-per-second)
 			      (let ((msecs (truncate (* 1000000 rem))))
-				(mach::unix-select (1+ fd) (ash 1 fd) 0 0
+				(call-unix-select (1+ fd) (ash 1 fd) 0 0
 						   secs msecs)))))
-			(t (mach::unix-select (1+ fd) (ash 1 fd) 0 0 nil)))))
-	    
+			(t (call-unix-select (1+ fd) (ash 1 fd) 0 0 nil)))))
 	    (when (not (zerop available-p))
 	      (multiple-value-bind (length err) (read-into-ibuff display needed)
 		(cond ((null length)
@@ -1670,15 +1669,29 @@
   (let ((fd (display-input-stream display)))
     (cond ((null fd))
 	  ((or (null timeout) (= timeout 0))
-	   (if (zerop (mach::unix-select (1+ fd) (ash 1 fd) 0 0 timeout))
+	   (if (zerop (call-unix-select (1+ fd) (ash 1 fd) 0 0 timeout))
 	       :timeout
 	       nil))
 	  (t
 	   (multiple-value-bind (secs rem) (truncate timeout)
 	     (let ((usecs (truncate (* 1000000 rem))))
-	       (if (zerop (mach::unix-select (1+ fd) (ash 1 fd) 0 0 secs usecs))
+	       (if (zerop (call-unix-select (1+ fd) (ash 1 fd) 0 0 secs usecs))
 		   :timeout
 		   nil)))))))
+
+#+CMU
+;;; CALL-UNIX-SELECT -- Internal.
+;;;
+;;; Since all our calls to MACH:UNIX-SELECT are within a WITHOUT-INTERRUPTS,
+;;; it returns nil when someone interrupts the system.  It gets interrupted
+;;; since it is a system call.  We loop over it whenever it returns nil to
+;;; simulate the WITHOUT-INTERRUPTS.
+;;;
+(defun call-unix-select (nfds rdfds wrfds xpfds to-secs &optional (to-usecs 0))
+  (loop
+    (let ((res (mach:unix-select nfds rdfds wrfds xpfds to-secs to-usecs)))
+      (when res (return res)))))
+
 
 #+Genera
 (defun buffer-input-wait-default (display timeout)
@@ -2029,6 +2042,7 @@
 ;; good compiler support for TYPEP.  The definitions for CARD32, CARD16, INT16, etc.
 ;; include range checks.  You can modify TYPE? to do less extensive checking
 ;; for these types if you desire.
+
 ;;
 ;; ### This comment is a lie!  TYPE? is really also used for run-time type
 ;; dispatching, not just type checking.  -- Ram.
@@ -2069,7 +2083,7 @@
   (x-error 'x-type-error
 	   :datum object
 	   :expected-type type
-	   :error-string error-string))
+	   #-CMU :error-string #+CMU :type-string error-string))
 
 
 ;;-----------------------------------------------------------------------------
