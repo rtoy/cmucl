@@ -468,8 +468,8 @@ default-value-5
     (maybe-load-stack-tn old-fp-temp old-fp)
     (maybe-load-stack-tn return-pc-temp return-pc)
     (inst lr sp-tn fp-tn)
-    (inst bnbrx :pz return-pc)
-    (inst lr fp-tn old-fp)))
+    (inst bnbrx :pz return-pc-temp)
+    (inst lr fp-tn old-fp-temp)))
 
 
 ;;;; Full call:
