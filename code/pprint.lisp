@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.9 1992/06/14 07:28:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.10 1992/07/30 05:36:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -666,6 +666,7 @@
 
 (defun force-pretty-output (stream)
   (maybe-output stream nil)
+  (expand-tabs stream nil)
   (write-string (pretty-stream-buffer stream)
 		(pretty-stream-target stream)
 		:end (pretty-stream-buffer-fill-pointer stream)))
