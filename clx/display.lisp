@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.10 2003/07/20 15:55:23 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.11 2003/08/29 09:17:50 gerd Exp $")
 
 (in-package :xlib)
 
@@ -326,32 +326,31 @@
   ;; Get the authorization mechanism from the environment.  Handle the
   ;; special case of a host name of "" and "unix" which means the
   ;; protocol is :unix
-  (when (null authorization-name)
-    (multiple-value-setq (authorization-name authorization-data)
-      (get-best-authorization host
-			      display
-			      (if (member host '("" "unix") :test #'equal)
-				  :unix
-				  protocol))))
-  ;; PROTOCOL is the network protocol (something like :TCP or :UNIX).
-  (let* ((stream (open-x-stream host display protocol))
-	 (disp (make-buffer *output-buffer-size* #'make-display-internal
-			    :host host :display display
-			    :output-stream stream :input-stream stream))
-	 (ok-p nil))
-    (unwind-protect
-	(progn
-	  (display-connect disp
-			   :authorization-name authorization-name
-			   :authorization-data authorization-data)
-	  (setf (display-authorization-name disp) authorization-name)
-	  (setf (display-authorization-data disp) authorization-data)
-	  (initialize-resource-allocator disp)
-	  (initialize-predefined-atoms disp)
-	  (initialize-extensions disp)
-	  (setq ok-p t))
-      (unless ok-p (close-display disp :abort t)))
-    disp))
+  (let ((actual-protocol (if (member host '("" "unix") :test #'equal) 
+			     :unix
+			     protocol)))
+    (when (null authorization-name)
+      (multiple-value-setq (authorization-name authorization-data)
+	(get-best-authorization host display actual-protocol)))
+    ;; PROTOCOL is the network protocol (something like :TCP or :UNIX).
+    (let* ((stream (open-x-stream host display actual-protocol))
+	   (disp (make-buffer *output-buffer-size* #'make-display-internal
+			      :host host :display display
+			      :output-stream stream :input-stream stream))
+	   (ok-p nil))
+      (unwind-protect
+	   (progn
+	     (display-connect disp
+			      :authorization-name authorization-name
+			      :authorization-data authorization-data)
+	     (setf (display-authorization-name disp) authorization-name)
+	     (setf (display-authorization-data disp) authorization-data)
+	     (initialize-resource-allocator disp)
+	     (initialize-predefined-atoms disp)
+	     (initialize-extensions disp)
+	     (setq ok-p t))
+	(unless ok-p (close-display disp :abort t)))
+      disp)))
 
 (defun display-force-output (display)
   ; Output is normally buffered, this forces any buffered output to the server.

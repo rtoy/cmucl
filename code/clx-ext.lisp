@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.17 2003/08/08 08:06:12 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.18 2003/08/29 09:17:50 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
   (when string
     (let* ((string (coerce string 'simple-string))
 	   (length (length string))
-	   (host-name "unix")
+	   (host-name "")
 	   (protocol :tcp)
 	   (auth-name nil)
 	   (auth-data nil)
@@ -87,7 +87,7 @@
       ;; connect to the X server using the :unix protocol. This is the
       ;; most efficient transport to the local host, most often a Unix
       ;; domain socket. In all other cases, we use the :tcp protocol. 
-      (when (equal host-name "unix")
+      (when (or (equal host-name "") (equal host-name "unix"))
         (setq protocol :unix)
         (multiple-value-setq (auth-name auth-data)
           (xlib::get-best-authorization (machine-instance) display-num :tcp)))
