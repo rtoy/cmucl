@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.17 1991/12/11 11:54:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.18 1991/12/11 16:51:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -370,103 +370,112 @@
     (find-top-level-components (components))))
 
 
+;;; MERGE-1-TL-LAMBDA  --  Internal
+;;;
+;;;    Insert the code in LAMBDA at the end of RESULT-LAMBDA.
+;;;
+(defun merge-1-tl-lambda (result-lambda lambda)
+  (declare (type clambda result-lambda lambda))
+
+  (setf (lambda-entries result-lambda)
+	(nconc (lambda-entries result-lambda)
+	       (lambda-entries lambda)))
+  
+  (let* ((bind (lambda-bind lambda))
+	 (bind-block (node-block bind))
+	 (component (block-component bind-block))
+	 (result-component
+	  (block-component (node-block (lambda-bind result-lambda))))
+	 (result-return-block (node-block (lambda-return result-lambda))))
+    ;;
+    ;; Move blocks into the new component, and move any nodes directly in
+    ;; the old lambda into the new one (lets implicitly moved by changing
+    ;; their home.) 
+    (do-blocks (block component)
+      (do-nodes (node cont block)
+	(let ((lexenv (node-lexenv node)))
+	  (when (eq (lexenv-lambda lexenv) lambda)
+	    (setf (lexenv-lambda lexenv) result-lambda))))
+      (setf (block-component block) result-component))
+    ;;
+    ;; Splice the blocks into the new DFO, and unlink them from the old
+    ;; component head and tail.  Non-return blocks that jump to the tail
+    ;; (NIL returning calls) are switched to go to the new tail.
+    (let* ((head (component-head component))
+	   (first (block-next head))
+	   (tail (component-tail component))
+	   (last (block-prev tail))
+	   (prev (block-prev result-return-block)))
+      (setf (block-next prev) first)
+      (setf (block-prev first) prev)
+      (setf (block-next last) result-return-block)
+      (setf (block-prev result-return-block) last)
+      (dolist (succ (block-succ head))
+	(unlink-blocks head succ))
+      (dolist (pred (block-pred tail))
+	(unlink-blocks pred tail)
+	(let ((last (block-last pred)))
+	  (unless (return-p last)
+	    (assert (basic-combination-p last))
+	    (link-blocks pred (component-tail result-component))))))
+    
+    (let ((lambdas (component-lambdas component)))
+      (assert (and (null (rest lambdas))
+		   (eq (first lambdas) lambda))))
+    ;;
+    ;; Switch the end of the code from the return block to the start of
+    ;; the next chunk.
+    (dolist (pred (block-pred result-return-block))
+      (unlink-blocks pred result-return-block)
+      (link-blocks pred bind-block))
+    (unlink-node bind)
+    ;;
+    ;; If there is a return, then delete it (making the preceding node the
+    ;; last node) and link the block to the result return.  There is always a
+    ;; preceding REF NIL node in top-level lambdas.
+    (let ((return (lambda-return lambda)))
+      (when return
+	(let ((return-block (node-block return))
+	      (result (return-result return)))
+	  (setf (block-last return-block) (continuation-use result))
+	  (flush-dest result)
+	  (delete-continuation result)
+	  (link-blocks return-block result-return-block))))))
+
+
 ;;; MERGE-TOP-LEVEL-LAMBDAS  --  Interface
 ;;;
 ;;;    Given a non-empty list of top-level lambdas, smash them into a top-level
 ;;; lambda and component, returning these as values.  We use the first lambda
 ;;; and its component, putting the other code in that component and deleting
-;;; the other lambdas.  We depend on there being at least a reference to NIL
-;;; preceding the RETURN node in each top-level lambda.
+;;; the other lambdas.
 ;;;
 (defun merge-top-level-lambdas (lambdas)
   (declare (cons lambdas))
   (let* ((result-lambda (first lambdas))
-	 (result-env (lambda-environment result-lambda))
-	 (result-component
-	  (block-component (node-block (lambda-bind result-lambda))))
 	 (result-return (lambda-return result-lambda)))
-
-    ;;
-    ;; Make sure the result's return node starts a block so that we can splice
-    ;; code in before it.
-    (let ((prev (node-prev (continuation-use (return-result result-return)))))
-      (when (continuation-use prev)
-	(node-ends-block (continuation-use prev)))
-      (do-uses (use prev)
-	(let ((new (make-continuation)))
-	  (delete-continuation-use use)
-	  (add-continuation-use use new))))
-
-    (let ((result-return-block (node-block result-return)))
+    (cond
+     (result-return
+      ;;
+      ;; Make sure the result's return node starts a block so that we can
+      ;; splice code in before it.
+      (let ((prev (node-prev
+		   (continuation-use
+		    (return-result result-return)))))
+	(when (continuation-use prev)
+	  (node-ends-block (continuation-use prev)))
+	(do-uses (use prev)
+	  (let ((new (make-continuation)))
+	    (delete-continuation-use use)
+	    (add-continuation-use use new))))
+      
       (dolist (lambda (rest lambdas))
-	;;
-	;; Delete the lambda, and compile lets and entries.
-	(setf (functional-kind lambda) :deleted)
-	(dolist (let (lambda-lets lambda))
-	  (setf (lambda-home let) result-lambda)
-	  (setf (lambda-environment let) result-env)
-	  (push let (lambda-lets result-lambda)))
-
-	(setf (lambda-entries result-lambda)
-	      (nconc (lambda-entries result-lambda)
-		     (lambda-entries lambda)))
-
-	(let* ((bind (lambda-bind lambda))
-	       (bind-block (node-block bind))
-	       (return (lambda-return lambda))
-	       (return-block (node-block return))
-	       (result (return-result return))
-	       (component (block-component bind-block)))
-
-	  ;;
-	  ;; Move blocks into the new component, and move any nodes directly in
-	  ;; the old lambda into the new one (lets implicitly moved by changing
-	  ;; their home.) 
-	  (do-blocks (block component)
-	    (do-nodes (node cont block)
-	      (let ((lexenv (node-lexenv node)))
-		(when (eq (lexenv-lambda lexenv) lambda)
-		  (setf (lexenv-lambda lexenv) result-lambda))))
-	    (setf (block-component block) result-component))
-
-	  ;;
-	  ;; Splice the blocks into the new DFO, and unlink them from the old
-	  ;; component head and tail.  Non-return blocks that jump to the tail
-	  ;; (NIL returning calls) are switched to go to the new tail.
-	  (let* ((head (component-head component))
-		 (first (block-next head))
-		 (tail (component-tail component))
-		 (last (block-prev tail))
-		 (prev (block-prev result-return-block)))
-	    (setf (block-next prev) first)
-	    (setf (block-prev first) prev)
-	    (setf (block-next last) result-return-block)
-	    (setf (block-prev result-return-block) last)
-	    (dolist (succ (block-succ head))
-	      (unlink-blocks head succ))
-	    (dolist (pred (block-pred tail))
-	      (unlink-blocks pred tail)
-	      (let ((last (block-last pred)))
-		(unless (return-p last)
-		  (assert (basic-combination-p last))
-		  (link-blocks pred (component-tail result-component))))))
-
-	  (let ((lambdas (component-lambdas component)))
-	    (assert (and (null (rest lambdas))
-			 (eq (first lambdas) lambda))))
-
-	  ;;
-	  ;; Switch the end of the code from the return block to the start of
-	  ;; the next chunk.
-	  (dolist (pred (block-pred result-return-block))
-	    (unlink-blocks pred result-return-block)
-	    (link-blocks pred bind-block))
-
-	  (setf (block-last return-block) (continuation-use result))
-	  (flush-dest result)
-	  (delete-continuation result)
-	  (link-blocks return-block result-return-block)
-
-	  (unlink-node bind))))
-    
-    (values result-component result-lambda)))
+	(merge-1-tl-lambda result-lambda lambda)))
+     (t
+      (dolist (lambda (rest lambdas))
+	(delete-component
+	 (block-component
+	  (node-block (lambda-bind lambda)))))))
+      
+    (values (block-component (node-block (lambda-bind result-lambda)))
+	    result-lambda)))
