@@ -12,9 +12,7 @@
 ;;; the resulting core image.  It writes "lisp.core" in the DEFAULT-DIRECTORY.
 ;;;
 
-;;; Turn of GC so bad things don't happen.
-;;;
-(setq lisp::*already-maybe-gcing* t)
+
 #| Can't eval conditionals now...
 ;;; Setup some packages.
 ;;;
@@ -148,7 +146,6 @@
   (setq ** NIL)
   (setq +++ NIL)
   (setq *** NIL)
-  (setq lisp::*already-maybe-gcing* t)
   (setq *load-verbose* nil)
   (setq *info-environment*
 	(list (make-info-environment :name "Working")
@@ -161,4 +158,6 @@
 				extensions:save-lisp
 				,lisp::fop-codes
 				compile-file)
-	     :init-function #'abort))
+	     :init-function #'(lambda ()
+				(gc-on)
+				(abort))))
