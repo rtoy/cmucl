@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.3 1991/10/02 23:04:56 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.4 1992/01/01 15:07:09 ram Exp $
 ;;;
 ;;; This file contains the definitions of VOPs used for non-local exit (throw,
 ;;; lexical exit, etc.)
@@ -47,18 +47,16 @@
 ;;; with the Save/Restore-Dynamic-Environment VOPs.
 ;;;
 (def-vm-support-routine make-dynamic-state-tns ()
-  (make-n-tns 5 *fixnum-primitive-type*))
+  (make-n-tns 4 *fixnum-primitive-type*))
 
 (define-vop (save-dynamic-state)
   (:results (catch :scs (any-reg))
-	    (special :scs (any-reg))
 	    (nfp :scs (any-reg))
 	    (nsp :scs (any-reg))
 	    (eval :scs (any-reg)))
   (:vop-var vop)
   (:generator 13
     (load-symbol-value catch lisp::*current-catch-block*)
-    (load-symbol-value special *binding-stack-pointer*)
     (let ((cur-nfp (current-nfp-tn vop)))
       (if cur-nfp
 	  (move nfp cur-nfp)
@@ -68,7 +66,6 @@
 
 (define-vop (restore-dynamic-state)
   (:args (catch :scs (any-reg))
-	 (special :scs (any-reg) :to (:eval 1))
 	 (nfp :scs (any-reg))
 	 (nsp :scs (any-reg))
 	 (eval :scs (any-reg)))
@@ -76,37 +73,12 @@
   (:temporary (:scs (word-pointer-reg) :from (:eval 0)) bsp)
   (:vop-var vop)
   (:generator 10
-    (let ((done (gen-label))
-	  (skip (gen-label))
-	  (loop (gen-label)))
-
-      (store-symbol-value catch lisp::*current-catch-block*)
-      (store-symbol-value eval lisp::*eval-stack-top*)
-      (let ((cur-nfp (current-nfp-tn vop)))
-	(when cur-nfp
-	  (move cur-nfp nfp)))
-      (move nsp-tn nsp)
-      
-      (load-symbol-value bsp *binding-stack-pointer*)
-      (inst c bsp special)
-      (inst bc :eq done)
-
-      ;; Unwind shallow dynamic bindings.
-      (emit-label loop)
-      (loadw symbol bsp (- binding-symbol-slot binding-size))
-      (inst c symbol 0)
-      (inst bc :eq skip)
-      (loadw value bsp (- binding-value-slot binding-size))
-      (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
-      (inst li value 0)
-      (storew value bsp (- binding-symbol-slot binding-size))
-      (emit-label skip)
-      (inst dec bsp (* 2 vm:word-bytes))
-      (inst c bsp special)
-      (inst bnc :eq loop)
-
-      (emit-label done)
-      (store-symbol-value special *binding-stack-pointer*))))
+    (store-symbol-value catch lisp::*current-catch-block*)
+    (store-symbol-value eval lisp::*eval-stack-top*)
+    (let ((cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(move cur-nfp nfp)))
+    (move nsp-tn nsp)))
 
 (define-vop (current-stack-pointer)
   (:results (res :scs (any-reg word-pointer-reg descriptor-reg)))
@@ -328,4 +300,3 @@
   (:ignore block start count)
   (:generator 0
     (emit-return-pc label)))
-
