@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.43 1992/02/24 06:31:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.44 1992/02/27 06:03:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,9 +60,6 @@
 (force-output)
 (set '*lisp-implementation-version* (read-line))
 
-;;; Keep us entertained...
-(setq *load-verbose* t)
-
 ;;; Load random code sources.
 
 (load "code:format-time")
@@ -110,6 +107,9 @@
 					 :name "Compiler")
 	       (rest *info-environment*)))
   (load "c:loadbackend.lisp")
+  ;; If we want a small core, blow away the meta-compile time VOP info.
+  #+small (setf (c::backend-parsed-vops c:*backend*)
+		(make-hash-table :test #'eq))
   (setq *info-environment*
 	(list* (make-info-environment)
 	       (compact-info-environment
@@ -181,7 +181,6 @@
   (setq +++ nil)
   (setq *** nil)
   (setq /// nil)
-  (setq *load-verbose* nil)
   (setq *info-environment*
 	(list* (make-info-environment :name "Working")
 	       (compact-info-environment (first *info-environment*)
