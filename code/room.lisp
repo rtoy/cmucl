@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.22 1993/05/10 08:54:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.23 1993/08/20 00:31:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -761,8 +761,8 @@
      #'(lambda (obj type size)
 	 (when (eql type code-header-type)
 	   (let* ((dinfo (let ((x (%code-debug-info obj)))
-			   (when (typep x 'c::compiled-debug-info) x)))
-		  (package (if dinfo
+			   (when (typep x 'c::debug-info) x)))
+		  (package (if (typep dinfo 'c::compiled-debug-info)
 			       (c::compiled-debug-info-package dinfo)
 			       "UNKNOWN"))
 		  (pkg-info (or (gethash package packages)
@@ -770,11 +770,11 @@
 				      (make-hash-table :test #'equal))))
 		  (file
 		   (if dinfo
-		       (let ((src (c::compiled-debug-info-source dinfo)))
+		       (let ((src (c::debug-info-source dinfo)))
 			 (cond (src
 				(let ((source
 				       (first
-					(c::compiled-debug-info-source
+					(c::debug-info-source
 					 dinfo))))
 				  (if (eq (c::debug-source-from source)
 					  :file)
