@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.14 1992/05/21 02:20:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.15 1992/05/21 03:04:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -832,7 +832,8 @@ default-value-8
 	 ,@(ecase return
 	     (:fixed
 	      '((emit-return-pc lra-label)
-		(default-unknown-values values nvals move-temp temp lra-label)
+		(default-unknown-values vop values nvals move-temp
+					temp lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:unknown
