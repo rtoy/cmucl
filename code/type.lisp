@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.29 1998/05/13 04:03:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.30 1998/05/19 02:07:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -978,7 +978,8 @@
 (define-type-method (hairy :simple-subtypep) (type1 type2)
   (let ((hairy-spec1 (hairy-type-specifier type1))
 	(hairy-spec2 (hairy-type-specifier type2)))
-    (cond ((and (eq (car hairy-spec1) 'not) (eq (car hairy-spec2) 'not))
+    (cond ((and (consp hairy-spec1) (eq (car hairy-spec1) 'not)
+		(consp hairy-spec2) (eq (car hairy-spec2) 'not))
 	   (csubtypep (specifier-type (cadr hairy-spec2))
 		      (specifier-type (cadr hairy-spec1))))
 	  ((equal hairy-spec1 hairy-spec2)
@@ -988,7 +989,7 @@
 
 (define-type-method (hairy :complex-subtypep-arg2) (type1 type2)
   (let ((hairy-spec (hairy-type-specifier type2)))
-    (cond ((eq (car hairy-spec) 'not)
+    (cond ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
 	   (multiple-value-bind (val win)
 	       (type-intersection type1 (specifier-type (cadr hairy-spec)))
 	     (if win
