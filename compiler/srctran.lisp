@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.139 2003/10/10 09:29:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.140 2003/10/12 13:37:56 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2743,7 +2743,7 @@
 			`(- (ash (- x) ,shift)))
 		   (- (logand (- x) ,mask)))
 	   (values ,(if (minusp y)
-			`(- (ash (- x) ,shift))
+			`(ash (- ,mask x) ,shift)
 			`(ash x ,shift))
 		   (logand x ,mask))))))
 
