@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.83 1992/06/12 01:33:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.84 1992/08/03 19:44:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,9 +19,6 @@
 (if (find-package "XLIB")
     (rename-package "XLIB" "XLIB" '("OLD-XLIB"))
     (make-package "XLIB" :nicknames '("OLD-XLIB") :use nil))
-(if (find-package "ASSEMBLER")
-    (rename-package "ASSEMBLER" "ASSEMBLER" '("ASSEM"))
-    (make-package "ASSEMBLER" :nicknames '("ASSEM") :use nil))
 (if (find-package "C-CALL")
     (rename-package "C-CALL" "C-CALL" 'nil)
     (make-package "C-CALL" :nicknames 'nil :use nil))
@@ -131,8 +128,10 @@
 (if (find-package "KERNEL")
     (rename-package "KERNEL" "KERNEL" 'nil)
     (make-package "KERNEL" :nicknames 'nil :use nil))
+(if (find-package "NEW-ASSEM")
+    (rename-package "NEW-ASSEM" "NEW-ASSEM" 'nil)
+    (make-package "NEW-ASSEM" :nicknames 'nil :use nil))
 (use-package '("LISP") "XLIB")
-(use-package '("LISP" "C" "EXTENSIONS" "KERNEL") "ASSEMBLER")
 (use-package '("SYSTEM" "ALIEN-INTERNALS" "ALIEN" "LISP") "C-CALL")
 (use-package '("KERNEL" "EXTENSIONS" "LISP") "INSPECT")
 (use-package '("LISP" "KERNEL") "BIGNUM")
@@ -169,6 +168,7 @@
 (use-package '("PCL" "EXTENSIONS" "LISP") "COMMON-LISP-USER")
 (use-package '("ALIEN-INTERNALS" "LISP" "EXTENSIONS" "SYSTEM" "BIGNUM")
              "KERNEL")
+(use-package '("LISP") "NEW-ASSEM")
 (intern "TYPE-ERROR" "LISP")
 (defpackage "XLIB"
 	    (:nicknames "OLD-XLIB")
@@ -348,41 +348,6 @@
              "WM-SIZE-HINTS-WIDTH-INC" "WM-SIZE-HINTS-WIN-GRAVITY"
              "WM-SIZE-HINTS-X" "WM-SIZE-HINTS-Y" "WM-ZOOM-HINTS"
              "WRITE-BITMAP-FILE" "WRITE-RESOURCES" "XATOM"))
-(dolist
-    (name
-     '("BACKEND-SB-LIST" "DO-LIVE-TNS" "FINITE-SB" "FINITE-SB-LIVE-TNS"
-       "IR2-BLOCK-BLOCK" "IR2-BLOCK-LIVE-IN" "MAKE-INSTRUCTION" "PRINT-TN"
-       "REALLY-MAKE-INSTRUCTION" "SB-KIND" "SC-ELEMENT-SIZE" "TN" "TN-KIND"
-       "TN-NUMBER" "TN-READS" "TN-WRITES" "UNMAKE-INSTRUCTION" "VOP" "VOP-ARGS"
-       "VOP-BLOCK" "VOP-INFO" "VOP-INFO-ARG-COSTS" "VOP-INFO-ARG-TYPES"
-       "VOP-INFO-MOVE-ARGS" "VOP-INFO-NAME" "VOP-INFO-RESULT-COSTS"
-       "VOP-INFO-SAVE-P" "VOP-REFS" "VOP-RESULTS" "VOP-SAVE-SET" "VOP-TEMPS"))
-  (intern name "C"))
-(defpackage "ASSEMBLER"
-	    (:nicknames "ASSEM")
-            (:import-from "C" "BACKEND-SB-LIST" "DO-LIVE-TNS" "FINITE-SB"
-             "FINITE-SB-LIVE-TNS" "IR2-BLOCK-BLOCK" "IR2-BLOCK-LIVE-IN"
-             "MAKE-INSTRUCTION" "PRINT-TN" "REALLY-MAKE-INSTRUCTION" "SB-KIND"
-             "SC-ELEMENT-SIZE" "TN" "TN-KIND" "TN-NUMBER" "TN-READS"
-             "TN-WRITES" "UNMAKE-INSTRUCTION" "VOP" "VOP-ARGS" "VOP-BLOCK"
-             "VOP-INFO" "VOP-INFO-ARG-COSTS" "VOP-INFO-ARG-TYPES"
-             "VOP-INFO-MOVE-ARGS" "VOP-INFO-NAME" "VOP-INFO-RESULT-COSTS"
-             "VOP-INFO-SAVE-P" "VOP-REFS" "VOP-RESULTS" "VOP-SAVE-SET"
-             "VOP-TEMPS")
-            (:export "*CURRENT-POSITION*" "ALIGN" "ASSEMBLE" "ASSEMBLY-CALL"
-             "COUNT-INSTRUCTIONS" "DEFINE-ARGUMENT-TYPE" "DEFINE-FIXUP-TYPE"
-             "DEFINE-FORMAT" "DEFINE-INSTRUCTION" "DEFINE-PSEUDO-INSTRUCTION"
-             "DEFINE-RANDOM-RESOURCES" "DEFINE-REGISTER-FILE"
-             "DEFINE-RESOURCES" "DELAYED-BRANCH" "DELAYED-LOAD" "DUMP-SEGMENT"
-             "EMIT-CODE-VECTOR" "EMIT-LABEL" "EXPAND-PSEUDO-INSTRUCTIONS"
-             "FINALIZE-SEGMENT" "GEN-LABEL" "INSERT-SEGMENT" "INST"
-             "INSTRUCTION-ARGUMENT-ONE" "INSTRUCTION-ARGUMENT-THREE"
-             "INSTRUCTION-ARGUMENT-TWO" "INSTRUCTION-ARGUMENT-ZERO"
-             "INSTRUCTION-CONSTANT-ONE" "INSTRUCTION-CONSTANT-TWO"
-             "INSTRUCTION-CONSTANT-ZERO" "INSTRUCTION-RESULT-ZERO" "LABEL"
-             "LABEL-POSITION" "MAKE-SEGMENT" "NOP"
-             "NUKE-SEGMENT" "OPTIMIZE-SEGMENT" "RELATIVE-BRANCH"
-             "SEGMENT-CHECK-REGISTERS" "UNCONDITIONAL-BRANCH"))
 (dolist (name '("CHAR" "FLOAT")) (intern name "LISP"))
 (defpackage "C-CALL"
             (:import-from "LISP" "CHAR" "FLOAT")
@@ -1189,6 +1154,8 @@
        "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P" "STRUCTURE-REF" "STRUCTURE-SET"
        "UNKNOWN-KEYWORD-ARGUMENT-ERROR"))
   (intern name "KERNEL"))
+(dolist (name '("LABEL" "GEN-LABEL" "EMIT-LABEL" "LABEL-POSITION"))
+  (intern name "NEW-ASSEM"))
 (defpackage "C"
 	    (:nicknames "OLD-C")
             (:import-from "LISP" "%ALIGNED-SAP" "%ARRAY-TYPEP" "%ASET"
@@ -1220,6 +1187,8 @@
              "DOUBLE-FLOAT-P" "ODD-KEYWORD-ARGUMENTS-ERROR" "SIMPLE-ARRAY-P"
              "SINGLE-FLOAT-P" "STRUCTURE-REF" "STRUCTURE-SET"
              "UNKNOWN-KEYWORD-ARGUMENT-ERROR")
+            (:import-from "NEW-ASSEM" "LABEL" "GEN-LABEL" "EMIT-LABEL"
+	      "LABEL-POSITION")
             (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND"
              "%LISTIFY-REST-ARGS" "%MORE-ARG" "%UNWIND-PROTECT-BREAKUP"
              "*BACKEND*" "*CODE-SEGMENT*" "*COLLECT-DYNAMIC-STATISTICS*"
