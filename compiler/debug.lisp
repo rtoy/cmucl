@@ -633,29 +633,25 @@
 ;;; 
 (defun check-vop-refs (vop)
   (declare (type vop vop))
-  (let ((saw-arg nil))
-    (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
-	((null ref))
-      (cond
-       ((find-in #'tn-ref-across ref (vop-args vop))
-	(setq saw-arg t))
-       ((find-in #'tn-ref-across ref (vop-results vop))
-	(when saw-arg
-	  (barf "Result ~S after arg in refs for ~S." ref vop)))
-       ((not (eq (tn-ref-vop ref) vop))
-	(barf "VOP in ~S isn't ~S." ref vop))
-       ((find-in #'tn-ref-across ref (vop-temps vop)))
-       ((tn-ref-write-p ref)
-	(barf "Stray ref that isn't a read: ~S." ref))
-       (t
-	(let* ((tn (tn-ref-tn ref))
-	       (temp (find-in #'tn-ref-across tn (vop-temps vop)
-			      :key #'tn-ref-tn)))
-	  (unless temp
-	    (barf "Stray ref with no corresponding temp write: ~S." ref))
-	  (unless (find-in #'tn-ref-next-ref temp (tn-ref-next-ref ref))
-	    (barf "Read is after write for temp ~S in refs of ~S."
-		  tn vop)))))))
+  (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
+      ((null ref))
+    (cond
+     ((find-in #'tn-ref-across ref (vop-args vop)))
+     ((find-in #'tn-ref-across ref (vop-results vop)))
+     ((not (eq (tn-ref-vop ref) vop))
+      (barf "VOP in ~S isn't ~S." ref vop))
+     ((find-in #'tn-ref-across ref (vop-temps vop)))
+     ((tn-ref-write-p ref)
+      (barf "Stray ref that isn't a read: ~S." ref))
+     (t
+      (let* ((tn (tn-ref-tn ref))
+	     (temp (find-in #'tn-ref-across tn (vop-temps vop)
+			    :key #'tn-ref-tn)))
+	(unless temp
+	  (barf "Stray ref with no corresponding temp write: ~S." ref))
+	(unless (find-in #'tn-ref-next-ref temp (tn-ref-next-ref ref))
+	  (barf "Read is after write for temp ~S in refs of ~S."
+		tn vop))))))
   (undefined-value))
 
 
