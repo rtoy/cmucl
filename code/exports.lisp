@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.65 1990/12/12 16:56:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.66 1991/01/08 23:20:56 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -277,8 +277,8 @@
 	  scale-single-float scale-double-float single-float-exponent
 	  double-float-exponent float-format-digits get-closure-length
 	  set-header-data signal-init %mask-field %deposit-field
-	  structurify structure-length structure-ref structure-set
-	  structure-index-ref structure-index-set
+	  make-structure structure-length structure-ref structure-set
+	  structure-index-ref structure-index-set structure-index
 	  dynamic-space-free-pointer binding-stack-pointer-sap
 	  control-stack-pointer-sap simple-array-unsigned-byte-2-p
 	  simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
