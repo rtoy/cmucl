@@ -14,12 +14,186 @@
 ;;;
 (in-package 'c)
 
-
 (defvar *byte-buffer*
   (make-array 10 :element-type '(unsigned-byte 8)
 	      :fill-pointer 0  :adjustable t))
 
+
+;;;; Debug blocks:
 
+(deftype location-kind ()
+  '(:unknown-return :known-return :internal-error :non-local-exit
+		    :block-start))
+
+
+;;; The Location-Info structure holds the information what we need about
+;;; locations which code generation decided were "interesting".
+;;;
+(defstruct (location-info
+	    (:constructor make-location-info (kind label vop)))
+  ;;
+  ;; The kind of location noted.
+  (kind nil :type location-kind)
+  ;;
+  ;; The label pointing to the interesting code location.
+  (label nil :type label)
+  ;;
+  ;; The VOP that emitted this location (for node, save-set, ir2-block, etc.)
+  (vop nil :type vop))
+
+
+;;; NOTE-DEBUG-LOCATION  --  Interface
+;;;
+;;;    Called during code generation in places where there is an "interesting"
+;;; location: some place where we are likely to end up in the debugger, and
+;;; thus want debug info.
+;;;
+(defun note-vop-debug-location (vop label kind)
+  (declare (type vop vop) (type label label) (type location-kind kind))
+  (setf (ir2-block-locations (vop-block vop))
+	(nconc (ir2-block-locations (vop-block vop))
+	       (list (make-location-info kind label vop))))
+  (undefined-value))
+
+
+;;; IR2-BLOCK-ENVIRONMENT  --  Interface
+;;;
+(proclaim '(inline ir2-block-environment))
+(defun ir2-block-environment (2block)
+  (declare (type ir2-block 2block))
+  (lambda-environment (block-lambda (ir2-block-block 2block))))
+
+
+;;; COMPUTE-LIVE-VARS  --  Internal
+;;;
+;;;    Given a local conflicts vector and an IR2 block to represent the set of
+;;; live TNs, and the Var-Locs hashtable representing the variables dumped,
+;;; compute a bit-vector representing the set of live variables.
+;;;
+(defun compute-live-vars (live block var-locs)
+  (declare (type ir2-block block) (type local-tn-bit-vector live)
+	   (type hash-table var-locs))
+  (let ((res (make-array (logandc2 (+ (hash-table-count var-locs) 7) #xFF)
+			 :element-type 'bit
+			 :initial-element 0)))
+    (do-live-tns (tn live block)
+      (let ((leaf (tn-leaf tn)))
+	(when (lambda-var-p leaf)
+	  (let ((num (gethash leaf var-locs)))
+	    (when num
+	      (setf (sbit res num) 1))))))))
+
+
+;;; The PC for the location most recently dumped.
+;;;
+(defvar *previous-location*)
+
+;;; DUMP-1-LOCATION  --  Internal
+;;;
+;;;    Dump a compiled debug-location into *BYTE-BUFFER* that describes the
+;;; code/source map and live info.
+;;;
+(defun dump-1-location (node block kind tlf-num label live var-locs)
+  (declare (type node node) (type ir2-block block)
+	   (type local-tn-bit-vector live) (type label label)
+	   (type location-kind location) (type (or index null) tlf-num)
+	   (type hash-table var-locs))
+  
+  (vector-push-extend
+   (dpb (position kind compiled-location-kinds) compiled-location-kind-byte 0)
+   *byte-buffer*)
+  
+  (let ((loc (label-location label)))
+    (write-var-integer (- loc *previous-location*) *byte-buffer*)
+    (setq *previous-location* loc))
+  
+  (unless tlf-num
+    (write-var-integer (node-tlf-number node)))
+  (write-var-integer (first (node-source-path node)))
+  
+  (write-packed-bit-vector (compute-live-vars live block var-locs)
+			   *byte-buffer*)
+  
+  (undefined-value))
+
+
+;;; DUMP-LOCATION-FROM-INFO  --  Internal
+;;;
+;;;    Extract context info from a Location-Info structure and use it to dump a
+;;; compiled code-location.
+;;;
+(defun dump-location-from-info (loc tlf-num)
+  (declare (type location-info loc) (type (or index null) tlf-num))
+  (let ((vop (location-info-vop loc)))
+    (dump-1-location (vop-node vop)
+		     (vop-block vop)
+		     (location-info-kind loc)
+		     tlf-num
+		     (location-info-label loc)
+		     (vop-save-set vop)
+		     var-locs))
+  (undefined-value))
+
+
+;;; COMPUTE-DEBUG-BLOCKS  --  Internal
+;;;
+;;;    Return a vector and an integer (or null) suitable for use as the BLOCKS
+;;; and TLF-NUMBER in Fun's debug-function.  This requires three passes to
+;;; compute:
+;;; -- Scan all the blocks, caching the block numbering in the BLOCK-FLAG and
+;;;    determining if all locations are in the same TLF.
+;;; -- Scan all blocks, dumping the header and successors followed by all the
+;;;    non-elsewhere locations.
+;;; -- Dump the elsewhere block header and all the elsewhere locations.
+;;;
+(defun compute-debug-blocks (fun var-locs)
+  (declare (type clambda fun) (type hash-table var-locs))
+  (setf (fill-pointer *byte-buffer*) 0)
+  (let ((*previous-location* 0)
+	(tlf-num (node-tlf-number (lambda-bind fun))))
+    (let ((num 0))
+      (do-environment-ir2-blocks (2block (lambda-environment fun))
+	(let ((block (ir2-block-block 2block)))
+	  (when (eq (block-info block) 2block)
+	    (setf (block-flag block) num)
+	    (incf num)
+	    (unless (eql (node-tlf-number
+			  (continuation-next (block-start block))
+			  tlf-num))
+	      (setq tlf-num nil)))
+	  
+	  (dolist (loc (ir2-block-locations 2block))
+	    (unless (eql (node-tlf-number (vop-node (location-info-vop loc)))
+			 tlf-num)
+	      (setq tlf-num nil))))))
+
+    (collect ((elsewhere))
+      (do-environment-ir2-blocks (2block (lambda-environment fun))
+	(let ((block (ir2-block-block 2block)))
+	  (when (eq (block-info block) 2block)
+	    (let ((succ (block-succ block)))
+	      (vector-push-extend
+	       (dpb (length succ) compiled-debug-block-nsucc-byte 0)
+	       *byte-buffer*)
+	      (dolist (b succ)
+		(write-var-integer (block-flag b) *byte-buffer*)))
+	    (dump-1-location (continuation-next (block-start block))
+			     2block (ir2-block-live-out 2block)
+			     :block-start tlf-num (ir2-block-%label 2block)
+			     var-locs))
+	  
+	  (dolist (loc (ir2-block-locations 2block))
+	    (if (label-elsewhere-p (location-info-label loc))
+		(elsewhere loc)
+		(dump-location-from-info loc tlf-num)))))
+      
+      (vector-push-extend compiler-debug-block-elsewhere-p *byte-buffer*)
+      (dolist (loc (elsewhere))
+	(dump-location-from-info loc tlf-num)))
+
+    (values (copy-seq *byte-buffer*) tlf-num)))
+
+
 ;;; DEBUG-SOURCE-FOR-INFO  --  Interface
 ;;;
 ;;;    Return a list of DEBUG-SOURCE structures containing information derived
@@ -35,7 +209,8 @@
 			  :created (file-info-write-date x)
 			  :compiled (source-info-start-time info)
 			  :source-root (file-info-source-root x)
-			  :start-position 0)))
+			  :start-position (coerce-to-smallest-eltype
+					   (file-info-positions info)))))
 		(cond ((pathnamep name)
 		       (setf (debug-source-name res) name))
 		      (t
@@ -47,6 +222,32 @@
 	  (source-info-files info)))
 
 
+;;; COERCE-TO-SMALLEST-ELTYPE  --  Internal
+;;;
+;;;    Given an arbirtary sequence, coerce it to an unsigned vector if
+;;; possible.
+;;;
+(defun coerce-to-smallest-eltype (seq)
+  (let ((max 0))
+    (macrolet ((frob ()
+		 '(if (and (integerp val) (>= val 0) max)
+		      (when (> val max)
+			(setq max val))
+		      (setq max nil))))
+      (if (listp seq)
+	  (dolist (elt seq)
+	    (frob))
+	  (dotimes (i (length seq))
+	    (let ((val (aref seq i)))
+	      (frob)))))
+    
+    (if max
+	(coerce seq `(vector (integer 0 ,max)))
+	(coerce seq 'simple-vector))))
+
+
+;;;; Locations:
+
 ;;; TN-SC-OFFSET  --  Internal
 ;;;
 ;;;    Return a SC-OFFSET describing TN's location.
@@ -57,13 +258,13 @@
 		  (tn-offset tn)))
 
 
-;;; DUMP-1-LOCATION  --  Internal
+;;; DUMP-1-VARIABLE  --  Internal
 ;;;
 ;;;    Dump info to represent Var's location being TN.  ID is an integer that
 ;;; makes Var's name unique in the function.  Buffer is the vector we stick the
 ;;; result in.
 ;;;
-(defun dump-1-location (var tn id buffer)
+(defun dump-1-variable (var tn id buffer)
   (declare (type lambda-var var) (type tn tn) (type unsigned-byte id))
   (let* ((name (leaf-name var))
 	 (package (symbol-package name))
@@ -136,8 +337,8 @@
 		 (incf id))
 		(t
 		 (setq id 0  prev-name name)))
-	  (dump-1-location var (cdr x) id *byte-buffer*))
-	(setf (gethash var var-locs) i)
+	  (dump-1-variable var (cdr x) id *byte-buffer*)
+	  (setf (gethash var var-locs) i))
 	(incf i)))
 
     (copy-seq *byte-buffer*)))
@@ -154,6 +355,8 @@
     (assert res () "No location for ~S?" var)
     res))
 
+
+;;;; Arguments/returns:
 
 ;;; COMPUTE-ARGUMENTS  --  Internal
 ;;;
@@ -188,7 +391,7 @@
 	  (dolist (var (lambda-vars fun))
 	    (res (debug-location-for var var-locs)))))
 
-    (coerce (res) 'simple-vector)))
+    (coerce-to-smallest-eltype (res))))
 
 
 ;;; COMPUTE-DEBUG-RETURNS  --  Internal
@@ -197,16 +400,12 @@
 ;;; return from Fun.
 ;;;
 (defun compute-debug-returns (fun)
-  (let* ((locs (return-info-locations (tail-set-info (lambda-tail-set fun))))
-	 (len (length locs))
-	 (res (make-array len :element-type '(unsigned-byte 32))))
-    (do ((i 0 (1+ i))
-	 (loc locs (cdr loc)))
-	((null loc))
-      (setf (aref res i) (tn-sc-offset (car loc))))
-    res))
+  (coerce-to-smallest-eltype 
+   (mapcar #'(lambda (loc)
+	       (tn-sc-offset loc))
+	   (return-info-locations (tail-set-info (lambda-tail-set fun))))))
 
-
+
 ;;; DEBUG-INFO-FOR-COMPONENT  --  Interface
 ;;;
 ;;; Return a debug-info structure describing component.  This has to be called
@@ -238,6 +437,12 @@
 	    (unless (= level 0)
 	      (setf (compiled-debug-function-arguments dfun)
 		    (compute-arguments fun var-locs)))
+
+	    (when (>= level 2)
+	      (multiple-value-bind (blocks tlf-num)
+				   (compute-debug-blocks fun)
+		(setf (debug-function-tlf-number dfun) tlf-num)
+		(setf (debug-function-blocks dfun) blocks)))
 
 	    (let ((tails (lambda-tail-set fun)))
 	      (when tails
