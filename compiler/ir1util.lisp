@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.67 1993/08/15 19:20:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.68 1993/08/17 16:53:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1955,25 +1955,25 @@
 
 ;;; COMPILER-{ERROR,WARNING,STYLE-WARNING}-HANDLER  --  Interface
 ;;;
-;;;    Condition handlers established by the compiler.  We increment our
-;;; counter, then re-signal the condition.  We don't print anything unless the
-;;; condition is not handled.
+;;;    Condition handlers established by the compiler.  We re-signal the
+;;; condition, if it is not handled, we increment our warning counter and print
+;;; the error message.
 ;;;
 (defun compiler-error-handler (condition)
-  (incf *compiler-error-count*)
   (signal condition)
+  (incf *compiler-error-count*)
   (print-error-message :error condition)
   (continue condition))
 ;;;
 (defun compiler-warning-handler (condition)
-  (incf *compiler-warning-count*)
   (signal condition)
+  (incf *compiler-warning-count*)
   (print-error-message :warning condition)
   (muffle-warning condition))
 ;;;
 (defun compiler-style-warning-handler (condition)
-  (incf *compiler-note-count*)
   (signal condition)
+  (incf *compiler-note-count*)
   (print-error-message :note condition)
   (muffle-warning condition))
 
