@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.118 1997/05/16 11:45:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119 1997/06/03 19:11:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1566,7 +1566,7 @@
 	   "CLASS-DIRECT-SUPERCLASSES" "MAKE-LAYOUT" "SIMPLE-STYLE-WARNING"
 	   "BYTE-FUNCTION-TYPE" "SLOT-CLASS-PRINT-FUNCTION"
 	   "REDEFINE-LAYOUT-WARNING" "SLOT-CLASS" "INSURED-FIND-CLASS"
-	   "CONDITION-FUNCTION-NAME"))
+	   "CONDITION-FUNCTION-NAME" "RANDOM-CHUNK-MAX"))
 
 (dolist
     (name

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.29 1997/04/16 18:16:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.30 1997/06/03 19:11:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,15 +68,22 @@
 				    (,type &optional *) *
 				    :when :both)
 		"use inline float operations"
-		'(,fun num state))))
+		'(,fun num (or state *random-state*)))))
   (frob %random-single-float single-float)
   (frob %random-double-float double-float))
 
+#-new-random
 (deftransform random ((num &optional state)
 		      ((integer 1 #.random-fixnum-max) &optional *))
   "use inline fixnum operations"
   '(rem (random-chunk (or state *random-state*)) num))
 
+#+new-random
+(deftransform random ((num &optional state)
+		      ((integer 1 #.random-chunk-max) &optional *))
+  "use inline (signed-byte 32) operations"
+  '(values (truncate (%random-double-float (coerce num 'double-float)
+		      (or state *random-state*)))))
 
 ;;;; Float accessors:
 
