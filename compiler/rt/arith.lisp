@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.6 1991/04/20 17:02:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.7 1991/04/21 19:47:51 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -292,10 +292,10 @@
   (:policy :fast-safe)
   (:args (arg :scs (signed-reg)))
   (:arg-types signed-num)
-  (:results (res :scs (any-reg)))
+  (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
-  (:temporary (:scs (non-descriptor-reg)) number)
-  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) number)
+  (:temporary (:scs (non-descriptor-reg) :from (:eval 0)) temp)
   (:generator 16
     (let ((upper-not-zero (gen-label))
 	  (count (gen-label)))
