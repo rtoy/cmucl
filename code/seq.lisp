@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.8 1991/05/16 16:03:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.9 1991/08/13 13:59:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1301,8 +1301,8 @@
 	     (atom current)))
       (declare (fixnum index))
       (if (or (and from-end 
-	           (not (member (apply-key key (car current))
-				(nthcdr start result)
+		   (not (member (apply-key key (car current))
+				(nthcdr (1+ start) result)
 				:test test
 				:test-not test-not
 				:key (if key key #'identity))))
