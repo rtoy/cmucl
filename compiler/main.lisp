@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.128 2002/11/14 16:54:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.129 2002/11/19 12:55:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1948,47 +1948,41 @@
 	   (type (or string pathname stream (member t)) output-file)
 	   (values (or null pathname)))
 
-  ;; Check INPUT-FILE
-  (when (and (streamp input-file) (not (typep input-file 'file-stream)))
-    (error 'simple-type-error
-           :datum input-file
-           :expected-type 'file-stream
-           :format-control "The INPUT-FILE parameter is a ~S, which is an invalid value ~@
+  (flet ((check-file-argument (file name)
+	   (when (and (streamp file)
+		      (not (typep file 'file-stream)))
+	     (error 'simple-type-error
+		    :datum input-file
+		    :expected-type 'file-stream
+		    :format-control "The ~A parameter is a ~S, which is an invalid value ~@
             to COMPILE-FILE-PATHNAME."
-	   :format-arguments (list (type-of input-file))))
-
-
-  (when (eq output-file t)
-    (setf output-file (compile-output-type-from-input input-file
-						      byte-compile)))
-  ;; Same checks on OUTPUT-FILE.
-  
-  (when (and (streamp output-file) (not (typep output-file 'file-stream)))
-    (error 'simple-type-error
-           :datum output-file
-           :expected-type 'file-stream
-           :format-control "The OUTPUT-FILE parameter is a ~S, which is an invalid value ~@
-            to COMPILE-FILE-PATHNAME."
-	   :format-arguments (list (type-of output-file))))
-
-  ;; Maybe these are too much.  CLHS says "might".
-  (when (wild-pathname-p input-file)
-    (error 'file-error :pathname input-file))
-
-  (when  (wild-pathname-p output-file)
-    (error 'file-error :pathname output-file))
-
-  
-  (let ((merged-input-file
-	 (merge-pathnames input-file *default-pathname-defaults*))
-	(resulting-pathname-type (pathname-type output-file)))
-    (cond ((and (not output-file-supplied-p)
-		(typep merged-input-file 'logical-pathname))
-	   (make-pathname :type resulting-pathname-type
-			  :defaults merged-input-file
-			  :case :common)) ; Not sure about this last one.
-	  ((typep merged-input-file 'logical-pathname)
-	   (merge-pathnames output-file
-			    (translate-logical-pathname merged-input-file)))
-	  (t
-	   (merge-pathnames output-file merged-input-file)))))
+		    :format-arguments (list name (type-of input-file))))
+	   ;; Maybe this is too much.  CLHS says "might".
+	   (when (wild-pathname-p input-file)
+	     (error 'file-error :pathname input-file))))
+    ;; Check INPUT-FILE
+    (check-file-argument input-file "INPUT-FILE")
+	 
+    (let ((output-file-type (compile-output-type-from-input input-file
+							    byte-compile)))
+      (when (eq output-file t)
+	(setf output-file output-file-type))
+      (check-file-argument output-file "OUTPUT-FILE")
+    
+      (let* ((merged-input-file
+	      (merge-pathnames input-file *default-pathname-defaults*))
+	     (output-pathname-type (or (pathname-type output-file)
+				       (pathname-type output-file-type))))
+	(cond ((and (not output-file-supplied-p)
+		    (typep merged-input-file 'logical-pathname))
+	       (make-pathname :type output-pathname-type
+			      :defaults merged-input-file
+			      :case :common)) ; Not sure about this last one.
+	      ((typep merged-input-file 'logical-pathname)
+	       (make-pathname :type output-pathname-type
+			      :defaults (merge-pathnames output-file
+							 (translate-logical-pathname merged-input-file))))
+	      (t
+	       (make-pathname :type output-pathname-type
+			      :defaults (merge-pathnames output-file
+							 merged-input-file))))))))
