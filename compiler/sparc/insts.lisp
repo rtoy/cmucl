@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.43 2003/09/09 18:00:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.44 2003/09/10 15:41:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1289,11 +1289,31 @@ about function addresses and register values.")
 				 4 0 0)))
 
 ;; Sparc-v9 Compare and Swap instructions
+
+(defconstant immediate-asi-alist
+  '((:asi_aiup . #x10)			; ASI_AS_IF_USER_PRIMARY
+    (:asi_aius . #x11)			; ASI_AS_IF_USER_SECONDARY
+    (:asi_aiup_l . #x18)		; ASI_AS_IF_USER_PRIMARY_LITTLE
+    (:asi_aius_l . #x19)		; ASI_AS_IF_USER_SECONDARY_LITTLE
+    (:asi_p . #x80)			; ASI_PRIMARY
+    (:asi_s . #x81)			; ASI_SECONDARY
+    (:asi_pnf . #x82)			; ASI_PRIMARY_NOFAULT
+    (:asi_snf . #x83)			; ASI_SECONDARY_NOFAULT
+    (:asi_p_l . #x88)			; ASI_PRIMARY_LITTLE
+    (:asi_s_l . #x89)			; ASI_SECONDARY_LITTLE
+    (:asi_pnf_l . #x8a)			; ASI_PRIMARY_NOFAULT_LITTLE
+    (:asi_snf_l . #x8b)))		; ASI_SECONDARY_NOFAULT_LITTLE
+
+(deftype immediate-asi ()
+  `(member ,@(mapcar #'car immediate-asi-alist)))
+
 (disassem:define-argument-type immediate-asi
     :printer #'(lambda (value stream dstate)
 		 (declare (stream stream) (fixnum value) (ignore dstate))
-		 ;; Should we use symbolic values for known ASI values?
-		 (format stream "0x~2,'0x" value)))
+		 (let ((symbolic (rassoc value immediate-asi-alist)))
+		   (if symbolic
+		       (format stream "#~A" (car symbolic))
+		       (format stream "~D" value)))))
 
 (defconstant compare-swap-asi-printer
   `(:name :tab "[" rs1 "]" '%asi
@@ -1314,7 +1334,7 @@ about function addresses and register values.")
     ((cas (name op3)
      `(define-instruction ,name (segment dst src1 src2 &key immed-asi)
 	(:declare (type tn dst src1 src2)
-		  (type (or null (unsigned-byte 8))))
+		  (type (or null (unsigned-byte 8) immediate-asi) immed-asi))
 	(:printer format-3-reg
 		  ((op #b11) (op3 ,op3) (i 1) (asi nil))
 		  compare-swap-asi-printer
@@ -1330,15 +1350,104 @@ about function addresses and register values.")
 		       (writes dst)
 		       (writes :memory))
 	(:delay 0)
-	(:emitter (emit-format-3-reg segment #b11 (reg-tn-encoding dst) ,op3
-				     (reg-tn-encoding src1)
-				     (if immed-asi 0 1)
-				     (or immed-asi 0)
-				     (reg-tn-encoding src2))))))
+	(:emitter
+	 (let ((asi-value (if immed-asi
+			      (if (integerp immed-asi)
+				  immed-asi
+				  (cdr (assoc immed-asi immediate-asi-alist))))))
+	   (emit-format-3-reg segment #b11 (reg-tn-encoding dst) ,op3
+			      (reg-tn-encoding src1)
+			      (if immed-asi 0 1)
+			      (or asi-value 0)
+			      (reg-tn-encoding src2)))))))
   ;; 32-bit compre and swap
   (cas casa  #b111100)
   ;; 64-bit compare and swap
   (cas casxa #b111110))
+
+;; Prefetch
+(defconstant prefetch-type-alist
+  '((:n_reads . 0)
+    (:one_read . 1)
+    (:n_writes . 2)
+    (:one_write . 3)
+    (:page . 4)))
+
+(deftype prefetch-type ()
+  `(member ,@(mapcar #'car prefetch-type-alist)))
+
+(disassem:define-argument-type prefetch-fcn
+    :printer #'(lambda (value stream dstate)
+		 (declare (stream stream) (fixnum value) (ignore dstate))
+		 (let ((symbolic (rassoc value prefetch-type-alist)))
+		   (if symbolic
+		       (format stream "#~A" (car symbolic))
+		       (format stream "~D" value)))))
+
+(define-instruction prefetch (segment fcn src1 src2)
+  (:declare (type tn src1)
+	    (type (or tn (signed-byte 13) src2))
+	    (type (or (unsigned-byte 5) prefetch-type) fcn))
+  (:printer format-3-reg
+	    ((op #b11) (op3 #b101101) (i 0) (rd nil :type 'prefetch-fcn))
+	    load-printer)
+  (:printer format-3-immed
+	    ((op #b11) (op3 #b101101) (i 1) (rd nil :type 'prefetch-fcn))
+	    load-printer)
+  (:delay 0)
+  (:emitter
+   (let ((fcn-type (if (integerp fcn)
+		       fcn
+		       (cdr (assoc fcn prefetch-type-alist)))))
+     (etypecase src2
+       (tn
+	(emit-format-3-reg segment #b11 fcn-type #b101101
+			   (reg-tn-encoding src1)
+			   0 0
+			   (reg-tn-encoding src2)))
+       (integer
+	(emit-format-3-immed segment #b11 fcn-type #b101101
+			     (reg-tn-encoding src1)
+			     1
+			     src2))))))
+
+;;; Some synthetic instructions
+
+;; Sign-extend a 32-bit number to 64 bits.  (Basically sra rs1, %g0,
+;; rd).
+(define-instruction signx (segment dst &optional src)
+  (:declare (type tn dst)
+	    (type (or null tn) src))
+  (:printer format-3-shift-reg
+	    ((op #b10) (op3 #b100111) (x 0) (i 0) (rs2 0))
+	    '(:name :tab (:unless (:same-as rd) rs1 ", ") rd))
+  (:dependencies
+   (if src (reads src) (reads dst))
+   (writes dst))
+  (:delay 0)
+  (:emitter
+   (unless src
+     (setf src dst))
+   (emit-format-3-shift-inst segment #b10 #b100111 dst src zero-tn))
+  )
+
+;; Zero-extend (clear upper part of word) a 32-bit number to 64 bits.
+;; (Basically srl rs1, %g0, rd)
+(define-instruction clruw (segment dst &optional src)
+  (:declare (type tn dst)
+	    (type (or null tn) src))
+  (:printer format-3-shift-reg
+	    ((op #b10) (op3 #b100110) (x 0) (i 0) (rs2 0))
+	    '(:name :tab (:unless (:same-as rd) rs1 ", ") rd))
+  (:dependencies
+   (if src (reads src) (reads dst))
+   (writes dst))
+  (:delay 0)
+  (:emitter
+   (unless src
+     (setf src dst))
+   (emit-format-3-shift-inst segment #b10 #b100110 dst src zero-tn))
+  )
 
 
 (defun snarf-error-junk (sap offset &optional length-only)
