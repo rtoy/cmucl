@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.64.1.1 1993/01/14 21:01:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.64.1.2 1993/02/08 22:13:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,9 +248,9 @@
 
 ;;;; Instance hackery:
 
-(define-vop (%instance-length)
+(define-vop (instance-length)
   (:policy :fast-safe)
-  (:translate instance-length)
+  (:translate %instance-length)
   (:args (struct :scs (descriptor-reg)))
   (:results (res :scs (unsigned-reg)))
   (:result-types positive-fixnum)
