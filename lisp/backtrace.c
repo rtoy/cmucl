@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.10 2004/07/07 22:22:59 rtoy Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.11 2004/07/08 04:10:09 rtoy Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -520,7 +520,7 @@ backtrace (int nframes)
       else if (p)
 	printf ("<Not implemented, type = %d>", (int) TypeOf (*p));
       else
-	printf ("Foreign fp = 0x%x, ra = 0x%x", next_fp, ra);
+	printf ("Foreign fp = 0x%x, ra = 0x%lx", next_fp, ra);
 
       putchar ('\n');
       fp = next_fp;

@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.19 2004/06/07 15:24:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.20 2004/07/08 04:10:09 rtoy Exp $
  *
  */
 
@@ -151,7 +151,7 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
   else
     flags |= MAP_VARIABLE;
 
-  DPRINTF(0, (stderr, "os_validate %x %d => ", addr, len));
+  DPRINTF(0, (stderr, "os_validate %p %d => ", addr, len));
 
   addr = mmap(addr, len, OS_VM_PROT_ALL, flags, -1, 0);
 
@@ -161,14 +161,14 @@ os_vm_address_t os_validate(os_vm_address_t addr, os_vm_size_t len)
       return NULL;
     }
 
-  DPRINTF(0, (stderr, "%x\n", addr));
+  DPRINTF(0, (stderr, "%p\n", addr));
 
   return addr;
 }
 
 void os_invalidate(os_vm_address_t addr, os_vm_size_t len)
 {
-  DPRINTF(0, (stderr, "os_invalidate %x %d\n", addr, len));
+  DPRINTF(0, (stderr, "os_invalidate %p %d\n", addr, len));
 
   if (munmap(addr, len) == -1)
     perror("munmap");
@@ -227,7 +227,7 @@ boolean valid_addr(os_vm_address_t addr)
 
 #if defined GENCGC
 
-static sigsegv_handle_now(HANDLER_ARGS)
+static void sigsegv_handle_now(HANDLER_ARGS)
 {
   interrupt_handle_now(signal, contextstruct);
 }
@@ -244,7 +244,7 @@ void sigsegv_handler(HANDLER_ARGS)
   int  page_index = find_page_index((void *) fault_addr);
 
 #ifdef RED_ZONE_HIT
-  if (os_control_stack_overflow (fault_addr, &contextstruct))
+  if (os_control_stack_overflow ((void *) fault_addr, &contextstruct))
     return;
 #endif
 
@@ -265,7 +265,7 @@ void sigsegv_handler(HANDLER_ARGS)
 #if defined(__x86_64)
   DPRINTF(0,(stderr,"sigsegv: rip: %p\n",context->rip));
 #else
-  DPRINTF(0,(stderr,"sigsegv: eip: %p\n",context->eip));
+  DPRINTF(0,(stderr,"sigsegv: eip: %lx\n",context->eip));
 #endif
   sigsegv_handle_now(signal, contextstruct);
 }

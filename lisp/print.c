@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.14 2003/07/19 14:10:16 emarsden Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.15 2004/07/08 04:10:09 rtoy Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -523,7 +523,7 @@ static void print_otherptr(lispobj obj)
 
             case type_InstanceHeader:
                 NEWLINE;
-                printf("length = %ld", count);
+                printf("length = %d", count);
                 index = 0;
                 while (count-- > 0) {
                     sprintf(buffer, "%d: ", index++);

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.15 2004/07/07 15:03:12 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.16 2004/07/08 04:10:09 rtoy Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -144,7 +144,7 @@ static void regs_cmd(char **ptr)
     printf("BSP\t=\t0x%08X\n", (unsigned long)current_binding_stack_pointer);
 #endif
 #if defined(i386) || defined(__x86_64)
-    printf("BSP\t=\t0x%08X\n", SymbolValue(BINDING_STACK_POINTER));
+    printf("BSP\t=\t0x%08lX\n", SymbolValue(BINDING_STACK_POINTER));
 #endif
 
     printf("DYNAMIC\t=\t0x%08lX\n", (unsigned long)current_dynamic_space);
@@ -409,7 +409,7 @@ static void catchers_cmd(char **ptr)
 		   catch->current_code,
 		   catch->entry_pc);
 #else
-            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%p\n\tentry: 0x%08lx\n\ttag: ",
 		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
 		   (unsigned long)(catch->current_cont),
 		   component_ptr_from_pc((lispobj *)catch->entry_pc) + type_OtherPointer,
