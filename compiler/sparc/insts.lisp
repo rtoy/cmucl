@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.50 2004/09/13 00:41:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.51 2005/02/07 17:27:17 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -317,32 +317,30 @@ about function addresses and register values.")
 			  dstate)))))))
 
 (defun handle-or-inst (rs1 immed-val rd dstate immed-p)
-  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
-    (cond
-      ((= rs1 alloc-offset)
-       ;; OR %ALLOC, n.  This must be some allocation or
-       ;; pseudo-atomic stuff
-       (cond ((and immed-p
-		   (= immed-val pseudo-atomic-value)
-		   (= rd alloc-offset)
-		   (not *pseudo-atomic-set*))
-	      ;; "OR 4, %ALLOC" sets the flag
-	      (disassem:note "Set pseudo-atomic flag" dstate)
-	      (setf *pseudo-atomic-set* t)))))))
+  (cond
+    ((= rs1 alloc-offset)
+     ;; OR %ALLOC, n.  This must be some allocation or
+     ;; pseudo-atomic stuff
+     (cond ((and immed-p
+		 (= immed-val pseudo-atomic-value)
+		 (= rd alloc-offset)
+		 (not *pseudo-atomic-set*))
+	    ;; "OR 4, %ALLOC" sets the flag
+	    (disassem:note "Set pseudo-atomic flag" dstate)
+	    (setf *pseudo-atomic-set* t))))))
 
 (defun handle-andn-inst (rs1 immed-val rd dstate immed-p)
-  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
-    (cond
-      ((= rs1 alloc-offset)
-       ;; ANDN %ALLOC, n.  Resetting pseudo-atomic
-       (cond ((and immed-p
-		   (= immed-val pseudo-atomic-value)
-		   (= rd alloc-offset)
-		   *pseudo-atomic-set*)
-	      ;; "ANDN 4, %ALLOC" resets the flag
-	      ;;(format t "Got reset~%")
-	      (disassem:note "Reset pseudo-atomic flag" dstate)
-	      (setf *pseudo-atomic-set* nil)))))))
+  (cond
+    ((= rs1 alloc-offset)
+     ;; ANDN %ALLOC, n.  Resetting pseudo-atomic
+     (cond ((and immed-p
+		 (= immed-val pseudo-atomic-value)
+		 (= rd alloc-offset)
+		 *pseudo-atomic-set*)
+	    ;; "ANDN 4, %ALLOC" resets the flag
+	    ;;(format t "Got reset~%")
+	    (disassem:note "Reset pseudo-atomic flag" dstate)
+	    (setf *pseudo-atomic-set* nil))))))
 
 (defun handle-jmpl-inst (rs1 immed-val rd dstate)
   (declare (ignore rd))

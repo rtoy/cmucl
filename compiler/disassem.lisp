@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.45 2004/11/10 18:38:59 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.46 2005/02/07 17:27:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2085,9 +2085,9 @@
 ;;; ----------------------------------------------------------------
 
 (defun lra-hook (chunk stream dstate)
+  (declare (ignore stream))
   (declare (type dchunk chunk)
 	   (ignore chunk)
-	   (type (or null stream) stream)
 	   (type disassem-state dstate))
   (when (and (aligned-p (+ (seg-virtual-location (dstate-segment dstate))
 			   (dstate-cur-offs dstate))
@@ -2899,6 +2899,7 @@
 	   (type (or null di:debug-function) debug-function)
 	   (type (or null source-form-cache) sfcache))
   (let ((last-block-pc -1)
+	#+nil
 	(segment-base 
 	 (- (seg-virtual-location segment)
 	    (sys:sap-int

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.154 2005/01/06 17:32:07 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.155 2005/02/07 17:27:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2582,23 +2582,30 @@
                              (lognot-derive-type-aux
                               (logior-derive-type-aux x y same-leaf)))
                        #'lognor))
+
+;; We should do something better for these.  (logandc1 x x) is 0, for
+;; example.
 (defoptimizer (logandc1 derive-type) ((x y))
   (two-arg-derive-type x y (lambda (x y same-leaf)
+			     (declare (ignore same-leaf))
                              (logand-derive-type-aux
                               (lognot-derive-type-aux x) y nil))
                        #'logandc1))
 (defoptimizer (logandc2 derive-type) ((x y))
   (two-arg-derive-type x y (lambda (x y same-leaf)
+			     (declare (ignore same-leaf))
                              (logand-derive-type-aux
                               x (lognot-derive-type-aux y) nil))
                        #'logandc2))
 (defoptimizer (logorc1 derive-type) ((x y))
   (two-arg-derive-type x y (lambda (x y same-leaf)
+			     (declare (ignore same-leaf))
                              (logior-derive-type-aux
                               (lognot-derive-type-aux x) y nil))
                        #'logorc1))
 (defoptimizer (logorc2 derive-type) ((x y))
   (two-arg-derive-type x y (lambda (x y same-leaf)
+			     (declare (ignore same-leaf))
                              (logior-derive-type-aux
                               x (lognot-derive-type-aux y) nil))
                        #'logorc2))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.44 2003/07/03 18:44:03 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.45 2005/02/07 17:27:16 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,7 +274,6 @@
 ;;;
 (defun source-transform-union-typep (object type)
   (let* ((types (union-type-types type))
-	 (list-type (specifier-type 'list))
 	 (cons-type (specifier-type 'cons))
 	 (mtype (find-if #'member-type-p types))
 	 (members (when mtype (member-type-members mtype))))
