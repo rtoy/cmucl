@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.35 2003/05/28 08:50:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.36 2003/06/04 08:47:03 gerd Exp $")
 
 (in-package :pcl)
 
@@ -397,8 +397,11 @@
 
 (defmethod find-method ((gf standard-generic-function)
 			qualifiers specializers &optional (errorp t))
-  (real-get-method gf qualifiers
-		   (parse-specializers specializers) errorp))
+  (let ((nreq (count-gf-required-parameters gf)))
+    (when (/= (length specializers) nreq)
+      (error "~@<The generic function ~s takes ~d required argument~p.~@:>"
+	     gf nreq nreq))
+    (real-get-method gf qualifiers (parse-specializers specializers) errorp)))
   
 ;;;
 ;;;
