@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.26 1992/04/14 16:24:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.27 1992/04/14 18:10:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -306,6 +306,11 @@
 		     (functional-entry-function fun)
 		     fun)))
 	  (*compiler-error-context* call))
+      (let ((c1 (block-component (node-block call)))
+	    (c2 (block-component (node-block (lambda-bind fun)))))
+	(assert (or (eq c1 c2)
+		    (and (eq (component-kind c1) :initial)
+			 (eq (component-kind c2) :initial)))))
       (assert (member (functional-kind fun) '(nil :escape :cleanup :optional)))
       (cond ((mv-combination-p call)
 	     (convert-mv-call ref call fun))
