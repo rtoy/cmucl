@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.103 2004/06/01 23:43:03 cwang Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.104 2004/10/14 13:53:19 rtoy Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,6 +40,7 @@
 ;;; Load the rest of the reader (maybe byte-compiled.)
 (maybe-byte-load "target:code/sharpm")
 (maybe-byte-load "target:code/backq")
+(maybe-byte-load "target:code/pprint-loop")
 (setq std-lisp-readtable (copy-readtable *readtable*))
 
 ;;; The pretty printer is part of the kernel core, but we don't turn it in
@@ -142,6 +143,7 @@
   (byte-load-over "target:code/debug")
   (byte-load-over "target:code/error")
   (maybe-byte-load "target:code/pprint" nil)
+  (maybe-byte-load "target:code/pprint-loop" nil)
   (maybe-byte-load "target:code/format" nil)
   (maybe-byte-load "target:code/reader" nil)
   (maybe-byte-load "target:code/pathname" nil)

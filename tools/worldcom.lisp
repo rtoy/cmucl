@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.93 2004/07/25 18:29:10 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.94 2004/10/14 13:53:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,6 +226,7 @@
 (comf "target:code/print")
 (comf "target:code/pprint")
 #-no-runtime (comf "target:code/pprint" :byte-compile t)
+(comf "target:code/pprint-loop")
 (comf "target:code/format")
 #-no-runtime (comf "target:code/format" :byte-compile t)
 (comf "target:code/package")
