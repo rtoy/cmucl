@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.64 2003/04/30 16:48:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.65 2003/05/09 14:15:55 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,7 @@
    to MAKE-PACKAGE or other package creation forms.")
 
 ;;; INTERNAL conditions
-(define-condition simple-package-error (simple-condition package-error)())
+(define-condition simple-package-error (simple-condition package-error) ())
 
 (defstruct (package
 	    (:constructor internal-make-package)
@@ -187,9 +187,15 @@
       (cond (dot-position
              (let ((parent (subseq child 0 dot-position)))
                (or (package-name-to-package parent)
-		   (error "The parent of ~a does not exist." child))))
+		   (error 'simple-package-error
+                          :name child
+                          :format-control "The parent of ~a does not exist."
+                          :format-arguments (list child)))))
             (t
-	     (error "There is no parent of ~a." child))))))
+	     (error 'simple-package-error
+                    :name child
+                    :format-control "There is no parent of ~a."
+                    :format-arguments (list child)))))))
 
 
 ;;; package-children  --  Internal.
@@ -278,7 +284,10 @@
 		   (declare (fixnum i))
 		   (setq tmp (package-parent package))
                    (unless tmp
-		     (error "The parent of ~a does not exist." package))
+		     (error 'simple-package-error
+                            :name (string package)
+                            :format-control "The parent of ~a does not exist."
+                            :format-arguments (list package)))
                    (setq package tmp))
                  (relative-to package name))))))))
 
