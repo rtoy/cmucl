@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.38 2000/07/07 09:33:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.39 2000/08/10 10:55:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1070,7 +1070,8 @@
 (define-info-class variable)
 
 ;;; The kind of variable-like thing described.
-(define-info-type variable kind (member :special :constant :global :alien)
+(define-info-type variable kind (member :special :constant :global :alien
+					:macro)
   (if (or (eq (symbol-package name) (symbol-package :end))
 	  (member name '(t nil)))
       :constant
@@ -1090,6 +1091,8 @@
       (values nil nil)))
 
 (define-info-type variable alien-info (or heap-alien-info null) nil)
+
+(define-info-type variable macro-expansion t nil)
 
 (define-info-type variable documentation (or string null) nil)
 

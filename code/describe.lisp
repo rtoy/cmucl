@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.33 1998/06/05 02:53:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.34 2000/08/10 10:55:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,6 +386,7 @@
 		(:special "special variable")
 		(:constant "constant")
 		(:global "undefined variable")
+		(:macro "symbol macro")
 		(:alien nil))))
     (cond
      ((eq kind :alien)
@@ -396,6 +397,9 @@
 		 (alien::heap-alien-info-type info)))
 	(format t "~@<It's current value is ~3I~:_~S.~:>"
 		(eval x))))
+     ((eq kind :macro)
+      (let ((expansion (info variable macro-expansion x)))
+	(format t "~&It is a ~A with expansion: ~S." wot expansion)))
      ((boundp x)
       (let ((value (symbol-value x)))
 	(format t "~&It is a ~A; its value is ~S." wot value)

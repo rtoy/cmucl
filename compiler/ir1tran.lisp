@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.117 2000/07/13 17:30:11 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.118 2000/08/10 10:55:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,7 +241,7 @@
 ;;; is unknown, then we emit a warning.
 ;;;
 (defun find-free-variable (name)
-  (declare (values (or leaf heap-alien-info)))
+  (declare (values (or leaf cons heap-alien-info)))
   (unless (symbolp name)
     (compiler-error "Variable name is not a symbol: ~S." name))
   (or (gethash name *free-variables*)
@@ -252,17 +252,22 @@
 	  (note-undefined-reference name :variable))
 
 	(setf (gethash name *free-variables*)
-	      (if (eq kind :alien)
-		  (info variable alien-info name)
-		  (multiple-value-bind
-		      (val valp)
-		      (info variable constant-value name)
-		    (if (and (eq kind :constant) valp)
-			(make-constant :value val  :name name
-				       :type (ctype-of val)
-				       :where-from where-from)
-			(make-global-var :kind kind  :name name  :type type
-					 :where-from where-from))))))))
+	      (cond ((eq kind :alien)
+		     (info variable alien-info name))
+		    ((eq kind :macro)
+		     (let ((expansion (info variable macro-expansion name))
+			   (type (type-specifier (info variable type name))))
+		       `(MACRO . (the ,type ,expansion))))
+		    (t
+		     (multiple-value-bind
+			   (val valp)
+			 (info variable constant-value name)
+		       (if (and (eq kind :constant) valp)
+			   (make-constant :value val  :name name
+					  :type (ctype-of val)
+					  :where-from where-from)
+			   (make-global-var :kind kind :name name :type type
+					    :where-from where-from)))))))))
 
 
 
