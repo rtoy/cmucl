@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.17 2002/09/07 13:28:46 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.18 2002/09/09 15:02:56 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -90,29 +90,6 @@ declaration.")
 
 
 
-;;;
-;;; FUNCTION-ARGLIST
-;;;
-;;; Given something which is functionp, function-arglist should return the
-;;; argument list for it.  PCL does not count on having this available, but
-;;; MAKE-SPECIALIZABLE works much better if it is available.
-
-(defun function-arglist (fcn)
-  "Returns the argument list of a compiled function, if possible."
-  (cond ((symbolp fcn)
-         (when (fboundp fcn)
-           (function-arglist (symbol-function fcn))))
-        ((eval:interpreted-function-p fcn)
-         (eval:interpreted-function-arglist fcn))
-        ((functionp fcn)
-         (let ((lambda-expr (function-lambda-expression fcn)))
-           (if lambda-expr
-               (cadr lambda-expr)
-               (let* ((function (kernel:%closure-function fcn))
-		      (arglist-string (kernel:%function-arglist function)))
-		 (when arglist-string
-		       (values (read-from-string arglist-string)))))))))
-
 ;;;
 ;;; set-function-name
 ;;; When given a function should give this function the name <new-name>.

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.15 2002/08/26 02:23:15 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.16 2002/09/09 15:02:56 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -410,48 +410,6 @@
     (add-method generic-function new)))
 
 	
-(defun make-specializable (function-name &key (arglist nil arglistp))
-  (cond ((not (null arglistp)))
-	((not (fboundp function-name)))
-	((fboundp 'function-arglist)
-	 ;; function-arglist exists, get the arglist from it.
-	 (setq arglist (function-arglist function-name)))
-	(t
-	 (error
-	   "The :arglist argument to make-specializable was not supplied~%~
-            and there is no version of FUNCTION-ARGLIST defined for this~%~
-            port of Portable CommonLoops.~%~
-            You must either define a version of FUNCTION-ARGLIST (which~%~
-            should be easy), and send it off to the Portable CommonLoops~%~
-            people or you should call make-specializable again with the~%~
-            :arglist keyword to specify the arglist.")))
-  (let ((original (and (fboundp function-name)
-		       (symbol-function function-name)))
-	(generic-function (make-instance 'standard-generic-function
-					 :name function-name))
-	(nrequireds 0))
-    (if (generic-function-p original)
-	original
-	(progn
-	  (dolist (arg arglist)
-	    (if (memq arg lambda-list-keywords)
-		(return)
-		(incf nrequireds)))
-	  (setf (gdefinition function-name) generic-function)
-	  (set-function-name generic-function function-name)
-	  (when arglistp
-	    (setf (gf-pretty-arglist generic-function) arglist))
-	  (when original
-	    (add-named-method function-name
-			      ()
-			      (make-list nrequireds :initial-element t)
-			      arglist
-			      (list :function
-				    (lambda (args next-methods)
-				      (declare (ignore next-methods))
-				      (apply original args)))))
-	  generic-function))))
-
 
 
 (defun real-get-method (generic-function qualifiers specializers
