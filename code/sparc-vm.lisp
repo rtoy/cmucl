@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.13 1992/07/09 16:43:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.14 1992/09/08 23:29:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.13 1992/07/09 16:43:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.14 1992/09/08 23:29:40 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -27,6 +27,13 @@
 
 ;;;; The sigcontext structure.
 
+(def-alien-type sigcontext-regs
+  (struct nil
+    (regs (array unsigned-long 32))
+    (fpregs (array unsigned-long 32))
+    (y unsigned-long)
+    (fsr unsigned-long)))
+
 (def-alien-type sigcontext
   (struct nil
     (sc-onstack unsigned-long)
@@ -35,13 +42,8 @@
     (sc-pc system-area-pointer)
     (sc-npc system-area-pointer)
     (sc-psr unsigned-long)
-    (sc-g1 unsigned-long)
-    (sc-o0 unsigned-long)
-    (sc-regs (array unsigned-long 32))
-    (sc-fpregs (array unsigned-long 32))
-    (sc-y unsigned-long)
-    (sc-fsr unsigned-long)))
-
+    (sc-g1 (* sigcontext-regs))
+    (sc-o0 unsigned-long)))
 
 
 ;;;; Add machine specific features to *features*
@@ -181,12 +183,12 @@
 (defun sigcontext-register (scp index)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (deref (slot scp 'sc-regs) index)))
+    (deref (slot (slot scp 'sc-g1) 'regs) index)))
 
 (defun %set-sigcontext-register (scp index new)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (setf (deref (slot scp 'sc-regs) index) new)
+    (setf (deref (slot (slot scp 'sc-g1) 'regs) index) new)
     new))
 
 (defsetf sigcontext-register %set-sigcontext-register)
@@ -200,7 +202,7 @@
 (defun sigcontext-float-register (scp index format)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((sap (alien-sap (slot scp 'sc-fpregs))))
+    (let ((sap (alien-sap (slot (slot scp 'sc-g1) 'fpregs))))
       (ecase format
 	(single-float (system:sap-ref-single sap (* index vm:word-bytes)))
 	(double-float (system:sap-ref-double sap (* index vm:word-bytes)))))))
@@ -208,7 +210,7 @@
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (let ((sap (alien-sap (slot scp 'sc-fpregs))))
+    (let ((sap (alien-sap (slot (slot scp 'sc-g1) 'fpregs))))
       (ecase format
 	(single-float
 	 (setf (sap-ref-single sap (* index vm:word-bytes)) new-value))
@@ -226,7 +228,7 @@
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp))
   (with-alien ((scp (* sigcontext) scp))
-    (slot scp 'sc-fsr)))
+    (slot (slot scp 'sc-g1) 'fsr)))
 
 
 
