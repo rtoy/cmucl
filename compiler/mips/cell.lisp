@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.14 1990/02/23 20:19:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.15 1990/02/23 23:36:11 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -302,33 +302,32 @@
   (:policy :fast-safe)
   (:node-var node)
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  (:temporary (:scs (descriptor-reg)) obj-temp))
+  (:temporary (:scs (descriptor-reg) :from (:argument 0)) obj-temp))
 
 ;;; With Symbol-Value, we check that the value isn't the trap object.  So
 ;;; Symbol-Value of NIL is NIL.
 ;;;
 (define-vop (symbol-value checked-cell-ref)
   (:translate symbol-value)
-  #+nil
   (:generator 9
     (move obj-temp object)
-    (loadw value obj-temp symbol-value-slot)
-    (let ((err-lab (generate-error-code node clc::error-symbol-unbound
-					obj-temp)))
-      (test-special-value value temp '%trap-object err-lab nil))))
+    (loadw value obj-temp vm:symbol-value-slot vm:other-pointer-type)
+    (let ((err-lab (generate-error-code node 56 obj-temp)))
+      (inst xori temp value vm:unbound-marker-type)
+      (inst beq temp zero-tn err-lab)
+      (nop))))
 
 ;;; With Symbol-Function, we check that the result is a function, so NIL is
 ;;; always un-fbound.
 ;;;
 (define-vop (symbol-function checked-cell-ref)
   (:translate symbol-function)
-  #+nil
   (:generator 10
     (move obj-temp object)
     (loadw value obj-temp symbol-function-slot)
     (let ((err-lab (generate-error-code node clc::error-symbol-undefined
 					obj-temp)))
-      (test-simple-type value temp err-lab t system:%function-type))))
+      (test-simple-type value temp err-lab t vm:function-pointer-type))))
 
 
 ;;; Like CHECKED-CELL-REF, only we are a predicate to see if the cell is bound.
@@ -342,10 +341,13 @@
 
 (define-vop (boundp boundp-frob)
   (:translate boundp)
-  #+nil
   (:generator 9
-    (loadw value object (/ clc::symbol-value 4))
-    (test-special-value value temp '%trap-object target (not not-p))))
+    (loadw value object vm:symbol-value-slot vm:other-pointer-type)
+    (inst xori temp value vm:unbound-marker-type)
+    (if not-p
+	(inst beq temp zero-tn target)
+	(inst bne temp zero-tn target))
+    (nop)))
 
 
 ;;; SYMBOL isn't a primitive type, so we can't use it for the arg restriction
@@ -358,10 +360,9 @@
 ;;;
 (define-vop (fboundp/symbol boundp-frob)
   (:translate fboundp/symbol)
-  #+nil
   (:generator 10
-    (loadw value object (/ clc::symbol-definition 4))
-    (test-simple-type value temp target not-p system:%function-type)))
+    (loadw value object vm:symbol-function-slot vm:other-pointer-type)
+    (test-simple-type value temp target not-p vm:function-pointer-type)))
 
 #+nil
 (def-source-transform makunbound (x)
@@ -379,12 +380,53 @@
   (:translate symbol-function))
 
 
-#+nil
-(define-miscop bind (val symbol) :results ())
+;;; Binding and Unbinding.
 
-#+nil
-(define-miscop unbind (num) :results ())
+;;; Position of next symbol and saved value relative to BSP.
+(defconstant bs-symbol-offset -1)
+(defconstant bs-value-offset -2)
 
+;;; BIND -- Establish VAL as a binding for SYMBOL.  Save the old value and
+;;; the symbol on the binding stack and 
+
+(define-vop (bind)
+  (:args (val :scs (any-reg descriptor-reg))
+	 (symbol :scs (descriptor-reg)))
+  (:temporary (:scs (descriptor-reg)) temp)
+  (:generator 5
+    (loadw temp symbol vm:symbol-value-slot vm:other-pointer-type)
+    (inst addiu bsp-tn bsp-tn (* 2 vm:word-bytes))
+    (storew temp bsp-tn bs-value-offset)
+    (storew symbol bsp-tn bs-symbol-offset)
+    (storew val symbol vm:symbol-value-slot vm:other-pointer-type)))
+
+
+(define-vop (unbind)
+  (:args (num-arg :scs (any-reg descriptor-reg) :target num))
+  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0)) num)
+  (:temporary (:scs (descriptor-reg)) symbol value)
+  (:generator 0
+    (let ((done (gen-label))
+	  (skip (gen-label))
+	  (loop (gen-label)))
+      (move num num-arg)
+      (inst beq num zero-tn done)
+      (nop)
+
+      (emit-label loop)
+
+      (loadw symbol bsp-tn bs-symbol-offset)
+      (inst beq symbol zero-tn skip)
+      (loadw value bsp-tn bs-value-offset)
+      (storew value symbol vm:symbol-value-slot vm:other-pointer-type)
+      (storew zero-tn bsp-tn bs-symbol-offset)
+      (emit-label skip)
+      (inst addiu num num (fixnum -1))
+      (inst bne num zero-tn loop)
+      (inst addiu bsp-tn bsp-tn (* -2 vm:word-bytes))
+
+      (emit-label done))))
+      
 
 
 ;;;; Structure hackery:
