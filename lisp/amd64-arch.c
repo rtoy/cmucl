@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.1 2004/05/18 21:53:56 cwang Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-arch.c,v 1.2 2004/06/15 23:40:58 cwang Exp $ 
  *
  */
 
@@ -282,13 +282,13 @@ void  sigtrap_handler(HANDLER_ARGS)
       context->sc_pc = (int) handle_function_end_breakpoint(signal, code, context);
       break;
       
-#ifdef trap_DynamicSpaceOverflowWarning
+#ifdef DYNAMIC_SPACE_OVERFLOW_WARNING_HIT
     case trap_DynamicSpaceOverflowWarning:
 	interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
 					context);
 	break;
 #endif
-#ifdef trap_DynamicSpaceOverflowError
+#ifdef DYNAMIC_SPACE_OVERFLOW_ERROR_HIT
     case trap_DynamicSpaceOverflowError:
 	interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
 					context);
