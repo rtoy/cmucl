@@ -143,13 +143,13 @@ Functions/macros for your enjoyment:
 			    (*standard-output* *debug-io*))
   "Show a listing of the call stack going down from the current frame.  Frames
   is how many frames to show."
-  (do ((callee (%primitive current-cont)
-	       (stack-ref callee c::old-cont-save-offset))
+  (do ((callee (%primitive current-fp)
+	       (stack-ref callee c::old-fp-save-offset))
        (n 0 (1+ n)))
       ((or (not (cstack-pointer-valid-p callee))
 	   (>= n frames))
        (values))
-    (let* ((caller (stack-ref callee c::old-cont-save-offset))
+    (let* ((caller (stack-ref callee c::old-fp-save-offset))
 	   (pc (stack-ref callee c::return-pc-save-offset)))
       (unless (cstack-pointer-valid-p caller)
 	(return (values)))
@@ -162,7 +162,7 @@ Functions/macros for your enjoyment:
 			   (escape-reg caller c::call-name-offset))
 		   (setq callee
 			 (check-valid
-			  (escape-reg caller c::old-cont-offset))))
+			  (escape-reg caller c::old-fp-offset))))
 		  ((valid-env-p env)
 		   (format t "~%<escape frame> ")
 		   (print-code-and-stuff
@@ -170,7 +170,7 @@ Functions/macros for your enjoyment:
 		    (escape-reg caller c::return-pc-offset))
 		   (setq callee
 			 (check-valid
-			  (stack-ref callee c::old-cont-save-offset))))
+			  (stack-ref callee c::old-fp-save-offset))))
 		  (t
 		   (error "Escaping frame ENV invalid?")))))
 	 ((valid-env-p env)
