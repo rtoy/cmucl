@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.67 1999/09/20 11:12:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.68 1999/09/22 15:07:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,8 +272,7 @@
   ;; its position in the implementation sequence
   (index (required-argument) :type fixnum)
   ;;
-  ;; Name of accesor, or NIL if this accessor has the same name as an inherited
-  ;; accessor (which we don't want to shadow.)
+  ;; Name of accessor.
   (accessor nil)
   default			; default value expression
   (type t)			; declared type specifier
@@ -318,9 +317,7 @@
 ;;;
 (defun dsd-name (dsd)
   (intern (string (dsd-%name dsd))
-	  (if (dsd-accessor dsd)
-	      (symbol-package (dsd-accessor dsd))
-	      *package*)))
+	  (symbol-package (dsd-accessor dsd))))
 
 (defun print-defstruct-slot-description (structure stream depth)
   (declare (ignore depth))
@@ -533,10 +530,7 @@
 ;;;
 ;;;    Parse a slot description for DEFSTRUCT, add it to the description and
 ;;; return it.  If supplied, ISLOT is a pre-initialized DSD that we modify to
-;;; get the new slot.  This is supplied when handling included slots.  If the
-;;; new accessor name is already an accessor for same slot in some included
-;;; structure, then set the DSD-ACCESSOR to NIL so that we don't clobber the
-;;; more general accessor.
+;;; get the new slot.  This is supplied when handling included slots.
 ;;;
 (defun parse-1-dsd (defstruct spec &optional
 		     (islot (make-defstruct-slot-description
@@ -562,19 +556,8 @@
     (setf (dsd-%name islot) (string name))
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
 
-    (let* ((aname (concat-pnames (dd-conc-name defstruct) name))
-	   (existing (info function accessor-for aname)))
-      (if (and (structure-class-p existing)
-	       (not (eq (class-name existing) (dd-name defstruct)))
-	       (string= (dsd-%name (find aname
-					 (dd-slots
-					  (layout-info
-					   (class-layout existing)))
-					 :key #'dsd-accessor))
-			name))
-	  (setf (dsd-accessor islot) nil)
-	  (setf (dsd-accessor islot) aname)))
-    
+    (setf (dsd-accessor islot) (concat-pnames (dd-conc-name defstruct) name))
+
     (when default-p
       (setf (dsd-default islot) default))
     (when type-p
@@ -1019,6 +1002,23 @@
 		   (%instance-ref object ,(dd-raw-index defstruct))))))))
 
 
+;;; dsd-inherited-p  --  Internal
+;;;
+;;; True when the defstruct slot has been inherited from an included
+;;; structure.
+;;;
+(defun dsd-inherited-p (defstruct slot)
+  (let* ((aname (dsd-accessor slot))
+	 (existing (info function accessor-for aname)))
+    (and (structure-class-p existing)
+	 (not (eq (class-name existing) (dd-name defstruct)))
+	 (string= (dsd-%name (find aname
+				   (dd-slots
+				    (layout-info (class-layout existing)))
+				   :key #'dsd-accessor))
+		  (dsd-%name slot)))))
+
+
 ;;; DEFINE-RAW-ACCESSORS  --  Internal
 ;;;
 ;;;    Define readers and writers for raw slots as inline functions.  We use
@@ -1032,13 +1032,13 @@
 	(let ((stype (dsd-type slot))
 	      (aname (dsd-accessor slot)))
 	  (multiple-value-bind (accessor offset data)
-			       (slot-accessor-form defstruct slot)
-	    (when (and aname (not (eq accessor '%instance-ref)))
+	      (slot-accessor-form defstruct slot)
+	    (unless (or (dsd-inherited-p defstruct slot)
+			(eq accessor '%instance-ref))
 	      (res `(declaim (inline ,aname)))
 	      (res `(declaim (ftype (function (,name) ,stype) ,aname)))
-	      (res
-	       `(defun ,aname (object)
-		  (truly-the ,stype (,accessor ,data ,offset))))
+	      (res `(defun ,aname (object)
+		      (truly-the ,stype (,accessor ,data ,offset))))
 	      (unless (dsd-read-only slot)
 		(res `(declaim (inline (setf ,aname))))
 		(res `(declaim (ftype (function (,stype ,name) ,stype)
@@ -1080,17 +1080,17 @@
   (collect ((stuff))
     (let ((ltype (dd-lisp-type defstruct)))
       (dolist (slot (dd-slots defstruct))
-	(let ((name (dsd-accessor slot))
+	(let ((aname (dsd-accessor slot))
 	      (index (dsd-index slot))
 	      (slot-type `(and ,(dsd-type slot)
 			       ,(dd-element-type defstruct))))
-	  (stuff `(proclaim '(inline ,name (setf ,name))))
-	  (stuff `(defun ,name (structure)
+	  (stuff `(proclaim '(inline ,aname (setf ,aname))))
+	  (stuff `(defun ,aname (structure)
 		    (declare (type ,ltype structure))
 		    (the ,slot-type (elt structure ,index))))
 	  (unless (dsd-read-only slot)
 	    (stuff
-	     `(defun (setf ,name) (new-value structure)
+	     `(defun (setf ,aname) (new-value structure)
 		(declare (type ,ltype structure) (type ,slot-type new-value))
 		(setf (elt structure ,index) new-value)))))))
     (stuff)))
@@ -1123,10 +1123,10 @@
 ;;;
 ;;;    In the normal case of structures that have a real type (i.e. no :Type
 ;;; option was specified), we want to optimize things for space as well as
-;;; speed, since there can be thousands of defined slot accesors.
+;;; speed, since there can be thousands of defined slot accessors.
 ;;;
 ;;;    What we do is defined the accessors and copier as closures over
-;;; general-case code.  Since the compiler will normally open-code accesors,
+;;; general-case code.  Since the compiler will normally open-code accessors,
 ;;; the (minor) efficiency penalty is not a concern.
 
 ;;; Typep-To-Layout  --  Internal
@@ -1245,9 +1245,11 @@
 	   (let ((old-info (layout-info old-layout)))    
 	     (when (defstruct-description-p old-info)
 	       (dolist (slot (dd-slots old-info))
-		 (fmakunbound (dsd-accessor slot))
-		 (unless (dsd-read-only slot)
-		   (fmakunbound `(setf ,(dsd-accessor slot)))))))
+		 (unless (dsd-inherited-p old-info slot)
+		   (let ((aname (dsd-accessor slot)))
+		     (fmakunbound aname)
+		     (unless (dsd-read-only slot)
+		       (fmakunbound `(setf ,aname slot))))))))
 	   (%redefine-defstruct class old-layout layout)
 	   (setq layout (class-layout class))))
 
@@ -1255,22 +1257,22 @@
 
     (unless (eq (dd-type info) 'funcallable-structure)
       (dolist (slot (dd-slots info))
-	(let ((dsd slot))
-	  (when (and (dsd-accessor slot)
-		     (eq (dsd-raw-type slot) 't))
-	    (setf (symbol-function (dsd-accessor slot))
-		  (structure-slot-accessor layout dsd))
-	    
+	(unless (or (dsd-inherited-p info slot)
+		    (not (eq (dsd-raw-type slot) 't)))
+	  (let ((aname (dsd-accessor slot)))
+	    (setf (symbol-function aname)
+		  (structure-slot-accessor layout slot))
+
 	    (unless (dsd-read-only slot)
-	      (setf (fdefinition `(setf ,(dsd-accessor slot)))
-		    (structure-slot-setter layout dsd))))))
-      
+	      (setf (fdefinition `(setf ,aname))
+		    (structure-slot-setter layout slot))))))
+
       (when (dd-predicate info)
 	(setf (symbol-function (dd-predicate info))
 	      #'(lambda (object)
 		  (declare (optimize (speed 3) (safety 0)))
 		  (typep-to-layout object layout))))
-      
+
       (when (dd-copier info)
 	(setf (symbol-function (dd-copier info))
 	      #'(lambda (structure)
@@ -1442,10 +1444,11 @@
 	(undefine-function-name (dd-copier info))
 	(undefine-function-name (dd-predicate info))
 	(dolist (slot (dd-slots info))
-	  (let ((fun (dsd-accessor slot)))
-	    (undefine-function-name fun)
-	    (unless (dsd-read-only slot)
-	      (undefine-function-name `(setf ,fun))))))
+	  (unless (dsd-inherited-p info slot)
+	    (let ((aname (dsd-accessor slot)))
+	      (undefine-function-name aname)
+	      (unless (dsd-read-only slot)
+		(undefine-function-name `(setf ,aname)))))))
       ;;
       ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
       ;; unknown types.
@@ -1563,11 +1566,12 @@
 	      `(lambda (x) (typep x ',name)))))
 
     (dolist (slot (dd-slots info))
-      (let* ((fun (dsd-accessor slot))
-	     (setf-fun `(setf ,fun)))
-	(when (and fun (eq (dsd-raw-type slot) 't))
-	  (define-defstruct-name fun)
-	  (setf (info function accessor-for fun) class)
+      (let* ((aname (dsd-accessor slot))
+	     (setf-fun `(setf ,aname)))
+	(unless (or (dsd-inherited-p info slot)
+		    (not (eq (dsd-raw-type slot) 't)))
+	  (define-defstruct-name aname)
+	  (setf (info function accessor-for aname) class)
 	  (unless (dsd-read-only slot)
 	    (define-defstruct-name setf-fun)
 	    (setf (info function accessor-for setf-fun) class))))))
@@ -1619,52 +1623,47 @@
       (let* ((type (%instance-layout structure))
 	     (name (class-name (layout-class type)))
 	     (dd (layout-info type)))
-	(flet ((slot-accessor (slot)
-		 (let ((aname
-			(intern (concatenate
-				 'simple-string
-				 (symbol-name (kernel::dd-conc-name dd))
-				 (dsd-%name slot)))))
-		   (fdefinition aname))))
-	  (if *print-pretty*
-	      (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
-		(prin1 name stream)
-		(let ((slots (dd-slots dd)))
-		  (when slots
-		    (write-char #\space stream)
-		    (pprint-indent :block 2 stream)
-		    (pprint-newline :linear stream)
-		    (loop
-		      (pprint-pop)
-		      (let ((slot (pop slots)))
-			(write-char #\: stream)
-			(output-symbol-name (dsd-%name slot) stream)
-			(write-char #\space stream)
-			(pprint-newline :miser stream)
-			(output-object
-			 (funcall (slot-accessor slot) structure) stream)
-			(when (null slots)
-			  (return))
-			(write-char #\space stream)
-			(pprint-newline :linear stream))))))
-	      (descend-into (stream)
-		(write-string "#S(" stream)
-		(prin1 name stream)
-		(do ((index 0 (1+ index))
-		     (slots (dd-slots dd) (cdr slots)))
-		    ((or (null slots)
-			 (and (not *print-readably*)(eql *print-length* index)))
-		     (if (null slots)
-			 (write-string ")" stream)
-			 (write-string " ...)" stream)))
-		  (declare (type index index))
+	(if *print-pretty*
+	    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	      (prin1 name stream)
+	      (let ((slots (dd-slots dd)))
+		(when slots
 		  (write-char #\space stream)
-		  (write-char #\: stream)
-		  (let ((slot (first slots)))
-		    (output-symbol-name (dsd-%name slot) stream)
-		    (write-char #\space stream)
-		    (output-object
-		     (funcall (slot-accessor slot) structure) stream)))))))))
+		  (pprint-indent :block 2 stream)
+		  (pprint-newline :linear stream)
+		  (loop
+		    (pprint-pop)
+		    (let ((slot (pop slots)))
+		      (write-char #\: stream)
+		      (output-symbol-name (dsd-%name slot) stream)
+		      (write-char #\space stream)
+		      (pprint-newline :miser stream)
+		      (output-object (funcall (fdefinition (dsd-accessor slot))
+					      structure)
+				     stream)
+		      (when (null slots)
+			(return))
+		      (write-char #\space stream)
+		      (pprint-newline :linear stream))))))
+	    (descend-into (stream)
+	      (write-string "#S(" stream)
+	      (prin1 name stream)
+	      (do ((index 0 (1+ index))
+		   (slots (dd-slots dd) (cdr slots)))
+		  ((or (null slots)
+		       (and (not *print-readably*) (eql *print-length* index)))
+		   (if (null slots)
+		       (write-string ")" stream)
+		       (write-string " ...)" stream)))
+		(declare (type index index))
+		(write-char #\space stream)
+		(write-char #\: stream)
+		(let ((slot (first slots)))
+		  (output-symbol-name (dsd-%name slot) stream)
+		  (write-char #\space stream)
+		  (output-object (funcall (fdefinition (dsd-accessor slot))
+					  structure)
+				 stream))))))))
 
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))
