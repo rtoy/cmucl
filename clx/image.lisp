@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/image.lisp,v 1.9 1999/03/16 23:37:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/image.lisp,v 1.10 2003/06/05 14:56:59 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -2312,7 +2312,7 @@
 	    (image-xy-bitmap-list image))))
 
 (defun image-xy->image-z (image x y width height)
-  (declare (type image-z image)
+  (declare (type image-xy image)
 	   (type card16 x y width height)
 	   (ignore image x y width height))
   (error "Format conversion from ~S to ~S not supported"

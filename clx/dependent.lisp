@@ -17,15 +17,13 @@
 ;;; Texas Instruments Incorporated provides this software "as is" without
 ;;; express or implied warranty.
 ;;;
-#+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.12 2003/02/17 13:17:53 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.13 2003/06/05 14:56:59 emarsden Exp $")
 
 (in-package :xlib)
 
 (proclaim '(declaration array-register))
 
-#+cmu
 (setf (getf ext:*herald-items* :xlib)
       `("    CLX X Library " ,*version*))
 
@@ -57,7 +55,7 @@
 
 ;;; Set some compiler-options for often used code
 
-(eval-when (eval compile load)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defconstant *buffer-speed* #+clx-debugging 1 #-clx-debugging 3
   "Speed compiler option for buffer code.")
@@ -73,9 +71,9 @@
 ;;; declaration is available, it would be a good idea to make it here when
 ;;; *buffer-speed* is 3 and *buffer-safety* is 0.
 (defun declare-buffun ()
-  #+(and cmu clx-debugging)
+  #+clx-debugging
   '(declare (optimize (speed 1) (safety 1)))
-  #-(and cmu clx-debugging)
+  #-clx-debugging
   `(declare (optimize (speed ,*buffer-speed*) (safety ,*buffer-safety*))))
 
 )
@@ -491,13 +489,12 @@
 
 ;;; MAKE-PROCESS-LOCK: Creating a process lock.
 
-#-(or (and cmu mp))
+#-mp
 (defun make-process-lock (name)
   (declare (ignore name))
   nil)
 
-
-#+(and cmu mp)
+#+mp
 (defun make-process-lock (name)
   (mp:make-lock name))
 
@@ -509,7 +506,7 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or (and CMU mp))
+#-cmu
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
@@ -523,7 +520,7 @@
 ;;; display connection.  We inhibit GC notifications since display of them
 ;;; could cause recursive entry into CLX.
 ;;;
-#+(and CMU (not mp))
+#+mp
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
 			&body body)
   `(let ((ext:*gc-verbose* nil)
@@ -535,7 +532,7 @@
 
 ;;; HOLDING-LOCK for CMU Common Lisp with multi-processes.
 ;;;
-#+(and cmu mp)
+#+mp
 (defmacro holding-lock ((lock display &optional (whostate "CLX wait")
 			      &key timeout)
 			&body body)
@@ -551,21 +548,19 @@
 ;;; request writing and reply reading to ensure that requests are atomically
 ;;; written and replies are atomically read from the stream.
 
-#-(or Genera excl lcl3.0)
 (defmacro without-aborts (&body body)
   `(progn ,@body))
 
 ;;; PROCESS-BLOCK: Wait until a given predicate returns a non-NIL value.
 ;;; Caller guarantees that PROCESS-WAKEUP will be called after the predicate's
 ;;; value changes.
-
-#-(or (and cmu mp))
+#-mp
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (ignore whostate))
   (or (apply predicate predicate-args)
       (error "Program tried to wait with no scheduler.")))
 
-#+(and cmu mp)
+#+mp
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (type function predicate))
   (mp:process-wait whostate #'(lambda ()
@@ -575,12 +570,12 @@
 
 (declaim (inline process-wakeup))
 
-#-(or (and cmu mp))
+#-mp
 (defun process-wakeup (process)
   (declare (ignore process))
   nil)
 
-#+(and cmu mp)
+#+mp
 (defun process-wakeup (process)
   (declare (ignore process))
   (mp:process-yield))
@@ -592,21 +587,16 @@
 
 ;;; Default return NIL, which is acceptable even if there is a scheduler.
 
-#-(or (and cmu mp))
+#-mp
 (defun current-process ()
   nil)
 
-#+(and cmu mp)
+#+mp
 (defun current-process ()
   mp:*current-process*)
 
 ;;; WITHOUT-INTERRUPTS -- provide for atomic operations.
-
-#-(or cmu)
-(defmacro without-interrupts (&body body)
-  `(progn ,@body))
-
-#+cmu
+;;
 (defmacro without-interrupts (&body body)
   `(sys:without-interrupts ,@body))
 
@@ -644,37 +634,45 @@
 ;;;	the stream to the server.
 ;;;----------------------------------------------------------------------------
 
-;;; OPEN-X-STREAM - create a stream for communicating to the appropriate X
-;;; server
-
-#-(or CMU)
+;;; OPEN-X-STREAM - create a stream for communicating to the
+;;; appropriate X server.
 (defun open-x-stream (host display protocol)
-  host display protocol ;; unused
-  (error "OPEN-X-STREAM not implemented yet."))
-
-;;; OPEN-X-STREAM -- for CMU Common Lisp.
-;;;
-;;; The file descriptor here just gets tossed into the stream slot of the
-;;; display object instead of a stream.
-;;;
-#+cmu
-(alien:def-alien-routine ("connect_to_server" xlib::connect-to-server)
-			 c-call:int
-  (host c-call:c-string)
-  (port c-call:int))
-#+cmu
-(defun open-x-stream (host display protocol)
-  (declare (ignore protocol))
-  (let ((server-fd (connect-to-server host display)))
-    (unless (plusp server-fd)
-      (error "Failed to connect to X11 server: ~A (display ~D)" host display))
-    (system:make-fd-stream server-fd :input t :output t
-			   :element-type '(unsigned-byte 8))))
+  (ecase protocol
+    ;; establish a TCP connection to the X11 server, which is
+    ;; listening on port 6000 + display-number
+    ((or :tcp nil)
+     (let ((fd (ext:connect-to-inet-socket host (+ *x-tcp-port* display))))
+       (unless (plusp fd)
+         (error 'connection-failure
+                :major-version *protocol-major-version*
+                :minor-version *protocol-minor-version*
+                :host host
+                :display display
+                :reason "Cannot connect to internet socket"))
+       (system:make-fd-stream fd :input t :output t :element-type '(unsigned-byte 8))))
+     ;; establish a connection to the X11 server over a Unix socket
+    (:unix
+     (let ((path (make-pathname :directory '(:absolute "tmp" ".X11-unix")
+                                :name (format nil "X~D" display))))
+       (unless (probe-file path)
+         (error 'connection-failure
+                :major-version *protocol-major-version*
+                :minor-version *protocol-minor-version*
+                :host host
+                :display display
+                :reason "Unix socket ~s does not exist" path))
+       (let ((fd (ext:connect-to-unix-socket (namestring path))))
+         (unless (plusp fd)
+           (error 'connection-failure
+                :major-version *protocol-major-version*
+                :minor-version *protocol-minor-version*
+                :host host
+                :display display
+                :reason "Can't connect to unix socket: ~S" (unix:get-unix-error-msg)))
+         (system:make-fd-stream fd :input t :output t :element-type '(unsigned-byte 8)))))))
 
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
-
-;;; BUFFER-READ-DEFAULT for CMU Common Lisp.
 ;;;
 ;;;    If timeout is 0, then we call LISTEN to see if there is any input.
 ;;; Timeout 0 is the only case where READ-INPUT dives into BUFFER-READ without
@@ -922,7 +920,7 @@
        (deallocate-gcontext-state ,saved-state))))
 
 ;;;----------------------------------------------------------------------------
-;;; How error detection should CLX do?
+;;; How much error detection should CLX do?
 ;;; Several levels are possible:
 ;;;
 ;;; 1. Do the equivalent of check-type on every argument.
@@ -1031,17 +1029,6 @@
 ;;  HOST hacking
 ;;-----------------------------------------------------------------------------
 
-#-(or CMU)
-(defun host-address (host &optional (family :internet))
-  ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
-  ;; and cdr is a list of network address bytes.
-  (declare (type stringable host)
-	   (type (or null (member :internet :decnet :chaos) card8) family))
-  (declare (clx-values list))
-  host family
-  (error "HOST-ADDRESS not implemented yet."))
-
-#+CMU
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
@@ -1078,7 +1065,7 @@
 ;;; want to make this expand to T, as it makes the code more compact.
 
 (defmacro use-closures ()
-  nil)
+  t) ;; emarsden2003-06-04 was NIL
 
 (defun clx-macroexpand (form env)
   (macroexpand form env))
@@ -1092,8 +1079,7 @@
 ;;; Utilities 
 
 (defun getenv (name)
-  #+CMU (cdr (assoc name ext:*environment-list* :test #'string=))
-  #-(or CMU) (progn name nil))
+  (cdr (assoc name ext:*environment-list* :test #'string=)))
 
 (defun homedir-file-pathname (name)
   (and #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
