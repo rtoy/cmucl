@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.14 1993/08/25 01:15:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.15 1993/11/13 00:59:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,13 +30,6 @@
   (/ 1000000 internal-time-units-per-second))
 
 
-(defmacro not-leap-year (year)
-  (let ((sym (gensym)))
-    `(let ((,sym ,year))
-       (cond ((eq (mod ,sym 4) 0)
-	      (and (eq (mod ,sym 100) 0)
-		   (not (eq (mod ,sym 400) 0))))
-	     (T T)))))
 
 
 ;;; The base number of seconds for our internal "epoch".  We initialize this to
@@ -88,6 +81,20 @@
 		   micro-seconds-per-internal-time-unit)))))
 
 
+;;;; Encode and Decode universal times.
+
+;;; CURRENT-TIMEZONE -- internal.
+;;;
+;;; Returns two values:
+;;;  - the minuteswest of GMT.
+;;;  - T if daylight savings is in effect, NIL if not.
+;;;
+(alien:def-alien-routine get-timezone c-call:void
+  (when c-call:long :in)
+  (minutes-west c-call:int :out)
+  (daylight-savings-p alien:boolean :out))
+
+
 ;;; Subtract from the returned Internal_Time to get the universal time.
 ;;; The offset between our time base and the Perq one is 2145 weeks and
 ;;; five days.
@@ -101,14 +108,6 @@
 (defconstant november-17-1858 678882)
 (defconstant weekday-november-17-1858 2)
 (defconstant unix-to-universal-time 2208988800)
-
-;;; Make-Universal-Time  --  Internal
-;;;
-;;;    Convert a Unix Internal_Time into a universal time.
-;;;
-(defun make-universal-time (weeks msec)
-  (+ (* (- weeks weeks-offset) seconds-in-week)
-     (- (truncate msec 1000) seconds-offset)))
 
 
 ;;; Get-Universal-Time  --  Public
@@ -127,30 +126,33 @@
    (daylight savings times) or NIL (standard time), and timezone."
   (decode-universal-time (get-universal-time)))
 
+
 (defun decode-universal-time (universal-time &optional time-zone)
   "Converts a universal-time to decoded time format returning the following
-  nine values: second, minute, hour, date, month, year, day of week (0 =
-  Monday), T (daylight savings time) or NIL (standard time), and timezone.
-  Completely ignores daylight-savings-time when time-zone is supplied."
-  (declare (type (or fixnum null) time-zone))
+   nine values: second, minute, hour, date, month, year, day of week (0 =
+   Monday), T (daylight savings time) or NIL (standard time), and timezone.
+   Completely ignores daylight-savings-time when time-zone is supplied."
   (multiple-value-bind (weeks secs)
 		       (truncate (+ universal-time seconds-offset)
 				 seconds-in-week)
-    (let ((weeks (+ weeks weeks-offset))
-	  (second NIL)
-	  (minute NIL)
-	  (hour NIL)
-	  (date NIL)
-	  (month NIL)
-	  (year NIL)
-	  (day NIL)
-	  (daylight NIL)
-	  (timezone (if (null time-zone)
-			(multiple-value-bind (res s us tz)
-					     (unix:unix-gettimeofday)
-			  (declare (ignore s us))
-			  (if res tz 0))
-			(* time-zone 60))))
+    (let* ((weeks (+ weeks weeks-offset))
+	   (second NIL)
+	   (minute NIL)
+	   (hour NIL)
+	   (date NIL)
+	   (month NIL)
+	   (year NIL)
+	   (day NIL)
+	   (daylight NIL)
+	   (timezone (if (null time-zone)
+			 (multiple-value-bind
+			     (ignore minwest dst)
+			     (get-timezone (- universal-time
+					      unix-to-universal-time))
+			   (declare (ignore ignore))
+			   (setf daylight dst)
+			   minwest)
+			 (* time-zone 60))))
       (declare (fixnum timezone))
       (multiple-value-bind (t1 seconds) (truncate secs 60)
 	(setq second seconds)
@@ -168,17 +170,6 @@
 	    (let ((days-since-mar0 (1+ (truncate (mod t2 quarter-days-per-year)
 						 4))))
 	      (setq day (mod (+ tday weekday-november-17-1858) 7))
-	      (unless time-zone
-		(if (setq daylight (dst-check days-since-mar0 hour day))
-		    (cond ((eq hour 23)
-			   (setq hour 0)
-			   (setq day (mod (1+ day) 7))
-			   (setq days-since-mar0 (1+ days-since-mar0))
-			   (if (>= days-since-mar0 366)
-			       (if (or (> days-since-mar0 366)
-				       (not-leap-year (1+ year)))
-				   (setq days-since-mar0 368))))
-			  (T (setq hour (1+ hour))))))
 	      (let ((t3 (+ (* days-since-mar0 5) 456)))
 		(cond ((>= t3 1989)
 		       (setq t3 (- t3 1836))
@@ -186,97 +177,72 @@
 		(multiple-value-setq (month t3) (truncate t3 153))
 		(setq date (1+ (truncate t3 5))))))))
       (values second minute hour date month year day
-	      daylight (truncate timezone 60)))))
+	      daylight
+	      (if daylight
+		  (1+ (/ timezone 60))
+		  (/ timezone 60))))))
+
+
+(defun pick-obvious-year (year)
+  (declare (type (mod 100) year))
+  (let* ((current-year (nth-value 5 (get-decoded-time)))
+	 (guess (+ year (* (truncate (- current-year 50) 100) 100))))
+    (declare (type (integer 1900 9999) current-year guess))
+    (if (> (- current-year guess) 50)
+	(+ guess 100)
+	guess)))
+
+(defun leap-years-before (year)
+  (let ((years (- year 1901)))
+    (+ (- (truncate years 4)
+	  (truncate years 100))
+       (truncate years 400))))
+
+(defvar *days-before-month*
+  (collect ((results))
+    (results nil)
+    (let ((sum 0))
+      (dolist (days-per-month '(31 28 31 30 31 30 31 31 30 31 30 31))
+	(results sum)
+	(incf sum days-per-month)))
+    (coerce (results) 'vector)))
 
 ;;; Encode-Universal-Time  --  Public
 ;;;
-;;;    Just do a TimeUser:T_UserToInt.  If the year is between 0 and 99 we 
-;;; have to figure out which the "obvious" year is.
-;;;
-
 (defun encode-universal-time (second minute hour date month year
 				     &optional time-zone)
   "The time values specified in decoded format are converted to 
    universal time, which is returned."
+  (declare (type (mod 60) second)
+	   (type (mod 60) minute)
+	   (type (mod 24) hour)
+	   (type (integer 1 31) date)
+	   (type (integer 1 12) month)
+	   (type (or (integer 0 99) (integer 1900)) year)
+	   (type (or null rational) time-zone))
   (let* ((year (if (< year 100)
-		   (multiple-value-bind (sec min hour day month now-year)
-					(get-decoded-time)
-		     (declare (ignore sec min hour day month))
-		     (do ((y (+ year (* 100 (1- (truncate now-year 100))))
-			     (+ y 100)))
-			 ((<= (abs (- y now-year)) 50) y)))
+		   (pick-obvious-year year)
 		   year))
-	 (zone (if time-zone (* time-zone 60)
-		   (multiple-value-bind (res s us tz) (unix:unix-gettimeofday)
-		     (declare (ignore s us))
-		     (if res tz))))
-	 (tmonth (- month 3)))
-    (cond ((< tmonth 0)
-	   (setq tmonth (+ tmonth 12))
-	   (setq year (1- year))))
-    (let ((days-since-mar0 (+ (truncate (+ (* tmonth 153) 2) 5) date)))
-      (multiple-value-bind (tcent tyear) (truncate year 100)
-	(let* ((tday (- (+ (truncate (* tcent quarter-days-per-century) 4)
-			   (truncate (* tyear quarter-days-per-year) 4)
-			   days-since-mar0)
-			november-17-1858))
-	       (daylight (dst-check days-since-mar0 (1- hour)
-				    (mod (+ tday weekday-november-17-1858) 7)))
-	       (tminutes (+ (* hour 60) minute zone)))
-	  (if daylight (setq tminutes (- tminutes 60)))
-	  (do ((i tminutes (+ i minutes-per-day)))
-	      ((>= i 0) (setq tminutes i))
-	    (declare (fixnum i))
-	    (decf tday 1))
-	  (do ((i tminutes (- i minutes-per-day)))
-	      ((< i minutes-per-day) (setq tminutes i))
-	    (declare (fixnum i))
-	    (incf tday 1))
-	  (multiple-value-bind (weeks dpart) (truncate tday 7)
-	    (make-universal-time weeks (* (+ (* (+ (* dpart minutes-per-day)
-						   tminutes) 60)
-					     second) 1000))))))))
+	 (days (+ (1- date)
+		  (aref *days-before-month* month)
+		  (if (> month 2)
+		      (leap-years-before (1+ year))
+		      (leap-years-before year))
+		  (* (- year 1900) 365)))
+	 (hours (+ hour (* days 24))))
+    (if time-zone
+	(+ second (* (+ minute (* (+ hours time-zone) 60)) 60))
+	(let* ((minwest-guess
+		(nth-value 1
+			   (get-timezone (- (* hours 60 60)
+					    unix-to-universal-time))))
+	       (guess (+ minute (* hours 60) minwest-guess))
+	       (minwest
+		(nth-value 1
+			   (get-timezone (- (* guess 60)
+					    unix-to-universal-time)))))
+	  (+ second (* (+ guess (- minwest minwest-guess)) 60))))))
 
-;;; Dst-check -- Internal
-(defconstant april-1 (+ (truncate (+ (* (- 4 3) 153) 2) 5) 1))
-(defconstant october-31 (+ (truncate (+ (* (- 10 3) 153) 2) 5) 31))
-
-(eval-when (compile eval)
-  
-  (defmacro dst-check-start-of-month-ge (day hour weekday daybound)
-    (let ((d (gensym))
-	  (h (gensym))
-	  (w (gensym))
-	  (db (gensym)))
-      `(let ((,d ,day)
-	     (,h ,hour)
-	     (,w ,weekday)
-	     (,db ,daybound))
-	 (declare (fixnum ,d ,h ,w ,db))
-	 (cond ((< ,d ,db) NIL)
-	       ((> (the fixnum (- ,d ,w)) ,db) T)
-	       ((and (eq ,w 6) (> ,h 0)) T)
-	       (T NIL)))))
-  
-  (defmacro dst-check-end-of-month-ge (day hour weekday daybound)
-    (let ((d (gensym))
-	  (h (gensym))
-	  (w (gensym))
-	  (db (gensym)))
-      `(let ((,d ,day)
-	     (,h ,hour)
-	     (,w ,weekday)
-	     (,db ,daybound))
-	 (declare (fixnum ,d ,h ,w ,db))
-	 (cond ((< (the fixnum (+ ,d 6)) ,db) NIL)
-	       ((> (the fixnum  (- (the fixnum (+ ,d 6)) ,w)) ,db) T)
-	       ((and (eq ,w 6) (> ,h 0)) T)
-	       (T NIL)))))
-  )
-
-(defun dst-check (day hour weekday)
-  (and (dst-check-start-of-month-ge day hour weekday april-1)
-       (not (dst-check-end-of-month-ge day hour weekday october-31))))
 
 ;;;; Time:
 
