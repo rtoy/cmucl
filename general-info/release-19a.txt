@@ -203,6 +203,9 @@ New in this release:
        called, the generic function PCL:NO-PRIMARY-METHOD is called.
        The default method of this generic function signals a
        continuable error of type PCL:NO-PRIMARY-METHOD-ERROR.
+     - Effective methods are not precomputed at method load time if
+       the generic function has >= PCL::*MAX-EMF-PRECOMPUTATION-METHODS* 
+       methods (default value 100).  This prevents a O(n^3) behavior.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
