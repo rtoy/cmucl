@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.39 1991/07/17 23:05:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.40 1991/08/05 15:51:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1019,9 +1019,12 @@
       (fill (finite-sb-live-tns sb) nil)))
 
   (do-live-tns (tn (ir2-block-live-in block) block)
-    (let ((sb (sc-sb (tn-sc tn))))
+    (let* ((sc (tn-sc tn))
+	   (sb (sc-sb sc)))
       (when (eq (sb-kind sb) :finite)
-	(setf (svref (finite-sb-live-tns sb) (tn-offset tn)) tn))))
+	(loop for offset from (tn-offset tn)
+	      repeat (sc-element-size sc) do
+	  (setf (svref (finite-sb-live-tns sb) offset) tn)))))
 
   (setq *live-block* block)
   (setq *live-vop* (ir2-block-last-vop block))
@@ -1046,22 +1049,36 @@
        (do ((res (vop-results vop) (tn-ref-across res)))
 	   ((null res))
 	 (let* ((tn (tn-ref-tn res))
-		(sb (sc-sb (tn-sc tn))))
+		(sc (tn-sc tn))
+		(sb (sc-sb sc)))
 	   (when (eq (sb-kind sb) :finite)
-	     (setf (svref (finite-sb-live-tns sb) (tn-offset tn))
-		   nil)))))
+	     (loop for offset from (tn-offset tn)
+	           repeat (sc-element-size sc) do
+	       (setf (svref (finite-sb-live-tns sb) offset) nil))))))
     (do ((ref (vop-refs current) (tn-ref-next-ref ref)))
 	((null ref))
+      (let ((ltn (tn-ref-load-tn ref)))
+	(when ltn
+	  (let* ((sc (tn-sc ltn))
+		 (sb (sc-sb sc)))
+	    (when (eq (sb-kind sb) :finite)
+	      (let ((tns (finite-sb-live-tns sb)))
+		(loop for offset from (tn-offset ltn)
+		      repeat (sc-element-size sc) do
+		  (assert (null (svref tns offset)))))))))
+
       (let* ((tn (tn-ref-tn ref))
-	     (sb (sc-sb (tn-sc tn))))
+	     (sc (tn-sc tn))
+	     (sb (sc-sb sc)))
 	(when (eq (sb-kind sb) :finite)
-	  (let ((tns (finite-sb-live-tns sb))
-		(offset (tn-offset tn)))
-	    (if (tn-ref-write-p ref)
-		(setf (svref tns offset) nil)
-		(let ((old (svref tns offset)))
-		  (assert (or (null old) (eq old tn)) (old tn))
-		  (setf (svref tns offset) tn))))))))
+	  (let ((tns (finite-sb-live-tns sb)))
+	    (loop for offset from (tn-offset tn)
+	          repeat (sc-element-size sc) do
+	      (if (tn-ref-write-p ref)
+		  (setf (svref tns offset) nil)
+		  (let ((old (svref tns offset)))
+		    (assert (or (null old) (eq old tn)) (old tn))
+		    (setf (svref tns offset) tn)))))))))
 
   (setq *live-vop* vop)
   (undefined-value))
@@ -1159,13 +1176,19 @@
 ;;; packed, and try that location.  There isn't any need to chain down the
 ;;; target path, since everything is packed now.
 ;;;
+;;;    We require the target to be in SC (and not merely to overlap with SC).
+;;; This prevents SC information from being lost in load TNs (we won't pack a
+;;; load TN in ANY-REG when it is targeted to a DESCRIPTOR-REG.)  This
+;;; shouldn't hurt the code as long as all relevant overlapping SCs are allowed
+;;; in the operand SC restriction.
+;;;
 (defun find-load-tn-target (op sc)
   (declare (inline member))
   (let ((target (tn-ref-target op)))
     (when target
       (let* ((tn (tn-ref-tn target))
 	     (loc (tn-offset tn)))
-	(if (and (eq (sc-sb sc) (sc-sb (tn-sc tn)))
+	(if (and (eq (tn-sc tn) sc)
 		 (member (the index loc) (sc-locations sc))
 		 (not (load-tn-conflicts-in-sc op sc loc nil)))
 	    loc
@@ -1231,12 +1254,14 @@
   (let ((sb (sc-sb sc))
 	(normal-tns (ir2-component-normal-tns
 		     (component-info *compile-component*)))
+	(node (vop-node (tn-ref-vop op)))
 	(fallback nil))
     (flet ((unpack-em (victims)
 	     (unless *repack-blocks*
 	       (setq *repack-blocks* (make-hash-table :test #'eq)))
 	     (setf (gethash (vop-block (tn-ref-vop op)) *repack-blocks*) t)
 	     (dolist (victim victims)
+	       (event unpack-tn node)
 	       (unpack-tn victim))
 	     (throw 'unpacked-tn nil)))
       (dolist (loc (sc-locations sc))
@@ -1261,7 +1286,7 @@
 			 (setq fallback (list conf)))))))))
       
       (when fallback
-	(event unpack-fallback)
+	(event unpack-fallback node)
 	(unpack-em fallback))))
 
   nil)
