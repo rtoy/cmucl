@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.5 1993/02/11 19:01:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.6 1993/02/16 10:51:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,7 +119,7 @@
 (declaim (inline (setf layout-hash)))
 (defun (setf layout-hash) (new-value layout i)
   (declare (type layout layout) (type index new-value i))
-  (setf (%instance-ref layout (1+ i)) new-value)))
+  (setf (%instance-ref layout (1+ i)) new-value))
 
 ;;; The CLASS structure is a supertype of all CLASS types.  A CLASS is also a
 ;;; CTYPE structure as recognized by the type system.
@@ -230,7 +230,6 @@
 					(vector super-layout))
 			   (1+ (layout-inheritance-depth super-layout)))))
 	(register-layout layout nil nil)
-	(setf (info type compiler-layout name) layout)
 	res))))
 
 
