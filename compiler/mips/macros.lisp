@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.4 1990/02/06 02:49:14 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.5 1990/02/06 12:33:14 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -26,13 +26,6 @@
 	      (n-src src))
     `(unless (location= ,n-dst ,n-src)
        (inst or ,n-dst ,n-src zero-tn))))
-
-(defmacro li (dst immed)
-  "Load Immediate"
-  (cond ((minusp immed)
-	 `(inst addi ,dst zero-tn ,immed))
-	(t
-	 `(inst addiu ,dst zero-tn ,immed))))
 
 (defmacro b (label)
   "Unconditional branch"
