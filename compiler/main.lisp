@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.62 1992/05/18 17:55:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.63 1992/05/25 21:37:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,6 +46,11 @@
   "Whether or not to use the byte-compiler.  Can be T, NIL, or :MAYBE")
 
 (defvar compiler-version "1.0")
+(pushnew :python *features*)
+(setf (getf ext:*herald-items* :python)
+      `("    Python " ,compiler-version ", target "
+	,#'(lambda (stream)
+	     (write-string (backend-version *backend*) stream))))
 
 (defvar *check-consistency* nil)
 (defvar *all-components*)
