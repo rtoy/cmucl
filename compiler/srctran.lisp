@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.18 1990/10/06 18:30:21 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.19 1990/10/10 15:19:57 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1002,7 +1002,7 @@
 ;;; SAME-LEAF-REF-P  --  Internal
 ;;;
 ;;;    Return true if X and Y are continuations whose only use is a reference
-;;; to the same leaf.
+;;; to the same leaf, and the value of the leaf cannot change.
 ;;;
 (defun same-leaf-ref-p (x y)
   (declare (type continuation x y))
@@ -1010,7 +1010,8 @@
 	(y-use (continuation-use y)))
     (and (ref-p x-use)
 	 (ref-p y-use)
-	 (eq (ref-leaf x-use) (ref-leaf y-use)))))
+	 (eq (ref-leaf x-use) (ref-leaf y-use))
+	 (constant-reference-p x-use))))
 
 
 ;;; SIMPLE-EQUALITY-TRANSFORM  --  Internal
