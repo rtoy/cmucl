@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.26 1991/05/03 12:55:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.27 1991/06/19 16:39:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -514,7 +514,10 @@
 ;;;
 ;;;    Iterate over the more operands to a call VOP, emitting move-arg VOPs and
 ;;; any necessary coercions.  We determine which FP to use by looking at the
-;;; MOVE-ARGS annotation.
+;;; MOVE-ARGS annotation.  If the vop is a :LOCAL-CALL, we insert any needed
+;;; coercions before the ALLOCATE-FRAME so that lifetime analysis doesn't get
+;;; confused (since otherwise, only passing locations are written between A-F
+;;; and call.)
 ;;;
 (defun emit-arg-moves (vop)
   (let* ((info (vop-info vop))
@@ -562,12 +565,18 @@
 		       (assert (not (sc-number-stack-p (tn-sc nfp-tn))))
 		       nfp-tn)))
 	       (new (emit-move-arg-template node block res val-tn this-fp
-					    pass-tn vop)))
+					    pass-tn vop))
+	       (after
+		(cond ((eq how :local-call)
+		       (assert (eq (vop-info-name (vop-info prev))
+				   'allocate-frame))
+		       prev)
+		      (prev (vop-next prev))
+		      (t
+		       (ir2-block-start-vop block)))))
 	  (coerce-some-operands (vop-args new) pass-tn
 				(vop-info-arg-load-scs res)
-				(if prev
-				    (vop-next prev)
-				    (ir2-block-start-vop block)))))))
+				after)))))
   (undefined-value))
 
 
