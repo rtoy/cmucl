@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.18 2003/01/23 21:05:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.19 2003/01/29 21:48:40 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -305,7 +305,7 @@
 	     (if (trace-info-encapsulated info)
 		 (locally (declare (special basic-definition argument-list))
 		   (prin1 `(,(trace-info-what info) ,@argument-list)))
-		 (print-frame-call frame))
+		 (print-frame-call frame :verbosity 1))
 	     (terpri)
 	     (trace-print frame (trace-info-print info)))
 	   (trace-maybe-break info (trace-info-break info) "before" frame)))
