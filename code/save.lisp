@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.47 2003/02/05 14:41:10 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.48 2003/03/03 23:48:31 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,9 @@
 
 (in-package "EXTENSIONS")
 (export '(print-herald *herald-items* save-lisp *before-save-initializations*
-	  *after-save-initializations* *environment-list* *editor-lisp-p*))
+	  *after-save-initializations* *environment-list* *editor-lisp-p*
+	  *cmucl-lib* *cmucl-core-path*
+	  *cmucl-core-dump-time* *cmucl-core-dump-host*))
 (in-package "LISP")
 
 (defvar *before-save-initializations* nil
@@ -43,8 +45,12 @@
 
 ;;; Filled in by the startup code.
 (defvar lisp-environment-list)
-(defvar *cmucl-lib*)			; Essentially the envvar CMUCLLIB, where available
-(defvar *cmucl-core-path*)		; Path to where the Lisp core file was found.
+(defvar *cmucl-lib*)		; Essentially the envvar CMUCLLIB, if available
+(defvar *cmucl-core-path*)	; Path to where the Lisp core file was found.
+
+;;; Filled in by the save code.
+(defvar *cmucl-core-dump-time*)	; Time the core was dumped
+(defvar *cmucl-core-dump-host*) ; machine-instance the core was dumped on
 
 
 ;;; PARSE-UNIX-SEARCH-LIST  --  Internal
@@ -233,6 +239,10 @@
 		    (%restart-lisp))
 	      (finish-standard-output-streams))))))
 
+    ;; Record dump time and host
+    (setq *cmucl-core-dump-time* (get-universal-time))
+    (setq *cmucl-core-dump-host* (machine-instance))
+
     (let ((initial-function (get-lisp-obj-address #'restart-lisp)))
       (without-gcing
 	(save (unix-namestring core-file-name nil) initial-function))))
@@ -262,11 +272,18 @@
 	,#'(lambda (stream)
 	     (let ((core (if (boundp '*cmucl-core-path*)
 			     (truename *cmucl-core-path*)
-			     nil)))
+			     nil))
+		   (dump-time (if (boundp '*cmucl-core-dump-time*)
+		                  *cmucl-core-dump-time*
+				  nil)))
 	       (when core
 		 (write-string "With core: " stream)
-		 (write-string (namestring core) stream))))
-	terpri
+		 (write-line (namestring core) stream))
+	       (when dump-time
+		 (write-string "Dumped on: " stream)
+		 (ext:format-universal-time stream dump-time :style :iso8601)
+		 (write-string " on " stream)
+		 (write-line *cmucl-core-dump-host* stream))))
 	))
 
 (setf (getf *herald-items* :bugs)
