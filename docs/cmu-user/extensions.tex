@@ -2135,20 +2135,20 @@ recompiled manually when classes are changed.
 
 
 
-\subsection{Inlineing Methods in Effective Methods}
+\subsection{Inlining Methods in Effective Methods}
 \cindex{effective method}
-\cpsubindex{methods}{inlineing in effective methods}
-\cpsubindex{effective method}{inlineing of methods}
+\cpsubindex{methods}{inlining in effective methods}
+\cpsubindex{effective method}{inlining of methods}
 \cindex{inline}
 
 When a generic function is called, an effective method is constructed
 from applicable methods.  The effective method is called with the
 original arguments, and itself calls applicable methods according to
 the generic function's method combination.  Some of the function call
-overhead in effective methods can be removed by inlineing methods in
+overhead in effective methods can be removed by inlining methods in
 effective methods, at the expense of increased code size.
 
-Inlineing of methods is controlled by the usual \code{inline}
+Inlining of methods is controlled by the usual \code{inline}
 declaration.  In the following example, both \code{foo} methods shown
 will be inlined in effective methods:
 
@@ -2159,14 +2159,14 @@ will be inlined in effective methods:
 (defmethod foo :before ((x foo)) ...)
 \end{example}
 
-Please note that this form of inlineing has no noticeable effect for
+Please note that this form of inlining has no noticeable effect for
 effective methods that consist of a primary method only, which doesn't
 have keyword arguments.  In such cases, PCL uses the primary method
 directly for the effective method.
 
 When the definition of an inlined method is changed, effective methods
 are \textbf{not} automatically updated to reflect the change.  This is
-just as it is when inlineing normal functions.  Different from the
+just as it is when inlining normal functions.  Different from the
 normal case is that users do not have direct access to effective
 methods, as it would be the case when a function is inlined somewhere
 else.  Because of this, the function \code{pcl:flush-emf-cache} is
@@ -2181,7 +2181,7 @@ provided for forcing such an update of effective methods.
 \end{defun}
 
 \begin{defvar}{pcl::}{inline-methods-in-emfs}
-  If true, the default, perform method inlineing as described above.
+  If true, the default, perform method inlining as described above.
   If false, don't.
 \end{defvar}
 
@@ -2222,7 +2222,7 @@ implemented.  Please note that this interface is subject to change.
 \cpsubindex{methods}{profiling}
 
 Methods can be traced with \code{trace}, using function names of the
-form \code{(method <qualifiers> <specializers>)}.  Example:
+form \verb|(method <qualifiers> <specializers>)|.  Example:
 
 \begin{example}
 (defmethod foo ((x integer)) x)
