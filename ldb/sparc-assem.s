@@ -269,6 +269,8 @@ _function_end_breakpoint_guts:
 	.word	type_ReturnPcHeader
 	b	1f
 	nop
+	mov	CSP, OCFP
+	add	4, CSP, CSP
 	mov	4, NARGS
 	mov	NULLREG, A1
 	mov	NULLREG, A2

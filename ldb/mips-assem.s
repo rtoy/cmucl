@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.12 1991/05/29 12:14:21 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.13 1991/06/13 10:35:54 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -336,6 +336,8 @@ function_end_breakpoint_guts:
 	.word	type_ReturnPcHeader
 	beq	zero, zero, 1f
 	nop
+	move	OCFP, CSP
+	addu	CSP, 4
 	li	NARGS, 4
 	move	A1, NULLREG
 	move	A2, NULLREG
