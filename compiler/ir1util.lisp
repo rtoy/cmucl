@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.65 1993/08/03 12:57:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.66 1993/08/06 13:12:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -682,12 +682,14 @@
   (let ((fun (lambda-var-home var)))
     (when (and (eq (functional-kind fun) :let)
 	       (leaf-refs var))
-      (reoptimize-continuation
-       (elt (basic-combination-args
-	     (continuation-dest
-	      (node-cont
-	       (first (leaf-refs fun)))))
-	    (position var (lambda-vars fun))))))
+      (do ((args (basic-combination-args
+		  (continuation-dest
+		   (node-cont
+		    (first (leaf-refs fun)))))
+		 (cdr args))
+	   (vars (lambda-vars fun) (cdr vars)))
+	  ((eq (car vars) var)
+	   (reoptimize-continuation (car args))))))
   (undefined-value))
 
 
