@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.51 1993/03/13 14:39:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.52 1993/05/07 07:14:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,10 +128,14 @@
   (flushable movable))
 
 
-(defknown %make-weak-pointer (t boolean) weak-pointer
+(defknown make-weak-pointer (t) weak-pointer
   (flushable))
+
 (defknown %make-scavenger-hook (t function) scavenger-hook
   (flushable))
+(defknown ((setf scavenger-hook-value)) (t scavenger-hook) t
+  (unsafe))
+
 (defknown %make-complex (real real) complex
   (flushable movable))
 (defknown %make-ratio (rational rational) ratio
