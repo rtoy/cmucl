@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.46 2004/04/28 13:01:57 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.46.2.1 2004/06/02 15:14:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -732,7 +732,7 @@ environment passed to Lisp."
                         ;; via the LDEMULATION environment variable, or via the "-m" command-line
                         ;; option. Here we assume that LDEMULATION will be ignored by the platform
                         ;; linker on Linux/i386 platforms. 
-                        :env `(#+(and x86 linux) ("LDEMULATION" . "elf_i386") ,@env)
+                        :env `(#+(and x86 linux) (:ldemulation . "elf_i386") ,@env)
                         :input nil
                         :output error-output
                         :error :output)))
