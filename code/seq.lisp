@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.35 2000/09/27 18:26:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.36 2002/07/30 16:18:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -941,6 +941,12 @@
 		  ((csubtypep type (specifier-type '(complex long-float)))
 		   (complex (%long-float (realpart object))
 			    (%long-float (imagpart object))))
+		  ((and (typep object 'rational)
+			(csubtypep type (specifier-type '(complex float))))
+		   ;; The case where object is complex, is handled way
+		   ;; above; where object is a float is handled below.
+		   ;; We only need to check for rationals here.
+		   (complex (%single-float object)))
 		  ((csubtypep type (specifier-type 'complex))
 		   (complex object))
 		  (t
