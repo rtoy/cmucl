@@ -31,6 +31,10 @@
 ;;;
 (defvar *tty-object-stack* ())
 
+;;; ### Copied from inspect.lisp.  Remove after it is up.
+(defparameter inspect-length 10)
+(defparameter inspect-level 1)
+
 (proclaim '(inline numbered-parts-p))
 (defun numbered-parts-p (parts)
   (second parts))
@@ -42,7 +46,9 @@
       (cdr (nth (+ n parts-offset) parts))
       (nth (+ n parts-offset) parts)))
 
-(defun tty-inspect (object)
+;;; ### Change name back to tty-inspect when we have the real inspector up.
+;;; 
+(defun inspect (object)
   (unwind-protect
       (input-loop object (describe-parts object) *standard-output*)
     (setf *tty-object-stack* nil)))
@@ -55,6 +61,7 @@
   (tty-display-object parts s)
   (loop
     (format s "~&> ")
+    (force-output)
     (let ((command (read))
 	  ;; Use 2 less than length because first 2 elements are bookkeeping.
 	  (parts-len-2 (- (length parts) 2)))
@@ -157,37 +164,29 @@
 (defun describe-structure-parts (object)
   (let ((dd-slots
 	 (c::dd-slots
-	  (ext:info type defined-structure-info
-		    (system:%primitive header-ref object
-				       system:%g-vector-structure-name-slot))))
+	  (ext:info type defined-structure-info (type-of object))))
 	(parts-list ()))
     (push (format nil "~s is a structure.~%" object) parts-list)
     (push t parts-list)
     (dolist (dd-slot dd-slots (nreverse parts-list))
       (push (cons (c::dsd-%name dd-slot)
-		  (system:%primitive header-ref object (c::dsd-index dd-slot)))
+		  (funcall (c::dsd-accessor dd-slot) object))
 	    parts-list))))
 
 (defun describe-function-parts (object)
-  (let ((object (if (= (system:%primitive get-vector-subtype object)
-		       system:%function-closure-subtype)
-		    (system:%primitive header-ref object
-				       system:%function-name-slot)
-		    object)))
+  (let* ((type (kernel:get-type object))
+	 (object (if (= type vm:closure-header-type)
+		     (kernel:%closure-function object)
+		     object)))
     (list (format nil "Function ~s.~%Argument List: ~a." object
-		  (system:%primitive header-ref object
-				     lisp::%function-entry-arglist-slot)
-		  #|###
-		  (system:%primitive header-ref object
-				     lisp::%function-defined-from-slot)
-		  ~%Defined from: ~a
-		  |#
+		  (lisp::%function-header-arglist object)
+		  ;; Defined from stuff used to be here.  Someone took it out.
 		  )
 	  t)))
 
 (defun describe-vector-parts (object)
   (list* (format nil "Object is a ~:[~;displaced ~]vector of length ~d.~%"
-		 (lisp::%displacedp object) (length object))
+		 (lisp::%array-displaced-p object) (length object))
 	 nil
 	 (coerce object 'list)))
 
@@ -196,6 +195,19 @@
 	 nil
 	 object))
 
+;;; ### Copied from inspect.lisp.  Remove when it is up.
+;;; 
+(defun index-string (index rev-dimensions)
+  (if (null rev-dimensions)
+      "[]"
+      (let ((list nil))
+	(dolist (dim rev-dimensions)
+	  (multiple-value-bind (q r)
+			       (floor index dim)
+	    (setq index q)
+	    (push r list)))
+	(format nil "[~D~{,~D~}]" (car list) (cdr list)))))
+
 (defun describe-array-parts (object)
   (let* ((length (min (array-total-size object) inspect-length))
 	 (reference-array (make-array length :displaced-to object))
@@ -203,7 +215,7 @@
 	 (parts ()))
     (push (format nil "Object is ~:[a displaced~;an~] array of ~a.~%~
                        Its dimensions are ~s.~%"
-		  (array-element-type object) (lisp::%displacedp object)
+		  (array-element-type object) (lisp::%array-displaced-p object)
 		  dimensions)
 	  parts)
     (push t parts)

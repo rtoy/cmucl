@@ -7,13 +7,15 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.10 1990/08/24 18:11:50 wlott Exp $
+;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
 ;;;
 ;;; Written by Scott Fahlman and Rob MacLachlan.
 ;;; Modified by Bill Chiles to adhere to
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 (export '(defvar defparameter defconstant when unless loop setf
 	  defsetf define-setf-method psetf shiftf rotatef push pushnew pop
 	  incf decf remf case typecase with-open-file
@@ -133,8 +135,12 @@
 ;;;
 (defun c::%%defmacro (name definition doc)
   (clear-info function where-from name)
-  (setf (info function macro-function name) definition)
-  (setf (info function kind name) :macro)
+  #+new-compiler
+  (setf (macro-function name) definition)
+  #-new-compiler
+  (progn
+    (setf (info function macro-function name) definition)
+    (setf (info function kind name) :macro))
   (setf (documentation name 'function) doc)
   name)
 
@@ -177,6 +183,11 @@
 
 (defparameter deftype-error-string "Type ~S cannot be used with ~S args.")
 
+#-new-compiler
+(defvar *bootstrap-deftype* :both)
+
+(compiler-let ((*bootstrap-defmacro* :both))
+
 (defmacro deftype (name arglist &body body)
   "Syntax like DEFMACRO, but defines a new type."
   (unless (symbolp name)
@@ -186,19 +197,37 @@
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name
 					 :default-default ''*
-					 :error-string 'deftype-error-string
-					 )
-      `(eval-when (compile load eval)
-	 (%deftype ',name
-		   #'(lambda (,whole) ,@local-decs (block ,name ,body))
-		   ,@(when doc `(,doc)))))))
+					 :error-string 'deftype-error-string)
+      (let ((guts `(%deftype ',name
+			     #'(lambda (,whole)
+				 ,@local-decs
+				 (block ,name ,body))
+			     ,@(when doc `(,doc)))))
+	#-new-compiler
+	(unless (member :new-compiler *features*)
+	  (setf guts
+		`(let ((*bootstrap-deftype* ,*bootstrap-deftype*))
+		   ,guts)))
+	`(eval-when (compile load eval)
+	   ,guts)))))
+
+); compile-let
 ;;;
 (defun %deftype (name expander &optional doc)
-  (setf (info type kind name) :defined)
-  (setf (info type expander name) expander)
+  #-new-compiler
+  (unless (or (eq *bootstrap-deftype* t)
+	      (member :new-compiler *features*))
+    (setf (get name 'deftype-expander)
+	  expander))
+  (when #-new-compiler *bootstrap-deftype* #+new-compiler t
+    (setf (info type kind name) :defined)
+    (setf (info type expander name) expander))
   (when doc
     (setf (documentation name 'type) doc))
-  (c::%note-type-defined name)
+  ;; ### Bootstrap hack -- we need to define types before %note-type-defined
+  ;; is defined.
+  (when (fboundp 'c::note-type-defined)
+    (c::%note-type-defined name))
   name)
 
 
@@ -507,9 +536,9 @@
 	  ;; ### Bootstrap hack...
 	  ;; Ignore any DEFSETF info for structure accessors.
 	  ((info function accessor-for (car form))
-	   (get-setf-method-inverse form `(funcall #'(setf ,(car form)))))
+	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
 	  ((setq temp (info setf inverse (car form)))
-	   (get-setf-method-inverse form `(,temp)))
+	   (get-setf-method-inverse form `(,temp) nil))
 	  ((setq temp (info setf expander (car form)))
 	   (funcall temp form environment))
 	  (t
@@ -517,11 +546,11 @@
 				(macroexpand-1 form environment)
 	     (if win
 		 (foo-get-setf-method res environment)
-		 (get-setf-method-inverse
-		  form
-		  `(funcall #'(setf ,(car form))))))))))
+		 (get-setf-method-inverse form
+					  `(funcall #'(setf ,(car form)))
+					  t)))))))
 
-(defun get-setf-method-inverse (form inverse)
+(defun get-setf-method-inverse (form inverse setf-function)
   (let ((new-var (gensym))
 	(vars nil)
 	(vals nil))
@@ -530,7 +559,9 @@
       (push x vals))
     (setq vals (nreverse vals))
     (values vars vals (list new-var)
-	    `(,@inverse ,@vars ,new-var)
+	    (if setf-function
+		`(,@inverse ,new-var ,@vars)
+		`(,@inverse ,@vars ,new-var))
 	    `(,(car form) ,@vars))))
 
 
@@ -612,9 +643,11 @@
 			       new-access-form)))))
 	      ,@(if doc
 		    `((eval-when (load eval)
-			(%put ',access-fn '%setf-documentation ',doc)))
-		    `((eval-when (load eval)             ;SKH 4/17/84
-			(remprop ',access-fn '%setf-documentation))))
+			(setf (info setf documentation ',access-fn) ',doc)))
+		    `((eval-when (load eval)
+			(or (clear-info setf documentation ',access-fn)
+			    (setf (info setf documentation ',access-fn)
+				  nil)))))
 	      ',access-fn)))
 	(t (error "Ill-formed DEFSETF for ~S." access-fn))))
 
@@ -630,7 +663,7 @@
 	   (cond ((atom (car args))
 		  `(setq ,(car args) ,(cadr args)))
 		 ((info function accessor-for (caar args))
-		  `(funcall #'(setf ,(caar args)) ,@(cdar args) ,(cadr args)))
+		  `(funcall #'(setf ,(caar args)) ,(cadr args) ,@(cdar args)))
 		 ((setq temp (info setf inverse (caar args)))
 		  `(,temp ,@(cdar args) ,(cadr args)))
 		 (t (multiple-value-bind (dummies vals newval setter getter)
@@ -927,11 +960,14 @@
 
 (defsetf elt %setelt)
 (defsetf aref %aset)
+(defsetf row-major-aref %set-row-major-aref)
 (defsetf svref %svset)
 (defsetf char %charset)
 (defsetf bit %bitset)
 (defsetf schar %scharset)
 (defsetf sbit %sbitset)
+(defsetf %array-dimension %set-array-dimension)
+(defsetf %raw-bits %set-raw-bits)
 (defsetf symbol-value set)
 (defsetf symbol-function %sp-set-definition)
 (defsetf symbol-plist %sp-set-plist)
@@ -940,6 +976,15 @@
 (defsetf fill-pointer %set-fill-pointer)
 (defsetf search-list %set-search-list)
 
+(defsetf sap-ref-8 %set-sap-ref-8)
+(defsetf signed-sap-ref-8 %set-sap-ref-8)
+(defsetf sap-ref-16 %set-sap-ref-16)
+(defsetf signed-sap-ref-16 %set-sap-ref-16)
+(defsetf sap-ref-32 %set-sap-ref-32)
+(defsetf signed-sap-ref-32 %set-sap-ref-32)
+(defsetf sap-ref-sap %set-sap-ref-sap)
+(defsetf sap-ref-single %set-sap-ref-single)
+(defsetf sap-ref-double %set-sap-ref-double)
 
 (define-setf-method getf (place prop &optional default &environment env)
   (multiple-value-bind (temps values stores set get)
@@ -1021,21 +1066,35 @@
 		     `(apply (function ,(car getter)) ,@(cdr getter)))))))
 
 
+;;; Special-case a BYTE bytespec so that the compiler can recognize it.
+;;;
 (define-setf-method ldb (bytespec place &environment env)
   "The first argument is a byte specifier.  The second is any place form
   acceptable to SETF.  Replaces the specified byte of the number in this
   place with bits from the low-order end of the new value."
   (multiple-value-bind (dummies vals newval setter getter)
 		       (foo-get-setf-method place env)
-    (let ((btemp (gensym))
-	  (gnuval (gensym)))
-      (values (cons btemp dummies)
-	      (cons bytespec vals)
-	      (list gnuval)
-	      `(let ((,(car newval) (dpb ,gnuval ,btemp ,getter)))
-		 ,setter
-		 ,gnuval)
-	      `(ldb ,btemp ,getter)))))
+    (if (and (consp bytespec) (eq (car bytespec) 'byte))
+	(let ((n-size (gensym))
+	      (n-pos (gensym))
+	      (n-new (gensym)))
+	  (values (list* n-size n-pos dummies)
+		  (list* (second bytespec) (third bytespec) vals)
+		  (list n-new)
+		  `(let ((,(car newval) (dpb ,n-new (byte ,n-size ,n-pos)
+					     ,getter)))
+		     ,setter
+		     ,n-new)
+		  `(ldb (byte ,n-size ,n-pos) ,getter)))
+	(let ((btemp (gensym))
+	      (gnuval (gensym)))
+	  (values (cons btemp dummies)
+		  (cons bytespec vals)
+		  (list gnuval)
+		  `(let ((,(car newval) (dpb ,gnuval ,btemp ,getter)))
+		     ,setter
+		     ,gnuval)
+		  `(ldb ,btemp ,getter))))))
 
 
 (define-setf-method mask-field (bytespec place &environment env)
@@ -1053,23 +1112,6 @@
 		 ,setter
 		 ,gnuval)
 	      `(mask-field ,btemp ,getter)))))
-
-
-(define-setf-method char-bit (place bit-name &environment env)
-  "The first argument is any place form acceptable to SETF.  Replaces the
-  specified bit of the character in this place with the new value."
-  (multiple-value-bind (dummies vals newval setter getter)
-		       (foo-get-setf-method place env)
-    (let ((btemp (gensym))
-	  (gnuval (gensym)))
-      (values `(,@dummies ,btemp)
-	      `(,@vals ,bit-name)
-	      (list gnuval)
-	      `(let ((,(car newval)
-		      (set-char-bit ,getter ,btemp ,gnuval)))
-		 ,setter
-		 ,gnuval)
-	      `(char-bit ,getter ,btemp)))))
 
 
 (define-setf-method the (type place &environment env)

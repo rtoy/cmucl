@@ -10,8 +10,20 @@
 ;;; Record definitions needed for the interface to Mach.
 ;;;
 (in-package 'mach)
+
 (export '(msg-simplemsg msg-msgsize msg-msgtype msg-localport msg-remoteport
 			msg-id sigmask with-trap-arg-block))
+
+(export '(int-array int-array-ref))
+
+(export '(sigcontext-onstack sigcontext-mask sigcontext-pc sigcontext-regs
+	  sigcontext-mdlo sigcontext-mdhi sigcontext-ownedfp sigcontext-fpregs
+	  sigcontext-fpc_csr sigcontext-fpc_eir sigcontext-cause
+	  sigcontext-badvaddr sigcontext-badpaddr sigcontext *sigcontext
+	  indirect-*sigcontext))
+
+
+(def-c-type c-string (pointer simple-base-string))
 
 (defrecord Msg
   (Reserved1 (unsigned-byte 8) 8)
@@ -29,41 +41,30 @@
   (seconds (unsigned-byte 32) (long-words 1))
   (useconds (signed-byte 32) (long-words 1)))
 
-(defalien timeval timeval (record-size 'timeval))
-
 (defrecord timezone
   (minuteswest (signed-byte 32) (long-words 1))
   (dsttime (signed-byte 32) (long-words 1)))
 
-(defalien timezone timezone (record-size 'timezone))
+#+new-compiler
+(def-c-array int-array unsigned-long 32)
+
+#+new-compiler
+(def-c-record sigcontext
+  (onstack unsigned-long)
+  (mask unsigned-long)
+  (pc system-area-pointer)
+  (regs int-array)
+  (mdlo unsigned-long)
+  (mdhi unsigned-long)
+  (ownedfp unsigned-long)
+  (fpregs int-array)
+  (fpc_csr unsigned-long)
+  (fpc_eir unsigned-long)
+  (cause unsigned-long)
+  (badvaddr system-area-pointer)
+  (badpaddr system-area-pointer))
 
 (eval-when (compile load eval)
-(defrecord int1
-  (int (signed-byte 32) (long-words 1)))
-
-(defalien int1 int1 (record-size 'int1))
-
-(defrecord int2
-  (int (signed-byte 32) (long-words 1)))
-
-(defalien int2 int2 (record-size 'int2))
-
-(defrecord int3
-  (int (signed-byte 32) (long-words 1)))
-
-(defalien int3 int3 (record-size 'int3))
-
-(defrecord sigcontext
-  (onstack (unsigned-byte 32) (long-words 1))
-  (mask (unsigned-byte 32) (long-words 1))
-  (sctx-fpa (unsgined-byte 32) (long-words 1))
-  (sp (unsigned-byte 32) (long-words 1))
-  (fp (unsigned-byte 32) (long-words 1))
-  (ap (unsigned-byte 32) (long-words 1))
-  (iar (unsigned-byte 32) (long-words 1))
-  (icscs (unsigned-byte 32) (long-words 1)))
-(defalien sigcontext sigcontext (record-size 'sigcontext))
-
 
 (defrecord tchars
   (intrc (signed-byte 8) (bytes 1))
@@ -72,7 +73,6 @@
   (stopc (signed-byte 8) (bytes 1))
   (eofc (signed-byte 8) (bytes 1))
   (brkc (signed-byte 8) (bytes 1)))
-(defalien tchars tchars (record-size 'tchars))
 
 (defrecord ltchars
   (suspc (signed-byte 8) (bytes 1))
@@ -81,7 +81,6 @@
   (flushc (signed-byte 8) (bytes 1))
   (werasc (signed-byte 8) (bytes 1))
   (lnextc (signed-byte 8) (bytes 1)))
-(defalien ltchars ltchars (record-size 'ltchars))
 
 ); eval-when (compile load eval)
 
@@ -90,16 +89,20 @@
 (eval-when (compile)
   (setq lisp::*bootstrap-defmacro* t))
 
-(defmacro sigmask (signal)
-  "Returns a mask given a signal." 
-  `(ash 1 (1- ,(unix-signal-number signal))))
+(defmacro with-trap-arg-block (type var &body forms)
+  `(with-stack-alien (,var ,type (record-size ',type))
+     ,@forms))
 
-(defmacro with-trap-arg-block (arg-var alien-var &body forms)
-  `(progn (unless *free-trap-arg-blocks* (alloc-trap-arg-block))
-	  (let ((*free-trap-arg-blocks* (cdr *free-trap-arg-blocks*))
-		(,arg-var (car *free-trap-arg-blocks*)))
-	    (alien-bind ((,alien-var ,arg-var ,arg-var T))
-			,@forms))))
+;;; SIGMASK -- Public
+;;;
+#-new-compiler
+(defmacro sigmask (&rest signals)
+  "Returns a mask given a set of signals."
+  (apply #'logior
+	 (mapcar #'(lambda (signal)
+		     (ash 1 (1- (unix-signal-number signal))))
+		 signals)))
+
 #-new-compiler
 (eval-when (compile)
   (setq lisp::*bootstrap-defmacro* nil))

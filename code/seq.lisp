@@ -48,7 +48,7 @@
   "Returns a sequence of the same type as SEQUENCE and the given LENGTH."
   `(make-sequence-of-type (type-of ,sequence) ,length))
 
-(defmacro type-specifier (type)
+(defmacro type-specifier-atom (type)
   "Returns the broad class of which TYPE is a specific subclass."
   `(if (atom ,type) ,type (car ,type)))
 
@@ -59,10 +59,11 @@
 (defun make-sequence-of-type (type length)
   "Returns a sequence of the given TYPE and LENGTH."
   (declare (fixnum length))
-  (case (type-specifier type)
+  (case (type-specifier-atom type)
     (list (make-list length))
     ((bit-vector simple-bit-vector) (make-array length :element-type '(mod 2)))
-    ((string simple-string) (make-string length))
+    ((string simple-string base-string simple-base-string)
+     (make-string length))
     (simple-vector (make-array length))
     ((array simple-array vector)
      (if (listp type)
@@ -101,19 +102,15 @@
 
 (defun length (sequence)
   "Returns an integer that is the length of SEQUENCE."
-  (%primitive length sequence))
-
-(defun list-length* (sequence)
-  (do ((count 0 (1+ count)))
-      ((atom sequence) count)
-    (declare (fixnum count))
-    (setq sequence (cdr sequence))))
+  (etypecase sequence
+    (vector (length (truly-the vector sequence)))
+    (list (length (truly-the list sequence)))))
 
 (defun make-sequence (type length &key (initial-element NIL iep))
   "Returns a sequence of the given Type and Length, with elements initialized
   to :Initial-Element."
   (declare (fixnum length))
-  (let ((type (type-expand type)))
+  (let ((type (kernel::type-expand type)))
     (cond ((subtypep type 'list)
 	   (make-list length :initial-element initial-element))
 	  ((subtypep type 'string)
@@ -532,10 +529,10 @@
   "Returns a new sequence of all the argument sequences concatenated together
    which shares no structure with the original argument sequences of the
    specified OUTPUT-TYPE-SPEC."
-  (case (type-specifier output-type-spec)
+  (case (type-specifier-atom output-type-spec)
     (list (apply #'concat-to-list* sequences))
     ((simple-vector simple-string vector string array simple-array
-		    bit-vector simple-bit-vector)
+		    bit-vector simple-bit-vector base-string simple-base-string)
      (apply #'concat-to-simple* output-type-spec sequences))
     (t (error "~S: invalid output type specification." output-type-spec))))
 
@@ -608,11 +605,11 @@
    result is a sequence such that element i is the result of applying FUNCTION
    to element i of each of the argument sequences."
   (let ((sequences (cons first-sequence more-sequences)))
-    (case (type-specifier output-type-spec)
+    (case (type-specifier-atom output-type-spec)
       ((nil) (map-for-effect function sequences))
       (list (map-to-list function sequences))
       ((simple-vector simple-string vector string array simple-array
-		    bit-vector simple-bit-vector)
+		    bit-vector simple-bit-vector base-string simple-base-string)
        (map-to-simple output-type-spec function sequences))
       (t (error "~S: invalid output type specifier." output-type-spec)))))
 
@@ -749,9 +746,10 @@
     (eval `#',object))
    ((numberp object)
     (case output-type-spec
-      (short-float (%primitive float-short object))
-      ((single-float float) (%primitive float-single object))
-      ((double-float long-float) (%primitive float-long object))
+      ((short-float single-float float)
+       (%single-float object))
+      ((double-float long-float)
+       (%double-float object))
       (complex
        (complex object))
       (t
@@ -759,43 +757,46 @@
    (t
     (typecase object
       (list
-       (case (type-specifier output-type-spec)
-	 ((simple-string string) (list-to-string* object))
+       (case (type-specifier-atom output-type-spec)
+	 ((simple-string string simple-base-string base-string)
+	  (list-to-string* object))
 	 ((simple-bit-vector bit-vector) (list-to-bit-vector* object))
 	 ((simple-vector vector array simple-array)
 	  (list-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (simple-string
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
 	 ;; Can't coerce a string to a bit-vector!
 	 ((simple-vector vector array simple-array)
 	  (vector-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (simple-bit-vector
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
 	 ;; Can't coerce a bit-vector to a string!
 	 ((simple-vector vector array simple-array)
 	  (vector-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (simple-vector
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
-	 ((simple-string string) (vector-to-string* object))
+	 ((simple-string string simple-base-string base-string)
+	  (vector-to-string* object))
 	 ((simple-bit-vector bit-vector) (vector-to-bit-vector* object))
 	 ((vector array simple-array) (vector-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (string
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
-	 (simple-string (string-to-simple-string* object))
+	 ((simple-string simple-base-string)
+	  (string-to-simple-string* object))
 	 ;; Can't coerce a string to a bit-vector!
 	 ((simple-vector vector simple-array array)
 	  (vector-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (bit-vector
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
 	 ;; Can't coerce a bit-vector to a string!
 	 (simple-bit-vector (bit-vector-to-simple-bit-vector* object))
@@ -803,9 +804,10 @@
 	  (vector-to-vector* object output-type-spec))
 	 (t (error "Can't coerce ~S to type ~S." object output-type-spec))))
       (vector
-       (case (type-specifier output-type-spec)
+       (case (type-specifier-atom output-type-spec)
 	 (list (vector-to-list* object))
-	 ((simple-string string) (vector-to-string* object))
+	 ((simple-string string base-string simple-base-string)
+	  (vector-to-string* object))
 	 ((simple-bit-vector bit-vector) (vector-to-bit-vector* object))
 	 ((simple-vector vector array simple-array)
 	  (vector-to-vector* object output-type-spec))
@@ -818,10 +820,10 @@
 (macrolet ((frob (name result access src-type &optional typep)
 		 `(defun ,name (object ,@(if typep '(type) ()))
 		    (do* ((index 0 (1+ index))
-			  (length (,(case src-type
-				      (:list 'list-length*)
-				      (:vector 'length))
-				   object))
+			  (length (length (the ,(case src-type
+						  (:list 'list)
+						  (:vector 'vector))
+					       object)))
 			  (result ,result))
 			 ((= index length) result)
 		      (declare (fixnum length index))
@@ -861,8 +863,7 @@
       object
       (with-array-data ((data object)
 			(start)
-			(end (%primitive header-ref object
-					 %array-fill-pointer-slot)))
+			(end (length object)))
 	(declare (simple-string data))
 	(subseq data start end))))
 
@@ -871,8 +872,7 @@
       object
       (with-array-data ((data object)
 			(start)
-			(end (%primitive header-ref object
-					 %array-fill-pointer-slot)))
+			(end (length object)))
 	(declare (simple-bit-vector data))
 	(subseq data start end))))
 

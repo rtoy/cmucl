@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.5 1990/07/26 19:12:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.2 1990/08/24 18:13:22 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.

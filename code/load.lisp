@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.5 1990/08/24 18:11:40 wlott Exp $
+;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
@@ -338,13 +340,13 @@
 (defun check-header (file)
   (let ((byte (read-byte file NIL '*eof*)))
     (cond ((eq byte '*eof*) ())
-	  ((eq byte (char-int #\F))
+	  ((eq byte (char-code #\F))
 	   (do ((byte (read-byte file) (read-byte file))
 		(count 1 (1+ count)))
 	       ((= byte 255) t)
 	     (declare (fixnum byte))
 	     (if (and (< count 9)
-		      (not (eql byte (char-int (schar "FASL FILE" count)))))
+		      (not (eql byte (char-code (schar "FASL FILE" count)))))
 		 (error "Bad FASL file format."))))
 	  (t (error "Bad FASL file format.")))))
 
@@ -398,8 +400,7 @@
 	       (tn (probe-file pn)))
 	  (cond
 	   (tn
-	    (if (or (string-equal (pathname-type tn) "nfasl")
-		    (string-equal (pathname-type tn) "fasl"))
+	    (if (string-equal (pathname-type tn) #.vm:target-fasl-file-type)
 		(with-open-file (file tn
 				      :direction :input
 				      :element-type '(unsigned-byte 8))
@@ -417,7 +418,8 @@
 	   (t
 	    (let* ((srcn (make-pathname :type "lisp" :defaults pn))
 		   (src (probe-file srcn))
-		   (objn (make-pathname :type "nfasl" :defaults pn))
+		   (objn (make-pathname :type #.vm:target-fasl-file-type
+					:defaults pn))
 		   (obj (probe-file objn)))
 	      (cond
 	       (obj
@@ -465,10 +467,10 @@
 (define-fop (fop-empty-list 4) ())
 (define-fop (fop-truth 5) t)
 (define-fop (fop-misc-trap 66)
-	    (%primitive make-immediate-type 0 lisp::%trap-type))
+	    (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
 
 (define-fop (fop-character 68)
-  (int-char (read-arg 3)))
+  (code-char (read-arg 3)))
 (define-fop (fop-short-character 69)
   (code-char (read-arg 1)))
 
@@ -563,22 +565,23 @@
 
 (define-fop (fop-ratio 70)
   (let ((den (pop-stack)))
-    (%primitive make-ratio (pop-stack) den)))
+    (%make-ratio (pop-stack) den)))
 
 (define-fop (fop-complex 71)
   (let ((im (pop-stack)))
-    (%primitive make-complex (pop-stack) im)))
+    (%make-complex (pop-stack) im)))
 
 (define-fop (fop-float 45)
   (let* ((n (read-arg 1))
 	 (exponent (load-s-integer (ceiling n 8)))
 	 (m (read-arg 1))
 	 (mantissa (load-s-integer (ceiling m 8)))
-	 (number (cond ((or (> n 9) (> m 32))
-			(coerce mantissa 'long-float))
-		       ((> m 21)
-			(coerce mantissa 'single-float))
-		       (T (coerce mantissa 'short-float)))))
+	 (number (if (or (not (<= vm:single-float-normal-exponent-min
+				  (+ exponent vm:single-float-bias)
+				  vm:single-float-normal-exponent-max))
+			 (> m (1+ vm:single-float-digits)))
+		     (coerce mantissa 'double-float)
+		     (coerce mantissa 'single-float))))
     (multiple-value-bind (f ex s) (decode-float number)
       (declare (ignore ex))
       (* s (scale-float f exponent)))))
@@ -645,14 +648,13 @@
 (define-fop (fop-array 83)
   (let* ((rank (read-arg 4))
 	 (vec (pop-stack))
-	 (size (+ rank %array-first-dim-slot))
 	 (length (length vec))
-	 (res (%primitive alloc-array rank)))
+	 (res (%primitive make-array-header vm:simple-array-type rank)))
     (declare (simple-array vec))
     (set-array-header res vec length length 0
-		      (do ((i (1- size) (1- i))
+		      (do ((i rank (1- i))
 			   (dimensions () (cons (pop-stack) dimensions)))
-			  ((< i %array-first-dim-slot) dimensions))
+			  ((zerop i) dimensions))
 		      nil)
     res))
 
@@ -668,12 +670,21 @@
   (prepare-for-fast-read-byte *fasl-file*
     (let* ((len (fast-read-u-integer 4))
 	   (size (fast-read-byte))
-	   (ac (1- (integer-length size)))
-	   (res (%primitive alloc-i-vector len ac)))
+	   (type (case size
+		   (1 vm:simple-bit-vector-type)
+		   (2 vm:simple-array-unsigned-byte-2-type)
+		   (4 vm:simple-array-unsigned-byte-4-type)
+		   (8 vm:simple-array-unsigned-byte-8-type)
+		   (16 vm:simple-array-unsigned-byte-16-type)
+		   (32 vm:simple-array-unsigned-byte-32-type)
+		   (t (error "Losing i-vector element size: ~S"))))
+	   (bits (* len size))
+	   (res (%primitive allocate-vector type len
+			    (the index (ceiling bits vm:word-bits)))))
+      (declare (type (unsigned-byte 8) type)
+	       (type index len))
       (done-with-fast-read-byte)
-      (unless (and (<= ac 5) (= size (ash 1 ac)))
-	(error "Losing element size ~S." size))
-      (read-n-bytes *fasl-file* res 0 (ash (+ (ash len ac) 7) -3))
+      (read-n-bytes *fasl-file* res 0 (ceiling bits vm:byte-bits))
       res)))
 
 
@@ -762,28 +773,23 @@
 
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
-;;; the boxed storage section, then Size bytes of code are read in.  This must
-;;; be done WITHOUT-GCING, since GC only recognizes code object references that
-;;; appear in a function object.  If a GC happened before we stored the code
-;;; object, the code would disappear.
+;;; the boxed storage section, then Size bytes of code are read in.
 ;;;
 (defmacro load-code (nitems size)
-  `(without-gcing
-     (let ((box-num ,nitems)
-	   (code-length ,size))
-       (declare (fixnum box-num code-length))
-       (let ((function (%primitive alloc-function box-num)))
-	 (%primitive set-vector-subtype function %function-constants-subtype)
-	 (do ((index (1- box-num) (1- index)))
-	     ((minusp index))
-	   (declare (fixnum index))
-	   (%primitive header-set function index (pop-stack)))
-	 (let ((code (%primitive alloc-code code-length)))
-	   (read-n-bytes *fasl-file* code 0 code-length)
-	   (%primitive header-set function %function-code-slot code))
-	 (when *load-print-stuff*
-	   (format t "~&; ~S~%" function))
-	 function))))
+  `(let ((box-num ,nitems)
+	 (code-length ,size))
+     (declare (fixnum box-num code-length))
+     (let ((code (%primitive c::allocate-code-object box-num code-length)))
+       (%primitive c::set-code-debug-info code (pop-stack))
+       (do ((index (1- box-num) (1- index)))
+	   ((minusp index))
+	 (declare (fixnum index))
+	 (%primitive c::code-constant-set code index (pop-stack)))
+       (system:without-gcing
+	 (let ((inst (truly-the system-area-pointer
+				(%primitive c::code-instructions code))))
+	   (read-n-bytes *fasl-file* inst 0 code-length)))
+       code)))
 
 (define-fop (fop-code 58)
   (if (eql *current-code-format* %fasl-code-format)
@@ -812,197 +818,102 @@
 (clone-fop (fop-alter-code 140 nil) (fop-byte-alter-code 141)
   (let ((value (pop-stack))
 	(code (pop-stack))
-	(index (clone-arg)))
-    (%primitive header-set code index value)))
+	(index (- (clone-arg) vm:code-constants-offset)))
+    (declare (type index index))
+    (%primitive c::code-constant-set code index value)
+    (undefined-value)))
 
-
-;;; Kind of like Load-Code, except that we set the Code and Constants
-;;; slots from the Constants object that is our first stack argument.  The
-;;; subtype is set to the second stack argument.
-;;;
 (define-fop (fop-function-entry 142)
-  (let* ((box-num (read-arg 1))
-	 (function (%primitive alloc-function box-num)))
-    ;;
-    ;; Pop boxed things, storing them in the allocated entry object.
-    (do ((index (1- box-num) (1- index)))
-	((minusp index))
-      (%primitive header-set function index (pop-stack)))
-    ;;
-    ;; Set the subtype of the entry object.
-    (%primitive set-vector-subtype function (pop-stack))
-    ;;
-    ;; Set code and constants slots in the entry.
-    (let* ((constants (pop-stack))
-	   (code (%primitive header-ref constants %function-code-slot)))
-      (%primitive header-set function %function-code-slot code)
-      (%primitive header-set function %function-entry-constants-slot
-		  constants))
+  (let ((type (pop-stack))
+	(arglist (pop-stack))
+	(name (pop-stack))
+	(code-object (pop-stack))
+	(offset (read-arg 4)))
+    (declare (type index offset))
+    (unless (zerop (logand offset vm:lowtag-mask))
+      (error "Unaligned function object, offset = #x~X." offset))
+    (let ((fun (%primitive c::compute-function code-object offset)))
+      (%primitive c::set-function-self fun fun)
+      (%primitive c::set-function-next fun
+		  (%primitive c::code-entry-points code-object))
+      (%primitive c::set-code-entry-points code-object fun)
+      (%primitive c::set-function-name fun name)
+      (%primitive c::set-function-arglist fun arglist)
+      (%primitive c::set-function-type fun type)
+      fun)))
 
-    function))
+
+;;;; Linkage fixups.
+
+;;; These two variables are initially filled in by Genesis.
+
+(defvar *initial-assembler-routines*)
+(defvar *initial-foreign-symbols*)
+
+(defvar *assembler-routines* (make-hash-table :test #'eq))
+(defvar *foreign-symbols* (make-hash-table :test #'equal))
+
+(defun loader-init ()
+  (dolist (routine *initial-assembler-routines*)
+    (setf (gethash (car routine) *assembler-routines*) (cdr routine)))
+  (dolist (symbol *initial-foreign-symbols*)
+    (setf (gethash (car symbol) *foreign-symbols*) (cdr symbol)))
+  (makunbound '*initial-assembler-routines*)
+  (makunbound '*initial-foreign-symbols*))
 
 
-
-(define-fop (fop-user-miscop-fixup 134)
-  (let* ((miscop-name (pop-stack))
-	 (function-object (pop-stack))
-	 (code (%primitive header-ref function-object %function-code-slot))
+(define-fop (fop-foreign-fixup 143)
+  (let* ((code-object (pop-stack))
 	 (offset (read-arg 4))
-	 (loaded-addr (get miscop-name '%loaded-address)))
-    (unless loaded-addr
-      (error "Miscop ~A is undefined." miscop-name))
-    
-    (let ((hi-addr (logior (ash clc::type-assembler-code
-				clc::type-shift-16)
-			   (logand (ash loaded-addr -16) #xFFFF))))
-      (setf (aref code (+ offset 1)) (logand hi-addr #xFF))
-      (setf (aref code (+ offset 2))
-	    (logand (ash loaded-addr -8) #xFF))
-      (setf (aref code (+ offset 3))
-	    (logand loaded-addr #xFF)))
+	 (len (read-arg 1))
+	 (sym (make-string len)))
+    (read-n-bytes *fasl-file* sym 0 len)
+    (multiple-value-bind
+	(value found)
+	(gethash sym *foreign-symbols* 0)
+      (unless found
+	(error "Unknown foreign symbol: ~S" sym))
+      (fixup-code-object code-object offset value))
+    code-object))
 
-    function-object))
+(define-fop (fop-assembler-code 144)
+  (error "Cannot load assembler code."))
+
+(define-fop (fop-assembler-routine 145)
+  (error "Cannot load assembler code."))
+
+(define-fop (fop-assembler-fixup 146)
+  (let ((routine (pop-stack))
+	(code-object (pop-stack))
+	(offset (read-arg 4)))
+    (multiple-value-bind
+	(value found)
+	(gethash routine *assembler-routines*)
+      (unless found
+	(error "Undefined assembler routine: ~S" routine))
+      (fixup-code-object code-object offset value)
+      code-object)))
+
+(defun fixup-code-object (code offset fixup)
+  ;; Currently, the only kind of fixup we can have is a lui followed by an
+  ;; addi.
+  (multiple-value-bind
+      (word-offset rem)
+      (truncate offset vm:word-bytes)
+    (unless (zerop rem)
+      (error "Unaligned instruction?  offset=#x~X." offset))
+    (system:without-gcing
+     (let* ((sap (truly-the system-area-pointer
+			    (%primitive c::code-instructions code)))
+	    (half-word-offset (* word-offset 2))
+	    (new-val (+ fixup
+			(ash (sap-ref-16 sap half-word-offset) 16)
+			(signed-sap-ref-16 sap (+ half-word-offset 2))))
+	    (low (logand new-val (1- (ash 1 16))))
+	    (high (+ (ash new-val -16)
+		     (if (logbitp 15 low) 1 0))))
+       (setf (sap-ref-16 sap half-word-offset) high)
+       (setf (sap-ref-16 sap (+ half-word-offset 2)) low)))))
 
 
-;;;; Loading assembler routines:
-;;;
-
-;;; Allocate-Assembler-Code  --  Internal
-;;;
-;;;    Allocate some stuff out of assembler code space.
-;;;
-(defun allocate-assembler-code (bytes)
-  (let* ((idx (ash %assembler-code-type %alloc-ref-type-shift))
-	 (free (alloc-ref idx))
-	 (new (+ free bytes)))
-    (prog1
-      (%primitive make-immediate-type free %assembler-code-type)
-      (%primitive 16bit-system-set alloctable-address idx (ash new -16))
-      (%primitive 16bit-system-set alloctable-address (1+ idx)
-		  (logand new #xFFFF)))))
-
-(define-fop (fop-assembler-routine 130)
-  (let* ((code-length (read-arg 4))
-	 (buffer (make-array code-length :element-type '(unsigned-byte 8)))
-	 (code (allocate-assembler-code code-length)))
-    (declare (fixnum code-length))
-    (read-n-bytes *fasl-file* buffer 0 code-length)
-    (%primitive byte-blt buffer 0 code 0 code-length)
-    code))
-
-;;; A list of the miscop definitions which have been loaded but not
-;;; resolved.  Each element is a cons (name . code-ptr).
-;;;
-(defvar *miscop-definitions* ())
-
-
-;;; Recall that the format of a reference is (How Label Location),
-;;; where How is one of JI, BI, BA, or L, Label is the label's name, and
-;;; Location is the location of the reference.  These things are stored on
-;;; the list *external-references* as (Name . References), where Name is
-;;; the name of the referencing routine, and References is a list of references
-;;; in the above format.
-;;;
-(defvar *external-references* ())
-(defvar *user-defined-miscops* ())
-
-(define-fop (fop-fixup-miscop-routine 131 nil)
-  (let* ((external-references (pop-stack))
-	 (external-labels (pop-stack))
-	 (name (pop-stack))
-	 (code (pop-stack))
-	 (start (%primitive make-immediate-type code %+-fixnum-type)))
-    (dolist (lab external-labels)
-      (setf (get (car lab) '%loaded-address) (+ (ash (cdr lab) 1) start)))
-    (push (cons name external-references) *external-references*)
-    (push (cons name code) *miscop-definitions*)))
-
-(define-fop (fop-fixup-user-miscop-routine 133 nil)
-  (let* ((external-references (pop-stack))
-	 (external-labels (pop-stack))
-	 (name (pop-stack))
-	 (code (pop-stack))
-	 (start (%primitive make-immediate-type code %+-fixnum-type)))
-    (dolist (lab external-labels)
-      (setf (get (car lab) '%loaded-address) (+ (ash (cdr lab) 1) start)))
-    (push (cons name external-references) *external-references*)
-    (pushnew name *user-defined-miscops*)
-    (setf (get name 'user-miscop) t)))
-
-(define-fop (fop-fixup-assembler-routine 132 nil)
-  (let* ((external-references (pop-stack))
-	 (external-labels (pop-stack))
-	 (name (pop-stack))
-	 (code (pop-stack))
-	 (start (%primitive make-immediate-type code %+-fixnum-type)))
-    (dolist (lab external-labels)
-      (setf (get (car lab) '%loaded-address) (+ (ash (cdr lab) 1) start)))
-    (push (cons name external-references) *external-references*)))
-
-;;; Resolving all the assembler routines' references.
-
-;;; Patch-Instruction  --  Internal
-;;;
-;;;    Used to patch an assembler code object.  Hi-var and lo-var are
-;;; bound to the values of the high and low halfwords in the instruction.
-;;; The values may by changed by setting the variables.
-;;;
-(defmacro patch-instruction ((hi-var lo-var code offset) &body body)
-  `(let ((,hi-var (%primitive 16bit-system-ref ,code ,offset))
-	 (,lo-var (%primitive 16bit-system-ref ,code (1+ ,offset))))
-     (multiple-value-prog1
-      (progn ,@body)
-      (%primitive 16bit-system-set ,code ,offset ,hi-var)
-      (%primitive 16bit-system-set ,code (1+ ,offset) ,lo-var))))
-
-;;; Resolve-Loaded-Assembler-References  --  Public
-;;;
-;;;    Fix up the recorded external references and define the miscops.
-;;;
-(defun resolve-loaded-assembler-references ()
-  "This function resolves external label references in loaded assembler
-  routines.  It should be called after assembler files have been loaded.
-  Miscop definitions do not take effect until this function is called."
-  (dolist (reflist *external-references*)
-    (let* ((code-byte-offset (get (car reflist) '%loaded-address))
-	   (code-halfword-offset (ash code-byte-offset -1))
-	   (address (%primitive make-immediate-type code-byte-offset
-				%assembler-code-type)))
-      (dolist (refs (cdr reflist))
-	(let ((how (car refs))
-	      (label (get (cadr refs) '%loaded-address))
-	      (location (caddr refs)))
-	  (unless label
-	    (error "~A references ~A, which has not been defined.~%"
-		   (car reflist) (cadr refs)))
-	  (let ((offset (- (- (ash label -1) code-halfword-offset) location)))
-	    (ecase how
-	      (clc::ji
-	       (unless (<= #x-80 offset #x7F)
-		 (error "Offset #X~X out of JI range for ~A to reference ~A.~%"
-			offset (car reflist) (cadr refs)))
-	       (patch-instruction (hi lo address location)
-		 (setf (ldb (byte 8 0) hi) offset)))
-	      (clc::bi
-	       (unless (<= #x-80000 offset #x7FFFF)
-		 (error "Offset #X~X out of BI range for ~A to reference ~A.~%"
-			offset (car reflist) (cadr refs)))
-	       (patch-instruction (hi lo address location)
-		 (setf (ldb (byte 4 0) hi) (ash offset -16))
-		 (setq lo (logand offset #xFFFF))))
-	      (clc::ba (error "I can't resolve a BA reference yet.~%"))
-	      (clc::l (error "I can't resolve an L reference yet.~%"))))))))
-  (setq *external-references* ())
-
-  (dolist (mo *miscop-definitions*)
-    (let* ((name (intern (symbol-name (car mo)) (find-package "COMPILER")))
-	   (index (get name 'clc::transfer-vector-index)))
-      (if index
-	  (%primitive write-control-stack
-		      (%primitive make-immediate-type (ash index 2)
-				  %assembler-code-type)
-		      (cdr mo))
-	  (pushnew name *user-defined-miscops*))))
-  (setq *miscop-definitions* ()))
-
 (proclaim '(notinline read-byte))

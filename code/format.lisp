@@ -948,33 +948,19 @@
       (cond ((not colon)
 	     (cond (atsign
 		    (prin1 char))
-		   ((zerop (char-bits char))
-		    (write-char char))
 		   (t
 		    (format-print-named-character char nil))))
 	    (t
 	     (format-print-named-character char t))))))
 
-(defun format-print-named-character (char longp)
-  (when (char-bit char :control) 
-    (write-string (if longp "Control-" "C-")))
-  (when (char-bit char :meta)
-    (write-string (if longp "Meta-" "M-")))
-  (when (char-bit char :super)
-    (write-string (if longp "Super-" "S-")))
-  (when (char-bit char :hyper)
-    (write-string (if longp "Hyper-" "H-")))
-  (let* ((ch (code-char (char-code char)))	;strip funny bits
-	 (name (char-name ch)))
+(defun format-print-named-character (char)
+  (let* ((name (char-name char)))
     (cond (name (write-string (string-capitalize name)))
 	  ;; Print control characters as "^"<char>
 	  ((<= 0 (the fixnum (char-code char)) 31)
 	   (write-char #\^)
 	   (write-char (code-char (+ 64 (the fixnum (char-code char))))))
-	  (t (write-char ch)))))
-	  
-
-
+	  (t (write-char char)))))
 
 ;;;; NUMERIC PRINTING
 
@@ -1227,45 +1213,54 @@
 	  (format-fixed-aux number w d k ovf pad atsign)
 	  (if (rationalp number)
 	      (format-fixed-aux
-	       (coerce number 'short-float) w d k ovf pad atsign)
+	       (coerce number 'single-float) w d k ovf pad atsign)
 	      (let ((*print-base* 10))
 		(format-write-field
 		 (princ-to-string number) w 1 0 #\space t)))))))
 
 
+;;; We return true if we overflowed, so that ~G can output the overflow char
+;;; instead of spaces.
+;;;
 (defun format-fixed-aux (number w d k ovf pad atsign)
-  (if (not (or w d))
-      (prin1 number)
-      (let ((spaceleft w))
-	(when (and w (or atsign (minusp number))) (decf spaceleft))
-	(multiple-value-bind 
-          (str len lpoint tpoint)
+  (cond
+   ((not (or w d))
+    (prin1 number)
+    nil)
+   (t
+    (let ((spaceleft w))
+      (when (and w (or atsign (minusp number))) (decf spaceleft))
+      (multiple-value-bind 
+	  (str len lpoint tpoint)
 	  (flonum-to-string (abs number) spaceleft d k)
-	  ;;if caller specifically requested no fraction digits, suppress the
+	;;if caller specifically requested no fraction digits, suppress the
+	;;optional trailing zero
+	(when (and d (zerop d)) (setq tpoint nil))
+	(when w 
+	  (decf spaceleft len)
+	  ;;optional leading zero
+	  (when lpoint
+	    (if (or (> spaceleft 0) tpoint) ;force at least one digit
+		(decf spaceleft)
+		(setq lpoint nil)))
 	  ;;optional trailing zero
-	  (when (and d (zerop d)) (setq tpoint nil))
-	  (when w 
-	    (decf spaceleft len)
-	    ;;optional leading zero
-	    (when lpoint
-	      (if (or (> spaceleft 0) tpoint) ;force at least one digit
-		  (decf spaceleft)
-		  (setq lpoint nil)))
-	    ;;optional trailing zero
-	    (when tpoint
-	      (if (> spaceleft 0)
-		  (decf spaceleft)
-		  (setq tpoint nil))))
-	  (cond ((and w (< spaceleft 0) ovf)
-		 ;;field width overflow
-		 (dotimes (i w) (write-char ovf)))
-		(t (when w (dotimes (i spaceleft) (write-char pad)))
-		   (if (minusp number)
-		       (write-char #\-)
-		       (if atsign (write-char #\+)))
-		   (when lpoint (write-char #\0))
-		   (write-string str)
-		   (when tpoint (write-char #\0))))))))
+	  (when tpoint
+	    (if (> spaceleft 0)
+		(decf spaceleft)
+		(setq tpoint nil))))
+	(cond ((and w (< spaceleft 0) ovf)
+	       ;;field width overflow
+	       (dotimes (i w) (write-char ovf))
+	       t)
+	      (t
+	       (when w (dotimes (i spaceleft) (write-char pad)))
+	       (if (minusp number)
+		   (write-char #\-)
+		   (if atsign (write-char #\+)))
+	       (when lpoint (write-char #\0))
+	       (write-string str)
+	       (when tpoint (write-char #\0))
+	       nil)))))))
 
 
 ;;;; Exponential-format floating point  ~E
@@ -1281,7 +1276,7 @@
 	  (format-exp-aux number w d e k ovf pad marker atsign)
 	  (if (rationalp number)
 	      (format-exp-aux
-	       (coerce number 'short-float) w d e k ovf pad marker atsign)
+	       (coerce number 'single-float) w d e k ovf pad marker atsign)
 	      (let ((*print-base* 10))
 		(format-write-field
 		 (princ-to-string number) w 1 0 #\space t)))))))
@@ -1289,11 +1284,11 @@
 
 (defun format-exponent-marker (number)
   (if (typep number *read-default-float-format*)
-      #\E
+      #\e
       (typecase number
-	(short-float #\S)
-;	(single-float #\F)
-	(double-float #\D)
+	(single-float #\f)
+	(double-float #\d)
+	(short-float #\s)
 	(long-float #\L))))
 
 
@@ -1356,7 +1351,7 @@
   (when colon
     (format-error "Colon flag not allowed"))
   (with-format-parameters parms
-    ((w nil) (d nil) (e nil) (k nil) (ovf #\*) (pad #\space) (marker nil))
+    ((w nil) (d nil) (e nil) (k nil) (ovf nil) (pad #\space) (marker nil))
     (let ((number (pop-format-arg)))
       ;;The Excelsior edition does not say what to do if
       ;;the argument is not a float.  Here, we adopt the
@@ -1365,7 +1360,7 @@
 	  (format-general-aux number w d e k ovf pad marker atsign)
 	  (if (rationalp number)
 	      (format-general-aux
-	       (coerce number 'short-float) w d e k ovf pad marker atsign)
+	       (coerce number 'single-float) w d e k ovf pad marker atsign)
 	      (let ((*print-base* 10))
 		(format-write-field
 		 (princ-to-string number) w 1 0 #\space t)))))))
@@ -1389,10 +1384,13 @@
 	   (ww (if w (- w ee) nil))
 	   (dd (- d n)))
       (cond ((<= 0 dd d)
-	     (format-fixed-aux number ww dd nil ovf pad atsign)
-	     (dotimes (i ee) (write-char #\space)))
-	    (t (format-exp-aux 
-		 number w d e (or k 1) ovf pad marker atsign))))))
+	     (let ((char (if (format-fixed-aux number ww dd nil ovf pad
+					       atsign)
+			     ovf
+			     #\space)))
+	       (dotimes (i ee) (write-char char))))
+	    (t
+	     (format-exp-aux number w d e (or k 1) ovf pad marker atsign))))))
 
 
 ;;; Dollars floating-point format  ~$
@@ -1400,7 +1398,7 @@
 (defun format-dollars (colon atsign parms)
   (with-format-parameters parms ((d 2) (n 1) (w 0) (pad #\space))
     (let ((number (pop-format-arg)))
-      (if (rationalp number) (setq number (coerce number 'short-float)))
+      (if (rationalp number) (setq number (coerce number 'single-float)))
       (if (floatp number)
 	  (let* ((signstr (if (minusp number) "-" (if atsign "+" "")))
 		 (signlen (length signstr)))
@@ -1416,39 +1414,6 @@
 	  (let ((*print-base* 10))
 	    (format-write-field (princ-to-string number) w 1 0 #\space t))))))
 
-
-;;;; Some stuff for Compiler, MACLISP interaction.
-
-;;; The following crock simulates some Common Lisp functions in the
-;;; cross-compiler's MACLISP environment for the benefit of the hairy
-;;; dispatch-table initialization macro. The internal representation
-;;; of character objects in the compiler is known to this code.  
-
-#|
-(eval-when (compile-maclisp)
-
-  (setq char-code-limit 256)
-
-  (defun char-downcase (char)
-    (let ((ch (cadr char)))
-      (if (lessp 64 ch 91) (list '**character** (+ ch 32)) char)))
-
-  (defun char-upcase (char)
-    (let ((ch (cadr char)))
-      (if (lessp 96 ch 123) (list '**character** (- ch 32)) char)))
-
-  (defun char= (a b)
-    (= (cadr a) (cadr b)))
-
-  (defun char< (a b)
-    (< (cadr a) (cadr b)))
-
-  (defun char-code (char)
-    (cadr char))
-
-  (defun code-char (code)
-    (list '**character** code)))
-|#
 
 ;;;; INITIALIZATION
 

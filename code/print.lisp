@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.9 1990/08/24 18:12:20 wlott Exp $
+;;;
 ;;; CMU Common Lisp printer.
 ;;;
 ;;; Written by Neal Feinberg, Bill Maddox, Steven Handerson, and Skef Wholey.
@@ -22,7 +24,7 @@
 
 (defvar *print-escape* T
   "Flag which indicates that slashification is on.  See the manual")
-(defvar *print-pretty* T
+(defvar *print-pretty* nil
   "Flag which indicates that pretty printing is to be used")
 (defvar *print-base* 10.
   "The output base for integers and rationals.")
@@ -224,50 +226,48 @@
 	   (>= currlevel (the fixnum *print-level*)))
       (write-char #\# stream)
       (typecase object
-	    (symbol
-	     (if *print-escape*
-		 (output-symbol object stream)
-		 (case *print-case*
-		   (:upcase (write-string (symbol-name object) stream))
-		   (:downcase
-		    (let ((name (symbol-name object)))
-		      (declare (simple-string name))
-		      (dotimes (i (length name))
-			(write-char (char-downcase (char name i)) stream))))
-		   (:capitalize
-		    (write-string (string-capitalize (symbol-name object))
-				  stream)))))
-	    ;; If a list, go through element by element, being careful
-	    ;; about not running over the printlength
-	    (list
-	     (output-list object stream (1+ currlevel)))
-	    (string
-	     (if *print-escape*
-		 (quote-string object stream)
-		 (write-string object stream)))
-	    (integer
-	     (output-integer object stream))
-	    (float
-	     (output-float object stream))
-	    (ratio
-	     (output-ratio object stream))
-	    (complex
-	     (output-complex object stream))
-	    (structure
-	     (output-structure object stream currlevel))
-	    (character
-	     (output-character object stream))
-	    (vector
-	     #+new-compiler
-	     (if (eql (%primitive get-type object) system:%code-type)
-		 (output-random object stream)
-		 (output-vector object stream))
-	     #-new-compiler
-	     (output-vector object stream))
-	    (array
-	     (output-array object stream (1+ currlevel))) 
-	    (t (output-random object stream)))))
-
+	(symbol
+	 (if *print-escape*
+	     (output-symbol object stream)
+	     (case *print-case*
+	       (:upcase (write-string (symbol-name object) stream))
+	       (:downcase
+		(let ((name (symbol-name object)))
+		  (declare (simple-string name))
+		  (dotimes (i (length name))
+		    (write-char (char-downcase (char name i)) stream))))
+	       (:capitalize
+		(write-string (string-capitalize (symbol-name object))
+			      stream)))))
+	;; If a list, go through element by element, being careful
+	;; about not running over the printlength
+	(list
+	 (output-list object stream (1+ currlevel)))
+	(string
+	 (if *print-escape*
+	     (quote-string object stream)
+	     (write-string object stream)))
+	(integer
+	 (output-integer object stream))
+	(float
+	 (output-float object stream))
+	(ratio
+	 (output-ratio object stream))
+	(complex
+	 (output-complex object stream))
+	(structure
+	 (output-structure object stream currlevel))
+	(character
+	 (output-character object stream))
+	(vector
+	 (output-vector object stream))
+	(array
+	 (output-array object stream (1+ currlevel)))
+	(system-area-pointer
+	 (output-sap object stream))
+	(weak-pointer
+	 (output-weak-pointer object stream))
+	(t (output-random object stream)))))
 
 
 ;;;; Symbol Printing Subfunctions
@@ -428,9 +428,9 @@
       (return (not (test sign)))
 
      OTHER ; Not potential number, see if funny chars...
-      (return (not (null (%primitive find-character-with-attribute
-				     name (1- index) len
-				     attributes funny-attribute))))
+      (return (not (null (%sp-find-character-with-attribute
+			  name (1- index) len
+			  attributes funny-attribute))))
      START
       (when (digitp)
 	(if (test letter)
@@ -778,10 +778,10 @@
 	(sub-output-integer quotient stream))
     ;; Then as each recursive call unwinds, turn the digit (in remainder) 
     ;; into a character and output the character.
-    (write-char (int-char (if (and (> remainder 9.)
-				   (> *print-base* 10.))
-			      (+ (char-int #\A) (- remainder 10.))
-			      (+ (char-int #\0) remainder)))
+    (write-char (code-char (if (and (> remainder 9.)
+				    (> *print-base* 10.))
+			       (+ (char-code #\A) (- remainder 10.))
+			       (+ (char-code #\0) remainder)))
 		stream)))
 
 
@@ -812,38 +812,53 @@
 
 ;;; Written by Steven Handerson
 ;;;  (based on Skef's idea)
-
-;;; BIGNUM-FIXNUM-DIVIDE-INPLACE wants the divisor to be of integer-length 19
-;;; or less.  1- the ideal power of the base for a divisor.
 ;;;
-(defparameter *fixnum-power--1*
-  '#(NIL NIL 17 10 8 7 6 5 5 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 2 2 2 2 2 2 2 2
-	 2))
+;;; Rewritten to remove assumptions about the length of fixnums for the
+;;; MIPS port by William Lott.
+;;; 
 
-;;; The base raised to the ideal power.
+;;; *BASE-POWER* holds the number that we keep dividing into the bignum for
+;;; each *print-base*.  We want this number as close to *most-positive-fixnum*
+;;; as possible, i.e. (floor (log most-positive-fixnum *print-base*)).
+;;; 
+(defparameter *base-power* (make-array 36))
+
+;;; *FIXNUM-POWER--1* holds the number of digits for each *print-base* that
+;;; fit in the corresponding *base-power*.
+;;; 
+(defparameter *fixnum-power--1* (make-array 36))
+
+;;; PRINT-BIGNUM -- internal.
 ;;;
-(defparameter *base-power*
-  '#(NIL NIL 262144 177147 262144 390625 279936 117649 262144 59049 100000
-	 161051 248832 371293 38416 50625 65536 83521 104976 130321 160000
-	 194481 234256 279841 331776 390625 456976 19683 21952 24389 27000
-	 29791 32768 35937 39304 42875))
-
+;;; Print the bignum to the stream.  We first generate the correct value for
+;;; *base-power* and *fixnum-power--1* if we have not already.  Then we call
+;;; bignum-print-aux to do the printing.
+;;; 
 (defun print-bignum (big stream)
+  (unless (aref *base-power* *print-base*)
+    (do ((power-1 -1 (1+ power-1))
+	 (new-divisor *print-base* (* new-divisor *print-base*))
+	 (divisor 1 new-divisor))
+	((not (fixnump new-divisor))
+	 (setf (aref *base-power* *print-base*) divisor)
+	 (setf (aref *fixnum-power--1* *print-base*) power-1))))
   (bignum-print-aux (cond ((minusp big)
 			   (write-char #\- stream)
 			   (- big))
-			  (t (copy-xnum big)))
+			  (t big))
+		    (aref *base-power* *print-base*)
+		    (aref *fixnum-power--1* *print-base*)
 		    stream)
   big)
 
-(defun bignum-print-aux (big stream)
-  (multiple-value-bind (newbig fix)
-		       (bignum-fixnum-divide-inplace
-			big (aref *base-power* *print-base*))
+;;; BIGNUM-PRINT-AUX -- internal.
+;;;
+(defun bignum-print-aux (big divisor power-1 stream)
+  (multiple-value-bind (newbig fix) (truncate big divisor)
     (if (fixnump newbig)
 	(sub-output-integer newbig stream)
-	(bignum-print-aux newbig stream))
-    (do ((zeros (aref *fixnum-power--1* *print-base*) (1- zeros))
+	(bignum-print-aux newbig divisor power-1 stream))
+    (do ((zeros power-1 (1- zeros))
 	 (base-power *print-base* (* base-power *print-base*)))
 	((> base-power fix)
 	 (dotimes (i zeros) (write-char #\0 stream))
@@ -851,7 +866,6 @@
 
 
 
-;;;; Floating Point printing
 ;;;
 ;;;  Written by Bill Maddox
 ;;;
@@ -929,7 +943,8 @@
 (defvar *digits* "0123456789")
 
 (defvar *digit-string*
-  (make-array 50 :element-type 'string-char :fill-pointer 0 :adjustable t))
+  (make-array 50 :element-type 'base-character :fill-pointer 0 :adjustable t
+	      :initial-element #\?)) ; ### Hack around make-array bug.
 
 (defun flonum-to-string (x &optional width fdigits scale fmin)
   (cond ((zerop x)
@@ -940,15 +955,12 @@
 	       (values s (length s) t (zerop fdigits) 0))
 	     (values "." 1 t t 0)))
 	(t
-	  (setf (fill-pointer *digit-string*) 0)
-	  (multiple-value-bind (sig exp)
-			       (integer-decode-float x)
-	    (if (typep x 'short-float)
-		;;20 and 53 are the number of bits of information in the
-		;;significand, less sign, of a short float and a long float
-		;;respectively.
-		(float-string sig exp 20 width fdigits scale fmin)
-		(float-string sig exp 53 width fdigits scale fmin))))))
+	 (setf (fill-pointer *digit-string*) 0)
+	 (multiple-value-bind (sig exp)
+			      (integer-decode-float x)
+	   (float-string sig exp (float-digits x) width fdigits scale
+			 fmin)))))
+
 
 (defun float-string (fraction exponent precision width fdigits scale fmin)
   (let ((r fraction) (s 1) (m- 1) (m+ 1) (k 0)
@@ -1062,40 +1074,34 @@
     (values *digit-string* (1+ digits) (= decpnt 0) (= decpnt digits) decpnt)))
 
 
-(defconstant short-log10-of-2 0.30103s0)
-
 ;;; Given a non-negative floating point number, SCALE-EXPONENT returns a
 ;;; new floating point number Z in the range (0.1, 1.0] and and exponent
 ;;; E such that Z * 10^E is (approximately) equal to the original number.
 ;;; There may be some loss of precision due the floating point representation.
 
-
-;;;
 (defun scale-exponent (x)
-  (if (typep x 'short-float)
-      (scale-expt-aux x 0.0s0 1.0s0 1.0s1 1.0s-1 short-log10-of-2)
-      (scale-expt-aux x 0.0l0 1.0l0 %long-float-ten
-		      %long-float-one-tenth long-log10-of-2)))
-
-
-(defun scale-expt-aux (x zero one ten one-tenth log10-of-2)
-  (multiple-value-bind (sig exponent)
-		       (decode-float x)
-    (declare (ignore sig))
-    (if (= x zero)
-	(values zero 1)
-	(let* ((ex (round (* exponent log10-of-2)))
-	       (x (if (minusp ex)		;For the end ranges.
-		      (* x ten (expt ten (- -1 ex)))
-		      (/ x ten (expt ten (1- ex))))))
-	  (do ((d ten (* d ten))
-	       (y x (/ x d))
-	       (ex ex (1+ ex)))
-	      ((< y one)
-	       (do ((m ten (* m ten))
-		    (z y (* z m))
-		    (ex ex (1- ex)))
-		   ((>= z one-tenth) (values z ex)))))))))
+  (let ((zero (float 0 x))
+	(one (float 1 x))
+	(ten (float 10 x))
+	(one-tenth (float 1/10 x))
+	(log10-of-2 (float (log 2l0 10) x)))
+    (multiple-value-bind (sig exponent)
+			 (decode-float x)
+      (declare (ignore sig))
+      (if (= x zero)
+	  (values zero 1)
+	  (let* ((ex (round (* exponent log10-of-2)))
+		 (x (if (minusp ex)		;For the end ranges.
+			(* x ten (expt ten (- -1 ex)))
+			(/ x ten (expt ten (1- ex))))))
+	    (do ((d ten (* d ten))
+		 (y x (/ x d))
+		 (ex ex (1+ ex)))
+		((< y one)
+		 (do ((m ten (* m ten))
+		      (z y (* z m))
+		      (ex ex (1- ex)))
+		     ((>= z one-tenth) (values z ex))))))))))
 
 
 ;;;; Entry point for the float printer.
@@ -1104,65 +1110,70 @@
 ;;; etc.  The argument is printed free-format, in either exponential or 
 ;;; non-exponential notation, depending on its magnitude.
 ;;;
-;;; NOTE:  When a number is to be printed in exponential format, it is scaled
-;;; in floating point.  Since precision may be lost in this process, the
+;;; NOTE: When a number is to be printed in exponential format, it is scaled in
+;;; floating point.  Since precision may be lost in this process, the
 ;;; guaranteed accuracy properties of FLONUM-TO-STRING are lost.  The
 ;;; difficulty is that FLONUM-TO-STRING performs extensive computations with
 ;;; integers of similar magnitude to that of the number being printed.  For
-;;; large exponents, the bignums really get out of hand.  When we switch to
-;;; IEEE format for long floats, this will significantly restrict the magnitude
-;;; of the largest allowable float.  This combined with microcoded bignum
-;;; arithmetic might make it attractive to handle exponential notation with
-;;; the same accuracy as non-exponential notation, using the method described
-;;; in the Steele and White paper.
+;;; large exponents, the bignums really get out of hand.  If bignum arithmetic
+;;; becomes reasonably fast and the exponent range is not too large, then it
+;;; might become attractive to handle exponential notation with the same
+;;; accuracy as non-exponential notation, using the method described in the
+;;; Steele and White paper.
+
+
+;;; PRINT-FLOAT-EXPONENT  --  Internal
+;;;
+;;;    Print the appropriate exponent marker for X and the specified exponent.
+;;;
+(defun print-float-exponent (x exp stream)
+  (declare (float x) (integer exp) (stream stream))
+  (let ((*print-radix* nil)
+	(plusp (plusp exp)))
+    (if (typep x *read-default-float-format*)
+	(unless (eql exp 0)
+	  (format stream "e~:[~;+~]~D" plusp exp))
+	(format stream "~A~:[~;+~]~D" 
+		(etypecase x
+		  (single-float #\f)
+		  (double-float #\d)
+		  (short-float #\s)
+		  (long-float #\L))
+		plusp exp))))
 
 (defun output-float (x stream)
-  (if (typep x 'short-float)
-      (output-float-aux x stream 1.0s-3 1.0s7)
-      (output-float-aux x stream %long-float1l-3 %long-float1l7)))
-
-
+  (let ((x (cond ((minusp (float-sign x))
+		  (write-char #\- stream)
+		  (- x))
+		 (t
+		  x))))
+    (cond ((zerop x)
+	   (write-string "0.0" stream)
+	   (print-float-exponent x 0 stream))
+	  (t
+	   (output-float-aux x stream (float 1/1000 x) (float 10000000 x))))))
+;;;  
 (defun output-float-aux (x stream e-min e-max)
-  (cond ((zerop x)
-	 (write-string "0.0" stream)
-	 (if (and (not (typep x *read-default-float-format*))
-		  (not (and (eq *read-default-float-format* 'single-float)
-			    (typep x 'short-float))))
-	     (write-string (if (typep x 'short-float) "s0" "L0") stream)))
-	(t (when (minusp x) 
-	     (write-char #\- stream)
-	     (setq x (- x)))
-	   (if (and (>= x e-min) (< x e-max))
-	       ;;free format
-	       (multiple-value-bind (str len lpoint tpoint)
-				    (flonum-to-string x)
-		 (declare (ignore len))
-		 (when lpoint (write-char #\0 stream))
-		 (write-string str stream)
-		 (when tpoint (write-char #\0 stream))
-		 (if (and (not (typep x *read-default-float-format*))
-			  (not (and (eq *read-default-float-format*
-					'single-float)
-				    (typep x 'short-float))))
-		     (write-string (if (typep x 'short-float) "s0" "L0")
-				   stream)))
-	       ;;exponential format 
-	       (multiple-value-bind (f ex)
-				    (scale-exponent x)
-		 (multiple-value-bind (str len lpoint tpoint)
-				      (flonum-to-string f nil nil 1)
-		   (declare (ignore len))
-		   (when lpoint (write-char #\0 stream))
-		   (write-string str stream)
-		   (when tpoint (write-char #\0 stream))
-		   (write-char (if (typep x *read-default-float-format*)
-				   #\E
-				   (if (typep x 'short-float) #\S #\L))
-			       stream)
-		   ;;must subtract 1 from exponent here, due to
-		   ;;the scale factor of 1 in call to FLONUM-TO-STRING
-		   (unless (minusp (1- ex)) (write-char #\+ stream))
-		   (output-integer (1- ex) stream)))))))
+  (if (and (>= x e-min) (< x e-max))
+      ;;free format
+      (multiple-value-bind (str len lpoint tpoint)
+			   (flonum-to-string x)
+	(declare (ignore len))
+	(when lpoint (write-char #\0 stream))
+	(write-string str stream)
+	(when tpoint (write-char #\0 stream))
+	(print-float-exponent x 0 stream))
+      ;;exponential format 
+      (multiple-value-bind (f ex)
+			   (scale-exponent x)
+	(multiple-value-bind (str len lpoint tpoint)
+			     (flonum-to-string f nil nil 1)
+	  (declare (ignore len))
+	  (when lpoint (write-char #\0 stream))
+	  (write-string str stream)
+	  (when tpoint (write-char #\0 stream))
+	  ;; subtract out scale factor of 1 passed to flonum-to-string
+	  (print-float-exponent x (1- ex) stream)))))
 
 
 ;;;; Output Character
@@ -1171,9 +1182,11 @@
 ;;; character must be slashified when being output.
 ;;;
 (defmacro funny-character-char-p (char)
-  `(and (not (zerop (char-bits ,char)))
-	(not (zerop (logand (aref character-attributes (char-code ,char))
-			    funny-attribute)))))
+;  (and (not (zerop (char-bits ,char)))
+;	(not (zerop (logand (aref character-attributes (char-code ,char))
+;			    funny-attribute))))
+  `(not (zerop (logand (aref character-attributes (char-code ,char))
+		       funny-attribute))))
 
 ;;; OUTPUT-CHARACTER  --  Internal
 ;;;
@@ -1183,23 +1196,15 @@
 ;;; itself to the stream.
 ;;;
 (defun output-character (char stream)
-  (let ((base (make-char char)))
-    (if *print-escape*
-	(let ((name (char-name base)))
-	  (write-string "#\\" stream)
-	  (macrolet ((frob (key string)
-		       `(when (char-bit char ,key)
-			  (write-string ,string stream))))
-	    (frob :control "CONTROL-")
-	    (frob :meta "META-")
-	    (frob :super "SUPER-")
-	    (frob :hyper "HYPER-"))
-	  (cond (name (write-string name stream))
-		(t 
-		 (when (funny-character-char-p char)
-		   (write-char #\\ stream))
-		 (write-char base stream))))
-	(write-char base stream))))
+  (if *print-escape*
+      (let ((name (char-name char)))
+	(write-string "#\\" stream)
+	(cond (name (write-string name stream))
+	      (t
+	       (when (funny-character-char-p char)
+		 (write-char #\\ stream))
+	       (write-char char stream))))
+      (write-char char stream)))
 
 
 
@@ -1211,35 +1216,9 @@
 ;;; below.
 
 (defun output-function-object (subr stream)
-  (let ((name (%primitive header-ref subr %function-name-slot)))
-    (case (%primitive get-vector-subtype subr)
-      (#.%function-entry-subtype
-       (if (stringp name)
-	   (format stream "Internal Function ~S" name)
-	   (format stream "Function ~S" name)))
-      (#.%function-closure-subtype
-       (if (eval:interpreted-function-p subr)
-	   (multiple-value-bind
-	       (def ignore name)
-	       (eval:interpreted-function-lambda-expression subr)
-	     (declare (ignore ignore))
-	     (let ((*print-level* 3))
-	       (format stream "Interpreted Function ~S" (or name def))))
-	   (format stream "Closure ~S"
-		   (%primitive header-ref name %function-name-slot))))
-      (#.%function-closure-entry-subtype
-       (format stream "Closure Entry ~S" name))
-      (#.%function-constants-subtype
-       (format stream "Function Constants ~S" name))
-      (#.%function-value-cell-subtype
-       (assert (= %function-value-cell-value-slot %function-name-slot))
-       (format stream "Indirect Value Cell ~S" name))
-      #|
-      (#.%function-funcallable-instance-subtype
-       (format stream "Funcallable Instance ~S" name))
-      |#
-      (t (error "Unknown function subtype.")))))
-
+  (let ((name (%primitive c::function-name subr)))
+    (write-string "Function " stream)
+    (prin1 name stream)))
 
 ;;; FINISH-RANDOM is a helping function for OUTPUT-RANDOM below.  
 ;;; It outputs the numerical value of the low 28 bits of 
@@ -1258,9 +1237,58 @@
 
 (defun output-random (object stream)
   (write-string "#<" stream)
-  (if (compiled-function-p object)
-      (output-function-object object stream)
-      (let ((type (%primitive get-type object)))
-	(write-string "Pointer into Hell, level " stream)
-	(sub-output-integer type stream)))
+  (let ((lowtag (get-lowtag object)))
+    (case lowtag
+      ((#.vm:other-pointer-type #.vm:function-pointer-type)
+       (let ((type (get-type object)))
+	 (case type
+	   (#.vm:code-header-type
+	    (write-string "Code Object" stream))
+	   ((#.vm:function-header-type #.vm:closure-function-header-type)
+	    (output-function-object object stream))
+	   (#.vm:return-pc-header-type
+	    (write-string "Return PC Object" stream))
+	   (#.vm:closure-header-type
+	    (write-string "Closure Over " stream)
+	    (output-function-object (%primitive c::closure-function object)
+				    stream))
+	   (#.vm:value-cell-header-type
+	    (write-string "Value Cell" stream))
+	   (#.vm:unbound-marker-type
+	    (write-string "Unbound Marker" stream))
+	   (t
+	    (write-string "Unknown Object, type=" stream)
+	    (let ((*print-base* 16) (*print-radix* t))
+	      (output-integer type stream))))))
+      (#.vm:structure-pointer-type
+       (write-string "Structure?"))
+      (#.vm:list-pointer-type
+       (write-string "List?"))
+      (t
+       (write-string "Unknown Immediate Object, lowtag=" stream)
+       (let ((*print-base* 2) (*print-radix* t))
+	 (output-integer lowtag stream))
+       (write-string ", type=" stream)
+       (let ((*print-base* 16) (*print-radix* t))
+	 (output-integer (get-type object) stream)))))
   (finish-random object stream))
+
+
+(defun output-sap (sap stream)
+  (declare (type system-area-pointer sap))
+  (write-string "#<System-Area pointer: " stream)
+  (let ((*print-base* 16) (*print-radix* t))
+    (output-integer (sap-int sap) stream))
+  (write-char #\> stream))
+
+(defun output-weak-pointer (weak-pointer stream)
+  (declare (type weak-pointer weak-pointer))
+  (multiple-value-bind
+      (value validp)
+      (weak-pointer-value weak-pointer)
+    (cond (validp
+	   (write-string "#<Weak Pointer: " stream)
+	   (write value :stream stream)
+	   (write-char #\> stream))
+	  (t
+	   (write-string "#<Broken Weak Pointer>")))))

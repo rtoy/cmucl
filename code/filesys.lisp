@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.3 1990/08/24 18:11:00 wlott Exp $
+;;;
 ;;; Ugly pathname functions for Spice Lisp.
 ;;;    these functions are part of the standard Spice Lisp environment.
 ;;;
@@ -42,8 +44,12 @@
   "Set to the default pathname-defaults pathname (Got that?)")
 
 (defun filesys-init ()
-  (setq *default-pathname-defaults* 
-	(%make-pathname "Mach" nil nil nil nil nil)))
+  (setq *default-pathname-defaults*
+	(%make-pathname "Mach" nil nil nil nil nil))
+  (multiple-value-bind (won dir)
+		       (mach:unix-current-directory)
+    (when won
+      (setf (search-list "default:") (list dir)))))
 
 
 ;;; The pathname type is defined with a defstruct.
@@ -316,7 +322,7 @@
 	      ((zerop q)
 	       (incf i)
 	       (replace res res :start2 i :end2 len)
-	       (%primitive shrink-vector res (- len i)))
+	       (shrink-vector res (- len i)))
 	   (declare (simple-string res)
 		    (fixnum len i r))
 	   (multiple-value-setq (q r) (truncate q 10))
@@ -1092,8 +1098,8 @@
   (multiple-value-bind (gr dir-or-error)
 		       (mach:unix-current-directory)
     (if gr
-	dir-or-error
-	(error (mach:get-unix-error-msg dir-or-error)))))
+	(pathname (concatenate 'simple-string dir-or-error "/"))
+	(error dir-or-error))))
 
 ;;;
 ;;; Maybe this shouldn't go here...
@@ -1109,5 +1115,5 @@
 		       (mach:unix-chdir (predict-name new-val nil))
     (if gr
 	(car (setf (search-list "default:")
-		   (cdr (multiple-value-list (mach:unix-current-directory)))))
+		   (list (default-directory))))
 	(error (mach:get-unix-error-msg error)))))

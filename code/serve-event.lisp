@@ -32,6 +32,8 @@
   "*In-server* is set to T when the SIGMSG interrupt has been enabled
   in Server.")
 
+#|
+
 (defvar server-unique-object (cons 1 2)
   "Object thrown by the message interrupt handler.")
 
@@ -78,6 +80,7 @@
 	    (unless (eql gr mach:kern-success)
 	      (gr-error 'server gr)))))))
   mach:kern-success)
+|#
 
 
 ;;;; File descriptor IO noise.
@@ -279,6 +282,7 @@
   seconds) and then return, otherwise it will wait until something happens.
   Server returns T if something happened and NIL otherwise."
   ;; First, check any X displays for any pending events.
+  #+nil
   (dolist (d/h *display-event-handlers*)
     (let ((d (car d/h)))
       (when (xlib::event-listen d)
@@ -292,7 +296,8 @@
       (value readable writeable)
       (wait-for-event timeout)
     ;; Now see what it was (if anything)
-    (cond ((eq value server-unique-object)
+    (cond #+nil
+	  ((eq value server-unique-object)
 	   ;; The interrupt handler fired.
 	   (grab-message-loop)
 	   t)
@@ -349,19 +354,17 @@
 	  (unwind-protect
 	      (progn
 		;; Block message interrupts.
-		(multiple-value-bind
-		    (noise mask)
-		    (mach:unix-sigsetmask (mach:sigmask :sigmsg))
-		  (declare (ignore noise))
-		  (setf old-mask mask))
+		(setf old-mask (mach:unix-sigblock (mach:sigmask :sigmsg)))
 		;; Check for any pending messages, because we are only signaled
 		;; for newly arived messages. This must be done after the
 		;; unix-sigsetmask.
+		#+nil
 		(when (grab-message-loop)
 		  (return-from wait-for-event t))
 		;; Indicate that we are in the server.
 		(let ((*in-server* t))
 		  ;; Establish the interrupt handlers.
+		  #+nil
 		  (enable-interrupt mach:sigmsg #'ih-sigmsg)
 		  ;; Enable all interrupts.
 		  (mach:unix-sigsetmask 0)
@@ -369,8 +372,8 @@
 		  (mach:unix-select count read-mask write-mask except-mask
 				    timeout-sec timeout-usec)))
 	    ;; Restore interrupt handler state.
-	    (mach:unix-sigsetmask (mach:sigmask :sigmsg))
+	    #+nil
+	    (mach:unix-sigblock (mach:sigmask :sigmsg))
+	    #+nil
 	    (default-interrupt mach:sigmsg)
 	    (mach:unix-sigsetmask old-mask)))))))
-
-

@@ -23,6 +23,22 @@
 ;;;
 (in-package 'lisp)
 
+
+(def-c-routine ("purify" %purify) (int)
+  (roots unsigned-long))
+
+(defun purify (&key root-structures)
+  (write-string "[Doing purification: ")
+  (force-output)
+  (without-gcing
+   (%purify (di::get-lisp-obj-address root-structures)))
+  (write-line "Done.]")
+  (force-output)
+  nil)
+
+
+#|
+
 (defun purify (&key root-structures)
   (declare (special lisp-environment-list))
   (setq lisp-environment-list NIL)
@@ -534,3 +550,5 @@
     (if (save file)
 	(quit)
 	(funcall root-function))))
+
+|#

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: Lisp; Log: code.log -*-
+;;; -*- Mode: Lisp; Package: LISP; Log: code.log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,15 +7,21 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; Predicate functions for Spice Lisp.
-;;; The type predicates are implementation-specific.  A different version
-;;;   of this file will be required for implementations with different
-;;;   data representations.
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.7 1990/08/24 18:12:12 wlott Exp $
 ;;;
-;;; Written and currently maintained by Scott Fahlman.
-;;; Based on an earlier version by Joe Ginder.
+;;; Predicate functions for CMU Common Lisp.
 ;;;
-(in-package 'lisp)
+;;; Written by William Lott.
+;;;
+
+(in-package "EXTENSIONS")
+(export '(structurep fixnump bignump bitp ratiop realp weak-pointer-p))
+
+(in-package "SYSTEM")
+(export '(system-area-pointer system-area-pointer-p))
+
+(in-package "LISP" :use "KERNEL")
+
 (export '(typep null symbolp atom consp listp numberp integerp rationalp
 	  floatp complexp characterp stringp bit-vector-p vectorp
 	  simple-vector-p simple-string-p simple-bit-vector-p arrayp
@@ -25,487 +31,292 @@
 	  array atom bignum bit bit-vector character common
 	  compiled-function complex cons double-float
 	  fixnum float function integer keyword list long-float nil
-	  null number ratio rational sequence short-float signed-byte
+	  null number ratio rational real sequence short-float signed-byte
 	  simple-array simple-bit-vector simple-string simple-vector
 	  single-float standard-char string string-char symbol t
 	  unsigned-byte vector structure satisfies))
 
-(in-package "EXTENSIONS")
-(export '(structurep fixnump bignump bitp ratiop))
-(in-package "LISP")
-
-
-;;; Data type predicates.
-
-;;; Translation from type keywords to specific predicates.  Assumes that
-;;; the following are named structures and need no special type hackery:
-;;; PATHNAME, STREAM, READTABLE, PACKAGE, HASHTABLE, RANDOM-STATE.
-
-(defparameter type-pred-alist
-  '((keyword . keywordp)
-    (common . commonp)
-    (null . null)
-    (cons . consp)
-    (list . listp)
-    (symbol . symbolp)
-    (array . arrayp)
-    (vector . vectorp)
-    (bit-vector . bit-vector-p)
-    (string . stringp)
-    (sequence . sequencep)
-    (simple-array . simple-array-p)
-    (c::structure-vector . simple-vector-p)
-    (simple-vector . simple-vector-p)
-    (simple-string . simple-string-p)
-    (simple-bit-vector . simple-bit-vector-p)
-    (function . functionp)
-    (compiled-function . compiled-function-p)
-    (character . characterp)
-    (number . numberp)
-    (rational . rationalp)
-    (float . floatp)
-    (string-char . %string-char-p)
-    (integer . integerp)
-    (ratio . ratiop)
-    (short-float . short-float-p)
-    (standard-char . %standard-char-p)
-    (fixnum . fixnump)
-    (complex . complexp)
-;    (single-float . single-float-p)
-    (single-float . short-float-p)
-    (bignum . bignump)
-    (double-float . double-float-p)
-    (bit . bitp)
-    (long-float . long-float-p)
-    (structure . structurep)
-    (atom . atom)))
 
 
-;;;; TYPE-OF and auxiliary functions.
+;;;; Primitive predicates.  These must be supported by the compiler.
 
+(eval-when (compile eval)
+  (defparameter primitive-predicates
+    '(array-header-p
+      arrayp
+      atom
+      base-char-p
+      bignump
+      bit-vector-p
+      characterp
+      consp
+      compiled-function-p
+      complexp
+      double-float-p
+      fixnump
+      floatp
+      functionp
+      integerp
+      listp
+      not
+      null
+      numberp
+      rationalp
+      ratiop
+      realp
+      simple-array-p
+      simple-bit-vector-p
+      simple-string-p
+      simple-vector-p
+      single-float-p
+      stringp
+      symbolp
+      system-area-pointer-p
+      weak-pointer-p
+      vectorp
+      c::unsigned-byte-32-p
+      c::signed-byte-32-p
+      c::simple-array-unsigned-byte-2-p
+      c::simple-array-unsigned-byte-4-p
+      c::simple-array-unsigned-byte-8-p
+      c::simple-array-unsigned-byte-16-p
+      c::simple-array-unsigned-byte-32-p
+      c::simple-array-single-float-p
+      c::simple-array-double-float-p
+      )))
+
+(macrolet
+    ((frob ()
+       `(progn
+	  ,@(mapcar #'(lambda (pred)
+			`(defun ,pred (object)
+			   ,(format nil
+				    "Return T if OBJECT is a~:[~;n~] ~(~A~) ~
+				     and NIL otherwise."
+				    (find (schar (string pred) 0) "AEIOUaeiou")
+				    (string pred))
+			   (,pred object)))
+		    primitive-predicates))))
+  (frob))
+
+
+;;;; TYPE-OF -- public.
+;;;
+;;; Return the specifier for the type of object.  This is not simply
+;;; (type-specifier (ctype-of object)) because ctype-of has different goals
+;;; than type-of.
+;;; 
 (defun type-of (object)
-  "Returns the type of OBJECT as a type-specifier.
-  Since objects may be of more than one type, the choice is somewhat
-  arbitrary and may be implementation-dependent."
-  (if (null object) 'symbol
-      (case (%primitive get-type object)
-	(#.%+-fixnum-type 'fixnum)
-	(#.%bignum-type 'bignum)
-	(#.%ratio-type 'ratio)
-	((#.%short-+-float-type #.%short---float-type) 'short-float)
-	(#.%long-float-type 'long-float)
-	(#.%complex-type 'complex)
-	(#.%string-type `(simple-string ,(%primitive vector-length object)))
-	(#.%bit-vector-type
-	 `(simple-bit-vector ,(%primitive vector-length object)))
-	(#.%integer-vector-type (type-of-i-vector object))
-	(#.%general-vector-type (type-of-g-vector object))
-	(#.%array-type (type-of-array object))
-	(#.%function-type 'function)
-	(#.%symbol-type 'symbol)
-	(#.%list-type 'cons)
-	(#.%string-char-type 'string-char)
-	(#.%bitsy-char-type 'character)
-	(#.%--fixnum-type 'fixnum)
-	(t 'random))))
+  "Return the type of OBJECT."
+  (typecase object
+    (null 'null)
+    (cons 'cons)
+    (character
+     (typecase object
+       (standard-char 'standard-char)
+       (base-character 'base-character)
+       (t 'character)))
+    (number
+     (etypecase object
+       (fixnum 'fixnum)
+       (bignum 'bignum)
+       (float
+	(etypecase object
+	  (double-float 'double-float)
+	  (single-float 'single-float)
+	  (short-float 'short-float)
+	  (long-float 'long-float)))
+       (ratio 'ratio)
+       (complex 'complex)))
+    (symbol (if (typep object 'keyword)
+		'keyword
+		'symbol))
+    (structure
+     (%primitive c::structure-ref object 0))
+    (array
+     (type-specifier (ctype-of object)))
+    (function
+     (type-specifier (ctype-of object)))
+    (t
+     (warn "Can't figure out the type of ~S" object)
+     t)))
 
-;;; %String-Char-P is called by typep when the type specification
-;;; is string-char.  The CL string-char-p does not do the right thing.
-(defun %string-char-p (x)
-  (and (characterp x)
-       (< (the fixnum (char-int x)) char-code-limit)))
-
-;;; Create the list-style description of a G-vector.
-
-(defun type-of-g-vector (object)
-  (if (structurep object)
-      (%primitive header-ref object
-		  %g-vector-structure-name-slot)
-      `(simple-vector ,(%primitive vector-length object))))
-
-;;; I-Vector-Element-Type  --  Internal
-;;;
-;;;    Return a type specifier for the element type of an I-Vector.
-;;;
-(defun i-vector-element-type (object)
-  (let ((ac (%primitive get-vector-access-code object)))
-    (if (< 0 ac 6)
-	(svref '#((mod 2) (mod 4) (mod 16) (mod 256) (mod 65536)
-		  (mod 4294967296))
-	       ac)
-	(error "Invalid I-Vector access code: ~S" ac))))
-	
-;;; Create the list-style description of an I-vector.
-	
-(defun type-of-i-vector (object)
-  `(simple-array ,(i-vector-element-type object)
-		 ,(%primitive vector-length object)))
-
-
-;;; Create the list-style description of an array.
-
-(defun type-of-array (object)
-  (with-array-data ((data-vector object) (start) (end))
-    (declare (ignore start end))
-    (let ((rank (- (the fixnum (%primitive header-length object))
-		   %array-first-dim-slot))
-	  (length (%primitive header-ref object %array-length-slot)))
-      (declare (fixnum rank length))
-      (if (= rank 1)
-	  (typecase data-vector
-	    (simple-bit-vector `(bit-vector ,length))
-	    (simple-string `(string ,length))
-	    (simple-vector `(vector t ,length))
-	    (t `(vector ,(i-vector-element-type data-vector) ,length)))
-	  `(array
-	    ,(typecase data-vector
-	       (simple-bit-vector '(mod 2))
-	       (simple-string 'string-char)
-	       (simple-vector 't)
-	       (t (i-vector-element-type data-vector)))
-	    ,(array-dimensions object))))))
 
-;;;; TYPEP and auxiliary functions.
-
-(defun %typep (object type)
-  (let ((type (type-expand type))
-	temp)
-    (cond ((symbolp type)
-	   (cond ((or (eq type t) (eq type '*)) t)
-		 ((eq type 'nil) nil)
-		 ((setq temp (assq type type-pred-alist))
-		  (funcall (cdr temp) object))
-		 (t (structure-typep object type))))
-	  ((listp type) 
-	   ;; This handles list-style type specifiers.
-	   (case (car type)
-	     (vector (and (vectorp object)
-			  (vector-eltype object (cadr type))
-			  (test-length object (caddr type))))
-	     (simple-vector (and (simple-vector-p object)
-				 (test-length object (cadr type))))
-	     (string (and (stringp object)
-			  (test-length object (cadr type))))
-	     (simple-string (and (simple-string-p object)
-				 (test-length object (cadr type))))
-	     (bit-vector (and (bit-vector-p object)
-			      (test-length object (cadr type))))
-	     (simple-bit-vector (and (simple-bit-vector-p object)
-				     (test-length object (cadr type))))
-	     (array (array-typep object type))
-	     (simple-array (and (not (array-header-p object))
-				(array-typep object type)))
-	     (satisfies (funcall (cadr type) object))
-	     (member (member object (cdr type)))
-	     (not (not (typep object (cadr type))))
-	     (or (dolist (x (cdr type) nil)
-		   (if (typep object x) (return t))))
-	     (and (dolist (x (cdr type) t)
-		    (if (not (typep object x)) (return nil))))
-	     (integer (and (integerp object) (test-limits object type)))
-	     (rational (and (rationalp object) (test-limits object type)))
-	     (float (and (floatp object) (test-limits object type)))
-	     (short-float (and (short-float-p object)
-			       (test-limits object type)))
-	     (single-float (and (single-float-p object)
-				(test-limits object type)))
-	     (double-float (and (double-float-p object)
-				(test-limits object type)))
-	     (long-float (and (long-float-p object)
-			      (test-limits object type)))
-	     (mod (and (integerp object)
-		       (>= object 0)
-		       (< object (cadr type))))
-	     (signed-byte
-	      (and (integerp object)
-		   (let ((n (cadr type)))
-		     (or (not n) (eq n '*)
-			 (> n (integer-length object))))))
-	     (unsigned-byte
-	      (and (integerp object)
-		   (not (minusp object))
-		   (let ((n (cadr type)))
-		     (or (not n) (eq n '*)
-			 (>= n (integer-length object))))))
-	     (complex (and (numberp object)
-			   (or (not (cdr type))
-			       (typep (realpart object) (cadr type)))))
-	     (t (error "~S -- Illegal type specifier to TYPEP."  type))))
-	  (t (error "~S -- Illegal type specifier to TYPEP."  type)))))
-
-(defun typep (obj type)
-  "Returns T if OBJECT is of the specified TYPE, otherwise NIL."
-  (declare (notinline %typep))
-  (%typep obj type))
-
-
-;;; Given that the object is a vector of some sort, and that we've already
-;;; verified that it matches CAR of TYPE, see if the rest of the type
-;;; specifier wins.  Mild hack: Eltype Nil means either type not supplied
-;;; or was Nil.  Any vector can hold objects of type Nil, since there aren't
-;;; any, so (vector nil) is the same as (vector *).
+;;;; SUBTYPEP -- public.
 ;;;
-(defun vector-eltype (object eltype)
-  (let ((data (if (array-header-p object)
-		  (with-array-data ((data object) (start) (end))
-		    (declare (ignore start end))
-		    data)
-		  object))
-	(eltype (type-expand eltype)))
-    (case eltype
-      ((t) (simple-vector-p data))
-      (string-char (simple-string-p data))
-      (bit (simple-bit-vector-p data))
-      ((* nil) t)
-      (t
-       (subtypep eltype
-		 (cond ((simple-vector-p data) t)
-		       ((simple-string-p data) 'string-char)
-		       ((simple-bit-vector-p data) 'bit)
-		       (t
-			(i-vector-element-type data))))))))
+;;; Just parse the type specifiers and call csubtype.
+;;; 
+(defun subtypep (type1 type2)
+  "Return two values indicating the relationship between type1 and type2:
+  T and T: type1 definatly is a subtype of type2.
+  NIL and T: type1 definatly is not a subtype of type2.
+  NIL and NIL: who knows?"
+  (csubtypep (specifier-type type1) (specifier-type type2)))
 
+
+;;;; TYPEP -- public.
+;;;
+;;; Just call %typep
+;;; 
+(defun typep (object type)
+  "Return T iff OBJECT is of type TYPE."
+  (declare (type (or list symbol) type))
+  (%typep object type))
 
-;;; Test sequence for specified length.
-
-(defun test-length (object length)
-  (or (null length)
-      (eq length '*)
-      (= length (length object))))
-
-
-;;; See if object satisfies the specifier for an array.
-
-(defun array-typep (object type)
-  (and (arrayp object)
-       (vector-eltype object (cadr type))
-       (if (cddr type)
-	   (let ((dims (third type)))
-	     (cond ((eq dims '*) t)
-		   ((numberp dims)
-		    (and (vectorp object)
-			 (= (the fixnum (length (the vector object)))
-			    (the fixnum dims))))
-		   (t
-		    (dotimes (i (array-rank object) (null dims))
-		      (when (null dims) (return nil))
-		      (let ((dim (pop dims)))
-			(unless (or (eq dim '*)
-				    (= dim (array-dimension object i)))
-			  (return nil)))))))
-	   t)))
-
-
-;;; Test whether a number falls within the specified limits.
-
-(defun test-limits (object type)
-  (let ((low (cadr type))
-	(high (caddr type)))
-    (and (cond ((null low) t)
-	       ((eq low '*) t)
-	       ((numberp low) (>= object low))
-	       ((and (consp low) (numberp (car low)))
-		(> object (car low)))
-	       (t nil))
-	 (cond ((null high) t)
-	       ((eq high '*) t)
-	       ((numberp high) (<= object high))
-	       ((and (consp high) (numberp (car high)))
-		(< object (car high)))
-	       (t nil)))))
+;;; %TYPEP -- internal.
+;;;
+;;; The actual typep engine.  The compiler only generates calls to this
+;;; function when it can't figure out anything more intelligent to do.
+;;; 
+(defun %typep (object specifier)
+  (declare (type (or list symbol ctype) specifier))
+  (let ((type (if (ctype-p specifier)
+		  specifier
+		  (specifier-type specifier))))
+    (etypecase type
+      (named-type
+       (ecase (named-type-name type)
+	 ((* t)
+	  t)
+	 ((nil)
+	  nil)
+	 (character (characterp object))
+	 (base-character (base-char-p object))
+	 (standard-char (and (characterp object) (standard-char-p object)))
+	 (extended-character
+	  (and (characterp object) (not (base-char-p object))))
+	 (function (functionp object))
+	 (cons (consp object))
+	 (symbol (symbolp object))
+	 (keyword
+	  (and (symbolp object)
+	       (eq (symbol-package object)
+		   (symbol-package :foo))))
+	 (system-area-pointer (system-area-pointer-p object))
+	 (weak-pointer (weak-pointer-p object))
+	 (structure (structurep object))))
+      (numeric-type
+       (and (numberp object)
+	    (let ((num (if (complexp object) (realpart object) object)))
+	      (ecase (numeric-type-class type)
+		(integer (integerp num))
+		(rational (rationalp num))
+		(float
+		 (ecase (numeric-type-format type)
+		   (short-float (typep object 'short-float))
+		   (single-float (typep object 'single-float))
+		   (double-float (typep object 'double-float))
+		   (long-float (typep object 'long-float))
+		   ((nil) (floatp num))))
+		((nil) t)))
+	    (flet ((bound-test (val)
+		     (let ((low (numeric-type-low type))
+			   (high (numeric-type-high type)))
+		       (and (cond ((null low) t)
+				  ((listp low) (> val (car low)))
+				  (t (>= val low)))
+			    (cond ((null high) t)
+				  ((listp high) (< val (car high)))
+				  (t (<= val high)))))))
+	      (ecase (numeric-type-complexp type)
+		((nil) t)
+		(:complex
+		 (and (complexp object)
+		      (let ((re (realpart object))
+			    (im (imagpart object)))
+			(and (bound-test (min re im))
+			     (bound-test (max re im))))))
+		(:real
+		 (and (not (complexp object))
+		      (bound-test object)))))))
+      (array-type
+       (and (arrayp object)
+	    (ecase (array-type-complexp type)
+	      ((t) (not (typep object 'simple-array)))
+	      ((nil) (typep object 'simple-array))
+	      (* t))
+	    (or (eq (array-type-dimensions type) '*)
+		(do ((want (array-type-dimensions type) (cdr want))
+		     (got (array-dimensions object) (cdr got)))
+		    ((and (null want) (null got)) t)
+		  (unless (and want got
+			       (or (eq (car want) '*)
+				   (= (car want) (car got))))
+		    (return nil))))
+	    (or (eq (array-type-element-type type) *wild-type*)
+		(type= (array-type-specialized-element-type type)
+		       (specifier-type (array-element-type object))))))
+      (member-type
+       (if (member object (member-type-members type)) t))
+      (structure-type
+       (structure-typep object (structure-type-name type)))
+      (union-type
+       (dolist (type (union-type-types type))
+	 (when (%typep object type)
+	   (return t))))
+      (unknown-type
+       (let ((orig-spec (unknown-type-specifier type)))
+	 (if (eq type specifier)
+	     ;; The type was unknown at compile time.  Therefore, we should
+	     ;; try again at runtime, 'cause it might be known now.
+	     (%typep object orig-spec)
+	     (error "Unknown type specifier: ~S" orig-spec))))
+      (hairy-type
+       ;; Now the tricky stuff.
+       (let* ((hairy-spec (hairy-type-specifier type))
+	      (symbol (if (consp hairy-spec) (car hairy-spec) hairy-spec)))
+	 (ecase symbol
+	   (and
+	    (or (atom hairy-spec)
+		(dolist (spec (cdr hairy-spec))
+		  (unless (%typep object spec)
+		    (return nil)))))
+	   (not
+	    (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
+	      (error "Invalid type specifier: ~S" hairy-spec))
+	    (not (%typep object (cadr hairy-spec))))
+	   (satisfies
+	    (unless (and (listp hairy-spec) (= (length hairy-spec) 2))
+	      (error "Invalid type specifier: ~S" hairy-spec))
+	    (if (funcall (cadr hairy-spec) object) t)))))
+      (function-type
+       (error "Function types are not a legal argument to TYPEP:~%  ~S"
+	      specifier)))))
 
 
 ;;; Structure-Typep  --  Internal
 ;;;
-;;; This is called by Typep if the type-specifier is a symbol and is not one of
-;;; the built-in Lisp types.  If it's a structure, see if it's that type, or if
-;;; it includes that type.
+;;; This is called by %typep when it tries to match against a structure type,
+;;; and typep of types that are known to be structure types at compile time
+;;; are converted to this.
 ;;;
 (defun structure-typep (object type)
   (declare (optimize speed))
-  (let ((type (type-expand type)))
-    (if (symbolp type)
-	(let ((info (info type defined-structure-info type)))
-	  (if info
-	      (and (structurep object)
-		   (let ((obj-name (%primitive header-ref object 0)))
-		     (or (eq obj-name type)
-			 (if (memq obj-name (c::dd-included-by info))
-			     t nil))))
-	      (error "~S is an unknown type specifier." type)))
-	(error "~S is an unknown type specifier." type))))
+  (let ((info (info type defined-structure-info type)))
+    (if info
+	(and (structurep object)
+	     (let ((obj-name (%primitive structure-ref object 0)))
+	       (or (eq obj-name type)
+		   (if (member obj-name (c::dd-included-by info)
+			       :test #'eq)
+		       t nil))))
+	(error "~S is an unknown structure type specifier." type))))
 
 
-;;;; Assorted mumble-P type predicates.
+;;;; Equality predicates.
 
-(defun commonp (object)
-  "Returns T if object is a legal Common-Lisp type, NIL if object is any
-  sort of implementation-dependent or internal type."
-  (or (structurep object)
-      (let ((type-spec (type-of object)))
-	(if (listp type-spec) (setq type-spec (car type-spec)))
-	(when (memq type-spec
-		    '(character fixnum short-float single-float double-float
-				long-float vector string simple-vector
-				simple-string bignum ratio complex
-				compiled-function array symbol cons))
-	  T))))
+;;; EQ -- public.
+;;;
+;;; Real simple, 'cause the compiler takes care of it.
+;;; 
 
-(defun bit-vector-p (object)
-  "Returns T if the object is a bit vector, else returns NIL."
-  (bit-vector-p object))
-
-;;; The following definitions are trivial because the compiler open-codes
-;;; all of these.
-
-(defun null (object)
-  "Returns T if the object is NIL, else returns NIL."
-  (null object))
-
-(defun not (object)
-  "Returns T if the object is NIL, else returns NIL."
-  (null object))
-
-(defun symbolp (object)
-  "Returns T if the object is a symbol, else returns NIL."
-  (symbolp object))
-
-(defun atom (object)
-  "Returns T if the object is not a cons, else returns NIL.
-  Note that (ATOM NIL) => T."
-  (atom object))
-
-(defun consp (object)
-  "Returns T if the object is a cons cell, else returns NIL.
-  Note that (CONSP NIL) => NIL."
-  (consp object))
-
-(defun listp (object)
-  "Returns T if the object is a cons cell or NIL, else returns NIL."
-  (listp object))
-
-(defun numberp (object)
-  "Returns T if the object is any kind of number."
-  (numberp object))
-
-(defun integerp (object)
-  "Returns T if the object is an integer (fixnum or bignum), else 
-  returns NIL."
-  (integerp object))
-
-(defun rationalp (object)
-  "Returns T if the object is an integer or a ratio, else returns NIL."
-  (rationalp object))
-
-(defun floatp (object)
-  "Returns T if the object is a floating-point number, else returns NIL."
-  (floatp object))
-
-(defun complexp (object)
-  "Returns T if the object is a complex number, else returns NIL."
-  (complexp object))
-
-(defun %standard-char-p (x)
-  (and (characterp x) (standard-char-p x)))
-
-(defun characterp (object)
-  "Returns T if the object is a character, else returns NIL."
-  (characterp object))
-
-(defun stringp (object)
-  "Returns T if the object is a string, else returns NIL."
-  (stringp object))
-
-(defun simple-string-p (object)
-  "Returns T if the object is a simple string, else returns NIL."
-  (simple-string-p object))
-
-(defun vectorp (object)
-  "Returns T if the object is any kind of vector, else returns NIL."
-  (vectorp object))
-
-(defun simple-array-p (object)
-  "Returns T if the object is a simple array, else returns NIL."
-  (and (arrayp object) (not (array-header-p object))))
-
-(defun simple-vector-p (object)
-  "Returns T if the object is a simple vector, else returns NIL."
-  (simple-vector-p object))
-
-(defun simple-bit-vector-p (object)
-  "Returns T if the object is a simple bit vector, else returns NIL."
-  (simple-bit-vector-p object))
-
-(defun arrayp (object)
-  "Returns T if the argument is any kind of array, else returns NIL."
-  (arrayp object))
-
-(defun functionp (object)
-  "Returns T if the object is a function, suitable for use by FUNCALL
-  or APPLY, else returns NIL."
-  (functionp object))
-
-(defun compiled-function-p (object)
-  "Returns T if the object is a compiled function object, else returns NIL."
-  (compiled-function-p object))
-
-;;; ### Dummy definition until we figure out what to really do...
-(defun clos::funcallable-instance-p (object)
-  (declare (ignore object))
-  nil)
-
-(defun sequencep (object)
-  "Returns T if object is a sequence, NIL otherwise."
-  (typep object 'sequence))
+(defun eq (obj1 obj2)
+  "Return T if OBJ1 and OBJ2 are the same object, otherwise NIL."
+  (eq obj1 obj2))
 
 
-;;; The following are not defined at user level, but are necessary for
-;;; internal use by TYPEP.
-
-(defun structurep (object)
-  (structurep object))
-
-(defun fixnump (object)
-  (fixnump object))
-
-(defun bignump (object)
-  (bignump object))
-
-(defun bitp (object)
-  (typep object 'bit))
-
-(defun short-float-p (object)
-  (typep object 'short-float))
-
-(defun single-float-p (object)
-  (typep object 'single-float))
-
-(defun double-float-p (object)
-  (typep object 'double-float))
-
-(defun long-float-p (object)
-  (typep object 'long-float))
-
-(defun ratiop (object)
-  (ratiop object))
-
-;;; Some silly internal things for tenser array hacking:
-
-(defun array-header-p (object)
-  (array-header-p object))
-
-;;;; Equality Predicates.
-
-(defun eq (x y)
-  "Returns T if X and Y are the same object, else returns NIL."
-  (eq x y))
-
-(defun eql (x y)
-  "Returns T if X and Y are EQ, or if they are numbers of the same
-  type and precisely equal value, or if they are characters and
-  are CHAR=, else returns NIL."
-  (eql x y))
-
+;;; EQUAL -- public.
+;;;
 (defun equal (x y)
   "Returns T if X and Y are EQL or if they are structured components
   whose elements are EQUAL.  Strings and bit-vectors are EQUAL if they
@@ -537,8 +348,7 @@
 			  (declare (fixnum i))
 			  (if (not (equal (svref x-el i) (svref y-el i)))
 			      (return-from equal nil))))
-		      (unless (or (eql x-el y-el)
-				  (equal x-el y-el))
+		      (unless (equal x-el y-el)
 			(return nil)))))))
 	((bit-vector-p x)
 	 (and (bit-vector-p y)
@@ -553,7 +363,8 @@
 		    (return nil)))))
 	(t nil)))
 
-
+;;; EQUALP -- public.
+;;; 
 (defun equalp (x y)
   "Just like EQUAL, but more liberal in several respects.
   Numbers may be of different types, as long as the values are identical
@@ -569,9 +380,8 @@
 	      (equalp (cdr x) (cdr y))))
 	((vectorp x)
 	 (let ((length (length x)))
-	   (declare (fixnum length))
 	   (and (vectorp y)
-		(= length (the fixnum (length y)))
+		(= length (length y))
 		(dotimes (i length t)
 		  (let ((x-el (aref x i))
 			(y-el (aref y i)))
@@ -579,27 +389,14 @@
 				(equalp x-el y-el))
 		      (return nil)))))))
 	((arrayp x)
-	 (let ((rank (array-rank x))
-	       (len (%primitive header-ref x %array-length-slot)))
-	   (declare (fixnum rank len))
-	   (and (arrayp y)
-		(= (the fixnum (array-rank y)) rank)
-		(dotimes (i rank t)
-		  (unless (= (the fixnum (array-dimension x i))
-			     (the fixnum (array-dimension y i)))
-		    (return nil)))
-		(with-array-data ((x-vec x) (x-start) (end))
-		  (declare (ignore end))
-		  (with-array-data ((y-vec y) (y-start) (end))
-		    (declare (ignore end))
-		    (do ((i x-start (1+ i))
-			 (j y-start (1+ j))
-			 (count len (1- count)))
-			((zerop count) t)
-		      (declare (fixnum i j count))
-		      (let ((x-el (aref x-vec i))
-			    (y-el (aref y-vec j)))
-			(unless (or (eql x-el y-el)
-				    (equalp x-el y-el))
-			  (return nil)))))))))
+	 (and (arrayp y)
+	      (= (array-rank x) (array-rank y))
+	      (dotimes (axis (array-rank x) t)
+		(unless (= (array-dimension x axis)
+			   (array-dimension y axis))
+		  (return nil)))
+	      (dotimes (index (array-total-size x) t)
+		(unless (equalp (row-major-aref x index)
+				(row-major-aref y index))
+		  (return nil)))))
 	(t nil)))

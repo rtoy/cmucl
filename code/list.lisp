@@ -126,13 +126,14 @@
        (y list (cddr y))
        (z list (cdr z)))
       (())
+    (declare (fixnum n) (list y z))
     (when (endp y) (return n))
     (when (endp (cdr y)) (return (+ n 1)))
     (when (and (eq y z) (> n 0)) (return nil))))
 
 (defun nth (n list)
   "Returns the nth object in a list where the car is the zero-th element."
-  (car (%primitive nthcdr n list)))
+  (car (nthcdr n list)))
 
 (defun first (list)
   "Returns the 1st object in a list or NIL if the list is empty."
@@ -170,11 +171,15 @@
 
 (defun nthcdr (n list)
   "Performs the cdr function n times on a list."
-  (%primitive nthcdr n list))
+  (do ((i n (1- i))
+       (result list (cdr result)))
+      ((not (plusp i)) result)))
 
 (defun last (list)
   "Returns the last cons (not the last element!) of a list."
-  (%primitive last list))
+  (do ((list list (cdr list))
+       (result nil list))
+      ((null list) result)))
 
 (defun list (&rest args)
   "Returns constructs and returns a list of its arguments."
@@ -793,8 +798,6 @@
        ((endp alist))
      (if (car alist)
 	 (if ,test-guy (return (car alist))))))
-) ;eval-when
-
 
 (defun assoc (item alist &key key test test-not)
   "Returns the cons in alist whose car is equal (by a given test or EQL) to
@@ -893,11 +896,11 @@
 
 (defun memq (item list)
   "Returns tail of list beginning with first element eq to item"
-  (memq item list))
+  (member item list :test #'eq))
 
 (defun assq (item alist)
   "Return the first pair of alist where item EQ the key of pair"
-  (assq item alist))
+  (assoc item alist :test #'eq))
 
 (defun delq (item list &optional (n 0 np))
   (declare (fixnum n))

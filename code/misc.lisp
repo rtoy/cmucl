@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.3 1990/08/24 18:11:59 wlott Exp $
+;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
 ;;; Written and maintained mostly by Skef Wholey and Rob MacLachlan.
@@ -53,7 +55,7 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :mach :ibm-rt-pc :new-compiler)
+(defvar *features* '(:common :cmu :mach :decstation-3100 :pmax :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
@@ -82,19 +84,11 @@
 
 (defun machine-type ()
   "Returns a string describing the type of the local machine."
-  "IBM RT PC")
+  "DECstation 3100")
 
 (defun machine-version ()
   "Returns a string describing the version of the local machine."
-  (let ((version (system:%primitive 16bit-system-ref
-				    (int-sap
-				     (+ (ash clc::romp-data-base 16)
-					clc::floating-point-hardware-available))
-				    1)))
-    (if (or (not (= (logand version clc::float-mc68881) 0))
-	    (not (= (logand version clc::float-afpa) 0)))
-	"IBM RT PC/APC"
-	"IBM RT PC")))
+  "DECstation 3100")
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."
@@ -110,11 +104,11 @@
 
 (defun short-site-name ()
   "Returns a string with the abbreviated site name."
-  "CMU-CSD")
+  "CMU-SCS")
 
 (defun long-site-name ()
   "Returns a string with the long form of the site name."
-  "Carnegie-Mellon University Computer Science Department")
+  "Carnegie-Mellon University School of Computer Science")
 
 
 

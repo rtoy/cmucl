@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.4 1990/08/24 18:14:16 wlott Exp $
+;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
@@ -190,25 +192,27 @@
 	 (index (stream-in-index stream)))
     (declare (fixnum index))
     (if (simple-string-p buffer)
-	(let ((nl (%primitive find-character buffer index in-buffer-length
-			      #\newline)))
+	(let ((nl (%sp-find-character buffer index in-buffer-length
+				      #\newline)))
 	  (if nl
 	      (values (prog1 (subseq (the simple-string buffer) index nl)
-			     (setf (stream-in-index stream) (1+ (the fixnum nl))))
+			     (setf (stream-in-index stream)
+				   (1+ (the fixnum nl))))
 		      nil)
 	      (multiple-value-bind (str eofp)
 				   (funcall (stream-misc stream) stream
 					    :read-line eof-errorp eof-value)
-		(declare (simple-string str))
 		(if (= index in-buffer-length)
 		    (values str eofp)
-		    (values (prog1
-			     (concatenate 'simple-string
-					  (subseq buffer index in-buffer-length)
-					  str)
-			     (setf (stream-in-index stream) in-buffer-length))
-			    eofp)))))
-	(funcall (stream-misc stream) stream :read-line eof-errorp eof-value))))
+		    (let ((first (subseq buffer index in-buffer-length)))
+		      (setf (stream-in-index stream) in-buffer-length)
+		      (if (eq str eof-value)
+			  (values first t)
+			  (values (concatenate 'simple-string first
+					       (the simple-string str))
+				  eofp)))))))
+	(funcall (stream-misc stream) stream :read-line eof-errorp
+		 eof-value))))
 
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
 ;;; so, except in this file, they are not inline by default, but they can be.
@@ -304,7 +308,8 @@
     (cond
      ((not in-buffer)
       (with-in-stream stream stream-n-bin buffer start numbytes eof-errorp))
-     ((not (eql (%primitive get-vector-access-code in-buffer) 3))
+     ((not (typep in-buffer
+		  '(or simple-string (simple-array (unsigned-byte 8) (*)))))
       (error "N-Bin only works on 8-bit-like streams."))
      ((<= numbytes num-buffered)
       (%primitive byte-blt in-buffer index buffer start (+ start numbytes))
@@ -773,7 +778,7 @@
        (declare (simple-string string) (fixnum current end))
        (if (= current end)
 	   (eof-or-lose stream arg1 arg2)
-	   (let ((pos (%primitive find-character string current end #\newline)))
+	   (let ((pos (position #\newline string :start current :end end)))
 	     (if pos
 		 (let* ((res-length (- (the fixnum pos) current))
 			(result (make-string res-length)))
@@ -908,7 +913,7 @@
  
 (defun fill-pointer-ouch (stream character)
   (let* ((buffer (fill-pointer-output-stream-string stream))
-	 (current (%primitive header-ref buffer %array-fill-pointer-slot))
+	 (current (fill-pointer buffer))
 	 (current+1 (1+ current)))
     (declare (fixnum current))
     (with-array-data ((workspace buffer) (start) (end))
@@ -924,7 +929,7 @@
 	      (setf offset-current current)
 	      (set-array-header buffer workspace new-length
 				current+1 0 new-length nil))
-	    (%primitive header-set buffer %array-fill-pointer-slot current+1))
+	    (setf (fill-pointer buffer) current+1))
 	(setf (schar workspace offset-current) character)))
     current+1))
 
@@ -932,7 +937,7 @@
 (defun fill-pointer-sout (stream string start end)
   (declare (simple-string string) (fixnum start end))
   (let* ((buffer (fill-pointer-output-stream-string stream))
-	 (current (%primitive header-ref buffer %array-fill-pointer-slot))
+	 (current (fill-pointer buffer))
 	 (string-len (- end start))
 	 (dst-end (+ string-len current)))
     (declare (fixnum current dst-end string-len))
@@ -951,7 +956,7 @@
 	      (setf offset-dst-end dst-end)
 	      (set-array-header buffer workspace new-length
 				dst-end 0 new-length nil))
-	    (%primitive header-set buffer %array-fill-pointer-slot dst-end))
+	    (setf (fill-pointer buffer) dst-end))
 	(%primitive byte-blt string start
 		    workspace offset-current offset-dst-end)))
     dst-end))
@@ -962,7 +967,7 @@
   (case operation
     (:charpos
      (let* ((buffer (fill-pointer-output-stream-string stream))
-	    (current (%primitive header-ref buffer %array-fill-pointer-slot)))
+	    (current (fill-pointer buffer)))
        (with-array-data ((string buffer) (start) (end current))
 	 (declare (simple-string string) (ignore start))
 	 (let ((found (position #\newline string :test #'char=

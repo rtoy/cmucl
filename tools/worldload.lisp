@@ -12,24 +12,27 @@
 ;;; the resulting core image.  It writes "lisp.core" in the DEFAULT-DIRECTORY.
 ;;;
 
-
-#| Can't eval conditionals now...
-;;; Setup some packages.
+;;; Define a bunch of search lists relative to lisp:
 ;;;
-(unless (eq *package* (find-package "USER"))
-  (error "Set *package* to the User package and try again."))
-|#
+(setf (ext:search-list "code:") '("lisp:code/"))
+(setf (ext:search-list "c:") '("lisp:compiler/"))
+(setf (ext:search-list "mips:") '("c:mips/"))
+(setf (ext:search-list "assem:") '("lisp:assembly/"))
+(setf (ext:search-list "hem:") '("lisp:hemlock/"))
 
-(in-package "CLOS" :nicknames '("PCL"))
-(in-package "USER" :use '("LISP" "EXTENSIONS" "CONDITIONS" "DEBUG" "CLOS"))
-(in-package "HEMLOCK")
+;;; This must be here, because it's where assert-user-package is defined.
+(load "code:save")
+
+;;; Make sure the core will start up in the user package.
+(lisp::assert-user-package)
+
+;;; We want to be in the LISP package for the rest of the file.
 (in-package "LISP")
-#|
-;;; Must load this here, instead of before loading this file, otherwise
-;;; SEARCH-LIST is unknown.
+
+;;; Make sure the package structure is correct.
 ;;;
-(load "/afs/cs/project/clisp/new-compiler/logical-names.lisp")
-|#
+(load "code:exports")
+
 ;;; Get some data on this core.
 ;;;
 (write-string "What is the current lisp-implementation-version? ")
@@ -42,67 +45,62 @@
 (force-output)
 (set '*hemlock-version* (read-line))
 
-;;;
 ;;; Keep us entertained...
 (setq *load-verbose* t)
 
-(export 'ed)
-
-(load "code:lfloatcon")
-(load "code:spirrat")
-(load "code:foreign")
+;;; Load random code sources.
+;(load "code:lfloatcon")
+;(load "code:spirrat")
 (load "code:format-time")
 (load "code:parse-time")
-;(load "code:xp-patch")
-(load "assem:ropdefs")
-(load "assem:rompconst")
-(load "assem:disassemble")
-
-(load "c:loadcom.lisp")
-
-(setq lisp::original-lisp-environment NIL)
-
-
-;;; Load the symbol table information for the Lisp start up code.
-;;; Used by CLX for the C routine to connect to the X11 server.
-;;;
-(load-foreign nil '("-lc") "/usr/cs/bin/ld"
-	      (namestring (truename "build:boot/lisp")))
-
-;;; This has to occur after the call to LOAD-FOREIGN.
-;;;
+(load "code:purify")
+(load "code:commandline")
+(load "code:sort")
+(load "code:time")
+(load "code:tty-inspect")
+(load "code:describe")
+(load "code:rand")
+(load "code:trace")
+(load "code:weak")
+(load "code:sysmacs")
+(load "code:pprint")
 (load "code:run-program")
 
+;;; Load the compiler.
+(load "c:loadcom.lisp")
 
-;;; CLX.
-;;;
-#+clx(progn
-(load "clx:defsystem")
-(setf (symbol-function 'xlib::clx-foreign-files) #'list); #### Hack...
-(xlib::load-clx (pathname "clx:"))
-)
+;;; Load the pretty printer after the compiler, 'cause it compiles stuff
+;;; at load time.
+(load "code:xp")
+(pprint-init)
 
 #|
+;;; CLX.
+;;;
+(load "clx:defsystem")
+(load-clx (pathname "clx:"))
+
 ;;; A hack to fix a bug in the X11 R3 server.  This should go away when
 ;;; the server is fixed.
 ;;;
 (load "/afs/cs/project/clisp/systems-work/font-patch")
 |#
 
-;;; Stick these after LOAD-FORIEGN but before Hemlock.
+;;; Stick these before Hemlock.
 ;;;
 (load "code:internet")
 (load "code:wire")
 (load "code:remote")
 
-#+hemlock(progn
 ;;; Hemlock.
 ;;;
-(load "hem:rompsite") ;Contains site-init stuff called at load time.
 (load "hem:load-hem.lisp")
+(load "hem:rompsite") ;Contains site-init stuff called at load time.
 (hi::build-hemlock)
 
 #|
+Don't install any dir translations, 'cause we want the real things.
+
 ;;; Setup definition editing defaults to look in the stable AFS directory.
 ;;; The first translation says what we want most clearly, but we require
 ;;; the others due to symbol links.
@@ -127,11 +125,8 @@
 				    "/afs/cs/project/clisp/systems/")
 (ed::add-definition-dir-translation "/usr2/lisp/"
 				    "/afs/cs/project/clisp/systems/")
-|#
 
-); #+hemlock progn
 
-#|
 ;;; PCL.
 ;;;
 (load "pcl:defsys")
@@ -142,7 +137,7 @@
 ;;; Load these after PCL.
 ;;;
 ;(load "code:inspect")
-(load "code:tty-inspect")
+;(load "code:tty-inspect")
 
 
 ;;; There should be no search lists defined in a full core.
@@ -152,22 +147,26 @@
 
 ;;; Okay, build the thing!
 ;;;
-(in-package "USER")
-(progn 
-  (setq + NIL)
-  (setq * NIL)
-  (setq ++ NIL)
-  (setq ** NIL)
-  (setq +++ NIL)
-  (setq *** NIL)
+(progn
+  (setq - nil)
+  (setq + nil)
+  (setq * nil)
+  (setq / nil)
+  (setq ++ nil)
+  (setq ** nil)
+  (setq // nil)
+  (setq +++ nil)
+  (setq *** nil)
+  (setq /// nil)
   (setq *load-verbose* nil)
   (setq *info-environment*
 	(list (make-info-environment :name "Working")
 	      (compact-info-environment (car *info-environment*))))
   (save-lisp (namestring (merge-pathnames "lisp.core" (default-directory)))
 	     :purify t
+	     :init-function #'initial-init-function
 	     :root-structures `(ed
-				#|,hi::*global-command-table*|#
+				,hi::*global-command-table*
 				lisp::%top-level
 				extensions:save-lisp
 				,lisp::fop-codes

@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.3 1990/08/24 18:09:34 wlott Exp $
+;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
 ;;;
@@ -35,12 +37,14 @@
 
 ;;; The number of bits corresponding to a change of 1 in the value of a SAP.
 ;;;
-(defconstant alien-address-unit 8)
+(defconstant alien-address-unit vm:byte-bits)
+(defconstant alien-address-shift (1- (integer-length alien-address-unit)))
 
 ;;; The address pointed to by the SAP in an alien is always a multiple of this
 ;;; number of bits.
 ;;;
-(defconstant alien-alignment 16)
+(defconstant alien-alignment vm:word-bits)
+
 
 (defvar *alien-eval-when* '(compile load eval)
   "This is a list of the times to eval Alien compiler info.")
@@ -48,10 +52,11 @@
 (defun %print-alien-value (s stream d)
   (declare (ignore d))
   (let ((offset (alien-value-offset s)))
-    (format stream
-	    "#<Alien value, Address = #x~X~:[+~D/8~;~*~], Size = ~D, Type = ~S>"
-	    (%primitive sap-int (alien-value-sap s)) (zerop offset) offset
-	    (alien-value-size s) (alien-value-type s))))
+    (format
+     stream
+     "#<Alien value, Address = #x~X~:[+~D/~D~;~2*~], Size = ~D, Type = ~S>"
+     (sap-int (alien-value-sap s)) (zerop offset) offset alien-address-unit
+     (alien-value-size s) (alien-value-type s))))
 
 (defun %print-alien-info (s stream d)
   (declare (ignore s d))
@@ -61,34 +66,128 @@
 ;;;; Interpreter stubs for SAP functions:
 
 #+new-compiler (progn
+
+(defun pointer< (x y)
+  "Return T iff the SAP X points to a smaller address then the SAP Y."
+  (declare (type system-area-pointer x y))
+  (pointer< x y))
+
+(defun pointer> (x y)
+  "Return T iff the SAP X points to a larger address then the SAP Y."
+  (declare (type system-area-pointer x y))
+  (pointer> x y))
+
+(defun sap+ (sap offset)
+  "Return a new sap OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (fixnum offset))
+  (sap+ sap offset))
+
+(defun sap- (sap1 sap2)
+  "Return the byte offset between SAP1 and SAP2."
+  (declare (type system-area-pointer sap1 sap2))
+  (sap- sap1 sap2))
+
 (defun sap-int (sap)
   "Converts a System Area Pointer into an integer."
+  (declare (type system-area-pointer sap))
   (sap-int sap))
 
 (defun int-sap (int)
   "Converts an integer into a System Area Pointer."
+  (declare (type (unsigned-byte #.vm:word-bits) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
-  "Returns the 8-bit byte at Offset bytes from SAP."
+  "Returns the 8-bit byte at OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
-  "Returns the 16-bit word at Offset words from SAP."
+  "Returns the 16-bit word at OFFSET half-words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
-  "Returns the 32-bit dualword at Offset words from SAP."
+  "Returns the 32-bit dualword at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-32 sap offset))
 
-(defun (setf sap-ref-8) (sap offset new-value)
+(defun sap-ref-sap (sap offset)
+  "Returns the 32-bit system-area-pointer at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-sap sap offset))
+
+(defun sap-ref-single (sap offset)
+  "Returns the 32-bit single-float at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-single sap offset))
+
+(defun sap-ref-double (sap offset)
+  "Returns the 64-bit double-float at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-double sap offset))
+
+(defun signed-sap-ref-8 (sap offset)
+  "Returns the signed 8-bit byte at Offset bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (signed-sap-ref-8 sap offset))
+
+(defun signed-sap-ref-16 (sap offset)
+  "Returns the signed 16-bit word at Offset words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (signed-sap-ref-16 sap offset))
+
+(defun signed-sap-ref-32 (sap offset)
+  "Returns the signed 32-bit dualword at Offset words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (signed-sap-ref-32 sap offset))
+
+(defun %set-sap-ref-8 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (or (signed-byte 8) (unsigned-byte 8)) new-value))
   (setf (sap-ref-8 sap offset) new-value))
 
-(defun (setf sap-ref-16) (sap offset new-value)
+(defun %set-sap-ref-16 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (or (signed-byte 16) (unsigned-byte 16)) new-value))
   (setf (sap-ref-16 sap offset) new-value))
 
-(defun (setf sap-ref-32) (sap offset new-value)
-  (setf (sap-ref-32 sap offset) new-value))
+(defun %set-sap-ref-32 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (or (signed-byte 32) (unsigned-byte 32)) new-value))
+  (if (minusp new-value)
+      (truly-the (signed-byte 32) (setf (sap-ref-32 sap offset) new-value))
+      (truly-the (unsigned-byte 32) (setf (sap-ref-32 sap offset) new-value))))
+
+(defun %set-sap-ref-sap (sap offset new-value)
+  (declare (type system-area-pointer sap new-value)
+	   (type index offset))
+  (setf (sap-ref-sap sap offset) new-value))
+
+(defun %set-sap-ref-single (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type single-float new-value))
+  (setf (sap-ref-single sap offset) new-value))
+
+(defun %set-sap-ref-double (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type double-float new-value))
+  (setf (sap-ref-double sap offset) new-value))
 
 ); #+New-Compiler
 
@@ -112,17 +211,19 @@
     (unless (= size (alien-value-size from-alien))
       (error "Arguments to Alien-Assign are of different sizes:~%~S~%~S"
 	     to-alien from-alien))
-    (unless (zerop (logand size 7))
+    (unless (zerop (logand size (1- alien-address-unit)))
       (error "Size of assigned Alien is not a byte multiple:~%~S"
 	     from-alien))
-    (unless (zerop (logand src-off 7))
+    (unless (zerop (logand src-off (1- alien-address-unit)))
       (error "Alien is not byte aligned:~%~S" from-alien))
-    (unless (zerop (logand dst-off 7))
+    (unless (zerop (logand dst-off (1- alien-address-unit)))
       (error "Alien is not byte aligned:~%~S" to-alien))
-    (let ((dst-start (ash dst-off -3)))
-      (%primitive byte-blt (alien-value-sap from-alien) (ash src-off -3)
+    (let ((dst-start (ash dst-off (- alien-address-shift))))
+      (%primitive byte-blt
+		  (alien-value-sap from-alien)
+		  (ash src-off (- alien-address-shift))
 		  (alien-value-sap to-alien) dst-start
-		  (+ dst-start (ash size -3))))
+		  (+ dst-start (ash size (- alien-address-shift)))))
     to-alien))
 
 
@@ -144,7 +245,7 @@
 (defun alien-address (alien)
   "Return the address of the data for Alien."
   (check-type alien alien-value)
-  (+ (%primitive sap-int (alien-value-sap alien))
+  (+ (sap-int (alien-value-sap alien))
      (/ (alien-value-offset alien) alien-address-unit)))
 
 (defun alien-sap (alien)
@@ -190,22 +291,11 @@
 (defmacro define-alien-stack (name type size)
   "Define-Stack-Alien Name Type Size
   Defines a new alien stack for use with the With-Stack-Alien macro.
-  The aliens have the specifed Type and Size, and are static."
-  (let ((n-head (concat-pnames name '-alien-stack-head))
-	(n-current (concat-pnames name '-alien-stack))
-	(grow-fun (concat-pnames name '-grow-stack)))
-  `(progn
-    (eval-when ,*alien-eval-when*
-      (setf (info alien-stack info ',name)
-	    (make-stack-info :head ',n-head  :current ',n-current
-			     :grow ',grow-fun  :type ',type
-			     :size ,size)))
-    (defvar ,n-head ())
-    (defvar ,n-current ())
-    (defun ,grow-fun ()
-      (let ((new (list (make-alien ',type ,size :static))))
-	(setq ,n-head (nconc ,n-head new)  ,n-current new)
-	(car new))))))
+  The aliens have the specifed Type and Size, and are allocated on the
+  number stack."
+  `(eval-when ,*alien-eval-when*
+     (setf (info alien-stack info ',name)
+	   (make-stack-info :type ',type :size ,size))))
 
 
 ;;; Defoperator  --  Public
@@ -241,22 +331,19 @@
 
 ;;;; Alien allocation:
 
-(eval-when (compile)
-  (dolist (x '(system-space-start alien-allocation-end))
-    (remprop x 'lisp::%constant)))
-
 ;;;    In order to improve memory locality static alien values are allocated
 ;;; contiguously in a pre-validated area at the beginning of system space.  We
 ;;; keep a free pointer to the next word we can allocate.
 ;;;
-(defparameter system-space-start
-  (%primitive make-immediate-type 0 %static-alien-area)
+#+new-compiler
+(defparameter system-space-start (int-sap #x80000000)
   "The address of the first statically allocated alien.")
 
-(defparameter alien-allocation-end
-  (%primitive make-immediate-type #x40000 %static-alien-area)
+#+new-compiler
+(defparameter alien-allocation-end (int-sap #x8fffffff)
   "The end of statically allocated aliens.")
 
+#+new-compiler
 (defvar *current-alien-free-pointer* system-space-start
   "The next word in system space for static alien allocation.")
 
@@ -265,26 +352,60 @@
 ;;;    Allocate enough storage to hold the specified number of bits
 ;;; and return the address.
 ;;;
+#+new-compiler
 (defun allocate-static-alien (bits)
   (declare (fixnum bits))
   (let* ((alien *current-alien-free-pointer*)
-	 (bytes (logand (ash (the fixnum (+ bits 31)) -3) (lognot 3)))
-	 (new (%primitive sap+ *current-alien-free-pointer* bytes)))
-    (when (%primitive pointer> new alien-allocation-end)
+	 (bytes (logand (ash (the fixnum (+ bits alien-alignment -1))
+			     (- alien-address-shift))
+			(lognot (1- (truncate alien-alignment
+					      alien-address-unit)))))
+	 (new (sap+ *current-alien-free-pointer* bytes)))
+    (when (#-new-compiler %primitive pointer> new alien-allocation-end)
       (error "Not enough room to allocate a ~D bit alien." bits))
     (setq *current-alien-free-pointer* new)
     alien))
 
 
-;;; DO-VALIDATE  --  Internal Interface.
+;;; ALLOCATE-SYSTEM-MEMORY -- public
 ;;;
-;;; Do a ValidateMemory on our kernel port and flame out if error.
+;;; Allocate random memory from the system area.
+;;; 
+(defun allocate-system-memory (bytes)
+  (declare (type index bytes))
+  (gr-call* mach:vm_allocate *task-self* (int-sap 0) bytes t))
+
+;;; REALLOCATE-SYSTEM-MEMORY -- public
 ;;;
-;;; Hemlock and other code files use this, even though it is not exported from
-;;; a more appropriate package.
+;;; Either allocate more memory at the end of this block, or allocate a new
+;;; block and move the old memory into it.
+;;; 
+(defun reallocate-system-memory (old old-size new-size)
+  (declare (type system-area-pointer old)
+	   (type index old-size new-size))
+  ;; ### Got to work the page size into this somehow.  The vm_allocate
+  ;; will fail much more often than it otherwise would 'cause if the old
+  ;; block stops in the middle of a page, we can't extend it.
+  (if (eql (mach:vm_allocate *task-self*
+			     (sap+ old old-size)
+			     (- new-size old-size)
+			     nil)
+	   mach:kern-success)
+      old
+      (let ((new (allocate-system-memory new-size)))
+	(declare (type system-area-pointer new))
+	(system-area-copy old 0 new 0 (* old-size vm:byte-bits))
+	(deallocate-system-memory old old-size)
+	new)))
+
+;;; DEALLOCATE-SYSTEM-MEMORY -- public
 ;;;
-(defun do-validate (addr bytes mask)
-  (gr-call* mach::vm_allocate *task-self* addr bytes (if (eq mask -1) t NIL)))
+;;; Deallocate that memory.
+;;; 
+(defun deallocate-system-memory (addr bytes)
+  (declare (type system-area-pointer addr)
+	   (type index bytes))
+  (gr-call* mach:vm_deallocate *task-self* addr bytes))
 
 
 ;;; Make-Alien  --  Public
@@ -299,20 +420,19 @@
   supplied then memory is allocated to contain the data."
   (case address
     (:dynamic
-     (setq address (do-validate 0 (ash size -3) -1)))
+     (setq address (allocate-system-memory (ash size (- alien-address-shift)))))
     (:static
      (setq address (allocate-static-alien size)))
     (t
-     (if (not (integerp address))
-	 (setq address (%primitive sap-int address)))
-     (check-type address (rational 0))))
+     (check-type address (or #+new-compiler system-area-pointer
+			     (rational 0)))))
   (check-type size (integer 0))
   (if (numberp address)
       (multiple-value-bind (base frac) (truncate address)
 	(let ((offset (* frac alien-address-unit)))
 	  (unless (integerp frac)
 	    (error "Address ~S does not fall on a bit position." address))
-	  (make-alien-value (%primitive int-sap base) offset size type)))
+	  (make-alien-value (int-sap base) offset size type)))
       (make-alien-value address 0 size type)))
 
 
@@ -329,9 +449,11 @@
   (check-type alien alien-value)
   (let* ((offset (alien-value-offset alien))
 	 (length (alien-value-size alien))
-	 (bytes (ash (+ length offset 15) -3))
-	 (new (%primitive int-sap (do-validate 0 bytes -1))))
-    (%primitive byte-blt (alien-value-sap alien) (ash offset -3)
+	 (bytes (ash (+ length offset alien-alignment -1)
+		     (- alien-address-shift)))
+	 (new (allocate-system-memory bytes)))
+    (%primitive byte-blt
+		(alien-value-sap alien) (ash offset (- alien-address-shift))
 		new 0 bytes)
     (make-alien-value new offset length (alien-value-type alien))))
 
@@ -341,14 +463,16 @@
 ;;;    Invalidate the memory pointed to by unless it is a statically
 ;;; allocated alien.
 ;;;
+#+new-compiler
 (defun dispose-alien (alien)
   "Release the storage allocated for Alien."
   (check-type alien alien-value)
   (let ((address (alien-value-sap alien)))
-    (unless (not (or (%primitive pointer< address system-space-start)
-		     (%primitive pointer> address alien-allocation-end)))
+    (unless (not (or (pointer< address system-space-start)
+		     (pointer> address alien-allocation-end)))
       (gr-call mach:vm_deallocate *task-self* address
-	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF) -3))))))
+	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF)
+				   (- alien-address-shift)))))))
 
 
 ;;;; Operator definition primitives:
@@ -368,9 +492,11 @@
     (error "~S is too small to extract a ~A bit field at ~A."
 	   alien size offset))
   (multiple-value-bind (words bits)
-		       (truncate (+ offset (alien-value-offset alien)) 8)
+		       (truncate (+ offset (alien-value-offset alien))
+				 alien-alignment)
     (make-alien-value
-     (%primitive int-sap (+ words (%primitive sap-int (alien-value-sap alien))))
+     (int-sap (+ (* words (/ alien-alignment alien-address-unit))
+		 (sap-int (alien-value-sap alien))))
      bits
      size
      nil)))
@@ -391,14 +517,13 @@
   (unless (zerop (alien-value-offset alien))
     (error "~S is not word aligned."))
   (let* ((sap (alien-value-sap alien))
-	 (value (logior (ash (%primitive 16bit-system-ref sap 0) 16)
-			(%primitive 16bit-system-ref sap 1))))
+	 (value (sap-ref-sap sap 0)))
 #|
     (unless (<= system-space-start value most-positive-fixnum)
       (error "The value of ~S, #x~X, does not point into system space."
 	     alien value))
 |#
-    (make-alien-value (%primitive int-sap value) 0 size nil)))
+    (make-alien-value value 0 size nil)))
 
 
 ;;; Bits, Bytes, Words, Long-Words  --  Public
@@ -426,11 +551,11 @@
 ;;;
 (defun %alien-indirect (size sap offset exp)
   (unless (eql size 32)
-    (error "Argument to Alien-Indirect is ~D bits, 32:~% ~S." size exp))
+    (error "Argument to Alien-Indirect is ~D bits, not 32:~% ~S." size exp))
   (unless (zerop (logand offset #x1F))
     (error "Offset ~D to Alien-Indirect is not long-word-aligned:~% ~S."
 	   offset exp))
-  (%primitive sap-system-ref sap (ash offset -4)))
+  (sap-ref-sap sap (ash offset -5)))
 
 
 ;;; %Aligned-SAP  --  Internal
@@ -439,49 +564,69 @@
 ;;; aligned.  In this case, we absorb the offset into the SAP, and make the
 ;;; bound offset 0.
 ;;;
+#+new-compiler
 (defun %aligned-sap (sap offset form)
-  (unless (zerop (logand offset #xF))
+  (unless (zerop (logand offset #x1F))
     (error "Offset ~S was declared to be word aligned, but isn't:~% ~S"
 	   offset form))
-  (%primitive sap+ sap (ash offset -3)))
+  (sap+ sap (ash offset (- alien-address-unit))))
 
 #+new-compiler
 ;;; Naturalize-Integer  --  Internal
 ;;;
-;;;    Read a possibly signed integer somewhere.  For the 16 and 32 bit
-;;; cases we let the transform do the work, for random fields we do it
-;;; by hand.
+;;;    Read a possibly signed integer somewhere.
 ;;;
 (defun naturalize-integer (signed sap offset size form)
-  (multiple-value-bind (q r) (truncate offset 16)
+  (declare (type boolean signed)
+	   (type system-area-pointer sap)
+	   (type index offset size))
+  (let ((bit-offset (logand offset #x1f)))
     (cond
-     ((> size 15)
-      (unless (zerop r)
-	(error "Offset ~D for ~D bit access is not word-aligned:~% ~S"
-	       offset size form))
-      (case size
-	(32
-	 (if signed
-	     (%primitive signed-32bit-system-ref sap (ash q 4))
-	     (%primitive unsigned-32bit-system-ref sap (ash q 4))))
-	(16
-	 (if signed
-	     (naturalize-integer t sap (ash q 4) 16 nil)
-	     (naturalize-integer nil sap (ash q 4) 16 nil)))
-	(t
-	 (error "Access of ~D bit integers is not supported." size))))
-     (t
-      (when (> (+ size r) 16)
-	(error "~D bit field at ~D offset crosses a word boundry:~% ~S"
-	       size offset form))
+     ((and (= size 32) (zerop bit-offset))
       (if signed
-	  (let ((val (ldb (byte size (- 16 size r))
-			  (%primitive 16bit-system-ref sap q))))
-	    (if (logbitp val (1- size))
-		(logior val (ash -1 size))
-		val))
-	  (ldb (byte size (- 16 size r))
-	       (%primitive 16bit-system-ref sap q)))))))
+	  (signed-sap-ref-32 sap (ash offset -5))
+	  (sap-ref-32 sap (ash offset -5))))
+     ((and (= size 16) (zerop (logand offset #xf)))
+      (if signed
+	  (signed-sap-ref-16 sap (ash offset -4))
+	  (sap-ref-16 sap (ash offset -4))))
+     ((and (= size 8) (zerop (logand offset #x7)))
+      (if signed
+	  (signed-sap-ref-8 sap (ash offset -3))
+	  (sap-ref-8 sap (ash offset -3))))
+     ((> size 32)
+      (error "Access of ~D bit integers is not supported:~% ~S" size form))
+     ((zerop bit-offset)
+      (let ((value (ldb (byte size 0) (sap-ref-32 sap (ash offset -5)))))
+	(if (and signed (logbitp value (1- size)))
+	    (logior value (ash -1 size))
+	    value)))
+     ((<= (+ size bit-offset) 32)
+      (let ((value (ldb (byte size bit-offset)
+			(sap-ref-32 sap (ash offset -5)))))
+	(if (and signed (logbitp value (1- size)))
+	    (logior value (ash -1 size))
+	    value)))
+     (t
+      (macrolet ((low-byte ()
+			   (ecase vm:target-byte-order
+			     (:little-endian 'offset)
+			     (:bit-endian '(1+ offset))))
+		 (high-byte ()
+			    (ecase vm:target-byte-order
+			      (:little-endian '(1+ offset))
+			      (:bit-endian 'offset))))
+	(let* ((high-bits (- 32 bit-offset))
+	       (low-bits (- size high-bits))
+	       (value (logior (ash (ldb (byte high-bits 0)
+					(sap-ref-32 sap (high-byte)))
+				   low-bits)
+			      (ash (sap-ref-32 sap (low-byte))
+				   (- (- 32 low-bits))))))
+	  (if (and signed (logbitp value (1- size)))
+	      (logior value (ash -1 size))
+	      value)))))))
+
 
 #+new-compiler
 ;;; Deport-Integer  --  Internal
@@ -489,46 +634,44 @@
 ;;;    Like Naturalize-Integer, but writes an integer.
 ;;;
 (defun deport-integer (signed sap offset size value form)
+  (declare (type boolean signed)
+	   (type system-area-pointer sap)
+	   (type index offset size)
+	   (type integer value))
   (declare (ignore signed))
-  (multiple-value-bind (q r) (truncate offset 16)
+  (multiple-value-bind (q r) (truncate offset 32)
     (declare (fixnum r))
     (cond
-     ((> size 15)
-      (unless (zerop r)
-	(error "Offset ~D for ~D bit store is not word-aligned:~% ~S"
-	       offset size form))
-      (case size
-	(32
-	 (%primitive signed-32bit-system-set sap q value))
-	(16
-	 (%primitive 16bit-system-set sap q value))
-	(t
-	 (error "Storing of ~D bit integers is not supported:~% ~S"
-		size form))))
-     ((= size 8)
-      (setq q (ash q 1))
-      (when (= r 8)
-	(setq q (1+ q))
-	(setq r 0))
-      (when (/= r 0)
-	(error "8 bit field at ~D offset crosses a byte boundary:~% ~S"
-	       offset form))
-      (%primitive 8bit-system-set sap q value))
-     ((> size 7)
-      (when (> (+ size r) 16)
-	(error "~D bit field at ~D offset crosses a word boundry:~% ~S"
-	       size offset form))
-      (%primitive 16bit-system-set sap q
-		  (dpb value (byte size (- 16 size r))
-		       (%primitive 16bit-system-ref sap q))))
-     (T
-      (multiple-value-bind (nq nr) (truncate offset 8)
-	(when (> (+ size nr) 8)
-	  (error "~D bit field at ~D offset crosses a byte boundry:~% ~S"
-		 size offset form))
-	(%primitive 8bit-system-set sap nq
-		    (dpb value (byte size (- 8 size nr))
-			 (%primitive 8bit-system-ref sap nq)))))))
+     ((and (= size 32) (zerop r))
+      (setf (sap-ref-32 sap q) value))
+     ((and (= size 16) (zerop (logand r #xf)))
+      (setf (sap-ref-16 sap (ash offset -4)) value))
+     ((and (= size 8) (zerop (logand r #x7)))
+      (setf (sap-ref-8 sap (ash offset -3)) value))
+     ((> size 32)
+      (error "Storing of ~D bit integers is not supported:~% ~S"
+	     size form))
+     ((zerop r)
+      (setf (ldb (byte size 0) (sap-ref-32 sap q)) value))
+     ((<= (+ r size) 32)
+      (setf (ldb (byte size r) (sap-ref-32 sap q)) value))
+     (t
+      (macrolet ((low-byte ()
+			   (ecase vm:target-byte-order
+			     (:little-endian 'offset)
+			     (:bit-endian '(1+ offset))))
+		 (high-byte ()
+			    (ecase vm:target-byte-order
+			      (:little-endian '(1+ offset))
+			      (:bit-endian 'offset))))
+	(let* ((high-bits (- 32 r))
+	       (low-bits (- size high-bits)))
+	  (setf (ldb (byte high-bits 0)
+		     (sap-ref-32 sap (high-byte)))
+		(ash value (- low-bits)))
+	  (setf (ldb (byte low-bits (- 32 low-bits))
+		     (sap-ref-32 sap (low-byte)))
+		value))))))
   nil)
 
 
@@ -539,11 +682,16 @@
 ;;;
 #+new-compiler
 (defun naturalize-boolean (sap offset size form)
+  (declare (type system-area-pointer sap)
+	   (type index offset size))
   (declare (notinline naturalize-integer))
   (not (zerop (naturalize-integer nil sap offset size form))))
 ;;;
 #+new-compiler
 (defun deport-boolean (sap offset size value form)
+  (declare (type system-area-pointer sap)
+	   (type index offset size)
+	   (type boolean value))
   (declare (notinline deport-integer))
   (deport-integer nil sap offset size (if value 1 0) form)
   nil)
@@ -735,7 +883,7 @@
   constraints on the values they may assume.  If the value
   is Nil, that is taken to be a null constraint.  The following
   keys are defined:
-   :unit      -- A integer (default 16).
+   :unit      -- A integer (default 32).
 		 Asserts that the value is a multiple of this number, and
 		 that the value is to be divided by this number before any
 		 other options are processed.
@@ -750,31 +898,36 @@
   (let ((n-sap (gensym))
 	(n-offset (gensym))
 	(n-size (gensym)))
-    `(%define-alien-access
-      ',lisp-type '(,atype ,@more-types)
-      #'(lambda (,n-sap ,n-offset ,n-size ,alien-var ,kind-var ,value-var
-			,source-var)
-	  ,@(unless source-p
-	     `((declare (ignore ,source-var))))
-
-	  (unless (memq (mostcar ,alien-var) '(,atype ,@more-types))
-	    (error "Wrong Alien type ~S, should have been ~S~
-	            ~{~#[~; or~:;,~] ~S~}."
-		   ,alien-var ',atype ',more-types))
-	  
-	  (macrolet ((with-alien ((sap)
-				  (offset &key
-					  ((:unit ounit) 16))
-				  (size &key
-					((:constant sconst) nil)
-					((:minimum smin) nil)
-					((:unit sunit) 16))
-				  &body (body decls))
-		       (%with-alien sap offset ounit
-				    size sconst smin sunit
-				    ',n-sap ',n-offset ',n-size
-				    body decls)))
-	    ,@body)))))
+    `(progn
+       (%define-alien-access
+	',lisp-type '(,atype ,@more-types)
+	#'(lambda (,n-sap ,n-offset ,n-size ,alien-var ,kind-var ,value-var
+			  ,source-var)
+	    ,@(unless source-p
+		`((declare (ignore ,source-var))))
+	    
+	    (unless (member (mostcar ,alien-var) '(,atype ,@more-types)
+			    :test #'eq)
+	      (error "Wrong Alien type ~S, should have been ~S~
+	      ~{~#[~; or~:;,~] ~S~}."
+		     ,alien-var ',atype ',more-types))
+	    
+	    (macrolet ((with-alien ((sap)
+				    (offset &key
+					    ((:unit ounit) 32))
+				    (size &key
+					  ((:constant sconst) nil)
+					  ((:minimum smin) nil)
+					  ((:unit sunit) 32))
+				    &body (body decls))
+				   (%with-alien sap offset ounit
+						size sconst smin sunit
+						',n-sap ',n-offset ',n-size
+						body decls)))
+	      ,@body)))
+       #-new-compiler
+       (eval-when (compile)
+	 (clc::clc-mumble "alien-access ~S compiled.~%" ',lisp-type)))))
 
 
 (eval-when (compile load eval)
@@ -960,59 +1113,32 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	`(naturalize-boolean ,sap ,offset ,size ',form)
 	`(deport-boolean ,sap ,offset ,size ,value ',form))))
 
-
-;;; Alien-Access expert for short-floats
+;;; Alien-Access expert for single-floats
 ;;;
-(define-alien-access (short-float) (type kind value)
+(define-alien-access (single-float) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	`(%primitive int-sap
-	  (logior (ash (%primitive unsigned-32bit-system-ref ,sap ,offset)
-		       (- clc::short-float-shift-16))
-		  (ash clc::short-float-4bit-type
-		       (- 32 clc::short-float-shift-16))))
-	(let ((var (gensym)))
-	  `(let ((,var (float ,value 1.0s0)))
-	     (setq ,var (ash (%primitive sap-int ,var) clc::short-float-shift-16))
-	     (%primitive signed-32bit-system-set ,sap ,offset ,var))))))
+	`(sap-ref-single ,sap ,offset)
+	`(setf (sap-ref-single ,sap ,offset) ,value))))
 
-
-;;; Alien-Access expert for long-floats
+;;; Alien-Access expert for double-floats
 ;;;
-(define-alien-access (long-float) (type kind value)
+(define-alien-access (double-float) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 4)
+	      (size :unit 64 :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	(let ((var (gensym)))
-	  `(let ((,var (%primitive float-long 0)))
-	     (%primitive 16bit-system-set ,var 2
-			 (%primitive 16bit-system-ref ,sap ,offset))
-	     (%primitive 16bit-system-set ,var 3
-			 (%primitive 16bit-system-ref ,sap (1+ ,offset)))
-	     (%primitive 16bit-system-set ,var 4
-			 (%primitive 16bit-system-ref ,sap (+ ,offset 2)))
-	     (%primitive 16bit-system-set ,var 5
-			 (%primitive 16bit-system-ref ,sap (+ ,offset 3)))
-	     ,var))
-	(let ((var (gensym)))
-	  `(let ((,var (float ,value 1.0L0)))
-	     (%primitive 16bit-system-set ,sap ,offset
-			 (%primitive 16bit-system-ref ,var 2))
-	     (%primitive 16bit-system-set ,sap (1+ ,offset)
-			 (%primitive 16bit-system-ref ,var 3))
-	     (%primitive 16bit-system-set ,sap (+ ,offset 2)
-			 (%primitive 16bit-system-ref ,var 4))
-	     (%primitive 16bit-system-set ,sap (+ ,offset 3)
-			 (%primitive 16bit-system-ref ,var 5)))))))
+	`(sap-ref-double ,sap ,offset)
+	`(setf (sap-ref-double ,sap ,offset) ,value))))
 
 ;;; Alien-access expert for procedure objects.  These should be used
 ;;; with caution.
 ;;;
+#+nil ; ### This will need work.
 (define-alien-access (c-procedure) (type kind value)
   (with-alien (sap)
 	      (offset)
@@ -1039,7 +1165,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
     (if (eq kind :read)
 	(let ((size (gensym))
 	      (str (gensym)))
-	  `(let* ((,size (%primitive 8bit-system-ref ,n-sap ,n-offset))
+	  `(let* ((,size (sap-ref-8 ,n-sap ,n-offset))
 		  (,str (make-string ,size)))
 	     (%primitive byte-blt ,n-sap (1+ ,n-offset) ,str 0 ,size)
 	     ,str))
@@ -1049,7 +1175,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 				    ,n-value)))
 		 (,1+off (1+ ,n-offset)))
 	     (check<= ,len ,(cadr type))
-	     (%primitive 8bit-system-set ,n-sap ,n-offset ,len)
+	     (setf (sap-ref-8 ,n-sap ,n-offset) ,len)
 	     (%primitive byte-blt ,n-value 0 ,n-sap ,1+off
 			 (+ ,1+off ,len)))))))
 
@@ -1067,26 +1193,30 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
     (declare (ignore size))
     (if (eq kind :read)
 	(let ((size (gensym))
-	      (str (gensym)))
-	  `(let* ((,size (the fixnum
-			      (- (the fixnum
-				      (%primitive find-character
-						  ,n-sap ,n-offset
-						  most-positive-fixnum 0))
-				 (the fixnum ,n-offset))))
-		  (,str (make-string ,size)))
-	     (%primitive byte-blt ,n-sap ,n-offset ,str 0 ,size)
-	     ,str))
-	(let ((len (gensym))
-	      (end (gensym)))
-	  `(let* ((,len (the fixnum (1+ (length (the simple-string
-						     ,n-value)))))
-		  (,end (the fixnum (+ (the fixnum ,len) ,n-offset))))
-	     (declare (fixnum ,len ,end))
+	      (str (gensym))
+	      (ptr (gensym))
+	      (start (gensym)))
+	  `(do* ((,start (sap+ ,n-sap ,n-offset))
+		 (,ptr ,start (sap+ ,ptr 1)))
+	       ((zerop (sap-ref-8 ,ptr 0))
+		(let* ((,size (sap- ,ptr ,start))
+		       (,str (make-string ,size)))
+		  (declare (fixnum ,size)
+			   (type simple-base-string ,str))
+		  (copy-from-system-area ,start 0
+					 ,str (* vm:vector-data-offset
+						 vm:word-bits)
+					 (* ,size vm:byte-bits))
+		  ,str))
+	     (declare (type system-area-pointer ,start ,ptr))))
+	(let ((len (gensym)))
+	  `(let ((,len (the fixnum (1+ (length (the simple-string
+						    ,n-value))))))
+	     (declare (fixnum ,len))
 	     (check<= ,len ,(cadr type))
-	     (%primitive byte-blt ,n-value 0 ,n-sap ,n-offset ,end)
-	     (%primitive 8bit-system-set ,n-sap
-			 (the fixnum (1+ ,end)) 0))))))
+	     (copy-to-system-area ,n-value (* vm:vector-data-offset
+					      vm:word-bits)
+				  ,n-sap ,n-offset ,len))))))
 
 
 ;;;; Pointer alien access:
@@ -1100,11 +1230,11 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
   (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	`(%primitive sap-system-ref ,sap ,offset)
-	`(%primitive pointer-system-set ,sap ,offset ,value))))
+	`(sap-ref-sap ,sap ,offset)
+	`(setf (sap-ref-sap ,sap ,offset) ,value))))
 
 ;;; Alien-Access expert for (Alien <type> [<bits>])  --  Internal
 ;;;
@@ -1114,7 +1244,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 (define-alien-access (alien) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (unless (and (consp type) (consp (cdr type)))
       (error "Bad type for accessing as an Alien: ~S" type))
@@ -1127,13 +1257,13 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	(unless (and (integerp size) (>= size 0))
 	  (error "Size is not a positive integer: ~S" type))
 	`(make-alien-value
-	  (%primitive sap-system-ref ,sap ,offset)
+	  (sap-ref-sap ,sap ,offset)
 	  0
 	  ,size
 	  ',atype))
        (t
-	`(%primitive pointer-system-set ,sap ,offset
-		     (alien-value-sap ,value)))))))
+	`(setf (sap-ref-sap ,sap ,offset)
+	       (alien-value-sap ,value)))))))
 
 ;;; Alien-Access expert for (Pointer xxx)  --  Internal
 ;;;
@@ -1143,11 +1273,22 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 (define-alien-access (pointer pointer alien) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
-    (when (eq kind :read)
-      (error "Cannot read with Pointer Alien type:~%~S" type))
-    `(%primitive pointer-system-set ,sap ,offset ,value)))
+    (if (eq kind :read)
+	`(error "Cannot reference pointer aliens")
+	(let ((n-value (gensym)))
+	  `(setf (sap-ref-sap ,sap ,offset)
+		 (let ((,n-value ,value))
+		   ,@(when (and (consp type) (consp (cdr type)))
+		       `((declare (type ,(cadr type) ,n-value))))
+		   (etypecase ,n-value
+		     (null (int-sap 0))
+		     (system-area-pointer ,n-value)
+		     ((or simple-string
+			  simple-bit-vector
+			  (simple-array unsigned-byte (*)))
+		      (%primitive c::vector-sap ,n-value)))))))))
 
 
 ;;;; Enumeration Alien access:
@@ -1189,7 +1330,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	(unless (and min (< min val)) (setq min val))
 	(when (rassoc val (cdr el))
 	  (error "Element value ~S used more than once." val))
-	(when (assq sym (cdr el))
+	(when (assoc sym (cdr el) :test #'eq)
 	  (error "Enumeration element ~S used more than once." sym))))
     (let* ((signed (minusp min))
 	   (to (intern (concatenate 'simple-string (string name)
@@ -1244,7 +1385,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	  (mapcar #'car alist))
    (write-string "New value: " *query-io*)
    (let* ((response (read *query-io*))
-	  (res (cdr (assq response alist))))
+	  (res (cdr (assoc response alist :test #'eq))))
      (when res (return res)))))
 
 
@@ -1272,7 +1413,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 			  ,to))))
 	  `(deport-integer
 	    ,signed ,sap ,offset ,size
-	    (or (cdr (assq ,value ,from))
+	    (or (cdr (assoc ,value ,from :test #'eq))
 		(enumeration-error ,from))
 	    ',form)))))
 

@@ -7,21 +7,16 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.9 1990/08/24 18:10:38 wlott Exp $
+;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package 'c)
 (export '(lisp::defstruct) "LISP")
 
-;;; In Spice Lisp, the default structure representation is a simple-vector with
-;;; the subtype field set to 1.  The first element is used to hold the name of
-;;; the structure.  This piece of implementation-dependency resides in the
-;;; macros defined here.
-;;;
-(proclaim '(inline structurify))
-(defun structurify (structure)
-  "Frobs a vector to turn it into a named structure.  Returns the vector."
-  (%primitive set-vector-subtype structure %g-vector-structure-subtype))
+;;; Note: STRUCTURIFY is defined in struct.lisp.  It converts a simple-vector
+;;; into a structure.
 
 
 ;;; This version of Defstruct is implemented using Defstruct, and is free of
@@ -285,11 +280,13 @@
 ;;; This is called by the accessor closures, which have a handle on the type's
 ;;; Defstruct-Description.
 ;;;
+#+new-compiler
 (proclaim '(inline typep-to-structure))
+#+new-compiler
 (defun typep-to-structure (obj info)
   (declare (type defstruct-description info) (inline member))
   (and (structurep obj)
-       (let ((name (%primitive header-ref obj 0)))
+       (let ((name (%primitive structure-ref obj 0)))
 	 (or (eq name (dd-name info))
 	     (member name (dd-included-by info) :test #'eq)))))
 
@@ -312,7 +309,7 @@
 		(unless (typep-to-structure structure info)
 		  (error "Structure for accessor ~S is not a ~S:~% ~S"
 			 (dsd-accessor dsd) (dd-name info) structure))
-		(%primitive header-ref structure (dsd-index dsd))))
+		(%primitive structure-index-ref structure (dsd-index dsd))))
       
       (unless (dsd-read-only slot)
 	(setf (fdefinition `(setf ,(dsd-accessor slot)))
@@ -326,7 +323,7 @@
 		    (error "New-Value for setter ~S is not a ~S:~% ~S."
 			   `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
 			   new-value))
-		  (%primitive header-set structure (dsd-index dsd)
+		  (%primitive structure-index-set structure (dsd-index dsd)
 			      new-value))))))
 
   (when (dd-predicate info)
@@ -348,11 +345,11 @@
 		(do ((i 1 (1+ i))
 		     (res (%primitive alloc-g-vector len nil)))
 		    ((= i len)
-		     (%primitive header-set res 0 (dd-name info))
+		     (%primitive structure-set res (dd-name info) 0)
 		     (structurify res))
 		  (declare (fixnum i))
-		  (%primitive header-set res i
-			      (%primitive header-ref structure i)))))))
+		  (%primitive structure-index-set res i
+			      (%primitive structure-index-ref structure i)))))))
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info))))
 
@@ -378,7 +375,7 @@
 	    (declare (type ,type structure))
 	    (the ,slot-type (elt structure ,index)))
 	  ,@(unless (dsd-read-only slot)
-	      `((defun (setf ,name) (structure new-value)
+	      `((defun (setf ,name) (new-value structure)
 		  (declare (type ,type structure) (type ,slot-type new-value))
 		  (setf (elt structure ,index) new-value)))))
        stuff))))
@@ -476,7 +473,7 @@
       (let ((arg (car args)))
 	(cond ((not (atom arg))
 	       (push (find-legal-slot defstruct (car arg)) slots-in-arglist))
-	      ((memq arg '(&optional &rest &aux &key))
+	      ((member arg '(&optional &rest &aux &key) :test #'eq)
 	       (setq arg-kind arg))
 	      (t
 	       (case arg-kind
@@ -494,7 +491,8 @@
 			  :initial-element `',(dd-name defstruct))
 	       (make-list (dd-offset defstruct))))
 	  (thing (mapcar #'(lambda (slot)
-			     (if (memq slot slots-in-arglist)
+			     (if (member slot slots-in-arglist
+					 :test #'eq)
 				 (dsd-name slot)
 				 (dsd-default slot)))
 			 slots)))
@@ -567,7 +565,7 @@
   (let ((def (info type structure-info type)))
     (if (and def (eq (dd-type def) 'structure) (dd-predicate def))
 	`(and (structurep ,object)
-	      (if (eq (%primitive header-ref ,object 0) ',type)
+	      (if (eq (%primitive structure-ref ,object 0) ',type)
 		  t
 		  (,(dd-predicate def) ,object)))
 	`(lisp::structure-typep ,object ',type))))

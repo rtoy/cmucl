@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.10 1990/08/24 18:11:26 wlott Exp $
+;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
@@ -37,49 +39,53 @@
 	  default-interrupt))
 
 (in-package "EXTENSIONS")
-(export '(quit *prompt* print-herald save-lisp gc-on gc-off
-	       *before-save-initializations* *after-save-initializations*
-	       *editor-lisp-p* *clx-server-displays*))
+(export '(quit *prompt* save-lisp gc-on gc-off *clx-server-displays*))
 
 (in-package "LISP")
 
-;;; These go here so that we can refer to them in top-level forms.
-
-(defvar *before-save-initializations* ()
-  "This is a list of functions which are called before creating a saved core
-  image.  These functions are executed in the child process which has no ports,
-  so they cannot do anything that tries to talk to the outside world.")
-
-(defvar *after-save-initializations* ()
-  "This is a list of functions which are called when a saved core image starts
-  up.  The system itself should be initialized at this point, but applications
-  might not be.")
-
 ;;; Make the error system enable interrupts.
 
-(defconstant most-positive-fixnum 134217727
+(defconstant most-positive-fixnum #.vm:target-most-positive-fixnum
   "The fixnum closest in value to positive infinity.")
 
-(defconstant most-negative-fixnum -134217728
+(defconstant most-negative-fixnum #.vm:target-most-negative-fixnum
   "The fixnum closest in value to negative infinity.")
 
 
 ;;; Random information:
 
 (defvar compiler-version "???")
-(defvar *lisp-implementation-version* "3.0(?)")
+(defvar *lisp-implementation-version* "4.0(?)")
 
-(defvar *in-the-compiler* ()
+(defvar *in-the-compiler* nil
   "Bound to T while running code inside the compiler.  Macros may test this to
   see where they are being expanded.")
 
-(defparameter %fasl-code-format 6)
+(defparameter %fasl-code-format #.vm:target-fasl-code-format)
 
 ;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
 		    *need-to-collect-garbage* *gc-verbose*
 		    *before-gc-hooks* *after-gc-hooks*
 		    c::*type-system-initialized*))
+
+
+;;;; Random magic specials.
+
+
+;;; These are filled in by Genesis.
+
+(defvar *the-undefined-function*)
+(defvar *current-catch-block*)
+(defvar *current-unwind-block*)
+(defvar *free-interrupt-context-index*)
+
+
+;;;
+
+(defvar %sp-interrupts-inhibited nil)
+
+
 
 ;;;; Global ports:
  
@@ -92,293 +98,6 @@
 (defvar *nameserverport* ()
   "Port to the name server.")
 
-
-;;; Software interrupt stuff.
-
-(defvar *in-server* NIL
-  "*In-server* is set to T when the SIGMSG interrupt has been enabled
-  in Server.")
-
-(defvar server-unique-object (cons 1 2))
-
-(defconstant lockout-interrupts (logior (mach:sigmask :sigint)
-					(mach:sigmask :sigquit)
-					(mach:sigmask :sigfpe)
-					(mach:sigmask :sigsys)
-					(mach:sigmask :sigpipe)
-					(mach:sigmask :sigalrm)
-					(mach:sigmask :sigurg)
-					(mach:sigmask :sigstop)
-					(mach:sigmask :sigtstp)
-					(mach:sigmask :sigcont)
-					(mach:sigmask :sigchld)
-					(mach:sigmask :sigttin)
-					(mach:sigmask :sigttou)
-					(mach:sigmask :sigio)
-					(mach:sigmask :sigxcpu)
-					(mach:sigmask :sigxfsz)
-					(mach:sigmask :sigvtalrm)
-					(mach:sigmask :sigprof)
-					(mach:sigmask :sigwinch)
-					(mach:sigmask :sigmsg)
-					(mach:sigmask :sigemsg)))
-
-(defconstant interrupt-stack-size 4096
-  "Size of stack for Unix interrupts.")
-
-(defvar software-interrupt-stack NIL
-  "Address of the stack used by Mach to send signals to Lisp.")
-
-(defvar %sp-interrupts-inhibited nil
-  "True if emergency message interrupts should be inhibited, false otherwise.")
-
-(defvar *software-interrupt-vector*
-  (make-array mach::maximum-interrupts)
-  "A vector that associates Lisp functions with Unix interrupts.")
-
-(defun enable-interrupt (interrupt function &optional character)
-  "Enable one Unix interrupt and associate a Lisp function with it.
-  Interrupt should be the number of the interrupt to enable.  Function
-  should be a funcallable object that will be called with three
-  arguments: the signal code, a subcode, and the context of the
-  interrupt.  The optional character should be an ascii character or
-  an integer that causes the interrupt from the keyboard.  This argument
-  is only used for SIGINT, SIGQUIT, and SIGTSTP interrupts and is ignored
-  for any others.  Returns the old function associated with the interrupt
-  and the character that generates it if the interrupt is one of SIGINT,
-  SIGQUIT, SIGTSTP and character was specified."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and ~D."
-	   mach::maximum-interrupts))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt))
-	(old-char ()))
-    (when (and character
-	       (or (eq interrupt mach:sigint)
-		   (eq interrupt mach:sigquit)
-		   (eq interrupt mach:sigtstp)))
-      (when (characterp character)
-	(setq character (char-code character)))
-      (when (mach:unix-isatty 0)
-	(if (or (eq interrupt mach:sigint)
-		(eq interrupt mach:sigquit))
-	    (mach:with-trap-arg-block mach:tchars tc
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCGETC
-				   (alien-value-sap mach:tchars))
-		(if (null val)
-		    (error "Failed to get tchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))
-	      (cond ((eq interrupt mach:sigint)
-		     (setq old-char
-			   (alien-access (mach::tchars-intrc (alien-value tc))))
-		     (setf (alien-access (mach::tchars-intrc (alien-value tc)))
-			   character))
-		    (T
-		     (setq old-char
-			   (alien-access (mach::tchars-quitc (alien-value tc))))
-		     (setf (alien-access (mach::tchars-quitc (alien-value tc)))
-			   character)))
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:tiocsetc
-				   (alien-value-sap mach:tchars))
-		(if (null val)
-		    (error "Failed to set tchars information, unix error ~S."
-			   (mach:get-unix-error-msg err)))))
-	    (mach:with-trap-arg-block mach:ltchars tc
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCGLTC
-				   (alien-value-sap mach:ltchars))
-		(if (null val)
-		    (error "Failed to get ltchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))
-	      (setq old-char
-		    (alien-access (mach::ltchars-suspc (alien-value tc))))
-	      (setf (alien-access (mach::ltchars-suspc (alien-value tc)))
-		    character)
-	      (multiple-value-bind
-		  (val err)
-		  (mach:unix-ioctl 0 mach:TIOCSLTC
-				   (alien-value-sap mach:ltchars))
-		(if (null val)
-		    (error "Failed to set ltchars information, unix error ~S."
-			   (mach:get-unix-error-msg err))))))))
-    (setf (svref *software-interrupt-vector* interrupt) function)
-    (if (null function)
-	(mach:unix-sigvec interrupt mach:sig_dfl 0 0)
-	(let ((diha (+ (ash clc::romp-data-base 16)
-		       clc::software-interrupt-offset)))
-	  (mach:unix-sigvec interrupt diha lockout-interrupts 1)))
-    (if old-char
-	(values old-fun old-char)
-	old-fun)))
-
-(defun ignore-interrupt (interrupt)
-  "The Unix interrupt handling mechanism is set up so that interrupt is
-  ignored."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and 31."))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt)))
-    (mach:unix-sigvec interrupt mach:sig_ign 0 0)
-    (setf (svref *software-interrupt-vector* interrupt) NIL)
-    old-fun))
-
-(defun default-interrupt (interrupt)
-  "The Unix interrupt handling mechanism is set up to do the default action
-  under mach.  Lisp will not get control of the interrupt."
-  (unless (< 0 interrupt mach::maximum-interrupts)
-    (error "Interrupt number ~D is not between 1 and 31."))
-  (let ((old-fun (svref *software-interrupt-vector* interrupt)))
-    (mach:unix-sigvec interrupt mach:sig_dfl 0 0)
-    (setf (svref *software-interrupt-vector* interrupt) NIL)
-    old-fun))
-
-
-;;; %SP-Software-Interrupt-Handler is called by the miscops when a Unix
-;;; signal arrives.  The three arguments correspond to the information
-;;; passed to a normal Unix signal handler, i.e.:
-;;;	signal -- the Unix signal number.
-;;;	code -- a code for those signals which can be caused by more
-;;;		than one kind of event.  This code specifies the sub-event.
-;;;	scp -- a pointer to the context of the signal.
-
-;;; Because of the way %sp-software-interrupt-handler returns, it doesn't
-;;; unwind the binding stack properly.  The only variable affected by this
-;;; is software-interrupt-stack, so it must be handled specially.
-
-(defun %sp-software-interrupt-handler (signal code scp stack)
-  (declare (optimize (speed 3) (safety 0)))
-  (if (and %sp-interrupts-inhibited
-	   (not (memq signal '(#.mach:sigill #.mach:sigbus #.mach:sigsegv))))
-      (progn
-	(let ((iin %sp-interrupts-inhibited))
-	  (setq %sp-interrupts-inhibited
-		(nconc (if (consp iin) iin)
-		       (list `(,signal ,code ,scp))))
-	  (mach:unix-sigsetmask 0)))
-      (let* ((old-stack software-interrupt-stack)
-	     (new-stack ())
-	     (%sp-interrupts-inhibited T))
-	(unwind-protect
-	    (progn
-	      (when *in-server*
-		(mach:unix-sigvec mach:sigmsg mach::sig_dfl 0 0))
-	      (multiple-value-bind (gr addr)
-				   (mach:vm_allocate *task-self* 0
-						     interrupt-stack-size t)
-		(gr-error 'mach:vm_allocate gr '%sp-software-interrupt-handler)
-		(setq software-interrupt-stack
-		      (int-sap (+ addr interrupt-stack-size))))
-	      (setq new-stack software-interrupt-stack)
-	      (mach:unix-sigstack new-stack 0)
-	      (mach:unix-sigsetmask 0)
-	      (funcall (svref *software-interrupt-vector* signal)
-		       signal code scp)
-	      (mach:unix-sigsetmask lockout-interrupts))
-	  (mach:vm_deallocate *task-self*
-			      (- (sap-int new-stack)
-				 interrupt-stack-size)
-			      interrupt-stack-size)
-	  (setq software-interrupt-stack old-stack)
-	  (mach:unix-sigstack old-stack 0)
-	  (when *in-server*
-	    (let ((diha (+ (ash clc::romp-data-base 16)
-			   clc::software-interrupt-offset)))
-	      (mach:unix-sigvec mach:sigmsg diha lockout-interrupts 1)))
-	  (mach:unix-sigsetmask 0))))
-  (%primitive break-return stack))
-
-
-(defun ih-sigint (signal code scp)
-  (declare (ignore signal code scp))
-  (without-hemlock
-   (with-interrupts
-    (break "Software Interrupt" t))))
-
-(defun ih-sigquit (signal code scp)
-  (declare (ignore signal code scp))
-  (throw 'top-level-catcher nil))
-
-(defun ih-sigtstp (signal code scp)
-  (declare (ignore signal code scp))
-  (without-hemlock
-;   (reset-keyboard 0)
-   (mach:unix-kill (mach:unix-getpid) mach:sigstop)))
-
-(defun ih-sigill (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (error "Illegal instruction encountered at IAR ~X."
-	   (alien-access (mach::sigcontext-iar (alien-value context))))))
-
-(defun ih-sigbus (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Bus error encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-(defun ih-sigsegv (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Segment violation encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-(defun ih-sigfpe (signal code scp)
-  (declare (ignore signal code))
-  (alien-bind ((context (make-alien-value scp 0 (record-size 'mach:sigcontext)
-					  'mach:sigcontext)
-			mach:sigcontext T))
-    (with-interrupts
-     (error "Floating point exception encountered at IAR ~X."
-	    (alien-access (mach::sigcontext-iar (alien-value context)))))))
-
-;;; When we're in server then throw back to server.  If we're not
-;;; in server then just ignore the sigmsg interrupt.  We can't handle
-;;; it and we should never get it anyway.  But of course we do -- it's
-;;; dealing with interrupts and there funny at best.
-(defun ih-sigmsg (signal code scp)
-  (declare (ignore signal code scp))
-  (mach:unix-sigsetmask (mach:sigmask :sigmsg))
-  (default-interrupt mach:sigmsg)
-  (when *in-server*
-    (setq *in-server* nil)
-    (throw 'server-catch server-unique-object)))
-
-(defun ih-sigemsg (signal code scp)
-  (declare (ignore signal code scp))
-  (service-emergency-message-interrupt))
-
-(defun init-mach-signals ()
-  (declare (optimize (speed 3) (safety 0)))
-  (multiple-value-bind (gr addr)
-		       (mach:vm_allocate *task-self* 0 interrupt-stack-size t)
-    (gr-error 'mach:vm_allocate gr 'enable-interrupt)
-    (setq software-interrupt-stack
-	  (int-sap (+ addr interrupt-stack-size))))
-  (let ((iha (get 'clc::interrupt-handler '%loaded-address))
-	(diha (+ (ash clc::romp-data-base 16) clc::software-interrupt-offset)))
-    (%primitive pointer-system-set diha 0 iha))
-  (mach:unix-sigstack software-interrupt-stack 0)
-  (enable-interrupt mach:sigint #'ih-sigint)
-  (enable-interrupt mach:sigquit #'ih-sigquit)
-  (enable-interrupt mach:sigtstp #'ih-sigtstp)
-  (enable-interrupt mach:sigill #'ih-sigill)
-  (enable-interrupt mach:sigbus #'ih-sigbus)
-  (enable-interrupt mach:sigsegv #'ih-sigsegv)
-  (enable-interrupt mach:sigemsg #'ih-sigemsg)
-  (enable-interrupt mach:sigfpe #'ih-sigfpe)
-;  (reset-keyboard 0)
-  )
 
 
 ;;;; Reply port allocation.
@@ -386,6 +105,9 @@
 ;;;    We maintain a global stack of reply ports which is shared among
 ;;; all matchmaker interfaces, and could be used by other people as well.
 ;;;
+
+#| More stuff that will probably be drastically different.
+
 ;;;    The stack is represented by a vector, and a pointer to the first
 ;;; free port.  The stack grows upward.  There is always at least one
 ;;; NIL entry in the stack after the last allocated port.
@@ -458,9 +180,11 @@
 	(gr-call mach:port_deallocate *task-self* port)
 	(setf (svref stack i)
 	      (gr-call* mach:port_allocate *task-self*))))))
+|#
 
 
 ;;;; Server stuff:
+#|
 ;;;
 ;;;    There is a fair amount of stuff to support Matchmaker RPC servers
 ;;; and asynchonous message service.  RPC message service needs to be
@@ -594,6 +318,9 @@
 ;;;
 (defsetf object-set-operation %set-object-set-operation
   "Sets the handler function for an object set operation.")
+|#
+
+
 
 ;;;; Emergency Message Handling:
 ;;;
@@ -603,6 +330,8 @@
 ;;; receive an emergency message, so we can't receive on all ports.
 ;;; Instead, we use MessagesWaiting to find the ports with emergency
 ;;; messages.
+
+#| still more noise that will be different.
 
 (defalien waiting-ports nil (long-words 128))
 
@@ -739,6 +468,9 @@
 
 (pushnew 'clear-port-tables *before-save-initializations*)
 
+|#
+
+
 
 ;;; %Initial-Function is called when a cold system starts up.  First we zoom
 ;;; down the *Lisp-Initialization-Functions* doing things that wanted to happen
@@ -753,7 +485,7 @@
 (eval-when (compile)
   (defmacro print-and-call (name)
     `(progn
-       (%primitive print ',name)
+       (%primitive print ,(symbol-name name))
        (,name))))
 
 (defun %initial-function ()
@@ -772,7 +504,7 @@
   (print-and-call c::globaldb-init)
 
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep...
-  (print-and-call subtypep-init)
+  (print-and-call type-init)
 
   (setq *lisp-initialization-functions*
 	(nreverse *lisp-initialization-functions*))
@@ -781,9 +513,14 @@
     (funcall fun))
   (makunbound '*lisp-initialization-functions*)	; So it gets GC'ed.
 
+  ;; Only do this after top level forms have run, 'cause thats where
+  ;; deftypes are.
+  (setq c::*type-system-initialized* t)
+
   (print-and-call os-init)
   (print-and-call filesys-init)
   (print-and-call conditions::error-init)
+  (print-and-call kernel::signal-init)
 
   (print-and-call reader-init)
   (print-and-call backq-init)
@@ -793,10 +530,15 @@
   (setq *readtable* (copy-readtable std-lisp-readtable))
 
   (print-and-call stream-init)
+  (print-and-call loader-init)
+  #+nil
   (print-and-call random-init)
   (print-and-call format-init)
   (print-and-call package-init)
+  #+nil
   (print-and-call pprint-init)
+
+  (%primitive print "Done initializing.")
 
   (setq *already-maybe-gcing* nil)
   (terpri)
@@ -820,16 +562,17 @@
 (defvar *task-notify* NIL)
 
 (defun reinit ()
+  (%primitive print "In REINIT.")
   (without-interrupts
    (setq *already-maybe-gcing* t)
-   (os-init)
-   (stream-reinit)
+   (print-and-call os-init)
+   (print-and-call kernel::signal-init)
+   (print-and-call stream-reinit)
    (setq *already-maybe-gcing* nil))
-  (setq *task-notify* (mach:mach-task_notify))
+  #+nil
   (mach:port_enable (mach:mach-task_self) *task-notify*)
-  (add-port-object *task-notify* nil *kernel-messages*)
-  (init-mach-signals))
-
+  #+nil
+  (add-port-object *task-notify* nil *kernel-messages*))
 
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions
@@ -837,7 +580,8 @@
 
 (defun os-init ()
   (setq *task-self* (mach:mach-task_self))
-  (setq *task-data* (mach:mach-task_data)))
+  (setq *task-data* (mach:mach-task_data))
+  (setq *task-notify* (mach:mach-task_notify)))
 
 
 ;;; Setup-path-search-list returns a list of the directories that are
@@ -864,107 +608,17 @@
 
 ;;;; Miscellaneous external functions:
 
-(defun print-herald ()
-  (write-string "CMU Common Lisp ")
-  (write-line (lisp-implementation-version))
-  (write-string "Hemlock ") (write-string *hemlock-version*)
-  (write-string ", Compiler ") (write-line compiler-version)
-  (write-line "Send bug reports and questions to Gripe.")
-  (values))
-
-(defvar *editor-lisp-p* nil
-  "This is true if and only if the lisp was started with the -edit switch.")
-
-(defun save-lisp (core-file-name &key
-				 (purify t)
-				 (root-structures ())
-				 (init-function
-				  #'(lambda ()
-				      (throw 'top-level-catcher nil)))
-				 (load-init-file t)
-				 (enable-gc t)
-				 (print-herald t)
-				 (process-command-line t))
-  "Saves a Spice Lisp core image in the file of the specified name.  The
-  following keywords are defined:
-  
-  :purify
-      If true, do a purifying GC which moves all dynamically allocated
-  objects into static space so that they stay pure.  This takes somewhat
-  longer than the normal GC which is otherwise done, but GC's will done
-  less often and take less time in the resulting core file.
-
-  :root-structures
-      This should be a list of the main entry points in any newly loaded
-  systems.  This need not be supplied, but locality will be better if it
-  is.  This is meaningless if :purify is Nil.
-  
-  :init-function
-      This is a function which is called when the created core file is
-  resumed.  The default function simply aborts to the top level
-  read-eval-print loop.  If the function returns it will be the value
-  of Save-Lisp.
-  
-  :load-init-file
-      If true, then look for an init.lisp or init.fasl file when the core
-  file is resumed.
-  
-  :print-herald
-      If true, print out the lisp system herald when starting.
-
-  :enable-gc
-      If true, turn GC on if it was off."
-  
-  (if purify
-      (purify :root-structures root-structures)
-      (gc))
-  (unless (save core-file-name)
-    (setf (search-list "default:") (list (default-directory)))
-    (setf (search-list "path:") (setup-path-search-list))
-    (when process-command-line (ext::process-command-strings))
-    (setf *editor-lisp-p* nil)
-    (macrolet ((find-switch (name)
-		 `(find ,name *command-line-switches*
-			:key #'cmd-switch-name
-			:test #'(lambda (x y)
-				  (declare (simple-string x y))
-				  (string-equal x y)))))
-      (when (and process-command-line (find-switch "edit"))
-	(setf *editor-lisp-p* t))
-      (when (and load-init-file
-		 (not (and process-command-line (find-switch "noinit"))))
-	(let* ((cl-switch (find-switch "init"))
-	       (name (or (and cl-switch
-			      (or (cmd-switch-value cl-switch)
-				  (car (cmd-switch-words cl-switch))
-				  "init"))
-			 "init")))
-	  (load (merge-pathnames name (user-homedir-pathname))
-		:if-does-not-exist nil))))
-    (when enable-gc
-      (gc-on))
-    (when print-herald
-      (print-herald))
-    (when process-command-line
-      (ext::invoke-switch-demons *command-line-switches*
-				 *command-switch-demons*))
-    (funcall init-function)))
-
-
 ;;; Quit gets us out, one way or another.
 
 (defun quit (&optional recklessly-p)
   "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
   non-Nil."
-;  (reset-keyboard 0)
-  (dolist (x (if (boundp 'extensions::temporary-foreign-files)
-		 extensions::temporary-foreign-files))
-    (mach:unix-unlink x))
   (if recklessly-p
       (mach:unix-exit 0)
       (throw '%end-of-the-world nil)))
 
 
+#| might be something different.
 
 (defalien sleep-msg mach:msg (record-size 'mach:msg))
 (setf (alien-access (mach:msg-simplemsg sleep-msg)) T)
@@ -989,6 +643,8 @@
 	       (unless (eql gr mach:rcv-timed-out)
 		 (gr-error 'mach:receive gr)))))))
   nil)
+
+|#
 
 
 ;;;; TOP-LEVEL loop.

@@ -206,12 +206,12 @@
   (let ((rank (array-rank x)))
     (cond ((> rank 1)
 	   (format t "~&~S is " x)
-	   (write-string (if (%displacedp x) "a displaced" "an"))
+	   (write-string (if (%array-displaced-p x) "a displaced" "an"))
 	   (format t " array of rank ~A." rank)
 	   (format t "~%Its dimensions are ~S." (array-dimensions x)))
 	  (t
 	   (format t "~&~S is a ~:[~;displaced ~]vector of length ~D." x
-		   (%displacedp x) (length x))
+		   (and (array-header-p x) (%array-displaced-p x)) (length x))
 	   (if (array-has-fill-pointer-p x)
 	       (format t "~&It has a fill pointer, currently ~d"
 		       (fill-pointer x))
@@ -228,32 +228,30 @@
 	   ,output))))
 
 (defun describe-function (x)
-  (case (%primitive get-vector-subtype x)
-    (#.%function-entry-subtype
-     (describe-function-compiled x))
-    (#.%function-closure-subtype
+  (declare (type function x))
+  (case (get-type x)
+    (#.vm:closure-header-type
      (describe-function-lex-closure x))
+    ((#.vm:function-header-type #.vm:closure-function-header-type)
+     (describe-function-compiled x))
     (t
      (format t "~&It is an unknown type of function."))))
 
 (defun describe-function-compiled (x)
-  (let ((args (%primitive header-ref x %function-entry-arglist-slot)))
+  (let ((args (%function-header-arglist x)))
     (describe-function-arg-list
      *current-describe-object* (string= args "()") (write-string args)))
   (let ((*print-level* nil)
 	(*print-length* nil)
-	(type (%primitive header-ref x %function-entry-type-slot)))
+	(type (%function-header-type x)))
     (format t "~&Its argument types are:~%  ~S" (second type))
     (format t "~&Its result type is:~%  ~S" (third type)))
   
-  (let ((name (%primitive header-ref x %function-name-slot)))
+  (let ((name (%function-header-name x)))
     (when (symbolp name)
       (desc-doc name 'function "Function Documention:")))
   
-  (let ((info (%primitive header-ref
-			  (%primitive header-ref x
-				      %function-entry-constants-slot)
-			  %function-constants-debug-info-slot)))
+  (let ((info (di::code-debug-info (di::function-code-header x))))
     (when info
       (let ((sources (c::compiled-debug-info-source info)))
 	(format t "~&On ~A it was compiled from:"
@@ -275,14 +273,11 @@
 (defun describe-function-lex-closure (x)
   (print-for-describe x)
   (format t " is a lexical closure.~%")
+  (describe-function-compiled (%closure-function x))
   (format t "~&Its lexical environment is:")
-  (indenting-further *standard-output* 8
-    (do ((i %function-closure-variables-offset (1+ i)))
-	((= i (%primitive header-length x)))
-      (format t "~&~D: ~S"
-	      (- i %function-closure-variables-offset)
-	      (%primitive header-ref x i))))
-  (describe-function-compiled (%primitive header-ref x %function-name-slot)))
+  (indenting-further *standard-output* 8)
+  (dotimes (i (get-header-data x))
+    (format t "~&~D: ~S" i (%closure-index-ref x i))))
 
 
 (defun print-for-describe (x &optional (freshp t))

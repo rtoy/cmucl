@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.1.1.2 1990/04/20 00:36:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.2 1990/08/24 18:10:58 wlott Exp $
 ;;;
 ;;;    Functions that hack on the global function namespace (primarily
 ;;; concerned with SETF functions here.)

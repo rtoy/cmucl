@@ -22,6 +22,10 @@
   "The number of internal time units that fit into a second.  See
   Get-Internal-Real-Time and Get-Internal-Run-Time.")
 
+(defconstant micro-seconds-per-internal-time-unit
+  (/ 1000000 internal-time-units-per-second))
+
+
 (defmacro not-leap-year (year)
   (let ((sym (gensym)))
     `(let ((,sym ,year))
@@ -32,47 +36,29 @@
 
 ;;; Get-Internal-Real-Time  --  Public
 ;;;
-;;;
-(defun get-internal-real-time ()
-  "Return the real time in the internal time format.  This is useful for
-  finding elapsed time.  See Internal-Time-Units-Per-Second."
-  (let ((val (system:%primitive get-real-time)))
-    (when (eq val -1)
-      (error "Failed to get real time."))
-    val))
-
-#|
 (defun get-internal-real-time ()
   "Return the real time in the internal time format.  This is useful for
   finding elapsed time.  See Internal-Time-Units-Per-Second."
   (multiple-value-bind (result seconds useconds) (mach:unix-gettimeofday)
-    (if result (+ (* seconds internal-time-units-per-second) useconds)
+    (if result
+	(+ (* seconds internal-time-units-per-second)
+	   (truncate useconds micro-seconds-per-internal-time-unit))
 	(error "Unix system call gettimeofday failed: ~A"
 	       (mach:get-unix-error-msg seconds)))))
-|#
 
 ;;; Get-Internal-Run-Time  --  Public
 ;;;
-;;; PmGetTimes returns run time in microseconds.  Convert to jiffies.
-;;;
-(defun get-internal-run-time ()
-  "Return the run time in the internal time format.  This is useful for
-  finding CPU usage."
-  (let ((val (system:%primitive get-run-time)))
-    (when (eq val -1)
-      (error "Failed to obtain run time."))
-    val))
-
-#|
 (defun get-internal-run-time ()
   "Return the run time in the internal time format.  This is useful for
   finding CPU usage."
   (multiple-value-bind (result utime stime)
 		       (mach:unix-getrusage mach:rusage_self)
-    (if result (+ utime stime)
+    (if result
+	(values (truncate (+ utime stime)
+			  micro-seconds-per-internal-time-unit))
 	(error "Unix system call getrusage failed: ~A"
 	       (mach:get-unix-error-msg utime)))))
-|#
+
 
 ;;; Subtract from the returned Internal_Time to get the universal time.
 ;;; The offset between our time base and the Perq one is 2145 weeks and

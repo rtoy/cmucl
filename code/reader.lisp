@@ -7,6 +7,8 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.3 1990/08/24 18:12:38 wlott Exp $
+;;;
 ;;; Spice Lisp Reader 
 ;;; Written by David Dill
 ;;; Package system interface by Lee Schumacher.
@@ -108,20 +110,20 @@
 (defmacro get-cat-entry (char rt)
   ;;only give this side-effect-free args.
   `(elt (the simple-vector (character-attribute-table ,rt))
-	(char-int ,char)))
+	(char-code ,char)))
 
 (defun set-cat-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (the simple-vector (character-attribute-table rt))
-	     (char-int char))
+	     (char-code char))
 	newvalue))
 
 (defmacro get-cmt-entry (char rt)
   `(elt (the simple-vector (character-macro-table ,rt))
-	(char-int ,char)))
+	(char-code ,char)))
 
 (defun set-cmt-entry (char newvalue &optional (rt *readtable*))
   (setf (elt (the simple-vector (character-macro-table rt))
-	     (char-int char))
+	     (char-code char))
 	newvalue))
 
 (defun make-character-attribute-table ()
@@ -172,7 +174,7 @@
 (defvar secondary-attribute-table ())
 
 (defun set-secondary-attribute (char attribute)
-  (setf (elt (the simple-vector secondary-attribute-table) (char-int char))
+  (setf (elt (the simple-vector secondary-attribute-table) (char-code char))
 	attribute))
 
 
@@ -186,9 +188,9 @@
   (set-secondary-attribute #\+ #.constituent-sign)
   (set-secondary-attribute #\- #.constituent-sign)
   (set-secondary-attribute #\/ #.constituent-slash)  
-  (do ((i (char-int #\0) (1+ i)))
-      ((> i (char-int #\9)))
-    (set-secondary-attribute (int-char i) #.constituent-digit))
+  (do ((i (char-code #\0) (1+ i)))
+      ((> i (char-code #\9)))
+    (set-secondary-attribute (code-char i) #.constituent-digit))
   (set-secondary-attribute #\E #.constituent-expt)
   (set-secondary-attribute #\F #.constituent-expt)
   (set-secondary-attribute #\D #.constituent-expt)
@@ -202,7 +204,7 @@
 
 (defmacro get-secondary-attribute (char)
   `(elt (the simple-vector secondary-attribute-table)
-	(char-int ,char)))
+	(char-code ,char)))
 
 
 
@@ -283,7 +285,7 @@
   (prepare-for-fast-read-char stream
     (do ((attribute-table (character-attribute-table *readtable*))
 	 (char (fast-read-char t) (fast-read-char t)))
-      ((/= (the fixnum (svref attribute-table (char-int char))) #.whitespace)
+      ((/= (the fixnum (svref attribute-table (char-code char))) #.whitespace)
        (done-with-fast-read-char)
        char))))
 
@@ -318,7 +320,7 @@
     (do ((ichar 0 (1+ ichar))
 	 (char))
 	((= ichar #O200))
-      (setq char (int-char ichar))
+      (setq char (code-char ichar))
       (when (constituentp char std-lisp-readtable)
 	    (set-cat-entry char (get-secondary-attribute char))
 	    (set-cmt-entry char #'read-token)))))
@@ -597,7 +599,7 @@
 ;;; return the character class for a char
 ;;;
 (defmacro char-class (char attable)
-  `(let ((att (svref ,attable (char-int ,char))))
+  `(let ((att (svref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if (<= att #.terminating-macro)
 	 #.delimiter
@@ -607,7 +609,7 @@
 ;;; number
 ;;;
 (defmacro char-class2 (char attable)
-  `(let ((att (svref ,attable (char-int ,char))))
+  `(let ((att (svref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if (<= att #.terminating-macro)
 	 #.delimiter
@@ -621,7 +623,7 @@
 ;;; floating number (assume that it is a digit if it could be)
 ;;;
 (defmacro char-class3 (char attable)
-  `(let ((att (svref ,attable (char-int ,char))))
+  `(let ((att (svref ,attable (char-code ,char))))
      (declare (fixnum att))
      (if possibly-rational
 	 (setq possibly-rational
@@ -1085,24 +1087,10 @@
 	  ;;should never happen:	
 	  (t (error "Internal error in floating point reader.")))))
 
+
 (defun make-float-aux (number divisor float-format)
-  (let ((fgcd (gcd number divisor)))
-    (when (/= fgcd 1)
-      (setq number (truncate number fgcd))
-      (setq divisor (truncate divisor fgcd))))
-  (when (= divisor 1)
-    (return-from make-float-aux (coerce number float-format)))
-  (let ((float-digits (case float-format
-			((short-float single-float) 37)
-			((double-float long-float) 307)
-			(t 307)))
-	(digits (round (integer-length number) (log 10 2))))
-    (cond ((<= digits float-digits)
-	   (/ (coerce number float-format)
-	      (coerce divisor float-format)))
-	  (T (let ((adj-amount (expt 10 (- digits float-digits))))
-	       (/ (coerce (round number adj-amount) float-format)
-		  (coerce (round divisor adj-amount) float-format)))))))
+  (coerce (/ number divisor) float-format))
+
 
 (defun make-ratio ()
   ;;assume read-buffer contains a legal ratio.  Build the number from
@@ -1168,7 +1156,7 @@
 		     :test #'char= :key #'car)))
     (if dpair
 	(setf (elt (the simple-vector (cdr dpair))
-		   (char-int sub-char))
+		   (char-code sub-char))
 	      function)
 	(error "~S is not a dispatch char." disp-char))))
 
@@ -1181,7 +1169,7 @@
 		     :test #'char= :key #'car)))
     (if dpair
 	(elt (the simple-vector (cdr dpair))
-	     (char-int sub-char))
+	     (char-code sub-char))
 	(error "~S is not a dispatch char." disp-char))))
 
 (defun read-dispatch-char (stream char)
@@ -1205,7 +1193,7 @@
 		       :test #'char= :key #'car)))
       (if dpair
 	  (funcall (elt (the simple-vector (cdr dpair))
-			(char-int sub-char))
+			(char-code sub-char))
 		   stream sub-char (if numargp numarg nil))
 	  (error "No dispatch table for dispatch char.")))))
 

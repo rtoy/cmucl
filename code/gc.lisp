@@ -8,9 +8,12 @@
 ;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.4 1990/08/24 18:11:14 wlott Exp $
+;;; 
 ;;; Garbage collection and allocation related code.
 ;;;
 ;;; Written by Christopher Hoover, Rob MacLachlan, Dave McDonald, et al.
+;;; New code for MIPS port by Christopher Hoover.
 ;;; 
 
 (in-package "EXTENSIONS")
@@ -21,91 +24,90 @@
 (in-package "LISP")
 (export '(room))
 
+
+;;;; DYNAMIC-USAGE and friends.
+
+(proclaim '(special *read-only-space-free-pointer*
+		    *static-space-free-pointer*))
+
+(macrolet ((frob (lisp-fun c-var-name)
+	     `(progn
+		(def-c-variable ,c-var-name (unsigned-byte 32))
+		(defun ,lisp-fun ()
+		  (system:alien-access ,(intern (string-upcase c-var-name)))))))
+  (frob read-only-space-start "read_only_space")
+  (frob static-space-start "static_space")
+  (frob dynamic-0-space-start "dynamic_0_space")
+  (frob dynamic-1-space-start "dynamic_1_space")
+  (frob control-stack-start "control_stack")
+  (frob binding-stack-start "binding_stack")
+  (frob current-dynamic-space-start "current_dynamic_space"))
+
+(defun dynamic-usage ()
+  (- (system:sap-int (c::dynamic-space-free-pointer))
+     (current-dynamic-space-start)))
+
+(defun static-space-usage ()
+  (- (* lisp::*static-space-free-pointer* vm:word-bytes)
+     (static-space-start)))
+
+(defun read-only-space-usage ()
+  (- (* lisp::*read-only-space-free-pointer* vm:word-bytes)
+     (read-only-space-start)))
+
+(defun control-stack-usage ()
+  (- (system:sap-int (c::control-stack-pointer-sap)) (control-stack-start)))
+
+(defun binding-stack-usage ()
+  (- (system:sap-int (c::binding-stack-pointer-sap)) (binding-stack-start)))
+
+
+(defun current-dynamic-space ()
+  (let ((start (current-dynamic-space-start)))
+    (cond ((= start (dynamic-0-space-start))
+	   0)
+	  ((= start (dynamic-1-space-start))
+	   1)
+	  (t
+	   (error "Oh no.  The current dynamic space is missing!")))))
 
 
 ;;;; Room.
 
-(defvar alloctable-address (int-sap %fixnum-alloctable-address)
-  "A system area pointer that addresses the the alloctable.")
+(defun room-maximal-info ()
+  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
+  (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage))
+  (format t "Read-Only Space Usage:  ~10:D bytes.~%" (read-only-space-usage))
+  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage))
+  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
+  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage)))
 
-(defun alloc-ref (index)
-  (logior (%primitive 16bit-system-ref alloctable-address (1+ index))
-	  (ash (logand %type-space-mask
-		       (%primitive 16bit-system-ref alloctable-address index))
-	       16)))
+(defun room-minimal-info ()
+  (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage)))
 
-(defun space-usage (type)
-  (let ((base (ash type %alloc-ref-type-shift)))
-    (values (alloc-ref base)
-	    (alloc-ref (+ base 8))
-	    (alloc-ref (+ base 12)))))
+(defun room-intermediate-info ()
+  (format t "Dynamic Space Usage:   ~10:D bytes.~%" (dynamic-usage))
+  (format t "Read-Only Space Usage: ~10:D bytes.~%" (read-only-space-usage))
+  (format t "Static Space Usage:    ~10:D bytes.~%" (static-space-usage)))
 
-(defconstant type-space-names
-  '#("Bignum" "Ratio" "Complex" "Short-Float" "Short-Float" "Long-Float"
-     "String" "Bit-Vector" "Integer-Vector" "Code-Vector" "General-Vector"
-     "Array" "Function" "Symbol" "List"))
-
-(defun room-header ()
+(defun room (&optional (verbosity :default))
+  "Prints to *STANDARD-OUTPUT* information about the state of internal
+  storage and its management.  The optional argument controls the
+  verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of
+  information.  If it is NIL, ROOM prints out a minimal amount of
+  information.  If it is :DEFAULT or it is not supplied, ROOM prints out
+  an intermediate amount of information."
   (fresh-line)
-  (princ "       Type        |  Dynamic  |   Static  | Read-Only |   Total")
-  (terpri)
-  (princ "-------------------|-----------|-----------|-----------|-----------")
-  (terpri))
-
-(defun room-summary (dynamic static read-only)
-  (princ "-------------------|-----------|-----------|-----------|-----------")
-  (format t "~% Totals:           |~10:D |~10:D |~10:D =~10:D~%" 
-	  dynamic static read-only (+ static dynamic read-only)))
-
-(defun describe-one-type (type dynamic static read-only)
-  (declare (fixnum type dynamic static read-only))
-  (format t "~18A |~10:D |~10:D |~10:D |~10:D~%"
-	  (elt (the simple-vector type-space-names)
-	       (the fixnum (- type (the fixnum %first-pointer-type))))
-	  dynamic static read-only (the fixnum (+ static dynamic read-only))))
-
-(defun room (&optional (x t) (object nil argp))
-  "Displays information about storage allocation.
-  If X is true then information is displayed broken down by types.
-  If Object is supplied then just display information for objects of
-  that type."
-  (when x
-    (let ((type (%primitive get-type object)))
-      (when (or (> type %last-pointer-type)
-		(< type %first-pointer-type))
-	(error "Objects of type ~S have no allocated storage."
-	       (type-of object)))
-      (room-header)
-      (cond
-       (argp
-	(multiple-value-bind (dyn stat ro)
-			     (space-usage type)
-	  (describe-one-type type dyn stat ro)))
-       (t
-        (let ((cum-dyn 0)
-	      (cum-stat 0)
-	      (cum-ro 0))
-	  (do ((type %first-pointer-type (1+ type)))
-	      ((= type (1+ %last-pointer-type)))
-	    (if (not (or (eq type %short-+-float-type)
-			 (eq type %short---float-type)))
-		(multiple-value-bind (dyn stat ro)
-				     (space-usage type)
-		  (describe-one-type type dyn stat ro)
-		  (incf cum-dyn dyn) (incf cum-stat stat) (incf cum-ro ro))))
-	  (room-summary cum-dyn cum-stat cum-ro)))))))
-
-
-;;;; DYNAMIC-USAGE.
-
-;;; 
-;;; DYNAMIC-USAGE -- Interface
-;;;
-;;; Return the number of bytes of dynamic storage allocated.
-;;;
-(defun dynamic-usage ()
-  "Returns the number of bytes of dynamic storage currently allocated."
-  (system:%primitive dynamic-space-in-use))
+  (case verbosity
+    ((t)
+     (room-maximal-info))
+    ((nil)
+     (room-minimal-info))
+    (:default
+     (room-intermediate-info))
+    (t
+     (error "No way man!  The optional argument to ROOM must be T, NIL, ~
+     or :DEFAULT.~%What do you think you are doing?"))))
 
 
 ;;;; GET-BYTES-CONSED.
@@ -130,7 +132,7 @@
 	   (incf *total-bytes-consed* (- bytes *last-bytes-in-use*))
 	   (setq *last-bytes-in-use* bytes))))
   *total-bytes-consed*)
-    
+
 
 ;;;; Variables and Constants.
 
@@ -151,7 +153,6 @@
 ;;; setting *NEED-TO-COLLECT-GARBAGE* to T.
 ;;; 
 (defvar *gc-trigger* default-bytes-consed-between-gcs)
-
 
 
 ;;;
@@ -250,250 +251,18 @@
   finished GC'ing.")
 
 
-;;;; Stack grovelling:
-
-;;; VECTOR-ALLOC-END  --  Internal
-;;;
-;;;    Return a pointer to past the end of the memory allocated for a
-;;; vector-like object.
-;;;
-(defun vector-alloc-end (vec)
-  (%primitive pointer+
-	      vec
-	      (* (%primitive vector-word-length vec) %word-size)))
-
-
-(defvar *gc-debug* nil)
-
-;;; PRINT-RAW-ADDR  --  Interface
-;;;
-;;;    Print the full address of an arbitary object.
-;;;
-(defun print-raw-addr (x &optional (stream *standard-output*))
-  (let ((fix (%primitive make-fixnum x)))
-    (format stream "~4,'0X~4,'0X "
-	    (logior (ash (%primitive get-type x) 11)
-		    (ash (%primitive get-space x) 9)
-		    (ash fix -16))
-	    (logand fix #xFFFF))))
-
-
-;;; GC-GROVEL-STACK  --  Internal
-;;;
-;;;    Locate all raw pointers on stack stack, and clobber them with something
-;;; that won't cause GC to gag.  We return a list of lists of the form:
-;;;    (object offset stack-location*),
-;;; 
-;;; where Object is some valid vector-like object pointer and Offset is an
-;;; offset to be added to Object.  The result of this addition should be stored
-;;; into each Stack-Location after GC completes.  We clobber the stack
-;;; locations with Offset for no particular reason (might aid debugging.)
-;;;
-;;; There are three major steps in the algorithm:
-;;;
-;;;  1] Find all the distinct vector-like pointers on the stack, building a
-;;;     list of all the locations that each pointer is stored in.  We do this
-;;;     using two hash-tables: the one for code pointers is separate, since
-;;;     they must be special-cased.
-;;;
-;;;     Note that we do our scan downward from the current CONT, and thus don't
-;;;     scan our own frame.  We don't want to modify the frame for the running
-;;;     function, as this is apt to cause problems.  It isn't necessary to
-;;;     grovel the current frame because we return before GC happens.
-;;;
-;;;  2] Sort all of the vector-like pointers (other than code vectors), and
-;;;     scan through this list finding raw pointers based on the assumption
-;;;     that we will always see the true pointer to the vector header before
-;;;     any raw pointers into that vector.  This exploits our GC invariant that
-;;;     when an indexing temp is in use, the true object pointer must be live
-;;;     on the stack or in a register.  [By now, any register indexing temp
-;;;     will have been saved on the stack.]
-;;;
-;;;     During this scan, we also note any true vector pointers that point to a
-;;;     function object.
-;;;
-;;;     Whenever we locate a raw vector pointer, we create a fixup for the
-;;;     locations holding that pointer and then clobber the locations.
-;;;
-;;;  3] Iterate over all code pointers, clobbering the locations and
-;;;     making fixups for those pointers that point inside some function object
-;;;     that appears on the stack.  This exploits our GC invariant that a
-;;;     *valid* code pointer only appears on the stack when some containing
-;;;     function object also appears on the stack.  Note that *invalid* code
-;;;     pointers may appear in the stack garbage unaccompanied by any function
-;;;     object.  Such isolated code pointers are set to 0.  (Code pointers in
-;;;     the heap must always point to the code vector header, and are always
-;;;     considered valid.)
-;;;
-;;;     This different invariant for code pointers allows us to throw around
-;;;     raw code pointers without clearing them when they are no longer needed.
-;;;
-(defun gc-grovel-stack ()
-  (let ((vec-table (make-hash-table :test #'eq))
-	(code-table (make-hash-table :test #'eq))
-	(base (%primitive make-immediate-type 0 %control-stack-type))
-	(fixups ()))
-    ;;
-    ;; Find all vector-like objects on the stack, putting code vectors in a
-    ;; separate table. (step 1)
-    (do ((sp (%primitive pointer+ (%primitive current-fp)
-			 (- %stack-increment))
-	     (%primitive pointer+ sp (- %stack-increment))))
-	((%primitive pointer< sp base))
-      (let* ((el (%primitive read-control-stack sp))
-	     (el-type (%primitive get-type el)))
-	
-	(when (and *gc-debug* (simple-vector-p el))
-	  (let ((hdr (%primitive read-control-stack el)))
-	    (unless (and (fixnump hdr) (> hdr 0)
-			 (<= (length el) #xFFFF)
-			 (<= (%primitive get-vector-subtype el)
-			     3))
-	      (format t "Suspicious G-vector ")
-	      (print-raw-addr el)
-	      (format t "at ")
-	      (print-raw-addr sp)
-	      (terpri))))
-
-	(when (and (< (%primitive get-space el) %static-space)
-		   (<= %string-type el-type %function-type))
-	  (push sp (gethash el
-			    (if (eq el-type %code-type)
-				code-table
-				vec-table))))))
-
-    (let ((vecs ())
-	  (functions ()))
-      (maphash #'(lambda (k v)
-		   (declare (ignore v))
-		   (push k vecs))
-	       vec-table)
-
-      (setq vecs
-	    (sort vecs
-		  #'(lambda (x y)
-		      (%primitive pointer< x y))))
-
-      ;;
-      ;; Iterate over non-code vector-like pointers in order (step 2.)
-      (loop
-	(unless vecs (return))
-	(let* ((base (pop vecs))
-	       (end (vector-alloc-end base)))
-	  
-	  (when (and (= (%primitive get-type base) %function-type)
-		     (<= %function-entry-subtype
-			 (%primitive get-vector-subtype base)
-			 %function-constants-subtype))
-	    (push base functions))
-
-	  (loop
-	    (unless vecs (return))
-	    (let ((next (first vecs)))
-	      (unless (%primitive pointer< next end) (return))
-	      (pop vecs)
-	      
-	      (let ((offset (%primitive pointer- next base))
-		    (sps (gethash next vec-table)))
-		(dolist (sp sps)
-		  (%primitive write-control-stack sp offset))
-		(push (list* base offset sps) fixups))))))
-
-      ;;
-      ;; Iterate over all code pointers (step 3.)
-      (maphash #'(lambda (code-ptr sps)
-		   (dolist (fun functions
-				(dolist (sp sps)
-				  (%primitive write-control-stack sp 0)))
-		     (let* ((base (%primitive header-ref fun
-					      %function-code-slot))
-			    (end (vector-alloc-end base)))
-		       (when (and (not (%primitive pointer< code-ptr base))
-				  (%primitive pointer< code-ptr end))
-			 (let ((offset (%primitive pointer- code-ptr base)))
-			   (dolist (sp sps)
-			     (%primitive write-control-stack sp offset))
-			   (push (list* base offset sps) fixups))
-			 (return)))))
-	       code-table)
-
-      (when *gc-debug*
-	(dolist (f fixups)
-	  (terpri)
-	  (print-raw-addr (first f))
-	  (format t "~X " (second f))
-	  (dolist (sp (cddr f))
-	    (print-raw-addr sp)))
-	(terpri))
-
-      fixups)))
-
-
-;;; GC-FIXUP-STACK  --  Internal
-;;;
-;;;    Given a list of GC fixups as returned by GC-GROVEL-STACK, fix up all the
-;;; raw pointers on the stack.
-;;;
-(defun gc-fixup-stack (fixups)
-  (dolist (fixup fixups)
-    (let ((new (%primitive pointer+ (first fixup) (second fixup))))
-      (dolist (sp (cddr fixup))
-	(%primitive write-control-stack sp new)))))
-
-
 ;;;; Internal GC
 
-;;; %GC  --  Internal
-;;;
-;;; %GC is the real garbage collector.  What we do:
-;;;  -- Call GC-GROVEL-STACK to locate any raw pointers on the stack.
-;;;  -- Invoke the COLLECT-GARBAGE miscop, adding the amount of garbage
-;;;     collected to *total-bytes-consed*.
-;;;  -- Invalidate & revalidate the old spaces to free up their memory.
-;;;  -- Call GC-FIXUP-STACK to restore raw pointers on the stack.
-;;;
-;;; *** Warning: the stack *including the current frame* is in a somewhat
-;;; altered state until after GC-FIXUP-STACK is called.  Don't change a single
-;;; character from the start of this function until after call to
-;;; GC-FIXUP-STACK unless you really know what you are doing.
-;;;
-;;; It is important that we not do anything that creates raw pointers between
-;;; the time we call GC-GROVEL-STACK and the time we invoke COLLECT-GARBAGE.
-;;; In particular, this means no function calls.  All raw pointers on the stack
-;;; have been trashed, so we cannot use any raw pointers until they have been
-;;; regenerated.  In particular, we cannot return from this function, since the
-;;; return PC is a raw pointer.
-;;;
-;;; We also can't expect the value of any variables allocated between the
-;;; grovel and fixup to persist after the fixup, since the value that variable
-;;; held at grovel time may have been a pointer that needed to be fixed.
-;;;
+(def-c-routine ("collect_garbage" collect-garbage) (int))
+
 (defun %gc ()
-  (let* ((oldspace-base (ash (%primitive newspace-bit) 25))
-	 (old-bytes (system:%primitive dynamic-space-in-use))
-	 (result nil)
-	 (fixups (gc-grovel-stack)))
-    (%primitive clear-registers)
-    (setq result (%primitive collect-garbage))
-    (let ((new-bytes (system:%primitive dynamic-space-in-use)))
+  (let ((old-usage (dynamic-usage)))
+    (collect-garbage)
+    (let ((new-bytes (dynamic-usage)))
       (when *last-bytes-in-use*
-	(incf *total-bytes-consed* (- old-bytes *last-bytes-in-use*))
-	(setq *last-bytes-in-use* new-bytes)))
-    (gc-fixup-stack fixups)
-    (do* ((i %first-pointer-type (1+ i))
-	  (this-space (logior oldspace-base (ash i 27))
-		      (logior oldspace-base (ash i 27)))
-	  (losing-gr nil))
-	 ((= i (1+ %last-pointer-type))
-	  (when losing-gr
-	    (system:gr-error "While reclaiming VM" losing-gr)))
-      (let ((gr (mach:vm_deallocate *task-self* this-space
-				    (- #x2000000 8192))))
-	(unless (eql gr mach:kern-success) (setq losing-gr gr)))
-      (let ((gr (mach:vm_allocate *task-self* this-space
-				  (- #x2000000 8192) nil)))
-	(unless (eql gr mach:kern-success) (setq losing-gr gr))))
-    result))
+	(incf *total-bytes-consed* (- old-usage *last-bytes-in-use*))
+	(setq *last-bytes-in-use* new-bytes)))))
+
 
 ;;;
 ;;; *INTERNAL-GC*
@@ -546,32 +315,23 @@
 		   (carefully-funcall *gc-inhibit-hook* pre-gc-dyn-usage))
 	  (return-from sub-gc nil))
 	(setf *gc-inhibit* nil) ; Reset *GC-INHIBIT*
-	(multiple-value-bind
-	    (winp old-mask)
-	    (mach:unix-sigsetmask lockout-interrupts)
-	  (unwind-protect
-	      (progn
-		(unless winp (warn "Could not set sigmask!"))
-		(let ((*standard-output* *terminal-io*))
-		  (when verbose-p
-		    (carefully-funcall *gc-notify-before* pre-gc-dyn-usage))
-		  (dolist (hook *before-gc-hooks*)
-		    (carefully-funcall hook))
-		  (funcall *internal-gc*)
-		  (let* ((post-gc-dyn-usage (dynamic-usage))
-			 (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
-		    (setf *need-to-collect-garbage* nil)
-		    (setf *gc-trigger*
-			  (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
-		    (dolist (hook *after-gc-hooks*)
-		      (carefully-funcall hook))
-		    (when verbose-p
-		      (carefully-funcall *gc-notify-after*
-					 post-gc-dyn-usage bytes-freed
-					 *gc-trigger*)))))
-	    (when winp
-	      (unless (values (mach:unix-sigsetmask old-mask))
-		(warn "Could not restore sigmask!"))))))))
+	(let ((*standard-output* *terminal-io*))
+	  (when verbose-p
+	    (carefully-funcall *gc-notify-before* pre-gc-dyn-usage))
+	  (dolist (hook *before-gc-hooks*)
+	    (carefully-funcall hook))
+	  (funcall *internal-gc*)
+	  (let* ((post-gc-dyn-usage (dynamic-usage))
+		 (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
+	    (setf *need-to-collect-garbage* nil)
+	    (setf *gc-trigger*
+		  (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
+	    (dolist (hook *after-gc-hooks*)
+	      (carefully-funcall hook))
+	    (when verbose-p
+	      (carefully-funcall *gc-notify-after*
+				 post-gc-dyn-usage bytes-freed
+				 *gc-trigger*)))))))
   nil)
 
 ;;;
@@ -581,7 +341,7 @@
 ;;; should occur.  The argument, object, is the newly allocated object
 ;;; which must be returned to the caller.
 ;;; 
-(defun maybe-gc (object)
+(defun maybe-gc (&optional object)
   (sub-gc *gc-verbose* nil)
   object)
 
