@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.31 1993/08/24 23:26:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.32 1993/08/30 14:53:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,18 +23,20 @@
 		 layout-inherits layout-inheritance-depth layout-length
 		 layout-info layout-pure
 		 layout-of structure-class-p
-		 basic-structure-class-print-function
+		 slot-class-print-function
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state
 		 class-direct-superclasses class-subclasses
 		 class-pcl-class class-init register-layout
-		 basic-structure-class funcallable-instance
+		 basic-structure-class slot-class funcallable-instance
 		 funcallable-structure-class
 		 make-funcallable-structure-class
 		 funcallable-structure-class-p make-standard-class
 		 random-pcl-class make-random-pcl-class
 		 built-in-class-direct-superclasses
-		 find-class-cell class-cell-name class-cell-class))
+		 find-class-cell class-cell-name class-cell-class
+		 make-layout make-undefined-class insured-find-class
+		 redefine-layout-warning))
 
 (in-package "LISP")
 (export '(class structure-class standard-class class-name find-class class-of
@@ -85,7 +87,8 @@
 		      (declare (ignore d))
 		      (print-unreadable-object (s stream :identity t)
 			(format stream "Layout for ~S~@[, Invalid=~S~]"
-				(layout-class s) (layout-invalid s)))))
+				(class-proper-name (layout-class s))
+				(layout-invalid s)))))
 		   (:make-load-form-fun :ignore-it)
 		   (:constructor %make-layout))
   ;;
@@ -247,15 +250,19 @@
   ;; own.  Only :INITIALIZING during for a period during cold-load.  See below.
   (translation nil :type (or ctype (member nil :initializing))))
 
+;;; Class with print function, but not necessarily a structure class.
+;;; (CONDITIONs)
+;;;
+(defstruct (slot-class (:include class))
+  ;;
+  ;; Print function, or NIL if none.
+  (print-function nil :type (or function symbol null)))
 
 ;;; STRUCTURE-CLASS represents what we need to know about structure classes.
 ;;; Non-structure "typed" defstructs are a special case, and don't have a
 ;;; corresponding class.
 ;;;
-(defstruct (basic-structure-class (:include class))
-  ;;
-  ;; Structure print function, or NIL if none.
-  (print-function nil :type (or function symbol null)))
+(defstruct (basic-structure-class (:include slot-class)))
 
 (defstruct (structure-class (:include basic-structure-class))
   ;;
@@ -336,7 +343,11 @@
   (remhash name *forward-referenced-layouts*)
   (%note-type-defined name)
   (setf (info type kind name) :instance)
-  (setf (class-cell-class (find-class-cell name)) new-value))
+  (setf (class-cell-class (find-class-cell name)) new-value)
+  (unless (eq (info type compiler-layout name)
+	      (class-layout new-value))
+    (setf (info type compiler-layout name) (class-layout new-value)))
+  new-value)
 
 
 ;;; INSURED-FIND-CLASS  --  Interface
