@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47 1992/12/17 09:10:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47.1.1 1993/01/15 16:13:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -667,6 +667,13 @@
       (declare (type (integer -1 #.most-positive-fixnum) n))
       (setf (structure-ref res n) (pop-stack)))
     res))
+
+(define-fop (fop-layout 45)
+  (let ((length (pop-stack))
+	(depth (pop-stack))
+	(inherits (pop-stack))
+	(name (pop-stack)))
+    (find-layout name length inherits depth)))
 
 (define-fop (fop-end-group 64 :nope) (throw 'group-end t))
 (define-fop (fop-end-header 255)
