@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.2 1991/04/22 10:18:42 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.3 1991/04/23 01:23:00 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -57,7 +57,7 @@
 			      (1+ bignum-digits-offset))
     (storew ocfp res bignum-digits-offset other-pointer-type))
   ;; Now get out of here.
-  (lisp-return lra lip :offset 2)
+  (lisp-return lra lip :offset 1)
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-+)
@@ -112,7 +112,7 @@
 			      (1+ bignum-digits-offset))
     (storew ocfp res bignum-digits-offset other-pointer-type))
   ;; Now get out of here.
-  (lisp-return lra lip :offset 2)
+  (lisp-return lra lip :offset 1)
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg--)
@@ -206,7 +206,7 @@
       (storew temp res 0 other-pointer-type)
       (storew ocfp/low res bignum-digits-offset other-pointer-type)))
   ;; Out of here
-  (lisp-return lra lip :offset 2)
+  (lisp-return lra lip :offset 1)
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-*)
