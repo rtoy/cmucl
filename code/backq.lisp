@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.7 1993/07/22 12:42:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.8 1993/08/20 00:39:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -275,14 +275,8 @@
 
 ;;;; BACKQ-INIT and BACKQ-PP-INIT
 
-;;; BACKQ-INIT -- interface.
-;;;
-;;; This is called by %INITIAL-FUNCTION.
-;;; 
-(defun backq-init ()
-  (let ((*readtable* std-lisp-readtable))
-    (set-macro-character #\` #'backquote-macro)
-    (set-macro-character #\, #'comma-macro)))
+(set-macro-character #\` #'backquote-macro)
+(set-macro-character #\, #'comma-macro)
 
 ;;; BACKQ-PP-INIT -- interface.
 ;;;
