@@ -1,6 +1,9 @@
 (load "target:code/exports.lisp")
+
+;;; These preceed 1.3.7
 #+x86(proclaim '(notinline kernel:%tan kernel:%atan kernel:%atan2))
-(in-package :x86)
+#+x86(in-package :x86)
+#+x86
 (eval-when (compile load eval)
 (defconstant conditions
   '((:o . 0)
@@ -19,3 +22,35 @@
     (:nl . 13) (:ge . 13)
     (:le . 14) (:ng . 14)
     (:nle . 15) (:g . 15))))
+
+;;; needed for current
+#+x86
+(eval-when (compile load eval)
+  (let ((ht (c::backend-template-names c:*backend*)))
+    (unless (gethash 'c::allocate-dynamic-code-object ht)
+      (setf (gethash 'c::allocate-dynamic-code-object ht)
+	    (gethash 'vm::allocate-dynamic-code-object ht)))))
+#+x86
+(let ((sym (find-symbol "ALLOCATE-DYNAMIC-CODE-OBJECT" :x86)))
+  (when sym
+    (unintern sym (symbol-package sym))
+    (import sym :c)
+    (export sym :c)))
+#+x86
+(progn
+;;; Moved all these to the x86 package.
+  (let ((sym (find-symbol "*ALLOCATION-POINTER*" :lisp)))
+    (unintern sym (symbol-package sym))
+    (import sym :x86))
+  (let ((sym (find-symbol "*BINDING-STACK-POINTER*" :lisp)))
+    (unintern sym (symbol-package sym))
+    (import sym :x86))
+  (let ((sym (find-symbol "*X86-CGC-ACTIVE-P*" :lisp)))
+    (unintern sym (symbol-package sym))
+    (import sym :x86))
+  (let ((sym (find-symbol "*INTERNAL-GC-TRIGGER*" :lisp)))
+    (unintern sym (symbol-package sym))
+    (import sym :x86))
+  (let ((sym (find-symbol "*STATIC-BLUE-BAG*" :lisp)))
+    (unintern sym (symbol-package sym))
+    (import sym :x86)))
