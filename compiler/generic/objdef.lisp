@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.15 1992/02/24 00:45:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.16 1992/02/26 00:56:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.15 1992/02/24 00:45:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.16 1992/02/26 00:56:53 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -159,7 +159,8 @@
 
 (eval-when (compile load eval)
 
-(defstruct (slot
+(defstruct (prim-object-slot
+	    (:conc-name slot-)
 	    (:constructor %make-slot
 			  (name docs rest-p length options))
 	    (:make-load-form-fun :just-dump-it-normally))
