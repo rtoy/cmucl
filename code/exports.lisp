@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.231 2004/05/18 13:20:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.232 2004/06/01 23:10:55 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,6 +60,10 @@
 (if (find-package "X86")
     (rename-package "X86" "X86" '("VM"))
     (make-package "X86" :nicknames '("VM") :use nil))
+#+amd64
+(if (find-package "AMD64")
+    (rename-package "AMD64" "AMD64" '("VM"))
+    (make-package "AMD64" :nicknames '("VM") :use nil))
 #+hppa
 (if (find-package "HPPA")
     (rename-package "HPPA" "HPPA" '("VM"))
@@ -864,6 +868,7 @@
 	    #+sparc "SPARC"
 	    #+ibmrt "RT"
             #+x86 "X86"
+            #+amd64 "AMD64"
 	    #+hppa "HPPA"
 	    #+alpha "ALPHA"
 	    #+sgi "SGI"

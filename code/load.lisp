@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.86 2003/06/02 16:00:03 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.87 2004/06/01 23:14:26 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1149,7 +1149,7 @@
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
 ;;; the boxed storage section, then Size bytes of code are read in.
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun load-code (box-num code-length)
   (declare (fixnum box-num code-length))
   (with-fop-stack t
@@ -1196,7 +1196,7 @@
 (defvar *load-code-verbose* nil)
 (defvar *enable-dynamic-space-code* #-gencgc nil #+gencgc t)
 
-#+x86
+#+(or x86 amd64)
 (defun load-code (box-num code-length)
   (declare (fixnum box-num code-length))
   (with-fop-stack t

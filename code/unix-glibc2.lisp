@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.30 2003/08/31 10:50:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.31 2004/06/01 23:16:00 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -398,13 +398,13 @@
 (def-alien-type u-int64-t (unsigned 64))
 (def-alien-type register-t #-alpha int #+alpha long)
 
-(def-alien-type dev-t uquad-t)
+(def-alien-type dev-t #-amd64 uquad-t #+amd64 u-int64-t)
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
-(def-alien-type ino-t u-int32-t)
+(def-alien-type ino-t #-amd64 u-int32-t #+amd64 u-int64-t)
 (def-alien-type ino64-t u-int64-t)
 (def-alien-type mode-t u-int32-t)
-(def-alien-type nlink-t unsigned-int)
+(def-alien-type nlink-t #-amd64 unsigned-int #+amd64 u-int64-t)
 (def-alien-type off-t int64-t)
 (def-alien-type blkcnt-t u-int64-t)
 (def-alien-type fsblkcnt-t u-int64-t)
@@ -1492,11 +1492,12 @@ length LEN and type TYPE."
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
-    #-alpha (st-pad1 unsigned-short)
+    #-(or alpha amd64) (st-pad1 unsigned-short)
     (st-ino ino-t)
     #+alpha (st-pad1 unsigned-int)
-    (st-mode mode-t)
+    #-amd64 (st-mode mode-t)
     (st-nlink  nlink-t)
+    #+amd64 (st-mode mode-t)
     (st-uid  uid-t)
     (st-gid  gid-t)
     (st-rdev dev-t)
@@ -2734,9 +2735,9 @@ in at a time in poll.")
 
 (defmacro extract-stat-results (buf)
   `(values T
-           #+alpha
+           #+(or alpha amd64)
 	   (slot ,buf 'st-dev)
-           #-alpha
+           #-(or alpha amd64)
            (+ (deref (slot ,buf 'st-dev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-dev) 1)))   ;;; let's hope this works..
@@ -2745,9 +2746,9 @@ in at a time in poll.")
 	   (slot ,buf 'st-nlink)
 	   (slot ,buf 'st-uid)
 	   (slot ,buf 'st-gid)
-           #+alpha
+           #+(or alpha amd64)
 	   (slot ,buf 'st-rdev)
-           #-alpha
+           #-(or alpha amd64)
            (+ (deref (slot ,buf 'st-rdev) 0)
 	      (* (+ +max-u-long+  1)
 	         (deref (slot ,buf 'st-rdev) 1)))   ;;; let's hope this works..

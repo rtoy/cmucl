@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.108 2004/04/01 17:06:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.109 2004/06/01 23:09:27 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -876,9 +876,9 @@
    (logior (system:sap-int component-ptr)
 	   vm:other-pointer-type)))
 
-;;;; X86 support.
+;;;; X86 and amd64 support.
 
-#+x86
+#+(or x86 amd64)
 (progn
 
 ;;; Note this function should be called with garbage collect inhibited.
@@ -1049,12 +1049,12 @@
 		  (bogus-debug-function
 		   (let ((fp (frame-pointer real)))
 		     (when (cstack-pointer-valid-p fp)
-		       #+x86
+		       #+(or x86 amd64)
 		       (multiple-value-bind (ra ofp)
 			   (x86-call-context fp)
 			 (when (and ra ofp)
 			   (compute-calling-frame ofp ra frame)))
-		       #-x86
+		       #-(or x86 amd64)
 		       (compute-calling-frame
 			#-alpha
 			(system:sap-ref-sap fp (* vm::ocfp-save-offset
@@ -1317,7 +1317,7 @@
 			       (if up-frame (1+ (frame-number up-frame)) 0)
 			       escaped)))))
 
-#-(or gengc x86)
+#-(or gengc x86 amd64)
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -1361,7 +1361,7 @@
 			      (kernel:get-header-data real-lra)
 			      nil))
 		    (values code pc-offset scp)))))))))))
-#+x86
+#+(or x86 amd64)
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
@@ -2995,7 +2995,7 @@
 
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
@@ -3138,7 +3138,7 @@
 	 (system:sap-ref-sap nfp (* (c:sc-offset-offset sc-offset)
 				    vm:word-bytes)))))))
 
-#+x86
+#+(or x86 amd64)
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (declare (type system:system-area-pointer fp))
   (macrolet ((with-escaped-value ((var) &body forms)
@@ -3315,7 +3315,7 @@
 
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -3471,7 +3471,7 @@
 					  vm:word-bytes))
 	       (the system:system-area-pointer value)))))))
 
-#+x86 
+#+(or x86 amd64)
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped

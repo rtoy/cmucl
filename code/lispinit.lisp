@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.73 2003/10/24 02:56:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.74 2004/06/01 23:12:33 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -359,12 +359,13 @@
 		  (funcall (second fun))))
 	   (:load-time-value-fixup
 	    #-gengc
-	    (setf (sap-ref-32 (second fun) 0)
+	    (setf (#+amd64 sap-ref-64
+		   #-amd64 sap-ref-32 (second fun) 0)
 		  (get-lisp-obj-address
 		   (svref *load-time-values* (third fun))))
 	    #+gengc
 	    (do-load-time-value-fixup (second fun) (third fun) (fourth fun)))
-	   #+(and x86 gencgc)
+	   #+(and (or x86 amd64) gencgc)
 	   (:load-time-code-fixup
 	    (vm::do-load-time-code-fixup (second fun) (third fun) (fourth fun)
 					 (fifth fun)))
@@ -398,7 +399,7 @@
 
   (set-floating-point-modes :traps '(:overflow :invalid :divide-by-zero))
   ;; This is necessary because some of the initial top level forms might
-  ;; have changed the compliation policy in strange ways.
+  ;; have changed the compilation policy in strange ways.
   (print-and-call c::proclaim-init)
 
   (print-and-call kernel::class-finalize)
@@ -517,7 +518,7 @@
 
 ;;; Scrub-control-stack.
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun %scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
@@ -554,7 +555,7 @@
 
 ;;; Scrub-control-stack.
 ;;;
-;;; On the x86 port the stack grows downwards, and to support grow on
+;;; On the x86 and amd64 port the stack grows downwards, and to support grow on
 ;;; demand stacks the stack must be decreased as it is scrubbed.
 ;;;
 (defun scrub-control-stack ()
@@ -567,7 +568,7 @@
   (%scrub-control-stack)
   #+stack-checking (os-guard-control-stack 0 1))
 
-#+x86
+#+(or x86 amd64)
 (defun %scrub-control-stack ()
   (%scrub-control-stack))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.21 2001/03/04 20:12:29 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.22 2004/06/01 23:07:30 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,7 @@
 (defun shift-towards-start (number count)
   "Shift NUMBER by COUNT bits, adding zero bits at the ``end'' and removing
   bits from the ``start.''  On big-endian machines this is a left-shift and
-  on little-endian machines this is a right-shift.  Note: only the low 5 bits
+  on little-endian machines this is a right-shift.  Note: only the low 5/6 bits
   of count are significant."
   (declare (type unit number) (fixnum count))
   (let ((count (ldb (byte (1- (integer-length unit-bits)) 0) count)))
@@ -124,26 +124,29 @@
 	   (type index offset)
 	   (values system-area-pointer index))
   (let ((address (sap-int sap)))
-    (values (int-sap #-alpha (32bit-logical-andc2 address 3)
-		     #+alpha (ash (ash address -2) 2))
-	    (+ (* (logand address 3) byte-bits) offset))))
+    (values (int-sap #-(or alpha amd64) (32bit-logical-andc2 address 3)
+		     #+alpha (ash (ash address -2) 2)
+		     #+amd64 (ash (ash address -3) 3))
+	    (+ (* (logand address #+amd64 7 #-amd64 3) byte-bits) offset))))
 
 (declaim (inline word-sap-ref %set-word-sap-ref))
 ;;;
 (defun word-sap-ref (sap offset)
   (declare (type system-area-pointer sap)
 	   (type index offset)
-	   (values (unsigned-byte 32))
+	   (values (unsigned-byte #+amd64 64 #-amd64 32))
 	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (sap-ref-32 sap (the index (ash offset 2))))
+  #+amd64 (sap-ref-64 sap (the index (ash offset 3)))
+  #-amd64 (sap-ref-32 sap (the index (ash offset 2))))
 ;;;
 (defun %set-word-sap-ref (sap offset value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
-	   (type (unsigned-byte 32) value)
-	   (values (unsigned-byte 32))
+	   (type (unsigned-byte #+amd64 64 #-amd64 32) value)
+	   (values (unsigned-byte #+amd64 64 #-amd64 32))
 	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (setf (sap-ref-32 sap (the index (ash offset 2))) value))
+  (setf #+amd64 (sap-ref-64 sap (the index (ash offset 3)))
+	#-amd64 (sap-ref-32 sap (the index (ash offset 2))) value))
 ;;;
 (defsetf word-sap-ref %set-word-sap-ref)
 
