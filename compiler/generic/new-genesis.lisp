@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.33 1998/03/21 07:55:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.34 1998/06/07 17:52:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2189,7 +2189,7 @@
     (format t "#define ~A LISPOBJ(0x~X)~%"
 	    (nsubstitute #\_ #\-
 			 (remove-if #'(lambda (char)
-					(member char '(#\% #\*)))
+					(member char '(#\% #\* #\.)))
 				    (symbol-name symbol)))
 	    (if *static*
 		;; We actually ran Genesis, use the real value.
