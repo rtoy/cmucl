@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.18 1998/03/04 16:41:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.19 1998/03/10 18:50:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,9 +318,9 @@
 	   (inst fmovs y-imag x-imag))))
       (complex-single-stack
        (let ((offset (* (tn-offset y) word-bytes)))
-	 (let ((real-tn (complex-double-reg-real-tn x)))
+	 (let ((real-tn (complex-single-reg-real-tn x)))
 	   (inst stf real-tn nfp offset))
-	 (let ((imag-tn (complex-double-reg-imag-tn x)))
+	 (let ((imag-tn (complex-single-reg-imag-tn x)))
 	   (inst stf imag-tn nfp (+ offset word-bytes))))))))
 (define-move-vop move-complex-single-float-argument :move-argument
   (complex-single-reg descriptor-reg) (complex-single-reg))
