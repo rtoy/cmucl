@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.108 2002/02/28 22:28:34 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.109 2002/03/11 16:52:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1659,14 +1659,30 @@
       (ftruncate-derive-type-quot n d)
       *empty-type*))
 
-(defoptimizer (ftruncate derive-type) ((number divisor))
-  (let ((quot
-	 (two-arg-derive-type number divisor
-			      #'ftruncate-derive-type-quot-aux #'ftruncate))
-	(rem (two-arg-derive-type number divisor
-				  #'truncate-derive-type-rem-aux #'rem)))
-    (when (and quot rem)
-      (make-values-type :required (list quot rem)))))
+;; I (RLT) don't understand why I need to make divisor optional.  This
+;; should look just like the optimizer for TRUNCATE.  Until I figure
+;; out why, this seems to work.
+(defoptimizer (ftruncate derive-type) ((number &optional divisor))
+  (if divisor
+      (let ((quot
+	     (two-arg-derive-type number divisor
+				  #'ftruncate-derive-type-quot-aux #'ftruncate))
+	    (rem (two-arg-derive-type number divisor
+				      #'truncate-derive-type-rem-aux #'rem)))
+	(when (and quot rem)
+	  (make-values-type :required (list quot rem))))
+      (let* ((div (specifier-type '(integer 1 1)))
+	     (quot
+	      (one-arg-derive-type number
+				   #'(lambda (n)
+				       (ftruncate-derive-type-quot-aux n div nil))
+				   #'ftruncate))
+	     (rem (one-arg-derive-type number
+				       #'(lambda (n)
+					   (truncate-derive-type-rem-aux n div nil))
+				       #'rem)))
+	(when (and quot rem)
+	  (make-values-type :required (list quot rem))))))
 
 
 (defun %unary-truncate-derive-type-aux (number)
