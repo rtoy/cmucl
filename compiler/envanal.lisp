@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.28 2002/02/06 23:20:46 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.29 2003/06/03 12:22:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,11 +291,13 @@
     (dolist (entry (lambda-entries lambda))
       (dolist (exit (entry-exits entry))
 	(let ((target-env (node-environment entry)))
-	  (if (eq (node-environment exit) target-env)
-	      (unless *converting-for-interpreter*
-		(maybe-delete-exit exit))
-	      (note-non-local-exit target-env exit))))))
-
+	  (unless (and *converting-for-interpreter*
+		       (eq (lambda-kind (node-home-lambda exit))
+			   :deleted))
+	    (if (eq (node-environment exit) target-env)
+		(unless *converting-for-interpreter*
+		  (maybe-delete-exit exit))
+		(note-non-local-exit target-env exit)))))))
   (undefined-value))
 
 
