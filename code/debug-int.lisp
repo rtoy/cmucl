@@ -587,7 +587,7 @@
 (defun top-frame ()
   "Returns the top frame of the control stack as it was before calling this
    function."
-  (compute-calling-frame (system:%primitive current-cont) nil))
+  (compute-calling-frame (system:%primitive current-fp) nil))
 
 (defun frame-down (frame)
   "Returns the frame immediately below frame on the stack.  When frame is
@@ -611,7 +611,7 @@
 ;;; executing upon returning to that previous frame.
 ;;;
 (defun compute-calling-frame (current-fp up-frame)
-  (let ((caller (stack-ref current-fp c::old-cont-save-offset)))
+  (let ((caller (stack-ref current-fp c::old-fp-save-offset)))
     (unless (cstack-pointer-valid-p caller)
       (return-from compute-calling-frame nil))
     (multiple-value-bind (env env-fp escaped)
@@ -737,7 +737,7 @@
 		 (values env
 			 ;; This is valid since the escape frame must be
 			 ;; preceded by some frame.
-			 (stack-ref fp c::old-cont-save-offset)
+			 (stack-ref fp c::old-fp-save-offset)
 			 fp))
 		(t
 		 (error "Escaping frame ENV invalid?"))))
@@ -764,7 +764,7 @@
 		 (values env
 			 ;; This is valid since the escape frame must be
 			 ;; preceded by some frame.
-			 (stack-ref fp c::old-cont-save-offset)
+			 (stack-ref fp c::old-fp-save-offset)
 			 fp))
 		(t
 		 (error "Escaping frame ENV invalid?"))))
@@ -858,7 +858,7 @@
 	(fp (frame-pointer frame)))
     (loop
       (when (eql catch 0) (return (nreverse res)))
-      (when (eq fp (stack-ref catch system:%unwind-block-current-cont))
+      (when (eq fp (stack-ref catch system:%unwind-block-current-fp))
 	(push (cons (stack-ref catch system:%catch-block-tag)
 		    (make-code-location
 		     (- (stack-ref catch system:%unwind-block-entry-pc)
@@ -1161,6 +1161,10 @@
 		    (c::deleted
 		     ;; Deleted required arg at beginning of args array.
 		     (push :deleted res))
+		    (c::optional-args
+		     ;; When I fill this in, I can remove the (typep last 'cons)
+		     ;; below.
+		     )
 		    (c::supplied-p
 		     ;; supplied-p var immediately following keyword or optional.
 		     ;; Stick the extra var in the result element representing
@@ -1683,16 +1687,25 @@
 (defun debug-variable-value (debug-var frame)
   "Returns the value stored for debug-variable in frame.  The value may be
    invalid."
+  (let ((res (access-debug-var-slot debug-var frame)))
+    (if (indirect-value-cell-p res)
+	(system:%primitive header-ref res
+			   system:%function-value-cell-value-slot)
+	res)))
+    
+(defun access-debug-var-slot (debug-var frame)
   (let ((escaped (frame-escaped frame)))
     (if escaped
-	(sub-debug-var-value (frame-pointer frame)
-			     (debug-variable-sc-offset debug-var)
-			     escaped)
-	(sub-debug-var-value (frame-pointer frame)
-			     (or (debug-variable-save-sc-offset debug-var)
-				 (debug-variable-sc-offset debug-var))))))
+	(sub-access-debug-var-slot
+	 (frame-pointer frame)
+	 (debug-variable-sc-offset debug-var)
+	 escaped)
+	(sub-access-debug-var-slot
+	 (frame-pointer frame)
+	 (or (debug-variable-save-sc-offset debug-var)
+	     (debug-variable-sc-offset debug-var))))))
 
-(defun sub-debug-var-value (fp sc-offset &optional escaped)
+(defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (ecase (c::sc-offset-scn sc-offset)
     ((0 1) ;; Any register or descriptor register.
      (if escaped
@@ -1712,18 +1725,27 @@
      (code-char (stack-ref fp (c::sc-offset-offset sc-offset))))))
 
 (defun %set-debug-variable-value (debug-var frame value)
+  (let ((current-value (access-debug-var-slot debug-var frame)))
+    (if (indirect-value-cell-p current-value)
+	(system:%primitive header-set current-value
+			   system:%function-value-cell-value-slot
+			   value)
+	(set-debug-variable-slot debug-var frame value))))
+
+(defun set-debug-variable-slot (debug-var frame value)
   (let ((escaped (frame-escaped frame)))
     (if escaped
-	(sub-%set-debug-var-value (frame-pointer frame)
-				  (debug-variable-sc-offset debug-var)
-				  value
-				  escaped)
-	(sub-%set-debug-var-value (frame-pointer frame)
-				  (or (debug-variable-save-sc-offset debug-var)
-				      (debug-variable-sc-offset debug-var))
-				  value))))
-;;;
-(defun sub-%set-debug-var-value (fp sc-offset value &optional escaped)
+	(sub-set-debug-var-slot (frame-pointer frame)
+				(debug-variable-sc-offset debug-var)
+				value
+				escaped)
+	(sub-set-debug-var-slot
+	 (frame-pointer frame)
+	 (or (debug-variable-save-sc-offset debug-var)
+	     (debug-variable-sc-offset debug-var))
+	 value))))
+
+(defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (ecase (c::sc-offset-scn sc-offset)
     ((0 1) ;; Any register or descriptor register.
      (if escaped
@@ -1745,8 +1767,12 @@
     (5 ;; String-chars on the stack (w/o tag bits).
      (setf (stack-ref fp (c::sc-offset-offset sc-offset))
 	   (char-code value)))))
-;;;
 (defsetf debug-variable-value %set-debug-variable-value)
+
+(defun indirect-value-cell-p (x)
+  (and (functionp x)
+       (eql (system:%primitive get-vector-subtype x)
+	    system:%function-value-cell-subtype)))
 
 
 ;;; DEBUG-VARIABLE-VALIDITY -- Public.
