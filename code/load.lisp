@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.79 2001/05/02 22:05:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.80 2001/05/30 16:56:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -537,7 +537,7 @@
 		   (fasload filename)
 		   (sloload filename))
 	       (let ((pn (merge-pathnames (pathname filename)
-					  *default-pathname-defaults*)))
+					  *default-pathname-defaults* nil)))
 		 (if (wild-pathname-p pn)
 		     (dolist (file (directory pn) t)
 		       (internal-load pn file if-does-not-exist contents))
