@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.9 1994/10/05 16:40:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.10 1994/10/29 05:45:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,8 @@
 
 (declaim (ftype (function * *)
 		find-keyword keyword-test assert-error
-		assert-prompt check-type-error case-body-error))
+		assert-prompt check-type-error case-body-error print-object
+		pcl::describe-object))
 
 #-clx
 (declaim (ftype (function * *)
