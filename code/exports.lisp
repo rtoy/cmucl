@@ -7,67 +7,12 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.52 1990/10/03 09:56:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.53 1990/11/12 14:00:20 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
 ;;; Written by William Lott.
 ;;; 
-
-
-;;; Old compiler cleanup.
-
-#-new-compiler
-(labels
-    ((move (name old-package new-package)
-	   (let* ((old-package (find-package old-package))
-		  (symbol (find-symbol name old-package)))
-	     (when symbol
-	       (let ((orig-package (symbol-package symbol)))
-		 (unintern symbol orig-package)
-		 (import symbol (find-package new-package))
-		 (import symbol orig-package)))))
-     (nuke (name package)
-	   (let* ((package (find-package package))
-		  (symbol (find-symbol name package)))
-	     (when symbol
-	       (unintern symbol package)))))
-
-  (nuke "REAL" "XLIB")
-  (nuke "FORM" "LISP")
-  (nuke "INDEX" "LISP")
-  (nuke "LEXICAL-ENVIRONMENT" "LISP")
-  (nuke "NEGATE" "LISP")
-  (nuke "TYPE-EXPAND" "LISP")
-  (nuke "VAR" "LISP")
-  (nuke "ARG" "LISP")
-  (nuke "STRUCTURE-TYPE" "XP")
-  (nuke "CONCAT-PNAMES" "LISP")
-  (nuke "ONCE-ONLY" "COMPILER")
-  (nuke "CONSTANT" "COMPILER")
-  (nuke "GET-TYPE" "LISP")
-  (nuke "INFO" "HEMLOCK")
-
-  (move "POINTER<" "COMPILER" "SYSTEM")
-  (move "POINTER>" "COMPILER" "SYSTEM")
-  (move "SAP+" "LISP" "SYSTEM")
-  (move "%SET-ALIEN-ACCESS" "LISP" "SYSTEM")
-  (move "CHECK<=" "LISP" "SYSTEM")
-  (move "CT-A-VAL" "LISP" "SYSTEM")
-  (move "CT-A-VAL-ALIEN" "LISP" "SYSTEM")
-  (move "CT-A-VAL-OFFSET" "LISP" "SYSTEM")
-  (move "CT-A-VAL-P" "LISP" "SYSTEM")
-  (move "CT-A-VAL-SAP" "LISP" "SYSTEM")
-  (move "CT-A-VAL-SIZE" "LISP" "SYSTEM")
-  (move "CT-A-VAL-TYPE" "LISP" "SYSTEM")
-  (move "DEPORT-BOOLEAN" "LISP" "SYSTEM")
-  (move "DEPORT-INTEGER" "LISP" "SYSTEM")
-  (move "MAKE-CT-A-VAL" "LISP" "SYSTEM")
-  (move "NATURALIZE-BOOLEAN" "LISP" "SYSTEM")
-  (move "NATURALIZE-INTEGER" "LISP" "SYSTEM")
-  (move "SAP-REF-SAP" "LISP" "SYSTEM")
-  (move "CHECK=" "COMPILER" "SYSTEM"))
-
 
 
 ;;; Create the packages
@@ -332,7 +277,17 @@
 	  integer-decode-single-float integer-decode-double-float
 	  scale-single-float scale-double-float single-float-exponent
 	  double-float-exponent float-format-digits get-closure-length
-	  set-header-data signal-init %mask-field %deposit-field))
+	  set-header-data signal-init %mask-field %deposit-field
+	  structurify structure-length structure-ref structure-set
+	  structure-index-ref structure-index-set
+	  dynamic-space-free-pointer binding-stack-pointer-sap
+	  control-stack-pointer-sap simple-array-unsigned-byte-2-p
+	  simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
+	  simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
+	  simple-array-single-float-p simple-array-double-float-p
+	  array-header-p signed-byte-32-p unsigned-byte-32-p
+
+	  ))
 
 
 (in-package "EXTENSIONS")
@@ -462,6 +417,7 @@
 
 (use-package "KERNEL")
 (use-package "EXT")
+(use-package "C")
 
 (export '(*assembly-unit-length* *primitive-objects* array-data-slot
 	  array-dimensions-offset array-displaced-p-slot
@@ -527,7 +483,7 @@
 	  value-cell-value-slot vector-data-offset vector-length-slot
 	  vector-normal-subtype vector-structure-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
-	  vm-version word-bits word-bytes word-shift weak-pointer-type
+	  word-bits word-bytes word-shift weak-pointer-type
 	  weak-pointer-size weak-pointer-value-slot weak-pointer-next-slot
 	  
 	  single-float-bias
@@ -541,22 +497,16 @@
 	  single-float-bits double-float-low-bits double-float-high-bits
 	  single-float-digits double-float-digits
 	  register-save-penalty symbol-raw-function-addr-slot
-	  symbol-setf-function-slot structure-header-type))
+	  symbol-setf-function-slot structure-header-type
+	  alloc-g-vector allocate-vector alloc-string sxhash-simple-string
+	  sxhash-simple-substring check-cons check-symbol check-fixnum
+	  check-signed-byte-32 check-unsigned-byte-32
+	  check-function-or-symbol check-function
+	  make-array-header code-constant-set allocate-code-object
+	  code-instructions compute-function
 
-
-(in-package "C")
-
-(use-package "EXT")
-(use-package "KERNEL")
-(use-package "SYSTEM")
-(use-package "VM")
-(use-package "ASSEM")
-(use-package "BIGNUM")
-
-(export '(*compile-time-define-macros* *compiling-for-interpreter*
-	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
-	  lambda-eval-info-args-passed lambda-eval-info-entries
-	  lambda-eval-info-frame-size))
+	  get-vector-subtype set-vector-subtype
+	  ))
 
 (in-package "LISP")
 (import '(
@@ -604,6 +554,147 @@
 	  string=*
 	  string/=*
 	  %sp-string-compare
+	  )
+	"VM")
+
+
+(in-package "C")
+
+(use-package "EXT")
+(use-package "KERNEL")
+(use-package "SYSTEM")
+(use-package "VM")
+(use-package "ASSEM")
+(use-package "BIGNUM")
+
+(export '(
+	  *compile-time-define-macros* *compiling-for-interpreter*
+	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
+	  lambda-eval-info-args-passed lambda-eval-info-entries
+	  lambda-eval-info-frame-size sc %more-arg %listify-rest-args
+	  more-arg-context verify-argument-count argument-count-error
+	  type-check-error odd-keyword-arguments-error
+	  unknown-keyword-argument-error save-dynamic-state
+	  restore-dynamic-state current-stack-pointer current-binding-pointer
+	  make-unwind-block make-catch-block set-unwind-protect
+	  %catch-breakup %unwind-protect-breakup nlx-entry nlx-entry-multiple
+	  uwp-entry %continue-unwind move non-descriptor-stack
+	  foreign-symbol-address compute-old-nfp unbind-to-here
+	  
+	  alloc-number-stack-space
+	  allocate-frame
+	  allocate-full-call-frame
+	  bind
+	  branch
+	  call
+	  call-local
+	  call-named
+	  call-out
+	  call-variable
+	  closure-init
+	  closure-ref
+	  coerce-to-function
+	  copy-more-arg
+	  current-fp
+	  current-stack-pointer
+	  dealloc-number-stack-space
+	  fast-safe-coerce-to-function
+	  fast-symbol-function
+	  fast-symbol-value
+	  if-eq
+	  known-call-local
+	  known-return
+	  make-catch-block
+	  make-closure
+	  make-unwind-block
+	  make-value-cell
+	  move
+	  multiple-call
+	  multiple-call-local
+	  multiple-call-named
+	  multiple-call-variable
+	  nil
+	  nlx-entry
+	  nlx-entry-multiple
+	  note-environment-start
+	  push-values
+	  reset-stack-pointer
+	  restore-dynamic-state
+	  return
+	  return-multiple
+	  save-dynamic-state
+	  set
+	  set-unwind-protect
+	  setup-closure-environment
+	  setup-environment
+	  structure-ref
+	  structure-set
+	  symbol-function
+	  symbol-value
+	  tail-call
+	  tail-call-named
+	  tail-call-variable
+	  throw
+	  unbind
+	  unwind
+	  uwp-entry
+	  value-cell-ref
+	  value-cell-set
+	  values-list
+	  xep-allocate-frame
+
+	  catch-block
+	  ))
+
+(in-package "LISP")
+(import '(
+	  %aset
+	  %bitset
+	  %charset
+	  %primitive
+	  %put
+	  %raw-bits
+	  %set-raw-bits
+	  %rplaca
+	  %rplacd
+	  %sbitset
+	  %scharset
+	  %set-documentation
+	  %set-fdefinition
+	  %set-fill-pointer
+	  %set-row-major-aref
+	  %set-sap-ref-sap
+	  %set-sap-ref-32
+	  %set-sap-ref-16
+	  %set-sap-ref-8
+	  %set-sap-ref-single
+	  %set-sap-ref-double
+	  %setelt
+	  %setnth
+	  %sp-set-plist
+	  %sp-set-definition
+	  %standard-char-p
+	  %string-char-p
+	  %svset
+	  %typep
+	  %array-typep
+	  array-header-p
+	  base-char-p
+	  double-float-p
+	  long-float-p
+	  short-float-p
+	  simple-array-p
+	  single-float-p
+	  string<*
+	  string>*
+	  string<=*
+	  string>=*
+	  string=*
+	  string/=*
+	  %sp-string-compare
+	  make-fixnum
+	  make-other-immediate-type
+	  halt
 	  )
 	"C")
 
