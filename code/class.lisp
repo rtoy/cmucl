@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.35 1997/04/01 19:23:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36 1997/04/09 17:49:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,7 @@
   ;; into read-only space by purify.)
   ;;
   ;; ### this slot is known to the C startup code.
-  (pure nil :type boolean))
+  (pure nil :type (member t nil 0)))
 
 ;;; MAKE-LAYOUT  --  Interface
 ;;;

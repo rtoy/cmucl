@@ -1,10 +1,10 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.9 1997/04/01 19:24:20 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.10 1997/04/09 17:49:36 dtc Exp $ */
 
 /* This file has been hacked a bunch by Werkowski as part of
  * the x86 port. Stack direction changes as well as more conservative
- * decisions about pointers. It probably doesn't work yet.
+ * decisions about pointers.
  */
 #include <stdio.h>
 #include <sys/types.h>
@@ -240,9 +240,43 @@ static lispobj ptrans_boxed(lispobj thing, lispobj header, boolean constant)
 static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
 {
     lispobj layout = ((struct instance *)PTR(thing))->slots[0];
-    return ptrans_boxed(thing, header,
-			(((struct instance *)PTR(layout))->slots[15])
-			!= NIL);
+    lispobj pure = ((struct instance *)PTR(layout))->slots[15];
+
+    switch (pure) {
+    case T:
+      return (ptrans_boxed(thing, header, 1));
+    case NIL:
+      return (ptrans_boxed(thing, header, 0));
+    case 0: {
+      /* Substructure: special case for the compact-info-envs, where
+         the instance may have a point to the dynamic space placed
+         into it (e.g. the cache-name slot), but the lists and arrays
+         at the time of a purify can be moved to the RO space. */
+      int nwords;
+      lispobj result, *new, *old;
+
+      nwords = 1 + HeaderValue(header);
+      
+      /* Allocate it */
+      old = (lispobj *)PTR(thing);
+      new = static_free;
+      static_free += CEILING(nwords, 2);
+      
+      /* Copy it. */
+      bcopy(old, new, nwords * sizeof(lispobj));
+      
+      /* Deposit forwarding pointer. */
+      result = (lispobj)new | LowtagOf(thing);
+      *old = result;
+      
+      /* Scavenge it. */
+      pscav(new, nwords, 1);
+
+      return result;
+    }
+    default:
+      gc_abort();
+    }
 }
     
 static lispobj ptrans_fdefn(lispobj thing, lispobj header)

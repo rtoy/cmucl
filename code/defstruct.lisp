@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.57 1996/05/07 20:21:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.58 1997/04/09 17:49:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,7 +215,7 @@
   ;;
   ;; Value of the :PURE option, or :UNSPECIFIED.  Only meaningful if
   ;; CLASS-STRUCTURE-P = T.
-  (pure :unspecified :type (member t nil :unspecified)))
+  (pure :unspecified :type (member t nil :substructure :unspecified)))
 
 
 ;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
@@ -305,9 +305,12 @@
 			 `',mlff
 			 `#',mlff)))))
       ,@(let ((pure (dd-pure defstruct)))
-	  (when (eq pure 't)
-	    `((setf (layout-pure (class-layout (find-class ',name)))
-		    t))))
+	  (cond ((eq pure 't)
+		 `((setf (layout-pure (class-layout (find-class ',name)))
+		    t)))
+		((eq pure :substructure)
+		 `((setf (layout-pure (class-layout (find-class ',name)))
+		    0)))))
       ,@(let ((def-con (dd-default-constructor defstruct)))
 	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
 	    `((setf (structure-class-constructor (find-class ',name))
