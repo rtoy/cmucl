@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.100 2002/12/29 23:35:06 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.101 2003/01/29 02:16:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,25 +59,32 @@
 
 (in-package "C")
 
+(deftype lexenv-or-null () '(or null lexical-environment))
+
 
 ;;;; Information for known functions:
 
 (defknown coerce (t type-specifier) t
 	  (movable foldable)			  ; Is defined to signal errors. 
-  :derive-type (result-type-specifier-nth-arg 2))
+	  ;; :derive-type (result-type-specifier-nth-arg 2)
+	  ;; This is wrong.  (coerce 1 'complex) returns 1, not COMPLEX.
+  )
 
 (defknown type-of (t) t (foldable flushable))
 
 ;;; Can be affected by type definitions...
 (defknown (upgraded-complex-part-type upgraded-array-element-type)
-	  (type-specifier) type-specifier
-  (flushable))
+	  (type-specifier &optional lexenv-or-null)
+          type-specifier
+	  (flushable))
 
 
 ;;;; In the "Predicates" chapter:
 
-(defknown typep (t type-specifier) boolean (foldable flushable))
-(defknown subtypep (type-specifier type-specifier) (values boolean boolean)
+(defknown typep (t type-specifier &optional lexenv-or-null)
+          boolean (foldable flushable))
+(defknown subtypep (type-specifier type-specifier &optional lexenv-or-null)
+          (values boolean boolean)
 	  (foldable flushable))
 
 (defknown (null symbolp atom consp listp numberp integerp rationalp floatp
@@ -95,7 +102,7 @@
 
 (deftype name-for-class () 't)
 (defknown class-name (class) name-for-class (flushable))
-(defknown find-class (name-for-class &optional t lexical-environment)
+(defknown find-class (name-for-class &optional t lexenv-or-null)
   (or class null) ())
 (defknown class-of (t) class (flushable))
 (defknown layout-of (t) layout (flushable))
@@ -119,7 +126,7 @@
 (defknown makunbound (symbol) symbol)
 (defknown fmakunbound ((or symbol cons)) (or symbol cons)
   (unsafe explicit-check))
-(defknown get-setf-expansion ((or list symbol) &optional lexical-environment)
+(defknown get-setf-expansion ((or list symbol) &optional lexenv-or-null)
  (values list list list form form)
  (flushable))
 
@@ -141,13 +148,13 @@
 
 ;;;; In the "Macros" chapter:
 
-(defknown macro-function (symbol &optional lexical-environment)
+(defknown macro-function (symbol &optional lexenv-or-null)
   (or function null)
   (flushable))
-(defknown (macroexpand macroexpand-1) (t &optional lexical-environment)
+(defknown (macroexpand macroexpand-1) (t &optional lexenv-or-null)
   (values form &optional boolean))
 
-(defknown compiler-macro-function (t &optional lexical-environment)
+(defknown compiler-macro-function (t &optional lexenv-or-null)
   (or function null)
   (flushable))
 
@@ -793,7 +800,7 @@
 ;;;; In the "Eval" chapter:
 
 (defknown eval (t) *)
-(defknown constantp (t &optional lexical-environment) boolean
+(defknown constantp (t &optional lexenv-or-null) boolean
   (foldable flushable))
 
 
@@ -1171,8 +1178,8 @@
 (defknown %put (symbol t t) t (unsafe))
 (defknown %setelt (sequence index t) t (unsafe))
 (defknown %svset (simple-vector index t) t (unsafe))
-(defknown %bitset (bit-vector &rest index) bit (unsafe))
-(defknown %sbitset (simple-bit-vector &rest index) bit (unsafe))
+(defknown %bitset ((array bit) &rest index) bit (unsafe))
+(defknown %sbitset ((simple-array bit) &rest index) bit (unsafe))
 (defknown %charset (string index character) character (unsafe))
 (defknown %scharset (simple-string index character) character (unsafe))
 (defknown %set-symbol-value (symbol t) t (unsafe))

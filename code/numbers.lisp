@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.45 2002/10/07 17:44:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.46 2003/01/29 02:16:30 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,9 +270,10 @@
 
 ;;;; Complexes:
 
-(defun upgraded-complex-part-type (spec)
+(defun upgraded-complex-part-type (spec &optional environment)
   "Returns the element type of the most specialized COMPLEX number type that
    can hold parts of type Spec."
+  (declare (ignore environment))
   (cond ((subtypep spec 'single-float)
 	 'single-float)
 	((subtypep spec 'double-float)

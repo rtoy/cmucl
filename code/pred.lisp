@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.54 2003/01/23 15:26:51 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.55 2003/01/29 02:16:30 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -147,9 +147,11 @@
 
 ;;;; UPGRADED-ARRAY-ELEMENT-TYPE  --  public
 ;;;
-(defun upgraded-array-element-type (spec)
+(defun upgraded-array-element-type (spec &optional environment)
   "Return the element type that will actually be used to implement an array
    with the specifier :ELEMENT-TYPE Spec."
+  ;; Type expansion (TYPE-EXPAND) currently doesn't handle environments.
+  (declare (ignore environment))
   (type-specifier
    (array-type-specialized-element-type
     (specifier-type `(array ,spec)))))
@@ -158,11 +160,12 @@
 ;;;
 ;;; Just parse the type specifiers and call csubtype.
 ;;; 
-(defun subtypep (type1 type2)
+(defun subtypep (type1 type2 &optional environment)
   "Return two values indicating the relationship between type1 and type2:
   T and T: type1 definitely is a subtype of type2.
   NIL and T: type1 definitely is not a subtype of type2.
   NIL and NIL: who knows?"
+  (declare (ignore environment))
   (csubtypep (specifier-type type1) (specifier-type type2)))
 
 
@@ -174,8 +177,9 @@
 ;;;
 ;;; Just call %typep
 ;;; 
-(defun typep (object type)
+(defun typep (object type &optional environment)
   "Return T iff OBJECT is of type TYPE."
+  (declare (ignore environment))
   (%typep object type))
 
   
