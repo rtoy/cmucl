@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.12 1991/10/05 19:33:33 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.13 1992/02/25 07:09:29 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -201,8 +203,8 @@
     lisp::*free-interrupt-context-index*
     lisp::*pseudo-atomic-atomic*
     lisp::*pseudo-atomic-interrupted*
-    mach::*interrupts-enabled*
-    mach::*interrupt-pending*
+    unix::*interrupts-enabled*
+    unix::*interrupt-pending*
 
     ;; Static functions.
     length
