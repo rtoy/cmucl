@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.25 1992/03/10 12:52:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.26 1992/05/14 23:17:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1472,6 +1472,7 @@
 ;;; Allocate a block of memory at least BITS bits long and return a system
 ;;; area pointer to it.
 ;;;
+(declaim (inline %make-alien))
 (defun %make-alien (bits)
   (declare (type kernel:index bits) (optimize-interface (safety 2)))
   (alien-funcall (extern-alien "malloc" (function system-area-pointer unsigned))
@@ -1479,6 +1480,7 @@
 
 ;;; FREE-ALIEN -- public
 ;;;
+(declaim (inline free-alien))
 (defun free-alien (alien)
   "Dispose of the storage pointed to by ALIEN.  ALIEN must have been allocated
    by MAKE-ALIEN or ``malloc''."
