@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.6 1990/03/15 19:04:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.7 1990/04/02 02:53:39 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -593,7 +593,7 @@
 		(etypecase x
 		  (ratio (dump-ratio x file))
 		  (complex (dump-complex x file))
-		  (long-float (dump-long-float x file))
+		  (float (dump-float x file))
 		  (integer (dump-integer x file)))
 		(equal-save-object x file)))
 #|
@@ -633,7 +633,6 @@
 	     (dump-non-immediate-object x file)))
 	((fixnump x) (dump-integer x file))
 	((characterp x) (dump-character x file))
-	((typep x 'short-float) (dump-short-float x file))
 #| Probably a bug to ever dump a trap object...
 	((lisp::trap-object-p x)
 	 (dump-fop 'lisp::fop-misc-trap file))
@@ -747,10 +746,7 @@
 (defun compute-bytes (n)
   (truncate (+ (integer-length n) 8) 8))
 
-;;;
-;;; These two are almost exactly alike, and could easily be the same function.
-
-(defun dump-short-float (x file)
+(defun dump-float (x file)
   (multiple-value-bind (f exponent sign) (decode-float x)
     (let ((mantissa (truncate (scale-float (* f sign) (float-precision f)))))
       (dump-fop 'lisp::fop-float file)
@@ -759,27 +755,6 @@
       (dump-byte (1+ (integer-length mantissa)) file)
       (quick-dump-number mantissa (compute-bytes mantissa) file))))
 
-#|
-(defun dump-single-float (x file)
-  (multiple-value-bind (f exponent sign) (decode-float x)
-    (let ((mantissa (truncate (scale-float (* f sign) (float-precision f)))))
-      (dump-fop 'lisp::fop-float file)
-      (dump-byte (1+ (integer-length exponent)) file)
-      (dump-byte exponent file)
-      (dump-byte (1+ (integer-length mantissa)) file)
-      (quick-dump-number mantissa (compute-bytes mantissa) file))))
-|#
-;;; For long-floats we're careful that the dumped mantissa actually
-;;; has 63 significant bits, so the fasloader can recognize it as such.
-
-(defun dump-long-float (x file)
-  (multiple-value-bind (f exponent sign) (decode-float x)
-    (let ((mantissa (truncate (scale-float (* f sign) (float-precision f)))))
-      (dump-fop 'lisp::fop-float file)
-      (dump-byte (1+ (integer-length exponent)) file)
-      (quick-dump-number exponent (compute-bytes exponent) file)
-      (dump-byte (1+ (integer-length mantissa)) file)
-      (quick-dump-number mantissa (compute-bytes mantissa) file))))
 
 
 ;;;; Symbol Dumping:
