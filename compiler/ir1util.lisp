@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.34 1991/04/02 11:06:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.35 1991/04/03 12:45:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -749,7 +749,8 @@ inlines
 	     (clambda
 	      (ecase (functional-kind leaf)
 		((nil :let :mv-let :escape :cleanup)
-		 (assert (not (functional-entry-function leaf))))
+		 (assert (not (functional-entry-function leaf)))
+		 (delete-lambda leaf))
 		(:external
 		 (delete-lambda leaf))
 		((:deleted :optional))))
@@ -1139,6 +1140,24 @@ inlines
 	      (let ((block (continuation-block prev)))
 		(and (block-component block)
 		     (not (block-delete-p block))))))))
+
+
+;;; DELETE-COMPONENT  --  Interface
+;;;
+;;;    Delete all the blocks and functions in Component.  We scan first marking
+;;; the blocks as delete-p to prevent weird stuff from being triggered by
+;;; deletion.
+;;;
+(defun delete-component (component)
+  (declare (type component component))
+  (do-blocks (block component)
+    (setf (block-delete-p block) t))
+  (dolist (fun (component-lambdas component))
+    (setf (leaf-refs fun) nil)
+    (delete-lambda fun))
+  (do-blocks (block component)
+    (delete-block block))
+  (undefined-value))
   
 
 ;;;; Leaf hackery:
