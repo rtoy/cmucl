@@ -162,7 +162,7 @@ distinct from the contiguous array type codes.  See section
 Pointers to data-blocks have the following format:
 \begin{verbatim}
 ----------------------------------------------------------------
-|      Dual-word address of data-block (29 bits)       | 1 1    1 |
+|      Dual-word address of data-block (29 bits)       | 1 1 1 |
 ----------------------------------------------------------------
 \end{verbatim}
 
@@ -211,48 +211,57 @@ byte and comparing it against a constant is more efficient than wasting even a
 small amount of time shifting out the other-immediate tag to compare against a
 five bit constant.
 \begin{verbatim}
-Number   (< 30)
-  bignum                                        10
-    ratio                                       14
-    single-float                                18
-    double-float                                22
-    complex                                     26
+Number   (< 36)
+  bignum                                           10
+    ratio                                          14
+    single-float                                   18
+    double-float                                   22
+    complex                                        26
+    (complex single-float)                         30
+    (complex double-float)                         34
 
-Array   (>= 30 code 86)
-   Simple-Array   (>= 20 code 70)
-         simple-array                           30
-      Vector  (>= 34 code 82)
-         simple-string                          34
-         simple-bit-vector                      38
-         simple-vector                          42
-         (simple-array (unsigned-byte 2) (*))   46
-         (simple-array (unsigned-byte 4) (*))   50
-         (simple-array (unsigned-byte 8) (*))   54
-         (simple-array (unsigned-byte 16) (*))  58
-         (simple-array (unsigned-byte 32) (*))  62
-         (simple-array single-float (*))        66
-         (simple-array double-float (*))        70
-      complex-string                            74
-      complex-bit-vector                        78
-      (array * (*))   -- general complex vector. 82
-   complex-array                                86
+Array   (>= 38 code 118)
+   Simple-Array   (>= 38 code 102)
+         simple-array                              38
+      Vector  (>= 42 code 114)
+         simple-string                             42
+         simple-bit-vector                         46
+         simple-vector                             50
+         (simple-array (unsigned-byte 2) (*))      54
+         (simple-array (unsigned-byte 4) (*))      58
+         (simple-array (unsigned-byte 8) (*))      62
+         (simple-array (unsigned-byte 16) (*))     66
+         (simple-array (unsigned-byte 32) (*))     70
+         (simple-array (signed-byte 8) (*))        74
+         (simple-array (signed-byte 16) (*))       78
+         (simple-array (signed-byte 30) (*))       82
+         (simple-array (signed-byte 32) (*))       86
+         (simple-array single-float (*))           90
+         (simple-array double-float (*))           94
+         (simple-array (complex single-float) (*)  98
+         (simple-array (complex double-float) (*)  102
+      complex-string                               106
+      complex-bit-vector                           110
+      (array * (*))   -- general complex vector.   114
+   complex-array                                   118
 
-code-header-type                                90
-function-header-type                            94
-closure-header-type                             98
-funcallable-instance-header-type                102
-unused-function-header-1-type                   106
-unused-function-header-2-type                   110
-unused-function-header-3-type                   114
-closure-function-header-type                    118
-return-pc-header-type (a.k.a LRA)               122
-value-cell-header-type                          126
-symbol-header-type                              130
-base-character-type                             134
-system-area-pointer-type (header type)          138
-unbound-marker                                  142
-weak-pointer-type                               146
-structure-header-type                           150
+code-header-type                                   122
+function-header-type                               126
+closure-header-type                                130
+funcallable-instance-header-type                   134
+unused-function-header-1-type                      138
+unused-function-header-2-type                      142
+unused-function-header-3-type                      146
+closure-function-header-type                       150
+return-pc-header-type (a.k.a LRA)                  154
+value-cell-header-type                             158
+symbol-header-type                                 162
+base-character-type                                166
+system-area-pointer-type (header type)             170
+unbound-marker                                     174
+weak-pointer-type                                  178
+structure-header-type                              182
+fdefn-type                                         186
 \end{verbatim}
 
 \section{Strings}
@@ -355,6 +364,8 @@ The array-header data-block has the following format:
 ----------------------------------------------------------------
 |               Fill Pointer (30 bits)                   | 0 0 | 
 ----------------------------------------------------------------
+|               Fill Pointer p (29 bits) -- t or nil   | 1 1 1 |
+----------------------------------------------------------------
 |               Available Elements (30 bits)             | 0 0 | 
 ----------------------------------------------------------------
 |               Data Vector (29 bits)                  | 1 1 1 | 
@@ -384,6 +395,9 @@ interpretations and types:
       typically the same value as the next slot.  This is the second word, so
       LENGTH of any array, with or without an array header, is just four bytes
       off the pointer to it.
+   \item[Fill Pointer P:]
+      This is either T or NIL and indicates whether the array uses the
+      fill-pointer or not.
    \item[Available Elements:]
       This is a fixnum indicating the number of elements for which there is
       space in the data vector.  This is greater than or equal to the logical
