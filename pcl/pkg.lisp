@@ -239,6 +239,8 @@
 
   (:shadowing-import-from :pcl
     "FIND-CLASS" "CLASS-NAME" "BUILT-IN-CLASS" "CLASS-OF")
+  (:export
+    "FIND-CLASS" "CLASS-NAME" "BUILT-IN-CLASS" "CLASS-OF")
 
   (:export ;; Names taken from "The Art of the Metaobject Protocol"
    "ADD-DEPENDENT"
