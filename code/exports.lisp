@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.18 1990/05/06 05:36:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.19 1990/05/07 14:34:45 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -528,6 +528,8 @@
 (in-package "BIGNUM")
 
 (use-package "KERNEL")
+
+(import 'vm:bignum-type)
 
 (export '(add-bignums multiply-bignums negate-bignum subtract-bignum
 	  bignum-ashift-right bignum-ashift-left bignum-gcd bignum=
