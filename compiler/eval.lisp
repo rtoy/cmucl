@@ -962,7 +962,7 @@
 	      (real-fun (c::functional-entry-function leaf))
 	      (arg-doc (c::functional-arg-documentation real-fun)))
 	 (cond ((c:lambda-eval-info-function (c::leaf-info leaf)))
-	       ((and (zerop (length closure))
+	       ((and (zerop (length calling-closure))
 		     (null (c::functional-fenv real-fun)))
 		(let* ((res (make-interpreted-function
 			     (c::functional-inline-expansion real-fun)))
