@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.1 1992/07/28 20:15:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.2 1992/08/16 13:41:50 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "internals.h"
@@ -248,7 +248,7 @@ undefined_tramp:
         .byte    4
         .byte    23
         .byte    254
-        .byte    208
+        .byte    204
         .byte    1
         .align 2
         .end    undefined_tramp
