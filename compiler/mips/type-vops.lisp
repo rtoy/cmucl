@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.7 1990/03/22 00:21:20 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.8 1990/03/23 21:43:34 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -99,8 +99,7 @@
   (frob simple-vector-p check-simple-vector simple-vector
     vm:simple-vector-type di:object-not-simple-vector-error)
 
-  ;; ### This should really be base-character-p ...
-  (frob string-char-p check-base-character base-character
+  (frob base-char-p check-base-character base-character
     vm:base-character-type di:object-not-base-character-error)
 
   (frob system-area-pointer-p check-system-area-pointer system-area-pointer
