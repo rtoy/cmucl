@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.2 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/osf1-os.lisp,v 1.3 1997/03/26 20:38:41 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,18 +49,11 @@
   (multiple-value-bind (err? utime stime maxrss ixrss idrss
 			     isrss minflt majflt)
 		       (unix:unix-getrusage unix:rusage_self)
-    (declare (ignore maxrss ixrss idrss isrss minflt majflt))
+    (declare (ignore maxrss ixrss idrss isrss minflt))
     (unless err?
       (error "Unix system call getrusage failed: ~A."
 	     (unix:get-unix-error-msg utime)))
-    
-    #+nil
-    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot)
-			 (mach:vm_statistics *task-self*)
-      (declare (ignore ps fc ac ic wc zf ra))
-      (mach:gr-error 'mach:vm_statistics gr)
-      
-      (values utime stime (+ in ot)))))
+    (values utime stime majflt)))
 
 
 ;;; GET-PAGE-SIZE  --  Interface
