@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.166 1999/12/04 15:59:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.167 2000/01/10 14:45:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1118,7 +1118,8 @@
 	   "CALL" "CALL-LOCAL" "CALL-NAMED" "CALL-OUT" "CALL-VARIABLE"
 	   "CALLEE-NFP-TN" "CALLEE-RETURN-PC-TN" "CATCH-BLOCK" "CHECK-CONS"
 	   "CHECK-FIXNUM" "CHECK-FUNCTION" "CHECK-FUNCTION-OR-SYMBOL"
-	   "CHECK-SIGNED-BYTE-32" "CHECK-SYMBOL" "CHECK-UNSIGNED-BYTE-32"
+	   "CHECK-BIGNUM" "CHECK-SIGNED-BYTE-32" "CHECK-SYMBOL"
+	   "CHECK-UNSIGNED-BYTE-32"
 	   "CLOSURE-INIT" "CLOSURE-REF" "CODE-CONSTANT-REF"
 	   "CODE-CONSTANT-SET" "CODE-INSTRUCTIONS" "COERCE-TO-FUNCTION"
 	   "COMPILE-FOR-EVAL" "COMPONENT" "COMPONENT-HEADER-LENGTH"
