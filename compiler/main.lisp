@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.113 1999/11/25 15:57:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.114 1999/11/25 16:03:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -262,7 +262,8 @@
 ;;;
 (defun native-compile-component (component)
   (let ((*code-segment* nil)
-	(*elsewhere* nil))
+	(*elsewhere* nil)
+	(*elsewhere-label* nil))
     (maybe-mumble "GTN ")
     (gtn-analyze component)
     (maybe-mumble "LTN ")
