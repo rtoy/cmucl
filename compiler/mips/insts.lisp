@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.23 1990/07/05 10:59:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.24 1990/08/21 19:12:18 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -650,10 +650,10 @@
   (data (byte 24 8) :default 0 :function header-data))
 
 (define-instruction (function-header-word)
-  (header-object (type :constant #x5e)))
+  (header-object (type :constant vm:function-header-type)))
 
 (define-instruction (lra-header-word)
-  (header-object (type :constant #x66)))
+  (header-object (type :constant vm:return-pc-header-type)))
 
 
 (defmacro define-compute-instruction (name calculation)
