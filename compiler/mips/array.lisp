@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.24 1990/08/15 02:54:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.25 1990/08/17 07:35:24 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -403,7 +403,7 @@
 
 (define-vop (set-raw-bits word-index-set)
   (:note "setf raw-bits VOP")
-  (:translate (setf %raw-bits))
+  (:translate %set-raw-bits)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg zero immediate unsigned-immediate))
 	 (value :scs (unsigned-reg)))
