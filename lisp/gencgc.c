@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.9 1998/01/14 10:40:58 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.10 1998/03/10 18:30:24 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -80,6 +80,8 @@ boolean gencgc_unmap_zero = TRUE;
 
 /* Enable checking that newly allocated regions are zero filled. */
 boolean gencgc_zero_check = FALSE;
+
+boolean gencgc_enable_verify_zero_fill = FALSE;
 
 /*
  * Enable checking that free pages are zero filled during gc_free_heap
@@ -412,7 +414,7 @@ static int  gc_alloc_generation;
    may pick up from the previous region if there is enough space. This
    keeps the allocation contiguous when scavenging the newspace.
 
-   The alloc_region is should have been closed by a call to
+   The alloc_region should have been closed by a call to
    gc_alloc_update_page_tables, and will thus be in an empty state.
    
    To assist the scavenging functions write protected pages are not
@@ -667,7 +669,7 @@ add_new_area(int first_page, int offset, int size)
    the new_areas.
 
    When done the alloc_region its setup so that the next quick alloc
-   will fail safely and thus a new regions will be allocated. Further
+   will fail safely and thus a new region will be allocated. Further
    it is safe to try and re-update the page table of this reset
    alloc_region.
 
@@ -5153,6 +5155,50 @@ verify_generation(int  generation)
   }
 }
 
+/* Check the all the free space is zero filled. */
+static void
+verify_zero_fill(void)
+{
+  int page;
+
+  for (page = 0; page < last_free_page; page++) {
+    if (page_table[page].allocated == FREE_PAGE) {
+      /* The whole page should be zero filled. */
+      int *start_addr = (int *)page_address(page);
+      int size = 1024;
+      int i;
+      for(i = 0; i < size; i++)
+	if (start_addr[i] != 0)
+	  fprintf(stderr,"** free page not zero @ %x\n", start_addr + i);
+    } else {
+      int free_bytes = 4096 - page_table[page].bytes_used;
+      if (free_bytes > 0) {
+	int *start_addr = (int *)((int)page_address(page)
+				  + page_table[page].bytes_used);
+	int size = free_bytes / 4;
+	int i;
+	for(i = 0; i < size; i++)
+	  if (start_addr[i] != 0)
+	    fprintf(stderr,"** free region not zero @ %x\n", start_addr + i);
+      }
+    }
+  }
+}
+
+/* External entry point for verify_zero_fill */
+void
+gencgc_verify_zero_fill(void)
+{
+  /* Flush the alloc regions updating the tables. */
+  boxed_region.free_pointer = current_region_free_pointer;
+  gc_alloc_update_page_tables(0,&boxed_region);
+  gc_alloc_update_page_tables(1,&unboxed_region);
+  fprintf(stderr,"* Verifying zero fill\n");
+  verify_zero_fill();
+  current_region_free_pointer = boxed_region.free_pointer;
+  current_region_end_addr = boxed_region.end_addr;
+}
+
 static void
 verify_dynamic_space(void)
 {
@@ -5160,6 +5206,9 @@ verify_dynamic_space(void)
 
   for (i = 0; i < NUM_GENERATIONS; i++)
     verify_generation(i);
+
+  if (gencgc_enable_verify_zero_fill)
+    verify_zero_fill();
 }
 
 
