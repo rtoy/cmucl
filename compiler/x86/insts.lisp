@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.16 1998/02/24 09:59:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.17 1999/09/28 16:07:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1152,7 +1152,7 @@
      ((integerp src)
       (cond ((and (not (eq size :byte)) (<= -128 src 127))
 	     (emit-byte segment #b10000011)
-	     (emit-ea segment dst opcode)
+	     (emit-ea segment dst opcode allow-constants)
 	     (emit-byte segment src))
 	    ((accumulator-p dst)
 	     (emit-byte segment
@@ -1164,7 +1164,7 @@
 	     (emit-sized-immediate segment size src))
 	    (t
 	     (emit-byte segment (if (eq size :byte) #b10000000 #b10000001))
-	     (emit-ea segment dst opcode)
+	     (emit-ea segment dst opcode allow-constants)
 	     (emit-sized-immediate segment size src))))
      ((register-p src)
       (emit-byte segment
