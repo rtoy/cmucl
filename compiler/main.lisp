@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.78 1992/11/25 10:32:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.78.1.1 1993/02/13 15:49:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1024,6 +1024,9 @@
 	     (process-cold-load-form form path t))
 	    ((error cerror break signal)
 	     (process-cold-load-form form path nil))
+	    (kernel:%compiler-defstruct
+	     (convert-and-maybe-compile form path)
+	     (compile-top-level-lambdas () t))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
