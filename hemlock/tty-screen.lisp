@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.6 1991/09/26 09:16:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-screen.lisp,v 1.7 1991/10/08 14:45:37 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -285,19 +285,6 @@
 	(setf *screen-image-trashed* t)
 	new-window))))
 
-(defun tty-find-biggest-hunk (device)
-  (let* ((top-hunk (device-hunks device))
-	 (hunk (device-hunk-next top-hunk))
-	 (max-size 0)
-	 biggest)
-    (declare (fixnum max-size))
-    (loop
-     (when (> (the fixnum (device-hunk-height hunk)) max-size)
-       (setf max-size (device-hunk-height hunk))
-       (setf biggest hunk))
-     (when (eq hunk top-hunk) (return biggest))
-     (setf hunk (device-hunk-next hunk)))))
-
 
 
 ;;;; Deleting a window
@@ -313,17 +300,17 @@
       (setf (buffer-windows buffer) (delq window (buffer-windows buffer))))
     (let ((new-lines (device-hunk-height hunk)))
       (declare (fixnum new-lines))
-      (cond ((eq next (device-hunks (device-hunk-device next)))
+      (cond ((eq hunk (device-hunks (device-hunk-device next)))
+	     (incf (device-hunk-height next) new-lines)
+	     (incf (tty-hunk-text-height next) new-lines)
+	     (let ((w (device-hunk-window next)))
+	       (change-window-image-height w (+ new-lines (window-height w)))))
+	    (t
 	     (incf (device-hunk-height prev) new-lines)
 	     (incf (device-hunk-position prev) new-lines)
 	     (incf (tty-hunk-text-height prev) new-lines)
 	     (incf (tty-hunk-text-position prev) new-lines)
 	     (let ((w (device-hunk-window prev)))
-	       (change-window-image-height w (+ new-lines (window-height w)))))
-	    (t
-	     (incf (device-hunk-height next) new-lines)
-	     (incf (tty-hunk-text-height next) new-lines)
-	     (let ((w (device-hunk-window next)))
 	       (change-window-image-height w (+ new-lines (window-height w)))))))
     (when (eq hunk (device-hunks device))
       (setf (device-hunks device) next)))
