@@ -244,7 +244,7 @@
 
 (defun get-entry-lookup (table name names classes)
   (declare (type list table names classes)
-	   (symbol name))
+	   (type stringable name))
   (dolist (entry table)
     (declare (type resource-database entry))
     (when (stringable-equal name (resource-database-name entry))
@@ -262,7 +262,7 @@
   (declare (type list tight loose names classes))
   (let ((name (car names))
 	(class (car classes)))
-    (declare (type symbol name class))
+    (declare (type stringable name class))
     (cond ((and tight
 		(get-entry-lookup tight name names classes)))
 	  ((and loose
