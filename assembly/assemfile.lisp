@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.33 1992/08/03 12:50:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.34 1993/05/18 23:49:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,8 +45,7 @@
 	 (*compiler-trace-output* nil)
 	 (*fixups* nil))
     (unwind-protect
-	(progn
-	  (pushnew :assembler *features*)
+	(let ((*features* (cons :assembler (backend-features *backend*))))
 	  (when trace-file
 	    (setf *compiler-trace-output*
 		  (open (if (eq trace-file t)
@@ -68,7 +67,6 @@
 				     *assembler-routines*
 				     *lap-output-file*))
 	  (setq won t))
-      (deletef :assembler *features*)
       (new-assem:release-segment *code-segment*)
       (when *elsewhere*
 	(new-assem:release-segment *elsewhere*))
