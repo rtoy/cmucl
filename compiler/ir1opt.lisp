@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.61 1993/05/12 11:22:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.62 1993/08/19 23:12:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -886,10 +886,14 @@
 	      nil))
      (t
       (let* ((name (leaf-name leaf))
-	     (info (info function info
-			 (if (slot-accessor-p leaf)
-			     (if (consp name) '%slot-setter '%slot-accessor)
-			     name))))
+	     (info (if (dylan-function-var-p leaf)
+		       (dylan-function-var-function-info leaf)
+		       (info function info
+			     (if (slot-accessor-p leaf)
+				 (if (consp name)
+				     '%slot-setter
+				     '%slot-accessor)
+				 name)))))
 	(if info
 	    (values leaf (setf (basic-combination-kind call) info))
 	    (values leaf nil)))))))
