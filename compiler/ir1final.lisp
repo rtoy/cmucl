@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.22 2003/02/20 16:41:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.23 2003/03/24 11:36:08 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,7 +84,8 @@
 	   (setf (info function where-from name) :defined))
 	  (:declared
 	   (let ((type (info function type name)))
-	     (when (and type (function-type-p dtype))
+	     (when (and (function-type-p type)
+			(function-type-p dtype))
 	       (let ((type-returns (function-type-returns type))
 		     (dtype-returns (function-type-returns dtype))
 		     (*error-function* #'compiler-warning))
