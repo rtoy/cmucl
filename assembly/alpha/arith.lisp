@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.2 1994/10/31 04:55:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/arith.lisp,v 1.2.2.1 1997/06/26 17:01:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,15 +171,13 @@
   (inst beq temp DONE)
   ;; Shift the double word hi:res down two bits into hi:low to get rid of the
   ;; fixnum tag.
-  (inst srl lo 2 lo)
+  (inst sra lo 2 lo)
   (inst sra lo 32 hi)
-  (inst sll lo 32 lo)
-  (inst sra lo 32 lo)
 
   ;; Do we need one word or two?  Assume two.
+  (inst li (logior (ash 2 type-bits) bignum-type) temp2)
   (inst sra lo 31 temp)
   (inst xor temp hi temp)
-  (inst li (logior (ash 2 type-bits) bignum-type) temp2)
   (inst bne temp two-words)
 
   ;; Only need one word, fix the header and zero the high-word.
