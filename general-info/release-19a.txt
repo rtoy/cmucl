@@ -146,6 +146,7 @@ New in this release:
      - FIXNUM no longer naming a function.
      - MAKE-STRING-OUTPUT-STREAM accepts :ELEMENT-TYPE.
      - Numerous LOOP fixes.
+     - On FreeBSD, CLtS-required floating-point conditions are signaled.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
