@@ -73,11 +73,15 @@
   (unless (integerp universal-time)
     (error "~A: Universal-Time should be an integer." universal-time))
   (when timezone
-    (unless (and (integerp timezone) (<= 0 timezone 32))
-      (error "~A: Timezone should be an integer between 0 and 32."
-	     timezone)))
+    (unless (and (rationalp timezone) (<= -24 timezone 24))
+      (error "~A: Timezone should be a rational between -24 and 24." timezone))
+    (unless (zerop (rem timezone 1/3600))
+      (error "~A: Timezone is not a second (1/3600) multiple." timezone)))
+
   (multiple-value-bind (secs mins hours day month year dow dst tz)
-		       (decode-universal-time universal-time timezone)
+		       (if timezone
+			   (decode-universal-time universal-time timezone)
+			   (decode-universal-time universal-time))
     (declare (ignore dst) (fixnum secs mins hours day month year dow))
     (let ((time-string "~2,'0D:~2,'0D")
 	  (date-string
