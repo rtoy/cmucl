@@ -5,7 +5,8 @@
 (use-package "PCL" "USER")
 
 ;; hack, hack...
-#+nil
+;; It seems that the first time we do this call, it spuriously says no matching
+;; methods, but subsequent calls work.
 (ignore-errors
  (with-output-to-string (*standard-output*)
    (describe #'print-object)))
