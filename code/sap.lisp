@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.7 1992/02/21 22:00:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.8 1992/02/21 23:13:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 
 (in-package "KERNEL")
 (export '(%set-sap-ref-sap %set-sap-ref-single %set-sap-ref-double
-	  %set-sap-ref-8 %signed-set-sap-ref-8
+	  %set-sap-ref-8 %set-signed-sap-ref-8
 	  %set-sap-ref-16 %set-signed-sap-ref-16
 	  %set-sap-ref-32 %set-signed-sap-ref-32))
 (in-package "SYSTEM")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.20 1992/02/21 22:02:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.21 1992/02/21 23:13:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,7 +162,7 @@
   `(progn
      (define-vop (,ref-name)
        (:translate ,ref-name)
-       (:polify :fast-safe)
+       (:policy :fast-safe)
        (:args (sap-arg :scs (sap-reg) :target sap)
 	      (offset :scs (unsigned-reg negative-immediate zero immediate)))
        (:arg-types system-area-pointer unsigned-num)
