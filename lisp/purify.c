@@ -10,12 +10,13 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.23 2003/08/22 13:20:03 toy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.24 2004/04/28 13:05:56 emarsden Exp $ 
 
    */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
+#include <strings.h>
 
 #include "lisp.h"
 #include "arch.h"
@@ -46,6 +47,20 @@ static lispobj *current_dynamic_space_free_pointer;
 #else
 #define gc_assert(ex)
 #endif
+
+
+#define assert_static_space_bounds(ptr) do { \
+   if (!(STATIC_SPACE_START <= ptr && ptr < STATIC_SPACE_START + STATIC_SPACE_SIZE)) \
+      lose ("static-space overflow!  File \"%s\", line %d\n", \
+			__FILE__, __LINE__); \
+} while (0)
+
+#define assert_readonly_space_bounds(ptr) do { \
+   if (!(READ_ONLY_SPACE_START <= ptr && ptr < READ_ONLY_SPACE_START + READ_ONLY_SPACE_SIZE)) \
+      lose ("readonly-space overflow!  File \"%s\", line %d\n", \
+			__FILE__, __LINE__); \
+} while (0)
+
 
 
 /* These hold the original end of the read_only and static spaces so we can */
@@ -523,10 +538,12 @@ static lispobj ptrans_boxed(lispobj thing, lispobj header, boolean constant)
     if (constant) {
         new = read_only_free;
         read_only_free += CEILING(nwords, 2);
+        assert_readonly_space_bounds (read_only_free);
     }
     else {
         new = static_free;
         static_free += CEILING(nwords, 2);
+        assert_static_space_bounds (static_free);
     }
 
     /* Copy it. */
@@ -570,7 +587,8 @@ static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
       old = (lispobj *)PTR(thing);
       new = static_free;
       static_free += CEILING(nwords, 2);
-      
+      assert_static_space_bounds (static_free);
+
       /* Copy it. */
       bcopy(old, new, nwords * sizeof(lispobj));
       
@@ -600,6 +618,7 @@ static lispobj ptrans_fdefn(lispobj thing, lispobj header)
     old = (lispobj *)PTR(thing);
     new = static_free;
     static_free += CEILING(nwords, 2);
+    assert_static_space_bounds (static_free);
 
     /* Copy it. */
     bcopy(old, new, nwords * sizeof(lispobj));
@@ -629,6 +648,7 @@ static lispobj ptrans_unboxed(lispobj thing, lispobj header)
     old = (lispobj *)PTR(thing);
     new = read_only_free;
     read_only_free += CEILING(nwords, 2);
+    assert_readonly_space_bounds (read_only_free);
 
     /* Copy it. */
     bcopy(old, new, nwords * sizeof(lispobj));
@@ -653,10 +673,12 @@ static lispobj ptrans_vector(lispobj thing, int bits, int extra,
     if (boxed && !constant) {
         new = static_free;
         static_free += CEILING(nwords, 2);
+        assert_static_space_bounds (static_free);
     }
     else {
         new = read_only_free;
         read_only_free += CEILING(nwords, 2);
+        assert_readonly_space_bounds (read_only_free);
     }
 
     bcopy(vector, new, nwords * sizeof(lispobj));
@@ -766,6 +788,7 @@ static lispobj ptrans_code(lispobj thing)
 
     new = (struct code *)read_only_free;
     read_only_free += CEILING(nwords, 2);
+    assert_readonly_space_bounds (read_only_free);
 
     bcopy(code, new, nwords * sizeof(lispobj));
 
@@ -864,6 +887,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
 	    /* FINs *must* not go in read_only space. */
 	    new = static_free;
 	    static_free += CEILING(nwords, 2);
+            assert_static_space_bounds (static_free);
 	}
 	else {
 	    /* Closures can always go in read-only space, 'caues */
@@ -871,6 +895,7 @@ static lispobj ptrans_func(lispobj thing, lispobj header)
 
 	    new = read_only_free;
 	    read_only_free += CEILING(nwords, 2);
+            assert_readonly_space_bounds (read_only_free);
 	}
         /* Copy it. */
         bcopy(old, new, nwords * sizeof(lispobj));
@@ -921,10 +946,12 @@ static lispobj ptrans_list(lispobj thing, boolean constant)
         if (constant) {
             new = (struct cons *)read_only_free;
             read_only_free += WORDS_PER_CONS;
+            assert_readonly_space_bounds (read_only_free);
         }
         else {
             new = (struct cons *)static_free;
             static_free += WORDS_PER_CONS;
+            assert_static_space_bounds (static_free);
         }
 
         /* Copy the cons cell and keep a pointer to the cdr. */
@@ -1153,7 +1180,7 @@ static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
     /* Check if this hook is already noted. */
     if (scav_hook->next == NULL) {
       scav_hook->next = scavenger_hooks;
-      scavenger_hooks = (int)scav_hook | type_OtherPointer;
+      scavenger_hooks = (unsigned long)scav_hook | type_OtherPointer;
     }
   }
   
@@ -1590,12 +1617,12 @@ int purify(lispobj static_roots, lispobj read_only_roots)
   {
     struct scavenger_hook *sh;
     for (sh = PTR((int)scavenger_hooks); (lispobj)sh != PTR(NIL);) {
-      struct scavenger_hook *sh_next = PTR((int) sh->next);
+      struct scavenger_hook *sh_next = PTR((unsigned long) sh->next);
       funcall0(sh->function);
       sh->next = NULL;
       sh = sh_next;
     }
-    scavenger_hooks = NIL;
+    scavenger_hooks = (unsigned long) NIL;
   }
 #endif
   
