@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.6 1990/07/07 13:44:33 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.7 1990/07/08 11:48:19 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -1275,6 +1275,11 @@
    as float2."
   (declare (float float1 float2))
   (float-sign float1 float2))
+
+(defun float-format-digits (format)
+  (ecase format
+    ((short-float single-float) single-float-digits)
+    ((double-float long-float) double-float-digits)))
 
 (proclaim '(inline float-digits float-precision float-radix))
 
