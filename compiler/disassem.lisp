@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.10 1992/07/30 13:18:56 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.11 1992/08/31 11:53:27 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1829,7 +1829,7 @@
   (declare (ignore level))
   (print-unreadable-object (seg stream :type t)
     (let ((addr (system:sap-int (funcall (seg-sap-maker seg)))))
-      (format stream "#x~x[~d]~:[ (#x~x)~;~]~@[ in ~s~]"
+      (format stream "#x~x[~d]~:[ (#x~x)~;~*~]~@[ in ~s~]"
 	      addr
 	      (seg-length seg)
 	      (= (seg-virtual-location seg) addr)
@@ -2055,7 +2055,8 @@
 	(sort (copy-list (seg-hooks segment))
 	      #'(lambda (oh1 oh2)
 		  (or (< (offs-hook-offset oh1) (offs-hook-offset oh2))
-		      (and (offs-hook-before-address oh1)
+		      (and (= (offs-hook-offset oh1) (offs-hook-offset oh2))
+			   (offs-hook-before-address oh1)
 			   (not (offs-hook-before-address oh2)))))))
   (setf (dstate-cur-offs dstate) 0)
   (setf (dstate-cur-labels dstate) (dstate-labels dstate)))
