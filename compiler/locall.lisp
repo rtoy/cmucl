@@ -206,9 +206,9 @@
 ;;; the function.
 ;;;
 ;;;    Except in the interpreter, we don't attempt to convert calls that appear
-;;; in a top-level lambda unless there is only one reference.  This ensures
-;;; that top-level components will contain only load-time code: any references
-;;; to run-time functions will be as closures.
+;;; in a top-level lambda unless there is only one reference or the function is
+;;; a unwind-protect cleanup.  This allows top-level components to contain only
+;;; load-time code: any references to run-time functions will be as closures.
 ;;;
 ;;;    If we cannot convert a reference, then we mark the referenced function
 ;;; as an entry-point, creating a new XEP if necessary.
@@ -228,6 +228,7 @@
 		    (eq (continuation-use cont) ref)
 		    (or (null (rest refs))
 			*converting-for-interpreter*
+			(eq (functional-kind fun) :cleanup)
 			(not (eq (functional-kind (node-home-lambda ref))
 				 :top-level))))
 	       (ecase (ref-inlinep ref)
