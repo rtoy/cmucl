@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.64 1998/07/24 17:17:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.65 1998/07/25 23:37:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1621,21 +1621,22 @@
 	    (descend-into (stream)
 	      (write-string "#S(" stream)
 	      (prin1 name stream)
-	      (do ((index 1 (1+ index))
-		   (length (%instance-length structure))
+	      (do ((index 0 (1+ index))
 		   (slots (dd-slots dd) (cdr slots)))
-		  ((or (= index length)
-		       (and *print-length*
-			    (= index *print-length*)))
-		   (if (= index length)
+		  ((or (null slots)
+		       (and (not *print-readably*) (eql *print-length* index)))
+		   (if (null slots)
 		       (write-string ")" stream)
-		       (write-string "...)" stream)))
+		       (write-string " ...)" stream)))
 		(declare (type index index))
 		(write-char #\space stream)
 		(write-char #\: stream)
-		(output-symbol-name (dsd-%name (car slots)) stream)
-		(write-char #\space stream)
-		(output-object (%instance-ref structure index) stream)))))))
+		(let ((slot (first slots)))
+		  (output-symbol-name (dsd-%name slot) stream)
+		  (write-char #\space stream)
+		  (output-object (funcall (fdefinition (dsd-accessor slot))
+					  structure)
+				 stream))))))))
 
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))
