@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.102 2003/01/29 02:47:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.103 2003/01/29 03:20:31 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -707,7 +707,7 @@
 (defknown array-rank (array) array-rank (foldable flushable))
 (defknown array-dimension (array array-rank) index (foldable flushable))
 (defknown array-dimensions (array) list (foldable flushable))
-(defknown array-in-bounds-p (array &rest index) boolean (foldable flushable))
+(defknown array-in-bounds-p (array &rest integer) boolean (foldable flushable))
 (defknown array-row-major-index (array &rest index) array-total-size
   (foldable flushable)) 
 (defknown array-total-size (array) array-total-size (foldable flushable))
