@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.34 1993/05/18 23:49:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.35 1993/05/25 21:23:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,7 +182,11 @@
 				      ,(reg-spec-temp res)))
 		     results))
 	 (:results ,@(mapcar #'arg-or-res-spec results))
-	 (:ignore ,@(mapcar #'reg-spec-name temps))
+	 (:ignore ,@(mapcar #'reg-spec-name temps)
+		  ,@(apply #'append
+			   (mapcar #'cdr
+				   (remove :ignore call-temps
+					   :test-not #'eq :key #'car))))
 	 ,@(remove-if #'(lambda (x)
 			  (member x '(:return-style :cost)))
 		      options
