@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31.2.4 2000/10/16 17:33:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.31.2.5 2000/11/04 17:06:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -203,7 +203,7 @@
 		    (handler-case
 			(%restart-lisp)
 		      (error (cond)
-			(format *error-output* "Error in batch processing:~%~A"
+			(format *error-output* "Error in batch processing:~%~A~%"
 				cond)
 			(throw '%end-of-the-world 1)))
 		    (%restart-lisp))
