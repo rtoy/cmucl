@@ -14,7 +14,7 @@
 ;;; file (VAXIO, SPIO, or VMIO) contains functions used by this file for
 ;;; a specific machine.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 
 (export '(make-broadcast-stream make-synonym-stream
 	  make-broadcast-stream make-concatenated-stream make-two-way-stream
@@ -278,7 +278,8 @@
   "Clears any buffered input associated with the Stream."
   (let ((stream (in-synonym-of stream)))
     (setf (stream-in-index stream) in-buffer-length)
-    (funcall (stream-misc stream) stream :clear-input)))
+    (funcall (stream-misc stream) stream :clear-input)
+    nil))
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
@@ -301,7 +302,7 @@
 	 (num-buffered (- in-buffer-length index)))
     (declare (fixnum index num-buffered))
     (cond
-     ((not buffer)
+     ((not in-buffer)
       (with-in-stream stream stream-n-bin buffer start numbytes eof-errorp))
      ((not (eql (%primitive get-vector-access-code in-buffer) 3))
       (error "N-Bin only works on 8-bit-like streams."))
@@ -762,6 +763,9 @@
 
 (defun string-in-misc (stream operation &optional arg1 arg2)
   (case operation
+    (:file-position
+     (if (null arg1)
+       (string-input-stream-current stream)))
     (:read-line
      (let ((string (string-input-stream-string stream))
 	   (current (string-input-stream-current stream))
@@ -849,6 +853,9 @@
 (defun string-out-misc (stream operation &optional arg1 arg2)
   (declare (ignore arg1 arg2))
   (case operation
+    (:file-position
+     (if (null arg1)
+       (string-output-stream-index stream)))
     (:charpos
      (do ((index (1- (the fixnum (string-output-stream-index stream)))
 		 (1- index))
