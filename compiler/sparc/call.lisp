@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.27 1997/04/16 18:06:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.28 2001/01/03 08:45:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1220,7 +1220,8 @@ default-value-8
     (let ((err-lab
 	   (generate-error-code vop invalid-argument-count-error nargs)))
       (inst cmp nargs (fixnum count))
-      (inst b :ne err-lab)
+      ;; Assume we don't take the branch
+      (inst b :ne err-lab #+sparc-v9 :pn)
       (inst nop))))
 
 ;;; Signal various errors.

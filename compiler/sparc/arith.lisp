@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.21 2000/09/26 15:14:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.22 2001/01/03 08:45:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,7 +252,7 @@
         (inst sra r x 31)
       (inst wry r)
       ;; Remove tag bits so Q and R will be tagged correctly.
-      (inst sra y-int y 2)
+      (inst sra y-int y fixnum-tag-bits)
       (inst nop)
       (inst nop)
 
@@ -282,7 +282,7 @@
   (:generator 12
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero #+sparc-v9 :pn)
       ;; Extend the sign of X into the Y register
         (inst sra r x 31)
       (inst wry r)
@@ -316,7 +316,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero #+sparc-v9 :pn)
         (inst wry zero-tn)		; Clear out high part
       (inst nop)
       (inst nop)
@@ -346,7 +346,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero :pn)
       ;; Sign extend the numbers, just in case.
         (inst sra x 0)
       (inst sra y 0)
@@ -374,7 +374,7 @@
   (:generator 8
     (let ((zero (generate-error-code vop division-by-zero-error x y)))
       (inst cmp y zero-tn)
-      (inst b :eq zero)
+      (inst b :eq zero :pn)
       ;; Zap the higher 32 bits, just in case
         (inst srl x 0)
       (inst srl y 0)
@@ -1270,6 +1270,7 @@
 ;; direction of the shift at run-time.
 (in-package "C")
 
+#+nil
 (deftransform ash ((num shift) (integer integer))
   (let ((num-type (continuation-type num))
 	(shift-type (continuation-type shift)))

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.11 2000/12/05 03:07:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.12 2001/01/03 08:45:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.11 2000/12/05 03:07:04 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.12 2001/01/03 08:45:52 dtc Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -276,7 +276,8 @@
        `((inst andcc zero-tn ,reg 3)
 	 ,(if (or lowtags hdrs)
 	      `(inst b :eq ,(if not-p not-target target))
-	      `(inst b ,(if not-p :ne :eq) ,target))))
+	      `(inst b ,(if not-p :ne :eq) ,target
+		       #+sparc-v9 ,(if not-p :pn :pt)))))
      (when (or lowtags hdrs)
        `((inst and ,temp ,reg lowtag-mask)))
      (when lowtags
