@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.11 1992/04/21 04:16:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.12 1993/05/08 00:47:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,6 +193,7 @@
 ;;; COMPONENT-REANALYZE.  We remove all deleted blocks from the IR2-COMPONENT
 ;;; VALUES-RECEIVERS to keep stack analysis from getting confused.
 ;;;
+(defevent control-deleted-block "control analysis deleted dead block")
 (defun control-analyze (component block-info-constructor)
   (declare (type component component)
 	   (type function block-info-constructor))
@@ -216,6 +217,7 @@
 
     (do-blocks (block component)
       (unless (block-flag block)
+	(event control-deleted-block (continuation-next (block-start block)))
 	(delete-block block))))
 
   (let ((2comp (component-info component)))
