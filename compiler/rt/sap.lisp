@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.1 1991/02/18 15:08:09 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.2 1991/04/13 13:44:11 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -211,12 +211,15 @@
        (define-vop (,name)
 	 (:policy :fast-safe)
 	 (:translate ,translate)
-	 (:args (object :scs (sap-reg) :to :eval)
+	 (:args (object :scs (sap-reg) :to (:eval 0))
 		(offset :scs (any-reg) :target base))
 	 (:results (result :scs (,result-sc)))
 	 (:arg-types system-area-pointer positive-fixnum)
 	 (:result-types ,result-type)
 	 (:temporary (:scs (sap-reg) :from (:argument 1)) base)
+	 (:temporary (:scs (non-descriptor-reg) :from (:eval 0) :to (:eval 1))
+		     bogus1 bogus2)
+	 (:ignore bogus1 bogus2)
 	 (:variant-vars signed)
 	 (:variant nil)
 	 (:generator 5
@@ -278,10 +281,10 @@
 	   (0 ;Want a byte.  Incoming offset is in bytes.  No shifting.
 	    '(inst stc data base offset))
 	   (1 ;Want 16 bits.  Incoming offset is in 16-bit quantities.
-	      ;Offset here is in bytes.
+	    ;Offset here is in bytes.
 	    '(inst sth data base offset))
 	   (2 ;Want 32 bits.  Incoming offset is in 32-bit quantities.
-	      ;Offset here is in bytes.
+	    ;Offset here is in bytes.
 	    '(inst st data base offset))))
 	(name-c (symbolicate name "-C")))
     `(progn
@@ -307,11 +310,14 @@
 	 (:args (object :scs (sap-reg) :to (:eval 0))
 		(offset :scs (any-reg) :target temp)
 		(data :scs (,@data-scs) :target result
-		      :to (:result 0)))
+		      :to (:eval 1)))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
-	 (:temporary (:scs (sap-reg) :from (:eval 0) :to (:result 0)) base)
+	 (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 2)) base)
 	 (:temporary (:scs (non-descriptor-reg)
 			   :from (:argument 1) :to (:eval 0)) temp)
+	 (:temporary (:scs (non-descriptor-reg) :from (:eval 1) :to (:eval 2))
+		     bogus)
+	 (:ignore bogus)
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
 	 (:generator 5
