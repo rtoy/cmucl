@@ -1,17 +1,22 @@
 ;;; -*- Mode: Lisp; Package: Lisp -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.9 1992/02/13 09:10:54 ram Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
 ;;; When loaded, this file builds a core image from all the .fasl files that
 ;;; are part of the kernel CMU Common Lisp system.
 
 (in-package "LISP")
+
+(unless (fboundp 'genesis) (load "target:compiler/generic/genesis"))
 
 (defparameter lisp-files
   `(,@(when (string= (c:backend-name c:*backend*) "PMAX")
