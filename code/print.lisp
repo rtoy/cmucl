@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.92 2004/04/22 21:31:14 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.93 2004/04/23 12:33:39 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1384,7 +1384,6 @@
 
 (defvar *digits* "0123456789")
 
-#+(or)
 (defun flonum-to-string (x &optional width fdigits scale fmin)
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1404,7 +1403,6 @@
 			 fdigits scale fmin))))))
 
 
-#+(or)
 (defun float-string (fraction exponent precision width fdigits scale fmin)
   (let ((r fraction) (s 1) (m- 1) (m+ 1) (k 0)
 	(digits 0) (decpnt 0) (cutoff nil) (roundup nil) u low high
