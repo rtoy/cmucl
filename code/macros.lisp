@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.38 1993/05/06 09:56:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.39 1993/06/24 12:22:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,14 +19,16 @@
 ;;;
 (in-package "LISP")
 (export '(defvar defparameter defconstant when unless setf
-	  defsetf define-setf-method psetf shiftf rotatef push pushnew pop
+	  defsetf psetf shiftf rotatef push pushnew pop
 	  incf decf remf case typecase with-open-file
 	  with-open-stream with-input-from-string with-output-to-string
 	  locally etypecase ctypecase ecase ccase
-	  get-setf-method get-setf-method-multiple-value
+	  get-setf-expansion define-setf-expander
           define-modify-macro destructuring-bind nth-value
           otherwise ; Sacred to CASE and related macros.
-	  define-compiler-macro))
+	  define-compiler-macro
+	  ;; CLtL1 versions:
+	  define-setf-method get-setf-method get-setf-method-multiple-value))
 
 (in-package "EXTENSIONS")
 (export '(do-anonymous collect iterate))
@@ -188,11 +190,11 @@
   name)
 
 
-;;; And so is DEFINE-SETF-METHOD.
+;;; And so is DEFINE-SETF-EXPANDER.
 
 (defparameter defsetf-error-string "Setf expander for ~S cannot be called with ~S args.")
 
-(defmacro define-setf-method (access-fn lambda-list &body body)
+(defmacro define-setf-expander (access-fn lambda-list &body body)
   "Syntax like DEFMACRO, but creates a Setf-Method generator.  The body
   must be a form that returns the five magical values."
   (unless (symbolp access-fn)
@@ -213,6 +215,10 @@
 	      (block ,access-fn ,body))
 	  nil
 	  ',doc)))))
+
+(defmacro define-setf-method (&rest stuff)
+  "Obsolete, use define-setf-expander."
+  `(define-setf-expander ,@stuff))
 
 
 ;;; %DEFINE-SETF-MACRO  --  Internal
@@ -520,7 +526,7 @@
 ;;; of value forms, a list of the single store-value form, a storing function,
 ;;; and an accessing function.
 
-(defun get-setf-method-multiple-value (form &optional environment)
+(defun get-setf-expansion (form &optional environment)
   "Returns five values needed by the SETF machinery: a list of temporary
    variables, a list of values with which to fill them, a list of temporaries
    for the new values, the setting function, and the accessing function."
@@ -530,7 +536,7 @@
 	       (expansion expanded)
 	       (macroexpand-1 form environment)
 	     (if expanded
-		 (get-setf-method-multiple-value expansion environment)
+		 (get-setf-expansion expansion environment)
 		 (let ((new-var (gensym)))
 		   (values nil nil (list new-var)
 			   `(setq ,form ,new-var) form)))))
@@ -550,6 +556,9 @@
 	  (t
 	   (expand-or-get-setf-inverse form environment)))))
 
+(defun get-setf-method-multiple-value (form &optional env)
+  "Obsolete: use GET-SETF-EXPANSION."
+  (get-setf-expansion form env))
 
 ;;;
 ;;; If a macro, expand one level and try again.  If not, go for the
@@ -559,7 +568,7 @@
       (expansion expanded)
       (macroexpand-1 form environment)
     (if expanded
-	(get-setf-method-multiple-value expansion environment)
+	(get-setf-expansion expansion environment)
 	(get-setf-method-inverse form `(funcall #'(setf ,(car form)))
 				 t))))
 
@@ -580,11 +589,10 @@
 
 
 (defun get-setf-method (form &optional environment)
-  "Like Get-Setf-Method-Multiple-Value, but signal an error if there are
-   more than one new-value variables."
+  "Obsolete: use GET-SETF-EXPANSION and handle multiple store values."
   (multiple-value-bind
       (temps value-forms store-vars store-form access-form)
-      (get-setf-method-multiple-value form environment)
+      (get-setf-expansion form environment)
     (when (cdr store-vars)
       (error "GET-SETF-METHOD used for a form with multiple store ~
 	      variables:~%  ~S" form))
@@ -680,7 +688,7 @@
 	(if (atom place)
 	    `(setq ,place ,value-form)
 	    (multiple-value-bind (dummies vals newval setter getter)
-				 (get-setf-method-multiple-value place env)
+				 (get-setf-expansion place env)
 	      (declare (ignore getter))
 	      (let ((inverse (info setf inverse (car place))))
 		(if (and inverse (eq inverse (car setter)))
@@ -707,7 +715,7 @@
 	  (error "Odd number of args to PSETF."))
       (multiple-value-bind
 	  (dummies vals newval setter getter)
-	  (get-setf-method-multiple-value (car a) env)
+	  (get-setf-expansion (car a) env)
 	(declare (ignore getter))
 	(let*-bindings (mapcar #'list dummies vals))
 	(mv-bindings (list newval (cadr a)))
@@ -738,7 +746,7 @@
 		   ,prev-setter)))
       (multiple-value-bind
 	  (temps exprs store-vars setter getter)
-	  (get-setf-method-multiple-value (car a) env)
+	  (get-setf-expansion (car a) env)
 	(loop
 	  for temp in temps
 	  for expr in exprs
@@ -763,7 +771,7 @@
       (dolist (arg args)
 	(multiple-value-bind
 	    (temps subforms store-vars setter getter)
-	    (get-setf-method-multiple-value arg env)
+	    (get-setf-expansion arg env)
 	  (loop
 	    for temp in temps
 	    for subform in subforms
