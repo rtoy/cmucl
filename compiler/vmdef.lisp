@@ -61,12 +61,12 @@
 ;;;
 (defun meta-sc-or-lose (x)
   (the sc
-       (or (gethash x (backend-meta-sc-names *backend*))
+       (or (gethash x (backend-meta-sc-names *target-backend*))
 	   (error "~S is not a defined storage class." x))))
 ;;;
 (defun meta-sb-or-lose (x)
   (the sb
-       (or (gethash x (backend-meta-sb-names *backend*))
+       (or (gethash x (backend-meta-sb-names *target-backend*))
 	   (error "~S is not a defined storage base." x))))
 ;;;
 (defun meta-sc-number-or-lose (x)
@@ -105,9 +105,10 @@
 		 (make-finite-sb :name name :kind kind :size size))))
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name (backend-meta-sb-names *backend*)) ',res))
+	 (setf (gethash ',name (backend-meta-sb-names *target-backend*))
+	       ',res))
        ,(if (eq kind :non-packed)
-	    `(setf (gethash ',name (backend-sb-names *backend*))
+	    `(setf (gethash ',name (backend-sb-names *target-backend*))
 		   (copy-sb ',res))
 	    `(let ((res (copy-finite-sb ',res)))
 	       (setf (finite-sb-always-live res)
@@ -116,11 +117,12 @@
 		     (make-array ',size :initial-element '#()))
 	       (setf (finite-sb-live-tns res)
 		     (make-array ',size :initial-element nil))
-	       (setf (gethash ',name (backend-sb-names *backend*)) res)))
+	       (setf (gethash ',name (backend-sb-names *target-backend*))
+		     res)))
 
-       (setf (backend-sb-list *backend*)
+       (setf (backend-sb-list *target-backend*)
 	     (cons (sb-or-lose ',name)
-		   (remove ',name (backend-sb-list *backend*)
+		   (remove ',name (backend-sb-list *target-backend*)
 			   :key #'sb-name)))
        ',name)))
 
@@ -203,17 +205,19 @@
 						    ',alternate-scs)
 			     :constant-scs (mapcar #'meta-sc-or-lose
 						   ',constant-scs))))
-	   (setf (gethash ',name (backend-meta-sc-names *backend*)) res)
-	   (setf (svref (backend-meta-sc-numbers *backend*) ',number) res)
+	   (setf (gethash ',name (backend-meta-sc-names *target-backend*)) res)
+	   (setf (svref (backend-meta-sc-numbers *target-backend*) ',number)
+		 res)
 	   (setf (svref (sc-load-costs res) ',number) 0)))
 
-       (let ((old (svref (backend-sc-numbers *backend*) ',number)))
+       (let ((old (svref (backend-sc-numbers *target-backend*) ',number)))
 	 (when (and old (not (eq (sc-name old) ',name)))
 	   (warn "Redefining SC number ~D from ~S to ~S." ',number
 		 (sc-name old) ',name)))
        
-       (setf (svref (backend-sc-numbers *backend*) ',number) (meta-sc-or-lose ',name))
-       (setf (gethash ',name (backend-sc-names *backend*))
+       (setf (svref (backend-sc-numbers *target-backend*) ',number)
+	     (meta-sc-or-lose ',name))
+       (setf (gethash ',name (backend-sc-names *target-backend*))
 	     (meta-sc-or-lose ',name))
        (setf (sc-sb (sc-or-lose ',name)) (sb-or-lose ',sb-name))
        ',name)))
@@ -345,7 +349,7 @@
 
 (defun meta-primitive-type-or-lose (name)
   (the primitive-type
-       (or (gethash name (backend-meta-primitive-type-names *backend*))
+       (or (gethash name (backend-meta-primitive-type-names *target-backend*))
 	   (error "~S is not a defined primitive type." name))))
 
 ); eval-when
@@ -372,11 +376,13 @@
 	(get-type `(specifier-type ',type)))
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name (backend-meta-primitive-type-names *backend*))
+	 (setf (gethash ',name (backend-meta-primitive-type-names
+				*target-backend*))
 	       (make-primitive-type :name ',name  :scs ',scns
 				    :type ,get-type)))
        ,(once-only ((n-old `(gethash ',name
-				     (backend-primitive-type-names *backend*)))
+				     (backend-primitive-type-names
+				      *target-backend*)))
 		    (n-type get-type))
 	  `(progn
 	     (cond (,n-old
@@ -384,7 +390,8 @@
 		    (setf (primitive-type-type ,n-old) ,n-type))
 		   (t
 		    (setf (gethash ',name
-				   (backend-primitive-type-names *backend*))
+				   (backend-primitive-type-names
+				    *target-backend*))
 			  (make-primitive-type :name ',name  :scs ',scns
 					       :type ,n-type))))
 	     ',name)))))
@@ -398,7 +405,7 @@
   "DEF-PRIMITIVE-TYPE-ALIAS Name Result
   Define name to be an alias for Result in VOP operand type restrictions."
   `(eval-when (compile load eval)
-     (setf (gethash ',name (backend-primitive-type-aliases *backend*))
+     (setf (gethash ',name (backend-primitive-type-aliases *target-backend*))
 	   ',result)
      ',name))
 
@@ -449,12 +456,13 @@
 	      (dolist (allowed (primitive-type-scs ptype) nil)
 		(when (eql allowed scn)
 		  (return t))
-		(let ((allowed-sc (svref (,sc-numbers-fun *backend*) allowed)))
+		(let ((allowed-sc (svref ,sc-numbers-fun allowed)))
 		  (when (or (member sc (sc-alternate-scs allowed-sc))
 			    (member sc (sc-constant-scs allowed-sc)))
 		    (return t)))))))))
-  (frob sc-allowed-by-primitive-type backend-sc-numbers nil)
-  (frob meta-sc-allowed-by-primitive-type backend-meta-sc-numbers t))
+  (frob sc-allowed-by-primitive-type (backend-sc-numbers *backend*) nil)
+  (frob meta-sc-allowed-by-primitive-type
+    (backend-meta-sc-numbers *target-backend*) t))
 
 
 ;;;; VOP definition structures:
@@ -661,7 +669,7 @@
 ;;;
 (defun vop-parse-or-lose (name)
   (the vop-parse
-       (or (gethash name (backend-parsed-vops *backend*))
+       (or (gethash name (backend-parsed-vops *target-backend*))
 	   (error "~S is not the name of a defined VOP." name))))
 
 
@@ -1430,7 +1438,7 @@
 
 	(dotimes (i sc-number-limit)
 	  (unless (svref costs i)
-	    (let ((op-sc (svref (backend-meta-sc-numbers *backend*) i)))
+	    (let ((op-sc (svref (backend-meta-sc-numbers *target-backend*) i)))
 	      (when op-sc
 		(let ((cost (if load-p
 				(svref (sc-move-costs load-sc) i)
@@ -1516,7 +1524,7 @@
 		   ((symbolp spec)
 		    (let ((alias (gethash spec
 					  (backend-primitive-type-aliases
-					   *backend*))))
+					   *target-backend*))))
 		      (if alias
 			  (parse-operand-type alias)
 			  `(:or ,spec))))
@@ -1534,7 +1542,7 @@
 			   (let ((alias
 				  (gethash item
 					   (backend-primitive-type-aliases
-					    *backend*))))
+					    *target-backend*))))
 			     (if alias
 				 (let ((alias (parse-operand-type alias)))
 				   (unless (eq (car alias) :or)
@@ -1707,7 +1715,11 @@
 (defun set-up-function-translation (parse n-template)
   (declare (type vop-parse parse))
   (mapcar #'(lambda (name)
-	      `(let ((info (function-info-or-lose ',name)))
+	      `(let ((info
+		      (let ((*info-environment*
+			     (or (backend-info-environment *target-backend*)
+				 *info-environment*)))
+			(function-info-or-lose ',name))))
 		 (setf (function-info-templates info)
 		       (adjoin-template ,n-template
 					(function-info-templates info)))
@@ -2061,10 +2073,12 @@
       
     `(progn
        (eval-when (compile load eval)
-	 (setf (gethash ',name (backend-parsed-vops *backend*)) ',parse))
+	 (setf (gethash ',name (backend-parsed-vops *target-backend*))
+	       ',parse))
 
        (let ((,n-res ,(set-up-vop-info iparse parse)))
-	 (setf (gethash ',name (backend-template-names *backend*)) ,n-res)
+	 (setf (gethash ',name (backend-template-names *target-backend*))
+	       ,n-res)
 	 (setf (template-type ,n-res)
 	       (specifier-type (template-type-specifier ,n-res)))
 	 ,@(set-up-function-translation parse n-res))
