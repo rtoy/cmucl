@@ -323,9 +323,9 @@
   ;;  :Stream - from a non-file stream (Compile-From-Stream)
   (from nil :type (member :file :stream :lisp))
   ;;
-  ;; If :File, the file name, if :Lisp, the lambda compiled, otherwise some
-  ;; descriptive string.
-  (name nil :type (or pathname list simple-string))
+  ;; If :File, the file name, if :Lisp, the form evaluated/compiled, otherwise
+  ;; some descriptive string.  When from COMPILE, this is #'(LAMBDA ...).
+  (name nil)
   ;;
   ;; File comment for this file, if any.
   (comment nil :type (or simple-string null))
