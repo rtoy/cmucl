@@ -1,6 +1,6 @@
 ### amd64-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.8 2004/07/20 22:36:54 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.9 2004/07/27 21:07:49 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -1029,6 +1029,37 @@ GNAME(alloc_overflow_r12):
 	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
 	ret
 	.size	 GNAME(alloc_overflow_r12),.-GNAME(alloc_overflow_r12)
+
+/* This routine handles an overflow with r13=crfp+size. So the
+   size=r13-crfp. */
+	.align	align_4byte
+	.globl	GNAME(alloc_overflow_r13)
+	.type	GNAME(alloc_overflow_r13),@function
+GNAME(alloc_overflow_r13):
+	pushq	%rax		# Save rax
+	pushq	%rcx		# Save rcx
+	pushq	%rdx		# Save rdx
+	pushq	%rdi
+	pushq	%rsi
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	/* Calculate the size for the allocation. */
+	subq	CURRENT_REGION_FREE_POINTER + SYMBOL_VALUE_OFFSET,%r13
+	movq	%r13, %rdi	# Pass arg 1
+	call	GNAME(alloc)
+	movq	%rax,%r13	# setup the destination.
+	popq	%r10
+	popq	%r9
+	popq	%r8
+	popq	%rsi
+	popq	%rdi
+	popq	%rdx	# Restore rdx.
+	popq	%rcx	# Restore rcx.
+	popq	%rax	# Restore rax.
+	addl	$13,(%rsp) # Adjust the return address to skip the next inst.
+	ret
+	.size	 GNAME(alloc_overflow_r13),.-GNAME(alloc_overflow_r13)
 			
 #endif
 
@@ -1088,14 +1119,10 @@ GNAME(resolve_linkage_tramp):
 	.global GNAME(undefined_foreign_symbol_trap)
 	.type	GNAME(undefined_foreign_symbol_trap),@function
 GNAME(undefined_foreign_symbol_trap):
-	/* C Calling Convention, move one arg to EAX */
-#if TOO_LAME_TO_PORT_IT_YET
-        pushl %ebp
-#endif
-        movl %esp,%ebp
-#if TOO_LAME_TO_PORT_IT_YET
-        movl 8(%ebp),%eax
-#endif
+	/* C Calling Convention, move one arg to RAX */
+        pushq %rbp
+        movq %rsp,%rbp
+        movq %rdi,%rax
 
 	/* Now trap to Lisp */
 	int3
