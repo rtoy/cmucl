@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.38 1992/03/09 20:18:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.39 1992/04/30 19:43:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,7 +195,5 @@
   ;; We can't compile anything after macros, 'cause it breaks the running lisp.
   (comf "target:code/macros"))
 
-
-); let
 
 ); with-compiler-log-file
