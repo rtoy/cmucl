@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.4 1991/12/08 03:30:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.5 1991/12/08 07:10:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,8 +82,6 @@
 	  prin1-short
 	  prin1-quoted-short
 	  ))
-
-(import 'xp:*print-lines*)
 
 ;;; This file implements a retargetable disassembler, that uses simple hooks
 ;;; in the compiler-backend's instruction definitions to learn about a
@@ -2818,7 +2816,7 @@ symbol object that we know about.")
 
 (defun source-available-p (debug-function)
   (handler-case
-      (di:do-blocks (block debug-function)
+      (di:do-debug-function-blocks (block debug-function)
 	(declare (ignore block))
 	(return t))
     (di:no-debug-blocks () nil)))
@@ -2844,7 +2842,7 @@ symbol object that we know about.")
 	     (push (cons (dstate-code-insts-offs-address dstate pc) fun)
 		   hooks)))
       (handler-case
-	  (di:do-blocks (block debug-function)
+	  (di:do-debug-function-blocks (block debug-function)
 	    (let ((first-location-in-block-p t))
 	      (di:do-debug-block-locations (loc block)
 		(let ((pc (di::compiled-code-location-pc loc)))
