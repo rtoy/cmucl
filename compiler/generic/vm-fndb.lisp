@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.48 1993/02/26 08:42:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.49 1993/03/12 16:50:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -297,7 +297,8 @@
   (flushable))
 
 
-(defknown %make-funcallable-instance (index function) function (unsafe))
+(defknown %make-funcallable-instance (index function function layout) function
+  (unsafe))
 
 (defknown %set-funcallable-instance-function (function function) function
   (unsafe))
