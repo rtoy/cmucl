@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.5 1997/11/19 02:57:17 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.6 1997/12/05 06:53:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,10 +61,7 @@
 			  (:temp eax dword-reg eax-offset))
   (declare (ignore result esi ecx eax))
   (loadw length string vector-length-slot other-pointer-type)
-  ;; zzzzz this appears to be busted
-  ;; (inst jmp nil (make-fixup 'sxhash-simple-substring :assembly-routine))
-  ;; just fall through???
-  )
+  (inst jmp (make-fixup 'sxhash-simple-substring :assembly-routine)))
 
 (define-assembly-routine (sxhash-simple-substring
 			  (:translate %sxhash-simple-substring)
@@ -79,10 +76,9 @@
 			  (:temp ecx dword-reg ecx-offset)
 			  (:temp eax dword-reg eax-offset))
   ;; Compute a pointer to where we are going to be extracting the bits.
-  (inst lea esi
-	(make-ea :byte :base string
-		 :disp (- (* vector-data-offset word-bytes)
-			  other-pointer-type)))
+  (inst lea esi	(make-ea :byte :base string
+			 :disp (- (* vector-data-offset word-bytes)
+				  other-pointer-type)))
   ;; Initialize the result.
   (inst xor result result)
   ;; Get the count.  If it's zero, blow out.

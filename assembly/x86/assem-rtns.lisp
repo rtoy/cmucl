@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.3 1997/11/21 12:26:48 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.4 1997/12/05 06:53:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -196,10 +196,9 @@
   (pushw ebp-tn -2)
 
   ;; And away we go.
-  (inst jmp
-	(make-ea :byte :base eax :disp (- (* closure-function-slot word-bytes)
-					  function-pointer-type)))
-  )
+  (inst jmp (make-ea :byte :base eax
+		     :disp (- (* closure-function-slot word-bytes)
+			      function-pointer-type))))
 
 
 
@@ -227,13 +226,9 @@
   (inst jmp loop)
   
   EXIT
-
   
-  ;; hear eax points to catch block containing symbol pointed to by edx
-  ;; (inst jmp-near (make-fixup 'unwind :assembly-routine)) -- jrd
-  ;;
-  ;; fall into unwind
-  )
+  ;; Hear EAX points to catch block containing symbol pointed to by EDX.
+  (inst jmp (make-fixup 'unwind :assembly-routine)))
 
 ;;;; Non-local exit noise.
 
