@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.32 1990/07/14 09:27:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.33 1990/09/06 17:49:04 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -167,7 +167,10 @@
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   :element-size 2
+   ;; Note: we don't bother with the element size, 'cause load-tn's with
+   ;; an element-size other than one don't work, and nothing can be allocated
+   ;; in the odd fp regs anyway.
+   ;; :element-size 2
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
@@ -304,7 +307,13 @@
 ;;; In a bootstrapping situation, we should be careful to use the
 ;;; correct values for the system parameters.
 ;;;
-(defun primitive-type (type)
+(defun-cached (primitive-type
+	       :hash-function (lambda (x)
+				(logand (cache-hash-eq x) #x1FF))
+	       :hash-bits 9
+	       :values 2
+	       :default (values nil :empty))
+	      ((type eq))
   (declare (type ctype type))
   (macrolet ((any () '(values *any-primitive-type* nil))
 	     (exactly (type) `(values (primitive-type-or-lose ',type) t))
@@ -396,6 +405,8 @@
 	  (part-of list))
 	 (t
 	  (any))))
+      (function-type
+       (exactly function))
       (ctype
        (any)))))
 
