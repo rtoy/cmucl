@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.16 2003/02/25 15:18:34 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.17 2003/05/05 16:13:59 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1173,3 +1173,6 @@
   (system:without-hemlock
    (unix:unix-kill (unix:unix-getpid) :sigstop))
   T)
+
+
+(provide :hemlock)
