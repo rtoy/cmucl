@@ -785,7 +785,7 @@
 ;;; one directory.
 ;;;
 (defun dired-directorify (pathname)
-  (let ((directory (lisp::predict-name pathname t)))
+  (let ((directory (ext:unix-namestring pathname)))
     (if (directoryp directory)
 	directory
 	(pathname (concatenate 'simple-string (namestring directory) "/")))))
