@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.9 1990/07/10 13:17:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.10 1990/07/21 15:32:33 wlott Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -255,38 +255,12 @@
   "Extracts the imaginary part of a number."
   (imagpart number))
 
-#+nil
-(defun phase (number)
-  "Returns the angle part of the polar representation of a complex number.
-  For non-complex positive numbers, this is 0.  For non-complex negative
-  numbers this is PI."
-  ;; This call was originally atan (realpart number) (imagpart number)
-  ;; but it gave imprecise results.
-  (if (complexp number)
-      (let ((ipart (imagpart number))
-	    (rpart (realpart number)))
-	(if (zerop rpart)
-	    (if (minusp ipart)
-		(if (long-float-p ipart) (- %long-pi/2) (- %short-pi/2))
-		(if (long-float-p ipart) %long-pi/2 %short-pi/2))
-	    (atan (/ (imagpart number) (realpart number)))))
-      (if (minusp number)
-	  (if (long-float-p number) pi %short-pi)
-	  (if (long-float-p number) 0.0l0 0.0))))
-
 (defun conjugate (number)
   "Returns the complex conjugate of NUMBER.  For non-complex numbers, this is
   an identity."
   (if (complexp number)
       (complex (realpart number) (- (imagpart number)))
       number))
-
-(defun cis (theta)
-  "Return cos(Theta) + i sin(Theta)."
-  (if (complexp theta)
-      (error "Argument to CIS is complex: ~S" theta)
-      (complex (cos theta) (sin theta))))
-
 
 (defun signum (number)
   "If NUMBER is zero, return NUMBER, else return (/ NUMBER (ABS NUMBER))."
@@ -730,17 +704,6 @@
       ((null nlist) (return result))
      (declare (list nlist))
      (if (< (car nlist) result) (setq result (car nlist)))))
-
-(defun abs (number)
-  "Returns the absolute value of the number."
-  (number-dispatch ((number number))
-    (((foreach single-float double-float fixnum rational))
-     (abs number))
-    ((complex)
-     (let ((rx (realpart number))
-	   (ix (imagpart number)))
-       (sqrt (+ (expt rx 2) (expt ix 2)))))))
-
 
 (eval-when (compile eval)
 
