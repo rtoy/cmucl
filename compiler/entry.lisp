@@ -70,4 +70,4 @@
 	     (or name
 		 (component-name (block-component block))))
      :arguments (make-arg-names internal-fun)
-     :type (type-specifier (definition-type internal-fun)))))
+     :type (type-specifier (leaf-type internal-fun)))))
