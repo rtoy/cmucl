@@ -1,4 +1,4 @@
-/* $Header */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.10 1990/07/01 04:47:20 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -14,9 +14,10 @@
 #include "lispregs.h"
 
 static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
-static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
+static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd();
 static void timed_call_cmd(), gc_cmd(), print_context_cmd();
-static void backtrace_cmd(), purify_cmd();
+static void backtrace_cmd(), purify_cmd(), catchers_cmd(), save_cmd();
+static void grab_sigs_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -26,28 +27,28 @@ static struct cmd {
     {"?", NULL, help},
     {"backtrace", "backtrace up to N frames", backtrace_cmd},
     {"call", "call FUNCTION with ARG1, ARG2, ...", call_cmd},
+    {"catchers", "Print a list of all the active catchers.", catchers_cmd},
     {"context", "print interrupt context number I.", print_context_cmd},
     {"dump", "dump memory starting at ADDRESS for COUNT words.", dump_cmd},
     {"d", NULL, dump_cmd},
     {"exit", "Exit this instance of the monitor.", exit_cmd},
     {"flush", "flush all temp variables.", flush_cmd},
     {"gc", "collect garbage (caveat collector).", gc_cmd},
+    {"grab-signals", "Set the signal handlers to call LDB.", grab_sigs_cmd},
     {"purify", "purify (caveat purifier).", purify_cmd},
     {"print", "print object at ADDRESS.", print_cmd},
     {"p", NULL, print_cmd},
     {"quit", "quit.", quit},
     {"regs", "display current lisp regs.", regs_cmd},
+    {"save", "save the current lisp image.", save_cmd},
     {"search", "search for TYPE starting at ADDRESS for a max of COUNT words.", search_cmd},
     {"s", NULL, search_cmd},
-    {"throw", "Throw to the top level monitor.", throw_cmd},
     {"time", "call FUNCTION with ARG1, ARG2, ... and time it.", timed_call_cmd},
     {NULL, NULL, NULL}
 };
 
 
-static jmp_buf topbuf;
 static jmp_buf curbuf;
-static int level = 0;
 
 
 static int visable(c)
@@ -194,8 +195,6 @@ char **ptr;
 {
     extern lispobj call_into_lisp();
 
-    int start_level = level;
-
     lispobj call_name = parse_lispobj(ptr);
     lispobj function, result, arg, *args;
     int numargs;
@@ -233,11 +232,6 @@ char **ptr;
     result = call_into_lisp(call_name, function, args, numargs);
 
     print(result);
-
-    if (start_level != level) {
-        printf("Back to level %d\n", start_level);
-        level = start_level;
-    }
 }
 
 static double tv_diff(x, y)
@@ -253,7 +247,6 @@ char **ptr;
     extern lispobj call_into_lisp();
 
     lispobj args[16];
-    int start_level = level;
 
     lispobj call_name = parse_lispobj(ptr);
     lispobj function, result, arg, *argptr;
@@ -311,11 +304,6 @@ char **ptr;
     printf("%20.8f msec of real time\n", real_time);
     printf("%20.8f msec of user time,\n", user_time);
     printf("%20.8f msec of system time.\n", system_time);
-
-    if (start_level != level) {
-        printf("Back to level %d\n", start_level);
-        level = start_level;
-    }
 }
 
 static void flush_cmd()
@@ -343,18 +331,6 @@ static void help()
             printf("%s\t%s\n", cmd->cmd, cmd->help);
 }
 
-static void throw_cmd()
-{
-    void throw_to_top();
-    char buf[10];
-
-    printf("Really throw? [n] ");
-    fflush(stdout);
-    fgets(buf, sizeof(buf), stdin);
-    if (buf[0] == 'y' || buf[0] == 'Y')
-        throw_to_top(0);
-}
-
 static int done;
 
 static void exit_cmd()
@@ -369,7 +345,7 @@ static void gc_cmd()
 
 static void purify_cmd()
 {
-	purify();
+	purify(NIL);
 }
 
 static void print_context(context)
@@ -430,8 +406,39 @@ char **ptr;
 	backtrace(n);
 }
 
-static void sub_monitor(csp, fp, bsp)
-lispobj *csp, *fp, *bsp;
+static void catchers_cmd()
+{
+    struct catch_block *catch;
+
+    catch = (struct catch_block *)SymbolValue(CURRENT_CATCH_BLOCK);
+
+    if (catch == NULL)
+        printf("There are no active catchers!\n");
+    else {
+        while (catch != NULL) {
+            printf("0x%08x:\n\tuwp: 0x%08x\n\tfp: 0x%08x\n\tcode: 0x%08x\n\tentry: 0x%08x\n\ttag: ", catch, catch->current_uwp, catch->current_cont, catch->current_code, catch->entry_pc);
+            brief_print((lispobj)catch->tag);
+            catch = catch->previous_catch;
+        }
+    }
+}
+
+static void save_cmd(ptr)
+char **ptr;
+{
+    if (more_p(ptr))
+        save(*ptr);
+    else
+        save("lisp.core");
+}
+
+static void grab_sigs_cmd()
+{
+    printf("Grabbing signals.\n");
+    test_init();
+}
+
+static void sub_monitor()
 {
     extern char *egets();
     struct cmd *cmd, *found;
@@ -440,19 +447,6 @@ lispobj *csp, *fp, *bsp;
     lispobj *new;
 
     while (!done) {
-        if ((new = current_control_stack_pointer) != csp) {
-            printf("CSP changed from 0x%x to 0x%x; Restoring.\n", csp, new);
-            current_control_stack_pointer = csp;
-        }
-        if ((new = current_control_frame_pointer) != fp) {
-            printf("FP changed from 0x%x to 0x%x; Restoring.\n", fp, new);
-            current_control_frame_pointer = csp;
-        }
-        if ((new = current_binding_stack_pointer) != bsp) {
-            printf("BSP changed from 0x%x to 0x%x; Restoring.\n", bsp, new);
-            current_binding_stack_pointer = bsp;
-        }
-
         printf("ldb> ");
         fflush(stdout);
         line = egets();
@@ -489,42 +483,24 @@ lispobj *csp, *fp, *bsp;
     }
 }
 
-void monitor()
+void ldb_monitor()
 {
     jmp_buf oldbuf;
-    lispobj *csp, *fp, *bsp;
-
-    csp = current_control_stack_pointer;
-    fp = current_control_frame_pointer;
-    bsp = current_binding_stack_pointer;
 
     bcopy(curbuf, oldbuf, sizeof(oldbuf));
 
-    if (level == 0) {
-        setjmp(topbuf);
-        level = 0;
-    }
-
-    level++;
-    printf("LDB monitor (level=%d)\n", level);
+    printf("LDB monitor\n");
 
     setjmp(curbuf);
 
-    sub_monitor(csp, fp, bsp);
+    sub_monitor();
 
     done = FALSE;
 
     bcopy(oldbuf, curbuf, sizeof(curbuf));
-
-    level--;
 }
 
 void throw_to_monitor()
 {
     longjmp(curbuf, 1);
-}
-
-void throw_to_top()
-{
-    longjmp(topbuf, 1);
 }
