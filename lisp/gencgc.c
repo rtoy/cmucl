@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.1 1997/11/25 17:59:18 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.2 1997/11/29 20:32:41 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -4070,7 +4070,7 @@ maybe_adjust_large_object(lispobj *where)
     boxed = UNBOXED_PAGE;
     break;
   default:
-    fprintf(stderr,"*P2 %x %x\n",where,where[0]);
+    /* fprintf(stderr,"*P2 %x %x\n",where,where[0]);*/
     return;
   }
 
