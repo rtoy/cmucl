@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.17 1992/08/24 14:28:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.18 1992/09/04 12:45:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1599,9 +1599,7 @@
 	 (dependencies nil)
 	 (delay nil)
 	 (pinned nil)
-	 (pdefs nil)
-	 (scheduler-p (assem-params-scheduler-p
-		       (c:backend-assembler-params c:*target-backend*))))
+	 (pdefs nil))
     (dolist (option-spec options)
       (multiple-value-bind
 	  (option args)
@@ -1709,9 +1707,10 @@
 	 (eval-when (compile load eval)
 	   (%define-instruction ,sym-name ',defun-name))
 	 ,@(extract-nths 1 'progn pdefs)
-	 (disassem:install-inst-flavors
-	  ',name
-	  (append ,@(extract-nths 0 'list pdefs)))))))
+	 ,@(when pdefs
+	     `((disassem:install-inst-flavors
+		',name
+		(append ,@(extract-nths 0 'list pdefs)))))))))
 
 ;;; DEFINE-INSTRUCTION-MACRO -- interface.
 ;;;
