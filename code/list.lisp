@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.19 1996/07/12 19:15:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,19 +94,21 @@
 (proclaim '(maybe-inline tree-equal-test tree-equal-test-not))
 
 (defun tree-equal-test-not (x y test-not)
-  (cond ((not (funcall test-not x y)) t)
-	((consp x)
+  (cond ((consp x)
 	 (and (consp y)
 	      (tree-equal-test-not (car x) (car y) test-not)
 	      (tree-equal-test-not (cdr x) (cdr y) test-not)))
+	((consp y) nil)
+	((not (funcall test-not x y)) t)
 	(t ())))
 
 (defun tree-equal-test (x y test)
-  (cond ((funcall test x y) t)
-	((consp x)
+  (cond	((consp x)
 	 (and (consp y)
 	      (tree-equal-test (car x) (car y) test)
 	      (tree-equal-test (cdr x) (cdr y) test)))
+	((consp y) nil)
+	((funcall test x y) t)
 	(t ())))
 
 (defun tree-equal (x y &key (test #'eql) test-not)
