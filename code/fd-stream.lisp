@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.27 1993/06/24 13:58:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.28 1993/08/04 10:39:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,10 @@
 
   (name nil)		      ; The name of this stream
   (file nil)		      ; The file this stream is for
-  (original nil)	      ; The original file (for :if-exists :rename)
+  ;;
+  ;; The backup file namestring for the old file, for :if-exists :rename or
+  ;; :rename-and-delete.
+  (original nil :type (or simple-string null))
   (delete-original nil)	      ; for :if-exists :rename-and-delete
   ;;
   ;;; Number of bytes per element.
@@ -102,7 +105,10 @@
   (handler nil)
   ;;
   ;; Timeout specified for this stream, or NIL if none.
-  (timeout nil :type (or index null)))
+  (timeout nil :type (or index null))
+  ;;
+  ;; Pathname of the file this stream is opened to (returned by PATHNAME.)
+  (pathname nil :type (or pathname null)))
 
 (defun %print-fd-stream (fd-stream stream depth)
   (declare (ignore depth) (stream stream))
@@ -987,7 +993,13 @@ non-server method is also significantly more efficient for large reads.
     (:file-position
      (fd-stream-file-position stream arg1))
     (:file-name
-     (fd-stream-file stream))))
+     (cond (arg1
+	    (setf (fd-stream-pathname stream) arg1)
+	    (setf (fd-stream-file stream) (unix-namestring arg1 nil))
+	    t)
+	   (t
+	    (fd-stream-pathname stream))))))
+
 
 ;;; FD-STREAM-FILE-POSITION -- internal.
 ;;;
@@ -1006,7 +1018,7 @@ non-server method is also significantly more efficient for large reads.
 		 ;; Adjust for buffered output:
 		 ;;  If there is any output buffered, the *real* file position
 		 ;; will be larger than reported by lseek because lseek
-		 ;; obviously cannot take into account output we have not
+		 ;; obviously cannot take< into account output we have not
 		 ;; sent yet.
 		 (dolist (later (fd-stream-output-later stream))
 		   (incf posn (- (the index (caddr later))
@@ -1086,6 +1098,7 @@ non-server method is also significantly more efficient for large reads.
 		       file
 		       original
 		       delete-original
+		       pathname
 		       input-buffer-p
 		       (name (if file
 				 (format nil "file ~S" file)
@@ -1112,6 +1125,7 @@ non-server method is also significantly more efficient for large reads.
 				 :file file
 				 :original original
 				 :delete-original delete-original
+				 :pathname pathname
 				 :buffering buffering
 				 :timeout timeout)))
     (set-routines stream element-type input output input-buffer-p)
@@ -1326,11 +1340,13 @@ non-server method is also significantly more efficient for large reads.
 				       :file namestring
 				       :original original
 				       :delete-original delete-original
+				       :pathname pathname
 				       :input-buffer-p t
 				       :auto-close t))
 		      (:probe
 		       (let ((stream
 			      (%make-fd-stream :name namestring :fd fd
+					       :pathname pathname
 					       :element-type element-type)))
 			 (close stream)
 			 stream)))))
@@ -1433,10 +1449,7 @@ non-server method is also significantly more efficient for large reads.
 ;;; stuff to get and set the file name.
 ;;;
 (defun file-name (stream &optional new-name)
-  (when (fd-stream-p stream)
-    (if new-name
-	(setf (fd-stream-file stream) new-name)
-	(fd-stream-file stream))))
+  (funcall (stream-misc stream) stream :file-name new-name))
 
 ;;;; Degenerate international character support:
 
@@ -1445,11 +1458,12 @@ non-server method is also significantly more efficient for large reads.
   "Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
+  (declare (ignore stream))
   (etypecase object
     (character 1)
     (string (length object))))
 
 (defun stream-external-format (stream)
-  (declare (type file-stream stream))
+  (declare (type file-stream stream) (ignore stream))
   "Returns :DEFAULT."
   :default)
