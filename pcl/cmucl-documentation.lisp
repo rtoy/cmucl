@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.9 2003/02/06 15:20:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.10 2003/02/06 15:47:35 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,10 +24,14 @@
   (lisp::function-doc x))
 
 (defmethod documentation ((x list) (doc-type (eql 'function)))
-  (when (eq (car x) 'setf)	; Give-up if not a setf function name.
-    (or (values (ext:info setf documentation (cadr x)))
-	;; Try the pcl function documentation.
-	(and (fboundp x) (documentation (fdefinition x) 't)))))
+  (when (ext:valid-function-name-p x)
+    (if (eq (car x) 'setf)
+	(or (values (ext:info setf documentation (cadr x)))
+	    (and (fboundp x)
+		 (documentation (fdefinition x) t)))
+	(or (values (ext:info function documentation x))
+	    (and (fboundp x)
+		 (documentation (fdefinition x) t))))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'function)))
   (or (values (ext:info function documentation x))
@@ -38,7 +42,12 @@
   (values (ext:info setf documentation x)))
 
 (defmethod (setf documentation) (new-value (x list) (doc-type (eql 'function)))
-  (setf (ext:info setf documentation (cadr x)) new-value))
+  (unless (ext:valid-function-name-p x)
+    (error "Invalid function name ~s" x))
+  (if (eq 'setf (cadr x))
+      (setf (ext:info setf documentation (cadr x)) new-value)
+      (setf (ext:info function documentation x) new-value))
+  new-value)
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'function)))
   (setf (ext:info function documentation x) new-value))
