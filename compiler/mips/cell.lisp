@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.12 1990/02/20 19:49:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.13 1990/02/22 20:33:21 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -170,13 +170,15 @@
 		   (pseudo-atomic (ndescr)
 		     (inst addiu result alloc-tn ,lowtag)
 		     ,@(cond ((and header did-rest)
-			      `((inst addiu temp extra-words ,size)
+			      `((inst addiu temp extra-words
+				      (fixnum (1- ,size)))
 				(inst addu alloc-tn alloc-tn temp)
 				(inst sll temp temp
 				      (- vm:type-bits vm:word-bits))
 				(inst ori temp temp ,header)
 				(storew temp result 0 ,lowtag)
-				(inst addiu alloc-tn alloc-tn vm:lowtag-mask)
+				(inst addiu alloc-tn alloc-tn
+				      (+ (fixnum 1) vm:lowtag-mask))
 				(loadi temp (lognot vm:lowtag-mask))
 				(inst and alloc-tn alloc-tn temp)))
 			     (did-rest
@@ -184,8 +186,9 @@
 			     (header
 			      `((inst addiu alloc-tn alloc-tn
 				      (vm:pad-data-block ,size))
-				(loadi temp (logior (ash ,size vm:type-bits)
-						    ,header))
+				(loadi temp
+				       (logior (ash (1- ,size) vm:type-bits)
+					       ,header))
 				(storew temp result 0 ,lowtag)))
 			     (t
 			      `((inst addiu alloc-tn alloc-tn
@@ -273,7 +276,7 @@
   (value :set-vop value-cell-set :ref-vop value-cell-ref :init :arg))
 
 (defslots (symbol :lowtag other-pointer-type :header symbol-header-type
-		  :alloc-vop make-symbol-vop :alloc-trans %make-symbol)
+		  :alloc-vop make-symbol-vop :alloc-trans make-symbol)
   (value :setf-vop set :set-trans set :init :unbound)
   (function :setf-vop set-symbol-function :set-trans %sp-set-definition
 	    :init :unbound)
