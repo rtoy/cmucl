@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.178 2001/02/11 14:21:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.179 2001/02/21 14:48:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -700,10 +700,7 @@
 	   "FUNCALLABLE-INSTANCE-HEADER-TYPE" 
 	   "FUNCALLABLE-INSTANCE-INFO-OFFSET"
 	   "FUNCTION-ARGLIST-SLOT" "FUNCTION-CODE-OFFSET"
-	   "FUNCTION-END-BREAKPOINT-TRAP" "FUNCTION-HEADER-ARGLIST-SLOT"
-	   "FUNCTION-HEADER-CODE-OFFSET" "FUNCTION-HEADER-NAME-SLOT"
-	   "FUNCTION-HEADER-NEXT-SLOT" "FUNCTION-HEADER-SELF-SLOT"
-	   "FUNCTION-HEADER-TYPE" "FUNCTION-HEADER-TYPE-SLOT"
+	   "FUNCTION-END-BREAKPOINT-TRAP" "FUNCTION-HEADER-TYPE"
 	   "FUNCTION-NAME-SLOT" "FUNCTION-NEXT-SLOT" "FUNCTION-POINTER-TYPE"
 	   "FUNCTION-SELF-SLOT" "FUNCTION-TYPE-SLOT"
 	   "FUNCALLABLE-INSTANCE-LAYOUT-SLOT"
