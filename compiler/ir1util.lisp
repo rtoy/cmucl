@@ -260,7 +260,7 @@
 ;;;
 (defun node-tlf-number (node)
   (declare (type node node))
-  (second (node-source-path node)))
+  (car (last (node-source-path node))))
 
 
 ;;;; Flow/DFO/Component hackery:
