@@ -1,8 +1,9 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.9 1994/10/24 19:19:29 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.10 1994/10/29 05:11:34 ram Exp $
 
 all: lisp.nm
 
 CC = gcc
+DEPEND_FLAGS =
 
 include Config
 
@@ -11,6 +12,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
 	socket.c runprog.c time.c undefineds.c \
 	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
+
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRCS)))
 
@@ -46,7 +48,7 @@ clean:
 	rm -f Depends *.o lisp lisp.nm core
 
 depend: ${SRCS}
-	$(CC) -MM -E ${CFLAGS} ${CPPFLAGS} $? > ,depends
+	$(CC) -MM -E ${DEPEND_FLAGS} ${CFLAGS} ${CPPFLAGS} $? > ,depends
 	mv ,depends Depends
 
 include Depends
