@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.13 1993/08/04 11:51:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.14 1994/02/04 15:10:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -467,8 +467,10 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile (unix-namestring (merge-pathnames program "path:")))
+	(let ((pfile (unix-namestring (merge-pathnames program "path:") t t))
 	      (cookie (list 0)))
+	  (unless pfile
+	    (error "No such program: ~S" program))
 	  (multiple-value-bind
 	      (stdin input-stream)
 	      (get-descriptor-for input cookie :direction :input
