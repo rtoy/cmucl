@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.15 1998/03/03 16:12:12 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.16 1998/03/10 21:24:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -768,6 +768,8 @@
   (:dependencies (reads dst) (reads src1) (writes dst))
   (:delay 0)
   (:emitter (emit-fp-inst segment #b000000001 #b110100 dst nil src1 t)))
+(define-unary-fp-inst fmovd #b000000010)	; V9
+(define-unary-fp-inst fmovq #b000000011)	; V9
 
 (define-unary-fp-inst fnegs #b000000101)
 (define-unary-fp-inst fabss #b000001001)
