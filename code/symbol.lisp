@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.7 1992/02/09 17:56:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.8 1992/02/24 00:50:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,26 +24,14 @@
 	  make-symbol copy-symbol gensym gentemp *gensym-counter*
 	  symbol-package keywordp makunbound symbol-value symbol-function
 	  boundp set))
+
 (in-package "KERNEL")
-(export '(%sp-set-definition %sp-set-plist))
+(export '(%set-symbol-value %set-symbol-definition %set-symbol-plist
+			    %set-symbol-package))
 
 (in-package "LISP")
 
 (declaim (maybe-inline get %put getf remprop %putf get-properties keywordp))
-
-(defun set (variable new-value)
-  "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
-  set to the specified new value."
-  (set variable new-value))
-
-(defun makunbound (variable)
-  "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
-  removing any value it may currently have."
-  (set variable
-       (%primitive make-other-immediate-type
-		   0
-		   vm:unbound-marker-type))
-  variable)
 
 (defun symbol-value (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current special
@@ -51,25 +39,57 @@
   (declare (optimize (safety 1)))
   (symbol-value variable))
 
+(defun boundp (variable)
+  "VARIABLE must evaluate to a symbol.  Return NIL if this symbol is
+  unbound, T if it has a value."
+  (boundp variable))
+
+(defun set (variable new-value)
+  "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
+  set to the specified new value."
+  (declare (type symbol variable))
+  (etypecase variable
+    (null
+     (error "Nilhil ex nilhil (Can't set NIL)."))
+    ((member t)
+     (error "Can't set T."))
+    (keyword
+     (error "Can't set keywords."))
+    (symbol
+     (%set-symbol-value variable new-value))))
+
+(defun %set-symbol-value (symbol new-value)
+  (%set-symbol-value symbol new-value))
+
+(defun makunbound (variable)
+  "VARIABLE must evaluate to a symbol.  This symbol is made unbound,
+  removing any value it may currently have."
+  (set variable
+       (%primitive make-other-immediate-type 0 vm:unbound-marker-type))
+  variable)
+
 (defun symbol-function (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current definition
   is returned."
   (declare (optimize (safety 1)))
   (symbol-function variable))
 
-(defun %sp-set-definition (symbol new-value)
-  (setf (symbol-function symbol) new-value))
+(defun fset (symbol new-value)
+  (declare (type symbol symbol) (type function new-value))
+  (if symbol
+      (%set-symbol-function symbol new-value)
+      (error "Can't define NIL.")))
 
-(defun boundp (variable)
-  "VARIABLE must evaluate to a symbol.  Return () if this symbol is
-  unbound, T if it has a value."
-  (boundp variable))
+(defun %set-symbol-function (symbol new-value)
+  (declare (type symbol symbol) (type function new-value))
+  (%set-symbol-function symbol new-value))
+
 
 (defun symbol-plist (variable)
   "VARIABLE must evaluate to a symbol.  Return its property list."
   (symbol-plist variable))
 
-(defun %sp-set-plist (symbol new-value)
+(defun %set-symbol-plist (symbol new-value)
   (setf (symbol-plist symbol) new-value))
 
 (defun symbol-name (variable)
@@ -79,6 +99,10 @@
 (defun symbol-package (variable)
   "VARIABLE must evaluate to a symbol.  Return its package."
   (symbol-package variable))
+
+(defun %set-symbol-package (symbol package)
+  (declare (type symbol symbol))
+  (%set-symbol-package symbol package))
 
 (defun make-symbol (string)
   "Make and return a new symbol with the STRING as its print name."
