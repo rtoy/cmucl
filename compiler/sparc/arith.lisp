@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.40 2004/04/13 17:18:34 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.41 2004/04/13 21:06:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1621,7 +1621,7 @@
             (t
              ;; The easy case
              (unless (zerop shift)
-               (inst sran q shift))))
+               (inst srln q shift))))
       ;; Compute the remainder
       (cond ((typep y '(signed-byte 13))
              (inst umul r q y))
