@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.32 2000/01/13 16:55:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.33 2000/01/14 19:47:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -206,6 +206,7 @@
   (values (sxhash key) nil))
 
 (defun equalp-hash (key)
+  (declare (values hash (member t nil)))
   (values (internal-equalp-hash key 0) nil))
 
 
@@ -851,6 +852,14 @@
 	 (sxmash hash (,(if equalp 'internal-equalp-hash 'internal-sxhash)
 			(car sequence) ,depth)))))
 
+(defmacro sxhash-bit-vector (vector)
+  `(let* ((length (length ,vector))
+	  (hash length))
+     (declare (type index length) (type hash hash))
+     (dotimes (index (min length sxhash-max-len) hash)
+       (declare (type index index))
+       (sxmash hash (bit ,vector index)))))
+
 ); eval-when (compile eval)
 
 
@@ -902,6 +911,9 @@
     (array
      (typecase s-expr
        (string (sxhash-string s-expr))
+       (simple-bit-vector (sxhash-bit-vector
+			   (truly-the simple-bit-vector s-expr)))
+       (bit-vector (sxhash-bit-vector (truly-the bit-vector s-expr)))
        (t (array-rank s-expr))))
     ;; Everything else.
     (t 42)))
@@ -939,15 +951,13 @@
 (defmacro vector-equalp-hash (vector depth)
   `(if (= ,depth sxhash-max-depth)
        0
-       (let ((hash 4)
-	     (length (length ,vector)))
-	 (declare (type hash hash) (type index length))
-	 (sxmash hash length)
-	 (let ((,depth (+ ,depth 1)))
-	   (dotimes (index (min length sxhash-max-len) hash)
-	     (declare (type index index))
-	     (sxmash hash (internal-equalp-hash (aref ,vector index)
-						,depth)))))))
+       (let* ((length (length ,vector))
+	      (hash length)
+	      (,depth (+ ,depth 1)))
+	 (declare (type index length) (type hash hash))
+	 (dotimes (index (min length sxhash-max-len) hash)
+	   (declare (type index index))
+	   (sxmash hash (internal-equalp-hash (aref ,vector index) ,depth))))))
 
 (defmacro array-equalp-hash (array depth)
   `(if (= ,depth sxhash-max-depth)
