@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.39 1991/12/15 08:27:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.40 1991/12/15 12:10:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -608,7 +608,8 @@
 ;;; also store the names of per-operand temporaries here.
 ;;;
 (defstruct (operand-parse
-	    (:print-function %print-operand-parse))
+	    (:print-function %print-operand-parse)
+	    (:make-load-form-fun :just-dump-it-normally))
   ;;
   ;; Name of the operand (which we bind to the TN).
   (name nil :type symbol)
