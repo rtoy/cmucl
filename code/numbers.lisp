@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.1 1990/07/03 17:31:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.2 1990/07/05 11:58:36 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -411,8 +411,12 @@
 	 (complex*real (x y)
 	   (canonical-complex (* (realpart x) y) (* (imagpart x) y))))
     (number-dispatch ((x number) (y number))
-      (bignum-cross-fixnum multiply-fixnums multiply-bignums)
       (float-contagion * x y)
+
+      ((fixnum fixnum) (multiply-fixnums x y))
+      ((bignum fixnum) (multiply-bignum-and-fixnum x y))
+      ((fixnum bignum) (multiply-bignum-and-fixnum y x))
+      ((bignum bignum) (multiply-bignums x y))
       
       ((complex complex)
        (let* ((rx (realpart x))
@@ -1189,8 +1193,7 @@
 			 (setq v (- temp)))
 		     (setq temp (- u v))
 		     (when (zerop temp)
-		       (return (the fixnum (ash u k)))))
-		   (setq temp (ash temp -1))))
+		       (return (the fixnum (ash u k)))))))
 	      (declare (fixnum k u v))))
 	   ((bignum bignum)
 	    (bignum-gcd u v))
