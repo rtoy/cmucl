@@ -35,7 +35,8 @@
 ;;; ### Bootstrap hack: base characters don't exist in the old compiler,
 ;;; so leave characters alone.
 (compiler-let ((lisp::*bootstrap-deftype* t))
-  (remhash 'character *builtin-types*)
+  (eval-when (compile eval load)
+    (remhash 'character *builtin-types*))
   (deftype character () 'base-character))
 
 ;;;
