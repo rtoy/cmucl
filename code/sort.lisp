@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.9 2002/10/02 17:29:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.10 2002/11/19 14:41:14 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -425,23 +425,43 @@
 (defun merge (result-type sequence1 sequence2 predicate &key key)
   "The sequences Sequence1 and Sequence2 are destructively merged into
    a sequence of type Result-Type using the Predicate to order the elements."
-  (if (or (eq result-type 'list)
-	  (subtypep result-type 'list))
-      (let ((result (merge-lists* (coerce sequence1 'list)
-				  (coerce sequence2 'list)
-				  predicate key)))
-	result)
-      (let* ((vector-1 (coerce sequence1 'vector))
-	     (vector-2 (coerce sequence2 'vector))
-	     (length-1 (length vector-1))
-	     (length-2 (length vector-2))
-	     (result (make-sequence result-type (+ length-1 length-2))))
-	(declare (vector vector-1 vector-2)
-		 (fixnum length-1 length-2))
-	(if (and (simple-vector-p result)
-		 (simple-vector-p vector-1)
-		 (simple-vector-p vector-2))
-	    (merge-vectors vector-1 length-1 vector-2 length-2
-			   result predicate key svref)
-	    (merge-vectors vector-1 length-1 vector-2 length-2
-			   result predicate key aref)))))
+  (cond ((or (eq result-type 'list)
+	     (subtypep result-type 'list))
+	 ;; Check the length of result-type and the sequence for
+	 ;; consistency
+	 (let ((s1 (coerce sequence1 'list))
+	       (s2 (coerce sequence2 'list))
+	       (type (specifier-type result-type)))
+	   (cond ((type= type (specifier-type 'list))
+		  (values (merge-lists* s1 s2 predicate key)))
+		 ((eq type *empty-type*)
+		  (bad-sequence-type-error nil))
+		 ((type= type (specifier-type 'null))
+		  (if (and (null s1) (null s2))
+		      nil
+		      (sequence-length-error type
+					     (+ (length s1) (length s2)))))
+		 ((csubtypep (specifier-type '(cons nil t)) type)
+		  (if (and (null s1) (null s2))
+		      (sequence-length-error type 0)
+		      (values (merge-lists* s1 s2 predicate key))))
+		 (t
+		  (values (merge-lists* s1 s2 predicate key))))))
+		
+	((subtypep result-type 'vector)
+	 (let* ((vector-1 (coerce sequence1 'vector))
+		(vector-2 (coerce sequence2 'vector))
+		(length-1 (length vector-1))
+		(length-2 (length vector-2))
+		(result (make-sequence result-type (+ length-1 length-2))))
+	   (declare (vector vector-1 vector-2)
+		    (fixnum length-1 length-2))
+	   (if (and (simple-vector-p result)
+		    (simple-vector-p vector-1)
+		    (simple-vector-p vector-2))
+	       (merge-vectors vector-1 length-1 vector-2 length-2
+			      result predicate key svref)
+	       (merge-vectors vector-1 length-1 vector-2 length-2
+			      result predicate key aref))))
+	(t
+	 (bad-sequence-type-error result-type))))
