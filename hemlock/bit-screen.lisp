@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.9 1991/08/12 07:17:35 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-screen.lisp,v 1.10 1991/10/23 11:10:27 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1465,7 +1465,8 @@
 	(setf *random-typeout-start-width* (xlib:drawable-width xwindow)))))
   (add-hook ed::window-buffer-hook 'set-window-name-for-window-buffer)
   (add-hook ed::buffer-name-hook 'set-window-name-for-buffer-name)
-  (add-hook ed::set-window-hook 'set-window-hook-raise-fun))
+  (add-hook ed::set-window-hook 'set-window-hook-raise-fun)
+  (add-hook buffer-modified-hook 'raise-echo-area-when-modified))
 
 (defun make-default-bitmap-device (display)
   (make-bitmap-device
