@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.27 1990/03/08 21:38:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.28 1990/03/18 23:46:06 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -80,7 +80,7 @@
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
 
-(defconstant target-byte-order :little-endian
+(defparameter target-byte-order :little-endian
   "The byte order of the target machine.  Should either be :big-endian
   which has the MSB first (RT) or :little-endian which has the MSB last
   (VAX).")
@@ -91,16 +91,16 @@
 
 ;;; Where to put the different spaces and stacks.
 ;;; 
-(defconstant target-read-only-space-start #x20000000)
-(defconstant target-static-space-start #x30000000)
-(defconstant target-dynamic-space-start #x40000000)
-(defconstant target-control-stack-start #x50000000)
-(defconstant target-binding-stack-start #x60000000)
+(defparameter target-read-only-space-start #x20000000)
+(defparameter target-static-space-start #x30000000)
+(defparameter target-dynamic-space-start #x40000000)
+(defparameter target-control-stack-start #x50000000)
+(defparameter target-binding-stack-start #x60000000)
 
 ;;; How much memory to validate for lisp.
 ;;; 
-(defconstant target-heap-address-space
-  '((#x40000000 . #x4000) ; Dynamic space
+(defparameter target-heap-address-space
+  '((#x40000000 . #x40000) ; Dynamic space
     (#x50000000 . #x4000) ; Control stack
     (#x60000000 . #x4000))) ; Binding stack
 
@@ -251,7 +251,7 @@
 
     ;; Static functions.
     c::two-arg-plus c::two-arg-minus c::two-arg-times c::two-arg-divide
-    c::negate
+    c::negate length
     ))
 
 (defun static-symbol-p (symbol)
