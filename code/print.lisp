@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.46 1992/12/06 20:17:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.47 1992/12/13 15:52:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1687,9 +1687,8 @@
 ;;; below.
 
 (defun output-function-object (subr stream)
-  (let ((name (%primitive c::function-name subr)))
-    (write-string "Function " stream)
-    (prin1 name stream)))
+  (write-string "Function " stream)
+  (prin1 (%function-name subr) stream))
 
 
 ;;; OUTPUT-INTERPRETED-FUNCTION  --  Internal
@@ -1719,8 +1718,7 @@
 	 (output-interpreted-function function stream))
 	(t
 	 (write-string "Closure Over " stream)
-	 (output-function-object (%primitive c::closure-function function)
-				 stream))))
+	 (output-function-object (%closure-function function) stream))))
       (#.vm:dylan-function-header-type
        (write-string "Dylan Function" stream))
       (t
@@ -1738,7 +1736,7 @@
 	    (case type
 	      (#.vm:value-cell-header-type
 	       (write-string "Value Cell " stream)
-	       (output-object (%primitive value-cell-ref object) stream))
+	       (output-object (c:value-cell-ref object) stream))
 	      (t
 	       (write-string "Unknown Pointer Object, type=" stream)
 	       (let ((*print-base* 16) (*print-radix* t))

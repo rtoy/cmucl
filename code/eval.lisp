@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.19 1992/09/19 17:45:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.20 1992/12/13 15:47:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,8 +221,8 @@
   (declare (type function fun))
   (if (eval:interpreted-function-p fun)
       (eval:interpreted-function-lambda-expression fun)
-      (let* ((fun (%primitive c::function-self fun))
-	     (name (%primitive c::function-name fun))
+      (let* ((fun (%function-self fun))
+	     (name (%function-name fun))
 	     (code (di::function-code-header fun))
 	     (info (di::code-debug-info code)))
 	(if info

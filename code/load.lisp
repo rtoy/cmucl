@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.45 1992/10/09 14:01:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.46 1992/12/13 15:50:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1030,13 +1030,12 @@
     (unless (zerop (logand offset vm:lowtag-mask))
       (error "Unaligned function object, offset = #x~X." offset))
     (let ((fun (%primitive compute-function code-object offset)))
-      (%primitive set-function-self fun fun)
-      (%primitive set-function-next fun
-		  (%primitive code-entry-points code-object))
-      (%primitive set-code-entry-points code-object fun)
-      (%primitive set-function-name fun name)
-      (%primitive set-function-arglist fun arglist)
-      (%primitive set-function-type fun type)
+      (setf (%function-self fun) fun)
+      (setf (%function-next fun) (%code-entry-points code-object))
+      (setf (%code-entry-points code-object) fun)
+      (setf (%function-name fun) name)
+      (setf (%function-arglist fun) arglist)
+      (setf (%function-type fun) type)
       (when *load-print*
 	(load-fresh-line)
 	(format t "~S defined~%" fun))

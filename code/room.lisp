@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.16 1992/02/26 12:13:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.17 1992/12/13 15:54:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,8 +233,7 @@
 			      (+ (the fixnum
 				      (* (get-header-data obj) word-bytes))
 				 (round-to-dualword
-				  (* (the fixnum
-					  (%primitive code-code-size obj))
+				  (* (the fixnum (%code-code-size obj))
 				     word-bytes)))))))
 		(declare (fixnum size))
 		(funcall fun obj header-type size)
@@ -420,7 +419,7 @@
  	 (declare (fixnum size) (optimize (safety 0)))
 	 (when (eql type code-header-type)
 	   (incf total-bytes size)
-	   (let ((words (truly-the fixnum (%primitive code-code-size obj)))
+	   (let ((words (truly-the fixnum (%code-code-size obj)))
 		 (sap (truly-the system-area-pointer
 				 (%primitive code-instructions obj))))
 	     (incf code-words words)
@@ -452,8 +451,7 @@
 	   (declare (fixnum size) (optimize (safety 0)))
 	   (case type
 	     (#.code-header-type
-	      (let ((inst-words
-		     (truly-the fixnum (%primitive code-code-size obj))))
+	      (let ((inst-words (truly-the fixnum (%code-code-size obj))))
 		(declare (type fixnum inst-words))
 		(incf non-descriptor-bytes (* inst-words word-bytes))
 		(incf descriptor-words

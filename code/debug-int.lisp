@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.52 1992/08/19 02:53:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.53 1992/12/13 15:46:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1247,8 +1247,8 @@
 			(c::compiled-debug-function-start-pc
 			 (compiled-debug-function-compiler-debug-fun
 			  debug-function))))
-		   (do ((entry (system:%primitive code-entry-points component)
-			       (system:%primitive function-next entry)))
+		   (do ((entry (kernel:%code-entry-points component)
+			       (kernel:%function-next entry)))
 		       ((null entry) nil)
 		     (when (= start-pc
 			      (c::compiled-debug-function-start-pc
@@ -1287,7 +1287,7 @@
 	(make-interpreted-debug-function
 	 (or (eval::eval-function-definition eval-fun)
 	     (eval::convert-eval-fun eval-fun))))
-      (let* ((name (system:%primitive c::function-name fun))
+      (let* ((name (kernel:%function-name fun))
 	     (component (kernel:function-code-header fun))
 	     (res (find-if
 		   #'(lambda (x)
@@ -2380,7 +2380,7 @@
      (check-type frame compiled-frame)
      (let ((res (access-compiled-debug-var-slot debug-var frame)))
        (if (indirect-value-cell-p res)
-	   (system:%primitive c::value-cell-ref res)
+	   (c:value-cell-ref res)
 	   res)))
     (interpreted-debug-variable
      (check-type frame interpreted-frame)
@@ -2505,7 +2505,7 @@
      (check-type frame compiled-frame)
      (let ((current-value (access-compiled-debug-var-slot debug-var frame)))
        (if (indirect-value-cell-p current-value)
-	   (system:%primitive c::value-cell-set current-value value)
+	   (c:value-cell-set current-value value)
 	   (set-compiled-debug-variable-slot debug-var frame value))))
     (interpreted-debug-variable
      (check-type frame interpreted-frame)
