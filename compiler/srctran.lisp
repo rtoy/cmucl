@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.36 1992/04/08 03:48:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.37 1992/06/05 18:45:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -510,11 +510,12 @@
   (let ((type (continuation-type bound)))
     (when (numeric-type-p type)
       (let ((class (numeric-type-class type))
-	    (high (numeric-type-high type)))
+	    (high (numeric-type-high type))
+	    (format (numeric-type-format type)))
 	(make-numeric-type
 	 :class class
-	 :format (numeric-type-format type)
-	 :low (coerce 0 class)
+	 :format format
+	 :low (coerce 0 (or format class 'real))
 	 :high (cond ((not high) nil)
 		     ((eq class 'integer) (max (1- high) 0))
 		     ((or (consp high) (zerop high)) high)
