@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.2 1990/12/01 22:33:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.3 1990/12/06 17:37:00 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -96,6 +96,24 @@
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
+
+
+(defconstant float-inexact-trap-bit (ash 1 0))
+(defconstant float-divide-by-zero-trap-bit (ash 1 1))
+(defconstant float-underflow-trap-bit (ash 1 2))
+(defconstant float-overflow-trap-bit (ash 1 3))
+(defconstant float-invalid-trap-bit (ash 1 4))
+
+(defconstant float-round-to-nearest 0)
+(defconstant float-round-to-zero 1)
+(defconstant float-round-to-positive 2)
+(defconstant float-round-to-negative 3)
+
+(defconstant float-rounding-mode (byte 2 30))	  ; RD 
+(defconstant float-sticky-bits (byte 5 5))	  ; aexc
+(defconstant float-traps-byte (byte 5 23))	  ; TEM
+(defconstant float-exceptions-byte (byte 5 0))	  ; cexc
+(defconstant float-fast-bit (ash 1 22))		  ; EFM
 
 ); eval-when
 
