@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.39 1999/04/12 12:33:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.40 2000/07/06 04:37:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -848,7 +848,7 @@ a host-structure or string."
 	   (type (or index null) end)
 	   (type (or t null) junk-allowed)
 	   (values (or null pathname) (or null index)))
-    (typecase thing
+    (etypecase thing
       (simple-string
        (%parse-namestring thing host defaults start end junk-allowed))
       (string
@@ -865,7 +865,7 @@ a host-structure or string."
 	 (unless name
 	   (error "Can't figure out the file associated with stream:~%  ~S"
 		  thing))
-	 name))))
+	 (values name nil)))))
 
 
 ;;; NAMESTRING -- Interface
@@ -1001,7 +1001,7 @@ a host-structure or string."
 (defun substitute-into (pattern subs diddle-case)
   (declare (type pattern pattern)
 	   (type list subs)
-	   (values (or simple-base-string pattern)))
+	   (values (or simple-base-string pattern) list))
   (let ((in-wildcard nil)
 	(pieces nil)
 	(strings nil))
