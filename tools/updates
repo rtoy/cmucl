@@ -14,7 +14,7 @@ while ($#argv > 0)
 				shift
 				breaksw
 			case "-to":
-				set from = $argv[2]
+				set to = $argv[2]
 				shift
 				breaksw
 			default:
