@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.18 2002/08/19 16:52:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.19 2002/08/24 16:20:25 pmai Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -54,7 +54,7 @@
 	   "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
 	   "STANDARD-CLASS")
   (:shadow "DOTIMES")
-  (:import-from :kernel "FUNCALLABLE-INSTANCE-P")
+  (:import-from :kernel "FUNCALLABLE-INSTANCE-P" "SIMPLE-PROGRAM-ERROR")
   (:shadow "DOCUMENTATION")
 
 
