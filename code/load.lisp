@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.48 1993/02/26 08:25:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.49 1993/03/01 18:16:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 (declaim (type (member :load-object :load-source :query :compile)
 	       *load-if-source-newer*))
 
-(defvar *load-source-types* '("lisp" "l" "cl" "lsp" nil)
+(defvar *load-source-types* '("lisp" "l" "cl" "lsp")
   "The source file types which LOAD recognizes.")
 
 (defvar *load-object-types*
@@ -492,8 +492,9 @@
 
    :CONTENTS {NIL | :SOURCE | :BINARY}
        Forces the input to be interpreted as a source or object file, instead
-       of guessing based on the file type.  Probably only necessary if you have
-       source files with a \"fasl\" type.
+       of guessing based on the file type.  This also inhibits file type
+       defaulting.  Probably only necessary if you have source files with a
+       \"fasl\" type. 
 
    The variables *LOAD-VERBOSE*, *LOAD-PRINT* and EXT:*LOAD-IF-SOURCE-NEWER*
    determine the defaults for the corresponding keyword arguments.  These
@@ -531,15 +532,14 @@
 		   (sloload filename))
 	       (let ((pn (merge-pathnames (pathname filename)
 					  *default-pathname-defaults*)))
-		 (cond ((wild-pathname-p pn)
-			(dolist (file (directory pn) t)
-			  (internal-load pn file if-does-not-exist contents)))
-		       ((pathname-type pn)
-			(internal-load pn (probe-file pn) if-does-not-exist
-				       contents))
-		       (t
-			(internal-load-default-type
-			 pn if-does-not-exist)))))))))))
+		 (if (wild-pathname-p pn)
+		     (dolist (file (directory pn) t)
+		       (internal-load pn file if-does-not-exist contents))
+		     (let ((tn (probe-file pn)))
+		       (if (or tn (pathname-type pn) contents)
+			   (internal-load pn tn if-does-not-exist contents)
+			   (internal-load-default-type
+			    pn if-does-not-exist))))))))))))
 
 
 ;;; INTERNAL-LOAD  --  Internal
