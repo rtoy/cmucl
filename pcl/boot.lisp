@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.55 2003/05/09 17:09:52 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.56 2003/05/18 12:23:21 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1009,11 +1009,17 @@ work during bootstrapping.
       (let ((bindings (mapcan #'process-var lambda-list)))
 	`(let* ((,args-tail ,args)
 		,@bindings
+		(.dummy1. ,@(when (eq state 'optional)
+			      `((unless (null ,args-tail)
+				  (too-many-args)))))
 		(.dummy. ,@(when (and key-seen (zerop nkeys))
 			     `((get-key-arg1 :allow-other-keys
 					     ,args-tail t)))))
-	   (declare (ignorable ,args-tail .dummy.))
+	   (declare (ignorable ,args-tail .dummy. .dummy1.))
 	   ,@body)))))
+
+(defun too-many-args ()
+  (simple-program-error "Too many arguments."))
 
 (defun odd-number-of-keyword-arguments ()
   (simple-program-error "Odd number of keyword arguments."))
