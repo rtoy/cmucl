@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.9 1991/02/11 13:38:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.10 1991/03/04 16:51:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
   doc				; documentation on the structure
   slots				; list of slots
   conc-name			; prefix for slot names
-  constructor			; name of standard constructor function
+  (constructors ())		; list of standard constructor function names
   boa-constructors		; BOA constructors (cdr of option).
   copier			; name of copying function
   predicate			; name of type predictate
