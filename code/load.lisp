@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.54 1993/05/26 20:29:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.55 1993/08/19 23:09:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1092,6 +1092,31 @@
       (load-fresh-line)
       (format t "~S defined~%" res))
     res))
+
+
+;;;; Dylan support.
+
+(clone-fop (fop-dylan-symbol-save 100)
+	   (fop-small-dylan-symbol-save 101)
+  (let* ((arg (clone-arg))
+	 (res (make-string arg)))
+    (declare (optimize (inhibit-warnings 3)))
+    (read-n-bytes *fasl-file* res 0 arg)
+    (push-table (dylan::string->symbol res))))
+
+(clone-fop (fop-dylan-keyword-save 102)
+	   (fop-small-dylan-keyword-save 103)
+  (let* ((arg (clone-arg))
+	 (res (make-string arg)))
+    (declare (optimize (inhibit-warnings 3)))
+    (read-n-bytes *fasl-file* res 0 arg)
+    (push-table (dylan::string->keyword res))))
+
+(define-fop (fop-dylan-varinfo-value 104)
+  (let ((module-name (pop-stack))
+	(name (pop-stack)))
+    (declare (optimize (inhibit-warnings 3)))
+    (dylan::lookup-varinfo-value name (dylan::find-module module-name) t)))
 
 
 ;;;; Linkage fixups.
