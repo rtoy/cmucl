@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66 1995/01/12 17:45:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.67 1997/07/26 17:14:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1311,11 +1311,6 @@
 ;;;     POINT-POS       - The position of the digit preceding the decimal
 ;;;                       point.  Zero indicates point before first digit.
 ;;;
-;;; WARNING: For efficiency, there is a single string object *digit-string*
-;;; which is modified destructively and returned as the value of
-;;; FLONUM-TO-STRING.  Thus the returned value is not valid across multiple 
-;;; calls.
-;;;
 ;;; NOTE:  FLONUM-TO-STRING goes to a lot of trouble to guarantee accuracy.
 ;;; Specifically, the decimal number printed is the closest possible 
 ;;; approximation to the true value of the binary number to be printed from 
@@ -1336,10 +1331,6 @@
 
 (defvar *digits* "0123456789")
 
-(defvar *digit-string*
-  (make-array 50 :element-type 'base-char :fill-pointer 0 :adjustable t
-	      :initial-element #\?)) ; ### Hack around make-array bug.
-
 (defun flonum-to-string (x &optional width fdigits scale fmin)
   (cond ((zerop x)
 	 ;;zero is a special case which float-string cannot handle
@@ -1349,7 +1340,6 @@
 	       (values s (length s) t (zerop fdigits) 0))
 	     (values "." 1 t t 0)))
 	(t
-	 (setf (fill-pointer *digit-string*) 0)
 	 (multiple-value-bind (sig exp)
 			      (integer-decode-float x)
 	   (let* ((precision (float-precision x))
@@ -1362,7 +1352,9 @@
 
 (defun float-string (fraction exponent precision width fdigits scale fmin)
   (let ((r fraction) (s 1) (m- 1) (m+ 1) (k 0)
-	(digits 0) (decpnt 0) (cutoff nil) (roundup nil) u low high)
+	(digits 0) (decpnt 0) (cutoff nil) (roundup nil) u low high
+	(digit-string (make-array 50 :element-type 'base-char
+				  :fill-pointer 0 :adjustable t)))
     ;;Represent fraction as r/s, error bounds as m+/s and m-/s.
     ;;Rational arithmetic avoids loss of precision in subsequent calculations.
     (cond ((> exponent 0)
@@ -1428,14 +1420,14 @@
     ;;zero-fill before fraction if no integer part
     (when (< k 0)
       (setq decpnt digits)
-      (vector-push-extend #\. *digit-string*)
+      (vector-push-extend #\. digit-string)
       (dotimes (i (- k))
-	(incf digits) (vector-push-extend #\0 *digit-string*)))
+	(incf digits) (vector-push-extend #\0 digit-string)))
     ;;generate the significant digits
     (do ()(nil)
       (decf k)
       (when (= k -1)
-	(vector-push-extend #\. *digit-string*)
+	(vector-push-extend #\. digit-string)
 	(setq decpnt digits))
       (multiple-value-setq (u r) (truncate (* r 10) s))
       (setq m- (* m- 10))
@@ -1447,7 +1439,7 @@
       ;;stop when either precision is exhausted or we have printed as many
       ;;fraction digits as permitted
       (when (or low high (and cutoff (<= k cutoff))) (return))
-      (vector-push-extend (char *digits* u) *digit-string*)
+      (vector-push-extend (char *digits* u) digit-string)
       (incf digits))
     ;;if cutoff occured before first digit, then no digits generated at all
     (when (or (not cutoff) (>= k cutoff))
@@ -1456,20 +1448,20 @@
 				(cond ((and low (not high)) u)
 				      ((and high (not low)) (1+ u))
 				      (t (if (<= (ash r 1) s) u (1+ u)))))
-			  *digit-string*)
+			  digit-string)
       (incf digits))
     ;;zero-fill after integer part if no fraction
     (when (>= k 0)
-      (dotimes (i k) (incf digits) (vector-push-extend #\0 *digit-string*))
-      (vector-push-extend #\. *digit-string*)
+      (dotimes (i k) (incf digits) (vector-push-extend #\0 digit-string))
+      (vector-push-extend #\. digit-string)
       (setq decpnt digits))
     ;;add trailing zeroes to pad fraction if fdigits specified
     (when fdigits
       (dotimes (i (- fdigits (- digits decpnt)))
 	(incf digits)
-	(vector-push-extend #\0 *digit-string*)))
+	(vector-push-extend #\0 digit-string)))
     ;;all done
-    (values *digit-string* (1+ digits) (= decpnt 0) (= decpnt digits) decpnt)))
+    (values digit-string (1+ digits) (= decpnt 0) (= decpnt digits) decpnt)))
 
 ;;; SCALE-EXPONENT  --  Internal
 ;;;
