@@ -166,6 +166,9 @@
 				 :message message
 				 :line line)))
     (message "~A" message)
+    (case severity
+      (:error (incf (note-errors note)))
+      (:warning (incf (note-warnings note))))
     (let ((region (case (note-kind note)
 		    (:compile
 		     (note-region note))
