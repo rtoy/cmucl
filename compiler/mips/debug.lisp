@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS; Log: C.Log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.8 1991/02/20 15:14:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.9 1991/03/12 20:19:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.8 1991/02/20 15:14:32 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.9 1991/03/12 20:19:32 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -20,8 +20,8 @@
 (in-package "MIPS")
 
 (in-package "DI")
-(import '(stack-ref %set-stack-ref lra-code-header
-		    function-code-header make-lisp-obj get-lisp-obj-address)
+(import '(stack-ref %set-stack-ref lra-code-header function-code-header
+	  make-lisp-obj get-lisp-obj-address function-word-offset)
 	(find-package "MIPS"))
 
 (in-package "MIPS")
@@ -35,6 +35,7 @@
 (defknown function-code-header (t) t (movable flushable))
 (defknown make-lisp-obj ((unsigned-byte 32)) t (movable flushable))
 (defknown get-lisp-obj-address (t) (unsigned-byte 32) (movable flushable))
+(defknown function-word-offset (function) index (movable flushable))
 
 (define-vop (debug-cur-sp)
   (:translate current-sp)
@@ -117,3 +118,13 @@
   (:result-types unsigned-num)
   (:generator 1
     (move result thing)))
+
+(define-vop (function-word-offset)
+  (:policy :fast-safe)
+  (:translate function-word-offset)
+  (:args (fun :scs (descriptor-reg)))
+  (:results (res :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 5
+    (loadw res fun 0 function-pointer-type)
+    (inst srl res vm:type-bits)))
