@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.12 1991/11/09 02:39:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.13 1991/11/24 23:59:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.12 1991/11/09 02:39:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.13 1991/11/24 23:59:43 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -398,9 +398,14 @@
 
 (define-primitive-object (value-cell :lowtag other-pointer-type
 				     :header value-cell-header-type
-				     :alloc-vop c::make-value-cell)
-  (value :set-vop c::value-cell-set
-	 :ref-vop c::value-cell-ref
+				     :alloc-vop make-value-cell
+				     :alloc-trans make-value-cell)
+  (value :set-vop value-cell-set
+	 :set-trans value-cell-set
+	 :set-known (unsafe)
+	 :ref-vop value-cell-ref
+	 :ref-trans value-cell-ref
+	 :ref-known (flushable)
 	 :init :arg))
 
 (define-primitive-object (symbol :lowtag other-pointer-type
