@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.5 1993/05/15 18:24:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.6 1993/07/22 21:24:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,8 @@
   (comf "target:motif/lisp/widgets" :load t)
   (comf "target:motif/lisp/main" :load t))
 
-(xt::build-toolkit-interface)
+(when (fboundp 'xt::build-toolkit-interface)
+  (xt::build-toolkit-interface))
 
 ;;; Make sure that the INTERFACE package is defined before we start
 ;;; talking about it.
@@ -67,3 +68,25 @@
   ;; It may be that the motifd server hasn't been (re)compiled yet.
   (let ((interface:*interface-style* :tty))
     (comf "target:interface/debug" :load t)))
+
+(cat-if-anything-changed
+ "target:interface/clm-library"
+ 
+ "target:motif/lisp/initial"
+ "target:motif/lisp/internals"
+ "target:motif/lisp/transport"
+ "target:motif/lisp/events"
+ "target:motif/lisp/conversion"
+ 
+ "target:motif/lisp/interface-glue"
+ "target:motif/lisp/xt-types"
+ "target:motif/lisp/string-base"
+ "target:motif/lisp/prototypes"
+ ;"target:motif/lisp/interface-build"
+ "target:motif/lisp/callbacks"
+ "target:motif/lisp/widgets"
+ "target:motif/lisp/main"
+ "target:interface/initial"
+ "target:interface/interface"
+ "target:interface/inspect"
+ "target:interface/debug")
