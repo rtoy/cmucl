@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.7 1993/02/13 19:10:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.8 1993/02/14 16:38:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1093,6 +1093,9 @@
 				   :inheritance-depth (length inherits)
 				   :length (dd-length info)
 				   :info info)))
+      #+ns-boot
+      (when (and old-layout (not (layout-info old-layout)))
+	(setf (layout-info old-layout) info))
       (if (or (not old-layout)
 	      (let ((old-info (layout-info old-layout)))
 		(or (redefine-layout-warning old-layout old-context
