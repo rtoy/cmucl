@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.49 2004/10/22 16:42:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.50 2004/12/22 19:25:55 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -563,7 +563,9 @@
 		      (result (multiple-value-list
 			       (funcall macrofun stream char))))
 		 ;; Repeat if macro returned nothing.
-		 (if result (return (car result)))))))))
+		 (if result (return (if *read-suppress*
+					nil
+					(car result))))))))))
     (t
      (let ((*sharp-equal-alist* nil))
        (read-preserving-whitespace-internal stream eof-errorp eof-value t)))))
