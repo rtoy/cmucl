@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.24 2001/11/29 01:46:59 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.25 2002/01/29 01:23:33 pmai Exp $
  *
  */
 
@@ -174,6 +174,10 @@ int main(int argc, char *argv[], char *envp[])
 		    break;
 		}
 	    } while (*lib++ == ':');
+
+	    if (core == NULL)
+                fprintf(stderr, "WARNING: Couldn't find core in specified CMUCLLIB, using default path.\n");
+
 	}
 	if (core == NULL) {
 	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
