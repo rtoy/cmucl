@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/parms.lisp,v 1.5 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/parms.lisp,v 1.6 1998/09/13 12:27:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -130,7 +130,7 @@
 (defparameter target-dynamic-space-start   #x30000000)
 
 ;; The space-register holding the lisp heap.
-(defconstant lisp-heap-space 4)
+(defconstant lisp-heap-space 5)
 
 ;; The space-register holding the C text segment.
 (defconstant c-text-space 4)

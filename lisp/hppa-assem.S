@@ -88,7 +88,7 @@ call_into_lisp
 	/* And into lisp we go. */
 	.export break_here
 break_here
-	be,n	0(sr4,reg_LIP)
+	be,n	0(sr5,reg_LIP)
 
 	.align	8
 lra
