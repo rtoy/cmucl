@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.52 2004/05/06 09:49:50 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.53 2004/05/11 14:36:10 rtoy Exp $
  *
  */
 
@@ -4259,13 +4259,9 @@ static int
 scav_weak_pointer (lispobj *where, lispobj object)
 {
   struct weak_pointer *this_wp = (struct weak_pointer *) where;
-  struct weak_pointer *wp;
-
-  for (wp = weak_pointers; wp && wp != this_wp; wp = wp->next)
-    ;
-
-  if (wp == NULL)
+  if (this_wp->mark_bit == NIL)
     {
+      this_wp->mark_bit = T;
       this_wp->next = weak_pointers;
       weak_pointers = this_wp;
     }
@@ -4296,6 +4292,7 @@ scan_weak_pointers (void)
       lispobj value = wp->value;
       lispobj *first_pointer = (lispobj *) PTR (value);
 
+      wp->mark_bit = NIL;
       if (Pointerp (value) && from_space_p (value))
 	{
 	  if (first_pointer[0] == 0x01)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.49 2003/06/18 14:29:23 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.50 2004/05/11 14:36:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -385,6 +385,12 @@
 	  :ref-trans c::%weak-pointer-broken :ref-known (flushable)
 	  :set-trans c::%set-weak-pointer-broken :set-known (unsafe)
 	  :init :null)
+  ;; This is used in gencgc.c to note if we've visited this weak
+  ;; pointer before, so that the scavenging weak-pointers isn't an
+  ;; O(n^2) process.
+  #+gencgc
+  (mark-bit :type (member t nil)
+	    :init :null)
   (next :c-type #-alpha "struct weak_pointer *" #+alpha "u32"))
 
 #+(or gengc gencgc)
