@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.25 1997/10/25 16:31:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.26 1997/11/11 18:51:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -382,7 +382,7 @@
 
 (export '(alternate-get-global-address))
 
-#-(or freebsd solaris linux irix)
+#-(or solaris linux irix)
 (defun alternate-get-global-address (symbol)
   (declare (type simple-string symbol)
 	   (ignore symbol))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.36 1997/11/04 15:39:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.37 1997/11/11 18:51:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,26 +95,13 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
-             ;; XXX perhaps we should use foreign-symbol-address-aux on linux
-	     ;;too?
-	     #-linux
 	     (let ((val (lisp::foreign-symbol-address-aux name)))
-	       ;; lisp::foreign-symbol-address-aux always signals exactly the
-	       ;; same error we would if the symbol isn't found
-	       (values val t))
-	     #+linux
-	     (multiple-value-bind
-		   (value found)
-		 (gethash name lisp::*foreign-symbols*)
-	       (if found
-		   (values value found)
-		   (gethash (concatenate 'string "PVE_stub_" name)
-			    lisp::*foreign-symbols*))))
+	       ;; Foreign-symbol-address-aux always signals exactly
+	       ;; the same error we would if the symbol isn't found
+	       (values val t)))
 	    #+x86
 	    (:code-object
-	     (values
-	      (get-lisp-obj-address code)
-	      t)))
+	     (values (get-lisp-obj-address code) t)))
 	(unless found
 	  (error (ecase flavor
 		   (:assembly-routine "Undefined assembler routine: ~S")

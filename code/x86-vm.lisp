@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.7 1997/11/08 15:54:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.8 1997/11/11 18:51:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -368,32 +368,25 @@
 ;;; The loader uses this to convert alien names to the form they occure in
 ;;; the symbol table (for example, prepending an underscore).
 ;;;
-;;; On the x86 under FreeBSD, we prepend an underscore. If this is not
-;;; done under Linux then this is the place to make the change.
-;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
-  (lisp:concatenate 'string #+linux "" #-linux "_" name))
+  name)
 
-;;; This used to live in foreign.lisp but it gets loaded too late
-;;; to be useful. This gets used by the loader to map lisp foreign
-;;; symbol names to the OS's version of it. This was added for the
-;;; Linux port -- maybe it makes the above extern-alien-name
-;;; obsolete?
-(defun system:alternate-get-global-address(symbol)
-  (declare (type simple-string symbol))
-  (let ((namex symbol)
-        (table lisp::*foreign-symbols*)) ; defined in load.lisp
-    (cond ((gethash namex table nil))
-#+linux   ((gethash (concatenate 'string "PVE_stub_" namex) table nil))
-#+linux   ((gethash (concatenate 'string "" namex) table nil)) ; Linux
-#+freebsd ((gethash (concatenate 'string "_" namex) table nil)); FreeBSD
-          ((gethash (concatenate 'string "__" namex) table nil))
-          ((gethash (concatenate 'string "__libc_" namex) table nil))
-          (t (progn (format t "Error: can't be in alt-get-gl-addr ~a" namex)
-	;; returning 0 is VERY dangerous!
-		0)))))
-
+(defun lisp::foreign-symbol-address-aux (name)
+  (multiple-value-bind (value found)
+      (gethash name lisp::*foreign-symbols* 0)
+    (if found
+	value
+	(multiple-value-bind (value found)
+	    (gethash
+	     (concatenate 'string #+linux "PVE_stub_" #+freebsd "_" name)
+	     lisp::*foreign-symbols* 0)
+	  (if found
+	      value
+	      (let ((value (system:alternate-get-global-address name)))
+		(when (zerop value)
+		  (error "Unknown foreign symbol: ~S" name))
+		value))))))
 
 
 ;;; SANCTIFY-FOR-EXECUTION -- Interface.

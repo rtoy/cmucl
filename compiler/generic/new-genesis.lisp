@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.28 1997/11/04 15:36:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.29 1997/11/11 18:51:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1684,13 +1684,18 @@
       version)))
 
 (defun lookup-foreign-symbol (name)
-  (let ((is-linux (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			   #.c:x86-fasl-file-implementation)
-		       (c:backend-featurep :linux))))
-
+  (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			  #.c:x86-fasl-file-implementation)
+		      (c:backend-featurep :linux)))
+	(freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			    #.c:x86-fasl-file-implementation)
+			(c:backend-featurep :freebsd))))
+    
     (cond
-     ((and is-linux (gethash (concatenate 'string "PVE_stub_" name)
-			     *cold-foreign-symbol-table* nil)))
+     ((and freebsd-p (gethash (concatenate 'string "_" name)
+			      *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "PVE_stub_" name)
+			    *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
      (#-irix
       (gethash name *cold-foreign-symbol-table* nil)
@@ -1699,12 +1704,12 @@
         (when (and (numberp value) (zerop value))
 	  (warn "Not-really-defined foreign symbol: ~S" name))
         value))
-     ((and is-linux (gethash (concatenate 'string "__libc_" name)
-			     *cold-foreign-symbol-table* nil)))
-     ((and is-linux (gethash (concatenate 'string "__" name)
-			     *cold-foreign-symbol-table* nil)))
-     ((and is-linux (gethash (concatenate 'string "_" name)
-			     *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "__libc_" name)
+			    *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "__" name)
+			    *cold-foreign-symbol-table* nil)))
+     ((and linux-p (gethash (concatenate 'string "_" name)
+			    *cold-foreign-symbol-table* nil)))
      (t
       (warn "Undefined foreign symbol: ~S" name)
       0))))
