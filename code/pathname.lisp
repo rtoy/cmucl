@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.8 1992/02/24 00:52:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.9 1992/03/10 15:06:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,8 @@
 	  load-logical-pathname-translations *default-pathname-defaults*))
 
 (in-package "EXTENSIONS")
-(export '(search-list clear-search-list enumerate-search-list))
+(export '(search-list search-list-defined-p clear-search-list
+		      enumerate-search-list))
 
 (in-package "LISP")
 
@@ -939,6 +940,15 @@
 				     :directory (cons :absolute directory)))
 		  (search-list-expansions search-list))
 	  (error "Search list ~S has not been defined yet." pathname)))))
+
+;;; SEARCH-LIST-DEFINED-P -- public.
+;;; 
+(defun search-list-defined-p (pathname)
+  "Returns T if the search-list starting PATHNAME is currently defined, and
+   NIL otherwise.  An error is signaled if PATHNAME does not start with a
+   search-list."
+  (with-pathname (pathname pathname)
+    (search-list-defined (extract-search-list pathname t))))
 
 ;;; %SET-SEARCH-LIST -- public setf method
 ;;;
