@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.6 1990/03/27 17:18:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.7 1990/03/27 18:54:23 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -41,8 +41,7 @@
 ;;; ### Bootstrap hack: base characters don't exist in the old compiler,
 ;;; so leave characters alone.  Also, make string-char look like base-char.
 (compiler-let ((lisp::*bootstrap-deftype* t))
-  (eval-when (compile eval load)
-    (remhash 'character *builtin-types*))
+  (remhash 'character *builtin-types*)
   (deftype character () 'base-character)
   (deftype string-char ()
     (warn "Someone used the STRING-CHAR type.")
