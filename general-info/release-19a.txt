@@ -75,6 +75,8 @@ New in this release:
      - SUBTYPEP works in presence of forward-referenced classes.
      - Accessing slots of specialized parameters in (SETF
        SLOT-VALUE-USING-CLASS) methods works.
+     - DIRECT-SLOT-DEFINITION-CLASS and EFFECTIVE-SLOT-DEFINITION-CLASS
+       AMOP compliant.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.56 2003/04/26 21:24:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.57 2003/04/29 10:33:51 gerd Exp $")
 
 (in-package :pcl)
 
@@ -709,7 +709,8 @@
   (make-class-predicate class predicate-name)
   (add-slot-accessors class direct-slots))
 
-(defmethod direct-slot-definition-class ((class structure-class) initargs)
+(defmethod direct-slot-definition-class ((class structure-class)
+					 &rest initargs)
   (declare (ignore initargs))
   (find-class 'structure-direct-slot-definition))
 
@@ -927,13 +928,14 @@
 ;;; 
 ;;;
 ;;;
-(defmethod direct-slot-definition-class ((class std-class) initargs)
+(defmethod direct-slot-definition-class ((class std-class) &rest initargs)
   (declare (ignore initargs))
   (find-class 'standard-direct-slot-definition))
 
 (defun make-direct-slotd (class initargs)
   (let ((initargs (list* :class class initargs)))
-    (apply #'make-instance (direct-slot-definition-class class initargs)
+    (apply #'make-instance
+	   (apply #'direct-slot-definition-class class initargs)
 	   initargs)))
 
 ;;;
@@ -1048,14 +1050,15 @@
     ((class slot-class) slot-name dslotds)
   (declare (ignore slot-name))
   (let* ((initargs (compute-effective-slot-definition-initargs class dslotds))
-	 (class (effective-slot-definition-class class initargs)))
+	 (class (apply #'effective-slot-definition-class class initargs)))
     (apply #'make-instance class initargs)))
 
-(defmethod effective-slot-definition-class ((class std-class) initargs)
+(defmethod effective-slot-definition-class ((class std-class) &rest initargs)
   (declare (ignore initargs))
   (find-class 'standard-effective-slot-definition))
 
-(defmethod effective-slot-definition-class ((class structure-class) initargs)
+(defmethod effective-slot-definition-class ((class structure-class)
+					    &rest initargs)
   (declare (ignore initargs))
   (find-class 'structure-effective-slot-definition))
 
