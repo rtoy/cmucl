@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.19 1993/05/27 17:05:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.20 1993/06/24 12:40:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,7 +415,7 @@
      (unless (listp x)
        (with-debugger-info (component pc fp)
 	 (error 'simple-type-error :item x :expected-type 'list
-		:format-string "Non-list argument to CAR: ~S"
+		:format-control "Non-list argument to CAR: ~S"
 		:format-arguments (list x))))
      (car x)))
 
@@ -424,7 +424,7 @@
      (unless (listp x)
        (with-debugger-info (component pc fp)
 	 (error 'simple-type-error :item x :expected-type 'list
-		:format-string "Non-list argument to CDR: ~S"
+		:format-control "Non-list argument to CDR: ~S"
 		:format-arguments (list x))))
      (cdr x)))
 
