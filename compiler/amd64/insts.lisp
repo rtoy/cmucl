@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.3 2004/07/08 17:33:15 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/insts.lisp,v 1.4 2004/07/14 21:05:13 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1159,7 +1159,8 @@
 	 (assert (not (eq size :byte)))
 	 (maybe-emit-operand-size-prefix segment size :qword)
 	 (cond ((register-p src)
-		(maybe-emit-rex-prefix segment size nil nil src)
+		;; push doesn't need a rex size prefix
+		(maybe-emit-rex-prefix segment :dword nil nil src)
 		(emit-byte-with-reg segment #b01010 (reg-lower-3-bits src)))
 	       (t
 		(maybe-emit-ea-rex-prefix segment size src nil)
@@ -1177,7 +1178,7 @@
   (:emitter
    (let ((size (operand-size dst)))
      (assert (not (eq size :byte)))
-     ;; pop doesn't need rex prefix
+     ;; pop doesn't need rex size prefix
      (maybe-emit-operand-size-prefix segment size :qword) 
      (cond ((register-p dst)
 	    (maybe-emit-rex-prefix segment :dword nil nil dst)
@@ -1202,9 +1203,11 @@
      (maybe-emit-operand-size-prefix segment size)
      (labels ((xchg-acc-with-something (acc something)
 		(if (and (not (eq size :byte)) (register-p something))
-		    (emit-byte-with-reg segment
+		    (progn
+		      (maybe-emit-rex-prefix segment size nil nil something)
+		      (emit-byte-with-reg segment
 					#b10010
-					(reg-tn-encoding something))
+					(reg-lower-3-bits something)))
 		    (xchg-reg-with-something acc something)))
 	      (xchg-reg-with-something (reg something)
 		(maybe-emit-ea-rex-prefix segment size something reg)
@@ -1506,6 +1509,7 @@
 	   (t
 	    (let ((size (operand-size dst)))
 	      (maybe-emit-operand-size-prefix segment size)
+	      (maybe-emit-ea-rex-prefix segment size dst nil)
 	      (emit-byte segment (if (eq size :byte) #b11110110 #b11110111))
 	      (emit-ea segment dst #b101)))))))
 
@@ -1584,9 +1588,10 @@
    (assert (register-p src))
    (let ((size (matching-operand-size src dst)))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-ea-rex-prefix segment size dst src)
      (emit-byte segment #b00001111)
      (emit-byte segment (if (eq size :byte) #b11000000 #b11000001))
-     (emit-ea segment dst (reg-tn-encoding src)))))
+     (emit-ea segment dst (reg-lower-3-bits src)))))
 
 
 ;;;; Logic.
@@ -1663,12 +1668,11 @@
     (when (eq size :byte)
       (error "Double shifts can only be used with words."))
     (maybe-emit-operand-size-prefix segment size)
+    (maybe-emit-ea-rex-prefix segment size dst src)
     (emit-byte segment #b00001111)
     (emit-byte segment (dpb opcode (byte 1 3)
 			    (if (eq amt :cl) #b10100101 #b10100100)))
-    #+nil
-    (emit-ea segment dst src)
-    (emit-ea segment dst (reg-tn-encoding src))	; pw tries this
+    (emit-ea segment dst (reg-lower-3-bits src))
     (unless (eq amt :cl)
       (emit-byte segment amt))))
 
@@ -1707,6 +1711,7 @@
      (maybe-emit-operand-size-prefix segment size)
      (flet ((test-immed-and-something (immed something)
 	      (cond ((accumulator-p something)
+		     (maybe-emit-rex-prefix segment size nil nil nil)
 		     (emit-byte segment
 				(if (eq size :byte) #b10101000 #b10101001))
 		     (emit-sized-immediate segment size immed))
@@ -1763,6 +1768,7 @@
   (:printer string-op ((op #b1010011)))
   (:emitter
    (maybe-emit-operand-size-prefix segment size)
+   (maybe-emit-rex-prefix segment size nil nil nil)
    (emit-byte segment (if (eq size :byte) #b10100110 #b10100111))))
 
 (define-instruction ins (segment acc)
@@ -1771,6 +1777,7 @@
    (let ((size (operand-size acc)))
      (assert (accumulator-p acc))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-rex-prefix segment size nil nil nil)
      (emit-byte segment (if (eq size :byte) #b01101100 #b01101101)))))
 
 (define-instruction lods (segment acc)
@@ -1796,6 +1803,7 @@
    (let ((size (operand-size acc)))
      (assert (accumulator-p acc))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-rex-prefix segment size nil nil nil)
      (emit-byte segment (if (eq size :byte) #b01101110 #b01101111)))))
 
 (define-instruction scas (segment acc)
@@ -1804,6 +1812,7 @@
    (let ((size (operand-size acc)))
      (assert (accumulator-p acc))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-rex-prefix segment size nil nil nil)
      (emit-byte segment (if (eq size :byte) #b10101110 #b10101111)))))
 
 (define-instruction stos (segment acc)
@@ -1812,6 +1821,7 @@
    (let ((size (operand-size acc)))
      (assert (accumulator-p acc))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-rex-prefix segment size nil nil nil)
      (emit-byte segment (if (eq size :byte) #b10101010 #b10101011)))))
 
 (define-instruction xlat (segment)
@@ -1843,9 +1853,10 @@
      (when (eq size :byte)
        (error "Can't scan bytes: ~S" src))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-ea-rex-prefix segment size src dst)
      (emit-byte segment #b00001111)
      (emit-byte segment #b10111100)
-     (emit-ea segment src (reg-tn-encoding dst)))))
+     (emit-ea segment src (reg-lower-3-bits dst)))))
 
 (define-instruction bsr (segment dst src)
   (:printer ext-reg-reg/mem ((op #b1011110) (width 1)))
@@ -1854,23 +1865,27 @@
      (when (eq size :byte)
        (error "Can't scan bytes: ~S" src))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-ea-rex-prefix segment size src dst)
      (emit-byte segment #b00001111)
      (emit-byte segment #b10111101)
-     (emit-ea segment src (reg-tn-encoding dst)))))
+     (emit-ea segment src (reg-lower-3-bits dst)))))
 
 (defun emit-bit-test-and-mumble (segment src index opcode)
   (let ((size (operand-size src)))
     (when (eq size :byte)
       (error "Can't scan bytes: ~S" src))
     (maybe-emit-operand-size-prefix segment size)
-    (emit-byte segment #b00001111)
     (cond ((integerp index)
+	   (maybe-emit-ea-rex-prefix segment size src nil)
+	   (emit-byte segment #b00001111)
 	   (emit-byte segment #b10111010)
 	   (emit-ea segment src opcode)
 	   (emit-byte segment index))
 	  (t
+	   (maybe-emit-ea-rex-prefix segment size src index)
+	   (emit-byte segment #b00001111)
 	   (emit-byte segment (dpb opcode (byte 3 3) #b10000011))
-	   (emit-ea segment src (reg-tn-encoding index))))))
+	   (emit-ea segment src (reg-lower-3-bits index))))))
 
 ;; Bit Test (BT) instructions
 ;; Ignoring the case with a src as a register, we have
@@ -1997,7 +2012,7 @@
      (t
       ;; REX is necessary for stuff like "callq *%rdi"
       (unless (ea-p where)
-	(emit-byte segment #b01001000)) ; REX prefix #x48
+	(maybe-emit-ea-rex-prefix segment :qword where nil))
       (emit-byte segment #b11111111)
       (emit-ea segment where #b010)))))
 
@@ -2269,8 +2284,9 @@
      (when (eq size :byte)
        (error "Can't bounds-test bytes: ~S" reg))
      (maybe-emit-operand-size-prefix segment size)
+     (maybe-emit-ea-rex-prefix segment size bounds reg)
      (emit-byte segment #b01100010)
-     (emit-ea segment bounds (reg-tn-encoding reg)))))
+     (emit-ea segment bounds (reg-lower-3-bits reg)))))
 
 (define-instruction iret (segment)
   (:printer byte ((op #b11001111)))
