@@ -38,7 +38,14 @@ inst breakpoint_install(code_obj, pc_offset)
      lispobj code_obj;
      int pc_offset;
 {
-    return swap_insts(code_obj, pc_offset, (trap_Breakpoint << 16) | 0xd);
+    return swap_insts(code_obj, pc_offset,
+#ifdef mips
+		      (trap_Breakpoint << 16) | 0xd
+#endif
+#ifdef sparc
+		      trap_Breakpoint
+#endif
+	);
 }
 
 void breakpoint_remove(code_obj, pc_offset, orig_inst)
