@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.38 1993/08/30 21:58:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.39 1994/02/04 15:22:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -419,13 +419,13 @@ See the CMU Common Lisp User's Manual for more information.
 	     (print-common-info)
 	     (format t "~A" string)
 	     (decf *number-of-steps*)
-	     (step current-frame))
+	     (set-step-breakpoint current-frame))
 	    ((and step-hit-info (= 1 *number-of-steps*))
 	     (build-string "*Step*")
 	     (break (make-condition 'step-condition :format-control string)))
 	    (step-hit-info
 	     (decf *number-of-steps*)
-	     (step current-frame))
+	     (set-step-breakpoint current-frame))
 	    (bp-hit-info
 	     (when break
 	       (build-string (format nil "~&*Breakpoint hit*")))
@@ -443,7 +443,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; Sets breakpoints at the next possible code-locations.  After calling
 ;;; this either (continue) if in the debugger or just let program flow
 ;;; return if in a hook function.
-(defun step (frame)
+(defun set-step-breakpoint (frame)
   (cond
    ((di:debug-block-elsewhere-p (di:code-location-debug-block
 				 (di:frame-code-location frame)))
@@ -1361,7 +1361,7 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; Steps to the next code-location
 (def-debug-command "STEP" ()
   (setf *number-of-steps* (read-if-available 1))
-  (step *current-frame*)
+  (set-step-breakpoint *current-frame*)
   (continue *debug-condition*)
   (error "Couldn't continue."))
   
