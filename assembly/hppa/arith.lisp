@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.2 1992/06/13 10:11:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.3 1992/06/22 15:46:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,9 +116,9 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst extru x 31 2 zero-tn :<>)
+  (inst extru x 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
-  (inst extru y 31 2 zero-tn :<>)
+  (inst extru y 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
   (inst addo x y res)
   (lisp-return lra :offset 2)
@@ -145,9 +145,9 @@
 			  (:temp lra descriptor-reg lra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
-  (inst extru x 31 2 zero-tn :<>)
+  (inst extru x 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
-  (inst extru y 31 2 zero-tn :<>)
+  (inst extru y 31 2 zero-tn :=)
   (inst b do-static-fun :nullify t)
   (inst subo x y res)
   (lisp-return lra :offset 2)
@@ -180,9 +180,9 @@
 				  (:temp lra descriptor-reg lra-offset)
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp ocfp any-reg ocfp-offset))
-	  (inst extru x 31 2 zero-tn :<>)
+	  (inst extru x 31 2 zero-tn :=)
 	  (inst b do-static-fn :nullify t)
-	  (inst extru y 31 2 zero-tn :<>)
+	  (inst extru y 31 2 zero-tn :=)
 	  (inst b do-static-fn :nullify t)
 
 	  (inst comclr x y zero-tn ,cond)
@@ -273,4 +273,3 @@
 
   RETURN-T
   (load-symbol res t))
-
