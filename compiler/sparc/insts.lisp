@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.48 2003/10/27 18:29:35 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.49 2004/03/29 18:37:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1659,7 +1659,7 @@ about function addresses and register values.")
   (:declare (type (or label branch-condition) cond-or-target)
 	    (type (or label null) target))
   (:printer format-2-branch ((op #b00) (op2 #b010) (a 1))
-            nil
+            branch-printer
             :print-name 'b)
   (:attributes branch)
   (:dependencies (reads :psr))
@@ -1673,8 +1673,8 @@ about function addresses and register values.")
 	    (type (or label null) target)
 	    (type (or null (member :icc :xcc)) cc)
 	    (type (or null (member :pt :pn)) pred))
-  (:printer format-2-branch ((op #b00) (op2 #b001) (a 1))
-            nil
+  (:printer format-2-branch-pred ((op #b00) (op2 #b001) (a 1))
+            branch-pred-printer
             :print-name 'bp)
   (:attributes branch)
   (:dependencies (reads :psr))
