@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.17 1992/11/25 10:51:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.18 1992/12/17 09:22:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2106,20 +2106,17 @@
 	    (bytes-to-words
 	     (segment-offs-to-code-offs (dstate-cur-offs dstate) seg)))
 	   (name
-	    (kernel:code-header-ref code
-				    (+ woffs vm:function-header-name-slot)))
+	    (kernel:code-header-ref code (+ woffs vm:function-name-slot)))
 	   (args
-	    (kernel:code-header-ref code
-				    (+ woffs vm:function-header-arglist-slot)))
+	    (kernel:code-header-ref code (+ woffs vm:function-arglist-slot)))
 	   (type
-	    (kernel:code-header-ref code
-				    (+ woffs vm:function-header-type-slot))))
+	    (kernel:code-header-ref code (+ woffs vm:function-type-slot))))
       (format stream ".~a ~s~:a" 'entry name args)
       (note #'(lambda (stream)
 		(format stream "~:s" type)) ; use format to print NIL as ()
 	    dstate)))
   (incf (dstate-next-offs dstate)
-	(words-to-bytes vm:function-header-code-offset)))
+	(words-to-bytes vm:function-code-offset)))
 
 ;;; ----------------------------------------------------------------
 
@@ -2624,11 +2621,11 @@
 		fun
 		fun-offset
 		(kernel:code-header-ref
-		 code (+ fun-offset vm:function-header-name-slot))
+		 code (+ fun-offset vm:function-name-slot))
 		(kernel:code-header-ref
-		 code (+ fun-offset vm:function-header-arglist-slot))
+		 code (+ fun-offset vm:function-arglist-slot))
 		(kernel:code-header-ref
-		 code (+ fun-offset vm:function-header-type-slot)))))))
+		 code (+ fun-offset vm:function-type-slot)))))))
 
 ;;; ----------------------------------------------------------------
 ;;; getting at the source code...
@@ -2733,8 +2730,7 @@
 
 (defun code-function-map (code)
   (declare (type kernel:code-component code))
-  (di::get-debug-info-function-map
-   (kernel:code-header-ref code vm:code-debug-info-slot)))
+  (di::get-debug-info-function-map (kernel:%code-debug-info code)))
 
 (defstruct location-group
   (locations #() :type (vector (or list fixnum)))
@@ -2974,7 +2970,7 @@
   (declare (type compiled-function function))
   (let* ((code (fun-code function))
 	 (function-map (code-function-map code))
-	 (fname (kernel:%function-header-name function))
+	 (fname (kernel:%function-name function))
 	 (sfcache (make-source-form-cache)))
     (let ((first-block-seen-p nil)
 	  (nil-block-seen-p nil)
