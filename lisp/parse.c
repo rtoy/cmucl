@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.3 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.4 1997/11/23 08:52:52 dtc Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>
@@ -291,7 +291,11 @@ parse_regnum(char *s)
 
 		for (i = 0; i < NREGS ; i++)
 			if (strcasecmp(s + 1, lisp_register_names[i]) == 0)
+#ifdef i386
+				return i*2;
+#else
 				return i;
+#endif
 		
 		return -1;
 	}

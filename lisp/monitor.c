@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.6 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.7 1997/11/23 08:52:51 dtc Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -336,7 +336,11 @@ static void print_context(struct sigcontext *context)
 
 	for (i = 0; i < NREGS; i++) {
 		printf("%s:\t", lisp_register_names[i]);
+#ifdef i386
+		brief_print((lispobj) SC_REG(context, i*2));
+#else
 		brief_print((lispobj) SC_REG(context, i));
+#endif
 	}
 	printf("PC:\t\t  0x%08lx\n", SC_PC(context));
 }
