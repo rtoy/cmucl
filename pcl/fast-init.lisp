@@ -24,6 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.4 1998/12/20 04:30:20 dtc Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 

@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.9 1998/12/20 04:30:21 dtc Exp $")
+;;;
 ;;; This file contains portable versions of low-level functions and macros
 ;;; which are ripe for implementation specific customization.  None of the
 ;;; code in this file *has* to be customized for a particular Common Lisp

@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.11 1998/12/20 04:30:16 dtc Exp $")
+;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
 

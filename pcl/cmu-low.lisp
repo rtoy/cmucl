@@ -23,6 +23,10 @@
 ;;;
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
+;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/cmu-low.lisp,v 1.17 1998/12/20 04:30:17 dtc Exp $")
 ;;; 
 ;;; This is the CMU Lisp version of the file low.
 ;;; 

@@ -18,6 +18,10 @@
 ;;; Suggestions, bugs, criticism and questions to lange@cs.ucla.edu
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.2 1998/12/20 04:30:23 dtc Exp $")
+;;;
 
 (in-package 'pcl)
 

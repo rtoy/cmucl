@@ -24,6 +24,9 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.11 1998/12/20 04:30:18 dtc Exp $")
 ;;;
 ;;; This file defines the defconstructor and other make-instance optimization
 ;;; mechanisms.

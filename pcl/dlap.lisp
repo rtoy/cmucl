@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/dlap.lisp,v 1.7 1998/12/20 04:30:19 dtc Exp $")
+;;;
 
 (in-package :pcl)
 

@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.10 1998/12/20 04:30:21 dtc Exp $")
+;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
 ;;;

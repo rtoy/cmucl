@@ -24,7 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
-
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.15 1998/12/20 04:30:22 dtc Exp $")
+;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 ;;; Note that at this time CMUCL is not in compliance with ANSI
 ;;; specified use of feature names :cltl2 :x3j13 :draft-ansi-cl or :ansi-cl

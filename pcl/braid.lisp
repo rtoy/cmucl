@@ -24,6 +24,10 @@
 ;;; Suggestions, comments and requests for improvements are also welcome.
 ;;; *************************************************************************
 ;;;
+#+cmu
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.14 1998/12/20 04:30:16 dtc Exp $")
+;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
 ;;; The code in this file takes the early definitions that have been saved
