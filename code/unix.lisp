@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.20 1992/07/17 18:19:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.21 1992/07/28 00:22:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1282,9 +1282,12 @@
   "Unix-gethostid returns a 32-bit integer which provides unique
    identification for the host machine.")
 
-(def-alien-routine ("fork" unix-fork) int
+(defun unix-fork ()
   "Executes the unix fork system call.  Returns 0 in the child and the pid
-  of the child in the parent if it works, or -1 if it doesn't work.")
+   of the child in the parent if it works, or NIL and an error number if it
+   doesn't work."
+  (int-syscall ("fork")))
+
 
 
 ;;; Operations on Unix Directories.
