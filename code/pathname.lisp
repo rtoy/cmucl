@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.38 1999/04/10 15:05:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.39 1999/04/12 12:33:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,9 @@
   (let ((namestring (handler-case (namestring pathname)
 		      (error nil))))
     (cond (namestring
-	   (format stream "#p~S" namestring))
+	   (if (or *print-escape* *print-readably*)
+	       (format stream "#p~S" namestring)
+	       (format stream "~A" namestring)))
 	  (*print-readably*
 	   (error "~S Cannot be printed readably." pathname))
 	  (t
@@ -165,7 +167,9 @@
   (let ((namestring (handler-case (namestring pathname)
 		      (error nil))))
     (cond (namestring
-	   (format stream "#.(logical-pathname ~S)" namestring))
+	   (if (or *print-escape* *print-readably*)
+	       (format stream "#.(logical-pathname ~S)" namestring)
+	       (format stream "~A" namestring)))
 	  (*print-readably*
 	   (error "~S Cannot be printed readably." pathname))
 	  (t
