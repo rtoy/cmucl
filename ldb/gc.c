@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.11 1990/07/18 10:49:45 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.12 1990/09/21 06:01:57 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1018,6 +1018,23 @@ lispobj *where;
 	return length;
 }
 
+static
+scav_symbol(where, object)
+lispobj *where, object;
+{
+    struct symbol *symbol;
+#define RAW_ADDR_OFFSET (sizeof(struct function_header)-1-type_FunctionHeader)
+
+    symbol = (struct symbol *)where;
+    
+    if ((char *)(symbol->function + RAW_ADDR_OFFSET) == symbol->raw_function_addr) {
+        scavenge(where + 1, sizeof(struct symbol)/sizeof(lispobj) - 1);
+        symbol->raw_function_addr = (char *)(symbol->function + RAW_ADDR_OFFSET);
+        return sizeof(struct symbol) / sizeof(lispobj);
+    }
+    else
+        return 1;
+}
 
 static
 scav_unboxed(where, object)
@@ -1692,7 +1709,7 @@ gc_init()
 	scavtab[type_ReturnPcHeader] = scav_return_pc_header;
 	scavtab[type_ClosureHeader] = scav_boxed;
 	scavtab[type_ValueCellHeader] = scav_boxed;
-	scavtab[type_SymbolHeader] = scav_boxed;
+        scavtab[type_SymbolHeader] = scav_symbol;
 	scavtab[type_BaseCharacter] = scav_immediate;
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
