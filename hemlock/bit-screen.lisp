@@ -658,8 +658,10 @@
 (defconstant minimum-window-columns 8
   "Windows must be at least this many characters wide.")
 
+(eval-when (compile eval load)
 (defconstant xwindow-border-width 2 "X border around X windows")
 (defconstant xwindow-border-width*2 (* xwindow-border-width 2))
+); eval-when
 
 ;;; We must name windows (set the "name" property) to get around a bug in
 ;;; awm and twm.  They will not handle menu clicks without a window having
