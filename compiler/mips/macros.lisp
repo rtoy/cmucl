@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.16 1990/02/25 02:39:32 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.17 1990/02/25 19:51:00 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -246,7 +246,8 @@
       `(let* ((drop-through (gen-label))
 	      (,in-label (if ,not-p drop-through ,target))
 	      (,out-label (if ,not-p ,target drop-through)))
-	 ,out-label			    ; squelch possible warning
+	 ,in-label			; squelch possible warning
+	 ,out-label
 	 (unless (zerop ,tag-mask)
 	   (inst andi ,temp ,register ,tag-mask))
 	 ,@(emit)
