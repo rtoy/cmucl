@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.5 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/alloc.lisp,v 1.6 2004/08/08 11:15:11 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,6 +43,7 @@
   (:temporary (:scs (descriptor-reg) :type list :to (:result 0) :target result)
 	      res)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
+  (:temporary (:scs (non-descriptor-reg)) alloc-temp)
   (:info num dynamic-extent)
   (:results (result :scs (descriptor-reg)))
   (:variant-vars star)
@@ -64,9 +65,8 @@
 			temp)))))
 	     (let* ((cons-cells (if star (1- num) num))
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
-	       (pseudo-atomic (pa-flag :extra alloc)
-		 (inst clrrwi res alloc-tn lowtag-bits)
-		 (inst ori res res list-pointer-type)
+	       (pseudo-atomic (pa-flag)
+		 (allocation res alloc list-pointer-type :temp-tn alloc-temp)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -98,6 +98,7 @@
 	 (unboxed-arg :scs (any-reg)))
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) size)
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:temporary (:sc non-descriptor-reg :offset nl3-offset) pa-flag)
@@ -111,9 +112,8 @@
       ;; Note: we don't have to subtract off the 4 that was added by
       ;; pseudo-atomic, because oring in other-pointer-type just adds
       ;; it right back.
-      (inst ori result alloc-tn other-pointer-type)
-      (inst add alloc-tn alloc-tn boxed)
-      (inst add alloc-tn alloc-tn unboxed)
+      (inst add size boxed unboxed)
+      (allocation result size other-pointer-type :temp-tn ndescr)
       (inst slwi ndescr boxed (- type-bits word-shift))
       (inst ori ndescr ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)

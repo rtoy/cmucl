@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.2 2004/07/25 18:15:52 pmai Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/macros.lisp,v 1.3 2004/08/08 11:15:12 rtoy Exp $
 ;;;
 ;;; This file contains various useful macros for generating PC code.
 ;;;
@@ -165,6 +165,21 @@
 
 ;;;; Storage allocation:
 
+(defmacro allocation (result-tn size lowtag &key stack-p temp-tn)
+  (declare (ignore stack-p temp-tn))
+  (let ((alloc-size (gensym)))
+    `(let ((,alloc-size ,size))
+       (if (logbitp (1- lowtag-bits) ,lowtag)
+	   (progn
+	     (inst ori ,result-tn alloc-tn ,lowtag))
+	   (progn
+	     (inst clrrwi ,result-tn alloc-tn lowtag-bits)
+	     (inst ori ,result-tn ,result-tn ,lowtag)))
+       (if (numberp ,alloc-size)
+	   (inst addi alloc-tn alloc-tn ,alloc-size)
+	   (inst add alloc-tn alloc-tn ,alloc-size)))))
+  
+#+nil
 (defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size)
 				 &body body)
   "Do stuff to allocate an other-pointer object of fixed Size with a single
@@ -178,6 +193,24 @@
        (inst ori ,result-tn alloc-tn other-pointer-type)
        (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
        (storew ,temp-tn ,result-tn 0 other-pointer-type)
+       ,@body)))
+
+(defmacro with-fixed-allocation ((result-tn flag-tn temp-tn type-code size
+					    &key (lowtag other-pointer-type))
+				 &body body)
+  "Do stuff to allocate an other-pointer object of fixed Size with a single
+  word header having the specified Type-Code.  The result is placed in
+  Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
+  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
+  initializes the object."
+  (once-only ((result-tn result-tn) (temp-tn temp-tn) (flag-tn flag-tn)
+	      (type-code type-code) (size size))
+    `(pseudo-atomic (,flag-tn)
+       (allocation ,result-tn (pad-data-block ,size) ,lowtag
+		   :temp-tn temp-tn)
+       (when ,type-code
+	 (inst lr ,temp-tn (logior (ash (1- ,size) type-bits) ,type-code))
+	 (storew ,temp-tn ,result-tn 0 other-pointer-type))
        ,@body)))
 
 
