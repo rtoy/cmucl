@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.18 1991/02/20 14:57:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.19 1991/12/14 09:09:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.18 1991/02/20 14:57:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.19 1991/12/14 09:09:24 wlott Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -108,13 +108,13 @@
 			     
   ;;
   ;; String name of this type.
-  (name nil :type simple-string)
+  (name (required-argument) :type simple-string)
   ;;
   ;; This type's class.
-  (class nil :type class-info)
+  (class (required-argument) :type class-info)
   ;;
   ;; A number that uniquely identifies this type (and implicitly its class.)
-  (number nil :type type-number)
+  (number (required-argument) :type type-number)
   ;;
   ;; Type specifier which info of this type must satisfy.
   (type nil :type t)
@@ -284,7 +284,7 @@
   ;;
   ;; Some string describing what is in this environment, for printing purposes
   ;; only.
-  (name nil :type string))
+  (name (required-argument) :type string))
 
 
 ;;; INFO-HASH  --  Internal
@@ -554,21 +554,23 @@
   ;;
   ;; Hashtable of the names in this environment.  If a bucket is unused, it is
   ;; 0.
-  (table nil :type simple-vector)
+  (table (required-argument) :type simple-vector)
   ;;
   ;; Indirection vector parallel to TABLE, translating indices in TABLE to the
   ;; start of the ENTRIES for that name.  Unused entries are undefined.
-  (index nil :type (simple-array compact-info-entries-index (*)))
+  (index (required-argument)
+	 :type (simple-array compact-info-entries-index (*)))
   ;;
   ;; Vector contining in contiguous ranges the values of for all the types of
   ;; info for each name.
-  (entries nil :type simple-vector)
+  (entries (required-argument) :type simple-vector)
   ;;
   ;; Vector parallel to ENTRIES, indicating the type number for the value
   ;; stored in that location and whether this location is the last type of info
   ;; stored for this name.  The type number is in the low TYPE-NUMBER-BITS
   ;; bits, and the next bit is set if this is the last entry.
-  (entries-info nil :type (simple-array compact-info-entry (*))))
+  (entries-info (required-argument)
+		:type (simple-array compact-info-entry (*))))
 
 
 (defconstant compact-info-entry-type-mask (ldb (byte type-number-bits 0) -1))
@@ -739,14 +741,14 @@
   ;; Vector of alists of alists of the form:
   ;;    ((Name . ((Type-Number . Value) ...) ...)
   ;;
-  (table nil :type simple-vector)
+  (table (required-argument) :type simple-vector)
   ;;
   ;; The number of distinct names currently in this table (each name may have
   ;; multiple entries, since there can be many types of info.
   (count 0 :type index)
   ;;
   ;; The number of names at which we should grow the table and rehash.
-  (threshold nil :type index))
+  (threshold 0 :type index))
 
 
 ;;; VOLATILE-INFO-CACHE-HIT  --  Internal
@@ -1129,6 +1131,9 @@
 
 ;;; Print function for a type.
 (define-info-type type printer (or function symbol null list) nil)
+
+;;; Make-load-form function for a type.
+(define-info-type type load-form-maker (or function symbol null) nil)
 
 ;;; Defstruct description information for a structure type.  DEFINED is the
 ;;; current global definition, and is not shadowed by compilation of
