@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.7 1992/07/27 13:45:15 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.8 1992/07/27 16:13:19 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -258,6 +258,7 @@
 	       (setf (gethash inst *inst-ids*)
 		     (incf *next-inst-id*)))
 	   stream)
+    (format stream " emitter=~S" (inst-emitter inst))
     (when (inst-depth inst)
       (format stream ", depth=~D" (inst-depth inst)))))
 
@@ -306,7 +307,7 @@
 ;;; see if the basic block is terminated.
 ;;; 
 (defun queue-inst (segment inst reads writes)
-  #+nil (format *trace-output* "Queuing ~S~%" inst)
+  #+debug (format *trace-output* "Queuing ~S~%" inst)
   (assert (segment-run-scheduler segment))
   (let* ((writers (segment-writers segment))
 	 (readers (segment-readers segment))
@@ -340,13 +341,13 @@
 	      (setf emittable-insts
 		    (delete prev-inst emittable-insts :test #'eq)))
 	    (setf readers (delete reader readers :test #'eq))))))
-    #+nil
+    #+debug
     (when read-dependencies
-      (format *trace-output* "Reads values produced by ~:S.~%"
+      (format *trace-output* " Reads values produced by ~:S.~%"
 	      read-dependencies))
-    #+nil
+    #+debug
     (when write-dependencies
-      (format *trace-output* "Writes values used by ~:S.~%"
+      (format *trace-output* " Writes values used by ~:S.~%"
 	      write-dependencies))
     (setf (inst-read-dependencies inst) read-dependencies)
     (setf (inst-write-dependencies inst) write-dependencies)
@@ -409,6 +410,8 @@
 						   flushable)
 			   (not (member inst (segment-writers segment)
 					:key #'cdr :test #'eq)))
+		      #+debug
+		      (format *trace-output* "Flushing ~S~%" inst)
 		      (setf (inst-emitter inst) nil)
 		      (setf (inst-depth inst) max))
 		     (t
@@ -424,13 +427,13 @@
       (setf (segment-emittable-insts segment)
 	    (sort really-emittable-insts #'> :key #'inst-depth))
       (setf (segment-delayed segment) delayed)))
-  #+nil
+  #+debug
   (format *trace-output* "Queued branches: ~S~%"
 	  (segment-queued-branches segment))
-  #+nil
+  #+debug
   (format *trace-output* "Initially emittable: ~S~%"
 	  (segment-emittable-insts segment))
-  #+nil
+  #+debug
   (format *trace-output* "Initially delayed: ~S~%"
 	  (segment-delayed segment))
   ;;
@@ -443,14 +446,14 @@
     (let ((insts-from-end 0))
       (dolist (branch (segment-queued-branches segment))
 	(dotimes (i (- (car branch) insts-from-end))
-	  #+nil
+	  #+debug
 	  (format *trace-output* "Filling branch delay slot...~%")
 	  (let ((inst (or (schedule-one-inst segment) :nop)))
 	    (push inst results))
 	  (advance-one-inst segment)
 	  (incf insts-from-end))
 	(push (cdr branch) results)
-	#+nil
+	#+debug
 	(format *trace-output* "Emitting ~S~%" (cdr branch))
 	(advance-one-inst segment)))
     ;;
@@ -506,7 +509,7 @@
 	   ;; We've got us a live one here.  Go for it.
 	   (assert (null (inst-write-dependents inst)))
 	   (assert (null (inst-read-dependents inst)))
-	   #+nil
+	   #+debug
 	   (format *Trace-output* "Emitting ~S~%" inst)
 	   (dolist (dep (inst-write-dependencies inst))
 	     ;; These are the instructions who have to be completed before our
@@ -542,7 +545,7 @@
 	  ((segment-delayed segment)
 	   ;; No emittable instructions, but we have more work to do.  Emit
 	   ;; a NOP to fill in a delay slot.
-	   #+nil (format *trace-output* "Emitting a NOP.~%")
+	   #+debug (format *trace-output* "Emitting a NOP.~%")
 	   :nop)
 	  (t
 	   ;; All done.
@@ -574,7 +577,7 @@
 ;;; first.
 ;;;
 (defun insert-emittable-inst (segment inst)
-  #+nil
+  #+debug
   (format *Trace-output* "Now emittable: ~S~%" inst)
   (do ((my-depth (inst-depth inst))
        (remaining (segment-emittable-insts segment) (cdr remaining))
@@ -1299,6 +1302,7 @@
    covered by this segment."
   (when (segment-run-scheduler segment)
     (schedule-pending-instructions segment))
+  (setf (segment-run-scheduler segment) nil)
   (let ((postits (segment-postits segment)))
     (setf (segment-postits segment) nil)
     (dolist (postit postits)
