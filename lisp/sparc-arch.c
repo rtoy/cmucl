@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.17 2003/10/14 13:11:39 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.18 2003/10/16 16:21:59 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -284,6 +284,17 @@ void handle_allocation_trap(struct sigcontext *context)
   int context_index;
   boolean were_in_lisp;
   char* memory;
+  sigset_t block;
+
+  /*
+   * Block all blockable signals.  Need to do this because
+   * sigill_handler enables the signals.  When the handler returns,
+   * signals should be enabled again, automatically.
+   */
+
+  sigemptyset(&block);
+  FILLBLOCKSET(&block);
+  sigprocmask(SIG_BLOCK, &block, 0);
       
   pc = (unsigned int*) SC_PC(context);
   or_inst = pc[-1];
@@ -334,7 +345,7 @@ void handle_allocation_trap(struct sigcontext *context)
 #if 0
   fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[rs1]);
 #endif
-  
+
   memory = (char *) alloc(size);
   SC_REG(context, rs1) = (unsigned long) memory;
 
