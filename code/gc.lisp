@@ -336,7 +336,7 @@
     ;;
     ;; Find all vector-like objects on the stack, putting code vectors in a
     ;; separate table. (step 1)
-    (do ((sp (%primitive pointer+ (%primitive current-cont)
+    (do ((sp (%primitive pointer+ (%primitive current-fp)
 			 (- %stack-increment))
 	     (%primitive pointer+ sp (- %stack-increment))))
 	((%primitive pointer< sp base))
