@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.33 2003/08/04 21:27:30 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.34 2003/08/12 16:41:40 gerd Exp $
  *
  */
 
@@ -355,6 +355,18 @@ prepend_core_path(char* lib, char* corefile)
     return result;
 }
 
+
+/* The symbol initial_function_addr is used globally as a flag to
+   indicate whether the executable contains the lisp image.  The
+   reason for this is that we use the linker to set the value of the
+   symbol.  But the symbol is an address, not a variable value.  So
+   for this to work as a flag, it must end up pointing to a valid
+   place in memory or we'll get a bus error or segmentation violation
+   when we check it.  The initial function address will be a valid
+   place in memory (or else we have worse problems).  FMG */
+
+int initial_function_addr = 0;
+
 /* And here be main. */
 
 int main(int argc, char *argv[], char *envp[])
@@ -366,7 +378,10 @@ int main(int argc, char *argv[], char *envp[])
     char *cmucllib = NULL;
 
     boolean monitor;
-    lispobj initial_function;
+    lispobj initial_function = 0;
+
+    if (initial_function_addr != 0)
+      initial_function = &initial_function_addr;
 
 #if defined(SVR4) || defined(__linux__)
     tzset();
@@ -387,6 +402,10 @@ int main(int argc, char *argv[], char *envp[])
       {
         if (strcmp(arg, "-core") == 0)
 	  {
+	    if (initial_function_addr) {
+	      fprintf(stderr, "Cannot specify core file in executable image --- sorry about that.\n");
+	      exit(1);
+	    }	      
             if (core != NULL)
 	      {
                 fprintf(stderr, "can only specify one core file.\n");
@@ -505,36 +524,52 @@ int main(int argc, char *argv[], char *envp[])
 	}
     }
 
-    /*
-     * If no core file specified, search for it in CMUCLLIB
-     */
-    if (core == NULL) {
-	if (getenv("CMUCLCORE") == NULL) {
-	    core = search_core(cmucllib, default_core);
-	} else {
-	    core = getenv("CMUCLCORE");
-	}
-    }
+
+    /* Only look for a core file if we're not using a built-in image.*/
+    if (initial_function_addr == 0) {
+      /*
+       * If no core file specified, search for it in CMUCLLIB
+       */
+      if (core == NULL) {
+	  if (getenv("CMUCLCORE") == NULL) {
+	      core = search_core(cmucllib, default_core);
+	  } else {
+	      core = getenv("CMUCLCORE");
+	  }
+      }
 	    
-    /* Die if the core file doesn't exist. */
-    {
-	struct stat statbuf;
+      /* Die if the core file doesn't exist. */
+      {
+	  struct stat statbuf;
 	
-	if (stat(core, &statbuf) != 0) {
-	    /* Can't find it so print a message and exit */
-            fprintf(stderr, "Cannot find core file");
-            if (core != NULL) {
-                fprintf(stderr, " %s", core);
-            }
-            fprintf(stderr, "\n");
-            fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
-	    exit(1);
-	}
+	  if (stat(core, &statbuf) != 0) {
+	      /* Can't find it so print a message and exit */
+              fprintf(stderr, "Cannot find core file");
+	      if (core != NULL) {
+                  fprintf(stderr, " %s", core);
+	      }
+	      fprintf(stderr, "\n");
+	      fprintf(stderr, "Based on lisp binary path `%s'\n", argv[0]);
+	      exit(1);
+	  }
+      }
+    } else {
+      /* The "core file" is the executable.  We have to do this
+       * because this file actually gets checked for later."
+       */
+      core = argv[0];
     }
 
     globals_init();
 
-    initial_function = load_core_file(core);
+    if(initial_function_addr != 0) {
+      extern int image_dynamic_space_size;
+      int allocation_pointer = dynamic_0_space + (int)&image_dynamic_space_size;
+      SetSymbolValue(ALLOCATION_POINTER, (lispobj)allocation_pointer);
+    } else {
+      initial_function = load_core_file(core);
+    }
+
 #if defined LINKAGE_TABLE
     os_foreign_linkage_init();
 #endif /* LINKAGE_TABLE */
