@@ -7,15 +7,18 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; Spice Lisp printer.
-;;; Written by Neal Feinberg, Spice Lisp Group.
-;;; Currently maintained by Skef Wholey.
-;;; 
-(in-package 'lisp)
-(export '(*print-escape* *print-pretty* *print-circle* *print-base* *print-radix*
-	  *print-case* *print-level* *print-length* *print-array* *print-gensym*
-	  write prin1 print princ write-to-string prin1-to-string
-	  princ-to-string))
+;;; CMU Common Lisp printer.
+;;;
+;;; Written by Neal Feinberg, Bill Maddox, Steven Handerson, and Skef Wholey.
+;;; Modified by various CMU Common Lisp maintainers.
+;;;
+
+(in-package "LISP")
+
+(export '(*print-escape* *print-pretty* *print-circle* *print-base*
+	  *print-radix* *print-case* *print-level* *print-length*
+	  *print-array* *print-gensym* write prin1 print princ
+	  write-to-string prin1-to-string princ-to-string))
 
 (defvar *print-escape* T
   "Flag which indicates that slashification is on.  See the manual")
@@ -33,8 +36,6 @@
   "Whether to worry about circular list structures. See the manual.")
 (defvar *print-case* ':upcase
   "What kind of case the printer should use by default")
-(defvar previous-case ()
-  "What the previous case selection the printer was set to.")
 (defvar *print-array* T
   "Whether the array should print it's guts out")
 (defvar *print-gensym* T
@@ -42,64 +43,69 @@
   If false, no prefix is printed.")
 
 
-;; This variable contains the current definition of one of three symbol
-;; printers.  This variable is set by the various print function (PRINT, 
-;; PRINC, and PRIN1).
-
-(defvar internal-symbol-output-function ())
-
-(defvar print-string-stream (make-string-output-stream)
-  "Holds the string stream for the x-TO-STRING functions.")
-
-(defvar *in-stringify-object* ()
-  "T if in the middle of stringify-object.")
-
-;; Imported from reader
+;;; Imported from reader.
+;;;
 (proclaim '(special *read-default-float-format*))
 
-;; From the package system
+;;; From the package system.
+;;;
 (proclaim '(special *package* *keyword-package*))
 
-;; This macro returns code which maps over a string, binding VARIABLE to each
-;; successive character in the string INIT-FORM, and executing BODY with
-;; the variable so bound.  This function used to be part of Common Lisp, but
-;; is no more.  It lives on in the printer, though.
 
-(defmacro dostring (varform &rest body)
-  ;; Varform looks like (variable init-form terminate-form)
-  (let ((variable (car varform))
-	(init-form (cadr varform))
-	(terminate-form (caddr varform)))
-    `(do ((,variable)
-	  (index 0 (1+ index))
-	  (terminate-index (length (the string ,init-form))))
-	 ((= index terminate-index)
-	  ,terminate-form)
-       (declare (fixnum index terminate-index))
-       (setq ,variable (char ,init-form index))
-       ,@body)))
+;;; DOSTRING -- Internal.
+;;;
+;;; This macro returns code which maps over a string, binding VARIABLE to each
+;;; successive character in the string INIT-FORM, and executing BODY with
+;;; the variable so bound.  This function used to be part of Common Lisp, but
+;;; is no more.  It lives on in the printer, though.
+;;;
+(defmacro dostring ((variable init-form terminate-form) &rest body)
+  (let ((str (gensym))
+	(end (gensym))
+	(index (gensym)))
+    `(let* ((,str ,init-form)
+	    (,end (length (the string ,str)))
+	    (,index 0))
+       (declare (fixnum ,index ,end))
+       (loop
+	 (when (= ,index ,end) (return ,terminate-form))
+	 (let ((,variable (char ,str ,index)))
+	   ,@body)
+	 (incf ,index)))))
+
 
 
+;;;; Printing Functions
+
 (proclaim '(inline setup-printer-state))
 
-;; This function sets the internal global symbol 
-;; "internal-symbol-output-function" to the right function depending on 
-;; the value of *print-case*.  See the manual for details.  The print buffer
-;; stream is also reset.
+(defvar *previous-case* ()
+  "What the previous case selection the printer was set to.")
 
+;;; This variable contains the current definition of one of three symbol
+;;; printers.  SETUP-PRINTER-STATE sets this variable.
+;;;
+(defvar *internal-symbol-output-function* nil)
+
+;;; SETUP-PRINTER-STATE -- Internal.
+;;;
+;;; This function sets the internal global symbol
+;;; *internal-symbol-output-function* to the right function depending on the
+;;; value of *print-case*.  See the manual for details.  The print buffer
+;;; stream is also reset.
+;;;
 (defun setup-printer-state ()
-  (unless (eq *print-case* previous-case)
-    (setq previous-case *print-case*)
-    (setq internal-symbol-output-function
+  (unless (eq *print-case* *previous-case*)
+    (setq *previous-case* *print-case*)
+    (setq *internal-symbol-output-function*
 	  (case *print-case*
 	    (:upcase #'output-uppercase-symbol)
 	    (:downcase #'output-lowercase-symbol)
 	    (:capitalize #'output-capitalize-symbol)
 	    (T (let ((bad-case *print-case*))
 		 (setq *print-case* :upcase)
-		 (Error "Invalid *print-case* value: ~s" bad-case))))))))
+		 (Error "Invalid *print-case* value: ~s" bad-case)))))))
 
-;;; Toplevel print functions
 
 (defun write (object &key
 		     ((:stream  stream)		     *standard-output*)
@@ -115,84 +121,42 @@
 		     ((:gensym  *print-gensym*)      *print-gensym*))
   "Outputs OBJECT to the specified stream, defaulting to *standard-output*"
   (setup-printer-state)
-  (let ((*standard-output* (if (or (eq stream 't)
-				   (and (synonym-stream-p stream)
-					(eq (synonym-stream-symbol stream)
-					    '*standard-output*)))
-			       *standard-output*
-			       stream)))
+  (let ((stream (out-synonym-of stream)))
     (if *print-pretty*
-	(output-pretty-object object)
-	(output-object object)))
+	(output-pretty-object object stream)
+	(output-object object stream)))
   object)
 
 (defun prin1 (object &optional stream)
   "Outputs a mostly READable printed representation of OBJECT on the specified
   stream."
-  (let ((*standard-output* (if (or (null stream)
-				   (eq stream 't)
-				   (and (synonym-stream-p stream)
-					(eq (synonym-stream-symbol stream)
-					    '*standard-output*)))
-			       *standard-output*
-			       stream)))
+  (let ((stream (out-synonym-of stream)))
     (setup-printer-state)
     (let ((*print-escape* T))
       (if *print-pretty*
-	  (output-pretty-object object)
-	  (output-object object)))
+	  (output-pretty-object object stream)
+	  (output-object object stream)))
     object))
 
 (defun princ (object &optional stream)
   "Outputs an asthetic but not READable printed representation of OBJECT on the
   specified stream."
-  (let ((*standard-output* (if (or (null stream)
-				   (eq stream 't)
-				   (and (synonym-stream-p stream)
-					(eq (synonym-stream-symbol stream)
-					    '*standard-output*)))
-			       *standard-output*
-			       stream)))
+  (let ((stream (out-synonym-of stream)))
     (setup-printer-state)
     (let ((*print-escape* NIL))
       (if *print-pretty*
-	  (output-pretty-object object)
-	  (output-object object)))
+	  (output-pretty-object object stream)
+	  (output-object object stream)))
     object))
 
 (defun print (object &optional stream)
   "Outputs a terpri, the mostly READable printed represenation of OBJECT, and 
   space to the stream."
-  (let ((*standard-output* (if (or (null stream)
-				   (eq stream 't)
-				   (and (synonym-stream-p stream)
-					(eq (synonym-stream-symbol stream)
-					    '*standard-output*)))
-			       *standard-output*
-			       stream)))
-    (terpri)
-    (prin1 object)
-    (write-char #\space)
+  (let ((stream (out-synonym-of stream)))
+    (terpri stream)
+    (prin1 object stream)
+    (write-char #\space stream)
     object))
-
-
-;; STRINGIFY-OBJECT is an internal printer function produces the printed
-;; representation of an object as a string.  It is called by various x-TO-STRING
-;; functions below.
-
-(defun stringify-object (object &optional (*print-escape* ()))
-  (let ((*standard-output* (if *in-stringify-object*
-			       (make-string-output-stream)
-			       print-string-stream))
-	(*in-stringify-object* T))
-    (setup-printer-state)
-    (if *print-pretty*
-	(output-pretty-object object)
-	(output-object object 0))
-    (get-output-stream-string *standard-output*)))
-
-;;; Top-level x-TO-STRING functions.  These functions all take an object
-;;; and return that object's printed representation as a string. 
 
 (defun write-to-string (object &key
 		     ((:escape  *print-escape*)      *print-escape*)
@@ -218,68 +182,94 @@
   slashification off."
   (stringify-object object nil))
 
+(defvar *print-string-stream* (make-string-output-stream)
+  "Holds the string stream for the x-TO-STRING functions.")
+
+(defvar *in-stringify-object* ()
+  "T if in the middle of stringify-object.")
+
+;;; STRINGIFY-OBJECT -- Internal.
+;;;
+;;; This produces the printed representation of an object as a string.  The
+;;; few ...-TO-STRING functions above call this.
+;;;
+(defun stringify-object (object &optional (*print-escape* nil))
+  (let ((stream (if *in-stringify-object*
+		    (make-string-output-stream)
+		    *print-string-stream*))
+	(*in-stringify-object* t))
+    (setup-printer-state)
+    (if *print-pretty*
+	(output-pretty-object object stream)
+	(output-object object stream 0))
+    (get-output-stream-string stream)))
+
+
 
-;;; Central print functions.  
+;;;; Central Print Functions.  
 
-;;; OUTPUT-OBJECT takes an object and outputs its printed representation to
-;;; *STANDARD-OUTPUT*, which is typically bound the the internal print stream.
-;;; This function is called recursively by the sub-functions which know how
-;;; to print structures which can contain other lisp objects.
-
-(defun output-object (object &optional (currlevel 0))
+;;; OUTPUT-OBJECT -- Internal.
+;;;
+;;; This takes an object and outputs its printed representation to stream,
+;;; which typically is the internal print stream.  This function is called
+;;; recursively by the sub-functions which know how to print structures which
+;;; can contain other lisp objects.
+;;;
+(defun output-object (object stream &optional (currlevel 0))
   "Outputs a string which is the printed representation of the given object."
   ;; First check and make sure we aren't too deep
   (declare (fixnum currlevel))
   (if (and (not (null *print-level*))
 	   (not (= *print-level* 0))
 	   (>= currlevel (the fixnum *print-level*)))
-      (write-char #\#)
+      (write-char #\# stream)
       (typecase object
 	    (symbol
 	     (if *print-escape*
-		 (output-symbol object)
+		 (output-symbol object stream)
 		 (case *print-case*
-		   (:upcase (write-string (symbol-name object)))
+		   (:upcase (write-string (symbol-name object) stream))
 		   (:downcase
 		    (let ((name (symbol-name object)))
 		      (declare (simple-string name))
 		      (dotimes (i (length name))
-			(write-char (char-downcase (char name i))))))
+			(write-char (char-downcase (char name i)) stream))))
 		   (:capitalize
-		    (write-string (string-capitalize (symbol-name object)))))))
+		    (write-string (string-capitalize (symbol-name object))
+				  stream)))))
 	    ;; If a list, go through element by element, being careful
 	    ;; about not running over the printlength
 	    (list
 	     (if (clos::funcallable-instance-p object)
-		 (clos::print-object object *standard-output* (1+ currlevel))
-		 (output-list object (1+ currlevel))))
+		 (clos::print-object object stream (1+ currlevel))
+		 (output-list object stream (1+ currlevel))))
 	    (string
 	     (if *print-escape*
-		 (quote-string object)
-		 (write-string object)))
+		 (quote-string object stream)
+		 (write-string object stream)))
 	    (integer
-	     (output-integer object))
+	     (output-integer object stream))
 	    (float
-	     (output-float object))
+	     (output-float object stream))
 	    (ratio
-	     (output-ratio object))
+	     (output-ratio object stream))
 	    (complex
-	     (output-complex object))
+	     (output-complex object stream))
 	    (structure
-	     (output-structure object currlevel))
+	     (output-structure object stream currlevel))
 	    (character
-	     (output-character object))
+	     (output-character object stream))
 	    (vector
-	     (output-vector object))
+	     (output-vector object stream))
 	    (array
-	     (output-array object (1+ currlevel))) 
-	    (t (output-random object))))
-  'T)
+	     (output-array object stream (1+ currlevel))) 
+	    (t (output-random object stream)))))
+
 
 
-;;; Symbol Printing Subfunctions
+;;;; Symbol Printing Subfunctions
 
-(defun output-symbol (object)
+(defun output-symbol (object stream)
   (let ((package (symbol-package object))
 	(name (symbol-name object)))
     (cond
@@ -288,42 +278,42 @@
      ((eq package *package*))
      ;; If the symbol is in the keyword package, output a colon.
      ((eq package *keyword-package*)
-      (write-char #\:))
+      (write-char #\: stream))
      ;; Uninterned symbols print with a leading #:.
      ((null package)
-      (when *print-gensym* (write-string "#:")))
+      (when *print-gensym* (write-string "#:" stream)))
      (t
       (let ((found (car (memq package (package-use-list *package*)))))
 	(multiple-value-bind (symbol externalp)
 			     (find-external-symbol name package)
-	  ;;
-	  ;;  If the symbol's home package is in our use list and is an external
+	  ;; If the symbol's home package is in our use list and is an external
 	  ;; symbol there, then it needs no qualification.
 	  (unless (and found externalp (eq symbol object))
 	    (multiple-value-bind (symbol accessible)
 				 (find-symbol name *package*)
-	      ;;
-	      ;;    If we can find the symbol by looking it up, it
-	      ;; need not be qualified.  This can happen if the symbol
-	      ;; has been inherited from a package other than its home
-	      ;; package.
+	      ;; If we can find the symbol by looking it up, it need not be
+	      ;; qualified.  This can happen if the symbol has been inherited
+	      ;; from a package other than its home package.
 	      (unless (and accessible (eq symbol object))
-		(funcall internal-symbol-output-function (package-name package))
+		(funcall *internal-symbol-output-function*
+			 (package-name package)
+			 stream)
 		(if externalp
-		    (write-char #\:)
-		    (write-string "::")))))))))
-    (funcall internal-symbol-output-function name)))
+		    (write-char #\: stream)
+		    (write-string "::" stream)))))))))
+    (funcall *internal-symbol-output-function* name stream)))
+
+
 
 ;;;; Escaping symbols:
-;;;
-;;;    When we print symbols we have to figure out if they need to
-;;; be printed with escape characters.  This isn't a whole lot easier
-;;; than reading symbols in the first place.
-;;;
 
+;;;    When we print symbols we have to figure out if they need to be
+;;; printed with escape characters.  This isn't a whole lot easier than
+;;; reading symbols in the first place.
+;;;
 ;;; For each character, the value of the corresponding element is a fixnum
-;;; with bits set corresponding to attributes that the character has.
-;;; This is also used by the character printer.
+;;; with bits set corresponding to attributes that the character has.  This
+;;; is also used by the character printer.
 ;;;
 (defvar character-attributes
   (make-array char-code-limit :element-type '(unsigned-byte 8)
@@ -391,7 +381,7 @@
     (setf (aref digit-bases (char-code char)) i)))
 
 
-;;; Symbol-Quotep  --  Internal
+;;; SYMBOL-QUOTEP  --  Internal
 ;;;
 ;;;    A FSM-like thingie that determines whether a symbol is a potential
 ;;; number or has evil characters in it.
@@ -528,7 +518,8 @@
       (when (test letter) (advance OTHER nil))
       (go DIGIT))))
 
-;;;
+;;;; Pathname hackery
+
 ;;; This function takes the pname of a symbol and adds slashes and/or 
 ;;; vertical bars to it to make it readable again.
 ;;; Special quoting characters are currently vertical bar and slash who's 
@@ -544,45 +535,45 @@
   `(or (char= ,char #\\) (char= ,char #\|)))
 ); eval-when (compile eval)
 
-(defun output-uppercase-symbol (pname)
+(defun output-uppercase-symbol (pname stream)
   (declare (simple-string pname))
   (cond ((symbol-quotep pname)
-	 (write-char #\|)
+	 (write-char #\| stream)
 	 (dostring (char pname)
 	   ;;If it needs slashing, do it.
 	   (if (symbol-quote-char-p char)
-	       (write-char #\\))
-	   (write-char char))
-	 (write-char #\|))
+	       (write-char #\\ stream))
+	   (write-char char stream))
+	 (write-char #\| stream))
 	(t
-	 (write-string pname))))
+	 (write-string pname stream))))
 
-;; See documentation for output-symbol-uppercase (above).
-
-(defun output-lowercase-symbol (pname)
+;;; See documentation for output-symbol-uppercase (above).
+;;;
+(defun output-lowercase-symbol (pname stream)
   (declare (simple-string pname))
   (cond ((symbol-quotep pname)
-	 (write-char #\|)
+	 (write-char #\| stream)
 	 (dostring (char pname)
 	   (if (symbol-quote-char-p char)
-	       (write-char #\\))
-	   (write-char char))
-	 (write-char #\|))
+	       (write-char #\\ stream))
+	   (write-char char stream))
+	 (write-char #\| stream))
 	(t
 	 (dostring (char pname)
-	   (write-char (char-downcase char))))))
+	   (write-char (char-downcase char) stream)))))
 
 
-(defun output-capitalize-symbol (pname)
+(defun output-capitalize-symbol (pname stream)
   (declare (simple-string pname))
   (cond
    ((symbol-quotep pname)
-    (write-char #\|)
+    (write-char #\| stream)
     (dostring (char pname)
       (if (symbol-quote-char-p char)
-	  (write-char #\\))
-      (write-char char))
-    (write-char #\|))
+	  (write-char #\\ stream))
+      (write-char char stream))
+    (write-char #\| stream))
    (t
     (do ((index 0 (1+ index))
 	 (pname-length (length (the string pname)))
@@ -590,92 +581,92 @@
 	((= index pname-length))
       (declare (fixnum index pname-length))
       (let ((char (char pname index)))
-	(write-char (if prev-not-alpha char (char-downcase char)))
+	(write-char (if prev-not-alpha char (char-downcase char)) stream)
 	(setq prev-not-alpha (not (alpha-char-p char))))))))
+
+
 
-;;; Recursive Datatype Printing Subfunctions
+;;;; Recursive Datatype Printing Subfunctions
 
-
-(defun output-list (list &optional (currlevel 0))
-  "Outputs the printed representation of a list."
-  (write-char #\()	#|)|#
+(defun output-list (list stream &optional (currlevel 0))
+  (write-char #\( stream)
   (do ((list list (cdr list))
        (currlength 0 (1+ currlength)))
       ((or (null list)
 	   (and (not (null *print-length*))
 		(>= currlength (the fixnum *print-length*))))
-       (if (not (null list)) (write-string " ..."))
-       (write-char #|(|# #\)))
+       (if (not (null list)) (write-string " ..." stream))
+       (write-char #\) stream))
     (declare (fixnum currlength))
     ;;If we are not printing the first object, we should space first.
-    (if (> currlength 0) (write-char #\space))
+    (if (> currlength 0) (write-char #\space stream))
     ;;Print whatever the car of the list is, at this level.
-    (output-object (car list) currlevel)
+    (output-object (car list) stream currlevel)
     (cond ((not (or (consp (cdr list))
 		    (null (cdr list))))
-	   (write-string " .  ")
-	   (output-object (cdr list) currlevel)
-	   (write-char #|(|# #\))
+	   (write-string " .  " stream)
+	   (output-object (cdr list) stream currlevel)
+	   (write-char #\) stream)
 	   (return ())))))
  
-(defun output-vector (vector &optional (currlevel 0))
-  "Outputs the printed representation of a 1-D array."
+(defun output-vector (vector stream &optional (currlevel 0))
   (declare (fixnum currlevel))
   (cond ((not *print-array*)
-	 (output-terse-array vector currlevel))
+	 (output-terse-array vector stream currlevel))
 	(T
 	 (if (bit-vector-p vector)
-	     (write-string "#*")
-	     (write-string "#(" #|)|# ))
+	     (write-string "#*" stream)
+	     (write-string "#(" stream))
 	 (do ((currlength 0 (1+ currlength))
 	      (vlength (length (the vector vector)))
 	      (not-bit-vector-p (not (bit-vector-p vector))))
 	     ((or (and (not (null *print-length*))
 		       (>= currlength (the fixnum *print-length*)))
 		  (= currlength vlength))
-	      (if (not (= currlength vlength)) (write-string " ..."))
+	      (if (not (= currlength vlength)) (write-string " ..." stream))
 	      (if not-bit-vector-p
-		  (write-char #|(|# #\))))
+		  (write-char #\) stream)))
 	   (declare (fixnum currlength vlength))
 	 ;;Put a space before every element except the first
 	 ;; and not in bit vectors.
-	 (if (and (> currlength 0)
-		  not-bit-vector-p)
-	     (write-char #\space))
+	 (if (and (> currlength 0) not-bit-vector-p)
+	     (write-char #\space stream))
 	 ;;Output an element of the vector
-	 (output-object (aref vector currlength) currlevel)))))
+	 (output-object (aref vector currlength) stream currlevel)))))
 
-(defun output-array (array &optional (currlevel 0))
+(defun output-array (array stream &optional (currlevel 0))
   "Outputs the printed representation of any array in either the #< or #A form."
   (let ((rank (array-rank array)))
     (cond ((not *print-array*)
-	   (output-terse-array array rank))
+	   (output-terse-array array stream rank))
 	  (T
-	   (output-array-guts array rank currlevel)))))
+	   (output-array-guts array rank stream currlevel)))))
 
-;; Master function for outputing the #A form of an array
-
-(defun output-array-guts (array rank currlevel)
-  (write-char #\#)
+;;; Master function for outputing the #A form of an array
+;;;
+(defun output-array-guts (array rank stream currlevel)
+  (write-char #\# stream)
   (let ((*print-base* 10))
-    (output-integer rank))
-  (write-char #\A)
+    (output-integer rank stream))
+  (write-char #\A stream)
   (with-array-data ((data array) (start) (end))
     (declare (ignore end))
-    (sub-output-array-guts data (array-dimensions array) currlevel start)))
+    (sub-output-array-guts data (array-dimensions array)
+			   stream currlevel start)))
 
-;; Some Ideas stolen from Skef Wholey.
-;; Helping function for above.
-(defun sub-output-array-guts (array dimensions currlevel index)
+;;; Some Ideas stolen from Skef Wholey.
+;;; Helping function for above.
+(defun sub-output-array-guts (array dimensions stream currlevel index)
   (declare (fixnum currlevel index))
   (cond ((null dimensions)
-	 (output-object (aref array index) currlevel)
+	 (output-object (aref array index) stream currlevel)
 	 (1+ index))
 	((and (not (null *print-level*))
 	      (>= currlevel (the fixnum *print-level*)))
-	 (write-char #\#) index)
-	(T
-	 (write-char #\()
+	 (write-char #\# stream)
+	 index)
+	(t
+	 (write-char #\( stream)
 	 (do ((index index)
 	      (times 0 (1+ times))
 	      (limit (pop dimensions)))
@@ -683,62 +674,55 @@
 		  (and (not (null *print-length*))
 		       (= times *print-length*)))
 	      (if (not (= times limit))
-		  (write-string " ...)")
-		  (write-char #\)))
+		  (write-string " ...)" stream)
+		  (write-char #\) stream))
 	      index)
 	   (declare (fixnum index times limit))
-	   (if (not (zerop times)) (write-char #\space))
+	   (if (not (zerop times)) (write-char #\space stream))
 	   (setq index
-		 (sub-output-array-guts array dimensions (1+ currlevel) index))
-	   ))))
+		 (sub-output-array-guts array dimensions
+					stream (1+ currlevel) index))))))
 
-;; Used to output the #< form of any array.
-
-(defun output-terse-array (array rank)
-  (write-string "#<")
+;;; Used to output the #< form of any array.
+;;;
+(defun output-terse-array (array stream rank)
+  (write-string "#<" stream)
   (cond ((vectorp array)
 	 (if (bit-vector-p array)
-	     (write-string "Bit-vector")
-	     (write-string "Vector")))
+	     (write-string "Bit-vector" stream)
+	     (write-string "Vector" stream)))
 	(T
-	 (write-string "Array, rank ")
-	 (output-integer rank)))
-  (finish-random array))
+	 (write-string "Array, rank " stream)
+	 (output-integer rank stream)))
+  (finish-random array stream))
 
 
 ;;; Structure Printing.  These days we can always pass the buck to the Defstruct
 ;;; code.
 
-(defun output-structure (structure currlevel)
+(defun output-structure (structure stream currlevel)
   (funcall (or (info type printer (svref structure 0))
 	       #'c::default-structure-print)
-	   structure *standard-output* currlevel))
 
 
-;; Helping functions for printing strings.
+;;;; Functions to help print strings.
 
-(defmacro funny-string-char-p (char)
-  "Determines whether or not the character needs quoting in a string."
-  ;; Should maybe look at readtable, not quite ready for such feat so
-  ;; use hack.
-  `(or (char= ,char #\\)
-       (char= ,char #\")))
-
+;;; QUOTE-STRING -- Internal.
 ;;;
-;;; This function takes a string and slashifies it sufficiently so
-;;; that if so that it may be read in again.
-;;; Strategy: Put slash before all and only those characters which are
-;;; either double-quote or backslash.
+;;; This function outputs a string quoting characters sufficiently, so someone
+;;; can read it in again.  Basically, put a slash in front of an character
+;;; satisfying FROB.
 ;;;
-
-(defun quote-string (string)
-  "Quotes a string so that if printed, it could be read back in again."
-  (write-char #\")
-  (dostring (char string)
-    (if (funny-string-char-p char) (write-char #\\))
-    (write-char char))
-  (write-char #\"))
-
+(defun quote-string (string stream)
+  (macrolet ((frob (char)
+	       ;; Probably should look at readtable, but just do this for now.
+	       `(or (char= ,char #\\)
+		    (char= ,char #\"))))
+    (write-char #\" stream)
+    (dostring (char string)
+      (when (frob char) (write-char #\\ stream))
+      (write-char char stream))
+    (write-char #\" stream)))
 
 
 (defun whitespace-char-p (char)
@@ -748,12 +732,9 @@
       (char= char #\return)
       (char= char #\linefeed)))
 
-;;; Numerical Printer Functions.
+;;;; Integer, ratio, complex printing.
 
-;; Helping function for above that actually outputs the individual digits.
-
-(defun output-integer (integer)
-  "This function outputs the printed representation of any integer"
+(defun output-integer (integer stream)
   (cond ((not (and (fixnump *print-base*) (> (the fixnum *print-base*) 1)))
 	 (let ((obase *print-base*))
 	   (setq *print-base* 10.)
@@ -762,96 +743,107 @@
 	(T (cond ((and (not (= *print-base* 10.))
 		       *print-radix*)
 		  ;; First print leading base information, if any.
-		  (write-char #\#)
+		  (write-char #\# stream)
 		  (write-char (case *print-base*
-			  (2.  #\b)
-			  (8.  #\o)
-			  (16. #\x)
-			  (T (let ((fixbase *print-base*)
-				   (*print-base* 10.)
-				   (*print-radix* ()))
-			       (sub-output-integer fixbase))
-			     #\r)))))
+				(2.  #\b)
+				(8.  #\o)
+				(16. #\x)
+				(T (let ((fixbase *print-base*)
+					 (*print-base* 10.)
+					 (*print-radix* ()))
+				     (sub-output-integer fixbase stream))
+				   #\r))
+			      stream)))
 	   ;; Then output a minus sign if the number is negative, then output
 	   ;; the absolute value of the number.
-	   (cond ((bignump integer) (print-bignum integer))
+	   (cond ((bignump integer) (print-bignum integer stream))
 		 ((< integer 0)
-		  (write-char #\-)
-		  (sub-output-integer (- integer)))
-		 (T (sub-output-integer integer)))
+		  (write-char #\- stream)
+		  (sub-output-integer (- integer) stream))
+		 (T (sub-output-integer integer stream)))
 	   ;; Print any trailing base information, if any.
-	   (if (and (= *print-base* 10.) *print-radix*) (write-char #\.)))))
+	   (if (and (= *print-base* 10.) *print-radix*)
+	       (write-char #\. stream)))))
 
-
-(defun sub-output-integer (integer)
-  (let  ((quotient ())
-	 (remainder ()))
+(defun sub-output-integer (integer stream)
+  (let ((quotient ())
+	(remainder ()))
     ;; Recurse until you have all the digits pushed on the stack.
     (if (not (zerop (multiple-value-setq (quotient remainder)
 		      (truncate integer *print-base*))))
-      (sub-output-integer quotient))
+	(sub-output-integer quotient stream))
     ;; Then as each recursive call unwinds, turn the digit (in remainder) 
     ;; into a character and output the character.
     (write-char (int-char (if (and (> remainder 9.)
-			     (> *print-base* 10.))
-			(+ (char-int #\A) (- remainder 10.))
-			(+ (char-int #\0) remainder))))))
+				   (> *print-base* 10.))
+			      (+ (char-int #\A) (- remainder 10.))
+			      (+ (char-int #\0) remainder)))
+		stream)))
 
 
-;;; Outputs the printed representation of a ratio.
+(defun output-ratio (ratio stream)
+  (when *print-radix*
+    (write-char #\# stream)
+    (case *print-base*
+      (2 (write-char #\b stream))
+      (8 (write-char #\o stream))
+      (16 (write-char #\x stream))
+      (t (write *print-base* :stream stream :radix nil :base 10)))
+    (write-char #\r stream))
+  (let ((*print-radix* nil))
+    (output-integer (numerator ratio) stream)
+    (write-char #\/ stream)
+    (output-integer (denominator ratio) stream)))
 
-(defun output-ratio (ratio)
-  (output-integer (numerator ratio))
-  (write-char #\/)
-  (output-integer (denominator ratio)))
+(defun output-complex (complex stream)
+  (write-string "#C(" stream)
+  (output-object (realpart complex) stream)
+  (write-char #\space stream)
+  (output-object (imagpart complex) stream)
+  (write-char #\) stream))
 
 
-;;; Outputs the printed representation of a complex number.
-
-(defun output-complex (complex)
-  (write-string "#C(" #|)|#)
-  (output-object (realpart complex))
-  (write-char #\space)
-  (output-object (imagpart complex))
-  (write-char #|(|# #\)))
 
-;;; Bignum printing
-;;;
+;;;; Bignum printing
+
 ;;; Written by Steven Handerson
 ;;;  (based on Skef's idea)
+
+;;; BIGNUM-FIXNUM-DIVIDE-INPLACE wants the divisor to be of integer-length 19
+;;; or less.  1- the ideal power of the base for a divisor.
 ;;;
-
-;;; Bignum-fixnum-divide-inplace wants the divisor to be of integer-length
-;;; 19 or less.
-
-;;; 1- the ideal power of the base for a divisor.
 (defparameter *fixnum-power--1*
   '#(NIL NIL 17 10 8 7 6 5 5 4 4 4 4 4 3 3 3 3 3 3 3 3 3 3 3 3 3 2 2 2 2 2 2 2 2
 	 2))
 
 ;;; The base raised to the ideal power.
+;;;
 (defparameter *base-power*
-  '#(NIL NIL 262144 177147 262144 390625 279936 117649 262144 59049 100000 161051
-	 248832 371293 38416 50625 65536 83521 104976 130321 160000 194481 234256
-	 279841 331776 390625 456976 19683 21952 24389 27000 29791 32768 35937
-	 39304 42875))
+  '#(NIL NIL 262144 177147 262144 390625 279936 117649 262144 59049 100000
+	 161051 248832 371293 38416 50625 65536 83521 104976 130321 160000
+	 194481 234256 279841 331776 390625 456976 19683 21952 24389 27000
+	 29791 32768 35937 39304 42875))
 
-(defun print-bignum (big)
-  (bignum-print-aux (cond ((minusp big) (write-char #\-) (- big))
-			  (t (copy-xnum big))))
+(defun print-bignum (big stream)
+  (bignum-print-aux (cond ((minusp big)
+			   (write-char #\- stream)
+			   (- big))
+			  (t (copy-xnum big)))
+		    stream)
   big)
 
-(defun bignum-print-aux (big)
+(defun bignum-print-aux (big stream)
   (multiple-value-bind (newbig fix)
 		       (bignum-fixnum-divide-inplace
 			big (aref *base-power* *print-base*))
-    (if (fixnump newbig) (sub-output-integer newbig)
-	(bignum-print-aux newbig))
+    (if (fixnump newbig)
+	(sub-output-integer newbig stream)
+	(bignum-print-aux newbig stream))
     (do ((zeros (aref *fixnum-power--1* *print-base*) (1- zeros))
 	 (base-power *print-base* (* base-power *print-base*)))
 	((> base-power fix)
-	 (dotimes (i zeros) (write-char #\0))
-	 (sub-output-integer fix)))))
+	 (dotimes (i zeros) (write-char #\0 stream))
+	 (sub-output-integer fix stream)))))
 
 
 
@@ -930,7 +922,6 @@
 ;;; DO NOT EVEN THINK OF ATTEMPTING TO UNDERSTAND THIS CODE WITHOUT READING 
 ;;; THE PAPER!
 
-
 (defvar *digits* "0123456789")
 
 (defvar *digit-string*
@@ -955,7 +946,6 @@
 		(float-string sig exp 20 width fdigits scale fmin)
 		(float-string sig exp 53 width fdigits scale fmin))))))
 
-
 (defun float-string (fraction exponent precision width fdigits scale fmin)
   (let ((r fraction) (s 1) (m- 1) (m+ 1) (k 0)
 	(digits 0) (decpnt 0) (cutoff nil) (roundup nil) u low high)
@@ -1021,7 +1011,6 @@
 	  (setq m+ (max y m+))
 	  (when (= m+ y) (setq roundup t))))
       (when (< (+ (ash r 1) m+) (ash s 1)) (return)))
-
     ;;zero-fill before fraction if no integer part
     (when (< k 0)
       (setq decpnt digits)
@@ -1069,15 +1058,15 @@
     (values *digit-string* (1+ digits) (= decpnt 0) (= decpnt digits) decpnt)))
 
 
-
+(defconstant short-log10-of-2 0.30103s0)
+
 ;;; Given a non-negative floating point number, SCALE-EXPONENT returns a
 ;;; new floating point number Z in the range (0.1, 1.0] and and exponent
 ;;; E such that Z * 10^E is (approximately) equal to the original number.
 ;;; There may be some loss of precision due the floating point representation.
 
 
-(defconstant short-log10-of-2 0.30103s0)
-
+;;;
 (defun scale-exponent (x)
   (if (typep x 'short-float)
       (scale-expt-aux x 0.0s0 1.0s0 1.0s1 1.0s-1 short-log10-of-2)
@@ -1105,6 +1094,8 @@
 		   ((>= z one-tenth) (values z ex)))))))))
 
 
+;;;; Entry point for the float printer.
+
 ;;; Entry point for the float printer as called by PRINT, PRIN1, PRINC,
 ;;; etc.  The argument is printed free-format, in either exponential or 
 ;;; non-exponential notation, depending on its magnitude.
@@ -1121,125 +1112,129 @@
 ;;; the same accuracy as non-exponential notation, using the method described
 ;;; in the Steele and White paper.
 
-(defun output-float (x)
+(defun output-float (x stream)
   (if (typep x 'short-float)
-      (output-float-aux x 1.0s-3 1.0s7)
-      (output-float-aux x %long-float1l-3 %long-float1l7)))
+      (output-float-aux x stream 1.0s-3 1.0s7)
+      (output-float-aux x stream %long-float1l-3 %long-float1l7)))
 
 
-(defun output-float-aux (x e-min e-max)
+(defun output-float-aux (x stream e-min e-max)
   (cond ((zerop x)
-	 (write-string "0.0")
+	 (write-string "0.0" stream)
 	 (if (and (not (typep x *read-default-float-format*))
 		  (not (and (eq *read-default-float-format* 'single-float)
 			    (typep x 'short-float))))
-	     (write-string (if (typep x 'short-float) "s0" "L0"))))
+	     (write-string (if (typep x 'short-float) "s0" "L0") stream)))
 	(t (when (minusp x) 
-	     (write-char #\-)
+	     (write-char #\- stream)
 	     (setq x (- x)))
 	   (if (and (>= x e-min) (< x e-max))
 	       ;;free format
 	       (multiple-value-bind (str len lpoint tpoint)
 				    (flonum-to-string x)
 		 (declare (ignore len))
-		 (when lpoint (write-char #\0))
-		 (write-string str)
-		 (when tpoint (write-char #\0))
+		 (when lpoint (write-char #\0 stream))
+		 (write-string str stream)
+		 (when tpoint (write-char #\0 stream))
 		 (if (and (not (typep x *read-default-float-format*))
-			  (not (and (eq *read-default-float-format* 'single-float)
+			  (not (and (eq *read-default-float-format*
+					'single-float)
 				    (typep x 'short-float))))
-		     (write-string (if (typep x 'short-float) "s0" "L0"))))
+		     (write-string (if (typep x 'short-float) "s0" "L0")
+				   stream)))
 	       ;;exponential format 
 	       (multiple-value-bind (f ex)
 				    (scale-exponent x)
 		 (multiple-value-bind (str len lpoint tpoint)
 				      (flonum-to-string f nil nil 1)
 		   (declare (ignore len))
-		   (when lpoint (write-char #\0))
-		   (write-string str)
-		   (when tpoint (write-char #\0))
+		   (when lpoint (write-char #\0 stream))
+		   (write-string str stream)
+		   (when tpoint (write-char #\0 stream))
 		   (write-char (if (typep x *read-default-float-format*)
 				   #\E
-				   (if (typep x 'short-float) #\S #\L)))
+				   (if (typep x 'short-float) #\S #\L))
+			       stream)
 		   ;;must subtract 1 from exponent here, due to
 		   ;;the scale factor of 1 in call to FLONUM-TO-STRING
-		   (unless (minusp (1- ex)) (write-char #\+))
-		   (output-integer (1- ex))))))))
+		   (unless (minusp (1- ex)) (write-char #\+ stream))
+		   (output-integer (1- ex) stream)))))))
 
 
+;;;; Output Character
 
-;; FUNNY-CHARACTER-CHAR-P returns a predicate which determines whether a
-;; character must be slashified when being output.
-
+;;; FUNNY-CHARACTER-CHAR-P returns a predicate which determines whether a
+;;; character must be slashified when being output.
+;;;
 (defmacro funny-character-char-p (char)
   `(and (not (zerop (char-bits ,char)))
 	(not (zerop (logand (aref character-attributes (char-code ,char))
 			    funny-attribute)))))
 
-;;; Output-Character  --  Internal
+;;; OUTPUT-CHARACTER  --  Internal
 ;;;
-;;;    If *print-escape* is false, just do a write-char, otherwise output
+;;;    If *print-escape* is false, just do a WRITE-CHAR, otherwise output
 ;;; any bits and then the character or name, escaping if necessary.  In
 ;;; either case, we blast the bits or font before writing the character
 ;;; itself to the stream.
 ;;;
-(defun output-character (char)
+(defun output-character (char stream)
   (let ((base (make-char char)))
     (if *print-escape*
 	(let ((name (char-name base)))
-	  (write-string "#\\")
+	  (write-string "#\\" stream)
 	  (macrolet ((frob (key string)
 		       `(when (char-bit char ,key)
-			  (write-string ,string))))
+			  (write-string ,string stream))))
 	    (frob :control "CONTROL-")
 	    (frob :meta "META-")
 	    (frob :super "SUPER-")
 	    (frob :hyper "HYPER-"))
-	  (cond (name (write-string name))
+	  (cond (name (write-string name stream))
 		(t 
 		 (when (funny-character-char-p char)
-		   (write-char #\\))
-		 (write-char base))))
-	(write-char base))))
+		   (write-char #\\ stream))
+		 (write-char base stream))))
+	(write-char base stream))))
 
 
 
-;;; Random and Misc. Print Subfunctions
+;;;; Random and Miscellaneous Print Subfunctions
 
 
 ;;; OUTPUT-FUNCTION-OBJECT outputs the main part of the printed 
 ;;; representation of function objects.  It is called from OUTPUT-RANDOM
 ;;; below.
 
-(defun output-function-object (subr)
+(defun output-function-object (subr stream)
   (let ((name (%primitive header-ref subr %function-name-slot)))
-  (case (%primitive get-vector-subtype subr)
-    (#.%function-entry-subtype
-     (if (stringp name)
-	 (format t "Internal Function ~S" name)
-	 (format t "Function ~S" name)))
-    (#.%function-closure-subtype
-     (if (eval:interpreted-function-p subr)
-	 (multiple-value-bind
-	     (def ignore name)
-	     (eval:interpreted-function-lambda-expression subr)
-	   (declare (ignore ignore))
-	   (let ((*print-level* 3))
-	     (format t "Interpreted Function ~S" (or name def))))
-	 (format t "Closure ~S"
-		 (%primitive header-ref name %function-name-slot))))
-    (#.%function-closure-entry-subtype
-     (format t "Closure Entry ~S" name))
-    (#.%function-constants-subtype
-     (format t "Function Constants ~S" name))
-    (#.%function-value-cell-subtype
-     (assert (= %function-value-cell-value-slot %function-name-slot))
-     (format t "Indirect Value Cell ~S" name))
-#|
-    (#.%function-funcallable-instance-subtype
-     (format t "Funcallable Instance ~S" name))
-|#
-    (t (error "Unknown function subtype.")))))
+    (case (%primitive get-vector-subtype subr)
+      (#.%function-entry-subtype
+       (if (stringp name)
+	   (format stream "Internal Function ~S" name)
+	   (format stream "Function ~S" name)))
+      (#.%function-closure-subtype
+       (if (eval:interpreted-function-p subr)
+	   (multiple-value-bind
+	       (def ignore name)
+	       (eval:interpreted-function-lambda-expression subr)
+	     (declare (ignore ignore))
+	     (let ((*print-level* 3))
+	       (format stream "Interpreted Function ~S" (or name def))))
+	   (format stream "Closure ~S"
+		   (%primitive header-ref name %function-name-slot))))
+      (#.%function-closure-entry-subtype
+       (format stream "Closure Entry ~S" name))
+      (#.%function-constants-subtype
+       (format stream "Function Constants ~S" name))
+      (#.%function-value-cell-subtype
+       (assert (= %function-value-cell-value-slot %function-name-slot))
+       (format stream "Indirect Value Cell ~S" name))
+      #|
+      (#.%function-funcallable-instance-subtype
+       (format stream "Funcallable Instance ~S" name))
+      |#
+      (t (error "Unknown function subtype.")))))
 
 
 ;;; FINISH-RANDOM is a helping function for OUTPUT-RANDOM below.  
@@ -1248,20 +1243,20 @@
 ;;; angle-bracket (">") random objects have at the end.  This
 ;;; is used to distringuish random objects of the same type.
 
-(defun finish-random (random-object)
-  (write-string " {")
+(defun finish-random (random-object stream)
+  (write-string " {" stream)
   (let ((*print-base* 16))
-    (output-integer (%primitive make-fixnum random-object)))
-  (write-string "}>"))
+    (output-integer (%primitive make-fixnum random-object)) stream)
+  (write-string "}>" stream))
 
 ;;; Functions Objects and other implmentation specific objects 
 ;;; are output here. 
 
 (defun output-random (object)
-  (write-string "#<")
+  (write-string "#<" stream)
   (if (compiled-function-p object)
-      (output-function-object object)
+      (output-function-object object stream)
       (let ((type (%primitive get-type object)))
 	(write-string "Pointer into Hell, level ")
-	(sub-output-integer type)))
-  (finish-random object))
+	(sub-output-integer type stream)))
+  (finish-random object stream))
