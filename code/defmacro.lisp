@@ -309,7 +309,7 @@
 (defun verify-keywords (key-list valid-keys allow-other-keys)
   (do ((already-processed nil)
        (unknown-keyword nil)
-       (remaining key-list (cddr key-list)))
+       (remaining key-list (cddr remaining)))
       ((null remaining)
        (if (and unknown-keyword
 		(not allow-other-keys)
@@ -329,13 +329,13 @@
 	   (setf unknown-keyword (car remaining))))))
 
 (defun lookup-keyword (keyword key-list)
-  (do ((remaining key-list (cddr key-list)))
+  (do ((remaining key-list (cddr remaining)))
       ((endp remaining))
     (when (eq keyword (car key-list))
       (return (cadr key-list)))))
 
 (defun keyword-supplied-p (keyword key-list)
-  (do ((remaining key-list (cddr key-list)))
+  (do ((remaining key-list (cddr remaining)))
       ((endp remaining))
     (when (eq keyword (car key-list))
       (return (cadr key-list)))))
