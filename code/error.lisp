@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.24 1993/07/02 15:06:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.25 1993/07/03 17:08:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,73 +214,6 @@
 		 (funcall interactive-function)
 		 '())))))
 
-
-#|
-This hack of using catch w/ conses should no longer be necessary...
-
-(defmacro restart-case (expression &body clauses)
-  "(RESTART-CASE form
-   {(case-name arg-list {keyword value}* body)}*)
-   The form is evaluated in a dynamic context where the clauses have special
-   meanings as points to which control may be transferred (see INVOKE-RESTART).
-   When clauses contain the same case-name, FIND-RESTART will find the first
-   such clause."
-  (flet ((transform-keywords (&key report interactive)
-	   (let ((result '()))
-	     (when report
-	       (setq result (list* (if (stringp report)
-				       `#'(lambda (stream)
-					    (write-string ,report stream))
-				       `#',report)
-				   :report-function
-				   result)))
-	     (when interactive
-	       (setq result (list* `#',interactive
-				   :interactive-function
-				   result)))
-	     (nreverse result))))
-    (let ((temp-var (gensym))
-	  (outer-tag (gensym))
-	  (inner-tag (gensym))
-	  (tag-var (gensym))
-	  (data
-	    (mapcar #'(lambda (clause)
-			(with-keyword-pairs ((report interactive &rest forms)
-					     (cddr clause))
-			  (list (car clause)			   ;name=0
-				(gensym)			   ;tag=1
-				(transform-keywords :report report ;keywords=2
-						    :interactive interactive)
-				(cadr clause)			   ;bvl=3
-				forms)))			   ;body=4
-		    clauses)))
-      `(let ((,outer-tag (cons nil nil))
-	     (,inner-tag (cons nil nil))
-	     ,temp-var ,tag-var)
-	 (catch ,outer-tag
-	   (catch ,inner-tag
-	     (throw ,outer-tag
-		    (restart-bind
-			,(mapcar #'(lambda (datum)
-				     (let ((name (nth 0 datum))
-					   (tag  (nth 1 datum))
-					   (keys (nth 2 datum)))
-				       `(,name #'(lambda (&rest temp)
-						   (setf ,temp-var temp)
-						   (setf ,tag-var ',tag)
-						   (throw ,inner-tag nil))
-					       ,@keys)))
-				 data)
-		      ,expression)))
-	   (case ,tag-var
-	     ,@(mapcar #'(lambda (datum)
-			   (let ((tag  (nth 1 datum))
-				 (bvl  (nth 3 datum))
-				 (body (nth 4 datum)))
-			     `(,tag
-			       (apply #'(lambda ,bvl ,@body) ,temp-var))))
-		       data)))))))
-|#
 
 (eval-when (compile load eval)
 ;;; Wrap the restart-case expression in a with-condition-restarts if
@@ -671,9 +604,10 @@ This hack of using catch w/ conses should no longer be necessary...
 	      (setf (error-function-name condition) name))
 	    (unless debug:*stack-top-hint*
 	      (setf debug:*stack-top-hint* frame))))
-	(let ((debug:*stack-top-hint* nil))
-	  (signal condition))
-	(invoke-debugger condition))))
+	(with-condition-restarts condition (list (find-restart 'continue))
+	  (let ((debug:*stack-top-hint* nil))
+	    (signal condition))
+	  (invoke-debugger condition)))))
   nil)
 
 (defun break (&optional (datum "Break") &rest arguments)
