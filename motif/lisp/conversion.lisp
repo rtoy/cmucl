@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.4 2000/02/14 11:52:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/conversion.lisp,v 1.5 2000/02/15 11:59:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -168,12 +168,22 @@
 (defun message-read-string (message length)
   (declare (fixnum length))
   ;; length includes the '\0'
-  (let ((string (make-string (1- length) :initial-element #\Space)))
+  (let ((string (make-string (1- length) :initial-element #\Space))
+	(packet (message-fill-packet message)))
     (declare (simple-string string))
-    ;;
-    ;; ***** This is of course a gross oversimplification !!!
-    (packet-read-string (message-fill-packet message)
-			string 0 length)
+    (cond ((= 1 (message-packet-count message))
+	   (packet-read-string packet string 0 length))
+	  ((< length (- *packet-size* *header-size*))
+	   (setq packet
+		 (setf (message-fill-packet message)
+		       (cadr (member packet (message-packet-list message)))))
+	   (packet-read-string packet string 0 length))
+	  (t
+	   ;; This should be optimized to remove the overhead of
+	   ;; message-get-byte
+	   (dotimes (i (length string))
+	       (setf (aref string i)(code-char (message-get-byte message))))
+	     (message-get-byte message))) ; the '\0'
     (let ((packet (message-fill-packet message)))
       (let ((pad (- 4 (mod (packet-fill packet) 4))))
       (unless (> pad 3)

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.7 2000/02/14 11:52:25 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.8 2000/02/15 11:59:25 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -47,8 +47,12 @@ void really_write_string(message_t message,String string,int length)
     message_add_packet(message);
     packet_write_string(message->packets,string,length);
   }
-  else
-    fatal_error("really_write_string:  Attempt to send huge string.");
+  else {
+    if(0)fatal_error("really_write_string:  Attempt to send huge string.");
+    for(i=0; i<length; i++)
+      message_put_byte(message,string[i]);
+    packet = message->packets;
+  }
   /* Add in the padding bytes at the end of the string */
   pad = (4-((packet->fill-packet->data)%4))%4;
   for(i=0;i<pad;i++)
