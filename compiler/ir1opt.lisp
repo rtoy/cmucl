@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.24 1991/02/20 14:57:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.25 1991/03/10 18:27:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1073,6 +1073,8 @@
 		   (lambda-home (lambda-var-home var)))
 	       (member (continuation-type-check arg) '(t nil))
 	       (member (continuation-type-check cont) '(t nil)))
+      (assert (member (continuation-kind arg)
+		      '(:block-start :deleted-block-start :inside-block)))
       (assert-continuation-type arg (continuation-asserted-type cont))
       (change-ref-leaf ref (find-constant nil))
       (substitute-continuation arg cont)
