@@ -7,60 +7,192 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37 1992/12/15 19:45:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.1 1993/01/15 15:27:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Defstruct structure definition package (Mark II).
-;;; Written by Skef Wholey and Rob MacLachlan.
+;;; Defstruct structure definition package (Mark III).
+;;; Written by Rob MacLachlan, William Lott and Skef Wholey.
 ;;;
-(in-package "C")
-
 (in-package "LISP")
 (export '(defstruct copy-structure))
-
-(in-package :c)
-
-;;; Always compile safe.  This code isn't very careful about protecting itself.
-;;; Note: we only do this at compile time because defstruct gets cold-loaded
-;;; before enough stuff to handle the declaim has been set up.
-(eval-when (compile)
-  (declaim (optimize (safety 1))))
+(in-package "KERNEL")
+(export '(
+	  default-structure-print make-structure-load-form 
+	  %compiler-defstruct %%compiler-defstruct
+	  %make-instance
+	  %instance-length %instance-ref %instance-set %instance-layout
+	  %set-instance-layout 
+	  %raw-ref-single %raw-set-single
+	  %raw-ref-double %raw-set-double
+	  defstruct-description dd-name dd-default-constructor dd-copier
+	  dd-predicate dd-slots dd-length dd-type dd-raw-index dd-raw-length
+	  defstruct-slot-description dsd-name dsd-%name dsd-accessor dsd-type
+	  dsd-index dsd-raw-type dsd-read-only))
 
 
 ;;;; Structure frobbing primitives.
 
-(defun make-structure (length)
-  "Allocate a new structure with LENGTH data slots."
+(defun %make-instance (length)
+  "Allocate a new instance with LENGTH data slots."
   (declare (type index length))
-  (make-structure length))
+  (%make-instance length))
 
-(defun structure-length (structure)
-  "Given a structure, return its length."
-  (declare (type structure structure))
-  (structure-length structure))
+(defun %instance-length (instance)
+  "Given an instance, return its length."
+  (declare (type instance instance))
+  (%instance-length instance))
 
-(defun structure-ref (struct index)
-  "Return the value from the INDEXth slot of STRUCT.  0 corresponds to the
-  type.  This is SETFable."
-  (structure-ref struct index))
+(defun %instance-ref (instance index)
+  "Return the value from the INDEXth slot of INSTANCE.  This is SETFable."
+  (%instance-ref instance index))
 
-(defun structure-set (struct index new-value)
-  "Set the INDEXth slot of STRUCT to NEW-VALUE."
-  (setf (structure-ref struct index) new-value))
+(defun %instance-set (instance index new-value)
+  "Set the INDEXth slot of INSTANCE to NEW-VALUE."
+  (setf (%instance-ref instance index) new-value))
 
-(defsetf structure-ref structure-set)
+(defsetf %instance-ref %instance-set)
 
+(defun %raw-ref-single (vec index)
+  (declare (type index index))
+  (%raw-ref-single vec index))
+
+(defun %raw-ref-double (vec index)
+  (declare (type index index))
+  (%raw-ref-double vec index))
+
+(defun %raw-set-single (vec index val)
+  (declare (type index index))
+  (%raw-set-single vec index val))
+
+(defun %raw-set-double (vec index val)
+  (declare (type index index))
+  (%raw-set-double vec index val))
+
+(defsetf %raw-ref-single %raw-set-single)
+(defsetf %raw-ref-double %raw-set-double)
+
+(defun %instance-layout (instance)
+  (%instance-layout instance))
+
+(defun %set-instance-layout (instance new-value)
+  (%set-instance-layout instance new-value))
+
+(defsetf %instance-layout %set-instance-layout)
 
 
 ;;; This version of Defstruct is implemented using Defstruct, and is free of
 ;;; Maclisp compatability nonsense.  For bootstrapping, you're on your own.
 
+;;; The DEFSTRUCT-DESCRIPTION structure holds compile-time information about a
+;;; structure type.
+;;;
+(defstruct (defstruct-description
+             (:conc-name dd-)
+             (:print-function print-defstruct-description)
+	     (:make-load-form-fun :just-dump-it-normally)
+	     (:constructor make-defstruct-description (name)))
+  ;;
+  ;; name of the structure
+  (name (required-argument) :type symbol)
+  ;;
+  ;; documentation on the structure
+  (doc nil :type (or string null))
+  ;;
+  ;; prefix for slot names.  If NIL, none.
+  (conc-name (concat-pnames name '-) :type (or symbol null))
+  ;;
+  ;; The name of the primary standard keyword constructor, or NIL if none.
+  (default-constructor nil :type (or symbol null))
+  ;;
+  ;; All the explicit :CONSTRUCTOR specs, with name defaulted.
+  (constructors () :type list)
+  ;;
+  ;; name of copying function
+  (copier (concat-pnames 'copy- name) :type (or symbol null))
+  ;;
+  ;; Name of type predictate
+  (predicate (concat-pnames name '-p) :type (or symbol null))
+  ;;
+  ;; The arguments to the :INCLUDE option, or NIL if no included structure.
+  (include nil :type list)
+  ;;
+  ;; list of defstruct-slot-description objects for all slots (including
+  ;; included ones.)
+  (slots () :type list)
+  ;;
+  ;; Number of elements we've allocated (see also raw-length.)
+  (length 0 :type index)
+  ;;
+  ;; General kind of implementation.
+  (type 'structure :type (member structure vector list))
+  ;;
+  ;; The next three slots are for :TYPE'd structures (which aren't classes,
+  ;; i.e. dd-type /= structure.)
+  ;;
+  ;; Vector element type.
+  (element-type 't)
+  ;;
+  ;; T if :NAMED was explicitly specified, Nil otherwise.
+  (named nil :type boolean)
+  ;;
+  ;; Any INITIAL-OFFSET option on this direct type.
+  (offset nil :type index))
+  ;;
+  ;; The next five slots are only meaningful in real default structures (i.e.
+  ;; dd-type = structure), since they are recognizably typed objects (classes.)
+  ;;
+  ;; The argument to the PRINT-FUNCTION option, or NIL if none.  If we see an
+  ;; explicit (:PRINT-FUNCTION) option, then this is DEFAULT-STRUCTURE-PRINT.
+  ;; See also STRUCTURE-CLASS-PRINTER.
+  (print-function nil :type (or cons symbol null))
+  ;;
+  ;; Make-load-form function option.  See also STRUCTURE-CLASS-LOAD-FORM-MAKER.
+  (make-load-form-fun nil :type (or symbol cons null))
+  ;;
+  ;; The index of the raw data vector and the number of words in it.  NIL and 0
+  ;; if not allocated yet.
+  (raw-index nil :type (or index null))
+  (raw-length 0 :type index))
+
+
+;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
+;;; slots.
+;;;
+(defstruct (defstruct-slot-description
+             (:conc-name dsd-)
+             (:print-function print-defstruct-slot-description)
+	     (:make-load-form-fun :just-dump-it-normally))
+  %name				; string name of slot
+  ;;
+  ;; its position in the implementation sequence
+  (index (required-argument) :type fixnum)
+  ;;
+  ;; Name of accesor, or NIL if this accessor has the same name as an inherited
+  ;; accessor (which we don't want to shadow.)
+  (accessor nil)
+  default			; default value expression
+  (type t)			; declared type specifier
+  ;;
+  ;; If a raw slot, what it holds.  T means not raw.
+  (raw-type t :type (member t single-float double-float unsigned-byte))
+  (read-only nil :type (member t nil)))
+
 (defun print-defstruct-description (structure stream depth)
   (declare (ignore depth))
   (format stream "#<Defstruct-Description for ~S>" (dd-name structure)))
 
-;;; DSD-Name  --  Internal
+
+(defun compiler-layout-or-lose (name)
+  (let ((res (info type compiler-layout name)))
+    (cond ((not res)
+	   (error "Inherited class not yet defined: ~S" name))
+	  ((not (defstruct-description-p (layout-info res)))
+	   (error "Inherited class is not a STRUCTURE-CLASS: ~S" name))
+	  (t res))))
+
+
+;;; DSD-Name  --  External
 ;;;
 ;;;    Return the the name of a defstruct slot as a symbol.  We store it
 ;;; as a string to avoid creating lots of worthless symbols at load time.
@@ -75,44 +207,84 @@
   (declare (ignore depth))
   (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
 
-
 
 ;;; The legendary macro itself.
 
+;;; DEFINE-CLASS-METHODS  --  Internal
+;;;
+;;; Return a list of forms to install print and make-load-form funs, mentioning
+;;; them in the expansion so that they can be compiled.
+;;;
+(defun define-class-methods (defstruct)
+  (let ((name (dd-name defstruct)))
+    `(,@(let ((pf (dd-print-function defstruct)))
+	  (when pf
+	    `((setf (structure-class-print-function (find-class ',name))
+		    ,(if (symbolp pf)
+			 `',pf
+			 `#',pf)))))
+	,@(let ((mlff (dd-make-load-form-fun defstruct)))
+	    (when mlff
+	      `((setf (structure-class-make-load-form-fun (find-class ',name))
+		      ,(if (symbolp mlff)
+			   `',mlff
+			   `#',mlff))))))))
+
+;;; DEFSTRUCT  --  Public
+;;;
 (defmacro defstruct (name-and-options &rest slot-descriptions)
-  "Defstruct {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
-  Define the structure type Name.  See the manual for details."
-  (let* ((defstruct (parse-name-and-options name-and-options))
+  "DEFSTRUCT {Name | (Name Option*)} {Slot | (Slot [Default] {Key Value}*)}
+   Define the structure type Name.  Instances are created by MAKE-<name>, which
+   takes keyword arguments allowing initial slot values to the specified.
+   A SETF'able function <name>-<slot> is defined for each slot to read&write
+   slot values.  <name>-p is a type predicate.
+
+   Popular DEFSTRUCT options (see manual for others):
+
+   (:CONSTRUCTOR Name)
+   (:PREDICATE Name)
+       Specify an alternate name for the constructor or predicate.
+
+   (:CONSTRUCTOR Name Lambda-List)
+       Explicitly specify the name and arguments to create a BOA constructor
+       (which is more efficient when keyword syntax isn't necessary.)
+
+   (:INCLUDE Supertype Slot-Spec*)
+       Make this type a subtype of the structure type Supertype.  The optional
+       Slot-Specs override inherited slot options.
+
+   Slot options:
+
+   :TYPE Type-Spec
+       Asserts that the value of this slot is always of the specified type.
+
+   :READ-ONLY {T | NIL}
+       If true, no setter function is defined for this slot."
+
+  (let* ((defstruct (parse-name-and-options
+		     (if (atom options)
+			 (list name-and-options)
+			 name-and-options))) 
 	 (name (dd-name defstruct)))
-    (parse-slot-descriptions defstruct slot-descriptions)
+    (when (stringp (car slot-descriptions))
+      (setf (dd-doc defstruct) (pop slot-descriptions)))
+    (dolist (slot slot-descriptions)
+      (allocate-1-slot (parse-1-dsd defstruct slot)))
     (if (eq (dd-type defstruct) 'structure)
-	`(progn
-	   (%defstruct ',defstruct)
-	   (%compiler-defstruct ',defstruct)
-	   ,@(define-constructors defstruct)
-	   ,@(define-boa-constructors defstruct)
-	   ;;
-	   ;; So the print function is in the right lexical environment, and
-	   ;; can be compiled...
-	   ,@(let ((pf (dd-print-function defstruct)))
-	       (when pf
-		 `((setf (info type printer ',name)
-			 ,(if (symbolp pf)
-			      `',pf
-			      `#',pf)))))
-	   ,@(let ((mlff (dd-make-load-form-fun defstruct)))
-	       (when mlff
-		 `((setf (info type load-form-maker ',name)
-			 ,(if (symbolp mlff)
-			      `',mlff
-			      `#',mlff)))))
-	   ',name)
+	(let ((inherits (inherits-for-structure defstruct)))
+	  `(progn
+	     (%defstruct ',defstruct ',inherits)
+	     (eval-when (compile)
+	       (%compiler-only-defstruct ',defstruct ',inherits))
+	     (%compiler-defstruct ',defstruct)
+	     ,@(define-constructors defstruct)
+	     ,@(define-raw-accessors defstruct)
+	     ,@(define-class-methods defstruct)
+	   ',name))
 	`(progn
 	   (eval-when (compile load eval)
-	     (setf (info type kind ',name) nil)
-	     (setf (info type structure-info ',name) ',defstruct))
+	     (setf (info typed-structure info ',name) ',defstruct))
 	   ,@(define-constructors defstruct)
-	   ,@(define-boa-constructors defstruct)
 	   ,@(define-predicate defstruct)
 	   ,@(define-accessors defstruct)
 	   ,@(define-copier defstruct)
@@ -121,123 +293,111 @@
 
 ;;;; Parsing:
 
-(defun parse-name-and-options (name-and-options)
-  (if (atom name-and-options)
-      (setq name-and-options (list name-and-options)))
-  (do* ((options (cdr name-and-options) (cdr options))
-	(name (car name-and-options))
-	(print-function nil)
-	(pf-supplied-p)
-	(conc-name (concat-pnames name '-))
-	(constructors '())
-	(constructor-opt-p nil)
-	(boa-constructors '())
-	(copier (concat-pnames 'copy- name))
-	(predicate (concat-pnames name '-p))
-	(include)
-	(saw-type)
-	(type 'structure)
-	(saw-named)
-	(offset 0)
-	(make-load-form-fun nil)
-	(make-load-form-fun-p nil))
-       ((null options)
-	(let ((named (if saw-type saw-named t)))
-	  (make-defstruct-description
-	   :name name
-	   :conc-name conc-name
-	   :constructors
-	   (if constructor-opt-p
-	       (nreverse constructors)
-	       (list (concat-pnames 'make- name)))
-	   :boa-constructors boa-constructors
-	   :copier copier
-	   :predicate predicate
-	   :include include
-	   :print-function print-function
-	   :type type
-	   :length (if named 1 0)
-	   :lisp-type (cond ((eq type 'structure) 'simple-vector)
-			    ((eq type 'vector) 'simple-vector)
-			    ((eq type 'list) 'list)
-			    ((and (listp type) (eq (car type) 'vector))
-			     (cons 'simple-array (cdr type)))
-			    (t (error "~S is a bad :TYPE for Defstruct." type)))
-	   :named named
-	   :offset offset
-	   :make-load-form-fun make-load-form-fun)))
-    (if (atom (car options))
-	(case (car options)
-	  (:constructor
-	   (setf constructor-opt-p t)
-	   (setf constructors (list (concat-pnames 'make- name))))
-	  (:copier)
-	  (:predicate)
-	  (:named (setq saw-named t))
-	  (t (error "The Defstruct option ~S cannot be used with 0 arguments."
-		    (car options))))
-	(let ((option (caar options))
-	      (args (cdar options)))
-	  (case option
-	    (:conc-name
-	     (setq conc-name (car args))
-	     (unless (symbolp conc-name)
-	       (setq conc-name (make-symbol (string conc-name)))))
-	    (:constructor
-	     (setf constructor-opt-p t)
-	     (let ((lambda-list (cdr args))
-		   (constructor-name (car args))
-		   (no-explicit-nil-name (not args)))
-	       ;; Constructor-name may be nil because args has one element, the
-	       ;; explicit name of nil.  In this situation, don't make a
-	       ;; default constructor.  If args itself is nil, then we make a
-	       ;; default constructor.
-	       (cond (lambda-list
-		      (push args boa-constructors))
-		     (constructor-name
-		      (push constructor-name constructors))
-		     (no-explicit-nil-name
-		      (push (concat-pnames 'make- name) constructors)))))
-	    (:copier (setq copier (car args)))
-	    (:predicate (setq predicate (car args)))
-	    (:include
-	     (setf include args)
-	     (let* ((name (car include))
-		    (included-structure
-		     (info type structure-info name)))
-	       (unless included-structure
-		 (error "Cannot find description of structure ~S to use for ~
-		         inclusion."
-			name))
-	       (unless pf-supplied-p
-		 (setf print-function
-		       (dd-print-function included-structure)))
-	       (unless make-load-form-fun-p
-		 (setf make-load-form-fun
-		       (dd-make-load-form-fun included-structure)))))
-	    (:print-function
-	     (setf print-function (car args))
-	     (setf pf-supplied-p t))
-	    (:type (setf saw-type t type (car args)))
-	    (:named (error "The Defstruct option :NAMED takes no arguments."))
-	    (:initial-offset (setf offset (car args)))
-	    (:make-load-form-fun
-	     (setf make-load-form-fun (car args))
-	     (setf make-load-form-fun-p t))
-	    (t (error "~S is an unknown Defstruct option." option)))))))
+;;; PARSE-1-OPTION  --  Internal
+;;;
+;;;    Parse a single defstruct option and store the results in Defstruct.
+;;;
+(defun parse-1-option (option defstruct)
+  (let ((args (rest option))
+	(name (dd-name defstruct)))
+    (case (first option)
+      (:conc-name
+       (destructuring-bind (conc-name) args
+	 (setf (dd-conc-name defstruct)
+	       (if (symbolp conc-name)
+		   conc-name
+		   (make-symbol (string conc-name))))))
+      (:constructor
+       (destructuring-bind (&optional (cname (concat-pnames 'make- name))
+				      &rest stuff)
+			   args
+	 (push (cons cname stuff) (dd-constructors defstruct))))
+      (:copier
+       (destructuring-bind (&optional (copier (concat-pnames 'copy- name)))
+			   args
+	 (setf (dd-copier defstruct) copier)))
+      (:predicate
+       (destructuring-bind (&optional (pred (concat-pnames name '-p)))
+			   args
+	 (setf (dd-predicate defstruct) pred)))
+      (:include
+       (when (dd-include defstruct)
+	 (error "Can't have more than one :INCLUDE option."))
+       (setf (dd-include defstruct) args))
+      (:print-function
+       (destructuring-bind (&optional (fun 'default-structure-print)) args
+	 (setf (dd-print-function defstruct) fun)))
+      (:type
+       (destructuring-bind (type) args
+	 (cond ((member type '(list vector))
+		(setf (dd-element-type defstruct) 't)
+		(setf (dd-type defstruct) type))
+	       ((and (consp type) (eq (first type) 'vector))
+		(destructuring-bind (vector vtype) type
+		  (declare (ignore vector))
+		  (setf (dd-element-type defstruct) vtype)
+		  (setf (dd-type defstruct) 'vector)))
+	       (t
+		(error "~S is a bad :TYPE for Defstruct." type)))))
+      (:named
+       (error "The Defstruct option :NAMED takes no arguments."))
+      (:initial-offset
+       (destructuring-bind (offset) args
+	 (setf (dd-offset defstruct) offset)))
+      (:make-load-form-fun
+       (destructuring-bind (fun) args
+	 (setf (dd-make-load-form-fun defstruct) fun)))
+      (t (error "Unknown DEFSTRUCT option~%  ~S" option)))))
 
+
+;;; PARSE-NAME-AND-OPTIONS  --  Internal
+;;;
+;;;    Given name and options, return a DD holding that info.
+;;;
+(defun parse-name-and-options (name-and-options)
+  (destructuring-bind (name &rest options) name-and-options
+    (let ((defstruct (make-defstruct-description :name name)))
+      (dolist (option options)
+	(cond ((consp option)
+	       (parse-1-option option defstruct))
+	      ((eq option :named)
+	       (setf (dd-named defstruct) t))
+	      ((member option '(:constructor :copier :predicate :named))
+	       (parse-1-option (list option)))
+	      (t
+	       (error "Unrecognized DEFSTRUCT option: ~S" option))))
+
+      (cond
+       ((eq (dd-type defstruct) 'structure)
+	(when (dd-offset defstruct)
+	  (error "Can't specify :OFFSET unless :TYPE is specified."))
+	(unless (dd-include defstruct)
+	  (incf (dd-length defstruct))))
+       (t
+	(when (dd-print-function defstruct)
+	  (warn "Silly to specify :PRINT-FUNCTION with :TYPE."))
+	(when (dd-make-load-form-fun defstruct)
+	  (warn "Silly to specify :MAKE-LOAD-FORM-FUN with :TYPE."))
+	(when (dd-named defstruct) (incf (dd-length defstruct)))
+	(let ((offset (dd-offset defstruct)))
+	  (when offset (incf (dd-length defstruct) offset)))))
+
+      (when (dd-include defstruct)
+	(do-include-stuff defstruct))
+
+      defstruct)))
 
 
 ;;;; Stuff to parse slot descriptions.
 
 ;;; PARSE-1-DSD  --  Internal
 ;;;
-;;;    Parse a slot description for DEFSTRUCT and add it to the description.
-;;; If supplied, ISLOT is a pre-initialized DSD that we modify to get the new
-;;; slot.  This is supplied when handling included slots.  If the new accessor
-;;; name is already an accessor for same slot in some included structure, then
-;;; set the DSD-ACCESSOR to NIL so that we don't clobber the more general
-;;; accessor.
+;;;    Parse a slot description for DEFSTRUCT, add it to the description and
+;;; return it.  If supplied, ISLOT is a pre-initialized DSD that we modify to
+;;; get the new slot.  This is supplied when handling included slots.  If the
+;;; new accessor name is already an accessor for same slot in some included
+;;; structure, then set the DSD-ACCESSOR to NIL so that we don't clobber the
+;;; more general accessor.
 ;;;
 (defun parse-1-dsd (defstruct spec &optional
 		     (islot (make-defstruct-slot-description
@@ -252,7 +412,7 @@
 	  (values name default default-p type type-p read-only ro-p)))
        (t
 	(when (keywordp spec)
-	  (warn "Keyword slot name indicates possible syntax ~
+	  (warn "Keyword slot name indicates probable syntax ~
 		 error in DEFSTRUCT -- ~S."
 		spec))
 	spec))
@@ -274,51 +434,446 @@
     (when default-p
       (setf (dsd-default islot) default))
     (when type-p
-      (setf (dsd-type islot) type))
+      (setf (dsd-type islot)
+	    (if (eq (dsd-type islot) 't)
+		type
+		`(and ,(dsd-type islot) ,type))))
     (when ro-p
-      (setf (dsd-read-only islot) read-only))
-    (setf (dsd-index islot) (dd-length defstruct))
-    (incf (dd-length defstruct)))
-  (undefined-value))
+      (if read-only
+	  (setf (dsd-read-only islot) t)
+	  (when (dsd-read-only islot)
+	    (error "Slot ~S must be read-only in subtype ~S." name
+		   (dd-name dsd)))))
+    dsd))
 
 
-;;; PARSE-SLOT-DESCRIPTIONS parses the slot descriptions (surprise) and does
-;;; any structure inclusion that needs to be done.
+;;; ALLOCATE-1-SLOT  --  Internal
 ;;;
-(defun parse-slot-descriptions (defstruct slots)
-  ;; First strip off any doc string and stash it in the Defstruct.
-  (when (stringp (car slots))
-    (setf (dd-doc defstruct) (car slots))
-    (setq slots (cdr slots)))
-  ;; Then include stuff.  We add unparsed items to the start of the Slots.
-  (when (dd-include defstruct)
-    (destructuring-bind (included-name &rest modified-slots)
-			(dd-include defstruct)
-      (let ((included-thing
-	     (or (info type structure-info included-name)
-		 (error "Cannot find description of structure ~S ~
-			 to use for inclusion."
-			included-name))))
-	(setf (dd-includes defstruct)
-	      (cons (dd-name included-thing) (dd-includes included-thing)))
-	(incf (dd-offset defstruct) (dd-offset included-thing))
-	(incf (dd-length defstruct) (dd-offset defstruct))
-	(dolist (islot (dd-slots included-thing))
-	  (let* ((iname (dsd-name islot))
-		 (modified (or (find iname modified-slots
-				     :key #'(lambda (x) (if (atom x) x (car x)))
-				     :test #'string=)
-			       `(,iname))))
-	    (parse-1-dsd defstruct modified
-			 (copy-defstruct-slot-description islot)))))))
-  
-  ;; Finally parse the slots into Slot-Description objects.
-  (dolist (slot slots)
-    (parse-1-dsd defstruct slot))
+;;;    Allocate storage for a DSD in Defstruct.  This is where we decide if a
+;;; slot is raw or not.  If raw, and we haven't allocated a raw-index yet for
+;;; the raw data vector, then do it.  Raw objects are aligned on the unit of
+;;; their size.
+;;;
+(defun allocate-1-slot (defstruct dsd)
+  (let ((type (dsd-type dsd)))
+    (multiple-value-bind
+	(raw-type words)
+	(cond ((not (eq (dd-type defstruct) 'structure))
+	       (values nil nil))
+	      ((and (subtypep type '(usigned-byte 32))
+		    (not (subtypep type 'fixnum)))
+	       (values 'unsigned-byte 1))
+	      ((subtypep type 'single-float)
+	       (values 'single-float 1))
+	      ((subtypep type 'double-float)
+	       (values 'double-float 2))
+	      (t (values nil nil)))
+
+      (cond ((not raw-type)
+	     (setf (dsd-index dsd) (dd-length defstruct))
+	     (incf (dd-length defstruct)))
+	    (t
+	     (unless (dd-raw-index defstruct)
+	       (setf (dd-raw-index defstruct) (dd-length defstruct))
+	       (incf (dd-length defstruct)))
+	     (let ((off (rem (dd-length defstruct) words)))
+	       (unless (zerop off)
+		 (incf (dd-raw-length defstruct) (- words off))))
+	     (setf (dsd-raw-type dsd) raw-type)
+	     (setf (dsd-index dsd) (dd-raw-length defstruct))
+	     (incf (dd-raw-length defstruct) words)))))
+
   (undefined-value))
+
+
+;;; DO-INCLUSION-STUFF  --  Internal
+;;;
+;;;    Process any included slots pretty much like they were specified.  Also
+;;; inherit various other attributes (print function, etc.)
+;;;
+(defun do-inclusion-stuff (defstruct)
+  (destructuring-bind (included-name &rest modified-slots)
+		      (dd-include defstruct)
+    (let ((type (dd-type defstruct))
+	  (included-structure
+	   (if (eq type 'structure)
+	       (layout-info (compiler-layout-or-lose included-name))
+	       (typed-structure-info-or-lose included-name))))
+      (unless (and (eq type (dd-type included-structure))
+		   (type= (specifier-type (dd-element-type included-structure))
+			  (specifier-type (dd-element-type defstruct))))
+	(error ":TYPE option mismatch between structures ~S and ~S."
+	       (dd-name defstruct) included-name))
+
+      (incf (dd-length defstruct) (dd-length included-structure))
+      (when (eq (dd-type defstruct) 'structure)
+	(unless (dd-print-function defstruct)
+	  (setf (dd-print-function defstruct)
+		(dd-print-function included-structure)))
+	(unless (dd-make-load-form-fun defstruct)
+	  (setf (dd-make-load-form-fun defstruct)
+		(dd-make-load-form-fun included-structure)))
+	(setf (dd-raw-index defstruct) (dd-raw-index included-structure))
+	(setf (dd-raw-length defstruct) (dd-raw-length included-structure)))
+
+      (dolist (islot (dd-slots included-structure))
+	(let* ((iname (dsd-name islot))
+	       (modified (or (find iname modified-slots
+				   :key #'(lambda (x) (if (atom x) x (car x)))
+				   :test #'string=)
+			     `(,iname))))
+	  (parse-1-dsd defstruct modified
+		       (copy-defstruct-slot-description islot)))))))
+
 
 
-;;;; Default structure access and copiers:
+;;;; Constructors:
+
+(defun typed-structure-info-or-lose (name)
+  (or (info typed-structure info name)
+      (error ":TYPE'd defstruct ~S not found for inclusion." name)))
+
+;;; FIND-NAME-INDICES  --  Internal
+;;;
+;;;      Returns a list of pairs (name . index).  Used for :TYPE'd constructors
+;;; to find all the names that we have to splice in & where.  Note that these
+;;; types don't have a layout, so we can't look at LAYOUT-INHERITS.
+;;;
+(defun find-name-indices (defstruct)
+  (collect ((res))
+    (let ((infos ()))
+      (do ((info defstruct
+		 (typed-structure-info-or-lose (first (dd-include info)))))
+	  ((not (dd-include info)))
+	(push info infos))
+      
+      (let ((i 0))
+	(dolist (info infos)
+	  (incf i (dd-offset info))
+	  (when (dd-named info)
+	    (res (cons (dd-name info) i)))
+	  (setq i (dd-length info)))))
+
+    (res)))
+
+  
+;;; CREATE-{STRUCTURE,VECTOR,LIST}-CONSTRUCTOR  --  Internal
+;;;
+;;;    These functions are called to actually make a constructor after we have
+;;; processed the arglist.  The correct variant (according to the DD-TYPE)
+;;; should be called.  The function is defined with the specified name and
+;;; arglist.  Vars and Types are used for argument type declarations.  Values
+;;; are the values for the slots (in order.)
+;;;
+;;; This is split three ways because:
+;;; 1] list & vector structures need "name" symbols stuck in at various weird
+;;;    places, whereas STRUCTURE structures have a LAYOUT slot.
+;;; 2] We really want to use LIST to make list structures, instead of
+;;;    MAKE-LIST/(SETF ELT).
+;;; 3] STRUCTURE structures can have raw slots that must also be allocated and
+;;;    indirectly referenced.  We just call the setter function and let the
+;;;    compiler figure out the references.
+;;;
+(defun create-vector-constructor
+       (defstruct cons-name arglist vars types values) 
+  (let ((temp (gensym)))
+    `(defun ,cons-name ,args
+       (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
+			  vars types))
+       (let ((,temp (make-array ,(dd-length defstruct)
+				:element-type ',(dd-element-type defstruct))))
+	 ,@(mapcar #'(lambda (x)
+		       `(setf (%instance-ref ,temp ,(cdr x))  ',(car x)))
+		   (find-name-indices defstruct))
+	 ,@(mapcar #'(lambda (dsd value)
+		       `(setf (aref ,temp ,(dsd-index dsd)) ,value))
+		   (dd-slots defstruct) values)
+	 ,temp))))
+;;;
+(defun create-list-constructor
+       (defstruct cons-name arglist vars types values) 
+  (let ((vals (make-list (dd-length defstruct) :initial-element nil)))
+    (dolist (x (find-name-indices defstruct))
+      (setf (elt vals (cdr x)) `',(car x)))
+    (loop for dsd in (dd-slots defstruct) and for val in values do
+      (setf (elt vals (dsd-index dsd)) val))
+
+    `(defun ,cons-name ,args
+       (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
+			  vars types))
+       (list ,@vals))))
+;;;
+(defun create-structure-constructor
+       (defstruct cons-name arglist vars types values)
+  (let ((temp (gensym)))
+    `(defun ,cons-name ,arglist
+       (declare ,@(mapcar #'(lambda (var type) `(type ,type ,var))
+			  vars types))
+       (let ((,temp (truly-the ,(dd-name defstruct)
+			       (%make-instance ,(dd-length defstruct)))))
+	 (setf (%instance-layout ,temp)
+	       ',(info type compiler-layout (dd-name defstruct)))
+	 ,@(when (dd-raw-index defstruct)
+	     `((setf (%instance-ref ,temp ,(dd-raw-index defstruct))
+		     (make-array ,(dd-raw-length defstruct)
+				 :element-type '(unsigned-byte 32)))))
+	 ,@(mapcar #'(lambda (dsd value)
+		       `(setf (,(concat-pnames (dd-conc-name defstruct)
+					       (dsd-name dsd))
+			       ,temp)
+			      ,value))
+		   (dd-slots defstruct)
+		   values))))
+
+
+;;; CREATE-KEYWORD-CONSTRUCTOR   --  Internal
+;;;
+;;;    Create a default (non-BOA) keyword constructor.
+;;;
+(defun create-default-constructor (defstruct creator)
+  (collect ((arglist (list '&key))
+	    (types)
+	    (values))
+    (dolist (slot (dd-slots defstruct))
+      (let ((dum (gensym))
+	    (name (dsd-name slot)))
+	(arglist `((,(intern (string name) "KEYWORD") dum)))
+	(types (dsd-type wlot))
+	(values dum)))
+    (funcall creator
+	     defstruct (dd-constructor defstruct)
+	     arglist values types values)))
+
+
+;;; CREATE-BOA-CONSTRUCTOR  --  Internal
+;;;
+;;;    Given a structure and a BOA constructor spec, call Creator with the
+;;; appropriate args to make a constructor.
+;;;
+(defun grovel-boa-constructor (defstruct boa creator)
+  (multiple-value-bind (req opt restp rest keyp keys allowp aux)
+		       (kernel:parse-lambda-list boa)
+    (collect ((arglist)
+	      (vars)
+	      (types))
+      (labels ((get-slot (name default)
+		 (let ((res (find name (dd-slots defstruct) :test #'string=
+				  :key #'dsd-name)))
+		   (if res
+		       (values (dsd-type res) (dsd-default res))
+		       (values t nil))))
+	       (do-default (arg)
+		 (multiple-value-bind (type default) (get-slot arg)
+		   (arglist `(,arg ,default))
+		   (vars arg)
+		   (types type))))
+	(dolist (arg req)
+	  (arglist arg)
+	  (vars arg)
+	  (types (get-slot arg)))
+	
+	(when opt
+	  (arglist '&optional)
+	  (dolist (arg opt)
+	    (cond ((consp arg)
+		   (destructuring-bind
+		       (name &optional (def (nth-value 1 (get-slot name))))
+		       arg
+		     (arglist `(,name ,def))
+		     (vars name)
+		     (types (get-slot name))))
+		  (t
+		   (do-default arg)))))
+
+	(when restp
+	  (arglist '&rest rest)
+	  (vars rest)
+	  (types 'list))
+
+	(when keyp
+	  (arglist '&key)
+	  (dolist (key keys)
+	    (if (consp key)
+		(destructuring-bind (wot &optional (def nil def-p))
+				    arg
+		  (let ((name (if (consp wot)
+				  (destructuring-bind (key var) wot
+				    (declare (ignore key))
+				    var)
+				  wot)))
+		    (multiple-value-bind (type slot-def) (get-slot name)
+		      (arglist `(,wot ,(if def-p ,def ,slot-def)))
+		      (vars name)
+		      (types type))))
+		(do-default key))))
+
+	(when allowp (arglist '&allow-other-keys))
+
+	(when aux
+	  (arglist '&aux)
+	  (dolist (arg aux)
+	    (let* ((arg (if (consp arg) arg (list arg)))
+		   (var (first arg)))
+	      (arglist arg)
+	      (vars var)
+	      (types (get-slot var))))))
+
+      (funcall creator defstruct (first boa)
+	       (arglist) (vars) (types)
+	       (mapcar #'(lambda (slot)
+			   (or (find (dsd-name slot) (vars))
+			       (dsd-default slot)))
+		       (dsd-slots defstruct))))))
+
+
+;;; DEFINE-CONSTRUCTORS  --  Internal
+;;;
+;;;    Grovel the constructor options, and decide what constructors (if any) to
+;;; create.
+;;;
+(defun define-constructors (defstruct)
+  (let ((no-constructors nil)
+	(boas ())
+	(defaults ())
+	(creator (ecase (dd-type defstruct)
+		   (structure #'create-structure-constructor)
+		   (vector #'create-vector-constructor)
+		   (list #'create-list-constructor))))
+    (dolist (constructor (dd-constructors defstruct))
+      (destructuring-bind (name &optional (boa-ll nil boa-p))
+			  constructor
+	(declare (ignore boa-ll))
+	(cond ((not name) (setq no-constructors t))
+	      (boa-p (push constructor boas))
+	      (t (push name defaults)))))
+
+    (when no-construtors
+      (when (or defaults boas)
+	(error "(:CONSTRUCTOR NIL) combined with other :CONSTRUCTORs."))
+      (return-from define-constructors ()))
+
+    (unless (or defaults boas)
+      (push (concat-pnames 'make- (dd-name defstruct)) defaults))
+
+    (collect ((res))
+      (when defaults
+	(let ((cname (first defaults)))
+	  (setf (dd-constructor defstruct) cname)
+	  (res (create-keyword-constructor defstruct creator))
+	  (dolist (other-name (rest defaults))
+	    (res `(setf (fdefinition ',other-name) (fdefinition ',cname)))
+	    (res `(declaim (ftype function ',other-name))))))
+      
+      (dolist (boa boas)
+	(res (create-boa-constructor defstruct boa creator)))
+
+      (res))))
+
+;;;; Slot accessors for raw slots:
+
+;;; DEFINE-RAW-ACCESSORS  --  Internal
+;;;
+;;;    Define readers and writers for raw slots as inline functions.  We use
+;;; the special RAW-REF operations to store floats in the raw data vector.
+;;;
+(defun define-raw-accessors (defstruct)
+  (collect ((res))
+    (dolist (slot (dd-slots defstruct))
+      (let ((rtype (dsd-raw-type slot))
+	    (aname (dsd-accessor slot)))
+	(when (and aname (not (eq rtype 't)))
+	  (let ((accessor
+		 (ecase rtype
+		   (single-float '%raw-ref-single)
+		   (double-float '%raw-ref-double)
+		   (unsigned-byte 'aref)))
+		 (offset
+		  (if (eq rtype 'double-float)
+		      (ash (dsd-index slot) -1)
+		      (dsd-index slot)))
+		 (data `(truly-the (simple-array (unsigned-byte 32) (*))
+				   (%instance-ref object
+						  ,(dd-raw-index defstruct))))
+		(name (dd-name defstruct))
+		(stype (dsd-type slot)))
+	    (res `(declaim (inline ,aname)))
+	    (res `(declaim (ftype (function (,name) ,stype) ,aname)))
+	    (res
+	     `(defun ,aname (object)
+		(truly-the ,stype (,accessor ,data ,offset))))
+	    (unless (dsd-read-only slot)
+	      (res `(declaim (inline (setf ,aname))))
+	      (res `(declaim (ftype (function (,stype ,name) ,stype)
+				    (setf ,aname))))
+	      (res
+	       `(defun (setf ,aname) (new-value object)
+		  (setf (,accessor ,data ,offset) new-value))))))))
+    (res)))
+	  
+
+;;;; Typed (non-class) structures:
+
+;;; DD-LISP-TYPE  --  Internal
+;;;
+;;;    Return a type specifier we can use for testing :TYPE'd structures.
+;;;
+(defun dd-lisp-type (defstruct)
+  (ecase (dd-type defstruct)
+    (list 'list)
+    (vector `(simple-array ,(dd-element-type defstruct)
+			   (*)))))
+
+;;; DEFINE-ACCESSORS  --  Internal
+;;;
+;;;    Returns a list of function definitions for accessing and setting the
+;;; slots of the a typed Defstruct.  The functions are proclaimed to be inline,
+;;; and the types of their arguments and results are declared as well.  We
+;;; count on the compiler to do clever things with Elt.
+;;;
+(defun define-accessors (defstruct)
+  (collect ((stuff))
+    (let* ((type (dd-type defstruct))
+	   (ltype (dd-lisp-type defstruct)))
+      (dolist (slot (dd-slots defstruct))
+	(let ((name (dsd-accessor slot))
+	      (index (dsd-index slot))
+	      (slot-type (dsd-type slot)))
+	  (stuff `(proclaim '(inline ,name (setf ,name))))
+	  (stuff `(defun ,name (structure)
+		    (declare (type ,ltype structure))
+		    (the ,slot-type (elt structure ,index))))
+	  (unless (dsd-read-only slot)
+	    (stuff
+	     `(defun (setf ,name) (new-value structure)
+		(declare (type ,ltype structure) (type ,slot-type new-value))
+		(setf (elt structure ,index) new-value))))))))
+    (stuff))
+
+
+;;; Define-Copier returns the definition for a copier function of a typed
+;;; Defstruct if one is desired.
+(defun define-copier (defstruct)
+  (when (dd-copier defstruct)
+    `((setf (fdefinition ',(dd-copier defstruct)) #'copy-seq)
+      (declaim (ftype function ,(dd-copier defstruct))))))
+
+
+;;; Define-Predicate returns a definition for a predicate function if one is
+;;; desired.  Rather vaguely specified w.r.t. inclusion.
+;;;
+(defun define-predicate (defstruct)
+  (let ((name (dd-name defstruct))
+	(pred (dd-predicate defstruct)))
+    (when (and pred (dd-named defstruct))
+      (let ((ltype (dd-lisp-type defstruct)))
+	`((defun ,pred (object)
+	    (and (typep object ',ltype)
+		 (eq (elt (the ,ltype object)
+			  ,(cdr (car (last (find-name-indices defstruct)))))
+		     ',name))))))))
+
+
+;;;; Load time support for default structures (%DEFSTRUCT)
 ;;;
 ;;;    In the normal case of structures that have a real type (i.e. no :Type
 ;;; option was specified), we want to optimize things for space as well as
@@ -328,378 +883,445 @@
 ;;; general-case code.  Since the compiler will normally open-code accesors,
 ;;; the (minor) efficiency penalty is not a concern.
 
-;;; Typep-To-Structure  --  Internal
+;;; Typep-To-Layout  --  Internal
 ;;;
-;;;    Return true if Obj is an object of the structure type specified by Info.
-;;; This is called by the accessor closures, which have a handle on the type's
-;;; Defstruct-Description.
+;;;    Return true if Obj is an object of the structure type corresponding to
+;;; Layout.  This is called by the accessor closures, which have a handle on
+;;; the type's layout.
 ;;;
-#+new-compiler
-(proclaim '(inline typep-to-structure))
-#+new-compiler
-(defun typep-to-structure (obj info)
-  (declare (type defstruct-description info) (inline member))
-  (and (structurep obj)
-       (let ((name (structure-ref obj 0)))
-	 (or (eq name (dd-name info))
-	     (member name (dd-included-by info) :test #'eq)))))
+(proclaim '(inline typep-to-layout))
+(defun typep-to-structure (obj layout)
+  (declare (type layout layout) (optimize (speed 3) (safety 0)))
+  (when (layout-invalid layout)
+    (error "Obsolete structure accessor function called."))
+  (and (%instancep obj)
+       (let ((depth (layout-inheritance-depth layout))
+	     (obj-layout (%instance-layout obj)))
+	 (cond ((eq obj-layout layout) t)
+	       ((layout-invalid obj-layout)
+		(error "Structure accessor called on obsolete instance:~%  ~S"
+		       obj))
+	       (t
+		(and (> (layout-inheritance-depth obj-layout) depth)
+		     (eq (svref (layout-inherits obj-layout) depth)
+			 layout)))))))
+
+
+;;; STRUCTURE-SLOT-SETTER, STRUCTURE-SLOT-ACCESSOR  --  Internal
+;;;
+;;;    Return closures to do slot access (set), according to Layout and DSD.
+;;; We check types, then do the access.  This is only used for normal slots
+;;; (not raw.)
+;;;
+(defun structure-slot-accessor (layout dsd)
+  #'(lambda (structure)
+      (declare (optimize (speed 3) (safety 0)))
+      (unless (typep-to-structure structure layout)
+	(error "Structure for accessor ~S is not a ~S:~% ~S"
+	       (dsd-accessor dsd) (class-name (layout-class layout))
+	       structure))
+      (%instance-ref structure (dsd-index dsd))))
+;;;
+(defun structure-slot-setter (layout dsd)
+  #'(lambda (new-value structure)
+      (declare (optimize (speed 3) (safety 0)))
+      (unless (typep-to-structure structure layout)
+	(error "Structure for setter ~S is not a ~S:~% ~S"
+	       `(setf ,(dsd-accessor dsd)) (class-name (layout-class layout))
+	       structure))
+      (unless (typep new-value (dsd-type dsd))
+	(error "New-Value for setter ~S is not a ~S:~% ~S."
+	       `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
+	       new-value))
+      (setf (%instance-ref structure (dsd-index dsd)) new-value)))
+
+
+;;; %Defstruct  --  Internal
+;;;
+;;;    Do miscellaneous (LOAD EVAL) time actions for the structure described by
+;;; Info.  Create the class & layout, checking for incompatible redefinition.
+;;; Define setters, accessors, copier, predicate, documentation, instantiate
+;;; definition in load-time env.  This is only called for default structures.
+;;;
+(defun %defstruct (info inherits)
+  (declare (type defstruct-description info))
+  (multiple-value-bind (class layout old-layout)
+		       (ensure-structure-class info inherits "current" "new")
+    (cond (old-layout
+	   (let ((old-info (layout-info old-layout)))    
+	     (when (defstruct-description-p old-info)
+	       (dolist (slot (dd-slots old-info))
+		 (fmakunbound (dsd-accessor slot))
+		 (unless (dsd-read-only slot)
+		   (fmakunbound `(setf ,(dsd-accessor slot)))))))
+	   (unless (eq layout old-layout)
+	     (%redefine-defstruct class old-layout layout)))
+	  (t
+	   (register-layout layout nil nil)))
+
+    (setf (find-class (dsd-name info)) class)
+      
+    (dolist (slot (dd-slots info))
+      (let ((dsd slot))
+	(when (and (dsd-accessor slot)
+		   (not (eq (dsd-raw-type slot) 'T)))
+	  (setf (symbol-function (dsd-accessor slot))
+		(structure-slot-accessor layout dsd))
+	  
+	  (unless (dsd-read-only slot)
+	    (setf (fdefinition `(setf ,(dsd-accessor slot)))
+		  (structure-slot-setter layout dsd))))))
+    
+    (when (dd-predicate info)
+      (setf (symbol-function (dd-predicate info))
+	    #'(lambda (object)
+		(declare (optimize (speed 3) (safety 0)))
+		(typep-to-layout object layout))))
+    
+    (when (dd-copier info)
+      (setf (symbol-function (dd-copier info))
+	    #'(lambda (structure)
+		(declare (optimize (speed 3) (safety 0)))
+		(unless (typep-to-layout structure layout)
+		  (error "Structure for copier is not a ~S:~% ~S"
+			 (class-name (layout-class layout))
+			 structure))
+		(copy-structure structure)))))
+  
+  (when (dd-doc info)
+    (setf (documentation (dd-name info) 'type) (dd-doc info)))
+
+  (undefined-value))
+
+
+;;;; Redefinition stuff:
+
+;;; ENSURE-STRUCTURE-CLASS  --  Internal
+;;;
+;;;    Called when we are about to define a structure class.  Returns a
+;;; (possibly new) class object and the layout which should be used for the new
+;;; definition (may be the current layout.)  The third value is any old layout
+;;; for this class (may be NIL, and also might be an uninstalled forward
+;;; referenced layout.)
+;;;
+(defun ensure-structure-class (info inherits old-context new-context)
+  (multiple-value-bind (class old-layout)
+		       (insured-find-class (dd-name info)
+					   (find-class 'structure-class)
+					   #'make-structure-class)
+    (let ((new-layout (make-layout :class class
+				   :inherits inherits
+				   :inheritance-depth (length inherits)
+				   :length (dd-length info)
+				   :info info)))
+      (if (or (not old-layout)
+	      (let ((old-info (layout-info old-layout)))
+		(or (redefine-layout-warning old-layout old-context
+					     new-layout new-context)
+		    (not (defstruct-description-p old-info))
+		    (redefine-structure-warning class old-info info))))
+	  (values class new-layout old-layout)
+	  (values class old-layout old-layout)))))
+	    
+
+;;; COMPARE-SLOTS  --  Internal
+;;;
+;;;    Compares the slots of Old and New, returning 3 lists of slot names:
+;;; 1] Slots which have moved,
+;;; 2] Slots whose type has changed,
+;;; 3] Deleted slots. 
+;;;
+(defun compare-slots (old new)
+  (let* ((oslots (dd-slots old))
+	 (nslots (dd-slots new))
+	 (onames (mapcar #'dsd-name oslots))
+	 (nnames (mapcar #'dsd-name nslots)))
+    (collect ((moved)
+	      (retyped))
+      (dolist (name (set-intersection onames nnames))
+	(let ((os (find name oslots :key #'dsd-name))
+	      (ns (find name nslots :key #'dsd-name)))
+	  (unless (subtypep (dsd-type ns) (dsd-type os))
+	    (retyped name))
+	  (unless (and (= (dsd-index os) (dsd-index ns))
+		       (eq (dsd-raw-type os) (dsd-raw-type ns)))
+	    (moved name))))
+      (values (moved)
+	      (retyped)
+	      (set-difference onames nnames)))))
+
+
+;;; REDEFINE-STRUCTURE-WARNING  --  Internal
+;;;
+;;;    Give a warning and return true if we are redefining a structure with
+;;; different slots than in the currently loaded version.
+;;;
+(defun redefine-structure-warning (class old new)
+  (declare (type defstruct-description old new) (type structure-class class))
+  (let ((name (dd-name new)))
+    (multiple-value-bind (moved renamed retyped new deleted)
+			 (compare-slots old new)
+      (when (or moved retyped deleted)
+	(compiler-warning 
+	 "Incompatibly redefining slots of structure class ~S~@
+	  Make sure any uses of affected accessors are recompiled:~@
+	  ~@[  These slots were moved to new positions:~%    ~S~%~]
+	  ~@[  These slots have new incompatible types:~%    ~S~%~]
+	  ~@[  These slots were deleted:~%    ~S~%~]"
+	 name moved retyped deleted)
+	t))))
 
 
 ;;; %REDEFINE-DEFSTRUCT  --  Internal
 ;;;
-;;;    This function is called when we are redefining a structure from Old to
-;;; New.  If the slots are different, we flame loudly, but give the luser a
-;;; chance to proceed.  We flame especially loudly if there are structures that
-;;; include this one.  If proceeded, we FMAKUNBOUND all the old accessors.  If
-;;; the redefinition is not incompatible, we make the INCLUDED-BY of the new
-;;; definition be the same as the old one.
+;;;    This function is called when we are incompatibly redefining a structure
+;;; Class to have the specified New-Layout.  We signal an error with some
+;;; proceed options.  In any case, we FMAKUNBOUND all the old accessors.
 ;;;
-(defun %redefine-defstruct (old new)
-  (declare (type defstruct-description old new))
-  (cond
-   ((and (equalp (dd-slots old) (dd-slots new))
-	 (equal (dd-includes old) (dd-includes new)))
-    (setf (dd-included-by new) (dd-included-by old)))
-   (t
-    (let ((name (dd-name old))
-	  (included-by (dd-included-by old)))
-      (cerror
-       "Recklessly proceed with wanton disregard for Lisp and limb."
-       "Structure ~S is being incompatibly redefined.  If proceeded, you must~@
-       recompile all uses of this structure's accessors.~:[~;~@
-       ~S is included by these structures:~
-       ~%  ~S~@
-       You must also recompile these DEFSTRUCTs and all the uses of their ~
-       accessors.~]"
-       name included-by name included-by)
-
-      (dolist (slot (dd-slots old))
-	(fmakunbound (dsd-accessor slot))
-	(unless (dsd-read-only slot)
-	  (fmakunbound `(setf ,(dsd-accessor slot))))))))
+(defun %redefine-defstruct (class old-layout new-layout)
+  (declare (type structure-class class) (type defstruct-description info)
+	   (type layout new-layout))
+    (restart-case
+	(error "Redefining class ~S incompatibly with the current ~
+		definition."
+	       name)
+      (continue ()
+	:report "Invalidate current definition."
+	(warn "Previously loaded accessors will no longer work." name)
+	(register-layout new-layout t nil))
+      (clobber-it ()
+	:report "Smash current layout, preserving old code."
+	(warn "Any old ~S instances will be in a bad way.~@
+	       I hope you know what you're doing..."
+	      name)
+	(register-layout new-layout nil t)))
 
   (undefined-value))
 
-#+new-compiler
-;;; %Defstruct  --  Internal
+
+;;; UNDEFINE-STRUCTURE  --  Interface
 ;;;
-;;;    Do miscellaneous load-time actions for the structure described by Info.
-;;; Define setters, accessors, copier, predicate, documentation, instantiate
-;;; definition in load-time env.  This is only called for default structures.
-;;;
-(defun %defstruct (info)
+;;;    Blow away all the compiler info for the structure described by Info.
+;;; This recursively descends the inheritance hierarchy.
+;;; 
+(defun undefine-structure (info)
   (declare (type defstruct-description info))
   (let* ((name (dd-name info))
-	 (old (info type defined-structure-info name)))
+	 (all-types (cons name (dd-included-by info))))
     ;;
-    ;; Don't flame about dd structures, since they are hackishly defined in
-    ;; type-boot...
-    (when (and old
-	       (not (member name '(defstruct-description
-				   defstruct-slot-description))))
-      (%redefine-defstruct old info))
-    
-    (setf (info type defined-structure-info name) info)
+    ;; Iterate over this type and all subtypes, clearing the compiler structure
+    ;; type info, and undefining all the associated functions.
+    (dolist (type all-types)
+      (let ((this-info (info type structure-info type)))
+	(setf (info type kind type) nil)
+	(setf (info type structure-info type) nil)
+	(setf (info type frozen type) nil)
+	(undefine-function-name (dd-copier this-info))
+	(undefine-function-name (dd-predicate this-info))
+	(dolist (slot (dd-slots this-info))
+	  (let ((fun (dsd-accessor slot)))
+	    (undefine-function-name fun)
+	    (unless (dsd-read-only slot)
+	      (undefine-function-name `(setf ,fun)))))))
+    ;;
+    ;; Iterate over all types that include this type, removing this type and
+    ;; all subtypes from the list of subtypes of the included type.  We copy
+    ;; the DD and included list so that we don't clobber the type in the
+    ;; compiler's Lisp.
     (dolist (include (dd-includes info))
-      (let ((iinfo (info type defined-structure-info include)))
-	(unless iinfo
-	  (error "~S includes ~S, but it is not defined." name include))
-	(pushnew name (dd-included-by iinfo)))))
+      (let ((new (copy-defstruct-description
+		  (info type structure-info include))))
+	(setf (dd-included-by new)
+	      (set-difference (dd-included-by new) all-types))
+	(setf (info type structure-info include) new))))
+  ;;
+  ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
+  ;; unknown types.
+  (values-specifier-type-cache-clear)
+  (undefined-value))
+
+
+;;; CHECK-FOR-STRUCTURE-REDEFINITION  --  Internal
+;;;
+;;;    Called when we process a DEFSTRUCT for a type that is already defined
+;;; for a structure.  We check for incompatible redefinition and undefine the
+;;; old structure if so.  We ignore the structures that DEFSTRUCT is built out
+;;; of, since they have to be hackishly defined in type-boot.  If the structure
+;;; is not incompatibly redefined, then we copy the old INCLUDED-BY into the
+;;; new structure.
+;;;
+(defun check-for-structure-redefinition (info)
+  (declare (type defstruct-description info))
+  (let* ((name (dd-name info))
+	 (old (info type structure-info name)))
+    (cond ((member name
+		   '(defstruct-description defstruct-slot-description)))
+	  ((and (equal (dd-includes old) (dd-includes info))
+		(equalp (dd-slots old) (dd-slots info)))
+	   (setf (dd-included-by info) (dd-included-by old)))
+	  (t
+	   (compiler-warning
+	    "Incompatibly redefining structure ~S.~@
+	    Removing the old definition~:[.~;~:* and these subtypes:~%  ~S~]"
+	    name (dd-included-by old))
+	   (undefine-structure old))))
+  (undefined-value))
+
+
+;;; ADD-NEW-SUBTYPE  --  Internal
+;;;
+;;;    Add a new subtype NAME to the structure type INC.  INFO is INC's current
+;;; info.
+;;;
+(defun add-new-subtype (name inc info)
+  (let ((new (copy-defstruct-description info)))
+    (setf (info type structure-info inc) new)
+    (push name (dd-included-by new))
+    (when (info type frozen inc)
+      (compiler-warning "Adding new subtype ~S to frozen type ~S.~@
+      			 Unfreezing this type and its inferiors.~@
+			 Previously compiled type tests must be recompiled."
+			name inc)
+      (setf (info type frozen inc) nil)
+      (dolist (subtype (dd-included-by info))
+	(setf (info type frozen subtype) nil)))))
+
+
+;;;; Compiler stuff:
+
+;;; DEFINE-DEFSTRUCT-NAME  --  Internal
+;;;
+;;;    Like DEFINE-FUNCTION-NAME, but we also set the kind to :DECLARED and
+;;; blow away any ASSUMED-TYPE.  Also, if the thing is a slot accessor
+;;; currently, quietly unaccessorize it.  And if there are any undefined
+;;; warnings, we nuke them.
+;;;
+(defun define-defstruct-name (name)
+  (when name
+    (when (info function accessor-for name)
+      (setf (info function accessor-for name) nil))
+    (define-function-name name)
+    (note-name-defined name :function)
+    (setf (info function where-from name) :declared)
+    (when (info function assumed-type name)
+      (setf (info function assumed-type name) nil)))
+  (undefined-value))
+
+
+;;; INHERITS-FOR-STRUCTURE  --  Internal
+;;;
+;;;    This function is called at macroexpand time to compute the INHERITS
+;;; vector for a structure type definition.
+;;;
+(defun inherits-for-structure (info)
+  (declare (type defstruct-description info))
+  (let ((include (dd-include info))
+	(super
+	 (if include
+	     (compiler-layout-or-lose (first include))
+	     (class-layout (find-class 'structure-object)))))
+    (concatentate 'simple-vector (layout-inherits super) (vector super))))
+
+
+;;; %COMPILER-ONLY-DEFSTRUCT  --  External
+;;;
+;;;    This function is called by an EVAL-WHEN to do the compile-time-only
+;;; actions for defining a structure type.  It installs the class in the type
+;;; system in a similar way to %DEFSTRUCT, but is quieter and safer in the case
+;;; of redefinition.  This is not called at all for interpreted defstructs.
+;;;
+(defun %compiler-only-defstruct (info inherits)
+  (multiple-value-bind (class layout)
+		       (ensure-structure-class info inherits
+					       "current" "compiled")
+    (setf (info type compiler-layout (dd-name info)) layout)
+    (unless (eq (class-layout class) layout)
+      (register-layout layout nil nil))
+    (setf (find-class (dsd-name info)) class))
+  (undefined-value))
+
+
+;;; %%Compiler-Defstruct  --  External
+;;;
+;;;    This function does the (compile load eval) time actions for updating the
+;;; compiler's global meta-information to represent the definition of the the
+;;; structure described by Info.  This primarily amounts to setting up info
+;;; about the accessor and other implicitly defined functions.  The
+;;; constructors are explicitly defined by top-level code.
+;;;
+(defun %%compiler-defstruct (info)
+  (declare (type defstruct-description info))
+  (let ((name (dd-name info)))
+    (let ((copier (dd-copier info)))
+      (when copier
+	(%proclaim `(ftype (function (,name) ,name) ,copier))))
     
+    (let ((pred (dd-predicate info)))
+      (when pred
+	(define-defstruct-name pred)
+	(setf (info function inlinep pred) :inline)
+	(setf (info function inline-expansion pred)
+	      `(lambda (x) (typep x ',name))))))
+
   (dolist (slot (dd-slots info))
-    (let ((dsd slot))
-      (when (dsd-accessor slot)
-	(setf (symbol-function (dsd-accessor slot))
-	      #'(lambda (structure)
-		  (declare (optimize (speed 3) (safety 0)))
-		  (unless (typep-to-structure structure info)
-		    (error "Structure for accessor ~S is not a ~S:~% ~S"
-			   (dsd-accessor dsd) (dd-name info) structure))
-		  (structure-ref structure (dsd-index dsd))))
-      
+    (let* ((fun (dsd-accessor slot))
+	   (setf-fun `(setf ,fun)))
+      (when (and fun (not (dsd-raw-type slot)))
+	(define-defstruct-name fun)
+	(setf (info function accessor-for fun) info)
 	(unless (dsd-read-only slot)
-	  (setf (fdefinition `(setf ,(dsd-accessor slot)))
-		#'(lambda (new-value structure)
-		    (declare (optimize (speed 3) (safety 0)))
-		    (unless (typep-to-structure structure info)
-		      (error "Structure for setter ~S is not a ~S:~% ~S"
-			     `(setf ,(dsd-accessor dsd)) (dd-name info)
-			     structure))
-		    (unless (typep new-value (dsd-type dsd))
-		      (error "New-Value for setter ~S is not a ~S:~% ~S."
-			     `(setf ,(dsd-accessor dsd)) (dsd-type dsd)
-			     new-value))
-		    (setf (structure-ref structure (dsd-index dsd))
-			  new-value)))))))
+	  (define-defstruct-name setf-fun)
+	  (setf (info function accessor-for setf-fun) info)))))
 
-  (when (dd-predicate info)
-    (setf (symbol-function (dd-predicate info))
-	  #'(lambda (object)
-	      (declare (optimize (speed 3) (safety 0)))
-	      (if (typep-to-structure object info) t nil))))
+  (undefined-value))
 
-  (when (dd-copier info)
-    (setf (symbol-function (dd-copier info))
-	  #'(lambda (structure)
-	      (declare (optimize (speed 3) (safety 0)))
-	      (unless (typep-to-structure structure info)
-		(error "Structure for copier ~S is not a ~S:~% ~S"
-		       (dd-copier info) (dd-name info) structure))
+(setf (symbol-function '%compiler-defstruct) #'%%compiler-defstruct)
 
-	      (let* ((len (dd-length info))
-		     (res (make-structure len)))
-		(declare (type structure-index len))
-		(dotimes (i len)
-		  (declare (type structure-index i))
-		  (setf (structure-ref res i)
-			(structure-ref structure i)))
-		res))))
-  (when (dd-doc info)
-    (setf (documentation (dd-name info) 'type) (dd-doc info))))
-
-
+
 ;;; COPY-STRUCTURE  --  Public
 ;;;
 ;;;    Copy any old kind of structure.
 ;;;
 (defun copy-structure (structure)
   "Return a copy of Structure with the same (EQL) slot values."
-  (declare (type structure structure))
-  (locally (declare (optimize (speed 3) (safety 0)))
-    (let* ((len (structure-length structure))
-	   (res (make-structure len)))
-      (declare (type structure-index len))
-      (dotimes (i len)
-	(declare (type structure-index i))
-	(setf (structure-ref res i)
-	      (structure-ref structure i)))
-      res)))
-
-
-;;; Define-Accessors returns a list of function definitions for accessing and
-;;; setting the slots of the a typed Defstruct.  The functions are proclaimed
-;;; to be inline, and the types of their arguments and results are declared as
-;;; well.  We count on the compiler to do clever things with Elt.
-
-(defun define-accessors (defstruct)
-  (do ((slots (dd-slots defstruct) (cdr slots))
-       (stuff '())
-       (type (dd-lisp-type defstruct)))
-      ((null slots) stuff)
-    (let* ((slot (car slots))
-	   (name (dsd-accessor slot))
-	   (index (dsd-index slot))
-	   (slot-type (dsd-type slot)))
-      (push
-       `(progn
-	  (proclaim '(inline ,name (setf ,name)))
-	  (defun ,name (structure)
-	    (declare (type ,type structure))
-	    (the ,slot-type (elt structure ,index)))
-	  ,@(unless (dsd-read-only slot)
-	      `((defun (setf ,name) (new-value structure)
-		  (declare (type ,type structure) (type ,slot-type new-value))
-		  (setf (elt structure ,index) new-value)))))
-       stuff))))
-
-
-;;; Define-Constructors returns a definition for the constructor function of
-;;; the given Defstruct.  If the structure is implemented as a vector and is
-;;; named, we structurify it.  If the structure is a vector of some specialized
-;;; type, we can't use the Vector function.
-;;;
-(defun define-constructors (defstruct)
-  (let ((cons-names (dd-constructors defstruct)))
-    (when cons-names
-      (let* ((name (first cons-names))
-	     (initial-cruft
-	      (if (dd-named defstruct)
-		  (make-list (1+ (dd-offset defstruct))
-			     :initial-element `',(dd-name defstruct))
-		  (make-list (dd-offset defstruct))))
-	     (slots (dd-slots defstruct))
-	     (names (mapcar #'dsd-name slots))
-	     (args (mapcar #'(lambda (slot)
-			       `(,(dsd-name slot) ,(dsd-default slot)))
-			   slots)))
-	`((defun ,name ,(if args `(&key ,@args))
-	    (declare
-	     ,@(mapcar #'(lambda (slot)
-			   `(type ,(dsd-type slot) ,(dsd-name slot)))
-		       slots))
-	    ,(case (dd-type defstruct)
-	       (list
-		`(list ,@initial-cruft ,@names))
-	       (structure
-		(let ((temp (gensym)))
-		  `(let ((,temp (make-structure ,(dd-length defstruct))))
-		     (declare (type structure ,temp))
-		     (setf (structure-ref ,temp 0) ',(dd-name defstruct))
-		     ,@(mapcar #'(lambda (slot)
-				   `(setf (structure-ref ,temp
-							 ,(dsd-index slot))
-					  ,(dsd-name slot)))
-			       slots)
-		     (truly-the ,(dd-name defstruct) ,temp))))
-	       (vector
-		`(vector ,@initial-cruft ,@names))
-	       (t
-		(do ((sluts slots (cdr sluts))
-		     (sets '())
-		     (temp (gensym)))
-		    ((null sluts)
-		     `(let ((,temp (make-array
-				    ,(dd-length defstruct)
-				    :element-type
-				    ',(cadr (dd-lisp-type defstruct)))))
-			,@(when (dd-named defstruct)
-			    `(setf (aref ,temp ,(dd-offset defstruct))
-				   ',(dd-name defstruct)))
-			,@sets
-			,temp))
-		  (let ((slot (car sluts)))
-		    (push `(setf (aref ,temp ,(dsd-index slot))
-				 ,(dsd-name slot))
-			  sets))))))
-	  ,@(mapcar #'(lambda (other-name)
-			`(setf (fdefinition ',other-name) #',name))
-		    (rest cons-names)))))))
-
-
-;;;; Support for By-Order-Argument Constructors.
-
-;;; FIND-LEGAL-SLOT   --  Internal
-;;;
-;;;    Given a defstruct description and a slot name, return the corresponding
-;;; slot if it exists, or signal an error if not.
-;;;
-(defun find-legal-slot (defstruct name)
-  (or (find name (dd-slots defstruct) :key #'dsd-name :test #'string=)
-      (error "~S is not a defined slot name in the ~S structure."
-	     name (dd-name defstruct))))
-
-
-;;; Define-Boa-Constructors defines positional constructor functions.  We
-;;; generate code to set each variable not specified in the arglist to the
-;;; default given in the Defstruct.  We just slap required args in, as with
-;;; rest args and aux args.  Optionals are treated a little differently.  Those
-;;; that aren't supplied with a default in the arg list are mashed so that
-;;; their default in the arglist is the corresponding default from the
-;;; Defstruct.
-;;;
-(defun define-boa-constructors (defstruct)
-  (do* ((boas (dd-boa-constructors defstruct) (cdr boas))
-	(name (car (car boas)) (car (car boas)))
-	(args (copy-list (cadr (car boas))) (copy-list (cadr (car boas))))
-	(slots (dd-slots defstruct) (dd-slots defstruct))
-	(slots-in-arglist '() '())
-	(defuns '()))
-       ((null boas) defuns)
-    ;; Find the slots in the arglist and hack the defaultless optionals.
-    (do ((args args (cdr args))
-	 (arg-kind 'required))
-	((null args))
-      (let ((arg (car args)))
-	(cond ((not (atom arg))
-	       (push (find-legal-slot defstruct (car arg)) slots-in-arglist))
-	      ((member arg '(&optional &rest &aux &key) :test #'eq)
-	       (setq arg-kind arg))
-	      (t
-	       (case arg-kind
-		 ((required &rest &aux)
-		  (push (find-legal-slot defstruct arg) slots-in-arglist))
-		 ((&optional &key)
-		  (let ((dsd (find-legal-slot defstruct arg)))
-		    (push dsd slots-in-arglist)
-		    (rplaca args (list arg (dsd-default dsd))))))))))
+  (declare (type structure structure) (optimize (speed 3) (safety 0)))
+  (let* ((len (%instance-length structure))
+	 (res (%make-instance len))
+	 (layout (%instance-layout structure)))
+    (declare (type structure-index len))
+    (unless (structure-class-p (layout-class layout))
+      (error "Not a structure-class object:~%  ~S" structure))
+    (when (layout-invalid layout)
+      (error "Copying an obsolete structure:~%  ~S" structure))
     
-    ;; Then make a list that can be used with a (list ...) or (vector...).
-    (let ((initial-cruft
-	   (if (dd-named defstruct)
-	       (make-list (1+ (dd-offset defstruct))
-			  :initial-element `',(dd-name defstruct))
-	       (make-list (dd-offset defstruct))))
-	  (thing (mapcar #'(lambda (slot)
-			     (if (member slot slots-in-arglist
-					 :test #'eq)
-				 (dsd-name slot)
-				 (dsd-default slot)))
-			 slots)))
-      (push
-       `(defun ,name ,args
-	  (declare
-	   ,@(mapcar #'(lambda (slot)
-			 `(type ,(dsd-type slot) ,(dsd-name slot)))
-		     slots-in-arglist))
-	  ,(case (dd-type defstruct)
-	     (list
-	      `(list ,@initial-cruft ,@thing))
-	     (structure
-	      (let ((temp (gensym)))
-		`(let ((,temp (make-structure ,(dd-length defstruct))))
-		   (declare (type structure ,temp))
-		   (setf (structure-ref ,temp 0) ',(dd-name defstruct))
-		   ,@(mapcar #'(lambda (slot thing)
-				 `(setf (structure-ref ,temp
-						       ,(dsd-index slot))
-					,thing))
-			     slots thing)
-		   (truly-the ,(dd-name defstruct) ,temp))))
-	     (vector
-	      `(vector ,@initial-cruft ,@thing))
-	     (t
-	      (do ((things thing (cdr things))
-		   (index 0 (1+ index))
-		   (sets '())
-		   (temp (gensym)))
-		  ((null things)
-		   `(let ((,temp (make-array
-				  ,(dd-length defstruct)
-				  :element-type
-				  ',(cadr (dd-lisp-type defstruct)))))
-		      ,@(when (dd-named defstruct)
-			  `(setf (aref ,temp ,(dd-offset defstruct))
-				 ',(dd-name defstruct)))
-		      ,@sets
-		      ,temp))
-		(push `(setf (aref ,temp index) ,(car things))
-		      sets)))))
-       defuns))))
-
-;;; Define-Copier returns the definition for a copier function of a typed
-;;; Defstruct if one is desired.
-
-(defun define-copier (defstruct)
-  (when (dd-copier defstruct)
-    `((defun ,(dd-copier defstruct) (structure)
-	(declare (type ,(dd-lisp-type defstruct) structure))
-	(subseq structure 0 ,(dd-length defstruct))))))
+    (dotimes (i len)
+      (declare (type structure-index i))
+      (setf (%instance-ref res i)
+	    (%instance-ref structure i)))
+    
+    (let ((raw-index (dd-raw-index (layout-info layout))))
+      (when raw-index
+	(let* ((data (truly-the (simply-array (unsigned-byte 32) (*))
+				(%instance-ref structure raw-index)))
+	       (raw-len (length data))
+	       (new (make-array raw-len :element-type '(unsigned-byte 32))))
+	  (setf (%instance-ref res raw-index) new)
+	  (dotimes (i raw-len)
+	    (setf (aref new i) (aref data i))))))
+    
+    res))
 
 
-;;; Define-Predicate returns a definition for a predicate function if one is
-;;; desired.  This is only called for typed structures, since the default
-;;; structure predicate is implemented as a closure. 
-
-(defun define-predicate (defstruct)
-  (let ((name (dd-name defstruct))
-	(pred (dd-predicate defstruct)))
-    (when (and pred (dd-named defstruct))
-      (let ((ltype (dd-lisp-type defstruct)))
-	`((defun ,pred (object)
-	    (and (typep object ',ltype)
-		 (eq (elt (the ,ltype object) ,(dd-offset defstruct))
-		     ',name))))))))
-
-
-;;; Random sorts of stuff.
+;;; Default print and make-load-form methods.
 
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
-  (let* ((type (structure-ref structure 0))
-	 (dd (info type defined-structure-info type)))
+  (let* ((type (%instance-layout structure))
+	 (name (class-name (layout-class type)))
+	 (dd (layout-info type)))
     (if *print-pretty*
 	(pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
-	  (prin1 type stream)
+	  (prin1 name stream)
 	  (let ((slots (dd-slots dd)))
 	    (when slots
 	      (write-char #\space stream)
@@ -712,7 +1334,7 @@
 		  (output-symbol-name (dsd-%name slot) stream)
 		  (write-char #\space stream)
 		  (pprint-newline :miser stream)
-		  (output-object (structure-ref structure (dsd-index slot))
+		  (output-object (%instance-ref structure (dsd-index slot))
 				 stream)
 		  (when (null slots)
 		    (return))
@@ -720,9 +1342,9 @@
 		  (pprint-newline :linear stream))))))
 	(descend-into (stream)
 	  (write-string "#S(" stream)
-	  (prin1 type stream)
+	  (prin1 name stream)
 	  (do ((index 1 (1+ index))
-	       (length (structure-length structure))
+	       (length (%instance-length structure))
 	       (slots (dd-slots dd) (cdr slots)))
 	      ((or (= index length)
 		   (and *print-length*
@@ -735,18 +1357,19 @@
 	    (write-char #\: stream)
 	    (output-symbol-name (dsd-%name (car slots)) stream)
 	    (write-char #\space stream)
-	    (output-object (structure-ref structure index) stream))))))
+	    (output-object (%instance-ref structure index) stream))))))
 
 
 (defun make-structure-load-form (structure)
   (declare (type structure structure))
-  (let* ((type (structure-ref structure 0))
-	 (fun (info type load-form-maker type)))
+  (let* ((class (layout-class (%instance-layout structure)))
+	 (fun (structure-class-load-form-maker class)))
     (etypecase fun
       ((member :just-dump-it-normally :ignore-it)
        fun)
       (null
-       (error "Structures of type ~S cannot be dumped as constants." type))
+       (error "Structures of type ~S cannot be dumped as constants."
+	      (class-name class)))
       (function
        (funcall fun structure))
       (symbol
