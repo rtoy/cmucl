@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.12 1992/03/10 08:57:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.13 1992/06/09 23:46:32 wlott Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -66,6 +66,7 @@
 (setf (backend-fasl-file-version *target-backend*) 1)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :big-endian)
+(setf (backend-page-size *target-backend*) 4096)
 
 ) ;eval-when
 
