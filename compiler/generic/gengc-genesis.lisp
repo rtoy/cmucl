@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.9 1993/05/25 19:09:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.10 1993/05/26 13:14:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -604,7 +604,7 @@
 ;;; for:
 ;;;
 ;;;   Simple objects:
-;;; A header word with the type and the length, plus the data.
+;;; Maybe a header word with the type and the length, plus the data.
 ;;;
 ;;;   Vector objects:
 ;;; A header word with the type, a word for the length, plus the data.
@@ -675,7 +675,7 @@
   (declare (type descriptor first second)
 	   (type (unsigned-byte #.vm:type-bits) type)
 	   (values descriptor))
-  (let ((des (allocate-simple-object *dynamic* 2 vm:other-pointer-type type)))
+  (let ((des (allocate-simple-object *dynamic* 3 vm:other-pointer-type type)))
     (write-descriptor des 1 first)
     (write-descriptor des 2 second)
     des))
@@ -1670,7 +1670,8 @@
     (write-descriptor des vm:code-code-size-slot
 		      (make-fixnum-descriptor length))
     (write-descriptor des vm:code-entry-points-slot *nil-descriptor*)
-    (write-descriptor des vm:code-debug-info-slot *nil-descriptor*)
+    (write-descriptor des vm:code-debug-info-slot
+		      (cold-intern :assembler-routine))
 
     (read-n-bytes *fasl-file*
 		  (descriptor-sap des)
