@@ -399,46 +399,47 @@
   (do-blocks (block component)
     (when (block-type-check block)
       (do-nodes (node cont block)
-	(when (eq (continuation-type-check cont) t)
+	(let ((type-check (continuation-type-check cont)))
+	  (unless (member type-check '(nil :error))
+	    (let ((dtype (node-derived-type node))
+		  (atype (continuation-asserted-type cont)))
+	      (unless (values-types-intersect dtype atype)
+		(setf (continuation-%type-check cont) :error)
+		(let ((dest (continuation-dest cont)))
+		  (when (and (combination-p dest)
+			     (function-info-p (basic-combination-kind dest)))
+		    (setf (basic-combination-kind dest) :full)))
+		(unless (policy node (= brevity 3))
+		  (let ((*compiler-error-context* node))
+		    (if (and (ref-p node) (constant-p (ref-leaf node)))
+			(compiler-warning "This is not a ~S:~%  ~S"
+					  (type-specifier atype)
+					  (constant-value (ref-leaf node)))
+			(compiler-warning "Result is a ~S, not a ~S."
+					  (type-specifier dtype)
+					  (type-specifier atype))))))))
 	  
-	  (let ((dtype (node-derived-type node))
-		(atype (continuation-asserted-type cont)))
-	    (unless (values-types-intersect dtype atype)
-	      (setf (continuation-%type-check cont) :error)
-	      (let ((dest (continuation-dest cont)))
-		(when (and (combination-p dest)
-			   (function-info-p (basic-combination-kind dest)))
-		  (setf (basic-combination-kind dest) :full)))
-	      (unless (policy node (= brevity 3))
-		(let ((*compiler-error-context* node))
-		  (if (and (ref-p node) (constant-p (ref-leaf node)))
-		      (compiler-warning "This is not a ~S:~%  ~S"
-					(type-specifier atype)
-					(constant-value (ref-leaf node)))
-		      (compiler-warning "Result is a ~S, not a ~S."
-					(type-specifier dtype)
-					(type-specifier atype)))))))
-	  
-	  (let ((check-p (probable-type-check-p cont)))
-	    (multiple-value-bind (check types)
-				 (continuation-check-types cont)
-	      (ecase check
-		(:simple
-		 (unless check-p
-		   (setf (continuation-%type-check cont) :no-check)))
-		(:hairy
-		 (if check-p
-		     (convert-type-check cont types)
+	  (when (eq type-check t)
+	    (let ((check-p (probable-type-check-p cont)))
+	      (multiple-value-bind (check types)
+				   (continuation-check-types cont)
+		(ecase check
+		  (:simple
+		   (unless check-p
 		     (setf (continuation-%type-check cont) :no-check)))
-		(:too-hairy
-		 (let* ((context (continuation-dest cont))
-			(*compiler-error-context* context))
-		   (when (policy context (>= safety brevity))
-		     (compiler-note
-		      "Type assertion too complex to check:~% ~S."
-		      (type-specifier (continuation-asserted-type cont)))))
-		 (setf (continuation-%type-check cont) :deleted)))))))
-
+		  (:hairy
+		   (if check-p
+		       (convert-type-check cont types)
+		       (setf (continuation-%type-check cont) :no-check)))
+		  (:too-hairy
+		   (let* ((context (continuation-dest cont))
+			  (*compiler-error-context* context))
+		     (when (policy context (>= safety brevity))
+		       (compiler-note
+			"Type assertion too complex to check:~% ~S."
+			(type-specifier (continuation-asserted-type cont)))))
+		   (setf (continuation-%type-check cont) :deleted))))))))
+      
       (setf (block-type-check block) nil)))
-
+  
   (undefined-value))
