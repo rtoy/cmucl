@@ -1,13 +1,17 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.8 2002/01/28 20:17:11 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.9 2003/10/13 21:52:12 toy Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
 
+#if 0
 #define lowtag_Bits 3
 #define lowtag_Mask ((1<<lowtag_Bits)-1)
+#endif
 #define LowtagOf(obj) ((obj)&lowtag_Mask)
+#if 0
 #define type_Bits 8
 #define type_Mask ((1<<type_Bits)-1)
+#endif
 #define TypeOf(obj) ((obj)&type_Mask)
 #define HeaderValue(obj) ((unsigned long) ((obj)>>type_Bits))
 
