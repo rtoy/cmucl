@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.9 1991/02/08 13:33:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.10 1991/12/14 08:57:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,14 +30,15 @@
 
 (defstruct (hash-table (:constructor make-hash-table-structure)
 		       (:conc-name hash-table-)
-		       (:print-function %print-hash-table))
+		       (:print-function %print-hash-table)
+		       (:make-load-form-fun make-hash-table-load-form))
   "Structure used to implement hash tables."
   (kind 'eq)
   (size 65 :type fixnum)
   (rehash-size 101)				; might be a float
   (rehash-threshold 57 :type fixnum)
   (number-entries 0 :type fixnum)
-  (table () :type simple-vector))
+  (table (required-argument) :type simple-vector))
 
 ;;; A hash-table-table is a vector of association lists.  When an
 ;;; entry is made in a hash table, a pair of (key . value) is consed onto
@@ -228,30 +229,40 @@
 ;;; Making hash tables:
 
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 101)
-			     rehash-threshold)
+			     (rehash-threshold size))
   "Creates and returns a hash table.  See manual for details."
-  (declare (fixnum size))
-  (cond ((eq test #'eq) (setq test 'eq))
-	((eq test #'eql) (setq test 'eql))
-	((eq test #'equal) (setq test 'equal)))
-  (if (not (member test '(eq eql equal) :test #'eq))
-      (error "~S is an illegal :Test for hash tables." test))
-  (setq size (if (<= size 37) 37 (almost-primify size)))
-  (cond ((null rehash-threshold)
-	 (setq rehash-threshold size))
-	((floatp rehash-threshold)
-	 (setq rehash-threshold (ceiling (* rehash-threshold size)))))
-  (make-hash-table-structure :size size
-			     :rehash-size rehash-size
-			     :rehash-threshold rehash-threshold
-			     :table
-			     (if (eq test 'equal)
-				 (make-array size :initial-element nil)
-				 (%primitive set-vector-subtype
-					     (make-array size
-							 :initial-element nil)
-					     valid-hashing))
-			     :kind test)))
+  (declare (type (or function (member eq eql equal)) test)
+	   (type index size rehash-size)
+	   (type (or (float 0.0 1.0) index) rehash-threshold))
+  (let ((test (cond ((or (eq test #'eq) (eq test 'eq)) 'eq)
+		    ((or (eq test #'eql) (eq test 'eql)) 'eql)
+		    ((or (eq test #'equal) (eq test 'equal)) 'equal)
+		    (t
+		     (error "~S is an illegal :Test for hash tables." test))))
+	(size (if (<= size 37) 37 (almost-primify size)))
+	(rehash-threshold
+	 (cond ((and (fixnump rehash-threshold)
+		     (<= 0 rehash-threshold size))
+		rehash-threshold)
+	       ((and (floatp rehash-threshold)
+		     (<= 0.0 rehash-threshold 1.0))
+		(ceiling (* rehash-threshold size)))
+	       (t
+		(error "Invalid rehash-threshold: ~S.~%Must be either a float ~
+			between 0.0 and 1.0 ~%or an integer between 0 and ~D."
+		       rehash-threshold
+		       size))))
+	(table (make-array size :initial-element nil)))
+    (make-hash-table-structure :size size
+			       :rehash-size rehash-size
+			       :rehash-threshold rehash-threshold
+			       :table
+			       (if (eq test 'equal)
+				   table
+				   (%primitive set-vector-subtype
+					       table
+					       valid-hashing))
+			       :kind test)))
 
 ;;; Manipulating hash tables:
 
@@ -491,3 +502,24 @@
 			    (return (values t (caar bucket) (cdar bucket)))))
 			(incf ,',counter))))
 	 ,@body))))
+
+
+
+;;;; Dumping one as a constant.
+
+(defun make-hash-table-load-form (table)
+  (values
+   `(make-hash-table
+     :test ',(hash-table-kind table) :size ',(hash-table-size table)
+     :hash-table-rehash-size ',(hash-table-rehash-size table)
+     :hash-table-rehash-threshold ',(hash-table-rehash-threshold table))
+   (let ((sets nil))
+     (with-hash-table-iterator (next table)
+       (loop
+	 (multiple-value-bind (more key value) (next)
+	   (if more
+	       (setf sets (list* `(gethash ',key ,table) `',value sets))
+	       (return)))))
+     (if sets
+	 `(setf ,@sets)
+	 nil))))
