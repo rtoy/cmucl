@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.13 1992/02/14 23:45:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.14 1992/03/09 14:57:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,8 +49,13 @@
              (:print-function print-defstruct-slot-description)
 	     (:make-load-form-fun :just-dump-it-normally))
   %name				; string name of slot
-  (index (required-argument) :type fixnum) ; its position in the implementation sequence
-  accessor			; name of it accessor function
+  ;;
+  ;; its position in the implementation sequence
+  (index (required-argument) :type fixnum)
+  ;;
+  ;; Name of accesor, or NIL if this accessor has the same name as an inherited
+  ;; accessor (which we don't want to shadow.)
+  accessor
   default			; default value
   type				; declared type
   read-only)			; T if there's to be no setter for it
