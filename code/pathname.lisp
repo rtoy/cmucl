@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.53 2001/06/18 11:27:35 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.54 2001/12/10 23:02:43 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1632,7 +1632,7 @@ a host-structure or string."
       (labels ((expecting (what chunks)
 		 (unless (and chunks (simple-string-p (caar chunks)))
 		   (error 'namestring-parse-error
-			  :complaint "Expecting ~A, got ~:[nothing~;~S~]."
+			  :complaint "Expecting ~A, got ~:[nothing~;~:*~S~]."
 			  :arguments (list what (caar chunks))
 			  :namestring namestr
 			  :offset (if chunks (cdar chunks) end)))
