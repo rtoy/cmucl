@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.27 1991/12/02 18:57:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.28 1991/12/03 00:01:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,14 @@
 	  write prin1 print princ pprint
 	  write-to-string prin1-to-string princ-to-string
 	  print-unreadable-object))
+
+(in-package "KERNEL")
+(export '(*current-level* *pretty-printer* output-object output-ugly-object
+	  check-for-circularity handle-circularity with-circularity-detection
+	  decend-into punt-if-too-long))
+
+(in-package "LISP")
+
 
 
 ;;;; Exported printer control variables.
@@ -266,11 +274,17 @@
 
 ;;; CHECK-FOR-CIRCULARITY -- interface.
 ;;;
-;;; Check to see if OBJECT is a circular reference, and return T if it is and
-;;; NIL if not.  Note: this function must be called *exactly* once with
-;;; assign T for every potentially circular object.  
-;;; 
 (defun check-for-circularity (object &optional assign)
+  "Check to see if OBJECT is a circular reference, and return something non-NIL
+   if it is.  If ASSIGN is T, then the number to use in the #n= and #n# noise
+   is assigned at this time.  Note: CHECK-FOR-CIRCULARITY must be called
+   *EXACTLY* once with ASSIGN T, or the circularity detection noise will get
+   confused about when to use #n= and when to use #n#.  If this returns
+   non-NIL when ASSIGN is T, then you must call HANDLE-CIRCULARITY on it.
+   If you are not using this inside a WITH-CIRCULARITY-DETECTION, then you
+   have to be prepared to handle a return value of :INITIATE which means it
+   needs to initiate the circularity detection noise.  See the source for
+   info on how to do that."
   (cond ((null *print-circle*)
 	 ;; Don't bother, nobody cares.
 	 nil)
@@ -313,7 +327,12 @@
 	      ;; Second or later occurance.
 	      (- value)))))))
 
+;;; HANDLE-CIRCULARITY -- interface.
+;;; 
 (defun handle-circularity (marker stream)
+  "Handle the results of CHECK-FOR-CIRCULARITY.  If this returns T then
+   you should go ahead and print the object.  If it returns NIL, then
+   you should blow it off."
   (case marker
     (:initiate
      ;; Someone forgor to initiate circularity detection.
@@ -336,7 +355,15 @@
 	      (write-char #\= stream)
 	      t))))))
 
+;;; WITH-CIRCULARITY-DETECTION -- interface.
+;;; 
 (defmacro with-circularity-detection ((object stream) &body body)
+  "Check to see if OBJECT needs to be delt with specially, and if so, do
+   whatever is necessary.  STREAM is the stream that the object is being
+   printed to (so we know where to print the #n= and #n#).  Note: BODY
+   might be executed twice, so it cannot have any side effects.  Also,
+   while initially looking for circularities, STREAM is rebound to a
+   stream that ignores all output so it must be a bindable symbol."
   (let ((user-body (gensym))
 	(checker (gensym)))
     (once-only ((object object))
@@ -361,9 +388,20 @@
 
 ;;;; Level and Length abbreviations.
 
-(defvar *current-level* 0)
+;;; *CURRENT-LEVEL* -- interface.
+;;; 
+(defvar *current-level* 0
+  "The current level we are printing at, to be compared against *PRINT-LEVEL*.
+   See the macro DECEND-INTO for a handy interface to depth abbreviation.")
 
+;;; DECEND-INTO -- interface.
+;;; 
 (defmacro decend-into ((object stream) &body body)
+  "Automatically handle *print-level* abbreviation and circularity detection.
+   If we are too deep, then a # is printed to STREAM and BODY is ignored.
+   If OBJECT isn't NIL, then it is checked to see if it is a circular
+   reference (see WITH-CIRCULARITY-DETECTION), and handled accordingly.
+   BODY should do it's output to STREAM (which might be rebound)."
   (let ((guts `(let ((*current-level* (1+ *current-level*)))
 		 ,@body)))
     `(if (and (null *print-readably*)
@@ -375,7 +413,11 @@
 		 ,guts)
 	      guts))))
 
+;;; PUNT-IF-TOO-LONG -- interface.
+;;; 
 (defmacro punt-if-too-long (index stream)
+  "Punt if INDEX is equal or larger then *PRINT-LENGTH* (and *PRINT-READABLY*
+   is NIL by outputting \"...\" and throwing to the block named NIL."
   `(when (and (not *print-readably*)
 	      *print-length*
 	      (>= ,index *print-length*))
@@ -385,14 +427,31 @@
 
 ;;;; OUTPUT-OBJECT -- the main entry point.
 
-(defvar *pretty-printer* nil)
+;;; *PRETTY-PRINTER* -- public.
+;;; 
+(defvar *pretty-printer* nil
+  "The current pretty printer.  Should be either a function that takes two
+   arguments (the object and the stream) or NIL to indicate that there is
+   no pretty printer installed.")
 
+;;; OUTPUT-OBJECT -- interface.
+;;; 
 (defun output-object (object stream)
-  (if (and *print-pretty* *pretty-printer*)
-      (funcall *pretty-printer* object stream)
+  "Output OBJECT to STREAM observing all printer control variables."
+  (if *print-pretty*
+      (if *pretty-printer*
+	  (funcall *pretty-printer* object stream)
+	  (let ((*print-pretty* nil))
+	    (output-ugly-object object stream)))
       (output-ugly-object object stream)))
 
+;;; OUTPUT-UGLY-OBJECT -- interface.
+;;; 
 (defun output-ugly-object (object stream)
+  "Output OBJECT to STREAM observing all printer control variables except
+   for *PRINT-PRETTY*.  Note: if *PRINT-PRETTY* is non-NIL, then the pretty
+   printer will be used for any components of OBJECT, just not for OBJECT
+   itself."
   (typecase object
     (fixnum
      (output-integer object stream))
@@ -749,11 +808,12 @@
   (declare (simple-string pname))
   (cond ((symbol-quotep pname)
 	 (write-char #\| stream)
-	 (dostring (char pname)
-	   ;;If it needs slashing, do it.
-	   (if (symbol-quote-char-p char)
-	       (write-char #\\ stream))
-	   (write-char char stream))
+	 (dotimes (index (length pname))
+	   (let ((char (schar pname index)))
+	     ;;If it needs slashing, do it.
+	     (if (symbol-quote-char-p char)
+		 (write-char #\\ stream))
+	     (write-char char stream)))
 	 (write-char #\| stream))
 	(t
 	 (write-string pname stream))))
@@ -764,14 +824,17 @@
   (declare (simple-string pname))
   (cond ((symbol-quotep pname)
 	 (write-char #\| stream)
-	 (dostring (char pname)
-	   (if (symbol-quote-char-p char)
-	       (write-char #\\ stream))
-	   (write-char char stream))
+	 (dotimes (index (length pname))
+	   (let ((char (schar pname index)))
+	     ;;If it needs slashing, do it.
+	     (if (symbol-quote-char-p char)
+		 (write-char #\\ stream))
+	     (write-char char stream)))
 	 (write-char #\| stream))
 	(t
-	 (dostring (char pname)
-	   (write-char (char-downcase char) stream)))))
+	 (dotimes (index (length pname))
+	   (let ((char (schar pname index)))
+	     (write-char (char-downcase char) stream))))))
 
 
 (defun output-capitalize-symbol (pname stream)
@@ -779,10 +842,12 @@
   (cond
    ((symbol-quotep pname)
     (write-char #\| stream)
-    (dostring (char pname)
-      (if (symbol-quote-char-p char)
-	  (write-char #\\ stream))
-      (write-char char stream))
+    (dotimes (index (length pname))
+      (let ((char (schar pname index)))
+	;;If it needs slashing, do it.
+	(if (symbol-quote-char-p char)
+	    (write-char #\\ stream))
+	(write-char char stream)))
     (write-char #\| stream))
    (t
     (do ((index 0 (1+ index))
@@ -855,9 +920,12 @@
 	       `(or (char= ,char #\\)
 		    (char= ,char #\"))))
     (write-char #\" stream)
-    (dostring (char string)
-      (when (frob char) (write-char #\\ stream))
-      (write-char char stream))
+    (with-array-data ((data string) (start) (end))
+      (do ((index start (1+ index)))
+	  ((>= index end))
+	(let ((char (schar data index)))
+	  (when (frob char) (write-char #\\ stream))
+	  (write-char char stream))))
     (write-char #\" stream)))
 
 (defun output-array (array stream)
