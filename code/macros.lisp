@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.14 1990/11/19 05:08:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.15 1990/11/19 06:18:20 wlott Exp $
 ;;;
 ;;; This file contains the macros that are part of the standard
 ;;; Spice Lisp environment.
@@ -499,8 +499,8 @@
       (values 
        `(lambda (,arglist-var ,new-var)
 	  ,@local-decs
-	  ,@body))
-       doc)))
+	  ,@body)
+       doc))))
 
 ) ; End of Eval-When.
 
