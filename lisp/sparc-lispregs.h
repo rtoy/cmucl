@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.4 1997/04/21 00:52:24 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.5 2000/10/27 19:42:31 dtc Exp $ */
 
 
 
@@ -40,8 +40,7 @@
 #define reg_CSP		GREG(3)
 #define reg_CFP		GREG(4)
 #define reg_BSP		GREG(5)
-#define reg_NFP		GREG(6)
-#define reg_CFUNC	GREG(7)
+/* %g6 and %g7 are supposed to be reserved for the system */
 
 #define reg_NL0		OREG(0)
 #define reg_NL1		OREG(1)
@@ -64,24 +63,24 @@
 #define reg_FDEFN	IREG(0)
 #define reg_LEXENV	IREG(1)
 #define reg_L0		IREG(2)
-#define reg_L1		IREG(3)
-#define reg_L2		IREG(4)
+#define reg_NFP		IREG(3)
+#define reg_CFUNC	IREG(4)
 #define reg_CODE	IREG(5)
 #define reg_LIP		IREG(7)
 
 #define REGNAMES \
 	"ZERO",		"ALLOC",	"NULL",		"CSP", \
-	"CFP",		"BSP",		"NFP",		"CFUNC", \
+	"CFP",		"BSP",		"%g6",		"%g7", \
         "NL0",		"NL1",		"NL2",		"NL3", \
         "NL4",		"NL5",		"NSP",		"NARGS", \
         "A0",		"A1",		"A2",		"A3", \
         "A4",		"A5",		"OCFP",		"LRA", \
-        "FDEFN",	"LEXENV",	"L0",		"L1", \
-        "L2",		"CODE",		"???",		"LIP"
+        "FDEFN",	"LEXENV",	"L0",		"NFP", \
+        "CFUNC",	"CODE",		"???",		"LIP"
 
 #define BOXED_REGISTERS { \
     reg_A0, reg_A1, reg_A2, reg_A3, reg_A4, reg_A5, reg_FDEFN, reg_LEXENV, \
-    reg_OCFP, reg_LRA, reg_L0, reg_L1, reg_L2, reg_CODE \
+    reg_OCFP, reg_LRA, reg_L0, reg_CODE \
 }
 
 #ifndef LANGUAGE_ASSEMBLY
