@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.22 1999/11/18 14:25:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.23 2000/01/12 19:48:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -321,7 +321,7 @@
   (i     :field (byte 1 13) :value 0)
   (x     :field (byte 1 12))
   (asi   :field (byte 7 5) :value 0)
-  (rs2   :field (byte 5 0)))
+  (rs2   :field (byte 5 0) :type 'reg))
 
 (disassem:define-instruction-format
     (format-3-shift-immed 32 :default-printer f3-printer)
