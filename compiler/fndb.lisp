@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.34 1991/12/05 05:47:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.35 1991/12/16 10:08:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -884,12 +884,25 @@
 
 ;;;; In the "File System Interface" chapter:
 
+(defknown wild-pathname-p (pathnamelike &optional (member nil :host :device
+							  :directory :name
+							  :type :version))
+  boolean
+  (foldable flushable))
+(defknown pathname-match-p (pathnamelike pathnamelike) boolean
+  (foldable flushable))
+(defknown translate-pathname (pathnamelike pathnamelike pathnamelike &key)
+  pathname
+  (foldable flushable))
+
+;;; Need to add the logical pathname stuff here.
+
 (defknown pathname (pathnamelike) pathname (foldable flushable))
 (defknown truename (pathnamelike) pathname ())
 
 (defknown parse-namestring
-  (pathnamelike &optional (or string null) pathnamelike  &key (start index)
-		(end sequence-end) (junk-allowed t))
+  (pathnamelike &optional pathname-host pathnamelike
+		&key (start index) (end sequence-end) (junk-allowed t))
   (values (or pathname null) index)
   ())
 
@@ -900,20 +913,26 @@
 
 (defknown make-pathname
  (&key (defaults pathnamelike) (host pathname-host) (device pathname-device)
-       (directory (or pathname-directory string)) (name pathname-name)
-       (type pathname-type) (version pathname-version))
+       (directory (or pathname-directory string (member :wild)))
+       (name (or pathname-name string (member :wild)))
+       (type (or pathname-type string (member :wild)))
+       (version pathname-version) (case (member :local :common)))
   pathname (foldable flushable))
 
 (defknown pathnamep (t) boolean (movable foldable flushable))
 
-(defknown pathname-host (pathnamelike) pathname-host (foldable flushable))
-(defknown pathname-device (pathnamelike) pathname-device (foldable flushable))
-(defknown pathname-directory (pathnamelike) pathname-directory
-  (foldable flushable))
-(defknown pathname-name (pathnamelike) pathname-name (foldable flushable))
-(defknown pathname-type (pathnamelike) pathname-type (foldable flushable))
-(defknown pathname-version (pathnamelike) pathname-version
-  (foldable flushable))
+(defknown pathname-host (pathnamelike &key (case (member :local :common)))
+  pathname-host (foldable flushable))
+(defknown pathname-device (pathnamelike &key (case (member :local :common)))
+  pathname-device (foldable flushable))
+(defknown pathname-directory (pathnamelike &key (case (member :local :common)))
+  pathname-directory (foldable flushable))
+(defknown pathname-name (pathnamelike &key (case (member :local :common)))
+  pathname-name (foldable flushable))
+(defknown pathname-type (pathnamelike &key (case (member :local :common)))
+  pathname-type (foldable flushable))
+(defknown pathname-version (pathnamelike)
+  pathname-version (foldable flushable))
 
 (defknown (namestring file-namestring directory-namestring host-namestring)
   (pathnamelike) simple-string
@@ -947,10 +966,12 @@
 
 (defknown load
   ((or filename stream)
-   &key (verbose t) (print t) (if-does-not-exist (member :error :create nil)))
+   &key (verbose t) (print t) (if-does-not-exist (member :error :create nil))
+   (contents (or null (member :source :binary))))
   t)
 
-(defknown directory (pathnamelike &key) list (flushable))
+(defknown directory (pathnamelike &key (check-for-subdirs t) (all t))
+  list (flushable))
 
 
 ;;;; In the "Errors" chapter:
