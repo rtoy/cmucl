@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.70 1992/04/04 01:28:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.71 1992/04/04 01:56:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -712,7 +712,7 @@
 			      (eq (leaf-name supplied-p) name))
 		     (setq found supplied-p))))))
 	    ((and (consp var) (eq (car var) name))
-	     (setf found var))))
+	     (setf found (cdr var)))))
     found))
 
 
@@ -770,9 +770,9 @@
 		     (t
 		      (restr (cons var int))))))
 	    (cons
-	     (assert (and (consp (cdr var)) (eq (cadr var) 'MACRO)))
+	     (assert (eq (car var) 'MACRO))
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
-						   ,(cddr var))))))
+						   ,(cdr var))))))
 	    (heap-alien-info
 	     (compiler-error "Can't declare type of Alien variable: ~S."
 			     var-name)))))
@@ -825,10 +825,8 @@
       (let ((var (find-in-bindings vars name)))
 	(etypecase var
 	  (cons
-	   (if (and (consp (cdr var)) (eq (cadr var) 'MACRO))
-	       (compiler-error "Declaring symbol-macro ~S special."
-			       name)
-	       (error "Strange thing in vars: ~S" var)))
+	   (assert (eq (car var) 'MACRO))
+	   (compiler-error "Declaring symbol-macro ~S special." name))
 	  (lambda-var
 	   (when (lambda-var-ignorep var)
 	     (compiler-warning
@@ -1011,11 +1009,6 @@
 ;;; GLOBAL-VAR.
 ;;;
 (defun specvar-for-binding (name)
-  (let ((lexdef (lexenv-find name variables)))
-    (when (consp lexdef)
-      (assert (eq (car lexdef) 'MACRO))
-      (compiler-warning "Declaring symbol macro to be special: ~S" name)))
-  
   (cond ((not (eq (info variable where-from name) :assumed))
 	 (let ((found (find-free-variable name)))
 	   (when (heap-alien-info-p found)
