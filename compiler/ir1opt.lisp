@@ -365,7 +365,7 @@
 ;;;    Joining is easy when the successor's Start continuation is the same from
 ;;; our Last's Cont.  If they differ, then we can still join when the last
 ;;; continuation has no next and the next continuation has no uses.  In this
-;;; case, we replace the last continuation with the next before joining the
+;;; case, we replace the next continuation with the last before joining the
 ;;; blocks.
 ;;;
 (defun join-successor-if-possible (block)
@@ -380,27 +380,24 @@
 	     (lambda (block-lambda block))
 	     (next-lambda (block-lambda next)))
 	(cond ((or (rest (block-pred next))
+		   (not (eq (continuation-use last-cont) last))
 		   (eq next block)
 		   (not (eq (lambda-home lambda) (lambda-home next-lambda)))
 		   (not (eq (find-enclosing-cleanup cleanup)
 			    (find-enclosing-cleanup next-cleanup))))
 	       nil)
-	      ((and (eq last-cont next-cont)
-		    (eq (continuation-use last-cont) last))
+	      ((eq last-cont next-cont)
 	       (join-blocks block next)
 	       t)
-	      ((block-start-uses next)
-	       nil)
-	      ((member (continuation-kind last-cont) '(:deleted :inside-block))
-	       (assert (not (continuation-dest next-cont)))
-	       (unless (eq (continuation-kind last-cont) :deleted)
-		 (let ((dest (continuation-dest last-cont)))
-		   (when dest
-		     (substitute-continuation next-cont last-cont)))
-		 (delete-continuation last-cont))
-	       (delete-continuation-use last)
-	       (add-continuation-use last next-cont)
-	       (join-blocks block next)
+	      ((and (null (block-start-uses next))
+		    (eq (continuation-kind last-cont) :inside-block))
+	       (let ((next-node (continuation-next next-cont)))
+		 (assert (not (continuation-dest next-cont)))
+		 (delete-continuation next-cont)
+		 (setf (node-prev next-node) last-cont)
+		 (setf (continuation-next last-cont) next-node)
+		 (setf (block-start next) last-cont)
+		 (join-blocks block next))
 	       t)
 	      (t
 	       nil))))))
