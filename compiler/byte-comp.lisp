@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.23 1994/03/07 11:35:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.24 1994/03/19 22:38:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -508,44 +508,50 @@
 	 (args (basic-combination-args call))
 	 (name (continuation-function-name fun))
 	 (info (gethash name *inline-function-table*)))
-    (cond ((and info
-		(valid-function-use call (inline-function-info-type info)))
-	   (annotate-basic-combination-args call)
-	   (setf (node-tail-p call) nil)
-	   (setf (basic-combination-info call) info)
-	   (annotate-continuation fun 0)
-	   (when (inline-function-info-safe info)
+    (flet ((annotate-args ()
+	     (annotate-basic-combination-args call)
 	     (dolist (arg args)
 	       (when (continuation-type-check arg)
-		 (setf (continuation-%type-check arg) :deleted)))))
-	  ((and (mv-combination-p call) (eq name '%throw))
-	   (assert (= (length args) 2))
-	   (annotate-continuation (first args) 1)
-	   (annotate-continuation (second args) :unknown)
-	   (setf (node-tail-p call) nil)
-	   (annotate-continuation fun 0))
-	  ((and name 
-		(let ((leaf (ref-leaf (continuation-use fun))))
-		  (and (slot-accessor-p leaf)
-		       (or (policy call (zerop safety))
-			   (not (find 't args :key #'continuation-type-check)))
-		       (if (consp name)
-			   (not (continuation-dest (node-cont call)))
-			   t))))
-	   (setf (basic-combination-info call)
-		 (gethash (if (consp name) '%setf-instance-ref '%instance-ref)
-			  *inline-function-table*))
-	   (setf (node-tail-p call) nil)
-	   (annotate-continuation fun 0)
-	   (annotate-basic-combination-args call))
-	  (t
-	   (annotate-basic-combination-args call)
-	   (dolist (arg args)
-	     (when (continuation-type-check arg)
-	       (setf (continuation-%type-check arg) :deleted)))
-	   (annotate-continuation
-	    fun
-	    (if (continuation-function-name fun) :fdefinition 1)))))
+		 (setf (continuation-%type-check arg) :deleted)))
+	     (annotate-continuation
+	      fun
+	      (if (continuation-function-name fun) :fdefinition 1))))
+      (cond ((mv-combination-p call)
+	     (cond ((eq name '%throw)
+		    (assert (= (length args) 2))
+		    (annotate-continuation (first args) 1)
+		    (annotate-continuation (second args) :unknown)
+		    (setf (node-tail-p call) nil)
+		    (annotate-continuation fun 0))
+		   (t
+		    (annotate-args))))
+	    ((and info
+		  (valid-function-use call (inline-function-info-type info)))
+	     (annotate-basic-combination-args call)
+	     (setf (node-tail-p call) nil)
+	     (setf (basic-combination-info call) info)
+	     (annotate-continuation fun 0)
+	     (when (inline-function-info-safe info)
+	       (dolist (arg args)
+		 (when (continuation-type-check arg)
+		   (setf (continuation-%type-check arg) :deleted)))))
+	    ((and name 
+		  (let ((leaf (ref-leaf (continuation-use fun))))
+		    (and (slot-accessor-p leaf)
+			 (or (policy call (zerop safety))
+			     (not (find 't args
+					:key #'continuation-type-check)))
+			 (if (consp name)
+			     (not (continuation-dest (node-cont call)))
+			     t))))
+	     (setf (basic-combination-info call)
+		   (gethash (if (consp name) '%setf-instance-ref '%instance-ref)
+			    *inline-function-table*))
+	     (setf (node-tail-p call) nil)
+	     (annotate-continuation fun 0)
+	     (annotate-basic-combination-args call))
+	    (t
+	     (annotate-args)))))
 
   ;; If this is (still) a tail-call, then blow away the return.
   (when (node-tail-p call)
