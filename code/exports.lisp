@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.77 1992/05/15 21:54:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.78 1992/05/18 17:57:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,7 +139,7 @@
 (use-package '("LISP" "WALKER") "ITERATE")
 (use-package
  '("C-CALL" "ALIEN-INTERNALS" "ALIEN" "BIGNUM" "LISP" "KERNEL" "EXTENSIONS"
-   "SYSTEM" "ASSEMBLER" "C")
+   "SYSTEM" "C")
  "VM")
 (use-package '("EXTENSIONS" "LISP") "CONDITIONS")
 (use-package '("LISP") "DISASSEM")
@@ -149,8 +149,7 @@
 (use-package '("LISP" "SYSTEM" "EXTENSIONS") "HEMLOCK-INTERNALS")
 (use-package '("LISP" "SYSTEM" "EXTENSIONS" "KERNEL") "DEBUG-INTERNALS")
 (use-package
- '("ALIEN-INTERNALS" "ALIEN" "LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "BIGNUM"
-   "ASSEMBLER")
+ '("ALIEN-INTERNALS" "ALIEN" "LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "BIGNUM")
  "C")
 (use-package '("LISP") "DIRED")
 (use-package '("LISP") "WIRE")
