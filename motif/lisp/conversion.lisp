@@ -66,7 +66,7 @@
     (xlib:cursor (message-write-xid message (xlib:cursor-id value) :cursor))
     ((unsigned-byte 24)
      (message-put-dblword message (combine-type-and-data :short value)))
-    ((signed-byte 32)
+    ((or (signed-byte 32) (unsigned-byte 32))
      (message-put-dblword message (combine-type-and-data :int 0))
      (message-put-dblword message value))
     ((member t nil)
