@@ -20,7 +20,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.5 2002/08/27 19:01:40 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.6 2002/10/19 14:32:45 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -219,7 +219,7 @@
                  "The slot ~s has neither :instance nor :class allocation, ~@
                               so it can't be read by the default ~s method."
 		  slotd 'slot-value-using-class)))))
-    (if (eq value *slot-unbound*)
+    (if (eq value +slot-unbound+)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
 
@@ -254,7 +254,7 @@
                  "The slot ~s has neither :instance nor :class allocation, ~@
                               so it can't be read by the default ~s method."
 		 slotd 'slot-boundp-using-class)))))
-    (not (eq value *slot-unbound*))))
+    (not (eq value +slot-unbound+))))
 
 
 
@@ -303,7 +303,7 @@
   (progn slot-name)
   (lambda (instance)
     (let ((value (%svref (user-vector-instance-slots instance) index)))
-      (if (eq value *slot-unbound*)
+      (if (eq value +slot-unbound+)
 	  (slot-unbound (class-of instance) instance slot-name)
 	  value))))
 
@@ -316,7 +316,7 @@
   (declare #.*optimize-speed*)
   (lambda (instance)
     (not (eq (%svref (user-vector-instance-slots instance) index)
-	     *slot-unbound*))))
+	     +slot-unbound+))))
 
 
 

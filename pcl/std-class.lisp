@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.34 2002/09/07 13:28:46 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.35 2002/10/19 14:32:44 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -480,7 +480,7 @@
 		(push (cons (slot-definition-name dslotd)
 			    (if initfunction 
 				(funcall initfunction)
-				*slot-unbound*))
+				+slot-unbound+))
 		      collected))))))
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
@@ -555,7 +555,7 @@
 				      (:constructor ,constructor ()))
 			   ,@(mapcar (lambda (slot)
 				       `(,(slot-definition-name slot)
-					 *slot-unbound*))
+					 +slot-unbound+))
 			             direct-slots)))
 	     (reader-names (mapcar (lambda (slotd)
 				     (intern (format nil "~A~A reader" conc-name 
@@ -1184,7 +1184,7 @@
 		      (instance-ref oslots opos))
 	      else do
 		(push name discarded)
-		(unless (eq (instance-ref oslots opos) *slot-unbound*)
+		(unless (eq (instance-ref oslots opos) +slot-unbound+)
 		  (setf (getf plist name)
 			(instance-ref oslots opos))))
 	;;
@@ -1196,7 +1196,7 @@
 	        (setf (instance-ref nslots npos) val)
 	      else do
 	        (push name discarded)
-		(unless (eq val *slot-unbound*)
+		(unless (eq val +slot-unbound+)
 		  (setf (getf plist name) val)))
 	;;
 	;; Go through all the new local slots to compute the added slots.

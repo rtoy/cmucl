@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.13 2002/09/07 13:28:46 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.14 2002/10/19 14:32:44 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -95,7 +95,7 @@
   (let ((entry (assoc slot-name (wrapper-class-slots wrapper))))
     (if (null entry)
 	(slot-missing (wrapper-class wrapper) object slot-name 'slot-value)
-	(if (eq (cdr entry) *slot-unbound*)
+	(if (eq (cdr entry) +slot-unbound+)
 	    (slot-unbound (wrapper-class wrapper) object slot-name)
 	    (cdr entry)))))
 
@@ -228,7 +228,7 @@
 		   (error "The slot ~s has neither :instance nor :class allocation, ~@
                            so it can't be read by the default ~s method."
 			  slotd 'slot-value-using-class)))))
-    (if (eq value *slot-unbound*)
+    (if (eq value +slot-unbound+)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
 
@@ -277,7 +277,7 @@
 		   (error "The slot ~s has neither :instance nor :class allocation, ~@
                            so it can't be read by the default ~s method."
 			  slotd 'slot-boundp-using-class)))))
-    (not (eq value *slot-unbound*))))
+    (not (eq value +slot-unbound+))))
 
 (defmethod slot-makunbound-using-class
 	   ((class std-class)
@@ -289,14 +289,14 @@
        (cond ((std-instance-p object)
 	      (unless (eq 't (wrapper-state (std-instance-wrapper object)))
 		(check-wrapper-validity object))
-	      (setf (%instance-ref (std-instance-slots object) location) *slot-unbound*))
+	      (setf (%instance-ref (std-instance-slots object) location) +slot-unbound+))
 	     ((fsc-instance-p object)
 	      (unless (eq 't (wrapper-state (fsc-instance-wrapper object)))
 		(check-wrapper-validity object))
-	      (setf (%instance-ref (fsc-instance-slots object) location) *slot-unbound*))
+	      (setf (%instance-ref (fsc-instance-slots object) location) +slot-unbound+))
 	     (t (error "What kind of instance is this?"))))
       (cons
-       (setf (cdr location) *slot-unbound*))
+       (setf (cdr location) +slot-unbound+))
       (t
        (error "The slot ~s has neither :instance nor :class allocation, ~@
                            so it can't be written by the default ~s method."
@@ -310,7 +310,7 @@
   (let* ((function (slot-definition-internal-reader-function slotd))
 	 (value (funcall function object)))
     (declare (type function function))
-    (if (eq value *slot-unbound*)
+    (if (eq value +slot-unbound+)
 	(slot-unbound class object (slot-definition-name slotd))
 	value)))
 

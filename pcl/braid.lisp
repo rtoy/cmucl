@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.23 2002/08/27 19:01:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.24 2002/10/19 14:32:43 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -57,7 +57,7 @@
 		   slots))
 		(t
 		 (make-array no-of-slots
-			     :initial-element pcl::*slot-unbound*))))
+			     :initial-element pcl::+slot-unbound+))))
     instance))
 
 (defmacro allocate-funcallable-instance-slots (wrapper &optional 
@@ -66,8 +66,8 @@
      ,(if slots-init-p
 	  `(if ,slots-init-p
 	       (make-array no-of-slots :initial-contents ,slots-init)
-	       (make-array no-of-slots :initial-element *slot-unbound*))
-	  `(make-array no-of-slots :initial-element *slot-unbound*))))
+	       (make-array no-of-slots :initial-element +slot-unbound+))
+	  `(make-array no-of-slots :initial-element +slot-unbound+))))
 
 (defun allocate-funcallable-instance (wrapper &optional (slots-init nil slots-init-p))
   (let ((fin (allocate-funcallable-instance-1)))

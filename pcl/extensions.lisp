@@ -18,7 +18,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.6 2002/08/27 19:01:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.7 2002/10/19 14:32:43 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -86,7 +86,7 @@
   (ext:once-only ((index index))
     `(if ,index
          (let ((val (%svref ,slots ,index)))
-           (if (eq val ',*slot-unbound*)
+           (if (eq val +slot-unbound+)
                (slot-unbound (wrapper-class ,wrapper) ,instance ,slot-name)
              val))
          (if *safe-to-use-slot-value-wrapper-optimizations-p*

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.19 2002/10/02 17:26:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.20 2002/10/19 14:32:45 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -672,8 +672,8 @@
 			       `((fixnum (%instance-ref ,slots ,index))))
 			   ,@(when (or (null type) (eq type :class))
 			       `((cons (cdr ,index))))
-			   (t ',*slot-unbound*)))
-	    (if (eq ,value ',*slot-unbound*)
+			   (t +slot-unbound+)))
+	    (if (eq ,value +slot-unbound+)
 		,default
 		,value))))))
 
@@ -735,9 +735,9 @@
 	  (let ((,index (pvref ,pv ,pv-offset)))
 	    (typecase ,index
 	      ,@(when (or (null type) (eq type :instance))
-		  `((fixnum (not (eq (%instance-ref ,slots ,index) ',*slot-unbound*)))))
+		  `((fixnum (not (eq (%instance-ref ,slots ,index) +slot-unbound+)))))
 	      ,@(when (or (null type) (eq type :class))
-		  `((cons (not (eq (cdr ,index) ',*slot-unbound*)))))
+		  `((cons (not (eq (cdr ,index) +slot-unbound+)))))
 	      (t ,default)))))))
 
 (defmacro instance-boundp (pv-offset parameter position slot-name class)

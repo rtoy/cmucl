@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.11 2002/10/18 23:31:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.12 2002/10/19 14:32:44 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -615,7 +615,7 @@
 	 (wrapper (class-wrapper class))
 	 (constants (when simple-p
 		      (make-list (wrapper-no-of-instance-slots wrapper)
-				 :initial-element *slot-unbound*)))
+				 :initial-element +slot-unbound+)))
 	 (slots (class-slots class))
 	 (slot-names (mapcar #'slot-definition-name slots))
 	 (slots-key (mapcar (lambda (slot)
@@ -867,8 +867,8 @@
 	   `((unless ,(if *inline-iis-instance-locations-p*
 			  (typecase location
 			    (fixnum `(not (eq (%instance-ref slots ,(const location))
-					      ',*slot-unbound*)))
-			    (cons `(not (eq (cdr ,(const location)) ',*slot-unbound*)))
+					      +slot-unbound+)))
+			    (cons `(not (eq (cdr ,(const location)) +slot-unbound+)))
 			    (t default))
 			  `(instance-boundp-internal pv slots ,(const pv-offset)
 			    ,default

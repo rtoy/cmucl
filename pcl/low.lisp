@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.18 2002/09/09 15:02:56 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.19 2002/10/19 14:32:44 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -286,14 +286,9 @@ the compiler as completely as possible.  Currently this means that
 ;;; It may seem gross, but for performance reasons, we make this an interned
 ;;; symbol.  That means that the fast check to see if a slot is unbound is to
 ;;; say (EQ <val> '..SLOT-UNBOUND..).  That is considerably faster than looking
-;;; at the value of a special variable.  Be careful, there are places in the
-;;; code which actually use ..slot-unbound.. rather than this variable.  So
-;;; much for modularity.
+;;; at the value of a special variable.
 ;;;
-;;; Actually at the current point in time it seems that all code now
-;;; uses *slot-unbound* instead of ..slot-unbound.. itself.
-;;; 
-(defconstant *slot-unbound* '..slot-unbound..)
+(defconstant +slot-unbound+ '..slot-unbound..)
 
 
 ;;;; Structure-instance stuff:

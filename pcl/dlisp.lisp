@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.8 2002/08/26 02:23:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.9 2002/10/19 14:32:43 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -166,7 +166,7 @@
 				   (eq wrapper wrapper-1)))))
 	      ,@(if readp
 		    `((let ((value ,read-form))
-			(unless (eq value *slot-unbound*)
+			(unless (eq value +slot-unbound+)
 			  (return-from access value))))
 		    `((return-from access (setf ,read-form ,(car arglist))))))
 	    (funcall miss-fn ,@arglist))))))
@@ -178,7 +178,7 @@
 
 (defun emit-boundp-check (value-form miss-fn arglist)
   `(let ((value ,value-form))
-     (if (eq value *slot-unbound*)
+     (if (eq value +slot-unbound+)
 	 (funcall ,miss-fn ,@arglist)
 	 value)))
 

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.13 2002/08/26 02:23:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.14 2002/10/19 14:32:43 pmai Exp $")
 ;;;
 ;;; This file defines the defconstructor and other make-instance optimization
 ;;; mechanisms.
@@ -558,12 +558,12 @@
 	    (initfn (slot-definition-initfunction slotd)))
 	(cond ((null (memq name layout)))
 	      ((null initfn)
-	       (push (cons name *slot-unbound*) constants))
+	       (push (cons name +slot-unbound+) constants))
 	      ((constantp initform)
 	       (push (cons name (eval initform)) constants)
 	       (when (eq flag :unsupplied) (setq flag :constants)))
 	      (t
-	       (push (cons name *slot-unbound*) constants)
+	       (push (cons name +slot-unbound+) constants)
 	       (setq flag t)))))
     (let* ((constants-alist (sort constants (lambda (x y)
 					      (memq (car y)
