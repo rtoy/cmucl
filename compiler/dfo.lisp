@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.15 1991/11/13 19:28:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.16 1991/11/16 13:14:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -427,7 +427,8 @@
 
 	  ;;
 	  ;; Splice the blocks into the new DFO, and unlink them from the old
-	  ;; component head and tail.
+	  ;; component head and tail.  Non-return blocks that jump to the tail
+	  ;; (NIL returning calls) are switched to go to the new tail.
 	  (let* ((head (component-head component))
 		 (first (block-next head))
 		 (tail (component-tail component))
@@ -440,7 +441,11 @@
 	    (dolist (succ (block-succ head))
 	      (unlink-blocks head succ))
 	    (dolist (pred (block-pred tail))
-	      (unlink-blocks pred tail)))
+	      (unlink-blocks pred tail)
+	      (let ((last (block-last pred)))
+		(unless (return-p last)
+		  (assert (basic-combination-p last))
+		  (link-blocks pred (component-tail result-component))))))
 
 	  (let ((lambdas (component-lambdas component)))
 	    (assert (and (null (rest lambdas))
