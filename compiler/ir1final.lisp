@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.21 2000/07/09 16:05:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.22 2003/02/20 16:41:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,8 +64,7 @@
 	 (name (leaf-name leaf))
 	 (dtype (definition-type leaf)))
     (setf (leaf-type leaf) dtype)
-    (when (or (and name (symbolp name))
-	      (and (consp name) (eq (car name) 'setf)))
+    (when (ext:valid-function-name-p name)
       (let* ((where (info function where-from name))
 	     (*compiler-error-context* (lambda-bind (main-entry leaf)))
 	     (global-def (gethash name *free-functions*))
