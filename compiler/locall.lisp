@@ -64,7 +64,7 @@
   (declare (type ref ref) (type combination call) (type clambda fun))
   (propagate-to-args call fun)
   (setf (basic-combination-kind call) :local)
-  (pushnew fun (lambda-calls (lambda-home (block-lambda (node-block call)))))
+  (pushnew fun (lambda-calls (node-home-lambda call)))
   (change-ref-leaf ref fun)
   (undefined-value))
 
@@ -227,9 +227,7 @@
 		    (eq (continuation-use cont) ref)
 		    (or (null (rest refs))
 			*converting-for-interpreter*
-			(not (eq (functional-kind
-				  (lambda-home
-				   (block-lambda (node-block ref))))
+			(not (eq (functional-kind (node-home-lambda ref))
 				 :top-level))))
 	       (ecase (ref-inlinep ref)
 		 ((nil :inline)
@@ -323,8 +321,7 @@
     (let ((ep (car (last (optional-dispatch-entry-points fun)))))
       (change-ref-leaf ref ep)
       (setf (basic-combination-kind call) :local)
-      (pushnew ep
-	       (lambda-calls (lambda-home (block-lambda (node-block call)))))
+      (pushnew ep (lambda-calls (node-home-lambda call)))
 
       (assert-continuation-type
        (first (basic-combination-args call))
@@ -412,8 +409,7 @@
 	   (ir1-convert-lambda
 	    `(lambda ,vars
 	       (declare (ignore . ,ignores))
-	       (%funcall ,entry . ,args))
-	    (node-source call)))))
+	       (%funcall ,entry . ,args))))))
     (convert-call ref call new-fun)
     (dolist (ref (leaf-refs entry))
       (convert-call-if-possible ref (continuation-dest (node-cont ref))))))
@@ -543,36 +539,26 @@
 ;;;    longer in effect.
 
 
-;;; Merge-Cleanups-And-Lets  --  Internal
+;;; Merge-Lets  --  Internal
 ;;;
 ;;;    Handle the environment semantics of let conversion.  We add the lambda
-;;; and its lets to lets for the call's home function and move any cleanups and
-;;; calls to the home function.  We merge the calls for Fun with the calls for
-;;; the home function, removing Fun in the process.  We also merge the Entries.
-;;; This must run after INSERT-LET-BODY, since the call to NODE-ENDS-BLOCK
-;;; figures out the actual cleanup current at the let call (and sets the
-;;; start/end cleanups accordingly.)
+;;; and its lets to lets for the call's home function.  We merge the calls for
+;;; Fun with the calls for the home function, removing Fun in the process.  We
+;;; also merge the Entries.
 ;;;
-(defun merge-cleanups-and-lets (fun call)
+(defun merge-lets (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (let* ((prev (node-prev call))
-	 (home (lambda-home (block-lambda (continuation-block prev))))
+	 (home (block-home-lambda (continuation-block prev)))
 	 (home-env (lambda-environment home)))
     (push fun (lambda-lets home))
     (setf (lambda-home fun) home)
     (setf (lambda-environment fun) home-env)
     
-    (let ((cleanup (find-enclosing-cleanup
-		    (block-end-cleanup (continuation-block prev))))
-	  (lets (lambda-lets fun)))
+    (let ((lets (lambda-lets fun)))
       (dolist (let lets)
 	(setf (lambda-home let) home)
 	(setf (lambda-environment let) home-env))
-      (when cleanup
-	(dolist (let lets)
-	  (unless (lambda-cleanup let)
-	    (setf (lambda-cleanup let) cleanup)))
-	(setf (lambda-cleanup fun) cleanup))
 
       (setf (lambda-lets home) (nconc lets (lambda-lets home)))
       (setf (lambda-lets fun) ()))
@@ -661,7 +647,7 @@
 (defun let-convert (fun call)
   (declare (type clambda fun) (type basic-combination call))
   (insert-let-body fun call)
-  (merge-cleanups-and-lets fun call)
+  (merge-lets fun call)
   (move-return-uses fun call)
 
   (let* ((fun (or (lambda-optional-dispatch fun) fun))
