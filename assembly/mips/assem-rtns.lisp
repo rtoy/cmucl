@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.24 1990/10/19 15:31:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.25 1990/10/20 16:26:02 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -40,8 +40,10 @@
      (:temp a4 descriptor-reg a4-offset)
      (:temp a5 descriptor-reg a5-offset))
 
+  ;; Note, because of the way the return-multiple vop is written, we can
+  ;; assume that we are never called with nvals == 1 and that a0 has already
+  ;; been loaded.
   (inst blez nvals default-a0-and-on)
-  (inst lw a0 vals (* 0 vm:word-bytes))
   (inst subu count nvals (fixnum 2))
   (inst blez count default-a2-and-on)
   (inst lw a1 vals (* 1 vm:word-bytes))
@@ -89,7 +91,7 @@
   ;; Clear the stack.
   (move old-fp-tn fp-tn)
   (move fp-tn old-fp)
-  (inst addu csp-tn fp-tn nvals)
+  (inst addu csp-tn old-fp-tn nvals)
   
   ;; Return.
   (lisp-return lra lip))
