@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.12 2003/05/28 10:41:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fngen.lisp,v 1.13 2003/06/03 10:28:23 gerd Rel $")
 
 (in-package :pcl)
 
@@ -211,7 +211,7 @@
    generic function metaobject or the name of a generic function, and
    this function flushes all cached emfs for the given generic
    function.  If GF is not supplied, all cached emfs are flushed."
-  (let ((gf-name (if (generic-function-p gf-name)
+  (let ((gf-name (if (generic-function-p gf)
 		     (generic-function-name gf)
 		     gf)))
     (collect ((new))

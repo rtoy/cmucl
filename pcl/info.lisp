@@ -36,7 +36,7 @@
 ;;; GF is actually non-accessor GF.  Clean this up.
 ;;; (setf symbol-value) should be handled like (setf fdefinition)
 
-(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.8 2003/06/02 09:32:44 gerd Exp $")
+(file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/info.lisp,v 1.9 2003/06/03 10:28:23 gerd Exp $")
 
 (in-package "PCL")
 
@@ -462,6 +462,7 @@
     slot-boundp))
 
 (defun split-declarations (body args calls-next-method-p)
+  (declare (ignore calls-next-method-p))
   (let ((inner-decls nil) (outer-decls nil) decl)
     (loop (when (null body) (return nil))
 	  (setq decl (car body))

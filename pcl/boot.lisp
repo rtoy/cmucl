@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.65 2003/06/03 09:59:47 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.66 2003/06/03 10:28:23 gerd Exp $")
 
 (in-package :pcl)
 
@@ -752,7 +752,7 @@ work during bootstrapping.
 		       (,',next-methods (cdr ,',next-methods)))
 		   (declare (ignorable .next-method. ,',next-methods))
 		   ,@body))
-	      (with-rebound-original-arguments (cnm-p &body body)
+	      (with-rebound-original-arguments ((cnm-p) &body body)
 		(declare (ignore cnm-p))
 		`(let () ,@body))
 	      (check-cnm-args-body (method-name-declaration cnm-args)
@@ -939,7 +939,7 @@ work during bootstrapping.
 		;; in the method body, leading to spurious warnings.
 		;; For now, we deal with this by translating IGNORE to
 		;; IGNORABLE.
-		(with-rebound-original-arguments (cnm-p &body body)
+		(with-rebound-original-arguments ((cnm-p) &body body)
 		  (if cnm-p
 		      `(let ,',bindings
 			 (declare (ignorable ,@',all-params))
@@ -986,6 +986,7 @@ work during bootstrapping.
     ((&key call-next-method-p next-method-p-p closurep applyp
 	   method-name-declaration)
      &body body)
+  (declare (ignore next-method-p-p closurep applyp))
   `(call-next-method-bind
     (flet ((call-next-method (&rest cnm-args)
 	     (check-cnm-args-body ,method-name-declaration cnm-args)
@@ -993,7 +994,7 @@ work during bootstrapping.
 	   (next-method-p ()
 	     (next-method-p-body)))
       (declare (ignorable #'call-next-method #'next-method-p))
-      (with-rebound-original-arguments (call-next-method-p)
+      (with-rebound-original-arguments (,call-next-method-p)
 	,@body))))
 
 ;;;

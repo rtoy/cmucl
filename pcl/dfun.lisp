@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.28 2003/05/25 14:33:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.29 2003/06/03 10:28:23 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1135,8 +1135,7 @@ And so, we are saved.
 			    ;; for the same emf we are computing.
 			    (make-callable gf methods generator nil
 					   (and for-cache-p wrappers)))
-			  (let ((fn (default-secondary-dispatch-function gf)))
-			    (set-emf-name gf methods fn)))))
+			  (default-secondary-dispatch-function gf))))
 	    (multiple-value-bind (index accessor-type)
 		(and for-accessor-p all-applicable-and-sorted-p methods
 		     (accessor-values gf arg-info classes methods))
