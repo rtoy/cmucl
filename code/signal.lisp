@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.20 1993/08/27 14:43:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21 1993/08/27 14:58:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.20 1993/08/27 14:43:29 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.21 1993/08/27 14:58:35 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -358,12 +358,12 @@
        (progn
 	 (locally
 	   (declare (optimize (speed 3) (safety 0)))
-	   (incf (kernel:mutator-interupts-disabled-count)))
+	   (incf (kernel:mutator-interrupts-disabled-count)))
 	 ,@body)
      (locally
        (declare (optimize (speed 3) (safety 0)))
        (when (and (zerop (decf (kernel:mutator-interrupts-disabled-count)))
-		  (not (zerop (kernel:mutator-interrupts-pending))))
+		  (not (zerop (kernel:mutator-interrupt-pending))))
 	 (do-pending-interrupt)))))
 
 
