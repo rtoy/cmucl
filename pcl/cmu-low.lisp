@@ -35,6 +35,13 @@
 (defun printing-random-thing-internal (thing stream)
   (format stream "{~X}" (sys:%primitive c:make-fixnum thing)))
 
+
+(eval-when (compile load eval)
+  (c:def-source-transform std-instance-p (x)
+    (ext:once-only ((n-x x))
+      `(and (ext:structurep ,n-x)
+	    (eq (kernel:structure-ref ,n-x 0) 'std-instance)))))
+
   ;;   
 ;;;;;; Cache No's
   ;;  
@@ -79,3 +86,42 @@
 	   (system:%primitive c::set-function-name header new-name))
 	 fcn)))
 
+(in-package "C")
+
+
+(defun keyword-spec-name (x)
+  (if (atom x)
+      (intern (symbol-name x) (find-package "KEYWORD"))
+      (let ((cx (car x)))
+	(if (atom cx)
+	    (intern (symbol-name cx) (find-package "KEYWORD"))
+	    (car cx)))))
+		  
+
+(defun generic-function-type-from-lambda-list (name ll)
+  (multiple-value-bind (req opt restp ignore keyp keys allowp)
+		       (parse-lambda-list ll)
+    (declare (ignore ignore))
+    (let* ((old (info function type name))
+	   (old-ftype (if (function-type-p old) old nil))
+	   (old-keys (and old-ftype
+			  (mapcar #'key-info-name
+				  (function-type-keywords old-ftype)))))
+      `(function (,@(make-list (length req) :initial-element t)
+		  ,@(when opt
+		      `(&optional ,@(make-list (length opt)
+					       :initial-element t)))
+		  ,@(when (or (and old-ftype (function-type-rest old-ftype))
+			      restp)
+		      '(&rest t))
+		  ,@(when (or (and old-ftype (function-type-keyp old-ftype))
+			      keyp)
+		      '(&key))
+		  ,@(when (or (and old-ftype (function-type-allowp old-ftype))
+			      allowp)
+		      '(&allow-other-keys))
+		  ,@(mapcar #'(lambda (name)
+				`(,name t))
+			    (union old-keys
+				   (mapcar #'keyword-spec-name keys))))
+		 *))))
