@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.26 1997/02/12 22:12:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.27 1997/02/15 21:39:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -420,8 +420,8 @@
   (destructuring-bind (name prim prim-quick) stuff
     (deftransform name ((x) '(single-float) '* :eval-name t :when :both)
       (cond ((csubtypep (continuation-type x)
-			(specifier-type '(single-float (#.(- (expt 2s0 64)))
-						       (#.(expt 2s0 64)))))
+			(specifier-type '(single-float (#.(- (expt 2f0 64)))
+						       (#.(expt 2f0 64)))))
 	     `(coerce (,prim-quick (coerce x 'double-float)) 'single-float))
 	    (t 
 	     (compiler-note
