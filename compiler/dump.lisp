@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.35 1991/12/14 18:12:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.36 1991/12/21 23:07:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.35 1991/12/14 18:12:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.36 1991/12/21 23:07:24 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -1165,7 +1165,7 @@
 
 ;;; DUMP-DATA-BITS-MAYBE-BYTE-SWAPPING  --  internal.
 ;;;
-;;; Dump BYTES of data from DATA-VECTOR (which much some unboxed vector)
+;;; Dump BYTES of data from DATA-VECTOR (which must be some unboxed vector)
 ;;; byte-swapping if necessary.
 ;;; 
 (defun dump-data-maybe-byte-swapping (data-vector bytes element-size file)
@@ -1218,16 +1218,19 @@
 	(t
 	 (let* ((elements-per-byte (/ vm:byte-bits element-size))
 		(elements (* bytes elements-per-byte))
+		(len (length data-vector))
 		(result (make-array elements
 				    :element-type
 				    `(unsigned-byte ,element-size))))
 	   (dotimes (index elements)
 	     (multiple-value-bind (byte-index additional)
 				  (truncate index elements-per-byte)
-	       (setf (aref result index)
-		     (aref data-vector
-			   (+ byte-index
-			      (- elements-per-byte additional 1))))))
+	       (let ((src-idx (+ byte-index
+				 (- elements-per-byte additional 1))))
+		 (setf (aref result index)
+		       (if (>= src-idx len)
+			   0
+			   (aref data-vector src-idx))))))
 	   (dump-bytes result bytes file)))))
 
 ;;; Dump-Multi-Dim-Array  --  Internal
