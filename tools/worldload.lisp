@@ -19,6 +19,7 @@
 (setf (ext:search-list "mips:") '("c:mips/"))
 (setf (ext:search-list "assem:") '("lisp:assembly/"))
 (setf (ext:search-list "hem:") '("lisp:hemlock/"))
+(setf (ext:search-list "clx:") '("lisp:clx/"))
 
 ;;; This must be here, because it's where assert-user-package is defined.
 (load "code:save")
@@ -71,15 +72,21 @@
 
 ;;; Load the pretty printer after the compiler, 'cause it compiles stuff
 ;;; at load time.
+#-no-xp
 (load "code:xp")
+#-no-xp
 (pprint-init)
 
-#|
 ;;; CLX.
 ;;;
+#-no-clx
 (load "clx:defsystem")
-(load-clx (pathname "clx:"))
+#-no-clx
+(xlib:load-clx (pathname "clx:"))
+#-no-clx
+(load "code:clx-ext")
 
+#|
 ;;; A hack to fix a bug in the X11 R3 server.  This should go away when
 ;;; the server is fixed.
 ;;;
@@ -94,8 +101,11 @@
 
 ;;; Hemlock.
 ;;;
+#-no-hemlock
 (load "hem:load-hem.lisp")
+#-no-hemlock
 (load "hem:rompsite") ;Contains site-init stuff called at load time.
+#-no-hemlock
 (hi::build-hemlock)
 
 #|
@@ -166,7 +176,7 @@ Don't install any dir translations, 'cause we want the real things.
 	     :purify t
 	     :init-function #'initial-init-function
 	     :root-structures `(ed
-				,hi::*global-command-table*
+				#-no-hemlock ,hi::*global-command-table*
 				lisp::%top-level
 				extensions:save-lisp
 				,lisp::fop-codes
