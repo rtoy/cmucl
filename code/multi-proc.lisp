@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.35 1999/09/04 19:43:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.36 1999/09/10 06:54:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1827,17 +1827,18 @@
     `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
       (unwind-protect
 	   ,(cond ((and timeout wait)
-		   `(when (cond (,have-lock
-				 (when (error-check-lock-p ,lock)
-				   (error "Dead lock")))
-				#+i486 ((null (kernel:%instance-set-conditional
-					       ,lock 2 nil *current-process*)))
-				#-i486 ((seize-lock ,lock))
-				((null ,timeout)
-				 (lock-wait ,lock ,whostate))
-				((lock-wait-with-timeout
-				  ,lock ,whostate ,timeout)))
-		      ,@body))
+		   `(progn
+		      (when (and (error-check-lock-p ,lock) ,have-lock)
+			(error "Dead lock"))
+		      (unless (or ,have-lock
+				 #+i486 (null (kernel:%instance-set-conditional
+					       ,lock 2 nil *current-process*))
+				 #-i486 (seize-lock ,lock)
+				 (if ,timeout
+				     (lock-wait-with-timeout
+				      ,lock ,whostate ,timeout)
+				     (lock-wait ,lock ,whostate)))
+			,@body)))
 		  (wait
 		   `(progn
 		      (when (and (error-check-lock-p ,lock) ,have-lock)
