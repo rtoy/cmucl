@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.63 1993/08/30 21:20:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.64 1994/03/20 00:00:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1116,9 +1116,13 @@
     (if (typep layout 'layout)
 	(let ((class (layout-class layout)))
 	  (cond ((typep class 'slot-class)
-		 (funcall (or (slot-class-print-function class)
-			      #'default-structure-print)
-			  instance stream *current-level*))
+		 (if (layout-invalid layout)
+		     (print-unreadable-object (instance stream :identity t
+							:type t)
+		       (write-string "Obsolete Instance" stream))
+		     (funcall (or (slot-class-print-function class)
+				  #'default-structure-print)
+			      instance stream *current-level*)))
 		((fboundp 'print-object)
 		 (print-object instance stream))
 		(t
