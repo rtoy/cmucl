@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.7 1991/04/21 22:12:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.8 1991/05/04 17:00:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,21 +75,26 @@
 
 ;;;; Room.
 
-(defun room-maximal-info ()
-  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
+(defun room-minimal-info ()
   (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage))
   (format t "Read-Only Space Usage:  ~10:D bytes.~%" (read-only-space-usage))
-  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage))
-  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
-  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage)))
-
-(defun room-minimal-info ()
-  (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage)))
+  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage)))
 
 (defun room-intermediate-info ()
-  (format t "Dynamic Space Usage:   ~10:D bytes.~%" (dynamic-usage))
-  (format t "Read-Only Space Usage: ~10:D bytes.~%" (read-only-space-usage))
-  (format t "Static Space Usage:    ~10:D bytes.~%" (static-space-usage)))
+  (room-minimal-info)
+  (vm:memory-usage :count-spaces '(:dynamic)
+		   :print-spaces t
+		   :cutoff 0.05
+		   :print-summary nil))
+
+(defun room-maximal-info ()
+  (room-minimal-info)
+  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
+  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage))
+  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
+  (vm:memory-usage :count-spaces '(:static :dynamic))
+  (vm:structure-usage :dynamic :top-n 10)
+  (vm:structure-usage :static :top-n 10))
 
 (defun room (&optional (verbosity :default))
   "Prints to *STANDARD-OUTPUT* information about the state of internal
@@ -97,7 +102,8 @@
   verbosity of ROOM.  If it is T, ROOM prints out a maximal amount of
   information.  If it is NIL, ROOM prints out a minimal amount of
   information.  If it is :DEFAULT or it is not supplied, ROOM prints out
-  an intermediate amount of information."
+  an intermediate amount of information.  See also VM:MEMORY-USAGE and
+  VM:STRUCTURE-USAGE for finer report control."
   (fresh-line)
   (case verbosity
     ((t)
