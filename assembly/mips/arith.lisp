@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.5 1990/11/23 08:43:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.6 1990/11/23 09:23:39 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -185,7 +185,6 @@
 				  
 				  (:temp temp non-descriptor-reg nl0-offset)
 				  (:temp lip interior-reg lip-offset)
-				  (:temp lra descriptor-reg lra-offset)
 				  (:temp nargs any-reg nargs-offset)
 				  (:temp cname descriptor-reg cname-offset)
 				  (:temp ocfp any-reg old-fp-offset))
@@ -206,7 +205,7 @@
 	  (inst move fp-tn csp-tn)
 	  
 	  DO-COMPARE
-	  (inst ,(if not-p 'bne 'beq) done)
+	  (inst ,(if not-p 'bne 'beq) temp done)
 	  (inst move res null-tn)
 	  (load-symbol res t)
 	  DONE)))
