@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.1 1992/07/28 20:15:06 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.2 1992/12/17 13:20:45 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -249,6 +249,8 @@ static void call_cmd(char **ptr)
 	       thing);
         return;
     }
+    else
+	function = thing;
 
     numargs = 0;
     while (more_p(ptr)) {
