@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.14 1993/03/13 11:11:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.15 1993/03/13 14:36:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,11 +26,11 @@
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state class-subclasses
 		 class-init
-		 basic-structure-class funcallable-structure-class))
+		 basic-structure-class funcallable-instance
+		 funcallable-structure-class))
 
 (in-package "LISP")
-(export '(class structure-class class-name find-class class-of built-in-class
-		generic-function))
+(export '(class structure-class class-name find-class class-of built-in-class))
 
 (in-package "KERNEL")
 
@@ -345,8 +345,8 @@
 	((let ((subclasses (class-subclasses class1)))
 	   (and subclasses (gethash class2 subclasses)))
 	 (values class2 t))
-	((or (structure-class-p class1)
-	     (structure-class-p class2))
+	((or (basic-structure-class-p class1)
+	     (basic-structure-class-p class2))
 	 (values *empty-type* t))
 	((eq (class-state class1) :sealed)
 	 (sealed-class-intersection class1 class2))
@@ -422,8 +422,7 @@
 	    #.vm:byte-code-function-type
 	    #.vm:closure-header-type  #.vm:function-header-type)
 	   :state :read-only)
-	  (generic-function :inherits (function)  :state :read-only
-			    :codes (#.vm:funcallable-instance-header-type))
+	  (funcallable-instance :inherits (function)  :state :read-only)
 	  
 	  (array :translation array
 		 :hierarchical nil  :codes (#.vm:complex-array-type))
@@ -576,11 +575,10 @@
 ;;; return NULL rather than LIST when X is NIL so that GF's can specialize on
 ;;; NULL.
 ;;;
-;;; ### special-case funcallable-instance
-;;;
 (declaim (inline layout-of))
 (defun layout-of (x)
   (cond ((%instancep x) (%instance-layout x))
+	((funcallable-instance-p x) (%funcallable-instance-layout x))
 	((null x) '#.(class-layout (find-class 'null)))
 	(t (svref built-in-class-codes (get-type x)))))
 
