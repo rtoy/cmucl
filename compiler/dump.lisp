@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.3 1990/02/09 21:06:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.4 1990/02/13 17:07:00 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -339,7 +339,7 @@
     (collect ((patches))
 
       ;; Dump the constants, noting any :entries that have to be fixed up.
-      (do ((i %code-constants-offset (1+ i)))
+      (do ((i vm:code-constants-offset (1+ i)))
 	  ((= i num-consts))
 	(let ((entry (aref constants i)))
 	  (etypecase entry
@@ -371,14 +371,15 @@
 	  (dump-push info-handle file)
 	  (push info-handle (fasl-file-debug-info file))))
 
-      (cond ((and (< num-consts #x100) (< code-length #x10000))
-	     (dump-fop 'lisp::fop-small-code file)
-	     (dump-byte num-consts file)
-	     (quick-dump-number code-length 2 file))
-	    (t
-	     (dump-fop 'lisp::fop-code file)
-	     (quick-dump-number num-consts 4 file)
-	     (quick-dump-number code-length 4 file)))
+      (let ((num-consts (- num-consts vm:code-constants-offset)))
+	(cond ((and (< num-consts #x100) (< code-length #x10000))
+	       (dump-fop 'lisp::fop-small-code file)
+	       (dump-byte num-consts file)
+	       (quick-dump-number code-length 2 file))
+	      (t
+	       (dump-fop 'lisp::fop-code file)
+	       (quick-dump-number num-consts 4 file)
+	       (quick-dump-number code-length 4 file))))
       
       (write-string code-vector (fasl-file-stream file) :end code-length)
       
@@ -411,15 +412,14 @@
 	   (dump-fop 'lisp::fop-user-miscop-fixup file)
 	   (quick-dump-number offset 4 file))
 	  (:foreign
-	   (assert (symbolp value))
+	   (assert (stringp value))
 	   (dump-fop 'lisp::fop-foreign-fixup file)
 	   (quick-dump-number offset 4 file)
-	   (let* ((str (symbol-name value))
-		  (len (length str)))
+	   (let ((len (length value)))
 	     (assert (< len 256))
-	     (quick-dump-number len 1 file)
+	     (dump-byte len file)
 	     (dotimes (i len)
-	       (dump-byte (char-code (schar str i)))))))))
+	       (dump-byte (char-code (schar value i)) file)))))))
     (dump-fop 'lisp::fop-pop-for-effect file))
   (undefined-value))
 
@@ -437,18 +437,14 @@
   (declare (type entry-info entry) (type unsigned-byte code-handle)
 	   (type fasl-file file))
   (let ((name (entry-info-name entry)))
-    (cond ((entry-info-closure-p entry)
-	   ;; ### Need to fix this.
-	   (compiler-error "Cannot dump closures. Oh no.")
-	   (dump-fop 'lisp::fop-misc-trap file))
-	  (t
-	   (dump-push code-handle file)
-	   (dump-object name file)
-	   (dump-object (entry-info-arguments entry) file)
-	   (dump-object (entry-info-type entry) file)
-	   (dump-fop 'lisp::fop-function-entry file)
-	   (quick-dump-number (label-location (entry-info-offset entry))
-			      4 file)))
+    ;; ### Do something special for closure functions?
+    (dump-push code-handle file)
+    (dump-object name file)
+    (dump-object (entry-info-arguments entry) file)
+    (dump-object (entry-info-type entry) file)
+    (dump-fop 'lisp::fop-function-entry file)
+    (quick-dump-number (label-location (entry-info-offset entry))
+		       4 file)
     (let ((handle (dump-pop file)))
       (when (and name (symbolp name))
 	(dump-object name file)
@@ -1053,6 +1049,6 @@
 ;;; Dump a structure.
 
 (defun dump-structure (obj file)
-  (normal-dump-vector obj file)
+  (dump-vector obj file)
   (dump-fop 'lisp::fop-structure file))
 
