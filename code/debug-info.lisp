@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.25 1993/02/26 08:25:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.26 1993/08/17 21:08:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,11 +458,7 @@ function (which would be useful info anyway).
 
 ;;;; The DEBUG-INFO structure:
 
-(defstruct debug-info)
-
-(defstruct (compiled-debug-info
-	    (:include debug-info)
-	    (:pure t))
+(defstruct debug-info
   ;;
   ;; Some string describing something about the code in this component.
   (name (required-argument) :type simple-string)
@@ -472,7 +468,12 @@ function (which would be useful info anyway).
   ;;
   ;; *** NOTE: the offset of this slot is wired into the fasl dumper so that it
   ;; *** can backpatch the source info when compilation is complete.
-  (source nil :type list)
+  (source nil :type list))
+
+
+(defstruct (compiled-debug-info
+	    (:include debug-info)
+	    (:pure t))
   ;;
   ;; The name of the package that DEBUG-FUNCTION-VARIABLES were dumped relative
   ;; to.  Locations that aren't packaged are in this package.
