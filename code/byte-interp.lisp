@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.27 1993/08/31 07:38:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.28 1993/08/31 07:42:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -374,8 +374,6 @@
 (defun make-byte-compiled-closure (xep closure-vars)
   (declare (type byte-function xep)
 	   (type simple-vector closure-vars))
-  (push xep (code-header-ref (byte-function-component xep)
-			     vm:code-trace-table-offset-slot))
   (let ((res (make-byte-closure xep closure-vars)))
     (setf (funcallable-instance-function res)
 	  #'(instance-lambda (&rest args)
