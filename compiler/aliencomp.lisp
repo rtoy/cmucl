@@ -34,7 +34,7 @@
 	  system-area-pointer pointer alien alien-access
 	  alien-assign alien-sap define-alien-stack
 	  with-stack-alien null-terminated-string c-procedure
-	  unstructured record-size
+	  record-size
 	  )
 	(find-package "C"))
 
