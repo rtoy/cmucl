@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.22 1992/02/14 23:47:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.23 1992/02/15 11:54:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,7 +239,6 @@
       (frob kind)
       (frob accessor-for)
       (frob inline-expansion)
-      (frob alien-operator)
       (frob source-transform)
       (frob assumed-type)))
   (undefined-value))
