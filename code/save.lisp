@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.44 2002/07/10 16:40:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.45 2003/01/29 19:47:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,6 +43,8 @@
 
 ;;; Filled in by the startup code.
 (defvar lisp-environment-list)
+(defvar *cmucl-lib*)			; Essentially the envvar CMUCLLIB, where available
+(defvar *cmucl-core-path*)		; Path to where the Lisp core file was found.
 
 
 ;;; PARSE-UNIX-SEARCH-LIST  --  Internal
@@ -50,23 +52,26 @@
 ;;; Returns a list of the directories that are in the specified Unix
 ;;; environment variable.  Return NIL if the variable is undefined.
 ;;;
+(defun parse-unix-search-path (path)
+  (do* ((i 0 (1+ p))
+	(p (position #\: path :start i)
+	   (position #\: path :start i))
+	(pl ()))
+       ((null p)
+	(let ((s (subseq path i)))
+	  (if (string= s "")
+	      (push "default:" pl)
+	      (push (concatenate 'simple-string s "/") pl)))
+	(nreverse pl))
+    (let ((s (subseq path i p)))
+      (if (string= s "")
+	  (push "default:" pl)
+	  (push (concatenate 'simple-string s "/") pl)))))
+
 (defun parse-unix-search-list (var)
   (let ((path (cdr (assoc var ext::*environment-list*))))
     (when path
-      (do* ((i 0 (1+ p))
-	    (p (position #\: path :start i)
-	       (position #\: path :start i))
-	    (pl ()))
-	   ((null p)
-	    (let ((s (subseq path i)))
-	      (if (string= s "")
-		  (push "default:" pl)
-		  (push (concatenate 'simple-string s "/") pl)))
-	    (nreverse pl))
-	(let ((s (subseq path i p)))
-	  (if (string= s "")
-	      (push "default:" pl)
-	      (push (concatenate 'simple-string s "/") pl)))))))
+      (parse-unix-search-path path))))
 
 
 ;;; ENVIRONMENT-INIT  --  Internal
@@ -90,7 +95,8 @@
 	    (list (default-directory))))
 
   (setf (search-list "library:")
-	(or (parse-unix-search-list :cmucllib)
+	(if (boundp '*cmucl-lib*)
+	    (parse-unix-search-path *cmucl-lib*)
 	    '("/usr/local/lib/cmucl/lib/")))
   (setf (search-list "modules:") '("library:subsystems/")))
 
@@ -119,7 +125,7 @@
       If true (the default), do a purifying GC which moves all dynamically
   allocated objects into static space so that they stay pure.  This takes
   somewhat longer than the normal GC which is otherwise done, but GC's will
-  done less often and take less time in the resulting core file.  See
+  be done less often and take less time in the resulting core file.  See
   EXT:PURIFY.
 
   :root-structures
@@ -246,7 +252,17 @@
 	,#'(lambda (stream)
 	     (write-string (lisp-implementation-version) stream))
 	", running on "
-	,#'(lambda (stream) (write-string (machine-instance) stream))))
+	,#'(lambda (stream) (write-string (machine-instance) stream))
+	terpri
+	,#'(lambda (stream)
+	     (let ((core (if (boundp '*cmucl-core-path*)
+			     (truename *cmucl-core-path*)
+			     nil)))
+	       (when core
+		 (write-string "With core: " stream)
+		 (write-string (namestring core) stream))))
+	terpri
+	))
 
 (setf (getf *herald-items* :bugs)
       '("Send questions to cmucl-help@cons.org. and bug reports to cmucl-imp@cons.org."

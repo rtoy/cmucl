@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.27 2003/01/23 21:05:38 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.28 2003/01/29 19:47:49 toy Exp $
  *
  */
 
@@ -61,7 +61,7 @@ void sigint_init(void)
 }
 
 
-/* Noise to convert argv and argp into lists. */
+/* Noise to convert argv and envp into lists. */
 
 static lispobj alloc_str_list(char *list[])
 {
@@ -83,13 +83,207 @@ static lispobj alloc_str_list(char *list[])
     return result;
 }
 
+/* Default paths for CMUCLLIB */
+static char* cmucllib_search_list[] =
+{
+    "./.",
+    "./../lib/cmucl/lib",
+    "./../lib",
+    "/usr/local/lib/cmucl/lib",
+    NULL
+};
+
+
+/*
+ * From the current location of the lisp executable, create a suitable
+ * default for CMUCLLIB
+ */
+char *
+default_cmucllib(char* argv0)
+{
+    char* p;
+    char* defpath;
+    char* cwd;
+    
+    /*
+     * From argv[0], create the appropriate directory by lopping off the
+     * executable name
+     */
+
+    p = strrchr(argv0, '/');
+    if (p == NULL) {
+        *argv0 = '\0';
+    } else if (p != argv0) {
+        *p = '\0';
+    }
+    
+    /*
+     * Create the full pathname of the directory containing the
+     * executable.  argv[0] can be an absolute or relative path.
+     */
+    if (argv0[0] == '/') {
+        cwd = malloc(strlen(argv0) + 2);
+        strcpy(cwd, argv0);
+        strcat(cwd, "/");
+    } else {
+        /*
+         * argv[0] is a relative path.  Get the current directory and
+         * append argv[0], after stripping off the executable name.
+         */
+        cwd = malloc(MAXPATHLEN + strlen(argv0) + 100);
+        getcwd(cwd, MAXPATHLEN);
+        strcat(cwd, "/");
+        if (*argv0 != '\0') {
+            strcat(cwd, argv0);
+            strcat(cwd, "/");
+        }
+    }
+
+    /* Create the appropriate value for CMUCLLIB */
+
+    {
+        char** ptr;
+        int total_len;
+        int cwd_len;
+        
+	/* First figure out how much space we need */
+
+        total_len = 0;
+        cwd_len = strlen(cwd);
+
+        ptr = cmucllib_search_list;
+        
+        while (*ptr != NULL) {
+            /* Plus 2 for the ":" and "/" we need to add */
+            total_len += strlen(*ptr) + cwd_len + 2;
+            ++ptr;
+        }
+
+	/* Create the colon separated list of directories */
+	
+        defpath = malloc(total_len + 1);
+
+        ptr = cmucllib_search_list;
+        while (*ptr != NULL) {
+            if (*ptr[0] != '/') {
+                strcat(defpath, cwd);
+            }
+            
+            strcat(defpath, *ptr);
+
+            if (ptr[1] != NULL) {
+                strcat(defpath, ":");
+            }
+            
+            ++ptr;
+        }
+
+	if (strlen(defpath) > total_len) {
+	    abort();
+	}
+    }
+    
+    free(cwd);
+
+    return defpath;
+}
+
+/*
+ * Search the a core file with the name given by default_core in the
+ * colon-separated list of directories given by lib.
+ *
+ * Return the full path, if found, or NULL if not.
+ */
+
+char*
+search_core(const char* lib, const char* default_core)
+{
+    char *buf;
+    char *dst;
+    struct stat statbuf;
+
+    /*
+     * A buffer that's large enough to hold lib, default_core, a
+     * slash, and a the string terminator
+     */
+    buf = malloc(strlen(lib) + strlen(default_core) + 2);
+    
+    do {
+	dst = buf;
+	/*
+	 * Extract out everything to the first colon, then append a
+	 * "/" and the core name.  See if the file exists.
+	 */
+	while (*lib != '\0' && *lib != ':')
+	    *dst++ = *lib++;
+	if (dst != buf && dst[-1] != '/')
+	    *dst++ = '/';
+	strcpy(dst, default_core);
+	/* If it exists, we are done! */
+	if (stat(buf, &statbuf) == 0) {
+	    return buf;
+	}
+    } while (*lib++ == ':');
+
+    free(buf);
+    return NULL;
+}
+
+/*
+ * Given the path to a core file, prepend the absolute location of the
+ * core file to the lib path.
+ *
+ * Return the new lib path.
+ */
+char*
+prepend_core_path(char* lib, char* corefile)
+{
+    char cwd[MAXPATHLEN];
+    char *path;
+    char *result;
+    char *sep;
+    
+    if (*corefile == '/') {
+	path = strdup(corefile);
+    } else {
+	/*
+	 * We have a relative path for the corefile.  Prepend our current
+	 * directory to get the full path.
+	 */
+	getcwd(cwd, MAXPATHLEN);
+	path = malloc(MAXPATHLEN + strlen(corefile) + 2);
+	strcpy(path, cwd);
+	strcat(path, "/");
+	strcat(path, corefile);
+    }
+
+    /*
+     * Now remove the name portion by finding the last slash.
+     */
+    sep = strrchr(path, '/');
+    if (sep != NULL) {
+	*sep = '\0';
+    }
+
+    result = malloc(strlen(path) + strlen(lib) + 2);
+    strcpy(result, path);
+    strcat(result, ":");
+    strcat(result, lib);
+
+    free(path);
+    return result;
+}
 
 /* And here be main. */
 
 int main(int argc, char *argv[], char *envp[])
 {
     char *arg, **argptr;
-    char *core = NULL, *default_core;
+    char *core = NULL;
+    char *default_core;
+    char *lib = NULL;
+    char *cmucllib = NULL;
+
     boolean monitor;
     lispobj initial_function;
 
@@ -100,6 +294,7 @@ int main(int argc, char *argv[], char *envp[])
     set_lossage_handler(ldb_monitor);
 
     monitor = FALSE;
+    
 #ifdef DEFAULT_DYNAMIC_SPACE_SIZE
     dynamic_space_size = DEFAULT_DYNAMIC_SPACE_SIZE;
 #else
@@ -121,6 +316,15 @@ int main(int argc, char *argv[], char *envp[])
 	      {
 		fprintf(stderr, "-core must be followed by the name of the core file to use.\n");
                 exit(1);
+	      }
+	  }
+	else if (strcmp(arg, "-lib") == 0)
+	  {
+	    lib = *++argptr;
+	    if (lib == NULL)
+	      {
+		fprintf(stderr, "-lib must be followed by a string denoting the CMUCL library path.\n");
+		exit(1);
 	      }
 	  }
         else if (strcmp(arg, "-dynamic-space-size") == 0)
@@ -149,47 +353,6 @@ int main(int argc, char *argv[], char *envp[])
     if (default_core == NULL)
 	default_core = "lisp.core";
 
-    if (core == NULL) {
-#ifdef MACH
-	extern char *getenv(char *var);
-#endif
-	static char buf[_POSIX_PATH_MAX];
-	char *lib = getenv("CMUCLLIB");
-
-	if (lib != NULL) {
-	    char *dst;
-	    struct stat statbuf;
-
-	    do {
-		dst = buf;
-		while (*lib != '\0' && *lib != ':')
-		    *dst++ = *lib++;
-		if (dst != buf && dst[-1] != '/')
-		    *dst++ = '/';
-		strcpy(dst, default_core);
-		if (stat(buf, &statbuf) == 0) {
-		    core = buf;
-		    break;
-		}
-	    } while (*lib++ == ':');
-
-	    if (core == NULL)
-                fprintf(stderr, "WARNING: Couldn't find core in specified CMUCLLIB, using default path.\n");
-
-	}
-	if (core == NULL) {
-	    /* Note: the /usr/misc/.cmucl/lib/ default path is also wired
-	       into the lisp code in .../code/save.lisp. */
-#ifdef MACH
-	    strcpy(buf, "/usr/misc/.cmucl/lib/");
-#else
-	    strcpy(buf, "/usr/local/lib/cmucl/lib/");
-#endif
-	    strcat(buf, default_core);
-	    core = buf;
-	}
-    }
-
     os_init();
     validate();
     gc_init();
@@ -200,6 +363,88 @@ int main(int argc, char *argv[], char *envp[])
      */
     define_var("nil", NIL, TRUE);
     define_var("t"  ,   T, TRUE);
+
+    /*
+     * Basic algorithm for setting CMUCLLIB and CMUCLCORE, from Pierre
+     * Mai.
+     *
+     * if CMUCLLIB envvar is not set
+     *	 CMUCLLIB = our list of places to look
+     *	 if -core option/CMUCLCORE given
+     *	    CMUCLLIB = CMUCLLIB + full path to the specified core file
+     *	 endif
+     * endif
+     *
+     * if -core option/CMUCLCORE unset
+     *	 search for a core file (named whatever arch_init returns or
+     *	   lisp.core) somewhere in the CMUCLLIB list.
+     * endif
+     *
+     * if core found
+     *	 use that
+     * else
+     *	 give error message and die
+     * endif
+     *
+     * CMUCLCORE = where the core file was found/specced
+     */
+
+    /*
+     * Set cmucllib to the -lib option, or to CMUCLLIB envvar.  If
+     * neither are set, set cmucllib to our default search path.
+     */
+    if (lib != NULL) {
+	cmucllib = strdup(lib);
+    } else {
+	char *libvar;
+
+	libvar = getenv("CMUCLLIB");
+	if (libvar != NULL) {
+	    cmucllib = strdup(libvar);
+	} else {
+	    char *newlib = NULL;
+
+	    /*
+	     * We need to use our default search path.  If a core file
+	     * is given, we prepend the directory of the core file to
+	     * the search path.
+	     */
+	    cmucllib = default_cmucllib(argv[0]);
+	    if (core != NULL) {
+		newlib = prepend_core_path(cmucllib, core);
+	    } else if (getenv("CMUCLCORE") != NULL) {
+		core = getenv("CMUCLCORE");
+		newlib = prepend_core_path(cmucllib, core);
+	    }
+
+	    if (newlib != NULL) {
+		free(cmucllib);
+		cmucllib = newlib;
+	    }
+	}
+    }
+
+    /*
+     * If no core file specified, search for it in CMUCLLIB
+     */
+    if (core == NULL) {
+	if (getenv("CMUCLCORE") == NULL) {
+	    core = search_core(cmucllib, default_core);
+	} else {
+	    core = getenv("CMUCLCORE");
+	}
+    }
+	    
+    /* Die if the core file doesn't exist. */
+    {
+	struct stat statbuf;
+	
+	if (stat(core, &statbuf) != 0) {
+	    /* Can't find it so print a message and die */
+	    fprintf(stderr, "Cannot find core file %s\n", core);
+	    exit(1);
+	}
+    }
 
     globals_init();
 
@@ -243,6 +488,10 @@ int main(int argc, char *argv[], char *envp[])
     SetSymbolValue(LISP_COMMAND_LINE_LIST, alloc_str_list(argv));
     SetSymbolValue(LISP_ENVIRONMENT_LIST, alloc_str_list(envp));
 
+    /* Set cmucllib and cmuclcore appropriately */
+    SetSymbolValue(CMUCL_LIB, alloc_string(cmucllib));
+    SetSymbolValue(CMUCL_CORE_PATH, alloc_string(core));
+    
     /*
      * Parse the command line again, picking up values that override
      * those loaded from the core.
@@ -261,10 +510,11 @@ int main(int argc, char *argv[], char *envp[])
      */
     sigint_init();
 
-    if (monitor)
-	while (1)
-	    ldb_monitor();
-    else {
+    if (monitor) {
+        while (1) {
+            ldb_monitor();
+        }
+    } else {
 	funcall0(initial_function);
 	printf("Initial function returned?\n");
 	exit(1);

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.20 2002/08/27 22:18:28 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.21 2003/01/29 19:47:48 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -302,9 +302,12 @@
       ;; common slot unbound check.
       pcl::..slot-unbound..
 
-      ;; Spare symbols
-      spare-10
-      spare-9
+      ;; These are filled in the C run-time.
+      lisp::*cmucl-lib*
+      lisp::*cmucl-core-path*
+      
+      ;; Spare symbols.  Rename these when you need to add some static
+      ;; symbols and don't want to do a cross-compile.
       spare-8
       spare-7
       spare-6
