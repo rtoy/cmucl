@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: Lisp -*-
+;;; -*- Package: Lisp -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,35 +7,43 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.13 1991/11/29 19:47:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.14 1992/12/10 01:08:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.13 1991/11/29 19:47:19 wlott Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
-;;; This file contains the machine-independent stream functions.  Another
-;;; file (VAXIO, SPIO, or VMIO) contains functions used by this file for
-;;; a specific machine.
+;;; This file contains the OS-independent stream functions.
 ;;;
 (in-package "LISP")
 
-(export '(make-broadcast-stream make-synonym-stream
-	  make-broadcast-stream make-concatenated-stream make-two-way-stream
-	  make-echo-stream make-string-input-stream make-string-output-stream
+(export '(broadcast-stream make-broadcast-stream broadcast-stream-streams 
+	  synonym-stream make-synonym-stream synonym-stream-symbol
+	  concatenated-stream make-concatenated-stream
+	  concatenated-stream-streams
+	  two-way-stream make-two-way-stream two-way-stream-input-stream
+	  two-way-stream-output-stream
+	  echo-stream make-echo-stream echo-stream-input-stream
+	  echo-stream-output-stream
+	  make-string-input-stream make-string-output-stream
 	  get-output-stream-string stream-element-type input-stream-p
-	  output-stream-p close read-line read-char
+	  output-stream-p open-stream-p interactive-stream-p
+	  close read-line read-char
 	  unread-char peek-char listen read-char-no-hang clear-input read-byte
 	  write-char write-string write-line terpri fresh-line
 	  finish-output force-output clear-output write-byte
-          stream streamp *standard-input* *standard-output*
+          stream streamp string-stream
+	  *standard-input* *standard-output*
           *error-output* *query-io* *debug-io* *terminal-io* *trace-output*))
 
 (in-package 'system)
 (export '(make-indenting-stream read-n-bytes))
 (in-package 'lisp)
+
+(deftype string-stream ()
+  '(or string-input-stream string-output-stream
+       fill-pointer-output-stream))
 
 ;;;; Standard streams:
 ;;;
@@ -113,6 +121,7 @@
 ;;;  :file-length	- Return the file length of a file stream.
 ;;;  :file-position	- Return or change the current position of a file stream.
 ;;;  :file-name		- Return the name of an associated file.
+;;;  :interactive-p     - Is this an interactive device?
 ;;;
 ;;;    In order to do almost anything useful, it is necessary to
 ;;; define a new type of structure that includes stream, so that the
@@ -161,11 +170,21 @@
        (or (not (eq (stream-out stream) #'ill-out))
 	   (not (eq (stream-bout stream) #'ill-bout)))))
 
+(defun open-stream-p (stream)
+  "Return true if Stream is not closed."
+  (declare (type stream stream))
+  (not (eq (stream-in stream) #'closed-flame)))
+
 (defun stream-element-type (stream)
   "Returns a type specifier for the kind of object returned by the Stream."
   (if (streamp stream)
       (funcall (stream-misc stream) stream :element-type)
       (error "~S is not a stream." stream)))
+
+(defun interactive-stream-p (stream)
+  "Return true if Stream does I/O on a terminal or other interactive device."
+  (declare (type stream stream))
+  (funcall (stream-misc stream) stream :interactive-p))
 
 (defun close (stream &key abort)
   "Closes the given Stream.  No more I/O may be performed, but inquiries
@@ -428,7 +447,7 @@
 			     (:print-function %print-broadcast-stream)
 			     (:constructor make-broadcast-stream (&rest streams)))
   ;; This is a list of all the streams we broadcast to.
-  streams)
+  (streams () :type list :read-only t))
 
 (setf (documentation 'make-broadcast-stream 'function)
  "Returns an ouput stream which sends its output to all of the given streams.")
@@ -481,7 +500,7 @@
 			   (:print-function %print-synonym-stream)
 			   (:constructor make-synonym-stream (symbol)))
   ;; This is the symbol, the value of which is the stream we are synonym to.
-  symbol)
+  (symbol :type symbol :read-only t))
 
 (defun %print-synonym-stream (s stream d)
   (declare (ignore d))
@@ -553,9 +572,9 @@
 	    (:print-function %print-two-way-stream)
 	    (:constructor make-two-way-stream (input-stream output-stream)))
   ;; We read from this stream...
-  input-stream
+  (input-stream (required-argument) :type stream :read-only t)
   ;; And write to this one
-  output-stream)
+  (output-stream (required-argument) :type stream :read-only t))
 
 (defun %print-two-way-stream (s stream d)
   (declare (ignore d))
@@ -625,7 +644,7 @@
   current
   ;; This is a list of all the streams.  We need to remember them so that
   ;; we can close them.
-  streams)
+  (streams nil :type list :read-only t))
 
 (defun %print-concatenated-stream (s stream d)
   (declare (ignore d))
