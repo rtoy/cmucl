@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.10 1992/02/13 23:13:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.11 1992/02/15 01:07:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 	  daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
 	  timeval tv-sec tv-usec timezone tz-minuteswest tz-dsttime
 	  itimerval it-interval it-value tchars t-intrc t-quitc t-startc
-	  t-stopc t-eofc t-brkc t-suspc t-dsuspc t-rprntc t-flushc
+	  t-stopc t-eofc t-brkc ltchars t-suspc t-dsuspc t-rprntc t-flushc
 	  t-werasc t-lnextc sgttyb sg-ispeed sg-ospeed sg-erase sg-kill
 	  sg-flags winsize ws-row ws-col ws-xpixel ws-ypixel
 	  direct d-off d-ino d-reclen d-namlen d-name
