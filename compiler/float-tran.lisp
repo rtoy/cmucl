@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.65 1998/03/21 07:53:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.66 1998/03/27 06:52:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,18 +144,21 @@
 (defknown double-float-low-bits (double-float) (unsigned-byte 32)
   (movable foldable flushable))
 
-(def-source-transform float-sign (float1 &optional (float2 nil f2-p))
-  (cond ((byte-compiling) (values nil t))
-	(f2-p `(* (float-sign ,float1) (abs ,float2)))
-	(t
-	 (let ((n-f1 (gensym)))
-	   `(let ((,n-f1 ,float1))
-	      (declare (float ,n-f1))
-	      (if (etypecase ,n-f1
-		    (single-float (minusp (single-float-bits ,n-f1)))
-		    (double-float (minusp (double-float-high-bits ,n-f1))))
-		  (float -1 ,n-f1)
-		  (float 1 ,n-f1)))))))
+(deftransform float-sign ((float &optional float2)
+			  (single-float &optional single-float) *)
+  (if float2
+      (let ((temp (gensym)))
+	`(let ((,temp (abs float2)))
+	  (if (minusp (single-float-bits float)) (- ,temp) ,temp)))
+      '(if (minusp (single-float-bits float)) -1f0 1f0)))
+
+(deftransform float-sign ((float &optional float2)
+			  (double-float &optional double-float) *)
+  (if float2
+      (let ((temp (gensym)))
+	`(let ((,temp (abs float2)))
+	  (if (minusp (double-float-high-bits float)) (- ,temp) ,temp)))
+      '(if (minusp (double-float-high-bits float)) -1d0 1d0)))
 
 
 ;;;; DECODE-FLOAT, INTEGER-DECODE-FLOAT, SCALE-FLOAT:
