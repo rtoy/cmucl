@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.8 1990/02/20 16:11:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.9 1990/02/24 17:09:04 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -192,7 +192,8 @@
 ;;;
 (def-instruction-format (break-special 4) (code)
   (special :unsigned 6 :constant special-op)
-  (code :unsigned 20 :immediate) ; This is the whole field
+  (code :unsigned 10 :immediate) ; The MIPS assembler only uses half the bits.
+  (unused :unsigned 10 :constant 0)
   (op :unsigned 6 :instruction-constant))
 
 ;;;
@@ -440,3 +441,24 @@
 
 (def-instruction store-foreign-value load-foreign-format
   :op2 #b101011)
+
+
+
+;;; BYTE, SHORT, and WORD instructions.
+;;;
+;;; These instructions emit a byte, short, or word in the instruction
+;;; stream.  If you use them, be sure to use (align 2) afterwords to
+;;; assure that additional code gets properly aligned.
+
+(def-instruction-format (byte-format 1) (value)
+  (value :unsigned 8 :immediate))
+(def-instruction byte byte-format)
+
+(def-instruction-format (short-format 2) (value)
+  (value :unsigned 16 :immediate))
+(def-instruction short short-format)
+
+(def-instruction-format (word-format 4) (value)
+  (value :unsigned 32 :immediate))
+(def-instruction word word-format)
+
