@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.24 2003/05/13 10:49:01 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.25 2003/06/12 09:06:30 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -313,7 +313,7 @@
 	   instance)))
 
 (defmethod slot-unbound ((class t) instance slot-name)
-  (error 'unbound-slot :slot slot-name :instance instance))
+  (error 'unbound-slot :name slot-name :slot slot-name :instance instance))
 
 (defun slot-unbound-internal (instance position)
   (slot-unbound (class-of instance) instance 
