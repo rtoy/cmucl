@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.7 1990/10/01 17:15:05 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.8 1990/10/03 11:57:41 wlott Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -141,6 +141,7 @@
   (:policy :fast-safe)
   (:note "inline float arithmetic")
   (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
     (note-this-location vop :internal-error)
     (inst float-op operation format r x y)))
@@ -180,6 +181,7 @@
 		(:result-types ,type)
 		(:note "inline float arithmetic")
 		(:vop-var vop)
+		(:save-p :compute-only)
 		(:generator 1
 		  (note-this-location vop :internal-error)
 		  (inst ,inst ,format y x)))))
@@ -199,6 +201,7 @@
   (:policy :fast-safe)
   (:note "inline float comparison")
   (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 3
     (note-this-location vop :internal-error)
     (inst fcmp operation format x y)
@@ -244,6 +247,7 @@
 		  (:note "inline float coercion")
 		  (:translate ,translate)
 		  (:vop-var vop)
+		  (:save-p :compute-only)
 		  (:generator ,(if word-p 3 2)
 		    ,@(if word-p
 			  `((inst mtc1 y x)
@@ -277,6 +281,7 @@
 		(:policy :fast-safe)
 		(:note "inline float truncate")
 		(:vop-var vop)
+		(:save-p :compute-only)
 		(:generator 3
 		  (note-this-location vop :internal-error)
 		  (inst fcvt :word ,from-format temp x)
