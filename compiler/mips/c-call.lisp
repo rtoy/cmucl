@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.6 1991/04/21 16:57:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.7 1991/07/14 03:59:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.6 1991/04/21 16:57:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.7 1991/07/14 03:59:34 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -127,7 +127,6 @@
   (:temporary (:sc any-reg :offset 2 :to (:result 0)) v0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
-  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:vop-var vop)
   (:generator 0
@@ -135,10 +134,9 @@
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
-      (inst compute-lra-from-code lra code lra-label temp)
+      (inst compute-lra-from-code lra code lra-label v0)
       (inst li v0 (make-fixup function :foreign))
-      (inst li temp (make-fixup "call_into_c" :foreign))
-      (inst j temp)
+      (inst j (make-fixup "call_into_c" :foreign))
       (inst nop)
 
       (align vm:lowtag-bits)
