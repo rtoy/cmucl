@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.17 1993/08/31 20:21:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.18 1993/08/31 21:33:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,7 +80,7 @@
   (let ((method (type-class-complex-intersection (type-class-info type1))))
     (if method
 	(funcall method type2 type1)
-	(vanilla-intesection type1 type2))))
+	(vanilla-intersection type1 type2))))
 
 ;;; HAS-SUPERCLASSES-COMPLEX-SUBTYPEP-ARG1  --  Internal
 ;;;
