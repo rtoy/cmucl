@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.12 1998/03/21 08:05:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.13 1998/06/18 07:02:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,6 +61,10 @@
 (def-alien-type-method (double-float :result-tn) (type)
   (declare (ignore type))
   (my-make-wired-tn 'double-float 'double-reg 0))
+
+(def-alien-type-method (single-float :result-tn) (type)
+  (declare (ignore type))
+  (my-make-wired-tn 'single-float 'single-reg 0))
 
 #+long-float
 (def-alien-type-method (long-float :result-tn) (type)
