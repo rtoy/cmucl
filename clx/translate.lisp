@@ -163,7 +163,7 @@
 	         mask)
 	   (type (or null display) display)
            (type (or null keysym) lowercase)
-	   (type (function (display card16 t) t) translate))
+	   (type (or null (function (display card16 t) t)) translate))
   (flet ((merge-keysym-mappings (new old)
 	   ;; Merge new keysym-mapping with list of old mappings.
 	   ;; Ensure that the mapping with no modifiers or mask comes first.
