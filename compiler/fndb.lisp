@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.105 2003/02/14 17:21:54 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.106 2003/02/15 18:30:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,8 @@
 ;;;; In the "Control Structure" chapter:
 
 ;;; Not flushable, since required to signal an error if unbound.
-(defknown (symbol-value symbol-function) (symbol) t ())
+(defknown symbol-value (symbol) t ())
+(defknown symbol-function (symbol) function ())
 
 (defknown boundp (symbol) boolean (flushable))
 (defknown fboundp ((or symbol cons)) boolean (flushable explicit-check))
