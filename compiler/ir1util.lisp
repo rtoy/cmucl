@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.69 1993/08/20 17:46:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.70 1993/08/24 02:12:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1360,11 +1360,16 @@
 ;;;
 (declaim (maybe-inline find-constant))
 (defun find-constant (object)
-  (or (gethash object *constants*)
-      (setf (gethash object *constants*)
-	    (make-constant :value object  :name nil
-			   :type (ctype-of object)
-			   :where-from :defined))))
+  (if (or *coalesce-constants*
+	  (typep object '(or symbol number character instance)))
+      (or (gethash object *constants*)
+	  (setf (gethash object *constants*)
+		(make-constant :value object  :name nil
+			       :type (ctype-of object)
+			       :where-from :defined)))
+      (make-constant :value object  :name nil
+		     :type (ctype-of object)
+		     :where-from :defined)))
 
 
 ;;;; Find-NLX-Info  --  Interface

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.38 1993/08/20 17:46:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.39 1993/08/24 02:12:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -721,6 +721,7 @@
   `(let ((*free-variables* (make-hash-table :test #'eq))
 	 (*free-functions* (make-hash-table :test #'equal))
 	 (*constants* (make-hash-table :test #'equal))
+	 (*coalesce-constants* t)
 	 (*source-paths* (make-hash-table :test #'eq)))
      (handler-bind ((compiler-error #'compiler-error-handler)
 		    (style-warning #'compiler-style-warning-handler)

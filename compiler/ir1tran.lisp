@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.100 1993/08/21 00:35:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.101 1993/08/24 02:12:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,6 +72,12 @@
 ;;;
 (defvar *constants*)
 (proclaim '(hash-table *constants*))
+
+;;; When compiling Dylan, we don't coalesce constants, because the dylan
+;;; test suite implies that doing so is a bozo-no-no.
+;;;
+(defvar *coalesce-constants*)
+(declaim (type (member t nil) *coalesce-constants*))
 
 ;;; *source-paths* is a hashtable from source code forms to the path taken
 ;;; through the source to reach the form.  This provides a way to keep track of

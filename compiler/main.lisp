@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.97 1993/08/20 00:18:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.98 1993/08/24 02:12:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,8 @@
 		    *compiler-trace-output*
 		    *last-source-context* *last-original-source*
 		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *lexical-environment*))
+		    *last-message-count* *lexical-environment*
+		    *coalesce-constants*))
 
 ;;; Exported:
 (defvar *block-compile-default* :specified
@@ -865,6 +866,7 @@
 		 (process-form form
 			       `(original-source-start 0 ,current-idx)))))))
       (:dylan
+       (setf *coalesce-constants* nil)
        (let ((*error-output* *compiler-error-output*))
 	 (dylan::parse-and-convert
 	  stream

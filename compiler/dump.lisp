@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.57 1993/08/19 23:43:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.58 1993/08/24 02:11:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -856,9 +856,11 @@
 	   (typecase x
 	     (symbol (dump-symbol x file))
 	     (list
-	      (unless (equal-check-table x file)
-		(dump-list x file)
-		(equal-save-object x file)))
+	      (if *coalesce-constants*
+		  (unless (equal-check-table x file)
+		    (dump-list x file)
+		    (equal-save-object x file))
+		  (dump-list x file)))
 	     (layout
 	      (dump-layout x file)
 	      (eq-save-object x file))
@@ -1250,9 +1252,11 @@
 			    x)))
     (typecase simple-version
       (simple-base-string
-       (unless (equal-check-table x file)
-	 (dump-simple-string simple-version file)
-	 (equal-save-object x file)))
+       (if *coalesce-constants*
+	   (unless (equal-check-table x file)
+	     (dump-simple-string simple-version file)
+	     (equal-save-object x file))
+	   (dump-simple-string simple-version file)))
       (simple-vector
        (dump-simple-vector simple-version file)
        (eq-save-object x file))
