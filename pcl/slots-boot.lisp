@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.15 2002/10/29 16:20:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.16 2002/11/28 16:18:19 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -181,7 +181,6 @@
     (funcall function nv object)))
 
 (defun make-optimized-structure-slot-boundp-using-class-method-function ()
-  (declare (type function function))
   (lambda (class object slotd)
     (declare (ignore class object slotd))
     t))
