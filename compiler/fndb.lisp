@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.35 1991/12/16 10:08:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.36 1991/12/19 22:11:13 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1051,6 +1051,7 @@
 (defknown %typep (t (or type-specifier ctype)) boolean
   (movable flushable explicit-check))
 
+(defknown %cleanup-point () void)
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)
 (defknown %listify-rest-args (t t) list (flushable))
