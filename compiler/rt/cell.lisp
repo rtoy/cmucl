@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.2 1991/04/20 17:08:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.3 1991/04/23 17:00:56 chiles Exp $
 ;;;
 ;;; This file contains the VM definition of various primitive memory access
 ;;; VOPs for the IBM RT.
@@ -332,6 +332,14 @@
 
 ;;;; Extra random indexers.
 
-(define-vop (code-constant-set word-index-set)
-  (:variant vm:code-constants-offset vm:other-pointer-type))
+(define-vop (code-header-ref word-index-ref)
+  (:translate code-header-ref)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))
+
+(define-vop (code-header-set word-index-set)
+  (:translate code-header-set)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))
+
 
