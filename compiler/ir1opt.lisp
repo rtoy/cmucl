@@ -1325,7 +1325,7 @@
 		(change-ref-leaf ref fun)
 		(assert (eq (basic-combination-kind node) :full))
 		(local-call-analyze *current-component*)
-		(assert (eq (functional-kind (ref-leaf ref)) :mv-let)))))))))
+		(assert (eq (basic-combination-kind node) :local)))))))))
 
   (undefined-value))
 
