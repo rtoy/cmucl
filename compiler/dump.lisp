@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.50 1993/05/08 00:46:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.51 1993/05/11 13:53:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -362,34 +362,43 @@
 ;;; Open-Fasl-File  --  Interface
 ;;;
 ;;;    Return a Fasl-File object for dumping to the named file.  Some
-;;; information about the source is specified by the string Where.
+;;; information about the source is specified by the string Where.  If byte-p
+;;; is true, this file will contain no native code, and is thus largely
+;;; implementation independent.
 ;;;
-(defun open-fasl-file (name where)
+(defun open-fasl-file (name where &optional byte-p)
   (declare (type pathname name))
   (let* ((stream (open name :direction :output
 		       :if-exists :new-version
 		       :element-type '(unsigned-byte 8)))
 	 (res (make-fasl-file :stream stream)))
-    (format stream
-	    "FASL FILE output from ~A.~@
-	    Compiled ~A on ~A~@
-	    Compiler ~A, Lisp ~A~@
-	    Targeted for ~A, FASL version ~D~%"
-	    where
-	    (ext:format-universal-time nil (get-universal-time))
-	    (machine-instance) compiler-version
-	    (lisp-implementation-version)
-	    (backend-version *backend*)
-	    (backend-fasl-file-version *backend*))
-    ;;
-    ;; Terminate header.
-    (dump-byte 255 res)
-    ;;
-    ;; Specify code format.
-    (dump-fop 'lisp::fop-code-format res)
-    (dump-byte (backend-fasl-file-implementation *backend*) res)
-    (dump-byte (backend-fasl-file-version *backend*) res)
-
+    (multiple-value-bind
+	(version f-vers f-imp)
+	(if byte-p
+	    (values "Byte code"
+		    byte-fasl-file-version
+		    (backend-byte-fasl-file-implementation *backend*))
+	    (values (backend-version *backend*)
+		    (backend-fasl-file-version *backend*)
+		    (backend-fasl-file-implementation *backend*)))
+      (format stream
+	      "FASL FILE output from ~A.~@
+	       Compiled ~A on ~A~@
+	       Compiler ~A, Lisp ~A~@
+	       Targeted for ~A, FASL version ~D~%"
+	      where
+	      (ext:format-universal-time nil (get-universal-time))
+	      (machine-instance) compiler-version
+	      (lisp-implementation-version)
+	      version f-vers)
+      ;;
+      ;; Terminate header.
+      (dump-byte 255 res)
+      ;;
+      ;; Specify code format.
+      (dump-fop 'lisp::fop-code-format res)
+      (dump-byte f-imp res)
+      (dump-byte f-vers res))
     res))
 
 
@@ -666,8 +675,9 @@
 
 ;;; DUMP-BYTE-CODE-OBJECT -- internal.
 ;;; 
-(defun dump-byte-code-object (segment constants file)
+(defun dump-byte-code-object (segment length constants file)
   (declare (type new-assem:segment segment)
+	   (type index length)
 	   (type vector constants)
 	   (type fasl-file file))
   (collect ((entry-patches) (xep-patches))
@@ -707,11 +717,10 @@
 	      (xep-patches (cons (cdr entry) i))
 	      (dump-fop 'lisp::fop-misc-trap file)))))))
 
-    ;; ### No debug info for now.
-    (dump-object nil file)
+    ;; For now, just the component name as debug info:
+    (dump-object (component-name *compile-component*) file)
 
-    (let ((num-consts (1+ (length constants)))
-	  (length (byte-output-length segment)))
+    (let ((num-consts (1+ (length constants))))
       (cond ((and (< num-consts #x100) (< length #x10000))
 	     (dump-fop 'lisp::fop-small-code file)
 	     (dump-byte num-consts file)
@@ -734,8 +743,9 @@
 ;;; Dump a byte-component.  This is similar to FASL-DUMP-COMPONENT, but
 ;;; different.
 ;;;
-(defun fasl-dump-byte-component (segment constants xeps file)
+(defun fasl-dump-byte-component (segment length constants xeps file)
   (declare (type new-assem:segment segment)
+	   (type index length)
 	   (type vector constants)
 	   (type list xeps)
 	   (type fasl-file file))
@@ -746,14 +756,14 @@
   
   (multiple-value-bind
       (code-handle xep-patches)
-      (dump-byte-code-object segment constants file)
+      (dump-byte-code-object segment length constants file)
     (dump-fop 'lisp::fop-verify-empty-stack file)
     (dolist (noise xeps)
       (let* ((lambda (car noise))
 	     (info (lambda-info lambda))
 	     (xep (cdr noise))
 	     (fake-component (list nil)))
-	(setf (byte-xep-component xep) fake-component)
+	(setf (byte-function-component xep) fake-component)
 	(setf (gethash fake-component (fasl-file-eq-table file)) code-handle)
 	(let ((*dump-only-valid-structures* nil))
 	  (dump-object xep file))
