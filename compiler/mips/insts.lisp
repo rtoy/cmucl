@@ -7,6 +7,8 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.2 1990/02/05 22:52:55 ch Exp $
+;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
 ;;; Written by Christopher Hoover
@@ -14,7 +16,8 @@
 
 (in-package "C")
 
-
+;;; Clear out any old definitions.
+;;; 
 (clrhash *instructions*)
 (clrhash *instruction-formats*)
 
@@ -284,7 +287,7 @@
 
 
 ;;;
-;;; These two aren't right
+;;; ### These two aren't right
 ;;; 
 (def-branch j (label) label
   (0 (ash 1 28) (j-inst label)))
