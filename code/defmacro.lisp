@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.22 2002/08/23 18:31:04 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defmacro.lisp,v 1.23 2002/11/02 23:18:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -139,7 +139,10 @@
 		     (t
 		      (defmacro-error "&ENVIRONMENT" error-kind name))))
 	      ((or (eq var '&rest) (eq var '&body))
-	       (cond ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
+	       (cond ((and (cddr rest-of-args)
+			   (not (member (caddr rest-of-args) lambda-list-keywords)))
+		      (defmacro-error (symbol-name var) error-kind name))
+		     ((and (cdr rest-of-args) (symbolp (cadr rest-of-args)))
 		      (setf rest-of-args (cdr rest-of-args))
 		      (setf restp t)
 		      (push-let-binding (car rest-of-args) path nil))
