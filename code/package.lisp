@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.31 1993/07/15 23:33:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.32 1993/07/23 13:44:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -745,16 +745,16 @@
 	(dolist (sym-name (cdr imports-from))
 	  (import (find-or-make-symbol sym-name other-package) package))))
     ;; Exports.
-    (let ((old-exports nil))
+    (let ((old-exports nil)
+	  (exports (mapcar #'(lambda (sym-name) (intern sym-name package))
+			   exports)))
       (do-external-symbols (sym package)
 	(push sym old-exports))
-      (dolist (sym-name exports)
-	(let ((sym (intern sym-name package)))
-	  (export sym package)
-	  (setf old-exports (delete sym old-exports :test #'eq))))
-      (when old-exports
-	(warn "~A also exports the following symbols:~%  ~S"
-	      name old-exports)))
+      (export exports package)
+      (let ((diff (set-difference old-exports exports)))
+	(when diff
+	  (warn "~A also exports the following symbols:~%  ~S"
+		name diff))))
     package))
 
 (defun find-or-make-symbol (name package)
