@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.3 1992/02/14 23:45:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.4 1992/02/15 12:47:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 (defun get-system-info ()
   (multiple-value-bind (err? utime stime maxrss ixrss idrss
 			     isrss minflt majflt)
-		       (unix:unix-getrusage mach:rusage_self)
+		       (unix:unix-getrusage unix:rusage_self)
     (declare (ignore maxrss ixrss idrss isrss minflt majflt))
     (unless err?
       (error "Unix system call getrusage failed: ~A."
