@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.7 2004/05/18 22:46:57 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.8 2004/07/08 03:37:53 rtoy Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -40,7 +40,7 @@ static void process_directory(int fd, long *ptr, int count)
 	    real_addr=os_map(fd, offset, addr, len);
 	    if(real_addr!=addr)
 	    fprintf(stderr,
-	"process_directory: file mapped in wrong place! (0x%08x != 0x%08lx)\n",
+	"process_directory: file mapped in wrong place! (0x%p != 0x%p)\n",
 		real_addr,
 		addr);
 	}
@@ -120,7 +120,7 @@ lispobj load_core_file(char *file)
 
 	  case CORE_VERSION:
 	    if (*ptr != version) {
-		fprintf(stderr, "WARNING: startup-code version (%d) different from core version (%d).\nYou may lose big.\n", version, *ptr);
+		fprintf(stderr, "WARNING: startup-code version (%d) different from core version (%ld).\nYou may lose big.\n", version, *ptr);
 	    }
 	    break;
 
