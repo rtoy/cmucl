@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.3 1991/12/09 17:02:39 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/lisp.1,v 1.4 1993/11/17 17:01:11 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -97,6 +97,15 @@ If `df /tmp' shows `swap' as the filesystem for the `/tmp' directory, then you
 have a "tmpfs" filesystem.  In this case, you must setenv CMUCL_EMPTYFILE to
 point into a pathname on a non-TMPFS filesystem that can be used instead of
 `/tmp/empty'.
+.TP
+.BR XKEYSYMDB
+In order to use Motif (and the graphical debugger) with X servers from
+non-OSF vendors (like Sun) you may need to set the environment variable
+XKEYSYMDB to point to the file `lib/XKeySymDB'.  Otherwise, you will get many
+error messages every time a new connection is opened to the CMU CL motifd.
+This file is read by the X11R5 Xt in order to augment the keysym database with
+certain OSF vendor keysyms that Motif wants to use.
+
 .PP
 
 .SH FILES
@@ -125,6 +134,9 @@ Inspector files.
 .TP
 .BR lib/fonts/ 
 X11 fonts for Hemlock and the inspector.
+.TP
+.BR lib/XKeysymDB
+Database of X Keysym names for Motif.
 .TP
 .BR lib/load-foreign.csh
 Script used by LOAD-FOREIGN to run "ld".
