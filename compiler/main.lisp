@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.82 1993/05/11 14:05:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.83 1993/05/12 11:22:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,10 +60,12 @@
 (defvar *byte-compile* :maybe)
 
 ;;; Bound by COMPILE-COMPONENT to T when byte-compiling, and NIL when
-;;; native compiling.
+;;; native compiling.  During IR1 conversion this can also be :MAYBE, in which
+;;; case we must look at the policy, see (byte-compiling).
 ;;;
-(defvar *byte-compiling*)
-
+(defvar *byte-compiling* :maybe)
+(declaim (type (member t nil :maybe) *byte-compile* *byte-compiling*
+	       *byte-compile-default*))
 
 (defvar compiler-version "1.0")
 (pushnew :python *features*)
@@ -344,11 +346,22 @@
   (undefined-value))
 
 
+;;; BYTE-COMPILING  --  Interface
+;;;
+;;;    Return our best guess for whether we will byte compile code currently
+;;; being IR1 converted.  Only a guess because the decision is made on a
+;;; per-component basis.
+;;;
+(defun byte-compiling ()
+  (if (eq *byte-compiling* :maybe)
+      (policy nil (zerop speed) (<= debug 1))
+      *byte-compiling*))
+
+  
 ;;; COMPILE-COMPONENT -- internal.
 ;;;
 (defun compile-component (component)
   (let* ((*compile-component* component)
-	 (*byte-compiling*
 	  (ecase *byte-compile*
 	    ((t) t)
 	    ((nil) nil)
