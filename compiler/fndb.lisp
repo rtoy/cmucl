@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.2 1997/08/06 12:29:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.68.2.3 1997/08/17 19:59:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1044,7 +1044,7 @@
 				(:use-labels t))
   void)
 
-(defknown documentation ((or symbol cons) symbol)
+(defknown documentation (t symbol)
   (or string null)
   (flushable))
 
