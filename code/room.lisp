@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.17 1992/12/13 15:54:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.18 1992/12/17 09:13:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -632,7 +632,7 @@
 		 (incf count-so-far)
 		 (case type
 		   (#.code-header-type
-		    (let ((dinfo (code-debug-info obj)))
+		    (let ((dinfo (%code-debug-info obj)))
 		      (format stream "~&Code object: ~S~%"
 			      (if dinfo
 				  (c::compiled-debug-info-name dinfo)
@@ -675,7 +675,7 @@
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (when (eql type code-header-type)
-	   (let* ((dinfo (code-debug-info obj))
+	   (let* ((dinfo (%code-debug-info obj))
 		  (name (if dinfo
 			    (ecase how
 			      (:package (c::compiled-debug-info-package dinfo))
