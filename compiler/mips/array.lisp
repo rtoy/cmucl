@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.30 1991/02/20 15:14:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.31 1991/04/16 20:10:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.30 1991/02/20 15:14:11 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.31 1991/04/16 20:10:37 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -222,7 +222,7 @@
 	 (:result-types positive-fixnum)
 	 (:temporary (:scs (interior-reg)) lip)
 	 (:temporary (:scs (non-descriptor-reg)) temp old)
-	 (:temporary (:scs (non-descriptor-reg) :from :eval) shift)
+	 (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) shift)
 	 (:generator 25
 	   (inst srl temp index ,bit-shift)
 	   (inst sll temp 2)
