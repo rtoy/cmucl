@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.40 1990/12/02 12:58:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.41 1991/02/04 18:44:03 ram Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -41,7 +41,7 @@
 (defreg nl3 1)
 (defreg nl4 2)
 (defreg flags 3)
-(defreg nl0 4)
+(defreg nl0 4) ; First C argument reg.
 (defreg nl1 5)
 (defreg nl2 6)
 (defreg nargs 7)
@@ -78,6 +78,12 @@
 
 (defregset register-arg-offsets
   a0 a1 a2 a3 a4 a5)
+
+(defregset reserve-descriptor-regs
+  cname lexenv)
+
+(defregset reserve-non-descriptor-regs
+  nl3 nl4)
 
 
 ;;;; SB and SC definition:
@@ -170,6 +176,8 @@
   (any-reg
    registers
    :locations #.(append non-descriptor-regs descriptor-regs)
+   :reserve-locations #.(append reserve-non-descriptor-regs
+				reserve-descriptor-regs)
    :constant-scs (negative-immediate zero immediate unsigned-immediate
 			   immediate-base-character random-immediate)
    :save-p t
@@ -178,6 +186,7 @@
   ;; Pointer descriptor objects.  Must be seen by GC.
   (descriptor-reg registers
    :locations #.descriptor-regs
+   :reserve-locations #.reserve-descriptor-regs
    :constant-scs (constant null random-immediate)
    :save-p t
    :alternate-scs (control-stack))
@@ -185,6 +194,7 @@
   ;; Non-Descriptor characters
   (base-character-reg registers
    :locations #.non-descriptor-regs
+   :reserve-locations #.reserve-non-descriptor-regs
    :constant-scs (immediate-base-character)
    :save-p t
    :alternate-scs (base-character-stack))
@@ -192,6 +202,7 @@
   ;; Non-Descriptor SAP's (arbitrary pointers into address space)
   (sap-reg registers
    :locations #.non-descriptor-regs
+   :reserve-locations #.reserve-non-descriptor-regs
    :constant-scs (immediate-sap)
    :save-p t
    :alternate-scs (sap-stack))
@@ -199,12 +210,14 @@
   ;; Non-Descriptor (signed or unsigned) numbers.
   (signed-reg registers
    :locations #.non-descriptor-regs
+   :reserve-locations #.reserve-non-descriptor-regs
    :constant-scs (negative-immediate zero immediate unsigned-immediate
 				     random-immediate)
    :save-p t
    :alternate-scs (signed-stack))
   (unsigned-reg registers
    :locations #.non-descriptor-regs
+   :reserve-locations #.reserve-non-descriptor-regs
    :constant-scs (zero immediate unsigned-immediate random-immediate)
    :save-p t
    :alternate-scs (unsigned-stack))
@@ -223,6 +236,7 @@
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+   :reserve-locations (26 28 30)
    :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
@@ -230,16 +244,12 @@
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   ;; Note: we don't bother with the element size, 'cause load-tn's with
-   ;; an element-size other than one don't work, and nothing can be allocated
-   ;; in the odd fp regs anyway.
-   ;; :element-size 2
+   :reserve-locations (26 28 30)
+   ;; Note: we don't bother with the element size, 'cause nothing can be
+   ;; allocated in the odd fp regs anyway.
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
-
-
-
 
   ;; A catch or unwind block.
   (catch-block control-stack :element-size vm:catch-block-size))
