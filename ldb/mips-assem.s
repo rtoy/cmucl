@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.7 1990/07/01 04:36:11 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.8 1990/07/23 19:43:45 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -226,12 +226,6 @@ call_into_c:
 1:
 
 	.set	reorder
-
-	/* Get first 4 args. */
-	lw	a0, 0(sp)
-	lw	a1, 4(sp)
-	lw	a2, 8(sp)
-	lw	a3, 12(sp)
 
 	/* Into C land we go. */
 	jal	v0
