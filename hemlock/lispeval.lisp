@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.3 1991/02/08 16:36:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispeval.lisp,v 1.1.1.4 1991/04/26 17:37:11 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -569,18 +569,6 @@
       "The Server-Info for the eval server used in this buffer."
       :buffer (current-buffer)
       :value (maybe-create-server))))
-
-#+ :IGNORETHIS
-(defcommand "Connect Registered Eval Server" (p)
-  "Tries to connect to a registered eval server.  Prompts for name."
-  "Tries to connect to a registered eval server.  Prompts for name."
-  (declare (ignore p))
-  (connect-registered-eval-server
-   (prompt-for-string :prompt "Name to lookup: "
-		      :help "Registered eval server to connect to.")
-   (prompt-for-string
-    :prompt "Local server name: "
-    :help "Editor's name for server and \"Background <name>\" buffer.")))
 
 (defcommand "Evaluate Defun" (p)
   "Evaluates the current or next top-level form.
