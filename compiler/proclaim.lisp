@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.16 1991/04/20 14:15:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.17 1991/05/23 17:53:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 (in-package "C")
 
 (in-package "EXTENSIONS")
-(export '(inhibit-warnings freeze-type optimize-interface))
+(export '(inhibit-warnings freeze-type optimize-interface constant-function))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -237,6 +237,7 @@
     (macrolet ((frob (type &optional val)
 		 `(unless (eq (info function ,type name) ,val)
 		    (setf (info function ,type name) ,val))))
+      (frob info)
       (frob type (specifier-type 'function))
       (frob where-from :assumed)
       (frob inlinep)
@@ -334,8 +335,13 @@
 	 (when (eq (info type kind type) :structure)
 	   (freeze-structure-type type))))
       (function
+       ;;
+       ;; Handle old-style FUNCTION declaration, which is a shorthand for
+       ;; FTYPE.
        (when *type-system-initialized*
-	 (%proclaim `(ftype (function . ,(rest args)) ,(first args)))))
+	 (if (and (<= 2 (length args) 3) (listp (second args)))
+	     (%proclaim `(ftype (function . ,(rest args)) ,(first args)))
+	     (%proclaim `(type function . ,args)))))
       (optimize
        (setq *default-cookie*
 	     (process-optimize-declaration form *default-cookie*)))
@@ -350,6 +356,13 @@
 		 (inline :inline)
 		 (notinline :notinline)
 		 (maybe-inline :maybe-inline)))))
+      (constant-function
+       (let ((info (make-function-info
+		    :attributes (ir1-attributes movable foldable flushable
+						unsafe))))
+	 (dolist (name args)
+	   (define-function-name name)
+	   (setf (info function info name) info))))
       (declaration
        (dolist (decl args)
 	 (unless (symbolp decl)
@@ -482,7 +495,7 @@
       (dolist (subtype (dd-included-by info))
 	(setf (info type frozen subtype) nil)))))
 
-	   
+
 ;;; %%Compiler-Defstruct  --  Interface
 ;;;
 ;;;    This function updates the global compiler information to represent the
@@ -507,7 +520,7 @@
        (compiler-warning "Redefining DEFTYPE type to be a DEFSTRUCT: ~S."
 			 name)
        (setf (info type expander name) nil)))
-
+    
     (dolist (inc (dd-includes info))
       (let ((info (info type structure-info inc)))
 	(unless info
@@ -515,17 +528,21 @@
 		 inc name))
 	(unless (member name (dd-included-by info))
 	  (add-new-subtype name inc info))))
-
+    
     (setf (info type kind name) :structure)
     (setf (info type structure-info name) info)
     (%note-type-defined name)
     
     (let ((copier (dd-copier info)))
       (when copier
-	(%proclaim `(ftype (function (,name) ,name) ,copier)))))
-
-  ;;; ### Should make a known type predicate.
-  (define-defstruct-name (dd-predicate info))
+	(%proclaim `(ftype (function (,name) ,name) ,copier))))
+    
+    (let ((pred (dd-predicate info)))
+      (when pred
+	(define-defstruct-name pred)
+	(setf (info function inlinep pred) :inline)
+	(setf (info function inline-expansion pred)
+	      `(lambda (x) (typep x ',name))))))
 
   (dolist (slot (dd-slots info))
     (let* ((fun (dsd-accessor slot))
