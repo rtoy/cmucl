@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.38 2003/05/12 16:30:42 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.39 2003/05/13 10:16:59 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -518,7 +518,7 @@
 	   (let* ((class (kernel::find-class name))
 		  (kernel-supers (kernel:%class-direct-superclasses class))
 		  (supers (mapcar #'kernel:%class-name kernel-supers)))
-             (ext:without-package-locks
+             (without-package-locks
               (if slotsp
                   (ensure-class-using-class
                    existing-class name :metaclass metaclass :name name

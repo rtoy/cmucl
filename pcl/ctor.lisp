@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.10 2003/05/13 09:38:28 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.11 2003/05/13 10:16:59 gerd Exp $")
 
 (in-package "PCL")
 
@@ -175,8 +175,7 @@
 	       (let ((ps #(.p0. .p1. .p2. .p3. .p4. .p5.)))
 		 (if (array-in-bounds-p ps i)
 		     (aref ps i)
-                     (ext:without-package-locks
-                      (intern (format nil ".P~D." i) *the-pcl-package*)))))
+		     (make-.variable. 'p i))))
 	     ;;
 	     ;; Check if CLASS-NAME is a constant symbol.  Give up if
 	     ;; not.
@@ -221,11 +220,10 @@
 	  ;; Return code constructing a ctor at load time, which, when
 	  ;; called, will set its funcallable instance function to an
 	  ;; optimized constructor function.
-	  `(ext:without-package-locks
-            (let ((.x. (load-time-value
-                        (ensure-ctor ',function-name ',class-name ',initargs))))
-              (declare (ignore .x.))
-              (funcall (function ,function-name) ,@value-forms))))))))
+	  `(let ((.x. (load-time-value
+		       (ensure-ctor ',function-name ',class-name ',initargs))))
+	     (declare (ignore .x.))
+	     (funcall (function ,function-name) ,@value-forms)))))))
 
 
 ;;; **************************************************
@@ -242,24 +240,25 @@
 (defvar *the-system-si-method* nil)
 
 (defun install-optimized-constructor (ctor)
-  (flet ((install (optimized-p)
-	   (multiple-value-bind (lambda fn)
-	       (if optimized-p
-		   (constructor-function-form ctor)
-		   (fallback-generator ctor))
-	     (setf (kernel:funcallable-instance-function ctor)
-		   (or fn
-		       (letf (((compiler-macro-function 'make-instance) nil))
-			 (compile-lambda lambda)))))))
-    (let ((class (find-class (ctor-class-name ctor) nil)))
-      (setf (ctor-class ctor) class)
-      (cond ((null class)
-	     (install nil))
-	    (t
-	     (unless (class-finalized-p class)
-	       (finalize-inheritance class))
-	     (pushnew ctor (plist-value class 'ctors))
-	     (install (null *cold-boot-state*)))))))
+   (flet ((install (optimized-p)
+	    (without-package-locks
+	     (multiple-value-bind (lambda fn)
+		 (if optimized-p
+		     (constructor-function-form ctor)
+		     (fallback-generator ctor))
+	       (setf (kernel:funcallable-instance-function ctor)
+		     (or fn
+			 (letf (((compiler-macro-function 'make-instance) nil))
+			   (compile-lambda lambda))))))))
+     (let ((class (find-class (ctor-class-name ctor) nil)))
+       (setf (ctor-class ctor) class)
+       (cond ((null class)
+	      (install nil))
+	     (t
+	      (unless (class-finalized-p class)
+		(finalize-inheritance class))
+	      (pushnew ctor (plist-value class 'ctors))
+	      (install (null *cold-boot-state*))))))))
 
 (defun constructor-function-form (ctor)
   (let* ((class (ctor-class ctor))
@@ -500,8 +499,7 @@
 	       (let ((ps #(.d0. .d1. .d2. .d3. .d4. .d5.)))
 		 (if (array-in-bounds-p ps i)
 		     (aref ps i)
-                     (ext:without-package-locks
-                      (intern (format nil ".D~D." i) *the-pcl-package*))))))
+		     (make-.variable. 'd i)))))
       ;;
       ;; Loop over supplied initargs and values and record which
       ;; instance and class slots they initialize.

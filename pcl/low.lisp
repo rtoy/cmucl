@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.27 2003/05/12 16:30:42 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.28 2003/05/13 10:16:58 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -106,7 +106,7 @@
   (declare (special *boot-state* *the-class-standard-generic-function*))
   (when (valid-function-name-p function)
     (setq function (fdefinition function)))
-  (ext:without-package-locks
+  (without-package-locks
    (when (funcallable-instance-p function)
      (if (if (eq *boot-state* 'complete)
              (typep function 'generic-function)
@@ -127,6 +127,11 @@
 (defun symbolicate* (pkg &rest things)
   (let ((*package* pkg))
     (apply #'symbolicate things)))
+
+(defun make-.variable. (stem i)
+  (without-package-locks
+   (intern (format nil ".~A~D." (string stem) i)
+	   *the-pcl-package*)))
 
 
 ;;;
