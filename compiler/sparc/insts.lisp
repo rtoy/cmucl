@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.38 2003/02/25 15:54:55 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.39 2003/02/25 17:05:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1238,7 +1238,7 @@ about function addresses and register values.")
 ;; registers.
 (define-instruction rdy (segment dst)
   (:declare (type tn dst))
-  (:printer format-3-immed ((op #b10) (op3 #b101000) (rs1 0) (immed 0))
+  (:printer format-3-reg ((op #b10) (op3 #b101000) (rs1 0) (rs2 0))
             '('RD :tab '%Y ", " rd))
   (:dependencies (reads :y) (writes dst))
   (:delay 0)
@@ -1270,7 +1270,7 @@ about function addresses and register values.")
 ;; Read the tick register available on sparc v9
 (define-instruction rdtick (segment dst)
   (:declare (type tn dst))
-  (:printer format-3-immed ((op #b10) (op3 #b101000) (rs1 4) (immed 0))
+  (:printer format-3-reg ((op #b10) (op3 #b101000) (rs1 4) (rs2 0))
             '('RD :tab '%TICK ", " rd))
   (:dependencies (reads :tick) (writes dst))
   (:delay 0)
