@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.10 1993/08/19 12:33:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.11 1994/02/10 21:08:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,11 +47,11 @@
      "You may want to supply an implementation-specific ~
      Quickly-Get-Time function."))
 
+  ;; In CMUCL, get-internal-run-time is good enough, so we just use it.
+
   (defconstant quick-time-units-per-second internal-time-units-per-second)
   
   (defmacro quickly-get-time ()
-    #+hpux 0
-    #-hpux
     `(the time-type (get-internal-run-time))))
 
 
@@ -224,6 +224,9 @@
 	 (setf (fdefinition name)
 	       #'(lambda (,@required-args
 			  ,@(if optionals-p
+				#+cmu
+				`(c:&more arg-context arg-count)
+				#-cmu
 				`(&rest optional-args)))
 		   (incf count)
 		   (when callers-p
@@ -256,6 +259,14 @@
 			       (*enclosed-profilings* 0))
 			   (multiple-value-prog1
 			       ,(if optionals-p
+				    #+cmu
+				    `(multiple-value-call
+					 old-definition
+				       (values ,@required-args)
+				       (c:%more-arg-values arg-context
+							   0
+							   arg-count))
+				    #-cmu
 				    `(apply old-definition
 					    ,@required-args optional-args)
 				    `(funcall old-definition ,@required-args))
