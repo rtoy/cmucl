@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.45 2001/03/13 02:10:29 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.46 2001/03/14 13:44:18 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,8 +1496,14 @@ a host-structure or string."
 (defun find-logical-host (thing &optional (errorp t))
   (etypecase thing
     (string
-     (let ((found (gethash (logical-word-or-lose thing)
-			   *logical-hosts*)))
+     (let ((found (or (gethash (logical-word-or-lose thing)
+			       *logical-hosts*)
+		      (and *autoload-translations*
+			   (handler-case
+			       (load-logical-pathname-translations thing)
+			     (error () nil))
+			   (gethash (logical-word-or-lose thing)
+				    *logical-hosts*)))))
        (if (or found (not errorp))
 	   found
 	   (error 'simple-file-error
@@ -1505,7 +1511,6 @@ a host-structure or string."
 		  :format-control "Logical host not yet defined: ~S"
 		  :format-arguments (list thing)))))
     (logical-host thing)))
-
 
 ;;; INTERN-LOGICAL-HOST -- Internal
 ;;;
