@@ -981,7 +981,10 @@
       (format stream "lambda ~S ~S" (leaf-name leaf)
 	      (mapcar #'leaf-name (lambda-vars leaf))))
     (optional-dispatch
-     (format stream "optional-dispatch ~S" (leaf-name leaf)))))
+     (format stream "optional-dispatch ~S" (leaf-name leaf)))
+    (functional
+     (assert (eq (functional-kind leaf) :top-level-xep))
+     (format stream "TL-XEP ~S" (entry-info-name (leaf-info leaf))))))
 
 
 ;;; Block-Or-Lose  --  Interface
