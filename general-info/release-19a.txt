@@ -175,6 +175,7 @@ New in this release:
      - SIGPROF having the wrong value on GNU/Linux.
      - Wrong byte-code being generated for (APPLY #'+ <X> <Y>) and
        similar cases.
+     - GCD sometimes returning a negative value.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
