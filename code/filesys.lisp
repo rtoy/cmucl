@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.75 2003/06/11 16:40:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.76 2003/08/05 16:31:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -673,10 +673,16 @@
 				 (let ((*ignore-wildcards* t))
 				   (extract-name-type-and-version
 				    file 0 (length file)))
+			       ;; Match also happens if the file has
+			       ;; no explicit version and we're asking
+			       ;; for version :NEWEST, since that's
+			       ;; what no version means.
 			       (when (and (components-match file-name name)
 					  (components-match file-type type)
-					  (components-match file-version
-							    version))
+					  (or (components-match file-version
+								version)
+					      (and (eq file-version nil)
+						   (eq version :newest))))
 				 (funcall function
 					  (concatenate 'string
 						       directory
