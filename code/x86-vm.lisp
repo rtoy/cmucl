@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.8 1997/11/11 18:51:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.9 1997/11/16 13:53:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,8 +24,7 @@
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name sanctify-for-execution
-	  alternate-get-global-address))
+	  extern-alien-name sanctify-for-execution))
 
 
 ;;;; The sigcontext structure.
