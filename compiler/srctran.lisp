@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.78 1998/02/11 06:06:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.79 1998/02/13 17:15:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1376,6 +1376,7 @@
 ) ;end progn
 
 
+#-propagate-fun-type
 (defoptimizer (ash derive-type) ((n shift))
   (or (let ((n-type (continuation-type n)))
 	(when (numeric-type-p n-type)
@@ -1384,12 +1385,7 @@
 	    (if (constant-continuation-p shift)
 		(let ((shift (continuation-value shift)))
 		  (make-numeric-type :class 'integer  :complexp :real
-				     :low (when n-low
-					    #+new-compiler
-					    (ash n-low shift)
-					    ;; ### fuckin' bignum bug.
-					    #-new-compiler
-					    (* n-low (ash 1 shift)))
+				     :low (when n-low (ash n-low shift))
 				     :high (when n-high (ash n-high shift))))
 		(let ((s-type (continuation-type shift)))
 		  (when (numeric-type-p s-type)
@@ -1407,6 +1403,30 @@
 					     :complexp :real)))))))))
       *universal-type*))
 
+#+propagate-fun-type
+(defun ash-derive-type-aux (n-type shift same-arg)
+  (declare (ignore same-arg))
+  (or (and (csubtypep n-type (specifier-type 'integer))
+	   (csubtypep shift (specifier-type 'integer))
+	   (let ((n-low (numeric-type-low n-type))
+		 (n-high (numeric-type-high n-type))
+		 (s-low (numeric-type-low shift))
+		 (s-high (numeric-type-high shift)))
+	     (if (and s-low s-high (<= s-low 32) (<= s-high 32))
+		 (make-numeric-type :class 'integer  :complexp :real
+				    :low (when n-low
+					   (min (ash n-low s-high)
+						(ash n-low s-low)))
+				    :high (when n-high
+					    (max (ash n-high s-high)
+						 (ash n-high s-low))))
+		 (make-numeric-type :class 'integer
+				    :complexp :real))))
+      *universal-type*))
+
+#+propagate-fun-type
+(defoptimizer (ash derive-type) ((n shift))
+  (two-arg-derive-type n shift #'ash-derive-type-aux #'ash))
 
 #-propagate-float-type
 (macrolet ((frob (fun)
@@ -2154,8 +2174,6 @@
 		     0
 		     '*))))
 
-
-
 (defoptimizer (random derive-type) ((bound &optional state))
   (let ((type (continuation-type bound)))
     (when (numeric-type-p type)
@@ -2191,6 +2209,8 @@
 		(or (null min) (minusp min))))
       (values nil t t)))
 
+#-propagate-fun-type
+(progn
 (defoptimizer (logand derive-type) ((x y))
   (multiple-value-bind
       (x-len x-pos x-neg)
@@ -2306,6 +2326,141 @@
        (t
 	(specifier-type 'integer))))))
 
+) ; end progn
+
+#+propagate-fun-type
+(progn
+(defun logand-derive-type-aux (x y &optional same-leaf)
+  (declare (ignore same-leaf))
+  (multiple-value-bind
+      (x-len x-pos x-neg)
+      (integer-type-length x)
+    (declare (ignore x-pos))
+    (multiple-value-bind
+	(y-len y-pos y-neg)
+	(integer-type-length  y)
+      (declare (ignore y-pos))
+      (if (not x-neg)
+	  ;; X must be positive.
+	  (if (not y-neg)
+	      ;; The must both be positive.
+	      (cond ((or (null x-len) (null y-len))
+		     (specifier-type 'unsigned-byte))
+		    ((or (zerop x-len) (zerop y-len))
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type `(unsigned-byte ,(min x-len y-len)))))
+	      ;; X is positive, but Y might be negative.
+	      (cond ((null x-len)
+		     (specifier-type 'unsigned-byte))
+		    ((zerop x-len)
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type `(unsigned-byte ,x-len)))))
+	  ;; X might be negative.
+	  (if (not y-neg)
+	      ;; Y must be positive.
+	      (cond ((null y-len)
+		     (specifier-type 'unsigned-byte))
+		    ((zerop y-len)
+		     (specifier-type '(integer 0 0)))
+		    (t
+		     (specifier-type
+		      `(unsigned-byte ,y-len))))
+	      ;; Either might be negative.
+	      (if (and x-len y-len)
+		  ;; The result is bounded.
+		  (specifier-type `(signed-byte ,(1+ (max x-len y-len))))
+		  ;; We can't tell squat about the result.
+		  (specifier-type 'integer)))))))
+
+(defun logior-derive-type-aux (x y &optional same-leaf)
+  (declare (ignore same-leaf))
+  (multiple-value-bind
+      (x-len x-pos x-neg)
+      (integer-type-length x)
+    (multiple-value-bind
+	(y-len y-pos y-neg)
+	(integer-type-length y)
+      (cond
+       ((and (not x-neg) (not y-neg))
+	;; Both are positive.
+	(if (and x-len y-len (zerop x-len) (zerop y-len))
+	    (specifier-type '(integer 0 0))
+	    (specifier-type `(unsigned-byte ,(if (and x-len y-len)
+					     (max x-len y-len)
+					     '*)))))
+       ((not x-pos)
+	;; X must be negative.
+	(if (not y-pos)
+	    ;; Both are negative.  The result is going to be negative and be
+	    ;; the same length or shorter than the smaller.
+	    (if (and x-len y-len)
+		;; It's bounded.
+		(specifier-type `(integer ,(ash -1 (min x-len y-len)) -1))
+		;; It's unbounded.
+		(specifier-type '(integer * -1)))
+	    ;; X is negative, but we don't know about Y.  The result will be
+	    ;; negative, but no more negative than X.
+	    (specifier-type
+	     `(integer ,(or (numeric-type-low x) '*)
+		       -1))))
+       (t
+	;; X might be either positive or negative.
+	(if (not y-pos)
+	    ;; But Y is negative.  The result will be negative.
+	    (specifier-type
+	     `(integer ,(or (numeric-type-low y) '*)
+		       -1))
+	    ;; We don't know squat about either.  It won't get any bigger.
+	    (if (and x-len y-len)
+		;; Bounded.
+		(specifier-type `(signed-byte ,(1+ (max x-len y-len))))
+		;; Unbounded.
+		(specifier-type 'integer))))))))
+
+(defun logxor-derive-type-aux (x y &optional same-leaf)
+  (declare (ignore same-leaf))
+  (multiple-value-bind
+      (x-len x-pos x-neg)
+      (integer-type-length x)
+    (multiple-value-bind
+	(y-len y-pos y-neg)
+	(integer-type-length y)
+      (cond
+       ((or (and (not x-neg) (not y-neg))
+	    (and (not x-pos) (not y-pos)))
+	;; Either both are negative or both are positive.  The result will be
+	;; positive, and as long as the longer.
+	(if (and x-len y-len (zerop x-len) (zerop y-len))
+	    (specifier-type '(integer 0 0))
+	    (specifier-type `(unsigned-byte ,(if (and x-len y-len)
+					     (max x-len y-len)
+					     '*)))))
+       ((or (and (not x-pos) (not y-neg))
+	    (and (not y-neg) (not y-pos)))
+	;; Either X is negative and Y is positive of vice-verca.  The result
+	;; will be negative.
+	(specifier-type `(integer ,(if (and x-len y-len)
+				       (ash -1 (max x-len y-len))
+				       '*)
+				  -1)))
+       ;; We can't tell what the sign of the result is going to be.  All we
+       ;; know is that we don't create new bits.
+       ((and x-len y-len)
+	(specifier-type `(signed-byte ,(1+ (max x-len y-len)))))
+       (t
+	(specifier-type 'integer))))))
+
+(macrolet ((frob (logfcn)
+	     (let ((fcn-aux (symbolicate logfcn "-DERIVE-TYPE-AUX")))
+	     `(defoptimizer (,logfcn derive-type) ((x y))
+	        (two-arg-derive-type x y #',fcn-aux #',logfcn)))))
+  (frob logand)
+  (frob logior)
+  (frob logxor))
+
+) ; end progn
 
 
 ;;;; Miscellaneous derive-type methods:
