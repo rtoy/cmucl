@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.12 1990/10/01 14:56:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.13 1990/10/05 13:11:44 wlott Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -713,11 +713,11 @@
   (finish-random array stream))
 
 
-;;; Structure Printing.  These days we can always pass the buck to the Defstruct
-;;; code.
+;;; Structure Printing.  These days we can always pass the buck to the
+;;; Defstruct code.
 
 (defun output-structure (structure stream currlevel)
-  (funcall (or (info type printer (svref structure 0))
+  (funcall (or (info type printer (%primitive c::structure-ref structure 0))
 	       #'c::default-structure-print)
 	   structure stream currlevel))
 
