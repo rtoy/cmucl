@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.105 1995/02/17 00:04:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.106 1995/08/18 13:05:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -926,7 +926,8 @@
                           "*USE-IMPLEMENTATION-TYPES*"
 			  "*BYTE-COMPILE-TOP-LEVEL*"
 			  "*BYTE-COMPILE-DEFAULT*"
-			  "PURIFY" "MAP-APROPOS"))
+			  "PURIFY" "MAP-APROPOS"
+			  *batch-mode*))
 (defpackage "LOOP")
 (dolist
     (name
@@ -1185,7 +1186,8 @@
              "WAIT-UNTIL-FD-USABLE" "WITH-ENABLED-INTERRUPTS" "WITH-FD-HANDLER"
              "WITH-INTERRUPTS" "WITH-REPLY-PORT" "WITHOUT-GCING"
              "WITHOUT-HEMLOCK" "WITHOUT-INTERRUPTS" "WORDS"
-	     "OS-INIT" "ALLOCATE-SYSTEM-MEMORY-AT"))
+	     "OS-INIT" "ALLOCATE-SYSTEM-MEMORY-AT"
+	     "ALTERNATE-GET-GLOBAL-ADDRESS"))
 (dolist
     (name
      '("*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION" "INTEGER" "SINGLE-FLOAT" "UNION"
