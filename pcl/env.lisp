@@ -100,8 +100,10 @@
 
 (defgeneric describe-object (object stream))
 
+#-cmu
 (defvar *old-describe* ())
 
+#-cmu
 (eval-when (load)
   (unless *old-describe* (setq *old-describe* (symbol-function 'describe)))
   (setf (symbol-function 'describe)
@@ -117,8 +119,11 @@
 	    (values))))
 
 (defmethod describe-object (object stream)
+  #-cmu
   (let ((*standard-output* stream))
-    (funcall *old-describe* object)))
+    (funcall *old-describe* object))
+  #+cmu
+  (describe object stream))
 
 (defmethod describe-object ((object standard-object) stream)
   (let* ((class (class-of object))
@@ -168,6 +173,19 @@
 			 (slot-value-or-default object (slotd-name slotd))
 			 (slotd-allocation slotd))))
       (values))))
+
+#+cmu
+(defmethod describe-object ((fun standard-generic-function) stream)
+  (format stream "~A is a generic function.~%" fun)
+  (format stream "Its arguments are:~%  ~S~%"
+	  (generic-function-pretty-arglist fun))
+  (format stream "Its methods are:")
+  (dolist (meth (generic-function-methods fun))
+    (format stream "~2%**** ~{~S ~}~:S =>~%"
+	    (method-qualifiers meth)
+	    (unparse-specializers meth))
+    (describe-object (method-function meth) stream)))
+
 
 (defmethod slots-to-inspect ((class std-class) (object standard-object))
   (class-slots class))
