@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.66 2001/03/03 16:50:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.67 2001/03/13 02:10:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,9 +24,7 @@
 	  get-setf-expansion define-setf-expander
           define-modify-macro destructuring-bind nth-value
           otherwise ; Sacred to CASE and related macros.
-	  define-compiler-macro
-	  ;; CLtL1 versions:
-	  define-setf-method get-setf-method get-setf-method-multiple-value))
+	  define-compiler-macro))
 
 (in-package "EXTENSIONS")
 (export '(do-anonymous collect iterate))

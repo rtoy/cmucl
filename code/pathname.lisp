@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.44 2001/03/11 22:02:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.45 2001/03/13 02:10:29 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 
 (in-package "LISP")
 
-(export '(pathname pathnamep logical-pathname logical-pathname-p
+(export '(pathname pathnamep logical-pathname
 	  parse-namestring merge-pathnames make-pathname
 	  pathname-host pathname-device pathname-directory pathname-name
 	  pathname-type pathname-version namestring file-namestring

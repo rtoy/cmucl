@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.27 2000/12/27 15:42:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.28 2001/03/13 02:10:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1408,7 +1408,7 @@
   (with-pretty-stream (stream)
     (funcall (pprint-dispatch object) stream object)))
 
-(defparameter magic-forms
+(defparameter *magic-forms*
   '((lambda pprint-lambda)
     ;; Special forms.
     (block pprint-block)
@@ -1417,8 +1417,6 @@
     (eval-when pprint-block)
     (flet pprint-flet)
     (function pprint-quote)
-    (generic-flet pprint-flet)
-    (generic-labels pprint-flet)
     (labels pprint-flet)
     (let pprint-let)
     (let* pprint-let)
@@ -1435,7 +1433,6 @@
     (tagbody pprint-tagbody)
     (throw pprint-block)
     (unwind-protect pprint-block)
-    (with-added-methods pprint-flet)
     
     ;; Macros.
     (case pprint-case)
@@ -1503,7 +1500,7 @@
 			 #'pprint-function-call -1)
     (set-pprint-dispatch 'cons #'pprint-fill -2)
     ;; Cons cells with interesting things for the car.
-    (dolist (magic-form magic-forms)
+    (dolist (magic-form *magic-forms*)
       (set-pprint-dispatch `(cons (eql ,(first magic-form)))
 			   (symbol-function (second magic-form))))
     ;; Other pretty-print init forms.
