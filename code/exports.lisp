@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.60 1990/12/01 22:18:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.61 1990/12/01 22:24:02 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -211,7 +211,6 @@
 (use-package "EXT")
 (use-package "SYSTEM")
 (use-package "BIGNUM")
-(use-package "VM")
 
 (export '(%array-fill-pointer %array-fill-pointer-p
 	  %array-available-elements %array-data-vector %array-displacement
@@ -553,7 +552,6 @@
 (use-package "EXT")
 (use-package "KERNEL")
 (use-package "SYSTEM")
-(use-package "VM")
 (use-package "ASSEM")
 (use-package "BIGNUM")
 
@@ -708,7 +706,6 @@
 
 (in-package "BIGNUM")
 (use-package "KERNEL")
-(use-package "VM")
 
 (export '(add-bignums multiply-bignums negate-bignum subtract-bignum
 	  multiply-bignum-and-fixnum multiply-fixnums
