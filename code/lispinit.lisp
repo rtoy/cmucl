@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.22 1991/08/30 14:29:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.23 1991/08/30 14:59:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -576,28 +576,6 @@
   (setf *task-self* (mach:mach-task_self))
   (setf *task-data* (mach:mach-task_data))
   (setf *task-notify* (mach:mach-task_notify)))
-
-
-;;; Setup-path-search-list returns a list of the directories that are
-;;; in the unix path environment variable.  This is so that run-program
-;;; can be smarter about where to find a program to run.
-(defun setup-path-search-list ()
-  (let ((path (cdr (assoc :path ext::*environment-list*))))
-    (when path
-      (do* ((i 0 (1+ p))
-	    (p (position #\: path :start i)
-	       (position #\: path :start i))
-	    (pl ()))
-	   ((null p)
-	    (let ((s (subseq path i)))
-	      (if (string= s "")
-		  (push "default:" pl)
-		  (push (concatenate 'simple-string s "/") pl)))
-	    (nreverse pl))
-	(let ((s (subseq path i p)))
-	  (if (string= s "")
-	      (push "default:" pl)
-	      (push (concatenate 'simple-string s "/") pl)))))))
 
 
 ;;;; Miscellaneous external functions:
