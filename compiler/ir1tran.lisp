@@ -2163,11 +2163,10 @@
 	(let ((name (first def))
 	      (arglist (second def))
 	      (body (cddr def)))
-	  (multiple-value-bind (body local-decs)
-			       (lisp::parse-defmacro
-				arglist whole body name
-				:environment environment
-				:error-string 'lisp::defmacro-error-string)
+	  (multiple-value-bind
+	      (body local-decs)
+	      (lisp::parse-defmacro arglist whole body name 'macrolet
+				    :environment environment)
 	    (unless (symbolp name)
 	      (compiler-error "Macro name ~S is not a symbol." name))
 	    (when (< (length def) 3)

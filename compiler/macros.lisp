@@ -147,12 +147,11 @@
   (let ((fn-name (symbolicate "IR1-CONVERT-" name))
 	(n-form (gensym))
 	(n-env (gensym)))
-    (multiple-value-bind (body decls doc)
-			 (lisp::parse-defmacro
-			  lambda-list n-form body name
-			  :error-string "Wrong number of arguments to special form ~S: ~D."
-			  :doc-string-allowed t
-			  :environment n-env)
+    (multiple-value-bind
+	(body decls doc)
+	(lisp::parse-defmacro lambda-list n-form body name 'special-form
+			      :doc-string-allowed t
+			      :environment n-env)
       `(progn
 	 (proclaim '(function ,fn-name (continuation continuation t) void))
 	 (defun ,fn-name (,start-var ,cont-var ,n-form)
@@ -193,10 +192,11 @@
   (let ((fn-name (symbolicate "SOURCE-TRANSFORM-" name))
 	(n-form (gensym))
 	(n-env (gensym)))
-    (multiple-value-bind (body decls)
-			 (lisp::parse-defmacro lambda-list n-form body name
-					       :error-string "Foo!"
-					       :environment n-env)
+    (multiple-value-bind
+	(body decls)
+	(lisp::parse-defmacro lambda-list n-form body name
+			      'def-source-transform
+			      :environment n-env)
       `(progn
 	 (defun ,fn-name (,n-form)
 	   (let ((,n-env *lexical-environment*))
@@ -215,11 +215,11 @@
   (let ((fn-name (symbolicate "PRIMITIVE-TRANSLATE-" name))
 	(n-form (gensym))
 	(n-env (gensym)))
-    (multiple-value-bind (body decls)
-			 (lisp::parse-defmacro
-			  lambda-list n-form body name
-			  :error-string "Wrong number of arguments to primitive ~S: ~D."
-			  :environment n-env)
+    (multiple-value-bind
+	(body decls)
+	(lisp::parse-defmacro lambda-list n-form body name
+			      'def-primitive-translator
+			      :environment n-env)
       `(progn
 	 (defun ,fn-name (,n-form)
 	   (let ((,n-env *lexical-environment*))
