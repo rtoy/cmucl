@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.2 1990/07/21 15:33:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.3 1990/07/31 17:22:14 wlott Exp $
 ;;;
 ;;; This file contains all the irrational functions.  Actually, most of the
 ;;; work is done by calling out to C...
@@ -114,7 +114,7 @@
 ;;; inverted if negative.
 
 (defun expt (base power)
-  "Returns x raised to the nth power."
+  "Returns BASE raised to the POWER."
   (if (zerop power)
       ;; This is wrong if power isn't an integer.
       (typecase (realpart base)
@@ -149,21 +149,32 @@
 	 (exp (* power (log base)))))))
 
 (defun log (number &optional (base nil base-p))
+  "Return the logarithm of NUMBER in the base BASE, which defaults to e."
   (if base-p
       (/ (log number) (log base))
       (number-dispatch ((number number))
-	(handle-reals %log number)
-	((complex)
-	 (complex (log (abs number))
-		  (phase number))))))
+	(((foreach fixnum bignum ratio single-float))
+	 (if (minusp number)
+	     (complex (log (- number)) (coerce pi 'single-float))
+	     (coerce (%log (coerce number 'double-float)) 'single-float)))
+	((double-float)
+	 (if (minusp number)
+	     (complex (log (- number)) (coerce pi 'double-float))
+	     (%log number)))
+	((complex) (complex (log (abs number)) (phase number))))))
 
 (defun sqrt (number)
   "Return the square root of NUMBER."
   (number-dispatch ((number number))
-    (handle-reals %sqrt number)
-    ((complex)
-     (* (exp (/ (complex 0 (phase number)) 2))
-	(sqrt (abs number))))))
+    (((foreach fixnum bignum ratio single-float))
+     (if (minusp number)
+	 (exp (/ (log number) 2))
+	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
+    ((double-float)
+     (if (minusp number)
+	 (exp (/ (log number) 2))
+	 (%sqrt number)))
+    ((complex) (exp (/ (log number) 2)))))
 
 ;;; ISQRT:  Integer square root - isqrt(n)**2 <= n
 ;;; Upper and lower bounds on the result are estimated using integer-length.
@@ -207,27 +218,24 @@
 
 (defun phase (number)
   "Returns the angle part of the polar representation of a complex number.
+  For complex numbers, this is (atan (imagpart number) (realpart number)).
   For non-complex positive numbers, this is 0.  For non-complex negative
   numbers this is PI."
-  (if (zerop number)
-      (if (typep number 'double-float) 0.0d0 0.0)
-      (atan (imagpart number) (realpart number))))
+  (etypecase number
+    ((or rational single-float)
+     (if (minusp number)
+	 (coerce pi 'single-float)
+	 0.0f0))
+    (double-float
+     (if (minusp number)
+	 (coerce pi 'double-float)
+	 0.0d0))
+    (complex
+     (atan (imagpart number) (realpart number)))))
 
-#|
-  (if (complexp number)
-      (let ((ipart (imagpart number))
-	    (rpart (realpart number)))
-	(if (zerop rpart)
-	    (if (minusp ipart)
-		(if (long-float-p ipart) (- %long-pi/2) (- %short-pi/2))
-		(if (long-float-p ipart) %long-pi/2 %short-pi/2))
-	    (atan (/ (imagpart number) (realpart number)))))
-      (if (minusp number)
-	  (if (long-float-p number) pi %short-pi)
-	  (if (long-float-p number) 0.0l0 0.0))))
-|#
 
 (defun sin (number)  
+  "Return the sine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %sin number)
     ((complex)
@@ -236,6 +244,7 @@
        (complex (* (sin x) (cosh y)) (* (cos x) (sinh y)))))))
 
 (defun cos (number)
+  "Return the cosine of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %cos number)
     ((complex)
@@ -244,6 +253,7 @@
        (complex (* (cos x) (cosh y)) (- (* (sin x) (sinh y))))))))
 
 (defun tan (number)
+  "Return the tangent of NUMBER."
   (number-dispatch ((number number))
     (handle-reals %tan number)
     ((complex)
@@ -253,44 +263,72 @@
 	   (/ num denom))))))
 
 (defun cis (theta)
-  "Return cos(Theta) + i sin(Theta), aka exp(i Theta)."
+  "Return cos(Theta) + i sin(Theta), AKA exp(i Theta)."
   (if (complexp theta)
       (error "Argument to CIS is complex: ~S" theta)
       (complex (cos theta) (sin theta))))
 
-#+nil
-(defun in-asin-domain (z)
-  (or (< (- (/ pi 2.0d0)) (realpart z) (/ pi 2.0d0))
-      (and (= (realpart z) (- (/ pi 2.0d0)))
-	   (>= (imagpart z) 0))
-      (and (= (realpart z) (/ pi 2.0d0))
-	   (<= (imagpart z) 0))))
+(proclaim '(inline mult-by-i))
+(defun mult-by-i (number)
+  (complex (imagpart number)
+	   (- (realpart number))))
+
+(defun complex-asin (number)
+  (- (mult-by-i (log (+ (mult-by-i number) (sqrt (- 1 (* number number))))))))
 
 (defun asin (number)
+  "Return the arc sine of NUMBER."
   (number-dispatch ((number number))
-    (handle-reals %asin number)
+    ((rational)
+     (if (or (> number 1) (< number -1))
+	 (complex-asin number)
+	 (coerce (%asin (coerce number 'double-float)) 'single-float)))
+    (((foreach single-float double-float))
+     (if (or (> number (coerce 1 '(dispatch-type number)))
+	     (< number (coerce -1 '(dispatch-type number))))
+	 (complex-asin number)
+	 (coerce (%asin (coerce number 'double-float))
+		 '(dispatch-type number))))
     ((complex)
-     (error "Can't hack complex ASIN yet: ~S" number))))
+     (complex-asin number))))
 
-#+nil
-(defun in-acos-domain (z)
-  (or (< 0 (realpart z) pi)
-      (and (= 0 (realpart z))
-	   (>= (imagpart z) 0))
-      (and (= (realpart z) pi)
-	   (<= (imagpart z) 0))))
+(defun complex-acos (number)
+  (- (mult-by-i (log (+ number (mult-by-i (sqrt (- (* number number)))))))))
 
 (defun acos (number)
+  "Return the arc cosine of NUMBER."
   (number-dispatch ((number number))
-    (handle-reals %acos number)
+    ((rational)
+     (if (or (> number 1) (< number -1))
+	 (complex-acos number)
+	 (coerce (%acos (coerce number 'double-float)) 'single-float)))
+    (((foreach single-float double-float))
+     (if (or (> number (coerce 1 '(dispatch-type number)))
+	     (< number (coerce -1 '(dispatch-type number))))
+	 (complex-acos number)
+	 (coerce (%acos (coerce number 'double-float))
+		 '(dispatch-type number))))
     ((complex)
-     (error "Can't hack complex ACOS yet: ~S" number))))
+     (complex-acos number))))
 
 
 (defun atan (y &optional (x nil xp))
+  "Return the arc tangent of Y if X is omitted or Y/X if X is supplied."
   (if xp
       (if (and (zerop x) (zerop y))
-	  (error "Both args to ATAN can't be zero.")
+	  (multiple-value-bind
+	      (mag exp sign-x)
+	      (integer-decode-float (float x))
+	    (declare (ignore mag exp))
+	    (if (plusp sign-x)
+		y
+		(multiple-value-bind
+		    (mag exp sign-y)
+		    (integer-decode-float (float y))
+		  (declare (ignore mag exp))
+		  (if (minusp sign-y)
+		      (- pi)
+		      pi))))
 	  (number-dispatch ((y real) (x real))
 	    (((foreach fixnum bignum ratio single-float)
 	      (foreach fixnum bignum ratio single-float))
@@ -305,4 +343,36 @@
       (number-dispatch ((y number))
 	(handle-reals %atan y)
 	((complex)
-	 (error "Can't handle complex ATAN yet: ~S" y)))))
+	 (let ((im (imagpart y))
+	       (re (realpart y)))
+	   (/ (- (log (complex (- 1 im) re))
+		 (log (complex (+ 1 im) (- re))))
+	      (complex 0 2)))))))
+
+
+(defun sinh (number)
+  "Return the hyperbolic sine of NUMBER."
+  (/ (- (exp number) (exp (- number))) 2))
+
+(defun cosh (number)
+  "Return the hyperbolic cosine of NUMBER."
+  (/ (+ (exp number) (exp (- number))) 2))
+
+(defun tanh (number)
+  "Return the hyperbolic tangent of NUMBER."
+  (/ (- (exp number) (exp (- number)))
+     (+ (exp number) (exp (- number)))))
+
+
+(defun asinh (number)
+  "Return the hyperbolic arc sine of NUMBER."
+  (log (+ number (sqrt (1+ (* number number))))))
+
+(defun acosh (number)
+  "Return the hyperbolic arc cosine of NUMBER."
+  (log (+ number (* (1+ number) (sqrt (/ (1- number) (1+ number)))))))
+
+(defun atanh (number)
+  "Return the hyperbolic arc tangent of NUMBER."
+  (log (* (1+ number) (sqrt (/ (- 1 (* number number)))))))
+
