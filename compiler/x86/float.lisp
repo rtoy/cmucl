@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6.2.5 2000/05/23 16:37:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.6.2.6 2000/06/26 15:57:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
 ;;;
 ;;; Rewrite, enhancements, complex-float and long-float support by
-;;; Douglas Crosher, 1996, 1997, 1998.
+;;; Douglas Crosher, 1996, 1997, 1998, 1999, 2000.
 ;;;
 
 (in-package :x86)
@@ -1271,6 +1271,19 @@
 		(:generator 3
 		   ;; Handle a few special cases
 		   (cond
+		     ;; x is ST0.
+		     ((and (sc-is x single-reg) (zerop (tn-offset x)))
+		      (sc-case y
+			(single-reg
+			 (inst fcom y))
+			((single-stack descriptor-reg)
+			 (if (sc-is y single-stack)
+			     (inst fcom (ea-for-sf-stack y))
+			     (inst fcom (ea-for-sf-desc y)))))
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)
+		      ,@(unless (zerop test)
+			  `((inst cmp ah-tn ,test))))
 		     ;; y is ST0.
 		     ((and (sc-is y single-reg) (zerop (tn-offset y)))
 		      (sc-case x
@@ -1284,14 +1297,13 @@
 		      (inst and ah-tn #x45)
 		      ,@(unless (zerop ntest)
 			  `((inst cmp ah-tn ,ntest))))
-		     ;; General case when y is not in ST0.
+		     ;; General case when neither x or y is in ST0.
 		     (t
 		      ,@(if (zerop ntest)
 			    `(;; y to ST0
 			      (sc-case y
 			        (single-reg
-				 (unless (zerop (tn-offset y))
-				   (copy-fp-reg-to-fr0 y)))
+				 (copy-fp-reg-to-fr0 y))
 			        ((single-stack descriptor-reg)
 				 (fp-pop)
 				 (if (sc-is y single-stack)
@@ -1309,8 +1321,7 @@
 			    `(;; x to ST0
 			      (sc-case x
 			        (single-reg
-				 (unless (zerop (tn-offset x))
-				   (copy-fp-reg-to-fr0 x)))
+				 (copy-fp-reg-to-fr0 x))
 			        ((single-stack descriptor-reg)
 				 (fp-pop)
 				 (if (sc-is x single-stack)
@@ -1349,7 +1360,20 @@
 		(:generator 3
 		   ;; Handle a few special cases
 		   (cond
-		     ;; y is ST0.
+		     ;; x is in ST0.
+		     ((and (sc-is x double-reg) (zerop (tn-offset x)))
+		      (sc-case y
+			(double-reg
+			 (inst fcomd y))
+			((double-stack descriptor-reg)
+			 (if (sc-is y double-stack)
+			     (inst fcomd (ea-for-df-stack y))
+			     (inst fcomd (ea-for-df-desc y)))))
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)
+		      ,@(unless (zerop test)
+			  `((inst cmp ah-tn ,test))))
+		     ;; y is in ST0.
 		     ((and (sc-is y double-reg) (zerop (tn-offset y)))
 		      (sc-case x
 			(double-reg
@@ -1362,14 +1386,13 @@
 		      (inst and ah-tn #x45)
 		      ,@(unless (zerop ntest)
 			  `((inst cmp ah-tn ,ntest))))
-		     ;; General case when y is not in ST0.
+		     ;; General case when neither x or y is in ST0.
 		     (t
 		      ,@(if (zerop ntest)
 			    `(;; y to ST0
 			      (sc-case y
 			        (double-reg
-				 (unless (zerop (tn-offset y))
-				   (copy-fp-reg-to-fr0 y)))
+				 (copy-fp-reg-to-fr0 y))
 			        ((double-stack descriptor-reg)
 				 (fp-pop)
 				 (if (sc-is y double-stack)
@@ -1387,8 +1410,7 @@
 			    `(;; x to ST0
 			      (sc-case x
 			        (double-reg
-				 (unless (zerop (tn-offset x))
-				   (copy-fp-reg-to-fr0 x)))
+				 (copy-fp-reg-to-fr0 x))
 			        ((double-stack descriptor-reg)
 				 (fp-pop)
 				 (if (sc-is x double-stack)
