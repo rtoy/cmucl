@@ -275,7 +275,6 @@ struct sigcontext *old_context;
     vm_size_t len;
     vm_address_t nsp;
     kern_return_t res;
-    vm_machine_attribute_val_t flush;
 
 
     /* We have to move the number stack into place. */
@@ -287,14 +286,6 @@ struct sigcontext *old_context;
     bcopy(number_stack, nsp, len);
 
     vm_deallocate(task_self(), number_stack, round_page(len));
-
-    /* Flush the old number stack from the cache. */
-    flush = MATTR_VAL_CACHE_FLUSH;
-
-    res = vm_machine_attribute(task_self(), nsp, len,
-                                MATTR_CACHE, &flush);
-    if (res != KERN_SUCCESS)
-        mach_error("Could not flush the number stack from the cache: ", res);
 
     sigreturn(&context);
 
