@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.13 1992/05/07 08:48:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.14 1992/05/07 09:12:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,7 +165,7 @@
     (let* ((size (ceiling size rehash-threshold))
 	   (length (if (<= size 37) 37 (almost-primify size)))
 	   (vector (make-array length :initial-element nil)))
-      (make-hash-table-structure
+      (%make-hash-table
        :test test
        :test-fun test-fun
        :hash-fun hash-fun
