@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.3 1990/11/23 08:37:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.4 1990/11/25 08:09:00 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
@@ -611,7 +611,8 @@
 	  ((loop-keyword-p clause "SYMBOL" "PRESENT-SYMBOL" "EXTERNAL-SYMBOL"
 			   "SYMBOLS" "PRESENT-SYMBOLS" "EXTERNAL-SYMBOLS")
 	   (let ((package
-		  (if (preposition-p "IN" "OF")
+		  (if (or (preposition-p "IN")
+			  (preposition-p "OF"))
 		      (pop *remaining-stuff*)
 		      '*package*))
 		 (iterator (gensym (format nil "~A-ITERATOR-" name)))
