@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.20 1990/11/05 20:03:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.21 1990/11/10 18:42:05 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -104,14 +104,14 @@
 (deftype unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character))
+      (when (subtypep type '(or integer character float))
 	(types `(array ,type ,dims))))
     (types)))
 
 (deftype simple-unboxed-array (&optional dims)
   (collect ((types (list 'or)))
     (dolist (type specialized-array-element-types)
-      (when (subtypep type '(or integer character))
+      (when (subtypep type '(or integer character float))
 	(types `(simple-array ,type ,dims))))
     (types)))
 
