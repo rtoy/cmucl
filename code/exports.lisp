@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.96 1993/09/10 19:24:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.97 1993/09/13 19:54:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -977,7 +977,8 @@
 		"SHORT-FLOAT-P" "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
 		"STRING>*" "STRING>=*")
   (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND" "&MORE"
-	   "%LISTIFY-REST-ARGS" "%MORE-ARG" "%UNWIND-PROTECT-BREAKUP"
+	   "%LISTIFY-REST-ARGS" "%MORE-ARG" "%MORE-ARG-VALUES"
+	   "%UNWIND-PROTECT-BREAKUP"
 	   "*BACKEND*" "*CODE-SEGMENT*" "*COLLECT-DYNAMIC-STATISTICS*"
 	   "*COMPILE-TIME-DEFINE-MACROS*" "*COMPILER-NOTIFICATION-FUNCTION*"
 	   "*COMPILING-FOR-INTERPRETER*" "*CONVERTING-FOR-INTERPRETER*"

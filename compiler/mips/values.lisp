@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.13 1992/07/28 20:38:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.14 1993/09/13 19:58:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,3 +96,29 @@
     DONE
     (inst subu count csp-tn start)))
 
+
+;;; Copy the more arg block to the top of the stack so we can use them
+;;; as function arguments.
+;;;
+(define-vop (%more-arg-values)
+  (:args (context :scs (descriptor-reg any-reg) :target src)
+	 (num :scs (descriptor-reg any-reg) :target count))
+  (:temporary (:sc any-reg :from (:argument 0)) src)
+  (:temporary (:sc any-reg :from (:argument 1)) dst)
+  (:temporary (:sc descriptor-reg :from (:argument 1)) temp)
+  (:results (start :scs (any-reg))
+	    (count :scs (any-reg)))
+  (:generator 20
+    (move src context)
+    (move count num)
+    (inst beq num zero-tn done)
+    (inst move start csp-tn)
+    (inst move dst csp-tn)
+    (inst addu csp-tn count)
+    LOOP
+    (inst lw temp src)
+    (inst addu src 4)
+    (inst addu dst 4)
+    (inst bne dst csp-tn loop)
+    (inst sw temp dst -4)
+    DONE))
