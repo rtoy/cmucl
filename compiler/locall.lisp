@@ -538,6 +538,9 @@
 ;;; and its lets to lets for the call's home function and move any cleanups and
 ;;; calls to the home function.  We merge the calls for Fun with the calls for
 ;;; the home function, removing Fun in the process.  We also merge the Entries.
+;;; This must run after INSERT-LET-BODY, since the call to NODE-ENDS-BLOCK
+;;; figures out the actual cleanup current at the let call (and sets the
+;;; start/end cleanups accordingly.)
 ;;;
 (defun merge-cleanups-and-lets (fun call)
   (declare (type clambda fun) (type basic-combination call))
@@ -641,8 +644,8 @@
 ;;;
 (defun let-convert (fun call)
   (declare (type clambda fun) (type basic-combination call))
-  (merge-cleanups-and-lets fun call)
   (insert-let-body fun call)
+  (merge-cleanups-and-lets fun call)
   (move-return-uses fun call)
 
   (dolist (arg (basic-combination-args call))
