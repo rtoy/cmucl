@@ -7,12 +7,12 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.10 1990/02/24 17:03:52 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.11 1990/02/25 18:35:05 ch Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
 ;;;
-;;; Written by Christopher Hoover.
+;;; Written by Christopher Hoover and William Lott.
 ;;;
 (in-package "C")
 
@@ -196,6 +196,8 @@
 (def-primitive-type bignum (descriptor-reg control-stack))
 (def-primitive-type ratio (descriptor-reg control-stack))
 (def-primitive-type complex (descriptor-reg control-stack))
+(def-primitive-type single-float (descriptor-reg control-stack))
+(def-primitive-type double-float (descriptor-reg control-stack))
 
 ;;;
 (def-primitive-type simple-string (descriptor-reg control-stack))
