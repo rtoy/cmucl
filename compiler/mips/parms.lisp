@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.10 1990/02/21 15:23:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.11 1990/02/21 19:36:12 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -40,7 +40,8 @@
 	  closure-header-type value-cell-header-type symbol-header-type
 	  character-type SAP-type unbound-marker-type atomic-flag
 	  interrupted-flag fixnum initial-symbols initial-symbol-offset
-	  *assembly-unit-length* target-fasl-code-format vm-version))
+	  offset-initial-symbol *assembly-unit-length*
+	  target-fasl-code-format vm-version)) 
 	  
 
 (eval-when (compile load eval)
@@ -211,6 +212,16 @@
        other-pointer-type
        (- list-pointer-type))))
 
+(defun offset-initial-symbol (offset)
+  "Given a byte offset returns the initial symbol."
+  (multiple-value-bind
+      (n rem)
+      (truncate (+ offset list-pointer-type (- other-pointer-type)
+		   (- (pad-data-block (1- symbol-size))))
+		(pad-data-block symbol-size))
+    (unless (and (zerop rem) (<= 0 n (1- (length initial-symbols))))
+      (error "Byte offset, ~D, is not correct." offset))
+    (elt initial-symbols n)))
 
 
 ;;;; Handy routine for making fixnums:
