@@ -81,6 +81,7 @@
 ;;; 
 (defsetf funcallable-instance-name set-funcallable-instance-name)
 
+;;; And returns the function, not the *name*.
 (defun set-function-name (fcn new-name)
   "Set the name of a compiled function object."
   (cond ((symbolp fcn)
@@ -89,7 +90,8 @@
 	 (setf (funcallable-instance-name fcn) new-name)
 	 fcn)
 	((eval:interpreted-function-p fcn)
-	 (setf (eval:interpreted-function-name fcn) new-name))
+	 (setf (eval:interpreted-function-name fcn) new-name)
+	 fcn)
 	(t
 	 (let ((header (kernel:%closure-function fcn)))
 	   (system:%primitive c::set-function-name header new-name))
