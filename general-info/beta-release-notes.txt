@@ -1,777 +1,490 @@
-	    Release notes for CMU Common Lisp 15e, 25 February 92
+	    Release notes for CMU Common Lisp 16d, 23 April 92
+
+16d is our first version 16 general release, and incorporates many changes not
+present in the 15 series.  It is currently fairly close to our current
+internal development (alpha) systems, and is thus less stable.  The major
+changes are:
+    New Aliens
+    New pathnames
+    New pretty printer
+    New format
+    R5.0 CLX.  
+    5/1/90  May Day PCL (REV 4b)
+    Revised manual
+
+The fasl file format is nominally compatible with version 15, but the pathname
+change affects any pathname constants in fasl files, which includes the
+defined-from information present in every fasl file.  It is probably a good
+idea to recompile everything.
+
+CLX and Hemlock are now optional.  When CMU CL is installed, the maintainer can
+elect not to load CLX and Hemlock -- this saves 7 megabytes of disk and
+improves memory usage somewhat.  See the installation section of the README
+file for details.
+
+The ``CMU Common Lisp User's Manual'' has been updated to be more helpful for
+non-CMU users.  The new manual also documents the new Alien facility for
+foreign function calls and data structure access.  The manual is now formatted
+with Mike Clarkson's LaTeXinfo package, so a consistent version of the
+documentation is available online in Gnu info format.  See `doc/cmu-user.ps'
+and `doc/cmu-user.info'.
+ 
+
+General system code:
+
+ANSI cleanups:
+ -- ANSI Compiler macros are now implemented: see COMPILER-MACRO-FUNCTION,
+    COMPILER-MACROEXPAND, COMPILER-MACROEXPAND-1 and DEFINE-COMPILER-MACRO.
+ -- Fixed things that invoke *MACROEXPAND-HOOK* to coerce it to a function
+    before calling it.
+ -- Fixed MACRO-FUNCTION to take an environment argument.
+ -- SYMBOL-MACROLET now accepts declarations.
+ -- SHADOW now accepts strings in addition to symbols.
+ -- Added UPGRADED-ARRAY-ELEMENT-TYPE and UPGRADED-COMPLEX-PART-TYPE.
+ -- IGNORABLE is now in the LISP package instead of the EXT package.
+ -- ADJUST-ARRAY has been updated to allow adjusting of arrays which were
+    not created with :adjustable non-nil to be adjusted to new dimensions.
+ -- ADJUSTABLE-ARRAY-P has been updated correspondingly. It returns T if
+    adjust ADJUST-ARRAY would return an EQ array.
+ -- The BASE-CHARACTER type has been renamed to BASE-CHAR.
+ -- The REAL type and REALP function are now implemented.
+ -- Changed the default structure printer to print slot names as keywords
+    instead of unqualified symbols.
+
+Enhancements:
+ -- Added MAYBE-INLINE declaration for GET, PUT, etc., so that these
+    functions can be inline expanded according to the compilation policy.
+ -- Added some type declarations so that GET-INTERNAL-REAL-TIME doesn't cons.
+ -- Process the command line before printing the herald so that we can eval
+    some form and quit without printing anything.
+ -- SET now protects against setting T, NIL, and keywords.  (SETF
+    SYMBOL-FUNCTION) now expands into FSET, which protects against defining
+    NIL.
+ -- Substantially rearranged function describing to make it more consistent,
+    and added support for describing interpreted functions.
+ -- PURIFY is now called multiple times during system building to improve
+    locality.  
+ -- (EVAL-WHEN (EVAL) ...) is now actually eval'ed.
+
+Bug fixes:
+ -- Fixed bug in NTH-VALUE where it expanded into bogus code unless ``n'' was
+    a constant integer.
+ -- Fixed FMAKUNBOUND to return the symbol instead of T.
+ -- Allocate memory as executable so that the OS knows to maintain cache
+    consistency.
+ -- Changed DESCRIBE to allow T or NIL as the stream argument.
+
+Load enhancements and cleanups:
+ -- The initial value of *LOAD-VERBOSE* is now T.  Additionally, LOAD no
+    longer always binds *LOAD-VERBOSE* and *LOAD-PRINT*.  Now it only
+    binds them when :VERBOSE or :PRINT are explicity supplied.  Therefore, you
+    can set either of these in your init file and it will take effect.
+ -- Normally when *LOAD-VERBOSE* is T, only the file name is printed.
+    Formerly, the loaded stream was always printed, whereas now a stream is
+    printed only when the stream is not a file stream.
+ -- Added ANSI features *LOAD-TRUENAME*, *LOAD-PATHNAME* and *LOAD-PRINT*.
+ -- As per ANSI, bind *READTABLE* to itself to make assignments file-local.
+ -- Added new variables EXT:*SOURCE-FILE-TYPES* and EXT:*OBJECT-FILE-TYPES*.
+    When no file type is specified, LOAD tries the types in these lists to
+    locate the source and object files.  LOAD now recognizes source types "l",
+    "cl" and "lsp" in addition to "lisp".
+ -- The compiler OPTIMIZE policy is now bound during load, so proclamations in
+    a file don't leave the global policy clobbered when the load is finished.
+ -- Changed the :IF-SOURCE-NEWER option to signal an error and use restarts,
+    rather than PROMPT-FOR-Y-OR-N.  Fixed the load source case to actually
+    load the source, rather than loading the object as a source file...
+ -- Changed load to deal with source files having NIL type more reasonably.
+ -- If a wild pathname is given to LOAD, all files matched will be loaded.
+ -- Proceeding from nonexistent file errors has been improved.  It is no longer
+    assumed that missing files are always source files.  Added condition
+    restarts for missing files.
+ -- Improved formatting of error and warning messages.
 
 
-15e is mainly a bug-fix release; it will probably be the last version 15
-release, and is thus the most stable system you're going to see for a while.
-We're reluctant to call it a "default" release because some things are stably
-broken:
- -- There still isn't any good stack overflow detection.  Probably stack
-    overflow detection won't appear until the C code rewrite associated with
-    generational GC comes out (version 17 or later.)
- -- The Alien/foreign function call mechanism is fairly broken.  It doesn't
-    work at all in interpreted code, and DEF-C-ROUTINE doesn't work properly
-    for many argument type signatures.  We've redesigned and reimplemented
-    our foreign interface for version 16.
+Garbage collection:
+ -- Changed the minimal ROOM output to include all easily computed information
+    including whether GC is disabled.  The verbose ROOM now conses less.
+ -- Removed the :ENABLE-GC SAVE-LISP option, as it's no longer needed.
+    Garbage collection is now correctly enabled in cores which have been saved
+    and then restarted.
+ -- Added EXT:BYTES-CONSED-BETWEEN-GCS, a function that returns (and sets when
+    used with setf) *BYTES-CONSED-BETWEEN-GCS*.  Additionally, it changes
+    *GC-TRIGGER* immediately to reflect the new values of *bytes-consed...*.
+ -- TIME now displays the GC run-time.
+ -- Added EXT:*GC-RUN-TIME* with accumulates the INTERNAL-RUN-TIME spent doing
+    garbage collection.  Added declarations to make EXT:GET-BYTES-CONSED more
+    efficient.
+ -- The top-level REP loop now zeros the unused non-zero portion of the
+    control stack to discourage spurious garbage retention.
+ -- The garbage collector now closes open file streams when it reclaims them.
 
-We are now distributing the CMU CL user manual in Gnu Info format (in
-doc/cmu-user.info.)  You can either have your EMACS maintainer install this in
-the info root, or you can use the info "g(<cmucl root dir>/doc/cmu-user.info)"
-command.  Many thanks to Mike Clarkson (the LaTeXinfo maintainer) who
-volunteered to convert our Scribe documents.
 
-Changes:
- -- Improved recursive error handling.  Errors during reporting of errors are
-    detected and suppressed.  Other recursive errors are eventually detected,
-    and hopefully recovered from.  This should eliminate some "recursive map
-    failure (stack overflow?)" errors.
- -- Fixed a bad declaration in CLX which caused an array index error on
-    font attribute queries (such as CHAR-WIDTH.)
- -- Fixed interpreted (typep x '(and ...)) to not always return NIL.
- -- Fixed interpreted CLOS methods to work once again.
- -- Fixed PROFILE to work again, now that argument count information may be
-    missing.
- -- Changed NCONC to signal an error if a non-null ATOM appears other than
-    as the last argument.
- -- Changed FEATUREP to signal an error if it is passed a list form with a
-    strange CAR.
- -- Do type checking on the arguments to %PUTHASH so that
-    (setf (gethash foo 'bar) x) doesn't get a bus error.
- -- Changed LET* and &AUX to allow duplicate variable names.
- -- Fixed DEFTYPE to properly invalidate type system caches so that type
-    redefinitions predictably take effect.
- -- Improvements to MIPS disassembler database.
+Packages:
+ -- The LISP and USER packages have been renamed to COMMON-LISP and
+    COMMON-LISP-USER.  LISP and USER are nicknames, so they can still be used.
+ -- The LISP package namespace has been cleaned up somewhat.  For example,
+    *DESCRIBE-PRINT-LEVEL* is no longer exported from LISP.
+ -- The Mach/Unix division in the package system has been clarified a great
+    deal.  Unix specific features have been moved from the MACH package to the
+    UNIX package.  Mach specific features have been left in (or moved to) the
+    MACH package.  For example, all standard Unix syscalls are related
+    definitions are un UNIX, whereas vm_statistics remains in MACH and GR-CALL
+    has been moved to MACH.
+
+SETF cleanups:
+ -- Changed GET-SETF-METHOD-MULTIPLE-VALUE to try to macroexpand-1 the form
+    when it's an atom in case it's a symbol-macro as per the X3J13 cleanup
+    SYMBOL-MACROLET-SEMANTICS:SPECIAL-FORM.  Now you can safely INCF, etc.
+    symbol macros where the macroexpansion has side effects.
+ -- Fixed SETF of GETF to evaluate the various parts in the correct order as
+    per X3J13 cleanup SETF-SUB-METHODS:DELAYED-ACCESS-STORES.
+ -- X3J13 cleanup SETF-MULTIPLE-STORE-VARIABLES:
+    Extend the semantics of the macros SETF, PSETF, SHIFTF, ROTATEF, and
+    ASSERT to allow "places" whose SETF methods have more than one "store
+    variable".  In such cases, the macros accept as many values from the
+    newvalue form as there are store variables.  As usual, extra values
+    are ignored and missing values default to NIL.
+ -- Extended the long form of DEFSETF to allow the specification of more
+    than one "store variable", with the obvious semantics.
+ -- GET-SETF-METHOD signals an error if there would be more than one
+    store-variable. 
 
 
-	    Release notes for CMU Common Lisp 15d, 2 February 92
+Printer:
 
-These release notes cover changes since the beta release of version 15b on 6
-June 91.  Execpt for Miles Bader's portable disassembler and a few minor
-performance enhancements, this is mostly a bug-fix release.  We've been
-working on ANSI complaince, foreign function interface and more advanced
-compiler optimizations, but we're not going to inflict that on the general
-public just yet.
-
-
-			     GENERAL SYSTEM CODE
-
-Bug fixes:
- -- (SETF AREF) now checks to make sure that the new value is of the correct
-    type.
- -- Improved checking for invalid syntax in DEFSTRUCT.  In some cases, syntax
-    errors would cause cryptic internal errors due to inadequate type
-    checking.
- -- DRIBBLE now monitors *ERROR-OUTPUT* (in addition to *STANDARD-OUTPUT*).
- -- Bignum printing now works correctly in base 36.
- -- Fixed EXPT to deal with SINGLE-FLOAT x SINGLE-FLOAT arg type combination.
- -- Fixed TRUNCATE to handle the SINGLE-FLOAT/DOUBLE-FLOAT case.
- -- The PROFILE package works once again.
-
-Enhancements:
- -- A new retargetable disassembler provides DISASSEMBLE support on the SPARC,
-    and also greatly improved disassembly on the MIPS.  The output is
-    annotated with source-code correspondences if debug-info permits.
- -- Added INLINE MEMBER declarations in definitions of the set functions
-    (UNION, etc.) so that when the set functions are inlined, the MEMBER calls
-    will also.
- -- Merged Lange's improved type declarations for nthcdr/butlast/nbutlast.
-    Also, NTH-VALUE now doesn't cons for non-constant N less than 3.
- -- The loader now supports appending fasl files.  You can:
-    	cat a.fasl b.fasl c.fasl >all.fasl
- -- Added :UNIX to the features list.
-
-The new variable EXT:*TOP-LEVEL-AUTO-DECLARE* controls whether assignments to
-unknown variables at top-level (or in any other call to EVAL of SETQ) will
-implicitly declare the variable SPECIAL.  These values are meaningful:
-     :WARN  -- Print a warning, but declare the variable special (the default.)
-      T     -- Quietly declare the variable special.
-      NIL   -- Never declare the variable, giving warnings on each use. (The
-               old behavior.) 
-
-The reader now ignores undefined read macro errors when *read-suppress* is T.
-All reader character lookup tables are now CHAR-CODE-LIMIT in size.  Formerly,
-some where only 128.  In the standard readtable, these additional characters
-are all undefined.
-
-There are various changes in the DEBUG-INTERNALS interface related to
-breakpoint support, but we haven't yet implemented a satisfactory user
-interface to breakpoints.  Changed name of DI:DO-BLOCKS to
-DI:DO-DEBUG-FUNCTION-BLOCKS.  Added DI:FUNCTION-END-COOKIE-VALID-P and
-DI:DEBUG-FUNCTION-START-LOCATION.
-
-This release fixes a few problems with Aliens, but they are still pretty
-broken.  In particular, Alien and C interface operations don't work at all in
-interpreted code.  We are in the process of integrating a new-and-improved
-implementation of Aliens that works much more smoothly with C.
-
-
-				 COMPILER
-
-Enhancements:
- -- Various SPARC-specific reductions in spurious type checks and coercions.
- -- FTYPE declarations on local functions are now propagated to the variables
-    of the local definition.
- -- Improved representation selection by not totally ignoring references by
-    move VOPs.  This is particularly useful for avoiding spurious number
-    consing of float arguments that are passed on as arguments.
- -- The warning about assignments to the arguments of functions having FTYPE
-    declarations is now suppressed when the FTYPE declaration gives no useful
-    information.
- -- Improved readability of *COMPILE-PROGRESS* output.
- -- Fixed TYPES-INTERSECT to consider any supertype of T to definitely
-    intersect with anything (including unknown or not-yet-defined types.)
+Almost all of the printing code has been rewritten/restructured to support
+all of the printing features added to the language.  Some highlights:
+ -- *PRINT-READABLY* is now supported.
+ -- *PRINT-CIRCLE* works irrespective of *PRINT-PRETTY*.  Note: the default
+    structure printer currently does not work when *PRINT-CIRCLE* is true: you
+    get #1=#1#.
+ -- *PRINT-LEVEL* abbreviation now works automatically inside structure
+    printers.
+ -- XP has been replaced with a native pretty printer that is fully
+    integrated with the rest of the system.  This Supports the ANSI
+    pretty-printing interface instead of the old Waters XP interface.  Existing
+    uses of the old interface will need to be updated to use the new names.
+ -- The pretty-printer now unparses backquote forms on printing.  To retain
+    this information, the backqoute read macro no longer expands into LIST,
+    CONS, etc.  Internal functions are used instead.
+ -- The macros WITH-STANDARD-IO-SYNTAX and PRINT-UNREADABLE-OBJECT have
+    been added.
+ -- All new format.  Supports the FORMATTER macro and all the pretty-printing
+    directives.  FORMAT has extended to accept a function as the format control
+    (as an alternative to a string.)
+ -- Added support for READTABLE-CASE in symbol printing.  Printing when
+    *PRINT-CASE* is :CAPITALIZE and *PRINT-ESCAPE* is NIL is now slightly
+    different than before.  Added some missing array type declarations in
+    symbol printing.
 
 Bug fixes:
- -- Fixed some bugs in dead code deletion.
- -- Lambdas with &KEY and no specified keywords are now compiled correctly
-    (instead of the &KEY being ignored.)
- -- The compiler now knows that INTERN can return NIL as its second value.
- -- Global FTYPE declarations on DEFSTRUCT slot accessors are now quietly
-    ignored, instead of causing the structure definition to be removed.
- -- Fixed a problem with resulting from an interaction between block
-    compilation and global FTYPE declarations.
- -- Fixed TAGBODY not to consider NIL to be a tag.
- -- Fixed an internal error during register allocation which could happen when
-    compilation-speed > speed.
- -- If we undefine a structure type, unfreeze it also.
- -- Fixed TYPEP SATISFIES to always return T-or-NIL, regardless of what the
-    predicate returns.
-
-PCL/CLOS:
- -- Added generalized source context parsing with EXT:DEF-SOURCE-CONTEXT.
-    Added a parser for DEFMETHOD that gets qualifiers and specializers.
- -- FUNCALLABLE-INSTANCE-P is now compiled much more efficiently.
- -- Fixed SET-FUNCTION-NAME to correctly set the name of interpreted methods,
-    instead of clobbering the name of an internal interpreter function.
-
-
-				  HEMLOCK
-
-Bug fixes:
- -- Changed X font specs in the generic site-init file to use point size
-    instead of pixel size so that they work on 100dpi devices. 
- -- Added :INPUT :ON wm-hints to Hemlock windows, which is necessary to
-    receive input in OpenLook windowing systems.
- -- Fixed Lisp mode indentation for FLET&c to check that we are actually in
-    the first arg form before doing funny indentation.  Generalized to
-    reference the variable "Lisp Indentation Local Definers", and also to
-    recognize LABELS (as well as MACROLET and FLET.)
- -- When we reallocate string-table vectors to grow them, clear the old vector
-    so that it won't hold onto garbage (in case the vector was in static
-    space, but pointed to dynamic values.)  This was a major cause of memory
-    leakage in Hemlock.
- -- Fixed sentence motion to work at the end of the buffer.
-
-Enhancements:
- -- The site file now contains a template for file directory translation (for
-    "Edit Definition"), and some of the comments have been improved.
- -- There's a new "Buffer Modified Hook" function that raises the "Echo Area"
-    window when it becomes modified.  You can control this with the Hemlock
-    variable: "Raise Echo Area When Modified".
- -- In "Edit Definition" and related commands, before doing directory
-    translations, try a probe-file of the source file first.  This can reduce
-    the number of translations needed.
- -- Added DEFINDENT's for the "WIRE" package.
- -- Made the X visual bell look less spastic by adding a finish-output.
- -- The termcap parser now recognizes entries for things like begin/end bold,
-    underline, etc.  Fixed a problem with font halding in TTY redisplay.
- -- The MH interface now uses the correct name for the MailDrop profile
-    component.
- -- The netnews interface has been improved in various ways, including the
-    addition of server timeouts, but should still be considered experimental.
+ -- Fixed a bug which caused some float printing format directives to
+    infinitely loop when a fixed-width field overflowed.
+ -- Specify stream when printing unbound marker.
+ -- Fixed FORMAT to override printer control variables when printing float
+    exponents so that they are always printed in decimal, etc.
 
 
-	    Release notes for CMU Common Lisp 15b, 19 October 91
+Reader:
 
-These release notes cover changes since the beta release of version 14c on 6
-June 91.  SPARCstations and Sun4's are now supported under SunOS (as well as
-Mach), which makes CMU CL more usable outside of the CMU environment.  CMU CL
-also runs on Mach (or OSF/1) DECstations, and IBM RT support is coming real
-soon now.
-
-
-			    GENERAL SYSTEM CODE
-
-Bug fixes:
- -- MAKE-ARRAY now to allows :INITIAL-CONTENTS any kind of of sequence, not
-    just a list.
- -- VECTOR-PUSH and VECTOR-PUSH-EXTEND now return the original fill
-    pointer, not the new fill pointer.
- -- VECTOR-POP now returns the value indexed by the new fill pointer, not
-    the original fill pointer.
- -- Fixed two bugs in bignum division.
- -- FORMAT-PRINT-NUMBER now correctly inserts commas for negative numbers
-    (don't print -,123).
- -- Fixed GET-SETF-METHOD to only inhibit setf macros when there is a local
-    function, not also when there is a local macro.
- -- Changed the debugger to use *READ-SUPPRESS* when skipping over top-level
-    forms in the source file to prevent spurious read errors.
- -- In the printer, deleted an incorrect and questionably optimal
-    optimization of symbol package qualification.
- -- When printing characters, prefer the semi-standard character-names
-    NEWLINE, ESCAPE and DELETE to the old LINEFEED, ALTMODE and RUBOUT.
- -- Fixed one-off error in list REMOVE-DUPLICATES :FROM-END.  Fixed
-    SUBSTITUTE & friends to pass arguments to the TEST in the right order.
-    Fixed SUBSTITUTE not to randomly apply the KEY to the OLD value.  Changed
-    LIST NSUBSTITUTE & friends to work in the :FROM-END case.
- -- Several bug-fixes to RUN-PROGRAM and subprocess I/O.
- -- Fixed all recursive READ calls in sharp-macros to specify eof-error-p T, so
-    that EOF errors are signalled when appropriate.
- -- The REMOTE RPC protocol (used for slave control) can now send bignums.
- -- Passing of unused arguments to interpreted functions now works.  Previously
-    the variables would be bound to the wrong arguments.
- -- Many fixes to the time parsing and printing extensions.
-
-X3J13 cleanups:
- -- Added #P pathname read syntax, and changed the pathname printer to use it.
- -- Added :KEY argument to REDUCE.
-
-Enhancements:
- -- Added code to compile the argument to TIME when possible, and print a
-    warning when it isn't.  Optimized the TIME macro to keep the consing
-    overhead of using it zero.
- -- Changed all places absolute pathnames were used to indirect search-lists,
-    mostly library:.  "lisp" must now be findable on your PATH for Hemlock to
-    be able to start slaves.
- -- Increased readability of DESCRIBE function output by printing function and
-    macro doc strings before arg and result info.
- -- The CMUCLLIB search path environment variable is now used to find lisp.core
-    and other library files, instead of always assuming the path
-    /usr/misc/.cmucl/lib.
-
-
-				 COMPILER
+ANSI Cleanups:
+ -- *READ-EVAL* is now supported.  If a #. is encountered while *READ-EVAL*
+    is NIL (default T), an error is signaled.  This intended to allow
+    ``secure'' READ-based command interfaces to be written.
+ -- READTABLE-CASE is now supported.
+ -- The reader now signals the correct type of error when things go wrong
+    instead of always signaling a simple-error.
+ -- Changed the return value of SET-SYNTAX-FROM-CHAR from NIL to T as per X3J13
+    cleanup RETURN-VALUES-UNSPECIFIED:SPECIFY.  [Hard to believe nobody has
+    complained about not conforming to this one.]
 
 Bug fixes:
- -- EVAL now uses the constant value recorded in the compiler environment
-    that compile-time references to constants works better.  Now
-    (defconstant a 3) (defconstant b (+ a 4)) works again.
- -- Don't try to infer the bounds of non-simple arrays, since they can change.
- -- Fixed some problems with block compilation, maybe-inline functions and
-    unused function deletion.
- -- DEFMETHODs can now use &ALLOW-OTHER-KEYS without killing the compiler.
- -- Fixed VALUES declaration to work correctly when zero values are specified.
- -- The FORMAT transform now warns if there are to many or too few args.
- -- Changed SYMBOL-MACRO-LET to SYMBOL-MACROLET.
+ -- Fixes to several bugs with respect to #+, #-.  In particular, stacked
+    conditionals like "#+foo #-bar baz" now work 
+ -- #n= and #n# now detect more error conditions and work on structures.
+ -- # is now a non-terminating macro character, so foo#bar is read as a
+    symbol.
+ -- Added Ted's changes to make INTERNAL-READ-EXTENDED-TOKEN work when there
+    are `|' escapes.  The main significance of this is that #+nil '|foo;bar|
+    and #:|foobar| now work properly.  Also changed this function to recognize
+    unquoted colons so that #:foo:bar will error, but not #:foo\:bar.
 
-X3J13 cleanups:
- -- Make all non-symbol atoms self-evaluate.
-
-Enhancements:
- -- Made the default for COMPILE-FILE's :error-file argument be nil.
- -- Changed notes about incompatible changes in function arguments lists to be
-    a warning rather than a note.
- -- Source-level optimization efficiency notes now print out a
-    transform-specific string to describe what the transform was trying to do,
-    instead of just saying "unable to optimize."
-
-
-				  HEMLOCK
-
-This is version 3.5.
-
-Note: The default value of "Slave Utility" is now just "lisp" which hopefully
-will be found on path:.  If you don't have lisp on your path, you need to set
-"Slave Utility" to the full pathname of lisp, /usr/misc/.cmucl/bin/lisp on CMU
-machines.
-
-Bug fixes:
- -- Under TTY screen management, a MAKE-WINDOW - DELETE-WINDOW sequence now
-    leaves the screen unchanged.
- -- Fixed some character attribute constants to make 8-bit chars work.
- -- "Center Line" now works when invoked on the last line of the buffer.
- -- Fixed "Move Over )" to use a permanent mark instead of a temporary mark
-    because it deletes text.
- -- Fixed sentence motion to be able to move to the end of the buffer.
- -- Fixed the hemlock banner in the status line to not have "!" after
-    the date.
-
-Enhancements:
- -- Removed the definitions of the obsolete COMMAND-CHAR-BITS-LIMIT and
-    COMMAND-CHAR-CODE-LIMIT.
- -- Modified "Visit File" to issue a loud message whenever another buffer
-    already contains the file visited. The quiet message often went unnoticed,
-    defeating its purpose.
- -- The definitions in FLET, LABELS and MACROLET are now indented correctly.
- -- Added DEFINDENT's for the "DEBUG-INTERNALS" interface.
- -- Modified Lisp indentation to check if the mark in was in a string context.
-    If it is, then we go to the column after the opening double quote.
-    Otherwise, we use the first preceding non-blank line's indentation.  This
-    fixes the problem with doc strings and ERROR strings which got indented
-    respectively at the beginning of the line and under the paren for the ERROR
-    call.
- -- Added some prototype netnews support.  Details to be anounced later.
- -- Added font support for the TTY.  Allow active region highlighting and open
-    paren highlighting when on the TTY, as they now work.
- -- Changed the compile-in-slave utilities to count notes and display in
-    completion message.  Also fixed not to print echo area messages "Error in
-    NIL ..."
-
-New commands:
-
-"Fill Lisp Comment Paragraph"	Lisp: M-q
-   Fills a flushleft or indented Lisp comment, or lines all beginning with the
-   same initial, non-empty blankspace.  When filling a comment, the current
-   line is used to determine a fill prefix by scanning for the first semicolon,
-   skipping any others, and finding the first non-whitespace character;
-   otherwise, the initial whitespace is used.
-
-"Shell Complete Filename"	Process: M-Escape
-    In a shell buffer, attempts to complete the filename immediately before
-    point.  The commands that start "Process" buffers with shells establish a
-    stream with the shell that tries to track the current working directory of
-    the shell.  It uses the variable "Current Working Directory" to do this.
-    For it to work, you should add the following to your .cshrc file:
-       if ($term == emacs) then
-	  alias cd 'cd \!* ; echo ""`pwd`"/"'
-	  alias popd 'popd \!* ; echo ""`pwd`"/"'
-	  alias pushd 'pushd \!* ; echo ""`pwd`"/"'
-       endif
-
-"Manual Page"
-    Runs man(1) in a scratch buffer and displays it in the current window.
-
-"Typescript Slave Status"	Typescript: H-s
-   Interrupt the slave and cause it to print status information.
-
-
-Hemlock-internals changes:
- -- CREATE-WINDOW-FROM-CURRENT now creates a window according to its new
-    proportion argument instead of simply splitting the current window in two.
-    It returns nil without doing anything if either window is too small.
- -- WINDOW-GROUP-CHANGED no longer unifies the sizes of window when the
-    user resizes a group.  It now tries to distribute the new size of the group
-    according to the proportions of the old size consumed by the windows.
- -- Changed ARRAY-ELEMENT-FROM-MARK to use AREF for the Netnews stuff.  I
-    documented this to be an internal interface since a few other modes use it.
- -- WRITE-FILE now takes an :append argument.
- -- Modified %SET-MODELINE-FIELD-FUNCTION to allow its function argument to be
-    a symbol or function since the purpose is to FUNCALL the thing.  Since the
-    new system is up to spec on the disjointedness of functions, this needed to
-    be fixed for usefulness.
+Enhancement:
+ -- Export new variable *ignore-extra-close-parentheses* if true (the default),
+    extra close parens are only a warning, not an error.  Previously unmatched
+    close parens were quietly ignored.
 
 
-	Release notes for CMU Common Lisp 14c, 6 June 91
+Pathnames:
 
-  ** The FASL file format has changed, so all files must be recompiled. **
+This release supports all the new CltL2 pathname features except for logical
+pathnames.  Following is an overview of the new pathname support.
 
-These notes describe changes since the beta release of 3 February 91.  This is
-the first CMU CL release to run on Mach SPARCs as well as on PMAXen (DECstation
-3100 or 5000).  Version 14c will go out to both beta and default, since there
-is currently no default release.
+Programs that actually conform to the CLtL1 pathname spec will have very few
+problems.  However, the CLtL1 spec was extremely vague, and CMU CL did not
+make use of much of the allowed flexibility, so many technically non-portable
+programs previously worked under CMU CL.
 
-This release has a substantial space reduction due to compiling with debug-info
-1 and reduced safety.  The core is currently 19.2 meg, which is 7 meg smaller
-than the last beta release (despite added functionality.)
+The main incompatible changes from CLtL1 to CLtL2:
+ -- Symbols are no longer acceptable filenames.
+ -- PATHNAME-HOST may be any object.
+ -- :UNSPECIFIC is now a legal pathname component.
+ -- MERGE-PATHNAMES now recognizes relative pathnames and treats them
+    specially. 
 
-Major parts of the system are now compiled with no error checking.  Users
-should not notice any reduction in safety, since user visible interfaces are
-supposed to be fully checked.  Standard functions that users can cause to get
-unbound symbol or array index errors needed to be changed to either do explicit
-error checks or locally use a safe policy.  Some of these cases may have been
-missed.  Let us know if you get any less-than-informative error messages
-(segmentation violation) inside standard functions.
+The format of directories is now specified (to be a list in a certain format.)
+This required an incompatible change from the previous practice of using a
+vector PATHNAME-DIRECTORY and using "DEFAULT" or :ABSOLUTE in the
+PATHNAME-DEVICE to indicate relative and absolute pathnames.
 
+In a related change, the CMU SEARCH-LIST extension was changed so that the
+search-list now appears in the PATHNAME-DIRECTORY as:
+    (:ABSOLUTE #<Search-list "name"> ...)
 
-New packages:
+Other changes to search-lists:
+ -- (SETF SEARCH-LIST) now accepts a string or pathname, and converts it into
+    a one-element list.
+ -- Search-list elements are now canonicalized to pathnames rather than to
+    strings. 
+ -- Instead of returning NIL, SEARCH-LIST now signals an error when it is
+    called on an undefined search list. 
+ -- SEARCH-LIST-DEFINED-P is a predicate that tells if the search list is
+    currently defined.
 
-The X based graphical inspector is now available.  It now uses standard
-fonts (courier) and has a bigger help window.
+New features which are now supported:
+ -- Wildcard pathnames are now fully supported.  In addition to allowing :WILD
+    in any pathname component, "extended wildcards" such as "foo*.*" are also
+    supported.  A consequence of this is that PATTERN objects may appear in
+    wildcard pathname components instead of strings.  See PATHNAME-MATCH-P and
+    TRANSLATE-PATHNAME.
+ -- As a CMU CL extension, a wildcard pathname may be used as the argument to
+    any filesystem interface (like OPEN) as long as it matches only one file.
+ -- The pathname :COMMON case mechanism provides a way around the problems of
+    portably specifying string pathname components in the presence of operating
+    systems with differing preferred case in their filesystem.  An uppercase
+    string "LISP" is mapped to the "customary case" (lowercase on unix.)  
+    Lowercase is also inverted: "readme" becomes "README".  Mixed case is left
+    alone.  Note that this mechanism is explicitly enabled by supplying :CASE
+    :COMMON to functions such as MAKE-PATHNAME.  The default is the old
+    behavior (:CASE :LOCAL).
 
-An improved version of the profile package (previously in the library) is now
-in the core.  It now compensates for recursive calls or nested calls, and
-interacts better with TRACE and function redefinition.  The old profile
-documentation is in:
-    /afs/cs/project/clisp/library/profile/profile.doc
+Also, DIRECTORY now actually returns the TRUENAME of each file (as it was
+always supposed to do.)  If a matched file is a symbolic link, the truename may
+be a file in some other directory that doesn't even match the pattern.  The old
+behavior can be obtained by specifying :FOLLOW-LINKS NIL.
 
+The new wildcard pathname mechanism has not yet been used to replace the old
+single-wildcard matching in Hemlock DIRED, etc.
 
-Code:
+
+Debugger:
+ -- Added Miles' changes to keep errors and warnings on one line if they fit.
+ -- The debugger now starts up with the error frame as the current frame, so
+    it is no longer necessary to manually skip over internal frames resulting
+    from the error system invocation.
+ -- Fixed some debugger bugs that appeared when debugging interpreted code.
+ -- Added ``DESCRIBE'' debugger command.
+ -- Merged Miles' changes that allow the use of restart names as debugger
+    commands.
+ -- Changed SHOW-RESTARTS to also display the restart name (but only if it's
+    not shadowed by a higher priority restart).  Changed the restart command
+    to look for restarts by name if a symbol is typed.
+ -- Bind *CURRENT-LEVEL* to 0, *PRINT-READABLY* to nil, and *READ-EVAL* to T
+    when entering the debugger to make sure things print as expected.
 
-Argument type checking for Common Lisp functions is now driven by the
-compiler's function type database (the types reported by DESCRIBE.)  This means
-that some type errors might be detected that were previously unnoticed.
+The debugger programmer (DEBUG-INTERNALS) interface is now documented in the
+User's Manual.  This interface allows the coding of debuggers and debugger
+extensions without requiring an intimate understanding of the compiler and
+run-time system.  Be warned that DI features (such as breakpoints) not used by
+the current debugger may not work very well (wait for version 17.)
 
-Changed the internal WITH-ARRAY-DATA macro to do bounds checking.  This causes
-various string functions to give better error messages when an :END arg is out
-of bounds or :START is greater than :END.
+Debug internals changes:
+ -- DI:DEBUG-FUNCTION-FUNCTION is now implemented.
+ -- Added DI:FLUSH-FRAMES-ABOVE for cleaning up frames to be bound to
+    DEBUG:*STACK-TOP-HINT*.
 
-Tuning:
-    Some tuning in SYSTEM:SERVE-EVENT which reduces consing and speeds up
-    Hemlock and terminal I/O.
+
+Defstruct:
 
-    Changed GET-INTERNAL-REAL-TIME to subtract out the time of the first
-    call to minimize the probability of bignum results.  Also some other tuning
-    that reduced the consing of this function to 0.
+Various fixes and enhancements to defstruct slot parsing and inclusion.   
+It now works to define structures such as:
+    (defstruct super a)
+    (defstruct (sub1 (:conc-name super)) one)
+    (defstruct (sub2 (:conc-name super)) two)
+    (super-a (make-sub1))
 
-    Tuned bignum code and added declarations to reduce number consing.
+previously, a definition such as for SUB2 would define SUPER-A to be a
+SUB2-specific function, which could then no longer be used on other types.  The
+spec doesn't clearly say that such a construct is legal, but its use seems
+fairly common.
 
+Also, slot parsing is now more rigorous.  Unrecognized slot options cause an
+error, as does a slot spec like: (defstruct foo (a :type t))
 
-DEFSTRUCT:
-    Fixed default-structure-print to work when *print-circle* is T.
-    Merged fix to DEFSTRUCT constructor parsing that allows multiple default
-    constructors, or none at all.
+Fasl dumping of constant structures has been fixed to conform to X3J13.  The
+main significance of this is that DEFSTRUCT structures are no longer dumpable
+by default.  However, the generic function MAKE-LOAD-FORM isn't really used.
+Instead, a new defstruct option, :MAKE-LOAD-FORM-FUN, has been added that can
+be used to specify a function that acts like a MAKE-LOAD-FORM method.  When we
+have a CLOS that supports STRUCTURE-CLASS, the default method for
+MAKE-LOAD-FORM will use this information instead of having the compiler use it
+directly.  The old behavior can be enabled on a structure by structure basis by
+using the :MAKE-LOAD-FORM-FUN defstruct option:
+    (defstruct (foo (:make-load-form-fun :just-dump-it-normally))
+      ...)
 
-Merged bug fixes from old RT system:
-    STANDARD-CHAR-P no longer returns T for #\return.
-
-    Fixed a bug in format regarding ~@*.
-
-    Fixed the read-eval-print loop to frob +, ++, +++ correctly.
-
-    Fixed a bug in Y-OR-N-P.  It was calling WHITESPACEP on a symbol.
-
-    Fixed READ-QUOTE to call READ with t for eof-errorp which it previously
-    failed to do.  fixed READ-PRESERVING-WHITESPACE to no longer screw with
-    eof-errorp based on recursivep
-
-Package system:
-    Changed DEFPACKAGE to expand into stuff that will have the package effect
-    at compile time as well as at load time.
-
-    Fixed DEFPACKAGE to deal more correctly with finding symbols that must
-    exist.
-
-    Fixed package system code to not destructively modify the USE, USED-BY and
-    SHADOWING-SYMBOLS lists so that they don't get retroactively modified when
-    we hand them off to the user.
-
-    Also, in SHADOW, when symbols is NIL, shadow no symbols, not NIL.
-
-    Fixed a bug in RENAME-PACKAGE that happened when the new name was one of
-    the old nicknames.
-
-Streams:
-    Tweaked handling of LISTEN a bit to allow READ-CHAR-NO-HANG to work
-    correctly.  Fixed the listen method for concatenated streams.  It failed to
-    step to the next stream when the current one hit eof.
-
-    Make two-way streams force-output on the output side before passing any
-    input requests on to the input side.  Made *standard-output* a two-way
-    stream so that reading *standard-input* will force output on standard
-    output.  This eliminates the need for explicit calls for FORCE-OUTPUT when
-    prompting.
-
-    Some tuning and bug fixes to FD-STREAMS (file descriptor streams) which are
-    used for file I/O (and now for communication with the X server.)  Also, now
-    OPEN complains if you try to open a non-writable file for output with
-    :RENAME or :RENAME-AND-DELETE.  Previously this would succeed as long as
-    the directory was writable.  SYSTEM:READ-N-BYTES on FD streams is now more
-    efficient, but does *not* wait using SERVE-EVENT; it blocks instead.
-
-TRACE:
-    Use FORCE-OUTPUT instead of FINISH-OUTPUT to prevent gratuitous slowdowns
-    when running in a slave.
-
-    If we enter trace recursively (due to the printer calling the traced
-    function), then just quietly call the function, instead of signalling an
-    annoying "unable to trace" error.
-
-LOAD:
-    Changed load to look at the file contents for the "FASL FILE" header to
-    determine whether to fasload or slow load, instead of forcing use of a
-    single fasl file type.  Also, when the given filename doesn't exist and
-    doesn't have a type, try ``fasl'' in addition to the machine specific fasl
-    file type.  Eliminated the "feature" whereby zero-length fasl files were
-    considered to be valid (doing nothing).  Now if you try to load a file with
-    a fasl file type, but that doesn't have a valid fasl header, then you will
-    get an error (proceeding loads as a source file.)
-
-    When the loader prints comments about loading progress, the number of
-    leading semicolons is now the depth of recursive loading.
-
-    Added a CONTINUE restart in LOAD that returns NIL. 
-
-GC:
-    Fixed some bugs in control of garbage collection that should solve some
-    problems with GC failing to be triggered automatically.  Also, GC no longer
-    implicitly reenables automatic GC if it has been disabled with GC-OFF.
-
-    Changed the default GC notify function to not beep.  The old behavior can
-    still be obtained by setting *GC-VERBOSE* to :BEEP.  Note that this only
-    affects use on TTYs, since slave GC notification works differently.
-
-    Wrapped a without-interrupts around the guts of maybe-gc so that the notify
-    messages and state updates don't get seperated from the actual gc.
-
-    Removed the icache flushing stuff from GC, because it was unneeded (and
-    sometimes printed annoying messages that it didn't work).
-
-X3J13 cleanups:
-    The non-destructive string functions now accept characters as well as
-    strings and symbols.
-
-    MACROEXPAND now expands symbol macros.
-
-    Now almost all Common Lisp functions which are SETFable have a (SETF name)
-    function.  The exceptions are functions where it makes no sense (LDB,
-    GETF), and a few other functions (GET, GETHASH.)  Now SETF of APPLY works
-    for any function which has a setf function.
-
-    Changed GET-SETF-METHOD to ignore setf macros (always global) when there is
-    a local macro or function of the place function.  [An x3j13 cleanup]
-
-    Fixed the LOOP THEREIS keyword.  Changed a null test in LOOP into an endp
-    test.
-
-Other bug fixes:
-    Fixed sequence functions with output type specifiers to handle DEFTYPE'ed
-    types and other complex types correctly.  (COERCE still can't hack
-    DEFTYPEs, though.)
-
-    Fixed typep of (satisfies (lambda (obj) ...)) to coerce the form into a
-    function so that "object not function" errors don't result.
-
-    Fixed DOCUMENTATION to return only one value.
-
-Enhancements:
-    ROOM is now much more verbose, displaying a breakdown of memory usage by
-    object type.
-
-    Changed the printer to print the name of code objects and the value of
-    value cells.
-
-
-CLX:
-
-Modified EXT:OPEN-CLX-DISPLAY to set XLIB:DISPLAY-DEFAULT-SCREEN to the
-screen specified by the user before returning the display.
-
-Merged in a bug-fix to EVENT-LISTEN to make it return the right number of
-events when called when there is a current event (i.e. in an EVENT-CASE.)
-
-Fixed the CLX X interface to be much more efficient, as well as fixing some
-bugs.  The low-level I/O to the server is now faster and conses much less.
-Enabled some code speeds up pixarray read/write (though it could still be much
-better.)  Also, eliminated redundant type checking and fixed some broken
-declarations.  This fixes problems with CLX sometimes not working with some X
-servers (like the RT server.)
-
-
+
 Compiler:
 
-Bug fixes:
-    Fixed incorrect argument type information for some standard Common Lisp
-    functions.
+Cleanups:
+ -- Added the LOAD-TIME-VALUE support special form.
+ -- Displaced or adjustable arrays and vectors with fill pointers can now be
+    dumped in fasl files, but are converted to simple array with the same
+    elements.
+ -- Arrays of floats are left as arrays of floats instead of being
+    converted into arrays of element-type T that just so happen to hold a
+    bunch of floats.
+ -- Changed IGNORE and IGNORABLE to recognize #'fn-name for declaring that
+    local functions are not used.  Exported IGNORABLE from LISP.
 
-    Fixed PROCLAIM to work correctly when the argument isn't a constant.
+New optimizations:
+ -- Iterations written using tail recursion are now optimized through a
+    special-casing of local functions where all calls but one are
+    tail-recursive self-calls.  Such functions are compiled with no
+    environment manipulation, resulting in the same code as explicit
+    iteration.
+ -- Loop rotation (Knuth "while" loop optimization) been added.  This is the
+    optimization that negates the loop exit test and places it at the end of
+    the loop, and then jumps there at loop entry.  Note that this is part of
+    control optimization, and not simply a recoding of certain iteration
+    macros.  In fact, for historical reasons DO, etc. already had the exit
+    test negated, but the compiler was cleverly un-negating the test.
+ -- Flow analysis now recognizes function calls and special forms which do
+    not yield any value because they unwind or signal an error.  This results
+    in improved code for error checks, since the compiler can get by with
+    fewer unconditional branches.  A function can be declared not to return by
+    declaring its result type to be NIL (not to be confused with NULL).  If a
+    function declared NIL does return, an error will be signalled.
+ -- Added derive-type methods for ASIN, ACOS, ACOSH, ATANH and SQRT which
+    figure out whether the result type is real on the basis of the argument
+    range.  Also, the result of ATAN is always real, so we don't need a result
+    type assertion.
+ -- Added optimization which deletes MULTIPLE-VALUE-BINDs when all
+    variables have been deleted.
+ -- Eliminated some spurious checking of the result types of safe VOPs (such
+    as the SPARC tadd for fixnum arithmetic.)
+ -- Transform uses of the SEARCH generic sequence function on simple strings
+    into a call to a more efficient string-specific function.
+ -- Added multiplier recoding of (UNSIGNED-BYTE 32) multiplication.  This
+    converts 32 bit (or smaller) unsigned multiplication by any compile-time
+    constant into a shift-add sequence.  This is much faster when the constant
+    is a near power of two or when general multiplication is slow (as on the
+    SPARC.)
+ -- Added comprehensive handling of arithmetic and logical identities when
+    an arg is -1, 0 or +1.
+ -- Added a RANDOM derive-type method: (random 13) is (integer 0 12).
 
-    Fixed the DEBUG optimize quality to be called DEBUG instead of DEBUG-INFO.
-
-    Fixed the compiler to not flame out if it sees a SATISFIES type specifier
-    where the predicate function is undefined, and generally to deal better
-    with testing whether a compile-time constant is of some type that may not
-    be properly defined yet.
-
-    Fixed a number of bugs in the handling of closures over top-level
-    variables.
-
-    Fixed a problem with semi-inline functions.
-
-    The compiler note count is no longer incremented when notes are suppressed
-    by INHIBIT-WARNINGS 3.
-
-    Some fixes that should eliminate spurious undefined-function warnings.  In
-    particular, definitions of functions in non-null lexical environments will
-    be noticed.
-
-    Also, now if a function is defined incompatibly with previous calls, the
-    warning will have proper source context.
-
-    Fixed a bug in accessors for 1,2, and 4 bit arrays that was causing #* to
-    generate incorrect bit vectors.
-
-    Changed the type system to consider #(:foo :bar) to be a subtype of 
-    (vector keyword).  In other words, array subtype relations are determined
-    according to the specialized element types actually present in this
-    implementation, rather than assuming that all element types can be
-    discriminated.
-
-    Fixed a problem that could cause type checks to be spuriously deleted in
-    some contexts where there is a local change in the SAFETY optimization
-    policy.
-
-DECStation (PMAX) specific changes:
-
-    Representation conversion of a SAP (system area pointer) to a pointer
-    representation now results in an efficiency note.
-
-    Fixed EQL (and =) on integers to not unnecessarily cons a word-integer
-    argument just because one argument is known to be a fixnum.
-
-    New version of the assembler with instruction scheduling (no-op deletion)
-    support.  This reduced the size of the core by 1.3 meg, and makes
-    everything run faster too.
-
-    Fixed TRUNCATE on floats to truncate instead of rounding.
-
-SPARC notes:
-    The SPARC port is not yet as highly tuned as the PMAX port.  In particular,
-    no instruction scheduling is done yet.  This is probably a 10% performance
-    penalty.
 
 Enhancements:
-    Made forms within a LOCALLY be recognized as "top-level" so that subforms
-    can be compiled separately.
+ -- Changed the compiler to temporarily increase *BYTES-CONSED-
+    BETWEEN-GCS* by a factor of 4 during compilation of each top-level form,
+    instead of turning off all garbage collection.
+ -- Bind *PRINT-LINES* around compiler error output to
+    *ERROR-PRINT-LINES*.
+ -- Do not warn about undefined variables, functions or types when the
+    INHIBIT-WARNINGS OPTIMIZE quality is 3.
+ -- Some optimizations are now considered "important"; failure of important
+    optimizations causes an efficiency note even when speed=inhibit-warnings
+    (i.e. by default.)
+ -- Print a error summary even when *COMPILE-VERBOSE* is false.  (This is only
+    printed when there are errors, so this doesn't seem a violation of the
+    spirit of the spec.)
 
-    The compiler now ignores assignments to special variables when determining
-    which representation to use for a variable.  Also, we don't print
-    representation selection efficiency notes about coercion that are due to
-    error checking code.
+Bug fixes:
+ -- Merged Miles' fix to disassembly of the MIPS coprocessor move instructions.
+ -- Fixed spelling of "efficency" in exported variables such as
+    *EFFICIENCY-NOTE-COST-THRESHOLD*
+ -- Fixed some cases where incomplete optimization could happen.
+ -- Fixed some arithmetic "identities" that failed to preserve the sign of
+    -0.0.
+ -- Fixed TYPES-INTERSECT to consider any supertype of T to definitely
+    intersect with anything (even an unknown type.)
+ -- Fixed a problem where inconsistent declarations could fail to be detected
+    at compile time.
+ -- Fixed the VALUES transform (which discards unused subforms) to work
+    on (VALUES).
+ -- More bug fixes to dead code deletion.
+ -- Fixed a problem where a special binding would not be removed on exit from
+    the scope if there was no code in the scope (e.g. it had all been
+    deleted.)
+ -- Fixed handling of named (DEFCONSTANT) constants so that EQ
+    relationships are properly preserved.
 
-    Added support for the EXT:CONSTANT-FUNCTION declaration (already in the
-    documentation.)
+
+Extensions:
 
-    When a DEFUN is compiled and the name has a FTYPE declaration, then a note
-    is printed if any arguments to the function are assigned to (i.e. SETQ) in
-    the body, as this inhibits application of the FTYPE declaration to the
-    argument variables.
-
-    (<mumble>-P x) structure predicates are now just as efficient as
-    (TYPEP x '<mumble>).
-
-    Added type inference methods for sequence functions, and various functions
-    that return an argument as their result value.
-
-    A number of improvements to register allocation.
-
-    Added a new optimization of MULTIPLE-VALUE-CALL which converts MV calls
-    having a known number of arguments into MULTIPLE-VALUE-BIND/FUNCALL.
-    Combined with some other existing optimizations, this allows functions like
-    to be efficiently inline expanded (i.e. the APPLY turns to a FUNCALL):
-	(defun foo (&rest x)
-	  (apply #'glorp x))
-
-    Reduced the size of debug information for OPTIMIZE DEBUG <= to 1.
-    If debug-info is < 1, then don't dump debug-args or function type.
-
-    Disabled the compiler's internal consistency checking by default.  These
-    phases are only useful for locating compiler bugs.
-
-X3J13 cleanups:
-    The :VERBOSE and :PRINT keyword arguments are now supported by
-    COMPILE-FILE.  The :PROGRESS keyword is a CMU extension that provides an
-    even higher level of verbosity.  The *COMPILE-VERBOSE*, etc., variables are
-    also now supported.
-
-    Changed declaration processing to treat FUNCTION declarations as ordinary
-    variably type declarations.  The old semantics is still obtained when the
-    second arg to the declaration is a list (as it always would be in the old
-    usage.)
-
-Block compilation:
-    Added new START-BLOCK and END-BLOCK declarations to allow portions of a
-    file to be block compiled (instead of only entire files.)  This mechanism
-    also allows the entry points to a block to be specified, allowing improved
-    compilation of non-entry-point functions.  Fixed many bugs that appeared
-    once block compilation was actually used.
-
-    COMPILE-FILE now has :ENTRY-POINTS and :BLOCK-COMPILE keywords.
-    :BLOCK-COMPILE NIL will totally inhibit compile-time resolution of function
-    names (including self-calls.)  The default (:SPECIFIED) allows compile time
-    resolution, but still compiles one top-level form at a time, preventing
-    local calls between top-level forms.  In this mode, a
-        (BLOCK-START Entry-Point*)
-    declaration will start block compilation.  Block compilation is terminated
-    by BLOCK-END, or the BLOCK-START of the next block.
-
-    See also the COMPILE-FILE doc string.
-
-
-Context sensitive declarations:
-    Added the OPTIMIZE-INTERFACE declaration, which is just like OPTIMIZE, but
-    specifies the policy for function argument syntax checking and checking of
-    any declared argument types, allowing it to be distinct from the general
-    compilation policy.  This allows debugged code to be compiled with lowered
-    safety in its "guts", while still doing checking on the arguments that
-    users may supply (incorrectly.)  Any quality not separately specified
-    defaults to the normal OPTIMIZE quality.
-
-    Fixed WITH-COMPILATION-UNIT keyword to be :OVERRIDE instead of :FORCE.
-    Also, added :OPTIMIZE and :OPTIMIZE-INTERFACE for changing the "global"
-    compilation policy within the dynamic extent.
-
-    Added :CONTEXT-DECLARATIONS, which provides a way to insert declarations
-    conditional on pattern matching of the context in which the definition
-    appears.  So you can compile all external functions safe, or whatever.  See
-    the doc string for WITH-COMPILATION-UNIT.
-
+ -- Export FEATUREP from EXT.  This takes a feature expression and tests it
+    against the value of *FEATURES*.  Allow LISP:AND, LISP:OR, and LISP:NOT in
+    features lists in addition to :AND, :OR, and :NOT.  This makes featurep
+    useful outside of #+ and #-.
+ -- The encapsulation mechanism (similar to advise facilities) has been
+    revamped to work on SETF function names as well as symbols.
+    EXT:ENCAPSULATED-DEFINITION
+       Returns whatever definition is stored for name, regardless of whether
+       it is encapsulated.  Unlike FDEFINITION, this does not strip off the
+       encapsulation.  This is SETF'able.
+    EXT:ENCAPSULATE
+       Replaces the definition of name with a function that binds name's
+       arguments a variable named argument-list, binds name's definition to a
+       variable named basic-definition, and EVAL's body in that context.  Type
+       is whatever you would like to associate with this encapsulation for
+       identification in case you need multiple encapsuations of the same
+       name.
+    EXT:UNENCAPSULATE
+       Removes name's most recent encapsulation of the specified type.
+    EXT:ENCAPSULATED-P
+       Returns t if name has an encapsulation of the given type, otherwise
+       nil.
+    EXT:*SETF-FDEFINITION-HOOK*
+       A list of functions invoked by (SETF FDEFINITION) before storing the
+       new value.  Each hook function must take the function name and the
+       new-value.
 
 Hemlock:
+ -- Fixed the :FILE branch of "Help on Parse" to trim leading directory
+    components off the pathname if it wouldn't otherwise fit on the screen.
+ -- Fixed GET-EDITOR-TTY-INPUT to not assume that UNIX-READ will always work.
+ -- When we reallocate string table vectors to grow them, clear the old vector
+    so that it won't hold onto garbage (in case the vector was in static space,
+    but pointed to dynamic values.)  This was a major cause of memory leakage
+    in Hemlock.
+ -- Added a (setf (ts-stream-char-pos stream) 0) to the accept-input function
+    so that char-pos will be reset to zero whenever the user presses enter.
 
-Tuning:
-    Changed typescript streams to cache the line length.  This greatly speeds
-    up slave output.
+PCL:
+ -- The version has been updated to "5/1/90  May Day PCL (REV 4b)".
+ -- The Code walker now understands the real SYMBOL-MACROLET, and the PCL macro
+    definition is no longer used.
+ -- Fixed a bug in WALK-ARGLIST where it would ignore the rest of the current
+    arglist if the current arg destructured.  This was causing it to compile
+    forms like:
+	    (macrolet ((foo ((a b) c) ...)) ...)
+    as:
+	    (macrolet ((foo ((a b)) ...)) ...)
+    note the loss of the arg c.
 
-    Several changes to allow redisplay to be delayed until process output (i.e.
-    in a shell buffer) is complete.  This allows the editor to catch up with
-    output by only displaying the final state of the shell buffer, instead of
-    forcing every line of output to be displayed.  This is very nice with slow
-    terminals or large outputs.
+
+System:
 
-TTY redisplay:
-    Changed TTY redisplay to get the terminal size and speed from Unix using
-    the appropriate "ioctl" calls.  The speed of a PTY (and hence any telnet or
-    MCN connection) is infinite by default.  For best results with TTY
-    redisplay, it is crucial to set the terminal speed with the Unix "stty"
-    command:
-    	stty 2400
-    	stty 9600 etc.
-
-    Setting the speed allows the editor to keep in synch with the terminal so
-    that typing a command will temporarily abort redisplay until until there is
-    no typeahead.  This way, if you type C-v C-v in succession, output of the
-    first screen will stop when you type the second C-v.
-
-    Fixed several bugs in TTY redisplay.  "Unexpected zero transition delta" is
-    gone.  Also, fixed some problems with the screen not being updated properly
-    after redisplay has been aborted.  (When you type several commands in quick
-    succession.)
-
-    REDISPLAY now returns T, NIL or :EDITOR-INPUT.  T is returned when
-    redisplay changed the screen.  NIL is returned when there was no change.
-    :EDITOR-INPUT is returned when redisplay tried to update the screen, but
-    was aborted due to pending editor input.
-
-    Fixed REDISPLAY-WINDOWS-FROM-MARK so that process output won't cause
-    redisplay when we aren't in Hemlock.
-
-Bug fixes:
-    Modified MAKE-BUFFERS-FOR-TYPESCRIPT to make sure the user supplied
-    slave-name is free for use, so we don't clobber currently existing slaves.
-
-    Fixed a bug in completion mode (didn't previously work in the new-compiler
-    system.)
-
-Enhancements:
-    There is a new command "Set Buffer Writable", and the obsolete
-    command "Connect to Registered Eval Server" has been removed.
-
-    Added "Slave GC Alarm" variable (default :MESSAGE) which controls how
-    obnoxious the slave GC notification is.  Other values are like for "Input
-    Wait Alarm", :LOUD-MESSAGE and NIL.
-
-    Made the slave switch demon set debug:*help-line-scroll-count* to
-    most-positive-fixnum, since the editor can do the scrolling for us.
-
-
-SYSTEM, EXTENSIONS:
-
-Made SYSTEM:BITS, BYTES, etc., be defined in the null environment so that they
-can be inline expanded.  This was causing spurious consing in various system
-code.
-
-Fixed EXT:CONNECT-TO-INET-SOCKET to check that we successfully looked up the
-name so that we don't get segment violations on unknown hosts.
-
-Fixed DI:FUNCTION-DEBUG-FUNCTION (though it still returns the XEP.)  
-Some fixes to DI: condition report methods
-
-Added support for the MACH:TIOCGWINSZ and MACH:TIOCSWINSZ ioctls.
-In the Unix interface, extended the length of pathnames from 64 to 1024.
-
-EXT:ONCE-ONLY now does sequential variable binding.  This can't cause any
-problems, since all names are gensyms, and is often useful.
-
-Added :TIMEOUT argument to SYSTEM:MAKE-FD-STREAM.  The SYSTEM:IO-TIMEOUT
-condition is signalled if a timeout is specified and exceeded.
-
-----------
+ -- All the SAP-REF-<n> functions now take byte offsets.  Previously, the
+    16 and 32bit versions were scaled by the element size.
+ -- Fixed UNIX-IOCTL to not flame out of the cmd is a ub-32 instead of a sb-32.
+ -- Added Miles' TCSETPGRP, TCGETPGRP, and TTY-PROCESS-GROUP.
+ -- Unix syscalls are now more restrictive in the kind of arguments that they
+    accept.  In particular, UNIX:UNIX-READ, etc., no longer automatically
+    accept a vector (or string) argument.  You must use VECTOR-SAP to convert
+    the vector to a system area pointer.  Note that WITHOUT-GCING should be
+    wrapped around any syscall which is passed a pointer to the Lisp heap,
+    since the object might otherwise move doing the syscall.
+ -- Changed LOAD-FOREIGN to be exported from ALIEN.  Changed it have keyword
+    args instead of optionals.  Deleted obsolete linker argument.
