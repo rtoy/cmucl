@@ -8,11 +8,15 @@
 (c::new-backend "X86"
    ;; Features to add here
    '(:x86 :i486 :pentium
-     :stack-checking :mp :gencgc
+     :stack-checking
+     :heap-overflow-check
+     :relative-package-names
+     :mp
+     :gencgc
      :conservative-float-type
      :hash-new :random-mt19937
      :linux :glibc2 :glibc2.1
-     :cmu :cmu18 :cmu18d
+     :cmu :cmu19 :cmu19a
      )
    ;; Features to remove from current *features* here
    '(:x86-bootstrap :alpha :osf1 :mips

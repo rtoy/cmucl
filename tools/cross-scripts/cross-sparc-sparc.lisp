@@ -7,20 +7,33 @@
 
 (c::new-backend "SPARC"
    ;; Features to add here
-   '(:sparc :sparc-v9
-     :complex-fp-vops
+   '(:sparc
+     :sparc-v9				; For Ultrasparc processors
+     :complex-fp-vops			; Some slightly faster FP vops on complex numbers
      :linkage-table
-     :stack-checking
-     :gencgc
+     :stack-checking			; Throw error if we run out of stack
+     :heap-overflow-check		; Throw error if we run out of heap
+     :gencgc				; Generational GC
+     :relative-package-names		; Relative package names from Allegro
      :conservative-float-type
-     :hash-new :random-mt19937
-     :cmu :cmu19 :cmu19a
+     :hash-new
+     :random-mt19937			; MT-19937 generator
+     :cmu				; Announce this is CMUCL
+     :cmu19 :cmu19a			; Current version identifier
      )
    ;; Features to remove from current *features* here
-   '(:sparc-v8 :sparc-v7 :x86 :x86-bootstrap :alpha :osf1 :mips
+   '(:sparc-v8 :sparc-v7		; Choose only one of :sparc-v7, :sparc-v8, :sparc-v9
+     ;; Other architectures we aren't using.
+     :x86 :x86-bootstrap
+     :alpha :osf1 :mips
+     ;; Really old stuff that should have been removed long ago.
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     :openbsd :freebsd :glibc2 :linux :pentium
-     :long-float :new-random :small))
+     ;; Other OSes were not using
+     :openbsd :freebsd :glibc2 :linux
+     :pentium
+     :long-float
+     :new-random
+     :small))
 
 ;;; May need to add some symbols to *features* and
 ;;; sys::*runtime-features* as well.  This might be needed even if we
