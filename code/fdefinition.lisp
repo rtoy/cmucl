@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.9 1991/11/05 16:51:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.10 1991/11/07 15:46:07 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -229,7 +229,10 @@
   "Set name's global function definition."
   (declare (type function new-value) (optimize (safety 1)))
   (macrolet ((set-basic-def (name new-value form)
-	       `(let ((encap-info (gethash ,name *encapsulation-info*)))
+	       ;; *encapsulation-info* won't be bound when initially running
+	       ;; top-level forms in the kernel core startup.
+	       `(let ((encap-info (if (boundp '*encapsulation-info*)
+				      (gethash ,name *encapsulation-info*))))
 		  (cond (encap-info
 			 (loop
 			   (when (not (encapsulation-info-next encap-info))
@@ -241,11 +244,17 @@
 			   (setf encap-info
 				 (encapsulation-info-next encap-info))))
 			(t
-			 (dolist (f *setf-fdefinition-hook*)
-			   (funcall f ,name ,new-value))
+			 ;; *setf-fdefinition-hook* won't be bound when
+			 ;; initially running top-level forms in the kernel
+			 ;; core startup.
+			 (when (boundp '*setf-fdefinition-hook*)
+			   (dolist (f *setf-fdefinition-hook*)
+			     (funcall f ,name ,new-value)))
 			 (setf ,form ,new-value))))))
     (function-name-dispatch name
       (set-basic-def name new-value (symbol-function name))
+      ;; We make sure no SETF definitions exist before the DEFVAR for
+      ;; *setf-functions* runs in the kernel core.
       (set-basic-def name new-value (gethash (cadr name) *setf-functions*)))))
 ;;;
 (defsetf fdefinition %set-fdefinition)
