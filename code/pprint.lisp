@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.49 2004/10/21 21:26:27 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.50 2004/10/22 16:56:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1454,11 +1454,37 @@
     (pprint-fill stream (pprint-pop))
     (pprint-tagbody-guts stream)))
 
+#+nil
 (defun pprint-function-call (stream list &rest noise)
   (declare (ignore noise))
   (funcall (formatter "~:<~^~W~^ ~:_~:I~@{~W~^ ~_~}~:>")
 	   stream
 	   list))
+
+(defun pprint-function-call (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    (pprint-exit-if-list-exhausted)
+    ;; Function name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-newline :fill stream)
+    (pprint-indent :current 0 stream)
+    ;; Output args.  We try to keep keyword/value pairs on the same
+    ;; line.  This, of course, doesn't work if the keyword isn't a
+    ;; keyword arg because that will mess up the following stuff if
+    ;; the next arg is really a keyword arg.
+    (loop
+       (let ((arg (pprint-pop)))
+	 (output-object arg stream)
+	 (pprint-exit-if-list-exhausted)
+	 (write-char #\space stream)
+	 (when (keywordp arg)
+	   (output-object (pprint-pop) stream)
+	   (pprint-exit-if-list-exhausted)
+	   (write-char #\space stream))
+	 (pprint-newline :linear stream)))))
 
 (defun pprint-with-like (stream list &rest noise)
   (declare (ignore noise))
@@ -1507,7 +1533,40 @@
        (pprint-exit-if-list-exhausted)
        (pprint-newline :mandatory stream)
        (output-object (pprint-pop) stream))))
-  
+
+(defun pprint-defpackage (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W ~W~I~@{~@:_ ~:<~@{~W~^~:I~@{ ~W~^~:_~}~}~:>~}~:>")
+	   stream list))
+
+(defun pprint-defmethod (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    ;; Print out method qualifiers, if any
+    (loop
+       (let ((qual-or-lambda (pprint-pop)))
+	 (write-char #\space stream)
+	 (cond ((listp qual-or-lambda)
+		;; Print out lambda-list
+		(pprint-lambda-list stream qual-or-lambda)
+		(return))
+	       (t
+		(output-object qual-or-lambda stream)))
+	 (pprint-exit-if-list-exhausted)))
+    ;; Rest of the forms
+    (pprint-newline :mandatory stream)
+    (pprint-indent :block 0 stream)
+    (loop
+       (write-char #\space stream)
+       (output-object (pprint-pop) stream)
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :linear stream))))
+
 (defun pprint-restart-case (stream list &rest noise)
   (declare (ignore noise))
   (pprint-logical-block (stream list :prefix "(" :suffix ")")
@@ -1537,6 +1596,12 @@
 	      (output-object (pprint-pop) stream)
 	      (pprint-exit-if-list-exhausted)
 	      (pprint-newline :linear stream)))))))
+
+(defun pprint-when (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^~3I ~:_~W~I~@:_~@{ ~W~^~_~}~:>")
+	   stream list))
+
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -1579,9 +1644,11 @@
     (cond pprint-cond)
     (ctypecase pprint-typecase)
     (defconstant pprint-block)
+    (define-condition pprint-defclass)
     (define-modify-macro pprint-defun)
     (define-setf-expander pprint-defun)
     (defmacro pprint-defun)
+    (defpackage pprint-defpackage)
     (defparameter pprint-block)
     (defsetf pprint-defun)
     (defstruct pprint-defstruct)
@@ -1618,8 +1685,8 @@
     (step pprint-progn)
     (time pprint-progn)
     (typecase pprint-typecase)
-    (unless pprint-block)
-    (when pprint-block)
+    (unless pprint-when)
+    (when pprint-when)
     (with-compilation-unit pprint-with-like)
     (with-condition-restarts pprint-with-like)
     (with-hash-table-iterator pprint-with-like)
@@ -1633,6 +1700,7 @@
 
     ;; CLOS things
     (defclass pprint-defclass)
+    (defmethod pprint-defmethod)
     (with-slots pprint-with-like)
     (with-accessors pprint-with-like)
     
