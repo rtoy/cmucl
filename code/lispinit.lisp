@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.58 1999/12/04 16:02:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.59 2000/01/17 16:45:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -499,47 +499,17 @@
       (scrub (int-sap (- csp initial-offset))
 	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
 	     0))))
-
-#+x86 ;; Stack grows downwards
+
+;;; Scrub-control-stack.
+;;;
+;;; On the x86 port the stack grows downwards, and to support grow on
+;;; demand stacks the stack must be decreased as it is scrubbed.
+;;;
+#+x86
 (defun scrub-control-stack ()
   "Zero the unused portion of the control stack so that old objects are not
    kept alive because of uninitialized stack variables."
-  (declare (optimize (speed 3) (safety 0))
-	   (values (unsigned-byte 20)))
-  (labels
-      ((scrub (ptr offset count)
-	 (declare (type system-area-pointer ptr)
-		  (type (unsigned-byte 16) offset)
-		  (type (unsigned-byte 20) count)
-		  (values (unsigned-byte 20)))
-	 (let ((loc (int-sap (- (sap-int ptr) (+ offset vm:word-bytes)))))
-	   (cond ((= offset bytes-per-scrub-unit)
-		  (look (int-sap (- (sap-int ptr) bytes-per-scrub-unit))
-			0 count))
-		 (t ;; need to fix bug in %set-stack-ref
-		  (setf (sap-ref-32 loc 0) 0)
-		  (scrub ptr (+ offset vm:word-bytes) count)))))
-       (look (ptr offset count)
-	 (declare (type system-area-pointer ptr)
-		  (type (unsigned-byte 16) offset)
-		  (type (unsigned-byte 20) count)
-		  (values (unsigned-byte 20)))
-	 (let ((loc (int-sap (- (sap-int ptr) offset))))
-	   (cond ((= offset bytes-per-scrub-unit)
-		  count)
-		 ((zerop (kernel::get-lisp-obj-address (stack-ref loc 0)))
-;		 ((zerop (stack-ref loc 0))
-		  (look ptr (+ offset vm:word-bytes) count))
-		 (t
-		  (scrub ptr offset (+ count vm:word-bytes)))))))
-    (let* ((csp (sap-int (c::control-stack-pointer-sap)))
-	   (initial-offset (logand csp (1- bytes-per-scrub-unit))))
-      (declare (type (unsigned-byte 32) csp))
-      (scrub (int-sap (+ csp initial-offset))
-	     (* (floor initial-offset vm:word-bytes) vm:word-bytes)
-	     0))))
-
-
+  (scrub-control-stack))
 
 
 ;;;; TOP-LEVEL loop.
