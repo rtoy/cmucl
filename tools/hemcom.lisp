@@ -1,3 +1,15 @@
+;;; -*- Log: hemlock.log; Package: Hemlock-Internals -*-
+;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemcom.lisp,v 1.1.1.9 1991/02/14 00:25:14 ram Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file compiles all of Hemlock.
 ;;;
