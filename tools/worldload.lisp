@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.64 1993/08/19 13:18:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.65 1993/08/19 17:16:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
 (load "target:code/debug.*bytef" :if-does-not-exist nil)
 (load "target:code/defmacro.*bytef" :if-does-not-exist nil) 
-(load "target:code/bc-error.fasl" :if-does-not-exist nil)
+(load "target:code/error.*bytef" :if-does-not-exist nil)
 
 ;;; Define a bunch of search lists relative to target:
 ;;;
