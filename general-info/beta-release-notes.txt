@@ -1,3 +1,125 @@
+	    Release notes for CMU Common Lisp 17e, 19 September 93
+
+17e is primarily a bug-fix release.  This release also supports
+Hewlett-Packard 700-series workstations running HP-UX version 9.x.
+
+
+BASIC COMMON LISP SUPPORT CODE:
+
+Enhancements:
+ -- The function EXT:PURIFY is now exported.  This was formerly only
+    documented as usable via the :PURIFY argument to SAVE-LISP.  Great
+    improvements in GC runtime and memory use can be obtained when PURIFY is
+    called after loading in large amounts of code or creating large
+    datastructures that are unlikely to become garbage.
+ -- EXT:PURIFY (and thus (EXT:SAVE-LISP ... :PURIFY T) now compact the
+    hashtables representing the global namespace.  Formerly this feature was
+    undocumented and only used during the initial system build.
+ -- There is now a "runtime" version of the Lisp image which omits the
+    compiler and loads some other code byte compiled, giving a 60% size
+    reduction.  See README file, "Runtime distribution" section.
+ -- Changed the byte-function and byte-closure funcallable-instances to use
+    &more args instead of a &rest arg (eliminating the main source of
+    grautitous consing in byte code.)
+ -- Allow pretty-printer to work without compiler loaded.
+ -- Improved (and thus changed) the SXHASH of lists and other composite
+    objects.
+ -- Added to *FEATURES* all of the ANSI CL features that seemed plausible.
+    Any non-ANSI compliance is now a bug, not a feature...
+ -- Picked up Miles' changes to apropos and apropos-list that allows one to
+    supply NIL for the package, meaning all packages.
+
+Bug fixes:
+ -- Fix arg ordering for GETF in new condition support.  Default the name
+    slot in DEFMACRO-LAMBDA-LIST-BIND-ERRORS to NIL (instead of leaving it
+    unbound.)
+ -- In READ-N-BYTES, only signal EOF when we read and got 0 bytes, not
+    whenever read returns less than we wanted.  Also, fix the case of small
+    reads with an empty buffer not to leave garbled buffer pointers if we have
+    to do more than one read.  These bugs mostly affect the X interface and
+    its users (Garnet was having problems.)
+ -- Changed YES-OR-NO-P and Y-OR-N-P to force output.
+ -- Fixed COUNT :TEST-NOT to actually negate the test.
+ -- Fixed COERCE to call type-expand so that people can coerce to deftypes.
+ -- Rename STEP to DEBUG::SET-STEP-BREAKPOINT because step is supposed to be
+    the exported step macro, not some internal routine.
+ -- Fixed DEFPACKAGE to combine multiple use, export, and import options
+    correctly.  Fixed the warning about no longer using some packages to
+    actually work.
+ -- Fixed GCD to correctly handle MOST-NEGATIVE-FIXNUM.
+ -- Flush Hemlock font change hack in default site-init.lisp, since it was
+    causing problems.
+
+CLOS (PCL):
+ -- Add some hacks for coercing lisp:class objects to pcl:class.
+ -- Export MAKE-LOAD-FORM-SAVING-SLOTS, not MAKE-LOAD-FORM-DUMPING-SLOTS.
+ -- Fix some problems with the LISP:CLASS class-precedence-list suddenly
+    becoming empty when a class is redefined.
+ -- Fixed SIMPLE-STRING to list STRING in the inherits list.
+
+
+COMPILER:
+
+Enhancements:
+ -- Added a type inference method for LOG's result type.
+ -- Added support for "more args" which are like rest args, but don't cons.
+    This is used for calling into annd out of byte-compiled core and in the
+    PROFILE package.
+ -- Increase *inline-expansion-limit* from 50 to 200.  Change "inline
+    expansion count exceeded" warning to be a note.  Don't inline expand in
+    interpreted code.
+
+Bug fixes:
+ -- Fix a problem where spurious argument types could be inferred for optional
+    arguments in byte-compiled code (caused yes-or-no-p to fail.)
+ -- Fixed an internal error related to tail local calls.
+ -- Fixed assertion failure about COMPONENT-NEW-FUNCTIONS with some inline
+    expansions. 
+ -- Fixed (TYPEP X '(REAL ...)) to actually test against REAL, not NUMBER.
+ -- Fixed a problem where top-level MULTIPLE-VALUE-CALL forms could cause an
+    assertion falure. 
+ -- Don't try to compile flow-graph components that are unreachable.  This
+    avoids some internal errors when unreachable local functions are
+    deleted.
+ -- Fix problem with byte-compiling PROGV getting an internal compiler error.
+
+
+EXTENSIONS:
+
+Misc extensions:
+ -- Added an executable-only optional to EXT:UNIX-NAMESTRING so that we can
+    expand path:foo into the first executable in the path named foo, not just
+    the first file
+ -- Changed RUN-PROGRAM to only try to run executables, and to flame out if it
+    can't be found in path:.
+ -- Profile: use &more instead of &rest to avoid consing the &rest arg list.
+    Fixed PROFILE:REPORT-TIME to not choke if any of the function names are
+    not symbols (e.g. setf functions).
+
+Motif interface:
+ -- Added an optional STYLE arg to the graphical inspector to make the
+    function consistent with its doc string (as well as the old inspector).
+ -- Tried to make starting the Motif server more robust, or at least give some
+    intelligible error message.
+ -- Added some extra protection against recursive invocation of the windowing
+    debugger.
+
+Hemlock:
+ -- Add window-buffer-hook for echo area buffer to make absolutely sure we
+    can't change the eacho area window to point to another buffer.
+ -- Give a sensible error message if we can't find the slave utility (e.g.
+    lisp) to run.
+ -- Restored the behavior of scribe-file to cd to the directory of the .mss
+    file before running scribe.
+ -- Change default fonts to be courier, flushing all mention of 8x13.
+    Remove font-setting in default site-init file, since it was causing
+    problems.
+ -- Add FILE-POSITION method for region streams so that the compiler's read
+    error recovery works for "Editor Compile Defun", etc.
+ -- When reading a file, set BUFFER-WRITABLE to T before doing anything so
+    that we don't get spurious read-only errors.
+
+
 	    Release notes for CMU Common Lisp 17c, 19 September 93
 
 17c is a new major release of CMU Common Lisp.  An overview of changes:
