@@ -188,7 +188,8 @@
 					 :error-string 'deftype-error-string
 					 )
       `(eval-when (compile load eval)
-	 (setf (get ',name 'deftype-expander)
+	 (setf (info type kind name) :defined)
+	 (setf (info type expander name)
 	       #'(lambda (,whole) ,@local-decs (block ,name ,body)))
 	 ,@(when doc
 	     `((setf (documentation ',name 'type) ,doc)))
