@@ -2,7 +2,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.14 2002/11/22 00:39:56 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.15 2002/11/22 01:05:23 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -138,6 +138,9 @@
 (defgeneric eql-specializer-object (eql-specializer))
 ;          (eql-specializer)
 
+(defgeneric generic-function-declarations (standard-generic-function))
+;          (standard-generic-function)
+
 (defgeneric generic-function-method-class (standard-generic-function))
 ;          (standard-generic-function)
 
@@ -270,6 +273,9 @@
 ;          (t standard-generic-function)
 
 (defgeneric (setf generic-function-method-combination) (new-value standard-generic-function))
+;          (t standard-generic-function)
+
+(defgeneric (setf generic-function-declarations) (new-value standard-generic-function))
 ;          (t standard-generic-function)
 
 (defgeneric (setf generic-function-methods) (new-value standard-generic-function))
