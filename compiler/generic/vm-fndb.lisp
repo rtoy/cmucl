@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.46 1992/12/15 20:09:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.47 1992/12/17 09:30:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +23,7 @@
 (export '(current-sp current-fp 
 	  stack-ref %set-stack-ref lra-code-header
 	  function-code-header make-lisp-obj get-lisp-obj-address
-	  function-word-offset code-debug-info
+	  function-word-offset
 	  funcallable-instance-p %set-funcallable-instance-info
 	  code-header-ref code-header-set code-instructions
 	  shift-towards-start shift-towards-end
