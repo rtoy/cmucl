@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.26 1991/11/07 13:20:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.27 1991/11/07 17:32:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,10 @@
 
 ;;; Always compile safe.  This code isn't very careful about protecting itself.
 ;;;
-(declaim (optimize (safety 1)))
+(eval-when (compile)
+  (declaim (optimize (safety 1))))
+
+
 
 ;;;; Structure frobbing primitives.
 
