@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.39 1999/02/11 12:17:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.40 2000/04/05 04:26:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -897,13 +897,10 @@
 		      (bin #'concatenated-bin)
 		      (misc #'concatenated-misc))
 	    (:print-function %print-concatenated-stream)
-	    (:constructor
-	     make-concatenated-stream (&rest streams &aux (current streams))))
-  ;; The car of this is the stream we are reading from now.
-  current
-  ;; This is a list of all the streams.  We need to remember them so that
-  ;; we can close them.
-  (streams nil :type list :read-only t))
+	    (:constructor make-concatenated-stream (&rest streams)))
+  ;; This is a list of all the streams. The car of this is the stream
+  ;; we are reading from now.
+  (streams nil :type list))
 
 (defun %print-concatenated-stream (s stream d)
   (declare (ignore d))
@@ -916,18 +913,19 @@
 
 (macrolet ((in-fun (name fun)
 	     `(defun ,name (stream eof-errorp eof-value)
-		(do ((current (concatenated-stream-current stream) (cdr current)))
+		(do ((current (concatenated-stream-streams stream)
+			      (cdr current)))
 		    ((null current)
 		     (eof-or-lose stream eof-errorp eof-value))
 		  (let* ((stream (car current))
 			 (result (,fun stream nil nil)))
 		    (when result (return result)))
-		  (setf (concatenated-stream-current stream) current)))))
+		  (setf (concatenated-stream-streams stream) (cdr current))))))
   (in-fun concatenated-in read-char)
   (in-fun concatenated-bin read-byte))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
-  (let ((left (concatenated-stream-current stream)))
+  (let ((left (concatenated-stream-streams stream)))
     (when left
       (let* ((current (car left)))
 	(case operation
@@ -939,9 +937,9 @@
 			      (stream-misc-dispatch current :listen))))
 	       (cond ((eq stuff :eof)
 		      ;; Advance current, and try again.
-		      (pop (concatenated-stream-current stream))
+		      (pop (concatenated-stream-streams stream))
 		      (setf current
-			    (car (concatenated-stream-current stream)))
+			    (car (concatenated-stream-streams stream)))
 		      (unless current
 			;; No further streams.  EOF.
 			(return :eof)))
