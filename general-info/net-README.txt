@@ -34,8 +34,8 @@ directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
 As of 12/11/92, the latest SunOS Sparc release is:
-    16f-sun4c_41.tar.Z (6.8 meg)
-    16f-extra-sun4c_41.tar.Z (3.5 meg)
+    17b-sun4c_41.tar.Z (6.8 meg)
+    17b-extra-sun4c_41.tar.Z (3.6 meg)
 
 The first file holds binaries and documentation for the basic Lisp system,
 while the second `-extra' file contains the Hemlock editor, the graphical
@@ -68,19 +68,18 @@ template that sets up environment variables and then runs CMU CL.  You may
 want to have your EMACS maintainer place doc/cmu-user.info in the info root, or
 you can setenv INFOPATH to include the doc/ directory.
 
-To load in Hemlock or CLX and save an augmented Lisp image, run lib/config.
-This runs `lisp' on `lib/config.lisp', which uses an interactive dialog to
-determine what systems to load and where to save the result.  The default
-output is to overwrite library:lisp.core.  To avoid overwriting the running
-Lisp image, any existing image is renamed to `lisp.core.BAK'; this file may be
-manually deleted to save disk space.
+To load in CLX, the Motif interface and windowing debugger, or Hemlock and save
+an augmented Lisp image, run lib/config.  This runs `lisp' on
+`lib/config.lisp', which uses an interactive dialog to determine what systems
+to load and where to save the result.  The default output is to overwrite
+library:lisp.core.  To avoid overwriting the running Lisp image, any existing
+image is renamed to `lisp.core.BAK'; this file may be manually deleted to save
+disk space.
 
 SunOS/SPARC Notes:
 
-Note: The regular release of CMU CL does not run on SPARC 10 systems, since
-the stack has been moved.  Pick up the file 16f-sun4m_413.core.Z,
-uncompress it, and use it instead of the lisp.core from the regular
-release.
+With this release, CMU CL should require no special effort to run on Sparc10's
+under SunOS.  Solaris is still  not supported.
 
 At least 16 meg of memory is recommended, and more is better.  Your system
 maintainer may need to configure extra paging space for large Lisp application.
@@ -98,7 +97,8 @@ Running CMU CL:
 
 Run "lisp".  If Hemlock is loaded, you can also "lisp -edit".  Hemlock will
 use X if the DISPLAY environment variable is defined, otherwise it will use
-terminal i/o based on TERM and /etc/termcap.
+terminal i/o based on TERM and /etc/termcap.  If the Motif debugger is loaded,
+it will be invoked on errors and by INSPECT.
 
 Source availability:
 
@@ -109,8 +109,8 @@ packages: PCL and CLX.  Although these packages are copyrighted, they may be
 freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
-".lisp" source files used to build version 16f:
-    16f-source.tar.Z (3.6 meg)
+".lisp" source files used to build version 17b:
+    17b-source.tar.Z (4.9 meg)
 
 All of our files (including the release area) are actually in the AFS file
 system.  On the release machines, the FTP server's home is the release
@@ -137,7 +137,7 @@ Miscellaneous Lisp run-time code:
     /afs/cs/project/clisp/src/beta/code/*.lisp
 
 C run-time code:
-    /afs/cs/project/clisp/src/beta/ldb/*
+    /afs/cs/project/clisp/src/beta/lisp/*
 
 A very drafty version of an internal design document: (160 pages) Some of
 the "tex" files may be more humanly readable, since many formatting
