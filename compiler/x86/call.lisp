@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.9 1997/12/03 15:30:20 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.10 1997/12/03 19:57:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,9 +49,8 @@
 ;#+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
   (declare (ignore standard))
-  (make-wired-tn *fixnum-primitive-type*
-		 control-stack-sc-number
-		 return-pc-save-offset))
+  (make-wired-tn (primitive-type-or-lose 'system-area-pointer *backend*)
+		 sap-stack-sc-number return-pc-save-offset))
 ;;;
 ;;; If standard is true, then use the standard (full call) location,
 ;;; otherwise use any legal location.
@@ -59,10 +58,10 @@
 ;;; No problems.
 #+nil
 (def-vm-support-routine make-return-pc-passing-location (standard)
-  (if standard
-      (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
-		     return-pc-save-offset)
-      (make-normal-tn *fixnum-primitive-type*)))
+  (let ((ptype (primitive-type-or-lose 'system-area-pointer *backend*)))
+    (if standard
+	(make-wired-tn ptype sap-stack-sc-number return-pc-save-offset)
+	(make-normal-tn ptype))))
 
 ;;; Make-Old-FP-Passing-Location  --  Interface
 ;;;
@@ -111,28 +110,25 @@
 (def-vm-support-routine make-old-fp-save-location (env)
   (specify-save-tn
    (environment-debug-live-tn (make-normal-tn *fixnum-primitive-type*) env)
-   (make-wired-tn *fixnum-primitive-type*
-		  control-stack-sc-number
+   (make-wired-tn *fixnum-primitive-type* control-stack-sc-number
 		  ocfp-save-offset)))
 
 ;;;
 ;;; Without using a save-tn - which does not make much sense if it is
 ;;; wire to the stack? No problems.
 (def-vm-support-routine make-return-pc-save-location (env)
-  (environment-debug-live-tn (make-wired-tn *fixnum-primitive-type*
-					    control-stack-sc-number
-					    return-pc-save-offset)
-			     env))
+  (environment-debug-live-tn
+   (make-wired-tn (primitive-type-or-lose 'system-area-pointer *backend*)
+		  sap-stack-sc-number return-pc-save-offset)
+   env))
 ;;;
 ;;; Using a save-tn. No problems.
 #+nil
 (def-vm-support-routine make-return-pc-save-location (env)
-  (let ((ptype *fixnum-primitive-type*))
+  (let ((ptype (primitive-type-or-lose 'system-area-pointer *backend*)))
     (specify-save-tn
      (environment-debug-live-tn (make-normal-tn ptype) env)
-     (make-wired-tn ptype
-		    control-stack-sc-number
-		    return-pc-save-offset))))
+     (make-wired-tn ptype sap-stack-sc-number return-pc-save-offset))))
 
 ;;; Make-Argument-Count-Location  --  Interface
 ;;;
@@ -486,14 +482,13 @@
     (inst jmp done)
 
     (emit-label variable-values)
+    ;; dtc: this writes the registers onto the stack even if they are
+    ;; not needed, only the number specified in ecx are used and have
+    ;; stack allocated to them. No harm is done.
     (loop
       for arg in register-arg-tns
       for i downfrom -1
-      do (storew arg args i)) ; dtc: this writes the registers onto
-                              ; the stack even if they are not needed,
-                              ; only the number specified in ecx are
-                              ; used and have stack allocated to
-                              ; them. No harm is done.
+      do (storew arg args i))
     (move start args)
     (move count nargs)
 
@@ -552,21 +547,20 @@
     (move ebp-tn fp)
 
     (let ((ret-tn (callee-return-pc-tn callee)))
-
-#+nil      (format t "*call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((control-stack)
-#+nil	 (format t "*call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
@@ -601,21 +595,20 @@
     (move ebp-tn fp)
 
     (let ((ret-tn (callee-return-pc-tn callee)))
-
-#+nil      (format t "*multiple-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*multiple-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
 
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((control-stack)
-#+nil	 (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*multiple-call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
@@ -659,20 +652,20 @@
 
     (let ((ret-tn (callee-return-pc-tn callee)))
 
-#+nil      (format t "*known-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
+      #+nil
+      (format t "*known-call-local ~s; tn-kind ~s; tn-save-tn ~s; its tn-kind ~s~%"
 	      ret-tn (c::tn-kind ret-tn) (c::tn-save-tn ret-tn)
 	      (c::tn-kind (c::tn-save-tn ret-tn)))
-
+      
       ;; Is the return-pc on the stack or in a register?
       (sc-case ret-tn
-	((control-stack)
-#+nil	 (format t "*known-call-local: ret-tn on stack; offset=~s~%"
-		 (tn-offset ret-tn))
+	((sap-stack)
+	 #+nil (format t "*known-call-local: ret-tn on stack; offset=~s~%"
+		       (tn-offset ret-tn))
 	 ;; Stack
 	 (storew (make-fixup nil :code-object return)
 		 ebp-tn (- (1+ (tn-offset ret-tn)))))
-
-	((any-reg descriptor-reg)
+	((sap-reg)
 	 ;; Register
 	 (inst lea ret-tn (make-fixup nil :code-object return)))))
 
@@ -743,29 +736,28 @@
   (:generator 6
     (trace-table-entry trace-table-function-epilogue)
 
-#+nil    (format t "*known-return: old-fp ~s, tn-kind ~s; ~s ~s~%"
-	    old-fp (c::tn-kind old-fp) (c::tn-save-tn old-fp)
-	    (c::tn-kind (c::tn-save-tn old-fp)))
+    #+nil (format t "*known-return: old-fp ~s, tn-kind ~s; ~s ~s~%"
+		  old-fp (c::tn-kind old-fp) (c::tn-save-tn old-fp)
+		  (c::tn-kind (c::tn-save-tn old-fp)))
 
-#+nil    (format t "*known-return: return-pc ~s, tn-kind ~s; ~s ~s~%"
-	    return-pc (c::tn-kind return-pc) (c::tn-save-tn return-pc)
-	    (c::tn-kind (c::tn-save-tn return-pc)))
-
+    #+nil (format t "*known-return: return-pc ~s, tn-kind ~s; ~s ~s~%"
+		  return-pc (c::tn-kind return-pc) (c::tn-save-tn return-pc)
+		  (c::tn-kind (c::tn-save-tn return-pc)))
+    
     ;; return-pc may be either in a register or on the stack.
     (sc-case return-pc
-      ((any-reg descriptor-reg)
+      ((sap-reg)
        (sc-case old-fp
          ((control-stack)
 
-#+nil	  (format t "*known-return: old-fp ~s on stack; offset=~s~%"
-		  old-fp (tn-offset old-fp))
-
+	  #+nil (format t "*known-return: old-fp ~s on stack; offset=~s~%"
+			old-fp (tn-offset old-fp))
+	  
 	  (cond ((zerop (tn-offset old-fp))
 		 ;; Zot all of the stack except for the old-fp.
-		 (inst lea esp-tn
-		       (make-ea :dword :base ebp-tn
-				:disp
-				(- (* (1+ ocfp-save-offset) word-bytes))))
+		 (inst lea esp-tn (make-ea :dword :base ebp-tn
+					   :disp (- (* (1+ ocfp-save-offset)
+						       word-bytes))))
 		 ;; Restore the old fp from its save location on the stack,
 		 ;; and zot the stack.
 		 (inst pop ebp-tn))
@@ -784,16 +776,15 @@
        ;; Return; return-pc is in a register.
        (inst jmp return-pc))
 
-      ((control-stack)
+      ((sap-stack)
 
-#+nil       (format t "*known-return: return-pc ~s on stack; offset=~s~%"
-	       return-pc (tn-offset return-pc))
-
+       #+nil (format t "*known-return: return-pc ~s on stack; offset=~s~%"
+		     return-pc (tn-offset return-pc))
+       
        ;; Zot all of the stack except for the old-fp and return-pc.
        (inst lea esp-tn
 	     (make-ea :dword :base ebp-tn
-		      :disp
-		      (- (* (1+ (tn-offset return-pc)) word-bytes))))
+		      :disp (- (* (1+ (tn-offset return-pc)) word-bytes))))
        ;; Restore the old fp.  old-fp may be either on the stack in its
        ;; save location or in a register, in either case this restores it.
        (move ebp-tn old-fp)
@@ -1096,7 +1087,7 @@
     (unless (and (sc-is old-fp control-stack)
 		 (= (tn-offset old-fp) ocfp-save-offset))
 	    (error "tail-call-variable: ocfp not on stack in standard save location?"))
-    (unless (and (sc-is ret-addr control-stack)
+    (unless (and (sc-is ret-addr sap-stack)
 		 (= (tn-offset ret-addr) return-pc-save-offset))
 	    (error "tail-call-variable: ret-addr not on stack in standard save location?"))
     
