@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.45 1993/02/08 20:03:57 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.46 1993/05/07 13:18:46 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1008,6 +1008,7 @@
 	    '(:name :tab code (:unless (:constant 0) subcode))
 	    :control #'break-control )
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-break-inst segment special-op code subcode #b001101)))
@@ -1033,6 +1034,7 @@
 (define-instruction word (segment word)
   (:declare (type (or (unsigned-byte 32) (signed-byte 32)) word))
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-word segment word)))
@@ -1040,6 +1042,7 @@
 (define-instruction short (segment short)
   (:declare (type (or (unsigned-byte 16) (signed-byte 16)) short))
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-short segment short)))
@@ -1047,6 +1050,7 @@
 (define-instruction byte (segment byte)
   (:declare (type (or (unsigned-byte 8) (signed-byte 8)) byte))
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-byte segment byte)))
@@ -1063,12 +1067,14 @@
 
 (define-instruction function-header-word (segment)
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-header-data segment function-header-type)))
 
 (define-instruction lra-header-word (segment)
   :pinned
+  (:cost 0)
   (:delay 0)
   (:emitter
    (emit-header-data segment return-pc-header-type)))
