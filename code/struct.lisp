@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.11 1991/05/21 21:25:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.12 1991/12/14 08:55:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 
 (defstruct (defstruct-description
              (:conc-name dd-)
-             (:print-function print-defstruct-description))
+             (:print-function print-defstruct-description)
+	     (:make-load-form-fun :just-dump-it-normally))
   name				; name of the structure
   doc				; documentation on the structure
   slots				; list of slots
@@ -39,12 +40,14 @@
   lisp-type			; actual type used for implementation.
   named				; T if named, Nil otherwise
   offset			; first slot's offset into implementation sequence
-  (length nil :type (or fixnum null))) ; total length of the thing
+  (length nil :type (or fixnum null)) ; total length of the thing
+  make-load-form-fun)		; make-load-form function.
 
 
 (defstruct (defstruct-slot-description
              (:conc-name dsd-)
-             (:print-function print-defstruct-slot-description))
+             (:print-function print-defstruct-slot-description)
+	     (:make-load-form-fun :just-dump-it-normally))
   %name				; string name of slot
   (index (required-argument) :type fixnum) ; its position in the implementation sequence
   accessor			; name of it accessor function
