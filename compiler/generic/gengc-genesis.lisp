@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.7 1993/05/22 16:16:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.8 1993/05/23 20:39:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,11 +219,11 @@
 
 ;;;; Generation/Step setup.
 
-(defparameter *initial-generation-setup*
+(defvar *initial-generation-setup*
   '((:policy gen-default-policy
      :steps ((:step 0 :max-blocks 1 :policy step-default-policy :prom-step 1)))
     (:policy gen-default-policy
-     :steps ((:step 1 :is :dynamic :max-blocks 32
+     :steps ((:step 1 :is :dynamic :max-blocks 64
 	      :policy step-default-policy :prom-step 1)))
     (:policy gen-tenure-policy
      :steps ((:step 2 :is :static :policy step-tenure-policy :prom-step 2)))))
@@ -870,17 +870,15 @@
 				     nil
 				     *static*)))
       (setf *nil-descriptor* nil-des)
-      (write-descriptor nil-des 0
+      (write-descriptor des 1
 			(make-other-immediate-descriptor
 			 0 vm:symbol-header-type))
-      (write-descriptor nil-des vm:symbol-value-slot *nil-descriptor*)
-      ;; The hash symbol slot is located at the same place as the cdr,
-      ;; so we fill it in with nil so that (cdr nil) returns nil.
-      (write-descriptor nil-des vm:symbol-hash-slot *nil-descriptor*)
-      (write-descriptor nil-des vm:symbol-plist-slot *nil-descriptor*)
-      (write-descriptor nil-des vm:symbol-name-slot (string-to-core "NIL"))
-      (write-descriptor nil-des vm:symbol-package-slot *nil-descriptor*)
-      (setf (get nil 'cold-info) (cons *nil-descriptor* nil))
+      (write-descriptor nil-des vm:cons-car-slot nil-des)
+      (write-descriptor nil-des vm:cons-cdr-slot nil-des)
+      (write-descriptor des (1+ vm:symbol-plist-slot) nil-des)
+      (write-descriptor des (1+ vm:symbol-name-slot) (string-to-core "NIL"))
+      (write-descriptor des (1+ vm:symbol-package-slot) nil-des)
+      (setf (get nil 'cold-info) (cons nil-des nil))
       (cold-intern nil))
 
     ;; Intern the others.
