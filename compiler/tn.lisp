@@ -514,15 +514,3 @@
 	  (return)))))
   (undefined-value))
 
-
-;;; TN-Environment  --  Interface
-;;;
-;;;    Return some Environment that TN is referenced in.  TN must have at least
-;;; one reference (either read or write.)  Note that some TNs are referenced in
-;;; multiple environments.
-;;;
-(defun tn-environment (tn)
-  (declare (type tn tn))
-  (let ((ref (or (tn-reads tn) (tn-writes tn))))
-    (assert ref)
-    (block-environment (ir2-block-block (vop-block (tn-ref-vop ref))))))
