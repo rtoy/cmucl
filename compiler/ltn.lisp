@@ -34,10 +34,9 @@
 			 (cookie-cspeed dcookie))))
 	 (speed (or (cookie-speed cookie)
 		    (cookie-speed dcookie))))
-    (cond ((>= safety speed space) :fast-safe)
-	  ((>= speed (max space safety)) :fast)
-	  ((>= space (max speed safety)) :small)
-	  (t :safe))))
+    (if (zerop safety)
+	(if (>= speed space) :fast :small)
+	(if (>= speed space) :fast-safe :safe))))
 
 
 ;;; Policy-Safe-P  --  Interface
