@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.7 1990/04/04 19:06:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.8 1990/04/06 00:15:48 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -257,8 +257,11 @@
 	  args-type-optional args-type-p args-type-required args-type-rest
 	  array-rank array-total-size array-type array-type-complexp
 	  array-type-dimensions array-type-element-type array-type-p
-	  array-type-specialized-element-type ash-index bit-index
-	  boole-code boolean byte-specifier callable char-int
+	  array-type-specialized-element-type ash-index bit-bash-clear
+	  bit-bash-set bit-bash-not bit-bash-copy bit-bash-and bit-bash-ior
+	  bit-bash-xor bit-bash-eqv bit-bash-lognand bit-bash-lognor
+	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
+	  bit-index boole-code boolean byte-specifier callable char-int
 	  consed-sequence csubtypep ctype ctype-of ctype-p ctypep
 	  data-vector-ref data-vector-set filename float-digits
 	  float-exponent float-format-max float-radix form function-type
@@ -278,17 +281,17 @@
 	  pathname-directory pathname-host pathname-name pathname-type
 	  pathname-version pathnamelike sequence-end single-value-type
 	  specifier-type streamlike stringable stringlike structure-type
-	  structure-type-name structure-type-p truth two-arg-* two-arg-+
-	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
-	  two-arg-> two-arg->= two-arg-and two-arg-ior two-arg-xor
-	  type-difference type-intersect type-intersection type-specifier
-	  type-specifier-symbols type-union type/= type= types-intersect
-	  union-type union-type-p union-type-types values-subtypep
-	  values-type values-type-allowp values-type-intersect
-	  values-type-intersection values-type-keyp values-type-keywords
-	  values-type-optional values-type-p values-type-required
-	  values-type-rest values-type-union values-types
-	  values-types-intersect void))
+	  structure-type-name structure-type-p truth type-init two-arg-*
+	  two-arg-+ two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<=
+	  two-arg-= two-arg-> two-arg->= two-arg-and two-arg-ior
+	  two-arg-xor type-difference type-intersect type-intersection
+	  type-specifier type-specifier-symbols type-union type/= type=
+	  types-intersect union-type union-type-p union-type-types
+	  values-subtypep values-type values-type-allowp
+	  values-type-intersect values-type-intersection values-type-keyp
+	  values-type-keywords values-type-optional values-type-p
+	  values-type-required values-type-rest values-type-union
+	  values-types values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
