@@ -1,7 +1,8 @@
 	    Release notes for CMU Common Lisp 17e, 19 September 93
 
-17e is primarily a bug-fix release.  This release also supports
-Hewlett-Packard 700-series workstations running HP-UX version 9.x.
+17e is primarily a bug-fix release.  This release is also available on
+Hewlett-Packard 700-series workstations running HP/UX version 9.x.  
+The main missing feature on HP/UX is LOAD-FOREIGN.
 
 
 BASIC COMMON LISP SUPPORT CODE:
@@ -30,6 +31,9 @@ Enhancements:
     supply NIL for the package, meaning all packages.
 
 Bug fixes:
+ -- In SIGNAL, bind *break-on-signals* to NIL even before doing the type test
+    so that we don't wedge the error system if the type is malformed or
+    undefined. 
  -- Fix arg ordering for GETF in new condition support.  Default the name
     slot in DEFMACRO-LAMBDA-LIST-BIND-ERRORS to NIL (instead of leaving it
     unbound.)
@@ -56,6 +60,7 @@ CLOS (PCL):
  -- Fix some problems with the LISP:CLASS class-precedence-list suddenly
     becoming empty when a class is redefined.
  -- Fixed SIMPLE-STRING to list STRING in the inherits list.
+ -- Fix to update-instance-for-different-class.
 
 
 COMPILER:
@@ -70,6 +75,13 @@ Enhancements:
     interpreted code.
 
 Bug fixes:
+ -- Allow stream arg to compile-file.
+ -- Changed assert-definition-type to quietly ignore non function-types.
+ -- Allow stream arg to compile-file.
+ -- Deleted incorrect type declaration in process-1-ftype-proclamation.
+    Deleted test for function-type-p around call to assert-definition-type,
+    since this is now folded into the function.  Previously several calls
+    weren't doing this necessary check.
  -- Fix a problem where spurious argument types could be inferred for optional
     arguments in byte-compiled code (caused yes-or-no-p to fail.)
  -- Fixed an internal error related to tail local calls.
@@ -96,6 +108,7 @@ Misc extensions:
     Fixed PROFILE:REPORT-TIME to not choke if any of the function names are
     not symbols (e.g. setf functions).
 
+[NOTE: Motif server doesn't work on HP yet.]
 Motif interface:
  -- Added an optional STYLE arg to the graphical inspector to make the
     function consistent with its doc string (as well as the old inspector).
@@ -103,6 +116,11 @@ Motif interface:
     intelligible error message.
  -- Added some extra protection against recursive invocation of the windowing
     debugger.
+ -- Don't try to invoke motif debugger if we didn't succeed in opening a
+    connection. 
+ -- Print warning in status hook when server dies.
+ -- Made server fflush after all output so that we see output when it is run
+    on a pipe.
 
 Hemlock:
  -- Add window-buffer-hook for echo area buffer to make absolutely sure we
