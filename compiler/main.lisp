@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.80 1993/03/12 15:14:35 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.81 1993/05/08 00:43:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -320,7 +320,8 @@
 	(new-assem:release-segment *elsewhere*))))
 
   ;; We are done, so don't bother keeping anything around.
-  (clear-ir2-info component)
+  (nuke-ir2-component component)
+  (setf (component-info component) nil)
   
   (undefined-value))
 
@@ -363,6 +364,8 @@
 	  (byte-compile-component component)
 	  (native-compile-component component))))
 
+  (clear-constant-info)
+
   (when *compile-print*
     (compiler-mumble "~&"))
 
@@ -371,21 +374,15 @@
 
 ;;;; Clearing global data structures:
 
-;;; CLEAR-IR2-INFO  --  Internal
+;;; CLEAR-CONSTANT-INFO  --  Internal
 ;;;
-;;;    Clear all the INFO slots in sight in Component to allow the IR2 data
-;;; structures to be reclaimed.  We also clear the INFO in constants in the
-;;; *FREE-VARIABLES*, etc.  The latter is required for correct assignment of
-;;; costant TNs, in addition to allowing stuff to be reclaimed.
+;;;    Clear the INFO in constants in the *FREE-VARIABLES*, etc.  In addition
+;;; to allowing stuff to be reclaimed, this is required for correct assignment
+;;; of constant offsets, since we need to assign a new offset for each
+;;; component.  We don't clear the FUNCTIONAL-INFO slots, since they are used
+;;; to keep track of functions across component boundaries.
 ;;;
-;;;    We don't clear the FUNCTIONAL-INFO slots, since they are used to keep
-;;; track of functions across component boundaries.
-;;;
-(defun clear-ir2-info (component)
-  (declare (type component component))
-  (nuke-ir2-component component)
-  (setf (component-info component) nil)
-
+(defun clear-constant-info ()
   (maphash #'(lambda (k v)
 	       (declare (ignore k))
 	       (setf (leaf-info v) nil))
