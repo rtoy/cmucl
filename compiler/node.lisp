@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.29 1993/05/06 10:20:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.30 1993/08/19 23:10:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -750,6 +750,32 @@
   name
   inlinep
   (functional :test functional))
+
+
+;;; The Dylan-Var structure is used to represent dylan module-variables.
+;;; 
+(defstruct (dylan-var
+	    (:include basic-var)
+	    (:print-function %print-dylan-var))
+  ;;
+  ;; The name of the module to extract this from.
+  (module-name (required-argument)))
+
+(defprinter dylan-var
+  name
+  module-name)
+
+
+
+;;; The Dylan-Function-Var is used to represent functional references to
+;;; dylan module variables.  The name is `(:dylan-function ,dname ,modname).
+;;;
+(defstruct (dylan-function-var
+	    (:include global-var))
+  ;;
+  ;; The function-info if this is a :function dylan-var.
+  (function-info nil :type (or null function-info)))
+
 
 
 ;;;; Function stuff:
