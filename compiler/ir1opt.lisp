@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.29 1991/11/09 22:10:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.30 1991/11/13 19:41:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,12 +329,9 @@
 	(combination
 	 (when (continuation-reoptimize (basic-combination-fun node))
 	   (propagate-function-change node))
-	 (when (dolist (arg (basic-combination-args node) nil)
-		 (when (and arg (continuation-reoptimize arg))
-		   (return t)))
-	   (ir1-optimize-combination node))
+	 (ir1-optimize-combination node)
 	 (unless (node-deleted node)
-	   (maybe-terminate-block node)))
+	   (maybe-terminate-block node nil)))
 	(cif 
 	 (ir1-optimize-if node))
 	(creturn
@@ -391,7 +388,11 @@
 	      ((and (null (block-start-uses next))
 		    (eq (continuation-kind last-cont) :inside-block))
 	       (let ((next-node (continuation-next next-cont)))
-		 (assert (not (continuation-dest next-cont)))
+		 ;;
+		 ;; If next-cont does have a dest, it must be unreachable,
+		 ;; since there are no uses.  DELETE-CONTINUATION will mark the
+		 ;; dest block as delete-p [and also this block, unless it is
+		 ;; no longer backward reachable from the dest block.]
 		 (delete-continuation next-cont)
 		 (setf (node-prev next-node) last-cont)
 		 (setf (continuation-next last-cont) next-node)
@@ -713,28 +714,40 @@
 ;;; MAYBE-TERMINATE-BLOCK  --  Interface
 ;;;
 ;;;    If Call is to a function that doesn't return (type NIL), then terminate
-;;; the block there, and link it to the component tail.  We also change the
-;;; call's CONT to be a dummy continuation to prevent the use from confusing
-;;; things.  This is also called during IR1 conversion, hence the BLOCK-LAST
-;;; test.
+;;; the block there, and link it to the component tail.
 ;;;
-(defun maybe-terminate-block (call)
+;;; We also change the call's CONT to be a dummy continuation to prevent the
+;;; use from confusing things.
+;;;
+;;; Except when called during IR1, we delete the continuation if it has no
+;;; other uses.  (If it does have other uses, we reoptimize.)
+;;;
+(defun maybe-terminate-block (call ir1-p)
   (declare (type basic-combination call))
   (let ((block (node-block call))
 	(cont (node-cont call)))
-    (when (or (eq (continuation-derived-type cont) *empty-type*)
+    (when (or (and (eq (continuation-derived-type cont) *empty-type*)
+		   (not (eq (continuation-kind cont) :deleted)))
 	      (eq (node-derived-type call) *empty-type*))
-      (cond ((block-last block)
-	     (node-ends-block call)
-	     (delete-continuation-use call))
-	    (t
-	     (setf (block-last block) call)
+      (cond (ir1-p
 	     (delete-continuation-use call)
-	     (link-blocks block (continuation-starts-block cont))))
+	     (cond
+	      ((block-last block)
+	       (assert (and (eq (block-last block) call)
+			    (eq (continuation-kind cont) :block-start))))
+	      (t
+	       (setf (block-last block) call)
+	       (link-blocks block (continuation-starts-block cont)))))
+	    (t
+	     (node-ends-block call)
+	     (delete-continuation-use call)
+	     (if (eq (continuation-kind cont) :unused)
+		 (delete-continuation cont)
+		 (reoptimize-continuation cont))))
+
       (unlink-blocks block (first (block-succ block)))
       (assert (not (block-succ block)))
       (link-blocks block (component-tail (block-component block)))
-      (reoptimize-continuation cont)
       (add-continuation-use call (make-continuation))
       t)))
 
@@ -1273,7 +1286,7 @@
 	  (let ((type (continuation-type fun)))
 	    (when (function-type-p type)
 	      (derive-node-type node (function-type-returns type))))
-	  (maybe-terminate-block node)
+	  (maybe-terminate-block node nil)
 	  (let ((use (continuation-use fun)))
 	    (when (and (ref-p use) (functional-p (ref-leaf use))
 		       (not (eq (ref-inlinep use) :notinline)))
