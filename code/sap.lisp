@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.16 1998/03/21 08:12:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.17 1999/09/15 15:14:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 
 (export '(system-area-pointer sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
-	  #+alpha sap-ref-64 #+alpha signed-sap-ref-64
+	  sap-ref-64 signed-sap-ref-64
 	  sap+ sap- sap< sap<= sap= sap>= sap>
 	  allocate-system-memory allocate-system-memory-at
 	  reallocate-system-memory deallocate-system-memory))
@@ -25,7 +25,7 @@
 	  %set-sap-ref-8 %set-signed-sap-ref-8
 	  %set-sap-ref-16 %set-signed-sap-ref-16
 	  %set-sap-ref-32 %set-signed-sap-ref-32
-	  #+alpha %set-sap-ref-64 #+alpha %set-signed-sap-ref-64))
+	  %set-sap-ref-64 %set-signed-sap-ref-64))
 (in-package "SYSTEM")
 
 (use-package "KERNEL")
@@ -100,7 +100,6 @@
 	   (fixnum offset))
   (sap-ref-32 sap offset))
 
-#+alpha
 (defun sap-ref-64 (sap offset)
   "Returns the 64-bit quadword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
@@ -150,7 +149,6 @@
 	   (fixnum offset))
   (signed-sap-ref-32 sap offset))
 
-#+alpha
 (defun signed-sap-ref-64 (sap offset)
   "Returns the signed 64-bit quadword at OFFSET bytes from SAP."
   (declare (type system-area-pointer sap)
@@ -175,7 +173,6 @@
 	   (type (unsigned-byte 32) new-value))
   (setf (sap-ref-32 sap offset) new-value))
 
-#+alpha
 (defun %set-sap-ref-64 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (fixnum offset)
@@ -200,7 +197,6 @@
 	   (type (signed-byte 32) new-value))
   (setf (signed-sap-ref-32 sap offset) new-value))
 
-#+alpha
 (defun %set-signed-sap-ref-64 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (fixnum offset)
