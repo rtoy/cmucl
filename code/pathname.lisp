@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.3 1991/12/18 22:35:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.4 1991/12/20 02:07:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -838,7 +838,13 @@
   ;;
   ;; The list of expansions for this search-list.  Each expansion is the list
   ;; of directory components to use in place of this search-list.
-  (expansions nil :type list))
+  (%expansions (%primitive c:make-value-cell nil)));  :type list))
+
+(defun search-list-expansions (x)
+  (%primitive c:value-cell-ref (search-list-%expansions x)))
+
+(defun (setf search-list-expansions) (val x)
+  (%primitive c:value-cell-set (search-list-%expansions x) val))
 
 (defun %print-search-list (sl stream depth)
   (declare (ignore depth))
