@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.5 1992/06/25 03:18:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.6 1992/06/27 03:18:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,9 +200,9 @@
 	  DO-STATIC-FN
 	  (inst ldw (static-function-offset ',static-fn) null-tn lip)
 	  (inst li (fixnum 2) nargs)
-	  (inst move ocfp cfp-tn)
+	  (inst move cfp-tn ocfp)
 	  (inst bv lip)
-	  (inst move cfp-tn csp-tn))))
+	  (inst move csp-tn cfp-tn))))
 
   (define-cond-assem-rtn generic-< < two-arg-< :<)
   (define-cond-assem-rtn generic-> > two-arg-> :>))
