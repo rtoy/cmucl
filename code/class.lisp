@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.21 1993/04/04 12:50:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.22 1993/04/04 14:11:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -549,28 +549,34 @@
 	  (number :translation number)
 	  (complex :translation complex :inherits (number generic-number)
 		   :codes (#.vm:complex-type))
+	  (real :translation real :inherits (number generic-number))
 	  (float :translation float :inherits (number generic-number))
 	  (single-float
-	   :translation single-float :inherits (float number generic-number)
+	   :translation single-float
+	   :inherits (float real number generic-number)
 	   :codes (#.vm:single-float-type))
 	  (double-float
-	   :translation double-float  :inherits (float number generic-number)
+	   :translation double-float
+	   :inherits (float real number generic-number)
 	   :codes (#.vm:double-float-type))
-	  (rational :translation rational :inherits (number generic-number))
+	  (rational
+	   :translation rational
+	   :inherits (real number generic-number))
 	  (ratio
 	   :translation (and rational (not integer))
-	   :inherits (rational number generic-number)
+	   :inherits (rational real number generic-number)
 	   :codes (#.vm:ratio-type))
 	  (integer
-	   :translation integer  :inherits (rational number generic-number))
+	   :translation integer
+	   :inherits (rational real number generic-number))
 	  (fixnum
 	   :translation (integer #.vm:target-most-negative-fixnum
 				 #.vm:target-most-positive-fixnum)
-	   :inherits (integer rational number generic-number)
+	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:even-fixnum-type #.vm:odd-fixnum-type))
 	  (bignum
 	   :translation (and integer (not fixnum))
-	   :inherits (integer rational number generic-number)
+	   :inherits (integer rational real number generic-number)
 	   :codes (#.vm:bignum-type))
 	  
 	  (list :translation (or cons (member nil))
