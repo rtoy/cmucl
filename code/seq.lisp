@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.20 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.21 1996/07/12 18:05:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,30 +136,28 @@
   "Returns a sequence of the given Type and Length, with elements initialized
   to :Initial-Element."
   (declare (fixnum length))
-  (let ((type (kernel::type-expand type)))
-    (cond ((subtypep type 'list)
+  (let ((type (specifier-type type)))
+    (cond ((csubtypep type (specifier-type 'list))
 	   (make-list length :initial-element initial-element))
-	  ((subtypep type 'string)
+	  ((csubtypep type (specifier-type 'string))
 	   (if iep
 	       (make-string length :initial-element initial-element)
 	       (make-string length)))
-	  ((subtypep type 'simple-vector)
+	  ((csubtypep type (specifier-type 'simple-vector))
 	   (make-array length :initial-element initial-element))
-	  ((subtypep type 'bit-vector)
+	  ((csubtypep type (specifier-type 'bit-vector))
 	   (if iep
 	       (make-array length :element-type '(mod 2)
 			   :initial-element initial-element)
 	       (make-array length :element-type '(mod 2))))
-	  ((subtypep type 'vector)
-	   (if (listp type)
-	       (if iep
-		   (make-array length :element-type (cadr type)
-			       :initial-element initial-element)
-		   (make-array length :element-type (cadr type)
-			       :initial-element
-			       (if (subtypep (cadr type) 'number)
-				   0
-				   NIL)))
+	  ((csubtypep type (specifier-type 'vector))
+	   (if (typep type 'array-type)
+	       (let ((etype (type-specifier
+			     (array-type-specialized-element-type type))))
+		 (if iep
+		     (make-array length :element-type etype
+				 :initial-element initial-element)
+		     (make-array length :element-type etype)))
 	       (make-array length :initial-element initial-element)))
 	  (t (error "~S is a bad type specifier for sequences." type)))))
 
