@@ -356,7 +356,7 @@ type tag, but nil points four additional bytes into its symbol data-block.
 The array-header data-block has the following format:
 \begin{verbatim}
 ----------------------------------------------------------------
-| Header Len (24 bits) = Array Rank +5   | Array Type (8 bits) |
+| Header Len (24 bits) = Array Rank +6   | Array Type (8 bits) |
 ----------------------------------------------------------------
 |               Fill Pointer (30 bits)                   | 0 0 | 
 ----------------------------------------------------------------
@@ -381,7 +381,7 @@ The array type in the header-word is one of the eight-bit patterns from
 ``Data-Blocks and Other-immediates Typing'', section~\ref{sec:data-blocks-and-header}, indicating that this is a complex
 string, complex vector, complex bit-vector, or a multi-dimensional array.  The
 data portion of the other-immediate word is the length of the array header
-data-block.  Due to its format, its length is always five greater than the
+data-block.  Due to its format, its length is always six greater than the
 array's number of dimensions.  The following words have the following
 interpretations and types:
 \begin{description}
