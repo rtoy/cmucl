@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.3 1990/06/05 14:43:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.4 1990/06/06 04:09:19 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -374,7 +374,7 @@
   (&rest args)
   (error "object-not-complex:~{ ~S~}" args))
 
-(deferr object-not-weak-pointer
+(deferr object-not-weak-pointer-error
   "Object is not a WEAK-POINTER."
   (&rest args)
   (error "object-not-weak-pointer:~{ ~S~}" args))
@@ -390,7 +390,15 @@
 		   mach:sigcontext
 		   t)
 	       (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
-    (let* ((pc (int-sap (alien-access (mach:sigcontext-pc (alien-value sc)))))
+    (let* ((pc (int-sap (+ (alien-access
+			    (mach:sigcontext-pc
+			     (alien-value sc)))
+			   (if (logbitp 31
+					(alien-access
+					 (mach:sigcontext-cause
+					  (alien-value sc))))
+			       4
+			       0))))
 	   (bad-inst (sap-ref-32 pc 0))
 	   (number (sap-ref-8 pc 4))
 	   (info (svref *internal-errors* number))
