@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.1 1997/01/21 00:30:28 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.2 1997/02/10 17:03:44 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
 		 :disp (- (* vector-data-offset word-bytes)
 			  other-pointer-type)))
   ;; Initialize the result.
-  (inst mov result 0)
+  (inst xor result result)
   ;; Get the count.  If it's zero, blow out.
   (inst mov ecx length)
   (inst jecxz done)
@@ -107,7 +107,6 @@
 
   LOOP
   ;; Merge each successive word with the result.
-  ;; ZZZZZ undef inst???
   (inst lods eax)			; load 32-bits into eax and (+4 esi)
 
   (inst rol result 5)
@@ -124,7 +123,6 @@
   (inst shl ecx 1)
 
   ;; Grab the last word.
-  ;; ZZZZZ undef isnt?
   (inst lods eax)
 
   ;; Convert the count into a mask.  The count is multiplied by 8, so we just
