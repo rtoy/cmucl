@@ -18,6 +18,8 @@ static long write_bytes(FILE *file, char *addr, long bytes)
 {
     long count, here, data;
 
+    bytes = (bytes+CORE_PAGESIZE-1)&~(CORE_PAGESIZE-1);
+
     fflush(file);
     here = ftell(file);
     fseek(file, 0, 2);
