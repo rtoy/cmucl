@@ -401,7 +401,7 @@
 
 (defknown elt (sequence index) t (foldable flushable))
 
-(defknown subseq (sequence index &optional index) consed-sequence
+(defknown subseq (sequence index &optional sequence-end) consed-sequence
   (foldable flushable) :derive-type 'result-type-arg1)
 
 (defknown copy-seq (sequence) consed-sequence (foldable flushable)
