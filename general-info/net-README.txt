@@ -84,10 +84,10 @@ manually deleted to save disk space.
 TMPFS NOTE:
 
 It is not possible to mmap a file in a tmpfs filesystem.  If /tmp is a "tmpfs"
-filesystem, then you must setenv CMUCL_EMPTYFILE to a pathname (in a normal
-filesystem) that can be used instead of /tmp/empty.  The "df" command will
-show tmpfs filesystems as mounted on "swap".  If this problem exists on
-your system, lisp will get an error like:
+filesystem, then you must setenv CMUCL_EMPTYFILE to the pathname of some file
+(in a normal filesystem) that can be used instead of /tmp/empty.  The "df"
+command will show tmpfs filesystems as mounted on "swap".  If this problem
+exists on your system, lisp will get an error like:
     mapin: mmap: Invalid argument
     ensure_space: Failed to validate 67108864 bytes at 0x01000000
 
