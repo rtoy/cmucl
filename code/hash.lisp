@@ -13,7 +13,8 @@
 (in-package 'lisp)
 (export '(hash-table hash-table-p make-hash-table
 	  gethash remhash maphash clrhash
-	  hash-table-count sxhash))
+	  hash-table-count sxhash
+	  with-hash-table-iterator))
 
 ;;; Vector subtype codes.
 
@@ -449,7 +450,40 @@
      (typecase s-expr
        (string (sxhash-string s-expr))
        (t (array-rank s-expr))))
-    #+nil
-    (compiled-function (%primitive header-length s-expr))
     ;; Everything else.
     (t 42)))
+
+
+
+;;;; WITH-HASH-TABLE-ITERATOR
+
+(defmacro with-hash-table-iterator ((function hash-table) &body body)
+  "WITH-HASH-TABLE-ITERATOR ((function hash-table) &body body)
+   provides a method of manually looping over the elements of a hash-table.
+   function is bound to a generator-macro that, withing the scope of the
+   invocation, returns three values.  First, whether there are any more objects
+   in the hash-table, second, the key, and third, the value."
+  (let ((counter (gensym))
+	(pointer (gensym))
+	(table (gensym))
+	(size (gensym))
+	(the-table (gensym)))
+    `(let* ((,the-table ,hash-table)
+	    (,table (hash-table-table ,the-table))
+	    (,size (hash-table-size ,the-table))
+	    (,counter 0)
+	    (,pointer nil))
+       (macrolet ((,function ()
+		     `(loop
+			(when (= ,',counter ,',size) (return))
+			(let ((bucket (or ,',pointer
+					  (aref ,',table ,',counter))))
+			  (when bucket
+			    (cond ((cdr bucket)
+				   (setf ,',pointer (cdr bucket)))
+				  (t
+				   (setf ,',pointer nil)
+				   (incf ,',counter)))
+			    (return (values t (caar bucket) (cdar bucket)))))
+			(incf ,',counter))))
+	 ,@body))))
