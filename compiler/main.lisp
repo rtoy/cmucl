@@ -958,14 +958,26 @@
 (defparameter top-level-lambda-max 10)
 
 
-;;; COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
+;;; OBJECT-CALL-TOP-LEVEL-LAMBDA  --  Internal
+;;;
+(defun object-call-top-level-lambda (tll object)
+  (declare (type functional tll) (type object object))
+  (etypecase object
+    (fasl-file
+     (fasl-dump-top-level-lambda-call tll object))
+    (core-object
+     (core-call-top-level-lambda tll object))
+    (null)))
+
+
+;;; SUB-COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
 ;;;
 ;;;    Add Lambdas to the pending lambdas.  If this leaves more than
 ;;; TOP-LEVEL-LAMBDA-MAX lambdas in the list, or if Force-P is true, then smash
 ;;; the lambdas into a single component, compile it, and call the resulting
 ;;; function.
 ;;;
-(defun compile-top-level-lambdas (lambdas force-p object)
+(defun sub-compile-top-level-lambdas (lambdas force-p object)
   (declare (list lambdas) (type object object))
   (setq *pending-top-level-lambdas*
 	(append *pending-top-level-lambdas* lambdas))
@@ -979,12 +991,39 @@
 	(compile-component component object)
 	(clear-ir2-info component)
 	(clear-ir1-info component)
-	(etypecase object
-	  (fasl-file
-	   (fasl-dump-top-level-lambda-call tll object))
-	  (core-object
-	   (core-call-top-level-lambda tll object))
-	  (null)))))
+	(object-call-top-level-lambda tll object))))
+  (undefined-value))
+
+
+;;; COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
+;;;
+;;;    Compile top-level code and call the Top-Level lambdas.  We pick off
+;;; top-level lambdas in non-top-level components here, calling SUB-c-t-l-l on
+;;; each subsequence of normal top-level lambdas.
+;;;
+(defun compile-top-level-lambdas (lambdas force-p object)
+  (declare (list lambdas) (type object object))
+  (let ((len (length lambdas)))
+    (flet ((loser (start)
+	     (or (position-if #'(lambda (x)
+				  (not (eq (component-kind
+					    (block-component
+					     (node-block
+					      (lambda-bind x))))
+					   :top-level)))
+			      lambdas
+			      :start start)
+		 len)))
+      (do* ((start 0 (1+ loser))
+	    (loser (loser start) (loser start)))
+	   ((>= start len)
+	    (when force-p
+	      (sub-compile-top-level-lambdas nil t object)))
+	(sub-compile-top-level-lambdas (subseq lambdas start loser)
+				       (or force-p (/= loser len))
+				       object)
+	(unless (= loser len)
+	  (object-call-top-level-lambda (elt lambdas loser) object)))))
   (undefined-value))
 
 
@@ -1003,7 +1042,7 @@
   (maybe-mumble ".~%")
   
   (maybe-mumble "Find components")
-  (multiple-value-bind (components top-components)
+  (multiple-value-bind (components top-components hairy-top)
 		       (find-initial-dfo lambdas)
     (let ((*all-components* (append components top-components))
 	  (top-level-closure nil))
@@ -1011,7 +1050,7 @@
 	(maybe-mumble "[Check]~%")
 	(check-ir1-consistency *all-components*))
       
-      (dolist (component top-components)
+      (dolist (component (append hairy-top top-components))
 	(pre-environment-analyze-top-level component))
       
       (dolist (component components)
