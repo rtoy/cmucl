@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.19 1992/09/09 00:25:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.20 1992/09/10 02:46:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -325,12 +325,26 @@
   (let ((index (c:location-number read)))
     #+debug (format *trace-output* "~&~S reads ~S[~D]~%" inst read index)
     (when index
-      (let ((writer (svref (segment-writers segment) index)))
-	(when writer
-	  (let ((prev-inst (car writer)))
-	    (sset-adjoin prev-inst (inst-read-dependencies inst))
-	    (sset-adjoin inst (inst-read-dependents prev-inst))
-	    (sset-delete prev-inst (segment-emittable-insts-sset segment)))))
+      (let ((writers (svref (segment-writers segment) index)))
+	(when writers
+	  ;; The inst that wrote the value we want to read must have completed.
+	  (let ((writer (car writers)))
+	    (sset-adjoin writer (inst-read-dependencies inst))
+	    (sset-adjoin inst (inst-read-dependents writer))
+	    (sset-delete writer (segment-emittable-insts-sset segment))
+	    ;; And it must have been completed *after* all other writes to that
+	    ;; location.  Actually, that isn't quite true.  Each of the earlier
+	    ;; writes could be done either before this last write, or after the
+	    ;; read, but we have no way of representing that.
+	    (dolist (other-writer (cdr writers))
+	      (sset-adjoin other-writer (inst-write-dependencies writer))
+	      (sset-adjoin writer (inst-write-dependents other-writer))
+	      (sset-delete other-writer
+			   (segment-emittable-insts-sset segment))))
+	  ;; And we don't need to remember about earlier writes any more.
+	  ;; Shortening the writers list means that we won't bother generating
+	  ;; as many explicit arcs in the graph.
+	  (setf (cdr writers) nil)))
       (push inst (svref (segment-readers segment) index))))
   (ext:undefined-value))
 
@@ -349,7 +363,10 @@
 	(dolist (prev-inst (svref (segment-writers segment) index))
 	  (sset-adjoin prev-inst (inst-write-dependencies inst))
 	  (sset-adjoin inst (inst-write-dependents prev-inst))
-	  (sset-delete prev-inst (segment-emittable-insts-sset segment))))
+	  (sset-delete prev-inst (segment-emittable-insts-sset segment)))
+	;; And we can forget about remembering them, because depending on us
+	;; is as good as depending on them.
+	(setf (svref (segment-writers segment) index) nil))
       (push inst (svref (segment-writers segment) index))))
   (ext:undefined-value))
 
