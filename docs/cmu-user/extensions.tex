@@ -1708,13 +1708,24 @@ than the original generator.
 \subsection{MT-19987 Generator}
 \cpsubindex{random number generation}{MT-19987 generator}
 On all platforms, this is the preferred generator as indicated by
-\kwd{:rand-mt19987} being in \code{*features*}.  This is a Lisp
+\kwd{rand-mt19987} being in \code{*features*}.  This is a Lisp
 implementation of the MT-19987 generator of Makoto Matsumoto and
 T. Nishimura.  We refer the reader to their paper\footnote{``Mersenne
   Twister: A 623-Dimensionally Equidistributed Uniform Pseudorandom
   Number Generator,'' ACM Trans. on Modeling and Computer Simulation,
   Vol. 8, No. 1, January 1998, pp.3--30} or to
-their website at \href{http://www.math.keio.ac.jp/~matumoto/emt.html}.
+their
+\ifpdf
+\href{http://www.math.keio.ac.jp/~matumoto/emt.html}{website}.
+\else
+website at
+\href{http://www.math.keio.ac.jp/~matumoto/emt.html}{\texttt{\verb+http://www.math.keio.ac.jp/~matumoto/emt.html+}}.
+\fi
+
+\section{Lisp Threads}
+\cindex{lisp threads}
+
+\cmucl supports Lisp threads for the x86 platform.
 
 \section{Lisp Library}
 \label{lisp-lib}
