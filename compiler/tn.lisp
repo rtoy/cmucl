@@ -14,6 +14,12 @@
 ;;;
 (in-package 'c)
 
+(export '(make-normal-tn make-representation-tn make-wired-tn
+	  make-restricted-tn environment-live-tn
+	  environment-debug-live-tn component-live-tn specify-save-tn
+	  make-constant-tn make-alias-tn make-load-time-constant-tn
+	  make-n-tns location= tn-value force-tn-to-stack))
+
 ;;; The component that is currently being compiled.  TNs are allocated in this
 ;;; component.
 ;;;
@@ -93,7 +99,8 @@
   (declare (type primitive-type ptype) (type sc-number scn))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal ptype (svref *sc-numbers* scn))))
+		       :normal ptype
+		       (svref (backend-sc-numbers *backend*) scn))))
     (push-in tn-next res (ir2-component-normal-tns component))
     res))
 
@@ -110,7 +117,8 @@
 	   (type sc-number scn) (type unsigned-byte offset))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal ptype (svref *sc-numbers* scn))))
+		       :normal ptype
+		       (svref (backend-sc-numbers *backend*) scn))))
     (setf (tn-offset res) offset)
     (push-in tn-next res (ir2-component-wired-tns component))
     res))
@@ -125,7 +133,8 @@
   (declare (type (or primitive-type null) ptype) (type sc-number scn))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal ptype (svref *sc-numbers* scn))))
+		       :normal ptype
+		       (svref (backend-sc-numbers *backend*) scn))))
     (push-in tn-next res (ir2-component-restricted-tns component))
     res))
 
@@ -193,7 +202,8 @@
   (declare (type constant constant))
   (let* ((component (component-info *compile-component*))
 	 (immed (immediate-constant-sc (constant-value constant)))
-	 (sc (svref *sc-numbers* (or immed (sc-number-or-lose 'constant))))
+	 (sc (svref (backend-sc-numbers *backend*)
+		    (or immed (sc-number-or-lose 'constant))))
 	 (res (make-tn 0 :constant (primitive-type (leaf-type constant)) sc)))
     (unless immed
       (let ((constants (ir2-component-constants component)))
@@ -228,8 +238,9 @@
 (defun make-load-time-constant-tn (kind info)
   (declare (type keyword kind))
   (let* ((component (component-info *compile-component*))
-	 (res (make-tn 0 :constant *any-primitive-type*
-		       (svref *sc-numbers* (sc-number-or-lose 'constant))))
+	 (res (make-tn 0 :constant (backend-any-primitive-type *backend*)
+		       (svref (backend-sc-numbers *backend*)
+			      (sc-number-or-lose 'constant))))
 	 (constants (ir2-component-constants component)))
 
     (do ((i 0 (1+ i)))
