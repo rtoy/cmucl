@@ -88,7 +88,7 @@
 	 (funcall (device-force-output device)))))
     (:line-length
      (stream-hunk-width (tty-hunk-output-stream-hunk stream)))
-    (:element-type 'string-char)))
+    (:element-type 'base-character)))
 
 ;;; HUNK-SOUT writes a byte-blt's a string to a hunk-stream's buffer.
 ;;; When newlines are found, recurse on the substrings delimited by start,

@@ -86,7 +86,7 @@
 	 (funcall (device-force-output device)))))
     (:line-length
      (bitmap-hunk-char-width (bitmap-hunk-output-stream-hunk stream)))
-    (:element-type 'string-char)))
+    (:element-type 'base-character)))
 
 
 ;;; Bitmap-Hunk-Out  --  Internal

@@ -23,8 +23,7 @@
 
 (defun insert-character (mark character)
   "Inserts the Character at the specified Mark."
-  (unless (and character (string-char-p character))
-    (error "Character must be non-nil and a string-char -- ~S" character))
+  (declare (type base-character character))
   (let* ((line (mark-line mark))
 	 (buffer (line-%buffer line)))
     (modifying-buffer buffer
