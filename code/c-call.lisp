@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.11 1992/03/04 17:08:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.12 1992/12/18 13:52:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,7 +79,7 @@
      (let ((length (loop
 		     for offset of-type fixnum upfrom 0
 		     until (zerop (deref ptr offset))
-		     finally return offset)))
+		     finally (return offset))))
        (let ((result (make-string length)))
 	 (kernel:copy-from-system-area (alien-sap ptr) 0
 				       result (* vm:vector-data-offset
