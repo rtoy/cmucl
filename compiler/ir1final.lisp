@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.16 1992/09/24 18:32:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.17 1992/12/09 00:10:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -87,8 +87,8 @@
 	   (setf (info function where-from name) :defined))
 	  (:declared); Just keep declared type.
 	  (:defined
-	   (setf (info function type name)
-		 (if global-p dtype (specifier-type 'function))))))))
+	   (when global-p
+	     (setf (info function type name) dtype)))))))
   (undefined-value))
 
 
