@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.127 2003/08/25 19:37:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.128 2003/08/31 19:03:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,13 +356,6 @@
   (make-interval :low (bound-value (interval-low x))
 		 :high (bound-value (interval-high x))))
 
-(defun signed-zero->= (x y)
-  (declare (real x y))
-  (or (> x y)
-      (and (= x y)
-	   (>= (float-sign (float x))
-	       (float-sign (float y))))))
-
 ;;; INTERVAL-RANGE-INFO
 ;;;
 ;;; For an interval X, if X >= POINT, return '+.  If X <= POINT, return
@@ -398,34 +391,44 @@
     ('both
      (and (interval-low x) (interval-high x)))))
 
-;;; Signed zero comparison functions.  Use these functions if we need to
-;;; distinguish between signed zeroes.
+;;; Return the sign of the number, taking into account the sign of
+;;; signed-zeros.  An integer 0 has a positive sign here.
+(declaim (inline number-sign))
+(defun number-sign (x)
+  (declare (real x))
+  (cond ((integerp x)
+	 (if (minusp x) -1.0 1.0))
+	((floatp x)
+	 (float-sign x))))
 
-(defun signed-zero-< (x y)
-  (declare (real x y))
-  (or (< x y)
-      (and (= x y)
-	   (< (float-sign (float x))
-	      (float-sign (float y))))))
-(defun signed-zero-> (x y)
-  (declare (real x y))
-  (or (> x y)
-      (and (= x y)
-	   (> (float-sign (float x))
-	      (float-sign (float y))))))
+;;; Signed zero comparison functions.  Use these functions if we need
+;;; to distinguish between signed zeroes.  Thus -0.0 < 0.0, which not
+;;; true with normal Lisp comparison functions.
 
 (defun signed-zero-= (x y)
   (declare (real x y))
   (and (= x y)
-       (= (float-sign (float x))
-	  (float-sign (float y)))))
+       (= (number-sign x)
+	  (number-sign y))))
 
-(defun signed-zero-<= (x y)
-  (declare (real x y))
-  (or (< x y)
-      (and (= x y)
-	   (<= (float-sign (float x))
-	       (float-sign (float y))))))
+
+(macrolet ((frob (name op1 op2)
+	     `(defun ,name (x y)
+		(declare (real x y))
+		;; Comparison (op1) is true, or the numbers are EQUAL
+		;; so we need to compare the signs of the numbers
+		;; appropriately.
+		(or (,op1 x y)
+		    (and (= x y)
+			 ;; Convert the numbers to long-floats so we
+			 ;; don't get problems converting to
+			 ;; shorter floats from longer. 
+			 (,op2 (number-sign x)
+			       (number-sign y)))))))
+  (frob signed-zero-< < <)
+  (frob signed-zero-> > >)
+  (frob signed-zero-<= < <=)
+  (frob signed-zero->= > >=))
 
 ;;; INTERVAL-CONTAINS-P
 ;;;
