@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.33 1991/11/26 18:02:32 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.34 1992/01/14 14:52:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1743,7 +1743,7 @@
      (parse-compiled-debug-blocks debug-function))
     (bogus-debug-function
      (debug-signal 'no-debug-blocks :debug-function debug-function))
-    (interpreted-debug-block
+    (interpreted-debug-function
      (parse-interpreted-debug-blocks debug-function))))
 
 
