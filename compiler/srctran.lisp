@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.43 1993/05/25 21:29:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.44 1993/08/15 14:51:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1052,7 +1052,6 @@
       "fold identity operations"
       result)))
 
-
 ;;; These are restricted to rationals, because (- 0 0.0) is 0.0, not -0.0, and
 ;;; (* 0 -4.0) is -0.0.
 ;;;
@@ -1114,6 +1113,21 @@
 	  (give-up))
 	(if (minusp val) minus-result result)))))
 
+
+
+(dolist (name '(ash /))
+  (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
+		      :eval-name t :when :both)
+    "fold zero arg"
+    0))
+
+(dolist (name '(truncate round floor ceiling))
+  (deftransform name ((x y) '((constant-argument (integer 0 0)) integer) '*
+		      :eval-name t :when :both)
+    "fold zero arg"
+    '(values 0 0)))
+
+    
 
 ;;;; Character operations:
 
