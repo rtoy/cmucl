@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.86 1997/12/12 15:28:21 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.87 1997/12/13 16:49:43 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,8 +96,8 @@
 (maybe-byte-load "code:time")
 (maybe-byte-load "code:tty-inspect")
 (maybe-byte-load "code:describe")
-#+random-mt19937 (maybe-byte-load "code:rand-mt19937")
-#-random-mt19937 (maybe-byte-load "code:rand")
+#+(and random-mt19937 (not x86)) (maybe-byte-load "code:rand-mt19937")
+#-(or random-mt19937 x86) (maybe-byte-load "code:rand")
 (maybe-byte-load "code:ntrace")
 #-runtime (maybe-byte-load "code:profile")
 (maybe-byte-load "code:weak")
