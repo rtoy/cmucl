@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.54 2003/08/05 14:04:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.55 2003/10/02 19:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,7 +102,7 @@
   (declare (type ref ref) (type combination call) (type clambda fun))
   (propagate-to-args call fun)
   (setf (basic-combination-kind call) :local)
-  (pushnew fun (lambda-calls (node-home-lambda call)))
+  (note-dfo-dependency call fun)
   (merge-tail-sets call fun)
   (change-ref-leaf ref fun)
   (undefined-value))
@@ -432,7 +432,7 @@
 	     (= (length (basic-combination-args call)) 1))
     (let ((ep (car (last (optional-dispatch-entry-points fun)))))
       (setf (basic-combination-kind call) :local)
-      (pushnew ep (lambda-calls (node-home-lambda call)))
+      (note-dfo-dependency call ep)
       (merge-tail-sets call ep)
       (change-ref-leaf ref ep)
       
@@ -758,11 +758,12 @@
 
     ;; HOME no longer calls FUN, and owns all of FUN's old DFO
     ;; dependencies
-    (setf (lambda-calls home)
-	  (delete fun (nunion (lambda-calls fun) (lambda-calls home))))
+    (setf (lambda-dfo-dependencies home)
+	  (delete fun (nunion (lambda-dfo-dependencies fun)
+			      (lambda-dfo-dependencies home))))
     ;; FUN no longer has an independent existence as an entity
     ;; which calls things or has DFO dependencies.
-    (setf (lambda-calls fun) ())
+    (setf (lambda-dfo-dependencies fun) ())
 
     ;; All of FUN's ENTRIES belong to HOME now.
     (setf (lambda-entries home)
@@ -837,28 +838,29 @@
 ;;;
 ;;;    The called function might be an assignment in the case where we are
 ;;; currently converting that function.  In steady-state, assignments never
-;;; appear in the lambda-calls.
+;;; appear in the lambda-dfo-dependencies.
 ;;;
 (defun unconvert-tail-calls (fun call next-block)
-  (dolist (called (lambda-calls fun))
-    (dolist (ref (leaf-refs called))
-      (let ((this-call (continuation-dest (node-cont ref))))
-	(when (and (node-tail-p this-call)
-		   (eq (node-home-lambda this-call) fun))
-	  (setf (node-tail-p this-call) nil)
-	  (ecase (functional-kind called)
-	    ((nil :cleanup :optional)
-	     (let ((block (node-block this-call))
-		   (cont (node-cont call)))
-	       (ensure-block-start cont)
-	       (unlink-blocks block (first (block-succ block)))
-	       (link-blocks block next-block)
-	       (delete-continuation-use this-call)
-	       (add-continuation-use this-call cont)))
-	    (:deleted)
-	    (:assignment
-	     (assert (eq called fun))))))))
-  (undefined-value))
+  (dolist (called (lambda-dfo-dependencies fun))
+    (when (lambda-p called)
+      (dolist (ref (leaf-refs called))
+	(let ((this-call (continuation-dest (node-cont ref))))
+	  (when (and (node-tail-p this-call)
+		     (eq (node-home-lambda this-call) fun))
+	    (setf (node-tail-p this-call) nil)
+	    (ecase (functional-kind called)
+	      ((nil :cleanup :optional)
+	       (let ((block (node-block this-call))
+		     (cont (node-cont call)))
+		 (ensure-block-start cont)
+		 (unlink-blocks block (first (block-succ block)))
+		 (link-blocks block next-block)
+		 (delete-continuation-use this-call)
+		 (add-continuation-use this-call cont)))
+	      (:deleted)
+	      (:assignment
+	       (assert (eq called fun)))))))))
+  (values))
 
 
 ;;; MOVE-RETURN-STUFF  --  Internal

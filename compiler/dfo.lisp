@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.26 2000/07/07 09:33:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.27 2003/10/02 19:23:11 gerd Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,33 +241,42 @@
   (let* ((bind-block (node-block (lambda-bind fun)))
 	 (this (block-component bind-block))
 	 (return (lambda-return fun)))
-    (cond
-     ((eq this component) component)
-     ((not (eq (component-kind this) :initial))
-      (join-components this component)
-      this)
-     ((block-flag bind-block)
-      component)
-     (t
-      (push fun (component-lambdas component))
-      (setf (component-lambdas this)
-	    (delete fun (component-lambdas this)))
-      (link-blocks (component-head component) bind-block)
-      (unlink-blocks (component-head this) bind-block)
-      (when return
-	(let ((return-block (node-block return)))
-	  (link-blocks return-block (component-tail component))
-	  (unlink-blocks return-block (component-tail this))))
-      (let ((calls (if (eq (functional-kind fun) :external)
-		       (append (find-reference-functions fun)
-			       (lambda-calls fun))
-		       (lambda-calls fun))))
-	(do ((res (find-initial-dfo-aux bind-block component)
-		  (dfo-walk-call-graph (first funs) res))
-	     (funs calls (rest funs)))
-	    ((null funs) res)
-	  (declare (type component res))))))))
-
+    (cond ((eq this component)
+	   component)
+	  ((not (eq (component-kind this) :initial))
+	   (join-components this component)
+	   this)
+	  ((block-flag bind-block)
+	   component)
+	  (t
+	   (push fun (component-lambdas component))
+	   (setf (component-lambdas this)
+		 (delete fun (component-lambdas this)))
+	   (link-blocks (component-head component) bind-block)
+	   (unlink-blocks (component-head this) bind-block)
+	   (when return
+	     (let ((return-block (node-block return)))
+	       (link-blocks return-block (component-tail component))
+	       (unlink-blocks return-block (component-tail this))))
+	   (let ((res (find-initial-dfo-aux bind-block component)))
+	     (declare (type component res))
+	     (flet ((walk (clambda)
+		      (unless (eq (lambda-kind clambda) :deleted)
+			(let ((home (lambda-home clambda)))
+			  (setq res (dfo-walk-call-graph home res))))))
+	       (dolist (dd (lambda-dfo-dependencies fun))
+		 (etypecase dd
+		   (clambda
+		    (walk dd))
+		   (lambda-var
+		    (unless (null (lambda-var-refs dd))
+		      (walk (lambda-home (lambda-var-home dd)))))
+		   (entry
+		    (walk (node-home-lambda dd)))))
+	       (when (eq (lambda-kind fun) :external)
+		 (dolist (lambda (find-reference-functions fun))
+		   (walk lambda))))
+	     res)))))
 
 ;;; HAS-XEP-OR-NLX  --  Internal
 ;;;

@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.4 2003/06/11 12:58:08 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.5 2003/10/02 19:23:11 gerd Exp $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.
@@ -197,6 +197,9 @@ be set at runtime."
 
 (in-package :compiler)
 
+(defun lambda-contains-calls-p (clambda)
+  (declare (type clambda clambda))
+  (some #'lambda-p (lambda-dfo-dependencies clambda)))
 
 (defun prettiest-caller-name (lambda-node toplevel-name)
   (cond
@@ -207,7 +210,7 @@ be set at runtime."
     ;; If the home slot contains a lambda with a nice name, we use
     ;; that; otherwise fall back on the toplevel-name.
     ((or (not (eq (lambda-home lambda-node) lambda-node))
-         (lambda-calls lambda-node))
+         (lambda-contains-calls-p lambda-node))
      (let ((home (lambda-name (lambda-home lambda-node)))
            (here (lambda-name lambda-node)))
        (cond ((and home here)
@@ -244,7 +247,7 @@ be set at runtime."
             (list :internal
                   (lambda-name (lambda-home lambda-node))
                   (lambda-name lambda-node)))
-           ((lambda-calls lambda-node)
+           ((lambda-contains-calls-p lambda-node)
             (list :internal/calls
                   (lambda-name (lambda-home lambda-node))
                   (lambda-name lambda-node)))

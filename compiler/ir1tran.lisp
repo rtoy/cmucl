@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.164 2003/09/14 10:13:27 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.165 2003/10/02 19:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,7 +145,7 @@
 ;;;; Dynamic-Extent
 
 (defvar *trust-dynamic-extent-declarations* nil
-  "If null, don't trust dynamic-extent declarations.
+  "If NIL, never trust dynamic-extent declarations.
 
    If T, always trust dynamic-extent declarations.
 
@@ -794,8 +794,10 @@
   (let ((var (or (lexenv-find name variables) (find-free-variable name))))
     (etypecase var
       (leaf
-       (when (and (lambda-var-p var) (lambda-var-ignorep var))
-	 (compiler-note "Reading an ignored variable: ~S." name))
+       (when (lambda-var-p var)
+	 (when (lambda-var-ignorep var)
+	   (compiler-note "Reading an ignored variable: ~S." name))
+	 (note-dfo-dependency start var))
        (reference-leaf start cont var))
       (cons
        (assert (eq (car var) 'MACRO))
@@ -2325,6 +2327,7 @@
     (setf (continuation-dest value-cont) exit)
     (ir1-convert start value-cont value)
     (prev-link exit value-cont)
+    (note-dfo-dependency start entry)
     (use-continuation exit (cont-ref-cont (second found)))))
 
 
@@ -2415,6 +2418,7 @@
 	 (exit (make-exit :entry entry)))
     (push exit (entry-exits entry))
     (prev-link exit start)
+    (note-dfo-dependency start entry)
     (use-continuation exit (cont-ref-cont (second found)))))
 
 
@@ -3268,9 +3272,10 @@
 		       (and (global-var-p leaf)
 			    (eq (global-var-kind leaf) :constant)))
 	       (compiler-error "Attempt to set constant ~S." name))
-	     (when (and (lambda-var-p leaf)
-			(lambda-var-ignorep leaf))
-	       (compiler-note "Setting an ignored variable: ~S." name))
+	     (when (lambda-var-p leaf)
+	       (when (lambda-var-ignorep leaf)
+		 (compiler-note "Setting an ignored variable: ~S." name))
+	       (note-dfo-dependency start leaf))
 	     (set-variable start cont leaf (second things)))
 	    (cons
 	     (assert (eq (car leaf) 'MACRO))

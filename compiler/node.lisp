@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.43 2003/08/25 20:50:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.44 2003/10/02 19:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -936,10 +936,16 @@
   ;; let.
   (entries () :type list)
   ;;
-  ;; A list of all the functions directly called from this function (or one of
+  ;; A list of leafs and nodes determining this lambda's dfo.
+  ;;
+  ;; - Clambdas directly called from this function (or one of
   ;; its lets) using a non-let local call.  May include deleted functions
   ;; because nobody bothers to clear them out.
-  (calls () :type list)
+  ;;
+  ;; - Lambda-Vars used
+  ;;
+  ;; - Entries
+  (dfo-dependencies () :type list)
   ;;
   ;; The Tail-Set that this lambda is in.  Null during creation and in let
   ;; lambdas.

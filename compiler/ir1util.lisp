@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.94 2003/08/16 11:45:47 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.95 2003/10/02 19:23:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2194,3 +2194,21 @@ these can be NIL if unavailable or inapplicable.")
 
   (let ((action (event-info-action info)))
     (when action (funcall action node))))
+
+(defun continuation-home-lambda (cont)
+  (if (continuation-use cont)
+      (node-home-lambda (continuation-use cont))
+      (let* ((block (continuation-block cont))
+	     (last-node (block-last block)))
+	(when last-node
+	  (node-home-lambda last-node)))))
+
+(defun note-dfo-dependency (dependent thing)
+  (declare (type (or lambda-var clambda entry) thing))
+  (let ((home (etypecase dependent
+		(node
+		 (node-home-lambda dependent))
+		(continuation
+		 (continuation-home-lambda dependent)))))
+    (when home
+      (pushnew thing (lambda-dfo-dependencies home)))))
