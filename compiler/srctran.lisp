@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.125 2003/08/16 11:45:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.126 2003/08/17 16:31:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1612,8 +1612,11 @@
     (flet ((floatify-bound (x)
 	     ;; Don't have to deal with list-type bounds because the
 	     ;; truncate defoptimizer doesn't return list-type bounds.
+	     ;;
+	     ;; Also, if RES-FORMAT is NIL, that means we want a FLOAT
+	     ;; type.
 	     (if (numberp x)
-		 (coerce x res-format)
+		 (coerce x (or res-format 'float))
 		 x)))
       (make-numeric-type :class 'float
 			 :format res-format
