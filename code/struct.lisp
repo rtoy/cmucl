@@ -17,11 +17,10 @@
 (in-package 'c)
 
 #+new-compiler
-(proclaim '(inline structurify))
-#+new-compiler
-(defun structurify (structure)
+(defun structurify (vec)
   "Frobs a vector to turn it into a named structure.  Returns the vector."
-  (set-header-data structure vm:vector-structure-subtype))
+  (declare (simple-vector vec))
+  (structurify vec))
 
 
 (defstruct (defstruct-description
