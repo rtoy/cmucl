@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.45 1998/05/04 11:26:19 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.46 1998/05/08 12:48:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,9 @@
 ;;;
 (defun find-package (name)
   "Find the package having the specified name."
-  (values (gethash (string name) *package-names*)))
+  (if (packagep name)
+      name
+      (values (gethash (string name) *package-names*))))
 
 ;;; Package-Listify  --  Internal
 ;;;
@@ -143,9 +145,7 @@
 ;;;    Make a package name into a simple-string.
 ;;;
 (defun package-namify (n)
-  (if (symbolp n)
-      (symbol-name n)
-      (coerce n 'simple-string)))
+  (stringify-name n "package"))
 
 ;;; Package-Or-Lose  --  Internal
 ;;;
@@ -159,7 +159,7 @@
 	(t
 	 (let ((thing (package-namify thing)))
 	   (cond ((gethash thing *package-names*))
-		 (t
+		 (t ; @@@ fixme. This must be TYPE-ERROR -- not SIMPLE-ERROR
 		  (cerror "Make this package."
 			  "~S is not the name of a package." thing)
 		  (make-package thing)))))))
