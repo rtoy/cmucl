@@ -4,6 +4,7 @@
 (load-pcl)
 
 ;; hack, hack...
+#+nil
 (ignore-errors
  (with-output-to-string (*standard-output*)
    (describe #'print-object)))
