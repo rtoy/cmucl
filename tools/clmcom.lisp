@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.13 1994/10/27 18:43:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.14 1994/10/28 22:23:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,40 +67,41 @@
       (when pn (load pn)))))
 
 (with-compiler-log-file
-    ("target:compile-motif.log"
-     :optimize '(optimize (speed 3) (ext:inhibit-warnings 3)
-			  #+small (safety 0)
-			  #+small (debug .5)))
+    ("target:compile-motif.log")
+
+  (with-compilation-unit
+      (:optimize '(optimize (speed 3) (ext:inhibit-warnings 3)
+			    #+small (safety 0)
+			    #+small (debug .5)))
+    
+    (dolist (f tk-internals-files)
+      (comf f :load t)))
   
-  (dolist (f tk-internals-files)
-    (comf f :load t)))
-
-(with-compiler-log-file
-    ("target:compile-motif.log"
-     :optimize
-     '(optimize (debug #-small 2 #+small .5) 
-		(speed 2) (inhibit-warnings 2)
-		(safety #-small 1 #+small 0))
-     :optimize-interface
-     '(optimize-interface (debug .5))
-     :context-declarations
-     '(((:and :external :global)
-	(declare (optimize-interface (safety 2) (debug 1))))
-       ((:and :external :macro)
-	(declare (optimize (safety 2))))
-       (:macro (declare (optimize (speed 0))))))
-
-  (dolist (f tk-files)
-    (comf f :load t))
-
-  (unless (fboundp 'xt::build-toolkit-interface)
-    (mapc #'load tk-internals-files)
-    (mapc #'load tk-files))
-
-  (xt::build-toolkit-interface)
-
-  (dolist (f interface-files)
-    (comf f :load t #+small :byte-compile #+small t)))
+  (with-compilation-unit
+      (:optimize
+       '(optimize (debug #-small 2 #+small .5) 
+		  (speed 2) (inhibit-warnings 2)
+		  (safety #-small 1 #+small 0))
+       :optimize-interface
+       '(optimize-interface (debug .5))
+       :context-declarations
+       '(((:and :external :global)
+	  (declare (optimize-interface (safety 2) (debug 1))))
+	 ((:and :external :macro)
+	  (declare (optimize (safety 2))))
+	 (:macro (declare (optimize (speed 0))))))
+    
+    (dolist (f tk-files)
+      (comf f :load t))
+    
+    (unless (fboundp 'xt::build-toolkit-interface)
+      (mapc #'load tk-internals-files)
+      (mapc #'load tk-files))
+    
+    (xt::build-toolkit-interface)
+    
+    (dolist (f interface-files)
+      (comf f :load t #+small :byte-compile #+small t))))
 
 (apply #'cat-if-anything-changed
        "target:interface/clm-library"
