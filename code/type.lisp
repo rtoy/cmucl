@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.56 2003/04/17 21:19:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.57 2003/04/23 15:19:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -446,6 +446,12 @@
 
 ); eval-when (compile eval)
 
+(declaim (inline reparse-unknown-type))
+(defun reparse-unknown-type (type)
+  (if (unknown-type-p type)
+      (specifier-type (type-specifier type))
+      type))
+
 (declaim (inline swapped-args-fun))
 (defun swapped-args-fun (fun)
   (declare (type function fun))
@@ -460,19 +466,6 @@
 	  (eql (car x) (car y))
 	  (equal-but-no-car-recursion (cdr x) (cdr y))))
     (t nil)))
-
-(defun hierarchical-intersection2 (type1 type2)
-  (multiple-value-bind (subtypep1 win1) (csubtypep type1 type2)
-    (multiple-value-bind (subtypep2 win2) (csubtypep type2 type1)
-      (cond (subtypep1 type1)
-	    (subtypep2 type2)
-	    ((and win1 win2) *empty-type*)
-	    (t nil)))))
-
-(defun hierarchical-union2 (type1 type2)
-  (cond ((csubtypep type1 type2) type2)
-	((csubtypep type2 type1) type1)
-	(t nil)))
 
 (defun any/type (op thing list)
   (declare (type function op))
@@ -1137,6 +1130,8 @@
 			   :init-form cold-load-init)
 	      ((type1 eq) (type2 eq))
   (declare (type ctype type1 type2))
+  (setq type1 (reparse-unknown-type type1))
+  (setq type2 (reparse-unknown-type type2))
   (cond ((eq type1 type2) type1)
 	((csubtypep type1 type2) type2)
 	((csubtypep type2 type1) type1)
@@ -1214,6 +1209,8 @@
 				  :init-form cold-load-init)
     ((type1 eq) (type2 eq))
   (declare (type ctype type1 type2))
+  (setq type1 (reparse-unknown-type type1))
+  (setq type2 (reparse-unknown-type type2))
   (cond ((eq type1 type2)
 	 ;; FIXME: For some reason, this doesn't catch e.g. type1 =
 	 ;; type2 = (SPECIFIER-TYPE
@@ -2840,16 +2837,17 @@
 
 (def-type-translator member (&rest members)
   (if members
-      (let (ms numbers)
+      (collect ((non-numbers) (numbers))
 	(dolist (m (remove-duplicates members))
-	  (typecase m
-	    (number (push (ctype-of m) numbers))
-	    (t (push m ms))))
+	  (if (and (numberp m)
+		   (not (and (floatp m) (zerop m))))
+	      (numbers (ctype-of m))
+	      (non-numbers m)))
 	(apply #'type-union
-	       (if ms
-		   (make-member-type :members ms)
+	       (if (non-numbers)
+		   (make-member-type :members (non-numbers))
 		   *empty-type*)
-	       (nreverse numbers)))
+	       (numbers)))
       *empty-type*))
 
 

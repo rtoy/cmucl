@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.12 2001/03/04 20:12:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.13 2003/04/23 15:19:41 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,12 +161,12 @@
   ;; that class.  If the result is a two-type union, then return NIL.
   ;; VANILLA-UNION returns whichever argument is a supertype of the other, or
   ;; NIL.
-  (simple-union #'vanilla-union :type function)
+  (simple-union #'hierarchical-union2 :type function)
   (complex-union nil :type (or function null))
   ;;
   ;; The default intersection methods assume that if one type is a subtype of
   ;; the other, then that type is the intersection.
-  (simple-intersection #'vanilla-intersection :type function)
+  (simple-intersection #'hierarchical-intersection2 :type function)
   (complex-intersection nil :type (or function null))
   ;;
   (simple-= #'must-supply-this :type function)
@@ -389,6 +389,18 @@
 	((csubtypep type2 type1) type1)
 	(t nil)))
 
+(defun hierarchical-intersection2 (type1 type2)
+  (multiple-value-bind (subtypep1 win1) (csubtypep type1 type2)
+    (multiple-value-bind (subtypep2 win2) (csubtypep type2 type1)
+      (cond (subtypep1 type1)
+	    (subtypep2 type2)
+	    ((and win1 win2) *empty-type*)
+	    (t nil)))))
+
+(defun hierarchical-union2 (type1 type2)
+  (cond ((csubtypep type1 type2) type2)
+	((csubtypep type2 type1) type1)
+	(t nil)))
 
 ;;; TYPE-CACHE-HASH  --  Interface
 ;;;
