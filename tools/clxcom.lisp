@@ -15,7 +15,7 @@
   (make-package "XLIB" :use '("LISP")))
 
 (with-compiler-log-file
-    ("clx:compile-clx.log"
+    ("target:compile-clx.log"
      :optimize
      '(optimize (debug-info #-small 2 #+small .5) 
 		(speed 2) (inhibit-warnings 2)
@@ -28,24 +28,24 @@
        ((:and :external :macro)
 	(declare (optimize (safety 2))))))
   (let ((c::*suppress-values-declaration* t))
-    (comf "clx:package" :load t)
-    (comf "clx:defsystem" :load t)
-    (comf "clx:depdefs" :load t)
-    (comf "clx:clx" :load t)
-    (comf "clx:dependent" :load t)
-    (comf "clx:macros" :load t)	; these are just macros
-    (comf "clx:bufmac" :load t)		; these are just macros
-    (comf "clx:buffer" :load t)
-    (comf "clx:display" :load t)
-    (comf "clx:gcontext" :load t)
-    (comf "clx:input" :load t)
-    (comf "clx:requests" :load t)
-    (comf "clx:fonts" :load t)
-    (comf "clx:graphics" :load t)
-    (comf "clx:text" :load t)
-    (comf "clx:attributes" :load t)
-    (comf "clx:translate" :load t)
-    (comf "clx:keysyms" :load t)
-    (comf "clx:manager" :load t)
-    (comf "clx:image" :load t)
-    (comf "clx:resource" :load t)))
+    (comf "target:clx/package" :load t)
+    (comf "target:clx/defsystem" :load t)
+    (comf "target:clx/depdefs" :load t)
+    (comf "target:clx/clx" :load t)
+    (comf "target:clx/dependent" :load t)
+    (comf "target:clx/macros" :load t)	; these are just macros
+    (comf "target:clx/bufmac" :load t)		; these are just macros
+    (comf "target:clx/buffer" :load t)
+    (comf "target:clx/display" :load t)
+    (comf "target:clx/gcontext" :load t)
+    (comf "target:clx/input" :load t)
+    (comf "target:clx/requests" :load t)
+    (comf "target:clx/fonts" :load t)
+    (comf "target:clx/graphics" :load t)
+    (comf "target:clx/text" :load t)
+    (comf "target:clx/attributes" :load t)
+    (comf "target:clx/translate" :load t)
+    (comf "target:clx/keysyms" :load t)
+    (comf "target:clx/manager" :load t)
+    (comf "target:clx/image" :load t)
+    (comf "target:clx/resource" :load t)))
