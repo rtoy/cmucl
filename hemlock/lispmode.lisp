@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.12 1991/10/21 15:09:41 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.13 1991/10/27 08:29:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1724,6 +1724,23 @@
    the cursor is directly to the right of the corresponding close paren."
   :value t
   :mode "Lisp")
+
+
+(defhvar "Open Paren Finder Function"
+  "Should be a function that takes a mark for input and returns either NIL
+   if the mark is not after a close paren, or two (temporary) marks
+   surrounding the corresponding open paren."
+  :mode "Lisp"
+  :value 'lisp-open-paren-finder-function)
+
+(defun lisp-open-paren-finder-function (mark)
+  (when (eq (character-attribute :lisp-syntax (previous-character mark))
+	    :close-paren)
+    (with-mark ((mark mark))
+      (pre-command-parse-check mark)
+      (if (not (and (valid-spot mark nil) (list-offset mark -1)))
+	  (values nil nil)
+	  (values mark (mark-after (copy-mark mark)))))))
 
 
 
