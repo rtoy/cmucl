@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.48 2002/12/03 16:58:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.49 2003/03/31 11:13:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -734,6 +734,19 @@
     `(if ,n-res
 	 (values (cdr ,n-res) t)
 	 (values nil nil))))
+
+;;;
+;;; LEXENV-FIND-FUNCTION  --  Interface
+;;;
+;;; Find local function with name NAME in *LEXICAL-ENVIRONMENT*.
+;;;
+(defun lexenv-find-function (name)
+  (lexenv-find name functions
+	       :test (lambda (x y)
+		       (or (equal x y)
+			   (and (consp y)
+				(member (car y) '(flet labels))
+				(equal x (cadr y)))))))
 
 
 

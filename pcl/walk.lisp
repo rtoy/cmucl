@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.24 2003/03/22 16:15:15 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.25 2003/03/31 11:13:22 gerd Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -188,15 +188,6 @@
 			       (coerce (cadr m) 'function)))
 		      macros)))))
 
-#-gerd-flet-names
-(defun environment-function (env fn)
-  (when env
-    (let ((entry (assoc fn (c::lexenv-functions env) :test #'equal)))
-      (and entry
-	   (c::functional-p (cdr entry))
-	   (cdr entry)))))
-
-#+gerd-flet-names
 (defun environment-function (env fn)
   (when env
     (flet ((test (x y)

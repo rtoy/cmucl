@@ -26,6 +26,8 @@ New in this release:
        necessary to SHADOWING-IMPORT these from PCL when doing MOP
        programming, and it fixes some non-compliances as well.
      - Weak hash tables have been added for x86 systems.
+     - Local functions are now named (FLET <name> ...) or 
+       (LABELS <name> ...).
 
   * Numerous ANSI compliance fixes:
 
@@ -40,6 +42,8 @@ New in this release:
      - PCL's class hierarchy has been changed to conform to AMOP, for
        instance, GENERIC-FUNCTION is now a subclass of
        STANDARD-OBJECT.
+     - ENSURE-CLASS-USING-CLASS's argument list has been changed
+       to conform to AMOP.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.21 2003/02/16 19:05:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.22 2003/03/31 11:13:23 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,6 +95,11 @@
   (when (eql 2 (length name))
     (valid-function-name-p (second name))))
 
+(define-function-name-syntax flet (name)
+  (valid-function-name-p (cadr name)))
+
+(define-function-name-syntax labels (name)
+  (valid-function-name-p (cadr name)))
 
 
 ;;;; Fdefinition (fdefn) objects.

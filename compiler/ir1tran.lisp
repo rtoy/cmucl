@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.140 2003/03/30 00:41:07 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.141 2003/03/31 11:13:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -109,6 +109,12 @@
 ;;; set this to false when compiling some parts of the system.
 ;;;
 (defvar *compile-time-define-macros* t)
+
+;;; Stack (alist) of names of currently compiled functions and counters
+;;; how often a name has been used.
+;;;
+(declaim (list *current-function-names*))
+(defvar *current-function-names* ())
 
 (defvar *derive-function-types* t
   "If true, argument and result type information derived from compilation of
@@ -218,7 +224,7 @@
 ;;;
 (defun find-lexically-apparent-function (name context)
   (declare (string context) (values leaf))
-  (let ((var (lexenv-find name functions :test #'equal)))
+  (let ((var (lexenv-find-function name)))
     (cond (var
 	   (unless (leaf-p var)
 	     (assert (and (consp var) (eq (car var) 'macro)))
@@ -520,7 +526,7 @@
 (declaim (start-block ir1-convert ir1-convert-progn-body
 		      ir1-convert-combination-args reference-leaf
 		      reference-constant))
-			
+
 ;;; IR1-Convert  --  Interface
 ;;;
 ;;;    Translate Form into IR1.  The code is inserted as the Next of the
@@ -548,7 +554,7 @@
 	  (let ((fun (car form)))
 	    (cond
 	     ((symbolp fun)
-	      (let ((lexical-def (lexenv-find fun functions)))
+	      (let ((lexical-def (lexenv-find-function fun)))
 		(typecase lexical-def
 		  (null (ir1-convert-global-functoid start cont form))
 		  (functional
@@ -1978,11 +1984,16 @@
     (compiler-error "Lambda-list absent or not a list:~%  ~S" form))
 
   (multiple-value-bind (vars keyp allow-other-keys aux-vars aux-vals)
-		       (find-lambda-vars (cadr form))
-    (multiple-value-bind
-	(body decls)
+      (find-lambda-vars (cadr form))
+    (multiple-value-bind (body decls)
 	(system:parse-body (cddr form) *lexical-environment* t)
-      (let* ((context-decls
+      (let* ((*current-function-names*
+	      (if (member parent-form
+			  '(flet labels defun defmacro define-compiler-macro)
+			  :test #'eq)
+		  (list name)
+		  *current-function-names*))
+	     (context-decls
 	      (and parent-form
 		   (loop for fun in *context-declarations*
 		         append (funcall (the function fun)
@@ -2282,9 +2293,10 @@
 	(environment (gensym)))
     (collect ((new-fenv))
       (dolist (def definitions)
-	(let ((name (first def))
-	      (arglist (second def))
-	      (body (cddr def)))
+	(let* ((name (first def))
+	       (*current-function-names* (list name))
+	       (arglist (second def))
+	       (body (cddr def)))
 	  (multiple-value-bind
 	      (body local-decs)
 	      (lisp::parse-defmacro arglist whole body name 'macrolet
@@ -2839,22 +2851,33 @@
 ;;;
 (defun extract-flet-variables (definitions context)
   (declare (list definitions) (symbol context) (values list list))
-  (collect ((names)
-	    (defs))
-    (dolist (def definitions)
-      (when (or (atom def) (< (length def) 2))
-	(compiler-error "Malformed ~S definition spec: ~S." context def))
-      
-      (let ((name (check-function-name (first def)))
-	    (block-name (nth-value 1 (valid-function-name-p (first def)))))
-	(names name)
-	(multiple-value-bind (body decls)
-	    (system:parse-body (cddr def) *lexical-environment* t)
-	  (defs `(lambda ,(second def)
-		   ,@decls
-		   (block ,block-name
-		     . ,body))))))
-    (values (names) (defs))))
+  (flet ((local-function-name (name)
+	   (let ((base (list context name))
+		 (current *current-function-names*))
+	     (if current
+		 (let ((entry (assoc name (cdr current) :test #'equal)))
+		   (cond (entry
+			  (nconc base (list (incf (cdr entry)))
+				 (list (car current))))
+			 (t
+			  (push (cons name 0) (cdr current))
+			  (nconc base (list (car current))))))
+		 base))))
+    (collect ((names) (defs))
+       (dolist (def definitions)
+	 (when (or (atom def) (< (length def) 2))
+	   (compiler-error "Malformed ~S definition spec: ~S." context def))
+	 (let* ((name (check-function-name (first def)))
+		(block-name (nth-value 1 (valid-function-name-p (first def))))
+		(local-name (local-function-name name)))
+	   (names local-name)
+	   (multiple-value-bind (body decls)
+	       (system:parse-body (cddr def) *lexical-environment* t)
+	     (defs `(lambda ,(second def)
+		      ,@decls
+		      (block ,block-name
+			. ,body))))))
+       (values (names) (defs)))))
 
 
 (def-ir1-translator flet ((definitions &body (body decls))
@@ -3120,7 +3143,7 @@
 ;;; smashes it to a :Cleanup function, as well as referencing it.
 ;;;
 (def-ir1-translator %cleanup-function ((name) start cont)
-  (let ((fun (lexenv-find name functions)))
+  (let ((fun (lexenv-find-function name)))
     (assert (lambda-p fun))
     (setf (functional-kind fun) :cleanup)
     (reference-leaf start cont fun)))

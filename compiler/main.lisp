@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.132 2003/02/05 19:32:21 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.133 2003/03/31 11:13:22 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1883,7 +1883,8 @@
 	     (*last-format-args* nil)
 	     (*last-message-count* 0)
 	     (*compile-object* (make-core-object))
-	     (*gensym-counter* 0))
+	     (*gensym-counter* 0)
+	     (*current-function-names* (list name)))
 	(with-debug-counters
 	  (clear-stuff)
 	  (find-source-paths form 0)
