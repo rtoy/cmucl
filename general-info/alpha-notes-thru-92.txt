@@ -1,3 +1,99 @@
+2/12/92 to 2/18/92
+
+Aliens and the foreign function call interface have been totally
+re-designed and re-written.  Therefore, anything using aliens will have to
+be re-written.  Complete docs are forthcomming.
+
+Additional changes are as follows:
+
+Code:
+
+The USER package has been renamed COMMON-LISP-USER (with USER as a
+nickname) to go along with the LISP->COMMON-LISP rename.
+
+Unix system calls are no longer in the MACH package, but in a new package
+named UNIX.
+
+UNIX-DUP now returns the new FD as the first return value instead of the
+second to be more consistent with the other system calls.
+
+You can no longer pass UNIX-READ a string (or any other vector).  If you
+really want to do this, do something like:
+	(system:without-gcing
+	 (unix:unix-read fd (system:vector-sap string) ...))
+Before, if someone interrupted the read, GCed, and then restarted the read,
+it would have read into the wrong place.
+
+Fixed FORMAT to print the floating point exponent in decimal irrespective
+of *PRINT-BASE*.
+
+The initial value of *LOAD-VERBOSE* is now T.  Additional, LOAD no longer
+always binds *LOAD-VERBOSE* and *LOAD-PRINT-STUFF*.  Now it only binds them
+when :verbose or :print are explicity supplied.  Therefore, you can set
+either of these in your init file and it will take effect.
+
+LOAD is less verbose when *LOAD-VERBOSE* is T.  Specifically, it just
+prints the filename that was loaded (if it can be figured out).
+
+Added ANSI features *LOAD-TRUENAME*, *LOAD-PATHNAME* and *LOAD-PRINT*.
+
+As per ANSI, bind *READTABLE* to itself to make assignments file-local.
+
+Added new variables EXT:*SOURCE-FILE-TYPES* and EXT:*OBJECT-FILE-TYPES*.  When
+no file type is specified, LOAD tries the types in these lists to locate the
+source and object files.  LOAD now recognizes source types "l", "cl" and "lsp"
+in addition to "lisp".
+
+The compiler OPTIMIZE policy is now bound during load, so proclamations in a
+file don't leave the global policy clobbered when the load is finished.
+
+Changed the :IF-SOURCE-NEWER option to signal an error and use restarts, rather
+than PROMPT-FOR-Y-OR-N.  Fixed the load source case to actually load the
+source, rather than loading the object as a source file...
+
+Changed load to deal with source files having NIL type more reasonably.
+
+Added support for wild pathnames in load.
+
+Improved handling of nonexistent files, in particular, don't always assume
+that missing files are source files.  Added condition restarts for missing
+files.
+
+Improved formatting of error and warning messages.
+
+PRINT-UNREADABLE-OBJECT returns NIL, not #\>
+
+Changed FLONUM-TO-STRING to consider widths < 1 to be 1 to prevent infinite
+looping in those cases.
+
+Print the package name instead of NIL when we can't find a package in symbol
+reading.  Also, read |LISP|::cons as CONS, not |cons|.
+
+Replaces {alloc,realloc,dealloc}ate-system-memory with versions that use
+the routines exported by os.c instead of MACH specific vm_allocate.
+
+Changed pointer< and pointer> to sap< and sap>.
+
+
+Compiler:
+
+Fixed a bug that caused an internal error when a never-referenced function
+(e.g. from FLET) had non-local exit code in it.
+
+Fixed spelling of "efficency" in several function names.
+
+Print a error summary even when *compile-verbose* is false.  (This is only
+printed when there are errors, so this doesn't seem a violation of the spirit
+of the spec.)
+
+
+Hemlock:
+
+Removed all RFS authentication stuff from the MH interface, because
+kerberose handles it for us now.
+
+
+
 2/3/92 to 2/12/92
 
 Code:
