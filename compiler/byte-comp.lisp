@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.13 1993/05/17 21:32:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.14 1993/05/20 11:26:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -823,7 +823,10 @@
 	      ;; It can be represented as an immediate.
 	      (output-push-int segment const)
 	      ;; We need to store it in the constants pool.
-	      (let* ((posn (gethash const *system-constant-codes*))
+	      (let* ((posn
+		      (unless (and (consp const)
+				   (eq (car const) '%fdefinition-marker%))
+			(gethash const *system-constant-codes*)))
 		     (new-info (if posn
 				   (cons :system-constant posn)
 				   (cons :local-constant
