@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.12 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.13 2003/07/20 13:55:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,7 @@
 
 (defmethod (setf documentation) (new-value (x list) (doc-type (eql 'function)))
   (unless (valid-function-name-p x)
-    (error "Invalid function name ~s" x))
+    (simple-program-error "Invalid function name ~s" x))
   (if (eq 'setf (cadr x))
       (setf (info setf documentation (cadr x)) new-value)
       (setf (info function documentation x) new-value))
@@ -117,7 +117,7 @@
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (info type kind x) :instance)
-    (error "~@<~S is not the name of a structure type.~@:>" x))
+    (simple-program-error "~@<~S is not the name of a structure type.~@:>" x))
   (setf (info type documentation x) new-value))
 
 ;;; Variables.
