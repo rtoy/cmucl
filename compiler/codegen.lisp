@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.12 1991/02/20 14:56:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.13 1991/02/26 22:05:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,6 +85,10 @@
   (setf *elsewhere* (make-segment))
   (undefined-value))
 
+(defvar *assembly-optimize* t
+  "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
+  rather than policy control.")
+
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
@@ -113,10 +117,11 @@
   (assemble (*code-segment* nil)
     (insert-segment *elsewhere*))
   (expand-pseudo-instructions *code-segment*)
-  (when (policy (lambda-bind
-		 (block-home-lambda
-		  (block-next (component-head component))))
-		(or (>= speed cspeed) (>= space cspeed)))
+  (when (and (policy (lambda-bind
+		      (block-home-lambda
+		       (block-next (component-head component))))
+		     (or (>= speed cspeed) (>= space cspeed)))
+	     *assembly-optimize*)
     (optimize-segment *code-segment*))
   (finalize-segment *code-segment*))
 
