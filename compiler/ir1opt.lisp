@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.3 2000/07/06 06:58:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.4 2000/07/06 18:06:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1465,6 +1465,42 @@
   (undefined-value))
 
   
+;;; Values-types-defaulted  --  Internal
+;;;
+;;;    Like values-types, but returns the types of the given number of
+;;; arguments. If optional of rest values must be used then the union
+;;; with the null type is computed in case of defaulting, and if no
+;;; values are available then they are defaulted to the null type.
+;;;
+(defun values-types-defaulted (type count)
+  (declare (type ctype type) (type index count))
+  (cond ((eq type *wild-type*)
+	 (let ((types nil))
+	   (dotimes (i count types)
+	     (push *universal-type* types))))
+	((not (values-type-p type))
+	 (let ((types nil))
+	   (dotimes (i (1- count))
+	     (push *null-type* types))
+	   (push type types)))
+	(t
+	 (let ((required (args-type-required type))
+	       (optional (args-type-optional type))
+	       (keyp-allowp (or (args-type-keyp type) (args-type-allowp type)))
+	       (rest (args-type-rest type)))
+	   (collect ((types))
+	     (dotimes (i count)
+	       (types (cond (required (single-value-type (pop required)))
+			    (optional (values-type-union
+				       (single-value-type (pop optional))
+				       *null-type*))
+			    (keyp-allowp *universal-type*)
+			    (rest (values-type-union (single-value-type rest)
+						     *null-type*))
+			    (t *null-type*))))
+	     (types))))))
+
+
 ;;; IR1-OPTIMIZE-MV-BIND  --  Internal
 ;;;
 ;;;    Propagate derived type info from the values continuation to the vars.
@@ -1473,17 +1509,13 @@
   (declare (type mv-combination node))
   (let ((arg (first (basic-combination-args node)))
 	(vars (lambda-vars (combination-lambda node))))
-    (multiple-value-bind (types nvals)
-			 (values-types (continuation-derived-type arg))
-      (unless (eq nvals :unknown)
-	(mapc #'(lambda (var type)
-		  (if (basic-var-sets var)
-		      (propagate-from-sets var type)
-		      (propagate-to-refs var type)))
-		vars
-		(append types
-			(make-list (max (- (length vars) nvals) 0)
-				   :initial-element *null-type*)))))
+    (let ((types (values-types-defaulted (continuation-derived-type arg)
+					 (length vars))))
+      (mapc #'(lambda (var type)
+		(if (basic-var-sets var)
+		    (propagate-from-sets var type)
+		    (propagate-to-refs var type)))
+	    vars types))
 
     (setf (continuation-reoptimize arg) nil))
   (undefined-value))
