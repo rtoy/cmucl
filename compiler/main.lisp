@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.72 1992/09/08 16:29:03 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.73 1992/09/10 19:57:06 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,9 +289,9 @@
 	    (when *compiler-trace-output*
 	      (format *compiler-trace-output*
 		      "~|~%Disassembly of code for ~S~2%" component)
-	      (disassem:disassemble-assem-segments *code-segment*
-						   *compiler-trace-output*
-						   *backend*))
+	      (disassem:disassemble-assem-segment *code-segment*
+						  *compiler-trace-output*
+						  *backend*))
 
 	    (when *count-vop-usages*
 	      (count-vops component))
