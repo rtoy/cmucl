@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.17 1990/03/23 21:58:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.18 1990/04/05 23:43:52 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -31,11 +31,11 @@
 ;;; 
 (defmacro define-storage-classes (&rest classes)
   `(progn
-     ,@(mapcar (let ((index -1))
-		 #'(lambda (class)
-		     (incf index)
-		     `(define-storage-class ,(car class) ,index ,@(cdr class))))
-	       classes)))
+     ,@(let ((index -1))
+	 (mapcar #'(lambda (class)
+		     `(define-storage-class ,(car class) ,(incf index)
+			,@(cdr class)))
+		 classes))))
 
 (define-storage-classes
   ;; Objects that can be stored in any register (immediate objects)
@@ -120,56 +120,69 @@
 ;;;; Interfaces for stack sizes.
 
 (defun current-frame-size ()
-  (* word-bytes
-     (finite-sb-current-size
-      (sc-sb (svref *sc-numbers* (sc-number-or-lose 'control-stack))))))
+  (values (* vm:word-bytes
+	     (finite-sb-current-size (sb-or-lose 'control-stack)))
+	  (* vm:word-bytes
+	     (finite-sb-current-size (sb-or-lose 'number-stack)))))
 
 
 
 ;;;; Move costs.
 
-;;; ### This needs work.
-
 ;;;
 ;;; Move costs for operand loading and storing
+;;;
 (define-move-costs
-  ((any-reg descriptor-reg non-descriptor-reg)
-   (1 any-reg descriptor-reg non-descriptor-reg)
-   (2 base-character-reg sap-reg)
-   (5 control-stack number-stack))
-
-  ((control-stack number-stack constant)
-   (5 any-reg descriptor-reg non-descriptor-reg)
-   (6 base-character-reg sap-reg))
-
   ((immediate zero null random-immediate)
-   (1 any-reg descriptor-reg non-descriptor-reg))
+   ;; load immediate or reg->reg move.
+   (1 any-reg descriptor-reg))
 
   ((immediate-base-character)
-   (1 base-character-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg))
+   ;; Load immediate.
+   (1 base-character-reg any-reg descriptor-reg))
 
   ((immediate-sap)
-   (1 sap-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg))
+   ;; lui/ori pair.
+   (2 sap-reg))
+
+  ((any-reg descriptor-reg)
+   ;; No conversion necessary for these.
+   (1 any-reg descriptor-reg)
+   ;; Must shift and addiu the type code.
+   (2 base-character-reg)
+   ;; Must indirect the src ptr.
+   (5 sap-reg)
+   ;; No type conversion, but we have to write it on the stack.
+   (5 control-stack number-stack))
 
   ((base-character-reg)
+   ;; Just move.
    (1 base-character-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg)
-   (5 base-character-stack)
-   (6 control-stack number-stack))
+   ;; Must add type info.
+   (2 any-reg descriptor-reg)
+   ;; Must store it.
+   (5 base-character-stack))
 
   ((sap-reg)
+   ;; Just move
    (1 sap-reg)
-   (2 any-reg descriptor-reg non-descriptor-reg)
-   (5 sap-stack)
-   (6 control-stack number-stack))
+   ;; Must allocate space for it.
+   (10 descriptor-reg)
+   ;; Must store it.
+   (5 sap-stack))
+
+  ((control-stack number-stack constant)
+   ;; Must indirect the stack/code pointer.
+   (5 any-reg descriptor-reg non-descriptor-reg))
 
   ((base-character-stack)
+   ;; Just indirect.
    (5 base-character-reg))
 
   ((sap-stack)
+   ;; Just indirect.
    (5 sap-reg)))
+
 
 ;;;
 ;;; SCs which must saved on a function call.
@@ -188,8 +201,7 @@
 (def-primitive-type fixnum (any-reg control-stack))
 
 (def-primitive-type base-character
-		    (base-character-reg any-reg base-character-stack
-					control-stack))
+  (base-character-reg any-reg base-character-stack control-stack))
 
 ;;; 
 (def-primitive-type function (descriptor-reg control-stack))
@@ -203,16 +215,24 @@
 (def-primitive-type double-float (descriptor-reg control-stack))
 
 ;;;
-(def-primitive-type simple-string (descriptor-reg control-stack))
+(def-primitive-type simple-string (descriptor-reg control-stack)
+  :type simple-base-string)
 (def-primitive-type simple-bit-vector (descriptor-reg control-stack))
 (def-primitive-type simple-vector (descriptor-reg control-stack))
-(def-primitive-type simple-array-unsigned-byte-2 (descriptor-reg control-stack))
-(def-primitive-type simple-array-unsigned-byte-4 (descriptor-reg control-stack))
-(def-primitive-type simple-array-unsigned-byte-8 (descriptor-reg control-stack))
-(def-primitive-type simple-array-unsigned-byte-16 (descriptor-reg control-stack))
-(def-primitive-type simple-array-unsigned-byte-32 (descriptor-reg control-stack))
-(def-primitive-type simple-array-single-float (descriptor-reg control-stack))
-(def-primitive-type simple-array-double-float (descriptor-reg control-stack))
+(def-primitive-type simple-array-unsigned-byte-2 (descriptor-reg control-stack)
+  :type (simple-array (unsigned-byte 2) (*)))
+(def-primitive-type simple-array-unsigned-byte-4 (descriptor-reg control-stack)
+  :type (simple-array (unsigned-byte 4) (*)))
+(def-primitive-type simple-array-unsigned-byte-8 (descriptor-reg control-stack)
+  :type (simple-array (unsigned-byte 8) (*)))
+(def-primitive-type simple-array-unsigned-byte-16 (descriptor-reg control-stack)
+  :type (simple-array (unsigned-byte 16) (*)))
+(def-primitive-type simple-array-unsigned-byte-32 (descriptor-reg control-stack)
+  :type (simple-array (unsigned-byte 32) (*)))
+(def-primitive-type simple-array-single-float (descriptor-reg control-stack)
+  :type (simple-array single-float (*)))
+(def-primitive-type simple-array-double-float (descriptor-reg control-stack)
+  :type (simple-array double-float (*)))
 
 (def-primitive-type system-area-pointer (sap-reg sap-stack))
 
@@ -222,7 +242,7 @@
 
 
 ;;;
-#|
+#|  These are not needed 'cause its pointless to restrict VOPs to them.
 (def-primitive complex-string (descriptor-reg control-stack))
 (def-primitive complex-bit-vector (descriptor-reg control-stack))
 (def-primitive complex-vector (descriptor-reg control-stack))
