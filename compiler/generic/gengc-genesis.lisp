@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.11 1993/08/25 17:04:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.12 1993/08/25 18:01:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2346,7 +2346,7 @@
 	(write-long 0)
 	(let ((block (step-block step)))
 	  (if block
-	      (write-long (+ base block-bytes))
+	      (write-long (+ (block-base block) block-bytes))
 	      (write-long 0)))
 	(write-long (step-first-LO step))
 	(write-long (step-last-LO step))))
