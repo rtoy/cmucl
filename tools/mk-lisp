@@ -1,8 +1,8 @@
-#!/bin/csh -f
+#!/bin/csh -fx
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.8 1991/11/07 22:58:41 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.9 1991/11/26 22:13:21 wlott Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -12,10 +12,11 @@ else
 	set features = ()
 endif
 
-set lisp = /afs/cs/project/clisp/build/@sys/$subdir
+set dest = /afs/cs/project/clisp/build/@sys/$subdir
+set src = /afs/cs/project/clisp/src/$subdir
 
-if (-e $lisp/ldb/kernel.core) then
-	set core = $lisp/ldb/kernel.core
+if (-e $dest/ldb/kernel.core) then
+	set core = $dest/ldb/kernel.core
 else
 	if (-e /usr/tmp/kernel.core) then
 		set core = /usr/tmp/kernel.core
@@ -24,14 +25,14 @@ else
 	endif
 endif
 
-if (-e $lisp/VERSION) then
-	set version = `cat $lisp/VERSION`
+if (-e $src/VERSION) then
+	set version = `cat $src/VERSION`
 else
 	set version = `/bin/date | awk '{print $3 "-" $2 "-" $6}'`
 endif
 
-if (-e $lisp/FEATURES) then
-	set features = ($features `cat $lisp/FEATURES`)
+if (-e $src/FEATURES) then
+	set features = ($features `cat $src/FEATURES`)
 endif
 
 # set a bunch of random env vars to fill up space.
@@ -51,9 +52,9 @@ setenv GORP2 $FOO
 
 echo Building lisp.core dated $version from the \`\`$subdir\'\' subdir.
 
-$lisp/ldb/ldb -core $core << EOF
+$dest/ldb/ldb -core $core << EOF
 (setf *features* (list* $features *features*))
-(setf (search-list "lisp:") '("$lisp/"))
+(setf (search-list "lisp:") '("$dest/" "$src/"))
 (in-package "USER")
 (load (open "lisp:tools/worldload.lisp"))
 $version
