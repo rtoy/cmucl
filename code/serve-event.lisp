@@ -376,4 +376,5 @@
 	    (mach:unix-sigblock (mach:sigmask :sigmsg))
 	    #+nil
 	    (default-interrupt mach:sigmsg)
-	    (mach:unix-sigsetmask old-mask)))))))
+	    (when old-mask
+	      (mach:unix-sigsetmask old-mask))))))))
