@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.39 1992/05/18 17:55:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.40 1992/06/09 06:56:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.39 1992/05/18 17:55:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.40 1992/06/09 06:56:51 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -685,6 +685,7 @@
 	      (dump-fop 'lisp::fop-misc-trap file)))))))
 
     ;; ### No debug info for now.
+    (dump-object nil file)
 
     (let ((num-consts (1+ (length constants)))
 	  (length (byte-output-length output)))
