@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.12 1993/08/25 18:01:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.13 1993/08/25 23:29:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1796,18 +1796,19 @@
   (let ((sap (sap+ (descriptor-sap code-object) offset)))
     (ecase (c:backend-fasl-file-implementation c:*backend*)
       (#.c:pmax-fasl-file-implementation
-       (ecase kind
-	 (:jump
-	  (assert (zerop (ash value -26)))
-	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
-		(ash value -2)))
-	 (:lui
-	  (setf (sap-ref-16 sap 0)
-		(+ (ash value -16)
-		   (if (logbitp 15 value) 1 0))))
-	 (:addi
-	  (setf (sap-ref-16 sap 0)
-		(ldb (byte 16 0) value)))))
+       (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
+	 (ecase kind
+	   (:jump
+	    (assert (zerop (ash value -26)))
+	    (setf (ldb (byte 26 0) inst) (ash value -2)))
+	   (:lui
+	    (setf (ldb (byte 16 0) inst)
+		  (+ (ash value -16)
+		     (if (logbitp 15 value) 1 0))))
+	   (:addi
+	    (setf (ldb (byte 16 0) inst)
+		  (ldb (byte 16 0) value))))
+	 (setf (sap-ref-32 sap 0) (maybe-byte-swap inst))))
       (#.c:sparc-fasl-file-implementation
        (let ((inst (maybe-byte-swap (sap-ref-32 sap 0))))
 	 (ecase kind
@@ -2283,7 +2284,9 @@
 		      (ash (char-code #\O) 16)
 		      (ash (char-code #\R) 8)
 		      (char-code #\E)))
-  (write-long version))
+  (write-long version)
+  (write-long 1) ; kernel_core = TRUE
+  (undefined-value))
 
 (defun write-chunks (chunks)
   (do ((range chunks (range-next range)))
@@ -2333,7 +2336,6 @@
     (let ((steps (generation-steps gen)))
       (write-long (length steps))
       (dolist (step steps)
-	(write-long 0) ; step pointer
 	(write-long (step-num step))
 	(write-long (step-prom-step step))
 	(write-long (step-max-blocks step))
