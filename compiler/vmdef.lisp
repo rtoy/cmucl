@@ -179,7 +179,7 @@
 
   :Constant-SCs (SC*)
       A list of the names of all the constant SCs that can be loaded into this
-      SC by a load function."
+      SC by a move function."
   
   (check-type name symbol)
   (check-type number sc-number)
@@ -278,11 +278,12 @@
        (do-sc-pairs (from-sc to-sc ',scs)
 	 (unless (eq from-sc to-sc)
 	   (let ((num (sc-number from-sc)))
-	     (setf (svref (sc-load-functions to-sc) num) ',name)
+	     (setf (svref (sc-move-functions to-sc) num) ',name)
 	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
      (defun ,name ,lambda-list
-       (assemble (vop-node ,(first lambda-list)) ,@body))))
+       (assemble (vop-node ,(first lambda-list))
+	 ,@body))))
 
 
 (defconstant sc-vop-slots '((:move . sc-move-vops)
@@ -354,13 +355,42 @@
 ;;;
 (defvar *primitive-type-names* (make-hash-table :test #'eq))
 
+;;; Establishes a convenient handle on primitive type unions, or whatever.
+;;; These names can only be used as the :arg-types or :result-types for VOPs
+;;; and can map to anything else that can be used as :arg-types or
+;;; :result-types (e.g. :or, :constant).
+;;; 
+(defvar *primitive-type-aliases* (make-hash-table :test #'eq))
+
+;;; Meta-compile time translation from names to primitive types.
+;;;
+(eval-when (compile load eval)
+  (defvar *meta-primitive-type-names* (make-hash-table :test #'eq)))
+
+
+;;; PRIMITIVE-TYPE-OR-LOSE, META-PRIMITIVE-TYPE-OR-LOSE  --  Interface
+;;;
+;;;    Return the primitive type corresponding to the specified name, or die
+;;; trying.
+;;;
+(defun primitive-type-or-lose (name)
+  (the primitive-type
+       (or (gethash name *primitive-type-names*)
+	   (error "~S is not a defined primitive type." name))))
+;;;
+(defun meta-primitive-type-or-lose (name)
+  (the primitive-type
+       (or (gethash name *meta-primitive-type-names*)
+	   (error "~S is not a defined primitive type." name))))
+
+
 ;;; The primitive type T is somewhat magical, in that it is the only primitive
 ;;; type that overlaps with other primitive types.  An object of primitive-type
 ;;; T is in the canonical descriptor (boxed or pointer) representation.
 ;;;
 ;;; We stick the T primitive-type in a variable so that people who have to
 ;;; special-case it can get at it conveniently.  This is done by the machine
-;;; specific VM definition, since the Def-Primitive-Type for T must specify the
+;;; specific VM definition, since the DEF-PRIMITIVE-TYPE for T must specify the
 ;;; SCs that boxed objects can be allocated in.
 ;;;
 (proclaim '(special *any-primitive-type*))
@@ -376,38 +406,46 @@
 ;;;
 (defmacro def-primitive-type (name scs &key (type name))
   "Def-Primitive-Type Name (SC*) {Key Value}*
-  Define a primitive type Name.  Each SC specifies a Storage Class that values
-  of this type may be allocated in.  The following keyword options are defined:
-
+   Define a primitive type Name.  Each SC specifies a Storage Class that values
+   of this type may be allocated in.  The following keyword options are
+   defined:
+  
   :Type
       The type descriptor for the Lisp type that is equivalent to this type
       (defaults to Name.)"
   (check-type name symbol)
   (check-type scs list)
-  (once-only ((n-old `(gethash ',name *primitive-type-names*))
-	      (n-scs `(mapcar #'meta-sc-number-or-lose ',scs))
-	      (n-type `(specifier-type ',type)))
+  (let ((scns (mapcar #'meta-sc-number-or-lose scs))
+	(get-type `(specifier-type ',type)))
     `(progn
-       (cond (,n-old
-	      (setf (primitive-type-scs ,n-old) ,n-scs)
-	      (setf (primitive-type-type ,n-old) ,n-type))
-	     (t
-	      (setf (gethash ',name *primitive-type-names*)
-		    (make-primitive-type :name ',name
-					 :scs ,n-scs
-					 :type ,n-type))))
-       ',name)))
+       (eval-when (compile load eval)
+	 (setf (gethash ',name *meta-primitive-type-names*)
+	       (make-primitive-type :name ',name  :scs ',scns
+				    :type ,get-type)))
+       ,(once-only ((n-old `(gethash ',name *primitive-type-names*))
+		    (n-type get-type))
+	  `(progn
+	     (cond (,n-old
+		    (setf (primitive-type-scs ,n-old) ',scns)
+		    (setf (primitive-type-type ,n-old) ,n-type))
+		   (t
+		    (setf (gethash ',name *primitive-type-names*)
+			  (make-primitive-type :name ',name  :scs ',scns
+					       :type ,n-type))))
+	     ',name)))))
 
 
-;;; Primitive-Type-Or-Lose  --  Interface
+;;; Def-Primitive-Type-Alias  --  Public
 ;;;
-;;;    Return the primitive type corresponding to the spesicifed name, or die
-;;; trying.
-;;;
-(defun primitive-type-or-lose (name)
-  (the primitive-type
-       (or (gethash name *primitive-type-names*)
-	   (error "~S is not a defined primitive type." name))))
+;;; Just record the translation.
+;;; 
+(defmacro def-primitive-type-alias (name result)
+  "DEF-PRIMITIVE-TYPE-ALIAS Name Result
+  Define name to be an alias for Result in VOP operand type restrictions."
+  `(eval-when (compile load eval)
+     (setf (gethash ',name *primitive-type-aliases*)
+	   ',result)
+     ',name))
 
 
 (eval-when (compile load eval)
@@ -440,6 +478,26 @@
 		    kinds)))
 	  types)
        nil)))
+
+
+;;; SC-ALLOWED-BY-PRIMITIVE-TYPE  --  Interface
+;;;
+;;;    Return true if SC is either one of Ptype's SC's, or one of those SC's
+;;; alternate or constant SCs.  If Meta-P is true, use meta-compile time info.
+;;;
+(defun sc-allowed-by-primitive-type (sc ptype &optional meta-p)
+  (declare (type sc sc) (type primitive-type ptype))
+  (let ((scn (sc-number sc)))
+    (dolist (allowed (primitive-type-scs ptype) nil)
+      (when (eql allowed scn)
+	(return t))
+      (let ((allowed-sc (svref (if meta-p
+				   *meta-sc-numbers*
+				   *sc-numbers*)
+			       allowed)))
+	(when (or (member sc (sc-alternate-scs allowed-sc))
+		  (member sc (sc-constant-scs allowed-sc)))
+	  (return t))))))
 
 
 ;;;; VOP definition structures:
@@ -596,9 +654,8 @@
   ;; NIL if no load-TN was allocated.
   (load-tn (gensym) :type symbol)
   ;;
-  ;; If true, automatic operand loading is inhibited and the operand name is
-  ;; always bound to the original TN.
-  (load t :type boolean)
+  ;; An expression that tests whether to do automatic operand loading.
+  (load t)
   ;;
   ;; In a wired or restricted temporary this is the SC the TN is to be packed
   ;; in.  Null otherwise.
@@ -851,8 +908,8 @@
 	(offset (operand-parse-offset temp)))
     (assert sc)
     (if offset
-	`(make-wired-tn ,(meta-sc-number-or-lose sc) ,offset)
-	`(make-restricted-tn ,(meta-sc-number-or-lose sc)))))
+	`(make-wired-tn nil ,(meta-sc-number-or-lose sc) ,offset)
+	`(make-restricted-tn nil ,(meta-sc-number-or-lose sc)))))
 
   
 ;;; Allocate-Temporaries  --  Internal
@@ -983,14 +1040,14 @@
 
 ;;;; Generator functions:
 
-;;; FIND-LOAD-FUNCTIONS  --  Internal
+;;; FIND-MOVE-FUNCTIONS  --  Internal
 ;;;
 ;;;    Return an alist that translates from lists of SCs we can load OP from to
-;;; the load function used for loading those SCs.  We quietly ignore
+;;; the move function used for loading those SCs.  We quietly ignore
 ;;; restrictions to :non-packed (constant) SCs, since we don't load into those
 ;;; SCs.
 ;;;
-(defun find-load-functions (op load-p)
+(defun find-move-functions (op load-p)
   (collect ((funs))
     (dolist (sc-name (operand-parse-scs op))
       (let* ((sc (meta-sc-or-lose sc-name))
@@ -1003,12 +1060,12 @@
 	  (dolist (alt load-scs)
 	    (let* ((altn (sc-number alt))
 		   (name (if load-p
-			     (svref (sc-load-functions sc) altn)
-			     (svref (sc-load-functions alt) scn)))
+			     (svref (sc-move-functions sc) altn)
+			     (svref (sc-move-functions alt) scn)))
 		   (found (or (assoc alt (funs) :test #'member)
 			      (rassoc name (funs)))))
 	      (unless name
-		(error "No load function defined to ~:[save~;load~] SC ~S~
+		(error "No move function defined to ~:[save~;load~] SC ~S~
 		        ~:[to~;from~] from SC ~S."
 		       load-p sc-name load-p (sc-name alt)))
 	      
@@ -1029,17 +1086,17 @@
     (funs)))
 
 
-;;; CALL-LOAD-FUNCTION  --  Internal
+;;; CALL-MOVE-FUNCTION  --  Internal
 ;;;
 ;;;    Return a form to load/save the specified operand when it has a load TN.
 ;;; For any given SC that we can load from, there must be a unique load
-;;; function.  If all SCs we can load from have the same load function, then we
+;;; function.  If all SCs we can load from have the same move function, then we
 ;;; just call that when there is a load TN.  If there are multiple possible
-;;; load functions, then we dispatch off of the operand TN's type to see which
-;;; load function to use.
+;;; move functions, then we dispatch off of the operand TN's type to see which
+;;; move function to use.
 ;;;
-(defun call-load-function (parse op load-p)
-  (let ((funs (find-load-functions op load-p))
+(defun call-move-function (parse op load-p)
+  (let ((funs (find-move-functions op load-p))
 	(load-tn (operand-parse-load-tn op)))
     (if funs
 	(let* ((tn `(tn-ref-tn ,(operand-parse-temp op)))
@@ -1063,7 +1120,7 @@
 	      `(when (eq ,load-tn ,(operand-parse-name op))
 		 ,form)))
 	`(when ,load-tn
-	   (error "Load TN allocated, but no load function?~@
+	   (error "Load TN allocated, but no move function?~@
 	           VM definition inconsistent, recompile and try again.")))))
 
 
@@ -1118,8 +1175,8 @@
 	     (cond ((and (operand-parse-load op) (operand-parse-scs op))
 		    (binds `(,name ,(decide-to-load parse op)))
 		    (if (eq (operand-parse-kind op) :argument)
-			(loads (call-load-function parse op t))
-			(saves (call-load-function parse op nil))))
+			(loads (call-move-function parse op t))
+			(saves (call-move-function parse op nil))))
 		   (t
 		    (binds `(,name (tn-ref-tn ,temp)))))))
 	  (:temporary
@@ -1150,7 +1207,7 @@
 	     (declare (ignore ,@(vop-parse-ignores parse)))
 	     ,@(loads)
 	     (assemble (vop-node ,n-vop)
-		       ,@(vop-parse-body parse))
+	       ,@(vop-parse-body parse))
 	     ,@(saves))))))
 
 
@@ -1376,7 +1433,7 @@
 ;;;
 ;;; Given an operand, returns two values:
 ;;; 1] A SC-vector of the cost for the operand being in that SC, including both
-;;;    the costs for load functions and coercion VOPs.
+;;;    the costs for move functions and coercion VOPs.
 ;;; 2] A SC-vector holding the SC that we load into, for any SC that we can
 ;;;    directly load from.
 ;;;
@@ -1392,7 +1449,7 @@
       (let* ((load-sc (meta-sc-or-lose sc-name))
 	     (load-scn (sc-number load-sc)))
 	(setf (svref costs load-scn) 0)
-	(setf (svref load-scs load-scn) load-scn)
+	(setf (svref load-scs load-scn) t)
 	(dolist (op-sc (append (when load-p
 				 (sc-constant-scs load-sc))
 			       (sc-alternate-scs load-sc)))
@@ -1401,7 +1458,7 @@
 			   (aref (sc-load-costs load-sc) op-scn)
 			   (aref (sc-load-costs op-sc) load-scn))))
 	    (unless load
-	      (error "No load function defined to move ~:[from~;to~] SC ~
+	      (error "No move function defined to move ~:[from~;to~] SC ~
 	              ~S~%~:[to~;from~] alternate or constant SC ~S."
 		     load-p sc-name load-p (sc-name op-sc)))
 	    
@@ -1409,7 +1466,9 @@
 	      (when (or (not op-cost) (< load op-cost))
 		(setf (svref costs op-scn) load)))
 
-	    (setf (svref load-scs op-scn) load-scn)))
+	    (let ((op-load (svref load-scs op-scn)))
+	      (unless (eq op-load t)
+		(pushnew load-scn (svref load-scs op-scn))))))
 
 	(dotimes (i sc-number-limit)
 	  (unless (svref costs i)
@@ -1424,14 +1483,11 @@
     (values costs load-scs)))
 
 
-(defconstant no-costs
+(defparameter no-costs
   (make-array sc-number-limit  :initial-element 0))
 
-(defconstant no-loads
-  (let ((res (make-array sc-number-limit)))
-    (dotimes (i sc-number-limit)
-      (setf (svref res i) i))
-    res))
+(defparameter no-loads
+  (make-array sc-number-limit :initial-element 't))
 
 
 ;;; COMPUTE-LOADING-COSTS-IF-ANY  --  Internal
@@ -1496,27 +1552,97 @@
 ;;;
 (defun parse-operand-types (specs args-p)
   (declare (list specs))
-  (mapcar #'(lambda (spec)
-	      (cond ((eq spec '*) spec)
-		    ((symbolp spec)
-		     `(:or ,spec))
-		    ((atom spec)
-		     (error "Bad thing to be a operand type: ~S." spec))
-		    (t
-		     (case (first spec)
-		       (:or
-			(unless (every #'symbolp (rest spec))
-			  (error "Bad PRIMITIVE-TYPE name in ~S." spec))
-			spec)
-		       (:constant
-			(unless args-p
-			  (error "Can't :CONSTANT for a result."))
-			(unless (= (length spec) 2)
-			  (error "Bad :CONSTANT argument type spec: ~S." spec))
-			spec)
-		       (t
-			(error "Bad thing to be a operand type: ~S." spec))))))
-	  specs))
+  (labels ((parse-operand-type (spec)
+	     (cond ((eq spec '*) spec)
+		   ((symbolp spec)
+		    (let ((alias (gethash spec *primitive-type-aliases*)))
+		      (if alias
+			  (parse-operand-type alias)
+			  `(:or ,spec))))
+		   ((atom spec)
+		    (error "Bad thing to be a operand type: ~S." spec))
+		   (t
+		    (case (first spec)
+		      (:or
+		       (collect ((results))
+			 (results :or)
+			 (dolist (item (cdr spec))
+			   (unless (symbolp item)
+			     (error "Bad PRIMITIVE-TYPE name in ~S: ~S"
+				    spec item))
+			   (let ((alias
+				  (gethash item *primitive-type-aliases*)))
+			     (if alias
+				 (let ((alias (parse-operand-type alias)))
+				   (unless (eq (car alias) :or)
+				     (error "Can't include primitive-type ~
+				             alias ~S in a :OR restriction: ~S."
+					    item spec))
+				   (dolist (x (cdr alias))
+				     (results x)))
+				 (results item))))
+			 (remove-duplicates (results)
+					    :test #'eq
+					    :start 1)))
+		      (:constant
+		       (unless args-p
+			 (error "Can't :CONSTANT for a result."))
+		       (unless (= (length spec) 2)
+			 (error "Bad :CONSTANT argument type spec: ~S." spec))
+		       spec)
+		      (t
+		       (error "Bad thing to be a operand type: ~S." spec)))))))
+    (mapcar #'parse-operand-type specs)))
+
+
+;;; CHECK-OPERAND-TYPE-SCS  --  Internal
+;;;
+;;;    Check the consistency of Op's Sc restrictions with the specified
+;;; primitive-type restriction.  :CONSTANT operands have already been filtered
+;;; out, so only :OR and * restrictions are left.
+;;;
+;;;    We check that every representation allowed by the type can be directly
+;;; loaded into some SC in the restriction, and that the type allows every SC
+;;; in the restriction.  With *, we require that T satisfy the first test, and
+;;; omit the second.
+;;;
+(defun check-operand-type-scs (parse op type load-p)
+  (declare (type vop-parse parse) (type operand-parse op))
+  (let ((ptypes (if (eq type '*) (list 't) (rest type)))
+	(scs (operand-parse-scs op)))
+    (when scs
+      (multiple-value-bind (costs load-scs)
+			   (compute-loading-costs op load-p)
+	(declare (ignore costs))
+	(dolist (ptype ptypes)
+	  (unless (dolist (rep (primitive-type-scs
+				(meta-primitive-type-or-lose ptype))
+			       nil)
+		    (when (svref load-scs rep) (return t)))
+	    (error "In the ~A ~:[result~;argument~] to VOP ~S,~@
+	            none of the SCs allowed by the operand type ~S can ~
+		    directly be loaded~@
+		    into any of the restriction's SCs:~%  ~S~:[~;~@
+		    [* type operand must allow T's SCs.]~]"
+		   (operand-parse-name op) load-p (vop-parse-name parse)
+		   ptype
+		   scs (eq type '*)))))
+	  
+      (dolist (sc scs)
+	(unless (or (eq type '*)
+		    (dolist (ptype ptypes nil)
+		      (when (sc-allowed-by-primitive-type
+			     (meta-sc-or-lose sc)
+			     (meta-primitive-type-or-lose ptype)
+			     t)
+			(return t))))
+	  (warn "~:[Result~;Argument~] ~A to VOP ~S~@
+	         has SC restriction ~S which is ~
+		 not allowed by the operand type:~%  ~S"
+		load-p (operand-parse-name op) (vop-parse-name parse)
+		sc type)))))
+
+  (undefined-value))
 
 
 ;;; Check-Operand-Types  --  Internal
@@ -1524,12 +1650,10 @@
 ;;;    If the operand types are specified, then check the number specified
 ;;; against the number of defined operands.
 ;;;
-;;; [### This would be a good place to check if the operand type is consistent
-;;; with the SC restriction.]
-;;;
-(defun check-operand-types (ops more-op types what)
-  (declare (list ops) (type (or list (member :unspecified)) types)
-	   (type (or operand-parse null) more-op) (string what))
+(defun check-operand-types (parse ops more-op types load-p)
+  (declare (type vop-parse parse) (list ops)
+	   (type (or list (member :unspecified)) types)
+	   (type (or operand-parse null) more-op))
   (unless (eq types :unspecified)
     (let ((num (+ (length ops) (if more-op 1 0))))
       (unless (= (count-if-not #'(lambda (x)
@@ -1537,11 +1661,22 @@
 					(eq (car x) :constant)))
 			       types)
 		 num)
-	(error "Expected ~D ~A type~P: ~S." num what types num)))
+	(error "Expected ~D ~:[result~;argument~] type~P: ~S."
+	       num load-p types num)))
+    
     (when more-op
       (let ((mtype (car (last types))))
 	(when (and (consp mtype) (eq (first mtype) :constant))
-	  (error "Can't use :CONSTANT on VOP more args.")))))
+	  (error "Can't use :CONSTANT on VOP more args."))))
+    
+    (when (vop-parse-translate parse)
+      (mapc #'(lambda (x y)
+		(check-operand-type-scs parse x y load-p))
+	    (if more-op (butlast ops) ops)
+	    (remove-if #'(lambda (x)
+			   (and (consp x)
+				(eq (car x) ':constant)))
+		       (if more-op (butlast types) types)))))
   
   (undefined-value))
 
@@ -1563,16 +1698,18 @@
 		    (list (vop-parse-more-results parse)))
 		(vop-parse-temps parse)))
 
-  (check-operand-types (vop-parse-args parse)
+  (check-operand-types parse
+		       (vop-parse-args parse)
 		       (vop-parse-more-args parse)
 		       (vop-parse-arg-types parse)
-		       "argument")
+		       t)
 
   
-  (check-operand-types (vop-parse-results parse)
+  (check-operand-types parse
+		       (vop-parse-results parse)
 		       (vop-parse-more-results parse)
 		       (vop-parse-result-types parse)
-		       "result")
+		       nil)
 
   (undefined-value))
 
@@ -1966,6 +2103,9 @@
 	 (setf (template-type ,n-res)
 	       (specifier-type (template-type-specifier ,n-res)))
 	 ,@(set-up-function-translation parse n-res))
+       #-new-compiler
+       (eval-when (compile)
+	 (clc::clc-mumble "vop ~S compiled.~%" ',name))
        ',name)))
 
 
