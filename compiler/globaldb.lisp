@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.44 2003/08/25 20:51:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.45 2003/08/27 09:55:24 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -597,7 +597,8 @@
 ;;; Name.
 ;;;
 (defun compact-info-lookup (env name hash)
-  (declare (type compact-info-env env) (type index hash))
+  (declare (type compact-info-env env)
+	   (type (integer 0 #.most-positive-fixnum) hash))
   (let* ((table (compact-info-env-table env))
 	 (len (length table))
 	 (len-2 (- len 2))
@@ -766,7 +767,8 @@
 ;;;    Just like COMPACT-INFO-LOOKUP, only do it on a volatile environment.
 ;;;
 (defun volatile-info-lookup (env name hash)
-  (declare (type volatile-info-env env) (type index hash))
+  (declare (type volatile-info-env env)
+	   (type (integer 0 #.most-positive-fixnum) hash))
   (let ((table (volatile-info-env-table env)))
     (macrolet ((lookup (test)
 		 `(dolist (entry (svref table (mod hash (length table))) ())
