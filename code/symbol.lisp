@@ -15,11 +15,16 @@
 ;;; Many of these are trivial interpreter entries to functions
 ;;; open-coded by the compiler.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 (export '(get remprop symbol-plist getf get-properties symbol-name
 	  make-symbol copy-symbol gensym gentemp *gensym-counter*
 	  symbol-package keywordp makunbound symbol-value symbol-function
 	  boundp set))
+(in-package "KERNEL")
+(export '(%sp-set-definition %sp-set-plist))
+
+(in-package "LISP")
+
 
 (defun set (variable new-value)
   "VARIABLE must evaluate to a symbol.  This symbol's special value cell is
