@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.48 1999/01/22 16:51:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.49 1999/09/04 19:44:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -481,18 +481,14 @@
 	  (unix:fd-zero read-fds)
 	  (unix:fd-set fd read-fds)
 	  (unix:unix-fast-select (1+ fd) (alien:addr read-fds) nil nil 0 0))
-      (case count
-	(1)
-	(0
-	 (unless #-mp (system:wait-until-fd-usable
-		       fd :input (fd-stream-timeout stream))
-		 #+mp (mp:process-wait-until-fd-usable
-		       fd :input (fd-stream-timeout stream))
-	   (error 'io-timeout :stream stream :direction :read)))
-	(t
-	 (error "Problem checking to see if ~S is readable: ~A"
-		stream
-		(unix:get-unix-error-msg errno)))))
+      ;; Wait if input is not available or if interrupted.
+      (when (or (eql count 0)
+		(and (not count) (eql errno unix:eintr)))
+	(unless #-mp (system:wait-until-fd-usable
+		      fd :input (fd-stream-timeout stream))
+		#+mp (mp:process-wait-until-fd-usable
+		      fd :input (fd-stream-timeout stream))
+	  (error 'io-timeout :stream stream :direction :read))))
     (multiple-value-bind
 	  (count errno)
 	(unix:unix-read fd
@@ -996,16 +992,18 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-ibuf-tail stream) 0)
      (catch 'eof-input-catcher
        (loop
-	(let ((count (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
-		       (unix:fd-zero read-fds)
-		       (unix:fd-set (fd-stream-fd stream) read-fds)
-		       (unix:unix-fast-select (1+ (fd-stream-fd stream))
-					      (alien:addr read-fds) nil nil
-					      0 0))))
+	(multiple-value-bind
+	      (count errno)
+	    (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+	      (unix:fd-zero read-fds)
+	      (unix:fd-set (fd-stream-fd stream) read-fds)
+	      (unix:unix-fast-select (1+ (fd-stream-fd stream))
+				     (alien:addr read-fds) nil nil 0 0))
 	  (cond ((eql count 1)
 		 (do-input stream)
 		 (setf (fd-stream-ibuf-head stream) 0)
 		 (setf (fd-stream-ibuf-tail stream) 0))
+		((and (not count) (eql errno unix:eintr)))
 		(t
 		 (return t)))))))
     (:force-output
