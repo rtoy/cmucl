@@ -870,7 +870,7 @@ Displays all the frames from the current to the bottom.  Only shows
 \end{Lentry}
 
 
-\section{Breakpoint Commands}
+\section{Breakpoint Commands}\cindex{breakpoints}
 
 \cmucl{} supports setting of breakpoints inside compiled functions and
 stepping of compiled code.  Breakpoints can only be set at at known
@@ -1073,7 +1073,31 @@ function entry or exit.
     otherwise.  When encapsulation is used, forms are {\it not}
     evaluated in the function's lexical environment, but
     \code{debug:arg} can still be used.
+
+    Note that if you trace using \kwd{encapsulate}, you will
+    only get a trace or breakpoint at the outermost call to the traced
+    function, not on recursive calls.
+
   \end{Lentry}
+
+  In the case of functions where the known return convention is used
+  to optimize, encapsulation may be necessary in order to make
+  tracing work at all.  The symptom of this occurring is an error
+  stating
+  \begin{example}
+    Error in function \var{foo}: :FUNCTION-END breakpoints are
+    currently unsupported for the known return convention.
+  \end{example}
+  in such cases we recommend using \code{(trace \var{foo} :encapsulate
+    t)}
+  
+  \cpsubindex{tracing}{errors}
+  \cpsubindex{breakpoints}{errors}
+  \cpsubindex{errors}{breakpoints}
+  \cindex{function-end breakpoints}
+  \cpsubindex{breakpoints}{function-end}
+    
+
   
   \kwd{condition}, \kwd{break} and \kwd{print} forms are evaluated in
   the lexical environment of the called function; \code{debug:var} and
