@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.67 1997/12/18 19:00:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.68 1997/12/21 00:14:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -851,18 +851,20 @@
 (defun one-arg-derive-type (arg derive-fcn fcn)
   (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
-      (flet
-	  ((deriver (x)
-	     (etypecase x
-	       (member-type
-		(with-float-traps-masked (:underflow :overflow :divide-by-zero)
-		    
-		  (specifier-type
-		   `(member ,(funcall fcn (first (member-type-members x)))))))
-	       (numeric-type
-		(funcall derive-fcn x)))))
-	;; Run down the list of args and derive the type of each one and
-	;; save all of the results in a list.
+      (flet ((deriver (x)
+	       (typecase x
+		 (member-type
+		  (with-float-traps-masked
+		      (:underflow :overflow :divide-by-zero)
+		    (specifier-type
+		     `(member
+		       ,(funcall fcn (first (member-type-members x)))))))
+		 (numeric-type
+		  (funcall derive-fcn x))
+		 (t
+		  *universal-type*))))
+	;; Run down the list of args and derive the type of each one
+	;; and save all of the results in a list.
 	(let ((result (flatten-list (mapcar #'deriver arg-list))))
 	  (if (rest result)
 	      (make-union-type result)
@@ -878,32 +880,32 @@
 ;;; positive.  If we didn't do this, we wouldn't be able to tell.
 ;;;
 (defun two-arg-derive-type (arg1 arg2 derive-fcn fcn)
-  (labels
-      ((maybe-convert-member-type (arg)
-	 (etypecase arg
-	   (numeric-type arg)
-	   (member-type
-	    (let* ((val (first (member-type-members arg)))
-		   (val-type (type-of val)))
-	      (specifier-type `(,(if (subtypep val-type 'integer)
-				     'integer
-				     val-type)
-				,val ,val))))))
-       (deriver (x y same-arg)
-	 (let* ((member-result-p (and (member-type-p x) (member-type-p y)))
-		(x (maybe-convert-member-type x))
-		(y (maybe-convert-member-type y))
-		(result
-		 (if member-result-p
-		     (with-float-traps-masked
-			 (:underflow :overflow :divide-by-zero)
-		       (funcall fcn
-				(numeric-type-low x)
-				(numeric-type-low y)))
-		     (funcall derive-fcn x y same-arg))))
-	   (if (and member-result-p result)
-	       (specifier-type `(member ,result))
-	       result))))
+  (labels ((convert-member-type (arg)
+	     (let* ((val (first (member-type-members arg)))
+		    (val-type (type-of val)))
+	       (specifier-type `(,(if (subtypep val-type 'integer)
+				      'integer
+				      val-type)
+				 ,val ,val))))
+	   (deriver (x y same-arg)
+	     (cond ((and (member-type-p x) (member-type-p y))
+		    (let* ((x (first (member-type-members x)))
+			   (y (first (member-type-members y)))
+			   (result (with-float-traps-masked
+				       (:underflow :overflow :divide-by-zero)
+				     (funcall fcn x y))))
+		      (if result
+			  (specifier-type `(member ,result)))))
+		   ((and (member-type-p x) (numeric-type-p y))
+		    (let ((x (convert-member-type x)))
+		      (funcall derive-fcn x y same-arg)))
+		   ((and (numeric-type-p x) (member-type-p y))
+		    (let ((y (convert-member-type y)))
+		      (funcall derive-fcn x y same-arg)))
+		   ((and (numeric-type-p x) (numeric-type-p y))
+		    (funcall derive-fcn x y same-arg))
+		   (t
+		    *universal-type*))))
     (let ((same-arg (same-leaf-ref-p arg1 arg2))
 	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
 	  (a2 (prepare-arg-for-derive-type (continuation-type arg2)))
