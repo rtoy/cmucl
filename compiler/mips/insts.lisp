@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.43 1992/07/23 16:25:22 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.44 1993/02/06 14:08:43 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -180,7 +180,7 @@
 (defconstant jump-printer
   #'(lambda (value stream dstate)
       (let ((addr (ash value 2)))
-	(disassem:maybe-note-assembler-routine addr dstate)
+	(disassem:maybe-note-assembler-routine addr t dstate)
 	(write addr :base 16 :radix t :stream stream))))
 
 (disassem:define-instruction-format
