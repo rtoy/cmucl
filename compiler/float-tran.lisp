@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.7 1990/12/01 16:32:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.8 1990/12/02 15:59:07 wlott Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -102,14 +102,6 @@
 ;;;    Convert these operations to format specific versions when the format is
 ;;; known.
 ;;;
-
-(defconstant single-float-digits
-  (1+ (byte-size vm:single-float-significand-byte)))
-
-(defconstant double-float-digits
-  (+ (byte-size vm:double-float-significand-byte)
-     vm:word-bits
-     1))
 
 (deftype single-float-exponent ()
   `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
