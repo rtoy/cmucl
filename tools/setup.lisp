@@ -39,6 +39,12 @@
 	  *compile-time-define-macros*))
 
 #-new-compiler
+(in-package "DEBUG")
+#-new-compiler
+(export '(var arg))
+
+
+#-new-compiler
 (setq clc::*peep-enable* t)
 #-new-compiler
 (setq clc::*inline-enable* t)
