@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.26 2003/03/11 02:20:30 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.27 2003/04/15 14:55:20 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1661,6 +1661,7 @@
 ;;;; Bit Manipulation
 
 (define-instruction bsf (segment dst src)
+  (:printer ext-reg-reg/mem ((op #b1011110) (width 0)))
   (:emitter
    (let ((size (matching-operand-size dst src)))
      (when (eq size :byte)
@@ -1671,6 +1672,7 @@
      (emit-ea segment src (reg-tn-encoding dst)))))
 
 (define-instruction bsr (segment dst src)
+  (:printer ext-reg-reg/mem ((op #b1011110) (width 1)))
   (:emitter
    (let ((size (matching-operand-size dst src)))
      (when (eq size :byte)
