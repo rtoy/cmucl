@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.42 1998/01/13 21:16:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.43 1998/02/06 19:48:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1113,23 +1113,57 @@
 			    (list (alien-record-field-bits field)))))
 		(alien-record-type-fields type)))))
 
-(defun record-fields-match (fields1 fields2)
-  (declare (type list fields1 fields2))
-  (or (eq fields1 fields2)
-      (and fields1
-	   fields2
-	   (let ((field1 (car fields1))
-		 (field2 (car fields2)))
-	     (declare (type alien-record-field field1 field2))
-	     (and (eq (alien-record-field-name field1)
-		      (alien-record-field-name field2))
-		  (eql (alien-record-field-bits field1)
-		       (alien-record-field-bits field2))
-		  (eql (alien-record-field-offset field1)
-		       (alien-record-field-offset field2))
-		  (alien-type-= (alien-record-field-type field1)
-				(alien-record-field-type field2))))
-	   (record-fields-match (cdr fields1) (cdr fields2)))))
+;;; Test the record fields. The depth is limiting in case of cyclic
+;;; pointers.
+(defun record-fields-match (fields1 fields2 depth)
+  (declare (type list fields1 fields2)
+	   (type (mod 64) depth))
+  (labels ((record-type-= (type1 type2 depth)
+	     (and (eq (alien-record-type-name type1)
+		      (alien-record-type-name type2))
+		  (eq (alien-record-type-kind type1)
+		      (alien-record-type-kind type2))
+		  (= (length (alien-record-type-fields type1))
+		     (length (alien-record-type-fields type2)))
+		  (record-fields-match (alien-record-type-fields type1)
+				       (alien-record-type-fields type2)
+				       (1+ depth))))
+	   (pointer-type-= (type1 type2 depth)
+	     (let ((to1 (alien-pointer-type-to type1))
+		   (to2 (alien-pointer-type-to type2)))
+	       (if to1
+		   (if to2
+		       (type-= to1 to2 (1+ depth))
+		       nil)
+		   (null to2))))
+	   (type-= (type1 type2 depth)
+	     (cond ((and (alien-pointer-type-p type1)
+			 (alien-pointer-type-p type2))
+		    (or (> depth 10)
+			(pointer-type-= type1 type2 depth)))
+		   ((and (alien-record-type-p type1)
+			 (alien-record-type-p type2))
+		    (record-type-= type1 type2 depth))
+		   (t
+		    (alien-type-= type1 type2)))))
+    (do ((fields1-rem fields1 (rest fields1-rem))
+	 (fields2-rem fields2 (rest fields2-rem)))
+	((or (eq fields1-rem fields2-rem)
+	     (endp fields1-rem) (endp fields2-rem))
+	 (eq fields1-rem fields2-rem))
+      (let ((field1 (first fields1-rem))
+	    (field2 (first fields2-rem)))
+	(declare (type alien-record-field field1 field2))
+	(unless (and (eq (alien-record-field-name field1)
+			 (alien-record-field-name field2))
+		     (eql (alien-record-field-bits field1)
+			  (alien-record-field-bits field2))
+		     (eql (alien-record-field-offset field1)
+			  (alien-record-field-offset field2))
+		     (let ((field1 (alien-record-field-type field1))
+			   (field2 (alien-record-field-type field2)))
+		       (type-= field1 field2 (1+ depth))))
+	  (return nil))))))
 
 (def-alien-type-method (record :type=) (type1 type2)
   (and (eq (alien-record-type-name type1)
@@ -1139,7 +1173,7 @@
        (= (length (alien-record-type-fields type1))
 	  (length (alien-record-type-fields type2)))
        (record-fields-match (alien-record-type-fields type1)
-			    (alien-record-type-fields type2))))
+			    (alien-record-type-fields type2) 0)))
 
 
 ;;;; The FUNCTION and VALUES types.
