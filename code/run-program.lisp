@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.3 1991/02/08 13:35:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.4 1991/06/17 17:35:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; RUN-PROGRAM and friends.  Factilty for running unix programs from inside
+;;; RUN-PROGRAM and friends.  Facility for running unix programs from inside
 ;;; a lisp.
 ;;; 
 ;;; Written by Jim Healy and Bill Chiles, November 1987, using an earlier
@@ -85,16 +85,17 @@
   "List of process structures for all active processes.")
 
 (defstruct (process (:print-function %print-process))
-  pid			      ; PID of child process.
-  %status		      ; Either :RUNNING, :STOPPED, :EXITED, or :SIGNALED.
-  exit-code		      ; Either exit code or signal
-  core-dumped		      ; T if a core image was dumped.
-  pty			      ; Stream to child's pty or nil.
-  input			      ; Stream to child's input or nil.
-  output		      ; Stream from child's output or nil.
-  error			      ; Stream from child's error output or nil.
-  status-hook		      ; Closure to call when PROC changes status.
-  plist			      ; Place for clients to stash tings.
+  pid			    ; PID of child process.
+  %status		    ; Either :RUNNING, :STOPPED, :EXITED, or :SIGNALED.
+  exit-code		    ; Either exit code or signal
+  core-dumped		    ; T if a core image was dumped.
+  pty			    ; Stream to child's pty or nil.
+  input			    ; Stream to child's input or nil.
+  output		    ; Stream from child's output or nil.
+  error			    ; Stream from child's error output or nil.
+  status-hook		    ; Closure to call when PROC changes status.
+  plist			    ; Place for clients to stash tings.
+  cookie		    ; List of the number of pipes from the subproc.
   )
 
 (defun %print-process (proc stream depth)
@@ -117,12 +118,17 @@
 (defun process-wait (proc &optional check-for-stopped)
   "Wait for PROC to quit running for some reason.  Returns PROC."
   (loop
-    (unless (or (eq (process-status proc) :running)
-		(and check-for-stopped
-		     (eq (process-status proc) :stopped)))
-      (return))
+    (case (process-status proc)
+      (:running)
+      (:stopped
+       (when check-for-stopped
+	 (return)))
+      (t
+       (when (zerop (car (process-cookie proc)))
+	 (return))))
     (system:serve-all-events 1))
   proc)
+
 
 ;;; FIND-CURRENT-FOREGROUND-PROCESS -- internal
 ;;;
@@ -286,7 +292,7 @@
 
 ;;; OPEN-PTY -- internal
 ;;;
-(defun open-pty (pty)
+(defun open-pty (pty cookie)
   (when pty
     (multiple-value-bind
 	(master slave name)
@@ -299,7 +305,7 @@
 	    (error "Could not MACH:UNIX-DUP ~D: ~A"
 		   master (mach:get-unix-error-msg new-fd)))
 	  (push new-fd *close-on-error*)
-	  (copy-descriptor-to-stream new-fd pty)))
+	  (copy-descriptor-to-stream new-fd pty cookie)))
       (values name
 	      (system:make-fd-stream master :input t :output t)))))
 
@@ -342,7 +348,13 @@
 	(when before-execve
 	  (funcall before-execve))
 	;; Exec the program
-	(mach:unix-execve pfile args env))
+	(multiple-value-bind
+	    (okay errno)
+	    (mach:unix-execve pfile args env)
+	  (declare (ignore okay))
+	  ;; If the magic number if bogus, try just a shell script.
+	  (when (eql errno mach:ENOEXEC)
+	    (mach:unix-execve "/bin/sh" (cons pfile args) env))))
     ;; If exec returns, we lose.
     (mach:unix-exit 1)))
 
@@ -410,7 +422,7 @@
      :input -
         Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard
 	input for the current process is inherited.  If NIL, /dev/null
-	is used.  If a pathname, the file so spesified is used.  If a stream,
+	is used.  If a pathname, the file so specified is used.  If a stream,
 	all the input is read from that stream and send to the subprocess.  If
 	:STREAM, the PROCESS-INPUT slot is filled in with a stream that sends 
 	its output to the process. Defaults to NIL.
@@ -422,7 +434,7 @@
      :output -
         Either T, NIL, a pathname, a stream, or :STREAM.  If T, the standard
 	input for the current process is inherited.  If NIL, /dev/null
-	is used.  If a pathname, the file so spesified is used.  If a stream,
+	is used.  If a pathname, the file so specified is used.  If a stream,
 	all the output from the process is written to this stream. If
 	:STREAM, the PROCESS-OUTPUT slot is filled in with a stream that can
 	be read to get the output. Defaults to NIL.
@@ -434,7 +446,7 @@
            nil - run-program returns nil without doing anything.
      :error and :if-error-exists - 
         Same as :output and :if-output-exists, except that :error can also be
-	spesified as :output in which case all error output is routed to the
+	specified as :output in which case all error output is routed to the
 	same place as normal output.
      :status-hook -
         This is a function the system calls whenever the status of the
@@ -454,24 +466,24 @@
   ;; info.  Also, establish proc at this level so we can return it.
   (let (*close-on-error* *close-in-parent* *handlers-installed* proc)
     (unwind-protect
-	(let ((pfile
-	       (namestring (truename (merge-pathnames program "path:")))))
+	(let ((pfile (namestring (truename (merge-pathnames program "path:"))))
+	      (cookie (list 0)))
 	  (multiple-value-bind
 	      (stdin input-stream)
-	      (get-descriptor-for input :direction :input
+	      (get-descriptor-for input cookie :direction :input
 				  :if-does-not-exist if-input-does-not-exist)
 	    (multiple-value-bind
 		(stdout output-stream)
-		(get-descriptor-for output :direction :output
+		(get-descriptor-for output cookie :direction :output
 				    :if-exists if-output-exists)
 	      (multiple-value-bind
 		  (stderr error-stream)
 		  (if (eq error :output)
 		      (values stdout output-stream)
-		      (get-descriptor-for error :direction :output
+		      (get-descriptor-for error cookie :direction :output
 					  :if-exists if-error-exists))
 		(multiple-value-bind (pty-name pty-stream)
-				     (open-pty pty)
+				     (open-pty pty cookie)
 		  ;; Make sure we are not notified about the child death before
 		  ;; we have installed the process struct in *active-processes*
 		  (system:without-interrupts
@@ -495,7 +507,8 @@
 						      :input input-stream
 						      :output output-stream
 						      :error error-stream
-						      :status-hook status-hook))
+						      :status-hook status-hook
+						      :cookie cookie))
 			     (push proc *active-processes*))))))))))
       (dolist (fd *close-in-parent*)
 	(mach:unix-close fd))
@@ -513,7 +526,8 @@
 ;;;   Installs a handler for any input that shows up on the file descriptor.
 ;;; The handler reads the data and writes it to the stream.
 ;;; 
-(defun copy-descriptor-to-stream (descriptor stream)
+(defun copy-descriptor-to-stream (descriptor stream cookie)
+  (incf (car cookie))
   (let ((string (make-string 256))
 	handler)
     (setf handler
@@ -539,10 +553,12 @@
 				    (eql errno mach:eio))
 			       (eql count 0))
 			   (system:remove-fd-handler handler)
+			   (decf (car cookie))
 			   (mach:unix-close descriptor)
 			   (return))
 			  ((null count)
 			   (system:remove-fd-handler handler)
+			   (decf (car cookie))
 			   (error "Could not read input from sub-process: ~A"
 				  (mach:get-unix-error-msg errno)))
 			  (t
@@ -555,7 +571,8 @@
 ;;; the descriptor. If object is :STREAM, returns the created stream as the
 ;;; second value.
 ;;; 
-(defun get-descriptor-for (object &rest keys &key direction &allow-other-keys)
+(defun get-descriptor-for (object cookie &rest keys &key direction
+				  &allow-other-keys)
   (cond ((eq object t)
 	 ;; No new descriptor is needed.
 	 (values nil nil))
@@ -597,7 +614,7 @@
 	      (mach:unix-close write-fd)
 	      (error "Direction must be either :INPUT or :OUTPUT, not ~S"
 		     direction)))))
-	((stringp object)
+	((or (pathnamep object) (stringp object))
 	 (with-open-stream (file (apply #'open object keys))
 	   (multiple-value-bind (won fd)
 				(mach:unix-dup (system:fd-stream-fd file))
@@ -643,7 +660,7 @@
 	      (unless read-fd
 		(error "Cound not create pipe: ~A"
 		       (mach:get-unix-error-msg write-fd)))
-	      (copy-descriptor-to-stream read-fd object)
+	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)
 	      (values write-fd nil)))))
