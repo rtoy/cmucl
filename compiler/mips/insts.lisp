@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.15 1990/04/27 19:21:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.16 1990/05/06 05:24:32 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -430,7 +430,9 @@
     ((signed-byte 16)
      (inst addu reg zero-tn value))
     ((or (signed-byte 32) (unsigned-byte 32))
-     (inst lui reg (ldb (byte 16 16) value))
+     (inst lui reg
+	   #+new-compiler (ldb (byte 16 16) value)
+	   #-new-compiler (logand #xffff (ash value -16)))
      (let ((low (ldb (byte 16 0) value)))
        (unless (zerop low)
 	 (inst or reg low))))
