@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.68 1993/08/17 16:53:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.69 1993/08/20 17:46:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2172,21 +2172,67 @@
        (undefined-value))))
 
 
-;;; Compiler-Constantp  --  Interface
+;;;; Utilities used at run-time for parsing keyword args in IR1:
+
+;;; Find-Keyword-Continuation  --  Internal
 ;;;
-;;;    We don't want to assume that a variable is a constant just because it is
-;;; in the current lisp environment.
+;;;    This function is used by the result of Parse-Deftransform to find the
+;;; continuation for the value of the keyword argument Key in the list of
+;;; continuations Args.  It returns the continuation if the keyword is present,
+;;; or NIL otherwise.  The legality and constantness of the keywords should
+;;; already have been checked. 
 ;;;
-;;; ### For now, just use CONSTANTP to avoid bootstrapping problems with having
-;;; to have the INFO database available at meta-compile time.
+(proclaim '(function find-keyword-continuation (list keyword) (or continuation null)))
+(defun find-keyword-continuation (args key)
+  (do ((arg args (cddr arg)))
+      ((null arg) nil)
+    (when (eq (continuation-value (first arg)) key)
+      (return (second arg)))))
+
+
+;;; Check-Keywords-Constant  --  Internal
 ;;;
-(proclaim '(function compiler-constantp (t) boolean))
-(defun compiler-constantp (exp)
-  "Like constantp, only uses the compilation environment rather than the
-  current Lisp environment."
-#|
-  (if (symbolp exp)
-      (eq (info variable kind exp) :constant)
-      (constantp exp))
-|#
-  (constantp exp))
+;;;    This function is used by the result of Parse-Deftransform to verify that
+;;; alternating continuations in Args are constant and that there is an even
+;;; number of args.
+;;;
+(proclaim '(function check-keywords-constant (list) boolean))
+(defun check-keywords-constant (args)
+  (do ((arg args (cddr arg)))
+      ((null arg) t)
+    (unless (and (rest arg)
+		 (constant-continuation-p (first arg)))
+      (return nil))))
+
+
+;;; Check-Transform-Keys  --  Internal
+;;;
+;;;    This function is used by the result of Parse-Deftransform to verify that
+;;; the list of continuations Args is a well-formed keyword arglist and that
+;;; only keywords present in the list Keys are supplied.
+;;;
+(proclaim '(function check-transform-keys (list list) boolean))
+(defun check-transform-keys (args keys)
+  (and (check-keywords-constant args)
+       (do ((arg args (cddr arg)))
+	   ((null arg) t)
+	 (unless (member (continuation-value (first arg)) keys)
+	   (return nil)))))
+
+
+;;; %EVENT  --  Interface
+;;;
+;;;    Called by the expansion of the EVENT macro.
+;;;
+(proclaim '(function %event (event-info (or node null))))
+(defun %event (info node)
+  (incf (event-info-count info))
+  (when (and (>= (event-info-level info) *event-note-threshold*)
+	     (if node
+		 (policy node (= brevity 0))
+		 (policy nil (= brevity 0))))
+    (let ((*compiler-error-context* node))
+      (compiler-note (event-info-description info))))
+
+  (let ((action (event-info-action info)))
+    (when action (funcall action node))))
