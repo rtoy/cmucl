@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.24 1991/01/12 13:49:08 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.25 1991/01/22 12:11:15 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -161,7 +161,7 @@
 (def-source-transform byte-size (spec) `(car ,spec))
 (def-source-transform byte-position (spec) `(cdr ,spec))
 (def-source-transform ldb-test (bytespec integer)
-  `(not (zerop (ldb ,bytespec ,integer))))
+  `(not (zerop (mask-field ,bytespec ,integer))))
 
 
 ;;; With the ratio and complex accessors, we pick off the "identity" case, and
