@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.5 1992/03/10 15:55:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.6 1992/03/10 18:37:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -206,9 +206,10 @@
 				  (print-trace-start frame bpt print))
 				 (t (setf conditionp nil)))
 			   (when (and break (eval break))
-			     (break "Breaking before TRACE'd call to ~S."
-				    (di:debug-function-name
-				     (di:frame-debug-function frame))))))
+			     (di:flush-frames-above frame)
+			     (let ((*stack-top-hint* frame))
+			       (break "Breaking before TRACE'd call to ~S."
+				      function-or-name)))))
 		     debug-fun :kind :function-start))
 	     (end (di:make-breakpoint
 		   #'(lambda (frame bpt values cookie)
@@ -219,9 +220,10 @@
 						print-after))
 			     (pop *traced-entries*)
 			     (when (and break-after (eval break-after))
-			       (break "Breaking after TRACE'd call to ~S."
-				      (di:debug-function-name
-				       (di:frame-debug-function frame)))))
+			       (di:flush-frames-above frame)
+			       (let ((*stack-top-hint* frame))
+				 (break "Breaking after TRACE'd call to ~S."
+					function-or-name))))
 			   (pop *traced-entries*)))
 		   debug-fun :kind :function-end
 		   :function-end-cookie
