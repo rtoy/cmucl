@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.31 1991/11/16 15:49:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.32 1991/11/24 17:43:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -967,7 +967,7 @@
   (values (or pathname null) boolean boolean))
 (defknown disassemble (callable &optional stream) void)
 
-(defknown documentation (symbol (member variable function structure type setf))
+(defknown documentation ((or symbol cons) symbol)
   (or string null)
   (flushable))
 
@@ -1080,8 +1080,7 @@
 (defknown %scharset (simple-string index character) character (unsafe))
 (defknown %sp-set-definition (symbol function) function (unsafe))
 (defknown %sp-set-plist (symbol t) t (unsafe))
-(defknown %set-documentation
-  (symbol (member variable function structure type setf) (or string null))
+(defknown %set-documentation ((or symbol cons) symbol (or string null))
   (or string null)
   ())
 (defknown %setnth (index list t) t (unsafe))
