@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.16 1993/08/06 13:56:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.17 1993/08/06 14:03:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,6 +214,7 @@
   (multiple-value-bind
       (prefix int)
       (etypecase thing
+	(null (values "G" (incf *gensym-counter*)))
 	(simple-string (values thing (incf *gensym-counter*)))
 	(fixnum (values "G" thing))
 	(string (values (coerce thing 'simple-string)
