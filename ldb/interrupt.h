@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.h,v 1.1 1990/03/29 21:23:00 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.h,v 1.2 1991/05/24 17:50:52 wlott Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -11,8 +11,11 @@ extern struct sigcontext *lisp_interrupt_contexts[MAX_INTERRUPTS];
 
 union interrupt_handler {
 	lispobj lisp;
-	int (*c)();
+	void (*c)();
 };
+
+extern void interrupt_handle_now(), interrupt_handle_pending();
+extern void interrupt_internal_error();
 
 extern union interrupt_handler interrupt_handlers[NSIG];
 
