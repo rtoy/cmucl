@@ -189,9 +189,11 @@ call_into_c
 	/* Turn off pseudo-atomic and check for traps. */
 	addit,od	-4,reg_ALLOC,reg_ALLOC
 
-	/* Now we can call the C function. */
-	ble	0(4,reg_CFUNC)
-	copy	r31, r2
+	/* in order to be able to call incrementally linked (ld -A) functions,
+	   we have to do some mild trickery here */
+	copy  reg_CFUNC,%r22
+	bl    $$dyncall,r31
+	copy  r31, r2
 
 	/* Clear the callee saves descriptor regs. */
 	copy	r0, reg_A5
