@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.5 1990/10/13 04:49:57 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.6 1990/10/23 00:04:06 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -13,12 +13,12 @@ int foreign_function_call_active;
 
 #ifdef mips
 unsigned long saved_global_pointer;
+unsigned long current_flags_register;
 #endif
 
 lispobj *current_control_stack_pointer;
 lispobj *current_control_frame_pointer;
 lispobj *current_binding_stack_pointer;
-unsigned long current_flags_register;
 
 lispobj *read_only_space;
 lispobj *static_space;
@@ -39,6 +39,9 @@ globals_init()
 #ifdef mips
 	/* Get the current value of GP. */
 	saved_global_pointer = current_global_pointer();
+
+        /* Set the Atomic flag */
+	current_flags_register = 1<<flag_Atomic;
 #endif
 
         /* No GC trigger yet */
@@ -51,5 +54,4 @@ globals_init()
 	current_control_stack_pointer = control_stack;
 	current_control_frame_pointer = (lispobj *)0;
 	current_binding_stack_pointer = binding_stack;
-	current_flags_register = 1<<flag_Atomic;
 }
