@@ -346,13 +346,13 @@
       (assert load-sc)
       (error "Unable to pack a Load-TN in SC ~S for the ~:R ~
               ~:[result~;argument~] to~@
-              the ~S VOP.
+              the ~S VOP.~@
 	      Perhaps all SC elements already in use by VOP?~:[~;~@
 	      Current cost info inconsistent with that in effect at compile ~
 	      time.  Recompile.~%Compilation order may be incorrect.~]"
+	     (sc-name load-sc)
 	     n arg-p
 	     (vop-info-name (vop-info (tn-ref-vop op)))
-	     (sc-name load-sc)
 	     incon))))
 
 
@@ -780,7 +780,7 @@
     (event spill-conditional-arg-tn node)
     (setf (block-info new) new-2block)
     (setf (first info-args) (block-label new))
-    (emit-operand-load node new-2block (tn-save-tn victim) victim)
+    (emit-operand-load node new-2block (tn-save-tn victim) victim nil)
     (vop branch node new-2block lab)
     
     (let ((next-lab (block-label (ir2-block-block (ir2-block-next 2block)))))
