@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.18.1.1 1993/01/23 13:51:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.18.1.2 1993/02/10 23:41:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -516,7 +516,7 @@
 	 (when (eql type instance-header-type)
 	   (incf total-objects)
 	   (incf total-bytes size)
-	   (let* ((class (layout-class (%instance-ref obj 0))))
+	   (let* ((class (layout-class (%instance-ref obj 0)))
 		  (found (gethash class totals)))
 	     (cond (found
 		    (incf (the fixnum (car found)))
@@ -528,8 +528,8 @@
     (collect ((totals-list))
       (maphash #'(lambda (class what)
 		   (totals-list (cons (prin1-to-string
-				       (class-proper-name class)
-				       what))))
+				       (class-proper-name class))
+				      what)))
 	       totals)
       (let ((sorted (sort (totals-list) #'> :key #'cddr))
 	    (printed-bytes 0)
