@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.17 2002/11/26 20:04:08 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.18 2002/12/04 01:37:00 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1296,7 +1296,10 @@ collected result will be returned as the value of the LOOP."
 
 
 (defun loop-do-if (for negatep)
-  (let ((form (loop-get-form)) (*loop-inside-conditional* t) (it-p nil))
+  (let ((form (loop-get-form))
+	(*loop-inside-conditional* t)
+	(it-p nil)
+	(first-clause-p t))
     (flet ((get-clause (for)
 	     (do ((body nil)) (nil)
 	       (let ((key (car *loop-source-code*)) (*loop-body* nil) data)
@@ -1306,7 +1309,8 @@ collected result will be returned as the value of the LOOP."
 			  key for))
 		       (t (setq *loop-source-context* *loop-source-code*)
 			  (loop-pop-source)
-			  (when (loop-tequal (car *loop-source-code*) 'it)
+			  (when (and (loop-tequal (car *loop-source-code*) 'it)
+				     first-clause-p)
 			    (setq *loop-source-code*
 				  (cons (or it-p (setq it-p (loop-when-it-variable)))
 					(cdr *loop-source-code*))))
@@ -1318,6 +1322,7 @@ collected result will be returned as the value of the LOOP."
 				   "~S does not introduce a LOOP clause that can follow ~S."
 				   key for))
 				(t (setq body (nreconc *loop-body* body)))))))
+	       (setq first-clause-p nil)
 	       (if (loop-tequal (car *loop-source-code*) :and)
 		   (loop-pop-source)
 		   (return (if (cdr body) `(progn ,@(nreverse body)) (car body)))))))
@@ -1515,6 +1520,8 @@ collected result will be returned as the value of the LOOP."
 		     (loop-pop-source)
 		     (loop-get-form))
 		    (t nil)))
+    (when (and var (loop-variable-p var))
+      (loop-error "Variable ~S has already been used" var))
     (loop-make-variable var val dtype)
     (if (loop-tequal (car *loop-source-code*) :and)
 	(loop-pop-source)
