@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.5 1990/03/28 23:00:25 ch Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.6 1990/03/28 23:05:44 ch Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -29,7 +29,7 @@ interrupt.o: interrupt.c
 	cc ${CFLAGS} -G 0 -c interrupt.c
 
 assem.o: assem.s
-	as -G 0 -o $@ $>
+	as -G 0 -o $@ assem.s
 
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
