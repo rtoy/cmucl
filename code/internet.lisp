@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.45 2005/02/06 19:26:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.46 2005/02/07 00:47:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -688,8 +688,6 @@ struct in_addr {
 	     fd
 	     (unix:get-unix-error-msg)))))
 
-#-darwin
-(progn
 (defun inet-recvfrom (fd buffer size &key (flags 0))
   "A packaging of the unix recvfrom call.  Returns three values:
 bytecount, source address as integer, and source port.  bytecount
@@ -724,4 +722,4 @@ can of course be negative, to indicate faults."
 	   :format-control "Error on shutdown of socket: ~A"
 	   :format-arguments (list (unix:get-unix-error-msg))
 	   :errno (unix:unix-errno))))
-)
+

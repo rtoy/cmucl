@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.101 2005/02/06 19:26:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.102 2005/02/07 00:47:44 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2969,8 +2969,6 @@
 
 ;; Datagram support
 
-#-darwin
-(progn
 (def-alien-routine ("recvfrom" unix-recvfrom) int
   (fd int)
   (buffer c-string)
@@ -2990,7 +2988,6 @@
 (def-alien-routine ("shutdown" unix-shutdown) int
   (socket int)
   (level int))
-)
 
 
 ;;;

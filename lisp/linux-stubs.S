@@ -1,6 +1,6 @@
 /*	linux-stubs.S
 
-	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.18 2004/09/21 11:59:17 emarsden Exp $
+	$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/linux-stubs.S,v 1.19 2005/02/07 00:47:45 rtoy Exp $
 
 	These are needed because the locations of the
 	libraries are filled in by ld.so at runtime.
@@ -43,7 +43,7 @@ PVE_stub_ ## fct: ;\
 
 #endif
 
-#if defined(LINKAGE_TABLE) && !defined(__FreeBSD__)
+#if defined(LINKAGE_TABLE) && !defined(__FreeBSD__) && !defined(DARWIN)
  /* This is a workaround for glibc braindamage.  These symbols are
     magically transformed by the preprocessor and linker so that
     these symbols of don't appear in libc.so.  These stubs
@@ -705,7 +705,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(realpath) */
 /*  doe(reboot) */
 /*  doe(recv) */
-/*  doe(recvfrom) */
+  doe(recvfrom)
 /*  doe(recvmsg) */
 /*  doe(regcomp) */
 /*  doe(regerror) */
@@ -751,7 +751,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(semop) */
 /*  doe(send) */
 /*  doe(sendmsg) */
-/*  doe(sendto) */
+  doe(sendto)
 /*  doe(set_new_handler) */
 /*  doe(setbuf) */
 /*  doe(setbuffer) */
@@ -798,7 +798,7 @@ PVE_stub_ ## fct: ;\
 /*  doe(shmctl) */
 /*  doe(shmdt) */
 /*  doe(shmget) */
-/*  doe(shutdown) */
+  doe(shutdown)
 /*  doe(sigaction) */
 /*  doe(sigaddset) */
 /*  doe(sigblock) */
