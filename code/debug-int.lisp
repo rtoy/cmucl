@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.109 2004/06/01 23:09:27 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.110 2004/07/29 11:52:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1343,6 +1343,7 @@
 	       #+(or pmax sgi) ; pmax only
 	       (when (logbitp 31 (alien:slot scp 'mips::sc-cause))
 		 (incf pc-offset vm:word-bytes))
+	       #+nil
 	       (unless (<= 0 pc-offset
 			   (* (kernel:code-header-ref code
 						      vm:code-code-size-slot)
@@ -1353,6 +1354,17 @@
 		       (- (vm:sigcontext-register scp vm::lra-offset)
 			  (kernel:get-lisp-obj-address code)
 			  code-header-len)))
+	       (let ((code-size (* (kernel:code-header-ref code
+							   vm:code-code-size-slot)
+				   vm:word-bytes)))
+		 (unless (<= 0 pc-offset code-size)
+		   ;; We were in an assembly routine.
+		   (multiple-value-bind (new-pc-offset computed-return)
+		       (find-pc-from-assembly-fun code scp)
+		     (setf pc-offset new-pc-offset)
+		     (unless (<= 0 pc-offset code-size)
+		       ;; Message here?
+		       (setf pc-offset 0)))))
 	       (return
 		(if (eq (kernel:%code-debug-info code) :bogus-lra)
 		    (let ((real-lra (kernel:code-header-ref code
@@ -1396,6 +1408,21 @@
 			 pc-offset code))
 	       (return
 		(values code pc-offset scp))))))))))
+
+(defun find-pc-from-assembly-fun (code scp)
+  "find the PC"
+  (let ((return-machine-address
+	 #-ppc
+	  (- (vm:sigcontext-register scp vm::lra-offset)
+	     vm:other-pointer-type)
+	  #+ppc
+	  (vm::sigcontext-lr scp))
+	(code-header-len (* (kernel:get-header-data code) vm:word-bytes)))
+    (values (- return-machine-address
+	       (- (get-lisp-obj-address code)
+		  vm:other-pointer-type)
+	       code-header-len)
+	    return-machine-address)))
 
 ;;; CODE-OBJECT-FROM-BITS  --  internal.
 ;;;

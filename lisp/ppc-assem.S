@@ -399,14 +399,18 @@ lra:
 
 	.byte 18<<2
 _undefined_tramp:	
-	.byte 0,0,24
+	.byte 0,0,48
 	.long _undefined_tramp
 	.long NIL
 	.long NIL
 	.long NIL
 	.long NIL
 	twllei reg_ZERO,trap_Cerror
-	.byte 4, 23, 254, 140, 2
+	.byte 4
+	.byte UNDEFINED_SYMBOL_ERROR
+	.byte 254
+	.byte sc_DescriptorReg+0x40
+	.byte 1
 	.align 2
 #ifdef PPC_FUN_HACK_MAYBE
 1:	lwz reg_CODE,FDEFN_RAW_ADDR_OFFSET(reg_CNAME)
@@ -416,6 +420,9 @@ _undefined_tramp:
 	la reg_LIP,FUNCTION_CODE_OFFSET(reg_CODE)
 	mtctr reg_LIP
 	bctr
+
+	mr reg_CSP, reg_CFP
+	b 1b
 	
 	SET_SIZE(xundefined_tramp)
 

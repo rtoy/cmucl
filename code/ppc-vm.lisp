@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.2 2004/07/25 19:32:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.3 2004/07/29 11:52:24 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,6 +234,11 @@
 
 (defsetf sigcontext-register %set-sigcontext-register)
 
+;; Extract the LR register from the sigcontext.
+(defun sigcontext-lr (scp)
+  (declare (type (alien (* sigcontext)) scp))
+  (with-alien ((scp (* sigcontext)) scp)
+    (deref (slot (slot scp 'sc-regs) 'lr) 0)))
 
 ;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface
 ;;;
