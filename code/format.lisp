@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.34 1997/02/08 16:02:22 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.35 1997/04/20 21:31:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1055,7 +1055,10 @@
 ;;;
 (defun format-fixed-aux (stream number w d k ovf pad atsign)
   (cond
-   ((not (or w d))
+   ((or (not (or w d))
+	(and (floatp number)
+	     (or (float-infinity-p number)
+		 (float-nan-p number))))
     (prin1 number stream)
     nil)
    (t
@@ -1144,15 +1147,22 @@
 ;;;errors.  As for now, we let the user get away with it, and merely guarantee
 ;;;that at least one significant digit will appear.
 
+;;; toy@rtp.ericsson.se:  The Hyperspec seems to say that the exponent
+;;; marker is always printed.  Make it so.  Also, the original version
+;;; causes errors when printing infinities or NaN's.  The Hyperspec is
+;;; silent here, so let's just print out infinities and NaN's instead
+;;; of causing an error.
 (defun format-exp-aux (stream number w d e k ovf pad marker atsign)
-  (if (not (or w d))
+  (if (and (floatp number)
+	   (or (float-infinity-p number)
+	       (float-nan-p number)))
       (prin1 number stream)
       (multiple-value-bind (num expt)
 			   (lisp::scale-exponent (abs number))
 	(let* ((expt (- expt k))
 	       (estr (decimal-string (abs expt)))
 	       (elen (if e (max (length estr) e) (length estr)))
-	       (fdig (if d (if (plusp k) (1+ (- d k)) d) nil))
+	       (fdig (if d (if (plusp k) (1+ (- d k)) d) 1))
 	       (fmin (if (minusp k) (- 1 k) nil))
 	       (spaceleft (if w
 			      (- w 2 elen
@@ -1225,32 +1235,37 @@
       (format-princ stream number nil nil w 1 0 pad)))
 
 
+;;; toy@rtp.ericsson.se:  Same change as for format-exp-aux.
 (defun format-general-aux (stream number w d e k ovf pad marker atsign)
-  (multiple-value-bind (ignore n) 
-		       (lisp::scale-exponent (abs number))
-    (declare (ignore ignore))
-    ;;Default d if omitted.  The procedure is taken directly
-    ;;from the definition given in the manual, and is not
-    ;;very efficient, since we generate the digits twice.
-    ;;Future maintainers are encouraged to improve on this.
-    (unless d
-      (multiple-value-bind (str len) 
-			   (lisp::flonum-to-string (abs number))
-	(declare (ignore str))
-	(let ((q (if (= len 1) 1 (1- len))))
-	  (setq d (max q (min n 7))))))
-    (let* ((ee (if e (+ e 2) 4))
-	   (ww (if w (- w ee) nil))
-	   (dd (- d n)))
-      (cond ((<= 0 dd d)
-	     (let ((char (if (format-fixed-aux stream number ww dd nil
-					       ovf pad atsign)
-			     ovf
-			     #\space)))
-	       (dotimes (i ee) (write-char char stream))))
-	    (t
-	     (format-exp-aux stream number w d e (or k 1)
-			     ovf pad marker atsign))))))
+  (if (and (floatp number)
+	   (or (float-infinity-p number)
+	       (float-nan-p number)))
+      (prin1 number stream)
+      (multiple-value-bind (ignore n) 
+	  (lisp::scale-exponent (abs number))
+	(declare (ignore ignore))
+	;;Default d if omitted.  The procedure is taken directly
+	;;from the definition given in the manual, and is not
+	;;very efficient, since we generate the digits twice.
+	;;Future maintainers are encouraged to improve on this.
+	(unless d
+	  (multiple-value-bind (str len) 
+	      (lisp::flonum-to-string (abs number))
+	    (declare (ignore str))
+	    (let ((q (if (= len 1) 1 (1- len))))
+	      (setq d (max q (min n 7))))))
+	(let* ((ee (if e (+ e 2) 4))
+	       (ww (if w (- w ee) nil))
+	       (dd (- d n)))
+	  (cond ((<= 0 dd d)
+		 (let ((char (if (format-fixed-aux stream number ww dd nil
+						   ovf pad atsign)
+				 ovf
+				 #\space)))
+		   (dotimes (i ee) (write-char char stream))))
+		(t
+		 (format-exp-aux stream number w d e (or k 1)
+				 ovf pad marker atsign)))))))
 
 (def-format-directive #\$ (colonp atsignp params)
   (expand-bind-defaults ((d 2) (n 1) (w 0) (pad #\space)) params
