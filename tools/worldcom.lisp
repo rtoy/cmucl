@@ -155,6 +155,7 @@
 (comf "target:code/query")
 (comf "target:code/rand")
 (comf "target:code/trace")
+(comf "target:code/ntrace")
 (comf "target:code/profile")
 (comf "target:code/sort")
 (comf "target:code/sysmacs")
