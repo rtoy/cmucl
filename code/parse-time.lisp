@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.8 2000/11/27 17:23:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.9 2003/01/03 21:14:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -85,7 +85,7 @@
 	    ("edt" . 4) ("cst" . 6)
 	    ("cdt" . 5) ("mst" . 7)
 	    ("mdt" . 6)	("pst" . 8)
-	    ("pdt" . 7)) 
+	    ("pdt" . 7) ("utc" . 0)) 
 	  *zone-strings*)
 
 (hashlist '(("yesterday" . yesterday)  ("today" . today)
