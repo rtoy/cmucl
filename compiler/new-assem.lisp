@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.12 1992/07/29 16:04:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.13 1992/07/29 20:39:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -253,19 +253,22 @@
   ;; List of the instrucitons who read what we write.
   (read-dependents nil :type list))
 ;;;
-(defvar *inst-ids* (make-hash-table :test #'eq))
-(defvar *next-inst-id* 0)
+#+debug (defvar *inst-ids* (make-hash-table :test #'eq))
+#+debug (defvar *next-inst-id* 0)
 (defun %print-instruction (inst stream depth)
   (declare (ignore depth))
   (print-unreadable-object (inst stream :type t :identity t)
+    #+debug
     (princ (or (gethash inst *inst-ids*)
 	       (setf (gethash inst *inst-ids*)
 		     (incf *next-inst-id*)))
 	   stream)
-    (format stream " emitter=~S" (inst-emitter inst))
+    (format stream #+debug " emitter=~S" #-debug "emitter=~S"
+	    (inst-emitter inst))
     (when (inst-depth inst)
       (format stream ", depth=~D" (inst-depth inst)))))
 
+#+debug
 (defun reset-inst-ids ()
   (clrhash *inst-ids*)
   (setf *next-inst-id* 0))
@@ -430,7 +433,9 @@
 		  (add-to-nth-list delayed inst (1- (inst-delay inst))))))
       (setf (segment-emittable-insts segment)
 	    (sort really-emittable-insts #'> :key #'inst-depth))
-      (setf (segment-delayed segment) delayed)))
+      (setf (segment-delayed segment) delayed))
+    (dolist (branch (segment-queued-branches segment))
+      (grovel-inst (cdr branch))))
   #+debug
   (format *trace-output* "Queued branches: ~S~%"
 	  (segment-queued-branches segment))
