@@ -56,6 +56,28 @@
 (defvar *redisplay-output-buffer-index* 0)
 (proclaim '(fixnum *redisplay-output-buffer-index*))
 
+(defvar *terminal-baud-rate* 9600
+  "If true, this is an integer indicating the speed of the terminal.  This used
+  to keep redisplay from getting ahead of the terminal, allowing redisplays in
+  progress to aborted when there is new command input.")
+(proclaim '(type (or (unsigned-byte 16) null) *terminal-baud-rate*))
+
+
+;;; WRITE-AND-MAYBE-WAIT  --  Internal
+;;;
+;;;    Write the first Count characters in the redisplay output buffer.  If
+;;; *terminal-baud-rate* is set, then sleep for long enough to allow the
+;;; written text to be displayed.  We multiply by 10 to get the baud-per-byte
+;;; conversion, which assumes 7 character bits + 1 start bit + 2 stop bits, no
+;;; parity.
+;;;
+(defun write-and-maybe-wait (count)
+  (declare (fixnum count))
+  (mach:unix-write 1 *redisplay-output-buffer* 0 count)
+  (let ((speed *terminal-baud-rate*))
+    (when speed
+      (sleep (/ (* (float count) 10.0) (float speed))))))
+
 
 ;;; TTY-WRITE-STRING blasts the string into the redisplay output buffer.
 ;;; If the string overflows the buffer, then segments of the string are
@@ -73,8 +95,7 @@
 	     (%primitive byte-blt string start *redisplay-output-buffer*
 			 *redisplay-output-buffer-index* dst-index)
 	     (cond ((= length buffer-space)
-		    (mach:unix-write 1 *redisplay-output-buffer* 0 
-				      redisplay-output-buffer-length)
+		    (write-and-maybe-wait redisplay-output-buffer-length)
 		    (setf *redisplay-output-buffer-index* 0))
 		   (t
 		    (setf *redisplay-output-buffer-index* dst-index)))))
@@ -85,8 +106,7 @@
 	      (%primitive byte-blt string start *redisplay-output-buffer*
 			  *redisplay-output-buffer-index*
 			  redisplay-output-buffer-length)
-	      (mach:unix-write 1 *redisplay-output-buffer* 0 
-				redisplay-output-buffer-length)
+	      (write-and-maybe-wait redisplay-output-buffer-length)
 	      (when (< remaining redisplay-output-buffer-length)
 		(%primitive byte-blt string (+ start buffer-space)
 			    *redisplay-output-buffer* 0 remaining)
@@ -106,8 +126,7 @@
 	char)
   (incf *redisplay-output-buffer-index*)
   (when (= *redisplay-output-buffer-index* redisplay-output-buffer-length)
-    (mach:unix-write 1 *redisplay-output-buffer* 0
-		     redisplay-output-buffer-length)
+    (write-and-maybe-wait redisplay-output-buffer-length)
     (setf *redisplay-output-buffer-index* 0)))
 
 
@@ -118,8 +137,7 @@
 ;;; 
 (defun tty-force-output ()
   (unless (zerop *redisplay-output-buffer-index*)
-    (mach:unix-write 1 *redisplay-output-buffer* 0
-		     *redisplay-output-buffer-index*)
+    (write-and-maybe-wait *redisplay-output-buffer-index*)
     (setf *redisplay-output-buffer-index* 0)))
 
 
