@@ -163,7 +163,8 @@
 ;;; on the nstack.
 ;;;
 (define-vop (compute-old-nfp)
-  (:results (val :scs (word-pointer-reg)))
+  (:results (val :scs (word-pointer-reg)
+		 :load-if (current-nfp-tn vop)))
   (:vop-var vop)
   (:generator 1
     (let ((nfp (current-nfp-tn vop)))
@@ -214,7 +215,8 @@
 ;;;
 (define-vop (allocate-frame)
   (:results (res :scs (word-pointer-reg))
-	    (nfp :scs (word-pointer-reg)))
+	    (nfp :scs (word-pointer-reg)
+		 :load-if (ir2-environment-number-stack-p callee)))
   (:info callee)
   (:generator 2
     (move res csp-tn)
@@ -528,7 +530,6 @@ default-value-5
       (receive-unknown-values values-start nvals start count label)
       (when cur-nfp
 	(load-stack-tn cur-nfp nfp-save)))))
-
 
 
 ;;;; Local call with known values return:
