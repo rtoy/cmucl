@@ -1,7 +1,5 @@
 (in-package "USER")
 
-(proclaim '(optimize (c::debug-info 2)))
-
 ;;; Hide CLOS from CLX, so objects stay implemented as structures.
 ;;;
 (when (find-package "CLOS")
@@ -16,7 +14,19 @@
   
   (make-package "XLIB" :use '("LISP")))
 
-(with-compiler-log-file ("clx:compile-clx.log")
+(with-compiler-log-file
+    ("clx:compile-clx.log"
+     :optimize
+     '(optimize (debug-info #-small 2 #+small 1) 
+		(speed 2) (inhibit-warnings 2)
+		(safety #-small 1 #+small 0))
+     :optimize-interface
+     '(optimize-interface (debug-info 1))
+     :context-declarations
+     '(((:and :external :global)
+	(declare (optimize-interface (safety 2))))
+       ((:and :external :macro)
+	(declare (optimize (safety 2))))))
   (let ((c::*suppress-values-declaration* t))
     (comf "clx:defsystem" :load t)
     (comf "clx:depdefs" :load t)
