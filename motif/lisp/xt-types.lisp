@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/xt-types.lisp,v 1.3 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/xt-types.lisp,v 1.4 1997/08/22 20:49:29 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,6 +142,8 @@
     (:edit-mode :enum) (:enum :enum) (:event :event) (:file-type-mask :enum)
     (:float :float) (:font :xid) (:font-list :font-list)
     (:function :function) (:grab-kind :enum) (:highlight-mode :enum)
+    (:horizontal-dimension :short) (:horizontal-int :int)
+    (:horizontal-position :short)
     (:indicator-type :enum) (:initial-state :int) (:int :int)
     (:int-list :int-list) (:keyboard-focus-policy :enum) (:label-type :enum)
     (:list-size-policy :enum) (:multi-click :enum) (:navigation-type :enum)
@@ -151,10 +153,14 @@
     (:row-column-type :enum) (:scroll-bar-display-policy :enum)
     (:scroll-bar-placement :enum) (:scrolling-policy :enum)
     (:selection-policy :enum) (:separator-type :enum) (:shadow-type :enum)
+    (:shell-horiz-dim :short) (:shell-horiz-pos :short) (:shell-vert-dim :short)
+    (:shell-vert-pos :short)
     (:short :short) (:string :string) (:string-direction :enum)
     (:string-table :string-table) (:string-token :string-token)
     (:translation-table :translation-table) (:traversal-direction :enum)
-    (:unit-type :enum) (:unsigned-char :short) (:visual-policy :enum)
+    (:unit-type :enum) (:unsigned-char :short)
+    (:vertical-dimension :short) (:vertical-int :int)
+    (:vertical-position :short)(:visual-policy :enum)
     (:widget :widget) (:widget-class :widget-class)
     (:widget-list :widget-list) (:window :xid) (:xm-string :xm-string)
     (:xm-string-table :xm-string-table)))

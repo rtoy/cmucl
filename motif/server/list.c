@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/list.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/list.c,v 1.3 1997/08/22 20:49:34 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -325,7 +325,7 @@ int RXmListReplaceItemsPos(message_t message)
 int RXmListSetAddMode(message_t message)
 {
   Widget w;
-  int state;
+  Boolean state;
 
   toolkit_read_value(message,&w,XtRWidget);
   toolkit_read_value(message,&state,XtRBoolean);

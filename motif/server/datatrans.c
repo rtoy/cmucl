@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.4 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/datatrans.c,v 1.5 1997/08/22 20:49:32 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -147,7 +147,33 @@ void message_write_resource_list(message_t message,ResourceList *list,int tag)
       message_write_boolean(message,0,boolean_tag);  /* Sends nil */
     }
     else {
-      toolkit_write_value(message,*((long *)(list->args[i].value)),type);
+       int size;
+       long type_tag = find_type_entry(type);
+       unsigned long val;
+       if( type_tag < 0 ) {
+          fprintf(stderr,"Choked on type %s\n",type);
+          fflush(stderr);
+          fatal_error("Illegal type specified.");
+          }
+    
+       size = type_table[type_tag].size;
+       switch(size) {
+        case 1:
+          val = *((unsigned char*)(list->args[i].value));
+          break;
+        case 2:
+          val = *((unsigned short*)(list->args[i].value));
+          break;
+        case 4:
+          val = *((unsigned long*)(list->args[i].value));
+          break;
+        default:
+          fprintf(stderr, "Bad size %d for %s\n", size, type);
+          fflush(stderr);
+          fatal_error("Bad size.");
+          break;
+          }
+      toolkit_write_value(message,val,type);
       if( !strcmp(type,XmRXmString) )
 	/* All XmString's returned as resource values are garbage */
 	register_garbage(*((XmString *)(list->args[i].value)),GarbageXmString);
@@ -304,9 +330,17 @@ void message_read_xm_string(message_t message,XmString *xs,int tag,int data)
     *xs = (XmString)message_get_dblword(message);
 }
 
-void message_read_boolean(message_t message,int *val,int tag,int data)
+/* used to be int *val here, but many places pass address of Boolean into
+   things that call this function, resulting in memory overwrite and
+   occasional bus errors. But, the resource list function calls this on the
+   resource list value, which is an int. So the solution is to make everything
+   that calls this function pass the address of a Boolean except for the
+   resource list function, which zeros the value beforehand because only part
+   is written. I still haven't looked up the real definition of an Xlib
+   boolean to see if this is valid or not. */
+void message_read_boolean(message_t message,Boolean *val,int tag,int data)
 {
-  *val = data;
+  *val = (data?1:0);
 }
 
 void message_read_int(message_t message,int *i,int tag,int data)
@@ -375,6 +409,8 @@ void message_read_resource_list(message_t message,ResourceList *list,
       type = query_resource_type(classid,list->parent,name);
       if( !type )
 	warn_bogus_resource(name);
+      list->args[i].value = 0;  /* booleans don't write whole word; see
+                                   message_read_boolean comment */
       toolkit_read_value(message,&(list->args[i].value),type);
       list->args[i].name = name;
 

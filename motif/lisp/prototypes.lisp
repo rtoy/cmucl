@@ -277,6 +277,46 @@
   "Returns the sensitivity state of the given widget."
   ((widget widget)) ((member t nil)))
 
+(defmacro def-xt-is-request (name)
+  (let* ((string-name (concatenate 'string "Xt" (symbol-class name)))
+         (class-name (subseq (symbol-class name) 2)))
+    `(def-toolkit-request ,string-name ,name :confirm
+      ,(concatenate 'string "is widget a subclass of " class-name)
+      ((widget widget)) ((member t nil)))))
+
+(def-xt-is-request is-application-shell)
+(def-xt-is-request is-composite)
+(def-xt-is-request is-constraint)
+(def-xt-is-request is-object)
+(def-xt-is-request is-override-shell)
+(def-xt-is-request is-rect-obj)
+(def-xt-is-request is-shell)
+(def-xt-is-request is-top-level-shell)
+(def-xt-is-request is-transient-shell)
+(def-xt-is-request is-vendor-shell)
+(def-xt-is-request is-w-m-shell)
+
+(def-toolkit-request "XtNameToWidget" name-to-widget :confirm
+  "find a widget by name"
+  ((widget widget) (name simple-string))
+  (widget))
+
+(def-toolkit-request "XtParent" %widget-parent :confirm
+  ""
+  ((widget widget))
+  (widget)
+  (if (/= 0 (widget-id result))
+      (widget-add-child result widget)
+      ;; we leave the nil widget around so gets looked up faster in the future
+      ;; only potential problem should be that it might accumulate parent or
+      ;; child values in its slots or something
+      (setf result nil)
+      ))
+
+(defun xt-widget-parent (widget)
+  "Parent of widget, even if unknown to lisp"
+  (or (widget-parent widget) (%widget-parent widget)))
+
 (def-toolkit-request "XtAddEventHandler" %add-event-handler :no-confirm
   ""
   ((widget widget) (mask (unsigned-byte 32)) (nonmaskable_p (member t nil)))

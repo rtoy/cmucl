@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.3 1997/08/22 20:49:36 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -246,7 +246,8 @@ int RXmScrollBarGetValues(message_t message)
 int RXmScrollBarSetValues(message_t message)
 {
   Widget w;
-  int value,slider_size,increment,page_increment,notify;
+  int value,slider_size,increment,page_increment;
+  Boolean notify;
 
   toolkit_read_value(message,&w,XtRWidget);
   toolkit_read_value(message,&value,XtRInt);

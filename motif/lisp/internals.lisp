@@ -100,7 +100,10 @@
   (close-hook nil :type (or symbol function))
   ;;
   ;; This maps widget ids (unsigned-byte 32)'s into widget structures
-  (widget-table (make-hash-table :test #'eq) :type hash-table)
+  ;; It has to have :test #'eql, not #'eq, because otherwise result widgets
+  ;; from calls aren't necessarily found in the table. An example is
+  ;; (get-values foo :menu-bar)
+  (widget-table (make-hash-table :test #'eql) :type hash-table)
   (function-table (make-array 32 :element-type '(or symbol function)
 			      :adjustable t :fill-pointer 0))
   (callback-table (make-hash-table :test #'equal) :type hash-table)
@@ -108,7 +111,8 @@
   (event-table (make-hash-table :test #'equal) :type hash-table)
   ;; This table tracks all the misc. id's we get from the server
   ;; ie. xm-strings, translations, accelerators, font-lists
-  (id-table (make-hash-table :test #'eq) :type hash-table))
+  ;; Needs to be #'eql for same reasons as widget-table
+  (id-table (make-hash-table :test #'eql) :type hash-table))
 
 (defun print-motif-connection (c stream d)
   (declare (ignore d)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.3 1997/01/18 14:31:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/initial.lisp,v 1.4 1997/08/22 20:49:26 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,7 +213,11 @@
 	   "LIST-GET-SELECTED-POS" "QUIT-APPLICATION-CALLBACK"
 	   "DESTROY-CALLBACK" "MANAGE-CALLBACK" "UNMANAGE-CALLBACK"
 	   "POPUP-CALLBACK" "POPDOWN-CALLBACK" "SET-ITEMS" "GET-ITEMS"
-	   "WITH-CALLBACK-DEFERRED-ACTIONS"))
+	   "WITH-CALLBACK-DEFERRED-ACTIONS" "NAME-TO-WIDGET"
+           "IS-APPLICATION-SHELL" "IS-COMPOSITE" "IS-CONSTRAINT" "IS-OBJECT"
+           "IS-OVERRIDE-SHELL" "IS-RECT-OBJ" "IS-SHELL" "IS-TOP-LEVEL-SHELL"
+           "IS-TRANSIENT-SHELL" "IS-VENDOR-SHELL" "IS-W-M-SHELL"
+           "XT-WIDGET-PARENT"))
 
 
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-build.lisp,v 1.3 1994/10/31 04:54:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/interface-build.lisp,v 1.4 1997/08/22 20:49:27 pw Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,13 +47,21 @@
   (dotimes (index next-type-tag)
     (let* ((stuff (svref *type-table* index))
 	   (name (car stuff))
-	   (kind (cdr stuff)))
-      (if (and (eq kind name) (gethash kind *enum-table*))
-	  (setf kind (symbol-atom :enum))
-	  (setf kind (symbol-atom kind)))
-      (format out "  {\"~a\",message_write_~(~a~),message_read_~(~a~)},~%"
-	      (symbol-class name) kind kind)))
-  (format out "  {NULL,NULL,NULL}~%};~%~%#define TYPE_TABLE_SIZE ~a~%"
+	   (kind (cdr stuff))
+           sizetype)
+      (when (and (eq kind name) (gethash kind *enum-table*))
+        (setf kind :enum))
+      (setf sizetype (case kind
+                       (:enum "XtEnum")
+                       (:short "short")
+                       (:long "long")
+                       (:float "float")
+                       (:int "int")
+                       (t "long")))
+      (setf kind (symbol-atom kind))
+      (format out "  {\"~a\",message_write_~(~a~),message_read_~(~a~),sizeof(~a)},~%"
+              (symbol-class name) kind kind sizetype)))
+  (format out "  {NULL,NULL,NULL,0}~%};~%~%#define TYPE_TABLE_SIZE ~a~%"
 	  next-type-tag))
 
 (defun build-interface-file (out)

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.8 1997/01/18 14:31:42 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.9 1997/08/22 20:49:35 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -245,6 +245,8 @@ main(int argc, char **argv)
   signal(SIGQUIT, server_shutdown);
 #if defined BSD
   signal(SIGCHLD, bury_zombie);
+#elif defined(hpux)
+  signal(SIGCHLD, SIG_IGN);
 #endif
 
   printf("Waiting for connection.\n");
