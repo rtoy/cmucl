@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25.2.1 2000/05/23 16:36:49 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25.2.2 2000/08/24 16:40:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,7 +99,8 @@
 (def-unix-signal :SIGQUIT 3 "Quit")
 (def-unix-signal :SIGILL 4 "Illegal instruction")
 (def-unix-signal :SIGTRAP 5 "Trace trap")
-(def-unix-signal :SIGIOT 6 "Iot instruction")
+(def-unix-signal :SIGIOT 6 "Iot instruction") ; Compatibility
+(def-unix-signal :SIGABRT 6 "C abort()")
 #-linux
 (def-unix-signal :SIGEMT 7 "Emt instruction")
 (def-unix-signal :SIGFPE 8 "Floating point exception")
@@ -265,7 +266,7 @@
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")
 (define-signal-handler sigtrap-handler "Breakpoint/Trap")
-(define-signal-handler sigiot-handler "SIGIOT")
+(define-signal-handler sigabrt-handler "SIGABRT")
 #-linux
 (define-signal-handler sigemt-handler "SIGEMT")
 (define-signal-handler sigbus-handler "Bus Error")
@@ -286,7 +287,7 @@
   (enable-interrupt :sigquit #'sigquit-handler)
   (enable-interrupt :sigill #'sigill-handler)
   (enable-interrupt :sigtrap #'sigtrap-handler)
-  (enable-interrupt :sigiot #'sigiot-handler)
+  (enable-interrupt :sigabrt #'sigabrt-handler)
   #-linux
   (enable-interrupt :sigemt #'sigemt-handler)
   (enable-interrupt :sigfpe #'vm:sigfpe-handler)
