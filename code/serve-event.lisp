@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.14 1992/02/14 23:45:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.15 1992/03/26 03:17:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,9 @@
 (in-package "SYSTEM")
 
 (export '(with-fd-handler add-fd-handler remove-fd-handler invalidate-descriptor
-	  serve-event serve-all-events wait-until-fd-usable))
+	  serve-event serve-all-events wait-until-fd-usable
+	  make-object-set object-set-operation *xwindow-table*
+	  map-xwindow add-xwindow-object remove-xwindow-object))
 
 (in-package "EXTENSIONS")
 
@@ -30,11 +32,116 @@
 
 
 
-;;;; MACH Message receiving noise.
+;;;; Object set stuff.
 
-(defvar *in-server* NIL
-  "*In-server* is set to T when the SIGMSG interrupt has been enabled
-  in Server.")
+;;;
+;;;    Hashtable from ports to objects.  Each entry is a cons (object . set).
+;;;
+;(defvar *port-table* (make-hash-table :test #'eql))
+
+;;; Hashtable from windows to objects.  Each entry is a cons (object . set).
+;;;
+(defvar *xwindow-table* (make-hash-table :test #'eql))
+
+
+(defstruct (object-set
+	    (:constructor make-object-set
+			  (name &optional
+				(default-handler #'default-default-handler)))
+	    (:print-function
+	     (lambda (s stream d)
+	       (declare (ignore d))
+	       (format stream "#<Object Set ~S>" (object-set-name s)))))
+  name					; Name, for descriptive purposes.
+  (table (make-hash-table :test #'eq))  ; Message-ID or xevent-type --> handler fun.
+  default-handler)
+
+(setf (documentation 'make-object-set 'function)
+      "Make an object set for use by a RPC/xevent server.  Name is for
+      descriptive purposes only.")
+
+;;; Default-Default-Handler  --  Internal
+;;;
+;;;    If no such operation defined, signal an error.
+;;;
+(defun default-default-handler (object)
+  (error "You lose, object: ~S" object))
+
+
+;;; MAP-XWINDOW and MAP-PORT return as multiple values the object and
+;;; object set mapped to by a xwindow or port in *xwindow-table* or
+;;; *port-table*.
+;;; 
+(macrolet ((defmapper (name table)
+	      `(defun ,(intern (concatenate 'simple-string
+					    "MAP-" (symbol-name name)))
+		      (,name)
+		 ,(format nil "Return as multiple values the object and ~
+		               object-set mapped to by ~A."
+			  (string-downcase (symbol-name name)))
+		 (let ((temp (gethash ,name ,table)))
+		   (if temp
+		       (values (car temp) (cdr temp))
+		       (values nil nil))))))
+  ;(defmapper port *port-table*)
+  (defmapper xwindow *xwindow-table*))
+
+
+;;; ADD-PORT-OBJECT and ADD-XWINDOW-OBJECT store an object/object-set pair
+;;; mapped to by a port or xwindow in either *port-table* or *xwindow-table*.
+;;; 
+(macrolet ((def-add-object (name table)
+	      `(defun ,(intern (concatenate 'simple-string
+					    "ADD-" (symbol-name name)
+					    "-OBJECT"))
+		      (,name object object-set)
+		 ,(format nil "Add a new ~A/object/object-set association."
+			  (string-downcase (symbol-name name)))
+		 (check-type object-set object-set)
+		 (setf (gethash ,name ,table) (cons object object-set))
+		 object)))
+  ;(def-add-object port *port-table*)
+  (def-add-object xwindow *xwindow-table*))
+
+
+;;; REMOVE-PORT-OBJECT and REMOVE-XWINDOW-OBJECT remove a port or xwindow and
+;;; its associated object/object-set pair from *port-table* or *xwindow-table*.
+;;; 
+(macrolet ((def-remove-object (name table)
+	      `(defun ,(intern (concatenate 'simple-string
+					    "REMOVE-" (symbol-name name)
+					    "-OBJECT"))
+		      (,name)
+		 ,(format nil
+			  "Remove ~A and its associated object/object-set pair."
+			  (string-downcase (symbol-name name)))
+		 (remhash ,name ,table))))
+  ;(def-remove-object port *port-table*)
+  (def-remove-object xwindow *xwindow-table*))
+
+
+;;; Object-Set-Operation  --  Public
+;;;
+;;;    Look up the handler function for a given message ID.
+;;;
+(defun object-set-operation (object-set message-id)
+  "Return the handler function in Object-Set for the operation specified by
+   Message-ID, if none, NIL is returned."
+  (check-type object-set object-set)
+  (check-type message-id fixnum)
+  (values (gethash message-id (object-set-table object-set))))
+
+;;; %Set-Object-Set-Operation  --  Internal
+;;;
+;;;    The setf inverse for Object-Set-Operation.
+;;;
+(defun %set-object-set-operation (object-set message-id new-value)
+  (check-type object-set object-set)
+  (check-type message-id fixnum)
+  (setf (gethash message-id (object-set-table object-set)) new-value))
+;;;
+(defsetf object-set-operation %set-object-set-operation
+  "Sets the handler function for an object set operation.")
 
 
 
