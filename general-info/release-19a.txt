@@ -90,6 +90,8 @@ New in this release:
      - DIRECT-SLOT-DEFINITION-CLASS and EFFECTIVE-SLOT-DEFINITION-CLASS
        AMOP compliant.
      - ALLOCATE-INSTANCE working with structures defined with DEFSTRUCT.
+     - With (DEFGENERIC FOO (&REST X &KEY)) (DEFMETHOD FOO (&REST X) X),
+       (FOO 1) now signals an error.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
