@@ -1,3 +1,61 @@
+9/7/92 to 9/25/92
+
+Code changes:
+ -- Various C code changes.
+ -- Changed PROFILE argument count determination to parse the function type and
+    look at it, instead of trying to fake it.  Among other things, this allows
+    efficient profiling of functions with FTYPE declarations even when
+    compilation policy has caused the function-object's type to be dropped.
+ -- In SERVE-EVENT, fixed WAIT-UNTIL-FD-USABLE to correctly borrow from the
+    timeout seconds when computing the new value for the timeout microseconds
+    and it is negative.
+ -- Added interpreter stub for VALUE-CELL-REF (for interpreted
+    LOAD-TIME-VALUE).
+ -- Fixed MAKE-INTERPRETED-FUNCTION to pass the arglist in so that it is
+    available to DESCRIBE.
+
+Compiler:
+
+It is now possible to inline expand global functions which are defined in a a
+not-completely-empty environment information (containing local macros, etc.)
+Inline expansion now works for local and block-compiled functions.  Now
+local-call conversion is responsible for copying lambdas for copy-per-call
+inlining.
+
+DEFUN handling has been totally rewritten.  Semi-inline expansion now has
+exactly the same semantics as introducing a non-entry-point copy of the
+function into the current compilation block.  A new DEFINED-FUNCTION leaf is
+entered in *FREE-FUNCTIONS* to represent functions which either have inline
+expansions or are defined in the current compilation block.  This allowed the
+implementation of block compilation and inline expansion to be cleaned up.
+
+The new variable EXT:*INLINE-EXPANSION-LIMIT* controls the maximum number of
+inline expansions done in a given function (or block compilation.)  This serves
+to keep inline expansions of recursive functions from crashing the compiler.
+
+Added block compilation declarations to ir1 conversion and optimization.  Moved
+some stuff around to get better locality.  Substantially revamped known call
+reoptimization so that more code is sharable with ir1-conversion.  Formerly
+some stuff (like inline expansion) only happend at ir1-conversion time.
+Some other minor compile speed tweaks such as declaring some simple utilities
+inline.
+
+Compiler bug fixes:
+ -- Added a hack to IF-IF optimization to prevent some spurious unreachable
+    code notes.
+ -- Fixed the code which converts "assignment" lets to ordinary lets to
+    actually work.
+ -- Merged William's change to load-time-value to not include make-value-cell
+    in the name.
+ -- Don't compile load-time-value lambdas if they've already been compiled
+    because they ended up in a non-top-level component.
+ -- Don't run the back-end(s) on components with no code.
+ -- Fixed START-BLOCK, END-BLOCK and recognized declarations to be ignored in
+    %PROCLAIM (they only make it that far when called by the interpreter.
+    Changed the unrecognized proclamation error to be a warning.
+ -- instruction scheduler fixes.
+
+
 8/17/92 to 9/7/92  [PMAX only]
 
 Code:
