@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.67 1990/08/15 02:51:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.68 1990/09/06 17:46:11 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -29,13 +29,10 @@
 ;;;
 (defconstant sc-number-limit 32)
 
-;;; The inclusive upper bound on a cost.  We want to write cost frobbing
-;;; code so that it is portable, but works on fixnums.  This constant
-;;; should be defined so that adding two costs cannot result in fixnum
-;;; overflow.
+;;; The number of references that a TN must have to offset the overhead of
+;;; saving the TN across a call.
 ;;;
-(defconstant most-positive-cost (1- (expt 2 20)))
-
+(defconstant register-save-penalty 3)
 
 
 ;;;; Machine Architecture parameters:
