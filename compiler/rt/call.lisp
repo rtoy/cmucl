@@ -324,7 +324,8 @@ default-value-5
     (inst compute-code-from-lra code-tn code-tn lra-label))
    (t
     (let ((regs-defaulted (gen-label))
-	  (defaulting-done (gen-label)))
+	  (defaulting-done (gen-label))
+	  (default-stack-vars (gen-label)))
       ;; Branch off to the MV case.
       ;; The returner has setup value registers and NARGS, and OCFP points to
       ;; any stack values.
@@ -337,20 +338,21 @@ default-value-5
       ;; Do the single value case.
       ;; Fill in some n-1 registers with nil to get to a consistent state with
       ;; having gotten multiple values, so the code after regs-defaulted can
-      ;; be the same for both cases.  This includes setting up NARGS and OCFP.
-      ;; This says there's one value and no stack values.
+      ;; be the same for both cases.
       (do ((i 1 (1+ i))
 	   (val (tn-ref-across values) (tn-ref-across val)))
 	  ((= i (min nvals register-arg-count)))
 	(move (tn-ref-tn val) null-tn))
-      ;; Only setup NARGS and OCFP we the returnee expected stack values.  If
-      ;; it doesn't want them, then it won't look at NARGS or OCFP.
+      ;; Set OCFP to CSP and (maybe) jump to the code that defaults (i.e.
+      ;; NILs out) all the values that would come from the stack.  We have
+      ;; to set OCFP because the stack defaulting stuff is going to set CSP
+      ;; to OCFP when it gets done to clear any values off the stack, and we
+      ;; don't want that to trash CSP.
       (when (> nvals register-arg-count)
-	(inst li nargs-tn (fixnum 1))
-	(move ocfp-tn csp-tn))
+	(inst bx default-stack-vars))
+      (move ocfp-tn csp-tn)
       
       (emit-label regs-defaulted)
-      (inst compute-code-from-lra code-tn code-tn lra-label)
       
       (when (> nvals register-arg-count)
 	(collect ((defaults))
@@ -370,13 +372,16 @@ default-value-5
 	      (store-stack-tn move-temp tn)))
 
 	  (emit-label defaulting-done)
-	  (move csp-tn ocfp-tn)
 
 	  (assemble (*elsewhere*)
+	    (emit-label default-stack-vars)
 	    (dolist (def (defaults))
 	      (emit-label (car def))
 	      (store-stack-tn null-tn (cdr def)))
-	    (inst b defaulting-done)))))))
+	    (inst b defaulting-done))))
+
+      (inst compute-code-from-lra code-tn code-tn lra-label)
+      (move csp-tn ocfp-tn))))
   (undefined-value))
 
 
