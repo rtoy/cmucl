@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.18 1990/06/11 02:25:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.19 1990/06/24 19:35:15 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -156,7 +156,9 @@
   (declare (type system-area-pointer sap)
 	   (type index offset)
 	   (type (or (signed-byte 32) (unsigned-byte 32)) new-value))
-  (setf (sap-ref-32 sap offset) new-value))
+  (if (minusp new-value)
+      (truly-the (signed-byte 32) (setf (sap-ref-32 sap offset) new-value))
+      (truly-the (unsigned-byte 32) (setf (sap-ref-32 sap offset) new-value))))
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)
