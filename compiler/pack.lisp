@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.29 1991/02/20 14:58:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.30 1991/02/24 16:20:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -512,6 +512,22 @@
   (undefined-value))
 
 
+;;; BASIC-SAVE-TN  --  Internal
+;;;
+;;;    Save a single TN that needs to be saved, choosing save-once if
+;;; appropriate.  This is also called by SPILL-AND-PACK-LOAD-TN.
+;;;
+(defun basic-save-tn (tn vop)
+  (declare (type tn tn) (type vop vop))
+  (let ((writes (tn-writes tn))
+	(save (tn-save-tn tn)))
+    (if (or (and save (eq (tn-kind save) :save-once))
+	    (and writes (null (tn-ref-next writes))))
+	(save-single-writer-tn tn vop)
+	(save-complex-writer-tn tn vop)))
+  (undefined-value))
+
+
 ;;; Emit-Saves  --  Internal
 ;;;
 ;;;    Scan over the VOPs in Block, emiting saving code for TNs noted in the
@@ -525,12 +541,7 @@
       (do-live-tns (tn (vop-save-set vop) block)
 	(when (and (sc-save-p (tn-sc tn))
 		   (not (eq (tn-kind tn) :component)))
-	  (let ((writes (tn-writes tn))
-		(save (tn-save-tn tn)))
-	    (if (or (and save (eq (tn-kind save) :save-once))
-		    (and writes (null (tn-ref-next writes))))
-		(save-single-writer-tn tn vop)
-		(save-complex-writer-tn tn vop)))))))
+	  (basic-save-tn tn vop)))))
 
   (undefined-value))
 
@@ -541,25 +552,34 @@
 ;;;
 ;;;    Save TN if it isn't a single-writer TN that has already been saved.  If
 ;;; multi-write, we insert the save Before the specified VOP.  Context is a VOP
-;;; used to tell which node/block to use for the new VOP.
+;;; used to tell which node/block to use for the new VOP.  When looking for
+;;; writes, we have to ignore uses of MOVE-OPERAND, since they correspond to
+;;; restores that we have already done.
 ;;;
 (defun save-if-necessary (tn before context)
   (declare (type tn tn) (type (or vop null) before) (type vop context))
-  (let ((writes (tn-writes tn))
-	(save (tn-save-tn tn)))
+  (let ((save (tn-save-tn tn)))
     (when (eq (tn-kind save) :specified-save)
       (setf (tn-kind save) :save))
-    (assert (eq (tn-kind save) :save))
-    (cond
-     ((eq (tn-kind save) :save-once))
-     ((and writes (null (tn-ref-next writes)))
-      (let ((writer (tn-ref-vop (tn-writes tn))))
-	(emit-operand-load (vop-node writer) (vop-block writer)
-			   tn save (vop-next writer)))
-      (setf (tn-kind save) :save-once))
-     (t
-      (emit-operand-load (vop-node context) (vop-block context)
-			 tn save before)))))
+    (assert (member (tn-kind save) '(:save :save-once)))
+    (unless (eq (tn-kind save) :save-once)
+      (let ((writer
+	     (do ((write (tn-writes tn) (tn-ref-next write))
+		  (res nil))
+		 ((null write) res)
+	       (unless (eq (vop-info-name (vop-info (tn-ref-vop write)))
+			   'move-operand)
+		 (when res (return nil))
+		 (setq res write)))))
+	(cond (writer
+	       (let ((vop (tn-ref-vop writer)))
+		 (emit-operand-load (vop-node vop) (vop-block vop)
+				    tn save (vop-next vop))
+		 (setf (tn-kind save) :save-once)))
+	      (t
+	       (emit-operand-load (vop-node context) (vop-block context)
+				  tn save before))))))
+  (undefined-value))
 
 
 ;;; RESTORE-TN  --  Internal
@@ -595,9 +615,9 @@
 
 ;;; OPTIMIZED-EMIT-SAVES-BLOCK  --  Internal
 ;;;
-;;;    Start scanning backward at the end of Block, looking tracking which TNs
-;;; are live and looking for places where we have to save.  We manipulate two
-;;; sets: SAVES and RESTORES.
+;;;    Start scanning backward at the end of Block, looking which TNs are live
+;;; and looking for places where we have to save.  We manipulate two sets:
+;;; SAVES and RESTORES.
 ;;;
 ;;;    SAVES is a set of all the TNs that have to be saved because they are
 ;;; restored after some call.  We normally delay saving until the beginning of
@@ -614,11 +634,11 @@
 ;;;
 ;;;    SAVES and RESTORES are represented using both a list and a bit-vector so
 ;;; that we can quickly iterate and test for membership.  The incoming Saves
-;;; and Restores args are used for computing theses sets (the initial contents
+;;; and Restores args are used for computing these sets (the initial contents
 ;;; are ignored.)
 ;;;
 ;;;    When we hit a VOP with :COMPUTE-ONLY Save-P (an internal error
-;;; location), we pretend that all life TNs were read, unless (= speed 3), in
+;;; location), we pretend that all live TNs were read, unless (= speed 3), in
 ;;; which case we mark all the TNs that are live but not restored as spilled.
 ;;;
 (defun optimized-emit-saves-block (block saves restores)
@@ -868,7 +888,8 @@
 		 (setq wrap-p t))))
 
 	(if (or (eq (sb-kind sb) :unbounded)
-		(member current-start (sc-locations sc)))
+		(and (member current-start (sc-locations sc))
+		     (not (member current-start (sc-reserve-locations sc)))))
 	    (dotimes (i element-size
 			(return-from select-location current-start))
 	      (let ((offset (+ current-start i)))
@@ -950,7 +971,7 @@
   (undefined-value))
 
 
-;;; Load-TN-Conflicts-In-SB  --  Internal
+;;; LOAD-TN-OFFSET-CONFLICTS-IN-SB  --  Internal
 ;;;
 ;;;    Kind of like Offset-Conflicts-In-SB, except that it uses the Live-TNs
 ;;; (must already be computed) and the VOP refs to determine whether a Load-TN
@@ -978,35 +999,56 @@
 ;;; load-TNs to appear live to the beginning (or end) of the VOP, as
 ;;; appropriate.
 ;;;
-(defun load-tn-conflicts-in-sb (op sb offset)
+(defun load-tn-offset-conflicts-in-sb (op sb offset)
   (declare (type tn-ref op) (type finite-sb sb) (type index offset))
   (assert (eq (sb-kind sb) :finite))
   (or (svref (finite-sb-live-tns sb) offset)
       (let ((vop (tn-ref-vop op)))
-	(macrolet ((same (ref)
-		     `(let ((tn (tn-ref-tn ,ref))
-			    (ltn (tn-ref-load-tn ,ref)))
-			(or (and (eq (sc-sb (tn-sc tn)) sb)
-				 (eql (tn-offset tn) offset))
-			    (and ltn
-				 (eq (sc-sb (tn-sc ltn)) sb)
-				 (eql (tn-offset ltn) offset)))))
-		   (is-op (ops)
-		     `(do ((ops ,ops (tn-ref-across ops)))
-			  ((null ops) nil)
-			(when (and (same ops)
-				   (not (eq ops op)))
-			  (return t))))
-		   (is-ref (refs end)
-		     `(do ((refs ,refs (tn-ref-next-ref refs)))
-			  ((eq refs ,end) nil)
-			(when (same refs) (return t)))))
-	  
+	(labels ((tn-overlaps (tn)
+		   (let ((sc (tn-sc tn))
+			 (tn-offset (tn-offset tn)))
+		     (and (eq (sc-sb sc) sb)
+			  (<= tn-offset
+			      offset
+			      (the index
+				   (+ tn-offset (sc-element-size sc)))))))
+		 (same (ref)
+		   (let ((tn (tn-ref-tn ref))
+			 (ltn (tn-ref-load-tn ref)))
+		     (or (tn-overlaps tn)
+			 (and ltn (tn-overlaps ltn)))))
+		 (is-op (ops)
+		   (do ((ops ops (tn-ref-across ops)))
+		       ((null ops) nil)
+		     (when (and (same ops)
+				(not (eq ops op)))
+		       (return t))))
+		 (is-ref (refs end)
+		   (do ((refs refs (tn-ref-next-ref refs)))
+		       ((eq refs end) nil)
+		     (when (same refs) (return t)))))
+	  (declare (inline is-op is-ref tn-overlaps))
 	  (if (tn-ref-write-p op)
 	      (or (is-op (vop-results vop))
 		  (is-ref (vop-refs vop) op))
 	      (or (is-op (vop-args vop))
 		  (is-ref (tn-ref-next-ref op) nil)))))))
+
+
+;;; LOAD-TN-CONFLICTS-IN-SC  --  Internal
+;;;
+;;;    Iterate over all the elements in the SB that would be allocated by
+;;; allocating a TN in SC at Offset, checking for conflict with load-TNs or
+;;; other TNs (live in the LIVE-TNS, which must be set up.)  We also return
+;;; true if there aren't enough locations after Offset to hold a TN in SC.
+;;;
+(defun load-tn-conflicts-in-sc (op sc offset)
+  (let* ((sb (sc-sb sc))
+	 (size (finite-sb-current-size sb)))
+    (loop for i from offset
+          repeat (sc-element-size sc)
+          any (or (>= i size)
+		  (load-tn-offset-conflicts-in-sb op i)))))
 
 
 ;;; Find-Load-TN-Target  --  Internal
@@ -1021,11 +1063,10 @@
   (let ((target (tn-ref-target op)))
     (when target
       (let* ((tn (tn-ref-tn target))
-	     (loc (tn-offset tn))
-	     (sb (sc-sb (tn-sc tn))))
-	(if (and (eq (sc-sb sc) sb)
+	     (loc (tn-offset tn)))
+	(if (and (eq (sc-sb sc) (sc-sb (tn-sc tn)))
 		 (member (the index loc) (sc-locations sc))
-		 (not (load-tn-conflicts-in-sb op sb loc)))
+		 (not (load-tn-conflicts-in-sc op sc loc)))
 	    loc
 	    nil)))))
 
@@ -1033,16 +1074,13 @@
 ;;; Select-Load-Tn-Location  --  Internal
 ;;;
 ;;;    Select a legal location for a load TN for Op in SC.  We just iterate
-;;; over the SCs locations.  If we can't find a legal location, return NIL.
+;;; over the SC's locations.  If we can't find a legal location, return NIL.
 ;;;
 (defun select-load-tn-location (op sc)
   (declare (type tn-ref op) (type sc sc))
-  (unless (= (sc-element-size sc) 1)
-    (error "Can't have a load-TN with SC element size /= 1."))
-  (let ((sb (sc-sb sc)))
-    (dolist (loc (sc-locations sc) nil)
-      (unless (load-tn-conflicts-in-sb op sb loc)
-	(return loc)))))
+  (dolist (loc (sc-locations sc) nil)
+    (unless (load-tn-conflicts-in-sb op sc loc)
+      (return loc))))
 
 
 (defevent spill-conditional-arg-tn
@@ -1126,7 +1164,7 @@
 	(let ((victim (svref (finite-sb-live-tns sb) loc)))
 	  (assert victim)
 	  (unless (eq (tn-kind victim) :component)
-	    (save-complex-writer-tn victim vop)
+	    (basic-save-tn victim vop)
 	    (note-spilled-tn victim vop)
 	    (when (eq (template-result-types (vop-info vop)) :conditional)
 	      (spill-conditional-arg-tn victim vop))
@@ -1142,6 +1180,14 @@
 ;;; then we let Spill-And-Pack-Load-TN do its thing.  We return the packed load
 ;;; TN.
 ;;;
+;;; Note: we allow a Load-TN to be packed in the target location even if that
+;;; location is in a SC not allowed by the primitive type.  (The SC must still
+;;; be allowed by the operand restriction.)  This makes move VOPs more
+;;; efficient, since we won't do a move from the stack into a non-descriptor
+;;; any-reg though a descriptor argument load-TN.  This does give targeting
+;;; some real semantics, making it not a pure advisory to pack.  It allows pack
+;;; to do some packing it wouldn't have done before.
+;;;
 (defun pack-load-tn (load-scs op)
   (declare (type sc-vector load-scs) (type tn-ref op))
   (let ((vop (tn-ref-vop op)))
@@ -1156,10 +1202,11 @@
 	  (unless allowed (no-load-scs-allowed-by-primitive-type-error op))
 	  (return (spill-and-pack-load-tn allowed op)))
 	
-	(let ((sc (svref (backend-sc-numbers *backend*) (pop scs))))
-	  (when (sc-allowed-by-primitive-type sc ptype)
+	(let* ((sc (svref (backend-sc-numbers *backend*) (pop scs)))
+	       (target (find-load-tn-target op sc)))
+	  (when (or target (sc-allowed-by-primitive-type sc ptype))
 	    (setq allowed sc)
-	    (let ((loc (or (find-load-tn-target op sc)
+	    (let ((loc (or target
 			   (select-load-tn-location op sc))))
 	      (when loc
 		(let ((res (make-tn 0 :load nil sc)))
