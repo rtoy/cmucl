@@ -45,25 +45,21 @@
 #-new-compiler
 (load "/../fred/usr/ram/hash.fasl")
 
-#-new-compiler
-(unintern (find-symbol "ABORT" (find-package "C"))
-	  (find-package "C"))
+(defun zap-sym (name pkg)
+  (let ((found (find-symbol name (find-package pkg))))
+    (when (and found
+	       (eq (symbol-package found) (find-package pkg)))
+      (unintern found pkg))))
 
 #-new-compiler
-(let ((found (find-symbol "CONCAT-PNAMES" (find-package "LISP"))))
-  (when found
-    (unintern found (find-package "LISP"))))
-
-#-new-compiler
-(let ((found (find-symbol "ONCE-ONLY" (find-package "COMPILER"))))
-  (when found
-    (unintern found (find-package "COMPILER"))))
-
-#-new-compiler
-(let ((found (find-symbol "UNIX-PIPE" (find-package "COMPILER"))))
-  (when found
-    (unintern found (find-package "COMPILER"))))
-
+(progn
+  (zap-sym "ABORT" "C")
+  (zap-sym "CONCAT-PNAMES" "LISP")
+  (zap-sym "ONCE-ONLY" "COMPILER")
+  (zap-sym "UNIX-PIPE" "COMPILER")
+  (zap-sym "MAKE-UNIX-PIPE" "MACH")
+  (zap-sym "UNIX-PIPE-P" "MACH"))
+  
 #-new-compiler
 (let ((sym (find-symbol "%CHARACTER-TYPE" (find-package "SYSTEM"))))
   (when sym
@@ -78,7 +74,7 @@
 #-new-compiler
 (export '(ignorable truly-the maybe-inline))
 #-new-compiler
-(export '(unix-pipe))
+(export '(unix-pipe make-unix-pipe unix-pipe-p))
 #-new-compiler
 (export '(lisp::with-compilation-unit lisp::debug-info) "LISP")
 
