@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.1 1992/07/13 03:46:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.2 1992/10/10 10:06:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -617,6 +617,7 @@
     (frob lisp::maybe-gc)
     (frob kernel::internal-error)
     (frob di::handle-breakpoint)
+    (frob di::handle-function-end-breakpoint)
     (frob lisp::fdefinition-object))
   (macrolet ((frob (symbol value)
 	       `(cold-setq (cold-intern ',symbol) ,value)))
@@ -1222,6 +1223,8 @@
 (define-cold-fop (fop-fdefinition)
   (cold-fdefinition-object (pop-stack)))
 
+(define-cold-fop (fop-sanctify-for-execution)
+  (pop-stack))
 
 (defun cold-verify-code-format ()
   (unless *current-code-format*
