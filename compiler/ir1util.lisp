@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.64 1993/08/03 10:56:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.65 1993/08/03 12:57:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1713,10 +1713,7 @@
 		   :source (full)
 		   :original-source (stringify-form form)
 		   :context src-context
-		   :file-name (let ((n (file-info-name file)))
-				(if (pathnamep n)
-				    (namestring n)
-				    n))
+		   :file-name (file-info-name file)
 		   :file-position
 		   (multiple-value-bind (ignore pos)
 					(find-source-root tlf *source-info*)
