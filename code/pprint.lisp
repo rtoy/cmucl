@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.32 2002/10/07 14:31:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.33 2003/01/06 22:27:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1119,7 +1119,7 @@
 	     (stringp array)
 	     (bit-vector-p array))
 	 (output-ugly-object array stream))
-	((and *print-readably* (not (eq (array-element-type array) 't)))
+	(*print-readably*
 	 (pprint-raw-array stream array))
 	((vectorp array)
 	 (pprint-vector stream array))

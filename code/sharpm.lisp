@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.22 2001/03/04 20:12:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.23 2003/01/06 22:27:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,9 +175,9 @@
   (cond (dimensions
 	 (collect ((dims))
 	   (let* ((contents (read stream t nil t))
-		  (seq contents))
-	     (dotimes (axis dimensions
-		       (make-array (dims) :initial-contents contents))
+		  (seq contents)
+		  (zero-axis nil))
+	     (dotimes (axis dimensions)
 	       (unless (typep seq 'sequence)
 		 (%reader-error stream
 				"#~DA axis ~D is not a sequence:~%  ~S"
@@ -185,19 +185,21 @@
 	       (let ((len (length seq)))
 		 (dims len)
 		 (unless (= axis (1- dimensions))
-		   (when (zerop len)
-		     (%reader-error stream
-				    "#~DA axis ~D is empty, but is not ~
-				     the last dimension."
-				    dimensions axis))
-		   (setq seq (elt seq 0))))))))
+		   (cond ((zerop len)
+			  (setq zero-axis axis))
+			 (zero-axis
+			  (%reader-error stream
+					 "#~DA axis ~D is empty, but axis ~
+				          ~D is non-empty."
+					 dimensions zero-axis axis))
+			 (t
+			  (setq seq (elt seq 0)))))))
+	     (make-array (dims) :initial-contents contents))))
 	(t
 	 (destructuring-bind (element-type dims contents)
 	     (read stream t nil t)
 	   (make-array dims :element-type element-type
 		       :initial-contents contents)))))
-	 
-
 
 (defun sharp-S (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
