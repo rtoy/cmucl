@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.55 1993/05/14 09:06:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.56 1993/08/17 22:34:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -718,8 +718,13 @@
 	      (xep-patches (cons (cdr entry) (+ i vm:code-constants-offset)))
 	      (dump-fop 'lisp::fop-misc-trap file)))))))
 
-    ;; For now, just the component name as debug info:
-    (dump-object (component-name *compile-component*) file)
+    ;; Dump the debug info.
+    (let ((info (make-debug-info :name (component-name *compile-component*)))
+	  (*dump-only-valid-structures* nil))
+      (dump-object info file)
+      (let ((info-handle (dump-pop file)))
+	(dump-push info-handle file)
+	(push info-handle (fasl-file-debug-info file))))
 
     (let ((num-consts (1+ (length constants))))
       (cond ((and (< num-consts #x100) (< length #x10000))
