@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.116 2004/11/16 23:07:18 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.117 2004/11/17 23:28:21 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,7 +169,7 @@
 
 ;;; The debug-internals code tries to signal all programmer errors as subtypes
 ;;; of debug-error.  There are calls to ERROR signalling simple-errors, but
-;;; these dummy checks in the code and shouldn't come up.
+;;; these dummy checks in the code shouldn't come up.
 ;;;
 ;;; While under development, this code also signals errors in code branches
 ;;; that remain unimplemented.
@@ -1533,8 +1533,8 @@ The result is a symbol or nil if the routine cannot be found."
 ;;;     - undefined_tramp
 ;;;     - closure_tramp
 ;;;     - function_end_breakpoint
-;;;        arn't ever actually in it, because we copy it into a bogus-lra
-;;;        component before every actually using it.
+;;;        aren't ever actually in it, because we copy it into a bogus-lra
+;;;        component before ever actually using it.
 ;;;    or someone jumped someplace strange, in which case we can't do anything.
 ;;; - component w/ :ASSEMBLER-ROUTINE for debug-info:
 ;;;    we are in an assembly routine.  RA will point back into the regular
@@ -3733,7 +3733,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; FORM-NUMBER-TRANSLATIONS  --  Public.
 ;;;
 ;;; The vector elements are in the same format as the compiler's
-;;; NODE-SOUCE-PATH; that is, the first element is the form number and the last
+;;; NODE-SOURCE-PATH; that is, the first element is the form number and the last
 ;;; is the top-level-form number.
 ;;;
 (defun form-number-translations (form tlf-number)
