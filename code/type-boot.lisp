@@ -50,3 +50,19 @@
 	       '(ctype hairy-type named-type numeric-type array-type
 		       member-type structure-type union-type args-type
 		       values-type function-type))))
+
+(defun values-type-p (thing)
+  (and (structurep thing)
+       (eq (%primitive structure-ref thing 0) 'values-type)))
+
+;;; Define this so that we can copy type-class structures before the defstruct
+;;; for type-class runs.  ### It relies on structures being build out of
+;;; simple-vectors in order to determine the length.
+;;;
+(defun copy-type-class (tc)
+  (let ((new (make-type-class)))
+    (dotimes (i (the index (length (the simple-vector tc))))
+      (declare (type index i))
+      (%primitive structure-index-set new i
+		  (%primitive structure-index-ref tc i)))
+    new))
