@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.56 1993/08/15 14:40:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.57 1993/08/19 12:51:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,8 @@
 ;;; 
 
 (in-package "USER")
+
+(defvar *byte-compile* #+small t #-small :maybe)
 
 (with-compiler-log-file
     ("target:compile-lisp.log"
@@ -37,7 +39,7 @@
 
 ;;; these guys need to be first.
 (comf "target:code/struct") ; For structures.
-(comf "target:code/sysmacs")
+(comf "target:code/sysmacs" :byte-compile *byte-compile*)
 
 ;;; Assembly files.
 (when (c:backend-featurep :pmax)
@@ -78,7 +80,9 @@
 (comf "target:code/lispinit")
 (comf "target:code/fdefinition")
 
-(comf "target:code/error")
+(comf "target:code/error" :byte-compile nil)
+#+small
+(comf "target:code/error" :byte-compile t)
 
 ;;; prevent deftypes from taking effect at compile time so that we don't
 ;;; install interpreted type expanders causing the compiler to infinitely
@@ -147,7 +151,7 @@
 
 (comf "target:code/char")
 (comf "target:code/misc")
-(comf "target:code/extensions")
+(comf "target:code/extensions" :byte-compile t)
 (comf "target:code/commandline")
 
 (unless (c:backend-featurep :gengc)
@@ -167,15 +171,15 @@
 
 (comf "target:code/package")
 (comf "target:code/reader")
-(comf "target:code/sharpm")
-(comf "target:code/backq")
+(comf "target:code/sharpm" :byte-compile *byte-compile*)
+(comf "target:code/backq" :byte-compile *byte-compile*)
 
 (comf "target:code/serve-event")
 (comf "target:code/fd-stream")
 (comf "target:code/pathname")
 (comf "target:code/filesys")
 (comf "target:code/load")
-(comf "target:code/module")
+(comf "target:code/module" :byte-compile *byte-compile*)
 
 (comf "target:code/eval")
 
@@ -184,10 +188,12 @@
 (comf "target:code/debug-info")
 (comf "target:code/debug-int")
 (comf "target:code/debug")
+#+small
+(comf "target:code/debug" :byte-compile t)
 
-(comf "target:code/query")
+(comf "target:code/query" :byte-compile *byte-compile*)
 (comf "target:code/rand")
-(comf "target:code/ntrace")
+(comf "target:code/ntrace" :byte-compile *byte-compile*)
 (comf "target:code/profile")
 (comf "target:code/sort")
 (comf "target:code/time")
@@ -195,14 +201,14 @@
 (comf "target:code/final")
 
 ;;; Later so that miscellaneous structures are defined (not crucial, but nice.)
-(comf "target:code/describe")
-(comf "target:code/tty-inspect")
+(comf "target:code/describe" :byte-compile *byte-compile*)
+(comf "target:code/tty-inspect" :byte-compile *byte-compile*)
 
 (comf "target:code/format-time")
 (comf "target:code/parse-time")
 (comf "target:code/run-program")
 
-(comf "target:code/loop")
+(comf "target:code/loop" :byte-compile *byte-compile*)
 
 (comf "target:code/foreign")
 (comf "target:code/internet")
@@ -223,6 +229,8 @@
 (let ((c:*compile-time-define-macros* nil))
   (comf "target:code/defstruct")
   (comf "target:code/defmacro")
+  #+small
+  (comf "target:code/defmacro" :byte-compile t)
   (comf "target:compiler/globaldb")
   ;; We can't compile anything after macros, 'cause it breaks the running lisp.
   (comf "target:code/macros"))
