@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.14 1993/08/25 02:08:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/eval-server.lisp,v 1.1.1.15 1994/02/04 15:20:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -327,50 +327,56 @@
    timeout and signal an editor-error."
   (when (and name (getstring name *buffer-names*))
     (editor-error "Buffer ~A is already in use." name))
-  (multiple-value-bind (slave background)
-		       (if name
-			   (values name (format nil "Background ~A" name))
-			   (pick-slave-buffer-names))
-    (when (value confirm-slave-creation)
-       (setf slave (prompt-for-string
-		    :prompt "New slave name? "
-		    :help "Enter the name to use for the newly created slave."
-		    :default slave
-		    :default-string slave))
-       (setf background (format nil "Background ~A" slave))
-       (when (getstring slave *buffer-names*)
-	 (editor-error "Buffer ~A is already in use." slave))
-       (when (getstring background *buffer-names*)
-	 (editor-error "Buffer ~A is already in use." background)))
-    (message "Spawning slave ... ")
-    (let ((proc
-	   (ext:run-program (value slave-utility)
-			    `("-slave" ,(get-editor-name)
-			      ,@(if slave (list "-slave-buffer" slave))
-			      ,@(if background
-				    (list "-background-buffer" background))
-			      ,@(value slave-utility-switches))
-			    :wait nil
-			    :output "/dev/null"
-			    :if-output-exists :append))
-	  (*accept-connections* t)
-	  (*newly-created-slave* nil))
-      (unless proc
-	(editor-error "Could not start slave."))
-      (dotimes (i *slave-connect-wait*
-		  (editor-error "Client Lisp is still unconnected.  ~
-				 You must use \"Accept Slave Connections\" to ~
-				 allow the slave to connect at this point."))
-	(system:serve-event 1)
-	(case (ext:process-status proc)
-	  (:exited
-	   (editor-error "The slave lisp exited before connecting."))
-	  (:signaled
-	   (editor-error "The slave lisp was kill before connecting.")))
-	(when *newly-created-slave*
-	  (message "DONE")
-	  (return *newly-created-slave*))))))
-
+  (let ((lisp (unix-namestring (merge-pathnames (value slave-utility) "path:")
+			       t t)))
+    (unless lisp
+      (editor-error "Can't find ``~S'' in your path to run."
+		    (value slave-utility)))
+    (multiple-value-bind (slave background)
+			 (if name
+			     (values name (format nil "Background ~A" name))
+			     (pick-slave-buffer-names))
+      (when (value confirm-slave-creation)
+	(setf slave (prompt-for-string
+		     :prompt "New slave name? "
+		     :help "Enter the name to use for the newly created slave."
+		     :default slave
+		     :default-string slave))
+	(setf background (format nil "Background ~A" slave))
+	(when (getstring slave *buffer-names*)
+	  (editor-error "Buffer ~A is already in use." slave))
+	(when (getstring background *buffer-names*)
+	  (editor-error "Buffer ~A is already in use." background)))
+      (message "Spawning slave ... ")
+      (let ((proc
+	     (ext:run-program lisp
+			      `("-slave" ,(get-editor-name)
+				,@(if slave (list "-slave-buffer" slave))
+				,@(if background
+				      (list "-background-buffer" background))
+				,@(value slave-utility-switches))
+			      :wait nil
+			      :output "/dev/null"
+			      :if-output-exists :append))
+	    (*accept-connections* t)
+	    (*newly-created-slave* nil))
+	(unless proc
+	  (editor-error "Could not start slave."))
+	(dotimes (i *slave-connect-wait*
+		    (editor-error
+		     "Client Lisp is still unconnected.  ~
+		      You must use \"Accept Slave Connections\" to ~
+		      allow the slave to connect at this point."))
+	  (system:serve-event 1)
+	  (case (ext:process-status proc)
+	    (:exited
+	     (editor-error "The slave lisp exited before connecting."))
+	    (:signaled
+	     (editor-error "The slave lisp was kill before connecting.")))
+	  (when *newly-created-slave*
+	    (message "DONE")
+	    (return *newly-created-slave*)))))))
+  
 ;;; MAYBE-CREATE-SERVER -- Internal interface.
 ;;;
 (defun maybe-create-server ()
