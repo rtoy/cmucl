@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.4 1990/06/06 04:09:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.5 1990/06/06 20:56:52 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -46,7 +46,7 @@
 	  object-not-simple-array-unsigned-byte-32-error
 	  object-not-simple-array-single-float-error
 	  object-not-simple-array-double-float-error
-	  object-not-complex-error))
+	  object-not-complex-error object-not-weak-pointer-error))
 
 
 
