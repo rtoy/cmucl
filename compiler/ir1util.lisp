@@ -1723,12 +1723,6 @@ inlines
 ;;;; Undefined warnings:
 
 
-;;; A list of UNDEFINED-WARNING structures representing the calls to unknown
-;;; functions.  This is bound by WITH-COMPILATION-UNIT.
-;;;
-(defvar *undefined-warnings*)
-(proclaim '(list *undefined-warnings*))
-
 (defvar *undefined-warning-limit* 3
   "If non-null, then an upper limit on the number of unknown function or type
   warnings that the compiler will print for any given name in a single
@@ -1755,20 +1749,6 @@ inlines
 	(push (find-error-context (list name))
 	      (undefined-warning-warnings res)))
     (incf (undefined-warning-count res)))
-  (undefined-value))
-
-
-;;; NOTE-NAME-DEFINED  --  Interface
-;;;
-;;;    Delete any undefined warnings for Name and Kind.
-;;;
-(defun note-name-defined (name kind)
-  (setq *undefined-warnings*
-	(delete-if #'(lambda (x)
-		       (and (equal (undefined-warning-name x) name)
-			    (eq (undefined-warning-kind x) kind)))
-		   *undefined-warnings*))
-
   (undefined-value))
 
 
