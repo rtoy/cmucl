@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.11 1990/02/20 19:39:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.12 1990/02/20 19:49:54 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -193,7 +193,7 @@
 		     ,@(when need-unbound-marker
 			 `((loadi temp vm:unbound-marker-type)))
 		     ,@(nreverse init-forms)
-		     (move real-results result))))
+		     (move real-result result))))
 	      load-time)))
     `(progn
        (eval-when (compile load eval)
@@ -203,6 +203,7 @@
 					  (string name)
 					  "-STRUCTURE"))
 	 ',(reverse slot-names)))))
+
 
 (defslots (cons :lowtag list-pointer-type
 		:alloc-vop cons-vop :alloc-trans cons)
@@ -267,7 +268,7 @@
   (function :init :arg)
   (info :rest t :set-vop closure-init :ref-vop closure-ref))
 
-(defslots (value-cell :lowtag other-pointer-type :header value-cell-type
+(defslots (value-cell :lowtag other-pointer-type :header value-cell-header-type
 		      :alloc-vop make-value-cell)
   (value :set-vop value-cell-set :ref-vop value-cell-ref :init :arg))
 
