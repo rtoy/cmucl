@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.12 1990/04/24 02:56:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.13 1990/04/24 19:10:22 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -501,4 +501,4 @@
 (define-pseudo-instruction compute-lra-from-code 64 (lra code label)
   ;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
   (let ((offset (+ (label-position label) (component-header-length))))
-    inst addu lra code offset))
+    (inst addu lra code offset)))
