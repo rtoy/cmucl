@@ -3,7 +3,7 @@
 ;;; Author: Eric Marsden <emarsden@laas.fr>
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.3 2003/03/22 16:15:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/xref.lisp,v 1.4 2003/06/11 12:58:08 emarsden Exp $")
 ;;
 ;; This code was written as part of the CMUCL project and has been
 ;; placed in the public domain.
@@ -48,23 +48,6 @@
 ;; listener).
 
 
-;; types of names that we can see in IR1 LEAF nodes:
-;;
-;;   - symbol that is a function-name or a macro name
-;;   - strings of the form "DEFINE-COMPILER-MACRO ~A"
-;;   - strings of the form "DEFMETHOD FOOBAR (SPECIALIZER1 SPECIALIZER2)"
-;;   - strings of the form "defstruct foo"
-;;   - strings of the form "Creation Form for #<kernel::class-cell struct-two>"
-;;
-;; and it would be nice to change this to
-;;
-;;   - (:method foobar (specializer1 specializer2))
-;;   - (:flet external-function internal-function)
-;;   - (:labels external-function internal-function)
-;;   - (:internal containing-function 0) for an anonymous lambda
-;;   - (:internal (flet external internal) 0) for anonymous lambda inside an FLET/LABELS
-
-
 (in-package :xref)
 
 (export '(init-xref-database
@@ -73,28 +56,40 @@
           who-references
           who-binds
           who-sets
-          #+pcl who-subclasses
-          #+pcl who-superclasses
+          who-macroexpands
+          who-subclasses
+          who-superclasses
+          who-specializes
           make-xref-context
           xref-context-name
           xref-context-file
           xref-context-source-path))
 
 
-(defstruct (xref-context (:print-function %print-xref-context))
+(defstruct (xref-context
+             (:print-function %print-xref-context)
+             (:make-load-form-fun :just-dump-it-normally))
   name
   (file *compile-file-truename*)
   (source-path nil))
 
 (defun %print-xref-context (s stream d)
   (declare (ignore d))
-  (format stream "#<xref-context ~S~@[ in ~S~]>"
-          (xref-context-name s)
-          (xref-context-file s)))
+  (cond (*print-readably*
+         (format stream "#S(xref::xref-context :name '~S :file ~S :source-path '~A)"
+                 (xref-context-name s)
+                 (xref-context-file s)
+                 (xref-context-source-path s)))
+        (t
+         (format stream "#<xref-context ~S~@[ in ~S~]>"
+                 (xref-context-name s)
+                 (xref-context-file s)))))
 
 
 ;; program contexts where a globally-defined function may be called at runtime
 (defvar *who-calls* (make-hash-table :test #'eq))
+
+(defvar *who-is-called* (make-hash-table :test #'eq))
 
 ;; program contexts where a global variable may be referenced
 (defvar *who-references* (make-hash-table :test #'eq))
@@ -104,6 +99,9 @@
 
 ;; program contexts where a global variable may be set
 (defvar *who-sets* (make-hash-table :test #'eq))
+
+;; program contexts where a global variable may be set
+(defvar *who-macroexpands* (make-hash-table :test #'eq))
 
 ;; you can print these conveniently with code like
 ;; (maphash (lambda (k v) (format t "~S <-~{ ~S~^,~}~%" k v)) xref::*who-sets*)
@@ -115,64 +113,37 @@
   (declare (type xref-context context))
   (let ((database (ecase type
                     (:calls *who-calls*)
+                    (:called *who-is-called*)
                     (:references *who-references*)
                     (:binds *who-binds*)
-                    (:sets *who-sets*))))
+                    (:sets *who-sets*)
+                    (:macroexpands *who-macroexpands*))))
     (if (gethash target database)
         (pushnew context (gethash target database) :test 'equal)
-        (setf (gethash target database) (list context)))))
+        (setf (gethash target database) (list context)))
+    context))
 
 ;; INIT-XREF-DATABASE -- interface
 ;;
 (defun init-xref-database ()
   "Reinitialize the cross-reference database."
   (setf *who-calls* (make-hash-table :test #'eq))
+  (setf *who-is-called* (make-hash-table :test #'eq))
   (setf *who-references* (make-hash-table :test #'eq))
   (setf *who-binds* (make-hash-table :test #'eq))
   (setf *who-sets* (make-hash-table :test #'eq))
+  (setf *who-macroexpands* (make-hash-table :test #'eq))
   (values))
 
 
 ;; WHO-CALLS -- interface
 ;;
-(defun who-calls (function &key (reverse nil))
+(defun who-calls (function-name &key (reverse nil))
   "Return a list of those program contexts where a globally-defined
 function may be called at runtime."
-  (declare (type (or symbol function) function))
-  (let ((name (etypecase function
-                (symbol function)
-                ;; FIXME what about MACRO-FUNCTION? 
-                (function (multiple-value-bind (ignore ignored fname)
-                              (function-lambda-expression function)
-                            (declare (ignore ignore ignored))
-                            (unless fname
-                              (error "Function ~a has no name" function))
-                            fname))))
-        (fun (etypecase function
-               (symbol (symbol-function function))
-               (function function))))
-    (if reverse
-        ;; this depends on the function having been loaded (rather than only
-        ;; on it having been compiled), and on the source file that it was
-        ;; compiled from being accessible.
-        (let ((debug-fun (di::function-debug-function fun))
-              (called (list)))
-          (unless debug-fun
-            (error "Function ~a has no debug information" function))
-          (di::do-debug-function-blocks (block debug-fun)
-            (di::do-debug-block-locations (loc block)
-              (di::fill-in-code-location loc)
-              (when (eq :call-site (di::compiled-code-location-kind loc))
-                (let* ((loc (debug::maybe-block-start-location loc))
-                       (form-num (di:code-location-form-number loc)))
-                  (multiple-value-bind (translations form)
-                      (debug::get-top-level-form loc)
-                    (unless (< form-num (length translations))
-                      (error "Source path no longer exists"))
-                    (pushnew (car (di:source-path-context form (aref translations form-num) 0))
-                             called))))))
-          called)
-        (gethash name *who-calls*))))
+  (if reverse
+      (gethash function-name *who-is-called*)
+      (gethash function-name *who-calls*)))
 
 ;; WHO-REFERENCES -- interface
 ;;
@@ -199,30 +170,28 @@ be set at runtime."
   (gethash global-variable *who-sets*))
 
 
+(defun who-macroexpands (macro)
+  (declare (type symbol macro))
+  (gethash macro *who-macroexpands*))
+
+
 ;; introspection functions from the CLOS metaobject protocol
 
 ;; WHO-SUBCLASSES -- interface
 ;;
-#+pcl
 (defun who-subclasses (class)
-  (declare (type kernel::class class))
   (pcl::class-direct-subclasses class))
 
 ;; WHO-SUPERCLASSES -- interface
 ;;
-#+pcl
 (defun who-superclasses (class)
-  (declare (type kernel::class class))
   (pcl::class-direct-superclasses class))
 
+;; WHO-SPECIALIZES -- interface
+;;
 ;; generic functions defined for this class
-#+pcl
 (defun who-specializes (class)
-  (declare (type kernel::class class))
-  (let ((pcl-class (etypecase class
-                     (kernel::class (pcl::coerce-to-pcl-class class))
-                     (pcl::class class))))
-    (pcl::specializer-direct-methods pcl-class)))
+  (pcl::specializer-direct-methods class))
 
 
 
@@ -233,16 +202,6 @@ be set at runtime."
   (cond
     ((not lambda-node)
      (list :anonymous toplevel-name))
-
-    ;; for DEFMETHOD forms
-    ((eql 0 (search "defmethod" toplevel-name :test 'char-equal))
-     ;; FIXME this probably won't handle FLET/LABELS inside a
-     ;; defmethod properly ...
-     (let* ((readable (substitute #\? #\# toplevel-name))
-            (listed (concatenate 'string "(" readable ")"))
-            (*read-eval* nil)
-            (list (ignore-errors (read-from-string listed))))
-       (cons :method (rest list))))
 
     ;; LET and FLET bindings introduce new unnamed LAMBDA nodes.
     ;; If the home slot contains a lambda with a nice name, we use
@@ -258,20 +217,12 @@ be set at runtime."
              (t
               (or here home toplevel-name)))))
 
-    ;; LET and FLET bindings introduce new unnamed LAMBDA nodes.
-    ;; If the home slot contains a lambda with a nice name, we use
-    ;; that; otherwise fall back on the toplevel-name.
-    #+nil
-    ((not (lambda-name lambda-node))
-     (let ((home (lambda-home lambda-node)))
-       (or (and home (lambda-name home))
-           toplevel-name)))
-
     ((and (listp (lambda-name lambda-node))
           (eq :macro (first (lambda-name lambda-node))))
      (lambda-name lambda-node))
 
     ;; a reference from a macro is named (:macro name)
+    #+nil
     ((eql 0 (search "defmacro" toplevel-name :test 'char-equal))
      (list :macro (subseq toplevel-name 9)))
 
@@ -317,8 +268,10 @@ be set at runtime."
        (let* ((leaf (ref-leaf node))
               (lexenv (ref-lexenv node))
               (lambda (lexenv-lambda lexenv))
-              (caller (prettiest-caller-name lambda toplevel-name)))
-         
+              (home (node-home-lambda node))
+              (caller (or (and home (lambda-name home))
+                          (prettiest-caller-name lambda toplevel-name))))
+
          (setf (xref:xref-context-name context) caller)
          (typecase leaf
            ;; a reference to a LEAF of type GLOBAL-VAR
@@ -335,16 +288,22 @@ be set at runtime."
                     ;; that have no name; they are mostly due to code
                     ;; inserted by the compiler (eg calls to %VERIFY-ARGUMENT-COUNT)
                     ((not caller)
-                     nil)
+                     :no-caller)
                     ;; we're not interested in lexical environments
                     ;; named "Top-Level Form".
                     ((and (stringp caller)
                           (string= "Top-Level Form" caller))
-                     t)
+                     :top-level-form)
+                    ((not (eq 'original-source-start (first (node-source-path node))))
+                     #+nil
+                     (format *debug-io* "~&Ignoring compiler-generated call with source-path ~A~%"
+                             (node-source-path node))
+                     :compiler-generated)
                     ((not called)
-                     nil)
+                     :no-called)
                     ((eq :global-function (global-var-kind leaf))
-                     (xref:register-xref :calls called context))
+                     (xref:register-xref :calls called context)
+                     (xref:register-xref :called caller context))
                     ((eq :special (global-var-kind leaf))
                      (xref:register-xref :references called context)))))
            ;; a reference to a LEAF of type CONSTANT

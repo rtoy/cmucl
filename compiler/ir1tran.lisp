@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.156 2003/06/08 11:43:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.157 2003/06/11 12:58:08 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -707,6 +707,11 @@
   (declare (type continuation start cont) (list form))
   (ecase (info function kind fun)
     (:macro
+     (when c:*record-xref-info*
+       (let ((leb (lexenv-blocks *lexical-environment*)))
+         (unless (or (null leb) (null (caar leb)))
+           (xref:register-xref :macroexpands fun
+                               (xref:make-xref-context :name (caar leb))))))
      (ir1-convert start cont
 		  (careful-expand-macro (info function macro-function fun)
 					form)))
