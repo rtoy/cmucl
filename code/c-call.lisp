@@ -528,9 +528,12 @@
 	 (unless (c-type-size type)
 	   (error "Can't return pointers to objects of unknown size: ~S"
 		  (c-type-description return-type)))
-	 `(make-alien ',(c-type-description type)
-		      ,(c-type-size type)
-		      ,(sub-compute-call-form 'system-area-pointer))))
+	 (let ((sap (gensym "SAP-")))
+	   `(let ((,sap ,(sub-compute-call-form 'system-area-pointer)))
+	      (unless (zerop (sap-int ,sap))
+		(make-alien ',(c-type-description type)
+			    ,(c-type-size type)
+			    ,sap))))))
       (array-type
        (unless (c-type-size return-type)
 	 (error "Can't return arrays of unknown size: ~S"
