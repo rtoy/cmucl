@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.25 2000/10/23 16:06:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.26 2001/06/01 12:51:56 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -487,8 +487,10 @@
        '(lambda (sap type)
 	  (declare (ignore type))
 	  sap))
+      (ref
+       `(alien::alien-value-sap alien))
       (t
-       (give-up)))))
+       (give-up "Could not optimize away ALIEN-SAP")))))
 
 (defoptimizer (%sap-alien derive-type) ((sap type))
   (declare (ignore sap))
