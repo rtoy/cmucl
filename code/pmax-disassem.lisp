@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.6 1990/02/14 14:36:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.7 1990/02/18 05:26:48 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -62,10 +62,10 @@
      "$T8" "$T9" "$K0" "$K1" "$GP" "$SP" "$S8" "$RA"))
 
 (defvar *lisp-register-names*
-  '#("$ZERO" "$LIP" "$NL0" "$NL1" "$NL2" "$NL3" "$NL4" "$NL5/NARGS"
-     "$L0" "$L1" "$L2" "$L3" "$L4" "$L5/ENV" "$L6/OLD-CONT" "$L7/CALL-NAME"
-     "$A0" "$A1" "$A2" "$A3" "$A4" "$A5" "$L14/ARGS" "$L15/LRA"
-     "$BSP" "$CSP" "$K0" "$K1" "$NULL" "$NSP" "$CODE" "$CONT"))
+  '#("$ZERO" "$LIP" "$NL0" "$NL1" "$NL2" "$NL3" "$NL4" "$NARGS"
+     "$A0" "$A1" "$A2" "$A3" "$A4" "$A5" "$CNAME" "$LEXENV"
+     "$ARGS" "$OLDCONT" "$LRA" "$L0" "$NULL" "$BSP" "$CONT" "$CSP"
+     "$FLAGS" "$ALLOC" "$K0" "$K1" "$L1" "$NSP" "$CODE" "$L2"))
 
 (defvar *raw-register-names*
   '#("$R0" "$R1" "$R2" "$R3" "$R4" "$R5" "$R6" "$R7"
