@@ -7,13 +7,14 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.56 2004/07/07 15:03:11 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.57 2004/07/07 20:31:06 rtoy Exp $
  *
  */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
 #include "lisp.h"
 #include "arch.h"
 #include "internals.h"
@@ -734,6 +735,9 @@ void *current_region_end_addr;
 /* The generation currently being allocated to. X */
 static int  gc_alloc_generation;
 
+extern void do_dynamic_space_overflow_warning(void);
+extern void do_dynamic_space_overflow_error(void);
+
 /* Handle heap overflow here, maybe. */
 static void
 handle_heap_overflow(const char* msg, int size)
@@ -807,6 +811,9 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
   int i;
   int mmask, mflags;
 
+  /* Shut up some compiler warnings */
+  last_page = bytes_found = 0;
+  
 #if 0
   fprintf(stderr, "alloc_new_region for %d bytes from gen %d\n",
 	  nbytes, gc_alloc_generation);
@@ -1238,6 +1245,10 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   int large = (nbytes >= large_object_size);
   int mmask, mflags;
 
+  
+  /* Shut up some compiler warnings */
+  last_page = bytes_found = 0;
+  
 #if 0
   if (nbytes > 200000)
     fprintf(stderr, "*** alloc_large %d\n", nbytes);
@@ -3234,6 +3245,8 @@ static int size_boxed(lispobj *where)
 	return length;
 }
 
+/* Not needed on sparc because the raw_addr has a function lowtag */
+#ifndef sparc
 static int scav_fdefn(lispobj *where, lispobj object)
 {
   struct fdefn *fdefn;
@@ -3252,6 +3265,7 @@ static int scav_fdefn(lispobj *where, lispobj object)
   else
     return 1;
 }
+#endif
 
 static int scav_unboxed(lispobj *where, lispobj object)
 {
@@ -4569,6 +4583,7 @@ lispobj *search_dynamic_space(lispobj *pointer)
   return search_space(start, pointer + 2 - start, pointer);
 }
 
+#ifdef i386
 static int valid_dynamic_space_pointer(lispobj *pointer)
 {
   lispobj *start_addr;
@@ -4745,7 +4760,7 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
   /* Looks good */
   return TRUE;
 }
-
+#endif
 
 /*
  * Adjust large bignum and vector objects.  This will adjust the
@@ -4756,6 +4771,7 @@ static int valid_dynamic_space_pointer(lispobj *pointer)
  * this is missed, just may delay the moving of objects to unboxed
  * pages, and the freeing of pages.
  */
+#ifdef i386
 static void maybe_adjust_large_object(lispobj *where)
 {
   int first_page;
@@ -4900,7 +4916,7 @@ static void maybe_adjust_large_object(lispobj *where)
 
   return;
 }
-
+#endif
 
 /*
  * Take a possible pointer to a list object and mark the page_table so
@@ -4918,7 +4934,11 @@ static void maybe_adjust_large_object(lispobj *where)
  *
  * Also assumes the current gc_alloc region has been flushed and the
  * tables updated.
+ *
+ * Only needed on x86 because GC is conservative there.  Not needed on
+ * sparc because GC is precise, not conservative.
  */
+#ifdef i386
 static void preserve_pointer(void *addr)
 {
   int addr_page_index = find_page_index(addr);
@@ -5028,6 +5048,7 @@ static void preserve_pointer(void *addr)
 
   return;
 }
+#endif
 
 #ifdef CONTROL_STACKS
 /* Scavenge the thread stack conservative roots. */

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.14 2004/07/07 15:03:12 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.15 2004/07/07 20:31:06 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -16,6 +16,8 @@
 #include "lisp.h"
 #include "lispregs.h"
 #include "globals.h"
+#include "interr.h"
+#include "arch.h"
 
 /* Except for os_zero, these routines are only called by Lisp code.  These
    routines may also be replaced by os-dependent versions instead.  See
@@ -50,7 +52,8 @@ os_vm_size_t length;
 	addr=os_validate(block_start,block_size);
 
 	if(addr==NULL || addr!=block_start)
-	    fprintf(stderr,"os_zero: block moved, 0x%08p ==> 0x%08p!\n",block_start,addr);
+          fprintf(stderr,"os_zero: block moved, 0x%p ==> 0x%8p!\n",
+                  (void*) block_start, (void*) addr);
     }
 }
 
@@ -94,7 +97,7 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 	      os_vm_address_t new=os_allocate(len);
 
 	      if(new!=NULL){
-		bcopy(addr,new,old_len);
+		bcopy((char*)addr, (char*)new,old_len);
 		os_invalidate(addr,old_len);
 		}
 		

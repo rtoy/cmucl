@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.6 2004/05/18 22:37:34 cwang Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alloc.c,v 1.7 2004/07/07 20:31:06 rtoy Exp $ */
 
 #include "lisp.h"
 #include "internals.h"
@@ -29,7 +29,8 @@ Allocation Routines.
 ****************************************************************/
 
 #if defined GENCGC
-#define alloc(nbytes) alloc_pseudo_atomic((nbytes))
+#define alloc(nbytes) alloc_pseudo_atomic(nbytes)
+#include "gencgc.h"
 #elif defined(WANT_CGC)
 extern lispobj *alloc(int bytes);
 #else
