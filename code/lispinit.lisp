@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.10 1990/08/24 18:11:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.11 1990/09/06 19:42:41 wlott Exp $
 ;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -184,7 +184,6 @@
 
 
 ;;;; Server stuff:
-#|
 ;;;
 ;;;    There is a fair amount of stuff to support Matchmaker RPC servers
 ;;; and asynchonous message service.  RPC message service needs to be
@@ -236,11 +235,13 @@
 ;;;    If no such operation defined, signal an error.
 ;;;
 (defun default-default-handler (object)
+  #+nil
   (alien-bind ((msg (server-message-msg server-message)))
     (error "No operation for ID ~D on ~S in ~S."
 	   (alien-access (mach:msg-id (alien-value msg))) object
 	   (car (gethash (alien-access (mach:msg-localport (alien-value msg)))
-			 *port-table*)))))
+			 *port-table*))))
+  (error "You lose, object: ~S" object))
 
 
 ;;; MAP-XWINDOW and MAP-PORT return as multiple values the object and
@@ -318,7 +319,6 @@
 ;;;
 (defsetf object-set-operation %set-object-set-operation
   "Sets the handler function for an object set operation.")
-|#
 
 
 
