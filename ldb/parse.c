@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.1 1990/02/24 19:37:26 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/parse.c,v 1.2 1990/03/08 17:28:21 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -216,6 +216,39 @@ char **ptr;
     return (char *)result;
 }
 
+static boolean lookup_symbol(name, result)
+char *name;
+lispobj *result;
+{
+    int count;
+
+    /* Search read only space */
+    *result = 0x20000000;
+    count = 1024;
+    if (search_for_symbol(name, result, &count)) {
+        *result |= type_OtherPointer;
+        return TRUE;
+    }
+
+    /* Search static space */
+    *result = 0x30000000;
+    count = 1024;
+    if (search_for_symbol(name, result, &count)) {
+        *result |= type_OtherPointer;
+        return TRUE;
+    }
+
+    /* Search dynamic space */
+    *result = 0x40000000;
+    count = (SymbolValue(SAVED_ALLOCATION_POINTER) - 0x40000000) / 4;
+    if (search_for_symbol(name, result, &count)) {
+        *result |= type_OtherPointer;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 lispobj parse_lispobj(ptr)
 char **ptr;
 {
@@ -233,7 +266,7 @@ char **ptr;
             throw_to_monitor();
         }
     }
-    else if (token[0] == '*') {
+    else if (token[0] == '@') {
         if (string_to_long(token+1, &pointer)) {
             pointer &= ~3;
             if (valid_addr(pointer))
@@ -248,11 +281,13 @@ char **ptr;
             throw_to_monitor();
         }
     }
+    else if (string_to_long(token, (long *)&result))
+        ;
+    else if (lookup_symbol(token, &result))
+        ;
     else {
-        if (!string_to_long(token, (long *)&result)) {
-            printf("Invalid number: ``%s''\n", token);
-            throw_to_monitor();
-        }
+        printf("Invalid lisp object: ``%s''\n", token);
+        throw_to_monitor();
     }
 
     return result;
