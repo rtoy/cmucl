@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.68 1998/03/21 08:12:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.69 1998/03/26 13:08:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,8 @@
 (defun princ (object &optional stream)
   "Outputs an asthetic but not READable printed representation of OBJECT on the
   specified stream."
-  (let ((*print-escape* NIL))
+  (let ((*print-escape* NIL)
+	(*print-readably* NIL))
     (output-object object (out-synonym-of stream)))
   object)
 
