@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.4 1991/11/09 03:05:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/table.lisp,v 1.1.1.5 1991/12/20 18:25:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,6 +196,9 @@
 ;;; of INSERT-ELEMENT must be used as a new vector may be created.
 ;;; (Note that the arguments should probably be lexicals since some of
 ;;; them are evaluated more than once.)
+;;;
+;;; We clear out the old vector so that it won't hold on to garbage if it
+;;; happens to be in static space.
 ;;; 
 (defmacro insert-element (vector pos element num &optional (grow-factor 2))
   `(let ((new-num (1+ ,num))
@@ -210,6 +213,7 @@
 	      (replace new ,vector :end1 ,pos :end2 ,pos)
 	      (replace new ,vector :start1 (1+ ,pos) :end1 new-num
 		       :start2 ,pos :end2 ,num)
+	      (fill ,vector nil)
 	      (setf (svref new ,pos) ,element)
 	      new))
 	   (t
