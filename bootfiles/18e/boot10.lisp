@@ -119,14 +119,4 @@
   (declare (ignore old new))
   (values nil nil nil))
 
-(in-package :conditions)
-
-(defstruct (condition-class (:include slot-class))
-  (slots nil :type list)
-  (class-slots nil :type list)
-  (report nil :type (or function null))
-  (default-initargs () :type list)
-  (cpl () :type list)
-  (hairy-slots nil :type list))
-
 ;;; end of file
