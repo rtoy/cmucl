@@ -17,7 +17,7 @@
 (export '(*compile-time-define-macros* *converting-for-interpreter*))
 
 (in-package 'ext)
-(export '(ignorable truly-the maybe-inline))
+(export '(ignorable truly-the maybe-inline *derive-function-types*))
 
 (in-package "LISP")
 (export '(symbol-macro-let))
@@ -551,7 +551,8 @@
 ;;;  4] A list of the &aux variables.
 ;;;  5] A list of the &aux values.
 ;;;
-(proclaim '(function find-lambda-vars (list) (values list boolean list list)))
+(proclaim '(function find-lambda-vars (list)
+		     (values list boolean boolean list list)))
 (defun find-lambda-vars (list)
   (multiple-value-bind (required optional restp rest keyp keys allowp aux)
 		       (parse-lambda-list list)
@@ -672,7 +673,7 @@
 ;;; of Name.  The second value is the inlinep information which currently
 ;;; applies to the variable.
 ;;;
-(proclaim '(function find-lexically-apparent-function (symbol string)
+(proclaim '(function find-lexically-apparent-function (t string)
 		     (values leaf inlinep)))
 (defun find-lexically-apparent-function (name context)
   (let ((var (lexenv-find name functions :test #'equal)))
@@ -844,8 +845,8 @@
 ;;; Res and returning it as a result.  Vars and Fvars are as described in
 ;;; PROCESS-DECLARATIONS.
 ;;;
-(defun process-1-declaration (spec res vars fvars)
-  (declare (list spec vars fvars) (type lexenv res))
+(defun process-1-declaration (spec res vars fvars cont)
+  (declare (list spec vars fvars) (type lexenv res) (type continuation cont))
   (case (first spec)
     (special (process-special-declaration spec res vars))
     (ftype
@@ -870,6 +871,12 @@
       :cookie (process-optimize-declaration spec (lexenv-cookie res))))
     (type
      (process-type-declaration (cdr spec) res vars))
+    (values
+     (let ((types (cdr spec)))
+       (do-the-stuff (if (null (cdr types))
+			 (car types)
+			 `(values ,@types))
+		     cont res 'values)))
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
@@ -887,10 +894,11 @@
 ;;; Functional structures which are being bound.  In addition to filling in
 ;;; slots in the leaf structures, we return a new LEXENV which reflects
 ;;; pervasive special and function type declarations, (not)inline declarations
-;;; and optimize declarations.
+;;; and optimize declarations.  Cont is the continuation affected by VALUES
+;;; declarations.
 ;;;
-(defun process-declarations (decls vars fvars)
-  (declare (list decls vars fvars))
+(defun process-declarations (decls vars fvars cont)
+  (declare (list decls vars fvars) (type continuation cont))
   (let ((res *lexical-environment*))
     (dolist (decl decls)
       (dolist (spec (rest decl))
@@ -898,7 +906,7 @@
 	  (compiler-error "Malformed declaration specifier ~S in ~S."
 			  spec decl))
 
-	(setq res (process-1-declaration spec res vars fvars))))
+	(setq res (process-1-declaration spec res vars fvars cont))))
     res))
 
 
@@ -995,11 +1003,12 @@
 ;;; sequentially bound.  Each Aux-Val is a form that is to be evaluated to get
 ;;; the initial value for the corresponding Aux-Var.
 ;;;
-(defun ir1-convert-lambda-body (body vars &optional aux-vars aux-vals)
-  (declare (list body vars aux-vars aux-vals))
+(defun ir1-convert-lambda-body (body vars &optional aux-vars aux-vals result)
+  (declare (list body vars aux-vars aux-vals)
+	   (type (or continuation null) result))
   (let* ((bind (make-bind))
 	 (lambda (make-lambda :vars vars  :bind bind))
-	 (result (make-continuation)))
+	 (result (or result (make-continuation))))
     (setf (lambda-home lambda) lambda)
     (collect ((svars)
 	      (new-venv nil cons))
@@ -1090,10 +1099,11 @@
 (defun generate-optional-default-entry (res default-vars default-vals
 					    entry-vars entry-vals
 					    vars supplied-p-p body
-					    aux-vars aux-vals)
+					    aux-vars aux-vals cont)
   (declare (type optional-dispatch res)
 	   (list default-vars default-vals entry-vars entry-vals vars body
-		 aux-vars aux-vals))
+		 aux-vars aux-vals)
+	   (type (or continuation null) cont))
   (let* ((arg (first vars))
 	 (arg-name (leaf-name arg))
 	 (info (lambda-var-arg-info arg))
@@ -1105,14 +1115,14 @@
 		  (list* (leaf-name supplied-p) arg-name default-vals)
 		  (cons arg entry-vars)
 		  (list* t arg-name entry-vals)
-		  (rest vars) t body aux-vars aux-vals)
+		  (rest vars) t body aux-vars aux-vals cont)
 		 (ir1-convert-hairy-args 
 		  res
 		  (cons arg default-vars)
 		  (cons arg-name default-vals)
 		  (cons arg entry-vars)
 		  (cons arg-name entry-vals)
-		  (rest vars) supplied-p-p body aux-vars aux-vals))))
+		  (rest vars) supplied-p-p body aux-vars aux-vals cont))))
 		 
     (convert-optional-entry ep default-vars default-vals
 			    (if supplied-p
@@ -1243,10 +1253,12 @@
 ;;; rest arg.  Keys is a list of the keyword argument vars.
 ;;;
 (defun ir1-convert-more (res default-vars default-vals entry-vars entry-vals
-			     rest keys supplied-p-p body aux-vars aux-vals)
+			     rest keys supplied-p-p body aux-vars aux-vals
+			     cont)
   (declare (type optional-dispatch res)
 	   (list default-vars default-vals entry-vars entry-vals keys body
-		 aux-vars aux-vals))
+		 aux-vars aux-vals)
+	   (type (or continuation null) cont))
   (collect ((main-vars (reverse default-vars))
 	    (main-vals default-vals cons)
 	    (bind-vars)
@@ -1260,8 +1272,12 @@
 	     (default (arg-info-default info))
 	     (hairy-default (not (compiler-constantp default)))
 	     (supplied-p (arg-info-supplied-p info))
-	     (n-val (gensym))
-	     (val-temp (make-lambda-var :name n-val)))
+	     (n-val (make-symbol (format nil "~A-DEFAULTING-TEMP"
+					 (leaf-name key))))
+	     (val-temp (make-lambda-var :name n-val
+					:type (if hairy-default
+						  *universal-type*
+						  (leaf-type key)))))
 	(main-vars val-temp)
 	(bind-vars key)
 	(cond ((or hairy-default supplied-p)
@@ -1282,7 +1298,8 @@
 
     (let* ((main-entry (ir1-convert-lambda-body body (main-vars)
 						(append (bind-vars) aux-vars)
-						(append (bind-vals) aux-vals)))
+						(append (bind-vals) aux-vals)
+						cont))
 	   (last-entry (convert-optional-entry main-entry default-vars
 					       (main-vals) ())))
       (setf (optional-dispatch-main-entry res) main-entry)
@@ -1332,13 +1349,14 @@
 (defun ir1-convert-hairy-args (res default-vars default-vals
 				   entry-vars entry-vals
 				   vars supplied-p-p body aux-vars
-				   aux-vals)
+				   aux-vals cont)
   (declare (type optional-dispatch res)
 	   (list default-vars default-vals entry-vars entry-vals vars body
-		 aux-vars aux-vals))
+		 aux-vars aux-vals)
+	   (type (or continuation null) cont))
   (cond ((not vars)
 	 (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
-					     aux-vars aux-vals)))
+					     aux-vars aux-vals cont)))
 	   (setf (optional-dispatch-main-entry res) fun)
 	   (push (if supplied-p-p
 		     (convert-optional-entry fun entry-vars entry-vals ())
@@ -1350,7 +1368,8 @@
 		(nvars (cons arg default-vars))
 		(nvals (cons (leaf-name arg) default-vals)))
 	   (ir1-convert-hairy-args res nvars nvals nvars nvals
-				   (rest vars) nil body aux-vars aux-vals)))
+				   (rest vars) nil body aux-vars aux-vals
+				   cont)))
 	(t
 	 (let* ((arg (first vars))
 		(info (lambda-var-arg-info arg))
@@ -1360,7 +1379,7 @@
 	      (let ((ep (generate-optional-default-entry
 			 res default-vars default-vals
 			 entry-vars entry-vals vars supplied-p-p body
-			 aux-vars aux-vals)))
+			 aux-vars aux-vals cont)))
 		(push (if supplied-p-p
 			  (convert-optional-entry ep entry-vars entry-vals ())
 			  ep)
@@ -1370,12 +1389,12 @@
 	      (ir1-convert-more res default-vars default-vals
 				entry-vars entry-vals
 				arg (rest vars) supplied-p-p body
-				aux-vars aux-vals))
+				aux-vars aux-vals cont))
 	     (:keyword
 	      (ir1-convert-more res default-vars default-vals
 				entry-vars entry-vals
 				nil vars supplied-p-p body aux-vars
-				aux-vals)))))))
+				aux-vals cont)))))))
 
 
 ;;; IR1-Convert-Hairy-Lambda  --  Internal
@@ -1385,13 +1404,14 @@
 ;;; IR1-Convert-Hairy-Args to do the work.  When it is done, we figure out the
 ;;; min-args and max-args. 
 ;;;
-(defun ir1-convert-hairy-lambda (body vars keyp allowp aux-vars aux-vals)
-  (declare (list body vars aux-vars aux-vals))
+(defun ir1-convert-hairy-lambda (body vars keyp allowp aux-vars aux-vals cont)
+  (declare (list body vars aux-vars aux-vals) (type continuation cont))
   (let ((res (make-optional-dispatch :arglist vars  :allowp allowp
 				     :keyp keyp))
 	(min (or (position-if #'lambda-var-arg-info vars) (length vars))))
     (push res (component-new-functions *current-component*))
-    (ir1-convert-hairy-args res () () () () vars nil body aux-vars aux-vals)
+    (ir1-convert-hairy-args res () () () () vars nil body aux-vars aux-vals
+			    cont)
     (setf (optional-dispatch-min-args res) min)
     (setf (optional-dispatch-max-args res)
 	  (+ (1- (length (optional-dispatch-entry-points res))) min))
@@ -1421,19 +1441,27 @@
     (multiple-value-bind
 	(body decls)
 	(system:parse-body (cddr form) *lexical-environment* t)
-      (let* ((*lexical-environment*
-	      (process-declarations decls (append aux-vars vars) nil))
+      (let* ((cont (make-continuation))
+	     (*lexical-environment*
+	      (process-declarations decls (append aux-vars vars) nil cont))
 	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
 		      (ir1-convert-hairy-lambda body vars keyp
 						allow-other-keys
-						aux-vars aux-vals)
-		      (ir1-convert-lambda-body body vars aux-vars aux-vals))))
+						aux-vars aux-vals cont)
+		      (ir1-convert-lambda-body body vars aux-vars aux-vals
+					       cont))))
 	(setf (functional-inline-expansion res) form)
 	(setf (functional-arg-documentation res) (cadr form))
 	res))))
 
 
 ;;;; Variable hacking:
+
+
+(defvar *derive-function-types* t
+  "If true, argument and result type information derived from compilation of
+  DEFUNs is used when compiling calls to that function.  If false, only
+  information from FTYPE proclamations will be used.")
 
 
 ;;; Find-Free-Really-Function  --  Internal
@@ -1445,13 +1473,17 @@
   (unless (info function kind name)
     (setf (info function kind name) :function)
     (setf (info function where-from name) :assumed))
-
+  
   (when (eq (info function where-from name) :assumed)
     (note-undefined-reference name :function))
-
-  (make-global-var :kind :global-function  :name name
-		   :type (info function type name)
-		   :where-from (info function where-from name)))
+  
+  (let ((where (info function where-from name)))
+    (make-global-var :kind :global-function  :name name
+		     :type (if (or *derive-function-types*
+				   (eq where :declared))
+			       (info function type name)
+			       (specifier-type 'function))
+		     :where-from where)))
 
 
 ;;; Find-Slot-Accessor  --  Internal
@@ -1498,6 +1530,7 @@
 	   (compiler-error "Found special-form name ~S ~A." name context))
 	  ((:function nil)
 	   (check-function-name name)
+	   (note-if-setf-function-and-macro name)
 	   (let ((info (info function accessor-for name)))
 	     (values (setf (gethash name *free-functions*)
 			   (if info
@@ -1566,6 +1599,8 @@
 ;;;
 (defun reference-constant (start cont value)
   (declare (type continuation start cont))
+  (unless (typep value '(or list number array symbol character structure))
+    (compiler-error "~S constants not supported." (type-of value)))
   (let* ((leaf (find-constant value))
 	 (res (make-ref (leaf-type leaf) leaf nil)))
     (push res (leaf-refs leaf))
@@ -1637,6 +1672,10 @@
 ;;; derived-type for the continuation to that of the node, so that a little
 ;;; type propagation gets done.
 ;;;
+;;;    We also deal with a bit of THE's semantics here: we weaken the assertion
+;;; on Cont to be no stronger than the assertion on Cont in our scope.  See the
+;;; THE IR1-CONVERT method.
+;;;
 (proclaim '(function use-continuation (node continuation) void))
 (defun use-continuation (node cont)
   (let ((block (continuation-block cont))
@@ -1658,7 +1697,12 @@
        (assert (not (member node-block (block-pred block))) ()
 	       "~S is already a predecessor of ~S." node-block block)
        (push node-block (block-pred block))
-       (add-continuation-use node cont)))))
+       (add-continuation-use node cont)
+       (unless (eq (continuation-asserted-type cont) *wild-type*)
+	 (setf (continuation-asserted-type cont)
+	       (values-type-union (continuation-asserted-type cont)
+				  (or (lexenv-find cont type-restrictions)
+				      *wild-type*))))))))
 
 
 ;;; Continuation-Starts-Block  --  Internal
@@ -2071,6 +2115,9 @@
 
   
 (def-ir1-translator eval-when ((situations &rest body) start cont)
+  "EVAL-WHEN (Situation*) Form*
+  Evaluate the Forms in the specified Situations, any of COMPILE, LOAD, EVAL.
+  This is conceptually a compile-only implementation, so EVAL is a no-op."
   (do-eval-when-stuff situations body
 		      #'(lambda (forms)
 			  (ir1-convert-progn-body start cont forms))))
@@ -2116,6 +2163,11 @@
 
 
 (def-ir1-translator macrolet ((definitions &rest body) start cont)
+  "MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
+  Evaluate the Body-Forms in an environment with the specified local macros
+  defined.  Name is the local macro name, Lambda-List is the DEFMACRO style
+  destructuring lambda list, and the Forms evaluate to the expansion.  The
+  Forms are evaluated in the null environment."
   (do-macrolet-stuff definitions
 		     #'(lambda ()
 			 (ir1-convert-progn-body start cont body))))
@@ -2205,10 +2257,15 @@
 ;;;; Quote and Function:
 
 (def-ir1-translator quote ((thing) start cont)
+  "QUOTE Value
+  Return Value without evaluating it."
   (reference-constant start cont thing))
 
 
 (def-ir1-translator function ((thing) start cont)
+  "FUNCTION Name
+  Return the lexically apparent definition of the function Name.  Name may also
+  be a lambda."
   (if (and (consp thing) (eq (car thing) 'lambda))
       (reference-leaf start cont (ir1-convert-lambda thing) nil)
       (multiple-value-bind (var inlinep)
@@ -2400,38 +2457,20 @@
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
 ;;;
 ;;;    This is a frob that DEFMACRO expands into to establish the compiler
-;;; semantics.  This is similar to the translator for proclaim: its job is to
-;;; keep the *free-functions* in sync.
+;;; semantics.  %%COMPILER-DEFSTRUCT does most of the work, we just clear all
+;;; of the functions out of *FREE-FUNCTIONS* to keep things in synch.
 ;;;
 (def-ir1-translator %compiler-defstruct ((info) start cont :kind :function)
-  (let* ((info (eval info))
-	 (name (dd-name info))
-	 (copier (dd-copier info))
-	 (predicate (dd-predicate info)))
-    (setf (info type kind name) :structure)
-    (setf (info type structure-info name) info)
+  (let* ((info (eval info)))
+    (funcall #'%%compiler-defstruct info)
     (dolist (slot (dd-slots info))
-      (let ((fun (dsd-accessor slot))
-	    (type (dsd-type slot)))
-	(process-1-ftype-proclamation
-	 fun
-	 (specifier-type `(function (,name) ,type)))
+      (let ((fun (dsd-accessor slot)))
+	(remhash fun *free-functions*)
 	(unless (dsd-read-only slot)
-	  (process-1-ftype-proclamation
-	   `(setf ,fun)
-	   (specifier-type `(function (,type ,name) ,type))))))
-
-    (collect ((forms))
-      (when copier
-	(forms `(proclaim '(ftype (function (,name) ,name) ,copier))))
-      
-      (when predicate
-	(forms `(proclaim '(ftype (function (t) boolean) ,predicate))))
-      
-      (funcall #'%%compiler-defstruct info)
-      (ir1-convert start cont `(progn
-				 ,@(forms)
-				 (%%compiler-defstruct ',info))))))
+	  (remhash `(setf ,fun) *free-functions*))))
+    (remhash (dd-predicate info) *free-functions*)
+    (remhash (dd-copier info) *free-functions*)
+    (ir1-convert start cont `(%%compiler-defstruct ',info))))
 
 
 ;;;; Let and Let*:
@@ -2449,7 +2488,8 @@
 ;;; are marked as such.  Context is the name of the form, for error reporting
 ;;; purposes.
 ;;;
-(proclaim '(function extract-let-variables (list symbol) (values list list)))
+(proclaim '(function extract-let-variables (list symbol)
+		     (values list list list)))
 (defun extract-let-variables (bindings context)
   (collect ((vars)
 	    (vals)
@@ -2474,9 +2514,13 @@
 
 (def-ir1-translator let ((bindings &body (body decls))
 			 start cont)
+  "LET ({(Var [Value]) | Var}*) Declaration* Form*
+  During evaluation of the Forms, Bind the Vars to the result of evaluating the
+  Value forms.  The variables are bound in parallel after all of the Values are
+  evaluated."
   (multiple-value-bind (vars values)
 		       (extract-let-variables bindings 'let)
-    (let* ((*lexical-environment* (process-declarations decls vars nil))
+    (let* ((*lexical-environment* (process-declarations decls vars nil cont))
 	   (fun-cont (make-continuation))
 	   (fun (ir1-convert-lambda-body body vars)))
       (reference-leaf start fun-cont fun nil)
@@ -2485,9 +2529,12 @@
 
 (def-ir1-translator let* ((bindings &body (body decls))
 			  start cont)
+  "LET* ({(Var [Value]) | Var}*) Declaration* Form*
+  Similar to LET, but the variables are bound sequentially, allowing each Value
+  form to reference any of the previous Vars."
   (multiple-value-bind (vars values)
 		       (extract-let-variables bindings 'let*)
-    (let ((*lexical-environment* (process-declarations decls vars nil)))
+    (let ((*lexical-environment* (process-declarations decls vars nil cont)))
       (ir1-convert-aux-bindings start cont body vars values))))
 
 
@@ -2524,6 +2571,10 @@
 
 (def-ir1-translator flet ((definitions &body (body decls))
 			  start cont)
+  "FLET ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  Evaluate the Body-Forms with some local function definitions.   The bindings
+  do not enclose the definitions; any use of Name in the Forms will refer to
+  the lexically apparent function definition in the enclosing environment."
   (multiple-value-bind (names defs)
 		       (extract-flet-variables definitions 'flet)
     (let* ((fvars (mapcar #'(lambda (n d)
@@ -2532,7 +2583,7 @@
 				res))
 			  names defs))
 	   (*lexical-environment*
-	    (make-lexenv :default (process-declarations decls nil fvars)
+	    (make-lexenv :default (process-declarations decls nil fvars cont)
 			 :functions (pairlis names fvars))))
       (ir1-convert-progn-body start cont body))))
 
@@ -2548,6 +2599,10 @@
 ;;; local functions.]
 ;;;
 (def-ir1-translator labels ((definitions &body (body decls)) start cont)
+  "LABELS ({(Name Lambda-List Declaration* Form*)}*) Declaration* Body-Form*
+  Evaluate the Body-Forms with some local function definitions.  The bindings
+  enclose the new definitions, so the defined functions can call themselves or
+  each other."
   (multiple-value-bind (names defs)
 		       (extract-flet-variables definitions 'labels)
     (let* ((dummies (mapcar #'(lambda (x)
@@ -2564,40 +2619,79 @@
       (mapc #'substitute-leaf real-funs dummies)
 
       (let ((*lexical-environment*
-	     (make-lexenv :default (process-declarations decls nil real-funs)
-			  :functions (pairlis names real-funs))))
+	     (make-lexenv
+	      :default (process-declarations decls nil real-funs cont)
+	      :functions (pairlis names real-funs))))
 	(ir1-convert-progn-body start cont body)))))
 
 
 ;;;; THE
+
+;;; DO-THE-STUFF  --  Internal
+;;;
+;;;    Do stuff to recognize a THE or VALUES declaration.  Cont is the
+;;; continuation that the assertion applies to, Type is the type specifier and
+;;; Lexenv is the current lexical environment.  Name is the name of the
+;;; declaration we are doing, for use in error messages.
 ;;;
 ;;;    This is somewhat involved, since a type assertion may only be made on a
-;;; continuation, not on a node.  If the continuation has no uses before the
-;;; form is converted, then we may make the type the assertion for the
-;;; continuation.  If there are other uses, then we accept some loss of
-;;; information, but try to retain as much as possible.  In this case, we make
-;;; the type assertion the union of the pre-existing type assertion and the new
-;;; type.
+;;; continuation, not on a node.  We can't just set the continuation asserted
+;;; type and let it go at that, since there may be paralell THE's for the same
+;;; continuation, i.e.:
+;;;     (if ...
+;;;         (the foo ...)
+;;;         (the bar ...))
+;;;
+;;; In this case, our representation can do no better than the union of these
+;;; assertions.  And if there is a branch with no assertion, we have nothing at
+;;; all.  We really need to recognize scoping, since we need to be able to
+;;; discern between parallel assertions (which we union) and nested ones (which
+;;; we intersect).
+;;;
+;;; We represent the scoping by throwing our innermost (intersected) assertion
+;;; on Cont into the TYPE-RESTRICTIONS.  As we go down, we intersect our
+;;; assertions together.  If Cont has no uses yet, we have not yet bottomed out
+;;; on the first COND branch; in this case we optimistically assume that this
+;;; type will be the one we end up with, and set the ASSERTED-TYPE to it.
+;;; We can never get better than the type that we have the first time we bottom
+;;; out.  Later THE's (or the absence thereof) can only weaken this result.
+;;;
+;;; We make this work by getting USE-CONTINUATION to do the unioning across
+;;; COND branches.  We can't do it here, since we don't know how many branches
+;;; there are going to be.
+;;;
+(defun do-the-stuff (type cont lexenv name)
+  (declare (type continuation cont) (type lexenv lexenv))
+  (let* ((ctype (values-specifier-type type))
+	 (old-type (or (lexenv-find cont type-restrictions)
+		       *wild-type*))
+	 (int (values-type-intersection old-type ctype))
+	 (new (if (eq int *empty-type*) old-type int)))
+    (when (null (find-uses cont))
+      (setf (continuation-asserted-type cont) new))
+    (when (and (eq int *empty-type*)
+	       (not (policy nil (= brevity 3))))
+      (compiler-warning
+       "Type ~S in ~S declaration conflicts with enclosing assertion:~%   ~S"
+       (type-specifier ctype) name (type-specifier old-type)))
+    (make-lexenv :type-restrictions `((,cont . ,new))
+		 :default lexenv)))
 
+
+;;; THE IR1 Convert  --  Internal
+;;;
 (def-ir1-translator the ((type value) start cont)
-  (let ((ctype (values-specifier-type type)))
-    (if (null (find-uses cont))
-	(let* ((old-type (continuation-asserted-type cont))
-	       (int (values-type-intersection old-type ctype)))
-	  (when (and (eq int *empty-type*)
-		     (not (policy nil (= brevity 3))))
-	    (compiler-warning
-	     "Type ~S in THE declaration conflicts with previous type ~S."
-	     (type-specifier ctype) (type-specifier old-type)))
-	  (setf (continuation-asserted-type cont) int))
-	(setf (continuation-asserted-type cont)
-	      (values-type-union ctype (continuation-asserted-type cont)))))
-  (ir1-convert start cont value))
+  "THE Type Form
+  Assert that Form evaluates to the specified type (which may be a VALUES
+  type.)"
+  (let ((*lexical-environment*
+	 (do-the-stuff type cont *lexical-environment* 'the)))
+      (ir1-convert start cont value)))
 
 
 ;;; Truly-The IR1 convert  --  Internal
 ;;;
-;;;    Since the Continuation-Derive-Type is computed as the union of its
+;;;    Since the Continuation-Derived-Type is computed as the union of its
 ;;; uses's types, setting it won't work.  Instead we must intersect the type
 ;;; with the uses's Derived-Type.
 ;;;
@@ -2621,6 +2715,10 @@
 ;;; out.
 
 (def-ir1-translator setq ((&rest things &whole source) start cont)
+  "SETQ {Var Value}*
+  Set the variables to the values.  If more than one pair is supplied, the
+  assignments are done sequentially.  If Var names a symbol macro, SETF the
+  expansion."
   (let ((len (length things)))
     (when (oddp len)
       (compiler-error "Odd number of args to SETQ: ~S." source))
@@ -2783,6 +2881,9 @@
 ;;; compilation of MV-Combinations.
 ;;;
 (def-ir1-translator multiple-value-call ((fun &rest args) start cont)
+  "MULTIPLE-VALUE-CALL Function Values-Form*
+  Call Function, passing all the values of each Values-Form as arguments,
+  values from the first Values-Form making up the first argument, etc."
   (let* ((fun-cont (make-continuation))
 	 (node (if args
 		   (make-mv-combination fun-cont)
@@ -2829,6 +2930,9 @@
 ;;; whose block is the true control destination.
 ;;;
 (def-ir1-translator multiple-value-prog1 ((result &rest forms) start cont)
+  "MULTIPLE-VALUE-PROG1 Values-Form Form*
+  Evaluate Values-Form and then the Forms, but return all the values of
+  Values-Form." 
   (continuation-starts-block cont)
   (let* ((dummy-result (make-continuation))
 	 (dummy-start (make-continuation))
@@ -2888,11 +2992,11 @@
     (unless (symbolp name)
       (compiler-error "Macro name is not a symbol: ~S." name))
 
-    (force-output)
     (ecase (info function kind name)
       ((nil))
       (:function
        (remhash name *free-functions*)
+       (undefine-function-name name)
        (compiler-warning
 	"Defining ~S to be a macro when it was ~(~A~) to be a function."
 	name (info function where-from name)))
@@ -2919,11 +3023,12 @@
 
     (compiler-mumble "Converted ~S.~%" name)))
 
+;;; %DEFUN IR1 convert  --  Internal
 ;;;
 ;;; Convert the definition and substitute for previous global uses.  We only
 ;;; do the substitution if the function is in the null environment, ensuring
 ;;; that the function cannot be called outside of the correct environment.
-;;; Emit top-level code to install the definition.
+;;; Also, emit top-level code to install the definition.
 ;;;
 (def-ir1-translator %defun ((name def doc source) start cont
 			    :kind :function)
@@ -2935,28 +3040,48 @@
 		   (in-null-environment))
 	      (cadr def) nil))
 	 (*current-path* (revert-source-path 'defun)))
-    (setf (info function where-from name) :defined)
     (setf (info function inline-expansion name) expansion)
     ;;
-    ;; If there is a previous defun for the same name, disown the leaf for it.
+    ;; If function has type information from a previous DEFUN, blow it away.
+    (when (eq (info function where-from name) :defined)
+      (setf (info function type name) (specifier-type 'function))
+      (remhash name *free-functions*))
+    ;;
+    ;; If there is a previous defun for Name in the same compilation, disown
+    ;; the leaf for it.
     (let ((old (gethash name *free-functions*)))
       (when (functional-p old) (remhash name *free-functions*)))
-
+    ;;
+    ;; Convert definition.  If in the null environment and definitely not an
+    ;; interpreter stub, then substitute for any references that aren't
+    ;; :NOTINLINE.
     (let ((fun (ir1-convert-lambda (cadr def)))
 	  (new (gethash name *free-functions*))
 	  (info (info function info name)))
       (setf (leaf-name fun) name)
       (cond ((and (in-null-environment t)
-		  (not (eq (info function inlinep name) :notinline))
 		  (or (not info)
 		      (and (null (function-info-transforms info))
 			   (null (function-info-templates info))
 			   (not (function-info-ir2-convert info)))))
 	     (setf (gethash name *free-functions*) fun)
-	     (when new (substitute-leaf fun new)))
+	     (when new
+	       (substitute-leaf-if 
+		#'(lambda (x)
+		    (not (eq (ref-inlinep x) :notinline)))
+		fun new)))
 	    (t
-	     (let ((var (find-free-function name "in a strange place")))
-	       (setf (leaf-where-from var) :defined))))
+	     ;;
+	     ;; We call CHECK-FREE-FUNCTION now, since the functional never
+	     ;; gets into *FREE-FUNCTIONS*.
+	     ;; ### Not so good for inferring result types.
+	     (setf (leaf-type fun) (definition-type fun))
+	     (check-free-function name fun)))
+
+      (when (eq (info function where-from name) :declared)
+	(let ((type (info function type name)))
+	  (when (function-type-p type)
+	    (assert-definition-type fun type))))
 
       (ir1-convert start cont
 		   `(%%defun ',name ,fun ,doc
@@ -2971,15 +3096,23 @@
 ;;;
 (def-ir1-translator %defconstant ((name value doc) start cont
 				  :kind :function)
-  (let ((name (eval name)))
+  (let ((name (eval name))
+	(newval (eval value)))
     (unless (symbolp name)
       (compiler-error "Constant name is not a symbol: ~S." name))
 
+    (ecase (info variable kind name)
+      (:constant
+       (unless (equalp newval (info variable constant-value name))
+	 (compiler-warning "Redefining constant ~S as:~%  ~S"
+			   name newval)))
+      (:special
+       (compiler-warning "Redefining special ~S to be a constant." name))
+      (:global))
+
     (setf (info variable kind name) :constant)
     (setf (info variable where-from name) :defined)
-
-    (when (and (constantp value) (not (symbolp value)))
-      (setf (info variable constant-value name) (eval value)))
+    (setf (info variable constant-value name) newval)
     (remhash name *free-variables*))
 
   (ir1-convert start cont `(%%defconstant ,name ,value ,doc)))
