@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.13 1992/07/28 20:37:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/debug.lisp,v 1.14 1992/09/03 17:39:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,7 +72,7 @@
   (:temporary (:scs (sap-reg) :from (:argument 1)) sap)
   (:generator 2
     (inst add sap object offset)
-    (inst sw sap value 0)
+    (inst sw value sap 0)
     (move result value)))
 
 (define-vop (write-control-stack-c)
