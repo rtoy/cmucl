@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.9 1992/03/11 21:29:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.10 1992/04/01 20:11:48 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -302,10 +302,13 @@ default-value-8
 	(inst nop)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
-	    (defaulting-done (gen-label)))
+	    (defaulting-done (gen-label))
+	    (default-stack-vals (gen-label)))
 	;; Branch off to the MV case.
 	(inst b regs-defaulted)
-	(inst nop)
+	(if (> nvals register-arg-count)
+	    (inst subcc temp nargs-tn (fixnum register-arg-count))
+	    (move csp-tn ocfp-tn))
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -313,14 +316,11 @@ default-value-8
 	    ((= i (min nvals register-arg-count)))
 	  (move (tn-ref-tn val) null-tn))
 	(when (> nvals register-arg-count)
-	  (inst li nargs-tn (fixnum 1))
+	  (inst b default-stack-vals)
 	  (move ocfp-tn csp-tn))
 	
 	(emit-label regs-defaulted)
-	(inst compute-code-from-lra code-tn code-tn lra-label temp)
-	
 	(when (> nvals register-arg-count)
-	  (inst subcc temp nargs-tn (fixnum register-arg-count))
 	  (collect ((defaults))
 	    (do ((i register-arg-count (1+ i))
 		 (val (do ((i 0 (1+ i))
@@ -344,6 +344,7 @@ default-value-8
 	    (let ((defaults (defaults)))
 	      (when defaults
 		(assemble (*elsewhere*)
+		  (emit-label default-stack-vals)
 		  (trace-table-entry trace-table-function-prologue)
 		  (do ((remaining defaults (cdr remaining)))
 		      ((null remaining))
@@ -352,7 +353,9 @@ default-value-8
 		      (when (null (cdr remaining))
 			(inst b defaulting-done))
 		      (store-stack-tn (cdr def) null-tn)))
-		  (trace-table-entry trace-table-normal))))))))
+		  (trace-table-entry trace-table-normal))))))
+
+	(inst compute-code-from-lra code-tn code-tn lra-label temp)))
   (undefined-value))
 
 
