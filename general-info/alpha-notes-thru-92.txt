@@ -1,3 +1,32 @@
+12/12/91 to 12/13/91
+
+Code:
+
+The printer now goes to extra care to make sure structures only count as
+one level against *print-level* and are handled correctly with respect to
+*print-circle*.
+
+Several fixes to the pretty printer:
+
+- Actually store the change in the suffix length in the pretty-stream
+structure (was causing suffixes to be ignored with line abbrevs).
+
+- Fixed an off-by-one error in desciding when to use line abbrevs.
+
+- Fixed output-line to make sure the buffer is large enough to fit
+the prefix before we copy it in.
+
+- Added several new keywords to pprint-logical-block to allow better
+support for pretty printing non-list objects.
+
+- Changed pprint-function-call to put a fill-style newline between the
+the function and the first arg instead of a miser style newline.
+
+- Printing lists when *print-circle* and *print-pretty* are both T now
+works.
+
+
+
 12/5/91 to 12/12/91
 
 Code:
