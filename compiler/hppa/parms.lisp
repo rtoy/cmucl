@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/parms.lisp,v 1.1 1992/07/13 03:48:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/parms.lisp,v 1.2 1992/10/13 13:17:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -187,16 +187,13 @@
     lisp::maybe-gc
     kernel::internal-error
     di::handle-breakpoint
+    di::handle-function-end-breakpoint
     lisp::fdefinition-object
 
     ;; Free Pointers.
     lisp::*read-only-space-free-pointer*
     lisp::*static-space-free-pointer*
     lisp::*initial-dynamic-space-free-pointer*
-    lisp::*allocation-pointer*
-
-    ;; The binding stack.
-    lisp::*binding-stack-pointer*
 
     ;; Things needed for non-local-exit.
     lisp::*current-catch-block*
