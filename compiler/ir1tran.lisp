@@ -1601,8 +1601,8 @@
 ;;; the global environment and enter it in *free-variables*.  If the variable
 ;;; is unknown, then we emit a warning.
 ;;;
-(proclaim '(function find-free-variable (symbol) leaf))
 (defun find-free-variable (name)
+  (declare (values leaf))
   (unless (symbolp name)
     (compiler-error "Variable name is not a symbol: ~S." name))
   (or (gethash name *free-variables*)
