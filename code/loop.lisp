@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.13 2002/11/14 04:12:37 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.14 2002/11/22 16:28:28 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -953,7 +953,8 @@ a LET-like macro, and a SETQ-like macro, which perform LOOP-style destructuring.
 (defun loop-error (format-string &rest format-args)
   #+(or Genera CLOE) (declare (dbg:error-reporter))
   #+Genera (setq format-args (copy-list format-args))	;Don't ask.
-  (error "~?~%Current LOOP context:~{ ~S~}." format-string format-args (loop-context)))
+  (kernel:simple-program-error "~?~%Current LOOP context:~{ ~S~}."
+			       format-string format-args (loop-context)))
 
 
 (defun loop-warn (format-string &rest format-args)
@@ -1023,9 +1024,6 @@ collected result will be returned as the value of the LOOP."
 		     ,(nreverse *loop-body*)
 		     ,(nreverse *loop-after-body*)
 		     ,(nreconc *loop-epilogue* (nreverse *loop-after-epilogue*)))))
-      (do () (nil)
-	(setq answer `(block ,(pop *loop-names*) ,answer))
-	(unless *loop-names* (return nil)))
       (dolist (entry *loop-bind-stack*)
 	(let ((vars (first entry))
 	      (dcls (second entry))
@@ -1042,7 +1040,10 @@ collected result will be returned as the value of the LOOP."
 				    (t 'let))
 			     ,vars
 			     ,@(loop-build-destructuring-bindings crocks forms)))))))
-      answer)))
+      (if *loop-names*
+	  (do () ((null (car *loop-names*)) answer)
+	    (setq answer `(block ,(pop *loop-names*) ,answer)))
+	  `(block nil ,answer)))))
 
 
 (defun loop-iteration-driver ()
@@ -1194,6 +1195,12 @@ collected result will be returned as the value of the LOOP."
 	  *loop-desetq-crocks* nil
 	  *loop-wrappers* nil)))
 
+(defun loop-variable-p (name)
+  (do ((entry *loop-bind-stack* (cdr entry))) (nil)
+    (cond ((null entry)
+	   (return nil))
+	  ((assoc name (caar entry) :test #'eq)
+	   (return t)))))
 
 (defun loop-make-variable (name initialization dtype &optional iteration-variable-p)
   (cond ((null name)
@@ -1359,6 +1366,8 @@ collected result will be returned as the value of the LOOP."
     (let ((cruft (find (the symbol name) *loop-collection-cruft*
 		       :key #'loop-collector-name)))
       (cond ((not cruft)
+	     (when (and name (loop-variable-p name))
+	       (loop-error "Variable ~S cannot be used in INTO clause" name))
 	     (push (setq cruft (make-loop-collector
 				 :name name :class class
 				 :history (list collector) :dtype dtype))
@@ -2098,6 +2107,7 @@ collected result will be returned as the value of the LOOP."
 			     (downfrom (loop-for-arithmetic :downfrom))
 			     (upfrom (loop-for-arithmetic :upfrom))
 			     (below (loop-for-arithmetic :below))
+			     (above (loop-for-arithmetic :above))
 			     (to (loop-for-arithmetic :to))
 			     (upto (loop-for-arithmetic :upto))
 			     (by (loop-for-arithmetic :by))
