@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.31 2001/12/06 19:15:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.32 2002/01/04 21:31:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -269,9 +269,9 @@ struct in_addr {
 
 (defun connect-to-inet-socket (host port &optional (kind :stream))
   "The host may be an address string or an IP address in host order."
-  (let ((socket (create-inet-socket kind))
-	(hostent (or (lookup-host-entry host)
-		     (error "Unknown host: ~S." host))))
+  (let* ((hostent (or (lookup-host-entry host)
+		      (error "Unknown host: ~S." host)))
+	 (socket (create-inet-socket kind)))
     (with-alien ((sockaddr inet-sockaddr))
       (setf (slot sockaddr 'family) af-inet)
       (setf (slot sockaddr 'port) (htons port))
