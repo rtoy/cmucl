@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.2 1993/07/27 13:29:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.3 1993/08/22 20:31:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,7 @@
 
 (defpackage "INTERFACE"
   (:use "TOOLKIT" "LISP" "PCL" "EXTENSIONS" "KERNEL")
+  (:shadow "CLASS-DIRECT-SUPERCLASSES")
   (:export "*HEADER-FONT*" "*ITALIC-FONT*" "*ENTRY-FONT*" "*INTERFACE-STYLE*"
 	   "USE-GRAPHICS-INTERFACE" "VERIFY-SYSTEM-SERVER-EXISTS"
 	   "CREATE-INTERFACE-SHELL" "POPUP-INTERFACE-PANE"
