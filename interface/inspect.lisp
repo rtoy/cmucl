@@ -517,24 +517,29 @@
 				    :right-attachment :attach-form
 				    :top-attachment :attach-form
 				    :bottom-attachment :attach-form))
-	   instance-slots class-slots other-slots)
-
+	   (instance-slots ())
+	   (class-slots ())
+	   (other-slots ()))
+      
       (dolist (slotd slotds)
 	(with-slots ((slot pcl::name) (allocation pcl::allocation))
-		    slotd
+	  slotd
 	  (case allocation
 	    (:instance (push slotd instance-slots))
 	    (:class (push slotd class-slots))
-	    (otherwise (push slotd other-slots))))
-	(when instance-slots
-	  (show-slot-list object instance-slots view t
-			  "Slots with Instance allocation:"))
-	(when class-slots
-	  (show-slot-list object class-slots view t
-			  "Slots with Class allocation:"))
-	(when other-slots
-	  (show-slot-list object other-slots view nil
-			  "Slots with Other allocation:"))))))
+	    (otherwise (push slotd other-slots)))))
+      
+      (when instance-slots
+	(show-slot-list object instance-slots view t
+			"Slots with Instance allocation:"))
+      (when class-slots
+	(show-slot-list object class-slots view t
+			"Slots with Class allocation:"))
+      (when other-slots
+	(show-slot-list object other-slots view nil
+			"Slots with Other allocation:"))
+
+      (when view (manage-child view)))))
 
 
 
