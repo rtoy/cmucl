@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.8 1997/11/25 14:21:08 pw Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.9 2000/10/24 13:32:30 dtc Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -1880,7 +1880,7 @@ cgc_init_collector()
     heap_base = (void*)DYNAMIC_0_SPACE_START;
 
     /* I could actually use both spaces here but just 1 for now */
-    heap_end = (char*)heap_base + DYNAMIC_SPACE_SIZE;
+    heap_end = (char*)heap_base + dynamic_space_size;
 
     max_blocks = BLOCK_NUMBER(heap_end) - BLOCK_NUMBER(heap_base);
     if((block_table_base = malloc(sizeof(struct cluster *) * max_blocks))

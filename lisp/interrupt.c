@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.24 2000/10/21 13:01:23 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.25 2000/10/24 13:32:32 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -443,7 +443,7 @@ static boolean gc_trigger_hit(HANDLER_ARGS)
 	lispobj *badaddr=(lispobj *)arch_get_bad_addr(signal, code, context);
 
 	return (badaddr >= current_auto_gc_trigger &&
-		badaddr < current_dynamic_space + DYNAMIC_SPACE_SIZE);
+		badaddr < current_dynamic_space + dynamic_space_size);
     }
 }
 #endif

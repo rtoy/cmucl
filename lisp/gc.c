@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.16 1998/07/26 00:05:31 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.17 2000/10/24 13:32:30 dtc Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -299,7 +299,7 @@ void collect_garbage(void)
 #endif
 
 	os_zero((os_vm_address_t) current_dynamic_space,
-		(os_vm_size_t) DYNAMIC_SPACE_SIZE);
+		(os_vm_size_t) dynamic_space_size);
 
 	current_dynamic_space = new_space;
 #ifndef ibmrt
@@ -2230,7 +2230,7 @@ void set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     os_vm_address_t addr=(os_vm_address_t)current_dynamic_space +
 	dynamic_usage;
     long length =
-	DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
+	dynamic_space_size + (os_vm_address_t)current_dynamic_space - addr;
 
     if(addr < (os_vm_address_t)current_dynamic_space_free_pointer) {
 	fprintf(stderr,
@@ -2265,12 +2265,12 @@ void clear_auto_gc_trigger(void)
 #if defined(SUNOS) || defined(SOLARIS)/* don't want to force whole space into swapping mode... */
 	os_vm_address_t addr=(os_vm_address_t)current_auto_gc_trigger;
 	os_vm_size_t length=
-	    DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
+	    dynamic_space_size + (os_vm_address_t)current_dynamic_space - addr;
 
 	os_validate(addr,length);
 #else
 	os_protect((os_vm_address_t)current_dynamic_space,
-		   DYNAMIC_SPACE_SIZE,
+		   dynamic_space_size,
 		   OS_VM_PROT_ALL);
 #endif
 

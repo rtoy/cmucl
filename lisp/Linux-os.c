@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.11 2000/08/27 14:45:41 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.12 2000/10/24 13:32:30 dtc Exp $
  *
  */
 
@@ -192,8 +192,8 @@ boolean valid_addr(os_vm_address_t addr)
 
   if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
       || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
-      || in_range_p(addr, DYNAMIC_0_SPACE_START, DYNAMIC_SPACE_SIZE  )
-      || in_range_p(addr, DYNAMIC_1_SPACE_START, DYNAMIC_SPACE_SIZE  )
+      || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+      || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
       || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
       || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
     return TRUE;

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.7 1997/04/20 21:03:14 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.8 2000/10/24 13:32:32 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -43,7 +43,7 @@ os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 	  SC_PC(context) >= READ_ONLY_SPACE_START+READ_ONLY_SPACE_SIZE) &&
 	 ((lispobj *)SC_PC(context) < current_dynamic_space &&
 	  (lispobj *)SC_PC(context) >=
-	      current_dynamic_space + DYNAMIC_SPACE_SIZE)))
+	      current_dynamic_space + dynamic_space_size)))
 	return 0;
 
     badinst = *(unsigned long *)SC_PC(context);

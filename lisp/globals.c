@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.2 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.3 2000/10/24 13:32:32 dtc Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -20,6 +20,7 @@ lispobj *read_only_space;
 lispobj *static_space;
 lispobj *dynamic_0_space;
 lispobj *dynamic_1_space;
+unsigned dynamic_space_size;
 lispobj *control_stack;
 #ifdef i386
 lispobj *control_stack_end;

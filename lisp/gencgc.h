@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.4 2000/08/27 14:45:42 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.5 2000/10/24 13:32:32 dtc Exp $
  *
  */
 
@@ -126,10 +126,8 @@ struct page {
 
 #define PAGE_SIZE 4096
 
-
-/* The number of pages needed for the dynamic space - rounding up. */
-#define NUM_PAGES ((DYNAMIC_SPACE_SIZE + (PAGE_SIZE - 1)) / PAGE_SIZE)
-extern struct page page_table[NUM_PAGES];
+extern unsigned dynamic_space_pages;
+extern struct page *page_table;
 
 
 /*

@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.5 1999/11/29 17:04:07 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.6 2000/10/24 13:32:30 dtc Exp $
  *
  */
 
@@ -149,8 +149,8 @@ boolean valid_addr(os_vm_address_t addr)
 
   if (   in_range_p(addr, READ_ONLY_SPACE_START, READ_ONLY_SPACE_SIZE)
       || in_range_p(addr, STATIC_SPACE_START   , STATIC_SPACE_SIZE   )
-      || in_range_p(addr, DYNAMIC_0_SPACE_START, DYNAMIC_SPACE_SIZE  )
-      || in_range_p(addr, DYNAMIC_1_SPACE_START, DYNAMIC_SPACE_SIZE  )
+      || in_range_p(addr, DYNAMIC_0_SPACE_START, dynamic_space_size  )
+      || in_range_p(addr, DYNAMIC_1_SPACE_START, dynamic_space_size  )
       || in_range_p(addr, CONTROL_STACK_START  , CONTROL_STACK_SIZE  )
       || in_range_p(addr, BINDING_STACK_START  , BINDING_STACK_SIZE  ))
     return TRUE;
