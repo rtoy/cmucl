@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.41 2002/08/27 22:18:24 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.42 2002/08/28 07:16:36 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -642,9 +642,9 @@ to skip undefined symbols which don't have an address."
 (defun ensure-lisp-table-opened ()
   (unless *global-table*
     ;; Prevent recursive call if dlopen isn't defined
-    (setf *global-table* (int-sap 0))
-    (setf *global-table* (list (dlopen nil rtld-lazy)))
-    (when (zerop (system:sap-int (car *global-table*)))
+    (setf *global-table* (acons (int-sap 0) nil nil))
+    (setf *global-table* (acons (dlopen nil rtld-lazy) nil nil))
+    (when (zerop (system:sap-int (caar *global-table*)))
       (error "Can't open global symbol table: ~S" (dlerror)))))
 
 (defun load-object-file (file)

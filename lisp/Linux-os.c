@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.13 2002/08/27 22:18:31 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.14 2002/08/28 07:16:38 moore Exp $
  *
  */
 
@@ -313,8 +313,8 @@ void *os_dlsym(const char *sym_name, lispobj lib_list)
 	for (lib_list_head = lib_list;
 	     lib_list_head != NIL;
 	     lib_list_head = (CONS(lib_list_head))->cdr) {
-	    struct cons *lib_cons = (struct cons *)(CONS(lib_list_head))->car;
-	    struct sap *dlhandle = (struct sap *)(CONS(lib_cons))->car;
+	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
+	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
 
 	    sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
 	    if (sym_addr)

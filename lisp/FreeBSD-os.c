@@ -12,7 +12,7 @@
  * Much hacked by Paul Werkowski
  * GENCGC support by Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.8 2002/08/27 22:18:30 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/FreeBSD-os.c,v 1.9 2002/08/28 07:16:38 moore Exp $
  *
  */
 
@@ -216,8 +216,8 @@ void *os_dlsym(const char *sym_name, lispobj lib_list)
 	for (lib_list_head = lib_list;
 	     lib_list_head != NIL;
 	     lib_list_head = (CONS(lib_list_head))->cdr) {
-	    struct cons *lib_cons = (CONS(lib_list_head))->car;
-	    struct sap *dlhandle = (CONS(lib_cons))->car;
+	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
+	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
 	    void *sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
 
 	    if (sym_addr)
