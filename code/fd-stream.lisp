@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.17 1991/12/07 00:56:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.18 1991/12/16 12:48:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1317,11 +1317,14 @@ non-server method is also significantly more efficient for large reads.
 	  ;; Determine if the file already exists, make sure the original
 	  ;; file is not a directory and keep the mode
 	  (let ((exists
-		 (multiple-value-bind
-		     (okay err/dev inode orig-mode)
-		     (mach:unix-stat namestring)
-		   (declare (ignore inode) (type (or index null) orig-mode))
-		   (cond (okay
+		 (and namestring
+		      (multiple-value-bind
+			  (okay err/dev inode orig-mode)
+			  (mach:unix-stat namestring)
+			(declare (ignore inode)
+				 (type (or index null) orig-mode))
+			(cond
+			 (okay
 			  (when (and output (= (logand orig-mode #o170000)
 					       #o40000))
 			    (error "Cannot open ~S for output: Is a directory."
@@ -1333,7 +1336,7 @@ non-server method is also significantly more efficient for large reads.
 			 (t
 			  (error "Cannot find ~S: ~A"
 				 namestring
-				 (mach:get-unix-error-msg err/dev)))))))
+				 (mach:get-unix-error-msg err/dev))))))))
 	    (unless (and exists
 			 (do-old-rename namestring original))
 	      (setf original nil)
@@ -1350,7 +1353,9 @@ non-server method is also significantly more efficient for large reads.
 	(loop
 	  (multiple-value-bind
 	      (fd errno)
-	      (mach:unix-open namestring mask mode)
+	      (if namestring
+		  (mach:unix-open namestring mask mode)
+		  (values nil mach:enoent))
 	    (cond ((numberp fd)
 		   (return
 		    (case direction
