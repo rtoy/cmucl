@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.108 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.109 1997/02/05 16:01:25 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -282,51 +282,52 @@
 	     (type (integer 0 #.(1+ list-to-hash-table-threshold)) count)
 	     (inline member))
     (labels ((grovel (value)
-	       (etypecase things-processed
-		 (list
-		  (when (member value things-processed :test #'eq)
-		    (return-from grovel nil))
-		  (push value things-processed)
-		  (incf count)
-		  (when (> count list-to-hash-table-threshold)
-		    (let ((things things-processed))
-		      (setf things-processed
-			    (make-hash-table :test #'eq))
-		      (dolist (thing things)
-			(setf (gethash thing things-processed) t)))))
-		 (hash-table
-		  (when (gethash value things-processed)
-		    (return-from grovel nil))
-		  (setf (gethash value things-processed) t)))
-	       (typecase value
-		 (cons
-		  (grovel (car value))
-		  (grovel (cdr value)))
-		 ((or symbol number character unboxed-array))
-		 (simple-vector
-		  (dotimes (i (length value))
-		    (grovel (svref value i))))
-		 ((vector t)
-		  (dotimes (i (length value))
-		    (grovel (aref value i))))
-		 ((simple-array t)
-		  ;; Even though the (array t) branch does the exact same
-		  ;; thing as this branch we do this seperate so that
-		  ;; the compiler can use faster versions of array-total-size
-		  ;; and row-major-aref.
-		  (dotimes (i (array-total-size value))
-		    (grovel (row-major-aref value i))))
-		 ((array t)
-		  (dotimes (i (array-total-size value))
-		    (grovel (row-major-aref value i))))
-		 (instance
-		  (when (emit-make-load-form value)
-		    (dotimes (i (%instance-length value))
-		      (grovel (%instance-ref value i)))))
-		 (t
-		  (compiler-error
-		   "Cannot dump objects of type ~S into fasl files."
-		   (type-of value))))))
+	       (unless (typep value
+			      '(or unboxed-array symbol number character))
+		 (etypecase things-processed
+		   (list
+		    (when (member value things-processed :test #'eq)
+		      (return-from grovel nil))
+		    (push value things-processed)
+		    (incf count)
+		    (when (> count list-to-hash-table-threshold)
+		      (let ((things things-processed))
+			(setf things-processed
+			      (make-hash-table :test #'eq))
+			(dolist (thing things)
+			  (setf (gethash thing things-processed) t)))))
+		   (hash-table
+		    (when (gethash value things-processed)
+		      (return-from grovel nil))
+		    (setf (gethash value things-processed) t)))
+		 (typecase value
+		   (cons
+		    (grovel (car value))
+		    (grovel (cdr value)))
+		   (simple-vector
+		    (dotimes (i (length value))
+		      (grovel (svref value i))))
+		   ((vector t)
+		    (dotimes (i (length value))
+		      (grovel (aref value i))))
+		   ((simple-array t)
+		    ;; Even though the (array t) branch does the exact same
+		    ;; thing as this branch we do this seperate so that
+		    ;; the compiler can use faster versions of array-total-size
+		    ;; and row-major-aref.
+		    (dotimes (i (array-total-size value))
+		      (grovel (row-major-aref value i))))
+		   ((array t)
+		    (dotimes (i (array-total-size value))
+		      (grovel (row-major-aref value i))))
+		   (instance
+		    (when (emit-make-load-form value)
+		      (dotimes (i (%instance-length value))
+			(grovel (%instance-ref value i)))))
+		   (t
+		    (compiler-error
+		     "Cannot dump objects of type ~S into fasl files."
+		     (type-of value)))))))
       (grovel constant)))
   (undefined-value))
 
@@ -413,10 +414,12 @@
     (push node-block (block-pred block))
     (add-continuation-use node cont)
     (unless (eq (continuation-asserted-type cont) *wild-type*)
-      (setf (continuation-asserted-type cont)
-	    (values-type-union (continuation-asserted-type cont)
-			       (or (lexenv-find cont type-restrictions)
-				   *wild-type*))))))
+      (let ((new (values-type-union (continuation-asserted-type cont)
+				    (or (lexenv-find cont type-restrictions)
+					*wild-type*))))
+	(when (type/= new (continuation-asserted-type cont))
+	  (setf (continuation-asserted-type cont) new)
+	  (reoptimize-continuation cont))))))
 
 
 ;;;; Exported functions:

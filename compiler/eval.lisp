@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.28 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.29 1997/02/05 16:01:21 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -889,7 +889,8 @@
 		    (values (if incoming-values (eval-stack-pop))))
 	       (cond
 		((eq (c::lambda-environment lambda)
-		     (c::block-environment (c::continuation-block cont)))
+		     (c::block-environment
+		      (c::node-block (c::exit-entry node))))
 		 ;; Local exit.
 		 ;; Fixup stack top and massage values for destination.
 		 (eval-stack-set-top
