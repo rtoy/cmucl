@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.40 1991/07/18 02:11:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.41 1991/09/03 18:46:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,7 +210,8 @@
 	 (cond ((or (eq kind :unused)
 		    (eq (node-cont (block-last block)) cont))
 		(setf (continuation-block cont)
-		      (make-block-key :start cont  :component nil))
+		      (make-block-key :start cont  :component nil
+				      :start-uses (find-uses cont)))
 		(setf (continuation-kind cont) :deleted-block-start))
 	       (t
 		(node-ends-block (continuation-use cont))))))))
