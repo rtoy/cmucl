@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.h,v 1.2 1991/05/24 17:54:14 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.h,v 1.3 1992/03/08 18:43:14 wlott Exp $ */
 #ifndef _LDB_H_
 #define _LDB_H_
 
@@ -12,8 +12,11 @@
 
 #define SymbolValue(sym) (((struct symbol *)PTR(sym))->value)
 #define SetSymbolValue(sym,val) (((struct symbol *)PTR(sym))->value = (val))
-#define SymbolFunction(sym) (((struct symbol *)PTR(sym))->function)
-#define SetSymbolFunction(sym,val) (((struct symbol *)PTR(sym))->function = (val))
+
+#define funcall(fdefn,argptr,nargs) \
+    call_into_lisp((fdefn),(fdefn)->function,argptr,nargs)
+#define funcall_sym(sym,argptr,nargs) \
+    funcall((struct fdefn *)(SymbolValue(sym)),argptr,nargs)
 
 #define crap_out(msg) do { write(2, msg, sizeof(msg)); exit(-1); } while (0)
 
