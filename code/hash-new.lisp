@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.19 2002/11/21 21:24:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.20 2002/11/28 00:51:34 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -914,6 +914,7 @@
 	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
 			  depth)
 	 (sxhash-instance s-expr)))
+    (funcallable-instance (sxhash-instance s-expr))
     ;; Other-pointer types.
     (simple-string (sxhash-simple-string s-expr))
     (symbol (sxhash-simple-string (symbol-name s-expr)))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.18 2002/11/22 15:20:18 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.19 2002/11/28 00:51:35 pmai Exp $")
 ;;;
 
   ;;   
@@ -170,6 +170,11 @@ explicitly marked saying who wrote it.
 ;;; Implement proper sxhashing of standard instances.
 (defun common-lisp::sxhash-instance (instance)
   (cond
-    ((std-instance-p instance) (std-instance-hash-code instance))
-    ((fsc-instance-p instance) (fsc-instance-hash-code instance))
-    (t (error "What kind of instance is this?"))))
+    ((and (std-instance-p instance)
+          (typep (std-instance-wrapper instance) 'wrapper))
+     (std-instance-hash-code instance))
+    ((and (fsc-instance-p instance)
+          (typep (fsc-instance-wrapper instance) 'wrapper))
+     (fsc-instance-hash-code instance))
+    (t
+     42)))
