@@ -284,13 +284,12 @@
   (setf *lisp-interface-shell* nil))
 
 (defun system-server-status-hook (process)
-  (let ((status (ext:process-status process)))
-    (unless (ext:process-alive-p process)
-      (setf *system-motif-server* nil)
-      (warn "Motif server died.~@
-	     Status = ~S, exit code = ~D."
-	    (ext:process-status process)
-	    (ext:process-exit-code process)))))
+  (unless (ext:process-alive-p process)
+    (setf *system-motif-server* nil)
+    (warn "Motif server died.~@
+	   Status = ~S, exit code = ~D."
+	  (ext:process-status process)
+	  (ext:process-exit-code process))))
 
 (defvar *server-startup-timeout* 30)
 
