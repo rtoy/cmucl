@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.10 2000/08/17 12:57:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.11 2000/08/24 17:10:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -400,8 +400,8 @@
    FEXCL           Error if already created.
    "
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 16) cmd)
-	   (type (unsigned-byte 16) arg))
+	   (type (unsigned-byte 32) cmd)
+	   (type (unsigned-byte 32) arg))
   (int-syscall ("fcntl" int int int) fd cmd arg))
 
 (defun unix-open (path flags mode)
