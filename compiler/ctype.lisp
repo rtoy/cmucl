@@ -689,9 +689,16 @@
 	      what where))))
     (frob (function-type-optional type) "optional args")
     (frob (function-type-keyp type) "keyword args")
-    (frob (function-type-rest type) "rest arg")
-    (try-type-intersections (lambda-vars lambda) (function-type-required type)
-			    where)))
+    (frob (function-type-rest type) "rest arg"))
+  (let* ((vars (lambda-vars lambda))
+	 (nvars (length vars))
+	 (req (function-type-required type))
+	 (nreq (length req)))
+    (unless (= nvars nreq)
+      (note-lossage
+       "Definition has ~R arg~:P, but the previous ~A had ~R."
+       nvars where nreq)
+      (try-type-intersections vars req where))))
 
 
 ;;; ASSERT-DEFINITION-TYPE  --  Interface
