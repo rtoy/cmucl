@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.30 1991/10/15 16:49:16 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.31 1991/11/03 17:41:51 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,11 +35,12 @@
 	  frame-code-location eval-in-frame return-from-frame frame-catches
 	  frame-number frame frame-p
 
-	  do-blocks debug-function-lambda-list debug-variable-info-available
-	  do-debug-function-variables debug-function-symbol-variables
-	  ambiguous-debug-variables preprocess-for-eval function-debug-function
-	  debug-function-function debug-function-kind debug-function-name
-	  debug-function debug-function-p
+	  do-debug-function-blocks debug-function-lambda-list
+	  debug-variable-info-available do-debug-function-variables
+	  debug-function-symbol-variables ambiguous-debug-variables
+	  preprocess-for-eval function-debug-function debug-function-function
+	  debug-function-kind debug-function-name debug-function
+	  debug-function-p debug-function-start-location
 
 	  do-debug-block-locations debug-block-successors debug-block
 	  debug-block-p debug-block-elsewhere-p
@@ -47,7 +48,7 @@
 	  make-breakpoint activate-breakpoint deactivate-breakpoint
 	  breakpoint-active-p breakpoint-hook-function breakpoint-info
 	  breakpoint-kind breakpoint-what breakpoint breakpoint-p
-	  delete-breakpoint
+	  delete-breakpoint function-end-cookie-valid-p
 
 	  code-location-debug-function code-location-debug-block
 	  code-location-top-level-form-offset code-location-form-number
@@ -838,7 +839,7 @@
 (defun kernel:current-fp () (kernel:current-fp))
 (defun kernel:stack-ref (s n) (kernel:stack-ref s n))
 (defun kernel:%set-stack-ref (s n value) (kernel:%set-stack-ref s n value))
-(defun function-code-header (fun) (function-code-header fun))
+(defun kernel:function-code-header (fun) (kernel:function-code-header fun))
 (defun kernel:lra-code-header (lra) (kernel:lra-code-header lra))
 (defun kernel:make-lisp-obj (value) (kernel:make-lisp-obj value))
 (defun kernel:get-lisp-obj-address (thing) (kernel:get-lisp-obj-address thing))
@@ -1013,7 +1014,8 @@
 		    (let ((fp (frame-pointer up-frame)))
 		      (values lra
 			      (kernel:stack-ref fp (1+ vm::lra-save-offset))))
-		    (values (kernel:get-header-data lra) (kernel:lra-code-header lra)))
+		    (values (kernel:get-header-data lra)
+			    (kernel:lra-code-header lra)))
 	      (if code
 		  (values code
 			  (* (1+ (- word-offset (kernel:get-header-data code)))
@@ -1023,22 +1025,26 @@
 			  0
 			  nil)))
 	    (find-escaped-frame caller))
-      (let ((d-fun (case code
-		     (:undefined-function
-		      (make-bogus-debug-function
-		       "The Undefined Function"))
-		     (:foreign-function
-		      (make-bogus-debug-function
-		       "Foreign function call land"))
-		     ((nil)
-		      (make-bogus-debug-function
-		       "Bogus stack frame"))
-		     (t
-		      (debug-function-from-pc code pc-offset)))))
-	(make-compiled-frame caller up-frame d-fun
-			     (code-location-from-pc d-fun pc-offset escaped)
-			     (if up-frame (1+ (frame-number up-frame)) 0)
-			     escaped)))))
+      (if (eq (kernel:code-debug-info code) :bogus-lra)
+	  (let ((real-lra (kernel:code-header-ref code real-lra-slot)))
+	    (compute-calling-frame caller real-lra up-frame))
+	  (let ((d-fun (case code
+			 (:undefined-function
+			  (make-bogus-debug-function
+			   "The Undefined Function"))
+			 (:foreign-function
+			  (make-bogus-debug-function
+			   "Foreign function call land"))
+			 ((nil)
+			  (make-bogus-debug-function
+			   "Bogus stack frame"))
+			 (t
+			  (debug-function-from-pc code pc-offset)))))
+	    (make-compiled-frame caller up-frame d-fun
+				 (code-location-from-pc d-fun pc-offset
+							escaped)
+				 (if up-frame (1+ (frame-number up-frame)) 0)
+				 escaped))))))
 
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
@@ -1103,7 +1109,7 @@
   (declare (type (unsigned-byte 32) bits))
   (let ((object (kernel:make-lisp-obj bits)))
     (if (functionp object)
-	(or (function-code-header object)
+	(or (kernel:function-code-header object)
 	    :undefined-function)
 	(let ((lowtag (kernel:get-lowtag object)))
 	  (if (= lowtag vm:other-pointer-type)
@@ -1255,14 +1261,15 @@
 
 ;;;; Debug-functions.
 
-;;; DO-BLOCKS -- Public.
+;;; DO-DEBUG-FUNCTION-BLOCKS -- Public.
 ;;;
-(defmacro do-blocks ((block-var debug-function &optional result) &body body)
-  "Executes the forms in a context with block-var bound to each debug-block
-   in debug-function successively.  Result is an optional form to execute for
-   return values, and DO-BLOCKS returns nil if there is no result form.  This
-   signals a no-debug-blocks condition when the debug-function lacks
-   debug-block information."
+(defmacro do-debug-function-blocks ((block-var debug-function &optional result)
+				    &body body)
+  "Executes the forms in a context with block-var bound to each debug-block in
+   debug-function successively.  Result is an optional form to execute for
+   return values, and DO-DEBUG-FUNCTION-BLOCKS returns nil if there is no
+   result form.  This signals a no-debug-blocks condition when the
+   debug-function lacks debug-block information."
   (let ((blocks (gensym))
 	(i (gensym)))
     `(let ((,blocks (debug-function-debug-blocks ,debug-function)))
@@ -1337,7 +1344,7 @@
 	 (or (eval::eval-function-definition eval-fun)
 	     (eval::convert-eval-fun eval-fun))))
       (let* ((name (system:%primitive c::function-name fun))
-	     (component (function-code-header fun))
+	     (component (kernel:function-code-header fun))
 	     (res (find-if
 		   #'(lambda (x)
 		       (and (c::compiled-debug-function-p x)
@@ -1655,6 +1662,7 @@
 ;;;
 (defun compiled-debug-function-debug-info (debug-fun)
   (kernel:code-debug-info (compiled-debug-function-component debug-fun)))
+
 
 
 ;;;; Unpacking variable and basic block data.
@@ -2903,9 +2911,10 @@
    the system uses starter breakpoints to establish the :function-end breakpoint
    for each invocation of the function.  Upon each entry, the system creates a
    unique cookie to identify the invocation, and when the user supplies a
-   function for this argument, the system invokes it on the cookie.  The system
-   later invokes the :function-end breakpoint hook on the same cookie.  The
-   user may save the cookie for comparison in the hook function.
+   function for this argument, the system invokes it on the frame and the
+   cookie.  The system later invokes the :function-end breakpoint hook on the
+   same cookie.  The user may save the cookie for comparison in the hook
+   function.
       This signals an error if what is an unknown code-location."
   (etypecase what
     (code-location
@@ -2952,7 +2961,12 @@
 (defstruct (function-end-cookie
 	    (:print-function (lambda (obj str n)
 			       (declare (ignore obj n))
-			       (write-string "#<Function-End-Cookie>" str)))))
+			       (write-string "#<Function-End-Cookie>" str)))
+	    (:constructor make-function-end-cookie (bogus-lra debug-fun)))
+  ;; This is a pointer to the bogus-lra created for :function-end bpts.
+  bogus-lra
+  ;; This is the debug-function associated with the cookie.
+  debug-fun)
 
 ;;; This maps bogus-lra-components to cookies, so
 ;;; HANDLE-FUNCTION-END-BREAKPOINT can find the appropriate cookie for the
@@ -2990,11 +3004,31 @@
 	      (setf (breakpoint-data-breakpoints data) end-bpts)
 	      (dolist (bpt end-bpts)
 		(setf (breakpoint-internal-data bpt) data)))
-	    (let ((cookie (make-function-end-cookie)))
+	    (let ((cookie (make-function-end-cookie lra debug-fun)))
 	      (setf (gethash component *function-end-cookies*) cookie)
 	      (dolist (bpt end-bpts)
 		(let ((fun (breakpoint-cookie-fun bpt)))
-		  (when fun (funcall fun cookie))))))))))
+		  (when fun (funcall fun frame cookie))))))))))
+
+;;; FUNCTION-END-COOKIE-VALID-P -- Public.
+;;;
+(defun function-end-cookie-valid-p (frame cookie)
+  "This takes a function-end-cookie and a frame, and it returns whether the
+   cookie is still valid.  A cookie becomes invalid when the frame that
+   established the cookie has exited.  Sometimes cookie holders are unaware
+   of cookie invalidation because their :function-end breakpoint hooks didn't
+   run due to THROW'ing.  This takes a frame as an efficiency hack since the
+   user probably has a frame object in hand when using this routine, and it
+   saves repeated parsing of the stack and consing when asking whether a
+   series of cookies is valid."
+  (let ((lra (function-end-cookie-bogus-lra cookie))
+	(lra-sc-offset (c::compiled-debug-function-return-pc
+			(compiled-debug-function-compiler-debug-fun
+			 (function-end-cookie-debug-fun cookie)))))
+    (do ((frame frame (frame-down frame)))
+	((not frame) nil)
+      (when (eq lra (get-context-value frame vm::lra-save-offset lra-sc-offset))
+	(return t)))))
 
 ;;;
 ;;; ACTIVATE-BREAKPOINT.
@@ -3701,7 +3735,7 @@
 	  (declare (type c::index i))
 	  (let ((d-fun (make-compiled-debug-function (svref function-map i)
 						     component)))
-	    (do-blocks (d-block d-fun)
+	    (do-debug-function-blocks (d-block d-fun)
 	      (do-debug-block-locations (loc d-block)
 		(let* ((d-source (code-location-debug-source loc))
 		       (translations (gethash d-source
@@ -3822,3 +3856,34 @@
   "The editor calls this remotely in the slave to delete a breakpoint."
   (delete-breakpoint (wire:remote-object-value remote-obj-bpt))
   (wire:forget-remote-translation remote-obj-bpt))
+
+
+
+;;;; Miscellaneous
+
+;;; This appears here because it cannot go with the debug-function interface
+;;; since DO-DEBUG-BLOCK-LOCATIONS isn't defined until after the debug-function
+;;; routines.
+;;;
+
+;;; DEBUG-FUNCTION-START-LOCATION -- Public.
+;;;
+(defun debug-function-start-location (debug-fun)
+  "This returns a code-location before the body of a function and after all
+   the arguments are in place.  If this cannot determine that location due to
+   a lack of debug information, it returns nil."
+  (etypecase debug-fun
+    (compiled-debug-function
+     (code-location-from-pc debug-fun
+			    (c::compiled-debug-function-start-pc
+			     (compiled-debug-function-compiler-debug-fun
+			      debug-fun))
+			    nil))
+    (interpreted-debug-function
+     ;; Return the first location if there are any, otherwise nil.
+     (handler-case (do-debug-function-blocks (block debug-fun nil)
+		     (do-debug-block-locations (loc block nil)
+		       (return loc)))
+       (no-debug-blocks (condx)
+	 (declare (ignore condx))
+	 nil)))))
