@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.37 1993/10/25 13:44:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.38 1993/10/25 13:53:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -611,7 +611,7 @@
 		   (setf (condition-slot-allocation found)
 			 (condition-slot-allocation sslot))))
 		(t
-		 (res (copy-structure cslot)))))))
+		 (res (copy-structure sslot)))))))
     (res)))
 
 
