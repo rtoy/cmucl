@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.14 2004/07/12 23:44:07 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/breakpoint.c,v 1.15 2005/03/17 23:13:55 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -23,6 +23,10 @@
 #include "gencgc.h"
 #endif
 
+/*
+ * See MAKE-BOGUS-LRA in code/debug-int.lisp for these values.  (We
+ * really should generate these from the Lisp code.)
+ */
 #define REAL_LRA_SLOT 0
 #ifndef i386
 #define KNOWN_RETURN_P_SLOT 1
@@ -61,7 +65,7 @@ void breakpoint_do_displaced_inst(os_context_t *scp,
     arch_do_displaced_inst(scp, orig_inst);
 }
 
-#ifndef i386
+#if !(defined(i386) || (0 && defined(sparc) && defined(GENCGC)))
 static lispobj find_code(os_context_t *scp)
 {
 #ifdef reg_CODE
@@ -82,7 +86,7 @@ static lispobj find_code(os_context_t *scp)
 }
 #endif
 
-#ifdef i386
+#if defined(i386) || (0 && defined(sparc) && defined(GENCGC))
 static lispobj find_code(os_context_t *scp)
 {
   lispobj *codeptr = component_ptr_from_pc(SC_PC(scp));
@@ -94,7 +98,7 @@ static lispobj find_code(os_context_t *scp)
 }
 #endif
 
-static int compute_offset(os_context_t *scp, lispobj code)
+static int compute_offset(os_context_t *scp, lispobj code, boolean function_end)
 {
     if (code == NIL)
 	return 0;
@@ -113,10 +117,31 @@ static int compute_offset(os_context_t *scp, lispobj code)
 	    return 0;
 	else {
 	    int offset = pc - code_start;
-	    if (offset >= codeptr->code_size)
+	    if (offset >= codeptr->code_size) {
+              if (function_end) {
+#ifdef sparc
+                /*
+                 * We're in a function end breakpoint.  Compute the
+                 * offset from the (known) breakpoint location and the
+                 * beginning of the breakpoint guts.  (See *-assem.S.)
+                 *
+                 * Then make the offset negative so the caller knows
+                 * that the offset is not from the code object.
+                 */
+                extern char function_end_breakpoint_trap;
+                extern char function_end_breakpoint_guts;
+
+                offset = &function_end_breakpoint_trap - &function_end_breakpoint_guts;
+                return make_fixnum(-offset);
+#else
+                return 0;
+#endif                
+              } else {
 		return 0;
-	    else
-		return make_fixnum(offset);
+              }
+	    } else {
+              return make_fixnum(offset);
+            }
 	}
     }
 }
@@ -131,7 +156,7 @@ void handle_breakpoint(int signal, int subcode, os_context_t *scp)
     code = find_code(scp);
 
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code),
+	     compute_offset(scp, code, 0),
 	     code,
 	     alloc_sap(scp));
 
@@ -157,7 +182,7 @@ void handle_breakpoint(int signal, int subcode, os_context_t *scp)
     sigsetmask(scp->sc_mask);
 #endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code),
+	     compute_offset(scp, code, 0),
 	     code,
 	     scp_sap);
 
@@ -171,19 +196,56 @@ void *handle_function_end_breakpoint(int signal, int subcode,
 {
     lispobj code, lra;
     struct code *codeptr;
-
+    int offset;
+    
     fake_foreign_function_call(scp);
 
     code = find_code(scp);
     codeptr = (struct code *)PTR(code);
+    offset = compute_offset(scp, code, 1);
 
+    if (offset < 0)
+      {
+        /*
+         * We were in the function end breakpoint.  Which means we are
+         * in a bogus LRA, so compute where the code-component of this
+         * bogus lra object starts.  Adjust code, and codeptr
+         * appropriately so the breakpoint handler can do the right
+         * thing.
+         */
+        unsigned long pc;
+
+        pc = SC_PC(scp);
+        
+        offset = -offset;
+        /*
+         * Some magic here.  pc points to the trap instruction.  The
+         * offset gives us where the function_end_breakpoint_guts
+         * begins.  But we need to back up some more to get to the
+         * code-component object.  The magic 2 below is 
+         */
+        code = pc - fixnum_value(offset);
+        code -= sizeof(struct code) + BOGUS_LRA_CONSTANTS*sizeof(lispobj);
+        code += type_OtherPointer;
+        codeptr = (struct code *) PTR(code);
+      }
+    
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code),
+	     offset,
 	     code,
 	     alloc_sap(scp));
 
+    /*
+     * Breakpoint handling done, so get the real LRA where we're
+     * supposed to return to so we can return there.
+     */
     lra = codeptr->constants[REAL_LRA_SLOT];
 #ifdef reg_CODE
+    /*
+     * With the known-return convention, we definitely do NOT want to
+     * mangle the CODE register because it isn't pointing to the bogus
+     * LRA but to the actual routine.
+     */
     if (codeptr->constants[KNOWN_RETURN_P_SLOT] == NIL)
 	SC_REG(scp, reg_CODE) = lra;
 #endif
@@ -213,7 +275,7 @@ void *handle_function_end_breakpoint(int signal, int subcode,
     sigsetmask(scp->sc_mask);
 #endif
     funcall3(SymbolFunction(HANDLE_BREAKPOINT),
-	     compute_offset(scp, code),
+	     compute_offset(scp, code, 1),
 	     code,
 	     scp_sap);
 

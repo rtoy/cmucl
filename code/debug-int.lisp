@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.119 2004/11/20 00:47:28 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.120 2005/03/17 23:13:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3965,23 +3965,24 @@ The result is a symbol or nil if the routine cannot be found."
        (:function-start
 	(%make-breakpoint hook-function what kind info))
        (:function-end
-	(unless (eq (c::compiled-debug-function-returns
-		     (compiled-debug-function-compiler-debug-fun what))
-		    :standard)
-	  (error ":FUNCTION-END breakpoints are currently unsupported ~
-		  for the known return convention."))
-		  
-	(let* ((bpt (%make-breakpoint hook-function what kind info))
-	       (starter (compiled-debug-function-end-starter what)))
-	  (unless starter
-	    (setf starter (%make-breakpoint #'list what :function-start nil))
-	    (setf (breakpoint-hook-function starter)
-		  (function-end-starter-hook starter what))
-	    (setf (compiled-debug-function-end-starter what) starter))
-	  (setf (breakpoint-start-helper bpt) starter)
-	  (push bpt (breakpoint-%info starter))
-	  (setf (breakpoint-cookie-fun bpt) function-end-cookie)
-	  bpt))))
+	(multiple-value-bind (settable known-return)
+	    (can-set-function-end-breakpoint-p what)
+	  (cond (settable
+		 (let* ((bpt (%make-breakpoint hook-function what kind info))
+			(starter (compiled-debug-function-end-starter what)))
+		   (unless starter
+		     (setf starter (%make-breakpoint #'list what :function-start 
+						     nil))
+		     (setf (breakpoint-hook-function starter)
+			   (function-end-starter-hook starter what known-return))
+		     (setf (compiled-debug-function-end-starter what) starter))
+		   (setf (breakpoint-start-helper bpt) starter)
+		   (push bpt (breakpoint-%info starter))
+		   (setf (breakpoint-cookie-fun bpt) function-end-cookie)
+		   bpt))
+		(t
+		 (error ":FUNCTION-END breakpoints are currently unsupported ~
+		       for the known return convention.")))))))
     (interpreted-debug-function
      (error ":function-end breakpoints are currently unsupported ~
 	     for interpreted-debug-functions."))))
@@ -3989,9 +3990,14 @@ The result is a symbol or nil if the routine cannot be found."
 (defun can-set-function-end-breakpoint-p (what)
   (typecase what
     (compiled-debug-function
-     (eq (c::compiled-debug-function-returns
-	  (compiled-debug-function-compiler-debug-fun what))
-	 :standard))))
+     (let ((returns (c::compiled-debug-function-returns
+		     (compiled-debug-function-compiler-debug-fun what))))
+       ;; First value says if we can set the function-end-breakpoint.
+       ;; The second value indicates if this is the known return
+       ;; convention.
+       (values (or (eq returns :standard)
+		   (typep returns 'vector))
+	       (not (eq returns :standard)))))))
 
 ;;; These are unique objects created upon entry into a function by a
 ;;; :function-end breakpoint's starter hook.  These are only created when users
@@ -4024,7 +4030,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; to debug-fun's function, we must establish breakpoint-data about
 ;;; fun-end-bpt.
 ;;;
-(defun function-end-starter-hook (starter-bpt debug-fun)
+(defun function-end-starter-hook (starter-bpt debug-fun &optional known-return-p)
   (declare (type breakpoint starter-bpt)
 	   (type compiled-debug-function debug-fun))
   #'(lambda (frame breakpoint)
@@ -4038,7 +4044,8 @@ The result is a symbol or nil if the routine cannot be found."
 			      (get-context-value frame
 						 #-gengc vm::lra-save-offset
 						 #+gengc vm::ra-save-offset
-						 lra-sc-offset))
+						 lra-sc-offset)
+			      known-return-p)
 	  (setf (get-context-value frame
 				   #-gengc vm::lra-save-offset
 				   #+gengc vm::ra-save-offset
@@ -4448,15 +4455,27 @@ The result is a symbol or nil if the routine cannot be found."
 	 (cookie (gethash component *function-end-cookies*)))
     (remhash component *function-end-cookies*)
     (dolist (bpt breakpoints)
-      (funcall (breakpoint-hook-function bpt)
-	       frame bpt
-	       (get-function-end-breakpoint-values scp)
-	       cookie))))
+      (let ((values (get-function-end-breakpoint-values bpt scp)))
+	(funcall (breakpoint-hook-function bpt) frame bpt values cookie)))))
 
-(defun get-function-end-breakpoint-values (scp)
-  (let ((ocfp (system:int-sap (vm:sigcontext-register scp
-						      #-(or x86 amd64) vm::ocfp-offset
-						      #+(or x86 amd64) vm::ebx-offset)))
+;;; Return a list of return values at the function end breakpoint
+;;; BREAKPOINT.
+;;;
+(defun get-function-end-breakpoint-values (breakpoint sigcontext)
+  (let* ((what (breakpoint-what breakpoint))
+	 (returns (c::compiled-debug-function-returns
+		   (compiled-debug-function-compiler-debug-fun what))))
+    (etypecase returns 
+      ((member :standard)
+       (function-end-breakpoint-values/standard sigcontext))
+      (vector
+       (function-end-breakpoint-values/known-return sigcontext returns)))))
+
+;;; Return a list of return values at a breakpoint with standard
+;;; return convention.
+;;; 
+(defun function-end-breakpoint-values/standard (scp)
+  (let ((ocfp (sigcontext-ocfp-sap scp))
 	(nargs (kernel:make-lisp-obj
 		(vm:sigcontext-register scp vm::nargs-offset)))
  	(reg-arg-offsets '#.vm::register-arg-offsets)
@@ -4466,13 +4485,31 @@ The result is a symbol or nil if the routine cannot be found."
        (push (if reg-arg-offsets
 		 (kernel:make-lisp-obj
 		  (vm:sigcontext-register scp (pop reg-arg-offsets)))
-	       (kernel:stack-ref ocfp arg-num))
+		 (kernel:stack-ref ocfp arg-num))
 	     results)))
     (nreverse results)))
+
+;;; Return a list of return values at a breakpoint with known-return
+;;; convention.
+;;; 
+(defun function-end-breakpoint-values/known-return (sigcontext sc-offsets)
+  (let ((ocfp (sigcontext-ocfp-sap sigcontext)))
+    (loop for offset across sc-offsets
+	  collect (sub-access-debug-var-slot ocfp offset sigcontext))))
+
+;;; Extract the old frame pointer from a sigcontext structure.  The
+;;; result is a SAP.
+;;; 
+(defun sigcontext-ocfp-sap (sigcontext)
+  (system:int-sap
+   (vm:sigcontext-register sigcontext
+			   #-(or x86 amd64) vm::ocfp-offset
+			   #+(or x86 amd64) vm::ebx-offset)))
 
 ;;;
 ;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
 ;;;
+;;; (If you change these, look in breakpoint.c too!)
 
 (defconstant bogus-lra-constants #-(or x86 amd64) 2 #+(or x86 amd64) 3)
 (defconstant known-return-p-slot (+ vm:code-constants-offset #-(or x86 amd64) 1 #+(or x86 amd64) 2))
@@ -4529,6 +4566,9 @@ The result is a symbol or nil if the routine cannot be found."
 	(logandc2 (+ vm:code-constants-offset bogus-lra-constants 1)
 		  1))
        (vm:sanctify-for-execution code-object)
+       (format t "real-lra = ~A~%" real-lra)
+       (format t "new-lra at ~A~%" dst-start)
+       (format t "offset  = ~A~%" (system:sap- trap-loc src-start))
        (values new-lra code-object (system:sap- trap-loc src-start))))))
 
 
