@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.21 2002/05/01 17:43:37 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.22 2002/10/30 18:05:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -474,11 +474,53 @@ this, the functions are listed.  If NIL, then always list the functions.")
     (if (minusp compensated) 0.0 compensated)))
 
 
+;; Compute and return the total time, total cons, total-calls, and the
+;; width of the field needed to hold the total time, total cons,
+;; total-calls, and the max time/call.
+(defun compute-totals-and-widths (info)
+  (let ((total-time 0)
+	(total-cons 0)
+	(total-calls 0)
+	(max-time/call 0))
+    ;; Find the total time, total consing, total calls, and the max
+    ;; time/call
+    (dolist (item info)
+      (let ((time (time-info-time item)))
+	(incf total-time time)
+	(incf total-cons (time-info-consing item))
+	(incf total-calls (time-info-calls item))
+	(setf max-time/call (max max-time/call
+				 (/ time (float (time-info-calls item)))))))
+
+    ;; Figure out the width needed for total-time, total-cons,
+    ;; total-calls and the max-time/call.  The total-cons is more
+    ;; complicated because we print the consing with comma
+    ;; separators. For total-time, we assume a default of "~10,3F";
+    ;; for total-calls, "~7D"; for time/call, "~10,5F".  This is where
+    ;; the constants come from.
+    (flet ((safe-log10 (x)
+	     ;; log base 10 of x, but any non-positive value of x, 0
+	     ;; is ok for what we want.
+	     (if (zerop x)
+		 0.0
+		 (log x 10))))
+      (let ((cons-length (ceiling (safe-log10 total-cons))))
+	(incf cons-length (floor (safe-log10 total-cons) 3))
+	(values total-time
+		total-cons
+		total-calls
+		(+ 3 (max 7 (ceiling (safe-log10 total-time))))
+		(max 9 cons-length)
+		(max 7 (ceiling (safe-log10 total-calls)))
+		(+ 5 (max 5 (ceiling (safe-log10 max-time/call)))))))))
+
 (defun %report-times (names)
   (declare (optimize (speed 0)))
   (unless (boundp '*call-overhead*)
     (compute-time-overhead))
-  (let ((info ()))
+  (let ((info ())
+	(ext:*gc-verbose* nil)
+	separator)
     (setf *no-calls* nil)
     (dolist (name names)
       (let ((pinfo (profile-info-or-lose name)))
@@ -488,7 +530,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	         PROFILE it again to record calls to the new definition."
 		name))
 	(multiple-value-bind
-	    (calls time consing profile callers)
+	      (calls time consing profile callers)
 	    (funcall (profile-info-read-time pinfo))
 	  (if (zerop calls)
 	      (push name *no-calls*)
@@ -501,22 +543,36 @@ this, the functions are listed.  If NIL, then always list the functions.")
     
     (setq info (sort info #'>= :key #'time-info-time))
 
-    (format *trace-output*
-	    "~&  Seconds  |  Consed   |  Calls  |  Sec/Call  |  Name:~@
-	       ------------------------------------------------------~%")
+    (multiple-value-bind (total-time total-consed total-calls
+				     time-width cons-width calls-width
+				     time/call-width)
+	(compute-totals-and-widths info)
 
-    (let ((total-time 0.0)
-	  (total-consed 0)
-	  (total-calls 0))
+      ;; Create the separator string of the appropriate length.  The
+      ;; 11 is for the column spacing and the 10 is for a reasonable
+      ;; length for the name of the function.
+      (setf separator (make-string (+ 11 10 time-width cons-width calls-width
+			      time/call-width)
+			   :initial-element #\-))
+      (format *trace-output*
+	      "~&~V@A | ~V@A | ~V@A | ~V@A | Name:~@
+	       ~A~%"
+	      time-width "Seconds"
+	      cons-width "Consed"
+	      calls-width "Calls"
+	      time/call-width "Sec/Call"
+	      separator)
+
       (dolist (time info)
-	(incf total-time (time-info-time time))
-	(incf total-calls (time-info-calls time))
-	(incf total-consed (time-info-consing time))
 	(format *trace-output*
-		"~10,3F | ~9:D | ~7:D | ~10,5F | ~S~%"
+		"~V,3F | ~V:D | ~V:D | ~V,5F | ~S~%"
+		time-width
 		(time-info-time time)
+		cons-width
 		(time-info-consing time)
+		calls-width
 		(time-info-calls time)
+		time/call-width
 		(/ (time-info-time time) (float (time-info-calls time)))
 		(time-info-name time))
 	(let ((callers (time-info-callers time)))
@@ -527,9 +583,13 @@ this, the functions are listed.  If NIL, then always list the functions.")
 	      (terpri *trace-output*))
 	    (terpri *trace-output*))))
       (format *trace-output*
-	      "------------------------------------------------------~@
-	      ~10,3F | ~9:D | ~7:D |            | Total~%"
-	      total-time total-consed total-calls)
+	      "~A~@
+	      ~V,3F | ~V:D | ~V:D | ~VA | Total~%"
+	      separator
+	      time-width total-time
+	      cons-width total-consed
+	      calls-width total-calls
+	      time/call-width " ")
 
       (format *trace-output*
 	      "~%Estimated total profiling overhead: ~4,2F seconds~%"
