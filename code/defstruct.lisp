@@ -31,7 +31,6 @@
   (declare (ignore depth))
   (format stream "#<Defstruct-Description for ~S>" (dd-name structure)))
 
-
 ;;; DSD-Name  --  Internal
 ;;;
 ;;;    Return the the name of a defstruct slot as a symbol.  We store it
@@ -43,6 +42,8 @@
 (defun print-defstruct-slot-description (structure stream depth)
   (declare (ignore depth))
   (format stream "#<Defstruct-Slot-Description for ~S>" (dsd-name structure)))
+
+
 
 ;;; The legendary macro itself.
 
@@ -97,7 +98,8 @@
       (setq name-and-options (list name-and-options)))
   (do* ((options (cdr name-and-options) (cdr options))
 	(name (car name-and-options))
-	(print-function 'default-structure-print)
+	(print-function #'default-structure-print)
+	(pf-supplied-p)
 	(conc-name (concat-pnames name '-))
 	(constructor (concat-pnames 'make- name))
 	(saw-constructor)
@@ -147,19 +149,41 @@
 				 (push args boa-constructors))
 				(t
 				 (setq saw-constructor t)
-				 (setq constructor (car args)))))
+				 (setq constructor
+				       (or (car args)
+					   (concat-pnames 'make- name))))))
 	    (:copier (setq copier (car args)))
 	    (:predicate (setq predicate (car args)))
-	    (:include (setq include args))
-	    (:print-function (setq print-function (car args)))
-	    (:type (setq saw-type t type (car args)))
+	    (:include
+	     (setf include args)
+	     (let* ((name (car include))
+		    (included-structure
+		     (or (get name '%structure-definition-in-compiler)
+			 (get name '%structure-definition)))
+		    (included-print-function
+		     (if included-structure
+			 (dd-print-function included-structure))))
+	       (unless included-structure
+		 (error "Cannot find description of structure ~S to use for ~
+		         inclusion."
+			name))
+	       (unless pf-supplied-p
+		 (setf print-function included-print-function))))
+	    (:print-function
+	     (setf print-function (or (car args) #'default-structure-print))
+	     (setf pf-supplied-p t))
+	    (:type (setf saw-type t type (car args)))
 	    (:named (error "The Defstruct option :NAMED takes no arguments."))
-	    (:initial-offset (setq offset (car args)))
+	    (:initial-offset (setf offset (car args)))
 	    (t (error "~S is an unknown Defstruct option." option)))))))
-
-;;; Parse-Slot-Descriptions parses the slot descriptions (surprise) and does
-;;; any structure inclusion that needs to be done.
 
+
+
+;;;; Stuff to parse slot descriptions.
+
+;;; PARSE-SLOT-DESCRIPTIONS parses the slot descriptions (surprise) and does
+;;; any structure inclusion that needs to be done.
+;;;
 (defun parse-slot-descriptions (defstruct slots)
   ;; First strip off any doc string and stash it in the Defstruct.
   (when (stringp (car slots))
@@ -208,22 +232,26 @@
 				 (car options)))))))))))))
   ;; Finally parse the slots into Slot-Description objects.
   (do ((slots slots (cdr slots))
-       (index (+ (dd-offset defstruct) (if (dd-named defstruct) 1 0)) (1+ index))
-       (descriptions '()))
+       (index (+ (dd-offset defstruct) (if (dd-named defstruct) 1 0))
+	      (1+ index))
+       (descriptions ()))
       ((null slots)
        (setf (dd-length defstruct) index)
        (setf (dd-slots defstruct) (nreverse descriptions)))
-    (let ((slot (car slots)))
+    (let* ((slot (car slots))
+	   (name (if (atom slot) slot (car slot))))
+      (when (keywordp name)
+	(warn "Keyword slot name indicates possible syntax error in DEFSTRUCT ~
+	       -- ~S."
+	      name))
       (push
        (if (atom slot)
-	   (let ((name slot))
-	     (make-defstruct-slot-description
-	      :%name (string name)
-	      :index index
-	      :accessor (concat-pnames (dd-conc-name defstruct) name)
-	      :type t))
+	   (make-defstruct-slot-description
+	    :%name (string name)
+	    :index index
+	    :accessor (concat-pnames (dd-conc-name defstruct) name)
+	    :type t)
 	   (do ((options (cddr slot) (cddr options))
-		(name (car slot))
 		(default (cadr slot))
 		(type t)
 		(read-only nil))
@@ -410,8 +438,12 @@
 		    (push `(setf (aref ,temp ,(dsd-index slot))
 				 ,(dsd-name slot))
 			  sets)))))))))))
+
+
 
-;;; Find-Legal-Slot   --  Internal
+;;;; Support for By-Order-Argument Constructors.
+
+;;; FIND-LEGAL-SLOT   --  Internal
 ;;;
 ;;;    Given a defstruct description and a slot name, return the corresponding
 ;;; slot if it exists, or signal an error if not.
@@ -421,18 +453,15 @@
       (error "~S is not a defined slot name in the ~S structure."
 	     name (dd-name defstruct))))
 
-;;; Define-Boa-Constructors defines positional constructor functions.  We generate
-;;; code to set each variable not specified in the arglist to the default given
-;;; in the Defstruct.  We just slap required args in, as with rest args and aux
-;;; args.  Optionals are treated a little differently.  Those that aren't
-;;; supplied with a default in the arg list are mashed so that their default in
-;;; the arglist is the corresponding default from the Defstruct.
-;;;
-;;; If we are defining safe accessors, we check the types of the arguments
-;;; supplied.  We don't bother checking the defaulted arguments since we would
-;;; have to figure out how to eval the defaults only once, and it probably
-;;; isn't worth the effort anyway.
 
+;;; Define-Boa-Constructors defines positional constructor functions.  We
+;;; generate code to set each variable not specified in the arglist to the
+;;; default given in the Defstruct.  We just slap required args in, as with
+;;; rest args and aux args.  Optionals are treated a little differently.  Those
+;;; that aren't supplied with a default in the arg list are mashed so that
+;;; their default in the arglist is the corresponding default from the
+;;; Defstruct.
+;;;
 (defun define-boa-constructors (defstruct)
   (do* ((boas (dd-boa-constructors defstruct) (cdr boas))
 	(name (car (car boas)) (car (car boas)))
@@ -446,19 +475,20 @@
 	 (arg-kind 'required))
 	((null args))
       (let ((arg (car args)))
-	(if (atom arg)
-	    (if (memq arg '(&optional &rest &aux))
-		(setq arg-kind arg)
-		(case arg-kind
-		  ((required &rest &aux)
-		   (push (find-legal-slot defstruct arg) slots-in-arglist))
-		  (&optional
-		   (let ((dsd (find-legal-slot defstruct arg)))
-		     (push dsd slots-in-arglist)
-		     (rplaca args (list arg (dsd-default dsd)))))))
-	    (push (find-legal-slot defstruct (car arg)) slots-in-arglist))))
+	(cond ((not (atom arg))
+	       (push (find-legal-slot defstruct (car arg)) slots-in-arglist))
+	      ((memq arg '(&optional &rest &aux &key))
+	       (setq arg-kind arg))
+	      (t
+	       (case arg-kind
+		 ((required &rest &aux)
+		  (push (find-legal-slot defstruct arg) slots-in-arglist))
+		 ((&optional &key)
+		  (let ((dsd (find-legal-slot defstruct arg)))
+		    (push dsd slots-in-arglist)
+		    (rplaca args (list arg (dsd-default dsd))))))))))
     
-    ;; Then make a list that can be used with a (list ...) or (vector ...).
+    ;; Then make a list that can be used with a (list ...) or (vector...).
     (let ((initial-cruft
 	   (if (dd-named defstruct)
 	       (make-list (1+ (dd-offset defstruct))
@@ -516,7 +546,8 @@
 ;;; desired.  This is only called for typed structures, since the default
 ;;; structure predicate is implemented as a closure. 
 
-(defun define-predicate (defstruct)
+
+		     **** END OF MERGE LOSSAGE ****(defun define-predicate (defstruct)
   (let ((name (dd-name defstruct))
 	(pred (dd-predicate defstruct)))
     (when (and pred (dd-named defstruct))
