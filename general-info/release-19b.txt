@@ -1,10 +1,10 @@
-========================== C M U C L  19 a =============================
+========================== C M U C L  19 b =============================
 
 [--- WORK IN PROGRESS --- DO NOT DISTRIBUTE ---]
 
-The CMUCL project is pleased to announce the release of CMUCL 19a.
+The CMUCL project is pleased to announce the release of CMUCL 19b.
 This is a major release which contains numerous enhancements and
-bugfixes from the 18e release.
+bugfixes from the 19a release.
 
 CMUCL is a free, high performance implementation of the Common Lisp
 programming language which runs on most major Unix platforms. It
@@ -19,6 +19,10 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
+      - SIMPLE-STREAM fixes:
+           o READ-SEQUENCE and WRITE-SEQUENCE for
+             signed-byte/unsigned-byte 8 streams.
+	   o Memory-mapped file streams.
 
   * Numerous ANSI compliance fixes:
       - CMUCL was computing the wrong value for some special functions
