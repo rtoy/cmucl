@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.57 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.58 1994/11/04 06:02:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1136,15 +1136,19 @@
   (makunbound '*initial-assembler-routines*)
   (makunbound '*initial-foreign-symbols*))
 
-(defun foreign-symbol-address (symbol)
+(defun foreign-symbol-address-aux (symbol)
   (multiple-value-bind
       (value found)
-      (gethash (vm:extern-alien-name symbol) *foreign-symbols* 0)
-    (unless found
-      (setq value (system:alternate-get-global-address symbol))
-      (when (zerop value)
-	    (error "Unknown foreign symbol: ~S" symbol)))
-    (int-sap value)))
+      (gethash symbol *foreign-symbols* 0)
+    (if found
+	value
+	(let ((value (system:alternate-get-global-address symbol)))
+	  (when (zerop value)
+	    (error "Unknown foreign symbol: ~S" symbol))
+	  value))))
+
+(defun foreign-symbol-address (symbol)
+  (int-sap (foreign-symbol-address-aux (vm:extern-alien-name symbol))))
 
 (define-fop (fop-foreign-fixup 147)
   (let* ((kind (pop-stack))
@@ -1152,12 +1156,9 @@
 	 (len (read-arg 1))
 	 (sym (make-string len)))
     (read-n-bytes *fasl-file* sym 0 len)
-    (multiple-value-bind
-	(value found)
-	(gethash sym *foreign-symbols* 0)
-      (unless found
-	(error "Unknown foreign symbol: ~S" sym))
-      (vm:fixup-code-object code-object (read-arg 4) value kind))
+    (vm:fixup-code-object code-object (read-arg 4)
+			  (foreign-symbol-address-aux sym)
+			  kind)
     code-object))
 
 (define-fop (fop-assembler-code 144)
