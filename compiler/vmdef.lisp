@@ -1532,7 +1532,11 @@
 	   (type (or operand-parse null) more-op) (string what))
   (unless (eq types :unspecified)
     (let ((num (+ (length ops) (if more-op 1 0))))
-      (unless (= (length types) num)
+      (unless (= (count-if-not #'(lambda (x)
+				   (and (consp x)
+					(eq (car x) :constant)))
+			       types)
+		 num)
 	(error "Expected ~D ~A type~P: ~S." num what types num)))
     (when more-op
       (let ((mtype (car (last types))))
