@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.6 1990/12/06 18:47:44 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.7 1990/12/12 00:01:16 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -16,6 +16,7 @@
 ;;; Author: Rob MacLachlan
 ;;; 
 (in-package "KERNEL")
+(export '(%unary-truncate %unary-round))
 
 (in-package "LISP")
 (export '(least-positive-normalized-short-float
@@ -639,6 +640,69 @@
   (frob %double-float double-float))
 
 
+#|
+These might be useful if we ever have a machine w/o float/integer conversion
+hardware.  For now, we'll use special ops that uninterruptibly frob the
+rounding modes & do ieee round-to-integer.
+
+;;; %UNARY-TRUNCATE-SINGLE-FLOAT/FIXNUM  --  Interface
+;;;
+;;;    The compiler compiles a call to this when we are doing %UNARY-TRUNCATE
+;;; and the result is known to be a fixnum.  We can avoid some generic
+;;; arithmetic in this case.
+;;;
+(defun %unary-truncate-single-float/fixnum (x)
+  (declare (single-float x) (values fixnum))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (let* ((bits (single-float-bits x))
+	   (exp (ldb vm:single-float-exponent-byte bits))
+	   (frac (logior (ldb vm:single-float-significand-byte bits)
+			 vm:single-float-hidden-bit))
+	   (shift (- exp vm:single-float-digits vm:single-float-bias)))
+      (when (> exp vm:single-float-normal-exponent-max)
+	(error 'floating-point-invalid :operator 'truncate
+	       :operands (list x)))
+      (if (<= shift (- vm:single-float-digits))
+	  0
+	  (let ((res (ash frac shift)))
+	    (declare (type (unsigned-byte 31) res)) 
+	    (if (minusp bits)
+		(- res)
+		res))))))
+
+
+;;; %UNARY-TRUNCATE-DOUBLE-FLOAT/FIXNUM  --  Interface
+;;;
+;;;    Double-float version of this operation (see above single op).
+;;;
+(defun %unary-truncate-double-float/fixnum (x)
+  (declare (double-float x) (values fixnum))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (let* ((hi-bits (double-float-high-bits x))
+	   (exp (ldb vm:double-float-exponent-byte hi-bits))
+	   (frac (logior (ldb vm:double-float-significand-byte hi-bits)
+			 vm:double-float-hidden-bit))
+	   (shift (- exp (- vm:double-float-digits vm:word-bits)
+		     vm:double-float-bias)))
+      (when (> exp vm:double-float-normal-exponent-max)
+	(error 'floating-point-invalid :operator 'truncate
+	       :operands (list x)))
+      (if (<= shift (- vm:word-bits vm:double-float-digits))
+	  0
+	  (let* ((res-hi (ash frac shift))
+		 (res (if (plusp shift)
+			  (logior res-hi
+				  (the fixnum
+				       (ash (double-float-low-bits x)
+					    (- shift vm:word-bits))))
+			  res-hi)))
+	    (declare (type (unsigned-byte 31) res-hi res))
+	    (if (minusp hi-bits)
+		(- res)
+		res))))))
+|#
+
+  
 ;;; %UNARY-TRUNCATE  --  Interface
 ;;;
 ;;;    This function is called when we are doing a truncate without any funky
@@ -646,14 +710,19 @@
 ;;; *not* return the second value of truncate, so it must be computed by the
 ;;; caller if needed.
 ;;;
+;;;    In the float case, we pick off small arguments so that compiler can use
+;;; special-case operations.  We use an exclusive test, since (due to round-off
+;;; error), (float most-positive-fixnum) may be greater than
+;;; most-positive-fixnum.
+;;;
 (defun %unary-truncate (number)
   (number-dispatch ((number real))
     ((integer) number)
-    ((ratio) (truncate (numerator number) (denominator number)))
+    ((ratio) (values (truncate (numerator number) (denominator number))))
     (((foreach single-float double-float))
-     (if (<= (float most-negative-fixnum number)
-	     number
-	     (float most-positive-fixnum number))
+     (if (< (float most-negative-fixnum number)
+	    number
+	    (float most-positive-fixnum number))
 	 (truly-the fixnum (%unary-truncate number))
 	 (multiple-value-bind (bits exp)
 			      (integer-decode-float number)
@@ -661,6 +730,39 @@
 	     (if (minusp number)
 		 (- res)
 		 res)))))))
+
+
+;;; %UNARY-ROUND  --  Interface
+;;;
+;;;    Similar to %UNARY-TRUNCATE, but rounds to the nearest integer.  If we
+;;; can't use the round primitive, then we do our own round-to-nearest on the
+;;; result of i-d-f.  [Note that this rounding will really only happen with
+;;; double floats, since the whole single-float fraction will fit in a fixnum,
+;;; so all single-floats larger than most-positive-fixnum can be precisely
+;;; represented by an integer.]
+;;;
+(defun %unary-round (number)
+  (number-dispatch ((number real))
+    ((integer) number)
+    ((ratio) (values (round (numerator number) (denominator number))))
+    (((foreach single-float double-float))
+     (if (< (float most-negative-fixnum number)
+	    number
+	    (float most-positive-fixnum number))
+	 (truly-the fixnum (%unary-round number))
+	 (multiple-value-bind (bits exp)
+			      (integer-decode-float number)
+	   (let* ((shifted (ash bits exp))
+		  (rounded (if (and (minusp exp)
+				    (oddp shifted)
+				    (eql (logand bits
+						 (lognot (ash -1 (- exp))))
+					 (ash 1 (- -1 exp))))
+			       (1+ shifted)
+			       shifted)))
+	     (if (minusp number)
+		 (- rounded)
+		 rounded)))))))
 
 
 (defun rational (x)
