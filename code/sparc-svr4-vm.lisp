@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.4 1997/02/19 01:41:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.5 2002/10/24 20:38:57 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -310,3 +310,19 @@
 		   (* (code-header-ref component code-code-size-slot)
 		      word-bytes)))
   nil)
+
+#+linkage-table
+(progn
+(defun lisp::foreign-symbol-address-aux (name flavor)
+  (let ((entry-num (lisp::register-foreign-linkage name flavor)))
+    (+ #.vm:target-foreign-linkage-space-start
+       (* entry-num vm:target-foreign-linkage-entry-size))))
+
+(defun lisp::find-foreign-symbol (addr)
+  (declare (type (unsigned-byte 32) addr))
+  (when (>= addr vm:target-foreign-linkage-space-start)
+    (let ((entry (/ (- addr vm:target-foreign-linkage-space-start)
+		    vm:target-foreign-linkage-entry-size)))
+      (when (< entry (lisp::foreign-linkage-symbols))
+	(lisp::foreign-linkage-entry entry)))))
+)

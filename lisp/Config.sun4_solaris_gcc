@@ -19,16 +19,16 @@ vpath %.S .:$(PATH1)
 #CC_V8PLUS = -xarch=v8plus
 #AS_V8PLUS = -Wa
 
-CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS)
+CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) -DLINKAGE_TABLE
 CC = gcc
 CPP = gcc -E
-CFLAGS = -g -O3 $(AS_V8PLUS)
+CFLAGS = -g $(AS_V8PLUS)
 
 # Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
 # Note that the sys/asm_linkage.h braindamage breaks make depend
 ASFLAGS = -g -traditional-cpp
 DEPEND_FLAGS = -traditional-cpp
-NM = ./solaris-nm
+NM = $(PATH1)/solaris-nm
 ASSEM_SRC = sparc-assem.S
 ARCH_SRC = sparc-arch.c
 

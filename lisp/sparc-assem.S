@@ -17,6 +17,11 @@
 #define _function_end_breakpoint_guts function_end_breakpoint_guts
 #define _call_into_c call_into_c
 #define _flush_icache flush_icache
+#ifdef LINKAGE_TABLE
+#define _resolve_linkage_tramp resolve_linkage_tramp
+#define	_lazy_resolve_linkage	lazy_resolve_linkage
+#define	_undefined_foreign_symbol_trap	undefined_foreign_symbol_trap
+#endif		
 #ifdef __STDC__
 #define FUNCDEF(x)	.type x, \#function
 #else
@@ -53,7 +58,7 @@
 #ifdef v8plus	
 #define FRAMESIZE (SA(WINDOWSIZE+4 + 6*8))
 #else	
-#define FRAMESIZE (SA(WINDOWSIZE+4))
+#define FRAMESIZE (SA(MINFRAME))
 #endif
         .seg    "text"
         .global _call_into_lisp
@@ -186,6 +191,7 @@ _call_into_c:
         store(reg_BSP,_current_binding_stack_pointer)
         store(reg_CSP,_current_control_stack_pointer)
         store(reg_CFP,_current_control_frame_pointer)
+
 	/* Use reg_CFP as a work register, and restore it */
 	andn	reg_ALLOC, 7, reg_CFP
         store(reg_CFP,_current_dynamic_space_free_pointer)
@@ -349,6 +355,69 @@ _flush_icache:
         nop
 	SET_SIZE(_flush_icache)
 
+#ifdef LINKAGE_TABLE
+/*
+ * Call into C code to resolve a linkage entry.
+ *
+ * We get here by Lisp calling call_into_c with an address of the
+ * desired function which is contained in the register reg_CFUNC (aka
+ * %i4, aka %r28).  This is the address of the entry in the linkage
+ * table, which is what we need to figure out what function we really
+ * wanted.
+ *
+ * Note that because we get here from call_into_c, all necessary live
+ * registers have been saved, including FP registers.  Hence, no need
+ * to save them.
+ */
+	.global _lazy_resolve_linkage
+	.global _resolve_linkage_tramp
+	FUNCDEF(_resolve_linkage_tramp)
+_resolve_linkage_tramp:
+	/*
+	 * At this point, all of the global %g registers have been
+	 * saved by call_into_c, so we can use them as temps.  %g2,
+	 * aka reg_NIL, aka null-tn is a good choice.  reg_L0 contains
+	 * the address of the jmpl instruction in the linkage jump
+	 * table.  (See sparc-arch.c.)
+	 */
+
+	mov	reg_L0, reg_NIL
+		
+	/* 
+	 * New stack frame so the %o regs become %i.  We can't touch
+	 * the original %o because they contain the parameters to the
+	 * function!
+	 */
+	save	%sp, -FRAMESIZE, %sp
+
+	/* %g2 tells where we came from in the linkage table */
+	call	_lazy_resolve_linkage
+	mov	reg_NIL, %o0		! in the delay slot
+
+	mov	%o0, reg_NIL
+	restore	%sp, FRAMESIZE, %sp
+
+	/* And away we go! */
+	jmp	reg_NIL
+	nop
+	
+	SET_SIZE(_resolve_linkage_tramp)						
+		
+	.global _undefined_foreign_symbol_trap
+	FUNCDEF(_undefined_foreign_symbol_trap)
+_undefined_foreign_symbol_trap:	
+	unimp	trap_Error
+	.byte	2	/* Number of argument bytes */
+	.byte	UNDEFINED_FOREIGN_SYMBOL_ERROR
+        /* Escape to create 16bit BE number from following two values */
+        .byte	254
+        /* SC_OFFSET(sc_DescriptorReg,NL0) NL0 = %o0 */
+	.byte	sc_NonDescriptorReg
+	.byte	0
+	.align	4
+					
+#endif
+											
 #ifndef SOLARIS
 
 /****************************************************************\

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.10 2000/10/27 19:32:03 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.11 2002/10/24 20:39:00 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -41,6 +41,25 @@
  * initialization.)
  *
  */
+
+#ifdef LINKAGE_TABLE
+/*
+ * This space start better match the value of
+ * target-foreign-linkage-space-start defined in sparc/parms.lisp!
+ *
+ * See the notes there!
+ */
+#define FOREIGN_LINKAGE_SPACE_START (0x0f800000)
+
+/*
+ * This allows for about 510K symbols (assuming each entry is 16 bytes
+ * long).  Hope that's enough!  Make sure this doesn't overlap the
+ * READ_ONLY_SPACE_START!
+ */
+#define FOREIGN_LINKAGE_SPACE_SIZE  (0x007f8000) /* 8 MB - 32 KB */
+#endif
+
+
 #define READ_ONLY_SPACE_START	(0x10000000)
 #define READ_ONLY_SPACE_SIZE	(0x07ff8000) /* 128 MB - 32 KB, 256 MB max */
   

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.35 2002/09/03 16:29:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.36 2002/10/24 20:38:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,9 +196,12 @@
 (defparameter target-read-only-space-start #x10000000)
 (defparameter target-static-space-start    #x28000000)
 (defparameter target-dynamic-space-start   #x40000000)
-(defparameter target-foreign-linkage-space-start #x0fc00000)
-(defconstant target-foreign-linkage-entry-size 8) ;In bytes.  Duh.
 
+;; This better match the value in sparc-validate.h!
+(defparameter target-foreign-linkage-space-start #x0f800000)
+;; This better agree with what sparc-arch.c thinks it is!  Right now,
+;; it's 4 instructions, so 16 bytes.
+(defconstant target-foreign-linkage-entry-size 16)
 
 
 ;;;; Other random constants.
@@ -273,6 +276,9 @@
     lisp::*free-interrupt-context-index*
     unix::*interrupts-enabled*
     unix::*interrupt-pending*
+
+    ;; Foreign linkage stuff
+    lisp::*linkage-table-data*
     ))
 
 (defparameter static-functions

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.48 2002/08/27 22:18:27 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.49 2002/10/24 20:38:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1954,8 +1954,12 @@
 (defun init-foreign-linkage ()
   (setf (fill-pointer *cold-linkage-table*) 0)
   (clrhash *cold-foreign-hash*)
-  ;; This has gotta be the first entry.
-  (cold-register-foreign-linkage "resolve_linkage_tramp" :code))
+  ;; This has gotta be the first entry.  This has to match what
+  ;; os_foreign_linkage_init does!
+  #+x86
+  (cold-register-foreign-linkage "resolve_linkage_tramp" :code)
+  #+sparc
+  (cold-register-foreign-linkage "call_into_c" :code))
 
 (defvar *cold-assembler-routines* nil)
 
@@ -2252,7 +2256,8 @@
 	    (test-tail "-TRAP" "trap_" 2)
 	    (test-tail "-SUBTYPE" "subtype_" 3)
 	    (test-head "TRACE-TABLE-" "tracetab_" 4)
-	    (test-tail "-SC-NUMBER" "sc_" 5)))))
+	    (test-tail "-SC-NUMBER" "sc_" 5)
+	    (test-head "TARGET-FOREIGN-" "" 6)))))
     (setf constants
 	  (sort constants
 		#'(lambda (const1 const2)

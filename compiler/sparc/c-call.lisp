@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.15 2001/01/23 04:40:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.16 2002/10/24 20:38:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,6 +190,7 @@
 	(c::give-up))))
 
 
+#-linkage-table
 (define-vop (foreign-symbol-address)
   (:translate foreign-symbol-address)
   (:policy :fast-safe)
@@ -201,6 +202,33 @@
   (:generator 2
     (inst li res (make-fixup (extern-alien-name foreign-symbol)
 			     :foreign))))
+
+(define-vop (foreign-symbol-code-address)
+  (:translate #+linkage-table foreign-symbol-code-address
+	      #-linkage-table foreign-symbol-address)
+  (:policy :fast-safe)
+  (:args)
+  (:arg-types (:constant simple-string))
+  (:info foreign-symbol)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:generator 2
+    (inst li res (make-fixup (extern-alien-name foreign-symbol)
+			     :foreign))))
+
+(define-vop (foreign-symbol-data-address)
+  (:translate foreign-symbol-data-address)
+  (:policy :fast-safe)
+  (:args)
+  (:arg-types (:constant simple-string))
+  (:info foreign-symbol)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:temporary (:scs (non-descriptor-reg)) addr)
+  (:generator 2
+    (inst li addr (make-fixup (extern-alien-name foreign-symbol)
+			      :foreign-data))
+    (loadw res addr)))
 
 (define-vop (call-out)
   (:args (function :scs (sap-reg) :target cfunc)

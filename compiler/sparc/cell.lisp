@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.20 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.21 2002/10/24 20:38:58 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,13 @@
       (inst cmp type function-header-type)
       (inst b :eq normal-fn)
       (inst move lip function)
-      (inst li lip (make-fixup (extern-alien-name "closure_tramp") :foreign))
+      ;; For the linkage-table stuff, we need to look up the address
+      ;; from the linkage table instead of using the address directly.
+      (inst li lip (make-fixup (extern-alien-name "closure_tramp")
+			       #-linkage-table :foreign
+			       #+linkage-table :foreign-data))
+      #+linkage-table
+      (loadw lip lip)
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
       (storew lip fdefn fdefn-raw-addr-slot other-pointer-type)
@@ -140,7 +146,13 @@
   (:results (result :scs (descriptor-reg)))
   (:generator 38
     (storew null-tn fdefn fdefn-function-slot other-pointer-type)
-    (inst li temp (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+    ;; For the linkage-table stuff, we need to look up the address
+    ;; from the linkage table instead of using the address directly.
+    (inst li temp (make-fixup (extern-alien-name "undefined_tramp")
+			      #-linkage-table :foreign
+			      #+linkage-table :foreign-data))
+    #+linkage-table
+    (loadw temp temp)
     (storew temp fdefn fdefn-raw-addr-slot other-pointer-type)
     (move result fdefn)))
 

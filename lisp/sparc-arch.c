@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.11 2002/05/02 21:09:33 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.12 2002/10/24 20:39:00 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -416,3 +416,139 @@ lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
 
     return call_into_lisp(function, args, 3);
 }
+
+#ifdef LINKAGE_TABLE
+
+/* This is mostly stolen from the x86 version, with adjustments for sparc */
+
+/*
+ * Linkage entry size is 16, because we need at least 3 instruction to
+ * implement a jump:
+ *
+ *      sethi %hi(addr), %g4
+ *      jmpl  [%g4 + %lo(addr)], %g5
+ *      nop
+ *
+ * The Sparc V9 ABI seems to use 8 words for its jump tables.  Maybe
+ * we should do the same?
+ */
+
+/*
+ * This had better match lisp::target-foreign-linkage-entry-size in
+ * sparc/parms.lisp!  Each entry is 4 instructions long, so 16 bytes.
+ */
+#ifndef LinkageEntrySize
+#define LinkageEntrySize (4*4)
+#endif
+
+
+/*
+ * Define the registers to use in the linkage jump table.  Can be the
+ * same.  This MUST be coordinated with resolve_linkage_tramp which
+ * needs to know the register used for LINKAGE_ADDR_REG.
+ *
+ * Some care must be exercised when choosing these.  It has to be a
+ * register that is not otherwise being used.  reg_L0 is a good
+ * choice.  call_into_c trashes reg_L0 without preserving it, so we
+ * can trash it in the linkage jump table.  For the linkage entries
+ * that call resolve_linkage_tramp, we can use reg_L0 too because
+ * resolve_linkage_tramp is always called from call_into_c.  (This is
+ * enforced by having new-genesis create an entry for call_into_c, so
+ * we never have to do a lookup for call_into_c.)
+ */
+#define LINKAGE_TEMP_REG        reg_L0
+#define LINKAGE_ADDR_REG        reg_L0
+
+/*
+ * Insert the necessary jump instructions at the given address.
+ * Return the address of the next word
+ */
+void* arch_make_jump_entry(void* reloc_addr, void *target_addr)
+{
+  
+  /*
+   * Make JMP to function entry.
+   *
+   * The instruction sequence is:
+   *
+   *        sethi %hi(addr), temp_reg
+   *        jmp   %temp_reg + %lo(addr), %addr_reg
+   *        nop
+   *        nop
+   *        
+   */
+  int* inst_ptr;
+  unsigned long hi;                   /* Top 22 bits of address */
+  unsigned long lo;                   /* Low 10 bits of address */
+  unsigned int inst;
+
+  inst_ptr = (int*) reloc_addr;
+
+  /*
+   * Split the target address into hi and lo parts for the sethi
+   * instruction.  hi is the top 22 bits.  lo is the low 10 bits.
+   */
+  hi = (unsigned long) target_addr;
+  lo = hi & 0x3ff;
+  hi >>= 10;
+
+  /*
+   * sethi %hi(addr), temp_reg
+   */
+      
+  inst = (0 << 30) | (LINKAGE_TEMP_REG << 25) | (4 << 22) | hi;
+  *inst_ptr++ = inst;
+
+  /*
+   * jmpl [temp_reg + %lo(addr)], addr_reg
+   */
+
+  inst = (2 << 30) | (LINKAGE_ADDR_REG << 25) | (0x38 << 19)
+    | (LINKAGE_TEMP_REG << 14) | (1 << 13) | lo;
+  *inst_ptr++ = inst;
+
+  /* nop (really sethi 0, %g0) */
+
+  inst = (0 << 30) | (0 << 25) | (4 << 22) | 0;
+      
+  *inst_ptr++ = inst;
+  *inst_ptr++ = inst;
+  
+  os_flush_icache(reloc_addr, (char*) inst_ptr - (char*) reloc_addr);
+  return reloc_addr;
+}
+
+void arch_make_linkage_entry(long linkage_entry, void *target_addr, long type)
+{
+  int *reloc_addr = (int *)(FOREIGN_LINKAGE_SPACE_START
+                            + linkage_entry * LinkageEntrySize);
+
+  if (type == 1)
+    {			/* code reference */
+      arch_make_jump_entry(reloc_addr, target_addr);
+    }
+  else if (type == 2)
+    {
+      *(unsigned long *)reloc_addr = (unsigned long)target_addr;
+    }
+}
+
+/* Make a the entry a jump to resolve_linkage_tramp. */
+
+extern void resolve_linkage_tramp(void);
+
+void arch_make_lazy_linkage(long linkage_entry)
+{
+  arch_make_linkage_entry(linkage_entry, (void*) resolve_linkage_tramp, 1);
+}
+
+/* Get linkage entry.  We're given the return address which should be
+   the address of the jmpl instruction (2nd word) of the linkage
+   entry.  Figure out which entry this address belong to. */
+
+long arch_linkage_entry(unsigned long retaddr)
+{
+  return (retaddr - (FOREIGN_LINKAGE_SPACE_START))
+    / LinkageEntrySize;
+}
+#endif /* LINKAGE_TABLE */

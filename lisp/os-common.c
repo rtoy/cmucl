@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.6 2002/08/28 13:29:25 pmai Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.7 2002/10/24 20:38:59 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -104,7 +104,11 @@ os_vm_address_t os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
 }
 
 #ifdef LINKAGE_TABLE
+
+/* These declarations are lies.  They actually take args, but are
+   never called by C.  Only by Lisp */
 extern void resolve_linkage_tramp(void);
+extern void call_into_c(void);
 
 /* In words */
 #define LINKAGE_DATA_ENTRY_SIZE 3
@@ -127,13 +131,29 @@ void os_foreign_linkage_init (void)
 	  = (struct vector *)PTR(data_vector->data[i]);
 	long type = fixnum_value(data_vector->data[i + 1]);
 	lispobj lib_list = data_vector->data[i + 2];
-	
+
+	/*
+         * Verify the "known" entries.  This had better match what
+         * init-foreign-linkage in new-genesis does!
+         */
 	if (i == 0) {
+#ifdef sparc
 	    if (type != 1 || strcmp((char *)symbol_name->data,
-				    "resolve_linkage_tramp")) {
+				    "call_into_c")) {
+                fprintf(stderr, "linkage_data is %s but expected call_into_c\n",
+                        (char*)symbol_name->data);
 		lose("First element of linkage_data is bogus.\n");
 	    }
-	    arch_make_linkage_entry(0, &resolve_linkage_tramp, 1);
+	    arch_make_linkage_entry(i, &call_into_c, 1);
+#else
+	    if (type != 1 || strcmp((char *)symbol_name->data,
+				    "resolve_linkage_tramp")) {
+                fprintf(stderr, "linkage_data is %s but expected resolve_linkage_tramp\n",
+                        (char*)symbol_name->data);
+		lose("First element of linkage_data is bogus.\n");
+	    }
+	    arch_make_linkage_entry(i, &resolve_linkage_tramp, 1);
+#endif
 	    continue;
 	}
 	if (type == 2 && lib_list == NIL) {
@@ -147,6 +167,7 @@ void os_foreign_linkage_init (void)
 	} else {
 	    arch_make_lazy_linkage(i / LINKAGE_DATA_ENTRY_SIZE);
 	}
+
     }
 #endif /* LINKAGE_TABLE */
 }
@@ -215,6 +236,9 @@ unsigned long os_link_one_symbol(long entry)
     type = fixnum_value(data_vector->data[table_index + 1]);
     target_addr = os_dlsym((char *)symbol_name->data,
 			   data_vector->data[table_index + 2]);
+    fprintf(stderr, "Looked up %s symbol %s at %lx\n",
+            type == 1 ? "code" : "data",
+            (char*) symbol_name->data, (unsigned long) target_addr);
     if (!target_addr) {
 	undefined_foreign_symbol_trap((lispobj)data_vector->data[table_index]);
     }

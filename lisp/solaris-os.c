@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.4 2000/12/05 03:03:48 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.5 2002/10/24 20:38:59 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -23,6 +23,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/param.h>
+
+#include <dlfcn.h>
+
 #define OS_PROTERR		SEGV_ACCERR
 #define OS_MAPERR		SEGV_MAPERR
 #define OS_HASERRNO(code)	((code)->si_errno != 0)
@@ -34,6 +37,9 @@
 #include "globals.h"
 /* To get memory map */
 #include "sparc-validate.h"
+
+/* For type_ListPointer and NIL */
+#include "internals.h"
 
 /* block size must be larger than the system page size */
 #define SPARSE_BLOCK_SIZE (1<<15)
@@ -447,3 +453,41 @@ void make_holes(void)
   os_protect(hole, HOLE_SIZE, 0);
 }
 
+/* Some symbols, most notably stat and lstat, don't appear at all in
+   the glibc .so files as a result of preprocessor and linker magic /
+   braindamage.  So, try falling back to a stub in linux-stubs.S that
+   will call the proper function if it's one of those. */
+
+static void *dlsym_fallback(void *handle, const char *name)
+{
+  fprintf(stderr, "dlsym_fallback name = %s\n", name);
+}
+
+void *os_dlsym(const char *sym_name, lispobj lib_list)
+{
+    static void *program_handle;
+    void *sym_addr = 0;
+
+    if (!program_handle)
+	program_handle = dlopen((void *)0, RTLD_LAZY | RTLD_GLOBAL);
+    if (lib_list != NIL) {
+	lispobj lib_list_head;
+
+	for (lib_list_head = lib_list;
+	     lib_list_head != NIL;
+	     lib_list_head = (CONS(lib_list_head))->cdr) {
+	    struct cons *lib_cons = CONS(CONS(lib_list_head)->car);
+	    struct sap *dlhandle = (struct sap *)PTR(lib_cons->car);
+
+	    sym_addr = dlsym((void *)dlhandle->pointer, sym_name);
+	    if (sym_addr)
+		return sym_addr;
+	}
+    }
+    sym_addr = dlsym(program_handle, sym_name);
+    if (!sym_addr && dlerror()) {
+	return dlsym_fallback(program_handle,sym_name);
+    } else {
+	return sym_addr;
+    }
+}
