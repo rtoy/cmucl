@@ -1,5 +1,27 @@
 ;;;; -*- Mode: Lisp ; Package: Interface -*-
 ;;;
+;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+;;; **********************************************************************
+;;;
+;;; Written by Michael Garland
+;;;
+;;; This file implements the methods used in graphically inspecting Lisp
+;;; objects.
+;;;
+;;; The inspector mechanism revolves around two generic functions:
+;;;      - INSPECTOR-PANE-TITLE which returns a string meant to be the
+;;; title of the inspection pane displaying the given object
+;;;      - DISPLAY-INSPECTOR-PANE which creates a window pane displaying
+;;; the relevant information about the given object
+;;;
+;;; You can add new display mechanisms by defining new methods for these
+;;; generic functions.  Specific functions for aiding in the construction
+;;; of inspection panes are given below.
 ;;;
 
 (in-package "INTERFACE")
@@ -14,6 +36,8 @@
 
 (defun destroy-pane-callback (widget call-data object)
   (declare (ignore widget call-data))
+  (setf *current-inspector-objects*
+	(delete object *current-inspector-objects*))
   (destroy-interface-pane object))
 
 (defun inspect-object-callback (widget call-data object)
@@ -101,6 +125,14 @@
 
 ;;;; Methods for constructing the title of inspection panes
 
+;;; INSPECTOR-PANE-TITLE -- Public
+;;;
+;;; This function takes a Lisp object and returns a string which is meant
+;;; to be the title of the inspection pane displaying the given object.
+
+;;; This particular method is a catch-all for the types which PCL does not
+;;; allow us to discriminate.
+;;;
 (defmethod inspector-pane-title (object)
   (typecase object
     (pcl::std-instance
@@ -144,6 +176,17 @@
 
 ;;;; Methods for displaying object inspection panes
 
+;;; WITH-INSPECTOR-PANE -- Public
+;;;
+;;; This macro is the primary tool for building inspection panes.  It
+;;; creates all the fundamental pieces of the display pane and then calls
+;;; the supplied body to create the rest.  A typical display method would
+;;; like something like:
+;;;    (defmethod display-inspector-pane ((x mytype))
+;;;      (with-inspector-pane (x)
+;;;        ... custom forms ...
+;;;      ))
+;;;
 (defmacro with-inspector-pane ((object) &body forms)
   `(multiple-value-bind
        (pane is-new)
@@ -158,7 +201,8 @@
 	      (obmenu (create-interface-menu
 		       menu-bar "Object"
 		       ,``(("Eval Expression" popup-eval-callback ,pane ,,object)
-			   ("Close Pane" destroy-pane-callback ,,object))))
+			   ("Close Pane" destroy-pane-callback ,,object)
+			   ("Close All Panes" close-all-callback))))
 	      (title (create-label-gadget
 		      over-form "inspectTitle"
 		      :label-string (inspector-pane-title ,object)
@@ -181,6 +225,14 @@
 	 (manage-children menu-bar title form)))
      (popup-interface-pane pane)))
 
+;;; DISPLAY-INSPECTOR-PANE -- Public
+;;;
+;;; This function takes an object and creates a graphical inspection pane
+;;; for displaying it.
+
+;;; This particular method is a catch all for the types which PCL won't
+;;; specialize on.
+;;;
 (defmethod display-inspector-pane (object)
   (typecase object
     (pcl::std-instance (display-clos-pane object))
@@ -480,6 +532,7 @@
     (with-motif-connection (connection)
       (verify-control-pane-displayed)
       (display-inspector-pane object)
+      (push object *current-inspector-objects*)
       (inspector-add-history-item object)))
   object)
 
