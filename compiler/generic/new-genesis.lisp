@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.22 1997/03/15 17:24:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23 1997/03/15 19:54:24 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1611,7 +1611,7 @@
 	    (setq line (string-trim '(#\Space #\Tab) line)))
 	  (let ((p1 (position-if #'whitespacep line :from-end nil))
 		(p2 (position-if #'whitespacep line :from-end t)))
-	    (if (not (and p1 p2))
+	    (if (not (and p1 p2 (< p1 p2)))
 		(warn "Ignoring malformed line ~s in ~a" line filename)
 		(multiple-value-bind
 		    (value name)
