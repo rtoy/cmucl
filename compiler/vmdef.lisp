@@ -130,9 +130,9 @@
 ;;; Define-Storage-Class  --  Public
 ;;;
 ;;;
-(defmacro define-storage-class (name number sb-name &key (element-size '1) 
-				     locations save-p alternate-scs
-				     constant-scs)
+(defmacro define-storage-class (name number sb-name &key (element-size '1)
+				     (alignment '1) locations save-p
+				     alternate-scs constant-scs)
   "Define-Storage-Class Name Number Storage-Base {Key Value}*
   Define a storage class Name that uses the named Storage-Base.  Number is a
   small, non-negative integer that is used as an alias.  The following
@@ -141,6 +141,10 @@
   :Element-Size Size
       The size of objects in this SC in whatever units the SB uses.  This
       defaults to 1.
+
+  :Alignment Size
+      The alignment restrictions for this SC.  TNs will only be allocated at
+      offsets that are an even multiple of this number.  Defaults to 1.
 
   :Locations (Location*)
       If the SB is :Finite, then this is a list of the offsets within the SB
@@ -198,6 +202,7 @@
 	 (let ((res (make-sc :name ',name :number ',number
 			     :sb (meta-sb-or-lose ',sb-name)
 			     :element-size ,element-size
+			     :alignment ,alignment
 			     :locations ',locations
 			     :save-p ',save-p
 			     :number-stack-p ,nstack-p
