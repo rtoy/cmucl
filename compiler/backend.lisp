@@ -14,7 +14,7 @@
 ;;;
 (in-package "C")
 
-(export '(def-vm-support-routine *backend* *target-backend*
+(export '(def-vm-support-routine *backend* *target-backend* *native-backend*
 	   backend-name backend-version backend-fasl-file-type
 	   backend-fasl-file-implementation backend-fasl-file-version
 	   backend-register-save-penalty backend-byte-order
