@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.16 1993/07/27 15:59:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.17 1994/02/12 12:46:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -985,34 +985,61 @@
 	  (< (pprint-dispatch-entry-priority e1)
 	     (pprint-dispatch-entry-priority e2)))))
 
+
+(macrolet ((frob (x)
+	     `(cons ',x #'(lambda (object) ,x))))
+  (defvar *precompiled-pprint-dispatch-funs*
+    (list (frob (typep object 'array))
+	  (frob (and (consp object)
+		     (and (typep (car object) 'symbol)
+			  (typep (car object) '(satisfies fboundp)))))
+	  (frob (typep object 'cons)))))
+
+
 (defun compute-test-fn (type)
-  (labels ((compute-test-expr (type object)
-	     (if (listp type)
-		 (case (car type)
-		   (cons
-		    (destructuring-bind
-			(&optional (car nil car-p) (cdr nil cdr-p))
-			(cdr type)
-		      `(and (consp ,object)
-			    ,@(when car-p
-				`(,(compute-test-expr car `(car ,object))))
-			    ,@(when cdr-p
-				`(,(compute-test-expr cdr `(cdr ,object)))))))
-		   (not
-		    (destructuring-bind (type) (cdr type)
-		      `(not ,(compute-test-expr type object))))
-		   (and
-		    `(and ,@(mapcar #'(lambda (type)
-					(compute-test-expr type object))
-				    (cdr type))))
-		   (or
-		    `(or ,@(mapcar #'(lambda (type)
-				       (compute-test-expr type object))
-				   (cdr type))))
-		   (t
-		    `(typep ,object ',type)))
-		 `(typep ,object ',type))))
-    (compile nil `(lambda (object) ,(compute-test-expr type 'object)))))
+  (let ((was-cons nil))
+    (labels ((compute-test-expr (type object)
+	       (if (listp type)
+		   (case (car type)
+		     (cons
+		      (setq was-cons t)
+		      (destructuring-bind
+			  (&optional (car nil car-p) (cdr nil cdr-p))
+			  (cdr type)
+			`(and (consp ,object)
+			      ,@(when car-p
+				  `(,(compute-test-expr
+				      car `(car ,object))))
+			      ,@(when cdr-p
+				  `(,(compute-test-expr
+				      cdr `(cdr ,object)))))))
+		     (not
+		      (destructuring-bind (type) (cdr type)
+			`(not ,(compute-test-expr type object))))
+		     (and
+		      `(and ,@(mapcar #'(lambda (type)
+					  (compute-test-expr type object))
+				      (cdr type))))
+		     (or
+		      `(or ,@(mapcar #'(lambda (type)
+					 (compute-test-expr type object))
+				     (cdr type))))
+		     (t
+		      `(typep ,object ',type)))
+		   `(typep ,object ',type))))
+      (let ((expr (compute-test-expr type 'object)))
+	(cond ((cdr (assoc expr *precompiled-pprint-dispatch-funs*
+			   :test #'equal)))
+	      ((fboundp 'compile)
+	       (compile nil `(lambda (object) ,expr)))
+	      (was-cons
+	       (warn "CONS PPRINT dispatch ignored w/o compiler loaded:~%  ~S"
+		     type)
+	       #'(lambda (object) (declare (ignore object)) nil))
+	      (t
+	       (let ((ttype (kernel:specifier-type type)))
+		 #'(lambda (object) (kernel:%typep object ttype)))))))))
+
 
 (defun copy-pprint-dispatch (&optional (table *print-pprint-dispatch*))
   (declare (type (or pprint-dispatch-table null) table))
@@ -1472,3 +1499,5 @@
   (setf *print-pprint-dispatch* (copy-pprint-dispatch nil))
   (setf *pretty-printer* #'output-pretty-object)
   (setf *print-pretty* t))
+
+(pprint-init)
