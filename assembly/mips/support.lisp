@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.2 1990/11/01 01:16:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.3 1990/11/01 01:22:07 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
 ;;;
 (in-package "C")
 
-(defun generate-call-sequence (name style vop temp nfp-save lra)
+(defun generate-call-sequence (name style vop)
   (ecase style
     (:raw
      (values
