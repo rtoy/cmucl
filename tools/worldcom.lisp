@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.51 1993/03/13 13:46:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.52 1993/05/12 15:59:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,7 @@
 	(declare (optimize (safety 2))))
        ((:and :external (:match "LIST"))
 	(declare (optimize (safety 1))))))
+(let ((*byte-compile-top-level* nil))
 
 ;;; these guys need to be first.
 (comf "target:code/struct") ; For structures.
@@ -218,5 +219,6 @@
   ;; We can't compile anything after macros, 'cause it breaks the running lisp.
   (comf "target:code/macros"))
 
+); let *byte-compile-top-level*
 
 ); with-compiler-log-file
