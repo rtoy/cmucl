@@ -1,6 +1,6 @@
 ;;; -*- Mode: CLtL -*-
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/timer-support.lisp,v 1.1 1994/10/27 17:44:22 ram Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/lisp/timer-support.lisp,v 1.2 1994/10/28 22:15:28 ram Exp $")
 
 ;;; timers-support.lisp --
 ;;; Extension to CMUCL Motif Interface. Adding missing call for
@@ -27,10 +27,9 @@
 
 (defstruct (timer (:print-function print-timer)
 		  (:constructor make-timer
-				callback-proc
-				&optional args
-				&aux (id (incf *timers-count*))
-				)
+				(callback-proc
+				 &optional args
+				 &aux (id (incf *timers-count*))))
 		  ;; &rest for 'args' would be nicer, but it would
 		  ;; mess up the actual interface functions.
 		  )
