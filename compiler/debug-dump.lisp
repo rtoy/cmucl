@@ -295,9 +295,8 @@
 		       (setf (debug-source-name res) name))
 		      (t
 		       (setf (debug-source-from res) name)
-		       (when (eq name :lisp)
-			 (setf (debug-source-name res)
-			       (aref (file-info-forms x) 0)))))
+		       (setf (debug-source-name res)
+			     (coerce (file-info-forms x) 'simple-vector))))
 		res))
 	  (source-info-files info)))
 
