@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.10 1992/09/07 15:33:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alloc.lisp,v 1.11 1993/08/12 17:31:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,8 +176,8 @@
     (let ((ltns (ir2-block-local-tns structure)))
       (dotimes (i local-tn-limit)
 	(setf (svref ltns i) nil)))
-    (clear-bit-vector (ir2-block-written structure))
-    (clear-bit-vector (ir2-block-live-in structure))
+    (clear-ltn-bit-vector (ir2-block-written structure))
+    (clear-ltn-bit-vector (ir2-block-live-in structure))
     (setf (ir2-block-global-tns structure) nil)
     (setf (ir2-block-%label structure) nil)
     (setf (ir2-block-locations structure) nil))
@@ -225,7 +225,7 @@
 	(setf (tn-local-conflicts structure)
 	      (make-array local-tn-limit :element-type 'bit
 			  :initial-element 0))
-	(clear-bit-vector (tn-local-conflicts structure)))
+	(clear-ltn-bit-vector (tn-local-conflicts structure)))
     
     (setf (tn-global-conflicts structure) nil)
     (setf (tn-current-conflict structure) nil)
@@ -241,7 +241,7 @@
   
   ((global-conflicts (kind tn block number)) global-conflicts-next
    ((setf (global-conflicts-block structure) *undefined*)
-    (clear-bit-vector (global-conflicts-conflicts structure))
+    (clear-ltn-bit-vector (global-conflicts-conflicts structure))
     (setf (global-conflicts-tn structure) *undefined*)
     (setf (global-conflicts-tn-next structure) nil))
    ((setf (global-conflicts-next structure) nil)

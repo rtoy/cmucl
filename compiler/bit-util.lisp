@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.4 1991/02/20 14:56:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/bit-util.lisp,v 1.5 1993/08/12 17:32:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,8 +27,23 @@
 ;;;
 (defun clear-bit-vector (vec)
   (declare (type simple-bit-vector vec))
-  (bit-xor vec vec t))
+  (do ((i vm:vector-data-offset (1+ i))
+       (end (+ vm:vector-data-offset
+	       (ash (+ (length vec) (1- vm:word-bits))
+		    (- (1- (integer-length vm:word-bits)))))))
+      ((= i end) vec)
+    (setf (kernel:%raw-bits vec i) 0)))
 
+(defmacro clear-ltn-bit-vector (vec)
+  (once-only ((n-vec vec))
+    (collect ((res))
+      (do ((i local-tn-limit (- i vm:word-bits))
+	   (word vm:vector-data-offset (1+ word)))
+	  ((<= i 0)
+	   (unless (zerop i)
+	     (error "local-tn-limit not a vm:word-bits multiple.")))
+	(res `(setf (kernel:%raw-bits ,n-vec ,word) 0)))
+      `(progn ,@(res) ,n-vec))))
 
 ;;; Set-Bit-Vector  --  Interface
 ;;;
