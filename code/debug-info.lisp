@@ -71,7 +71,7 @@
   (cond ((<= int 253)
 	 (vector-push-extend int vec))
 	(t
-	 (let ((32-p (<= int #xFFFF)))
+	 (let ((32-p (> int #xFFFF)))
 	   (vector-push-extend (if 32-p 255 254) vec)
 	   (vector-push-extend (ldb (byte 8 0) int) vec)
 	   (vector-push-extend (ldb (byte 8 8) int) vec)
@@ -139,13 +139,34 @@
 ;;;
 (defun write-packed-bit-vector (bits vec)
   (declare (type simple-bit-vector bits))
-  (let ((len (ash (length bits) -3))
+  (let ((len (length bits))
 	(start (fill-pointer vec)))
-    (dotimes (i len)
-      (vector-push-extend 0 vec))
-    (lisp::with-array-data ((data vec) (ig1) (ig2))
-      (declare (ignore ig1 ig2))
-      (%primitive byte-blt bits 0 data start (+ start len))))
+    (cond ((eq target-byte-order native-byte-order)
+	   (let ((bytes (ash len -3)))
+	     (dotimes (i bytes)
+	       (vector-push-extend 0 vec))
+	     (lisp::with-array-data ((data vec) (ig1) (ig2))
+	       (declare (ignore ig1 ig2))
+	       (%primitive byte-blt bits 0 data start (+ start bytes)))))
+	  (t
+	   (macrolet ((frob (initial step done)
+			`(let ((shift ,initial)
+			       (byte 0))
+			   (dotimes (i len)
+			     (let ((int (aref bits i)))
+			       (setq byte (logior byte (ash int shift)))
+			       (,step shift))
+			     (when ,done
+			       (vector-push-extend byte vec)
+			       (setq shift ,initial  byte 0)))
+			   (unless (= shift ,initial)
+			     (vector-push-extend byte vec)))))
+	     (ecase target-byte-order
+	       (:little-endian
+		(frob 0 incf (= shift 8)))
+	       (:big-endian
+		(frob 7 decf (minusp shift))))))))
+  
   (undefined-value))
 
 
@@ -281,7 +302,10 @@
   ;;
   ;; The earliest PC in this function at which the environment is properly
   ;; initialized (arguments moved from passing locations, etc.)
-  (start-pc nil :type unsigned-byte))
+  (start-pc nil :type index)
+  ;;
+  ;; The start of elsewhere code for this function (if any.)
+  (elsewhere-pc nil :type index))
 
 
 (defstruct debug-source
