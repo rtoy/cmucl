@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.19 2003/08/25 20:10:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.20 2003/09/05 23:03:36 gerd Exp $")
 
 (in-package "PCL")
 
@@ -83,7 +83,6 @@
   (standard-compute-effective-method gf combin applicable-methods))
 
 (defun standard-compute-effective-method (gf combin applicable-methods)
-  (declare (ignore combin))
   (collect ((before) (primary) (after) (around) (invalid))
     (labels ((lose (method why)
 	       (invalid-method-error
@@ -94,6 +93,7 @@
                  no qualifier at all.~@:>"
 		method why :around :before :after))
 	     (invalid-method (method why)
+	       (declare (special *in-precompute-effective-methods-p*))
 	       (if *in-precompute-effective-methods-p*
 		   (invalid method)
 		   (lose method why))))
@@ -129,7 +129,7 @@
 	     ;; checking as in CLHS 7.6.5 because we can't tell in
 	     ;; method functions if they are used as emfs only.  If they
 	     ;; are not used as emfs only, they should accept any keyword
-	     ;; argumests, per CLHS 7.6.4, for instance.
+	     ;; arguments, per CLHS 7.6.4, for instance.
 	     (let ((call-method `(call-method ,(first (primary))
 					      ,(rest (primary)))))
 	       (if (emfs-must-check-applicable-keywords-p gf)

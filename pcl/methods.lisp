@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.42 2003/08/27 09:02:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.43 2003/09/05 23:03:36 gerd Exp $")
 
 (in-package :pcl)
 
@@ -557,7 +557,7 @@
       (when (and (arg-info-valid-p (gf-arg-info gf))
 		 (not (null args))
 		 (or lambda-list-p (cddr args)))
-	  (update-dfun gf))))))
+	  (update-dfun gf)))))
 
 
 (defun compute-applicable-methods-function (gf arguments)
