@@ -448,7 +448,8 @@
 	  (let* ((2env (environment-info (lambda-environment fun)))
 		 (dfun (make-compiled-debug-function
 			:name (cond ((leaf-name fun))
-				    ((let ((ef (functional-entry-function fun)))
+				    ((let ((ef (functional-entry-function
+						fun)))
 				       (and ef (leaf-name ef))))
 				    (t
 				     (component-name component)))
@@ -457,8 +458,12 @@
 				    (ir2-environment-return-pc 2env))
 			:old-cont (tn-sc-offset
 				   (ir2-environment-old-cont 2env))
-			;; Not right...
-			:start-pc 0)))
+			:start-pc (label-location
+				   (ir2-environment-environment-start 2env))
+
+			:elsewhere-pc
+			(label-location
+			 (ir2-environment-elsewhere-start 2env)))))
 	    
 	    (when (>= level 1)
 	      (setf (compiled-debug-function-variables dfun)
