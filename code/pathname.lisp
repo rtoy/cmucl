@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.35 1998/12/29 17:55:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.36 1999/01/09 11:20:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,7 +63,7 @@
 		       #'(lambda (x) (logical-host-name (%pathname-host x))))
 		      (:unparse-directory #'unparse-logical-directory)
 		      (:unparse-file #'unparse-unix-file)
-		      (:unparse-enough #'identity)
+		      (:unparse-enough #'unparse-enough-namestring)
 		      (:customary-case :upper)))
   (name "" :type simple-base-string)
   (translations nil :type list)
@@ -1151,8 +1151,8 @@ a host-structure or string."
 ;;;    Called by TRANSLATE-PATHNAME on the directory components of its argument
 ;;; pathanames to produce the result directory component.  If any leaves the
 ;;; directory NIL, we return the source directory.  The :RELATIVE or :ABSOLUTE
-;;; is always taken from the source directory. If TO is :absolute, the result
-;;; will be :absolute
+;;; is taken from the source directory, except if TO is :ABSOLUTE, in which
+;;; case the result will be :ABSOLUTE.
 ;;;
 (defun translate-directories (source from to diddle-case)
   (if (not (and source to from))
@@ -1712,6 +1712,36 @@ a host-structure or string."
 		  (t (error "Invalid keyword: ~S" piece))))))
        (apply #'concatenate 'simple-string (strings))))))
 
+;;; UNPARSE-ENOUGH-NAMESTRING -- Internal
+;;;
+(defun unparse-enough-namestring (pathname defaults)
+  (let* ((path-dir (pathname-directory pathname))
+        (def-dir (pathname-directory defaults))
+        (enough-dir
+         ;; Go down the directory lists to see what matches.  What's
+         ;; left is what we want, more or less.
+         (cond ((and (eq (first path-dir) (first def-dir))
+                     (eq (first path-dir) :absolute))
+                ;; Both paths are :absolute, so find where the common
+                ;; parts end and return what's left
+                (do* ((p (rest path-dir) (rest p))
+                      (d (rest def-dir) (rest d)))
+                     ((or (endp p) (endp d)
+                          (not (equal (first p) (first d))))
+                      `(:relative ,@p))))
+               (t
+                ;; At least one path is :relative, so just return the
+                ;; original path.  If the original path is :relative,
+                ;; then that's the right one.  If PATH-DIR is
+                ;; :absolute, we want to return that except when
+                ;; DEF-DIR is :absolute, as handled above. so return
+                ;; the original directory.
+                path-dir))))
+    (make-pathname :host (pathname-host pathname)
+                  :directory enough-dir
+                  :name (pathname-name pathname)
+                  :type (pathname-type pathname)
+                  :version (pathname-version pathname))))
 
 ;;; UNPARSE-LOGICAL-NAMESTRING -- Internal
 ;;;
