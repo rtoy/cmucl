@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.25 2002/01/28 20:17:11 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.26 2002/05/06 18:02:05 pmai Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -231,11 +231,15 @@ D(timezone)
 D(altzone)
 D(daylight)
 D(tzname)
+#endif
+
+#if defined(SVR4) || defined(__OpenBSD__)
 F(dlopen)
 F(dlsym)
 F(dlclose)
 F(dlerror)
 #endif
+
 #if !defined (SOLARIS) ||  defined(SOLARIS25)
 F(getwd)
 #endif

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.19 2002/03/13 08:01:58 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.20 2002/05/06 18:02:05 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -473,8 +473,12 @@
 ;;;
 (defun extern-alien-name (name)
   (declare (type simple-string name))
+  #+(and bsd (not elf))
+  (concatenate 'string "_" name)
+  #-(and bsd (not elf))
   name)
 
+#+(or linux (and freebsd elf))
 (defun lisp::foreign-symbol-address-aux (name)
   (multiple-value-bind (value found)
       (gethash name lisp::*foreign-symbols* 0)
@@ -482,9 +486,7 @@
 	value
 	(multiple-value-bind (value found)
 	    (gethash
-	     (concatenate 'string #+(or linux (and freebsd elf)) "PVE_stub_"
-			  #+(and bsd (not elf)) "_"
-			  name)
+	     (concatenate 'string "PVE_stub_" name)
 	     lisp::*foreign-symbols* 0)
 	  (if found
 	      value

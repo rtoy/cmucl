@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.39 2002/03/15 00:37:32 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.40 2002/05/06 18:02:04 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 (defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
-#-(or linux irix)
+#-(or openbsd linux irix)
 (defvar *foreign-segment-free-pointer* foreign-segment-start)
 
 (defun pick-temporary-file-name (&optional (base "/tmp/tmp~D~C"))
@@ -57,7 +57,7 @@
 		(t
 		 (incf code))))))))
 
-#+(or OpenBSD (and FreeBSD (not elf)) (and sparc (not svr4)))
+#+(or (and FreeBSD (not elf)) (and sparc (not svr4)))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -69,7 +69,7 @@
     (trsize c-call:unsigned-long)
     (drsize c-call:unsigned-long)))
 
-#-(or linux svr4)
+#-(or OpenBSD linux svr4)
 (defun allocate-space-in-foreign-segment (bytes)
   (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
@@ -279,8 +279,7 @@ to skip undefined symbols which don't have an address."
 ;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
 ;;; for correct file format so it may croak if ld fails to produce the
 ;;; expected results. It is probably good enough for now.
-;;; prm- We assume this works for OpenBSD as well, needs testing...
-#+(or OpenBSD (and FreeBSD (not ELF)) (and sparc (not svr4)))
+#+(or (and FreeBSD (not ELF)) (and sparc (not svr4)))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -485,7 +484,7 @@ to skip undefined symbols which don't have an address."
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris irix NetBSD (and FreeBSD elf))
+#-(or OpenBSD linux solaris irix NetBSD (and FreeBSD elf))
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -505,7 +504,7 @@ to skip undefined symbols which don't have an address."
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
-#-(or linux irix solaris)
+#-(or OpenBSD linux irix solaris)
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
@@ -591,13 +590,13 @@ to skip undefined symbols which don't have an address."
 
 (export '(alternate-get-global-address))
 
-#-(or solaris linux irix)
+#-(or OpenBSD linux solaris irix)
 (defun alternate-get-global-address (symbol)
   (declare (type simple-string symbol)
 	   (ignore symbol))
   0)
 
-#+(or linux solaris irix FreeBSD4)
+#+(or OpenBSD linux solaris irix FreeBSD4)
 (progn
 
 (defconstant rtld-lazy 1
@@ -622,7 +621,7 @@ to skip undefined symbols which don't have an address."
 
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
-  #+(or linux irix FreeBSD4) "/usr/bin/ld")
+  #+(or OpenBSD linux irix FreeBSD4) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
   (file c-call:c-string) (mode c-call:int))
@@ -695,11 +694,12 @@ to skip undefined symbols which don't have an address."
     (let ((proc (ext:run-program
 		 *dso-linker*
 		 (list*
-		        #+(or solaris linux FreeBSD4) "-G" #+irix "-shared"
+		        #+(or solaris linux FreeBSD4) "-G"
+			#+(or OpenBSD irix) "-shared"
 			"-o"
 			output-file
 			;; Cause all specified libs to be loaded in full
-			#+(or linux FreeBSD4) "--whole-archive"
+			#+(or OpenBSD linux FreeBSD4) "--whole-archive"
 			#+solaris "-z" #+solaris "allextract"
 			(append (mapcar
 				 #'(lambda (name)
@@ -715,7 +715,8 @@ to skip undefined symbols which don't have an address."
 				     files))
 				;; Return to default ld behaviour for libs
 				(list
-				 #+(or linux FreeBSD4) "--no-whole-archive"
+				 #+(or OpenBSD linux FreeBSD4)
+				 "--no-whole-archive"
 				 #+solaris "-z" #+solaris "defaultextract")
 				libraries))
 		 :env env
