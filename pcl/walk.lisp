@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.19 2000/11/15 19:07:31 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.20 2000/11/16 15:47:40 pw Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -160,6 +160,8 @@
 							,functions
 							,macros)))
      ,@body))
+
+(defvar *key-to-walker-environment*) ; Initialized below.
 
 (defun with-augmented-environment-internal (env functions macros)
   ;; Note: In order to record the correct function definition, we would
