@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.17 1993/08/06 14:03:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.18 1993/08/11 16:31:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,6 +204,7 @@
 
 (defvar *gensym-counter* 0
   "Counter for generating unique GENSYM symbols.")
+(declaim (type unsigned-byte *gensym-counter*))
 
 (defun gensym (&optional thing)
   "Creates a new uninterned symbol whose name is a prefix string (defaults
@@ -211,18 +212,24 @@
   alter the prefix if it is a string, or the decimal number if it is a
   number, of this symbol.  The number, defaultly *gensym-counter*, is
   incremented by each call to GENSYM."
+  (let ((old *gensym-counter*))
+    (let ((new (etypecase old
+		 (index (1+ old))
+		 (unsigned-byte (1+ old)))))
+      (declare (optimize (speed 3) (safety 0)))
+      (setq *gensym-counter* new)
   (multiple-value-bind
       (prefix int)
       (etypecase thing
-	(null (values "G" (incf *gensym-counter*)))
-	(simple-string (values thing (incf *gensym-counter*)))
+	(null (values "G" new))
+	(simple-string (values thing new))
 	(fixnum (values "G" thing))
-	(string (values (coerce thing 'simple-string)
-			(incf *gensym-counter*))))
+	(string (values (coerce thing 'simple-string) new)))
     (declare (simple-string prefix) (fixnum int))
     (make-symbol
-     (concatenate 'simple-string prefix 
-		  (quick-integer-to-string int)))))
+     (concatenate 'simple-string prefix
+		  (the simple-string
+		       (quick-integer-to-string int))))))))
 
 (defvar *gentemp-counter* 0)
 (declaim (type index *gentemp-counter*))
