@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.27 2000/02/24 14:38:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.28 2000/12/05 03:06:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -825,7 +825,7 @@
 ;; taddcctv is deprecated on the Sparc V9.  Use taddcc and bpvs or
 ;; taddcc and trap to get a similar effect.  (Requires changing the C
 ;; code though!)
-(define-f3-inst taddcctv #b10 #b100010 :writes :psr)
+;;(define-f3-inst taddcctv #b10 #b100010 :writes :psr)
 
 (define-f3-inst sub #b10 #b000100)
 (define-f3-inst subcc #b10 #b010100 :writes :psr)
@@ -836,7 +836,7 @@
 ;; tsubcctv is deprecated on the Sparc V9.  Use tsubcc and bpvs or
 ;; tsubcc and trap to get a similar effect.  (Requires changing the C
 ;; code though!)
-(define-f3-inst tsubcctv #b10 #b100011 :writes :psr)
+;;(define-f3-inst tsubcctv #b10 #b100011 :writes :psr)
 
 (define-f3-inst mulscc #b10 #b100100 :reads :y :writes (:psr :y))
 (define-f3-inst and #b10 #b000001)
@@ -1152,11 +1152,15 @@
   (:emitter
    (emit-relative-branch-integer segment 1 #b001 cond-or-target target (or cc :icc) (or pred :pt))))
 
+;; This doesn't cover all of the possible formats for the trap
+;; instruction.  We really only want a trap with a immediate trap
+;; value.  Also, the Sparc Compliance Definition 2.4.1 says only trap
+;; numbers 16-31 are allowed for user code.  All other trap numbers
+;; have other uses.  The restriction on target will prevent us from
+;; using bad trap numbers by mistake.
 (define-instruction t (segment condition target)
   (:declare (type branch-condition condition)
-	    (type #-sparc-v9 (or (signed-byte 13) (unsigned-byte 13))
-		  #+sparc-v9 (or (signed-byte 7) (unsigned-byte 7))
-		  target))
+	    (type (integer 16 31) target))
   (:printer format-3-immed ((op #b10)
                             (rd nil :type 'branch-condition)
                             (op3 #b111010)
