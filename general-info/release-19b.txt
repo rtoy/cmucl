@@ -158,6 +158,9 @@ New in this release:
         double-float array.
       - COUNT for bit arrays was sometimes failing to include the
         count from the last 32-bits of the array.
+      - The default heap size was causing CMUCL to fail on Solaris
+        10.  Change the default so this doesn't happen.  (The real
+        cause is unknown.)
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
