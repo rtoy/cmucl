@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.23 1991/07/08 16:30:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.24 1992/05/21 22:50:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,7 +232,7 @@
 (defconstant compiled-code-location-kind-byte (byte 3 0))
 (defconstant compiled-code-location-kinds
   '#(:unknown-return :known-return :internal-error :non-local-exit
-		     :block-start :call-site :single-value-return))
+     :block-start :call-site :single-value-return :non-local-entry))
 
 
 
