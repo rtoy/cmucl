@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.18 1993/05/17 07:52:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.19 1993/08/06 13:14:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,29 +85,81 @@
   '(setf (car (nthcdr i s)) v))
 
 
-(deftransform member ((e l &key (test #'eql)) * * :node node :when :both)
-  (unless (constant-continuation-p l) (give-up))
-  
-  (let ((val (continuation-value l)))
-    (unless (policy node
-		    (or (= speed 3)
-			(and (>= speed space)
-			     (<= (length val) 5))))
-      (give-up))
+(dolist (name '(member memq))
+  (deftransform name ((e l &key (test #'eql)) '* '* :node node :when :both
+		      :eval-name t)
+    (unless (constant-continuation-p l) (give-up))
     
-    (labels ((frob (els)
-	       (if els
-		   `(if (funcall test e ',(car els))
-			',els
-			,(frob (cdr els)))
-		   'nil)))
-      (frob val))))
+    (let ((val (continuation-value l)))
+      (unless (policy node
+		      (or (= speed 3)
+			  (and (>= speed space)
+			       (<= (length val) 5))))
+	(give-up))
+      
+      (labels ((frob (els)
+		 (if els
+		     `(if (funcall test e ',(car els))
+			  ',els
+			  ,(frob (cdr els)))
+		     'nil)))
+	(frob val)))))
+
+(dolist (x '((delete delq)
+	     (assoc assq)
+	     (member memq)))
+  (destructuring-bind (fun eq-fun) x
+    (deftransform fun ((item list &key test) '(t list &rest t) '*
+			:eval-name t)
+      "convert to EQ test"
+      (cond (test
+	     (unless (continuation-function-is test '(eq))
+	       (give-up)))
+	    ((types-intersect (continuation-type item)
+			      (specifier-type 'number))
+	     (give-up "Item might be a number")))
+      `(,eq-fun item list))))
+
+(deftransform delete-if ((pred list) (t list))
+  "inline expand"
+  '(do ((x list (cdr x))
+	(splice '()))
+       ((endp x) list)
+     (cond ((funcall pred (car x))
+	    (if (null splice) 
+		(setq list (cdr x))
+		(rplacd splice (cdr x))))
+	   (T (setq splice x)))))
+
+(deftransform fill ((seq item &key (start 0) (end (length seq)))
+		    (simple-array t &key (:start t) (:end index)))
+  "open code"
+  '(do ((i start (1+ i)))
+       ((= i end) seq)
+     (declare (type index i))
+     (setf (aref seq i) item)))
+
+(deftransform position ((item list &key (test #'eql)) (t list))
+  "open code"
+  '(do ((i 0 (1+ i))
+	(l list (cdr l)))
+       ((endp l) nil)
+     (declare (type index i))
+     (when (funcall test item (car l)) (return i))))
+
+(deftransform position ((item vec &key (test #'eql) (start 0)
+			      (end (length seq)))
+			(t simple-array &key (:start t) (:end index)))
+  "open code"
+  '(do ((i start (1+ i)))
+       ((= i end) nil)
+     (declare (type index i))
+     (when (funcall test item (aref vec i)) (return i))))
 
 ;;; Names of predicates that compute the same value as CHAR= when applied to
 ;;; characters.
 ;;; 
 (defconstant char=-functions '(eql equal char=))
-
 
 (deftransform search ((string1 string2 &key (start1 0) end1 (start2 0) end2
 			       test)
