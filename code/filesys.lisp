@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.35 1993/08/04 10:54:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.36 1993/08/04 13:33:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -529,7 +529,7 @@
 	   (%enumerate-directories (concatenate 'string head piece "/")
 				   (cdr tail) pathname verify-existance
 				   function))
-	  (pattern
+	  ((or pattern (member :wild :wild-inferiors))
 	   (let ((dir (unix:open-dir head)))
 	     (when dir
 	       (unwind-protect
@@ -555,9 +555,9 @@
       (%enumerate-files head pathname verify-existance function)))
 
 (defun %enumerate-files (directory pathname verify-existance function)
-  (let ((name (pathname-name pathname))
-	(type (pathname-type pathname))
-	(version (pathname-version pathname)))
+  (let ((name (%pathname-name pathname))
+	(type (%pathname-type pathname))
+	(version (%pathname-version pathname)))
     (cond ((member name '(nil :unspecific))
 	   (when (or (not verify-existance)
 		     (unix:unix-file-kind directory))
