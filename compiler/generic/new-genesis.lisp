@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.51 2003/02/01 19:47:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.52 2003/02/16 15:41:03 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1944,7 +1944,7 @@
 (defvar *cold-linkage-table* (make-array 8192 :adjustable t :fill-pointer 0))
 (defvar *cold-foreign-hash* (make-hash-table :test #'equal))
 
-
+#+linkage-table
 (defun cold-register-foreign-linkage (sym type)
   (let ((entry-num (register-foreign-linkage sym
 					     type
