@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.4 1993/11/12 20:08:22 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.5 2003/07/19 14:10:16 emarsden Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -244,7 +244,7 @@ os_zero(os_vm_address_t addr,os_vm_size_t length)
     os_vm_size_t block_size;
     int i;
 
-#ifdef DEBUG
+#ifdef PRINTNOISE
     fprintf(stderr,"os_zero: addr: 0x%08x, len: 0x%08x, end: 0x%X\n",addr,
 	    length,addr+length);
 #endif

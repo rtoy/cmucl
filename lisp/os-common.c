@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.11 2003/05/30 01:07:20 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.12 2003/07/19 14:10:16 emarsden Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -28,7 +28,7 @@ os_vm_size_t length;
     os_vm_address_t block_start;
     os_vm_size_t block_size;
 
-#ifdef DEBUG
+#ifdef PRINTNOISE
     fprintf(stderr,";;; os_zero: addr: 0x%08x, len: 0x%08x\n",addr,length);
 #endif
 

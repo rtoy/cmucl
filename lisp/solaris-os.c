@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.7 2003/05/29 22:03:01 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.8 2003/07/19 14:10:16 emarsden Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -16,8 +16,9 @@
 #define DEBUG
 
 #include <stdio.h>
-
+#include <stdlib.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <sys/file.h>
 
 #include <unistd.h>

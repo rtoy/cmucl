@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.20 2002/05/02 21:10:53 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.21 2003/07/19 14:10:16 emarsden Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -40,7 +40,7 @@ static void scan_weak_pointers(void);
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
 
-#if 0
+#if DEBUG
 #define gc_assert(ex) do { \
 	if (!(ex)) gc_abort(); \
 } while (0)
@@ -2254,7 +2254,12 @@ void set_auto_gc_trigger(os_vm_size_t dynamic_usage)
     os_protect(addr, length, 0);
 #endif
 
-    current_auto_gc_trigger = (lispobj *)addr;
+    current_auto_gc_trigger = (lispobj *) addr;
+
+#ifdef PRINTNOISE
+    fprintf (stderr, "current_auto_gc_trigger set to %p\n", current_auto_gc_trigger);
+#endif
+
 }
 
 void clear_auto_gc_trigger(void)

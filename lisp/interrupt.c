@@ -1,15 +1,12 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.29 2003/05/30 01:07:20 toy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.30 2003/07/19 14:10:16 emarsden Exp $ */
 
 /* Interrupt handing magic. */
 
 #include <stdio.h>
-
+#include <unistd.h>
+#include <stdlib.h>
 #include <signal.h>
-#ifdef mach
-#ifdef mips
-#include <mips/cpu.h>
-#endif
-#endif
+#include <assert.h>
 
 #include "lisp.h"
 #include "arch.h"
@@ -447,13 +444,18 @@ maybe_now_maybe_later(HANDLER_ARGS)
 #ifndef INTERNAL_GC_TRIGGER
 static boolean gc_trigger_hit(HANDLER_ARGS)
 {
-    if (current_auto_gc_trigger == NULL)
+    if (current_auto_gc_trigger == NULL) {
 	return FALSE;
-    else{
+    } else {
 	lispobj *badaddr=(lispobj *)arch_get_bad_addr(signal, code, context);
 
+#ifdef PRINTNOISE
+        fprintf (stderr, "gc_trigger_hit: badaddr=%p, current_auto_gc_trigger=%p, limit=%p\n",
+                 badaddr, current_auto_gc_trigger, 
+                 current_dynamic_space + dynamic_space_size);
+#endif
 	return (badaddr >= current_auto_gc_trigger &&
-		badaddr < current_dynamic_space + dynamic_space_size);
+		(unsigned long) badaddr < (unsigned long) current_dynamic_space + (unsigned long) dynamic_space_size);
     }
 }
 #endif

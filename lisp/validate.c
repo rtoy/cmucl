@@ -1,14 +1,16 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.11 2003/03/23 21:23:41 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/validate.c,v 1.12 2003/07/19 14:10:16 emarsden Exp $
  *
  * Memory Validation
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include "lisp.h"
 #include "os.h"
 #include "globals.h"
 #include "validate.h"
+#include "internals.h"
 
 static void
 ensure_space(lispobj *start, size_t size)
