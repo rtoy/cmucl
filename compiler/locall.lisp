@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.18 1991/04/20 14:12:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.19 1991/07/29 16:02:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -271,13 +271,18 @@
   (declare (type component component))
   (loop
     (unless (component-new-functions component) (return))
-    (let ((fun (pop (component-new-functions component))))
-      (unless (eq (functional-kind fun) :deleted)
-	(when (lambda-p fun)
-	  (push fun (component-lambdas component)))
-	(local-call-analyze-1 fun)
-	(when (lambda-p fun)
-	  (maybe-let-convert fun)))))
+    (let* ((fun (pop (component-new-functions component)))
+	   (kind (functional-kind fun)))
+      (cond ((eq kind :deleted))
+	    ((and (null (leaf-refs fun)) (eq kind nil)
+		  (not (functional-entry-function fun)))
+	     (delete-functional fun))
+	    (t
+	     (when (lambda-p fun)
+	       (push fun (component-lambdas component)))
+	     (local-call-analyze-1 fun)
+	     (when (lambda-p fun)
+	       (maybe-let-convert fun))))))
   
   (undefined-value))
 
