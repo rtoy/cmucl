@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.35 1999/02/25 13:03:11 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.36 2000/06/18 15:45:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,6 +83,21 @@
   ;; AList of random options that are associated with the lexical
   ;; environment.  They can be established with COMPILER-OPTION-BIND.
   (options nil :type list))
+
+
+;;; A Cont-Ref represents a reference to a continuation.
+;;;
+;;; Note this is somewhat of a hack to handle continuation substitution and
+;;; correct references to continuations within the lexenv.
+;;;
+(defstruct (cont-ref
+	    (:print-function %print-cont-ref))
+  ;;
+  ;; The continuation referenced.
+  (cont (required-argument))) ; :type continuation))
+
+(defprinter cont-ref
+  cont)
 
 
 ;;; The front-end data structure (IR1) is composed of nodes and continuations.
@@ -166,6 +181,10 @@
   ;; continuations.  In a :Block-Start contiuation, the Block's Start-Uses
   ;; indicate whether NIL means no uses or more than one use.
   (use nil :type (or node null))
+  ;;
+  ;; Other references to this continuation that must be substituted when this
+  ;; continuation is substituted. This is a list of cont-ref structures.
+  (refs nil :type list)
   ;;
   ;; Basic block this continuation is in.  This is null only in :Deleted and
   ;; :Unused continuations.  Note that blocks that are unreachable but still in
