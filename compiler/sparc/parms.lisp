@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.30 2000/12/05 03:07:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.31 2001/05/17 20:42:41 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,8 +51,11 @@
 
 ;;;; Machine Architecture parameters:
 
-(export '(word-bits byte-bits word-shift word-bytes float-sign-shift
+(export '(word-bits byte-bits word-shift word-bytes 
+	  fixnum-tag-bits fixnum-tag-mask positive-fixnum-bits
 
+	  float-sign-shift
+	  
 	  single-float-bias single-float-exponent-byte
 	  single-float-significand-byte single-float-normal-exponent-min
 	  single-float-normal-exponent-max single-float-hidden-bit
@@ -88,6 +91,14 @@
 (defconstant word-bytes (/ word-bits byte-bits)
   "Number of bytes in a word.")
 
+(defconstant fixnum-tag-bits 2
+  "Number of tag bits used for a fixnum")
+
+(defconstant fixnum-tag-mask (1- (ash 1 fixnum-tag-bits))
+  "Mask to get the fixnum tag")
+
+(defconstant positive-fixnum-bits (- word-bits fixnum-tag-bits 1)
+  "Maximum number of bits in a positive fixnum")
 
 (defconstant float-sign-shift 31)
 
