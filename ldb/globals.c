@@ -1,6 +1,8 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.4 1990/09/21 05:56:31 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.5 1990/10/13 04:49:57 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
+
+#include <stdio.h>
 
 #include "lisp.h"
 #include "globals.h"
@@ -27,6 +29,7 @@ lispobj *binding_stack;
 
 lispobj *current_dynamic_space;
 lispobj *current_dynamic_space_free_pointer;
+lispobj *current_auto_gc_trigger;
 
 globals_init()
 {
@@ -37,6 +40,9 @@ globals_init()
 	/* Get the current value of GP. */
 	saved_global_pointer = current_global_pointer();
 #endif
+
+        /* No GC trigger yet */
+        current_auto_gc_trigger = NULL;
 
 	/* Set foreign function call active. */
 	foreign_function_call_active = 1;

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.4 1990/09/21 05:56:46 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.h,v 1.5 1990/10/13 04:49:59 wlott Exp $ */
 
 #if !defined(_INCLUDE_GLOBALS_H_)
 #define _INCLUDED_GLOBALS_H_
@@ -29,6 +29,7 @@ extern lispobj *binding_stack;
 
 extern lispobj *current_dynamic_space;
 extern lispobj *current_dynamic_space_free_pointer;
+extern lispobj *current_auto_gc_trigger;
 
 #else
 
