@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.46 2002/10/15 21:23:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.47 2003/11/03 12:55:45 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -194,8 +194,8 @@
 
 (deftransform subseq ((string start &optional (end nil))
 		      (simple-string t &optional t))
-  '(let* ((length (length string))
-	  (end (if end (min end length) length))
+  '(let* ((len (length string))
+	  (end (if end (min end len) len))
 	  (start (min start end))
 	  (size (- end start))
 	  (result (make-string size)))
@@ -211,14 +211,14 @@
 
 
 (deftransform copy-seq ((seq) (simple-string))
-  '(let* ((length (length seq))
-	  (res (make-string length)))
+  '(let* ((len (length seq))
+	  (res (make-string len)))
      (declare (optimize (safety 0)))
      (bit-bash-copy seq
 		    vector-data-bit-offset
 		    res
 		    vector-data-bit-offset
-		    (the index (* length vm:byte-bits)))
+		    (the index (* len vm:byte-bits)))
      res))
 
 
