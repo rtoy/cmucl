@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.53 1993/01/17 20:37:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.53.1.1 1993/02/10 12:48:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,6 +92,15 @@
 
 (defknown (eq eql) (t t) boolean (movable foldable flushable))
 (defknown (equal equalp) (t t) boolean (foldable flushable recursive))
+
+
+;;;; Classes:
+
+(deftype name-for-class () 't)
+(defknown class-name (class) name-for-class (flushable))
+(defknown find-class (name-for-class &optional t) (or class null) ())
+(defknown class-of (t) class (flushable))
+(defknown layout-of (t) layout (flushable))
 
 
 ;;;; In the "Control Structure" chapter:
