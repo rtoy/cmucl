@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.42 1992/03/10 15:56:59 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.43 1992/03/10 18:32:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 	  debug-variable-id debug-variable-value debug-variable-validity
 	  debug-variable-valid-value debug-variable debug-variable-p
 
-	  top-frame frame-down frame-up frame-debug-function
+	  top-frame frame-down frame-up flush-frames-above frame-debug-function
 	  frame-code-location eval-in-frame return-from-frame frame-catches
 	  frame-number frame frame-p
 
@@ -873,6 +873,17 @@
 					       vm:word-bytes))
 			    pc nil)
      nil)))
+
+;;; FLUSH-FRAMES-ABOVE -- public.
+;;; 
+(defun flush-frames-above (frame)
+  "Flush all of the frames above FRAME, and renumber all the frames below
+   FRAME."
+  (setf (frame-up frame) nil)
+  (do ((number 0 (1+ number))
+       (frame frame (frame-%down frame)))
+      ((not (frame-p frame)))
+    (setf (frame-number frame) number)))
 
 ;;; FRAME-DOWN -- Public.
 ;;;
