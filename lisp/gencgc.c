@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.35 2003/09/13 14:21:30 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.36 2003/09/15 14:28:18 gerd Exp $
  *
  */
 
@@ -6801,13 +6801,24 @@ char *
 alloc_pseudo_atomic (int nbytes)
 {
   char *result;
-
-  clr_pseudo_atomic_interrupted ();
-  set_pseudo_atomic_atomic ();
+  int in_pseudo_atomic;
+  
+  in_pseudo_atomic = get_pseudo_atomic_atomic ();
+  if (!in_pseudo_atomic)
+    {
+      clr_pseudo_atomic_interrupted ();
+      set_pseudo_atomic_atomic ();
+    }
+  
   result = alloc (nbytes);
-  clr_pseudo_atomic_atomic ();
-  if (get_pseudo_atomic_interrupted ())
-    do_pending_interrupt (); 
+
+  if (!in_pseudo_atomic)
+    {
+      clr_pseudo_atomic_atomic ();
+      if (get_pseudo_atomic_interrupted ())
+	do_pending_interrupt ();
+    }
+  
   return result; 
 }
 
