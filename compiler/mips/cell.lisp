@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.25 1990/03/19 23:45:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.26 1990/03/19 23:55:34 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -60,7 +60,12 @@
 			,@(when ref-trans
 			    `((:translate ,ref-trans))))))
 	    (when (or set-vop setf-vop)
-	      (forms `(define-vop ,(cond (rest-p `(,set-vop slot-set))
+	      (forms `(define-vop ,(cond ((and rest-p setf-vop)
+		  (error "Can't automatically generate a setf VOP for :rest-p ~
+		          slots: ~S in ~S"
+			 name
+			 (vm:primitive-object-name obj)))
+					 (rest-p `(,set-vop slot-set))
 					 (set-vop `(,set-vop cell-set))
 					 (t `(,setf-vop cell-setf)))
 			(:variant ,offset ,lowtag)
