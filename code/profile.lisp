@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.4 1992/02/02 23:43:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.5 1992/02/18 19:49:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -477,9 +477,9 @@
 ;;;    Dummy function we profile to find profiling overhead.
 ;;;
 (proclaim '(notinline compute-time-overhead-aux))
-(defun compute-time-overhead-aux (x)
-  (declare (optimize (debug-info 2))) ; Make sure we have arglist info...
-  (declare (ignore x)))
+(locally (declare (optimize (debug-info 2))) ; Make sure we have arglist info...
+  (defun compute-time-overhead-aux (x)
+    (declare (ignore x))))
 
 
 ;;; COMPUTE-TIME-OVERHEAD  --  Internal
