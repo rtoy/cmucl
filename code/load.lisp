@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.29 1991/04/06 12:10:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.30 1991/04/09 16:13:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.29 1991/04/06 12:10:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.30 1991/04/09 16:13:07 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -496,7 +496,7 @@
 	 (t
 	  (internal-load obj obj if-does-not-exist :binary))))
        (t
-	(internal-load srcn srcn if-does-not-exist :source)))))))
+	(internal-load srcn src if-does-not-exist :source)))))))
 
 
 ;;;; Actual FOP definitions:
