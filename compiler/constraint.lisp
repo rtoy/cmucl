@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.12 1992/03/21 19:41:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.13 1992/06/03 20:03:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -452,27 +452,36 @@
 ;;;
 (defun flow-propagate-constraints (block)
   (let* ((pred (block-pred block))
-	 (in (copy-sset (block-out (first pred)))))
-    (dolist (b (rest pred))
-      (sset-intersection in (block-out b)))
-    (setf (block-in block) in)
+	 (in (cond (pred
+		    (let ((res (copy-sset (block-out (first pred)))))
+		      (dolist (b (rest pred))
+			(sset-intersection res (block-out b)))
+		      res))
+		   (t
+		    (when *check-consistency*
+		      (let ((*compiler-error-context* (block-last block)))
+			(compiler-warning
+			 "*** Unreachable code in constraint ~
+			  propagation...  Bug?")))
+		    (make-sset))))
+	 (kill (block-kill block))
+	 (out (block-out block)))
 
-    (let ((kill (block-kill block))
-	  (out (block-out block)))
-      (cond ((null kill)
-	     (sset-union (block-out block) in))
-	    ((null (rest kill))
-	     (let ((con (lambda-var-constraints (first kill))))
-	       (if con
-		   (sset-union-of-difference out in con)
-		   (sset-union out in))))
-	    (t
-	     (let ((kill-set (make-sset)))
-	       (dolist (var kill)
-		 (let ((con (lambda-var-constraints var)))
-		   (when con
-		     (sset-union kill-set con))))
-	       (sset-union-of-difference (block-out block) in kill-set)))))))
+    (setf (block-in block) in)
+    (cond ((null kill)
+	   (sset-union (block-out block) in))
+	  ((null (rest kill))
+	   (let ((con (lambda-var-constraints (first kill))))
+	     (if con
+		 (sset-union-of-difference out in con)
+		 (sset-union out in))))
+	  (t
+	   (let ((kill-set (make-sset)))
+	     (dolist (var kill)
+	       (let ((con (lambda-var-constraints var)))
+		 (when con
+		   (sset-union kill-set con))))
+	     (sset-union-of-difference (block-out block) in kill-set))))))
 
 
 ;;; CONSTRAINT-PROPAGATE  --  Interface
