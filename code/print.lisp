@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.30 1991/12/13 06:04:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.31 1991/12/13 10:08:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1040,7 +1040,7 @@
 
 (defun output-structure (structure stream)
   (let ((*current-structure* nil))
-    (descend-into (stream structure)
+    (descend-into (structure stream)
       (let ((*current-structure* structure))
 	(funcall (or (info type printer (structure-ref structure 0))
 		     #'c::default-structure-print)
