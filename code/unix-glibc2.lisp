@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.21 2003/03/02 15:48:31 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.22 2003/03/03 16:03:40 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,6 +48,7 @@
 (export '(
 	  daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
           blkcnt-t fsblkcnt-t fsfilcnt-t
+	  unix-lockf f_ulock f_lock f_tlock f_test
 	  timeval tv-sec tv-usec timezone tz-minuteswest tz-dsttime
 	  itimerval it-interval it-value tchars t-intrc t-quitc t-startc
 	  t-stopc t-eofc t-brkc ltchars t-suspc t-dsuspc t-rprntc t-flushc
@@ -2306,7 +2307,6 @@ length LEN and type TYPE."
 (defconstant f_tlock 2 "Test and lock a region for exclusive use")
 (defconstant f_test 3 "Test a region for othwer processes locks")
 
-#+nil
 (defun unix-lockf (fd cmd length)
   "Unix-locks can lock, unlock and test files according to the cmd
    which can be one of the following:
@@ -2322,18 +2322,9 @@ length LEN and type TYPE."
    This is a simpler version of the interface provided by unix-fcntl.
    "
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 32) length)
+	   (type (unsigned-byte 64) length)
 	   (type (integer 0 3) cmd))
-  (int-syscall ("lockf" int int off-t) fd cmd length))
-
-;;; ustatbits.h
-
-(def-alien-type nil
-    (struct ustat
-	    (f-tfree daddr-t)
-	    (f-tinone ino-t)
-	    (f-fname (array char 6))
-	    (f-fpack (array char 6))))
+  (int-syscall ("lockf64" int int off-t) fd cmd length))
 
 ;;; utime.h
 
