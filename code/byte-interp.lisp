@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.33 1999/02/25 13:02:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.34 2002/07/29 13:56:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -509,8 +509,8 @@
 (defun two-arg-char-lessp (x y) (char-lessp x y))
 (defun two-arg-char-greaterp (x y) (char-greaterp x y))
 (defun two-arg-string= (x y) (string= x y))
-(defun two-arg-string< (x y) (string= x y))
-(defun two-arg-string> (x y) (string= x y))
+(defun two-arg-string< (x y) (string< x y))
+(defun two-arg-string> (x y) (string> x y))
 
 
 ;;;; Misc primitive stubs:
