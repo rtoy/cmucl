@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.12 1991/12/20 21:40:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.13 1992/01/22 18:09:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1074,10 +1074,11 @@
    (r3 :argument address-register)
    (i :argument (unsigned-byte 16))))
 
-(define-pseudo-instruction mc68881-load 64 (fpn data optype temp)
+(define-pseudo-instruction mc68881-load 80 (fpn data optype temp)
   (inst mc68881-load-inst fpn data temp
 	(do-68881-inst :move temp :fpn fpn :data data :optype optype
-		       :class :mem-to-freg)))
+		       :class :mem-to-freg))
+  (inst mc68881-wait))
 
 (define-instruction (mc68881-store-inst :clobber (memory))
   (mc68881-inst
@@ -1087,10 +1088,11 @@
    (r3 :argument address-register)
    (i :argument (unsigned-byte 16))))
 
-(define-pseudo-instruction mc68881-store 64 (fpn data optype temp)
+(define-pseudo-instruction mc68881-store 80 (fpn data optype temp)
   (inst mc68881-store-inst fpn data temp
 	(do-68881-inst :move temp :fpn fpn :data data :optype optype
-		       :class :freg-to-mem)))
+		       :class :freg-to-mem))
+  (inst mc68881-wait))
 
 
 (define-instruction (mc68881-load-status-inst :use (memory)
@@ -1102,10 +1104,11 @@
    (r3 :argument address-register)
    (i :argument (unsigned-byte 16))))
 
-(define-pseudo-instruction mc68881-load-status 64 (creg data temp)
+(define-pseudo-instruction mc68881-load-status 80 (creg data temp)
   (inst mc68881-load-status-inst data temp
 	(do-68881-inst :move temp :creg creg :data data
-		       :class :mem-to-scr)))
+		       :class :mem-to-scr))
+  (inst mc68881-wait))
 
 (define-instruction (mc68881-store-status-inst :clobber (memory)
 					       :use (float-status))
@@ -1116,10 +1119,12 @@
    (r3 :argument address-register)
    (i :argument (unsigned-byte 16))))
 
-(define-pseudo-instruction mc68881-store-status 64 (creg data temp)
+(define-pseudo-instruction mc68881-store-status 80 (creg data temp)
   (inst mc68881-store-status-inst data temp
 	(do-68881-inst :move temp :creg creg :data data
-		       :class :scr-to-mem)))
+		       :class :scr-to-mem))
+  (inst mc68881-wait))
+
 
 ;;; AFPA instruction set details:
 
