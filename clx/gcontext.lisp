@@ -968,10 +968,7 @@
   ;;	    (,set-function dst-gc value)
   ;;	  (error "Can't copy unknown GContext component ~a" ',name)))
   (declare (type symbol name)
-	   (type t default)
-	   (type (function (gcontext t) t) set-function) ;; required
-	   (type (or null (function (gcontext gcontext t) t))
-		 copy-function))
+	   (type t default))
   (let* ((gc-name (intern (concatenate 'string
 				       (string 'gcontext-)
 				       (string name)))) ;; in current package
