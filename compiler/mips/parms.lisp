@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.18 1990/02/26 18:18:38 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.19 1990/02/26 18:54:05 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -24,7 +24,7 @@
 	  word-bytes target-byte-order target-read-only-space-start
 	  target-static-space-start target-dynamic-space-start
 	  target-control-stack-start target-binding-stack-start
-	  target-heap-start target-heap-length lowtag-bits lowtag-mask
+	  target-heap-address-space lowtag-bits lowtag-mask
 	  lowtag-limit type-bits type-mask pad-data-block even-fixnum-type
 	  function-pointer-type other-immediate-0-type other-immediate-1-type
 	  list-pointer-type odd-fixnum-type structure-pointer-type
@@ -99,8 +99,10 @@
 
 ;;; How much memory to validate for lisp.
 ;;; 
-(defconstant target-heap-start #x20000000)
-(defconstant target-heap-length #x50000000)
+(defconstant target-heap-address-space
+  '((#x40000000 . #x4000) ; Dynamic space
+    (#x50000000 . #x4000) ; Control stack
+    (#x60000000 . #x4000))) ; Binding stack
 
 
 
