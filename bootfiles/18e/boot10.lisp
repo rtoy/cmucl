@@ -19,14 +19,33 @@
 
 (in-package :kernel)
 
-;;;
-;;; Like DEFSTRUCT, but silently clobber old definitions.
-;;;
-(defmacro defstruct! (name &rest stuff)
-  `(handler-bind ((error (lambda (c)
-			   (declare (ignore c))
-			   (invoke-restart 'kernel::clobber-it))))
-     (defstruct ,name ,@stuff)))
+(setq *ANSI-defstruct-options-p* nil)
+
+(defun define-class-methods (defstruct)
+  (let* ((name (dd-name defstruct)))
+    `(,@(let ((pf (dd-print-function defstruct)))
+	  (when pf
+	    `((setf (basic-structure-class-print-function (find-class ',name))
+		    ,(if (symbolp pf)
+			 `',pf
+			 `#',pf)))))
+      ,@(let ((mlff (dd-make-load-form-fun defstruct)))
+	  (when mlff
+	    `((setf (structure-class-make-load-form-fun (find-class ',name))
+		    ,(if (symbolp mlff)
+			 `',mlff
+			 `#',mlff)))))
+      ,@(let ((pure (dd-pure defstruct)))
+	  (cond ((eq pure 't)
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
+		    t)))
+		((eq pure :substructure)
+		 `((setf (layout-pure (%class-layout (find-class ',name)))
+		    0)))))
+      ,@(let ((def-con (dd-default-constructor defstruct)))
+	  (when (and def-con (not (dd-alternate-metaclass defstruct)))
+	    `((setf (structure-class-constructor (find-class ',name))
+		    #',def-con)))))))
 
 (defstruct (defstruct-slot-description
              (:conc-name dsd-)
@@ -97,6 +116,17 @@
     islot))
 
 (defun compare-slots (old new)
+  (declare (ignore old new))
   (values nil nil nil))
+
+(in-package :conditions)
+
+(defstruct (condition-class (:include slot-class))
+  (slots nil :type list)
+  (class-slots nil :type list)
+  (report nil :type (or function null))
+  (default-initargs () :type list)
+  (cpl () :type list)
+  (hairy-slots nil :type list))
 
 ;;; end of file
