@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.29.2.1 2000/05/23 16:36:32 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.29.2.2 2000/07/06 06:18:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,7 +350,7 @@
 		  (fixnum
 		   (+ rehash-size old-length))
 		  (float
-		   (the index (round (* rehash-size old-length))))))
+		   (the (values index t) (round (* rehash-size old-length))))))
 	      old-length))
 	 (new-vector (make-array new-length :initial-element nil))
 	 #-gengc (weak-p (hash-table-weak-p table)))
@@ -456,8 +456,7 @@
 		       (weak-pointer-value (hash-table-bucket-key bucket))
 		     (assert valid)
 		     (when (eq key bucket-key)
-		       (return (values (hash-table-bucket-value bucket)
-				       t))))))
+		       (return (values (hash-table-bucket-value bucket) t))))))
 	       (do ((bucket (svref vector index)
 			    (hash-table-bucket-next bucket)))
 		   ((null bucket) (values default nil))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25.2.2 2000/05/23 16:36:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.25.2.3 2000/07/06 06:18:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -639,7 +639,7 @@
 		   (return-from print-allocated-objects (values)))
 		 
 		 (unless count
-		   (let ((this-page (* (the (unsigned-byte 32)
+		   (let ((this-page (* (the (values (unsigned-byte 32) t)
 					    (truncate addr pagesize))
 				       pagesize)))
 		     (declare (type (unsigned-byte 32) this-page))
