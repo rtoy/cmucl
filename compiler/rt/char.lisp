@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/char.lisp,v 1.2 1991/11/09 02:37:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/char.lisp,v 1.3 1992/03/10 10:00:34 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -139,10 +139,20 @@
 
 ;;; Comparison of base-chars.
 ;;;
-(define-vop (base-char-compare pointer-compare)
+(define-vop (base-char-compare)
   (:args (x :scs (base-char-reg))
 	 (y :scs (base-char-reg)))
-  (:arg-types base-char base-char))
+  (:arg-types base-char base-char)
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:note "inline comparison")
+  (:variant-vars condition)
+  (:generator 6
+    (inst cl x y)
+    (if not-p
+	(inst bnc condition target)
+	(inst bc condition target))))
 
 (define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
