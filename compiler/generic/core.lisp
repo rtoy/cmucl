@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.8 1991/02/20 15:17:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.9 1991/03/20 03:02:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,8 +65,7 @@
 		  (entry-info-type entry))
 
       (dolist (patch (gethash entry patch-table))
-	(%primitive code-constant-set (car patch) (the index (cdr patch))
-		    res))
+	(setf (code-header-ref (car patch) (the index (cdr patch))) res))
       (remhash entry patch-table)
       (setf (gethash entry (core-object-entry-table object)) res)))
   (undefined-value))
@@ -112,7 +111,7 @@
   (let* ((info (leaf-info fun))
 	 (found (gethash info (core-object-entry-table object))))
     (if found
-	(%primitive code-constant-set code-obj i found)
+	(setf (code-header-ref code-obj i) found)
 	(push (cons code-obj i)
 	      (gethash info (core-object-patch-table object)))))
   (undefined-value))
@@ -123,17 +122,24 @@
 ;;;    Dump a component to core.  We pass in the assembler fixups, code vector
 ;;; and node info.
 ;;;
-(defun make-core-component (component segment length object)
+(defun make-core-component (component segment length trace-table object)
   (declare (type component component)
 	   (type index length)
+	   (list trace-table)
 	   (type core-object object))
   (without-gcing
     (let* ((2comp (component-info component))
 	   (constants (ir2-component-constants 2comp))
-	   (box-num (- (length constants) vm:code-constants-offset))
-	   (code-obj (%primitive allocate-code-object box-num length))
-	   (fixups (emit-code-vector (make-code-instruction-stream code-obj)
-				     segment)))
+	   (trace-table (pack-trace-table trace-table))
+	   (trace-table-len (length trace-table))
+	   (trace-table-bits (* trace-table-len bits-per-entry))
+	   (total-length (+ length (ceiling trace-table-bits vm:word-bits)))
+	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
+	   (code-obj (%primitive allocate-code-object box-num total-length))
+	   (inst-stream (make-code-instruction-stream code-obj))
+	   (fixups (emit-code-vector inst-stream segment)))
+      (declare (type index box-num total-length))
+
       (do-core-fixups code-obj fixups)
       
       (dolist (entry (ir2-component-entries 2comp))
@@ -141,24 +147,26 @@
       
       (let ((info (debug-info-for-component component)))
 	(push info (core-object-debug-info object))
-	(%primitive set-code-debug-info code-obj info))
+	(setf (code-header-ref code-obj vm:code-debug-info-slot) info))
       
-      (dotimes (i box-num)
-	(let ((const (aref constants (+ i vm:code-constants-offset))))
+      (setf (code-header-ref code-obj vm:code-trace-table-offset-slot) length)
+      (copy-to-system-area trace-table (* vm:vector-data-offset vm:word-bits)
+			   (code-instruction-stream-current inst-stream) 0
+			   trace-table-bits)
+
+      (do ((index vm:code-constants-offset (1+ index)))
+	  ((>= index (length constants)))
+	(let ((const (aref constants index)))
 	  (etypecase const
 	    (null)
 	    (constant
-	     (%primitive code-constant-set code-obj i
-			 (constant-value const)))
+	     (setf (code-header-ref code-obj index)
+		   (constant-value const)))
 	    (list
 	     (ecase (car const)
 	       (:entry
-		(reference-core-function code-obj i (cdr const) object))
-	       #+nil
-	       (:label
-		(%primitive header-set code-obj i
-			    (+ (label-location (cdr const))
-				clc::i-vector-header-size))))))))))
+		(reference-core-function code-obj index
+					 (cdr const) object)))))))))
   (undefined-value))
 
 
@@ -202,9 +210,7 @@
 	    (:constructor make-code-instruction-stream
 			  (code-object
 			   &aux
-			   (current (truly-the system-area-pointer
-					       (%primitive code-instructions
-							   code-object)))
+			   (current (code-instructions code-object))
 			   (end (sap+ current
 				      (* (%primitive code-code-size
 						     code-object)
