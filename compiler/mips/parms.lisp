@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.77 1990/10/13 20:23:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.78 1990/10/23 02:37:09 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -23,9 +23,7 @@
 (export '(float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit single-float-trapping-nan-bit
-	  double-float-trapping-nan-bit *fixup-values*))
-
-;(eval-when (compile load eval)
+	  double-float-trapping-nan-bit))
 
 
 ;;;; Compiler constants.
@@ -633,21 +631,17 @@
 ;;;
 (defparameter *assembly-unit-length* 8)
 
-(defparameter *fixup-values*
-  '((:jump . 0) (:lui . 1) (:addi . 2)))
-
 
 
 ;;;; Other parameters:
 
-;;; The number representing the fasl-code format emit code in.
+;;; The number representing the version of fasl files we are going to dump.
 ;;;
-(defparameter target-fasl-code-format 7)
+(defparameter target-fasl-file-implementation #.pmax-fasl-file-implementation)
+(defparameter target-fasl-file-version 1)
+
 (defparameter target-fasl-file-type "mips-fasl")
 
 ;;; The version string for the implementation dependent code.
 ;;;
 (defparameter vm-version "DECstation 3100/Mach 0.0")
-
-
-;); Eval-When (Compile Load Eval)
