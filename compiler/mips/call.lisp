@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.5 1990/04/24 02:55:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.6 1990/05/09 06:39:00 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -571,10 +571,10 @@ default-value-5
    
      ,@(unless (eq return :tail)
 	 `((:save-p t)
-	   (:vop-var vop)
 	   ,@(unless variable
 	       '((:move-args :full-call)))))
 
+     (:vop-var vop)
      (:info ,@(unless (or variable (eq return :tail)) '(arg-locs))
 	    ,@(unless variable '(nargs))
 	    ,@(when (eq return :fixed) '(nvals)))
@@ -647,9 +647,9 @@ default-value-5
 			   register-arg-names)))
 	     `((inst li nargs-pass (fixnum nargs))))
        
-       (let (,@(unless (eq return :tail)
-		 '((lra-label (gen-label))
-		   (cur-nfp (current-nfp-tn vop)))))
+       (let ((cur-nfp (current-nfp-tn vop))
+	     ,@(unless (eq return :tail)
+		 '((lra-label (gen-label)))))
 	 ,@(unless (eq return :tail)
 	     `((inst compute-lra-from-code return-pc-pass code-tn lra-label)))
 
@@ -662,6 +662,8 @@ default-value-5
 	 ,@(if (eq return :tail)
 	       '((move old-fp-pass old-fp)
 		 (move return-pc-pass return-pc)
+		 (when cur-nfp
+		   (move nsp-tn cur-nfp))
 		 (inst j lip)
 		 (move code-tn function))
 	       `((move old-fp-pass fp-tn)
@@ -728,6 +730,7 @@ default-value-5
     (:temporary (:scs (any-reg) :type fixnum) src dst count)
     (:temporary (:scs (descriptor-reg)) temp)
     (:temporary (:scs (interior-reg) :type interior) lip)
+    (:vop-var vop)
     (:generator 75
       (let ((loop (gen-label))
 	    (test (gen-label)))
@@ -764,6 +767,11 @@ default-value-5
 	(inst bgtz count loop)
 	(inst addu count count (fixnum -1))
 	
+	;; Clear the number stack if anything is there.
+	(let ((cur-nfp (current-nfp-tn vop)))
+	  (when cur-nfp
+	    (move nsp-tn cur-nfp)))
+
 	;; We are done.  Do the jump.
 	(loadw function lexenv vm:closure-function-slot
 	       vm:function-pointer-type)
