@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.20 2003/02/25 15:15:55 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.21 2003/03/02 15:48:31 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,27 @@
 ;;;
 ;; Todo: #+nil'ed stuff and ioctl's
 ;;
+;;
+;; Large File Support (LFS) added by Pierre Mai and Eric Marsden, Feb
+;; 2003. This is necessary to be able to read/write/stat files that
+;; are larger than 2GB on a 32-bit system. From a C program, defining
+;; a preprocessor macro _LARGEFILE64_SOURCE makes the preproccessor
+;; replace a call to open() by open64(), and similarly for stat,
+;; fstat, lstat, lseek, readdir and friends. Furthermore, certain data
+;; types, that are normally 32 bits wide, are replaced by 64-bit wide
+;; equivalents: off_t -> off64_t etc. The libc.so fiddles around with
+;; weak symbols to support this mess.
+;;
+;; From CMUCL, we make FFI calls to the xxx64 functions, and use the
+;; 64-bit wide versions of the data structures. The most ugly aspect
+;; is that some of the stat functions are not available via dlsym, so
+;; we reference them explicitly from linux-stubs.S. Another amusing
+;; fact is that stat64() returns a struct stat with a 32-bit inode_t,
+;; whereas readdir64() returns a struct dirent that contains a 64-bit
+;; inode_t. 
+
+
+
 (in-package "UNIX")
 (use-package "ALIEN")
 (use-package "C-CALL")
@@ -26,6 +47,7 @@
 
 (export '(
 	  daddr-t caddr-t ino-t swblk-t size-t time-t dev-t off-t uid-t gid-t
+          blkcnt-t fsblkcnt-t fsfilcnt-t
 	  timeval tv-sec tv-usec timezone tz-minuteswest tz-dsttime
 	  itimerval it-interval it-value tchars t-intrc t-quitc t-startc
 	  t-stopc t-eofc t-brkc ltchars t-suspc t-dsuspc t-rprntc t-flushc
@@ -317,15 +339,17 @@
 (def-alien-type u-int64-t (unsigned 64))
 (def-alien-type register-t #-alpha int #+alpha long)
 
-
-(def-alien-type dev-t #+alpha u-int64-t #-alpha (array unsigned-long 2))
+(def-alien-type dev-t uquad-t)
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
 (def-alien-type ino-t u-int32-t)
+(def-alien-type ino64-t u-int64-t)
 (def-alien-type mode-t unsigned-int)
 (def-alien-type nlink-t unsigned-int)
-(def-alien-type off-t long)
-(def-alien-type loff-t u-int64-t)
+(def-alien-type off-t int64-t)
+(def-alien-type blkcnt-t u-int64-t)
+(def-alien-type fsblkcnt-t u-int64-t)
+(def-alien-type fsfilcnt-t u-int64-t)
 (def-alien-type pid-t int)
 ;(def-alien-type ssize-t #-alpha int #+alpha long)
 
@@ -347,9 +371,9 @@
 ;;; direntry.h
 
 (def-alien-type nil
-  (struct direct
-    (d-ino long); inode number of entry
-    (d-off off-t)                        ; offset of next disk directory entry
+  (struct dirent
+    (d-ino ino64-t)                     ; inode number of entry
+    (d-off off-t)                       ; offset of next disk directory entry
     (d-reclen unsigned-short)		; length of this record
     (d_type unsigned-char)
     (d-name (array char 256))))		; name must be no longer than this
@@ -391,16 +415,16 @@
 
 (defun read-dir (dir)
   (declare (type directory dir))
-  (let ((daddr (alien-funcall (extern-alien "readdir"
+  (let ((daddr (alien-funcall (extern-alien "readdir64"
 					    (function system-area-pointer
 						      system-area-pointer))
 			      (directory-dir-struct dir))))
     (declare (type system-area-pointer daddr))
     (if (zerop (sap-int daddr))
 	nil
-	(with-alien ((direct (* (struct direct)) daddr))
-	  (values (cast (slot direct 'd-name) c-string)
-		  (slot direct 'd-ino))))))
+	(with-alien ((dirent (* (struct dirent)) daddr))
+	  (values (cast (slot dirent 'd-name) c-string)
+		  (slot dirent 'd-ino))))))
 
 (defun close-dir (dir)
   (declare (type directory dir))
@@ -1415,7 +1439,7 @@ length LEN and type TYPE."
     #-alpha (st-pad2  unsigned-short)
     (st-size off-t)
     #-alpha (st-blksize unsigned-long)
-    #-alpha (st-blocks unsigned-long)
+    #-alpha (st-blocks blkcnt-t)
     (st-atime time-t)
     #-alpha (unused-1 unsigned-long)
     (st-mtime time-t)
@@ -1465,11 +1489,11 @@ length LEN and type TYPE."
     (struct statfs
 	    (f-type int)
 	    (f-bsize int)
-	    (f-blocks int)
-	    (f-bfree int)
-	    (f-bavail int)
-	    (f-files int)
-	    (f-ffree int)
+	    (f-blocks fsblkcnt-t)
+	    (f-bfree fsblkcnt-t)
+	    (f-bavail fsblkcnt-t)
+	    (f-files fsfilcnt-t)
+	    (f-ffree fsfilcnt-t)
 	    (f-fsid fsid-t)
 	    (f-namelen int)
 	    (f-spare (array int 6))))
@@ -1751,8 +1775,8 @@ length LEN and type TYPE."
 (defconstant l_xtnd 2 "extend the file size")
 
 (defun unix-lseek (fd offset whence)
-  "Unix-lseek accepts a file descriptor and moves the file pointer ahead
-   a certain offset for that file.  Whence can be any of the following:
+  "UNIX-LSEEK accepts a file descriptor and moves the file pointer ahead
+   a certain OFFSET for that file.  WHENCE can be any of the following:
 
    l_set        Set the file pointer.
    l_incr       Increment the file pointer.
@@ -1762,20 +1786,20 @@ length LEN and type TYPE."
 	   (type (signed-byte 64) offset)
 	   (type (integer 0 2) whence))
   (let ((result (alien-funcall
-                 (extern-alien "lseek64" (function loff-t int loff-t int))
+                 (extern-alien "lseek64" (function off-t int off-t int))
                  fd offset whence)))
     (if (minusp result)
         (values nil (unix-get-errno))
         (values result 0))))
 
 
-;;; Unix-read accepts a file descriptor, a buffer, and the length to read.
+;;; UNIX-READ accepts a file descriptor, a buffer, and the length to read.
 ;;; It attempts to read len bytes from the device associated with fd
 ;;; and store them into the buffer.  It returns the actual number of
 ;;; bytes read.
 
 (defun unix-read (fd buf len)
-  "Unix-read attempts to read from the file described by fd into
+  "UNIX-READ attempts to read from the file described by fd into
    the buffer buf until it is full.  Len is the length of the buffer.
    The number of bytes actually read is returned or NIL and an error
    number if an error occured."
@@ -2262,14 +2286,14 @@ length LEN and type TYPE."
    if the call is unsuccessful."
   (declare (type unix-pathname name)
 	   (type (unsigned-byte 64) length))
-  (void-syscall ("truncate64" c-string loff-t) name length))
+  (void-syscall ("truncate64" c-string off-t) name length))
 
 (defun unix-ftruncate (fd length)
   "Unix-ftruncate is similar to unix-truncate except that the first
    argument is a file descriptor rather than a file name."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 64) length))
-  (void-syscall ("ftruncate64" int loff-t) fd length))
+  (void-syscall ("ftruncate64" int off-t) fd length))
 
 #+nil
 (defun unix-getdtablesize ()
@@ -2681,7 +2705,7 @@ in at a time in poll.")
 	   (slot ,buf 'st-blocks)))
 
 (defun unix-stat (name)
-  "Unix-stat retrieves information about the specified
+  "UNIX-STAT retrieves information about the specified
    file returning them in the form of multiple values.
    See the UNIX Programmer's Manual for a description
    of the values returned.  If the call fails, then NIL
@@ -2690,25 +2714,25 @@ in at a time in poll.")
   (when (string= name "")
     (setf name "."))
   (with-alien ((buf (struct stat)))
-    (syscall ("stat" c-string (* (struct stat)))
+    (syscall ("stat64" c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     name (addr buf))))
 
 (defun unix-fstat (fd)
-  "Unix-fstat is similar to unix-stat except the file is specified
-   by the file descriptor fd."
+  "UNIX-FSTAT is similar to UNIX-STAT except the file is specified
+   by the file descriptor FD."
   (declare (type unix-fd fd))
   (with-alien ((buf (struct stat)))
-    (syscall ("fstat" int (* (struct stat)))
+    (syscall ("fstat64" int (* (struct stat)))
 	     (extract-stat-results buf)
 	     fd (addr buf))))
 
 (defun unix-lstat (name)
-  "Unix-lstat is similar to unix-stat except the specified
+  "UNIX-LSTAT is similar to UNIX-STAT except the specified
    file must be a symbolic link."
   (declare (type unix-pathname name))
   (with-alien ((buf (struct stat)))
-    (syscall ("lstat" c-string (* (struct stat)))
+    (syscall ("lstat64" c-string (* (struct stat)))
 	     (extract-stat-results buf)
 	     name (addr buf))))
 
@@ -2791,7 +2815,7 @@ in at a time in poll.")
 #+nil
 (defun unix-statfs (file buf)
   "Return information about the filesystem on which FILE resides."
-  (int-syscall ("statfs" c-string (* (struct statfs)))
+  (int-syscall ("statfs64" c-string (* (struct statfs)))
 	       file buf))
 
 ;;; sys/swap.h
