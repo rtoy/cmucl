@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.3 1990/12/06 17:37:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.4 1990/12/07 18:03:06 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -113,7 +113,10 @@
 (defconstant float-sticky-bits (byte 5 5))	  ; aexc
 (defconstant float-traps-byte (byte 5 23))	  ; TEM
 (defconstant float-exceptions-byte (byte 5 0))	  ; cexc
-(defconstant float-fast-bit (ash 1 22))		  ; EFM
+
+;;; According to the SPARC doc (as opposed to FPU doc), the fast mode bit (EFM)
+;;; is "reserved", and should always be zero.
+(defconstant float-fast-bit 0)
 
 ); eval-when
 
