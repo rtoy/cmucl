@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.20 1998/07/24 17:22:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.21 2000/05/02 04:44:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -372,12 +372,12 @@
 	    (part-of function))
 	   (base-char
 	    (exactly base-char))
-	   (cons
-	    (part-of list))
 	   (t
 	    (any))))
 	(function-type
 	 (exactly function))
+	(cons-type
+	 (part-of list))
 	(class
 	 (if (csubtypep type (specifier-type 'function))
 	     (part-of function)

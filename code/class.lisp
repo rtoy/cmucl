@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.42 2000/01/10 14:43:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.43 2000/05/02 04:44:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -750,7 +750,7 @@
 	  (list :translation (or cons (member nil))
 		:inherits (sequence mutable-sequence mutable-collection
 			   generic-sequence collection))
-	  (cons :codes (#.vm:list-pointer-type)
+	  (cons :translation cons :codes (#.vm:list-pointer-type)
 		:inherits (list sequence mutable-sequence mutable-collection
 			   generic-sequence collection))
 	  (null :translation (member nil)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.39 2000/04/30 03:48:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.40 2000/05/02 04:44:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -184,10 +184,13 @@
      (if (type= type (specifier-type 'bignum))
 	 'c:check-bignum
 	 nil))
+    (cons-type
+     (if (type= type (specifier-type 'cons))
+	  'c:check-cons
+	   nil))
     (built-in-class
      (case (class-name type)
-       (symbol 'c:check-symbol)
-       (cons 'c:check-cons)))
+       (symbol 'c:check-symbol)))
     (function-type
      'c:check-function)
     (t

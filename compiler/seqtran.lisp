@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.23 1999/09/05 13:02:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.24 2000/05/02 04:44:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -518,3 +518,21 @@
 	(lisp::%sp-string-compare
 	 string1 start1 (or end1 (length string1))
 	 string2 start2 (or end2 (length string2)))))))
+
+
+
+;;;; CONS assessor derive type optimizers.
+
+(defoptimizer (car derive-type) ((cons))
+  (let ((type (continuation-type cons)))
+    (cond ((eq type *null-type*)
+	   *null-type*)
+	  ((cons-type-p type)
+	   (cons-type-car-type type)))))
+
+(defoptimizer (cdr derive-type) ((cons))
+  (let ((type (continuation-type cons)))
+    (cond ((eq type *null-type*)
+	   *null-type*)
+	  ((cons-type-p type)
+	   (cons-type-cdr-type type)))))

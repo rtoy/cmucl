@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.26 1998/03/01 21:55:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.27 2000/05/02 04:44:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -80,6 +80,12 @@
 	    (+ 1
 	       (if (numeric-type-low type) 1 0)
 	       (if (numeric-type-high type) 1 0))))
+	(cons-type
+	 (+ (type-test-cost (specifier-type 'cons))
+	    (function-cost 'car)
+	    (type-test-cost (cons-type-car-type type))
+	    (function-cost 'cdr)
+	    (type-test-cost (cons-type-cdr-type type))))
 	(t
 	 (function-cost 'typep)))))
 

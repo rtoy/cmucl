@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.35 1998/07/24 17:22:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.36 2000/05/02 04:44:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -333,6 +333,29 @@
 			    types)))))))
 
 
+;;; Source-Transform-Cons-Typep  --  Internal
+;;;
+;;; If necessary recurse to check the cons type.
+;;;
+(defun source-transform-cons-typep (object type)
+  (let* ((car-type (cons-type-car-type type))
+	 (cdr-type (cons-type-cdr-type type)))
+    (let ((car-test-p (not (or (type= car-type *wild-type*)
+			       (type= car-type (specifier-type t)))))
+	  (cdr-test-p (not (or (type= cdr-type *wild-type*)
+			       (type= cdr-type (specifier-type t))))))
+      (if (and (not car-test-p) (not cdr-test-p))
+	  `(consp ,object)
+	  (once-only ((n-obj object))
+	    `(and (consp ,n-obj)
+		  ,@(if car-test-p
+			`((typep (car ,n-obj)
+				 ',(type-specifier car-type))))
+		  ,@(if cdr-test-p
+			`((typep (cdr ,n-obj)
+				 ',(type-specifier cdr-type))))))))))
+
+
 ;;; FIND-SUPERTYPE-PREDICATE  --  Internal
 ;;;
 ;;;    Return the predicate and type from the most specific entry in
@@ -512,6 +535,8 @@
 		    `(%instance-typep ,object ,spec))
 		   (array-type
 		    (source-transform-array-typep object type))
+		   (cons-type
+		    (source-transform-cons-typep object type))
 		   (t nil)))
 	    `(%typep ,object ,spec)))
       (values nil t)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.32 2000/01/10 14:47:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.33 2000/05/02 04:44:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2173,6 +2173,77 @@
       *universal-type*))
 
 
+;;;; Cons types:
+
+;;; The Cons-Type is used to represent cons types.
+;;;
+(defstruct (cons-type (:include ctype
+				(:class-info (type-class-or-lose 'cons)))
+		      (:print-function %print-type))
+  ;;
+  ;; The car element type.
+  (car-type *wild-type* :type ctype)
+  ;;
+  ;; The cdr element type.
+  (cdr-type *wild-type* :type ctype))
+
+(define-type-class cons)
+
+(def-type-translator cons (&optional car-type cdr-type)
+  (make-cons-type :car-type (specifier-type car-type)
+		  :cdr-type (specifier-type cdr-type)))
+
+(define-type-method (cons :unparse) (type)
+  (let ((car-eltype (type-specifier (cons-type-car-type type)))
+	(cdr-eltype (type-specifier (cons-type-cdr-type type))))
+    (cond ((and (eq car-eltype '*) (eq cdr-eltype '*))
+	   'cons)
+	  (t
+	   `(cons ,car-eltype ,cdr-eltype)))))
+
+(define-type-method (cons :simple-=) (type1 type2)
+  (declare (type cons-type type1 type2))
+  (and (type= (cons-type-car-type type1) (cons-type-car-type type2))
+       (type= (cons-type-cdr-type type1) (cons-type-cdr-type type2))))
+
+(define-type-method (cons :simple-subtypep) (type1 type2)
+  (declare (type cons-type type1 type2))
+  (multiple-value-bind (val-car win-car)
+      (csubtypep (cons-type-car-type type1) (cons-type-car-type type2))
+    (multiple-value-bind (val-cdr win-cdr)
+	(csubtypep (cons-type-cdr-type type1) (cons-type-cdr-type type2))
+      (if (and val-car val-cdr)
+	  (values t (and win-car win-cdr))
+	  (values nil (or win-car win-cdr))))))
+
+;;; CONS :simple-union method  -- Internal
+;;;
+;;; Give up if a precise type in not possible, to avoid returning overly
+;;; general types.
+;;;
+(define-type-method (cons :simple-union) (type1 type2)
+  (declare (type cons-type type1 type2))
+  (let ((car-type1 (cons-type-car-type type1))
+	(car-type2 (cons-type-car-type type2))
+	(cdr-type1 (cons-type-cdr-type type1))
+	(cdr-type2 (cons-type-cdr-type type2)))
+    (cond ((type= car-type1 car-type2)
+	   (make-cons-type :car-type car-type1
+			   :cdr-type (type-union cdr-type1 cdr-type2)))
+	  ((type= cdr-type1 cdr-type2)
+	   (make-cons-type :car-type (type-union cdr-type1 cdr-type2)
+			   :cdr-type cdr-type1)))))
+
+(define-type-method (cons :simple-intersection) (type1 type2)
+  (declare (type cons-type type1 type2))
+  (multiple-value-bind (int-car win-car)
+      (type-intersection (cons-type-car-type type1) (cons-type-car-type type2))
+    (multiple-value-bind (int-cdr win-cdr)
+	(type-intersection (cons-type-cdr-type type1) (cons-type-cdr-type type2))
+      (values (make-cons-type :car-type int-car :cdr-type int-cdr)
+	      (and win-car win-cdr)))))
+
+
 ;;; TYPE-DIFFERENCE  --  Interface
 ;;;
 ;;;    Return the type that describes all objects that are in X but not in Y.
@@ -2265,7 +2336,7 @@
 (defun ctypep (obj type)
   (declare (type ctype type))
   (etypecase type
-    ((or numeric-type named-type member-type array-type built-in-class)
+    ((or numeric-type named-type member-type array-type built-in-class cons-type)
      (values (%typep obj type) t))
     (class
      (if (if (csubtypep type (specifier-type 'funcallable-instance))
@@ -2381,6 +2452,8 @@
 			:complexp (not (typep x 'simple-array))
 			:element-type etype
 			:specialized-element-type etype)))
+    (cons
+     (make-cons-type))
     (t
      (class-of x))))
 

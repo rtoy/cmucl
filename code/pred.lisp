@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.51 2000/01/10 15:25:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.52 2000/05/02 04:44:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -286,6 +286,10 @@
      (dolist (type (union-type-types type))
        (when (%%typep object type)
 	 (return t))))
+    (cons-type
+     (and (consp object)
+	  (%%typep (car object) (cons-type-car-type type))
+	  (%%typep (cdr object) (cons-type-cdr-type type))))
     (unknown-type
      ;; Parse it again to make sure it's really undefined.
      (let ((reparse (specifier-type (unknown-type-specifier type))))
