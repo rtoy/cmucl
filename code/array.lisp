@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.3 1990/08/24 18:10:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.4 1990/10/03 09:55:22 wlott Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -53,6 +53,9 @@
   (frob %array-data-vector)
   (frob %array-displacement)
   (frob %array-displaced-p))
+
+(defun %array-rank (array)
+  (%array-rank array))
 
 (defun %array-dimension (array axis)
   (%array-dimension array axis))
