@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.16 1992/07/08 17:19:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.17 1992/07/09 19:27:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.16 1992/07/08 17:19:39 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.17 1992/07/09 19:27:05 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -233,7 +233,7 @@
      (system:without-hemlock
       (,function ,(concatenate 'simple-string what " at #x~x.")
 		 (with-alien ((scp (* sigcontext) scp))
-		   (sap-int (slot scp 'sc-pc)))))))
+		   (sap-int (vm:sigcontext-program-counter scp)))))))
 
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.50 1992/06/22 13:51:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.51 1992/07/09 19:26:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1076,7 +1076,8 @@
 	     (let* ((code-header-len (* (kernel:get-header-data code)
 					vm:word-bytes))
 		    (pc-offset
-		     (- (system:sap-int (alien:slot scp 'unix:sc-pc))
+		     (- (system:sap-int
+			 (vm:sigcontext-program-counter scp))
 			(- (kernel:get-lisp-obj-address code)
 			   vm:other-pointer-type)
 			code-header-len)))
