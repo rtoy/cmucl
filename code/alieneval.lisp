@@ -7,23 +7,27 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.6 1990/11/06 14:04:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.7 1990/11/13 23:25:24 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
 ;;;
-(in-package 'lisp)
-(in-package 'system)
+(in-package "LISP")
+(in-package "SYSTEM")
 (export '(*alien-eval-when* make-alien alien-type alien-size alien-address
-			    copy-alien dispose-alien defalien alien-value
-			    alien-bind defoperator alien-index alien-indirect
-			    bits bytes words long-words port perq-string
-			    boolean defenumeration enumeration
-			    system-area-pointer pointer alien alien-access
-			    alien-assign alien-sap define-alien-stack
-			    with-stack-alien null-terminated-string c-procedure
-			    unstructured))
-(in-package 'lisp)
+	  copy-alien dispose-alien defalien alien-value alien-bind
+	  defoperator alien-index alien-indirect bits bytes words
+	  long-words port perq-string boolean defenumeration enumeration
+	  system-area-pointer pointer alien alien-access alien-assign
+	  alien-sap define-alien-stack with-stack-alien
+	  null-terminated-string c-procedure unstructured
+	  sap+ sap- sap-ref-sap sap-ref-32 sap-ref-16 sap-ref-8
+	  sap-ref-single sap-ref-double))
+(in-package "KERNEL"
+(export '(%set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16
+	  %set-sap-ref-8 %set-sap-ref-single %set-sap-ref-double))
+
+(in-package "LISP")
 
 (defun concat-pnames* (name1 name2)
   (if name1
