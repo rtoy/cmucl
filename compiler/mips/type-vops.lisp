@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.46 1998/07/24 17:22:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.47 2000/01/10 14:46:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,7 +254,7 @@
 (def-type-vops %instancep check-instance instance object-not-instance-error
   instance-pointer-type)
 
-(def-type-vops bignump check-bigunm bignum
+(def-type-vops bignump check-bignum bignum
   object-not-bignum-error bignum-type)
 
 (def-type-vops ratiop check-ratio ratio
