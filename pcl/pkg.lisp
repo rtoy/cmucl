@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.17 2001/07/08 16:28:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.18 2002/08/19 16:52:09 pmai Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -50,7 +50,6 @@
 	   "*ITERATE-WARNINGS*"))
 
 (defpackage "PCL" (:use :common-lisp :walker :iterate)
-  (:shadow "DESTRUCTURING-BIND")
   (:shadow "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
 	   "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
 	   "STANDARD-CLASS")

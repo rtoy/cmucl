@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.15 2001/03/13 15:49:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.16 2002/08/19 16:52:09 pmai Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -194,96 +194,6 @@
     `(or (assq ,key ,alist)
 	 (progn (setf ,alist (cons (,make-entry-fn ,key) ,alist))
 		(car ,alist)))))
-
-;;; A simple version of destructuring-bind.
-
-;;; This does no more error checking than CAR and CDR themselves do.  Some
-;;; attempt is made to be smart about preserving intermediate values.  It
-;;; could be better, although the only remaining case should be easy for
-;;; the compiler to spot since it compiles to PUSH POP.
-;;;
-;;; Common Lisp BUG:
-;;;    Common Lisp should have destructuring-bind.
-;;;    
-(defmacro destructuring-bind (pattern form &body body)
-  (multiple-value-bind (ignore declares body)
-      (extract-declarations body)
-    (declare (ignore ignore))
-    (multiple-value-bind (setqs binds)
-	(destructure pattern form)
-      `(let ,binds
-	 ,@declares
-	 ,@setqs
-	 (progn .destructure-form.)
-	 . ,body))))
-
-(eval-when (compile load eval)
-(defun destructure (pattern form)
-  ;;(declare (values setqs binds))
-  (let ((*destructure-vars* ())
-	(setqs ()))
-    (declare (special *destructure-vars*))
-    (setq *destructure-vars* '(.destructure-form.)
-	  setqs (list `(setq .destructure-form. ,form))
-	  form '.destructure-form.)
-    (values (nconc setqs (nreverse (destructure-internal pattern form)))
-	    (delete nil *destructure-vars*))))
-
-(defun destructure-internal (pattern form)
-  ;; When we are called, pattern must be a list.  Form should be a symbol
-  ;; which we are free to setq containing the value to be destructured.
-  ;; Optimizations are performed for the last element of pattern cases.
-  ;; we assume that the compiler is smart about gensyms which are bound
-  ;; but only for a short period of time.
-  (declare (special *destructure-vars*))
-  (let ((gensym (gensym))
-	(pending-pops 0)
-	(var nil)
-	(setqs ()))
-    (labels
-        ((make-pop (var form pop-into)
-	   (prog1 
-	     (cond ((zerop pending-pops)
-		    `(progn ,(and var `(setq ,var (car ,form)))
-			    ,(and pop-into `(setq ,pop-into (cdr ,form)))))
-		   ((null pop-into)
-		    (and var `(setq ,var ,(make-caxr pending-pops form))))
-		   (t
-		    `(progn (setq ,pop-into ,(make-cdxr pending-pops form))
-			    ,(and var `(setq ,var (pop ,pop-into))))))
-	     (setq pending-pops 0))))
-      (do ((pat pattern (cdr pat)))
-	  ((null pat) ())
-	(if (symbolp (setq var (car pat)))
-	    (progn
-	      (unless (memq var '(nil ignore))
-			 (push var *destructure-vars*))	      
-	      (cond ((null (cdr pat))
-		     (push (make-pop var form ()) setqs))
-		    ((symbolp (cdr pat))
-		     (push (make-pop var form (cdr pat)) setqs)
-		     (push (cdr pat) *destructure-vars*)
-		     (return ()))
-		    ((memq var '(nil ignore)) (incf pending-pops))
-		    ((memq (cadr pat) '(nil ignore))
-		     (push (make-pop var form ()) setqs)
-		     (incf pending-pops 1))
-		    (t
-		     (push (make-pop var form form) setqs))))
-	    (progn
-	      (push `(let ((,gensym ()))
-		       ,(make-pop gensym
-				  form
-				  (if (symbolp (cdr pat)) (cdr pat) form))
-		       ,@(nreverse
-			   (destructure-internal (car pat) gensym)))
-		    setqs)
-	      (when (symbolp (cdr pat))
-		(push (cdr pat) *destructure-vars*)
-		(return)))))
-      setqs)))
-)
-
 
 (defmacro collecting-once (&key initial-value)
    `(let* ((head ,initial-value)

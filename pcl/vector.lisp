@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.15 1999/05/30 23:14:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.16 2002/08/19 16:52:09 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -456,23 +456,39 @@
 
 (defun optimize-slot-value (slots sparameter form)
   (if sparameter
-      (destructuring-bind (ignore ignore slot-name-form) form
+      (destructuring-bind (slot-value instance-form slot-name-form) form
+	(declare (ignore slot-value instance-form))
 	(let ((slot-name (eval slot-name-form)))
 	  (optimize-instance-access slots :read sparameter slot-name nil)))
       `(accessor-slot-value ,@(cdr form))))
 
 (defun optimize-set-slot-value (slots sparameter form)
   (if sparameter
-      (destructuring-bind (ignore ignore slot-name-form new-value) form
+      (destructuring-bind
+          (set-slot-value instance-form slot-name-form new-value) form
+	(declare (ignore set-slot-value instance-form))
 	(let ((slot-name (eval slot-name-form)))
-	  (optimize-instance-access slots :write sparameter slot-name new-value)))
+	  (optimize-instance-access slots :write sparameter
+	                            slot-name new-value)))
       `(accessor-set-slot-value ,@(cdr form))))
 
 (defun optimize-slot-boundp (slots sparameter form)
   (if sparameter
-      (destructuring-bind (ignore ignore slot-name-form new-value) form
+      ;;
+      ;; The original PCL code, which used its own definition of
+      ;; DESTRUCTURING-BIND, had a fourth variable NEW-VALUE below,
+      ;; that was passed to OPTIMIZE-INSTANCE-ACCESS as its NEW-VALUE
+      ;; argument; the NEW-VALUE seems not to be used in
+      ;; OPTIMIZE-INSTANCE-ACCESS for the :BOUNDP case.
+      ;;
+      ;; Using CL's DESTRUCTURING-BIND, one gets an error when
+      ;; building PCL because FORM has 3 elements only, which seems
+      ;; reasonable for a SLOT-BOUNDP form.  I don't see a case where
+      ;; this function could be called with a form having 4 elements.
+      (destructuring-bind (slot-boundp instance-form slot-name-form) form
+	(declare (ignore slot-boundp instance-form))
 	(let ((slot-name (eval slot-name-form)))
-	  (optimize-instance-access slots :boundp sparameter slot-name new-value)))
+	  (optimize-instance-access slots :boundp sparameter slot-name nil)))
       `(accessor-slot-boundp ,@(cdr form))))
 
 (defun optimize-reader (slots sparameter gf-name form)
@@ -482,7 +498,8 @@
 
 (defun optimize-writer (slots sparameter gf-name form)
   (if sparameter
-      (destructuring-bind (ignore ignore new-value) form
+      (destructuring-bind (writer instance-form new-value) form
+	(declare (ignore writer instance-form))
 	(optimize-accessor-call slots :write sparameter gf-name new-value))
       form))
 ;;;
