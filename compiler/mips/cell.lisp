@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.50 1990/12/07 23:16:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.51 1990/12/18 20:48:11 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -301,46 +301,43 @@
   (:variant funcallable-instance-info-offset function-pointer-type)
   (:translate %set-funcallable-instance-info))
 
+
 
 ;;;; Structure hackery:
 
-(define-vop (structure-length cell-ref)
-  (:variant vm:vector-length-slot vm:other-pointer-type)
+(define-vop (structure-length)
   (:policy :fast-safe)
-  (:translate structure-length))
-
-;;; These two are needed until the compiler is recompiled with the version
-;;; of defstruct that has had all uses of %primitive removed.
+  (:translate structure-length)
+  (:args (struct :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) temp)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 4
+    (loadw temp struct 0 structure-pointer-type)
+    (inst srl res temp vm:type-bits)))
 
 (define-vop (structure-ref slot-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type))
-
-(define-vop (structure-set slot-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type))
-
-
-(define-vop (structure-const-ref slot-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:policy :fast-safe)
   (:translate structure-ref)
-  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29))))))
+  (:arg-types structure (:constant index)))
 
-(define-vop (structure-const-set slot-set)
+(define-vop (structure-set slot-set)
   (:policy :fast-safe)
   (:translate structure-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
-  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29)))) *))
+  (:variant structure-slots-offset structure-pointer-type)
+  (:arg-types structure (:constant index) *))
 
 (define-vop (structure-index-ref word-index-ref)
   (:policy :fast-safe) 
   (:translate structure-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum))
 
 (define-vop (structure-index-set word-index-set)
   (:policy :fast-safe) 
   (:translate structure-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum *))
 
 
