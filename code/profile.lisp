@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.11 1994/02/10 21:08:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.12 1994/02/10 21:25:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,9 +72,6 @@
 (defun required-arguments (name)
   (let ((type (ext:info function type name)))
     (cond ((not (kernel:function-type-p type))
-	   (warn "No argument count information available for:~%  ~S~@
-		  Allow for &rest arg consing."
-		 name)
 	   (values 0 t))
 	  (t
 	   (values (length (kernel:function-type-required type))
