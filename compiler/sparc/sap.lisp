@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.2 1992/01/14 16:03:35 ram Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.3 1992/02/25 07:10:28 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file contains the SPARC VM definition of SAP operations.
 ;;;
@@ -149,186 +151,118 @@
 
 ;;;; mumble-SYSTEM-REF and mumble-SYSTEM-SET
 
-(define-vop (sap-ref)
-  (:policy :fast-safe)
-  (:variant-vars size signed)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate)))
-  (:arg-types system-area-pointer positive-fixnum)
-  (:results (result))
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 5
-    (let* ((shift (ecase size
-		    (:byte 0)
-		    (:short 1)
-		    ((:long :single :double) 2)))
-	   (offset
-	    (sc-case offset
-	      (zero offset)
-	      (immediate
-	       (let ((offset (ash (tn-value offset) shift)))
-		 (cond ((typep offset '(signed-byte 13))
-			offset)
-		       (t
-			(inst li temp offset)
-			temp))))
-	      ((any-reg signed-reg)
-	       (when (sc-is offset any-reg)
-		 (decf shift 2))
-	       (cond ((plusp shift)
-		      (inst sll temp offset shift)
-		      temp)
-		     ((minusp shift)
-		      (inst sra temp offset (- shift))
-		      temp)
-		     (t
-		      offset))))))
-      (ecase size
-	(:byte
-	 (if signed
-	     (inst ldsb result sap offset)
-	     (inst ldub result sap offset)))
-	(:short
-	 (if signed
-	     (inst ldsh result sap offset)
-	     (inst lduh result sap offset)))
-	(:long
-	 (inst ld result sap offset))
-	(:single
-	 (inst ldf result sap offset))
-	(:double
-	 (inst lddf result sap offset))))))
+(eval-when (compile eval)
 
+(defmacro def-system-ref-and-set
+	  (ref-name set-name sc type size &optional signed)
+  (let ((ref-name-c (symbolicate ref-name "-C"))
+	(set-name-c (symbolicate set-name "-C")))
+    `(progn
+       (define-vop (,ref-name)
+	 (:translate ,ref-name)
+	 (:policy :fast-safe)
+	 (:args (sap :scs (sap-reg))
+		(offset :scs (unsigned-reg)))
+	 (:arg-types system-area-pointer unsigned-num)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 5
+	   (inst ,(ecase size
+		    (:byte (if signed 'ldsb 'ldub))
+		    (:short (if signed 'ldsh 'lsuh))
+		    (:long 'ld)
+		    (:single 'ldf)
+		    (:double 'lddf))
+		 result sap offset)))
+       (define-vop (,ref-name-c)
+	 (:translate ,ref-name)
+	 (:policy :fast-safe)
+	 (:args (sap :scs (sap-reg)))
+	 (:arg-types system-area-pointer (:constant (signed-byte 13)))
+	 (:info offset)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 4
+	   (inst ,(ecase size
+		    (:byte (if signed 'ldsb 'ldub))
+		    (:short (if signed 'ldsh 'lsuh))
+		    (:long 'ld)
+		    (:single 'ldf)
+		    (:double 'lddf))
+		 result sap offset)))
+       (define-vop (,set-name)
+	 (:translate ,set-name)
+	 (:policy :fast-safe)
+	 (:args (sap :scs (sap-reg))
+		(offset :scs (unsigned-reg))
+		(value :scs (,sc) :target result))
+	 (:arg-types system-area-pointer unsigned-num ,type)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 5
+	   (inst ,(ecase size
+		    (:byte 'stb)
+		    (:short 'sth)
+		    (:long 'st)
+		    (:single 'stf)
+		    (:double 'stdf))
+		 value sap offset)
+	   (unless (location= result value)
+	     ,@(case size
+		 (:single
+		  '((inst fmovs result value)))
+		 (:double
+		  '((inst fmovs result value)
+		    (inst fmovs-odd result value)))
+		 (t
+		  '((inst move result value)))))))
+       (define-vop (,set-name-c)
+	 (:translate ,set-name)
+	 (:policy :fast-safe)
+	 (:args (sap :scs (sap-reg))
+		(value :scs (,sc) :target result))
+	 (:arg-types system-area-pointer (:constant (signed-byte 13)) ,type)
+	 (:info offset)
+	 (:results (result :scs (,sc)))
+	 (:result-types ,type)
+	 (:generator 4
+	   (inst ,(ecase size
+		    (:byte 'stb)
+		    (:short 'sth)
+		    (:long 'st)
+		    (:single 'stf)
+		    (:double 'stdf))
+		 value sap offset)
+	   (unless (location= result value)
+	     ,@(case size
+		 (:single
+		  '((inst fmovs result value)))
+		 (:double
+		  '((inst fmovs result value)
+		    (inst fmovs-odd result value)))
+		 (t
+		  '((inst move result value))))))))))
 
-(define-vop (sap-set)
-  (:policy :fast-safe)
-  (:variant-vars size)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
-	 (value :scs (signed-reg unsigned-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum (:or signed-num unsigned-num))
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
-  (:temporary (:scs (non-descriptor-reg)) temp)
-  (:generator 5
-    (let* ((shift (ecase size
-		    (:byte 0)
-		    (:short 1)
-		    ((:long :single :double) 2)))
-	   (offset
-	    (sc-case offset
-	      (zero offset)
-	      (immediate
-	       (let ((offset (ash (tn-value offset) shift)))
-		 (cond ((typep offset '(signed-byte 13))
-			offset)
-		       (t
-			(inst li temp offset)
-			temp))))
-	      ((any-reg signed-reg)
-	       (when (sc-is offset any-reg)
-		 (decf shift 2))
-	       (cond ((plusp shift)
-		      (inst sll temp offset shift)
-		      temp)
-		     ((minusp shift)
-		      (inst sra temp offset (- shift))
-		      temp)
-		     (t
-		      offset))))))
-      (ecase size
-	(:byte
-	 (inst stb value sap offset)
-	 (move result value))
-	(:short
-	 (inst sth value sap offset)
-	 (move result value))
-	(:long
-	 (inst st value sap offset)
-	 (move result value))
-	(:single
-	 (inst stf value sap offset)
-	 (unless (location= result value)
-	   (inst fmovs result value)))
-	(:double
-	 (inst stdf value sap offset)
-	 (unless (location= result value)
-	   (inst fmovs result value)
-	   (inst fmovs-odd result value)))))))
+); eval-when (compile eval)
 
-
-
-(define-vop (sap-system-ref sap-ref)
-  (:translate sap-ref-sap)
-  (:results (result :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:variant :long nil))
-
-(define-vop (sap-system-set sap-set)
-  (:translate %set-sap-ref-sap)
-  (:args (sap :scs (sap-reg))
-	 (offset :scs (any-reg signed-reg zero immediate))
-	 (value :scs (sap-reg) :target result))
-  (:arg-types system-area-pointer positive-fixnum system-area-pointer)
-  (:results (result :scs (sap-reg)))
-  (:result-types system-area-pointer)
-  (:variant :long))
-
-
-
-(define-vop (32bit-system-ref sap-ref)
-  (:translate sap-ref-32)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  (:variant :long nil))
-
-(define-vop (signed-32bit-system-ref sap-ref)
-  (:translate signed-sap-ref-32)
-  (:results (result :scs (signed-reg)))
-  (:result-types signed-num)
-  (:variant :long t))
-
-(define-vop (32bit-system-set sap-set)
-  (:translate %set-sap-ref-32)
-  (:arg-types system-area-pointer positive-fixnum
-	      (:or unsigned-num signed-num))
-  (:variant :long))
-
-
-(define-vop (16bit-system-ref sap-ref)
-  (:translate sap-ref-16)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types positive-fixnum)
-  (:variant :short nil))
-
-(define-vop (signed-16bit-system-ref sap-ref)
-  (:translate signed-sap-ref-16)
-  (:results (result :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:variant :short t))
-
-(define-vop (16bit-system-set sap-set)
-  (:translate %set-sap-ref-16)
-  (:arg-types system-area-pointer positive-fixnum tagged-num)
-  (:variant :short))
-
-
-(define-vop (8bit-system-ref sap-ref)
-  (:translate sap-ref-8)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types positive-fixnum)
-  (:variant :byte nil))
-
-(define-vop (signed-8bit-system-ref sap-ref)
-  (:translate signed-sap-ref-8)
-  (:results (result :scs (signed-reg)))
-  (:result-types tagged-num)
-  (:variant :byte t))
-
-(define-vop (8bit-system-set sap-set)
-  (:translate %set-sap-ref-8)
-  (:arg-types system-area-pointer positive-fixnum tagged-num)
-  (:variant :byte))
+(def-system-ref-and-set sap-ref-8 %set-sap-ref-8
+  unsigned-reg positive-fixnum :byte nil)
+(def-system-ref-and-set signed-sap-ref-8 %set-signed-sap-ref-8
+  signed-reg tagged-num :byte t)
+(def-system-ref-and-set sap-ref-16 %set-sap-ref-16
+  unsigned-reg positive-fixnum :short nil)
+(def-system-ref-and-set signed-sap-ref-16 %set-signed-sap-ref-16
+  signed-reg tagged-num :short t)
+(def-system-ref-and-set sap-ref-32 %set-sap-ref-32
+  unsigned-reg unsigned-num :long nil)
+(def-system-ref-and-set signed-sap-ref-32 %set-signed-sap-ref-32
+  signed-reg signed-num :long t)
+(def-system-ref-and-set sap-ref-sap %set-sap-ref-sap
+  sap-reg system-area-pointer :long)
+(def-system-ref-and-set sap-ref-single %set-sap-ref-single
+  single-reg single-float :single)
+(def-system-ref-and-set sap-ref-double %set-sap-ref-double
+  double-reg double-float :double)
 
 
 
@@ -344,26 +278,3 @@
     (inst add sap vector
 	  (- (* vector-data-offset word-bytes) other-pointer-type))))
 
-
-
-;;;; ### Noise to allow old forms to continue to work until they are gone.
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim ',func)
-		`(,',func ,@args))))
-  (frob 32bit-system-ref sap-ref-32)
-  (frob unsigned-32bit-system-ref sap-ref-32)
-  (frob 16bit-system-ref sap-ref-16)
-  (frob 8bit-system-ref sap-ref-8))
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim (list 'setf ',func))
-		`(setf ,',func ,@args))))
-  (frob 32bit-system-set sap-ref-32)
-  (frob signed-32bit-system-set sap-ref-32)
-  (frob 16bit-system-set sap-ref-16)
-  (frob 8bit-system-set sap-ref-8))
