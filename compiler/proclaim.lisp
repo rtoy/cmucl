@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.20 1991/12/11 16:43:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.21 1992/02/05 18:34:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -570,7 +570,7 @@
 (defun %note-type-defined (name)
   (declare (symbol name))
   (note-name-defined name :type)
-  (when (boundp '*values-specifier-type-cache-vector*)
+  (when (boundp 'kernel::*values-specifier-type-cache-vector*)
     (values-specifier-type-cache-clear))
   (undefined-value))
 
