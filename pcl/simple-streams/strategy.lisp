@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.2 2003/06/07 17:56:28 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/strategy.lisp,v 1.3 2003/06/11 16:10:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -460,7 +460,7 @@
                               stream char))
           (when (>= ptr max)
 	    (setf (sm outpos stream) ptr)
-	    (setf ptr (dc-flush-buffer stream ptr t)))
+	    (setf ptr (dc-flush-buffer stream t)))
 	  (setf (bref buffer ptr) code)
 	  (incf ptr))))))
 
