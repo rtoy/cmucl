@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.43 1992/03/10 18:32:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.44 1992/05/18 19:57:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1189,8 +1189,11 @@
 	(res nil)
 	(fp (frame-pointer (frame-real-frame frame))))
     (loop
-      (when (eql catch 0) (return (nreverse res)))
-      (when (eq fp (kernel:stack-ref catch vm:catch-block-current-cont-slot))
+      (when (zerop (sap-int catch)) (return (nreverse res)))
+      (when (sap= fp
+		  (system:int-sap
+		   (* (kernel:stack-ref catch vm:catch-block-current-cont-slot)
+		      vm:word-bytes)))
 	(let* ((lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
 	       (word-offset (kernel:get-header-data lra)))
 	  (push (cons (kernel:stack-ref catch vm:catch-block-tag-slot)
@@ -1198,7 +1201,11 @@
 		       (* word-offset vm:word-bytes)
 		       (frame-debug-function frame)))
 		res)))
-      (setf catch (kernel:stack-ref catch vm:catch-block-previous-catch-slot)))))
+      (setf catch
+	    (system:int-sap
+	     (* (kernel:stack-ref catch
+				  vm:catch-block-previous-catch-slot)
+		vm:word-bytes))))))
 
 ;;; FRAME-REAL-FRAME -- Internal.
 ;;;
