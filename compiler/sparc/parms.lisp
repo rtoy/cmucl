@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.18 1992/06/09 23:46:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.19 1992/07/09 19:52:42 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,6 +40,8 @@
       #+mach 4096 #+sunos 8192)
 
 ); eval-when
+
+(pushnew :new-assembler *features*)
 
 
 ;;;; Machine Architecture parameters:
