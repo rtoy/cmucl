@@ -72,7 +72,7 @@
   (unless (member (intern (string name) (find-package "C"))
 		  vm-support-routines)
     (warn "Unknown VM support routine: ~A" name))
-  (let ((local-name (symbolicate (backend-name *backend*) "-" name)))
+  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
     `(progn
        (defun ,local-name ,ll ,@body)
        (setf (,(intern (concatenate 'simple-string "BACKEND-" (string name))
