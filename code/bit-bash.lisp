@@ -53,14 +53,14 @@
 (defmacro end-bits (count)
   "Returns the byte spec for COUNT bits at the end of a word, i.e. the bits
   at the largest address."
-  (ecase vm:target-byte-order
+  (ecase (c:backend-byte-order c:*backend*)
     (:little-endian `(byte ,count (- unit-bits ,count)))
     (:big-endian `(byte ,count 0))))
 
 (defmacro start-bits (count)
   "Returns the byte spec for COUNT bits at the start of a word, i.e. the bits
   at the smallest address."
-  (ecase vm:target-byte-order
+  (ecase (c:backend-byte-order c:*backend*)
     (:little-endian `(byte ,count 0))
     (:big-endian `(byte ,count (- unit-bits ,count)))))
 
@@ -69,7 +69,7 @@
   corresponds to the start of the word (lowest address) and WHERE of
   unit-bits corresponds to the end of the word (highest address).  In other
   words, act like :little-endian"
-  (ecase vm:target-byte-order
+  (ecase (c:backend-byte-order c:*backend*)
     (:little-endian `(byte ,count ,where))
     (:big-endian `(byte ,count (- unit-bits ,where ,count)))))
 
