@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.31 1990/07/12 12:18:40 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.32 1990/07/12 12:43:08 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -769,6 +769,7 @@
       (signed-reg
        (move res digit)))))
 
+
 (define-vop (digit-ashr)
   (:translate bignum::%ashr)
   (:policy :fast-safe)
@@ -780,17 +781,15 @@
   (:generator 1
     (inst sra result digit count)))
 
-(define-vop (digit-ashl)
+(define-vop (digit-lshr digit-ashr)
+  (:translate bignum::%digit-logical-shift-right)
+  (:generator 1
+    (inst srl result digit count)))
+
+(define-vop (digit-ashl digit-ashr)
   (:translate bignum::%ashl)
-  (:policy :fast-safe)
-  (:args (digit :scs (unsigned-reg))
-	 (count :scs (unsigned-reg)))
-  (:arg-types unsigned-num positive-fixnum)
-  (:results (result :scs (unsigned-reg)))
-  (:result-types unsigned-num)
   (:generator 1
     (inst sll result digit count)))
-
 
 
 ;;;; Static functions.
