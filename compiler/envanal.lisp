@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.32 2003/10/04 12:21:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.33 2003/10/26 10:27:58 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -348,9 +348,11 @@
 	     (code `(%catch-breakup)))
 	    (:unwind-protect
 	     (code `(%unwind-protect-breakup))
-	     (let ((fun (ref-leaf (continuation-use (second args)))))
-	       (reanalyze-funs fun)
-	       (code `(%funcall ,fun))))
+	     (let ((use (continuation-use (second args))))
+	       (when use
+		 (let ((fun (ref-leaf use)))
+		   (reanalyze-funs fun)
+		   (code `(%funcall ,fun))))))
 	    ((:block :tagbody)
 	     (cond (*converting-for-interpreter*
 		    ;; Avoid duplicates, as the interpreter expects just one
