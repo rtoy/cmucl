@@ -215,12 +215,11 @@
 
 
 
-;;;; Set up the tables used in defining interface components.
+;;;; These variables are built at compile time and used to build C header
+;;;; files.  We retain the values at run-time just so that we can built the
+;;;; interface files at any time.
 
 (in-package "TOOLKIT")
 
-(defvar *request-table* (make-array 50 :element-type 'simple-string
-				    :adjustable t :fill-pointer 0))
-(defvar *class-table* (make-array 40 :element-type 'cons
-				  :adjustable t :fill-pointer 0))
-(defvar next-type-tag)
+(declaim (special *request-table* *class-table* next-type-tag))
+
