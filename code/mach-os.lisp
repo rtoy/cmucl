@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.8 1992/03/26 03:21:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.9 1992/07/03 00:09:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,13 +40,9 @@
 ;;; that set up the argument blocks for the server interfaces.
 
 (defvar *task-self*)
-(defvar *task-data*)
-(defvar *task-notify*)
 
 (defun os-init ()
-  (setf *task-self* (mach:mach-task_self))
-  (setf *task-data* (mach:mach-task_data))
-  (setf *task-notify* (mach:mach-task_notify)))
+  (setf *task-self* (mach:mach-task_self)))
 
 
 ;;; GET-SYSTEM-INFO  --  Interface
