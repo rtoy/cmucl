@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.1 1990/11/22 11:51:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.2 1990/11/24 19:19:27 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -67,9 +67,11 @@
 (def-vm-support-routine generate-return-sequence (style)
   (ecase style
     (:raw
-     `((inst j (make-random-tn :kind :normal
-			       :sc (sc-or-lose 'interior-reg *backend*)
-			       :offset lip-offset))
+     `((inst j
+	     (make-random-tn :kind :normal
+			     :sc (sc-or-lose 'interior-reg *backend*)
+			     :offset lip-offset)
+	     8)
        (inst nop)))
     (:full-call
      `((lisp-return (make-random-tn :kind :normal
