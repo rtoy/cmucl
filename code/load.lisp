@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.43 1992/07/09 00:05:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.44 1992/10/08 22:11:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -988,6 +988,7 @@
 	     (system:without-gcing
 	      (read-n-bytes *fasl-file* (code-instructions code) 0
 			    code-length))
+	     (vm:sanctify-for-execution code)
 	     code)))
        (error
 	"Code Format not set?  Can't load code until after FOP-CODE-FORMAT.")))
@@ -1036,6 +1037,7 @@
       (when *load-print*
 	(load-fresh-line)
 	(format t "~S defined~%" fun))
+      (vm:sanctify-for-execution code-object)
       fun)))
 
 (define-fop (fop-make-byte-compiled-function 143)
