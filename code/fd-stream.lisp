@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.24 1993/02/26 08:25:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.25 1993/06/08 11:20:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -954,6 +954,7 @@ non-server method is also significantly more efficient for large reads.
        (setf (fd-stream-ibuf-sap stream) nil))
      (lisp::set-closed-flame stream))
     (:clear-input
+     (setf (fd-stream-unread stream) nil)
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (loop
