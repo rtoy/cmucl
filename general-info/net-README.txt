@@ -123,8 +123,8 @@ A very drafty version of an internal design document: (160 pages) Some of
 the "tex" files may be more humanly readable, since many formatting
 commands need to be added.  There is some inaccurate (dated) material in
 the compiler description.
-    /afs/cs/project/clisp/hackers/ram/scribe/internals/*.tex
-    /afs/cs/project/clisp/hackers/ram/scribe/internals/design.ps
+    /afs/cs/project/clisp/hackers/ram/docs/internals/*.tex
+    /afs/cs/project/clisp/hackers/ram/docs/internals/design.ps
 
 See hackers/ram/scribe/internals/architecture.tex (the System Architecture
 chapter in the internals document) for more information on the source tree
