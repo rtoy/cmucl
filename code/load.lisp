@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.16 1990/11/07 20:21:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.17 1990/11/19 05:06:59 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -646,8 +646,9 @@
   (let* ((rank (read-arg 4))
 	 (vec (pop-stack))
 	 (length (length vec))
-	 (res (%primitive make-array-header vm:simple-array-type rank)))
-    (declare (simple-array vec))
+	 (res (make-array-header vm:simple-array-type rank)))
+    (declare (simple-array vec)
+	     (type (unsigned-byte 24) rank))
     (set-array-header res vec length length 0
 		      (do ((i rank (1- i))
 			   (dimensions () (cons (pop-stack) dimensions)))
