@@ -204,6 +204,7 @@
 ); with-compilation-unit for back end.
 
 (comf "target:compiler/aliencomp")
+(comf "target:compiler/ltv")
 (comf "target:compiler/gtn")
 (with-compilation-unit
     (:optimize '(optimize (debug-info 2) (safety 1)))
