@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.12 1994/05/22 00:00:49 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.13 1994/05/22 18:05:49 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -772,7 +772,8 @@
 				#.c:rt-afpa-fasl-file-implementation
 				#.c:x86-fasl-file-implementation
 				#.c:hppa-fasl-file-implementation
-				#.c:alpha-fasl-file-implementation)
+				#.c:alpha-fasl-file-implementation
+				#.c:sgi-fasl-file-implementation)
 			       (lookup-foreign-symbol "undefined_tramp"))
 			      (#.c:sparc-fasl-file-implementation
 			       (lookup-foreign-symbol "_undefined_tramp"))))))
@@ -789,7 +790,8 @@
 		       #.c:rt-afpa-fasl-file-implementation
 		       #.c:x86-fasl-file-implementation
 		       #.c:hppa-fasl-file-implementation
-		       #.c:alpha-fasl-file-implementation)
+		       #.c:alpha-fasl-file-implementation
+		       #.c:sgi-fasl-file-implementation)
 		      (ecase type
 			(#.vm:function-header-type
 			 (make-random-descriptor
@@ -1670,7 +1672,7 @@
 (defun do-cold-fixup (code-object offset value kind)
   (let ((sap (sap+ (descriptor-sap code-object) offset)))
     (ecase (c:backend-fasl-file-implementation c:*backend*)
-      (#.c:pmax-fasl-file-implementation
+      ((#.c:pmax-fasl-file-implementation #.c:sgi-fasl-file-implementation)
        (ecase kind
 	 (:jump
 	  (assert (zerop (ash value -28)))
