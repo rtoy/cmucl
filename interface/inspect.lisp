@@ -135,7 +135,7 @@
 ;;;
 (defmethod inspector-pane-title (object)
   (typecase object
-    (pcl::std-instance
+    (standard-object
      (format nil "Instance ~a of Class ~a"
 	     object (pcl::class-name (pcl::class-of object))))
     (function (format nil "~a" object))
@@ -235,7 +235,7 @@
 ;;;
 (defmethod display-inspector-pane (object)
   (typecase object
-    (pcl::std-instance (display-clos-pane object))
+    (standard-object (display-clos-pane object))
     (function (display-function-pane object))
     (structure-object (display-structure-pane object))
     (t
