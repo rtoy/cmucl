@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.26 1991/05/15 16:36:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.27 1991/06/05 14:09:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,12 +51,6 @@
 (write-string "What is the current lisp-implementation-version? ")
 (force-output)
 (set '*lisp-implementation-version* (read-line))
-(write-string "What is the compiler version? ")
-(force-output)
-(set 'compiler-version (read-line))
-(write-string "What is the Hemlock version? ")
-(force-output)
-(set '*hemlock-version* (read-line))
 
 ;;; Keep us entertained...
 (setq *load-verbose* t)
@@ -92,7 +86,10 @@
 #-no-compiler
 ;;; Depends on backend definition for object format info...
 (load "code:room")
-
+#-no-compiler
+(set 'compiler-version
+     (concatenate 'string compiler-version
+		  "(" *lisp-implementation-version* ")"))
 
 ;;; Load the pretty printer after the compiler, 'cause it compiles stuff
 ;;; at load time.
@@ -120,6 +117,10 @@
 (load "hem:rompsite") ;Contains site-init stuff called at load time.
 #-no-hemlock
 (hi::build-hemlock)
+#-no-hemlock
+(set '*hemlock-version*
+     (concatenate 'string *hemlock-version*
+		  "(" *lisp-implementation-version* ")"))
 
 #|
 Don't install any dir translations, 'cause we want the real things.
