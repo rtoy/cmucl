@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.66 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.67 1996/07/08 19:01:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1024,7 +1024,7 @@
 
 ;;; ### Compiler interface non-standard...
 (defknown compile (symbol &optional (or list function null))
-  (values (or function symbol) boolean boolean))
+  (values (or function symbol cons) boolean boolean))
 
 (deftype optional-filename () '(or filename (member t nil)))
 
