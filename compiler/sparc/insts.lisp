@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.29 2001/01/03 08:45:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.30 2001/05/11 21:18:26 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -51,9 +51,12 @@
 	  (t
 	   (tn-offset tn)))))
 
-(disassem:set-disassem-params :instruction-alignment 32)
+(disassem:set-disassem-params :instruction-alignment 32
+			      :opcode-column-width 11)
 
-(defvar *disassem-use-lisp-reg-names* t)
+(defvar *disassem-use-lisp-reg-names* t
+  "If non-NIL, print registers using the Lisp register names.
+Otherwise, use the Sparc register names")
 
 (def-vm-support-routine location-number (loc)
   (etypecase loc
@@ -96,18 +99,250 @@
        #'(lambda (name)
 	   (cond ((null name) nil)
 		 (t (make-symbol (concatenate 'string "%" name)))))
-       sparc::*register-names*))
+       sparc::*register-names*)
+  "The Lisp names for the Sparc integer registers")
 
+(defparameter sparc-reg-symbols
+  #("%G0" "%G1" "%G2" "%G3" "%G4" "%G5" NIL NIL
+    "%O0" "%O1" "%O2" "%O3" "%O4" "%O5" "%O6" "%O7"
+    "%L0" "%L1" "%L2" "%L3" "%L4" "%L5" "%L6" "%L7"
+    "%I0" "%I1" "%I2" "%I3" "%I4" "%I5" NIL "%I7")
+  "The standard names for the Sparc integer registers")
+    
+(defun get-reg-name (index)
+  (if *disassem-use-lisp-reg-names*
+      (aref reg-symbols index)
+      (aref sparc-reg-symbols index)))
+
+(defvar *note-sethi-inst* nil
+  "An alist for the disassembler indicating the target register and
+value used in a SETHI instruction.  This is used to make annotations
+about function addresses and register values.")
+
+(defvar *pseudo-atomic-set* nil)
+
+(defun sign-extend-immed-value (val)
+  ;; val is a 13-bit signed number.  Extend the sign appropriately.
+  (if (logbitp 12 val)
+      (- val (ash 1 13))
+      val))
+
+(defmacro frob-names (names)
+  `(mapcar #'(lambda (n)
+	       (list (eval n) n))
+    ,names))
+
+(defmacro frob-names (names)
+  `(mapcar #'(lambda (n)
+	       `(,(eval n) ,n))
+    ,names))
+
+(macrolet
+    ((frob (&rest names)
+       (let ((results (mapcar #'(lambda (n)
+				  (let ((nn (intern (concatenate 'string (string n)
+								 "-TYPE"))))
+				    `(,(eval nn) ,nn)))
+			      names)))
+	 `(eval-when (compile load eval)
+	   (defconstant header-word-type-alist
+	     ',results)))))
+  ;; This is the same list as in objdefs.
+  (frob bignum
+	ratio
+	single-float
+	double-float
+	#+long-float long-float
+	complex
+	complex-single-float
+	complex-double-float
+	#+long-float complex-long-float
+  
+	simple-array
+	simple-string
+	simple-bit-vector
+	simple-vector
+	simple-array-unsigned-byte-2
+	simple-array-unsigned-byte-4
+	simple-array-unsigned-byte-8
+	simple-array-unsigned-byte-16
+	simple-array-unsigned-byte-32
+	simple-array-signed-byte-8
+	simple-array-signed-byte-16
+	simple-array-signed-byte-30
+	simple-array-signed-byte-32
+	simple-array-single-float
+	simple-array-double-float
+	#+long-float simple-array-long-float
+	simple-array-complex-single-float
+	simple-array-complex-double-float
+	#+long-float simple-array-complex-long-float
+	complex-string
+	complex-bit-vector
+	complex-vector
+	complex-array
+  
+	code-header
+	function-header
+	closure-header
+	funcallable-instance-header
+	byte-code-function
+	byte-code-closure
+	dylan-function-header
+	closure-function-header
+	#-gengc return-pc-header
+	#+gengc forwarding-pointer
+	value-cell-header
+	symbol-header
+	base-char
+	sap
+	unbound-marker
+	weak-pointer
+	instance-header
+	fdefn
+	#+(or gengc gencgc) scavenger-hook))
+
+;; Look at the current instruction and see if we can't add some notes
+;; about what's happening.
+
+(defun maybe-add-notes (reg dstate)
+  (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+				      (disassem:dstate-cur-offs dstate)
+				      vm:word-bytes
+				      (disassem::dstate-byte-order dstate)))
+	 (format (ldb (byte 2 30) word))
+	 (op3 (ldb (byte 6 19) word))
+	 (rs1 (ldb (byte 5 14) word))
+	 (rd (ldb (byte 5 25) word))
+	 (immed-p (not (zerop (ldb (byte 1 13) word))))
+	 (immed-val (sign-extend-immed-value (ldb (byte 13 0) word))))
+    ;; Only the value of format and rd are guaranteed to be correct
+    ;; because the disassembler is trying to print out the value of a
+    ;; register.  The other values may not be right.
+    (case format
+      (2
+       (case op3
+	 (#b000000
+	  (when (= reg rs1)
+	    (handle-add-inst rs1 immed-val rd dstate)))
+	 (#b111000
+	  (when (= reg rs1)
+	    (handle-jmpl-inst rs1 immed-val rd dstate)))
+	 (#b010001
+	  (when (= reg rs1)
+	    (handle-andcc-inst rs1 immed-val rd dstate)))))
+      (3
+       (case op3
+	 ((#b000000 #b000100)
+	  (when (= reg rs1)
+	    (handle-ld/st-inst rs1 immed-val rd dstate))))))
+    ;; If this is not a SETHI instruction, and RD is the same as some
+    ;; register used by SETHI, we delete the entry.  (In case we have
+    ;; a SETHI without any additional instruction because the low bits
+    ;; were zero.)
+    (unless (and (zerop format) (= #b100 (ldb (byte 3 22) word)))
+      (let ((sethi (assoc rd *note-sethi-inst*)))
+	(when sethi
+	  (setf *note-sethi-inst* (delete sethi *note-sethi-inst*)))))))
+
+(defun handle-add-inst (rs1 immed-val rd dstate)
+  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
+    (cond
+      (sethi
+       ;; RS1 was used in a SETHI instruction.  Assume that
+       ;; this is the offset part of the SETHI instruction for
+       ;; a full 32-bit address of something.  Make a note
+       ;; about this usage as a Lisp assembly routine or
+       ;; foreign routine, if possible.  If not, just note the
+       ;; final value.
+       (let ((addr (+ immed-val (ash (cdr sethi) 10))))
+	 (or (disassem::note-code-constant-absolute addr dstate)
+	     (disassem::maybe-note-assembler-routine addr t dstate)
+	     (disassem::note (format nil "~A = #x~8,'0X"
+				     (get-reg-name rd) addr)
+			     dstate)))
+       (setf *note-sethi-inst* (delete sethi *note-sethi-inst*)))
+      ((= rs1 null-offset)
+       ;; We have an ADD %NULL, <n>, RD instruction.  This is a
+       ;; reference to a static symbol.
+       (disassem:maybe-note-nil-indexed-object immed-val
+					       dstate))
+      ((= rs1 alloc-offset)
+       ;; ADD %ALLOC, n.  This must be some allocation or
+       ;; pseudo-atomic stuff
+       (cond ((and (= immed-val 4) (= rd alloc-offset)
+		   (not *pseudo-atomic-set*))
+	      ;; "ADD 4, %ALLOC" sets the flag
+	      (disassem:note "Set pseudo-atomic flag" dstate)
+	      (setf *pseudo-atomic-set* t))
+	     ((= rd alloc-offset)
+	      ;; "ADD n, %ALLOC" is reseting the flag, with extra
+	      ;; allocation.
+	      (disassem:note
+	       (format nil "Reset pseudo-atomic, allocated ~D bytes"
+		       (+ immed-val 4)) dstate)
+	      (setf *pseudo-atomic-set* nil))))
+      ((and (= rs1 zero-offset) *pseudo-atomic-set*)
+       ;; "ADD %ZERO, num, RD" inside a pseudo-atomic is very
+       ;; likely loading up a header word.  Make a note to that
+       ;; effect.
+       (let ((type (second (assoc (logand immed-val #xff) header-word-type-alist)))
+	     (size (ldb (byte 24 8) immed-val)))
+	 (when type
+	   (disassem:note (format nil "Header word ~A, size ~D?" type size)
+			  dstate)))))))
+
+(defun handle-jmpl-inst (rs1 immed-val rd dstate)
+  (let* ((sethi (assoc rs1 *note-sethi-inst*)))
+    (when sethi
+      ;; RS1 was used in a SETHI instruction.  Assume that
+      ;; this is the offset part of the SETHI instruction for
+      ;; a full 32-bit address of something.  Make a note
+      ;; about this usage as a Lisp assembly routine or
+      ;; foreign routine, if possible.  If not, just note the
+      ;; final value.
+      (let ((addr (+ immed-val (ash (cdr sethi) 10))))
+	(disassem::maybe-note-assembler-routine addr t dstate)
+	(setf *note-sethi-inst* (delete sethi *note-sethi-inst*))))))
+
+(defun handle-ld/st-inst (rs1 immed-val rd dstate)
+  (declare (ignore rd))
+  ;; Got an LDUW/LD or STW instruction, with immediate offset.
+  (case rs1
+    (29
+     ;; A reference to a code constant (reg = %CODE)
+     (disassem:note-code-constant immed-val dstate))
+    (2
+     ;; A reference to a static symbol (reg = %NULL)
+     (disassem:maybe-note-nil-indexed-symbol-slot-ref immed-val
+						      dstate))
+    (t
+     (let ((sethi (assoc rs1 *note-sethi-inst*)))
+       (when sethi
+	 (let ((addr (+ immed-val (ash (cdr sethi) 10))))
+	   (disassem::maybe-note-assembler-routine addr nil dstate)
+	   (setf *note-sethi-inst* (delete sethi *note-sethi-inst*))))))))
+
+(defun handle-andcc-inst (rs1 immed-val rd dstate)
+  (declare (ignore rs1))
+  ;; ANDCC %ALLOC, 3, %ZERO instruction
+  (when (and (= rd 0) (= immed-val 3))
+    (disassem:note "pseudo-atomic interrupted?" dstate)))
+	 
+(eval-when (compile load eval)
+(defun reg-arg-printer (value stream dstate)
+  (declare (stream stream) (fixnum value))
+  (let ((regname (get-reg-name value)))
+    (princ regname stream)
+    (disassem:maybe-note-associated-storage-ref value
+						'registers
+						regname
+						dstate)
+    (maybe-add-notes value dstate)))
+) ; eval-when
+      
 (disassem:define-argument-type reg
-  :printer #'(lambda (value stream dstate)
-	       (declare (stream stream) (fixnum value))
-	       (let ((regname (aref reg-symbols value)))
-		 (princ regname stream)
-		 (disassem:maybe-note-associated-storage-ref
-		  value
-		  'registers
-		  regname
-		  dstate))))
+  :printer #'reg-arg-printer)
 
 (defparameter float-reg-symbols
   (coerce 
@@ -945,8 +1180,18 @@
 
 (eval-when (compile load eval)
   (defun sethi-arg-printer (value stream dstate)
-    (declare (ignore dstate))
-    (format stream "%hi(#x~8,'0x)" (ash value 10)))
+    (format stream "%hi(#x~8,'0x)" (ash value 10))
+    ;; Save the immediate value and the destination register from this
+    ;; sethi instruction.  This is used later to print some possible
+    ;; notes about the value loaded by sethi.
+    (let* ((word (disassem::sap-ref-int (disassem:dstate-segment-sap dstate)
+					(disassem:dstate-cur-offs dstate)
+					vm:word-bytes
+					(disassem::dstate-byte-order dstate)))
+	   (imm22 (ldb (byte 22 0) word))
+	   (rd (ldb (byte 5 25) word)))
+      (push (cons rd imm22) *note-sethi-inst*)
+      ))
 ) ; eval-when (compile load eval)
 
 (define-instruction sethi (segment dst src1)
@@ -1474,7 +1719,7 @@
     (fixup
      (inst sethi reg value)
      (inst add reg value))))
-  
+
 (define-instruction-macro li (reg value)
   `(%li ,reg ,value))
 
