@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.6 1991/02/08 13:36:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.7 1991/08/23 18:23:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -274,8 +274,28 @@
   "Evaluates the Form and prints timing information on *Trace-Output*."
   `(%time #'(lambda () ,form)))
 
+;;; MASSAGE-TIME-FUNCTION  --  Internal
+;;;
+;;;    Try to compile the closure arg to %TIME if it is interpreted.
+;;;
+(defun massage-time-function (fun)
+  (cond
+   ((eval:interpreted-function-p fun)
+    (multiple-value-bind (def env-p)
+			 (function-lambda-expression fun)
+      (declare (ignore def))
+      (cond
+       (env-p
+	(warn "TIME form in a non-null environment, forced to interpret.~@
+	       Compiling entire form will produce more accurate times.")
+	fun)
+       (t
+	(compile nil fun)))))
+   (t fun)))
+
 (defun %time (fun)
-  (let (old-run-utime
+  (let ((fun (massage-time-function fun))
+	old-run-utime
 	new-run-utime
 	old-run-stime
 	new-run-stime
