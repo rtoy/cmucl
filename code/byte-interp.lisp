@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.5 1993/05/11 13:47:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.6 1993/05/11 17:26:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,9 +15,13 @@
 ;;;
 ;;; Written by William Lott
 ;;;
-
 (in-package "C")
 
+(in-package "KERNEL")
+(export '(byte-function byte-function-name initialize-byte-function
+			byte-closure byte-closure-function
+			byte-closure-data byte-function-or-closure))
+(in-package "C")
 
 
 ;;;; Types.
@@ -36,18 +40,42 @@
 
 ;;;; Byte functions:
 
-(defstruct (byte-function
-	    (:print-function %print-byte-function))
+;;; Abstract class represents any type of byte-compiled function.
+;;;
+(defstruct (byte-function-or-closure
+	    (:print-function %print-byte-function)
+	    (:alternate-metaclass kernel:funcallable-instance
+				  kernel:funcallable-structure-class
+				  kernel:make-funcallable-structure-class)
+	    (:type kernel:funcallable-structure)))
+
+;;; Represents a byte-compiled closure.
+;;;
+(defstruct (byte-closure (:include byte-function-or-closure)
+			 (:constructor make-byte-closure function data))
   ;;
-  ;; Debug name of this function.
-  (name nil)
+  ;; Byte function that we call.
+  (function (required-argument) :type byte-function)
+  ;;
+  ;; Closure data vector.
+  (data (required-argument) :type simple-vector))
+
+
+;;; Any non-closure byte function (including the hidden function object for a
+;;; closure.)
+;;;
+(defstruct (byte-function (:include byte-function-or-closure))
   ;;
   ;; The component that this XEP is an entry point into.  NIL until
-  ;; LOAD or MAKE-CORE-BYTE-COMPONENT fills it in.  We also allow
-  ;; cons so that the dumper can stick in a unique cons cell to
-  ;; identify what component it is trying to dump.  What a hack.
-  (component nil :type (or null kernel:code-component cons)))
+  ;; LOAD or MAKE-CORE-BYTE-COMPONENT fills it in.  They count on this being
+  ;; the first slot.
+  (component nil :type (or null kernel:code-component))
+  ;;
+  ;; Debug name of this function.
+  (name nil))
 
+;;; Fixed-argument byte function.
+;;;
 (defstruct (simple-byte-function (:include byte-function))
   ;;
   ;; The number of arguments expected.
@@ -56,6 +84,9 @@
   ;; The start of the function.
   (entry-point 0 :type index))
 
+
+;;; Variable arg-count byte function.
+;;;
 (defstruct (hairy-byte-function (:include byte-function))
   ;;
   ;; The minimum and maximum number of args, ignoring &rest and &key.
@@ -89,7 +120,7 @@
   (print-unreadable-object (s stream :identity t)
     (format stream "Byte function ~S" (byte-function-name s))))
 
-(declaim (freeze-type byte-function))
+(declaim (freeze-type byte-function-or-closure))
 
 
 ;;;; The stack.
@@ -263,53 +294,32 @@
 
 ;;;; Byte compiled function constructors/extractors.
 
-(defun make-byte-compiled-function (xep)
+(defun initialize-byte-compiled-function (xep)
   (declare (type byte-function xep))
-  (set-function-subtype
-   #'(lambda (&rest args)
-       (let ((old-sp (current-stack-pointer))
-	     (num-args (length args)))
-	 (declare (type stack-pointer old-sp))
-	 (dolist (arg args)
-	   (push-eval-stack arg))
-	 (invoke-xep nil 0 old-sp 0 num-args xep)))
-   vm:byte-code-function-type))
-
-(defun byte-compiled-function-xep (function)
-  (declare (type function function)
-	   (values byte-function))
-  (or (system:find-if-in-closure #'byte-function-p function)
-      (error "Couldn't find the XEP in ~S" function)))
+  (setf (%funcallable-instance-function xep)
+	#'(lambda (&rest args)
+	    (let ((old-sp (current-stack-pointer))
+		  (num-args (length args)))
+	      (declare (type stack-pointer old-sp))
+	      (dolist (arg args)
+		(push-eval-stack arg))
+	      (invoke-xep nil 0 old-sp 0 num-args xep))))
+  xep)
 
 (defun make-byte-compiled-closure (xep closure-vars)
   (declare (type byte-function xep)
 	   (type simple-vector closure-vars))
-  (set-function-subtype
-   #'(lambda (&rest args)
-       (let ((old-sp (current-stack-pointer))
-	     (num-args (length args)))
-	 (declare (type stack-pointer old-sp))
-	 (dolist (arg args)
-	   (push-eval-stack arg))
-	 (invoke-xep nil 0 old-sp 0 num-args xep closure-vars)))
-   vm:byte-code-closure-type))
-
-(defun byte-compiled-closure-xep (closure)
-  (declare (type function closure)
-	   (values byte-function))
-  (or (system:find-if-in-closure #'byte-function-p closure)
-      (error "Couldn't find the XEP in ~S" closure)))
-
-(defun byte-compiled-closure-closure-vars (closure)
-  (declare (type function closure)
-	   (values simple-vector))
-  (or (system:find-if-in-closure #'simple-vector-p closure)
-      (error "Couldn't find the closure vars in ~S" closure)))
-
-(defun set-function-subtype (function subtype)
-  (setf (function-subtype function) subtype)
-  function)
-
+  (let ((res (make-byte-closure xep closure-vars)))
+    (setf (%funcallable-instance-function res)
+	  #'(lambda (&rest args)
+	      (let ((old-sp (current-stack-pointer))
+		    (num-args (length args)))
+		(declare (type stack-pointer old-sp))
+		(dolist (arg args)
+		  (push-eval-stack arg))
+		(invoke-xep nil 0 old-sp 0 num-args xep
+			    (byte-closure-data xep)))))
+    res))
 
 
 ;;;; Inlines.
@@ -1072,22 +1082,21 @@
     (declare (type stack-pointer old-sp)
 	     (type (or function fdefn) fun-or-fdefn)
 	     (type function function))
-    (case (function-subtype function)
-      (#.vm:byte-code-function-type
+    (typecase function
+      (byte-function
+       (invoke-xep old-component ret-pc old-sp old-fp num-args function))
+      (byte-closure
        (invoke-xep old-component ret-pc old-sp old-fp num-args
-		   (byte-compiled-function-xep function)))
-      (#.vm:byte-code-closure-type
-       (invoke-xep old-component ret-pc old-sp old-fp num-args
-		   (byte-compiled-closure-xep function)
-		   (byte-compiled-closure-closure-vars function)))
+		   (byte-closure-function function)
+		   (byte-closure-data function)))
       (t
        (cond ((minusp ret-pc)
 	      (let* ((ret-pc (- ret-pc))
 		     (results
 		      (multiple-value-list
 		       (with-debugger-info
-			(old-component ret-pc old-fp)
-			(byte-apply function num-args old-sp)))))
+			   (old-component ret-pc old-fp)
+			 (byte-apply function num-args old-sp)))))
 		(dolist (result results)
 		  (push-eval-stack result))
 		(push-eval-stack (length results))
@@ -1095,8 +1104,8 @@
 	     (t
 	      (push-eval-stack
 	       (with-debugger-info
-		(old-component ret-pc old-fp)
-		(byte-apply function num-args old-sp)))
+		   (old-component ret-pc old-fp)
+		 (byte-apply function num-args old-sp)))
 	      (byte-interpret old-component ret-pc old-fp)))))))
 
 
@@ -1123,39 +1132,39 @@
 	     (type (or fdefn function) fun-or-fdefn)
 	     (type function function))
     (case (function-subtype function)
-      (#.vm:byte-code-function-type
+      (byte-function
+       (stack-copy old-sp start-of-args num-args)
+       (invoke-xep old-component old-pc old-sp old-fp num-args function))
+      (byte-closure
        (stack-copy old-sp start-of-args num-args)
        (invoke-xep old-component old-pc old-sp old-fp num-args
-		   (byte-compiled-function-xep function)))
-      (#.vm:byte-code-closure-type
-       (stack-copy old-sp start-of-args num-args)
-       (invoke-xep old-component old-pc old-sp old-fp num-args
-		   (byte-compiled-closure-xep function)
-		   (byte-compiled-closure-closure-vars function)))
+		   (byte-closure-function function)
+		   (byte-closure-data function)))
       (t
        ;; We are tail-calling native code.
-	 (cond ((null old-component)
-		;; We were called by native code.
-		(byte-apply function num-args old-sp))
-	       ((minusp old-pc)
-		;; We were called for multiple values.  So return multiple
-		;; values.
-		(let ((results
-		       (multiple-value-list
-			(with-debugger-info
-			    (old-component old-pc old-fp)
-			  (byte-apply function num-args old-sp)))))
-		  (dolist (result results)
-		    (push-eval-stack result))
-		  (push-eval-stack (length results)))
-		(byte-interpret old-component old-pc old-fp))
-	       (t
-		;; We were called for one value.  So return one value.
-		(push-eval-stack
-		 (with-debugger-info
-		     (old-component old-pc old-fp)
-		   (byte-apply function num-args old-sp)))
-		(byte-interpret old-component old-pc old-fp)))))))
+       (cond ((null old-component)
+	      ;; We were called by native code.
+	      (byte-apply function num-args old-sp))
+	     ((minusp old-pc)
+	      ;; We were called for multiple values.  So return multiple
+	      ;; values.
+	      (let ((results
+		     (multiple-value-list
+		      (with-debugger-info
+		       (old-component old-pc old-fp)
+		       (byte-apply function num-args old-sp)))))
+		(dolist (result results)
+		  (push-eval-stack result))
+		(push-eval-stack (length results)))
+	      (byte-interpret old-component old-pc old-fp))
+	     (t
+	      ;; We were called for one value.  So return one value.
+	      (push-eval-stack
+	       (with-debugger-info
+		   (old-component old-pc old-fp)
+		 (byte-apply function num-args old-sp)))
+	      (byte-interpret old-component old-pc old-fp)))))))
+
 
 (defun invoke-xep (old-component ret-pc old-sp old-fp num-args xep
 				 &optional closure-vars)
@@ -1169,21 +1178,21 @@
 	 (cond
 	  ((typep xep 'simple-byte-function)
 	   (unless (eql (simple-byte-function-num-args xep) num-args)
-	     ;;; ### flame out point.
-	     (error "Wrong number of arguments."))
+	     (with-debugger-info (old-component ret-pc old-fp)
+	       (error "Wrong number of arguments.")))
 	   (simple-byte-function-entry-point xep))
 	  (t
 	   (let ((min (hairy-byte-function-min-args xep))
 		 (max (hairy-byte-function-max-args xep)))
 	     (cond
 	      ((< num-args min)
-	       ;; ### Flame out point.
-	       (error "Not enough arguments."))
+	       (with-debugger-info (old-component ret-pc old-fp)
+		 (error "Not enough arguments.")))
 	      ((<= num-args max)
 	       (nth (- num-args min) (hairy-byte-function-entry-points xep)))
 	      ((null (hairy-byte-function-more-args-entry-point xep))
-	       ;; ### Flame out point.
-	       (error "Too many arguments."))
+	       (with-debugger-info (old-component ret-pc old-fp)
+		 (error "Too many arguments.")))
 	      (t
 	       (let* ((more-args-supplied (- num-args max))
 		      (sp (current-stack-pointer))
@@ -1205,8 +1214,8 @@
 		   (setf (eval-stack-ref more-args-start) rest))
 		  (t
 		   (unless (evenp more-args-supplied)
-		     ;; ### Flame out.
-		     (error "Odd number of keyword arguments."))
+		     (with-debugger-info (old-component ret-pc old-fp)
+		       (error "Odd number of keyword arguments.")))
 		   (let* ((num-more-args (hairy-byte-function-num-more-args xep))
 			  (new-sp (+ more-args-start num-more-args))
 			  (temp (max sp new-sp))
@@ -1255,8 +1264,8 @@
 					 (t
 					  (incf target))))))))
 		       (when (and bogus-key-p (not allow))
-			 ;; ### Flame out.
-			 (error "Unknown keyword: ~S" bogus-key)))
+			 (with-debugger-info (old-component ret-pc old-fp)
+			   (error "Unknown keyword: ~S" bogus-key))))
 		     (setf (current-stack-pointer) new-sp)))))
 	       (hairy-byte-function-more-args-entry-point xep))))))))
     (declare (type pc entry-point))
