@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.19 1991/11/14 09:32:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.20 1992/02/07 11:33:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.19 1991/11/14 09:32:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.20 1992/02/07 11:33:23 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -30,7 +30,8 @@
 	  boole-and boole-ior boole-xor boole-eqv boole-nand boole-nor
 	  boole-andc1 boole-andc2 boole-orc1 boole-orc2 lognot logtest
 	  logbitp ash integer-length byte byte-size byte-position
-	  ldb ldb-test mask-field dpb deposit-field))
+	  ldb ldb-test mask-field dpb deposit-field
+	  upgraded-complex-part-type)) 
 
 (in-package "KERNEL")
 
@@ -245,6 +246,12 @@
 
 
 ;;;; Complexes:
+
+(defun upgraded-complex-part-type (spec)
+  "Returns the element type of the most specialized COMPLEX number type that
+   can hold parts of type Spec.  This is currently always T."
+  (declare (ignore spec))
+  t)
 
 (defun complex (realpart &optional (imagpart 0))
   "Builds a complex number from the specified components."
