@@ -1284,13 +1284,13 @@
 	(unless (tree-equal context *last-source-context*)
 	  (note-message-repeats)
 	  (setq *last-source-context* context)
-	  (setq *last-original-source* nil)
+	  (setq *last-original-source* '#(invalid))
 	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" context))
 
 	(unless (tree-equal form *last-original-source*)
 	  (note-message-repeats)
 	  (setq *last-original-source* form)
-	  (setq *last-enclosing-source* nil)
+	  (setq *last-enclosing-source* '#(invalid))
 	  (setq *last-format-string* nil) 
 	  (format stream "  ~S~%" form))
 
@@ -1301,7 +1301,8 @@
 	    (note-message-repeats)
 	    (setq *last-source-form* '#(invalid))
 	    (setq *last-enclosing-source* enclosing)
-	    (format stream "==>~%  ~S~%" enclosing))
+	    (when enclosing
+	      (format stream "==>~%  ~S~%" enclosing)))
 	  
 	  (unless (tree-equal source *last-source-form*)
 	    (note-message-repeats)
