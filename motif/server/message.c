@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.3 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.4 1997/04/19 20:13:24 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -33,8 +33,9 @@ void message_free(message_t message) {
   packet_t current = last;
 
   do {
+    packet_t next = current->next;
     packet_free(current);
-    current = current->next;
+    current = next;
   } while( current != last );
 
   XtFree( (char *)message );

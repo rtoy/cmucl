@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.2 1994/10/27 17:16:51 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/widgets.c,v 1.3 1997/04/19 20:13:26 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -268,7 +268,7 @@ int RXtTranslateCoords(message_t message)
   toolkit_read_value(message,&x,XtRInt);
   toolkit_read_value(message,&y,XtRInt);
 
-  XtTranslateCoords(w,x,y,&root_x,&root_y);
+  XtTranslateCoords(w,x,y,(Position*)&root_x,(Position*)&root_y);
 
   message_write_int(reply,root_x,int_tag);
   message_write_int(reply,root_y,int_tag);
