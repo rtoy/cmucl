@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.30 1993/05/07 07:19:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.31 1993/05/13 13:09:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,6 +367,7 @@
 	  :init :null)
   (next :c-type "struct weak_pointer *"))
 
+#+gengc
 (define-primitive-object (scavenger-hook :type scavenger-hook
 					 :lowtag other-pointer-type
 					 :header scavenger-hook-type
