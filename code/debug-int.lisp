@@ -1001,6 +1001,34 @@
 (defsetf escape-register %set-escape-register)
 
 
+;;; ESCAPE-FLOAT-REGISTER  --  Internal
+;;;
+;;;    Like ESCAPE-REGISTER, but returns the value of a float register.  Format
+;;; is the type of float to return.
+;;;
+(defun escape-float-register (scp index format)
+  (alien-bind ((sc scp mach:sigcontext t)
+	       (fpregs (mach:sigcontext-fpregs (alien-value sc))
+		       mach:int-array t))
+    (let ((sap (alien-sap fpregs)))
+      (ecase format
+	(single-float (sap-ref-single sap index))
+	(double-float (sap-ref-double sap index))))))
+;;;
+(defun %set-escape-float-register (scp index format new-value)
+  (alien-bind ((sc scp mach:sigcontext t)
+	       (fpregs (mach:sigcontext-fpregs (alien-value sc))
+		       mach:int-array t))
+    (let ((sap (alien-sap fpregs)))
+      (ecase format
+	(single-float
+	 (setf (sap-ref-single sap index) new-value))
+	(double-float
+	 (setf (sap-ref-double sap index) new-value))))))
+;;;
+(defsetf escape-float-register %set-escape-float-register)
+
+
 ;;; DEBUG-FUNCTION-FROM-PC -- Internal.
 ;;;
 ;;; This returns a compiled-debug-function for code and pc.  We fetch the
@@ -2125,6 +2153,12 @@
 				 (c::sc-offset-offset sc-offset))))
 		      ,@forms)
 		    :invalid-value-for-unescaped-register-storage))
+	     (escaped-float-value (format)
+	       `(if escaped
+		    (escape-float-register escaped
+					   (c::sc-offset-offset sc-offset)
+					   ',format)
+		    :invalid-value-for-unescaped-register-storage))
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(int-sap (escape-register escaped
@@ -2154,11 +2188,16 @@
        (error "Local non-descriptor register access?"))
       (#.c:interior-reg-sc-number
        (error "Local interior register access?"))
-      ((#.c:single-reg-sc-number
-	#.c:double-reg-sc-number
-	#.c:single-stack-sc-number
-	#.c:double-stack-sc-number)
-       (error "No floating point stuff yet."))
+      (#.c:single-reg-sc-number
+       (escaped-float-value single-float))
+      (#.c:double-reg-sc-number
+       (escaped-float-value double-float))
+      (#.c:single-stack-sc-number
+       (with-nfp (nfp)
+	 (sap-ref-single nfp (c::sc-offset-offset sc-offset))))
+      (#.c:double-stack-sc-number
+       (with-nfp (nfp)
+	 (sap-ref-double nfp (c::sc-offset-offset sc-offset))))
       (#.c:control-stack-sc-number
        (stack-ref fp (c::sc-offset-offset sc-offset)))
       (#.c:base-character-stack-sc-number
@@ -2231,6 +2270,14 @@
 					   (c::sc-offset-offset sc-offset))
 			  ,val)
 		    value))
+	     (set-escaped-float-value (format val)
+	       `(if escaped
+		    (setf (escape-float-register
+			   escaped
+			   (c::sc-offset-offset sc-offset)
+			   ',format)
+			  ,val)
+		    value))
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(int-sap (escape-register escaped
@@ -2254,11 +2301,18 @@
        (error "Local non-descriptor register access?"))
       (#.c:interior-reg-sc-number
        (error "Local interior register access?"))
-      ((#.c:single-reg-sc-number
-	#.c:double-reg-sc-number
-	#.c:single-stack-sc-number
-	#.c:double-stack-sc-number)
-       (error "No floating point stuff yet."))
+      (#.c:single-reg-sc-number
+       (set-escaped-float-value single-float value))
+      (#.c:double-reg-sc-number
+       (set-escaped-float-value double-float value))
+      (#.c:single-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (sap-ref-single nfp (c::sc-offset-offset sc-offset))
+	       (the single-float value))))
+      (#.c:double-stack-sc-number
+       (with-nfp (nfp)
+	 (setf (sap-ref-double nfp (c::sc-offset-offset sc-offset))
+	       (the double-float value))))
       (#.c:control-stack-sc-number
        (setf (stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.c:base-character-stack-sc-number
