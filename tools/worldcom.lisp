@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.45 1992/09/24 16:27:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.46 1992/09/24 17:01:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,7 @@
 ;;; install interpreted type expanders causing the compiler to infinitely
 ;;; recurse.
 (defvar *original-%deftype* #'lisp::%deftype)
-(setf (fdefinition 'lisp::%deftype) *original-%deftype*)
+(setf (fdefinition 'lisp::%deftype) #'list)
 (comf "target:compiler/type")
 (comf "target:compiler/generic/vm-type")
 (comf "target:compiler/type-init")
