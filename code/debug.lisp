@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.46 1997/12/07 18:22:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.47 1997/12/31 18:01:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -701,7 +701,8 @@ See the CMU Common Lisp User's Manual for more information.
     (unless (typep *debug-condition* 'step-condition)
       (clear-input *debug-io*)
       (format *debug-io* "~2&Debug  (type H for help)~2%"))
-    (debug-loop)))
+    #-mp (debug-loop)
+    #+mp (mp:without-scheduling (debug-loop))))
 
 
 
