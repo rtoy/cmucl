@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.11 1999/03/16 23:37:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/dependent.lisp,v 1.12 2003/02/17 13:17:53 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -954,7 +954,7 @@
 ;;; This controls macro expansion, and isn't changable at run-time You will
 ;;; probably want to set this to nil if you want good performance at
 ;;; production time.
-(defconstant *type-check?* #+(or CMU) nil #-(or CMU) t)
+(defconstant *type-check?* #+clx-debugging t #-clx-debugging nil)
 
 ;; TYPE? is used to allow the code to do error checking at a different level from
 ;; the declarations.  It also does some optimizations for systems that don't have
