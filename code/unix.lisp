@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.26 1993/07/26 19:30:03 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.27 1993/11/06 04:16:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,8 @@
 	  KBDSCLICK FIONREAD unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
-	  unix-utimes unix-setreuid unix-setregid unix-getpid unix-getppid
+	  #-hpux unix-utimes #-hpux unix-setreuid #-hpux unix-setregid
+	  unix-getpid unix-getppid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
@@ -1259,6 +1260,7 @@
 ;;; the second argument is a list of the 4 times- accessed and
 ;;; updated seconds and microseconds.
 
+#-hpux
 (defun unix-utimes (file atime-sec atime-usec mtime-sec mtime-usec)
   "Unix-utimes sets the 'last-accessed' and 'last-updated'
    times on a specified file.  NIL and an error number is
@@ -1281,6 +1283,7 @@
 ;;; restricted for anyone but the super-user.  Setting either "ruid" or
 ;;; "euid" to -1 makes the system use the current id instead.
 
+#-hpux
 (defun unix-setreuid (ruid euid)
   "Unix-setreuid sets the real and effective user-id's of the current
    process to the specified ones.  NIL and an error number is returned
@@ -1292,6 +1295,7 @@
 ;;; restricted for anyone but the super-user.  Setting either "rgid" or
 ;;; "egid" to -1 makes the system use the current id instead.
 
+#-hpux
 (defun unix-setregid (rgid egid)
   "Unix-setregid sets the real and effective group-id's of the current
    process process to the specified ones.  NIL and an error number is
