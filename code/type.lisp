@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.27 1998/02/02 17:52:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.28 1998/04/17 00:44:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2370,7 +2370,7 @@
 
 (deftype extended-char ()
   "Type of characters that aren't base-char's.  None in CMU CL."
-  'nil)
+  '(and character (not base-char)))
 
 (deftype standard-char ()
   "Type corresponding to the charaters required by the standard."
