@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.18 1997/02/05 16:15:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.19 1997/02/10 23:24:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -71,9 +71,9 @@
 (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
-#-x86(def-math-rtn "exp" 1)
-#-x86(def-math-rtn "log" 1)
-#-x86(def-math-rtn "log10" 1)
+#-x86 (def-math-rtn "exp" 1)
+#-x86 (def-math-rtn "log" 1)
+#-x86 (def-math-rtn "log10" 1)
 (def-math-rtn "pow" 2)
 #-x86 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
@@ -83,7 +83,7 @@
 #+x86 ;; These are needed for use by byte-compiled files.
 (progn
   (defun %sin (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%sin x))
   (defun %sin-quick (x)
@@ -91,7 +91,7 @@
 	     (values double-float))
     (%sin-quick x))
   (defun %cos (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%cos x))
   (defun %cos-quick (x)
@@ -115,30 +115,29 @@
 	     (values double-float))
     (%atan2 x y))
   (defun %exp (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%exp x))
   (defun %log (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%log x))
   (defun %log10 (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%log10 x))
-
   #+nil ;; notyet
   (defun %pow (x y)
     (declare (type (double-float 0d0) x)
-	     (type double-float y)
+	     (double-float y)
 	     (values (double-float 0d0)))
     (%pow x y))
   (defun %sqrt (x)
-    (declare (type double-float x)
+    (declare (double-float x)
 	     (values double-float))
     (%sqrt x))
   (defun %scalbn (f ex)
-    (declare (type double-float f)
+    (declare (double-float f)
 	     (type (signed-byte 32) ex)
 	     (values double-float))
     (%scalbn f ex))
@@ -147,9 +146,9 @@
 	     (values double-float))
     (%scalb f ex))
   (defun %logb (x)
-     (declare (double-float x)
- 	     (values double-float))
-     (%logb x))
+    (declare (double-float x)
+	     (values double-float))
+    (%logb x))
   ) ; progn
 
 
@@ -635,11 +634,12 @@
 ;; instead of these Lisp versions.  These versions are probably good
 ;; enough, especially since they are portable.
 
+(declaim (inline scalb))
 (defun scalb (x n)
   "Compute 2^N * X without compute 2^N first (use properties of the
 underlying floating-point format"
   (declare (type double-float x)
-	   (integer n))
+	   (type double-float-exponent n))
   (scale-float x n))
 
 (defun logb (x)
