@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.25 1990/09/17 23:44:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.26 1990/10/01 16:31:24 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -115,6 +115,10 @@
   :type '(satisfies fp-reg-p)
   :function (lambda (tn)
 	      (1+ (tn-offset tn))))
+
+(define-argument-type control-register
+  :type '(unsigned-byte 5)
+  :function identity)
 
 (defun label-offset (label)
   (1- (ash (- (label-position label) *current-position*) -2)))
@@ -527,6 +531,19 @@
   (frob mfc1 fp-reg)
   (frob mfc1-odd odd-fp-reg))
 
+(define-instruction (cfc1)
+  (register (op :constant #b010001)
+	    (rs :constant #b00010)
+	    (rt :argument register)
+	    (rd :argument control-register)
+	    (funct :constant 0)))
+
+(define-instruction (ctc1)
+  (register (op :constant #b010001)
+	    (rs :constant #b00110)
+	    (rt :argument register)
+	    (rd :argument control-register)
+	    (funct :constant 0)))
 
 (define-instruction (float-op)
   (float (funct :argument float-operation)
