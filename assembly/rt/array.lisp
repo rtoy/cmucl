@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.3 1991/04/09 16:57:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/array.lisp,v 1.4 1991/10/22 16:50:36 wlott Exp $
 ;;;
 ;;; This file contains the support routines for arrays and vectors.
 ;;;
@@ -44,6 +44,8 @@
     (storew ndescr vector 0 vm:other-pointer-type)
     (storew length vector vm:vector-length-slot vm:other-pointer-type)
     (store-symbol-value alloc *allocation-pointer*))
+  (load-symbol-value ndescr *internal-gc-trigger*)
+  (inst tlt ndescr alloc)
   (move result vector))
 
 

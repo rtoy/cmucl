@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.4 1991/05/15 09:59:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/arith.lisp,v 1.5 1991/10/22 16:50:34 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -205,6 +205,8 @@
       (store-symbol-value alloc *allocation-pointer*)
       (storew temp res 0 other-pointer-type)
       (storew ocfp/low res bignum-digits-offset other-pointer-type)))
+  (load-symbol-value temp *internal-gc-trigger*)
+  (inst tlt temp ocfp/low)
   ;; Out of here
   (lisp-return lra lip :offset 1)
 

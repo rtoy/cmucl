@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.3 1991/04/11 14:49:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.4 1991/10/22 16:50:28 wlott Exp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -65,7 +65,7 @@
 		,@(when (or need-unbound-marker header variable-length)
 		    '((:temp temp non-descriptor-reg ocfp-offset)))
 		(:res result descriptor-reg a0-offset))
-	   (pseudo-atomic (alloc)
+	   (pseudo-atomic (temp)
 	     (load-symbol-value alloc *allocation-pointer*)
 	     (inst cal result alloc ,lowtag)
 	     ,@(cond ((and header variable-length)
@@ -91,4 +91,6 @@
 	     ,@(when need-unbound-marker
 		 `((inst li temp unbound-marker-type)))
 	     ,@(init-forms)
-	     (store-symbol-value alloc *allocation-pointer*)))))))
+	     (store-symbol-value alloc *allocation-pointer*))
+	   (load-symbol-value temp *internal-gc-trigger*)
+	   (inst tlt temp alloc))))))
