@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.72 2001/03/04 20:12:46 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.73 2001/09/27 11:28:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,7 +204,9 @@
   #+alpha unsigned-int #+svr4 unsigned-long)
 (def-alien-type nlink-t #-svr4 unsigned-short #+svr4 unsigned-long)
 
-(defconstant FD-SETSIZE #-(or hpux alpha linux) 256 #+hpux 2048 #+alpha 4096 #+linux 1024)
+(defconstant FD-SETSIZE
+  #-(or hpux alpha linux FreeBSD) 256
+  #+hpux 2048 #+alpha 4096 #+(or linux FreeBSD) 1024)
 
 ;; not checked for linux...
 (def-alien-type nil
