@@ -138,13 +138,13 @@
   ;; Non-Descriptor mc68881-single-floats.
   (mc68881-single-reg mc68881-float-registers
    :locations (0 1 2 3 4 5 6 7)
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
   ;; Non-Descriptor mc68881-double-floats.
   (mc68881-double-reg mc68881-float-registers
    :locations (0 1 2 3 4 5 6 7)
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
@@ -152,14 +152,14 @@
   (FPA-single-reg FPA-float-registers
    ;; 14 and 15 are status and exception registers.
    :locations (0 1 2 3 4 5 6 7 8 9 10 11 12 13)
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
   ;; Non-Descriptor FPA-double-floats.
   (FPA-double-reg FPA-float-registers
    :locations (0 2 4 6 8 10 12) ;14 and 15 are status and exception registers.
    :element-size 2
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
@@ -168,7 +168,7 @@
    :locations (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23
 	       24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44
 	       45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63)
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
   ;; Non-Descriptor AFPA-double-floats.
@@ -176,7 +176,7 @@
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28
 	       30 32 34 36 38 40 42 44 46 48 50 52 54 56 58 60 62)
    :element-size 2
-   :constant-scs (constant)
+   :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
@@ -250,14 +250,22 @@
 (def-primitive-type bignum (descriptor-reg))
 (def-primitive-type ratio (descriptor-reg))
 (def-primitive-type complex (descriptor-reg))
-(def-primitive-type mc68881-single-float (mc68881-single-reg descriptor-reg))
-(def-primitive-type mc68881-double-float (mc68881-double-reg descriptor-reg))
-(def-primitive-type FPA-single-float (FPA-single-reg descriptor-reg))
-(def-primitive-type FPA-double-float (FPA-double-reg descriptor-reg))
-(def-primitive-type AFPA-single-float (AFPA-single-reg descriptor-reg))
-(def-primitive-type AFPA-double-float (AFPA-double-reg descriptor-reg))
-(def-primitive-type any-single-float (descriptor-reg))
-(def-primitive-type any-double-float (descriptor-reg))
+(def-primitive-type mc68881-single-float (mc68881-single-reg descriptor-reg)
+  :type single-float)
+(def-primitive-type mc68881-double-float (mc68881-double-reg descriptor-reg)
+  :type double-float)
+(def-primitive-type FPA-single-float (FPA-single-reg descriptor-reg)
+  :type single-float)
+(def-primitive-type FPA-double-float (FPA-double-reg descriptor-reg)
+  :type double-float)
+(def-primitive-type AFPA-single-float (AFPA-single-reg descriptor-reg)
+  :type single-float)
+(def-primitive-type AFPA-double-float (AFPA-double-reg descriptor-reg)
+  :type double-float)
+(def-primitive-type any-single-float (descriptor-reg)
+  :type single-float)
+(def-primitive-type any-double-float (descriptor-reg)
+  :type double-float)
 
 ;;; Primitive other-pointer array types.
 ;;; 
