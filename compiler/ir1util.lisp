@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.56 1992/06/03 20:04:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.57 1992/08/03 12:32:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -845,8 +845,9 @@
     (unless (or (leaf-ever-used var)
 		(lambda-var-ignorep var))
       (let ((*compiler-error-context* (lambda-bind fun)))
-	(compiler-warning "Variable ~S defined but never used."
-			  (leaf-name var))
+	(unless (policy *compiler-error-context* (= brevity 3))
+	  (compiler-warning "Variable ~S defined but never used."
+			    (leaf-name var)))
 	(setf (leaf-ever-used var) t))))
   (undefined-value))
 
