@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.19 1997/02/10 23:24:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.20 1997/08/26 18:00:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -892,7 +892,7 @@ Z may be any number, but the result is always a complex."
 	   (complex (float-sign x)
 		    (float-sign y 0.0d0)))
 	  (t
-	   (let* ((tv (tan y))
+	   (let* ((tv (%tan y))
 		  (beta (+ 1.0d0 (* tv tv)))
 		  (s (sinh x))
 		  (rho (sqrt (+ 1.0d0 (* s s)))))
