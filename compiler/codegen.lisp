@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.19 1993/03/12 15:30:15 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.20 1993/05/05 19:48:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,7 +126,7 @@
 (defvar *elsewhere* nil)
 (defvar *elsewhere-label* nil)
 
-(defvar *assembly-optimize* nil
+(defvar *assembly-optimize* t
   "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
   rather than policy control.")
 
@@ -170,7 +170,7 @@
 	(policy (lambda-bind
 		 (block-home-lambda
 		  (block-next (component-head *compile-component*))))
-		(or (>= speed cspeed) (>= space cspeed))))
+		(or (> speed cspeed) (> space cspeed))))
    :inst-hook (if *compiler-trace-output* #'trace-instruction)))
 
 ;;; Init-Assembler  --  Interface
