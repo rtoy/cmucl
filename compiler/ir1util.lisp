@@ -245,11 +245,11 @@
 |#
 
 
-;;; Node-Block, Node-Environment  --  Interface
+;;; NODE-BLOCK, NODE-ENVIRONMENT, NODE-TLF-NUMBER  --  Interface
 ;;;
 ;;;    Shorthand for common idiom.
 ;;;
-(proclaim '(inline node-block node-environment))
+(proclaim '(inline node-block node-environment node-tlf-number))
 (defun node-block (node)
   (declare (type node node))
   (the cblock (continuation-block (node-prev node))))
@@ -257,6 +257,10 @@
 (defun node-environment (node)
   (declare (type node node))
   (the environment (lambda-environment (block-lambda (node-block node)))))
+;;;
+(defun node-tlf-number (node)
+  (declare (type node node))
+  (second (node-source-path node)))
 
 
 ;;;; Flow/DFO/Component hackery:
