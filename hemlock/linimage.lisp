@@ -193,7 +193,7 @@
 
 (defmacro u-vec-get-rep (u-vec index)
   `(svref *print-representation-vector*
-	  (%primitive 8bit-system-ref ,u-vec ,index)))
+	  (system:sap-ref-8 ,u-vec ,index)))
 
 ;;; display-losing-chars  --  Internal
 ;;;
