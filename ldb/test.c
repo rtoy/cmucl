@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.2 1990/03/08 17:30:54 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.3 1990/03/19 14:21:02 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -16,27 +16,55 @@ static char *signames[] = {
     "SIGUSR1", "SIGUSR2"
 };
 
+static char *errors[] = ERRORS;
+
 
 signal_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
     int mask;
-    unsigned long bad_inst;
+    unsigned long *ptr, bad_inst;
+    char *cptr;
 
     printf("Hit with %s, code = %d, context = 0x%x\n", signames[signal], code, context);
 
     if (context->sc_cause & CAUSE_BD)
-        bad_inst = *(unsigned long *)(context->sc_pc + 4);
+        ptr = (unsigned long *)(context->sc_pc + 4);
     else
-        bad_inst = *(unsigned long *)(context->sc_pc);
+        ptr = (unsigned long *)(context->sc_pc);
+    bad_inst = *ptr;
 
     if ((bad_inst >> 26) == 0 && (bad_inst & 0x3f) == 0xd) {
-        printf("Hit a break.  Use ``exit'' to continue.\n");
-        if (context->sc_cause & CAUSE_BD)
-            emulate_branch(context, *(unsigned long *)context->sc_pc);
-        else
-            context->sc_pc += 4;
+        /* It was a break. */
+        switch (code) {
+            case trap_Halt:
+                printf("%primitive halt called; the party is over.\n");
+                break;
+
+            case trap_PendingInterrupt:
+                printf("Pending interrupt trap? This should not happen.\n");
+                break;
+
+            case trap_Error:
+            case trap_Cerror:
+                cptr = (char *)(ptr+1);
+                printf("Error: %s\n", errors[*cptr]);
+                while (*++cptr != 0)
+                    printf("    R%d: 0x%x\n", *cptr, context->sc_regs[*cptr]);
+                if (code == trap_Cerror) {
+                    printf("Hit a break.  Use ``exit'' to continue.\n");
+                    if (context->sc_cause & CAUSE_BD)
+                        emulate_branch(context, *(unsigned long *)context->sc_pc);
+                    else
+                        context->sc_pc += 4;
+                }
+                break;
+
+            default:
+                printf("Unknown trap type.\n");
+                break;
+        }
     }
 
     mask = sigsetmask(0);
