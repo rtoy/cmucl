@@ -39,14 +39,20 @@
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
 
-(comf "target:compiler/macros" :load *load-stuff*
+(comf "target:compiler/macros"
       :byte-compile #+bootstrap t #-bootstrap *byte-compile*)
+(when *load-stuff*
+  (load "target:compiler/macros"))
 
-(comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t
+(comf "target:compiler/generic/vm-macs" :proceed t
 	:byte-compile #+bootstrap t #-bootstrap nil)
+(when *load-stuff*
+  (load "target:compiler/generic/vm-macs"))
 
-(comf "target:compiler/backend" :load *load-stuff* :proceed t
+(comf "target:compiler/backend" :proceed t
 	:byte-compile #+bootstrap t #-bootstrap nil)
+(when *load-stuff*
+  (load "target:compiler/backend"))
 
 (defvar c::*target-backend* (c::make-backend))
 
@@ -122,27 +128,31 @@
 (with-compilation-unit
     (:optimize '(optimize (safety #+small 0 #-small 1) #+small (debug 0)))
 
-  #-x86
+  #+original
   (progn				; this is distributed order
     (comf (vmdir "target:compiler/insts"))
     (comf (vmdir "target:compiler/macros") :load *load-stuff*)
     (comf (vmdir "target:compiler/vm")))
-  #+nil
+  #+original
   (progn				; this works for x86
     (comf (vmdir "target:compiler/vm"))
     (comf (vmdir "target:compiler/macros") :load *load-stuff*)
     (comf (vmdir "target:compiler/insts")))
-  #+x86
-  (progn				; this is needed for cross compile
+  #-tryit
+  (progn				; this also works - better??
     (comf (vmdir "target:compiler/vm"))
     (comf (vmdir "target:compiler/insts"))
-    (comf (vmdir "target:compiler/macros") :load *load-stuff*
+    (comf (vmdir "target:compiler/macros")
 	   :byte-compile #+bootstrap t #-bootstrap nil)
-    )	
+    (when *load-stuff*
+      (load (vmdir "target:compiler/macros")))
+    )
   
 (comf "target:compiler/generic/primtype")
-(comf (vmdir "target:assembly/support") :load *load-stuff*
+(comf (vmdir "target:assembly/support")
        :byte-compile #+bootstrap t #-bootstrap nil) ; pw
+(when *load-stuff*
+  (load (vmdir "target:assembly/support")))
 (comf (vmdir "target:compiler/move"))
 (comf (vmdir "target:compiler/float") :byte-compile *byte-compile*)
 (comf (vmdir "target:compiler/sap") :byte-compile *byte-compile*)
