@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.2 1991/11/09 02:38:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/char.lisp,v 1.3 1991/11/11 22:55:58 ram Exp $
 ;;; 
 ;;; This file contains the SPARC VM definition of character operations.
 ;;;
@@ -24,26 +24,26 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-char)
-  (:args (x :scs (any-reg)))
+  (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (base-char-reg)))
   (:generator 1
     (inst srl y x vm:type-bits)))
 ;;;
 (define-move-vop move-to-base-char :move
-  (any-reg) (base-char-reg))
+  (any-reg descriptor-reg) (base-char-reg))
 
 
 ;;; Move an untagged char to a tagged representation.
 ;;;
 (define-vop (move-from-base-char)
   (:args (x :scs (base-char-reg)))
-  (:results (y :scs (any-reg)))
+  (:results (y :scs (any-reg descriptor-reg)))
   (:generator 1
     (inst sll y x vm:type-bits)
     (inst or y vm:base-char-type)))
 ;;;
 (define-move-vop move-from-base-char :move
-  (base-char-reg) (any-reg))
+  (base-char-reg) (any-reg descriptor-reg))
 
 ;;; Move untagged base-char values.
 ;;;
