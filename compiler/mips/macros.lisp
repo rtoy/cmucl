@@ -7,13 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.2 1990/02/03 19:33:02 wlott Exp $
+;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
 ;;; Written by William Lott.
 ;;; 
 
 (in-package "C")
-
 
 
 
@@ -81,3 +82,31 @@
 	(sc-case ,n-stack
 	  ((control-stack number-stack string-char-stack sap-stack)
 	   (storew ,n-reg cont-tn (tn-offset ,n-stack))))))))
+
+;;; Error stuff.
+;;;
+
+(defmacro error-call (error-code &rest values)
+  (once-only ((n-error-code error-code))
+    `(progn
+       ,@(collect ((args))
+	   (do ((vals values (cdr vals))
+		(regs register-argument-tns (cdr regs)))
+	       ((or (null vals) (null regs))
+		(if (null vals)
+		    (args)
+		    (error "Can't use ERROR-CALL with ~D values"
+			   (length values))))
+	     (args `(move ,(car regs) ,(car vals)))))
+       (inst break ,error-code))))
+
+(defmacro generate-error-code (node error-code &rest values)
+  "Generate-Error-Code Node Error-code Value*
+  Emit code for an error with the specified Error-Code and context Values.
+  Node is used for source context."
+  `(unassemble
+     (assemble-elsewhere ,node
+       (let ((start-lab (gen-label)))
+	 (emit-label start-lab)
+	 (error-call ,error-code ,@values)
+	 start-lab))))
