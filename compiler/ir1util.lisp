@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.44 1991/11/13 19:35:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.45 1991/11/14 00:58:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -826,35 +826,28 @@
 ;;;    This function is called by people who delete nodes; it provides a way to
 ;;; indicate that the value of a continuation is no longer used.  We null out
 ;;; the Continuation-Dest, set Flush-P in the blocks containing uses of Cont
-;;; and set Component-Reoptimize.
+;;; and set Component-Reoptimize.  If the Prev of the use is deleted, then we
+;;; blow off reoptimization.
 ;;;
 ;;;    If the continuation is :Deleted, then we don't do anything, since all
-;;; semantics have already been flushed.  If the continuation is a
-;;; :Deleted-Block-Start, then we delete the continuation, since its control
-;;; semantics have already been deleted.  Deleting the continuation causes its
-;;; uses to be reoptimized.  If the Prev of the use is deleted, then we blow
-;;; off reoptimization.
+;;; semantics have already been flushed.  :Deleted-Block-Start start
+;;; continuations are treated just like :Block-Start; it is possible that the
+;;; continuation may be given a new dest (e.g. by SUBSTITUTE-CONTINUATION), so
+;;; we don't want to delete it.
 ;;;
 (defun flush-dest (cont)
   (declare (type continuation cont))
   
-  (ecase (continuation-kind cont)
-    (:deleted)
-    (:deleted-block-start
-     (assert (continuation-dest cont))
-     (setf (continuation-dest cont) nil)
-     (delete-continuation cont))
-    ((:inside-block :block-start)
-     (assert (continuation-dest cont))
-     (setf (continuation-dest cont) nil)
-     (setf (component-reoptimize (block-component (continuation-block cont)))
-	   t)
-     (do-uses (use cont)
-       (let ((prev (node-prev use)))
-	 (unless (eq (continuation-kind prev) :deleted)
-	   (setf (block-attributep (block-flags (continuation-block prev))
-				   flush-p type-asserted)
-		 t))))))
+  (unless (eq (continuation-kind cont) :deleted)
+    (assert (continuation-dest cont))
+    (setf (continuation-dest cont) nil)
+    (do-uses (use cont)
+      (let ((prev (node-prev use)))
+	(unless (eq (continuation-kind prev) :deleted)
+	  (let ((block (continuation-block prev)))
+	    (setf (component-reoptimize (block-component block)) t)
+	    (setf (block-attributep (block-flags block) flush-p type-asserted)
+		  t))))))
 
   (setf (continuation-%type-check cont) nil)
   
