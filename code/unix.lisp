@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.67 2000/08/25 09:59:05 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.68 2001/01/23 12:24:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1935,13 +1935,13 @@
   "Unix-times returns information about the cpu time usage of the process
    and its children."
   (with-alien ((usage (struct tms)))
-    (syscall* ("times" (* (struct tms)))
-	      (values t
-		      (slot usage 'tms-utime)
-		      (slot usage 'tms-stime)
-		      (slot usage 'tms-cutime)
-		      (slot usage 'tms-cstime))
-	      (addr usage))))
+    (alien-funcall (extern-alien "times" (function int (* (struct tms))))
+		   (addr usage))
+    (values t
+	    (slot usage 'tms-utime)
+	    (slot usage 'tms-stime)
+	    (slot usage 'tms-cutime)
+	    (slot usage 'tms-cstime))))
 ) ; end progn
 
 ;; Requires call to tzset() in main.
