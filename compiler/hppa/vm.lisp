@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/vm.lisp,v 1.1 1992/07/13 03:48:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/vm.lisp,v 1.2 1993/08/24 01:50:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,11 +289,11 @@
 	 nil))
     (single-float
      (if (zerop value)
-	 (sc-number-or-lose 'fp-single-zero)
+	 (sc-number-or-lose 'fp-single-zero *backend*)
 	 nil))
     (double-float
      (if (zerop value)
-	 (sc-number-or-lose 'fp-double-zero)
+	 (sc-number-or-lose 'fp-double-zero *backend*)
 	 nil))))
 
 
