@@ -64,13 +64,10 @@
   "The fixnum closest in value to negative infinity.")
 
 
-(defvar *prompt* "* " "The string with which Lisp prompts you.")
-
-
 ;;; Random information:
 
 (defvar compiler-version "???")
-(defvar *lisp-implementation-version* "2.7(?)")
+(defvar *lisp-implementation-version* "3.0(?)")
 
 (defvar *in-the-compiler* ()
   "Bound to T while running code inside the compiler.  Macros may test this to
@@ -1166,44 +1163,76 @@
 (defvar ++ nil "Gets the previous value of + when a new value is read.")
 (defvar +++ nil "Gets the previous value of ++ when a new value is read.")
 (defvar - nil "Holds the form curently being evaluated.")
-(defvar *prompt* nil "The top-level prompt string.")
-(defvar %temp% nil "Random temporary, clobbered by top level loop.")
+(defvar *prompt* "* "
+  "The top-level prompt string.  This also may be a function of no arguments
+   that returns a simple-string.")
 (defvar *in-top-level-catcher* nil
   "True if we are within the Top-Level-Catcher.  This is used by interrupt
   handlers to see whether it is o.k. to throw.")
 
+(defun interactive-eval (form)
+  "Evaluate FORM, returning whatever it returns but adjust ***, **, *, +++, ++,
+  +, ///, //, /, and -."
+  (setf +++ ++
+	++ +
+	+ -
+	- form)
+  (let ((results (multiple-value-list (eval form))))
+    (setf /// //
+	  // /
+	  / results
+	  *** **
+	  ** *
+	  * (car results)))
+  (unless (boundp '*)
+    ;; The bogon returned an unbound marker.
+    (setf * nil)
+    (cerror "Go on with * set to NIL."
+	    "EVAL returned an unbound marker."))
+  (values-list /))
+
+(defconstant eofs-before-quit 10)
+
 (defun %top-level ()
   "Top-level READ-EVAL-PRINT loop.  Do not call this."
-  (let  ((this-eval nil) (* nil) (** nil) (*** nil)
+  (let  ((* nil) (** nil) (*** nil)
 	 (- nil) (+ nil) (++ nil) (+++ nil)
-	 (/// nil) (// nil) (/ nil) (%temp% nil))
+	 (/// nil) (// nil) (/ nil)
+	 (magic-eof-cookie (cons :eof nil))
+	 (number-of-eofs 0))
     (loop
      (with-simple-restart (abort "Return to Top-Level.")
        (catch 'top-level-catcher
-	 ;;
-	 ;; Prevent the user from irrevocably wedging the hooks.
-	 (setq *evalhook* nil)
-	 (setq *applyhook* nil)
 	 (let ((*in-top-level-catcher* t))
 	   (loop
-	    (fresh-line)
-	    (princ *prompt*)
-	    (setq +++ ++ ++ + + - - (read))
-	    (setq this-eval (multiple-value-list (eval -)))
-	    (dolist (x this-eval)
-	      (fresh-line)
-	      (prin1 x))
-	    (setq /// // // / / this-eval)
-	    (setq %temp% (car this-eval))
-	    ;;
-	    ;; Make sure nobody passes back an unbound marker.
-	    (unless (boundp '%temp%)
-	      (setq %temp% nil)
-	      (cerror "Go on, but set * to NIL."
-		      "Eval returned an unbound marker."))
-	    (setq *** ** ** * * %temp%))))))))
+	     (fresh-line)
+	     (princ (if (functionp *prompt*)
+			(funcall *prompt*)
+			*prompt*))
+	     (force-output)
+	     (let ((form (read *standard-input* nil magic-eof-cookie)))
+	       (cond ((not (eq form magic-eof-cookie))
+		      (let ((results
+			     (multiple-value-list (interactive-eval form))))
+			(dolist (result results)
+			  (fresh-line)
+			  (prin1 result)))
+		      (setf number-of-eofs 0))
+		     ((eql (incf number-of-eofs) 1)
+		      (let ((stream (make-synonym-stream '*terminal-io*)))
+			(setf *standard-input* stream)
+			(setf *standard-output* stream)
+			(format t "~&Received EOF on *standard-input*, ~
+			          switching to *terminal-io*.~%")))
+		     ((> number-of-eofs eofs-before-quit)
+		      (format t "~&Received more than ~D EOFs; Aborting.~%"
+			      eofs-before-quit)
+		      (quit))
+		     (t
+		      (format t "~&Received EOF.~%")))))))))))
 
 
+
 ;;; %Halt  --  Interface
 ;;;
 ;;;    A convenient way to get into the assembly level debugger.
