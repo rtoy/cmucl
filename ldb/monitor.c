@@ -16,7 +16,7 @@
 static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
 static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
 static void timed_call_cmd(), gc_cmd(), print_context_cmd();
-static void backtrace_cmd();
+static void backtrace_cmd(), purify_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -32,6 +32,7 @@ static struct cmd {
     {"exit", "Exit this instance of the monitor.", exit_cmd},
     {"flush", "flush all temp variables.", flush_cmd},
     {"gc", "collect garbage (caveat collector).", gc_cmd},
+    {"purify", "purify (caveat purifier).", purify_cmd},
     {"print", "print object at ADDRESS.", print_cmd},
     {"p", NULL, print_cmd},
     {"quit", "quit.", quit},
@@ -117,11 +118,15 @@ char **ptr;
 static void regs_cmd(ptr)
 char **ptr;
 {
-    printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
-    printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
     printf("CSP\t=\t0x%08x\n", current_control_stack_pointer);
     printf("FP\t=\t0x%08x\n", current_control_frame_pointer);
     printf("BSP\t=\t0x%08x\n", current_binding_stack_pointer);
+
+    printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
+    printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
+    printf("STATIC\t=\t0x%08x\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
+    printf("RDONLY\t=\t0x%08x\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
+
     printf("FLAGS\t=\t0x%08x\n", current_flags_register);
 }
 
@@ -360,6 +365,11 @@ static void exit_cmd()
 static void gc_cmd()
 {
 	collect_garbage();
+}
+
+static void purify_cmd()
+{
+	purify();
 }
 
 static void print_context(context)
