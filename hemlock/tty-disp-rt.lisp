@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.3 1991/03/14 16:25:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.4 1991/09/03 16:26:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -69,15 +69,17 @@
     (mach::with-trap-arg-block mach:sgtty sgtty
       (let ((size-win (mach:unix-ioctl fd mach:TIOCGWINSZ (alien-sap winsize)))
 	    (speed-win (mach:unix-ioctl fd mach:TIOCGETP (alien-sap sgtty))))
-	(values
-	 (and size-win
-	      (alien-access (mach:winsize-ws_row winsize)))
-	 (and size-win
-	      (alien-access (mach:winsize-ws_col winsize)))
-	 (and speed-win
-	      (setq *terminal-baud-rate*
-		    (svref mach:terminal-speeds
-			   (alien-access (mach:sgtty-ospeed sgtty))))))))))
+	(flet ((frob (val)
+		 (if (and size-win (not (zerop val)))
+		     val
+		     nil)))
+	  (values
+	   (frob (alien-access (mach:winsize-ws_row winsize)))
+	   (frob (alien-access (mach:winsize-ws_col winsize)))
+	   (and speed-win
+		(setq *terminal-baud-rate*
+		      (svref mach:terminal-speeds
+			     (alien-access (mach:sgtty-ospeed sgtty)))))))))))
 
 ;;;; Output routines and buffering.
 
