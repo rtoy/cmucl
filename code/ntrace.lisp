@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.6 1992/03/10 18:37:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.7 1992/05/15 18:31:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 (in-package "DEBUG")
 
 (export '(*trace-print-level* *trace-print-length* *traced-function-list*
-	  *trace-frame* *max-trace-indentation*))
+	  *trace-frame* *trace-values* *max-trace-indentation*))
 
 (defvar *traced-function-list* nil
   "A list of functions which are traced.")
@@ -42,6 +42,10 @@
 (defvar *trace-frame* nil
   "TRACE causes expressions for its switches to evaluate within a context
    where this is bound to the appropriate control stack frame.")
+
+(defvar *trace-values* nil
+  "This is bound to the returned values when evaluating :BREAK-AFTER and
+   :PRINT-AFTER forms.")
 
 (defvar *max-trace-indentation* nil
   "This is currently unused.")
@@ -88,10 +92,8 @@
     (let ((name-list nil)
 	  (trace-1-forms nil))
       (dolist (spec specs `(progn
-			     ;; Make sure every name has a definition.
-			     ,@(mapcar #'(lambda (x) `#',x) name-list)
 			     ,@trace-1-forms
-			     ',(nreverse name-list)))
+			     ',(reverse name-list)))
 	(multiple-value-bind
 	    (name options)
 	    (typecase spec
@@ -139,6 +141,24 @@
 			    ',wherein ',print ',print-after)
 		  trace-1-forms))))))))
 
+
+;;; TRACE-FDEFINITION  --  Internal
+;;;
+;;;    Given a function or macro name, return the definition.  Error if a
+;;; special form.  If already a function, just return it.
+;;;
+(defun trace-fdefinition (x)
+  (typecase x
+    (symbol
+     (cond ((special-form-p x)
+	    (error "Can't trace special form ~S." x))
+	   ((macro-function x))
+	   (t
+	    (fdefinition x))))
+    (function x)
+    (t (fdefinition x))))
+
+
 ;;; This is a list of function-end-cookies, which we use to note distinct
 ;;; dynamic entries into functions.
 ;;;
@@ -162,7 +182,7 @@
 (defun clear-trace-breakpoint-record (fname new-value)
   (declare (ignore new-value))
   (when (fboundp fname)
-    (let* ((fun (fdefinition fname))
+    (let* ((fun (trace-fdefinition fname))
 	   (bpts (gethash fun *trace-breakpoints*)))
       (when bpts
 	;; Free breakpoint bookkeeping data.
@@ -178,73 +198,71 @@
 ;;; This establishes :function-start and :function-end breakpoints with
 ;;; appropriate hook functions to TRACE function-name as described by the user.
 ;;;
-(defun trace-1 (function-or-name condition break break-after where-in print
+(defun trace-1 (function-or-name condition break break-after wherein print
 		 print-after)
-  (let ((fun (if (functionp function-or-name)
-		 function-or-name
-		 (fdefinition function-or-name))))
-    (cond
-     ((member fun *traced-function-list*)
-      (warn "Function ~S already TRACE'd, ignoring this request."
-	    fun))
-     (t
-      (when where-in
-	(dolist (f where-in)
-	  (unless (fboundp f)
-	    (error "Undefined :where-in name -- ~S." f))))
-      (let* ((debug-fun (di:function-debug-function fun))
-	     ;; The start and end hooks use conditionp for communication.
-	     (conditionp nil)
-	     (start (di:make-breakpoint
-		     #'(lambda (frame bpt)
+  (let ((fun (trace-fdefinition function-or-name)))
+    (when (member fun *traced-function-list*)
+      (warn "Function ~S already TRACE'd, retracing it." function-or-name)
+      (untrace-1 fun))
+    
+    (when wherein
+      (dolist (f wherein)
+	(unless (fboundp f)
+	  (error "Undefined :wherein name -- ~S." f))))
+    (let* ((debug-fun (di:function-debug-function fun))
+	   ;; The start and end hooks use conditionp for communication.
+	   (conditionp nil)
+	   (start (di:make-breakpoint
+		   #'(lambda (frame bpt)
+		       (let ((*trace-frame* frame))
+			 (cond ((and (or (not condition) ;Save a call to EVAL
+					 (eval condition))
+				     (or (not wherein)
+					 (trace-wherein-p frame wherein)))
+				(setf conditionp t)
+				(print-trace-start frame bpt print))
+			       (t (setf conditionp nil)))
+			 (when (and break (eval break))
+			   (di:flush-frames-above frame)
+			   (let ((*stack-top-hint* frame))
+			     (break "Breaking before TRACE'd call to ~S."
+				    function-or-name)))))
+		   debug-fun :kind :function-start))
+	   (end (di:make-breakpoint
+		 #'(lambda (frame bpt *trace-values* cookie)
+		     (if (member fun *traced-function-list*)
 			 (let ((*trace-frame* frame))
-			   (cond ((and (or (not condition) ;Save a call to EVAL
-					   (eval condition))
-				       (or (not where-in)
-					   (trace-where-in-p frame where-in)))
-				  (setf conditionp t)
-				  (print-trace-start frame bpt print))
-				 (t (setf conditionp nil)))
-			   (when (and break (eval break))
+			   (when conditionp
+			     (print-trace-end frame bpt *trace-values* cookie
+					      print-after))
+			   (pop *traced-entries*)
+			   (when (and break-after (eval break-after))
 			     (di:flush-frames-above frame)
 			     (let ((*stack-top-hint* frame))
-			       (break "Breaking before TRACE'd call to ~S."
-				      function-or-name)))))
-		     debug-fun :kind :function-start))
-	     (end (di:make-breakpoint
-		   #'(lambda (frame bpt values cookie)
-		       (if (member fun *traced-function-list*)
-			   (let ((*trace-frame* frame))
-			     (when conditionp
-			       (print-trace-end frame bpt values cookie
-						print-after))
-			     (pop *traced-entries*)
-			     (when (and break-after (eval break-after))
-			       (di:flush-frames-above frame)
-			       (let ((*stack-top-hint* frame))
-				 (break "Breaking after TRACE'd call to ~S."
-					function-or-name))))
-			   (pop *traced-entries*)))
-		   debug-fun :kind :function-end
-		   :function-end-cookie
-		   #'(lambda (frame x)
-		       (when (and *traced-entries*
-				  (not (di:function-end-cookie-valid-p
-					frame (car *traced-entries*))))
-			 (loop
-			   (pop *traced-entries*)
-			   (when (or (not *traced-entries*)
-				     (di:function-end-cookie-valid-p
-				      frame (car *traced-entries*)))
-			     (return))))
-		       (push x *traced-entries*)))))
-	(setf (gethash fun *trace-breakpoints*) (cons start end))
-	;; The next two forms must be in the order in which they appear.  They
-	;; rely on a documented property that later activated breakpoint hooks
-	;; run first, and the end breakpoint establishes a starting helper bpt.
-	(di:activate-breakpoint start)
-	(di:activate-breakpoint end))
-      (push fun *traced-function-list*)))))
+			       (break "Breaking after TRACE'd call to ~S."
+				      function-or-name))))
+			 (pop *traced-entries*)))
+		 debug-fun :kind :function-end
+		 :function-end-cookie
+		 #'(lambda (frame x)
+		     (when (and *traced-entries*
+				(not (di:function-end-cookie-valid-p
+				      frame (car *traced-entries*))))
+		       (loop
+			 (pop *traced-entries*)
+			 (when (or (not *traced-entries*)
+				   (di:function-end-cookie-valid-p
+				    frame (car *traced-entries*)))
+			   (return))))
+		     (push x *traced-entries*)))))
+      (assert (not (gethash fun *trace-breakpoints*)))
+      (setf (gethash fun *trace-breakpoints*) (cons start end))
+      ;; The next two forms must be in the order in which they appear.  They
+      ;; rely on a documented property that later activated breakpoint hooks
+      ;; run first, and the end breakpoint establishes a starting helper bpt.
+      (di:activate-breakpoint start)
+      (di:activate-breakpoint end))
+    (push fun *traced-function-list*)))
 
 ;;; PRINT-TRACE-START -- Internal.
 ;;;
@@ -291,11 +309,11 @@
     (prin1 len)
     (write-string ": ")))
 
-;;; TRACE-WHERE-IN-P -- Internal.
+;;; TRACE-WHEREIN-P -- Internal.
 ;;;
-;;; The TRACE hooks use this for the :where-in arg.
+;;; The TRACE hooks use this for the :wherein arg.
 ;;;
-(defun trace-where-in-p (frame names)
+(defun trace-wherein-p (frame names)
   (do ((frame (di:frame-down frame) (di:frame-down frame)))
       ((not frame) nil)
     (when (member (di:debug-function-name (di:frame-debug-function frame))
@@ -309,33 +327,19 @@
 (defmacro untrace (&rest specs)
   "Removes tracing from the specified functions.  With no args, untraces all
    functions."
-  (let ((specs (or specs *traced-function-list*))
-	(untrace-1-forms nil))
-    (dolist (spec specs `(progn ,@(nreverse untrace-1-forms) t))
-      (let ((fun (typecase spec
-		   (symbol (fdefinition spec))
-		   (function spec)
-		   (list
-		    (let ((fun (car spec)))
-		      (cond ((eq fun 'quote)
-			     (error "Do NOT quote function names."))
-			    ((symbolp fun)
-			     (fdefinition fun))
-			    ((functionp fun)
-			     fun)
-			    ((not (and (consp fun) (= (length fun) 2)))
-			     (error "Illegal function specifier:  ~S." fun))
-			    ((eq (car fun) 'setf)
-			     (fdefinition fun))
-			    (t (error "Illegal function specifier:  ~S." fun)))))
-		   (t (error "Illegal function specifier:  ~S." spec)))))
-	(push `(untrace-1 ',fun) untrace-1-forms)))))
+  (let ((specs (or specs *traced-function-list*)))
+    `(progn
+       ,@(mapcar #'(lambda (spec)
+		     `(untrace-1 ',(if (consp spec) (car spec) spec)))
+		 specs)
+       t)))
 
-(defun untrace-1 (fun)
-  (cond ((member fun *traced-function-list*)
-	 (let ((breakpoints (gethash fun *trace-breakpoints*)))
-	   (di:delete-breakpoint (car breakpoints))
-	   (di:delete-breakpoint (cdr breakpoints))
-	   (setf (gethash fun *trace-breakpoints*) nil))
-	 (setf *traced-function-list* (delete fun *traced-function-list*)))
-	(t (warn "Function is not TRACE'd -- ~S." fun))))
+(defun untrace-1 (function-or-name)
+  (let ((fun (trace-fdefinition function-or-name)))
+    (cond ((member fun *traced-function-list*)
+	   (let ((breakpoints (gethash fun *trace-breakpoints*)))
+	     (di:delete-breakpoint (car breakpoints))
+	     (di:delete-breakpoint (cdr breakpoints))
+	     (setf (gethash fun *trace-breakpoints*) nil))
+	   (setf *traced-function-list* (delete fun *traced-function-list*)))
+	  (t (warn "Function is not TRACE'd -- ~S." fun)))))
