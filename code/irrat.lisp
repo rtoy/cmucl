@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.40 2004/06/09 14:48:15 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.41 2004/10/19 15:07:30 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -916,59 +916,62 @@ Z may be any number, but the result is always a complex."
 (defun complex-atanh (z)
   "Compute atanh z = (log(1+z) - log(1-z))/2"
   (declare (number z))
-  (let* (;; Constants
-	 (theta (/ (sqrt most-positive-double-float) 4.0d0))
-	 (rho (/ 4.0d0 (sqrt most-positive-double-float)))
-	 (half-pi (/ pi 2.0d0))
-	 (rp (float (realpart z) 1.0d0))
-	 (beta (float-sign rp 1.0d0))
-	 (x (* beta rp))
-	 (y (* beta (- (float (imagpart z) 1.0d0))))
-	 (eta 0.0d0)
-	 (nu 0.0d0))
-    ;; Shouldn't need this declare.
-    (declare (double-float x y))
-    (locally
-	(declare (optimize (speed 3)))
-      (cond ((or (> x theta)
-		 (> (abs y) theta))
-	     ;; To avoid overflow...
-	     (setf nu (float-sign y half-pi))
-	     ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
-	     ;; which can cause overflow.  Arrange this computation so
-	     ;; that it won't overflow.
-	     (setf eta (let* ((x-bigger (> x (abs y)))
-			      (r (if x-bigger (/ y x) (/ x y)))
-			      (d (+ 1.0d0 (* r r))))
-			 (if x-bigger
-			     (/ (/ x) d)
-			     (/ (/ r y) d)))))
-	    ((= x 1.0d0)
-	     ;; Should this be changed so that if y is zero, eta is set
-	     ;; to +infinity instead of approx 176?  In any case
-	     ;; tanh(176) is 1.0d0 within working precision.
-	     (let ((t1 (+ 4d0 (square y)))
-		   (t2 (+ (abs y) rho)))
-	       (setf eta (log (/ (sqrt (sqrt t1))
-				 (sqrt t2))))
-	       (setf nu (* 0.5d0
-			   (float-sign y
-				       (+ half-pi (atan (* 0.5d0 t2))))))))
-	    (t
-	     (let ((t1 (+ (abs y) rho)))
-	       ;; Normal case using log1p(x) = log(1 + x)
-	       (setf eta (* 0.25d0
-			    (%log1p (/ (* 4.0d0 x)
-				       (+ (square (- 1.0d0 x))
-					  (square t1))))))
-	       (setf nu (* 0.5d0
-			   (atan (* 2.0d0 y)
-				 (- (* (- 1.0d0 x)
-				       (+ 1.0d0 x))
-				    (square t1))))))))
-      (coerce-to-complex-type (* beta eta)
-			      (- (* beta nu))
-			      z))))
+  (if (and (realp z) (< z -1))
+      ;; atanh is continuous in quadrant III in this case.
+      (complex-atanh (complex z -0f0))
+      (let* ( ;; Constants
+	     (theta (/ (sqrt most-positive-double-float) 4.0d0))
+	     (rho (/ 4.0d0 (sqrt most-positive-double-float)))
+	     (half-pi (/ pi 2.0d0))
+	     (rp (float (realpart z) 1.0d0))
+	     (beta (float-sign rp 1.0d0))
+	     (x (* beta rp))
+	     (y (* beta (- (float (imagpart z) 1.0d0))))
+	     (eta 0.0d0)
+	     (nu 0.0d0))
+	;; Shouldn't need this declare.
+	(declare (double-float x y))
+	(locally
+	    (declare (optimize (speed 3)))
+	  (cond ((or (> x theta)
+		     (> (abs y) theta))
+		 ;; To avoid overflow...
+		 (setf nu (float-sign y half-pi))
+		 ;; eta is real part of 1/(x + iy).  This is x/(x^2+y^2),
+		 ;; which can cause overflow.  Arrange this computation so
+		 ;; that it won't overflow.
+		 (setf eta (let* ((x-bigger (> x (abs y)))
+				  (r (if x-bigger (/ y x) (/ x y)))
+				  (d (+ 1.0d0 (* r r))))
+			     (if x-bigger
+				 (/ (/ x) d)
+				 (/ (/ r y) d)))))
+		((= x 1.0d0)
+		 ;; Should this be changed so that if y is zero, eta is set
+		 ;; to +infinity instead of approx 176?  In any case
+		 ;; tanh(176) is 1.0d0 within working precision.
+		 (let ((t1 (+ 4d0 (square y)))
+		       (t2 (+ (abs y) rho)))
+		   (setf eta (log (/ (sqrt (sqrt t1))
+				     (sqrt t2))))
+		   (setf nu (* 0.5d0
+			       (float-sign y
+					   (+ half-pi (atan (* 0.5d0 t2))))))))
+		(t
+		 (let ((t1 (+ (abs y) rho)))
+		   ;; Normal case using log1p(x) = log(1 + x)
+		   (setf eta (* 0.25d0
+				(%log1p (/ (* 4.0d0 x)
+					   (+ (square (- 1.0d0 x))
+					      (square t1))))))
+		   (setf nu (* 0.5d0
+			       (atan (* 2.0d0 y)
+				     (- (* (- 1.0d0 x)
+					   (+ 1.0d0 x))
+					(square t1))))))))
+	  (coerce-to-complex-type (* beta eta)
+				  (- (* beta nu))
+				  z)))))
 
 (defun complex-tanh (z)
   "Compute tanh z = sinh z / cosh z"
@@ -1056,13 +1059,16 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-1+z (complex-sqrt (1+z z)))
-	(sqrt-1-z (complex-sqrt (1-z z))))
-    (with-float-traps-masked (:divide-by-zero)
-      (complex (* 2 (atan (/ (realpart sqrt-1-z)
-			     (realpart sqrt-1+z))))
-	       (asinh (imagpart (* (conjugate sqrt-1+z)
-				   sqrt-1-z)))))))
+  (if (and (realp z) (> z 1))
+      ;; acos is continuous in quadrant IV in this case.
+      (complex-acos (complex z -0f0))
+      (let ((sqrt-1+z (complex-sqrt (1+z z)))
+	    (sqrt-1-z (complex-sqrt (1-z z))))
+	(with-float-traps-masked (:divide-by-zero)
+	  (complex (* 2 (atan (/ (realpart sqrt-1-z)
+				 (realpart sqrt-1+z))))
+		   (asinh (imagpart (* (conjugate sqrt-1+z)
+				       sqrt-1-z))))))))
 
 (defun complex-acosh (z)
   "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
@@ -1083,13 +1089,16 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-1-z (complex-sqrt (1-z z)))
-	(sqrt-1+z (complex-sqrt (1+z z))))
-    (with-float-traps-masked (:divide-by-zero)
-      (complex (atan (/ (realpart z)
-			(realpart (* sqrt-1-z sqrt-1+z))))
-	       (asinh (imagpart (* (conjugate sqrt-1-z)
-				   sqrt-1+z)))))))
+  (if (and (realp z) (> z 1))
+      ;; asin is continuous in quadrant IV in this case.
+      (complex-asin (complex z -0f0))
+      (let ((sqrt-1-z (complex-sqrt (1-z z)))
+	    (sqrt-1+z (complex-sqrt (1+z z))))
+	(with-float-traps-masked (:divide-by-zero)
+	  (complex (atan (/ (realpart z)
+			    (realpart (* sqrt-1-z sqrt-1+z))))
+		   (asinh (imagpart (* (conjugate sqrt-1-z)
+				       sqrt-1+z))))))))
 
 (defun complex-asinh (z)
   "Compute asinh z = log(z + sqrt(1 + z*z))
