@@ -160,9 +160,9 @@
 (proclaim '(function get-c-type (t) c-type))
 (defun get-c-type (spec)
   (cond ((gethash spec *c-type-names*))
-	((member spec
-		 '(c-procedure short-float long-float null-terminated-string))
-	 (let ((size (if (eq spec 'long-float) 64 32)))
+	((member spec '(c-procedure single-float double-float
+				    null-terminated-string))
+	 (let ((size (if (eq spec 'double-float) 64 32)))
 	   (make-primitive-type
 	    :description spec
 	    :size size
