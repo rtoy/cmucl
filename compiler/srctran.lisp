@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.116 2003/04/13 11:57:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.117 2003/04/27 14:52:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -917,7 +917,6 @@
 ;;; to an intermediate convention for which they are considered different
 ;;; which is more natural for some of the optimisers.
 ;;;
-#-negative-zero-is-not-zero
 (defun convert-numeric-type (type)
   (declare (type numeric-type type))
   ;; Only convert real float interval delimiters types.
@@ -950,7 +949,6 @@
 ;;; Convert back from the intermediate convention for which -0.0 and 0.0 are
 ;;; considered different to the standard type convention for which and equal.
 ;;;
-#-negative-zero-is-not-zero
 (defun convert-back-numeric-type (type)
   (declare (type numeric-type type))
   ;;; Only convert real float interval delimiters types.
@@ -1039,7 +1037,6 @@
 
 ;;; Convert back a possible list of numeric types.
 ;;;
-#-negative-zero-is-not-zero
 (defun convert-back-numeric-type-list (type-list)
   (typecase type-list
     (list
@@ -1074,22 +1071,13 @@
 	  (push type misc-types)))
     #+long-float
     (when (null (set-difference '(-0l0 0l0) members))
-      #-negative-zero-is-not-zero
       (push (specifier-type '(long-float 0l0 0l0)) misc-types)
-      #+negative-zero-is-not-zero
-      (push (specifier-type '(long-float -0l0 0l0)) misc-types)
       (setf members (set-difference members '(-0l0 0l0))))
     (when (null (set-difference '(-0d0 0d0) members))
-      #-negative-zero-is-not-zero
       (push (specifier-type '(double-float 0d0 0d0)) misc-types)
-      #+negative-zero-is-not-zero
-      (push (specifier-type '(double-float -0d0 0d0)) misc-types)
       (setf members (set-difference members '(-0d0 0d0))))
     (when (null (set-difference '(-0f0 0f0) members))
-      #-negative-zero-is-not-zero
       (push (specifier-type '(single-float 0f0 0f0)) misc-types)
-      #+negative-zero-is-not-zero
-      (push (specifier-type '(single-float -0f0 0f0)) misc-types)
       (setf members (set-difference members '(-0f0 0f0))))
     (if members
 	(apply #'type-union (make-member-type :members members) misc-types)
@@ -1128,7 +1116,7 @@
 				&optional (convert-type t))
   (declare (type function derive-fcn)
 	   (type (or null function) member-fcn)
-	   #+negative-zero-is-not-zero (ignore convert-type))
+	   )
   (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
       (flet ((deriver (x)
@@ -1144,20 +1132,14 @@
 		      ;; Otherwise convert to a numeric type.
 		      (let ((result-type-list
 			     (funcall derive-fcn (convert-member-type x))))
-			#-negative-zero-is-not-zero
 			(if convert-type
 			    (convert-back-numeric-type-list result-type-list)
-			    result-type-list)
-			#+negative-zero-is-not-zero
-			result-type-list)))
+			    result-type-list))))
 		 (numeric-type
-		  #-negative-zero-is-not-zero
 		  (if convert-type
 		      (convert-back-numeric-type-list
 		       (funcall derive-fcn (convert-numeric-type x)))
-		      (funcall derive-fcn x))
-		  #+negative-zero-is-not-zero
-		  (funcall derive-fcn x))
+		      (funcall derive-fcn x)))
 		 (t
 		  *universal-type*))))
 	;; Run down the list of args and derive the type of each one, saving
@@ -1193,20 +1175,12 @@
 ;;;
 (defun two-arg-derive-type (arg1 arg2 derive-fcn fcn
 				 &optional (convert-type t))
-  #+negative-zero-is-not-zero
-  (declare (ignore convert-type))
   #-conservative-float-type
   (declare (ignore fcn))
   (labels ((maybe-convert-numeric-type (type)
-	     #-negative-zero-is-not-zero
-	     (if convert-type (convert-numeric-type type) type)
-	     #+negative-zero-is-not-zero
-	     type)
+	     (if convert-type (convert-numeric-type type) type))
 	   (maybe-convert-back-type-list (type)
-	     #-negative-zero-is-not-zero
-	     (if convert-type (convert-back-numeric-type-list type) type)
-	     #+negative-zero-is-not-zero
-	     type)
+	     (if convert-type (convert-back-numeric-type-list type) type))
 	   (deriver (x y same-arg)
 	     (cond #+conservative-float-type
 		   ((and (member-type-p x) (member-type-p y))

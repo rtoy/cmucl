@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.42 2003/04/26 18:24:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.43 2003/04/27 14:52:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,7 +176,6 @@
 ;;; specified by Type.  Base is the name of the base type, for declaration.  We
 ;;; make safety locally 0 to inhibit any checking of this assertion.
 ;;;
-#-negative-zero-is-not-zero
 (defun transform-numeric-bound-test (n-object type base)
   (declare (type numeric-type type))
   (let ((low (numeric-type-low type))
@@ -191,50 +190,6 @@
 		(if (consp high)
 		    `((< (the ,base ,n-object) ,(car high)))
 		    `((<= (the ,base ,n-object) ,high))))))))
-
-#+negative-zero-is-not-zero
-(defun transform-numeric-bound-test (n-object type base)
-  (declare (type numeric-type type))
-  (let ((low (numeric-type-low type))
-	(high (numeric-type-high type))
-	(float-type-p (csubtypep type (specifier-type 'float)))
-	(x (gensym))
-	(y (gensym)))
-    `(locally
-       (declare (optimize (safety 0)))
-       (and ,@(when low
-		(if (consp low)
-		    `((let ((,x (the ,base ,n-object))
-			    (,y ,(car low)))
-			,(if (not float-type-p)
-			    `(> ,x ,y)
-			    `(if (and (zerop ,x) (zerop ,y))
-				 (> (float-sign ,x) (float-sign ,y))
-				 (> ,x ,y)))))
-		    `((let ((,x (the ,base ,n-object))
-			    (,y ,low))
-			,(if (not float-type-p)
-			    `(>= ,x ,y)
-			    `(if (and (zerop ,x) (zerop ,y))
-				 (>= (float-sign ,x) (float-sign ,y))
-				 (>= ,x ,y)))))))
-	    ,@(when high
-		(if (consp high)
-		    `((let ((,x (the ,base ,n-object))
-			    (,y ,(car high)))
-			,(if (not float-type-p)
-			     `(< ,x ,y)
-			     `(if (and (zerop ,x) (zerop ,y))
-				  (< (float-sign ,x) (float-sign ,y))
-				  (< ,x ,y)))))
-		    `((let ((,x (the ,base ,n-object))
-			    (,y ,high))
-			,(if (not float-type-p)
-			     `(<= ,x ,y)
-			     `(if (and (zerop ,x) (zerop ,y))
-				  (<= (float-sign ,x) (float-sign ,y))
-				  (<= ,x ,y)))))))))))
-
 
 ;;; Source-Transform-Numeric-Typep  --  Internal
 ;;;

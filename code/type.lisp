@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.60 2003/04/26 18:24:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.61 2003/04/27 14:52:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,22 +198,6 @@
 			 low)
 		     (if (consp high)
 			 (1- (type-bound-number high))
-			 high)))
-	    #+negative-zero-is-not-zero
-	    (float
-	     ;; Canonicalize a low bound of (-0.0) to 0.0, and a high
-	     ;; bound of (+0.0) to -0.0.
-	     (values (if (and (consp low)
-			      (floatp (car low))
-			      (zerop (car low))
-			      (minusp (float-sign (car low))))
-			 (float 0.0 (car low))
-			 low)
-		     (if (and (consp high)
-			      (floatp (car high))
-			      (zerop (car high))
-			      (plusp (float-sign (car high))))
-			 (float -0.0 (car high))
 			 high)))
 	    (t 
 	     ;; no canonicalization necessary
@@ -1930,7 +1914,6 @@
 ;;;    This is for comparing bounds of the same kind, e.g. upper and upper.
 ;;; Use Numeric-Bound-Test* for different kinds of bounds.
 ;;;
-#-negative-zero-is-not-zero
 (defmacro numeric-bound-test (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) nil)
@@ -1943,25 +1926,6 @@
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
 
-#+negative-zero-is-not-zero
-(defmacro numeric-bound-test-zero (op x y)
-  `(if (and (zerop ,x) (zerop ,y) (floatp ,x) (floatp ,y))
-       (,op (float-sign ,x) (float-sign ,y))
-       (,op ,x ,y)))
-
-#+negative-zero-is-not-zero
-(defmacro numeric-bound-test (x y closed open)
-  `(cond ((not ,y) t)
-	 ((not ,x) nil)
-	 ((consp ,x)
-	  (if (consp ,y)
-	      (numeric-bound-test-zero ,closed (car ,x) (car ,y))
-	      (numeric-bound-test-zero ,closed (car ,x) ,y)))
-	 (t
-	  (if (consp ,y)
-	      (numeric-bound-test-zero ,open ,x (car ,y))
-	      (numeric-bound-test-zero ,closed ,x ,y)))))
-
 ;;; Numeric-Bound-Test*  --  Internal
 ;;;
 ;;;    Used to compare upper and lower bounds.  This is different from the
@@ -1971,7 +1935,6 @@
 ;;; -- an open inner bound is "greater" and also squeezes the interval, causing
 ;;;    us to use the Open test for those cases as well.
 ;;;
-#-negative-zero-is-not-zero
 (defmacro numeric-bound-test* (x y closed open)
   `(cond ((not ,y) t)
 	 ((not ,x) t)
@@ -1983,20 +1946,6 @@
 	  (if (consp ,y)
 	      (,open ,x (car ,y))
 	      (,closed ,x ,y)))))
-
-#+negative-zero-is-not-zero
-(defmacro numeric-bound-test* (x y closed open)
-  `(cond ((not ,y) t)
-	 ((not ,x) t)
-	 ((consp ,x)
-	  (if (consp ,y)
-	      (numeric-bound-test-zero ,open (car ,x) (car ,y))
-	      (numeric-bound-test-zero ,open (car ,x) ,y)))
-	 (t
-	  (if (consp ,y)
-	      (numeric-bound-test-zero ,open ,x (car ,y))
-	      (numeric-bound-test-zero ,closed ,x ,y)))))
-
 
 ;;; Numeric-Bound-Max  --  Internal
 ;;;
@@ -2066,28 +2015,19 @@
     (cond ((not (and low-bound high-bound)) nil)
 	  ((and (consp low-bound) (consp high-bound)) nil)
 	  ((consp low-bound)
-	   #-negative-zero-is-not-zero
 	   (let ((low-value (car low-bound)))
 	     (or (eql low-value high-bound)
 		 (and (eql low-value -0f0) (eql high-bound 0f0))
 		 (and (eql low-value 0f0) (eql high-bound -0f0))
 		 (and (eql low-value -0d0) (eql high-bound 0d0))
-		 (and (eql low-value 0d0) (eql high-bound -0d0))))
-	   #+negative-zero-is-not-zero
-	   (eql (car low-bound) high-bound))
+		 (and (eql low-value 0d0) (eql high-bound -0d0)))))
 	  ((consp high-bound)
-	   #-negative-zero-is-not-zero
 	   (let ((high-value (car high-bound)))
 	     (or (eql high-value low-bound)
 		 (and (eql high-value -0f0) (eql low-bound 0f0))
 		 (and (eql high-value 0f0) (eql low-bound -0f0))
 		 (and (eql high-value -0d0) (eql low-bound 0d0))
-		 (and (eql high-value 0d0) (eql low-bound -0d0))))
-	   #+negative-zero-is-not-zero
-	   (eql (car high-bound) low-bound))
-	  #+negative-zero-is-not-zero
-	  ((or (and (eql low-bound -0f0) (eql high-bound 0f0))
-	       (and (eql low-bound -0d0) (eql high-bound 0d0))))
+		 (and (eql high-value 0d0) (eql low-bound -0d0)))))
 	  ((and (eq (numeric-type-class low) 'integer)
 		(eq (numeric-type-class high) 'integer))
 	   (eql (1+ low-bound) high-bound))
@@ -2915,7 +2855,6 @@
       (collect ((non-numbers) (numbers))
 	(dolist (m (remove-duplicates members))
 	  (if (and (numberp m)
-		   #-negative-zero-is-not-zero
 		   (not (and (floatp m) (zerop m))))
 	      (numbers (ctype-of m))
 	      (non-numbers m)))

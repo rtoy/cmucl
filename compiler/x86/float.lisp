@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.39 2001/03/04 21:19:22 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.40 2003/04/27 14:52:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1527,29 +1527,20 @@
 			      float-test)
 		  (:translate ,translate)
 		  (:args (x :scs (single-reg)))
-		  #-negative-zero-is-not-zero
 		  (:arg-types single-float (:constant (single-float 0f0 0f0)))
-		  #+negative-zero-is-not-zero
-		  (:arg-types single-float (:constant (single-float -0f0 0f0)))
 		  (:variant ,test))
 		(define-vop (,(symbolicate translate "0/DOUBLE-FLOAT")
 			      float-test)
 		  (:translate ,translate)
 		  (:args (x :scs (double-reg)))
-		  #-negative-zero-is-not-zero
 		  (:arg-types double-float (:constant (double-float 0d0 0d0)))
-		  #+negative-zero-is-not-zero
-		  (:arg-types double-float (:constant (double-float -0d0 0d0)))
 		  (:variant ,test))
 		#+long-float
 		(define-vop (,(symbolicate translate "0/LONG-FLOAT")
 			      float-test)
 		  (:translate ,translate)
 		  (:args (x :scs (long-reg)))
-		  #-negative-zero-is-not-zero
 		  (:arg-types long-float (:constant (long-float 0l0 0l0)))
-		  #+negative-zero-is-not-zero
-		  (:arg-types long-float (:constant (long-float -0l0 0l0)))
 		  (:variant ,test)))))
   (frob > #x00)
   (frob < #x01)
