@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.16 1992/02/24 02:28:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.17 1992/03/13 23:27:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,9 @@
 	       ((zerop ,ehash)
 		(setq ,index-var nil)
 		(go DOIT)))
-	 (setq ,index-var (rem (+ ,index-var ,h2) ,len))
+	 (setq ,index-var (+ ,index-var ,h2))
+	 (when (>= ,index-var ,len)
+	   (setq ,index-var (- ,index-var ,len)))
 	 (go LOOP)
 	 DOIT
 	 (return (progn ,@forms))))))
