@@ -4,7 +4,7 @@
 
 \section{Source Tree Structure}
 
-The CMUCL source tree has subdirectories for each major subsystem:
+The \cmucl{} source tree has subdirectories for each major subsystem:
 
 \begin{description}
 \item[{\tt assembly/}] Holds the CMU CL source-file assembler, and has machine
@@ -23,7 +23,7 @@ subdirectory holds code that is shared across most backends.
 
 \item[{\tt lisp/}] The C runtime system code and low-level Lisp debugger.
 
-\item[{\tt pcl/}] CMUCL version of the PCL implementation of CLOS.
+\item[{\tt pcl/}] \cmucl{} version of the PCL implementation of CLOS.
 
 \item[{\tt tools/}] System building command files and source management tools.
 \end{description}
@@ -126,23 +126,23 @@ causes bootstrapping problems.  The easiest way to get around this problem
 is to make a fake lisp.nm file that has nothing in it but a version number:
 
 \begin{verbatim}
-	% echo "Map file for lisp version 0" > lisp.nm
+        % echo "Map file for lisp version 0" > lisp.nm
 \end{verbatim}
 and then run genesis with NIL for the list of files:
 \begin{verbatim}
-	* (load ".../compiler/generic/new-genesis") ; compile before loading
-	* (lisp::genesis nil ".../lisp/lisp.nm" "/dev/null"
-		".../lisp/lisp.map" ".../lisp/lisp.h")
+        * (load ".../compiler/generic/new-genesis") ; compile before loading
+        * (lisp::genesis nil ".../lisp/lisp.nm" "/dev/null"
+                ".../lisp/lisp.map" ".../lisp/lisp.h")
 \end{verbatim}
 It will generate
 a whole bunch of warnings about things being undefined, but ignore
 that, because it will also generate a correct lisp.h.  You can then
 compile lisp producing a correct lisp.map:
 \begin{verbatim}
-	% make
+        % make
 \end{verbatim}
 and then use \verb|tools/do-worldbuild| and \verb|tools/mk-lisp| to build
-\verb|kernel.core| and \verb|lisp.core| (see section \ref[building-cores].)
+\verb|kernel.core| and \verb|lisp.core| (see section \ref{building-cores}.)
 
 \section{Compiling the Lisp Code}
 
