@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.52 1993/05/17 04:46:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.53 1993/05/19 08:41:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1380,7 +1380,7 @@
 (def-ir1-translator progv ((vars vals &body body) start cont)
   (ir1-convert
    start cont
-   (if (or *converting-for-interpreter* *byte-compiling*)
+   (if (or *converting-for-interpreter* (byte-compiling))
        `(%progv ,vars ,vals #'(lambda () ,@body))
        (once-only ((n-save-bs '(%primitive current-binding-pointer)))
 	 `(unwind-protect
