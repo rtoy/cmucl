@@ -7,24 +7,20 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.34 1992/06/14 07:29:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.35 1992/12/10 01:21:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
-(in-package 'c)
-(export '(lisp::defstruct) "LISP")
-
-(export '(structure-index make-structure structure-length
-	  structure-ref structure-set))
+(in-package "C")
+(in-package "LISP")
+(export '(defstruct copy-structure))
 
 ;;; Always compile safe.  This code isn't very careful about protecting itself.
 ;;;
-(eval-when (compile)
-  (declaim (optimize (safety 1))))
-
+(declaim (optimize (safety 1)))
 
 
 ;;;; Structure frobbing primitives.
@@ -455,6 +451,24 @@
 		res))))
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info))))
+
+
+;;; COPY-STRUCTURE  --  Public
+;;;
+;;;    Copy any old kind of structure.
+;;;
+(defun copy-structure (structure)
+  "Return a copy of Structure with the same (EQL) slot values."
+  (declare (type structure structure))
+  (locally (declare (optimize (speed 3) (safety 0)))
+    (let* ((len (structure-length structure))
+	   (res (make-structure len)))
+      (declare (type structure-index len))
+      (dotimes (i len)
+	(declare (type structure-index i))
+	(setf (structure-ref res i)
+	      (structure-ref structure i)))
+      res))
 
 
 ;;; Define-Accessors returns a list of function definitions for accessing and
