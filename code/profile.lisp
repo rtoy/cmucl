@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.16 1997/02/13 09:31:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.17 1997/07/21 14:37:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -386,9 +386,9 @@
  undefined, then we give a warning and ignore it.  If CALLERS-P is T
  names have counts of the most common calling functions recorded. See
  also UNPROFILE, REPORT-TIME and RESET-TIME. "
-  (let ((package (if (symbolp package)
-		     (find-package package)
-		     package)))
+  (let ((package (if (packagep package)
+		     package
+		     (find-package package))))
     (do-symbols (symbol package (values))
       (when (and (eq (symbol-package symbol) package)
 		 (fboundp symbol))
