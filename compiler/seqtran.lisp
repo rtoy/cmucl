@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.17 1993/05/11 13:50:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.18 1993/05/17 07:52:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -421,7 +421,7 @@
   (destructuring-bind (fun pred*) stuff
     (deftransform fun ((string1 string2 &key (start1 0) end1
 				(start2 0) end2)
-		       '* '* :eval-name t :when :both)
+		       '* '* :eval-name t)
       `(,pred* string1 string2 start1 end1 start2 end2))))
 
 
