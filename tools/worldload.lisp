@@ -26,12 +26,12 @@
 (in-package "USER" :use '("LISP" "EXTENSIONS" "CONDITIONS" "DEBUG" "CLOS"))
 (in-package "HEMLOCK")
 (in-package "LISP")
-
+#|
 ;;; Must load this here, instead of before loading this file, otherwise
 ;;; SEARCH-LIST is unknown.
 ;;;
 (load "/afs/cs/project/clisp/new-compiler/logical-names.lisp")
-
+|#
 ;;; Get some data on this core.
 ;;;
 (write-string "What is the current lisp-implementation-version? ")
