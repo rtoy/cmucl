@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.36 2003/09/15 14:28:18 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.37 2003/09/15 16:41:12 toy Exp $
  *
  */
 
@@ -49,8 +49,13 @@
 
 #elif defined(sparc)
 
+/*
+ * current_dynamic_space_free_pointer contains the pseudo-atomic
+ * stuff, so we need to preserve those bits when we give it a value.
+ * This value better not have any bits set there either!
+ */
 #define set_alloc_pointer(value) \
-  (current_dynamic_space_free_pointer = (value))
+  (current_dynamic_space_free_pointer = (value) | ((unsigned long) current_dynamic_space_free_pointer & 7))
 #define get_alloc_pointer() \
   (current_dynamic_space_free_pointer)
 #define get_binding_stack_pointer() \
