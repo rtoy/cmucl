@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.166 2003/11/04 15:01:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.167 2003/12/02 16:59:12 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2524,7 +2524,7 @@
 ;;;    Like DO-EVAL-WHEN-STUFF, only do a macrolet.  Fun is not passed any
 ;;; arguments.
 ;;;
-(defun do-macrolet-stuff (definitions fun)
+(defun do-macrolet-stuff (definitions fun &optional decls (cont (make-continuation)))
   (declare (list definitions) (type function fun))
   (let ((whole (gensym))
 	(environment (gensym)))
@@ -2554,20 +2554,23 @@
 			  t
 			  (make-macrolet-environment *lexical-environment*)))))))
 
-      (let ((*lexical-environment* (make-lexenv :functions (new-fenv))))
+      (let* ((*lexical-environment* (make-lexenv :functions (new-fenv)))
+	     (*lexical-environment* (process-declarations decls nil (new-fenv) cont)))
 	(funcall fun))))
 
   (undefined-value))
 
 
-(def-ir1-translator macrolet ((definitions &rest body) start cont)
+(def-ir1-translator macrolet ((definitions &parse-body (body decls)) start cont)
   "MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
   Evaluate the Body-Forms in an environment with the specified local macros
   defined.  Name is the local macro name, Lambda-List is the DEFMACRO style
   destructuring lambda list, and the Forms evaluate to the expansion."
   (do-macrolet-stuff definitions
 		     #'(lambda ()
-			 (ir1-convert-progn-body start cont body))))
+			 (ir1-convert-progn-body start cont body))
+		     decls
+		     cont))
 
 
 ;;; COMPILER-OPTION-BIND

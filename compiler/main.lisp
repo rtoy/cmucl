@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.137 2003/08/11 14:22:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.138 2003/12/02 16:59:13 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1114,10 +1114,14 @@
 	    ((macrolet)
 	     (unless (>= (length form) 2)
 	       (compiler-error "MACROLET form is too short: ~S." form))
-	     (do-macrolet-stuff
-	      (cadr form)
-	      #'(lambda ()
-		  (process-progn (cddr form) path))))
+	     ;; Macrolets can have declarations.
+	     (multiple-value-bind (body decls)
+		 (system:parse-body (cddr form) nil nil)
+	       (do-macrolet-stuff
+		 (cadr form)
+		 #'(lambda ()
+		     (process-progn body path))
+		 decls)))
 	    (locally (process-locally form path))
 	    (progn (process-progn (cdr form) path))
 	    (file-comment (process-file-comment form))
