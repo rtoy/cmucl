@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.89 2003/07/02 21:45:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.90 2003/07/03 17:13:30 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -126,8 +126,8 @@
 (macrolet ((frob (ftype func)
 	     `(deftransform %unary-ftruncate ((x) (,ftype))
 		(let* ((x-type (continuation-type x))
-		       (lo (numeric-type-low x-type))
-		       (hi (numeric-type-high x-type))
+		       (lo (bound-value (numeric-type-low x-type)))
+		       (hi (bound-value (numeric-type-high x-type)))
 		       (limit-lo (- (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
 		       (limit-hi (ash 1 #-sparc-v9 31 #+sparc-v9 63)))
 		  (if (and (numberp lo) (numberp hi)
