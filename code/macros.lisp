@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.96 2003/07/17 17:48:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.97 2003/08/08 11:32:52 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,7 +91,10 @@
                 :report "Ignore the lock and continue")
               (unlock-package ()
                 :report "Disable the package's definition-lock then continue"
-                (setf (ext:package-definition-lock package) nil))))))))
+                (setf (ext:package-definition-lock package) nil))
+              (unlock-all ()
+                :report "Unlock all packages, then continue"
+                (lisp::unlock-all-packages))))))))
   (let ((whole (gensym "WHOLE-"))
 	(environment (gensym "ENV-")))
     (multiple-value-bind
@@ -216,7 +219,10 @@
            :report "Ignore the lock and continue")
          (unlock-package ()
            :report "Disable package's definition-lock then continue"
-           (setf (ext:package-definition-lock (symbol-package name)) nil))))
+           (setf (ext:package-definition-lock (symbol-package name)) nil))
+         (unlock-all ()
+           :report "Unlock all packages, then continue"
+           (lisp::unlock-all-packages))))
   (let ((whole (gensym "WHOLE-")))
     (multiple-value-bind (body local-decs doc)
 			 (parse-defmacro arglist whole body name 'deftype
@@ -1858,7 +1864,7 @@
 	     (handler-bind ((c::parse-unknown-type
 			     #'(lambda (c)
 				 (c::note-undefined-reference
-				  (c::parse-unknown-type-specifier c)
+				  (kernel:parse-unknown-type-specifier c)
 				  :type))))
 	       (unwind-protect
 		   (multiple-value-prog1

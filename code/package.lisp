@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.70 2003/06/18 09:23:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.71 2003/08/08 11:32:52 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,8 @@
 (in-package "EXTENSIONS")
 (export '(*keyword-package* *lisp-package* *default-package-use-list*
 	  map-apropos package-children package-parent
-          package-lock package-definition-lock without-package-locks))
+          package-lock package-definition-lock without-package-locks
+          unlock-all-packages))
 
 (in-package "KERNEL")
 (export '(%in-package old-in-package %defpackage))
@@ -162,6 +163,12 @@
 (pushnew 'package-locks-init ext:*after-save-initializations*)
 
 
+(defun unlock-all-packages ()
+  (dolist (p (list-all-packages))
+    (setf (package-definition-lock p) nil)
+    (setf (package-lock p) nil)))
+
+
 (defmacro without-package-locks (&body body)
   `(eval-when (:compile-toplevel :load-toplevel :execute)
     (let ((*enable-package-locked-errors* nil))
@@ -195,8 +202,11 @@
               (continue ()
                 :report "Ignore the lock and continue")
               (unlock-package ()
-                :report "Disable package's definition-lock then continue"
-                (setf (ext:package-definition-lock package) nil)))))))))
+                :report "Disable package's definition-lock, then continue"
+                (setf (ext:package-definition-lock package) nil))
+              (unlock-all ()
+                :report "Disable all package locks, then continue"
+                (unlock-all-packages)))))))))
 
 
 ;;; This magical variable is T during initialization so Use-Package's of packages
@@ -1299,8 +1309,11 @@
                 (continue ()
                   :report "Ignore the lock and continue")
                 (unlock-package ()
-                  :report "Unlock package then continue"
-                  (setf (ext:package-lock package) nil)))))
+                  :report "Unlock package, then continue"
+                  (setf (ext:package-lock package) nil))
+                (unlock-all ()
+                  :report "Unlock all packages, then continue"
+                  (unlock-all-packages)))))
           (let ((symbol (make-symbol (subseq name 0 length))))
             (%set-symbol-package symbol package)
             (cond ((eq package *keyword-package*)
@@ -1380,7 +1393,10 @@
             :report "Ignore the lock and continue")
           (unlock-package ()
             :report "Disable package's lock then continue"
-            (setf (ext:package-lock package) nil)))))
+            (setf (ext:package-lock package) nil))
+          (unlock-all ()
+            :report "Unlock all packages, then continue"
+            (unlock-all-packages)))))
     ;;
     ;; If a name conflict is revealed, give use a chance to shadowing-import
     ;; one of the accessible symbols.
@@ -1551,7 +1567,10 @@
             :report "Ignore the lock and continue")
           (unlock-package ()
             :report "Disable package's lock then continue"
-            (setf (ext:package-lock package) nil)))))
+            (setf (ext:package-lock package) nil))
+          (unlock-all ()
+            :report "Unlock all packages, then continue"
+            (unlock-all-packages)))))
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))

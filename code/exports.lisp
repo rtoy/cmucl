@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.221 2003/08/06 19:00:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.222 2003/08/08 11:32:52 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,6 +245,7 @@
 	   "UNIX-RMDIR" "UNIX-SCHED-YIELD" "UNIX-SELECT"
 	   "UNIX-SEND" "UNIX-SETPGID" "UNIX-SETPGRP"
 	   "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SETSOCKOPT" "UNIX-SOCKET"
+           "UNIX-SETUID" "UNIX-SETGID"
 	   "UNIX-STAT" "UNIX-SYMLINK" "UNIX-SYNC"
 	   "UNIX-TIMES" "UNIX-TRUNCATE" "UNIX-TTYNAME" "UNIX-UID"
 	   "UNIX-UNAME" "UNIX-UNLINK" "UNIX-UTIMES" "UNIX-WRITE" "WINSIZE"
@@ -1223,7 +1224,7 @@
              "OBJECT-SET-EVENT-HANDLER" "OLD-TRACE" "OLD-UNTRACE" "ONCE-ONLY"
              "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE"
 	     "PACKAGE-CHILDREN" "PACKAGE-PARENT" "PARSE-TIME"
-             "PACKAGE-LOCK" "PACKAGE-DEFINITION-LOCK" "WITHOUT-PACKAGE-LOCKS"
+             "PACKAGE-LOCK" "PACKAGE-DEFINITION-LOCK" "WITHOUT-PACKAGE-LOCKS" "UNLOCK-ALL-PACKAGES"
              "PRINT-DIRECTORY" "PRINT-HERALD" "PRINT-PRETTY-KEY"
              "PRINT-PRETTY-KEY-EVENT" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
@@ -1590,8 +1591,10 @@
            "WHO-REFERENCES"
            "WHO-BINDS"
            "WHO-SETS"
-           #+pcl "WHO-SUBCLASSES"
-           #+pcl "WHO-SUPERCLASSES"
+           "WHO-SUBCLASSES"
+           "WHO-SUPERCLASSES"
+           "WHO-SPECIALIZES"
+           "WHO-MACROEXPANDS"
            "MAKE-XREF-CONTEXT"
            "XREF-CONTEXT-NAME"
            "XREF-CONTEXT-FILE"
