@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.25 1990/10/02 18:07:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.26 1990/10/09 23:10:43 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -90,6 +90,13 @@
 
 (defknown structurify (simple-vector) structure
   (unsafe))
+(defknown structure-length (structure) index
+  (flushable))
+(defknown structure-ref (structure index) t
+  (flushable))
+(defknown structure-set (structure index t) t
+  (unsafe))
+
 
 
 (defknown %raw-bits (t fixnum) (unsigned-byte 32)
