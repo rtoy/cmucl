@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.49 2002/02/04 17:22:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.50 2002/06/10 22:41:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -566,9 +566,9 @@
 	(stream-fresh-line stream))))
 
 (defun write-string (string &optional (stream *standard-output*)
-			    &key (start 0) (end (length (the vector string))))
+			    &key (start 0) end)
   "Outputs the String to the given Stream."
-  (write-string* string stream start end))
+  (write-string* string stream start (or end (length (the vector string)))))
 
 (defun write-string* (string &optional (stream *standard-output*)
 			     (start 0) (end (length (the vector string))))
