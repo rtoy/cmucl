@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.21 2000/09/05 08:51:51 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.22 2000/10/21 12:50:42 dtc Exp $
  *
  */
 
@@ -122,7 +122,11 @@ boolean enable_pointer_filter = TRUE;
  * The total bytes allocated. Seen by (dynamic-usage)
  */
 unsigned long bytes_allocated = 0;
-static unsigned long auto_gc_trigger = 0;
+
+/*
+ * GC trigger; a value of 0xffffffff represents disabled.
+ */
+unsigned long auto_gc_trigger = 0xffffffff;
 
 /*
  * The src. and dest. generations. Set before a GC starts scavenging.
@@ -6324,8 +6328,7 @@ char *alloc(int nbytes)
       return (void *) new_obj;
     }
 
-    if(auto_gc_trigger		/* Only when enabled */
-       && bytes_allocated > auto_gc_trigger) {
+    if(bytes_allocated > auto_gc_trigger) {
       /* Double the trigger. */
       auto_gc_trigger *= 2;
       alloc_entered--;
@@ -6392,8 +6395,7 @@ char *alloc(int nbytes)
       return (void *) new_obj;
     }
 
-    if(auto_gc_trigger		/* Only when enabled */
-       && bytes_allocated > auto_gc_trigger) {
+    if(bytes_allocated > auto_gc_trigger) {
       /* Double the trigger. */
       auto_gc_trigger *= 2;
       alloc_entered--;
@@ -6433,7 +6435,7 @@ void set_auto_gc_trigger(unsigned long dynamic_usage)
 
 void clear_auto_gc_trigger(void)
 {
-  auto_gc_trigger = 0;
+  auto_gc_trigger = 0xffffffff;
 }
 
 /* Find the code object for the given pc. Return NULL on failure */
