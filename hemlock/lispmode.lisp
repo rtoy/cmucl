@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.13 1991/10/27 08:29:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.14 1991/11/18 15:27:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1049,6 +1049,10 @@
 		      mark temp fstart start nil)
 		     (mark-column start)))))))))
 
+(defhvar "Lisp Indentation Local Definers"
+  "Forms with syntax like LABELS, MACROLET, etc."
+  :value '("LABELS" "MACROLET" "FLET"))
+
 ;;; LISP-INDENTATION-CHECK-FOR-LOCAL-DEF -- Internal.
 ;;;
 ;;; This is a temporary hack to see how it performs.  When we are indenting
@@ -1077,7 +1081,8 @@
 	 (move-mark temp2 temp1)
 	 (scan-char temp2 :lisp-syntax (not :constituent))
 	 (let ((fname (nstring-upcase (region-to-string (region temp1 temp2)))))
-	   (cond ((and (string/= fname "FLET") (string/= fname "MACROLET"))
+	   (cond ((not (member fname (value lisp-indentation-local-definers)
+			       :test #'string=))
 		  nil)
 		 (arg-list
 		  (1+ (mark-column start)))
