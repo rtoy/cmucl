@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.19 1990/07/03 06:31:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.20 1990/07/03 07:12:38 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -280,7 +280,7 @@
 
 (define-vop (check-signed-byte-32 check-hairy-type)
   (:generator 45
-    (let ((nope (generate-error-code object-not-signed-byte-32-error obj))
+    (let ((nope (generate-error-code vop object-not-signed-byte-32-error obj))
 	  (yep (gen-label)))
       (inst and temp obj #x3)
       (inst beq temp zero-tn yep)
@@ -352,7 +352,8 @@
 
 (define-vop (check-unsigned-byte-32 check-hairy-type)
   (:generator 45
-    (let ((nope (generate-error-code object-not-unsigned-byte-32-error obj))
+    (let ((nope
+	   (generate-error-code vop object-not-unsigned-byte-32-error obj))
 	  (yep (gen-label))
 	  (fixnum (gen-label))
 	  (single-word (gen-label)))
@@ -425,7 +426,7 @@
 		    ,@body))
 		(define-vop (,check-name check-list-symbol)
 		  (:generator 8
-		    (let ((target (generate-error-code ,error-code obj))
+		    (let ((target (generate-error-code vop ,error-code obj))
 			  (not-p t))
 		      ,@body
 		      (move res obj)))))))
