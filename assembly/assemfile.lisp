@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.20 1990/10/28 05:59:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.21 1990/10/31 23:44:09 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -124,19 +124,7 @@
 			 :offset ,(reg-spec-offset reg))))
 		  regs))
 	   ,@insts
-	   ,@(ecase vm:target-fasl-file-implementation
-	       (#.vm:pmax-fasl-file-implementation
-		(ecase return-style
-		  (:raw
-		   `((inst j lip-tn)
-		     (inst nop)))
-		  (:full-call
-		   `((lisp-return (make-random-tn :kind :normal
-						  :sc (sc-or-lose
-						       'descriptor-reg)
-						  :offset lra-offset)
-				  lip-tn :offset 2)))
-		  (:none))))))
+	   ,@(generate-return-sequence return-style)))
        (format *error-output* "~S assembled~%" ',name))))
 
 (defun arg-or-res-spec (reg)
@@ -209,34 +197,7 @@
 		       `(move ,(reg-spec-temp arg)
 			      ,(reg-spec-name arg)))
 		   args)
-	 ,@(ecase vm:target-fasl-file-implementation
-	     (#.vm:pmax-fasl-file-implementation
-	      (ecase return-style
-		(:raw
-		 `((inst jal (make-fixup ',name :assembly-routine))
-		   (inst nop)))
-		(:full-call
-		 (when (> (length results) 1)
-		   (error "Can't use :full-call in an assembly-routine for ~
-		           more than one return value."))
-		 `((let ((lra-label (gen-label))
-			 (cur-nfp (current-nfp-tn ,vop)))
-		     (when cur-nfp
-		       (store-stack-tn ,nfp-save cur-nfp))
-		     (inst compute-lra-from-code ,lra code-tn lra-label ,temp)
-		     (inst j (make-fixup ',name :assembly-routine))
-		     (inst nop)
-		     (emit-return-pc lra-label)
-		     (note-this-location ,vop :unknown-return)
-		     (move csp-tn old-fp-tn)
-		     (inst nop)
-		     (inst compute-code-from-lra code-tn code-tn
-			   lra-label ,temp)
-		     (when cur-nfp
-		       (load-stack-tn cur-nfp ,nfp-save)))))
-		(:none
-		 `((inst j (make-fixup ',name :assembly-routine))
-		   (inst nop))))))
+	 ,@(generate-call-sequence name return-style vop temp nfp-save lra)
 	 ,@(mapcar #'(lambda (res)
 		       `(move ,(reg-spec-name res)
 			      ,(reg-spec-temp res)))
