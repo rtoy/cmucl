@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.28 1993/07/26 19:49:45 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.29 1993/08/19 13:57:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,8 +234,6 @@
 	(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
 	 (setf *editor-input* (make-windowed-editor-input))
-	 (ext:carefully-add-font-paths *editor-windowed-input*
-				       lisp-fonts-pathnames)
 	 (setup-font-family *editor-windowed-input*
 			    (variable-value 'ed::default-font)
 			    "8x13u" "8x13bold"))
