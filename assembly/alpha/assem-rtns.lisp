@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/assem-rtns.lisp,v 1.1 1994/04/06 16:58:34 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/alpha/assem-rtns.lisp,v 1.2 1994/04/12 20:10:13 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,8 +70,8 @@
   (inst addq vals vm:word-bytes vals)
   (inst stl temp 0 dst)
   (inst subq count (fixnum 1) count)
-  (inst bne count loop)
   (inst addq dst vm:word-bytes dst)
+  (inst bne count loop)
 		
   (inst br zero-tn done)
 
