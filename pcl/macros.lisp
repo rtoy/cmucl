@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.16 2002/08/19 16:52:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.17 2002/08/24 13:46:52 pmai Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -98,35 +98,6 @@
 (defun remtail (list tail)
   (if (eq list tail) () (cons (car list) (remtail (cdr list) tail))))
 
-;;; ONCE-ONLY does the same thing as it does in zetalisp.  I should have just
-;;; lifted it from there but I am honest.  Not only that but this one is
-;;; written in Common Lisp.  I feel a lot like bootstrapping, or maybe more
-;;; like rebuilding Rome.
-(defmacro once-only (vars &body body)
-  (let ((gensym-var (gensym))
-        (run-time-vars (gensym))
-        (run-time-vals (gensym))
-        (expand-time-val-forms ()))
-    (dolist (var vars)
-      (push `(if (or (symbolp ,var)
-                     (numberp ,var)
-                     (and (listp ,var)
-			  (member (car ,var) '(quote function))))
-                 ,var
-                 (let ((,gensym-var (gensym)))
-                   (push ,gensym-var ,run-time-vars)
-                   (push ,var ,run-time-vals)
-                   ,gensym-var))
-            expand-time-val-forms))    
-    `(let* (,run-time-vars
-            ,run-time-vals
-            (wrapped-body
-	      (let ,(mapcar #'list vars (reverse expand-time-val-forms))
-		,@body)))
-       `(let ,(mapcar #'list (reverse ,run-time-vars)
-			     (reverse ,run-time-vals))
-	  ,wrapped-body))))
-
 (eval-when (compile load eval)
 (defun extract-declarations (body &optional environment)
   ;;(declare (values documentation declarations body))
@@ -184,13 +155,13 @@
   (intern (string-append sym1 sym2) package))
 
 (defmacro check-member (place list &key (test #'eql) (pretty-name place))
-  (once-only (place list)
+  (ext:once-only ((place place) (list list))
     `(or (member ,place ,list :test ,test)
          (error "The value of ~A, ~S is not one of ~S."
                 ',pretty-name ,place ,list))))
 
 (defmacro alist-entry (alist key make-entry-fn)
-  (once-only (alist key)
+  (ext:once-only ((alist alist) (key key))
     `(or (assq ,key ,alist)
 	 (progn (setf ,alist (cons (,make-entry-fn ,key) ,alist))
 		(car ,alist)))))

@@ -18,7 +18,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.3 1999/05/30 23:13:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.4 2002/08/24 13:46:52 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -83,7 +83,7 @@
 
 (defmacro slot-value-from-index (instance wrapper slot-name slots index)
   "Returns instance's slot-value given slot-name's index."
-  (once-only (index)
+  (ext:once-only ((index index))
     `(if ,index
          (let ((val (%svref ,slots ,index)))
            (if (eq val ',*slot-unbound*)
@@ -96,7 +96,7 @@
 (defmacro set-slot-value-from-index
           (instance wrapper slot-name slots index new-value)
   "Sets instance's slot-value to new-value given slot-name's index."
-  (once-only (index)
+  (ext:once-only ((index index))
     `(if ,index
           (setf (%svref ,slots ,index) ,new-value)
           (if *safe-to-use-set-slot-value-wrapper-optimizations-p*
