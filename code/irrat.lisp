@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.28 1998/04/15 01:29:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.29 1999/06/23 14:05:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,7 +75,7 @@
 #-x86 (def-math-rtn "log" 1)
 #-x86 (def-math-rtn "log10" 1)
 (def-math-rtn "pow" 2)
-#-x86 (def-math-rtn "sqrt" 1)
+#-(or x86 sparc-v7) (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
 #-(or hpux x86) (def-math-rtn "log1p" 1)
 
