@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.40 2003/05/13 10:49:01 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.41 2003/05/15 15:43:56 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -583,7 +583,7 @@
   t)
 
 (defun make-class-predicate (class name)
-  (let* ((gf (ensure-generic-function name))
+  (let* ((gf (without-package-locks (ensure-generic-function name)))
 	 (mlist (if (eq *boot-state* 'complete)
 		    (generic-function-methods gf)
 		    (early-gf-methods gf))))
