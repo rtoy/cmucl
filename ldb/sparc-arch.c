@@ -99,7 +99,7 @@ struct sigcontext *context;
 	  case trap_FunctionEndBreakpoint:
 	    sigsetmask(context->sc_mask);
 	    fake_foreign_function_call(context);
-	    handle_breakpoint(signal, code, context);
+	    handle_function_end_breakpoint(signal, code, context);
 	    undo_fake_foreign_function_call(context);
 	    context->sc_npc = context->sc_pc + 4;
 	    break;
