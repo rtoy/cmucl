@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.20 1991/02/08 13:31:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-info.lisp,v 1.21 1991/02/11 13:36:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,7 +240,7 @@
   ;;
   ;; The name of this function.  If from a DEFUN, etc., then this is the
   ;; function name, otherwise it is a descriptive string.
-  (name nil :type (or simple-string cons symbol))
+  (name (required-argument) :type (or simple-string cons symbol))
   ;;
   ;; The kind of function (same as FUNCTIONAL-KIND):
   (kind nil :type (member nil :optional :external :top-level :cleanup))
@@ -310,8 +310,8 @@
   (returns :fixed :type (or (simple-array * (*)) (member :standard :fixed)))
   ;;
   ;; SC-Offsets describing where the return PC and return FP are kept.
-  (return-pc nil :type sc-offset)
-  (old-fp nil :type sc-offset)
+  (return-pc (required-argument) :type sc-offset)
+  (old-fp (required-argument) :type sc-offset)
   ;;
   ;; SC-Offset for the number stack FP in this function, or NIL if no NFP
   ;; allocated.
@@ -319,10 +319,10 @@
   ;;
   ;; The earliest PC in this function at which the environment is properly
   ;; initialized (arguments moved from passing locations, etc.)
-  (start-pc nil :type index)
+  (start-pc (required-argument) :type index)
   ;;
   ;; The start of elsewhere code for this function (if any.)
-  (elsewhere-pc nil :type index))
+  (elsewhere-pc (required-argument) :type index))
 
 
 (defstruct debug-source
@@ -331,7 +331,7 @@
   ;;    :File - from a file (Compile-File)
   ;;    :Lisp - from Lisp (Compile)
   ;;  :Stream - from a non-file stream (Compile-From-Stream)
-  (from nil :type (member :file :stream :lisp))
+  (from (required-argument) :type (member :file :stream :lisp))
   ;;
   ;; If :File, the file name, if :Lisp or :Stream, then a vector of the
   ;; top-level forms.  When from COMPILE, form 0 is #'(LAMBDA ...).
@@ -344,7 +344,7 @@
   (created nil :type (or unsigned-byte null))
   ;;
   ;; The universal time that the source was compiled.
-  (compiled nil :type unsigned-byte)
+  (compiled (required-argument) :type unsigned-byte)
   ;;
   ;; The source path root number of the first form read from this source (i.e.
   ;; the total number of forms converted previously in this compilation.)
@@ -366,7 +366,7 @@
 (defstruct (compiled-debug-info (:include debug-info))
   ;;
   ;; Some string describing something about the code in this component.
-  (name nil :type simple-string)
+  (name (required-argument) :type simple-string)
   ;;
   ;; A list of DEBUG-SOURCE structures describing where the code for this
   ;; component came from, in the order that they were read.
@@ -377,7 +377,7 @@
   ;;
   ;; The name of the package that DEBUG-FUNCTION-VARIABLES were dumped relative
   ;; to.  Locations that aren't packaged are in this package.
-  (package nil :type simple-string)
+  (package (required-argument) :type simple-string)
   ;;
   ;; A simple-vector of alternating Debug-Function structures and fixnum
   ;; PCs.  This is used to map PCs to functions, so that we can figure out
