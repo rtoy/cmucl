@@ -625,12 +625,15 @@
 			:metaclass 'structure-class
 			:name symbol
 			:direct-superclasses
-			(cond ((lisp:subtypep symbol 'condition)
-			       (list (lisp:class-name
-				      (first (kernel:class-direct-superclasses
-					      (lisp:find-class symbol))))))
+			(cond #+cmu
+			      ;; Handle the CMUCL structure based conditions.
+			      ((lisp:subtypep symbol 'condition)
+			       (mapcar #'lisp:class-name
+				       (kernel:class-direct-superclasses
+					(lisp:find-class symbol))))
 			      ;; Hack to add the stream class as a
 			      ;; mixin to the lisp-stream class.
+			      #+cmu
 			      ((eq symbol 'sys:lisp-stream)
 			       '(structure-object stream))
 			      ((structure-type-included-type-name symbol)
