@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.27 1991/05/16 00:25:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.28 1991/10/03 18:30:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -702,7 +702,7 @@
        (let ((fun (function-info-optimizer kind)))
 	 (unless (and fun (funcall fun node))
 	   (dolist (x (function-info-transforms kind))
-	     (unless (ir1-transform node (car x) (cdr x))
+	     (unless (ir1-transform node x)
 	       (return))))))))
 
   (undefined-value))
@@ -801,10 +801,11 @@
 
 ;;;
 ;;;    A hashtable from combination nodes to things describing how an
-;;; optimization of the node failed.  The value is an alist
-;;; (Fun . Args), where Fun is the transformation function that failed and Args
-;;; is either a list for format arguments for the note or the FUNCTION-TYPE
-;;; that would have enabled the transformation but failed to match.
+;;; optimization of the node failed.  The value is an alist (Transform . Args),
+;;; where Transform is the structure describing the transform that failed, and
+;;; Args is either a list of format arguments for the note, or the
+;;; FUNCTION-TYPE that would have enabled the transformation but failed to
+;;; match.
 ;;;
 (defvar *failed-optimizations* (make-hash-table :test #'eq))
 
@@ -812,16 +813,16 @@
 ;;; RECORD-OPTIMIZATION-FAILURE  --  Internal
 ;;;
 ;;;    Add a failed optimization note to *FAILED-OPTIMZATIONS* for Node, Fun
-;;; and Args.  If there is already a note for Node and Fun, replace it,
+;;; and Args.  If there is already a note for Node and Transform, replace it,
 ;;; otherwise add a new one.
 ;;;
-(defun record-optimization-failure (node fun args)
-  (declare (type combination node) (type function fun)
+(defun record-optimization-failure (node transform args)
+  (declare (type combination node) (type transform transform)
 	   (type (or function-type list) args))
-  (let ((found (assoc fun (gethash node *failed-optimizations*))))
+  (let ((found (assoc transform (gethash node *failed-optimizations*))))
     (if found
 	(setf (cdr found) args)
-	(push (cons fun args)
+	(push (cons transform args)
 	      (gethash node *failed-optimizations*))))
   (undefined-value))
 
@@ -836,11 +837,13 @@
 ;;; attempted.  We return false if either the transform suceeded or was
 ;;; aborted.
 ;;;
-(defun ir1-transform (node type fun)
-  (declare (type combination node) (type ctype type) (type function fun))
-  (let ((constrained (function-type-p type))
-	(flame (policy node (> speed brevity)))
-	(*compiler-error-context* node))
+(defun ir1-transform (node transform)
+  (declare (type combination node) (type transform transform))
+  (let* ((type (transform-type transform))
+	 (fun (transform-function transform))
+	 (constrained (function-type-p type))
+	 (flame (policy node (> speed brevity)))
+	 (*compiler-error-context* node))
     (cond ((or (not constrained)
 	       (valid-function-use node type :strict-result t))
 	   (multiple-value-bind
@@ -863,16 +866,17 @@
 	       (:failure 
 		(if args
 		    (when flame
-		      (record-optimization-failure node fun args))
+		      (record-optimization-failure node transform args))
 		    (setf (gethash node *failed-optimizations*)
-			  (remove fun (gethash node *failed-optimizations*)
+			  (remove transform
+				  (gethash node *failed-optimizations*)
 				  :key #'car)))
 		t))))
 	  ((and flame
 		(valid-function-use node type
 				    :argument-test #'types-intersect
 				    :result-test #'values-types-intersect))
-	   (record-optimization-failure node fun type)
+	   (record-optimization-failure node transform type)
 	   t)
 	  (t
 	   t))))
