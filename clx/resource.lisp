@@ -676,7 +676,9 @@
 		      :write write :test test :test-not test-not)
     database))
 
-(defsetf root-resources set-root-resources)
+(defsetf root-resources (screen &key test test-not (write #'princ))(database)
+  `(set-root-resources
+    ,screen :test ,test :test-not ,test-not :write ,write :database ,database))
 
 (defun initialize-resource-database (display)
   ;; This function is (supposed to be) equivalent to the Xlib initialization
