@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.6 1990/11/23 16:21:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.7 1991/01/13 23:08:25 ram Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -343,6 +343,19 @@
 (deftransform length ((vector) (vector))
   '(vector-length vector))
 
+
+;;; If a simple array with known dimensions, then vector-length is a
+;;; compile-time constant.
+;;;
+(deftransform vector-length ((vector) ((simple-array * (*))))
+  (let ((vtype (continuation-type vector)))
+    (if (array-type-p vtype)
+	(let ((dim (first (array-type-dimensions vtype))))
+	  (when (eq dim '*) (give-up))
+	  dim)
+	(give-up))))
+
+
 ;;; ARRAY-TOTAL-SIZE  --  transform.
 ;;;
 ;;; Again, if we can tell the results from the type, just use it.  Otherwise,
@@ -503,3 +516,38 @@
   `(data-vector-set array
 		    (%check-bound array (array-total-size array) index)
 		    new-value))
+
+
+;;;; Bit-vector array operation canonicalization:
+;;;
+;;;    We convert all bit-vector operations to have the result array specified.
+;;; This allows any result allocation to be open-coded, and eliminates the need
+;;; for any VM-dependent transforms to handle these cases.
+
+(dolist (fun '(bit-and bit-ior bit-xor bit-eqv bit-nand bit-nor bit-andc1
+		       bit-andc2 bit-orc1 bit-orc2))
+  ;;
+  ;; Make a result array if result is NIL or unsupplied.
+  (deftransform fun ((bit-array-1 bit-array-2 &optional result-bit-array)
+		     (bit-vector bit-vector &optional null) *
+		     :eval-name t  :policy (>= speed space))
+    `(,fun bit-array-1 bit-array-2
+	   (make-array (length bit-array-1) :element-type 'bit)))
+  ;;
+  ;; If result its T, make it the first arg.
+  (deftransform fun ((bit-array-1 bit-array-2 result-bit-array)
+		     (bit-vector bit-vector (constant-argument t)) *
+		     :eval-name t)
+    `(,fun bit-array-1 bit-array-2 bit-array-1)))
+
+;;; Similar for BIT-NOT, but there is only one arg...
+;;;
+(deftransform bit-not ((bit-array-1 &optional result-bit-array)
+		       (bit-vector &optional null) *
+		       :policy (>= speed space))
+  '(bit-not bit-array-1 
+	    (make-array (length bit-array-1) :element-type 'bit)))
+;;;
+(deftransform bit-not ((bit-array-1 result-bit-array)
+		       (bit-vector (constant-argument t)))
+  '(bit-not bit-array-1 bit-array-1)))
