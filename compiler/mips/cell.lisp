@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.57 1992/03/11 21:26:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.58 1992/04/12 20:53:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.57 1992/03/11 21:26:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.58 1992/04/12 20:53:51 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -155,22 +155,14 @@
   (:temporary (:scs (non-descriptor-reg)) type)
   (:results (result :scs (descriptor-reg)))
   (:generator 38
-    (let ((closure (gen-label))
-	  (normal-fn (gen-label)))
+    (let ((normal-fn (gen-label)))
       (load-type type function (- function-pointer-type))
       (inst nop)
-      (inst xor type closure-header-type)
-      (inst beq type zero-tn closure)
-      (inst xor type (logxor closure-header-type
-			     funcallable-instance-header-type))
-      (inst beq type zero-tn closure)
-      (inst xor type (logxor funcallable-instance-header-type
-			     function-header-type))
-      (inst bne type zero-tn normal-fn)
+      (inst xor type function-header-type)
+      (inst beq type zero-tn normal-fn)
       (inst addu lip function
 	    (- (ash function-header-code-offset word-shift)
 	       function-pointer-type))
-      (emit-label closure)
       (inst li lip (make-fixup "closure_tramp" :foreign))
       (emit-label normal-fn)
       (storew function fdefn fdefn-function-slot other-pointer-type)
