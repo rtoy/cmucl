@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.23 2003/02/25 17:06:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.24 2003/07/24 13:59:51 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,6 +290,14 @@
 #-(or pentium sparc-v9)
 (defun cycle-count/float () 0.0)
 
+(defvar *time-consing* nil)
+(defvar *last-time-consing* nil)
+
+(defun get-time-consing ()
+  (when (null *time-consing*)
+    (time nil)
+    (setq *time-consing* *last-time-consing*)))
+
 
 ;;; %TIME  --  Internal
 ;;;
@@ -314,6 +322,7 @@
         old-bytes-consed
         new-bytes-consed
         cons-overhead)
+    (get-time-consing)
     ;; Calculate the overhead...
     (multiple-value-setq
         (old-run-utime old-run-stime old-page-faults old-bytes-consed)
@@ -348,7 +357,8 @@
 	  (new-run-utime new-run-stime new-page-faults new-bytes-consed)
 	(time-get-sys-info))
       (setq new-real-time (- (get-internal-real-time) real-time-overhead))
-      (let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0)))
+      (let ((gc-run-time (max (- *gc-run-time* start-gc-run-time) 0))
+	    (bytes-consed (- new-bytes-consed old-bytes-consed cons-overhead)))
 	(terpri *trace-output*)
 	(pprint-logical-block (*trace-output* nil :per-line-prefix "; ")
 	  (format *trace-output*
@@ -370,6 +380,6 @@
 		    (/ (float gc-run-time)
 		       (float internal-time-units-per-second)))
 		  (max (- new-page-faults old-page-faults) 0)
-		  (max (- new-bytes-consed old-bytes-consed cons-overhead)
-		       0))))
-	(terpri *trace-output*)))))
+		  (max (- bytes-consed (or *time-consing* 0)) 0)))
+	(terpri *trace-output*)
+	(setq *last-time-consing* bytes-consed)))))))
