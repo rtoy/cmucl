@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.9 2003/10/13 18:59:37 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.10 2004/01/10 05:09:26 toy Exp $
  *
  */
 
@@ -127,7 +127,15 @@ struct page {
 #if defined(i386)
 #define PAGE_SIZE 4096
 #else
-#define PAGE_SIZE 8192
+/*
+ * For sparc, the minimum page size (physical page size) is 8K.
+ * However, some experimments indicate that this gives worse
+ * performance in some cases than the non-gencgc version.  By upping
+ * the page size to 32K, we are as good as before, so let us use a 32K
+ * page size.  (I'm assuming the gain is because we do the kernel
+ * allocation trap less often.)
+ */
+#define PAGE_SIZE (4*8192)
 #endif
 
 extern unsigned dynamic_space_pages;
@@ -159,7 +167,7 @@ void  gencgc_pickup_dynamic(void);
 void sniff_code_object(struct code *code, unsigned displacement);
 #endif
 lispobj *search_dynamic_space(lispobj *pointer);
-void update_x86_dynamic_space_free_pointer(void);
+void update_dynamic_space_free_pointer(void);
 
 lispobj * component_ptr_from_pc(lispobj *pc);
 
