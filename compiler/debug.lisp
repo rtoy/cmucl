@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.21 1992/06/09 06:57:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.23 1992/07/21 17:38:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,6 +25,8 @@
   "This variable is bound to the format arguments when an error is signalled
   by Barf or Burp.")
 
+(defvar *ignored-errors* (make-hash-table :test #'equal))
+
 ;;; Barf  --  Interface
 ;;;
 ;;;    A definite inconsistency has been detected.  Signal an error with
@@ -32,7 +34,14 @@
 ;;;
 (proclaim '(function barf (string &rest t) void))
 (defun barf (string &rest *args*)
-  (apply #'cerror "Skip this error." string *args*))
+  (unless (gethash string *ignored-errors*)
+    (restart-case
+	(apply #'error string *args*)
+      (continue ()
+	:report "Ignore this error.")
+      (ignore-all ()
+	:report "Ignore this and all future occurrences of this error."
+	(setf (gethash string *ignored-errors*) t)))))
 
 (defvar *burp-action* :warn
   "Action taken by the Burp function when a possible compiler bug is detected.
@@ -555,7 +564,15 @@
 			       (basic-combination-fun node)))))
 	   (when (leaf-refs (elt (lambda-vars fun)
 				 (position arg (basic-combination-args node))))
-	     (barf "Flushed arg for referenced var in ~S." node)))))))
+	     (barf "Flushed arg for referenced var in ~S." node))))))
+
+     (let ((dest (continuation-dest (node-cont node))))
+       (when (and (return-p dest)
+		  (eq (basic-combination-kind node) :local)
+		  (not (eq (lambda-tail-set (combination-lambda node))
+			   (lambda-tail-set (return-lambda dest)))))
+	 (barf "Tail local call to function with different tail set:~%  ~S"
+	       node))))
     (cif
      (check-dest (if-test node) node)
      (unless (eq (block-last (node-block node)) node)
