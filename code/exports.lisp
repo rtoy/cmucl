@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.78 1992/05/18 17:57:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.79 1992/05/18 18:15:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1640,3 +1640,13 @@
              "WITH-CIRCULARITY-DETECTION" "WRONG-NUMBER-OF-INDICES-ERROR"
 	     "FDEFN" "MAKE-FDEFN" "FDEFN-P" "FDEFN-NAME" "FDEFN-FUNCTION"
 	     "FDEFN-MAKUNBOUND"))
+
+(defpackage "NEW-ASSEM"
+  (:export "EMIT-BYTE" "EMIT-SKIP" "EMIT-BACK-PATCH" "EMIT-CHOOSER"
+	   "DEFINE-EMITTER" "DEFINE-INSTRUCTION" "DEFINE-INSTRUCTION-MACRO"
+	   "DEF-ASSEMBLER-PARAMS"
+
+	   "MAKE-SEGMENT" "SEGMENT-NAME" "ASSEMBLE" "ALIGN" "INST"
+	   "LABEL" "LABEL-P" "GEN-LABEL" "EMIT-LABEL" "LABEL-POSITION"
+	   "APPEND-SEGMENT" "FINALIZE-SEGMENT"
+	   "SEGMENT-MAP-OUTPUT" "RELEASE-SEGMENT"))
