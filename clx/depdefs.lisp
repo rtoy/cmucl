@@ -559,8 +559,8 @@
 (def-clx-class (buffer (:constructor nil) (:copier nil) (:predicate nil))
   ;; Lock for multi-processing systems
   (lock (make-process-lock "CLX Buffer Lock"))
-  #-(or excl cmu) (output-stream nil :type (or null stream))
-  #+(or excl cmu) (output-stream nil :type (or null fixnum))
+  #-(or excl) (output-stream nil :type (or null stream))
+  #+(or excl) (output-stream nil :type (or null fixnum))
   ;; Buffer size
   (size 0 :type array-index)
   (request-number 0 :type (unsigned-byte 16))
@@ -582,8 +582,8 @@
   ;; Holding buffer for 16-bit text
   (tbuf16 (make-sequence 'buffer-text16 *buffer-text16-size* :initial-element 0))
   ;; Probably EQ to Output-Stream
-  #-(or excl cmu) (input-stream nil :type (or null stream))
-  #+(or excl cmu) (input-stream nil :type (or null fixnum))
+  #-(or excl) (input-stream nil :type (or null stream))
+  #+(or excl) (input-stream nil :type (or null fixnum))
   ;; T when the host connection has gotten errors
   (dead nil :type (or null (not null)))
   ;; T makes buffer-flush a noop.  Manipulated with with-buffer-flush-inhibited.
@@ -602,15 +602,6 @@
   (input-wait-function 'buffer-input-wait-default)
   ;; Function to call to listen for input data
   (listen-function 'buffer-listen-default)
-  ;;
-  ;; This is an alien array.  We use it for, somewhat unnecessarily, to have
-  ;; interior pointers into it when calling UNIX-READ.
-  #+:CMU
-  (internal-buffer nil)
-  ;;
-  ;; How much of the internal-buffer have we filled so far.
-  #+:CMU
-  (internal-buffer-length 0)
 
   #+Genera (debug-io nil :type (or null stream))
   ) 
