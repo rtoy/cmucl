@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.14 1991/11/30 23:51:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.15 1991/12/01 16:40:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1496,7 +1496,7 @@
 						(if atsignp
 						    :capitalize-first
 						    :downcase)))))
-	(setf args (interpret-directive-list before stream orig-args args))
+	(setf args (interpret-directive-list stream before orig-args args))
 	after))))
 
 (def-complex-format-directive #\) ()
