@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.48 2004/10/14 13:53:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.49 2004/10/21 21:26:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1387,6 +1387,11 @@
 	   stream
 	   list))
 
+(defun pprint-cond (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^~1I~:@_~@{~:<~^~W~^~:@_~@{~W~^~:@_~}~:>~^~:@_~}~:>")
+	   stream list))
+
 (defun pprint-defun (stream list &rest noise)
   (declare (ignore noise))
   (funcall (formatter
@@ -1460,6 +1465,78 @@
   (funcall (formatter "~:<~W~^~3I ~:_~W~^~1I~@{ ~@:_~W~}~:>")
 	   stream list))
 
+(defun pprint-defstruct (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; DEFSTRUCT
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    (pprint-indent :block 1 stream)
+    ;; Output name and any options neatly
+    (funcall (formatter "~:<~W~^ ~1I~@:_~@{~:<~W~^ ~:I~W~@{ ~_~W~}~:>~^~@:_~}~:>")
+	     stream (pprint-pop))
+    ;; Output each slot neatly
+    (loop
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)
+       (funcall (formatter "~:<~W~^~:I ~W~_~@{ ~W~^~@_~}~:>") stream (pprint-pop)))))
+
+(defun pprint-defclass (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; DEFCLASS
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-indent :block 2 stream)
+    (write-char #\space stream)
+    ;; Output class-name
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (pprint-newline :fill stream)
+    (write-char #\space stream)
+    ;; Output superclasses
+    (funcall (formatter "~W") stream (pprint-pop))
+    (pprint-indent :block 1 stream)
+    (pprint-newline :mandatory stream)
+    ;; Output slots.  We try to output keyword and value on one line together
+    (funcall (formatter "~:<~^~@{~:<~^~W~^ ~:I~@{~W ~W~^~@:_~}~:>~^~@:_~}~:>")
+		  stream (pprint-pop))
+    ;; Output options
+    (loop
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)
+       (output-object (pprint-pop) stream))))
+  
+(defun pprint-restart-case (stream list &rest noise)
+  (declare (ignore noise))
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
+    ;; RESTART-CASE
+    (output-object (pprint-pop) stream)
+    (pprint-exit-if-list-exhausted)
+    (write-char #\space stream)
+    ;; restartable form
+    (output-object (pprint-pop) stream)
+    (pprint-indent :block 1 stream)
+    ;; Output each clause
+    (loop
+       (pprint-exit-if-list-exhausted)
+       (pprint-newline :mandatory stream)
+       (destructuring-bind (case-name lambda-list &rest forms)
+	   (pprint-pop)
+	 (pprint-logical-block (stream forms :prefix "(" :suffix ")")
+	   ;; case-name
+	   (output-object case-name stream)
+	   (write-char #\space stream)
+	   ;; lambda-list
+	   (pprint-lambda-list stream lambda-list)
+	   ;;(pprint-newline :mandatory stream)
+	   (pprint-exit-if-list-exhausted)
+	   (loop
+	      (write-char #\space stream)
+	      (output-object (pprint-pop) stream)
+	      (pprint-exit-if-list-exhausted)
+	      (pprint-newline :linear stream)))))))
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -1499,6 +1576,7 @@
     ;; Macros.
     (case pprint-case)
     (ccase pprint-case)
+    (cond pprint-cond)
     (ctypecase pprint-typecase)
     (defconstant pprint-block)
     (define-modify-macro pprint-defun)
@@ -1506,7 +1584,7 @@
     (defmacro pprint-defun)
     (defparameter pprint-block)
     (defsetf pprint-defun)
-    (defstruct pprint-block)
+    (defstruct pprint-defstruct)
     (deftype pprint-defun)
     (defun pprint-defun)
     (defvar pprint-block)
@@ -1522,6 +1600,7 @@
     (etypecase pprint-typecase)
     (handler-bind pprint-handler-bind)
     (handler-case pprint-handler-bind)
+    ;; Loop is handled by pprint-loop.lisp
     #+nil(loop pprint-loop)
     (multiple-value-bind pprint-multiple-value-bind)
     (multiple-value-setq pprint-block)
@@ -1534,7 +1613,7 @@
     (psetf pprint-setq)
     (psetq pprint-setq)
     #+nil (restart-bind ...)
-    #+nil (restart-case ...)
+    (restart-case pprint-restart-case)
     (setf pprint-setq)
     (step pprint-progn)
     (time pprint-progn)
@@ -1553,6 +1632,7 @@
     (with-standard-io-syntax pprint-progn)
 
     ;; CLOS things
+    (defclass pprint-defclass)
     (with-slots pprint-with-like)
     (with-accessors pprint-with-like)
     
