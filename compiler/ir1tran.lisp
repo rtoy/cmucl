@@ -757,9 +757,10 @@
 			type
 			(type-intersection old-type type))))
 	  (cond ((eq int *empty-type*)
-		 (compiler-warning
-		  "Conflicting type declarations ~S and ~S for ~S."
-		  (type-specifier old-type) (type-specifier type) var-name))
+		 (unless (policy nil (= brevity 3))
+		   (compiler-warning
+		    "Conflicting type declarations ~S and ~S for ~S."
+		    (type-specifier old-type) (type-specifier type) var-name)))
 		(bound-var (setf (leaf-type bound-var) int))
 		(t
 		 (res (cons var int))))))
@@ -2275,7 +2276,7 @@
 (proclaim '(function process-type-proclamation (t list) void))
 (defun process-type-proclamation (spec names)
   (let ((type (single-value-type (specifier-type spec))))
-    (when (policy nil (>= safety brevity))
+    (unless (policy nil (= brevity 3))
       (dolist (name names)
 	(let ((old-type (info variable type name)))
 	  (unless (or (function-type-p type)
@@ -2558,7 +2559,8 @@
     (if (null (find-uses cont))
 	(let* ((old-type (continuation-asserted-type cont))
 	       (int (values-type-intersection old-type ctype)))
-	  (when (eq int *empty-type*)
+	  (when (and (eq int *empty-type*)
+		     (not (policy nil (= brevity 3))))
 	    (compiler-warning
 	     "Type ~S in THE declaration conflicts with previous type ~S."
 	     (type-specifier ctype) (type-specifier old-type)))
