@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.9 1990/04/24 02:56:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.10 1990/04/25 21:47:10 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -51,10 +51,9 @@
 	 (y :scs (any-reg descriptor-reg)))
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:variant-vars condition not-p error)
-  (:node-var node)
   (:policy :fast-safe)
   (:generator 3
-    (let ((target (generate-error-code node error x y)))
+    (let ((target (generate-error-code error x y)))
       (three-way-comparison x y condition :signed not-p target temp))))
 
 (define-vop (check<= check-op)
