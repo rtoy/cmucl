@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.46 2001/03/14 13:44:18 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.47 2001/03/23 14:57:48 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -673,6 +673,16 @@ a host-structure or string."
 	    (merge-directories dir
 			       (%pathname-directory defaults)
 			       diddle-defaults)))
+
+    ;; A bit of sanity checking on user arguments.
+    (flet ((check-component-validity (name name-or-type)
+	     (let ((unix-directory-separator #\/))
+	       (when (eq host (pathname-host *default-pathname-defaults*))
+		 (when (find unix-directory-separator name)
+		   (warn "Silly argument for a unix ~A: ~S"
+			 name-or-type name))))))
+      (check-component-validity name :pathname-name)
+      (check-component-validity type :pathname-type))
     
     (macrolet ((pick (var varp field)
 		 `(cond ((or (simple-string-p ,var)
