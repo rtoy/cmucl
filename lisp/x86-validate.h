@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.18 2004/01/16 03:04:46 toy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.19 2004/01/16 03:32:21 toy Exp $
  *
  */
 
@@ -11,37 +11,44 @@
  * Address map:
  *
  *  FreeBSD:
- *	0x00000000->0x0E000000 224M C program and memory allocation.
- *	0x0E000000->0x10000000  32M Foreign segment.
- *	0x10000000->0x20000000 256M Read-Only Space.
- *	0x20000000->0x28000000 128M Reserved for shared libraries.
- *	0x28000000->0x38000000 256M Static Space.
- *	0x38000000->0x40000000 128M Binding stack growing up.
- *	0x40000000->0x48000000 128M Control stack growing down.
- *	0x48000000->0xC8000000 2GB  Dynamic Space.
- *	0xE0000000->           256M C stack - Alien stack.
+ *	0x00000000->0x0E000000  224M C program and memory allocation.
+ *	0x0E000000->0x10000000   32M Foreign segment.
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x20000000->0x28000000  128M Reserved for shared libraries.
+ *	0x28000000->0x38000000  256M Static Space.
+ *	0x38000000->0x40000000  128M Binding stack growing up.
+ *	0x40000000->0x48000000  128M Control stack growing down.
+ *	0x48000000->0xB0000000 1664M Dynamic Space.
+ *      0xB0000000->0xB1000000       Foreign Linkage Table
+ *	0xE0000000->            256M C stack - Alien stack.
  *
  *  OpenBSD and NetBSD:
- *	0x00000000->0x0E000000 224M C program and memory allocation.
- *	0x0E000000->0x10000000  32M Foreign segment.
- *	0x10000000->0x20000000 256M Read-Only Space.
- *	0x20000000->0x28000000 128M Binding stack growing up.
- *	0x28000000->0x38000000 256M Static Space.
- *	0x38000000->0x40000000 128M Control stack growing down.
- *	0x40000000->0x48000000 128M Reserved for shared libraries.
- *	0x48000000->0xB8000000 1.75GB  Dynamic Space.
- *	0xE0000000->           256M C stack - Alien stack.
+ *	0x00000000->0x0E000000  224M C program and memory allocation.
+ *	0x0E000000->0x10000000   32M Foreign segment.
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x20000000->0x28000000  128M Binding stack growing up.
+ *	0x28000000->0x38000000  256M Static Space.
+ *	0x38000000->0x40000000  128M Control stack growing down.
+ *	0x40000000->0x48000000  128M Reserved for shared libraries.
+ *	0x48000000->0xB0000000 1664M Dynamic Space.
+ *      0xB0000000->0xB1000000   16M Foreign Linkage Table
+ *	0xE0000000->            256M C stack - Alien stack.
  *
  *  Linux:
- *	0x00000000->0x08000000 128M Unused.
- *	0x08000000->0x10000000 128M C program and memory allocation.
- *	0x10000000->0x20000000 256M Read-Only Space.
- *	0x20000000->0x28000000 128M Binding stack growing up.
- *	0x28000000->0x38000000 256M Static Space.
- *	0x38000000->0x40000000 128M Control stack growing down.
- *	0x40000000->0x48000000 128M Reserved for shared libraries.
- *	0x48000000->0xB8000000 1.75G Dynamic Space.
+ *	0x00000000->0x08000000  128M Unused.
+ *	0x08000000->0x10000000  128M C program and memory allocation.
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x20000000->0x28000000  128M Binding stack growing up.
+ *	0x28000000->0x38000000  256M Static Space.
+ *	0x38000000->0x40000000  128M Control stack growing down.
+ *	0x40000000->0x48000000  128M Reserved for shared libraries.
+ *	0x58000000->0xBE000000 1632M Dynamic Space.
+ *      0xBE000000->0xBF000000   16M Foreign Linkage Table
+ *      0xBFFF0000->0xC0000000       Unknown Linux mapping
  *
+ *      (Note: 0x58000000 allows us to run on a Linux system on an AMD
+ *      x86-64.  Hence we have a gap of unused memory starting at
+ *      0x48000000.)
  */
 
 #ifdef __FreeBSD__
