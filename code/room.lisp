@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.20 1993/02/27 01:11:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.21 1993/03/02 15:53:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -756,37 +756,56 @@
 
 (defun code-breakdown (space &key (how :package))
   (declare (type spaces space) (type (member :file :package) how))
-  (let ((info (make-hash-table :test (if (eq how :package) #'equal #'eq))))
+  (let ((packages (make-hash-table :test #'equal)))
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (when (eql type code-header-type)
 	   (let* ((dinfo (%code-debug-info obj))
-		  (name (if dinfo
-			    (ecase how
-			      (:package (c::compiled-debug-info-package dinfo))
-			      (:file
-			       (let ((source
-				      (first (c::compiled-debug-info-source
-					      dinfo))))
-				 (if (eq (c::debug-source-from source)
-					 :file)
-				     (c::debug-source-name source)
-				     "FROM LISP"))))
+		  (package (if dinfo
+			       (c::compiled-debug-info-package dinfo)
+			       "UNKNOWN"))
+		  (pkg-info (or (gethash package packages)
+				(setf (gethash package packages)
+				      (make-hash-table :test #'equal))))
+		  (file (if dinfo
+			    (let ((source
+				   (first (c::compiled-debug-info-source
+					   dinfo))))
+			      (if (eq (c::debug-source-from source)
+				      :file)
+				  (c::debug-source-name source)
+				  "FROM LISP"))
 			    "UNKNOWN"))
-		  (found (or (gethash name info)
-			     (setf (gethash name info) (cons 0 0)))))
-	     (incf (car found))
-	     (incf (cdr found) size))))
+		  (file-info (or (gethash file pkg-info)
+				 (setf (gethash file pkg-info)
+				       (cons 0 0)))))
+	     (incf (car file-info))
+	     (incf (cdr file-info) size))))
      space)
 
-    (collect ((res))
-      (maphash #'(lambda (k v)
-		   (res (list v k)))
-	       info)
-      (loop for ((count . size) name) in (sort (res) #'> :key #'cdar) do
-	(format t "~40@A: ~:D bytes, ~:D object~:P.~%"
-		(subseq name (max (- (length name) 40) 0))
-		size count))))
+    (let ((res ()))
+      (do-hash (pkg pkg-info packages)
+	(let ((pkg-res ())
+	      (pkg-count 0)
+	      (pkg-size 0))
+	  (do-hash (file file-info pkg-info)
+	    (incf pkg-count (car file-info))
+	    (incf pkg-size (cdr file-info))
+	    (push (list file file-info) pkg-res))
+	  (push (cons pkg-count pkg-size) pkg-res)
+	  (push pkg pkg-res)
+	  (push pkg-res res)))
+	    
+      (loop for (pkg (pkg-count . pkg-size) . files) in
+	    (sort res #'> :key #'(lambda (x) (cdr (second x)))) do
+	(format t "~%Package ~A: ~32T~9:D bytes, ~9:D object~:P.~%"
+		pkg pkg-size pkg-count)
+	(when (eq how :file)
+	  (loop for (file (file-count . file-size)) in
+	        (sort files #'> :key #'(lambda (x) (cdr (second x)))) do
+	    (format t "~30@A: ~9:D bytes, ~9:D object~:P.~%"
+		    (file-namestring file) file-size file-count))))))
+
   (values))
 
 
