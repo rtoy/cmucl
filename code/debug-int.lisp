@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.110 2004/07/29 11:52:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.111 2004/07/30 01:05:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1416,7 +1416,7 @@
 	  (- (vm:sigcontext-register scp vm::lra-offset)
 	     vm:other-pointer-type)
 	  #+ppc
-	  (vm::sigcontext-lr scp))
+	  (vm:sigcontext-lr scp))
 	(code-header-len (* (kernel:get-header-data code) vm:word-bytes)))
     (values (- return-machine-address
 	       (- (get-lisp-obj-address code)

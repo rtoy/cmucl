@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.3 2004/07/29 11:52:24 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ppc-vm.lisp,v 1.4 2004/07/30 01:05:59 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,8 @@
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-program-counter sigcontext-register
 	  sigcontext-float-register sigcontext-floating-point-modes
-	  extern-alien-name sanctify-for-execution))
+	  extern-alien-name sanctify-for-execution
+	  sigcontext-lr))
 
 
 ;;;; The sigcontext structure.
@@ -237,8 +238,8 @@
 ;; Extract the LR register from the sigcontext.
 (defun sigcontext-lr (scp)
   (declare (type (alien (* sigcontext)) scp))
-  (with-alien ((scp (* sigcontext)) scp)
-    (deref (slot (slot scp 'sc-regs) 'lr) 0)))
+  (with-alien ((scp (* sigcontext) scp))
+    (slot (slot scp 'sc-regs) 'lr)))
 
 ;;; SIGCONTEXT-FLOAT-REGISTER  --  Interface
 ;;;
