@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.33 1991/03/27 17:37:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.34 1991/04/02 11:06:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -603,8 +603,8 @@ inlines
 ;;; DELETE-REF will handle the deletion. 
 ;;;
 (defun delete-functional (fun)
-  (assert (and (null (leaf-refs fun)))
-	  (not (functional-entry-function fun)))
+  (assert (and (null (leaf-refs fun))
+	       (not (functional-entry-function fun))))
   (etypecase fun
     (optional-dispatch (delete-optional-dispatch fun))
     (clambda (delete-lambda fun)))
@@ -749,7 +749,7 @@ inlines
 	     (clambda
 	      (ecase (functional-kind leaf)
 		((nil :let :mv-let :escape :cleanup)
-		 (asssert (not (functional-entry-function leaf))))
+		 (assert (not (functional-entry-function leaf))))
 		(:external
 		 (delete-lambda leaf))
 		((:deleted :optional))))
