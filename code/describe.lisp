@@ -199,7 +199,7 @@
       (describe (cadr plist)))))
 
 (defun describe-structure (x)
-  (format t "~&~S is a structure of type ~A." x (svref x 0))
+  (format t "~&~S is a structure of type ~A." x (c::structure-ref x 0))
   (dolist (slot (cddr (inspect::describe-parts x)))
     (format t "~%~A: ~S." (car slot) (cdr slot))))
 
