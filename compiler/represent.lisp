@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.28 1991/11/08 15:25:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.29 1991/11/11 23:13:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,7 +133,8 @@
 	       (primitive-type-name ptype)
 	       (mapcar #'sc-name (losers))
 	       more-p
-	       (mapcar #'sc-name (listify-restrictions load-scs))
+	       (unless more-p
+		 (mapcar #'sc-name (listify-restrictions load-scs)))
 	       incon)))))
 
 
