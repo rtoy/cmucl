@@ -113,7 +113,7 @@
     (write-var-integer len vec)
     (dotimes (i len)
       (vector-push-extend (char-code (schar string i)) vec)))
-  (undefined))
+  (undefined-value))
 
 
 ;;;; Compiled debug locations:
