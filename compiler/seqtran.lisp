@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.12 1991/11/05 19:26:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.13 1991/11/12 14:13:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,7 +412,7 @@
 	(string/= string/=*)) do
   (deftransform fun ((string1 string2 &key (start1 0) end1
 			      (start2 0) end2)
-		     * * :eval-name t)
+		     '* '* :eval-name t)
     `(,pred* string1 string2 start1 end1 start2 end2)))
 
 
@@ -428,7 +428,7 @@
 	(string>* nil nil)
 	(string>=* nil t)) do
   (deftransform name ((string1 string2 start1 end1 start2 end2)
-		      (simple-string simple-string t t t t) *
+		      '(simple-string simple-string t t t t) '*
 		      :eval-name t)
     `(let* ((end1 (if (not end1) (length string1) end1))
 	    (end2 (if (not end2) (length string2) end2))
@@ -452,7 +452,7 @@
       '((string=* not)
 	(string/=* identity)) do
   (deftransform name ((string1 string2 start1 end1 start2 end2)
-		      (simple-string simple-string t t t t) *
+		      '(simple-string simple-string t t t t) '*
 		      :eval-name t)
     `(,result-fun
       (lisp::%sp-string-compare

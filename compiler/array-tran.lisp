@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.13 1991/11/09 18:57:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.14 1991/11/12 14:14:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.13 1991/11/09 18:57:19 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -549,14 +547,14 @@
   ;;
   ;; Make a result array if result is NIL or unsupplied.
   (deftransform fun ((bit-array-1 bit-array-2 &optional result-bit-array)
-		     (bit-vector bit-vector &optional null) *
+		     '(bit-vector bit-vector &optional null) '*
 		     :eval-name t  :policy (>= speed space))
     `(,fun bit-array-1 bit-array-2
 	   (make-array (length bit-array-1) :element-type 'bit)))
   ;;
   ;; If result its T, make it the first arg.
   (deftransform fun ((bit-array-1 bit-array-2 result-bit-array)
-		     (bit-vector bit-vector (member t)) *
+		     '(bit-vector bit-vector (member t)) '*
 		     :eval-name t)
     `(,fun bit-array-1 bit-array-2 bit-array-1)))
 
