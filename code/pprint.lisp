@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.29 2001/03/13 16:52:14 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.30 2001/06/11 14:22:09 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1128,10 +1128,10 @@
 (defun pprint-vector (stream vector)
   (pprint-logical-block (stream nil :prefix "#(" :suffix ")")
     (dotimes (i (length vector))
-      (pprint-pop)
       (unless (zerop i)
 	(write-char #\space stream)
 	(pprint-newline :fill stream))
+      (pprint-pop)
       (output-object (aref vector i) stream))))
 
 (defun pprint-array-contents (stream array)
