@@ -20,7 +20,8 @@ GC_SRC = gencgc.c
 endif
 
 RUNTIME = $(GENCGC) $(LINKAGE)
-CPPFLAGS = -I. -I$(PATH2) -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
+# __NO_CTYPE so builds on glibc 2.3 will run on (some) older glibc's.
+CPPFLAGS = -D__NO_CTYPE -I. -I$(PATH2) -I$(PATH1) -I- -I/usr/X11R6/include $(RUNTIME)
 CFLAGS = -rdynamic -Wstrict-prototypes -Wall -g $(RUNTIME)
 ASFLAGS = -g -DGENCGC -DLINKAGE_TABLE
 NM = $(PATH1)/linux-nm
