@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.41 1991/02/11 16:09:29 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.42 1991/02/20 14:43:08 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -429,7 +429,8 @@
 (defmacro define-conditional-vop (translate &rest generator)
   ;;
   ;; Squelch dead-code notes...
-  `(locally (declare (optimize (inhibit-warnings 3)))
+  `(;locally (declare (optimize (inhibit-warnings 3)))
+    progn ; but not really, since that makes a big function, which doesn't load.
      ,@(mapcar #'(lambda (suffix cost signed)
 		   (unless (and (member suffix '(/fixnum -c/fixnum))
 				(eq translate 'eql))
