@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.29 2003/05/13 10:16:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.30 2004/04/06 20:44:03 rtoy Rel $")
 ;;;
 
 (in-package :pcl)
@@ -165,10 +165,12 @@
 				    ',metaclass
 				    ',supers
 				    (list ,@canonical-slots)
-				    (list ,@(apply #'append 
-						   (when defstruct-p
-						     '(:from-defclass-p t))
-						   other-initargs))))))))
+				    (list 
+				     :definition-source (c::source-location)
+				     ,@(apply #'append 
+					      (when defstruct-p
+						'(:from-defclass-p t))
+					      other-initargs))))))))
           (if defstruct-p
               (progn
                 (eval defclass-form) ; define the class now, so that
@@ -356,12 +358,15 @@
 	     (others (ecd-other-initargs definition)))
 	(loop (when (null others) (return nil))
 	      (let ((initarg (pop others)))
-		(unless (eq initarg :direct-default-initargs)
-		 (error "~@<The defclass option ~S is not supported by ~
-                         the bootstrap object system.~@:>"
-			initarg)))
-	      (setq default-initargs
-		    (nconc default-initargs (reverse (pop others)))))))
+		(cond ((eq initarg :direct-default-initargs)
+		       (setq default-initargs
+			     (nconc default-initargs (reverse (pop others)))))
+		      (t
+		       (cerror "Discard it."
+			       "~@<The defclass option ~S is not supported by ~
+                                 the bootstrap object system.~@:>"
+			       initarg)
+		       (pop others)))))))
     (reverse default-initargs)))
 
 (defun bootstrap-slot-index (class-name slot-name)
@@ -425,16 +430,18 @@
 	canonical-options (copy-tree canonical-options))
   (when (eq metaclass 'standard-class)
     (inform-type-system-about-std-class name))
-  (let ((ecd
-	  (make-early-class-definition name
-				       *load-pathname*
-				       metaclass
-				       supers
-				       canonical-slots
-				       canonical-options))
-	(existing
-	  (find name *early-class-definitions* :key #'ecd-class-name)))
-    (setq *early-class-definitions*
-	  (cons ecd (remove existing *early-class-definitions*)))
-    ecd))
+  (let ((source (getf canonical-options :definition-source)))
+    (remf canonical-options :definition-source)
+    (let ((ecd
+	   (make-early-class-definition name
+					source
+					metaclass
+					supers
+					canonical-slots
+					canonical-options))
+	  (existing
+	   (find name *early-class-definitions* :key #'ecd-class-name)))
+      (setq *early-class-definitions*
+	    (cons ecd (remove existing *early-class-definitions*)))
+      ecd)))
 

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.25 2003/08/25 20:10:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.26 2004/04/06 20:44:03 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -117,7 +117,8 @@
     (make-top-level-form `(define-method-combination ,type)
 			 '(:load-toplevel :execute)
       `(load-short-defcombin
-	 ',type ',operator ',identity-with-one-arg ',documentation))))
+	 ',type ',operator ',identity-with-one-arg 
+	',documentation (c::source-location)))))
 
 (defun set-random-documentation (type doc-type doc)
   (let ((pair (assoc doc-type
@@ -127,7 +128,7 @@
 	(push (cons doc-type doc)
 	      (info random-documentation stuff type)))))
 
-(defun load-short-defcombin (type operator ioa doc)
+(defun load-short-defcombin (type operator ioa doc source)
   (let* ((specializers
 	   (list (find-class 'generic-function)
 		 (intern-eql-specializer type)
@@ -148,8 +149,7 @@
 			   (make-short-method-combination
 			       type options operator ioa new-method doc))
 			 args))
-	    :definition-source `((define-method-combination ,type)
-				 ,*load-pathname*)))
+	    :definition-source source))
     (when old-method
       (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)
@@ -252,9 +252,9 @@
       (make-top-level-form `(define-method-combination ,type)
 			   '(:load-toplevel :execute)
 	`(load-long-defcombin ',type ',documentation #',function
-			      ',arguments-option)))))
+			      ',arguments-option (c::source-location))))))
 
-(defun load-long-defcombin (type doc function args-lambda-list)
+(defun load-long-defcombin (type doc function args-lambda-list source)
   (let* ((specializers
 	   (list (find-class 'generic-function)
 		 (intern-eql-specializer type)
@@ -278,8 +278,7 @@
 					   :args-lambda-list args-lambda-list
 					   :documentation doc))
 			  args))
-	 :definition-source `((define-method-combination ,type)
-			      ,*load-pathname*))))
+	 :definition-source source)))
     (when old-method
       (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)

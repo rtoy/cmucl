@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.71 2003/10/29 12:14:35 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.72 2004/04/06 20:44:03 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -352,7 +352,6 @@
   (apply #'ensure-class name :metaclass metaclass-name
 	 :direct-superclasses supers
 	 :direct-slots slots
-	 :definition-source `((defclass ,name) ,*load-pathname*)
 	 other))
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)

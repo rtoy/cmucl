@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.101 2004/03/24 13:27:43 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.102 2004/04/06 20:44:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -409,6 +409,62 @@
     (if use
 	(values (node-source-form use) t)
 	(values nil nil))))
+
+
+;;; Utilities for source location recording.  SOURCE-LOCATION returns
+;;; a data structure describing the source location of the call site.
+;;; The structure includes form numbers and the filename, if we
+;;; compile a file, or the user supplied info, if we compile from a
+;;; stream.
+;;;
+;;; Some effort was made to keep the structures small.  We restrict
+;;; form numbers to two 14 bit integers and encode them in a single
+;;; fixnum.  Both FILE-SOURCE-LOCATION and STREAM-SOURCE-LOCATION
+;;; require 4 words (usually 16 bytes).
+
+(defstruct (form-numbers)
+  ;; The tlf-number and form-number encoded in a fixnum.
+  (form-numbers (required-argument) :type fixnum))
+
+(defstruct (file-source-location
+	     (:include form-numbers)
+	     (:make-load-form-fun :just-dump-it-normally)
+	     (:pure t))
+  (pathname (required-argument) :type simple-string))
+
+(defstruct (stream-source-location
+	     (:include form-numbers)
+	     (:make-load-form-fun :just-dump-it-normally)
+	     (:pure t))
+  user-info)
+
+(defun encode-form-numbers (tlf-number form-number)
+  "Return the TLF-NUMBER and FORM-NUMBER encoded as fixnum."
+  (declare (type (unsigned-byte 14) tlf-number form-number))
+  (logior tlf-number (ash form-number 14)))
+
+(defun decode-form-numbers (fixnum)
+  "Return the tlf-number and form-number from an encoded FIXNUM."
+  (values (ldb (byte 14 0) fixnum) 
+	  (ldb (byte 14 14) fixnum)))
+
+(defun source-location ()
+  "Return a source-location for the call site."
+  nil)
+
+(define-compiler-macro source-location ()
+  (let ((file-info (car (source-info-current-file *source-info*)))
+	(form-numbers (encode-form-numbers
+		       (source-path-tlf-number *current-path*)
+		       (source-path-form-number *current-path*))))
+      (etypecase (file-info-name file-info)
+	((member :stream)
+	 `(quote ,(make-stream-source-location :form-numbers form-numbers
+					       :user-info *user-source-info*)))
+	(pathname
+	 `(quote ,(make-file-source-location 
+		   :form-numbers form-numbers
+		   :pathname (namestring-for-debug-source file-info)))))))
 
 
 ;;; MAKE-LEXENV  --  Interface

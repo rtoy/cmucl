@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.139 2004/01/16 14:15:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.140 2004/04/06 20:44:01 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,6 +131,11 @@
 ;;;
 (defvar *source-info* nil)
 
+(defvar *user-source-info* nil
+  "The user supplied source-info for the current compilation.  
+This is the :source-info argument to COMPILE-FROM-STREAM and will be
+stored in the INFO slot of the DEBUG-SOURCE in code components and 
+in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
 ;;; Maybe-Mumble  --  Internal
 ;;;
@@ -1505,6 +1510,7 @@
 	   (*lexical-environment* (make-null-environment))
 	   (*converting-for-interpreter* nil)
 	   (*source-info* info)
+	   (*user-source-info* d-s-info)
 	   (*compile-file-pathname* nil)
 	   (*compile-file-truename* nil)
 	   (*top-level-lambdas* ())

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.71 2004/01/09 05:18:08 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.72 2004/04/06 20:44:02 rtoy Exp $")
 
 (in-package :pcl)
 
@@ -302,7 +302,9 @@ work during bootstrapping.
        ,(make-top-level-form
 	 `(defgeneric ,function-specifier)
 	 '(:load-toplevel :execute)
-	 `(load-defgeneric ',function-specifier ',lambda-list ,@initargs))
+	 `(load-defgeneric ',function-specifier ',lambda-list 
+	   :definition-source (c::source-location)
+	   ,@initargs))
        ,@methods
        `,(function ,function-specifier))))
 
@@ -320,8 +322,6 @@ work during bootstrapping.
   (apply #'ensure-generic-function
 	 function-specifier
 	 :lambda-list lambda-list
-	 :definition-source `((defgeneric ,function-specifier)
-			      ,*load-pathname*)
 	 initargs))
 
 
@@ -512,7 +512,7 @@ work during bootstrapping.
     ',qualifiers
     ,specializers-form
     ',unspecialized-lambda-list
-    ,initargs-form
+    (list* :definition-source (c::source-location) ,initargs-form)
     ;;Paper over a bug in KCL by passing the cache-symbol
     ;;here in addition to in the list.
     ',pv-table-symbol
@@ -1335,12 +1335,7 @@ work during bootstrapping.
       (maybe-compile :function)))
   ;;
   (let ((method (apply #'add-named-method
-		       gf-name qualifiers specializers lambda-list
-		       :definition-source `((defmethod ,gf-name
-						,@qualifiers
-						,specializers)
-					    ,*load-pathname*)
-		       initargs)))
+		       gf-name qualifiers specializers lambda-list initargs)))
     ;;
     (record-inline-access-info method inline-access method-info)
     ;;
@@ -1753,7 +1748,8 @@ work during bootstrapping.
 #-loadable-pcl
 (defun ensure-generic-function-using-class
     (existing spec &rest keys
-     &key (lambda-list nil lambda-list-p) argument-precedence-order 
+     &key (lambda-list nil lambda-list-p) argument-precedence-order
+     definition-source
      &allow-other-keys)
   (declare (ignore keys))
   (cond ((and existing (early-gf-p existing))
@@ -1769,10 +1765,10 @@ work during bootstrapping.
 	(t
 	 (pushnew spec *early-generic-functions* :test #'equal)
 	 (make-early-gf spec lambda-list lambda-list-p nil
-			argument-precedence-order))))
+			argument-precedence-order definition-source))))
 
 (defun make-early-gf (spec &optional lambda-list lambda-list-p function
-		      argument-precedence-order)
+		      argument-precedence-order source)
   (let ((fin (allocate-funcallable-instance *sgf-wrapper* *sgf-slots-init*)))
     (set-funcallable-instance-function 
      fin 
@@ -1787,7 +1783,7 @@ work during bootstrapping.
 			 has not been set.~@:>" fin)))))
     (setf (gdefinition spec) fin)
     (bootstrap-set-slot 'standard-generic-function fin 'name spec)
-    (bootstrap-set-slot 'standard-generic-function fin 'source *load-pathname*)
+    (bootstrap-set-slot 'standard-generic-function fin 'source source)
     (set-function-name fin spec)
     (let ((arg-info (make-arg-info)))
       (setf (early-gf-arg-info fin) arg-info)
