@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.41 2002/11/13 19:47:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.42 2002/11/19 14:39:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,22 +173,51 @@
 	    (= type-len length)))
       ;; Type system not ready, so assume it's ok.
       t))
+
+(defun bad-sequence-type-error (type-spec)
+  (error 'simple-type-error
+	 :datum type-spec
+	 ;; This expected-type is wrong; it should be something like
+	 ;; (SATISFIES IS-A-VALID-SEQUENCE-TYPE-SPECIFIER-P), but we
+	 ;; aren't really using it.
+	 :expected-type 'sequence
+	 :format-control "~S is a bad type specifier for sequences"
+	 :format-arguments (list type-spec)))
+
+(defun sequence-length-error (type-spec length)
+  (error 'simple-type-error
+	 :datum length
+	 :expected-type (cond ((array-type-p type-spec)
+			       `(eql ,(car (array-type-dimensions type-spec))))
+			      ((type= type-spec (specifier-type 'null))
+			       '(eql 0))
+			      ((cons-type-p type-spec)
+			       `(integer 1))
+			      (t
+			       (error "Shouldn't happen!  Weird type")))
+	 :format-control "The length of ~S does not match the specified ~
+                          length of ~S."
+	 :format-arguments (list (type-specifier type-spec) length)))
 	 
 (defun make-sequence (type length &key (initial-element NIL iep))
   "Returns a sequence of the given Type and Length, with elements initialized
   to :Initial-Element."
   (declare (fixnum length))
   (flet ((check-seq-len (spec-type length)
-	   (unless (valid-sequence-and-length-p spec-type length)
-	     (error 'simple-type-error
-		    :format-control
-		    "The length of ~S does not match the specified ~
-                     length of ~S."
-		    :format-arguments
-		    (list (type-specifier spec-type) length)))))
+	     (unless (valid-sequence-and-length-p spec-type length)
+	       (sequence-length-error spec-type length))))
 
     (let ((type (specifier-type type)))
       (cond
+	((csubtypep type (specifier-type 'null))
+	 (unless (zerop length)
+	   (sequence-length-error type length))
+	 nil)
+	((type= type (specifier-type 'cons))
+	 (unless (plusp length)
+	   (sequence-length-error type length))
+	 (make-list length :initial-element initial-element))
+	;; Should we also check for types like '(cons (cons ...))?
 	((csubtypep type (specifier-type 'list))
 	 (make-list length :initial-element initial-element))
 	((csubtypep type (specifier-type 'string))
