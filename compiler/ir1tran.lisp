@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.104 1994/02/04 14:08:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.105 1994/03/05 14:38:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2554,7 +2554,6 @@
 ;;;    This will only happen during block compilation.
 ;;;
 (defun process-1-ftype-proclamation (name type)
-  (declare (type function-type type))
   (let ((var (gethash (define-function-name name) *free-functions*)))
     (etypecase var
       (null)
@@ -3470,21 +3469,20 @@
   (let ((type (leaf-type var))
 	(for-real (eq (leaf-where-from var) :declared))
 	(info (info function info (leaf-name var))))
-    (when (function-type-p type)
-      (assert-definition-type
-       fun type
-       :error-function #'compiler-warning
-       :warning-function (cond (info #'compiler-warning)
-			       (for-real #'compiler-note)
-			       (t nil))
-       :really-assert
-       (and for-real
-	    (not (and info
-		      (ir1-attributep (function-info-attributes info)
-				      explicit-check))))
-       :where (if for-real
-		  "previous declaration"
-		  "previous definition")))))
+    (assert-definition-type
+     fun type
+     :error-function #'compiler-warning
+     :warning-function (cond (info #'compiler-warning)
+			     (for-real #'compiler-note)
+			     (t nil))
+     :really-assert
+     (and for-real
+	  (not (and info
+		    (ir1-attributep (function-info-attributes info)
+				    explicit-check))))
+     :where (if for-real
+		"previous declaration"
+		"previous definition"))))
 
 
 ;;; IR1-CONVERT-LAMBDA-FOR-DEFUN  --  Interface
