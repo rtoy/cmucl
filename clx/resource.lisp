@@ -472,7 +472,7 @@
 (defun merge-resources (database with-database)
   (declare (type resource-database database with-database))
   (declare (values resource-database))
-  (map-resource #'add-resource database with-database)
+  (map-resource database #'add-resource with-database)
   with-database)
 
 (defun char-memq (key char)
