@@ -455,7 +455,8 @@
 ;;; 
 (defclass class (documentation-mixin dependent-update-mixin
 				     definition-source-mixin
-				     specializer)
+				     specializer
+				     kernel:instance)
   ((name
     :initform nil
     :initarg  :name
