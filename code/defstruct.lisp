@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.74 2001/09/21 12:00:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.75 2002/04/25 21:13:45 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -971,15 +971,16 @@
 	(when opt
 	  (arglist '&optional)
 	  (dolist (arg opt)
-	    (cond ((consp arg)
-		   (destructuring-bind
-		       (name &optional (def (nth-value 1 (get-slot name))))
-		       arg
-		     (arglist `(,name ,def))
-		     (vars name)
-		     (types (get-slot name))))
-		  (t
-		   (do-default arg)))))
+	    (if (consp arg)
+		(destructuring-bind (name &optional
+					  (def (nth-value 1 (get-slot name)))
+					  (supplied-test nil supplied-test-p))
+		    arg
+		  (arglist
+		   `(,name ,def ,@(if supplied-test-p `(,supplied-test) nil)))
+		  (vars name)
+		  (types (get-slot name)))
+		(do-default arg))))
 
 	(when restp
 	  (arglist '&rest rest)
@@ -988,20 +989,26 @@
 
 	(when keyp
 	  (arglist '&key)
-	  (dolist (key keys)
-	    (if (consp key)
-		(destructuring-bind (wot &optional (def nil def-p))
-				    key
-		  (let ((name (if (consp wot)
-				  (destructuring-bind (key var) wot
+	  (dolist (arg keys)
+	    (if (consp arg)
+		(destructuring-bind
+		      (name-spec &optional
+				 (def nil def-p)
+				 (supplied-test nil supplied-test-p))
+		    arg
+		  (let ((name (if (consp name-spec)
+				  (destructuring-bind (key var) name-spec
 				    (declare (ignore key))
 				    var)
-				  wot)))
+				  name-spec)))
 		    (multiple-value-bind (type slot-def) (get-slot name)
-		      (arglist `(,wot ,(if def-p def slot-def)))
+		      (arglist
+		       `(,name
+			 ,(if def-p def slot-def)
+			 ,@(if supplied-test-p `(,supplied-test) nil)))
 		      (vars name)
 		      (types type))))
-		(do-default key))))
+		(do-default arg))))
 
 	(when allowp (arglist '&allow-other-keys))
 
