@@ -141,6 +141,10 @@
     %unwind-protect %catch-breakup %unwind-protect-breakup %lexical-exit-breakup
     %continue-unwind %nlx-entry))
 
+;;; Some kinds of functions are only passed as arguments to funny functions,
+;;; and are never actually evaluated at run time.
+;;;
+(defconstant non-closed-function-kinds '(:cleanup :escape))
 
 ;;; ANNOTATE-COMPONENT-FOR-EVAL -- Internal.
 ;;;
@@ -194,6 +198,10 @@
 			  (eq (global-var-kind leaf) :global-function)
 			  (member (c::global-var-name leaf) undefined-funny-funs
 				  :test #'eq))
+		     :unused)
+		    ((and leaf (typep leaf 'clambda)
+			  (member (functional-kind leaf)
+				  non-closed-function-kinds))
 		     :unused)
 		    (t
 		     (typecase dest
