@@ -414,7 +414,7 @@ then the interrupt will be processed.  \xlref{signal-handlers} to define
 your own signal handlers.
 
 
-\section{Packages}
+\section{Implementation-specific Packages}
 
 When \cmucl{} is first started up, the default package is the
 \code{common-lisp-user} package.  The \code{common-lisp-user} package
@@ -484,6 +484,10 @@ name.
 \item[\code{wire}] The \code{wire} package exports a remote procedure
   call facility (\pxlref{remote}).
 \end{Lentry}
+
+
+\input{hierarchical-packages}
+
 
 
 \section{The Editor}
@@ -1720,7 +1724,7 @@ their
 \href{http://www.math.keio.ac.jp/~matumoto/emt.html}{website}.
 \else
 website at
-\href{http://www.math.keio.ac.jp/~matumoto/emt.html}{\texttt{\verb+http://www.math.keio.ac.jp/~matumoto/emt.html+}}.
+\href{http://www.math.keio.ac.jp/~matumoto/emt.html}{\texttt{http://www.math.keio.ac.jp/~matumoto/emt.html}}.
 \fi
 
 \section{Lisp Threads}
