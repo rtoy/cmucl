@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.30 2001/06/17 19:12:35 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.31 2002/12/03 01:45:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -269,7 +269,7 @@
 
 (defun %verify-argument-count (supplied-args defined-args)
   (unless (= supplied-args defined-args)
-    (error "Wrong argument count, wanted ~D and got ~D."
+    (simple-program-error "Wrong argument count, wanted ~D and got ~D."
 	   defined-args supplied-args))
   (values))
 
