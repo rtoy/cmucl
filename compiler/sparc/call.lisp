@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.11 1992/04/27 20:03:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.12 1992/04/28 15:38:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,14 +145,11 @@
 
 ;;; NUMBER-STACK-DISPLACEMENT
 ;;;
-;;; The number of bytes reserved above the number stack pointer.
+;;; The number of bytes reserved above the number stack pointer.  These
+;;; slots are required by architecture for a place to spill register windows.
 ;;; 
 (defconstant number-stack-displacement
-  (* (+ 16 ; 16 words to save ins and locals in.
-	1  ; extra word required by C call convention.
-	6  ; space where anyone we call can save his args.
-	1) ; and one more to round it out.
-     vm:word-bytes))
+  (* 16 vm:word-bytes))
 
 ;;; Used for setting up the Old-FP in local call.
 ;;;
