@@ -181,6 +181,8 @@
 (comf "target:code/wire")
 (comf "target:code/remote")
 
+(comf "target:code/setf-funs")
+
 ;;; Compile basic macros that we assume are already in the compilation
 ;;; environment.  We inhibit compile-time definition to prevent these functions
 ;;; from becoming interpreted.  In some cases, this is necessary for
