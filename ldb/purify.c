@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.8 1990/11/12 02:39:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.9 1990/11/27 17:38:02 wlott Exp $ */
 
 
 #include <mach.h>
@@ -263,9 +263,10 @@ static lispobj ptrans_func(thing, header, constant)
     lispobj code, *new, *old, result;
     struct function_header *function;
 
-    /* THING can either be a function header, a closure function header, or */
-    /* a closure.  If it's a closure, we do the same as ptrans_boxed, */
-    /* otherwise we have to do something strange, 'cause it is buried inside */
+    /* THING can either be a function header, a closure function header, */
+    /* a closure, or a funcallable-instance.  If it's a closure or a */
+    /* funcallable-instance, we do the same as ptrans_boxed. */
+    /* Otherwise we have to do something strange, 'cause it is buried inside */
     /* a code object. */
 
     if (TypeOf(header) == type_ClosureHeader) {
@@ -276,6 +277,26 @@ static lispobj ptrans_func(thing, header, constant)
         old = (lispobj *)PTR(thing);
         new = read_only_free;
         read_only_free += CEILING(nwords, 2);
+
+        /* Copy it. */
+        bcopy(old, new, nwords * sizeof(lispobj));
+
+        /* Deposit forwarding pointer. */
+        result = (lispobj)new | LowtagOf(thing);
+        *old = result;
+
+        /* Scavenge it. */
+        pscav(new, nwords, constant);
+
+        return result;
+    }
+    else if (TypeOf(header) == type_FuncallableInstanceHeader) {
+        nwords = 1 + HeaderValue(header);
+
+        /* Allocate it.  It *must* not go in read_only space. */
+        old = (lispobj *)PTR(thing);
+        new = static_free;
+        static_free += CEILING(nwords, 2);
 
         /* Copy it. */
         bcopy(old, new, nwords * sizeof(lispobj));
@@ -400,6 +421,7 @@ static lispobj ptrans_otherptr(thing, header, constant)
       case type_ComplexVector:
       case type_ComplexArray:
       case type_ClosureHeader:
+      case type_FuncallableInstanceHeader:
       case type_ValueCellHeader:
       case type_WeakPointer:
         return ptrans_boxed(thing, header, constant);

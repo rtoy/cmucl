@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.19 1990/11/12 02:37:48 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.20 1990/11/27 17:37:41 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -585,20 +585,21 @@ lispobj *where, object;
 			
 			type = TypeOf(first);
 			switch (type) {
-			case type_FunctionHeader:
-				copy = trans_function_header(object);
-				break;
-			case type_ClosureFunctionHeader:
-				copy = trans_closure_function_header(object);
-				break;
-			case type_ClosureHeader:
-				copy = trans_boxed(object);
-				break;
-			default:
-				fprintf(stderr, "GC lossage.  Bogus function pointer.\n");
-				fprintf(stderr, "Pointer: 0x%08x, Header: 0x%08x\n",
-					(unsigned long) object, (unsigned long) first);
-				gc_lose();
+			  case type_FunctionHeader:
+			    copy = trans_function_header(object);
+			    break;
+			  case type_ClosureFunctionHeader:
+			    copy = trans_closure_function_header(object);
+			    break;
+			  case type_ClosureHeader:
+			  case type_FuncallableInstanceHeader:
+			    copy = trans_boxed(object);
+			    break;
+			  default:
+			    fprintf(stderr, "GC lossage.  Bogus function pointer.\n");
+			    fprintf(stderr, "Pointer: 0x%08x, Header: 0x%08x\n",
+				    (unsigned long) object, (unsigned long) first);
+			    gc_lose();
 			}
 
 			first = *first_pointer = copy;
@@ -1745,6 +1746,7 @@ gc_init()
 	scavtab[type_ClosureFunctionHeader] = scav_closure_function_header;
 	scavtab[type_ReturnPcHeader] = scav_return_pc_header;
 	scavtab[type_ClosureHeader] = scav_boxed;
+	scavtab[type_FuncallableInstanceHeader] = scav_boxed;
 	scavtab[type_ValueCellHeader] = scav_boxed;
         scavtab[type_SymbolHeader] = scav_symbol;
 	scavtab[type_BaseCharacter] = scav_immediate;
@@ -1783,6 +1785,7 @@ gc_init()
 	transother[type_ClosureFunctionHeader] = trans_closure_function_header;
 	transother[type_ReturnPcHeader] = trans_return_pc_header;
 	transother[type_ClosureHeader] = trans_boxed;
+	transother[type_FuncallableInstanceHeader] = trans_boxed;
 	transother[type_ValueCellHeader] = trans_boxed;
 	transother[type_SymbolHeader] = trans_boxed;
 	transother[type_BaseCharacter] = trans_immediate;
@@ -1835,6 +1838,7 @@ gc_init()
 	sizetab[type_ReturnPcHeader] = size_return_pc_header;
 #endif
 	sizetab[type_ClosureHeader] = size_boxed;
+	sizetab[type_FuncallableInstanceHeader] = size_boxed;
 	sizetab[type_ValueCellHeader] = size_boxed;
 	sizetab[type_SymbolHeader] = size_boxed;
 	sizetab[type_BaseCharacter] = size_immediate;
