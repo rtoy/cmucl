@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.50 2003/08/23 10:32:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.51 2003/09/05 10:03:21 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1355,8 +1355,8 @@ significant bit of INTEGER is bit 0."
 ;;; about "small bignum" zeros.
 ;;;
 (defun two-arg-gcd (u v)
-  (cond ((eql u 0) v)
-	((eql v 0) u)
+  (cond ((eql u 0) (abs v))
+	((eql v 0) (abs u))
 	(t
 	 (number-dispatch ((u integer) (v integer))
 	   ((fixnum fixnum)
