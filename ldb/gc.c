@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.28 1991/05/24 17:36:47 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.29 1991/09/27 10:45:45 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1900,13 +1900,20 @@ void set_auto_gc_trigger(dynamic_usage)
     os_vm_size_t length=
 	DYNAMIC_SPACE_SIZE + (os_vm_address_t)current_dynamic_space - addr;
 
-    if(addr<(os_vm_address_t)current_dynamic_space_free_pointer){
+#ifdef ibmrt
+#define CURDYNFREEPTR (os_vm_address_t)SymbolValue(ALLOCATION_POINTER)
+#else
+#define CURDYNFREEPTR (os_vm_address_t)current_dynamic_space_free_pointer
+#endif
+
+    if(addr < CURDYNFREEPTR) {
 	fprintf(stderr,
 		"set_auto_gc_trigger: tried to set gc trigger too low! (%d < %d)\n",
 		dynamic_usage,
-		current_dynamic_space_free_pointer-current_dynamic_space);
+		CURDYNFREEPTR - (os_vm_address_t)current_dynamic_space);
 	return;
-    }else if(length<0){
+    }
+    else if (length < 0) {
 	fprintf(stderr,
 		"set_auto_gc_trigger: tried to set gc trigger too high! (%d)\n",
 		dynamic_usage);
