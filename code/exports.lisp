@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.40 1990/07/07 00:19:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.41 1990/07/07 13:10:12 ram Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -531,8 +531,8 @@
 	  double-float-normal-exponent-max double-float-normal-exponent-min
 	  single-float-hidden-bit double-float-hidden-bit
 	  float-sign-shift make-single-float make-double-float
-	  single-float-bits double-float-low-bits double-float-high-bits))
-
+	  single-float-bits double-float-low-bits double-float-high-bits
+	  single-float-digits double-float-digits float-format-digits))
 
 
 (in-package "C")
@@ -618,19 +618,17 @@
 
 
 (in-package "BIGNUM")
-
 (use-package "KERNEL")
+(use-package "VM")
 
-(import 'vm:bignum-type)
-
-(export '(add-bignums bignum-ashift-left bignum-ashift-right bignum-compare
-	  bignum-deposit-byte bignum-element-type bignum-gcd bignum-index
-	  bignum-integer-length bignum-load-byte bignum-logcount
-	  bignum-logical-and bignum-logical-ior bignum-logical-not
-	  bignum-logical-xor bignum-plus-p bignum-to-double-float
-	  bignum-to-single-float bignum-truncate bignum-type make-small-bignum
-	  multiply-bignums negate-bignum subtract-bignum))
-
+(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
+	  multiply-bignum-and-fixnum multiply-fixnums
+	  bignum-ashift-right bignum-ashift-left bignum-gcd
+	  bignum-to-float float-bignum-ratio bignum-integer-length
+	  bignum-logical-and bignum-logical-ior bignum-logical-xor
+	  bignum-logical-not bignum-load-byte bignum-deposit-byte
+	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
+	  bignum-logcount))
 
 
 (in-package "DEBUG")
