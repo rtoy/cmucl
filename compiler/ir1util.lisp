@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.61 1993/05/02 14:57:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.62 1993/07/20 10:18:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1976,8 +1976,12 @@
 ;;; of the specified Kind.  If we have exceeded the warning limit, then just
 ;;; increment the count, otherwise note the current error context.
 ;;;
+;;; Undefined types are noted by a condition handler in WITH-COMPILATION-UNIT,
+;;; which can potentially be invoked outside the compiler, hence the BOUNDP
+;;; check.
+;;;
 (defun note-undefined-reference (name kind)
-  (unless (policy nil (= brevity 3))
+  (unless (and (boundp '*lexical-environment*) (policy nil (= brevity 3)))
     (let* ((found (dolist (warn *undefined-warnings* nil)
 		    (when (and (equal (undefined-warning-name warn) name)
 			       (eq (undefined-warning-kind warn) kind))
