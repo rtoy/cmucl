@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/window.lisp,v 1.2 1991/02/08 16:39:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/window.lisp,v 1.3 1991/10/04 12:01:46 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -193,7 +193,7 @@
 
 (defun %set-modeline-field-function (ml-field function)
   (check-type ml-field modeline-field)
-  (check-type function function)
+  (check-type function (or symbol function))
   (setf (modeline-field-%function ml-field) function)
   (dolist (b *buffer-list*)
     (when (buffer-modeline-field-p b ml-field)
