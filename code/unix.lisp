@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.18 1992/03/06 11:57:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.19 1992/07/11 16:05:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -840,7 +840,7 @@
 	(macrolet ((frob (lisp-var alien-var)
 		     `(setf (deref (slot ,alien-var 'fds-bits) index)
 			    (ldb (byte 32 0) ,lisp-var)
-			    ,lisp-var (ash -32 ,lisp-var))))
+			    ,lisp-var (ash ,lisp-var -32))))
 	  (frob rdfds rdf)
 	  (frob wrfds wrf)
 	  (frob xpfds xpf)))
