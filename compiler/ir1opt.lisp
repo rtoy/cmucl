@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.49 1992/08/04 21:34:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.50 1992/09/07 15:41:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,6 +202,7 @@
 	  (reoptimize-continuation (node-cont node))))))
   (undefined-value))
 
+(declaim (start-block assert-continuation-type assert-call-type))
 
 ;;; Assert-Continuation-Type  --  Interface
 ;;;
@@ -258,6 +259,10 @@
   (undefined-value))
 
 
+;;;; IR1-OPTIMIZE:
+
+(declaim (start-block ir1-optimize))
+
 ;;; IR1-Optimize  --  Interface
 ;;;
 ;;;    Do one forward pass over Component, deleting unreachable blocks and
@@ -335,11 +340,7 @@
       (typecase node
 	(ref)
 	(combination
-	 (when (continuation-reoptimize (basic-combination-fun node))
-	   (propagate-function-change node))
-	 (ir1-optimize-combination node)
-	 (unless (node-deleted node)
-	   (maybe-terminate-block node nil)))
+	 (ir1-optimize-combination node))
 	(cif 
 	 (ir1-optimize-if node))
 	(creturn
@@ -355,7 +356,7 @@
 	 (ir1-optimize-set node)))))
   (undefined-value))
 
-
+
 ;;; Join-Successor-If-Possible  --  Internal
 ;;;
 ;;;    We cannot combine with a successor block if:
@@ -450,6 +451,62 @@
 
   (undefined-value))
 
+;;; Flush-Dead-Code  --  Internal
+;;;
+;;;    Delete any nodes in Block whose value is unused and have no
+;;; side-effects.  We can delete sets of lexical variables when the set
+;;; variable has no references.
+;;;
+;;; [### For now, don't delete potentially flushable calls when they have the
+;;; Call attribute.  Someday we should look at the funcitonal args to determine
+;;; if they have any side-effects.] 
+;;;
+(defun flush-dead-code (block)
+  (declare (type cblock block))
+  (do-nodes-backwards (node cont block)
+    (unless (continuation-dest cont)
+      (typecase node
+	(ref
+	 (delete-ref node)
+	 (unlink-node node))
+	(combination
+	 (let ((info (combination-kind node)))
+	   (when (function-info-p info)	     
+	     (let ((attr (function-info-attributes info)))
+	       (when (and (ir1-attributep attr flushable)
+			  (not (ir1-attributep attr call)))
+		 (flush-dest (combination-fun node))
+		 (dolist (arg (combination-args node))
+		   (flush-dest arg))
+		 (unlink-node node))))))
+	(mv-combination
+	 (when (eq (basic-combination-kind node) :local)
+	   (let ((fun (combination-lambda node)))
+	     (when (dolist (var (lambda-vars fun) t)
+		     (when (or (leaf-refs var)
+			       (lambda-var-sets var))
+		       (return nil)))
+	       (flush-dest (first (basic-combination-args node)))
+	       (delete-let fun)))))
+	(exit
+	 (let ((value (exit-value node)))
+	   (when value
+	     (flush-dest value)
+	     (setf (exit-value node) nil))))
+	(cset
+	 (let ((var (set-var node)))
+	   (when (and (lambda-var-p var)
+		      (null (leaf-refs var)))
+	     (flush-dest (set-value node))
+	     (setf (basic-var-sets var)
+		   (delete node (basic-var-sets var)))
+	     (unlink-node node)))))))
+
+  (setf (block-flush-p block) nil)
+  (undefined-value))
+
+(declaim (end-block))
+
 
 ;;;; Local call return type propagation:
 
@@ -524,6 +581,10 @@
   (undefined-value))
 
 
+;;; IF optimization:
+
+(declaim (start-block ir1-optimize-if))
+
 ;;; IR1-Optimize-If  --  Internal
 ;;;
 ;;;    If the test has multiple uses, replicate the node when possible.  Also
@@ -604,6 +665,8 @@
       (setf (component-reanalyze *current-component*) t)))
   (undefined-value))
 
+(declaim (end-block))
+
 
 ;;;; Exit IR1 optimization:
 
@@ -647,12 +710,17 @@
 
 ;;;; Combination IR1 optimization:
 
+(declaim (start-block ir1-optimize-combination maybe-terminate-block
+		      validate-call-type))
+
 ;;; Ir1-Optimize-Combination  --  Internal
 ;;;
 ;;;    Do IR1 optimizations on a Combination node.
 ;;;
 (proclaim '(function ir1-optimize-combination (combination) void))
 (defun ir1-optimize-combination (node)
+  (when (continuation-reoptimize (basic-combination-fun node))
+    (propagate-function-change node))
   (let ((args (basic-combination-args node))
 	(kind (basic-combination-kind node)))
     (case kind
@@ -661,7 +729,7 @@
 	 (if (eq (functional-kind fun) :let)
 	     (propagate-let-args node fun)
 	     (propagate-local-call-args node fun))))
-      (:full
+      ((:full :error)
        (dolist (arg args)
 	 (when arg
 	   (setf (continuation-reoptimize arg) nil))))
@@ -682,7 +750,8 @@
 	 (when fun
 	   (let ((res (funcall fun node)))
 	     (when res
-	       (derive-node-type node res)))))
+	       (derive-node-type node res)
+	       (maybe-terminate-block node nil)))))
 
        (let ((fun (function-info-optimizer kind)))
 	 (unless (and fun (funcall fun node))
@@ -716,7 +785,8 @@
 	 (tail (component-tail (block-component block)))
 	 (succ (first (block-succ block))))
     (unless (or (and (eq call (block-last block)) (eq succ tail))
-		(block-delete-p block))
+		(block-delete-p block)
+		*converting-for-interpreter*)
       (when (or (and (eq (continuation-asserted-type cont) *empty-type*)
 		     (not (or ir1-p (eq (continuation-kind cont) :deleted))))
 		(eq (node-derived-type call) *empty-type*))
@@ -746,122 +816,157 @@
 
 ;;; Recognize-Known-Call  --  Interface
 ;;;
-;;;    If Call is a call to a known function, mark it as such by setting the
-;;; Kind.  In addition to a direct check for the function name in the table, we
-;;; also must check for slot accessors.  If the function is a slot accessor,
-;;; then we set the combination kind to the function info of %Slot-Setter or
-;;; %Slot-Accessor, as appropriate.
+;;;    Called both by IR1 conversion and IR1 optimization when they have
+;;; verified the type signature for the call, and are wondering if something
+;;; should be done to special-case the call.  If Call is a call to a global
+;;; function, then see if it defined or known:
+;;; -- If a DEFINED-FUNCTION should be inline expanded, then convert the
+;;;    expansion and change the call to call it.  Expansion is enabled if
+;;;    :INLINE or if space=0.  If the FUNCTIONAL slot is true, we never expand,
+;;;    since this function has already been converted.  Local call analysis
+;;;    will duplicate the definition if necessary.  We claim that the parent
+;;;    form is LABELS for context declarations, since we don't want it to be
+;;;    considered a real global function.
+;;; -- In addition to a direct check for the function name in the table, we
+;;;    also must check for slot accessors.  If the function is a slot accessor,
+;;;    then we set the combination kind to the function info of %Slot-Setter or
+;;;    %Slot-Accessor, as appropriate.
+;;; -- If it is a known function, mark it as such by setting the Kind.
 ;;;
-;;;    If convert-again is true, and the function has a source-transform or
-;;; inline-expansion, or if the function is conditional, and the destination of
-;;; the value is not an IF, then instead of making the existing call known, we
-;;; change it to be a call to a lambda that just re-calls the function.  This
-;;; gives IR1 transformation another go at the call, in the case where the call
-;;; wasn't obviously known during the initial IR1 conversion.
+;;; We return the leaf referenced (NIL if not a leaf) and the function-info
+;;; assigned.
 ;;;
-(defun recognize-known-call (call &optional convert-again)
+(defun recognize-known-call (call ir1-p)
   (declare (type combination call))
-  (let* ((fun (basic-combination-fun call))
-	 (name (continuation-function-name fun)))
-    (when name
-      (let ((info (info function info name)))
-	(cond
-	 ((and convert-again
-	       (symbolp name)
-	       (or (info function source-transform name)
-		   (info function inline-expansion name)
-		   (and info
-			(ir1-attributep (function-info-attributes info)
-					predicate)
-			(let ((dest (continuation-dest (node-cont call))))
-			  (and dest (not (if-p dest)))))))
-	  (let ((dums (loop repeat (length (combination-args call))
-			    collect (gensym))))
-	    (transform-call call
-			    `(lambda ,dums
-			       (,name ,@dums)))))
-	 (info
-	  (setf (basic-combination-kind call) info))
-	 ((slot-accessor-p (ref-leaf (continuation-use fun)))
-	  (setf (basic-combination-kind call)
-		(info function info
-		      (if (consp name)
-			  '%slot-setter
-			  '%slot-accessor))))))))
-  (undefined-value))
+  (let* ((ref (continuation-use (basic-combination-fun call)))
+	 (leaf (when (ref-p ref) (ref-leaf ref)))
+	 (inlinep (if (defined-function-p leaf)
+		      (defined-function-inlinep leaf)
+		      :no-chance)))
+    (cond
+     ((eq inlinep :notinline) (values nil nil))
+     ((not (and (global-var-p leaf)
+		(eq (global-var-kind leaf) :global-function)))
+      (values leaf nil))
+     ((and (ecase inlinep
+	     (:inline t)
+	     (:no-chance nil)
+	     ((nil :maybe-inline) (policy call (zerop space))))
+	   (defined-function-inline-expansion leaf)
+	   (let ((fun (defined-function-functional leaf)))
+	     (or (not fun)
+		 (and (eq inlinep :inline) (functional-kind fun))))
+	   (inline-expansion-ok call))
+      (flet ((frob ()
+	       (let ((res (ir1-convert-lambda-for-defun
+			   (defined-function-inline-expansion leaf)
+			   leaf
+			   #'ir1-convert-inline-lambda
+			   'labels)))
+		 (setf (defined-function-functional leaf) res)
+		 (change-ref-leaf ref res))))
+	(if ir1-p
+	    (frob)
+	    (with-ir1-environment call
+	      (frob)
+	      (local-call-analyze *current-component*))))
+      (values (ref-leaf (continuation-use (basic-combination-fun call)))
+	      nil))
+     (t
+      (let* ((name (leaf-name leaf))
+	     (info (info function info
+			 (if (slot-accessor-p leaf)
+			     (if (consp name) '%slot-setter '%slot-accessor)
+			     name))))
+	(if info
+	    (values leaf (setf (basic-combination-kind call) info))
+	    (values leaf nil)))))))
+
+
+;;; VALIDATE-CALL-TYPE  --  Internal
+;;;
+;;;    Check if Call satisfies Type.  If so, apply the type to the call, and do
+;;; MAYBE-TERMINATE-BLOCK and return the values of RECOGNIZE-KNOWN-CALL.  If an
+;;; error, set the combination kind and return NIL, NIL.
+;;;
+(defun validate-call-type (call type ir1-p)
+  (declare (type combination call) (type ctype type))
+  (cond ((not (function-type-p type)) (values nil nil))
+	((valid-function-use call type
+			     :argument-test #'always-subtypep
+			     :result-test #'always-subtypep
+			     :error-function #'compiler-warning
+			     :warning-function #'compiler-note)
+	 (assert-call-type call type)
+	 (maybe-terminate-block call ir1-p)
+	 (recognize-known-call call ir1-p))
+	(t
+	 (setf (combination-kind call) :error)
+	 (values nil nil))))
 
 
 ;;; Propagate-Function-Change  --  Internal
 ;;;
 ;;;    Called by Ir1-Optimize when the function for a call has changed.
-;;; If the call is to a functional, then we attempt to convert it to a local
-;;; call, otherwise we check the call for legality with respect to the new
-;;; type; if it is illegal, we mark the Ref as :Notline and punt.
-;;;
-;;; If we do have a good type for the call, we propagate type information from
-;;; the type to the arg and result continuations.  If we discover that the call
-;;; is to a known global function, then we mark the combination as known.
+;;; If the call is local, we try to let-convert it, and derive the result type.
+;;; If it is a :FULL call, we validate it against the type, which recognizes
+;;; known calls, does inline expansion, etc.  If a call to a predicate in a
+;;; non-conditional position or to a function with a source transform, then we
+;;; reconvert the form to give IR1 another chance.
 ;;;
 (defun propagate-function-change (call)
   (declare (type combination call))
-  (let* ((fun (combination-fun call))
-	 (use (continuation-use fun))
-	 (type (continuation-derived-type fun))
-	 (*compiler-error-context* call))
-    (setf (continuation-reoptimize fun) nil)
-    (cond ((or (not (ref-p use))
-	       (eq (ref-inlinep use) :notinline)))
-	  ((functional-p (ref-leaf use))
-	   (let ((leaf (ref-leaf use)))
-	     (cond ((eq (combination-kind call) :local)
-		    (unless (member (functional-kind leaf)
-				    '(:let :assignment :deleted))
-		      (derive-node-type
-		       call (tail-set-type (lambda-tail-set leaf)))))
-		   ((not (eq (ref-inlinep use) :notinline))
-		    (convert-call-if-possible use call)
-		    (maybe-let-convert leaf)))))
-	  ((not (function-type-p type)))
-	  ((valid-function-use call type
-			       :argument-test #'always-subtypep
-			       :result-test #'always-subtypep
-			       :error-function #'compiler-warning
-			       :warning-function #'compiler-note)
-	   (assert-call-type call type)
-	   (recognize-known-call call t))
-	  (t
-	   (setf (ref-inlinep use) :notinline))))
-
+  (let ((*compiler-error-context* call)
+	(fun-cont (basic-combination-fun call)))
+    (setf (continuation-reoptimize fun-cont) nil)
+    (case (combination-kind call)
+      (:local
+       (let ((fun (combination-lambda call)))
+	 (maybe-let-convert fun)
+	 (unless (member (functional-kind fun) '(:let :assignment :deleted))
+	   (derive-node-type call (tail-set-type (lambda-tail-set fun))))))
+      (:full
+       (multiple-value-bind
+	   (leaf info)
+	   (validate-call-type call (continuation-derived-type fun-cont) nil)
+	 (cond ((functional-p leaf)
+		(convert-call-if-possible
+		 (continuation-use (basic-combination-fun call))
+		 call))
+	       ((not leaf))
+	       ((or (info function source-transform (leaf-name leaf))
+		    (and info
+			 (ir1-attributep (function-info-attributes info)
+					 predicate)
+			 (let ((dest (continuation-dest (node-cont call))))
+			   (and dest (not (if-p dest))))))
+		(let ((name (leaf-name leaf)))
+		  (when (symbolp name)
+		    (let ((dums (loop repeat (length (combination-args call))
+				      collect (gensym))))
+		      (transform-call call
+				      `(lambda ,dums
+					 (,name ,@dums))))))))))))
   (undefined-value))
 
 
 ;;;; Known function optimization:
 
-;;;
-;;;    A hashtable from combination nodes to things describing how an
-;;; optimization of the node failed.  The value is an alist (Transform . Args),
-;;; where Transform is the structure describing the transform that failed, and
-;;; Args is either a list of format arguments for the note, or the
-;;; FUNCTION-TYPE that would have enabled the transformation but failed to
-;;; match.
-;;;
-(defvar *failed-optimizations* (make-hash-table :test #'eq))
-
 
 ;;; RECORD-OPTIMIZATION-FAILURE  --  Internal
 ;;;
-;;;    Add a failed optimization note to *FAILED-OPTIMZATIONS* for Node, Fun
+;;;    Add a failed optimization note to FAILED-OPTIMZATIONS for Node, Fun
 ;;; and Args.  If there is already a note for Node and Transform, replace it,
 ;;; otherwise add a new one.
 ;;;
 (defun record-optimization-failure (node transform args)
   (declare (type combination node) (type transform transform)
 	   (type (or function-type list) args))
-  (let ((found (assoc transform (gethash node *failed-optimizations*))))
+  (let* ((table (component-failed-optimizations *compile-component*))
+	 (found (assoc transform (gethash node table))))
     (if found
 	(setf (cdr found) args)
-	(push (cons transform args)
-	      (gethash node *failed-optimizations*))))
+	(push (cons transform args) (gethash node table))))
   (undefined-value))
 
 
@@ -870,7 +975,7 @@
 ;;;    Attempt to transform Node using Function, subject to the call type
 ;;; constraint Type.  If we are inhibited from doing the transform for some
 ;;; reason and Flame is true, then we make a note of the message in 
-;;; *failed-optimizations* for IR1 finalize to pick up.  We return true if
+;;; FAILED-OPTIMIZATIONS for IR1 finalize to pick up.  We return true if
 ;;; the transform failed, and thus further transformation should be
 ;;; attempted.  We return false if either the transform suceeded or was
 ;;; aborted.
@@ -880,6 +985,7 @@
   (let* ((type (transform-type transform))
 	 (fun (transform-function transform))
 	 (constrained (function-type-p type))
+	 (table (component-failed-optimizations *compile-component*))
 	 (flame
 	  (if (transform-important transform)
 	      (policy node (>= speed brevity))
@@ -894,24 +1000,20 @@
 		 (values :none nil))
 	     (ecase severity
 	       (:none
-		(remhash node *failed-optimizations*)
+		(remhash node table)
 		nil)
 	       (:aborted
-		(setf (combination-kind node) :full)
-		(setf (ref-inlinep (continuation-use (combination-fun node)))
-		      :notinline)
+		(setf (combination-kind node) :error)
 		(when args
 		  (apply #'compiler-warning args))
-		(remhash node *failed-optimizations*)
+		(remhash node table)
 		nil)
 	       (:failure 
 		(if args
 		    (when flame
 		      (record-optimization-failure node transform args))
-		    (setf (gethash node *failed-optimizations*)
-			  (remove transform
-				  (gethash node *failed-optimizations*)
-				  :key #'car)))
+		    (setf (gethash node table)
+			  (remove transform (gethash node table) :key #'car)))
 		t))))
 	  ((and flame
 		(valid-function-use node type
@@ -922,6 +1024,7 @@
 	  (t
 	   t))))
 
+(declaim (end-block))
 
 ;;; GIVE-UP, ABORT-TRANSFORM  --  Interface
 ;;;
@@ -947,13 +1050,12 @@
 ;;;    Take the lambda-expression Res, IR1 convert it in the proper
 ;;; environment, and then install it as the function for the call Node.  We do
 ;;; local call analysis so that the new function is integrated into the control
-;;; flow.  We set the Reanalyze flag in the component to cause the DFO to be
-;;; recomputed at soonest convenience.
+;;; flow.
 ;;;
 (defun transform-call (node res)
   (declare (type combination node) (list res))
   (with-ir1-environment node
-    (let ((new-fun (ir1-convert-global-lambda res))
+    (let ((new-fun (ir1-convert-inline-lambda res))
 	  (ref (continuation-use (combination-fun node))))
       (change-ref-leaf ref new-fun)
       (setf (combination-kind node) :full)
@@ -968,10 +1070,10 @@
 ;;; the call, stealing the call's continuation.  We give the call a
 ;;; continuation with no Dest, which should cause it and its arguments to go
 ;;; away.  If there is an error during the evaluation, we give a warning and
-;;; leave the call alone, making the call a full call and marking it as
-;;; :notinline to make sure that it stays that way.
+;;; leave the call alone, making the call a :ERROR call.
 ;;;
-;;;    For now, if the result is other than one value, we don't fold it.
+;;;    If there is more than one value, then we transform the call into a
+;;; values form.
 ;;;
 (defun constant-fold-call (call)
   (declare (type combination call))
@@ -983,16 +1085,13 @@
 			 (careful-call fun args call "constant folding")
       (cond
        ((not win)
-	(setf (ref-inlinep ref) :notinline)
-	(setf (combination-kind call) :full))
+	(setf (combination-kind call) :error))
        ((= (length values) 1)
 	(with-ir1-environment call
 	  (when (producing-fasl-file)
 	    (maybe-emit-make-load-forms (first values)))
 	  (let* ((leaf (find-constant (first values)))
-		 (node (make-ref (leaf-type leaf)
-				 leaf
-				 nil))
+		 (node (make-ref (leaf-type leaf) leaf))
 		 (dummy (make-continuation))
 		 (cont (node-cont call))
 		 (block (node-block call))
@@ -1021,6 +1120,10 @@
 
 
 ;;;; Local call optimization:
+
+(declaim (start-block ir1-optimize-set constant-reference-p delete-let
+		      propagate-let-args propagate-local-call-args
+		      ir1-optimize-mv-combination))
 
 ;;; Propagate-To-Refs  --  Internal
 ;;;
@@ -1077,24 +1180,20 @@
 ;;; CONSTANT-REFERENCE-P  --  Interface
 ;;;
 ;;;    Return true if the value of Ref will always be the same (and is thus
-;;; legal to substitute.)  Even though the value of a FUNCTIONAL really can't
-;;; change, we consider it non-constant when it is marker :NOTINLINE, since
-;;; this is used as a flag to inhibit local call conversion, and must not be
-;;; lost.
+;;; legal to substitute.)
 ;;;
 (defun constant-reference-p (ref)
   (declare (type ref ref))
   (let ((leaf (ref-leaf ref)))
     (typecase leaf
-      (constant t)
-      (functional
-       (not (eq (ref-inlinep ref) :notinline)))
+      ((or constant functional) t)
       (lambda-var
        (null (lambda-var-sets leaf)))
+      (defined-function
+       (not (eq (defined-function-inlinep leaf) :notinline)))
       (global-var
        (case (global-var-kind leaf)
-	 (:global-function
-	  (not (eq (ref-inlinep ref) :notinline)))
+	 (:global-function t)
 	 (:constant t))))))
 
 
@@ -1277,6 +1376,8 @@
   
   (undefined-value))
 
+(declaim (end-block))
+
 
 ;;;; Multiple values optimization:
 
@@ -1296,36 +1397,36 @@
 ;;;     which tries to convert MV-CALLs into MV-binds.
 ;;;
 (defun ir1-optimize-mv-combination (node)
-  (cond
-   ((eq (basic-combination-kind node) :local)
-    (let ((fun (basic-combination-fun node)))
-      (when (continuation-reoptimize fun)
-	(setf (continuation-reoptimize fun) nil)
-	(maybe-let-convert (combination-lambda node))))
-    (setf (continuation-reoptimize (first (basic-combination-args node))) nil)
-    (when (eq (functional-kind (combination-lambda node)) :mv-let)
-      (unless (convert-mv-bind-to-let node)
-	(ir1-optimize-mv-bind node))))
-   (t
-    (let* ((fun (basic-combination-fun node))
-	   (fun-changed (continuation-reoptimize fun))
-	   (args (basic-combination-args node)))
-      (when fun-changed
-	(setf (continuation-reoptimize fun) nil)
-	(let ((type (continuation-type fun)))
-	  (when (function-type-p type)
-	    (derive-node-type node (function-type-returns type))))
-	(maybe-terminate-block node nil)
-	(let ((use (continuation-use fun)))
-	  (when (and (ref-p use) (functional-p (ref-leaf use))
-		     (not (eq (ref-inlinep use) :notinline)))
-	    (convert-call-if-possible use node)
-	    (maybe-let-convert (ref-leaf use)))))
-      (unless (or (eq (basic-combination-kind node) :local)
-		  (eq (continuation-function-name fun) '%throw))
-	(ir1-optimize-mv-call node))
-      (dolist (arg args)
-	(setf (continuation-reoptimize arg) nil)))))
+  (ecase (basic-combination-kind node)
+    (:local
+     (let ((fun (basic-combination-fun node)))
+       (when (continuation-reoptimize fun)
+	 (setf (continuation-reoptimize fun) nil)
+	 (maybe-let-convert (combination-lambda node))))
+     (setf (continuation-reoptimize (first (basic-combination-args node))) nil)
+     (when (eq (functional-kind (combination-lambda node)) :mv-let)
+       (unless (convert-mv-bind-to-let node)
+	 (ir1-optimize-mv-bind node))))
+    (:full
+     (let* ((fun (basic-combination-fun node))
+	    (fun-changed (continuation-reoptimize fun))
+	    (args (basic-combination-args node)))
+       (when fun-changed
+	 (setf (continuation-reoptimize fun) nil)
+	 (let ((type (continuation-type fun)))
+	   (when (function-type-p type)
+	     (derive-node-type node (function-type-returns type))))
+	 (maybe-terminate-block node nil)
+	 (let ((use (continuation-use fun)))
+	   (when (and (ref-p use) (functional-p (ref-leaf use)))
+	     (convert-call-if-possible use node)
+	     (maybe-let-convert (ref-leaf use)))))
+       (unless (or (eq (basic-combination-kind node) :local)
+		   (eq (continuation-function-name fun) '%throw))
+	 (ir1-optimize-mv-call node))
+       (dolist (arg args)
+	 (setf (continuation-reoptimize arg) nil))))
+    (:error))
   (undefined-value))
 
   
@@ -1407,14 +1508,14 @@
 	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at least ~R."
 	     total-nvals min)
-	    (setf (ref-inlinep ref) :notinline)
+	    (setf (basic-combination-kind node) :error)
 	    (return-from ir1-optimize-mv-call))
 	  (when (and max (> total-nvals max))
 	    (compiler-warning
 	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
 	     at most ~R."
 	     total-nvals max)
-	    (setf (ref-inlinep ref) :notinline)
+	    (setf (basic-combination-kind node) :error)
 	    (return-from ir1-optimize-mv-call)))
 
 	(let ((count (cond (total-nvals)
@@ -1542,58 +1643,3 @@
 	   (declare (ignore ,@dummies))
 	   val))
       'nil))
-
-
-;;; Flush-Dead-Code  --  Internal
-;;;
-;;;    Delete any nodes in Block whose value is unused and have no
-;;; side-effects.  We can delete sets of lexical variables when the set
-;;; variable has no references.
-;;;
-;;; [### For now, don't delete potentially flushable calls when they have the
-;;; Call attribute.  Someday we should look at the funcitonal args to determine
-;;; if they have any side-effects.] 
-;;;
-(defun flush-dead-code (block)
-  (declare (type cblock block))
-  (do-nodes-backwards (node cont block)
-    (unless (continuation-dest cont)
-      (typecase node
-	(ref
-	 (delete-ref node)
-	 (unlink-node node))
-	(combination
-	 (let ((info (combination-kind node)))
-	   (when (function-info-p info)	     
-	     (let ((attr (function-info-attributes info)))
-	       (when (and (ir1-attributep attr flushable)
-			  (not (ir1-attributep attr call)))
-		 (flush-dest (combination-fun node))
-		 (dolist (arg (combination-args node))
-		   (flush-dest arg))
-		 (unlink-node node))))))
-	(mv-combination
-	 (when (eq (basic-combination-kind node) :local)
-	   (let ((fun (combination-lambda node)))
-	     (when (dolist (var (lambda-vars fun) t)
-		     (when (or (leaf-refs var)
-			       (lambda-var-sets var))
-		       (return nil)))
-	       (flush-dest (first (basic-combination-args node)))
-	       (delete-let fun)))))
-	(exit
-	 (let ((value (exit-value node)))
-	   (when value
-	     (flush-dest value)
-	     (setf (exit-value node) nil))))
-	(cset
-	 (let ((var (set-var node)))
-	   (when (and (lambda-var-p var)
-		      (null (leaf-refs var)))
-	     (flush-dest (set-value node))
-	     (setf (basic-var-sets var)
-		   (delete node (basic-var-sets var)))
-	     (unlink-node node)))))))
-
-  (setf (block-flush-p block) nil)
-  (undefined-value))
