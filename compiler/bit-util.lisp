@@ -14,6 +14,9 @@
 ;;;
 (in-package 'c)
 
+(declaim (inline clear-bit-vector set-bit-vector bit-vector-replace
+		 bit-vector-copy))
+
 ;;; Clear-Bit-Vector  --  Interface
 ;;;
 ;;;    Clear a bit-vector to zeros.
