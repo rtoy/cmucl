@@ -49,47 +49,38 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.20 2003/02/21 16:25:08 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.21 2003/05/05 12:09:50 emarsden Exp $")
 
 ;;;; LOOP Iteration Macro
 
-#+allegro
-(in-package :excl)
-#-allegro
 (in-package :ansi-loop)
 
 (provide :loop)
 
-#+Cloe-Runtime					;Don't ask.
-(car (push "%Z% %M% %I% %E% %U%" system::*module-identifications*))
-
 ;;; Technology.
 ;;;
 ;;; The LOOP iteration macro is one of a number of pieces of code
-;;; originally developed at MIT for which free distribution has been
-;;; permitted, as long as the code is not sold for profit, and as long
-;;; as notification of MIT's interest in the code is preserved.
-;;;
-;;; This version of LOOP, which is almost entirely rewritten both as
+;;; originally developed at MIT and licensed as set out above. This
+;;; version of LOOP, which is almost entirely rewritten both as a
 ;;; clean-up and to conform with the ANSI Lisp LOOP standard, started
 ;;; life as MIT LOOP version 829 (which was a part of NIL, possibly
 ;;; never released).
 ;;;
-;;; A "light revision" was performed by me (Glenn Burke) while at
-;;; Palladian Software in April 1986, to make the code run in Common
-;;; Lisp.  This revision was informally distributed to a number of
-;;; people, and was sort of the "MIT" version of LOOP for running in
-;;; Common Lisp.
+;;; A "light revision" was performed by Glenn Burke while at Palladian
+;;; Software in April 1986, to make the code run in Common Lisp.  This
+;;; revision was informally distributed to a number of people, and was
+;;; sort of the "MIT" version of LOOP for running in Common Lisp.
 ;;;
 ;;; A later more drastic revision was performed at Palladian perhaps a
-;;; year later.  This version was more thoroughly Common Lisp in style,
-;;; with a few miscellaneous internal improvements and extensions.  I
-;;; have lost track of this source, apparently never having moved it to
-;;; the MIT distribution point.  I do not remember if it was ever
-;;; distributed.
+;;; year later.  This version was more thoroughly Common Lisp in
+;;; style, with a few miscellaneous internal improvements and
+;;; extensions.  Glenn Burke lost track of this source, apparently
+;;; never having moved it to the MIT distribution point; and does not
+;;; remember if it was ever distributed.
 ;;;
-;;; This revision for the ANSI standard is based on the code of my April
-;;; 1986 version, with almost everything redesigned and/or rewritten.
+;;; This revision for the ANSI standard is based on the code of Glenn
+;;; Burke's April 1986 version, with almost everything redesigned
+;;; and/or rewritten.
 
 
 ;;; The design of this LOOP is intended to permit, using mostly the same
