@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.33 1993/08/25 01:13:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.34 1993/08/30 21:24:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,9 +18,10 @@
 
 (in-package "CONDITIONS")
 (use-package "EXTENSIONS")
+(use-package "KERNEL")
 
 (in-package "KERNEL")
-(export '(layout-invalid simple-style-warning))
+(export '(layout-invalid simple-style-warning condition-function-name))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -335,158 +336,438 @@
 
 ;;;; Conditions.
 
-(defun condition-print (condition stream depth)
-  (declare (ignore depth))
+(eval-when (compile load eval)
+
+(defstruct (condition-class (:include slot-class))
+  ;;
+  ;; List of CONDITION-SLOT structures for the direct slots of this class.
+  (slots nil :type list)
+  ;;
+  ;; List of CONDITION-SLOT structures for all of the effective class slots of
+  ;; this class.
+  (class-slots nil :type list)
+  ;;
+  ;; Report function or NIL.
+  (report nil :type (or function null))
+  ;;
+  ;; List of alternating initargs and initforms.
+  (default-initargs () :type list)
+  ;;
+  ;; CPL as a list of class objects, with all non-condition classes removed.
+  (cpl () :type list))
+
+); eval-when (compile load eval)
+
+(defstruct (condition
+	    (:constructor make-condition-object (actual-initargs))
+	    (:alternate-metaclass instance condition-class
+				  make-condition-class))
+		      
+  (function-name nil)
+  ;;
+  ;; Actual initargs supplied to MAKE-CONDITION.
+  (actual-initargs (required-argument) :type list)
+  ;;
+  ;; Plist mapping slot names to any values that were assigned or defaulted
+  ;; after creation.
+  (assigned-slots () :type list))
+
+
+(defstruct condition-slot
+  (name (required-argument) :type symbol)
+  ;;
+  ;; List of all applicable initargs.
+  (initargs (required-argument) :type list)
+  ;;
+  ;; Names of reader and writer functions.
+  (readers (required-argument) :type list)
+  (writers (required-argument) :type list)
+  ;;
+  ;; True if :INITFORM was specified.
+  (initform-p (required-argument) :type (member t nil))
+  ;;
+  ;; If a function, call it with no args.  Otherwise, the actual value.
+  (initform (required-argument) :type t)
+  ;;
+  ;; Allocation of this slot.  Nil only until defaulted.
+  (allocation nil :type (member :instance :class nil))
+  ;;
+  ;; If :class allocation, a cons whose car holds the value.
+  (cell nil :type (or cons null)))
+
+(eval-when (compile load eval)
+  (setf (condition-class-cpl (find-class 'condition))
+	(list (find-class 'condition))))
+
+(setf (condition-class-report (find-class 'condition))
+      #'(lambda (cond stream)
+	  (format stream "Condition ~S was signalled." (type-of cond))))
+
+(eval-when (compile load eval)
+
+(defun find-condition-layout (name parent-types)
+  (let* ((cpl (remove-duplicates
+	       (reverse
+		(reduce #'append
+			(mapcar #'(lambda (x)
+				    (condition-class-cpl
+				     (find-class x)))
+				parent-types)))))
+	 (cond-layout (info type compiler-layout 'condition))
+	 (olayout (info type compiler-layout name))
+	 (new-inherits 
+	  (concatenate 'simple-vector
+		       (layout-inherits cond-layout)
+		       (mapcar #'class-layout cpl))))
+    (if (and olayout
+	     (not (mismatch (layout-inherits olayout) new-inherits)))
+	olayout
+	(make-layout :class (make-undefined-class name)
+		     :inherits new-inherits
+		     :inheritance-depth -1
+		     :length (layout-length cond-layout)))))
+
+); EVAL-WHEN (COMPILE LOAD EVAL)
+
+
+;;;; Condition reporting:
+
+(defun %print-condition (s stream d)
+  (declare (ignore d))
   (if *print-escape*
-      (print-unreadable-object (condition stream :identity t)
-	(prin1 (type-of condition) stream))
-      (handler-case
-	  (condition-report condition stream)
-	(error () (format stream "...~2%; Error reporting condition: ~S.~%"
-			  condition)))))
+      (print-unreadable-object (s stream :identity t :type t))
+      (dolist (class (condition-class-cpl (class-of s))
+		     (error "No REPORT?  Shouldn't happen!"))
+	(let ((report (condition-class-report class)))
+	  (when report
+	    (return (funcall report s stream)))))))
+
+;;;; Condition slots:
 
-(eval-when (eval compile load)
+(defvar *empty-slot* '(empty))
 
-(defmacro parent-type     (condition-type) `(get ,condition-type 'parent-type))
-(defmacro slots           (condition-type) `(get ,condition-type 'slots))
-(defmacro conc-name       (condition-type) `(get ,condition-type 'conc-name))
-(defmacro report-function (condition-type)
-  `(get ,condition-type 'report-function))
-(defmacro make-function   (condition-type) `(get ,condition-type 'make-function))
+(defun find-slot-default (class slot)
+  (let ((initargs (condition-slot-initargs slot))
+	(cpl (condition-class-cpl class)))
+    (dolist (class cpl)
+      (let ((default-initargs (condition-class-default-initargs class)))
+	(dolist (initarg initargs)
+	  (let ((val (getf default-initargs initarg *empty-slot*)))
+	    (unless (eq val *empty-slot*)
+	      (return-from find-slot-default
+			   (if (functionp val)
+			       (funcall val)
+			       val)))))))
+  
+    (if (condition-slot-initform-p slot)
+	(let ((initform (condition-slot-initform slot)))
+	  (if (functionp initform)
+	      (funcall initform)
+	      initform))
+	(error "Condition slot is not bound: ~S"
+	       (condition-slot-name slot)))))
 
-) ;eval-when
+(defun find-slot (classes name)
+  (dolist (sclass classes nil)
+    (dolist (slot (condition-class-slots sclass))
+      (when (eq (condition-slot-name slot) name)
+	(return-from find-slot slot)))))
 
-(defun condition-report (condition stream)
-  (do ((type (type-of condition) (parent-type type)))
-      ((not type)
-       (format stream "The condition ~A occurred." (type-of condition)))
-    (let ((reporter (report-function type)))
-      (when reporter
-        (funcall reporter condition stream)
-        (return nil)))))
+(defun condition-writer-function (condition new-value name)
+  (dolist (cslot (condition-class-class-slots
+		  (layout-class (%instance-layout condition)))
+		 (setf (getf (condition-assigned-slots condition) name)
+		       new-value))
+    (when (eq (condition-slot-name cslot) name)
+      (return (setf (car (condition-slot-cell cslot)) new-value)))))
 
-(setf (make-function   'condition) '|constructor for condition|)
+(defun condition-reader-function (condition name)
+  (let ((class (layout-class (%instance-layout condition))))
+    (dolist (cslot (condition-class-class-slots class))
+      (when (eq (condition-slot-name cslot) name)
+	(return-from condition-reader-function
+		     (car (condition-slot-cell cslot)))))
 
-(defun make-condition (type &rest slot-initializations)
-  "Makes a condition of type type using slot-initializations as initial values
-   for the slots."
-  (let ((fn (make-function type)))
-    (cond ((not fn) (error 'simple-type-error
-			   :datum type
-			   :expected-type '(satisfies make-function)
-			   :format-control "Not a condition type: ~S"
-			   :format-arguments (list type)))
-          (t (apply fn slot-initializations)))))
+    (let ((val (getf (condition-assigned-slots condition) name 
+		     *empty-slot*)))
+      (if (eq val *empty-slot*)
+	  (let ((actual-initargs (condition-actual-initargs condition))
+		(slot (find-slot (condition-class-cpl class) name)))
+	    (dolist (initarg (condition-slot-initargs slot))
+	      (let ((val (getf actual-initargs initarg *empty-slot*)))
+		(unless (eq val *empty-slot*)
+		  (return-from condition-reader-function
+			       (setf (getf (condition-assigned-slots condition)
+					   name)
+				     val)))))
+	    (setf (getf (condition-assigned-slots condition) name)
+		  (find-slot-default class slot)))
+	  val))))
 
+
+(defun make-condition (thing &rest args)
+  "Make an instance of a condition object using the specified initargs."
+  (let* ((thing (if (symbolp thing)
+		    (find-class thing)
+		    thing))
+	 (class (typecase thing
+		  (condition-class thing)
+		  (class
+		   (error "~S is not a condition class."))
+		  (t
+		   (error "Bad thing for class arg:~%  ~S" thing))))
+	 (res (make-condition-object args)))
+    (setf (%instance-layout res) (class-layout class))
+    ;;
+    ;; Set any class slots with initargs present in this call.
+    (dolist (cslot (condition-class-class-slots class))
+      (dolist (initarg (condition-slot-initargs cslot))
+	(let ((val (getf args initarg *empty-slot*)))
+	  (unless (eq val *empty-slot*)
+	    (setf (car (condition-slot-cell cslot)) val)))))
 
-;;; Some utilities used at macro expansion time.
-;;;
-(eval-when (eval compile load)
+    res))
 
-(defmacro resolve-function (function expression resolver)
-  `(cond ((and ,function ,expression)
-          (cerror "Use only the :~A information."
-                  "Only one of :~A and :~A is allowed."
-                  ',function ',expression))
-         (,expression (setq ,function ,resolver))))
-         
-(defun parse-new-and-used-slots (slots parent-type)
-  (let ((new '()) (used '()))
+
+;;;; DEFINE-CONDITION
+
+(eval-when (compile load eval)
+(defun %compiler-define-condition (name direct-supers layout)
+  (multiple-value-bind (class old-layout)
+		       (insured-find-class name #'condition-class-p
+					   #'make-condition-class)
+    (setf (layout-class layout) class)
+    (setf (class-direct-superclasses class)
+	  (mapcar #'find-class direct-supers))
+    (cond ((not old-layout)
+	   (register-layout layout))
+	  ((redefine-layout-warning old-layout "current"
+				    layout "new")
+	   (register-layout layout :invalidate t)))
+
+    (setf (find-class name) class)
+    ;;
+    ;; Initialize CPL slot from layout.
+    (collect ((cpl))
+      (cpl class)
+      (let ((inherits (layout-inherits layout)))
+	(do ((i (1- (length inherits)) (1- i)))
+	    ((minusp i))
+	  (let ((super (find-class
+			(class-name
+			 (layout-class (svref inherits i))))))
+	    (when (typep super 'condition-class)
+	      (cpl super)))))
+      (setf (condition-class-cpl class) (cpl))))
+  (undefined-value))
+
+); eval-when (compile load eval)
+  
+(defun %define-condition (name slots documentation report default-initargs)
+  (let ((class (find-class name)))
+    (setf (slot-class-print-function class) #'%print-condition)
+    (setf (condition-class-slots class) slots)
+    (setf (condition-class-report class) report)
+    (setf (condition-class-default-initargs class) default-initargs)
+    (setf (documentation name 'type) documentation)
+    
     (dolist (slot slots)
-      (if (slot-used-p (car slot) parent-type)
-          (push slot used)
-          (push slot new)))
-    (values new used)))
+      (let* ((name (condition-slot-name slot))
+	     (islot (find-slot (cdr (condition-class-cpl class)) name)))
+	;;
+	;; Handle :allocation.  If a new class slot, allocate cell.  If NIL,
+	;; default it.
+	(ecase (condition-slot-allocation slot)
+	  (:class
+	   (setf (condition-slot-cell slot)
+		 (list (if (condition-slot-initform-p slot)
+			   (let ((initform (condition-slot-initform slot)))
+			     (if (functionp initform)
+				 (funcall initform)
+				 initform))
+			   *empty-slot*))))
+	  (:instance)
+	  ((nil)
+	   (when islot
+	     (setf (condition-slot-allocation slot)
+		   (condition-slot-allocation islot)))))
+	
+	;;
+	;; Default initform.
+	(when (and islot (not (condition-slot-initform-p slot)))
+	  (setf (condition-slot-initform slot)
+		(condition-slot-initform islot))
+	  (setf (condition-slot-initform-p slot)
+		(condition-slot-initform-p islot)))
+	
+	;;
+	;; Set up reader & writer functions.
+	(dolist (reader (condition-slot-readers slot))
+	  (setf (fdefinition reader)
+		#'(lambda (condition)
+		    (condition-reader-function condition name))))
+	(dolist (writer (condition-slot-writers slot))
+	  (setf (fdefinition writer)
+		#'(lambda (new-value condition)
+		    (condition-writer-function condition new-value name))))))
+    
+    (collect ((class-slots))
+      ;;
+      ;; Direct class slots:
+      (dolist (slot slots)
+	(when (eq (condition-slot-allocation slot) :class)
+	  (class-slots slot)))
+      ;;
+      ;; Indirect class slots:
+      (dolist (sclass (class-direct-superclasses class))
+	(dolist (cslot (condition-class-class-slots sclass))
+	  (when (and (eq (condition-slot-allocation
+			  (find-slot (condition-class-cpl class)
+				     (condition-slot-name cslot)))
+			 :class)
+		     (not (member cslot (class-slots)
+				  :key #'condition-slot-name
+				  :test #'eq)))
+	    (class-slots (copy-structure cslot)))))
+      
+      (dolist (slot (union slots (class-slots)))
+	(let ((name (condition-slot-name slot)))
+	  (collect ((initargs (condition-slot-initargs slot) union))
+	    (dolist (super (class-direct-superclasses class))
+	      (dolist (sslot (condition-class-slots super))
+		(when (eq (condition-slot-name sslot) name)
+		  (initargs (condition-slot-initargs sslot)))))
+	    (setf (condition-slot-initargs slot) (initargs)))))
+      
+      (setf (condition-class-class-slots class) (class-slots))))
+  
+  name)
 
-(defun slot-used-p (slot-name type)
-  (cond ((eq type 'condition) nil)
-        ((not type) (error "The type ~S does not inherit from condition." type))
-        ((assoc slot-name (slots type)))
-        (t (slot-used-p slot-name (parent-type type)))))
 
-) ;eval-when
+(defmacro define-condition (name (&rest parent-types) (&rest slot-specs)
+				 &body options)
+  "DEFINE-CONDITION Name (Parent-Type*) (Slot-Spec*) Option*
+   Define NAME as a condition type.  This new type inherits slots and its
+   report function from the specified PARENT-TYPEs.  A slot spec is a list of:
+     (slot-name :reader <rname> :initarg <iname> {Option Value}*
 
-(defmacro define-condition (name (parent-type) &optional slot-specs
-				 &rest options)
-  "(DEFINE-CONDITION name (parent-type)
-      ( {slot-name | (slot-name {slot-option}*)}*)
-      options)"
-  (when (eq parent-type 'simple-condition)
-    (setq parent-type 'internal-simple-condition))
-  (let ((constructor (let ((*package* (find-package "CONDITIONS")))
-		       ;; Bind for the INTERN and the FORMAT.
-		       (intern (format nil "Constructor for ~S" name)))))
-    (let ((slots (mapcar #'(lambda (slot-spec)
-			     (cond
-			      ((atom slot-spec)
-			       (list slot-spec))
-			      ((atom (cdr slot-spec))
-			       slot-spec)
-			      ((atom (cddr slot-spec))
-			       (warn "Old style slot specifier: ~S" slot-spec)
-			       slot-spec)
-			      (t
-			       (destructuring-bind
-				   (name &key (type nil typep) initform
-					 &allow-other-keys)
-				   slot-spec
-				 `(,name ,initform
-					 ,@(when typep `(:type ,type)))))))
-			 slot-specs)))
-      (multiple-value-bind (new-slots used-slots)
-          (parse-new-and-used-slots slots parent-type)
-	(let ((conc-name-p     nil)
-	      (conc-name       nil)
-	      (report-function nil)
-	      (documentation   nil))
-	  (do ((o options (cdr o)))
-	      ((null o))
-	    (let ((option (car o)))
-	      (case (car option) ;should be ecase
-		(:conc-name
-		 (setq conc-name-p t)
-		 (setq conc-name (cadr option)))
-		(:report
-		 (setq report-function
-		       (if (stringp (cadr option))
-			   `(lambda (stream)
-			      (write-string ,(cadr option) stream))
-			   (cadr option))))
-		(:documentation (setq documentation (cadr option)))
-		(otherwise
-		 (cerror "Ignore this DEFINE-CONDITION option."
-			 "Invalid DEFINE-CONDITION option: ~S" option)))))
-	  (unless conc-name-p
-	    (setq conc-name
-		  (intern (concatenate 'simple-string (symbol-name name)
-				       "-")
-			  *package*)))
-	  ;; The following three forms are compile-time side-effects.  For now,
-	  ;; they affect the global environment, but with modified abstractions
-	  ;; for parent-type, slots, and conc-name, the compiler could easily
-	  ;; make them local.
-	  (setf (parent-type name) parent-type)
-          (setf (slots name)       slots)
-          (setf (conc-name name)   conc-name)
-          ;; finally, the expansion ...
-	  `(progn
-	     (defstruct (,name
-			 (:constructor ,constructor)
-			 (:predicate nil)
-			 (:copier nil)
-			 (:print-function condition-print)
-			 (:include ,parent-type ,@used-slots)
-			 (:conc-name ,conc-name))
-	       ,@new-slots)
-	     (setf (documentation ',name 'type) ',documentation)
-	     (setf (parent-type ',name) ',parent-type)
-	     (setf (slots ',name) ',slots)
-	     (setf (conc-name ',name) ',conc-name)
-	     (setf (report-function ',name)
-		   ,(if report-function `#',report-function))
-	     (setf (make-function ',name) ',constructor)
-	     ',name))))))
+   The DEFINE-CLASS slot options :ALLOCATION, :INITFORM, [slot] :DOCUMENTATION
+   and :TYPE and the overall options :DEFAULT-INITARGS and 
+   [type] :DOCUMENTATION are also allowed.
 
+   The :REPORT option is peculiar to DEFINE-CONDITION.  Its argument is either
+   a string or a two-argument lambda or function name.  If a function, the
+   function is called with the condition and stream to report the condition.
+   If a string, the string is printed.
+
+   Condition types are classes, but (as allowed by ANSI and not as described in
+   CLtL2) and neither STANDARD-OBJECTs nor STRUCTURE-OBJECTs.  WITH-SLOTS and
+   SLOT-VALUE may not be used on condition objects."
+  (let* ((parent-types (or parent-types '(condition)))
+	 (layout (find-condition-layout name parent-types))
+	 (documentation nil)
+	 (report nil)
+	 (default-initargs ()))
+    (collect ((slots)
+	      (all-readers nil append)
+	      (all-writers nil append))
+      (dolist (spec slot-specs)
+	(when (keywordp spec)
+	  (warn "Keyword slot name indicates probable syntax error:~%  ~S"
+		spec))
+	(let* ((spec (if (consp spec) spec (list spec)))
+	       (slot-name (first spec))
+	       (allocation :instance)
+	       (initform-p nil)
+	       initform)
+	  (collect ((initargs)
+		    (readers)
+		    (writers))
+	    (do ((options (rest spec) (cddr options)))
+		((null options))
+	      (unless (and (consp options) (consp (cdr options)))
+		(error "Malformed condition slot spec:~%  ~S." spec))
+	      (let ((arg (second options)))
+		(case (first options)
+		  (:reader (readers arg))
+		  (:writer (writers arg))
+		  (:accessor
+		   (readers arg)
+		   (writers `(setf ,arg)))
+		  (:initform
+		   (when initform-p
+		     (error "More than one :INITFORM in:~%  ~S" spec))
+		   (setq initform-p t)
+		   (setq initform arg))
+		  (:initarg (initargs arg))
+		  (:allocation
+		   (setq allocation arg))
+		  (:type)
+		  (t
+		   (error "Unknown slot option:~%  ~S" (first options))))))
+
+	    (unless (initargs)
+	      (warn "Probable error: no initargs for condition slot:~%  ~S"
+		    slot-name))
+	    (unless (readers)
+	      (warn "Probable error: no readers for condition slot:~%  ~S"
+		    slot-name))
+
+	    (all-readers (readers))
+	    (all-writers (writers))
+	    (slots `(make-condition-slot
+		     :name ',slot-name
+		     :initargs ',(initargs)
+		     :readers ',(readers)
+		     :writers ',(writers)
+		     :initform-p ',initform-p
+		     :initform
+		     ,(if (constantp initform)
+			  `',(eval initform)
+			  `#'(lambda () ,initform)))))))
+      
+      (dolist (option options)
+	(unless (consp option)
+	  (error "Bad option:~%  ~S" option))
+	(case (first option)
+	  (:documentation (setq documentation (second option)))
+	  (:report
+	   (let ((arg (second option)))
+	     (setq report
+		   (if (stringp arg)
+		       `#'(lambda (condition stream)
+			    (declare (ignore condition))
+			    (write-string ,arg stream))
+		       `#',arg))))
+	  (:default-initargs
+	   (do ((initargs (rest option) (cddr initargs)))
+	       ((endp initargs))
+	     (let ((val (second initargs)))
+	       (setq default-initargs
+		     (list* `',(first initargs)
+			    (if (constantp val)
+				`',(eval val)
+				`#'(lambda () ,val))
+			    default-initargs)))))
+	  (t
+	   (error "Unknown option: ~S" (first option)))))
+
+      (when (all-writers)
+	(warn "Condition slot setters probably not allowed in ANSI CL:~%  ~S"
+	      (all-writers)))
+      
+      `(progn
+	 (eval-when (compile load eval)
+	   (%compiler-define-condition ',name ',parent-types ',layout))
+
+	 (declaim (ftype (function (t) t) ,@(all-readers)))
+	 (declaim (ftype (function (t t) t) ,@(all-writers)))
+
+	 (%define-condition ',name
+			    (list ,@(slots))
+			    ,documentation
+			    ,report
+			    (list ,@default-initargs))))))
 
 
 ;;;; HANDLER-BIND and SIGNAL.
@@ -512,9 +793,7 @@
 
 (define-condition serious-condition (condition) ())
 
-(define-condition error (serious-condition)
-  ((function-name :init-form nil
-		  :accessor serious-condition-function-name)))
+(define-condition error (serious-condition) ())
 
 (define-condition warning (condition) ())
 (define-condition style-warning (warning) ())
@@ -523,88 +802,39 @@
   (apply #'format stream (simple-condition-format-control condition)
 	 		 (simple-condition-format-arguments condition)))
 
-(deftype simple-condition ()
-  '(or internal-simple-condition simple-warning simple-type-error
-       simple-error simple-style-warning))
-
-;;; The simple-condition is really called internal-simple-condition, so
-;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
-;;; be written to handle the simple-condition, simple-warning,
-;;; simple-style-warning, simple-type-error, and simple-error types.
-;;; DEFINE-CONDITION special-cases inheriting simple-condition to make this
-;;; work.  This seems to create some kind of bogus multiple inheritance that
-;;; the user sees.
-;;;
-(define-condition internal-simple-condition (condition)
-  ((format-control :acessor internal-simple-condition-format-control)
-   (format-arguments :init-form '()
-		     :accessor internal-simple-condition-format-arguments))
+(define-condition simple-condition ()
+  ((format-control :reader simple-condition-format-control
+		   :initarg :format-control)
+   (format-arguments :reader simple-condition-format-arguments
+		     :initarg :format-arguments
+		     :initform '()))
   (:report simple-condition-printer))
 
-(setf (symbol-plist 'simple-condition)
-      (symbol-plist 'internal-simple-condition))
-
-
-;;; The simple-warning type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
-;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
-;;; simple-condition, simple-warning, simple-type-error, and simple-error
-;;; types.  This seems to create some kind of bogus multiple inheritance that
-;;; the user sees.
-;;;
-(define-condition simple-warning (warning)
-  ((format-control :accessor internal-simple-warning-format-control)
-   (format-arguments :init-form '()
-		     :accessor internal-simple-warning-format-arguments))
-  (:report simple-condition-printer))
-;;;
-(define-condition simple-style-warning (style-warning)
-  ((format-control :accessor internal-simple-style-warning-format-control)
-   (format-arguments :init-form '()
-		     :accessor internal-simple-style-warning-format-arguments))
-  (:report simple-condition-printer))
+(define-condition simple-warning (simple-condition warning) ())
+(define-condition simple-style-warning (simple-condition style-warning) ())
 
 (defun print-simple-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
-	  (serious-condition-function-name condition)
-	  (internal-simple-error-format-control condition)
-	  (internal-simple-error-format-arguments condition)))
+	  (condition-function-name condition)
+	  (simple-condition-format-control condition)
+	  (simple-condition-format-arguments condition)))
 
-;;; The simple-error type has a conc-name, so SIMPLE-CONDITION-FORMAT-CONTROL
-;;; and SIMPLE-CONDITION-FORMAT-ARGUMENTS could be written to handle the
-;;; simple-condition, simple-warning, simple-type-error, and simple-error types.
-;;; This seems to create some kind of bogus multiple inheritance that the user
-;;; sees.
-;;;
-(define-condition simple-error (error)
-  ((format-control :accessor internal-simple-error-format-control)
-   (format-arguments :init-form '()
-		     :accessor internal-simple-error-format-arguments))
+(define-condition simple-error (simple-condition error) ()
   (:report print-simple-error))
-
 
 (define-condition storage-condition (serious-condition) ())
 
 (define-condition type-error (error)
-  (datum
-   expected-type)
+  ((datum :reader type-error-datum :initarg :datum)
+   (expected-type :reader type-error-expected-type :initarg :expected-type))
   (:report
    (lambda (condition stream)
      (format stream "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
-	     (serious-condition-function-name condition)
+	     (condition-function-name condition)
 	     (type-error-datum condition)
 	     (type-error-expected-type condition)))))
 
-;;; The simple-type-error type has a conc-name, so
-;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
-;;; be written to handle the simple-condition, simple-warning,
-;;; simple-type-error, and simple-error types.  This seems to create some kind
-;;; of bogus multiple inheritance that the user sees.
-;;;
-(define-condition simple-type-error (type-error)
-  ((format-control :accessor internal-simple-type-error-format-control)
-   (format-arguments :init-form '()
-		     :accessor internal-simple-type-error-format-arguments))
-  (:report simple-condition-printer))
+(define-condition simple-type-error (simple-condition type-error) ())
 
 (define-condition kernel:layout-invalid (type-error)
   ()
@@ -612,13 +842,13 @@
    (lambda (condition stream)
      (format stream "Layout-invalid error in ~S:~@
 		     Type test of class ~S was passed obsolete instance:~%  ~S"
-	     (serious-condition-function-name condition)
+	     (condition-function-name condition)
 	     (kernel:class-proper-name (type-error-expected-type condition))
 	     (type-error-datum condition)))))
 
 (define-condition case-failure (type-error)
-  (name
-   possibilities)
+  ((name :reader case-failure-name :initarg :name)
+   (possibilities :reader case-failure-possibilities :initarg :possibilities))
   (:report
     (lambda (condition stream)
       (format stream "~@<~S fell through ~S expression.  ~:_Wanted one of ~:S.~:>"
@@ -627,55 +857,11 @@
 	      (case-failure-possibilities condition)))))
 
 
-;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS.
-;;; These exist for the obvious types to seemingly give the impression of
-;;; multiple inheritance.  That is, the last three types inherit from warning,
-;;; type-error, and error while inheriting from simple-condition also.
-;;;
-(defun simple-condition-format-control (condition)
-  (etypecase condition
-    (internal-simple-condition
-     (internal-simple-condition-format-control condition))
-    (simple-warning
-     (internal-simple-warning-format-control condition))
-    (simple-style-warning
-     (internal-simple-style-warning-format-control condition))
-    (simple-type-error
-     (internal-simple-type-error-format-control condition))
-    (simple-error
-     (internal-simple-error-format-control condition))))
-;;;
-(defun simple-condition-format-arguments (condition)
-  (etypecase condition
-    (internal-simple-condition
-     (internal-simple-condition-format-arguments condition))
-    (simple-warning
-     (internal-simple-warning-format-arguments condition))
-    (simple-style-warning
-     (internal-simple-style-warning-format-arguments condition))
-    (simple-type-error
-     (internal-simple-type-error-format-arguments condition))
-    (simple-error
-     (internal-simple-error-format-arguments condition))))
-
-
 (define-condition program-error (error) ())
 (define-condition parse-error (error) ())
-
-(defun print-control-error (condition stream)
-  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
-	  (serious-condition-function-name condition)
-	  (control-error-format-control condition)
-	  (control-error-format-arguments condition)))
-
-(define-condition control-error (error)
-  ((format-control :accessor control-error-format-control)
-   (format-arguments :init-form '()
-		     :accessor control-error-format-arguments))
-  (:report print-control-error))
-
-
-(define-condition stream-error (error) (stream))
+(define-condition control-error (simple-error) ())
+(define-condition stream-error (error)
+  ((stream :reader stream-error-stream :initarg :stream)))
 
 (define-condition end-of-file (stream-error) ()
   (:report
@@ -683,18 +869,21 @@
      (format stream "End-of-File on ~S"
 	     (stream-error-stream condition)))))
 
-(define-condition file-error (error) (pathname))
+(define-condition file-error (error)
+  ((pathname :reader file-error-pathname :initarg :pathname)))
 
-(define-condition package-error (error) (package))
+(define-condition package-error (error)
+  ((package :reader package-error-package :initarg :package)))
 
-(define-condition cell-error (error) (name))
+(define-condition cell-error (error)
+  ((name :reader cell-error-name :initarg :name)))
 
 (define-condition unbound-variable (cell-error) ()
   (:report
    (lambda (condition stream)
      (format stream
 	     "Error in ~S:  the variable ~S is unbound."
-	     (serious-condition-function-name condition)
+	     (condition-function-name condition)
 	     (cell-error-name condition)))))
   
 (define-condition undefined-function (cell-error) ()
@@ -702,10 +891,12 @@
    (lambda (condition stream)
      (format stream
 	     "Error in ~S:  the function ~S is undefined."
-	     (serious-condition-function-name condition)
+	     (condition-function-name condition)
 	     (cell-error-name condition)))))
 
-(define-condition arithmetic-error (error) (operation operands)
+(define-condition arithmetic-error (error)
+  ((operation :reader arithmetic-error-operation :initarg :operation)
+   (operands :reader arithmetic-error-operands :initarg :operands))
   (:report (lambda (condition stream)
 	     (format stream "Arithmetic error ~S signalled."
 		     (type-of condition))
