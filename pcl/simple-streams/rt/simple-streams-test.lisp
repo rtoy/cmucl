@@ -411,3 +411,20 @@
       result)
   t)
 
+
+;;; From Lynn Quam, cmucl-imp, 2004-12-04: After doing a READ-VECTOR,
+;;; FILE-POSITION returns the wrong value.
+
+(deftest file-position-6
+    ;; Test the file-position is write.
+    (with-open-file (st1 "/etc/passwd" :class 'stream:file-simple-stream)
+      (with-open-file (st2 "/etc/passwd" :element-type '(unsigned-byte 8))
+	(let* ((buf1 (make-array 100 :element-type '(unsigned-byte 8)))
+	       (buf2 (make-array 100 :element-type '(unsigned-byte 8)))
+	       (n1 (stream:read-vector buf1 st1))
+	       (n2 (read-sequence buf2 st2)))
+	  (list n1 (file-position st1) 
+		n2 (file-position st2)))))
+  (100 100 100 100)
+  )
+

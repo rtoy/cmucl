@@ -5,7 +5,7 @@
 ;;; domain.
 ;;; 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.6 2004/07/11 03:49:33 rtoy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/simple-streams/impl.lisp,v 1.7 2004/12/06 17:07:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -624,13 +624,16 @@
 		 (index (or start 0) (1+ index))
 		 (end (or end (* (length vector) (vector-elt-width vector))))
 		 (endian-swap (endian-swap-value vector endian-swap))
-		 (byte (funcall j-read-byte encap nil nil t)
-		       (funcall j-read-byte encap nil nil nil)))
-		((or (null byte) (>= index end)) index)
-	     (setf (bref vector (logxor index endian-swap)) byte)))))
+		 (flag t nil))
+		((>= index end) index)
+	     (let ((byte (funcall j-read-byte encap nil nil flag)))
+	       (unless byte (return index))
+	       (setf (bref vector (logxor index endian-swap)) byte))))))
+
     ((or lisp-stream fundamental-stream)
      (unless (typep vector '(or string
 			     (simple-array (signed-byte 8) (*))
 			     (simple-array (unsigned-byte 8) (*))))
        (error "Wrong vector type for read-vector on stream not of type simple-stream."))
      (read-sequence vector stream :start (or start 0) :end end))))
+
