@@ -84,28 +84,15 @@
     res))
 
 
-;;; Make-Restricted-TN  --  Interface
-;;;
-;;;    Create a packed TN restricted to the SC with number SCN.
-;;;
-(defun make-restricted-tn (scn)
-  (declare (type sc-number scn))
-  (let* ((component (component-info *compile-component*))
-	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal nil (svref *sc-numbers* scn))))
-    (push-in tn-next res (ir2-component-restricted-tns component))
-    res))
-
-
 ;;; MAKE-REPRESENTATION-TN  --  Interface
 ;;;
 ;;;    Create a normal packed TN with representation indicated by SCN.
 ;;;
-(defun make-representation-tn (scn)
-  (declare (type sc-number scn))
+(defun make-representation-tn (ptype scn)
+  (declare (type primitive-type ptype) (type sc-number scn))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal nil (svref *sc-numbers* scn))))
+		       :normal ptype (svref *sc-numbers* scn))))
     (push-in tn-next res (ir2-component-normal-tns component))
     res))
 
@@ -114,15 +101,31 @@
 ;;;
 ;;;    Create a TN wired to a particular location in an SC.  We set the Offset
 ;;; and FSC to record where it goes, and then put it on the current component's
-;;; Wired-TNs list.
+;;; Wired-TNs list.  Ptype is the TN's primitive-type, which may be NIL in VOP
+;;; temporaries.
 ;;;
-(defun make-wired-tn (scn offset)
-  (declare (type sc-number scn) (type unsigned-byte offset))
+(defun make-wired-tn (ptype scn offset)
+  (declare (type (or primitive-type null) ptype)
+	   (type sc-number scn) (type unsigned-byte offset))
   (let* ((component (component-info *compile-component*))
 	 (res (make-tn (incf (ir2-component-global-tn-counter component))
-		       :normal nil (svref *sc-numbers* scn))))
+		       :normal ptype (svref *sc-numbers* scn))))
     (setf (tn-offset res) offset)
     (push-in tn-next res (ir2-component-wired-tns component))
+    res))
+
+
+;;; Make-Restricted-TN  --  Interface
+;;;
+;;;    Create a packed TN restricted to the SC with number SCN.  Ptype is as
+;;; for MAKE-WIRED-TN.
+;;;
+(defun make-restricted-tn (ptype scn)
+  (declare (type (or primitive-type null) ptype) (type sc-number scn))
+  (let* ((component (component-info *compile-component*))
+	 (res (make-tn (incf (ir2-component-global-tn-counter component))
+		       :normal ptype (svref *sc-numbers* scn))))
+    (push-in tn-next res (ir2-component-restricted-tns component))
     res))
 
 
