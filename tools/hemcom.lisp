@@ -140,6 +140,7 @@
 (comf "target:hemlock/overwrite")
 (comf "target:hemlock/gosmacs")
 (comf "target:hemlock/eval-server")
+(comf "target:hemlock/dylan")
 (comf "target:hemlock/lispbuf")
 (comf "target:hemlock/lispeval")
 (comf "target:hemlock/icom")
