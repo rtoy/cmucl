@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.25 1993/08/21 00:23:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.26 1993/08/23 03:02:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -877,6 +877,31 @@
       (allocate-eval-stack howmany)
       (push-eval-stack val))
     (byte-interpret component new-pc fp)))
+
+
+;;; Used to ref and set dylan variables.
+;;;
+(define-xop dylan-var-ref (component old-pc pc fp)
+  (declare (type code-component component)
+	   (ignore old-pc)
+	   (type pc pc)
+	   (type stack-pointer fp))
+  (let ((value (pop-eval-stack)))
+    (declare (optimize (inhibit-warnings 3)))
+    (push-eval-stack (dylan::value-datum value)))
+  (byte-interpret component pc fp))
+;;;
+(define-xop dylan-var-set (component old-pc pc fp)
+  (declare (type code-component component)
+	   (ignore old-pc)
+	   (type pc pc)
+	   (type stack-pointer fp))
+  (multiple-value-pop-eval-stack
+      (new value)
+    (declare (optimize (inhibit-warnings 3)))
+    (setf (dylan::value-datum value) new))
+  (byte-interpret component pc fp))
+
 
 
 ;;;; Type checking:
