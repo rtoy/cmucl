@@ -7,12 +7,18 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.27 1990/11/03 16:22:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.28 1991/02/04 18:41:00 ram Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
 ;;; Written by William Lott
 ;;;
+
+#|
+(eval-when (compile load eval)
+  (unless (find-package "OLD-MIPS")
+    (rename-package (find-package "MIPS") "OLD-MIPS" '("VM"))))
+|#
 
 (in-package "MIPS")
 (use-package "ASSEM")
@@ -22,9 +28,7 @@
 
 ;;;; Resources.
 
-(define-random-resources high low)
-(define-register-file ireg 32)
-(define-register-file fpreg 32)
+(define-resources high low memory float-status)
 
 
 ;;;; Formats.
@@ -39,8 +43,8 @@
 
 (define-format (immediate 32)
   (op (byte 6 26))
-  (rs (byte 5 21) :use ireg)
-  (rt (byte 5 16) :clobber ireg)
+  (rs (byte 5 21) :read t)
+  (rt (byte 5 16) :write t)
   (immediate (byte 16 0)))
 
 (define-format (jump 32)
@@ -49,9 +53,9 @@
 
 (define-format (register 32)
   (op (byte 6 26))
-  (rs (byte 5 21) :use ireg)
-  (rt (byte 5 16) :use ireg)
-  (rd (byte 5 11) :clobber ireg)
+  (rs (byte 5 21) :read t)
+  (rt (byte 5 16) :read t)
+  (rd (byte 5 11) :write t)
   (shamt (byte 5 6) :default 0)
   (funct (byte 6 0)))
 
@@ -63,27 +67,27 @@
   (funct (byte 6 0) :default #b001101))
 
 
-(define-format (coproc-branch 32)
+(define-format (coproc-branch 32 :use (float-status))
   (op (byte 6 26))
   (funct (byte 10 16))
   (offset (byte 16 0)))
 
-(define-format (float 32)
+(define-format (float 32 :use (float-status) :clobber (float-status))
   (op (byte 6 26) :default #b010001)
   (filler (byte 1 25) :default #b1)
   (format (byte 4 21))
-  (ft (byte 5 16))
-  (fs (byte 5 11))
-  (fd (byte 5 6))
+  (ft (byte 5 16) :read t)
+  (fs (byte 5 11) :read t)
+  (fd (byte 5 6) :write t)
   (funct (byte 6 0)))
 
-(define-format (float-aux 32)
+(define-format (float-aux 32 :use (float-status) :clobber (float-status))
   (op (byte 6 26) :default #b010001)
   (filler-1 (byte 1 25) :default #b1)
   (format (byte 4 21))
   (ft (byte 5 16) :default 0)
-  (fs (byte 5 11))
-  (fd (byte 5 6))
+  (fs (byte 5 11) :read t)
+  (fd (byte 5 6) :write t)
   (funct (byte 2 4))
   (sub-funct (byte 4 0)))
 
@@ -230,73 +234,83 @@
 (define-math-inst slt #b101010 #b001010 :signed)
 (define-math-inst sltu #b101011 #b001011 :signed)
 
-(define-instruction (beq)
+(define-instruction (beq :pinned t
+			 :attributes (relative-branch delayed-branch))
   (immediate (op :constant #b000100)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label))
   (immediate (op :constant #b000100)
 	     (rs :argument register)
-	     (rt :argument register)
+	     (rt :argument register :read t :write nil)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bne)
+(define-instruction (bne :pinned t
+			 :attributes (relative-branch delayed-branch))
   (immediate (op :constant #b000101)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label))
   (immediate (op :constant #b000101)
 	     (rs :argument register)
-	     (rt :argument register)
+	     (rt :argument register :read t :write nil)
 	     (immediate :argument relative-label)))
 
-(define-instruction (blez)
+(define-instruction (blez :pinned t
+			  :attributes (relative-branch delayed-branch))
   (immediate (op :constant #b000110)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bgtz)
+(define-instruction (bgtz :pinned t
+			  :attributes (relative-branch delayed-branch))
   (immediate (op :constant #b000111)
 	     (rs :argument register)
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bltz)
+(define-instruction (bltz :pinned t
+			  :attributes (relative-branch delayed-branch))
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b00000)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bgez)
+(define-instruction (bgez :pinned t
+			  :attributes (relative-branch delayed-branch))
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b00001)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bltzal)
+(define-instruction (bltzal :pinned t
+			    :attributes (relative-branch delayed-branch))
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b01000)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bgezal)
+(define-instruction (bgezal :pinned t
+			    :attributes (relative-branch delayed-branch))
   (immediate (op :constant bcond-op)
 	     (rs :argument register)
 	     (rt :constant #b01001)
 	     (immediate :argument relative-label)))
 
-(define-instruction (bc1f)
+(define-instruction (bc1f :pinned t
+			  :attributes (relative-branch delayed-branch))
   (coproc-branch (op :constant cop1-op)
 		 (funct :constant #x100)
 		 (offset :argument relative-label)))
 
-(define-instruction (bc1t)
+(define-instruction (bc1t :pinned t
+			  :attributes (relative-branch delayed-branch))
   (coproc-branch (op :constant cop1-op)
 		 (funct :constant #x101)
 		 (offset :argument relative-label)))
 
-(define-instruction (break)
+(define-instruction (break :pinned t)
   (break (code :argument (unsigned-byte 10)))
   (break (code :argument (unsigned-byte 10))
 	 (subcode :argument (unsigned-byte 10))))
@@ -315,7 +329,8 @@
 	    (rd :constant 0)
 	    (funct :constant #b011011)))
 
-(define-instruction (j)
+(define-instruction (j :pinned t
+		       :attributes (unconditional-branch delayed-branch))
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :constant 0)
@@ -324,7 +339,8 @@
   (jump (op :constant #b000010)
 	(target :argument jump-fixup)))
 
-(define-instruction (jal)
+(define-instruction (jal :pinned t
+			 :attributes (delayed-branch))
   (register (op :constant special-op)
 	    (rs :argument register)
 	    (rt :constant 0)
@@ -339,71 +355,77 @@
 	(target :argument jump-fixup)))
 
 
-(defmacro define-load/store-instruction (name op &optional (rt-kind 'register))
-  `(define-instruction (,name)
+(defmacro define-load/store-instruction (name read-p op
+					      &optional (rt-kind 'register))
+  `(define-instruction (,name ,@(if read-p
+				    '(:use (memory) :attributes (delayed-load))
+				    '(:clobber (memory))))
      (immediate (op :constant ,op)
-		(rt :argument ,rt-kind)
+		(rt :argument ,rt-kind ,@(unless read-p
+					   '(:read t :write nil)))
 		(rs :argument register)
 		(immediate :argument (signed-byte 16)))
      (immediate (op :constant ,op)
-		(rt :argument ,rt-kind)
+		(rt :argument ,rt-kind ,@(unless read-p
+					   '(:read t :write nil)))
 		(rs :argument register)
 		(immediate :argument addi-fixup))
      (immediate (op :constant ,op)
-		(rt :argument ,rt-kind)
+		(rt :argument ,rt-kind ,@(unless read-p
+					   '(:read t :write nil)))
 		(rs :argument register)
 		(immediate :constant 0))))
 
-(define-load/store-instruction lb #b100000)
-(define-load/store-instruction lh #b100001)
-(define-load/store-instruction lwl #b100010)
-(define-load/store-instruction lw #b100011)
-(define-load/store-instruction lbu #b100100)
-(define-load/store-instruction lhu #b100101)
-(define-load/store-instruction lwr #b100110)
-(define-load/store-instruction lwc1 #o61 fp-reg)
-(define-load/store-instruction lwc1-odd #o61 odd-fp-reg)
-(define-load/store-instruction sb #b101000)
-(define-load/store-instruction sh #b101001)
-(define-load/store-instruction swl #b101010)
-(define-load/store-instruction sw #b101011)
-(define-load/store-instruction swr #b101110)
-(define-load/store-instruction swc1 #o71 fp-reg)
-(define-load/store-instruction swc1-odd #o71 odd-fp-reg)
+(define-load/store-instruction lb t #b100000)
+(define-load/store-instruction lh t #b100001)
+(define-load/store-instruction lwl t #b100010)
+(define-load/store-instruction lw t #b100011)
+(define-load/store-instruction lbu t #b100100)
+(define-load/store-instruction lhu t #b100101)
+(define-load/store-instruction lwr t #b100110)
+(define-load/store-instruction lwc1 t #o61 fp-reg)
+(define-load/store-instruction lwc1-odd t #o61 odd-fp-reg)
+(define-load/store-instruction sb nil #b101000)
+(define-load/store-instruction sh nil #b101001)
+(define-load/store-instruction swl nil #b101010)
+(define-load/store-instruction sw nil #b101011)
+(define-load/store-instruction swr nil #b101110)
+(define-load/store-instruction swc1 nil #o71 fp-reg)
+(define-load/store-instruction swc1-odd nil #o71 odd-fp-reg)
 
 (define-instruction (lui)
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
-	     (rt :argument register)
+	     (rt :argument register :read t)
 	     (immediate :argument (or (unsigned-byte 16) (signed-byte 16))))
   (immediate (op :constant #b001111)
 	     (rs :constant 0)
-	     (rt :argument register)
+	     (rt :argument register :read t)
 	     (immediate :argument lui-fixup)))
 
 
-(define-instruction (mfhi :use high)
+(define-instruction (mfhi :use (high))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010000)))
 
-(define-instruction (mthi :clobber high)
+(define-instruction (mthi :clobber (high))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010001)))
 
-(define-instruction (mflo :use low)
+(define-instruction (mflo :use (low))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
 	    (rt :constant 0)
 	    (funct :constant #b010010)))
 
-(define-instruction (mtlo :clobber low)
+(define-instruction (mtlo :clobber (low))
   (register (op :constant special-op)
 	    (rd :argument register)
 	    (rs :constant 0)
@@ -497,7 +519,7 @@
 	    (rs :argument register)
 	    (funct :constant #b000110)))
 
-(define-instruction (syscall)
+(define-instruction (syscall :pinned t)
   (register (op :constant special-op)
 	    (rd :constant 0)
 	    (rt :constant 0)
@@ -509,7 +531,7 @@
 ;;;; Floating point instructions.
 
 (macrolet ((frob (name kind)
-	     `(define-instruction (,name)
+	     `(define-instruction (,name :attributes (delayed-load))
 		(register (op :constant #b010001)
 			  (rs :constant #b00100)
 			  (rd :argument ,kind)
@@ -519,7 +541,7 @@
   (frob mtc1-odd odd-fp-reg))
 
 (macrolet ((frob (name kind)
-	     `(define-instruction (,name)
+	     `(define-instruction (,name :attributes (delayed-load))
 		(register (op :constant #b010001)
 			  (rs :constant #b00000)
 			  (rt :argument register)
@@ -528,18 +550,19 @@
   (frob mfc1 fp-reg)
   (frob mfc1-odd odd-fp-reg))
 
-(define-instruction (cfc1)
+(define-instruction (cfc1 :use (float-status) :attributes (delayed-load))
   (register (op :constant #b010001)
 	    (rs :constant #b00010)
-	    (rt :argument register)
-	    (rd :argument control-register)
+	    (rt :argument register :read nil :write t)
+	    (rd :argument control-register :write nil)
 	    (funct :constant 0)))
 
-(define-instruction (ctc1)
+(define-instruction (ctc1 :use (float-status) :clobber (float-status)
+			  :attributes (delayed-load))
   (register (op :constant #b010001)
 	    (rs :constant #b00110)
 	    (rt :argument register)
-	    (rd :argument control-register)
+	    (rd :argument control-register :write nil)
 	    (funct :constant 0)))
 
 (define-instruction (float-op)
@@ -623,30 +646,32 @@
      (inst lui reg value)
      (inst addu reg value))))
 
-(define-instruction (b)
+(define-instruction (b :pinned t
+		       :attributes (relative-branch unconditional-branch
+						    delayed-branch))
   (immediate (op :constant #b000100)
 	     (rs :constant 0)
 	     (rt :constant 0)
 	     (immediate :argument relative-label)))
 
-(define-instruction (nop)
+(define-instruction (nop :attributes (nop))
   (register (op :constant 0)
 	    (rd :constant 0)
 	    (rt :constant 0)
 	    (rs :constant 0)
 	    (funct :constant 0)))
 
-(define-format (word-format 32)
+(define-format (word-format 32 :pinned t)
   (data (byte 32 0)))
 (define-instruction (word)
   (word-format (data :argument (or (unsigned-byte 32) (signed-byte 32)))))
 
-(define-format (short-format 16)
+(define-format (short-format 16 :pinned t)
   (data (byte 16 0)))
 (define-instruction (short)
   (short-format (data :argument (or (unsigned-byte 16) (signed-byte 16)))))
 
-(define-format (byte-format 8)
+(define-format (byte-format 8 :pinned t)
   (data (byte 8 0)))
 (define-instruction (byte)
   (byte-format (data :argument (or (unsigned-byte 8) (signed-byte 8)))))
@@ -655,11 +680,15 @@
 
 ;;;; Function and LRA Headers emitters and calculation stuff.
 
+(define-format (entry-point 0 :pinned t))
+(define-instruction (entry-point)
+  (entry-point))
+
 (defun header-data (ignore)
   (declare (ignore ignore))
   (ash (+ *current-position* (component-header-length)) (- vm:word-shift)))
 
-(define-format (header-object 32)
+(define-format (header-object 32 :pinned t)
   (type (byte 8 0))
   (data (byte 24 8) :default 0 :function header-data))
 
@@ -688,7 +717,7 @@
        (define-instruction (,lui)
 	 (immediate (op :constant #b001111)
 		    (rs :constant 0)
-		    (rt :argument register)
+		    (rt :argument register :read t)
 		    (immediate :argument label
 			       :function (lambda (label)
 					   (ash ,calculation -16)))))
@@ -723,4 +752,3 @@
 (define-compute-instruction compute-lra-from-code
 			    (+ (label-position label)
 			       (component-header-length)))
-
