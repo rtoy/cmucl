@@ -7,14 +7,14 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.4 1990/11/25 08:09:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/old-loop.lisp,v 1.5 1990/11/25 08:15:31 wlott Exp $
 ;;;
 ;;; Loop facility, written by William Lott.
 ;;; 
 (in-package "LOOP")
 
 (in-package "LISP")
-(export 'loop)
+(export '(loop loop-finish))
 
 (in-package "LOOP")
 
