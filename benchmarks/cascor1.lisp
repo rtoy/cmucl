@@ -46,8 +46,12 @@
 ;;; Added CHANGED-TRAINING-SET, which should be called when the training set
 ;;; is changed but you don't want to reinitialize the net.  This rebuilds
 ;;; the caches.
+;;; 
+;;; 11/9/90:
+;;; Added some additional type declarations for maximum speed under certain
+;;; Common Lisp compilers.
 ;;; ***************************************************************************
-;;;
+
 ;;; This proclamation buys a certain amount of overall speed at the expense
 ;;; of runtime checking.  Comment it out when debugging new, bug-infested code.
 (proclaim '(optimize (speed 3) (space 0) (safety 0)))
@@ -55,14 +59,8 @@
 ;;; Style note: Because some of these runs take a long time, this code is
 ;;; extensively hacked for good performance under a couple of Common Lisp
 ;;; systems, some of which have poor performance on multi-dimensional
-;;; arrays and some of which have weak type-inference int he compiler.
+;;; arrays and some of which have weak type-inference in the compiler.
 ;;; Elegance and clarity have in some cases been sacrificed for speed.
-
-;;; The EXTENSIONS:*IGNORE-FLOATING-POINT-UNDERFLOW* switch, if non-null,
-;;; says that floating point underflows should quietly return zero rather
-;;; than signalling an error.  If your Lisp does not have such a switch,
-;;; you will either have to define an error handler for floating underflows
-;;; or check for tiny values at various critical points of the code.
 
 ;;; In some problems, floating point underflow errors may occur as a result
 ;;; of weight-decay and other operations.  Most Common Lisp implementations
@@ -76,10 +74,11 @@
 
 
 ;;; Compensate for the clumsy Common Lisp declaration system and weak
-;;; type-inference in some primitive Common Lisp compilers.  INCF-SF, *SF,
-;;; etc. are like INCF, *, etc., but they declare their operands and
-;;; results to be short-floats.  The code gets unreadable quickly if you
-;;; insert all these declarations by hand.
+;;; type-inference in some Common Lisp compilers.
+
+;;; INCF-SF, *SF, etc. are like INCF, *, etc., but they declare their
+;;; operands and results to be short-floats.  The code gets unreadable
+;;; quickly if you insert all these declarations by hand.
 
 (defmacro incf-sf (place &optional (increment 1.0))
   `(the short-float (incf (the short-float ,place)
@@ -104,6 +103,12 @@
 (defmacro /sf (&rest args)
   `(the short-float
 	(/ ,@(mapcar #'(lambda (x) (list 'the 'short-float x)) args))))
+
+;;; DOTIMES1 is like DOTIMES, only with the loop counter declared as a
+;;; fixnum.  This is for compilers with weak type inference.
+
+(defmacro dotimes1 (form1 &body body)
+  `(dotimes ,form1 (declare (fixnum ,(car form1))) . ,body))
 
 ;;; Create vector-access forms similar to SVREF, but for vectors of
 ;;; element-type SHORT-FLOAT and FIXNUM.
@@ -296,9 +301,9 @@
   "Turned briefly to T in order to continue after a pause.")
 
 ;;; The sets of training inputs and outputs are stored in parallel vectors.
-;;; Each element is a SIMPLE-VECTOR of short-float values, one for each
-;;; input or output.  Note: the elements are not specialized vectors of 
-;;; type SHORT-FLOAT.
+;;; Each element is a SIMPLE-VECTOR holding short-float values, one for
+;;; each input or output.  Note: this is a simple vector, not a specialized
+;;; vector of element-type short-float.
 
 (defvar *training-inputs* (make-array 0)
   "Vector of input patterns for training the net.")
@@ -334,9 +339,11 @@
 
 (defvar *test-inputs* nil
   "Vector of input patterns for testing the net.")
+(proclaim '(simple-vector *test-inputs*))
 
 (defvar *test-outputs* nil
   "Vector of output patterns for testing the net.")
+(proclaim '(simple-vector *test-outputs*))
 
 
 ;;;; Fundamental data structures.
@@ -550,7 +557,7 @@
 	*cand-prev-slopes* (make-array *ncandidates* :initial-element nil))
   ;; Only create the caches if *USE-CACHE* is on -- may not always have room.
   (when *use-cache*
-    (dotimes (i *max-cases*)
+    (dotimes1 (i *max-cases*)
       (setf (svref *values-cache* i)
 	    (make-array *max-units*
 			:element-type 'short-float
@@ -560,7 +567,7 @@
 			:element-type 'short-float
 			:initial-element 0.0))))
   ;; For each output, create the vectors holding per-weight information.
-  (dotimes (i *noutputs*)
+  (dotimes1 (i *noutputs*)
     (setf (svref *output-weights* i)
 	  (make-array *max-units*
 		      :element-type 'short-float
@@ -579,7 +586,7 @@
 		      :initial-element 0.0)))
   ;; For each candidate unit, create the vectors holding the correlations,
   ;; incoming weights, and other stats.
-  (dotimes (i *ncandidates*)
+  (dotimes1 (i *ncandidates*)
     (setf (svref *cand-cor* i)
 	  (make-array *noutputs*
 		      :element-type 'short-float
@@ -617,47 +624,39 @@
   ;; Set up the *ALL-CONNECTIONS* vector.
   (setq *all-connections*
 	(make-array *max-units* :element-type 'fixnum))
-  (dotimes (i *max-units*)
-    (declare (fixnum i))
+  (dotimes1 (i *max-units*)
     (setf (ivref *all-connections* i) i))
   ;; Initialize the active unit data structures.
-  (dotimes (i *max-units*)
-    (declare (fixnum i))
+  (dotimes1 (i *max-units*)
     (setf (fvref *extra-values* i) 0.0)
     (setf (ivref *nconnections* i) 0)
     (setf (svref *connections* i) nil)
     (setf (svref *weights* i) nil)
     (setf (svref *output-weights-record* i) nil))
   ;; Initialize the per-output data structures.
-  (dotimes (i *noutputs*)
-    (declare (fixnum i))
+  (dotimes1 (i *noutputs*)
     (setf (fvref *outputs* i) 0.0)
     (setf (fvref *extra-errors* i) 0.0)
     (let ((ow (svref *output-weights* i))
 	  (od (svref *output-deltas* i))
 	  (os (svref *output-slopes* i))
 	  (op (svref *output-prev-slopes* i)))
-      (dotimes (j *max-units*)
-	(declare (fixnum j))
+      (dotimes1 (j *max-units*)
 	(setf (fvref ow j) 0.0)
 	(setf (fvref od j) 0.0)
 	(setf (fvref os j) 0.0)
 	(setf (fvref op j) 0.0))
       ;; Set up initial random weights for the input-to-output connections.
-      (dotimes (j (1+ *ninputs*))
-	(declare (fixnum j))
+      (dotimes1 (j (1+ *ninputs*))
 	(setf (fvref ow j) (random-weight)))))
   ;; Initialize the caches if they are in use.
   (when *use-cache*
-    (dotimes (j *max-cases*)
-      (declare (fixnum j))
+    (dotimes1 (j *max-cases*)
       (let ((v (svref *values-cache* j))
 	    (e (svref *errors-cache* j)))
-	(dotimes (i *max-units*)
-	  (declare (fixnum i))
+	(dotimes1 (i *max-units*)
 	  (setf (fvref v i) 0.0))
-	(dotimes (i *noutputs*)
-	  (declare (fixnum i))
+	(dotimes1 (i *noutputs*)
 	  (setf (fvref e i) 0.0)))))	
   ;; Candidate units get initialized in a separate routine.
   (init-candidates)
@@ -684,8 +683,7 @@
 	*errors-cache* (make-array *max-cases* :initial-element nil))
   ;; Only create the caches if *USE-CACHE* is on -- may not always have room.
   (when *use-cache*
-    (dotimes (i *max-cases*)
-      (declare (fixnum i))
+    (dotimes1 (i *max-cases*)
       (setf (svref *errors-cache* i)
 	    (make-array *noutputs*
 			:element-type 'short-float
@@ -718,7 +716,7 @@
      ;; Asymmetric sigmoid in range 0.0 to 1.0.
      (cond ((< sum -15.0) 0.0)
 	   ((> sum 15.0) 1.0)
-	   (t (/sf (+sf 1.0 (exp (-sf sum)))))))
+	   (t (/sf 1.0 (+sf 1.0 (exp (-sf sum)))))))
     (:gaussian
      ;; Gaussian activation function in range 0.0 to 1.0.
      (let ((x (*sf -0.5 sum sum)))
@@ -750,7 +748,7 @@
   (ecase *output-type*
     (:sigmoid (cond ((< sum -15.0) -0.5)
 		    ((> sum 15.0) +0.5)
-		    (t (-sf (/sf (+sf 1.0 (exp (-sf sum)))) 0.5))))
+		    (t (-sf (/sf 1.0 (+sf 1.0 (exp (-sf sum)))) 0.5))))
     (:linear sum)))
 
 (defun output-prime (output)
@@ -811,7 +809,8 @@
     (setf (fvref deltas i) next-step)
     (setf (fvref weights i) (+sf w next-step))
     (setf (fvref prevs i) s)
-    (setf (fvref slopes i) 0.0)))
+    (setf (fvref slopes i) 0.0)
+    nil))
 
 
 ;;;; Machinery for training output weights.
@@ -821,20 +820,18 @@
   in the values vector."
   (declare (simple-vector input))
   (setf (fvref *values* 0) 1.0)
-  (dotimes (i *ninputs*)
-    (declare (fixnum i))
+  (dotimes1 (i *ninputs*)
     (setf (fvref *values* (1+ i))
 	  (the short-float (svref input i)))))
 
 (defun output-forward-pass ()
   "Assume the *VALUES* vector has been set up.  Just compute the network's
   outputs."
-  (dotimes (j *noutputs*)
-    (declare (fixnum j))
+  (dotimes1 (j *noutputs*)
     (let ((ow (svref *output-weights* j))
 	  (sum 0.0))
       (declare (short-float sum))
-      (dotimes (i *nunits*)
+      (dotimes1 (i *nunits*)
 	(incf-sf sum (*sf (fvref *values* i) (fvref ow i))))
       (setf (fvref *outputs* j)
 	    (output-function sum)))))
@@ -847,11 +844,11 @@
 	 (w (svref *weights* j))
 	 (sum 0.0))
     (declare (short-float sum))
-    (dotimes (i (ivref *nconnections* j))
-      (declare (fixnum i))
+    (dotimes1 (i (ivref *nconnections* j))
       (incf-sf sum (*sf (fvref *values* (ivref c i))
 			(fvref w i))))
-    (setf (fvref *values* j) (activation sum))))
+    (setf (fvref *values* j) (activation sum))
+    nil))
 
 (defun full-forward-pass (input)
   "Set up the inputs from the INPUT vector, then propagate activation values
@@ -878,8 +875,7 @@
   OUTPUT-SLOPES-P is T, then use errors to compute slopes for output
   weights.  If STATS-P is T, accumulate error statistics."
   (declare (simple-vector goal))
-  (dotimes (j *noutputs*)
-    (declare (fixnum j))
+  (dotimes1 (j *noutputs*)
     (let* ((out (fvref *outputs* j))
 	   (dif (-sf out (svref goal j)))
 	   (err-prime (*sf dif (output-prime out)))
@@ -898,8 +894,7 @@
 	     (incf-sf *sum-error* err-prime)
 	     (incf-sf *sum-sq-error* (*sf err-prime err-prime))))
       (when output-slopes-p
-	(dotimes (i *nunits*)
-	  (declare (fixnum i))
+	(dotimes1 (i *nunits*)
 	  (incf-sf (fvref os i) (*sf err-prime (fvref *values* i))))))))
 
 ;;; Note: Scaling *OUTPUT-EPSILON* by the number of cases seems to keep the
@@ -911,14 +906,12 @@
   "Update the output weights, using the pre-computed slopes, prev-slopes,
   and delta values.  Uses the quickprop update function."
   (let ((eps (/ *output-epsilon* *ncases*)))
-    (dotimes (j *noutputs*)
-      (declare (fixnum j))
+    (dotimes1 (j *noutputs*)
       (let ((ow (svref *output-weights* j))
 	    (od (svref *output-deltas* j))
 	    (os (svref *output-slopes* j))
 	    (op (svref *output-prev-slopes* j)))
-	(dotimes (i *nunits*)
-	  (declare (fixnum i))
+	(dotimes1 (i *nunits*)
 	  (quickprop-update i ow od os op eps *output-decay*
 			    *output-mu* *output-shrink-factor*))))))
 
@@ -959,13 +952,11 @@
   "Store the output weights developed after each output-training phase
   in the *ouput-weights-record* vector."
   (let ((record (make-array *noutputs* :initial-element nil)))
-    (dotimes (o *noutputs*)
-      (declare (fixnum o))
+    (dotimes1 (o *noutputs*)
       (let ((original (svref *output-weights* o))
 	    (copy (make-array *nunits* :element-type 'short-float
 			      :initial-element 0.0)))
-	(dotimes (u *nunits*)
-	  (declare (fixnum u))
+	(dotimes1 (u *nunits*)
 	  (setf (fvref copy u) (fvref original u)))
 	(setf (svref record o) copy)))
     (setf (svref *output-weights-record* (1- *nunits*)) record)))
@@ -983,10 +974,9 @@
 	(first-time t))
     (declare (fixnum quit-epoch)
 	     (short-float last-error))
-    (dotimes (i max-epochs (progn
+    (dotimes1 (i max-epochs (progn
 			     (record-output-weights)
 			     :timeout))
-      (declare (fixnum i))
       ;; Maybe run a test epoch to see how we're doing.
       (when (and *test*
 		 (not (= 0 *test-interval*))
@@ -1014,8 +1004,7 @@
 (defun init-candidates ()
   "Give new random weights to all of the candidate units.  Zero the other
   candidate-unit statistics."
-  (dotimes (i *ncandidates*)
-    (declare (fixnum i))
+  (dotimes1 (i *ncandidates*)
     (setf (fvref *cand-sum-values* i) 0.0)
     (let ((cw (svref *cand-weights* i))
 	  (cd (svref *cand-deltas* i))
@@ -1023,14 +1012,12 @@
 	  (cp (svref *cand-prev-slopes* i))
 	  (cc (svref *cand-cor* i))
 	  (cpc (svref *cand-prev-cor* i)))
-      (dotimes (j *nunits*)
-	(declare (fixnum j))
+      (dotimes1 (j *nunits*)
 	(setf (fvref cw j) (random-weight))
 	(setf (fvref cd j) 0.0)
 	(setf (fvref cs j) 0.0)
 	(setf (fvref cp j) 0.0))
-      (dotimes (o *noutputs*)
-	(declare (fixnum o))
+      (dotimes1 (o *noutputs*)
 	(setf (fvref cc o) 0.0)
 	(setf (fvref cpc o) 0.0)))))
 
@@ -1045,7 +1032,7 @@
   ;; Copy the weight vector for the new unit.
   (let ((w (make-array *nunits* :element-type 'short-float))
 	(cw (svref *cand-weights* *best-candidate*)))
-    (dotimes (i *nunits*)
+    (dotimes1 (i *nunits*)
       (setf (fvref w i) (fvref cw i)))
     (setf (svref *weights* *nunits*) w)
     ;; Tell user about the new unit.
@@ -1054,13 +1041,13 @@
   ;; Fix up output weights for candidate unit.
   ;; Use minus the correlation times the *weight-multiplier* as an
   ;; initial guess.  At least the sign should be right.
-  (dotimes (o *noutputs*)
+  (dotimes1 (o *noutputs*)
     (setf (fvref (svref *output-weights* o) *nunits*)
 	  (*sf (-sf (fvref (svref *cand-prev-cor* *best-candidate*) o))
 	       *weight-multiplier*)))
   ;; If using cache, run an epoch to compute this unit's values.
   (when *use-cache*
-    (dotimes (i *max-cases*)
+    (dotimes1 (i *max-cases*)
       (setq *values* (svref *values-cache* i))
       (compute-unit-value *nunits*)))
   ;; Reinitialize candidate units with random weights.
@@ -1096,23 +1083,20 @@
   unit and begin to compute the correlation between that unit's value and
   the error at each output.  We have already done a forward-prop and
   computed the error values for active units."
-  (dotimes (u *ncandidates*)
-    (declare (fixnum u))
+  (dotimes1 (u *ncandidates*)
     (let ((sum 0.0)
 	  (v 0.0)
 	  (cw (svref *cand-weights* u))
 	  (cc (svref *cand-cor* u)))
       (declare (short-float sum v))
       ;; Determine activation value of each candidate unit.
-      (dotimes (i *nunits*)
-	(declare (fixnum i))
+      (dotimes1 (i *nunits*)
 	(incf-sf sum (*sf (fvref cw i)
 			  (fvref *values* i))))
       (setq v (activation sum))
       (incf-sf (fvref *cand-sum-values* u) v)
       ;; Accumulate value of each unit times error at each output.
-      (dotimes (o *noutputs*)
-	(declare (fixnum o))
+      (dotimes1 (o *noutputs*)
 	(incf-sf (fvref cc o) (*sf v (fvref *errors* o)))))))
 
 ;;; Note: When we were computing true correlations between candidates and
@@ -1133,16 +1117,14 @@
   correlation score."
   (setq *best-candidate* 0)
   (setq *best-candidate-score* 0.0)
-  (dotimes (u *ncandidates*)
-    (declare (fixnum u))
+  (dotimes1 (u *ncandidates*)
     (let* ((cc (svref *cand-cor* u))
 	   (cpc (svref *cand-prev-cor* u))
 	   (offset (*sf (fvref *cand-sum-values* u) *avg-error*))
 	   (cor 0.0)
 	   (score 0.0))
       (declare (short-float offset cor score))
-      (dotimes (o *noutputs*)
-	(declare (fixnum o))
+      (dotimes1 (o *noutputs*)
 	(setq cor (/sf (-sf (fvref cc o) offset) *sum-sq-error*))
 	(setf (fvref cpc o) cor)
 	(setf (fvref cc o) 0.0)
@@ -1158,8 +1140,7 @@
   "Given the correlation values for each candidate-output pair, compute
   the derivative of the candidate's score with respect to each incoming
   weight."
-  (dotimes (u *ncandidates*)
-    (declare (fixnum u))
+  (dotimes1 (u *ncandidates*)
     (let* ((sum 0.0)
 	   (value 0.0)
 	   (actprime 0.0)
@@ -1170,16 +1151,14 @@
 	   (cpc (svref *cand-prev-cor* u)))
       (declare (short-float sum value actprime direction))
       ;; Forward pass through each candidate unit to compute activation-prime.
-      (dotimes (i *nunits*)
-	(declare (fixnum i))
+      (dotimes1 (i *nunits*)
 	(incf-sf sum (*sf (fvref cw i)
 			  (fvref *values* i))))
       (setq value (activation sum))
       (setq actprime (activation-prime value sum))
       ;; Now compute which way we want to adjust each unit's incoming
       ;; activation.
-      (dotimes (o *noutputs*)
-	(declare (fixnum o))
+      (dotimes1 (o *noutputs*)
 	(let ((error (fvref *errors* o)))
 	  (decf-sf direction
 		   (*sf (if (minusp (fvref cpc o)) -1.0 1.0)
@@ -1190,8 +1169,7 @@
 	  (incf-sf (fvref cc o) (*sf error value))))
       ;; Given the direction we want to push the candidate, compute
       ;; which way we want to tweak each incoming weight.
-      (dotimes (i *nunits*)
-	(declare (fixnum i))
+      (dotimes1 (i *nunits*)
 	(incf-sf (fvref cs i)
 		 (*sf direction (fvref *values* i)))))))
 
@@ -1205,14 +1183,12 @@
   "Update the input weights, using the pre-computed slopes, prev-slopes,
   and delta values.  Uses the quickprop update function."
   (let ((eps (/ *input-epsilon* (* *ncases* *nunits*))))
-    (dotimes (u *ncandidates*)
-      (declare (fixnum u))
+    (dotimes1 (u *ncandidates*)
       (let ((cw (svref *cand-weights* u))
 	    (cd (svref *cand-deltas* u))
 	    (cs (svref *cand-slopes* u))
 	    (cp (svref *cand-prev-slopes* u)))
-	(dotimes (i *nunits*)
-	  (declare (fixnum i))
+	(dotimes1 (i *nunits*)
 	  (quickprop-update i cw cd cs cp eps *input-decay*
 			    *input-mu* *input-shrink-factor*))))))
 
@@ -1278,8 +1254,7 @@
 	(first-time t))
     (declare (fixnum quit)
 	     (short-float last-score))
-    (dotimes (i max-epochs :timeout)
-      (declare (fixnum i))
+    (dotimes1 (i max-epochs :timeout)
       (train-inputs-epoch)
       (cond ((zerop *input-patience*))
 	    (first-time
@@ -1318,11 +1293,10 @@
   (unless restart (init-net))
   (list-parameters)
   (when *use-cache*
-    (dotimes (i *max-cases*)
+    (dotimes1 (i *max-cases*)
       (setq *values* (svref *values-cache* i))
       (set-up-inputs (svref *training-inputs* i))))
-  (dotimes (r rounds  :lose)
-    (declare (fixnum r))
+  (dotimes1 (r rounds  :lose)
     (case (train-outputs outlimit)
       (:win
        (list-parameters)
@@ -1357,7 +1331,7 @@
 	(*sum-error* 0.0)
 	(*sum-sq-error* 0.0))
     ;; Run all training patterns and count errors.
-    (dotimes (i (length *training-inputs*))
+    (dotimes1 (i (length *training-inputs*))
       (setq *goal* (svref *training-outputs* i))
       (full-forward-pass (svref *training-inputs* i))
       (compute-errors *goal* nil t))
@@ -1370,7 +1344,7 @@
     (setq *sum-sq-error* 0.0)
     ;; Now run all test patterns and report the results.
     (when *test-inputs*
-      (dotimes (i (length *test-inputs*))
+      (dotimes1 (i (length *test-inputs*))
 	(setq *goal* (svref *test-outputs* i))
 	(full-forward-pass (svref *test-inputs* i))
 	(compute-errors *goal* nil t)))
@@ -1385,6 +1359,7 @@
   (setq *nunits* nunits)
   (do ((i (1+ *ninputs*) (1+ i)))
       ((= i *nunits*))
+    (declare (fixnum i))
     (setf (ivref *nconnections* i) i)
     (setf (svref *connections* i) *all-connections*)))
 
@@ -1402,7 +1377,7 @@
   (setq *noutputs* 1)
   (let ((ti (make-array (* 2 n)))
 	(to (make-array (* 2 n))))
-    (dotimes (i n)
+    (dotimes1 (i n)
       (setf (svref ti (* i 2))
 	    (vector (+ i 1.0)))
       (setf (svref to (* i 2))
@@ -1427,11 +1402,12 @@
 (defun build-two-spirals (&optional (n 97))
   "Build N point-pairs of the two-spiral problem, with standard default
   of 97 pairs."
+  (declare (fixnum n))
   (setq *ninputs* 2)
   (setq *noutputs* 1)
   (let ((ti (make-array (* 2 n)))
 	(to (make-array (* 2 n))))
-    (dotimes (i n)
+    (dotimes1 (i n)
       (let* ((angle (/ (* i (coerce pi 'short-float)) 16.0))
 	     (radius (/ (* 6.5 (- 104.0 i)) 104))
 	     (x (* radius (sin angle)))
@@ -1463,4 +1439,10 @@
 ;;; IMu 2.00, IEps 100.00, IDcy 0.00000, IPat 8, IChange 0.030
 ;;; Utype :SIGMOID, Otype :SIGMOID, RawErr NIL, Pool 8
 
+(defun time-two-spirals ()
+  (setq *random-state* (make-random-state))
+  (build-two-spirals)
+  (time (train 100 100 25)))
+	
 ;;; The End.
+
