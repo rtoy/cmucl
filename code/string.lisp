@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.11 2001/06/17 19:12:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/string.lisp,v 1.12 2003/04/11 15:41:59 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -361,8 +361,8 @@
 (defun make-string (count &key element-type ((:initial-element fill-char)))
   "Given a character count and an optional fill character, makes and returns
    a new string Count long filled with the fill character."
-  (declare (fixnum count)
-	   (ignore element-type))
+  (declare (type fixnum count))
+  (assert (subtypep element-type 'character))
   (if fill-char
       (do ((i 0 (1+ i))
 	   (string (make-string count)))
