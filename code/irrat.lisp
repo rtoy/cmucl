@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.24 1997/11/01 22:58:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.25 1997/12/15 06:46:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -376,15 +376,7 @@
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float)) 'single-float)))
     (((foreach single-float double-float))
-     ;; NOTE there is a problem with (at least x86 NPX) of what result
-     ;; should be returned for (sqrt -0.0). The x86 hardware FSQRT
-     ;; instruction returns -0d0. The result is that Python will perhaps
-     ;; note the following test in generic sqrt, non-negatively constrained
-     ;; float types will be passed to FSQRT (or libm on other boxes).
-     ;; So, in the interest of consistency of compiled and interpreted
-     ;; codes, the following test is disabled for now. Maybe the float-sign
-     ;; test could be moved to the optimization codes.
-     (if (< (#+nil float-sign #-nil identity number)
+     (if (< (float-sign number)
 	    (coerce 0 '(dispatch-type number)))
 	 (complex-sqrt number)
 	 (coerce (%sqrt (coerce number 'double-float))
