@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.12 1993/02/23 15:51:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.13 1993/03/01 20:04:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,10 +43,8 @@
 (defvar lisp::*initial-layouts*)
 (cold-load-init
   (setq *forward-referenced-layouts* (make-hash-table :test #'equal))
-#-ns-boot
   (dolist (x lisp::*initial-layouts*)
     (setf (gethash (car x) *forward-referenced-layouts*) (cdr x)))
-#-ns-boot
   (makunbound 'lisp::*initial-layouts*))
 
 
@@ -218,28 +216,6 @@
 
 
 ;;;; Class namespace:
-  
-#+ns-boot
-(defun find-structure-class (name)
-  (let ((info (info type structure-info name)))
-    (when info
-      (let* ((res (setf (info type class name)
-			(make-structure-class :name name)))
-	     (includes (c::dd-includes info))
-	     (super (find-class
-		     (if includes
-			 (first includes)
-			 'structure-object)))
-	     (super-layout (class-layout super))
-	     (layout
-	      (find-layout name (c::dd-length info)
-			   (concatenate 'vector
-					(layout-inherits super-layout)
-					(vector super-layout))
-			   (1+ (layout-inheritance-depth super-layout)))))
-	(register-layout layout nil nil)
-	res))))
-
 
 ;;; FIND-CLASS  --  Public
 ;;;
@@ -247,11 +223,7 @@
   "Return the class with the specified Name.  If ERRORP is false, then NIL is
    returned when no such class exists."
   (declare (type symbol name) (ignore environment))
-  (let ((res #-ns-boot
-	     (info type class name)
-	     #+ns-boot
-	     (or (info type class name)
-		 (find-structure-class name))))
+  (let ((res (info type class name)))
     (if (or res (not errorp))
 	res
 	(error "Class not yet defined:~%  ~S" name))))
@@ -260,7 +232,7 @@
   (declare (type class new-value))
   (ecase (info type kind name)
     ((nil))
-    (#+ns-boot (:instance :structure) #-ns-boot :instance
+    (:instance
      (let ((old (class-of (info type class name)))
 	   (new (class-of new-value)))
        (unless (eq old new)
@@ -427,15 +399,13 @@
 	  (symbol :codes (#.vm:symbol-header-type))
 	  
 	  (instance :state :read-only)
-	  #+ns-boot
-	  (structure-object :state :read-only :inherits (instance))
-
-	  (system-area-pointer)
-	  (weak-pointer)
-	  (scavenger-hook)
-	  (code-component)
-	  (lra)
-	  (fdefn)
+	  
+	  (system-area-pointer :codes (#.vm:sap-type))
+	  (weak-pointer :codes (#.vm:weak-pointer-type))
+	  (scavenger-hook #+gengc :codes #+gengc (#.vm:scavenger-hook-type))
+	  (code-component :codes (#.vm:code-header-type))
+	  (lra :codes (#.vm:return-pc-header-type))
+	  (fdefn :codes (#.vm:fdefn-type))
 	  (random-class) ; Used for unknown type codes.
 	  
 	  (function
@@ -446,7 +416,7 @@
 	   :state :read-only)
 	  (generic-function :inherits (function)  :state :read-only
 			    :codes (#.vm:funcallable-instance-header-type))
-
+	  
 	  (array :translation array
 		 :hierarchical nil  :codes (#.vm:complex-array-type))
 	  (simple-array :translation simple-array  :inherits (array)
@@ -600,18 +570,10 @@
 ;;;
 ;;; ### special-case funcallable-instance
 ;;;
-#-ns-boot
 (declaim (inline layout-of))
 (defun layout-of (x)
-  (cond #-ns-boot
-	((%instancep x) (%instance-layout x))
-	#+ns-boot
-	((structurep x)
-	 (class-layout (find-class (structure-ref x 0))))
-	#-ns-boot
+  (cond ((%instancep x) (%instance-layout x))
 	((null x) '#.(class-layout (find-class 'null)))
-	#+ns-boot
-	((null x) (class-layout (find-class 'null)))
 	(t (svref built-in-class-codes (get-type x)))))
 
 
