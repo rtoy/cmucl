@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.22 1990/10/24 01:28:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.23 1990/10/25 20:48:32 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -302,11 +302,11 @@
 	    "FASL FILE output from ~A.~@
 	    Compiled ~A on ~A~@
 	    Compiler ~A, Lisp ~A~@
-	    Targeted for ~A, FASL code format ~D~%"
+	    Targeted for ~A, FASL version ~D~%"
 	    where
 	    (ext:format-universal-time nil (get-universal-time))
 	    (machine-instance) compiler-version
-	    (lisp-implementation-version) vm-version target-fasl-code-format)
+	    (lisp-implementation-version) vm-version target-fasl-file-version)
     ;;
     ;; Terminate header.
     (dump-byte 255 res)
