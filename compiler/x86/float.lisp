@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.33 1999/12/05 16:23:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.34 2000/02/03 15:35:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2494,7 +2494,7 @@
      (inst fldz)
      (inst jmp-short DONE)
      NOINFNAN
-     (fp-pop)
+     (inst fstp fr1)
      (inst fldl2e)
      (inst fmul fr1)
      ;; Now fr0=x log2(e)
