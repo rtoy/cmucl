@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.35 2000/04/22 17:50:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.36 2000/04/23 16:59:53 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1214,7 +1214,6 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
-  #+not-yet (:guard (not (backend-featurep :ppro)))
   (:note "inline float comparison")
   (:ignore temp)
   (:generator 3
@@ -1222,21 +1221,24 @@
      (cond
       ;; x is in ST0; y is in any reg.
       ((zerop (tn-offset x))
-       (inst fucom y))
+       (inst fucom y)
+       (inst fnstsw))			; status word to ax
       ;; y is in ST0; x is in another reg. Can swap args saving a reg. swap.
       ((zerop (tn-offset y))
-       (inst fucom x))
+       (inst fucom x)
+       (inst fnstsw))			; status word to ax
       ;; x and y are the same register, not ST0
       ((location= x y)
        (inst fxch x)
        (inst fucom fr0-tn)
+       (inst fnstsw)			; status word to ax
        (inst fxch x))
       ;; x and y are different registers, neither ST0.
       (t
        (inst fxch x)
        (inst fucom y)
+       (inst fnstsw)			; status word to ax
        (inst fxch x)))
-     (inst fnstsw)			; status word to ax
      (inst and ah-tn #x45)		; C3 C2 C0
      (inst cmp ah-tn #x40)
      (inst jmp (if not-p :ne :e) target)))
@@ -1441,8 +1443,8 @@
 		     ((location= x y)
 		      (inst fxch x)
 		      (inst fcomd fr0-tn)
-		      (inst fxch x)
 		      (inst fnstsw)		; status word to ax
+		      (inst fxch x)
 		      (inst and ah-tn #x45)	; C3 C2 C0
 		      ,@(unless (or (zerop test) (zerop ntest))
 			  `((inst cmp ah-tn ,test))))
@@ -1451,14 +1453,14 @@
 		      ,@(cond ((zerop ntest)
 			       `((inst fxch y)
 				 (inst fcomd x)
-				 (inst fxch y)
 				 (inst fnstsw)		; status word to ax
+				 (inst fxch y)
 				 (inst and ah-tn #x45)))	; C3 C2 C0
 			      (t
 			       `((inst fxch x)
 				 (inst fcomd y)
-				 (inst fxch x)
 				 (inst fnstsw)		; status word to ax
+				 (inst fxch x)
 				 (inst and ah-tn #x45)	; C3 C2 C0
 				 ,@(unless (zerop test)
 				     `((inst cmp ah-tn ,test))))))))
@@ -1484,13 +1486,14 @@
      (cond
       ;; x is in ST0
       ((zerop (tn-offset x))
-       (inst ftst))
+       (inst ftst)
+       (inst fnstsw))			; status word to ax
       ;; x not ST0
       (t
        (inst fxch x)
        (inst ftst)
+       (inst fnstsw)			; status word to ax
        (inst fxch x)))
-     (inst fnstsw)			; status word to ax
      (inst and ah-tn #x45)		; C3 C2 C0
      (unless (zerop code)
        (inst cmp ah-tn code))
@@ -1532,48 +1535,16 @@
 
 
 
-;;;; Pentium Pro floating point comparisons, using FCOMI and FUCOMI which
-;;;; directly write to the condition codes.
+;;;; Enhanced Pentium Pro floating point comparisons.
 
-#+not-yet
-(define-vop (ppro-=/float)
-  (:args (x) (y))
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:guard (backend-featurep :ppro))
-  (:note "inline float comparison")
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-      ;; x is in ST0; y is in any reg.
-      ((zerop (tn-offset x))
-       (inst fucomi y))
-      ;; y is in ST0; x is in another reg; can swap argument order.
-      ((zerop (tn-offset y))
-       (inst fucomi x))
-      ;; x and y are the same register, not ST0.
-      ((location= x y)
-       (inst fxch x)
-       (inst fucomi fr0-tn)
-       (inst fxch x))
-      ;; x and y are different registers, neither ST0.
-      (t
-       (inst fxch x)
-       (inst fucomi y)
-       (inst fxch x)))
-    (inst jmp (if not-p :ne :e) target)))
-
-#+not-yet
-(macrolet ((frob (type sc)
-	     `(define-vop (,(symbolicate "PPRO-=/" type) ppro-=/float)
-	        (:translate =)
-		(:args (x :scs (,sc))
-		       (y :scs (,sc)))
-	        (:arg-types ,type ,type))))
-  (frob single-float single-reg)
-  (frob double-float double-reg)
-  #+long-float (frob long-float long-reg))
+;;; These comparisions use the faster sequences bases upon FCOMI and FUCOMI,
+;;; which write to the condition codes.  However, correct IEEE handling of
+;;; unordered arguments requires the comparision of multiple flags which is
+;;; only possible for the comparison (> ST0 operand) in which case the :b and
+;;; :be tests can check that both ZF and CF are zero, or either is one
+;;; respectively. For the opposite comparision (< ST0 operand), the arguments
+;;; may be swapped and the > comparision used, but for equality the slower
+;;; FNSTSW variation must be used.
 
 (define-vop (ppro-</float)
   (:args (x) (y))
