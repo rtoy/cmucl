@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.39 1991/07/22 19:22:34 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.40 1991/08/01 10:44:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.39 1991/07/22 19:22:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.40 1991/08/01 10:44:03 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -35,7 +35,9 @@
 	  32bit-logical-or 32bit-logical-nor
 	  32bit-logical-xor 32bit-logical-eqv
 	  32bit-logical-andc1 32bit-logical-andc2
-	  32bit-logical-orc1 32bit-logical-orc2))
+	  32bit-logical-orc1 32bit-logical-orc2
+
+	  mutator-self))
 
 (in-package "C")
 
@@ -263,6 +265,12 @@
 (defknown code-instructions (t) system-area-pointer (flushable movable))
 (defknown code-header-ref (t index) t (flushable))
 (defknown code-header-set (t index t) t ())
+
+
+
+;;;; Mutator accessors.
+
+(defknown mutator-self () system-area-pointer (flushable movable))
 
 
 
