@@ -17,14 +17,14 @@
 (with-compiler-log-file
     ("clx:compile-clx.log"
      :optimize
-     '(optimize (debug-info #-small 2 #+small 1) 
+     '(optimize (debug-info #-small 2 #+small .5) 
 		(speed 2) (inhibit-warnings 2)
 		(safety #-small 1 #+small 0))
      :optimize-interface
-     '(optimize-interface (debug-info 1))
+     '(optimize-interface (debug-info .5))
      :context-declarations
      '(((:and :external :global)
-	(declare (optimize-interface (safety 2))))
+	(declare (optimize-interface (safety 2) (debug-info 1))))
        ((:and :external :macro)
 	(declare (optimize (safety 2))))))
   (let ((c::*suppress-values-declaration* t))
