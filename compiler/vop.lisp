@@ -861,9 +861,10 @@
   ;;   :Save
   ;;   :Save-Once
   ;;        A TN used for saving a :Normal TN across function calls.  The
-  ;;        lifetime information slots are copied from the saved TN.  Save-Once
-  ;;        is like :Save, except that it is only save once at the single
-  ;;        writer of the original TN.
+  ;;        lifetime information slots are unitialized: get the original TN our
+  ;;        of the SAVE-TN slot and use it for conflicts. Save-Once is like
+  ;;        :Save, except that it is only save once at the single writer of the
+  ;;        original TN.
   ;;
   ;;   :Load
   ;;        A load-TN used to compute an argument or result that is restricted
