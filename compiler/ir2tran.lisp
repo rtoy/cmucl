@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.5 1990/03/10 16:58:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.6 1990/04/16 10:38:52 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -17,207 +17,16 @@
 (in-package 'c)
 
 
-;;;; Random utilities:
-
-
-;;; Block-Label  --  Interface
-;;;
-;;;    Return the label marking the start of Block, assigning one if necessary.
-;;;
-(defun block-label (block)
-  (declare (type cblock block))
-  (let ((2block (block-info block)))
-    (or (ir2-block-%label 2block)
-	(setf (ir2-block-%label 2block) (gen-label)))))
-
-
-;;; Drop-Thru-P  --  Interface
-;;;
-;;;    Return true if Block is emitted immediately after the block ended by
-;;; Node.
-;;;
-(defun drop-thru-p (node block)
-  (declare (type node node) (type cblock block))
-  (let ((next-block (ir2-block-next (block-info (node-block node)))))
-    (assert (eq node (block-last (node-block node))))
-    (eq next-block (block-info block))))
-
-
-;;; Flush-Tail-Transfer  --  Interface
-;;;
-;;;    Annotate Node and Block to indicate that the Node is being
-;;; compiled in a way that exploits its tail-recursive position: Block ends
-;;; with a return or TR call, and will never transfer to the block containing
-;;; the return node.
-;;;
-;;;    For now, we just flush the link between the IR1 blocks, but we might
-;;; want to do something else someday.  If the return is is the same block as
-;;; Node, then we don't do any anything.  This works, since this can only
-;;; happen when there node is the sole use of the return continuation.  Since
-;;; Node is TR, LTN will annotate Cont as :Unused, and no return code will be
-;;; emitted.
-;;;
-(defun flush-tail-transfer (node block)
-  (declare (type node node) (type ir2-block block) (ignore block))
-  (let* ((cont (node-cont node))
-	 (ret (continuation-dest cont))
-	 (b1 (node-block node))
-	 (b2 (node-block ret)))
-    (assert (return-p ret))
-    (if (eq b1 b2)
-	(assert (eq (ir2-continuation-kind (continuation-info cont)) :unused))
-	(unlink-blocks b1 b2)))
-  (undefined-value))
-
-
-;;; Insert-VOP-Sequence  --  Interface
-;;;
-;;;    Link a list of VOPs from First to Last into Block, Before the specified
-;;; VOP.  If Before is NIL, insert at the end.
-;;;
-(defun insert-vop-sequence (first last block before)
-  (declare (type vop first last) (type ir2-block block)
-	   (type (or vop null) before))
-  (if before
-      (let ((prev (vop-prev before)))
-	(setf (vop-prev first) prev)
-	(if prev
-	    (setf (vop-next prev) first)
-	    (setf (ir2-block-start-vop block) first))
-	(setf (vop-next last) before)
-	(setf (vop-prev before) last))
-      (let ((current (ir2-block-last-vop block)))
-	(setf (vop-prev first) current)
-	(setf (ir2-block-last-vop block) last)
-	(if current
-	    (setf (vop-next current) first)
-	    (setf (ir2-block-start-vop block) first))))
-  (undefined-value))
-
-
 ;;;; Moves and type checks:
-
-;;; Emit-Move-Template  --  Internal
-;;;
-;;;    Emit a move-like template determined at run-time, with X as the argument
-;;; and Y as the result.  If Template is null, then just use the Move VOP.
-;;; Useful for move, coerce and type-check templates.  If supplied, then insert
-;;; before VOP, otherwise insert at then end of the block.
-;;;
-(defun emit-move-template (node block template x y &optional before)
-  (declare (type node node) (type ir2-block block)
-	   (type (or template null) template) (type tn x y))
-  (let ((template (or template (template-or-lose 'move)))
-	(arg (reference-tn x nil))
-	(result (reference-tn y t)))
-    (multiple-value-bind
-	(first last)
-	(funcall (template-emit-function template) node block template arg
-		 result)
-      (insert-vop-sequence first last block before)))
-  (undefined-value))
-
 
 ;;; Emit-Move  --  Internal
 ;;;
-;;;    Move X to Y, emitting the appropriate move/coerce VOP.  If the primitive
-;;; types don't overlap, there there must be a type error.  In this case, we
-;;; coerce the source object to T, then emit ILLEGAL-MOVE to make properly
-;;; start the destination's lifetime.
+;;;    Move X to Y unless they are EQ.
 ;;;
 (defun emit-move (node block x y)
   (declare (type node node) (type ir2-block block) (type tn x y))
-  (let ((x-type (tn-primitive-type x))
-	(y-type (tn-primitive-type y)))
-    (cond ((eq x-type y-type)
-	   (emit-move-template node block (primitive-type-move x-type) x y))
-	  ((eq y-type *any-primitive-type*)
-	   (emit-move-template node block (primitive-type-coerce-to-t x-type)
-			       x y))
-	  ((eq x-type *any-primitive-type*)
-	   (emit-move-template node block (primitive-type-coerce-from-t y-type)
-			       x y))
-	  (t
-	   (let* ((c-to-t (primitive-type-coerce-to-t x-type))
-		  (src (if c-to-t
-			   (make-normal-tn *any-primitive-type*)
-			   x))
-		  (y-type (emit-constant
-			   (type-specifier
-			    (primitive-type-type
-			     (tn-primitive-type y))))))
-	     (when c-to-t
-	       (emit-move-template node block c-to-t x src))
-	     (vop illegal-move node block src y-type y)))))
-
-  (undefined-value))
-
-
-;;; Maybe-Coerce  --  Internal
-;;;
-;;;    If TN is of the specified type, or doesn't require a coercion to be of
-;;; that type, then return TN, otherwise convert the value into a temporary and
-;;; return the temporary.
-;;;
-(defun maybe-coerce (node block tn ptype)
-  (declare (type node node) (type ir2-block block)
-	   (type tn tn) (type primitive-type ptype))
-  (let ((tn-ptype (tn-primitive-type tn)))
-    (if (or (eq tn-ptype ptype)
-	    (not (or (primitive-type-coerce-to-t tn-ptype)
-		     (primitive-type-coerce-from-t ptype))))
-	tn
-	(let ((temp (make-normal-tn ptype)))
-	  (emit-move node block tn temp)
-	  temp))))
-
-
-;;; Get-Result-TN  --  Internal
-;;;
-;;;    Used together with Move-Result to handle any coercion necessary to
-;;; compute a value of the primitive-type PType in TN.  This is called before
-;;; computation of the result to get a TN to compute the result in.  If a
-;;; coercion is necessary, then we create a temporary and return it, otherwise
-;;; we return TN.
-;;;
-(defun get-result-tn (tn ptype)
-  (declare (type tn tn) (type primitive-type ptype))
-    (if (ok-result-tn tn ptype)
-	tn
-	(make-normal-tn ptype)))
-
-
-;;; OK-Result-TN  --  Internal
-;;;
-;;;    Return true if TN is an ok location to compute a result of the specified
-;;; primitive type in, i.e. no implicit coercion is needed.  This is true when
-;;; either the primitive types are the same or when no coercion is needed
-;;; to/from T.  If there is a manifest type error, then we always return T so
-;;; that EMIT-MOVE gets to do its thing.
-;;;
-(defun ok-result-tn (tn ptype)
-  (declare (type tn tn) (type primitive-type ptype))
-  (let ((tn-ptype (tn-primitive-type tn)))
-    (cond ((eq tn-ptype ptype))
-	  ((eq tn-ptype *any-primitive-type*)
-	   (not (primitive-type-coerce-to-t ptype)))
-	  ((eq ptype *any-primitive-type*)
-	   (not (primitive-type-coerce-from-t tn-ptype)))
-	  (t
-	   nil))))
-
-
-;;; Move-Result  --  Internal
-;;;
-;;;    Used with Get-Result-TN to handle result type coercions.  This is called
-;;; after the result is actually computed in order actually do the coercion.
-;;; If TN isn't EQ to Dest, then have Emit-Move figure out what to do.
-;;;
-(proclaim '(inline move-result))
-(defun move-result (node block tn dest)
-  (declare (type node node) (type ir2-block block) (type tn tn dest))
-  (unless (eq tn dest)
-    (emit-move node block tn dest))
+  (unless (eq x y)
+    (vop move node block x y))
   (undefined-value))
 
 
@@ -248,46 +57,7 @@
 (defun emit-type-check (node block value result type)
   (declare (type tn value result) (type node node) (type ir2-block block)
 	   (type ctype type))
-  (let ((check (type-check-template type)))
-    (assert check)
-    (let ((src (maybe-coerce node block value *any-primitive-type*))
-	  (dest (get-result-tn result *any-primitive-type*)))
-      (emit-move-template node block check src dest)
-      (move-result node block dest result)))
-  (undefined-value))
-
-
-;;; Move-From-Frame, Move-To-Frame  --  Internal
-;;;
-;;;    Move a value out of or into a different frame.  This is used during
-;;; function call/return to move an argument or return value into the
-;;; appropriate passing location.
-;;;
-;;; [### For now, we always use the same VOPs, and passing locations are always
-;;; in a descriptor representation.  To allow passing of non-descriptor
-;;; arguments or results, we will have to have type-specific argument/value
-;;; moving VOPs.]
-;;;
-(defun move-from-frame (node block src dest frame)
-  (declare (type node node) (type ir2-block block) (type tn src dest frame))
-  (let* ((dtype (tn-primitive-type dest))
-	 (temp (if (primitive-type-coerce-from-t dtype)
-		   (make-normal-tn *any-primitive-type*)
-		   dest)))
-    (vop move-argument node block src frame temp)
-    (unless (eq temp dest)
-      (emit-move node block temp dest)))
-  (undefined-value))
-;;;
-(defun move-to-frame (node block src dest frame)
-  (declare (type node node) (type ir2-block block) (type tn src dest frame))
-  (let* ((stype (tn-primitive-type src))
-	 (temp (if (primitive-type-coerce-to-t stype)
-		   (make-normal-tn *any-primitive-type*)
-		   src)))
-    (unless (eq src temp)
-      (emit-move node block src temp))
-    (vop move-value node block temp frame dest))
+  (emit-move-template node block (type-check-template type) value result)
   (undefined-value))
 
 
@@ -498,30 +268,10 @@
 	       (emit-type-check node block tn temp
 				(continuation-asserted-type cont))
 	       temp)
-	     (maybe-coerce node block tn ptype))))
+	     tn)))
       (:fixed
        (assert (= (length (ir2-continuation-locs 2cont)) 1))
        (first (ir2-continuation-locs 2cont))))))
-
-
-;;; Reference-Arguments  --  Internal
-;;;
-;;;    Build a TN-Refs list that represents access to the values of the
-;;; specified list of continuations Args.  Node and Block provide the context
-;;; for emitting any necessary coercion or type-checking code.
-;;;
-(defun reference-arguments (node block args)
-  (declare (type node node) (type ir2-block block) (list args))
-  (let ((last nil)
-	(first nil))
-    (dolist (arg args)
-      (let ((ref (reference-tn (continuation-tn node block arg)
-			       nil)))
-	(if last
-	    (setf (tn-ref-across last) ref)
-	    (setf first ref))
-	(setq last ref)))
-    (the (or tn-ref null) first)))
 
 
 ;;;; Utilities for delivering values to continuations:
@@ -538,53 +288,43 @@
 ;;; This provides a place to compute the result until we figure out what (if
 ;;; anything) to do with it.
 ;;;
-;;;    If the continuation is fixed-values, wants the same number of values as
-;;; the user wants to deliver, and requires no implicit coercion, then we just
-;;; return the IR2-Continuation-Locs.  If coercions are required, then we make
-;;; any necessary temporaries and return them.
+;;;    If the continuation is fixed-values, and wants the same number of values
+;;; as the user wants to deliver, then we just return the
+;;; IR2-Continuation-Locs.  Otherwise we make a new list padded as necessary by
+;;; discarded TNs.
 ;;;
 ;;;    If the continuation is unknown-values, then we make a boxed TN to
 ;;; compute each desired result in.
 ;;;
-;;;    If the continuation is :Unused (a tail-recursive result), then we look
-;;; at the return-info for the function being returned from.  If the return
-;;; convention is fixed, then we make result temporaries as specified by
-;;; rtypes, otherwise we make the same number of boxed temporaries.
+;;;    Currently, we totally ignore the types, always allocating TNs of type T
+;;; when we can't use a continuation's TN.  This affects unused values and
+;;; values needing to be checked.  But representation selection cleverly
+;;; replaces dummy result TNs with ones in a good representation, so the first
+;;; isn't a problem.  It seems important to allow non-standard representations
+;;; in type checking for numeric subranges, but these checks are hairy, so the
+;;; right thing happens.
 ;;;
 (defun continuation-result-tns (cont rtypes)
   (declare (type continuation cont) (list rtypes))
   (let ((2cont (continuation-info cont)))
     (if (or (not 2cont) (eq (continuation-type-check cont) t))
-	(mapcar #'make-normal-tn rtypes)
+	(make-n-tns (length rtypes) *any-primitive-type*)
 	(ecase (ir2-continuation-kind 2cont)
 	  (:fixed
 	   (let ((locs (ir2-continuation-locs 2cont)))
-	     (if (and (= (length locs) (length rtypes))
-		      (every #'ok-result-tn locs rtypes))
+	     (if (= (length locs) (length rtypes))
 		 locs
 		 (collect ((res))
 		   (do ((loc locs (cdr loc))
 			(rtype rtypes (cdr rtype)))
 		       ((null rtype))
 		     (if loc
-			 (res (get-result-tn (car loc) (car rtype)))
-			 (res (make-normal-tn (car rtype)))))
+			 (res (car loc))
+			 (res (make-normal-tn *any-primitive-type*))))
 		   (res)))))
-	  ((:unknown :unused)
-	   (mapcar #'make-normal-tn rtypes))))))
-
-#|
 	  (:unknown
-	   (make-n-tns (length rtypes) *any-primitive-type*))
-	  (:unused
-	   (let ((returns (tail-set-info
-			   (lambda-tail-set
-			    (return-lambda
-			     (continuation-dest cont))))))
-	     (if (eq (return-info-kind returns) :fixed)
-		 (mapcar #'make-normal-tn rtypes)
-		 (make-n-tns (length rtypes) *any-primitive-type*))))
-|#
+	   (make-n-tns (length rtypes) *any-primitive-type*))))))
+
 
 ;;; Make-Standard-Value-Tns  --  Internal
 ;;;
@@ -608,8 +348,7 @@
 ;;;    If the continuation isn't annotated, then we treat as 0-values,
 ;;; returning an empty list of temporaries.
 ;;;
-;;;    If the continuation is annotated, then it must either be :Fixed or be
-;;; :Unused with the Return-Info-Kind being :Fixed.
+;;;    If the continuation is annotated, then it must be :Fixed.
 ;;;
 (defun standard-result-tns (cont)
   (declare (type continuation cont))
@@ -617,15 +356,7 @@
     (if 2cont
 	(ecase (ir2-continuation-kind 2cont)
 	  (:fixed
-	   (make-standard-value-tns (length (ir2-continuation-locs 2cont))))
-	  (:unused
-	   (let ((returns (tail-set-info
-			   (lambda-tail-set
-			    (return-lambda
-			     (continuation-dest cont))))))
-	     (assert (eq (return-info-kind returns) :fixed))
-	     (make-standard-value-tns
-	      (length (return-info-types returns))))))
+	   (make-standard-value-tns (length (ir2-continuation-locs 2cont)))))
 	())))
 
 
@@ -707,12 +438,6 @@
 ;;; standard value locations, and use Push-Values to put the values on the
 ;;; stack.
 ;;;
-;;;    If the continuation is :Unused, then this use is tail-recursive.  We
-;;; emit code that returns the values out of the current function.  Type
-;;; checking is done in-place in the Results, since we don't know where
-;;; Emit-Return-For-Locs is going to want to pass the values.  In this case, we
-;;; also flush the control transfer to the tail return.
-;;;
 (defun move-continuation-result (node block results cont)
   (declare (type node node) (type ir2-block block)
 	   (list results) (type continuation cont))
@@ -736,16 +461,41 @@
 	   (vop* push-values node block
 		 ((reference-tn-list locs nil))
 		 ((reference-tn-list (ir2-continuation-locs 2cont) t))
-		 nvals)))
-	(:unused
-	 (when check
-	   (move-results-checked node block results results cont))
-	 (emit-return-for-locs (continuation-dest cont) block :fixed results)
-	 (flush-tail-transfer node block)))))
+		 nvals))))))
   (undefined-value))
 
 
 ;;;; Template conversion:
+
+
+;;; Reference-Arguments  --  Internal
+;;;
+;;;    Build a TN-Refs list that represents access to the values of the
+;;; specified list of continuations Args for Template.  Any :CONSTANT arguments
+;;; are returned in the second value as a list rather than being accessed as a
+;;; normal argument.  Node and Block provide the context for emitting any
+;;; necessary type-checking code.
+;;;
+(defun reference-arguments (node block args template)
+  (declare (type node node) (type ir2-block block) (list args)
+	   (type template template))
+  (collect ((info-args))
+    (let ((last nil)
+	  (first nil))
+      (do ((args args (cdr args))
+	   (types (template-arg-types template) (cdr types)))
+	  ((null args))
+	(let ((type (first types))
+	      (arg (first args)))
+	  (if (and (consp type) (eq (car type) ':constant))
+	      (info-args (continuation-value arg))
+	      (let ((ref (reference-tn (continuation-tn node block arg) nil)))
+		(if last
+		    (setf (tn-ref-across last) ref)
+		    (setf first ref))
+		(setq last ref)))))
+
+      (values (the (or tn-ref null) first) (info-args)))))
 
 
 ;;; IR2-Convert-Conditional  --  Internal
@@ -754,19 +504,20 @@
 ;;; emit an unconditional branch afterward if we fail.  Not-P is true if the
 ;;; sense of the Template's test should be negated.
 ;;;
-(defun ir2-convert-conditional (node block template args if not-p)
+(defun ir2-convert-conditional (node block template args info-args if not-p)
   (declare (type node node) (type ir2-block block)
 	   (type template template) (type (or tn-ref null) args)
-	   (type cif if) (type boolean not-p))
-  (assert (= (template-info-arg-count template) 2))
+	   (list info-args) (type cif if) (type boolean not-p))
+  (assert (= (template-info-arg-count template) (+ (length info-args) 2)))
   (let ((consequent (if-consequent if))
 	(alternative (if-alternative if)))
     (cond ((drop-thru-p if consequent)
 	   (emit-template node block template args nil
-			  (list (block-label alternative) (not not-p))))
+			  (list* (block-label alternative) (not not-p)
+				 info-args)))
 	  (t
 	   (emit-template node block template args nil
-			  (list (block-label consequent) not-p))
+			  (list* (block-label consequent) not-p info-args))
 	   (unless (drop-thru-p if alternative)
 	     (vop branch node block (block-label alternative)))))))
 
@@ -782,7 +533,7 @@
 	 (nil-ref (reference-tn (emit-constant nil) nil)))
     (setf (tn-ref-across test-ref) nil-ref)
     (ir2-convert-conditional node block (template-or-lose 'if-eq)
-			     test-ref node t)))
+			     test-ref () node t)))
 
 
 ;;; IR2-Convert-Template  --  Internal
@@ -794,17 +545,22 @@
   (declare (type combination call) (type ir2-block block))
   (let* ((template (combination-info call))
 	 (cont (node-cont call))
-	 (args (reference-arguments call block (combination-args call)))
 	 (rtypes (template-result-types template)))
-    (assert (not (template-more-results-type template)))
-    (if (eq rtypes :conditional)
-	(ir2-convert-conditional call block template args
-				 (continuation-dest cont) nil)
-	(let ((results (continuation-result-tns cont rtypes)))
-	  (assert (zerop (template-info-arg-count template)))
-	  (emit-template call block template args
-			 (reference-tn-list results t))
-	  (move-continuation-result call block results cont))))
+    (multiple-value-bind
+	(args info-args)
+	(reference-arguments call block (combination-args call) template)
+      (assert (not (template-more-results-type template)))
+      (if (eq rtypes :conditional)
+	  (ir2-convert-conditional call block template args info-args
+				   (continuation-dest cont) nil)
+	  (let* ((results (continuation-result-tns cont rtypes))
+		 (r-refs (reference-tn-list results t)))
+	    (assert (= (length info-args)
+		       (template-info-arg-count template)))
+	    (if info-args
+		(emit-template call block template args r-refs info-args)
+		(emit-template call block template args r-refs))
+	    (move-continuation-result call block results cont)))))
   (undefined-value))
 
 
@@ -818,18 +574,22 @@
   (let* ((template (continuation-value template))
 	 (info (continuation-value info))
 	 (cont (node-cont call))
-	 (args (reference-arguments call block (cddr (combination-args call))))
 	 (rtypes (template-result-types template))
 	 (results (continuation-result-tns cont rtypes))
 	 (r-refs (reference-tn-list results t)))
-    (assert (not (template-more-results-type template)))
-    (assert (not (eq rtypes :conditional)))
-
-    (if info
-	(emit-template call block template args r-refs info)
-	(emit-template call block template args r-refs))
-
-    (move-continuation-result call block results cont))
+    (multiple-value-bind
+	(args info-args)
+	(reference-arguments call block (cddr (combination-args call))
+			     template)
+      (assert (not (template-more-results-type template)))
+      (assert (not (eq rtypes :conditional)))
+      (assert (null info-args))
+      
+      (if info
+	  (emit-template call block template args r-refs info)
+	  (emit-template call block template args r-refs))
+      
+      (move-continuation-result call block results cont)))
   (undefined-value))
 
 
@@ -855,66 +615,72 @@
   (undefined-value))
 
 
-;;; Move-Local-Call-Args  --  Internal
+;;; IR2-Convert-Tail-Local-Call   --  Internal
 ;;;
-;;;    Set up the arguments for a local call.  This involves moving the actual
-;;; arguments into the passing locations (doing any type checking) and
-;;; computing the environment arguments for the called function.
+;;;    A tail-recursive local call is done by emitting moves of stuff into the
+;;; appropriate passing locations.  After setting up the args and environment,
+;;; we just move our return-pc and old-fp into the called function's passing
+;;; locations.
 ;;;
-(defun move-local-call-args (node block fun)
+(defun ir2-convert-tail-local-call (node block fun)
   (declare (type combination node) (type ir2-block block) (type clambda fun))
   (let* ((called-env (environment-info (lambda-environment fun)))
 	 (arg-locs (ir2-environment-arg-locs called-env))
-	 (1env (node-environment node)))
+	 (this-1env (node-environment node))
+	 (this-env (environment-info this-1env)))
     (dolist (arg (basic-combination-args node))
       (when arg
 	(emit-move node block (continuation-tn node block arg)
 		   (pop arg-locs))))
     
     (dolist (thing (ir2-environment-environment called-env))
-      (emit-move node block (find-in-environment (car thing) 1env)
-		 (pop arg-locs))))
+      (emit-move node block (find-in-environment (car thing) this-1env)
+		 (pop arg-locs)))
+
+    (emit-move node block (ir2-environment-old-fp this-env)
+	       (ir2-environment-old-fp-pass called-env))
+    (emit-move node block (ir2-environment-return-pc this-env)
+	        (ir2-environment-return-pc-pass called-env)))
 
   (undefined-value))
 
 
-;;; IR2-Convert-Tail-Local-Call   --  Internal
+;;; IR2-CONVERT-LOCAL-CALL-ARGS  --  Internal
 ;;;
-;;;    A tail-recursive local call is done by emitting moves of stuff into the
-;;; appropriate passing locations.  After setting up the args and environment,
-;;; we just move our return-pc and old-cont into the called function's passing
-;;; locations.  The Current-Cont VOP is used to set the arg pointer to point
-;;; to the current frame.
+;;;    Do stuff to set up the arguments to a non-tail local call (including
+;;; implicit environment args.)  We allocate a frame (returning the FP and
+;;; NFP), and also compute the TN-Refs list for the values to pass and the list
+;;; of passingt location TNs.
 ;;;
-;;;    The Tail-Call-Local VOP's only purpose is to get the argument lifetimes
-;;; right.  We flush the tail control transfer for similar reasons.
-;;;
-(defun ir2-convert-tail-local-call (node block fun)
-  (declare (type combination node) (type ir2-block block) (type clambda fun))
-  (move-local-call-args node block fun)
+(defun ir2-convert-local-call-args (node block env)
+  (declare (type combination node) (type ir2-block block)
+	   (type ir2-environment env))
+  (let ((fp (make-normal-tn *any-primitive-type*))
+	(nfp (make-normal-tn *any-primitive-type*))
+	(old-fp (make-normal-tn *any-primitive-type*))
+	(this-1env (node-environment node)))
+
+    (vop current-fp node block old-fp)
+    (vop allocate-frame node block fp nfp)
     
-  (let* ((this-env (environment-info (node-environment node)))
-	 (call-env (environment-info (lambda-environment fun)))
-	 (old-cont (ir2-environment-old-cont-pass call-env))
-	 (return-pc (ir2-environment-return-pc-pass call-env))
-	 (args (ir2-environment-argument-pointer call-env))
-	 (target (node-block (lambda-bind fun))))
+    (let* ((args (reference-tn old-fp nil))
+	   (tail args))
+      (dolist (arg (basic-combination-args node))
+	(when arg
+	  (let ((arg-ref (reference-tn (continuation-tn node block arg) nil)))
+	    (setf (tn-ref-across tail) arg-ref)
+	    (setf tail arg-ref))))
+      
+      (dolist (thing (ir2-environment-environment env))
+	(let ((arg-ref (reference-tn
+			(find-in-environment (car thing) this-1env)
+			nil)))
+	  (setf (tn-ref-across tail) arg-ref)
+	  (setf tail arg-ref)))
 
-    (emit-move node block (ir2-environment-old-cont this-env) old-cont)
-    (emit-move node block (ir2-environment-return-pc this-env) return-pc)
-    (vop current-cont node block args)
-
-    (vop* tail-call-local node block
-	  (old-cont return-pc args
-		    (reference-tn-list (ir2-environment-arg-locs call-env)
-				       nil))
-	  (nil)
-	  (unless (drop-thru-p (block-last (node-block node)) target)
-	    (block-label target))))
-
-  (flush-tail-transfer node block)
-
-  (undefined-value))
+      (values fp nfp args
+	      (cons (ir2-environment-old-fp-pass env)
+		    (ir2-environment-arg-locs env))))))
 
 
 ;;; IR2-Convert-Local-Known-Call  --  Internal
@@ -926,22 +692,16 @@
   (declare (type node node) (type ir2-block block) (type ir2-environment env)
 	   (type return-info returns) (type continuation cont)
 	   (type label start))
-  (let* ((locs (return-info-locations returns))
-	 (temps (continuation-result-tns
-		 cont (mapcar #'tn-primitive-type locs))))
-    (vop* known-call-local node block
-	  ((ir2-environment-old-cont-pass env)
-	   (ir2-environment-argument-pointer env)
-	   (reference-tn-list (ir2-environment-arg-locs env) nil))
-	  ((reference-tn-list locs t))
-	  "<save info>"
-	  (ir2-environment-return-pc-pass env)
-	  start)
-    (mapc #'(lambda (from to)
-	      (unless (eq from to)
-		(emit-move node block from to)))
-	  locs temps)
-    (move-continuation-result node block temps cont))
+  (multiple-value-bind (fp nfp args arg-locs)
+		       (ir2-convert-local-call-args node block env)
+    (let ((locs (return-info-locations returns)))
+      (vop* known-call-local node block
+	    (fp nfp args)
+	    ((reference-tn-list locs t))
+	    arg-locs
+	    (ir2-environment-return-pc-pass env)
+	    start)
+      (move-continuation-result node block locs cont)))
   (undefined-value))
 
 
@@ -950,7 +710,7 @@
 ;;;    Handle a non-TR unknown-values local call.  We do different things
 ;;; depending on what kind of values the continuation wants.
 ;;;
-;;;    If Cont is :Unkown, then we use the "Multiple-" variant, directly
+;;;    If Cont is :Unknown, then we use the "Multiple-" variant, directly
 ;;; specifying the continuation's Locs as the VOP results so that we don't have
 ;;; to do anything after the call.
 ;;;
@@ -961,43 +721,20 @@
 (defun ir2-convert-local-unknown-call (node block env cont start)
   (declare (type node node) (type ir2-block block) (type ir2-environment env)
 	   (type continuation cont) (type label start))
-  (let ((2cont (continuation-info cont))
-	(old-cont (ir2-environment-old-cont-pass env))
-	(argp (ir2-environment-argument-pointer env))
-	(return-pc (ir2-environment-return-pc-pass env))
-	(arg-locs (reference-tn-list (ir2-environment-arg-locs env) nil)))
-    (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
-	(vop* multiple-call-local node block (old-cont argp arg-locs)
-	      ((reference-tn-list (ir2-continuation-locs 2cont) t))
-	      "<save info>" return-pc start)
-	(let ((temps (standard-result-tns cont)))
-	  (vop* call-local node block
-		(old-cont argp arg-locs)
-		((reference-tn-list temps t))
-		"<save info>" return-pc start (length temps))
-	  (move-continuation-result node block temps cont))))
-  (undefined-value))
-
-
-;;; IR2-Convert-Local-Normal-Call  --  Internal
-;;;
-;;;    This function handles non-tail-recursive local call.  We move the
-;;; arguments into the passing locations and then look at return conventions
-;;; and think about how we are going to get the values back.
-;;;
-(defun ir2-convert-local-normal-call (node block fun)
-  (let* ((env (environment-info (lambda-environment fun)))
-	 (start (block-label (node-block (lambda-bind fun))))
-	 (returns (tail-set-info (lambda-tail-set fun)))
-	 (cont (node-cont node)))
-    (move-local-call-args node block fun)
-    (vop current-cont node block (ir2-environment-old-cont-pass env))
-    (vop current-cont node block (ir2-environment-argument-pointer env))
-    (ecase (return-info-kind returns)
-      (:unknown
-       (ir2-convert-local-unknown-call node block env cont start))
-      (:fixed
-       (ir2-convert-local-known-call node block env returns cont start))))
+  (multiple-value-bind (fp nfp args arg-locs)
+		       (ir2-convert-local-call-args node block env)
+    (let ((2cont (continuation-info cont))
+	  (return-pc (ir2-environment-return-pc-pass env)))
+      (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
+	  (vop* multiple-call-local node block (fp nfp args)
+		((reference-tn-list (ir2-continuation-locs 2cont) t))
+		arg-locs return-pc start)
+	  (let ((temps (standard-result-tns cont)))
+	    (vop* call-local node block
+		  (fp nfp args)
+		  ((reference-tn-list temps t))
+		  arg-locs return-pc start (length temps))
+	    (move-continuation-result node block temps cont)))))
   (undefined-value))
 
 
@@ -1014,7 +751,16 @@
 	  ((node-tail-p node)
 	   (ir2-convert-tail-local-call node block fun))
 	  (t
-	   (ir2-convert-local-normal-call node block fun))))
+	   (let* ((env (environment-info (lambda-environment fun)))
+		  (start (block-label (node-block (lambda-bind fun))))
+		  (returns (tail-set-info (lambda-tail-set fun)))
+		  (cont (node-cont node)))
+	     (ecase (return-info-kind returns)
+	       (:unknown
+		(ir2-convert-local-unknown-call node block env cont start))
+	       (:fixed
+		(ir2-convert-local-known-call node block env returns
+					      cont start)))))))
   (undefined-value))
 
 
@@ -1052,12 +798,12 @@
 		(values temp nil)))))))
 
 
-;;; Move-Full-Call-Args  --  Internal
+;;; MOVE-TAIL-FULL-CALL-ARGS  --  Internal
 ;;;
-;;;    Set up the arguments to a full call in the appropriate passing
-;;; locations.  Returns the head of a TN-Ref list to the passing locations.
+;;;    Set up the args to Node in the current frame, and return a tn-ref list
+;;; for the passing locations.
 ;;;
-(defun move-full-call-args (node block)
+(defun move-tail-full-call-args (node block)
   (declare (type combination node) (type ir2-block block))
   (let ((args (basic-combination-args node))
 	(last nil)
@@ -1076,30 +822,56 @@
 ;;; IR2-Convert-Tail-Full-Call  --  Internal
 ;;;
 ;;;    Move the arguments into the passing locations and do a (possibly named)
-;;; tail call.  We flush the tail control transfer so that nobody thinks that
-;;; we return.
+;;; tail call.
 ;;;
 (defun ir2-convert-tail-full-call (node block)
   (declare (type combination node) (type ir2-block block))
-  (let* ((pass-refs (move-full-call-args node block))
-	 (env (environment-info (node-environment node)))
-	 (old-cont (ir2-environment-old-cont env))
-	 (return-pc (ir2-environment-return-pc env))
-	 (nargs (length (basic-combination-args node))))
+  (let* ((env (environment-info (node-environment node)))
+	 (args (basic-combination-args node))
+	 (nargs (length args))
+	 (pass-refs (move-tail-full-call-args node block))
+	 (old-fp (ir2-environment-old-fp env))
+	 (return-pc (ir2-environment-return-pc env)))
+
     (multiple-value-bind
 	(fun-tn named)
 	(function-continuation-tn node block (basic-combination-fun node))
       (if named
 	  (vop* tail-call-named node block
-		(fun-tn old-cont return-pc pass-refs)
+		(fun-tn old-fp return-pc pass-refs)
 		(nil)
 		nargs)
 	  (vop* tail-call node block
-		(fun-tn old-cont return-pc pass-refs)
+		(fun-tn old-fp return-pc pass-refs)
 		(nil)
 		nargs))))
-  (flush-tail-transfer node block)
+
   (undefined-value))
+
+
+;;; IR2-CONVERT-FULL-CALL-ARGS  --  Internal
+;;;
+;;;    Like IR2-CONVERT-LOCAL-CALL-ARGS, only different.
+;;;
+(defun ir2-convert-full-call-args (node block)
+  (declare (type combination node) (type ir2-block block))
+  (let* ((args (basic-combination-args node))
+	 (fp (make-normal-tn *any-primitive-type*))
+	 (nargs (length args)))
+    (vop allocate-full-call-frame node block nargs fp)
+    (collect ((locs))
+      (let ((last nil)
+	    (first nil))
+	(dotimes (num nargs)
+	  (locs (standard-argument-location num))
+	  (let ((ref (reference-tn (continuation-tn node block (elt args num))
+				   nil)))
+	    (if last
+		(setf (tn-ref-across last) ref)
+		(setf first ref))
+	    (setq last ref)))
+	
+	(values fp first (locs) nargs)))))
 
 
 ;;; IR2-Convert-Fixed-Full-Call  --  Internal
@@ -1110,21 +882,21 @@
 ;;;
 (defun ir2-convert-fixed-full-call (node block)
   (declare (type combination node) (type ir2-block block))
-  (let* ((nargs (length (basic-combination-args node)))
-	 (pass-refs (move-full-call-args node block))
-	 (cont (node-cont node))
-	 (locs (standard-result-tns cont))
-	 (loc-refs (reference-tn-list locs t))
-	 (nvals (length locs)))
-    (multiple-value-bind
-	(fun-tn named)
-	(function-continuation-tn node block (basic-combination-fun node))
-      (if named
-	  (vop* call-named node block (fun-tn pass-refs) (loc-refs)
-		"<save info>" nargs nvals)
-	  (vop* call node block (fun-tn pass-refs) (loc-refs)
-		"<save info>" nargs nvals))
-      (move-continuation-result node block locs cont)))
+  (multiple-value-bind (fp args arg-locs nargs)
+		       (ir2-convert-full-call-args node block)
+    (let* ((cont (node-cont node))
+	   (locs (standard-result-tns cont))
+	   (loc-refs (reference-tn-list locs t))
+	   (nvals (length locs)))
+      (multiple-value-bind
+	  (fun-tn named)
+	  (function-continuation-tn node block (basic-combination-fun node))
+	(if named
+	    (vop* call-named node block (fp fun-tn args) (loc-refs)
+		  arg-locs nargs nvals)
+	    (vop* call node block (fp fun-tn args) (loc-refs)
+		  arg-locs nargs nvals))
+	(move-continuation-result node block locs cont))))
   (undefined-value))
 
 
@@ -1134,34 +906,32 @@
 ;;;
 (defun ir2-convert-multiple-full-call (node block)
   (declare (type combination node) (type ir2-block block))
-  (let* ((nargs (length (basic-combination-args node)))
-	 (pass-refs (move-full-call-args node block))
-	 (cont (node-cont node))
-	 (locs (ir2-continuation-locs (continuation-info cont)))
-	 (loc-refs (reference-tn-list locs t)))
-    (multiple-value-bind
-	(fun-tn named)
-	(function-continuation-tn node block (basic-combination-fun node))
-      (if named
-	  (vop* multiple-call-named node block (fun-tn pass-refs) (loc-refs)
-		"<save info>" nargs)
-	  (vop* multiple-call node block (fun-tn pass-refs) (loc-refs)
-		"<save info>" nargs))))
+  (multiple-value-bind (fp args arg-locs nargs)
+		       (ir2-convert-full-call-args node block)
+    (let* ((cont (node-cont node))
+	   (locs (ir2-continuation-locs (continuation-info cont)))
+	   (loc-refs (reference-tn-list locs t)))
+      (multiple-value-bind
+	  (fun-tn named)
+	  (function-continuation-tn node block (basic-combination-fun node))
+	(if named
+	    (vop* multiple-call-named node block (fp fun-tn args) (loc-refs)
+		  arg-locs nargs)
+	    (vop* multiple-call node block (fp fun-tn args) (loc-refs)
+		  arg-locs nargs)))))
   (undefined-value))
 
 
 ;;; IR2-Convert-Full-Call  --  Internal
 ;;;
 ;;;    If the call is in a TR position and the return convention is standard,
-;;; then do a full call.  If one or fewer values are desired, then use a
+;;; then do a tail full call.  If one or fewer values are desired, then use a
 ;;; single-value call, otherwise use a multiple-values call.
 ;;;
 (defun ir2-convert-full-call (node block)
   (declare (type combination node) (type ir2-block block))
   (let ((2cont (continuation-info (node-cont node))))
-    (cond ((let ((tails (node-tail-p node)))
-	     (and tails
-		  (eq (return-info-kind (tail-set-info tails)) :unknown)))
+    (cond ((node-tail-p node)
 	   (ir2-convert-tail-full-call node block))
 	  ((and 2cont
 		(eq (ir2-continuation-kind 2cont) :unknown))
@@ -1182,7 +952,7 @@
 ;;; 
 (defun init-xep-environment (node block fun)
   (declare (type bind node) (type ir2-block block) (type clambda fun))
-  (vop allocate-frame node block (entry-info-offset (leaf-info fun)))
+  (vop xep-allocate-frame node block (entry-info-offset (leaf-info fun)))
   (let ((ef (functional-entry-function fun)))
     (when (and (optional-dispatch-p ef)
 	       (optional-dispatch-more-entry ef))
@@ -1216,7 +986,6 @@
   (let* ((fun (bind-lambda node))
 	 (xep-p (external-entry-point-p fun))
 	 (env (environment-info (lambda-environment fun)))
-	 (argp (ir2-environment-argument-pointer env))
 	 (args (ir2-environment-arg-locs env)))
     (assert (member (functional-kind fun)
 		    '(nil :external :optional :top-level :cleanup)))
@@ -1229,22 +998,20 @@
 	(let ((pass (pop args))
 	      (home (leaf-info arg)))
 	  (if (lambda-var-indirect arg)
-	      (let ((temp (make-normal-tn *any-primitive-type*)))
-		(move-from-frame node block pass temp argp)
-		(vop make-value-cell node block temp home))
-	      (move-from-frame node block pass home argp)))))
+	      (vop make-value-cell node block pass home)
+	      (emit-move node block pass home)))))
 
     (unless xep-p
       (dolist (loc (ir2-environment-environment env))
-	(move-from-frame node block (pop args) (cdr loc) argp)))
+	(emit-move node block (pop args) (cdr loc))))
     
-    (when (ir2-environment-old-cont env)
-      (move-from-frame node block (ir2-environment-old-cont-pass env)
-		       (ir2-environment-old-cont env) argp))
+    (when (ir2-environment-old-fp env)
+      (emit-move node block (ir2-environment-old-fp-pass env)
+		 (ir2-environment-old-fp env)))
     
     (when (ir2-environment-return-pc env)
-      (move-from-frame node block (ir2-environment-return-pc-pass env)
-		       (ir2-environment-return-pc env) argp))
+      (emit-move node block (ir2-environment-return-pc-pass env)
+		 (ir2-environment-return-pc env)))
 
     (let ((lab (gen-label)))
       (setf (ir2-environment-environment-start env) lab)
@@ -1257,48 +1024,30 @@
 
 ;;; IR2-Convert-Return  --  Internal
 ;;;
-(defun ir2-convert-return (node block)
-  (let ((cont (continuation-info (return-result node))))
-    (unless (eq (ir2-continuation-kind cont) :unused)
-      (emit-return-for-locs node block
-			    (ir2-continuation-kind cont)
-			    (ir2-continuation-locs cont))))
-  (undefined-value))
-
-
-;;; Emit-Return-For-Locs  --  Internal
-;;;
 ;;;    Do stuff to return from a function with the specified values and
-;;; convention.  Node must the Return node that we are doing a return for.
-;;; The reason that this is broken off from IR2-Convert-Return in this curious
-;;; way is that when all uses of the result are tail-recursive, we annotate the
-;;; result continuation as :Unused and then emit a return at each use of the
-;;; result.
+;;; convention.  If the return convention is :Fixed and we aren't returning
+;;; from an XEP, then we move the return values to the passing locs and do a
+;;; Known-Return.  Otherwise, we use the unknown-values convention.  If there
+;;; is a fixed number of return values, then use Return, otherwise use
+;;; Return-Multiple.
 ;;;
-;;;    If the return convention is :Fixed and we aren't returning from an XEP,
-;;; then we move the return values to the passing locs and do a Known-Return.
-;;; Otherwise, we use the unknown-values convention.  If there is a fixed
-;;; number of return values, then use Return, otherwise use Return-Multiple.
-;;;
-(defun emit-return-for-locs (node block cont-kind cont-locs)
-  (declare (type creturn node) (type ir2-block block)
-	   (type (member :fixed :unknown) cont-kind)
-	   (list cont-locs))
-  (let* ((fun (return-lambda node))
+(defun ir2-convert-return (node block)
+  (declare (type creturn node) (type ir2-block block))
+  (let* ((cont (continuation-info (return-result node)))
+	 (cont-kind (ir2-continuation-kind cont))
+	 (cont-locs (ir2-continuation-locs cont))
+	 (fun (return-lambda node))
 	 (env (environment-info (lambda-environment fun)))
-	 (old-cont (ir2-environment-old-cont env))
+	 (old-fp (ir2-environment-old-fp env))
 	 (return-pc (ir2-environment-return-pc env))
 	 (returns (tail-set-info (lambda-tail-set fun))))
     (cond
      ((and (eq (return-info-kind returns) :fixed)
 	   (not (external-entry-point-p fun)))
-      (let ((locs (return-info-locations returns)))
-	(mapc #'(lambda (from to)
-		  (move-to-frame node block from to old-cont))
-	      cont-locs locs)
-	(vop* known-return node block
-	      (old-cont return-pc (reference-tn-list locs nil))
-	      (nil))))
+      (vop* known-return node block
+	    (old-fp return-pc (reference-tn-list cont-locs nil))
+	    (nil)
+	    (return-info-locations returns)))
      ((eq cont-kind :fixed)
       (let* ((nvals (length cont-locs))
 	     (locs (make-standard-value-tns nvals)))
@@ -1307,13 +1056,13 @@
 	      cont-locs
 	      locs)
 	(vop* return node block
-	      (old-cont return-pc (reference-tn-list locs nil))
+	      (old-fp return-pc (reference-tn-list locs nil))
 	      (nil)
 	      nvals)))
      (t
       (assert (eq cont-kind :unknown))
       (vop* return-multiple node block
-	    (old-cont return-pc (reference-tn-list cont-locs nil))
+	    (old-fp return-pc (reference-tn-list cont-locs nil))
 	    (nil)))))
 
   (undefined-value))
@@ -1365,24 +1114,19 @@
       (assert (and (not named)
 		   (eq (ir2-continuation-kind start-cont) :unknown)))
       (cond
-       ((and tails
-	     (eq (return-info-kind (tail-set-info tails)) :unknown))
+       (tails
 	(let ((env (environment-info (node-environment node))))
-	  (vop tail-call-variable node block fun
-	       (ir2-environment-old-cont env)
-	       (ir2-environment-return-pc env)
-	       start))
-	(flush-tail-transfer node block))
+	  (vop tail-call-variable node block start fun
+	       (ir2-environment-old-fp env)
+	       (ir2-environment-return-pc env))))
        ((and 2cont
 	     (eq (ir2-continuation-kind 2cont) :unknown))
-	(vop* multiple-call-variable node block (fun start nil)
-	      ((reference-tn-list (ir2-continuation-locs 2cont) t))
-	      "<save info>"))
+	(vop* multiple-call-variable node block (start fun nil)
+	      ((reference-tn-list (ir2-continuation-locs 2cont) t))))
        (t
 	(let ((locs (standard-result-tns cont)))
-	  (vop* call-variable node block (fun start nil)
-		((reference-tn-list locs t))
-		"<save info>" (length locs))
+	  (vop* call-variable node block (start fun nil)
+		((reference-tn-list locs t)) (length locs))
 	  (move-continuation-result node block locs cont)))))))
 
 
@@ -1412,32 +1156,22 @@
 ;;; Values-List IR2 convert  --  Internal
 ;;;
 ;;;    In the normal case where unknown values are desired, we use the
-;;; Values-List VOP.  If the continuation is :Unused (a TR result
-;;; continuation), then we must compute the values into temporaries and then do
-;;; an Emit-Return-For-Locs and flush the tail control transfer.
-;;;
-;;;    In the relatively unimportant case of Values-List for a fixed number of
-;;; values, we punt by doing a full call to the Values-List function.  This
-;;; gets the full call VOP to deal with defaulting any unsupplied values.  It
-;;; seems unworthwhile to optimize this case.
+;;; Values-List VOP.  In the relatively unimportant case of Values-List for a
+;;; fixed number of values, we punt by doing a full call to the Values-List
+;;; function.  This gets the full call VOP to deal with defaulting any
+;;; unsupplied values.  It seems unworthwhile to optimize this case.
 ;;;
 (defoptimizer (values-list ir2-convert) ((list) node block)
   (let* ((cont (node-cont node))
 	 (2cont (continuation-info cont)))
     (when 2cont
-      (let ((kind (ir2-continuation-kind 2cont)))
-	(if (eq kind :fixed)
-	    (ir2-convert-full-call node block)
-	    (let ((locs (ecase kind
-			  (:unknown (ir2-continuation-locs 2cont))
-			  (:unused (make-unknown-values-locations)))))
-	      (vop* values-list node block
-		    ((continuation-tn node block list) nil)
-		    ((reference-tn-list locs t)))
-	      (when (eq kind :unused)
-		(emit-return-for-locs (continuation-dest cont) block :unknown
-				      locs)
-		(flush-tail-transfer node block))))))))
+      (ecase (ir2-continuation-kind 2cont)
+	(:fixed (ir2-convert-full-call node block))
+	(:unknown
+	 (let ((locs (ir2-continuation-locs 2cont)))
+	   (vop* values-list node block
+		 ((continuation-tn node block list) nil)
+		 ((reference-tn-list locs t)))))))))
 
 
 ;;;; Special binding:
@@ -1548,8 +1282,9 @@
 	   (type (or continuation null) tag))
   (let* ((2info (nlx-info-info info))
 	 (kind (cleanup-kind (nlx-info-cleanup info)))
-	 (block-tn (make-environment-tn (primitive-type-or-lose 'catch-block)
-					(node-environment node)))
+	 (block-tn (environment-live-tn
+		    (make-representation-tn (sc-number-or-lose 'catch-block))
+		    (node-environment node)))
 	 (res (make-normal-tn *any-primitive-type*))
 	 (target-tn
 	  (make-load-time-constant-tn
@@ -1615,8 +1350,8 @@
 ;;; use the other variant, delivering the temps to the continuation using
 ;;; Move-Continuation-Result.
 ;;;
-;;; In the Unwind-Protect case, we deliver move the first register argument,
-;;; the argument count and the argument pointer to our continuation as multiple
+;;; In the Unwind-Protect case, we deliver the first register argument, the
+;;; argument count and the argument pointer to our continuation as multiple
 ;;; values.  These values are the block exited to and the values start and
 ;;; count.
 ;;;
@@ -1631,7 +1366,7 @@
 	 (2cont (continuation-info cont))
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
-	 (start-loc (make-argument-pointer-location t))
+	 (start-loc (make-old-fp-passing-location t))
 	 (count-loc (make-argument-count-location)))
 
     (ecase (cleanup-kind (nlx-info-cleanup info))
@@ -1663,14 +1398,12 @@
 
 (macrolet ((frob (name)
 	     `(defoptimizer (,name ir2-convert) ((&rest args) node block)
-		(let* ((refs (move-full-call-args node block))
+		(let* ((refs (move-tail-full-call-args node block))
 		       (cont (node-cont node))
 		       (res (continuation-result-tns
 			     cont
 			     (list (primitive-type (specifier-type 'list))))))
-		  (vop* ,name node block
-			(refs)
-			((first res) nil)
+		  (vop* ,name node block (refs) ((first res) nil)
 			(length args))
 		  (move-continuation-result node block res cont)))))
   (frob list)
@@ -1767,10 +1500,10 @@
 	      (let ((fun (function-info-ir2-convert kind)))
 		(cond (fun
 		       (funcall fun node 2block))
-		      ((basic-combination-info node)
-		       (ir2-convert-template node 2block))
+		      ((eq (basic-combination-info node) :full)
+		       (ir2-convert-full-call node 2block))
 		      (t
-		       (ir2-convert-full-call node 2block))))))))
+		       (ir2-convert-template node 2block))))))))
 	(cif
 	 (when (continuation-info (if-test node))
 	   (ir2-convert-if node 2block)))
