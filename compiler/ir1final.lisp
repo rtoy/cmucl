@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.15 1992/09/07 15:38:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1final.lisp,v 1.16 1992/09/24 18:32:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,9 +68,12 @@
     (setf (leaf-type leaf) dtype)
     (when (or (and name (symbolp name))
 	      (and (consp name) (eq (car name) 'setf)))
-      (let ((where (info function where-from name))
-	    (*compiler-error-context* (lambda-bind (main-entry leaf)))
-	    (global-p (eq leaf (gethash name *free-functions*))))
+      (let* ((where (info function where-from name))
+	     (*compiler-error-context* (lambda-bind (main-entry leaf)))
+	     (global-def (gethash name *free-functions*))
+	     (global-p
+	      (and (defined-function-p global-def)
+		   (eq (defined-function-functional global-def) leaf))))
 	(note-name-defined name :function)
 	(when global-p
 	  (remhash name *free-functions*))
