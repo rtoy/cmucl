@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.169 2004/04/19 22:10:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.170 2004/04/28 17:58:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1232,7 +1232,14 @@
   (let ((sense (cdr (assoc (first spec) inlinep-translations :test #'eq)))
 	(new-fenv ()))
     (dolist (name (rest spec))
-      (let ((fvar (find name fvars :key #'leaf-name :test #'function-name-eqv-p)))
+      (let ((fvar (find name fvars
+			:key #'(lambda (x)
+				 ;; FVARS doesn't always contain a
+				 ;; LEAF.  Sometimes it comes from a
+				 ;; macrolet.
+				 (and (leaf-p x)
+				      (leaf-name x)))
+			:test #'function-name-eqv-p)))
 	(if fvar
 	    (setf (functional-inlinep fvar) sense)
 	    (let ((found
