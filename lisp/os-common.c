@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.12 2003/07/19 14:10:16 emarsden Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.13 2004/05/19 23:32:05 cwang Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -319,7 +319,7 @@ os_stack_grows_down (void)
 static void
 guard_zones (char **yellow_start, char **red_start)
 {
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
   if (os_stack_grows_down ())
     {
       char *end = (char *) CONTROL_STACK_START;
@@ -433,6 +433,11 @@ os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
       context->sc_eip = (int) ((struct function *) PTR (error))->code;
       context->sc_ecx = 0;
 #else
+#ifdef __x86_64
+      /* RCX is the argument count.  */
+      context->sc_rip = (unsigned long) ((struct function *) PTR (error))->code;
+      context->sc_rcx = 0;
+#else
 #ifdef sparc
       /* This part should be common to all non-x86 ports */
       SC_PC(context) = (long) ((struct function *) PTR (error))->code;
@@ -444,6 +449,7 @@ os_control_stack_overflow (void *fault_addr, struct sigcontext *context)
       SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
 #else
 #error os_control_stack_overflow not implemented for this system
+#endif
 #endif
 #endif
       return 1;
