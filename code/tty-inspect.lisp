@@ -186,7 +186,9 @@
 
 (defun describe-vector-parts (object)
   (list* (format nil "Object is a ~:[~;displaced ~]vector of length ~d.~%"
-		 (lisp::%array-displaced-p object) (length object))
+		 (and (lisp::array-header-p object)
+		      (lisp::%array-displaced-p object))
+		 (length object))
 	 nil
 	 (coerce object 'list)))
 
@@ -215,7 +217,9 @@
 	 (parts ()))
     (push (format nil "Object is ~:[a displaced~;an~] array of ~a.~%~
                        Its dimensions are ~s.~%"
-		  (array-element-type object) (lisp::%array-displaced-p object)
+		  (array-element-type object)
+		  (and (lisp::array-header-p object)
+		       (lisp::%array-displaced-p object))
 		  dimensions)
 	  parts)
     (push t parts)
