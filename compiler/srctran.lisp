@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.133 2003/09/12 12:55:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.134 2003/09/24 21:29:07 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1129,9 +1129,7 @@
 		  (if member-fcn
 		      (with-float-traps-masked
 			  (:underflow :overflow :divide-by-zero)
-			(make-member-type
-			 :members (list
-				   (funcall member-fcn
+			(specifier-type `(eql ,(funcall member-fcn
 					    (first (member-type-members x))))))
 		      ;; Otherwise convert to a numeric type.
 		      (let ((result-type-list
@@ -1200,7 +1198,7 @@
 						:format (type-of result)
 						:complexp :real))
 			    (t
-			     (make-member-type :members (list result))))))
+			     (specifier-type `(eql ,result))))))
 		   #-conservative-float-type
 		   ((and (member-type-p x) (member-type-p y))
 		    (let* ((x (convert-member-type x))
