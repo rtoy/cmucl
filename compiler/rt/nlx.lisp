@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.1 1991/02/18 15:08:03 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.2 1991/04/23 01:21:42 wlott Exp $
 ;;;
 ;;; This file contains the definitions of VOPs used for non-local exit (throw,
 ;;; lexical exit, etc.)
@@ -87,7 +87,7 @@
       (move nsp-tn nsp)
       
       (load-symbol-value bsp *binding-stack-pointer*)
-      (inst c bsp 0)
+      (inst c bsp special)
       (inst bc :eq done)
 
       ;; Unwind shallow dynamic bindings.
