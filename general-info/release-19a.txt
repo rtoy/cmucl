@@ -70,6 +70,7 @@ New in this release:
        index. 
      - Lisp binary will also look at the PATH envvar to find out it's
        own location which is used to find other needed files.
+     - Byte-interpreted code being executed ca. 20% faster.
  
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
