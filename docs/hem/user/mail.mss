@@ -1,5 +1,5 @@
-@comment{-*- Dictionary: bld:scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
-@chap[The Hemlock Mail Interface]
+@comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
+@chap[The Mail Interface]
 @section[Introduction to Mail in Hemlock]
 
 @index[MH interface]@label[introduction]
@@ -516,51 +516,49 @@ Matching of @f[<component>] fields is case sensitive, so this example will
 
 
 @defhvar[var "MH Scan Line Form", val {"/usr/misc/.lisp/lib/mh-scan"}]
-   This is a pathname of a file containing an @mh format expression used for
-   header lines.
+This is a pathname of a file containing an @mh format expression used for
+header lines.
 
-   The header line format must display the message ID as the first
-   non-whitespace item.  If the user uses the virtual message deletion feature
-   which is on by default, there must be a space three characters to the right
-   of the message ID.  This location is used on header lines to note that a
-   message is flagged for deletion.  The second space after the message ID is
-   used for notating answered or replied-to messages.
+The header line format must display the message ID as the first non-whitespace
+item.  If the user uses the virtual message deletion feature which is on by
+default, there must be a space three characters to the right of the message ID.
+This location is used on header lines to note that a message is flagged for
+deletion.  The second space after the message ID is used for notating answered
+or replied-to messages.
 @enddefhvar
 
 @defcom[com "Message Headers", bind (C-x r)]
-   This command prompts for a folder, message (defaulting to "@b[all]"), and an
-   optional @f[pick] expression.  Typically this will simply be used to
-   generate headers for an entire folder or sequence, and the @f[pick]
-   expression will not be used.  A new @hid[Headers] buffer is made, and the
-   output of @f[scan] on the messages indicated is inserted into the buffer.
-   The current window is used, the buffer's point is moved to the first header,
-   and the @hid[Headers] buffer becomes current.  The current value of the
-   @hemlock @hid[Fill Column] variable is supplied to @f[scan] as the
-   @f[-width] switch.  The buffer name is set to a string of the form
-   @w<"@f[Headers <folder> <msgs> <pick expression>]">, so the modeline will
-   show what is in the buffer.  If no @f[pick] expression was supplied, none
-   will be shown in the buffer's name.  As described in the introduction to
-   this section, the expression may be entered using either a Lisp syntax or a
-   Unix shell-like/switch notation.
+This command prompts for a folder, message (defaulting to "@b[all]"), and an
+optional @f[pick] expression.  Typically this will simply be used to generate
+headers for an entire folder or sequence, and the @f[pick] expression will not
+be used.  A new @hid[Headers] buffer is made, and the output of @f[scan] on the
+messages indicated is inserted into the buffer.  The current window is used,
+the buffer's point is moved to the first header, and the @hid[Headers] buffer
+becomes current.  The current value of the @hemlock @hid[Fill Column] variable
+is supplied to @f[scan] as the @f[-width] switch.  The buffer name is set to a
+string of the form @w<"@f[Headers <folder> <msgs> <pick expression>]">, so the
+modeline will show what is in the buffer.  If no @f[pick] expression was
+supplied, none will be shown in the buffer's name.  As described in the
+introduction to this section, the expression may be entered using either a Lisp
+syntax or a Unix shell-like/switch notation.
 @enddefcom
 
 @defhvar[var "MH Lisp Expression", val {t}]
-   When this is set, @mh expression prompts are read in a Lisp syntax.
-   Otherwise, the input is of the form of a Unix shell-like/switch notation as
-   described in the @mh documentation.
+When this is set, @mh expression prompts are read in a Lisp syntax.  Otherwise,
+the input is of the form of a Unix shell-like/switch notation as described in
+the @mh documentation.
 @enddefhvar
 
 @defcom[com "Pick Headers", stuff (bound to @bf[h] in @hid[Headers] mode) ]
-   This command is only valid in a @hid[Headers] buffer.  It prompts for a
-   @f[pick] expression, and the messages shown in the buffer are supplied to
-   @f[pick] with the expression.  The resulting messages are @f[scan]'ed,
-   deleting the previous contents of the buffer.  The current value of
-   @hid[Fill Column] is used for the @f[scan]'ing.  The buffer's point is moved
-   to the first header.  The buffer's name is set to a string of the form
-   @w<"@f[Headers <folder> <msgs picked over> <pick expression>]">, so the
-   modeline will show what is in the buffer.  As described in the introduction
-   to this section, the expression may be entered using either a Lisp syntax or
-   a Unix shell-like/switch notation.
+This command is only valid in a @hid[Headers] buffer.  It prompts for a
+@f[pick] expression, and the messages shown in the buffer are supplied to
+@f[pick] with the expression.  The resulting messages are @f[scan]'ed, deleting
+the previous contents of the buffer.  The current value of @hid[Fill Column] is
+used for the @f[scan]'ing.  The buffer's point is moved to the first header.
+The buffer's name is set to a string of the form @w<"@f[Headers <folder> <msgs
+picked over> <pick expression>]">, so the modeline will show what is in the
+buffer.  As described in the introduction to this section, the expression may
+be entered using either a Lisp syntax or a Unix shell-like/switch notation.
 @enddefcom
 
 @defcom[com "Headers Help", bind (Headers: ?)]
@@ -573,40 +571,40 @@ This command displays documentation on @hid[Headers] mode.
 @index[reading new mail]@label[reading-new-mail]
 
 @defcom[com "Incorporate and Read New Mail", stuff (bound to @bf[C-x i] globally and @bf[i] in @hid[Headers] and @hid[Message] modes) ]
-   This command incorporates new mail into @hid[New Mail Folder] and creates a
-   @hid[Headers] buffer with the new messages.  An unseen-sequence must be
-   define in the user's @mh profile to use this.  Any headers generated due to
-   @hid[Unseen Headers Message Spec] are inserted as well.  The buffer's point
-   is positioned on the headers line representing the first unseen message of
-   the newly incorporated mail.
+This command incorporates new mail into @hid[New Mail Folder] and creates a
+@hid[Headers] buffer with the new messages.  An unseen-sequence must be define
+in the user's @mh profile to use this.  Any headers generated due to
+@hid[Unseen Headers Message Spec] are inserted as well.  The buffer's point is
+positioned on the headers line representing the first unseen message of the
+newly incorporated mail.
 @enddefcom
 
 @defcom[com "Incorporate New Mail" ]
-   This command incorporates new mail into @hid[New Mail Folder], displaying
-   @f[inc] output in a pop-up window.  This is similar to @hid[Incorporate and
-   Read New Mail] except that no @hid[Headers] buffer is generated.
+This command incorporates new mail into @hid[New Mail Folder], displaying
+@f[inc] output in a pop-up window.  This is similar to @hid[Incorporate and
+Read New Mail] except that no @hid[Headers] buffer is generated.
 @enddefcom
 
 @defhvar[var "New Mail Folder", val {"+inbox"}]
-   This is the folder into which @mh incorporates new mail.
+This is the folder into which @mh incorporates new mail.
 @enddefhvar
 
 @defhvar[var "Unseen Headers Message Spec", val {nil}]
-   This is an @mh message specification that is suitable for any message
-   prompt.  When incorporating new mail and after expunging messages, @hemlock
-   uses this specification in addition to the unseen-sequence name that is
-   taken from the user's @mh profile to generate headers for the unseen
-   @hid[Headers] buffer.  This value is a string.
+This is an @mh message specification that is suitable for any message prompt.
+When incorporating new mail and after expunging messages, @hemlock uses this
+specification in addition to the unseen-sequence name that is taken from the
+user's @mh profile to generate headers for the unseen @hid[Headers] buffer.
+This value is a string.
 @enddefhvar
 
 @defhvar[var "Incorporate New Mail Hook", val {nil}]
-   This is a list of functions which are invoked immediately after new mail is
-   incorporated.  The functions should take no arguments.
+This is a list of functions which are invoked immediately after new mail is
+incorporated.  The functions should take no arguments.
 @enddefhvar
 
 @defhvar[var "Store Password", val {nil}]
-   When this is set, the user is only prompted once for his password, and the
-   password is stored for future use.
+When this is set, the user is only prompted once for his password, and the
+password is stored for future use.
 @enddefhvar
 
 @defhvar[var "Authenticate Incorporation", val {t}]
@@ -920,51 +918,52 @@ associated @hid[Message] buffer.  There are also commands for various styles of
 inserting text from a @hid[Message] buffer into a @hid[Draft] buffer.
 
 @defcom[com "Goto Headers Buffer", stuff (bound to @bf[^] in @hid[Message] mode and @bf[H-^] in @hid[Draft] mode) ] 
-   This command, when invoked in a @hid[Message] or @hid[Draft] buffer with an
-   associated @hid[Headers] buffer, places the associated @hid[Headers] buffer
-   in the current window.
+This command, when invoked in a @hid[Message] or @hid[Draft] buffer with an
+associated @hid[Headers] buffer, places the associated @hid[Headers] buffer in
+the current window.
 
-   The cursor is moved to the headers line of the associated message.
+The cursor is moved to the headers line of the associated message.
 @enddefcom
 
 @defcom[com "Goto Message Buffer", stuff (bound to @bf[H-m] in @hid[Draft] mode) ]
-   This command, when invoked in a @hid[Draft] buffer with an associated
-   @hid[Message] buffer, places the associated @hid[Message] buffer in the
-   current window.
+This command, when invoked in a @hid[Draft] buffer with an associated
+@hid[Message] buffer, places the associated @hid[Message] buffer in the current
+window.
 @enddefcom
 
-@defcom[com "Insert Message Region", stuff (bound to @bf[H-y] in @hid[Message] mode) ]
+@defcom[com "Insert Message Region", stuff (bound to @bf[H-y] in appropriate modes) ]
 @defhvar1[var "Message Insertion Prefix", val {"   "}]
 @defhvar1[var "Message Insertion Column", val {75}]
-   This command, when invoked in a @hid[Message] buffer that has an associated
-   @hid[Draft] buffer, copies the current active region into the @hid[Draft]
-   buffer.  It is filled using @hid[Message Insertion Prefix] (which defaults
-   to three spaces) and @hid[Message Insertion Column].  If an argument is
-   supplied, the filling is inhibited.
+This command, when invoked in a @hid[Message] or @hid[News-Message] (where it
+is bound) buffer that has an associated @hid[Draft] or @hid[Post] buffer,
+copies the current active region into the @hid[Draft] or @hid[Post] buffer.  It
+is filled using @hid[Message Insertion Prefix] (which defaults to three spaces)
+and @hid[Message Insertion Column].  If an argument is supplied, the filling is
+inhibited.
 @enddefcom
 
-@defcom[com "Insert Message Buffer", stuff (bound to @bf[H-y] in @hid[Draft] mode) ]
+@defcom[com "Insert Message Buffer", stuff (bound to @bf[H-y] in appropriate modes) ]
 @defhvar1[var "Message Buffer Insertion Prefix", val {"    "}]
-   This command, when invoked in a @hid[Draft] buffer with an associated
-   @hid[Message] buffer, or when in a @hid[Message] buffer that has an
-   associated @hid[Draft] buffer, inserts the @hid[Message] buffer into the
-   @hid[Draft] buffer.  Each inserted line is modified by prefixing it with
-   @hid[Message Buffer Insertion Prefix] (which defaults to four spaces) .  If
-   an argument is supplied, the prefixing is inhibited.
+This command, when invoked in a @hid[Draft] or @hid[Post] (where it is bound)
+buffer with an associated @hid[Message] or @hid[News-Message] buffer, or when
+in a @hid[Message] (or @hid[News-Message]) buffer that has an associated
+@hid[Draft] buffer, inserts the @hid[Message] buffer into the @hid[Draft] (or
+@hid[Post]) buffer.  Each inserted line is modified by prefixing it with
+@hid[Message Buffer Insertion Prefix] (which defaults to four spaces) .  If an
+argument is supplied, the prefixing is inhibited.
 @enddefcom
 
 @defcom[com "Edit Message Buffer", stuff (bound to @bf[e] in @hid[Message] mode) ]
-   This command puts the current @hid[Message] buffer in @hid[Text] mode and
-   makes it writable (@hid[Message] buffers are normally read-only).  The
-   pathname of the file which the message is in is associated with the buffer
-   making saving possible.  A recursive edit is entered, and the user is
-   allowed to make changes to the message.  When the recursive edit is exited,
-   if the buffer is modified, the user is asked if the changes should be saved.
-   The buffer is marked unmodified, and the pathname is disassociated from the
-   buffer.  The buffer otherwise returns to its previous state as a
-   @hid[Message] buffer.  If the recursive edit is aborted, the user is not
-   asked to save the file, and the buffer remains changed though it is marked
-   unmodified.
+This command puts the current @hid[Message] buffer in @hid[Text] mode and makes
+it writable (@hid[Message] buffers are normally read-only).  The pathname of
+the file which the message is in is associated with the buffer making saving
+possible.  A recursive edit is entered, and the user is allowed to make changes
+to the message.  When the recursive edit is exited, if the buffer is modified,
+the user is asked if the changes should be saved.  The buffer is marked
+unmodified, and the pathname is disassociated from the buffer.  The buffer
+otherwise returns to its previous state as a @hid[Message] buffer.  If the
+recursive edit is aborted, the user is not asked to save the file, and the
+buffer remains changed though it is marked unmodified.
 @enddefcom
 
 
@@ -1005,42 +1004,42 @@ its buffer
 @enddefcom
 
 @defcom[com "Headers Delete Message", stuff (bound to @bf[k] in @hid[Headers] and @hid[Message] modes) ]
-   This command, when invoked in a @hid[Headers] buffer, deletes the message on
-   the current line as described in @hid[Delete Message].
+This command, when invoked in a @hid[Headers] buffer, deletes the message on
+the current line as described in @hid[Delete Message].
 
-   When invoked in a @hid[Message] buffer, the message displayed in it is
-   deleted as described in @hid[Delete Message].
+When invoked in a @hid[Message] buffer, the message displayed in it is deleted
+as described in @hid[Delete Message].
 @enddefcom
 
 @defcom[com "Delete Message and Show Next", stuff (bound to @bf[k] in @hid[Headers] and @hid[Message] modes) ]
-   This command is only valid in a @hid[Headers] buffer or a @hid[Message]
-   buffer associated with some @hid[Headers] buffer.  The current message is
-   deleted as with the @hid[Delete Message] command.  Then the next message is
-   shown as with @hid[Next Undeleted Message].
+This command is only valid in a @hid[Headers] buffer or a @hid[Message] buffer
+associated with some @hid[Headers] buffer.  The current message is deleted as
+with the @hid[Delete Message] command.  Then the next message is shown as with
+@hid[Next Undeleted Message].
 @enddefcom
 
 @defcom[com "Delete Message and Down Line", stuff (bound to @bf[d] in @hid[Headers mode])]
-   This command, when invoked in a @hid[Headers] buffer, deletes the message on
-   the current line.  Then the point is moved to the next non-blank line.
+This command, when invoked in a @hid[Headers] buffer, deletes the message on
+the current line.  Then the point is moved to the next non-blank line.
 @enddefcom
 
 @defcom[com "Undelete Message" ]
-   This command is only meaningful when @hid[Virtual Message Deletion] is set.
-   This prompts for a folder, messages, and an optional @f[pick] expression.  When
-   in a @hid[Headers] buffer of the specified folder, the messages prompt
-   defaults to those messages in the buffer.  All @hid[Headers] buffers
-   representing the folder are updated.  Each headers line referring to an
-   undeleted message is notated by replacing the "@b[D]" in the third character
-   position after the message ID with a space.
+This command is only meaningful when @hid[Virtual Message Deletion] is set.
+This prompts for a folder, messages, and an optional @f[pick] expression.  When
+in a @hid[Headers] buffer of the specified folder, the messages prompt defaults
+to those messages in the buffer.  All @hid[Headers] buffers representing the
+folder are updated.  Each headers line referring to an undeleted message is
+notated by replacing the "@b[D]" in the third character position after the
+message ID with a space.
 @enddefcom
 
 @defcom[com "Headers Undelete Message", stuff (bound to @bf[u] in @hid[Headers] and @hid[Message] modes) ]
-   This command is only meaningful when @hid[Virtual Message Deletion] is set.
-   When invoked in a @hid[Headers] buffer, the message on the current line is
-   undeleted as described in @hid[Undelete Message].
+This command is only meaningful when @hid[Virtual Message Deletion] is set.
+When invoked in a @hid[Headers] buffer, the message on the current line is
+undeleted as described in @hid[Undelete Message].
 
-   When invoked in a @hid[Message] buffer, the message displayed in it is
-   undeleted as described in @hid[Undelete Message].
+When invoked in a @hid[Message] buffer, the message displayed in it is
+undeleted as described in @hid[Undelete Message].
 @enddefcom
 
 
@@ -1048,18 +1047,18 @@ its buffer
 
 @index[folder operations]@label[folder]
 @defcom[com "List Folders" ]
-   This command displays a list of all current mail folders in the user's
-   top-level mail directory in a @hemlock pop-up window.
+This command displays a list of all current mail folders in the user's
+top-level mail directory in a @hemlock pop-up window.
 @enddefcom
 
 @defcom[com "Create Folder"]
-   This command prompts for and creates a folder.  If the folder already
-   exists, an error is signaled.
+This command prompts for and creates a folder.  If the folder already exists,
+an error is signaled.
 @enddefcom
 
 @defcom[com "Delete Folder" ]
-   This command prompts for a folder and uses @f[rmf] to delete it.  Note that
-   no confirmation is asked for.
+This command prompts for a folder and uses @f[rmf] to delete it.  Note that no
+confirmation is asked for.
 @enddefcom
 
 
@@ -1067,25 +1066,24 @@ its buffer
 
 @index[refiling messages]@label[refiling]
 @defcom[com "Refile Message" ]
-   This command prompts for a folder, messages, an optional @f[pick]
-   expression, and a destination folder.  When invoked in a @hid[Headers]
-   buffer of the specified folder, the message prompt offers a default of those
-   messages in the buffer.  If the destination folder does not exist, the user
-   is asked to create it.  The resulting messages are refiled with the
-   @f[refile] utility.  All @hid[Headers] buffers for the folder are updated.
-   Each line referring to a refiled message is deleted from its buffer.
+This command prompts for a folder, messages, an optional @f[pick] expression,
+and a destination folder.  When invoked in a @hid[Headers] buffer of the
+specified folder, the message prompt offers a default of those messages in the
+buffer.  If the destination folder does not exist, the user is asked to create
+it.  The resulting messages are refiled with the @f[refile] utility.  All
+@hid[Headers] buffers for the folder are updated.  Each line referring to a
+refiled message is deleted from its buffer.
 @enddefcom
 
 @defcom[com "Headers Refile Message", stuff (bound to @bf[o] in @hid[Headers] and @hid[Message] modes) ]
-   This command, when invoked in a @hid[Headers] buffer, prompts for a
-   destination folder, refiling the message on the current line with
-   @f[refile].  If the destination folder does not exist, the user is asked to
-   create it.  Any @hid[Headers] buffers containing messages for that folder
-   are updated.  Each headers line referring to the refiled message is deleted
-   from its buffer.
+This command, when invoked in a @hid[Headers] buffer, prompts for a destination
+folder, refiling the message on the current line with @f[refile].  If the
+destination folder does not exist, the user is asked to create it.  Any
+@hid[Headers] buffers containing messages for that folder are updated.  Each
+headers line referring to the refiled message is deleted from its buffer.
 
-   When invoked in a @hid[Message] buffer, that message is refiled as described
-   above.
+When invoked in a @hid[Message] buffer, that message is refiled as described
+above.
 @enddefcom
 
 
@@ -1111,15 +1109,15 @@ in this section are @hid[Expunge Messages] and @hid[Quit Headers].
 
 
 @defhvar[var "Expunge Messages Confirm", val {t}]
-   When this is set, @hid[Quit Headers] and @hid[Expunge Messages] will ask for
-   confirmation before expunging messages and packing the folder's message ID's.
+When this is set, @hid[Quit Headers] and @hid[Expunge Messages] will ask for
+confirmation before expunging messages and packing the folder's message ID's.
 @enddefhvar
 
 @defhvar[var "Temporary Draft Folder", val {nil}]
-   This is a folder name where @mh @f[fcc:] messages are kept with the
-   intention that this folder's messages will be deleted and expunged whenever
-   messages from any folder are expunged (for example, when @hid[Expunge
-   Messages] or @hid[Quit Headers] is invoked.
+This is a folder name where @mh @f[fcc:] messages are kept with the intention
+that this folder's messages will be deleted and expunged whenever messages from
+any folder are expunged (for example, when @hid[Expunge Messages] or @hid[Quit
+Headers] is invoked.
 @enddefhvar
 
 @defcom[com "Expunge Messages", stuff (bound to @bf[!] in @hid[Headers] mode) ]
@@ -1177,12 +1175,11 @@ inhibits this.
 @enddefcom
 
 @defcom[com "Delete Headers Buffer and Message Buffers" ]
-   This command prompts for a @hid[Headers] buffer to delete along with its
-   associated @hid[Message] buffers.  Any associated @hid[Draft] buffers are
-   left intact, but their corresponding @hid[Message] buffers will be deleted.
-   When invoked in a @hid[Headers] buffer or a @hid[Message] buffer associated
-   with a @hid[Headers] buffer, that @hid[Headers] buffer is offered as a
-   default.
+This command prompts for a @hid[Headers] buffer to delete along with its
+associated @hid[Message] buffers.  Any associated @hid[Draft] buffers are left
+intact, but their corresponding @hid[Message] buffers will be deleted.  When
+invoked in a @hid[Headers] buffer or a @hid[Message] buffer associated with a
+@hid[Headers] buffer, that @hid[Headers] buffer is offered as a default.
 @enddefcom
 
 
