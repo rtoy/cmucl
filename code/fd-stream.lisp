@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.38 1997/01/18 14:31:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.39 1997/02/25 19:47:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -894,7 +894,11 @@ non-server method is also significantly more efficient for large reads.
     (setf (fd-stream-element-type stream)
 	  (cond ((equal input-type output-type)
 		 input-type)
-		((or (null output-type) (subtypep input-type output-type))
+		((null output-type)
+		 input-type)
+		((null input-type)
+		 output-type)
+		((subtypep input-type output-type)
 		 input-type)
 		((subtypep output-type input-type)
 		 output-type)
