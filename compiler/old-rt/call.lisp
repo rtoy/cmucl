@@ -24,9 +24,8 @@
 (defun standard-argument-location (n)
   (declare (type unsigned-byte n))
   (if (< n register-arg-count)
-      (make-wired-tn *any-primitive-type* register-arg-scn
-		     (elt register-arg-offsets n))
-      (make-wired-tn *any-primitive-type* stack-arg-scn n)))
+      (make-wired-tn register-arg-scn (elt register-arg-offsets n))
+      (make-wired-tn stack-arg-scn n)))
 
 
 ;;; Make-Return-PC-Passing-Location  --  Interface
@@ -38,52 +37,38 @@
 ;;;
 (defun make-return-pc-passing-location (standard)
   (if standard
-      (make-wired-tn *any-primitive-type* register-arg-scn return-pc-offset)  
-      (make-restricted-tn *any-primitive-type* (list register-arg-scn))))
+      (make-wired-tn register-arg-scn return-pc-offset)  
+      (make-restricted-tn register-arg-scn)))
 
 
-;;; Make-Old-Cont-Passing-Location  --  Interface
+;;; Make-Old-Fp-Passing-Location  --  Interface
 ;;;
 ;;;    Similar to Make-Return-PC-Passing-Location, but makes a location to pass
-;;; Old-Cont in.  This is (obviously) wired in the standard convention, but is
+;;; Old-Fp in.  This is (obviously) wired in the standard convention, but is
 ;;; totally unrestricted in non-standard conventions, since we can always fetch
 ;;; it off of the stack using the arg pointer.
 ;;;
-(defun make-old-cont-passing-location (standard)
+(defun make-old-fp-passing-location (standard)
   (if standard
-      (make-wired-tn *any-primitive-type* register-arg-scn old-cont-offset)
+      (make-wired-tn register-arg-scn old-fp-offset)
       (make-normal-tn *any-primitive-type*)))
 
 
-;;; Make-Old-Cont-Save-Location, Make-Return-PC-Save-Location  --  Interface
+;;; Make-Old-Fp-Save-Location, Make-Return-PC-Save-Location  --  Interface
 ;;;
-;;;    Make the TNs used to hold Old-Cont and Return-PC within the current
+;;;    Make the TNs used to hold Old-Fp and Return-PC within the current
 ;;; function.  We treat these specially so that the debugger can find them at a
 ;;; known location.
 ;;;
-(defun make-old-cont-save-location (env)
-  (make-wired-environment-tn *any-primitive-type*
-			     stack-arg-scn old-cont-save-offset
-			     env))
+(defun make-old-fp-save-location (env)
+  (environment-live-tn
+   (make-wired-tn stack-arg-scn old-fp-save-offset)
+   env))
 ;;;
 (defun make-return-pc-save-location (env)
-  (make-wired-environment-tn *any-primitive-type*
-			     stack-arg-scn return-pc-save-offset
-			     env))
-
-
-;;; Make-Argument-Pointer-Location  --  Interface
-;;;
-;;;    Similar to Make-Return-PC-Passing-Location, but makes a location to pass
-;;; an argument pointer in.  Even when non-standard locations are allowed, this
-;;; must be restricted to a register, since the argument pointer is used to
-;;; fetch stack arguments.
-;;;
-(defun make-argument-pointer-location (standard)
-  (if standard
-      (make-wired-tn *any-primitive-type* register-arg-scn
-		     argument-pointer-offset)
-      (make-restricted-tn *any-primitive-type* (list register-arg-scn))))
+  (environment-live-tn
+   (make-wired-tn stack-arg-scn return-pc-save-offset)
+   env))
 
 
 ;;; Make-Argument-Count-Location  --  Interface
@@ -93,7 +78,16 @@
 ;;; are using non-standard conventions.
 ;;;
 (defun make-argument-count-location ()
-  (make-wired-tn *any-primitive-type* register-arg-scn argument-count-offset))
+  (make-wired-tn register-arg-scn argument-count-offset))
+
+
+;;; MAKE-NFP-TN  --  Interface
+;;;
+;;;    Make a TN to hold the number-stack frame pointer.  This is allocated
+;;; once per component, and is component-live.
+;;;
+(defun make-nfp-tn ()
+  (component-live-tn (make-restricted-tn register-arg-scn)))
 
 
 ;;; Select-Component-Format  --  Interface
@@ -111,58 +105,64 @@
   (undefined-value))
 
 
-;;;; Argument/value passing, frame hackery:
+;;;; Frame hackery:
 
-;;; Fetch the argument Arg using the argument pointer Argp, yeilding the value
-;;; Val.  This operation is used at function entry to move the arguments from
-;;; their passing locations to the appropriate variable.
+;;; Used for setting up the Old-Fp in local call.
 ;;;
-(define-vop (move-argument)
-  (:args (arg :scs (any-reg descriptor-reg)  :load nil  :target val)
-	 (argp :scs (descriptor-reg)))
-  (:results (val :scs (any-reg descriptor-reg)))
-  (:generator 0
-    (sc-case arg
-      (stack
-       (loadw val argp (tn-offset arg)))
-      ((any-reg descriptor-reg)
-       (unless (location= arg val)
-	 (inst lr val arg))))))
-
-
-;;; Similar to Move-Argument, but is used to store known values into the frame
-;;; being returned into.  In this case, it is Loc that is potentially on the
-;;; stack in a different frame.
-;;;
-(define-vop (move-value)
-  (:args (value :scs (any-reg descriptor-reg)
-		:target loc)
-	 (old-cont :scs (descriptor-reg)))
-  (:results (loc :scs (any-reg descriptor-reg)  :load nil))
-  (:generator 0
-    (sc-case loc
-      (stack
-       (storew value old-cont (tn-offset loc)))
-      ((any-reg descriptor-reg)
-       (unless (location= loc value)
-	 (inst lr loc value))))))
-
-
-;;; Used for setting up the Old-Cont in local call.
-;;;
-(define-vop (current-cont)
+(define-vop (current-fp)
   (:results (val :scs (any-reg descriptor-reg)))
   (:generator 1
-    (inst lr val cont-tn)))
+    (inst lr val fp-tn)))
 
 
-;;; Notes the place at which the environment is properly initialized, for
-;;; debug-info purposes.
+#| Since we don't have a number stack yet, shouldn't be emitted.
+
+;;; Used for computing the caller's NFP for use in known-values return.  Only
+;;; works assuming there is no variable size stuff on the nstack.
 ;;;
-(define-vop (note-environment-start)
+(define-vop (compute-old-nfp)
+  (:results (val :scs (any-reg descriptor-reg)))
+  (:vop-var vop)
+  (:generator 1
+    (let ((nfp (current-nfp-tn vop)))
+      (when nfp
+	(inst cal val nfp (- (* 4 (sb-allocated-size 'number-stack))))))))
+|#
+
+
+;;; In an XEP, allocate frames for this function on the control stack (and
+;;; number stack if any).  We get to emit the start label, since we might need
+;;; to emit variable cruft to align it, etc.
+;;;
+(define-vop (xep-allocate-frame)
   (:info start-lab)
-  (:generator 0
-    (emit-label start-lab)))
+  (:generator 1
+    (emit-label start-lab)
+    (inst cal sp-tn fp-tn (* 4 (sb-allocated-size 'stack)))))
+
+
+;;; Allocate the frame for the function we are about to call, returning the
+;;; frame pointer(s).
+;;;
+(define-vop (allocate-frame)
+  (:results (res :scs (any-reg descriptor-reg)) (nfp))
+  (:ignore nfp)
+  (:generator 2
+    (inst lr res sp-tn)
+    (inst cal sp-tn sp-tn (* 4 (sb-allocated-size 'stack)))))
+
+
+;;; Allocate a partial frame for passing stack arguments in a full call.  Nargs
+;;; is the number of arguments passed.  If no stack arguments are passed, then
+;;; we don't have to do anything.
+;;;
+(define-vop (allocate-full-call-frame)
+  (:info nargs)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 2
+    (when (> nargs register-arg-count)
+      (inst lr res sp-tn)
+      (inst cal sp-tn sp-tn (* 4 nargs)))))
 
 
 ;;; Default-Unknown-Values  --  Internal
@@ -204,12 +204,12 @@ regs-defaulted
 
 	cmpi nargs 3			; If 4'th value unsupplied...
 	blex default-value-4		;    jump to default code
-	loadw move-temp args-tn 3	; Move value to correct location.
+	loadw move-temp old-fp-tn 3	; Move value to correct location.
 	store-stack-tn val4-tn move-temp
 
 	cmpi nargs 4			; Check 5'th value, etc.
 	blex default-value-5
-	loadw move-temp args-tn 4
+	loadw move-temp old-fp-tn 4
 	store-stack-tn val5-tn move-temp
 
 	...
@@ -235,7 +235,7 @@ default-value-5
 	   (type unsigned-byte nvals) (type tn move-temp nil-temp))
   (assemble node
     (if (<= nvals 1)
-	(inst ai sp-tn args-tn 0)
+	(inst ai sp-tn old-fp-tn 0)
 	(let ((regs-defaulted (gen-label))
 	      (defaulting-done (gen-label)))
 	  (inst bnb :pz regs-defaulted)
@@ -246,7 +246,7 @@ default-value-5
 	    (inst cau (tn-ref-tn val) zero-tn clc::nil-16))
 	  (when (> nvals register-arg-count)
 	    (loadi nargs-tn 1)
-	    (inst lr args-tn sp-tn))
+	    (inst lr old-fp-tn sp-tn))
 
 	  (emit-label regs-defaulted)
 
@@ -266,11 +266,11 @@ default-value-5
 		  (defaults (cons default-lab tn))
 		  (cmpi nargs-tn i)
 		  (inst bnbx :gt default-lab)
-		  (loadw move-temp args-tn i)
+		  (loadw move-temp old-fp-tn i)
 		  (store-stack-tn tn move-temp)))
 
 	      (emit-label defaulting-done)
-	      (inst lr sp-tn args-tn)
+	      (inst lr sp-tn old-fp-tn)
 
 	      (unassemble
 	       (assemble-elsewhere node
@@ -340,7 +340,7 @@ default-value-5
    (count :scs (descriptor-reg)))
   (:node-var node)
   (:temporary (:sc descriptor-reg
-	       :offset argument-pointer-offset
+	       :offset old-fp-offset
 	       :from :eval  :to (:result 0))
 	      values-start)
   (:temporary (:sc any-reg
@@ -349,28 +349,15 @@ default-value-5
 	      nvals))
 
 
-;;;; Tail-recursive local call:
-
-;;; We just do the control transfer.  The other stuff is done with explicit
-;;; move VOPs.
-;;;
-(define-vop (tail-call-local)
-  (:args
-   (args :more t))
-  (:info start)
-  (:ignore args)
-  (:generator 5
-    (when start
-      (inst bnb :pz start))))
-
-
 ;;;; Local call with unknown values convention return:
 
 ;;; Non-TR local call for a fixed number of values passed according to the
 ;;; unknown values convention.
 ;;;
-;;; Args are the argument passing locations, which are specified only to
-;;; terminate their lifetimes in the caller.
+;;; When initially emitted, Args reference the values to be passed.
+;;; Representation selection changes the Args to reference the passing
+;;; locations when it inserts the move-argument VOPs.  Arg-Locs is the list of
+;;; passing locations used by representation selection.
 ;;;
 ;;; Values are the return value locations (wired to the standard passing
 ;;; locations).
@@ -381,11 +368,14 @@ default-value-5
 ;;; Nvals is the number of values received.
 ;;;
 (define-vop (call-local)
-  (:args (args :more t))
+  (:args (fp :scs (any-reg descriptor-reg))
+	 (nfp)
+	 (args :more t))
   (:results (values :more t))
   (:save-p t)
-  (:info save return-pc target nvals)
-  (:ignore args save)
+  (:move-args :local-call)
+  (:info arg-locs return-pc target nvals)
+  (:ignore arg-locs args nfp)
   (:node-var node)
   (:vop-var vop)
   (:temporary (:scs (descriptor-reg)) move-temp nil-temp)
@@ -394,9 +384,9 @@ default-value-5
 	      env-save)
   (:generator 5
     (store-stack-tn env-save env-tn)
-    (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
-    (inst cal sp-tn sp-tn (current-frame-size))
+    (inst lr fp-tn fp)
+    (no-op)
     (note-this-location vop :unknown-return)
     (unassemble
       (default-unknown-values node values nvals move-temp nil-temp))
@@ -408,19 +398,22 @@ default-value-5
 ;;; glob and the number of values received.
 ;;;
 (define-vop (multiple-call-local unknown-values-receiver)
-  (:args (args :more t))
+  (:args (fp :scs (any-reg descriptor-reg))
+	 (nfp)
+	 (args :more t))
   (:save-p t)
-  (:info save return-pc target)
-  (:ignore args save)
+  (:move-args :local-call)
+  (:info arg-locs return-pc target)
+  (:ignore arg-locs args nfp)
   (:vop-var vop)
   (:temporary (:sc stack
 	       :offset env-save-offset)
 	      env-save)
   (:generator 20
     (store-stack-tn env-save env-tn)
-    (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
-    (inst cal sp-tn sp-tn (current-frame-size))
+    (inst lr fp-tn fp)
+    (no-op)
     (note-this-location vop :unknown-return)
     (unassemble
       (receive-unknown-values node values-start nvals start count))
@@ -433,35 +426,39 @@ default-value-5
 ;;; just like argument passing in local call.
 ;;;
 (define-vop (known-call-local)
-  (:args
-   (args :more t))
+  (:args (fp :scs (any-reg descriptor-reg))
+	 (nfp)
+	 (args :more t))
   (:results
    (res :more t))
+  (:move-args :local-call)
   (:save-p t)
-  (:info save return-pc target)
-  (:ignore args res save)
+  (:info arg-locs return-pc target)
+  (:ignore arg-locs args res nfp)
   (:vop-var vop)
   (:generator 5
-    (inst lr cont-tn sp-tn)
     (inst balix return-pc target)
-    (inst cal sp-tn sp-tn (current-frame-size))
+    (inst lr fp-tn fp)
+    (no-op)
     (note-this-location vop :known-return)))
 
 
 ;;; Return from known values call.  We receive the return locations as
 ;;; arguments to terminate their lifetimes in the returning function.  We
-;;; restore CONT and SP and jump to the Return-PC.
+;;; restore FP and SP and jump to the Return-PC.
 ;;;
 (define-vop (known-return)
   (:args
-   (old-cont :scs (descriptor-reg))
+   (old-fp :scs (descriptor-reg))
    (return-pc :scs (descriptor-reg))
-   (locs :more t))
-  (:ignore locs)
+   (vals :more t))
+  (:move-args :known-return)
+  (:info val-locs)
+  (:ignore val-locs vals)
   (:generator 6
-    (inst lr sp-tn cont-tn)
+    (inst lr sp-tn fp-tn)
     (inst bnbrx :pz return-pc)
-    (inst lr cont-tn old-cont)))
+    (inst lr fp-tn old-fp)))
 
 
 ;;;; Full call:
@@ -470,10 +467,12 @@ default-value-5
 ;;; versions are used depending on whether we know the number of arguments or
 ;;; the name of the called function, and whether we want fixed values, unknown
 ;;; values, or a tail call.
-
-;;; In full call, the arguments are passed by placing them in TNs wired to the
-;;; beginning of the current frame (as done by Standard-Argument-Location).  A
-;;; pointer to these arguments is then passed as the argument pointer.
+;;;
+;;; In full call, the arguments are passed creating a partial frame on the
+;;; stack top and storing stack arguments into that frame.  On entry to the
+;;; callee, this partial frame is pointed to by FP.  If there are no stack
+;;; arguments, we don't bother allocating a partial frame, and instead set FP
+;;; to SP just before the call.
 
 
 ;;; Define-Full-Call  --  Internal
@@ -493,14 +492,17 @@ default-value-5
 ;;;    result values are specified by the Start and Count as in the
 ;;;    unknown-values continuation representation.
 ;;; -- If :Tail, then do a tail-recursive call.  No values are returned.
-;;;    The Old-Cont and Return-PC are passed as the second and third arguments.
+;;;    The Old-Fp and Return-PC are passed as the second and third arguments.
 ;;;
-;;; Variable is true if there are a variable number of arguments passed on the
-;;; stack, with the last argument pointing to the beginning of the arguments.
-;;; If Variable is false, the arguments are set up in the standard passing
-;;; locations and are passed as the remaining arguments.  Variable cannot be
-;;; specified with :Tail return.  TR variable argument call is implemented
-;;; separately.
+;;; In non-tail calls, the pointer to the stack arguments is passed as the last
+;;; fixed argument.  If Variable is false, then the passing locations are
+;;; passed as a more arg.  Variable is true if there are a variable number of
+;;; arguments passed on the stack.  Variable cannot be specified with :Tail
+;;; return.  TR variable argument call is implemented separately.
+;;;
+;;; In tail call with fixed arguments, the passing locations are passed as a
+;;; more arg, but there is no new-FP, since the arguments have been set up in
+;;; the current frame.
 ;;;
 (defmacro define-full-call (name named return variable)
   (assert (not (and variable (eq return :tail))))
@@ -508,47 +510,47 @@ default-value-5
 		,@(when (eq return :unknown)
 		    '(unknown-values-receiver)))
      (:args
+      ,@(unless (eq return :tail)
+	  '((new-fp :scs (descriptor-reg) :to :eval)))
+
       ,(if named
 	   '(name :scs (descriptor-reg)
 		  :target name-pass)
-	   '(arg-fun :scs (descriptor-reg)
-		     :target function))
+	   '(function :scs (descriptor-reg) :to :eval))
       
       ,@(when (eq return :tail)
-	  '((old-cont :scs (descriptor-reg)
-		      :target old-cont-pass)
+	  '((old-fp :scs (descriptor-reg)
+		    :target old-fp-pass)
 	    (return-pc :scs (descriptor-reg)
 		       :target return-pc-pass)))
       
-      ,(if variable
-	   '(args :scs (descriptor-reg)
-		  :target args-pass)
-	   '(args :more t)))
-
+      ,@(unless variable '((args :more t))))
+      
      ,@(when (eq return :fixed)
 	 '((:results (values :more t))))
-   
+     
      ,@(unless (eq return :tail)
-	 '((:save-p t)
+	 `((:save-p t)
 	   (:node-var node)
 	   (:vop-var vop)
 	   (:temporary (:sc stack
 			:offset env-save-offset)
-		       env-save)))
+		       env-save)
+	   ,@(unless variable
+	       '((:move-args :full-call)))))
 
-     (:info ,@(unless (eq return :tail) '(save))
+     (:info ,@(unless (or variable (eq return :tail)) '(arg-locs))
 	    ,@(unless variable '(nargs))
 	    ,@(when (eq return :fixed) '(nvals)))
 
-     (:ignore
-      ,@(unless (eq return :tail) '(save))
-      ,@(unless variable '(args)))
+     (:ignore ,@(unless (or variable (eq return :tail)) '(arg-locs))
+	      ,@(unless variable '(args)))
 
      (:temporary (:sc descriptor-reg
-		  :offset old-cont-offset
+		  :offset old-fp-offset
 		  :from (:argument ,(if (eq return :tail) 1 0))
 		  :to :eval)
-		 old-cont-pass)
+		 old-fp-pass)
 
      (:temporary (:sc descriptor-reg
 		  :offset return-pc-offset
@@ -561,18 +563,11 @@ default-value-5
 			:offset call-name-offset
 			:from (:argument 0)
 			:to :eval)
-		       name-pass)))
-
-     (:temporary (:scs (descriptor-reg)
-		       :from (:argument 0)
-		       :to :eval)
-		 function)
-
-     (:temporary (:sc descriptor-reg
-		  :offset argument-pointer-offset
-		  :from (:argument ,(if variable 1 0))
-		  :to :eval)
-		 args-pass)
+		       name-pass)
+	   (:temporary (:scs (descriptor-reg)
+			     :from (:argument 0)
+			     :to :eval)
+		       function)))
 
      (:temporary (:sc descriptor-reg
 		  :offset argument-count-offset
@@ -608,39 +603,38 @@ default-value-5
 		     15
 		     (if (eq return :unknown) 25 0))
        
-       ,@(if named
-	     `((unless (location= name name-pass)
-		 (inst lr name-pass name))
-	       (loadw function name-pass (/ clc::symbol-definition 4)))
-	     `((unless (location= arg-fun function)
-		 (inst lr function arg-fun))))
+       ,@(when named
+	   `((unless (location= name name-pass)
+	       (inst lr name-pass name))
+	     (loadw function name-pass (/ clc::symbol-definition 4))))
        
        ,@(if variable
-	     `((unless (location= args args-pass)
-		 (inst lr args-pass args))
-	       (inst lr nargs-pass sp-tn)
-	       (inst s nargs-pass args-pass)
+	     `((inst lr nargs-pass sp-tn)
+	       (inst s nargs-pass new-fp)
 	       (inst sari nargs-pass 2)
-	       (loadw a0 args-pass 0)
-	       (loadw a1 args-pass 1)
-	       (loadw a2 args-pass 2))
-	     `((loadi nargs-pass nargs)
-	       (inst lr args-pass cont-tn)))
+	       (loadw a0 new-fp 0)
+	       (loadw a1 new-fp 1)
+	       (loadw a2 new-fp 2))
+	     `((loadi nargs-pass nargs)))
        
        (load-slot code function system:%function-code-slot)
        (load-slot offset function system:%function-offset-slot)
        (inst cas code code offset)
        
        ,@(if (eq return :tail)
-	     '((unless (location= old-cont old-cont-pass)
-		 (inst lr old-cont-pass old-cont))
+	     '((unless (location= old-fp old-fp-pass)
+		 (inst lr old-fp-pass old-fp))
 	       (unless (location= return-pc return-pc-pass)
 		 (inst lr return-pc-pass return-pc))
 	       (inst bnbrx :pz code)
 	       (inst lr env-tn function))
-	     '((store-stack-tn env-save env-tn)
-	       (inst lr old-cont-pass cont-tn)
-	       (inst lr cont-tn sp-tn)
+	     `((store-stack-tn env-save env-tn)
+	       (inst lr old-fp-pass fp-tn)
+	       ,(if variable
+		    '(inst lr fp-tn new-fp)
+		    '(if (> nargs register-arg-count)
+			 (inst lr fp-tn new-fp)
+			 (inst lr fp-tn sp-tn)))
 	       (inst balrx return-pc-pass code)
 	       (inst lr env-tn function)
 	       (no-op)))
@@ -675,43 +669,41 @@ default-value-5
 ;;; down.
 ;;;
 ;;; This miscop uses a non-standard calling convention so that the argument
-;;; registers are free for loading of stack arguments.  Old-Cont, Args and the
-;;; function are passed in the registers that they will ultimately go in:
-;;; OLD-CONT, ARGS and ENV.  The Return-PC is passed in A3 rather than PC
-;;; because the BALA trashes PC.  We use BALA even though the miscop never
-;;; returns, since there isn't any BA.
+;;; registers are free for loading of stack arguments.  Old-Fp and the function
+;;; are passed in the registers that they will ultimately go in: OLD-FP and
+;;; ENV.  Args is a pointer to the start of the arguments on the stack, and is
+;;; passed in the special ARGS passing location.  The Return-PC is passed in
+;;; A3 rather than PC because the BALA trashes PC.  We use BALA even though the
+;;; miscop never returns, since there isn't any BA.
 ;;;
 ;;; [### We could easily code inline the special case of nargs <= 3.]
 ;;;
 (define-vop (tail-call-variable)
   (:args
+   (args :scs (descriptor-reg) :target args-pass)
    (function :scs (descriptor-reg))
-   (old-cont :scs (descriptor-reg)
-	     :target old-cont-pass)
-   (return-pc :scs (descriptor-reg)
-	      :target a3)
-   (args :scs (descriptor-reg)
-	 :target args-pass))
+   (old-fp :scs (descriptor-reg) :target old-fp-pass)
+   (return-pc :scs (descriptor-reg) :target a3))
   (:temporary (:sc descriptor-reg
-	       :offset old-cont-offset
-	       :from (:argument 1))
-	      old-cont-pass)
+	       :offset old-fp-offset
+	       :from (:argument 2))
+	      old-fp-pass)
   (:temporary (:sc descriptor-reg
 	       :offset a3-offset
-	       :from (:argument 2))
+	       :from (:argument 3))
 	      a3)
   (:temporary (:sc descriptor-reg
 	       :offset argument-pointer-offset
-	       :from (:argument 3))
+	       :from (:argument 0))
 	      args-pass)
   (:generator 75
     (inst lr env-tn function)
-    (unless (location= old-cont old-cont-pass)
-      (inst lr old-cont-pass old-cont))
-    (unless (location= return-pc a3)
-      (inst lr a3 return-pc))
     (unless (location= args args-pass)
       (inst lr args-pass args))
+    (unless (location= old-fp old-fp-pass)
+      (inst lr old-fp-pass old-fp))
+    (unless (location= return-pc a3)
+      (inst lr a3 return-pc))
     (inst miscop 'clc::tail-call-variable)))
 
 
@@ -723,17 +715,17 @@ default-value-5
 ;;; number of values returned.
 ;;;
 ;;; If returning a single value, then deallocate the current frame, restore
-;;; CONT and jump to the single-value entry at Return-PC + 4.
+;;; FP and jump to the single-value entry at Return-PC + 4.
 ;;;
 ;;; If returning other than one value, then load the number of values returned,
-;;; NIL out unsupplied values registers, restore CONT and return at Return-PC.
+;;; NIL out unsupplied values registers, restore FP and return at Return-PC.
 ;;; When there are stack values, we must initialize the argument pointer to
 ;;; point to the beginning of the values block (which is the beginning of the
 ;;; current frame.)
 ;;;
 (define-vop (return)
   (:args
-   (old-cont :scs (descriptor-reg any-reg))
+   (old-fp :scs (descriptor-reg any-reg))
    (return-pc :scs (descriptor-reg) :target pc-save)
    (values :more t))
   (:ignore values)
@@ -758,19 +750,19 @@ default-value-5
 	       :offset argument-count-offset)
 	      nvals-loc)
   (:temporary (:sc descriptor-reg
-	       :offset argument-pointer-offset)
+	       :offset old-fp-offset)
 	      vals-loc)
   (:generator 6
     (cond ((= nvals 1)
-	   (inst lr sp-tn cont-tn)
+	   (inst lr sp-tn fp-tn)
 	   (inst inc return-pc 4)
 	   (inst bnbrx :pz return-pc)
-	   (inst lr cont-tn old-cont))
+	   (inst lr fp-tn old-fp))
 	  (t
 	   (loadi nvals-loc nvals)
-	   (inst lr vals-loc cont-tn)
+	   (inst lr vals-loc fp-tn)
 	   (inst cal sp-tn vals-loc (* nvals 4))
-	   (inst lr cont-tn old-cont)
+	   (inst lr fp-tn old-fp)
 
 	   (unless (location= pc-save return-pc)
 	     (inst lr pc-save return-pc))
@@ -792,14 +784,15 @@ default-value-5
 ;;;
 ;;; The Return-Multiple miscop uses a non-standard calling convention.  For one
 ;;; thing, it doesn't return.  We only use BALA because there isn't a BA
-;;; instruction.   Also, we don't use A0..A2 for argument passing, since the
+;;; instruction.  Also, we don't use A0..A2 for argument passing, since the
 ;;; miscop will want to load these with values off of the stack.  Instead, we
-;;; pass Old-Cont, Start and Count in the normal locations for these values.
-;;; Return-PC is passed in A3 since PC is trashed by the BALA. 
+;;; pass Old-Fp and Count in the normal locations for these values.  The
+;;; pointer to the start of the return values is passed in the special ARGS
+;;; location.  Return-PC is passed in A3 since PC is trashed by the BALA.
 ;;;
 (define-vop (return-multiple)
   (:args
-   (old-cont :scs (descriptor-reg) :target old-cont-pass)
+   (old-fp :scs (descriptor-reg) :target old-fp-pass)
    (return-pc :scs (descriptor-reg)
 	      :target a3)
    (start :scs (descriptor-reg)
@@ -807,9 +800,9 @@ default-value-5
    (count :scs (descriptor-reg)
 	  :target nvals-loc))
   (:temporary (:sc descriptor-reg
-	       :offset old-cont-offset
+	       :offset old-fp-offset
 	       :from (:argument 0))
-	      old-cont-pass)
+	      old-fp-pass)
   (:temporary (:sc descriptor-reg
 	       :offset a3-offset
 	       :from (:argument 1))
@@ -831,16 +824,16 @@ default-value-5
       (cmpi count 1)
       (inst bnbx :eq non-single)
       (loadw a0 start)
-      (inst lr sp-tn cont-tn)
+      (inst lr sp-tn fp-tn)
       (inst inc return-pc 4)
       (inst bnbrx :pz return-pc)
-      (inst lr cont-tn old-cont)
+      (inst lr fp-tn old-fp)
 
       (unassemble
 	(assemble-elsewhere node
 	  (emit-label non-single)
-	  (unless (location= old-cont-pass old-cont)
-	    (inst lr old-cont-pass old-cont))
+	  (unless (location= old-fp-pass old-fp)
+	    (inst lr old-fp-pass old-fp))
 	  (unless (location= a3 return-pc)
 	    (inst lr a3 return-pc))
 	  (unless (location= vals-loc start)
@@ -851,17 +844,6 @@ default-value-5
 
 
 ;;;; XEP hackery:
-
-
-;;; We get to emit the start label, since we might need to emit variable cruft
-;;; to align it, etc.
-;;;
-(define-vop (allocate-frame)
-  (:info start-lab)
-  (:generator 1
-    (emit-label start-lab)
-    (inst cal sp-tn cont-tn (current-frame-size))))
-
 
 ;;; Fetch the constant pool from the function entry structure.
 ;;;
@@ -906,32 +888,10 @@ default-value-5
   (:translate %more-arg))
 
 
-;;; Turn more arg (context, count) into a list.  Context and count are passed
-;;; in ARGS and NARGS.
+;;; Turn more arg (context, count) into a list.
 ;;;
-(define-vop (listify-rest-args zero-arg-miscop)
-  (:args (context :target args :scs (any-reg descriptor-reg))
-	 (count :target nargs :scs (any-reg descriptor-reg)))
-  (:temporary (:sc any-reg
-	       :offset argument-pointer-offset
-	       :from (:argument 0)
-	       :to :eval)
-	      args)
-  (:temporary (:sc any-reg
-	       :offset argument-count-offset
-	       :from (:argument 1)
-	       :to :eval)
-	      nargs)
-  (:variant-vars)
-  (:translate %listify-rest-args)
-  (:generator 50
-    (unless (location= context args)
-      (inst lr args context))
-    (unless (location= count nargs)
-      (inst lr nargs count))
-    (inst miscop 'clc::listify-rest-args)
-    (unless (location= a0 r)
-      (inst lr r a0))))
+(define-miscop listify-rest-args (context count)
+  :translate %listify-rest-args)
 
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
