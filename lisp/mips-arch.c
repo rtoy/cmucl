@@ -60,12 +60,17 @@ unsigned long arch_install_breakpoint(void *pc)
     unsigned long *ptr = (unsigned long *)pc;
     unsigned long result = *ptr;
     *ptr = (trap_Breakpoint << 16) | 0xd;
+
+    os_flush_icache((os_vm_address_t)ptr, sizeof(unsigned long));
+
     return result;
 }
 
 void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
     *(unsigned long *)pc = orig_inst;
+
+    os_flush_icache((os_vm_address_t)pc, sizeof(unsigned long));
 }
 
 static unsigned long *skipped_break_addr, displaced_after_inst;
@@ -95,6 +100,7 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 
     /* Put the original instruction back. */
     *break_pc = orig_inst;
+    os_flush_icache((os_vm_address_t)break_pc, sizeof(unsigned long));
     skipped_break_addr = break_pc;
 
     /* Figure out where it goes. */
@@ -109,6 +115,7 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 
     displaced_after_inst = *next_pc;
     *next_pc = (trap_AfterBreakpoint << 16) | 0xd;
+    os_flush_icache((os_vm_address_t)next_pc, sizeof(unsigned long));
 
     sigreturn(scp);
 }
@@ -143,8 +150,11 @@ static void sigtrap_handler(int signal, int code, struct sigcontext *scp)
 
       case trap_AfterBreakpoint:
 	*skipped_break_addr = (trap_Breakpoint << 16) | 0xd;
+	os_flush_icache((os_vm_address_t)skipped_break_addr,
+			sizeof(unsigned long));
 	skipped_break_addr = NULL;
 	*(unsigned long *)scp->sc_pc = displaced_after_inst;
+	os_flush_icache((os_vm_address_t)scp->sc_pc, sizeof(unsigned long));
 	scp->sc_mask = orig_sigmask;
 	break;
 
