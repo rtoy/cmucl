@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.4 1991/09/03 16:26:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.1.1.5 1992/02/14 23:51:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,9 +52,6 @@
 (defvar *terminal-baud-rate* nil)
 (declaim (type (or (unsigned-byte 16) null) *terminal-baud-rate*))
 
-(defalien sgtty mach:sgtty (record-size 'mach:sgtty))
-(defalien winsize mach:winsize (record-size 'mach:winsize))
-
 ;;; GET-TERMINAL-ATTRIBUTES  --  Interface
 ;;;
 ;;;    Get terminal attributes from Unix.  Return as values, the lines,
@@ -65,21 +62,21 @@
 ;;; the buffer is in a global.
 ;;;
 (defun get-terminal-attributes (&optional (fd 1))
-  (mach::with-trap-arg-block mach:winsize winsize
-    (mach::with-trap-arg-block mach:sgtty sgtty
-      (let ((size-win (mach:unix-ioctl fd mach:TIOCGWINSZ (alien-sap winsize)))
-	    (speed-win (mach:unix-ioctl fd mach:TIOCGETP (alien-sap sgtty))))
-	(flet ((frob (val)
-		 (if (and size-win (not (zerop val)))
-		     val
-		     nil)))
-	  (values
-	   (frob (alien-access (mach:winsize-ws_row winsize)))
-	   (frob (alien-access (mach:winsize-ws_col winsize)))
-	   (and speed-win
-		(setq *terminal-baud-rate*
-		      (svref mach:terminal-speeds
-			     (alien-access (mach:sgtty-ospeed sgtty)))))))))))
+  (alien:with-alien ((winsize (alien:struct unix:winsize))
+		     (sgtty (alien:struct unix:sgttyb)))
+    (let ((size-win (unix:unix-ioctl fd mach:TIOCGWINSZ (alien-sap winsize)))
+	  (speed-win (unix:unix-ioctl fd mach:TIOCGETP (alien-sap sgtty))))
+      (flet ((frob (val)
+	       (if (and size-win (not (zerop val)))
+		   val
+		   nil)))
+	(values
+	 (frob (alien:slot winsize 'unix:ws-row))
+	 (frob (alien:slot winsize 'unix:ws-col))
+	 (and speed-win
+	      (setq *terminal-baud-rate*
+		    (svref unix:terminal-speeds
+			   (alien:slot sgtty 'unix:sg-ospeed)))))))))
 
 ;;;; Output routines and buffering.
 
@@ -102,7 +99,7 @@
 ;;;
 (defun write-and-maybe-wait (count)
   (declare (fixnum count))
-  (mach:unix-write 1 *redisplay-output-buffer* 0 count)
+  (unix:unix-write 1 *redisplay-output-buffer* 0 count)
   (let ((speed *terminal-baud-rate*))
     (when speed
       (sleep (/ (* (float count) 10.0) (float speed))))))
