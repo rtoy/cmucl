@@ -834,10 +834,12 @@
 
 ;;;; CMU Common Lisp version of environment frobbing stuff.
 
-;;; In CMU Common Lisp, the environment (well, the function/macro part of
-;;; the environment) is represented as a list of entries, with each entry
-;;; being of the form (name . thing), where thing is either
-;;; (macro . <interpreted-function) or a C::FUNCTIONAL structure.
+;;; In CMU Common Lisp, the environment is represented with a structure
+;;; that holds alists for the functional things, variables, blocks, etc.
+;;; Only the c::lexenv-functions slot is relevent.  It holds:
+;;; Alist (name . what), where What is either a Functional (a local function)
+;;; or a list (MACRO . <function>) (a local macro, with the specifier
+;;; expander.)    Note that Name may be a (SETF <name>) function.
 
 #+:CMU
 (progn
@@ -856,16 +858,15 @@
   ;; we have no idea what to use for the environment.  So we just blow it
   ;; off, 'cause anything real we do would be wrong.  We still have to
   ;; make an entry so we can tell functions from macros.
-  (let ((c::*lexical-environment* (or env (c::make-null-environment))))
-    (c::make-lexenv
-     :functions
-     (append (mapcar #'(lambda (f)
-			 (cons (car f) (c::make-functional)))
-		     functions)
-	     (mapcar #'(lambda (m)
-			 (list* (car m) 'c::macro
-				(coerce (cadr m) 'function)))
-		     macros)))))
+  (c::make-lexenv :default (or env (c::make-null-environment))
+		  :functions
+		  (append (mapcar #'(lambda (f)
+				      (cons (car f) (c::make-functional)))
+				  functions)
+			  (mapcar #'(lambda (m)
+				      (list* (car m) 'c::macro
+					     (coerce (cadr m) 'function)))
+				  macros))))
 
 (defun environment-function (env fn)
   (when env
@@ -945,14 +946,16 @@
 (defun walker-environment-bind-1 (env &key (walk-function nil wfnp)
 					   (walk-form nil wfop)
 					   (declarations nil decp)
-					   (lexical-variables nil lexp))
+					   (lexical-variables nil lexp)
+					   (symbol-macros nil symmacp))
   (let ((lock (environment-macro env *key-to-walker-environment*)))
     (list
       (list *key-to-walker-environment*
 	    (list (if wfnp walk-function     (car lock))
 		  (if wfop walk-form         (cadr lock))
 		  (if decp declarations      (caddr lock))
-		  (if lexp lexical-variables (cadddr lock)))))))
+		  (if lexp lexical-variables (cadddr lock))
+		  (if symmacp symbol-macros  (fifth lock)))))))
 		  
 (defun env-walk-function (env)
   (car (env-lock env)))
@@ -966,6 +969,9 @@
 (defun env-lexical-variables (env)
   (cadddr (env-lock env)))
 
+(defun env-symbol-macros (env)
+  (fifth (env-lock env)))
+
 
 (defun note-declaration (declaration env)
   (let ((lock (env-lock env)))
@@ -974,8 +980,8 @@
 
 (defun note-lexical-binding (thing env)
   (let ((lock (env-lock env)))
-    (setf (cadddr lock)
-	  (cons thing (cadddr lock)))))
+    (push thing (cadddr lock))
+    (setf (fifth lock) (remove thing (fifth lock) :key #'car))))
 
 
 (defun VARIABLE-LEXICAL-P (var env)
@@ -1141,13 +1147,14 @@
 (define-walker-template MACROLET             walk-macrolet)
 (define-walker-template MULTIPLE-VALUE-CALL  (NIL EVAL REPEAT (EVAL)))
 (define-walker-template MULTIPLE-VALUE-PROG1 (NIL RETURN REPEAT (EVAL)))
-(define-walker-template MULTIPLE-VALUE-SETQ  (NIL (REPEAT (SET)) EVAL))
+(define-walker-template MULTIPLE-VALUE-SETQ  walk-multiple-value-setq)
 (define-walker-template MULTIPLE-VALUE-BIND  walk-multiple-value-bind)
 (define-walker-template PROGN                (NIL REPEAT (EVAL)))
 (define-walker-template PROGV                (NIL EVAL EVAL REPEAT (EVAL)))
 (define-walker-template QUOTE                (NIL QUOTE))
 (define-walker-template RETURN-FROM          (NIL QUOTE REPEAT (RETURN)))
-(define-walker-template SETQ                 (NIL REPEAT (SET EVAL)))
+(define-walker-template SETQ                 walk-setq)
+(define-walker-template SYMBOL-MACROLET      walk-symbol-macrolet)
 (define-walker-template TAGBODY              walk-tagbody)
 (define-walker-template THE                  (NIL QUOTE EVAL))
 (define-walker-template THROW                (NIL EVAL EVAL))
@@ -1289,44 +1296,60 @@
 ;;;     3. Otherwise, assume it is a function call. "
 ;;;     
 
-(defun walk-form-internal (form context env
-			   &aux newform newnewform
-				walk-no-more-p macrop
-				fn template)
+(defun walk-form-internal (form context env)
   ;; First apply the walk-function to perform whatever translation
   ;; the user wants to this form.  If the second value returned
   ;; by walk-function is T then we don't recurse...
   (catch form
-    (multiple-value-setq (newform walk-no-more-p)
-      (funcall (env-walk-function env) form context env))
-    (catch newform
-      (cond (walk-no-more-p newform)
-	    ((not (eq form newform))
-	     (walk-form-internal newform context env))
-	    ((not (consp newform)) newform)
-	    ((setq template (get-walker-template (setq fn (car newform))))
-	     (if (symbolp template)
-		 (funcall template newform context env)
-		 (walk-template newform template context env)))
-	    (t
-	     (multiple-value-setq (newnewform macrop)
-	       (walker-environment-bind (new-env env :walk-form newform)
-		 (macroexpand-1 newform new-env)))
-	     (cond (macrop (walk-form-internal newnewform context env))
+    (multiple-value-bind (newform walk-no-more-p)
+      (funcall (env-walk-function env) form context env)
+      (catch newform
+	(cond
+	 (walk-no-more-p newform)
+	 ((not (eq form newform))
+	  (walk-form-internal newform context env))
+	 ((not (consp newform))
+	  (let ((symmac (assoc newform (env-symbol-macros env))))
+	    (if symmac
+		(let ((newnewform (walk-form-internal (cadr symmac)
+						      context env)))
+		  (if (eq newnewform (cadr symmac))
+		      newform
+		      newnewform))
+		newform)))
+	 (t
+	  (let* ((fn (car newform))
+		 (template (get-walker-template fn)))
+	    (if template
+		(if (symbolp template)
+		    (funcall template newform context env)
+		    (walk-template newform template context env))
+		(multiple-value-bind
+		    (newnewform macrop)
+		    (walker-environment-bind
+			(new-env env :walk-form newform)
+		      (macroexpand-1 newform new-env))
+		  (cond
+		   (macrop
+		    (let ((newnewnewform (walk-form-internal newnewform context
+							     env)))
+		      (if (eq newnewnewform newnewform)
+			  newform
+			  newnewnewform)))
 		   ((and (symbolp fn)
 			 (not (fboundp fn))
 			 (special-form-p fn))
 		    (error
-		      "~S is a special form, not defined in the CommonLisp.~%~
-                       manual This code walker doesn't know how to walk it.~%~
-                       Define a template for this special form and try again."
-		      fn))
+		     "~S is a special form, not defined in the CommonLisp.~%~
+		      manual This code walker doesn't know how to walk it.~%~
+		      Define a template for this special form and try again."
+		     fn))
 		   (t
 		    ;; Otherwise, walk the form as if its just a standard 
 		    ;; functioncall using a template for standard function
 		    ;; call.
 		    (walk-template
-		      newnewform '(call repeat (eval)) context env))))))))
+		     newnewform '(call repeat (eval)) context env))))))))))))
 
 (defun walk-template (form template context env)
   (if (atom template)
@@ -1423,14 +1446,18 @@
       x))
 
 (defun relist (x &rest args)
-  (relist-internal x args nil))
+  (if (null args)
+      nil
+      (relist-internal x args nil)))
 
 (defun relist* (x &rest args)
   (relist-internal x args 't))
 
 (defun relist-internal (x args *p)
   (if (null (cdr args))
-      (if *p (car args) (list (car args)))
+      (if *p
+	  (car args)
+	  (recons x (car args) nil))
       (recons x
 	      (car args)
 	      (relist-internal (cdr x) (cdr args) *p))))
@@ -1620,6 +1647,28 @@
       context
       env)))
 
+(defun walk-multiple-value-setq (form context env)
+  (let ((symmacs (env-symbol-macros env))
+	(vars (cadr form)))
+    (if (dolist (var vars)
+	  (when (member var symmacs :key #'car)
+	    (return t)))
+	(let* ((expanded
+		(loop
+		  for var in vars
+		  for temp = (gensym)
+		  collect `(setq ,var ,temp) into sets
+		  collect temp into temps
+		  finally return `(multiple-value-bind
+				      ,temps
+				      ,(caddr form)
+				    ,@sets)))
+	       (walked (walk-form-internal expanded context env)))
+	  (if (eq walked expanded)
+	      form
+	      walked))
+	(walk-template form '(nil (repeat (set)) eval) context env))))
+
 (defun walk-multiple-value-bind (form context old-env)
   (walker-environment-bind (new-env old-env)
     (let* ((mvb (car form))
@@ -1710,6 +1759,42 @@
 	       name
 	       walked-arglist
                walked-body))))  
+
+(defun walk-setq (form context env)
+  (if (cdddr form)
+      (let* ((expanded (loop
+			 for (var val) on (cdr form) by #'cddr
+			 collect `(setq ,var ,val)))
+	     (walked (walk-repeat-eval expanded env)))
+	(if (eq expanded walked)
+	    form
+	    `(progn ,@walked)))
+      (let* ((var (cadr form))
+	     (val (caddr form))
+	     (symmac (assoc var (env-symbol-macros env))))
+	(if symmac
+	    (let* ((expanded `(setf ,(cadr symmac) ,val))
+		   (walked (walk-form-internal expanded context env)))
+	      (if (eq expanded walked)
+		  form
+		  walked))
+	    (relist form 'setq
+		    (walk-form-internal var :set env)
+		    (walk-form-internal val :eval env))))))
+
+(defun walk-symbol-macrolet (form context old-env)
+  (declare (ignore context))
+  (let* ((bindings (cadr form)))
+    (walker-environment-bind
+	(new-env old-env
+		 :lexical-variables (remove-if #'(lambda (x)
+						   (member x bindings
+							   :key #'car))
+					       (env-lexical-variables old-env))
+		 :symbol-macros (append bindings
+					(env-symbol-macros old-env)))
+      (relist* form 'symbol-macrolet bindings
+	       (walk-repeat-eval (cddr form) new-env)))))
 
 (defun walk-tagbody (form context env)
   (recons form (car form) (walk-tagbody-1 (cdr form) context env)))
