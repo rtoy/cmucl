@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.2 2003/05/23 15:10:16 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.3 2003/06/18 09:38:10 gerd Exp $")
 
 (in-package :fwrappers)
 
@@ -109,12 +109,14 @@
       (push-fwrapper f function-name))))
 
 (defun fwrap (function-name constructor &key type user-data)
-  "Wrap the function named FUNCTION-NAME in an fwrapper of type TYPE.
+  "Wrap the function named FUNCTION-NAME in an fwrapper of type TYPE,
+   created by calling CONSTRUCTOR.  CONSTRUCTOR is a function
+   defined with DEFINE-FWRAPPER, or the name of such a function.
    Return the fwrapper created.  USER-DATA is arbitrary data to be
    associated with the fwrapper.  It is accessible in wrapper
    functions defined with DEFINE-FWRAPPER as (FWRAPPER-USER-DATA
    FWRAPPER)."
-  (let ((f (make-fwrapper constructor type user-data)))
+  (let ((f (make-fwrapper (coerce constructor 'function) type user-data)))
     (update-fwrapper f)
     (push-fwrapper f function-name)))
 
