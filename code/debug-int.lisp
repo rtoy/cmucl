@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.95 1999/08/28 15:56:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.96 1999/09/17 18:14:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,6 +881,7 @@
 #+x86
 (progn
 
+;;; Note this function should be called with garbage collect inhibited.
 (defun compute-lra-data-from-pc (pc)
   (declare (type system-area-pointer pc))
   (let ((component-ptr (component-ptr-from-pc pc)))
@@ -1256,8 +1257,9 @@
 		 (assert code)))
 	      (t
 	       ;; Not escaped
-	       (multiple-value-setq (pc-offset code)
-		 (compute-lra-data-from-pc ra))
+	       (system:without-gcing
+		(multiple-value-setq (pc-offset code)
+		  (compute-lra-data-from-pc ra)))
 ;	       (format t "ccf4 ~s ~s~%" code pc-offset)
 	       (unless code
 		 (setf code :foreign-function
