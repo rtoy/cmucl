@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.13.2.3 2000/10/24 13:33:56 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.13.2.4 2000/11/06 17:18:34 dtc Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -464,7 +464,7 @@ static void scavenge_interrupt_context(struct sigcontext *context)
 
 		index = boxed_registers[i];
 		reg = SC_REG(context, index);
-		if (PTR(reg) <= lip) {
+		if (Pointerp(reg) && PTR(reg) <= lip) {
 			offset = lip - reg;
 			if (offset < lip_offset) {
 				lip_offset = offset;
