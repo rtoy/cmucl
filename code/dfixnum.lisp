@@ -5,7 +5,7 @@
 ;;; and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.2 2002/12/20 17:39:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dfixnum.lisp,v 1.3 2003/02/12 18:35:29 cracauer Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,16 +24,29 @@
 ;;; Compatibility: Runs in any valid Common Lisp.
 
 (defpackage "DFIXNUM"
-  (:export "DFIXNUM" "MAKE-DFIXNUM" dfparttype
-	   "DFIXNUM-INC-DF" "DFIXNUM-INC-HF"
-	   "DFIXNUM-SET-FROM-NUMBER" "DFIXNUM-MAKE-FROM-NUMBER"
-	   "DFIXNUM-INTEGER" "DFIXNUM-SINGLE-FLOAT"
-	   dfixnum-set-df
-	   dfixnum-dec-df dfixnum-dec-hf
-	   dfixnum-single-float dfixnum-single-float-inline
-	   dfixnum-set-single-float dfixnum-inc-single-float
-	   dfixnum-set-pair dfixnum-inc-pair dfixnum-pair-integer
-	   dfixnum-dec-pair dfixnum-copy-pair))
+  (:export
+
+   ;; types
+   dfixnum dfparttype
+
+   ;; constructing
+   make-dfixnum
+   dfixnum-make-from-number
+   
+   ;; arthmetic with our datatypes
+   dfixnum-inc-df dfixnum-inc-hf
+   dfixnum-set-df dfixnum-dec-df dfixnum-dec-hf
+
+
+   ;; operations with normal datatypes
+   dfixnum-set-from-number dfixnum-inc-integer
+   dfixnum-set-single-float dfixnum-inc-single-float
+   dfixnum-integer dfixnum-single-float
+   dfixnum-single-float dfixnum-single-float-inline
+
+   ;; operations on pairs instead of the dfixnum struct
+   dfixnum-set-pair dfixnum-inc-pair dfixnum-pair-integer
+   dfixnum-dec-pair dfixnum-copy-pair))
 
 (in-package "DFIXNUM")
 
@@ -109,6 +122,20 @@
     (setf (dfixnum-h v) high)
     (setf (dfixnum-l v) low))
   v)
+
+(defun dfixnum-inc-integer (df i)
+  "increments dfixnum by an interger which may be bigger than fixnum.
+   May cons"
+  (declare (type dfixnum df) (integer i) (optimize (ext:inhibit-warnings 3)))
+  (let ((carry (+ (dfixnum-l df) (mod i dfmax))))
+    (setf (dfixnum-l df) (mod carry dfmax))
+    (if (> carry dfmax)
+	(setf carry 1)
+	(setf carry 0))
+    (setf (dfixnum-h df)
+	  (+ (dfixnum-h df)
+	     (ash i (- dfbits))
+	     carry))))
 
 (defun dfixnum-set-from-number (df i)
   (declare (type dfixnum df) (optimize (ext:inhibit-warnings 3)))

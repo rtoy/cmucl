@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.32 2003/01/28 02:49:15 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.33 2003/02/12 18:35:29 cracauer Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -438,7 +438,8 @@
 	    (let* ((post-gc-dyn-usage (dynamic-usage))
 		   (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
 	      (when *last-bytes-in-use*
-		#+nil(when verbose-p
+		#+nil
+		(when verbose-p
 		  (format
 		   t "~&Adjusting *last-bytes-in-use* from ~:D to ~:D, gen ~d, pre ~:D ~%"
 		   *last-bytes-in-use*
@@ -446,9 +447,12 @@
 		   gen
 		   pre-gc-dyn-usage)
 		  (force-output))
-		(dfixnum:dfixnum-inc-hf
-		 *total-bytes-consed*
-		 (- pre-gc-dyn-usage *last-bytes-in-use*))
+		(let ((correction (- pre-gc-dyn-usage *last-bytes-in-use*)))
+		  (if (<= correction dfixnum::dfmax)
+		      (dfixnum:dfixnum-inc-hf *total-bytes-consed* correction)
+		      ;; give up on not consing
+		      (dfixnum:dfixnum-inc-integer *total-bytes-consed*
+						   correction)))
 		(setq *last-bytes-in-use* post-gc-dyn-usage))
 	      (setf *need-to-collect-garbage* nil)
 	      (setf *gc-trigger*
