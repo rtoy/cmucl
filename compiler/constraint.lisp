@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.19 1998/05/29 06:41:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.20 1999/01/25 12:25:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,49 +329,38 @@
   (labels ((exclude (x)
 	     (cond ((not x) nil)
 		   (or-equal x)
-		   (greater
-		    (if (consp x)
-			(car x)
-			x))
-		   (t
-		    (if (consp x)
-			x
-			(list x)))))
+		   ((consp x) x)
+		   (t (list x))))
 	   (bound (x)
 	     (if greater (numeric-type-low x) (numeric-type-high x)))
 	   (max-lower-bound (x y)
-	     ;; Both x and y are not null.  Find the max.
-	     (let ((res (max (bound-value x) (bound-value y))))
-	       ;; An open lower bound is greater than a close
-	       ;; lower bound because the open bound doesn't
-	       ;; contain the bound, so choose an open lower
-	       ;; bound.
-	       (set-bound res (or (consp x) (consp y)))))
+	     (cond ((< (bound-value x) (bound-value y)) y)
+		   ((> (bound-value x) (bound-value y)) x)
+		   ((not or-equal) (list (bound-value x)))
+		   ((consp x) x)
+		   (t y)))
 	   (min-upper-bound (x y)
-	     ;; Same as above, but for the min of upper bounds
-	     ;; Both x and y are not null.  Find the min.
-	     (let ((res (min (bound-value x) (bound-value y))))
-	       ;; An open upper bound is less than a closed
-	       ;; upper bound because the open bound doesn't
-	       ;; contain the bound, so choose an open lower
-	       ;; bound.
-	       (set-bound res (or (consp x) (consp y)))))
+	     (cond ((< (bound-value x) (bound-value y)) x)
+		   ((> (bound-value x) (bound-value y)) y)
+		   ((not or-equal) (list (bound-value x)))
+		   ((consp x) x)
+		   (t y)))
 	   (validate (x)
-	     (let ((x-lo (numeric-type-low x))
-		   (x-hi (numeric-type-high x)))
-	       (if (and x-lo x-hi (> (bound-value x-lo) (bound-value x-hi)))
+	     (let* ((low (numeric-type-low x))
+		    (low-val (bound-value low))
+		    (high (numeric-type-high x))
+		    (high-val (bound-value high)))
+	       (if (and low high (or (> low-val high-val)
+				     (and (= low-val high-val)
+					  (or (consp low) (consp high)))))
 		   *empty-type*
 		   x))))
     (let* ((x-bound (bound x))
 	   (y-bound (exclude (bound y)))
-	   (new-bound (cond ((not x-bound)
-			     y-bound)
-			    ((not y-bound)
-			     x-bound)
-			    (greater
-			     (max-lower-bound x-bound y-bound))
-			    (t
-			     (min-upper-bound x-bound y-bound))))
+	   (new-bound (cond ((not x-bound) y-bound)
+			    ((not y-bound) x-bound)
+			    (greater (max-lower-bound x-bound y-bound))
+			    (t (min-upper-bound x-bound y-bound))))
 	   (res (copy-numeric-type x)))
       (if greater
 	  (setf (numeric-type-low res) new-bound)
