@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.18 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.19 1994/11/04 05:23:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -230,6 +230,11 @@
   (n c-call:unsigned-long))
 
 #+hppa
+(defconstant reloc-magic #x106)
+#+hppa
+(defconstant cpu-pa-risc1-1 #x210)
+
+#+hppa
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -292,8 +297,10 @@
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
+			    #-hpux
 			    (merge-pathnames *command-line-utility-name*
-					     "path:"))
+					     "path:")
+			    #+hpux "library:lisp.orig")
 			   (env ext:*environment-list*))
   "Load-foreign loads a list of C object files into a running Lisp.  The files
   argument should be a single file or a list of files.  The files may be
@@ -306,10 +313,23 @@
   the linker.  The default is the environment passed to Lisp."
   (let ((output-file (pick-temporary-file-name))
 	(symbol-table-file (pick-temporary-file-name))
-	(error-output (make-string-output-stream)))
+	(error-output (make-string-output-stream))
+	(files (if (atom files) (list files) files)))
 
     (format t ";;; Running library:load-foreign.csh...~%")
     (force-output)
+    #+hpux
+    (dolist (f files)
+      (with-open-file (stream f :element-type '(unsigned-byte 16))
+	(unless (eql (read-byte stream) cpu-pa-risc1-1)
+	  (error "Object file is wrong format, so can't load-foreign:~
+		  ~%  ~S"
+		 f))
+	(unless (eql (read-byte stream) reloc-magic)
+	  (error "Object file is not relocatable, so can't load-foreign:~
+		  ~%  ~S"
+		 f))))
+
     (let ((proc (ext:run-program
 		 "library:load-foreign.csh"
 		 (list* (or *previous-linked-object-file*
@@ -320,9 +340,7 @@
 			symbol-table-file
 			(append (mapcar #'(lambda (name)
 					    (unix-namestring name nil))
-					(if (atom files)
-					    (list files)
-					    files))
+					files)
 				libraries))
 		 :env env
 		 :input nil
