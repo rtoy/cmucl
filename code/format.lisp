@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.57 2004/09/09 16:46:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.58 2004/12/14 21:56:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1788,7 +1788,7 @@
 	    (let ((*simple-args* *simple-args*))
 	      (values (expand-directive-list sublist)
 		      *simple-args*))
-	  (cond ((eq *simple-args* (cdr new-args))
+	  (cond ((and new-args (eq *simple-args* (cdr new-args)))
 		 (setf *simple-args* new-args)
 		 `(when ,(caar new-args)
 		    ,@guts))
@@ -1988,7 +1988,7 @@
 		     (throw 'need-orig-args nil))
 		 (let ((*up-up-and-out-allowed* colonp))
 		   (expand-directive-list (subseq directives 0 posn)))))
-	   (compute-loop-aux (count)
+	   (compute-loop (count)
 	     (when atsignp
 	       (setf *only-simple-args* nil))
 	     `(loop
@@ -2012,30 +2012,31 @@
 		,@(when closed-with-colon
 		    '((when (null args)
 			(return))))))
-	   (compute-loop ()
-	     (if params
-		 (expand-bind-defaults ((count nil)) params
-		   (compute-loop-aux count))
-		 (compute-loop-aux nil)))
-	   (compute-block ()
+	   (compute-block (count)
 	     (if colonp
 		 `(block outside-loop
-		    ,(compute-loop))
-		 (compute-loop)))
-	   (compute-bindings ()
+		    ,(compute-loop count))
+		 (compute-loop count)))
+	   (compute-bindings (count)
 	     (if atsignp
-		 (compute-block)
+		 (compute-block count)
 		 `(let* ((orig-args ,(expand-next-arg))
 			 (args orig-args))
 		    (declare (ignorable orig-args args))
 		    ,(let ((*expander-next-arg-macro* 'expander-next-arg)
 			   (*only-simple-args* nil)
 			   (*orig-args-available* t))
-		       (compute-block))))))
-	(values (if (zerop posn)
-		    `(let ((inside-string ,(expand-next-arg)))
-		       ,(compute-bindings))
-		    (compute-bindings))
+			  (compute-block count))))))
+	(values (if params
+		    (expand-bind-defaults ((count nil)) params
+		      (if (zerop posn)
+			  `(let ((inside-string ,(expand-next-arg)))
+			     ,(compute-bindings count))
+			  (compute-bindings count)))
+		    (if (zerop posn)
+			`(let ((inside-string ,(expand-next-arg)))
+			   ,(compute-bindings nil))
+			(compute-bindings nil)))
 		(nthcdr (1+ posn) directives))))))
 
 (def-complex-format-interpreter #\{
