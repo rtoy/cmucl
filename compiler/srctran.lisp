@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.57 1997/09/20 11:49:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.58 1997/10/08 10:39:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -349,7 +349,7 @@
 ;;; interval at the point P.  If CLOSE-LOWER is T, then the left
 ;;; interval contains P.  If CLOSE-UPPER is T, the right interval
 ;;; contains P. You can specify both to be T or NIL.
-
+;;;
 (defun interval-split (p x &optional close-lower close-upper)
   (declare (type number p)
 	   (type interval x))
@@ -362,7 +362,7 @@
 ;;;
 ;;; Return the closure of the interval.  That is, convert open bounds
 ;;; to closed bounds.
-
+;;;
 (defun interval-closure (x)
   (declare (type interval x))
   (make-interval :low (bound-value (interval-low x))
@@ -370,16 +370,16 @@
 
 ;;; INTERVAL-RANGE-INFO
 ;;;
-;;; For an interval X, if X >= 0, return '+.  If X <= 0, return
+;;; For an interval X, if X >= POINT, return '+.  If X <= POINT, return
 ;;; '-. Otherwise return NIL.
-
-(defun interval-range-info (x)
+;;;
+(defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (let ((lo (interval-low x))
 	(hi (interval-high x)))
-  (cond ((and lo (>= (bound-value lo) 0))
+  (cond ((and lo (>= (bound-value lo) point))
 	 '+)
-	((and hi (<= (bound-value hi) 0))
+	((and hi (<= (bound-value hi) point))
 	 '-)
 	(t
 	 nil))))
@@ -388,7 +388,7 @@
 ;;;
 ;;; Test to see if the interval X is bounded.  HOW determines the
 ;;; test, and should be either ABOVE, BELOW, or BOTH.
-
+;;;
 (defun interval-bounded-p (x how)
   (declare (type interval x))
   (ecase how
@@ -403,7 +403,7 @@
 ;;;
 ;;; See if the interval X contains the number P, taking into account
 ;;; that the interval might not be closed.
-
+;;;
 (defun interval-contains-p (p x)
   (declare (type number p)
 	   (type interval x))
@@ -446,7 +446,7 @@
 ;;; because no element in X is in Y.  However, if CLOSED-INTERVALS-P
 ;;; is T, then they do intersect because we use the closure of X = [0,
 ;;; 1] and Y = [1, 2] to determine intersection.
-
+;;;
 (defun interval-intersect-p (x y &optional closed-intervals-p)
   (declare (type interval x y))
   (let ((x-lo (interval-low x))
@@ -507,7 +507,7 @@
 ;;;
 ;;; If intervals X and Y intersect, return a new interval that is the
 ;;; union of the two.  If they do not intersect, return NIL.
-
+;;;
 (defun interval-merge-pair (x y)
   (declare (type interval x y))
   ;; If x and y intersect or are adjacent, create the union.
@@ -548,7 +548,7 @@
 ;;; INTERVAL-NEG
 ;;;
 ;;; The negative of an interval
-
+;;;
 (defun interval-neg (x)
   (declare (type interval x))
   (make-interval :low (bound-func #'- (interval-high x))
@@ -557,7 +557,7 @@
 ;;; INTERVAL-ADD
 ;;;
 ;;; Add two intervals
-
+;;;
 (defun interval-add (x y)
   (declare (type interval x y))
   (make-interval :low (bound-binop + (interval-low x) (interval-low y))
@@ -566,7 +566,7 @@
 ;;; INTERVAL-SUB
 ;;;
 ;;; Subtract two intervals
-
+;;;
 (defun interval-sub (x y)
   (declare (type interval x y))
   (make-interval :low (bound-binop - (interval-low x) (interval-high y))
@@ -575,6 +575,7 @@
 ;;; INTERVAL-MUL
 ;;;
 ;;; Multiply two intervals
+;;;
 (defun interval-mul (x y)
   (declare (type interval x y))
   (flet ((bound-mul (x y)
@@ -621,8 +622,7 @@
 ;;; INTERVAL-DIV
 ;;;
 ;;; Divide two intervals.
-
-
+;;;
 (defun interval-div (top bot)
   (declare (type interval top bot))
   (flet ((bound-div (x y)
@@ -674,7 +674,7 @@
 ;;; result is [f(a), f(b)].  It is up to the user to make sure the
 ;;; result makes sense.  It will if F is monotonic increasing (or
 ;;; non-decreasing).
-
+;;;
 (defun interval-func (f x)
   (declare (type interval x))
   (let ((lo (bound-func f (interval-low x)))
@@ -685,7 +685,7 @@
 ;;;
 ;;; Return T if X < Y.  That is every number in the interval X is
 ;;; always less than any number in the interval Y.
-
+;;;
 (defun interval-< (x y)
   (declare (type interval x y))
   ;; X < Y only if X is bounded above, Y is bounded below, and they
@@ -725,7 +725,7 @@
 ;;;
 ;;; Return an interval that is the absolute value of X.  Thus, if X =
 ;;; [-1 10], the result is [0, 10].
-
+;;;
 (defun interval-abs (x)
   (declare (type interval x))
   (case (interval-range-info x)
@@ -741,7 +741,7 @@
 ;;; INTERVAL-SQR
 ;;;
 ;;; Compute the square of an interval.
-
+;;;
 (defun interval-sqr (x)
   (declare (type interval x))
   (interval-func #'(lambda (x) (* x x))
@@ -785,7 +785,7 @@
 ;;; two.  For those cases of one argument functions, set IGNORE-Y to T
 ;;; because we don't want derive-real-type to process the second
 ;;; argument because it's meaningless.
-  
+
 (defun derive-real-type (x y fun)
   (declare (type continuation x y) (type function fun))
   (let ((x (continuation-type x))
@@ -800,7 +800,7 @@
 ;;; Perhaps it would be better to let the user say so.  Instead of
 ;;; saying (member 1 2 4), you should say (or (integer 1 1) (integer 2
 ;;; 2) (integer 4 4)).
-
+;;;
 (defun derive-real-numeric-or-union-type (x y fun)
   (labels ((combine (lx ly)
 	     ;; Creates a new list containing all possible pairs from
@@ -830,46 +830,46 @@
 	      (make-union-type result)
 	      (first result)))))
 
+;;; Merge the first interval in the list with the rest of intervals in
+;;; the list.  The list of intervals MUST be sorted in ascending order
+;;; of lower limits.
+;;;  
 (defun merge-types-aux (tlist)
-  ;; Merge the first interval in the list with the rest of
-  ;; intervals in the list.  The list of intervals MUST be
-  ;; sorted in ascending order of lower limits.
-  
   (let* ((cur (first tlist))
-	 (cur-intvrl (if (numeric-type-real-p cur)
-			 (numeric-type->interval cur)
-			 nil))
-	 (res (list cur)))
-    (dolist (this-interval (rest tlist) res)
+	 (cur-interval (if (numeric-type-real-p cur)
+			   (numeric-type->interval cur)
+			   nil))
+	 (res '()))
+    (dolist (this-interval (rest tlist) (cons cur res))
       (let ((this (if (numeric-type-real-p this-interval)
 		      (numeric-type->interval this-interval)
 		      nil)))
-	;; If the current interval is complex (cur-intvrl is nil) or
+	;; If the current interval is complex (cur-interval is nil) or
 	;; the next interval is complex (this is nil), we just simply
 	;; add that to the resulting list.  That is we don't try to
 	;; merge complex types at all.
 	;;
-	;;If interval intersects cur or if they are adjacent, we can
-	;;merge them together, but only if they are the same type of
-	;;number.  If they are different, we can't merge them.
-	(cond ((and cur-intvrl
-		    this
+	;; If interval intersects cur or if they are adjacent, we can
+	;; merge them together, but only if they are the same type of
+	;; number.  If they are different, we can't merge them.
+	(cond ((and cur-interval this
 		    (eq (numeric-type-class cur) 
 			(numeric-type-class this-interval))
-		    (or (interval-intersect-p cur-intvrl this)
-			(interval-adjacent-p cur-intvrl this)))
-	       (let ((result (interval-merge-pair cur-intvrl this)))
+		    (or (interval-intersect-p cur-interval this)
+			(interval-adjacent-p cur-interval this)))
+	       (let ((result (interval-merge-pair cur-interval this)))
 		 (when result
-		   (setf (numeric-type-high cur)
-			 (interval-high result)))))
+		   (setf cur-interval result)
+		   (setf (numeric-type-low cur) (interval-low result))
+		   (setf (numeric-type-high cur) (interval-high result)))))
 	      (t
-	       (setf res (cons this-interval res))))))))
+	       (push this-interval res)))))))
 
+;;; Compare the first element with the rest to merge whatever we can
+;;; into the first element.  The first element is totally merged, so
+;;; we only need to consider whatever is left.
+;;;
 (defun merge-types (ilist &optional (result '()))
-  ;; Compare the first element with the rest to merge
-  ;; whatever we can into the first element.  The first
-  ;; element is totally merged, so we only need to consider
-  ;; whatever is left.
   (cond ((null ilist)
 	 result)
 	((cdr ilist)
