@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.66 2003/06/03 10:28:23 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.67 2003/06/03 11:38:15 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1033,7 +1033,7 @@ work during bootstrapping.
 (defknown pcl::%check-cnm-args (t t t) t
   (movable foldable flushable))
 
-(deftransform pcl::%check-cnm-args ((x y z) (t t t) t :policy (= safety 3))
+(deftransform pcl::%check-cnm-args ((x y z) (t t t) t :policy (< safety 3))
   nil)
 	  
 (in-package :pcl)
