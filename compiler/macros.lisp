@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.30 1992/03/24 20:35:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.31 1992/06/14 07:41:22 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -858,11 +858,16 @@
 			    (first option)))))))))
 	     
       `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
-	 (declare (ignore depth))
 	 (flet ((do-prints (stream)
 		  (declare (ignorable stream))
 		  ,@(prints)))
-	   (cond (*print-pretty*
+	   (cond (*print-readably*
+		  (error "~S cannot be printed readably." structure))
+		 ((and *print-level* (>= depth *print-level*))
+		  (format stream "#<~S ~X>"
+			  ',name
+			  (get-lisp-obj-address structure)))
+		 (*print-pretty*
 		  (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
 		    (pprint-indent :current 2 stream)
 		    (prin1 ',name stream)
@@ -872,11 +877,12 @@
 		      (prin1 (get-lisp-obj-address structure) stream))
 		    (do-prints stream)))
 		 (t
-		  (format stream "#<~S ~X"
-			  ',name
-			  (get-lisp-obj-address structure))
-		  (do-prints stream)
-		  (format stream ">"))))
+		  (descend-into (stream)
+		    (format stream "#<~S ~X"
+			    ',name
+			    (get-lisp-obj-address structure))
+		    (do-prints stream)
+		    (format stream ">")))))
 	 nil))))
 
 
