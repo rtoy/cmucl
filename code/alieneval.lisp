@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.41 1997/09/16 08:44:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.42 1998/01/13 21:16:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1706,8 +1706,14 @@
 ;;;; Accessing local aliens.
 
 (defun make-local-alien (info)
-  (let ((alien (eval `(make-alien ,(local-alien-info-type info)))))
-    (finalize info #'(lambda () (free-alien alien)))
+  (let* ((alien (eval `(make-alien ,(local-alien-info-type info))))
+	 (alien-sap (alien-sap alien)))
+    (finalize
+     alien
+     #'(lambda ()
+	 (alien-funcall
+	  (extern-alien "free" (function (values) system-area-pointer))
+	  alien-sap)))
     alien))
 
 (defun note-local-alien-type (info alien)
@@ -1751,8 +1757,7 @@
 
 (defun dispose-local-alien (info alien)
   (declare (ignore info))
-  #+nil
-  (cancel-finalization info)
+  (cancel-finalization alien)
   (free-alien alien))
 
 
