@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.16 1993/08/31 13:26:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.17 1993/08/31 20:21:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,14 +59,14 @@
 (cold-load-init (setq *use-implementation-types* t))
 (proclaim '(type boolean *use-implementation-types*))
 
-;;; DELEGATE-COMPLEX-SUBTYPEP-ARG2  --  Interface
+;;; DELEGATE-COMPLEX-{SUBTYPEP-ARG2,INTERSECTION}  --  Interface
 ;;;
-;;;    This function is used as the COMPLEX-SUBTYPEP-ARG2 method for types
-;;; which need a ARG1 method to handle some superclasses, but cover a subtree
-;;; of the type graph (i.e. there is no simple way for any other type class to
-;;; be a subtype.)  There are always still complex ways, namely UNION and
-;;; MEMBER types, so we must give TYPE1's ARG1 method a chance to run, instead
-;;; of immediately returning NIL, T.
+;;;    These functions are used as method for types which need a complex
+;;; subtypep method to handle some superclasses, but cover a subtree of the
+;;; type graph (i.e. there is no simple way for any other type class to be a
+;;; subtype.)  There are always still complex ways, namely UNION and MEMBER
+;;; types, so we must give TYPE1's method a chance to run, instead of
+;;; immediately returning NIL, T.
 ;;;
 (defun delegate-complex-subtypep-arg2 (type1 type2)
   (let ((subtypep-arg1
@@ -75,11 +75,19 @@
     (if subtypep-arg1
 	(funcall subtypep-arg1 type1 type2)
 	(values nil t))))
+;;;
+(defun delegate-complex-intersection (type1 type2)
+  (let ((method (type-class-complex-intersection (type-class-info type1))))
+    (if method
+	(funcall method type2 type1)
+	(vanilla-intesection type1 type2))))
 
 ;;; HAS-SUPERCLASSES-COMPLEX-SUBTYPEP-ARG1  --  Internal
 ;;;
 ;;;    Used by DEFINE-SUPERCLASSES to define the SUBTYPE-ARG1 method.  Info is
-;;; a list of conses (SUPERCLASS-CLASS . {GUARD-TYPE-SPECIFIER | NIL}).
+;;; a list of conses (SUPERCLASS-CLASS . {GUARD-TYPE-SPECIFIER | NIL}).  Will
+;;; never be called with a hairy type as type2, since the hairy type type2
+;;; method gets first crack.
 ;;;
 (defun has-superclasses-complex-subtypep-arg1 (type1 type2 info)
   (values
@@ -125,7 +133,7 @@
        
        (setf (type-class-complex-intersection
 	      (type-class-or-lose ',type-class))
-	     #'vanilla-intersection))))
+	     #'delegate-complex-intersection))))
 
 ); eval-when (compile eval)
 
