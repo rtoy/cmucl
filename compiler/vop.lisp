@@ -125,7 +125,7 @@
 ;;; associated block.
 ;;;
 (defstruct (ir2-block
-	    (:constructor make-ir2-block (block))
+	    (:constructor really-make-ir2-block (block))
 	    (:print-function %print-ir2-block))
   ;;
   ;; The IR2-Block's number, which differs from Block's Block-Number if any
@@ -141,9 +141,7 @@
   (next nil :type (or ir2-block null))
   (prev nil :type (or ir2-block null))
   ;;
-  ;; A thread running through all IR2 blocks in this environment, in no
-  ;; particular order.
-  (environment-next nil :type (or ir2-block null))
+  unused-slot
   ;;
   ;; Information about unknown-values continuations that is used by stack
   ;; analysis to do stack simulation.  A unknown-values continuation is Pushed
@@ -535,7 +533,7 @@
 ;;; to the operation.
 ;;;
 (defstruct (vop (:print-function %print-vop)
-		(:constructor make-vop (block node info args results)))
+		(:constructor really-make-vop (block node info args results)))
   ;;
   ;; VOP-Info structure containing static info about the operation.
   (info nil :type (or vop-info null))
@@ -584,7 +582,7 @@
 ;;; TN.  The information in the TN-Refs largely determines how TNs are packed.
 ;;; 
 (defstruct (tn-ref (:print-function %print-tn-ref)
-		   (:constructor make-tn-ref (tn write-p)))
+		   (:constructor really-make-tn-ref (tn write-p)))
   ;;
   ;; The TN referenced.
   (tn nil :type tn)
@@ -925,7 +923,7 @@
 
 (defstruct (tn (:include sset-element)
 	       (:constructor make-random-tn)
-	       (:constructor make-tn (number kind primitive-type sc))
+	       (:constructor really-make-tn (number kind primitive-type sc))
 	       (:print-function %print-tn))
   ;;
   ;; The kind of TN this is:
@@ -1056,7 +1054,7 @@
 ;;; the set of TNs live at the start of the IR2 block.
 ;;;
 (defstruct (global-conflicts
-	    (:constructor make-global-conflicts (kind tn block number))
+	    (:constructor really-make-global-conflicts (kind tn block number))
 	    (:print-function %print-global-conflicts))
 
   ;;
