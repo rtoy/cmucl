@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.29 1997/11/21 12:26:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.30 1998/01/22 00:04:18 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -85,7 +85,7 @@
   ;; From NLX.LISP
   make-nlx-sp-tn
   make-dynamic-state-tns
-  #+x86 make-nlx-entry-argument-start-location
+  #+(or x86 sparc) make-nlx-entry-argument-start-location
   
   ;; From SUPPORT.LISP
   generate-call-sequence
