@@ -1,6 +1,6 @@
 /* -*- Mode: C -*- */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/timer-support.c,v 1.1 1994/10/27 17:44:53 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/timer-support.c,v 1.2 1994/10/29 03:00:32 ram Exp $ */
 
 /* timer_support.c --
  * Extension to CMUCL Motif Interface. Adding missing call for
@@ -44,6 +44,50 @@
  * Functions
  */
 
+
+void
+reply_with_xt_interval(message_t message, XtIntervalId timer) {
+  reply_with_integer(message, (unsigned long) timer);
+				/*  Pretty redundant! */
+}
+
+
+void
+RawTimerHandler(XtPointer lisp_timer_id, XtIntervalId* timer) {
+  int exit_value;
+  extern int end_callback_loop;
+  message_t reply = message_new(next_serial++);
+
+  message_add_packet(reply);
+  message_put_dblword(reply, TIMEOUT_REPLY); /* This is new. */
+  message_write_int(reply, (unsigned long) *lisp_timer_id);
+  message_write_int(reply, (unsgined long) *timer);
+  message_send(client_socket, reply);
+  message_free(reply);
+
+  exit_value = end_callback_loop++;
+
+  /* Code lifted from original CMU */
+  /* *** This version handles no events until callbacks are done
+     *** processing
+   */
+  while( exit_value<end_callback_loop )
+    XtAppProcessEvent(app_context,XtIMAlternateInput);
+
+  /* *** Use this version to allow callbacks to occur during callback
+     *** processing 
+     *** In general, this is not something the you want to do.  For instance,
+     *** the callback_info mechanism for supporting modifications to the
+     *** callback structure would no longer work if callbacks could be nested.
+  while( exit_value<end_callback_loop ) {
+    XtAppNextEvent(app_context, &event);
+    XtDispatchEvent(&event);
+   }
+  */
+
+}
+
+
 /* RXtAppAddTimeOut -- */
 
 int
@@ -81,42 +125,3 @@ RXtAppAddTimeOut(message_t message)
   reply_with_xt_interval(message, timer);
 }
 
-
-void
-reply_with_xt_interval(message_t message, XtIntervalId timer) {
-  reply_with_integer(message, (unsigned long) timer);
-				/*  Pretty redundant! */
-}
-
-
-void
-RawTimerHandler(XtPointer lisp_timer_id, XtIntervalId* timer) {
-  message_t replay = message_new(next_serial++);
-
-  message_add_packet(reply);
-  message_put_dblword(reply, TIMEOUT_REPLY); /* This is new. */
-  message_write_int(reply, (unsigned long) *lisp_timer_id);
-  message_write_int(reply, (unsigned long) *timer);
-  message_send(client_socket, reply);
-  message_free(reply);
-
-  exit_value = end_callback_loop++;
-
-  /* Code lifted from original CMU */
-  /* *** This version handles no events until callbacks are done
-     *** processing
-   */
-  while( exit_value<end_callback_loop )
-    XtAppProcessEvent(app_context,XtIMAlternateInput);
-
-  /* *** Use this version to allow callbacks to occur during callback
-     *** processing 
-     *** In general, this is not something the you want to do.  For instance,
-     *** the callback_info mechanism for supporting modifications to the
-     *** callback structure would no longer work if callbacks could be nested.
-  while( exit_value<end_callback_loop ) {
-    XtAppNextEvent(app_context, &event);
-    XtDispatchEvent(&event);
-  }
-  */
-}
