@@ -73,7 +73,10 @@
 (load "vm:sap")
 (load "vm:system")
 (load "vm:char")
-(load "vm:float")
+#-rt (load "vm:float")
+#+(and rt afpa) (load "vm:afpa")
+#+(and rt (not afpa)) (load "vm:mc68881")
+
 (load "vm:memory")
 (load "vm:static-fn")
 (load "vm:arith")
