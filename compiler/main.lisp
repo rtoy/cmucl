@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.124 2002/03/07 00:04:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.125 2002/08/09 21:21:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1915,23 +1915,70 @@
 	      (coerce (get-lambda-to-compile def) 'function))))
   name)
 
+(defun compile-output-type-from-input (input-file byte-compile)
+  (declare (type (or string stream pathname) input-file))
+  (let ((type (if (typep (pathname input-file) 'logical-pathname)
+		  (if (not (eq byte-compile t)) ; This is the old logic. But why?
+		      "FASL"
+		      (string-upcase (c:backend-byte-fasl-file-type c:*backend*)))
+		  (if (eq byte-compile t)
+		      (c:backend-byte-fasl-file-type c:*backend*)
+		      (c:backend-fasl-file-type c:*backend*)))))
+    (make-pathname :host nil
+		   :device nil
+		   :directory nil
+		   :type type
+		   :version nil)))
 
 ;;; COMPILE-FILE-PATHNAME -- Public
 ;;;
-(defun compile-file-pathname (file-path &key (output-file t) byte-compile
-					&allow-other-keys)
+;;; The output-file, if given, is merged with the input-file.
+(defun compile-file-pathname (input-file
+			      &key
+			      byte-compile
+			      (output-file t output-file-supplied-p)
+			      &allow-other-keys)
   "Return a pathname describing what file COMPILE-FILE would write to given
    these arguments."
-  (declare (values (or null pathname)))
-  (let ((pathname (pathname file-path)))
-    (cond ((not (eq output-file t))
-	   (when output-file
-	     (translate-logical-pathname (pathname output-file))))
-	  ((and (typep pathname 'logical-pathname) (not (eq byte-compile t)))
-	   (make-pathname :type "FASL" :defaults pathname
-			  :case :common))
+  (declare (type (or string pathname stream) input-file)
+	   (type (or string pathname stream (member t)) output-file)
+	   (values (or null pathname)))
+
+  ;; Check INPUT-FILE
+  (when (and (streamp input-file) (not (typep input-file 'file-stream)))
+    (error "The INPUT-FILE parameter is a ~S, which is an invalid value ~@
+            to COMPILE-FILE-PATHNAME."
+	   (type-of input-file)))
+
+
+  (when (eq output-file t)
+    (setf output-file (compile-output-type-from-input input-file
+						      byte-compile)))
+  ;; Same checks on OUTPUT-FILE.
+  
+  (when (and (streamp output-file) (not (typep output-file 'file-stream)))
+    (error "The OUTPUT-FILE parameter is a ~S, which is an invalid value ~@
+            to COMPILE-FILE-PATHNAME."
+	   (type-of output-file)))
+
+  ;; Maybe these are too much.  CLHS says "might".
+  (when (wild-pathname-p input-file)
+    (error 'file-error :pathname input-file))
+
+  (when  (wild-pathname-p output-file)
+    (error 'file-error :pathname output-file))
+
+  
+  (let ((merged-input-file
+	 (merge-pathnames input-file *default-pathname-defaults*))
+	(resulting-pathname-type (pathname-type output-file)))
+    (cond ((and (not output-file-supplied-p)
+		(typep merged-input-file 'logical-pathname))
+	   (make-pathname :type resulting-pathname-type
+			  :defaults merged-input-file
+			  :case :common)) ; Not sure about this last one.
+	  ((typep merged-input-file 'logical-pathname)
+	   (merge-pathnames output-file
+			    (translate-logical-pathname merged-input-file)))
 	  (t
-	   (make-pathname :defaults (translate-logical-pathname pathname)
-			  :type (if (eq byte-compile t)
-				    (backend-byte-fasl-file-type *backend*)
-				    (backend-fasl-file-type *backend*)))))))
+	   (merge-pathnames output-file merged-input-file)))))
