@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.42 1991/06/15 17:34:16 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.43 1991/07/09 14:02:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1303,7 +1303,8 @@
    :Output-File
       The name of the fasl to output, NIL for none, T for the default.
    :Error-File
-      The name of the error listing file, NIL for none, T for the .err default.
+      The name of the error listing file, NIL for none (the default), T for
+      .err.
    :Trace-File
       If specified, internal data structures are dumped to this file.  T for
       the .trace default.
