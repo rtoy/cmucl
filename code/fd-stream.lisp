@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.11 1991/05/18 13:38:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.12 1991/05/18 19:06:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,14 +37,15 @@
 ;;;; Buffer manipulation routines.
 
 (defvar *available-buffers* ()
-  "List of available buffers. Each buffer is an dynamic alien.")
+  "List of available buffers.  Each buffer is an sap pointing to
+  bytes-per-buffer of memory.")
 
 (defconstant bytes-per-buffer (* 4 1024)
   "Number of bytes per buffer.")
 
 ;;; NEXT-AVAILABLE-BUFFER -- Internal.
 ;;;
-;;; Returns the next available alien buffer, creating one if necessary.
+;;; Returns the next available buffer, creating one if necessary.
 ;;;
 (proclaim '(inline next-available-buffer))
 ;;;
@@ -71,8 +72,8 @@
   (fd -1 :type fixnum)	      ; The file descriptor
   (buffering :full)	      ; One of :none, :line, or :full
   (char-pos nil)	      ; Character position if known.
-  (listen nil)		      ; T if we don't need to listen
-
+  (listen nil)		      ; T if we don't need to listen.  :EOF if we hit
+			      ; EOF.
   ;; The input buffer.
   (unread nil)
   (ibuf-sap nil)
@@ -452,6 +453,7 @@
 		      stream
 		      (mach:get-unix-error-msg errno))))
 	    ((zerop count)
+	     (setf (fd-stream-listen stream) :eof)
 	     (throw 'eof-input-catcher nil))
 	    (t
 	     (incf (fd-stream-ibuf-tail stream) count))))))
