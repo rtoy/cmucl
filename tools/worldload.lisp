@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.44 1992/02/27 06:03:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.45 1992/03/29 21:55:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,11 +166,19 @@
 ;;;
 (lisp::clear-all-search-lists)
 
+;; set up the initial info environment.
+(setq *info-environment*
+      (list* (make-info-environment :name "Working")
+	     (compact-info-environment (first *info-environment*)
+				       :name "Auxiliary")
+	     (rest *info-environment*)))
+
 ;;; Okay, build the thing!
 ;;;
 (progn
   ;; We want to be in the USER package when the command line switches run.
   (in-package "USER")
+  ;; Clean random top-level specials.
   (setq - nil)
   (setq + nil)
   (setq * nil)
@@ -181,14 +189,12 @@
   (setq +++ nil)
   (setq *** nil)
   (setq /// nil)
-  (setq *info-environment*
-	(list* (make-info-environment :name "Working")
-	       (compact-info-environment (first *info-environment*)
-					 :name "Auxiliary")
-	       (rest *info-environment*)))
-
-  (save-lisp (namestring (merge-pathnames "lisp.core" (default-directory)))
-	     :purify t
-	     :init-function #'initial-init-function
-	     #| :constants (cadr *info-environment*) |#
-	     ))
+  ;; 
+  ;; Enable the garbage collector.  But first fake it into thinking that
+  ;; we don't need to garbage collect.  The save-lisp is going to call purify
+  ;; so any garbage will be collected then.
+  (setf *need-to-collect-garbage* nil)
+  (gc-on)
+  ;;
+  ;; Save the lisp.
+  (save-lisp "lisp.core"))
