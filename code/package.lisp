@@ -1180,7 +1180,8 @@
   not already present."
   (let* ((package (package-or-lose package))
 	 (internal (package-internal-symbols package)))
-    (dolist (name (mapcar #'string symbols))
+    (dolist (name (mapcar #'string
+			  (if (consp symbols) symbols (list symbols))))
       (multiple-value-bind (s w) (find-symbol name package)
 	(when (or (not w) (eq w :inherited))
 	  (setq s (make-symbol name))
