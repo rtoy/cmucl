@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.12 1997/02/18 05:02:08 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.13 1997/02/19 01:19:53 dtc Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -63,7 +63,7 @@ gettimeofday,
 getuid,
 ioctl,
 kill,
-#ifndef SOLARIS
+#if !defined(SOLARIS) || defined(SOLARIS25)
 killpg,
 #endif
 link,
@@ -99,7 +99,7 @@ send,
 sendmsg,
 sendto,
 setgroups,
-#if !defined(SUNOS) && !defined(SOLARIS) ||  defined(SOLARIS25)
+#if !defined(SUNOS) && !(defined(SOLARIS) ||  defined(SOLARIS25))
 sethostid,
 #endif
 #if !defined(SVR4) ||  defined(SOLARIS25)
@@ -185,9 +185,11 @@ atan2,
 sinh,
 cosh,
 tanh,
+#ifndef hpux
 asinh,
 acosh,
 atanh,
+#endif
 exp,
 #ifndef hpux
 expm1,
