@@ -1077,7 +1077,7 @@
 (defun find-original-source (path)
   (declare (list path))
   (assert path)
-  (let* ((rpath (reverse path))
+  (let* ((rpath (reverse (rest path)))
 	 (root (find-source-root (first rpath) *source-info*)))
     (collect ((context))
       (let ((form root)
