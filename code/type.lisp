@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.33 2000/05/02 04:44:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.34 2000/06/27 16:31:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,7 +232,7 @@
 	   (values nil nil))
 	  ((and rest1 rest2 (type/= rest1 rest2))
 	   (type= rest1 rest2))
-	  ((or rest1 rest2)
+	  ((if rest1 (not rest2) rest2)
 	   (values nil t))
 	  (t
 	   (multiple-value-bind (req-val req-win)
