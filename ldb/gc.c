@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.20 1990/11/27 17:37:41 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.21 1990/12/05 10:57:41 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -409,10 +409,18 @@ scavenge_interrupt_contexts()
 	}
 }
 
+#ifdef mips
 static int boxed_registers[] = {
 	A0, A1, A2, A3, A4, A5, CNAME, LEXENV,
 	NFP, OCFP, LRA, L0, L1, L2, CODE
 };
+#endif
+#ifdef sparc
+static int boxed_registers[] = {
+	A0, A1, A2, A3, A4, A5, OCFP, LRA,
+	CNAME, LEXENV, L0, L1, L2, CODE
+};
+#endif
 
 scavenge_interrupt_context(context)
 struct sigcontext *context;
@@ -422,19 +430,23 @@ struct sigcontext *context;
 	unsigned long lip_offset;
 	int lip_register_pair;
 	unsigned long pc_code_offset;
+#ifdef sparc
+	unsigned long npc_code_offset;
+#endif
 
 	/* Find the LIP's register pair and calculate it's offset */
 	/* before we scavenge the context. */
 	lip = context->sc_regs[LIP];
-	lip_offset = 0xFFFFFFFF;
+	lip_offset = 0x7FFFFFFF;
 	lip_register_pair = -1;
 	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
-		unsigned long reg, offset;
+		unsigned long reg;
+		long offset;
 		int index;
 
 		index = boxed_registers[i];
 		reg = context->sc_regs[index];
-		if (reg <= lip) {
+		if (PTR(reg) <= lip) {
 			offset = lip - reg;
 			if (offset < lip_offset) {
 				lip_offset = offset;
@@ -454,10 +466,17 @@ struct sigcontext *context;
 	/* Compute the PC's offset from the start of the CODE */
 	/* register. */
 	pc_code_offset = context->sc_pc - context->sc_regs[CODE];
+#ifdef sparc
+	npc_code_offset = context->sc_npc - context->sc_regs[CODE];
+#endif
 
 #if defined(DEBUG_PC)
 	printf("PC = %08x, CODE = %08x, Offset = %08x\n",
 	       context->sc_pc, context->sc_regs[CODE], pc_code_offset);
+#ifdef sparc
+	printf("nPC = %08x, CODE = %08x, Offset = %08x\n",
+	       context->sc_npc, context->sc_regs[CODE], npc_code_offset);
+#endif
 #endif
 	       
 	/* Scanvenge all boxed registers in the context. */
@@ -489,10 +508,18 @@ struct sigcontext *context;
 	/* Fix the PC if it was in from space */
 	if (from_space_p(context->sc_pc))
 		context->sc_pc = context->sc_regs[CODE] + pc_code_offset;
+#ifdef sparc
+	if (from_space_p(context->sc_npc))
+		context->sc_npc = context->sc_regs[CODE] + npc_code_offset;
+#endif
 
 #if defined(DEBUG_PC)
 	printf("PC = %08x, CODE = %08x, Offset = %08x\n",
 	       context->sc_pc, context->sc_regs[CODE], pc_code_offset);
+#ifdef sparc
+	printf("PC = %08x, CODE = %08x, Offset = %08x\n",
+	       context->sc_npc, context->sc_regs[CODE], npc_code_offset);
+#endif
 #endif
 	       
 }
@@ -1056,6 +1083,9 @@ lispobj *where;
 	return length;
 }
 
+/* Note: on the sparc we don't have to do anything special for symbols, */
+/* cause the raw-function-addr has the correct lowtag. */
+#ifndef sparc
 static
 scav_symbol(where, object)
 lispobj *where, object;
@@ -1073,6 +1103,7 @@ lispobj *where, object;
     else
         return 1;
 }
+#endif
 
 static
 scav_unboxed(where, object)
@@ -1748,7 +1779,11 @@ gc_init()
 	scavtab[type_ClosureHeader] = scav_boxed;
 	scavtab[type_FuncallableInstanceHeader] = scav_boxed;
 	scavtab[type_ValueCellHeader] = scav_boxed;
+#ifndef sparc
         scavtab[type_SymbolHeader] = scav_symbol;
+#else
+        scavtab[type_SymbolHeader] = scav_boxed;
+#endif
 	scavtab[type_BaseCharacter] = scav_immediate;
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
@@ -1861,14 +1896,18 @@ void set_auto_gc_trigger(dynamic_usage)
     addr = round_page((vm_address_t)current_dynamic_space + dynamic_usage);
     length = DYNAMIC_SPACE_SIZE + (vm_address_t)current_dynamic_space - addr;
 
+#ifndef sparc
     os_protect(addr, length, 0);
+#endif
     current_auto_gc_trigger = (lispobj *)addr;
 }
 
 void clear_auto_gc_trigger()
 {
+#ifndef sparc
     os_protect((vm_address_t)current_dynamic_space, DYNAMIC_SPACE_SIZE,
                VM_PROT_READ | VM_PROT_WRITE | VM_PROT_EXECUTE);
+#endif
     current_auto_gc_trigger = NULL;
 }
 
