@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.19 2003/09/22 13:28:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.20 2003/10/08 01:15:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -140,7 +140,14 @@
   (:translate make-fdefn)
   (:generator 37
     (with-fixed-allocation (result temp fdefn-type fdefn-size)
-      (inst li temp (make-fixup (extern-alien-name "undefined_tramp") :foreign))
+      ;; For the linkage-table stuff, we need to look up the address
+      ;; of undefined_tramp from the linkage table instead of using
+      ;; the address directly.
+      (inst li temp (make-fixup (extern-alien-name "undefined_tramp")
+				#-linkage-table :foreign
+				#+linkage-table :foreign-data))
+      #+linkage-table
+      (loadw temp temp)
       (storew name result fdefn-name-slot other-pointer-type)
       (storew null-tn result fdefn-function-slot other-pointer-type)
       (storew temp result fdefn-raw-addr-slot other-pointer-type))))

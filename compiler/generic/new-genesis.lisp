@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.59 2003/09/25 02:40:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.60 2003/10/08 01:15:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1925,7 +1925,11 @@
   #+x86
   (cold-register-foreign-linkage "resolve_linkage_tramp" :code)
   #+sparc
-  (cold-register-foreign-linkage "call_into_c" :code))
+  (progn
+    (cold-register-foreign-linkage "call_into_c" :code)
+    (cold-register-foreign-linkage "undefined_tramp" :data)
+    (cold-register-foreign-linkage "closure_tramp" :data)
+    ))
 
 (defvar *cold-assembler-routines* nil)
 
