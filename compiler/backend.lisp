@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.18 1992/03/22 17:59:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.19 1992/03/22 22:05:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -307,9 +307,3 @@
 		  :misfeatures misfeatures)))
     (setf *target-backend* backend)))
 
-
-
-;;;; temporary hack.
-
-(defun backend-vm-support-routines (backend)
-  (backend-support-routines backend))
