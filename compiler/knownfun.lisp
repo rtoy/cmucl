@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.24 2003/07/30 15:33:05 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.25 2003/08/02 11:52:15 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -242,7 +242,34 @@
   (declare (type combination call))
   (let ((cont (first (combination-args call))))
     (when cont (continuation-type cont))))
-;;;
+
+(defun result-type-first-arg/reverse (call)
+  (declare (type combination call))
+  (let ((cont (first (combination-args call))))
+    (when cont
+      (let ((type (continuation-type cont)))
+	(if (cons-type-p type)
+	    (reversed-cons-type type)
+	    type)))))
+
+(defun reversed-cons-type (type)
+  (declare (type cons-type type))
+  (collect ((car-types))
+    (let ((cdr-type nil))
+      (loop for x = type then (cons-type-cdr-type x)
+	    while (cons-type-p x) do
+	    (let ((car (cons-type-car-type x))
+		  (cdr (cons-type-cdr-type x)))
+	      (car-types (type-specifier car))
+	      (setq cdr-type cdr)))
+      (let ((cons-type (specifier-type 'cons)))
+	(if (types-intersect cons-type cdr-type)
+	    cons-type
+	    (let ((spec 'null))
+	      (dolist (x (car-types))
+		(setq spec `(cons ,x ,spec)))
+	      (specifier-type spec)))))))
+
 (defun result-type-last-arg (call)
   (declare (type combination call))
   (let ((cont (car (last (combination-args call)))))

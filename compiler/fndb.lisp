@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.120 2003/07/30 16:51:43 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.121 2003/08/02 11:52:15 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -398,10 +398,10 @@
 (defknown length (sequence) index (foldable flushable))
 
 (defknown reverse (sequence) consed-sequence (flushable)
-  :derive-type #'result-type-first-arg)
+  :derive-type #'result-type-first-arg/reverse)
 
 (defknown nreverse (sequence) sequence ()
-  :derive-type #'result-type-first-arg)
+  :derive-type #'result-type-first-arg/reverse)
 
 (defknown make-sequence (type-specifier index &key (:initial-element t)) consed-sequence
   (movable flushable unsafe)
