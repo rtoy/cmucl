@@ -174,12 +174,17 @@
 
     (collect ((elsewhere))
       (let ((tail (component-tail
-		   (block-component (node-block (lambda-bind fun))))))
-	(do-environment-ir2-blocks (2block (lambda-environment fun))
+		   (block-component (node-block (lambda-bind fun)))))
+	    (env (lambda-environment fun)))
+	(do-environment-ir2-blocks (2block env)
 	  (let ((block (ir2-block-block 2block)))
 	    (when (eq (block-info block) 2block)
 	      (let ((succ (let ((s (block-succ block)))
-			    (if (eq (car s) tail)
+			    (if (and s
+				     (or (eq (car s) tail)
+					 (not (eq (lambda-environment
+						   (block-lambda (car s)))
+						  env))))
 				()
 				s))))
 		(vector-push-extend
@@ -225,6 +230,7 @@
 	      (let ((name (file-info-name x))
 		    (res (make-debug-source
 			  :from :file
+			  :comment (file-info-comment x)
 			  :created (file-info-write-date x)
 			  :compiled (source-info-start-time info)
 			  :source-root (file-info-source-root x)
@@ -456,8 +462,8 @@
 			:kind (functional-kind fun)
 			:return-pc (tn-sc-offset
 				    (ir2-environment-return-pc 2env))
-			:old-cont (tn-sc-offset
-				   (ir2-environment-old-cont 2env))
+			:old-fp (tn-sc-offset
+				 (ir2-environment-old-fp 2env))
 			:start-pc (label-location
 				   (ir2-environment-environment-start 2env))
 
