@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.29 1991/11/09 02:42:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.30 1991/11/12 16:10:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -192,48 +192,94 @@
 ;;;; In the "Numbers" chapter:
 
 (defknown zerop (number) boolean (movable foldable flushable explicit-check))
-(defknown (plusp minusp) (real) boolean (movable foldable flushable explicit-check))
-(defknown (oddp evenp) (integer) boolean (movable foldable flushable explicit-check))
-(defknown (= /=) (number &rest number) boolean (movable foldable flushable explicit-check))
-(defknown (< > <= >=) (real &rest real) boolean (movable foldable flushable explicit-check))
-(defknown (max min) (real &rest real) real (movable foldable flushable explicit-check))
-(defknown + (&rest number) number (movable foldable flushable explicit-check))
-(defknown - (number &rest number) number (movable foldable flushable explicit-check))
-(defknown * (&rest number) number (movable foldable flushable explicit-check))
-(defknown / (number &rest number) number (movable foldable flushable explicit-check))
-(defknown (1+ 1-) (number) number (movable foldable flushable explicit-check))
-(defknown conjugate (number) number (movable foldable flushable explicit-check))
-(defknown gcd (&rest integer) unsigned-byte (movable foldable flushable explicit-check)
+(defknown (plusp minusp) (real) boolean
+  (movable foldable flushable explicit-check))
+(defknown (oddp evenp) (integer) boolean
+  (movable foldable flushable explicit-check))
+(defknown (= /=) (number &rest number) boolean
+  (movable foldable flushable explicit-check))
+(defknown (< > <= >=) (real &rest real) boolean
+  (movable foldable flushable explicit-check))
+(defknown (max min) (real &rest real) real
+  (movable foldable flushable explicit-check))
+
+(defknown + (&rest number) number
+  (movable foldable flushable explicit-check))
+(defknown - (number &rest number) number
+  (movable foldable flushable explicit-check))
+(defknown * (&rest number) number
+  (movable foldable flushable explicit-check))
+(defknown / (number &rest number) number
+  (movable foldable flushable explicit-check))
+(defknown (1+ 1-) (number) number
+  (movable foldable flushable explicit-check))
+
+(defknown conjugate (number) number
+  (movable foldable flushable explicit-check))
+
+(defknown gcd (&rest integer) unsigned-byte
+  (movable foldable flushable explicit-check)
   #|:derive-type 'boolean-result-type|#)
-(defknown lcm (&rest integer) unsigned-byte (movable foldable flushable explicit-check))
+(defknown lcm (&rest integer) unsigned-byte
+  (movable foldable flushable explicit-check))
 
 (defknown exp (number) irrational
-  (movable foldable flushable explicit-check recursive))
+  (movable foldable flushable explicit-check recursive)
+  :derive-type #'result-type-float-contagion)
+
 (defknown expt (number number) number
   (movable foldable flushable explicit-check recursive))
-(defknown log (number &optional real) irrational (movable foldable flushable explicit-check))
-(defknown sqrt (number) irrational (movable foldable flushable explicit-check))
-(defknown isqrt (unsigned-byte) unsigned-byte (movable foldable flushable explicit-check))
-(defknown (abs phase signum) (number) number (movable foldable flushable explicit-check))
-(defknown cis (real) (complex float) (movable foldable flushable explicit-check))
-(defknown atan (number &optional real) irrational (movable foldable flushable explicit-check))
-(defknown (sin cos tan asin acos sinh cosh tanh asinh acosh atanh)
-  (number) irrational (movable foldable flushable explicit-check recursive))
-(defknown float (real &optional float) float (movable foldable flushable explicit-check))
-(defknown (rational rationalize) (real) rational (movable foldable flushable explicit-check))
+(defknown log (number &optional real) irrational
+  (movable foldable flushable explicit-check))
+(defknown sqrt (number) irrational
+  (movable foldable flushable explicit-check))
+(defknown isqrt (unsigned-byte) unsigned-byte
+  (movable foldable flushable explicit-check))
+
+(defknown (abs phase signum) (number) number
+  (movable foldable flushable explicit-check))
+(defknown cis (real) (complex float)
+  (movable foldable flushable explicit-check))
+
+(defknown (sin cos) (number)
+  (or (float -1.0 1.0) (complex (float -1.0 1.0)))
+  (movable foldable flushable explicit-check recursive)
+  :derive-type #'result-type-float-contagion)
+
+(defknown (atan tan sinh cosh tanh asinh)
+  (number) irrational (movable foldable flushable explicit-check recursive)
+  :derive-type #'result-type-float-contagion)
+
+(defknown (asin acos acosh atanh)
+  (number) irrational
+  (movable foldable flushable explicit-check recursive))
+
+(defknown float (real &optional float) float
+  (movable foldable flushable explicit-check))
+
+(defknown (rational rationalize) (real) rational
+  (movable foldable flushable explicit-check))
+
 (defknown (numerator denominator) (rational) integer
   (movable foldable flushable))
+
 (defknown (floor ceiling truncate round)
-  (real &optional real) (values integer real) (movable foldable flushable explicit-check))
-(defknown (mod rem) (real real) real (movable foldable flushable explicit-check))
+  (real &optional real) (values integer real)
+  (movable foldable flushable explicit-check))
+
+(defknown (mod rem) (real real) real
+  (movable foldable flushable explicit-check))
+
 (defknown (ffloor fceiling fround ftruncate)
-  (real &optional real) (values float float) (movable foldable flushable explicit-check))
+  (real &optional real) (values float float)
+  (movable foldable flushable explicit-check))
 
 (defknown decode-float (float) (values float float-exponent float)
   (movable foldable flushable explicit-check))
 (defknown scale-float (float float-exponent) float
   (movable foldable flushable explicit-check))
-(defknown float-radix (float) float-radix (movable foldable flushable explicit-check))
+(defknown float-radix (float) float-radix
+  (movable foldable flushable explicit-check))
 (defknown float-sign (float &optional float) float
   (movable foldable flushable explicit-check))
 (defknown (float-digits float-precision) (float) float-digits
@@ -241,7 +287,10 @@
 (defknown integer-decode-float (float)
 	  (values integer float-exponent (member -1 1))
 	  (movable foldable flushable explicit-check))
-(defknown complex (real &optional real) number (movable foldable flushable explicit-check))
+
+(defknown complex (real &optional real) number
+  (movable foldable flushable explicit-check))
+
 (defknown (realpart imagpart) (number) real (movable foldable flushable))
 
 (defknown (logior logxor logand logeqv) (&rest integer) integer
