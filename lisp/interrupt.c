@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.22 2000/04/12 17:31:19 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.23 2000/10/21 12:42:46 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -271,7 +271,8 @@ interrupt_handle_now(HANDLER_ARGS)
      * Restore the FPU control word, setting the rounding mode to nearest.
      */
 
-    setfpucw(contextstruct.fpstate->cw & ~0xc00);
+    if (contextstruct.fpstate)
+      setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
     handler = interrupt_handlers[signal];

@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.12 2000/09/05 08:51:52 dtc Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.13 2000/10/21 12:42:46 dtc Exp $ 
  *
  */
 
@@ -215,7 +215,8 @@ void  sigtrap_handler(HANDLER_ARGS)
    * Restore the FPU control word, setting the rounding mode to nearest.
    */
 
-  setfpucw(contextstruct.fpstate->cw & ~0xc00);
+  if (contextstruct.fpstate)
+    setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
  /*
