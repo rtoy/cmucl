@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.26 1998/02/19 03:49:49 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.27 1998/02/24 18:18:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,8 +77,7 @@
 (def-math-rtn "pow" 2)
 #-x86 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
-#-hpux
-(def-math-rtn "log1p" 1)
+#-(or hpux x86) (def-math-rtn "log1p" 1)
 
 #+x86 ;; These are needed for use by byte-compiled files.
 (progn
@@ -149,6 +148,10 @@
     (declare (double-float x)
 	     (values double-float))
     (%logb x))
+  (defun %log1p (x)
+    (declare (double-float x)
+	     (values double-float))
+    (%log1p x))
   ) ; progn
 
 
