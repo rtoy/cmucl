@@ -19,10 +19,10 @@ over the Internet, and is mostly in the public domain.
 New in this release:
        
   * Feature enhancements:
-     - Stack overflow checking added for FreeBSD/x86 and Linux/x86.
-       Code that makes the control stack overflow (for example due to
-       unbounded recursion) will lead to a STORAGE-ERROR being
-       signaled, instead of making CMUCL crash.
+     - Stack overflow checking added for FreeBSD/x86, Linux/x86 and
+       Solaris.  Code that makes the control stack overflow (for
+       example due to unbounded recursion) will lead to a
+       STORAGE-ERROR being signaled, instead of making CMUCL crash.
      - LISP:FIND-CLASS and LISP:CLASS-OF now return CLOS classes.  The
        symbols LISP:STANDARD-CLASS, LISP:BUILT-IN-CLASS, and
        LISP:STRUCTURE-CLASS name CLOS classes.  It is no longer
@@ -40,7 +40,8 @@ New in this release:
      - TRACE automatically using encapsulation when function-end
        breakpoints cannot be used.
      - INSPECT working on CLOS instances.
-     - Callbacks from foreign code to Lisp.
+     - Callbacks from foreign code to Lisp.  Implemented for x86 and
+       sparc.
      - Functions like GETHASH that are used in the implementation of 
        TRACE can now be traced.  See also
        DEBUG:*TRACE-ENCAPSULATE-PACKAGE-NAMES*.
@@ -50,6 +51,8 @@ New in this release:
        with the effect of tracing and profiling now working more
        nicely together.
      - When a profiled function is redefined, it is re-profiled.
+     - A basic implementation of simple-streams added.  Some
+       functionality may be missing.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
