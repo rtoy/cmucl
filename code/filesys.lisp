@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.84 2004/10/18 16:57:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.85 2004/12/13 15:12:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -421,7 +421,7 @@
 	   (error ":BACK cannot be represented in namestrings."))
 	  ((member :wild-inferiors)
 	   (pieces "**/"))
-	  ((or simple-string pattern)
+	  ((or simple-string pattern (eql :wild))
 	   (pieces (unparse-unix-piece dir))
 	   (pieces "/"))
 	  (t
