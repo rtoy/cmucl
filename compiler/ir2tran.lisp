@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.7 1990/04/17 13:26:42 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.8 1990/04/19 14:27:06 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -699,9 +699,7 @@
       (vop* known-call-local node block
 	    (fp nfp args)
 	    ((reference-tn-list locs t))
-	    arg-locs
-	    (ir2-environment-return-pc-pass env)
-	    start)
+	    arg-locs env start)
       (move-continuation-result node block locs cont)))
   (undefined-value))
 
@@ -724,17 +722,16 @@
 	   (type continuation cont) (type label start))
   (multiple-value-bind (fp nfp args arg-locs)
 		       (ir2-convert-local-call-args node block env)
-    (let ((2cont (continuation-info cont))
-	  (return-pc (ir2-environment-return-pc-pass env)))
+    (let ((2cont (continuation-info cont)))
       (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
 	  (vop* multiple-call-local node block (fp nfp args)
 		((reference-tn-list (ir2-continuation-locs 2cont) t))
-		arg-locs return-pc start)
+		arg-locs env start)
 	  (let ((temps (standard-result-tns cont)))
 	    (vop* call-local node block
 		  (fp nfp args)
 		  ((reference-tn-list temps t))
-		  arg-locs return-pc start (length temps))
+		  arg-locs env start (length temps))
 	    (move-continuation-result node block temps cont)))))
   (undefined-value))
 
