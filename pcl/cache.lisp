@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.16 2002/08/27 19:01:37 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.17 2002/09/07 13:16:48 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -575,6 +575,7 @@
 	 (new-vector (get-cache-vector size)))
     (declare (simple-vector old-vector new-vector))
     (dotimes (i size)
+      (declare (fixnum i))
       (setf (svref new-vector i) (svref old-vector i)))
     (setf (cache-vector new-cache) new-vector)
     new-cache))
@@ -690,6 +691,7 @@
     (declare (type field-type field) (fixnum result mask nkeys)
 	     (simple-vector cache-vector))
     (dotimes (i nkeys)
+      (declare (fixnum i))
       (let* ((wrapper (cache-vector-ref cache-vector (+ i from-location)))
 	     (wcn (wrapper-cache-number-vector-ref wrapper field)))
 	(declare (fixnum wcn))
@@ -940,6 +942,7 @@
 		(vector (vector)))
 	    (declare (simple-vector vector))
 	    (dotimes (i (nkeys) list)
+	      (declare (fixnum i))
 	      (setf (nth i list) (cache-vector-ref vector (+ location i)))))))
     ;;
     ;; Given a line number, return true IFF the line's
@@ -957,6 +960,7 @@
 	(if (= (nkeys) 1)
 	    (eq wrappers (cache-vector-ref cache-vector loc))
 	    (dotimes (i (nkeys) t)
+	      (declare (fixnum i))
 	      (unless (eq (pop wrappers) (cache-vector-ref cache-vector (+ loc i)))
 		(return nil))))))
     ;;
@@ -997,6 +1001,7 @@
 	    (wrappers-mismatch-p (null wrappers)))
 	(declare (simple-vector cache-vector))
 	(dotimes (i (nkeys) wrappers-mismatch-p)
+	  (declare (fixnum i))
 	  (let ((wrapper (cache-vector-ref cache-vector (+ loc i))))
 	    (when (or (null wrapper)
 		      (invalid-wrapper-p wrapper))
@@ -1108,6 +1113,7 @@
     (let ((location (if (= (nkeys) 1) 0 1))
 	  (limit (funcall (limit-fn) (nlines))))
       (dotimes (i (nlines) cache)
+	(declare (fixnum i))
 	(when (and (not (location-reserved-p location))
 		   (line-full-p i))
 	  (let* ((home-loc (compute-primary-cache-location-from-location 
@@ -1132,6 +1138,7 @@
       (when (location-reserved-p location)
 	(setq location (next-location location)))
       (dotimes (i (1+ limit))
+	(declare (fixnum i))
 	(when (location-matches-wrappers-p location wrappers)
 	  (return-from probe-cache (or (not (valuep))
 				       (location-value location))))
@@ -1146,6 +1153,7 @@
   (with-local-cache-functions (cache)
     (let ((set-p (and set-p (valuep))))
       (dotimes (i (nlines) cache)
+	(declare (fixnum i))
 	(unless (or (line-reserved-p i) (not (line-valid-p i nil)))
 	  (let ((value (funcall function (line-wrappers i) (line-value i))))
 	    (when set-p
@@ -1162,6 +1170,7 @@
     (let ((count 0))
       (declare (fixnum count))
       (dotimes (i (nlines) count)
+	(declare (fixnum i))
 	(unless (line-reserved-p i)
 	  (when (line-full-p i)
 	    (incf count)))))))
@@ -1170,6 +1179,7 @@
   (declare (ignore value))
   (with-local-cache-functions (cache)
     (dotimes (i (nlines))
+      (declare (fixnum i))
       (unless (line-reserved-p i)
 	(when (equal (line-wrappers i) wrappers)
 	  (return t))))))
@@ -1235,6 +1245,7 @@
 		  (declare (fixnum from-loc to-loc))
 		  (modify-cache to-cache-vector
 				(dotimes (i (line-size))
+				  (declare (fixnum i))
 				  (setf (cache-vector-ref to-cache-vector
 							  (+ to-loc i))
 					(cache-vector-ref from-cache-vector
@@ -1263,6 +1274,7 @@
 		 (try-one-fill (wrappers value)
 		   (fill-cache-p nil ncache wrappers value)))
 	  (if (and (dotimes (i (nlines) t)
+		     (declare (fixnum i))
 		     (when (and (null (line-reserved-p i))
 				(line-valid-p i wrappers))
 		       (unless (try-one-fill-from-line i) (return nil))))
@@ -1291,6 +1303,7 @@
 	       (try-one-fill (wrappers value)
 		 (fill-cache-p nil ncache wrappers value)))
 	(dotimes (i (nlines))
+	  (declare (fixnum i))
 	  (when (and (null (line-reserved-p i))
 		     (line-valid-p i wrappers))
 	    (do-one-fill-from-line i)))
@@ -1365,6 +1378,7 @@
 	   (declare (fixnum from-loc to-loc) (simple-vector cache-vector))
 	   (modify-cache cache-vector
 			 (dotimes (i (line-size))
+			   (declare (fixnum i))
 			   (setf (cache-vector-ref cache-vector (+ to-loc i))
 				 (cache-vector-ref cache-vector (+ from-loc i)))
 			   (setf (cache-vector-ref cache-vector (+ from-loc i))

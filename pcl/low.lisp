@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.15 2001/09/22 13:57:42 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.16 2002/09/07 13:16:48 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -43,11 +43,6 @@ declaration.")
 
 ;;; Various macros that include necessary declarations for maximum
 ;;; performance.
-
-(defmacro dotimes ((var count &optional (result nil)) &body body)
-  `(lisp:dotimes (,var (the fixnum ,count) ,result)
-     (declare (fixnum ,var))
-     ,@body))
 
 (defmacro %svref (vector index)
   `(locally (declare #.*optimize-speed*

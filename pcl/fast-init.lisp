@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.9 2002/08/27 19:01:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.10 2002/09/07 13:16:48 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -795,6 +795,7 @@
 		      pv slots (cadr form)
 		      (slot-boundp-using-class class instance (caddr form)))
 		 (dotimes (i (cadddr form))
+		   (declare (fixnum i))
 		   (pop form-list))))
 	      (update-initialize-info-cache
 	       (when (consp initargs)
@@ -874,7 +875,8 @@
 			       (t :default))))
 	       ,@(let ((sforms (cons nil nil)))
 		   (dotimes (i (cadddr form) (car sforms))
-		     (add-forms (first-form-to-lisp forms cvector pv) sforms)))))))
+		     (add-forms (first-form-to-lisp forms cvector pv)
+				sforms)))))))
 	(update-initialize-info-cache
 	 `((when (consp initargs)
 	     (setq initargs (cons (car initargs) (cdr initargs))))

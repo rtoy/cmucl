@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.31 2002/08/27 19:01:37 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.32 2002/09/07 13:16:47 pmai Exp $")
 
 (in-package :pcl)
 
@@ -651,6 +651,7 @@ work during bootstrapping.
 	  (*enable-emf-call-tracing-p* nil))
       (format t "~&(The oldest entries are printed first)~%")
       (dotimes (i *emf-call-trace-size*)
+	(declare (fixnum i))
 	(let ((ct (aref *emf-call-trace* j)))
 	  (when ct (print ct)))
 	(incf j)

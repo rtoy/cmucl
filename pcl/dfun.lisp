@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.14 2002/08/26 02:23:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.15 2002/09/07 13:16:48 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1312,8 +1312,12 @@ And so, we are saved.
 
 (defun compute-precedence (lambda-list nreq argument-precedence-order)
   (if (null argument-precedence-order)
-      (let ((list nil))(dotimes (i nreq list) (push (- (1- nreq) i) list)))
-      (mapcar (lambda (x) (position x lambda-list)) argument-precedence-order)))
+      (let ((list nil))
+	(dotimes (i nreq list)
+	  (declare (fixnum i))
+	  (push (- (1- nreq) i) list)))
+      (mapcar (lambda (x) (position x lambda-list))
+	      argument-precedence-order)))
 
 (defun saut-and (specl type)
   (let ((applicable nil)

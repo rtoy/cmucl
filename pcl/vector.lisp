@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.17 2002/08/26 02:23:16 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.18 2002/09/07 13:16:49 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -332,6 +332,7 @@
 	     (new-intern-p t))
 	(if (atom wrappers)
 	    (dotimes (i pv-size)
+	      (declare (fixnum i))
 	      (when (consp (let ((map (svref pv-map i)))
 			     (if map
 				 (setf (pvref new-pv i) (cdr map))
@@ -341,6 +342,7 @@
 	      (dolist (wrapper wrappers)
 		(when (eq wrapper cwrapper)
 		  (dotimes (i pv-size)
+		    (declare (fixnum i))
 		    (when (consp (let ((map (svref pv-map i)))
 				   (if (and map (= (car map) param))
 				       (setf (pvref new-pv i) (cdr map))
