@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.2 1990/11/03 15:35:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.3 1990/11/13 22:54:50 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -113,7 +113,7 @@
   (let ((type (ctype-of object)))
     (cond ((not (member-type-p type)) (primitive-type type))
 	  ((equal (member-type-members type) '(nil))
-	   (primitive-type-or-lose 'list))
+	   (primitive-type-or-lose 'list *backend*))
 	  (t
 	   *any-primitive-type*))))
 
@@ -156,8 +156,10 @@
 	      ((type eq))
   (declare (type ctype type))
   (macrolet ((any () '(values *any-primitive-type* nil))
-	     (exactly (type) `(values (primitive-type-or-lose ',type) t))
-	     (part-of (type) `(values (primitive-type-or-lose ',type) nil)))
+	     (exactly (type)
+	       `(values (primitive-type-or-lose ',type *backend*) t))
+	     (part-of (type)
+	       `(values (primitive-type-or-lose ',type *backend*) nil)))
     (etypecase type
       (numeric-type
        (let ((lo (numeric-type-low type))
@@ -182,7 +184,8 @@
 			      (min (cadr spec))
 			      (max (caddr spec)))
 			  (when (<= min lo hi max)
-			    (return (values (primitive-type-or-lose type)
+			    (return (values (primitive-type-or-lose type
+								    *backend*)
 					    (and (= lo min) (= hi max))))))))
 		     ((or (and hi (< hi most-negative-fixnum))
 			  (and lo (> lo most-positive-fixnum)))
@@ -193,9 +196,11 @@
 	       (let ((exact (and (null lo) (null hi))))
 		 (case (numeric-type-format type)
 		   ((short-float single-float)
-		    (values (primitive-type-or-lose 'single-float) exact))
+		    (values (primitive-type-or-lose 'single-float *backend*)
+			    exact))
 		   ((double-float long-float)
-		    (values (primitive-type-or-lose 'double-float) exact))
+		    (values (primitive-type-or-lose 'double-float *backend*)
+			    exact))
 		   (t
 		    (any)))))
 	      (t
@@ -213,7 +218,8 @@
 		  (ptype (cdr (assoc type-spec *simple-array-primitive-types*
 				     :test #'equal))))
 	     (if (and (consp dims) (null (rest dims)) ptype)
-		 (values (primitive-type-or-lose ptype) (eq (first dims) '*))
+		 (values (primitive-type-or-lose ptype *backend*)
+			 (eq (first dims) '*))
 		 (any)))))
       (union-type
        (if (type= type (specifier-type 'list))
@@ -237,7 +243,7 @@
        (case (named-type-name type)
 	 ((t bignum ratio complex function structure
 	     system-area-pointer weak-pointer)
-	  (values (primitive-type-or-lose (named-type-name type)) t))
+	  (values (primitive-type-or-lose (named-type-name type) *backend*) t))
 	 ((character base-character string-char)
 	  (exactly base-character))
 	 (standard-char
