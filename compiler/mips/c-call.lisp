@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.8 1992/02/14 23:50:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.9 1992/03/10 12:38:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.8 1992/02/14 23:50:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.9 1992/03/10 12:38:19 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -45,7 +45,7 @@
 	  (my-make-wired-tn ptype reg-sc (+ stack-frame-size 4))
 	  (my-make-wired-tn ptype stack-sc stack-frame-size)))))
 
-(def-alien-type-method (alien::sap :arg-tn) (type state)
+(def-alien-type-method (system-area-pointer :arg-tn) (type state)
   (declare (ignore type))
   (let ((stack-frame-size (arg-state-stack-frame-size state)))
     (setf (arg-state-stack-frame-size state) (1+ stack-frame-size))
@@ -108,7 +108,7 @@
 	    (values 'unsigned-byte-32 'unsigned-reg))
       (my-make-wired-tn ptype reg-sc (+ num-results 2)))))
 
-(def-alien-type-method (alien::sap :result-tn) (type state)
+(def-alien-type-method (system-area-pointer :result-tn) (type state)
   (declare (ignore type))
   (let ((num-results (result-state-num-results state)))
     (setf (result-state-num-results state) (1+ num-results))
