@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.2 1991/03/22 14:02:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.3 1991/11/05 16:21:47 ram Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -244,7 +244,8 @@
 		  values))
 
 
-(defun test-type-aux (reg temp target not-target not-p lowtags immed hdrs)
+(defun test-type-aux (reg temp target not-target not-p lowtags immed hdrs
+			  function-p)
   (let* ((fixnump (and (member even-fixnum-type lowtags :test #'eql)
 		       (member odd-fixnum-type lowtags :test #'eql)))
 	 (lowtags (sort (if fixnump
@@ -254,6 +255,9 @@
 				    :test #'eql)
 			    (copy-list lowtags))
 			#'<))
+	 (lowtag (if function-p
+		     vm:function-pointer-type
+		     vm:other-pointer-type))
 	 (hdrs (sort (copy-list hdrs) #'<))
 	 (immed (sort (copy-list immed) #'<)))
     (append
@@ -285,21 +289,26 @@
 	   (gen-range-test temp target not-target not-p 0 1
 			   (1- lowtag-limit) lowtags)))
      (when hdrs
-       `((inst cmp ,temp other-pointer-type)
+       `((inst cmp ,temp ,lowtag)
 	 (inst b :ne ,(if not-p target not-target))
 	 (inst nop)
-	 (load-type ,temp ,reg (- other-pointer-type))
+	 (load-type ,temp ,reg (- ,lowtag))
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
 
 (defconstant immediate-types
   (list base-character-type unbound-marker-type))
+
+(defconstant function-subtypes
+  (list funcallable-instance-header-type closure-header-type
+	function-header-type closure-function-header-type))
 
 (defmacro test-type (register temp target not-p &rest type-codes)
   (let* ((type-codes (mapcar #'eval type-codes))
 	 (lowtags (remove lowtag-limit type-codes :test #'<))
 	 (extended (remove lowtag-limit type-codes :test #'>))
 	 (immediates (intersection extended immediate-types :test #'eql))
-	 (headers (set-difference extended immediate-types :test #'eql)))
+	 (headers (set-difference extended immediate-types :test #'eql))
+	 (function-p nil))
     (unless type-codes
       (error "Must supply at least on type for test-type."))
     (when (and headers (member other-pointer-type lowtags))
@@ -310,6 +319,12 @@
 		   (member other-immediate-1-type lowtags)))
       (warn "OTHER-IMMEDIATE-n-TYPE supersedes the use of ~S" immediates)
       (setf immediates nil))
+    (when (intersection headers function-subtypes)
+      (unless (subsetp headers function-subtypes)
+	(error "Can't test for mix of function subtypes and normal ~
+		header types."))
+      (setq function-p t))
+      
     (let ((n-reg (gensym))
 	  (n-temp (gensym))
 	  (n-target (gensym))
@@ -321,13 +336,16 @@
 	 (declare (ignorable ,n-temp))
 	 ,@(if (constantp not-p)
 	       (test-type-aux n-reg n-temp n-target not-target
-			      (eval not-p) lowtags immediates headers)
+			      (eval not-p) lowtags immediates headers
+			      function-p)
 	       `((cond (,not-p
 			,@(test-type-aux n-reg n-temp n-target not-target t
-					 lowtags immediates headers))
+					 lowtags immediates headers
+					 function-p))
 		       (t
 			,@(test-type-aux n-reg n-temp n-target not-target nil
-					 lowtags immediates headers)))))
+					 lowtags immediates headers
+					 function-p)))))
 	 (inst nop)
 	 (emit-label ,not-target)))))
 
