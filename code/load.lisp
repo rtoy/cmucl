@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.32 1991/11/18 10:32:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.33 1991/11/24 22:55:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -713,6 +713,18 @@
 			  ((zerop i) dimensions))
 		      nil)
     res))
+
+(define-fop (fop-single-float-vector 84)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'single-float)))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes))
+    result))
+
+(define-fop (fop-double-float-vector 85)
+  (let* ((length (read-arg 4))
+	 (result (make-array length :element-type 'double-float)))
+    (read-n-bytes *fasl-file* result 0 (* length vm:word-bytes 2))
+    result))
 
 
 ;;; FOP-INT-VECTOR  --  Internal
