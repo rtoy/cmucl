@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.1 1991/11/18 10:43:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.2 1992/01/28 08:40:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,9 +19,11 @@
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
 	  sap+ sap- sap< sap<= sap= sap>= sap>))
 
-(import '(%set-sap-ref-8 %set-sap-ref-16 %set-sap-ref-32 %set-sap-ref-sap
-	  %set-sap-ref-single %set-sap-ref-double)
-	"C")
+(in-package "KERNEL")
+(export '(%set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16
+	  %set-sap-ref-8 %set-sap-ref-single %set-sap-ref-double))
+(in-package "SYSTEM")
+
 
 
 ;;;; Primitive SAP operations.
