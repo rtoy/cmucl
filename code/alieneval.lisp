@@ -36,11 +36,13 @@
 ;;; The number of bits corresponding to a change of 1 in the value of a SAP.
 ;;;
 (defconstant alien-address-unit 8)
+(defconstant alien-address-shift (1- (integer-length alien-address-unit)))
 
 ;;; The address pointed to by the SAP in an alien is always a multiple of this
 ;;; number of bits.
 ;;;
-(defconstant alien-alignment 16)
+(defconstant alien-alignment 32)
+
 
 (defvar *alien-eval-when* '(compile load eval)
   "This is a list of the times to eval Alien compiler info.")
@@ -50,7 +52,7 @@
   (let ((offset (alien-value-offset s)))
     (format stream
 	    "#<Alien value, Address = #x~X~:[+~D/8~;~*~], Size = ~D, Type = ~S>"
-	    (%primitive sap-int (alien-value-sap s)) (zerop offset) offset
+	    (sap-int (alien-value-sap s)) (zerop offset) offset
 	    (alien-value-size s) (alien-value-type s))))
 
 (defun %print-alien-info (s stream d)
@@ -70,16 +72,31 @@
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
-  "Returns the 8-bit byte at Offset bytes from SAP."
+  "Returns the 8-bit byte at OFFSET bytes from SAP."
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
-  "Returns the 16-bit word at Offset words from SAP."
+  "Returns the 16-bit word at OFFSET half-words from SAP."
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
-  "Returns the 32-bit dualword at Offset words from SAP."
+  "Returns the 32-bit dualword at OFFSET words from SAP."
   (sap-ref-32 sap offset))
+
+(defun sap-ref-sap (sap offset)
+  "Returns the 32-bit system-area-pointer at OFFSET words from SAP.")
+
+(defun signed-sap-ref-8 (sap offset)
+  "Returns the signed 8-bit byte at Offset bytes from SAP."
+  (signed-sap-ref-8 sap offset))
+
+(defun signed-sap-ref-16 (sap offset)
+  "Returns the signed 16-bit word at Offset words from SAP."
+  (signed-sap-ref-16 sap offset))
+
+(defun signed-sap-ref-32 (sap offset)
+  "Returns the signed 32-bit dualword at Offset words from SAP."
+  (signed-sap-ref-32 sap offset))
 
 (defun (setf sap-ref-8) (sap offset new-value)
   (setf (sap-ref-8 sap offset) new-value))
@@ -89,6 +106,9 @@
 
 (defun (setf sap-ref-32) (sap offset new-value)
   (setf (sap-ref-32 sap offset) new-value))
+
+(defun (setf sap-ref-sap) (sap offset new-value)
+  (setf (sap-ref-sap sap offset) new-value))
 
 ); #+New-Compiler
 
@@ -144,7 +164,7 @@
 (defun alien-address (alien)
   "Return the address of the data for Alien."
   (check-type alien alien-value)
-  (+ (%primitive sap-int (alien-value-sap alien))
+  (+ (sap-int (alien-value-sap alien))
      (/ (alien-value-offset alien) alien-address-unit)))
 
 (defun alien-sap (alien)
@@ -268,12 +288,25 @@
 (defun allocate-static-alien (bits)
   (declare (fixnum bits))
   (let* ((alien *current-alien-free-pointer*)
-	 (bytes (logand (ash (the fixnum (+ bits 31)) -3) (lognot 3)))
-	 (new (%primitive sap+ *current-alien-free-pointer* bytes)))
+	 (bytes (logand (ash (the fixnum (+ bits 31))
+			     (- alien-address-shift))
+			(lognot 3)))
+	 (new (sap+ *current-alien-free-pointer* bytes)))
     (when (%primitive pointer> new alien-allocation-end)
       (error "Not enough room to allocate a ~D bit alien." bits))
     (setq *current-alien-free-pointer* new)
     alien))
+
+
+;;; DO-VALIDATE  --  Internal Interface.
+;;;
+;;; Do a ValidateMemory on our kernel port and flame out if error.
+;;;
+;;; Hemlock and other code files use this, even though it is not exported from
+;;; a more appropriate package.
+;;;
+(defun do-validate (addr bytes mask)
+  (gr-call* mach::vm_allocate *task-self* addr bytes (if (eq mask -1) t NIL)))
 
 
 ;;; Make-Alien  --  Public
@@ -288,12 +321,12 @@
   supplied then memory is allocated to contain the data."
   (case address
     (:dynamic
-     (setq address (do-validate 0 (ash size -3) -1)))
+     (setq address (do-validate 0 (ash size (- alien-address-shift)) -1)))
     (:static
      (setq address (allocate-static-alien size)))
     (t
      (if (not (integerp address))
-	 (setq address (%primitive sap-int address)))
+	 (setq address (sap-int address)))
      (check-type address (rational 0))))
   (check-type size (integer 0))
   (if (numberp address)
@@ -301,7 +334,7 @@
 	(let ((offset (* frac alien-address-unit)))
 	  (unless (integerp frac)
 	    (error "Address ~S does not fall on a bit position." address))
-	  (make-alien-value (%primitive int-sap base) offset size type)))
+	  (make-alien-value (int-sap base) offset size type)))
       (make-alien-value address 0 size type)))
 
 
@@ -319,7 +352,7 @@
   (let* ((offset (alien-value-offset alien))
 	 (length (alien-value-size alien))
 	 (bytes (ash (+ length offset 15) -3))
-	 (new (%primitive int-sap (do-validate 0 bytes -1))))
+	 (new (int-sap (do-validate 0 bytes -1))))
     (%primitive byte-blt (alien-value-sap alien) (ash offset -3)
 		new 0 bytes)
     (make-alien-value new offset length (alien-value-type alien))))
@@ -357,9 +390,11 @@
     (error "~S is too small to extract a ~A bit field at ~A."
 	   alien size offset))
   (multiple-value-bind (words bits)
-		       (truncate (+ offset (alien-value-offset alien)) 8)
+		       (truncate (+ offset (alien-value-offset alien))
+				 alien-alignment)
     (make-alien-value
-     (%primitive int-sap (+ words (%primitive sap-int (alien-value-sap alien))))
+     (int-sap (+ (* words (/ alien-alignment alien-address-unit))
+		 (sap-int (alien-value-sap alien))))
      bits
      size
      nil)))
@@ -380,14 +415,13 @@
   (unless (zerop (alien-value-offset alien))
     (error "~S is not word aligned."))
   (let* ((sap (alien-value-sap alien))
-	 (value (logior (ash (%primitive 16bit-system-ref sap 0) 16)
-			(%primitive 16bit-system-ref sap 1))))
+	 (value (sap-ref-sap sap 0)))
 #|
     (unless (<= system-space-start value most-positive-fixnum)
       (error "The value of ~S, #x~X, does not point into system space."
 	     alien value))
 |#
-    (make-alien-value (%primitive int-sap value) 0 size nil)))
+    (make-alien-value value 0 size nil)))
 
 
 ;;; Bits, Bytes, Words, Long-Words  --  Public
@@ -415,11 +449,11 @@
 ;;;
 (defun %alien-indirect (size sap offset exp)
   (unless (eql size 32)
-    (error "Argument to Alien-Indirect is ~D bits, 32:~% ~S." size exp))
+    (error "Argument to Alien-Indirect is ~D bits, not 32:~% ~S." size exp))
   (unless (zerop (logand offset #x1F))
     (error "Offset ~D to Alien-Indirect is not long-word-aligned:~% ~S."
 	   offset exp))
-  (%primitive sap-system-ref sap (ash offset -4)))
+  (sap-ref-sap sap (ash offset -5)))
 
 
 ;;; %Aligned-SAP  --  Internal
@@ -429,10 +463,10 @@
 ;;; bound offset 0.
 ;;;
 (defun %aligned-sap (sap offset form)
-  (unless (zerop (logand offset #xF))
+  (unless (zerop (logand offset #x1F))
     (error "Offset ~S was declared to be word aligned, but isn't:~% ~S"
 	   offset form))
-  (%primitive sap+ sap (ash offset -3)))
+  (sap+ sap (ash offset -3)))
 
 #+new-compiler
 ;;; Naturalize-Integer  --  Internal
@@ -442,35 +476,52 @@
 ;;; by hand.
 ;;;
 (defun naturalize-integer (signed sap offset size form)
-  (multiple-value-bind (q r) (truncate offset 16)
+  (multiple-value-bind (q r) (truncate offset address-alignment)
     (cond
-     ((> size 15)
-      (unless (zerop r)
-	(error "Offset ~D for ~D bit access is not word-aligned:~% ~S"
-	       offset size form))
-      (case size
-	(32
-	 (if signed
-	     (%primitive signed-32bit-system-ref sap (ash q 4))
-	     (%primitive unsigned-32bit-system-ref sap (ash q 4))))
-	(16
-	 (if signed
-	     (naturalize-integer t sap (ash q 4) 16 nil)
-	     (naturalize-integer nil sap (ash q 4) 16 nil)))
-	(t
-	 (error "Access of ~D bit integers is not supported." size))))
-     (t
-      (when (> (+ size r) 16)
-	(error "~D bit field at ~D offset crosses a word boundry:~% ~S"
-	       size offset form))
+     ((and (= size 32) (zerop r))
       (if signed
-	  (let ((val (ldb (byte size (- 16 size r))
-			  (%primitive 16bit-system-ref sap q))))
-	    (if (logbitp val (1- size))
-		(logior val (ash -1 size))
-		val))
-	  (ldb (byte size (- 16 size r))
-	       (%primitive 16bit-system-ref sap q)))))))
+	  (signed-sap-ref-32 sap q)
+	  (sap-ref-32 sap q)))
+     ((and (= size 16) (zerop (logand r #xf)))
+      (if signed
+	  (signed-sap-ref-16 sap (ash offset -4))
+	  (sap-ref-16 sap (ash offset -4))))
+     ((and (= size 8) (zerop (logand r #x7)))
+      (if signed
+	  (signed-sap-ref-8 sap (ash offset -3))
+	  (sap-ref-8 sap (ash offset -3))))
+     ((> size 32)
+      (error "Access of ~D bit integers is not supported." size))
+     ((zerop r)
+      (let ((value (ldb (byte size 0) (sap-ref-32 sap q))))
+	(if (and signed (logbitp value (1- size)))
+	    (logior value (ash -1 size))
+	    value)))
+     ((<= (+ size r) 32)
+      (let ((value (ldb (byte size r) (sap-ref-32 sap q))))
+	(if (and signed (logbitp value (1- size)))
+	    (logior value (ash -1 size))
+	    value)))
+     (t
+      (macrolet ((low-byte ()
+			   (ecase vm:target-byte-order
+			     (:little-endian 'offset)
+			     (:bit-endian '(1+ offset))))
+		 (high-byte ()
+			    (ecase vm:target-byte-order
+			      (:little-endian '(1+ offset))
+			      (:bit-endian 'offset))))
+	(let* ((high-bits (- 32 r))
+	       (low-bits (- size high-bits))
+	       (value (logior (ash (ldb (byte high-bits 0)
+					(sap-ref-32 sap (high-byte)))
+				   low-bits)
+			      (ash (sap-ref-32 sap (low-byte))
+				   (- (- 32 low-bits))))))
+	  (if (and signed (logbitp value (1- size)))
+	      (logior value (ash -1 size))
+	      value)))))))
+
 
 #+new-compiler
 ;;; Deport-Integer  --  Internal
@@ -479,45 +530,39 @@
 ;;;
 (defun deport-integer (signed sap offset size value form)
   (declare (ignore signed))
-  (multiple-value-bind (q r) (truncate offset 16)
+  (multiple-value-bind (q r) (truncate offset 32)
     (declare (fixnum r))
     (cond
-     ((> size 15)
-      (unless (zerop r)
-	(error "Offset ~D for ~D bit store is not word-aligned:~% ~S"
-	       offset size form))
-      (case size
-	(32
-	 (%primitive signed-32bit-system-set sap q value))
-	(16
-	 (%primitive 16bit-system-set sap q value))
-	(t
-	 (error "Storing of ~D bit integers is not supported:~% ~S"
-		size form))))
-     ((= size 8)
-      (setq q (ash q 1))
-      (when (= r 8)
-	(setq q (1+ q))
-	(setq r 0))
-      (when (/= r 0)
-	(error "8 bit field at ~D offset crosses a byte boundary:~% ~S"
-	       offset form))
-      (%primitive 8bit-system-set sap q value))
-     ((> size 7)
-      (when (> (+ size r) 16)
-	(error "~D bit field at ~D offset crosses a word boundry:~% ~S"
-	       size offset form))
-      (%primitive 16bit-system-set sap q
-		  (dpb value (byte size (- 16 size r))
-		       (%primitive 16bit-system-ref sap q))))
-     (T
-      (multiple-value-bind (nq nr) (truncate offset 8)
-	(when (> (+ size nr) 8)
-	  (error "~D bit field at ~D offset crosses a byte boundry:~% ~S"
-		 size offset form))
-	(%primitive 8bit-system-set sap nq
-		    (dpb value (byte size (- 8 size nr))
-			 (%primitive 8bit-system-ref sap nq)))))))
+     ((and (= size 32) (zerop r))
+      (setf (sap-ref-32 sap q) value))
+     ((and (= size 16) (zerop (logand r #xf)))
+      (setf (sap-ref-16 sap (ash offset -4)) value))
+     ((and (= size 8) (zerop (logand r #x7)))
+      (setf (sap-ref-8 sap (ash offset -3)) value))
+     ((> size 32)
+      (error "Storing of ~D bit integers is not supported:~% ~S"
+	     size form))
+     ((zerop r)
+      (setf (ldb (byte size 0) (sap-ref-32 sap q)) value))
+     ((<= (+ r size) 32)
+      (setf (ldb (byte size r) (sap-ref-32 sap q)) value))
+     (t
+      (macrolet ((low-byte ()
+			   (ecase vm:target-byte-order
+			     (:little-endian 'offset)
+			     (:bit-endian '(1+ offset))))
+		 (high-byte ()
+			    (ecase vm:target-byte-order
+			      (:little-endian '(1+ offset))
+			      (:bit-endian 'offset))))
+	(let* ((high-bits (- 32 r))
+	       (low-bits (- size high-bits)))
+	  (setf (ldb (byte high-bits 0)
+		     (sap-ref-32 sap (high-byte)))
+		(ash value (- low-bits)))
+	  (setf (ldb (byte low-bits (- 32 low-bits))
+		     (sap-ref-32 sap (low-byte)))
+		value))))))
   nil)
 
 
@@ -724,7 +769,7 @@
   constraints on the values they may assume.  If the value
   is Nil, that is taken to be a null constraint.  The following
   keys are defined:
-   :unit      -- A integer (default 16).
+   :unit      -- A integer (default 32).
 		 Asserts that the value is a multiple of this number, and
 		 that the value is to be divided by this number before any
 		 other options are processed.
@@ -753,11 +798,11 @@
 	  
 	  (macrolet ((with-alien ((sap)
 				  (offset &key
-					  ((:unit ounit) 16))
+					  ((:unit ounit) 32))
 				  (size &key
 					((:constant sconst) nil)
 					((:minimum smin) nil)
-					((:unit sunit) 16))
+					((:unit sunit) 32))
 				  &body (body decls))
 		       (%with-alien sap offset ounit
 				    size sconst smin sunit
@@ -952,10 +997,11 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 
 ;;; Alien-Access expert for short-floats
 ;;;
+#+nil ; ### no short floats in the new object format.
 (define-alien-access (short-float) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
 	`(%primitive int-sap
@@ -971,10 +1017,11 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 
 ;;; Alien-Access expert for long-floats
 ;;;
+#+nil ; ### These will need work.
 (define-alien-access (long-float) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 4)
+	      (size :unit 64 :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
 	(let ((var (gensym)))
@@ -1002,6 +1049,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 ;;; Alien-access expert for procedure objects.  These should be used
 ;;; with caution.
 ;;;
+#+nil ; ### This will need work.
 (define-alien-access (c-procedure) (type kind value)
   (with-alien (sap)
 	      (offset)
@@ -1089,11 +1137,11 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
   (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (if (eq kind :read)
-	`(%primitive sap-system-ref ,sap ,offset)
-	`(%primitive pointer-system-set ,sap ,offset ,value))))
+	`(sap-ref-sap ,sap ,offset)
+	`(setf (sap-ref-sap ,sap ,offset) ,value))))
 
 ;;; Alien-Access expert for (Alien <type> [<bits>])  --  Internal
 ;;;
@@ -1103,7 +1151,7 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 (define-alien-access (alien) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
     (unless (and (consp type) (consp (cdr type)))
       (error "Bad type for accessing as an Alien: ~S" type))
@@ -1116,13 +1164,13 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 	(unless (and (integerp size) (>= size 0))
 	  (error "Size is not a positive integer: ~S" type))
 	`(make-alien-value
-	  (%primitive sap-system-ref ,sap ,offset)
+	  (sap-ref-sap ,sap ,offset)
 	  0
 	  ,size
 	  ',atype))
        (t
-	`(%primitive pointer-system-set ,sap ,offset
-		     (alien-value-sap ,value)))))))
+	`(setf (sap-ref-sap ,sap ,offset)
+	       (alien-value-sap ,value)))))))
 
 ;;; Alien-Access expert for (Pointer xxx)  --  Internal
 ;;;
@@ -1132,11 +1180,11 @@ don't know that it is supposed to be used for.  I suspect it is a PERQ crock.
 (define-alien-access (pointer pointer alien) (type kind value)
   (with-alien (sap)
 	      (offset)
-	      (size :constant 2)
+	      (size :constant 1)
     (declare (ignore size))
-    (when (eq kind :read)
-      (error "Cannot read with Pointer Alien type:~%~S" type))
-    `(%primitive pointer-system-set ,sap ,offset ,value)))
+    (if (eq kind :read)
+	`(sap-ref-sap ,sap ,offset)
+	`(setf (sap-ref-sap ,sap ,offset) ,value))))
 
 
 ;;;; Enumeration Alien access:
