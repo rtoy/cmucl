@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.40 1992/03/04 13:44:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.41 1992/03/06 11:37:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1240,9 +1240,6 @@
 
 ;;; DEBUG-FUNCTION-FUNCTION -- Public.
 ;;;
-;;; ### Should hack compiled functions someday, now that the new object format
-;;; allows it.
-;;;
 (defun debug-function-function (debug-function)
   "Returns the Common Lisp function associated with the debug-function.  This
    returns nil if the function is unavailable or is non-existent as a user
@@ -1251,7 +1248,21 @@
     (if (eq cached-value :unparsed)
 	(setf (debug-function-%function debug-function)
 	      (etypecase debug-function
-		(compiled-debug-function nil)
+		(compiled-debug-function
+		 (let ((component
+			(compiled-debug-function-component debug-function))
+		       (start-pc
+			(c::compiled-debug-function-start-pc
+			 (compiled-debug-function-compiler-debug-fun
+			  debug-function))))
+		   (do ((entry (system:%primitive code-entry-points component)
+			       (system:%primitive function-next entry)))
+		       ((null entry) nil)
+		     (when (= start-pc
+			      (c::compiled-debug-function-start-pc
+			       (compiled-debug-function-compiler-debug-fun
+				(function-debug-function entry))))
+		       (return entry)))))
 		(interpreted-debug-function
 		 (c::lambda-eval-info-function
 		  (c::leaf-info
