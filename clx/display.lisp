@@ -61,14 +61,12 @@
 
 (defmacro allocate-resource-id (display object type)
   ;; Allocate a resource-id for OBJECT in DISPLAY
-  (declare (type display display)
-	   (type t object))
-  (declare (values resource-id))
-  (if (member (eval type) *clx-cached-types*)
-      `(let ((id (funcall (display-xid ,display) ,display)))
-	 (save-id ,display id ,object)
-	 id)
-    `(funcall (display-xid ,display) ,display)))
+  `(the resource-id
+	,(if (member (eval type) *clx-cached-types*)
+	     `(let ((id (funcall (display-xid ,display) ,display)))
+		(save-id ,display id ,object)
+		id)
+	     `(funcall (display-xid ,display) ,display))))
 
 (defmacro deallocate-resource-id (display id type)
   ;; Deallocate a resource-id for OBJECT in DISPLAY
