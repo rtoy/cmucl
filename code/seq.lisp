@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23 1997/02/22 12:49:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.23.2.1 1997/09/03 01:02:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,16 +66,19 @@
 ;;; that we can directly match.
 ;;;
 (defun result-type-or-lose (type &optional nil-ok)
-  (cond
-   ((subtypep type 'nil)
-    (if nil-ok
-	nil
-	(error "NIL output type invalid for this sequence function.")))
-   ((dolist (seq-type '(list bit-vector string vector) nil)
-      (when (subtypep type seq-type)
-	(return seq-type))))
-   (t
-    (error "~S is a bad type specifier for sequence functions." type))))
+  (let ((type (specifier-type type)))
+    (cond
+      ((csubtypep type (specifier-type 'nil))
+       (if nil-ok
+	   nil
+	   (error "NIL output type invalid for this sequence function.")))
+      ((dolist (seq-type '(list string simple-vector bit-vector))
+	 (when (csubtypep type (specifier-type seq-type))
+	   (return seq-type))))
+      ((csubtypep type (specifier-type 'vector))
+       (type-specifier type))
+      (t
+       (error "~S is a bad type specifier for sequence functions." type)))))
 
   
 (defun make-sequence-of-type (type length)
