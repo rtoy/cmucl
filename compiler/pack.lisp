@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.56 2001/03/04 20:12:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.57 2002/07/10 16:14:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,15 +290,15 @@
     (dolist (sb (backend-sb-list *backend*))
       (unless (eq (sb-kind sb) :non-packed)
 	(let ((size (sb-size sb)))
-	  (fill nil (finite-sb-always-live sb))
+	  (fill (finite-sb-always-live sb) nil)
 	  (setf (finite-sb-always-live sb)
 		(make-array size :initial-element #*))
 	  
-	  (fill nil (finite-sb-conflicts sb))
+	  (fill (finite-sb-conflicts sb) nil)
 	  (setf (finite-sb-conflicts sb)
 		(make-array size :initial-element '#()))
 	  
-	  (fill nil (finite-sb-live-tns sb))
+	  (fill (finite-sb-live-tns sb) nil)
 	  (setf (finite-sb-live-tns sb)
 		(make-array size :initial-element nil))))))
   (undefined-value))
