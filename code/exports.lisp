@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.184 2001/09/27 11:27:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.185 2001/10/03 16:00:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -790,6 +790,10 @@
 	   "WEAK-POINTER-SIZE" "WEAK-POINTER-TYPE" "WEAK-POINTER-VALUE-SLOT"
 	   "WORD-BITS" "WORD-BYTES" "WORD-REG-SC-NUMBER" "WORD-SHIFT"
 	   "ZERO-SC-NUMBER"
+	   #+sparc "POSITIVE-FIXNUM-BITS"
+	   #+sparc "FIXNUM-TAG-BITS"
+	   #+sparc "FIXNUM-TAG-MASK"
+	   #+sparc "PSEUDO-ATOMIC-TRAP"
 	   ))
 
 (defpackage "CONDITIONS")
@@ -851,7 +855,8 @@
 	   "ADD-OFFS-NOTE-HOOK"
 	   "ADD-OFFS-COMMENT-HOOK"
 	   "DSTATE-CUR-ADDR"
-	   "DSTATE-NEXT-ADDR"	     
+	   "DSTATE-NEXT-ADDR"
+	   #+sparc "MAYBE-NOTE-STATIC-FUNCTION"
 	   ))
 (dolist
     (name
