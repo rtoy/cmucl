@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.5 1990/09/26 22:22:37 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.6 1990/09/27 06:33:57 wlott Exp $ */
 
 
 #include <mach.h>
@@ -21,6 +21,19 @@ static lispobj *read_only_end, *static_end;
 
 static lispobj *read_only_free, *static_free;
 static lispobj *pscav();
+
+#define LATERBLOCKSIZE 1020
+#define LATERMAXCOUNT 10
+
+static struct later {
+    struct later *next;
+    union {
+        lispobj *ptr;
+        int count;
+    } u[LATERBLOCKSIZE];
+} *later_blocks = NULL;
+static int later_count = 0;
+
 
 #define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
@@ -44,6 +57,35 @@ static boolean dynamic_pointer_p(ptr)
     return ptr >= (lispobj)dynamic_0_space;
 }
 
+static void pscav_later(where, count)
+     lispobj *where;
+     int count;
+{
+    struct later *new;
+
+    if (count > LATERMAXCOUNT) {
+        while (count > LATERMAXCOUNT) {
+            pscav_later(where, LATERMAXCOUNT);
+            count -= LATERMAXCOUNT;
+            where += LATERMAXCOUNT;
+        }
+    }
+    else {
+        if (later_blocks == NULL || later_count == LATERBLOCKSIZE ||
+            (later_count == LATERBLOCKSIZE-1 && count > 1)) {
+            new  = (struct later *)malloc(sizeof(struct later));
+            new->next = later_blocks;
+            if (later_blocks && later_count < LATERBLOCKSIZE)
+                later_blocks->u[later_count].ptr = NULL;
+            later_blocks = new;
+            later_count = 0;
+        }
+
+        if (count != 1)
+            later_blocks->u[later_count++].count = count;
+        later_blocks->u[later_count++].ptr = where;
+    }
+}
 
 static lispobj ptrans_boxed(thing, header, constant)
      lispobj thing, header;
@@ -193,18 +235,21 @@ static lispobj ptrans_code(thing)
         *(lispobj *)PTR(func) = result + (func - thing);
     }
 
+    /* Arrange to scavenge the debug info later. */
+    pscav_later(&new->debug_info, 1);
+
     /* Scavenge the constants. */
-    pscav((lispobj *)new + 1, HeaderValue(new->header) - 1, TRUE);
+    pscav(new->constants, HeaderValue(new->header)-4, TRUE);
 
     /* Scavenge all the functions. */
+    pscav(&new->entry_points, 1, TRUE);
     for (func = new->entry_points;
          func != NIL;
          func = ((struct function_header *)PTR(func))->next) {
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
-        pscav((lispobj *)PTR(func) + 1,
-              (sizeof(struct function_header) / sizeof(lispobj)) - 1,
-              TRUE);
+        pscav(&((struct function_header *)PTR(func))->self, 2, TRUE);
+        pscav_later(&((struct function_header *)PTR(func))->name, 3);
     }
 
     return result;
@@ -214,16 +259,36 @@ static lispobj ptrans_func(thing, header, constant)
      lispobj thing, header;
      boolean constant;
 {
-    lispobj code;
+    int nwords;
+    lispobj code, *new, *old, result;
     struct function_header *function;
 
     /* THING can either be a function header, a closure function header, or */
-    /* a closure.  If it's a closure, we just use ptrans_boxed, otherwise we */
-    /* have to do something strange, 'cause it is buried inside a code */
-    /* object. */
+    /* a closure.  If it's a closure, we do the same as ptrans_boxed, */
+    /* otherwise we have to do something strange, 'cause it is buried inside */
+    /* a code object. */
 
-    if (TypeOf(header) == type_ClosureHeader)
-        return ptrans_boxed(thing, header, constant);
+    if (TypeOf(header) == type_ClosureHeader) {
+        nwords = 1 + HeaderValue(header);
+
+        /* Allocate it.  Closures can always go in read-only space, 'caues */
+        /* they never change. */
+        old = (lispobj *)PTR(thing);
+        new = read_only_free;
+        read_only_free += CEILING(nwords, 2);
+
+        /* Copy it. */
+        bcopy(old, new, nwords * sizeof(lispobj));
+
+        /* Deposit forwarding pointer. */
+        result = (lispobj)new | LowtagOf(thing);
+        *old = result;
+
+        /* Scavenge it. */
+        pscav(new, nwords, constant);
+
+        return result;
+    }
     else {
         gc_assert(TypeOf(header) == type_FunctionHeader ||
                   TypeOf(header) == type_ClosureFunctionHeader);
@@ -398,6 +463,7 @@ static int pscav_symbol(symbol)
     return sizeof(struct symbol) / sizeof(lispobj);
 }
 
+#if 0
 static int pscav_code(addr)
      lispobj *addr;
 {
@@ -405,10 +471,12 @@ static int pscav_code(addr)
 
     code = (struct code *)addr;
 
-    pscav(addr+1, HeaderValue(code->header)-1, TRUE);
+    pscav_later(&code->debug_info, 1);
+    pscav(code->constants, HeaderValue(code->header)-4, TRUE);
 
     return HeaderValue(code->header) + FIXNUM_TO_INT(code->code_size);
 }    
+#endif
 
 static lispobj *pscav(addr, nwords, constant)
      lispobj *addr;
@@ -528,7 +596,10 @@ static lispobj *pscav(addr, nwords, constant)
                 break;
 
               case type_CodeHeader:
+                gc_assert(0); /* No code headers in static space */
+#if 0
                 count = pscav_code(addr, thing);
+#endif
                 break;
 
               case type_FunctionHeader:
@@ -563,10 +634,12 @@ static lispobj *pscav(addr, nwords, constant)
 }
 
 
-int purify(roots)
-lispobj roots;
+int purify(static_roots, read_only_roots)
+lispobj static_roots;
 {
     lispobj *clean;
+    int count, i;
+    struct later *laters, *next;
 
 #ifdef PRINTNOISE
     printf("[Doing purification:");
@@ -588,7 +661,8 @@ lispobj roots;
     printf(" roots");
     fflush(stdout);
 #endif
-    pscav(&roots, 1, FALSE);
+    pscav(&static_roots, 1, FALSE);
+    pscav(&read_only_roots, 1, TRUE);
 
 #ifdef PRINTNOISE
     printf(" handlers");
@@ -615,8 +689,31 @@ lispobj roots;
     fflush(stdout);
 #endif
     clean = static_space;
-    while (clean != static_free)
-        clean = pscav(clean, static_free - clean, FALSE);
+    do {
+        while (clean != static_free)
+            clean = pscav(clean, static_free - clean, FALSE);
+        laters = later_blocks;
+        count = later_count;
+        later_blocks = NULL;
+        later_count = 0;
+        while (laters != NULL) {
+            for (i = 0; i < count; i++) {
+                if (laters->u[i].count == 0)
+                    ;
+                else if (laters->u[i].count <= LATERMAXCOUNT) {
+                    pscav(laters->u[i+1].ptr, laters->u[i].count, TRUE);
+                    i++;
+                }
+                else
+                    pscav(laters->u[i].ptr, 1, TRUE);
+            }
+            next = laters->next;
+            free(laters);
+            laters = next;
+            count = LATERBLOCKSIZE;
+        }
+    } while (clean != static_free || later_blocks != NULL);
+
 
 #ifdef PRINTNOISE
     printf(" cleanup");
