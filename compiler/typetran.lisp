@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.8 1991/01/03 13:13:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.9 1991/01/03 15:02:09 ram Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -356,7 +356,7 @@
 		      type))
      (t
       (let ((frozen (info type frozen type))
-	    (includes (dd-includes def))
+	    (included (dd-included-by def))
 	    (n-name (gensym)))
 	(if (or frozen (dd-predicate def))
 	    (once-only ((object obj))
@@ -365,8 +365,8 @@
 		      (if (eq ,n-name ',type)
 			  t
 			  ,(if frozen
-			       (when includes
-				 `(member ,n-name ',includes :test #'eq))
+			       (when included
+				 `(member ,n-name ',included :test #'eq))
 			       `(,(dd-predicate def) ,object))))))
 	    `(lisp::structure-typep ,obj ',type)))))))
 
