@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.43 1991/02/20 15:14:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.44 1991/04/09 17:37:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.43 1991/02/20 15:14:07 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.44 1991/04/09 17:37:59 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -584,25 +584,72 @@
   (:generator 1
     (inst nor r x zero-tn)))
 
-(define-vop (32bit-logical-nor 32bit-logical)
-  (:translate 32bit-logical-nor)
-  (:generator 1
-    (inst nor r x y)))
-
 (define-vop (32bit-logical-and 32bit-logical)
   (:translate 32bit-logical-and)
   (:generator 1
     (inst and r x y)))
+
+(deftransform 32bit-logical-nand ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-and x y)))
 
 (define-vop (32bit-logical-or 32bit-logical)
   (:translate 32bit-logical-or)
   (:generator 1
     (inst or r x y)))
 
+(define-vop (32bit-logical-nor 32bit-logical)
+  (:translate 32bit-logical-nor)
+  (:generator 1
+    (inst nor r x y)))
+
 (define-vop (32bit-logical-xor 32bit-logical)
   (:translate 32bit-logical-xor)
   (:generator 1
     (inst xor r x y)))
+
+(deftransform 32bit-logical-eqv ((x y) (* *))
+  '(32bit-logical-not (32bit-logical-xor x y)))
+
+(deftransform 32bit-logical-andc1 ((x y) (* *))
+  '(32bit-logical-and (32bit-logical-not x) y))
+
+(deftransform 32bit-logical-andc2 ((x y) (* *))
+  '(32bit-logical-and x (32bit-logical-not y)))
+
+(deftransform 32bit-logical-orc1 ((x y) (* *))
+  '(32bit-logical-or (32bit-logical-not x) y))
+
+(deftransform 32bit-logical-orc2 ((x y) (* *))
+  '(32bit-logical-or x (32bit-logical-not y)))
+
+
+(define-vop (shift-towards-someplace)
+  (:policy :fast-safe)
+  (:args (num :scs (unsigned-reg))
+	 (amount :scs (signed-reg)))
+  (:arg-types unsigned-num tagged-num)
+  (:results (r :scs (unsigned-reg)))
+  (:result-types unsigned-num))
+
+(define-vop (shift-towards-start shift-towards-someplace)
+  (:translate shift-towards-start)
+  (:note "SHIFT-TOWARDS-START")
+  (:generator 1
+    (ecase (backend-byte-order *backend*)
+      (:big-endian
+       (inst sll r num amount))
+      (:little-endian
+       (inst srl r num amount)))))
+
+(define-vop (shift-towards-end shift-towards-someplace)
+  (:translate shift-towards-end)
+  (:note "SHIFT-TOWARDS-END")
+  (:generator 1
+    (ecase (backend-byte-order *backend*)
+      (:big-endian
+       (inst srl r num amount))
+      (:little-endian
+       (inst sll r num amount)))))
 
 
 
