@@ -13,6 +13,29 @@
 ;;;
 (in-package "C")
 
+
+;;; A hack we we to defeat compile-time type checking in deinitializing slots
+;;; where there isn't any convenient legal value.
+;;;
+(defvar *undefined* '**undefined**)
+
+
+;;; ZAP-IN  --  Internal
+;;;
+;;;    A convenient macro for iterating over linked lists when we are
+;;; clobbering the next link as we go.
+;;;
+(defmacro zap-in ((var in slot) &body body)
+  (let ((next (gensym)))
+    `(let ((,var ,in) ,next)
+       (when ,var
+	 (loop
+	   (setq ,next (,slot ,var))
+	   ,@body
+	   (unless ,next (return))
+	   (setq ,var ,next))))))
+
+
 ;;; DEFALLOCATERS  --  Internal
 ;;;
 ;;;    Define some structure freelisting operations.
@@ -36,6 +59,7 @@
 	(forms `(proclaim '(inline ,fun-name ,unfun-name)))
 	(forms `(defvar ,var-name nil))
 	(forms `(defun ,fun-name ,lambda-list
+		  (declare (optimize (safety 0)))
 		  (let ((structure ,var-name))
 		    (cond (structure
 			   (setq ,var-name (,slot structure))
@@ -45,6 +69,7 @@
 			   (,real-fun-name ,@real-lambda-list))))))
 	
 	(forms `(defun ,unfun-name (structure)
+		  (declare (optimize (safety 0)))
 		  ,@(third spec)
 		  #+nil
 		  (when (find-in #',slot structure ,var-name)
@@ -52,11 +77,16 @@
 		  (setf (,slot structure) ,var-name)
 		  (setq ,var-name structure)))
 
-	(hook-forms `(setq ,var-name nil))))
+	(hook-forms
+	 `(progn
+	    (zap-in (structure ,var-name ,slot)
+	      (setf (,slot structure) nil))
+	    (setq ,var-name nil)))))
 
     `(progn
        ,@(forms)
        (defun defallocator-deallocation-hook ()
+	 (declare (optimize (safety 0)))
 	 ,@(hook-forms))
        (pushnew 'defallocator-deallocation-hook ext:*before-gc-hooks*))))
 
@@ -116,9 +146,28 @@
     (setf (block-component structure) *current-component*)
     (setf (block-start structure) start)))
   
+  ((ref (derived-type source leaf inlinep)) node-source
+   ((node-deinits)
+    (setf (ref-leaf structure) *undefined*))
+   ((node-inits)
+    (setf (node-derived-type structure) derived-type)
+    (setf (node-source structure) source)
+    (setf (ref-leaf structure) leaf)
+    (setf (ref-inlinep structure) inlinep)))
+
+  ((combination (source fun)) node-source
+   ((node-deinits)
+    (setf (basic-combination-fun structure) *undefined*)
+    (setf (basic-combination-args structure) nil)
+    (setf (basic-combination-kind structure) :full)
+    (setf (basic-combination-info structure) nil))
+   ((node-inits)
+    (setf (node-source structure) source)
+    (setf (basic-combination-fun structure) fun)))
+  
   ((ir2-block (block)) ir2-block-next
    ((setf (ir2-block-number structure) nil)
-    (setf (ir2-block-block structure) nil)
+    (setf (ir2-block-block structure) *undefined*)
     (setf (ir2-block-prev structure) nil)
     (setf (ir2-block-pushed structure) nil)
     (setf (ir2-block-popped structure) nil)
@@ -139,7 +188,7 @@
     (setf (ir2-block-block structure) block)))
 
   ((vop (block node info args results)) vop-next
-   ((setf (vop-block structure) nil)
+   ((setf (vop-block structure) *undefined*)
     (setf (vop-prev structure) nil)
     (setf (vop-args structure) nil)
     (setf (vop-results structure) nil)
@@ -155,27 +204,8 @@
     (setf (vop-args structure) args)
     (setf (vop-results structure) results)))
 
-  ((ref (derived-type source leaf inlinep)) node-source
-   ((node-deinits)
-    (setf (ref-leaf structure) nil))
-   ((node-inits)
-    (setf (node-derived-type structure) derived-type)
-    (setf (node-source structure) source)
-    (setf (ref-leaf structure) leaf)
-    (setf (ref-inlinep structure) inlinep)))
-
-  ((combination (source fun)) node-source
-   ((node-deinits)
-    (setf (basic-combination-fun structure) nil)
-    (setf (basic-combination-args structure) nil)
-    (setf (basic-combination-kind structure) :full)
-    (setf (basic-combination-info structure) nil))
-   ((node-inits)
-    (setf (node-source structure) source)
-    (setf (basic-combination-fun structure) fun)))
-
   ((tn-ref (tn write-p)) tn-ref-next
-   ((setf (tn-ref-tn structure) nil)
+   ((setf (tn-ref-tn structure) *undefined*)
     (setf (tn-ref-vop structure) nil)
     (setf (tn-ref-next-ref structure) nil)
     (setf (tn-ref-across structure) nil)
@@ -211,26 +241,15 @@
    (setf (tn-sc structure) sc)))
 
   ((global-conflicts (kind tn block number)) global-conflicts-next
-   ((setf (global-conflicts-block structure) nil)
+   ((setf (global-conflicts-block structure) *undefined*)
     (clear-bit-vector (global-conflicts-conflicts structure))
-    (setf (global-conflicts-tn structure) nil)
+    (setf (global-conflicts-tn structure) *undefined*)
     (setf (global-conflicts-tn-next structure) nil))
    ((setf (global-conflicts-next structure) nil)
     (setf (global-conflicts-kind structure) kind)
     (setf (global-conflicts-tn structure) tn)
     (setf (global-conflicts-block structure) block)
     (setf (global-conflicts-number structure) number))))
-
-
-(defmacro zap-in ((var in slot) &body body)
-  (let ((next (gensym)))
-    `(let ((,var ,in) ,next)
-       (when ,var
-	 (loop
-	   (setq ,next (,slot ,var))
-	   ,@body
-	   (unless ,next (return))
-	   (setq ,var ,next))))))
 
 
 ;;; NUKE-IR2-COMPONENT  --  Interface
