@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.9 1992/02/18 19:17:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.10 1992/07/15 11:38:40 garland Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,6 +88,11 @@
   (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
+(def-alien-type unix-sockaddr
+  (struct nil
+    (family short)
+    (path (array char 108))))
+
 (def-alien-type inet-sockaddr
   (struct nil
     (family short)
@@ -139,6 +144,33 @@
 					    (* (unsigned 32)))
 				      index)))
 	     collect (deref (deref (slot hostent 'addr-list) index))))))))
+
+(defun create-unix-socket (&optional (kind :stream))
+  (multiple-value-bind (proto type)
+		       (internet-protocol kind)
+    (declare (ignore proto))
+    (let ((socket (unix:unix-socket af-unix type 0)))
+      (when (minusp socket)
+	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
+      socket)))
+
+(defun connect-to-unix-socket (path &optional (kind :stream))
+  (declare (simple-string path))
+  (let ((socket (create-unix-socket kind)))
+    (with-alien ((sockaddr unix-sockaddr))
+      (setf (slot sockaddr 'family) af-unix)
+      (kernel:copy-to-system-area path
+				  (* vm:vector-data-offset vm:word-bits)
+				  (alien-sap (slot sockaddr 'path))
+				  0
+				  (* (1+ (length path)) vm:byte-bits))
+      (when (minusp (unix:unix-connect socket
+				       (alien-sap sockaddr)
+				       (alien-size unix-sockaddr :bytes)))
+	(unix:unix-close socket)
+	(error "Error connecting socket to [~A]: ~A"
+	       path (unix:get-unix-error-msg)))
+      socket)))
 
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
