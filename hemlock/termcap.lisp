@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.3 1991/02/08 16:38:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/termcap.lisp,v 1.4 1991/09/19 22:56:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,12 +92,14 @@
 ;;; LEX-TERMCAP-NAME gathers characters until the next #\|, which separate
 ;;; terminal names, or #\:, which terminate terminal names for an entry.
 ;;; T is returned if the end of the names is reached for the entry.
+;;; If we hit and EOF, act like we found a :. 
 ;;; 
 (defun lex-termcap-name (stream)
   (init-termcap-string-buffer)
   (loop
-   (let ((char (read-char stream)))
+   (let ((char (read-char stream nil #\:)))
      (case char
+       (#\# (read-line stream nil))
        (#\| (return nil))
        (#\: (return t))
        (t (store-char char))))))
@@ -106,11 +108,11 @@
   (string= name *termcap-string-buffer* :end2 *termcap-string-index*))
 
 ;;; SKIP-TERMCAP-NAMES eats characters until the next #\: which terminates
-;;; terminal names for an entry.
+;;; terminal names for an entry.  Stop also at EOF.
 ;;; 
 (defun skip-termcap-names (stream)
   (loop
-   (when (char= (read-char stream) #\:)
+   (when (char= (read-char stream nil #\:) #\:)
      (return))))
 
 ;;; SKIP-TERMCAP-FIELDS skips the rest of an entry, returning nil if there
@@ -120,10 +122,12 @@
 (defun skip-termcap-fields (stream)
   (loop
    (multiple-value-bind (line eofp)
-			(read-line stream)
+			(read-line stream nil)
      (let ((len (length line)))
        (declare (simple-string line))
-       (when (char= (schar line (1- len)) #\:)
+       (when (and (not (zerop len))
+		  (not (char= (schar line 0) #\#))
+		  (char= (schar line (1- len)) #\:))
 	 (if eofp
 	     (return nil)
 	     (let ((char (read-char stream nil :eof)))
