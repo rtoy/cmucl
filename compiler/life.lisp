@@ -548,21 +548,16 @@
 
 ;;; Compute-Save-Set  --  Internal
 ;;;
-;;;    Compute a list of the TNs live after VOP that aren't results.
+;;;    Compute a bit vector of the TNs live after VOP that aren't results.
 ;;;
-(defun compute-save-set (vop block live-list)
-  (declare (type vop vop) (type ir2-block block) (type (or tn null) live-list))
-  (collect ((save))
-    (let ((results (vop-results vop)))
-      (do ((live live-list (tn-next* live)))
-	  ((null live))
-	(unless (find-in #'tn-ref-across live results :key #'tn-ref-tn)
-	  (save live))))
-    (do ((conf (ir2-block-global-tns block) (global-conflicts-next conf)))
-	((null conf))
-      (when (eq (global-conflicts-kind conf) :live)
-	(save (global-conflicts-tn conf))))
-    (save)))
+(defun compute-save-set (vop block live-bits)
+  (declare (type vop vop) (type ir2-block block)
+	   (type local-tn-bit-vector live-list))
+  (let ((live (bit-vector-copy live-bits)))
+    (do ((r (vop-results vop) (tn-ref-across r)))
+	((null r))
+      (setf (sbit live (tn-local-number (tn-ref-tn r))) 0))
+    live))
 
 
 ;;; Compute-Initial-Conflicts  --  Internal
@@ -642,11 +637,12 @@
 	
 	(let ((save-p (vop-info-save-p (vop-info vop))))
 	  (when save-p
-	    (setf (vop-save-set vop) (bit-vector-copy live-bits))
-	    (when (eq save-p :force-to-stack)
-	      (dolist (tn (compute-save-set vop block live-list))
-		(force-tn-to-stack tn)
-		(convert-to-environment-tn tn)))))
+	    (let ((ss (compute-save-set vop block live-bits)))
+	      (setf (vop-save-set vop) ss)
+	      (when (eq save-p :force-to-stack)
+		(do-live-tns (tn ss block)
+		  (force-tn-to-stack tn)
+		  (convert-to-environment-tn tn))))))
 	
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 	    ((null ref))
