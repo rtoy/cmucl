@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.11 1991/05/23 16:30:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.12 1992/01/02 22:47:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -283,7 +283,10 @@
 	(handler-bind ((error #'(lambda (condx)
 				  (declare (ignore condx))
 				  (flush-display-events d))))
-	  (funcall (cdr d/h) d))
+	  (unless (funcall (cdr d/h) d)
+	    (disable-clx-even-handling d)
+	    (error "Event-listen was true, but handler didn't handle: ~%~S"
+		   d/h)))
 	(return-from serve-event t))))
   ;; Next, wait for something to happen.
   (multiple-value-bind
