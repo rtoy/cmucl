@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.44 1992/12/05 21:51:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.45 1992/12/13 14:43:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.44 1992/12/05 21:51:41 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -72,15 +70,6 @@
 
 (defknown %sxhash-simple-substring (simple-string index) index
   (foldable flushable))
-
-
-(defknown %closure-index-ref (function index) t
-  (flushable))
-
-
-(defknown %make-funcallable-instance (index function) function (unsafe))
-
-(defknown %set-funcallable-instance-info (function index t) t (unsafe))
 
 
 (defknown vector-sap ((simple-unboxed-array (*))) system-area-pointer
@@ -283,44 +272,26 @@
 (defknown fdefn-makunbound (fdefn) t ())
 
 
+(defknown %function-self (function) function
+  (flushable))
+(defknown (setf %function-self) (function function) function
+  (unsafe))
+
+(defknown %closure-function (function) function
+  (flushable))
+
+(defknown %closure-index-ref (function index) t
+  (flushable))
+
+
+(defknown %make-funcallable-instance (index function) function (unsafe))
+
+(defknown %set-funcallable-instance-info (function index t) t (unsafe))
+
+
 
 ;;;; Mutator accessors.
 
 (defknown mutator-self () system-area-pointer (flushable movable))
 
 
-
-;;;; Automatic defknowns for primitive objects.
-
-(vm:define-for-each-primitive-object (obj)
-  (collect ((forms))
-    (let* ((options (vm:primitive-object-options obj))
-	   (obj-type (getf options :type t)))
-      (dolist (slot (vm:primitive-object-slots obj))
-	(let* ((name (vm:slot-name slot))
-	       (slot-opts (vm:slot-options slot))
-	       (slot-type (getf slot-opts :type t))
-	       (ref-trans (getf slot-opts :ref-trans))
-	       (ref-known (getf slot-opts :ref-known))
-	       (set-trans (getf slot-opts :set-trans))
-	       (set-known (getf slot-opts :set-known)))
-	  (when ref-known
-	    (if ref-trans
-		(forms `(defknown (,ref-trans) (,obj-type) ,slot-type
-			  ,ref-known))
-		(error "Can't spec a :ref-known with no :ref-trans. ~S in ~S"
-		       name (vm:primitive-object-name obj))))
-	  (when set-known
-	    (if set-trans
-		(forms `(defknown (,set-trans)
-				  ,(if (and (listp set-trans)
-					    (= (length set-trans) 2)
-					    (eq (car set-trans) 'setf))
-				       (list slot-type obj-type)
-				       (list obj-type slot-type))
-			  ,slot-type ,set-known))
-		(error "Can't spec a :set-known with no :set-trans. ~S in ~S"
-		       name (vm:primitive-object-name obj)))))))
-    (when (forms)
-      `(progn
-	 ,@(forms)))))
