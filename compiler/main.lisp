@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.95 1993/08/05 17:11:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.96 1993/08/18 16:52:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -735,14 +735,12 @@
 ;;; *Read-Suppress* on, discarding the result.  If an error happens during this
 ;;; read, then bail out using Compiler-Error (fatal in this context).
 ;;;
-(defun ignore-error-form (stream pos language)
+(defun ignore-error-form (stream pos)
   (declare (type stream stream) (type unsigned-byte pos))
   (file-position stream pos)
   (handler-case (let ((*read-suppress* t)
 		      (*features* (backend-features *target-backend*)))
-		  (ecase language
-		    (:lisp (read stream))
-		    (:dylan (dylan::dylan-read stream))))
+		  (read stream))
     (error (condition)
       (declare (ignore condition))
       (compiler-error "Unable to recover from read error."))))
@@ -780,19 +778,16 @@
 ;;;    Read a form from Stream, returning EOF at EOF.  If a read error happens,
 ;;; then attempt to recover if possible, returing a proxy error form.
 ;;;
-(defun careful-read (stream eof pos language)
+(defun careful-read (stream eof pos)
   (handler-case (let ((*features* (backend-features *target-backend*)))
-		  (ecase language
-		    (:lisp (read stream nil eof))
-		    (:dylan
-		     (dylan::dylan-read stream nil eof))))
+		  (read stream nil eof))
     (error (condition)
       (let ((new-pos (file-position stream)))
 	(cond ((= new-pos (file-length stream))
 	       (unexpected-eof-error stream pos condition))
 	      (t
 	       (normal-read-error stream pos condition)
-	       (ignore-error-form stream pos language))))
+	       (ignore-error-form stream pos))))
       '(cerror "Skip this form."
 	       "Attempt to load a file having a compile-time read error."))))
 
@@ -847,41 +842,46 @@
 	  t)
 	nil)))
 
-
-;;; Read-Source-Form  --  Internal
+;;; PROCESS-SOURCES -- internal.
 ;;;
-;;;    Read the next form from the source designated by Info.  The second value
-;;; is the top-level form number of the read form.  The third value is true
-;;; when at EOF.
-;;;
-;;;   We carefully read from the current source file.  If it is at EOF, we
-;;; advance to the next file and try again.  When we get a form, we enter it
-;;; into the per-file Forms and Positions vectors.
-;;;
-(defun read-source-form (info) 
-  (declare (type source-info info))
-  (let ((eof '(*eof*)))
-    (loop
-      (let* ((file (first (source-info-current-file info)))
-	     (language (file-info-language file))
-	     (stream (get-source-stream info))
-	     (pos (file-position stream))
-	     (res (careful-read stream eof pos language)))
-	(unless (eq res eof)
-	  (let ((form (ecase language
-			(:dylan
-			 (let ((*error-output* *compiler-error-output*))
-			   (dylan::convert-top-level res)))
-			(:lisp res))))
-	    (let* ((forms (file-info-forms file))
-		   (current-idx (+ (fill-pointer forms)
-				   (file-info-source-root file))))
-	      (vector-push-extend form forms)
-	      (vector-push-extend pos (file-info-positions file))
-	      (return (values form current-idx nil)))))
-
-	(unless (advance-source-file info)
-	  (return (values nil nil t)))))))
+;;; Read the sources from the source files and process them.
+;;; 
+(defun process-sources (info)
+  (let* ((file (first (source-info-current-file info)))
+	 (language (file-info-language file))
+	 (stream (get-source-stream info)))
+    (ecase language
+      (:lisp
+       (loop
+	 (let* ((pos (file-position stream))
+		(eof '(*eof*))
+		(form (careful-read stream eof pos)))
+	   (if (eq form eof)
+	       (return)
+	       (let* ((forms (file-info-forms file))
+		      (current-idx (+ (fill-pointer forms)
+				      (file-info-source-root file))))
+		 (vector-push-extend form forms)
+		 (vector-push-extend pos (file-info-positions file))
+		 (clrhash *source-paths*)
+		 (find-source-paths form current-idx)
+		 (process-form form
+			       `(original-source-start 0 ,current-idx)))))))
+      (:dylan
+       (let ((*error-output* *compiler-error-output*))
+	 (dylan::parse-and-convert
+	  stream
+	  #'(lambda (form start-position)
+	      (let* ((forms (file-info-forms file))
+		     (current-idx (+ (fill-pointer forms)
+				     (file-info-source-root file))))
+		(vector-push-extend form forms)
+		(vector-push-extend start-position (file-info-positions file))
+		(clrhash *source-paths*)
+		(process-form form
+			      `(original-source-start 0 ,current-idx))))))))
+    (when (advance-source-file info)
+      (process-sources info))))
 
 
 ;;; FIND-FILE-INFO  --  Interface
@@ -1485,13 +1485,7 @@
 	   (*gensym-counter* 0))
       (clear-stuff)
       (with-compilation-unit ()
-	(loop
-	  (multiple-value-bind (form tlf eof-p)
-			       (read-source-form info)
-	    (when eof-p (return))
-	    (clrhash *source-paths*)
-	    (find-source-paths form tlf)
-	    (process-form form `(original-source-start 0 ,tlf))))
+	(process-sources info)
 
 	(finish-block-compilation)
 	(compile-top-level-lambdas () t)
@@ -1519,10 +1513,15 @@
 	      (let ((x (pathname x)))
 		(if (probe-file x)
 		    x
-		    (let ((x (merge-pathnames x (make-pathname :type "lisp"))))
-		      (if (probe-file x)
-			  x
-			  (truename x))))))
+		    (let ((y (merge-pathnames x (make-pathname :type "lisp"))))
+		      (if (probe-file y)
+			  y
+			  (let ((z (merge-pathnames
+				    x
+				    (make-pathname :type "dylan"))))
+			    (if (probe-file z)
+				z
+				(truename y))))))))
 	  (if (listp stuff) stuff (list stuff))))
 
 
