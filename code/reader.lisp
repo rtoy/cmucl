@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.5 1991/02/08 13:35:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.6 1991/02/14 22:40:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.5 1991/02/08 13:35:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.6 1991/02/14 22:40:34 ram Exp $
 ;;;
 ;;; Spice Lisp Reader 
 ;;; Written by David Dill
@@ -263,12 +263,12 @@
   T)
 
 (defun get-macro-character (char &optional (rt *readtable*))
-  "Returns the function associated with the specified char
-   which is a macro character.  The optional readtable argument
-   defaults to the current readtable."
+  "Returns the function associated with the specified char which is a macro
+   character.  The optional readtable argument defaults to the current
+   readtable."
   (when (null rt) (setf rt *readtable*))
-  ;;check macro syntax, return associated function if it's there.
-  ;;returns a value for all constituents.
+  ;; Check macro syntax, return associated function if it's there.
+  ;; Returns a value for all constituents.
   (cond ((constituentp char)
 	 (values (get-cmt-entry char rt) t))
 	((terminating-macrop char)
@@ -401,11 +401,6 @@
 
 ;;;; READ-PRESERVING-WHITESPACE, READ-DELIMITED-LIST, and READ.
 
-(defvar *real-eof-errorp* ()
-  "Value checked by reader if recursivep is true.")
-(defvar *real-eof-value* ()
-  "Eof-value used for eof-value if recursivep is true.")
-
 (defvar right-paren-whitespace t
   "Flag that READ uses to tell when it's ok to treat right parens as
   whitespace.")
@@ -423,38 +418,32 @@
 ;;; READ-PRESERVING-WHITESPACE behaves just like read only it makes sure
 ;;; to leave terminating whitespace in the stream.
 ;;;
-(defun read-preserving-whitespace
-  (&optional (stream *standard-input*) (eof-errorp t) (eof-value ())
-	     (recursivep ()))
+
+(defun read-preserving-whitespace (&optional (stream *standard-input*)
+					     (eof-errorp t) (eof-value nil)
+					     (recursivep nil))
   "Reads from stream and returns the object read, preserving the whitespace
-  that followed the object."
-  (let ((*real-eof-value* *real-eof-value*)
-	(*real-eof-errorp* *real-eof-errorp*))
-   (if recursivep
-       (setq eof-errorp *real-eof-errorp*
-	     eof-value *real-eof-value*)
-       (setq *real-eof-value* eof-value
-	     *real-eof-errorp* eof-errorp
-	     ;; The scope of these two lists is the top level read, so they
-	     ;; have to be reset here.
-	     sharp-equal-alist nil
-	     sharp-sharp-alist nil))
-   (progn
-    ;;loop for repeating when a macro returns nothing.
-    (do ((char (read-char stream nil eof-object)
-	       (read-char stream nil eof-object)))
-	(())
-	(cond ((eofp char)
-	       (if eof-errorp
-		   (error "Unexpected end-of-file encountered.")
-		   (return eof-value)))
-	      ((whitespacep char))
-	      (t
-	       (let* ((macrofun (get-cmt-entry char *readtable*))
-		      (result (multiple-value-list
-			       (funcall macrofun stream char))))
-		 ;;repeat if macro returned nothing.
-		 (if result (return (car result))))))))))
+   that followed the object."
+  (unless recursivep
+    ;; The scope of these two lists is the top level read, so they have to be
+    ;; reset here.
+    (setf sharp-equal-alist nil)
+    (setf sharp-sharp-alist nil))
+  ;; Loop for repeating when a macro returns nothing.
+  (loop
+    (let ((char (read-char stream nil eof-object)))
+      (cond ((eofp char)
+	     (if eof-errorp
+		 (error "Unexpected end-of-file encountered.")
+		 (return eof-value)))
+	    ((whitespacep char))
+	    (t
+	     (let* ((macrofun (get-cmt-entry char *readtable*))
+		    (result (multiple-value-list
+			     (funcall macrofun stream char))))
+	       ;; Repeat if macro returned nothing.
+	       (if result (return (car result)))))))))
+
 
 (defun read-maybe-nothing (stream char)
   ;;returns nil or a list with one thing, depending.
@@ -496,7 +485,7 @@
 
 (defun read-quote (stream ignore)
   (declare (ignore ignore))
-  (list 'quote (read stream () () t)))
+  (list 'quote (read stream t nil t)))
 
 (defun read-comment (stream ignore)
   (declare (ignore ignore))
@@ -1090,7 +1079,6 @@
 	     (return-from make-float (if negative-fraction (- num) num))))
 	  ;;should never happen:	
 	  (t (error "Internal error in floating point reader.")))))
-
 
 (defun make-float-aux (number divisor float-format)
   (coerce (/ number divisor) float-format))
