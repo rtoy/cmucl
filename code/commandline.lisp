@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.3 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/commandline.lisp,v 1.4 1995/07/26 16:43:37 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,8 @@
 (in-package "EXTENSIONS")
 (export '(*command-line-words* *command-line-switches*
 	  *command-switch-demons* *command-line-utility-name*
-	  *command-line-strings* cmd-switch-string command-line-switch-p
+	  *command-line-strings* *batch-mode*
+	  cmd-switch-string command-line-switch-p
 	  cmd-switch-name cmd-switch-value cmd-switch-words command-line-switch
 	  defswitch cmd-switch-arg get-command-line-switch))
 
@@ -36,7 +37,9 @@
 (defvar *command-switch-demons* ()
   "An Alist of (\"argument-name\" . demon-function)")
 
-
+(defvar *batch-mode* nil
+  "When True runs lisp with its input coming from standard-input.
+   If an error is detected returns error code 1, otherwise 0.")
 
 (defstruct (command-line-switch (:conc-name cmd-switch-)
 				(:constructor make-cmd-switch
@@ -96,7 +99,7 @@
 			(subseq (the simple-string str) (1+ position)
 				(length (the simple-string str))))))
 	(setq str (pop cmd-strings))
-	;; Set this switches words until the next switch.
+	;; Set this switch's words until the next switch.
 	;; 
 	(let (word-list)
 	  (loop
@@ -179,6 +182,11 @@
   (load (cmd-switch-arg switch)))
 (defswitch "load" #'load-switch-demon)
 
+(defun batch-switch-demon (switch)
+  (setq *batch-mode* t)
+  (setq (cmd-switch-value switch) t)
+  (defswitch "batch" #'batch-switch-demon))
+
 (defun cmd-switch-arg (switch)
   (or (cmd-switch-value switch)
       (car (cmd-switch-words switch))
@@ -188,3 +196,4 @@
 (defswitch "init")
 (defswitch "noinit")
 (defswitch "hinit")
+
