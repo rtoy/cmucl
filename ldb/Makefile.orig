@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.13 1990/08/30 16:44:01 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.14 1990/10/19 20:46:45 wlott Exp $ */
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -6,30 +6,49 @@ OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	search.o validate.o gc.o globals.o dynbind.o \
 	regnames.o backtrace.o bitbash.o save.o purify.o socket.o
 
+all: Makefile ldb.map
+
 ldb.map: ldb
 	echo -n 'Map file for ldb version ' > ldb.map
 	cat version >> ldb.map
 	nm -gp ldb >> ldb.map
 
 
-ldb: ${OBJS} version syscalls
+ldb: ${OBJS} version undefineds
 	echo -n '1 + ' | cat - version | bc > ,version
 	mv ,version version
 	cc ${CFLAGS} -DVERSION=`cat version` -c version.c
-	cc `cat syscalls` -o ,ldb ${OBJS} version.o -lmach -lm -lc
+	cc `cat undefineds` -o ,ldb ${OBJS} version.o -lmach -lm -lc
 	mv -f ,ldb ldb
 
 version:
 	echo 0 > version
 
-syscalls: /usr/man/man2
-	ls /usr/man/man2 | sed -e '/intro/d' -e 's/^/-u /' -e 's/\.2$$//' > ,syscalls
-	mv ,syscalls syscalls
-	
+undefineds: undefineds.src
+#ifdef mips
+	sed -e '/^;/d' -e 's/.*/-u &/' undefineds.src | sort -u > ,undefineds
+#endif
+#ifdef ibmrt
+	sed -e '/^;/d' -e 's/.*/-u _&/' undefineds.src | sort -u > ,undefineds
+#endif
+	mv ,undefineds undefineds
 
-# If we get an interrupt while in lisp code, the global pointer
-# is trash.  Therefore, we can't use the GP relative addressing
-# mode in the interrupt handlers.
+assem.s:
+#ifdef mips
+	ln -s mips-assem.s assem.s
+#endif
+#ifdef ibmrt
+	ln -s rt-assem.s assem.s
+#endif
+
+
+#ifdef mips
+
+/* MIPS specific stuff. */
+
+/* If we get an interrupt while in lisp code, the global pointer */
+/* is trash.  Therefore, we can't use the GP relative addressing */
+/* mode in the interrupt handlers. */
 
 interrupt.o: interrupt.c
 	cc ${CFLAGS} -G 0 -c interrupt.c
@@ -37,24 +56,40 @@ interrupt.o: interrupt.c
 assem.o: assem.s
 	as -G 0 -o $@ assem.s
 
+#endif
+
+#if 0
+#ifdef ibmrt
+
+assem.o: assem.s
+	as assem.s
+
+#endif
+#endif
+
 socket.o: socket.c
-	cc ${CFLAGS} -D UNIXCONN -c socket.c
+	cc ${CFLAGS} -DUNIXCONN -c socket.c
 
 lisp.h:
 	@echo "You must run genesis to create lisp.h!"
 	@false
 
+Makefile: Makefile.orig
+	/lib/cpp < Makefile.orig > Makefile.NEW
+	mv Makefile.NEW Makefile
+
+
 depend: depends
 
 depends:
-	rm -f Makefile.BAK
-	ln Makefile Makefile.BAK
-	sed -n '1,/^#@/p' Makefile > Makefile.NEW
-	cc -M *.[cs] | egrep -v ' /usr/' >> Makefile.NEW
-	mv Makefile.NEW Makefile
-	rm Makefile.BAK
+	rm -f Makefile.orig.BAK
+	ln Makefile.orig Makefile.orig.BAK
+	sed -n '1,/^\/*@/p' Makefile.orig > Makefile.orig.NEW
+	cc -M *.[cs] | egrep -v ' /usr/' >> Makefile.orig.NEW
+	mv Makefile.orig.NEW Makefile.orig
+	rm Makefile.orig.BAK
 
-#@ Do not edit anything after this line.
+/*@ Do not edit anything after this line. */
 alloc.o: alloc.c
 alloc.o: lisp.h
 alloc.o: ldb.h
