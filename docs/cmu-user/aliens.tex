@@ -543,35 +543,40 @@ which can be made be manipulated in Lisp like this:
 
 \section{Loading Unix Object Files}
 
-Foreign object files are loaded into the running Lisp process by
-\code{load-foreign}.  First, it runs the linker on the files and
-libraries, creating an absolute Unix object file.  This object file is
-then loaded into into the currently running Lisp.  The external
-symbols defining routines and variables are made available for future
-external references (e.g.  by \code{extern-alien}.)
-\code{load-foreign} must be run before any of the defined symbols are
-referenced.
+\cmucl{} is able to load foreign object files at runtime, using the
+function \code{load-foreign}. This function is able to load shared
+libraries (that are typically named \verb|.so|) via the dlopen
+mechanism. It can also load \verb|.a| or \verb|.o| object files by
+calling the linker on the files and libraries to create a loadable
+object file. Once loaded, the external symbols that define routines
+and variables are made available for future external references (e.g.
+by \code{extern-alien}.) \code{load-foreign} must be run before any of
+the defined symbols are referenced.
 
 Note that if a Lisp core image is saved (using \funref{save-lisp}), all
-loaded foreign code is lost when the image is restarted.
+loaded foreign code is lost when the image is restarted. 
+
 
 \begin{defun}{ext:}{load-foreign}{%
     \args{\var{files} \keys{\kwd{libraries} \kwd{base-file} \kwd{env}}}}
   
   \var{files} is a \code{simple-string} or list of
-  \code{simple-string}s specifying the names of the object files.
-  \var{libraries} is a list of \code{simple-string}s specifying
-  libraries in a format that \code{ld}, the Unix linker, expects.  The
-  default value for \var{libraries} is \code{("-lc")} (i.e., the
-  standard C library).  \var{base-file} is the file to use for the
-  initial symbol table information.  The default is the Lisp start up
-  code: \file{path:lisp}.  \var{env} should be a list of simple
-  strings in the format of Unix environment variables (i.e.,
-  \code{\var{A}=\var{B}}, where \var{A} is an environment variable and
-  \var{B} is its value).  The default value for \var{env} is the
-  environment information available at the time Lisp was invoked.
-  Unless you are certain that you want to change this, you should just
-  use the default.
+  \code{simple-string}s specifying the names of the object files. If
+  \var{files} is a simple-string, the file that it designates is
+  loaded using the platform's dlopen mechanism. If it is a list of
+  strings, the platform linker \code{ld} is invoked to transform the
+  object files into a loadable object file. \var{libraries} is a list
+  of \code{simple-string}s specifying libraries in a format that the
+  platform linker expects. The default value for \var{libraries} is
+  \code{("-lc")} (i.e., the standard C library). \var{base-file} is
+  the file to use for the initial symbol table information. The
+  default is the Lisp start up code: \file{path:lisp}. \var{env}
+  should be a list of simple strings in the format of Unix environment
+  variables (i.e., \code{\var{A}=\var{B}}, where \var{A} is an
+  environment variable and \var{B} is its value). The default value
+  for \var{env} is the environment information available at the time
+  Lisp was invoked. Unless you are certain that you want to change
+  this, you should just use the default.
 \end{defun}
 
 
