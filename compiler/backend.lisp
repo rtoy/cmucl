@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.21 1992/05/18 17:53:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.22 1992/05/18 18:27:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -218,7 +218,7 @@
   (internal-errors nil :type (or simple-vector null))
 
   ;; Assembler parameters.
-  (assembler-params nil :type list))
+  (assembler-params nil :type t))
 
 (defprinter backend
   name)
