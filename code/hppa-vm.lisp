@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.2 1992/06/13 08:39:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.3 1992/06/18 11:54:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,9 +93,8 @@
 	     (:branch
 	      (let ((bits (ldb (byte 9 2) value)))
 		(assert (zerop (ldb (byte 2 0) value)))
-		(dpb (ash bits 1)
-		     (byte 11 2)
-		     (logand inst #xffe0e0002)))))))))
+		(logior (ash bits 3)
+			(logand inst #xffe0e002)))))))))
 
 
 
