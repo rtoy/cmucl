@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.11 1991/09/27 17:52:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.12 1991/10/21 15:09:41 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,8 +906,8 @@
 
 ;;; Debug-internals forms.
 ;;;
-(defindent "do-blocks" 1)
-(defindent "di:do-blocks" 1)
+(defindent "do-debug-function-blocks" 1)
+(defindent "di:do-debug-function-blocks" 1)
 (defindent "do-debug-function-variables" 1)
 (defindent "di:do-debug-function-variables" 1)
 (defindent "do-debug-block-locations" 1)
@@ -972,6 +972,14 @@
 (defindent "alien-bind" 1)
 (defindent "def-c-record" 1)
 (defindent "defrecord" 1)
+
+;;; Wire forms.
+(defindent "remote" 1)
+(defindent "wire:remote" 1)
+(defindent "remote-value" 1)
+(defindent "wire:remote-value" 1)
+(defindent "remote-value-bind" 3)
+(defindent "wire:remote-value-bind" 3)
 
 
 
