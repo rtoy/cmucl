@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.2 1990/03/12 22:39:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.3 1990/03/18 15:30:11 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -20,7 +20,7 @@
 ;;; function, because it magically gets called in place of a function when
 ;;; there is no real function to call.
 
-(define-assembly-routine (undefined-function (:arg name :sc any-reg
+(define-assembly-routine (undefined-function (:arg cname :sc any-reg
 						   :offset cname-offset)
 					     (:temp lexenv :sc any-reg
 						    :offset lexenv-offset)
@@ -37,14 +37,14 @@
   (dotimes (i (1- vm:function-header-code-offset))
     (nop))
   ;; Cause the error.
-  (cerror-call continue di:undefined-symbol-error name)
+  (cerror-call continue di:undefined-symbol-error cname)
 
   continue
 
   (let ((not-sym (generate-cerror-code 'undefined-function
 				       di:object-not-symbol-error
 				       cname)))
-    (test-simple-type cname name not-sym t vm:symbol-header-type))
+    (test-simple-type cname temp not-sym t vm:symbol-header-type))
 
   (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
   (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
