@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.39 1999/09/09 16:31:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.40 2000/10/23 20:20:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -710,6 +710,8 @@
     (frob *eval-stack-top* (make-fixnum-descriptor 0))
 
     (frob *free-interrupt-context-index* (make-fixnum-descriptor 0))
+
+    (frob *batch-mode* (cold-intern nil))
 
     (frob *initial-layouts* (list-all-layouts))
 
