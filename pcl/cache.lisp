@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.25 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.26 2003/03/30 00:48:10 gerd Exp $")
 
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
@@ -410,7 +410,7 @@
 	  (:obsolete
 	   (obsolete-instance-trap owrapper (second state) instance))))))
 
-(declaim (inline check-obsolete-instance))
+;(declaim (inline check-obsolete-instance))
 (defun check-obsolete-instance (instance)
   (when (invalid-wrapper-p (kernel:layout-of instance))
     (check-wrapper-validity instance)))

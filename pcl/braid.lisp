@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.30 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.31 2003/03/30 00:48:10 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -511,11 +511,11 @@
 		  (supers (mapcar #'kernel:%class-name kernel-supers)))
 	     (if slotsp
 		 (ensure-class-using-class
-		  name nil :metaclass metaclass :name name
+		  nil name :metaclass metaclass :name name
 		  :direct-superclasses supers
 		  :direct-slots slots)
 		 (ensure-class-using-class
-		  name nil :metaclass metaclass :name name
+		  nil name :metaclass metaclass :name name
 		  :direct-superclasses supers))))
 	 (slot-initargs-from-structure-slotd (slotd)
 	   `(:name ,(structure-slotd-name slotd)
@@ -579,20 +579,21 @@
 ;;; class in the lisp type system.
 ;;;
 (defun update-lisp-class-layout (class layout)
-  (let ((lclass (kernel:layout-class layout)))
-    (unless (eq (kernel:%class-layout lclass) layout)
-      (setf (kernel:layout-inherits layout)
-	    (kernel:order-layout-inherits
-	     (map 'simple-vector #'class-wrapper
-		  (reverse (rest (class-precedence-list class))))))
+  (let ((kernel-class (kernel:layout-class layout)))
+    (unless (eq (kernel:%class-layout kernel-class) layout)
+      (let ((cpl (class-precedence-list class)))
+	(setf (kernel:layout-inherits layout)
+	      (kernel:order-layout-inherits
+	       (map 'simple-vector #'class-wrapper
+		    (reverse (rest cpl))))))
       (kernel:register-layout layout :invalidate t)
       ;;
       ;; Subclasses of formerly forward-referenced-class may be unknown
       ;; to lisp:find-class and also anonymous. This functionality moved
       ;; here from (setf find-class).
       (let ((name (class-name class)))
-	(setf (kernel::find-class name) lclass
-	      (kernel:%class-name lclass) name)))))
+	(setf (kernel::find-class name) kernel-class
+	      (kernel:%class-name kernel-class) name)))))
 
 (defun common-lisp::sxhash-instance (instance)
   (get-hash instance))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.46 2003/03/28 16:07:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.47 2003/03/30 00:48:10 gerd Exp $")
 
 (in-package :pcl)
 
@@ -353,9 +353,9 @@
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
 (defun ensure-class (name &rest all)
-  (apply #'ensure-class-using-class name (find-class name nil) all))
+  (apply #'ensure-class-using-class (find-class name nil) name all))
 
-(defmethod ensure-class-using-class (name (class null) &rest args &key)
+(defmethod ensure-class-using-class ((class null) name &rest args &key)
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
     (inform-type-system-about-class (class-prototype meta) name)
@@ -364,7 +364,7 @@
     (inform-type-system-about-class class name)
     class))
 
-(defmethod ensure-class-using-class (name (class pcl-class) &rest args &key)
+(defmethod ensure-class-using-class ((class pcl-class) name &rest args &key)
   (multiple-value-bind (meta initargs)
       (ensure-class-values class args)
     (unless (eq (class-of class) meta)
@@ -512,8 +512,8 @@
 			       (setf (slot-value class 'predicate-name)
 				     (make-class-predicate-name (class-name class))))))
   (add-direct-subclasses class direct-superclasses)
-  (update-class class nil)
   (make-class-predicate class predicate-name)
+  (update-class class nil)
   (add-slot-accessors class direct-slots))
 
 (defmethod shared-initialize :before ((class class) slot-names &key name)
@@ -734,6 +734,7 @@
   (when (or finalizep
 	    (class-finalized-p class)
 	    (not (class-has-a-forward-referenced-superclass-p class)))
+    (setf (find-class (class-name class)) class)
     (update-cpl class (compute-class-precedence-list class))
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)

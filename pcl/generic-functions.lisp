@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.20 2003/03/26 17:15:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.21 2003/03/30 00:48:10 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -721,7 +721,7 @@
 ;          (structure-class)
 ;          (funcallable-standard-class)
 
-(defgeneric ensure-class-using-class (name class &rest args &key &allow-other-keys))
+(defgeneric ensure-class-using-class (class name &rest args &key &allow-other-keys))
 ;          (t null)
 ;          (t pcl-class)
 
