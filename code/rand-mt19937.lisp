@@ -6,7 +6,7 @@
 ;;; placed in the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.10 2003/02/11 13:52:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand-mt19937.lisp,v 1.11 2003/03/06 09:31:06 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,10 +207,11 @@
 	   (make-random-object :state (init-random-state (generate-seed))))
 	  (t (error "Argument is not a RANDOM-STATE, T or NIL: ~S" state)))))
 
-(pushnew #'(lambda ()
-	     (init-random-state (generate-seed)
-				(random-state-state *random-state*)))
-	 ext:*after-save-initializations*)
+(defun rand-mt19937-initializer ()
+  (init-random-state (generate-seed)
+                     (random-state-state *random-state*)))
+
+(pushnew 'rand-mt19937-initializer ext:*after-save-initializations*)
 
 
 ;;;; Random entries:
