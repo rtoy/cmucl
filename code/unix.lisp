@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.41 1996/07/25 15:38:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.42 1996/07/25 20:46:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1226,7 +1226,7 @@
   (define-ioctl-command TIOCGLTC #\T 24 (struct ltchars) :out)
   (define-ioctl-command TIOCSPGRP #\T 29 int :in)
   (define-ioctl-command TIOCGPGRP #\T 30 int :out)
-  (define-ioctl-command TIOCSIGSEND #\t 93 int :in))
+  (define-ioctl-command TIOCSIGSEND #\t 93 nil))
 
 ;;; File ioctl commands.
 (define-ioctl-command FIONREAD #\f 127 int :out)
