@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.10 1998/03/11 17:00:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.11 1998/03/11 17:11:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -214,8 +214,6 @@
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   ;; ### Note: We really should have every location listed, but then we
-   ;; would have to make load-tns work with element-sizes other than 1.
    :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
@@ -223,16 +221,15 @@
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
    :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   ;; ### Note: load-tns don't work with an element-size other than 1.
-   ;; :element-size 2 :alignment 2
+   :element-size 2 :alignment 2
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
   #+complex-float
   (complex-single-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
-   :element-size 2
+   :locations (0 4 8 12 16 20 24 28)
+   :element-size 4
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-single-stack))
