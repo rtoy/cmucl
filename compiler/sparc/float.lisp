@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.7 1992/01/14 16:00:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.8 1992/01/16 16:34:24 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -52,7 +52,7 @@
 			    :load-if (not (location= x y))))
 		  (:results (y :scs (,sc)
 			       :load-if (not (location= x y))))
-		  (:node "float move")
+		  (:note "float move")
 		  (:generator 0
 		    (unless (location= y x)
 		      (inst fmovs y x)
