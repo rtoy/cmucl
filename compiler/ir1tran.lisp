@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.51 1991/09/03 21:50:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.52 1991/10/01 19:11:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 (export '(ignorable truly-the maybe-inline *derive-function-types*))
 
 (in-package "LISP")
-(export '(symbol-macro-let))
+(export '(symbol-macrolet))
 
 (in-package 'c)
 
@@ -2420,8 +2420,8 @@
 
 ;;;; Symbol macros:
 
-(def-ir1-translator symbol-macro-let ((specs &body body) start cont)
-  "SYMBOL-MACRO-LET {(Name Expansion)}* Form*
+(def-ir1-translator symbol-macrolet ((specs &body body) start cont)
+  "SYMBOL-MACROLET {(Name Expansion)}* Form*
   Define the Names as symbol macros with the given Expansions.  Within the
   body, references to a Name will effectively be replaced with the Expansion."
   (collect ((res))
@@ -2433,7 +2433,7 @@
 	(unless (symbolp name)
 	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
 	(when (assoc name (res))
-	  (compiler-warning "Repeated name in SYMBOL-MACRO-LET: ~S." name))
+	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
 
     (let ((*lexical-environment* (make-lexenv :variables (res))))
