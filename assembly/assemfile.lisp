@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.7 1990/04/24 02:55:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.8 1990/04/24 19:06:59 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -36,7 +36,6 @@
 	(let (*code-segment* *elsewhere*)
 	  (init-assembler)
 	  (load (merge-pathnames name (make-pathname :type "lisp")))
-	  (finish-assembly)
 	  (fasl-dump-cold-load-form `(in-package ,(package-name *package*))
 				    *lap-output-file*)
 	  (assemble (*code-segment* nil)
