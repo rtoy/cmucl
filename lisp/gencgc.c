@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.5 1997/12/02 02:50:45 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.6 1997/12/03 08:17:02 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -40,7 +40,9 @@
 
 /* Debugging variables. */
 
-boolean gencgc_verbose = FALSE;
+/* The verbose level. All non-error messages are disabled at level 0;
+   and only a few rare messages are printed at level 1. */
+unsigned gencgc_verbose = 0;
 
 /* To enable the use of page protection to help avoid the scavenging
    of pages that don't have pointers to younger generations. */
@@ -1338,7 +1340,7 @@ copy_large_object(lispobj object, int nwords)
   gc_assert(from_space_p(object));
   gc_assert((nwords & 0x01) == 0);
 
-  if (nwords > 1024*1024)
+  if ((nwords > 1024*1024) && gencgc_verbose)
     fprintf(stderr,"** copy_large_object: %d\n",nwords*4);
 
   /* Check if it's a large object. */
@@ -1418,7 +1420,7 @@ copy_large_object(lispobj object, int nwords)
       next_page++;
     }
     
-    if (bytes_freed > 0)
+    if ((bytes_freed > 0) && gencgc_verbose)
       fprintf(stderr,"* copy_large_boxed bytes_freed %d\n", bytes_freed);
     
     generations[from_space].bytes_allocated -= 4*nwords + bytes_freed;
@@ -1507,7 +1509,7 @@ copy_large_unboxed_object(lispobj object, int nwords)
   gc_assert(from_space_p(object));
   gc_assert((nwords & 0x01) == 0);
 
-  if (nwords > 1024*1024)
+  if ((nwords > 1024*1024) && gencgc_verbose)
     fprintf(stderr,"** copy_large_unboxed_object: %d\n",nwords*4);
 
   /* Check if it's a large object. */
@@ -1579,7 +1581,7 @@ copy_large_unboxed_object(lispobj object, int nwords)
       next_page++;
     }
     
-    if (bytes_freed > 0)
+    if ((bytes_freed > 0) && gencgc_verbose)
       fprintf(stderr,"* copy_large_unboxed bytes_freed %d\n", bytes_freed);
     
     generations[from_space].bytes_allocated -= 4*nwords + bytes_freed;
@@ -1793,9 +1795,8 @@ sniff_code_object(struct code *code, unsigned displacement)
   if (!check_code_fixups)
     return;
 
-  /* It's ok if it's byte compiled code. The trace
-     table offset will be a fixnum if it's x86
-     compiled code - check. */
+  /* It's ok if it's byte compiled code. The trace table offset will
+     be a fixnum if it's x86 compiled code - check. */
   if (code->trace_table_offset & 0x3) {
     /* fprintf(stderr,"*** Sniffing byte compiled code object at %x.\n",code);*/
     return;
@@ -3888,18 +3889,21 @@ valid_dynamic_space_pointer(lispobj *pointer)
     case type_ByteCodeClosure:
     case type_DylanFunctionHeader:
       if ((int)pointer != ((int)start_addr+type_FunctionPointer)) {
-	fprintf(stderr,"*Ef2: %x %x %x\n", pointer, start_addr, *start_addr);
+	if (gencgc_verbose)
+	  fprintf(stderr,"*Wf2: %x %x %x\n", pointer, start_addr, *start_addr);
 	return FALSE;
       }
       break;
     default:
-      fprintf(stderr,"*Ef3: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wf3: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_ListPointer:
     if ((int)pointer != ((int)start_addr+type_ListPointer)) {
-      fprintf(stderr,"*El1: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wl1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible cons? */
@@ -3913,33 +3917,39 @@ valid_dynamic_space_pointer(lispobj *pointer)
 	   || (TypeOf(start_addr[1]) == type_UnboundMarker)))
       break;
     else {
-      fprintf(stderr,"*El2: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wl2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
   case type_InstancePointer:
     if ((int)pointer != ((int)start_addr+type_InstancePointer)) {
-      fprintf(stderr,"*Ei1: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wi1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     if (TypeOf(start_addr[0]) != type_InstanceHeader) {
-      fprintf(stderr,"*Ei2: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wi2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_OtherPointer:
     if ((int)pointer != ((int)start_addr+type_OtherPointer)) {
-      fprintf(stderr,"*Eo1: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo1: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible?  Not a cons. X should check the headers. */
     if(Pointerp(start_addr[0]) || ((start_addr[0] & 3) == 0)) {
-      fprintf(stderr,"*Eo2: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo2: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     switch (TypeOf(start_addr[0])) {
     case type_UnboundMarker:
     case type_BaseChar:
-      fprintf(stderr,"*Eo3: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo3: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
       
       /* Only pointed to by function pointers? */
@@ -3948,11 +3958,13 @@ valid_dynamic_space_pointer(lispobj *pointer)
     case type_ByteCodeFunction:
     case type_ByteCodeClosure:
     case type_DylanFunctionHeader:
-      fprintf(stderr,"*Eo4: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo4: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
       
     case type_InstanceHeader:
-      fprintf(stderr,"*Eo5: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo5: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
       
       /* The valid other immediate pointer objects */
@@ -4010,12 +4022,14 @@ valid_dynamic_space_pointer(lispobj *pointer)
       break;
 
     default:
-      fprintf(stderr,"*Eo6: %x %x %x\n", pointer, start_addr, *start_addr);
+      if (gencgc_verbose)
+	fprintf(stderr,"*Wo6: %x %x %x\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   default:
-    fprintf(stderr,"*E?: %x %x %x\n", pointer, start_addr, *start_addr);
+    if (gencgc_verbose)
+      fprintf(stderr,"*W?: %x %x %x\n", pointer, start_addr, *start_addr);
     return FALSE;
   }
   
@@ -4083,12 +4097,9 @@ maybe_adjust_large_object(lispobj *where)
     boxed = UNBOXED_PAGE;
     break;
   default:
-    /* fprintf(stderr,"*P2 %x %x\n",where,where[0]);*/
     return;
   }
 
-  /*fprintf(stderr,"*P1 %x %x\n",where,where[0]);*/
-  
   /* Find its current size. */
   nwords = (sizetab[TypeOf(where[0])])(where);
   
@@ -4161,7 +4172,7 @@ maybe_adjust_large_object(lispobj *where)
     next_page++;
   }
   
-  if (bytes_freed > 0)
+  if ((bytes_freed > 0) && gencgc_verbose)
     fprintf(stderr,"* adjust_large_object freed %d\n", bytes_freed);
   
   generations[from_space].bytes_allocated -= bytes_freed;
@@ -4235,7 +4246,7 @@ preserve_pointer(void *addr)
 	|| (page_table[addr_page_index].bytes_used == 0)
 	/* Check the offset within the page */
 	|| (((int)addr & 0xfff) > page_table[addr_page_index].bytes_used)) {
-      fprintf(stderr,"* ignore pointer 0x%x to freed area of large object\n",
+      fprintf(stderr,"*W ignore pointer 0x%x to freed area of large object\n",
 	      addr);
       return;
     }
@@ -4303,7 +4314,7 @@ scavenge_thread_stacks(void)
 	if (TypeOf(stack->header) != type_SimpleArrayUnsignedByte32)
 	  return;
 	length = fixnum_value(stack->length);
-	if (gencgc_verbose)
+	if (gencgc_verbose > 1)
 	  fprintf(stderr,"Scavenging control stack %d of length %d words\n",
 		  i,length);
 	for (j = 0; j < length; j++)
@@ -4484,7 +4495,7 @@ scavenge_generation(int generation)
     }
   }
   
-  if (gencgc_verbose && num_wp != 0)
+  if ((gencgc_verbose > 1) && (num_wp != 0))
     fprintf(stderr,"Write protected %d pages within generation %d\n",num_wp);
 
 #if SC_GEN_CK
@@ -4706,7 +4717,8 @@ scavenge_newspace_generation(int generation)
       /* New areas of objects allocated have been lost so need to do a
 	 full scan to be sure! If this becomes a problem try
 	 increasing NUM_NEW_AREAS. */
-      fprintf(stderr,"** new_areas overflow, doing full scavenge\n");
+      if (gencgc_verbose)
+	fprintf(stderr,"** new_areas overflow, doing full scavenge\n");
       
       /* Don't need to record new areas that get scavenge anyway
 	 during scavenge_newspace_generation_one_scan. */
@@ -4853,16 +4865,10 @@ free_oldspace(void)
 	fprintf(stderr,"gc_zero: page moved, 0x%08x ==> 0x%08x!\n",
 		page_start,addr);
     } else {
-      int *page_start, *p, *q;
-      
+      int *page_start;
+
       page_start = (int *)page_address(first_page);
-      /* fprintf(stderr,"*M %x %x\n",
-	 page_start,4096*(last_page-first_page)); */
       i586_bzero(page_start,4096*(last_page-first_page));
-      /* MADV_FREE does not guarantee that the same page will be
-	 returned, so it could contain garbaged. */
-      /*if (first_page > 2)
-	madvise((void *)page_start,4096*(last_page-first_page),MADV_FREE);*/
     }
     
     first_page = last_page;
@@ -5165,7 +5171,7 @@ write_protect_generation_pages(int generation)
       page_table[i].write_protected = 1;
     }
 
-  if (gencgc_verbose)
+  if (gencgc_verbose > 1)
     fprintf(stderr,"Write protected %d of %d pages in generation %d.\n",
 	    count_write_protect_generation_pages(generation),
 	    count_generation_pages(generation),
@@ -5236,7 +5242,7 @@ garbage_collect_generation(int generation, int raise)
   scavenge_thread_stacks();
 #endif
 
-  if (gencgc_verbose) {
+  if (gencgc_verbose > 1) {
     int num_dont_move_pages = count_dont_move_pages();
     fprintf(stderr,"Non-movable pages due to conservative pointers = %d, %d bytes\n",num_dont_move_pages,num_dont_move_pages*4096);
   }
@@ -5263,7 +5269,7 @@ garbage_collect_generation(int generation, int raise)
   
   static_space_size = (lispobj *)SymbolValue(STATIC_SPACE_FREE_POINTER)
     - static_space;
-  if (gencgc_verbose)
+  if (gencgc_verbose > 1)
     fprintf(stderr,"Scavenge static space: %d bytes\n",
 	    static_space_size * sizeof(lispobj));
   scavenge(static_space, static_space_size);
@@ -5331,7 +5337,8 @@ garbage_collect_generation(int generation, int raise)
   generations[generation].alloc_large_unboxed_start_page = 0;
 
   if(generation >= verify_gens) {
-    fprintf(stderr,"Checking\n");
+    if (gencgc_verbose)
+      fprintf(stderr,"Checking\n");
     verify_gc();
     verify_dynamic_space();
   }
@@ -5386,7 +5393,8 @@ collect_garbage(unsigned last_gen)
 
   /* Check last_gen */
   if (last_gen > NUM_GENERATIONS) {
-    fprintf(stderr,"** collect_garbage: last_gen = %d. Doing a level 0 GC.\n",last_gen);
+    fprintf(stderr,"** collect_garbage: last_gen = %d. Doing a level 0 GC.\n",
+	    last_gen);
     last_gen = 0;
   }
 
@@ -5400,7 +5408,7 @@ collect_garbage(unsigned last_gen)
     verify_generation(0);
   }
 
-  if (gencgc_verbose)
+  if (gencgc_verbose > 1)
     print_generation_stats(0);
 
   scavenger_hooks = NIL;
@@ -5422,7 +5430,7 @@ collect_garbage(unsigned last_gen)
 	else
 	  raise = 0;
     
-    if (gencgc_verbose)
+    if (gencgc_verbose > 1)
       fprintf(stderr,"Starting GC of generation %d with raise=%d alloc=%d trig=%d GCs=%d\n",
 	      gen,
 	      raise,
@@ -5440,7 +5448,7 @@ collect_garbage(unsigned last_gen)
     /* Reset the memory age cum_sum */
     generations[gen].cum_sum_bytes_allocated = 0;
     
-    if (gencgc_verbose) {
+    if (gencgc_verbose > 1) {
       fprintf(stderr,"GC of generation %d finished:\n",gen);
       print_generation_stats(0);
     }
@@ -5519,7 +5527,7 @@ gc_free_heap(void)
   unsigned long  allocated = bytes_allocated;
   int page;
 
-  if (gencgc_verbose)
+  if (gencgc_verbose > 1)
     fprintf(stderr,"Free heap\n");
 
   for (page = 0; page < NUM_PAGES; page++)
@@ -5574,7 +5582,7 @@ gc_free_heap(void)
     generations[page].cum_sum_bytes_allocated = 0;
   }
   
-  if (gencgc_verbose)
+  if (gencgc_verbose > 1)
     print_generation_stats(0);
   
   /* Initialise gc_alloc */
@@ -5603,7 +5611,8 @@ gc_free_heap(void)
 
   if (verify_after_free_heap) {
     /* Check if purify has left any bad pointers. */
-    fprintf(stderr,"Checking after free_heap.\n");
+    if (gencgc_verbose)
+      fprintf(stderr,"Checking after free_heap.\n");
     verify_gc();
   }
 }
@@ -5784,20 +5793,8 @@ char
      */
     sigset_t mask;
     sigprocmask(0,NULL,&mask);
-    if (!mask) {
-      /*
-      sigset_t block;
-#ifdef POSIX_SIGS
-      sigemptyset(&block);
-      FILLBLOCKSET(&block);
-      sigprocmask(SIG_BLOCK, &block,NULL);
-#else
-      sigblock(BLOCKABLE);
-#endif
-      lose("Alloc non-atomic %x\n", mask);
-      */
+    if (!mask)
       fprintf(stderr,"* Alloc non-atomic %x\n", mask);
-    }
 #endif      
     
   retry2:
