@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.61 2002/08/23 18:31:05 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.62 2002/12/12 19:09:45 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,7 @@
 (in-package "LISP")
 
 (export '(file-stream file-string-length stream-external-format))
+#+nil
 (deftype file-stream () 'fd-stream)
 
 
@@ -58,10 +59,16 @@
 
 ;;;; The FD-STREAM structure.
 
+;;;; Superclass defined by the ANSI Spec
+(defstruct (file-stream
+	     (:include lisp-stream)
+	     (:constructor nil)
+	     (:copier nil)))
+
 (defstruct (fd-stream
 	    (:print-function %print-fd-stream)
 	    (:constructor %make-fd-stream)
-	    (:include lisp-stream
+	    (:include file-stream
 		      (misc #'fd-stream-misc-routine)))
 
   (name nil)		      ; The name of this stream

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.56 2002/11/19 14:30:57 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.57 2002/12/12 19:09:46 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,6 +47,7 @@
 
 (in-package "LISP")
 
+#+nil
 (deftype string-stream ()
   '(or string-input-stream string-output-stream
        fill-pointer-output-stream))
@@ -1168,10 +1169,17 @@ output to Output-stream"
    sends its output to Output-Stream.  In addition, all input is echoed to
    the output stream")
 
+;;;; Superclass of all string streams
+
+(defstruct (string-stream
+	     (:include lisp-stream)
+	     (:constructor nil)
+	     (:copier nil)))
+
 ;;;; String Input Streams:
 
 (defstruct (string-input-stream
-	     (:include lisp-stream
+	     (:include string-stream
 		       (in #'string-inch)
 		       (bin #'string-binch)
 		       (n-bin #'string-stream-read-n-bytes)
@@ -1260,7 +1268,7 @@ output to Output-stream"
 ;;;; String Output Streams:
 
 (defstruct (string-output-stream
-	    (:include lisp-stream
+	    (:include string-stream
 		      (out #'string-ouch)
 		      (sout #'string-sout)
 		      (misc #'string-out-misc))
@@ -1352,7 +1360,7 @@ output to Output-stream"
 ;;; the CLM, but they are required for the implementation of With-Output-To-String.
 
 (defstruct (fill-pointer-output-stream
- 	    (:include lisp-stream
+ 	    (:include string-stream
 		      (out #'fill-pointer-ouch)
 		      (sout #'fill-pointer-sout)
 		      (misc #'fill-pointer-misc))

@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.40 2002/02/20 06:40:01 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.41 2002/12/12 19:09:45 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -878,7 +878,8 @@
       (progv
 	  (mapcar #'car bindings)
 	  (mapcar #'(lambda (binding)
-		      (eval (cdr binding))))
+		      (eval (cdr binding)))
+		  bindings)
 	(apply function args))
       (apply function args)))
 
