@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.26 1991/05/16 14:58:22 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.27 1991/10/12 20:52:04 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,6 +67,9 @@
 	  debug-error unhandled-condition invalid-control-stack-pointer
 	  unknown-code-location unknown-debug-variable invalid-value
 	  ambiguous-variable-name frame-function-mismatch
+
+	  set-breakpoint-for-editor set-location-breakpoint-for-editor
+	  delete-breakpoint-for-editor
 
 	  *debugging-interpreter*))
 
@@ -161,9 +164,9 @@
 
 ;;;; Errors and DEBUG-SIGNAL.
 
-;;; The debug internals code tries to signal all programmer errors as
-;;; subtypes of debug-error.  There are calls to ERROR signalling simple-errors,
-;;; but these dummy checks in the code and shouldn't come up.
+;;; The debug-internals code tries to signal all programmer errors as subtypes
+;;; of debug-error.  There are calls to ERROR signalling simple-errors, but
+;;; these dummy checks in the code and shouldn't come up.
 ;;;
 ;;; While under development, this code also signals errors in code branches
 ;;; that remain unimplemented.
@@ -180,13 +183,6 @@
 	     (format stream "~&Unhandled debug-condition:~%~A"
 		     (unhandled-condition-condition condition)))))
 
-(define-condition invalid-control-stack-pointer (debug-error)
-  ()
-  (:report (lambda (condition stream)
-	     (declare (ignore condition))
-	     (fresh-line stream)
-	     (write-string "Invalid control stack pointer." stream))))
-
 (define-condition unknown-code-location (debug-error)
   ((code-location))
   (:report (lambda (condition stream)
@@ -200,6 +196,13 @@
 	     (format stream "~&~S not in ~S."
 		     (unknown-debug-variable-debug-variable condition)
 		     (unknown-debug-variable-debug-function condition)))))
+
+(define-condition invalid-control-stack-pointer (debug-error)
+  ()
+  (:report (lambda (condition stream)
+	     (declare (ignore condition))
+	     (fresh-line stream)
+	     (write-string "Invalid control stack pointer." stream))))
 
 (define-condition frame-function-mismatch (debug-error)
   ((code-location)
@@ -221,7 +224,8 @@
 ;;; ??? Get SIGNAL in the right package!
 ;;;
 (defmacro debug-signal (datum &rest arguments)
-  `(let ((condition (ext:signal ,datum ,@arguments)))
+  `(let ((condition (make-condition ,datum ,@arguments)))
+     (signal condition)
      (error 'unhandled-condition :condition condition)))
 
 
@@ -606,7 +610,8 @@
   ;; This is the function invoked when execution encounters the breakpoint.  It
   ;; takes a frame, the breakpoint, and optionally a list of values.  Values
   ;; are supplied for :function-end breakpoints as values to return for the
-  ;; function containing the breakpoint.
+  ;; function containing the breakpoint.  :function-end breakpoint
+  ;; hook-functions also take a cookie argument.  See cookie-fun slot.
   (hook-function nil :type function)
   ;;
   ;; Code-location or debug-function.
@@ -627,6 +632,20 @@
   ;; slot.  If execution goes from one instruction to the other, we must make
   ;; sure we only invoke the hook-functions once.
   (unknown-return-partner nil :type (or null breakpoint))
+  ;;
+  ;; :function-end breakpoints use a breakpoint at the :function-start to
+  ;; establish the end breakpoint upon function entry.  We do this by frobbing
+  ;; the LRA to jump to a special piece of code that breaks and provides the
+  ;; return values for the returnee.  This slot points to the start breakpoint,
+  ;; so we can activate, deactivate, and delete it.
+  (start-helper nil :type (or null breakpoint))
+  ;;
+  ;; This is a hook users supply to get a dynamically unique cookie for
+  ;; identifying :function-end breakpoint executions.  That is, if there is one
+  ;; :function-end breakpoint, but there may be multiple pending calls of its
+  ;; function on the stack.  This function takes the cookie, and the
+  ;; hook-function takes the cookie too.
+  (cookie-fun nil :type (or null function))
   ;;
   ;; This slot users can set with whatever information they find useful.
   %info)
@@ -746,8 +765,8 @@
   (%live-set :unparsed :type (or simple-bit-vector (member :unparsed)))
   ;;
   ;; (unexported)
-  (kind :unparsed :type (member :unparsed :unknown-return :known-return
-				:internal-error :non-local-exit :block-start)))
+  ;; To see c::location-kind, do "(kernel:type-expand 'c::location-kind)".
+  (kind :unparsed :type (or (member :unparsed) c::location-kind)))
 
 (defstruct (interpreted-code-location
 	    (:include code-location
@@ -807,6 +826,14 @@
 
 ;;;; Frames.
 
+;;; This is used in FIND-ESCAPE-FRAME and with the bogus components and LRAs
+;;; used for :function-end breakpoints.  When a components debug-info slot is
+;;; :bogus-lra, then the real-lra-slot contains the real component to continue
+;;; executing, as opposed to the bogus component which appeared in some frame's
+;;; LRA location.
+;;;
+(defconstant real-lra-slot vm:code-constants-offset)
+
 ;;; These are magically converted by the compiler.
 ;;;
 (defun current-sp () (current-sp))
@@ -835,19 +862,6 @@
 (def-c-variable "lisp_interrupt_contexts" interrupt-array)
 
 
-;;; These are the names of all the functions that the system could have called
-;;; while interpreting.  We need to detect these when parsing the stack and
-;;; make frames representing the code the intepreter is evaluating.
-
-;;; FRAME-REAL-FRAME  --  Internal
-;;;
-;;;    If an interpreted frame, return the real frame, otherwise frame.
-;;;
-(defun frame-real-frame (frame)
-  (etypecase frame
-    (compiled-frame frame)
-    (interpreted-frame (interpreted-frame-real-frame frame))))
-
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
@@ -860,26 +874,9 @@
 			    pc nil)
      nil)))
 
-
-;;; GET-CONTEXT-VALUE  --  Internal
-;;;
-;;;    Get the old FP or return PC out of Frame.  Stack-Slot is offset the
-;;; standard save location on the stack.  Loc the the saved SC-Offset
-;;; describing the main location.
-;;;
-(defun get-context-value (frame stack-slot loc)
-  (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
-	   (type c::sc-offset loc))
-  (let ((pointer (frame-pointer frame))
-	(escaped (compiled-frame-escaped frame)))
-    (if escaped
-	(sub-access-debug-var-slot pointer loc escaped)
-	(stack-ref pointer stack-slot))))
-
-  
 ;;; FRAME-DOWN -- Public.
 ;;;
-;;;    We have to access the old-fp and return-pc out of Frame and pass them to
+;;; We have to access the old-fp and return-pc out of frame and pass them to
 ;;; COMPUTE-CALLING-FRAME.
 ;;;
 (defun frame-down (frame)
@@ -915,80 +912,31 @@
 					    frame))))))
 	down)))
 
-;;; CODE-OBJECT-FROM-BITS  --  internal.
-;;;
-;;; Find the code object corresponding to the object represented by bits and
-;;; return it.  We assume bogus functions correspond to the
-;;; undefined-function.
-;;; 
-(defun code-object-from-bits (bits)
-  (declare (type (unsigned-byte 32) bits))
-  (let ((object (make-lisp-obj bits)))
-    (if (functionp object)
-	(or (function-code-header object)
-	    :undefined-function)
-	(let ((lowtag (get-lowtag object)))
-	  (if (= lowtag vm:other-pointer-type)
-	      (let ((type (get-type object)))
-		(cond ((= type vm:code-header-type)
-		       object)
-		      ((= type vm:return-pc-header-type)
-		       (lra-code-header object))
-		      (t
-		       nil))))))))
 
-(defun find-escaped-frame (frame-pointer)
-  (declare (type system-area-pointer frame-pointer))
-  (dotimes (index lisp::*free-interrupt-context-index*
-		  (values nil 0 nil))
-    (alien-bind ((scp (interrupt-array-ref
-		       (alien-value lisp_interrupt_contexts)
-		       index)
-		      (alien mach:sigcontext #.(c-sizeof 'mach:sigcontext))
-		      t)
-		 (sc (mach:indirect-*sigcontext scp)
-		     mach:sigcontext
-		     t)
-		 (regs (mach:sigcontext-regs (alien-value sc))
-		       mach:int-array
-		       t))
-      (when (= (sap-int frame-pointer)
-	       (alien-access
-		(mach:int-array-ref regs vm::cfp-offset)))
-	(system:without-gcing
-	 (let ((code (code-object-from-bits
-		      (alien-access
-		       (mach:int-array-ref regs vm::code-offset)))))
-	   (when (symbolp code)
-	     (return (values code 0 (alien-value sc))))
-	   (let* ((code-header-len (* (get-header-data code) vm:word-bytes))
-		  (pc-offset
-		   (- (sap-int
-		       (alien-access
-			(mach:sigcontext-pc (alien-value sc))))
-		      (- (get-lisp-obj-address code) vm:other-pointer-type)
-		      code-header-len)))
-	     ;; Check to see if we were executing in a branch delay slot.
-	     #+pmax  ; pmax only
-	     (when (logbitp 31 (alien-access
-				(mach:sigcontext-cause (alien-value sc))))
-	       (incf pc-offset vm:word-bytes))
-	     (unless (<= 0
-			 pc-offset
-			 (* (truly-the lisp::index
-				       (%primitive c::code-code-size code))
-			    vm:word-bytes))
-	       ;; We were in an assembly routine.  Therefore, use the LRA as
-	       ;; the pc.
-	       (setf pc-offset
-		     (- (escape-register (alien-value sc)
-					 vm::lra-offset)
-			(get-lisp-obj-address code)
-			code-header-len)))
-	     (return
-	      (values code
-		      pc-offset
-		      (alien-value sc))))))))))
+;;; GET-CONTEXT-VALUE  --  Internal.
+;;;
+;;; Get the old FP or return PC out of frame.  Stack-slot is the standard save
+;;; location offset on the stack.  Loc is the saved sc-offset describing the
+;;; main location.
+;;;
+(defun get-context-value (frame stack-slot loc)
+  (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
+	   (type c::sc-offset loc))
+  (let ((pointer (frame-pointer frame))
+	(escaped (compiled-frame-escaped frame)))
+    (if escaped
+	(sub-access-debug-var-slot pointer loc escaped)
+	(stack-ref pointer stack-slot))))
+;;;
+(defun (setf get-context-value) (value frame stack-slot loc)
+  (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
+	   (type c::sc-offset loc))
+  (let ((pointer (frame-pointer frame))
+	(escaped (compiled-frame-escaped frame)))
+    (if escaped
+	(sub-set-debug-var-slot pointer loc value escaped)
+	(setf (stack-ref pointer stack-slot) value))))
+
 
 (defvar *debugging-interpreter* nil
   "When set, the debugger foregoes making interpreted-frames, so you can
@@ -1036,6 +984,7 @@
 		 frame
 		 (debug-variable-value closure-var frame)))
 	      frame)))))
+
 
 ;;; COMPUTE-CALLING-FRAME -- Internal.
 ;;;
@@ -1092,6 +1041,72 @@
 			     (if up-frame (1+ (frame-number up-frame)) 0)
 			     escaped)))))
 
+(defun find-escaped-frame (frame-pointer)
+  (declare (type system-area-pointer frame-pointer))
+  (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
+    (alien-bind ((scp (interrupt-array-ref (alien-value lisp_interrupt_contexts)
+					   index)
+		      (alien mach:sigcontext #.(c-sizeof 'mach:sigcontext))
+		      t)
+		 (sc (mach:indirect-*sigcontext scp) mach:sigcontext t)
+		 (regs (mach:sigcontext-regs (alien-value sc)) mach:int-array t))
+      (when (= (sap-int frame-pointer)
+	       (alien-access (mach:int-array-ref regs vm::cfp-offset)))
+	(system:without-gcing
+	 (let ((code (code-object-from-bits
+		      (alien-access (mach:int-array-ref regs vm::code-offset)))))
+	   (when (symbolp code)
+	     (return (values code 0 (alien-value sc))))
+	   (let* ((code-header-len (* (get-header-data code) vm:word-bytes))
+		  (pc-offset
+		   (- (sap-int (alien-access
+				(mach:sigcontext-pc (alien-value sc))))
+		      (- (get-lisp-obj-address code) vm:other-pointer-type)
+		      code-header-len)))
+	     ;; Check to see if we were executing in a branch delay slot.
+	     #+pmax  ; pmax only
+	     (when (logbitp 31 (alien-access
+				(mach:sigcontext-cause (alien-value sc))))
+	       (incf pc-offset vm:word-bytes))
+	     (unless (<= 0 pc-offset
+			 (* (truly-the lisp::index
+				       (%primitive c::code-code-size code))
+			    vm:word-bytes))
+	       ;; We were in an assembly routine.  Therefore, use the LRA as
+	       ;; the pc.
+	       (setf pc-offset
+		     (- (escape-register (alien-value sc) vm::lra-offset)
+			(get-lisp-obj-address code)
+			code-header-len)))
+	     (return
+	      (if (eq (code-debug-info code) :bogus-lra)
+		  (let ((real-lra (kernel:code-header-ref code real-lra-slot)))
+		    (values (lra-code-header real-lra)
+			    (get-header-data real-lra)
+			    nil))
+		  (values code pc-offset (alien-value sc)))))))))))
+
+;;; CODE-OBJECT-FROM-BITS  --  internal.
+;;;
+;;; Find the code object corresponding to the object represented by bits and
+;;; return it.  We assume bogus functions correspond to the
+;;; undefined-function.
+;;; 
+(defun code-object-from-bits (bits)
+  (declare (type (unsigned-byte 32) bits))
+  (let ((object (make-lisp-obj bits)))
+    (if (functionp object)
+	(or (function-code-header object)
+	    :undefined-function)
+	(let ((lowtag (get-lowtag object)))
+	  (if (= lowtag vm:other-pointer-type)
+	      (let ((type (get-type object)))
+		(cond ((= type vm:code-header-type)
+		       object)
+		      ((= type vm:return-pc-header-type)
+		       (lra-code-header object))
+		      (t
+		       nil))))))))
 
 ;;;
 ;;; Frame utilities.
@@ -1151,32 +1166,32 @@
 ;;;
 (defun debug-function-from-pc (component pc)
   (let ((info (code-debug-info component)))
-    (unless info
+    (cond
+     ((not info)
       (debug-signal 'no-debug-info))
-    (let* ((function-map (get-debug-info-function-map info))
-	   (len (length function-map)))
-      (declare (simple-vector function-map))
-      (if (= len 1)
-	  (make-compiled-debug-function (svref function-map 0) component)
-	  (let ((i 1)
-		(elsewhere-p
-		 (>= pc (c::compiled-debug-function-elsewhere-pc
-			 (svref function-map 0)))))
-	    (declare (type c::index i))
-	    (loop
-	      (when (or (= i len)
-			(< pc (if elsewhere-p
-				  #+rt-target
-				  (1+ (c::compiled-debug-function-elsewhere-pc
-				       (svref function-map (1+ i))))
-				  #-rt-target
-				  (c::compiled-debug-function-elsewhere-pc
-				   (svref function-map (1+ i)))
-				  (svref function-map i))))
-		(return (make-compiled-debug-function
-			 (svref function-map (1- i))
-			 component)))
-	      (incf i 2)))))))
+     ((eq info :bogus-lra)
+      (make-bogus-debug-function "Function End Breakpoint"))
+     (t
+      (let* ((function-map (get-debug-info-function-map info))
+	     (len (length function-map)))
+	(declare (simple-vector function-map))
+	(if (= len 1)
+	    (make-compiled-debug-function (svref function-map 0) component)
+	    (let ((i 1)
+		  (elsewhere-p
+		   (>= pc (c::compiled-debug-function-elsewhere-pc
+			   (svref function-map 0)))))
+	      (declare (type c::index i))
+	      (loop
+		(when (or (= i len)
+			  (< pc (if elsewhere-p
+				    (c::compiled-debug-function-elsewhere-pc
+				     (svref function-map (1+ i)))
+				    (svref function-map i))))
+		  (return (make-compiled-debug-function
+			   (svref function-map (1- i))
+			   component)))
+		(incf i 2)))))))))
 
 ;;; CODE-LOCATION-FROM-PC -- Internal.
 ;;;
@@ -1203,10 +1218,7 @@
    frame if someone threw to the corresponding tag."
   (let ((catch (int-sap (* lisp::*current-catch-block* vm:word-bytes)))
 	(res nil)
-	(fp (etypecase frame
-	      (compiled-frame (frame-pointer frame))
-	      (interpreted-frame (frame-pointer
-				  (interpreted-frame-real-frame frame))))))
+	(fp (frame-pointer (frame-real-frame frame))))
     (loop
       (when (eql catch 0) (return (nreverse res)))
       (when (eq fp (stack-ref catch vm:catch-block-current-cont-slot))
@@ -1218,6 +1230,15 @@
 		       (frame-debug-function frame)))
 		res)))
       (setf catch (stack-ref catch vm:catch-block-previous-catch-slot)))))
+
+;;; FRAME-REAL-FRAME -- Internal.
+;;;
+;;; If an interpreted frame, return the real frame, otherwise frame.
+;;;
+(defun frame-real-frame (frame)
+  (etypecase frame
+    (compiled-frame frame)
+    (interpreted-frame (interpreted-frame-real-frame frame))))
 
 
 
@@ -1304,11 +1325,26 @@
 	(make-interpreted-debug-function
 	 (or (eval::eval-function-definition eval-fun)
 	     (eval::convert-eval-fun eval-fun))))
-      (let ((code (function-code-header fun)))
-	(debug-function-from-pc
-	 code
-	 (* (- (function-word-offset fun) (get-header-data code))
-	    vm:word-bytes)))))
+      (let* ((name (%primitive c::function-name fun))
+	     (component (function-code-header fun))
+	     (res (find-if
+		   #'(lambda (x)
+		       (and (c::compiled-debug-function-p x)
+			    (eq (c::compiled-debug-function-name x) name)
+			    (eq (c::compiled-debug-function-kind x) nil)))
+		   (get-debug-info-function-map
+		    (code-debug-info component)))))
+	(if res
+	    (make-compiled-debug-function res component)
+	    ;; This used to be the non-interpreted branch, but William wrote it
+	    ;; to return the debug-fun of fun's XEP instead of fun's debug-fun.
+	    ;; The above code does this more correctly, but it doesn't get or
+	    ;; eliminate all appropriate cases.  It mostly works, and probably
+	    ;; works for all named functions anyway.
+	    (debug-function-from-pc component
+				    (* (- (function-word-offset fun)
+					  (get-header-data component))
+				       vm:word-bytes))))))
 
 
 ;;; DEBUG-FUNCTION-KIND -- Public.
@@ -1840,9 +1876,9 @@
     vars))
 
 
-;;; ASSIGN-MINIMAL-VAR-NAMES  --  Internal
+;;; ASSIGN-MINIMAL-VAR-NAMES -- Internal.
 ;;;
-;;;    Vars is the parsed variables for a minimal debug function.  We need to
+;;; Vars is the parsed variables for a minimal debug function.  We need to
 ;;; assign names of the form ARG-NNN.  We must pad with leading zeros, since
 ;;; the arguments must be in alphabetical order.
 ;;;
@@ -1861,12 +1897,10 @@
 ;;; debug-function's c::compiled-debug-function.
 ;;;
 (defun parse-compiled-debug-variables (debug-function)
-  (let* ((debug-fun
-	  (compiled-debug-function-compiler-debug-fun debug-function))
+  (let* ((debug-fun (compiled-debug-function-compiler-debug-fun debug-function))
 	 (packed-vars (c::compiled-debug-function-variables debug-fun))
-	 (default-package
-	  (c::compiled-debug-info-package
-	   (compiled-debug-function-debug-info debug-function)))
+	 (default-package (c::compiled-debug-info-package
+			   (compiled-debug-function-debug-info debug-function)))
 	 (args-minimal (eq (c::compiled-debug-function-arguments debug-fun)
 			   :minimal)))
     (unless packed-vars
@@ -1917,11 +1951,14 @@
 	  res)))))
 
 
-;;;; Unpacking minimal debug functions:
+;;;; Unpacking minimal debug functions.
 
 (eval-when (compile eval)
+
+;;; MAKE-UNCOMPACTED-DEBUG-FUN -- Internal.
 ;;;
-;;; Sleazoid "macro" to keep our indentation sane...
+;;; Sleazoid "macro" to keep our indentation sane in UNCOMPACT-FUNCTION-MAP.
+;;;
 (defmacro make-uncompacted-debug-fun ()
   '(c::make-compiled-debug-function
     :name
@@ -1970,7 +2007,7 @@
     :elsewhere-pc
     (setq elsewhere-pc (+ elsewhere-pc (c::read-var-integer map i)))))
 
-); eval-when (compile eval)
+) ;EVAL-WHEN (compile eval)
 
 ;;; UNCOMPACT-FUNCTION-MAP  --  Internal
 ;;;
@@ -2730,7 +2767,7 @@
   ;;
   ;; Get to the form indicated by path or the enclosing form indicated by
   ;; context and path.
-  (let ((path (nreverse (butlast (cdr path)))))
+  (let ((path (reverse (butlast (cdr path)))))
     (dotimes (i (- (length path) context))
       (setq form (elt form (first path)))
       (setq path (rest path)))
@@ -2760,15 +2797,18 @@
 ;;; accesses that variable from the frame argument.
 ;;;
 (defun preprocess-for-eval (form loc)
-  "Return a function of one argument that will evaluate Form in the lexical
-   context of the Basic-Code-Location Loc.  The function take the frame to get
-   values from as its argument, and returns the values of Form."
+  "Return a function of one argument that evaluates form in the lexical
+   context of the basic-code-location loc.  PREPROCESS-FOR-EVAL signals a
+   no-debug-variables condition when the loc's debug-function has no
+   debug-variable information available.  The returned function takes the frame
+   to get values from as its argument, and it returns the values of form.
+   The returned function signals the following conditions: invalid-value,
+   ambiguous-variable-name, and frame-function-mismatch"
   (declare (type code-location loc))
   (let ((n-frame (gensym))
 	(fun (code-location-debug-function loc)))
     (unless (debug-variable-info-available fun)
       (debug-signal 'no-debug-variables :debug-function fun))
-
     (ext:collect ((binds)
 		  (specs))
       (do-debug-function-variables (var fun)
@@ -2779,7 +2819,6 @@
 	      (if found
 		  (setf (second found) :ambiguous)
 		  (binds (list sym validity var)))))))
-
       (dolist (bind (binds))
 	(let ((name (first bind))
 	      (var (third bind)))
@@ -2787,26 +2826,22 @@
 	    (:valid
 	     (specs `(,name (debug-variable-value ',var ,n-frame))))
 	    (:unknown
-	     (specs `(,name
-		      (debug-signal 'invalid-value
-				    :debug-variable ',var
-				    :frame ,n-frame))))
+	     (specs `(,name (debug-signal 'invalid-value :debug-variable ',var
+					  :frame ,n-frame))))
 	    (:ambiguous
-	     (specs `(,name
-		      (debug-signal 'ambiguous-variable-name
-				    :name ',name
-				    :frame ,n-frame)))))))
-
+	     (specs `(,name (debug-signal 'ambiguous-variable-name :name ',name
+					  :frame ,n-frame)))))))
       (let ((res (coerce `(lambda (,n-frame)
 			    (declare (ext:ignorable ,n-frame))
-			    (symbol-macro-let ,(specs)
-			      ,form))
+			    (symbol-macro-let ,(specs) ,form))
 			 'function)))
 	#'(lambda (frame)
-	    (unless (code-location= (frame-code-location frame)
-				    loc)
+	    ;; This prevents these functions from use in any location other
+	    ;; than a function return location, so maybe this should only
+	    ;; check whether frame's debug-function is the same as loc's.
+	    (unless (code-location= (frame-code-location frame) loc)
 	      (debug-signal 'frame-function-mismatch
-			    :code-location loc  :form form  :frame frame))
+			    :code-location loc :form form :frame frame))
 	    (funcall res frame))))))
 
 
@@ -2817,3 +2852,940 @@
   "Evaluate Form in the lexical context of Frame's current code location,
    returning the results of the evaluation."
   (funcall (preprocess-for-eval form (frame-code-location frame)) frame))
+
+
+
+;;;; Breakpoints.
+
+;;;
+;;; User visible interface.
+;;;
+
+;;; This maps debug-functions, for which there are :function-end breakpoints,
+;;; to internal starter breakpoints that actually establish the :function-end
+;;; breakpoint upon entry to the routine.  We want these starter breakpoints to
+;;; be unique for every routine regardless of how many :function-end
+;;; breakpoints exist.  Otherwise, we can't support multiple :function-end
+;;; breakpoints.  These starter breakpoints' info slot points to a list of
+;;; :function-end breakpoints that use them, and upon deletion of the last such
+;;; breakpoint, we remove the starter from this table.
+;;;
+(defvar *function-end-debug-funs* (make-hash-table :test #'eq))
+
+(defun make-breakpoint (hook-function what
+			&key (kind :code-location) info function-end-cookie)
+  "This creates and returns a breakpoint.  When program execution encounters
+   the breakpoint, the system calls hook-function.  Hook-function takes the
+   current frame for the function in which the program is running and the
+   breakpoint object.
+      What and kind determine where in a function the system invokes
+   hook-function.  What is either a code-location or a debug-function.  Kind is
+   one of :code-location, :function-start, or :function-end.  Since the starts
+   and ends of functions may not have code-locations representing them,
+   designate these places by supplying what as a debug-function and kind
+   indicating the :function-start or :function-end.  When what is a
+   debug-function and kind is :function-end, then hook-function must take an
+   additional argument, a list of values returned by the function.
+      Info is information supplied by and used by the user.
+      This signals an error if what is an unknown code-location."
+  (etypecase what
+    (code-location
+     (when (code-location-unknown-p what)
+       (error "Cannot make a breakpoint at an unknown code location -- ~S."
+	      what))
+     (assert (eq kind :code-location))
+     (let ((bpt (%make-breakpoint hook-function what kind info)))
+       (etypecase what
+	 (interpreted-code-location
+	  (error "Breakpoints in interpreted code are currently unsupported."))
+	 (compiled-code-location
+	  ;; This slot is filled in due to calling CODE-LOCATION-UNKNOWN-P.
+	  (when (eq (compiled-code-location-kind what) :unknown-return)
+	    (let ((other-bpt (%make-breakpoint hook-function what kind info)))
+	      (setf (breakpoint-unknown-return-partner bpt) other-bpt)
+	      (setf (breakpoint-unknown-return-partner other-bpt) bpt)))))
+       bpt))
+    (compiled-debug-function
+     (ecase kind
+       (:function-start
+	(%make-breakpoint hook-function what kind info))
+       (:function-end
+	(let* ((bpt (%make-breakpoint hook-function what kind info))
+	       (starter (gethash what *function-end-debug-funs*)))
+	  (unless starter
+	    (setf starter (%make-breakpoint #'list what :function-start nil))
+	    (setf (breakpoint-hook-function starter)
+		  (function-end-starter-hook starter what))
+	    (setf (gethash what *function-end-debug-funs*) starter))
+	  (setf (breakpoint-start-helper bpt) starter)
+	  (push bpt (breakpoint-%info starter))
+	  (setf (breakpoint-cookie-fun bpt) function-end-cookie)
+	  bpt))))
+    (interpreted-debug-function
+     (error ":function-end breakpoints are currently unsupported ~
+	     for interpreted-debug-functions."))))
+
+;;; These are unique objects created upon entry into a function by a
+;;; :function-end breakpoint's starter hook.  These are only created when users
+;;; supply :function-end-cookie to MAKE-BREAKPOINT.  Also, the :function-end
+;;; breakpoint's hook is called on the same cookie when it is created.
+;;;
+(defstruct (function-end-cookie
+	    (:print-function (lambda (obj str n)
+			       (declare (ignore obj n))
+			       (write-string "#<Function-End-Cookie>" str)))))
+
+;;; This maps bogus-lra-components to cookies, so
+;;; HANDLE-FUNCTION-END-BREAKPOINT can find the appropriate cookie for the
+;;; breakpoint hook.
+;;;
+(defvar *function-end-cookies* (make-hash-table :test #'eq))
+
+;;; FUNCTION-END-STARTER-HOOK -- Internal.
+;;;
+;;; This returns a hook function for the start helper breakpoint associated
+;;; with a :function-end breakpoint.  The returned function makes a fake LRA
+;;; that all returns go through, and this piece of fake code actually breaks.
+;;; Upon return from the break, the code provides the returnee with any values.
+;;; Since the returned function effectively activates fun-end-bpt on each entry
+;;; to debug-fun's function, we must establish breakpoint-data about
+;;; fun-end-bpt.
+;;;
+(defun function-end-starter-hook (starter-bpt debug-fun)
+  (declare (type breakpoint starter-bpt)
+	   (type compiled-debug-function debug-fun))
+  #'(lambda (frame breakpoint)
+      (declare (ignore breakpoint)
+	       (type frame frame))
+      (let ((lra-sc-offset
+	     (c::compiled-debug-function-return-pc
+	      (compiled-debug-function-compiler-debug-fun debug-fun))))
+	(multiple-value-bind (lra component offset)
+			     (make-bogus-lra
+			      (get-context-value frame vm::lra-save-offset
+						 lra-sc-offset))
+	  (setf (get-context-value frame vm::lra-save-offset lra-sc-offset)
+		lra)
+	  (let ((end-bpts (breakpoint-%info starter-bpt)))
+	    (let ((data (breakpoint-data component offset)))
+	      (setf (breakpoint-data-breakpoints data) end-bpts)
+	      (dolist (bpt end-bpts)
+		(setf (breakpoint-internal-data bpt) data)))
+	    (let ((cookie (make-function-end-cookie)))
+	      (setf (gethash component *function-end-cookies*) cookie)
+	      (dolist (bpt end-bpts)
+		(let ((fun (breakpoint-cookie-fun bpt)))
+		  (when fun (funcall fun cookie))))))))))
+
+;;;
+;;; ACTIVATE-BREAKPOINT.
+;;;
+
+;;; ACTIVATE-BREAKPOINT -- Public.
+;;;
+(defun activate-breakpoint (breakpoint)
+  "This causes the system to invoke the breakpoint's hook-function until the
+   next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT."
+  (when (eq (breakpoint-status breakpoint) :deleted)
+    (error "Cannot activate a deleted breakpoint -- ~S." breakpoint))
+  (unless (eq (breakpoint-status breakpoint) :active)
+    (ecase (breakpoint-kind breakpoint)
+      (:code-location
+       (let ((loc (breakpoint-what breakpoint)))
+	 (etypecase loc
+	   (interpreted-code-location
+	    (error "Breakpoints in interpreted code are currently unsupported."))
+	   (compiled-code-location
+	    (activate-compiled-code-location-breakpoint breakpoint)
+	    (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	      (when other
+		(activate-compiled-code-location-breakpoint other)))))))
+      (:function-start
+       (etypecase (breakpoint-what breakpoint)
+	 (compiled-debug-function
+	  (activate-compiled-function-start-breakpoint breakpoint))
+	 (interpreted-debug-function
+	  (error "I don't know how you made this, but they're unsupported -- ~S"
+		 (breakpoint-what breakpoint)))))
+      (:function-end
+       (etypecase (breakpoint-what breakpoint)
+	 (compiled-debug-function
+	  (let ((starter (breakpoint-start-helper breakpoint)))
+	    (unless (eq (breakpoint-status starter) :active)
+	      ;; May already be active by some other :function-end breakpoint.
+	      (activate-compiled-function-start-breakpoint starter)))
+	  (setf (breakpoint-status breakpoint) :active))
+	 (interpreted-debug-function
+	  (error "I don't know how you made this, but they're unsupported -- ~S"
+		 (breakpoint-what breakpoint)))))))
+  breakpoint)
+
+;;; ACTIVATE-COMPILED-CODE-LOCATION-BREAKPOINT -- Internal.
+;;;
+(defun activate-compiled-code-location-breakpoint (breakpoint)
+  (declare (type breakpoint breakpoint))
+  (let ((loc (breakpoint-what breakpoint)))
+    (sub-activate-breakpoint
+     breakpoint
+     (breakpoint-data (compiled-debug-function-component
+		       (code-location-debug-function loc))
+		      (compiled-code-location-pc loc)))))
+
+;;; ACTIVATE-COMPILED-FUNCTION-START-BREAKPOINT -- Internal.
+;;;
+(defun activate-compiled-function-start-breakpoint (breakpoint)
+  (declare (type breakpoint breakpoint))
+  (let ((debug-fun (breakpoint-what breakpoint)))
+    (sub-activate-breakpoint
+     breakpoint
+     (breakpoint-data (compiled-debug-function-component debug-fun)
+		      (c::compiled-debug-function-start-pc
+		       (compiled-debug-function-compiler-debug-fun
+			debug-fun))))))
+
+;;; SUB-ACTIVATE-BREAKPOINT -- Internal.
+;;;
+(defun sub-activate-breakpoint (breakpoint data)
+  (declare (type breakpoint breakpoint)
+	   (type breakpoint-data data))
+  (setf (breakpoint-status breakpoint) :active)
+  (system:without-interrupts
+   (unless (breakpoint-data-breakpoints data)
+     (setf (breakpoint-data-instruction data)
+	   (system:without-gcing
+	    (breakpoint_install (kernel:get-lisp-obj-address
+				 (breakpoint-data-component data))
+				(breakpoint-data-offset data)))))
+   (push breakpoint (breakpoint-data-breakpoints data))
+   (setf (breakpoint-internal-data breakpoint) data)))
+
+;;;
+;;; DEACTIVATE-BREAKPOINT.
+;;;
+
+;;; DEACTIVATE-BREAKPOINT -- Public.
+;;;
+(defun deactivate-breakpoint (breakpoint)
+  "This stops the system from invoking the breakpoint's hook-function."
+  (unless (eq (breakpoint-status breakpoint) :inactive)
+    (system:without-interrupts
+     (ecase (breakpoint-kind breakpoint)
+       (:code-location
+	(let ((loc (breakpoint-what breakpoint)))
+	  (etypecase loc
+	    (interpreted-code-location
+	     (error
+	      "Breakpoints in interpreted code are currently unsupported."))
+	    (compiled-code-location
+	     (deactivate-compiled-code-location-breakpoint breakpoint)
+	     (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	       (when other
+		 (deactivate-compiled-code-location-breakpoint other)))))))
+       (:function-start
+	(etypecase (breakpoint-what breakpoint)
+	  (compiled-debug-function
+	   (deactivate-compiled-function-start-breakpoint breakpoint))
+	  (interpreted-debug-function
+	   (error ":function-start breakpoints for interpreted-debug-functions ~
+		   are unsupported currently -- ~S."
+		  breakpoint))))
+       (:function-end
+	(etypecase (breakpoint-what breakpoint)
+	  (compiled-debug-function
+	   (let ((starter (breakpoint-start-helper breakpoint)))
+	     (unless (find-if #'(lambda (bpt)
+				  (and (not (eq bpt breakpoint))
+				       (eq (breakpoint-status bpt) :active)))
+			      (breakpoint-%info starter))
+	       (deactivate-compiled-function-start-breakpoint starter)))
+	   (setf (breakpoint-status breakpoint) :inactive))
+	  (interpreted-debug-function
+	   (error ":function-end breakpoints for interpreted-debug-functions ~
+		   are unsupported currently -- ~S."
+		  breakpoint)))))))
+  breakpoint)
+
+;;; DEACTIVATE-COMPILED-CODE-LOCATION-BREAKPOINT -- Internal.
+;;;
+(defun deactivate-compiled-code-location-breakpoint (breakpoint)
+  (declare (type breakpoint breakpoint))
+  (let* ((loc (breakpoint-what breakpoint))
+	 (component (compiled-debug-function-component
+		     (code-location-debug-function loc)))
+	 (offset (compiled-code-location-pc loc)))
+    (sub-deactivate-breakpoint breakpoint (breakpoint-data component offset)
+			       component offset)))
+
+;;; DEACTIVATE-COMPILED-FUNCTION-START-BREAKPOINT -- Internal.
+;;;
+(defun deactivate-compiled-function-start-breakpoint (breakpoint)
+  (declare (type breakpoint breakpoint))
+  (let* ((debug-fun (breakpoint-what breakpoint))
+	 (component (compiled-debug-function-component debug-fun))
+	 (offset (c::compiled-debug-function-start-pc
+		  (compiled-debug-function-compiler-debug-fun debug-fun))))
+    (sub-deactivate-breakpoint breakpoint (breakpoint-data component offset)
+			       component offset)))
+
+;;; SUB-DEACTIVATE-BREAKPOINT -- Internal.
+;;;
+(defun sub-deactivate-breakpoint (breakpoint data component offset)
+  (declare (type breakpoint breakpoint)
+	   (type breakpoint-data data)
+	   (type c::index offset))
+  (system:without-gcing
+   (breakpoint_remove (kernel:get-lisp-obj-address component)
+		      offset (breakpoint-data-instruction data)))
+  (setf (breakpoint-data-breakpoints data)
+	(delete breakpoint (breakpoint-data-breakpoints data)))
+  (setf (breakpoint-status breakpoint) :inactive))
+
+;;;
+;;; BREAKPOINT-INFO.
+;;;
+
+;;; BREAKPOINT-INFO -- Public.
+;;;
+(defun breakpoint-info (breakpoint)
+  "This returns the user maintained info associated with breakpoint.  This
+   is SETF'able."
+  (breakpoint-%info breakpoint))
+;;;
+(defun %set-breakpoint-info (breakpoint value)
+  (setf (breakpoint-%info breakpoint) value)
+  (let ((other (breakpoint-unknown-return-partner breakpoint)))
+    (when other
+      (setf (breakpoint-%info other) value))))
+;;;
+(defsetf breakpoint-info %set-breakpoint-info)
+
+;;;
+;;; BREAKPOINT-ACTIVE-P and DELETE-BREAKPOINT.
+;;;
+
+;;; BREAKPOINT-ACTIVE-P -- Public.
+;;;
+(defun breakpoint-active-p (breakpoint)
+  "This returns whether breakpoint is currently active."
+  (ecase (breakpoint-status breakpoint)
+    (:active t)
+    ((:inactive :deleted) nil)))
+
+;;; DELETE-BREAKPOINT -- Public.
+;;;
+(defun delete-breakpoint (breakpoint)
+  "This frees system storage and removes computational overhead associated with
+   breakpoint.  After calling this, breakpoint is completely impotent and can
+   never become active again."
+  (let ((status (breakpoint-status breakpoint)))
+    (unless (eq status :deleted)
+      (ecase status
+	(:active
+	 (setf (breakpoint-status breakpoint) :deleted)
+	 (deactivate-breakpoint breakpoint)
+	 (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	   (when other
+	     (setf (breakpoint-status other) :deleted))))
+	(:inactive
+	 (setf (breakpoint-status breakpoint) :deleted)
+	 (let ((other (breakpoint-unknown-return-partner breakpoint)))
+	   (when other
+	     (setf (breakpoint-status other) :deleted)))))
+      (when (eq (breakpoint-kind breakpoint) :function-end)
+	(let* ((debug-fun (breakpoint-what breakpoint))
+	       (starter (gethash debug-fun *function-end-debug-funs*)))
+	  (setf (breakpoint-info starter)
+		(delete breakpoint (the list (breakpoint-info starter))))
+	  (when (zerop (length (the list (breakpoint-%info starter))))
+	    (remhash debug-fun *function-end-debug-funs*))))))
+  breakpoint)
+
+;;;
+;;; C call out stubs.
+;;;
+
+;;; BREAKPOINT_INSTALL -- Internal.
+;;;
+;;; This actually installs the break instruction in the component.  It returns
+;;; the overwritten bits.  You must call this in a context in which GC is
+;;; disabled, so Lisp doesn't move objects around that C is pointing to.
+;;;
+(ext:def-c-routine "breakpoint_install" (ext:unsigned-long)
+  (code-obj ext:unsigned-long)
+  (pc-offset ext:int))
+
+;;; BREAKPOINT_REMOVE -- Internal.
+;;;
+;;; This removes the break instruction and replaces the original instruction.
+;;; You must call this in a context in which GC is disabled, so Lisp doesn't
+;;; move objects around that C is pointing to.
+;;;
+(ext:def-c-routine "breakpoint_remove" (ext:void)
+  (code-obj ext:unsigned-long)
+  (pc-offset ext:int)
+  (old-inst ext:unsigned-long))
+
+;;; BREAKPOINT_AFTER_OFFSET -- Internal.
+;;;
+;;; This returns the offset of the next instruction following the break that
+;;; generated the signal context we supply as an argument to this routine.
+;;;
+(ext:def-c-routine "breakpoint_after_offset" (ext:int)
+  (scp system-area-pointer))
+
+;;;
+;;; Breakpoint handlers (layer between C and exported interface).
+;;;
+
+;;; This maps components to a mapping of offsets to breakpoint-datas.
+;;;
+(defvar *component-breakpoint-offsets* (make-hash-table :test #'eq))
+
+;;; BREAKPOINT-DATA -- Internal.
+;;;
+;;; This returns the breakpoint-data associated with component cross offset.
+;;; If none exists, this makes one, installs it, and returns it.
+;;;
+(defun breakpoint-data (component offset)
+  (flet ((install-breakpoint-data ()
+	   (let ((data (make-breakpoint-data component offset)))
+	     (push (cons offset data)
+		   (gethash component *component-breakpoint-offsets*))
+	     data)))
+    (let ((offsets (gethash component *component-breakpoint-offsets*)))
+      (if offsets
+	  (let ((data (assoc offset offsets)))
+	    (if data
+		(cdr data)
+		(install-breakpoint-data)))
+	  (install-breakpoint-data)))))
+
+;;; DELETE-BREAKPOINT-DATA -- Internal.
+;;;
+;;; We use this for :function-end breakpoints which use fake components that
+;;; exist only from the start of the function until we hit the end breakpoint.
+;;;
+(defun delete-breakpoint-data (data)
+  (setf (gethash (breakpoint-data-component data)
+		 *component-breakpoint-offsets*)
+	nil))
+
+;;; HANDLE-BREAKPOINT -- Internal Interface.
+;;;
+;;; The C handler for interrupts calls this when it has a debugging-tool break
+;;; instruction.  This does NOT handle all breaks; for example, it does not
+;;; handle breaks for internal errors.
+;;;
+(defun handle-breakpoint (offset component signal-context)
+  (let ((data (breakpoint-data component offset)))
+    (unless data
+      (error "Unknown breakpoint in ~S at offset ~S."
+	      (debug-function-name (debug-function-from-pc component offset))
+	      offset))
+    (let ((breakpoints (breakpoint-data-breakpoints data)))
+      (if (and breakpoints
+	       (eq (breakpoint-kind (car breakpoints)) :function-end))
+	  (handle-function-end-breakpoint breakpoints data signal-context)
+	  (handle-breakpoint-aux breakpoints data
+				 offset component signal-context)))))
+
+;;; HANDLE-BREAKPOINT-AUX -- Internal.
+;;;
+;;; This handles code-location and debug-function :function-start breakpoints.
+;;;
+(defun handle-breakpoint-aux (breakpoints data offset component signal-context)
+  (let ((after (breakpoint-data-after-breakpoint data)))
+    (when after
+      (handle-after-breakpoint after breakpoints data offset component))
+    (when breakpoints
+      (invoke-breakpoint-hooks breakpoints component offset after)
+      ;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which uses
+      ;; CALL-BREAKPOINT_AFTER_OFFSET.
+      (system:without-gcing
+       (breakpoint_remove (kernel:get-lisp-obj-address component) offset
+			  (breakpoint-data-instruction data)))
+      (set-after-breakpoints component data signal-context)
+      ;; Set the sigmask, to keep the system running until we can
+      ;; remove the after breakpoints and re-install the user breakpoints.
+      (setf (breakpoint-data-sigmask data)
+	    (mach:unix-sigblock (mach:sigmask :sigint :sigquit :sigtstp))))))
+
+(defun handle-after-breakpoint (after breakpoints data offset component)
+  (let ((previous-data (after-breakpoint-previous-data after)))
+    (unless (breakpoint-data-breakpoints previous-data)
+      (error "After-breakpoint found with no user breakpoints. -- ~s" after))
+    ;; If there are no user breakpoints at this after location, remove the
+    ;; break instruction.
+    (unless breakpoints
+      (system:without-gcing
+       (breakpoint_remove (kernel:get-lisp-obj-address component) offset
+			  (breakpoint-data-instruction data)))
+      (setf (breakpoint-data-after-breakpoint data) nil))
+    ;; Ditto for the partner of the after-breakpoint (if there were two).
+    (let ((partner (after-breakpoint-partner after)))
+      (when partner
+	(let ((partner-data (after-breakpoint-internal-data partner)))
+	  (unless (breakpoint-data-breakpoints partner-data)
+	    (system:without-gcing
+	     (breakpoint_remove (kernel:get-lisp-obj-address
+				 (breakpoint-data-component partner-data))
+				(breakpoint-data-offset partner-data)
+				(breakpoint-data-instruction partner-data)))
+	    (setf (breakpoint-data-after-breakpoint partner-data) nil)))))
+    ;; Put back previous's break instruction.
+    ;; We don't need to store the replaced instruction in the data since we
+    ;; have it from installing the break instruction before.
+    (system:without-gcing
+     (breakpoint_install (kernel:get-lisp-obj-address
+			  (breakpoint-data-component previous-data))
+			 (breakpoint-data-offset previous-data)))
+    ;; Restore sigmask that we saved before executing previous's inst.
+    (mach:unix-sigsetmask (breakpoint-data-sigmask previous-data))))
+
+(defun invoke-breakpoint-hooks (breakpoints component offset after)
+  (let* ((debug-fun (debug-function-from-pc component offset))
+	 (frame (do ((f (top-frame) (frame-down f)))
+		    ((eq debug-fun (frame-debug-function f)) f)))) 
+    (if after
+	;; If there's an after-bpt here, and any breakpoint whose hook we
+	;; may invoke has an unknown-return-partner, then the after-bpt may
+	;; be for the unknown-return-partner.  This means we already ran
+	;; this breakpoint's hook when we hit its partner one instruction
+	;; previous.  don't invoke it twice for one virtual break.
+	(let ((previous-data (after-breakpoint-previous-data after)))
+	  (dolist (bpt breakpoints)
+	    (let ((partner (breakpoint-unknown-return-partner bpt)))
+	      (unless (and partner
+			   (eq (breakpoint-internal-data partner) previous-data))
+		(funcall (breakpoint-hook-function bpt) frame bpt)))))
+	(dolist (bpt breakpoints)
+	  (funcall (breakpoint-hook-function bpt) frame bpt)))))
+
+(defun set-after-breakpoints (component data signal-context)
+  (multiple-value-bind (after-1 after-2)
+		       (call-breakpoint_after_offset signal-context)
+    (let* ((after-data-1 (breakpoint-data component after-1))
+	   (after-data-2 (if (not (zerop after-2))
+			     (breakpoint-data component after-2)))
+	   (after-bpt-1 (make-after-breakpoint data after-data-1)))
+      (setf (breakpoint-data-after-breakpoint after-data-1) after-bpt-1)
+      (when after-data-2
+	;; Set after-bpt-1's partner to an after-breakpoint.
+	(setf (after-breakpoint-partner after-bpt-1)
+	      ;; While making it, store it in the appropriate data obj.
+	      (setf (breakpoint-data-after-breakpoint after-data-2)
+		    (make-after-breakpoint data after-data-2 after-bpt-1))))
+      (system:without-gcing
+       (unless (breakpoint-data-breakpoints after-data-1)
+	 (setf (breakpoint-data-instruction after-data-1)
+	       (breakpoint_install (kernel:get-lisp-obj-address component)
+				   after-1)))
+       (when (and after-data-2 (not (breakpoint-data-breakpoints after-data-2)))
+	 (setf (breakpoint-data-instruction after-data-2)
+	       (breakpoint_install (kernel:get-lisp-obj-address component)
+				   after-2)))))))
+
+;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal.
+;;;
+;;; HANDLE-BREAKPOINT calls this for :function-end breakpoints.
+;;;
+(defun handle-function-end-breakpoint (breakpoints data signal-context)
+  (delete-breakpoint-data data)
+  (system:alien-bind ((sc (system:make-alien 'mach:sigcontext
+					     #.(c-sizeof 'mach:sigcontext)
+					     signal-context)
+			  mach:sigcontext
+			  t))
+    (let* ((frame (do ((cfp (escape-register sc vm::cfp-offset))
+		       (f (top-frame) (frame-down f)))
+		      ((= cfp (system:sap-int (frame-pointer f))) f)
+		    (declare (type (unsigned-byte #.vm:word-bits) cfp))))
+	   (component (breakpoint-data-component data))
+	   (cookie (gethash component *function-end-cookies*)))
+      (remhash component *function-end-cookies*)
+      (dolist (bpt breakpoints)
+	(funcall (breakpoint-hook-function bpt)
+		 frame bpt
+		 (get-function-end-breakpoint-values (system:alien-value sc))
+		 cookie)))))
+
+(defun get-function-end-breakpoint-values (sc)
+  (system:alien-bind ((sc sc mach:sigcontext t))
+    (let ((ocfp (int-sap (escape-register sc vm::ocfp-offset)))
+	  (nargs (make-lisp-obj (escape-register sc vm::nargs-offset)))
+	  (reg-arg-offsets vm::register-arg-offsets)
+	  (results nil))
+      (without-gcing
+       (dotimes (arg-num nargs)
+	 (push (if reg-arg-offsets
+		   (make-lisp-obj (escape-register sc (pop reg-arg-offsets)))
+		   (stack-ref ocfp arg-num))
+	       results)))
+      (nreverse results))))
+
+
+;;; CALL-BREAKPOINT_AFTER_OFFSET -- Internal.
+;;;
+;;; This calls the C routine and massages its return values.  Originally the
+;;; breakpoint code was designed for the C code to return multiple offsets when
+;;; the break generating the argument signal-context had replaced a branch
+;;; instruction.  The Lisp code would then set after-breakpoints at each
+;;; location, cleaning up both when one was hit after continuing execution.
+;;; Later the C code decided it could determine which way the branch would go,
+;;; so BREAKPOINT_AFTER_OFFSET could just return one offset.  In case this
+;;; won't be possible on all platforms, the Lisp code will stay with its
+;;; support for multiple after-breakpoints.  Then we only need to change this
+;;; routine to return all values of BREAKPOINT_AFTER_OFFSET.
+;;;
+(defun call-breakpoint_after_offset (signal-context)
+  (values (breakpoint_after_offset signal-context) 0))
+
+;;;
+;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
+;;;
+
+(defconstant bogus-lra-constants 2)
+(defconstant known-return-p-slot (+ vm:code-constants-offset 1))
+
+;;; MAKE-BOGUS-LRA -- Interface.
+;;;
+(defun make-bogus-lra (real-lra &optional known-return-p)
+  "Make a bogus LRA object that signals a breakpoint trap when returned to.  If
+   the breakpoint trap handler returns, REAL-LRA is returned to.  Three values
+   are returned: the bogus LRA object, the code component it is part of, and the
+   PC offset for the trap instruction."
+  (system:without-gcing
+   (let* ((src-start (ext:truly-the system-area-pointer
+				    (system:%primitive
+				     c:foreign-symbol-address
+				     "function_end_breakpoint_guts")))
+	  (src-end (ext:truly-the system-area-pointer
+				  (system:%primitive
+				   c:foreign-symbol-address
+				   "function_end_breakpoint_end")))
+	  (trap-loc (ext:truly-the system-area-pointer
+				   (system:%primitive
+				    c:foreign-symbol-address
+				    "function_end_breakpoint_trap")))
+	  (length (sap- src-end src-start))
+	  (code-object (system:%primitive c:allocate-code-object
+					  (1+ bogus-lra-constants)
+					  length))
+	  (dst-start (kernel:code-instructions code-object)))
+     (declare (type system-area-pointer src-start src-end dst-start trap-loc)
+	      (type kernel:index length))
+     (setf (kernel:code-header-ref code-object vm:code-debug-info-slot)
+	   :bogus-lra)
+     (setf (kernel:code-header-ref code-object vm:code-trace-table-offset-slot)
+	   length)
+     (setf (kernel:code-header-ref code-object real-lra-slot) real-lra)
+     (setf (kernel:code-header-ref code-object known-return-p-slot)
+	   known-return-p)
+     (kernel:system-area-copy src-start 0 dst-start 0 (* length vm:byte-bits))
+     (let ((new-lra (kernel:make-lisp-obj (+ (system:sap-int dst-start)
+					     vm:other-pointer-type))))
+       (kernel:set-header-data
+	new-lra
+	(logandc2 (+ vm:code-constants-offset bogus-lra-constants 1)
+		  1))
+       (values new-lra code-object (system:sap- trap-loc src-start))))))
+
+
+
+;;;; Editor support.
+
+;;; This holds breakpoints in the slave set on behalf of the editor.
+;;;
+;(defvar *editor-breakpoints* (make-hash-table :test #'equal))
+
+;;;
+;;; Setting breakpoints.
+;;;
+
+;;; SET-BREAKPOINT-FOR-EDITOR -- Internal Interface.
+;;;
+(defun set-breakpoint-for-editor (package name-str path)
+  "The editor calls this remotely in the slave to set breakpoints.  Package is
+   the string name of a package or nil, and name-str is a string representing a
+   function name (for example, \"foo\" or \"(setf foo)\").  After finding
+   package, this READs name-str with *package* bound appropriately.  Path is
+   either a modified source-path or a symbol (:function-start or
+   :function-end).  If it is a modified source-path, it has no top-level-form
+   offset or form-number component, and it is in descent order from the root of
+   the top-level form."
+  (let* ((name (let ((*package* (if package
+				    (lisp::package-or-lose package)
+				    *package*)))
+		 (read-from-string name-str)))
+	 (debug-fun (function-debug-function (fdefinition name))))
+    (etypecase path
+      (symbol
+       (let* ((bpt (di:make-breakpoint
+		    #'(lambda (frame bpt)
+			(declare (ignore frame bpt))
+			(break "Editor installed breakpoint."))
+		    debug-fun :kind path))
+	      (remote-bpt (wire:make-remote-object bpt)))
+	 (activate-breakpoint bpt)
+	 ;;(push remote-bpt (gethash name *editor-breakpoints*))
+	 remote-bpt))
+      (cons
+       (etypecase debug-fun
+	 (compiled-debug-function
+	  (compiled-debug-function-set-breakpoint-for-editor
+	   debug-fun #|name|# path))
+	 (interpreted-debug-function
+	  (error
+	   "We don't currently support breakpoints in interpreted code.")))))))
+
+(defun compiled-debug-function-set-breakpoint-for-editor (debug-fun #|name|# path)
+  (let* ((source-paths (generate-component-source-paths
+			(compiled-debug-function-component debug-fun)))
+	 (matches nil)
+	 (matching-length 0))
+    (declare (simple-vector source-paths)
+	     (list matches)
+	     (fixnum matching-length))
+    ;; Build a list of paths that match path up to matching-length
+    ;; elements.
+    (macrolet ((maybe-store-match (path matched-len)
+		 `(cond ((> ,matched-len matching-length)
+			 (setf matches (list ,path))
+			 (setf matching-length ,matched-len))
+			((= ,matched-len matching-length)
+			 (cons ,path matches)))))
+      (dotimes (i (length source-paths))
+	(declare (fixnum i))
+	(let ((sp (svref source-paths i)))
+	  ;; Remember, first element of sp is a code-location.
+	  (do ((path-ptr path (cdr path-ptr))
+	       (sp-ptr (cdr sp) (cdr sp-ptr))
+	       (count 0 (1+ count)))
+	      ((or (null path-ptr) (null sp-ptr))
+	       (when (null sp-ptr)
+		 (maybe-store-match sp count)))
+	    (declare (list sp-ptr path-ptr)
+		     (fixnum count))
+	    (unless (= (the fixnum (car path-ptr)) (the fixnum (car sp-ptr)))
+	      (maybe-store-match sp count))))))
+    ;; If there's just one, set it; otherwise, return the conflict set.
+    (cond ((and (= (length matches) 1) (equal path (cdar matches)))
+	   (let* ((bpt (make-breakpoint
+			#'(lambda (frame bpt)
+			    (declare (ignore frame bpt))
+			    (break "Editor installed breakpoint."))
+			(wire:remote-object-value (caar matches))))
+		  (remote-bpt (wire:make-remote-object bpt)))
+	     (activate-breakpoint bpt)
+	     ;;(push remote-bpt (gethash name *editor-breakpoints*))
+	     remote-bpt))
+	  (t matches))))
+
+;;; This maps components to vectors of modified source-paths.  We assume users
+;;; will set multiple breakpoints in a given function which entails computing
+;;; this data repeatedly.  Possibly the GC hook should free this cache.  The
+;;; source-paths are modified in the following ways:
+;;;    1] The form number element (first) is clobbered with the code-location
+;;;       corresponding to the source-path.
+;;;    2] The top-level-form offset element (last) is thrown away.
+;;;    3] Everything after the first element is reversed, so the modified
+;;;       source-path actually portrays a descent into the form.
+;;;
+(defvar *component-source-locations* (make-hash-table :test #'eq))
+
+;;; GENERATE-COMPONENT-SOURCE-PATHS -- Internal.
+;;;
+;;; This returns a vector of modified source-paths, one for every code-location
+;;; in component.  The source-paths are modified as described for
+;;; *component-source-locations*.
+;;;
+(defun generate-component-source-paths (component)
+  (or (gethash component *component-source-locations*)
+      (setf (gethash component *component-source-locations*)
+	    (sub-generate-component-source-paths component))))
+
+;;; This maps source-infos to hashtables that map top-level-form offsets to
+;;; modified form-number translations (as returned by
+;;; FORM-NUMBER-TRANSLATIONS).  These are modified as described for
+;;; *component-source-locations*.
+;;;
+(defvar *source-info-offset-translations* (make-hash-table :test #'eq))
+
+;;; This is a hacking space for SUB-GENERATE-COMPONENT-SOURCE-PATHS.  We use
+;;; this because we throw away many source-paths we accumulate in this buffer
+;;; since they are not associated with code-locations.
+;;;
+(defvar *source-paths-buffer* (make-array 50 :fill-pointer t :adjustable t))
+
+;;; SUB-GENERATE-COMPONENT-SOURCE-PATHS -- Internal.
+;;;
+;;; We iterate over the code-locations in component, fetching their
+;;; source-infos and using the *source-info-offset-translations* cache.  This
+;;; computation often repeatedly sees the same source-info/tlf-offset pair, so
+;;; we see many source-paths from one form-number-translation table.  Because
+;;; of this, when we add a form-number-translations table to this cache, we add
+;;; all the source-paths in it to the result immediately.  Then later if we see
+;;; the same (not EQ though) source-info/tlf-offset form-number-translations,
+;;; we can simply check if one of the source-paths is already in the result,
+;;; and if it is, then all of them already are.  We keep the cache around
+;;; between invocations since we expect multiple breakpoints to be set in the
+;;; same function, and this is why we must check if a form-number-translations
+;;; has been added to the result; just its presence in the cache does not mean
+;;; it is in the result vector.
+;;;
+(defun sub-generate-component-source-paths (component)
+  (let ((info (code-debug-info component)))
+    (unless info (debug-signal 'no-debug-info))
+    (let* ((function-map (get-debug-info-function-map info))
+	   (result *source-paths-buffer*))
+      (declare (simple-vector function-map)
+	       (vector result))
+      (setf (fill-pointer result) 0)
+      (flet ((copy-stuff (form-num-trans result)
+	       (declare (simple-vector form-num-trans)
+			(vector result))
+	       (dotimes (i (length form-num-trans))
+		 (declare (fixnum i))
+		 (vector-push-extend (svref form-num-trans i) result)))
+	     (convert-paths (form-num-trans)
+	       (declare (simple-vector form-num-trans))
+	       (dotimes (i (length form-num-trans) form-num-trans)
+		 (declare (fixnum i))
+		 (let* ((source-path (svref form-num-trans i)))
+		   (declare (list source-path))
+		   ;; Make the first cons point to the reversal of everything
+		   ;; else, but throw away what was the last element before the
+		   ;; reversal.
+		   (setf (cdr source-path)
+			 ;; Must copy the rest of the list, so REVERSE, but
+			 ;; the first cons cell of each list is unique.
+			 (cdr (reverse (cdr source-path))))))))
+	;; Get all possible source-paths, modifying any new additions to the
+	;; cache.
+	(do ((i 0 (+ i 2))
+	     (len (length function-map)))
+	    ((>= i len))
+	  (declare (type c::index i))
+	  (let ((d-fun (make-compiled-debug-function (svref function-map i)
+						     component)))
+	    (do-blocks (d-block d-fun)
+	      (do-debug-block-locations (loc d-block)
+		(let* ((d-source (code-location-debug-source loc))
+		       (translations (gethash d-source
+					      *source-info-offset-translations*))
+		       (tlf-offset (code-location-top-level-form-offset loc))
+		       (loc-num (code-location-form-number loc)))
+		  (cond
+		   (translations
+		    (let ((form-num-trans (gethash tlf-offset translations)))
+		      (declare (type (or simple-vector null) form-num-trans))
+		      (cond
+		       ((not form-num-trans)
+			(let ((form-num-trans (get-form-number-translations
+					       d-source tlf-offset)))
+			  (declare (simple-vector form-num-trans))
+			  (setf (gethash tlf-offset translations) form-num-trans)
+			  (copy-stuff (convert-paths form-num-trans) result)
+			  (setf (car (svref form-num-trans loc-num))
+				(wire:make-remote-object loc))))
+		       ;; If one of these source-paths is in our result, then
+		       ;; they all are.
+		       ((find (svref form-num-trans 0) result :test #'eq)
+			(setf (car (svref form-num-trans loc-num))
+			      (wire:make-remote-object loc)))
+		       ;; Otherwise, store these source-paths in the result.
+		       (t
+			(copy-stuff form-num-trans result)
+			(setf (car (svref form-num-trans loc-num))
+			      (wire:make-remote-object loc))))))
+		   (t
+		    (let ((translations (make-hash-table :test #'eq))
+			  (form-num-trans (get-form-number-translations
+					   d-source tlf-offset)))
+		      (declare (simple-vector form-num-trans))
+		      (setf (gethash d-source *source-info-offset-translations*)
+			    translations)
+		      (setf (gethash tlf-offset translations) form-num-trans)
+		      (copy-stuff (convert-paths form-num-trans) result)
+		      (setf (car (svref form-num-trans loc-num))
+			    (wire:make-remote-object loc)))))))))))
+      ;; Copy source-paths with code-locations from the result buffer to a
+      ;; real result vector.
+      (let* ((count (count-if #'(lambda (x) (wire:remote-object-p (car x)))
+			      result))
+	     (the-real-thing (make-array count))
+	     (i -1))
+	(declare (simple-vector the-real-thing)
+		 (fixnum i count))
+	(dotimes (j count)
+	  (loop (when (wire:remote-object-p (car (aref result (incf i))))
+		  (return)))
+	  (setf (svref the-real-thing j) (aref result i)))
+	the-real-thing))))
+
+;;; GET-FORM-NUMBER-TRANSLATIONS -- Internal.
+;;;
+;;; This returns a vector of form-number translations to source-paths for
+;;; d-source and the top-level-form indicated by the top-level-form offset.
+;;;
+(defun get-form-number-translations (d-source tlf-offset)
+  (let ((name (debug-source-name d-source)))
+    (ecase (debug-source-from d-source)
+      (:file
+       (cond
+	((not (probe-file name))
+	 (format t "~%Cannot set breakpoints for editor when source file no ~
+		    longer exists:~%  ~A."
+		 (namestring name)))
+	(t
+	 (let* ((local-tlf-offset (- tlf-offset
+				     (debug-source-root-number d-source)))
+		(char-offset
+		 (aref (or (debug-source-start-positions d-source)
+			   (error "Cannot set breakpoints for editor when ~
+				   there is no start positions map."))
+		       local-tlf-offset)))
+	   (with-open-file (f name)
+	     (cond
+	      ((= (debug-source-created d-source) (file-write-date name))
+	       (file-position f char-offset))
+	      (t
+	       (format t
+		       "~%While setting a breakpoint for the editor, noticed ~
+			source file has been modified since compilation:~%  ~A~@
+			Using form offset instead of character position.~%"
+		       (namestring name))
+	       (dotimes (i local-tlf-offset) (read f))))
+	     (form-number-translations (read f) tlf-offset))))))
+      ((:lisp :stream)
+       (form-number-translations (svref name tlf-offset) tlf-offset)))))
+
+;;; SET-LOCATION-BREAKPOINT-FOR-EDITOR -- Internal Interface.
+;;;
+(defun set-location-breakpoint-for-editor (remote-obj-loc)
+  "The editor calls this in the slave with a remote-object representing a
+   code-location to set a breakpoint."
+  (let ((loc (wire:remote-object-value remote-obj-loc)))
+    (etypecase loc
+      (interpreted-code-location
+       (error "Breakpoints in interpreted code are currently unsupported."))
+      (compiled-code-location
+       (let* ((bpt (make-breakpoint #'(lambda (frame bpt)
+					(declare (ignore frame bpt))
+					(break "Editor installed breakpoint."))
+				    loc))
+	      (remote-bpt (wire:make-remote-object bpt)))
+	 (activate-breakpoint bpt)
+	 ;;(push remote-bpt (gethash name *editor-breakpoints*))
+	 remote-bpt)))))
+
+;;;
+;;; Deleting breakpoints.
+;;;
+
+;;; DELETE-BREAKPOINT-FOR-EDITOR -- Internal Interface.
+;;;
+(defun delete-breakpoint-for-editor (remote-obj-bpt)
+  "The editor calls this remotely in the slave to delete a breakpoint."
+  (delete-breakpoint (wire:remote-object-value remote-obj-bpt))
+  (wire:forget-remote-translation remote-obj-bpt))
