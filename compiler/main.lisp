@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.73 1992/09/10 19:57:06 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.74 1992/09/22 00:06:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -200,6 +200,9 @@
     (declare (special *constraint-number*))
     (loop
       (ir1-optimize-until-done component)
+      (when (component-reanalyze-functions component)
+	(maybe-mumble "Locall ")
+	(local-call-analyze component))
       (dfo-as-needed component)
       (when *constraint-propagate*
 	(maybe-mumble "Constraint ")
@@ -207,7 +210,8 @@
       (maybe-mumble "Type ")
       (generate-type-checks component)
       (unless (or (component-reoptimize component)
-		  (component-reanalyze component))
+		  (component-reanalyze component)
+		  (component-reanalyze-functions component))
 	(return))
       (when (>= loop-count *reoptimize-after-type-check-max*)
 	(maybe-mumble "[Reoptimize Limit]")
