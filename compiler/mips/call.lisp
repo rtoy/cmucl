@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.54 1993/02/04 15:51:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.55 1993/02/07 18:48:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1244,21 +1244,23 @@ default-value-8
 
 	;; Store the current cons in the cdr of the previous cons.
 	(emit-label loop)
+	(inst addu dst dst (* 2 word-bytes))
 	(storew dst dst -1 list-pointer-type)
 
-	;; Grab one value and stash it in the car of this cons.
 	(emit-label enter)
+	;; Grab one value.
 	(loadw temp context)
 	(inst addu context context word-bytes)
-	(storew temp dst 0 list-pointer-type)
 
 	;; Dec count, and if != zero, go back for more.
 	(inst addu count count (fixnum -1))
 	(inst bne count zero-tn loop)
-	(inst addu dst dst (* 2 word-bytes))
+
+	;; Store the value in the car (in delay slot)
+	(storew temp dst 0 list-pointer-type)
 
 	;; NIL out the last cons.
-	(storew null-tn dst -1 list-pointer-type))
+	(storew null-tn dst 1 list-pointer-type))
       (emit-label done))))
 #+gengc
 (define-vop (listify-rest-args)

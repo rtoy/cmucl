@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.22 1993/01/15 22:49:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.23 1993/02/07 18:48:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1141,18 +1141,16 @@ default-value-8
   (:translate %listify-rest-args)
   (:policy :safe)
   (:generator 20
-    (let ((enter (gen-label))
-	  (loop (gen-label))
-	  (done (gen-label)))
-      (move context context-arg)
-      (move count count-arg)
-      ;; Check to see if there are any arguments.
-      (inst cmp count)
-      (inst b :eq done)
-      (move result null-tn)
+    (move context context-arg)
+    (move count count-arg)
+    ;; Check to see if there are any arguments.
+    (inst cmp count)
+    (inst b :eq done)
+    (move result null-tn)
 
-      ;; We need to do this atomically.
-      (pseudo-atomic ()
+    ;; We need to do this atomically.
+    (pseudo-atomic ()
+      (assemble ()
 	;; Allocate a cons (2 words) for each item.
 	(inst andn result alloc-tn lowtag-mask)
 	(inst or result list-pointer-type)
@@ -1161,24 +1159,27 @@ default-value-8
 	(inst b enter)
 	(inst add alloc-tn temp)
 
-	;; Store the current cons in the cdr of the previous cons.
-	(emit-label loop)
+	;; Compute the next cons and store it in the current one.
+	LOOP
+	(inst add dst dst (* 2 vm:word-bytes))
 	(storew dst dst -1 vm:list-pointer-type)
 
-	;; Grab one value and stash it in the car of this cons.
-	(emit-label enter)
+	;; Grab one value.
+	ENTER
 	(loadw temp context)
 	(inst add context context vm:word-bytes)
-	(storew temp dst 0 vm:list-pointer-type)
 
 	;; Dec count, and if != zero, go back for more.
 	(inst subcc count (fixnum 1))
 	(inst b :gt loop)
-	(inst add dst dst (* 2 vm:word-bytes))
+
+	;; Store the value into the car of the current cons (in the delay
+	;; slot).
+	(storew temp dst 0 vm:list-pointer-type)
 
 	;; NIL out the last cons.
-	(storew null-tn dst -1 vm:list-pointer-type))
-      (emit-label done))))
+	(storew null-tn dst 1 vm:list-pointer-type)))
+    DONE)))
 
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.

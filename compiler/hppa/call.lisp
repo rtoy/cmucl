@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.5 1993/01/15 22:46:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.6 1993/02/07 18:48:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1132,36 +1132,37 @@ default-value-8
   (:translate %listify-rest-args)
   (:policy :safe)
   (:generator 20
-    (let ((loop (gen-label))
-	  (done (gen-label)))
-      (move context-arg context)
-      (move count-arg count)
-      ;; Check to see if there are any arguments.
-      (inst comb := count zero-tn done)
-      (move null-tn result)
+    (move context-arg context)
+    (move count-arg count)
+    ;; Check to see if there are any arguments.
+    (inst comb := count zero-tn done)
+    (move null-tn result)
 
-      ;; We need to do this atomically.
-      (pseudo-atomic ()
+    ;; We need to do this atomically.
+    (pseudo-atomic ()
+      (assemble ()
 	;; Allocate a cons (2 words) for each item.
 	(inst move alloc-tn result)
 	(inst dep list-pointer-type 31 3 result)
 	(move result dst)
 	(inst sll count 1 temp)
 	(inst add alloc-tn temp alloc-tn)
-
-	(emit-label loop)
+	
+	LOOP
 	;; Grab one value and stash it in the car of this cons.
 	(inst ldwm word-bytes context temp)
 	(storew temp dst 0 vm:list-pointer-type)
-
+	
 	;; Dec count, and if != zero, go back for more.
 	(inst addi (* 2 vm:word-bytes) dst dst)
 	(inst addib :> (fixnum -1) count loop :nullify t)
 	(storew dst dst -1 list-pointer-type)
-
+	
 	;; NIL out the last cons.
-	(storew null-tn dst -1 list-pointer-type))
-      (emit-label done))))
+	(storew null-tn dst -1 list-pointer-type)
+	;; Clear out dst, because it points past the last cons.
+	(move null-tn dst)))
+    DONE)))
 
 ;;; Return the location and size of the more arg glob created by Copy-More-Arg.
 ;;; Supplied is the total number of arguments supplied (originally passed in
