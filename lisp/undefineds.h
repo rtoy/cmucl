@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.26 2002/05/06 18:02:05 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.27 2002/10/27 23:01:10 toy Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -242,6 +242,7 @@ F(dlerror)
 
 #if !defined (SOLARIS) ||  defined(SOLARIS25)
 F(getwd)
+F(getcwd)  
 #endif
 F(ttyname)
 
