@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.8 1991/05/28 17:32:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.9 1991/12/12 16:18:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,29 +35,29 @@
 ;;;; Readtable implementation.
 
 ;;; The readtable is a structure with three components: the
-;;; CHARACTER-ATTRIBUTE-TABLE is a vector of 128 integers for describing the
-;;; character type.  Conceptually, there are 4 distinct "primary" character
-;;; attributes (WHITESPACE, TERMINATING-MACRO, ESCAPE, and CONSTITUENT --
-;;; non-terminating macros have the attribute CONSTITUENT, and the symbol
-;;; reader is implemented as a non-terminating macro), and a number of
-;;; "secondary" attributes that are used by the function READ-QUALIFIED-TOKEN,
-;;; which apply only when the primary attribute is CONSTITUENT.  In order to
-;;; make the READ-QUALIFIED-TOKEN fast, all this information is stored in the
-;;; character attribute table by having different varieties of constituents.
-;;; In order to conform with the white pages, the primary attributes should be
-;;; moved by SET-SYNTAX-FROM-CHARACTER and SET-MACRO-CHARACTER, while the
-;;; secondary attributes are constant properties of the characters (as long as
-;;; they are constituents).
+;;; CHARACTER-ATTRIBUTE-TABLE is a vector of CHAR-CODE-LIMIT integers for
+;;; describing the character type.  Conceptually, there are 4 distinct
+;;; "primary" character attributes (WHITESPACE, TERMINATING-MACRO, ESCAPE, and
+;;; CONSTITUENT -- non-terminating macros have the attribute CONSTITUENT, and
+;;; the symbol reader is implemented as a non-terminating macro), and a number
+;;; of "secondary" attributes that are used by the function
+;;; READ-QUALIFIED-TOKEN, which apply only when the primary attribute is
+;;; CONSTITUENT.  In order to make the READ-QUALIFIED-TOKEN fast, all this
+;;; information is stored in the character attribute table by having different
+;;; varieties of constituents.  In order to conform with the white pages, the
+;;; primary attributes should be moved by SET-SYNTAX-FROM-CHARACTER and
+;;; SET-MACRO-CHARACTER, while the secondary attributes are constant properties
+;;; of the characters (as long as they are constituents).
 
 
-;;; The CHARACTER-MACRO-TABLE is a vector of 128 functions.  One of these
-;;; functions called with appropriate arguments whenever any non-WHITESPACE
-;;; character is encountered inside READ-PRESERVING-WHITESPACE.  These
-;;; functions are used to implement user-defined read-macros, system
+;;; The CHARACTER-MACRO-TABLE is a vector of CHAR-CODE-LIMIT functions.  One of
+;;; these functions called with appropriate arguments whenever any
+;;; non-WHITESPACE character is encountered inside READ-PRESERVING-WHITESPACE.
+;;; These functions are used to implement user-defined read-macros, system
 ;;; read-macros, and the number-symbol reader.  Finally, there is a
 ;;; DISPATCH-TABLES entry, which is an alist from dispatch characters to
-;;; vectors of 128 functions, for use in defining dispatching macros (like
-;;; #-macro).
+;;; vectors of CHAR-CODE-LIMIT functions, for use in defining dispatching
+;;; macros (like #-macro).
 
 (defvar std-lisp-readtable ()
   "Standard lisp readtable. This is for recovery from broken
@@ -129,18 +129,18 @@
 	newvalue))
 
 (defun make-character-attribute-table ()
-  (make-array 256 :element-type t :initial-element #.constituent))
+  (make-array char-code-limit :element-type t :initial-element #.constituent))
 
 (defun make-character-macro-table ()
-  (make-array 256 :element-type t
-		      :initial-element #'undefined-macro-char))
-
+  (make-array char-code-limit :element-type t
+	      :initial-element #'undefined-macro-char))
 (defun undefined-macro-char (ignore char)
   (declare (ignore ignore))
-  (error "Undefined read-macro character ~S" char))
+  (unless *read-suppress*
+    (error "Undefined read-macro character ~S" char)))
 
 
-;;; The character attribute table is a 128-long vector of integers. 
+;;; The character attribute table is a CHAR-CODE-LIMIT vector of integers. 
 
 (defmacro test-attribute (char whichclass rt)
   `(= (the fixnum (get-cat-entry ,char ,rt)) ,whichclass)))
@@ -182,8 +182,8 @@
 
 (defun init-secondary-attribute-table ()
   (setq secondary-attribute-table
-	(make-array 128 :element-type t
-			    :initial-element #.constituent))
+	(make-array char-code-limit :element-type t
+		    :initial-element #.constituent))
   (set-secondary-attribute #\: #.package-delimiter)
   (set-secondary-attribute #\| #.multiple-escape)	; |) [For EMACS]
   (set-secondary-attribute #\. #.constituent-dot)
@@ -1112,11 +1112,13 @@
 ;;;; dispatching macro cruft
 
 (defun make-char-dispatch-table ()
-  (make-array 128 :initial-element #'dispatch-char-error))
+  (make-array char-code-limit :initial-element #'dispatch-char-error))
 
 (defun dispatch-char-error (ig1 sub-char ig2)
   (declare (ignore ig1 ig2))
-  (error "No dispatch function defined for ~S."	sub-char))
+  (if *read-suppress*
+      (values)
+      (error "No dispatch function defined for ~S." sub-char)))
 
 (defun make-dispatch-macro-character (char &optional
 					   (non-terminating-p nil)
