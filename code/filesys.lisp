@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.26 1992/02/14 23:44:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.27 1992/02/15 12:47:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -847,12 +847,12 @@
 			   size
 			   (decode-universal-time-for-files mtime year)
 			   tail
-			   (= (logand mode unix::s_ifmt) unix::s_ifdir))))
+			   (= (logand mode unix:s-ifmt) unix:s-ifdir))))
 		(t (format t "Couldn't stat ~A -- ~A.~%"
 			   tail
 			   (unix:get-unix-error-msg dev-or-err))))
 	  (when return-list
-	    (push (if (= (logand mode unix::s_ifmt) unix::s_ifdir)
+	    (push (if (= (logand mode unix:s-ifmt) unix:s-ifdir)
 		      (pathname (concatenate 'string namestring "/"))
 		      file)
 		  result)))))
