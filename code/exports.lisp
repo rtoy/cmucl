@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.41 1990/07/07 13:10:12 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.42 1990/07/10 18:25:11 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -326,7 +326,7 @@
 	  %double-float decode-single-float decode-double-float
 	  integer-decode-single-float integer-decode-double-float
 	  scale-single-float scale-double-float single-float-exponent
-	  double-float-exponent))
+	  double-float-exponent float-format-digits))
 
 
 (in-package "EXTENSIONS")
@@ -532,7 +532,7 @@
 	  single-float-hidden-bit double-float-hidden-bit
 	  float-sign-shift make-single-float make-double-float
 	  single-float-bits double-float-low-bits double-float-high-bits
-	  single-float-digits double-float-digits float-format-digits))
+	  single-float-digits double-float-digits))
 
 
 (in-package "C")
