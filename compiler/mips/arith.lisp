@@ -105,13 +105,13 @@
 
 ;;; Logical operatons.
 
-(define-fixnum-binop (fast-logior/fixnum logior 1 t)
+(define-fixnum-binop (fast-logior/fixnum logior 1 *)
 		     or :immed-op ori :unsigned t)
 
-(define-fixnum-binop (fast-logand/fixnum logand 1 t)
+(define-fixnum-binop (fast-logand/fixnum logand 1 *)
 		     and :immed-op andi :unsigned t)
 
-(define-fixnum-binop (fast-logxor/fixnum logxor 1 t)
+(define-fixnum-binop (fast-logxor/fixnum logxor 1 *)
 		     xor :immed-op xori :unsigned t)
 
 
@@ -245,9 +245,7 @@
 
 
 (define-vop (fast-if-</fixnum fast-conditional/fixnum)
-  (:temporary (:type fixnum :scs (any-reg descriptor-reg)
-	       :from (:argument 0))
-	      temp)
+  (:temporary (:type fixnum :scs (any-reg) :from (:argument 0)) temp)
   (:translate <)
   (:generator 3
     (sc-case y
@@ -268,9 +266,7 @@
     (nop)))
 
 (define-vop (fast-if->/fixnum fast-conditional/fixnum)
-  (:temporary (:type fixnum :scs (any-reg descriptor-reg)
-	       :from (:argument 0))
-	      temp)
+  (:temporary (:type fixnum :scs (any-reg) :from (:argument 0)) temp)
   (:translate >)
   (:generator 3
     (sc-case y
