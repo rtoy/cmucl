@@ -513,10 +513,7 @@
 ;;;
 (def-input-routine input-string-char
 		   (string-char 1 sap head)
-  (system:%primitive make-immediate-type
-		     (system:%primitive 8bit-system-ref sap head)
-		     ; XXX character-type, should be a constant.
-		     27))
+  (code-char (system:%primitive 8bit-system-ref sap head)))
 
 ;;; INPUT-UNSIGNED-8BIT-BYTE -- internal
 ;;;
