@@ -187,6 +187,14 @@
 
 ) ;WITH-COMPILER-LOG-FILE
 
+(unless (probe-file "target:hemlock/spell-dictionary.bin")
+  (load "target:hemlock/spell-rt")
+  (load "target:hemlock/spell-corr")
+  (load "target:hemlock/spell-aug")
+  (load "target:hemlock/spell-build")
+  (funcall (fdefinition (intern "BUILD-DICTIONARY" "SPELL"))
+	   "target:hemlock/spell-dictionary.text"
+	   "target:hemlock/spell-dictionary.bin"))
 
 (cat-if-anything-changed
  "target:hemlock/hemlock-library"
