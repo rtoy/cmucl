@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.4 1992/02/14 23:50:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/dired.lisp,v 1.1.1.5 1992/06/05 19:28:07 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,6 +207,7 @@
 ;;; adds it to the end of the sequence of directory names from pname2, returning
 ;;; a pathname.
 ;;;
+#|
 (defun merge-dirs (pname1 pname2)
   (let* ((dirs1 (pathname-directory pname1))
 	 (dirs2 (pathname-directory pname2))
@@ -217,6 +218,17 @@
     (setf (svref new-dirs2 dirs2-len)
 	  (svref dirs1 (1- (length dirs1))))
     (make-pathname :directory new-dirs2 :device :absolute)))
+|#
+
+(defun merge-dirs (pname1 pname2)
+  (let* ((dirs1 (pathname-directory pname1))
+	 (dirs2 (pathname-directory pname2))
+	 (dirs2-len (length dirs2))
+	 (new-dirs2 (make-list (1+ dirs2-len))))
+    (replace new-dirs2 dirs2)
+    (setf (nth dirs2-len new-dirs2)
+	  (nth (1- (length dirs1)) dirs1))
+    (make-pathname :directory new-dirs2 :device :unspecific)))
 
 ;;; COPY-FILE-1 takes pathnames which either both contain a single wildcard
 ;;; or none.  Wildp1 and Wildp2 are either nil or indexes into the
@@ -612,7 +624,8 @@
 			  dev-or-err))
     (setf (car *utimes-buffer*) atime)
     (setf (caddr *utimes-buffer*) secs))
-  (multiple-value-bind (winp err) (unix:unix-utimes ses-name *utimes-buffer*)
+  (multiple-value-bind (winp err)
+		       `(unix:unix-utimes ses-name ,@*utimes-buffer*)
     (unless winp
       (funcall *error-function* "Couldn't set write date of file ~S: ~A"
 	       ses-name
