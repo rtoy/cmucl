@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.55 1992/06/02 00:35:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.56 1992/06/03 20:04:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,6 +461,7 @@
 (defun change-block-successor (block old new)
   (declare (type cblock new old block))
   (unlink-blocks block old)
+  (setf (component-reanalyze (block-component block)) t)
   (unless (member new (block-succ block))
     (link-blocks block new))
   
@@ -892,6 +893,7 @@
   (declare (type cblock block))
   (unless (block-delete-p block)
     (setf (block-delete-p block) t)
+    (setf (component-reanalyze (block-component block)) t)
     (dolist (pred (block-pred block))
       (mark-for-deletion pred)))
   (undefined-value))
