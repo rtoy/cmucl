@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.36 1990/03/29 15:15:39 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.37 1990/04/01 17:42:22 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -18,41 +18,7 @@
 ;;; Converted to MIPS by William Lott.
 ;;;
 
-(in-package "VM" :use "EXT")
-
-(export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
-	  word-bytes target-byte-order target-read-only-space-start
-	  target-static-space-start target-dynamic-space-start
-	  target-control-stack-start target-binding-stack-start
-	  target-heap-address-space lowtag-bits lowtag-mask
-	  lowtag-limit type-bits type-mask pad-data-block even-fixnum-type
-	  function-pointer-type other-immediate-0-type other-immediate-1-type
-	  list-pointer-type odd-fixnum-type structure-pointer-type
-	  other-pointer-type bignum-type ratio-type single-float-type
-	  double-float-type complex-type simple-array-type simple-string-type
-	  simple-bit-vector-type simple-vector-type
-	  simple-array-unsigned-byte-2-type
-	  simple-array-unsigned-byte-4-type
-	  simple-array-unsigned-byte-8-type
-	  simple-array-unsigned-byte-16-type
-	  simple-array-unsigned-byte-32-type simple-array-single-float-type
-	  simple-array-double-float-type complex-string-type
-	  complex-bit-vector-type complex-vector-type complex-array-type
-	  code-header-type function-header-type
-	  closure-function-header-type return-pc-header-type
-	  closure-header-type value-cell-header-type symbol-header-type
-	  base-character-type sap-type unbound-marker-type atomic-flag
-	  interrupted-flag halt-trap pending-interrupt-trap error-trap
-	  cerror-trap *primitive-objects* slot-name slot-docs slot-rest-p
-	  slot-offset slot-length slot-options primitive-object-name
-	  primitive-object-header primitive-object-lowtag
-	  primitive-object-options primitive-object-slots
-	  primitive-object-size primitive-object-variable-length
-	  define-for-each-primitive-object
-	  static-symbols static-symbol-offset offset-static-symbol
-	  static-symbol-p fixnum *assembly-unit-length*
-	  target-fasl-code-format vm-version))
-	  
+(in-package "VM")
 
 (eval-when (compile load eval)
 
@@ -216,7 +182,6 @@
 
 ;;;; Primitive data objects definition noise.
 
-(eval-when (compile load eval)
 
 (defstruct (slot
 	    (:constructor %make-slot
@@ -312,10 +277,6 @@
 		 (mapcar #'(lambda (,var)
 			     ,@body)
 			 *primitive-objects*)))))
-
-
-) ; eval-when
-
 
 
 
@@ -472,7 +433,9 @@
 ;;; that the system can compute their address by adding a constant
 ;;; amount to NIL.
 ;;;
-
+;;; The exported static symbols are a subset of the static symbols that get
+;;; exported to the C header file.
+;;;
 (defparameter static-symbols
   '(t
 
@@ -492,15 +455,19 @@
     ;; Things needed for non-local-exit.
     lisp::*current-catch-block*
     lisp::*current-unwind-protect-block*
-    lisp::*eval-stack-top*
+    *eval-stack-top*
 
     ;; Interrupt Handling
     lisp::*free-interrupt-context-index*
 
     ;; Static functions.
-    c::two-arg-plus c::two-arg-minus c::two-arg-times c::two-arg-divide
-    c::negate length
+    two-arg-+ two-arg-- two-arg-* two-arg-/ two-arg-< two-arg-> two-arg-=
+    two-arg-<= two-arg->= two-arg-/= negate length
     ))
+
+(defparameter exported-static-symbols
+  (subseq static-symbols 0 (1+ (position 'lisp::*free-interrupt-context-index*
+					 static-symbols))))
 
 (defun static-symbol-p (symbol)
   (member symbol static-symbols))
@@ -549,6 +516,7 @@
 ;;; The number representing the fasl-code format emit code in.
 ;;;
 (defparameter target-fasl-code-format 7)
+(defparameter target-fasl-file-type "mips-fasl")
 
 ;;; The version string for the implementation dependent code.
 ;;;
