@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.11 2002/07/06 00:58:04 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.12 2002/07/30 16:40:28 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1071,9 +1071,17 @@ collected result will be returned as the value of the LOOP."
       (loop-error "LOOP source code ran out when another token was expected.")))
 
 
+(defun loop-get-compound-form ()
+  (let ((form (loop-get-form)))
+    (unless (consp form)
+      (loop-error "Compound form expected, but found ~A." form))
+    form))
+
 (defun loop-get-progn ()
-  (do ((forms (list (loop-pop-source)) (cons (loop-pop-source) forms))
-       (nextform (car *loop-source-code*) (car *loop-source-code*)))
+  (do ((forms (list (loop-get-compound-form))
+              (cons (loop-get-compound-form) forms))
+       (nextform (car *loop-source-code*)
+                 (car *loop-source-code*)))
       ((atom nextform)
        (if (null (cdr forms)) (car forms) (cons 'progn (nreverse forms))))))
 
@@ -1213,6 +1221,7 @@ collected result will be returned as the value of the LOOP."
 		(loop-declare-variable name dtype)
 		(push (list name initialization) *loop-variables*))
 	       (t (let ((newvar (loop-gentemp 'loop-destructure-)))
+		    (loop-declare-variable name dtype)
 		    (push (list newvar initialization) *loop-variables*)
 		    ;; *LOOP-DESETQ-CROCKS* gathered in reverse order.
 		    (setq *loop-desetq-crocks*
