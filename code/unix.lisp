@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.39 1994/11/06 18:00:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.40 1996/07/25 14:59:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,6 +67,8 @@
 	  unix-tcgetattr #+(or hpux svr4) unix-tcsetattr
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
+	  TIOCSIGSEND
+
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
 	  KBDSCLICK FIONREAD #+hpux siocspgrp
 	  unix-exit unix-stat unix-lstat unix-fstat
@@ -1223,7 +1225,8 @@
   (define-ioctl-command TIOCSLTC #\T 23 (struct ltchars) :in)
   (define-ioctl-command TIOCGLTC #\T 24 (struct ltchars) :out)
   (define-ioctl-command TIOCSPGRP #\T 29 int :in)
-  (define-ioctl-command TIOCGPGRP #\T 30 int :out))
+  (define-ioctl-command TIOCGPGRP #\T 30 int :out)
+  (define-ioctl-command TIOCSIGSEND #\t 93 int :in))
 
 ;;; File ioctl commands.
 (define-ioctl-command FIONREAD #\f 127 int :out)
@@ -1257,6 +1260,17 @@
 		(alien:alien-sap (alien:addr alien-pgrp)))))
 
 (defun tcgetpgrp (fd)
+  "Get the tty-process-group for the unix file-descriptor FD."
+  (alien:with-alien ((alien-pgrp c-call:int))
+    (multiple-value-bind (ok err)
+	(unix-ioctl fd
+		     tiocgpgrp
+		     (alien:alien-sap (alien:addr alien-pgrp)))
+      (if ok
+	  (values alien-pgrp nil)
+	  (values nil err)))))
+
+(defun  (fd)
   "Get the tty-process-group for the unix file-descriptor FD."
   (alien:with-alien ((alien-pgrp c-call:int))
     (multiple-value-bind (ok err)
