@@ -154,10 +154,8 @@
 (define-vop (n-arg-miscop zero-arg-miscop)
   (:args (passed-args :more t))
   (:ignore passed-args a1 a2 a3 nl1 misc-pc)
-  (:temporary (:sc descriptor-reg :offset argument-pointer-offset) args)
   (:info nargs)
   (:generator 40
-    (inst lr args cont-tn)
     (inst miscopx miscop-name)
     (inst cal nl0 zero-tn nargs)
     (note-this-location vop :known-return)
@@ -167,10 +165,8 @@
 (define-vop (n-arg-two-value-miscop zero-arg-two-value-miscop)
   (:args (passed-args :more t))
   (:ignore passed-args a2 a3 nl1 misc-pc)
-  (:temporary (:sc descriptor-reg :offset argument-pointer-offset) args)
   (:info nargs)
   (:generator 40
-    (inst lr args cont-tn)
     (inst miscopx miscop-name)
     (inst cal nl0 zero-tn nargs)
     (note-this-location vop :known-return)
@@ -178,3 +174,24 @@
       (inst lr r a0))
     (unless (location= r1 a1)
       (inst lr r1 a1))))
+
+
+;;;; ILLEGAL-MOVE
+
+;;; This VOP is emitted when we attempt to do a move between incompatible
+;;; primitive types.  We signal an error, and ignore the result (which is
+;;; specified only to terminate its lifetime.)
+;;;
+(define-vop (illegal-move three-arg-miscop)
+  (:args (x :scs (any-reg descriptor-reg) :target a1)
+	 (y-type :scs (any-reg descriptor-reg) :target a2))
+  (:variant-vars)
+  (:ignore r a3 nl0 nl1 misc-pc)
+  (:generator 666
+    (loadi a0 clc::error-object-not-type)
+    (unless (location= x a1)
+      (inst lr a1 x))
+    (unless (location= y-type a2)
+      (inst lr a2 y-type))
+    (inst miscop 'clc::error2)
+    (note-this-location vop :internal-error)))
