@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.55 1997/12/18 19:01:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.56 1997/12/19 02:39:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1105,8 +1105,7 @@
       (specifier-type 'complex)))
 
 (defun complex-derive-type-aux-2 (re-type im-type same-arg)
-  (declare (ignore same-arg)
-	   (optimize (debug 3) (safety 3)))
+  (declare (ignore same-arg))
   (if (and (numeric-type-p re-type)
 	   (numeric-type-p im-type))
       ;; Need to check to make sure numeric-contagion returns the
