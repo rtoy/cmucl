@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.41 1991/11/25 00:00:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.42 1992/03/07 17:14:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.41 1991/11/25 00:00:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.42 1992/03/07 17:14:17 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -261,11 +261,18 @@
   ())
 
 
-;;;; Code object manipulation routines.
+;;;; Code/function/fdefn object manipulation routines.
 
 (defknown code-instructions (t) system-area-pointer (flushable movable))
 (defknown code-header-ref (t index) t (flushable))
 (defknown code-header-set (t index t) t ())
+
+(defknown make-fdefn (t) fdefn (flushable movable))
+(defknown fdefn-p (t) boolean (movable foldable flushable))
+(defknown fdefn-name (fdefn) t (foldable flushable))
+(defknown fdefn-function (fdefn) (or function null) (flushable))
+(defknown (setf fdefn-function) (function fdefn) t (unsafe))
+(defknown fdefn-makunbound (fdefn) t ())
 
 
 
