@@ -124,7 +124,7 @@
     ((:finish-output :force-output)
      (redisplay-windows-from-mark (hemlock-output-stream-mark stream)))
     (:close (setf (hemlock-output-stream-mark stream) nil))
-    (:element-type 'string-char)))
+    (:element-type 'base-character)))
 
 (defstruct (hemlock-region-stream
 	    (:include stream
@@ -258,7 +258,7 @@
     (:close
      (delete-mark (hemlock-region-stream-mark stream))
      (setf (hemlock-region-stream-region stream) nil))
-    (:element-type 'string-char)))
+    (:element-type 'base-character)))
 
 ;;;; Stuff to support keyboard macros.
 

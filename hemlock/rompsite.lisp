@@ -99,7 +99,7 @@
   (defhvar "Cursor Bitmap File"
     "File to read to setup cursors for Hemlock windows.  The mask is found by
      merging this name with \".mask\"."
-    :value "/usr/misc/.lisp/lib/hemlock11.cursor")
+    :value "/usr/misc/.cmucl/lib/hemlock11.cursor")
   (defhvar "Enter Window Hook"
     "When the mouse enters an editor window, this hook is invoked.  These
      functions take the Hemlock Window as an argument."
@@ -181,14 +181,15 @@
 ;;; 
 (defvar *editor-windowed-input* nil)
 
-#|
 ;;; These are used for selecting X events.
 ;;; 
 ;;; This says to send :key-press, :button-press, :button-release, :enter-notify,
 ;;; and :leave-notify events.
 ;;;
+#+clx
 (defconstant input/boundary-xevents-selection-keys
   '(:key-press :button-press :button-release :enter-window :leave-window))
+#+clx
 (defconstant input/boundary-xevents-mask
   (apply #'xlib:make-event-mask input/boundary-xevents-selection-keys))
 ;;;
@@ -197,29 +198,31 @@
 ;;; in addition to the above events.  Of those enumerated here, we only care
 ;;; about :exposure and :configure-notify.
 ;;;
+#+clx
 (defconstant interesting-xevents-receive-keys
   '(:key-press :button-press :button-release :enter-notify :leave-notify
     :exposure :graphics-exposure :configure-notify :destroy-notify :unmap-notify
     :map-notify :reparent-notify :gravity-notify :circulate-notify))
+#+clx
 (defconstant interesting-xevents-mask
   (apply #'xlib:make-event-mask
 	 (append input/boundary-xevents-selection-keys
 		 '(:exposure :structure-notify))))
 
+#+clx
 (defconstant random-typeout-xevents-mask
   (apply #'xlib:make-event-mask
 	 (append input/boundary-xevents-selection-keys
 		 '(:exposure))))
 
 
+#+clx
 (proclaim '(special ed::*open-paren-highlight-font*
 		    ed::*active-region-highlight-font*))
 
+#+clx
 (defparameter lisp-fonts-pathnames
-  '("/usr/misc/.lisp/lib/fonts/"
-    "/afs/cs.cmu.edu/unix/rt_mach/omega/usr/misc/.lisp/lib/fonts/"))
-
-|#
+  '("/usr/misc/.cmucl/lib/fonts/"))
 
 (proclaim '(special *editor-input* *real-editor-input*))
 
@@ -229,8 +232,10 @@
 ;;; lisp.  It sets up process specific data structures.
 ;;;
 (defun init-raw-io (display)
+  #-clx (declare (ignore display))
   (setf *editor-windowed-input* nil)
-  (cond #+nil(display
+  (cond #+clx
+	(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
 	 (setf *editor-input* (make-windowed-editor-input))
 	 (ext:carefully-add-font-paths *editor-windowed-input*
@@ -254,10 +259,10 @@
 (proclaim '(declaration values))
 (proclaim '(special *default-font-family*))
 
-#|
 ;;; font-map-size should be defined in font.lisp, but SETUP-FONT-FAMILY would
 ;;; assume it to be special, issuing a nasty warning.
 ;;;
+#+clx
 (defconstant font-map-size 16
   "The number of possible fonts in a font-map.")
 
@@ -268,6 +273,7 @@
 ;;; in lieu of "Active Region Highlighting Font" and "Open Paren Highlighting
 ;;; Font" when these are defined.
 ;;;
+#+clx
 (defun setup-font-family (display default-font default-highlight-font
 				  default-open-paren-font)
   (let* ((font-family (make-font-family :map (make-array font-map-size
@@ -306,6 +312,7 @@
 ;;; level, we want to deal with this error here returning nil if the font
 ;;; couldn't be opened.
 ;;;
+#+clx
 (defun setup-one-font (display font-name font-family-map index)
   (handler-case (let ((font (xlib:open-font display (namestring font-name))))
 		  (xlib:display-finish-output display)
@@ -314,7 +321,6 @@
      (warn "Cannot open font -- ~S" font-name)
      nil)))
 
-|#
 
 ;;;; HEMLOCK-BEEP.
 
@@ -330,10 +336,10 @@
 
 (proclaim '(special *current-window*))
 
-#|
 ;;; BITMAP-BEEP is used in Hemlock for beeping when running under windowed
 ;;; input.
 ;;;
+#+clx
 (defun bitmap-beep (device stream)
   (declare (ignore stream))
   (let ((display (bitmap-device-display device)))
@@ -356,8 +362,10 @@
       ((nil) ;Do nothing.
        ))))
 
+#+clx
 (proclaim '(special *foreground-background-xor*))
 
+#+clx
 (defun flash-window-border (window)
   (let* ((hunk (window-hunk window))
 	 (xwin (bitmap-hunk-xwindow hunk))
@@ -384,6 +392,7 @@
 	(xlib:draw-rectangle xwin gcontext side-border 0 top-width top-border t)
 	(xlib:display-force-output display)))))
 
+#+clx
 (defun flash-window (window)
   (let* ((hunk (window-hunk window))
 	 (xwin (bitmap-hunk-xwindow hunk))
@@ -398,8 +407,6 @@
       (xlib:display-force-output display)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display))))
-
-|#
 
 (defun hemlock-beep (stream)
   "Using the current window, calls the device's beep function on stream."
@@ -467,7 +474,7 @@
 	 (cond ((not *editor-windowed-input*)
 		,@body)
 	       (t
-#+nil
+		#+clx
 		(ext:with-clx-event-handling
 		    (*editor-windowed-input* #'ext:object-set-event-handler)
 		  ,@body)))))
@@ -482,10 +489,10 @@
 
 (proclaim '(special *echo-area-window*))
 
-#|
 ;;; Maybe bury/unbury hemlock window when we go to and from Lisp.
 ;;; This should do something more sophisticated when we know what that is.
 ;;; 
+#+clx
 (defun default-hemlock-window-mngt (display on)
   (let ((win (bitmap-hunk-xwindow (window-hunk *current-window*)))
 	(ewin (bitmap-hunk-xwindow (window-hunk *echo-area-window*))))
@@ -495,7 +502,6 @@
 	  (t (setf (xlib:window-priority ewin) :below)
 	     (setf (xlib:window-priority win) :below))))
   (xlib:display-force-output display))
-|#
 
 (defvar *hemlock-window-mngt* nil;#'default-hemlock-window-mngt
   "This function is called by HEMLOCK-WINDOW, passing its arguments.  This may
@@ -681,7 +687,7 @@
 	   t)
 	(t nil)))
 
-#|
+#+clx
 (defun bitmap-show-mark (window x y time)
   (cond ((listen-editor-input *editor-input*))
 	(x (let* ((hunk (window-hunk window))
@@ -695,7 +701,6 @@
 	     t))
 	(t nil)))
 
-|#
 
 ;;;; Function description and defined-from.
 
@@ -709,15 +714,13 @@
   (typecase function
     (symbol (fun-defined-from-pathname (careful-symbol-function function)))
     (compiled-function
-     (let* ((source
-	     (first
-	      (c::compiled-debug-info-source
-	       (%primitive header-ref
-			   (%primitive header-ref function
-				       system:%function-entry-constants-slot)
-			   %function-constants-debug-info-slot)))))
-       (when (eq (c::debug-source-from source) :file)
-	 (c::debug-source-name source))))
+     (let ((info (di::code-debug-info (di::function-code-header function))))
+       (when info
+	 (let ((sources (c::compiled-debug-info-source info)))
+	   (when sources
+	     (let ((source (car sources)))
+	       (when (eq (c::debug-source-from source) :file)
+		 (c::debug-source-name source))))))))
     (t nil)))
 
 
@@ -758,31 +761,38 @@
 
 
 ;;;; X Stuff.
-#|
 ;;; Setting window cursors ...
 ;;; 
 
+#+clx
 (proclaim '(special *default-foreground-pixel* *default-background-pixel*))
 
+#+clx
 (defvar *hemlock-cursor* nil "Holds cursor for Hemlock windows.")
 
 ;;; DEFINE-WINDOW-CURSOR in shoved on the "Make Window Hook".
 ;;; 
+#+clx
 (defun define-window-cursor (window)
   (setf (xlib:window-cursor (bitmap-hunk-xwindow (window-hunk window)))
 	*hemlock-cursor*))
 
 ;;; These are set in INIT-BITMAP-SCREEN-MANAGER and REVERSE-VIDEO-HOOK-FUN.
 ;;;
+#+clx
 (defvar *cursor-foreground-color* nil)
+#+clx
 (defvar *cursor-background-color* nil)
+#+clx
 (defun make-white-color () (xlib:make-color :red 1.0 :green 1.0 :blue 1.0))
+#+clx
 (defun make-black-color () (xlib:make-color :red 0.0 :green 0.0 :blue 0.0))
 
 
 ;;; GET-HEMLOCK-CURSOR is used in INIT-BITMAP-SCREEN-MANAGER to load the
 ;;; hemlock cursor for DEFINE-WINDOW-CURSOR.
 ;;;
+#+clx
 (defun get-hemlock-cursor (display)
   (when *hemlock-cursor* (xlib:free-cursor *hemlock-cursor*))
   (let* ((cursor-file (truename (variable-value 'ed::cursor-bitmap-file)))
@@ -800,6 +810,7 @@
       (xlib:free-pixmap cursor-pixmap)
       (when mask-pixmap (xlib:free-pixmap mask-pixmap)))))
 
+#+clx
 (defun get-cursor-pixmap (root pathname)
   (let* ((image (xlib:read-bitmap-file pathname))
 	 (pixmap (xlib:create-pixmap :width 16 :height 16
@@ -816,9 +827,11 @@
 ;;; Setting up grey borders ...
 ;;; 
 
+#+clx
 (defparameter hemlock-grey-bitmap-data
   '(#*10 #*01))
 
+#+clx
 (defun get-hemlock-grey-pixmap (display)
   (let* ((screen (xlib:display-default-screen display))
 	 (depth (xlib:screen-root-depth screen))
@@ -841,26 +854,29 @@
 ;;; Cut Buffer manipulation ...
 ;;;
 
+#+clx
 (defun store-cut-string (display string)
   (check-type string simple-string)
   (setf (xlib:cut-buffer display) string))
 
+#+clx
 (defun fetch-cut-string (display)
   (xlib:cut-buffer display))
 
 
 ;;; Window naming ...
 ;;;
+#+clx
 (defun set-window-name-for-buffer-name (buffer new-name)
   (dolist (ele (buffer-windows buffer))
     (xlib:set-standard-properties (bitmap-hunk-xwindow (window-hunk ele))
 				  :icon-name new-name)))
   
+#+clx
 (defun set-window-name-for-window-buffer (window new-buffer)
   (xlib:set-standard-properties (bitmap-hunk-xwindow (window-hunk window))
 				:icon-name (buffer-name new-buffer)))
 
-|#
 
 ;;;; Some hacks for supporting Hemlock under Mach.
 
@@ -904,18 +920,13 @@
 (defparameter listen-iterations-hack 1) ; 10-20 seems to really pick up input.
 
 (defun editor-tty-listen (stream)
-  (mach::with-trap-arg-block mach::int1 nc
+  (with-stack-alien (nc (signed-byte 32) 32)
     (dotimes (i listen-iterations-hack nil)
-      (multiple-value-bind (val err) 
-			   (mach::Unix-ioctl (tty-editor-input-fd stream)
-					     mach::FIONREAD
-					     (lisp::alien-value-sap
-					      mach::int1))
-	(declare (ignore err))
-	(when (and val
-		   (> (alien-access (mach::int1-int (alien-value nc))) 0))
-	  (return t))))))
-
+      (when (and (mach::Unix-ioctl (tty-editor-input-fd stream)
+				   mach::FIONREAD
+				   (alien-sap (alien-value nc)))
+		 (> (alien-access (alien-value nc)) 0))
+	(return t)))))
 
 
 (defvar old-flags)
@@ -930,8 +941,7 @@
       (mach:with-trap-arg-block mach:sgtty sg
 	(multiple-value-bind
 	    (val err)
-	    (mach:unix-ioctl fd mach:TIOCGETP
-			     (lisp::alien-value-sap mach:sgtty))
+	    (mach:unix-ioctl fd mach:TIOCGETP (alien-sap (alien-value sg)))
 	  (if (null val)
 	      (error "Could not get tty information, unix error ~S."
 		     (mach:get-unix-error-msg err)))
@@ -944,7 +954,7 @@
 	    (multiple-value-bind
 		(val err)
 		(mach:unix-ioctl fd mach:TIOCSETP
-				 (lisp::alien-value-sap mach:sgtty))
+				 (alien-sap (alien-value sg)))
 	      (if (null val)
 		  (error "Could not set tty information, unix error ~S."
 			 (mach:get-unix-error-msg err)))))))
@@ -952,7 +962,7 @@
 	(multiple-value-bind
 	    (val err)
 	    (mach:unix-ioctl fd mach:TIOCGETC
-			     (lisp::alien-value-sap mach:tchars))
+			     (alien-sap (alien-value tc)))
 	  (if (null val)
 	      (error "Could not get tty tchars information, unix error ~S."
 		     (mach:get-unix-error-msg err)))
@@ -973,14 +983,14 @@
 	(multiple-value-bind
 	    (val err)
 	    (mach:unix-ioctl fd mach:TIOCSETC
-			     (lisp::alien-value-sap mach:tchars))
+			     (alien-sap (alien-value tc)))
 	  (if (null val) (error "Failed to set tchars, unix error ~S."
 				(mach:get-unix-error-msg err)))))
       (mach:with-trap-arg-block mach:ltchars tc
 	(multiple-value-bind
 	    (val err)
 	    (mach:unix-ioctl fd mach:TIOCGLTC
-			     (lisp::alien-value-sap mach:ltchars))
+			     (alien-sap (alien-value tc)))
 	  (if (null val)
 	      (error "Could not get tty ltchars information, unix error ~S."
 		     (mach:get-unix-error-msg err)))
@@ -1000,7 +1010,7 @@
 	(multiple-value-bind
 	    (val err)
 	    (mach:unix-ioctl fd mach:TIOCSLTC
-			     (lisp::alien-value-sap mach:ltchars))
+			     (alien-sap (alien-value tc)))
 	  (if (null val) (error "Failed to set ltchars, unix error ~S."
 				(mach:get-unix-error-msg err))))))))
 
@@ -1013,7 +1023,7 @@
 	    (multiple-value-bind
 		(val err)
 		(mach:unix-ioctl fd mach:TIOCGETP
-				 (lisp::alien-value-sap mach:sgtty))
+				 (alien-sap (alien-value sg)))
 	      (if (null val)
 		  (error "Could not get tty information, unix error ~S."
 			 (mach:get-unix-error-msg err)))
@@ -1022,7 +1032,7 @@
 	      (multiple-value-bind
 		  (val err)
 		  (mach:unix-ioctl fd mach:TIOCSETP
-				   (lisp::alien-value-sap mach:sgtty))
+				   (alien-sap (alien-value sg)))
 		(if (null val)
 		    (error "Could not set tty information, unix error ~S."
 			   (mach:get-unix-error-msg err))))))
@@ -1045,7 +1055,7 @@
 		   (multiple-value-bind
 		       (val err)
 		       (mach:unix-ioctl fd mach:TIOCSETC
-					(lisp::alien-value-sap mach:tchars))
+					(alien-sap (alien-value tc)))
 		     (if (null val)
 			 (error "Failed to set tchars, unix error ~S."
 				(mach:get-unix-error-msg err)))))))
@@ -1068,7 +1078,7 @@
 		   (multiple-value-bind
 		       (val err)
 		       (mach:unix-ioctl fd mach:TIOCSLTC
-					(lisp::alien-value-sap mach:ltchars))
+					(alien-sap (alien-value tc)))
 		     (if (null val)
 			 (error "Failed to set ltchars, unix error ~S."
 				(mach:get-unix-error-msg err)))))))))))

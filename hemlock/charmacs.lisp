@@ -80,7 +80,7 @@
 ;;; Doesn't do anything special, but it should fast and not waste any time
 ;;; checking type and whatnot.
 (defmacro search-char-upcase (ch)
-  `(char-upcase (the string-char ,ch)))
+  `(char-upcase (the base-character ,ch)))
 
 
 
