@@ -456,13 +456,21 @@
 ;;;    Scan over the VOPs in Block, emiting saving code for TNs noted in the
 ;;; codegen info that are packed into saved SCs.
 ;;;
+
+
+;;; Emit-Saves  --  Internal
+;;;
+;;;    Scan over the VOPs in Block, emiting saving code for TNs noted in the
+;;; codegen info that are packed into saved SCs.
+;;;
 (defun emit-saves (block)
   (declare (type ir2-block block))
   (do ((vop (ir2-block-start-vop block) (vop-next vop)))
       ((null vop))
     (when (eq (vop-info-save-p (vop-info vop)) t)
       (do-live-tns (tn (vop-save-set vop) block)
-	(when (sc-save-p (tn-sc tn))
+	(when (and (sc-save-p (tn-sc tn))
+		   (not (eq (tn-kind tn) :component)))
 	  (let ((writes (tn-writes tn))
 		(save (tn-save-tn tn)))
 	    (if (or (and save (eq (tn-kind save) :save-once))
