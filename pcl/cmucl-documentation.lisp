@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.6 1998/05/04 00:08:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.7 1998/06/21 10:02:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,9 +24,10 @@
   (lisp::function-doc x))
 
 (defmethod documentation ((x list) (doc-type (eql 'function)))
-  (or (values (ext:info setf documentation (cadr x)))
-      ;; Try the pcl function documentation.
-      (and (fboundp x) (documentation (fdefinition x) 't))))
+  (when (eq (car x) 'setf)	; Give-up if not a setf function name.
+    (or (values (ext:info setf documentation (cadr x)))
+	;; Try the pcl function documentation.
+	(and (fboundp x) (documentation (fdefinition x) 't)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'function)))
   (or (values (ext:info function documentation x))
