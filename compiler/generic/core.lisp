@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.33 1997/04/01 12:04:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.34 1997/04/02 20:53:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,6 +95,9 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
+	     #-linux
+	     (gethash name lisp::*foreign-symbols*)
+	     #+linux
 	     (multiple-value-bind
 		   (value found)
 		 (gethash name lisp::*foreign-symbols*)
