@@ -792,6 +792,10 @@
 	    (loop
 	      (when (or (= i len)
 			(< pc (if elsewhere-p
+				  #+rt-target
+				  (1+ (c::compiled-debug-function-elsewhere-pc
+				       (svref function-map (1+ i))))
+				  #-rt-target
 				  (c::compiled-debug-function-elsewhere-pc
 				   (svref function-map (1+ i)))
 				  (svref function-map i))))
