@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.40 1992/07/08 20:58:41 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.41 1992/07/09 16:33:12 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -709,7 +709,7 @@
    segment 12 3
    #'(lambda (segment posn delta-if-after)
        (let ((delta (funcall calc label posn delta-if-after)))
-	  (when (<= (- (ash 1 16)) delta (1- (ash 1 16)))
+	  (when (<= (- (ash 1 15)) delta (1- (ash 1 15)))
 	    (emit-back-patch segment 4
 			     #'(lambda (segment posn)
 				 (assemble (segment vop)
