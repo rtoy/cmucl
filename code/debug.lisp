@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.49 1999/08/13 16:41:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.50 2001/01/27 14:18:14 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -716,6 +716,28 @@ See the CMU Common Lisp User's Manual for more information.
   "When non-NIL, becomes the system *READTABLE* in the debugger
    read-eval-print loop")
 
+(defun maybe-handle-dead-input-stream (condition)
+  ;; Scenario: "xon <remote-box> cmucl -edit"
+  ;; Then close the display with the window manager or shutdown the
+  ;; local computer. The remote lisp goes into infinite error loop.
+  (labels ((real-stream (stream)
+	     (etypecase stream
+	       (system:fd-stream
+		(values stream (system:fd-stream-fd stream)))
+	       (synonym-stream
+		(real-stream (symbol-value (synonym-stream-symbol stream))))
+	       (two-way-stream
+		(real-stream (two-way-stream-input-stream stream))))))
+
+    (when (typep condition 'stream-error)
+      (let* ((stream-with-error (stream-error-stream condition))
+	     (real-stream-with-error (real-stream stream-with-error))
+	     (real-debug-io  (real-stream *debug-io*)))
+	(when (and (eq real-stream-with-error real-debug-io)
+		   (not (unix:unix-isatty (system:fd-stream-fd real-debug-io))))
+	  ;; Probably running on a remote processor and lost the connection.
+	  (ext:quit))))))
+
 (defun debug-loop ()
   (let* ((*debug-command-level* (1+ *debug-command-level*))
 	 (*real-stack-top* (di:top-frame))
@@ -731,6 +753,7 @@ See the CMU Common Lisp User's Manual for more information.
       (loop
 	(catch 'debug-loop-catcher
 	  (handler-bind ((error #'(lambda (condition)
+				    (maybe-handle-dead-input-stream condition)
 				    (when *flush-debug-errors*
 				      (clear-input *debug-io*)
 				      (princ condition)
