@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.27 1997/09/04 06:17:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.28 1998/05/01 01:02:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
 ;;;
 (in-package "LISP")
-(export '(documentation *features* common variable room
+(export '(documentation *features* variable room
 	  lisp-implementation-type lisp-implementation-version machine-type
 	  machine-version machine-instance software-type software-version
 	  short-site-name long-site-name dribble compiler-macro))

@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.6 1998/02/03 19:15:56 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.7 1998/05/01 01:02:55 dtc Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -2089,7 +2089,7 @@ collected result will be returned as the value of the LOOP."
 	     :iteration-keywords '((for (loop-do-for))
 				   (as (loop-do-for))
 				   (repeat (loop-do-repeat)))
-	     :type-symbols '(array atom bignum bit bit-vector character #| common |# compiled-function
+	     :type-symbols '(array atom bignum bit bit-vector character compiled-function
 				   complex cons double-float fixnum float
 				   function hash-table integer keyword list long-float
 				   nil null number package pathname random-state

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.151 1998/04/10 11:42:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.152 1998/05/01 01:02:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -573,7 +573,7 @@
              "WITH-ADDED-METHODS" "WITH-SLOTS"
 	     "MAKE-METHOD" "UNBOUND-SLOT" "UNBOUND-SLOT-INSTANCE"
              "CELL-ERROR-NAME"
-	     "COMMON" "HASH-TABLE-WEAK-P"
+	     "HASH-TABLE-WEAK-P"
              "GET-SETF-EXPANSION" "STYLE-WARNING" 
              "PRINT-NOT-READABLE-OBJECT"
              "DEFINE-SETF-EXPANDER" "PRINT-NOT-READABLE" "METHOD"

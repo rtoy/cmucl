@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.47 1998/04/06 02:44:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.48 1998/05/01 01:02:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 	  functionp compiled-function-p eq eql equal equalp not
 	  type-of upgraded-array-element-type realp
 	  ;; Names of types...
-	  array atom bignum bit bit-vector character common
+	  array atom bignum bit bit-vector character
 	  compiled-function complex cons double-float
 	  fixnum float function integer keyword list long-float nil
 	  null number ratio rational real sequence short-float signed-byte
