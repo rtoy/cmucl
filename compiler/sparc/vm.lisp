@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.22 2003/05/14 14:29:49 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.23 2004/05/13 14:34:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,17 @@
 (defreg csp 3)				; %g3
 (defreg cfp 4)				; %g4
 (defreg bsp 5)				; %g5
-;; %g6 and %g7 are supposed to be reserved for the system.
+;; %g6 and %g7 are supposed to be reserved for the system.  %g6 is
+;; apparently used by thread libraries.  %g7 doesn't seem to be
+;; currently used.
+
+;; NOTE: We are going to use this as a global temp for use by the
+;; define-move-function functions so we can access things where the
+;; offset of the object is too large to fit in the offset part of an
+;; instruction.  This breaks ABI.  If this is not desired, we can
+;; probably use a5 (aka %l5).  But if we do, be sure to remove a5 from
+;; the list of arg registers, descriptor-regs, etc.
+(defreg gtemp 7)			; %g7
 
 ;; Outs.  These get clobbered when we call into C.
 (defreg nl0 8)				; %o0
@@ -344,6 +354,7 @@
 (defregtn cfp any-reg)
 (defregtn ocfp any-reg)
 (defregtn nsp any-reg)
+(defregtn gtemp any-reg) 
 
 
 
