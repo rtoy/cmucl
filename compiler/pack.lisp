@@ -300,7 +300,7 @@
       ((null vop))
     (let ((info (vop-info vop)))
       (when (eq (vop-info-save-p info) t)
-	(dolist (tn (first (vop-codegen-info vop)))
+	(do-live-tns (tn (vop-save-set vop) block)
 	  (add-cost-vector tn *save-costs*)
 	  (add-cost-vector tn *restore-costs*)))
 
@@ -318,6 +318,24 @@
 
 ;;;; Register saving:
 
+;;; Orignal-TN  --  Internal
+;;;
+;;;    If a save TN, return the saved TN, otherwise return TN.  Useful for
+;;; getting the conflicts of a TN that might be a save TN.
+;;;
+(defun original-tn (tn)
+  (declare (type tn tn))
+  (if (member (tn-kind tn) '(:save :save-once))
+      (tn-save-tn tn)
+      tn))
+
+#|
+    (setf (tn-local res) (tn-local tn))
+    (bit-vector-replace (tn-local-conflicts res) (tn-local-conflicts tn))
+    (setf (tn-local-number res) (tn-local-number tn))
+    (setf (tn-global-conflicts res) (tn-global-conflicts tn))
+|#
+
 ;;; Pack-Save-TN  --  Internal
 ;;;
 ;;;    Make a save TN for TN, pack it, and return it.  We copy various conflict
@@ -330,10 +348,6 @@
     (setf (tn-save-tn tn) res)
     (setf (tn-save-tn res) tn)
     (setf (svref (tn-costs res) (sc-number sc)) 0)
-    (setf (tn-local res) (tn-local tn))
-    (bit-vector-replace (tn-local-conflicts res) (tn-local-conflicts tn))
-    (setf (tn-local-number res) (tn-local-number tn))
-    (setf (tn-global-conflicts res) (tn-global-conflicts tn))
     (pack-tn res)
     res))
 
@@ -394,7 +408,7 @@
   (do ((vop (ir2-block-start-vop block) (vop-next vop)))
       ((null vop))
     (when (eq (vop-info-save-p (vop-info vop)) t)
-      (dolist (tn (first (vop-codegen-info vop)))
+      (do-live-tns (tn (vop-save-set vop) block)
 	(when (svref *save-scs* (sc-number (tn-sc tn)))
 	  (let ((writes (tn-writes tn))
 		(save (tn-save-tn tn)))
@@ -939,10 +953,11 @@
   (declare (type tn tn))
   (loop
     (let* ((fsc (find-best-sc tn))
-	   (loc (or (find-ok-target-offset tn fsc)
-		    (select-location tn fsc))))
+	   (original (original-tn tn))
+	   (loc (or (find-ok-target-offset original fsc)
+		    (select-location original fsc))))
       (cond (loc
-	     (add-location-conflicts tn fsc loc)
+	     (add-location-conflicts original fsc loc)
 	     (setf (tn-sc tn) fsc)
 	     (setf (tn-offset tn) loc)
 	     (return))
