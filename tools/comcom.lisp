@@ -21,10 +21,10 @@
      :optimize
      '(optimize (speed 2) (space 2) (inhibit-warnings 2)
 		(safety #+small 0 #-small 1)
-		(debug-info #+small .5 #-small 2))
+		(debug #+small .5 #-small 2))
      :optimize-interface
      '(optimize-interface (safety #+small 1 #-small 2)
-			  (debug-info #+small .5 #-small 2))
+			  (debug #+small .5 #-small 2))
      :context-declarations
      '(#+small
        ((:or :macro
@@ -32,7 +32,7 @@
 		     "$PRIMITIVE-TRANSLATE-" "$PARSE-"))
 	(declare (optimize (safety 1))))
        (:macro (declare (optimize (speed 0))))
-       (:external (declare (optimize-interface (safety 2) (debug-info 1))))))
+       (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
 (comf "target:compiler/macros" :load *load-stuff*)
 (comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t)
@@ -73,7 +73,7 @@
 (comf "target:compiler/main")
 
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 1)))
+    (:optimize '(optimize (debug 2) (safety 1)))
   (comf "target:compiler/ir1tran")
   (comf "target:compiler/ir1util")
   (comf "target:compiler/ir1opt"))
@@ -103,7 +103,7 @@
 (comf "target:assembly/assemfile" :load *load-stuff*)
 
 (with-compilation-unit
-    (:optimize '(optimize (safety #+small 0 #-small 1) #+small (debug-info 1)))
+    (:optimize '(optimize (safety #+small 0 #-small 1) #+small (debug 1)))
 
 (when (c:target-featurep :pmax)
   (comf "target:compiler/mips/insts")
@@ -274,26 +274,26 @@
 (comf "target:compiler/ltv")
 (comf "target:compiler/gtn")
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 1)))
+    (:optimize '(optimize (debug 2) (safety 1)))
   (comf "target:compiler/ltn"))
 (comf "target:compiler/stack")
 (comf "target:compiler/control")
 (comf "target:compiler/entry")
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 1)))
+    (:optimize '(optimize (debug 2) (safety 1)))
   (comf "target:compiler/ir2tran")
   (comf "target:compiler/generic/vm-ir2tran"))
 (comf "target:compiler/copyprop")
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 1)))
+    (:optimize '(optimize (debug 2) (safety 1)))
   (comf "target:compiler/represent"))
 (comf "target:compiler/generic/vm-tran")
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 1)))
+    (:optimize '(optimize (debug 2) (safety 1)))
   (comf "target:compiler/pack"))
 (comf "target:compiler/codegen")
 (with-compilation-unit
-    (:optimize '(optimize (debug-info 2) (safety 2)))
+    (:optimize '(optimize (debug 2) (safety 2)))
   (comf "target:compiler/debug"))
 (comf "target:compiler/statcount")
 (comf "target:compiler/dyncount")

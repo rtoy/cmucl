@@ -10,14 +10,14 @@
 (with-compiler-log-file
     ("target:compile-clx.log"
      :optimize
-     '(optimize (debug-info #-small 2 #+small .5) 
+     '(optimize (debug #-small 2 #+small .5) 
 		(speed 2) (inhibit-warnings 2)
 		(safety #-small 1 #+small 0))
      :optimize-interface
-     '(optimize-interface (debug-info .5))
+     '(optimize-interface (debug .5))
      :context-declarations
      '(((:and :external :global)
-	(declare (optimize-interface (safety 2) (debug-info 1))))
+	(declare (optimize-interface (safety 2) (debug 1))))
        ((:and :external :macro)
 	(declare (optimize (safety 2))))
        (:macro (declare (optimize (speed 0))))))
