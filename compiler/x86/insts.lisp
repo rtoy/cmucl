@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.12 1997/11/04 09:11:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.13 1997/12/03 15:28:58 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1869,17 +1869,19 @@
 
 ;;;; Enter/Leave
 
-(disassem:define-instruction-format
-    (enter-format
-     24
-     :default-printer '(:name :tab disp (:unless (:constant 0) ", " level)))
+(disassem:define-instruction-format (enter-format 32
+				     :default-printer '(:name
+							:tab disp
+							(:unless (:constant 0)
+							  ", " level)))
   (op :field (byte 8 0))
   (disp :field (byte 16 8))
-  (level :field (byte 8 16)))
+  (level :field (byte 8 24)))
 
 (define-instruction enter (segment disp &optional (level 0))
   (:declare (type (unsigned-byte 16) disp)
 	    (type (unsigned-byte 8) level))
+  (:printer enter-format ((op #b11001000)))
   (:emitter
    (emit-byte segment #b11001000)
    (emit-word segment disp)
