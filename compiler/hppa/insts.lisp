@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.3 1992/10/19 18:22:15 hallgren Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.4 1992/10/23 19:26:30 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -237,9 +237,17 @@
   :printer #("" \,= \,< \,<= \,<< \,<<= \,SV \,OD \,TR \,<> \,>=
 	     \,> \,>>= \,>> \,NSV \,EV))
 
+(disassem:define-argument-type compare-condition-false
+  :printer #(\,TR \,<> \,>= \,> \,>>= \,>> \,NSV \,EV
+	     "" \,= \,< \,<= \,<< \,<<= \,SV \,OD))
+
 (disassem:define-argument-type add-condition
   :printer #("" \,= \,< \,<= \,NUV \,ZNV \,SV \,OD \,TR \,<> \,>= \,> \,UV
 	     \,VNZ \,NSV \,EV))
+
+(disassem:define-argument-type add-condition-false
+  :printer #(\,TR \,<> \,>= \,> \,UV \,VNZ \,NSV \,EV
+	     "" \,= \,< \,<= \,NUV \,ZNV \,SV \,OD))
 
 (disassem:define-argument-type logical-condition
   :printer #("" \,= \,< \,<= "" "" "" \,OD \,TR \,<> \,>= \,> "" "" "" \,EV))
@@ -250,6 +258,9 @@
 
 (disassem:define-argument-type extract/deposit-condition
   :printer #("" \,= \,< \,OD \,TR \,<> \,>= \,EV))
+
+(disassem:define-argument-type extract/deposit-condition-false
+  :printer #(\,TR \,<> \,>= \,EV "" \,= \,< \,OD))
 
 (disassem:define-argument-type nullify
   :printer #("" \,N))
@@ -264,6 +275,9 @@
 	       (declare (ignore dstate) (stream stream) (fixnum value))
 	       (format stream "~S" value)))
 
+(disassem:define-argument-type space
+  :printer #("" |1,| |2,| |3,|))
+
 
 ;;;; Define-instruction-formats for disassembler.
 
@@ -272,7 +286,7 @@
   (op   :field (byte 6 26))
   (b    :field (byte 5 21) :type 'reg)
   (t/r  :field (byte 5 16) :type 'reg)
-  (s    :field (byte 2 14))
+  (s    :field (byte 2 14) :type 'space)
   (im14 :field (byte 14 0) :type 'im14))
 
 (defconstant cmplt-index-print '((:cond ((u :constant 1) '\,S))
@@ -291,7 +305,7 @@
   (op1     :field (byte 6 26) :value 3)
   (b       :field (byte 5 21) :type 'reg)
   (x/im5/r :field (byte 5 16) :type 'reg)
-  (s       :field (byte 2 14))
+  (s       :field (byte 2 14) :type 'space)
   (u       :field (byte 1 13))
   (op2     :field (byte 3 10))
   (ext4/c  :field (byte 4 6))
@@ -342,7 +356,7 @@
     (branch 32)
   (op1 :field (byte 6 26))
   (t   :field (byte 5 21) :type 'reg)
-  (x   :field (byte 5 15) :type 'reg)
+  (x   :field (byte 5 16) :type 'reg)
   (op2 :field (byte 3 13))
   (x1  :field (byte 11 2))
   (n   :field (byte 1 1) :type 'nullify)
@@ -449,7 +463,7 @@
   (op :field (byte 6 26))
   (b  :field (byte 5 21) :type 'reg)
   (x  :field (byte 5 16) :type 'reg)
-  (s  :field (byte 2 14))
+  (s  :field (byte 2 14) :type 'space)
   (u  :field (byte 1 13))
   (x1 :field (byte 1 12))
   (x2 :field (byte 2 10))
@@ -512,7 +526,7 @@
        (:declare (type tn reg base)
 		 (type (or fixup (signed-byte 14)) disp))
        (:printer load/store ((op ,opcode) (s 0))
-		 '(:name :tab im14 "(" s "," b ")," t/r))
+		 '(:name :tab im14 "(" s b ")," t/r))
        (:emitter
 	(emit-load/store segment ,opcode
 			 (reg-tn-encoding base) (reg-tn-encoding reg) 0
@@ -522,7 +536,7 @@
        (:declare (type tn reg base)
 		 (type (or fixup (signed-byte 14)) disp))
        (:printer load/store ((op ,opcode) (s 0))
-		 '(:name :tab t/r "," im14 "(" s "," b ")"))
+		 '(:name :tab t/r "," im14 "(" s b ")"))
        (:emitter
 	(emit-load/store segment ,opcode
 			 (reg-tn-encoding base) (reg-tn-encoding reg) 0
@@ -550,7 +564,7 @@
        (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'reg)
 				      (op2 0))
 				      `(:name ,@cmplt-index-print :tab x/im5/r
-					      "(" s "," b ")" t/im5))
+					      "(" s b ")" t/im5))
        (:emitter
 	(emit-extended-load/store
 	 segment #x03 (reg-tn-encoding base) (reg-tn-encoding index)
@@ -583,7 +597,7 @@
        (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'im5)
 				      (op2 4))
 				      `(:name ,@cmplt-disp-print :tab x/im5/r
-					      "(" s "," b ")" t/im5))
+					      "(" s b ")" t/im5))
        (:emitter
 	(multiple-value-bind
 	    (m a)
@@ -603,7 +617,7 @@
        (:printer extended-load/store ((ext4/c ,opcode) (t/im5 nil :type 'im5)
 				      (op2 4))
 				      `(:name ,@cmplt-disp-print :tab x/im5/r
-					      "," t/im5 "(" s "," b ")"))
+					      "," t/im5 "(" s b ")"))
        (:emitter
 	(multiple-value-bind
 	    (m a)
@@ -631,7 +645,7 @@
 	    (type (member :begin :end) where)
 	    (type (member t nil) modify))
   (:printer extended-load/store ((ext4/c #xC) (t/im5 nil :type 'im5) (op2 4))
-	    `(:name ,@cmplt-store-print :tab x/im5/r "," t/im5 "(" s "," b ")"))
+	    `(:name ,@cmplt-store-print :tab x/im5/r "," t/im5 "(" s b ")"))
   (:emitter
    (emit-extended-load/store segment #x03 (reg-tn-encoding base)
 			     (reg-tn-encoding reg) 0
@@ -746,7 +760,7 @@
   (:declare (type tn base)
 	    (type (member t nil) nullify)
 	    (type (or tn null) offset))
-  (:printer branch ((op1 #x3A) (op2 6)) '(:name n :tab x "," t))
+  (:printer branch ((op1 #x3A) (op2 6)) '(:name n :tab x "(" t ")"))
   (:emitter
    (emit-branch segment #x3A (reg-tn-encoding base)
 		(if offset (reg-tn-encoding offset) 0)
@@ -799,7 +813,8 @@
 
 (eval-when (compile eval)
   (defmacro define-branch-inst (r-name r-opcode i-name i-opcode cond-kind)
-    (let ((conditional (symbolicate cond-kind "-CONDITION")))
+    (let* ((conditional (symbolicate cond-kind "-CONDITION"))
+	   (false-conditional (symbolicate conditional "-FALSE")))
       `(progn
 	 (define-instruction ,r-name (segment cond r1 r2 target &key nullify)
 	   (:declare (type ,conditional cond)
@@ -807,11 +822,11 @@
 		     (type label target)
 		     (type (member t nil) nullify))
 	   (:printer branch12 ((op1 ,r-opcode) (c nil :type ',conditional))
-		     '(:name 'T c n :tab r1 "," r2 "," w))
+		     '(:name c n :tab r1 "," r2 "," w))
 	   ,@(unless (= r-opcode #x32)
 	       `((:printer branch12 ((op1 ,(+ 2 r-opcode))
-				     (c nil :type ',conditional))
-			 '(:name 'F c n :tab r1 "," r2 "," w))))
+				     (c nil :type ',false-conditional))
+			 '(:name c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -827,11 +842,11 @@
 		     (type (member t nil) nullify))
 	   (:printer branch12 ((op1 ,i-opcode) (r1 nil :type 'im5)
 			       (c nil :type ',conditional))
-		     '(:name 'T c n :tab r1 "," r2 w))
+		     '(:name c n :tab r1 "," r2 w))
 	   ,@(unless (= r-opcode #x32)
-	       `((:printer branch12 ((op1 ,(+ 2 i-opcode))
-				     (c nil :type ',conditional))
-			 '(:name 'F c n :tab r1 "," r2 "," w))))
+	       `((:printer branch12 ((op1 ,(+ 2 i-opcode)) (r1 nil :type 'im5)
+				     (c nil :type ',false-conditional))
+			 '(:name c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -875,6 +890,11 @@
        (:printer r3-inst ((op ,opcode) (c nil :type ',(symbolicate
 						       cond-kind 
 						       "-CONDITION"))))
+       ,@(when (= opcode #x12)
+	   `((:printer r3-inst ((op ,opcode) (r2 0)
+				(c nil :type ',(symbolicate cond-kind
+							    "-CONDITION")))
+		       `('COPY :tab r1 "," t))))
        (:emitter
 	(multiple-value-bind
 	    (cond false)
@@ -1067,8 +1087,9 @@
 (define-instruction ldsid (segment res base &optional (space 0))
   (:declare (type tn res base)
 	    (type (integer 0 3) space))
-  (:printer system-inst ((op2 #x85) (s nil  :printer #(0 0 1 1 2 2 3 3)))
-	    `(:name :tab "(" s "," r1 ")," r3))
+  (:printer system-inst ((op2 #x85) (c nil :type 'space)
+			 (s nil  :printer #(0 0 1 1 2 2 3 3)))
+	    `(:name :tab "(" s r1 ")," r3))
   (:emitter
    (emit-system-inst segment 0 (reg-tn-encoding base) 0 (ash space 1) #x85
 		     (reg-tn-encoding res))))
@@ -1082,7 +1103,7 @@
 
 (define-instruction mfsp (segment space reg)
   (:declare (type tn reg) (type (integer 0 7) space))
-  (:printer system-inst ((op2 #x25)) '(:name :tab s "," r3))
+  (:printer system-inst ((op2 #x25) (c nil :type 'space)) '(:name :tab s r3))
   (:emitter
    (emit-system-inst segment 0 0 0 (space-encoding space) #x25
 		     (reg-tn-encoding reg))))
@@ -1125,9 +1146,9 @@
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 0))
-	    `('FLDDX ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
+	    `('FLDDX ,@cmplt-index-print :tab x "(" s b ")" "," t))
   (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 0))
-	    `('FLDWX ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
+	    `('FLDWX ,@cmplt-index-print :tab x "(" s b ")" "," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -1144,9 +1165,9 @@
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 1))
-	    `('FSTDX ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
+	    `('FSTDX ,@cmplt-index-print :tab t "," x "(" s b ")"))
   (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 1))
-	    `('FSTWX ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
+	    `('FSTWX ,@cmplt-index-print :tab t "," x "(" s b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
@@ -1164,9 +1185,9 @@
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
-	    `('FLDDS ,@cmplt-disp-print :tab x "(" s "," b ")," t))
+	    `('FLDDS ,@cmplt-disp-print :tab x "(" s b ")," t))
   (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
-	    `('FLDWS ,@cmplt-disp-print :tab x "(" s "," b ")," t))
+	    `('FLDWS ,@cmplt-disp-print :tab x "(" s b ")," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -1185,9 +1206,9 @@
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
-	    `('FSTDS ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
+	    `('FSTDS ,@cmplt-disp-print :tab t "," x "(" s b ")"))
   (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
-	    `('FSTWS ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
+	    `('FSTWS ,@cmplt-disp-print :tab t "," x "(" s b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
