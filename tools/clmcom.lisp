@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.2 1993/01/28 14:08:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.3 1993/02/01 12:17:51 garland Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,11 +44,18 @@
 
 (xt::build-toolkit-interface)
 
+;;; Make sure that the INTERFACE package is defined before we start
+;;; talking about it.
 (with-compiler-log-file
     ("target:compile-motif.log")
-  (comf "target:interface/initial" :load t)
+  (comf "target:interface/initial" :load t))
+
+(with-compiler-log-file
+    ("target:compile-motif.log")
+
   (comf "target:interface/interface" :load t)
   (comf "target:interface/inspect" :load t)
+  ;;
   ;; We don't want to fall into the Motif debugger while compiling.
   ;; It may be that the motifd server hasn't been (re)compiled yet.
   (let ((interface:*interface-style* :tty))
