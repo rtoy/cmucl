@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.144 2004/03/29 18:47:03 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.145 2004/04/06 20:44:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,6 +659,22 @@
 	(make-interval :low (select-bound x-lo y-lo #'< #'>)
 		       :high (select-bound x-hi y-hi #'> #'<))))))
 
+;; Wrap a handler-case around BODY so that any errors in the body
+;; will return a doubly-infinite interval.
+;;
+;; This is intended to catch things like (* 0f0 n) where n is an
+;; integer that won't fit in a single-float.
+;;
+;; This is a bit heavy-handed since ANY error gets converted to an
+;; unbounded interval.  Perhaps some more fine-grained control would
+;; be appropriate?
+
+(defmacro with-unbounded-interval-on-error (() &body body)
+  `(handler-case
+       (progn ,@body)
+     (error ()
+       (make-interval :low nil :high nil))))
+     
 ;;; Basic arithmetic operations on intervals.  We probably should do true
 ;;; interval arithmetic here, but it's complicated because we have float and
 ;;; integer types and bounds can be open or closed.
@@ -670,7 +686,7 @@
 (defun interval-neg (x)
   (declare (type interval x))
   (make-interval :low (bound-func #'- (interval-high x))
-		 :high (bound-func #'- (interval-low x))))
+		   :high (bound-func #'- (interval-low x))))
 		       
 ;;; INTERVAL-ADD
 ;;;
@@ -678,8 +694,9 @@
 ;;;
 (defun interval-add (x y)
   (declare (type interval x y))
-  (make-interval :low (bound-binop + (interval-low x) (interval-low y))
-		 :high (bound-binop + (interval-high x) (interval-high y))))
+  (with-unbounded-interval-on-error ()
+    (make-interval :low (bound-binop + (interval-low x) (interval-low y))
+		   :high (bound-binop + (interval-high x) (interval-high y)))))
 
 ;;; INTERVAL-SUB
 ;;;
@@ -687,8 +704,9 @@
 ;;;
 (defun interval-sub (x y)
   (declare (type interval x y))
-  (make-interval :low (bound-binop - (interval-low x) (interval-high y))
-		 :high (bound-binop - (interval-high x) (interval-low y))))
+  (with-unbounded-interval-on-error ()
+    (make-interval :low (bound-binop - (interval-low x) (interval-high y))
+		   :high (bound-binop - (interval-high x) (interval-low y)))))
 
 ;;; INTERVAL-MUL
 ;;;
@@ -734,9 +752,10 @@
 	     (interval-neg (interval-mul x (interval-neg y))))
 	    ((and (eq x-range '+) (eq y-range '+))
 	     ;; If we are here, X and Y are both positive
-	     (make-interval :low (bound-mul (interval-low x) (interval-low y))
-			    :high (bound-mul (interval-high x)
-					     (interval-high y))))
+	     (with-unbounded-interval-on-error ()
+	       (make-interval :low (bound-mul (interval-low x) (interval-low y))
+			      :high (bound-mul (interval-high x)
+					       (interval-high y)))))
 	    (t
 	     (error "This shouldn't happen!"))))))
 
@@ -794,13 +813,14 @@
 	     ;; quite right, but until we make the interval and numeric-type
 	     ;; routines understand the concept of infinity better, this will
 	     ;; have to do for now. (RLT)
-	     (make-interval :low (or (bound-div (interval-low top)
-						(interval-high bot) nil)
-				     (if (interval-contains-p 0 top)
-					 0
-					 '(0)))
-			    :high (bound-div (interval-high top)
-					     (interval-low bot) t)))
+	     (with-unbounded-interval-on-error ()
+	       (make-interval :low (or (bound-div (interval-low top)
+						  (interval-high bot) nil)
+				       (if (interval-contains-p 0 top)
+					   0
+					   '(0)))
+			      :high (bound-div (interval-high top)
+					       (interval-low bot) t))))
 	    (t
 	     (error "This shouldn't happen!"))))))
 
