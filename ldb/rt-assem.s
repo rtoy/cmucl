@@ -234,3 +234,27 @@ closure_tramp:
         l	CNAME, CLOSURE_FUNCTION_OFFSET(LEXENV)
         cal	LIP, FUNCTION_HEADER_CODE_OFFSET(CNAME)
         br	LIP
+
+/*
+ * Function-end breakpoint magic.
+ */
+	.text
+	.align	2
+	.globl	_function_end_breakpoint_guts
+_function_end_breakpoint_guts:
+	.long	type_ReturnPcHeader
+	b	1f
+	mr	OCFP, CSP
+	inc	CSP, 4
+	lis	NARGS, 4
+	mr	A1, NULLREG
+	mr	A2, NULLREG
+1:
+
+	.globl	_function_end_breakpoint_trap
+_function_end_breakpoint_trap:
+	ti	7, r0, trap_FunctionEndBreakpoint
+	b	1b
+
+	.globl	_function_end_breakpoint_end
+_function_end_breakpoint_end:
