@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.19 1990/05/31 00:22:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.20 1990/06/02 16:03:53 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -21,8 +21,9 @@
 ;;;; Random pointer comparison VOPs
 
 (define-vop (pointer-compare)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
+  (:args (x :scs (sap-reg))
+	 (y :scs (sap-reg)))
+  (:arg-types system-area-pointer system-area-pointer)
   (:temporary (:type random  :scs (non-descriptor-reg)) temp)
   (:conditional)
   (:info target not-p)
