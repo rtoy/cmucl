@@ -439,20 +439,20 @@
 ;;; alternate or constant SCs.  The META- version uses meta-compile time info.
 ;;;
 (macrolet
-    ((frob (name sc-numbers-fun)
-       `(defun ,name (sc ptype)
-	  (declare (type sc sc) (type primitive-type ptype))
-	  (let ((scn (sc-number sc)))
-	    (dolist (allowed (primitive-type-scs ptype) nil)
-	      (when (eql allowed scn)
-		(return t))
-	      (let ((allowed-sc (svref (,sc-numbers-fun *backend*) allowed)))
-		(when (or (member sc (sc-alternate-scs allowed-sc))
-			  (member sc (sc-constant-scs allowed-sc)))
-		  (return t))))))))
-  (frob sc-allowed-by-primitive-type backend-sc-numbers)
-  (eval-when (compile eval load)
-    (frob meta-sc-allowed-by-primitive-type backend-meta-sc-numbers)))
+    ((frob (name sc-numbers-fun compile-time-also)
+       (eval-when (load eval ,@(when compile-time-also '(compile)))
+	 (defun ,name (sc ptype)
+	   (declare (type sc sc) (type primitive-type ptype))
+	   (let ((scn (sc-number sc)))
+	     (dolist (allowed (primitive-type-scs ptype) nil)
+	       (when (eql allowed scn)
+		 (return t))
+	       (let ((allowed-sc (svref (,sc-numbers-fun *backend*) allowed)))
+		 (when (or (member sc (sc-alternate-scs allowed-sc))
+			   (member sc (sc-constant-scs allowed-sc)))
+		   (return t)))))))))
+  (frob sc-allowed-by-primitive-type backend-sc-numbers nil)
+  (frob meta-sc-allowed-by-primitive-type backend-meta-sc-numbers t))
 
 
 ;;;; VOP definition structures:
