@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.76 2002/07/31 15:54:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.77 2002/12/09 16:52:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -485,7 +485,8 @@
 	(name (dd-name defstruct)))
     (case (first option)
       (:conc-name
-       (destructuring-bind (conc-name) args
+       (destructuring-bind (&optional conc-name)
+	   args
 	 (setf (dd-conc-name defstruct)
 	       (if (symbolp conc-name)
 		   conc-name
@@ -615,7 +616,8 @@
 	       (parse-1-option option defstruct))
 	      ((eq option :named)
 	       (setf (dd-named defstruct) t))
-	      ((member option '(:constructor :copier :predicate :named))
+	      ((member option '(:constructor :copier :predicate :named
+				:conc-name))
 	       (parse-1-option (list option) defstruct))
 	      (t
 	       (error "Unrecognized DEFSTRUCT option: ~S" option))))
