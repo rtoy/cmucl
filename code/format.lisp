@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.37 1997/08/14 17:06:10 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.38 1998/06/18 07:09:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1465,7 +1465,8 @@
 	       (output-spaces stream (- colnum cur)))
 	      (t
 	       (unless (zerop colinc)
-		 (output-spaces stream (- colinc (rem cur colinc)))))))))
+		 (output-spaces stream
+				(- colinc (rem (- cur colnum) colinc)))))))))
 
 (def-format-directive #\_ (colonp atsignp params)
   (expand-bind-defaults () params
