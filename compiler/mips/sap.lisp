@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.12 1990/06/16 15:35:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.13 1990/06/17 22:25:59 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -43,7 +43,7 @@
     (pseudo-atomic (ndescr)
       (inst addu y alloc-tn vm:other-pointer-type)
       (inst addu alloc-tn alloc-tn (vm:pad-data-block vm:sap-size))
-      (inst li ndescr (logior (ash vm:sap-size vm:type-bits) vm:sap-type))
+      (inst li ndescr (logior (ash (1- vm:sap-size) vm:type-bits) vm:sap-type))
       (storew ndescr y 0 vm:other-pointer-type)
       (storew sap y vm:sap-pointer-slot vm:other-pointer-type))))
 ;;;
