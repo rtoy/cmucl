@@ -70,15 +70,14 @@
     "target:code/mipsstrops"
     "target:code/misc"
     "target:code/gc"
+    "target:code/save"
     "target:code/extensions"
     "target:code/alieneval"
     "target:code/c-call"
     "target:code/syscall"
     "target:code/vm"
-    #+mach
-    "target:code/mach-os"
-    #+sunos
-    "target:code/sunos-os"
+    #+mach "target:code/mach-os"
+    #+sunos "target:code/sunos-os"
     "target:code/serve-event"
     "target:code/stream"
     "target:code/fd-stream"
@@ -110,10 +109,12 @@
     ))
 
 (setf *genesis-core-name*
-      #-sparc "target:ldb/kernel.core"
-      #+sparc "/usr/tmp/kernel.core")
+      #-(and sparc mach) "target:ldb/kernel.core"
+      #+(and sparc mach) "/usr/tmp/kernel.core")
 (setf *genesis-c-header-name* "target:ldb/lisp.h")
 (setf *genesis-map-name* "target:ldb/lisp.map")
 (setf *genesis-symbol-table* "target:ldb/ldb.map")
+
+#+sunos (setf *target-page-size* 8192)
 
 (genesis lisp-files)
