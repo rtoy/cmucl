@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.10 1990/04/21 17:36:53 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.11 1990/04/27 11:39:42 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -195,17 +195,18 @@
 (defun ir2-convert-closure (node block leaf res)
   (declare (type ref node) (type ir2-block block)
 	   (type clambda leaf) (type tn res))
-  (let ((entry (make-load-time-constant-tn :entry leaf))
-	(this-env (node-environment node))
-	(leaf-closure (environment-closure (lambda-environment leaf))))
-    (cond (leaf-closure
-	   (vop make-closure node block (emit-constant (length leaf-closure))
-		entry res)
-	   (let ((n (1- system:%function-closure-variables-offset)))
-	     (dolist (what leaf-closure)
-	       (vop closure-init node block
-		    res (find-in-environment what this-env)
-		    (incf n)))))
+  (let ((entry (make-load-time-constant-tn :entry leaf)))
+    (cond ((and (lambda-p leaf)
+		(environment-closure (lambda-environment leaf)))
+	   (let ((this-env (node-environment node))
+		 (closure (environment-closure (lambda-environment leaf))))
+	     (vop make-closure node block (emit-constant (length closure))
+		  entry res)
+	     (let ((n (1- system:%function-closure-variables-offset)))
+	       (dolist (what closure)
+		 (vop closure-init node block
+		      res (find-in-environment what this-env)
+		      (incf n))))))
 	  (t
 	   (emit-move node block entry res))))
   (undefined-value))
