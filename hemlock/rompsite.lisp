@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.4 1994/02/11 21:53:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.5 1994/02/12 13:27:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -131,7 +131,15 @@
     "The string name of the font to be used for Hemlock -- buffer text,
      modelines, random typeout, etc.  The font is loaded when initializing
      Hemlock."
-    :value "8x13")
+    :value "*-courier-medium-r-normal--*-120-*")
+  (defhvar "Active Region Highlighting Font"
+    "The string name of the font to be used for highlighting active regions.
+     The font is loaded when initializing Hemlock."
+    :value "*-courier-medium-o-normal--*-120-*")
+  (defhvar "Open Paren Highlighting Font"
+    "The string name of the font to be used for highlighting open parens.
+     The font is loaded when initializing Hemlock."
+    :value "*-courier-bold-r-normal--*-120-*")
   (defhvar "Thumb Bar Meter"
     "When non-nil (the default), windows will be created to be displayed with
      a ruler in the bottom border of the window."
@@ -139,7 +147,6 @@
 
   (setf *key-event-history* (make-ring 60))
   nil)
-
 
 
 ;;;; Some generally useful file-system functions.
@@ -234,9 +241,7 @@
 	(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
 	 (setf *editor-input* (make-windowed-editor-input))
-	 (setup-font-family *editor-windowed-input*
-			    (variable-value 'ed::default-font)
-			    "8x13u" "8x13bold"))
+	 (setup-font-family *editor-windowed-input*))
 	(t ;; The editor's file descriptor is Unix standard input (0).
 	   ;; We don't need to affect system:*file-input-handlers* here
 	   ;; because the init and exit methods for tty redisplay devices
@@ -268,8 +273,7 @@
 ;;; Font" when these are defined.
 ;;;
 #+clx
-(defun setup-font-family (display default-font default-highlight-font
-				  default-open-paren-font)
+(defun setup-font-family (display)
   (let* ((font-family (make-font-family :map (make-array font-map-size
 							 :initial-element 0)
 					:cursor-x-offset 0
@@ -277,8 +281,9 @@
 	 (font-family-map (font-family-map font-family)))
     (declare (simple-vector font-family-map))
     (setf *default-font-family* font-family)
-    (let ((font (xlib:open-font display default-font)))
-      (unless font (error "Cannot open font -- ~S" default-font))
+    (let ((font (xlib:open-font display (variable-value 'ed::default-font))))
+      (unless font
+	(error "Cannot open font -- ~S" (variable-value 'ed::default-font)))
       (fill font-family-map font)
       (let ((width (xlib:max-char-width font)))
 	(setf (font-family-width font-family) width)
@@ -289,13 +294,11 @@
 	(setf (font-family-cursor-height font-family) height)
 	(setf (font-family-baseline font-family) baseline)))
     (setup-one-font display
-		    (or (variable-value 'ed::open-paren-highlighting-font)
-			default-open-paren-font)
+		    (variable-value 'ed::open-paren-highlighting-font)
 		    font-family-map
 		    ed::*open-paren-highlight-font*)
     (setup-one-font display
-		    (or (variable-value 'ed::active-region-highlighting-font)
-			default-highlight-font)
+		    (variable-value 'ed::active-region-highlighting-font)
 		    font-family-map
 		    ed::*active-region-highlight-font*)))
 
