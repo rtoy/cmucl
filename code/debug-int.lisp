@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.96 1999/09/17 18:14:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.97 2000/11/06 17:47:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -922,7 +922,7 @@
 ;;; XX Should handle interrupted frames, both Lisp and C. A present it
 ;;; manages to find a fp trail, see linux hack below.
 ;;;
-(defun x86-call-context (fp &key (depth 8))
+(defun x86-call-context (fp &key (depth 0))
   (declare (type system-area-pointer fp)
 	   (fixnum depth))
 ;  (format t "*CC ~s ~s~%" fp depth)
@@ -944,12 +944,13 @@
 ;		     lisp-ocfp lisp-ra c-ocfp c-ra)
 	     ;; Look forward another step to check their validity.
 	     (let ((lisp-path-fp (x86-call-context lisp-ocfp
-						   :depth (- depth 1)))
-		   (c-path-fp (x86-call-context c-ocfp :depth (- depth 1))))
+						   :depth (1+ depth)))
+		   (c-path-fp (x86-call-context c-ocfp :depth (1+ depth))))
 	       (cond ((and lisp-path-fp c-path-fp)
 		      ;; Both still seem valid - choose the smallest.
-		      (format t "Debug: Both still valid ~s ~s ~s ~s~%"
-			      lisp-ocfp lisp-ra c-ocfp c-ra)
+		      (when (zerop depth)
+			(format t "Debug: Both still valid ~s ~s ~s ~s~%"
+				lisp-ocfp lisp-ra c-ocfp c-ra))
 		      (if (sap< lisp-ocfp c-ocfp)
 			  (values lisp-ra lisp-ocfp)
 			(values c-ra c-ocfp)))
