@@ -19,30 +19,27 @@
 
 (proclaim '(special *keyword-package* *lisp-package* *package* *query-io*
 		    *terminal-io* *error-output* *trace-output* *debug-io*
-		    *standard-input* *standard-output* *file-input-handlers*
-		    *hemlock-version* *evalhook* *applyhook*
-		    *task-self* *command-line-switches*
+		    *standard-input* *standard-output* *hemlock-version*
+		    *evalhook* *applyhook* *task-self* *command-line-switches*
 		    *command-switch-demons* ext::temporary-foreign-files
 		    *display-event-handlers* original-lisp-environment
-		    *environment-list* 
-		    *read-default-float-format* *read-suppress* *readtable*
-		    *print-base* *print-radix* *print-length* *print-level*
-		    *print-pretty* *print-escape* *print-case* *print-circle*
-		    *print-gensym* *print-array*
+		    *environment-list* *read-default-float-format*
+		    *read-suppress* *readtable* *print-base* *print-radix*
+		    *print-length* *print-level* *print-pretty* *print-escape*
+		    *print-case* *print-circle* *print-gensym* *print-array*
 		    defmacro-error-string defsetf-error-string
-		    std-lisp-readtable
-		    hi::*in-the-editor* debug::*in-the-debugger*
-		    mach::*free-trap-arg-blocks* conditions::*handler-clusters*
-		    conditions::*restart-clusters*
-		    alloctable-address ext::*c-type-names* *gc-inhibit*
-		    *need-to-collect-garbage*
+		    std-lisp-readtable hi::*in-the-editor*
+		    debug::*in-the-debugger* mach::*free-trap-arg-blocks*
+		    conditions::*handler-clusters*
+		    conditions::*restart-clusters* alloctable-address
+		    ext::*c-type-names* *gc-inhibit* *need-to-collect-garbage*
 		    defmacro-error-string deftype-error-string
 		    defsetf-error-string %sp-interrupts-inhibited
 		    *software-interrupt-vector* *load-verbose*
 		    *load-print-stuff* *in-compilation-unit*
-		    *aborted-compilation-units*
-		    char-name-alist *default-pathname-defaults*
-		    *beep-function* *gc-notify-before* *gc-notify-after*
+		    *aborted-compilation-units* char-name-alist
+		    *default-pathname-defaults* *beep-function*
+		    *gc-notify-before* *gc-notify-after*
 
 		    ;; hack to get these args to with-trap-arg-block to work in
 		    ;; the bootstrapping env, since the var must be known to be
