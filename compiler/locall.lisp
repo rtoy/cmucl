@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.17 1991/04/04 14:10:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.18 1991/04/20 14:12:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,7 +158,8 @@
 ;;; the result of Make-XEP-Lambda in the correct environment, then associate
 ;;; this lambda with Fun as its XEP.  After the conversion, we iterate over the
 ;;; function's associated lambdas, redoing local call analysis so that the XEP
-;;; calls will get converted.
+;;; calls will get converted.  We also bind *lexical-environment* to change the
+;;; compilation policy over to the interface policy.
 ;;;
 ;;;    We set Reanalyze and Reoptimize in the component, just in case we
 ;;; discover an XEP after the initial local call analyze pass.
@@ -167,7 +168,10 @@
   (declare (type functional fun))
   (assert (not (functional-entry-function fun)))
   (with-ir1-environment (lambda-bind (main-entry fun))
-    (let ((res (ir1-convert-lambda (make-xep-lambda fun))))
+    (let* ((*lexical-environment*
+	    (make-lexenv :cookie
+			 (make-interface-cookie *lexical-environment*)))
+	   (res (ir1-convert-lambda (make-xep-lambda fun))))
       (setf (functional-kind res) :external)
       (setf (leaf-ever-used res) t)
       (setf (functional-entry-function res) fun)
