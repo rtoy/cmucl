@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.11 2000/08/24 17:10:28 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.12 2000/08/25 09:59:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -402,7 +402,7 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd)
 	   (type (unsigned-byte 32) arg))
-  (int-syscall ("fcntl" int int int) fd cmd arg))
+  (int-syscall ("fcntl" int unsigned-int unsigned-int) fd cmd arg))
 
 (defun unix-open (path flags mode)
   "Unix-open opens the file whose pathname is specified by path
