@@ -570,18 +570,24 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 ;;;; Fetching errorful function name.
 
-#+new-compiler
-;;; FIND-NAME returns the name of a function if it is a subr or named-lambda.
-;;; If the function is a regular lambda, the whole list is returned, and if
-;;; the function can't be recognized, () is returned.
-(defun find-name (function)
-  (declare (ignore function))
-  'hunoz)
+;;; Used to prevent infinite recursive lossage when we can't find the caller
+;;; for some reason.
+;;;
+(defvar *finding-caller* nil)
 
-;;; GET-CALLER returns a form that returns the function which called the
-;;; currently active function.
-(defmacro get-caller ()
-  'nil)
+#+new-compiler
+;;; FIND-CALLER-NAME  --  Internal
+;;;
+(defun find-caller-name ()
+  (if *finding-caller*
+      "<error finding name>"
+      (handler-case
+	  (let ((*finding-caller* t))
+	    (di:debug-function-name
+	     (di:frame-debug-function
+	      (di:frame-down (di:frame-down (di:top-frame))))))
+	(error () "<error finding name>")
+	(di:debug-condition () "<error finding name>"))))
 
 
 ;;;; ERROR, CERROR, BREAK, WARN.
@@ -598,7 +604,7 @@ The previous version is uglier, but it sets up unique run-time tags.
   (infinite-error-protect
    (let ((condition (coerce-to-condition datum arguments 'simple-error 'error)))
      (unless (error-function-name condition)
-       (setf (error-function-name condition) (find-name (get-caller))))
+       (setf (error-function-name condition) (find-caller-name)))
      (signal condition)
      (invoke-debugger condition))))
 
@@ -615,7 +621,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 			 (coerce-to-condition datum arguments
 					      'simple-error 'error))))
       (unless (error-function-name condition)
-	(setf (error-function-name condition) (find-name (get-caller))))
+	(setf (error-function-name condition) (find-caller-name)))
       (error condition)))
   nil)
 
@@ -989,7 +995,7 @@ The previous version sets up unique run-time tags.
 (defun lisp::%sp-internal-error (err-code arg3 arg4)
   (infinite-error-protect
    (funcall (svref *internal-error-table* err-code)
-	    (find-name (get-caller))
+	    (find-caller-name)
 	    0
 	    arg3
 	    arg4)))
