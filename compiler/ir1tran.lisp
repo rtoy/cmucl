@@ -14,7 +14,8 @@
 ;;;
 (in-package 'c)
 
-(export '(*compile-time-define-macros* *converting-for-interpreter*))
+(export '(*compile-time-define-macros* *converting-for-interpreter*
+	  *suppress-values-declaration*))
 
 (in-package 'ext)
 (export '(ignorable truly-the maybe-inline *derive-function-types*))
@@ -839,6 +840,10 @@
   (undefined-value))
 
 
+(defvar *suppress-values-declaration* nil
+  "If true, processing of the VALUES declaration is inhibited.")
+
+
 ;;; PROCESS-1-DECLARATION  --  Internal
 ;;;
 ;;;    Process a single declaration spec, agumenting the specified LEXENV
@@ -872,11 +877,13 @@
     (type
      (process-type-declaration (cdr spec) res vars))
     (values
-     (let ((types (cdr spec)))
-       (do-the-stuff (if (null (cdr types))
-			 (car types)
-			 `(values ,@types))
-		     cont res 'values)))
+     (if *suppress-values-declaration*
+	 res
+	 (let ((types (cdr spec)))
+	   (do-the-stuff (if (null (cdr types))
+			     (car types)
+			     `(values ,@types))
+			 cont res 'values))))
     (t
      (let ((what (first spec)))
        (cond ((member what type-specifier-symbols)
