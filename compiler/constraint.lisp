@@ -24,17 +24,21 @@
   ;;     X is a LAMBDA-VAR and Y is a CTYPE.  The value of X is constrained to
   ;;     be of type Y.
   ;;
-  ;; >, <, =, EQL, EQ
+  ;; >, <
+  ;;     X is a lambda-var and Y is a CTYPE.  The relation holds between X and
+  ;;     some object of type Y.
+  ;;
+  ;; EQL
   ;;     X is a LAMBDA-VAR Y is a LAMBDA-VAR or a CONSTANT.  The relation is
   ;;     asserted to hold.
   ;;
-  (kind nil :type (member typep < > = eql eq))
+  (kind nil :type (member typep < > eql))
   ;;
   ;; The operands to the relation.
   (x nil :type lambda-var)
   (y nil :type (or ctype lambda-var constant))
   ;;
-  ;; If true, negates the sense of the constaint.  The relation is does *not*
+  ;; If true, negates the sense of the constraint.  The relation is does *not*
   ;; hold.
   (not-p nil :type boolean))
 
@@ -81,6 +85,133 @@
 	new)))
 
 
+;;; OK-REF-LAMBDA-VAR  --  Internal
+;;;
+;;;    If Ref is to a Lambda-Var with Constraints (i.e. we can do flow analysis
+;;; on it), then return the Lambda-Var, otherwise NIL.
+;;;
+(proclaim '(inline ok-ref-lambda-var))
+(defun ok-ref-lambda-var (ref)
+  (declare (type ref ref))
+  (let ((leaf (ref-leaf ref)))
+    (when (and (lambda-var-p leaf)
+	       (lambda-var-constraints leaf))
+      leaf)))
+
+
+;;; OK-CONT-LAMBDA-VAR  --  Internal
+;;;
+;;;    If Cont's Use is a Ref, then return OK-REF-LAMBDA-VAR of the Use,
+;;; otherwise NIL.
+;;;
+(proclaim '(inline ok-cont-lambda-var))
+(defun ok-cont-lambda-var (cont)
+  (declare (type continuation cont))
+  (let ((use (continuation-use cont)))
+    (when (ref-p use)
+      (ok-ref-lambda-var use))))
+
+
+;;; ADD-TEST-CONSTRAINT  --  Internal
+;;;
+;;;    Add the indicated test constraint to Block, marking the block as having
+;;; a new assertion when the constriant was not already present.
+;;;
+(defun add-test-constraint (block fun x y not-p)
+  (let ((con (find-constraint fun x y not-p))
+	(old (or (block-test-constraint block)
+		 (setf (block-test-constraint block) (make-sset)))))
+    (when (sset-adjoin con old)
+      (setf (block-type-asserted block) t)))
+  (undefined-value))
+
+
+;;; ADD-COMPLEMENT-CONSTRAINTS  --  Internal
+;;;
+;;;    Add complementary constraints to the consequent and alternative blocks
+;;; of If.  We do nothing if X is NIL.
+;;;
+(proclaim '(inline add-complement-constraints))
+(defun add-complement-constraints (if fun x y not-p)
+  (when x
+    (add-test-constraint (if-consequent if) fun x y not-p)
+    (add-test-constraint (if-alternative if) fun x y (not not-p)))
+  (undefined-value))
+
+
+;;; ADD-TEST-CONSTRAINTS  --  Internal
+;;;
+;;;    Add test constraints to the consequent and alternative blocks of the
+;;; test represented by Use.
+;;;
+(defun add-test-constraints (use if)
+  (declare (type node use) (type cif if))
+  (typecase use
+    (ref
+     (add-complement-constraints if 'typep (ok-ref-lambda-var use)
+				 *null-type* t))
+    (combination
+     (let ((name (continuation-function-name
+		  (basic-combination-fun use)))
+	   (args (basic-combination-args use)))
+       (case name
+	 (%typep
+	  (add-complement-constraints if 'typep
+				      (ok-cont-lambda-var (first args))
+				      (specifier-type
+				       (continuation-value
+					(second args)))
+				      nil))
+	 ((eq eql)
+	  (let* ((var1 (ok-cont-lambda-var (first args)))
+		 (arg2 (second args))
+		 (var2 (ok-cont-lambda-var arg2)))
+	    (cond ((not var1))
+		  (var2
+		   (add-complement-constraints if 'eql var1 var2 nil))
+		  ((constant-continuation-p arg2)
+		   (add-complement-constraints if 'eql var1
+					       (ref-leaf
+						(continuation-use arg2))
+					       nil)))))
+	 ((< >)
+	  (let* ((arg1 (first args))
+		 (var1 (ok-cont-lambda-var arg1))
+		 (arg2 (second args))
+		 (var2 (ok-cont-lambda-var arg2)))
+	    (when var1
+	      (add-complement-constraints if name var1 (continuation-type arg2)
+					  nil))
+	    (when var2
+	      (add-complement-constraints if (if (eq name '<) '> '<)
+					  var2 (continuation-type arg1)
+					  nil))))
+	 (t
+	  (let ((ptype (gethash name *predicate-types*)))
+	    (when ptype
+	      (add-complement-constraints if 'typep
+					  (ok-cont-lambda-var (first args))
+					  ptype nil))))))))
+  (undefined-value))
+
+	      
+
+;;; FIND-TEST-CONSTRAINTS  --  Internal
+;;;
+;;;    Set the Test-Constraint in the successors of Block according to the
+;;; condition it tests.
+;;;
+(defun find-test-constraints (block)
+  (let ((last (block-last block)))
+    (when (if-p last)
+      (let ((use (continuation-use (if-test last))))
+	(when use
+	  (add-test-constraints use last)))))
+
+  (setf (block-test-modified block) nil)
+  (undefined-value))
+
+
 ;;; FIND-BLOCK-TYPE-CONSTRAINTS  --  Internal
 ;;;
 ;;;    Compute the initial flow analysis sets for Block:
@@ -91,16 +222,19 @@
 (defun find-block-type-constraints (block)
   (let ((gen (make-sset))
 	(kill (make-sset)))
-	
+
+    (let ((test (block-test-constraint block)))
+      (when test
+	(sset-union gen test)))
+
     (do-nodes (node cont block)
       (typecase node
 	(ref
 	 (when (continuation-type-check cont)
-	   (let ((leaf (ref-leaf node)))
-	     (when (and (lambda-var-p leaf)
-			(lambda-var-constraints leaf))
+	   (let ((var (ok-ref-lambda-var node)))
+	     (when var
 	       (let* ((atype (continuation-derived-type cont))
-		      (con (find-constraint 'typep leaf atype nil)))
+		      (con (find-constraint 'typep var atype nil)))
 		 (sset-adjoin con gen))))))
 	(cset
 	 (let ((var (set-var node)))
@@ -117,24 +251,96 @@
     (undefined-value)))
 
 
-;;; GET-CONSTRAINTS-TYPE  --  Internal
+;;; INTEGER-TYPE-P  --  Internal
+;;;
+;;;    Return true if X is an integer NUMERIC-TYPE.
+;;;
+(defun integer-type-p (x)
+  (declare (type ctype x))
+  (and (numeric-type-p x)
+       (eq (numeric-type-class x) 'integer)
+       (eq (numeric-type-complexp x) :real)))
+
+
+;;; CONSTRAIN-INTEGER-TYPE  --  Internal
+;;;
+;;;    Given that an inequality holds on values of type X any Y, return a new
+;;; type for X.  If Greater is true, then X was greater than Y, otherwise less.
+;;; If Or-Equal is true, then the inequality was inclusive, i.e. >=.
+;;;
+;;; If Greater (or not), then we max (or min) in Y's lower (or upper) bound
+;;; into X and return that result.  If not Or-Equal, we can go one greater
+;;; (less) than Y's bound.
+;;;
+(defun constrain-integer-type (x y greater or-equal)
+  (flet ((exclude (x)
+	   (cond ((not x) nil)
+		 (or-equal x)
+		 (greater (1+ x))
+		 (t (1- x))))
+	 (bound (x)
+	   (if greater (numeric-type-low x) (numeric-type-high x))))
+    (let* ((x-bound (bound x))
+	   (y-bound (exclude (bound y)))
+	   (new-bound (cond ((not x-bound) y-bound)
+			    ((not y-bound) x-bound)
+			    (greater (max x-bound y-bound))
+			    (t (min x-bound y-bound))))
+	   (res (copy-numeric-type x)))
+      (if greater
+	  (setf (numeric-type-low res) new-bound)
+	  (setf (numeric-type-high res) new-bound))
+      res)))
+
+  
+;;; CONSTRAIN-REF-TYPE  --  Internal
 ;;;
 ;;;    Given the set of Constraints for a variable and the current set of
-;;; restrictions from flow analysis In, return the best approximation of what
-;;; the type of a reference would be.
+;;; restrictions from flow analysis In, set the type for Ref accordingly.
 ;;;
-(defun get-constraints-type (constraints in)
+(defun constrain-ref-type (ref constraints in)
   (let ((var-cons (copy-sset constraints)))
     (sset-intersection var-cons in)
-    (let ((res *universal-type*))
+    (let ((res (single-value-type (node-derived-type ref)))
+	  (not-res *empty-type*))
       (do-elements (con var-cons)
-	(when (eq (constraint-kind con) 'typep)
-	  (if (constraint-not-p con)
-	      (let ((diff (type-difference res (constraint-y con))))
-		(when diff
-		  (setf res diff)))
-	      (setq res (type-intersection res (constraint-y con))))))
-      res)))
+	(let* ((x (constraint-x con))
+	       (y (constraint-y con))
+	       (not-p (constraint-not-p con))
+	       (leaf (ref-leaf ref))
+	       (other (if (eq x leaf) y x))
+	       (kind (constraint-kind con)))
+	  (case kind
+	    (typep
+	     (if not-p
+		 (setq not-res (type-union not-res other))
+		 (setq res (type-intersection res other))))
+	    (eql
+	     (let ((other-type (leaf-type other)))
+	       (if not-p
+		   (when (and (constant-p other)
+			      (member-type-p other-type))
+		     (setq not-res (type-union not-res other-type)))
+		   (let ((leaf-type (leaf-type leaf)))
+		     (when (or (constant-p other)
+			       (and (csubtypep other-type leaf-type)
+				    (not (type= other-type leaf-type))))
+		       (change-ref-leaf ref other))))))
+	    ((< >)
+	     (when (and (integer-type-p res) (integer-type-p y))
+	       (let ((greater (eq kind '>)))
+		 (let ((greater (if not-p (not greater) greater)))
+		   (setq res
+			 (constrain-integer-type res y greater not-p)))))))))
+      
+      (let ((dest (continuation-dest (node-cont ref))))
+	(if (and (if-p dest)
+		 (csubtypep *null-type* not-res))
+	    (change-ref-leaf ref (find-constant 't))
+	    (derive-node-type ref (or (type-difference res not-res)
+				      res))))))
+  
+  (undefined-value))
 
 		 
 ;;; USE-RESULT-CONSTRAINTS  --  Internal
@@ -146,6 +352,11 @@
 (defun use-result-constraints (block)
   (declare (type cblock block))
   (let ((in (block-in block)))
+
+    (let ((test (block-test-constraint block)))
+      (when test
+	(sset-union in test)))
+
     (do-nodes (node cont block)
       (typecase node
 	(ref
@@ -153,7 +364,7 @@
 	   (when (lambda-var-p var)
 	     (let ((con (lambda-var-constraints var)))
 	       (when con
-		 (derive-node-type node (get-constraints-type con in))
+		 (constrain-ref-type node con in)
 		 (when (continuation-type-check cont)
 		   (sset-adjoin
 		    (find-constraint 'typep var
@@ -222,6 +433,9 @@
 (defun constraint-propagate (component)
   (declare (type component component))
   (init-var-constraints component)
+  (do-blocks (block component)
+    (when (block-test-modified block)
+      (find-test-constraints block)))
   (do-blocks (block component)
     (when (block-type-asserted block)
       (find-block-type-constraints block)))
