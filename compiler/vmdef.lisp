@@ -623,7 +623,7 @@
 ;;; expression that evaluates into the first tn-ref.
 ;;;
 (defun access-operands (operands more-operand refs)
-  (declare (list operands refs))
+  (declare (list operands))
   (collect ((res))
     (let ((prev refs))
       (dolist (op operands)
