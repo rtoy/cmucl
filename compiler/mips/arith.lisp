@@ -56,7 +56,6 @@
   (:results (r :scs (any-reg descriptor-reg)))
   (:effects)
   (:affected)
-  (:note "inline fixnum arithmetic")
   (:policy :fast-safe))
 
 (defmacro define-fixnum-binop ((name translate cost result-type)
@@ -75,6 +74,8 @@
 				       'zero)))))
      (:translate ,translate)
      (:result-types ,result-type)
+     ,@(when (eq result-type t)
+	 '((:note "inline fixnum arithmetic")))
      (:generator ,cost
        (sc-case y
 	 ((any-reg descriptor-reg)
@@ -112,6 +113,64 @@
 
 (define-fixnum-binop (fast-logxor/fixnum logxor 1 t)
 		     xor :immed-op xori :unsigned t)
+
+
+;;; Shifting
+
+(define-vop (fast-ash/fixnum=>fixnum)
+  (:note "inline fixnum arithmetic")
+  (:args (number :scs (any-reg descriptor-reg) :target num)
+	 (amount :scs (any-reg descriptor-reg immediate negative-immediate zero)
+		 :target ndesc))
+  (:arg-types fixnum fixnum)
+  (:results (result :scs (any-reg descriptor-reg)))
+  (:result-types fixnum)
+  (:translate ash)
+  (:policy :fast-safe)
+  (:temporary (:scs (any-reg) :type fixnum :from (:argument 0))
+	      num)
+  (:temporary (:scs (non-descriptor-reg) :type random :from (:argument 1))
+	      ndesc foo)
+  (:node-var node)
+  (:generator 3
+    (sc-case amount
+      ((any-reg descriptor-reg)
+       (let ((negative (gen-label))
+	     (very-negative (gen-label))
+	     (done (gen-label)))
+	 (move num number)
+	 (inst bltz amount negative)
+	 (inst sra ndesc amount 2)
+
+	 ;; The fixnum result-type assures us that this shift will not overflow.
+	 (inst sllv result num ndesc)
+	 (emit-label done)
+
+	 (unassemble
+	  (assemble-elsewhere node
+	    (emit-label negative)
+	    (inst nor ndesc ndesc ndesc)
+	    (inst addiu ndesc ndesc 3)
+	    (inst andi foo ndesc #x1f)
+	    (inst beq foo ndesc very-negative)
+
+	    (inst srav ndesc num ndesc)
+	    (b done)
+	    (inst sll result ndesc 2)
+
+	    (emit-label very-negative)
+	    (inst sra ndesc num 31)
+	    (b done)
+	    (inst sll result ndesc 2)))))
+      (immediate
+       (inst sll result number (tn-value amount)))
+      (negative-immediate
+       (inst sra ndesc number (min 31 (+ 2 (abs (tn-value amount)))))
+       (inst sll result ndesc 2))
+      (zero
+       ;; Someone should have optimized this away.
+       (move result number)))))
+
 
 
 ;;; Multiply and Divide.
