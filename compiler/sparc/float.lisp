@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.43 2003/10/27 18:30:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.44 2004/03/29 18:47:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2485,13 +2485,13 @@
 (defun %%min (x y)
   (declare (type (or (unsigned-byte 32) (signed-byte 32)
 		     single-float double-float) x y))
-  (if (< x y)
+  (if (<= x y)
       x y))
 
 (defun %%max (x y)
   (declare (type (or (unsigned-byte 32) (signed-byte 32)
 		     single-float double-float) x y))
-  (if (> x y)
+  (if (>= x y)
       x y))
   
 (macrolet
@@ -2609,22 +2609,28 @@
 
 ;; Derive the types of max and min
 (defoptimizer (max derive-type) ((x y))
+  ;; It's Y < X instead of X < Y because that's how the
+  ;; source-transform, the deftransform and the max function do the
+  ;; comparisons.  This is important if the types of X and Y are
+  ;; different types, like integer vs double-float because CMUCL
+  ;; returns the actual arg, instead of applying float-contagion to
+  ;; the result.
   (multiple-value-bind (definitely-< definitely->=)
-      (ir1-transform-<-helper x y)
+      (ir1-transform-<-helper y x)
     (cond (definitely-<
-	      (continuation-type y))
-	  (definitely->=
 	      (continuation-type x))
+	  (definitely->=
+	      (continuation-type y))
 	  (t
 	   (make-canonical-union-type (list (continuation-type x)
 					    (continuation-type y)))))))
 
 (defoptimizer (min derive-type) ((x y))
-  (multiple-value-bind (definitely-< definitely->=)
-      (ir1-transform-<-helper x y)
-    (cond (definitely-<
+  (multiple-value-bind (definitely-> definitely-<=)
+      (ir1-transform-<-helper y x)
+    (cond (definitely-<=
 	      (continuation-type x))
-	  (definitely->=
+	  (definitely->
 	      (continuation-type y))
 	  (t
 	   (make-canonical-union-type (list (continuation-type x)

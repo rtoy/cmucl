@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.143 2004/01/19 20:15:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.144 2004/03/29 18:47:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3295,7 +3295,7 @@
       `(values (the real ,arg))
       (once-only ((arg1 arg)
 		  (arg2 `(max ,@more-args)))
-	`(if (> ,arg1 ,arg2)
+	`(if (>= ,arg1 ,arg2)
 	     ,arg1 ,arg2))))
 ;;;
 (def-source-transform min (arg &rest more-args)
@@ -3303,7 +3303,7 @@
       `(values (the real ,arg))
       (once-only ((arg1 arg)
 		  (arg2 `(min ,@more-args)))
-	`(if (< ,arg1 ,arg2)
+	`(if (<= ,arg1 ,arg2)
 	     ,arg1 ,arg2))))
 
 )
