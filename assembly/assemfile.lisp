@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.17 1990/10/13 21:45:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.18 1990/10/20 01:36:42 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -118,6 +118,7 @@
 		  #'(lambda (reg)
 		      `(,(reg-spec-name reg)
 			(make-random-tn
+			 :kind :normal
 			 :sc (sc-or-lose ',(reg-spec-sc reg))
 			 :offset ,(reg-spec-offset reg))))
 		  regs))
