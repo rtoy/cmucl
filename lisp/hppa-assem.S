@@ -2,6 +2,24 @@
 
 #include <machine/asm.h>
 
+#ifdef hpux
+#define r0 %r0
+#define r1 %r1
+#define r2 %r2
+#define r4 %r4
+#define r19 %r19
+#define r31 %r31
+#define sp %sp
+#define sr1 %sr1
+#define sr4 %sr4
+#define t1 %t1
+#define arg0 %arg0
+#define arg1 %arg1
+#define arg2 %arg2
+#define ret0 %ret0
+#define dp %dp
+#endif
+
 #include "internals.h"
 #include "lispregs.h"
 
