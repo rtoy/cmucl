@@ -124,7 +124,8 @@
   (non-descriptor-reg registers
    :locations (0 2 3 4))
 
-  ;; Word-aligned pointers that cannot be in R0.  Used only as temporaries.
+  ;; Word-aligned pointers that cannot be in R0.  Used for temporaries and to
+  ;; hold stack pointers.
   (word-pointer-reg registers
    :locations (2 3 4 9 10 11 12 13 14)
    :save-p t
