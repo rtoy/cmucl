@@ -20,11 +20,19 @@ New in this release:
        
   * Feature enhancements:
      - Stack overflow checking added for FreeBSD/x86 and Linux/x86.
+       Code that makes the control stack overflow (for example due to
+       unbounded recursion) will lead to a STORAGE-ERROR being
+       signaled, instead of making CMUCL crash.
      - LISP:FIND-CLASS and LISP:CLASS-OF now return CLOS classes.  The
        symbols LISP:STANDARD-CLASS, LISP:BUILT-IN-CLASS, and
        LISP:STRUCTURE-CLASS name CLOS classes.  It is no longer
        necessary to SHADOWING-IMPORT these from PCL when doing MOP
        programming, and it fixes some non-compliances as well.
+     - Package locks: a package whose EXT:PACKAGE-LOCK is enabled
+       non-NIL is protected against changes in its structure (list of
+       exported symbols, use-list etc). Symbols in a package whose
+       EXT:PACKAGE-DEFINITION-LOCK is enabled are protected against
+       redefinition.
      - Weak hash tables have been added for x86 systems.
      - Local functions are now named (FLET <name> ...) or 
        (LABELS <name> ...).
