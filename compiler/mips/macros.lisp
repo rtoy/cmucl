@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.17 1990/02/25 19:51:00 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.18 1990/02/27 00:09:59 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -77,6 +77,35 @@
 (defmacro load-symbol (reg symbol)
   `(inst addi ,reg null-tn (vm:static-symbol-offset ,symbol)))
 
+(macrolet
+    ((frob (slot)
+       (let ((loader (intern (concatenate 'simple-string
+					  "LOAD-SYMBOL-"
+					  (string slot))))
+	     (storer (intern (concatenate 'simple-string
+					  "STORE-SYMBOL-"
+					  (string slot))))
+	     (offset (intern (concatenate 'simple-string
+					  "SYMBOL-"
+					  (string slot)
+					  "-SLOT")
+			     (find-package "VM"))))
+	 `(progn
+	    (defmacro ,loader (reg symbol)
+	      `(progn
+		 (inst lw ,reg null-tn
+		       (+ (vm:static-symbol-offset ',symbol)
+			  (ash ,',offset vm:word-shift)
+			  (- vm:other-pointer-type)))
+		 (nop)))
+	    (defmacro ,storer (reg symbol)
+	      `(inst sw ,reg null-tn
+		     (+ (vm:static-symbol-offset ',symbol)
+			(ash ,',offset vm:word-shift)
+			(- vm:other-pointer-type))))))))
+  (frob value)
+  (frob function))
+
 (defmacro load-type (target source &optional (offset 0))
   "Loads the type bits of a pointer into target independent of
   byte-ordering issues."
@@ -88,6 +117,34 @@
        `(inst lb ,n-target ,n-source ,n-offset ))
       (:big-endian
        `(inst lb ,n-target ,n-source (+ ,n-offset 3))))))
+
+
+;;; Macros to handle the fact that we cannot use the machine native call and
+;;; return instructions. 
+
+(defmacro lisp-jump (function lip)
+  "Jump to the lisp function FUNCTION.  LIP is an interior-reg temporary."
+  `(progn
+     (inst addiu ,lip ,function (- (ash vm:function-header-code-offset
+					vm:word-shift)
+				   vm:function-pointer-type))
+     (inst jr ,lip)
+     (nop)))
+
+(defmacro lisp-return (return-pc lip)
+  "Return to RETURN-PC.  LIP is an interior-reg temporary."
+  `(progn
+     (inst addiu ,lip ,return-pc (- vm:word-bytes vm:other-pointer-type))
+     (inst jr ,lip)
+     (nop)))
+
+(defmacro emit-return-pc (label)
+  "Emit a return-pc header word.  LABEL is the label to use for this return-pc."
+  `(progn
+     (align vm:lowtag-bits)
+     (emit-label ,label)
+     (inst return-pc-header)))
+
 
 
 ;;;; Stack TN's
