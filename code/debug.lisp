@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.58 2003/04/16 13:31:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.59 2003/05/05 11:56:53 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -697,8 +697,9 @@ See the CMU Common Lisp User's Manual for more information.
 ;;;    Print condition and invoke the TTY debugger.
 ;;;
 (defun invoke-tty-debugger (condition)
-  (format *error-output* "~2&~A~2&"
-	  (safe-condition-message *debug-condition*))
+  (format *error-output* "~2&~A~%   [Condition of type ~A]~2&"
+	  (safe-condition-message *debug-condition*)
+          (type-of *debug-condition*))
   (unless (typep condition 'step-condition)
     (show-restarts *debug-restarts* *error-output*))
   (internal-debug))
