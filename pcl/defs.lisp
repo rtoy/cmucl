@@ -49,8 +49,10 @@
 ;;;
 (eval-when (compile load eval)
 
+#-cmu
 (defvar *setf-function-names* (make-hash-table :size 200 :test #'eq))
 
+#-cmu
 (defun get-setf-function-name (name)
   (or (gethash name *setf-function-names*)
       (setf (gethash name *setf-function-names*)
@@ -84,6 +86,9 @@
   (dolist (name accessors) (do-standard-defsetf-1 name)))
 
 (defun do-standard-defsetf-1 (function-name)
+  #+cmu
+  (declare (ignore function-name))
+  #-cmu
   (unless (setfboundp function-name)
     (let* ((setf-function-name (get-setf-function-name function-name)))
     
@@ -145,6 +150,7 @@
       
       )))
 
+#-cmu
 (defun setfboundp (symbol)
   #+Genera nil
   #+Lucid  (locally
@@ -202,6 +208,7 @@
 ;;; has a 'real' function spec mechanism can use that instead and in that way
 ;;; get rid of setf generic function names.
 ;;;
+#-cmu
 (defmacro parse-gspec (spec
 		       (non-setf-var . non-setf-case)
 		       (setf-var . setf-case))
@@ -227,19 +234,21 @@
 ;;; function object even when it is traced.
 ;;;
 (defun unencapsulated-fdefinition (symbol)
+  #+cmu (fdefinition symbol)
   #+Lispm (si:fdefinition (si:unencapsulate-function-spec symbol))
   #+Lucid (lucid::get-unadvised-procedure (symbol-function symbol))
   #+excl  (or (excl::encapsulated-basic-definition symbol)
 	      (symbol-function symbol))
   #+xerox (il:virginfn symbol)
   
-  #-(or Lispm Lucid excl Xerox) (symbol-function symbol))
+  #-(or cmu Lispm Lucid excl Xerox) (symbol-function symbol))
 
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
 ;;;
 (defun fdefine-carefully (symbol new-definition)
+  #+cmu (setf (fdefinition symbol) new-definition)
   #+Lispm (si:fdefine symbol new-definition t t)
   #+Lucid (let ((lucid::*redefinition-action* nil))
 	    (setf (symbol-function symbol) new-definition))
@@ -255,27 +264,41 @@
             (when brokenp (xcl:rebreak-function symbol))
             (when advisedp (xcl:readvise-function symbol)))
 
-  #-(or Lispm Lucid excl Xerox)
+  #-(or cmu Lispm Lucid excl Xerox)
   (setf (symbol-function symbol) new-definition)
   
   new-definition)
 
 (defun gboundp (spec)
+  #+cmu
+  (fboundp spec)
+  #-cmu
   (parse-gspec spec
     (name (fboundp name))
     (name (fboundp (get-setf-function-name name)))))
 
 (defun gmakunbound (spec)
+  #+cmu
+  (fmakunbound spec)
+  #-cmu
   (parse-gspec spec
     (name (fmakunbound name))
     (name (fmakunbound (get-setf-function-name name)))))
 
 (defun gdefinition (spec)
+  #+cmu
+  (fdefinition spec)
+  #-cmu
   (parse-gspec spec
     (name (or (macro-function name)		;??
 	      (unencapsulated-fdefinition name)))
     (name (unencapsulated-fdefinition (get-setf-function-name name)))))
 
+#+cmu
+(defun (setf gdefinition) (new-value spec)
+  (setf (fdefinition spec) new-value))
+
+#-cmu
 (defun SETF\ PCL\ GDEFINITION (new-value spec)
   (parse-gspec spec
     (name (fdefine-carefully name new-value))
