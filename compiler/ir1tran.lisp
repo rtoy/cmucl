@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.93 1993/08/06 13:11:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.94 1993/08/17 22:42:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2183,15 +2183,17 @@
 ;;;
 (defun do-eval-when-stuff (situations body fun)
   (when (or (not (listp situations))
-	    (set-difference situations '(compile load eval)))
+	    (set-difference situations
+			    '(compile load eval
+			      :compile-top-level :load-top-level :execute)))
     (compiler-error "Bad Eval-When situation list: ~S." situations))
 
-  (let* ((do-eval (and (member 'compile situations)
+  (let* ((do-eval (and (intersection '(compile :compile-top-level) situations)
 		       (not lisp::*already-evaled-this*)))
 	 (lisp::*already-evaled-this* t))
     (when do-eval
       (eval `(progn ,@body)))
-    (if (member 'load situations)
+    (if (intersection '(:load-top-level load :execute eval) situations)
 	(funcall fun body)
 	(funcall fun '(nil)))))
 
