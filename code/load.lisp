@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.81 2001/10/16 19:19:54 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.82 2002/03/31 14:48:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,6 +73,12 @@
 (declaim (type index *load-depth*))
 (defvar *fasl-file*)
 (declaim (type lisp-stream *fasl-file*))
+
+;; If non-nil, don't check that FASL files loaded into core have the
+;; same version number as the current backend. This is used when
+;; rebuilding CMUCL after having incremented the FASL-FILE-VERSION
+;; parameter.
+(defvar *skip-fasl-file-version-check* nil)
 
 
 ;;; LOAD-FRESH-LINE -- internal.
@@ -406,10 +412,12 @@
 		(funcall (the function (svref fop-functions byte))))))))))
 
 
-;;; Check-Header returns t if t succesfully read a header from the file,
+;;; Check-Header returns t if it succesfully read a header from the file,
 ;;; or () if EOF was hit before anything was read.  An error is signaled
 ;;; if garbage is encountered.
-
+;;;
+;;; We check that the stream starts with the magic bytes "FASL FILE".
+;;; The end of the header is marked by the octet #xFF. 
 (defun check-header (file)
   (let ((byte (read-byte file NIL '*eof*)))
     (cond ((eq byte '*eof*) ())
@@ -1103,30 +1111,35 @@
 
 ;;;; Loading functions:
 
+;;; must be compatible with the function OPEN-FASL-FILE in compiler/dump.lisp
 (define-fop (fop-code-format 57 :nope)
   (let ((implementation (read-arg 1))
-	(version (read-arg 1)))
+	(version (read-arg 4)))
     (flet ((check-version (imp vers)
 	     (when (eql imp implementation)
 	       (unless (eql version vers)
-		 (error "~A was compiled for fasl-file version ~A, ~
-			 but this is version ~A"
-			*fasl-file* version vers))
+		 (cerror "Load ~A anyway"
+                         "~A was compiled for fasl-file version ~X, ~
+			 but this is version ~X"
+                         *fasl-file* version vers))
 	       t))
 	   (imp-name (imp)
-	     (or (nth imp '#.c:fasl-file-implementations)
+             (if (< -1 imp (length '#.c:fasl-file-implementations))
+                 (nth imp '#.c:fasl-file-implementations)
 		 "unknown machine")))
-    (unless (or (check-version #.(c:backend-fasl-file-implementation
+    (unless (or *skip-fasl-file-version-check*
+                (check-version #.(c:backend-fasl-file-implementation
 				  c:*backend*)
 			       #.(c:backend-fasl-file-version
 				  c:*backend*))
 		(check-version #.(c:backend-byte-fasl-file-implementation
 				  c:*backend*)
 			       c:byte-fasl-file-version))
-      (error "~A was compiled for a ~A, but this is a ~A"
-	     *Fasl-file*
-	     (imp-name implementation)
-	     (imp-name #.(c:backend-fasl-file-implementation c:*backend*)))))))
+      (cerror "Load ~A anyway"
+              "~A was compiled for a ~A, but this is a ~A"
+              *Fasl-file*
+              (imp-name implementation)
+              (imp-name #.(c:backend-fasl-file-implementation c:*backend*)))))))
 
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for

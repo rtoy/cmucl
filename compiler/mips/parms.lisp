@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.113 2000/10/16 17:30:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.114 2002/03/31 14:48:39 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,7 +37,7 @@
 (setf (backend-fasl-file-type *target-backend*) #+pmax "pmaxf" #+sgi "sgif")
 (setf (backend-fasl-file-implementation *target-backend*)
       #+pmax pmax-fasl-file-implementation #+sgi sgi-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) #-gengc 6 #+gengc 7)
+(setf (backend-fasl-file-version *target-backend*) #x18d)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) #+pmax :little-endian
       #+sgi :big-endian)
