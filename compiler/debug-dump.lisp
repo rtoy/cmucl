@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.43 2003/02/06 14:25:58 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.44 2003/02/16 19:05:19 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -651,7 +651,11 @@
   (let* ((name (compiled-debug-function-name dfun))
 	 (setf-p (and (consp name) (eq (car name) 'setf)
 		      (consp (cdr name)) (symbolp (cadr name))))
-	 (base-name (if setf-p (cadr name) name))
+         (base-name (if (stringp name) name
+                        (multiple-value-bind (valid block-name)
+                            (valid-function-name-p name)
+                          (assert valid)
+                          block-name)))
 	 (pkg (when (symbolp base-name)
 		(symbol-package base-name)))
 	 (name-rep
@@ -663,7 +667,6 @@
 		 minimal-debug-function-name-symbol)
 		(t
 		 minimal-debug-function-name-packaged))))
-    (assert (or (stringp name) (valid-function-name-p name)))
     (let ((options 0))
       (setf (ldb minimal-debug-function-name-style-byte options) name-rep)
       (setf (ldb minimal-debug-function-kind-byte options)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.20 2003/02/05 11:08:44 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.21 2003/02/16 19:05:19 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -86,6 +86,15 @@
 	(cons
 	 (unless (eq 'setf (car fn))
 	   (valid-function-name-p fn)))))))
+
+(define-function-name-syntax :macro (name)
+  (when (eql 2 (length name))
+    (valid-function-name-p (second name))))
+
+(define-function-name-syntax :compiler-macro (name)
+  (when (eql 2 (length name))
+    (valid-function-name-p (second name))))
+
 
 
 ;;;; Fdefinition (fdefn) objects.
