@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.21 1997/02/05 15:53:16 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.22 1997/03/15 17:24:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1606,62 +1606,27 @@
 	(let ((line (read-line file nil nil)))
 	  (unless line
 	    (return))
-	  (multiple-value-bind
-	      (value name)
- 	      (if (string= "0x" line :end2 2)
-;;;		  (values (parse-integer line :start 2
-;;;					 :end #-alpha 10 #+alpha 18 :radix 16)
-;;;			  (subseq line #-alpha 13 #+alpha 19))
-;;;		  (values (parse-integer line :end #-alpha 8 #+alpha 16
-;;;					 :radix 16)
-;;;			  (subseq line #-alpha 11 #+alpha 19)))
-;;; If your nm produces 64-bit addresses, there's 3 ways to get 
-;;; new-genesis to work: Yet another is to use 'sed' in your Config file.
-;; OPTION 1 --- hard-wire 16 bit values into line
-;;              i.e. replace above six lines with these
-;		  (values (parse-integer line :start 2 :end 18 :radix 16)
-;			  (subseq line #-alpha 21 #+alpha 19))
-;		  (values (parse-integer line :end 16 :radix 16)
-;			  (subseq line #-alpha 19 #+alpha 19)))
-;; OPTION 2 --- scan line, read junk, and do subseq until non-int char found
-;		  (values (parse-integer line :start 2 :end 16 :radix 16
-;					 :junk-allowed t)
-;			  (let ((pos 2))
-;			      (loop
-;			        (setq pos (+ pos 8))
-;				(if (not (digit-char-p (char line pos) 16))
-;				    (return)))
-;			      (subseq line (+ pos 3))))
-;		  (values (parse-integer line :end 16 :radix 16
-;					 :junk-allowed t)
-;			  (let ((pos 0))
-;			      (loop
-;			        (setq pos (+ pos 8))
-;				(if (not (digit-char-p (char line pos) 16))
-;				    (return)))
-;			      (subseq line (+ pos 3)))))
-;;; OPTION 3 --- use environment variable for 64 bit linux 
-;;              i.e.  in setenv.lsp add (pushnew :linux64 *features*)
-;;              (using the alpha flag also works, but I don't know if it has
-;;               side-effects)
-		  (values (parse-integer line :start 2 :radix 16 
-					 :end #-(or alpha linux64) 10 
-					      #+(or alpha linux64) 18)
-			  (subseq line #-(or alpha linux64) 13 
-				       #+(or alpha linux64) 19))
-		  (values (parse-integer line :radix 16
-					 :end #-(or alpha linux64) 8 
-					      #+(or alpha linux64) 16)
-			  (subseq line #-(or alpha linux64) 11 
-				       #+(or alpha linux64) 19)))
-;; END OPTIONS
-
-	    (multiple-value-bind
-		(old-value found)
-		(gethash name *cold-foreign-symbol-table*)
-	      (when found
-		(warn "Redefining ~S from #x~X to #x~X" name old-value value)))
-	    (setf (gethash name *cold-foreign-symbol-table*) value))))
+	  (when (or (whitespacep (aref line 0))
+		    (whitespacep (aref line (1- (length line)))))
+	    (setq line (string-trim '(#\Space #\Tab) line)))
+	  (let ((p1 (position-if #'whitespacep line :from-end nil))
+		(p2 (position-if #'whitespacep line :from-end t)))
+	    (if (not (and p1 p2))
+		(warn "Ignoring malformed line ~s in ~a" line filename)
+		(multiple-value-bind
+		    (value name)
+		    (if (string= "0x" line :end2 2)
+			(values (parse-integer line :start 2 :end p1 :radix 16)
+				(subseq line (1+ p2)))
+			(values (parse-integer line :end p1 :radix 16)
+				(subseq line (1+ p2))))
+		  (multiple-value-bind
+		      (old-value found)
+		      (gethash name *cold-foreign-symbol-table*)
+		    (when found
+		      (warn "Redefining ~S from #x~X to #x~X"
+			    name old-value value)))
+		  (setf (gethash name *cold-foreign-symbol-table*) value))))))
       version)))
 
 (defun lookup-foreign-symbol (name)
