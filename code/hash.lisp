@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.25 1993/06/10 16:16:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.26 1993/08/25 01:13:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -501,6 +501,12 @@
 			 (hash-table-needing-rehash hash-table)
 			   bucket))))))
     #'hash-table-scavenger-hook))
+
+;;; So people can call #'(setf gethash).
+;;;
+(defun (setf gethash) (new-value key table &optional default)
+  (declare (ignore default))
+  (%puthash key table new-value))
 
 ;;; %PUTHASH -- public setf method.
 ;;; 

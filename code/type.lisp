@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.13 1993/08/23 12:02:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.14 1993/08/25 01:15:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -583,7 +583,7 @@
 ;;; is guaranteed that it will be no smaller (more restrictive) than the
 ;;; precise result.
 ;;;
-(defun-cached (values-type-union :hash-<function type-cache-hash
+(defun-cached (values-type-union :hash-function type-cache-hash
 				 :hash-bits 8
 				 :default nil
 				 :init-form cold-load-init)

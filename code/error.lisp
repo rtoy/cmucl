@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.32 1993/08/19 17:14:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.33 1993/08/25 01:13:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -513,7 +513,8 @@
 (define-condition serious-condition (condition) ())
 
 (define-condition error (serious-condition)
-  ((function-name nil)))
+  ((function-name :init-form nil
+		  :accessor serious-condition-function-name)))
 
 (define-condition warning (condition) ())
 (define-condition style-warning (warning) ())
@@ -551,21 +552,20 @@
 ;;; the user sees.
 ;;;
 (define-condition simple-warning (warning)
-  (format-control
-   (format-arguments '()))
-  (:conc-name internal-simple-warning-)
+  ((format-control :accessor internal-simple-warning-format-control)
+   (format-arguments :init-form '()
+		     :accessor internal-simple-warning-format-arguments))
   (:report simple-condition-printer))
 ;;;
 (define-condition simple-style-warning (style-warning)
-  (format-control
-   (format-arguments '()))
-  (:conc-name internal-simple-style-warning-)
+  ((format-control :accessor internal-simple-style-warning-format-control)
+   (format-arguments :init-form '()
+		     :accessor internal-simple-style-warning-format-arguments))
   (:report simple-condition-printer))
-
 
 (defun print-simple-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
-	  (internal-simple-error-function-name condition)
+	  (serious-condition-function-name condition)
 	  (internal-simple-error-format-control condition)
 	  (internal-simple-error-format-arguments condition)))
 
@@ -576,9 +576,9 @@
 ;;; sees.
 ;;;
 (define-condition simple-error (error)
-  (format-control
-   (format-arguments '()))
-  (:conc-name internal-simple-error-)
+  ((format-control :accessor internal-simple-error-format-control)
+   (format-arguments :init-form '()
+		     :accessor internal-simple-error-format-arguments))
   (:report print-simple-error))
 
 
@@ -590,7 +590,7 @@
   (:report
    (lambda (condition stream)
      (format stream "~@<Type-error in ~S:  ~3i~:_~S is not of type ~S~:>"
-	     (type-error-function-name condition)
+	     (serious-condition-function-name condition)
 	     (type-error-datum condition)
 	     (type-error-expected-type condition)))))
 
@@ -601,9 +601,9 @@
 ;;; of bogus multiple inheritance that the user sees.
 ;;;
 (define-condition simple-type-error (type-error)
-  (format-control
-   (format-arguments '()))
-  (:conc-name internal-simple-type-error-)
+  ((format-control :accessor internal-simple-type-error-format-control)
+   (format-arguments :init-form '()
+		     :accessor internal-simple-type-error-format-arguments))
   (:report simple-condition-printer))
 
 (define-condition kernel:layout-invalid (type-error)
@@ -612,7 +612,7 @@
    (lambda (condition stream)
      (format stream "Layout-invalid error in ~S:~@
 		     Type test of class ~S was passed obsolete instance:~%  ~S"
-	     (type-error-function-name condition)
+	     (serious-condition-function-name condition)
 	     (kernel:class-proper-name (type-error-expected-type condition))
 	     (type-error-datum condition)))))
 
@@ -664,13 +664,14 @@
 
 (defun print-control-error (condition stream)
   (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
-	  (control-error-function-name condition)
+	  (serious-condition-function-name condition)
 	  (control-error-format-control condition)
 	  (control-error-format-arguments condition)))
 
 (define-condition control-error (error)
-  (format-control
-   (format-arguments nil))
+  ((format-control :accessor control-error-format-control)
+   (format-arguments :init-form '()
+		     :accessor control-error-format-arguments))
   (:report print-control-error))
 
 
@@ -693,7 +694,7 @@
    (lambda (condition stream)
      (format stream
 	     "Error in ~S:  the variable ~S is unbound."
-	     (cell-error-function-name condition)
+	     (serious-condition-function-name condition)
 	     (cell-error-name condition)))))
   
 (define-condition undefined-function (cell-error) ()
@@ -701,7 +702,7 @@
    (lambda (condition stream)
      (format stream
 	     "Error in ~S:  the function ~S is undefined."
-	     (cell-error-function-name condition)
+	     (serious-condition-function-name condition)
 	     (cell-error-name condition)))))
 
 (define-condition arithmetic-error (error) (operation operands)

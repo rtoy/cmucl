@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.7 1993/02/17 17:27:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.8 1993/08/25 01:12:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,7 @@
 ;;; Hacked up for speed by Scott Fahlman.
 ;;; Font support flushed and type hackery rewritten by Rob MacLachlan.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 
 (export '(char-code-limit standard-char-p graphic-char-p 
 	  alpha-char-p upper-case-p lower-case-p both-case-p digit-char-p

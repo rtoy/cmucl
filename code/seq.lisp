@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.13 1993/08/17 20:48:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.14 1993/08/25 01:15:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 ;;; functions.  If transforms are written for some sequence operation, note
 ;;; how the end argument is handled in other operations with transforms.
 
-(in-package 'lisp)
+(in-package "LISP")
 (export '(elt subseq copy-seq coerce
 	  length reverse nreverse make-sequence concatenate map some every
 	  notany notevery reduce fill replace remove remove-if remove-if-not

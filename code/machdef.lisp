@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/machdef.lisp,v 1.5 1991/02/08 13:34:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/machdef.lisp,v 1.6 1993/08/25 01:14:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Record definitions needed for the interface to Mach.
 ;;;
-(in-package 'mach)
+(in-package "MACH")
 
 (export '(msg-simplemsg msg-msgsize msg-msgtype msg-localport msg-remoteport
 			msg-id sigmask with-trap-arg-block))

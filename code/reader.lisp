@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.17 1993/02/17 16:29:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.18 1993/08/25 01:14:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -805,7 +805,7 @@
       ;;saw "[sign] {digit}+"
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
-      (unless char (return (make-integer stream)))
+      (unless char (return (make-integer)))
       (case (char-class3 char attribute-table)
 	(#.constituent-digit (go LEFTDIGIT))
 	(#.constituent-dot (if possibly-float
@@ -815,7 +815,7 @@
 	(#.constituent-slash (if possibly-rational
 				 (go RATIO)
 				 (go SYMBOL)))
-	(#.delimiter (unread-char char stream) (return (make-integer stream)))
+	(#.delimiter (unread-char char stream) (return (make-integer)))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -825,14 +825,14 @@
       (ouch-read-buffer char)
       (setq char (read-char stream nil nil))
       (unless char (return (let ((*read-base* 10))
-			     (make-integer stream))))
+			     (make-integer))))
       (case (char-class char attribute-table)
 	(#.constituent-digit (go RIGHTDIGIT))
 	(#.constituent-expt (go EXPONENT))
 	(#.delimiter
 	 (unread-char char stream)
 	 (return (let ((*read-base* 10))
-		   (make-integer stream))))
+		   (make-integer))))
 	(#.escape (go ESCAPE))
 	(#.multiple-escape (go MULT-ESCAPE))
 	(#.package-delimiter (go COLON))
@@ -1115,7 +1115,7 @@
 	    (expt base digits)))))
 |#
 
-(defun make-integer (stream)
+(defun make-integer ()
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
   (let* ((base *read-base*)

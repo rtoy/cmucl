@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.3 1993/02/06 15:01:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/setf-funs.lisp,v 1.4 1993/08/25 01:15:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,6 @@
 
 (define-setters ("LISP")
   ;; Semantically silly...
-  getf apply ldb mask-field logbitp
+  getf apply ldb mask-field logbitp subseq
   ;; Have explicit redundant definitions...
-  setf bit sbit)
+  setf bit sbit get aref gethash)

@@ -7,14 +7,14 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.8 1993/08/20 00:39:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/backq.lisp,v 1.9 1993/08/25 01:12:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    BACKQUOTE: Code Spice Lispified by Lee Schumacher.
 ;;;   		  (unparsing by Miles Bader)
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 
 
 ;;; The flags passed back by BACKQUOTIFY can be interpreted as follows:

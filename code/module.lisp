@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.2 1992/12/16 12:32:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/module.lisp,v 1.3 1993/08/25 01:14:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -18,14 +18,14 @@
 ;;; spliced into the current sources to reflect the last minute deprecated
 ;;; addition of modules to the X3J13 ANSI standard.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 
 (export '(*modules* provide require))
 
 
 (in-package "EXTENSIONS")
 (export '(*require-verbose* defmodule))
-(in-package 'lisp)
+(in-package "LISP")
 
 
 

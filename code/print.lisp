@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.60 1993/08/20 08:19:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.61 1993/08/25 01:14:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1099,6 +1099,9 @@
 	(*print-length* nil))
     (print-unreadable-object (array stream :type t :identity t))))
 
+
+(declaim (ftype function dylan::%print-dylan-instance
+		dylan::dylan-instance-p))
 
 ;;; Instance Printing.  If it's a structure, call the structure printer.
 ;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.6 1992/03/03 18:59:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.7 1993/08/25 01:13:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
 
 (proclaim '(special *keyword-package* *lisp-package* *package* *query-io*
 		    *terminal-io* *error-output* *trace-output* *debug-io*
