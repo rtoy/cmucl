@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.31 1992/08/03 19:03:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.32 1993/03/12 15:35:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,21 +158,18 @@
   (undefined-value))
 
 
-;;; FIND-TLF-AND-BLOCK-NUMBERS  --  Internal
+;;; FIND-TLF-NUMBER  --  Internal
 ;;;
-;;;    Scan all the blocks, caching the block numbering in the BLOCK-FLAG and
-;;; determining if all locations are in the same TLF.
+;;;    Scan all the blocks, determining if all locations are in the same TLF,
+;;; and returing it or NIL.
 ;;;
-(defun find-tlf-and-block-numbers (fun)
+(defun find-tlf-number (fun)
   (declare (type clambda fun))
-  (let ((res (source-path-tlf-number (node-source-path (lambda-bind fun))))
-	(num 0))
-    (declare (type index num) (type (or index null) res))
+  (let ((res (source-path-tlf-number (node-source-path (lambda-bind fun)))))
+    (declare (type (or index null) res))
     (do-environment-ir2-blocks (2block (lambda-environment fun))
       (let ((block (ir2-block-block 2block)))
 	(when (eq (block-info block) 2block)
-	  (setf (block-flag block) num)
-	  (incf num)
 	  (unless (eql (source-path-tlf-number
 			(node-source-path
 			 (continuation-next
@@ -230,8 +227,13 @@
     (vector-push-extend
      (dpb (length valid-succ) compiled-debug-block-nsucc-byte 0)
      *byte-buffer*)
-    (dolist (b valid-succ)
-      (write-var-integer (block-flag b) *byte-buffer*)))
+    (let ((base (block-number
+		 (node-block
+		  (lambda-bind (environment-function env))))))
+      (dolist (b valid-succ)
+	(write-var-integer
+	 (the index (- (block-number b) base))
+	 *byte-buffer*))))
   (undefined-value))
 
 
@@ -249,7 +251,7 @@
   (declare (type clambda fun) (type hash-table var-locs))
   (setf (fill-pointer *byte-buffer*) 0)
   (let ((*previous-location* 0)
-	(tlf-num (find-tlf-and-block-numbers fun))
+	(tlf-num (find-tlf-number fun))
 	(env (lambda-environment fun))
 	(prev-locs nil)
 	(prev-block nil))
@@ -575,9 +577,11 @@
 (defun compute-1-debug-function (fun var-locs)
   (declare (type clambda fun) (type hash-table var-locs))
   (let* ((dfun (dfun-from-fun fun))
-	 (level (cookie-debug
-		 (lexenv-cookie (node-lexenv (lambda-bind fun))))))
-
+	 (actual-level
+	  (cookie-debug (lexenv-cookie (node-lexenv (lambda-bind fun)))))
+	 (level (if *collect-dynamic-statistics*
+		    (max actual-level 2)
+		    actual-level)))
     (cond ((zerop level))
 	  ((and (<= level 1)
 		(let ((od (lambda-optional-dispatch fun)))
