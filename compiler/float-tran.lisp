@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.98 2004/06/18 18:18:12 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.99 2004/09/03 18:36:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,9 +166,19 @@
 (deftransform random ((num &optional state)
 		      ((integer 1 #.(expt 2 32)) &optional *))
   "use inline (unsigned-byte 32) operations"
-  (let ((num-high (numeric-type-high (continuation-type num))))
-    (when (null num-high)
-      (give-up))
+  (let* ((num-type (continuation-type num))
+	 (num-high (cond ((numeric-type-p num-type)
+			  (numeric-type-high num-type))
+			 ((union-type-p num-type)
+			  ;; Find the maximum of the union type.  We
+			  ;; know this works because if we're in this
+			  ;; routine, NUM must be a subtype of
+			  ;; (INTEGER 1 2^32), so each member of the
+			  ;; union must be a subtype too.
+			  (reduce #'max (union-type-types num-type)
+				  :key #'numeric-type-high))
+			 (t
+			  (give-up)))))
     (cond ((constant-continuation-p num)
 	   ;; Check the worst case sum abs error for the random number
 	   ;; expectations.
