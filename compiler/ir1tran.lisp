@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.56 1991/11/05 14:38:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.57 1991/11/08 15:24:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -762,22 +762,22 @@
 ;;; being bound, we must also deal with declarations that constrain the type of
 ;;; lexically apparent functions.
 ;;;
-;;; [### In the non-pervasive case, we should propagate type constraints into
-;;; the function getting the declaration.  We should also think about checking
-;;; for incompatible declarations and possibly intersecting the declared
-;;; types.]
-;;;
 (defun process-ftype-declaration (spec res names fvars)
   (declare (list spec names fvars) (type lexenv res))
   (let ((type (specifier-type spec)))
     (collect ((res nil cons))
       (dolist (name names)
 	(let ((found (find name fvars :key #'leaf-name)))
-	  (if found
-	      (setf (leaf-type found) type)
-	      (res (cons (find-lexically-apparent-function
-			  name "in a function type declaration")
-			 type)))))
+	  (cond
+	   (found
+	    (setf (leaf-type found) type)
+	    (assert-definition-type found type
+				    :warning-function #'compiler-note
+				    :where "FTYPE declaration"))
+	   (t
+	    (res (cons (find-lexically-apparent-function
+			name "in a function type declaration")
+		       type))))))
       (if (res)
 	  (make-lexenv :default res  :type-restrictions (res))
 	  res))))
@@ -2517,6 +2517,7 @@
   (let ((var (gethash (define-function-name name) *free-functions*)))
     (etypecase var
       (null)
+      (slot-accessor)
       (global-var
        (let ((new (copy-global-var var))
 	     (name (leaf-name var)))
