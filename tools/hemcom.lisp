@@ -111,13 +111,6 @@
 (comf "target:hemlock/echocoms")
 (comf "target:hemlock/defsyn")
 
-(comf "target:hemlock/spell-rt")
-(comf "target:hemlock/spell-corr")
-(comf "target:hemlock/spell-aug")
-(comf "target:hemlock/spell-build")
-(comf "target:hemlock/spellcoms")
-(comf "target:hemlock/kbdmac")
-
 (comf "target:hemlock/ts-buf")
 (comf "target:hemlock/ts-stream")
 
@@ -173,6 +166,14 @@
 
 ) ;WITH-COMPILATION-UNIT for commands
 
+;; Stuff we want compiled native:
+
+(comf "target:hemlock/spell-rt")
+(comf "target:hemlock/spell-corr")
+(comf "target:hemlock/spell-aug")
+(comf "target:hemlock/spell-build")
+(comf "target:hemlock/spellcoms")
+(comf "target:hemlock/kbdmac")
 
 (comf "target:hemlock/bindings")
 (comf "target:hemlock/hacks")
