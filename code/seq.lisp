@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.9 1991/08/13 13:59:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.10 1991/10/01 16:12:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -700,47 +700,50 @@
 
 (eval-when (compile eval)
 
-(defmacro mumble-reduce (function sequence start end initial-value ref)
+(defmacro mumble-reduce (function sequence key start end initial-value ref)
   `(do ((index ,start (1+ index))
 	(value ,initial-value))
        ((= index (the fixnum ,end)) value)
      (declare (fixnum index))
-     (setq value (funcall ,function value (,ref ,sequence index)))))
+     (setq value (funcall ,function value
+			  (apply-key ,key (,ref ,sequence index))))))
 
-(defmacro mumble-reduce-from-end (function sequence start end initial-value ref)
+(defmacro mumble-reduce-from-end (function sequence key start end initial-value ref)
   `(do ((index (1- ,end) (1- index))
 	(value ,initial-value)
 	(terminus (1- ,start)))
        ((= index terminus) value)
      (declare (fixnum index terminus))
-     (setq value (funcall ,function (,ref ,sequence index) value))))
+     (setq value (funcall ,function
+			  (apply-key ,key (,ref ,sequence index))
+			  value))))
 
-(defmacro list-reduce (function sequence start end initial-value ivp)
+(defmacro list-reduce (function sequence key start end initial-value ivp)
   `(let ((sequence (nthcdr ,start ,sequence)))
      (do ((count (if ,ivp ,start (1+ (the fixnum ,start)))
 		 (1+ count))
 	  (sequence (if ,ivp sequence (cdr sequence))
 		    (cdr sequence))
-	  (value (if ,ivp ,initial-value (car sequence))
-		 (funcall ,function value (car sequence))))
+	  (value (if ,ivp ,initial-value (apply-key ,key (car sequence)))
+		 (funcall ,function value (apply-key ,key (car sequence)))))
 	 ((= count (the fixnum ,end)) value)
        (declare (fixnum count)))))
 
-(defmacro list-reduce-from-end (function sequence start end initial-value ivp)
+(defmacro list-reduce-from-end (function sequence key start end initial-value ivp)
   `(let ((sequence (nthcdr (- (the fixnum (length ,sequence)) (the fixnum ,end))
 			   (reverse ,sequence))))
      (do ((count (if ,ivp ,start (1+ (the fixnum ,start)))
 		 (1+ count))
 	  (sequence (if ,ivp sequence (cdr sequence))
 		    (cdr sequence))
-	  (value (if ,ivp ,initial-value (car sequence))
-		 (funcall ,function (car sequence) value)))
+	  (value (if ,ivp ,initial-value (apply-key ,key (car sequence)))
+		 (funcall ,function (apply-key ,key (car sequence)) value)))
 	 ((= count (the fixnum ,end)) value)
        (declare (fixnum count)))))
 
 )
 
-(defun reduce (function sequence &key from-end (start 0)
+(defun reduce (function sequence &key key from-end (start 0)
 			end (initial-value nil ivp))
   "The specified Sequence is ``reduced'' using the given Function.
   See manual for details."
@@ -750,18 +753,20 @@
 	 (if ivp initial-value (funcall function)))
 	((listp sequence)
 	 (if from-end
-	     (list-reduce-from-end function sequence start end initial-value ivp)
-	     (list-reduce function sequence start end initial-value ivp)))
+	     (list-reduce-from-end function sequence key start end
+				   initial-value ivp)
+	     (list-reduce function sequence key start end initial-value ivp)))
 	(from-end
 	 (when (not ivp)
 	   (setq end (1- (the fixnum end)))
-	   (setq initial-value (aref sequence end)))
-	 (mumble-reduce-from-end function sequence start end initial-value aref))
+	   (setq initial-value (apply-key key (aref sequence end))))
+	 (mumble-reduce-from-end function sequence key start end
+				 initial-value aref))
 	(t
 	 (when (not ivp)
-	   (setq initial-value (aref sequence start))
+	   (setq initial-value (apply-key key (aref sequence start)))
 	   (setq start (1+ start)))
-	 (mumble-reduce function sequence start end initial-value aref))))
+	 (mumble-reduce function sequence key start end initial-value aref))))
 
 
 ;;; Coerce:
@@ -1461,8 +1466,8 @@
 				   (normal
 				    (if test-not
 					(not 
-					 (funcall test-not (apply-key key elt) old))
-					(funcall test (apply-key key elt) old)))
+					 (funcall test-not old (apply-key key elt)))
+					(funcall test old (apply-key key elt))))
 				   (if (funcall test (apply-key key elt)))
 				   (if-not (not (funcall test (apply-key key elt)))))
 			    (setq count (1- count))
@@ -1494,8 +1499,8 @@
 	    (cond ((case pred
 			  (normal
 			    (if test-not
-				(not (funcall test-not (apply-key key elt) old))
-				(funcall test (apply-key key elt) old)))
+				(not (funcall test-not old (apply-key key elt)))
+				(funcall test old (apply-key key elt))))
 			  (if (funcall test (apply-key key elt)))
 			  (if-not (not (funcall test (apply-key key elt)))))
 		   (setq count (1- count))
@@ -1540,8 +1545,7 @@
   for details."
   (declare (fixnum start count))
   (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence))
-	(old (apply-key key old)))
+  (let ((length (length sequence)))
     (declare (fixnum length))
     (subst-dispatch 'normal)))
 
@@ -1588,21 +1592,18 @@
   may be destroyed.  See manual for details."
   (declare (fixnum count start))
   (when (null end) (setf end (length sequence)))
-  (let ((incrementer 1))
-    (declare (fixnum incrementer))
-    (if from-end
-	(psetq start (1- end)
-	       end (1- start)
-	       incrementer -1))
-    (if (listp sequence)
-	(if from-end
-	    (nreverse (nlist-substitute*
-		       new old (nreverse (the list sequence))
-		       test test-not start end count key))
-	    (nlist-substitute* new old sequence
-			       test test-not start end count key))
-	(nvector-substitute* new old sequence incrementer
-			     test test-not start end count key))))
+  (if (listp sequence)
+      (if from-end
+	  (nreverse (nlist-substitute*
+		     new old (nreverse (the list sequence))
+		     test test-not start end count key))
+	  (nlist-substitute* new old sequence
+			     test test-not start end count key))
+      (if from-end
+	  (nvector-substitute* new old sequence -1
+			       test test-not (1- end) (1- start) count key)
+	  (nvector-substitute* new old sequence 1
+			       test test-not start end count key))))
 
 (defun nlist-substitute* (new old sequence test test-not start end count key)
   (declare (fixnum start count end))
@@ -1611,8 +1612,8 @@
       ((or (= index end) (null list) (= count 0)) sequence)
     (declare (fixnum index))
     (when (if test-not
-	      (not (funcall test-not (apply-key key (car list)) old))
-	      (funcall test (apply-key key (car list)) old))
+	      (not (funcall test-not old (apply-key key (car list))))
+	      (funcall test old (apply-key key (car list))))
       (rplaca list new)
       (setq count (1- count)))))
 
@@ -1623,8 +1624,8 @@
       ((or (= index end) (= count 0)) sequence)
     (declare (fixnum index))
     (when (if test-not
-	      (not (funcall test-not (apply-key key (aref sequence index)) old))
-	      (funcall test (apply-key key (aref sequence index)) old))
+	      (not (funcall test-not old (apply-key key (aref sequence index))))
+	      (funcall test old (apply-key key (aref sequence index))))
       (setf (aref sequence index) new)
       (setq count (1- count)))))
 
@@ -1632,18 +1633,13 @@
 ;;; NSubstitute-If:
 
 (defun nsubstitute-if (new test sequence &key from-end (start 0)
-			end (count most-positive-fixnum) key)
+			   end (count most-positive-fixnum) key)
   "Returns a sequence of the same kind as Sequence with the same elements
-  except that all elements satisfying the Test are replaced with New.  The
-  Sequence may be destroyed.  See manual for details."
+   except that all elements satisfying the Test are replaced with New.  The
+   Sequence may be destroyed.  See manual for details."
   (declare (fixnum start count))
-  (let ((incrementer 1)
-	(end (or end (length sequence))))
-    (declare (fixnum incrementer end))
-    (if from-end
-	(psetq start (1- end)
-	       end (1- start)
-	       incrementer -1))
+  (let ((end (or end (length sequence))))
+    (declare (fixnum end))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute-if*
@@ -1651,8 +1647,11 @@
 		       start end count key))
 	    (nlist-substitute-if* new test sequence
 				  start end count key))
-	(nvector-substitute-if* new test sequence incrementer
-				start end count key))))
+	(if from-end
+	    (nvector-substitute-if* new test sequence -1
+				    (1- end) (1- start) count key)
+	    (nvector-substitute-if* new test sequence 1
+				    start end count key)))))
 
 (defun nlist-substitute-if* (new test sequence start end count key)
   (declare (fixnum end))
@@ -1675,27 +1674,25 @@
 ;;; NSubstitute-If-Not:
 
 (defun nsubstitute-if-not (new test sequence &key from-end (start 0)
-			    end (count most-positive-fixnum) key)
+			       end (count most-positive-fixnum) key)
   "Returns a sequence of the same kind as Sequence with the same elements
-  except that all elements not satisfying the Test are replaced with New.
-  The Sequence may be destroyed.  See manual for details."
+   except that all elements not satisfying the Test are replaced with New.
+   The Sequence may be destroyed.  See manual for details."
   (declare (fixnum start count))
   (let ((end (or end (length sequence))))
     (declare (fixnum end))
-    (let ((incrementer 1))
-      (if from-end
-	  (psetq start (1- end)
-		 end (1- start)
-		 incrementer -1))
-      (if (listp sequence)
-	  (if from-end
-	      (nreverse (nlist-substitute-if-not*
-			 new test (nreverse (the list sequence))
-			 start end count key))
-	      (nlist-substitute-if-not* new test sequence
-					start end count key))
-	  (nvector-substitute-if-not* new test sequence incrementer
-				      start end count key)))))
+    (if (listp sequence)
+	(if from-end
+	    (nreverse (nlist-substitute-if-not*
+		       new test (nreverse (the list sequence))
+		       start end count key))
+	    (nlist-substitute-if-not* new test sequence
+				      start end count key))
+	(if from-end
+	    (nvector-substitute-if-not* new test sequence -1
+					(1- end) (1- start) count key)
+	    (nvector-substitute-if-not* new test sequence 1
+					start end count key)))))
 
 (defun nlist-substitute-if-not* (new test sequence start end count key)
   (declare (fixnum end))
