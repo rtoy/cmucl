@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.46 1998/05/08 12:48:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.47 1998/05/11 18:18:28 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -473,6 +473,10 @@
 
 (defmacro with-package-iterator ((mname package-list &rest symbol-types)
 				 &body body)
+  "Within the lexical scope of the body forms, MNAME is defined via macrolet
+   such that successive invocations of (mname) will return the symbols,
+   one by one, from the packages in PACKAGE-LIST. SYMBOL-TYPES may be
+   any of :inherited :external :internal."
   (let* ((packages (gensym))
 	 (these-packages (gensym))
 	 (ordered-types (let ((res nil))
@@ -488,6 +492,7 @@
 	 (init-macro (gensym))
 	 (end-test-macro (gensym))
 	 (real-symbol-p (gensym))
+	 (inherited-symbol-p (gensym))
 	 (BLOCK (gensym)))
     `(let* ((,these-packages ,package-list)
 	    (,packages `,(mapcar #'(lambda (package)
@@ -585,16 +590,31 @@
 				(,',end-test-macro :external)))))
 		     ,@(when (member :inherited ',ordered-types)
 			 `((:inherited
-			    (setf ,',counter
-				  (position-if #',',real-symbol-p ,',hash-vector
-					       :start (if ,',counter
-							  (1+ ,',counter)
-							  0)))
+			    (flet ((,',inherited-symbol-p (number)
+				     (when (,',real-symbol-p number)
+				       (let* ((p (position
+						  number ,',hash-vector
+						  :start (if ,',counter
+							     (1+ ,',counter)
+							     0)))
+					      (s (svref ,',vector p)))
+					 (eql (nth-value
+					       1 (find-symbol
+						  (symbol-name s)
+						  (car ,',packages)))
+					      :inherited)))))
+			      (setf ,',counter
+				    (position-if #',',inherited-symbol-p
+						 ,',hash-vector
+						 :start (if ,',counter
+							    (1+ ,',counter)
+							    0))))
 			    (cond (,',counter
 				   (return-from
 				    ,',BLOCK
 				    (values t (svref ,',vector ,',counter)
-					    ,',kind (car ,',packages))))
+					    ,',kind (car ,',packages))
+				    ))
 				  (t
 				   (setf ,',package-use-list
 					 (cdr ,',package-use-list))
