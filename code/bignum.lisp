@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.19 1991/06/12 17:24:18 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.20 1993/05/07 12:13:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 (export '(add-bignums multiply-bignums negate-bignum subtract-bignum
 	  multiply-bignum-and-fixnum multiply-fixnums
 	  bignum-ashift-right bignum-ashift-left bignum-gcd
-	  bignum-to-float float-bignum-ratio bignum-integer-length
+	  bignum-to-float bignum-integer-length
 	  bignum-logical-and bignum-logical-ior bignum-logical-xor
 	  bignum-logical-not bignum-load-byte bignum-deposit-byte
 	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
@@ -1019,36 +1019,6 @@
 
 
 ;;;; Float conversion.
-
-;;; FLOAT-BIGNUM-RATIO  --  Internal
-;;;
-;;;    Given a Ratio with arbitrarily large numerator and denominator, convert
-;;; it to a float in the specified Format without causing spurious floating
-;;; overflows.  What we do is discard all of the numerator and denominator
-;;; except for the format's precision + guard bits.  We float these
-;;; integers, do the floating division, and then scaled the result accordingly.
-;;;
-;;;    The use of digit-size as the number of guard bits is relatively
-;;; arbitrary.  We want to keep around some extra bits so that we rarely do
-;;; round-to-even when there were low bits that could have caused us to round
-;;; up.  We really only need to discard enough bits to ensure that floating the
-;;; result doesn't overflow.
-;;;
-(defun float-bignum-ratio (ratio format)
-  (declare (optimize (ext:inhibit-warnings 3)))
-  (let* ((bits-to-keep (+ (float-format-digits format) digit-size))
-	 (num (numerator ratio))
-	 (num-len (integer-length num))
-	 (num-shift (min (- bits-to-keep num-len) 0))
-	 (den (denominator ratio))
-	 (den-len (integer-length den))
-	 (den-shift (min (- bits-to-keep den-len) 0)))
-    (multiple-value-bind
-	(decoded exp sign)
-	(decode-float (/ (coerce (ash num num-shift) format)
-			 (coerce (ash den den-shift) format)))
-     (* sign (scale-float decoded (+ exp (- num-shift) den-shift))))))
-
 
 ;;; xxx-FLOAT-FROM-BITS  --  Internal
 ;;;
