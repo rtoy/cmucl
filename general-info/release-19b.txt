@@ -42,6 +42,7 @@ New in this release:
       - Lazy sxhash on symbols implemented for ppc.
       - Pretty-printer for LOOP.
       - Added some more pprinters for various forms.
+      - Callbacks supported on Mac OS X.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -115,6 +116,8 @@ New in this release:
         has version :wild.
       - Fixed bug with CLX on MacOS X where the WM-SIZE-HINTS were
         larger than CLX expected.  Replaced card16 with card32.
+      - Callbacks on sparc that returned double-floats were sometimes
+        causing a sigbus error.
 
   * Other changes:
      
