@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.52 1993/08/03 16:29:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.53 1993/08/22 22:21:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1163,6 +1163,8 @@
 				#'(lambda (x) (typep x 'structure-class))
 				#'(lambda (x) (typep x (find-class class))))
 			    (fdefinition constructor)))
+    (setf (class-direct-superclasses class)
+	  (list (layout-class (svref inherits (1- (length inherits))))))
     (let ((new-layout (make-layout :class class
 				   :inherits inherits
 				   :inheritance-depth (length inherits)
