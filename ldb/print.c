@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.13 1990/10/02 23:04:52 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/print.c,v 1.14 1990/11/08 22:46:22 wlott Exp $ */
 #include <stdio.h>
 
 #include "ldb.h"
@@ -400,12 +400,12 @@ lispobj obj;
 
             case type_SingleFloat:
                 NEWLINE;
-                printf("%f", *(float *)ptr);
+                printf("%f", ((struct single_float *)PTR(obj))->value);
                 break;
 
             case type_DoubleFloat:
                 NEWLINE;
-                printf("%lf", *(double *)ptr);
+                printf("%lf", ((struct double_float *)PTR(obj))->value);
                 break;
 
             case type_SimpleString:
