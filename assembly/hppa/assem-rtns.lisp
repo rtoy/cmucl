@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.3 1992/07/08 01:40:27 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/assem-rtns.lisp,v 1.4 1993/07/26 19:44:48 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,6 +57,7 @@
   (loadw a4 vals 4)
   (inst addib := (fixnum -1) count default-a5-and-on :nullify t)
   (loadw a5 vals 5)
+  (inst addib := (fixnum -1) count done :nullify t)  
 
   ;; Copy the remaining args to the top of the stack.
   (inst addi (* 6 word-bytes) vals src)
@@ -64,7 +65,7 @@
 
   LOOP
   (inst ldwm 4 src temp)
-  (inst addib :< (fixnum -1) count loop)
+  (inst addib :> (fixnum -1) count loop)
   (inst stwm temp 4 dst)
 
   (inst b done :nullify t)
