@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.39 1994/02/04 15:22:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.40 1994/02/14 13:21:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -759,7 +759,7 @@ See the CMU Common Lisp User's Manual for more information.
 (defun debug-eval-print (exp)
   (setq +++ ++ ++ + + - - exp)
   (let* ((values (multiple-value-list
-		  (if (and (fboundp 'eval:internal-eval) *auto-eval-in-frame*)
+		  (if (and (fboundp 'compile) *auto-eval-in-frame*)
 		      (di:eval-in-frame *current-frame* -)
 		      (eval -))))
 	 (*standard-output* *debug-io*))
