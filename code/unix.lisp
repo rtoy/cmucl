@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.76 2002/08/27 22:18:25 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.77 2002/10/27 22:59:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2204,12 +2204,23 @@
   nil)
 
 
+;; Use getcwd instead of getwd.  But what should we do if the path
+;; won't fit?  Try again with a larger size?  We don't do that right
+;; now.
 (defun unix-current-directory ()
-  (with-alien ((buf (array char 1024)))
-    (values (not (zerop (alien-funcall (extern-alien "getwd"
-						     (function int (* char)))
-				       (cast buf (* char)))))
-	    (cast buf c-string))))
+  ;; 5120 is some randomly selected maximum size for the buffer for getcwd.
+  (with-alien ((buf (array c-call:char 5120)))
+    (let ((result
+	   (alien-funcall 
+	    (extern-alien "getcwd"
+				(function (* c-call:char)
+					  (* c-call:char) c-call:int))
+	    (cast buf (* c-call:char))
+	    5120)))
+	
+      (values (not (zerop
+		    (sap-int (alien-sap result))))
+	      (cast buf c-call:c-string)))))
 
 
 
