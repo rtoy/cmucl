@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.9 2000/12/05 03:07:57 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.10 2001/10/03 14:09:35 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -160,7 +160,7 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
 
   /* Check to see if the current instruction is a trap #16 */
   if (((badinst >> 30) == 2) && (((badinst >> 19) & 0x3f) == 0x3a)
-      && (((badinst >> 13) & 1) == 1) && ((badinst & 0x3f) == 16))
+      && (((badinst >> 13) & 1) == 1) && ((badinst & 0x3f) == trap_PseudoAtomic))
     {
       unsigned int previnst;
       previnst = pc[-1];
@@ -178,13 +178,24 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
         }
       else
         {
-          fprintf(stderr, "Oops!  Got a trap 16 without a preceeding andcc!\n");
+          fprintf(stderr, "Oops!  Got a pseudo atomic trap without a preceeding andcc!\n");
         }
     }
   return result;
 }
 
 
+/*
+ * How to identify an illegal instruction trap and a trap instruction
+ * trap.
+ */
+#ifdef SOLARIS
+#define ILLTRAP_INST ILL_ILLOPC
+#define TRAP_INST(code) (CODE(code) == ILL_ILLTRP)
+#else
+#define ILLTRAP_INST T_UNIMP_INSTR
+#define TRAP_INST(code) ((CODE(code) >= T_SOFTWARE_TRAP + 16) && (CODE(code) < T_SOFTWARE_TRAP + 32))
+#endif
 
 static void sigill_handler(HANDLER_ARGS)
 {
@@ -196,34 +207,17 @@ static void sigill_handler(HANDLER_ARGS)
     sigsetmask(context->sc_mask);
 #endif
 
-#ifdef SOLARIS
-    if (CODE(code) == ILL_ILLOPC)
-#else
-    if (CODE(code) == T_UNIMP_INSTR)
-#endif
+    if (CODE(code) == ILLTRAP_INST)
     {
-	int trap;
+	int illtrap_code;
 	unsigned int inst;
 	unsigned int* pc = (unsigned int *)(SC_PC(context));
 
 	inst = *pc;
-#if 0
-        /* CMUCL shouldn't be generating these yucky trap instructions anymore. */
-#ifdef SOLARIS
-	/* SPARC v9 doesn't like our trap instructions */
-	if ((inst & 0xe1f82000) == 0x81d02000) {
-	    /* only 7 bits of trap # are allowed, not 13 as previously */
-	    /* clear reserved bits */
-	    inst &= ~ 0x1f80;
-	    *pc = inst;
-	    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
-	    return;
-	}
-#endif
-#endif
-	trap = inst & 0x3fffff;
 
-	switch (trap) {
+	illtrap_code = inst & 0x3fffff;
+
+	switch (illtrap_code) {
 	  case trap_PendingInterrupt:
 	    arch_skip_instruction(context);
 	    interrupt_handle_pending(context);
@@ -235,7 +229,7 @@ static void sigill_handler(HANDLER_ARGS)
 
 	  case trap_Error:
 	  case trap_Cerror:
-	    interrupt_internal_error(signal, code, context, trap == trap_Cerror);
+	    interrupt_internal_error(signal, code, context, illtrap_code == trap_Cerror);
 	    break;
 
 	  case trap_Breakpoint:
@@ -265,12 +259,7 @@ static void sigill_handler(HANDLER_ARGS)
 	    break;
 	}
     }
-#ifdef SOLARIS
-    else if (CODE(code) == ILL_ILLTRP)
-#else
-    else if (CODE(code) >= T_SOFTWARE_TRAP + 16 &&
-	     CODE(code) < T_SOFTWARE_TRAP + 32)
-#endif
+    else if (TRAP_INST(code))
       {
         if (pseudo_atomic_trap_p(context))
           {
