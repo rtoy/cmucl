@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.70 1994/10/05 16:03:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.71 1994/10/24 19:11:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,6 @@
 (when (c:backend-featurep :sparc)
   (comf "target:assembly/sparc/assem-rtns" :assem t)
   (comf "target:assembly/sparc/array" :assem t)
-  (comf "target:assembly/sparc/bit-bash" :assem t)
   (comf "target:assembly/sparc/arith" :assem t)
   (comf "target:assembly/sparc/alloc" :assem t))
 
@@ -152,7 +151,9 @@
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
 (when (c:backend-featurep :sparc)
-  (comf "target:code/sparc-vm"))
+  (if (c:backend-featurep :svr4)
+      (comf "target:code/sparc-svr4-vm")
+      (comf "target:code/sparc-vm")))
 (when (c:backend-featurep :rt)
   (comf "target:code/rt-vm"))
 (when (c:backend-featurep :hppa)
