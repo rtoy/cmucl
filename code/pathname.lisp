@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.6 1992/01/16 18:38:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.7 1992/02/19 01:50:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -969,11 +969,13 @@
 		       a name, type, or ~%version specified:~%  ~S"
 		      pathname))
 	     (let ((directory (pathname-directory pathname)))
-	       (unless (eq (car directory) :absolute)
-		 (error "Search-lists cannot expand into relative ~
-			 pathnames:~%  ~S"
-			pathname))
-	       (let ((expansion (cdr directory)))
+	       (let ((expansion
+		      (if directory
+			  (ecase (car directory)
+			    (:absolute (cdr directory))
+			    (:relative (cons (intern-search-list "default")
+					     (cdr directory))))
+			  (list (intern-search-list "default")))))
 		 (check (car expansion) nil)
 		 expansion)))))
       (setf (search-list-expansions search-list)
