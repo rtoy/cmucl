@@ -421,7 +421,10 @@
        (eval-when (compile load eval)
 	 (setf (gethash ',name *meta-primitive-type-names*)
 	       (make-primitive-type :name ',name  :scs ',scns
-				    :type ,get-type)))
+				    ;; ### Bootstrap hack: The type system
+				    ;; isn't avaiable during cross compile.
+				    :type (if (fboundp 'specifier-type)
+					      ,get-type))))
        ,(once-only ((n-old `(gethash ',name *primitive-type-names*))
 		    (n-type get-type))
 	  `(progn
@@ -1667,9 +1670,10 @@
     (when more-op
       (let ((mtype (car (last types))))
 	(when (and (consp mtype) (eq (first mtype) :constant))
-	  (error "Can't use :CONSTANT on VOP more args."))))
-    
-    (when (vop-parse-translate parse)
+	  (error "Can't use :CONSTANT on VOP more args.")))))
+  
+  (when (vop-parse-translate parse)
+    (let ((types (specify-operand-types types ops more-op)))
       (mapc #'(lambda (x y)
 		(check-operand-type-scs parse x y load-p))
 	    (if more-op (butlast ops) ops)
