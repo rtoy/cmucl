@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.8 1990/05/15 01:21:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.9 1990/05/23 06:08:42 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -250,10 +250,16 @@
 	    (system-area-pointer
 	     (system-area-copy src src-start dst dst-start length))
 	    ((simple-unboxed-array (*))
-	     (copy-from-system-area src src-start dst dst-start length))))
+	     (copy-from-system-area src src-start
+				    dst (+ dst-start vector-data-bit-offset)
+				    length))))
 	 ((simple-unboxed-array (*))
 	  (etypecase dst
 	    (system-area-pointer
-	     (copy-to-system-area src src-start dst dst-start length))
+	     (copy-to-system-area src (+ src-start vector-data-bit-offset)
+				  dst dst-start
+				  length))
 	    ((simple-unboxed-array (*))
-	     (bit-bash-copy src src-start dst dst-start length))))))))
+	     (bit-bash-copy src (+ src-start vector-data-bit-offset)
+			    dst (+ dst-start vector-data-bit-offset)
+			    length))))))))
