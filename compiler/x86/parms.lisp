@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.11 1998/06/07 17:56:16 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.12 1998/08/30 04:56:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -173,14 +173,14 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x05000000)
-(defparameter target-dynamic-space-start   #x09000000)
+(defparameter target-read-only-space-start #x10000000)
+(defparameter target-static-space-start    #x28000000)
+(defparameter target-dynamic-space-start   #x48000000)
 
 ;;; Given that NIL is the first things allocated in static space, we
 ;;; know its value at compile time:
 ;;; 
-(defparameter nil-value #x0500000B)
+(defparameter nil-value #x2800000B)
 
 
 ;;;; Other random constants.

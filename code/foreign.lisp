@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.28 1998/05/01 01:21:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.29 1998/08/30 04:56:49 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,10 +25,10 @@
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
 
-#+(and (not linux) x86)
- (defconstant foreign-segment-start #x7000000) ; just an unused space
-#+(and (not linux) x86) 
- (defconstant foreign-segment-size  #x00400000)
+#+(and freebsd x86)
+(defconstant foreign-segment-start #x0E000000)
+#+(and freebsd x86) 
+(defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
 #-(or linux irix)
