@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.3 1997/08/22 20:49:36 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/motif.c,v 1.4 2001/03/08 00:08:50 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -69,7 +69,7 @@ int RXmMenuPosition(message_t message)
   XButtonPressedEvent *event;
 
   toolkit_read_value(message,&w,XtRWidget);
-  toolkit_read_value(message,&w,ExtREvent);
+  toolkit_read_value(message,&event,ExtREvent);
 
   XmMenuPosition(w,event);
 }
