@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.147 1998/03/21 08:11:54 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.148 1998/03/26 13:18:35 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -328,7 +328,7 @@
              "ATOM" "BASE-CHAR" "BASE-STRING" "BIGNUM"
              "BIT" "BIT-AND" "BIT-ANDC1" "BIT-ANDC2" "BIT-EQV" "BIT-IOR"
              "BIT-NAND" "BIT-NOR" "BIT-NOT" "BIT-ORC1" "BIT-ORC2"
-             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE"
+             "BIT-VECTOR" "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" "BOOLEAN"
              "BOOLE-1" "BOOLE-2" "BOOLE-AND" "BOOLE-ANDC1" "BOOLE-ANDC2"
              "BOOLE-C1" "BOOLE-C2" "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR"
              "BOOLE-NAND" "BOOLE-NOR" "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET"
@@ -571,6 +571,7 @@
 	     "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
              "UPDATE-INSTANCE-FOR-REDEFINED-CLASS" "WITH-ACCESSORS"
              "WITH-ADDED-METHODS" "WITH-SLOTS"
+	     "MAKE-METHOD" "UNBOUND-SLOT" "UNBOUND-SLOT-INSTANCE"
              "CELL-ERROR-NAME"
 	     "COMMON" "HASH-TABLE-WEAK-P"
              "GET-SETF-EXPANSION" "STYLE-WARNING" 
