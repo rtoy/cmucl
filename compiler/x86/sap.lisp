@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.7 1998/02/19 10:52:16 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.8 1998/03/21 07:54:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -466,6 +466,36 @@
   (:generator 4
      (with-empty-tn@fp-top(result)
         (inst fldl (make-ea :dword :base sap :disp offset)))))
+
+#+long-float
+(define-vop (%set-sap-ref-long)
+  (:translate %set-sap-ref-long)
+  (:policy :fast-safe)
+  (:args (sap :scs (sap-reg) :to (:eval 0))
+	 (offset :scs (signed-reg) :to (:eval 0))
+	 (value :scs (long-reg)))
+  (:arg-types system-area-pointer signed-num long-float)
+  (:results (result :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 5
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (store-long-float (make-ea :dword :base sap :index offset))
+	   (unless (zerop (tn-offset result))
+	     ;; Value is in ST0 but not result.
+	     (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (store-long-float (make-ea :dword :base sap :index offset))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+		    (inst fstd result))
+		  (inst fxch value)))))))
 
 
 ;;; Noise to convert normal lisp data objects into SAPs.

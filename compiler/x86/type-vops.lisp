@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.10 1998/02/19 19:35:08 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.11 1998/03/21 07:54:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -355,7 +355,8 @@
 (def-type-vops complexp check-complex complex object-not-complex-error
   complex-type
   #+complex-float complex-single-float-type
-  #+complex-float complex-double-float-type)
+  #+complex-float complex-double-float-type
+  #+(and complex-float long-float) complex-long-float-type)
 
 #+complex-float
 (def-type-vops complex-rational-p check-complex-rational nil
@@ -364,7 +365,8 @@
 #+complex-float
 (def-type-vops complex-float-p check-complex-float nil
   object-not-complex-float-error
-  complex-single-float-type complex-double-float-type)
+  complex-single-float-type complex-double-float-type
+  #+long-float complex-long-float-type)
 
 #+complex-float
 (def-type-vops complex-single-float-p check-complex-single-float
@@ -376,11 +378,20 @@
   complex-double-float object-not-complex-double-float-error
   complex-double-float-type)
 
+#+(and complex-float long-float)
+(def-type-vops complex-long-float-p check-complex-long-float
+  complex-long-float object-not-complex-long-float-error
+  complex-long-float-type)
+
 (def-type-vops single-float-p check-single-float single-float
   object-not-single-float-error single-float-type)
 
 (def-type-vops double-float-p check-double-float double-float
   object-not-double-float-error double-float-type)
+
+#+long-float
+(def-type-vops long-float-p check-long-float long-float
+  object-not-long-float-error long-float-type)
 
 (def-type-vops simple-string-p check-simple-string simple-string
   object-not-simple-string-error simple-string-type)
@@ -457,6 +468,11 @@
   simple-array-double-float object-not-simple-array-double-float-error
   simple-array-double-float-type)
 
+#+long-float
+(def-type-vops simple-array-long-float-p check-simple-array-long-float
+  simple-array-long-float object-not-simple-array-long-float-error
+  simple-array-long-float-type)
+
 #+complex-float
 (def-type-vops simple-array-complex-single-float-p
   check-simple-array-complex-single-float
@@ -470,6 +486,13 @@
   simple-array-complex-double-float
   object-not-simple-array-complex-double-float-error
   simple-array-complex-double-float-type)
+
+#+(and complex-float long-float)
+(def-type-vops simple-array-complex-long-float-p
+  check-simple-array-complex-long-float
+  simple-array-complex-long-float
+  object-not-simple-array-complex-long-float-error
+  simple-array-complex-long-float-type)
 
 (def-type-vops base-char-p check-base-char base-char
   object-not-base-char-error base-char-type)
@@ -519,8 +542,10 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
   #+complex-float simple-array-complex-single-float-type
   #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type
   complex-string-type complex-bit-vector-type complex-vector-type)
 
 (def-type-vops simple-array-p check-simple-array nil object-not-simple-array-error
@@ -533,8 +558,10 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
   #+complex-float simple-array-complex-single-float-type
-  #+complex-float simple-array-complex-double-float-type)
+  #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type)
 
 (def-type-vops arrayp check-array nil object-not-array-error
   simple-array-type simple-string-type simple-bit-vector-type
@@ -546,16 +573,19 @@
   #+signed-array simple-array-signed-byte-30-type
   #+signed-array simple-array-signed-byte-32-type
   simple-array-single-float-type simple-array-double-float-type
+  #+long-float simple-array-long-float-type
   #+complex-float simple-array-complex-single-float-type
   #+complex-float simple-array-complex-double-float-type
+  #+(and complex-float long-float) simple-array-complex-long-float-type
   complex-string-type complex-bit-vector-type complex-vector-type
   complex-array-type)
 
 (def-type-vops numberp check-number nil object-not-number-error
   even-fixnum-type odd-fixnum-type bignum-type ratio-type
-  single-float-type double-float-type complex-type
+  single-float-type double-float-type #+long-float long-float-type complex-type
   #+complex-float complex-single-float-type
-  #+complex-float complex-double-float-type)
+  #+complex-float complex-double-float-type
+  #+(and complex-float long-float) complex-long-float-type)
 
 (def-type-vops rationalp check-rational nil object-not-rational-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type)
@@ -564,11 +594,11 @@
   even-fixnum-type odd-fixnum-type bignum-type)
 
 (def-type-vops floatp check-float nil object-not-float-error
-  single-float-type double-float-type)
+  single-float-type double-float-type #+long-float long-float-type)
 
 (def-type-vops realp check-real nil object-not-real-error
   even-fixnum-type odd-fixnum-type ratio-type bignum-type
-  single-float-type double-float-type)
+  single-float-type double-float-type #+long-float long-float-type)
 
 
 ;;;; Other integer ranges.

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.7 1998/02/19 19:34:44 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.8 1998/03/21 07:54:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Debugging and Enhancements by Douglas Crosher 1996,1997.
+;;; Debugging and Enhancements by Douglas Crosher 1996,1997,1998.
 ;;;
 
 (in-package :x86)
@@ -55,6 +55,13 @@
 		      'sap-stack
 		      stack-frame-size)))
 
+#+long-float
+(def-alien-type-method (long-float :arg-tn) (type state)
+  (declare (ignore type))
+  (let ((stack-frame-size (arg-state-stack-frame-size state)))
+    (setf (arg-state-stack-frame-size state) (+ stack-frame-size 3))
+    (my-make-wired-tn 'long-float 'long-stack stack-frame-size)))
+
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
   (let ((stack-frame-size (arg-state-stack-frame-size state)))
@@ -91,6 +98,13 @@
     (setf (result-state-num-results state) (1+ num-results))
     (my-make-wired-tn 'system-area-pointer 'sap-reg
 		      (result-reg-offset num-results))))
+
+#+long-float
+(def-alien-type-method (long-float :result-tn) (type state)
+  (declare (ignore type))
+  (let ((num-results (result-state-num-results state)))
+    (setf (result-state-num-results state) (1+ num-results))
+    (my-make-wired-tn 'long-float 'long-reg (* num-results 2))))
 
 (def-alien-type-method (double-float :result-tn) (type state)
   (declare (ignore type))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.9 1997/11/18 16:55:53 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.10 1998/03/21 07:54:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,6 +76,11 @@
 	  double-float-normal-exponent-max double-float-hidden-bit
 	  double-float-trapping-nan-bit double-float-digits
 
+	  long-float-bias long-float-exponent-byte
+	  long-float-significand-byte long-float-normal-exponent-min
+	  long-float-normal-exponent-max long-float-hidden-bit
+	  long-float-trapping-nan-bit long-float-digits
+
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
@@ -121,12 +126,22 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
+(defconstant long-float-bias 16382)
+(defconstant long-float-exponent-byte (byte 15 0))
+(defconstant long-float-significand-byte (byte 31 0))
+(defconstant long-float-normal-exponent-min 1)
+(defconstant long-float-normal-exponent-max #x7FFE)
+(defconstant long-float-hidden-bit (ash 1 31))		; Actually not hidden
+(defconstant long-float-trapping-nan-bit (ash 1 30))
+
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
+(defconstant long-float-digits
+  (+ (byte-size long-float-significand-byte) word-bits 1))
 
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
@@ -258,6 +273,14 @@
       *fp-constant-1d0*
       *fp-constant-0s0*
       *fp-constant-1s0*
+      ;; Following are all long-floats.
+      *fp-constant-0l0*
+      *fp-constant-1l0*
+      *fp-constant-pi*
+      *fp-constant-l2t*
+      *fp-constant-l2e*
+      *fp-constant-lg2*
+      *fp-constant-ln2*
 
       ;; Used by gencgc.
       *scavenge-read-only-space*
@@ -296,4 +319,3 @@
 
 ;;; cf the sparc PARMS.LISP
 (defparameter *assembly-unit-length* 8)
-

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.12 1998/03/03 17:35:25 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.13 1998/03/21 07:54:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -489,6 +489,121 @@
 		  (inst fxch value)))))))
 
 
+#+long-float
+(define-vop (data-vector-ref/simple-array-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-long-float positive-fixnum)
+  (:temporary (:sc any-reg :from :eval :to :result) temp)
+  (:results (value :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 7
+    ;; temp = 3 * index
+    (inst lea temp (make-ea :dword :base index :index index :scale 2))
+    (with-empty-tn@fp-top(value)
+      (inst fldl (make-ea :dword :base object :index temp :scale 1
+			  :disp (- (* vm:vector-data-offset vm:word-bytes)
+				   vm:other-pointer-type))))))
+
+#+long-float
+(define-vop (data-vector-ref-c/simple-array-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-long-float (:constant (signed-byte 30)))
+  (:results (value :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 6
+   (with-empty-tn@fp-top(value)
+     (inst fldl (make-ea :dword :base object
+			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				     (* 12 index))
+				  vm:other-pointer-type))))))
+
+#+long-float
+(define-vop (data-vector-set/simple-array-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (long-reg) :target result))
+  (:arg-types simple-array-long-float positive-fixnum long-float)
+  (:temporary (:sc any-reg :from (:argument 1) :to :result) temp)
+  (:results (result :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 20
+    ;; temp = 3 * index
+    (inst lea temp (make-ea :dword :base index :index index :scale 2))
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (store-long-float
+	    (make-ea :dword :base object :index temp :scale 1
+		     :disp (- (* vm:vector-data-offset vm:word-bytes)
+			      vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+		   ;; Value is in ST0 but not result.
+		   (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (store-long-float
+	    (make-ea :dword :base object :index temp :scale 1
+		     :disp (- (* vm:vector-data-offset vm:word-bytes)
+			      vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+		    (inst fstd result))
+		  (inst fxch value)))))))
+
+#+long-float
+(define-vop (data-vector-set-c/simple-array-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (long-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-long-float (:constant (signed-byte 30)) long-float)
+  (:results (result :scs (long-reg)))
+  (:result-types long-float)
+  (:generator 19
+    (cond ((zerop (tn-offset value))
+	   ;; Value is in ST0
+	   (store-long-float (make-ea :dword :base object
+				      :disp (- (+ (* vm:vector-data-offset
+						     vm:word-bytes)
+						  (* 12 index))
+					       vm:other-pointer-type)))
+	   (unless (zerop (tn-offset result))
+	     ;; Value is in ST0 but not result.
+	     (inst fstd result)))
+	  (t
+	   ;; Value is not in ST0.
+	   (inst fxch value)
+	   (store-long-float (make-ea :dword :base object
+				      :disp (- (+ (* vm:vector-data-offset
+						     vm:word-bytes)
+						  (* 12 index))
+					       vm:other-pointer-type)))
+	   (cond ((zerop (tn-offset result))
+		  ;; The result is in ST0.
+		  (inst fstd value))
+		 (t
+		  ;; Neither value or result are in ST0
+		  (unless (location= value result)
+		    (inst fstd result))
+		  (inst fxch value)))))))
+
 ;;; Complex float variants.
 #+complex-float
 (progn
@@ -783,6 +898,162 @@
 	(inst fstd result-imag))
       (inst fxch value-imag))))
 
+
+#+long-float
+(define-vop (data-vector-ref/simple-array-complex-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-long-float positive-fixnum)
+  (:temporary (:sc any-reg :from :eval :to :result) temp)
+  (:results (value :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:generator 7
+    ;; temp = 3 * index
+    (inst lea temp (make-ea :dword :base index :index index :scale 2))
+    (let ((real-tn (complex-long-reg-real-tn value)))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldl (make-ea :dword :base object :index temp :scale 2
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (complex-long-reg-imag-tn value)))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldl (make-ea :dword :base object :index temp :scale 2
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					12)
+				     vm:other-pointer-type)))))))
+
+#+long-float
+(define-vop (data-vector-ref-c/simple-array-complex-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-complex-long-float (:constant (signed-byte 30)))
+  (:results (value :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:generator 6
+    (let ((real-tn (complex-long-reg-real-tn value)))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldl (make-ea :dword :base object
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					(* 24 index))
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (complex-long-reg-imag-tn value)))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldl (make-ea :dword :base object
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					(* 24 index) 12)
+				     vm:other-pointer-type)))))))
+
+#+long-float
+(define-vop (data-vector-set/simple-array-complex-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (complex-long-reg) :target result))
+  (:arg-types simple-array-complex-long-float positive-fixnum
+	      complex-long-float)
+  (:temporary (:sc any-reg :from (:argument 1) :to :result) temp)
+  (:results (result :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:generator 20
+    ;; temp = 3 * index
+    (inst lea temp (make-ea :dword :base index :index index :scale 2))
+    (let ((value-real (complex-long-reg-real-tn value))
+	  (result-real (complex-long-reg-real-tn result)))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (store-long-float
+	      (make-ea :dword :base object :index temp :scale 2
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (store-long-float
+	      (make-ea :dword :base object :index temp :scale 2
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag (complex-long-reg-imag-tn value))
+	  (result-imag (complex-long-reg-imag-tn result)))
+      (inst fxch value-imag)
+      (store-long-float
+       (make-ea :dword :base object :index temp :scale 2
+		:disp (- (+ (* vm:vector-data-offset vm:word-bytes) 12)
+			 vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
+
+#+long-float
+(define-vop (data-vector-set-c/simple-array-complex-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (complex-long-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-complex-long-float (:constant (signed-byte 30))
+	      complex-long-float)
+  (:results (result :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:generator 19
+    (let ((value-real (complex-long-reg-real-tn value))
+	  (result-real (complex-long-reg-real-tn result)))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (store-long-float
+	      (make-ea :dword :base object
+		       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				   (* 24 index))
+				vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (store-long-float
+	      (make-ea :dword :base object
+		       :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				   (* 24 index))
+				vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag (complex-long-reg-imag-tn value))
+	  (result-imag (complex-long-reg-imag-tn result)))
+      (inst fxch value-imag)
+      (store-long-float
+       (make-ea :dword :base object
+		:disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+			    (* 24 index) 12)
+			 vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
 
 ) ; complex-float
 
@@ -1201,6 +1472,25 @@
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
 	      double-float))
+;;;
+#+long-float
+(define-vop (raw-ref-long data-vector-ref/simple-array-long-float)
+  (:translate %raw-ref-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+#+long-float
+(define-vop (raw-ref-long-c data-vector-ref-c/simple-array-long-float)
+  (:translate %raw-ref-long)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+#+long-float
+(define-vop (raw-set-double data-vector-set/simple-array-long-float)
+  (:translate %raw-set-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum long-float))
+#+long-float
+(define-vop (raw-set-long-c data-vector-set-c/simple-array-long-float)
+  (:translate %raw-set-long)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      long-float))
 
 ;;;; Complex-float raw structure slot accessors.
 #+complex-float
@@ -1244,6 +1534,30 @@
   (:translate %raw-set-complex-double)
   (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
 	      complex-double-float))
+;;;
+#+long-float
+(define-vop (raw-ref-complex-long
+	     data-vector-ref/simple-array-complex-long-float)
+  (:translate %raw-ref-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+#+long-float
+(define-vop (raw-ref-complex-long-c
+	     data-vector-ref-c/simple-array-complex-long-float)
+  (:translate %raw-ref-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+#+long-float
+(define-vop (raw-set-complex-long
+	     data-vector-set/simple-array-complex-long-float)
+  (:translate %raw-set-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-long-float))
+#+long-float
+(define-vop (raw-set-complex-long-c
+	     data-vector-set-c/simple-array-complex-long-float)
+  (:translate %raw-set-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      complex-long-float))
 
 ) ; end progn complex-float
 

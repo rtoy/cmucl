@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.8 1998/02/21 18:24:45 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.9 1998/03/21 07:54:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,10 +174,14 @@
   (sap-stack stack)			; System area pointers.
   (single-stack stack)			; single-floats
   (double-stack stack :element-size 2)	; double-floats.
+  #+long-float
+  (long-stack stack :element-size 3)	; long-floats.
   #+complex-float
   (complex-single-stack stack :element-size 2)	; complex-single-floats
   #+complex-float
   (complex-double-stack stack :element-size 4)	; complex-double-floats
+  #+(and complex-float long-float)
+  (complex-long-stack stack :element-size 6)	; complex-long-floats
 
   ;; **** Magic SCs.
 
@@ -270,6 +274,14 @@
 	      :save-p t
 	      :alternate-scs (double-stack))
 
+  ;; Non-Descriptor long-floats.
+  #+long-float
+  (long-reg float-registers
+	    :locations (0 1 2 3 4 5 6 7)
+	    :constant-scs (fp-constant)
+	    :save-p t
+	    :alternate-scs (long-stack))
+
   #+complex-float
   (complex-single-reg float-registers
 		      :locations (0 2 4 6)
@@ -285,6 +297,14 @@
 		      :constant-scs ()
 		      :save-p t
 		      :alternate-scs (complex-double-stack))
+
+  #+(and complex-float long-float)
+  (complex-long-reg float-registers
+		    :locations (0 2 4 6)
+		    :element-size 2
+		    :constant-scs ()
+		    :save-p t
+		    :alternate-scs (complex-long-stack))
 
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)
@@ -356,6 +376,15 @@
        (sc-number-or-lose 'fp-constant *backend*)))
     (double-float
      (when (or (eql value 0d0) (eql value 1d0))
+       (sc-number-or-lose 'fp-constant *backend*)))
+    #+long-float
+    (long-float
+     (when (or (eql value 0l0) (eql value 1l0)
+	       (eql value pi)
+	       (eql value (log 10l0 2l0))
+	       (eql value (log 2.718281828459045235360287471352662L0 2l0))
+	       (eql value (log 2l0 10l0))
+	       (eql value (log 2l0 2.718281828459045235360287471352662L0)))
        (sc-number-or-lose 'fp-constant *backend*)))))
 
 
