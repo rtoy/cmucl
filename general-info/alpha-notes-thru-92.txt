@@ -1,3 +1,72 @@
+12/19/91 to 12/22/91
+
+Various fixes in the new pathname code.  Following is some clarification of the
+nature of the new pathname support.
+
+Programs that actually conform to the CLtL1 pathname spec will have very few
+problems.  However, the CLtL1 spec was extremely vague, and CMU CL did not make
+use of much of the allowed flexibility, so many technically non-portable
+programs previously worked under CMU CL.
+
+The main incompatible changes from CLtL1 to CLtL2:
+ -- Symbols are no longer acceptable filenames.
+ -- PATHNAME-HOST may be any object.
+ -- :UNSPECIFIC is now a legal pathname component.
+ -- MERGE-PATHNAMES now recognizes relative pathnames and treats them
+    specially. 
+
+The format of directories is now specified (to be a list in a certain format.)
+This required an incompatible change from the previous practice of using a
+vector PATHNAME-DIRECTORY and using "DEFAULT" or :ABSOLUTE in the
+PATHNAME-DEVICE to indicate relative and absolute pathnames.
+
+In a related change, the CMU SEARCH-LIST extension was changed so that the
+search-list now appears in the PATHNAME-DIRECTORY as 
+    (:ABSOLUTE #<Search-list "name"> ...)
+
+A consequence of this change is that search-list definitions can now only
+contain directories (and other search lists); the component pathnames cannot
+have name or type specified.  Other changes to search-lists:
+ -- (SETF SEARCH-LIST) now accepts a string or pathname, and converts it into
+    a one-element list.
+ -- Search-list elements are now canonicalized to pathnames rather than to
+    strings. 
+
+New features which are now supported:
+ -- Wildcard pathnames are now fully supported.  In addition to allowing :WILD
+    in any pathname component, "extended wildcards" such as "foo*.*" are also
+    supported.  A consequence of this is that PATTERN objects may appear in
+    wildcard pathname components instead of strings.  See PATHNAME-MATCH-P and
+    TRANSLATE-PATHNAME.
+ -- As a CMU CL extension, a wildcard pathname may be used as the argument to
+    any filesystem interface (like OPEN) as long as it matches only one file.
+ -- The pathname :COMMON case mechanism provides a way around the problems of
+    portably specifying string pathname components in the presence of operating
+    systems with differing preferred case in their filesystem.  An uppercase
+    string "LISP" is mapped to the "customary case" (lowercase on unix.)  
+    Lowercase is also inverted: "readme" becomes "README".  Mixed case is left
+    alone.  Note that this mechanism is explicitly enabled by supplying :CASE
+    :COMMON to functions such as MAKE-PATHNAME.  The default is the old
+    behavior (:CASE :LOCAL).
+
+Also, DIRECTORY now actually returns the TRUENAME of each file (as it was
+always supposed to do.)  If a matched file is a symbolic link, the truename may
+be a file in some other directory that doesn't even match the pattern.  The old
+behavior can be obtained by specifying :FOLLOW-LINKS NIL.
+
+The new wildcard pathname mechanism has not yet been used to replace the old
+single-wildcard matching in Hemlock DIRED, etc.
+
+Other bug-fixes:
+ -- PURIFY now places indirect value cells and funcallable instances in static
+    space.  Purified code that contained closures or generic functions as
+    function constants could have experienced bad pointer problems.
+ -- The compiler now correctly compiles dynamic scope binding forms such as
+    CATCH and special binding even when there is no code the scope.
+ -- Fixed a bug in the FASL dumper's byte-swapping.  This affects only
+    implementors who do cross-compilation.
+
+
 12/13/91 to 12/19/91
 
 Code:
@@ -22,7 +91,6 @@ number of dangling pointers.
 
 Fixed pprint-logical-block :suffixes and *print-line* abbreviations to work
 together.
-
 
 
 Compiler:
