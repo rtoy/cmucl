@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.21 1990/05/18 10:45:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.22 1990/05/19 09:40:26 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -648,12 +648,12 @@
       (inst bne c no-borrow-in)
       (inst subu res a b)
 
+      (inst subu res 1)
       (inst b done)
-      (inst sltu borrow a b)
+      (inst sltu borrow b a)
 
       (emit-label no-borrow-in)
-      (inst subu res 1)
-      (inst sltu borrow b a)
+      (inst sltu borrow a b)
       (inst xor borrow 1)
 
       (emit-label done)
