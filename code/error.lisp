@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.12 1991/12/15 19:10:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.13 1992/01/21 17:11:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,11 +318,12 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defun condition-print (condition stream depth)
   (declare (ignore depth))
   (if *print-escape*
-      (format stream "#<~S.~X>"
-	      (type-of condition)
-	      (system:%primitive lisp::make-fixnum condition))
-      (condition-report condition stream)))
-
+      (print-unreadable-object (condition stream :identity t)
+	(prin1 (type-of condition) stream))
+      (handler-case
+	  (condition-report condition stream)
+	(error () (format stream "...~2%; Error reporting condition: ~S.~%"
+			  condition)))))
 
 (eval-when (eval compile load)
 
@@ -523,77 +524,6 @@ The previous version is uglier, but it sets up unique run-time tags.
 
 
 
-;;;; INFINITE-ERROR-PROTECT.
-
-(defvar *error-system-initialized*)
-(defvar *max-error-depth* 10 "The maximum number of nested errors allowed.")
-(defvar *current-error-depth* 0 "The current number of nested errors.")
-
-;;; INFINITE-ERROR-PROTECT is used by ERROR and friends to keep us out of
-;;; hyperspace.
-;;;
-(defmacro infinite-error-protect (form)
-  `(if (and (boundp '*error-system-initialized*)
-	    (numberp *current-error-depth*))
-       (let ((*current-error-depth* (1+ *current-error-depth*)))
-	 (if (> *current-error-depth* *max-error-depth*)
-	     (error-error "Help! " *current-error-depth* " nested errors.")
-	     ,form))
-       (system:%primitive lisp::halt)))
-
-;;; These are used in ERROR-ERROR.
-;;;
-(defvar %error-error-depth% 0)
-(defvar *error-throw-up-count* 0)
-
-(proclaim '(special lisp::*real-terminal-io*))
-
-;;; ERROR-ERROR can be called when the error system is in trouble and needs
-;;; to punt fast.  Prints a message without using format.  If we get into
-;;; this recursively, then halt.
-;;;
-(defun error-error (&rest messages)
-  (let ((%error-error-depth% (1+ %error-error-depth%)))
-    (when (> *error-throw-up-count* 50)
-      (system:%primitive lisp::halt)
-      (throw 'lisp::top-level-catcher nil))
-    (case %error-error-depth%
-      (1)
-      (2
-       (setq *terminal-io* lisp::*real-terminal-io*))
-      (3
-       (incf *error-throw-up-count*)
-       (throw 'lisp::top-level-catcher nil))
-      (t
-       (system:%primitive lisp::halt)
-       (throw 'lisp::top-level-catcher nil)))
-    
-    (dolist (item messages) (princ item *terminal-io*))
-    (debug:internal-debug)))
-
-
-
-;;;; Fetching errorful function name.
-
-;;; Used to prevent infinite recursive lossage when we can't find the caller
-;;; for some reason.
-;;;
-(defvar *finding-caller* nil)
-
-;;; FIND-CALLER-NAME  --  Internal
-;;;
-(defun find-caller-name ()
-  (if *finding-caller*
-      "<error finding name>"
-      (handler-case
-	  (let ((*finding-caller* t))
-	    (di:debug-function-name
-	     (di:frame-debug-function
-	      (di:frame-down (di:frame-down (di:top-frame))))))
-	(error () "<error finding name>")
-	(di:debug-condition () "<error finding name>"))))
-
-
 ;;;; ERROR, CERROR, BREAK, WARN.
 
 (define-condition serious-condition (condition) ())
@@ -604,37 +534,40 @@ The previous version is uglier, but it sets up unique run-time tags.
 (defun error (datum &rest arguments)
   "Invokes the signal facility on a condition formed from datum and arguments.
    If the condition is not handled, the debugger is invoked."
-  (infinite-error-protect
-   (let ((condition (coerce-to-condition datum arguments 'simple-error 'error)))
-     (unless (error-function-name condition)
-       (setf (error-function-name condition) (find-caller-name)))
-     (signal condition)
-     (invoke-debugger condition))))
+  (kernel:infinite-error-protect
+    (let ((condition (coerce-to-condition datum arguments
+					  'simple-error 'error)))
+      (unless (error-function-name condition)
+	(setf (error-function-name condition) (kernel:find-caller-name)))
+      (signal condition)
+      (invoke-debugger condition))))
 
-;;; CERROR must take care to no use arguments when datum is already a condition
-;;; object.  Furthermore, we must set ERROR-FUNCTION-NAME here instead of
-;;; letting ERROR do it, so we get the correct function name.
+;;; CERROR must take care to not use arguments when datum is already a
+;;; condition object.
 ;;;
 (defun cerror (continue-string datum &rest arguments)
-  (with-simple-restart
-      (continue "~A" (apply #'format nil continue-string arguments))
-    (let ((condition (if (typep datum 'condition)
-			 datum
-			 (coerce-to-condition datum arguments
-					      'simple-error 'error))))
-      (unless (error-function-name condition)
-	(setf (error-function-name condition) (find-caller-name)))
-      (error condition)))
+  (kernel:infinite-error-protect
+    (with-simple-restart
+	(continue "~A" (apply #'format nil continue-string arguments))
+      (let ((condition (if (typep datum 'condition)
+			   datum
+			   (coerce-to-condition datum arguments
+						'simple-error 'error))))
+	(unless (error-function-name condition)
+	  (setf (error-function-name condition) (kernel:find-caller-name)))
+	(signal condition)
+	(invoke-debugger condition))))
   nil)
 
 (defun break (&optional (format-string "Break") &rest format-arguments)
   "Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
-  (with-simple-restart (continue "Return from BREAK.")
-    (invoke-debugger
-      (make-condition 'simple-condition
-		      :format-string format-string
-		      :format-arguments format-arguments)))
+  (kernel:infinite-error-protect
+    (with-simple-restart (continue "Return from BREAK.")
+      (invoke-debugger
+       (make-condition 'simple-condition
+		       :format-string format-string
+		       :format-arguments format-arguments))))
   nil)
 
 (define-condition warning (condition) ())
@@ -647,18 +580,19 @@ The previous version is uglier, but it sets up unique run-time tags.
    arguments.  Before signalling, if *break-on-warnings* is set, then BREAK
    is called.  While the condition is being signaled, a muffle-warning restart
    exists that causes WARN to immediately return nil."
-  (let ((condition (coerce-to-condition datum arguments 'simple-warning 'warn)))
-    (check-type condition warning "a warning condition")
-    (if *break-on-warnings*
-	(break "~A~%Break entered because of *break-on-warnings*."
-	       condition))
-    (restart-case (signal condition)
-      (muffle-warning ()
+  (kernel:infinite-error-protect
+    (let ((condition (coerce-to-condition datum arguments
+					  'simple-warning 'warn)))
+      (check-type condition warning "a warning condition")
+      (if *break-on-warnings*
+	  (break "~A~%Break entered because of *break-on-warnings*."
+		 condition))
+      (restart-case (signal condition)
+	(muffle-warning ()
 	  :report "Skip warning."
-	(return-from warn nil)))
-    (format *error-output* "~&Warning:~%~A~%" condition)
-    nil))
-
+	  (return-from warn nil)))
+      (format *error-output* "~&Warning:~%~A~%" condition)))
+  nil)
 
 
 ;;;; Condition definitions.
@@ -991,11 +925,3 @@ The previous version sets up unique run-time tags.
 (define-nil-returning-restart use-value (value)
   "Transfer control and value to a restart named use-value, returning nil if
    none exists.")
-
-
-
-;;; ERROR-INIT is called at init time to initialize the error system.
-;;;
-(defun error-init ()
-  (setq *error-system-initialized* t))
-
