@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.5 1992/02/25 07:13:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.6 1992/05/21 02:21:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,6 +313,12 @@
 			      :offset n))
 	  register-arg-offsets))
 
+;;; SINGLE-VALUE-RETURN-BYTE-OFFSET
+;;;
+;;; This is used by the debugger.
+;;;
+(export 'single-value-return-byte-offset)
+(defconstant single-value-return-byte-offset 8)
 
 
 ;;; LOCATION-PRINT-NAME  --  Interface
