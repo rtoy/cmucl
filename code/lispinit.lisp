@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.24 1991/11/29 22:58:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.25 1991/12/15 10:21:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 	  coerece-to-exposecopy-event coerce-to-focuschange-event server
 	  *task-self* *task-data* *task-notify* with-interrupts
 	  with-enabled-interrupts enable-interrupt ignore-interrupt
-	  default-interrupt))
+	  default-interrupt scrub-control-stack))
 
 (in-package "EXTENSIONS")
 (export '(quit *prompt* save-lisp gc-on gc-off *clx-server-displays*))
@@ -606,6 +606,50 @@
   nil)
 
 
+;;;; SCRUB-CONTROL-STACK
+
+
+(defconstant words-per-scrub-unit 512)
+
+(defun scrub-control-stack ()
+  "Zero the unused portion of the control stack so that old objects are not
+   kept alive because of uninitialized stack variables."
+  (declare (optimize (speed 3) (safety 0))
+	   (values (unsigned-byte 20)))
+  (labels
+      ((scrub (ptr offset count)
+	 (declare (type system-area-pointer ptr)
+		  (type (unsigned-byte 16) offset)
+		  (type (unsigned-byte 20) count)
+		  (values (unsigned-byte 20)))
+	 (cond ((= offset words-per-scrub-unit)
+		(look (sap+ ptr (* words-per-scrub-unit vm:word-bytes))
+		      0
+		      count))
+	       (t
+		(setf (sap-ref-32 ptr offset) 0)
+		(scrub ptr (1+ offset) count))))
+       (look (ptr offset count)
+	 (declare (type system-area-pointer ptr)
+		  (type (unsigned-byte 16) offset)
+		  (type (unsigned-byte 20) count)
+		  (values (unsigned-byte 20)))
+	 (cond ((= offset words-per-scrub-unit)
+		count)
+	       ((zerop (sap-ref-32 ptr offset))
+		(look ptr (1+ offset) count))
+	       (t
+		(scrub ptr offset (1+ count))))))
+    (let* ((csp (sap-int (c::control-stack-pointer-sap)))
+	   (initial-offset
+	    (logand csp (1- (* words-per-scrub-unit vm:word-bytes)))))
+      (declare (type (unsigned-byte 32) csp))
+      (scrub (int-sap (- csp initial-offset))
+	     (floor initial-offset vm:word-bytes)
+	     0))))
+
+
+
 ;;;; TOP-LEVEL loop.
 
 (defvar / nil
@@ -658,36 +702,37 @@
 	 (magic-eof-cookie (cons :eof nil))
 	 (number-of-eofs 0))
     (loop
-     (with-simple-restart (abort "Return to Top-Level.")
-       (catch 'top-level-catcher
-	 (mach:unix-sigsetmask 0)
-	 (let ((*in-top-level-catcher* t))
-	   (loop
-	     (fresh-line)
-	     (princ (if (functionp *prompt*)
-			(funcall *prompt*)
-			*prompt*))
-	     (force-output)
-	     (let ((form (read *standard-input* nil magic-eof-cookie)))
-	       (cond ((not (eq form magic-eof-cookie))
-		      (let ((results
-			     (multiple-value-list (interactive-eval form))))
-			(dolist (result results)
-			  (fresh-line)
-			  (prin1 result)))
-		      (setf number-of-eofs 0))
-		     ((eql (incf number-of-eofs) 1)
-		      (let ((stream (make-synonym-stream '*terminal-io*)))
-			(setf *standard-input* stream)
-			(setf *standard-output* stream)
-			(format t "~&Received EOF on *standard-input*, ~
-			          switching to *terminal-io*.~%")))
-		     ((> number-of-eofs eofs-before-quit)
-		      (format t "~&Received more than ~D EOFs; Aborting.~%"
-			      eofs-before-quit)
-		      (quit))
-		     (t
-		      (format t "~&Received EOF.~%")))))))))))
+      (with-simple-restart (abort "Return to Top-Level.")
+	(catch 'top-level-catcher
+	  (mach:unix-sigsetmask 0)
+	  (let ((*in-top-level-catcher* t))
+	    (loop
+	      (scrub-control-stack)
+	      (fresh-line)
+	      (princ (if (functionp *prompt*)
+			 (funcall *prompt*)
+			 *prompt*))
+	      (force-output)
+	      (let ((form (read *standard-input* nil magic-eof-cookie)))
+		(cond ((not (eq form magic-eof-cookie))
+		       (let ((results
+			      (multiple-value-list (interactive-eval form))))
+			 (dolist (result results)
+			   (fresh-line)
+			   (prin1 result)))
+		       (setf number-of-eofs 0))
+		      ((eql (incf number-of-eofs) 1)
+		       (let ((stream (make-synonym-stream '*terminal-io*)))
+			 (setf *standard-input* stream)
+			 (setf *standard-output* stream)
+			 (format t "~&Received EOF on *standard-input*, ~
+				    switching to *terminal-io*.~%")))
+		      ((> number-of-eofs eofs-before-quit)
+		       (format t "~&Received more than ~D EOFs; Aborting.~%"
+			       eofs-before-quit)
+		       (quit))
+		      (t
+		       (format t "~&Received EOF.~%")))))))))))
 
 
 
