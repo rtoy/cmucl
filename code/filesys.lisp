@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.57 2000/08/23 15:52:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.58 2000/08/24 14:22:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -869,14 +869,15 @@
 ;;; DIRECTORY  --  public.
 ;;; 
 (defun directory (pathname &key (all t) (check-for-subdirs t)
-			   (follow-links t))
+			   (truenamep t) (follow-links t))
   "Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :ALL as nil causes this to ignore Unix dot files.  This
-   never includes Unix dot and dot-dot in the result.  If :FOLLOW-LINKS is NIL,
-   then symblolic links in the result are not expanded.  This is not the
+   never includes Unix dot and dot-dot in the result.  If :TRUENAMEP is NIL,
+   then symblolic links in the result are not expanded which is not the
    default because TRUENAME does follow links, and the result pathnames are
    defined to be the TRUENAME of the pathname (the truename of a link may well
-   be in another directory.)"
+   be in another directory.) If FOLLOW-LINKS is NIL then symbolic links are
+   not followed."
   (let ((results nil))
     (enumerate-search-list
 	(pathname (merge-pathnames pathname
@@ -897,7 +898,7 @@
 					   :directory))
 				  (concatenate 'string name "/")
 				  name)))
-		    (if follow-links (truename name) (pathname name))))
+		    (if truenamep (truename name) (pathname name))))
 	      (sort (delete-duplicates results :test #'string=) #'string<)))))
 
 
@@ -919,7 +920,7 @@
 
 (defun print-directory-verbose (pathname all return-list)
   (let ((contents (directory pathname :all all :check-for-subdirs nil
-			     :follow-links nil))
+			     :truenamep nil))
 	(result nil))
     (format t "Directory of ~A :~%" (namestring pathname))
     (dolist (file contents)
@@ -994,7 +995,7 @@
 	(names ())
 	(cnt 0)
 	(max-len 0)
-	(result (directory pathname :all all :follow-links nil)))
+	(result (directory pathname :all all :truenamep nil)))
     (declare (list names) (fixnum max-len cnt))
     ;;
     ;; Get the data.
@@ -1123,7 +1124,7 @@
 			       ignore-types)
   (let ((files (directory (complete-file-directory-arg pathname defaults)
 			  :check-for-subdirs nil
-			  :follow-links nil)))
+			  :truenamep nil)))
     (cond ((null files)
 	   (values nil nil))
 	  ((null (cdr files))
@@ -1191,7 +1192,7 @@
    We look in the directory specified by Defaults as well as looking down
    the search list."
   (directory (complete-file-directory-arg pathname defaults)
-	     :follow-links nil
+	     :truenamep nil
 	     :check-for-subdirs nil))
 
 

@@ -2712,7 +2712,7 @@ matches.)  Filesystem operations treat \kwd{wild-inferiors} the same as\
 \kwd{wild}.
 
 \begin{defun}{}{directory}{\var{wildname} \keys{\kwd{all} \kwd{check-for-subdirs}}
-    \morekeys{\kwd{follow-links}}}
+    \kwd{truenamep} \morekeys{\kwd{follow-links}}}
   
   The keyword arguments to this \clisp{} function are a CMU extension.
   The arguments (all default to \code{t}) have the following
@@ -2724,10 +2724,13 @@ matches.)  Filesystem operations treat \kwd{wild-inferiors} the same as\
   \item[\kwd{check-for-subdirs}] Test whether files are directories,
     similar to ``\code{ls -F}''.
     
-  \item[\kwd{follow-links}] Call \code{truename} on each file, which
+  \item[\kwd{truenamep}] Call \code{truename} on each file, which
     expands out all symbolic links.  Note that this option can easily
     result in pathnames being returned which have a different
     directory from the one in the \var{wildname} argument.
+
+  \item[\kwd{follow-links}] Follow symbolic links when searching for
+    matching directories.
   \end{Lentry}
 \end{defun}
 
