@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.2 2003/03/22 16:15:15 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/ctor.lisp,v 1.3 2003/04/24 13:44:15 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -239,7 +239,7 @@
 		 'foo '(:a a :b b))))
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) (the t b))
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -249,7 +249,7 @@
 		 'foo '(:a a))))
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -263,7 +263,7 @@
 		 'foo5 '(:a a))))
       (setf (pcl::ctor-class ctor) (find-class 'foo5))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
     (setf (pcl::%svref pcl::.slots. 1) (the t a))))
 
@@ -277,7 +277,7 @@
 		 'foo5a '())))
       (setf (pcl::ctor-class ctor) (find-class 'foo5a))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) (the t '0))
     (setf (pcl::%svref pcl::.slots. 1) (the t '0))))
 
@@ -291,7 +291,7 @@
 		 'foo6 '(:a a))))
       (setf (pcl::ctor-class ctor) (find-class 'foo6))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
     (setf (cdr '(a . 0)) (the t a))))
 
@@ -308,10 +308,10 @@
 		 'foo7 '())))
       (setf (pcl::ctor-class ctor) (find-class 'foo7))
       (let ((form (pcl::slot-init-forms ctor nil)))
-	(values (second form)
-		(second (third form))
-		(first (third (third (third form))))
-		(functionp (second (third (third (third form))))))))
+	(values (third form)
+		(second (fourth form))
+		(first (third (third (fourth form))))
+		(functionp (second (third (third (fourth form))))))))
   (setf (pcl::%svref pcl::.slots. 0) pcl::+slot-unbound+)
   (pcl::%svref pcl::.slots. 1)
   funcall
@@ -323,7 +323,7 @@
 		 'foo '(:a '(foo)))))
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t '(foo)))))
 
@@ -333,7 +333,7 @@
 		 'foo '(:a 'x))))
       (setf (pcl::ctor-class ctor) (find-class 'foo))
       (pcl::slot-init-forms ctor nil))
-  (progn
+  (let ()
     (setf (pcl::%svref pcl::.slots. 0) (the t '2))
     (setf (pcl::%svref pcl::.slots. 1) (the t 'x))))
 

@@ -46,7 +46,7 @@
 ;;; is called.
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.5 2003/04/22 13:10:13 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.6 2003/04/24 13:44:15 gerd Exp $")
 
 (in-package "PCL")
 
@@ -368,18 +368,6 @@
 		 .instance.))))))
 
 ;;;
-;;; Return a form for invoking METHOD with arguments from ARGS.  As
-;;; can be seen in METHOD-FUNCTION-FROM-FAST-FUNCTION, method
-;;; functions look like (LAMBDA (ARGS NEXT-METHODS) ...).  We could
-;;; call fast method functions directly here, but benchmarks show that
-;;; there's no speed to gain, so lets avoid the hair here.
-;;;
-#+nil
-(defmacro invoke-method (method args)
-  (let ((fn (method-function method)))
-    `(funcall (ext:truly-the function ,fn) ,args ())))
-
-;;;
 ;;; Return a form that is sort of an effective method comprising all
 ;;; calls to INITIALIZE-INSTANCE and SHARED-INITIALIZE that would
 ;;; normally have taken place when calling MAKE-INSTANCE.
@@ -466,6 +454,7 @@
 			:initial-element nil)))
 	 (class-inits ())
 	 (structure-inits ())
+	 (default-inits ())
 	 (default-initargs (class-default-initargs class))
 	 ;;
 	 ;; Note that the locations are actually defstruct slot
@@ -476,14 +465,22 @@
     (labels ((locations (key)
 	       (cdr (assoc key locations :test #'eq)))
 
+	     (initialized-p (location)
+	       (cond (structure-p
+		      (assq location structure-inits))
+		     ((integerp location)
+		      (not (null (aref slot-vector location))))
+		     (t
+		      (assoc location class-inits :test #'eq))))
+
 	     (class-init (location type val slot-type)
 	       (assert (consp location))
 	       (assert (not structure-p))
-	       (unless (assoc location class-inits :test #'eq)
+	       (unless (initialized-p location)
 		 (push (list location type val slot-type) class-inits)))
 
 	     (instance-init (location type val slot-type)
-	       (unless (instance-slot-initialized-p location)
+	       (unless (initialized-p location)
 		 (cond (structure-p
 			(assert (symbolp location))
 			(push (list location type val slot-type)
@@ -493,10 +490,11 @@
 			(setf (aref slot-vector location)
 			      (list type val slot-type))))))
 
-	     (instance-slot-initialized-p (location)
-	       (if structure-p
-		   (assq location structure-inits)
-		   (not (null (aref slot-vector location))))))
+	     (default-init-variable-name (i)
+	       (let ((ps #(.d0. .d1. .d2. .d3. .d4. .d5.)))
+		 (if (array-in-bounds-p ps i)
+		     (aref ps i)
+		     (intern (format nil ".D~D." i) *the-pcl-package*)))))
       ;;
       ;; Loop over supplied initargs and values and record which
       ;; instance and class slots they initialize.
@@ -509,15 +507,22 @@
       ;;
       ;; Loop over default initargs of the class, recording
       ;; initializations of slots that have not been initialized
-      ;; above.
-      (loop for (key initfn initform) in default-initargs
+      ;; above.  Default initargs which are not in the supplied
+      ;; initargs are treated as if they were appended to supplied
+      ;; initargs, that is, their values must be evaluated even
+      ;; if not actually used for initializing a slot.
+      (loop for (key initfn initform) in default-initargs and i from 0
 	    unless (memq key initkeys) do
-	      (loop with type = (if (constantp initform) 'constant 'initfn)
-		    with init = (if (eq type 'initfn) initfn initform)
-		    for (location . slot-type) in (locations key) do
-		      (if (consp location)
-			  (class-init location type init slot-type)
-			  (instance-init location type init slot-type))))
+	      (let* ((type (if (constantp initform) 'constant 'var))
+		     (init (if (eq type 'var) initfn initform)))
+		(when (eq type 'var)
+		  (let ((init-var (default-init-variable-name i)))
+		    (setq init init-var)
+		    (push (cons init-var initfn) default-inits)))
+		(loop for (location . slot-type) in (locations key) do
+			(if (consp location)
+			    (class-init location type init slot-type)
+			    (instance-init location type init slot-type)))))
       ;;
       ;; Loop over all slots of the class, filling in the rest from
       ;; slot initforms.
@@ -533,7 +538,7 @@
 	      (unless (or (eq allocation :class)
 			  (and (not structure-p)
 			       (null initfn))
-			  (instance-slot-initialized-p location))
+			  (initialized-p location))
 		(if (constantp initform)
 		    (instance-init location 'initform initform slot-type)
 		    (instance-init location 'initform/initfn initfn
@@ -552,12 +557,18 @@
 		       `(setf (cdr ',location)
 			      (the ,slot-type
 				,(ecase type
-					(constant `',(eval value))
-					(param `,value)
-					(initfn `(funcall ,value)))))))))
-	`(progn
-	   ,@instance-init-forms
-	   ,@class-init-forms)))))
+				   (constant `',(eval value))
+				   ((param var) `,value)
+				   (initfn `(funcall ,value)))))))))
+	(multiple-value-bind (vars bindings)
+	    (loop for (var . initfn) in (nreverse default-inits)
+		  collect var into vars
+		  collect `(,var (funcall ,initfn)) into bindings
+		  finally (return (values vars bindings)))
+	  `(let ,bindings
+	     (declare (ignorable ,@vars))
+	     ,@instance-init-forms
+	     ,@class-init-forms))))))
 
 ;;;
 ;;; Return an alist of lists (KEY LOCATION ...) telling, for each key
@@ -599,7 +610,7 @@
 	    ((nil)
 	     (unless before-method-p
 	       `(setf (%svref .slots. ,i) +slot-unbound+)))
-	    (param
+	    ((param var)
 	     `(setf (%svref .slots. ,i) (the ,slot-type ,value)))
 	    (initfn
 	     `(setf (%svref .slots. ,i)
@@ -635,7 +646,7 @@
 		 `(when (eq (,accessor .instance.) '.unbound.)
 		    (setf (,accessor .instance.) nil))
 		 `(setf (,accessor .instance.) nil)))
-	    (param
+	    ((param var)
 	     `(setf (,accessor .instance.) (the ,slot-type ,value)))
 	    (initfn
 	     `(setf (,accessor .instance.)
