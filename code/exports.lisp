@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.101 1994/06/29 21:38:19 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.102 1994/10/04 12:23:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -146,6 +146,8 @@
 (use-package '("ALIEN-INTERNALS" "LISP" "EXTENSIONS" "SYSTEM" "BIGNUM")
              "KERNEL")
 (use-package '("LISP") "NEW-ASSEM")
+
+(defpackage "ANSI-LOOP")
 
 (defpackage "C-CALL"
             (:export "C-STRING" "CHAR" "DOUBLE" "FLOAT" "INT" "LONG" "SHORT"
