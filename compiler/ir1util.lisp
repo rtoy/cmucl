@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.71 1993/08/25 00:15:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.72 1993/08/31 12:50:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1956,7 +1956,7 @@
 ;;; between internal and user errors.  Non-compiler errors put us in the
 ;;; debugger.
 ;;;
-(define-condition compiler-error (simple-error))
+(define-condition compiler-error (simple-error) ())
 
 ;;; COMPILER-{ERROR,WARNING,STYLE-WARNING}-HANDLER  --  Interface
 ;;;
