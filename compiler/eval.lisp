@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.35 2001/03/04 20:12:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.36 2002/12/13 19:25:50 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -630,8 +630,8 @@
 ;;;    Evaluate an arbitary form.  We convert the form, then call internal
 ;;; apply on it.
 ;;;
-(defun internal-eval (form &optional quietly)
-  (let ((res (c:compile-for-eval form quietly)))
+(defun internal-eval (form &optional quietly env)
+  (let ((res (c:compile-for-eval form quietly env)))
     (internal-apply res nil '#())))
 
 

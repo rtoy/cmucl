@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.133 2002/12/07 18:19:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.134 2002/12/13 19:25:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2248,6 +2248,28 @@
 			  (ir1-convert-progn-body start cont forms))))
 
 
+(defun make-macrolet-environment (lexenv)
+  (flet ((local-function-p (fun)
+	   (functional-p (cdr fun)))
+         (local-variable-p (var)
+	   ;; ??? What is that CT-A-VAL structure that's mentioned in the
+	   ;; description of the VARIABLES slot of LEXENV structure?
+	   ;; Maybe this stuff has to be removed, too.
+	   (leaf-p (cdr var))))
+    (let ((env (copy-lexenv lexenv)))
+      ;; CLHS says in the text of its MACROLET description that
+      ;; consequences are undefined if a local macro definition refers
+      ;; to local variable or function bindings.  A later example
+      ;; clearly implies these are not accessible.  SBCL apparently
+      ;; follows the example in CLHS.  Let's do the same.
+      (setf (lexenv-functions env)
+	    (remove-if #'local-function-p (lexenv-functions env)))
+      (setf (lexenv-variables env)
+	    (remove-if #'local-variable-p (lexenv-variables env)))
+      (setf (lexenv-blocks env) nil)
+      (setf (lexenv-tags env) nil)
+      env)))
+
 ;;; DO-MACROLET-STUFF  --  Interface
 ;;;
 ;;;    Like DO-EVAL-WHEN-STUFF, only do a macrolet.  Fun is not passed any
@@ -2275,9 +2297,12 @@
 	      (compiler-error
 	       "Local macro ~S is too short to be a legal definition." name))
 	    (new-fenv `(,(first def) macro .
-			,(coerce `(lambda (,whole ,environment)
-				    ,@local-decs (block ,name ,body))
-				 'function))))))
+			,(eval:internal-eval
+			  `(lambda (,whole ,environment)
+			     ,@local-decs
+			     (block ,name ,body))
+			  t
+			  (make-macrolet-environment *lexical-environment*)))))))
 
       (let ((*lexical-environment* (make-lexenv :functions (new-fenv))))
 	(funcall fun))))
@@ -2289,8 +2314,7 @@
   "MACROLET ({(Name Lambda-List Form*)}*) Body-Form*
   Evaluate the Body-Forms in an environment with the specified local macros
   defined.  Name is the local macro name, Lambda-List is the DEFMACRO style
-  destructuring lambda list, and the Forms evaluate to the expansion.  The
-  Forms are evaluated in the null environment."
+  destructuring lambda list, and the Forms evaluate to the expansion."
   (do-macrolet-stuff definitions
 		     #'(lambda ()
 			 (ir1-convert-progn-body start cont body))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.31 2002/12/03 01:45:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.32 2002/12/13 19:25:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,10 +46,10 @@
 ;;; analysis.  It is sort of a combination of NCOMPILE-FILE, SUB-COMPILE-FILE,
 ;;; COMPILE-TOP-LEVEL, and COMPILE-COMPONENT.
 ;;;
-(defun compile-for-eval (form quietly)
+(defun compile-for-eval (form quietly &optional env)
   (with-ir1-namespace
     (let* ((*block-compile* nil)
-	   (*lexical-environment* (make-null-environment))
+	   (*lexical-environment* (or env (make-null-environment)))
 	   ;;
 	   (*compiler-error-output*
 	    (if quietly
