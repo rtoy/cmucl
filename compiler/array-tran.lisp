@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.22 1998/01/09 10:07:48 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.23 1998/01/10 05:02:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,13 +30,24 @@
   
 ;;; EXTRACT-ELEMENT-TYPE  -- internal
 ;;;
-;;; Array access functions return an object from the array, hence it's type
-;;; is going to be the array element type.
+;;; Array access functions return an object from the array, hence it's
+;;; type will be asserted to be array element type.
 ;;;
 (defun extract-element-type (array)
   (let ((type (continuation-type array)))
     (if (array-type-p type)
 	(array-type-element-type type)
+	*universal-type*)))
+
+;;; EXTRACT-UPGRADED-ELEMENT-TYPE  -- internal
+;;;
+;;; Array access functions return an object from the array, hence it's
+;;; type is going to be the array upgraded element type.
+;;;
+(defun extract-upgraded-element-type (array)
+  (let ((type (continuation-type array)))
+    (if (array-type-p type)
+	(array-type-specialized-element-type type)
 	*universal-type*)))
 
 ;;; ASSERT-NEW-VALUE-TYPE  --  internal
@@ -70,9 +81,13 @@
 
 ;;; AREF  --  derive-type optimizer.
 ;;;
-(defoptimizer (aref derive-type) ((array &rest indices))
+(defoptimizer (aref derive-type) ((array &rest indices) node)
   (assert-array-rank array (length indices))
-  (extract-element-type array))
+  ;; If the node continuation has a single use then assert its type.
+  (let ((cont (node-cont node)))
+    (unless (rest (find-uses cont))
+      (assert-continuation-type cont (extract-element-type array))))
+  (extract-upgraded-element-type array))
 
 ;;; %ASET  --  derive-type optimizer.
 ;;;
@@ -83,7 +98,7 @@
 ;;; DATA-VECTOR-REF  --  derive-type optimizer.
 ;;;
 (defoptimizer (data-vector-ref derive-type) ((array index))
-  (extract-element-type array))
+  (extract-upgraded-element-type array))
 
 ;;; DATA-VECTOR-SET  --  derive-type optimizer.
 ;;;
@@ -114,7 +129,7 @@
 ;;; ROW-MAJOR-AREF  --  derive-type optimizer.
 ;;;
 (defoptimizer (row-major-aref derive-type) ((array index))
-  (extract-element-type array))
+  (extract-upgraded-element-type array))
   
 ;;; %SET-ROW-MAJOR-AREF  --  derive-type optimizer.
 ;;;
