@@ -86,10 +86,10 @@
 ;;; *ALREADY-EVALED-THIS* is true, then we bind it to NIL before doing a call
 ;;; so that the effect is confined to the lexical scope of the EVAL-WHEN.
 ;;;
-(defun eval (exp)
+(defun eval (original-exp)
   "Evaluates its single arg in a null lexical environment, returns the
   result or results."
-  (let ((exp (macroexpand exp)))
+  (let ((exp (macroexpand original-exp)))
     (typecase exp
       (symbol (symbol-value exp))
       (list
@@ -120,7 +120,7 @@
 			(set (first args) (eval (second args))))
 		     (set (first args) (eval (second args)))))
 		(unless (eq (info variable kind (first name)) :special)
-		  (return (eval:internal-eval exp))))))
+		  (return (eval:internal-eval original-exp))))))
 	   ((progn)
 	    (when (> args 0)
 	      (dolist (x (butlast (rest exp)) (eval (car (last exp))))
@@ -135,7 +135,7 @@
 		      (let ((*already-evaled-this* nil))
 			(apply (symbol-function name) (args)))
 		      (apply (symbol-function name) (args))))
-		(eval:internal-eval exp))))))
+		(eval:internal-eval original-exp))))))
       (t
        exp))))
 
@@ -189,8 +189,13 @@
 	   (if info
 	       (let ((source (first (c::compiled-debug-info-source info))))
 		 (cond ((eq (c::debug-source-from source) :lisp)
-			(values (c::debug-source-name source)
-				nil name))
+			(let ((def (c::debug-source-name source)))
+			  (if (and (consp def) (eq (car def) 'function))
+			      (let ((def (cadr def)))
+				(if (and (consp def) (eq (car def) 'lambda))
+				    (values def nil name)
+				    (values nil t name)))
+			      (values nil t name))))
 		       ((stringp name)
 			(values nil t name))
 		       (t
@@ -233,27 +238,25 @@
 
 ;;; Macroexpand-1  --  Public
 ;;;
-;;;    The Env arg may actually be the compiler *fenv* alist.
+;;;    The Env is a LEXENV or NIL (the null environment.)
 ;;;
 (defun macroexpand-1 (form &optional env)
   "If form is a macro, expands it once.  Returns two values, the
   expanded form and a T-or-NIL flag indicating whether the form was,
   in fact, a macro.  Env is the lexical environment to expand in,
   which defaults to the null environment."
-  (let ((fenv #|(if (listp env) env
-		  (lexical-environment-fenv env))|#
-	      env))
+  (let ((fenv (when env (c::lexenv-functions env))))
     (if (and (consp form) (symbolp (car form)))
 	(let ((local-def (cdr (assoc (car form) fenv))))
 	  (if local-def
 	      (if (and (consp local-def) (eq (car local-def) 'MACRO))
 		  (values (funcall *macroexpand-hook* (cdr local-def)
-				   form fenv)
+				   form env)
 			  t)
 		  (values form nil))
 	      (let ((global-def (macro-function (car form))))
 		(if global-def
-		    (values (funcall *macroexpand-hook* global-def form fenv)
+		    (values (funcall *macroexpand-hook* global-def form env)
 			    t)
 		    (values form nil)))))
 	(values form nil))))
