@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.8 1991/02/08 13:36:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.9 1991/02/11 13:38:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,7 +46,7 @@
              (:conc-name dsd-)
              (:print-function print-defstruct-slot-description))
   %name				; string name of slot
-  (index nil :type fixnum)	; its position in the implementation sequence
+  (index (required-argument) :type fixnum) ; its position in the implementation sequence
   accessor			; name of it accessor function
   default			; default value
   type				; declared type
