@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.47 2003/03/30 00:48:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.48 2003/03/30 21:17:03 gerd Exp $")
 
 (in-package :pcl)
 
@@ -630,7 +630,8 @@
 		  ,@readers-init ,@writers-init)))
 	(unless (structure-type-p name) (eval defstruct-form))
 	(mapc (lambda (dslotd reader-name writer-name)
-		(let* ((reader (gdefinition reader-name))
+		(let* ((reader (when (fboundp reader-name)
+				 (gdefinition reader-name)))
 		       (writer (when (fboundp writer-name)
 				 (gdefinition writer-name))))
 		  (setf (slot-value dslotd 'internal-reader-function) reader)
