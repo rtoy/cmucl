@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.20 1991/01/03 13:14:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.21 1991/02/03 11:07:06 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -648,20 +648,23 @@
   (let* ((type (structure-ref structure 0))
 	 (dd (info type defined-structure-info type)))
     (cond (*print-pretty*
-	   (let ((index 0))
-	     (declare (type structure-index index))
-	     (xp:pprint-logical-block (stream (cons type (dd-slots dd))
-					      :prefix "#S("
-					      :suffix ")")
-	       (prin1 (xp:pprint-pop) stream)
+	   (let ((slots (dd-slots dd)))
+	     (xp:pprint-logical-block (stream
+				       (mapcar
+					#'(lambda (dsd)
+					    (structure-ref structure
+							   (dsd-index dsd)))
+					slots)
+				       :prefix "#S(" :suffix ")")
+	       (prin1 type stream)
 	       (xp:pprint-exit-if-list-exhausted)
 	       (write-char #\space stream)
 	       (xp:pprint-indent :current 0 stream)
 	       (loop
-		 (prin1 (dsd-name (xp:pprint-pop)) stream)
+		 (prin1 (dsd-name (pop slots)) stream)
 		 (write-char #\space stream)
 		 (xp:pprint-newline :miser stream)
-		 (prin1 (structure-ref structure (incf index)) stream)
+		 (prin1 (xp:pprint-pop) stream)
 		 (xp:pprint-exit-if-list-exhausted)
 		 (write-char #\space stream)
 		 (xp:pprint-newline :linear stream)))))
