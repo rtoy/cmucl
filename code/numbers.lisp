@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.7 1990/07/08 11:48:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.8 1990/07/09 14:13:42 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -1312,8 +1312,10 @@
 (defun integer-decode-single-float (x)
   (declare (single-float x))
   (let ((bits (single-float-bits (abs x))))
-    (values (logior (ldb single-float-significand-byte bits)
-		    single-float-hidden-bit)
+    (values (if (zerop x)
+		0
+		(logior (ldb single-float-significand-byte bits)
+			single-float-hidden-bit))
 	    (truly-the single-float-exponent
 		       (- (ldb single-float-exponent-byte bits)
 			  single-float-bias
@@ -1325,10 +1327,12 @@
   (let* ((abs (abs x))
 	 (hi (double-float-high-bits abs))
 	 (lo (double-float-low-bits abs)))
-    (values (logior (ash (logior (ldb double-float-significand-byte hi)
-				 double-float-hidden-bit)
-			 32)
-		    lo)
+    (values (if (zerop x)
+		0
+		(logior (ash (logior (ldb double-float-significand-byte hi)
+				     double-float-hidden-bit)
+			     32)
+			lo))
 	    (truly-the double-float-exponent
 		       (- (ldb double-float-exponent-byte hi)
 			  double-float-bias
@@ -1354,8 +1358,10 @@
 (defun decode-single-float (x)
   (declare (single-float x))
   (let ((bits (single-float-bits (abs x))))
-    (values (make-single-float
-	     (dpb single-float-bias single-float-exponent-byte bits))
+    (values (if (zerop x)
+		0f0
+		(make-single-float
+		 (dpb single-float-bias single-float-exponent-byte bits)))
 	    (truly-the single-float-exponent
 		       (- (ldb single-float-exponent-byte bits)
 			  single-float-bias))
@@ -1366,9 +1372,11 @@
   (let* ((abs (abs x))
 	 (hi (double-float-high-bits abs))
 	 (lo (double-float-low-bits abs)))
-    (values (make-double-float
-	     (dpb double-float-bias double-float-exponent-byte hi)
-	     lo)
+    (values (if (zerop x)
+		0d0
+		(make-double-float
+		 (dpb double-float-bias double-float-exponent-byte hi)
+		 lo))
 	    (truly-the double-float-exponent
 		       (- (ldb double-float-exponent-byte hi)
 			  double-float-bias))
@@ -1392,30 +1400,34 @@
 
 (defun scale-single-float (x exp)
   (declare (single-float x) (fixnum exp))
-  (let* ((bits (single-float-bits x))
-	 (new-exp (+ (ldb single-float-exponent-byte bits)
-		     exp)))
-    (unless (<= single-float-normal-exponent-min
-		new-exp
-		single-float-normal-exponent-max)
-      (error "Floating point over/underflow scaling ~S by ~S." x exp))
-
-    (make-single-float (dpb new-exp single-float-exponent-byte bits))))
+  (if (zerop x)
+      x
+      (let* ((bits (single-float-bits x))
+	     (new-exp (+ (ldb single-float-exponent-byte bits)
+			 exp)))
+	(unless (<= single-float-normal-exponent-min
+		    new-exp
+		    single-float-normal-exponent-max)
+	  (error "Floating point over/underflow scaling ~S by ~S." x exp))
+	
+	(make-single-float (dpb new-exp single-float-exponent-byte bits)))))
 
 (defun scale-double-float (x exp)
   (declare (double-float x) (fixnum exp))
-  (let ((hi (double-float-high-bits x))
-	(lo (double-float-low-bits x)))
-    (let ((new-exp (+ (ldb double-float-exponent-byte hi)
-		      exp)))
-      (unless (<= double-float-normal-exponent-min
-		  new-exp
-		  double-float-normal-exponent-max)
-	(error "Floating point over/underflow scaling ~S by ~S." x exp))
-
-      (make-double-float
-       (dpb new-exp double-float-exponent-byte hi)
-       lo))))
+  (if (zerop x)
+      x
+      (let ((hi (double-float-high-bits x))
+	    (lo (double-float-low-bits x)))
+	(let ((new-exp (+ (ldb double-float-exponent-byte hi)
+			  exp)))
+	  (unless (<= double-float-normal-exponent-min
+		      new-exp
+		      double-float-normal-exponent-max)
+	    (error "Floating point over/underflow scaling ~S by ~S." x exp))
+	  
+	  (make-double-float
+	   (dpb new-exp double-float-exponent-byte hi)
+	   lo)))))
 
 (defun scale-float (f ex)
   "Returns the value (* f (expt (float b f) e))"
