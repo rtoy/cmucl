@@ -14,9 +14,16 @@
 ;;;
 (in-package 'c)
 
-(export '(make-random-tn tn-ref tn-ref-p tn-ref-tn tn-ref-write-p tn-ref-next
-	  tn-ref-vop tn-ref-next-ref tn-ref-across tn-ref-target
-	  tn-ref-load-tn))
+(export '(tn-ref tn-ref-p make-tn-ref tn-ref-tn tn-ref-write-p
+	  tn-ref-next tn-ref-vop tn-ref-next-ref tn-ref-across
+	  tn-ref-target tn-ref-load-tn
+
+	  sc sc-p sc-name sc-number sc-sb
+
+	  tn tn-p make-random-tn tn-sc tn-offset
+
+	  ;; Call.lisp and core.lisp need to get at these slots.
+	  ir2-component-constants ir2-environment-number-stack-p))
 
 (eval-when (compile load eval)
 
@@ -29,6 +36,10 @@
 (deftype local-tn-count () `(integer 0 ,local-tn-limit)) 
 (deftype local-tn-vector () `(simple-vector ,local-tn-limit))
 (deftype local-tn-bit-vector () `(simple-bit-vector ,local-tn-limit))
+
+;;; Maximum number of SCs allowed.
+;;;
+(defconstant sc-number-limit 32)
 
 ;;; Type of an SC number.
 (deftype sc-number () `(integer 0 (,sc-number-limit)))
