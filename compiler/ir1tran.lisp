@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.48 1991/05/24 01:03:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.49 1991/07/18 02:08:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2280,6 +2280,28 @@
   (declare (ignore stuff))
   start cont; Ignore hack
   (compiler-error "Misplaced declaration."))
+
+
+;;; COMPILER-OPTION-BIND
+;;; 
+(def-ir1-translator compiler-option-bind ((bindings &body body) start cont)
+  "Compiler-Option-Bind ({(Name Value-Form)}*) Body-Form*
+   Establish the specified compiler options for the (lexical) duration of
+   the body.  The Value-Forms are evaluated at compile time."
+  (let ((*lexical-environment*
+	 (make-lexenv :options
+		      (mapcar #'(lambda (binding)
+				  (unless (and (listp binding)
+					       (cdr binding)
+					       (listp (cdr binding))
+					       (null (cddr binding)))
+				    (compiler-error "Bogus binding for ~
+						     COMPILER-OPTION-BIND: ~S"
+						    binding))
+				  (cons (car binding)
+					(eval (cadr binding))))
+			      bindings))))
+    (ir1-convert-progn-body start cont body)))
 
 
 ;;;; %Primitive:
