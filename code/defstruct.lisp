@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.24 1991/06/06 16:36:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.25 1991/11/06 19:20:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,6 +20,9 @@
 (export '(structure-index make-structure structure-length
 	  structure-ref structure-set))
 
+;;; Always compile safe.  This code isn't very careful about protecting itself.
+;;;
+(declaim (optimize (safety 1)))
 
 ;;;; Structure frobbing primitives.
 
