@@ -70,7 +70,7 @@
 ;;;
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
-;;;
+;;
 (defun (setf gdefinition) (new-definition name)
   (c::%%defun name new-definition nil)
   (c::note-name-defined name :function)
@@ -181,22 +181,21 @@
   (specializer-type (class-eq-specializer class)))
 
 (defun inform-type-system-about-std-class (name)
-  (let ((predicate-name (make-type-predicate-name name)))
-    (setf (gdefinition predicate-name) (make-type-predicate name))
-    (do-satisfies-deftype name predicate-name)))
+  ;; This should only be called if metaclass is standard-class.
+  ;; Compiler problems have been seen if the metaclass is 
+  ;; funcallable-standard-class and this is called from the defclass macro
+  ;; expander. However, bootstrap-meta-braid calls this for funcallable-
+  ;; standard-class metaclasses but *boot-state* is not 'complete then.
+  ;;
+  ;; The only effect of this code is to ensure a lisp:standard-class class
+  ;; exists so as to avoid undefined-function compiler warnings. The
+  ;; skeleton class will be replaced at load-time with the correct object.
+  ;; Earlier revisions (<= 1.17) of this function were essentially NOOPs.
 
-(defun make-type-predicate (name)
-  (let ((cell (find-class-cell name)))
-    #'(lambda (x)
-	(funcall (the function (find-class-cell-predicate cell)) x))))
-
-
-;This stuff isn't right.  Good thing it isn't used.
-;The satisfies predicate has to be a symbol.  There is no way to
-;construct such a symbol from a class object if class names change.
-(defun class-predicate (class)
-  (when (symbolp class) (setq class (find-class class)))
-  #'(lambda (object) (memq class (class-precedence-list (class-of object)))))
+  (when (and (eq *boot-state* 'complete)
+	     (null (lisp:find-class name nil)))
+    (setf (lisp:find-class name)
+	  (lisp::make-standard-class :name name))))
 
 (defun make-class-eq-predicate (class)
   (when (symbolp class) (setq class (find-class class)))
@@ -272,23 +271,6 @@
 	      (t
 	       (subtypep (convert-to-system-type type1)
 			 (convert-to-system-type type2))))))))
-
-(defun do-satisfies-deftype (name predicate)
-  (declare (ignore name predicate)))
-
-(defun make-type-predicate-name (name &optional kind)
-  (if (symbol-package name)
-      (intern (format nil
-		      "~@[~A ~]TYPE-PREDICATE ~A ~A"
-		      kind
-		      (package-name (symbol-package name))
-		      (symbol-name name))
-	      *the-pcl-package*)
-      (make-symbol (format nil
-			   "~@[~A ~]TYPE-PREDICATE ~A"
-			   kind
-			   (symbol-name name)))))
-
 
 
 (defvar *built-in-class-symbols* ())

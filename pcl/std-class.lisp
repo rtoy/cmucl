@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.9.2.4 2000/05/23 16:39:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.9.2.5 2000/08/04 10:34:59 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -992,9 +992,8 @@
 
 
 ;;;; inform-type-system-about-class
-;;;; make-type-predicate
 ;;;
-;;; These are NOT part of the standard protocol.  They are internal mechanism
+;;; This is NOT part of the standard protocol.  It is an internal mechanism
 ;;; which PCL uses to *try* and tell the type system about class definitions.
 ;;; In a more fully integrated implementation of CLOS, the type system would
 ;;; know about class objects and class names in a more fundamental way and
@@ -1002,7 +1001,16 @@
 ;;; different.
 ;;;
 (defmethod inform-type-system-about-class ((class std-class) name)
+  ;; Maybe add skeleton lisp:standard-class to avoid undefined-function
+  ;; compiler warnings. Not otherwise needed in this implementation.
   (inform-type-system-about-std-class name))
+
+(defmethod inform-type-system-about-class
+    ((class funcallable-standard-class) name)
+  (declare (ignore name))
+  ;; Avoid load-time warning of changing metaclass.
+  )
+
 
 
 (defmethod compatible-meta-class-change-p (class proto-new-class)
