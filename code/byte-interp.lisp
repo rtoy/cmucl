@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.43 2003/08/27 15:35:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.44 2003/08/27 16:09:11 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1038,7 +1038,7 @@
 		"pc=~D, fp=~D, sp=~D, byte=#b~,'0X, frame:~%    ~S~%"
 		pc fp (current-stack-pointer) byte
 		(subseq eval::*eval-stack* fp (current-stack-pointer))))))
-  (if (zerop (logand byte #x80))
+  (if (not (logbitp 7 byte))
       ;; Some stack operation.  No matter what, we need the operand,
       ;; so compute it.
       (multiple-value-bind
@@ -1051,21 +1051,21 @@
 			      (+ pc 5))
 		      (values operand (+ pc 2))))
 		(values operand (1+ pc))))
-	(if (zerop (logand byte #x40))
-	    (push-eval-stack (if (zerop (logand byte #x20))
-				 (if (zerop (logand byte #x10))
+	(if (not (logbitp 6 byte))
+	    (push-eval-stack (if (not (logbitp 5 byte))
+				 (if (not (logbitp 4 byte))
 				     (eval-stack-ref (+ fp operand))
 				     (eval-stack-ref (- fp operand 5)))
-				 (if (zerop (logand byte #x10))
+				 (if (not (logbitp 4 byte))
 				     (code-header-ref
 				      component
 				      (+ operand vm:code-constants-offset))
 				     (svref system-constants operand))))
-	    (if (zerop (logand byte #x20))
-		(push-eval-stack (if (zerop (logand byte #x10))
+	    (if (not (logbitp 5 byte))
+		(push-eval-stack (if (not (logbitp 4 byte))
 				     operand
 				     (- (1+ operand))))
-		(if (zerop (logand byte #x10))
+		(if (not (logbitp 4 byte))
 		    (setf (eval-stack-ref (+ fp operand)) (pop-eval-stack))
 		    (if (zerop operand)
 			(let ((operand (pop-eval-stack)))
@@ -1073,33 +1073,33 @@
 			  (decf (current-stack-pointer) operand))
 			(decf (current-stack-pointer) operand)))))
 	(byte-interpret component new-pc fp))
-      (if (zerop (logand byte #x40))
+      (if (not (logbitp 6 byte))
 	  ;; Some kind of call.
 	  (let ((args (let ((args (logand byte #x07)))
 			(if (= args #x07)
 			    (pop-eval-stack)
 			    args))))
-	    (if (zerop (logand byte #x20))
-		(let ((named (not (zerop (logand byte #x08)))))
-		  (if (zerop (logand byte #x10))
+	    (if (not (logbitp 5 byte))
+		(let ((named (not (not (logbitp 3 byte)))))
+		  (if (not (logbitp 4 byte))
 		      ;; Call for single value.
 		      (do-call component pc (1+ pc) fp args named)
 		      ;; Tail call.
 		      (do-tail-call component pc fp args named)))
-		(if (zerop (logand byte #x10))
+		(if (not (logbitp 4 byte))
 		    ;; Call for multiple-values.
 		    (do-call component pc (- (1+ pc)) fp args
-			     (not (zerop (logand byte #x08))))
-		    (if (zerop (logand byte #x08))
+			     (not (not (logbitp 3 byte))))
+		    (if (not (logbitp 3 byte))
 			;; Local call
 			(do-local-call component pc (+ pc 4) fp args)
 			;; Local tail-call
 			(do-tail-local-call component pc fp args)))))
-	  (if (zerop (logand byte #x20))
+	  (if (not (logbitp 5 byte))
 	      ;; local-multiple-call, Return, branch, or Xop.
-	      (if (zerop (logand byte #x10))
+	      (if (not (logbitp 4 byte))
 		  ;; local-multiple-call or return.
-		  (if (zerop (logand byte #x08))
+		  (if (not (logbitp 3 byte))
 		      ;; Local-multiple-call.
 		      (do-local-call component pc (- (+ pc 4)) fp
 				     (let ((args (logand byte #x07)))
@@ -1114,13 +1114,13 @@
 				   num-results))))
 			(do-return fp num-results)))
 		  ;; Branch or Xop.
-		  (if (zerop (logand byte #x08))
+		  (if (not (logbitp 3 byte))
 		      ;; Branch.
-		      (if (if (zerop (logand byte #x04))
-			      (if (zerop (logand byte #x02))
+		      (if (if (not (logbitp 2 byte))
+			      (if (not (logbitp 1 byte))
 				  t
 				  (pop-eval-stack))
-			      (if (zerop (logand byte #x02))
+			      (if (not (logbitp 1 byte))
 				  (not (pop-eval-stack))
 				  (multiple-value-pop-eval-stack
 				   (val1 val2)
@@ -1128,14 +1128,14 @@
 			  ;; Branch taken.
 			  (byte-interpret
 			   component
-			   (if (zerop (logand byte #x01))
+			   (if (not (logbitp 0 byte))
 			       (component-ref-24 component (1+ pc))
 			       (+ pc 2
 				  (component-ref-signed component (1+ pc))))
 			   fp)
 			  ;; Branch not taken.
 			  (byte-interpret component
-					  (if (zerop (logand byte #x01))
+					  (if (not (logbitp 0 byte))
 					      (+ pc 4)
 					      (+ pc 2))
 					  fp))
