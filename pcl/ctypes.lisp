@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; The built-in method combination types as taken from page 1-31 of 88-002R.

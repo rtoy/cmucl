@@ -29,7 +29,7 @@
 ;;; mechanisms.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; defconstructor is used to define special purpose functions which just
@@ -289,7 +289,7 @@
     (when old (remove-constructor class old))
     (install-lazy-constructor-installer constructor)
     (add-constructor class constructor)
-    (setf (symbol-function name) constructor)))
+    (setf (gdefinition name) constructor)))
 
 (defmethod install-lazy-constructor-installer ((constructor constructor))
   (let ((class (constructor-class constructor)))

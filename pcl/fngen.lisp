@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; GET-FUNCTION is the main user interface to this code. It is like

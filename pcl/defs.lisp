@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (eval-when (compile load eval)
   
@@ -77,10 +77,12 @@
   (once-only (spec)
     `(cond (#-setf (symbolp ,spec) #+setf t
 	    (let ((,non-setf-var ,spec)) ,@non-setf-case))
+	   #-setf
 	   ((and (listp ,spec)
 		 (eq (car ,spec) 'setf)
 		 (symbolp (cadr ,spec)))
 	    (let ((,setf-var (cadr ,spec))) ,@setf-case))
+	   #-setf
 	   (t
 	    (error
 	      "Can't understand ~S as a generic function specifier.~%~
@@ -115,35 +117,38 @@
 ;;; If symbol names a function which is traced or advised, redefine
 ;;; the `real' definition without affecting the advise.
 ;;;
-(defun fdefine-carefully (symbol new-definition)
-  #+Lispm (si:fdefine symbol new-definition t t)
+(defun fdefine-carefully (name new-definition)
+  #+Lispm (si:fdefine name new-definition t t)
   #+Lucid (let ((lucid::*redefinition-action* nil))
-	    (setf (symbol-function symbol) new-definition))
-  #+excl  (setf (symbol-function symbol) new-definition)
-  #+xerox (let ((advisedp (member symbol il:advisedfns :test #'eq))
-                (brokenp (member symbol il:brokenfns :test #'eq)))
+	    (setf (symbol-function name) new-definition))
+  #+excl  (setf (symbol-function name) new-definition)
+  #+xerox (let ((advisedp (member name il:advisedfns :test #'eq))
+                (brokenp (member name il:brokenfns :test #'eq)))
 	    ;; In XeroxLisp (late of envos) tracing is implemented
 	    ;; as a special case of "breaking".  Advising, however,
 	    ;; is treated specially.
-            (xcl:unadvise-function symbol :no-error t)
-            (xcl:unbreak-function symbol :no-error t)
-            (setf (symbol-function symbol) new-definition)
-            (when brokenp (xcl:rebreak-function symbol))
-            (when advisedp (xcl:readvise-function symbol)))
-  #+setf (setf (fdefinition symbol) new-definition)
+            (xcl:unadvise-function name :no-error t)
+            (xcl:unbreak-function name :no-error t)
+            (setf (symbol-function name) new-definition)
+            (when brokenp (xcl:rebreak-function name))
+            (when advisedp (xcl:readvise-function name)))
+  #+(and setf (not cmu)) (setf (fdefinition name) new-definition)
   #+kcl (setf (symbol-function 
-	       (let ((sym (get symbol 'si::traced)) first-form)
+	       (let ((sym (get name 'si::traced)) first-form)
 		 (if (and sym
-			  (consp (symbol-function symbol))
-			  (consp (setq first-form (nth 3 (symbol-function symbol))))
+			  (consp (symbol-function name))
+			  (consp (setq first-form
+				       (nth 3 (symbol-function name))))
 			  (eq (car first-form) 'si::trace-call))
 		     sym
-		     symbol)))
-	      new-definition)  
-  #-(or Lispm Lucid excl Xerox setf kcl)
-  (setf (symbol-function symbol) new-definition)
-  
-  new-definition)
+		     name)))
+	      new-definition)
+  #+cmu (progn
+	  (c::%%defun name new-definition nil)
+	  (c::note-name-defined name :function)
+	  new-definition)
+  #-(or Lispm Lucid excl Xerox setf kcl cmu)
+  (setf (symbol-function name) new-definition))
 
 (defun gboundp (spec)
   (parse-gspec spec
@@ -261,7 +266,7 @@
 
 (defun inform-type-system-about-std-class (name)
   (let ((predicate-name (make-type-predicate-name name)))
-    (setf (symbol-function predicate-name) (make-type-predicate name))
+    (setf (gdefinition predicate-name) (make-type-predicate name))
     (do-satisfies-deftype name predicate-name)))
 
 (defun make-type-predicate (name)

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmacro object-cache-no (object mask)
   `(logand (sys::address-of ,object) ,mask))

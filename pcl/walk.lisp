@@ -51,7 +51,7 @@
 ;;; mechanisms is in the first part of the file, the real walker follows it.
 ;;; 
 
-(in-package 'walker)
+(in-package :walker)
 
 ;;;
 ;;; The user entry points are walk-form and nested-walked-form.  In addition,

@@ -1,37 +1,6 @@
 ;;; -*- Mode: Lisp; Base: 10; Syntax: Common-Lisp; Package: DSYS -*-
 ;;; File: sysdef.lisp 
 ;;; Author: Richard Harris
-;;;
-;;;	ROSE - Rensselaer Object System for Engineering
-;;;	Common Lisp Implementation
-;;;
-;;; 			   Copyright (c) 1990 by 
-;;; 	      Rensselaer Polytechnic Institute, Troy, New York.
-;;; 			    All Rights Reserved
-;;;
-;;;	THE SOFTWARE AND ACCOMPANYING WRITTEN MATERIALS ARE PROVIDED
-;;;	\"AS IS\" AND WITHOUT ANY WARRANTY, INCLUDING BUT NOT LIMITED 
-;;;	TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-;;;	A PARTICULAR PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND
-;;;	PERFORMANCE OF THE SOFTWARE AND USE OF THE ACCOMPANYING WRITTEN
-;;;	MATERIALS IS ASSUMED BY YOU.  IN NO EVENT SHALL RENSSELAER 
-;;;	POLYTECHNIC INSTITUTE BE LIABLE FOR ANY LOST REVENUE, LOST 
-;;;	PROFITS OR OTHER INCIDENTAL OR CONSEQUENTIAL DAMAGES, EVEN
-;;;	IF ADVISED OF THE POSSIBILITIES OF SUCH DAMAGES, WHERE DAMAGES
-;;;	ARISE OUT OF OR IN CONNECTION WITH THE USE OF, PERFORMANCE OR
-;;;	NONPERFORMANCE OF THIS SOFTWARE.
-;;;
-;;;	This software and accompanying written materials may not be 
-;;;	distributed outside your organization or outside the United 
-;;;	States of America without express written authorization from
-;;;	Rensselaer Polytechnic Institute.
-;;;
-;;;	This work has been sponsored in part by Defense Advanced Research 
-;;;	Projects Agency (DARPA) under contract number MDA972-88-C0047 for
-;;; 	DARPA Initiative in Concurrent Engineering (DICE).  This material
-;;;	may be reproduced by or for the U.S. Government pursuant to the 
-;;;	copyright license under the clause at DFARS 252.227-7013 7/26/90.
-;;; 
 
 (in-package "DSYS")
 
@@ -125,11 +94,11 @@
 	     (pcl::compile-pcl))
 	   (reset-pcl-package)
 	   (maybe-load-pcl t)))
-     #+cmu (lisp::purify))
+     #+cmu (purify))
    :load
    (progn 
      (maybe-load-pcl)
-     #+cmu (lisp::purify))))
+     #+cmu (purify))))
 
 (defparameter *pcl-files*
   '((("systems") "lisp"

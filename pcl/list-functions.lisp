@@ -52,6 +52,8 @@
 	(*print-pretty* nil)
 	(s-a-n (find-package "SLOT-ACCESSOR-NAME"))
 	(lisp-sans (mapcar #'slot-reader-symbol '(function type))))
+    ;; This one has no predefined methods.
+    (defgeneric update-dependent (metaobject dependent &rest initargs))
     (map-all-generic-functions 
      #'(lambda (gf)
 	 (when (or all-p

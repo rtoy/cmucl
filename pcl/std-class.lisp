@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmethod slot-accessor-function ((slotd effective-slot-definition) type)
   (ecase type
@@ -325,7 +325,7 @@
 						  ,(load-truename))
 			     other))
 
-(setf (symbol-function 'load-defclass) #'real-load-defclass)
+(setf (gdefinition 'load-defclass) #'real-load-defclass)
 
 (defun ensure-class (name &rest all)
   (apply #'ensure-class-using-class name (find-class name nil) all))
@@ -335,8 +335,7 @@
       (ensure-class-values class args)
     (inform-type-system-about-class (class-prototype meta) name);***
     (setf class (apply #'make-instance meta :name name initargs)
-	  (find-class name) class
-	  (find-class-predicate name) (symbol-function (class-predicate-name class)))
+	  (find-class name) class)
     (inform-type-system-about-class class name)	                ;***
     class))
 
@@ -345,8 +344,12 @@
       (ensure-class-values class args)
     (unless (eq (class-of class) meta) (change-class class meta))
     (apply #'reinitialize-instance class initargs)
+    (setf (find-class name) class)
     (inform-type-system-about-class class name)	                ;***
     class))
+
+(defmethod class-predicate-name ((class t))
+  'function-returning-nil)
 
 (defun ensure-class-values (class args)
   (let* ((initargs (copy-list args))
@@ -629,7 +632,7 @@
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)
     (update-inits class (compute-default-initargs class))
-    (update-constructors class))
+    (update-make-instance-function-table class))
   (unless finalizep
     (dolist (sub (class-direct-subclasses class)) (update-class sub nil))))
 
@@ -986,39 +989,6 @@
 ;;;
 (defmethod inform-type-system-about-class ((class std-class) name)
   (inform-type-system-about-std-class name))
-
-
-;;;
-;;; These 4 definitions appear here for bootstrapping reasons.  Logically,
-;;; they should be in the construct file.  For documentation purposes, a
-;;; copy of these definitions appears in the construct file.  If you change
-;;; one of the definitions here, be sure to change the copy there.
-;;; 
-(defvar *initialization-generic-functions*
-	(list #'make-instance
-	      #'default-initargs
-	      #'allocate-instance
-	      #'initialize-instance
-	      #'shared-initialize))
-
-(defmethod maybe-update-constructors
-	   ((generic-function generic-function)
-	    (method method))
-  (when (memq generic-function *initialization-generic-functions*)
-    (labels ((recurse (class)
-	       (update-constructors class)
-	       (dolist (subclass (class-direct-subclasses class))
-		 (recurse subclass))))
-      (when (classp (car (method-specializers method)))
-	(recurse (car (method-specializers method)))))))
-
-(defmethod update-constructors ((class slot-class))
-  (dolist (cons (class-constructors class))
-    (install-lazy-constructor-installer cons)))
-
-(defmethod update-constructors ((class class))
-  ())
-
 
 
 (defmethod compatible-meta-class-change-p (class proto-new-class)

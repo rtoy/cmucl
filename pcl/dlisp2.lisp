@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defun emit-reader/writer-function (reader/writer 1-or-2-class class-slot-p)
   (values
@@ -136,8 +136,10 @@
   (declare (ignore applyp))
   (if cached-emf-p
       #'(lambda (cache miss-fn)
+	  (declare (type function miss-fn))
 	  #'(lambda (&rest args)
 	      (declare #.*optimize-speed*)
+	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
 		(dfun-wrappers invalid-wrapper-p)
 		(apply miss-fn args)
@@ -150,8 +152,10 @@
 			      emf
 			      (invoke-emf emf args))))))))
       #'(lambda (cache emf miss-fn)
+	  (declare (type function miss-fn))
 	  #'(lambda (&rest args)
 	      (declare #.*optimize-speed*)
+	      #+copy-&rest-arg (setq args (copy-list args))
 	      (with-dfun-wrappers (args metatypes)
 		(dfun-wrappers invalid-wrapper-p)
 		(apply miss-fn args)
@@ -171,5 +175,6 @@
   (declare (ignore metatypes applyp))
   (values #'(lambda (emf)
 	      #'(lambda (&rest args)
+		  #+copy-&rest-arg (setq args (copy-list args))
 		  (invoke-emf emf args)))
 	  t))

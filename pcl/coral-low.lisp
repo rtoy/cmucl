@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 #-:ccl-1.3
 (ccl::add-transform 'std-instance-p 

@@ -38,7 +38,7 @@
 ;;; workings of this metaclass and the standard-class metaclass.
 ;;; 
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (defmethod wrapper-fetcher ((class funcallable-standard-class))
   'fsc-instance-wrapper)

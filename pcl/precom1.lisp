@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 ;;;
 ;;; pre-allocate generic function caches.  The hope is that this will put

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 ;;;
 
-(in-package 'pcl)
+(in-package :pcl)
 
 (fix-early-generic-functions)
 (setq *boot-state* 'complete)
