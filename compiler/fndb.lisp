@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.59 1993/08/25 00:15:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.60 1993/08/25 01:11:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -657,7 +657,8 @@
 (defknown make-hash-table
   (&key (:test callable) (:size index)
 	(:rehash-size (or (integer 1) (float (1.0))))
-	(:rehash-threshold (real 0 1)))
+	(:rehash-threshold (real 0 1))
+	(:weak-p t))
   hash-table
   (flushable unsafe))
 (defknown hash-table-p (t) boolean (movable foldable flushable))
@@ -982,7 +983,8 @@
 		(:if-exists (member :error :new-version :rename
 				   :rename-and-delete :overwrite :append
 				   :supersede nil))
-		(:if-does-not-exist (member :error :create nil)))
+		(:if-does-not-exist (member :error :create nil))
+		(:external-format (member :default)))
   (or stream null))
 
 (defknown rename-file (pathnamelike filename) (values pathname pathname pathname))
@@ -1085,7 +1087,8 @@
 (defknown identity (t) t (movable foldable flushable unsafe)
   :derive-type #'result-type-first-arg)
 
-(defknown constantly (t &rest t) function (movable flushable))
+;;; &optional is to agree with the optimization in the interpreter stub.
+(defknown constantly (t &optional t t &rest t) function (movable flushable))
 (defknown complement (function) function (movable flushable))
 
 
