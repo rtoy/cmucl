@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.145 2004/04/06 20:44:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.146 2004/04/07 02:47:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -190,12 +190,19 @@
   (frob floor)
   (frob ceiling))
 
+;; Some of these source transforms are not needed when modular
+;; arithmetic is available.  When modular arithmetic is available, the
+;; various backends need to define them there.
+#-modular-arith
+(progn
 (def-source-transform lognand (x y) `(lognot (logand ,x ,y)))
 (def-source-transform lognor (x y) `(lognot (logior ,x ,y)))
 (def-source-transform logandc1 (x y) `(logand (lognot ,x) ,y))
 (def-source-transform logandc2 (x y) `(logand ,x (lognot ,y)))
 (def-source-transform logorc1 (x y) `(logior (lognot ,x) ,y))
 (def-source-transform logorc2 (x y) `(logior ,x (lognot ,y)))
+)
+
 (def-source-transform logtest (x y) `(not (zerop (logand ,x ,y))))
 (def-source-transform byte (size position) `(cons ,size ,position))
 (def-source-transform byte-size (spec) `(car ,spec))
@@ -2349,6 +2356,35 @@
        (t
 	(specifier-type 'integer))))))
 
+(defun derive-integer-type-aux (x y fun)
+  (declare (type function fun))
+  (if (and (numeric-type-p x) (numeric-type-p y)
+           (eq (numeric-type-class x) 'integer)
+           (eq (numeric-type-class y) 'integer)
+           (eq (numeric-type-complexp x) :real)
+           (eq (numeric-type-complexp y) :real))
+      (multiple-value-bind (low high) (funcall fun x y)
+        (make-numeric-type :class 'integer
+                           :complexp :real
+                           :low low
+                           :high high))
+      (numeric-contagion x y)))
+
+(defun lognot-derive-type-aux (int)
+  (derive-integer-type-aux int int
+                           (lambda (type type2)
+                             (declare (ignore type2))
+                             (let ((lo (numeric-type-low type))
+                                   (hi (numeric-type-high type)))
+                               (values (if hi (lognot hi) nil)
+                                       (if lo (lognot lo) nil)
+                                       (numeric-type-class type)
+                                       (numeric-type-format type))))))
+
+(defoptimizer (lognot derive-type) ((int))
+  (lognot-derive-type-aux (continuation-type int)))
+
+
 (macrolet ((frob (logfcn)
 	     (let ((fcn-aux (symbolicate logfcn "-DERIVE-TYPE-AUX")))
 	     `(defoptimizer (,logfcn derive-type) ((x y))
@@ -2356,6 +2392,43 @@
   (frob logand)
   (frob logior)
   (frob logxor))
+
+;;; FIXME: could actually do stuff with SAME-LEAF
+(defoptimizer (logeqv derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (lognot-derive-type-aux 
+                              (logxor-derive-type-aux x y same-leaf))) 
+                       #'logeqv))
+(defoptimizer (lognand derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (lognot-derive-type-aux
+                              (logand-derive-type-aux x y same-leaf)))
+                       #'lognand))
+(defoptimizer (lognor derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (lognot-derive-type-aux
+                              (logior-derive-type-aux x y same-leaf)))
+                       #'lognor))
+(defoptimizer (logandc1 derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (logand-derive-type-aux
+                              (lognot-derive-type-aux x) y nil))
+                       #'logandc1))
+(defoptimizer (logandc2 derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (logand-derive-type-aux
+                              x (lognot-derive-type-aux y) nil))
+                       #'logandc2))
+(defoptimizer (logorc1 derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (logior-derive-type-aux
+                              (lognot-derive-type-aux x) y nil))
+                       #'logorc1))
+(defoptimizer (logorc2 derive-type) ((x y))
+  (two-arg-derive-type x y (lambda (x y same-leaf)
+                             (logior-derive-type-aux
+                              x (lognot-derive-type-aux y) nil))
+                       #'logorc2))
 
 (defoptimizer (integer-length derive-type) ((num))
   (one-arg-derive-type
@@ -2683,6 +2756,13 @@
 ;;; 		      (+ (%f2) (* 13 (%f2)))))))
 ;;;  => segmentation violation
 ;;;
+;;;
+;;; Another useful test is
+;;;      (defun zot ()
+;;;	   (let ((v9 (labels ((%f13 () nil)) nil)))
+;;;	     (let ((v3 (logandc2 97 3)))
+;;;	       (* v3 (- 37391897 (logand v3 -66)))))
+;;;
 ;;; The right fix for this is probably to port SBCL's modular
 ;;; functions implementation.
 
@@ -2746,6 +2826,7 @@
 	(give-up))
     
       (or result 0))))
+
 
 ;;; If arg is a constant power of two, turn floor into a shift and
 ;;; mask. If ceiling, add in (1- (abs y)) and do floor, and correct
@@ -2843,6 +2924,19 @@
 			:eval-name t :when :both)
       "fold identity operations"
       result)))
+
+(deftransform logand ((x y) (* (constant-argument t)) *)
+  "fold identity operation"
+  (let ((y (continuation-value y)))
+    (unless (and (plusp y)
+                 (= y (1- (ash 1 (integer-length y)))))
+      (give-up))
+    (unless (csubtypep (continuation-type x)
+                       (specifier-type `(integer 0 ,y)))
+      (give-up))
+    'x))
+
+
 
 ;;; Restricted to rationals, because (- 0 0.0) is 0.0, not -0.0.
 ;;;
@@ -3502,3 +3596,157 @@
   (define-format-checker compiler-warning)
   (define-format-checker compiler-note)
   (define-format-checker compiler-mumble))
+
+;;; Modular functions
+
+;;; (ldb (byte s 0) (foo                 x  y ...)) =
+;;; (ldb (byte s 0) (foo (ldb (byte s 0) x) y ...))
+;;;
+;;; and similar for other arguments.
+
+;;; Try to recursively cut all uses of LVAR to WIDTH bits.
+;;;
+;;; For good functions, we just recursively cut arguments; their
+;;; "goodness" means that the result will not increase (in the
+;;; (unsigned-byte +infinity) sense). An ordinary modular function is
+;;; replaced with the version, cutting its result to WIDTH or more
+;;; bits. For most functions (e.g. for +) we cut all arguments; for
+;;; others (e.g. for ASH) we have "optimizers", cutting only necessary
+;;; arguments (maybe to a different width) and returning the name of a
+;;; modular version, if it exists, or NIL. If we have changed
+;;; anything, we need to flush old derived types, because they have
+;;; nothing in common with the new code.
+
+(defun cut-to-width (cont width)
+  (declare (type continuation cont) (type (integer 0) width))
+  (labels ((reoptimize-node (node name)
+             (setf (node-derived-type node)
+                   (function-type-returns (info function type name)))
+             (setf (continuation-%derived-type (node-cont node)) nil)
+             (setf (node-reoptimize node) t)
+             (setf (block-reoptimize (node-block node)) t)
+             (setf (component-reoptimize (block-component (node-block node)))
+		   t))
+           (cut-node (node &aux did-something)
+             (when (and (not (block-delete-p (node-block node)))
+                        (combination-p node)
+                        (function-info-p (basic-combination-kind node)))
+               (let* ((fun-ref (continuation-use (combination-fun node)))
+		      (fun-name (leaf-name (ref-leaf fun-ref)))
+                      (modular-fun (find-modular-version fun-name width))
+                      #+nil
+		      (name (and (modular-fun-info-p modular-fun)
+                                 (modular-fun-info-name modular-fun))))
+                 (when (and modular-fun
+                            (not (and (eq fun-name 'logand)
+                                      (csubtypep
+                                       (single-value-type (node-derived-type node))
+                                       (specifier-type `(unsigned-byte ,width))))))
+		   (let ((name (etypecase modular-fun
+				 ((eql :good) fun-name)
+				 (modular-fun-info
+				  (modular-fun-info-name modular-fun))
+				 (function
+				  (funcall modular-fun node width)))))
+		     #+debug-mod32
+		     (progn
+		       (format t "leaf-name   = ~S~%" (leaf-name (ref-leaf fun-ref)))
+		       (format t "fun-name    = ~S~%" fun-name)
+		       (format t "modular-fun = ~A~%" modular-fun)
+		       (format t " type = ~A~%" (single-value-type (node-derived-type node)))
+		       (format t "name        = ~A~%" name))
+		     (when name
+		       (unless (eq modular-fun :good)
+			 (setq did-something t)
+			 #+debug-mod32
+			 (format t "  changing leaf ~S ~%  to ~S~%" fun-ref
+				 (find-free-function name "in a strange place"))
+			 (change-ref-leaf
+			  fun-ref
+			  (find-free-function name "in a strange place"))
+			 (setf (combination-kind node) :full))
+		       (unless (functionp modular-fun)
+			 (dolist (arg (basic-combination-args node))
+			   (when (cut-cont arg)
+			     (setq did-something t))))
+		       (when did-something
+			 (reoptimize-node node fun-name))
+		       did-something))))))
+           (cut-cont (cont &aux did-something)
+             (do-uses (node cont)
+               (when (cut-node node)
+                 (setq did-something t)))
+             did-something))
+    (cut-cont cont)))
+
+#+nil
+(defun cut-to-width (lvar width)
+  (declare (type lvar lvar) (type (integer 0) width))
+  (labels ((reoptimize-node (node name)
+             (setf (node-derived-type node)
+                   (fun-type-returns
+                    (info :function :type name)))
+             (setf (lvar-%derived-type (node-lvar node)) nil)
+             (setf (node-reoptimize node) t)
+             (setf (block-reoptimize (node-block node)) t)
+             (setf (component-reoptimize (node-component node)) t))
+           (cut-node (node &aux did-something)
+             (when (and (not (block-delete-p (node-block node)))
+                        (combination-p node)
+                        (fun-info-p (basic-combination-kind node)))
+               (let* ((fun-ref (lvar-use (combination-fun node)))
+                      (fun-name (leaf-source-name (ref-leaf fun-ref)))
+                      (modular-fun (find-modular-version fun-name width)))
+                 (when (and modular-fun
+                            (not (and (eq fun-name 'logand)
+                                      (csubtypep
+                                       (single-value-type (node-derived-type node))
+                                       (specifier-type `(unsigned-byte* ,width))))))
+                   (binding* ((name (etypecase modular-fun
+                                      ((eql :good) fun-name)
+                                      (modular-fun-info
+                                       (modular-fun-info-name modular-fun))
+                                      (function
+                                       (funcall modular-fun node width)))
+                                :exit-if-null))
+                     (unless (eql modular-fun :good)
+                       (setq did-something t)
+                       (change-ref-leaf
+                        fun-ref
+                        (find-free-fun name "in a strange place"))
+                       (setf (combination-kind node) :full))
+                     (unless (functionp modular-fun)
+                       (dolist (arg (basic-combination-args node))
+                         (when (cut-lvar arg)
+                           (setq did-something t))))
+                     (when did-something
+                       (reoptimize-node node name))
+                     did-something)))))
+           (cut-lvar (lvar &aux did-something)
+             (do-uses (node lvar)
+               (when (cut-node node)
+                 (setq did-something t)))
+             did-something))
+    (cut-lvar lvar)))
+
+
+(defun logand-defopt-helper (x y node)
+  (let ((result-type (single-value-type (node-derived-type node))))
+    (when (numeric-type-p result-type)
+      (let ((low (numeric-type-low result-type))
+            (high (numeric-type-high result-type)))
+        (when (and (numberp low)
+                   (numberp high)
+                   (>= low 0))
+          (let ((width (integer-length high)))
+            (when (some (lambda (x) (<= width x))
+                        *modular-funs-widths*)
+              ;; FIXME: This should be (CUT-TO-WIDTH NODE WIDTH).
+              (cut-to-width x width)
+              (cut-to-width y width)
+              nil		 ; After fixing above, replace with T.
+              )))))))
+
+#+modular-arith
+(defoptimizer (logand optimizer) ((x y) node)
+  (logand-defopt-helper x y node))

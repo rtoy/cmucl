@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.16 2003/09/11 11:39:07 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.17 2004/04/07 02:47:54 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1473,3 +1473,100 @@
     (inst mov tmp y)
     (inst shr tmp 18)
     (inst xor y tmp)))
+
+;;; Modular arithmetic
+;;; logical operations
+#+modular-arith
+(progn
+(c::define-modular-fun lognot-mod32 (x) lognot 32)
+(define-vop (lognot-mod32/unsigned=>unsigned)
+  (:translate lognot-mod32)
+  (:args (x :scs (unsigned-reg unsigned-stack) :target r
+	    :load-if (not (and (sc-is x unsigned-stack)
+			       (sc-is r unsigned-stack)
+			       (location= x r)))))
+  (:arg-types unsigned-num)
+  (:results (r :scs (unsigned-reg)
+	       :load-if (not (and (sc-is x unsigned-stack)
+				  (sc-is r unsigned-stack)
+				  (location= x r)))))
+  (:result-types unsigned-num)
+  (:policy :fast-safe)
+  (:generator 1
+    (move r x)
+    (inst not r)))
+
+(c::define-modular-fun logxor-mod32 (x y) logxor 32)
+(define-vop (fast-logxor-mod32/unsigned=>unsigned
+             fast-logxor/unsigned=>unsigned)
+  (:translate logxor-mod32))
+(define-vop (fast-logxor-mod32-c/unsigned=>unsigned
+             fast-logxor-c/unsigned=>unsigned)
+  (:translate logxor-mod32))
+
+(c::def-source-transform logeqv (&rest args)
+  (if (oddp (length args))
+      `(logxor ,@args)
+      `(lognot (logxor ,@args))))
+(c::def-source-transform logandc1 (x y)
+  `(logand (lognot ,x) ,y))
+(c::def-source-transform logandc2 (x y)
+  `(logand ,x (lognot ,y)))
+(c::def-source-transform logorc1 (x y)
+  `(logior (lognot ,x) ,y))
+(c::def-source-transform logorc2 (x y)
+  `(logior ,x (lognot ,y)))
+(c::def-source-transform lognor (x y)
+  `(lognot (logior ,x ,y)))
+(c::def-source-transform lognand (x y)
+  `(lognot (logand ,x ,y)))
+
+;;;; Modular functions
+
+(c::define-modular-fun +-mod32 (x y) + 32)
+(define-vop (fast-+-mod32/unsigned=>unsigned fast-+/unsigned=>unsigned)
+  (:translate +-mod32))
+(define-vop (fast-+-mod32-c/unsigned=>unsigned fast-+-c/unsigned=>unsigned)
+  (:translate +-mod32))
+(c::define-modular-fun --mod32 (x y) - 32)
+(define-vop (fast---mod32/unsigned=>unsigned fast--/unsigned=>unsigned)
+  (:translate --mod32))
+(define-vop (fast---mod32-c/unsigned=>unsigned fast---c/unsigned=>unsigned)
+  (:translate --mod32))
+
+(c::define-modular-fun *-mod32 (x y) * 32)
+(define-vop (fast-*-mod32/unsigned=>unsigned fast-*/unsigned=>unsigned)
+  (:translate *-mod32))
+;;; (no -C variant as x86 MUL instruction doesn't take an immediate)
+
+(defknown vm::ash-left-mod32 (integer (integer 0))
+  (unsigned-byte 32)
+  (foldable flushable movable))
+
+(define-vop (fast-ash-left-mod32-c/unsigned=>unsigned
+             fast-ash-c/unsigned=>unsigned)
+  (:translate ash-left-mod32))
+)
+
+(in-package :C)
+#+modular-arith
+(progn
+(define-modular-fun-optimizer ash ((integer count) :width width)
+  ;; The count needs to be (unsigned-byte 32) because the Sparc shift
+  ;; instruction takes the count modulo 32.  (NOTE: Should we make
+  ;; this work on Ultrasparcs?  We could then use the sllx instruction
+  ;; which takes the count mod 64.  Then a left shift of 32 or more
+  ;; will produce 0 in the lower 32 bits of the register, which is
+  ;; what we want.)
+  (when (and (<= width 32)
+	     (csubtypep (continuation-type count) (specifier-type '(unsigned-byte 5))))
+    (cut-to-width integer width)
+    'vm::ash-left-mod32))
+
+;; This should only get called when the ash modular function optimizer
+;; succeeds, which is for a count of 0-31, which is just right for
+;; %ashl.
+(defun vm::ash-left-mod32 (integer count)
+  (bignum::%ashl (ldb (byte 32 0) integer) count))
+
+)

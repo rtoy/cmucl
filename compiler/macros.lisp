@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.52 2003/09/24 09:48:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.53 2004/04/07 02:47:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1237,3 +1237,110 @@
 (defmacro eposition (&rest args)
   `(or (position ,@args)
        (error "Shouldn't happen?")))
+
+
+;;; Modular functions
+
+;;; For a documentation, see CUT-TO-WIDTH.
+
+#+modular-arith
+(sys:register-lisp-feature :modular-arith)
+
+#+modular-arith
+(progn
+;;; List of increasing widths
+(defvar *modular-funs-widths* nil)
+(defstruct modular-fun-info
+  (name (required-argument) :type symbol)
+  (width (required-argument) :type (integer 0))
+  (lambda-list (required-argument) :type list)
+  (prototype (required-argument) :type symbol))
+
+(defun find-modular-version (fun-name width)
+  (let ((infos (gethash fun-name kernel::*modular-funs*)))
+    (if (listp infos)
+        (find-if (lambda (item-width) (>= item-width width))
+                 infos
+                 :key #'modular-fun-info-width)
+        infos)))
+
+(defun %define-modular-fun (name lambda-list prototype width)
+  (let* ((infos (the list (gethash prototype kernel::*modular-funs*)))
+         (info (find-if (lambda (item-width) (= item-width width))
+                        infos
+                        :key #'modular-fun-info-width)))
+    (if info
+        (unless (and (eq name (modular-fun-info-name info))
+                     (= (length lambda-list)
+                        (length (modular-fun-info-lambda-list info))))
+          (setf (modular-fun-info-name info) name)
+          (warn "Redefining modular version ~S of ~S for width ~S."
+		name prototype width))
+        (setf (gethash prototype kernel::*modular-funs*)
+              (merge 'list
+                     (list (make-modular-fun-info :name name
+                                                  :width width
+                                                  :lambda-list lambda-list
+                                                  :prototype prototype))
+                     infos
+                     #'< :key #'modular-fun-info-width))))
+  (setq *modular-funs-widths*
+        (merge 'list (list width) *modular-funs-widths* #'<)))
+
+(defmacro define-modular-fun (name lambda-list prototype width)
+  (check-type name symbol)
+  (check-type prototype symbol)
+  (check-type width unsigned-byte)
+  (dolist (arg lambda-list)
+    (when (member arg lambda-list-keywords)
+      (error "Lambda list keyword ~S is not supported for ~
+              modular function lambda lists." arg)))
+  `(progn
+     (%define-modular-fun ',name ',lambda-list ',prototype ,width)
+     (defknown ,name ,(mapcar (constantly 'integer) lambda-list)
+       (unsigned-byte ,width)
+       (foldable flushable movable))
+     ;; Define the modular function just in case we need it.
+     #+nil
+     (defun ,name ,lambda-list
+       (flet ((prepare-argument (arg)
+		(declare (integer arg))
+		(etypecase arg
+		  ((unsigned-byte ,width) arg)
+		  (fixnum (logand arg ,(1- (ash 1 width))))
+		  (bignum (logand arg ,(1- (ash 1 width)))))))
+	 (,name ,@(loop for arg in lambda-list
+		     collect `(prepare-argument ,arg)))))))
+
+(defun %define-good-modular-fun (name)
+  (setf (gethash name kernel::*modular-funs*) :good)
+  name)
+
+(defmacro define-good-modular-fun (name)
+  (check-type name symbol)
+  `(%define-good-modular-fun ',name))
+
+(defmacro define-modular-fun-optimizer
+    (name ((&rest lambda-list) &key (width (gensym "WIDTH")))
+     &body body)
+  (check-type name symbol)
+  (dolist (arg lambda-list)
+    (when (member arg lambda-list-keywords)
+      (error "Lambda list keyword ~S is not supported for ~
+              modular function lambda lists." arg)))
+  (let ((call (gensym))
+	(args (gensym)))
+    `(setf (gethash ',name kernel::*modular-funs*)
+           (lambda (,call ,width)
+             (declare (type basic-combination ,call)
+                      (type (integer 0) width))
+             (let ((,args (basic-combination-args ,call)))
+               (when (= (length ,args) ,(length lambda-list))
+                 (destructuring-bind ,lambda-list ,args
+                   (declare (type continuation ,@lambda-list))
+                   ,@body)))))))
+
+;;; Good modular functions.  (Those that don't make the result larger.)
+(define-good-modular-fun logand)
+(define-good-modular-fun logior)
+)					; modular-arith

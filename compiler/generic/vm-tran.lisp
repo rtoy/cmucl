@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.47 2003/11/03 12:55:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.48 2004/04/07 02:47:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -462,3 +462,54 @@
 (deftransform eql ((x y) (double-float double-float))
   '(and (= (double-float-low-bits x) (double-float-low-bits y))
 	(= (double-float-high-bits x) (double-float-high-bits y))))
+
+;;; There are two different ways the multiplier can be recoded. The
+;;; more obvious is to shift X by the correct amount for each bit set
+;;; in Y and to sum the results. But if there is a string of bits that
+;;; are all set, you can add X shifted by one more then the bit
+;;; position of the first set bit and subtract X shifted by the bit
+;;; position of the last set bit. We can't use this second method when
+;;; the high order bit is bit 31 because shifting by 32 doesn't work
+;;; too well.
+(defun strength-reduce-constant-multiply (arg num)
+  (declare (type (unsigned-byte 32) num))
+  (let ((adds 0) (shifts 0)
+	(result nil) first-one)
+    (labels ((add (next-factor)
+	       (setf result
+		     (if result
+                         (progn (incf adds) `(+ ,result ,next-factor))
+                         next-factor))))
+      (declare (inline add))
+      (dotimes (bitpos 32)
+	(if first-one
+	    (when (not (logbitp bitpos num))
+	      (add (if (= (1+ first-one) bitpos)
+		       ;; There is only a single bit in the string.
+		       (progn (incf shifts) `(ash ,arg ,first-one))
+		       ;; There are at least two.
+		       (progn
+			 (incf adds)
+			 (incf shifts 2)
+			 `(- (ash ,arg ,bitpos)
+			     (ash ,arg ,first-one)))))
+	      (setf first-one nil))
+	    (when (logbitp bitpos num)
+	      (setf first-one bitpos))))
+      (when first-one
+	(cond ((= first-one 31))
+	      ((= first-one 30)
+	       (incf shifts)
+	       (add `(ash ,arg 30)))
+	      (t
+	       (incf shifts 2)
+	       (incf adds)
+	       (add `(- (ash ,arg 31)
+			(ash ,arg ,first-one)))))
+	(incf shifts)
+	(add `(ash ,arg 31))))
+    (values (if (plusp adds)
+                `(logand ,result #.(1- (ash 1 32))) ; using modular arithmetic
+                result)
+            adds
+            shifts)))

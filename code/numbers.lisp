@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.56 2004/01/09 04:18:06 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.57 2004/04/07 02:47:53 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1072,6 +1072,8 @@
 	  ((null integers) result))
       -1))
 
+#-modular-arith
+(progn
 (defun lognand (integer1 integer2)
   "Returns the complement of the logical AND of integer1 and integer2."
   (lognand integer1 integer2))
@@ -1095,6 +1097,7 @@
 (defun logorc2 (integer1 integer2)
   "Returns the logical OR of integer1 and (LOGNOT integer2)."
   (logorc2 integer1 integer2))
+)
 
 (defun lognot (number)
   "Returns the bit-wise logical not of integer."
@@ -1103,13 +1106,45 @@
     (bignum (bignum-logical-not number))))
 
 
-(macrolet ((frob (name op big-op)
+(macrolet ((frob (name op big-op &optional doc)
 	     `(defun ,name (x y)
+		,@(when doc (list doc))
 	       (number-dispatch ((x integer) (y integer))
 		 (bignum-cross-fixnum ,op ,big-op)))))
   (frob two-arg-and logand bignum-logical-and)
   (frob two-arg-ior logior bignum-logical-ior)
-  (frob two-arg-xor logxor bignum-logical-xor))
+  (frob two-arg-xor logxor bignum-logical-xor)
+
+  ;; BIGNUM-LOGICAL-{AND,IOR,XOR} need not return a bignum, so must
+  ;; call the generic LOGNOT.
+  (frob two-arg-eqv
+	(lambda (x y) (lognot (logxor x y)))
+	(lambda (x y) (lognot (bignum-logical-xor x y))))
+  (frob lognand
+	(lambda (x y) (lognot (logand x y)))
+	(lambda (x y) (lognot (bignum-logical-and x y)))
+	"Returns the complement of the AND of integer1 and integer2")
+  (frob lognor
+	(lambda (x y) (lognot (logior x y)))
+	(lambda (x y) (lognot (bignum-logical-ior x y)))
+	"Returns the complement of the OR of integer1 and integer2")
+  (frob logandc1
+	(lambda (x y) (logand (lognot x) y))
+	(lambda (x y) (bignum-logical-and (bignum-logical-not x) y))
+	"Returns the AND of (LOGNOT integer1) and integer2" )
+  (frob logandc2
+	(lambda (x y) (logand x (lognot y)))
+	(lambda (x y) (bignum-logical-and x (bignum-logical-not y)))
+	"Returns the AND of integer1 and (LOGNOT integer2)")
+  (frob logorc1
+	(lambda (x y) (logior (lognot x) y))
+	(lambda (x y) (bignum-logical-ior (bignum-logical-not x) y))
+	"Returns the OR of (LOGNOT integer1) and integer2")
+  (frob logorc2
+	(lambda (x y) (logior x (lognot y)))
+	(lambda (x y) (bignum-logical-ior x (bignum-logical-not y)))
+	"Returns the OR of integer1 and (LOGNOT integer2)")
+  )
 
 
 (defun logcount (integer)
@@ -1210,6 +1245,13 @@ significant bit of INTEGER is bit 0."
 (defun %ldb (size posn integer)
   (logand (ash integer (- posn))
 	  (1- (ash 1 size))))
+
+#+nil
+(defun %ldb (size posn integer)
+  (if (typep integer '(or (signed-byte 32) (unsigned-byte 32)))
+      (logand (ash integer (- posn))
+	      (1- (ash 1 size)))
+      (bignum:bignum-load-byte (byte size posn) integer)))
 
 (defun %mask-field (size posn integer)
   (logand integer (ash (1- (ash 1 size)) posn)))
@@ -1457,3 +1499,83 @@ significant bit of INTEGER is bit 0."
   (frob minusp "Returns T if number < 0, NIL otherwise.")
   (frob oddp "Returns T if number is odd, NIL otherwise.")
   (frob evenp "Returns T if number is even, NIL otherwise."))
+
+
+;;;; Modular arithmetic
+
+;;; hash: name -> { :GOOD | optimizer | ({modular-fun-info}*)}
+(defvar *modular-funs*
+  (make-hash-table :test 'eq))
+
+;;;; modular functions
+#+modular-arith
+#.
+(collect ((forms))
+  (flet ((definition (name lambda-list width pattern)
+           `(defun ,name ,lambda-list
+              (flet ((prepare-argument (x)
+                       (declare (integer x))
+                       (etypecase x
+                         ((unsigned-byte ,width) x)
+                         (fixnum (logand x ,pattern))
+                         (bignum (logand x ,pattern)))))
+                (,name ,@(loop for arg in lambda-list
+                               collect `(prepare-argument ,arg)))))))
+    (loop for infos being each hash-value of *modular-funs*
+          ;; FIXME: We need to process only "toplevel" functions
+          when (listp infos)
+          do (loop for info in infos
+                   for name = (c::modular-fun-info-name info)
+                   and width = (c::modular-fun-info-width info)
+                   and lambda-list = (c::modular-fun-info-lambda-list info)
+                   for pattern = (1- (ash 1 width))
+                   do (forms (definition name lambda-list width pattern)))))
+  `(progn ,@(forms)))
+
+
+#||
+(defmacro define-generic-modular-fun (name lambda-list width)
+  `(defun ,name ,lambda-list
+    (flet ((prepare-argument (arg)
+	     (declare (integer arg))
+	     (etypecase arg
+	       ((unsigned-byte ,width) arg)
+	       (fixnum (logand arg ,(1- (ash 1 width))))
+	       (bignum (logand arg ,(1- (ash 1 width)))))))
+      (,name ,@(loop for arg in lambda-list
+		     collect `(prepare-argument ,arg))))))
+
+;;; FIXME: We should do this a better way instead of having to
+;;; explicitly define each function here.  c::*modular-funs* has the
+;;; necessary information, but it seems it's not available when this
+;;; stuff is built.
+#+modular-arith
+(progn
+  (define-generic-modular-fun vm::lognot-mod32 (x) 32)
+  (define-generic-modular-fun vm::logxor-mod32 (x y) 32)
+  (define-generic-modular-fun vm::+-mod32 (x y) 32)
+  (define-generic-modular-fun vm::--mod32 (x y) 32)
+  (define-generic-modular-fun vm::*-mod32 (x y) 32)
+  )
+
+#+(and modular-arith sparc)
+(progn
+  (define-generic-modular-fun vm::logxor-mod32 (x y) 32)
+  (define-generic-modular-fun vm::logeqv-mod32 (x y) 32)
+  (define-generic-modular-fun vm::logandc1-mod32 (x y) 32)
+  (define-generic-modular-fun vm::logandc2-mod32 (x y) 32)
+  (define-generic-modular-fun vm::logorc1-mod32 (x y) 32)
+  (define-generic-modular-fun vm::logorc2-mod32 (x y) 32)
+  )
+||#
+
+
+;; Not sure this is 100% right, but the defoptimizer for ash only
+;; calls ash-left-mod32 when the COUNT is known to be a (UNSIGNED-BYTE
+;; 32), which is what %ASHL wants.
+#+modular-arith
+(defun vm::ash-left-mod32 (integer count)
+  (declare (type integer integer)
+	   (type (integer 0 31) count))
+  (bignum::%ashl (ldb (byte 32 0) integer) count))
+
