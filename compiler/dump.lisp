@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.56 1993/08/17 22:34:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.57 1993/08/19 23:43:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -447,8 +447,7 @@
 ;;; since we don't have the handle for the code object being dumped while we
 ;;; are dumping its constants.
 ;;;
-;;;    We dump a trap object as a placeholder for the code vector, which is
-;;; actually filled in by the loader.
+;;;    We dump trap objects in any unused slots or forward referenced slots.
 ;;;
 (defun dump-code-object (component code-segment code-length
 				   trace-table fixups file)
@@ -496,7 +495,11 @@
 		(dump-push (cdr entry) file))
 	       (:fdefinition
 		(dump-object (cdr entry) file)
-		(dump-fop 'lisp::fop-fdefinition file))))
+		(dump-fop 'lisp::fop-fdefinition file))
+	       (:dylan-varinfo-value
+		(dump-object (cadr entry) file)
+		(dump-object (cddr entry) file)
+		(dump-fop 'lisp::fop-dylan-varinfo-value file))))
 	    (null
 	     (dump-fop 'lisp::fop-misc-trap file)))))
 
@@ -680,7 +683,7 @@
 	   (type index length)
 	   (type vector constants)
 	   (type fasl-file file))
-  (collect ((entry-patches) (xep-patches))
+  (collect ((entry-patches))
     ;; No trace table in byte-compiled functions.
     (dump-object 0 file)
 
@@ -708,15 +711,16 @@
 	     (:fdefinition
 	      (dump-object (cdr entry) file)
 	      (dump-fop 'lisp::fop-fdefinition file))
+	     (:dylan-varinfo-value
+	      (dump-object (cadr entry) file)
+	      (dump-object (cddr entry) file)
+	      (dump-fop 'lisp::fop-dylan-varinfo-value file))
 	     (:type-predicate
 	      (dump-object 'load-type-predicate file)
 	      (let ((*unparse-function-type-simplify* t))
 		(dump-object (type-specifier (cdr entry)) file))
 	      (dump-fop 'lisp::fop-funcall file)
-	      (dump-byte 1 file))
-	     (:xep
-	      (xep-patches (cons (cdr entry) (+ i vm:code-constants-offset)))
-	      (dump-fop 'lisp::fop-misc-trap file)))))))
+	      (dump-byte 1 file)))))))
 
     ;; Dump the debug info.
     (let ((info (make-debug-info :name (component-name *compile-component*)))
@@ -742,7 +746,7 @@
       (dolist (patch (entry-patches))
 	(push (cons code-handle (cdr patch))
 	      (gethash (car patch) patch-table)))
-      (values code-handle (xep-patches)))))
+      code-handle)))
 
 
 ;;; DUMP-BYTE-FUNCTION  --  Internal
@@ -777,34 +781,23 @@
 	   (type list xeps)
 	   (type fasl-file file))
   
-  (multiple-value-bind
-      (code-handle xep-patches)
-      (dump-byte-code-object segment length constants file)
+  (let ((code-handle (dump-byte-code-object segment length constants file)))
     (dolist (noise xeps)
       (let* ((lambda (car noise))
 	     (info (lambda-info lambda))
 	     (xep (cdr noise)))
 	(dump-byte-function xep code-handle file)
-	(let ((patches (remove lambda xep-patches :key #'car :test-not #'eq)))
-	  (cond
-	   (patches
-	    ;; We only have direct references to XEPs for closures.  Therefore,
-	    ;; there better not be any :entry references to it.
-	    (assert (null (gethash info (fasl-file-patch-table file))))
-	    (let ((xep-handle (dump-pop file)))
-	      (dolist (patch patches)
-		(alter-code-object code-handle (cdr patch) xep-handle file))))
-	   (t
-	    (let* ((entry-handle (dump-pop file))
-		   (patch-table (fasl-file-patch-table file))
-		   (old (gethash info patch-table)))
-	      (setf (gethash info (fasl-file-entry-table file)) entry-handle)
-	      (when old
-		(dolist (patch old)
-		  (alter-code-object (car patch) (cdr patch)
-				     entry-handle file))
-		(remhash info patch-table)))))))))
+	(let* ((entry-handle (dump-pop file))
+	       (patch-table (fasl-file-patch-table file))
+	       (old (gethash info patch-table)))
+	  (setf (gethash info (fasl-file-entry-table file)) entry-handle)
+	  (when old
+	    (dolist (patch old)
+	      (alter-code-object (car patch) (cdr patch)
+				 entry-handle file))
+	    (remhash info patch-table))))))
   (undefined-value))
+
 
 ;;; FASL-DUMP-TOP-LEVEL-LAMBDA-CALL  --  Interface
 ;;;
