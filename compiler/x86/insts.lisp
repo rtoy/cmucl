@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.1 1997/01/18 14:31:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.2 1997/02/08 21:18:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2068,13 +2068,12 @@
 (define-instruction fst (segment dest)
   (:printer floating-point ((op '(#b001 #b010))))
   (:emitter 
-    (if (fp-reg-tn-p dest)
-	(progn 
-	  (emit-byte segment #b11011101)
-	  (emit-fp-op segment dest #b010))
-	(progn
-	  (emit-byte segment #b11011001)
-	  (emit-fp-op segment dest #b010)))))
+    (cond ((fp-reg-tn-p dest)
+	   (emit-byte segment #b11011101)
+	   (emit-fp-op segment dest #b010))
+	  (t
+	   (emit-byte segment #b11011001)
+	   (emit-fp-op segment dest #b010)))))
 
 ;;;
 ;;; store double from st(0)
@@ -2083,13 +2082,12 @@
   (:printer floating-point ((op '(#b101 #b010))))
   (:printer floating-point-fp ((op '(#b101 #b010))))
   (:emitter 
-   (if (fp-reg-tn-p dest)
-       (progn 
-	 (emit-byte segment #b11011101)
-	 (emit-fp-op segment dest #b010))
-       (progn
-	 (emit-byte segment #b11011101)
-	 (emit-fp-op segment dest #b010)))))
+   (cond ((fp-reg-tn-p dest)
+	  (emit-byte segment #b11011101)
+	  (emit-fp-op segment dest #b010))
+	 (t
+	  (emit-byte segment #b11011101)
+	  (emit-fp-op segment dest #b010)))))
 
 ;;; Arithmetic ops are all done with at least one operand at top of
 ;;; stack. The other operand is is another register or a 32/64 bit
@@ -2402,11 +2400,10 @@
   (:printer floating-point ((op '(#b001 #b011))))
   (:printer floating-point-fp ((op '(#b101 #b011))))
   (:emitter 
-    (if (fp-reg-tn-p dest)
-	(progn 
+   (cond ((fp-reg-tn-p dest)
 	  (emit-byte segment #b11011101)
 	  (emit-fp-op segment dest #b011))
-	(progn
+	 (t
 	  (emit-byte segment #b11011001)
 	  (emit-fp-op segment dest #b011)))))
 ;;;
