@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.15 1994/10/28 22:30:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.16 1994/10/29 03:08:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,7 @@
     "target:motif/lisp/interface-build"
     "target:motif/lisp/callbacks"
     "target:motif/lisp/widgets"
-    "target:motif/lisp/timer-support"
+;    "target:motif/lisp/timer-support"
     "target:motif/lisp/main"))
 
 (defparameter interface-files
