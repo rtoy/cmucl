@@ -24,14 +24,16 @@
 (in-package 'lisp)
 
 
-(def-c-routine ("purify" %purify) (int)
-  (roots unsigned-long))
+(def-c-routine ("purify" %purify) (void)
+  (static-roots unsigned-long)
+  (read-only-roots unsigned-long))
 
-(defun purify (&key root-structures)
+(defun purify (&key root-structures constants)
   (write-string "[Doing purification: ")
   (force-output)
   (without-gcing
-   (%purify (di::get-lisp-obj-address root-structures)))
+   (%purify (di::get-lisp-obj-address root-structures)
+	    (di::get-lisp-obj-address constants)))
   (write-line "Done.]")
   (force-output)
   nil)
