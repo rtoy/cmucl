@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.1 1990/02/24 19:37:31 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/test.c,v 1.2 1990/03/08 17:30:54 wlott Exp $ */
 /* Extra random routines for testing stuff. */
 
 #include <signal.h>
@@ -59,4 +59,12 @@ test_init()
 cacheflush()
 {
     /* This is supposed to be defined, but is not. */
+}
+
+
+lispobj print_three_nums(num1, num2, num3)
+long num1, num2, num3;
+{
+    printf("%d\t%d\t%d\n", num1>>2, num2>>2, num3>>2);
+    return NIL;
 }
