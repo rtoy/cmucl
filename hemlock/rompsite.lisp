@@ -748,9 +748,10 @@
    then this also outputs any 'function documentation for sym to
    *standard-output*."
   (describe fun)
-  #+nil
   (when (and (compiled-function-p fun)
-	     (not (eq (%primitive header-ref fun %function-name-slot) sym)))
+	     (not (eq (kernel:%function-header-name
+		       (kernel:%closure-function fun))
+		      sym)))
     (let ((doc (documentation sym 'function)))
       (when doc
 	(format t "~&Function documentation for ~S:" sym)
