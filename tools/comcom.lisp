@@ -46,6 +46,7 @@
 (when (string= (old-c:backend-name old-c:*backend*) "RT")
   (comf "target:compiler/rt/params" :proceed t))
 (comf "target:compiler/generic/objdef" :proceed t)
+(comf "target:compiler/generic/interr")
 
 (comf "target:code/struct") ; For defstruct description structures.
 (comf "target:compiler/proclaim") ; For COOKIE structure.
