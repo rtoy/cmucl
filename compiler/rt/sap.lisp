@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.5 1991/04/29 06:19:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.6 1991/07/10 17:51:14 ram Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -309,13 +309,11 @@
 	 (:policy :fast-safe)
 	 (:translate ,translate)
 	 (:args (object :scs (sap-reg) :to (:eval 0))
-		(offset :scs (any-reg) :target temp)
+		(offset :scs (any-reg) :target base)
 		(data :scs (,@data-scs) :target result
 		      :to (:eval 1)))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
-	 (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 2)) base)
-	 (:temporary (:scs (non-descriptor-reg)
-			   :from (:argument 1) :to (:eval 0)) temp)
+	 (:temporary (:scs (sap-reg) :from (:argument 1) :to (:eval 2)) base)
 	 ;; Add some bullshit temporaries because of human understanding about
 	 ;; a peculiarity in compiler register allocation, so this will trick
 	 ;; the compiler into giving us enough non-descriptor-regs.
@@ -326,14 +324,14 @@
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
 	 (:generator 7
-	   (move temp offset)
+	   (move base offset)
 	   ;;
 	   ;; We shift right because the offset has fixnum lowtag.  Effectively
 	   ;; the index has already been multiplied by 4.
 	   ,@(let ((adj (- 2 shift)))
 	       (unless (zerop adj)
-		 `((inst sr temp ,adj))))
-	   (inst cas base temp object)
+		 `((inst sr base ,adj))))
+	   (inst cas base base object)
 	   (let ((offset 0))
 	     ,set-form)
 	   (move result data))))))
