@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.25 1997/09/03 01:00:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.26 1998/02/14 06:51:30 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1035,13 +1035,15 @@
 )
 
 (defun delete (item sequence &key from-end (test #'eql) test-not (start 0)
-		end (count most-positive-fixnum) key)
+		end count key)
   "Returns a sequence formed by destructively removing the specified Item from
   the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length )))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-delete-from-end)
@@ -1070,14 +1072,15 @@
 
 )
 
-(defun delete-if (predicate sequence &key from-end (start 0) key
-			    end (count most-positive-fixnum))
+(defun delete-if (predicate sequence &key from-end (start 0) key end count)
   "Returns a sequence formed by destructively removing the elements satisfying
   the specified Predicate from the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-delete-from-end)
@@ -1106,14 +1109,15 @@
 
 )
 
-(defun delete-if-not (predicate sequence &key from-end (start 0) 
-			end key (count most-positive-fixnum))
+(defun delete-if-not (predicate sequence &key from-end (start 0) end key count)
   "Returns a sequence formed by destructively removing the elements not
   satisfying the specified Predicate from the given Sequence."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-delete-from-end)
@@ -1251,13 +1255,15 @@
 )
 
 (defun remove (item sequence &key from-end (test #'eql) test-not (start 0)
-		end (count most-positive-fixnum) key)
+		end count key)
   "Returns a copy of SEQUENCE with elements satisfying the test (default is
    EQL) with ITEM removed."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-remove-from-end)
@@ -1266,14 +1272,15 @@
 		      (normal-mumble-remove-from-end)
 		      (normal-mumble-remove)))))
 
-(defun remove-if (predicate sequence &key from-end (start 0)
-		    end (count most-positive-fixnum) key)
+(defun remove-if (predicate sequence &key from-end (start 0) end count key)
   "Returns a copy of sequence with elements such that predicate(element)
    is non-null are removed"
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-remove-from-end)
@@ -1282,15 +1289,15 @@
 		      (if-mumble-remove-from-end)
 		      (if-mumble-remove)))))
 
-(defun remove-if-not (predicate sequence &key
-				from-end (start 0) end
-				(count most-positive-fixnum) key)
+(defun remove-if-not (predicate sequence &key from-end (start 0) end count key)
   "Returns a copy of sequence with elements such that predicate(element)
    is null are removed"
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-remove-from-end)
@@ -1561,47 +1568,51 @@
 ;;; Substitute:
 
 (defun substitute (new old sequence &key from-end (test #'eql) test-not
-		   (start 0) (count most-positive-fixnum)
-		   end key)
+		   (start 0) count end key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements equal to Old are replaced with New.  See manual
   for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
-	 (end (or end length)))
-    (declare (type index length end))
+	 (end (or end length))
+	 (count (or count most-positive-fixnum)))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'normal)))
 
 
 ;;; Substitute-If:
 
-(defun substitute-if (new test sequence &key from-end (start 0)
-		       end (count most-positive-fixnum) key)
+(defun substitute-if (new test sequence &key from-end (start 0) end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements satisfying the Test are replaced with New.  See
   manual for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
+	 (count (or count most-positive-fixnum))
 	 test-not
 	 old)
-    (declare (type index length end))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'if)))
   
 
 ;;; Substitute-If-Not:
 
 (defun substitute-if-not (new test sequence &key from-end (start 0)
-			   end (count most-positive-fixnum) key)
+			   end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements not satisfying the Test are replaced with New.
   See manual for details."
-  (declare (fixnum start count))
+  (declare (fixnum start))
   (let* ((length (length sequence))
 	 (end (or end length))
+	 (count (or count most-positive-fixnum))
 	 test-not
 	 old)
-    (declare (type index length end))
+    (declare (type index length end)
+	     (fixnum count))
     (subst-dispatch 'if-not)))
 
 
@@ -1609,12 +1620,14 @@
 ;;; NSubstitute:
 
 (defun nsubstitute (new old sequence &key from-end (test #'eql) test-not 
-		     end (count most-positive-fixnum) key (start 0))
+		     end count key (start 0))
   "Returns a sequence of the same kind as Sequence with the same elements
   except that all elements equal to Old are replaced with New.  The Sequence
   may be destroyed.  See manual for details."
-  (declare (fixnum count start))
-  (let ((end (or end (length sequence))))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute*
@@ -1655,14 +1668,14 @@
 
 ;;; NSubstitute-If:
 
-(defun nsubstitute-if (new test sequence &key from-end (start 0)
-			   end (count most-positive-fixnum) key)
+(defun nsubstitute-if (new test sequence &key from-end (start 0) end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
    except that all elements satisfying the Test are replaced with New.  The
    Sequence may be destroyed.  See manual for details."
-  (declare (fixnum start count))
-  (let ((end (or end (length sequence))))
-    (declare (fixnum end))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute-if*
@@ -1697,13 +1710,14 @@
 ;;; NSubstitute-If-Not:
 
 (defun nsubstitute-if-not (new test sequence &key from-end (start 0)
-			       end (count most-positive-fixnum) key)
+			       end count key)
   "Returns a sequence of the same kind as Sequence with the same elements
    except that all elements not satisfying the Test are replaced with New.
    The Sequence may be destroyed.  See manual for details."
-  (declare (fixnum start count))
-  (let ((end (or end (length sequence))))
-    (declare (fixnum end))
+  (declare (fixnum start))
+  (let ((end (or end (length sequence)))
+	(count (or count most-positive-fixnum)))
+    (declare (fixnum end count))
     (if (listp sequence)
 	(if from-end
 	    (nreverse (nlist-substitute-if-not*
