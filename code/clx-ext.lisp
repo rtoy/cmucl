@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.5 1991/03/25 15:51:13 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.6 1991/05/21 18:35:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
   (let ((change-handler (assoc display *display-event-handlers*)))
     (if change-handler
 	(setf (cdr change-handler) handler)
-	(let ((fd (xlib::display-input-stream display)))
+	(let ((fd (fd-stream-fd (xlib::display-input-stream display))))
 	  (system:add-fd-handler fd :input #'call-display-event-handler)
 	  (setf (gethash fd *clx-fds-to-displays*) display)
 	  (push (cons display handler) *display-event-handlers*)))))
@@ -198,7 +198,7 @@
   "Undoes the effect of EXT:ENABLE-CLX-EVENT-HANDLING."
   (setf *display-event-handlers*
 	(delete display *display-event-handlers* :key #'car))
-  (let ((fd (xlib::display-input-stream display)))
+  (let ((fd (fd-stream-fd (xlib::display-input-stream display))))
     (remhash fd *clx-fds-to-displays*)
     (system:invalidate-descriptor fd)))
 
