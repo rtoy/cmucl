@@ -7,19 +7,29 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.24 1992/03/07 08:44:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.25 1992/05/22 19:05:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; "Site dependent" stuff for the editor while on the IBM RT PC machine.
 ;;;
 
+;;; Stuff to set up the packages Hemlock uses.
+;;;
+(in-package "HEMLOCK-INTERNALS"
+	    :nicknames '("HI")
+	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
+;;;
+(in-package "HEMLOCK"
+	    :nicknames '("ED")
+	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
+;;;
 (in-package "SYSTEM")
-
-(export '(without-hemlock))
-
-
-(in-package "HEMLOCK-INTERNALS" :nicknames '("HI"))
+(export '(without-hemlock %sp-byte-blt %sp-find-character
+			  %sp-find-character-with-attribute 
+			  %sp-reverse-find-character-with-attribute))
+;;;
+(in-package "HI")
 
 (export '(show-mark editor-sleep *input-transcript* fun-defined-from-pathname
 	  editor-describe-function pause-hemlock store-cut-string
