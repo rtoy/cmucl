@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.1.1.6 1993/08/25 02:09:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/linimage.lisp,v 1.1.1.7 1993/08/25 02:23:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; This file contains functions related to building line images.
 ;;;
-(in-package "HEMLOCK"-internals)
+(in-package "HEMLOCK-INTERNALS")
 
 ;;;    The code in here is factored out in this way because it is more
 ;;; or less implementation dependant.  The reason this code is 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/line.lisp,v 1.1.1.3 1993/08/25 02:09:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/line.lisp,v 1.1.1.4 1993/08/25 02:23:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 ;;; is mapped in memory.  Such lines are called "buffered".  This stuff
 ;;; links up with the file-reading stuff and the line-image building stuff.
 ;;;
-(in-package "HEMLOCK"-internals)
+(in-package "HEMLOCK-INTERNALS")
 (export '(line linep line-previous line-next line-plist line-signature))
 
 (setf (documentation 'linep 'function)
