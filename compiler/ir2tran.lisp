@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.25 1990/11/13 22:49:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.26 1990/12/06 22:24:33 wlott Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -1138,7 +1138,10 @@
 		    '(nil :external :optional :top-level :cleanup)))
 
     (when (external-entry-point-p fun)
-      (init-xep-environment node block fun))
+      (init-xep-environment node block fun)
+      (when *collect-dynamic-statistics*
+	(vop count-me node block *dynamic-counts-tn*
+	     (1- (block-number (ir2-block-block block))))))
 
     (emit-move node block (ir2-environment-return-pc-pass env)
 	       (ir2-environment-return-pc env))
@@ -1542,6 +1545,10 @@
 	  (list block-loc start-loc count-loc)
 	  cont))))
 
+    (when *collect-dynamic-statistics*
+      (vop count-me node block *dynamic-counts-tn*
+	   (1- (block-number (ir2-block-block block)))))
+
     (vop* restore-dynamic-state node block
 	  ((reference-tn-list (ir2-nlx-info-dynamic-state 2info) nil))
 	  (nil))))
@@ -1603,8 +1610,37 @@
 ;;;
 (defun ir2-convert (component)
   (declare (type component component))
-  (do-blocks (block component)
-    (ir2-convert-block block))
+  (let ((*dynamic-counts-tn*
+	 (when *collect-dynamic-statistics*
+	   (let ((num 0))
+	     (declare (fixnum num))
+	     (do-blocks-backwards (block component :both)
+	       (setf (block-number block) (incf num))))
+	   (let* ((blocks
+		   (block-number (block-next (component-head component))))
+		  (counts-vector
+		   (make-array blocks
+			       :element-type '(unsigned-byte 32)
+			       :initial-element 0))
+		  (info (make-dyncount-info
+			 :for (component-name component)
+			 :counts counts-vector
+			 :vops (make-array blocks :initial-element nil))))
+	     (setf (ir2-component-dyncount-info (component-info component))
+		   info)
+	     (emit-constant info)
+	     (emit-constant counts-vector)))))
+    (do-blocks (block component)
+      (when *collect-dynamic-statistics*
+	(let ((first-node (continuation-next (block-start block))))
+	  (unless (or (and (bind-p first-node)
+			   (external-entry-point-p (bind-lambda first-node)))
+		      (eq (continuation-function-name (node-cont first-node))
+			  '%nlx-entry))
+	    (vop count-me first-node (block-info block)
+		 *dynamic-counts-tn*
+		 (1- (block-number block))))))
+      (ir2-convert-block block)))
   (undefined-value))
 
 
