@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.46 1992/12/13 15:50:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47 1992/12/17 09:10:13 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -981,7 +981,7 @@
 	   (declare (fixnum box-num code-length))
 	   (let ((code (%primitive allocate-code-object box-num code-length))
 		 (index (+ vm:code-trace-table-offset-slot box-num)))
-	     (setf (code-header-ref code vm:code-debug-info-slot) (pop-stack))
+	     #-gengc (setf (%code-debug-info code) (pop-stack))
 	     (dotimes (i box-num)
 	       (declare (fixnum i))
 	       (setf (code-header-ref code (decf index)) (pop-stack)))
