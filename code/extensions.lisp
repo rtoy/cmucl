@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.15 1993/02/26 08:25:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.16 1993/08/12 16:51:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -394,6 +394,9 @@
 
 ;;;; Hash cache utility:
 
+(eval-when (compile load eval)
+  (defvar *profile-hash-cache* nil))
+
 ;;; DEFINE-HASH-CACHE  --  Public
 ;;;
 ;;;    :INIT-FORM passed as COLD-LOAD-INIT in type system definitions so that
@@ -495,18 +498,27 @@
 				  default-values))))
 		  (undefined-value)))))
 	  (incf n)))
-	
+
+      (when *profile-hash-cache*
+	(forms `(defvar ,(symbolicate "*" name "-CACHE-PROBES*") 0))
+	(forms `(defvar ,(symbolicate "*" name "-CACHE-MISSES*") 0)))
+
       (let ((fun-name (symbolicate name "-CACHE-LOOKUP")))
 	(inlines fun-name)
 	(forms
 	 `(defun ,fun-name ,(arg-vars)
+	    ,@(when *profile-hash-cache*
+		`((incf ,(symbolicate  "*" name "-CACHE-PROBES*"))))
 	    (let ((,n-index (* (,hash-function ,@(arg-vars)) ,entry-size))
 		  (,n-cache ,var-name))
 	      (declare (type fixnum ,n-index))
-	      (if (and ,@(tests))
-		  (values ,@(mapcar #'(lambda (x) `(svref ,n-cache ,x))
-				    (values-indices)))
-		  ,default)))))
+	      (cond ((and ,@(tests))
+		     (values ,@(mapcar #'(lambda (x) `(svref ,n-cache ,x))
+				       (values-indices))))
+		    (t
+		     ,@(when *profile-hash-cache*
+			 `((incf ,(symbolicate  "*" name "-CACHE-MISSES*"))))
+		     ,default))))))
 
       (let ((fun-name (symbolicate name "-CACHE-ENTER")))
 	(inlines fun-name)
