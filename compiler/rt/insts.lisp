@@ -314,14 +314,14 @@
 ;;; increment.
 ;;;
 (define-instruction (inc)
-  (r (op :constant 91)
+  (r (op :constant #x91)
      (r2 :argument register)
      (r3 :argument (unsigned-byte 4))))
 
 ;;; decrement
 ;;;
 (define-instruction (dec)
-  (r (op :constant 93)
+  (r (op :constant #x93)
      (r2 :argument register)
      (r3 :argument (unsigned-byte 4))))
 
