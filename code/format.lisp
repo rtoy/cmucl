@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.53 2004/08/27 11:31:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.54 2004/08/31 12:48:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -826,11 +826,13 @@
 (def-format-interpreter #\R (colonp atsignp params)
   (if params
       (interpret-bind-defaults
-	  ((base 10) (mincol 0) (padchar #\space) (commachar #\,)
+	  ((base nil) (mincol 0) (padchar #\space) (commachar #\,)
 	   (commainterval 3))
 	  params
-	(format-print-integer stream (next-arg) colonp atsignp base mincol
-			      padchar commachar commainterval))
+	(if base
+	    (format-print-integer stream (next-arg) colonp atsignp base mincol
+				  padchar commachar commainterval)
+	    (format-print-cardinal stream (next-arg))))
       (if atsignp
 	  (if colonp
 	      (format-print-old-roman stream (next-arg))
@@ -2317,21 +2319,26 @@
 	    insides
 	    suffix)))
 
-(defun add-fill-style-newlines (list string offset)
+;; CLHS 22.3.5.2 says fill-style conditional newlines are
+;; automatically inserted after each group of blanks except for blanks
+;; after a newline directive.
+(defun add-fill-style-newlines (list string offset &optional newlinep)
   (if list
       (let ((directive (car list)))
 	(if (simple-string-p directive)
-	    (nconc (add-fill-style-newlines-aux directive string offset)
+	    (nconc (add-fill-style-newlines-aux directive string offset newlinep)
 		   (add-fill-style-newlines (cdr list)
 					    string
 					    (+ offset (length directive))))
 	    (cons directive
 		  (add-fill-style-newlines (cdr list)
 					   string
-					   (format-directive-end directive)))))
+					   (format-directive-end directive)
+					   (char= (format-directive-character directive)
+						  #\Newline)))))
       nil))
 
-(defun add-fill-style-newlines-aux (literal string offset)
+(defun add-fill-style-newlines-aux (literal string offset &optional newlinep)
   (let ((end (length literal))
 	(posn 0))
     (collect ((results))
@@ -2344,10 +2351,11 @@
 					 :test #'char/=)
 			       end)))
 	    (results (subseq literal posn non-blank))
-	    (results (make-format-directive
-		      :string string :character #\_
-		      :start (+ offset non-blank) :end (+ offset non-blank)
-		      :colonp t :atsignp nil :params nil))
+	    (unless newlinep
+	      (results (make-format-directive
+			:string string :character #\_
+			:start (+ offset non-blank) :end (+ offset non-blank)
+			:colonp t :atsignp nil :params nil)))
 	    (setf posn non-blank))
 	  (when (= posn end)
 	    (return))))
