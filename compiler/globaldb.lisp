@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.20 1992/02/14 23:47:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.21 1992/02/15 12:07:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1065,7 +1065,7 @@
       (values (symbol-value name) t)
       (values nil nil)))
 
-(define-info-type variable alien-info (or extern-alien-info null) nil)
+(define-info-type variable alien-info (or heap-alien-info null) nil)
 
 (define-info-type variable documentation (or string null) nil)
 
