@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.6 1992/02/24 04:00:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-rt.lisp,v 1.1.1.7 1993/08/25 02:40:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,14 @@
 ;;; correcting code in Spell-Correct.Lisp, Spell-Augment.Lisp, and
 ;;; Spell-Build.Lisp.
 
-(in-package "SPELL" :use '("LISP" "EXTENSIONS" "SYSTEM"))
+(defpackage "SPELL"
+  (:use "LISP" "EXTENSIONS" "SYSTEM")
+  (:export spell-try-word spell-root-word spell-collect-close-words
+	   maybe-read-spell-dictionary correct-spelling max-entry-length
+	   spell-read-dictionary spell-add-entry spell-root-flags
+	   spell-remove-entry))
+
+(in-package "SPELL")
 
 
 ;;;; System Area Referencing and Setting
