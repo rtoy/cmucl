@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.5 1993/08/20 00:12:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/meta-vmdef.lisp,v 1.6 1993/08/25 00:16:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -720,10 +720,10 @@
 	    (targets (+ (* index max-vop-tn-refs)
 			(ecase (operand-parse-kind target)
 			  (:result
-			   (+ (position target (vop-parse-results parse))
+			   (+ (eposition target (vop-parse-results parse))
 			      num-args))
 			  (:temporary
-			   (+ (* (position target (vop-parse-temps parse)) 2)
+			   (+ (* (eposition target (vop-parse-temps parse)) 2)
 			      num-args num-results)))))))
 	(let ((born (operand-parse-born op))
 	      (dies (operand-parse-dies op)))

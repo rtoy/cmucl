@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.20 1993/08/06 15:39:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.21 1993/08/25 00:16:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by Rob MacLachlan.  Some code adapted from the old seqtran file,
 ;;; written by Wholey and Fahlman.
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 (defun mapper-transform (fn arglists accumulate take-car)

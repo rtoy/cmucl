@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.58 1993/08/20 18:46:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.59 1993/08/25 00:15:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -60,7 +60,7 @@
 
 (export '(%caller-frame-and-pc %with-array-data))
 
-(in-package 'c)
+(in-package "C")
 
 
 ;;;; Information for known functions:

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/copyprop.lisp,v 1.6 1991/02/20 14:56:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/copyprop.lisp,v 1.7 1993/08/25 00:14:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; 
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 ;;; In copy propagation, we manipulate sets of TNs.  We only consider TNs whose
 ;;; sole write is by a MOVE VOP.  This allows us to use a degenerate version of

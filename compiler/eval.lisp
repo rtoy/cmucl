@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.24 1993/08/24 23:43:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.25 1993/08/25 00:15:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -734,7 +734,7 @@
 	 ((member ,info '(:multiple :return) :test #'eq)
 	  (eval-stack-push (list ,value)))
 	 (t (assert (eq ,info :single))
-	    (eval-stack-push ,value))))))
+	    (eval-stack-push ,value))))
 
 
 (defun maybe-trace-nodes (node)

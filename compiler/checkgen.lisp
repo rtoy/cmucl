@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.22 1992/09/07 15:34:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.23 1993/08/25 00:14:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -433,7 +433,7 @@
 	 (what (when (and (combination-p dest)
 			  (eq (combination-kind dest) :local))
 		 (let ((lambda (combination-lambda dest))
-		       (pos (position cont (combination-args dest))))
+		       (pos (eposition cont (combination-args dest))))
 		   (format nil "~:[A possible~;The~] binding of ~S"
 			   (and (continuation-use cont)
 				(eq (functional-kind lambda) :let))

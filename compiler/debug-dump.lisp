@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.37 1993/08/17 22:38:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.38 1993/08/25 00:15:01 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -118,7 +118,7 @@
 	   (type hash-table var-locs) (type (or vop null) vop))
   
   (vector-push-extend
-   (dpb (position kind compiled-code-location-kinds)
+   (dpb (eposition kind compiled-code-location-kinds)
 	compiled-code-location-kind-byte
 	0)
    *byte-buffer*)
@@ -667,7 +667,7 @@
     (let ((options 0))
       (setf (ldb minimal-debug-function-name-style-byte options) name-rep)
       (setf (ldb minimal-debug-function-kind-byte options)
-	    (position (compiled-debug-function-kind dfun)
+	    (eposition (compiled-debug-function-kind dfun)
 		      minimal-debug-function-kinds))
       (setf (ldb minimal-debug-function-returns-byte options)
 	    (etypecase (compiled-debug-function-returns dfun)

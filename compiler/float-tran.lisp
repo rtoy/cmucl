@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.19 1993/08/21 08:16:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.20 1993/08/25 00:15:29 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,7 +160,7 @@
 
 (defknown integer-decode-double-float (double-float)
   (values double-float-significand double-float-int-exponent (integer -1 1))
-  (movable foldable flushable)))
+  (movable foldable flushable))
 
 (defknown scale-single-float (single-float fixnum) single-float
   (movable foldable flushable))

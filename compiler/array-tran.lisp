@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.16 1993/05/12 11:10:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.17 1993/08/25 00:14:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -577,4 +577,4 @@
 ;;;
 (deftransform bit-not ((bit-array-1 result-bit-array)
 		       (bit-vector (constant-argument t)))
-  '(bit-not bit-array-1 bit-array-1)))
+  '(bit-not bit-array-1 bit-array-1))

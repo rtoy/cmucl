@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.39 1993/08/24 02:12:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.40 1993/08/25 00:16:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,6 +26,10 @@
 	  attributes=))
 
 (proclaim '(special *wild-type* *universal-type* *compiler-error-context*))
+
+(declaim (ftype function (setf dylan::value-datum) dylan::find-module
+		dylan::lookup-varinfo-value 
+		dylan::parse-and-convert dylan::value-datum))
 
 ;;;; Deftypes:
 
@@ -1106,3 +1110,110 @@
 	       (setf (event-info-count v) 0))
 	   *event-info*)
   (values))
+
+
+;;;; Generic list (?) functions:
+
+(proclaim '(inline find-in position-in map-in))
+
+;;; Find-In  --  Interface
+;;;
+(defun find-in (next element list &key (key #'identity)
+		     (test #'eql test-p) (test-not nil not-p))
+  "Find Element in a null-terminated List linked by the accessor function
+  Next.  Key, Test and Test-Not are the same as for generic sequence
+  functions."
+  (when (and test-p not-p)
+    (error "Silly to supply both :Test and :Test-Not."))
+  (if not-p
+      (do ((current list (funcall next current)))
+	  ((null current) nil)
+	(unless (funcall test-not (funcall key current) element)
+	  (return current)))
+      (do ((current list (funcall next current)))
+	  ((null current) nil)
+	(when (funcall test (funcall key current) element)
+	  (return current)))))
+
+;;; Position-In  --  Interface
+;;;
+(defun position-in (next element list &key (key #'identity)
+		     (test #'eql test-p) (test-not nil not-p))
+  "Return the position of Element (or NIL if absent) in a null-terminated List
+  linked by the accessor function Next.  Key, Test and Test-Not are the same as
+  for generic sequence functions."
+  (when (and test-p not-p)
+    (error "Silly to supply both :Test and :Test-Not."))
+  (if not-p
+      (do ((current list (funcall next current))
+	   (i 0 (1+ i)))
+	  ((null current) nil)
+	(unless (funcall test-not (funcall key current) element)
+	  (return i)))
+      (do ((current list (funcall next current))
+	   (i 0 (1+ i)))
+	  ((null current) nil)
+	(when (funcall test (funcall key current) element)
+	  (return i)))))
+
+
+;;; Map-In  --  Interface
+;;;
+(defun map-in (next function list)
+  "Map Function over the elements in a null-terminated List linked by the
+  accessor function Next, returning a list of the results."
+  (collect ((res))
+    (do ((current list (funcall next current)))
+	((null current))
+      (res (funcall function current)))
+    (res)))
+
+
+;;; Deletef-In  --  Interface
+;;;
+(defmacro deletef-in (next place item &environment env)
+  "Deletef-In Next Place Item
+  Delete Item from a null-terminated list linked by the accessor function Next
+  that is stored in Place.  Item must appear exactly once in the list."
+  (multiple-value-bind
+      (temps vals stores store access)
+      (get-setf-method place env)
+    (let ((n-item (gensym))
+	  (n-place (gensym))
+	  (n-current (gensym))
+	  (n-prev (gensym)))
+      `(let* (,@(mapcar #'list temps vals)
+	      (,n-place ,access)
+	      (,n-item ,item))
+	 (if (eq ,n-place ,n-item)
+	     (let ((,(first stores) (,next ,n-place)))
+	       ,store)
+	     (do ((,n-prev ,n-place ,n-current)
+		  (,n-current (,next ,n-place)
+			      (,next ,n-current)))
+		 ((eq ,n-current ,n-item)
+		  (setf (,next ,n-prev)
+			(,next ,n-current)))))
+	 (undefined-value)))))
+
+
+;;; Push-In  --  Interface
+;;;
+(defmacro push-in (next item place &environment env)
+  "Push Item onto a list linked by the accessor function Next that is stored in
+  Place."
+  (multiple-value-bind
+      (temps vals stores store access)
+      (get-setf-method place env)
+    `(let (,@(mapcar #'list temps vals)
+	   (,(first stores) ,item))
+       (setf (,next ,(first stores)) ,access)
+       ,store
+       (undefined-value))))
+
+
+;;; EPOSITION  --  Interface
+;;;
+(defmacro eposition (&rest args)
+  `(or (position ,@args)
+       (error "Shouldn't happen?")))
