@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.74 1997/10/02 18:31:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.75 1997/10/24 18:08:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -558,6 +558,17 @@
   sequence
   (flushable call)
   :derive-type (result-type-specifier-nth-arg 1))
+
+(defknown read-sequence (sequence stream &key (:start index)
+				  (:end sequence-end))
+  (index)
+  (flushable))
+
+(defknown write-sequence (sequence stream &key (:start index)
+				   (:end sequence-end))
+  (sequence)
+  ()
+  :derive-type (sequence-result-nth-arg 1))
 
 
 ;;;; In the "Manipulating List Structure" chapter:

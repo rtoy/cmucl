@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25 1994/12/05 00:02:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.26 1997/10/24 18:08:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1405,7 +1405,7 @@
 
 ;;; GET-STREAM-COMMAND -- Public.
 ;;;
-;;; We can't simply call the stream's misc method because because nil is an
+;;; We can't simply call the stream's misc method because nil is an
 ;;; ambiguous return value: does it mean text arrived, or does it mean the
 ;;; stream's misc method had no :get-command implementation.  We can't return
 ;;; nil until there is text input.  We don't need to loop because any stream
@@ -1423,3 +1423,94 @@
 	  (t
 	   ;; This waits for input and returns nil when it arrives.
 	   (unread-char (read-char stream) stream)))))
+
+
+;;; READ-SEQUENCE -- Public
+;;;
+(defun read-sequence (seq stream &key (start 0) (end nil))
+  "Destructively modify SEQ by reading elements from STREAM.
+  SEQ is bounded by START and END. SEQ is destructively modified by
+  copying successive elements into it from STREAM. If the end of file
+  for STREAM is reached before copying all elements of the subsequence,
+  then the extra elements near the end of sequence are not updated, and
+  the index of the next element is returned."
+  (declare (type sequence seq)
+	   (type stream stream)
+	   (type index start)
+	   (type sequence-end end)
+	   (values index))
+  (let ((end (or end (length seq))))
+    (declare (type index end))
+    (etypecase seq
+      (list
+       (let ((read-function
+	      (if (subtypep (stream-element-type stream) 'character)
+		  #'read-char
+		  #'read-byte)))
+	 (do ((rem (nthcdr start seq) (rest rem))
+	      (i start (1+ i)))
+	     ((or (endp rem) (>= i end)) i)
+	   (declare (type list rem)
+		    (type index i))
+	   (let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
+	     (when (eq el '%%RWSEQ-EOF%%)
+	       (return i))
+	     (setf (first rem) el)))))
+      (vector
+       (with-array-data ((data seq) (offset-start start) (offset-end end))
+	 (typecase data
+	   ((or simple-string (simple-array (unsigned-byte 8) (*))
+		#+signed-array (simple-array (signed-byte 8) (*)))
+	    (let* ((numbytes (- end start))
+		   (bytes-read (system:read-n-bytes
+				stream data offset-start numbytes nil)))
+	      (if (< bytes-read numbytes)
+		  (+ start bytes-read)
+		  end)))
+	   (t
+	    (let ((read-function
+		   (if (subtypep (stream-element-type stream) 'character)
+		       #'read-char
+		       #'read-byte)))
+	      (do ((i offset-start (1+ i)))
+		  ((>= i offset-end) end)
+		(declare (type index i))
+		(let ((el (funcall read-function stream nil '%%RWSEQ-EOF%%)))
+		  (when (eq el '%%RWSEQ-EOF%%)
+		    (return (- i offset-start)))
+		  (setf (aref data i) el)))))))))))
+
+;;; WRITE-SEQUENCE -- Public
+;;;
+(defun write-sequence (seq stream &key (start 0) (end nil))
+  "Write the elements of SEQ bounded by START and END to STREAM."
+  (declare (type sequence seq)
+	   (type stream stream)
+	   (type index start)
+	   (type sequence-end end)
+	   (values sequence))
+  (let ((end (or end (length seq))))
+    (declare (type index start end))
+    (etypecase seq
+      (list
+       (let ((write-function
+	      (if (subtypep (stream-element-type stream) 'character)
+		  #'write-char
+		  #'write-byte)))
+	 (do ((rem (nthcdr start seq) (rest rem))
+	      (i start (1+ i)))
+	     ((or (endp rem) (>= i end)) seq)
+	   (declare (type list rem)
+		    (type index i))
+	   (funcall write-function (first rem) stream))))
+      (string
+       (write-string seq stream :start start :end end))
+      (vector
+       (let ((write-function
+	      (if (subtypep (stream-element-type stream) 'character)
+		  #'write-char
+		  #'write-byte)))
+	 (do ((i start (1+ i)))
+	     ((>= i end) seq)
+	   (declare (type index i))
+	   (funcall write-function (aref seq i) stream)))))))
