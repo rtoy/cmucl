@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.85 2003/05/12 16:30:41 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.86 2003/05/12 21:54:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -454,19 +454,21 @@
 		     (if (atom name-and-options)
 			 (list name-and-options)
 			 name-and-options)))
-	 (name (dd-name defstruct)))
-    (when cl::*enable-package-locked-errors*
-      (when (ext:package-definition-lock (symbol-package name))
-        (restart-case
-            (error 'cl::package-locked-error
-                   :package (symbol-package name)
-                   :format-control "defining structure ~A"
-                   :format-arguments (list name))
-          (continue ()
-            :report "Ignore the lock and continue")
-          (unlock-package ()
-            :report "Disable package's lock then continue"
-            (setf (ext:package-lock (symbol-package name)) nil)))))
+	 (name (dd-name defstruct))
+	 (pkg (symbol-package name)))
+    (when (and cl::*enable-package-locked-errors*
+	       pkg
+	       (ext:package-definition-lock pkg))
+      (restart-case
+	  (error 'cl::package-locked-error
+		 :package pkg
+		 :format-control "defining structure ~A"
+		 :format-arguments (list name))
+	(continue ()
+	  :report "Ignore the lock and continue")
+	(unlock-package ()
+	  :report "Disable package's lock then continue"
+	  (setf (ext:package-lock pkg) nil))))
     (when (stringp (car slot-descriptions))
       (setf (dd-doc defstruct) (pop slot-descriptions)))
     (dolist (slot slot-descriptions)
