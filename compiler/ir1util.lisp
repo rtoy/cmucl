@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.73 1993/11/16 18:17:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.74 1993/11/16 18:28:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1486,7 +1486,7 @@
   (ref-leaf (continuation-use (basic-combination-fun call))))
 
 
-(defvar *inline-expansion-limit* 50
+(defvar *inline-expansion-limit* 200
   "An upper limit on the number of inline function calls that will be expanded
    in any given code object (single function or block compilation.)")
 
