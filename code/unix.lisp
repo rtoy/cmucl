@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.27 1993/11/06 04:16:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.28 1993/12/09 12:56:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,8 @@
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
-	  KBDSCLICK FIONREAD unix-exit unix-stat unix-lstat unix-fstat
+	  KBDSCLICK FIONREAD #+hpux siocspgrp
+	  unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
 	  #-hpux unix-utimes #-hpux unix-setreuid #-hpux unix-setregid
@@ -1130,6 +1131,19 @@
   supplied, FD defaults to /dev/tty."
   `(%set-tty-process-group ,pgrp ,fd))
 
+
+;;; Socket options.
+
+#+hpux
+(define-ioctl-command SIOCSPGRP #\s 8 int :in)
+
+#+hpux
+(defun siocspgrp (fd pgrp)
+  "Set the socket process-group for the unix file-descriptor FD to PGRP."
+  (alien:with-alien ((alien-pgrp c-call:int pgrp))
+    (unix-ioctl fd
+		siocspgrp
+		(alien:alien-sap (alien:addr alien-pgrp)))))
 
 ;;; Unix-exit terminates a program.
 
