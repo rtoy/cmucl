@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.19 2003/04/23 17:38:59 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.20 2003/05/02 12:43:06 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -164,11 +164,13 @@
 	      (loop for slotd in (class-slots class)
 		    unless (initialize-slot-from-initarg class instance slotd)
 		    collect slotd)))
-	(loop for slotd in initfn-slotds
-	      when (and (not (eq :class (slot-definition-allocation slotd)))
-			(or (eq t slot-names)
-			    (memq (slot-definition-name slotd) slot-names))) do
-	      (initialize-slot-from-initfunction class instance slotd)))
+	(dolist (slotd initfn-slotds)
+	  (if (eq (slot-definition-allocation slotd) :class)
+	      (unless (slot-boundp-using-class class instance slotd)
+		(initialize-slot-from-initfunction class instance slotd))
+	      (when (or (eq t slot-names)
+			(memq (slot-definition-name slotd) slot-names))
+		(initialize-slot-from-initfunction class instance slotd)))))
       instance)))
 
 
