@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.8 1990/03/03 00:01:15 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.9 1990/03/03 00:04:41 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -141,7 +141,7 @@
 	  (editor-error "Someone deleted the RCS Log Entry buffer."))
       (change-to-buffer old-buffer)
       (setf allow-delete t)
-      (delete-buffer-if-possible buffer))))
+      (delete-buffer-if-possible log-buffer))))
 
 (defun sub-check-in-file (pathname keep-lock log-stream)
   (let* ((filename (file-namestring pathname))
