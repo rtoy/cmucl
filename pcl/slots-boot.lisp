@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.11 2002/10/19 14:32:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.12 2002/10/19 14:35:56 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -78,17 +78,8 @@
 	`(slot-boundp-normal ,object ',slot-name)
 	`(asv-funcall ,sym ,slot-name boundp ,object))))
 
-
-(defun structure-slot-boundp (object)
-  (declare (ignore object))
-  t)
-
 (defun make-structure-slot-boundp-function (slotd)
-  (let* ((reader (slot-definition-internal-reader-function slotd))
-	 (fun (lambda (object)
-		(not (eq (funcall reader object) +slot-unbound+)))))
-    (declare (type function reader))
-    fun))		    
+  (lambda (object) (declare (ignore object)) t))
 
 (defun get-optimized-std-accessor-method-function (class slotd name)
   (if (structure-class-p class)
