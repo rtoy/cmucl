@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.85 1990/12/06 17:34:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.86 1990/12/07 18:03:58 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -103,6 +103,7 @@
 (defconstant float-traps-byte (byte 5 7))
 (defconstant float-exceptions-byte (byte 5 12))
 (defconstant float-condition-bit (ash 1 23))
+(defconstant float-fast-bit 0)			  ; No fast mode on PMAX.
 
 ); eval-when
 
