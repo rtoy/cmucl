@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.77 1994/05/22 20:25:56 hallgren Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.78 1994/06/22 16:21:15 hallgren Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,22 +44,20 @@
 (setf (ext:search-list "code:") '("target:code/"))
 (setf (ext:search-list "c:") '("target:compiler/"))
 (setf (ext:search-list "vm:")
-      '(#+pmax "c:mips/"
+      '(#+(or pmax sgi) "c:mips/"
         #+sparc "c:sparc/"
 	#+rt "c:rt/"
 	#+hppa "c:hppa/"
 	#+x86 "c:x86/"
 	#+alpha "c:alpha/"
-	#+sgi "c:mips/"
 	"c:generic/"))
 (setf (ext:search-list "assem:")
-      '(#+pmax "target:assembly/mips/"
+      '(#+(or pmax sgi) "target:assembly/mips/"
 	#+sparc "target:assembly/sparc/"
 	#+rt "target:assembly/rt/"
 	#+hppa "target:assembly/hppa/"
 	#+x86 "target:assembly/x86/"
 	#+alpha "target:assembly/alpha/"
-	#+sgi "c:mips/"
 	"target:assembly/"))
 (setf (ext:search-list "hem:") '("target:hemlock/"))
 (setf (ext:search-list "clx:") '("target:clx/"))
