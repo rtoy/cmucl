@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.81 1997/01/18 14:31:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.82 1997/11/25 18:33:32 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,13 +18,16 @@
 
 (in-package "LISP")
 
+#+gencgc (setf *load-x86-tlf-to-dynamic-space* t)  ; potentially dangerous.
+#+gencgc (setf cl::*enable-dynamic-space-code* t)
+
 ;;; Get some data on this core.
 ;;;
 (write-string "What is the current lisp-implementation-version? ")
 (force-output)
 (set '*lisp-implementation-version* (read-line))
 
-;;; Load the rest of the reader (may be byte-compiled.)
+;;; Load the rest of the reader (maybe byte-compiled.)
 (maybe-byte-load "target:code/sharpm")
 (maybe-byte-load "target:code/backq")
 (setq std-lisp-readtable (copy-readtable *readtable*))
@@ -72,7 +75,12 @@
 
 (maybe-byte-load "code:format-time")
 (maybe-byte-load "code:parse-time")
+
+;;; Better not move purify, or it will die on return!
+#+gencgc (setf cl::*enable-dynamic-space-code* nil)
 #-gengc (maybe-byte-load "code:purify")
+#+gencgc (setf cl::*enable-dynamic-space-code* t)
+
 (maybe-byte-load "code:commandline")
 (maybe-byte-load "code:sort")
 (maybe-byte-load "code:time")
@@ -110,6 +118,9 @@
 (purify :root-structures
 	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes)
 	:environment-name "Kernel")
+
+;;; Can turn off scavenging of the read-only-space now.
+#+x86 (setf x86::*scavenge-read-only-space* nil)
 
 ;;; Load the compiler.
 #-(or no-compiler runtime)
@@ -185,6 +196,12 @@
   ;; so any garbage will be collected then.
   #-gengc (setf *need-to-collect-garbage* nil)
   #-gengc (gc-on)
+  (setf *gc-run-time* 0)
+
+  #+x86 (setf *load-x86-tlf-to-dynamic-space* nil)  ; potentially dangerous.
+  #+gencgc (setf cl::*enable-dynamic-space-code* t)
+  #+x86 (setf x86::*num-fixups* 0)
+
   ;;
   ;; Save the lisp.  If RUNTIME, there is nothing new to purify, so don't.
   (save-lisp "lisp.core"
