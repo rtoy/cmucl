@@ -56,12 +56,12 @@
        (eq (%primitive structure-ref thing 0) 'values-type)))
 
 ;;; Define this so that we can copy type-class structures before the defstruct
-;;; for type-class runs.  ### It relies on structures being build out of
-;;; simple-vectors in order to determine the length.
+;;; for type-class runs.  ### It relies on structures being identical to
+;;; simple-vectors so that the length can be extracted from the -1'st slot.
 ;;;
 (defun copy-type-class (tc)
   (let ((new (make-type-class)))
-    (dotimes (i (the index (length (the simple-vector tc))))
+    (dotimes (i (truly-the index (%primitive structure-ref tc -1)))
       (declare (type index i))
       (%primitive structure-index-set new i
 		  (%primitive structure-index-ref tc i)))
