@@ -766,10 +766,11 @@
   (more-arg-costs nil :type (or sc-vector null))
   (more-result-costs nil :type (or sc-vector null))
   ;;
-  ;; Lists of sc-vectors holding the SC numbers mapping SCs to the SC that we
-  ;; load into.  The entry is null if there is no load function which loads
-  ;; from that SC to an SC allowed by the operand SC restriction.  If a SC is
-  ;; directly acceptable to the VOP, then the entry equals its index.
+  ;; Lists of sc-vectors mapping each SC to the SCs that we can load into.  If
+  ;; a SC is directly acceptable to the VOP, then the entry is T.  Otherwise,
+  ;; it is a list of the SC numbers of all the SCs that we can load into.  This
+  ;; list will be empty if there is no load function which loads from that SC
+  ;; to an SC allowed by the operand SC restriction.
   (arg-load-scs nil :type list)
   (result-load-scs nil :type list)
   ;;
@@ -791,7 +792,7 @@
 
 ;;;; SBs and SCs:
 
-(eval-when (#-new-compiler compile load eval)
+(eval-when (compile load eval)
 
 ;;; The SB structure represents the global information associated with a
 ;;; storage base.
@@ -874,11 +875,11 @@
   (save-p nil :type boolean)
   ;;
   ;; Vectors mapping from SC numbers to information about how to load from the
-  ;; index SC to this one.  Load-Functions holds the names of the functions
+  ;; index SC to this one.  Move-Functions holds the names of the functions
   ;; used to do loading, and Load-Costs holds the cost of the corresponding
-  ;; Load-Functions.  If loading is impossible, then the entries are NIL.
+  ;; Move-Functions.  If loading is impossible, then the entries are NIL.
   ;; Load-Costs is initialized to have a 0 for this SC.
-  (load-functions (make-array sc-number-limit :initial-element nil)
+  (move-functions (make-array sc-number-limit :initial-element nil)
 		  :type sc-vector)
   (load-costs (make-array sc-number-limit :initial-element nil)
 	      :type sc-vector)
@@ -918,8 +919,6 @@
   
 
 ;;;; TNs:
-
-(eval-when (#-new-compiler compile load eval)
 
 (defstruct (tn (:include sset-element)
 	       (:constructor make-random-tn)
@@ -1028,7 +1027,6 @@
   ;; indicates that the TN is packed.
   (offset nil :type (or unsigned-byte null)))
 
-); Eval-When (Compile Load Eval)
 
 (defun %print-tn (s stream d)
   (declare (ignore d))
