@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.35 1992/12/10 01:21:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.36 1992/12/15 16:08:46 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,8 +15,11 @@
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;;
 (in-package "C")
+
 (in-package "LISP")
 (export '(defstruct copy-structure))
+
+(in-package :c)
 
 ;;; Always compile safe.  This code isn't very careful about protecting itself.
 ;;;
@@ -468,7 +471,7 @@
 	(declare (type structure-index i))
 	(setf (structure-ref res i)
 	      (structure-ref structure i)))
-      res))
+      res)))
 
 
 ;;; Define-Accessors returns a list of function definitions for accessing and
