@@ -26,9 +26,9 @@
 ;;;
 ;;;    Return the template having the specified name, or die trying.
 ;;;
-(defun template-or-lose (x)
+(defun template-or-lose (x &optional (backend *target-backend*))
   (the template
-       (or (gethash x (backend-template-names *backend*))
+       (or (gethash x (backend-template-names backend))
 	   (error "~S is not a defined template." x))))
 
 
@@ -37,18 +37,18 @@
 ;;;    Return the SC structure, SB structure or SC number corresponding to a
 ;;; name, or die trying.
 ;;;
-(defun sc-or-lose (x)
+(defun sc-or-lose (x &optional (backend *target-backend*))
   (the sc
-       (or (gethash x (backend-sc-names *backend*))
+       (or (gethash x (backend-sc-names backend))
 	   (error "~S is not a defined storage class." x))))
 ;;;
-(defun sb-or-lose (x)
+(defun sb-or-lose (x &optional (backend *target-backend*))
   (the sb
-       (or (gethash x (backend-sb-names *backend*))
+       (or (gethash x (backend-sb-names backend))
 	   (error "~S is not a defined storage base." x))))
 ;;;
-(defun sc-number-or-lose (x)
-  (the sc-number (sc-number (sc-or-lose x))))
+(defun sc-number-or-lose (x &optional (backend *target-backend*))
+  (the sc-number (sc-number (sc-or-lose x backend))))
 
 
 (eval-when (compile eval load)
@@ -340,9 +340,9 @@
 ;;;    Return the primitive type corresponding to the specified name, or die
 ;;; trying.
 ;;;
-(defun primitive-type-or-lose (name)
+(defun primitive-type-or-lose (name &optional (backend *target-backend*))
   (the primitive-type
-       (or (gethash name (backend-primitive-type-names *backend*))
+       (or (gethash name (backend-primitive-type-names backend))
 	   (error "~S is not a defined primitive type." name))))
 ;;;
 (eval-when (compile eval load)
@@ -667,9 +667,9 @@
 ;;; meta-compile time uses, the VOP-Parse should be used instead of the
 ;;; VOP-Info
 ;;;
-(defun vop-parse-or-lose (name)
+(defun vop-parse-or-lose (name &optional (backend *target-backend*))
   (the vop-parse
-       (or (gethash name (backend-parsed-vops *target-backend*))
+       (or (gethash name (backend-parsed-vops backend))
 	   (error "~S is not the name of a defined VOP." name))))
 
 
@@ -2189,7 +2189,7 @@
 	  
 	  `(let* ((,n-node ,node)
 		  (,n-block ,block)
-		  (,n-template (template-or-lose ',name))
+		  (,n-template (template-or-lose ',name *backend*))
 		  ,@abinds
 		  ,@(ibinds)
 		  ,@rbinds)
@@ -2247,7 +2247,7 @@
 	
 	`(let* ((,n-node ,node)
 		(,n-block ,block)
-		(,n-template (template-or-lose ',name))
+		(,n-template (template-or-lose ',name *backend*))
 		,@abinds
 		,@rbinds)
 	   ,@acode
