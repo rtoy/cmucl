@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.44 1998/01/30 17:11:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.45 1998/02/11 18:15:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1179,21 +1179,25 @@
 	 (pathname (if (logical-pathname-p pathname)
 		       (translate-logical-pathname pathname)
 		       pathname))
-	 (dir (pathname-directory pathname))
 	 (created-p nil))
     (when (wild-pathname-p pathname)
       (error (make-condition 'file-error :pathname pathspec)))
-    (loop for i from 1 upto (length dir)
-	  do (let ((newpath (make-pathname :host (pathname-host pathname)
-					   :device (pathname-device pathname)
-					   :directory (subseq dir 0 i))))
-	       (unless (probe-file newpath)
-		 (let ((namestring (namestring newpath)))
-		   (when verbose
-		     (format *standard-output* "~&Creating directory: ~A~%"
-			     namestring))
-		   (unix:unix-mkdir namestring mode)
-		   (unless (probe-file namestring)
-		     (error (make-condition 'file-error :pathname pathspec)))
-		   (setf created-p t)))))
-    (values pathname created-p)))
+    (enumerate-search-list (pathname pathname)
+       (let ((dir (pathname-directory pathname)))
+	 (loop for i from 1 upto (length dir)
+	       do (let ((newpath (make-pathname
+				  :host (pathname-host pathname)
+				  :device (pathname-device pathname)
+				  :directory (subseq dir 0 i))))
+		    (unless (probe-file newpath)
+		      (let ((namestring (namestring newpath)))
+			(when verbose
+			  (format *standard-output* "~&Creating directory: ~A~%"
+				  namestring))
+			(unix:unix-mkdir namestring mode)
+			(unless (probe-file namestring)
+			  (error (make-condition 'file-error
+						 :pathname pathspec)))
+			(setf created-p t)))))
+	 ;; Only the first path in a search-list is considered.
+	 (return (values pathname created-p))))))
