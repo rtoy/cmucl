@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.14 1997/11/08 15:32:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.15 1997/11/16 14:00:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2560,9 +2560,6 @@
 
 #+complex-float
 (progn
-(eval-when (compile load eval)
-  (export '(complex-single-float-real complex-double-float-real
-	    complex-single-float-imag complex-double-float-imag)))
 
 (define-vop (make-complex-float)
   (:args (x :target r)
@@ -2597,7 +2594,8 @@
 	 (y :scs (single-reg) :to :save))
   (:arg-types single-float single-float)
   (:results (r :scs (complex-single-reg) :from (:argument 0)))
-  (:result-types complex-single-float))
+  (:result-types complex-single-float)
+  (:note "inline complex single-float creation"))
 
 (define-vop (make-complex-double-float make-complex-float)
   (:translate complex)
@@ -2605,13 +2603,8 @@
 	 (y :scs (double-reg) :to :save))
   (:arg-types double-float double-float)
   (:results (r :scs (complex-double-reg) :from (:argument 0)))
-  (:result-types complex-double-float))
-
-;;; Real and imaginary part accessors.
-(defknown (complex-single-float-real complex-single-float-imag)
-  ((complex single-float)) single-float (flushable))
-(defknown (complex-double-float-real complex-double-float-imag)
-  ((complex double-float)) double-float (flushable))
+  (:result-types complex-double-float)
+  (:note "inline complex double-float creation"))
 
 (define-vop (complex-float-value)
   (:args (x :target r))
@@ -2658,39 +2651,44 @@
 	       (inst fldd ea))))
 	  (t (error "Complex-float-value VOP failure")))))
 
-(define-vop (complex-single-float-real complex-float-value)
-  (:translate complex-single-float-real)
+(define-vop (realpart/complex-single-float complex-float-value)
+  (:translate realpart)
   (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
 	    :target r))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
+  (:note "complex float realpart")
   (:variant 0))
 
-(define-vop (complex-double-float-real complex-float-value)
-  (:translate complex-double-float-real)
+(define-vop (realpart/complex-double-float complex-float-value)
+  (:translate realpart)
   (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
 	    :target r))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
+  (:note "complex float realpart")
   (:variant 0))
 
-(define-vop (complex-single-float-imag complex-float-value)
-  (:translate complex-single-float-imag)
+(define-vop (imagpart/complex-single-float complex-float-value)
+  (:translate imagpart)
   (:args (x :scs (complex-single-reg complex-single-stack descriptor-reg)
 	    :target r))
   (:arg-types complex-single-float)
   (:results (r :scs (single-reg)))
   (:result-types single-float)
+  (:note "complex float imagpart")
   (:variant 1))
 
-(define-vop (complex-double-float-imag complex-float-value)
-  (:translate complex-double-float-imag)
+(define-vop (imagpart/complex-double-float complex-float-value)
+  (:translate imagpart)
   (:args (x :scs (complex-double-reg complex-double-stack descriptor-reg)
 	    :target r))
   (:arg-types complex-double-float)
   (:results (r :scs (double-reg)))
   (:result-types double-float)
+  (:note "complex float imagpart")
   (:variant 1))
+
 ) ; complex-float

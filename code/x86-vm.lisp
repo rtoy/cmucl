@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.9 1997/11/16 13:53:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.10 1997/11/16 13:59:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -432,22 +432,3 @@
   "Atomically compare object's slot value to test-value and if EQ store
    new-value in the slot. The original value of the slot is returned."
   (kernel::%instance-set-conditional object slot test-value new-value))
-
-#+complex-float
-(progn
-(defun complex-single-float-real (x)
-  (declare (type (complex single-float) x))
-  (the single-float (complex-single-float-real x)))
-
-(defun complex-double-float-real (x)
-  (declare (type (complex double-float) x))
-  (the double-float (complex-double-float-real x)))
-
-(defun complex-single-float-imag (x)
-  (declare (type (complex single-float) x))
-  (the single-float (complex-single-float-imag x)))
-
-(defun complex-double-float-imag (x)
-  (declare (type (complex double-float) x))
-  (the double-float (complex-double-float-imag x)))
-) ; complex-float

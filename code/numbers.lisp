@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.30 1997/11/05 14:59:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.31 1997/11/16 13:59:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.30 1997/11/05 14:59:45 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.31 1997/11/16 13:59:56 dtc Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -290,13 +290,43 @@
      (canonical-complex realpart imagpart))
     (float-contagion %%make-complex realpart imagpart (rational)))))
 
+#-complex-float
 (defun realpart (number)
   "Extracts the real part of a number."
   (realpart number))
 
+#-complex-float
 (defun imagpart (number)
   "Extracts the imaginary part of a number."
   (imagpart number))
+
+#+complex-float
+(defun realpart (number)
+  "Extracts the real part of a number."
+  (typecase number
+    ((complex double-float)
+     (truly-the double-float (realpart number)))
+    ((complex single-float)
+     (truly-the single-float (realpart number)))
+    ((complex rational)
+     (kernel:%realpart number))
+    (t
+     number)))
+
+#+complex-float
+(defun imagpart (number)
+  "Extracts the imaginary part of a number."
+  (typecase number
+    ((complex double-float)
+     (truly-the double-float (imagpart number)))
+    ((complex single-float)
+     (truly-the single-float (imagpart number)))
+    ((complex rational)
+     (kernel:%imagpart number))
+    (float
+     (float 0 number))
+    (t
+     0)))
 
 (defun conjugate (number)
   "Returns the complex conjugate of NUMBER.  For non-complex numbers, this is
