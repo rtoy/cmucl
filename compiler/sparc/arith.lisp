@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.31 2003/03/25 14:53:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.32 2003/03/31 17:48:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -733,7 +733,7 @@
 	      (and (backend-featurep :sparc-v9)
 		   (not (backend-featurep :sparc-64)))))
   (:generator 1
-    (inst mul r x y)))
+    (inst umul r x y)))
 
 (define-vop (fast-v8-*-c/signed=>signed fast-signed-binop-c)
   (:translate *)
