@@ -28,6 +28,7 @@ if [ $# = 1 ]; then
     case `uname -s` in
     SunOS) LISP_VARIANT=sun4_solaris_gcc ;;
     Linux) LISP_VARIANT=linux_gencgc ;;
+    Darwin) LISP_VARIANT=ppc_darwin ;;
     # Please fill in some other common systems
     *) echo "Sorry, please specify the desired Lisp variant." 
        exit 1 ;;
@@ -63,6 +64,7 @@ if [ "$MOTIF_VARIANT" = "" ]; then
       FreeBSD*) MOTIF_VARIANT=FreeBSD ;;
       NetBSD*) MOTIF_VARIANT=NetBSD ;;
       OpenBSD*) MOTIF_VARIANT=OpenBSD ;;
+      *_darwin) MOTIF_VARIANT=Darwin ;;
       sun4_solaris*) MOTIF_VARIANT=solaris ;;
       sun4c*) MOTIF_VARIANT=sun4c_411 ;;
       hp700*) MOTIF_VARIANT=hpux_cc ;;
