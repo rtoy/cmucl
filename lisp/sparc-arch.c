@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.23 2004/07/29 16:47:40 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.24 2004/08/06 17:23:23 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -628,6 +628,10 @@ lispobj funcall3(lispobj function, lispobj arg0, lispobj arg1, lispobj arg2)
  * resolve_linkage_tramp is always called from call_into_c.  (This is
  * enforced by having new-genesis create an entry for call_into_c, so
  * we never have to do a lookup for call_into_c.)
+ *
+ * The LINKAGE_ADDR_REG is important!  resolve_linkage_tramp needs to
+ * be coordinated with this because that's how resolve_linkage_tramp
+ * figures out what linkage entry it's being called from.
  */
 #define LINKAGE_TEMP_REG        reg_L0
 #define LINKAGE_ADDR_REG        reg_L0
@@ -645,7 +649,7 @@ void* arch_make_jump_entry(void* reloc_addr, void *target_addr)
    * The instruction sequence is:
    *
    *        sethi %hi(addr), temp_reg
-   *        jmp   %temp_reg + %lo(addr), %addr_reg
+   *        jmpl  %temp_reg + %lo(addr), %addr_reg
    *        nop
    *        nop
    *        
