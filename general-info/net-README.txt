@@ -22,8 +22,8 @@ Distribution:
 CMU Common Lisp is only available via anonymous FTP.  We don't have the
 manpower to make tapes.  All of our files are in the AFS file system.  Here are
 some suggested gateway machines:
-    lisp-rt1.slisp.cs.cmu.edu
-    lisp-rt2.slisp.cs.cmu.edu
+    lisp-rt1.slisp.cs.cmu.edu (128.2.217.9)
+    lisp-rt2.slisp.cs.cmu.edu (128.2.217.10)
 
 Log in with the user "anonymous" and "username@host" as password (i.e. your
 EMAIL address.)  Due to the way anonymous FTP access control is done, it is
