@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.10 1997/02/05 18:01:19 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.11 1997/02/18 01:22:20 dtc Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -175,10 +175,8 @@ write,
 writev,
 
 /* Math routines. */
-#ifndef i386
 cos,
 sin,
-#endif
 tan,
 acos,
 asin,
