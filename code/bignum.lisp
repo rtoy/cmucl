@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.22 1997/01/18 14:30:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.23 1997/02/21 01:42:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -509,7 +509,7 @@
 	 (fixnum-plus-p (not (minusp fixnum)))
 	 (bignum (if bignum-plus-p bignum (negate-bignum bignum)))
 	 (bignum-len (%bignum-length bignum))
-	 (fixnum (%fixnum-to-digit (if fixnum-plus-p fixnum (- fixnum))))
+	 (fixnum (if fixnum-plus-p fixnum (- fixnum)))
 	 (result (%allocate-bignum (1+ bignum-len)))
 	 (carry-digit 0))
     (declare (type bignum-type bignum result)
@@ -533,8 +533,8 @@
   (let* ((a-minusp (minusp a))
 	 (b-minusp (minusp b)))
     (multiple-value-bind (high low)
-			 (%multiply (%fixnum-to-digit (if a-minusp (- a) a))
-				    (%fixnum-to-digit (if b-minusp (- b) b)))
+			 (%multiply (if a-minusp (- a) a)
+				    (if b-minusp (- b) b))
       (declare (type bignum-element-type high low))
       (if (and (zerop high)
 	       (%digit-0-or-plusp low))
