@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.153 2003/05/14 12:03:15 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.154 2003/05/21 16:34:34 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2048,7 +2048,7 @@
                   (let ((decl (find 'pcl::method-name decls :key 'caadr)))
                     (and decl
                          (eq 'declare (first decl))
-                         (cons :method (cadadr decl))))))
+                         (cons 'pcl::method (cadadr decl))))))
 	res))))
 
 (declaim (end-block))
