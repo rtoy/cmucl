@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.40 1991/11/08 15:14:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.41 1991/11/09 20:52:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.40 1991/11/08 15:14:11 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.41 1991/11/09 20:52:53 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -1229,4 +1229,5 @@ default-value-8
   (frob argument-count-error invalid-argument-count-error nargs)
   (frob type-check-error object-not-type-error object type)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key))
+  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
+  (frob nil-function-returned-error nil-function-returned-error fun))

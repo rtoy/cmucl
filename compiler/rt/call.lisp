@@ -1149,4 +1149,5 @@ default-value-5
   (frob argument-count-error invalid-argument-count-error nargs)
   (frob type-check-error object-not-type-error object type)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key))
+  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
+  (frob nil-function-returned-error nil-function-returned-error fun))

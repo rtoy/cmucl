@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.6 1991/11/08 15:22:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.7 1991/11/09 20:50:29 ram Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -1209,4 +1209,5 @@ default-value-8
   (frob argument-count-error invalid-argument-count-error nargs)
   (frob type-check-error object-not-type-error object type)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error)
-  (frob unknown-keyword-argument-error unknown-keyword-argument-error key))
+  (frob unknown-keyword-argument-error unknown-keyword-argument-error key)
+  (frob nil-function-returned-error nil-function-returned-error fun))
