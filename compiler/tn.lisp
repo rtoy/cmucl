@@ -481,6 +481,4 @@
   (declare (type tn tn))
   (let ((ref (or (tn-reads tn) (tn-writes tn))))
     (assert ref)
-    (lambda-environment
-     (block-lambda
-      (ir2-block-block (vop-block (tn-ref-vop ref)))))))
+    (block-environment (ir2-block-block (vop-block (tn-ref-vop ref))))))
