@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.1 1997/09/03 20:29:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.2 1997/09/13 20:31:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1391,20 +1391,22 @@
 (defmacro with-input-from-string ((var string &key index start end) &body (forms decls))
   "Binds the Var to an input stream that returns characters from String and
   executes the body.  See manual for details."
-  `(let ((,var
-	  ,(cond ((null end)
-		  `(make-string-input-stream ,string ,(or start 0)))
-		 ((symbolp end)
-		  `(if ,end
-		       (make-string-input-stream ,string ,(or start 0) ,end)
-		     (make-string-input-stream ,string ,(or start 0))))
-		 (t
-		  `(make-string-input-stream ,string ,(or start 0) ,end)))))
-     ,@decls
-     (unwind-protect
-       (progn ,@forms)
-       (close ,var)
-       ,@(if index `((setf ,index (string-input-stream-current ,var)))))))
+  ;; The once-only inhibits compiler note for unreachable code when 'end' is true.
+  (once-only ((string string))
+    `(let ((,var
+	    ,(cond ((null end)
+		    `(make-string-input-stream ,string ,(or start 0)))
+		   ((symbolp end)
+		    `(if ,end
+			 (make-string-input-stream ,string ,(or start 0) ,end)
+			 (make-string-input-stream ,string ,(or start 0))))
+		   (t
+		    `(make-string-input-stream ,string ,(or start 0) ,end)))))
+       ,@decls
+       (unwind-protect
+	   (progn ,@forms)
+	 (close ,var)
+	 ,@(if index `((setf ,index (string-input-stream-current ,var))))))))
 
 
 (defmacro with-output-to-string ((var &optional string) &body (forms decls))
