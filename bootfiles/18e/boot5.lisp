@@ -82,11 +82,11 @@
 	      ;; a symbol following &body, there could be a list of up
 	      ;; to three elements which will be bound to the body,
 	      ;; declarations, and doc-string of the body.
-	      ((eq var '&parse-body)
+	      ((eq var 'ext::&parse-body)
 	       (unless (and (cdr rest-of-args)
 			    (consp (cadr rest-of-args))
 			    (symbolp (caadr rest-of-args)))
-		 (simple-program-error "Invalid ~a" '&parse-body))
+		 (simple-program-error "Invalid ~a" 'ext::&parse-body))
 		(setf rest-of-args (cdr rest-of-args))
 		(setf restp t)
 		(let ((body-name (caar rest-of-args))
