@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.10 1991/04/24 23:48:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.11 1991/05/08 15:38:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.10 1991/04/24 23:48:15 ram Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -384,10 +382,9 @@
     (setf (row-major-aref array (%array-row-major-index array subscripts))
 	  new-value)))
 
-;;; %Apply-aset is called when (setf (apply #'aref ...) new-value) is
-;;; called.
-
-(defun %apply-aset (new-value array &rest subscripts)
+(declaim (inline (setf aref)))
+(defun (setf aref) (new-value array &rest subscripts)
+  (declare (type array array))
   (setf (row-major-aref array (%array-row-major-index array subscripts))
 	new-value))
 
@@ -413,13 +410,6 @@
   (declare (optimize (safety 1)))
   (setf (aref simple-vector index) new))
 
-;;; The following function is used when (setf (apply #'svref ...) new
-;;; is compiled.
-
-(defun %apply-svset (new simple-vector index)
-  (declare (simple-vector simple-vector) (fixnum index) (optimize (safety 1)))
-  (setf (aref simple-vector index) new))
-
 
 (defun bit (bit-array &rest subscripts)
   "Returns the bit from the Bit-Array at the specified Subscripts."
@@ -435,12 +425,18 @@
 			  (%array-row-major-index bit-array subscripts))
 	  new-value)))
 
+(declaim (inline (setf bit)))
+(defun (setf bit) (new-value bit-array &rest subscripts)
+  (declare (type (array bit) bit-array) (optimize (safety 1)))
+  (setf (row-major-aref bit-array
+			(%array-row-major-index bit-array subscripts))
+	new-value))
+
 (defun sbit (simple-bit-array &rest subscripts)
   "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
   (declare (type (simple-array bit) simple-bit-array) (optimize (safety 1)))
   (row-major-aref simple-bit-array
 		  (%array-row-major-index simple-bit-array subscripts)))
-
 
 (defun %sbitset (simple-bit-array &rest stuff)
   (declare (type (simple-array bit) simple-bit-array) (optimize (safety 1)))
@@ -449,9 +445,13 @@
     (setf (row-major-aref simple-bit-array
 			  (%array-row-major-index simple-bit-array subscripts))
 	  new-value)))
-
-
-
+ 
+(declaim (inline (setf sbit)))
+(defun (setf sbit) (new-value bit-array &rest subscripts)
+  (declare (type (simple-array bit) bit-array) (optimize (safety 1)))
+  (setf (row-major-aref bit-array
+			(%array-row-major-index bit-array subscripts))
+	new-value))
 
 
 ;;;; Random array properties.
