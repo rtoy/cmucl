@@ -29,11 +29,6 @@
 (defvar *default-default* nil
   "Unsupplied optional and keyword arguments get this value defaultly.")
 
-(defvar *key-finder* 'keyword-argument
-  "The way we want to lookup keywords in macros at expansion time.  The default
-   does the obvious thing, returning a keyword's argument.  DEFTRANSFORM,
-   however does something more clever.")
-
 
 ;;;; Stuff to parse DEFMACRO, MACROLET, DEFINE-SETF-METHOD, and DEFTYPE.
 
@@ -46,7 +41,6 @@
 				   (doc-string-allowed t)
 				   ((:environment env-arg-name))
 				   ((:default-default *default-default*))
-				   ((:key-finder *key-finder*))
 				   (error-fun 'error))
   "Returns as multiple-values a parsed body, any local-declarations that
    should be made where this body is inserted, and a doc-string if there is
@@ -338,7 +332,7 @@
   (do ((remaining key-list (cddr remaining)))
       ((endp remaining))
     (when (eq keyword (car key-list))
-      (return (cadr key-list)))))
+      (return t))))
 
 
 
