@@ -19,50 +19,20 @@
 (in-package 'ext)
 (export '(ignorable truly-the maybe-inline))
 
+(in-package "LISP")
+(export '(symbol-macro-let))
+
 (in-package 'c)
 
 
 (proclaim '(special *compiler-error-bailout* *template-names*))
 
-;;; The *fenv* is used to keep track of the meaning of the names of functional
-;;; objects during IR1 translation.  It is an alist with the car of each entry
-;;; being the name of the function.  If the cdr is a Leaf structure, then the
-;;; name is bound to the function it represents.  If the cdr is 
-;;; (macro . (lambda ...)) then the lambda is the macroexpansion function for a
-;;; local macro.
-;;;
-(defvar *fenv*)
 
-;;; *inlines* is used to keep track of which functions may and may not be coded
-;;; as inline functions.  It is an alist (Leaf . Flag), where Leaf is the
-;;; structure that represents the function and Flag is either :Inline or
-;;; :Notinline, indicating the sense of the declaration.
+;;; The lexical environment we are currently converting in.  See the LEXENV
+;;; structure.
 ;;;
-(defvar *inlines*)
-
-;;; *type-restrictions* is an alist (Leaf . CType) which is used to keep track
-;;; of "pervasive" type declarations.  A pervasive type declaration is a type
-;;; declaration that pertains to the type in a syntactic extent which does not
-;;; correspond to a binding of the affected name.  Currently Common Lisp only
-;;; allows pervasive type declarations on variables in the function namespace.
-;;;
-(defvar *type-restrictions*)
-
-;;; *venv* translates from variable names to Leaf structures.  A special
-;;; binding is indicated by a :Special Global-Var leaf.  Each special binding
-;;; within the code gets a distinct var structure, as does the current "global"
-;;; value on entry to the code compiled.  (locally (special ...)) is handled by
-;;; adding the most recent special binding to the front of the list.
-;;;
-(defvar *venv*)
-
-;;; *benv* and *tenv* are alists from block and go-tag names to 2-lists of the
-;;; form (<entry> <continuation>), where <continuation> is the continuation to
-;;; exit to, and <entry> is the corresponding Entry node.
-;;;
-(defvar *benv*)
-(defvar *tenv*)
-(proclaim '(list *fenv* *inlines* *type-restrictions* *venv* *benv* *tenv*))
+(defvar *lexical-environment*)
+(proclaim '(type lexenv *lexical-environment*))
 
 ;;; *free-variables* translates from the names of variables referenced globally
 ;;; to the Leaf structures for them.  *free-functions* is like
@@ -86,12 +56,6 @@
 (defvar *constants*)
 (proclaim '(hash-table *constants*))
 
-;;; *Current-Cookie* represents locally bound state information; declaration
-;;; processing binds it.
-;;;
-(proclaim '(type cookie *current-cookie*))
-(defvar *current-cookie*)
-
 ;;; *source-paths* is a hashtable from source code forms to the path taken
 ;;; through the source to reach the form.  This provides a way to keep track of
 ;;; the location of original source forms, even when macroexpansions and other
@@ -100,13 +64,6 @@
 ;;;
 (proclaim '(hash-table *source-paths*))
 (defvar *source-paths*)
-
-;;; *current-lambda* is used to keep track of the function currently being
-;;; translated.  Blocks point to the current lambda so that we can find the
-;;; environment that they run in.
-;;;
-(proclaim '(type (or clambda null) *current-lambda*))
-(defvar *current-lambda*)
 
 ;;; *Current-Component* is the Component structure which we link blocks into as
 ;;; we generate them.  This just serves to glue the emitted blocks together
@@ -117,24 +74,11 @@
 (proclaim '(type (or component null) *current-component*))
 (defvar *current-component*)
 
-;;; *Current-Cleanup* is similar to *Current-Lambda*, but used to keep track
-;;; of the enclosing Cleanup.  If there is no cleanup, then this is the same as
-;;; *Current-Lambda*.
-;;;
-(proclaim '(type (or cleanup clambda null) *current-cleanup*))
-(defvar *current-cleanup*)
-
 ;;; *Current-Path* is the source path of the form we are currently translating.
-;;; If the path for the form is unknown, then this is the path for the
-;;; innermost enclosing form for which the path is known.
+;;; See NODE-SOURCE-PATH in the NODE structure.
 ;;;
 (proclaim '(list *current-path*))
 (defvar *current-path* nil)
-
-;;; *Current-Form* is the form that is currently being converted into IR1.
-;;; This is used to provide context for errors found during IR1 conversion.
-;;;
-(defvar *current-form* nil)
 
 ;;; *Converting-For-Interpreter* is true when we are creating IR1 to be
 ;;; interpreted rather than compiled.  This inhibits source tranformations and
@@ -161,6 +105,8 @@
 	   (*bailout-form* ,form)
 	   (*compiler-error-bailout*
 	    #'(lambda ()
+		(declare (special *bailout-start* *bailout-cont*
+				  *bailout-form*))
 		(ir1-convert
 		 *bailout-start* *bailout-cont*
 		 `(error "Execution of a form compiled with errors:~% ~S"
@@ -186,43 +132,41 @@
 (proclaim '(function ir1-convert (continuation continuation t) void))
 (defun ir1-convert (start cont form)
   (ir1-error-bailout (start cont form)
-    (if (atom form)
-	(cond ((and (symbolp form) (not (keywordp form)))
-	       (ir1-convert-variable start cont form))
-	      ((leaf-p form)
-	       (reference-leaf start cont form nil))
-	      ((constantp form)
-	       (reference-constant start cont form form))
-	      (t
-	       (compiler-error "Cannot evaluate this object: ~S" form)))
-	(let ((fun (car form))
-	      (*current-form* form)
-	      (*current-path* (or (gethash form *source-paths*)
-				  *current-path*)))
-	  (cond
-	   ((symbolp fun)
-	    (let ((lexical-def (cdr (assoc fun *fenv*))))
-	      (cond
-	       ((not lexical-def)
-		(ir1-convert-global-functoid start cont form))
-	       ((leaf-p lexical-def)
-		(ir1-convert-local-function start cont form lexical-def))
-	       ((and (consp lexical-def) (eq (car lexical-def) 'macro))
-		(ir1-convert-macro start cont (cdr lexical-def) form))
-	       (t
-		(error "Malformed *fenv* entry: ~S." lexical-def)))))
-	   ((or (atom fun) (not (eq (car fun) 'lambda)))
-	    (compiler-error "Illegal function call."))
-	   (t
-	    (ir1-convert-combination start cont form
-				     (ir1-convert-lambda fun))))))))
+    (let ((*current-path* (or (gethash form *source-paths*)
+			      (cons form *current-path*))))
+      (if (atom form)
+	  (cond ((and (symbolp form) (not (keywordp form)))
+		 (ir1-convert-variable start cont form))
+		((leaf-p form)
+		 (reference-leaf start cont form nil))
+		((constantp form)
+		 (reference-constant start cont form))
+		(t
+		 (compiler-error "Cannot evaluate this object: ~S" form)))
+	  (let ((fun (car form)))
+	    (cond
+	     ((symbolp fun)
+	      (let ((lexical-def (lexenv-find fun functions)))
+		(cond
+		 ((not lexical-def)
+		  (ir1-convert-global-functoid start cont form))
+		 ((leaf-p lexical-def)
+		  (ir1-convert-local-function start cont form lexical-def))
+		 (t
+		  (assert (and (consp lexical-def)
+			       (eq (car lexical-def) 'macro)))
+		  (ir1-convert-macro start cont (cdr lexical-def) form)))))
+	     ((or (atom fun) (not (eq (car fun) 'lambda)))
+	      (compiler-error "Illegal function call."))
+	     (t
+	      (ir1-convert-combination start cont form
+				       (ir1-convert-lambda fun)))))))))
+
 
 ;;; IR1-Convert-Global-Functoid  --  Internal
 ;;;
 ;;;    Convert anything that looks like a special-form, global function or
-;;; macro call.  If the thing has a ir1-convert method, but we are at top level
-;;; and the method can't be used there, then convert the form in the initial
-;;; component.
+;;; macro call.
 ;;;
 (defun ir1-convert-global-functoid (start cont form)
   (declare (type continuation start cont)
@@ -249,7 +193,7 @@
 (defun ir1-convert-macro (start cont fun form)
   (declare (type continuation start cont))
   (ir1-convert start cont
-	       (handler-case (funcall fun form *fenv*)
+	       (handler-case (funcall fun form *lexical-environment*)
 		 (error (condition)
 		   (compiler-error "(during macroexpansion)~%~A"
 				   condition)))))
@@ -261,9 +205,10 @@
 ;;;
 (defun leaf-inlinep (leaf)
   (declare (type leaf leaf))
-  (let ((found (assoc leaf *inlines*)))
+  (multiple-value-bind (val found)
+		       (lexenv-find leaf inlines)
     (if found
-	(cdr found)
+	val
 	(etypecase leaf
 	  (functional nil)
 	  (global-var
@@ -286,11 +231,9 @@
     (if (and expansion (eq inlinep :inline)
 	     (policy nil (>= speed space) (>= speed cspeed)))
 	(ir1-convert-combination start cont form 
-				 (let ((*fenv* (functional-fenv var))
-				       (*venv* (functional-venv var))
-				       (*tenv* (functional-tenv var))
-				       (*benv* (functional-benv var)))
-				   (ir1-convert-lambda expansion form))
+				 (let ((*lexical-environment*
+					(functional-lexenv var)))
+				   (ir1-convert-lambda expansion))
 				 :inline)
 	(ir1-convert-combination start cont form var inlinep))))
 
@@ -307,22 +250,19 @@
 (defun ir1-convert-combination (start cont form fun &optional (inlinep nil))
   (let ((fun-cont (make-continuation)))
     (reference-leaf start fun-cont fun inlinep)
-    (ir1-convert-combination-args fun-cont cont form)))
+    (ir1-convert-combination-args fun-cont cont (cdr form))))
 
 
 ;;; IR1-Convert-Combination-Args  --  Internal
 ;;;
 ;;;    Convert the arguments to a call and make the Combination node.  Fun-Cont
-;;; is the continuation which yields the function to call.  Form is the source 
-;;; for the call.  Source is the source for the call.  Args is the list of
-;;; arguments for the call, which defaults to the cdr of source.  We return the
-;;; Combination node.
+;;; is the continuation which yields the function to call.  Form is the source
+;;; for the call.  Args is the list of arguments for the call, which defaults
+;;; to the cdr of source.  We return the Combination node.
 ;;;
-(proclaim '(function ir1-convert-combination-args
-		     (continuation continuation list &optional list)
-		     combination))
-(defun ir1-convert-combination-args (fun-cont cont source &optional (args (cdr source)))
-  (let ((node (make-combination source fun-cont)))
+(defun ir1-convert-combination-args (fun-cont cont args)
+  (declare (type continuation fun-cont cont) (list args))
+  (let ((node (make-combination fun-cont)))
     (setf (continuation-dest fun-cont) node)
     (assert-continuation-type fun-cont
 			      (specifier-type '(or function symbol)))
@@ -347,7 +287,7 @@
 (proclaim '(function ir1-convert-progn-body (continuation continuation list) void))
 (defun ir1-convert-progn-body (start cont body)
   (if (endp body)
-      (reference-constant start cont nil nil)
+      (reference-constant start cont nil)
       (let ((this-start start)
 	    (forms body))
 	(loop
@@ -446,14 +386,12 @@
   (let ((fun-cont (make-continuation)))
     (reference-leaf start fun-cont var nil)
     (let ((type (leaf-type var))
-	  (node (ir1-convert-combination-args fun-cont cont form)))
+	  (node (ir1-convert-combination-args fun-cont cont (cdr form))))
       (cond
        ((eq (leaf-where-from var) :assumed)
 	(let ((name (leaf-name var)))
 	  (when (and (eq (info function where-from name) :assumed)
 		     (eq (info function kind name) :function))
-	    (let ((*compiler-error-context* node))
-	      (note-undefined-reference name :function))
 	    (setf (info function assumed-type name)
 		  (note-function-use node
 				     (info function assumed-type name)))))
@@ -482,28 +420,32 @@
 ;;; stuff in the environment.
 ;;;
 (defun in-null-environment (&optional macros-ok)
-  (and (if macros-ok
-	   (every #'(lambda (x)
-		      (let ((val (cdr x)))
-			(and (consp val)
-			     (eq (car val) 'macro))))
-		  *fenv*)
-	   (null *fenv*))
-       (null *benv*) (null *venv*) (null *tenv*)))
+  (let* ((env *lexical-environment*)
+	 (functions (lexenv-functions env)))
+    (and (if macros-ok
+	     (every #'(lambda (x)
+			(let ((val (cdr x)))
+			  (and (consp val)
+			       (eq (car val) 'macro))))
+		    functions)
+	     (null functions))
+	 (null (lexenv-blocks env))
+	 (null (lexenv-variables env))
+	 (null (lexenv-tags env)))))
 
 
-;;; IR1-Convert-Global-Lambda  --  Internal
+;;; IR1-Convert-Global-Lambda  --  Interface
 ;;;
 ;;;    Like IR1-Convert-Lambda except that we null out the environment
-;;; variables around the conversion.
+;;; variables around the conversion.  This is used when we are converting an
+;;; inline expansion.  We pass through the cookie, since that seems more
+;;; useful.
 ;;;
-(proclaim '(function ir1-convert-global-lambda (t t) functional))
-(defun ir1-convert-global-lambda (fun source)
-  (let ((*fenv* ())
-	(*benv* ())
-	(*venv* ())
-	(*tenv* ()))
-    (ir1-convert-lambda fun source)))
+(defun ir1-convert-global-lambda (fun)
+  (let ((*lexical-environment*
+	 (make-lexenv :default (make-null-environment)
+		      :cookie (lexenv-cookie *lexical-environment*))))
+    (ir1-convert-lambda fun)))
 
 
 ;;; IR1-Convert-Global-Inline  --  Internal
@@ -531,7 +473,7 @@
       (let* ((name (leaf-name var))
 	     (dummy (make-functional :name name)))
 	(setf (gethash name *free-functions*) dummy)
-	(let ((fun (ir1-convert-global-lambda expansion form)))
+	(let ((fun (ir1-convert-global-lambda expansion)))
 	  (setf (leaf-name fun) name)
 	  (substitute-leaf fun dummy)
 	  (setf (gethash name *free-functions*)
@@ -552,7 +494,7 @@
 ;;; which have previously been bound.  If the name is in this list, then we
 ;;; error out.
 ;;;
-(proclaim '(function varify-lambda-arg (t list) var))
+(proclaim '(function varify-lambda-arg (t list) lambda-var))
 (defun varify-lambda-arg (name names-so-far)
   (unless (symbolp name)
     (compiler-error "Lambda-variable is not a symbol: ~S." name))
@@ -654,34 +596,36 @@
 	    (names-so-far rest)))
 	
 	(dolist (spec keys)
-	  (cond ((atom spec)
-		 (let ((var (varify-lambda-arg spec (names-so-far))))
-		   (setf (lambda-var-arg-info var)
-			 (make-arg-info :kind :keyword
-					:keyword (make-keyword spec (vars))))
-		   (vars var)
-		   (names-so-far spec)))
-		((atom (first spec))
-		 (let* ((name (first spec))
-			(var (varify-lambda-arg name (names-so-far)))
-			(info (make-arg-info :kind :keyword
-					     :keyword (make-keyword name (vars)))))
-		   (setf (lambda-var-arg-info var) info)
-		   (vars var)
-		   (names-so-far name)
-		   (parse-default spec info)))
-		(t
-		 (let ((head (first spec)))
-		   (unless (= (length head) 2)
-		     (error "Malformed keyword arg specifier: ~S." spec))
-		   (let* ((name (second head))
-			  (var (varify-lambda-arg name (names-so-far)))
-			  (info (make-arg-info :kind :keyword
-					       :keyword (make-keyword (first head) (vars)))))
-		     (setf (lambda-var-arg-info var) info)
-		     (vars var)
-		     (names-so-far name)
-		     (parse-default spec info))))))
+	  (cond
+	   ((atom spec)
+	    (let ((var (varify-lambda-arg spec (names-so-far))))
+	      (setf (lambda-var-arg-info var)
+		    (make-arg-info :kind :keyword
+				   :keyword (make-keyword spec (vars))))
+	      (vars var)
+	      (names-so-far spec)))
+	   ((atom (first spec))
+	    (let* ((name (first spec))
+		   (var (varify-lambda-arg name (names-so-far)))
+		   (info (make-arg-info :kind :keyword
+					:keyword (make-keyword name (vars)))))
+	      (setf (lambda-var-arg-info var) info)
+	      (vars var)
+	      (names-so-far name)
+	      (parse-default spec info)))
+	   (t
+	    (let ((head (first spec)))
+	      (unless (= (length head) 2)
+		(error "Malformed keyword arg specifier: ~S." spec))
+	      (let* ((name (second head))
+		     (var (varify-lambda-arg name (names-so-far)))
+		     (info (make-arg-info :kind :keyword
+					  :keyword (make-keyword (first head)
+								 (vars)))))
+		(setf (lambda-var-arg-info var) info)
+		(vars var)
+		(names-so-far name)
+		(parse-default spec info))))))
 	
 	(dolist (spec aux)
 	  (cond ((atom spec)
@@ -691,7 +635,8 @@
 		   (names-so-far spec)))
 		(t
 		 (unless (<= 1 (length spec) 2)
-		   (compiler-error "Malformed &aux binding specifier: ~S." spec))
+		   (compiler-error "Malformed &aux binding specifier: ~S."
+				   spec))
 		 (let* ((name (first spec))
 			(var (varify-lambda-arg name (names-so-far))))
 		   (aux-vars var)
@@ -725,13 +670,12 @@
 ;;; applies to the variable.
 ;;;
 (proclaim '(function find-lexically-apparent-function (symbol string)
-		     (values var inlinep)))
+		     (values leaf inlinep)))
 (defun find-lexically-apparent-function (name context)
-  (let ((var (cdr (assoc name *fenv* :test #'equal))))
+  (let ((var (lexenv-find name functions :test #'equal)))
     (cond (var
 	   (unless (leaf-p var)
-	     (assert (and (consp var) (eq (car var) 'macro)) ()
-		     "Strange *fenv* entry: ~S." var)
+	     (assert (and (consp var) (eq (car var) 'macro)))
 	     (compiler-error "Found macro name ~S ~A." name context))
 	   (values var (leaf-inlinep var)))
 	  (t
@@ -741,32 +685,50 @@
 ;;; Process-Type-Declaration  --  Internal
 ;;;
 ;;;    Called by Process-Declarations to deal with a variable type declaration.
-;;; We return a list of new *TYPE-RESTRICTIONS*.
+;;; If a lambda-var being bound, we intersect the type with the vars type,
+;;; otherwise we add a type-restriction on the var.  If a symbol macro, we just
+;;; wrap a THE around the expansion.
 ;;;
-(proclaim '(function process-type-declaration (list list) void))
-(defun process-type-declaration (decl vars)
+(defun process-type-declaration (decl res vars)
+  (declare (list decl vars) (type lexenv res))
   (let ((type (specifier-type (first decl))))
-    (collect ((res))
+    (collect ((restr nil cons)
+	      (new-vars nil cons))
       (dolist (var-name (rest decl))
 	(let* ((bound-var (find-in-bindings vars var-name))
 	       (var (or bound-var
-			(cdr (assoc var-name *venv*))
-			(find-free-variable var-name)))
-	       (old-type (or (cdr (assoc var *type-restrictions*))
-			     (leaf-type var)))
-	       (int (if (or (function-type-p type)
-			    (function-type-p old-type))
-			type
-			(type-intersection old-type type))))
-	  (cond ((eq int *empty-type*)
-		 (unless (policy nil (= brevity 3))
-		   (compiler-warning
-		    "Conflicting type declarations ~S and ~S for ~S."
-		    (type-specifier old-type) (type-specifier type) var-name)))
-		(bound-var (setf (leaf-type bound-var) int))
-		(t
-		 (res (cons var int))))))
-      (res))))
+			(lexenv-find var-name variables)
+			(find-free-variable var-name))))
+	  (etypecase var
+	    (leaf
+	     (let* ((old-type (or (lexenv-find var type-restrictions)
+				  (leaf-type var)))
+		    (int (if (or (function-type-p type)
+				 (function-type-p old-type))
+			     type
+			     (type-intersection old-type type))))
+	       (cond ((eq int *empty-type*)
+		      (unless (policy nil (= brevity 3))
+			(compiler-warning
+			 "Conflicting type declarations ~S and ~S for ~S."
+			 (type-specifier old-type) (type-specifier type)
+			 var-name)))
+		     (bound-var (setf (leaf-type bound-var) int))
+		     (t
+		      (restr (cons var int))))))
+	    (cons
+	     (assert (eq (car var) 'MACRO))
+	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
+						   ,(cdr var))))))
+	    (lisp::ct-a-val
+	     (compiler-error "Can't declare type of Alien variable: ~S."
+			     var-name)))))
+
+      (if (or (restr) (new-vars))
+	  (make-lexenv :default res
+		       :type-restrictions (restr)
+		       :variables (new-vars))
+	  res))))
 
 
 ;;; Process-Ftype-Declaration  --  Internal
@@ -776,16 +738,15 @@
 ;;; being bound, we must also deal with declarations that constrain the type of
 ;;; lexically apparent functions.
 ;;;
-;;; [In the non-pervasive case, we should propagate type constraints into the
-;;; function getting the declaration.  We should also think about checking for
-;;; incompatible declarations and possibly intersecting the declared types.
-;;; Handling of pervasive declarations is also sub-optimal, but with any luck
-;;; this feature will go away.]
+;;; [### In the non-pervasive case, we should propagate type constraints into
+;;; the function getting the declaration.  We should also think about checking
+;;; for incompatible declarations and possibly intersecting the declared
+;;; types.]
 ;;;
-(proclaim '(function process-ftype-declaration (t list list) list))
-(defun process-ftype-declaration (spec names fvars)
+(defun process-ftype-declaration (spec res names fvars)
+  (declare (list spec names fvars) (type lexenv res))
   (let ((type (specifier-type spec)))
-    (collect ((res))
+    (collect ((res nil cons))
       (dolist (name names)
 	(let ((found (find name fvars :key #'leaf-name)))
 	  (if found
@@ -793,95 +754,149 @@
 	      (res (cons (find-lexically-apparent-function
 			  name "in a function type declaration")
 			 type)))))
-      (res))))
+      (if (res)
+	  (make-lexenv :default res  :type-restrictions (res))
+	  res))))
 
+
+;;; PROCESS-SPECIAL-DECLARATION  --  Internal
+;;;
+;;;    Process a special declaration, returning a new LEXENV.  A non-bound
+;;; special declaration is instantiated by throwing a special variable into the
+;;; variables.
+;;;
+(defun process-special-declaration (spec res vars)
+  (declare (list spec vars) (type lexenv res))
+  (collect ((new-venv nil cons))
+    (dolist (name (cdr spec))
+      (let ((var (find-in-bindings vars name))
+	    (specvar (specvar-for-binding name)))
+	(cond (var
+	       (when (lambda-var-ignorep var)
+		 (compiler-warning
+		  "Ignored variable ~S is being declared special."
+		  name))
+	       (setf (lambda-var-specvar var) specvar))
+	      ((assoc name (new-venv)))
+	      (t
+	       (new-venv (cons name specvar))))))
+    (if (new-venv)
+	(make-lexenv :default res  :variables (new-venv))
+	res)))
+
+
+;;; PROCESS-INLINE-DECLARATION  --  Internal
+;;;
+;;;    Parse an inline/notinline declaration, checking for conflicting
+;;; declarations.
+;;;
+(defun process-inline-declaration (spec res fvars)
+  (declare (list spec fvars) (type lexenv res))
+  (collect ((new-inlines nil cons))
+    (let ((sense (case (first spec)
+		   (inline :inline)
+		   (notinline :notinline)
+		   (maybe-inline :maybe-inline))))
+      (dolist (name (rest spec))
+	(let* ((var (or (find name fvars :key #'leaf-name)
+			(find-lexically-apparent-function
+			 name
+			 "in an inline or notinline declaration")))
+	       (found (cdr (assoc var (new-inlines)))))
+	  (if found
+	      (unless (eq found sense)
+		(compiler-warning
+		 "Conflicts with previous inline/notinline declaration: ~S."
+		 spec))
+	      (new-inlines (cons var sense))))))
+    (make-lexenv :default res  :inlines (new-inlines))))
+
+
+;;; PROCESS-IGNORE-DECLARATION  --  Internal
+;;;
+;;;    Process an ignore/ignorable declaration, checking for variious losing
+;;; conditions.
+;;;
+(defun process-ignore-declaration (spec vars)
+  (declare (list spec vars))
+  (dolist (name (rest spec))
+    (let ((var (find-in-bindings vars name)))
+      (cond
+       ((not var)
+	(compiler-warning
+	 "Ignore declaration for unknown variable ~S." name))
+       ((lambda-var-specvar var)
+	(compiler-warning
+	 "Declaring special variable ~S to be ignored." name))
+       ((eq (first spec) 'ignorable)
+	(setf (leaf-ever-used var) t))
+       (t
+	(setf (lambda-var-ignorep var) t)))))
+  (undefined-value))
+
+
+;;; PROCESS-1-DECLARATION  --  Internal
+;;;
+;;;    Process a single declaration spec, agumenting the specified LEXENV
+;;; Res and returning it as a result.  Vars and Fvars are as described in
+;;; PROCESS-DECLARATIONS.
+;;;
+(defun process-1-declaration (spec res vars fvars)
+  (declare (list spec vars fvars) (type lexenv res))
+  (case (first spec)
+    (special (process-special-declaration spec res vars))
+    (ftype
+     (unless (cdr spec)
+       (compiler-error "No type specified in FTYPE declaration: ~S." spec))
+     (process-ftype-declaration (second spec) res (cddr spec) fvars))
+    (function
+     (unless (cdr spec)
+       (compiler-error
+	"No function name specified in FUNCTION declaration: ~S." spec))
+     (process-ftype-declaration `(function ,@(cddr spec)) res
+				(list (second spec))
+				fvars))
+    ((inline notinline maybe-inline)
+     (process-inline-declaration spec res fvars))
+    ((ignore ignorable)
+     (process-ignore-declaration spec vars)
+     res)
+    (optimize
+     (make-lexenv
+      :default res
+      :cookie (process-optimize-declaration spec (lexenv-cookie res))))
+    (type
+     (process-type-declaration (cdr spec) res vars))
+    (t
+     (let ((what (first spec)))
+       (cond ((member what type-specifier-symbols)
+	      (process-type-declaration spec res vars))
+	     ((info declaration recognized what)
+	      res)
+	     (t
+	      (compiler-warning "Unrecognized declaration: ~S." spec)
+	      res))))))
 
 
 ;;; Process-Declarations  --  Internal
 ;;;
 ;;;    Use a list of Declare forms to annotate the lists of Lambda-Var and
 ;;; Functional structures which are being bound.  In addition to filling in
-;;; slots in the leaf structures, we return new values for *venv*, *inlines*,
-;;; *type-restrictions* and *current-cookie* which reflect pervasive special
-;;; and function type declarations, (not)inline declarations and optimize
-;;; declarations.
+;;; slots in the leaf structures, we return a new LEXENV which reflects
+;;; pervasive special and function type declarations, (not)inline declarations
+;;; and optimize declarations.
 ;;;
-(proclaim '(function process-declarations (list list list) (values list list list cookie)))
 (defun process-declarations (decls vars fvars)
-  (let ((new-cookie *current-cookie*))
-    (collect ((new-venv nil cons)
-	      (new-inlines nil cons)
-	      (new-restrictions *type-restrictions* nconc))
-      (dolist (decl decls)
-	(dolist (spec (rest decl))
-	  (unless (consp spec)
-	    (compiler-error "Malformed declaration specifier ~S in ~S." spec decl))
-	  (case (first spec)
-	    (special
-	     (dolist (name (cdr spec))
-	       (let ((var (find-in-bindings vars name))
-		     (specvar (specvar-for-binding name)))
-		 (cond (var
-			(when (lambda-var-ignorep var)
-			  (compiler-warning "Ignored variable ~S is being declared special." name))
-			(setf (lambda-var-specvar var) specvar))
-		       ((assoc name (new-venv)))
-		       (t
-			(new-venv (cons name specvar)))))))
-	    (ftype
-	     (unless (cdr spec)
-	       (compiler-error "No type specified in FTYPE declaration: ~S." decl))
-	     (new-restrictions
-	      (process-ftype-declaration (second spec) (cddr spec) fvars)))
-	    (function
-	     (unless (cdr spec)
-	       (compiler-error "No function name specified in FUNCTION declaration: ~S." decl))
-	     (new-restrictions
-	      (process-ftype-declaration `(function ,@(cddr spec)) (list (second spec))
-					 fvars)))
-	    ((inline notinline maybe-inline)
-	     (let ((sense (case (first spec)
-			    (inline :inline)
-			    (notinline :notinline)
-			    (maybe-inline :maybe-inline))))
-	       (dolist (name (rest spec))
-		 (let* ((var (or (find name fvars :key #'leaf-name)
-				 (find-lexically-apparent-function
-				  name "in an inline or notinline declaration")))
-			(found (cdr (assoc var (new-inlines)))))
-		   (if found
-		       (unless (eq found sense)
-			 (compiler-warning "Conflicting inline/notinline declarations in ~S." decl))
-		       (new-inlines (cons var sense)))))))
-	    ((ignore ignorable)
-	     (dolist (name (rest spec))
-	       (let ((var (find-in-bindings vars name)))
-		 (cond
-		  ((not var)
-		   (compiler-warning
-		    "Ignore declaration for unknown variable ~S." name))
-		  ((lambda-var-specvar var)
-		   (compiler-warning
-		    "Declaring special variable ~S to be ignored." name))
-		  ((eq (first spec) 'ignorable)
-		   (setf (leaf-ever-used var) t))
-		  (t
-		   (setf (lambda-var-ignorep var) t))))))
-	    (optimize
-	     (setq new-cookie (process-optimize-declaration spec new-cookie)))
-	    (type
-	     (new-restrictions (process-type-declaration (cdr spec) vars)))
-	    (t
-	     (let ((what (first spec)))
-	       (cond ((member what type-specifier-symbols)
-		      (new-restrictions (process-type-declaration spec vars)))
-		     ((info declaration recognized what))
-		     (t
-		      (compiler-warning "Unrecognized declaration: ~S."
-					spec))))))))
+  (declare (list decls vars fvars))
+  (let ((res *lexical-environment*))
+    (dolist (decl decls)
+      (dolist (spec (rest decl))
+	(unless (consp spec)
+	  (compiler-error "Malformed declaration specifier ~S in ~S."
+			  spec decl))
 
-      (values (nconc (new-venv) *venv*) (nconc (new-inlines) *inlines*)
-	      (new-restrictions) new-cookie))))
+	(setq res (process-1-declaration spec res vars fvars))))
+    res))
 
 
 ;;; Specvar-For-Binding  --  Internal
@@ -892,6 +907,11 @@
 ;;; GLOBAL-VAR.
 ;;;
 (defun specvar-for-binding (name)
+  (let ((lexdef (lexenv-find name variables)))
+    (when (consp lexdef)
+      (assert (eq (car lexdef) 'MACRO))
+      (compiler-warning "Declaring symbol macro to be special: ~S" name)))
+  
   (cond ((not (eq (info variable where-from name) :assumed))
 	 (let ((found (find-free-variable name)))
 	   (when (or (not (global-var-p found))
@@ -909,18 +929,16 @@
 ;;; are no bindings, just convert the body, otherwise do one binding and
 ;;; recurse on the rest.
 ;;;
-(proclaim '(function ir1-convert-aux-bindings
-		     (continuation continuation list list list)
-		     void))
-(defun ir1-convert-aux-bindings (start cont body source aux-vars aux-vals)
+(defun ir1-convert-aux-bindings (start cont body aux-vars aux-vals)
+  (declare (type continuation start cont) (list body aux-vars aux-vals))
   (if (null aux-vars)
       (ir1-convert-progn-body start cont body)
       (let ((fun-cont (make-continuation))
-	    (fun (ir1-convert-lambda-body body (list (first aux-vars)) source
+	    (fun (ir1-convert-lambda-body body (list (first aux-vars))
 					  (rest aux-vars) (rest aux-vals))))
 	(reference-leaf start fun-cont fun nil)
-	(ir1-convert-combination-args fun-cont cont source
-				      (list (first aux-vals))))))
+	(ir1-convert-combination-args fun-cont cont (list (first aux-vals)))))
+  (undefined-value))
 
 
 ;;; IR1-Convert-Special-Bindings  --  Internal
@@ -930,40 +948,37 @@
 ;;; there are no special bindings, we just convert the body, otherwise we do
 ;;; one special binding and recurse on the rest.
 ;;;
-;;;    We make a cleanup, bind *Current-Cleanup* to it, and also set the
-;;; Block-End-Cleanup for the start block.  If there are multiple special
-;;; bindings, the cleanup for the blocks will end up being the innermost one.
-;;; We force Cont to start a block outside of this cleanup, causing cleanup
-;;; code to be emitted when the scope is exited.
+;;;    We make a cleanup and introduce it into the lexical environment.  If
+;;; there are multiple special bindings, the cleanup for the blocks will end up
+;;; being the innermost one.  We force Cont to start a block outside of this
+;;; cleanup, causing cleanup code to be emitted when the scope is exited.
 ;;;
-(defun ir1-convert-special-bindings (start cont body aux-vars aux-vals
-					   svars source)
+(defun ir1-convert-special-bindings (start cont body aux-vars aux-vals svars)
   (declare (type continuation start cont)
 	   (list body aux-vars aux-vals svars))
   (cond
    ((null svars)
-    (ir1-convert-aux-bindings start cont body source aux-vars aux-vals))
+    (ir1-convert-aux-bindings start cont body aux-vars aux-vals))
    (t
     (continuation-starts-block cont)
-    (let* ((cleanup (make-cleanup :kind :special-bind))
-	   (*current-cleanup* cleanup)
-	   (var (first svars))
-	   (next-cont (make-continuation)))
-      (setf (cleanup-start cleanup) next-cont)
-      (setf (block-end-cleanup (continuation-block start)) cleanup)
+    (let ((cleanup (make-cleanup :kind :special-bind))
+	  (var (first svars))
+	  (next-cont (make-continuation)))
       (ir1-convert start next-cont
 		   `(%special-bind ',(lambda-var-specvar var) ,var))
-      (ir1-convert-special-bindings next-cont cont body aux-vars aux-vals
-				    (rest svars) source)))))
+      (setf (cleanup-mess-up cleanup) (continuation-use next-cont))
+      (let ((*lexical-environment* (make-lexenv :cleanup cleanup)))
+	(ir1-convert-special-bindings next-cont cont body aux-vars aux-vals
+				      (rest svars)))))))
 
 
 ;;; IR1-Convert-Lambda-Body  --  Internal
 ;;;
 ;;;    Create a lambda node out of some code, returning the result.  The
 ;;; bindings are specified by the list of var structures Vars.  We deal with
-;;; adding the names to the *venv* for the conversion.  The result is added to
-;;; the New-Functions in the *Current-Component* and linked to the component
-;;; head and tail.
+;;; adding the names to the Lexenv-Variables for the conversion.  The result is
+;;; added to the New-Functions in the *Current-Component* and linked to the
+;;; component head and tail.
 ;;;
 ;;; We detect special bindings here, replacing the original Var in the lambda
 ;;; list with a temporary variable.  We then pass a list of the special vars to
@@ -977,17 +992,14 @@
 ;;; sequentially bound.  Each Aux-Val is a form that is to be evaluated to get
 ;;; the initial value for the corresponding Aux-Var.
 ;;;
-(proclaim '(function ir1-convert-lambda-body (list list t &optional list list)
-		     lambda))
-(defun ir1-convert-lambda-body (body vars source &optional aux-vars aux-vals)
-  (let* ((bind (make-bind :source source))
+(defun ir1-convert-lambda-body (body vars &optional aux-vars aux-vals)
+  (declare (list body vars aux-vars aux-vals))
+  (let* ((bind (make-bind))
 	 (lambda (make-lambda :vars vars  :bind bind))
-	 (*current-lambda* lambda)
-	 (*current-cleanup* lambda)
 	 (result (make-continuation)))
     (setf (lambda-home lambda) lambda)
     (collect ((svars)
-	      (new-venv *venv* cons))
+	      (new-venv nil cons))
 
       (dolist (var vars)
 	(setf (lambda-var-home var) lambda)
@@ -998,29 +1010,33 @@
 		(t
 		 (new-venv (cons (leaf-name var) var))))))
       
-      (setf (bind-lambda bind) lambda)
-      (let ((*venv* (new-venv))
-	    (cont1 (make-continuation))
-	    (cont2 (make-continuation)))
-	(continuation-starts-block cont1)
-	(prev-link bind cont1)
-	(use-continuation bind cont2)
-	(ir1-convert-special-bindings cont2 result body aux-vars aux-vals
-				      (svars) source))
+      (let ((*lexical-environment*
+	     (make-lexenv :variables (new-venv)  :lambda lambda
+			  :cleanup nil)))
+	(setf (bind-lambda bind) lambda)
+	(setf (node-lexenv bind) *lexical-environment*)
+	
+	(let ((cont1 (make-continuation))
+	      (cont2 (make-continuation)))
+	  (continuation-starts-block cont1)
+	  (prev-link bind cont1)
+	  (use-continuation bind cont2)
+	  (ir1-convert-special-bindings cont2 result body aux-vars aux-vals
+					(svars)))
 
-      (let ((block (continuation-block result)))
-	(when block
-	  (let ((return (make-return :source source  :result result
-				     :lambda lambda))
-		(tail-set (make-tail-set :functions (list lambda)))
-		(dummy (make-continuation)))
-	    (setf (lambda-tail-set lambda) tail-set)
-	    (setf (lambda-return lambda) return)
-	    (setf (continuation-dest result) return)
-	    (setf (block-last block) return)
-	    (prev-link return result)
-	    (use-continuation return dummy))
-	  (link-blocks block (component-tail *current-component*)))))
+	(let ((block (continuation-block result)))
+	  (when block
+	    (let ((return (make-return :result result
+				       :lambda lambda))
+		  (tail-set (make-tail-set :functions (list lambda)))
+		  (dummy (make-continuation)))
+	      (setf (lambda-tail-set lambda) tail-set)
+	      (setf (lambda-return lambda) return)
+	      (setf (continuation-dest result) return)
+	      (setf (block-last block) return)
+	      (prev-link return result)
+	      (use-continuation return dummy))
+	    (link-blocks block (component-tail *current-component*))))))
 
     (link-blocks (component-head *current-component*) (node-block bind))
     (push lambda (component-new-functions *current-component*))
@@ -1038,8 +1054,8 @@
 ;;; mark the corresponding var as Ever-Used to inhibit "defined but not read"
 ;;; warnings for arguments that are only used by default forms.
 ;;;
-(proclaim '(function convert-optional-entry (lambda list list list t) lambda))
-(defun convert-optional-entry (fun vars vals defaults source)
+(defun convert-optional-entry (fun vars vals defaults)
+  (declare (type clambda fun) (list vars vals defaults))
   (let* ((fvars (reverse vars))
 	 (arg-vars (mapcar #'(lambda (var)
 			       (make-lambda-var
@@ -1051,7 +1067,7 @@
 	 (fun
 	  (ir1-convert-lambda-body
 	   `((%funcall ,fun ,@(reverse vals) ,@defaults))
-	   arg-vars source)))
+	   arg-vars)))
     (mapc #'(lambda (var arg-var)
 	      (when (cdr (leaf-refs arg-var))
 		(setf (leaf-ever-used var) t)))
@@ -1068,14 +1084,13 @@
 ;;; throw a T into the entry values.  The resulting entry point function is
 ;;; returned.
 ;;;
-(proclaim '(function generate-optional-default-entry
-		     (optional-dispatch list list list list list boolean list
-					list list list)
-		     lambda))
 (defun generate-optional-default-entry (res default-vars default-vals
 					    entry-vars entry-vals
-					    vars supplied-p-p body source
+					    vars supplied-p-p body
 					    aux-vars aux-vals)
+  (declare (type optional-dispatch res)
+	   (list default-vars default-vals entry-vars entry-vals vars body
+		 aux-vars aux-vals))
   (let* ((arg (first vars))
 	 (arg-name (leaf-name arg))
 	 (info (lambda-var-arg-info arg))
@@ -1087,20 +1102,19 @@
 		  (list* (leaf-name supplied-p) arg-name default-vals)
 		  (cons arg entry-vars)
 		  (list* t arg-name entry-vals)
-		  (rest vars) t body source aux-vars aux-vals)
+		  (rest vars) t body aux-vars aux-vals)
 		 (ir1-convert-hairy-args 
 		  res
 		  (cons arg default-vars)
 		  (cons arg-name default-vals)
 		  (cons arg entry-vars)
 		  (cons arg-name entry-vals)
-		  (rest vars) supplied-p-p body source aux-vars aux-vals))))
+		  (rest vars) supplied-p-p body aux-vars aux-vals))))
 		 
     (convert-optional-entry ep default-vars default-vals
 			    (if supplied-p
 				(list (arg-info-default info) nil)
-				(list (arg-info-default info)))
-			    source)))
+				(list (arg-info-default info))))))
 
 
 ;;; Convert-More-Entry  --  Internal
@@ -1126,11 +1140,8 @@
 ;;;    We deal with :allow-other-keys by delaying unknown keyword errors until
 ;;; we have scanned all the keywords.
 ;;;
-(proclaim '(function convert-more-entry
-		     (optional-dispatch list list (or lambda-var null)
-					list list)
-		     void))
-(defun convert-more-entry (res entry-vars entry-vals rest keys source)
+(defun convert-more-entry (res entry-vars entry-vals rest keys)
+  (declare (type optional-dispatch res) (list entry-vars entry-vals keys))
   (collect ((arg-vars)
 	    (arg-vals (reverse entry-vals))
 	    (temps)
@@ -1215,8 +1226,10 @@
 		     ,@(body)
 		     (%funcall ,(optional-dispatch-main-entry res)
 			      . ,(arg-vals))))
-		 (arg-vars) source)))
-	(setf (optional-dispatch-more-entry res) ep)))))
+		 (arg-vars))))
+	(setf (optional-dispatch-more-entry res) ep))))
+
+  (undefined-value))
 
 
 ;;; IR1-Convert-More  --  Internal
@@ -1226,13 +1239,11 @@
 ;;; and pass it in separately.  Rest is the rest arg var, or NIL if there is no
 ;;; rest arg.  Keys is a list of the keyword argument vars.
 ;;;
-(proclaim '(function ir1-convert-more
-		     (optional-dispatch list list list list (or lambda-var null)
-					list boolean list list list list)
-		     lambda))
 (defun ir1-convert-more (res default-vars default-vals entry-vars entry-vals
-			     rest keys supplied-p-p body source aux-vars
-			     aux-vals)
+			     rest keys supplied-p-p body aux-vars aux-vals)
+  (declare (type optional-dispatch res)
+	   (list default-vars default-vals entry-vars entry-vals keys body
+		 aux-vars aux-vals))
   (collect ((main-vars (reverse default-vars))
 	    (main-vals default-vals cons)
 	    (bind-vars)
@@ -1266,17 +1277,16 @@
 	       (main-vals (arg-info-default info))
 	       (bind-vals n-val)))))
 
-    (let* ((main-entry (ir1-convert-lambda-body body (main-vars) source
+    (let* ((main-entry (ir1-convert-lambda-body body (main-vars)
 						(append (bind-vars) aux-vars)
 						(append (bind-vals) aux-vals)))
 	   (last-entry (convert-optional-entry main-entry default-vars
-					       (main-vals) () source)))
+					       (main-vals) ())))
       (setf (optional-dispatch-main-entry res) main-entry)
-      (convert-more-entry res entry-vars entry-vals rest keys source)
+      (convert-more-entry res entry-vars entry-vals rest keys)
 
       (push (if supplied-p-p
-		(convert-optional-entry last-entry entry-vars entry-vals
-					() source)
+		(convert-optional-entry last-entry entry-vars entry-vals ())
 		last-entry)
 	    (optional-dispatch-entry-points res))
       last-entry)))
@@ -1316,21 +1326,19 @@
 ;;;     When we run into a rest or keyword arg, we punt out to
 ;;; IR1-Convert-More, which finishes for us in this case.
 ;;;
-(proclaim '(function ir1-convert-hairy-args
-		     (optional-dispatch list list list list list boolean list
-					list list list)
-		     lambda))
 (defun ir1-convert-hairy-args (res default-vars default-vals
 				   entry-vars entry-vals
-				   vars supplied-p-p body source aux-vars
+				   vars supplied-p-p body aux-vars
 				   aux-vals)
+  (declare (type optional-dispatch res)
+	   (list default-vars default-vals entry-vars entry-vals vars body
+		 aux-vars aux-vals))
   (cond ((not vars)
-	 (let ((fun (ir1-convert-lambda-body body (reverse default-vars) source
+	 (let ((fun (ir1-convert-lambda-body body (reverse default-vars)
 					     aux-vars aux-vals)))
 	   (setf (optional-dispatch-main-entry res) fun)
 	   (push (if supplied-p-p
-		     (convert-optional-entry fun entry-vars entry-vals
-					     () source)
+		     (convert-optional-entry fun entry-vars entry-vals ())
 		     fun)
 		 (optional-dispatch-entry-points res))
 	   fun))
@@ -1339,8 +1347,7 @@
 		(nvars (cons arg default-vars))
 		(nvals (cons (leaf-name arg) default-vals)))
 	   (ir1-convert-hairy-args res nvars nvals nvars nvals
-				   (rest vars) nil body source aux-vars
-				   aux-vals)))
+				   (rest vars) nil body aux-vars aux-vals)))
 	(t
 	 (let* ((arg (first vars))
 		(info (lambda-var-arg-info arg))
@@ -1349,21 +1356,22 @@
 	     (:optional
 	      (let ((ep (generate-optional-default-entry
 			 res default-vars default-vals
-			 entry-vars entry-vals vars supplied-p-p body source
+			 entry-vars entry-vals vars supplied-p-p body
 			 aux-vars aux-vals)))
 		(push (if supplied-p-p
-			  (convert-optional-entry ep entry-vars entry-vals
-						  () source)
+			  (convert-optional-entry ep entry-vars entry-vals ())
 			  ep)
 		      (optional-dispatch-entry-points res))
 		ep))
 	     (:rest
-	      (ir1-convert-more res default-vars default-vals entry-vars entry-vals
-				arg (rest vars) supplied-p-p body source
+	      (ir1-convert-more res default-vars default-vals
+				entry-vars entry-vals
+				arg (rest vars) supplied-p-p body
 				aux-vars aux-vals))
 	     (:keyword
-	      (ir1-convert-more res default-vars default-vals entry-vars entry-vals
-				nil vars supplied-p-p body source aux-vars
+	      (ir1-convert-more res default-vars default-vals
+				entry-vars entry-vals
+				nil vars supplied-p-p body aux-vars
 				aux-vals)))))))
 
 
@@ -1374,16 +1382,13 @@
 ;;; IR1-Convert-Hairy-Args to do the work.  When it is done, we figure out the
 ;;; min-args and max-args. 
 ;;;
-(proclaim '(function ir1-convert-hairy-lambda
-		     (list list boolean boolean list list list)
-		     optional-dispatch))
-(defun ir1-convert-hairy-lambda (body vars keyp allowp source aux-vars aux-vals)
+(defun ir1-convert-hairy-lambda (body vars keyp allowp aux-vars aux-vals)
+  (declare (list body vars aux-vars aux-vals))
   (let ((res (make-optional-dispatch :arglist vars  :allowp allowp
 				     :keyp keyp))
 	(min (or (position-if #'lambda-var-arg-info vars) (length vars))))
     (push res (component-new-functions *current-component*))
-    (ir1-convert-hairy-args res () () () () vars nil body source aux-vars
-			    aux-vals)
+    (ir1-convert-hairy-args res () () () () vars nil body aux-vars aux-vals)
     (setf (optional-dispatch-min-args res) min)
     (setf (optional-dispatch-max-args res)
 	  (+ (1- (length (optional-dispatch-entry-points res))) min))
@@ -1403,8 +1408,7 @@
 ;;;
 ;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.
 ;;;
-(proclaim '(function ir1-convert-lambda (t &optional t) functional))
-(defun ir1-convert-lambda (form &optional (source form))
+(defun ir1-convert-lambda (form)
   (unless (and (consp form) (eq (car form) 'lambda) (consp (cdr form))
 	       (listp (cadr form)))
     (compiler-error "Malformed lambda expression: ~S." form))
@@ -1413,19 +1417,17 @@
 		       (find-lambda-vars (cadr form))
     (multiple-value-bind
 	(body decls)
-	(system:parse-body (cddr form) *fenv* t)
-      (multiple-value-bind
-	  (*venv* *inlines* *type-restrictions* *current-cookie*)
-	  (process-declarations decls (append aux-vars vars) nil)
-	(let ((res (if (or (find-if #'lambda-var-arg-info vars) keyp)
-		       (ir1-convert-hairy-lambda body vars keyp
-						 allow-other-keys source
-						 aux-vars aux-vals)
-		       (ir1-convert-lambda-body body vars source aux-vars
-						aux-vals))))
-	  (setf (functional-inline-expansion res) form)
-	  (setf (functional-arg-documentation res) (cadr form))
-	  res)))))
+	(system:parse-body (cddr form) *lexical-environment* t)
+      (let* ((*lexical-environment*
+	      (process-declarations decls (append aux-vars vars) nil))
+	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
+		      (ir1-convert-hairy-lambda body vars keyp
+						allow-other-keys
+						aux-vars aux-vals)
+		      (ir1-convert-lambda-body body vars aux-vars aux-vals))))
+	(setf (functional-inline-expansion res) form)
+	(setf (functional-arg-documentation res) (cadr form))
+	res))))
 
 
 ;;;; Variable hacking:
@@ -1440,6 +1442,9 @@
   (unless (info function kind name)
     (setf (info function kind name) :function)
     (setf (info function where-from name) :assumed))
+
+  (when (eq (info function where-from name) :assumed)
+    (note-undefined-reference name :function))
 
   (make-global-var :kind :global-function  :name name
 		   :type (info function type name)
@@ -1501,17 +1506,24 @@
 ;;; IR1-Convert-Variable  --  Internal
 ;;;
 ;;;    Convert a reference to a symbolic constant or variable.  If the symbol
-;;; is entered in *venv*, then we use that definition, otherwise we find the
-;;; current global definition.
+;;; is entered in the LEXENV-VARIABLES we use that definition, otherwise we
+;;; find the current global definition.  This is also where we pick off symbol
+;;; macro and Alien variable references.
 ;;;
-(proclaim '(function ir1-convert-variable (continuation continuation symbol) void))
 (defun ir1-convert-variable (start cont name)
-  (let ((var (or (cdr (assoc name *venv*)) (find-free-variable name))))
-    (when (and (lambda-var-p var) (lambda-var-ignorep var))
-      (compiler-warning "Reading an ignored variable: ~S." name))
-    (if (lisp::ct-a-val-p var)
-	(ir1-convert start cont `(alien-value ,name))
-	(reference-leaf start cont var nil))))
+  (declare (type continuation start cont) (symbol name))
+  (let ((var (or (lexenv-find name variables) (find-free-variable name))))
+    (etypecase var
+      (lisp::ct-a-val
+       (ir1-convert start cont `(alien-value ,name)))
+      (cons
+       (assert (eq (car var) 'MACRO))
+       (ir1-convert start cont (cdr var)))
+      (leaf
+       (when (and (lambda-var-p var) (lambda-var-ignorep var))
+	 (compiler-warning "Reading an ignored variable: ~S." name))
+       (reference-leaf start cont var nil))))
+  (undefined-value))
 
 
 ;;; Find-Free-Variable  --  Internal
@@ -1549,14 +1561,14 @@
 ;;;    Generate a reference to a manifest constant, creating a new leaf if
 ;;; necessary.
 ;;;
-(proclaim '(function reference-constant (continuation continuation t t)
-		     void))
-(defun reference-constant (start cont value source)
+(defun reference-constant (start cont value)
+  (declare (type continuation start cont))
   (let* ((leaf (find-constant value))
-	 (res (make-ref (leaf-type leaf) source leaf nil)))
+	 (res (make-ref (leaf-type leaf) leaf nil)))
     (push res (leaf-refs leaf))
     (prev-link res start)
-    (use-continuation res cont)))
+    (use-continuation res cont))
+  (undefined-value))
 
 
 ;;; Reference-Leaf  --  Internal
@@ -1569,9 +1581,8 @@
 		     (continuation continuation leaf inlinep)
 		     void))
 (defun reference-leaf (start cont leaf inlinep)
-  (let ((res (make-ref (or (cdr (assoc leaf *type-restrictions*))
+  (let ((res (make-ref (or (lexenv-find leaf type-restrictions)
 			   (leaf-type leaf))
-		       (leaf-name leaf)
 		       leaf
 		       inlinep)))
     (push res (leaf-refs leaf))
@@ -1585,12 +1596,12 @@
 ;;;    Kind of like Reference-Leaf, but we generate a Set node.  This
 ;;; should only need to be called in Setq.
 ;;;
-(proclaim '(function set-variable (continuation continuation basic-var t list) void)) 
-(defun set-variable (start cont var value source)
+(defun set-variable (start cont var value)
+  (declare (type continuation start cont) (type basic-var var))
   (let ((dest (make-continuation)))
     (setf (continuation-asserted-type dest) (leaf-type var))
     (ir1-convert start dest value)
-    (let ((res (make-set :source source :var var :value dest)))
+    (let ((res (make-set :var var :value dest)))
       (setf (continuation-dest dest) res)
       (setf (leaf-ever-used var) t)
       (push res (basic-var-sets var))
@@ -1654,13 +1665,7 @@
 ;;; continuation to be used more than once.  Every continuation which may be
 ;;; used more than once must start a block by the time that anyone does a
 ;;; Use-Continuation on it.
-;;;
-;;;    Note that the block is made in the *current-lambda*, so continuations
-;;; without blocks cannot be passed across function boundaries since they might
-;;; get a block assigned which is in the wrong function.  Basically this means
-;;; that BLOCK and TAGBODY must make sure that their named continuations have
-;;; blocks.
-;;;
+;;; 
 ;;;    We also throw the block into the next/prev list for the
 ;;; *current-component* so that we keep track of which blocks we have made.
 ;;;
@@ -1708,29 +1713,18 @@
 ;;; eval-when processing, etc.
 ;;;
 ;;;    The hashtables used to hold global namespace info must be reallocated
-;;; elsewhere.  Note also that *fenv* is not rebound, so that local macro
-;;; definitions can be introduced by enclosing code.
+;;; elsewhere.  Note also that *lexical-environment* is not bound, so that
+;;; local macro definitions can be introduced by enclosing code.
 ;;;
-(defun ir1-top-level (form tlf-num for-value)
-  (declare (type index tlf-num))
-  (let* ((*current-path* (or (gethash form *source-paths*)
-			     *current-path*
-			     (list 0 tlf-num)))
-	 (*inlines* ())
-	 (*type-restrictions* ())
-	 (*venv* ())
-	 (*benv* ())
-	 (*tenv* ())
-	 (*current-cookie* (make-cookie))
-	 (*current-lambda* nil)
-	 (*current-cleanup* nil)
-	 (*current-form* nil)
+(defun ir1-top-level (form path for-value)
+  (declare (list path))
+  (let* ((*current-path* path)
 	 (component (make-empty-component))
 	 (*current-component* component))
     (setf (component-name component) "initial component")
     (setf (component-kind component) :initial)
     (let* ((forms (if for-value `(,form) `(,form nil)))
-	   (res (ir1-convert-lambda-body forms () `(progn ,@forms))))
+	   (res (ir1-convert-lambda-body forms ())))
       (setf (leaf-name res) "Top-Level Form")
       (setf (functional-entry-function res) res)
       (setf (functional-arg-documentation res) ())
@@ -1763,7 +1757,7 @@
 (defun sub-find-source-paths (form path)
   (unless (gethash form *source-paths*)
     (setf (gethash form *source-paths*)
-	  (cons *current-form-number* path))
+	  (list* 'original-source-start *current-form-number* path))
     (incf *current-form-number*)
     (let ((pos 0)
 	  (subform form)
@@ -1792,7 +1786,7 @@
   forms, returns NIL."
   (ir1-convert-progn-body start cont forms))
 
-(def-ir1-translator if ((test then &optional else &whole source) start cont)
+(def-ir1-translator if ((test then &optional else) start cont)
   "If Predicate Then [Else]
   If Predicate evaluates to non-null, evaluate Then and returns its values,
   otherwise evaluate Else and return its values.  Else defaults to NIL."
@@ -1803,8 +1797,7 @@
 	 (else-block (continuation-starts-block else-cont))
 	 (dummy-cont (make-continuation))
 	 (node (make-if :test pred
-			:consequent then-block  :alternative else-block
-			:source source)))
+			:consequent then-block  :alternative else-block)))
     (setf (continuation-dest pred) node)
     (ir1-convert start pred test)
     (prev-link node pred)
@@ -1833,7 +1826,7 @@
 ;;; the modified environment.  We make Cont start a block now, since if it was
 ;;; done later, the block would be in the wrong environment.
 ;;;
-(def-ir1-translator block ((name &rest forms &whole source) start cont)
+(def-ir1-translator block ((name &rest forms) start cont)
   "Block Name Form*
   Evaluate the Forms as a PROGN.  Within the lexical scope of the body,
   (RETURN-FROM Name Value-Form) can be used to exit the form, returning the
@@ -1842,32 +1835,34 @@
     (compiler-error "Block name is not a symbol: ~S." name))
   (continuation-starts-block cont)
   (let* ((dummy (make-continuation))
-	 (entry (make-entry :exits (list cont)  :source source))
-	 (cleanup (make-cleanup :kind :entry  :start dummy)))
-    (push entry (lambda-entries *current-lambda*))
+	 (entry (make-entry))
+	 (cleanup (make-cleanup :kind :block  :mess-up entry)))
+    (push entry (lambda-entries (lexenv-lambda *lexical-environment*)))
+    (setf (entry-cleanup entry) cleanup)
     (prev-link entry start)
     (use-continuation entry dummy)
-    (setf (block-end-cleanup (continuation-block dummy)) cleanup)
-    (let ((*benv* (acons name (list entry cont) *benv*))
-	  (*current-cleanup* cleanup))
+    (let ((*lexical-environment*
+	   (make-lexenv :blocks (list (cons name (list entry cont)))
+			:cleanup cleanup)))
       (ir1-convert-progn-body dummy cont forms))))
 
 ;;; We make Cont start a block just so that it will have a block assigned.
 ;;; People assume that when they pass a continuation into IR1-Convert as Cont,
 ;;; it will have a block when it is done.
 ;;;
-(def-ir1-translator return-from ((name &optional value &whole source)
+(def-ir1-translator return-from ((name &optional value)
 				 start cont)
   "Return-From Block-Name Value-Form
   Evaluate the Value-Form, returning its values from the lexically enclosing
   BLOCK Block-Name.  This is constrained to be used only within the dynamic
   extent of the BLOCK."
   (continuation-starts-block cont)
-  (let* ((found (or (cdr (assoc name *benv*))
+  (let* ((found (or (lexenv-find name blocks)
 		    (compiler-error "Return for unknown block: ~S." name)))
 	 (value-cont (make-continuation))
-	 (exit (make-exit :entry (first found)  :value value-cont
-			  :source source)))
+	 (entry (first found))
+	 (exit (make-exit :entry entry  :value value-cont)))
+    (push exit (entry-exits entry))
     (setf (continuation-dest value-cont) exit)
     (ir1-convert start value-cont value)
     (prev-link exit value-cont)
@@ -1905,10 +1900,10 @@
 ;;; Tagbody IR1 convert  --  Internal
 ;;;
 ;;;    Set up the cleanup, emitting the entry node.  Then make a block for each
-;;; tag, building up the tag list for *tenv* as we go.  Finally, convert each
-;;; segment with the precomputed Start and Cont values.
+;;; tag, building up the tag list for LEXENV-TAGS as we go.  Finally, convert
+;;; each segment with the precomputed Start and Cont values.
 ;;;
-(def-ir1-translator tagbody ((&rest statements &whole source) start cont)
+(def-ir1-translator tagbody ((&rest statements) start cont)
   "Tagbody {Tag | Statement}*
   Define tags for used with GO.  The Statements are evaluated in order
   (skipping Tags) and NIL is returned.  If a statement contains a GO to a
@@ -1918,14 +1913,14 @@
   body."
   (continuation-starts-block cont)
   (let* ((dummy (make-continuation))
-	 (entry (make-entry :source source))
-	 (*current-cleanup* (make-cleanup :kind :entry  :start dummy))
-	 (segments (parse-tagbody statements)))
-    (push entry (lambda-entries *current-lambda*))
+	 (entry (make-entry))
+	 (segments (parse-tagbody statements))
+	 (cleanup (make-cleanup :kind :tagbody  :mess-up entry)))
+    (push entry (lambda-entries (lexenv-lambda *lexical-environment*)))
+    (setf (entry-cleanup entry) cleanup)
     (prev-link entry start)
     (use-continuation entry dummy)
-    (setf (block-end-cleanup (continuation-block start)) *current-cleanup*)
-
+    
     (collect ((tags)
 	      (starts)
 	      (conts))
@@ -1938,9 +1933,8 @@
 	  (tags (list (car segment) entry tag-cont))))
       (conts cont)
       
-      (setf (entry-exits entry) (rest (starts)))
-      
-      (let ((*tenv* (append (tags) *tenv*)))
+      (let ((*lexical-environment*
+	     (make-lexenv :cleanup cleanup :tags (tags))))
 	(mapc #'(lambda (segment start cont)
 		  (ir1-convert-progn-body start cont (rest segment)))
 	      segments (starts) (conts))))))
@@ -1950,14 +1944,16 @@
 ;;;
 ;;;    Emit an Exit node without any value.
 ;;;
-(def-ir1-translator go ((tag &whole source) start cont)
+(def-ir1-translator go ((tag) start cont)
   "Go Tag
   Transfer control to the named Tag in the lexically enclosing TAGBODY.  This
   is constrained to be used only within the dynamic extent of the TAGBODY."
   (continuation-starts-block cont)
-  (let* ((found (or (cdr (assoc tag *tenv*))
+  (let* ((found (or (lexenv-find tag tags)
 		    (compiler-error "Go to nonexistent tag: ~S." tag)))
-	 (exit (make-exit :entry (first found)  :source source)))
+	 (entry (first found))
+	 (exit (make-exit :entry entry)))
+    (push exit (entry-exits entry))
     (prev-link exit start)
     (use-continuation exit (second found))))
 
@@ -2080,39 +2076,38 @@
 ;;; DO-MACROLET-STUFF  --  Interface
 ;;;
 ;;;    Like DO-EVAL-WHEN-STUFF, only do a macrolet.  Fun is not passed any
-;;; arguments.  We cleverly make the FENV entry for a macro look like the
-;;; interpreter version so that we can pass in *fenv* as a macroexpansion
-;;; environment.
+;;; arguments.
 ;;;
 (defun do-macrolet-stuff (definitions fun)
   (declare (list definitions) (function fun))
-  (let ((*fenv* *fenv*)
-	(whole (gensym))
+  (let ((whole (gensym))
 	(environment (gensym)))
-    (dolist (def definitions)
-      (let ((name (first def))
-	    (arglist (second def))
-	    (body (cddr def)))
-	(multiple-value-bind (body local-decs)
-			     (lisp::parse-defmacro
-			      arglist whole body name
-			      :environment environment
-			      :error-string 'lisp::defmacro-error-string)
-	  (unless (symbolp name)
-	    (compiler-error "Macro name ~S is not a symbol." name))
-	  (when (< (length def) 3)
-	    (compiler-error "Local macro ~S is too short to be a legal definition." name))
-	  #-new-compiler
-	  (push `(,(first def) macro lambda
-		  (,whole ,environment) ,@local-decs (block ,name ,body))
-		*fenv*)
-	  #+new-compiler
-	  (push `(,(first def) macro .
-		  ,(coerce `(lambda (,whole ,environment)
-			      ,@local-decs (block ,name ,body))
-			   'function))
-		*fenv*))))
-    (funcall fun))
+    (collect ((new-fenv))
+      (dolist (def definitions)
+	(let ((name (first def))
+	      (arglist (second def))
+	      (body (cddr def)))
+	  (multiple-value-bind (body local-decs)
+			       (lisp::parse-defmacro
+				arglist whole body name
+				:environment environment
+				:error-string 'lisp::defmacro-error-string)
+	    (unless (symbolp name)
+	      (compiler-error "Macro name ~S is not a symbol." name))
+	    (when (< (length def) 3)
+	      (compiler-error
+	       "Local macro ~S is too short to be a legal definition." name))
+	    #-new-compiler
+	    (new-fenv `(,(first def) macro lambda
+			(,whole ,environment) ,@local-decs (block ,name ,body)))
+	    #+new-compiler
+	    (new-fenv `(,(first def) macro .
+			,(coerce `(lambda (,whole ,environment)
+				    ,@local-decs (block ,name ,body))
+				 'function))))))
+
+      (let ((*lexical-environment* (make-lexenv :functions (new-fenv))))
+	(funcall fun))))
 
   (undefined-value))
 
@@ -2206,8 +2201,8 @@
 
 ;;;; Quote and Function:
 
-(def-ir1-translator quote ((thing &whole source) start cont)
-  (reference-constant start cont thing source))
+(def-ir1-translator quote ((thing) start cont)
+  (reference-constant start cont thing))
 
 
 (def-ir1-translator function ((thing) start cont)
@@ -2237,8 +2232,29 @@
 (def-ir1-translator %funcall ((function &rest args) start cont)
   (let ((fun-cont (make-continuation)))
     (ir1-convert start fun-cont function)
-    (ir1-convert-combination-args fun-cont cont `(funcall ,function ,@args)
-				  args)))
+    (ir1-convert-combination-args fun-cont cont args)))
+
+
+;;;; Symbol macros:
+
+(def-ir1-translator symbol-macro-let ((specs &body body) start cont)
+  "SYMBOL-MACRO-LET {(Name Expansion)}* Form*
+  Define the Names as symbol macros with the given Expansions.  Within the
+  body, references to a Name will effectively be replaced with the Expansion."
+  (collect ((res))
+    (dolist (spec specs)
+      (unless (= (length spec) 2)
+	(compiler-error "Malformed symbol macro binding: ~S." spec))
+      (let ((name (first spec))
+	    (def (second spec)))
+	(unless (symbolp name)
+	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
+	(when (assoc name (res))
+	  (compiler-warning "Repeated name in SYMBOL-MACRO-LET: ~S." name))
+	(res `(,name . (MACRO . ,def)))))
+
+    (let ((*lexical-environment* (make-lexenv :variables (res))))
+      (ir1-convert-progn-body start cont body))))
 
 
 ;;;; Proclaim:
@@ -2453,24 +2469,23 @@
     (values (vars) (vals) (names))))
 
 
-(def-ir1-translator let ((bindings &body (body decls) &whole source) start cont)
+(def-ir1-translator let ((bindings &body (body decls))
+			 start cont)
   (multiple-value-bind (vars values)
 		       (extract-let-variables bindings 'let)
-    (multiple-value-bind (*venv* *inlines* *type-restrictions* *current-cookie*)
-			 (process-declarations decls vars nil)
-
-      (let ((fun-cont (make-continuation))
-	    (fun (ir1-convert-lambda-body body vars source)))
-	(reference-leaf start fun-cont fun nil)
-	(ir1-convert-combination-args fun-cont cont source values)))))
+    (let* ((*lexical-environment* (process-declarations decls vars nil))
+	   (fun-cont (make-continuation))
+	   (fun (ir1-convert-lambda-body body vars)))
+      (reference-leaf start fun-cont fun nil)
+      (ir1-convert-combination-args fun-cont cont values))))
 
 
-(def-ir1-translator let* ((bindings &body (body decls) &whole source) start cont)
+(def-ir1-translator let* ((bindings &body (body decls))
+			  start cont)
   (multiple-value-bind (vars values)
 		       (extract-let-variables bindings 'let*)
-    (multiple-value-bind (*venv* *inlines* *type-restrictions* *current-cookie*)
-			 (process-declarations decls vars nil)
-      (ir1-convert-aux-bindings start cont body source vars values))))
+    (let ((*lexical-environment* (process-declarations decls vars nil)))
+      (ir1-convert-aux-bindings start cont body vars values))))
 
 
 ;;;; Flet and Labels:
@@ -2496,7 +2511,7 @@
 	(names name)
 	(multiple-value-bind
 	    (body decls)
-	    (system:parse-body (cddr def) *fenv* t)
+	    (system:parse-body (cddr def) *lexical-environment* t)
 	  (defs `(lambda ,(second def)
 		   ,@decls
 		   (block ,(if (consp name) (second name) name)
@@ -2508,25 +2523,26 @@
 			  start cont)
   (multiple-value-bind (names defs)
 		       (extract-flet-variables definitions 'flet)
-    (let ((fvars (mapcar #'(lambda (n d)
-			     (let ((res (ir1-convert-lambda d)))
-			       (setf (leaf-name res) n)
-			       res))
-			 names defs)))
-      (multiple-value-bind (*venv* *inlines* *type-restrictions* *current-cookie*)
-			   (process-declarations decls nil fvars)
-	(let ((*fenv* (pairlis names fvars *fenv*)))
-	  (ir1-convert-progn-body start cont body))))))
+    (let* ((fvars (mapcar #'(lambda (n d)
+			      (let ((res (ir1-convert-lambda d)))
+				(setf (leaf-name res) n)
+				res))
+			  names defs))
+	   (*lexical-environment*
+	    (make-lexenv :default (process-declarations decls nil fvars)
+			 :functions (pairlis names fvars))))
+      (ir1-convert-progn-body start cont body))))
 
 
-;;; For Labels, we have to create dummy function vars and add them to *fenv*
-;;; while converting the functions.  We then modify all the references to these
-;;; leaves so that they point to the real functional leaves.
+;;; For Labels, we have to create dummy function vars and add them to the
+;;; function namespace while converting the functions.  We then modify all the
+;;; references to these leaves so that they point to the real functional
+;;; leaves.
 ;;;
-;;; [Perhaps not totally correct, since the declarations aren't processed until
-;;; after the function definitions.  This means that declarations for local
-;;; functions may not have their full effect on references within the local
-;;; functions.]
+;;; [### Perhaps not totally correct, since the declarations aren't processed
+;;; until after the function definitions.  This means that declarations for
+;;; local functions may not have their full effect on references within the
+;;; local functions.]
 ;;;
 (def-ir1-translator labels ((definitions &body (body decls)) start cont)
   (multiple-value-bind (names defs)
@@ -2534,7 +2550,8 @@
     (let* ((dummies (mapcar #'(lambda (x)
 				(make-functional :name x)) names))
 	   (real-funs 
-	    (let ((*fenv* (pairlis names dummies *fenv*)))
+	    (let ((*lexical-environment*
+		   (make-lexenv :functions (pairlis names dummies))))
 	      (mapcar #'(lambda (n d)
 			  (let ((res (ir1-convert-lambda d)))
 			    (setf (leaf-name res) n)
@@ -2543,12 +2560,10 @@
 
       (mapc #'substitute-leaf real-funs dummies)
 
-      (multiple-value-bind
-	  (*venv* *inlines* *type-restrictions* *current-cookie*)
-	  (process-declarations decls nil real-funs)
-
-	(let ((*fenv* (pairlis names real-funs *fenv*)))
-	  (ir1-convert-progn-body start cont body))))))
+      (let ((*lexical-environment*
+	     (make-lexenv :default (process-declarations decls nil real-funs)
+			  :functions (pairlis names real-funs))))
+	(ir1-convert-progn-body start cont body)))))
 
 
 ;;;; THE
@@ -2598,9 +2613,9 @@
 
 ;;;; Setq
 ;;;
-;;;    If there is a definition in *venv*, just set that, otherwise
-;;; look at the global information.  If the name is for a constant, then
-;;; error out.
+;;;    If there is a definition in LEXENV-VARIABLES, just set that, otherwise
+;;; look at the global information.  If the name is for a constant, then error
+;;; out.
 
 (def-ir1-translator setq ((&rest things &whole source) start cont)
   (let ((len (length things)))
@@ -2608,16 +2623,23 @@
       (compiler-error "Odd number of args to SETQ: ~S." source))
     (if (= len 2)
 	(let* ((name (first things))
-	       (leaf (or (cdr (assoc name *venv*))
+	       (leaf (or (lexenv-find name variables)
 			 (find-free-variable name))))
-	  (when (or (constant-p leaf)
-		    (and (global-var-p leaf)
-			 (eq (global-var-kind leaf) :constant)))
-	    (compiler-error "Attempt to set constant ~S." name))
-	  (when (and (lambda-var-p leaf)
-		     (lambda-var-ignorep leaf))
-	    (compiler-warning "Setting an ignored variable: ~S." name))
-	  (set-variable start cont leaf (second things) source))
+	  (etypecase leaf
+	    (leaf
+	     (when (or (constant-p leaf)
+		       (and (global-var-p leaf)
+			    (eq (global-var-kind leaf) :constant)))
+	       (compiler-error "Attempt to set constant ~S." name))
+	     (when (and (lambda-var-p leaf)
+			(lambda-var-ignorep leaf))
+	       (compiler-warning "Setting an ignored variable: ~S." name))
+	     (set-variable start cont leaf (second things)))
+	    (cons
+	     (assert (eq (car leaf) 'MACRO))
+	     (ir1-convert start cont `(setf ,(cdr leaf) ,(second things))))
+	    (lisp::ct-a-val
+	     (compiler-error "Can't set Alien variable: ~S." name))))
 	(collect ((sets))
 	  (do ((thing things (cddr thing)))
 	      ((endp thing)
@@ -2643,14 +2665,23 @@
 
 
 ;;; This is a special special form used to instantiate a cleanup as the current
-;;; cleanup within the body.  Kind is a the kind of cleanup to make.  We make
-;;; the Start be Start, then set Block-End-Cleanup and bind *Current-Cleanup*.
+;;; cleanup within the body.  Kind is a the kind of cleanup to make, and
+;;; Mess-Up is a form that does the mess-up action.  We make the MESS-UP be the
+;;; USE of the Mess-Up form's continuation, and introduce the cleanup into the
+;;; lexical environment.  We back-patch the Entry-Cleanup for the current
+;;; cleanup to be the new cleanup, since this inner cleanup is the interesting
+;;; one.
 ;;;
-(def-ir1-translator %within-cleanup ((kind &body body) start cont)
-  (let* ((cleanup (make-cleanup :kind kind  :start start))
-	 (*current-cleanup* cleanup))
-    (setf (block-end-cleanup (continuation-block start)) cleanup)
-    (ir1-convert-progn-body start cont body)))
+(def-ir1-translator %within-cleanup ((kind mess-up &body body) start cont)
+  (let ((dummy (make-continuation)))
+    (ir1-convert start dummy mess-up)
+    (let* ((mess-node (continuation-use dummy))
+	   (cleanup (make-cleanup :kind kind  :mess-up mess-node))
+	   (old-cup (lexenv-cleanup *lexical-environment*))
+	   (*lexical-environment* (make-lexenv :cleanup cleanup)))
+      (setf (entry-cleanup (cleanup-mess-up old-cup)) cleanup)
+      (ir1-convert-progn-body dummy cont body))))
+
 
 ;;; This is a special special form that makes an "escape function" which
 ;;; returns unknown values from named block.  We convert the function, set its
@@ -2668,11 +2699,12 @@
     (setf (functional-kind fun) :escape)
     (reference-leaf start cont fun nil)))
 
+
 ;;; Yet another special special form.  This one looks up a local function and
 ;;; smashes it to a :Cleanup function, as well as referencing it.
 ;;;
 (def-ir1-translator %cleanup-function ((name) start cont)
-  (let ((fun (cdr (assoc name *fenv*))))
+  (let ((fun (lexenv-find name functions)))
     (assert (lambda-p fun))
     (setf (functional-kind fun) :cleanup)
     (reference-leaf start cont fun nil)))
@@ -2685,9 +2717,7 @@
 ;;;
 ;;;    We represent the possibility of the control transfer by making an
 ;;; "escape function" that does a lexical exit, and instantiate the cleanup
-;;; using %within-cleanup.  It is crucial that %Within-Cleanup immediately
-;;; follows the %Catch call so that the Cleanup-Start's Use will be the
-;;; combination node for the %Catch.
+;;; using %within-cleanup.
 ;;;
 (def-ir1-translator catch ((tag &body body) start cont)
   "Catch Tag Form*
@@ -2699,8 +2729,9 @@
    start cont
    (let ((exit-block (gensym)))
      `(block ,exit-block
-	(%catch (%escape-function ,exit-block) ,tag)
-	(%within-cleanup :catch
+	(%within-cleanup
+	    :catch
+	    (%catch (%escape-function ,exit-block) ,tag)
 	  ,@body)))))
 
 
@@ -2730,10 +2761,11 @@
 	  (multiple-value-bind
 	      (,next ,start ,count)
 	      (block ,exit-tag
-		(%unwind-protect (%escape-function ,exit-tag)
-				 (%cleanup-function ,cleanup-fun))
-		(%within-cleanup :unwind-protect
-				 (return-from ,drop-thru-tag ,protected)))
+		(%within-cleanup
+		    :unwind-protect
+		    (%unwind-protect (%escape-function ,exit-tag)
+				     (%cleanup-function ,cleanup-fun))
+		  (return-from ,drop-thru-tag ,protected)))
 	    (,cleanup-fun)
 	    (%continue-unwind ,next ,start ,count)))))))
 
@@ -2747,12 +2779,11 @@
 ;;; be regarded as an optimization, but it is more important for simplifying
 ;;; compilation of MV-Combinations.
 ;;;
-(def-ir1-translator multiple-value-call ((fun &rest args &whole source)
-					 start cont)
+(def-ir1-translator multiple-value-call ((fun &rest args) start cont)
   (let* ((fun-cont (make-continuation))
 	 (node (if args
-		   (make-mv-combination source fun-cont)
-		   (make-combination source fun-cont))))
+		   (make-mv-combination fun-cont)
+		   (make-combination fun-cont))))
     (ir1-convert start fun-cont fun)
     (setf (continuation-dest fun-cont) node)
     (assert-continuation-type fun-cont
@@ -2876,6 +2907,7 @@
 ;;;
 (def-ir1-translator %defun ((name def doc source) start cont
 			    :kind :function)
+  (declare (ignore source))
   (let* ((name (define-function-name (eval name)))
 	 (expansion
 	  (if (and (member (info function inlinep name)
@@ -2889,7 +2921,7 @@
     (let ((old (gethash name *free-functions*)))
       (when (functional-p old) (remhash name *free-functions*)))
 
-    (let ((fun (ir1-convert-lambda (cadr def) (cadr source)))
+    (let ((fun (ir1-convert-lambda (cadr def)))
 	  (new (gethash name *free-functions*))
 	  (info (info function info name)))
       (setf (leaf-name fun) name)
