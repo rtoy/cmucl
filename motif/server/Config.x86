@@ -1,4 +1,4 @@
 CFLAGS = -O2 -I/usr/X11R6/include -I. -I$(VPATH)
 LDFLAGS = -L/usr/X11R6/lib
 LIBS = -static -lXm -dynamic -lXt -lXext -lX11 -lSM -lICE
-VPATH = ../../../p86/motif/server/:../../../17f/motif/server/
+VPATH = ../../src/motif/server/
