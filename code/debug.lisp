@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.34 1993/06/24 12:50:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.35 1993/07/02 14:18:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -638,7 +638,7 @@ See the CMU Common Lisp User's Manual for more information.
       (funcall hook condition hook)))
   (unix:unix-sigsetmask 0)
   (let* ((*debug-condition* condition)
-	 (*debug-restarts* (compute-restarts))
+	 (*debug-restarts* (compute-restarts condition))
 	 (*standard-input* *debug-io*)		;in case of setq
 	 (*standard-output* *debug-io*)		;''  ''  ''  ''
 	 (*error-output* *debug-io*)
@@ -1119,7 +1119,7 @@ See the CMU Common Lisp User's Manual for more information.
   (throw 'lisp::top-level-catcher nil))
 
 (def-debug-command "GO" ()
-  (continue)
+  (continue *debug-condition*)
   (error "No restart named continue."))
 
 (def-debug-command "RESTART" ()
@@ -1363,7 +1363,7 @@ See the CMU Common Lisp User's Manual for more information.
 (def-debug-command "STEP" ()
   (setf *number-of-steps* (read-if-available 1))
   (step *current-frame*)
-  (continue)
+  (continue *debug-condition*)
   (error "Couldn't continue."))
   
 ;;; Lists possible breakpoint locations, which are active, and where go will
