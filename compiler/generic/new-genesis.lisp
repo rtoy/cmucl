@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.2 1992/10/10 10:06:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.3 1992/12/17 09:29:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -769,8 +769,7 @@
 			(#.vm:function-header-type
 			 (make-random-descriptor
 			  (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
-			     (ash vm:function-header-code-offset
-				  vm:word-shift))))
+			     (ash vm:function-code-offset vm:word-shift))))
 			(#.vm:closure-header-type
 			 (make-random-descriptor
 			  (lookup-foreign-symbol "closure_tramp")))))
@@ -1311,19 +1310,19 @@
     (write-memory fn (make-other-immediate-descriptor (ash offset
 							   (- vm:word-shift))
 						      vm:function-header-type))
-    (write-indexed fn vm:function-header-self-slot
+    (write-indexed fn vm:function-self-slot
 		   (if (= (c:backend-fasl-file-implementation c:*backend*)
 			  #.c:x86-fasl-file-implementation)
 		       (make-random-descriptor
 			(+ (descriptor-bits fn)
-			   (- (ash vm:function-header-code-offset
+			   (- (ash vm:function-code-offset
 				   vm:word-shift)
 			      vm:function-pointer-type)))
 		       fn))
-    (write-indexed fn vm:function-header-next-slot next)
-    (write-indexed fn vm:function-header-name-slot name)
-    (write-indexed fn vm:function-header-arglist-slot arglist)
-    (write-indexed fn vm:function-header-type-slot type)
+    (write-indexed fn vm:function-next-slot next)
+    (write-indexed fn vm:function-name-slot name)
+    (write-indexed fn vm:function-arglist-slot arglist)
+    (write-indexed fn vm:function-type-slot type)
     fn))
 
 (define-cold-fop (fop-foreign-fixup)
