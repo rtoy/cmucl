@@ -24,8 +24,10 @@
 
 (with-compilation-unit
     (:optimize '(optimize (debug-info #+small .5 #-small 2)
-			  (speed 2)
+			  (speed 2) (safety #+small 0 #-small 2)
 			  (inhibit-warnings 2))
+     :optimize-interface '(optimize-interface #+small (safety 1))
      :context-declarations
-     '((:external (declare (optimize-interface (safety 2) (debug-info 1))))))
+     '((:external (declare (optimize-interface (safety 2) (debug-info 1))))
+       (:macro (declare (optimize (speed 0))))))
  (pcl::compile-pcl))
