@@ -5,13 +5,15 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.15 1997/04/02 19:18:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.16 1998/01/21 05:10:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
 ;;; Written by William Lott
+;;; Signed-array support by Douglas Crosher 1997.
+;;; Complex-float support by Douglas Crosher 1998.
 ;;;
 (in-package "SPARC")
 
@@ -492,3 +494,108 @@
 	 (value :scs (signed-reg)))
   (:results (result :scs (signed-reg)))
   (:result-types tagged-num))
+
+
+;;; Complex float arrays.
+#+complex-float
+(progn
+
+(define-vop (data-vector-ref/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-single-float positive-fixnum)
+  (:results (value :scs (complex-single-reg)))
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:result-types complex-single-float)
+  (:generator 5
+    (let ((real-tn (complex-single-reg-real-tn value)))
+      (inst sll offset index 1)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst ldf real-tn object offset))
+    (let ((imag-tn (complex-single-reg-imag-tn value)))
+      (inst add offset vm:word-bytes)
+      (inst ldf imag-tn object offset))))
+
+(define-vop (data-vector-set/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-single-reg) :target result))
+  (:arg-types simple-array-complex-single-float positive-fixnum
+	      complex-single-float)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:generator 5
+    (let ((value-real (complex-single-reg-real-tn value))
+	  (result-real (complex-single-reg-real-tn result)))
+      (inst sll offset index 1)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst stf value-real object offset)
+      (unless (location= result-real value-real)
+	(inst fmovs result-real value-real)))
+    (let ((value-imag (complex-single-reg-imag-tn value))
+	  (result-imag (complex-single-reg-imag-tn result)))
+      (inst add offset vm:word-bytes)
+      (inst stf value-imag object offset)
+      (unless (location= result-imag value-imag)
+	(inst fmovs result-imag value-imag)))))
+
+(define-vop (data-vector-ref/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-double-float positive-fixnum)
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:generator 7
+    (let ((real-tn (complex-double-reg-real-tn value)))
+      (inst sll offset index 2)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst lddf real-tn object offset))
+    (let ((imag-tn (complex-double-reg-imag-tn value)))
+      (inst add offset (* 2 vm:word-bytes))
+      (inst lddf imag-tn object offset))))
+
+(define-vop (data-vector-set/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-double-reg) :target result))
+  (:arg-types simple-array-complex-double-float positive-fixnum
+	      complex-double-float)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:generator 20
+    (let ((value-real (complex-double-reg-real-tn value))
+	  (result-real (complex-double-reg-real-tn result)))
+      (inst sll offset index 2)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (inst stdf value-real object offset)
+      (unless (location= result-real value-real)
+	(inst fmovs result-real value-real)
+	(inst fmovs-odd result-real value-real)))
+    (let ((value-imag (complex-double-reg-imag-tn value))
+	  (result-imag (complex-double-reg-imag-tn result)))
+      (inst add offset (* 2 vm:word-bytes))
+      (inst stdf value-imag object offset)
+      (unless (location= result-imag value-imag)
+	(inst fmovs result-imag value-imag)
+	(inst fmovs-odd result-imag value-imag)))))
+
+) ; end progn complex-float

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.7 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.8 1998/01/21 05:10:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,6 +148,11 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+complex-float
+  (complex-single-stack stack :element-size 2)	; complex-single-floats
+  #+complex-float
+  (complex-double-stack stack
+			:element-size 4 :alignment 2) ; complex-double-floats.
 
 
   ;; **** Things that can go in the integer registers.
@@ -222,6 +227,22 @@
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+   :element-size 2
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+   :locations (0 4 8 12 16 20 24 28)
+   :element-size 4
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-double-stack))
 
 
   ;; A catch or unwind block.
