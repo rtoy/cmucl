@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.2 1998/06/23 11:22:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.66.2.3 1998/07/12 21:51:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,8 +248,9 @@
   ((object :reader print-not-readable-object :initarg :object))
   (:report
    (lambda (condition stream)
-    (format stream "~S cannot be printed readably."
-	    (print-not-readable-object condition)))))
+     (let ((obj (print-not-readable-object condition))
+	   (*print-array* nil))
+       (format stream "~S cannot be printed readably." obj)))))
 
 (defun %print-unreadable-object (object stream type identity body)
   (when *print-readably*
@@ -1065,7 +1066,7 @@
 (defun output-array-guts (array stream)
   (when (and *print-readably*
 	     (not (eq (array-element-type array) t)))
-    (error 'print-not-readable :object (array-element-type array)))
+    (error 'print-not-readable :object array))
   (write-char #\# stream)
   (let ((*print-base* 10))
     (output-integer (array-rank array) stream))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11.2.1 1998/06/23 11:23:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.11.2.2 1998/07/12 21:51:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,13 +96,17 @@
 	 (arg-types (alien-function-type-arg-types type))
 	 (result-type (alien-function-type-result-type type)))
     (assert (= (length arg-types) (length args)))
-    (if (or (some #'alien-double-float-type-p arg-types)
+    (if (or (some #'alien-single-float-type-p arg-types)
+	    (some #'alien-double-float-type-p arg-types)
 	    #+long-float (some #'alien-long-float-type-p arg-types))
 	(collect ((new-args) (lambda-vars) (new-arg-types))
 	  (dolist (type arg-types)
 	    (let ((arg (gensym)))
 	      (lambda-vars arg)
-	      (cond ((alien-double-float-type-p type)
+	      (cond ((alien-single-float-type-p type)
+		     (new-args `(single-float-bits ,arg))
+		     (new-arg-types (parse-alien-type '(signed 32))))
+		    ((alien-double-float-type-p type)
 		     (new-args `(double-float-high-bits ,arg))
 		     (new-args `(double-float-low-bits ,arg))
 		     (new-arg-types (parse-alien-type '(signed 32)))
