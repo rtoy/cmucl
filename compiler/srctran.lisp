@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.120 2003/05/01 20:51:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.121 2003/06/27 17:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1606,12 +1606,19 @@
   ;; The bounds are the same as for truncate.  However, the first
   ;; result is a float of some type.  We need to determine what that
   ;; type is.  Basically it's the more contagious of the two types.
-  (let ((q-type (truncate-derive-type-quot number-type divisor-type))
-	(res-type (numeric-contagion number-type divisor-type)))
-    (make-numeric-type :class 'float
-		       :format (numeric-type-format res-type)
-		       :low (numeric-type-low q-type)
-		       :high (numeric-type-high q-type))))
+  (let* ((q-type (truncate-derive-type-quot number-type divisor-type))
+	 (res-type (numeric-contagion number-type divisor-type))
+	 (res-format (numeric-type-format res-type)))
+    (flet ((floatify-bound (x)
+	     ;; Don't have to deal with list-type bounds because the
+	     ;; truncate defoptimizer doesn't return list-type bounds.
+	     (if (numberp x)
+		 (coerce x res-format)
+		 x)))
+      (make-numeric-type :class 'float
+			 :format res-format
+			 :low (floatify-bound (numeric-type-low q-type))
+			 :high (floatify-bound (numeric-type-high q-type))))))
 
 (defun ftruncate-derive-type-quot-aux (n d same-arg)
   (declare (ignore same-arg))
