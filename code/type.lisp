@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.52 2003/04/13 11:57:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.53 2003/04/13 21:20:40 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,6 +204,7 @@
 	(funcall (the function method-fun) type1 type2)
 	(values subtypep win))))
 
+(declaim (inline type-might-contain-other-types-p))
 (defun type-might-contain-other-types-p (type)
   (or (hairy-type-p type)
       (negation-type-p type)
