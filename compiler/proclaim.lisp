@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.23 1992/02/15 11:54:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.24 1992/02/18 02:01:57 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,10 +49,24 @@
 ;;; any values specified by an OPTIMIZE-INTERFACE declaration.
 ;;;
 (proclaim '(type cookie *default-cookie* *default-interface-cookie*))
-(defvar *default-cookie* (make-cookie :safety 1 :speed 1 :space 1 :cspeed 1
-				      :brevity 1 :debug 2))
-(defvar *default-interface-cookie* (make-cookie))
+(defvar *default-cookie*)
+(defvar *default-interface-cookie*)
 
+;;; PROCLAIM-INIT -- sorta interface.
+;;;
+;;; %Initial-function (in lispinit) calls this after running all the
+;;; initial top level forms to reset the cookies.  We also use it in place
+;;; of supplying initial values in the DEFVARs above so that we don't
+;;; have to put the initial default cookie in two places.
+;;; 
+(defun proclaim-init ()
+  (setf *default-cookie*
+	(make-cookie :safety 1 :speed 1 :space 1 :cspeed 1
+		     :brevity 1 :debug 2))
+  (setf *default-interface-cookie*
+	(make-cookie)))
+;;;
+(proclaim-init)
 
 ;;; A list of UNDEFINED-WARNING structures representing the calls to unknown
 ;;; functions.  This is bound by WITH-COMPILATION-UNIT.
