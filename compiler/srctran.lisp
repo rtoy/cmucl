@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.114 2003/03/19 14:24:41 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.115 2003/03/26 15:41:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2648,35 +2648,57 @@
     (give-up))
   (let ((y (continuation-value y))
 	(result nil)
-	(first-one nil))
+	(first-one nil)
+	(add-count 0)
+	(shift-count 0))
     (labels ((tub32 (x) `(truly-the (unsigned-byte 32) ,x))
 	     (add (next-factor)
 	       (setf result
 		     (tub32
 		      (if result
-			  `(+ ,result ,(tub32 next-factor))
+			  (progn
+			    (incf add-count)
+			    `(+ ,result ,(tub32 next-factor)))
 			  next-factor)))))
       (declare (inline add))
       (dotimes (bitpos 32)
 	(if first-one
 	    (when (not (logbitp bitpos y))
-	      (add (if (= (1+ first-one) bitpos)
-		       ;; There is only a single bit in the string.
-		       `(ash x ,first-one)
-		       ;; There are at least two.
-		       `(- ,(tub32 `(ash x ,bitpos))
-			   ,(tub32 `(ash x ,first-one)))))
+	      (add (cond ((= (1+ first-one) bitpos)
+			  ;; There is only a single bit in the string.
+			  (incf shift-count)
+			  `(ash x ,first-one))
+			 (t
+			  ;; There are at least two.
+			  (incf add-count)
+			  (incf shift-count 2)
+			  `(- ,(tub32 `(ash x ,bitpos))
+			    ,(tub32 `(ash x ,first-one))))))
 	      (setf first-one nil))
 	    (when (logbitp bitpos y)
 	      (setf first-one bitpos))))
       (when first-one
 	(cond ((= first-one 31))
 	      ((= first-one 30)
+	       (incf shift-count)
 	       (add '(ash x 30)))
 	      (t
+	       (incf shift-count 2)
 	       (add `(- ,(tub32 '(ash x 31)) ,(tub32 `(ash x ,first-one))))))
-	(add '(ash x 31))))
-    (or result 0)))
+	(add '(ash x 31)))
+      ;; See how many shifts and adds we had to do.  If there are too
+      ;; many, it's probably better to use the multiply instruction
+      ;; (for those architectures that have multiply instructions).
+      ;; Sparc-v7 doesn't have a mutiply instruction.
+      ;;
+      ;; Some simple tests on Solaris v9 indicates the about 9
+      ;; shift-adds is comparable to a multiply.  Use a threshold of
+      ;; 9.  Should this be architeucture specific?
+      #-sparc-v7
+      (when (> (+ add-count shift-count) 9)
+	(give-up))
+    
+      (or result 0))))
 
 ;;; If arg is a constant power of two, turn floor into a shift and
 ;;; mask. If ceiling, add in (1- (abs y)) and do floor, and correct
