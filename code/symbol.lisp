@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.13 1992/12/11 17:16:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.14 1993/05/18 19:54:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,7 +98,13 @@
 
 (defun make-symbol (string)
   "Make and return a new symbol with the STRING as its print name."
-  (make-symbol string))
+  #-gengc (make-symbol string)
+  #+gengc (%make-symbol (random most-positive-fixnum) string))
+
+#+gengc
+(defun symbol-hash (symbol)
+  "Return the hash value for symbol."
+  (symbol-hash symbol))
 
 (defun get (symbol indicator &optional (default nil))
   "Look on the property list of SYMBOL for the specified INDICATOR.  If this
