@@ -435,8 +435,7 @@
 			 (parse-deftransform
 			  lambda-list
 			  (if policy
-			      `(progn
-				(unless (policy ,n-node ,policy) (give-up))
+			      `((unless (policy ,n-node ,policy) (give-up))
 				,@body)
 			      body)
 			  n-args '(give-up))
