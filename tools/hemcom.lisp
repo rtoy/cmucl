@@ -2,7 +2,9 @@
 ;;; This file compiles all of Hemlock.
 ;;;
 
-(c::%proclaim '(optimize (speed 1) (safety 1) (c::brevity 1) (debug-info 2)))
+(declaim (optimize (speed 1) (safety 1) (brevity 1)
+		   #+small (debug-info 1)
+		   #-small (debug-info 2)))
 #|
 (when (ext:get-command-line-switch "slave")
   (error "Cannot compile Hemlock in a slave due to its clobbering needed
