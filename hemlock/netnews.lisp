@@ -22,13 +22,13 @@
 ;;;             the nn-info structure to new streams.  If the structure
 ;;;             access were not made again and NNTP had timed us out, we
 ;;;             would be making requests on a defunct stream.
-;;;
+;;; 
 
 (in-package "HEMLOCK")
 
 
 
-;;;; Netnews mode.
+;;;; Netnews data structures.
 
 (defparameter default-netnews-headers-length 1000
   "How long the header-cache and message-ids arrays should be made on startup.")
@@ -42,13 +42,13 @@
   (updatep (ext:required-argument) :type (or null t))
   (from-end-p nil :type (or null t))
   ;;
-  ;; The string name of the current bboard.
+  ;; The string name of the current group.
   (current (ext:required-argument) :type simple-string)
   ;;
   ;; The number of the latest message read in the current group.
   (latest nil :type (or null fixnum))
   ;;
-  ;; The cache of header info for the current bboard.  Each element contains
+  ;; The cache of header info for the current group.  Each element contains
   ;; an association list of header fields to contents of those fields.  Indexed
   ;; by id offset by the first message in the group.
   (header-cache nil :type (or null simple-vector))
@@ -156,7 +156,7 @@
 
 ;;;; Command Level Implementation of "News-Headers" mode.
 
-(defhvar "Netnews Database Filename"
+(defhvar "Netnews Database File"
   "This value is merged with your home directory to get a path to your netnews
    pointers file."
   :value ".hemlock-netnews")
@@ -165,9 +165,10 @@
   "How you like to read netnews.  A value of :single will cause netnews
    mode to use a single window for headers and messages, and a value of
    :multiple will cause the current window to be split so that Headers take
-   up 25% of what was the current window, and a message bodies buffer the
-   remaining 75%.  Changing the value of this variable dynamically affects
-   netnews reading."  :value :multiple)
+   up \"Netnews Headers Proportion\" of what was the current window, and a
+   message bodies buffer the remaining portion.  Changing the value of this
+   variable dynamically affects netnews reading."
+  :value :multiple)
 
 (unless (modeline-field :netnews-message)
   (make-modeline-field
@@ -212,8 +213,8 @@
    Line\" to read Killed messages.  Defaults to \".hemlock-kill\"."
   :value ".hemlock-kill")
 
-(defhvar "Netnews New Board Style"
-  "Determines what happend when you read a bboard that you have never read
+(defhvar "Netnews New Group Style"
+  "Determines what happend when you read a group that you have never read
    before.  When :from-start, \"Netnews\" will read from the beginning of a
    new group forward.  When :from-end, the default, \"Netnews\" will read
    from the end backward group.  Otherwise this variable is a number
@@ -221,10 +222,16 @@
    of the group and read forward from there."
   :value :from-end)
 
+(defhvar "Netnews Start Over Threshold"
+  "If you have read a group before, and the number of new messages exceeds this
+   number, Hemlock asks whether you want to start reading from the end of this
+   group.  The default is 300."
+  :value 300)
+
 (defcommand "Netnews" (p &optional group-name from-end-p browse-buf (updatep t))
-  "Enter a headers buffer and read bboards from \"Netnews Group File\".  With
+  "Enter a headers buffer and read groups from \"Netnews Group File\".  With
    an argument prompts for a group and reads it."
-  "Enter a headers buffer and read bboards from \"Netnews Group File\".  With
+  "Enter a headers buffer and read groupss from \"Netnews Group File\".  With
    an argument prompts for a group and reads it."
   (cond
    ((and *nn-headers-buffer* (not p) (not group-name))
@@ -232,7 +239,7 @@
    (t
     (let* ((single-group (if p (prompt-for-string :prompt "Group to read: "
 						  :help "Type the name of ~
-						  the bboard you want ~
+						  the group you want ~
 						  to scan."
 						  :trim t)))
 	   (groups (cond
@@ -282,9 +289,9 @@
 		  (message "Buffer ~S also contains headers for ~A"
 			   clashp (car groups)))
 		(defhvar "Netnews Info"
-		  "A structure containg the current bboard, a list of groups, a
-		  book-keeping mark, a stream we get headers on, and the stream
-		  on which we request articles."
+		  "A structure containing the current group, a list of
+		   groups, a book-keeping mark, a stream we get headers on,
+		   and the stream on which we request articles."
 		  :buffer buffer
 		  :value nn-info)
 		(setf (buffer-writable buffer) nil)
@@ -294,7 +301,7 @@
 		   \"News-Browse\" mode."
 		  :buffer buffer
 		  :value browse-buf)
-		(setup-bboard (car groups) nn-info buffer from-end-p)))))))))
+		(setup-group (car groups) nn-info buffer from-end-p)))))))))
 
 
 (defun nn-parse-kill-file ()
@@ -349,7 +356,7 @@
 ;;; created.
 ;;; 
 (defun nn-assure-database-exists ()
-  (let ((filename (merge-pathnames (value netnews-database-filename)
+  (let ((filename (merge-pathnames (value netnews-database-file)
 				   (user-homedir-pathname))))
     (unless (probe-file filename)
       (message "Creating netnews database file.")
@@ -369,19 +376,19 @@
   (declare (ignore p))
   (netnews-command nil (prompt-for-string :prompt "Group to look at: "
 					  :help "Type the name of ~
-					  the bboard you want ~
+					  the group you want ~
 					  to look at."
 					  :trim t)
 		   nil nil nil))
   
-;;; SETUP-BBOARD is the guts of this bboard reader.  It sets up a headers
+;;; SETUP-GROUP is the guts of this group reader.  It sets up a headers
 ;;; buffer in buffer for group group-name.  This consists of sending a group
 ;;; command to both the header-stream and normal stream and then getting the
 ;;; last message read in group-name from the database file and setting the
 ;;; appropriate slots in the nn-info structure.  The first batch of messages
 ;;; is then requested and inserted, and room for message-ids is allocated.
 ;;; 
-(defun setup-bboard (group-name nn-info buffer &optional from-end-p)
+(defun setup-group (group-name nn-info buffer &optional from-end-p)
   ;; Do not bind stream or header-stream because if a timeout has occurred
   ;; before these calls are invoked, they would be bogus.
   ;; 
@@ -399,10 +406,15 @@
 				(group-response-args response)
 	     (declare (ignore first))
 	     (message "Setting up ~A" group-name)
+	     ;; If nn-info-updatep is nil, then we fool ourselves into
+	     ;; thinking we've never read this group before by making
+	     ;; last-read nil.  We determine first here because the first
+	     ;; that NNTP gives us is way way out of line.
+	     ;;
 	     (let ((last-read (if (nn-info-updatep nn-info)
 				  (nn-last-read-message-number group-name)))
 		   (first (1+ (- last number))))
-	       ;; Make sure there is at least one new message on this board.
+	       ;; Make sure there is at least one new message in this group.
 	       (cond
 		((and last-read (= last-read last))
 		 (message "No new messages in ~A" group-name)
@@ -414,10 +426,24 @@
 		 (change-to-next-group nn-info buffer))
 		(t
 		 (let ((latest (if (and last-read (> last-read first))
-				   (1+ last-read)
+				   last-read
 				   first)))
-		   (if (or (and (= latest first)
-				(eq (value netnews-new-board-style) :from-end))
+		   (if (or (and (eq (value netnews-new-group-style) :from-end)
+				(or (= latest first)
+				    (and (> (- last latest)
+					    (value
+					     netnews-start-over-threshold))
+					 (prompt-for-y-or-n
+					  :prompt
+					  `("There are ~D new messages.  ~
+					     Read from the end of this ~
+					     group? " ,(- last latest))
+					  :default "Y"
+					  :default-string "Y"
+					  :help "Y starts reading from the ~
+					         end.  N starts reading where ~
+						 you left off many messages ~
+						 back."))))
 			   from-end-p)
 		       (setf (nn-info-from-end-p nn-info) t))
 
@@ -425,7 +451,8 @@
 			  (setf (nn-info-first-visible nn-info) nil)
 			  (setf (nn-info-last-visible nn-info) last))
 			 (t
-			  (setf (nn-info-first-visible nn-info) latest)
+			  ; (setf (nn-info-first-visible nn-info) latest)
+			  (setf (nn-info-first-visible nn-info) (1+ latest))
 			  (setf (nn-info-last-visible nn-info) nil)))
 		   (setf (nn-info-first nn-info) first)
 		   (setf (nn-info-last nn-info) last)
@@ -459,11 +486,11 @@
 		 (change-to-buffer buffer)))))))))
 
 ;;; NN-LAST-READ-MESSAGE-NUMBER reads the last read message in group-name
-;;; from the value of "Netnews Database Filename".  It is SETF'able and the
+;;; from the value of "Netnews Database File".  It is SETF'able and the
 ;;; SETF method is %SET-LAST-READ-MESSAGE-NUMBER.
 ;;; 
 (defun nn-last-read-message-number (group-name)
-  (with-open-file (s (merge-pathnames (value netnews-database-filename)
+  (with-open-file (s (merge-pathnames (value netnews-database-file)
 				      (user-homedir-pathname))
 		     :direction :input :if-does-not-exist :error)
     (loop
@@ -478,7 +505,7 @@
 		       group-name))))))))
 
 (defun %set-nn-last-read-message-number (group-name new-value)
-  (with-open-file (s (merge-pathnames (value netnews-database-filename)
+  (with-open-file (s (merge-pathnames (value netnews-database-file)
 				      (user-homedir-pathname))
 		     :direction :io :if-does-not-exist :error
 		     :if-exists :overwrite)
@@ -692,8 +719,8 @@
 	      (t
 	       (if (nn-info-from-end-p nn-info)
 		   (setf (nn-info-first-visible nn-info) messages-waiting)
-		   (setf (nn-info-last-visible nn-info) (1- (+ messages-waiting
-							       howmany))))
+		   (setf (nn-info-last-visible nn-info)
+			 (1- (+ messages-waiting howmany))))
 	       (if (nn-info-last-batch-p nn-info)
 		   (setf (nn-info-messages-waiting nn-info) nil)
 		   (nn-request-next-batch nn-info fetch-rest-p))))
@@ -704,7 +731,7 @@
 
 ;;; NN-MAYBE-GET-MORE-HEADERS gets more headers if the point of the headers
 ;;; buffer is on an empty line and there are some.  Returns whether it got more
-;;; headers, i.e., if it is time to go on to the next bboard.
+;;; headers, i.e., if it is time to go on to the next group.
 ;;; 
 (defun nn-maybe-get-more-headers (nn-info)
   (let ((headers-buffer (line-buffer (mark-line (nn-info-mark nn-info)))))
@@ -733,7 +760,7 @@
 	 (last (nn-info-last nn-info))
 	 (batch-start (if last-visible
 			  (1+ (nn-info-last-visible nn-info))
-			  (nn-info-latest nn-info)))
+			  (1+ (nn-info-latest nn-info))))
 	 (header-stream (nn-info-header-stream nn-info))
 	 (batch-end (if fetch-rest-p
 			last
@@ -770,12 +797,12 @@
     (nn-send-many-head-requests stream batch-start batch-end
 				(not use-header-stream-p))))
 
-;;; NN-REQUEST-OUT-OF-ORDER is called when the user is reading a board normally
+;;; NN-REQUEST-OUT-OF-ORDER is called when the user is reading a group normally
 ;;; and decides he wants to see some messages before the first one visible.
 ;;; To accomplish this without disrupting the normal flow of things, we fool
-;;; ourselves into thinking we are reading the board from the end, remembering
+;;; ourselves into thinking we are reading the group from the end, remembering
 ;;; several slots that could be modified in requesting thesse messages.
-;;; When we are done, return state to what it was for reading a board forward.
+;;; When we are done, return state to what it was for reading a group forward.
 ;;; 
 (defun nn-request-out-of-order (nn-info headers-buffer)
   (let ((messages-waiting (nn-info-messages-waiting nn-info))
@@ -857,7 +884,7 @@
 ;;; Next Article".  He expects to see the article again, not the second
 ;;; page of it.  Also check to make sure there is a message under the
 ;;; point.  If there is not, then get some more headers.  If there are no
-;;; more headers, then go on to the next board.  I can read and write.  Hi
+;;; more headers, then go on to the next group.  I can read and write.  Hi
 ;;; Bill.  Are you having fun grokking my code?  Hope so -- Dude.  Nothing
 ;;; like stream of consciousness is there?  Come to think of it, this is
 ;;; kind of like recursive stream of conscious because I'm writing down my
@@ -921,7 +948,7 @@
 					     :headers))
 		 (:single (change-to-buffer message-buffer))))))))))
 
-(defcommand "Netnews Message Punt" (p)
+(defcommand "Netnews Message Quit" (p)
   "Destroy this message buffer, and pop back to the associated headers buffer."
   "Destroy this message buffer, and pop back to the associated headers buffer."
   (declare (ignore p))
@@ -1035,8 +1062,8 @@
 
 (defhvar "Netnews Headers Proportion"
   "Determines how much of the current window will display headers when
-   \"Netnews Read Style\" is :multiple.  Defaults to 0.25"
-  :value 0.25)
+   \"Netnews Read Style\" is :multiple.  Defaults to .25"
+  :value .25)
 
 (defun nn-assure-multi-windows (nn-info)
   (let ((newp nil))
@@ -1184,8 +1211,8 @@
   "Moves the point to the next header that is not in your kill file.  If you
    move off the end of the buffer and there are more headers, then get them.
    Otherwise go on to the next group in \"Netnews Groups\".
-   Returns nil if we have gone on to the next bboard, :done if there are no
-   more boards to read, or T if everything is normal."
+   Returns nil if we have gone on to the next group, :done if there are no
+   more groups to read, or T if everything is normal."
   (declare (ignore p))
   (let* ((nn-info (variable-value 'netnews-info :buffer headers-buffer))
 	 (point (buffer-point headers-buffer)))
@@ -1242,7 +1269,7 @@
     (editor-error "Not in a News-Message buffer."))
   (setf (nm-info-keep-p (value netnews-message-info)) t))
 
-(defcommand "Netnews Message Select Headers Buffer" (p)
+(defcommand "Netnews Goto Headers Buffer" (p)
   "From \"Message Mode\", switch to the associated headers buffer."
   "From \"Message Mode\", switch to the associated headers buffer."
   (declare (ignore p))
@@ -1252,7 +1279,7 @@
     (unless headers-buffer (editor-error "Headers buffer has been deleted"))
     (change-to-buffer headers-buffer)))
 
-(defcommand "Netnews Message Select Post Buffer" (p)
+(defcommand "Netnews Goto Post Buffer" (p)
   "Change to the associated \"Post\" buffer (if there is one) from a
    \"News-Message\" buffer."
   "Change to the associated \"Post\" buffer (if there is one) from a
@@ -1264,7 +1291,7 @@
     (unless post-buffer (editor-error "No associated post buffer."))
     (change-to-buffer post-buffer)))
 
-(defcommand "Netnews Message Select Draft Buffer" (p)
+(defcommand "Netnews Goto Draft Buffer" (p)
   "Change to the associated \"Draft\" buffer (if there is one) from a
    \"News-Message\" buffer."
   "Change to the associated \"Draft\" buffer (if there is one) from a
@@ -1315,11 +1342,11 @@
 	   (setf (nn-info-current nn-info) next-group)
 	   (with-writable-buffer (headers-buffer)
 	     (delete-region (buffer-region headers-buffer)))
-	   (setup-bboard next-group nn-info headers-buffer)
+	   (setup-group next-group nn-info headers-buffer)
 	   nil)
 	  (t
 	   (if (eq headers-buffer *nn-headers-buffer*)
-	       (message "This was your last bboard.  Exiting Netnews.")
+	       (message "This was your last group.  Exiting Netnews.")
 	       (message "Done with ~A.  Exiting Netnews."
 			(nn-info-current nn-info)))
 	   (netnews-exit-command nil t headers-buffer)
@@ -1351,32 +1378,32 @@
       (scroll-window-down-command p window)))
 
 (defcommand "Netnews Go to Next Group" (p)
-  "Goes on to the next group in \"Netnews Groups\", setting the bboard pointer
-   the the latest message read.  With an argument does not modify the bboard
-   pointer."
-  "Goes on to the next group in \"Netnews Groups\", setting the bboard pointer
-   the the latest message read.  With an argument does not modify the bboard
-   pointer."
+  "Goes on to the next group in \"Netnews Group File\", setting the group
+   pointer for this group to the the latest message read.  With an argument
+   does not modify the group pointer."
+  "Goes on to the next group in \"Netnews Group File\", setting the group
+   pointer for this group to the the latest message read.  With an argument
+   does not modify the group pointer."
   (nn-punt-headers (if p :none :latest)))
 
 (defcommand "Netnews Group Punt Messages" (p)
-  "Go on to the next group in \"Netnews Groups\" setting the netnews pointer
-   for this bboard to the last visible message.  With an argument, set the
-   pointer to the last message in this group."
-  "Go on to the next group in \"Netnews Groups\" setting the netnews pointer
-   for this bboard to the last visible message.  With an argument, set the
-   pointer to the last message in this group."
-  (nn-punt-headers (if p :punt :last-visible)))
+  "Go on to the next group in \"Netnews Group File\" setting the netnews
+   pointer for this group to the last message.  With an argument, set the
+   pointer to the last visible message in this group."
+  "Go on to the next group in \"Netnews Group File\" setting the netnews
+   pointer for this group to the last message.  With an argument, set the
+   pointer to the last visible message in this group."
+  (nn-punt-headers (if p :last-visible :punt)))
 
 (defcommand "Netnews Quit Starting Here" (p)
-  "Go on to the next group in \"Netnews Groups\", setting the bboard pointer
-   to the message before the currently displayed one or the message under
-   the point if none is currently displayed."
-  "Go on to the next group in \"Netnews Groups\", setting the bboard pointer
-   to the message before the currently displayed one or the message under
-   the point if none is currently displayed."
+  "Go on to the next group in \"Netnews Group File\", setting the group
+   pointer for this group to the message before the currently displayed one
+   or the message under the point if none is currently displayed."
+  "Go on to the next group in \"Netnews Group File\", setting the group
+   pointer for this group to the message before the currently displayed one
+   or the message under the point if none is currently displayed."
   (declare (ignore p))
-  (nn-punt-headers :just-before))
+  (nn-punt-headers :this-one))
 
 (defun nn-punt-headers (pointer-type)
   (let* ((headers-buffer (nn-get-headers-buffer))
@@ -1388,7 +1415,7 @@
 	    (:latest (nn-info-latest nn-info))
 	    (:punt (nn-info-last nn-info))
 	    (:last-visible (nn-info-last-visible nn-info))
-	    (:just-before
+	    (:this-one
 	     (1- (if (minusp (nn-info-current-displayed-message nn-info))
 		     (array-element-from-mark (buffer-point headers-buffer)
 					      (nn-info-message-ids nn-info))
@@ -1425,7 +1452,7 @@
     (nn-write-headers-to-mark nn-info headers-buffer)))
 
 
-(defcommand "List All Newsgroups" (p &optional buffer)
+(defcommand "List All Groups" (p &optional buffer)
   "Shows all available newsgroups in a buffer."
   "Shows all available newsgroups in a buffer."
   (declare (ignore p))
@@ -1449,10 +1476,9 @@
       (dotimes (i (length groups))
 	(let ((group (aref groups i)))
 	  (multiple-value-bind (last first) (list-response-args group)
+	    (declare (ignore first))
 	    (insert-string point group 0 (position #\space group))
-	    (insert-string point ": ")
-	    (insert-string point (format nil "~D" (1+ (- last first))))
-	    (insert-character point #\newline))))
+	    (insert-string point (format nil ": ~D~%" last)))))
       (setf (buffer-modified buffer) nil)
       (buffer-start point)
       (change-to-buffer buffer))
@@ -1473,7 +1499,7 @@
    file to which Hemlock will append messages."
   :value "hemlock.messages")
 
-(defhvar "Netnews Prompt Before Exiting"
+(defhvar "Netnews Exit Confirm"
   "When non-nil, the default, \"Netnews Exit\" will ask you if you really
    want to.  If this variable is NIL, you will not be prompted."
   :value T)
@@ -1487,7 +1513,7 @@
 				       :buffer headers-buf)))
     (when (or browse-buffer
 	      no-prompt-p
-	      (not (value netnews-prompt-before-exiting))
+	      (not (value netnews-exit-confirm))
 	      (prompt-for-y-or-n :prompt "Exit Netnews? "
 				 :default "Y"
 				 :default-string "Y"
@@ -1967,7 +1993,7 @@
 	    ;; from under us by an NNTP timeout.  The recover method for posting
 	    ;; resets the Hemlock Variable.
 	    (stream (post-info-stream (value post-info))))
-	(unless winp (editor-error "Posting prohibited on this board."))
+	(unless winp (editor-error "Posting prohibited in this group."))
 	(let ((buffer (current-buffer))
 	      (username (value netnews-reply-address)))
 	  (nn-write-line (format nil "From: ~A"
@@ -2029,7 +2055,7 @@
   (declare (ignore p))
   (let ((buffer (make-buffer "Netnews Browse")))
     (cond (buffer
-	   (list-all-newsgroups-command nil buffer)
+	   (list-all-groups-command nil buffer)
 	   (setf (buffer-major-mode buffer) "News-Browse")
 	   (setf (buffer-writable buffer) nil))
 	  (t (change-to-buffer (getstring "Netnews Browse" *buffer-names*))))))
@@ -2064,7 +2090,7 @@
     (unless y (editor-error "There is no group in the modeline."))
     (netnews-browse-read-group-command p (cursorpos-to-mark x y window))))
 
-(defcommand "Netnews Browse Add Newsgroup to File" (p &optional
+(defcommand "Netnews Browse Add Group to File" (p &optional
 						      (mark (current-point)))
   "Append the newsgroup on the line under the point to the file specified by
    \"Netnews Group File\".  With an argument, delete all groups that were
@@ -2083,7 +2109,7 @@
       (write-line group s))
     (message "Adding ~S to newsgroup file." group)))
       
-(defcommand "Netnews Browse Pointer Add Newsgroup to File" (p)
+(defcommand "Netnews Browse Pointer Add Group to File" (p)
   "Append the newsgroup you just clicked on to the file specified by
    \"Netnews Group File\"."
   "Append the newsgroup you just clicked on to the file specified by
@@ -2092,7 +2118,7 @@
   (multiple-value-bind (x y window) (last-key-event-cursorpos)
     (unless window (editor-error "Couldn't figure out where last click was."))
     (unless y (editor-error "There is no group in the modeline."))
-    (netnews-browse-add-newsgroup-to-file-command
+    (netnews-browse-add-group-to-file-command
      nil (cursorpos-to-mark x y window))))
 
 
@@ -2274,9 +2300,9 @@
 ;;; for the types of arguments each command will return.
 ;;; 
 (defun group-response-args (string)
-  "Group response args are an estimate of how many messages there are,
-   the number of the first message, the number of the last message, and \"y\"
-   or \"n\", indicating whether the user has rights to post on this board."
+  "Group response args are an estimate of how many messages there are, the
+   number of the first message, the number of the last message, and \"y\"
+   or \"n\", indicating whether the user has rights to post in this group."
   (def-nntp-arg-parser (:integer :integer :integer)))
 
 (defun list-response-args (string)
