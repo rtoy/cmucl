@@ -140,8 +140,7 @@ Don't install any dir translations, 'cause we want the real things.
 
 ;;; PCL.
 ;;;
-#-no-pcl (load "pcl:defsys")
-#-no-pcl (pcl::load-pcl)
+#-no-pcl (load "pcl:pclload")
 
 
 ;;; Load these after PCL.
