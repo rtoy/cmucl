@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.37 2000/06/26 15:56:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.38 2001/03/04 20:17:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -765,7 +765,7 @@
     ((frob (op fop-sti fopr-sti
 	       fop fopr sname scost
 	       fopd foprd dname dcost
-	       lname lcost)
+	       #+long-float lname #+long-float lcost)
        `(progn
 	 (define-vop (,sname)
 	   (:translate ,op)
