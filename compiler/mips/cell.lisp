@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.69 1993/03/13 12:35:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.70 1993/04/28 01:19:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -201,6 +201,7 @@
 	  (done (gen-label)))
       (move where arg)
       (inst beq where bsp-tn done)
+      (inst nop)
 
       (emit-label loop)
       (loadw symbol bsp-tn (- binding-symbol-slot binding-size))
