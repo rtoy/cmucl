@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.83 2001/06/17 19:12:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.84 2002/08/21 17:55:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -754,7 +754,13 @@
 	(let* ((bind-block (node-block bind))
 	       (component (block-component bind-block))
 	       (return (lambda-return leaf)))
-	  (assert (null (leaf-refs leaf)))
+
+	  ;; DELETE-LAMBDA can now remove a recursive lambda.  Check
+	  ;; that all calls are from the lambda being deleted.
+	  (dolist (ref (lambda-refs leaf))
+	    (let ((home (node-home-lambda ref)))
+	      (assert (eq home leaf))))
+	  
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
 	      (compiler-note "Deleting unused function~:[.~;~:*~%  ~S~]"

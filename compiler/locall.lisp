@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.50 2000/09/07 12:16:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.51 2002/08/21 17:55:20 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -720,24 +720,38 @@
   (setf (lambda-tail-set fun) nil)
   (let* ((home (node-home-lambda call))
 	 (home-env (lambda-environment home)))
+
+    (assert (not (eq home fun)))
+
+    ;; FUN belongs to HOME now.
     (push fun (lambda-lets home))
     (setf (lambda-home fun) home)
     (setf (lambda-environment fun) home-env)
-    
+
+    ;; All of FUN's LETs belong to HOME now
     (let ((lets (lambda-lets fun)))
       (dolist (let lets)
 	(setf (lambda-home let) home)
 	(setf (lambda-environment let) home-env))
 
       (setf (lambda-lets home) (nconc lets (lambda-lets home)))
+      ;; FUN no longer has an independent existence as an entity which
+      ;; has LETs.
       (setf (lambda-lets fun) ()))
 
+    ;; HOME no longer calls FUN, and owns all of FUN's old DFO
+    ;; dependencies
     (setf (lambda-calls home)
 	  (delete fun (nunion (lambda-calls fun) (lambda-calls home))))
+    ;; FUN no longer has an independent existence as an entity
+    ;; which calls things or has DFO dependencies.
     (setf (lambda-calls fun) ())
 
+    ;; All of FUN's ENTRIES belong to HOME now.
     (setf (lambda-entries home)
 	  (nconc (lambda-entries fun) (lambda-entries home)))
+    ;; FUN no longer has an independent existence as an entity
+    ;; with ENTRIES.
     (setf (lambda-entries fun) ()))
   (undefined-value))
 
@@ -957,6 +971,9 @@
 			 (t
 			  (reoptimize-continuation ref-cont)
 			  nil)))
+	  (when (eq fun (node-home-lambda dest))
+	    (delete-lambda fun)
+	    (return-from maybe-let-convert nil))
 	  (unless (eq (functional-kind fun) :assignment)
 	    (let-convert fun dest))
 	  (reoptimize-call dest)
@@ -1046,8 +1063,8 @@
   (declare (type clambda fun))
   (when (and (not (functional-kind fun))
 	     (not (functional-entry-function fun)))
-    (let ((non-tail nil)
-	  (call-fun nil))
+    (let ((outside-non-tail-call nil)
+	  (outside-call nil))
       (when (and (dolist (ref (leaf-refs fun) t)
 		   (let ((dest (continuation-dest (node-cont ref))))
 		     (when (or (not dest)
@@ -1055,15 +1072,21 @@
 		       (return nil))
 		     (let ((home (node-home-lambda ref)))
 		       (unless (eq home fun)
-			 (when call-fun (return nil))
-			 (setq call-fun home))
+			 (when outside-call
+			   (return nil))
+			 (setq outside-call dest))
 		       (unless (node-tail-p dest)
-			 (when (or non-tail (eq home fun)) (return nil))
-			 (setq non-tail dest)))))
+			 (when (or outside-non-tail-call (eq home fun))
+			   (return nil))
+			 (setq outside-non-tail-call dest)))))
 		 (ok-initial-convert-p fun))
 	(setf (functional-kind fun) :assignment)
-	(let-convert fun (or non-tail
-			     (continuation-dest
-			      (node-cont (first (leaf-refs fun))))))
-	(when non-tail (reoptimize-call non-tail))
-	t))))
+        (cond (outside-call
+	       (setf (functional-kind fun) :assignment)
+	       (let-convert fun outside-call)
+	       (when outside-non-tail-call
+		 (reoptimize-call outside-non-tail-call))
+	       t)
+              (t
+	       (delete-lambda fun)
+	       nil))))))
