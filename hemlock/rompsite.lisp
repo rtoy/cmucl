@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.12 1991/09/04 14:04:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.13 1991/10/21 15:23:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -413,15 +413,16 @@
 	 (bottom-y (- h top-border)))
     (xlib:with-gcontext (gcontext :function xlib::boole-xor
 				  :foreground *foreground-background-xor*)
-      (dotimes (i 8)
-	(xlib:draw-rectangle xwin gcontext 0 0 side-border h t)
-	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext side-border bottom-y
-			     top-width top-border t)
-	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext right-x 0 side-border h t)
-	(xlib:display-force-output display)
-	(xlib:draw-rectangle xwin gcontext side-border 0 top-width top-border t)
+      (flet ((zot ()
+	       (xlib:draw-rectangle xwin gcontext 0 0 side-border h t)
+	       (xlib:draw-rectangle xwin gcontext side-border bottom-y
+				    top-width top-border t)
+	       (xlib:draw-rectangle xwin gcontext right-x 0 side-border h t)
+	       (xlib:draw-rectangle xwin gcontext side-border 0
+				    top-width top-border t)))
+	(zot)
+	(xlib:display-finish-output display)
+	(zot)
 	(xlib:display-force-output display)))))
 
 #+clx
@@ -436,7 +437,7 @@
     (xlib:with-gcontext (gcontext :function xlib::boole-xor
 				  :foreground *foreground-background-xor*)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
-      (xlib:display-force-output display)
+      (xlib:display-finish-output display)
       (xlib:draw-rectangle xwin gcontext 0 0 width height t)
       (xlib:display-force-output display))))
 
