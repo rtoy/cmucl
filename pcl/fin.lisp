@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.16 2002/10/09 15:32:29 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.17 2002/11/21 21:24:14 pmai Exp $")
 ;;;
 
   ;;   
@@ -133,7 +133,13 @@ explicitly marked saying who wrote it.
   (pcl-funcallable-instance-slots nil)
   ;;
   ;; The debug-name for this function.
-  (funcallable-instance-name nil))
+  (funcallable-instance-name nil)
+  ;;
+  ;; Hash code.
+  (hash-code (get-instance-hash-code) :type fixnum))
+
+(defmacro fsc-instance-hash-code (fin)
+  `(kernel:%funcallable-instance-info ,fin 2))
 
 ;;; Note: returns true for non-pcl funcallable structures.
 (import 'kernel:funcallable-instance-p)

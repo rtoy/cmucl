@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.19 2002/10/19 14:32:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.20 2002/11/21 21:24:14 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -218,6 +218,11 @@ the compiler as completely as possible.  Currently this means that
 (defun pcl-instance-p (x)
   (typep (kernel:layout-of x) 'wrapper))
 
+;;; Support for sensible sxhash codes for instances
+(let ((hash-code 0))
+  (declare (fixnum hash-code) (optimize (speed 3) (safety 0)))
+  (defun get-instance-hash-code ()
+    (setq hash-code (ext:truly-the fixnum (+ hash-code 1)))))
 
 ;;; We define this as STANDARD-INSTANCE, since we're going to clobber the
 ;;; layout with some standard-instance layout as soon as we make it, and we
@@ -228,7 +233,19 @@ the compiler as completely as possible.  Currently this means that
 	    (:constructor %%allocate-instance--class ())
 	    (:alternate-metaclass kernel:instance lisp:standard-class
 				  kernel:make-standard-class))
-  (slots nil))
+  (slots nil)
+  (hash-code (get-instance-hash-code) :type fixnum))
+
+;;; This doesn't work on structures, but is only called from sxhash which
+;;; ensures it isn't called with a structure.
+(defmacro std-instance-hash-code (x) `(kernel:%instance-ref ,x 2))
+
+;;; Implement proper sxhashing of standard instances.
+(defun common-lisp::sxhash-instance (instance)
+  (cond
+    ((std-instance-p instance) (std-instance-hash-code instance))
+    ((fsc-instance-p instance) (fsc-instance-hash-code instance))
+    (t (error "What kind of instance is this?"))))
 
 ;;; Both of these operations "work" on structures, which allows the above
 ;;; weakening of std-instance-p.
