@@ -142,6 +142,29 @@
 
 (defevent copy-deleted-move "Copy propagation deleted a move.")
 
+;;; OK-COPY-REF  --  Internal
+;;;
+;;;    Return true if Arg is a reference to a TN that we can copy propagate to.
+;;; In addition to dealing with copy chains (as discussed below), we also throw
+;;; out references that are arguments to a local call, since IR2tran introduces
+;;; tempes in that context to preserve parallel assignment semantics.
+;;;
+(defun ok-copy-ref (vop arg in original-copy-of)
+  (declare (type vop vop) (type tn arg) (type sset in)
+	   (type hash-table original-copy-of))
+  (and (sset-member arg in)
+       (do ((original (gethash arg original-copy-of)
+		      (gethash original original-copy-of)))
+	   ((not original) t)
+	 (unless (sset-member original in)
+	   (return nil)))
+       (let ((info (vop-info vop)))
+	 (not (and (eq (vop-info-move-args info) :local-call)
+		   (>= (position-in #'tn-ref-across arg (vop-args vop)
+				    :key #'tn-ref-tn)
+		       (length (template-arg-types info))))))))
+
+
 ;;; PROPAGATE-COPIES  --  Internal
 ;;;
 ;;;    Make use of the result of flow analysis to eliminate copies.  We scan
@@ -192,12 +215,7 @@
 	    ((null arg-ref))
 	  (let* ((arg (tn-ref-tn arg-ref))
 		 (copy-of (tn-is-copy-of arg)))
-	    (when (and copy-of (sset-member arg in)
-		       (do ((original (gethash arg original-copy-of)
-				      (gethash original original-copy-of)))
-			   ((not original) t)
-			 (unless (sset-member original in)
-			   (return nil))))
+	    (when (and copy-of (ok-copy-ref vop arg in original-copy-of))
 	      (when this-copy
 		(setf (gethash this-copy original-copy-of) arg))
 	      (change-tn-ref-tn arg-ref copy-of)
