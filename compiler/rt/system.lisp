@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.5 1991/04/27 22:14:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.6 1992/03/10 09:01:56 wlott Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -270,10 +270,10 @@
 ;;;; Other random VOPs.
 
 
-(defknown mach::do-pending-interrupt () (values))
-(define-vop (mach::do-pending-interrupt)
+(defknown unix::do-pending-interrupt () (values))
+(define-vop (unix::do-pending-interrupt)
   (:policy :fast-safe)
-  (:translate mach::do-pending-interrupt)
+  (:translate unix::do-pending-interrupt)
   (:generator 1
     (inst break pending-interrupt-trap)))
 
