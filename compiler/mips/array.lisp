@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.3 1990/03/07 18:38:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.4 1990/03/20 00:19:03 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -36,6 +36,44 @@
   :arg-types (simple-bit-vector t t))
 |#
 
+
+;;; These VOPS are automatically generated in cell.lisp
+
+(defknown lisp::%array-fill-pointer (t) fixnum (flushable))
+(defknown lisp::%array-available-elements (t) fixnum (flushable))
+(defknown lisp::%array-data-vector (t) t (flushable))
+(defknown lisp::%array-displacement (t) (or fixnum null) (flushable))
+(defknown lisp::%array-displaced-p (t) (member t nil) (flushable))
+
+(defknown ((setf lisp::%array-fill-pointer))
+	  (t fixnum) fixnum ())
+(defknown ((setf lisp::%array-available-elements))
+	  (t fixnum) fixnum ())
+(defknown ((setf lisp::%array-data-vector))
+	  (t t) t ())
+(defknown ((setf lisp::%array-displacement))
+	  (t (or fixnum null)) (or fixnum null) ())
+(defknown ((setf lisp::%array-displaced-p))
+	  (t (member t nil)) (member t nil) ())
+
+;;; Define an accessor and setter for to the dimensions.
+
+(defknown lisp::%array-dimension (t fixnum) fixnum (flushable))
+(defknown ((setf lisp::%array-dimension))
+	  (t fixnum fixnum) fixnum ())
+
+(define-vop (%array-dimension word-index-ref)
+  (:translate lisp::%array-dimension)
+  (:policy :fast-safe)
+  (:variant vm:array-dimensions-offset vm:other-pointer-type))
+
+(define-vop (set-%array-dimension word-index-set)
+  (:translate (setf lisp::%array-dimension))
+  (:policy :fast-safe)
+  (:variant vm:array-dimensions-offset vm:other-pointer-type))
+
+
+;;; Various length translations.
 
 (macrolet ((frob (type)
 	     `(define-vop (,(intern (concatenate 'simple-string
