@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.97 1991/05/24 20:38:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.98 1991/09/18 06:38:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.97 1991/05/24 20:38:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.98 1991/09/18 06:38:47 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -117,8 +117,8 @@
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x04000000)
-(defparameter target-dynamic-space-start   #x06000000)
+(defparameter target-static-space-start    #x05000000)
+(defparameter target-dynamic-space-start   #x07000000)
 
 
 
