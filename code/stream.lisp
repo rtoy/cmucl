@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.10 1991/02/14 18:47:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.11 1991/04/23 12:58:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.10 1991/02/14 18:47:57 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.11 1991/04/23 12:58:28 ram Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -496,6 +496,7 @@
 ;;;
 (macrolet ((out-fun (name slot &rest args)
 	     `(defun ,name (stream ,@args)
+		(declare (optimize (safety 1)))
 		(let ((syn (symbol-value (synonym-stream-symbol stream))))
 		  (funcall (,slot syn) syn ,@args)))))
   (out-fun synonym-out stream-out ch)
@@ -514,6 +515,7 @@
 ;;;
 (macrolet ((in-fun (name fun &rest args)
 	     `(defun ,name (stream ,@args)
+		(declare (optimize (safety 1)))
 		(let ((*previous-stream* stream))
 		  (,fun (symbol-value (synonym-stream-symbol stream)) ,@args)))))
   (in-fun synonym-in read-char eof-errorp eof-value)
@@ -527,6 +529,7 @@
 ;;; the in-buffer.
 ;;;
 (defun synonym-misc (stream operation &optional arg1 arg2)
+  (declare (optimize (safety 1)))
   (let ((syn (symbol-value (synonym-stream-symbol stream)))
 	(*previous-stream* stream))
     (case operation
