@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.71 2004/04/07 11:03:38 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.72 2004/04/07 17:15:00 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1222,38 +1222,37 @@ streams."
     (setf (concatenated-stream-streams stream) (cdr current))))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
-  (let ((left (concatenated-stream-streams stream)))
-    (when left
-      (let* ((current (car left)))
-	(case operation
-	  (:listen
-	   (loop
-	     (let ((stuff (if (lisp-stream-p current)
-			      (funcall (lisp-stream-misc current) current
-				       :listen)
-			      (stream-misc-dispatch current :listen))))
-	       (cond ((eq stuff :eof)
-		      ;; Advance current, and try again.
-		      (pop (concatenated-stream-streams stream))
-		      (setf current
-			    (car (concatenated-stream-streams stream)))
-		      (unless current
-			;; No further streams.  EOF.
-			(return :eof)))
-		     (stuff
-		      ;; Stuff's available.
-		      (return t))
-		     (t
-		      ;; Nothing available yet.
-		      (return nil))))))
-	  (:close
-	   (set-closed-flame stream))
-	  (:clear-input (clear-input current))
-	  (:unread (unread-char arg1 current))
-	  (t
-	   (if (lisp-stream-p current)
-	       (funcall (lisp-stream-misc current) current operation arg1 arg2)
-	       (stream-misc-dispatch current operation arg1 arg2))))))))
+  (let ((current (first (concatenated-stream-streams stream))))
+    (case operation
+      (:listen
+       (if current
+           (loop
+            (let ((stuff (if (lisp-stream-p current)
+                             (funcall (lisp-stream-misc current) current
+                                      :listen)
+                             (stream-misc-dispatch current :listen))))
+              (cond ((eq stuff :eof)
+                     ;; Advance current, and try again.
+                     (pop (concatenated-stream-streams stream))
+                     (setf current (first (concatenated-stream-streams stream)))
+                     (unless current (return :eof)))
+                    (stuff
+                     ;; Stuff's available.
+                     (return t))
+                    (t
+                     ;; Nothing available yet.
+                     (return nil)))))
+           :eof))
+      (:close
+       (set-closed-flame stream))
+      (:clear-input
+       (when current (clear-input current)))
+      (:unread
+       (when current (unread-char arg1 current)))
+      (t
+       (if (lisp-stream-p current)
+           (funcall (lisp-stream-misc current) current operation arg1 arg2)
+           (stream-misc-dispatch current operation arg1 arg2))))))
 
 
 ;;;; Echo Streams:
