@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.16 2002/09/09 16:48:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defcombin.lisp,v 1.17 2002/10/19 01:19:30 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -218,9 +218,16 @@
 ;;;
 ;;;
 
+(defvar *combined-method-args*)
+(defvar *generic-function*)
+
 (defclass long-method-combination (standard-method-combination)
-     ((function :initarg :function
-		:reader long-method-combination-function)))
+  ((function
+    :initarg :function
+    :reader long-method-combination-function)
+   (arguments-lambda-list
+    :initarg :arguments-lambda-list
+    :reader long-method-combination-arguments-lambda-list)))
 
 (defun expand-long-defcombin (form)
   (let ((type (cadr form))
@@ -238,12 +245,13 @@
 	  type lambda-list method-group-specifiers arguments-option gf-var
 	  body)
       (make-top-level-form `(define-method-combination ,type)
-			   '(load eval)
-	`(load-long-defcombin ',type ',documentation #',function)))))
+			   '(:load-toplevel :execute)
+	`(load-long-defcombin ',type ',documentation #',function
+                              ',arguments-option)))))
 
 (defvar *long-method-combination-functions* (make-hash-table :test #'eq))
 
-(defun load-long-defcombin (type doc function)
+(defun load-long-defcombin (type doc function arguments-lambda-list)
   (let* ((specializers
 	   (list (find-class 'generic-function)
 		 (intern-eql-specializer type)
@@ -263,6 +271,9 @@
 			    (make-instance 'long-method-combination
 					   :type type
 					   :options options
+					   :function function
+					   :arguments-lambda-list
+					   arguments-lambda-list
 					   :documentation doc))
 			  args))
 	 :definition-source `((define-method-combination ,type)
@@ -270,6 +281,23 @@
     (setf (gethash type *long-method-combination-functions*) function)
     (when old-method (remove-method #'find-method-combination old-method))
     (add-method #'find-method-combination new-method)))
+
+(defmethod compute-discriminating-function :around
+    ((gf standard-generic-function))
+  (let ((dfun (call-next-method)))
+    (if (let ((combin (generic-function-method-combination gf)))
+          (and (typep combin 'long-method-combination)
+               (long-method-combination-arguments-lambda-list combin)))
+        #'(kernel:instance-lambda (&rest args)
+            (let ((old (kernel:funcallable-instance-function gf))
+                  (*combined-method-args* args)
+                  (*generic-function* gf))
+              (unwind-protect
+                   (progn
+                     (set-funcallable-instance-function gf dfun)
+                     (apply gf args))
+                (set-funcallable-instance-function gf old))))
+        dfun)))
 
 (defmethod compute-effective-method ((generic-function generic-function)
 				     (combin long-method-combination)
@@ -331,7 +359,8 @@
 	  (push name names)
 	  (push specializer-cache specializer-caches)
 	  (push `((or ,@tests)
-		      (if  (equal ,specializer-cache .specializers.)
+		      (if (and (equal ,specializer-cache .specializers.)
+		               (not (null .specializers.))) 
 			   (return-from .long-method-combination-function.
 			     '(error "More than one method of type ~S ~
                                       with the same specializers."
@@ -361,7 +390,7 @@
         (dolist (.method. .applicable-methods.)
 	  (let ((.qualifiers. (method-qualifiers .method.))
 		(.specializers. (method-specializers .method.)))
-	    (progn .qualifiers. .specializers.)
+	    (declare (ignorable .qualifiers. .specializers.))
 	    (cond ,@(nreverse cond-clauses))))
       ,@(nreverse required-checks)
       ,@(nreverse order-cleanups)
@@ -369,22 +398,20 @@
    
 (defun parse-method-group-specifier (method-group-specifier)
   ;;(declare (values name tests description order required))
-  (loop
-     with name = (pop method-group-specifier)
-     for pattern = (pop method-group-specifier)
-     until (null pattern)
-     until (memq pattern '(:description :order :required))
-     collect pattern into patterns
-     collect (parse-qualifier-pattern name pattern) into tests
-     finally
-       (return
-	 (values name
-		 tests
-		 (getf method-group-specifier :description
-		       (make-default-method-group-description
-			(nreverse patterns)))
-		 (getf method-group-specifier :order :most-specific-first)
-		 (getf method-group-specifier :required nil)))))
+  (loop with name = (pop method-group-specifier)
+	for rest on method-group-specifier
+	for pattern = (car rest)
+	until (memq pattern '(:description :order :required))
+	collect pattern into patterns
+	collect (parse-qualifier-pattern name pattern) into tests
+	finally
+	  (return (values name
+			  tests
+			  (getf rest :description
+				(make-default-method-group-description
+				 (nreverse patterns)))
+			  (getf rest :order :most-specific-first)
+			  (getf rest :required nil)))))
 
 (defun parse-qualifier-pattern (name pattern)
   (cond ((eq pattern '()) `(null .qualifiers.))
@@ -428,39 +455,98 @@
 ;;; At compute-effective-method time, the symbols in the :arguments
 ;;; option are bound to the symbols in the intercept lambda list.
 ;;;
-(defun deal-with-arguments-option (wrapped-body arguments-option)
-  (let* ((intercept-lambda-list
-	  (loop for arg in arguments-option
-		collect (if (memq arg lambda-list-keywords)
-			    arg
-			    (gensym))))
-	 (intercept-rebindings
-	  (loop for arg in arguments-option
-		and int in intercept-lambda-list
-		unless (memq arg lambda-list-keywords)
-		  collect `(,arg ',int))))
+(defun deal-with-arguments-option (wrapped-body args-lambda-list)
+  (let ((intercept-rebindings
+	 (loop for arg in args-lambda-list
+	       unless (memq arg lambda-list-keywords)
+	       collect `(,arg ',arg)))
+        (nreq 0)
+        (nopt 0)
+	whole)
+    (loop with state = 'required
+          for arg in args-lambda-list do
+            (if (memq arg lambda-list-keywords)
+                (setq state arg)
+                (case state
+                  (required (incf nreq))
+                  (&optional (incf nopt))
+                  (&whole (setq whole arg)))))
     ;;
+    ;; This assumes that the cadr of the WRAPPED-BODY is a let, and it
+    ;; injects let-bindings of the form (ARG 'SYM) for all variables
+    ;; of the argument-lambda-list; SYM is a gensym.
+    (assert (memq (first wrapped-body) '(let let*)))
+    (setf (second wrapped-body)
+          (append intercept-rebindings (second wrapped-body)))
     ;;
-    (setf (cadr wrapped-body)
-	  (append intercept-rebindings (cadr wrapped-body)))
-    ;;
-    ;; Be sure to fill out the intercept lambda list so that it can
-    ;; be too short if it wants to.
-    ;; 
-    (cond ((memq '&rest intercept-lambda-list))
-	  ((memq '&allow-other-keys intercept-lambda-list))
-	  ((memq '&key intercept-lambda-list)
-	   (setq intercept-lambda-list
-		 (append intercept-lambda-list '(&allow-other-keys))))
-	  (t
-	   (setq intercept-lambda-list
-		 (append intercept-lambda-list '(&rest .ignore.)))))
+    ;; Be sure to fill out the args lambda list so that it can be too
+    ;; short if it wants to.
+    (unless (or (memq '&rest args-lambda-list)
+                (memq '&allow-other-keys args-lambda-list))
+      (let ((aux (memq '&aux args-lambda-list)))
+        (setq args-lambda-list
+              (append (ldiff args-lambda-list aux)
+                      (if (memq '&key args-lambda-list)
+                          '(&allow-other-keys)
+                          '(&rest .ignore.))
+                      aux))))
 
+    ;;
+    ;; the DESTRUCTURING-BIND binds the parameters of the
+    ;; ARGS-LAMBDA-LIST to actual generic function arguments.
+    ;; *COMBINEND-METHOD-ARGS* is bound to the generic function
+    ;; arguments by the discriminating functions created for generic
+    ;; functions having a method combination that uses :ARGUMENTS.
+    ;;
+    ;; Using one of the variable names in the body inserts a symbol
+    ;; into the effective method, and running the effective method
+    ;; produces the value of actual argument that is bound to the
+    ;; symbol.
     `(let ((inner-result. ,wrapped-body))
-       `(apply (lambda ,',intercept-lambda-list
-		   ,,(when (memq '.ignore. intercept-lambda-list)
-		       ''(declare (ignore .ignore.)))
-		   ,inner-result.)
-	       .combined-method-args.))))
+       `(destructuring-bind ,',args-lambda-list
+            (frob-args *combined-method-args*
+                       (generic-function-lambda-list *generic-function*)
+                       ,',nreq ,',nopt)
+          ,,(when (memq '.ignore. args-lambda-list)
+              ''(declare (ignore .ignore.)))
+          ;; If there is a &WHOLE in the args-lambda-list, let
+          ;; it result in the actual arguments of the generic-function
+          ;; not the frobbed list.
+          ,,(when whole
+              ``(setq ,',whole *combined-method-args*))
+          ,inner-result.))))
 
-
+;;;
+;;; Partition VALUES into three sections required, optional, and the
+;;; rest, according to required, optional, and other parameters in
+;;; LAMBDA-LIST.  Make the required and optional sections NREQ and
+;;; NOPT elements long by discarding values or adding NILs.  Value is
+;;; the concatenated list of required and optional sections, plus what
+;;; is left as rest from VALUES.
+;;;
+(defun frob-args (values lambda-list nreq nopt)
+  (loop with section = 'required
+        with required = () and optional = ()
+        with nr = 0 and no = 0
+        for arg in lambda-list do
+          (if (member arg lambda-list-keywords :test #'eq)
+              (unless (eq (setq section arg) '&optional)
+                (loop-finish))
+              (case section
+                (required
+                 (incf nr)
+                 (push (pop values) required))
+                (&optional
+                 (incf no)
+                 (push (pop values) optional))))
+        finally
+          (flet ((frob (list n to)
+                   (cond ((> n to)
+                          (butlast (nreverse list) (- n to)))
+                         ((< n to)
+                          (nconc (nreverse list) (make-list (- to n))))
+                         (t
+                          (nreverse list)))))
+            (return (append (frob required nr nreq)
+                            (frob optional no nopt)
+                            values)))))
