@@ -635,27 +635,24 @@
       (live-bits live-list)
       (compute-initial-conflicts block)
     (let ((ltns (ir2-block-local-tns block)))
-
+      
       (do ((vop (ir2-block-last-vop block)
 		(vop-prev vop)))
 	  ((null vop))
-
+	
 	(let ((save-p (vop-info-save-p (vop-info vop))))
 	  (when save-p
-	    (let ((save-set (compute-save-set vop block live-list)))
-	      (ecase save-p
-		(:force-to-stack
-		 (dolist (tn save-set)
-		   (force-tn-to-stack tn)
-		   (convert-to-environment-tn tn)))
-		((t :compute-only)
-		 (setf (first (vop-codegen-info vop)) save-set))))))
-
+	    (setf (vop-save-set vop) (copy-bit-vector live-bits))
+	    (when (eq save-p :force-to-stack)
+	      (dolist (tn (compute-save-set vop block live-list))
+		(force-tn-to-stack tn)
+		(convert-to-environment-tn tn)))))
+	
 	(do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
 	    ((null ref))
 	  (let* ((tn (tn-ref-tn ref))
 		 (num (tn-local-number tn)))
-	      
+	    
 	    (cond
 	     ((not num))
 	     ((not (zerop (sbit live-bits num)))
@@ -667,7 +664,7 @@
 	     ((tn-ref-write-p ref)
 	      (note-conflicts live-bits live-list tn num))
 	     (t
-              (note-conflicts live-bits live-list tn num)
+	      (note-conflicts live-bits live-list tn num)
 	      (frob-more-tns (note-conflicts live-bits live-list mtn num))
 	      (setf (sbit live-bits num) 1)
 	      (push-in tn-next* tn live-list)
