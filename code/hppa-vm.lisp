@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.1 1992/06/12 03:24:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hppa-vm.lisp,v 1.2 1992/06/13 08:39:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -198,11 +198,11 @@
 ;;; EXTERN-ALIEN-NAME -- interface.
 ;;;
 ;;; The loader uses this to convert alien names to the form they occure in
-;;; the symbol table (for example, prepending an underscore).  Which is just
-;;; what we need to do.
+;;; the symbol table (for example, prepending an underscore).  On the HPPA
+;;; we just leave it alone.
 ;;; 
 (defun extern-alien-name (name)
   (declare (type simple-base-string name))
-  (concatenate 'string "_" name))
+  name)
 
 
