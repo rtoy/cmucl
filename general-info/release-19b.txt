@@ -50,7 +50,9 @@ New in this release:
       - Errors from socket functions signal a SOCKET-ERROR instead of
         ERROR. 
       - Efficiency notes are no longer printed if inhibit-warnings >=
-        2.5.
+         2.5.
+      - Simple support for datagram networking added: INET-RECVFROM,
+        INET-SENDTO, INET-SHUTDOWN.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -149,7 +151,14 @@ New in this release:
         handled.
       - CREATE-INET-LISTENER was missing a call to htonl.
       - (coerce #c(1 2) '(complex float)) works now.
- 
+      - Type derivation for logior and logxor was broken.
+      - Fixed bug where (setf (aref f 0) (aref d 0)) doesn't produce a
+        warning and causes code including the function return to be
+        deleted, where f is a single-float array and d is a
+        double-float array.
+      - COUNT for bit arrays was sometimes failing to include the
+        count from the last 32-bits of the array.
+
   * Other changes:
       - Infinite loops in map and friends caused by specifying
         sequence types that are too hairy for CMUCL should no longer
@@ -162,6 +171,7 @@ New in this release:
         defaults.
 
   * Improvements to the PCL implementation of CLOS:
+      - AMOP-style custom slot allocation supported.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
