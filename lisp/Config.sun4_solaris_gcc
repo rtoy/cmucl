@@ -1,0 +1,15 @@
+CPPFLAGS = -I/usr/include/X11 -DSOLARIS -DSVR4
+CC = gcc
+CPP = gcc -E
+CFLAGS = -g
+# Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
+# Note that the sys/asm_linkage.h braindamage breaks make depend
+ASFLAGS = -g -traditional-cpp
+NM = ./solaris-nm
+ASSEM_SRC = sparc-assem.S
+ARCH_SRC = sparc-arch.c
+OS_SRC = sunos-os.c os-common.c
+OS_LINK_FLAGS=
+OS_LIBS= -lsocket -lnsl -ldl
+
+vpath /home/casper/cmucl/src/17e/lisp
