@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.45 2003/10/06 12:39:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.46 2003/10/17 10:06:30 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -615,11 +615,13 @@
 	   (setf (compiled-debug-function-arguments dfun)
 		 (compute-arguments fun var-locs))))
     
-    (when (>= level 2)
-      (multiple-value-bind (blocks tlf-num)
-			   (compute-debug-blocks fun var-locs)
-	(setf (compiled-debug-function-tlf-number dfun) tlf-num)
-	(setf (compiled-debug-function-blocks dfun) blocks)))
+    (if (>= level 2)
+	(multiple-value-bind (blocks tlf-num)
+	    (compute-debug-blocks fun var-locs)
+	  (setf (compiled-debug-function-tlf-number dfun) tlf-num)
+	  (setf (compiled-debug-function-blocks dfun) blocks))
+	(setf (compiled-debug-function-tlf-number dfun)
+	      (find-tlf-number fun)))
 
     (if (external-entry-point-p fun)
 	(setf (compiled-debug-function-returns dfun) :standard)
