@@ -41,7 +41,7 @@
 	*the-pcl-package*)
 
 #+CMU
-(shadow '(destructuring-bind symbol-macrolet)
+(shadow '(destructuring-bind)
 	*the-pcl-package*)
 
 #+GCLisp
