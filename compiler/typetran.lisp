@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.32 1998/01/05 22:35:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.33 1998/04/03 03:58:12 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,21 +195,45 @@
 (defun transform-numeric-bound-test (n-object type base)
   (declare (type numeric-type type))
   (let ((low (numeric-type-low type))
-	(high (numeric-type-high type)))
+	(high (numeric-type-high type))
+	(float-type-p (csubtypep type (specifier-type 'float)))
+	(x (gensym))
+	(y (gensym)))
     `(locally
        (declare (optimize (safety 0)))
        (and ,@(when low
 		(if (consp low)
-		    `((kernel::numeric-bound-test-zero
-		       > (the ,base ,n-object) ,(car low)))
-		    `((kernel::numeric-bound-test-zero
-		       >= (the ,base ,n-object) ,low))))
+		    `((let ((,x (the ,base ,n-object))
+			    (,y ,(car low)))
+			,(if (not float-type-p)
+			    `(> ,x ,y)
+			    `(if (and (zerop ,x) (zerop ,y))
+				 (> (float-sign ,x) (float-sign ,y))
+				 (> ,x ,y)))))
+		    `((let ((,x (the ,base ,n-object))
+			    (,y ,low))
+			,(if (not float-type-p)
+			    `(>= ,x ,y)
+			    `(if (and (zerop ,x) (zerop ,y))
+				 (>= (float-sign ,x) (float-sign ,y))
+				 (>= ,x ,y)))))))
 	    ,@(when high
 		(if (consp high)
-		    `((kernel::numeric-bound-test-zero
-		       < (the ,base ,n-object) ,(car high)))
-		    `((kernel::numeric-bound-test-zero
-		       <= (the ,base ,n-object) ,high))))))))
+		    `((let ((,x (the ,base ,n-object))
+			    (,y ,(car high)))
+			,(if (not float-type-p)
+			     `(< ,x ,y)
+			     `(if (and (zerop ,x) (zerop ,y))
+				  (< (float-sign ,x) (float-sign ,y))
+				  (< ,x ,y)))))
+		    `((let ((,x (the ,base ,n-object))
+			    (,y ,high))
+			,(if (not float-type-p)
+			     `(<= ,x ,y)
+			     `(if (and (zerop ,x) (zerop ,y))
+				  (<= (float-sign ,x) (float-sign ,y))
+				  (<= ,x ,y)))))))))))
+
 
 ;;; Source-Transform-Numeric-Typep  --  Internal
 ;;;
