@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.20 1990/10/16 17:15:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.21 1990/10/16 20:24:46 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -154,12 +154,6 @@
   (inst addu dst dst vm:word-bytes)
 	
   DONE
-  ;; Clear the number stack if anything is there.
-  (let ((cur-nfp (current-nfp-tn vop)))
-    (when cur-nfp
-      (inst addu nsp-tn cur-nfp
-	    (bytes-needed-for-non-descriptor-stack-frame))))
-
   ;; We are done.  Do the jump.
   (loadw temp lexenv vm:closure-function-slot vm:function-pointer-type)
   (lisp-jump temp lip))
