@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.55 2004/09/08 02:10:55 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.56 2004/10/04 20:27:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -378,6 +378,46 @@
 		     (type index index end-1))
 	    (setf (%raw-bits result-bit-array index)
 		  (32bit-logical-not (%raw-bits bit-array index))))))))
+
+(deftransform count ((item sequence) (bit simple-bit-vector) *
+                     :policy (>= speed space))
+  `(let ((length (length sequence)))
+    (if (zerop length)
+        0
+        (do ((index vm:vector-data-offset (1+ index))
+             (count 0)
+             (end-1 (+ vm:vector-data-offset
+                       (truncate (truly-the index (1- length))
+                                 vm:word-bits))))
+            ((= index end-1)
+             (let* ((extra (mod length vm:word-bits))
+		    (mask (1- (ash 1 extra)))
+		    (bits (logand (ash mask
+				       ,(ecase (c:backend-byte-order c:*target-backend*)
+					       (:little-endian 0)
+					       (:big-endian
+						'(- vm:word-bits extra))))
+				  (%raw-bits sequence index))))
+               (declare (type (mod #.vm:word-bits) extra))
+               (declare (type (unsigned-byte #.vm:word-bits) mask bits))
+               ;; could consider LOGNOT for the zero case instead of
+               ;; doing the subtraction...
+               (incf count ,(if (constant-continuation-p item)
+                                (if (zerop (continuation-value item))
+                                    '(- extra (logcount bits))
+                                    '(logcount bits))
+                                '(if (zerop item)
+                                     (- extra (logcount bits))
+                                     (logcount bits))))))
+          (declare (type index index count end-1)
+		   (optimize (speed 3) (safety 0)))
+          (incf count ,(if (constant-continuation-p item)
+                           (if (zerop (continuation-value item))
+                               '(- vm:word-bits (logcount (%raw-bits sequence index)))
+                               '(logcount (%raw-bits sequence index)))
+                           '(if (zerop item)
+                             (- vm:word-bits (logcount (%raw-bits sequence index)))
+                             (logcount (%raw-bits sequence index)))))))))
 
 
 ;;;; Primitive translator for byte-blt
