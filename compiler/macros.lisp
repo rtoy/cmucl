@@ -733,7 +733,7 @@
 ;;;    These functions are called by the expansion of the Defprinter
 ;;; macro to do the actual printing.
 ;;;
-(proclaim '(ftype (function (symbol t stream fixnum) void)
+(proclaim '(ftype (function (symbol t stream (or null fixnum)) void)
 		  defprinter-prin1 defprinter-princ))
 (defun defprinter-prin1 (name value stream indent)
   (if *defprint-pretty*
