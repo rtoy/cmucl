@@ -8,6 +8,7 @@
 #include "core.h"
 #include "globals.h"
 #include "lispregs.h"
+#include "interrupt.h"
 
 #define STACK_SIZE (8*1024)
 
@@ -124,7 +125,7 @@ struct sigcontext *context;
     fwrite(&ms, sizeof(ms), 1, save_file);
 }
 
-static void save_handler(signal, code, context)
+static SIGHDLRTYPE save_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
@@ -283,7 +284,7 @@ struct machine_state *ms;
                              "Number");
 }
 
-static void restore_handler(signal, code, old_context)
+static SIGHDLRTYPE restore_handler(signal, code, old_context)
 int signal, code;
 struct sigcontext *old_context;
 {
