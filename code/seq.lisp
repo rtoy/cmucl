@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.36 2002/07/30 16:18:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.37 2002/08/08 15:28:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -163,48 +163,71 @@
     (vector (length (truly-the vector sequence)))
     (list (length (truly-the list sequence)))))
 
+;; Check that the specifier-type SPEC-TYPE has a length compatible
+;; with the given length.  Return T if so.  SPEC-TYPE must be some
+;; kind of vector.  If the type system isn't initialized, we return T.
+(defun valid-sequence-and-length-p (spec-type length)
+  (if *type-system-initialized*
+      (let ((type-len (first (array-type-dimensions spec-type))))
+	(or (eq type-len '*)
+	    (= type-len length)))
+      ;; Type system not ready, so assume it's ok.
+      t))
+	 
 (defun make-sequence (type length &key (initial-element NIL iep))
   "Returns a sequence of the given Type and Length, with elements initialized
   to :Initial-Element."
   (declare (fixnum length))
-  (let ((type (specifier-type type)))
-    (cond ((csubtypep type (specifier-type 'list))
-	   (make-list length :initial-element initial-element))
-	  ((csubtypep type (specifier-type 'string))
-	   (if iep
-	       (make-string length :initial-element initial-element)
-	       (make-string length)))
-	  ((csubtypep type (specifier-type 'simple-vector))
-	   (make-array length :initial-element initial-element))
-	  ((csubtypep type (specifier-type 'bit-vector))
-	   (if iep
-	       (make-array length :element-type '(mod 2)
-			   :initial-element initial-element)
-	       (make-array length :element-type '(mod 2))))
-	  ((csubtypep type (specifier-type 'vector))
-	   (if (typep type 'array-type)
-               (let ((etype (type-specifier
-                             (array-type-specialized-element-type type)))
-                     (vlen (car (array-type-dimensions type))))
-                 (if (and (numberp vlen) (/= vlen length))
-                   (error 'simple-type-error
-			  ;; these two are under-specified by ANSI
-			  :datum (type-specifier type)
-			  :expected-type (type-specifier type)
-			  :format-control
-			  "The length of ~S does not match the specified length  of ~S."
-			  :format-arguments
-			  (list (type-specifier type) length)))
-		 (if iep
-		     (make-array length :element-type etype
-				 :initial-element initial-element)
-		     (make-array length :element-type etype)))
-	       (make-array length :initial-element initial-element)))
-	  (t (error 'simple-type-error
-		    :datum type
-		    :expected-type 'sequence
-		    :format-control "~S is a bad type specifier for sequences."
-		    :format-arguments (list type))))))
+  (flet ((check-seq-len (spec-type length)
+	   (unless (valid-sequence-and-length-p spec-type length)
+	     (error 'simple-type-error
+		    :format-control
+		    "The length of ~S does not match the specified length of ~S."
+		    :format-arguments
+		    (list (type-specifier spec-type) length)))))
+
+    (let ((type (specifier-type type)))
+      (if (csubtypep type (specifier-type 'list))
+	  (make-list length :initial-element initial-element)
+	  (progn
+	    (cond ((csubtypep type (specifier-type 'string))
+		   (check-seq-len type length)
+		   (if iep
+		       (make-string length :initial-element initial-element)
+		       (make-string length)))
+		  ((csubtypep type (specifier-type 'simple-vector))
+		   (check-seq-len type length)
+		   (make-array length :initial-element initial-element))
+		  ((csubtypep type (specifier-type 'bit-vector))
+		   (check-seq-len type length)
+		   (if iep
+		       (make-array length :element-type '(mod 2)
+				   :initial-element initial-element)
+		       (make-array length :element-type '(mod 2))))
+		  ((csubtypep type (specifier-type 'vector))
+		   (if (typep type 'array-type)
+		       (let ((etype (type-specifier
+				     (array-type-specialized-element-type type)))
+			     (vlen (car (array-type-dimensions type))))
+			 (if (and (numberp vlen) (/= vlen length))
+			     (error 'simple-type-error
+				    ;; these two are under-specified by ANSI
+				    :datum (type-specifier type)
+				    :expected-type (type-specifier type)
+				    :format-control
+				    "The length of ~S does not match the specified length  of ~S."
+				    :format-arguments
+				    (list (type-specifier type) length)))
+			 (if iep
+			     (make-array length :element-type etype
+					 :initial-element initial-element)
+			     (make-array length :element-type etype)))
+		       (make-array length :initial-element initial-element)))
+		  (t (error 'simple-type-error
+			    :datum type
+			    :expected-type 'sequence
+			    :format-control "~S is a bad type specifier for sequences."
+			    :format-arguments (list (type-specifier type))))))))))
 
 
 
@@ -571,7 +594,7 @@
 	(do ((sequences ,sequences (cdr sequences))
 	     (lengths lengths (cdr lengths))
 	     (index 0)
-	     (result (make-sequence-of-type ,output-type-spec total-length)))
+	     (result (make-sequence ,output-type-spec total-length)))
 	    ((= index total-length) result)
 	  (declare (fixnum index))
 	  (let ((sequence (car sequences)))
@@ -703,7 +726,9 @@
 		    min-length)))))
     (let* ((args (make-list (length sequences)))
 	   (min-length (seqlen sequences))
-	   (result (make-sequence-of-type output-type-spec min-length)))
+	   (result (if *type-system-initialized*
+		       (make-sequence output-type-spec min-length)
+		       (make-sequence-of-type output-type-spec min-length))))
       (declare (type index min-length))
       (do ((index 0 (1+ index)))
 	  ((>= index min-length))
@@ -905,10 +930,13 @@
 
 (defun coerce (object output-type-spec)
   "Coerces the Object to an object of type Output-Type-Spec."
-  (flet ((coerce-error ()
-	   (error 'simple-type-error
-		  :format-control "~S can't be converted to type ~S."
-		  :format-arguments (list object output-type-spec))))
+  (labels ((coerce-error ()
+	     (error 'simple-type-error
+		    :format-control "~S can't be converted to type ~S."
+		    :format-arguments (list object output-type-spec)))
+	   (check-seq-len (type length)
+	     (unless (valid-sequence-and-length-p type length)
+	       (coerce-error))))
     (let ((type (specifier-type output-type-spec)))
       (cond
 	((%typep object output-type-spec)
@@ -963,6 +991,7 @@
 	     (vector-to-list* object)
 	     (coerce-error)))
 	((csubtypep type (specifier-type 'string))
+	 (check-seq-len type (length object))
 	 (typecase object
 	   (list (list-to-string* object))
 	   (string (string-to-simple-string* object))
@@ -970,12 +999,14 @@
 	   (t
 	    (coerce-error))))
 	((csubtypep type (specifier-type 'bit-vector))
+	 (check-seq-len type (length object))
 	 (typecase object
 	   (list (list-to-bit-vector* object))
 	   (vector (vector-to-bit-vector* object))
 	   (t
 	    (coerce-error))))
 	((csubtypep type (specifier-type 'vector))
+	 (check-seq-len type (length object))
 	 (typecase object
 	   (list (list-to-vector* object output-type-spec))
 	   (vector (vector-to-vector* object output-type-spec))

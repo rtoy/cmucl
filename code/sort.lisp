@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.7 1998/11/27 22:17:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sort.lisp,v 1.8 2002/08/08 15:28:54 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -434,7 +434,7 @@
 	     (vector-2 (coerce sequence2 'vector))
 	     (length-1 (length vector-1))
 	     (length-2 (length vector-2))
-	     (result (make-sequence-of-type result-type (+ length-1 length-2))))
+	     (result (make-sequence result-type (+ length-1 length-2))))
 	(declare (vector vector-1 vector-2)
 		 (fixnum length-1 length-2))
 	(if (and (simple-vector-p result)
