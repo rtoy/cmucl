@@ -184,12 +184,22 @@
   ;; representation.
   (source nil :type t :read-only t)
   ;;
-  ;; List of integers describing the path taken through the source to get to
-  ;; this point.  (k l m ...) => (nth k (nth l (nth m ...)))  This path is
-  ;; through the original top-level form compiled, and in general has nothing
-  ;; to do with the Source slot.  This path is our best guess for where the
-  ;; code came from, and may be not be very helpful in the case of code
-  ;; resulting from macroexpansion.
+  ;; A representation of the location in the original source of the form
+  ;; responsible for generating this node.  The first element in this list is
+  ;; the "form number", which is the ordinal number of this form in a
+  ;; depth-first, left-to-right walk of the truly top-level form in which this
+  ;; appears.
+  ;;
+  ;; Following is a list of integers describing the path taken through the
+  ;; source to get to this point:
+  ;;     (k l m ...) => (nth k (nth l (nth m ...)))
+  ;; 
+  ;; This path is through the original top-level form compiled, and in general
+  ;; has nothing to do with the Source slot.  This path is our best guess for
+  ;; where the code came from, and may be not be very helpful in the case of
+  ;; code resulting from macroexpansion.  The last element in the list is the
+  ;; top-level form number, which is the ordinal number (in this call to the
+  ;; compiler) of the truly top-level form containing the orignal source
   (source-path *current-path* :type list :read-only t)
   ;;
   ;; If this node is in a tail-recursive position, then this is set to the
