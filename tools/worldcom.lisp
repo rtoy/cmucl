@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.65 1993/08/31 13:40:41 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.66 1994/02/11 13:39:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -182,17 +182,21 @@
 (comf "target:code/stream")
 (comf "target:code/print")
 (comf "target:code/pprint")
+#-no-runtime (comf "target:code/pprint" :byte-compile t)
 (comf "target:code/format")
-
+#-no-runtime (comf "target:code/format" :byte-compile t)
 (comf "target:code/package")
 (comf "target:code/reader")
+#-no-runtime (comf "target:code/reader" :byte-compile t)
 (comf "target:code/sharpm" :byte-compile *byte-compile*)
 (comf "target:code/backq" :byte-compile *byte-compile*)
 
 (comf "target:code/serve-event")
 (comf "target:code/fd-stream")
 (comf "target:code/pathname")
+#-no-runtime (comf "target:code/pathname" :byte-compile t)
 (comf "target:code/filesys")
+#-no-runtime (comf "target:code/filesys" :byte-compile t)
 (comf "target:code/load")
 (comf "target:code/module" :byte-compile *byte-compile*)
 
@@ -220,7 +224,10 @@
 (comf "target:code/tty-inspect" :byte-compile *byte-compile*)
 
 (comf "target:code/format-time")
+#-no-runtime (comf "target:code/format-time")
 (comf "target:code/parse-time")
+#-no-runtime (comf "target:code/parse-time")
+
 (comf "target:code/run-program")
 
 (comf "target:code/loop" :byte-compile *byte-compile*)
@@ -245,8 +252,8 @@
   (comf "target:code/defstruct")
   (comf "target:code/defmacro" :byte-compile *byte-compile*)
   (comf "target:compiler/globaldb")
-  ;; We can't compile anything after macros, 'cause it breaks the running lisp.
-  (comf "target:code/macros"))
+  (comf "target:code/macros")
+  #-no-runtime (comf "target:code/macros" :byte-compile t))
 
 ); let *byte-compile-top-level*
 
