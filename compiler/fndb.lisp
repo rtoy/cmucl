@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.123 2003/08/05 15:50:28 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.124 2003/08/16 11:45:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1228,3 +1228,8 @@
   (simple-string index index simple-string index index)
   (or index null)
   (foldable flushable))
+
+(defknown compiler-error (string &rest t) nil ())
+(defknown (compiler-warning compiler-note compiler-mumble)
+    (string &rest t) (values) ())
+

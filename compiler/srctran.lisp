@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.124 2003/07/26 19:21:24 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.125 2003/08/16 11:45:46 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3359,21 +3359,27 @@
 ;;; string is a function (i.e. formatter), then convert the call to format to
 ;;; just a funcall of that function.
 ;;;
-(defun check-format-args (string args)
+
+(defun check-format-args-2 (min-args max-args args context)
+  (when min-args
+    (let ((nargs (length args)))
+      (cond ((stringp min-args)
+	     (compiler-warning "~a" min-args))
+	    ((< nargs min-args)
+	     (compiler-warning "~s: too few args (~d), need at least ~d"
+			       context nargs min-args))
+	    ((> nargs max-args)
+	     (compiler-note "~s: too many args (~d), wants at most ~d"
+			    context nargs max-args))))))
+
+(defun check-format-args-1 (string args context)
   (multiple-value-bind (min-args max-args)
       (format::min/max-format-arguments-count string)
-    (when min-args
-      (let ((nargs (length args)))
-	(cond ((stringp min-args)
-	       (compiler-warning "~a" min-args))
-	      ((< nargs min-args)
-	       (compiler-warning
-		"Too few args (~d) to FORMAT, need at least ~d"
-		nargs min-args))
-	      ((> nargs max-args)
-	       (compiler-note
-		"Too many args (~d) to FORMAT, wants at most ~d"
-		nargs max-args)))))))
+    (check-format-args-2 min-args max-args args context)))
+
+(defun check-format-args (string-cont args context)
+  (when (constant-continuation-p string-cont)
+    (check-format-args-1 (continuation-value string-cont) args context)))
 
 ;;;
 ;;; Note that two DEFTRANSFORMs differing in their :POLICY only cannot
@@ -3384,14 +3390,13 @@
 	 (unless (constant-continuation-p control)
 	   (give-up "Control string is not a constant."))
 	 (let ((string (continuation-value control)))
-	   (check-format-args string args)
+	   (check-format-args-1 string args 'format)
 	   (let ((arg-names (loop repeat (length args) collect (gensym))))
 	     `(lambda (dest control ,@arg-names)
 		(declare (ignore control))
 		(format dest (formatter ,string) ,@arg-names)))))
 	(t
-	 (when (constant-continuation-p control)
-	   (check-format-args (continuation-value control) args))
+	 (check-format-args control args 'format)
 	 (give-up))))
 
 (deftransform format ((stream control &rest args) (stream function &rest t) *
@@ -3409,3 +3414,14 @@
        (funcall control *standard-output* ,@arg-names)
        nil)))
 
+(macrolet ((define-format-checker (name)
+	     `(deftransform ,name ((format &rest args)
+				   (simple-string &rest t) *)
+		(check-format-args format args ',name)
+		(give-up))))
+  (define-format-checker error)
+  (define-format-checker warn)
+  (define-format-checker compiler-error)
+  (define-format-checker compiler-warning)
+  (define-format-checker compiler-note)
+  (define-format-checker compiler-mumble))

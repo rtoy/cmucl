@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.93 2003/08/06 19:01:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.94 2003/08/16 11:45:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1970,7 +1970,8 @@ these can be NIL if unavailable or inapplicable.")
   (note-message-repeats)
   (setq *last-error-context* nil)
   (apply #'format *compiler-error-output* format-string format-args)
-  (force-output *compiler-error-output*))
+  (force-output *compiler-error-output*)
+  (values))
 
 
 ;;; Find-Component-Name  --  Interface
@@ -2056,7 +2057,8 @@ these can be NIL if unavailable or inapplicable.")
 ;;;
 (defun compiler-warning (format-string &rest format-args)
   (declare (string format-string))
-  (apply #'warn format-string format-args))
+  (apply #'warn format-string format-args)
+  (values))
 ;;;
 (defun compiler-note (format-string &rest format-args)
   (declare (string format-string))
@@ -2064,7 +2066,8 @@ these can be NIL if unavailable or inapplicable.")
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
     (warn 'simple-style-warning :format-control format-string
-	  :format-arguments format-args)))
+	  :format-arguments format-args))
+  (values))
 
 
 ;;;; Undefined warnings:

@@ -36,7 +36,8 @@ New in this release:
      - Weak hash tables have been added for x86 systems.
      - Local functions are now named (FLET <name> ...) or 
        (LABELS <name> ...).
-     - Compiler checking control string and number of args to FORMAT.
+     - Compiler checking control string and number of args to FORMAT,
+       ERROR and WARN.
      - TRACE automatically using encapsulation when function-end
        breakpoints cannot be used.
      - INSPECT working on CLOS instances.

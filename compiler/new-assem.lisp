@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.32 2002/11/14 16:54:38 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.33 2003/08/16 11:45:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -950,7 +950,7 @@
   (declare (type segment segment)
 	   (type annotation note))
   (when (annotation-posn note)
-    (error "Attempt to emit ~S for the second time."))
+    (error "Attempt to emit ~S for the second time." note))
   (setf (annotation-posn note) (segment-current-posn segment))
   (setf (annotation-index note) (segment-current-index segment))
   (let ((last (segment-last-annotation segment))

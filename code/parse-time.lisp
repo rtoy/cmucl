@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.9 2003/01/03 21:14:25 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.10 2003/08/16 11:45:47 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -569,7 +569,8 @@
 	   (if (<= 0 hour 11)
 	       (setf (decoded-time-hour parsed-values)
 		     (mod (+ hour 12) 24))))
-	  (t (error "~A isn't AM/PM - this shouldn't happen.")))))
+	  (t (error "~A isn't AM/PM - this shouldn't happen."
+		    form-value)))))
 
 ;;; Internet numerical time zone, e.g. RFC1123, in hours and minutes.
 (defun deal-with-izone (form-value parsed-values)
