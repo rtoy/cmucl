@@ -592,14 +592,14 @@ The following are detailed slot descriptions:
    \item[LRA header word:]
       The immediate header-word data is the word offset from the enclosing code
       data-block's header-word to this word.  This allows GC and the debugger
-      to easily recover the code data-block from a LRA.  The code at the
+      to easily recover the code data-block from an LRA.  The code at the
       return point restores the current code pointer using a subtract immediate
       of the offset, which is known at compile time.
 \vspace{1ex}
    \item[Function entry point header-word:]
       The immediate header-word data is the word offset from the enclosing code
       data-block's header-word to this word.  This is the same as for the
-      retrun-PC header-word.
+      return-PC header-word.
    \item[Self-pointer back to header-word:]
       In a non-closure function, this self-pointer to the previous header-word
       allows the call sequence to always indirect through the second word in a
@@ -672,7 +672,7 @@ data-block.
 An advantage of using a single data-block to represent both the descriptor and
 non-descriptor parts of a function is that both can be represented by a
 single pointer.  This reduces the number of memory accesses that have to be
-done in a full call.  For example, since the constant pool is implicit in a
+done in a full call.  For example, since the constant pool is implicit in an
 LRA, a call need only save the LRA, rather than saving both the
 return PC and the constant pool.
 

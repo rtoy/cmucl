@@ -40,7 +40,7 @@ local TN assignment pass before this, since we allocate TNs afterward, so we do
 a pre-pass that marks the TNs that are local for our purposes.  We don't care
 if block splitting eventually causes some of them to be considered global.
 
-Note also that we are really only are interested in knowing if there is a
+Note also that we are really only interested in knowing if there is a
 unique reaching definition, which we can mash into our flow analysis rules by
 doing an intersection.  Then a definition only appears in the set when it is
 unique.  We then propagate only definitions of TNs with only one write, which
@@ -118,7 +118,7 @@ inter-block lifetime information.  The pre-pass creates all the
 global-conflicts for blocks that global TNs are referenced in.  The flow
 analysis pass just adds always-live global-conflicts for the other blocks the
 TNs are live in.  In addition to possibly being more efficient than SSets, this
-would directly result in the desired global-conflicts information, rather that
+would directly result in the desired global-conflicts information, rather than
 having to create it from another representation.
 
 The DFO sorted per-TN global-conflicts thread suggests some kind of algorithm
@@ -320,7 +320,7 @@ somebody can copy conflict info from the saved TN.
 
 Note that having block granularity in the conflict information doesn't mean
 that a localized packing scheme would have to do all moves at block boundaries
-(which would clash with the desire the have saving done as part of this
+(which would clash with the desire to have saving done as part of this
 mechanism.)  All that it means is that if we want to do a move within the
 block, we would need to allocate both locations throughout that block (or
 something).
@@ -361,10 +361,10 @@ We assume all locations can be used when an sc is based on an unbounded sb.
 ]
 
 
-TN-Refs are be convenient structures to build the target graph out of.  If we
+TN-Refs are convenient structures to build the target graph out of.  If we
 allocated space in every TN-Ref, then there would certainly be enough to
 represent arbitrary target graphs.  Would it be enough to allocate a single
-Target slot?  If there is a target path though a given VOP, then the Target of
+Target slot?  If there is a target path through a given VOP, then the Target of
 the write ref would be the read, and vice-versa.  To find all the TNs that
 target us, we look at the TN for the target of all our write refs.
 
@@ -486,8 +486,7 @@ implemented at this point.
 
 This means that Pack can pack all TNs simultaneously, using one data structure
 to represent the conflicts for each location.  So we have only one conflict set
-per SB location, rather than separating this information by environment
-environment.
+per SB location, rather than separating this information by environment.
 
 
 Load TN packing:
@@ -505,7 +504,7 @@ In many cases we will be able to pack the load TN with no hassle, but in
 general we may need to spill a TN that has already been packed.  We choose a
 TN that isn't in use by the offending VOP, and then spill that TN onto the
 stack for the duration of that VOP.  If the VOP is a conditional, then we must
-insert a new block interposed before the branch target so that the value TN
+insert a new block interposed before the branch target so that the TN
 value is restored regardless of which branch is taken.
 
 Instead of remembering lifetime information from conflict analysis, we rederive
@@ -572,6 +571,7 @@ far as the assembler is concerned, an instruction is a bit sequence that is
 broken down into subsequences.  Some of the subsequences are constant in value,
 while others can be determined at assemble or load time.
 
+\begin{verbatim}
 Assemble Node Form*
     Allow instructions to be emitted during the evaluation of the Forms by
     defining Inst as a local macro.  This macro caches various global
@@ -591,6 +591,7 @@ Gen-Label
 Emit-Label (Label)
     Gen-Label returns a Label object, which describes a place in the code.
     Emit-Label marks the current position as being the location of Label.
+\end{verbatim}
 
 
 
@@ -616,6 +617,7 @@ dumper:
 Fasl dumper and in-core loader are implementation (but not instruction set)
 dependent, so we want to give them a clear interface.
 
+\begin{verbatim}
 open-fasl-file name => fasl-file
     Returns a "fasl-file" object representing all state needed by the dumper.
     We objectify the state, since the fasdumper should be reentrant.  (but
@@ -636,6 +638,7 @@ load-component component code-vector length fixups
     Like Fasl-Dump-Component, but directly installs the code in core, running
     any top-level code immediately.  (???) but we need some way to glue
     together the componenents, since we don't have a fasl table.
+\end{verbatim}
 
 
 
@@ -647,7 +650,7 @@ the table.
 
 We have to grovel the constants for each component after compiling that
 component so that we can fix up load-time constants.  Load-time constants are
-values needed my the code that are computed after code generation/assembly
+values needed by the code that are computed after code generation/assembly
 time.  Since the code is fixed at this point, load-time constants are always
 represented as non-immediate constants in the constant pool.  A load-time
 constant is distinguished by being a cons (Kind . What), instead of a Constant

@@ -72,16 +72,18 @@ determine whether an arbitrary form is a subform of some other form, since the
 form number of B will be \verb+>+ than A's number and \verb+<+ A's next sibling's number iff
 B is a subform of A.  
 
-This should be quite useful for doing the source=>pc mapping in the debugger,
+This should be quite useful for doing the \verb|source=>pc| mapping in the debugger,
 since that problem reduces to finding the subset of the known locations that
 are for subforms of the specified form.
 
 
 Assume a byte vector with a standard variable-length integer format, something
 like this:
+\begin{verbatim}
     0..253 => the integer
     254 => read next two bytes for integer
     255 => read next four bytes for integer
+\end{verbatim}
 
 Then a compiled debug block is just a sequence of variable-length integers in a
 particular order, something like this:
@@ -94,7 +96,7 @@ particular order, something like this:
     first live mask (length in bytes determined by number of VARIABLES)
     ...more <PC, top-level form offset, form-number, live-set> tuples...
 \end{verbatim}
-We determine the number of locations recorded in a block by the finding the
+We determine the number of locations recorded in a block by finding the
 start of the next compiled debug block in the blocks vector.
 
 [\#\#\# Actually, only need 2 bits for number of successors {0,1,2}.  We might
@@ -112,15 +114,18 @@ being interpreted as an index into the Location's alternate locations.]
 It looks like using structures for the compiled-location-info is too bulky.
 Instead we need some packed binary representation.
 
-First, let's represent a SC/offset pair with an "SC-Offset", which is an
+First, let's represent an SC/offset pair with an "SC-Offset", which is an
 integer with the SC in the low 5 bits and the offset in the remaining bits:
+\begin{verbatim}
     ----------------------------------------------------
     | Offset (as many bits as necessary) | SC (5 bits) |
     ----------------------------------------------------
+\end{verbatim}
 Probably the result should be constrained to fit in a fixnum, since it will be
 more efficient and gives more than enough possible offsets.
 
-We can the represent a compiled location like this:
+We can then represent a compiled location like this:
+\begin{verbatim}
     single byte of boolean flags:
 	uninterned name
 	packaged name
@@ -134,12 +139,13 @@ We can the represent a compiled location like this:
     [If has ID, ID as var-length integer]
     SC-Offset of primary location (as var-length integer)
     [If has save SC, SC-Offset of save location (as var-length integer)]
+\end{verbatim}
 
 
 
 
-But for a whizzy breakpoint facility, we would need a good source=>code map.
-Dumping a complete code=>source map might be as good a way as any to represent
+But for a whizzy breakpoint facility, we would need a good \verb+source=>code+ map.
+Dumping a complete \verb+code=>source map+ might be as good a way as any to represent
 this, due to the one-to-many relationship between source and code locations.
 
 We might be able to get away with just storing the source locations for the
@@ -161,7 +167,7 @@ several paths.  This ambiguity might be resolved by picking the shortest path
 or letting the user choose.
 
 At the primitive level, I guess what this means is that the structure of source
-locations (i.e. source paths) must be known, and the source=>code operation
+locations (i.e. source paths) must be known, and the \verb+source=>code+ operation
 should return a list of \verb+<source,code>+ pairs, rather than just a list of code
 locations.  This allows the debugger to resolve the ambiguity however it wants.
 
@@ -236,6 +242,7 @@ of ambiguous matches.  [Actually, it would probably be a good idea to store the
 package if we are going to allow variables to be closed over.]
 
 Some objects we would need:
+\begin{verbatim}
 Location:
 	The constant information about the place where a value is stored,
         everything but which particular frame it is in.  Operations:
@@ -278,6 +285,7 @@ Block:
         block-forms block => (source-location code-location)*
             Return the corresponding source locations and code locations for
             all forms (and form fragments) in the block.
+\end{verbatim}
 
 
 Variable maps:
@@ -317,7 +325,7 @@ variable:
 	both in space and compiler effort, so we will have to settle for some
 	sort of approximation.
 
-	The finest granularity at which it is easy to determine liveness is the
+	The finest granularity at which it is easy to determine liveness is
 	the block: we can regard the variable lifetime as the set of blocks
 	that the variable is live in.  Of course, the variable may be dead (and
 	thus contain meaningless garbage) during arbitrarily large portions of
@@ -332,7 +340,7 @@ The variable map should represent this information space-efficiently and with
 adequate computational efficiency.
 
 The SC and ID can be represented as small integers.  Although the ID can in
-principle be arbitrarily large, it should be <100 in practice.  The location
+principle be arbitrarily large, it should be $<$100 in practice.  The location
 can be represented by just the offset (a moderately small integer), since the
 SB is implicit in the SC.
 
@@ -353,7 +361,7 @@ We could probably save some space by cleverly representing the var-info as
 parallel vectors of different types, but this would be more painful in use.
 It seems better to just use a structure, encoding the unboxed fields in a
 fixnum.  This way, we can pass around the structure in the debugger, perhaps
-even exporting it from the the low-level debugger interface.
+even exporting it from the low-level debugger interface.
 
 [\#\#\# We need the save location too.  This probably means that we need two slots
 of bits, since we need the save offset and save SC.  Actually, we could let the
@@ -376,6 +384,7 @@ continue to be somewhat magical.]
 
 How about:
 
+\begin{verbatim}
 (defstruct var-info
   ;;
   ;; This variable's name. (symbol-name of the symbol)
@@ -392,6 +401,7 @@ How about:
   ;;
   ;; The variable's type, represented as list-style type descriptor.
   type)
+\end{verbatim}
 
 Then the debug-info holds a simple-vector of all the var-info structures for
 that component.  We might as well make it sorted alphabetically by name, so
@@ -482,7 +492,7 @@ in block compilation.
 The implementation is simple: per-environment TNs are flagged by the
 :Environment kind.  :Environment TNs are treated the same as :Normal TNs by
 everyone except for lifetime/conflict analysis.  An environment's TNs are also
-stashed in a list in the IR2-Environment structure.  During during the conflict
+stashed in a list in the IR2-Environment structure.  During the conflict
 analysis post-pass, we look at each block's environment, and make all the
 environment's TNs always-live in that block.
 
@@ -508,7 +518,7 @@ debugger.  In this case, it may be desirable to be able to indicate that only
 partial saving has been done.  For example, we don't want to have to save all
 the FP registers just so that we can use a couple extra general registers.
 
-When when the debugger see an escape frame, it knows that register values are
+When the debugger see an escape frame, it knows that register values are
 located in the escape frame's "register save" area, rather than in the normal
 save locations.
 

@@ -229,8 +229,8 @@ have to edit them before they will work.}
 \section{Compiling the C Startup Code}
 
 There is a circular dependancy between lisp/internals.h and lisp/lisp.map that
-causes bootstrapping problems.  To the easiest way to get around this problem
-is to make a fake lisp.nm file that has nothing in it by a version number:
+causes bootstrapping problems.  The easiest way to get around this problem
+is to make a fake lisp.nm file that has nothing in it but a version number:
 
 \begin{verbatim}
 	% echo "Map file for lisp version 0" > lisp.nm
@@ -248,7 +248,7 @@ compile lisp producing a correct lisp.map:
 \begin{verbatim}
 	% make
 \end{verbatim}
-and the use \verb|tools/do-worldbuild| and \verb|tools/mk-lisp| to build
+and then use \verb|tools/do-worldbuild| and \verb|tools/mk-lisp| to build
 \verb|kernel.core| and \verb|lisp.core| (see section \ref[building-cores].)
 
 \section{Compiling the Lisp Code}
@@ -263,7 +263,7 @@ subsystem.  Error output is generated in files with ``{\tt .log}'' extension in
 the root of the build area.
 
 \item[setup.lisp] Some lisp utilities used for compiling changed files in batch
-mode and collecting the error output Sort of a crude defsystem.  Loads into the
+mode and collecting the error output. Sort of a crude defsystem.  Loads into the
 ``user'' package.  See {\tt with-compiler-log-file} and {\tt comf}.
 
 \item[{\it foo}com.lisp] Each system has a ``\verb|.lisp|'' file in

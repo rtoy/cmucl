@@ -100,7 +100,7 @@ Primitive types are used for two things:
 	since we might want to allow multiple ptypes.  This could be handled
 	by allowing "union primitive types", or by allowing multiple primitive
 	types to be specified (only in the operand restriction.)  The latter
-	would be long the lines of other more flexible VOP operand restriction
+	would be along the lines of other more flexible VOP operand restriction
 	mechanisms, (constant, etc.)
 
 
@@ -110,7 +110,7 @@ Ensure that load/save-operand never need to do representation conversion.
 The PRIMITIVE-TYPE more/coerce info would be moved into the SC.  This could
 perhaps go along with flushing the TN-COSTS.  We would annotate the TN with
 best SC, which implies the representation (boxed or unboxed).  We would still
-need represent the legal SCs for restricted TNs somehow, and also would have to
+need to represent the legal SCs for restricted TNs somehow, and also would have to
 come up with some other way for pack to keep track of which SCs we have already
 tried.
 
@@ -133,7 +133,7 @@ alternate.
 I guess a packed SC could also have immediate SCs as alternate SCs, and
 constant loading functions could be associated with SCs using this mechanism.
 
-So given a TN packed in SC X and a SC restriction for Y and Z, how do we know
+So given a TN packed in SC X and an SC restriction for Y and Z, how do we know
 which load function to call?  There would be ambiguity if X was an alternate
 for both Y and Z and they specified different load functions.  This seems
 unlikely to arise in practice, though, so we could just detect the ambiguity
@@ -153,11 +153,13 @@ relativized by the environment that the TN is allocated in.  Packing conflict
 information is kept in the storage base, but non-packed storage resources such
 as closure environments also have storage bases.
 Some storage bases:
+\begin{verbatim}
     General purpose registers
     Floating point registers
     Boxed (control) stack environment
     Unboxed (number) stack environment
     Closure environment
+\end{verbatim}
 
 A storage class is a potentially arbitrary set of the elements in a storage
 base.  Although conceptually there may be a hierarchy of storage classes such
@@ -226,7 +228,7 @@ system:
     since the portable semantics of types has already been dealt with.
 
  -- Different systems will have different specialized number and array types,
-    and different VOPs specialized for these types.  It is easy add this kind
+    and different VOPs specialized for these types.  It is easy to add this kind
     of knowledge without affecting the rest of the compiler.  All you have to
     do is define the VOPs and translations.
 
@@ -417,7 +419,7 @@ VOP writers expect:
       This returns a TN for the NFP if the caller uses the number stack, or
       nil.
    \item[SB-ALLOCATED-SIZE]
-      This returns the size of some storage based used by the currently
+      This returns the size of some storage base used by the currently
       compiling component.
    \item[...]
 \end{Lentry}
@@ -561,7 +563,7 @@ tail-recursive XEP calls.
 
 The unknown-values return convention has variants: single value and variable
 values.  We make this distinction to optimize the important case of a returner
-whose knows exactly one value is being returned.  Note that it is possible to
+who knows exactly one value is being returned.  Note that it is possible to
 return a single value using the variable-values convention, but it is less
 efficient.
 
@@ -689,7 +691,7 @@ Register usage at the time of the return for single value return, which
 goes with the unknown-values convention the caller used.
 
 A0
-   The holds the value.
+   This holds the value.
 
 CODE
    This holds the lisp-return-address at which the system continues executing.
@@ -875,7 +877,7 @@ then it just goes along with the "want one value, got it" case.
 If the returnee wants multiple values, and there's a shortage of return
 values, there are two cases to handle.  One, if the returnee wants fewer
 values than there are return registers, and we start at PC+N, then it fills
-in return registers A1..A<desired values necessary>; if we start at PC,
+in return registers \verb|A1..A<desired values necessary>|; if we start at PC,
 then the returnee is fine since the returning conventions have filled in
 the unused return registers with nil, but the returnee must adjust the
 stack pointer to dump possible stack return values (move OCFP to CSP).
@@ -897,7 +899,7 @@ This also restores CODE from LRA by subtracting an assemble-time constant.
 
 RECEIVE-UKNOWN-VALUES
 (I want whatever I get.)
-We want these at the end of our frame.  When the returnee starts starts at
+We want these at the end of our frame.  When the returnee starts at
 PC, it moves the return value registers to OCFP..OCFP[An] ignoring where
 the end of the stack is and whether all the return value registers had
 values.  The returner left room on the stack before the stack return values
@@ -1000,7 +1002,7 @@ When practical, ICR transforms should be used instead of VMR generators, since
 transforms are more portable and less error-prone.  Note that the Lisp code
 need not be implementation independent: it may contain all sorts of
 sub-primitives and similar stuff.  Generally a function should be implemented
-using a transform instead of an VMR translator unless it cannot be implemented
+using a transform instead of a VMR translator unless it cannot be implemented
 as a transform due to being totally evil or it is just as easy to implement as
 a translator because it is so simple.
 
@@ -1024,13 +1026,13 @@ i.e. what FPA is present is to do this using primitive types.  Note that the
 Primitive-Type function is VM supplied, and can look at any appropriate
 hardware configuration switches.  Short-Float can become 6881-Short-Float,
 AFPA-Short-Float, etc.  There would be separate SBs and SCs for the registers
-of each kind of FP hardware, with the each hardware-specific primitive type
+of each kind of FP hardware, with each hardware-specific primitive type
 using the appropriate float register SC.  Then the hardware specific templates
 would provide AFPA-Short-Float as the argument type restriction.
 
 Primitive type changes:
 
-The primitive-type structure is given a new %Type slot, which is the CType
+The primitive-type structure is given a new \%Type slot, which is the CType
 structure that is equivalent to this type.  There is also a Guard slot, with,
 if true is a function that control whether this primitive type is allowed (due
 to hardware configuration, etc.)  
@@ -1041,7 +1043,7 @@ an expression evaluated in the null environment that controls whether this type
 applies (default to none, i.e. constant T).
 
 The Primitive-Type-Type function returns the Lisp CType corresponding to a
-primitive type.  This is the %Type unless there is a guard that returns false,
+primitive type.  This is the \%Type unless there is a guard that returns false,
 in which case it is the empty type (i.e. NIL).
 
 [But this doesn't do what we want it to do, since we will compute the
@@ -1067,7 +1069,7 @@ I guess the guard should be associated with the template rather than the
 primitive type.  This would allow LTN and friends to easily tell whether a
 template applies in this configuration.  It is also probably more natural for
 some sorts of things: with some hardware variants, it may be that the SBs and
-representations (SCs) are really the same, but there some different allowed
+representations (SCs) are really the same, but there are some different allowed
 operations.  In this case, we could easily conditionalize VOPs without the
 increased complexity due to bogus SCs.  If there are different storage
 resources, then we would conditionalize Primitive-Type as well.

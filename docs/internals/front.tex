@@ -6,8 +6,8 @@
 
 \#|
 
-Would be useful to have a Freeze-Type proclamation.  Its primary use would to
-be say that the indicated type won't acquire any new subtypes in the future.
+Would be useful to have a Freeze-Type proclamation.  Its primary use would be
+to say that the indicated type won't acquire any new subtypes in the future.
 This allows better open-coding of structure type predicates, since the possible
 types that would satisfy the predicate will be constant at compile time, and
 thus can be compiled as a skip-chain of EQ tests.  
@@ -131,15 +131,18 @@ with these cases.  [\#\#\# In the case of union types we may want to do somethin
 to preserve information for type constraint propagation.]
 
 
+\begin{verbatim}
     (apply \#'foo a b c)
 ==>
     (multiple-value-call \#'foo (values a) (values b) (values-list c))
+\end{verbatim}
 
 This way only MV-CALL needs to know how to do calls with unknown numbers of
 arguments.  It should be nearly as efficient as a special-case VMR-Convert
 method could be.
 
 
+\begin{verbatim}
 Make-String => Make-Array
 N-arg predicates associated into two-arg versions.
 Associate N-arg arithmetic ops.
@@ -148,12 +151,14 @@ Zerop, Plusp, Minusp, 1+, 1-, Min, Max, Rem, Mod
 (Values x), (Identity x) => (Prog1 x)
 
 All specialized aref functions => (aref (the xxx) ...)
+\end{verbatim}
 
 Convert (ldb (byte ...) ...) into internal frob that takes size and position as
 separate args.  Other byte functions also...
 
 Change for-value primitive predicates into \verb+(if <pred> t nil)+.  This isn't
 particularly useful during ICR phases, but makes life easy for VMR conversion.
+
 
 This last can't be a source transformation, since a source transform can't tell
 where the form appears.  Instead, ICR conversion special-cases calls to known
@@ -182,7 +187,7 @@ arguments, etc.)
 ]
 
 We only record a function's inline expansion in the global environment when the
-function is in the null lexical environment, since it the expansion must be
+function is in the null lexical environment, since the expansion must be
 represented as source.
 
 We do inline expansion of functions locally defined by FLET or LABELS even when
@@ -385,7 +390,7 @@ preserve the single-value semantics of the let-binding in this case.
 
 The REF and variable must be deleted as part of this operation, since the ICR
 would otherwise be left in an inconsistent state; we can't wait for the REF to
-be deleted due to bing unused, since we have grabbed the arg continuation and
+be deleted due to being unused, since we have grabbed the arg continuation and
 substituted it into the old DEST.
 
 The big reason for doing this transformation is that in macros such as INCF and
@@ -458,7 +463,7 @@ to tell when a node needs to be reoptimized and does the optimization.  These
 node types are special-cased: COMBINATION, IF, RETURN, EXIT, SET.
 
 The REOPTIMIZE flag in the COMBINATION-FUN is used to detect when the function
-information might have changed, so that we know when where are new assertions
+information might have changed, so that we know when there are new assertions
 that could be propagated from the function type to the arguments.
 
 When we discover something about a leaf, or substitute for leaf, we reoptimize
@@ -474,7 +479,7 @@ termination.  I believe that with the type system implemented, type inference
 will converge in finite time, but as a practical matter, it can take far too
 long to discover not much.  For this reason, ICR optimization is terminated
 after three consecutive passes that don't add or delete code.  This premature
-termination only happens 2% of the time.
+termination only happens 2\% of the time.
 
 
 \section{Flow graph simplification}
@@ -499,8 +504,10 @@ between predecessors.  IFs with identical branches would eventually be left
 with nothing in their branches.]
 
 We eliminate IF-IF constructs:
+\begin{verbatim}
     (IF (IF A B C) D E) ==>
     (IF A (IF B D E) (IF C D E))
+\end{verbatim}
 
 In reality, what we do is replicate blocks containing only an IF node where the
 predicate continuation is the block start.  We make one copy of the IF node for
@@ -621,7 +628,7 @@ only way that code is deleted other than the elimination of unreachable blocks.
 
 We need to do a pretty good job of guessing when a type check will ultimately
 need to be done.  Generic arithmetic, for example: In the absence of
-declarations, we will use use the safe variant, but if we don't know this, we
+declarations, we will use the safe variant, but if we don't know this, we
 will generate a check for NUMBER anyway.  We need to look at the fast-safe
 templates and guess if any of them could apply.
 
@@ -630,7 +637,7 @@ and assertions on those arguments.  This can be used with Valid-Function-Use
 to see which templates do or might apply to a particular call.  If we guess
 that a safe implementation will be used, then we mark the continuation so as to
 force a safe implementation to be chosen.  [This will happen if ICR optimize
-doesn't run to completion, so the icr optimization after type check generation
+doesn't run to completion, so the ICR optimization after type check generation
 can discover new type information.  Since we won't redo type check at that
 point, there could be a call that has applicable unsafe templates, but isn't
 type checkable.]
@@ -754,7 +761,7 @@ It's fairly easy to see how we can build these sets of restrictions and
 propagate them using flow analysis, but actually using this information seems
 a bit more ad-hoc.  
 
-Probably the biggest thing we do is look at all the refs.  If have proven that
+Probably the biggest thing we do is look at all the refs.  If we have proven that
 the value is EQ (EQL for a number) to some other leaf (constant or lambda-var),
 then we can substitute for that reference.  In some cases, we will want to do
 special stuff depending on the DEST.  If the dest is an IF and we proved (not

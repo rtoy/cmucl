@@ -133,7 +133,7 @@ with delayed branch instructions, locate instructions that can be moved into
 delay slots.  Files: {\tt assem-opt}
 
 \item[Assembly]
-Resolve branches and convert in to object code and fixup information.
+Resolve branches and convert into object code and fixup information.
 Files: {\tt assembler}
 
 \item[Dumping] Convert the compiled code into an object file or in-core
@@ -310,7 +310,7 @@ life simpler anyway, since this breaks the potential circularity of the
 Tail-Info-Type will affecting the Continuation-Derived-Type, which affects...
 
 When a given return has no non-call uses, we represent this by using
-*empty-type*.  This consistent with the interpretation that a return type of
+*empty-type*.  This is consistent with the interpretation that a return type of
 NIL means the function can't return.
 
 
@@ -384,7 +384,7 @@ The Entry node marks the beginning of a block or tagbody:
       (continuations nil :type list)) 
 \end{verbatim}
 It contains a list of all the continuations that the body could exit to.  The
-Entry node is used as a marker for the the place to snapshot state, including
+Entry node is used as a marker for the place to snapshot state, including
 the control stack pointer.  Each lambda has a list of its Entries so
 that environment analysis can figure out which continuations are really being
 closed over.  There is no reason for optimization to delete Entry nodes,
@@ -402,7 +402,7 @@ like this:
        xxx))
 \end{verbatim}
 
-\%CATCH just sets up the catch frame which points to the exit function.  %Catch
+\%CATCH just sets up the catch frame which points to the exit function.  \%Catch
 is an ordinary function as far as ICR is concerned.  The fact that the catcher
 needs to be cleaned up is expressed by the Cleanup slots in the continuations
 in the body.  \%UNKNOWN-VALUES is a dummy function call which represents the

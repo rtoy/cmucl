@@ -179,7 +179,7 @@ also done at the same time so that multiple passes aren't necessary.
  
 If safety is more important that speed and space, then we consider generating
 type checks on the values of nodes whose CONT has the Type-Check flag set.  If
-the destinatation for the continuation value is safe, then we don't need to do
+the destination for the continuation value is safe, then we don't need to do
 a check.  We assume that all full calls are safe, and use the template
 information to determine whether inline operations are safe.
 
@@ -395,7 +395,7 @@ mechanism.  This translation is specified by the particular VM definition; VMR
 conversion makes no assumptions about which operations are primitive or what
 operand types are worth special-casing.  The default calling mechanisms and
 other miscellaneous builtin features are implemented using standard VOPs that
-must implemented by each VM.
+must be implemented by each VM.
 
 Type information can be forgotten after VMR conversion, since all type-specific
 operation selections have been made.
@@ -490,8 +490,8 @@ over all the code in the component (not that big a consideration.)
 
 
 \#|
-Actually, what we do is do a backward graph walk from each unknown-values
-receiver.   As we go, we mark each walked block with ther ordered list of
+Actually, what we do is a backward graph walk from each unknown-values
+receiver.   As we go, we mark each walked block with the ordered list of
 continuations we believe are on the stack.  Starting with an empty stack, we:
  -- When we encounter another unknown-values receiver, we push that
     continuation on our simulated stack.
@@ -507,10 +507,10 @@ discard it.]
 
 
 [\#\#\# Also, we can't terminate our walk just because we hit a block previously
-walked.  We have to compare the the End-Stack with the values received along
+walked.  We have to compare the End-Stack with the values received along
 the current path: if we have more values on our current walk than on the walk
 that last touched the block, then we need to re-walk the subgraph reachable
-from from that block, using our larger set of continuations.  It seems that our
+from that block, using our larger set of continuations.  It seems that our
 actual termination condition is reaching a block whose End-Stack is already EQ
 to our current stack.]
 
@@ -519,7 +519,7 @@ to our current stack.]
 
 
 If at the start, the block containing the values receiver has already been
-walked, the we skip the walk for that continuation, since it has already been
+walked, we skip the walk for that continuation, since it has already been
 handled by an enclosing values receiver.  Once a walk has started, we
 ignore any signs of a previous walk, clobbering the old result with our own,
 since we enclose that continuation, and the previous walk doesn't take into
@@ -549,6 +549,7 @@ possibility of blocks being joined.  We could collect some unknown MVs in a
 block, then do a control transfer out of the receiver, and this control
 transfer could be squeezed out by merging blocks.  How about:
 
+\begin{verbatim}
     (tagbody
       (return
        (multiple-value-prog1 (foo)
@@ -559,6 +560,7 @@ transfer could be squeezed out by merging blocks.  How about:
       (return
        (multiple-value-prog1 (baz)
 	 bletch)))
+\end{verbatim}
 
 But the problem doesn't happen here (can't happen in general?) since a node
 buried within a block can't use a continuation outside of the block.  In fact,
@@ -580,7 +582,7 @@ pushes.]
 I believe that above concern with a dead use getting mashed inside a block
 can't happen, since the use inside the block must be the only use, and if the
 use isn't reachable from the push, then the use is totally unreachable, and
-should have been deleted, which would prevent the prevent it from ever being
+should have been deleted, which would prevent it from ever being
 annotated.
 ]
 ]
@@ -595,7 +597,7 @@ is all we need to do the inter-block analysis.
 After we have found out what stuff is on the stack at each block boundary, we
 look for blocks with predecessors that have junk on the stack.  For each such
 block, we introduce a new block containing code to restore the stack pointer.
-Since unknown-values continuations are represented as <start, count>, we can
+Since unknown-values continuations are represented as \verb+<start, count>+, we can
 easily pop a continuation using the Start TN.
 
 Note that there is only doubt about how much stuff is on the control stack,
@@ -621,13 +623,13 @@ I.e. we need some way to interpose arbitrary code in the path of value
 delivery.
 
 What we do is replace the NLX uses of the continuation with another
-continuation that is received by a MV-Call to %NLX-VALUES in a cleanup block
+continuation that is received by a MV-Call to \%NLX-VALUES in a cleanup block
 that is interposed between the NLX uses and the old continuation's block.  The
-MV-Call uses the original continuation to deliver it's values to.  
+MV-Call uses the original continuation to deliver its values to.  
 
 [Actually, it's not really important that this be an MV-Call, since it has to
 be special-cased by LTN anyway.  Or maybe we would want it to be an MV call.
-If did normal LTN analysis of an MV call, it would force the returned values
+If we did normal LTN analysis of an MV call, it would force the returned values
 into the unknown values convention, which is probably pretty convenient for use
 in NLX.
 
@@ -639,11 +641,13 @@ since THROW will use truly unknown values.]
 
 On entry to a dynamic extent that has non-local-exists into it (always at an
 ENTRY node), we take a complete snapshot of the dynamic state:
+\begin{verbatim}
     the top pointers for all stacks
     current Catch and Unwind-Protect
     current special binding (binding stack pointer in shallow binding)
+\end{verbatim}
 
 We insert code at the re-entry point which restores the saved dynamic state.
-All TNs live at a NLX EP are forced onto the stack, so we don't have to restore
+All TNs live at an NLX EP are forced onto the stack, so we don't have to restore
 them, and we don't have to worry about getting them saved.
 
