@@ -343,9 +343,9 @@
   "Set the global information for Name."
   (let* ((n-name (gensym))
 	 (n-value (gensym))
-	 (class (symbol-name class))
-	 (type (symbol-name type))
-	 (info (type-info-or-lose class type)))
+	 (class-str (symbol-name class))
+	 (type-str (symbol-name type))
+	 (info (type-info-or-lose class-str type-str)))
     (values
      `(,n-name)
      `(,name)
