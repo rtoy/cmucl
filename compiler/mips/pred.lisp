@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.2 1990/02/16 08:27:35 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.3 1990/03/06 19:39:09 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of predicate VOPs for the MIPS.
 ;;;
@@ -56,26 +56,4 @@
 	  (inst beq x-prime y-prime target)))
     (nop)))
 
-
-
-
-;;;; Error VOPs
-
-(define-vop (error0)
-  (:args (code :scs (any-reg descriptor-reg)))
-  (:generator 1000
-    (error-call 0 code)))
-
-(define-vop (error1)
-  (:args (code :scs (any-reg descriptor-reg))
-	 (arg :scs (descriptor-reg)))
-  (:generator 1000
-    (error-call 1 code arg)))
-
-(define-vop (error2)
-  (:args (code :scs (any-reg descriptor-reg))
-	 (arg1 :scs (descriptor-reg))
-	 (arg2 :scs (descriptor-reg)))
-  (:generator 1000
-    (error-call 2 code arg1 arg2)))
 
