@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.21 2003/03/25 14:55:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.22 2003/05/14 14:29:49 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,8 +77,18 @@
 (defreg nfp 27)				; %i3
 (defreg cfunc 28)			; %i4
 (defreg code 29)			; %i5
-;; we can't touch reg 30 (aka %i6, aka %fp) if we ever want to return
+;; We can't touch reg 30 (aka %i6, aka %fp) if we ever want to return
 (defreg lip 31)				; %i7
+
+(eval-when (compile load eval)
+  ;; Registers %g6, %g7, and %fp are not defined above so we can't
+  ;; access them by accident. However, it's useful to be able to
+  ;; disassemble code that uses these registers.  (Callbacks use %fp).
+  ;; So manually give names to these registers
+  (setf (aref *register-names* 6) "G6")
+  (setf (aref *register-names* 7) "G7")
+  (setf (aref *register-names* 30) "FP")
+  )
 
 (defregset non-descriptor-regs
   nl0 nl1 nl2 nl3 nl4 nl5 cfunc nargs nfp)
