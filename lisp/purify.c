@@ -10,7 +10,7 @@
    Bug fixes, x86 code movement support, and scavenger hook support,
    by Douglas Crosher, 1996, 1997.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.12 1997/11/08 15:44:38 dtc Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.13 1997/11/17 23:39:04 dtc Exp $ 
 
    */
 #include <stdio.h>
@@ -162,9 +162,9 @@ maybe_can_move_p(lispobj thing)
       case type_Fdefn:
 #ifdef type_ScavengerHook
       case type_ScavengerHook:
+#endif
 	return kind;
 	break;
-#endif
       default:
 	return 0;
       }}}
@@ -684,8 +684,8 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_WeakPointer:
 #ifdef type_ScavengerHook
       case type_ScavengerHook:
-        return ptrans_boxed(thing, header, FALSE);
 #endif
+        return ptrans_boxed(thing, header, FALSE);
 
       case type_SymbolHeader:
         return ptrans_boxed(thing, header, FALSE);
