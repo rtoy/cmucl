@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/morecoms.lisp,v 1.1.1.4 1991/02/08 16:36:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/morecoms.lisp,v 1.1.1.5 1991/05/04 17:02:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,7 +278,7 @@
   "Display stats on allocated storage."
   "Run Room into a With-Random-Typeout window."
   (declare (ignore p))
-  (with-pop-up-display (*standard-output* :height 19)
+  (with-pop-up-display (*standard-output*)
     (room)))
 
 
