@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.10 1993/07/26 18:09:24 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.11 1994/11/04 07:07:57 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -27,10 +27,9 @@ to users are SETF functions, LOOP and the WITH-COMPILATION-UNIT macro.
 
 .SH HARDWARE REQUIREMENTS
 
-CMU CL is currently available for Sparcstations and DECstations (pmaxes)
-running Mach (or OSF/1).  We are beta-testing a SunOS SPARC version and an IBM
-RT Mach version.  At least 16 megabytes of memory and 25 megabytes of disk
-space are recommended.  As usual, more is better.
+CMU CL is currently available for a variety of Unix workstations.  See the
+README file for current platforms.  At least 16 megabytes of memory and 25
+megabytes of disk space are recommended.  As usual, more is better.
 
 .SH OVERVIEW
 When compared other Common Lisp implementations, CMU CL has
@@ -305,10 +304,9 @@ Bug reports should be sent to cmucl-bugs@cs.cmu.edu.  Please consult
 your local CMU CL maintainer or Common Lisp expert to verify that 
 the problem really is a bug before sending to this list.
 
-We have insufficient staffing to provide extensive support to people outside of
-CMU.  We are looking for university and industrial affiliates to help us with
-porting and maintenance for hardware and software that is not widely used at
-CMU.
+The CMU Common Lisp project is no longer funded, so only minimal support is
+being done at CMU.  There is a net community of \cmucl{} users and maintainers
+who communicate via comp.lang.lisp and the cmucl-bugs@cs.cmu.edu mailing list.
 
 .SH DISTRIBUTION
 
@@ -320,19 +318,21 @@ README file in the distribution for FTP instructions.
 
 .SH ABOUT THE CMU COMMON LISP PROJECT
 
-Organizationally, CMU Common Lisp is a small, mostly autonomous part within the
-Mach operating system project.  CMU CL is more of a tool development effort
-than a research project.  The project started out as Spice Lisp, which provided
-a modern Lisp implementation for use in the CMU community.  CMU CL has been
-under continuous development since the early 1980's (concurrent with the Common
-Lisp standardization effort.)
+Organizationally, CMU Common Lisp was a small, mostly autonomous part within
+the Mach operating system project.  The CMU CL project was more of a tool
+development effort than a research project.  The project started out as Spice
+Lisp, which provided a modern Lisp implementation for use in the CMU community.
+CMU CL has been under continuous development since the early 1980's (concurrent
+with the Common Lisp standardization effort.)  Most of the CMU Common Lisp
+implementors are now working on the Gwydion environment for Dylan (see
+http://legend.gwydion.cs.cmu.edu:8001/gwydion/.)
 
-CMU CL is funded by DARPA under CMU's "Research on Parallel Computing"
+CMU CL was funded by DARPA under CMU's "Research on Parallel Computing"
 contract.  Rather than doing pure research on programming languages and
-environments, our emphasis has been on developing practical programming tools.
-Sometimes this has required new technology, but much of the work has been in
-creating a Common Lisp environment that incorporates state-of-the-art features
-from existing systems (both Lisp and non-Lisp.)
+environments, the emphasis was on developing practical programming tools.
+Sometimes this required new technology, but much of the work was in creating a
+Common Lisp environment that incorporates state-of-the-art features from
+existing systems (both Lisp and non-Lisp.)
 
 Because sources are freely available, CMU Common Lisp has been ported to
 experimental hardware, and used as a basis for research in programming language
