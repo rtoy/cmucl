@@ -145,6 +145,7 @@ New in this release:
      - WITH-OUTPUT-TO-STRING accepting :ELEMENT-TYPE.
      - FIXNUM no longer naming a function.
      - MAKE-STRING-OUTPUT-STREAM accepts :ELEMENT-TYPE.
+     - Numerous LOOP fixes.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
