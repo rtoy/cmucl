@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.19 1992/12/17 11:24:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.20 1993/08/17 21:01:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3227,14 +3227,17 @@
 	   (type (or (member t) stream) stream)
 	   (type (member t nil) use-labels)
 	   (type c::backend backend))
-  (disassemble-function (fun-self	; we can't detect closures, so
-					; be careful
-			 (compiled-function-or-lose object))
-			:stream (if (eq stream t)
-				    *standard-output*
-				    stream)
-			:use-labels use-labels
-			:backend backend))
+  (let ((fun (compiled-function-or-lose object)))
+    (if (typep fun 'kernel:byte-function)
+	(c:disassem-byte-fun fun)
+	;; we can't detect closures, so be careful
+	(disassemble-function (fun-self fun)
+			      :stream (if (eq stream t)
+					  *standard-output*
+					  stream)
+			      :use-labels use-labels
+			      :backend backend)))
+  (values))
 
 (defun disassemble-memory (address
 			   length
