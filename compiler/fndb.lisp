@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.78 1997/12/20 19:52:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.79 1998/02/13 16:09:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -786,7 +786,8 @@
   (or index null)
   (foldable flushable))
 
-(defknown make-string (index &key (:initial-element character))
+(defknown make-string (index &key (:element-type type-specifier)
+		       (:initial-element character))
   simple-string (flushable))
 
 (defknown (string-trim string-left-trim string-right-trim)
@@ -820,7 +821,8 @@
 ;;;; In the "Eval" chapter:
 
 (defknown eval (t) *)
-(defknown constantp (t) boolean (foldable flushable))
+(defknown constantp (t &optional lexical-environment) boolean
+  (foldable flushable))
 
 
 ;;;; In the "Streams" chapter:

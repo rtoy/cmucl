@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.23 1998/01/10 05:02:26 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.24 1998/02/13 16:09:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,11 +189,12 @@
 ;;; 
 ;;; Just convert it into a make-array.
 ;;;
-(def-source-transform make-string (length &key (initial-element #\NULL))
+(def-source-transform make-string (length &key (element-type ''base-char)
+					  (initial-element #\NULL))
   (if (byte-compiling)
       (values nil t)
       `(make-array (the index ,length)
-		   :element-type 'base-char
+		   :element-type ,element-type
 		   :initial-element ,initial-element)))
 
 (defconstant array-info
