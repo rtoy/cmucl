@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.30 1991/02/20 14:58:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.31 1991/02/26 22:06:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -340,12 +340,13 @@
     (setq *tn-id* 0)
     (clrhash *label-ids*)
     (clrhash *id-labels*)
-    (setq *label-id* 0))
-  ;;
-  ;; Clear some Pack data structures (for GC purposes only.)
-  (dolist (sb (backend-sb-list *backend*))
-    (when (finite-sb-p sb)
-      (fill (finite-sb-live-tns sb) nil)))
+    (setq *label-id* 0)
+    ;;
+    ;; Clear some Pack data structures (for GC purposes only.)
+    (assert (not *in-pack*))
+    (dolist (sb (backend-sb-list *backend*))
+      (when (finite-sb-p sb)
+	(fill (finite-sb-live-tns sb) nil))))
   ;;
   ;; Reset Gensym.
   (setq lisp:*gensym-counter* 0)
