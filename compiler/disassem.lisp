@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.28 1999/08/13 16:03:52 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.29 2001/05/08 12:32:32 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3489,17 +3489,45 @@ symbol object that we know about.")
 	 t)
 	(values nil nil))))
 
+(defun get-code-constant-absolute (addr dstate)
+  (declare (type address addr))
+  (declare (type disassem-state dstate))
+  (let ((code (seg-code (dstate-segment dstate))))
+    (if (null code)
+	(return-from get-code-constant-absolute (values nil nil)))
+    (let ((code-size (ash (kernel:get-header-data code) vm:word-shift)))
+      (system:without-gcing
+       (let ((code-addr (- (kernel:get-lisp-obj-address code)
+			   vm:other-pointer-type)))
+	 (if (or (< addr code-addr) (>= addr (+ code-addr code-size)))
+	     (values nil nil)
+	     (values (kernel:code-header-ref
+			code
+			(ash (- addr code-addr) (- vm:word-shift)))
+		       t)))))))
+
+
 (defvar *assembler-routines-by-addr* nil)
 
+(defvar *foreign-symbols-by-addr* nil)
+
+(defun invert-address-hash (htable &optional (addr-hash (make-hash-table)))
+  "Build an address-name hash-table from the name-address hash"
+  (maphash #'(lambda (name address)
+	       (setf (gethash address addr-hash) name))
+	     htable)
+  addr-hash)
+
 (defun find-assembler-routine (address)
-  "Returns the name of the primitive lisp assembler routine located at
-  ADDRESS, or NIL if there isn't one."
+  "Returns the name of the primitive lisp assembler routine or foreign
+  symbol located at ADDRESS, or NIL if there isn't one."
   (declare (type address address))
   (when (null *assembler-routines-by-addr*)
-    (setf *assembler-routines-by-addr* (make-hash-table))
-    (maphash #'(lambda (name address)
-		 (setf (gethash address *assembler-routines-by-addr*) name))
-	     lisp::*assembler-routines*))
+    (setf *assembler-routines-by-addr*
+	  (invert-address-hash lisp::*assembler-routines*))
+    (setf *assembler-routines-by-addr*
+	  (invert-address-hash lisp::*foreign-symbols*
+			       *assembler-routines-by-addr*)))
   (gethash address *assembler-routines-by-addr*))
 
 ;;; ----------------------------------------------------------------
@@ -3583,6 +3611,20 @@ symbol object that we know about.")
 	    dstate))
     const))
 
+(defun note-code-constant-absolute (addr dstate)
+  "Store a note about the lisp constant located at ADDR in the
+  current code-component, to be printed as an end-of-line comment after the
+  current instruction is disassembled."
+  (declare (type address addr)
+	   (type disassem-state dstate))
+  (multiple-value-bind (const valid)
+      (get-code-constant-absolute addr dstate)
+    (when valid
+      (note #'(lambda (stream)
+		(prin1-quoted-short const stream))
+	    dstate))
+    (values const valid)))
+
 (defun maybe-note-nil-indexed-symbol-slot-ref (nil-byte-offset dstate)
   "If the memory address located NIL-BYTE-OFFSET bytes from the constant NIL
   is a valid slot in a symbol, store a note describing which symbol and slot,
@@ -3615,18 +3657,20 @@ symbol object that we know about.")
     t))
 
 (defun maybe-note-assembler-routine (address note-address-p dstate)
-  "If ADDRESS is the address of a primitive assembler routine, store a note
-  describing which one, to be printed as an end-of-line comment after the
-  current instruction is disassembled.  Returns non-NIL iff a note was
-  recorded.  If NOTE-ADDRESS-P is non-NIL, a note of the address is also made."
-  (declare (type address address)
-	   (type disassem-state dstate))
+  "If ADDRESS is the address of a primitive assembler routine or
+  foreign symbol, store a note describing which one, to be printed as
+  an end-of-line comment after the current instruction is disassembled.
+  Returns non-NIL iff a note was recorded.  If NOTE-ADDRESS-P is non-NIL, a
+  note of the address is also made." 
+  (declare (type disassem-state dstate))
+  (unless (typep address 'address)
+    (return-from maybe-note-assembler-routine nil))
   (let ((name (find-assembler-routine address)))
     (unless (null name)
       (note #'(lambda (stream)
 		(if NOTE-ADDRESS-P
-		    (format stream "#x~8,'0x: ~s" address name)
-		    (prin1 name stream)))
+		    (format stream "#x~8,'0x: ~a" address name)
+		    (princ name stream)))
 	    dstate))
     name))
 
