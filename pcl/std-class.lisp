@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.57 2003/04/29 10:33:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.58 2003/04/29 11:57:43 gerd Exp $")
 
 (in-package :pcl)
 
@@ -622,75 +622,82 @@
 			      (make-direct-slotd class pl))
 			    direct-slots)))
 	(setq direct-slots (slot-value class 'direct-slots)))
-    (when defstruct-p
-      (let* ((include (car (slot-value class 'direct-superclasses)))
-	     (conc-name (symbolicate *package*
-				     (if (symbol-package name)
-					 (package-name (symbol-package name))
-					 "")
-				     "::" name " structure class "))
-	     ;;
-	     ;; It's not possible to use a generalized name for the
-	     ;; constructor function.  It shouldn't matter though, I think,
-	     ;; like for the slot names above, because this stuff is not
-	     ;; supposed to be used by users directly.
-	     (constructor
-	       (symbolicate *package* conc-name " constructor"))
-	     (defstruct `(defstruct (,name
-				      ,@(when include
-					  `((:include ,(class-name include))))
-				      (:predicate nil)
-				      (:conc-name ,conc-name)
-				      (:constructor ,constructor ()))
-			   ;;
-			   ;; Use a temporary unbound marker that lets
-			   ;; SHARED-INITIALIZE recognize if a before-method
-			   ;; has written to a slot.
-			   ,@(mapcar (lambda (slot)
-				       `(,(slot-definition-name slot)
-					 '.unbound.))
-			             direct-slots)))
-	     (reader-names (mapcar (lambda (slotd)
-				     (list 'slot-accessor name
-					   (slot-definition-name slotd)
-					   'reader))
-				   direct-slots))
-	     (writer-names (mapcar (lambda (slotd)
-				     (list 'slot-accessor name
-					   (slot-definition-name slotd)
-					   'writer))
-				   direct-slots))
-	     (readers-init 
-	      (mapcar (lambda (slotd reader-name)
-			(let ((accessor 
-			       (slot-definition-defstruct-accessor-symbol slotd)))
-			  `(defun ,reader-name (obj)
-			     (declare (type ,name obj))
-			     (,accessor obj))))
-		      direct-slots reader-names))
-	     (writers-init 
-	      (mapcar (lambda (slotd writer-name)
-			(let ((accessor 
-			       (slot-definition-defstruct-accessor-symbol slotd)))
-			  `(defun ,writer-name (nv obj)
-			     (declare (type ,name obj))
-			     (setf (,accessor obj) nv))))
-		      direct-slots writer-names))
-	     (defstruct-form
-	       `(progn
-		  ,defstruct
-		  ,@readers-init ,@writers-init)))
-	(unless (structure-type-p name) (eval defstruct-form))
-	(mapc (lambda (dslotd reader-name writer-name)
-		(let* ((reader (when (fboundp reader-name)
-				 (gdefinition reader-name)))
-		       (writer (when (fboundp writer-name)
-				 (gdefinition writer-name))))
-		  (setf (slot-value dslotd 'internal-reader-function) reader)
-		  (setf (slot-value dslotd 'internal-writer-function) writer)))
-	      direct-slots reader-names writer-names)
-	(setf (slot-value class 'defstruct-form) defstruct-form)
-	(setf (slot-value class 'defstruct-constructor) constructor))))
+    (if defstruct-p
+	(let* ((include (car (slot-value class 'direct-superclasses)))
+	       (conc-name (symbolicate *package*
+				       (if (symbol-package name)
+					   (package-name (symbol-package name))
+					   "")
+				       "::" name " structure class "))
+	       ;;
+	       ;; It's not possible to use a generalized name for the
+	       ;; constructor function.  It shouldn't matter though, I think,
+	       ;; like for the slot names above, because this stuff is not
+	       ;; supposed to be used by users directly.
+	       (constructor
+		(symbolicate *package* conc-name " constructor"))
+	       (defstruct `(defstruct (,name
+					,@(when include
+					    `((:include ,(class-name include))))
+					(:predicate nil)
+					(:conc-name ,conc-name)
+					(:constructor ,constructor ()))
+			     ;;
+			     ;; Use a temporary unbound marker that lets
+			     ;; SHARED-INITIALIZE recognize if a before-method
+			     ;; has written to a slot.
+			     ,@(mapcar (lambda (slot)
+					 `(,(slot-definition-name slot)
+					    '.unbound.))
+				       direct-slots)))
+	       (reader-names (mapcar (lambda (slotd)
+				       (list 'slot-accessor name
+					     (slot-definition-name slotd)
+					     'reader))
+				     direct-slots))
+	       (writer-names (mapcar (lambda (slotd)
+				       (list 'slot-accessor name
+					     (slot-definition-name slotd)
+					     'writer))
+				     direct-slots))
+	       (readers-init 
+		(mapcar (lambda (slotd reader-name)
+			  (let ((accessor 
+				 (slot-definition-defstruct-accessor-symbol slotd)))
+			    `(defun ,reader-name (obj)
+			       (declare (type ,name obj))
+			       (,accessor obj))))
+			direct-slots reader-names))
+	       (writers-init 
+		(mapcar (lambda (slotd writer-name)
+			  (let ((accessor 
+				 (slot-definition-defstruct-accessor-symbol slotd)))
+			    `(defun ,writer-name (nv obj)
+			       (declare (type ,name obj))
+			       (setf (,accessor obj) nv))))
+			direct-slots writer-names))
+	       (defstruct-form
+		`(progn
+		   ,defstruct
+		   ,@readers-init ,@writers-init)))
+	  (unless (structure-type-p name) (eval defstruct-form))
+	  (mapc (lambda (dslotd reader-name writer-name)
+		  (let* ((reader (when (fboundp reader-name)
+				   (gdefinition reader-name)))
+			 (writer (when (fboundp writer-name)
+				   (gdefinition writer-name))))
+		    (setf (slot-value dslotd 'internal-reader-function) reader)
+		    (setf (slot-value dslotd 'internal-writer-function) writer)))
+		direct-slots reader-names writer-names)
+	  (setf (slot-value class 'defstruct-form) defstruct-form)
+	  (setf (slot-value class 'defstruct-constructor) constructor))
+	;;
+	;; ALLOCATE-INSTANCE is supposed to work with structures
+	;; defined with DEFSTRUCT.
+	(with-slots (defstruct-constructor) class
+	  (setq defstruct-constructor
+		(make-defstruct-allocation-function class)))))
+  ;;
   (add-direct-subclasses class direct-superclasses)
   (setf (slot-value class 'class-precedence-list) 
 	(compute-class-precedence-list class))
@@ -709,6 +716,24 @@
   (make-class-predicate class predicate-name)
   (add-slot-accessors class direct-slots))
 
+;;;
+;;; Return a closure for allocating an uninitialized structure
+;;; instance of class CLASS.
+;;; 
+(defun make-defstruct-allocation-function (class)
+  (let ((dd (get-structure-dd (class-name class))))
+    (lambda ()
+      (let ((instance (kernel::%make-instance (kernel::dd-length dd)))
+	    (raw-index (kernel::dd-raw-index dd)))
+	(setf (kernel::%instance-layout instance)
+	      (kernel::compiler-layout-or-lose (kernel::dd-name dd)))
+	(when raw-index
+	  (setf (kernel::%instance-ref
+		 instance raw-index
+		 (make-array (kernel::dd-raw-length dd)
+			     :element-type '(unsigned-byte 32)))))
+	instance))))
+    
 (defmethod direct-slot-definition-class ((class structure-class)
 					 &rest initargs)
   (declare (ignore initargs))

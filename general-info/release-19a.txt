@@ -77,6 +77,7 @@ New in this release:
        SLOT-VALUE-USING-CLASS) methods works.
      - DIRECT-SLOT-DEFINITION-CLASS and EFFECTIVE-SLOT-DEFINITION-CLASS
        AMOP compliant.
+     - ALLOCATE-INSTANCE working with structures defined with DEFSTRUCT.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
