@@ -42,22 +42,10 @@ $LISP "$@" -noinit -nositeinit <<EOF
 (load "target:tools/setup" :if-source-newer :load-source)
 (comf "target:tools/setup" :load t)
 
-(when (probe-file "home:.cmucl-fcn.lisp")
-  (compile-file "home:.cmucl-fcn" :output-file "/tmp/cmucl-fcn.fasl" :load t)
-  (pushnew #'rlt-before-gc-hook ext:*before-gc-hooks*)
-  (setf ext:*after-gc-hooks*
-	      (append ext:*after-gc-hooks* (list #'rlt-after-gc-hook))))
-
 (setq *gc-verbose* nil)
 (setq *interactive* nil)
 (setq debug:*debug-print-level* nil)
 (setq debug:*debug-print-length* nil)
-
-#+nil
-(when (probe-file "verify-hash.lisp")
-  (compile-file "verify-hash" :output-file "/tmp/verify-hash.fasl" :load t)
-  (setf ext:*after-gc-hooks*
-        (append ext:*after-gc-hooks* (list #'check-all-hashes))))
 
 (load "target:tools/worldcom")
 #-(or no-compiler runtime) (load "target:tools/comcom")
