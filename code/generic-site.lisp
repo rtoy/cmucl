@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.8 1993/11/17 14:13:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.9 1994/02/12 13:29:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,30 +35,3 @@ Loaded subsystems:"))
 #|
 (setf (search-list "target:") "<the source tree root>/")
 |#
-
-;;; The following Hemlock initializations will error if run in a core without
-;;; hemlock.
-;;;
-;;; Use standard X fonts for Hemlock, since the default ones may not work
-;;; everywhere.  By default, Hemlock used 8x13 and a non-standard underline
-;;; font, 8x13u (which is part of the distribution.)  Unfortunately, we don't
-;;; have source for this font, since it was created by hand-editing the
-;;; bitmaps.
-;;;
-;;; All this devious eval/intern stuff is to prevent lossage if Hemlock isn't
-;;; loaded.
-;;;
-(when (member :hemlock *features*)
-  (eval `(progn
-	   (hi::%set-variable-value
-	    ',(intern "OPEN-PAREN-HIGHLIGHTING-FONT" "ED")
-	    :global nil
-	    "*-courier-bold-r-normal--*-120-*")
-	   (hi::%set-variable-value
-	    ',(intern "DEFAULT-FONT" "ED")
-	    :global nil
-	    "*-courier-medium-r-normal--*-120-*")
-	   (hi::%set-variable-value
-	    (intern "ACTIVE-REGION-HIGHLIGHTING-FONT" "ED")
-	    :global nil
-	    "*-courier-medium-o-normal--*-120-*"))))
