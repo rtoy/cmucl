@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.44 1992/07/28 01:57:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.45 1992/08/13 12:53:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1039,7 +1039,7 @@
 	       `(or (char= ,char #\\)
 		    (char= ,char #\"))))
     (write-char #\" stream)
-    (with-array-data ((data string) (start) (end))
+    (with-array-data ((data string) (start) (end (length string)))
       (do ((index start (1+ index)))
 	  ((>= index end))
 	(let ((char (schar data index)))
