@@ -114,6 +114,10 @@
 ;;;        :FULL if this is definitely a full call.
 ;;;        :FUNNY if this is a random thing with IR2-convert.
 ;;;        :LOCAL if this is a local call.
+;;;
+;;; Node-Tail-P
+;;;    After LTN analysis, this is true only in combination nodes that are
+;;;    truly tail recursive.
 ;;;    
 
 ;;; The IR2-Block structure holds information about a block that is used during
@@ -292,12 +296,12 @@
   ;; If this component has a NFP, then this is it.
   (nfp nil :type (or tn null))
   ;;
-  ;; Values-Generators is a list of all the blocks whose ir2-block has a
-  ;; non-null value for Popped.  Values-Generators is a list of all blocks that
-  ;; contain a use of a continuation that is in some block's Popped.  These
-  ;; slots are initialized by LTN-Analyze as an input to Stack-Analyze. 
+  unused-slot
+  ;;
+  ;; Values-Receivers is a list of all the blocks whose ir2-block has a
+  ;; non-null value for Popped.  This slot is initialized by LTN-Analyze as an
+  ;; input to Stack-Analyze.
   (values-receivers nil :type list)
-  (values-generators nil :type list)
   ;;
   ;; An adjustable vector that records all the constants in the constant pool.
   ;; A non-immediate :Constant TN with offset 0 refers to the constant in
