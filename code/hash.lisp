@@ -419,8 +419,8 @@
     (list (sxhash-list s-expr depth))
     (fixnum
      (ldb sxhash-bits-byte s-expr))
-    #+nil
-    (structure ???)
+    (structure
+     (internal-sxhash (type-of s-expr) depth))
     ;; Other-pointer types.
     (simple-string (sxhash-simple-string s-expr))
     (symbol (sxhash-simple-string (symbol-name s-expr)))
