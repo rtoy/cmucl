@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.15 1999/12/05 16:22:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.16 2001/04/12 19:42:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -211,15 +211,16 @@
 	(trap-mask (dpb (lognot (float-trap-mask traps))
 			float-traps-byte #xffffffff))
 	(exception-mask (dpb (lognot (vm::float-trap-mask traps))
-			     float-sticky-bits #xffffffff)))
-    `(let ((orig-modes (floating-point-modes)))
+			     float-sticky-bits #xffffffff))
+	(orig-modes (gensym)))
+    `(let ((,orig-modes (floating-point-modes)))
       (unwind-protect
 	   (progn
 	     (setf (floating-point-modes)
-		   (logand orig-modes ,(logand trap-mask exception-mask)))
+		   (logand ,orig-modes ,(logand trap-mask exception-mask)))
 	     ,@body)
 	;; Restore the original traps and exceptions.
 	(setf (floating-point-modes)
-	      (logior (logand orig-modes ,(logior traps exceptions))
+	      (logior (logand ,orig-modes ,(logior traps exceptions))
 		      (logand (floating-point-modes)
 			      ,(logand trap-mask exception-mask))))))))
