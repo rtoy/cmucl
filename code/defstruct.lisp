@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.25 1991/11/06 19:20:08 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.26 1991/11/07 13:20:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -169,7 +169,10 @@
 	(let ((option (caar options))
 	      (args (cdar options)))
 	  (case option
-	    (:conc-name (setq conc-name (car args)))
+	    (:conc-name
+	     (setq conc-name (car args))
+	     (unless (symbolp conc-name)
+	       (setq conc-name (make-symbol (string conc-name)))))
 	    (:constructor
 	     (setf constructor-opt-p t)
 	     (let ((lambda-list (cdr args))
