@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.31 1992/06/14 07:41:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.32 1992/09/07 16:04:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 (export '(lisp::with-compilation-unit) "LISP")
 
@@ -758,8 +758,7 @@
   `(let ((*free-variables* (make-hash-table :test #'eq))
 	 (*free-functions* (make-hash-table :test #'equal))
 	 (*constants* (make-hash-table :test #'equal))
-	 (*source-paths* (make-hash-table :test #'eq))
-	 (*failed-optimizations* (make-hash-table :test #'eq)))
+	 (*source-paths* (make-hash-table :test #'eq)))
      ,@forms))
 
 
