@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.20 1990/02/26 20:46:57 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.21 1990/02/26 21:15:28 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -240,7 +240,12 @@
     lisp::*saved-control-stack-pointer*
     lisp::*saved-binding-stack-pointer*
     lisp::*saved-allocation-pointer*
-    lisp::*saved-flags-register*))
+    lisp::*saved-flags-register*
+
+    ;; Things needed for non-local-exit.
+    lisp::*current-catch-block*
+    lisp::*eval-stack-top*
+    ))
 
 (defun static-symbol-p (symbol)
   (member symbol static-symbols))
