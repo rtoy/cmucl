@@ -228,6 +228,13 @@
        ',name)))
 
 
+;;;; Side-Effect Classes
+
+(def-boolean-attribute vop
+  any)
+
+
+
 ;;;; Move/coerce definition:
 
 
