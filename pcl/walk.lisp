@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.20 2000/11/16 15:47:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.21 2001/05/05 23:34:47 pw Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -452,12 +452,13 @@
 ;;;
 ;;; And the extra templates...
 ;;;
+#|| These are macros in CMUCL
 (define-walker-template DO      walk-do)
 (define-walker-template DO*     walk-do*)
 (define-walker-template PROG    walk-prog)
 (define-walker-template PROG*   walk-prog*)
 (define-walker-template COND    (NIL REPEAT ((TEST REPEAT (EVAL)))))
-
+||#
 
 
 (defvar walk-form-expand-macros-p nil)
