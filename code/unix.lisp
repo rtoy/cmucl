@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.35 1994/10/29 05:44:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.36 1994/10/30 18:26:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -103,7 +103,7 @@
 (def-alien-type gid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
   #+svr4 long)
 (def-alien-type mode-t #-(or alpha svr4) unsigned-short
-  #+(or alpha svr4) unsigned-long)
+  #+alpha unsigned-int #+svr4 unsigned-long)
 (def-alien-type nlink-t #-svr4 unsigned-short #+svr4 unsigned-long)
 
 (defconstant FD-SETSIZE #-(or hpux alpha) 256 #+hpux 2048 #+alpha 4096)
