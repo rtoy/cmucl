@@ -1,18 +1,8 @@
-CMU Common Lisp is a public domain implementation of Common Lisp.  Both sources
-and executables are freely available via anonymous FTP; this software is 
-"as is", and has no warranty of any kind.  CMU and the authors assume no
-responsibility for the consequences of any use of this software.
-
-15e will probably be the last version 15 release, and is thus the most stable
-system you're going to see for a while.  We're reluctant to call it a
-"default" release because some things are stably broken:
- -- There still isn't any good stack overflow detection.  Probably stack
-    overflow detection won't appear until the C code rewrite associated with
-    generational GC comes out (version 17 or later.)
- -- The Alien/foreign function call mechanism is fairly broken.  It doesn't
-    work at all in interpreted code, and DEF-C-ROUTINE doesn't work properly
-    for many argument type signatures.  We've redesigned and reimplemented
-    our foreign interface for version 16.
+CMU Common Lisp is a public domain implementation of Common Lisp.  Both
+sources and executables are freely available via anonymous FTP; this software
+is "as is", and has no warranty of any kind.  CMU and the authors assume no
+responsibility for the consequences of any use of this software.  See
+doc/release-notes.txt for a description of the state of the release you have.
 
 The CMU Common Lisp project's goal is to develop a high quality public domain
 system, so we want your bug reports, bug fixes and enhancements.  However,
@@ -77,7 +67,8 @@ To run CMU CL, place bin/ in PATH and setenv CMUCLLIB to point to lib/.  The
 file lib/site-init.lisp contains site-specific initialization, such as setting
 of the site name.  Any site-specific initialization should be placed in this
 file; this file can be compiled.  See bin/sample-wrapper for a shell script
-template that sets up environment variables and then runs CMU CL.
+template that sets up environment variables and then runs CMU CL.  You may
+want to have your EMACS maintainer place doc/cmu-user.info in the info root.
 
 TMPFS NOTE:
 
