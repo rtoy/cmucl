@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.2 1992/02/13 09:54:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/dyncount.lisp,v 1.3 1992/05/27 00:33:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@ VOP classification.
   (let ((res (make-hash-table-like table1)))
     (do-hash (k v table1)
       (unless (nth-value 1 (gethash k table2))
-	(setf (gethash res k) v)))
+	(setf (gethash k res) v)))
     res))
 
 (defun hash-list (table)
@@ -211,7 +211,7 @@ VOP classification.
 ;;; loop must avoid calling any functions outside this file to prevent adding
 ;;; noise to the data, since other files may be compiled with profiling.
 ;;;
-(defun get-vop-counts (&optional (spaces '(:dynamic)) &key (clear t))
+(defun get-vop-counts (&optional (spaces '(:dynamic)) &key (clear nil))
   "Return a hash-table mapping string VOP names to VOP-STATS structures
    describing the VOPs executed.  If clear is true, then reset all counts to
    zero as a side-effect."
@@ -234,7 +234,7 @@ VOP classification.
       (declare (ignore v))
       (let ((stats (get k 'vop-stats)))
 	(when stats
-	  (setf (gethash k counts) stats)
+	  (setf (gethash (symbol-name k) counts) stats)
 	  (when clear
 	    (remprop k 'vop-stats)))))
     counts))
@@ -264,11 +264,14 @@ VOP classification.
   (clear-vop-counts spaces)
   (apply function args)
   (if by-space
-      (mapcar #'get-vop-counts spaces)
+      (mapcar #'(lambda (space)
+		  (get-vop-counts (list space) :clear t))
+	      spaces)
       (get-vop-counts spaces)))
 
 ;;;; Adjustments:
 
+#|
 (defparameter *count-adjustments*
   '((return-multiple 152)
     (tail-call-variable 88)
@@ -298,6 +301,7 @@ VOP classification.
     (%allocate-bignum 72)
     (make-structure 72)
     (cons 50)))
+|#
 
 ;;; GET-VOP-COSTS  --  Public
 ;;;
@@ -317,7 +321,102 @@ VOP classification.
   "Costs of assember routines on this machine.")
 
 
-;;;; Analysis and report generation:
+;;;; Classification:
+
+(defparameter *basic-classes*
+  '(("Integer multiplication"
+     "*/FIXNUM" "*/SIGNED" "*/UNSIGNED" "SIGNED-*" "FIXNUM-*" "GENERIC-*")
+    ("Integer division" "TRUNCATE")
+    ("Generic arithmetic" "GENERIC" "TWO-ARG")
+    ("Inline EQL" "EQL")
+    ("Inline compare less/greater" "</" ">/" "<-C/" ">-C/")
+    ("Inline arith" "*/" "//" "+/" "-/" "NEGATE" "ABS" "+-C" "--C")
+    ("Inline logic" "-ASH" "$ASH" "LOG")
+    ("CAR/CDR" "CAR" "CDR")
+    ("Array type test" "ARRAYP" "VECTORP" "ARRAY-HEADER-P")
+    ("Simple type predicate" "STRUCTUREP" "LISTP" "FIXNUMP")
+    ("Simple type check" "CHECK-LIST" "CHECK-FIXNUM" "CHECK-STRUCTURE")
+    ("Array bounds check" "CHECK-BOUND")
+    ("Complex type check" "$CHECK-" "COERCE-TO-FUNCTION")
+    ("Special read" "SYMBOL-VALUE")
+    ("Special bind" "BIND$")
+    ("Tagging" "MOVE-FROM")
+    ("Untagging" "MOVE-TO" "MAKE-FIXNUM")
+    ("Move" "MOVE")
+    ("Non-local exit" "CATCH" "THROW" "DYNAMIC-STATE" "NLX" "UNWIND")
+    ("Array write" "DATA-VECTOR-SET" "$SET-RAW-BITS$")
+    ("Array read" "DATA-VECTOR-REF" "$RAW-BITS$" "VECTOR-LENGTH"
+     "LENGTH/SIMPLE" "ARRAY-HEADER")
+    ("List/string utility" "LENGTH/LIST" "SXHASH" "BIT-BASH" "$LENGTH$")
+    ("Alien operations" "SAP" "ALLOC-NUMBER-STACK" "$CALL-OUT$")
+    ("Function call/return" "CALL" "RETURN" "ALLOCATE-FRAME"
+     "COPY-MORE-ARG" "LISTIFY-REST-ARG" "VERIFY-ARGUMENT-COUNT")
+    ("Allocation" "MAKE-" "ALLOC" "$CONS$" "$LIST$" "$LIST*$")
+    ("Float conversion" "%SINGLE-FLOAT" "%DOUBLE-FLOAT" "-BITS$")
+    ("Complex type predicate" "P$")))
+
+
+;;; MATCHES-PATTERN  --  Internal
+;;;
+;;;    Return true if Name patches a specified pattern.  Pattern is a string
+;;; (or symbol) or a list of strings (or symbols).  If any specified string
+;;; appears as a substring of name, the pattern is matched.  #\$'s are wapped
+;;; around name, allowing the use of $ to force a match at the beginning or
+;;; end.
+;;;
+(defun matches-pattern (name pattern)
+  (declare (simple-string name))
+  (let ((name (concatenate 'string "$" name "$")))
+    (dolist (pat (if (listp pattern) pattern (list pattern)) nil)
+      (when (search (the simple-string (string pat))
+		    name :test #'char=)
+	(return t)))))
+
+
+;;; FIND-MATCHES, WHAT-CLASS  --  Interface
+;;;
+;;;    Utilities for debugging classification rules.  FIND-MATCHES returns a
+;;; list of all the VOP names in Table that match Pattern.   WHAT-CLASS returns
+;;; the class that NAME would be placed in.
+;;;
+(defun find-matches (table pattern)
+  (collect ((res))
+    (do-hash (key value table)
+      (declare (ignore value))
+      (when (matches-pattern key pattern) (res key)))
+    (res)))
+;;;
+(defun what-class (name classes)
+  (dolist (class classes nil)
+    (when (matches-pattern name (rest class)) (return (first class)))))
+
+    
+;;; CLASSIFY-COSTS  --  Interface
+;;;
+;;;    Given a VOP-STATS hash-table, return a new one with VOPs in the same
+;;; class merged into a single entry for that class.  The classes are
+;;; represented as a list of lists: (class-name pattern*).  Each pattern is a
+;;; string (or symbol) that can appear as a subsequence of the VOP name.  A VOP
+;;; is placed in the first class that it matches, or is left alone if it
+;;; matches no class.
+;;;
+(defun classify-costs (table classes)
+  (let ((res (make-hash-table-like table)))
+    (do-hash (key value table)
+      (let ((class (dolist (class classes nil)
+		     (when (matches-pattern key (rest class))
+		       (return (first class))))))
+	(if class
+	    (let ((found (or (gethash class res)
+			     (setf (gethash class res)
+				   (%make-vop-stats class)))))
+	      (incf (vop-stats-count found) (vop-stats-count value))
+	      (incf (vop-stats-cost found) (vop-stats-cost value)))
+	    (setf (gethash key res) value))))
+    res))
+
+
+;;;; Analysis:
 
 ;;; COST-SUMMARY  --  Internal
 ;;;
@@ -336,12 +435,13 @@ VOP classification.
 ;;; COMPENSATE-COSTS  --  Internal
 ;;;
 ;;;    Return a hashtable of DYNCOUNT-INFO structures, with cost adjustments
-;;; according to the Costs table.
+;;; according to the Costs table.  Any VOPs in the list IGNORE are ignored.
 ;;;
-(defun compensate-costs (table costs)
+(defun compensate-costs (table costs &optional ignore)
   (let ((res (make-hash-table-like table)))
     (do-hash (key value table)
-      (unless (string= key "COUNT-ME")
+      (unless (or (string= key "COUNT-ME")
+		  (member key ignore :test #'string=))
 	(let ((cost (gethash key costs)))
 	  (if cost
 	      (let* ((count (vop-stats-count value))
@@ -353,15 +453,14 @@ VOP classification.
     res))
 
 
-;;; COMBINE-STATS  --  Internal
+;;; COMPARE-STATS  --  Internal
 ;;;
 ;;;    Take two tables of vop-stats and return a table of entries where the
-;;; entries have been compared somehow.  The counts are normalized to Compared.
-;;; The costs are the difference of the costs adjusted by the difference in
-;;; counts: the cost for Original is modified to correspond to the count in
-;;; Compared.
+;;; entries have been compared.  The counts are normalized to Compared.  The
+;;; costs are the difference of the costs adjusted by the difference in counts:
+;;; the cost for Original is modified to correspond to the count in Compared.
 ;;;
-(defun combine-stats (original compared)
+(defun compare-stats (original compared)
   (declare (type hash-table original compared))
   (let ((res (make-hash-table-like original)))
     (do-hash (k cv compared)
@@ -377,6 +476,23 @@ VOP classification.
     res))
 
 
+;;; COMBINE-STATS  --  Public
+;;;
+(defun combine-stats (&rest tables)
+  "Sum the VOP stats for the specified tables, returning a new table with the
+   combined results."
+  (let ((res (make-hash-table-like (first tables))))
+    (dolist (table tables)
+      (do-hash (k v table)
+	(let ((found (or (gethash k res)
+			 (setf (gethash k res) (%make-vop-stats k)))))
+	  (incf (vop-stats-count found) (vop-stats-count v))
+	  (incf (vop-stats-cost found) (vop-stats-cost v)))))
+    res))
+
+
+;;;; Report generation:
+
 ;;; SORT-RESULT  --  Internal
 ;;;
 (defun sort-result (table by)
@@ -387,36 +503,177 @@ VOP classification.
 			(:cost (vop-stats-cost x)))))))
 
 
+;;; ENTRY-REPORT  --  Internal
+;;;
+;;;    Report about VOPs in the list of stats structures.
+;;;
+(defun entry-report (entries cut-off compensated compare total-cost)
+  (let ((counter (if (and cut-off (> (length entries) cut-off))
+		     cut-off
+		     most-positive-fixnum)))
+  (dolist (entry entries)
+    (let* ((cost (vop-stats-cost entry))
+	   (name (vop-stats-name entry))
+	   (entry-count (vop-stats-count entry))
+	   (comp-entry (if compare (gethash name compare) entry))
+	   (count (vop-stats-count comp-entry)))
+      (format t "~30<~A~>: ~:[~13:D~;~13,2F~] ~9,2F  ~5,2,2F%~%"
+	      (vop-stats-name entry)
+	      compare
+	      (if compare entry-count (round entry-count))
+	      (/ cost count)
+	      (/ (if compare
+		     (- (vop-stats-cost (gethash name compensated))
+			(vop-stats-cost comp-entry))
+		     cost)
+		 total-cost))
+      (when (zerop (decf counter))
+	(format t "[End of top ~D]~%" cut-off))))))
+
+;;; FIND-CUT-OFF  --  Internal
+;;;
+;;;    Divide Sorted into two lists, the first cut-off elements long.  Any VOP
+;;; names that match one of the report strings are moved into the report list
+;;; even if they would otherwise fall below the cut-off.
+;;;
+(defun find-cut-off (sorted cut-off report)
+  (if (or (not cut-off) (<= (length sorted) cut-off))
+      (values sorted ())
+      (let ((not-cut (subseq sorted 0 cut-off)))
+	(collect ((select)
+		  (reject))
+	  (dolist (el (nthcdr cut-off sorted))
+	    (let ((name (vop-stats-name el)))
+	      (if (matches-pattern name report)
+		  (select el)
+		  (reject el))))
+	  (values (append not-cut (select)) (reject))))))
+		  
+
+;;; CUT-OFF-REPORT  --  Internal
+;;;
+;;;    Display information about entries that were not displayed due to the
+;;; cut-off.  Note: if compare, we find the total cost delta and the geometric
+;; mean of the normalized counts.
+;;
+(defun cut-off-report (other compare total-cost)
+  (let ((rest-cost 0d0)
+	(rest-count 0d0)
+	(rest-entry-count (if compare 1d0 0d0)))
+    (dolist (entry other)
+      (incf rest-cost (vop-stats-cost entry))
+      (incf rest-count
+	    (vop-stats-count
+	     (if compare
+		 (gethash (vop-stats-name entry) compare)
+		 entry)))
+      (if compare
+	  (setq rest-entry-count
+		(* rest-entry-count (vop-stats-count entry)))
+	  (incf rest-entry-count (vop-stats-count entry))))
+    
+    (let ((count (if compare
+		     (expt rest-entry-count
+			   (/ (coerce (length other) 'double-float)))
+		     (round rest-entry-count))))
+      (format t "~30<Other~>: ~:[~13:D~;~13,2F~] ~9,2F  ~@[~5,2,2F%~]~%"
+	      compare count
+	      (/ rest-cost rest-count)
+	      (unless compare
+		(/ rest-cost total-cost))))))
+
+
+;;; COMPARE-REPORT  --  Internal
+;;;
+;;;    Report summary information about the difference between the comparison
+;;; and base data sets.
+;;;
+(defun compare-report (total-count total-cost compare-total-count
+				   compare-total-cost compensated compare)
+  (format t "~30<Relative total~>: ~13,2F ~9,2F~%"
+	  (/ total-count compare-total-count)
+	  (/ total-cost compare-total-cost))
+  (flet ((frob (a b sign wot)
+	   (multiple-value-bind
+	       (cost count) (cost-summary (hash-difference a b))
+	     (unless (zerop count)
+	       (format t "~30<~A~>: ~13:D ~9,2F  ~5,2,2F%~%"
+		       wot (* sign (round count))
+		       (* sign (/ cost count))
+		       (* sign (/ cost compare-total-cost)))))))
+    (frob compensated compare 1 "Not in comparison")
+    (frob compare compensated -1 "Only in comparison"))
+  (format t "~30<Comparison total~>: ~13,2E ~9,2E~%"
+	  compare-total-count compare-total-cost))
+
+
+;;; The fraction of system time that we guess happened during GC.
+;;;
+(defparameter *gc-system-fraction* 2/3)
+
+;;; FIND-CPI  --  Interface
+;;;
+;;;    Estimate CPI from CPU time and cycles accounted in profiling
+;;; information.
+;;;
+(defun find-cpi (total-cost user system gc clock)
+  (let ((adj-time (if (zerop gc)
+		      user
+		      (- user (- gc (* system *gc-system-fraction*))))))
+    (/ (* adj-time clock) total-cost)))
+
+  
 ;;; GENERATE-REPORT  --  Public
 ;;;
 ;;; Generate a report from the specified table.
 ;;;
 (defun generate-report (table &key (cut-off 15) (sort-by :cost)
-			      (costs *native-costs*) compare)
-  (let* ((compensated (if costs (compensate-costs table costs) table))
+			      (costs *native-costs*)
+			      ((:compare uncomp-compare))
+			      (compare-costs costs)
+			      ignore report
+			      (classes *basic-classes*)
+			      user (system 0d0) (gc 0d0)
+			      (clock 25d6))
+  (let* ((compensated
+	  (classify-costs
+	   (if costs
+	       (compensate-costs table costs ignore)
+	       table)
+	   classes))
+	 (compare
+	  (when uncomp-compare
+	    (classify-costs
+	     (if compare-costs
+		 (compensate-costs uncomp-compare compare-costs ignore)
+		 uncomp-compare)
+	     classes)))
 	 (compared (if compare
-		       (combine-stats compensated compare)
+		       (compare-stats compensated compare)
 		       compensated))
 	 (*gc-verbose* nil))
     (multiple-value-bind (total-count total-cost)
-			 (cost-summary (or compare compensated))
-      (format t "~30<Vop~>  ~13<Count~> ~6<Cost~>  ~6:@<Percent~>~%")
-      (dolist (entry (sort-result compared sort-by))
-	(when (and cut-off (minusp (decf cut-off)))
-	  (return))
-	(let* ((cost (vop-stats-cost entry))
-	       (name (vop-stats-name entry))
-	       (entry-count (vop-stats-count entry))
-	       (comp-entry (if compare (gethash name compare) entry))
-	       (count (vop-stats-count comp-entry)))
-	  (format t "~30<~A~>: ~:[~13:D~;~13,2F~] ~6,1F  ~4,1,2F%~%"
-		  (vop-stats-name entry)
-		  compare
-		  (if compare entry-count (round entry-count))
-		  (/ cost count)
-		  (/ cost total-cost))))
-	(format t "~%Total count ~,3E, total cost ~,3E.~%"
-		total-count total-cost)))
+			 (cost-summary compensated)
+      (multiple-value-bind (compare-total-count compare-total-cost)
+			   (when compare (cost-summary compare))
+	(format t "~2&~30<Vop~>  ~13<Count~> ~9<Cost~>  ~6:@<Percent~>~%")
+	(let ((sorted (sort-result compared sort-by))
+	      (base-total (if compare compare-total-cost total-cost)))
+	  (multiple-value-bind
+	      (report other)
+	      (find-cut-off sorted cut-off report)
+	    (entry-report report cut-off compensated compare base-total)
+	    (when other
+	      (cut-off-report other compare base-total))))
+
+	(when compare
+	  (compare-report total-count total-cost compare-total-count
+			  compare-total-cost compensated compare))
+
+	(format t "~30<Total~>: ~13,2E ~9,2E~%" total-count total-cost)
+	(when user
+	  (format t "~%Cycles per instruction = ~,2F~%"
+		  (find-cpi total-cost user system gc clock))))))
   (values))
 
 
