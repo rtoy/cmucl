@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.47 1999/01/15 09:27:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.48 1999/01/22 16:51:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -767,11 +767,11 @@ non-server method is also significantly more efficient for large reads.
 		(unless count
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
+		(decf now-needed count)
 		(if eof-error-p
 		    (when (zerop count)
 		      (error 'end-of-file :stream stream))
 		    (return (- requested now-needed)))
-		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
 	 (t
