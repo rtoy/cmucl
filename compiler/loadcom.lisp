@@ -122,7 +122,7 @@
 
 #+pmax(progn
 (load "mips:dump")
-;(load "c:core")
+(load "mips:core")
 ;(load "mips:genesis")
 
 (load "mips:vm")
