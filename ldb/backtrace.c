@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.2 1990/04/05 00:45:06 wlott Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/backtrace.c,v 1.3 1990/04/27 01:55:15 wlott Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -110,7 +110,10 @@ struct sigcontext *csp;
         info->lra = 0;
         pc = csp->sc_pc;
     }
-    info->pc = (pc - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+    if (info->code != NULL)
+        info->pc = (pc - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+    else
+        info->pc = 0;
 }
 
 static int
@@ -129,7 +132,10 @@ struct call_info *info;
         return 0;
 
     info->code = code_pointer(info->lra);
-    info->pc = ((unsigned long)PTR(info->lra) - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+    if (info->code != NULL)
+        info->pc = ((unsigned long)PTR(info->lra) - (unsigned long) info->code) / sizeof(lispobj) - HEADER_LENGTH(info->code->header);
+    else
+        info->pc = 0;
 
     return 1;
 }
@@ -197,7 +203,7 @@ int nframes;
         else
             printf("<no LRA>, ");
 
-        printf("PC: %d\n", info.pc);
+        printf("PC: %d>\n", info.pc);
 
     } while (--nframes > 0 && previous_info(&info));
 }
