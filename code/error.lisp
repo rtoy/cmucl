@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.72 2003/04/18 10:24:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.73 2003/04/29 16:27:18 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -982,7 +982,7 @@
 
 ;;; INTERNAL
 (define-condition simple-program-error (simple-condition program-error)())
-(define-condition simple-parse-error (simple-condition program-error)())
+(define-condition simple-parse-error (simple-condition parse-error)())
 (define-condition simple-control-error (simple-condition control-error)())
 
 (define-condition simple-file-error (simple-condition file-error) ()
