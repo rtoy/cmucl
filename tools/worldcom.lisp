@@ -93,6 +93,10 @@
 (comf "assem:ropdefs")
 (comf "assem:rompconst")
 (comf "assem:disassemble")
+#+new-compiler
+(comf "assem:assem")
+#+new-compiler
+(comf "assem:assembler")
 
 (comf "ncode:machdef")
 (comf "ncode:mmlispdefs")
