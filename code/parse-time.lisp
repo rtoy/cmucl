@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.2 1991/02/08 13:34:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.3 1991/07/26 11:35:16 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -24,7 +24,7 @@
 
 (defconstant whitespace-chars '(#\space #\tab #\newline #\, #\' #\`))
 (defconstant time-dividers '(#\: #\.))
-(defconstant date-dividers '(#\- #\\ #\/))
+(defconstant date-dividers '(#\\ #\/ #\-))
 
 (defvar *error-on-mismatch* nil
   "If t, an error will be signalled if parse-time is unable
@@ -41,10 +41,10 @@
   `(dolist (item ,list)
      (setf (gethash (car item) ,table) (cdr item))))
 
-(defparameter weekday-table-size 20)
-(defparameter month-table-size 30)
-(defparameter zone-table-size 10)
-(defparameter special-table-size 10)
+(defparameter weekday-table-size 23)
+(defparameter month-table-size 31)
+(defparameter zone-table-size 11)
+(defparameter special-table-size 11)
 
 (defvar *weekday-strings* (make-hash-table :test #'equal
 					 :size weekday-table-size))
@@ -84,10 +84,10 @@
 	  *month-strings*)
 
 (hashlist '(("gmt" . 0) ("est" . 5)
-	    ("edt" . 5) ("cst" . 6)
-	    ("cdt" . 6) ("mst" . 7)
-	    ("mdt" . 7)	("pst" . 8)
-	    ("pdt" . 8)) 
+	    ("edt" . 4) ("cst" . 6)
+	    ("cdt" . 5) ("mst" . 7)
+	    ("mdt" . 6)	("pst" . 8)
+	    ("pdt" . 7)) 
 	  *zone-strings*)
 
 (hashlist '(("yesterday" . yesterday)  ("today" . today)
@@ -259,15 +259,23 @@
 
 ;;; Converts the values in the decoded-time structure to universal time
 ;;; by calling extensions:encode-universal-time.
+;;; If zone is in numerical form, tweeks it appropriately.
 
 (defun convert-to-unitime (parsed-values)
-  (encode-universal-time (decoded-time-second parsed-values)
-			 (decoded-time-minute parsed-values)
-			 (decoded-time-hour parsed-values)
-			 (decoded-time-day parsed-values)
-			 (decoded-time-month parsed-values)
-			 (decoded-time-year parsed-values)
-			 (decoded-time-zone parsed-values)))
+  (let ((zone (decoded-time-zone parsed-values)))
+    (encode-universal-time (decoded-time-second parsed-values)
+			   (decoded-time-minute parsed-values)
+			   (decoded-time-hour parsed-values)
+			   (decoded-time-day parsed-values)
+			   (decoded-time-month parsed-values)
+			   (decoded-time-year parsed-values)
+			   (if (or (> zone 23) (< zone -23))
+			       (let ((new-zone (/ zone 100)))
+				 (cond ((minusp new-zone) (- new-zone))
+				       ((plusp new-zone) (- 24 new-zone))
+				       ;; must be zero (GMT)
+				       (t new-zone)))
+			       zone))))
 
 ;;; Sets the current values for the time and/or date parts of the 
 ;;; decoded time structure.
@@ -335,8 +343,11 @@
   (or (and (simple-string-p thing) (gethash thing *month-strings*))
       (and (integerp thing) (<= 1 thing 12))))
 
-(defun zone (string)
-  (and (simple-string-p string) (gethash string *zone-strings*)))
+(defun zone (thing)
+  (or (and (simple-string-p thing) (gethash thing *zone-strings*))
+      (if (integerp thing)
+	  (let ((zone (/ thing 100)))
+	    (and (integerp zone) (<= -23 zone 23))))))
 
 (defun special (string)
   (and (simple-string-p string) (gethash string *special-strings*)))
@@ -398,9 +409,13 @@
 
 (defun decompose-string (string &key (start 0) (end (length string)) (radix 10))
   (do ((string-index start)
+       (next-negative nil)
        (parts-list nil))
       ((eq string-index end) (nreverse parts-list))
-    (let ((next-char (char string string-index)))
+    (let ((next-char (char string string-index))
+	  (prev-char (if (= string-index start)
+			 nil
+			 (char string (1- string-index)))))
       (cond ((alpha-char-p next-char)
 	     ;; Alphabetic character - scan to the end of the substring.
 	     (do ((scan-index (1+ string-index) (1+ scan-index)))
@@ -419,8 +434,21 @@
 				      (digit-char-p (char string scan-index) radix))))
 		 ((or (eq scan-index end)
 		      (not (digit-char-p (char string scan-index) radix)))
+		  ;; If next-negative is t, set the numeric value to it's
+		  ;; opposite and reset next-negative to nil.
+		  (when next-negative
+		    (setf next-negative nil)
+		    (setf numeric-value (- numeric-value)))
 		  (push numeric-value parts-list)
 		  (setf string-index scan-index))))
+	    ((and (char= next-char #\-)
+		  (or (not prev-char)
+		      (member prev-char whitespace-chars :test #'char=)))
+	     ;; If we see a minus sign before a number, but not after one,
+	     ;; it is not a date divider, but a negative offset from GMT, so
+	     ;; set next-negative to t and continue.
+	     (setf next-negative t)
+	     (incf string-index))	     
 	    ((member next-char time-dividers :test #'char=)
  	     ;; Time-divider - add it to the parts-list with symbol.
 	     (push (cons 'time-divider next-char) parts-list)
@@ -476,19 +504,19 @@
 						  (nreverse form-list))
 				   (if (not (listp element))
 				       (return nil))))))
-	(let* ((pattern-element (car pattern))
-	       (datum-element (car datum))
-	       (optional (listp pattern-element))
-	       (matching (match-pattern-element (if optional
-						    (car pattern-element)
-						    pattern-element)
-						datum-element)))
-	  (cond (matching (let ((form-type (car matching)))
-			    (unless (or (eq form-type 'time-divider)
-					(eq form-type 'date-divider))
-			      (push matching form-list))))
-		(optional (push datum-element datum))
-		(t (return-from match-pattern nil))))))))
+	  (let* ((pattern-element (car pattern))
+		 (datum-element (car datum))
+		 (optional (listp pattern-element))
+		 (matching (match-pattern-element (if optional
+						      (car pattern-element)
+						      pattern-element)
+						  datum-element)))
+	    (cond (matching (let ((form-type (car matching)))
+			      (unless (or (eq form-type 'time-divider)
+					  (eq form-type 'date-divider))
+				(push matching form-list))))
+		  (optional (push datum-element datum))
+		  (t (return-from match-pattern nil))))))))
 
 ;;; Deal-with-noon-midn sets the decoded-time values to either noon
 ;;; or midnight depending on the argument form-value.  Form-value
@@ -542,7 +570,8 @@
 	(special (funcall form-value parsed-values))
 	(t (error "Unrecognized symbol in form list: ~A." form-type))))))
 
-(defun parse-time (time-string &key (error-on-mismatch nil)
+(defun parse-time (time-string &key (start 0) (end (length time-string))
+			       (error-on-mismatch nil)			       
 			       (default-seconds nil) (default-minutes nil)
 			       (default-hours nil) (default-day nil)
 			       (default-month nil) (default-year nil)
@@ -557,7 +586,7 @@
    to set them to the current value.  The default-default values
    are 00:00:00 on the current date, current time-zone."
   (setq *error-on-mismatch* error-on-mismatch)
-  (let* ((string-parts (decompose-string time-string))
+  (let* ((string-parts (decompose-string time-string :start start :end end))
 	 (parts-length (length string-parts))
 	 (string-form (dolist (pattern patterns)
 			(let ((match-result (match-pattern pattern
