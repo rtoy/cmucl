@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.4 1990/08/24 18:14:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.5 1990/10/11 18:30:21 ram Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -769,8 +769,10 @@
 (defun string-in-misc (stream operation &optional arg1 arg2)
   (case operation
     (:file-position
-     (if (null arg1)
-       (string-input-stream-current stream)))
+     (if arg1
+	 (setf (string-input-stream-current stream) arg1)
+	 (string-input-stream-current stream)))
+    (:file-length (length (string-input-stream-string stream)))
     (:read-line
      (let ((string (string-input-stream-string stream))
 	   (current (string-input-stream-current stream))
