@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.6 1990/09/06 19:40:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.7 1990/09/24 17:22:32 wlott Exp $
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
@@ -852,7 +852,9 @@
      (loop
        (multiple-value-bind
 	   (count errno)
-	   (mach:unix-select (1+ fd) (ash 1 fd) 0 0 0)
+	   (mach:unix-select (1+ (fd-stream-fd stream))
+			     (ash 1 (fd-stream-fd stream))
+			     0 0 0)
 	 (cond ((eql count 1)
 		(do-input stream)
 		(setf (fd-stream-ibuf-head stream) 0)
