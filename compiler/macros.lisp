@@ -384,7 +384,8 @@
 ;;; automatically create the result lambda.
 ;;;
 (defmacro deftransform (name (lambda-list &optional (arg-types '*) (result-type '*)
-					  &key result policy node defun-only)
+					  &key result policy node defun-only
+					  eval-name)
 			     &body body)
   "Deftransform Name (Lambda-List [Arg-Types] [Result-Type] {Key Value}*)
                Declaration* Form*
@@ -428,11 +429,16 @@
     :Policy - A form which is supplied to the Policy macro to determine whether
               this transformation is appropriate.  If the result is false, then
               the transform automatically passes.
+    :Eval-Name
+    	    - The name is actually a form to be evaluated.  Useful for getting
+	      closures that transform similar functions.
     :Defun-Only
             - Don't actually instantiate a transform, instead just DEFUN
               Name with the specified transform definition function.  This may
               be later instantiated with %Deftransform."
 
+  (when (and eval-name defun-only)
+    (error "Can't specify both DEFUN-ONLY and EVAL-NAME."))
   (let ((n-args (gensym))
 	(n-node (or node (gensym)))
 	(n-decls (gensym))
@@ -461,7 +467,7 @@
 	(if defun-only
 	    `(defun ,name ,@stuff)
 	    `(%deftransform
-	      ',name
+	      ,(if eval-name name `',name)
 	      '(function ,arg-types ,result-type)
 	      #'(lambda ,@stuff)))))))
 
