@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.18 2002/11/19 13:17:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.19 2003/02/24 16:19:48 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -313,19 +313,19 @@
 (def-alien-type u-int16-t unsigned-short)
 (def-alien-type int32-t int)
 (def-alien-type u-int32-t unsigned-int)
-(def-alien-type int64-t #+alpha long #-alpha (array long 2))
-(def-alien-type u-int64-t #+alpha unsigned-long #-alpha (array unsigned-long 2))
+(def-alien-type int64-t (signed 64))
+(def-alien-type u-int64-t (unsigned 64))
 (def-alien-type register-t #-alpha int #+alpha long)
 
 
-(def-alien-type dev-t u-int64-t)
+(def-alien-type dev-t #+alpha u-int64-t #-alpha (array unsigned-long 2))
 (def-alien-type uid-t unsigned-int)
 (def-alien-type gid-t unsigned-int)
 (def-alien-type ino-t u-int32-t)
 (def-alien-type mode-t unsigned-int)
 (def-alien-type nlink-t unsigned-int)
 (def-alien-type off-t long)
-(def-alien-type loff-t quad-t)
+(def-alien-type loff-t u-int64-t)
 (def-alien-type pid-t int)
 ;(def-alien-type ssize-t #-alpha int #+alpha long)
 
@@ -447,8 +447,9 @@
   (int-syscall ("fcntl" int unsigned-int unsigned-int) fd cmd arg))
 
 (defun unix-open (path flags mode)
-  "Unix-open opens the file whose pathname is specified by path
-   for reading and/or writing as specified by the flags argument.
+  "Unix-open opens the file whose pathname is specified by PATH
+   for reading and/or writing as specified by the FLAGS argument.
+   Returns an integer file descriptor.
    The flags argument can be:
 
      o_rdonly        Read-only flag.
@@ -457,19 +458,18 @@
      o_append        Append flag.
      o_creat         Create-if-nonexistant flag.
      o_trunc         Truncate-to-size-0 flag.
-     o_excl          Error if the file allready exists
+     o_excl          Error if the file already exists
      o_noctty        Don't assign controlling tty
      o_ndelay        Non-blocking I/O
      o_sync          Synchronous I/O
      o_async         Asynchronous I/O
 
    If the o_creat flag is specified, then the file is created with
-   a permission of argument mode if the file doesn't exist.  An
-   integer file descriptor is returned by unix-open."
+   a permission of argument MODE if the file doesn't exist."
   (declare (type unix-pathname path)
 	   (type fixnum flags)
 	   (type unix-file-mode mode))
-  (int-syscall ("open" c-string int int) path flags mode))
+  (int-syscall ("open64" c-string int int) path flags mode))
 
 (defun unix-getdtablesize ()
   "Unix-getdtablesize returns the maximum size of the file descriptor
@@ -500,7 +500,7 @@
   
   (declare (type unix-pathname name)
 	   (type unix-file-mode mode))
-  (int-syscall ("creat" c-string int) name mode))
+  (int-syscall ("creat64" c-string int) name mode))
 
 ;;; fcntlbits.h
 
@@ -1759,9 +1759,14 @@ length LEN and type TYPE."
    l_xtnd       Extend the file size.
   "
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 32) offset)
+	   (type (signed-byte 64) offset)
 	   (type (integer 0 2) whence))
-  (int-syscall ("lseek" int off-t int) fd offset whence))
+  (let ((result (alien-funcall
+                 (extern-alien "lseek64" (function loff-t int loff-t int))
+                 fd offset whence)))
+    (if (minusp result)
+        (values nil (get-errno))
+        (values result 0))))
 
 
 ;;; Unix-read accepts a file descriptor, a buffer, and the length to read.
@@ -2251,20 +2256,20 @@ length LEN and type TYPE."
 ;;; Unix-truncate accepts a file name and a new length.  The file is
 ;;; truncated to the new length.
 
-(defun unix-truncate (name len)
+(defun unix-truncate (name length)
   "Unix-truncate truncates the named file to the length (in
-   bytes) specified by len.  NIL and an error number is returned
+   bytes) specified by LENGTH.  NIL and an error number is returned
    if the call is unsuccessful."
   (declare (type unix-pathname name)
-	   (type (unsigned-byte 32) len))
-  (void-syscall ("truncate" c-string off-t) name len))
+	   (type (unsigned-byte 64) length))
+  (void-syscall ("truncate64" c-string loff-t) name length))
 
-(defun unix-ftruncate (fd len)
+(defun unix-ftruncate (fd length)
   "Unix-ftruncate is similar to unix-truncate except that the first
    argument is a file descriptor rather than a file name."
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 32) len))
-  (void-syscall ("ftruncate" int off-t) fd len))
+	   (type (unsigned-byte 64) length))
+  (void-syscall ("ftruncate64" int loff-t) fd length))
 
 #+nil
 (defun unix-getdtablesize ()
