@@ -124,7 +124,15 @@
 
 ); Eval-When (Compile Load Eval)
 
-  
+;;; SPECIAL-FORM-FUNCTION  --  Internal
+;;;
+;;;    This function is stored in the SYMBOL-FUNCTION of special form names so
+;;; that they are FBOUND.
+;;;
+(defun special-form-function (&rest stuff)
+  (declare (ignore stuff))
+  (error "Can't funcall the SYMBOL-FUNCTION of special forms."))
+
 ;;; Def-IR1-Translator  --  Interface
 ;;;
 ;;;    Parse defmacro style lambda-list, setting things up so that a compiler
@@ -161,7 +169,10 @@
 	 ,@(when doc
 	     `((setf (documentation ',name 'function) ,doc)))
 	 (setf (info function ir1-convert ',name) #',fn-name)
-	 (setf (info function kind ',name) ,kind)))))
+	 (setf (info function kind ',name) ,kind)
+	 #+new-compiler
+	 ,@(when (eq kind :special-form)
+	     `((setf (symbol-function ',name) #'special-form-function)))))))
 
 
 ;;; Def-Source-Transform  --  Interface
