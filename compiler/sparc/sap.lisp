@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.7 1997/04/25 20:49:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.8 1997/04/26 20:05:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 ;;; Move a tagged SAP to an untagged representation.
 ;;;
 (define-vop (move-to-sap)
-  (:args (x :scs (any-reg descriptor-reg)))
+  (:args (x :scs (descriptor-reg)))
   (:results (y :scs (sap-reg)))
   (:note "pointer to SAP coercion")
   (:generator 1

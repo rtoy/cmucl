@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.16 1994/10/31 04:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.17 1997/04/26 20:04:59 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.16 1994/10/31 04:45:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.17 1997/04/26 20:04:59 dtc Rel $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -27,7 +27,7 @@
 ;;; Move a tagged SAP to an untagged representation.
 ;;;
 (define-vop (move-to-sap)
-  (:args (x :scs (any-reg descriptor-reg)))
+  (:args (x :scs (descriptor-reg)))
   (:results (y :scs (sap-reg)))
   (:generator 1
     (loadw y x vm:sap-pointer-slot vm:other-pointer-type)))
