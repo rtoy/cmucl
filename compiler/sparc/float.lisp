@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.32 2001/05/10 18:38:23 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.33 2001/09/24 15:37:01 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1956,7 +1956,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2031,7 +2031,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2121,7 +2121,6 @@
 	    (:translate /)
 	    (:temporary (:sc ,real-reg) ratio)
 	    (:temporary (:sc ,real-reg) den)
-	    (:temporary (:sc ,real-reg) temp)
 	    (:generator ,cost
 	      (let ((yr (,real-tn y))
 		    (yi (,imag-tn y))
@@ -2131,7 +2130,7 @@
 		    (done (gen-label)))
 		(,@fabs ratio yr)
 		(,@fabs den yi)
-		(inst ,fcmp ratio den)
+		(inst ,fcmp den ratio)
 		(unless (backend-featurep :sparc-v9)
 		  (inst nop))
 		(inst fb :ge bigger)
@@ -2141,10 +2140,10 @@
 		(inst ,fmul den ratio yi)
 		(inst ,fadd den den yr) ; den = yr + (yi/yr)*yi
 
-		(inst ,fmul temp ratio x) ; temp = (yi/yr)*x
+		(inst ,fmul ri ratio x) ; ri = (yi/yr)*x
 		(inst ,fdiv rr x den)	; rr = x/den
 		(inst b done)
-		(inst ,fdiv temp temp den) ; temp = (yi/yr)*x/den
+		(inst ,fdiv ri ri den) ; ri = (yi/yr)*x/den
 
 		(emit-label bigger)
 		;; The case of |yi| > |yr|
@@ -2152,12 +2151,12 @@
 		(inst ,fmul den ratio yr)
 		(inst ,fadd den den yi) ; den = yi + (yr/yi)*yr
 
-		(inst ,fmul temp ratio x) ; temp = (yr/yi)*x
-		(inst ,fdiv rr temp den) ; rr = (yr/yi)*x/den
-		(inst ,fdiv temp x den) ; temp = x/den
+		(inst ,fmul ri ratio x) ; ri = (yr/yi)*x
+		(inst ,fdiv rr ri den) ; rr = (yr/yi)*x/den
+		(inst ,fdiv ri x den) ; ri = x/den
 		(emit-label done)
 
-		(,@fneg ri temp)))))))
+		(,@fneg ri ri)))))))
 
   (frob single fcmps fadds fmuls fdivs (inst fnegs) (inst fabss) 10)
   (frob double fcmpd faddd fmuld fdivd (negate-double-reg) (abs-double-reg) 10))
