@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.12 2002/10/24 20:39:00 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.13 2003/08/22 13:20:03 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -147,10 +147,44 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 #endif
 }
 
+/*
+ * Look at the instruction at address PC and see if it's a trap
+ * instruction with an immediate value.  If so, set trapno to the trap
+ * number, and return non-zero.  If it's not a trap instruction,
+ * return 0.
+ */
+boolean trap_inst_p(unsigned int* pc, int* trapno)
+{
+  unsigned int trap_inst;
+  
+  trap_inst = *pc;
+  
+  if (((trap_inst >> 30) == 2)
+      && (((trap_inst >> 19) & 0x3f) == 0x3a)
+      && (((trap_inst >> 14) & 0x1f) == reg_ZERO)
+      && (((trap_inst >> 13) & 1) == 1))
+    {
+      /*
+       * Got a trap instruction with immediate trap value.
+       * Get the value and return.
+       */
+      *trapno = (trap_inst & 0x3f);
+
+      return 1;
+    }
+  else
+    {
+      *trapno = -1;
+      return 0;
+    }
+}
+
+
 static int pseudo_atomic_trap_p(struct sigcontext *context)
 {
   unsigned int* pc;
   unsigned int badinst;
+  int trapno;
   int result;
   
   
@@ -163,11 +197,7 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
    * to make sure this instruction was a trap instruction with rs1 = 0
    * and a software trap number (immediate value) of 16.
    */
-  if (((badinst >> 30) == 2)
-      && (((badinst >> 19) & 0x3f) == 0x3a)
-      && (((badinst >> 14) & 0x1f) == reg_ZERO)
-      && (((badinst >> 13) & 1) == 1)
-      && ((badinst & 0x3f) == trap_PseudoAtomic))
+  if (trap_inst_p(pc, &trapno) && (trapno == trap_PseudoAtomic))
     {
       unsigned int previnst;
       previnst = pc[-1];
@@ -191,6 +221,130 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
   return result;
 }
 
+#ifdef GENCGC
+/*
+ * Return non-zero if the instruction is a trap 31 instruction
+ */
+
+boolean allocation_trap_p(struct sigcontext *context)
+{
+  int result;
+  unsigned int* pc;
+  unsigned int or_inst;
+  int trapno;
+  
+  result = 0;
+  
+  /*
+   * Make sure this is a trap 31 instruction preceeded by an OR
+   * instruction.
+   */
+
+  pc = SC_PC(context);
+  
+  if (trap_inst_p(pc, &trapno) && (trapno == 31))
+    {
+      /* Got the trap.  Is it preceeded by an OR instruction? */
+      or_inst = pc[-1];
+      if (((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 2))
+        {
+          result = 1;
+        }
+      else
+        {
+          fprintf(stderr, "Whoa!!! Got an allocation trap not preceeded by an OR inst: 0x%08x!\n",
+                  or_inst);
+        }
+    }
+
+  return result;
+}
+#endif
+
+#if 0
+/* Pop the stack frame that build_fake_control_stack_frame makes */
+static void pop_fake_control_stack_frame(struct sigcontext *context)
+{
+  current_control_frame_pointer = (lispobj*) SC_REG(context, reg_CFP);
+  SC_REG(context, reg_OCFP) = current_control_frame_pointer[0];
+  SC_REG(context, reg_CODE) = current_control_frame_pointer[1];
+  SC_REG(context, reg_CSP) = SC_REG(context, reg_CFP);
+  SC_REG(context, reg_CFP) = SC_REG(context, reg_OCFP);
+}
+#endif
+
+#ifdef GENCGC
+void handle_allocation_trap(struct sigcontext *context)
+{
+  unsigned int* pc;
+  unsigned int or_inst;
+  int rs1;
+  int size;
+  int immed;
+  int context_index;
+  boolean were_in_lisp;
+  char* memory;
+      
+  pc = (unsigned int*) SC_PC(context);
+  or_inst = pc[-1];
+
+  /*
+   * The instruction before this trap instruction had better be an OR
+   * instruction!
+   */
+
+  /*
+   * An OR instruction.  RS1 is the register we want to allocate to.
+   * RS2 (or an immediate) is the size.
+   */
+
+  rs1 = (or_inst >> 14) & 0x1f;
+      
+  immed = (or_inst >> 13) & 1;
+
+  if (immed == 1)
+    {
+      size = or_inst & 0x1fff;
+    }
+  else
+    {
+      size = or_inst & 0x1f;
+      size = SC_REG(context, size);
+    }
+
+  /*
+   * I don't think it's possible for us NOT to be in lisp when we get
+   * here.  Remove this later?
+   */
+  were_in_lisp = !foreign_function_call_active;
+  
+  if (were_in_lisp)
+    {
+      fake_foreign_function_call(context);
+    }
+  else
+    {
+      fprintf(stderr, "**** Whoa! allocation trap and we weren't in lisp!\n");
+    }
+  
+  /*
+   * Allocate some memory, store the memory address in rs1.
+   */
+
+#if 0
+  fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[rs1]);
+#endif
+  
+  memory = alloc(size);
+  SC_REG(context, rs1) = memory;
+
+  if (were_in_lisp)
+    {
+      undo_fake_foreign_function_call(context);
+    }
+  
+}
+#endif
 
 /*
  * How to identify an illegal instruction trap and a trap instruction
@@ -278,7 +432,16 @@ static void sigill_handler(HANDLER_ARGS)
             arch_skip_instruction(context);
             interrupt_handle_pending(context);
           }
-        else
+#ifdef GENCGC
+        else if (allocation_trap_p(context))
+          {
+            /* An allocation trap. Call the trap handler and then skip
+               this instruction */
+            handle_allocation_trap(context);
+            arch_skip_instruction(context);
+          }
+#endif
+        else 
           {
             interrupt_internal_error(signal, code, context, FALSE);
           }

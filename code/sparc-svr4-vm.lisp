@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.6 2003/04/01 21:19:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.7 2003/08/22 13:20:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -401,3 +401,6 @@
       (when (< entry (lisp::foreign-linkage-symbols))
 	(lisp::foreign-linkage-entry entry)))))
 )
+
+;;; Enable/Disable scavenging of the read-only space.
+(defvar *scavenge-read-only-space* nil)

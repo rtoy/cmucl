@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.32 2003/03/27 12:42:10 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.33 2003/08/22 13:20:03 toy Exp $
  *
  */
 
@@ -28,7 +28,39 @@
 #define gc_abort() lose("GC invariant lost!  File \"%s\", line %d\n", \
 			__FILE__, __LINE__)
 
-#if 0
+#if defined(i386)
+#define set_alloc_pointer(value)  SetSymbolValue(ALLOCATION_POINTER, value)
+#define get_alloc_pointer()       SymbolValue(ALLOCATION_POINTER)
+#define get_binding_stack_pointer()     SymbolValue(BINDING_STACK_POINTER)
+#define get_pseudo_atomic_atomic()      SymbolValue(PSEUDO_ATOMIC_ATOMIC)
+#define set_pseudo_atomic_atomic()      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
+#define clr_pseudo_atomic_atomic()      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
+#define get_pseudo_atomic_interrupted() SymbolValue(PSEUDO_ATOMIC_INTERRUPTED)
+#define clr_pseudo_atomic_interrupted() SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0))
+#elif defined(sparc)
+#define set_alloc_pointer(value)  (current_dynamic_space_free_pointer = (value))
+#define get_alloc_pointer()       (current_dynamic_space_free_pointer)
+#define get_binding_stack_pointer()     (current_binding_stack_pointer)
+#define get_pseudo_atomic_atomic() \
+     ((unsigned long)current_dynamic_space_free_pointer & 4)
+#define set_pseudo_atomic_atomic() \
+     (current_dynamic_space_free_pointer \
+       = (lispobj*) ((unsigned long)current_dynamic_space_free_pointer | 4))
+#define clr_pseudo_atomic_atomic() \
+     (current_dynamic_space_free_pointer \
+       = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~4))
+#define get_pseudo_atomic_interrupted() ((unsigned long) current_dynamic_space_free_pointer & 1)
+#define clr_pseudo_atomic_interrupted() \
+     (current_dynamic_space_free_pointer \
+       = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~1))
+#else
+#endif
+
+/*
+ * Leave the gc_asserts enabled on sparc for a while yet until this
+ * stabilizes.
+ */
+#if defined(sparc)
 #define gc_assert(ex) do { \
 	if (!(ex)) gc_abort(); \
 } while (0)
@@ -71,7 +103,9 @@ boolean  enable_page_protection = TRUE;
 int verify_gens = NUM_GENERATIONS;
 
 /*
- * Enable a pre-scan verify of generation 0 before it's GCed.
+ * Enable a pre-scan verify of generation 0 before it's GCed.  (This
+ * makes GC very, very slow, so don't enable this unless you really
+ * need it!)
  */
 boolean pre_verify_gen_0 = FALSE;
 
@@ -88,7 +122,7 @@ boolean verify_dynamic_code_check = FALSE;
 
 /*
  * Enable the checking of code objects for fixup errors after they are
- * transported.
+ * transported.  (Only used for x86.)
  */
 boolean check_code_fixups = FALSE;
 
@@ -403,14 +437,26 @@ static double gen_av_mem_age(int gen)
 void print_generation_stats(int  verbose)
 {
   int i, gens;
-  int fpu_state[27];
+#if defined(i386)
+#define FPU_STATE_SIZE 27
+  int fpu_state[FPU_STATE_SIZE];
+#elif defined(sparc)
+  /*
+   * 32 (single-precision) FP registers, and the FP state register.
+   * But Sparc V9 has 32 double-precision registers (equivalent to 64
+   * single-precision, but can't be accessed), so we leave enough room
+   * for that.
+   */
+#define FPU_STATE_SIZE (((32 + 32 + 1) + 1)/2)
+  long long fpu_state[FPU_STATE_SIZE];
+#endif
 
   /*
    * This code uses the FP instructions which may be setup for Lisp so
    * they need to the saved and reset for C.
    */
   fpu_save(fpu_state);
-
+  
   /* Number of generations to print out. */
   if (verbose)
     gens = NUM_GENERATIONS + 1;
@@ -757,9 +803,9 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
   /* Bump up the last_free_page */
   if (last_page + 1 > last_free_page) {
     last_free_page = last_page + 1;
-    SetSymbolValue(ALLOCATION_POINTER,
-		   (lispobj) ((char *) heap_base +
-			      PAGE_SIZE * last_free_page));
+    set_alloc_pointer((lispobj) ((char *) heap_base +
+                               PAGE_SIZE * last_free_page));
+    
   }
 }
 
@@ -938,7 +984,7 @@ void gc_alloc_update_page_tables(int unboxed,
      */
     while (more) {
 #if 0
-      fprintf(stderr, "+")
+      fprintf(stderr, "+");
 #endif
       gc_assert(PAGE_ALLOCATED(next_page));
       gc_assert(PAGE_UNBOXED_VAL(next_page) == unboxed);
@@ -1241,9 +1287,8 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   /* Bump up the last_free_page */
   if (last_page + 1 > last_free_page) {
     last_free_page = last_page + 1;
-    SetSymbolValue(ALLOCATION_POINTER,
-		   (lispobj) ((char *) heap_base +
-			      PAGE_SIZE * last_free_page));
+    set_alloc_pointer((lispobj) ((char *) heap_base +
+                               PAGE_SIZE * last_free_page));
   }
 
   return (void *) (page_address(first_page) + orig_first_page_bytes_used);
@@ -1937,9 +1982,132 @@ static void scavenge(lispobj *start, long nwords)
 }
 
 
+#ifndef i386
+/* Scavenging Interrupt Contexts */
+
+static int boxed_registers[] = BOXED_REGISTERS;
+
+static void scavenge_interrupt_context(struct sigcontext *context)
+{
+  int i;
+#ifdef reg_LIP
+  unsigned long lip;
+  unsigned long lip_offset;
+  int lip_register_pair;
+#endif
+  unsigned long pc_code_offset;
+#ifdef SC_NPC
+  unsigned long npc_code_offset;
+#endif
+
+#ifdef reg_LIP
+  /* Find the LIP's register pair and calculate it's offset */
+  /* before we scavenge the context. */
+
+  /*
+   * I (RLT) think this is trying to find the boxed register that is
+   * closest to the LIP address, without going past it.  Usually, it's
+   * reg_CODE or reg_LRA.  But sometimes, nothing can be found.
+   */
+  lip = SC_REG(context, reg_LIP);
+  lip_offset = 0x7FFFFFFF;
+  lip_register_pair = -1;
+  for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++)
+    {
+      unsigned long reg;
+      long offset;
+      int index;
+
+      index = boxed_registers[i];
+      reg = SC_REG(context, index);
+      if (Pointerp(reg) && PTR(reg) <= lip) {
+        offset = lip - reg;
+        if (offset < lip_offset) {
+          lip_offset = offset;
+          lip_register_pair = index;
+        }
+      }
+    }
+#endif /* reg_LIP */
+
+  /* Compute the PC's offset from the start of the CODE */
+  /* register. */
+  pc_code_offset = SC_PC(context) - SC_REG(context, reg_CODE);
+#ifdef SC_NPC
+  npc_code_offset = SC_NPC(context) - SC_REG(context, reg_CODE);
+#endif /* SC_NPC */
+	       
+  /* Scanvenge all boxed registers in the context. */
+  for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++)
+    {
+      int index;
+      lispobj foo;
+		
+      index = boxed_registers[i];
+      foo = SC_REG(context,index);
+      scavenge((lispobj *) &foo, 1);
+      SC_REG(context,index) = foo;
+
+      scavenge((lispobj *) &(SC_REG(context, index)), 1);
+    }
+
+#ifdef reg_LIP
+  /* Fix the LIP */
+
+  /*
+   * But what happens if lip_register_pair is -1?  SC_REG on Solaris
+   * (see solaris_register_address in solaris-os.c) will return
+   * &context->uc_mcontext.gregs[2].  But gregs[2] is REG_nPC.  Is
+   * that what we really want?  My guess is that that is not what we
+   * want, so if lip_register_pair is -1, we don't touch reg_LIP at
+   * all.  But maybe it doesn't really matter if LIP is trashed?
+   */
+  if (lip_register_pair >= 0)
+    {
+      SC_REG(context, reg_LIP) =
+        SC_REG(context, lip_register_pair) + lip_offset;
+    }
+#endif /* reg_LIP */
+	
+  /* Fix the PC if it was in from space */
+  if (from_space_p(SC_PC(context)))
+    SC_PC(context) = SC_REG(context, reg_CODE) + pc_code_offset;
+#ifdef SC_NPC
+  if (from_space_p(SC_NPC(context)))
+    SC_NPC(context) = SC_REG(context, reg_CODE) + npc_code_offset;
+#endif /* SC_NPC */
+}
+
+void scavenge_interrupt_contexts(void)
+{
+  int i, index;
+  struct sigcontext *context;
+
+  index = fixnum_value(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX));
+
+#if defined(DEBUG_PRINT_CONTEXT_INDEX)
+  printf("Number of active contexts: %d\n", index);
+#endif
+
+  for (i = 0; i < index; i++)
+    {
+      context = lisp_interrupt_contexts[i];
+      scavenge_interrupt_context(context); 
+    }
+}
+#endif
+
 /* Code and Code-Related Objects */
 
+/*
+ * Aargh!  Why is SPARC so different here?  What is the advantage of
+ * making it different from all the other ports?
+ */
+#ifdef sparc
+#define RAW_ADDR_OFFSET 0
+#else
 #define RAW_ADDR_OFFSET (6 * sizeof(lispobj) - type_FunctionPointer)
+#endif
 
 static lispobj trans_function_header(lispobj object);
 static lispobj trans_boxed(lispobj object);
@@ -2042,6 +2210,7 @@ static int scav_function_pointer(lispobj *where, lispobj object)
 }
 #endif
 
+#ifdef i386
 /*
  * Scan a x86 compiled code objected, looking for possible fixups that
  * have been missed after a move.
@@ -2340,6 +2509,7 @@ static void apply_code_fixups(struct code *old_code, struct code *new_code)
   if (check_code_fixups)
     sniff_code_object(new_code, displacement);
 }
+#endif
 
 static struct code * trans_code(struct code *code)
 {
@@ -2356,7 +2526,10 @@ static struct code * trans_code(struct code *code)
 
   /* If object has already been transported, just return pointer */
   if (*(lispobj *) code == 0x01)
-    return (struct code*) (((lispobj *) code)[1]);
+    {
+      return (struct code*) (((lispobj *) code)[1]);
+    }
+  
 
   gc_assert(TypeOf(code->header) == type_CodeHeader);
 
@@ -2424,7 +2597,15 @@ static struct code * trans_code(struct code *code)
 #if 0
   sniff_code_object(new_code, displacement);
 #endif
+#ifdef i386
   apply_code_fixups(code, new_code);
+#else
+  /* From gc.c */
+#ifndef MACH
+  os_flush_icache((os_vm_address_t) (((int *)new_code) + nheader_words),
+                  ncode_words * sizeof(int));
+#endif
+#endif
 
   return new_code;
 }
@@ -2504,13 +2685,12 @@ static lispobj trans_return_pc_header(lispobj object)
   unsigned long offset;
   struct code *code, *ncode;
 
-  fprintf(stderr, "*** trans_return_pc_header: will this work?\n");
-
   return_pc = (struct function *) PTR(object);
   offset = HeaderValue(return_pc->header) * 4;
 
   /* Transport the whole code object */
   code = (struct code *) ((unsigned long) return_pc - offset);
+  
   ncode = trans_code(code);
 
   return ((lispobj) ncode + offset) | type_OtherPointer;
@@ -2833,16 +3013,16 @@ static int scav_boxed(lispobj *where, lispobj object)
 
 static lispobj trans_boxed(lispobj object)
 {
-	lispobj header;
-	unsigned long length;
+  lispobj header;
+  unsigned long length;
 
-	gc_assert(Pointerp(object));
+  gc_assert(Pointerp(object));
 
-	header = *((lispobj *) PTR(object));
-	length = HeaderValue(header) + 1;
-	length = CEILING(length, 2);
+  header = *((lispobj *) PTR(object));
+  length = HeaderValue(header) + 1;
+  length = CEILING(length, 2);
 
-	return copy_object(object, length);
+  return copy_object(object, length);
 }
 
 static lispobj trans_boxed_large(lispobj object)
@@ -3311,9 +3491,10 @@ scav_hash_vector (lispobj *where, lispobj object)
      length.  The first value is the symbol :empty, the first key is a
      reference to the hash-table containing the key/value vector.
      (See hash-new.lisp, MAKE-HASH-TABLE.)  */
-    
+
   kv_length = fixnum_value (where[1]);
   kv_vector = where + 2;
+
   scavenge (kv_vector, 2);
     
   gc_assert (Pointerp (kv_vector[0]));
@@ -3323,7 +3504,30 @@ scav_hash_vector (lispobj *where, lispobj object)
   hash_table = (struct hash_table *) PTR (hash_table_obj);
   empty_symbol = kv_vector[1];
 
+  /*
+   * For some reason, the following GC assert doesn't always hold true
+   * on Sparc/gencgc.  I (RLT) don't know why that is.  So turn it off
+   * for now.  I leave these printfs here so I can see it happening,
+   * just in case.
+   */
+#ifdef sparc
+  if (where != (lispobj *) PTR (hash_table->table))
+    {
+      fprintf(stderr, "Hash table invariant failed during scavenging!\n");
+      fprintf(stderr, " *** where = %lx\n", where);
+      fprintf(stderr, " *** hash_table = %lx\n", hash_table);
+      fprintf(stderr, " *** hash_table->table = %lx\n", PTR(hash_table->table));
+#if 0
+      reset_printer();
+      print(object);
+      abort();
+#endif
+    }
+#endif  
+
+#ifndef sparc
   gc_assert (where == (lispobj *) PTR (hash_table->table));
+#endif
   gc_assert (TypeOf (hash_table->instance_header) == type_InstanceHeader);
   gc_assert (TypeOf (*(lispobj *) PTR (empty_symbol)) == type_SymbolHeader);
 
@@ -4079,9 +4283,11 @@ static void gc_init_tables(void)
 	scavtab[type_ComplexVector] = scav_boxed;
 	scavtab[type_ComplexArray] = scav_boxed;
 	scavtab[type_CodeHeader] = scav_code_header;
-	/*scavtab[type_FunctionHeader] = scav_function_header;*/
-	/*scavtab[type_ClosureFunctionHeader] = scav_function_header;*/
-	/*scavtab[type_ReturnPcHeader] = scav_return_pc_header;*/
+#ifndef i386
+	scavtab[type_FunctionHeader] = scav_function_header;
+	scavtab[type_ClosureFunctionHeader] = scav_function_header;
+	scavtab[type_ReturnPcHeader] = scav_return_pc_header;
+#endif
 #ifdef i386
 	scavtab[type_ClosureHeader] = scav_closure_header;
 	scavtab[type_FuncallableInstanceHeader] = scav_closure_header;
@@ -4102,7 +4308,16 @@ static void gc_init_tables(void)
 	scavtab[type_UnboundMarker] = scav_immediate;
 	scavtab[type_WeakPointer] = scav_weak_pointer;
         scavtab[type_InstanceHeader] = scav_boxed;
+        /*
+         * Note: on the sparc we don't have to do anything special for
+         * fdefns, cause the raw-addr has a function lowtag.
+         */
+#ifndef sparc
         scavtab[type_Fdefn] = scav_fdefn;
+#else
+        scavtab[type_Fdefn] = scav_boxed;
+#endif
+
         scavtab[type_ScavengerHook] = scav_scavenger_hook;
 
 	/* Transport Other Table */
@@ -5387,7 +5602,11 @@ static void unprotect_oldspace(void)
  * generation. Bytes_allocated and the generation bytes_allocated
  * counter are updated.  The number of bytes freed is returned.
  */
+#ifdef i386
 extern void i586_bzero(void *addr, int nbytes);
+#else
+#define i586_bzero(addr, nbytes)        memset(addr, 0, nbytes)
+#endif
 static int free_oldspace(void)
 {
   int bytes_freed = 0;
@@ -5483,7 +5702,11 @@ static void print_ptr(lispobj *addr)
 	  *(addr + 1), *(addr + 2), *(addr + 3), *(addr + 4));
 }
 
+#ifdef sparc
+extern char  closure_tramp;
+#else
 extern int  undefined_tramp;
+#endif
 
 static void verify_space(lispobj*start, size_t words)
 {
@@ -5542,14 +5765,28 @@ static void verify_space(lispobj*start, size_t words)
 	  print_ptr(start);
 	}
 #endif
-      } else
+      } else {
 	/* Verify that it points to another valid space */
-	if (!to_readonly_space && !to_static_space
-	    && thing != (int) &undefined_tramp) {
-	  fprintf(stderr, "*** Ptr %lx @ %lx sees Junk\n",
-		  (unsigned long) thing, (unsigned long) start);
-	  print_ptr(start);
-	}
+	if (!to_readonly_space && !to_static_space &&
+#if defined(sparc)
+            thing != (int) &closure_tramp
+#else
+            thing != (int) &undefined_tramp
+#endif
+            )
+          {
+            fprintf(stderr, "*** Ptr %lx @ %lx sees Junk (undefined_tramp = %lx)\n",
+                    (unsigned long) thing, (unsigned long) start,
+#if defined(sparc)
+                    (unsigned long) &closure_tramp
+#else
+                    (unsigned long) &undefined_tramp
+#endif
+                    );
+            print_ptr(start);
+          }
+      }
+    
     } else
       if (thing & 0x3) /* Skip fixnums */
 	switch(TypeOf(*start)) {
@@ -5694,7 +5931,7 @@ static void verify_gc(void)
     (lispobj*) SymbolValue(STATIC_SPACE_FREE_POINTER)
     - (lispobj*) static_space;
   int binding_stack_size =
-    (lispobj*) SymbolValue(BINDING_STACK_POINTER)
+    (lispobj*) get_binding_stack_pointer()
     - (lispobj*) BINDING_STACK_START;
 
   verify_space((lispobj*) READ_ONLY_SPACE_START, read_only_space_size);
@@ -5896,6 +6133,7 @@ static void	garbage_collect_generation(int generation, int raise)
    */
   unprotect_oldspace();
 
+#ifdef i386
   /* Scavenge the stacks conservative roots. */
   {
     lispobj **ptr;
@@ -5903,6 +6141,8 @@ static void	garbage_collect_generation(int generation, int raise)
 	 ptr > (lispobj **) &raise; ptr--)
       preserve_pointer(*ptr);
   }
+#endif
+  
 #ifdef CONTROL_STACKS
   scavenge_thread_stacks();
 #endif
@@ -5911,6 +6151,13 @@ static void	garbage_collect_generation(int generation, int raise)
     int num_dont_move_pages = count_dont_move_pages();
     fprintf(stderr, "Non-movable pages due to conservative pointers = %d, %d bytes\n",
 	    num_dont_move_pages, PAGE_SIZE * num_dont_move_pages);
+#ifndef i386
+    /*
+     * There shouldn't be any non-movable pages because we don't have
+     * any conservative pointers!
+     */
+    gc_assert(num_dont_move_pages == 0);
+#endif    
   }
 
   /* Scavenge all the rest of the roots. */
@@ -5920,17 +6167,55 @@ static void	garbage_collect_generation(int generation, int raise)
    * care to avoid SIG_DFL, SIG_IGN.
    */
 
+#ifndef i386
+  /*
+   * If not x86, scavenge the interrupt context(s) and the control
+   * stack.
+   */
+#ifdef PRINTNOISE
+  printf("Scavenging interrupt contexts ...\n");
+#endif
+  scavenge_interrupt_contexts();
+#ifdef PRINTNOISE
+  printf("Scavenging interrupt handlers (%d bytes) ...\n",
+         sizeof(interrupt_handlers));
+#endif
+  scavenge((lispobj *) interrupt_handlers,
+           sizeof(interrupt_handlers) / sizeof(lispobj));
+  {
+    unsigned long control_stack_size;
+    
+    control_stack_size = current_control_stack_pointer - control_stack;
+#ifdef PRINTNOISE
+    printf("Scavenging the control stack (%d bytes) ...\n",
+           control_stack_size * sizeof(lispobj));
+#endif
+    scavenge(control_stack, control_stack_size);
+#ifdef PRINTNOISE
+    printf("Done scavenging the control stack.\n");
+#endif
+  }
+  
+#else /* x86 */
   for (i = 0; i < NSIG; i++) {
     union interrupt_handler handler = interrupt_handlers[i];
     if (handler.c != (void (*) (HANDLER_ARGS)) SIG_IGN
 	&& handler.c != (void (*) (HANDLER_ARGS)) SIG_DFL)
       scavenge((lispobj *) (interrupt_handlers + i), 1);
   }
-
+#endif
+        
+#ifdef PRINTNOISE
+    printf("Scavenging the binding stack (%d bytes) ...\n",
+           ((lispobj *) get_binding_stack_pointer() - binding_stack) * sizeof(lispobj));
+#endif
   /* Scavenge the binding stack. */
   scavenge(binding_stack,
-	   (lispobj *) SymbolValue(BINDING_STACK_POINTER) - binding_stack);
+	   (lispobj *) get_binding_stack_pointer() - binding_stack);
 
+#ifdef PRINTNOISE
+    printf("Done scavenging the binding stack.\n");
+#endif
   /*
    * Scavenge the scavenge_hooks in case this refers to a hook added
    * in a prior generation GC. From here on the scavenger_hook will
@@ -5938,7 +6223,13 @@ static void	garbage_collect_generation(int generation, int raise)
    * doing here.
    */
 
+#ifdef PRINTNOISE
+    printf("Scavenging the scavenger hooks ...\n");
+#endif
   scavenge((lispobj *) &scavenger_hooks, 1);
+#ifdef PRINTNOISE
+    printf("Done scavenging the scavenger hooks.\n");
+#endif
 
   if (SymbolValue(SCAVENGE_READ_ONLY_SPACE) != NIL) {
     read_only_space_size = (lispobj *) SymbolValue(READ_ONLY_SPACE_FREE_POINTER)
@@ -5978,7 +6269,7 @@ static void	garbage_collect_generation(int generation, int raise)
    */
   {
     int old_bytes_allocated = bytes_allocated;
-    int bytes_allocated;
+    int bytes_allocated_diff;
 
     /* Start with a full scavenge */
     scavenge_newspace_generation_one_scan(new_space);
@@ -5989,11 +6280,11 @@ static void	garbage_collect_generation(int generation, int raise)
     gc_alloc_update_page_tables(0, &boxed_region);
     gc_alloc_update_page_tables(1, &unboxed_region);
 
-    bytes_allocated = bytes_allocated - old_bytes_allocated;
+    bytes_allocated_diff = bytes_allocated - old_bytes_allocated;
 
-    if (bytes_allocated != 0)
-      fprintf(stderr, "*** rescan of new_space allocated % more bytes?\n",
-	      bytes_allocated);
+    if (bytes_allocated_diff != 0)
+      fprintf(stderr, "*** rescan of new_space allocated %d more bytes? (%ld vs %ld)\n",
+	      bytes_allocated_diff, old_bytes_allocated, bytes_allocated);
   }
 #endif
 
@@ -6047,7 +6338,7 @@ static void	garbage_collect_generation(int generation, int raise)
 }
 
 /* Update last_free_page then ALLOCATION_POINTER */
-void	update_x86_dynamic_space_free_pointer(void)
+void	update_dynamic_space_free_pointer(void)
 {
   int last_page = -1;
   int i;
@@ -6058,8 +6349,7 @@ void	update_x86_dynamic_space_free_pointer(void)
 
   last_free_page = last_page + 1;
 
-  SetSymbolValue(ALLOCATION_POINTER,
-		 (lispobj) ((char *) heap_base + PAGE_SIZE * last_free_page));
+  set_alloc_pointer((lispobj) ((char *) heap_base + PAGE_SIZE * last_free_page));
 }
 
 
@@ -6188,7 +6478,7 @@ void	collect_garbage(unsigned last_gen)
   gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
   gc_alloc_generation = 0;
 
-  update_x86_dynamic_space_free_pointer();
+  update_dynamic_space_free_pointer();
 
   SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
   SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
@@ -6301,8 +6591,9 @@ void	gc_free_heap(void)
   unboxed_region.end_addr = page_address(0);
 
   last_free_page = 0;
-  SetSymbolValue(ALLOCATION_POINTER, (lispobj) heap_base);
 
+  set_alloc_pointer((lispobj) heap_base);
+  
   SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
   SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 
@@ -6395,7 +6686,7 @@ void	gencgc_pickup_dynamic(void)
 {
   int page = 0;
   int addr = DYNAMIC_0_SPACE_START;
-  int alloc_ptr = SymbolValue(ALLOCATION_POINTER);
+  int alloc_ptr = get_alloc_pointer();
 
   /* Initialise the first region. */
   do {
@@ -6443,7 +6734,8 @@ void do_pending_interrupt(void);
 
 int alloc_entered = 0;
 
-char *alloc(int nbytes)
+char *
+alloc(int nbytes)
 {
   /* Check for alignment allocation problems. */
   gc_assert(((unsigned) SymbolValue(CURRENT_REGION_FREE_POINTER) & 0x7) == 0
@@ -6451,7 +6743,7 @@ char *alloc(int nbytes)
 
   bytes_allocated_sum += nbytes;
 
-  if (SymbolValue(PSEUDO_ATOMIC_ATOMIC)) {
+  if (get_pseudo_atomic_atomic()) {
     /* Already within a pseudo atomic. */
     void *new_free_pointer;
 
@@ -6475,14 +6767,14 @@ char *alloc(int nbytes)
       auto_gc_trigger *= 2;
       alloc_entered--;
       /* Exit the pseudo atomic */
-      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-      if (SymbolValue(PSEUDO_ATOMIC_INTERRUPTED) != 0)
+      clr_pseudo_atomic_atomic();
+      if (get_pseudo_atomic_interrupted() != 0)
 	/* Handle any interrupts that occurred during gc_alloc */
 	do_pending_interrupt();
       funcall0(SymbolFunction(MAYBE_GC));
       /* Re-enter the pseudo atomic. */
-      SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
-      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
+      clr_pseudo_atomic_interrupted();
+      set_pseudo_atomic_atomic();
       goto retry1;
     }
     /* Call gc_alloc */
@@ -6512,8 +6804,8 @@ char *alloc(int nbytes)
   retry2:
     /* At least wrap this allocation in a pseudo atomic to prevent
        gc_alloc from being re-entered. */
-    SetSymbolValue(PSEUDO_ATOMIC_INTERRUPTED, make_fixnum(0));
-    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(1));
+    clr_pseudo_atomic_interrupted();
+    set_pseudo_atomic_atomic();
 
     if (alloc_entered++)
       fprintf(stderr,"* Alloc re-entered\n");
@@ -6527,8 +6819,8 @@ char *alloc(int nbytes)
       SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) new_free_pointer);
 
       alloc_entered--;
-      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-      if (SymbolValue(PSEUDO_ATOMIC_INTERRUPTED)) {
+      clr_pseudo_atomic_atomic();
+      if (get_pseudo_atomic_interrupted()) {
 	/* Handle any interrupts that occurred during gc_alloc */
 	do_pending_interrupt();
 	goto retry2;
@@ -6541,8 +6833,8 @@ char *alloc(int nbytes)
       auto_gc_trigger *= 2;
       alloc_entered--;
       /* Exit the pseudo atomic */
-      SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-      if (SymbolValue(PSEUDO_ATOMIC_INTERRUPTED) != 0)
+      clr_pseudo_atomic_atomic();
+      if (get_pseudo_atomic_interrupted() != 0)
 	/* Handle any interrupts that occurred during gc_alloc */
 	do_pending_interrupt();
       funcall0(SymbolFunction(MAYBE_GC));
@@ -6556,8 +6848,8 @@ char *alloc(int nbytes)
     SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
 
     alloc_entered--;
-    SetSymbolValue(PSEUDO_ATOMIC_ATOMIC, make_fixnum(0));
-    if (SymbolValue(PSEUDO_ATOMIC_INTERRUPTED) != 0) {
+    clr_pseudo_atomic_atomic();
+    if (get_pseudo_atomic_interrupted() != 0) {
       /* Handle any interrupts that occurred during gc_alloc */
       do_pending_interrupt();
       goto retry2;

@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.8 2003/07/19 14:10:16 emarsden Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/solaris-os.c,v 1.9 2003/08/22 13:20:03 toy Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -26,6 +26,11 @@
 #include <sys/param.h>
 
 #include <dlfcn.h>
+
+#if defined(GENCGC)
+#include "lisp.h"
+#include "gencgc.h"
+#endif
 
 #define OS_PROTERR		SEGV_ACCERR
 #define OS_MAPERR		SEGV_MAPERR
@@ -198,6 +203,41 @@ valid_addr(os_vm_address_t addr)
 /*
  * Running into the gc trigger page will end up here...
  */
+#if defined(GENCGC)
+void segv_handler(HANDLER_ARGS)
+{
+  caddr_t addr = code->si_addr;
+  int page_index;
+  
+  SAVE_CONTEXT();
+
+   page_index = find_page_index((void *) addr);
+
+#ifdef RED_ZONE_HIT
+  if (os_control_stack_overflow (addr, context))
+    return;
+#endif
+
+  /* check if the fault is within the dynamic space. */
+  if (page_index != -1) {
+    /* Un-protect the page */
+
+    /* The page should have been marked write protected */
+    if (!PAGE_WRITE_PROTECTED(page_index))
+      fprintf(stderr, "*** Sigsegv in page not marked as write protected\n");
+    os_protect((void*)page_address(page_index), PAGE_SIZE, OS_VM_PROT_ALL);
+    page_table[page_index].flags &= ~PAGE_WRITE_PROTECTED_MASK;
+    page_table[page_index].flags |= PAGE_WRITE_PROTECT_CLEARED_MASK;
+
+    return;
+  }
+
+  /* a *real* protection fault */
+  fprintf(stderr, "segv_handler: Real protection violation: 0x%08x\n",
+          addr);
+  interrupt_handle_now(signal, code, context);
+}
+#else
 void
 segv_handler(HANDLER_ARGS)
 {
@@ -217,6 +257,7 @@ segv_handler(HANDLER_ARGS)
     interrupt_handle_now(signal,code,context);
   }
 }
+#endif
 
 void
 os_install_interrupt_handlers()

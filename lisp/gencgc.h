@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.7 2002/08/27 22:18:32 moore Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.h,v 1.8 2003/08/22 13:20:03 toy Exp $
  *
  */
 
@@ -124,7 +124,11 @@ struct page {
  * write protected.
  */
 
+#if defined(i386)
 #define PAGE_SIZE 4096
+#else
+#define PAGE_SIZE 8192
+#endif
 
 extern unsigned dynamic_space_pages;
 extern struct page *page_table;
@@ -151,7 +155,9 @@ extern struct alloc_region  unboxed_region;
 
 void  gencgc_pickup_dynamic(void);
 
+#ifdef i386
 void sniff_code_object(struct code *code, unsigned displacement);
+#endif
 lispobj *search_dynamic_space(lispobj *pointer);
 void update_x86_dynamic_space_free_pointer(void);
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.15 2003/08/06 21:12:07 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.16 2003/08/22 13:20:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 	     (let* ((cons-cells (if star (1- num) num))
 		    (alloc (* (pad-data-block cons-size) cons-cells)))
 	       (pseudo-atomic ()
-		 (allocation res alloc list-pointer-type)
+		 (allocation res alloc list-pointer-type :temp-tn temp)
 		 (move ptr res)
 		 (dotimes (i (1- cons-cells))
 		   (storew (maybe-load (tn-ref-tn things)) ptr
@@ -82,6 +82,7 @@
   (:temporary (:scs (non-descriptor-reg)) size)
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
+  ;;(:temporary (:scs (any-reg)) gc-temp)
   (:generator 100
     (inst add boxed boxed-arg (fixnumize (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
@@ -89,11 +90,9 @@
     (inst add unboxed lowtag-mask)
     (inst and unboxed (lognot lowtag-mask))
     (pseudo-atomic ()
-      ;; Note: we don't have to subtract off the 4 that was added by
-      ;; pseudo-atomic, because oring in other-pointer-type just adds
-      ;; it right back.
+      ;; Figure out how much space we really need and allocate it.
       (inst add size boxed unboxed)
-      (allocation result size other-pointer-type)
+      (allocation result size other-pointer-type :temp-tn ndescr)
       (inst sll ndescr boxed (- type-bits word-shift))
       (inst or ndescr code-header-type)
       (storew ndescr result 0 other-pointer-type)
@@ -161,7 +160,7 @@
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 4
     (pseudo-atomic ()
-      (allocation result (pad-data-block words) lowtag)
+      (allocation result (pad-data-block words) lowtag :temp-tn temp)
       (when type
 	(inst li temp (logior (ash (1- words) type-bits) type))
 	(storew temp result 0 lowtag)))))
@@ -173,7 +172,7 @@
   (:ignore name)
   (:results (result :scs (descriptor-reg)))
   (:temporary (:scs (any-reg)) bytes header)
-  (:temporary (:scs (descriptor-reg)) temp)
+  (:temporary (:scs (any-reg)) temp)
   (:generator 6
     (inst add bytes extra (* (1+ words) word-bytes))
     (inst sll header bytes (- type-bits 2))
@@ -182,5 +181,5 @@
     (pseudo-atomic ()
       ;; Need to be careful if the lowtag and the pseudo-atomic flag
       ;; are not compatible
-      (allocation result bytes lowtag)
+      (allocation result bytes lowtag :temp-tn temp)
       (storew header result 0 lowtag))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.28 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.29 2003/08/22 13:20:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,12 +28,13 @@
   (:arg-types tagged-num tagged-num)
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
   (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:scs (non-descriptor-reg)) gc-temp)	; gencgc
   (:results (result :scs (descriptor-reg)))
   (:generator 0
     (pseudo-atomic ()
       (inst add ndescr rank (* (1+ array-dimensions-offset) vm:word-bytes))
       (inst andn ndescr 4)
-      (allocation header ndescr other-pointer-type)
+      (allocation header ndescr other-pointer-type :temp-tn gc-temp)
       (inst add ndescr rank (fixnumize (1- vm:array-dimensions-offset)))
       (inst sll ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)

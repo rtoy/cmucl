@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.8 2003/08/22 13:20:02 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.7 2003/08/03 11:27:50 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.8 2003/08/22 13:20:02 toy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -30,11 +30,18 @@
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
+			  (:temp gc-temp non-descriptor-reg nl1-offset)
 			  (:temp vector descriptor-reg a3-offset))
   (pseudo-atomic ()
     (inst add ndescr words (* (1+ vm:vector-data-offset) vm:word-bytes))
-    (inst andn ndescr 7)
-    (allocation vector ndescr other-pointer-type)
+    (inst andn ndescr vm:lowtag-mask)
+    (allocation vector ndescr other-pointer-type :temp-tn gc-temp)
+    #+gencgc
+    (progn
+      ;; ndescr points to one word past the end of the allocated
+      ;; space.  Fill the last word with a zero.
+      (inst add ndescr vector)
+      (storew zero-tn ndescr -1 vm:other-pointer-type))
     (inst srl ndescr type vm:word-shift)
     (storew ndescr vector 0 vm:other-pointer-type)
     (storew length vector vm:vector-length-slot vm:other-pointer-type))
@@ -46,6 +53,7 @@
   ;; the zero-byte of the string is.  Look at the deftransform for
   ;; make-array in array-tran.lisp.  For strings we always allocate
   ;; enough space to hold the zero-byte.
+  #-gencgc
   (storew zero-tn alloc-tn -1)
   (move result vector))
 

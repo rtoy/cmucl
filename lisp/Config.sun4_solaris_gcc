@@ -28,7 +28,10 @@ AS_V8PLUS = -Wa,-xarch=v8plus
 
 LINKAGE = -DLINKAGE_TABLE
 
-CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE)
+# Enable support for generational GC
+GENCGC = -DGENCGC
+
+CPPFLAGS = -I. -I$(PATH1) -I/usr/openwin/include -I/usr/include/X11 -DSOLARIS -DSOLARIS25 -DSVR4 $(CC_V8PLUS) $(LINKAGE) $(GENCGC)
 
 CC = gcc -O
 CPP = gcc -E
@@ -36,7 +39,7 @@ CFLAGS = -g $(AS_V8PLUS)
 
 # Needed for sys/asm_linkage.h and sparc-assem.S (at least in 2.3)
 # Note that the sys/asm_linkage.h braindamage breaks make depend
-ASFLAGS = -g -traditional-cpp
+ASFLAGS = -g -traditional-cpp $(AS_V8PLUS)
 DEPEND_FLAGS = -traditional-cpp
 NM = $(PATH1)/solaris-nm
 ASSEM_SRC = sparc-assem.S
@@ -49,3 +52,9 @@ ARCH_SRC = sparc-arch.c
 OS_SRC = solaris-os.c os-common.c undefineds.c elf.c
 OS_LINK_FLAGS=
 OS_LIBS= -lsocket -lnsl -ldl
+
+# Use this with generational GC
+GC_SRC = gencgc.c
+
+# Use this when not using generational GC
+# GC_SRC = gc.c

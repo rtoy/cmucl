@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.41 2003/05/29 22:03:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.42 2003/08/22 13:20:03 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,6 +289,14 @@
     lisp::*cmucl-lib*
     lisp::*cmucl-core-path*
 
+    ;; Gencgc
+    #+gencgc
+    *current-region-free-pointer*
+    #+gencgc
+    *current-region-end-addr*
+    #+gencgc
+    *scavenge-read-only-space*
+
     ;; Some spare static symbols.  Useful for adding another static
     ;; symbol without having to do a cross-compile.  Just rename one
     ;; of these to the desired name.
@@ -330,3 +338,9 @@
 ;;;; are only used in an illtrap instruction, not the trap
 ;;;; instruction.  This needs to be coordinated with the C code.
 (defconstant pseudo-atomic-trap 16)
+
+;;;; Allocation trap number.
+;;;;
+;;;; This is the trap number to use when we need to allocate memory.
+;;;; This must match the C runtime code
+(defconstant allocation-trap 31)

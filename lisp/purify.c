@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.22 2003/01/23 21:05:39 toy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.23 2003/08/22 13:20:03 toy Exp $ 
 
    */
 #include <stdio.h>
@@ -209,7 +209,7 @@ carefully_pscav_stack(lispobj*lowaddr, lispobj*base)
 }
 #endif
 
-#ifdef GENCGC
+#if defined(GENCGC) && defined(i386)
 /*
  * Enhanced x86/GENCGC stack scavenging by Douglas Crosher.
  *
@@ -703,7 +703,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   /* It will be 0 or the unbound-marker if there are no fixups, and
      will be an other-pointer to a vector if it is valid. */
   if ((fixups==0) || (fixups==type_UnboundMarker) || !Pointerp(fixups)) {
-#ifdef GENCGC    
+#if defined(GENCGC) && defined(i386)
     /* Check for a possible errors. */
     sniff_code_object(new_code,displacement);
 #endif
@@ -748,7 +748,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   /* No longer need the fixups. */
   new_code->constants[0] = 0;
   
-#ifdef GENCGC
+#if defined(GENCGC) && defined(x86)
   /* Check for possible errors. */
   sniff_code_object(new_code,displacement);
 #endif
@@ -1428,8 +1428,11 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #endif
 
 #ifdef GENCGC
+#ifdef i386
     gc_assert(control_stack_end > ((&read_only_roots)+1));
     setup_i386_stack_scav(((&static_roots)-2), control_stack_end);
+#elif defined(sparc)
+#endif    
 #endif
 
     pscav(&static_roots, 1, FALSE);
@@ -1563,7 +1566,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
-#if !defined(ibmrt) && !defined(i386)
+#if !defined(ibmrt) && !defined(i386) && !(defined(sparc) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)
