@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.15 1994/04/06 17:05:39 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.16 1994/07/05 15:52:45 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,9 +36,9 @@
   (rusage c-call:int))
 
 (eval-when (load eval compile)
-  (defconstant wait-wstopped #o177)
-  (defconstant wait-wnohang 1)
-  (defconstant wait-wuntraced 2))
+  (defconstant wait-wstopped #-irix #o177 #+irix 4)
+  (defconstant wait-wnohang #-irix 1 #+irix #o100)
+  (defconstant wait-wuntraced #-irix 2 #+irix 4))
 
 (defun wait3 (&optional do-not-hang check-for-stopped)
   "Return any available status information on child processed. "
@@ -248,6 +248,7 @@
 ;;; for the master side of the pty, the file descriptor for the slave side of
 ;;; the pty, and the name of the tty device for the slave side.
 ;;; 
+#-irix
 (defun find-a-pty ()
   "Returns the master fd, the slave fd, and the name of the tty"
   (dolist (char '(#\p #\q))
@@ -278,6 +279,39 @@
 				   slave-fd
 				   slave-name)))
 	  (unix:unix-close master-fd))))))
+  (error "Could not find a pty."))
+
+#+irix
+(alien:def-alien-routine ("_getpty" c-getpty) c-call:c-string
+  (fildes c-call:int :out)
+  (oflag c-call:int)
+  (mode c-call:int)
+  (nofork c-call:int))
+
+#+irix
+(defun find-a-pty ()
+  "Returns the master fd, the slave fd, and the name of the tty"
+  (multiple-value-bind (line master-fd)
+    (c-getpty (logior unix:o_rdwr unix:o_ndelay) #o600 0)
+    (let* ((slave-name line)
+	   (slave-fd (unix:unix-open slave-name unix:o_rdwr #o666)))
+      (when slave-fd
+	; Maybe put a vhangup here?
+	(alien:with-alien ((stuff (alien:struct unix:sgttyb)))
+          (let ((sap (alien:alien-sap stuff)))
+	    (unix:unix-ioctl slave-fd unix:TIOCGETP sap)
+	    (setf (alien:slot stuff 'unix:sg-flags) #o300) ; EVENP|ODDP
+	    (unix:unix-ioctl slave-fd unix:TIOCSETP sap)
+	    (unix:unix-ioctl master-fd unix:TIOCGETP sap)
+	    (setf (alien:slot stuff 'unix:sg-flags)
+		  (logand (alien:slot stuff 'unix:sg-flags)
+			  (lognot 8))) ; ~ECHO
+	    (unix:unix-ioctl master-fd unix:TIOCSETP sap)))
+	(return-from find-a-pty
+		     (values master-fd
+			     slave-fd
+			     slave-name))))
+    (unix:unix-close master-fd))
   (error "Could not find a pty."))
 
 ;;; OPEN-PTY -- internal

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.30 1994/04/06 17:06:24 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.31 1994/07/05 15:53:29 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,19 +47,26 @@
 	  unix-fcntl f-dupfd f-getfd f-setfd f-getfl f-setfl f-getown f-setown
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
 	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
+	  #+irix o_ndelay
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
-	  #-hpux tty-cbreak #-hpux tty-tandem #+hpux termios #+hpux c-lflag
-	  #+hpux c-iflag #+hpux c-oflag #+hpux tty-icrnl #+hpux tty-ocrnl
-	  #+hpux vdsusp #+hpux veof #+hpux vintr #+hpux vquit #+hpux vstart
-	  #+hpux vstop #+hpux vsusp #+hpux c-cflag
-	  #+hpux c-cc #+hpux tty-icanon #+hpux vmin #+hpux vtime
-	  #+hpux tty-ixon
-	  #+hpux tcsaflush #+hpux unix-tcgetattr #+hpux unix-tcsetattr
+	  #-(or hpux irix) tty-cbreak #-(or hpux irix) tty-tandem
+	  #+(or hpux irix) termios #+(or hpux irix) c-lflag
+	  #+(or hpux irix) c-iflag #+(or hpux irix) c-oflag
+	  #+(or hpux irix) tty-icrnl #+(or hpux irix) tty-ocrnl
+	  #+(or hpux irix) vdsusp #+(or hpux irix) veof
+	  #+(or hpux irix) vintr #+(or hpux irix) vquit #+(or hpux irix) vstart
+	  #+(or hpux irix) vstop #+(or hpux irix) vsusp
+	  #+(or hpux irix) c-cflag
+	  #+(or hpux irix) c-cc #+(or hpux irix) tty-icanon
+	  #+(or hpux irix) vmin #+(or hpux irix) vtime
+	  #+(or hpux irix) tty-ixon
+	  #+(or hpux irix) tcsaflush #+(or hpux irix)
+	  unix-tcgetattr #+(or hpux irix) unix-tcsetattr
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
@@ -88,10 +95,12 @@
 (def-alien-type swblk-t long)
 (def-alien-type size-t #-alpha long #+alpha unsigned-long)
 (def-alien-type time-t #-alpha long #+alpha int)
-(def-alien-type dev-t #-alpha short #+alpha int)
+(def-alien-type dev-t #-(or alpha irix) short #+alpha int #+irix unsigned-long)
 (def-alien-type off-t #-alpha long #+alpha unsigned-long)
-(def-alien-type uid-t #-alpha unsigned-short #+alpha unsigned-int)
-(def-alien-type gid-t #-alpha unsigned-short #+alpha unsigned-int)
+(def-alien-type uid-t #-(or alpha irix) unsigned-short #+alpha unsigned-int
+  #+irix long)
+(def-alien-type gid-t #-(or alpha irix) unsigned-short #+alpha unsigned-int
+  #+irix long)
 
 (defconstant FD-SETSIZE #-(or hpux alpha) 256 #+hpux 2048 #+alpha 4096)
 
@@ -171,7 +180,7 @@
     (sg-ospeed char)			; output speed
     (sg-erase char)			; erase character
     (sg-kill char)			; kill character
-    (sg-flags #-hpux short #+hpux int))); mode flags
+    (sg-flags #-(or hpux irix) short #+(or hpux irix) int))); mode flags
 
 (def-alien-type nil
   (struct winsize
@@ -183,15 +192,16 @@
 
 ;;; From sys/termio.h
 
-#+hpux
+#+(or hpux irix)
 (def-alien-type nil
   (struct termios
     (c-iflag unsigned-int)
     (c-oflag unsigned-int)
     (c-cflag unsigned-int)
     (c-lflag unsigned-int)
+    #+hpux
     (c-reserved unsigned-int)
-    (c-cc (array unsigned-char 16))))
+    (c-cc (array unsigned-char #+hpux 16 #+irix 23))))
 
 ;;; From sys/dir.h
 
@@ -199,12 +209,14 @@
   (struct direct
     #+sunos (d-off long)		; offset of next disk directory entry
     (d-ino #-alpha unsigned-long #+alpha unsigned-int); inode number of entry
+    #+irix (d-off long)
     (d-reclen unsigned-short)		; length of this record
-    (d-namlen unsigned-short)		; length of string in d-name
+    #-irix (d-namlen unsigned-short)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
 
 ;;; From sys/stat.h
 
+#-irix
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -224,6 +236,34 @@
     (st-blksize #-alpha long #+alpha unsigned-int)
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
+
+#+irix
+(def-alien-type nil
+  (struct timestruc-t
+    (tv-sec time-t)
+    (tv-nsec long)))
+
+#+irix
+(def-alien-type nil
+  (struct stat
+    (st-dev dev-t)
+    (st-pad1 (array long 3))
+    (st-ino ino-t)
+    (st-mode unsigned-long)
+    (st-nlink short)
+    (st-uid uid-t)
+    (st-gid gid-t)
+    (st-rdev dev-t)
+    (st-pad2 (array long 2))
+    (st-size off-t)
+    (st-pad3 long)
+    (st-atime (struct timestruc-t))
+    (st-mtime (struct timestruc-t))
+    (st-ctime (struct timestruc-t))
+    (st-blksize long)
+    (st-blocks long)
+    (st-fstype (array char 16))
+    (st-pad4 (array long 8))))
 
 (defconstant s-ifmt #o0170000)
 (defconstant s-ifdir #o0040000)
@@ -627,10 +667,14 @@
 
 (defconstant FNDELAY  #-osf1 #o0004 #+osf1 #o100000 "Non-blocking reads")
 (defconstant FAPPEND  #o0010   "Append on each write")
-(defconstant FASYNC   #o0100   "Signal pgrp when data ready")
-(defconstant FCREAT   #-hpux #o1000 #+hpux #o0400  "Create if nonexistant")
-(defconstant FTRUNC   #-hpux #o2000 #+hpux #o1000  "Truncate to zero length")
-(defconstant FEXCL    #-hpux #o4000 #+hpux #o2000  "Error if already created")
+(defconstant FASYNC   #-irix #o0100 #+irix #o10000
+  "Signal pgrp when data ready")
+(defconstant FCREAT   #-(or hpux irix) #o1000 #+(or hpux irix) #o0400
+  "Create if nonexistant")
+(defconstant FTRUNC   #-(or hpux irix) #o2000 #+(or hpux irix) #o1000
+  "Truncate to zero length")
+(defconstant FEXCL    #-(or hpux irix) #o4000 #+(or hpux irix) #o2000
+  "Error if already created")
 
 (defun unix-fcntl (fd cmd arg)
   "Unix-fcntl manipulates file descriptors according to the
@@ -703,12 +747,13 @@
 (defconstant o_wronly 1 "Write-only flag.")
 (defconstant o_rdwr 2   "Read-write flag.")
 (defconstant o_append #o10   "Append flag.")
-#+hpux
+#+irix (defconstant o_ndelay 4 "Non-blocking I/O")
+#+(or hpux irix)
 (progn
   (defconstant o_creat #o400  "Create if nonexistant flag.") 
   (defconstant o_trunc #o1000  "Truncate flag.")
   (defconstant o_excl #o2000  "Error if already exists."))
-#-hpux
+#-(or hpux irix)
 (progn
   (defconstant o_creat #o1000  "Create if nonexistant flag.") 
   (defconstant o_trunc #o2000  "Truncate flag.")
@@ -981,24 +1026,24 @@
 (defconstant tty-cbreak #o2)
 #-hpux
 (defconstant tty-tandem #o1)
-#+hpux
+#+(or hpux irix)
 (progn
   (defconstant tty-icanon #o2)
   (defconstant tty-icrnl #o400)
   (defconstant tty-ocrnl #o10)
   (defconstant tty-ixon #o2000)
 
-  (defconstant vdsusp 21)
+  (defconstant vdsusp #+hpux 21 #+irix 11)
   (defconstant veof 4)
   (defconstant vintr 0)
   (defconstant vquit 1)
-  (defconstant vstart 14)
-  (defconstant vstop 15)
-  (defconstant vsusp 13)
+  (defconstant vstart #+hpux 14 #+irix 8)
+  (defconstant vstop #+hpux 15 #+irix 9)
+  (defconstant vsusp #+hpux 13 #+irix 10)
     
-  (defconstant vmin 11)
-  (defconstant vtime 12)
-  (defconstant tcsaflush 2))
+  (defconstant vmin #+hpux 11 #+irix 4)
+  (defconstant vtime #+hpux 12 #+irix 5)
+  (defconstant tcsaflush #+hpux 2 #+irix #x5410))
 
 
 (eval-when (compile load eval)
@@ -1009,6 +1054,7 @@
 (defconstant ioc_in #x80000000)
 (defconstant ioc_inout (logior ioc_in ioc_out))
 
+#-irix
 (defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
   (let* ((ptype (ecase parm-type
 		  (:void ioc_void)
@@ -1024,6 +1070,11 @@
 		     ,code)))
     `(eval-when (eval load compile)
        (defconstant ,name ,code))))
+
+#+irix
+(defmacro define-ioctl-command (name dev cmd arg &optional (parm-type :void))
+  `(eval-when (eval load compile)
+     (defconstant ,name ,(logior (ash (char-code #\t) 8) cmd))))
 
 )
 
@@ -1065,13 +1116,13 @@
 	   (type (unsigned-byte 32) cmd))
   (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
-#+hpux
+#+(or hpux irix)
 (defun unix-tcgetattr (fd termios)
   "Get terminal attributes."
   (declare (type unix-fd fd))
   (void-syscall ("tcgetattr" int (* (struct termios))) fd termios))
 
-#+hpux
+#+(or hpux irix)
 (defun unix-tcsetattr (fd opt termios)
   "Set terminal attributes."
   (declare (type unix-fd fd))
@@ -1169,9 +1220,12 @@
 	   (slot ,buf 'st-gid)
 	   (slot ,buf 'st-rdev)
 	   (slot ,buf 'st-size)
-	   (slot ,buf 'st-atime)
-	   (slot ,buf 'st-mtime)
-	   (slot ,buf 'st-ctime)
+	   #-irix (slot ,buf 'st-atime)
+	   #+irix (slot (slot ,buf 'st-atime) 'tv-sec)
+	   #-irix (slot ,buf 'st-mtime)
+	   #+irix (slot (slot ,buf 'st-mtime) 'tv-sec)
+	   #-irix (slot ,buf 'st-ctime)
+	   #+irix (slot (slot ,buf 'st-ctime) 'tv-sec)
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 
@@ -1182,6 +1236,8 @@
    of the values returned.  If the call fails, then NIL
    and an error number is returned instead."
   (declare (type unix-pathname name))
+  (when (string= name "")
+    (setf name "."))
   (with-alien ((buf (struct stat)))
     (syscall ("stat" c-string (* (struct stat)))
 	     (extract-stat-results buf)
@@ -1394,6 +1450,8 @@
 
 (defun open-dir (pathname)
   (declare (type unix-pathname pathname))
+  (when (string= pathname "")
+    (setf pathname "."))
   (let ((kind (unix-file-kind pathname)))
     (case kind
       (:directory
@@ -1420,6 +1478,7 @@
     (if (zerop (sap-int daddr))
 	nil
 	(with-alien ((direct (* (struct direct)) daddr))
+	  #-irix
 	  (let ((nlen (slot direct 'd-namlen))
 		(ino (slot direct 'd-ino)))
 	    (declare (type (unsigned-byte 16) nlen))
@@ -1428,7 +1487,10 @@
 	       (alien-sap (addr (slot direct 'd-name))) 0
 	       string (* vm:vector-data-offset vm:word-bits)
 	       (* nlen vm:byte-bits))
-	      (values string ino)))))))
+	      (values string ino)))
+	  #+irix
+	  (values (cast (slot direct 'd-name) c-string)
+		  (slot direct 'd-ino))))))
 
 (defun close-dir (dir)
   (declare (type directory dir))

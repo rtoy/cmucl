@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.5 1994/02/12 13:27:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.6 1994/07/05 15:54:27 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -934,7 +934,7 @@
 
 (defvar old-ltchars)
 
-#+hpux
+#+(or hpux irix)
 (progn
   (defvar old-c-iflag)
   (defvar old-c-oflag)
@@ -945,7 +945,7 @@
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
     (when (unix:unix-isatty 0)
-      #+hpux
+      #+(or hpux irix)
       (alien:with-alien ((tios (alien:struct unix:termios)))
 	(multiple-value-bind
 	    (val err)
@@ -991,7 +991,7 @@
 	  (when (null val)
 	    (error "Could not tcsetattr, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
-      #-hpux
+      #-(or hpux irix)
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
@@ -1002,7 +1002,7 @@
 	(let ((flags (alien:slot sg 'unix:sg-flags)))
 	  (setq old-flags flags)
 	  (setf (alien:slot sg 'unix:sg-flags)
-		(logand #-hpux (logior flags unix:tty-cbreak)
+		(logand #-(or hpux irix) (logior flags unix:tty-cbreak)
 			(lognot unix:tty-echo)
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
@@ -1011,7 +1011,7 @@
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
-      #-hpux
+      #-(or hpux irix)
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1041,6 +1041,7 @@
 		   (unix:get-unix-error-msg err)))))
 
       ;; Needed even under HpUx to suppress dsuspc.
+      #-irix
       (alien:with-alien ((tc (alien:struct unix:ltchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1071,7 +1072,7 @@
 (defun reset-input ()
   (when (unix:unix-isatty 0)
     (let ((fd *editor-file-descriptor*))
-      #+hpux
+      #+(or hpux irix)
       (when (boundp 'old-c-lflag)
 	(alien:with-alien ((tios (alien:struct unix:termios)))
 	  (multiple-value-bind
@@ -1108,7 +1109,7 @@
 	    (when (null val)
 	      (error "Could not tcsetattr, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
-      #-hpux
+      #-(or hpux irix)
       (when (boundp 'old-flags)
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
@@ -1124,7 +1125,7 @@
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
-      #-hpux
+      #-(or hpux irix)
       (when (and (boundp 'old-tchars)
 		 (simple-vector-p old-tchars)
 		 (eq (length old-tchars) 6))
