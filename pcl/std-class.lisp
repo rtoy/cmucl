@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.59 2003/05/03 14:46:12 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.60 2003/05/04 00:37:33 gerd Exp $")
 
 (in-package :pcl)
 
@@ -728,10 +728,9 @@
 	(setf (kernel::%instance-layout instance)
 	      (kernel::compiler-layout-or-lose (kernel::dd-name dd)))
 	(when raw-index
-	  (setf (kernel::%instance-ref
-		 instance raw-index
-		 (make-array (kernel::dd-raw-length dd)
-			     :element-type '(unsigned-byte 32)))))
+	  (setf (kernel::%instance-ref instance raw-index)
+		(make-array (kernel::dd-raw-length dd)
+			    :element-type '(unsigned-byte 32))))
 	instance))))
     
 (defmethod direct-slot-definition-class ((class structure-class)
@@ -1482,17 +1481,17 @@
 
 (defmethod change-class ((instance standard-object)
 			 (new-class standard-class)
-			 &rest initargs)
+			 &rest initargs &key)
   (change-class-internal instance new-class initargs))
 
 (defmethod change-class ((instance funcallable-standard-object)
 			 (new-class funcallable-standard-class)
-			 &rest initargs)
+			 &rest initargs &key)
   (change-class-internal instance new-class initargs))
 
 (defmethod change-class ((instance standard-object)
 			 (new-class funcallable-standard-class)
-			 &rest initargs)
+			 &rest initargs &key)
   (declare (ignore initargs))
   (error "~@<Can't change the class of ~S to ~S ~
           because it isn't already an instance with metaclass ~S.~@:>"
@@ -1500,13 +1499,14 @@
 
 (defmethod change-class ((instance funcallable-standard-object)
 			 (new-class standard-class)
-			 &rest initargs)
+			 &rest initargs &key)
   (declare (ignore initargs))
   (error "~@<Can't change the class of ~S to ~S ~
           because it isn't already an instance with metaclass ~S.~@:>"
 	 instance new-class 'funcallable-standard-class))
 
-(defmethod change-class ((instance t) (new-class-name symbol) &rest initargs)
+(defmethod change-class ((instance t) (new-class-name symbol)
+			 &rest initargs &key)
   (apply #'change-class instance (find-class new-class-name) initargs))
 
 

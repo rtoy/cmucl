@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.49 2003/03/26 17:15:22 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.50 2003/05/04 00:37:34 gerd Exp $")
 
 (in-package :pcl)
 
@@ -924,77 +924,95 @@ work during bootstrapping.
 (defmacro bind-args ((lambda-list args) &body body)
   (let ((args-tail '.args-tail.)
 	(key '.key.)
-	(state 'required))
+	(state 'required)
+	(key-seen nil)
+	(nkeys 0))
     (flet ((process-var (var)
 	     (if (memq var lambda-list-keywords)
 		 (progn
-		   (case var
+		   (ecase var
 		     (&optional         (setq state 'optional))
-		     (&key              (setq state 'key))
+		     (&key              (setq state 'key key-seen t))
 		     (&allow-other-keys)
 		     (&rest             (setq state 'rest))
-		     (&aux              (setq state 'aux))
-		     (otherwise
-		      (internal-error "Encountered the non-standard ~
-				       lambda list keyword ~S."
-				      var)))
+		     (&aux              (setq state 'aux)))
 		   nil)
 		 (case state
-		   (required `((,var (pop ,args-tail))))
-		   (optional (cond ((not (consp var))
-				    `((,var (when ,args-tail (pop ,args-tail)))))
-				   ((null (cddr var))
-				    `((,(car var) (if ,args-tail
-						      (pop ,args-tail)
-						      ,(cadr var)))))
-				   (t
-				    `((,(caddr var) ,args-tail)
-				      (,(car var) (if ,args-tail
-						      (pop ,args-tail)
-						      ,(cadr var)))))))
-		   (rest `((,var ,args-tail)))
-		   (key (cond ((not (consp var))
-			       `((,var (get-key-arg ,(make-keyword var)
-					            ,args-tail))))
-			      ((null (cddr var))
-			       (multiple-value-bind (keyword variable)
-				   (if (consp (car var))
-				       (values (caar var) (cadar var))
-				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ',keyword ,args-tail))
-				   (,variable (if (consp ,key)
-						  (car ,key)
-						  ,(cadr var))))))
-			      (t
-			       (multiple-value-bind (keyword variable)
-				   (if (consp (car var))
-				       (values (caar var) (cadar var))
-				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ',keyword ,args-tail))
-				   (,(caddr var) ,key)
-				   (,variable (if (consp ,key)
-						  (car ,key)
-						  ,(cadr var))))))))
-		   (aux `(,var))))))
+		   (required
+		    `((,var (pop ,args-tail))))
+		   (optional
+		    (cond ((not (consp var))
+			   `((,var (when ,args-tail (pop ,args-tail)))))
+			  ((null (cddr var))
+			   `((,(car var) (if ,args-tail
+					     (pop ,args-tail)
+					     ,(cadr var)))))
+			  (t
+			   `((,(caddr var) ,args-tail)
+			     (,(car var) (if ,args-tail
+					     (pop ,args-tail)
+					     ,(cadr var)))))))
+		   (rest
+		    `((,var ,args-tail)))
+		   (key
+		    (incf nkeys)
+		    (cond ((not (consp var))
+			   `((,var (get-key-arg ,(make-keyword var)
+						,args-tail ',(= 1 nkeys)))))
+			  ((null (cddr var))
+			   (multiple-value-bind (keyword variable)
+			       (if (consp (car var))
+				   (values (caar var) (cadar var))
+				   (values (make-keyword (car var)) (car var)))
+			     `((,key (get-key-arg1 ',keyword ,args-tail
+						   ',(= 1 nkeys)))
+			       (,variable (if (consp ,key)
+					      (car ,key)
+					      ,(cadr var))))))
+			  (t
+			   (multiple-value-bind (keyword variable)
+			       (if (consp (car var))
+				   (values (caar var) (cadar var))
+				   (values (make-keyword (car var)) (car var)))
+			     `((,key (get-key-arg1 ',keyword ,args-tail
+						   ',(= 1 nkeys)))
+			       (,(caddr var) ,key)
+			       (,variable (if (consp ,key)
+					      (car ,key)
+					      ,(cadr var))))))))
+		   (aux
+		    `(,var))))))
       (let ((bindings (mapcan #'process-var lambda-list)))
 	`(let* ((,args-tail ,args)
-		,@bindings)
-	   (declare (ignorable ,args-tail))
+		,@bindings
+		(.dummy. ,@(when (and key-seen (zerop nkeys))
+			     `((get-key-arg1 :allow-other-keys
+					     ,args-tail t)))))
+	   (declare (ignorable ,args-tail .dummy.))
 	   ,@body)))))
 
-(defun get-key-arg (keyword list)
-  (loop for (key . more) on list by #'cddr
-	when (null more) do
-	  (simple-program-error "Odd number of keyword arguments.")
-	when (eq key keyword)
-	  return (car more)))
+(defun odd-number-of-keyword-arguments ()
+  (simple-program-error "Odd number of keyword arguments."))
 
-(defun get-key-arg1 (keyword list)
-  (loop for (key . more) on list by #'cddr
-	when (null more) do
-	  (simple-program-error "Odd number of keyword arguments.")
-	when (eq key keyword)
-	  return more))
+(defun invalid-keyword-argument (key)
+  (simple-program-error "Invalid keyword argument ~s" key))
+
+(defun get-key-arg (keyword list first-time)
+  (car (get-key-arg1 keyword list first-time)))
+
+(defun get-key-arg1 (keyword list first-time)
+  (if first-time
+      (loop with cell = nil
+	    for (key . more) on list by #'cddr do
+	      (cond ((not (symbolp key))
+		     (invalid-keyword-argument key))
+		    ((null more)
+		     (odd-number-of-keyword-arguments))
+		    ((and (null cell) (eq key keyword))
+		     (setq cell more)))
+	    finally (return cell))
+      (loop for (key . more) on list by #'cddr
+	    when (eq key keyword) return more)))
 
 (defun walk-method-lambda (method-lambda required-parameters env slots calls)
   (let ((call-next-method-p nil)   ;flag indicating that call-next-method

@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.11 2003/03/22 16:15:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.12 2003/05/04 00:37:34 gerd Exp $")
 ;;;
 ;;; This file contains the definition of the FUNCALLABLE-STANDARD-CLASS
 ;;; metaclass.  Much of the implementation of this metaclass is actually
@@ -62,8 +62,8 @@
     (or (eq new-super-meta-class *the-class-std-class*)
 	(eq (class-of fsc) new-super-meta-class))))
 
-(defmethod allocate-instance
-	   ((class funcallable-standard-class) &rest initargs)
+(defmethod allocate-instance ((class funcallable-standard-class)
+			      &rest initargs &key)
   (declare (ignore initargs))
   (unless (class-finalized-p class) (finalize-inheritance class))
   (allocate-funcallable-instance (class-wrapper class)))

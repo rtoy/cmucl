@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.27 2003/04/25 17:43:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.28 2003/05/04 00:37:33 gerd Exp $")
 
 (in-package :pcl)
 
@@ -160,7 +160,7 @@
   (find-class 'standard-generic-function))
 
 
-(defmethod reinitialize-instance ((method standard-method) &rest initargs)
+(defmethod reinitialize-instance ((method standard-method) &rest initargs &key)
   (declare (ignore initargs))
   (error "~@<Attempt to reinitialize the method ~S.  ~
           Method objects cannot be reinitialized.~@:>"

@@ -1,7 +1,7 @@
 ;;;-*-Mode:LISP; Package:PCL; Base:10; Syntax:Common-lisp -*-
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.23 2003/04/29 10:33:51 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/generic-functions.lisp,v 1.24 2003/05/04 00:37:33 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -487,7 +487,8 @@
 (defgeneric add-method (generic-function method))
 ;          (standard-generic-function method)
 
-(defgeneric change-class (instance new-class-name &rest initargs))
+(defgeneric change-class (instance new-class-name &rest initargs
+				   &key &allow-other-keys))
 ;          (standard-object standard-class)
 ;          (funcallable-standard-object funcallable-standard-class)
 ;          (t symbol)
@@ -715,7 +716,7 @@
 
 
 ;;; keyword arguments  
-(defgeneric allocate-instance (class &rest initargs))
+(defgeneric allocate-instance (class &rest initargs &key &allow-other-keys))
 ;          (standard-class)
 ;          (structure-class)
 ;          (funcallable-standard-class)
@@ -768,9 +769,12 @@
 
 (defgeneric update-dependent (metaobject dependent &rest initargs))
 
-(defgeneric update-instance-for-different-class (previous current &rest initargs))
+(defgeneric update-instance-for-different-class
+    (previous current &rest initargs &key &allow-other-keys))
 
-(defgeneric update-instance-for-redefined-class (instance added-slots discarded-slots property-list &rest initargs))
+(defgeneric update-instance-for-redefined-class
+    (instance added-slots discarded-slots property-list &rest initargs
+	      &key &allow-other-keys))
 
 (defgeneric writer-method-class (class direct-slot &rest initargs))
 ;          (slot-class t)

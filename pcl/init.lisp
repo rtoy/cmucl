@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.20 2003/05/02 12:43:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.21 2003/05/04 00:37:33 gerd Exp $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -34,10 +34,10 @@
 
 (in-package :pcl)
 
-(defmethod make-instance ((class symbol) &rest initargs)
+(defmethod make-instance ((class symbol) &rest initargs &key)
   (apply #'make-instance (find-class class) initargs))
 
-(defmethod make-instance ((class class) &rest initargs)
+(defmethod make-instance ((class class) &rest initargs &key)
   ;;
   ;; Try to use an optimized constructor if there is one.
   (let ((instance (call-ctor class initargs)))
@@ -73,16 +73,16 @@
 	finally
 	  (return (append supplied-initargs default-initargs))))
 
-(defmethod initialize-instance ((instance slot-object) &rest initargs)
+(defmethod initialize-instance ((instance slot-object) &rest initargs &key)
   (apply #'shared-initialize instance t initargs))
 
-(defmethod reinitialize-instance ((instance slot-object) &rest initargs)
+(defmethod reinitialize-instance ((instance slot-object) &rest initargs &key)
   (check-ri-initargs instance initargs)
   (apply #'shared-initialize instance nil initargs)
   instance)
 
 (defmethod update-instance-for-different-class
-    ((previous standard-object) (current standard-object) &rest initargs)
+    ((previous standard-object) (current standard-object) &rest initargs &key)
   ;; First we must compute the newly added slots.  The spec defines
   ;; newly added slots as "those local slots for which no slot of
   ;; the same name exists in the previous class."
@@ -105,7 +105,7 @@
      added-slots
      discarded-slots
      property-list
-     &rest initargs)
+     &rest initargs &key)
   (check-initargs
    (class-of instance) initargs
    (list (list* 'update-instance-for-redefined-class
@@ -134,7 +134,8 @@
 ;;;            no slots are set from initforms
 ;;;
 
-(defmethod shared-initialize ((instance slot-object) slot-names &rest initargs)
+(defmethod shared-initialize ((instance slot-object) slot-names
+			      &rest initargs &key)
   (let ((structure-p (structure-class-p (class-of instance))))
     (flet ((initialize-slot-from-initarg (class instance slotd)
 	     (let ((slot-initargs (slot-definition-initargs slotd)))

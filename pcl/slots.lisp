@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.19 2003/04/26 14:30:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.20 2003/05/04 00:37:33 gerd Exp $")
 ;;;
 
 (in-package :pcl)
@@ -295,12 +295,12 @@
 		   (car position)))))
 
 
-(defmethod allocate-instance ((class standard-class) &rest initargs)
+(defmethod allocate-instance ((class standard-class) &rest initargs &key)
   (declare (ignore initargs))
   (unless (class-finalized-p class) (finalize-inheritance class))
   (allocate-standard-instance (class-wrapper class)))
 
-(defmethod allocate-instance ((class structure-class) &rest initargs)
+(defmethod allocate-instance ((class structure-class) &rest initargs &key)
   (declare (ignore initargs))
   (let ((constructor (class-defstruct-constructor class)))
     (if constructor
