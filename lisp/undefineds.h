@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.7 1994/10/30 21:36:58 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.8 1994/10/30 21:43:03 ram Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -163,7 +163,7 @@ vfork,
 vhangup,
 #endif
 wait,
-#ifndef SVR4
+#ifndef SOLARIS
 wait3,
 #endif
 write,
