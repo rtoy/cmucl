@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.186 2001/12/06 19:15:40 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.187 2001/12/13 01:04:21 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -910,6 +910,7 @@
 	     "*PROMPT*" "*REQUIRE-VERBOSE*"
 	     "*SETF-FDEFINITION-HOOK*"
              "*TOP-LEVEL-AUTO-DECLARE*"
+	     "COMPILER-MACROEXPAND-1" "COMPILER-MACROEXPAND"
              "*UNDEFINED-WARNING-LIMIT*" "ACCEPT-TCP-CONNECTION"
              "ADD-OOB-HANDLER" "AMBIGUOUS-FILES" "ARGUMENT-LIST" "ASSQ"
              "BASIC-DEFINITION" "BIGNUMP" "BITP" "CACHE-HASH-EQ"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.32 2001/03/01 21:45:33 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.33 2001/12/13 01:04:20 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,8 @@
 (export '(parse-body find-if-in-closure))
 
 (in-package "EXTENSIONS")
-(export '(*top-level-auto-declare*))
+(export '(*top-level-auto-declare*
+	  compiler-macroexpand-1 compiler-macroexpand))
 
 (in-package "KERNEL")
 (export '(invoke-macroexpand-hook))
@@ -439,8 +440,9 @@
   (setf (info function compiler-macro-function name) function)
   function)
 
-#|These seem to have been dropped from the spec, and we don't use them
-internally...
+;;; While these have been dropped from the spec, and we don't use them
+;;; internally, we implement them anyway, for the benefit of a user
+;;; trying to debug his compiler macros.
 
 (defun compiler-macroexpand-1 (form &optional env)
   "If FORM is a function call for which a compiler-macro has been defined,
@@ -464,7 +466,6 @@ internally...
 		   (frob new-form t)
 		   (values new-form expanded)))))
     (frob form env)))
-|#
 
 (defun constantp (object &optional environment)
   "True of any Lisp object that has a constant value: types that eval to
