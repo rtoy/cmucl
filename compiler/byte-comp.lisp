@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.25.2.3 2000/06/14 06:23:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.25.2.4 2000/09/26 16:40:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1353,17 +1353,24 @@
 	 (values (if info
 		     (byte-continuation-info-results info)
 		     0)))
-    (unless (eql values 0)
-      ;; Someone wants the value, so copy it.
-      (output-do-xop segment 'dup))
     (etypecase leaf
       (global-var
+       (unless (eql values 0)
+	 ;; Someone wants the value, so copy it.
+	 (output-do-xop segment 'dup))
        (ecase (global-var-kind leaf)
 	 ((:special :global)
 	  (output-push-constant segment (global-var-name leaf))
 	  (output-do-inline-function segment 'setf-symbol-value))))
       (lambda-var
-       (output-set-lambda-var segment leaf (node-environment set))))
+       (cond ((leaf-refs leaf)
+	      (unless (eql values 0)
+		;; Someone wants the value, so copy it.
+		(output-do-xop segment 'dup))
+	      (output-set-lambda-var segment leaf (node-environment set)))
+	     ;; If no-one wants the value then pop it else leave it for them.
+	     ((eql values 0)
+	      (output-byte-with-operand segment byte-pop-n 1)))))
     (unless (eql values 0)
       (checked-canonicalize-values segment cont 1)))
   (undefined-value))
