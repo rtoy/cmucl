@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.15 1992/09/08 22:28:09 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.16 1993/08/03 11:08:42 ram Exp $
 
 if ($#argv) then
     if ($argv[1] == "-now") then
@@ -70,9 +70,9 @@ echo "Features: $features"
 
 $dest/lisp/lisp -core $core << EOF
 (setf *features* (list* $features *features*))
-(setf (search-list "lisp:") '("$dest/" "$src/"))
+(setf (search-list "target:") '("$dest/" "$src/"))
 (in-package "USER")
-(load (open "lisp:tools/worldload.lisp"))
+(load (open "target:tools/worldload.lisp"))
 $version
 (quit)
 EOF
