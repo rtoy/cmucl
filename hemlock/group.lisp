@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/group.lisp,v 1.1.1.2 1991/02/08 16:34:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/group.lisp,v 1.1.1.3 1993/08/25 02:08:50 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
 ;;; one wishes to change the name of the definition file after a group has
 ;;; been selected, one should call Select Group with a prefix argument.
 
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 (defvar *file-groups* (make-string-table)
   "A string table of file groups.")

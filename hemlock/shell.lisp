@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.10 1992/02/15 01:06:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.11 1993/08/25 02:10:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -234,7 +234,7 @@
 (defun set-current-shell ()
   (let ((old-buffer (value current-shell))
 	(first-old-shell (do-strings (var val *shell-names* nil)
-			   (declare (ignore var val))
+			   (declare (ignore var))
 			   (return var))))
     (when (and (not old-buffer) (not first-old-shell))
       (editor-error "Nothing to set current shell to."))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/register.lisp,v 1.1.1.3 1991/02/08 16:37:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/register.lisp,v 1.1.1.4 1993/08/25 02:10:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by Dave Touretzky.
 ;;; Modified by Bill Chiles for Hemlock consistency.
 ;;;
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 
 

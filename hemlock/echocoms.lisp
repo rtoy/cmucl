@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.7 1993/08/24 19:30:31 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/echocoms.lisp,v 1.1.1.8 1993/08/25 02:08:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Written by Rob MacLachlan and Skef Wholey.
 ;;;
-(in-package 'hemlock)
+(in-package "HEMLOCK")
 
 (defhvar "Beep on Ambiguity"
   "If non-NIL, beep when completion of a parse is ambiguous."

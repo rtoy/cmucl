@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.10 1991/10/30 08:22:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.1.1.11 1993/08/25 02:11:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1216,19 +1216,19 @@
   (let* ((device (device-hunk-device hunk))
 	 (init-string (tty-device-insert-init-string device))
 	 (char-init-string (tty-device-insert-char-init-string device))
-	 (cis-len (if char-init-string (length char-init-string)))
 	 (char-end-string (tty-device-insert-char-end-string device))
-	 (ces-len (if char-end-string (length char-end-string)))
 	 (end-string (tty-device-insert-end-string device)))
     (declare (type (or simple-string null) char-init-string char-end-string))
     (when init-string (device-write-string init-string))
     (if char-init-string
-	(do ((i start (1+ i)))
-	    ((= i end))
-	  (device-write-string char-init-string 0 cis-len)
-	  (tty-write-char (schar string i))
-	  (when char-end-string
-	    (device-write-string char-end-string 0 ces-len)))
+	(let ((cis-len (length char-init-string))
+	      (ces-len (length char-end-string)))
+	  (do ((i start (1+ i)))
+	      ((= i end))
+	    (device-write-string char-init-string 0 cis-len)
+	    (tty-write-char (schar string i))
+	    (when char-end-string
+	      (device-write-string char-end-string 0 ces-len))))
 	(device-write-string string start end))
     (when end-string (device-write-string end-string))
     (setf (tty-device-cursor-x device)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-aug.lisp,v 1.1.1.2 1991/02/08 16:37:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/spell-aug.lisp,v 1.1.1.3 1993/08/25 02:10:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,12 +59,14 @@
 (defmacro string-table-replace (src-string dst-start length)
   `(sap-replace *string-table* ,src-string 0 ,dst-start (+ ,dst-start ,length)))
 
+(defconstant spell-deleted-entry #xFFFF)
+
 ;;; HASH-ENTRY is used in SPELL-ADD-ENTRY to find a dictionary location for
-;;; adding a new entry.  If a location contains a zero, then it has never
-;;; been used, and no entries have ever been "hashed past" it.  If a location
-;;; contains a -1, then it once contained an entry that has since been
-;;; deleted.
-;;; 
+;;; adding a new entry.  If a location contains a zero, then it has never been
+;;; used, and no entries have ever been "hashed past" it.  If a location
+;;; contains SPELL-DELETED-ENTRY, then it once contained an entry that has
+;;; since been deleted.
+;;;
 (defmacro hash-entry (entry entry-len)
   (let ((loop-loc (gensym)) (loc-contents (gensym))
 	(hash (gensym)) (loc (gensym)))
@@ -72,7 +74,7 @@
 	    (,loc (rem ,hash (the fixnum *dictionary-size*)))
 	    (,loc-contents (dictionary-ref ,loc)))
        (declare (fixnum ,loc ,loc-contents))
-       (if (or (zerop ,loc-contents) (= ,loc-contents -1))
+       (if (or (zerop ,loc-contents) (= ,loc-contents spell-deleted-entry))
 	   ,loc
 	   (hash2-loop (,loop-loc ,loc-contents) ,loc ,hash
 	     ,loop-loc nil t)))))
@@ -157,7 +159,7 @@
 ;;; flag, the flag is cleared in the descriptor table.  If entry is a root
 ;;; word in the dictionary (that is, looked up without the use of a flag),
 ;;; then the root and all its derivitives are deleted by setting its
-;;; dictionary location to -1.
+;;; dictionary location to spell-deleted-entry.
 ;;; 
 (defun spell-remove-entry (entry)
   "Removes entry from the dictionary, so it will be an unknown word.  Entry
@@ -183,14 +185,15 @@
 		(declare (fixnum hash hash-and-len loc))
 		(cond ((zerop loc-contents) nil)
 		      ((found-entry-p loc-contents entry entry-len hash-and-len)
-		       (setf (dictionary-ref loc) -1))
+		       (setf (dictionary-ref loc) spell-deleted-entry))
 		      (t
 		       (hash2-loop (loop-loc loc-contents) loc hash
 				   nil
 				   (when (found-entry-p loc-contents entry
 							entry-len hash-and-len)
-				     (setf (dictionary-ref loop-loc) -1)
-				     (return -1))))))))))))
+				     (setf (dictionary-ref loop-loc)
+					   spell-deleted-entry)
+				     (return spell-deleted-entry))))))))))))
 
 (defun spell-root-flags (index)
   "Return the flags associated with the root word corresponding to a

@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.7 1991/11/09 03:05:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/charmacs.lisp,v 1.1.1.8 1993/08/25 02:07:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Implementation specific character-hacking macros and constants.
 ;;;
-(in-package 'hemlock-internals)
+(in-package "HEMLOCK"-internals)
 (export ' (syntax-char-code-limit search-char-code-limit do-alpha-chars))
 
 ;;; This file contains various constants and macros which are implementation or
