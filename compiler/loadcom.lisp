@@ -77,6 +77,7 @@
 (load "c:main")
 (load "c:assembler")
 (load "assem:assemfile")
+#+pmax (load "assem:mips/support")
 #+pmax (load "mips:dismips")
 #-pmax (load "c:assem-insts")
 #+pmax (load "mips:mips-insts")
