@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.11 1990/04/12 16:35:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.12 1990/04/29 02:00:05 wlott Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -46,9 +46,7 @@
 (compiler-let ((lisp::*bootstrap-deftype* t))
   (remhash 'character *builtin-types*)
   (deftype character () 'base-character)
-  (deftype string-char ()
-    (warn "Someone used the STRING-CHAR type.")
-    'base-character))
+  (deftype string-char () 'base-character))
 
 ;;;
 ;;; An index into an integer.
@@ -98,6 +96,14 @@
   '(bit (unsigned-byte 2) (unsigned-byte 4) (unsigned-byte 8) (unsigned-byte 16)
 	(unsigned-byte 32) base-character single-float double-float))
 
+(deftype unboxed-array (&optional dims)
+  (collect ((types (list 'or)))
+    (dolist (type specialized-array-element-types)
+      (when (subtypep type '(or integer character))
+	(types `(array ,type ,dims))))
+    (types)))
+
+
 ;;; Float-Format-Name  --  Internal
 ;;;
 ;;;    Return the symbol that describes the format of Float.
@@ -105,7 +111,7 @@
 (proclaim '(function float-format-name (float) symbol))
 (defun float-format-name (x)
   (etypecase x
-    (single-float 'short-float)
+    (single-float 'single-float)
     (double-float 'double-float)))
 
 ;;; Specialize-Array-Type  --  Internal
