@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.4 1997/04/13 21:07:34 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.5 1997/04/23 18:52:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,8 +16,7 @@
 ;;; Written by William Lott
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;;
-;;; Debugging and enhancements by Douglas Crosher 1996.
+;;; Debugging and enhancements by Douglas Crosher 1996, 1997.
 ;;;
 
 (in-package :x86)
@@ -2394,13 +2393,21 @@
    (emit-byte segment #b11011011)
    (emit-fp-op segment dest #b010)))
 ;;;
-;;; Store and pop 32-bit interger
+;;; Store and pop 32-bit integer
 ;;;
 (define-instruction fistp (segment dest)
   (:printer floating-point ((op '(#b011 #b011))))
   (:emitter
    (emit-byte segment #b11011011)
    (emit-fp-op segment dest #b011)))
+;;;
+;;; Store and pop 64-bit integer
+;;;
+(define-instruction fistpl (segment dest)
+  (:printer floating-point ((op '(#b111 #b111))))
+  (:emitter
+   (emit-byte segment #b11011111)
+   (emit-fp-op segment dest #b111)))
 ;;;
 ;;; store single from st(0) and pop
 ;;;
