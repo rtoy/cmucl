@@ -469,17 +469,13 @@
 ;;; Target-If-Desirable  --  Internal
 ;;;
 ;;;    Link the TN-Refs Read and Write together using the TN-Ref-Target when
-;;; this seems like a good idea.  Our current criterion is that the referenced
-;;; TNs not conflict.  This is called by VOP target functions.
+;;; this seems like a good idea.  Currently we always do, as this increases the
+;;; sucess of load-TN targeting.
 ;;;
 (defun target-if-desirable (read write)
   (declare (type tn-ref read write))
-  (let ((rtn (tn-ref-tn read))
-	(wtn (tn-ref-tn write)))
-    (when (or (eq (tn-kind rtn) :constant)
-	      (not (tns-conflict rtn wtn)))
-      (setf (tn-ref-target read) write)
-      (setf (tn-ref-target write) read))))
+  (setf (tn-ref-target read) write)
+  (setf (tn-ref-target write) read))
 
 
 ;;; Check-OK-Target  --  Internal
@@ -620,16 +616,24 @@
 ;;; Compute-Live-TNs  --  Internal
 ;;;
 ;;;    Set the Live-TNs in :Finite SBs to represent the TNs live immediately
-;;; after the evaluation of VOP in Block.  If VOP is null, then compute the
-;;; live TNs at the beginning of the block.  Sequential calls on the same block
-;;; must be in reverse VOP order.
+;;; after the evaluation of VOP in Block, excluding results of the VOP.  If VOP
+;;; is null, then compute the live TNs at the beginning of the block.
+;;; Sequential calls on the same block must be in reverse VOP order.
 ;;;
 (defun compute-live-tns (block vop)
+  (declare (type ir2-block block) (type vop vop))
   (unless (eq block *live-block*)
     (init-live-tns block))
   
   (do ((current *live-vop* (vop-prev current)))
-      ((eq current vop))
+      ((eq current vop)
+       (do ((res (vop-results vop) (tn-ref-across res)))
+	   ((null res))
+	 (let* ((tn (tn-ref-tn res))
+		(sb (sc-sb (tn-sc tn))))
+	   (when (eq (sb-kind sb) :finite)
+	     (setf (svref (finite-sb-live-tns sb) (tn-offset tn))
+		   nil)))))
     (do ((ref (vop-refs current) (tn-ref-next-ref ref)))
 	((null ref))
       (let* ((tn (tn-ref-tn ref))
@@ -656,21 +660,19 @@
 ;;;  1] Live-TNs is non-null for that location.  This means that there is a
 ;;;     live non-load TN in that location after the VOP.
 ;;;  2] The reference is a result, and the same location is either:
-;;;     -- Used in a write (other than by OP) any time after the first result
-;;;        write (inclusive).
-;;;     -- Used in a read after OP (exclusive).
+;;;     -- Used by some other result.
+;;;     -- Used in any way after the reference (exclusive).
 ;;;  3] The reference is an argument, and the same location is either:
-;;;     -- Used in a read (other than by OP) any time before the last argument
-;;;        (inclusive).
-;;;     -- Used in a write before the reference (exclusive).
+;;;     -- Used by some other argument.
+;;;     -- Used in any way before the reference (exclusive).
 ;;;
-;;;    In 2 (and 3) above, the first bullet corresponds to a conflict with a
-;;; result (argument).  In 3, only load-TNs should hit this test, since
-;;; original results will be in the live-TNs.
+;;;    In 2 (and 3) above, the first bullet corresponds to result-result
+;;; (and argument-argument) conflicts.  We need this case because there aren't
+;;; any TN-REFs to represent the implicit reading of results or writing of
+;;; arguments.
 ;;;
-;;;    In 2 and 3 above, the second bullet corresponds to a conflict with a
-;;; temporary.  Note that this time interval overlaps with the previous case:
-;;; during the overlap, any reference causes a conflict.
+;;;    In 2 and 3 above, the second bullet corresponds conflicts with
+;;; temporaries or between arguments and results.
 ;;;
 ;;;    In 2 and 3 above, we consider both the TN-REF-TN and the TN-REF-LOAD-TN
 ;;; (if any) to be referenced simultaneously and in the same way.  This causes
@@ -681,37 +683,30 @@
   (assert (eq (sb-kind sb) :finite))
   (or (svref (finite-sb-live-tns sb) offset)
       (let ((vop (tn-ref-vop op)))
-	(macrolet ((frob (first end on-match)
-		     `(let ((end ,end))
-			(do ((ref ,first (tn-ref-next-ref ref))
-			     (before-op nil))
-			    ((eq ref end)
-			     nil)
-			  (let ((tn (tn-ref-tn ref))
-				(ltn (tn-ref-load-tn ref)))
-			    (cond ((eq ref op)
-				   (setq before-op t))
-				  ((or (and (eq (sc-sb (tn-sc tn)) sb)
-					    (eql (tn-offset tn) offset))
-				       (and ltn
-					    (eq (sc-sb (tn-sc ltn)) sb)
-					    (eql (tn-offset ltn) offset)))
-				   ,on-match)))))))
-	  (if (tn-ref-write-p op)
-	      (frob (vop-refs vop)
-		    (tn-ref-next-ref (vop-results vop))
-		    (if (tn-ref-write-p ref)
-			(return t)
-			(unless before-op
+	(macrolet ((same (ref)
+		     `(let ((tn (tn-ref-tn ,ref))
+			    (ltn (tn-ref-load-tn ,ref)))
+			(or (and (eq (sc-sb (tn-sc tn)) sb)
+				 (eql (tn-offset tn) offset))
+			    (and ltn
+				 (eq (sc-sb (tn-sc ltn)) sb)
+				 (eql (tn-offset ltn) offset)))))
+		   (is-op (ops)
+		     `(do ((ops ,ops (tn-ref-across ops)))
+			  ((null ops) nil)
+			(when (and (same ops)
+				   (not (eq ops op)))
 			  (return t))))
-	      (frob (do ((ref (vop-args vop) (tn-ref-across ref))
-			 (prev nil ref))
-			((null ref) prev))
-		    nil
-		    (if (tn-ref-write-p ref)
-			(when before-op
-			  (return t))
-			(return t))))))))
+		   (is-ref (refs end)
+		     `(do ((refs ,refs (tn-ref-next-ref refs)))
+			  ((eq refs ,end) nil)
+			(when (same refs) (return t)))))
+	  
+	  (if (tn-ref-write-p op)
+	      (or (is-op (vop-results vop))
+		  (is-ref (vop-refs vop) op))
+	      (or (is-op (vop-args vop))
+		  (is-ref (tn-ref-next-ref op) nil)))))))
 
 
 ;;; Find-Load-TN-Target  --  Internal
