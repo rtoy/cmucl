@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.5 2000/10/27 19:25:54 dtc Exp $
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/backtrace.c,v 1.6 2003/07/25 17:57:01 gerd Exp $
  *
  * Simple backtrace facility.  More or less from Rob's lisp version.
  */
@@ -243,11 +243,199 @@ backtrace(int nframes)
     } while (--nframes > 0 && previous_info(&info));
 }
 
-#else
+#else /* i386 */
 
-void backtrace(int nframes)
+#include "x86-validate.h"
+
+#define VM_OCFP_SAVE_OFFSET		0
+#define VM_RETURN_PC_SAVE_OFFSET	1
+
+static int
+stack_pointer_p (unsigned p)
 {
-    printf("Can't backtrace on this hardware platform.\n");
+  return (p < CONTROL_STACK_START + CONTROL_STACK_SIZE
+	  && p > (unsigned) &p
+	  && (p & 3) == 0);
 }
 
+static int
+ra_pointer_p (unsigned ra)
+{
+  return ra > 4096 && !stack_pointer_p (ra);
+}
+
+static unsigned
+deref (unsigned p, int offset)
+{
+  return *((unsigned *) p + offset);
+}
+
+static void
+print_entry_name (lispobj name)
+{
+  lispobj *object = (lispobj *) PTR (name);
+
+  if (TypeOf (*object) == type_SymbolHeader)
+    {
+      struct symbol *symbol = (struct symbol *) object;
+      object = (lispobj *) PTR (symbol->name);
+    }
+  
+  if (TypeOf (*object) == type_SimpleString)
+    {
+      struct vector *string = (struct vector *) object;
+      printf ("%s", (char *) string->data);
+    }
+  else
+    printf ("<??? type %d>", TypeOf (*object));
+}
+  
+static void
+print_entry_list (lispobj name)
+{
+  putchar ('(');
+  while (name != NIL)
+    {
+      struct cons *cons = (struct cons *) PTR (name);
+      print_entry_name (cons->car);
+      name = cons->cdr;
+      if (name != NIL)
+	putchar (' ');
+    }
+  putchar (')');
+}
+
+static void
+print_entry_points (struct code *code)
+{
+  lispobj function;
+  
+  function = code->entry_points;
+
+  while (function != NIL)
+    {
+      struct function *header;
+      lispobj name;
+
+      header = (struct function *) PTR (function);
+      name = header->name;
+
+      switch (LowtagOf (name))
+	{
+	case type_OtherPointer:
+	  print_entry_name (name);
+	  break;
+
+	case type_ListPointer:
+	  print_entry_list (name);
+	  break;
+
+	default:
+	  printf ("<??? lowtag %d>", LowtagOf (name));
+	  break;
+	}
+
+      function = header->next;
+
+      if (function != NIL)
+	printf (", ");
+    }
+}
+
+/* See also X86-CALL-CONTEXT in code:debug-int.  */
+
+static int
+x86_call_context (unsigned fp, unsigned *ra, unsigned *ocfp)
+{
+  unsigned lisp_ocfp, lisp_ra, c_ocfp, c_ra;
+  int lisp_valid_p, c_valid_p;
+  
+  if (!stack_pointer_p (fp))
+    return 0;
+
+  lisp_ocfp = deref (fp, - (1 + VM_OCFP_SAVE_OFFSET));
+  lisp_ra = deref (fp,  - (1 + VM_RETURN_PC_SAVE_OFFSET));
+  c_ocfp = deref (fp, 0);
+  c_ra = deref (fp, 1);
+
+  lisp_valid_p = (lisp_ocfp > fp
+		  && stack_pointer_p (lisp_ocfp)
+		  && ra_pointer_p (lisp_ra));
+  c_valid_p = (c_ocfp > fp
+	       && stack_pointer_p (c_ocfp)
+	       && ra_pointer_p (c_ra));
+
+  if (lisp_valid_p && c_valid_p)
+    {
+      unsigned lisp_path_fp, c_path_fp, dummy;
+      int lisp_path_p = x86_call_context (lisp_ocfp, &lisp_path_fp, &dummy);
+      int c_path_p = x86_call_context (c_ocfp, &c_path_fp, &dummy);
+
+      if (lisp_path_p && c_path_p)
+	{
+#if defined __FreeBSD__ && __FreeBSD_version > 400000
+	  if (lisp_ocfp > c_ocfp)
+	    *ra = lisp_ra, *ocfp = lisp_ocfp;
+	  else
+	    *ra = c_ra, *ocfp = c_ocfp;
+#else
+	  *ra = lisp_ra, *ocfp = lisp_ocfp;
 #endif
+	}
+      else if (lisp_path_p)
+	*ra = lisp_ra, *ocfp = lisp_ocfp;
+      else if (c_path_p)
+	*ra = c_ra, *ocfp = c_ocfp;
+      else
+	return 0;
+    }
+  else if (lisp_valid_p)
+    *ra = lisp_ra, *ocfp = lisp_ocfp;
+  else if (c_valid_p)
+    *ra = c_ra, *ocfp = c_ocfp;
+  else
+    return 0;
+
+  return 1;
+}
+
+void
+backtrace (int nframes)
+{
+  unsigned ra, fp, next_fp;
+  int i;
+
+  asm ("movl %%ebp,%0" : "=g" (fp));
+
+  for (i = 0; nframes--; ++i)
+    {
+      lispobj *cp;
+      
+      if (!x86_call_context (fp, &ra, &next_fp))
+	break;
+
+      printf ("%4d: ", i);
+      
+      cp = component_ptr_from_pc ((lispobj *) ra);
+      if (cp)
+	{
+	  switch (TypeOf (*cp))
+	    {
+	    case type_CodeHeader:
+	      print_entry_points ((struct code *) cp);
+	      break;
+		  
+	    default:
+	      printf ("<Not implemented, type = %d>", TypeOf (*cp));
+	      break;
+	    }
+	}
+      else
+	printf ("Foreign fp = 0x%x, ra = 0x%x", next_fp, ra);
+
+      putchar ('\n');
+      fp = next_fp;
+    }
+}
+
+#endif /* i386 */

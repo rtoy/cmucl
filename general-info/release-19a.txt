@@ -166,6 +166,7 @@ New in this release:
        :unspecific instead of :newest so versioning is disabled by
        default to preserve current behavior.  Set the version to
        :newest to create versions.
+     - LDB backtrace on x86.
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
