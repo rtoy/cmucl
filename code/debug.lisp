@@ -78,15 +78,22 @@
 ;;;
 (defvar *number-of-steps* 1)
 (declaim (type integer *number-of-steps*))
+
+;;; Used when listing and setting breakpoints.
 ;;;
 (defvar *default-breakpoint-debug-function* nil)
   L              lists locals in current function.
-  P, PP          displays current function call.  
 
-Functions/macros for your enjoyment:
- (DEBUG:DEBUG-RETURN expression [frame])  returns with values from an active frame.
- (DEBUG:ARGUMENT n [frame])              shows the nth  supplied argument.
- (DEBUG:PC [frame])                 shows the next pc to be executed.
+
+;;;; Code location utilities:
+
+      (unless found 
+	(setf first-code-location code-location)
+	(setf found t)))
+    first-code-location))
+
+;;; NEXT-CODE-LOCATIONS -- Internal.
+;;;
 ;;; Returns a list of the next code-locations following the one passed.  One of
 ;;; the *bad-code-location-types* will not be returned.
 ;;;
@@ -133,6 +140,13 @@ Functions/macros for your enjoyment:
 		(di:frame-down frame))
 	 (count count (1- count)))
 	((or (null frame) (zerop count))
+	 (values))
+      (print-frame-call frame :number t))))
+
+
+;;;; Frame printing:
+
+(eval-when (compile eval)
 
 ;;; LAMBDA-LIST-ELEMENT-DISPATCH -- Internal.
 
@@ -149,40 +163,71 @@ Functions/macros for your enjoyment:
 			       (verbosity 1))
   (ecase verbosity
     (0 (print frame))
-    (1 (handler-case
-	   (let* ((d-fun (di:frame-debug-function frame))
-		  (loc (di:frame-code-location frame))
-		  (args (di:debug-function-lambda-list d-fun)))
-	     (terpri)
-	     (write-char #\()
-	     (prin1 (di:debug-function-name d-fun))
-	     (dolist (ele args)
-	       (write-char #\space)
-	       (lambda-list-element-dispatch ele
-		 :required ((print-frame-call-arg ele loc frame))
-		 :optional ((print-frame-call-arg (second ele) loc frame))
-		 :keyword ((prin1 (second ele))
-			   (write-char #\space)
-			   (print-frame-call-arg (third ele) loc frame))
-		 :deleted ((print-frame-call-arg ele loc frame))))
-	     (write-char #\))
-	     (when (di:debug-function-kind d-fun)
-	       (write-string " [")
-	       (prin1 (di:debug-function-kind d-fun))
-	       (write-char #\])))
-	 (di:lambda-list-unavailable ()
-	  (let ((d-fun (di:frame-debug-function frame)))
-	    (format t "(~S <lambda-list-unavailable>)) ~S)"
-		    (di:debug-function-name d-fun)
-		    (di:debug-function-kind d-fun))))))
+    (1 (print-frame-call-1 frame))
     ((2 3 4 5))))
 	     (t ,other)))))
+			       (format s "#<~A>"
+				       (unprintable-object-string x)))))
+;;; This prints frame with verbosity level 1.  This pays attention to
+;;; *print-length*, and if we hit a rest-arg before the length runs out, then
+;;; print as many of the values as possible, punting the loop over lambda-list
+;;; variables since any other arguments will be in the rest-arg's list of
+;;; values.
+;;; This prints frame with verbosity level 1.  If we hit a rest-arg, 
+(defun print-frame-call-1 (frame)
+  (handler-case
+      (let* ((d-fun (di:frame-debug-function frame))
+	     (loc (di:frame-code-location frame))
+	     (count (or *print-length* most-positive-fixnum)))
+	(terpri)
+	(write-char #\()
+	(prin1 (di:debug-function-name d-fun))
+  (let* ((d-fun (di:frame-debug-function frame))
+	  (write-char #\space)
+	  (when (zerop count)
+	    ;; We know there are more arguments to print since we haven't
+	    ;; printed ele on this iteration yet.
+	    (write-string "...")
+	    (return))
+	 (loc (di:frame-code-location frame))
+	    :required ((print-frame-call-arg ele loc frame))
+	    :optional ((print-frame-call-arg (second ele) loc frame))
+	    :keyword ((prin1 (second ele))
+		      (write-char #\space)
+		      (print-frame-call-arg (third ele) loc frame)
+		      ;; Extra decrement for printing two items.
+		      (decf count))
+	    :deleted ((print-frame-call-arg ele loc frame))
+	    :optional ((push (frame-call-arg (second ele) loc frame) results))
+		     (write-string "<unused-rest-arg> ...")
+		     (let ((values (di:debug-variable-value (second ele) frame)))
+		       (prin1 (car values))
+		       (dolist (value (cdr values))
+			 (write-char #\space)
+			 (when (zerop count)
+			   (write-string "...")
+			   (return))
+			 (prin1 value)
+			 (decf count)))
+		     (write-string "<unavaliable-rest-arg> ..."))
+		   (return)))
+	  (decf count))
+	(write-char #\))
+	(when (di:debug-function-kind d-fun)
+	  (write-string " [")
+	  (prin1 (di:debug-function-kind d-fun))
+	  (write-char #\])))
+    (di:lambda-list-unavailable ()
+      (let ((d-fun (di:frame-debug-function frame)))
+	(format t "(~S <lambda-list-unavailable>)) ~S)"
+		(di:debug-function-name d-fun)
+		(di:debug-function-kind d-fun))))))
+
 (defun print-frame-call-arg (var location frame)
-  (cond ((eq var :deleted)
-	 (write-string "<unused-arg>"))
-	((eq (di:debug-variable-validity var location) :valid)
-	 (prin1 (di:debug-variable-value var frame)))
-	(t (write-string "<unavailable-arg>"))))
+      (write-char #\]))))
+    (write-string "<unused-arg>")
+    (prin1 (di:debug-variable-value var frame))
+    (write-string "<unavailable-arg>")))
 
 
 
@@ -305,6 +350,10 @@ Functions/macros for your enjoyment:
       (dolist (restart restarts)
 ;;;; DEBUG-LOOP.
 	  (when name
+	    (let ((len (length (princ-to-string name))))
+	      (when (> len max-name-len)
+		(setf max-name-len len))))))
+      (unless (zerop max-name-len)
 	(incf max-name-len 3))
   (let ((*debug-command-level* (1+ *debug-command-level*))
 	(*current-frame* (di:top-frame)))
@@ -376,74 +425,117 @@ Functions/macros for your enjoyment:
 				vars :test #'string=
 				:key #'di:debug-variable-name))))
    information."
-  (let* ((vars (etypecase name
+  (let* ((temp (etypecase name
 		 (symbol (di:debug-function-symbol-variables
 			  (di:frame-debug-function *current-frame*)
 			  name))
 		 (simple-string (di:ambiguous-debug-variables
 				 (di:frame-debug-function *current-frame*)
 				 name))))
-	 (location (di:frame-code-location *current-frame*)))
+	 (location (di:frame-code-location *current-frame*))
+	 ;; Let's only deal with valid variables.
+	 (vars (remove-if-not #'(lambda (v)
+				  (eq (di:debug-variable-validity v location)
+				      :valid))
+			      temp)))
     (declare (list vars))
-    (setf vars
-	  (remove-if-not #'(lambda (v)
-			     (eq (di:debug-variable-validity v location) :valid))
-			 vars))
     (cond ((null vars)
 	   (error "No known valid variables match ~S." name))
 	  ((= (length vars) 1)
 	   (di:debug-variable-value (car vars) *current-frame*))
-	  ((find-if-not #'(lambda (v)
-			    (string= (di:debug-variable-name v)
-				     (di:debug-variable-name (car vars))))
-			vars)
-	   (error "Specification ambiguous:~%~{   ~A~%~}"
-		  (mapcar #'di:debug-variable-name
-			  (delete-duplicates vars
-					     :test #'string=
-					     :key #'di:debug-variable-name))))
-	  (id-supplied
-	   (let ((v (find id vars :key #'di:debug-variable-id)))
-	     (unless v
-	       (error "Invalid variable ID, ~D, should have been one of ~S."
-		      id (mapcar #'di:debug-variable-id vars)))
-	     (di:debug-variable-value v *current-frame*)))
 	  (t
-	   (error "Specify variable id to disambiguate ~S.  Use one of ~S."
-		   name (mapcar #'di:debug-variable-id vars))))))
+	   ;; Since we have more than one, first see if we have any variables
+	   ;; that exactly match the specification.
+	   (let* ((name (etypecase name
+			  (symbol (symbol-name name))
+			  (simple-string name)))
+		  (exact (remove-if-not #'(lambda (v)
+					    (string= (di:debug-variable-name v)
+						     name))
+					vars))
+		  (vars (or exact vars)))
+	     (declare (simple-string name)
+		      (list exact vars))
+	     (cond
+	      ;; Check now for only having one variable.
+	      ((= (length vars) 1)
+	       (di:debug-variable-value (car vars) *current-frame*))
+	      ;; If there weren't any exact matches, flame about ambiguity
+	      ;; unless all the variables have the same name.
+	      ((and (not exact)
+		    (find-if-not
+		     #'(lambda (v)
+			 (string= (di:debug-variable-name v)
+				  (di:debug-variable-name (car vars))))
+		     (cdr vars)))
+	       (error "Specification ambiguous:~%~{   ~A~%~}"
+		      (mapcar #'di:debug-variable-name
+			      (delete-duplicates
+			       vars :test #'string=
+			       :key #'di:debug-variable-name))))
+	      ;; All names are the same, so see if the user ID'ed one of them.
+	      (id-supplied
+	       (let ((v (find id vars :key #'di:debug-variable-id)))
+		 (unless v
+		   (error "Invalid variable ID, ~D, should have been one of ~S."
+			  id (mapcar #'di:debug-variable-id vars)))
+		 (di:debug-variable-value v *current-frame*)))
+	      (t
+	       (error "Specify variable ID to disambiguate ~S.  Use one of ~S."
+		      name (mapcar #'di:debug-variable-id vars)))))))))
 			   id (mapcar #'di:debug-variable-id vars)))
 		      '(di:debug-variable-value v *current-frame*))
 		     (:set
 		      `(setf (di:debug-variable-value v *current-frame*)
 			     ,value-var)))))
-   argument in a frame's default printed representation.  Keyword/value pairs
-   count as one."
-  (let* ((lambda-list (handler-case (di:debug-function-lambda-list
-				     (di:frame-debug-function *current-frame*))
-			(di:lambda-list-unavailable ()
-			  (error "No argument values are available."))))
-	 (rest-pos (position-if #'(lambda (x)
-				    (and (consp x) (eq (car x) :rest)))
-				lambda-list))
-	 (arg (car (nthcdr (if (and rest-pos (<= rest-pos n))
-			       (1+ n)
-			       n)
-			   lambda-list))))
-    (flet ((variable-value-if-valid (var frame)
-	     (cond ((eq var :deleted)
-		    (error "Unused arguments have no values."))
-		   ((eq (di:debug-variable-validity
-			 var (di:frame-code-location frame))
-			:valid)
-		    (di:debug-variable-value var frame))
-		   (t (error "Invalid argument value.")))))
-      (lambda-list-element-dispatch arg
-	:required ((variable-value-if-valid arg *current-frame*))
-	:optional ((variable-value-if-valid (second arg) *current-frame*))
-	:keyword ((variable-value-if-valid (third arg) *current-frame*))
-	:deleted ((variable-value-if-valid arg *current-frame*))))))
+	       (t
+		(error "Specify variable ID to disambiguate ~S.  Use one of ~S."
+		       name (mapcar #'di:debug-variable-id vars)))))))))
 
+) ;EVAL-WHEN
+
+;;; VAR -- Public.
+;;;
+(defun var (name &optional (id 0 id-supplied))
+  "Returns a variable's value if possible.  Name is a simple-string or symbol.
+   If it is a simple-string, it is an initial substring of the variable's name.
+   If name is a symbol, it has the same name and package as the variable whose
+   value this function returns.  If the symbol is uninterned, then the variable
+   has the same name as the symbol, but it has no package.
+
+   If name is the initial substring of variables with different names, then
+   this return no values after displaying the ambiguous names.  If name
+   determines multiple variables with the same name, then you must use the
+   optional id argument to specify which one you want.  If you left id
+   unspecified, then this returns no values after displaying the distinguishing
+   id values.
+
+   The result of this function is limited to the availability of variable
+   information.  This is SETF'able."
+  (define-var-operation :ref))
+;;;
+(defun (setf var) (value name &optional (id 0 id-supplied))
+  (define-var-operation :set value))
+
+
+
+;;; ARG -- Public.
+;;;
+(defun arg (n)
+  "Returns the n'th argument's value if possible.  Argument zero is the first
+   argument in a frame's default printed representation.  Count keyword/value
+   pairs as separate arguments."
+  (multiple-value-bind
+      (var lambda-var-p)
+      (nth-arg n (handler-case (di:debug-function-lambda-list
+				(di:frame-debug-function *current-frame*))
+		   (di:lambda-list-unavailable ()
+		     (error "No argument values are available."))))
+    (if lambda-var-p
+	(lambda-var-dispatch var (di:frame-code-location *current-frame*)
+	  (error "Unused arguments have no values.")
 	  (di:debug-variable-value var *current-frame*)
+	  (error "Invalid argument value."))
 	var)))
 
 ;;; NTH-ARG -- Internal.
@@ -492,6 +584,34 @@ Functions/macros for your enjoyment:
 	      (lead (di:frame-down *current-frame*) (di:frame-down lead)))
 	     ((null lead) prev)))))
 
+(def-debug-command "F"
+  (let ((n (read-prompting-maybe "Frame number: "))
+	(current (di:frame-number *current-frame*)))
+  
+(def-debug-command "DOWN" ()
+  (let ((next (di:frame-down *current-frame*)))
+    (cond (next
+	   (setf *current-frame* next)
+	   (print-frame-call next))
+	  (t
+	   (format t "~&Bottom of stack.")))))
+
+(def-debug-command-alias "D" "DOWN")
+
+(def-debug-command "TOP" ()
+  (do ((prev *current-frame* lead)
+       (lead (di:frame-up *current-frame*) (di:frame-up lead)))
+      ((null lead)
+       (setf *current-frame* prev)
+       (print-frame-call prev))))
+
+(def-debug-command "BOTTOM" ()
+  (do ((prev *current-frame* lead)
+       (lead (di:frame-down *current-frame*) (di:frame-down lead)))
+      ((null lead)
+       (setf *current-frame* prev)
+       (print-frame-call prev))))
+
 
 (def-debug-command "FRAME" (&optional
 			    (n (read-prompting-maybe "Frame number: ")))
@@ -522,8 +642,29 @@ Functions/macros for your enjoyment:
 ;;;
 
 (def-debug-command "QUIT" ()
+(defvar *help-line-scroll-count* 20)
+  (continue)
 (def-debug-command "H"
-  (princ debug-help-string))
+
+(def-debug-command "RESTART" ()
+  (let ((num (read-if-available :prompt)))
+    (when (eq num :prompt)
+      (show-restarts *debug-restarts*)
+      (write-string "Restart: ")
+      (force-output)
+      (setf num (read *standard-input*)))
+    (let ((restart (typecase num
+		     (unsigned-byte
+		      (nth num *debug-restarts*))
+		     (symbol
+		      (find num *debug-restarts* :key #'restart-name
+			    :test #'(lambda (sym1 sym2)
+				      (string= (symbol-name sym1)
+					       (symbol-name sym2)))))
+      (format t "~%Q for quit: ")
+		      (return-from restart-debug-command nil)))))
+      (if restart
+	  (invoke-restart-interactively restart)
 	  (princ "No such restart.")))))
 (def-debug-command "ERROR"
 ;;; Information commands.
@@ -539,22 +680,30 @@ Functions/macros for your enjoyment:
   (print-frame-call *current-frame* nil nil))
 	    (count *help-line-scroll-count*))
 (def-debug-command "L"
-  (let ((*print-level* *debug-print-level*)
-	(*print-length* *debug-print-length*)
-	(*standard-output* *debug-io*)
-	(location (di:frame-code-location *current-frame*))
-	(any-p nil))
-    (di:do-debug-function-variables (v (di:frame-debug-function *current-frame*))
-      (setf any-p t)
-      (if (eq (di:debug-variable-validity v location) :valid)
-	  (format t "~A~:[#~D~;~*~]  =  ~S~%"
-		  (di:debug-variable-name v)
-		  (zerop (di:debug-variable-id v))
-		  (di:debug-variable-id v)
-		  (di:debug-variable-value v *current-frame*))
-	  #|(format t "~A has an invalid value currently.~%"
-		  (di:debug-variable-name v))|#))
-    (unless any-p (write-line "No variable information available."))))
+		 (setf end len)
+		 (return))
+	(let ((*print-level* *debug-print-level*)
+	      (*print-length* *debug-print-length*)
+	(write-string debug-help-string *standard-output*
+		      :start start :end end))
+      (format t "~%[RETURN FOR MORE, Q TO QUIT HELP TEXT]: ")
+      (force-output)
+	  (di:do-debug-function-variables (v d-fun)
+
+	    (cond ((eq (di:debug-variable-validity v location) :valid)
+		   (setf any-valid-p t)
+		   (format t "~A~:[#~D~;~*~]  =  ~S~%"
+			   (di:debug-variable-name v)
+			   (zerop (di:debug-variable-id v))
+			   (di:debug-variable-id v)
+			   (di:debug-variable-value v *current-frame*)))
+		  (t #|(format t "~A has an invalid value currently.~%"
+			       (di:debug-variable-name v))|#)))
+	  (cond ((not any-p)
+		 (write-line "No local variables in function."))
+		((not any-valid-p)
+		 (write-line "All variables currently have invalid values."))))
+
 (def-debug-command-alias "PP" "VPRINT")
 (def-debug-command "SOURCE"
   (print-frame-source-form *current-frame* (read-if-available 0)))
@@ -563,7 +712,7 @@ Functions/macros for your enjoyment:
   (print-frame-source-form *current-frame* (read-if-available 0) t))
 			d-fun
 (defun print-frame-source-form (frame context &optional verbose)
-  (let* ((location (di:frame-code-location *current-frame*))
+  (let* ((location (di:frame-code-location frame))
 	      (format t "~A~:[#~D~;~*~]  =  ~S~%"
 		      (di:debug-variable-name v)
     (cond ((not (eq :file (di:debug-source-from d-source)))
@@ -597,9 +746,6 @@ Functions/macros for your enjoyment:
 			(possible-breakpoints
 			 *default-breakpoint-debug-function*))))))
 	   (setup-function-start ()
-
-(defvar *flush-debug-errors* t
-  "Don't recursively call DEBUG on errors while within the debugger if non-nil.")
 	     (let ((code-loc (di:debug-function-start-location place)))
 (def-debug-command "FLUSH"
   (setf *flush-debug-errors* (not *flush-debug-errors*)))
