@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.51 1994/03/23 12:45:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.52 1994/03/23 13:54:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -379,6 +379,7 @@
 	 (results (vop-results vop))
 	 (name (with-output-to-string (stream)
 		 (print-tn tn stream)))
+	 (2comp (component-info *compile-component*))
 	 temp)
     (cond
      ((setq temp (position-in #'tn-ref-across tn args :key #'tn-ref-tn))
@@ -399,6 +400,10 @@
 				  temp))))
      ((eq (tn-kind tn) :component)
       `("~2D: ~A (component live)" ,loc ,name))
+     ((position-in #'tn-next tn (ir2-component-wired-tns 2comp))
+      `("~2D: ~A (wired)" ,loc ,name))
+     ((position-in #'tn-next tn (ir2-component-restricted-tns 2comp))
+      `("~2D: ~A (restricted)" ,loc ,name))
      (t
       `("~2D: not referenced?" ,loc)))))
 
@@ -427,7 +432,7 @@
 		     (unused el))
 		  (declare (type index i end))
 		  (let ((victim (svref confs i)))
-		    (when (and victim (eq (tn-kind victim) :component))
+		    (when victim
 		      (used (describe-tn-use el victim op))
 		      (return t)))))))))
       
