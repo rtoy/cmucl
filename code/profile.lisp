@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.32 2003/03/22 16:15:20 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.33 2003/04/30 15:41:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -519,7 +519,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
   "Unwraps the profiling code around the named functions.  Names defaults to
   the list of all currently profiled functions."
   (collect ((binds) (forms))
-    (let ((names names))
+    (let ((names (or names *timed-functions*)))
       (loop
 	 (unless names (return))
 	 (let ((name (pop names)))
