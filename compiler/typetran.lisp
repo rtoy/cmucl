@@ -254,7 +254,8 @@
   (let ((spec (hairy-type-specifier type)))
     (cond ((unknown-type-p type)
 	   (when (policy nil (> speed brevity))
-	     (compiler-note "Can't open-code test of unknown type ~S." type))
+	     (compiler-note "Can't open-code test of unknown type ~S."
+			    (specifier-type type)))
 	   `(%typep ,object ',spec))
 	  (t
 	   (ecase (first spec)
