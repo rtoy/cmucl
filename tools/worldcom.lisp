@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.64 1993/08/25 21:59:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.65 1993/08/31 13:40:41 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,6 +78,12 @@
   (comf "target:assembly/x86/arith" :assem t)
   (comf "target:assembly/x86/alloc" :assem t))
 
+(when (c:backend-featurep :alpha)
+  (comf "target:assembly/alpha/assem-rtns" :assem t)
+  (comf "target:assembly/alpha/array" :assem t)
+  (comf "target:assembly/alpha/arith" :assem t)
+  (comf "target:assembly/alpha/alloc" :assem t))
+
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
 
@@ -131,6 +137,8 @@
   (comf "target:code/sunos-os"))
 (when (c:backend-featurep :hpux)
   (comf "target:code/hpux-os"))
+(when (c:backend-featurep :osf1)
+  (comf "target:code/osf1-os"))
 
 (when (c:backend-featurep :pmax)
   (comf "target:code/pmax-vm"))
@@ -142,6 +150,8 @@
   (comf "target:code/hppa-vm"))
 (when (c:backend-featurep :x86)
   (comf "target:code/x86-vm"))
+(when (c:backend-featurep :alpha)
+  (comf "target:code/alpha-vm"))
 
 (comf "target:code/symbol")
 (comf "target:code/bignum")
