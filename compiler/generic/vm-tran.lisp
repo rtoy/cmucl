@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.7 1990/04/29 23:53:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.8 1990/05/15 01:21:52 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -233,3 +233,27 @@
 	 ,@(forms)
 	 res))))
 
+
+;;;; Primitive translator for byte-blt
+
+
+(def-primitive-translator byte-blt (src src-start dst dst-start dst-end)
+  `(let ((src ,src)
+	 (src-start (* ,src-start vm:byte-bits))
+	 (dst ,dst)
+	 (dst-start (* ,dst-start vm:byte-bits))
+	 (dst-end (* ,dst-end vm:byte-bits)))
+     (let ((length (- dst-end dst-start)))
+       (etypecase src
+	 (system-area-pointer
+	  (etypecase dst
+	    (system-area-pointer
+	     (system-area-copy src src-start dst dst-start length))
+	    ((simple-unboxed-array (*))
+	     (copy-from-system-area src src-start dst dst-start length))))
+	 ((simple-unboxed-array (*))
+	  (etypecase dst
+	    (system-area-pointer
+	     (copy-to-system-area src src-start dst dst-start length))
+	    ((simple-unboxed-array (*))
+	     (bit-bash-copy src src-start dst dst-start length))))))))
