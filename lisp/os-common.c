@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.7 2002/10/24 20:38:59 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.8 2002/10/24 20:41:25 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -236,9 +236,11 @@ unsigned long os_link_one_symbol(long entry)
     type = fixnum_value(data_vector->data[table_index + 1]);
     target_addr = os_dlsym((char *)symbol_name->data,
 			   data_vector->data[table_index + 2]);
+#if 0
     fprintf(stderr, "Looked up %s symbol %s at %lx\n",
             type == 1 ? "code" : "data",
             (char*) symbol_name->data, (unsigned long) target_addr);
+#endif
     if (!target_addr) {
 	undefined_foreign_symbol_trap((lispobj)data_vector->data[table_index]);
     }
