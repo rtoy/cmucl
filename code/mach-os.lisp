@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.10 1993/02/07 21:17:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.11 1993/03/17 12:25:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -39,7 +39,9 @@
 (defvar *task-self*)
 
 (defun os-init ()
-  (setf *task-self* (mach:mach-task_self)))
+  (setf *task-self* (mach:mach-task_self))
+  #+sparc ;; Can't use #x20000000 thru #xDFFFFFFF, but mach tries to let us.
+  (system:allocate-system-memory-at (system:int-sap #x20000000) #xc0000000))
 
 
 ;;; GET-SYSTEM-INFO  --  Interface
