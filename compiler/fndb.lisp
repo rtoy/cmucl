@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.10 1990/08/24 18:35:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.11 1990/10/03 09:51:53 wlott Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -37,10 +37,8 @@
 	  %sp-set-definition
 	  %sp-set-plist
 	  %standard-char-p
-	  %string-char-p
 	  %svset
 	  %typep
-	  %array-typep
 	  array-header-p
 	  base-char-p
 	  double-float-p
@@ -186,7 +184,7 @@
 (defknown (null symbolp atom consp listp numberp integerp rationalp floatp
 		complexp characterp stringp bit-vector-p vectorp
 		simple-vector-p simple-string-p simple-bit-vector-p arrayp
-		packagep functionp compiled-function-p commonp not)
+		packagep functionp compiled-function-p not)
   (t) boolean (movable foldable flushable))
 
 
@@ -281,8 +279,6 @@
 (defknown (shadowing-import shadow) (symbols &optional packagelike) truth)
 (defknown (use-package unuse-package) ((or list packagelike) &optional packagelike) truth)
 (defknown find-all-symbols (stringlike) list (flushable))
-(defknown provide (stringlike) void)
-(defknown require (stringlike &optional filename) void)
 
 
 ;;;; In the "Numbers" chapter:
@@ -376,7 +372,7 @@
 (defknown random-state-p (t) boolean (movable foldable flushable))
 
 ;;; In "Characters" chapter:
-(defknown (standard-char-p graphic-char-p string-char-p alpha-char-p
+(defknown (standard-char-p graphic-char-p alpha-char-p
 			   upper-case-p lower-case-p both-case-p alphanumericp)
   (character) boolean (movable foldable flushable))
 
@@ -772,8 +768,6 @@
 ;;;; In the "Eval" chapter:
 
 (defknown eval (t) *)
-(defknown evalhook (t callable callable &optional full-lexical-environment) *)
-(defknown applyhook (callable list callable callable &optional full-lexical-environment) *)
 (defknown constantp (t) boolean (foldable flushable))
 
 
@@ -1015,7 +1009,7 @@
 
 ;;;; Magical compiler frobs:
 
-(defknown (%typep %array-typep) (t type-specifier) boolean)
+(defknown %typep (t type-specifier) boolean)
 (defknown %special-bind (t t) void)
 (defknown %special-unbind (t) void)
 (defknown %listify-rest-args (t t) list (flushable))
@@ -1084,7 +1078,7 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p base-char-p %string-char-p %standard-char-p structurep
+	   long-float-p base-char-p %standard-char-p structurep
 	   array-header-p)
   (t) boolean (movable foldable flushable))
 
