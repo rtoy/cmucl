@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.85 2004/12/13 15:12:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.86 2005/02/10 15:57:08 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -357,6 +357,10 @@
 (defun unparse-unix-piece (thing)
   (etypecase thing
     ((member :wild) "*")
+    ((member :unspecific)
+     ;; CLHS 19.2.2.2.3.1 says "That is, both nil and :unspecific
+     ;; cause the component not to appear in the namestring."
+     "")
     (simple-string
      (let* ((srclen (length thing))
 	    (dstlen srclen))
