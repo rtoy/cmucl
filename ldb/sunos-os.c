@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/sunos-os.c,v 1.2 1991/09/04 15:01:36 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/sunos-os.c,v 1.3 1992/03/06 12:34:22 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -384,7 +384,7 @@ int is_readable;
     real=(os_vm_address_t)
 	mmap((caddr_t)addr,
 	     (long)len,
-	     sparse ? (is_readable ? PROT_READ : 0) : protection,
+	     sparse ? (is_readable ? PROT_READ|PROT_EXEC : 0) : protection,
 	     (addr==NULL? 0 : MAP_FIXED)|MAP_PRIVATE,
 	     (is_readable || !sparse) ? map_fd : empty_fd,
 	     (off_t)(offset==OFFSET_NONE ? 0 : offset));
