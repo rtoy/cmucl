@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.2 1993/01/23 14:34:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.14.1.3 1993/02/08 22:12:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -137,7 +137,7 @@
   (define-type-predicate simple-string-p simple-string)
   (define-type-predicate simple-vector-p simple-vector)
   (define-type-predicate stringp string)
-  (define-type-predicate instancep instance)
+  (define-type-predicate %instancep instance)
   (define-type-predicate symbolp symbol)
   (define-type-predicate vectorp vector))
 
@@ -343,9 +343,8 @@
 ;;; named, error.  If a structure, call S-T-STRUCTURE-TYPEP.  Otherwise, call
 ;;; CLASS-TYPEP at run-time with the layout and class object.
 ;;;
-(defun source-transform-instance-typep (obj desc)
-  (let* ((class (instance-type-class desc))
-	 (name (class-name class))
+(defun source-transform-instance-typep (obj class)
+  (let* ((name (class-name class))
 	 (layout (info type compiler-layout name)))
     (cond
      ((not (and name (eq (find-class name) class)))
@@ -359,7 +358,7 @@
      (t
       (multiple-value-bind
 	  (pred layout)
-	  (if (funcallable-class-p class)
+	  (if (csubtypep class (specifier-type 'generic-function))
 	      (values 'funcallable-instance-p 'funcallable-instance-layout)
 	      (values '%instancep '%instance-layout))
 	(once-only ((object obj))
@@ -426,7 +425,7 @@
 	       (source-transform-union-typep object type))
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
-	      (instance-type
+	      (class
 	       (source-transform-instance-typep object type))
 	      (args-type
 	       (compiler-warning "Illegal type specifier for Typep: ~S."
