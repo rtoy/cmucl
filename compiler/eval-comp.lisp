@@ -103,7 +103,7 @@
 	    (when *check-consistency*
 	      (maybe-mumble "[Check]~%")
 	      (check-ir1-consistency *all-components*))))
-	  (ir1-finalize)
+	  (maphash #'check-free-function *free-functions*)
 	  (car lambdas))))))
 
 
