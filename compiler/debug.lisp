@@ -7,12 +7,10 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.17 1991/12/11 16:50:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.18 1992/04/02 15:30:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.17 1991/12/11 16:50:17 ram Exp $
-;;; 
 ;;;    Utilities for debugging the compiler.  Currently contains only stuff for
 ;;; checking the consistency of the IR1.
 ;;; 
@@ -29,7 +27,7 @@
 ;;;    A definite inconsistency has been detected.  Signal an error with
 ;;; *args* bound to the list of the format args.
 ;;;
-(proclaim '(function barf (string &rest t) nil))
+(proclaim '(function barf (string &rest t) void))
 (defun barf (string &rest *args*)
   (apply #'cerror "Skip this error." string *args*))
 
@@ -44,7 +42,7 @@
 ;;;    Called when something funny but possibly correct is noticed.  Otherwise
 ;;; similar to Barf.
 ;;;
-(proclaim '(function burp (string &rest t) nil))
+(proclaim '(function burp (string &rest t) void))
 (defun burp (string &rest *args*)
   (ecase *burp-action*
     (:warn (apply #'warn string *args*))
@@ -364,13 +362,12 @@
     (unless (member block (block-succ pred))
       (barf "Bad predecessor link ~S in ~S." pred block)))
 
-  (let ((fun (block-home-lambda block)))
-    (when (eq (functional-kind fun) :deleted)
-      (return-from check-block-consistency nil))
-    (check-function-reached fun block))
-
-  (let ((this-cont (block-start block))
-	(last (block-last block)))
+  (let* ((fun (block-home-lambda block))
+	 (fun-deleted (eq (functional-kind fun) :deleted))
+	 (this-cont (block-start block))
+	 (last (block-last block)))
+    (unless fun-deleted
+      (check-function-reached fun block))
     (when (not this-cont)
       (barf "~S has no START." block))
     (when (not last)
@@ -426,8 +423,9 @@
 	  (barf "~S has strange next." this-cont))
 	(unless (eq (node-prev node) this-cont)
 	  (barf "PREV in ~S should be ~S." node this-cont))
-	
-	(check-node-consistency node)
+
+	(unless fun-deleted
+	  (check-node-consistency node))
 	
 	(let ((cont (node-cont node)))
 	  (when (not cont)
@@ -483,9 +481,11 @@
        (unless (member (if-alternative last) succ)
 	 (barf "ALTERNATIVE for ~S isn't in SUCC for ~S." last block)))
       (creturn
-       (unless (and (= (length succ) 1)
-		    (eq (first succ)
-			(component-tail (block-component block))))
+       (unless (if (eq (functional-kind (return-lambda last)) :deleted)
+		   (null succ)
+		   (and (= (length succ) 1)
+			(eq (first succ)
+			    (component-tail (block-component block)))))
 	 (barf "Strange successors for RETURN in ~S." block)))
       (exit
        (unless (<= (length succ) 1)
@@ -1235,7 +1235,9 @@
 ;;;
 (defun print-all-blocks (thing)
   (do-blocks (block (block-component (block-or-lose thing)))
-    (print-nodes block))
+    (handler-case (print-nodes block)
+      (error (condition)
+        (format t "~&~A...~%" condition))))
   (values))
 
 
