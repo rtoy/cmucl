@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.11 1990/10/09 23:05:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.12 1990/10/10 16:31:39 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -342,11 +342,11 @@
 	((pathnamep x)
 	 (and (pathnamep y)
 	      (do* ((i 1 (1+ i))
-		    (len (length x)))
+		    (len (c::structure-length x)))
 		   ((>= i len) t)
 		(declare (fixnum i len))
-		(let ((x-el (svref x i))
-		      (y-el (svref y i)))
+		(let ((x-el (c::structure-ref x i))
+		      (y-el (c::structure-ref y i)))
 		  (if (and (simple-vector-p x-el)
 			   (simple-vector-p y-el))
 		      (let ((lx (length x-el))
@@ -381,13 +381,23 @@
   after coercion.  Characters may differ in alphabetic case.  Vectors and
   arrays must have identical dimensions and EQUALP elements, but may differ
   in their type restriction."
-  (cond ((eql x y) t)
+  (cond ((eq x y) t)
 	((characterp x) (char-equal x y))
 	((numberp x) (and (numberp y) (= x y)))
 	((consp x)
 	 (and (consp y)
 	      (equalp (car x) (car y))
 	      (equalp (cdr x) (cdr y))))
+	((structurep x)
+	 (let ((length (c::structure-length x)))
+	   (and (structurep y)
+		(= length (c::structure-length y))
+		(dotimes (i length t)
+		  (let ((x-el (c::structure-ref x i))
+			(y-el (c::structure-ref y i)))
+		    (unless (or (eq x-el y-el)
+				(equalp x-el y-el))
+		      (return nil)))))))
 	((vectorp x)
 	 (let ((length (length x)))
 	   (and (vectorp y)
@@ -395,7 +405,7 @@
 		(dotimes (i length t)
 		  (let ((x-el (aref x i))
 			(y-el (aref y i)))
-		    (unless (or (eql x-el y-el)
+		    (unless (or (eq x-el y-el)
 				(equalp x-el y-el))
 		      (return nil)))))))
 	((arrayp x)
@@ -406,7 +416,9 @@
 			   (array-dimension y axis))
 		  (return nil)))
 	      (dotimes (index (array-total-size x) t)
-		(unless (equalp (row-major-aref x index)
-				(row-major-aref y index))
-		  (return nil)))))
+		(let ((x-el (row-major-aref x index))
+		      (y-el (row-major-aref y index)))
+		  (unless (or (eq x-el y-el)
+			      (equalp x-el y-el))
+		    (return nil))))))
 	(t nil)))
