@@ -334,59 +334,102 @@
 ;;; 
 (defun undefine-structure (info)
   (declare (type defstruct-description info))
-  (let ((name (dd-name info)))
-    (setf (info type kind name) nil)
-    (setf (info type structure-info name) nil)
-    (undefine-function-name (dd-copier info))
-    (undefine-function-name (dd-predicate info))
+  (let* ((name (dd-name info))
+	 (all-types (cons name (dd-included-by info))))
     ;;
-    ;; Update the INCLUDED-BY list, copying the DD and included list so that we
-    ;; don't clobber the type in the compiler's Lisp.
+    ;; Iterate over this type and all subtypes, clearing the compiler structure
+    ;; type info, and undefining all the associated functions.
+    (dolist (type all-types)
+      (let ((this-info (info type structure-info type)))
+	(setf (info type kind type) nil)
+	(setf (info type structure-info type) nil)
+	(undefine-function-name (dd-copier this-info))
+	(undefine-function-name (dd-predicate this-info))
+	(dolist (slot (dd-slots this-info))
+	  (let ((fun (dsd-accessor slot)))
+	    (undefine-function-name fun)
+	    (unless (dsd-read-only slot)
+	      (undefine-function-name `(setf ,fun)))))))
+    ;;
+    ;; Iterate over all types that include this type, removing this type and
+    ;; all subtypes from the list of subtypes of the included type.  We copy
+    ;; the DD and included list so that we don't clobber the type in the
+    ;; compiler's Lisp.
     (dolist (include (dd-includes info))
-      (let ((iinfo (info type structure-info include)))
-	(when iinfo
-	  (let ((new (copy-defstruct-description iinfo)))
-	    (setf (dd-included-by new) (remove name (dd-included-by new)))
-	    (setf (info type structure-info include) new))))))
-
-  (dolist (included (dd-included-by info))
-    (let ((iinfo (info type structure-info included)))
-      (when iinfo
-	(undefine-structure iinfo))))
-      
-  (dolist (slot (dd-slots info))
-    (let ((fun (dsd-accessor slot)))
-      (undefine-function-name fun)
-      (unless (dsd-read-only slot)
-	(undefine-function-name `(setf ,fun)))))
-
+      (let ((new (copy-defstruct-description
+		  (info type structure-info include))))
+	(setf (dd-included-by new)
+	      (set-difference (dd-included-by new) all-types))
+	(setf (info type structure-info include) new))))
+  ;;
+  ;; Clear out the SPECIFIER-TYPE cache so that subsequent references are
+  ;; unknown types.
+  (values-specifier-type-cache-clear)
   (undefined-value))
 
 
 ;;; DEFINE-DEFSTRUCT-NAME  --  Internal
 ;;;
 ;;;    Like DEFINE-FUNCTION-NAME, but we also set the kind to :DECLARED and
-;;; blow away any ASSUMED-TYPE.
+;;; blow away any ASSUMED-TYPE.  Also, if the thing is a slot accessor
+;;; currently, quietly unaccessorize it.
 ;;;
 (defun define-defstruct-name (name)
   (when name
+    (when (info function accessor-for name)
+      (setf (info function accessor-for name) nil))
     (define-function-name name)
     (setf (info function where-from name) :declared)
     (when (info function assumed-type name)
       (setf (info function assumed-type name) nil)))
   (undefined-value))
 
-  
+
+;;; CHECK-FOR-STRUCTURE-REDEFINITION  --  Internal
+;;;
+;;;    Called when we process a DEFSTRUCT for a type that is already defined
+;;; for a structure.  We check for incompatible redefinition and undefine the
+;;; old structure if so.  We ignore the structures that DEFSTRUCT is built out
+;;; of, since they have to be hackishly defined in type-boot.  If the structure
+;;; is not incompatibly redefined, then we copy the old INCLUDED-BY into the
+;;; new structure.
+;;;
+(defun check-for-structure-redefinition (info)
+  (declare (type defstruct-description info))
+  (let* ((name (dd-name info))
+	 (old (info type structure-info name)))
+    (cond ((member name
+		   '(defstruct-description defstruct-slot-description)))
+	  ((and (equal (dd-includes old) (dd-includes info))
+		(equalp (dd-slots old) (dd-slots info)))
+	   (setf (dd-included-by info) (dd-included-by old)))
+	  (t
+	   (compiler-warning
+	    "Incompatibly redefining structure ~S.~@
+	    Removing the old definition~:[.~;~:* and these subtypes:~%  ~S~]"
+	    name (dd-included-by old))
+	   (undefine-structure old))))
+  (undefined-value))
+
+	   
 ;;; %%Compiler-Defstruct  --  Interface
 ;;;
 ;;;    This function updates the global compiler information to represent the
-;;; definition of the the structure described by Info.
+;;; definition of the the structure described by Info.  In addition to defining
+;;; all the functions and slots, we also update the INCLUDED-BY info in the
+;;; compiler's environment.  Note that at the first time the DEFSTRUCT is
+;;; loaded, STRUCTURE-INFO is EQ to DEFINED-STRUCTURE-INFO, so the name will
+;;; already be in INCLUDED-BY.  When we do update this info, we copy the
+;;; defstruct description so that the type definition in the compiler's Lisp
+;;; isn't trashed.
 ;;;
 (defun %%compiler-defstruct (info)
   (declare (type defstruct-description info))
   (let ((name (dd-name info)))
     (ecase (info type kind name)
-      ((nil :structure))
+      ((nil))
+      (:structure
+       (check-for-structure-redefinition info))
       (:primitive
        (compiler-error "Illegal to redefine standard type ~S." name))
       (:defined
@@ -394,21 +437,11 @@
 			 name)
        (setf (info type expander name) nil)))
 
-    (let ((old (info type structure-info name)))
-      (when old
-	(undefine-structure old)))
-
     (dolist (inc (dd-includes info))
       (let ((info (info type structure-info inc)))
 	(unless info
 	  (error "Structure type ~S is included by ~S but not defined."
 		 inc name))
-	;;
-	;; Note that NAME will already be in INCLUDED-BY at the first time the
-	;; DEFSTRUCT is loaded, since STRUCTURE-INFO is then EQ to
-	;; DEFINED-STRUCTURE-INFO, so %DEFSTRUCT has already added NAME to the
-	;; list.  The purpose of the copying is for the compiler's info
-	;; on compiling a new definition.
 	(unless (member name (dd-included-by info))
 	  (let ((new (copy-defstruct-description info)))
 	    (setf (info type structure-info inc) new)
