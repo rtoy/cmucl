@@ -6,7 +6,7 @@ else
 	set subdir = alpha
 endif
 
-set src = /afs/cs/project/clisp/new-compiler/@sys/$subdir
+set src = /afs/cs/project/clisp/build/@sys/$subdir
 set dst = /afs/cs/misc/cmucl/@sys/alpha
 
 rm -f $dst/bin/lisp $dst/lib/lisp.core
