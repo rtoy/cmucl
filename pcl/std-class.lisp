@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.58 2003/04/29 11:57:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.59 2003/05/03 14:46:12 gerd Exp $")
 
 (in-package :pcl)
 
@@ -970,19 +970,16 @@
 ;;; The list is in most-specific-first order.
 ;;;
 (defmethod compute-slots ((class std-class))
-  (loop with names/slots = ()
-	for c in (class-precedence-list class) do
-	  (loop for slot in (class-direct-slots c)
-		as name = (slot-definition-name slot)
-		as entry = (assq name names/slots) do
-		  (if entry
-		      (push slot (cdr entry))
-		      (push (list name slot) names/slots)))
-	finally
-	  (return
-	    (loop for (name . slots) in names/slots collect
-		    (compute-effective-slot-definition
-		     class name (nreverse slots))))))
+  (ext:collect ((names/slots) (effective))
+    (dolist (c (reverse (class-precedence-list class)))
+      (dolist (slot (class-direct-slots c))
+	(let* ((name (slot-definition-name slot))
+	       (entry (assq name (names/slots))))
+	  (if entry
+	      (push slot (cdr entry))
+	      (names/slots (list name slot))))))
+    (dolist (e (names/slots) (effective))
+      (effective (compute-effective-slot-definition class (car e) (cdr e))))))
 
 ;;;
 ;;; These are the specified AMOP methods.
