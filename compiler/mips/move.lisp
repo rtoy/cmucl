@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.10 1990/04/05 23:54:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.11 1990/04/11 16:49:05 wlott Exp $
 ;;;
 ;;;    This file contains the RT VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -141,6 +141,10 @@
        (sc-case y
 	 (base-character-reg
 	  (load-stack-tn y x))))
+      ((any-reg descriptor-reg)
+       (sc-case y
+	 (base-character-reg
+	  (inst srl y x vm:type-bits))))
       (t
        (unassemble (load-constant-tn x y nil node))))))
 
@@ -160,7 +164,12 @@
       (base-character-stack
        (sc-case x
 	 (base-character-reg
-	  (store-stack-tn y x)))))))
+	  (store-stack-tn y x))))
+      ((any-reg descriptor-reg)
+       (sc-case x
+	 (base-character-reg
+	  (inst sll x x vm:type-bits)
+	  (inst ori y x vm:base-character-type)))))))
 
 
 ;;;; Register saving and restoring VOPs.
