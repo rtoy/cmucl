@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.7 1990/08/24 18:12:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.8 1990/09/08 14:59:24 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -109,13 +109,20 @@
 (defun type-of (object)
   "Return the type of OBJECT."
   (typecase object
+    ;; First the ones that we can tell by testing the lowtag
+    (fixnum 'fixnum)
+    (function (type-specifier (ctype-of object)))
     (null 'null)
-    (cons 'cons)
+    (list 'cons)
+
+    ;; Any other immediates.
     (character
      (typecase object
        (standard-char 'standard-char)
        (base-character 'base-character)
        (t 'character)))
+
+    ;; And now for the complicated ones.
     (number
      (etypecase object
        (fixnum 'fixnum)
@@ -128,15 +135,15 @@
 	  (long-float 'long-float)))
        (ratio 'ratio)
        (complex 'complex)))
-    (symbol (if (typep object 'keyword)
-		'keyword
-		'symbol))
-    (structure
-     (%primitive c::structure-ref object 0))
-    (array
-     (type-specifier (ctype-of object)))
-    (function
-     (type-specifier (ctype-of object)))
+    (symbol
+     (if (eq (symbol-package object)
+	     (symbol-package :foo))
+	 'keyword
+	 'symbol))
+    (structure (%primitive c::structure-ref object 0))
+    (array (type-specifier (ctype-of object)))
+    (system-area-pointer 'system-area-pointer)
+    (weak-pointer 'weak-pointer)
     (t
      (warn "Can't figure out the type of ~S" object)
      t)))
