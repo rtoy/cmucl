@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.140 2003/10/12 13:37:56 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.141 2004/01/10 05:07:19 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -367,8 +367,12 @@
 (defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (labels ((signed->= (x y)
-	     (if (and (zerop x) (zerop y) (floatp x) (floatp y))
-		 (>= (float-sign x) (float-sign y))
+	     ;; If one of the args is a float, we need to do a float
+	     ;; comparison to get the correct value when testing for a
+	     ;; signed-zero.  That is, we want (>= -0.0 0) to be false.
+	     (if (and (zerop x) (zerop y)
+		      (or (floatp x) (floatp y)))
+		 (>= (float-sign (float x)) (float-sign (float y)))
 		 (>= x y))))
     (let ((lo (interval-low x))
 	  (hi (interval-high x)))
@@ -1224,8 +1228,18 @@
 			   (result (funcall derive-fcn x y same-arg)))
 		      (maybe-convert-back-type-list result)))
 		   (t
-		    *universal-type*))))
-    (let ((same-arg (same-leaf-ref-p arg1 arg2))
+		    *universal-type*)))
+	   (non-const-same-leaf-ref-p (x y)
+	     ;; Just like same-leaf-ref-p, but we don't care if the
+	     ;; value of the leaf is constant or not.
+	     (declare (type continuation x y))
+	     (let ((x-use (continuation-use x))
+		   (y-use (continuation-use y)))
+	       (and (ref-p x-use)
+		    (ref-p y-use)
+		    (eq (ref-leaf x-use) (ref-leaf y-use))))))
+
+    (let ((same-arg (non-const-same-leaf-ref-p arg1 arg2))
 	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
 	  (a2 (prepare-arg-for-derive-type (continuation-type arg2))))
       (when (and a1 a2)
@@ -2972,7 +2986,6 @@
 	 (ref-p y-use)
 	 (eq (ref-leaf x-use) (ref-leaf y-use))
 	 (constant-reference-p x-use))))
-
 
 ;;; SIMPLE-EQUALITY-TRANSFORM  --  Internal
 ;;;
