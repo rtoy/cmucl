@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.88 2003/02/18 16:55:49 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.89 2003/02/24 11:45:43 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1568,12 +1568,13 @@
       (parse-body body nil nil)
     (let ((n-list (gensym)))
       `(do* ((,n-list ,list (cdr ,n-list)))
-	((endp ,n-list)
-	 ,@(if result
-	       `((let ((,var nil))
-		   ,var
-		   ,result))
-	       '(nil)))
+	    ((endp ,n-list)
+	     ,@(if (constantp result)
+		   `(,result)
+		   `((let ((,var nil))
+		       ,@decls
+		       ,var
+		       ,result))))
 	(let ((,var (car ,n-list)))
 	  ,@decls
 	  (tagbody
