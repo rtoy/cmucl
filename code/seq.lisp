@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.48 2003/06/14 10:58:10 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.49 2004/09/27 21:17:23 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1537,7 +1537,7 @@
       (declare (fixnum index))
       (setq splice (cdr (rplacd splice (list (car current)))))
       (setq current (cdr current)))
-    (do ((index 0 (1+ index)))
+    (do ((index start (1+ index)))
 	((or (and end (= index (the fixnum end)))
 	     (atom current)))
       (declare (fixnum index))
