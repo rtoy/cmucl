@@ -39,6 +39,8 @@
 	      misc-pc)
   (:note "miscop call")
   (:variant-vars miscop-name)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:policy :safe))
 
 (eval-when (compile load eval)
@@ -109,6 +111,7 @@
 	 (:generator 20
 	   ,@(arg-moves)
 	   (inst miscop miscop-name)
+	   (note-this-location vop :known-return)
 	   ,@(result-moves)
 	   ,@(when conditional
 	       '((if not-p
@@ -157,6 +160,7 @@
     (inst lr args cont-tn)
     (inst miscopx miscop-name)
     (inst cal nl0 zero-tn nargs)
+    (note-this-location vop :known-return)
     (unless (location= r a0)
       (inst lr r a0))))
 
@@ -169,6 +173,7 @@
     (inst lr args cont-tn)
     (inst miscopx miscop-name)
     (inst cal nl0 zero-tn nargs)
+    (note-this-location vop :known-return)
     (unless (location= r a0)
       (inst lr r a0))
     (unless (location= r1 a1)
