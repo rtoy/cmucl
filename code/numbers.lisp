@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.57 2004/04/07 02:47:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.58 2004/04/10 04:51:03 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1532,47 +1532,9 @@ significant bit of INTEGER is bit 0."
                    do (forms (definition name lambda-list width pattern)))))
   `(progn ,@(forms)))
 
-
-#||
-(defmacro define-generic-modular-fun (name lambda-list width)
-  `(defun ,name ,lambda-list
-    (flet ((prepare-argument (arg)
-	     (declare (integer arg))
-	     (etypecase arg
-	       ((unsigned-byte ,width) arg)
-	       (fixnum (logand arg ,(1- (ash 1 width))))
-	       (bignum (logand arg ,(1- (ash 1 width)))))))
-      (,name ,@(loop for arg in lambda-list
-		     collect `(prepare-argument ,arg))))))
-
-;;; FIXME: We should do this a better way instead of having to
-;;; explicitly define each function here.  c::*modular-funs* has the
-;;; necessary information, but it seems it's not available when this
-;;; stuff is built.
-#+modular-arith
-(progn
-  (define-generic-modular-fun vm::lognot-mod32 (x) 32)
-  (define-generic-modular-fun vm::logxor-mod32 (x y) 32)
-  (define-generic-modular-fun vm::+-mod32 (x y) 32)
-  (define-generic-modular-fun vm::--mod32 (x y) 32)
-  (define-generic-modular-fun vm::*-mod32 (x y) 32)
-  )
-
-#+(and modular-arith sparc)
-(progn
-  (define-generic-modular-fun vm::logxor-mod32 (x y) 32)
-  (define-generic-modular-fun vm::logeqv-mod32 (x y) 32)
-  (define-generic-modular-fun vm::logandc1-mod32 (x y) 32)
-  (define-generic-modular-fun vm::logandc2-mod32 (x y) 32)
-  (define-generic-modular-fun vm::logorc1-mod32 (x y) 32)
-  (define-generic-modular-fun vm::logorc2-mod32 (x y) 32)
-  )
-||#
-
-
 ;; Not sure this is 100% right, but the defoptimizer for ash only
 ;; calls ash-left-mod32 when the COUNT is known to be a (UNSIGNED-BYTE
-;; 32), which is what %ASHL wants.
+;; 5), which is what %ASHL wants.
 #+modular-arith
 (defun vm::ash-left-mod32 (integer count)
   (declare (type integer integer)
