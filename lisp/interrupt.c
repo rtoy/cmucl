@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.17 1999/02/20 15:54:43 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.18 1999/02/20 16:14:29 pw Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -535,7 +535,7 @@ void interrupt_install_low_level_handler
     sigvec(signal,&sv,NULL);
 #endif
 #endif    
-    interrupt_low_level_handlers[signal]=((__sighandler_t) handler==SIG_DFL ? 0 : handler);
+    interrupt_low_level_handlers[signal]= (handler==SIG_DFL)? 0 : handler;
 }
 
 unsigned long install_handler(int signal,
