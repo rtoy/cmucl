@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.9 2000/10/24 13:32:30 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.10 2002/11/14 21:13:23 toy Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -17,6 +17,7 @@
 #include <assert.h>
 #include <signal.h>
 #include "os.h"				/* for SetSymbolValue */
+#include "globals.h"                    /* For dynamic_space_size */
 #include "x86-validate.h"		/* for memory layout  */
 #include "x86-lispregs.h"
 #include "lisp.h"			/* for object defs */
