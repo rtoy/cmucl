@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.36 1992/09/21 15:37:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.37 1992/09/22 00:04:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,26 +292,30 @@
 ;;; triggered by reference deletion.  In particular, the Component-Lambdas are
 ;;; being hacked to remove newly deleted and let converted lambdas, so it is
 ;;; important that the lambda is added to the Component-Lambdas when it is.
-;;; Also, the COMPOENT-NEW-FUNCTIONS may contain all sorts of drivel, since it
+;;; Also, the COMPONENT-NEW-FUNCTIONS may contain all sorts of drivel, since it
 ;;; is not updated when we delete functions, etc.  Only COMPONENT-LAMBDAS is
 ;;; updated.
+;;;
+;;; COMPONENT-REANALYZE-FUNCTIONS is treated similarly to NEW-FUNCTIONS, but we
+;;; don't add lambdas to the LAMBDAS.
 ;;;
 (defun local-call-analyze (component)
   (declare (type component component))
   (loop
-    (unless (component-new-functions component) (return))
-    (let* ((fun (pop (component-new-functions component)))
-	   (kind (functional-kind fun)))
-      (cond ((member kind '(:deleted :let :mv-let :assignment)))
-	    ((and (null (leaf-refs fun)) (eq kind nil)
-		  (not (functional-entry-function fun)))
-	     (delete-functional fun))
-	    (t
-	     (when (lambda-p fun)
-	       (push fun (component-lambdas component)))
-	     (local-call-analyze-1 fun)
-	     (when (lambda-p fun)
-	       (maybe-let-convert fun))))))
+    (let* ((new (pop (component-new-functions component)))
+	   (fun (or new (pop (component-reanalyze-functions component)))))
+      (unless fun (return))
+      (let ((kind (functional-kind fun)))
+	(cond ((member kind '(:deleted :let :mv-let :assignment)))
+	      ((and (null (leaf-refs fun)) (eq kind nil)
+		    (not (functional-entry-function fun)))
+	       (delete-functional fun))
+	      (t
+	       (when (and new (lambda-p fun))
+		 (push fun (component-lambdas component)))
+	       (local-call-analyze-1 fun)
+	       (when (lambda-p fun)
+		 (maybe-let-convert fun)))))))
   
   (undefined-value))
 
