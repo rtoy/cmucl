@@ -2366,7 +2366,15 @@ redisplay.
 @defhvar1[var "Redisplay Hook"]
 @f[redisplay] executes the redisplay process, and @hemlock typically invokes
 this whenever it looks for input.  The redisplay process frequently checks for
-input, and if it detects any, it aborts.
+input, and if it detects any, it aborts.  The return value is interpreted as
+follows:
+@begin[description]
+@false@\No update was needed.
+
+@true@\Update was needed, and completed successfully.
+
+@kwd[editor-input]@\Update is needed, but was aborted due to pending input.
+@end[description]
 
 This function invokes the functions in @hid[Redisplay Hook] on the current
 window after computing screen transformations but before executing them.  After
@@ -2374,14 +2382,15 @@ invoking the hook, this recomputes the redisplay and then executes it on the
 current window.
 
 For the current window and any window with @f[window-display-recentering] set,
-this ensures the buffer's point for the window's buffer is visible after
-redisplay.
+@f[redisplay] ensures the buffer's point for the window's buffer is visible
+after redisplay.
 @enddefun
 
 @defun[fun {redisplay-all}]
 This causes all editor windows to be completely redisplayed.  For the current
 window and any window with @f[window-display-recentering] set, this ensures the
-buffer's point for the window's buffer is visible after redisplay.
+buffer's point for the window's buffer is visible after redisplay.  The return
+values are the same as for redisplay, except that @false is never returned.
 @enddefun
 
 @defun[fun {editor-finish-output}, args {@i[window]}]
