@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.12 1992/04/15 01:29:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.13 1992/04/21 04:20:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,6 +42,21 @@
   (debug-info () :type list))
 
 
+;;; NOTE-FUNCTION -- Internal.
+;;;
+;;; Note the existance of FUNCTION.
+;;; 
+(defun note-function (info function object)
+  (declare (type function function)
+	   (type core-object object))
+  (let ((patch-table (core-object-patch-table object)))
+    (dolist (patch (gethash info patch-table))
+      (setf (code-header-ref (car patch) (the index (cdr patch))) function))
+    (remhash info patch-table))
+  (setf (gethash info (core-object-entry-table object)) function)
+  (undefined-value))
+
+
 ;;; MAKE-FUNCTION-ENTRY  --  Internal
 ;;;
 ;;;    Make a function entry, filling in slots from the ENTRY-INFO.
@@ -52,8 +67,7 @@
     (declare (type index offset))
     (unless (zerop (logand offset vm:lowtag-mask))
       (error "Unaligned function object, offset = #x~X." offset))
-    (let* ((res (%primitive compute-function code-obj offset))
-	   (patch-table (core-object-patch-table object)))
+    (let ((res (%primitive compute-function code-obj offset)))
       (%primitive set-function-self res res)
       (%primitive set-function-next res
 		  (%primitive code-entry-points code-obj))
@@ -64,12 +78,7 @@
       (%primitive set-function-type res
 		  (entry-info-type entry))
 
-      (dolist (patch (gethash entry patch-table))
-	(setf (code-header-ref (car patch) (the index (cdr patch))) res))
-      (remhash entry patch-table)
-      (setf (gethash entry (core-object-entry-table object)) res)))
-  (undefined-value))
-
+      (note-function entry res object))))
 
 ;;; DO-CORE-FIXUPS  --  Internal
 ;;;
@@ -173,6 +182,55 @@
   (undefined-value))
 
 
+;;; MAKE-CORE-BYTE-COMPONENT -- Interface.
+;;;
+(defun make-core-byte-component (byte-output constants xeps object)
+  (declare (type byte-output byte-output)
+	   (type vector constants)
+	   (type list xeps)
+	   (type core-object object))
+  (without-gcing
+    (let* ((num-constants (length constants))
+	   (length (byte-output-length byte-output))
+	   (code-obj (%primitive allocate-code-object
+				 (the index (1+ num-constants))
+				 length)))
+      (declare (type index length))
+
+      (output-byte-output byte-output
+			  (make-code-instruction-stream code-obj))
+
+      (dolist (noise xeps)
+	(let ((xep (cdr noise)))
+	  (setf (byte-xep-component xep) code-obj)
+	  (note-function (lambda-info (car noise))
+			 (make-byte-compiled-function xep)
+			 object)))
+
+      (dotimes (index num-constants)
+	(let ((const (aref constants index))
+	      (code-obj-index (+ index vm:code-constants-offset)))
+	  (etypecase const
+	    (null)
+	    (constant
+	     (setf (code-header-ref code-obj code-obj-index)
+		   (constant-value const)))
+	    (list
+	     (ecase (car const)
+	       (:entry
+		(reference-core-function code-obj code-obj-index (cdr const)
+					 object))
+	       (:fdefinition
+		(setf (code-header-ref code-obj code-obj-index)
+		      (lisp::fdefinition-object (cdr const) t)))
+	       (:xep
+		(let ((xep (cdr (assoc (cdr const) xeps :test #'eq))))
+		  (assert xep)
+		  (setf (code-header-ref code-obj code-obj-index) xep))))))))))
+
+  (undefined-value))
+
+
 ;;; CORE-CALL-TOP-LEVEL-LAMBDA  --  Interface
 ;;;
 ;;;    Call the top-level lambda function dumped for Entry, returning the
@@ -209,6 +267,7 @@
 	    (:print-function %print-code-inst-stream)
 	    (:include stream
 		      (lisp::sout #'code-inst-stream-sout)
+		      (lisp::bout #'code-inst-stream-bout)
 		      (lisp::misc #'code-inst-stream-misc))
 	    (:constructor make-code-instruction-stream
 			  (code-object
@@ -240,6 +299,17 @@
 				   (* vm:vector-data-offset vm:word-bits))
 			 current 0
 			 (* length vm:byte-bits))
+    (setf (code-instruction-stream-current stream) new)))
+
+(defun code-inst-stream-bout (stream byte)
+  (declare (type code-instruction-stream stream)
+	   (type (unsigned-byte 8) byte))
+  (let* ((current (code-instruction-stream-current stream))
+	 (new (sap+ current 1)))
+    (when (sap> new (code-instruction-stream-end stream))
+      (error "Writing another byte to ~S would cause it to overflow."
+	     stream))
+    (setf (sap-ref-8 current 0) byte)
     (setf (code-instruction-stream-current stream) new)))
 
 (defun code-inst-stream-misc (stream method &optional arg1 arg2)
