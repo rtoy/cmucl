@@ -15,7 +15,7 @@
  * GENCGC support by Douglas Crosher, 1996, 1997.
  * Alpha support by Julian Dolby, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.22 2004/10/19 19:12:03 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/Linux-os.c,v 1.23 2004/12/24 15:11:10 rtoy Exp $
  *
  */
 
@@ -45,6 +45,7 @@
 #include <link.h>
 #include <dlfcn.h>
 #include <fpu_control.h>
+#include <assert.h>
 
 #include "validate.h"
 size_t os_vm_page_size;
@@ -246,6 +247,15 @@ static void sigsegv_handle_now(HANDLER_ARGS)
   interrupt_handle_now(signal, contextstruct);
 }
 
+static int tramp_signal;
+static struct sigcontext tramp_contextstruct;
+
+static void sigsegv_handler_tramp (void)
+{
+  sigsegv_handle_now (tramp_signal, tramp_contextstruct);
+  assert (0);
+}
+
 void sigsegv_handler(HANDLER_ARGS)
 {
   GET_CONTEXT
@@ -281,6 +291,19 @@ void sigsegv_handler(HANDLER_ARGS)
 #else
   DPRINTF(0,(stderr,"sigsegv: eip: %lx\n",context->eip));
 #endif
+
+#ifdef RED_ZONE_HIT
+  { 
+    /* Switch back to the normal stack and invoke the Lisp signal
+       handler there.  Global variables are used to pass the context
+       to the other stack. */
+    tramp_signal = signal;
+    tramp_contextstruct = contextstruct;
+    SC_PC(context) = sigsegv_handler_tramp;
+    return;
+  }
+#endif
+
   sigsegv_handle_now(signal, contextstruct);
 }
 #else
