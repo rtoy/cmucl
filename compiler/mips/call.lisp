@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.29 1990/09/17 23:43:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.30 1990/09/21 00:50:37 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -170,16 +170,19 @@
   (:vop-var vop)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 1
-    ;; Make sure the function is aligned.
+    ;; Make sure the function is aligned, and drop a label pointing to this
+    ;; function header.
     (align vm:lowtag-bits)
+    (emit-label start-lab)
     ;; Allocate function header.
     (inst function-header-word)
     (dotimes (i (1- vm:function-header-code-offset))
       (inst word 0))
     ;; The start of the actual code.
-    (emit-label start-lab)
     ;; Fix CODE, cause the function object was passed in.
-    (inst compute-code-from-fn code-tn lip-tn start-lab temp)
+    (let ((entry-point (gen-label)))
+      (emit-label entry-point)
+      (inst compute-code-from-fn code-tn lip-tn entry-point temp))
     ;; Build our stack frames.
     (inst addu csp-tn fp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
@@ -741,7 +744,7 @@ default-value-5
 					     vm:word-shift)))))
 			      (:load-return-pc
 			       (sc-case return-pc
-				 (any-reg
+				 (descriptor-reg
 				  (inst move return-pc-pass return-pc))
 				 (control-stack
 				  (inst lw return-pc-pass fp-tn
