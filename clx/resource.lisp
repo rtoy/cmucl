@@ -351,7 +351,7 @@
 
 (defun get-tables-lookup (dbase name names classes)
   (declare (type list dbase names classes)
-	   (type symbol name))
+	   (type stringable name))
   (declare (optimize speed))
   (dolist (entry dbase)
     (declare (type resource-database entry))
@@ -377,7 +377,7 @@
   (declare (type list tight loose names classes))
   (let ((name (car names))
 	(class (car classes)))
-    (declare (type symbol name class))
+    (declare (type stringable name class))
     (when tight
       (get-tables-lookup tight name names classes))
     (when loose
