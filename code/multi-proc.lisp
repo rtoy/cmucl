@@ -3,7 +3,8 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.27 1998/01/26 14:59:45 dtc Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.28 1998/05/01 00:53:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1153,10 +1154,11 @@
   should be setup to the *initial-process*. If one of the processes quits
   by throwing to %end-of-the-world then *quitting-lisp* will have been
   set to the exit value which is noted by the idle loop which tries to
-  exit gracefully destroying all the process giving them a chance to unwind."
+  exit gracefully destroying all the processes and giving them a chance
+  to unwind."
   (declare (optimize (speed 3)))
   (assert (eq *current-process* *initial-process*) ()
-	  "Only the *initial-process* is intended to run this idle loop")
+	  "Only the *initial-process* is intended to run the idle loop")
   ;; Ensure the *idle-process* is setup.
   (unless *idle-process*
     (setf *idle-process* *current-process*))
@@ -1581,9 +1583,9 @@
 					    (password (random (expt 2 24))))
   (declare (type (unsigned-byte 16) port))
   "Create a Lisp connection listener, listening on a TCP port for new
-  connections and starting a new top-level loop form each. If a password
+  connections and starting a new top-level loop for each. If a password
   is not given then one will be generated and reported.  A search is
-  performed for the first free port starting at the give port which
+  performed for the first free port starting at the given port which
   defaults to 1025."
   (labels (;; The session top level read eval. loop.
 	   (start-top-level (fd)
