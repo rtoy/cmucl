@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.30 1994/03/05 14:35:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.31 1994/03/05 20:25:51 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -748,7 +748,7 @@
   (declare (type functional functional)
 	   (type function *error-function*)
 	   (string where))
-  (unless (function-type-p type) (return t))
+  (unless (function-type-p type) (return-from assert-definition-type t))
   (let ((*lossage-detected* nil))
     (multiple-value-bind
 	(vars types)
