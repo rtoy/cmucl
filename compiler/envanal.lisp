@@ -27,11 +27,18 @@
 ;;;  3] Find any unreferenced variables in the lambdas in the component.
 ;;;  4] Scan the blocks in the component closing over non-local-exit
 ;;;     continuations.
+;;;  5] Compute a function type for each "real" function.  This is done now
+;;;     because tail uses of the result continuation may be blown away by the
+;;;     back end.
 ;;;
 (defun environment-analyze (component)
   (declare (type component component))
   (assert (not (component-new-functions component)))
   (dolist (fun (component-lambdas component))
+    (let ((f (if (eq (functional-kind fun) :external)
+		 (functional-entry-function fun)
+		 fun)))
+      (setf (leaf-type f) (definition-type f)))
     (let ((res (make-environment :function fun)))
       (setf (lambda-environment fun) res)
       (dolist (lambda (lambda-lets fun))
