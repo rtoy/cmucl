@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.8 1994/10/02 22:36:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/globals.lisp,v 1.9 1994/10/05 16:40:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,42 +21,47 @@
 ;;;
 (in-package "LISP")
 
-(proclaim '(special *keyword-package* *lisp-package* *package* *query-io*
-		    *terminal-io* *error-output* *trace-output* *debug-io*
-		    *standard-input* *standard-output* *hemlock-version*
-		    *evalhook* *applyhook* *task-self* *command-line-switches*
-		    *command-switch-demons* ext::temporary-foreign-files
-		    *display-event-handlers* original-lisp-environment
-		    *environment-list* *read-default-float-format*
-		    *read-suppress* *readtable* *print-base* *print-radix*
-		    *print-length* *print-level* *print-pretty* *print-escape*
-		    *print-case* *print-circle* *print-gensym* *print-array*
-		    defmacro-error-string defsetf-error-string
-		    std-lisp-readtable hi::*in-the-editor*
-		    debug::*in-the-debugger*
-		    conditions::*handler-clusters*
-		    conditions::*restart-clusters* alloctable-address
-		    *gc-inhibit* *need-to-collect-garbage*
-		    defmacro-error-string deftype-error-string
-		    defsetf-error-string %sp-interrupts-inhibited
-		    *software-interrupt-vector* *load-verbose*
-		    *load-print-stuff* *in-compilation-unit*
-		    *aborted-compilation-units* char-name-alist
-		    *default-pathname-defaults* *beep-function*
-		    *gc-notify-before* *gc-notify-after*))
+(declaim (special *keyword-package* *lisp-package* *package* *query-io*
+		  *terminal-io* *error-output* *trace-output* *debug-io*
+		  *standard-input* *standard-output* *hemlock-version*
+		  *evalhook* *applyhook* *command-line-switches*
+		  *command-switch-demons* ext::temporary-foreign-files
+		  *display-event-handlers* original-lisp-environment
+		  *environment-list* *read-default-float-format*
+		  *read-suppress* *readtable* *print-base* *print-radix*
+		  *print-length* *print-level* *print-pretty* *print-escape*
+		  *print-case* *print-circle* *print-gensym* *print-array*
+		  defmacro-error-string defsetf-error-string
+		  std-lisp-readtable hi::*in-the-editor*
+		  debug::*in-the-debugger*
+		  conditions::*handler-clusters*
+		  conditions::*restart-clusters*
+		  *gc-inhibit* *need-to-collect-garbage*
+		  defmacro-error-string deftype-error-string
+		  defsetf-error-string %sp-interrupts-inhibited
+		  *software-interrupt-vector* *load-verbose*
+		  *load-print-stuff* *in-compilation-unit*
+		  *aborted-compilation-units* char-name-alist
+		  *default-pathname-defaults* *beep-function*
+		  *gc-notify-before* *gc-notify-after*))
 
 
-(proclaim '(ftype (function (&rest t) *)
-		  c::%%defun c::%%defmacro c::%%defconstant c::%defstruct
-		  c::%%compiler-defstruct c::%proclaim c::get-info-value
-		  c::set-info-value find-keyword keyword-test assert-error
-		  assert-prompt check-type-error case-body-error
-		  extensions::call-display-event-handler
-		  hemlock-internals::current-window
-		  hemlock-internals::device-exit
-		  hemlock-internals::device-hunk-device
-		  hemlock-internals::device-init disable-clx-event-handling
-		  xlib::display-input-stream xlib:event-listen
-		  flush-display-events
-		  hemlock::ts-stream-p hemlock::ts-stream-wire
-		  hemlock-internals::window-hunk))
+(declaim (ftype (function * *)
+		find-keyword keyword-test assert-error
+		assert-prompt check-type-error case-body-error))
+
+#-clx
+(declaim (ftype (function * *)
+		disable-clx-event-handling
+		extensions::call-display-event-handler
+		xlib::display-input-stream xlib:event-listen
+		flush-display-events))
+
+#-hemlock
+(declaim (ftype (function * *)
+		hemlock-internals::current-window
+		hemlock-internals::device-exit
+		hemlock-internals::device-hunk-device
+		hemlock-internals::device-init 
+		hemlock::ts-stream-p hemlock::ts-stream-wire
+		hemlock-internals::window-hunk))
