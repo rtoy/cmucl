@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.10 1992/03/04 16:47:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.11 1992/03/04 17:08:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,7 +56,7 @@
 
 (def-alien-type-method (c-string :lisp-rep) (type)
   (declare (ignore type))
-  '(or simple-base-string null))
+  '(or simple-base-string null (alien (* char))))
 
 (def-alien-type-method (c-string :naturalize-gen) (type alien)
   (declare (ignore type))
