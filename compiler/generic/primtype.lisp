@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.11 1993/03/13 20:22:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.12 1993/03/14 00:05:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,9 +246,10 @@
 	 ((nil) (values *any-primitive-type* nil))))
       (built-in-class
        (case (class-name type)
-	 ((complex function instance funcallable-instance system-area-pointer
-		   weak-pointer)
+	 ((complex function instance system-area-pointer weak-pointer)
 	  (values (primitive-type-or-lose (class-name type) *backend*) t))
+	 (funcallable-instance
+	  (part-of function))
 	 (base-char
 	  (exactly base-char))
 	 (cons
