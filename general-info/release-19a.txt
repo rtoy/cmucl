@@ -83,6 +83,12 @@ New in this release:
      - Source location recording is done better and handles macros
        including things defined by defclass, defvar, and defgeneric.
        From Helmut Eller.
+     - Modular arithmetic implemented for x86 and sparc.  So 
+
+         (ldb (byte 32 0) (+ x y))
+
+       is a simple machine add instruction if x and y are
+       (unsigned-byte 32).
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
@@ -169,6 +175,8 @@ New in this release:
        using hard-wired values.
      - PEEK-CHAR signals an end-of-file error if necessary when
        RECURSIVE-P is true.
+     - FILE-LENGTH now signals a TYPE-ERROR when the stream is not a
+       stream associated with a file.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
