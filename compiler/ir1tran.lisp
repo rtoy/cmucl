@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.64 1992/02/07 14:42:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.65 1992/02/14 23:47:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -753,7 +753,7 @@
 	     (assert (eq (car var) 'MACRO))
 	     (new-vars `(,var-name . (MACRO . (the ,(first decl)
 						   ,(cdr var))))))
-	    (lisp::ct-a-val
+	    (heap-alien-info
 	     (compiler-error "Can't declare type of Alien variable: ~S."
 			     var-name)))))
 
@@ -989,6 +989,9 @@
   
   (cond ((not (eq (info variable where-from name) :assumed))
 	 (let ((found (find-free-variable name)))
+	   (when (heap-alien-info-p found)
+	     (compiler-error "Declaring an alien variable to be special: ~S"
+			     name))
 	   (when (or (not (global-var-p found))
 		     (eq (global-var-kind found) :constant))
 	     (compiler-error "Declaring a constant to be special: ~S." name))
@@ -1684,15 +1687,15 @@
   (declare (type continuation start cont) (symbol name))
   (let ((var (or (lexenv-find name variables) (find-free-variable name))))
     (etypecase var
-      (lisp::ct-a-val
-       (ir1-convert start cont `(alien-value ,name)))
-      (cons
-       (assert (eq (car var) 'MACRO))
-       (ir1-convert start cont (cdr var)))
       (leaf
        (when (and (lambda-var-p var) (lambda-var-ignorep var))
 	 (compiler-warning "Reading an ignored variable: ~S." name))
-       (reference-leaf start cont var nil))))
+       (reference-leaf start cont var nil))
+      (cons
+       (assert (eq (car var) 'MACRO))
+       (ir1-convert start cont (cdr var)))
+      (heap-alien-info
+       (ir1-convert start cont `(%heap-alien ',var)))))
   (undefined-value))
 
 
@@ -1705,7 +1708,7 @@
 ;;; is unknown, then we emit a warning.
 ;;;
 (defun find-free-variable (name)
-  (declare (values leaf))
+  (declare (values (or leaf heap-alien-info)))
   (unless (symbolp name)
     (compiler-error "Variable name is not a symbol: ~S." name))
   (or (gethash name *free-variables*)
@@ -1715,15 +1718,18 @@
 	(when (and (eq where-from :assumed) (eq kind :global))
 	  (note-undefined-reference name :variable))
 
-	(multiple-value-bind (val valp)
-			     (info variable constant-value name)
-	  (setf (gethash name *free-variables*)
-		(if (and (eq kind :constant) valp)
-		    (make-constant :value val  :name name
-				   :type (ctype-of val)
-				   :where-from where-from)
-		    (make-global-var :kind kind  :name name  :type type
-				     :where-from where-from)))))))
+	(setf (gethash name *free-variables*)
+	      (if (eq kind :alien)
+		  (info variable alien-info name)
+		  (multiple-value-bind
+		      (val valp)
+		      (info variable constant-value name)
+		    (if (and (eq kind :constant) valp)
+			(make-constant :value val  :name name
+				       :type (ctype-of val)
+				       :where-from where-from)
+			(make-global-var :kind kind  :name name  :type type
+					 :where-from where-from))))))))
 
 
 ;;; Reference-Constant  --  Internal
@@ -2948,8 +2954,9 @@
 	    (cons
 	     (assert (eq (car leaf) 'MACRO))
 	     (ir1-convert start cont `(setf ,(cdr leaf) ,(second things))))
-	    (lisp::ct-a-val
-	     (compiler-error "Can't set Alien variable: ~S." name))))
+	    (heap-alien-info
+	     (ir1-convert start cont
+			  `(%set-heap-alien ',leaf ,(second things))))))
 	(collect ((sets))
 	  (do ((thing things (cddr thing)))
 	      ((endp thing)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.13 1992/01/21 12:56:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.14 1992/02/14 23:45:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,55 +36,6 @@
   "*In-server* is set to T when the SIGMSG interrupt has been enabled
   in Server.")
 
-#|
-
-(defvar server-unique-object (cons 1 2)
-  "Object thrown by the message interrupt handler.")
-
-(defconstant server-message-size 4096)
-(defalien server-message server-message (bytes server-message-size) 0)
-
-(define-alien-stack server-message server-message (bytes server-message-size))
-
-(defrecord server-message
-  (msg mach:msg #.(record-size 'mach:msg)))
-  
-;;; Grab-message-loop calls the appropiate handler for an IPC message.
-(defun grab-message-loop ()
-  (let ((done-any nil))
-    (loop
-      (if (eql (server-grab-message)
-	       mach:rcv-timed-out)
-	(return done-any)
-	(setf done-any t)))))
-
-
-(defun server-grab-message ()
-  (with-stack-alien (sm server-message)
-    (alien-bind ((msg (server-message-msg (alien-value sm))))
-      (setf (alien-access (mach:msg-msgsize (alien-value msg)))
-	    server-message-size)
-      (setf (alien-access (mach:msg-localport (alien-value msg)))
-	    mach::port-enabled)
-      (let ((gr (mach:msg-receive (alien-value sm) mach::rcv-timeout 0)))
-	(when (eql gr mach:rcv-timed-out)
-	  (return-from server-grab-message gr))
-	(unless (eql gr mach:rcv-success)
-	  (gr-error 'mach:msg-receive gr))
-	(let* ((server-message (alien-value sm))
-	       (port (alien-access (mach:msg-localport (alien-value msg))))
-	       (id (alien-access (mach:msg-id (alien-value msg))))
-	       (x (gethash port *port-table*))
-	       (set (cdr x)))
-	  (unless x
-	    (error "~D is not known to server (operation: ~D)." port id))
-	  (let ((gr (funcall (gethash id (object-set-table set)
-				      (object-set-default-handler set))
-			     (car x))))
-	    (unless (eql gr mach:kern-success)
-	      (gr-error 'server gr)))))))
-  mach:kern-success)
-|#
 
 
 ;;;; File descriptor IO noise.
@@ -181,7 +132,7 @@
 	(stop-sec stop-usec)
 	(if timeout
 	    (multiple-value-bind (okay sec usec)
-				 (mach:unix-gettimeofday)
+				 (unix:unix-gettimeofday)
 	      (declare (ignore okay))
 	      (values (the (unsigned-byte 32) (+ sec timeout))
 		      usec))
@@ -198,7 +149,7 @@
 	  
 	  (when timeout
 	    (multiple-value-bind (okay sec usec)
-				 (mach:unix-gettimeofday)
+				 (unix:unix-gettimeofday)
 	      (declare (ignore okay))
 	      (when (or (> sec stop-sec)
 			(and (= sec stop-sec) (>= usec stop-usec)))
@@ -215,7 +166,7 @@
   (let ((bogus-handlers nil))
     (dolist (handler *descriptor-handlers*)
       (unless (or (handler-bogus handler)
-		  (mach:unix-fstat (handler-descriptor handler)))
+		  (unix:unix-fstat (handler-descriptor handler)))
 	(setf (handler-bogus handler) t)
 	(push handler bogus-handlers)))
     (restart-case (error "~S ~[have~;has a~:;have~] bad file descriptor~:P."
@@ -322,7 +273,7 @@
 		       (:output (frob writeable))))
 		   (setf result t)))
 	       result)))
-	  ((eql readable mach:eintr)
+	  ((eql readable unix:eintr)
 	   ;; We did an interrupt.
 	   t)
 	  (t
@@ -386,5 +337,5 @@
     (multiple-value-bind (count read-mask write-mask except-mask)
 			 (calc-masks)
       ;; Do the select.
-      (mach:unix-select count read-mask write-mask except-mask
+      (unix:unix-select count read-mask write-mask except-mask
 			timeout-sec timeout-usec))))

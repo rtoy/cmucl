@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.25 1992/01/30 16:23:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.26 1992/02/14 23:44:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -519,11 +519,11 @@
 				   (cdr tail) pathname verify-existance
 				   function))
 	  (pattern
-	   (let ((dir (mach:open-dir head)))
+	   (let ((dir (unix:open-dir head)))
 	     (when dir
 	       (unwind-protect
 		   (loop
-		     (let ((name (mach:read-dir dir)))
+		     (let ((name (unix:read-dir dir)))
 		       (cond ((null name)
 			      (return))
 			     ((string= name "."))
@@ -531,12 +531,12 @@
 			     ((pattern-matches piece name)
 			      (let ((subdir (concatenate 'string
 							 head name "/")))
-				(when (eq (mach:unix-file-kind subdir)
+				(when (eq (unix:unix-file-kind subdir)
 					  :directory)
 				  (%enumerate-directories
 				   subdir (cdr tail) pathname verify-existance
 				   function)))))))
-		 (mach:close-dir dir)))))
+		 (unix:close-dir dir)))))
 	  ((member :up)
 	   (%enumerate-directories (concatenate 'string head "../")
 				   (cdr tail) pathname verify-existance
@@ -549,16 +549,16 @@
 	(version (pathname-version pathname)))
     (cond ((null name)
 	   (when (or (not verify-existance)
-		     (mach:unix-file-kind directory))
+		     (unix:unix-file-kind directory))
 	     (funcall function directory)))
 	  ((or (pattern-p name)
 	       (pattern-p type)
 	       (eq version :wild))
-	   (let ((dir (mach:open-dir directory)))
+	   (let ((dir (unix:open-dir directory)))
 	     (when dir
 	       (unwind-protect
 		   (loop
-		     (let ((file (mach:read-dir dir)))
+		     (let ((file (unix:read-dir dir)))
 		       (if file
 			   (unless (or (string= file ".")
 				       (string= file ".."))
@@ -576,7 +576,7 @@
 						       directory
 						       file)))))
 			   (return))))
-		 (mach:close-dir dir)))))
+		 (unix:close-dir dir)))))
 	  (t
 	   (let ((file (concatenate 'string directory name)))
 	     (unless (or (null type) (eq type :unspecific))
@@ -585,7 +585,7 @@
 	       (setf file (concatenate 'string file "."
 				       (quick-integer-to-string version))))
 	     (when (or (not verify-existance)
-		       (mach:unix-file-kind file))
+		       (unix:unix-file-kind file))
 	       (funcall function file)))))))
 
 (defun quick-integer-to-string (n)
@@ -650,13 +650,13 @@
   "Return a pathname which is the truename of the file if it exists, NIL
   otherwise."
   (let ((namestring (unix-namestring pathname t)))
-    (when (and namestring (mach:unix-file-kind namestring))
-      (let ((truename (mach:unix-resolve-links
-		       (mach:unix-maybe-prepend-current-directory
+    (when (and namestring (unix:unix-file-kind namestring))
+      (let ((truename (unix:unix-resolve-links
+		       (unix:unix-maybe-prepend-current-directory
 			namestring))))
 	(when truename
 	  (let ((*ignore-wildcards* t))
-	    (pathname (mach:unix-simplify-pathname truename))))))))
+	    (pathname (unix:unix-simplify-pathname truename))))))))
 
 
 ;;;; Other random operations.
@@ -676,11 +676,11 @@
     (unless new-namestring
       (error "~S can't be created." new-name))
     (multiple-value-bind (res error)
-			 (mach:unix-rename original-namestring
+			 (unix:unix-rename original-namestring
 					   new-namestring)
       (unless res
 	(error "Failed to rename ~A to ~A: ~A"
-	       original new-name (mach:get-unix-error-msg error)))
+	       original new-name (unix:get-unix-error-msg error)))
       (when (streamp file)
 	(file-name file new-namestring))
       (values new-name original (truename new-name)))))
@@ -697,11 +697,11 @@
     (unless namestring
       (error "~S doesn't exist." file))
 
-    (multiple-value-bind (res err) (mach:unix-unlink namestring)
+    (multiple-value-bind (res err) (unix:unix-unlink namestring)
       (unless res
 	(error "Could not delete ~A: ~A."
 	       namestring
-	       (mach:get-unix-error-msg err)))))
+	       (unix:get-unix-error-msg err)))))
   t)
 
 
@@ -723,7 +723,7 @@
     (when name
       (multiple-value-bind
 	  (res dev ino mode nlink uid gid rdev size atime mtime)
-	  (mach:unix-stat name)
+	  (unix:unix-stat name)
 	(declare (ignore dev ino mode nlink uid gid rdev size atime))
 	(when res
 	  (+ unix-to-universal-time mtime))))))
@@ -737,7 +737,7 @@
     (unless name
       (error "~S doesn't exist." file))
     (multiple-value-bind (winp dev ino mode nlink uid)
-			 (mach:unix-stat file)
+			 (unix:unix-stat file)
       (declare (ignore dev ino mode nlink))
       (if winp (lookup-login-name uid)))))
 
@@ -772,7 +772,7 @@
     (let ((*ignore-wildcards* t))
       (mapcar #'(lambda (name)
 		  (let ((name (if (and check-for-subdirs
-				       (eq (mach:unix-file-kind name)
+				       (eq (unix:unix-file-kind name)
 					   :directory))
 				  (concatenate 'string name "/")
 				  name)))
@@ -810,7 +810,7 @@
 				   -1)))))
 	(multiple-value-bind 
 	    (reslt dev-or-err ino mode nlink uid gid rdev size atime mtime)
-	    (mach:unix-stat namestring)
+	    (unix:unix-stat namestring)
 	  (declare (ignore ino gid rdev atime)
 		   (fixnum uid mode))
 	  (cond (reslt
@@ -847,12 +847,12 @@
 			   size
 			   (decode-universal-time-for-files mtime year)
 			   tail
-			   (= (logand mode mach::s_ifmt) mach::s_ifdir))))
+			   (= (logand mode unix::s_ifmt) unix::s_ifdir))))
 		(t (format t "Couldn't stat ~A -- ~A.~%"
 			   tail
-			   (mach:get-unix-error-msg dev-or-err))))
+			   (unix:get-unix-error-msg dev-or-err))))
 	  (when return-list
-	    (push (if (= (logand mode mach::s_ifmt) mach::s_ifdir)
+	    (push (if (= (logand mode unix::s_ifmt) unix::s_ifdir)
 		      (pathname (concatenate 'string namestring "/"))
 		      file)
 		  result)))))
@@ -1086,15 +1086,15 @@
   (let ((name (unix-namestring name nil)))
     (cond ((null name)
 	   nil)
-	  ((mach:unix-file-kind name)
-	   (values (mach:unix-access name mach:w_ok)))
+	  ((unix:unix-file-kind name)
+	   (values (unix:unix-access name unix:w_ok)))
 	  (t
 	   (values
-	    (mach:unix-access (subseq name
+	    (unix:unix-access (subseq name
 				      0
 				      (or (position #\/ name :from-end t)
 					  0))
-			      (logior mach:w_ok mach:x_ok)))))))
+			      (logior unix:w_ok unix:x_ok)))))))
 
 
 ;;; Pathname-Order  --  Internal
@@ -1120,7 +1120,7 @@
   a file will be written if no directory is specified.  This may be changed
   with setf."
   (multiple-value-bind (gr dir-or-error)
-		       (mach:unix-current-directory)
+		       (unix:unix-current-directory)
     (if gr
 	(let ((*ignore-wildcards* t))
 	  (pathname (concatenate 'simple-string dir-or-error "/")))
@@ -1133,10 +1133,10 @@
     (unless namestring
       (error "~S doesn't exist." new-val))
     (multiple-value-bind (gr error)
-			 (mach:unix-chdir namestring)
+			 (unix:unix-chdir namestring)
       (if gr
 	  (setf (search-list "default:") (default-directory))
-	  (error (mach:get-unix-error-msg error))))
+	  (error (unix:get-unix-error-msg error))))
     new-val))
 ;;;
 (defsetf default-directory %set-default-directory)

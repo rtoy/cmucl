@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.25 1991/12/16 09:27:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.26 1992/02/14 23:44:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -258,7 +258,7 @@
      (t
       (when number
 	(format t "~&~S: " (di:frame-number frame)))
-  (mach:unix-sigsetmask 0)
+      (print-frame-call-1 frame)))
     (when (>= verbosity 2)
       (let ((loc (di:frame-code-location frame)))
 	 (*debug-abort* (find-restart 'abort))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.12 1991/12/14 08:55:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/struct.lisp,v 1.13 1992/02/14 23:45:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -74,57 +74,6 @@
   (bout #'ill-bout :type function)		; Byte output function
   (sout #'ill-out :type function)		; String output function
   (misc #'do-nothing :type function))		; Less used methods
-
-
-;;;; Alien structures:
- 
-(defstruct (alien-value
-	    (:constructor make-alien-value (sap offset size type))
-	    (:print-function %print-alien-value))
-  "This structure represents an Alien value."
-  sap
-  offset
-  size
-  type)
-
-(defstruct (ct-a-val
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore s d))
-	       (write-string "#<Alien compiler info>" stream))))
-  type		; Type of expression, NIL if unknown.
-  size		; Expression for the size of the alien.
-  sap		; Expression for SAP.
-  offset	; Expression for bit offset.
-  alien)	; Expression for alien-value or NIL.
-
-
-(defstruct (alien-info
-	    (:print-function %print-alien-info)
-	    (:constructor
-	     make-alien-info (function num-args arg-types result-type)))
-  function	; The function the definition was made into.
-  num-args	; The total number of arguments.
-  arg-types	; Alist of arg numbers to types of Alien args.
-  result-type)	; The type of the resulting Alien.
-
-
-(defstruct (stack-info
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore s d))
-	       (format stream "#<Alien stack info>"))))
-  type
-  size)
-
-
-(defstruct enumeration-info
-  signed	; True if minimum value negative.
-  size		; Minimum number of bits needed to hold value.
-  from		; Symbol holding alist from keywords to integers.
-  to		; Symbol holding alist or vector from integers to keywords.
-  kind		; Kind of from mapping, :vector or :alist.
-  offset)	; Offset to add to value for :vector from mapping.
 
 
 ;;; Condition structures:

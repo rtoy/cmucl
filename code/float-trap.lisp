@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.5 1991/02/08 13:32:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.6 1992/02/14 23:46:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.5 1991/02/08 13:32:45 ram Exp $
 ;;;
 ;;;    This file contains stuff for controlling floating point traps.  It is
 ;;; IEEE float specific, but should work for pretty much any FPU where the
@@ -157,8 +155,10 @@
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
 (defun sigfpe-handler (signal code scp)
-  (declare (ignore signal code))
-  (let* ((modes (sigcontext-floating-point-modes scp))
+  (declare (ignore signal code)
+	   (type system-area-pointer scp))
+  (let* ((modes (sigcontext-floating-point-modes
+		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
     (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))

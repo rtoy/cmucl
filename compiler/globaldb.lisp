@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.19 1991/12/14 09:09:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.20 1992/02/14 23:47:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.19 1991/12/14 09:09:24 wlott Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -34,16 +32,6 @@
 (in-package "C")
 (use-package "EXTENSIONS")
 (use-package "SYSTEM")
-
-(deftype index () `(integer 0 ,most-positive-fixnum))
-
-;;; Undefined-Value  --  Public
-;;;
-;;;    This is here until we figure out what to do with it.
-;;;
-(proclaim '(inline undefined-value))
-(defun undefined-value ()
-  '%undefined%)
 
 (in-package "EXTENSIONS")
 (export '(info clear-info define-info-class define-info-type
@@ -303,9 +291,6 @@
 (defun info-hash (x)
   (cond
    ((symbolp x)
-    #-new-compiler
-    (the fixnum (%primitive sxhash-simple-string (symbol-name x)))
-    #+new-compiler
     (%sxhash-simple-string (symbol-name x)))
    ((and (listp x)
 	 (eq (car x) 'setf))
@@ -314,12 +299,7 @@
 	(let ((name (car next)))
 	  (when (and (symbolp name) (null (cdr next)))
 	    (return-from info-hash
-			 (logxor #-new-compiler
-				 (the fixnum
-				      (%primitive sxhash-simple-string
-						  (symbol-name name)))
-				 #+new-compiler
-				 (%sxhash-simple-string (symbol-name name))
+			 (logxor (%sxhash-simple-string (symbol-name name))
 				 110680597))))))
     (sxhash x))
    (t
@@ -344,9 +324,8 @@
   (let* ((class (symbol-name class))
 	 (type (symbol-name type))
 	 (info (type-info-or-lose class type)))
-    `(#+new-compiler truly-the #-new-compiler the
-		     ,(type-info-type info)
-		     (get-info-value ,name ,(type-info-number info)))))
+    `(truly-the ,(type-info-type info)
+		(get-info-value ,name ,(type-info-number info)))))
 ;;;
 (define-setf-method info (class type name)
   "Set the global information for Name."
@@ -413,7 +392,6 @@
 				 (,class-var (class-info-name
 					      (type-info-class ,n-type-info)))
 				 (,value-var (svref ,n-entries ,n-type)))
-			     #+new-compiler
 			     (declare (ignorable ,type-var ,class-var
 						 ,value-var))
 			     ,@body
@@ -434,7 +412,6 @@
 				  (cdr ,n-names)))
 		       ((null ,n-names))
 	   (let ((,name-var (caar ,n-names)))
-	     #+new-compiler
 	     (declare (ignorable ,name-var))
 	     (do-anonymous ((,n-types (cdar ,n-names) (cdr ,n-types)))
 			   ((null ,n-types))
@@ -445,7 +422,6 @@
 			   (,class-var (class-info-name
 					(type-info-class ,n-type)))
 			   (,value-var (cdar ,n-types)))
-		       #+new-compiler
 		       (declare (ignorable ,type-var ,class-var ,value-var))
 		       ,@body))))))))))
 
@@ -999,23 +975,17 @@
 ;;; The kind of functional object being described.  If null, Name isn't a known
 ;;; functional object.
 (define-info-type function kind (member nil :function :macro :special-form)
-  #+new-compiler
-  (if (fboundp name) :function nil)
-  #-new-compiler
-  nil)
+  (if (fboundp name) :function nil))
 
 ;;; The type specifier for this function.
 (define-info-type function type ctype
-  #+new-compiler
   (if (fboundp name)
       (let ((def (fdefinition name)))
 	(if (eval:interpreted-function-p def)
 	    (eval:interpreted-function-type def)
 	    (specifier-type (%primitive function-type
 					(%primitive closure-function def)))))
-      (specifier-type 'function))
-  #-new-compiler
-  (specifier-type 'function))
+      (specifier-type 'function)))
 
 ;;; The Assumed-Type for this function, if we have to infer the type due to not
 ;;; having a declaration or definition.
@@ -1026,10 +996,7 @@
 ;;;  :assumed, from uses of the object.
 ;;;  :defined, from examination of the definition.
 (define-info-type function where-from (member :declared :assumed :defined)
-  #+new-compiler
-  (if (fboundp name) :defined :assumed)
-  #-new-compiler
-  :assumed)
+  (if (fboundp name) :defined :assumed))
 
 ;;; Lambda used for inline expansion of this function.
 (define-info-type function inline-expansion list)
@@ -1053,9 +1020,6 @@
 ;;; A function which gets a chance to do stuff to the IR1 for any call to this
 ;;; function.
 (define-info-type function ir1-transform (or function null list))
-
-;;; If a function is an alien-operator, then this is the Alien-Info.
-(define-info-type function alien-operator (or lisp::alien-info null) nil)
 
 ;;; If a function is a defstruct slot accessor or setter, then this is the
 ;;; defstruct-definition for the structure that it belongs to.
@@ -1082,14 +1046,9 @@
 (define-info-class variable)
 
 ;;; The kind of variable-like thing described.
-(define-info-type variable kind (member :special :constant :global)
-  #+new-compiler
+(define-info-type variable kind (member :special :constant :global :alien)
   (if (or (eq (symbol-package name) (symbol-package :end))
 	  (member name '(t nil)))
-      :constant
-      :global)
-  #-new-compiler
-  (if (constantp name)
       :constant
       :global))
 
@@ -1102,16 +1061,11 @@
 
 ;;; The the lisp object which is the value of this constant, if known.
 (define-info-type variable constant-value t
-  #+new-compiler
   (if (boundp name)
-      (values (symbol-value name) t)
-      (values nil nil))
-  #-new-compiler
-  (if (constantp name)
       (values (symbol-value name) t)
       (values nil nil)))
 
-(define-info-type variable alien-value (or lisp::ct-a-val null) nil)
+(define-info-type variable alien-info (or extern-alien-info null) nil)
 
 (define-info-type variable documentation (or string null) nil)
 
@@ -1162,11 +1116,14 @@
 (define-info-class declaration)
 (define-info-type declaration recognized boolean)
 
-(define-info-class alien-stack)
-(define-info-type alien-stack info (or lisp::stack-info null) nil)
-
-(define-info-class enumeration)
-(define-info-type enumeration info (or lisp::enumeration-info null) nil)
+(define-info-class alien-type)
+(define-info-type alien-type kind (member :primitive :defined :unknown)
+  :unknown)
+(define-info-type alien-type translator (or function null) nil)
+(define-info-type alien-type definition (or alien-type null) nil)
+(define-info-type alien-type struct (or alien-type null) nil)
+(define-info-type alien-type union (or alien-type null) nil)
+(define-info-type alien-type enum (or alien-type null) nil)
 
 (define-info-class setf)
 

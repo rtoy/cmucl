@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.9 1991/10/25 20:02:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.10 1992/02/14 23:45:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
     `(progn
        (proclaim '(inline ,function))
        (export ',function)
-       (def-c-routine (,name ,function) (double-float)
+       (alien:def-alien-routine (,name ,function) double-float
 	 ,@(let ((results nil))
 	     (dotimes (i num-args (nreverse results))
 	       (push (list (intern (format nil "ARG-~D" i))

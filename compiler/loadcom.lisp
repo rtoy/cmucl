@@ -28,6 +28,7 @@
 (load "c:typetran")
 (load "vm:vm-typetran")
 (load "c:float-tran")
+(load "c:saptran")
 (load "c:locall")
 (load "c:dfo")
 (load "c:ir1opt")

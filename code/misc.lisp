@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.13 1992/01/17 16:11:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.14 1992/02/14 23:45:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -62,7 +62,7 @@
 		 (info random-documentation stuff name))))))
   string)
 
-(defvar *features* '(:common :cmu :new-compiler :unix)
+(defvar *features* '(:common :cmu :new-compiler)
   "Holds a list of symbols that describe features provided by the
    implementation.")
 
@@ -91,7 +91,7 @@
 
 (defun machine-instance ()
   "Returns a string giving the name of the local machine."
-  (mach::unix-gethostname))
+  (unix:unix-gethostname))
 
 (defvar *software-type* "Unix"
   "The value of SOFTWARE-TYPE.  Set in FOO-os.lisp.")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.8 1991/08/30 17:41:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.9 1992/02/14 23:45:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
   "Return the real time in the internal time format.  This is useful for
   finding elapsed time.  See Internal-Time-Units-Per-Second."
   (locally (declare (optimize (speed 3) (safety 0)))
-    (multiple-value-bind (ignore seconds useconds) (mach:unix-gettimeofday)
+    (multiple-value-bind (ignore seconds useconds) (unix:unix-gettimeofday)
       (declare (ignore ignore))
       (let ((base *internal-real-time-base-seconds*)
 	    (uint (truncate useconds
@@ -74,7 +74,7 @@
   finding CPU usage."
   (locally (declare (optimize (speed 3) (safety 0)))
     (multiple-value-bind (ignore utime stime)
-			 (mach:unix-getrusage mach:rusage_self)
+			 (unix:unix-getrusage unix:rusage_self)
       (declare (ignore ignore))
       (values (truncate (the (unsigned-byte 32) (+ utime stime))
 			micro-seconds-per-internal-time-unit)))))
@@ -109,7 +109,7 @@
 (defun get-universal-time ()
   "Returns a single integer for the current time of
    day in universal time format."
-  (multiple-value-bind (res secs) (mach:unix-gettimeofday)
+  (multiple-value-bind (res secs) (unix:unix-gettimeofday)
     (declare (ignore res))
     (+ secs unix-to-universal-time)))
 
@@ -139,7 +139,7 @@
 	  (daylight NIL)
 	  (timezone (if (null time-zone)
 			(multiple-value-bind (res s us tz)
-					     (mach:unix-gettimeofday)
+					     (unix:unix-gettimeofday)
 			  (declare (ignore s us))
 			  (if res tz 0))
 			(* time-zone 60))))
@@ -199,7 +199,7 @@
 			 ((<= (abs (- y now-year)) 50) y)))
 		   year))
 	 (zone (if time-zone (* time-zone 60)
-		   (multiple-value-bind (res s us tz) (mach:unix-gettimeofday)
+		   (multiple-value-bind (res s us tz) (unix:unix-gettimeofday)
 		     (declare (ignore s us))
 		     (if res tz))))
 	 (tmonth (- month 3)))

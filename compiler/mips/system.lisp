@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.42 1991/03/23 12:30:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.43 1992/02/14 23:50:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.42 1991/03/23 12:30:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.43 1992/02/14 23:50:32 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -46,30 +46,6 @@
 		  (:variant ,cond)))))
   (frob pointer< :lt)
   (frob pointer> :gt))
-
-
-
-;;;; Random assertions VOPS.
-
-(define-vop (check-op)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
-  (:temporary (:type random  :scs (non-descriptor-reg)) temp)
-  (:vop-var vop)
-  (:save-p :compute-only)
-  (:policy :fast-safe))
-
-(define-vop (check<= check-op)
-  (:translate check<=)
-  (:generator 3
-    (let ((target (generate-error-code vop not-<=-error x y)))
-      (three-way-comparison x y :gt :signed nil target temp))))
-
-(define-vop (check= check-op)
-  (:translate check=)
-  (:generator 3
-    (let ((target (generate-error-code vop not-=-error x y)))
-      (three-way-comparison x y :eq :signed t target temp))))
 
 
 
@@ -259,10 +235,10 @@
 ;;;; Other random VOPs.
 
 
-(defknown mach::do-pending-interrupt () (values))
-(define-vop (mach::do-pending-interrupt)
+(defknown unix::do-pending-interrupt () (values))
+(define-vop (unix::do-pending-interrupt)
   (:policy :fast-safe)
-  (:translate mach::do-pending-interrupt)
+  (:translate unix::do-pending-interrupt)
   (:generator 1
     (inst break vm:pending-interrupt-trap)))
 

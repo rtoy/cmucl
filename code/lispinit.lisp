@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.27 1992/01/21 17:25:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.28 1992/02/14 23:45:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,8 +64,8 @@
 (proclaim '(special *gc-inhibit* *already-maybe-gcing*
 		    *need-to-collect-garbage* *gc-verbose*
 		    *before-gc-hooks* *after-gc-hooks*
-		    mach::*interrupts-enabled*
-		    mach::*interrupt-pending*
+		    unix::*interrupts-enabled*
+		    unix::*interrupt-pending*
 		    c::*type-system-initialized*))
 
 
@@ -479,8 +479,6 @@
        (%primitive print ,(symbol-name name))
        (,name))))
 
-(def-c-variable "internal_errors_enabled" boolean)
-
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
   (setf *already-maybe-gcing* t)
@@ -489,8 +487,8 @@
   (setf *gc-verbose* t)
   (setf *before-gc-hooks* nil)
   (setf *after-gc-hooks* nil)
-  (setf mach::*interrupts-enabled* t)
-  (setf mach::*interrupt-pending* nil)
+  (setf unix::*interrupts-enabled* t)
+  (setf unix::*interrupt-pending* nil)
   (setf c::*type-system-initialized* nil)
   (%primitive print "In initial-function, and running.")
 
@@ -544,7 +542,7 @@
   (print-and-call loader-init)
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
-  (setf (alien-access (alien-value internal_errors_enabled)) t)
+  (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
   (set-floating-point-modes :traps '(:overflow :underflow :invalid
 					       :divide-by-zero))
 
@@ -562,7 +560,7 @@
     (loop
      (%top-level)
      (write-line "You're certainly a clever child.")))
-  (mach:unix-exit 0))
+  (unix:unix-exit 0))
 
 
 ;;;; Initialization functions:
@@ -577,7 +575,7 @@
    (os-init)
    (stream-reinit)
    (kernel::signal-init)
-   (setf (alien-access (alien-value internal_errors_enabled)) t)
+   (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
    (setf *already-maybe-gcing* nil))
   (set-floating-point-modes :traps '(:overflow :underflow :invalid
 					       :divide-by-zero))
@@ -604,7 +602,7 @@
   "Terminates the current Lisp.  Things are cleaned up unless Recklessly-P is
   non-Nil."
   (if recklessly-p
-      (mach:unix-exit 0)
+      (unix:unix-exit 0)
       (throw '%end-of-the-world nil)))
 
 
@@ -621,7 +619,7 @@
 			   (values n 0)
 			   (values (truncate n)
 				   (truncate (* n 1000000))))
-    (mach:unix-select 0 0 0 0 sec usec))
+    (unix:unix-select 0 0 0 0 sec usec))
   nil)
 
 
@@ -723,7 +721,7 @@
     (loop
       (with-simple-restart (abort "Return to Top-Level.")
 	(catch 'top-level-catcher
-	  (mach:unix-sigsetmask 0)
+	  (unix:unix-sigsetmask 0)
 	  (let ((*in-top-level-catcher* t))
 	    (loop
 	      (scrub-control-stack)

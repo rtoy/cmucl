@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.35 1992/01/14 15:07:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.36 1992/02/14 23:44:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -853,20 +853,13 @@
 ;;;
 (defsetf kernel:stack-ref kernel:%set-stack-ref)
 
-(ext:def-c-variable "control_stack" system:system-area-pointer)
-
 (proclaim '(inline cstack-pointer-valid-p))
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
-  (and (system:pointer< x (kernel:current-sp))
-       (not (system:pointer< x (system:alien-access
-				(system:alien-value control_stack))))))
-
-
-(ext:def-c-array interrupt-array mach:*sigcontext 4096)
-
-(ext:def-c-variable "lisp_interrupt_contexts" interrupt-array)
-
+  (and (system:sap< x (kernel:current-sp))
+       (system:sap<= (alien:alien-sap (alien:extern-alien "control_stack"
+							  (* t)))
+		     x)))
 
 ;;; TOP-FRAME -- Public.
 ;;;
@@ -1055,55 +1048,45 @@
 (defun find-escaped-frame (frame-pointer)
   (declare (type system:system-area-pointer frame-pointer))
   (dotimes (index lisp::*free-interrupt-context-index* (values nil 0 nil))
-    (system:alien-bind ((scp (interrupt-array-ref
-			      (system:alien-value lisp_interrupt_contexts)
-			      index)
-			     (system:alien mach:sigcontext
-					   #.(ext:c-sizeof 'mach:sigcontext))
-			     t)
-			(sc (mach:indirect-*sigcontext scp) mach:sigcontext t)
-			(regs (mach:sigcontext-regs (system:alien-value sc))
-			      mach:int-array t))
-      (when (= (system:sap-int frame-pointer)
-	       (system:alien-access (mach:int-array-ref regs vm::cfp-offset)))
-	(system:without-gcing
-	 (let ((code (code-object-from-bits
-		      (system:alien-access (mach:int-array-ref
-					    regs vm::code-offset)))))
-	   (when (symbolp code)
-	     (return (values code 0 (system:alien-value sc))))
-	   (let* ((code-header-len (* (kernel:get-header-data code)
-				      vm:word-bytes))
-		  (pc-offset
-		   (- (system:sap-int
-		       (system:alien-access
-			(mach:sigcontext-pc (system:alien-value sc))))
-		      (- (kernel:get-lisp-obj-address code)
-			 vm:other-pointer-type)
-		      code-header-len)))
-	     ;; Check to see if we were executing in a branch delay slot.
-	     #+pmax  ; pmax only
-	     (when (logbitp 31 (system:alien-access
-				(mach:sigcontext-cause (system:alien-value sc))))
-	       (incf pc-offset vm:word-bytes))
-	     (unless (<= 0 pc-offset
-			 (* (ext:truly-the lisp::index
-					   (system:%primitive c::code-code-size
-							      code))
-			    vm:word-bytes))
-	       ;; We were in an assembly routine.  Therefore, use the LRA as
-	       ;; the pc.
-	       (setf pc-offset
-		     (- (escape-register (system:alien-value sc) vm::lra-offset)
-			(kernel:get-lisp-obj-address code)
+    (alien:with-alien
+	((lisp-interrupt-contexts (array (* unix:sigcontext) nil) :extern))
+      (let ((scp (alien:deref lisp-interrupt-contexts index)))
+	(when (= (system:sap-int frame-pointer)
+		 (vm:sigcontext-register scp vm::cfp-offset))
+	  (system:without-gcing
+	   (let ((code (code-object-from-bits
+			(vm:sigcontext-register scp vm::code-offset))))
+	     (when (symbolp code)
+	       (return (values code 0 scp)))
+	     (let* ((code-header-len (* (kernel:get-header-data code)
+					vm:word-bytes))
+		    (pc-offset
+		     (- (system:sap-int (alien:slot scp 'unix:sc-pc))
+			(- (kernel:get-lisp-obj-address code)
+			   vm:other-pointer-type)
 			code-header-len)))
-	     (return
-	      (if (eq (kernel:code-debug-info code) :bogus-lra)
-		  (let ((real-lra (kernel:code-header-ref code real-lra-slot)))
-		    (values (kernel:lra-code-header real-lra)
-			    (kernel:get-header-data real-lra)
-			    nil))
-		  (values code pc-offset (system:alien-value sc)))))))))))
+	       ;; Check to see if we were executing in a branch delay slot.
+	       #+pmax  ; pmax only
+	       (when (logbitp 31 (alien:slot scp 'mips::sc-cause))
+		 (incf pc-offset vm:word-bytes))
+	       (unless (<= 0 pc-offset
+			   (* (kernel:code-header-ref code
+						      vm:code-code-size-slot)
+			      vm:word-bytes))
+		 ;; We were in an assembly routine.  Therefore, use the LRA as
+		 ;; the pc.
+		 (setf pc-offset
+		       (- (vm:sigcontext-register scp vm::lra-offset)
+			  (kernel:get-lisp-obj-address code)
+			  code-header-len)))
+	       (return
+		(if (eq (kernel:code-debug-info code) :bogus-lra)
+		    (let ((real-lra (kernel:code-header-ref code
+							    real-lra-slot)))
+		      (values (kernel:lra-code-header real-lra)
+			      (kernel:get-header-data real-lra)
+			      nil))
+		    (values code pc-offset scp)))))))))))
 
 ;;; CODE-OBJECT-FROM-BITS  --  internal.
 ;;;
@@ -1130,55 +1113,6 @@
 ;;;
 ;;; Frame utilities.
 ;;;
-
-;;; ESCAPE-REGISTER -- Internal.
-;;;
-;;; An escape register saves the value of a register for a frame that someone
-;;; interrupts.  
-;;;
-(defun escape-register (scp index)
-  (system:alien-bind ((sc scp mach:sigcontext t)
-		      (regs (mach:sigcontext-regs (system:alien-value sc))
-			    mach:int-array t))
-    (system:alien-access (mach:int-array-ref (system:alien-value regs) index))))
-
-(defun %set-escape-register (scp index new)
-  (system:alien-bind ((sc scp mach:sigcontext t)
-		      (regs (mach:sigcontext-regs (system:alien-value sc))
-			    mach:int-array t))
-    (setf (system:alien-access (mach:int-array-ref (system:alien-value regs)
-						   index))
-	  new)))
-
-(defsetf escape-register %set-escape-register)
-
-
-;;; ESCAPE-FLOAT-REGISTER  --  Internal
-;;;
-;;;    Like ESCAPE-REGISTER, but returns the value of a float register.  Format
-;;; is the type of float to return.
-;;;
-(defun escape-float-register (scp index format)
-  (system:alien-bind ((sc scp mach:sigcontext t)
-		      (fpregs (mach:sigcontext-fpregs (system:alien-value sc))
-			      mach:int-array t))
-    (let ((sap (system:alien-sap fpregs)))
-      (ecase format
-	(single-float (system:sap-ref-single sap index))
-	(double-float (system:sap-ref-double sap index))))))
-;;;
-(defun %set-escape-float-register (scp index format new-value)
-  (system:alien-bind ((sc scp mach:sigcontext t)
-		      (fpregs (mach:sigcontext-fpregs (system:alien-value sc))
-			      mach:int-array t))
-    (let ((sap (system:alien-sap fpregs)))
-      (ecase format
-	(single-float
-	 (setf (system:sap-ref-single sap index) new-value))
-	(double-float
-	 (setf (system:sap-ref-double sap index) new-value))))))
-;;;
-(defsetf escape-float-register %set-escape-float-register)
 
 ;;; DEBUG-FUNCTION-FROM-PC -- Internal.
 ;;;
@@ -2451,21 +2385,23 @@
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (macrolet ((with-escaped-value ((var) &body forms)
 	       `(if escaped
-		    (let ((,var (escape-register
+		    (let ((,var (vm:sigcontext-register
 				 escaped
 				 (c::sc-offset-offset sc-offset))))
 		      ,@forms)
 		    :invalid-value-for-unescaped-register-storage))
 	     (escaped-float-value (format)
 	       `(if escaped
-		    (escape-float-register escaped
-					   (c::sc-offset-offset sc-offset)
-					   ',format)
+		    (vm:sigcontext-float-register
+		     escaped
+		     (c::sc-offset-offset sc-offset)
+		     ',format)
 		    :invalid-value-for-unescaped-register-storage))
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
-				 (escape-register escaped vm::nfp-offset))
+				 (vm:sigcontext-register escaped
+							 vm::nfp-offset))
 				(system:sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
@@ -2571,13 +2507,14 @@
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
-		    (setf (escape-register escaped
-					   (c::sc-offset-offset sc-offset))
+		    (setf (vm:sigcontext-register
+			   escaped
+			   (c::sc-offset-offset sc-offset))
 			  ,val)
 		    value))
 	     (set-escaped-float-value (format val)
 	       `(if escaped
-		    (setf (escape-float-register
+		    (setf (vm:sigcontext-float-register
 			   escaped
 			   (c::sc-offset-offset sc-offset)
 			   ',format)
@@ -2586,7 +2523,8 @@
 	     (with-nfp ((var) &body body)
 	       `(let ((,var (if escaped
 				(system:int-sap
-				 (escape-register escaped vm::nfp-offset))
+				 (vm:sigcontext-register escaped
+							 vm::nfp-offset))
 				(system:sap-ref-sap fp vm::nfp-save-offset))))
 		  ,@body)))
     (ecase (c::sc-offset-scn sc-offset)
@@ -3271,9 +3209,9 @@
 ;;; the overwritten bits.  You must call this in a context in which GC is
 ;;; disabled, so Lisp doesn't move objects around that C is pointing to.
 ;;;
-(ext:def-c-routine "breakpoint_install" (ext:unsigned-long)
-  (code-obj ext:unsigned-long)
-  (pc-offset ext:int))
+(alien:def-alien-routine "breakpoint_install" c-call:unsigned-long
+  (code-obj c-call:unsigned-long)
+  (pc-offset c-call:int))
 
 ;;; BREAKPOINT_REMOVE -- Internal.
 ;;;
@@ -3281,17 +3219,17 @@
 ;;; You must call this in a context in which GC is disabled, so Lisp doesn't
 ;;; move objects around that C is pointing to.
 ;;;
-(ext:def-c-routine "breakpoint_remove" (ext:void)
-  (code-obj ext:unsigned-long)
-  (pc-offset ext:int)
-  (old-inst ext:unsigned-long))
+(alien:def-alien-routine "breakpoint_remove" c-call:void
+  (code-obj c-call:unsigned-long)
+  (pc-offset c-call:int)
+  (old-inst c-call:unsigned-long))
 
 ;;; BREAKPOINT_AFTER_OFFSET -- Internal.
 ;;;
 ;;; This returns the offset of the next instruction following the break that
 ;;; generated the signal context we supply as an argument to this routine.
 ;;;
-(ext:def-c-routine "breakpoint_after_offset" (ext:int)
+(alien:def-alien-routine "breakpoint_after_offset" c-call:int
   (scp system:system-area-pointer))
 
 ;;;
@@ -3386,7 +3324,7 @@
       ;; Set the sigmask, to keep the system running until we can
       ;; remove the after breakpoints and re-install the user breakpoints.
       (setf (breakpoint-data-sigmask data)
-	    (mach:unix-sigblock (mach:sigmask :sigint :sigquit :sigtstp))))))
+	    (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp))))))
 
 (defun handle-after-breakpoint (after breakpoints data offset component)
   (let ((previous-data (after-breakpoint-previous-data after)))
@@ -3418,7 +3356,7 @@
 			  (breakpoint-data-component previous-data))
 			 (breakpoint-data-offset previous-data)))
     ;; Restore sigmask that we saved before executing previous's inst.
-    (mach:unix-sigsetmask (breakpoint-data-sigmask previous-data))))
+    (unix:unix-sigsetmask (breakpoint-data-sigmask previous-data))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset after)
   (let* ((debug-fun (debug-function-from-pc component offset))
@@ -3469,41 +3407,36 @@
 ;;;
 (defun handle-function-end-breakpoint (breakpoints data signal-context)
   (delete-breakpoint-data data)
-  (system:alien-bind ((sc (system:make-alien 'mach:sigcontext
-					     #.(ext:c-sizeof 'mach:sigcontext)
-					     signal-context)
-			  mach:sigcontext
-			  t))
-    (let* ((frame (do ((cfp (escape-register sc vm::cfp-offset))
-		       (f (top-frame) (frame-down f)))
-		      ((= cfp (system:sap-int (frame-pointer f))) f)
-		    (declare (type (unsigned-byte #.vm:word-bits) cfp))))
-	   (component (breakpoint-data-component data))
-	   (cookie (gethash component *function-end-cookies*)))
-      (remhash component *function-end-cookies*)
-      (dolist (bpt breakpoints)
-	(funcall (breakpoint-hook-function bpt)
-		 frame bpt
-		 (get-function-end-breakpoint-values (system:alien-value sc))
-		 cookie)))))
+  (let* ((scp (alien:sap-alien signal-context (* unix:sigcontext)))
+	 (frame (do ((cfp (vm:sigcontext-register scp vm::cfp-offset))
+		     (f (top-frame) (frame-down f)))
+		    ((= cfp (system:sap-int (frame-pointer f))) f)
+		  (declare (type (unsigned-byte #.vm:word-bits) cfp))))
+	 (component (breakpoint-data-component data))
+	 (cookie (gethash component *function-end-cookies*)))
+    (remhash component *function-end-cookies*)
+    (dolist (bpt breakpoints)
+      (funcall (breakpoint-hook-function bpt)
+	       frame bpt
+	       (get-function-end-breakpoint-values scp)
+	       cookie))))
 
-(defun get-function-end-breakpoint-values (sc)
-  (system:alien-bind ((sc sc mach:sigcontext t))
-    (let ((ocfp (system:int-sap (escape-register sc vm::ocfp-offset)))
-	  (nargs (kernel:make-lisp-obj (escape-register sc vm::nargs-offset)))
-	  (reg-arg-offsets vm::register-arg-offsets)
-	  (results nil))
-      (system:without-gcing
-       (dotimes (arg-num nargs)
-	 (push (if reg-arg-offsets
-		   (kernel:make-lisp-obj
-		    (escape-register sc (pop reg-arg-offsets)))
-		   (kernel:stack-ref ocfp arg-num))
-	       results)))
-      (nreverse results))))
+(defun get-function-end-breakpoint-values (scp)
+  (let ((ocfp (system:int-sap (escape-register scp vm::ocfp-offset)))
+	(nargs (kernel:make-lisp-obj (escape-register scp vm::nargs-offset)))
+	(reg-arg-offsets vm::register-arg-offsets)
+	(results nil))
+    (system:without-gcing
+     (dotimes (arg-num nargs)
+       (push (if reg-arg-offsets
+		 (kernel:make-lisp-obj
+		  (vm:sigcontext-register scp (pop reg-arg-offsets)))
+		 (kernel:stack-ref ocfp arg-num))
+	     results)))
+    (nreverse results)))
 
 
-;;; CALL-BREAKPOINT_AFTER_OFFSET -- Internal.
+;;; CAL<L-BREAKPOINT_AFTER_OFFSET -- Internal.
 ;;;
 ;;; This calls the C routine and massages its return values.  Originally the
 ;;; breakpoint code was designed for the C code to return multiple offsets when
@@ -3534,18 +3467,12 @@
    are returned: the bogus LRA object, the code component it is part of, and the
    PC offset for the trap instruction."
   (system:without-gcing
-   (let* ((src-start (ext:truly-the system:system-area-pointer
-				    (system:%primitive
-				     c:foreign-symbol-address
-				     "function_end_breakpoint_guts")))
-	  (src-end (ext:truly-the system:system-area-pointer
-				  (system:%primitive
-				   c:foreign-symbol-address
-				   "function_end_breakpoint_end")))
-	  (trap-loc (ext:truly-the system:system-area-pointer
-				   (system:%primitive
-				    c:foreign-symbol-address
-				    "function_end_breakpoint_trap")))
+   (let* ((src-start (system:foreign-symbol-address
+		      "function_end_breakpoint_guts"))
+	  (src-end (system:foreign-symbol-address
+		    "function_end_breakpoint_end"))
+	  (trap-loc (system:foreign-symbol-address
+		     "function_end_breakpoint_trap"))
 	  (length (system:sap- src-end src-start))
 	  (code-object (system:%primitive c:allocate-code-object
 					  (1+ bogus-lra-constants)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.9 1991/11/07 12:37:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.10 1992/02/14 23:44:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,9 +33,9 @@
 
 (macrolet ((frob (lisp-fun c-var-name)
 	     `(progn
-		(def-c-variable ,c-var-name (unsigned-byte 32))
+		(declaim (inline ,lisp-fun))
 		(defun ,lisp-fun ()
-		  (system:alien-access ,(intern (string-upcase c-var-name)))))))
+		  (alien:extern-alien ,c-var-name (alien:unsigned 32))))))
   (frob read-only-space-start "read_only_space")
   (frob static-space-start "static_space")
   (frob dynamic-0-space-start "dynamic_0_space")
@@ -269,12 +269,11 @@
 
 ;;;; Internal GC
 
-(def-c-routine ("collect_garbage" collect-garbage) (int))
+(alien:def-alien-routine collect-garbage c-call:int)
 
 #-ibmrt
-(def-c-routine ("set_auto_gc_trigger" set-auto-gc-trigger)
-	       (void)
-  (dynamic-usage unsigned-long))
+(alien:def-alien-routine set-auto-gc-trigger c-call:void
+  (dynamic-usage c-call:unsigned-long))
 
 #+ibmrt
 (defun set-auto-gc-trigger (bytes)
@@ -285,8 +284,7 @@
     (setf rt::*internal-gc-trigger* words)))
 
 #-ibmrt
-(def-c-routine ("clear_auto_gc_trigger" clear-auto-gc-trigger)
-	       (void))
+(alien:def-alien-routine clear-auto-gc-trigger c-call:void)
 
 #+ibmrt
 (defun clear-auto-gc-trigger ()

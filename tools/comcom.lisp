@@ -81,6 +81,7 @@
 (comf "target:compiler/typetran")
 (comf "target:compiler/generic/vm-typetran")
 (comf "target:compiler/float-tran")
+(comf "target:compiler/saptran")
 (comf "target:compiler/locall")
 (comf "target:compiler/dfo")
 (comf "target:compiler/checkgen")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.18 1991/12/16 12:48:45 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.19 1992/02/14 23:44:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,15 +138,15 @@
     (declare (type index start end length))
     (multiple-value-bind
 	(count errno)
-	(mach:unix-write (fd-stream-fd stream)
+	(unix:unix-write (fd-stream-fd stream)
 			 base
 			 start
 			 length)
       (cond ((not count)
-	     (if (= errno mach:ewouldblock)
+	     (if (= errno unix:ewouldblock)
 		 (error "Write would have blocked, but SERVER told us to go.")
 		 (error "While writing ~S: ~A"
-			stream (mach:get-unix-error-msg errno))))
+			stream (unix:get-unix-error-msg errno))))
 	    ((eql count length) ; Hot damn, it workded.
 	     (when reuse-sap
 	       (push base *available-buffers*)))
@@ -199,12 +199,12 @@
       (let ((length (- end start)))
 	(multiple-value-bind
 	    (count errno)
-	    (mach:unix-write (fd-stream-fd stream) base start length)
+	    (unix:unix-write (fd-stream-fd stream) base start length)
 	  (cond ((not count)
-		 (if (= errno mach:ewouldblock)
+		 (if (= errno unix:ewouldblock)
 		     (output-later stream base start end reuse-sap)
 		     (error "While writing ~S: ~A"
-			    stream (mach:get-unix-error-msg errno))))
+			    stream (unix:get-unix-error-msg errno))))
 		((not (eql count length))
 		 (output-later stream base (+ start count) end reuse-sap)))))))
 
@@ -450,7 +450,7 @@
     #+serve-event
     (multiple-value-bind
 	(count errno)
-	(mach:unix-select (1+ fd) (ash 1 fd) 0 0 0)
+	(unix:unix-select (1+ fd) (ash 1 fd) 0 0 0)
       (case count
 	(1)
 	(0
@@ -460,14 +460,14 @@
 	(t
 	 (error "Problem checking to see if ~S is readable: ~A"
 		stream
-		(mach:get-unix-error-msg errno)))))
+		(unix:get-unix-error-msg errno)))))
     (multiple-value-bind
 	(count errno)
-	(mach:unix-read fd
+	(unix:unix-read fd
 			(system:int-sap (+ (system:sap-int ibuf-sap) tail))
 			(- buflen tail))
       (cond ((null count)
-	     (if #+serve-event (eql errno mach:ewouldblock)
+	     (if #+serve-event (eql errno unix:ewouldblock)
 		 #-serve-event nil
 	       (progn
 		 (unless (system:wait-until-fd-usable
@@ -476,7 +476,7 @@
 		 (do-input stream))
 	       (error "Error reading ~S: ~A"
 		      stream
-		      (mach:get-unix-error-msg errno))))
+		      (unix:get-unix-error-msg errno))))
 	    ((zerop count)
 	     (setf (fd-stream-listen stream) :eof)
 	     (throw 'eof-input-catcher nil))
@@ -774,7 +774,7 @@ non-server method is also significantly more efficient for large reads.
 	    (loop
 	      (multiple-value-bind
 		  (count err)
-		  (mach:unix-read (fd-stream-fd stream)
+		  (unix:unix-read (fd-stream-fd stream)
 				  (sap+ (if (typep buffer 'system-area-pointer)
 					    buffer
 					    (vector-sap buffer))
@@ -783,7 +783,7 @@ non-server method is also significantly more efficient for large reads.
 		(declare (type (or index null) count))
 		(unless count
 		  (error "Error reading ~S: ~A" stream
-			 (mach:get-unix-error-msg err)))
+			 (unix:get-unix-error-msg err)))
 		(when (zerop count)
 		  (if eof-error-p
 		      (error "Unexpected eof on ~S." stream)
@@ -795,11 +795,11 @@ non-server method is also significantly more efficient for large reads.
 	  (loop
 	    (multiple-value-bind
 		(count err)
-		(mach:unix-read (fd-stream-fd stream) sap len)
+		(unix:unix-read (fd-stream-fd stream) sap len)
 	      (declare (type (or index null) count))
 	      (unless count
 		(error "Error reading ~S: ~A" stream
-		       (mach:get-unix-error-msg err)))
+		       (unix:get-unix-error-msg err)))
 	      (incf (fd-stream-ibuf-tail stream) count)
 	      (when (zerop count)
 		(if eof-error-p
@@ -933,7 +933,7 @@ non-server method is also significantly more efficient for large reads.
 		   (fd-stream-ibuf-tail stream)))
 	 (fd-stream-listen stream)
 	 (setf (fd-stream-listen stream)
-	       (eql (mach:unix-select (1+ (fd-stream-fd stream))
+	       (eql (unix:unix-select (1+ (fd-stream-fd stream))
 				      (ash 1 (fd-stream-fd stream))
 				      0
 				      0
@@ -954,38 +954,38 @@ non-server method is also significantly more efficient for large reads.
 		  ;; Have an handle on the original, just revert.
 		  (multiple-value-bind
 		      (okay err)
-		      (mach:unix-rename (fd-stream-original stream)
+		      (unix:unix-rename (fd-stream-original stream)
 					(fd-stream-file stream))
 		    (unless okay
 		      (cerror "Go on as if nothing bad happened."
 		        "Could not restore ~S to it's original contents: ~A"
 			      (fd-stream-file stream)
-			      (mach:get-unix-error-msg err))))
+			      (unix:get-unix-error-msg err))))
 		  ;; Can't restore the orignal, so nuke that puppy.
 		  (multiple-value-bind
 		      (okay err)
-		      (mach:unix-unlink (fd-stream-file stream))
+		      (unix:unix-unlink (fd-stream-file stream))
 		    (unless okay
 		      (cerror "Go on as if nothing bad happened."
 			      "Could not remove ~S: ~A"
 			      (fd-stream-file stream)
-			      (mach:get-unix-error-msg err)))))))
+			      (unix:get-unix-error-msg err)))))))
 	   (t
 	    (fd-stream-misc-routine stream :finish-output)
 	    (when (and (fd-stream-original stream)
 		       (fd-stream-delete-original stream))
 	      (multiple-value-bind
 		  (okay err)
-		  (mach:unix-unlink (fd-stream-original stream))
+		  (unix:unix-unlink (fd-stream-original stream))
 		(unless okay
 		  (cerror "Go on as if nothing bad happened."
 			  "Could not delete ~S during close of ~S: ~A"
 			  (fd-stream-original stream)
 			  stream
-			  (mach:get-unix-error-msg err)))))))
+			  (unix:get-unix-error-msg err)))))))
      (when (fboundp 'cancel-finalization)
        (cancel-finalization stream))
-     (mach:unix-close (fd-stream-fd stream))
+     (unix:unix-close (fd-stream-fd stream))
      (when (fd-stream-obuf-sap stream)
        (push (fd-stream-obuf-sap stream) *available-buffers*)
        (setf (fd-stream-obuf-sap stream) nil))
@@ -997,7 +997,7 @@ non-server method is also significantly more efficient for large reads.
      (setf (fd-stream-ibuf-head stream) 0)
      (setf (fd-stream-ibuf-tail stream) 0)
      (loop
-       (let ((count (mach:unix-select (1+ (fd-stream-fd stream))
+       (let ((count (unix:unix-select (1+ (fd-stream-fd stream))
 				      (ash 1 (fd-stream-fd stream))
 				      0 0 0)))
 	 (cond ((eql count 1)
@@ -1024,13 +1024,13 @@ non-server method is also significantly more efficient for large reads.
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
 	       atime mtime ctime blksize blocks)
-	 (mach:unix-fstat (fd-stream-fd stream))
+	 (unix:unix-fstat (fd-stream-fd stream))
        (declare (ignore ino nlink uid gid rdev
 			atime mtime ctime blksize blocks))
        (unless okay
 	 (error "Error fstating ~S: ~A"
 		stream
-		(mach:get-unix-error-msg dev)))
+		(unix:get-unix-error-msg dev)))
        (if (zerop mode)
 	 nil
 	 (truncate size (fd-stream-element-size stream)))))
@@ -1050,7 +1050,7 @@ non-server method is also significantly more efficient for large reads.
 	;; file.
 	(multiple-value-bind
 	    (posn errno)
-	    (mach:unix-lseek (fd-stream-fd stream) 0 mach:l_incr)
+	    (unix:unix-lseek (fd-stream-fd stream) 0 unix:l_incr)
 	  (declare (type (or index null) posn))
 	  (cond ((fixnump posn)
 		 ;; Adjust for buffered output:
@@ -1073,13 +1073,13 @@ non-server method is also significantly more efficient for large reads.
 		   (decf posn))
 		 ;; Divide bytes by element size.
 		 (truncate posn (fd-stream-element-size stream)))
-		((eq errno mach:espipe)
+		((eq errno unix:espipe)
 		 nil)
 		(t
 		 (system:with-interrupts
 		   (error "Error lseek'ing ~S: ~A"
 			  stream
-			  (mach:get-unix-error-msg errno)))))))
+			  (unix:get-unix-error-msg errno)))))))
       (let (offset origin)
 	;; Make sure we don't have any output pending, because if we move the
 	;; file pointer before writing this stuff, it will be written in the
@@ -1097,25 +1097,25 @@ non-server method is also significantly more efficient for large reads.
 	(setf (fd-stream-listen stream) nil)
 	;; Now move it.
 	(cond ((eq newpos :start)
-	       (setf offset 0 origin mach:l_set))
+	       (setf offset 0 origin unix:l_set))
 	      ((eq newpos :end)
-	       (setf offset 0 origin mach:l_xtnd))
+	       (setf offset 0 origin unix:l_xtnd))
 	      ((typep newpos 'index)
 	       (setf offset (* newpos (fd-stream-element-size stream))
-		     origin mach:l_set))
+		     origin unix:l_set))
 	      (t
 	       (error "Invalid position given to file-position: ~S" newpos)))
 	(multiple-value-bind
 	    (posn errno)
-	    (mach:unix-lseek (fd-stream-fd stream) offset origin)
+	    (unix:unix-lseek (fd-stream-fd stream) offset origin)
 	  (cond ((typep posn 'fixnum)
 		 t)
-		((eq errno mach:espipe)
+		((eq errno unix:espipe)
 		 nil)
 		(t
 		 (error "Error lseek'ing ~S: ~A"
 			stream
-			(mach:get-unix-error-msg errno))))))))
+			(unix:get-unix-error-msg errno))))))))
 
 
 
@@ -1166,7 +1166,7 @@ non-server method is also significantly more efficient for large reads.
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
-		    (mach:unix-close fd)
+		    (unix:unix-close fd)
 		    (format *terminal-io* "** Closed file descriptor ~D~%"
 			    fd))))
     stream))
@@ -1215,18 +1215,18 @@ non-server method is also significantly more efficient for large reads.
 ;;; We return true if we suceed in renaming.
 ;;;
 (defun do-old-rename (namestring original)
-  (unless (mach:unix-access namestring mach:w_ok)
+  (unless (unix:unix-access namestring unix:w_ok)
     (cerror "Try to rename it anyway." "File ~S is not writable." namestring))
   (multiple-value-bind
       (okay err)
-      (mach:unix-rename namestring original)
+      (unix:unix-rename namestring original)
     (cond (okay t)
 	  (t
 	   (cerror "Use :SUPERSEDE instead."
 		   "Could not rename ~S to ~S: ~A."
 		   namestring
 		   original
-		   (mach:get-unix-error-msg err))
+		   (unix:get-unix-error-msg err))
 	   nil))))
 
 
@@ -1258,10 +1258,10 @@ non-server method is also significantly more efficient for large reads.
   (multiple-value-bind
       (input output mask)
       (case direction
-	(:input (values t nil mach:o_rdonly))
-	(:output (values nil t mach:o_wronly))
-	(:io (values t t mach:o_rdwr))
-	(:probe (values t nil mach:o_rdonly)))
+	(:input (values t nil unix:o_rdonly))
+	(:output (values nil t unix:o_wronly))
+	(:io (values t t unix:o_rdwr))
+	(:probe (values t nil unix:o_rdonly)))
     (declare (type index mask))
     (let* ((pathname (pathname filename))
 	   (namestring (unix-namestring pathname input)))
@@ -1280,13 +1280,13 @@ non-server method is also significantly more efficient for large reads.
 				  :if-exists))
 	     (case if-exists
 	       ((:error nil)
-		(setf mask (logior mask mach:o_excl)))
+		(setf mask (logior mask unix:o_excl)))
 	       ((:rename :rename-and-delete)
-		(setf mask (logior mask mach:o_creat)))
+		(setf mask (logior mask unix:o_creat)))
 	       ((:new-version :supersede)
-		(setf mask (logior mask mach:o_trunc)))
+		(setf mask (logior mask unix:o_trunc)))
 	       (:append
-		(setf mask (logior mask mach:o_append)))))
+		(setf mask (logior mask unix:o_append)))))
 	    (t
 	     (setf if-exists :ignore-this-arg)))
       
@@ -1305,7 +1305,7 @@ non-server method is also significantly more efficient for large reads.
 			   '(:error :create nil)
 			   :if-does-not-exist))
       (if (eq if-does-not-exist :create)
-	(setf mask (logior mask mach:o_creat)))
+	(setf mask (logior mask unix:o_creat)))
        
       (let ((original (if (member if-exists
 				  '(:rename :rename-and-delete))
@@ -1320,7 +1320,7 @@ non-server method is also significantly more efficient for large reads.
 		 (and namestring
 		      (multiple-value-bind
 			  (okay err/dev inode orig-mode)
-			  (mach:unix-stat namestring)
+			  (unix:unix-stat namestring)
 			(declare (ignore inode)
 				 (type (or index null) orig-mode))
 			(cond
@@ -1331,22 +1331,22 @@ non-server method is also significantly more efficient for large reads.
 				   namestring))
 			  (setf mode (logand orig-mode #o777))
 			  t)
-			 ((eql err/dev mach:enoent)
+			 ((eql err/dev unix:enoent)
 			  nil)
 			 (t
 			  (error "Cannot find ~S: ~A"
 				 namestring
-				 (mach:get-unix-error-msg err/dev))))))))
+				 (unix:get-unix-error-msg err/dev))))))))
 	    (unless (and exists
 			 (do-old-rename namestring original))
 	      (setf original nil)
 	      (setf delete-original nil)
 	      ;; In order to use SUPERSEDE instead, we have
-	      ;; to make sure mach:o_creat corresponds to
-	      ;; if-does-not-exist.  mach:o_creat was set
+	      ;; to make sure unix:o_creat corresponds to
+	      ;; if-does-not-exist.  unix:o_creat was set
 	      ;; before because of if-exists being :rename.
 	      (unless (eq if-does-not-exist :create)
-		(setf mask (logior (logandc2 mask mach:o_creat) mach:o_trunc)))
+		(setf mask (logior (logandc2 mask unix:o_creat) unix:o_trunc)))
 	      (setf if-exists :supersede))))
 	
 	;; Okay, now we can try the actual open.
@@ -1354,8 +1354,8 @@ non-server method is also significantly more efficient for large reads.
 	  (multiple-value-bind
 	      (fd errno)
 	      (if namestring
-		  (mach:unix-open namestring mask mode)
-		  (values nil mach:enoent))
+		  (unix:unix-open namestring mask mode)
+		  (values nil unix:enoent))
 	    (cond ((numberp fd)
 		   (return
 		    (case direction
@@ -1374,35 +1374,35 @@ non-server method is also significantly more efficient for large reads.
 					       :element-type element-type)))
 			 (close stream)
 			 stream)))))
-		  ((eql errno mach:enoent)
+		  ((eql errno unix:enoent)
 		   (case if-does-not-exist
 		     (:error
 		      (cerror "Return NIL."
 			      "Error opening ~S, ~A."
 			      pathname
-			      (mach:get-unix-error-msg errno)))
+			      (unix:get-unix-error-msg errno)))
 		     (:create
 		      (cerror "Return NIL."
 			      "Error creating ~S, path does not exist."
 			      pathname)))
 		   (return nil))
-		  ((eql errno mach:eexist)
+		  ((eql errno unix:eexist)
 		   (unless (eq nil if-exists)
 		     (cerror "Return NIL."
 			     "Error opening ~S, ~A."
 			     pathname
-			     (mach:get-unix-error-msg errno)))
+			     (unix:get-unix-error-msg errno)))
 		   (return nil))
-		  ((eql errno mach:eacces)
+		  ((eql errno unix:eacces)
 		   (cerror "Try again."
 			  "Error opening ~S, ~A."
 			  pathname
-			  (mach:get-unix-error-msg errno)))
+			  (unix:get-unix-error-msg errno)))
 		  (t
 		   (cerror "Return NIL."
 			   "Error opening ~S, ~A."
 			   pathname
-			   (mach:get-unix-error-msg errno))
+			   (unix:get-unix-error-msg errno))
 		   (return nil)))))))))
 
 ;;;; Initialization.
@@ -1445,7 +1445,7 @@ non-server method is also significantly more efficient for large reads.
 	(make-fd-stream 1 :name "Standard Output" :output t :buffering :line))
   (setf *stderr*
 	(make-fd-stream 2 :name "Standard Error" :output t :buffering :line))
-  (let ((tty (mach:unix-open "/dev/tty" mach:o_rdwr #o666)))
+  (let ((tty (unix:unix-open "/dev/tty" unix:o_rdwr #o666)))
     (if tty
 	(setf *tty*
 	      (make-fd-stream tty :name "the Terminal" :input t :output t

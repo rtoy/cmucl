@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.6 1991/11/09 02:47:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.7 1992/02/14 23:45:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,9 @@
 ;;;
 
 (in-package "EXTENSIONS")
+
+(use-package "ALIEN")
+(use-package "C-CALL")
 
 (export '(htonl ntohl htons ntohs lookup-host-entry host-entry host-entry-name
 	  host-entry-aliases host-entry-addr-list host-entry-addr
@@ -85,186 +88,117 @@
   (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
+(def-alien-type inet-sockaddr
+  (struct nil
+    (family short)
+    (port unsigned-short)
+    (addr unsigned-long)
+    (zero (array char 8))))
 
-(def-c-pointer *char (null-terminated-string 256))
-(def-c-pointer *int int)
-(def-c-pointer *ulong unsigned-long)
+(def-alien-type hostent
+  (struct nil
+    (name c-string)
+    (aliases (* c-string))
+    (addrtype int)
+    (length int)
+    (addr-list (* (unsigned 32)))))
 
-(def-c-record inet-sockaddr
-  (family short)
-  (port unsigned-short)
-  (addr unsigned-long)
-  (zero (unsigned-byte 64)))
+(def-alien-routine "gethostbyname" (* hostent)
+  (name c-string))
 
-(def-c-record hostent
-  (name *char)
-  (aliases system-area-pointer)
-  (addrtype int)
-  (length int)
-  (addr-list system-area-pointer))
-
-(def-c-routine "gethostbyname" (*hostent)
-  (name null-terminated-string))
-
-(def-c-routine "gethostbyaddr" (*hostent)
-  (addr *ulong :copy)
+(def-alien-routine "gethostbyaddr" (* hostent)
+  (addr unsigned-long :copy)
   (len int)
   (type int))
 
-(def-c-routine ("socket" unix-socket) (int)
-  (domain int)
-  (type int)
-  (protocol int))
-
-(def-c-routine ("connect" unix-connect) (int)
-  (socket int)
-  (sockaddr system-area-pointer)
-  (len int))
-
-(def-c-routine ("bind" unix-bind) (int)
-  (socket int)
-  (sockaddr system-area-pointer)
-  (len int))
-
-(def-c-routine ("listen" unix-listen) (int)
-  (socket int)
-  (backlog int))
-
-(def-c-routine ("accept" unix-accept) (int)
-  (socket int)
-  (sockaddr system-area-pointer)
-  (len *int :in-out))
-
-
-(defmacro listify-c-array (array alien-type)
-  `(do* ((array ,array)
-	 (results nil
-		  (alien-bind ((alien
-				(make-alien ',alien-type
-					    ,(c-sizeof alien-type)
-					    sap)
-				,alien-type
-				t))
-		    (cons (alien-access alien)
-			  results)))
-	 (index 0 (1+ index))
-	 (sap (sap-ref-sap array index) (sap-ref-sap array index)))
-	((zerop (sap-int sap)) (nreverse results))))
+(defmacro listify-c-array (array)
+  `(do ((results nil (cons (deref ,array index) results))
+	(index 0 (1+ index)))
+       ((zerop (deref (cast ,array (* (unsigned 32))) index))
+	(nreverse results))))
 
 (defun lookup-host-entry (host)
   (if (typep host 'host-entry)
-    host
-    (let ((hostent
-	   (typecase host
-	     (string
-	      (gethostbyname host))
-	     ((unsigned-byte 32)
-	      (gethostbyaddr host 4 af-inet))
-	     (t
-	      (error "Invalid host ~S for ~S -- must be either a string ~
-	              or (unsigned-byte 32)"
-		     host 'lookup-host-entry)))))
-      (when hostent
-	(alien-bind ((alien hostent hostent t))
+      host
+      (with-alien
+	  ((hostent (* hostent) 
+		    (etypecase host
+		      (string
+		       (gethostbyname host))
+		      ((unsigned-byte 32)
+		       (gethostbyaddr host 4 af-inet)))))
+	(unless (zerop (sap-int (alien-sap hostent)))
 	  (make-host-entry
-	   :name (alien-access
-		  (indirect-*char (hostent-name (alien-value alien))))
-	   :aliases (listify-c-array
-		     (alien-access (hostent-aliases (alien-value alien)))
-		     (null-terminated-string 256))
-	   :addr-type (alien-access (hostent-addrtype (alien-value alien)))
-	   :addr-list (listify-c-array
-		       (alien-access (hostent-addr-list (alien-value alien)))
-		       (unsigned-byte 32))))))))
+	   :name (slot hostent 'name)
+	   :aliases (listify-c-array (slot hostent 'aliases))
+	   :addr-type (slot hostent 'addrtype)
+	   :addr-list (listify-c-array (slot hostent 'addr-list)))))))
 
 (defun create-inet-socket (&optional (kind :stream))
   (multiple-value-bind (proto type)
 		       (internet-protocol kind)
-    (let ((socket (unix-socket af-inet type proto)))
+    (let ((socket (unix:unix-socket af-inet type proto)))
       (when (minusp socket)
-	(error "Error creating socket: ~A" (get-unix-error-msg)))
+	(error "Error creating socket: ~A" (unix:get-unix-error-msg)))
       socket)))
 
 (defun connect-to-inet-socket (host port &optional (kind :stream))
   (let ((socket (create-inet-socket kind))
 	(hostent (or (lookup-host-entry host)
 		     (error "Unknown host: ~S." host))))
-    (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
-      (setf (alien-access (inet-sockaddr-family (alien-value sockaddr)))
-	    af-inet)
-      (setf (alien-access (inet-sockaddr-port (alien-value sockaddr)))
-	    (htons port))
-      (setf (alien-access (inet-sockaddr-addr (alien-value sockaddr)))
-	    (host-entry-addr hostent))
-      (when (minusp (unix-connect socket
-				  (alien-sap (alien-value sockaddr))
-				  #.(truncate (c-sizeof 'inet-sockaddr)
-					      (c-sizeof 'char))))
-	(unix-close socket)
+    (with-alien ((sockaddr inet-sockaddr))
+      (setf (slot sockaddr 'family) af-inet)
+      (setf (slot sockaddr 'port) (htons port))
+      (setf (slot sockaddr 'addr) (host-entry-addr hostent))
+      (when (minusp (unix:unix-connect socket
+				       (alien-sap sockaddr)
+				       (alien-size inet-sockaddr :bytes)))
+	(unix:unix-close socket)
 	(error "Error connecting socket to [~A:~A]: ~A"
 	       (host-entry-name hostent)
 	       port
-	       (get-unix-error-msg)))
+	       (unix:get-unix-error-msg)))
       socket)))
 
 (defun create-inet-listener (port &optional (kind :stream))
   (let ((socket (create-inet-socket kind)))
-    (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
-      (setf (alien-access (inet-sockaddr-family (alien-value sockaddr)))
-	    af-inet)
-      (setf (alien-access (inet-sockaddr-port (alien-value sockaddr)))
-	    (htons port))
-      (setf (alien-access (inet-sockaddr-addr (alien-value sockaddr)))
-	    0)
-      (when (minusp (unix-bind socket
-			       (alien-sap (alien-value sockaddr))
-			       #.(truncate (c-sizeof 'inet-sockaddr)
-					   (c-sizeof 'char))))
-	(unix-close socket)
+    (with-alien ((sockaddr inet-sockaddr))
+      (setf (slot sockaddr 'family) af-inet)
+      (setf (slot sockaddr 'port) (htons port))
+      (setf (slot sockaddr 'addr) 0)
+      (when (minusp (unix:unix-bind socket
+				    (alien-sap sockaddr)
+				    (alien-size inet-sockaddr :bytes)))
+	(unix:unix-close socket)
 	(error "Error binding socket to port ~a: ~a"
 	       port
-	       (get-unix-error-msg))))
+	       (unix:get-unix-error-msg))))
     (when (eq kind :stream)
-      (when (minusp (unix-listen socket 5))
-	(unix-close socket)
-	(error "Error listening to socket: ~A" (get-unix-error-msg))))
+      (when (minusp (unix:unix-listen socket 5))
+	(unix:unix-close socket)
+	(error "Error listening to socket: ~A" (unix:get-unix-error-msg))))
     socket))
 
 (defun accept-tcp-connection (unconnected)
   (declare (fixnum unconnected))
-  (with-stack-alien (sockaddr inet-sockaddr (c-sizeof 'inet-sockaddr))
-    (let ((connected (unix-accept unconnected
-				  (alien-sap (alien-value sockaddr))
-				  #.(truncate (c-sizeof 'inet-sockaddr)
-					      (c-sizeof 'char)))))
+  (with-alien ((sockaddr inet-sockaddr))
+    (let ((connected (unix:unix-accept unconnected
+				       (alien-sap sockaddr)
+				       (alien-size inet-sockaddr :bytes))))
       (when (minusp connected)
-	(error "Error accepting a connection: ~A" (get-unix-error-msg)))
-      (values connected
-	      (alien-access (inet-sockaddr-addr (alien-value sockaddr)))))))
+	(error "Error accepting a connection: ~A" (unix:get-unix-error-msg)))
+      (values connected (slot sockaddr 'addr)))))
 
 (defun close-socket (socket)
   (multiple-value-bind (ok err)
-		       (unix-close socket)
+		       (unix:unix-close socket)
     (unless ok
-      (error "Error closing socket: ~A" (get-unix-error-msg err))))
+      (error "Error closing socket: ~A" (unix:get-unix-error-msg err))))
   (undefined-value))
 
 
 
 ;;;; Out of Band Data.
-
-(def-c-routine ("recv" unix-recv) (int)
-  (fd int)
-  (buffer null-terminated-string)
-  (length int)
-  (flags int))
-
-(def-c-routine ("send" unix-send) (int)
-  (fd int)
-  (buffer null-terminated-string)
-  (length int)
-  (flags int))
-
 
 ;;; Two level AList. First levels key is the file descriptor, second levels
 ;;; key is the character. The datum is the handler to call.
@@ -284,11 +218,11 @@
     (declare (simple-string buffer))
     (dolist (handlers *oob-handlers*)
       (declare (list handlers))
-      (cond ((minusp (mach:unix-recv (car handlers) buffer 1 msg-oob))
+      (cond ((minusp (unix:unix-recv (car handlers) buffer 1 msg-oob))
 	     (cerror "Ignore it"
 		     "Error recving oob data on ~A: ~A"
 		     (car handlers)
-		     (mach:get-unix-error-msg)))
+		     (unix:get-unix-error-msg)))
 	    (t
 	     (setf handled t)
 	     (let ((char (schar buffer 0))
@@ -332,7 +266,7 @@
 			     handler))
 		 *oob-handlers*)
 	   (system:enable-interrupt mach:sigurg #'sigurg-handler)
-	   (mach:unix-fcntl fd mach::f-setown (mach:unix-getpid)))))
+	   (unix:unix-fcntl fd unix:f-setown (unix:unix-getpid)))))
   (values))
 
 ;;; REMOVE-OOB-HANDLER -- public
@@ -382,8 +316,8 @@
 	   (base-char char))
   (let ((buffer (make-string 1 :initial-element char)))
     (declare (simple-string buffer))
-    (when (minusp (mach:unix-send fd buffer 1 msg-oob))
+    (when (minusp (unix:unix-send fd buffer 1 msg-oob))
       (error "Error sending ~S OOB to across ~A: ~A"
 	     char
 	     fd
-	     (mach:get-unix-error-msg)))))
+	     (unix:get-unix-error-msg)))))

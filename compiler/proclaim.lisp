@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.21 1992/02/05 18:34:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.22 1992/02/14 23:47:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,12 +208,7 @@
 	  so that this slot accessor can be redefined:~%  ~S"
 	  (dd-name for) name)
 	 (undefine-structure for)
-	 (setf (info function kind name) :function)))
-     (when (info function alien-operator name)
-       (compiler-warning "Redefining alien operator as normal function:~%  ~S"
-			 name)
-       (setf (info function alien-operator name) nil)
-       (setf (info function source-transform name) nil)))
+	 (setf (info function kind name) :function))))
     (:macro
      (compiler-warning "~S previously defined as a macro." name)
      (setf (info function kind name) :function)
@@ -593,22 +588,3 @@
 (defun compiler-error-message (string &rest args)
   (apply #'warn string args))
 
-
-;;; Alien=>Lisp-Transform  --  Internal
-;;;
-;;;    This is the transform for alien-operators and other alien-valued
-;;; things which may be evaluated normally to yield an alien-value structure.
-;;;
-(defun alien=>lisp-transform (form)
-  (multiple-value-bind (binds stuff res)
-		       (analyze-alien-expression nil form)
-    `(let* ,(reverse binds)
-       ,(ignore-unreferenced-vars binds)
-       ,@(nreverse stuff)
-       ,(if (ct-a-val-alien res)
-	    (ct-a-val-alien res)
-	    `(lisp::make-alien-value
-	      ,(ct-a-val-sap res)
-	      ,(ct-a-val-offset res)
-	      ,(ct-a-val-size res)
-	      ',(ct-a-val-type res))))))

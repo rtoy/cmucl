@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: MACH -*-
+;;; -*- Package: UNIX -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,22 +7,23 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.12 1991/02/08 13:35:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.13 1992/02/14 23:45:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.12 1991/02/08 13:35:43 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.13 1992/02/14 23:45:34 wlott Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
 ;;; Written by William Lott.
 ;;;
 
-(in-package "MACH")
+(in-package "UNIX")
+(use-package "KERNEL")
 
 (export '(unix-signal-name unix-signal-description unix-signal-number
-	  sigcontext sigmask unix-sigblock unix-sigpause
-	  unix-sigsetmask unix-kill unix-getpid))
+	  sigmask unix-sigblock unix-sigpause unix-sigsetmask unix-kill
+	  unix-killpg))
 
 (export 'kernel::signal-init (find-package "KERNEL"))
 
@@ -48,7 +49,7 @@
 
 (eval-when (compile eval)
 (defmacro def-unix-signal (name number description)
-  (let ((mach-symbol (intern (symbol-name name))))
+  (let ((symbol (intern (symbol-name name))))
     `(progn
        (push (make-unix-signal ,name ,number ,description) *unix-signals*)
        ;; 
@@ -56,8 +57,8 @@
        ;; old code which expects the symbol with the same print name as
        ;; our keywords to be a constant with a value equal to the signal
        ;; number.
-       (defconstant ,mach-symbol ,number ,description)
-       (export ',mach-symbol))))
+       (defconstant ,symbol ,number ,description)
+       (export ',symbol))))
 ) ;eval-when
 
 (defun unix-signal-or-lose (arg)
@@ -136,9 +137,9 @@
 
 (proclaim '(inline real-unix-kill))
 
-(def-c-routine ("kill" real-unix-kill) (int)
-  (pid int)
-  (signal int))
+(alien:def-alien-routine ("kill" real-unix-kill) c-call:int
+  (pid c-call:int)
+  (signal c-call:int))
 
 (defun unix-kill (pid signal)
   "Unix-kill sends the signal signal to the process with process 
@@ -149,9 +150,9 @@
 
 (proclaim '(inline real-unix-killpg))
 
-(def-c-routine ("killpg" real-unix-killpg) (int)
-  (pgrp int)
-  (signal int))
+(alien:def-alien-routine ("killpg" real-unix-killpg) c-call:int
+  (pgrp c-call:int)
+  (signal c-call:int))
 
 (defun unix-killpg (pgrp signal)
   "Unix-killpg sends the signal signal to the all the process in process
@@ -160,36 +161,35 @@
   (real-unix-killpg pgrp (unix-signal-number signal)))
 
 
-(def-c-routine ("sigblock" unix-sigblock) (unsigned-long)
+(alien:def-alien-routine ("sigblock" unix-sigblock) c-call:unsigned-long
   "Unix-sigblock cause the signals specified in mask to be
    added to the set of signals currently being blocked from
    delivery.  The macro sigmask is provided to create masks."
-  (mask unsigned-long))
+  (mask c-call:unsigned-long))
 
 
-(def-c-routine ("sigpause" unix-sigpause) (void)
+(alien:def-alien-routine ("sigpause" unix-sigpause) c-call:void
   "Unix-sigpause sets the set of masked signals to its argument
    and then waits for a signal to arrive, restoring the previous
    mask upon its return."
-  (mask unsigned-long))
+  (mask c-call:unsigned-long))
 
 
-(def-c-routine ("sigsetmask" unix-sigsetmask) (unsigned-long)
+(alien:def-alien-routine ("sigsetmask" unix-sigsetmask) c-call:unsigned-long
   "Unix-sigsetmask sets the current set of masked signals (those
    begin blocked from delivery) to the argument.  The macro sigmask
    can be used to create the mask.  The previous value of the signal
    mask is returned."
-  (mask unsigned-long))
+  (mask c-call:unsigned-long))
 
 
 
 ;;;; C routines that actually do all the work of establishing signal handlers.
 
-(def-c-routine ("install_handler" install-handler)
-	       (unsigned-long)
-  (signal int)
-  (handler unsigned-long))
-
+(alien:def-alien-routine ("install_handler" install-handler)
+			 c-call:unsigned-long
+  (signal c-call:int)
+  (handler c-call:unsigned-long))
 
 
 
@@ -202,10 +202,11 @@
 				  (case handler
 				    (:default sig_dfl)
 				    (:ignore sig_ign)
-				    (t (di::get-lisp-obj-address handler))))))
+				    (t
+				     (kernel:get-lisp-obj-address handler))))))
      (cond ((= result sig_dfl) :default)
 	   ((= result sig_ign) :ignore)
-	   (t (the function (di::make-lisp-obj result)))))))
+	   (t (the function (kernel:make-lisp-obj result)))))))
 
 (defun default-interrupt (signal)
   (enable-interrupt signal :default))
@@ -221,17 +222,12 @@
 
 (defmacro define-signal-handler (name what &optional (function 'error))
   `(defun ,name (signal code scp)
-     (declare (ignore signal code))
-     (alien-bind ((sc
-		   (make-alien 'mach:sigcontext
-			       #.(c-sizeof 'mach:sigcontext)
-			       scp)
-		   mach:sigcontext
-		   t))
-       (system:without-hemlock
-	(,function ,(concatenate 'simple-string what " at #x~x.")
-		   (sap-int
-		    (alien-access (mach:sigcontext-pc (alien-value sc)))))))))
+     (declare (ignore signal code)
+	      (type system-area-pointer scp))
+     (system:without-hemlock
+      (,function ,(concatenate 'simple-string what " at #x~x.")
+		 (with-alien ((scp (* sigcontext) scp))
+		   (sap-int (slot scp 'sc-pc)))))))
 
 (define-signal-handler sigint-handler "Interrupted" break)
 (define-signal-handler sigill-handler "Illegal Instruction")

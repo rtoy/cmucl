@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.10 1991/04/28 03:11:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.11 1992/02/14 23:50:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -230,7 +230,7 @@
 	 (length (- end start))
 	 (current (code-instruction-stream-current stream))
 	 (new (sap+ current length)))
-    (when (pointer> new (code-instruction-stream-end stream))
+    (when (sap> new (code-instruction-stream-end stream))
       (error "Writing ~D bytes to ~S would cause it to overflow."
 	     length stream))
     (copy-to-system-area string (+ (* start vm:byte-bits)

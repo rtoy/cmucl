@@ -1,12 +1,18 @@
-;;; -*- Package: User; Log: code.log -*-
+;;; -*- Package: USER -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.35 1992/02/14 23:46:37 wlott Exp $")
+;;;
 ;;; **********************************************************************
+;;;
+;;; This file contains noise to compile the lisp world.
+;;; 
 
 (in-package "USER")
 
@@ -66,10 +72,7 @@
 (comf "target:code/kernel")
 (comf "target:code/lispinit")
 (comf "target:code/fdefinition")
-#+mach (comf "target:code/mach-os")
-#+sunos (comf "target:code/sunos-os")
 
-(comf "target:code/interr")
 (comf "target:code/error")
 (comf "target:code/salterror")
 
@@ -80,6 +83,7 @@
 
 (comf "target:code/alieneval")
 (comf "target:code/c-call")
+(comf "target:code/sap")
 
 (comf "target:code/bit-bash")
 (comf "target:code/array")
@@ -93,17 +97,16 @@
 (comf "target:code/string")
 (comf "target:code/mipsstrops")
 
-(comf "target:code/machdef")
+(comf "target:code/unix")
+#+mach (comf "target:code/mach")
+#+mach (comf "target:code/mach-os")
+#+sunos (comf "target:code/sunos-os")
 
 (when (string= (c:backend-name c:*backend*) "PMAX")
-  (comf "target:code/pmax-machdef")
-  (comf "target:code/pmax-vm")
-  (comf "target:code/pmax-disassem"))
+  (comf "target:code/pmax-vm"))
 (when (string= (c:backend-name c:*backend*) "SPARC")
-  (comf "target:code/sparc-machdef")
   (comf "target:code/sparc-vm"))
 (when (string= (c:backend-name c:*backend*) "RT")
-  (comf "target:code/rt-machdef")
   (comf "target:code/rt-vm"))
 
 (comf "target:code/symbol")
@@ -137,8 +140,6 @@
 (comf "target:code/sharpm")
 (comf "target:code/backq")
 
-(comf "target:code/syscall")
-(comf "target:code/vm")
 (comf "target:code/serve-event")
 (pushnew :serve-event *features*)
 (comf "target:code/fd-stream")
@@ -151,6 +152,7 @@
 (comf "target:code/eval")
 
 (comf "target:code/signal")
+(comf "target:code/interr")
 (comf "target:code/debug-info")
 (comf "target:code/debug-int")
 (comf "target:code/debug")
@@ -187,6 +189,7 @@
 (comf "target:code/remote")
 
 (comf "target:code/setf-funs")
+(comf "target:code/exports")
 
 ;;; Compile basic macros that we assume are already in the compilation
 ;;; environment.  We inhibit compile-time definition to prevent these functions
@@ -198,7 +201,6 @@
 (let ((c:*compile-time-define-macros* nil))
   (comf "target:code/defstruct")
   (comf "target:code/defmacro")
-  (comf "target:code/defrecord")
   (comf "target:compiler/globaldb")
   ;; We can't compile anything after macros, 'cause it breaks the running lisp.
   (comf "target:code/macros"))

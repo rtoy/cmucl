@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.51 1992/02/12 17:39:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.52 1992/02/14 23:47:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -360,11 +360,12 @@
   (labels ((blast (x)
 	     (maphash #'(lambda (k v)
 			  (declare (ignore k))
-			  (setf (leaf-refs v)
-				(delete-if #'here-p (leaf-refs v)))
-			  (when (basic-var-p v)
-			    (setf (basic-var-sets v)
-				  (delete-if #'here-p (basic-var-sets v)))))
+			  (when (leaf-p v)
+			    (setf (leaf-refs v)
+				  (delete-if #'here-p (leaf-refs v)))
+			    (when (basic-var-p v)
+			      (setf (basic-var-sets v)
+				    (delete-if #'here-p (basic-var-sets v))))))
 		      x))
 	   (here-p (x)
 	     (eq (block-component (node-block x)) component)))
@@ -458,6 +459,7 @@
 	     (cdr summary) kind summary))))))
   
   (unless (or *converting-for-interpreter*
+	      (not *compile-verbose*)
 	      (and (not abort-p) (zerop abort-count)
 		   (zerop *compiler-error-count*)
 		   (zerop *compiler-warning-count*)

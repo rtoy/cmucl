@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.7 1991/09/27 10:24:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.8 1992/02/14 23:45:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,13 +30,10 @@
 
 ;;;; Import WAIT3 from unix.
 
-(ext:def-c-pointer *wait (unsigned-byte 32))
-
-(ext:def-c-routine ("wait3" c-wait3)
-		   (int)
-    (status *wait :out)
-    (options int)
-    (rusage int))
+(alien:def-alien-routine ("wait3" c-wait3) c-call:int
+  (status c-call:int :out)
+  (options c-call:int)
+  (rusage c-call:int))
 
 (eval-when (load eval compile)
   (defconstant wait-wstopped #o177)
@@ -68,10 +65,10 @@
 	  (t
 	   (let ((signal (ldb (byte 7 0) status)))
 	     (values pid
-		     (if (or (eql signal mach:sigstop)
-			     (eql signal mach:sigtstp)
-			     (eql signal mach:sigttin)
-			     (eql signal mach:sigttou))
+		     (if (or (eql signal unix:sigstop)
+			     (eql signal unix:sigtstp)
+			     (eql signal unix:sigttin)
+			     (eql signal unix:sigttou))
 		       :stopped
 		       :signaled)
 		     signal
@@ -135,16 +132,16 @@
 ;;; Finds the current foreground process group id.
 ;;; 
 (defun find-current-foreground-process (proc)
-  (system:with-stack-alien (result (unsigned-byte 32) (long-words 1))
+  (alien:with-alien ((result c-call:int))
     (multiple-value-bind
 	(wonp error)
-	(mach:unix-ioctl (system:fd-stream-fd (ext:process-pty proc))
-			 mach:TIOCGPGRP
-			 (system:alien-sap (system:alien-value result)))
+	(unix:unix-ioctl (system:fd-stream-fd (ext:process-pty proc))
+			 unix:TIOCGPGRP
+			 (alien:alien-sap (alien:addr result)))
       (unless wonp
 	(error "TIOCPGRP ioctl failed: ~S"
-	       (mach:get-unix-error-msg error)))
-      (system:alien-access (system:alien-value result)))))
+	       (unix:get-unix-error-msg error)))
+      result)))
 
 ;;; PROCESS-KILL -- public
 ;;;
@@ -162,12 +159,12 @@
 		(find-current-foreground-process proc)))))
     (multiple-value-bind (okay errno)
 			 (if (eq whom :pty-process-group)
-			   (mach:unix-killpg pid signal)
-			   (mach:unix-kill pid signal))
+			   (unix:unix-killpg pid signal)
+			   (unix:unix-kill pid signal))
       (cond ((not okay)
 	     (values nil errno))
 	    ((and (eql pid (process-pid proc))
-		  (= (unix-signal-number signal) mach:sigcont))
+		  (= (unix-signal-number signal) unix:sigcont))
 	     (setf (process-%status proc) :running)
 	     (setf (process-exit-code proc) nil)
 	     (when (process-status-hook proc)
@@ -256,38 +253,31 @@
   (dolist (char '(#\p #\q))
     (dotimes (digit 16)
       (let* ((master-name (format nil "/dev/pty~C~X" char digit))
-	     (master-fd (mach:unix-open master-name
-					mach:o_rdwr
+	     (master-fd (unix:unix-open master-name
+					unix:o_rdwr
 					#o666)))
 	(when master-fd
 	  (let* ((slave-name (format nil "/dev/tty~C~X" char digit))
-		 (slave-fd (mach:unix-open slave-name
-					   mach:o_rdwr
+		 (slave-fd (unix:unix-open slave-name
+					   unix:o_rdwr
 					   #o666)))
 	    (when slave-fd
 	      ; Maybe put a vhangup here?
-	      (with-stack-alien (stuff mach:sgtty (record-size 'mach:sgtty))
-		(let ((sap (system:alien-sap (system:alien-value stuff))))
-		  (mach:unix-ioctl slave-fd mach:TIOCGETP sap)
-		  (setf (system:alien-access
-			 (mach::sgtty-flags
-			  (system:alien-value stuff)))
-			#o300) ; EVENP|ODDP
-		  (mach:unix-ioctl slave-fd mach:TIOCSETP sap)
-		  (mach:unix-ioctl master-fd mach:TIOCGETP sap)
-		  (setf (system:alien-access
-			 (mach::sgtty-flags
-			  (system:alien-value stuff)))
-			(logand (system:alien-access
-				 (mach::sgtty-flags
-				  (system:alien-value stuff)))
+	      (alien:with-alien ((stuff (alien:struct unix:sgttyb)))
+		(let ((sap (alien:alien-sap stuff)))
+		  (unix:unix-ioctl slave-fd unix:TIOCGETP sap)
+		  (setf (alien:slot stuff 'unix:sg-flags) #o300) ; EVENP|ODDP
+		  (unix:unix-ioctl slave-fd unix:TIOCSETP sap)
+		  (unix:unix-ioctl master-fd unix:TIOCGETP sap)
+		  (setf (alien:slot stuff 'unix:sg-flags)
+			(logand (alien:slot stuff 'unix:sg-flags)
 				(lognot 8))) ; ~ECHO
-		  (mach:unix-ioctl master-fd mach:TIOCSETP sap)))
+		  (unix:unix-ioctl master-fd unix:TIOCSETP sap)))
 	      (return-from find-a-pty
 			   (values master-fd
 				   slave-fd
 				   slave-name)))
-	  (mach:unix-close master-fd))))))
+	  (unix:unix-close master-fd))))))
   (error "Could not find a pty."))
 
 ;;; OPEN-PTY -- internal
@@ -300,10 +290,10 @@
       (push master *close-on-error*)
       (push slave *close-in-parent*)
       (when (streamp pty)
-	(multiple-value-bind (won new-fd) (mach:unix-dup master)
+	(multiple-value-bind (won new-fd) (unix:unix-dup master)
 	  (unless won
-	    (error "Could not MACH:UNIX-DUP ~D: ~A"
-		   master (mach:get-unix-error-msg new-fd)))
+	    (error "Could not UNIX:UNIX-DUP ~D: ~A"
+		   master (unix:get-unix-error-msg new-fd)))
 	  (push new-fd *close-on-error*)
 	  (copy-descriptor-to-stream new-fd pty cookie)))
       (values name
@@ -318,45 +308,45 @@
   (unwind-protect
       (handler-bind ((error #'(lambda (condition)
 				(declare (ignore condition))
-				(mach:unix-exit 2))))
+				(unix:unix-exit 2))))
 	;; Put us in our own pgrp.
-	(mach:unix-setpgrp 0 (mach:unix-getpid))
+	(unix:unix-setpgrp 0 (unix:unix-getpid))
 	;; If we want a pty, set it up.
 	(when pty-name
-	  (let ((old-tty (mach:unix-open "/dev/tty" mach:o_rdwr 0)))
+	  (let ((old-tty (unix:unix-open "/dev/tty" unix:o_rdwr 0)))
 	    (when old-tty
-	      (mach:unix-ioctl old-tty mach:TIOCNOTTY 0)
-	      (mach:unix-close old-tty)))
-	  (let ((new-tty (mach:unix-open pty-name mach:o_rdwr 0)))
+	      (unix:unix-ioctl old-tty unix:TIOCNOTTY 0)
+	      (unix:unix-close old-tty)))
+	  (let ((new-tty (unix:unix-open pty-name unix:o_rdwr 0)))
 	    (when new-tty
-	      (mach:unix-dup2 new-tty 0)
-	      (mach:unix-dup2 new-tty 1)
-	      (mach:unix-dup2 new-tty 2))))
+	      (unix:unix-dup2 new-tty 0)
+	      (unix:unix-dup2 new-tty 1)
+	      (unix:unix-dup2 new-tty 2))))
 	;; Setup the three standard descriptors.
 	(when stdin
-	  (mach:unix-dup2 stdin 0))
+	  (unix:unix-dup2 stdin 0))
 	(when stdout
-	  (mach:unix-dup2 stdout 1))
+	  (unix:unix-dup2 stdout 1))
 	(when stderr
-	  (mach:unix-dup2 stderr 2))
+	  (unix:unix-dup2 stderr 2))
 	;; Arange for all the unused FD's to be closed.
-	(do ((fd (1- (mach:unix-getdtablesize))
+	(do ((fd (1- (unix:unix-getdtablesize))
 		 (1- fd)))
 	    ((= fd 3))
-	  (mach:unix-fcntl fd mach:f-setfd 1))
+	  (unix:unix-fcntl fd unix:f-setfd 1))
 	;; Do the before-execve
 	(when before-execve
 	  (funcall before-execve))
 	;; Exec the program
 	(multiple-value-bind
 	    (okay errno)
-	    (mach:unix-execve pfile args env)
+	    (unix:unix-execve pfile args env)
 	  (declare (ignore okay))
 	  ;; If the magic number if bogus, try just a shell script.
-	  (when (eql errno mach:ENOEXEC)
-	    (mach:unix-execve "/bin/sh" (cons pfile args) env))))
+	  (when (eql errno unix:ENOEXEC)
+	    (unix:unix-execve "/bin/sh" (cons pfile args) env))))
     ;; If exec returns, we lose.
-    (mach:unix-exit 1)))
+    (unix:unix-exit 1)))
 
 ;;; RUN-PROGRAM -- public
 ;;;
@@ -456,7 +446,7 @@
         process just before turning it into the specified program."
 
   ;; Make sure the interrupt handler is installed.
-  (system:enable-interrupt mach:sigchld #'sigchld-handler)
+  (system:enable-interrupt unix:sigchld #'sigchld-handler)
   ;; Make sure all the args are okay.
   (unless (every #'simple-string-p args)
     (error "All args to program must be simple strings -- ~S." args))
@@ -489,7 +479,7 @@
 		  (system:without-interrupts
 		    (multiple-value-bind
 			(child-pid errno)
-			(mach:unix-fork)
+			(unix:unix-fork)
 		      (cond ((zerop child-pid)
 			     ;; We are the child. Note: setup-child NEVER returns
 			     (setup-child pfile args env stdin stdout stderr
@@ -498,7 +488,7 @@
 			     ;; This should only happen if the bozo has too
 			     ;; many running procs.
 			     (error "Could not fork child process: ~A"
-				    (mach:get-unix-error-msg errno)))
+				    (unix:get-unix-error-msg errno)))
 			    (t
 			     ;; We are the parent.
 			     (setf proc (make-process :pid child-pid
@@ -511,10 +501,10 @@
 						      :cookie cookie))
 			     (push proc *active-processes*))))))))))
       (dolist (fd *close-in-parent*)
-	(mach:unix-close fd))
+	(unix:unix-close fd))
       (unless proc
 	(dolist (fd *close-on-error*)
-	  (mach:unix-close fd))
+	  (unix:unix-close fd))
 	(dolist (handler *handlers-installed*)
 	  (system:remove-fd-handler handler))))
     (when (and wait proc)
@@ -539,32 +529,32 @@
 		    (return))
 		  (multiple-value-bind
 		      (result readable/errno)
-		      (mach:unix-select (1+ descriptor) (ash 1 descriptor)
+		      (unix:unix-select (1+ descriptor) (ash 1 descriptor)
 					0 0 0)
 		    (cond ((null result)
 			   (error "Could not select on sub-process: ~A"
-				  (mach:get-unix-error-msg readable/errno)))
+				  (unix:get-unix-error-msg readable/errno)))
 			  ((zerop result)
 			   (return))))
 		  (multiple-value-bind
 		      (count errno)
-		      (mach:unix-read descriptor
+		      (unix:unix-read descriptor
 				      string
 				      (length string))
 		    (cond ((or (and (null count)
-				    (eql errno mach:eio))
+				    (eql errno unix:eio))
 			       (eql count 0))
 			   (system:remove-fd-handler handler)
 			   (setf handler nil)
 			   (decf (car cookie))
-			   (mach:unix-close descriptor)
+			   (unix:unix-close descriptor)
 			   (return))
 			  ((null count)
 			   (system:remove-fd-handler handler)
 			   (setf handler nil)
 			   (decf (car cookie))
 			   (error "Could not read input from sub-process: ~A"
-				  (mach:get-unix-error-msg errno)))
+				  (unix:get-unix-error-msg errno)))
 			  (t
 			   (write-string string stream
 					 :end count))))))))))
@@ -584,24 +574,24 @@
 	 ;; Use /dev/null.
 	 (multiple-value-bind
 	     (fd errno)
-	     (mach:unix-open "/dev/null"
+	     (unix:unix-open "/dev/null"
 			     (case direction
-			       (:input mach:o_rdonly)
-			       (:output mach:o_wronly)
-			       (t mach:o_rdwr))
+			       (:input unix:o_rdonly)
+			       (:output unix:o_wronly)
+			       (t unix:o_rdwr))
 			     #o666)
 	   (unless fd
 	     (error "Could not open \"/dev/null\": ~A"
-		    (mach:get-unix-error-msg errno)))
+		    (unix:get-unix-error-msg errno)))
 	   (push fd *close-in-parent*)
 	   (values fd nil)))
 	((eq object :stream)
 	 (multiple-value-bind
 	     (read-fd write-fd)
-	     (mach:unix-pipe)
+	     (unix:unix-pipe)
 	   (unless read-fd
 	     (error "Could not create pipe: ~A"
-		    (mach:get-unix-error-msg write-fd)))
+		    (unix:get-unix-error-msg write-fd)))
 	   (case direction
 	     (:input
 	      (push read-fd *close-in-parent*)
@@ -614,20 +604,20 @@
 	      (let ((stream (system:make-fd-stream read-fd :input t)))
 		(values write-fd stream)))
 	     (t
-	      (mach:unix-close read-fd)
-	      (mach:unix-close write-fd)
+	      (unix:unix-close read-fd)
+	      (unix:unix-close write-fd)
 	      (error "Direction must be either :INPUT or :OUTPUT, not ~S"
 		     direction)))))
 	((or (pathnamep object) (stringp object))
 	 (with-open-stream (file (apply #'open object keys))
 	   (multiple-value-bind (won fd)
-				(mach:unix-dup (system:fd-stream-fd file))
+				(unix:unix-dup (system:fd-stream-fd file))
 	     (cond (won
 		    (push fd *close-in-parent*)
 		    (values fd nil))
 		   (t
 		    (error "Could not duplicate file descriptor: ~A"
-			   (mach:get-unix-error-msg fd)))))))
+			   (unix:get-unix-error-msg fd)))))))
 	((system:fd-stream-p object)
 	 (values (system:fd-stream-fd object) nil))
 	((streamp object)
@@ -637,12 +627,12 @@
 		      256
 		      (error "Could not open a temporary file in /tmp"))
 	      (let* ((name (format nil "/tmp/.run-program-~D" count))
-		     (fd (mach:unix-open name
-					 (logior mach:o_rdwr
-						 mach:o_creat
-						 mach:o_excl)
+		     (fd (unix:unix-open name
+					 (logior unix:o_rdwr
+						 unix:o_creat
+						 unix:o_excl)
 					 #o666)))
-		(mach:unix-unlink name)
+		(unix:unix-unlink name)
 		(when fd
 		  (let ((newline (string #\Newline)))
 		    (loop
@@ -651,19 +641,19 @@
 			  (read-line object nil nil)
 			(unless line
 			  (return))
-			(mach:unix-write fd line 0 (length line))
+			(unix:unix-write fd line 0 (length line))
 			(if no-cr
 			  (return)
-			  (mach:unix-write fd newline 0 1)))))
-		  (mach:unix-lseek fd 0 mach:l_set)
+			  (unix:unix-write fd newline 0 1)))))
+		  (unix:unix-lseek fd 0 unix:l_set)
 		  (push fd *close-in-parent*)
 		  (return (values fd nil))))))
 	   (:output
 	    (multiple-value-bind (read-fd write-fd)
-				 (mach:unix-pipe)
+				 (unix:unix-pipe)
 	      (unless read-fd
 		(error "Cound not create pipe: ~A"
-		       (mach:get-unix-error-msg write-fd)))
+		       (unix:get-unix-error-msg write-fd)))
 	      (copy-descriptor-to-stream read-fd object cookie)
 	      (push read-fd *close-on-error*)
 	      (push write-fd *close-in-parent*)

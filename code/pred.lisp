@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.22 1992/02/07 12:36:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.23 1992/02/14 23:45:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -320,6 +320,8 @@
 			 object)
 		t
 		nil))))))
+    (alien-type-type
+     (alien-internals:alien-typep object (alien-type-type-alien-type type)))
     (function-type
      (error "Function types are not a legal argument to TYPEP:~%  ~S"
 	    (type-specifier type)))))

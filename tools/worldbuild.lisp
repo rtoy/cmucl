@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.9 1992/02/13 09:10:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.10 1992/02/14 23:46:35 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,7 +68,6 @@
     "target:code/irrat"
     "target:code/bignum"
     "target:code/defmacro"
-    "target:code/defrecord"
     "target:code/list"
     "target:code/hash"
     "target:code/macros"
@@ -82,8 +81,9 @@
     "target:code/extensions"
     "target:code/alieneval"
     "target:code/c-call"
-    "target:code/syscall"
-    "target:code/vm"
+    "target:code/sap"
+    "target:code/unix"
+    #+mach "target:code/mach"
     #+mach "target:code/mach-os"
     #+sunos "target:code/sunos-os"
     "target:code/serve-event"
@@ -97,16 +97,12 @@
     "target:code/backq"
     "target:code/sharpm"
     "target:code/load"
-    "target:code/machdef"
     ,@(when (string= (c:backend-name c:*backend*) "PMAX")
-	'("target:code/pmax-vm"
-	  "target:code/pmax-machdef"))
+	'("target:code/pmax-vm"))
     ,@(when (string= (c:backend-name c:*backend*) "SPARC")
-	'("target:code/sparc-vm"
-	  "target:code/sparc-machdef"))
+	'("target:code/sparc-vm"))
     ,@(when (string= (c:backend-name c:*backend*) "RT")
-	'("target:code/rt-vm"
-	  "target:code/rt-machdef"))
+	'("target:code/rt-vm"))
 
     "target:code/signal"
     "target:code/interr"

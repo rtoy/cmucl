@@ -7,790 +7,1711 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.70 1991/12/06 17:53:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.71 1992/02/14 23:44:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.70 1991/12/06 17:53:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.71 1992/02/14 23:44:37 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
-;;; Written by William Lott.
-;;; 
-
-
-;;; Create the packages
-
-(in-package "LISP")
-(in-package "KERNEL")
-(in-package "SYSTEM" :nicknames '("SYS"))
-(in-package "EXTENSIONS" :nicknames '("EXT"))
-(in-package "USER")
-(in-package "VM")
-(in-package "C")
-(in-package "ASSEMBLER" :nicknames '("ASSEM"))
-(in-package "BIGNUM")
-(in-package "DEBUG")
-(in-package "DEBUG-INTERNALS" :nicknames '("DI"))
-(in-package "MACH")
-(in-package "USER")
-
-
-(in-package "LISP")
-
-(use-package "KERNEL")
-(use-package "EXT")
-(use-package "SYSTEM")
-(use-package "BIGNUM")
-
-(export '(&allow-other-keys &aux &body &environment &key &optional &rest
-	  &whole * ** *** *applyhook* *break-on-signals*
-	  *break-on-warnings* *debug-io* *debugger-hook*
-	  *default-pathname-defaults* *error-output* *evalhook* *features*
-	  *gensym-counter* *load-verbose* *macroexpand-hook* *modules*
-	  *package* *print-array* *print-base* *print-case* *print-circle*
-	  *print-escape* *print-gensym* *print-length* *print-level*
-	  *print-pretty* *print-radix* *query-io* *random-state*
-	  *read-base* *read-default-float-format* *read-suppress*
-
-	  *readtable* *standard-input* *standard-output* *terminal-io*
-	  *trace-output* + ++ +++ - / // /// /= 1+ 1- < <= = > >= abort abs
-	  acons acos acosh adjoin adjust-array adjustable-array-p
-	  alpha-char-p alphanumericp and append apply applyhook apropos
-	  apropos-list aref arithmetic-error arithmetic-error-operands
-	  arithmetic-error-operation array array-dimension
-	  array-dimension-limit array-dimensions array-element-type
-	  array-has-fill-pointer-p array-in-bounds-p array-rank
-	  array-rank-limit array-row-major-index array-total-size
-	  array-total-size-limit arrayp ash asin asinh assert assoc
-	  assoc-if assoc-if-not atan atanh atom base-char base-string
-	  bignum bit bit-and bit-andc1 bit-andc2 bit-eqv bit-ior bit-nand
-	  bit-nor bit-not bit-orc1 bit-orc2 bit-vector bit-vector-p bit-xor
-	  block boole boole-1 boole-2 boole-and boole-andc1 boole-andc2
-	  boole-c1 boole-c2 boole-clr boole-eqv boole-ior boole-nand
-	  boole-nor boole-orc1 boole-orc2 boole-set boole-xor both-case-p
-	  boundp break butlast byte byte-position byte-size caaaar caaadr
-	  caaar caadar caaddr caadr caar cadaar cadadr cadar caddar cadddr
-	  caddr cadr call-arguments-limit car case catch ccase cdaaar
-	  cdaadr cdaar cdadar cdaddr cdadr cdar cddaar cddadr cddar cdddar
-	  cddddr cdddr cddr cdr ceiling cell-error cerror char char-bit
-	  char-bits char-bits-limit char-code char-code-limit
-	  char-control-bit char-downcase char-equal char-font
-	  char-font-limit char-greaterp char-hyper-bit char-int char-lessp
-	  char-meta-bit char-name char-not-equal char-not-greaterp
-	  char-not-lessp char-super-bit char-upcase char/= char< char<=
-	  char= char> char>= character characterp check-type cis
-	  clear-input clear-output close clrhash code-char coerce common
-	  commonp compilation-speed compile compile-file compiled-function
-	  compiled-function-p compiler-let complex complexp
-	  compute-restarts concatenate cond condition conjugate cons consp
-	  constantp continue control-error copy-alist copy-list
-	  copy-readtable copy-seq copy-symbol copy-tree cos cosh count
-	  count-if count-if-not ctypecase debug-info decf declaration
-	  declare decode-float decode-universal-time defconstant
-	  define-condition define-modify-macro define-setf-method defmacro
-	  defparameter defsetf defstruct deftype defun defvar delete
-	  delete-duplicates delete-file delete-if delete-if-not denominator
-	  deposit-field describe digit-char digit-char-p directory
-	  directory-namestring disassemble division-by-zero do do*
-	  do-all-symbols do-external-symbols do-symbols documentation
-	  dolist dotimes double-float double-float-epsilon
-	  double-float-negative-epsilon dpb dribble ecase ed eighth elt
-	  encode-universal-time end-of-file endp enough-namestring eq eql
-	  equal equalp error etypecase eval eval-when evalhook evenp every
-	  exp export expt extended-char fboundp fceiling fdefinition
-	  ffloor fifth file-author file-error file-error-pathname
-	  file-length file-namestring file-position file-write-date fill
-	  fill-pointer find find-all-symbols find-if find-if-not
-	  find-package find-restart find-symbol finish-output first fixnum
-	  flet float float-digits float-precision float-radix float-sign
-	  floating-point-overflow floating-point-underflow floatp floor
-	  fmakunbound force-output format fourth fresh-line fround
-	  ftruncate ftype funcall function function-lambda-expression
-	  functionp gcd gensym gentemp get get-decoded-time
-	  get-dispatch-macro-character get-internal-real-time
-	  get-internal-run-time get-macro-character
-	  get-output-stream-string get-properties get-setf-method
-	  get-setf-method-multiple-value get-universal-time getf gethash go
-	  graphic-char-p handler-bind handler-case hash-table
-	  hash-table-count hash-table-p host-namestring identity if ignore
-	  ignore-errors imagpart import in-package incf inline
-	  input-stream-p inspect int-char integer integer-decode-float
-	  integer-length integerp intern internal-time-units-per-second
-	  intersection invoke-debugger invoke-restart
-	  invoke-restart-interactively isqrt keyword keywordp labels lambda
-	  lambda-list-keywords lambda-parameters-limit last lcm ldb
-	  ldb-test ldiff least-negative-double-float
-	  least-negative-long-float least-negative-short-float
-	  least-negative-single-float least-positive-double-float
-	  least-positive-long-float least-positive-short-float
-	  least-positive-single-float length let let*
-	  lisp-implementation-type lisp-implementation-version list list*
-	  list-all-packages list-length listen listp load locally log
-	  logand logandc1 logandc2 logbitp logcount logeqv logior lognand
-	  lognor lognot logorc1 logorc2 logtest logxor long-float
-	  long-float-epsilon long-float-negative-epsilon long-site-name
-	  loop lower-case-p machine-instance machine-type machine-version
-	  macro-function macroexpand macroexpand-1 macrolet make-array
-	  make-broadcast-stream make-char make-concatenated-stream
-	  make-condition make-dispatch-macro-character make-echo-stream
-	  make-hash-table make-list make-package make-pathname
-	  make-random-state make-sequence make-string
-	  make-string-input-stream make-string-output-stream make-symbol
-	  make-synonym-stream make-two-way-stream makunbound map mapc
-	  mapcan mapcar mapcon maphash mapl maplist mask-field max member
-	  member-if member-if-not merge merge-pathnames min minusp mismatch
-	  mod most-negative-double-float most-negative-fixnum
-	  most-negative-long-float most-negative-short-float
-	  most-negative-single-float most-positive-double-float
-	  most-positive-fixnum most-positive-long-float
-	  most-positive-short-float most-positive-single-float
-	  muffle-warning multiple-value-bind multiple-value-call
-	  multiple-value-list multiple-value-prog1 multiple-value-setq
-	  multiple-values-limit name-char namestring nbutlast nconc nil
-	  nintersection ninth not notany notevery notinline nreconc
-	  nreverse nset-difference nset-exclusive-or nstring-capitalize
-	  nstring-downcase nstring-upcase nsublis nsubst nsubst-if
-	  nsubst-if-not nsubstitute nsubstitute-if nsubstitute-if-not nth
-	  nthcdr null number numberp numerator nunion oddp open optimize or
-	  otherwise output-stream-p package package-error
-	  package-error-package package-name package-nicknames
-	  package-shadowing-symbols package-use-list package-used-by-list
-	  packagep pairlis parse-integer parse-namestring pathname
-	  pathname-device pathname-directory pathname-host pathname-name
-	  pathname-type pathname-version pathnamep peek-char phase pi plusp
-	  pop position position-if position-if-not pprint prin1
-	  prin1-to-string princ princ-to-string print probe-file proclaim
-	  prog prog* prog1 prog2 progn program-error progv provide psetf
-	  psetq push pushnew quote random random-state random-state-p
-	  rassoc rassoc-if rassoc-if-not ratio rational rationalize
-	  rationalp read read-byte read-char read-char-no-hang
-	  read-delimited-list read-from-string read-line
-	  read-preserving-whitespace readtable readtablep real realpart
-	  reduce rem remf remhash remove remove-duplicates remove-if
-	  remove-if-not remprop rename-file rename-package replace require
-	  rest restart restart-bind restart-case restart-name return
-	  return-from revappend reverse room rotatef round row-major-aref
-	  rplaca rplacd safety satisfies sbit scale-float schar search
-	  second sequence serious-condition set set-char-bit set-difference
-	  set-dispatch-macro-character set-exclusive-or set-macro-character
-	  set-syntax-from-char setf setq seventh shadow shadowing-import
-	  shiftf short-float short-float-epsilon
-	  short-float-negative-epsilon short-site-name signal signed-byte
-	  signum simple-array simple-base-string simple-bit-vector
-	  simple-bit-vector-p simple-condition
-	  simple-condition-format-arguments simple-condition-format-string
-	  simple-error simple-string simple-string-p simple-type-error
-	  simple-vector simple-vector-p simple-warning sin single-float
-	  single-float-epsilon single-float-negative-epsilon sinh sixth
-	  sleep software-type software-version some sort space special
-	  special-form-p speed sqrt stable-sort stack-overflow
-	  standard-char standard-char-p step storage-condition
-	  storage-exhausted store-value stream stream-element-type
-	  stream-error stream-error-stream streamp string string-capitalize
-	  string-char string-char-p string-downcase string-equal
-	  string-greaterp string-left-trim string-lessp string-not-equal
-	  string-not-greaterp string-not-lessp string-right-trim
-	  string-trim string-upcase string/= string< string<= string=
-	  string> string>= stringp structure sublis subseq subsetp subst
-	  subst-if subst-if-not substitute substitute-if substitute-if-not
-	  subtypep svref sxhash symbol symbol-function symbol-name
-	  symbol-package symbol-plist symbol-value symbolp t tagbody tailp
-	  tan tanh tenth terpri the third throw time trace tree-equal
-	  truename truncate type type-error type-error-datum
-	  type-error-expected-type type-of typecase typep unbound-variable
-	  undefined-function unexport unintern union unless unread-char
-	  unsigned-byte untrace unuse-package unwind-protect upper-case-p
-	  use-package use-value user-homedir-pathname values values-list
-	  variable vector vector-pop vector-push vector-push-extend vectorp
-	  warn warning when with-compilation-unit with-input-from-string
-	  with-open-file with-open-stream with-output-to-string
-	  with-simple-restart write write-byte write-char write-line
-	  write-string write-to-string y-or-n-p yes-or-no-p zerop))
-
-
-(in-package "KERNEL")
-
-(use-package "EXT")
-(use-package "SYSTEM")
-(use-package "BIGNUM")
-
-(export '(%array-fill-pointer %array-fill-pointer-p
-	  %array-available-elements %array-data-vector %array-displacement
-	  %array-displaced-p %array-dimension %check-bound
-	  %closure-function %closure-index-ref %dpb
-	  %function-header-arglist %function-header-name
-	  %function-header-type %ldb %negate %sxhash-simple-string
-	  %sxhash-simple-substring *empty-type* *eval-stack-top*
-	  *null-type* *universal-type* *unparse-function-type-simplify*
-	  *wild-type* 32bit-logical-not 32bit-logical-nor 32bit-logical-and
-	  32bit-logical-or 32bit-logical-xor 32bit-logical-eqv
-	  32bit-logical-nand 32bit-logical-andc1 32bit-logical-andc2
-	  32bit-logical-orc1 32bit-logical-orc2 always-subtypep args-type
-	  args-type-allowp args-type-keyp args-type-keywords
-	  args-type-optional args-type-p args-type-required args-type-rest
-	  array-rank array-total-size array-type array-type-complexp
-	  array-type-dimensions array-type-element-type array-type-p
-	  array-type-specialized-element-type ash-index bit-bash-clear
-	  bit-bash-set bit-bash-not bit-bash-copy bit-bash-and bit-bash-ior
-	  bit-bash-xor bit-bash-eqv bit-bash-lognand bit-bash-lognor
-	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
-	  bit-index boole-code boolean byte-specifier callable char-int
-	  consed-sequence constant-type constant-type-p constant-type-type
-	  containing-integer-type copy-from-system-area copy-numeric-type
-	  copy-to-system-area csubtypep ctype ctype-of ctype-p ctypep
-	  data-vector-ref data-vector-set error-number-or-lose filename
-	  float-digits float-exponent float-format-max float-radix form
-	  function-type function-type-allowp function-type-keyp
-	  function-type-keywords function-type-optional function-type-p
-	  function-type-required function-type-rest function-type-returns
-	  function-type-wild-args get-header-data get-lowtag get-type
-	  hairy-type hairy-type-check-template hairy-type-specifier index
-	  internal-time irrational key-info key-info-name key-info-p
-	  key-info-type lexical-environment make-args-type
-	  make-function-type make-key-info make-member-type make-named-type
-	  make-numeric-type make-structure-type make-union-type
-	  make-values-type member-type member-type-members member-type-p
-	  merge-bits named-type named-type-name named-type-p
-	  native-byte-order negate never-subtypep numeric-contagion
-	  numeric-type numeric-type-class numeric-type-complexp
-	  numeric-type-format numeric-type-high numeric-type-low
-	  numeric-type-p parse-lambda-list parse-unknown-type
-	  parse-unknown-type-specifier pathname-device pathname-directory
-	  pathname-host pathname-name pathname-type pathname-version
-	  pathnamelike sequence-end simple-unboxed-array single-value-type
-	  specifier-type streamlike stringable stringlike structure-type
-	  structure-type-name structure-type-p system-area-clear
-	  system-area-copy truth type-expand type-init two-arg-* two-arg-+
-	  two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<= two-arg-=
-	  two-arg-> two-arg->= two-arg-and two-arg-gcd two-arg-ior
-	  two-arg-lcm two-arg-xor type-difference type-intersect
-	  type-intersection type-specifier type-specifier-symbols
-	  type-union type/= type= types-intersect unboxed-array union-type
-	  union-type-p union-type-types unknown-type unknown-type-p
-	  unknown-type-specifier values-specifier-type
-	  values-specifier-type-cache-clear values-subtypep values-type
-	  values-type-allowp values-type-intersect values-type-intersection
-	  values-type-keyp values-type-keywords values-type-optional
-	  values-type-p values-type-required values-type-rest
-	  values-type-union values-types values-types-intersect void
-	  %unary-truncate %make-ratio %make-complex %single-float
-	  %double-float decode-single-float decode-double-float
-	  integer-decode-single-float integer-decode-double-float
-	  scale-single-float scale-double-float single-float-exponent
-	  double-float-exponent float-format-digits get-closure-length
-	  set-header-data signal-init %mask-field %deposit-field
-	  make-structure structure-length structure-ref structure-set
-	  structure-index-ref structure-index-set structure-index
-	  dynamic-space-free-pointer binding-stack-pointer-sap
-	  control-stack-pointer-sap simple-array-unsigned-byte-2-p
-	  simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
-	  simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
-	  simple-array-single-float-p simple-array-double-float-p
-	  array-header-p signed-byte-32-p unsigned-byte-32-p
-
-	  %set-sap-ref-sap %set-sap-ref-32 %set-sap-ref-16 %set-sap-ref-8
-	  %set-sap-ref-single %set-sap-ref-double
-	  make-single-float make-double-float single-float-bits
-	  double-float-high-bits double-float-low-bits
-	  single-float-p double-float-p base-char-p simple-array-p
-	  %raw-bits %set-raw-bits %sp-set-definition
-	  make-array-header allocate-vector %unary-round
-
-	  ))
-
-
-(in-package "EXTENSIONS")
-
-(export '(*after-gc-hooks* *after-save-initializations* *backup-extension*
-	  *before-gc-hooks* *before-save-initializations*
- 	  *bytes-consed-between-gcs* *clx-fds-to-displays*
- 	  *command-line-strings* *command-line-switches*
- 	  *command-line-utility-name* *command-line-words*
- 	  *command-switch-demons* *compatibility-warnings*
- 	  *describe-implementation-details* *describe-indentation*
- 	  *describe-level* *describe-print-length* *describe-print-level*
- 	  *describe-verbose* *display-event-handlers* *editor-lisp-p*
- 	  *environment-list* *gc-inhibit-hook* *gc-notify-after*
- 	  *gc-notify-before* *gc-verbose* *hemlock-version*
- 	  *ignore-floating-point-underflow* *info-environment*
- 	  *intexp-maximum-exponenent* *keyword-package* *lisp-package*
- 	  *load-if-source-newer* *max-step-indentation*
- 	  *max-trace-indentation* *module-file-translations* *prompt*
- 	  *require-verbose* *safe-defstruct-accessors* *step-print-length*
- 	  *step-print-level* *terminal-line-mode* *trace-print-length*
- 	  *trace-print-level* *traced-function-list* abort
- 	  accept-tcp-connection add-oob-handler ambiguous-files
- 	  argument-list assq basic-definition bignump bitp c-sizeof
- 	  call-user-miscop careful-symbol-function carefully-add-font-paths
- 	  char clean-up-compiler clear-info close-socket cmd-switch-arg
- 	  cmd-switch-name cmd-switch-value cmd-switch-words collect
- 	  command-line-switch command-line-switch-p
- 	  compact-info-environment compile-from-stream compiledp
- 	  complete-file concat-pnames connect-to-inet-socket constant
- 	  constant-argument create-inet-listener create-inet-socket debug
- 	  def-c-array def-c-pointer def-c-procedure def-c-record
- 	  def-c-routine def-c-type def-c-variable default-clx-event-handler
- 	  default-directory define-info-class define-info-type
- 	  define-keyboard-modifier define-keysym define-mouse-code
- 	  defmodule defswitch deletef delq disable-clx-event-handling
- 	  do-anonymous do-info double-floatp dovector e
- 	  enable-clx-event-handling encapsulate encapsulated-p
- 	  file-writable fixnump flush-display-events format-decoded-time
- 	  format-universal-time gc gc-off gc-on get-bytes-consed
- 	  get-code-pointer get-command-line-switch get-data-pointer grindef
- 	  host-entry host-entry-addr host-entry-addr-list
- 	  host-entry-aliases host-entry-name htonl htons ignorable
- 	  ignore-errors inaddr-any indenting-further info int
- 	  interactive-eval ipproto-tcp ipproto-udp iterate letf letf*
- 	  listen-skip-whitespace load-foreign long long-floatp
- 	  lookup-host-entry make-info-environment maybe-inline memq ntohl
- 	  ntohs object-set-event-handler once-only open-clx-display
- 	  parse-time print-directory print-herald process-alive-p
- 	  process-close process-core-dumped process-error process-exit-code
- 	  process-input process-kill process-output process-p process-pid
- 	  process-plist process-pty process-status process-status-hook
- 	  process-wait putf quit ratiop read-char-no-edit realp
- 	  remove-all-oob-handlers remove-oob-handler reset-foreign-pointers
- 	  run-program save save-all-buffers save-lisp search-list
- 	  send-character-out-of-band serve-button-press
- 	  serve-button-release serve-circulate-notify
- 	  serve-circulate-request serve-client-message
- 	  serve-colormap-notify serve-configure-notify
- 	  serve-configure-request serve-create-notify serve-destroy-notify
- 	  serve-enter-notify serve-exposure serve-focus-in serve-focus-out
- 	  serve-graphics-exposure serve-gravity-notify serve-key-press
- 	  serve-key-release serve-leave-notify serve-map-notify
- 	  serve-map-request serve-motion-notify serve-no-exposure
- 	  serve-property-notify serve-reparent-notify serve-resize-request
- 	  serve-selection-clear serve-selection-notify
- 	  serve-selection-request serve-unmap-notify
- 	  serve-visibility-notify set-symbol-function-carefully short
-	  short-floatp signal single-floatp structurep symbolicate
-	  translate-character translate-mouse-character truly-the
-	  uncompile undefined-value unencapsulate unsigned-char
-	  unsigned-int unsigned-long unsigned-short void
-	  with-clx-event-handling weak-pointer weak-pointer-p
- 	  make-weak-pointer weak-pointer-value))
-
-
-(in-package "SYSTEM")
-
-(export '(%alien-indirect %assembler-code-type %bind-aligned-sap
-	  %set-alien-access %standard-char-p %static-alien-area
-	  %string-char-p *alien-eval-when* *beep-function* *gr-messages*
-	  *in-the-compiler* *maximum-interpreter-error-checking*
-	  *nameserverport* *pornography-of-death*
-	  *port-ownership-rights-handlers* *port-receive-rights-handlers*
-	  *stderr* *stdin* *stdout* *task-data* *task-notify* *task-self*
-	  *tty* *typescriptport* *usertypescript* *userwindow*
-	  *xwindow-table* add-fd-handler add-port-death-handler
-	  add-port-object add-xwindow-object alien alien-access
-	  alien-address alien-assign alien-bind alien-index alien-indirect
-	  alien-sap alien-size alien-type alien-value
-	  allocate-system-memory beep bits boolean bytes c-procedure
-	  check<= check= compiler-version copy-alien ct-a-val
-	  ct-a-val-alien ct-a-val-offset ct-a-val-p ct-a-val-sap
-	  ct-a-val-size ct-a-val-type deallocate-system-memory defalien
-	  default-interrupt defenumeration define-alien-stack defoperator
-	  defrecord deport-boolean deport-integer dispose-alien
-	  double-float-radix enable-interrupt enumeration fd-stream
-	  fd-stream-fd fd-stream-p fexpr find-if-in-closure gr-bind gr-call
-	  gr-call* gr-error ignore-interrupt int-sap invalidate-descriptor
-	  long-float-radix long-words macro make-alien make-ct-a-val
-	  make-fd-stream make-indenting-stream make-object-set map-port
-	  map-xwindow naturalize-boolean naturalize-integer
-	  null-terminated-string object-set-operation output-raw-bytes
-	  parse-body perq-string pointer pointer< pointer> port primep
-	  read-n-bytes record-size remove-fd-handler
-	  remove-port-death-handler remove-port-object
-	  remove-xwindow-object resolve-loaded-assembler-references sap+
-	  sap- sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
-	  sap-ref-single sap-ref-double sap-ref-descriptor serve-all-events
-	  serve-event server server-message short-float-radix
-	  signed-sap-ref-16 signed-sap-ref-32 signed-sap-ref-8
-	  single-float-radix symbol-macro-let system-area-pointer
-	  system-area-pointer-p unproclaim unstructured vector-sap
-	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
-	  with-interrupts with-reply-port with-stack-alien without-gcing
-	  without-hemlock without-interrupts words
-	  reallocate-system-memory))
-
-
-(in-package "USER")
-
-(use-package "EXT")
-
-
-
-(in-package "VM")
-
-(use-package "KERNEL")
-(use-package "EXT")
-(use-package "C")
-(use-package "BIGNUM")
-
-(export '(*assembly-unit-length* *primitive-objects* array-data-slot
-	  array-dimensions-offset array-displaced-p-slot
-	  array-displacement-slot array-elements-slot
-	  array-fill-pointer-slot atomic-flag base-char-type
-	  binding-size binding-symbol-slot
-	  binding-value-slot byte-bits catch-block-current-code-slot
-	  catch-block-current-cont-slot catch-block-current-uwp-slot
-	  catch-block-entry-pc-slot catch-block-previous-catch-slot
-	  catch-block-size catch-block-size-slot catch-block-tag-slot
-	  cerror-trap closure-function-header-type closure-function-slot
-	  closure-header-type closure-info-offset code-code-size-slot
-	  code-constants-offset code-debug-info-slot code-entry-points-slot
-	  code-header-type complex-array-type complex-bit-vector-type
-	  complex-imag-slot complex-real-slot complex-size
-	  complex-string-type complex-type complex-vector-type
-	  cons-car-slot cons-cdr-slot cons-size
-	  define-for-each-primitive-object double-float-bias
-	  double-flaot-exponent-byte double-float-hidden-bit
-	  double-float-normal-exponent-min double-float-normal-exponent-max
-	  double-float-size double-float-significand-byte double-float-type
-	  double-float-value-slot error-trap even-fixnum-type
-	  exported-static-symbols fixnum float-sign-shift
-	  function-header-arglist-slot function-header-code-offset
-	  function-header-name-slot function-header-next-slot
-	  function-header-self-slot function-header-type
-	  function-header-type-slot function-pointer-type genesis halt-trap
-	  interrupted-flag list-pointer-type lowtag-bits lowtag-limit
-	  lowtag-mask most-positive-cost odd-fixnum-type
-	  offset-static-symbol other-immediate-0-type
-	  other-immediate-1-type other-pointer-type pad-data-block
-	  pending-interrupt-trap primitive-object-header
-	  primitive-object-lowtag primitive-object-name
-	  primitive-object-options primitive-object-size
-	  primitive-object-slots primitive-object-variable-length
-	  ratio-denominator-slot ratio-numerator-slot ratio-size ratio-type
-	  return-pc-header-type return-pc-return-point-offset
-	  sap-pointer-slot sap-size sap-type
-	  simple-array-double-float-type simple-array-single-float-type
-	  simple-array-type simple-array-unsigned-byte-16-type
-	  simple-array-unsigned-byte-2-type
-	  simple-array-unsigned-byte-32-type
-	  simple-array-unsigned-byte-4-type
-	  simple-array-unsigned-byte-8-type simple-bit-vector-type
-	  simple-string-type simple-vector-type single-float-bias
-	  single-float-exponent-byte single-float-hidden-bit
-	  single-float-normal-exponent-min single-float-normal-exponent-max
-	  single-float-size single-float-significand-byte single-float-type
-	  single-float-value-slot slot-docs slot-length slot-name
-	  slot-offset slot-options slot-rest-p static-symbol-offset
-	  static-symbol-p static-symbols structure-pointer-type
-	  symbol-function-slot symbol-header-type symbol-name-slot
-	  symbol-package-slot symbol-plist-slot symbol-size
-	  symbol-value-slot target-binding-stack-start target-byte-order
-	  target-control-stack-start target-dynamic-space-start
-	  target-fasl-code-format target-fasl-file-type
-	  target-heap-address-space target-most-negative-fixnum
-	  target-most-positive-fixnum target-read-only-space-start
-	  target-static-space-start type-bits type-mask unbound-marker-type
-	  unwind-block-current-code-slot unwind-block-current-cont-slot
-	  unwind-block-current-uwp-slot unwind-block-entry-pc-slot
-	  unwind-block-size value-cell-header-type value-cell-size
-	  value-cell-value-slot vector-data-offset vector-length-slot
-	  vector-normal-subtype vector-structure-subtype
-	  vector-valid-hashing-subtype vector-must-rehash-subtype
-	  word-bits word-bytes word-shift weak-pointer-type
-	  weak-pointer-size weak-pointer-value-slot weak-pointer-next-slot
-	  
-	  single-float-bias
-	  double-float-bias single-float-significand-byte
-	  double-float-significand-byte
-	  single-float-exponent-byte double-float-exponent-byte
-	  single-float-normal-exponent-max single-float-normal-exponent-min
-	  double-float-normal-exponent-max double-float-normal-exponent-min
-	  single-float-hidden-bit double-float-hidden-bit
-	  float-sign-shift single-float-digits double-float-digits
-	  register-save-penalty symbol-raw-function-addr-slot
-	  symbol-setf-function-slot structure-header-type bignum-type
-	  ))
-
-(in-package "LISP")
-(import '(
-	  %aset
-	  %bitset
-	  %charset
-	  %primitive
-	  %put
-	  %rplaca
-	  %rplacd
-	  %sbitset
-	  %scharset
-	  %set-documentation
-	  %set-fdefinition
-	  %set-fill-pointer
-	  %set-row-major-aref
-	  %setelt
-	  %setnth
-	  %sp-set-plist
-	  %sp-set-definition
-	  %standard-char-p
-	  %string-char-p
-	  %svset
-	  %typep
-	  %array-typep
-	  array-header-p
-	  base-char-p
-	  double-float-p
-	  long-float-p
-	  short-float-p
-	  simple-array-p
-	  single-float-p
-	  string<*
-	  string>*
-	  string<=*
-	  string>=*
-	  string=*
-	  string/=*
-	  %sp-string-compare
-	  )
-	"VM")
-
-
-(in-package "C")
-
-(use-package "EXT")
-(use-package "KERNEL")
-(use-package "SYSTEM")
-(use-package "ASSEM")
-(use-package "BIGNUM")
-
-(export '(
-	  *compile-time-define-macros* *compiling-for-interpreter*
-	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
-	  lambda-eval-info-args-passed lambda-eval-info-entries
-	  lambda-eval-info-frame-size sc %more-arg %listify-rest-args
-	  more-arg-context verify-argument-count argument-count-error
-	  type-check-error odd-keyword-arguments-error
-	  unknown-keyword-argument-error save-dynamic-state
-	  restore-dynamic-state current-stack-pointer current-binding-pointer
-	  make-unwind-block make-catch-block set-unwind-protect
-	  %catch-breakup %unwind-protect-breakup nlx-entry nlx-entry-multiple
-	  uwp-entry %continue-unwind move non-descriptor-stack
-	  foreign-symbol-address compute-old-nfp unbind-to-here
-	  
-	  alloc-number-stack-space
-	  allocate-frame
-	  allocate-full-call-frame
-	  bind
-	  branch
-	  call
-	  call-local
-	  call-named
-	  call-out
-	  call-variable
-	  closure-init
-	  closure-ref
-	  coerce-to-function
-	  copy-more-arg
-	  current-stack-pointer
-	  dealloc-number-stack-space
-	  fast-safe-coerce-to-function
-	  fast-symbol-function
-	  fast-symbol-value
-	  if-eq
-	  known-call-local
-	  known-return
-	  make-catch-block
-	  make-closure
-	  make-unwind-block
-	  make-value-cell
-	  move
-	  multiple-call
-	  multiple-call-local
-	  multiple-call-named
-	  multiple-call-variable
-	  nil
-	  nlx-entry
-	  nlx-entry-multiple
-	  note-environment-start
-	  push-values
-	  reset-stack-pointer
-	  restore-dynamic-state
-	  return
-	  return-multiple
-	  save-dynamic-state
-	  set
-	  set-unwind-protect
-	  setup-closure-environment
-	  setup-environment
-	  structure-ref
-	  structure-set
-	  symbol-function
-	  symbol-value
-	  tail-call
-	  tail-call-named
-	  tail-call-variable
-	  throw
-	  unbind
-	  unwind
-	  uwp-entry
-	  value-cell-ref
-	  value-cell-set
-	  values-list
-	  xep-allocate-frame
-
-	  catch-block
-
-	  sxhash-simple-string sxhash-simple-substring check-cons
-	  check-symbol check-fixnum check-signed-byte-32
-	  check-unsigned-byte-32 check-function-or-symbol check-function
-	  code-constant-set allocate-code-object
-	  code-instructions compute-function
-	  get-vector-subtype set-vector-subtype
-	  halt make-fixnum make-other-immediate-type
-	  code-constant-ref
-	  ))
-
-(in-package "LISP")
-(import '(
-	  %aset
-	  %bitset
-	  %charset
-	  %primitive
-	  %put
-	  %rplaca
-	  %rplacd
-	  %sbitset
-	  %scharset
-	  %set-documentation
-	  %set-fdefinition
-	  %set-fill-pointer
-	  %set-row-major-aref
-	  %setelt
-	  %setnth
-	  %sp-set-plist
-	  %standard-char-p
-	  %string-char-p
-	  %svset
-	  %typep
-	  %array-typep
-	  array-header-p
-	  base-char-p
-	  double-float-p
-	  long-float-p
-	  short-float-p
-	  simple-array-p
-	  single-float-p
-	  string<*
-	  string>*
-	  string<=*
-	  string>=*
-	  string=*
-	  string/=*
-	  %sp-string-compare
-	  )
-	"C")
-
-
-(in-package "ASSEM")
-
-(export '(*current-position* align assemble define-argument-type
-	  define-fixup-type define-format define-instruction
-	  define-pseudo-instruction define-random-resources
-	  define-register-file dump-segment emit-code-vector emit-label
-	  finalize-segment fixup fixup-flavor fixup-name fixup-offset
-	  fixup-p gen-label insert-segment inst label label-id label-position
-	  make-fixup make-segment nuke-segment count-instructions))
-
-
-(in-package "EVAL")
-
-(use-package "KERNEL")
-
-(export '(internal-eval interpreted-function-arglist
-	  interpreted-function-closure
-	  interpreted-function-lambda-expression interpreted-function-name
-	  interpreted-function-p make-interpreted-function))
-
-
-(in-package "BIGNUM")
-(use-package "KERNEL")
-
-(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
-	  multiply-bignum-and-fixnum multiply-fixnums
-	  bignum-ashift-right bignum-ashift-left bignum-gcd
-	  bignum-to-float float-bignum-ratio bignum-integer-length
-	  bignum-logical-and bignum-logical-ior bignum-logical-xor
-	  bignum-logical-not bignum-load-byte bignum-deposit-byte
-	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
-	  bignum-logcount bignum-index bignum-type bignum-element-type))
-
-(export '(bignum-type bignum-element-type bignum-index %allocate-bignum
-	  %bignum-length %bignum-set-length %bignum-ref %bignum-set
-	  %digit-0-or-plusp %add-with-carry %subtract-with-borrow
-	  %multiply-and-add %multiply %lognot %logand %logior %logxor
-	  %fixnum-to-digit %floor %fixnum-digit-with-correct-sign %ashl
-	  %ashr %digit-logical-shift-right))
-
-
-
-(in-package "DEBUG")
-
-(export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
-	  *debug-print-level* *debug-print-length* *debug-prompt*
-
-	  var arg))
-
-
-(in-package "DEBUG-INTERNALS")
-
-(use-package "SYSTEM")
-(use-package "EXT")
-(use-package "KERNEL")
-
-;;; The compiler's debug-source structure is almost exactly what we want, so
-;;; just get these symbols and export them.
+;;; Machine generated.  Don't edit it unless you know what you are doing.
 ;;;
-(import '(c::debug-source-from c::debug-source-name c::debug-source-created
-	  c::debug-source-compiled c::debug-source-start-positions
-	  c::debug-source c::debug-source-p))
 
-(export '(debug-variable-name debug-variable-package debug-variable-symbol
-	  debug-variable-id debug-variable-value debug-variable-validity
-	  debug-variable-valid-value debug-variable debug-variable-p
+(in-package "LISP")
 
-	  top-frame frame-down frame-up frame-debug-function
-	  frame-code-location eval-in-frame return-from-frame frame-catches
-	  frame-number frame frame-p
-
-	  do-blocks debug-function-lambda-list debug-variable-info-available
-	  do-debug-function-variables debug-function-symbol-variables
-	  ambiguous-debug-variables preprocess-for-eval function-debug-function
-	  debug-function-function debug-function-kind debug-function-name
-	  debug-function debug-function-p
-
-	  do-debug-block-locations debug-block-successors debug-block
-	  debug-block-p debug-block-elsewhere-p
-
-	  make-breakpoint activate-breakpoint deactivate-breakpoint
-	  breakpoint-hook-function breakpoint-info breakpoint-kind
-	  breakpoint-what breakpoint breakpoint-p
-
-	  code-location-debug-function code-location-debug-block
-	  code-location-top-level-form-offset code-location-form-number
-	  code-location-debug-source code-location code-location-p
-	  unknown-code-location unknown-code-location-p
-
-	  debug-source-from debug-source-name debug-source-created
-	  debug-source-compiled debug-source-root-number
-	  debug-source-start-positions form-number-translations
-	  source-path-context debug-source debug-source-p
-
-	  debug-condition no-debug-info no-debug-function-returns
-	  no-debug-blocks lambda-list-unavailable
-
-	  debug-error unhandled-condition invalid-control-stack-pointer
-	  unknown-code-location unknown-debug-variable invalid-value))
-
-
-(in-package "MACH")
-
-(use-package "SYSTEM")
-(use-package "KERNEL")
-(use-package "EXT")
-
+(if (find-package "XLIB")
+    (rename-package "XLIB" "XLIB" '("OLD-XLIB"))
+    (make-package "XLIB" :nicknames '("OLD-XLIB") :use nil))
+(if (find-package "ASSEMBLER")
+    (rename-package "ASSEMBLER" "ASSEMBLER" '("ASSEM"))
+    (make-package "ASSEMBLER" :nicknames '("ASSEM") :use nil))
+(if (find-package "C-CALL")
+    (rename-package "C-CALL" "C-CALL" 'nil)
+    (make-package "C-CALL" :nicknames 'nil :use nil))
+(if (find-package "INSPECT")
+    (rename-package "INSPECT" "INSPECT" 'nil)
+    (make-package "INSPECT" :nicknames 'nil :use nil))
+(if (find-package "BIGNUM")
+    (rename-package "BIGNUM" "BIGNUM" 'nil)
+    (make-package "BIGNUM" :nicknames 'nil :use nil))
+(if (find-package "WALKER")
+    (rename-package "WALKER" "WALKER" 'nil)
+    (make-package "WALKER" :nicknames 'nil :use nil))
+(if (find-package "MACH")
+    (rename-package "MACH" "MACH" 'nil)
+    (make-package "MACH" :nicknames 'nil :use nil))
+(if (find-package "UNIX")
+    (rename-package "UNIX" "UNIX" 'nil)
+    (make-package "UNIX" :nicknames 'nil :use nil))
+(if (find-package "PCL")
+    (rename-package "PCL" "PCL" 'nil)
+    (make-package "PCL" :nicknames 'nil :use nil))
+(shadow '("DOCUMENTATION" "DESTRUCTURING-BIND") "PCL")
+(if (find-package "FORMAT")
+    (rename-package "FORMAT" "FORMAT" 'nil)
+    (make-package "FORMAT" :nicknames 'nil :use nil))
+(if (find-package "HEMLOCK")
+    (rename-package "HEMLOCK" "HEMLOCK" '("ED"))
+    (make-package "HEMLOCK" :nicknames '("ED") :use nil))
+(if (find-package "SPELL")
+    (rename-package "SPELL" "SPELL" 'nil)
+    (make-package "SPELL" :nicknames 'nil :use nil))
+(if (find-package "COMMON-LISP")
+    (rename-package "COMMON-LISP" "COMMON-LISP" '("CL" "LISP"))
+    (make-package "LISP" :nicknames 'nil :use nil))
+(if (find-package "EVAL")
+    (rename-package "EVAL" "EVAL" 'nil)
+    (make-package "EVAL" :nicknames 'nil :use nil))
+(if (find-package "ITERATE")
+    (rename-package "ITERATE" "ITERATE" 'nil)
+    (make-package "ITERATE" :nicknames 'nil :use nil))
+(if (find-package "MIPS")
+    (rename-package "MIPS" "MIPS" '("VM" "OLD-MIPS"))
+    (make-package "MIPS" :nicknames '("VM" "OLD-MIPS") :use nil))
+(if (find-package "CONDITIONS")
+    (rename-package "CONDITIONS" "CONDITIONS" 'nil)
+    (make-package "CONDITIONS" :nicknames 'nil :use nil))
+(if (find-package "DISASSEM")
+    (rename-package "DISASSEM" "DISASSEM" 'nil)
+    (make-package "DISASSEM" :nicknames 'nil :use nil))
+(if (find-package "DEBUG")
+    (rename-package "DEBUG" "DEBUG" 'nil)
+    (make-package "DEBUG" :nicknames 'nil :use nil))
+(if (find-package "EXTENSIONS")
+    (rename-package "EXTENSIONS" "EXTENSIONS" '("EXT"))
+    (make-package "EXTENSIONS" :nicknames '("EXT") :use nil))
+(if (find-package "LOOP")
+    (rename-package "LOOP" "LOOP" 'nil)
+    (make-package "LOOP" :nicknames 'nil :use nil))
+(if (find-package "HEMLOCK-INTERNALS")
+    (rename-package "HEMLOCK-INTERNALS" "HEMLOCK-INTERNALS" '("HI"))
+    (make-package "HEMLOCK-INTERNALS" :nicknames '("HI") :use nil))
+(if (find-package "DEBUG-INTERNALS")
+    (rename-package "DEBUG-INTERNALS" "DEBUG-INTERNALS" '("DI"))
+    (make-package "DEBUG-INTERNALS" :nicknames '("DI") :use nil))
+(if (find-package "C")
+    (rename-package "C" "C" '("OLD-C"))
+    (make-package "C" :nicknames '("OLD-C") :use nil))
+(if (find-package "DIRED")
+    (rename-package "DIRED" "DIRED" 'nil)
+    (make-package "DIRED" :nicknames 'nil :use nil))
+(shadow '("DELETE-FILE" "RENAME-FILE") "DIRED")
+(if (find-package "WIRE")
+    (rename-package "WIRE" "WIRE" 'nil)
+    (make-package "WIRE" :nicknames 'nil :use nil))
+(if (find-package "PRETTY-PRINT")
+    (rename-package "PRETTY-PRINT" "PRETTY-PRINT" '("PP"))
+    (make-package "PRETTY-PRINT" :nicknames '("PP") :use nil))
+(if (find-package "SYSTEM")
+    (rename-package "SYSTEM" "SYSTEM" '("SYS"))
+    (make-package "SYSTEM" :nicknames '("SYS") :use nil))
+(if (find-package "ALIEN")
+    (rename-package "ALIEN" "ALIEN" 'nil)
+    (make-package "ALIEN" :nicknames 'nil :use nil))
+(if (find-package "ALIEN-INTERNALS")
+    (rename-package "ALIEN-INTERNALS" "ALIEN-INTERNALS" 'nil)
+    (make-package "ALIEN-INTERNALS" :nicknames 'nil :use nil))
+(if (find-package "PROFILE")
+    (rename-package "PROFILE" "PROFILE" 'nil)
+    (make-package "PROFILE" :nicknames 'nil :use nil))
+(if (find-package "USER")
+    (rename-package "USER" "USER" 'nil)
+    (make-package "USER" :nicknames 'nil :use nil))
+(if (find-package "KERNEL")
+    (rename-package "KERNEL" "KERNEL" 'nil)
+    (make-package "KERNEL" :nicknames 'nil :use nil))
+(use-package '("LISP") "XLIB")
+(use-package '("LISP" "C" "EXTENSIONS" "KERNEL") "ASSEMBLER")
+(use-package '("SYSTEM" "ALIEN-INTERNALS" "ALIEN" "LISP") "C-CALL")
+(use-package '("KERNEL" "EXTENSIONS" "LISP") "INSPECT")
+(use-package '("LISP" "KERNEL") "BIGNUM")
+(use-package '("LISP") "WALKER")
+(use-package '("C-CALL" "SYSTEM" "LISP" "EXTENSIONS" "MACH" "KERNEL") "MACH")
+(use-package '("LISP") "UNIX")
+(use-package '("WALKER" "ITERATE" "LISP") "PCL")
+(use-package '("KERNEL" "LISP" "EXTENSIONS") "FORMAT")
+(use-package '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM") "HEMLOCK")
+(use-package '("LISP" "EXTENSIONS" "SYSTEM") "SPELL")
+(use-package '("EXTENSIONS" "SYSTEM" "DEBUG" "KERNEL" "BIGNUM") "LISP")
+(use-package '("LISP" "KERNEL") "EVAL")
+(use-package '("LISP" "WALKER") "ITERATE")
+(use-package
+ '("C-CALL" "ALIEN-INTERNALS" "ALIEN" "BIGNUM" "LISP" "KERNEL" "EXTENSIONS"
+   "SYSTEM" "ASSEMBLER" "C")
+ "MIPS")
+(use-package '("EXTENSIONS" "LISP") "CONDITIONS")
+(use-package '("LISP") "DISASSEM")
+(use-package '("EXTENSIONS" "LISP" "SYSTEM") "DEBUG")
+(use-package '("C-CALL" "ALIEN" "LISP" "SYSTEM" "MACH") "EXTENSIONS")
+(use-package '("LISP") "LOOP")
+(use-package '("LISP" "SYSTEM" "EXTENSIONS") "HEMLOCK-INTERNALS")
+(use-package '("LISP" "SYSTEM" "EXTENSIONS" "KERNEL") "DEBUG-INTERNALS")
+(use-package
+ '("ALIEN-INTERNALS" "ALIEN" "LISP" "EXTENSIONS" "KERNEL" "SYSTEM" "BIGNUM"
+   "ASSEMBLER")
+ "C")
+(use-package '("LISP") "DIRED")
+(use-package '("LISP") "WIRE")
+(use-package '("KERNEL" "EXTENSIONS" "LISP") "PRETTY-PRINT")
+(use-package '("EXTENSIONS" "LISP") "SYSTEM")
+(use-package '("SYSTEM" "EXTENSIONS" "LISP") "ALIEN")
+(use-package '("LISP") "ALIEN-INTERNALS")
+(use-package '("LISP") "PROFILE")
+(use-package '("PCL" "EXTENSIONS" "LISP") "USER")
+(use-package '("ALIEN-INTERNALS" "LISP" "EXTENSIONS" "SYSTEM" "BIGNUM")
+             "KERNEL")
+(intern "TYPE-ERROR" "LISP")
+(defpackage "XLIB"
+            (:import-from "LISP" "TYPE-ERROR")
+            (:export "*VERSION*" "ACCESS-CONTROL" "ACCESS-ERROR" "ACCESS-HOSTS"
+             "ACTIVATE-SCREEN-SAVER" "ADD-ACCESS-HOST" "ADD-RESOURCE"
+             "ADD-TO-SAVE-SET" "ALIST" "ALLOC-COLOR" "ALLOC-COLOR-CELLS"
+             "ALLOC-COLOR-PLANES" "ALLOC-ERROR" "ALLOW-EVENTS" "ANGLE"
+             "ARC-SEQ" "ARRAY-INDEX" "ATOM-ERROR" "ATOM-NAME" "BELL"
+             "BIT-GRAVITY" "BITMAP" "BITMAP-FORMAT" "BITMAP-FORMAT-LSB-FIRST-P"
+             "BITMAP-FORMAT-P" "BITMAP-FORMAT-PAD" "BITMAP-FORMAT-UNIT"
+             "BITMAP-IMAGE" "BOOLE-CONSTANT" "BOOLEAN" "CARD16" "CARD29"
+             "CARD32" "CARD8" "CARD8->CHAR" "CHANGE-ACTIVE-POINTER-GRAB"
+             "CHANGE-KEYBOARD-CONTROL" "CHANGE-KEYBOARD-MAPPING"
+             "CHANGE-POINTER-CONTROL" "CHANGE-PROPERTY" "CHAR->CARD8"
+             "CHAR-ASCENT" "CHAR-ATTRIBUTES" "CHAR-DESCENT" "CHAR-LEFT-BEARING"
+             "CHAR-RIGHT-BEARING" "CHAR-WIDTH" "CHARACTER->KEYSYMS"
+             "CHARACTER-IN-MAP-P" "CIRCULATE-WINDOW-DOWN" "CIRCULATE-WINDOW-UP"
+             "CLEAR-AREA" "CLOSE-DISPLAY" "CLOSE-DOWN-MODE" "CLOSE-FONT"
+             "CLOSED-DISPLAY" "COLOR" "COLOR-BLUE" "COLOR-GREEN" "COLOR-P"
+             "COLOR-RED" "COLOR-RGB" "COLORMAP" "COLORMAP-DISPLAY"
+             "COLORMAP-EQUAL" "COLORMAP-ERROR" "COLORMAP-ID" "COLORMAP-P"
+             "COLORMAP-PLIST" "COLORMAP-VISUAL-INFO" "CONNECTION-FAILURE"
+             "CONVERT-SELECTION" "COPY-AREA" "COPY-COLORMAP-AND-FREE"
+             "COPY-GCONTEXT" "COPY-GCONTEXT-COMPONENTS" "COPY-IMAGE"
+             "COPY-PLANE" "CREATE-COLORMAP" "CREATE-CURSOR" "CREATE-GCONTEXT"
+             "CREATE-GLYPH-CURSOR" "CREATE-IMAGE" "CREATE-PIXMAP"
+             "CREATE-WINDOW" "CURSOR" "CURSOR-DISPLAY" "CURSOR-EQUAL"
+             "CURSOR-ERROR" "CURSOR-ID" "CURSOR-P" "CURSOR-PLIST" "CUT-BUFFER"
+             "DECLARE-EVENT" "DECODE-CORE-ERROR" "DEFAULT-ERROR-HANDLER"
+             "DEFAULT-KEYSYM-INDEX" "DEFAULT-KEYSYM-TRANSLATE" "DEFINE-ERROR"
+             "DEFINE-EXTENSION" "DEFINE-GCONTEXT-ACCESSOR" "DEFINE-KEYSYM"
+             "DEFINE-KEYSYM-SET" "DELETE-PROPERTY" "DELETE-RESOURCE"
+             "DESTROY-SUBWINDOWS" "DESTROY-WINDOW" "DEVICE-BUSY"
+             "DEVICE-EVENT-MASK" "DEVICE-EVENT-MASK-CLASS"
+             "DISCARD-CURRENT-EVENT" "DISCARD-FONT-INFO" "DISPLAY"
+             "DISPLAY-AFTER-FUNCTION" "DISPLAY-AUTHORIZATION-DATA"
+             "DISPLAY-AUTHORIZATION-NAME" "DISPLAY-BITMAP-FORMAT"
+             "DISPLAY-BYTE-ORDER" "DISPLAY-DEFAULT-SCREEN" "DISPLAY-DISPLAY"
+             "DISPLAY-ERROR-HANDLER" "DISPLAY-FINISH-OUTPUT"
+             "DISPLAY-FORCE-OUTPUT" "DISPLAY-HOST" "DISPLAY-IMAGE-LSB-FIRST-P"
+             "DISPLAY-INVOKE-AFTER-FUNCTION" "DISPLAY-KEYCODE-RANGE"
+             "DISPLAY-MAX-KEYCODE" "DISPLAY-MAX-REQUEST-LENGTH"
+             "DISPLAY-MIN-KEYCODE" "DISPLAY-MOTION-BUFFER-SIZE"
+             "DISPLAY-NSCREENS" "DISPLAY-P" "DISPLAY-PIXMAP-FORMATS"
+             "DISPLAY-PLIST" "DISPLAY-PROTOCOL-MAJOR-VERSION"
+             "DISPLAY-PROTOCOL-MINOR-VERSION" "DISPLAY-PROTOCOL-VERSION"
+             "DISPLAY-RELEASE-NUMBER" "DISPLAY-REPORT-ASYNCHRONOUS-ERRORS"
+             "DISPLAY-RESOURCE-ID-BASE" "DISPLAY-RESOURCE-ID-MASK"
+             "DISPLAY-ROOTS" "DISPLAY-VENDOR" "DISPLAY-VENDOR-NAME"
+             "DISPLAY-XDEFAULTS" "DISPLAY-XID" "DRAW-ARC" "DRAW-ARCS"
+             "DRAW-DIRECTION" "DRAW-GLYPH" "DRAW-GLYPHS" "DRAW-IMAGE-GLYPH"
+             "DRAW-IMAGE-GLYPHS" "DRAW-LINE" "DRAW-LINES" "DRAW-POINT"
+             "DRAW-POINTS" "DRAW-RECTANGLE" "DRAW-RECTANGLES" "DRAW-SEGMENTS"
+             "DRAWABLE" "DRAWABLE-BORDER-WIDTH" "DRAWABLE-DEPTH"
+             "DRAWABLE-DISPLAY" "DRAWABLE-EQUAL" "DRAWABLE-ERROR"
+             "DRAWABLE-HEIGHT" "DRAWABLE-ID" "DRAWABLE-P" "DRAWABLE-PLIST"
+             "DRAWABLE-ROOT" "DRAWABLE-WIDTH" "DRAWABLE-X" "DRAWABLE-Y"
+             "ERROR-KEY" "EVENT-CASE" "EVENT-COND" "EVENT-HANDLER" "EVENT-KEY"
+             "EVENT-LISTEN" "EVENT-MASK" "EVENT-MASK-CLASS" "EXTENSION-OPCODE"
+             "FIND-ATOM" "FONT" "FONT-ALL-CHARS-EXIST-P" "FONT-ASCENT"
+             "FONT-DEFAULT-CHAR" "FONT-DESCENT" "FONT-DIRECTION" "FONT-DISPLAY"
+             "FONT-EQUAL" "FONT-ERROR" "FONT-ID" "FONT-MAX-BYTE1"
+             "FONT-MAX-BYTE2" "FONT-MAX-CHAR" "FONT-MIN-BYTE1" "FONT-MIN-BYTE2"
+             "FONT-MIN-CHAR" "FONT-NAME" "FONT-P" "FONT-PATH" "FONT-PLIST"
+             "FONT-PROPERTIES" "FONT-PROPERTY" "FONTABLE"
+             "FORCE-GCONTEXT-CHANGES" "FREE-COLORMAP" "FREE-COLORS"
+             "FREE-CURSOR" "FREE-GCONTEXT" "FREE-PIXMAP" "GCONTEXT"
+             "GCONTEXT-ARC-MODE" "GCONTEXT-BACKGROUND" "GCONTEXT-CACHE-P"
+             "GCONTEXT-CAP-STYLE" "GCONTEXT-CLIP-MASK" "GCONTEXT-CLIP-ORDERING"
+             "GCONTEXT-CLIP-X" "GCONTEXT-CLIP-Y" "GCONTEXT-DASH-OFFSET"
+             "GCONTEXT-DASHES" "GCONTEXT-DISPLAY" "GCONTEXT-EQUAL"
+             "GCONTEXT-ERROR" "GCONTEXT-EXPOSURES" "GCONTEXT-FILL-RULE"
+             "GCONTEXT-FILL-STYLE" "GCONTEXT-FONT" "GCONTEXT-FOREGROUND"
+             "GCONTEXT-FUNCTION" "GCONTEXT-ID" "GCONTEXT-JOIN-STYLE"
+             "GCONTEXT-KEY" "GCONTEXT-LINE-STYLE" "GCONTEXT-LINE-WIDTH"
+             "GCONTEXT-P" "GCONTEXT-PLANE-MASK" "GCONTEXT-PLIST"
+             "GCONTEXT-STIPPLE" "GCONTEXT-SUBWINDOW-MODE" "GCONTEXT-TILE"
+             "GCONTEXT-TS-X" "GCONTEXT-TS-Y" "GET-EXTERNAL-EVENT-CODE"
+             "GET-IMAGE" "GET-PROPERTY" "GET-RAW-IMAGE" "GET-RESOURCE"
+             "GET-SEARCH-RESOURCE" "GET-SEARCH-TABLE" "GET-STANDARD-COLORMAP"
+             "GET-WM-CLASS" "GLOBAL-POINTER-POSITION" "GRAB-BUTTON" "GRAB-KEY"
+             "GRAB-KEYBOARD" "GRAB-POINTER" "GRAB-SERVER" "GRAB-STATUS"
+             "ICON-SIZES" "ICONIFY-WINDOW" "ID-CHOICE-ERROR"
+             "ILLEGAL-REQUEST-ERROR" "IMAGE" "IMAGE-BLUE-MASK" "IMAGE-DEPTH"
+             "IMAGE-GREEN-MASK" "IMAGE-HEIGHT" "IMAGE-NAME" "IMAGE-PIXMAP"
+             "IMAGE-PLIST" "IMAGE-RED-MASK" "IMAGE-WIDTH" "IMAGE-X"
+             "IMAGE-X-HOT" "IMAGE-X-P" "IMAGE-XY" "IMAGE-XY-BITMAP-LIST"
+             "IMAGE-XY-P" "IMAGE-Y-HOT" "IMAGE-Z" "IMAGE-Z-BITS-PER-PIXEL"
+             "IMAGE-Z-P" "IMAGE-Z-PIXARRAY" "IMPLEMENTATION-ERROR"
+             "INPUT-FOCUS" "INSTALL-COLORMAP" "INSTALLED-COLORMAPS" "INT16"
+             "INT32" "INT8" "INTERN-ATOM" "INVALID-FONT" "KEYBOARD-CONTROL"
+             "KEYBOARD-MAPPING" "KEYCODE->CHARACTER" "KEYCODE->KEYSYM" "KEYSYM"
+             "KEYSYM->CHARACTER" "KEYSYM->KEYCODES" "KEYSYM-IN-MAP-P"
+             "KEYSYM-SET" "KILL-CLIENT" "KILL-TEMPORARY-CLIENTS" "LENGTH-ERROR"
+             "LIST-EXTENSIONS" "LIST-FONT-NAMES" "LIST-FONTS" "LIST-PROPERTIES"
+             "LOAD-CLX" "LOOKUP-COLOR" "LOOKUP-ERROR" "MAKE-COLOR"
+             "MAKE-EVENT-HANDLERS" "MAKE-EVENT-KEYS" "MAKE-EVENT-MASK"
+             "MAKE-RESOURCE-DATABASE" "MAKE-STATE-KEYS" "MAKE-STATE-MASK"
+             "MAKE-WM-HINTS" "MAKE-WM-SIZE-HINTS" "MAP-RESOURCE"
+             "MAP-SUBWINDOWS" "MAP-WINDOW" "MAPPING-NOTIFY" "MASK16" "MASK32"
+             "MATCH-ERROR" "MAX-CHAR-ASCENT" "MAX-CHAR-ATTRIBUTES"
+             "MAX-CHAR-DESCENT" "MAX-CHAR-LEFT-BEARING"
+             "MAX-CHAR-RIGHT-BEARING" "MAX-CHAR-WIDTH" "MERGE-RESOURCES"
+             "MIN-CHAR-ASCENT" "MIN-CHAR-ATTRIBUTES" "MIN-CHAR-DESCENT"
+             "MIN-CHAR-LEFT-BEARING" "MIN-CHAR-RIGHT-BEARING" "MIN-CHAR-WIDTH"
+             "MISSING-PARAMETER" "MODIFIER-KEY" "MODIFIER-MAPPING"
+             "MODIFIER-MASK" "MOTION-EVENTS" "NAME-ERROR" "NO-OPERATION"
+             "OPEN-DISPLAY" "OPEN-FONT" "PIXARRAY" "PIXEL" "PIXMAP"
+             "PIXMAP-DISPLAY" "PIXMAP-EQUAL" "PIXMAP-ERROR" "PIXMAP-FORMAT"
+             "PIXMAP-FORMAT-BITS-PER-PIXEL" "PIXMAP-FORMAT-DEPTH"
+             "PIXMAP-FORMAT-P" "PIXMAP-FORMAT-SCANLINE-PAD" "PIXMAP-ID"
+             "PIXMAP-P" "PIXMAP-PLIST" "POINT-SEQ" "POINTER-CONTROL"
+             "POINTER-EVENT-MASK" "POINTER-EVENT-MASK-CLASS" "POINTER-MAPPING"
+             "POINTER-POSITION" "PROCESS-EVENT" "PUT-IMAGE" "PUT-RAW-IMAGE"
+             "QUERY-BEST-CURSOR" "QUERY-BEST-STIPPLE" "QUERY-BEST-TILE"
+             "QUERY-COLORS" "QUERY-EXTENSION" "QUERY-KEYMAP" "QUERY-POINTER"
+             "QUERY-TREE" "QUEUE-EVENT" "READ-BITMAP-FILE" "READ-RESOURCES"
+             "RECOLOR-CURSOR" "RECT-SEQ" "REMOVE-ACCESS-HOST"
+             "REMOVE-FROM-SAVE-SET" "REPARENT-WINDOW" "REPEAT-SEQ"
+             "REPLY-LENGTH-ERROR" "REPLY-TIMEOUT" "REQUEST-ERROR"
+             "RESET-SCREEN-SAVER" "RESOURCE-DATABASE"
+             "RESOURCE-DATABASE-TIMESTAMP" "RESOURCE-ERROR" "RESOURCE-ID"
+             "RESOURCE-KEY" "RGB-COLORMAPS" "RGB-VAL" "ROOT-RESOURCES"
+             "ROTATE-CUT-BUFFERS" "ROTATE-PROPERTIES" "SCREEN"
+             "SCREEN-BACKING-STORES" "SCREEN-BLACK-PIXEL"
+             "SCREEN-DEFAULT-COLORMAP" "SCREEN-DEPTHS"
+             "SCREEN-EVENT-MASK-AT-OPEN" "SCREEN-HEIGHT"
+             "SCREEN-HEIGHT-IN-MILLIMETERS" "SCREEN-MAX-INSTALLED-MAPS"
+             "SCREEN-MIN-INSTALLED-MAPS" "SCREEN-P" "SCREEN-PLIST"
+             "SCREEN-ROOT" "SCREEN-ROOT-DEPTH" "SCREEN-ROOT-VISUAL"
+             "SCREEN-ROOT-VISUAL-INFO" "SCREEN-SAVE-UNDERS-P" "SCREEN-SAVER"
+             "SCREEN-WHITE-PIXEL" "SCREEN-WIDTH" "SCREEN-WIDTH-IN-MILLIMETERS"
+             "SEG-SEQ" "SELECTION-OWNER" "SEND-EVENT" "SEQUENCE-ERROR"
+             "SET-ACCESS-CONTROL" "SET-CLOSE-DOWN-MODE" "SET-INPUT-FOCUS"
+             "SET-MODIFIER-MAPPING" "SET-POINTER-MAPPING" "SET-SCREEN-SAVER"
+             "SET-SELECTION-OWNER" "SET-STANDARD-COLORMAP"
+             "SET-STANDARD-PROPERTIES" "SET-WM-CLASS" "SET-WM-PROPERTIES"
+             "SET-WM-RESOURCES" "STATE-KEYSYM-P" "STATE-MASK-KEY" "STORE-COLOR"
+             "STORE-COLORS" "STRINGABLE" "TEXT-EXTENTS" "TEXT-WIDTH"
+             "TIMESTAMP" "TRANSIENT-FOR" "TRANSLATE-COORDINATES"
+             "TRANSLATE-DEFAULT" "TRANSLATION-FUNCTION" "TYPE-ERROR"
+             "UNDEFINE-KEYSYM" "UNEXPECTED-REPLY" "UNGRAB-BUTTON" "UNGRAB-KEY"
+             "UNGRAB-KEYBOARD" "UNGRAB-POINTER" "UNGRAB-SERVER"
+             "UNINSTALL-COLORMAP" "UNKNOWN-ERROR" "UNMAP-SUBWINDOWS"
+             "UNMAP-WINDOW" "VALUE-ERROR" "VISUAL-INFO"
+             "VISUAL-INFO-BITS-PER-RGB" "VISUAL-INFO-BLUE-MASK"
+             "VISUAL-INFO-CLASS" "VISUAL-INFO-COLORMAP-ENTRIES"
+             "VISUAL-INFO-DISPLAY" "VISUAL-INFO-GREEN-MASK" "VISUAL-INFO-ID"
+             "VISUAL-INFO-P" "VISUAL-INFO-PLIST" "VISUAL-INFO-RED-MASK"
+             "WARP-POINTER" "WARP-POINTER-IF-INSIDE" "WARP-POINTER-RELATIVE"
+             "WARP-POINTER-RELATIVE-IF-INSIDE" "WIN-GRAVITY" "WINDOW"
+             "WINDOW-ALL-EVENT-MASKS" "WINDOW-BACKGROUND"
+             "WINDOW-BACKING-PIXEL" "WINDOW-BACKING-PLANES"
+             "WINDOW-BACKING-STORE" "WINDOW-BIT-GRAVITY" "WINDOW-BORDER"
+             "WINDOW-CLASS" "WINDOW-COLORMAP" "WINDOW-COLORMAP-INSTALLED-P"
+             "WINDOW-CURSOR" "WINDOW-DISPLAY" "WINDOW-DO-NOT-PROPAGATE-MASK"
+             "WINDOW-EQUAL" "WINDOW-ERROR" "WINDOW-EVENT-MASK" "WINDOW-GRAVITY"
+             "WINDOW-ID" "WINDOW-MAP-STATE" "WINDOW-OVERRIDE-REDIRECT"
+             "WINDOW-P" "WINDOW-PLIST" "WINDOW-PRIORITY" "WINDOW-SAVE-UNDER"
+             "WINDOW-VISUAL" "WINDOW-VISUAL-INFO" "WITH-DISPLAY"
+             "WITH-EVENT-QUEUE" "WITH-GCONTEXT" "WITH-SERVER-GRABBED"
+             "WITH-STATE" "WITHDRAW-WINDOW" "WM-CLIENT-MACHINE"
+             "WM-COLORMAP-WINDOWS" "WM-COMMAND" "WM-HINTS" "WM-HINTS-FLAGS"
+             "WM-HINTS-ICON-MASK" "WM-HINTS-ICON-PIXMAP" "WM-HINTS-ICON-WINDOW"
+             "WM-HINTS-ICON-X" "WM-HINTS-ICON-Y" "WM-HINTS-INITIAL-STATE"
+             "WM-HINTS-INPUT" "WM-HINTS-P" "WM-HINTS-WINDOW-GROUP"
+             "WM-ICON-NAME" "WM-NAME" "WM-NORMAL-HINTS" "WM-PROTOCOLS"
+             "WM-RESOURCES" "WM-SIZE-HINTS" "WM-SIZE-HINTS-BASE-HEIGHT"
+             "WM-SIZE-HINTS-BASE-WIDTH" "WM-SIZE-HINTS-HEIGHT"
+             "WM-SIZE-HINTS-HEIGHT-INC" "WM-SIZE-HINTS-MAX-ASPECT"
+             "WM-SIZE-HINTS-MAX-HEIGHT" "WM-SIZE-HINTS-MAX-WIDTH"
+             "WM-SIZE-HINTS-MIN-ASPECT" "WM-SIZE-HINTS-MIN-HEIGHT"
+             "WM-SIZE-HINTS-MIN-WIDTH" "WM-SIZE-HINTS-P"
+             "WM-SIZE-HINTS-USER-SPECIFIED-POSITION-P"
+             "WM-SIZE-HINTS-USER-SPECIFIED-SIZE-P" "WM-SIZE-HINTS-WIDTH"
+             "WM-SIZE-HINTS-WIDTH-INC" "WM-SIZE-HINTS-WIN-GRAVITY"
+             "WM-SIZE-HINTS-X" "WM-SIZE-HINTS-Y" "WM-ZOOM-HINTS"
+             "WRITE-BITMAP-FILE" "WRITE-RESOURCES" "XATOM"))
+(dolist
+    (name
+     '("BACKEND-SB-LIST" "DO-LIVE-TNS" "FINITE-SB" "FINITE-SB-LIVE-TNS"
+       "IR2-BLOCK-BLOCK" "IR2-BLOCK-LIVE-IN" "MAKE-INSTRUCTION" "PRINT-TN"
+       "REALLY-MAKE-INSTRUCTION" "SB-KIND" "SC-ELEMENT-SIZE" "TN" "TN-KIND"
+       "TN-NUMBER" "TN-READS" "TN-WRITES" "UNMAKE-INSTRUCTION" "VOP" "VOP-ARGS"
+       "VOP-BLOCK" "VOP-INFO" "VOP-INFO-ARG-COSTS" "VOP-INFO-ARG-TYPES"
+       "VOP-INFO-MOVE-ARGS" "VOP-INFO-NAME" "VOP-INFO-RESULT-COSTS"
+       "VOP-INFO-SAVE-P" "VOP-REFS" "VOP-RESULTS" "VOP-SAVE-SET" "VOP-TEMPS"))
+  (intern name "C"))
+(defpackage "ASSEMBLER"
+            (:import-from "C" "BACKEND-SB-LIST" "DO-LIVE-TNS" "FINITE-SB"
+             "FINITE-SB-LIVE-TNS" "IR2-BLOCK-BLOCK" "IR2-BLOCK-LIVE-IN"
+             "MAKE-INSTRUCTION" "PRINT-TN" "REALLY-MAKE-INSTRUCTION" "SB-KIND"
+             "SC-ELEMENT-SIZE" "TN" "TN-KIND" "TN-NUMBER" "TN-READS"
+             "TN-WRITES" "UNMAKE-INSTRUCTION" "VOP" "VOP-ARGS" "VOP-BLOCK"
+             "VOP-INFO" "VOP-INFO-ARG-COSTS" "VOP-INFO-ARG-TYPES"
+             "VOP-INFO-MOVE-ARGS" "VOP-INFO-NAME" "VOP-INFO-RESULT-COSTS"
+             "VOP-INFO-SAVE-P" "VOP-REFS" "VOP-RESULTS" "VOP-SAVE-SET"
+             "VOP-TEMPS")
+            (:export "*CURRENT-POSITION*" "ALIGN" "ASSEMBLE" "ASSEMBLY-CALL"
+             "COUNT-INSTRUCTIONS" "DEFINE-ARGUMENT-TYPE" "DEFINE-FIXUP-TYPE"
+             "DEFINE-FORMAT" "DEFINE-INSTRUCTION" "DEFINE-PSEUDO-INSTRUCTION"
+             "DEFINE-RANDOM-RESOURCES" "DEFINE-REGISTER-FILE"
+             "DEFINE-RESOURCES" "DELAYED-BRANCH" "DELAYED-LOAD" "DUMP-SEGMENT"
+             "EMIT-CODE-VECTOR" "EMIT-LABEL" "EXPAND-PSEUDO-INSTRUCTIONS"
+             "FINALIZE-SEGMENT" "FIXUP" "FIXUP-FLAVOR" "FIXUP-NAME"
+             "FIXUP-OFFSET" "FIXUP-P" "GEN-LABEL" "INSERT-SEGMENT" "INST"
+             "INSTRUCTION-ARGUMENT-ONE" "INSTRUCTION-ARGUMENT-THREE"
+             "INSTRUCTION-ARGUMENT-TWO" "INSTRUCTION-ARGUMENT-ZERO"
+             "INSTRUCTION-CONSTANT-ONE" "INSTRUCTION-CONSTANT-TWO"
+             "INSTRUCTION-CONSTANT-ZERO" "INSTRUCTION-RESULT-ZERO" "LABEL"
+             "LABEL-ID" "LABEL-POSITION" "MAKE-FIXUP" "MAKE-SEGMENT" "NOP"
+             "NUKE-SEGMENT" "OPTIMIZE-SEGMENT" "RELATIVE-BRANCH"
+             "SEGMENT-CHECK-REGISTERS" "UNCONDITIONAL-BRANCH"))
+(dolist (name '("CHAR" "FLOAT")) (intern name "LISP"))
+(defpackage "C-CALL"
+            (:import-from "LISP" "CHAR" "FLOAT")
+            (:export "C-STRING" "CHAR" "DOUBLE" "FLOAT" "INT" "LONG" "SHORT"
+             "UNSIGNED-CHAR" "UNSIGNED-INT" "UNSIGNED-LONG" "UNSIGNED-SHORT"
+             "VOID"))
+(defpackage "INSPECT"
+            (:export "*INTERFACE-STYLE*" "REMOVE-ALL-DISPLAYS"
+             "REMOVE-OBJECT-DISPLAY" "SHOW-OBJECT"))
+(defpackage "BIGNUM"
+            (:export "%ADD-WITH-CARRY" "%ALLOCATE-BIGNUM" "%ASHL" "%ASHR"
+             "%BIGNUM-LENGTH" "%BIGNUM-REF" "%BIGNUM-SET" "%BIGNUM-SET-LENGTH"
+             "%DIGIT-0-OR-PLUSP" "%DIGIT-LOGICAL-SHIFT-RIGHT"
+             "%FIXNUM-DIGIT-WITH-CORRECT-SIGN" "%FIXNUM-TO-DIGIT" "%FLOOR"
+             "%LOGAND" "%LOGIOR" "%LOGNOT" "%LOGXOR" "%MULTIPLY"
+             "%MULTIPLY-AND-ADD" "%SUBTRACT-WITH-BORROW" "ADD-BIGNUMS"
+             "BIGNUM-ASHIFT-LEFT" "BIGNUM-ASHIFT-RIGHT" "BIGNUM-COMPARE"
+             "BIGNUM-DEPOSIT-BYTE" "BIGNUM-ELEMENT-TYPE" "BIGNUM-GCD"
+             "BIGNUM-INDEX" "BIGNUM-INTEGER-LENGTH" "BIGNUM-LOAD-BYTE"
+             "BIGNUM-LOGCOUNT" "BIGNUM-LOGICAL-AND" "BIGNUM-LOGICAL-IOR"
+             "BIGNUM-LOGICAL-NOT" "BIGNUM-LOGICAL-XOR" "BIGNUM-PLUS-P"
+             "BIGNUM-TO-FLOAT" "BIGNUM-TRUNCATE" "BIGNUM-TYPE"
+             "FLOAT-BIGNUM-RATIO" "MAKE-SMALL-BIGNUM"
+             "MULTIPLY-BIGNUM-AND-FIXNUM" "MULTIPLY-BIGNUMS" "MULTIPLY-FIXNUMS"
+             "NEGATE-BIGNUM" "SUBTRACT-BIGNUM"))
+(defpackage "WALKER"
+            (:export "*VARIABLE-DECLARATIONS*" "DEFINE-WALKER-TEMPLATE"
+             "NESTED-WALK-FORM" "VARIABLE-DECLARATION"
+             "VARIABLE-GLOBALLY-SPECIAL-P" "VARIABLE-LEXICAL-P"
+             "VARIABLE-SPECIAL-P" "WALK-FORM"))
+(dolist
+    (name
+     '("*INTERRUPT-PENDING*" "*INTERRUPTS-ENABLED*" "DO-PENDING-INTERRUPT"))
+  (intern name "UNIX"))
+(defpackage "MACH"
+            (:import-from "UNIX" "*INTERRUPT-PENDING*" "*INTERRUPTS-ENABLED*"
+             "DO-PENDING-INTERRUPT")
+            (:export "*SIGCONTEXT" "AF-INET" "AF-UNIX" "BADMSGID" "BADREPLY"
+             "CHECK" "CLOSE-DIR" "CMU-GETAID" "DIRECT" "E2BIG" "EACCES"
+             "EADDRINUSE" "EADDRNOTAVAIL" "EAFNOSUPPORT" "EAGAIN" "EALREADY"
+             "EBADF" "EBUSY" "ECHILD" "ECONNABORTED" "ECONNREFUSED"
+             "ECONNRESET" "EDEADLK" "EDESTADDRREQ" "EDOM" "EDQUOT" "EEXIST"
+             "EFAULT" "EFBIG" "EHOSTDOWN" "EHOSTUNREACH" "EINPROGRESS" "EINTR"
+             "EINVAL" "EIO" "EISCONN" "EISDIR" "ELOCAL" "ELOOP" "EMFILE"
+             "EMLINK" "EMSGSIZE" "ENAMETOOLONG" "ENETDOWN" "ENETRESET"
+             "ENETUNREACH" "ENFILE" "ENOBUFS" "ENODEV" "ENOENT" "ENOEXEC"
+             "ENOMEM" "ENOPROTOOPT" "ENOSPC" "ENOTBLK" "ENOTCONN" "ENOTDIR"
+             "ENOTEMPTY" "ENOTSOCK" "ENOTTY" "ENXIO" "EOPNOTSUPP" "EPERM"
+             "EPFNOSUPPORT" "EPIPE" "EPROCLIM" "EPROTONOSUPPORT" "EPROTOTYPE"
+             "ERANGE" "EREMOTE" "ERESTART" "EROFS" "ESHUTDOWN"
+             "ESOCKTNOSUPPORT" "ESPIPE" "ESRCH" "ESUCCESS" "ETIMEDOUT"
+             "ETOOMANYREFS" "ETXTBSY" "EUSERS" "EVICEERR" "EVICEOP"
+             "EWOULDBLOCK" "EXDEV" "EXECGRP" "EXECOTH" "EXECOWN" "F-DUPFD"
+             "F-GETFD" "F-GETFL" "F-GETOWN" "F-SETFD" "F-SETFL" "F-SETOWN"
+             "FAPPEND" "FASYNC" "FCREAT" "FDARRAY" "FEXCL" "FILDES" "FIONREAD"
+             "FNDELAY" "FTRUNC" "F_OK" "GET-UNIX-ERROR-MSG"
+             "INDIRECT-*SIGCONTEXT" "INT-ARRAY" "INT-ARRAY-REF" "ITIMER-PROF"
+             "ITIMER-REAL" "ITIMER-VIRTUAL" "KBDARG" "KBDARG-END"
+             "KBDARG-INDEX" "KBDARG-SCAN" "KBDARG-TEXT" "KBDCGET" "KBDCRESET"
+             "KBDCRST" "KBDCSET" "KBDCSSTD" "KBDGCLICK" "KBDSCLICK" "KBDSGET"
+             "KERN-FAILURE" "KERN-INVALID-ADDRESS" "KERN-INVALID-ARGUMENT"
+             "KERN-NO-ACCESS" "KERN-NO-SPACE" "KERN-NOT-RECEIVER"
+             "KERN-PROTECTION-FAILURE" "KERN-RESOURCE-SHORTAGE" "KERN-SUCCESS"
+             "LOCK-EX" "LOCK-NB" "LOCK-SH" "LOCK-UN" "LTCHARS" "L_INCR" "L_SET"
+             "L_XTND" "MACH" "MACH-TASK_DATA" "MACH-TASK_NOTIFY"
+             "MACH-TASK_SELF" "MSG" "MSG-DONTROUTE" "MSG-ID" "MSG-LOCALPORT"
+             "MSG-MSGSIZE" "MSG-MSGTYPE" "MSG-OOB" "MSG-OPTION-NONE" "MSG-PEEK"
+             "MSG-RECEIVE" "MSG-REMOTEPORT" "MSG-SEND" "MSG-SIMPLEMSG"
+             "NOREPLY" "NOTIFY-LAST" "NOTIFY-MSG-ACCEPTED"
+             "NOTIFY-OWNERSHIP-RIGHTS" "NOTIFY-PORT-DELETED"
+             "NOTIFY-RECEIVE-RIGHTS" "NULLPORT" "OPEN-DIR" "O_APPEND" "O_CREAT"
+             "O_EXCL" "O_RDONLY" "O_RDWR" "O_TRUNC" "O_WRONLY" "PORT-ENABLED"
+             "PRIO-MAX" "PRIO-MIN" "PRIO-PGRP" "PRIO-PROCESS" "PRIO-USER"
+             "RCV-INTERRUPTED" "RCV-INVALID-MEMORY" "RCV-INVALID-PORT"
+             "RCV-NO-SENDERS" "RCV-NOT-ENOUGH-MEMORY" "RCV-ONLY-SENDER"
+             "RCV-SUCCESS" "RCV-TIMED-OUT" "RCV-TIMEOUT" "RCV-TOO-LARGE"
+             "READ-DIR" "READGRP" "READOTH" "READOWN" "RFS-AUTHENTICATE"
+             "RFSIOCGETRW" "RFSIOCGETS" "RFSIOCIDENTIFY" "RFSIOCSETRW"
+             "RFSIOCSETS" "RFSRW_ACCOUNT" "RFSRW_GROUP" "RFSRW_LOOKUP"
+             "RFSRW_NONE" "RFSRW_PASSWORD" "RFSRW_T" "RFSRW_USER" "RLIMIT-CORE"
+             "RLIMIT-CPU" "RLIMIT-DATA" "RLIMIT-FSIZE" "RLIMIT-INFINITY"
+             "RLIMIT-NLIMITS" "RLIMIT-RSS" "RLIMIT-STACK" "RPC-SUCCESS"
+             "RUSAGE" "RUSAGE_CHILDREN" "RUSAGE_SELF" "R_OK" "SAVETEXT"
+             "SEND-INTERRUPTED" "SEND-INVALID-MEMORY" "SEND-INVALID-PORT"
+             "SEND-KERNEL-REFUSED" "SEND-MSG-TOO-LARGE" "SEND-MSG-TOO-SMALL"
+             "SEND-NOTIFY" "SEND-SUCCESS" "SEND-TIMED-OUT" "SEND-TIMEOUT"
+             "SEND-WILL-NOTIFY-SEND-NOTIFY-IN-PROGRESS" "SET-UTARRAY"
+             "SETGIDEXEC" "SETUIDEXEC" "SGTTY" "SGTTY-ERASE" "SGTTY-FLAGS"
+             "SGTTY-ISPEED" "SGTTY-KILL" "SGTTY-OSPEED" "SIGALRM" "SIGBUS"
+             "SIGCHLD" "SIGCONT" "SIGCONTEXT" "SIGCONTEXT-BADPADDR"
+             "SIGCONTEXT-BADVADDR" "SIGCONTEXT-CAUSE" "SIGCONTEXT-FPC_CSR"
+             "SIGCONTEXT-FPC_EIR" "SIGCONTEXT-FPREGS" "SIGCONTEXT-MASK"
+             "SIGCONTEXT-MDHI" "SIGCONTEXT-MDLO" "SIGCONTEXT-ONSTACK"
+             "SIGCONTEXT-OWNEDFP" "SIGCONTEXT-PC" "SIGCONTEXT-REGS" "SIGEMSG"
+             "SIGEMT" "SIGFPE" "SIGHUP" "SIGILL" "SIGINT" "SIGIO" "SIGIOT"
+             "SIGKILL" "SIGMASK" "SIGMSG" "SIGPIPE" "SIGPROF" "SIGQUIT"
+             "SIGSEGV" "SIGSTOP" "SIGSYS" "SIGTERM" "SIGTRAP" "SIGTSTP"
+             "SIGTTIN" "SIGTTOU" "SIGURG" "SIGUSR1" "SIGUSR2" "SIGVTALRM"
+             "SIGWINCH" "SIGXCPU" "SIGXFSZ" "SIG_DFL" "SIG_IGN" "SOCK-DGRAM"
+             "SOCK-RAW" "SOCK-STREAM" "STAT" "TCHARS" "TERMINAL-SPEEDS"
+             "TIMEVAL" "TIMEZONE" "TIOCFLUSH" "TIOCGETC" "TIOCGETP" "TIOCGLTC"
+             "TIOCGPGRP" "TIOCGWINSZ" "TIOCNOTTY" "TIOCSETC" "TIOCSETP"
+             "TIOCSLTC" "TIOCSPGRP" "TIOCSWINSZ" "TTY-CBREAK" "TTY-CRMOD"
+             "TTY-ECHO" "TTY-LCASE" "TTY-RAW" "TTY-TANDEM" "TYPETYPE"
+             "UNIX-ACCEPT" "UNIX-ACCESS" "UNIX-BIND" "UNIX-CHDIR" "UNIX-CHMOD"
+             "UNIX-CHOWN" "UNIX-CLOSE" "UNIX-CONNECT" "UNIX-CREAT"
+             "UNIX-CURRENT-DIRECTORY" "UNIX-DUP" "UNIX-DUP2" "UNIX-ERRNO"
+             "UNIX-EXECVE" "UNIX-EXIT" "UNIX-FCHMOD" "UNIX-FCHOWN" "UNIX-FCNTL"
+             "UNIX-FILE-KIND" "UNIX-FLOCK" "UNIX-FORK" "UNIX-FSTAT"
+             "UNIX-FSYNC" "UNIX-FTRUNCATE" "UNIX-GETDTABLESIZE" "UNIX-GETEGID"
+             "UNIX-GETGID" "UNIX-GETGROUPS" "UNIX-GETHOSTID" "UNIX-GETHOSTNAME"
+             "UNIX-GETITIMER" "UNIX-GETPAGESIZE" "UNIX-GETPGRP" "UNIX-GETPID"
+             "UNIX-GETPPID" "UNIX-GETPRIORITY" "UNIX-GETRLIMIT"
+             "UNIX-GETRUSAGE" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-IOCTL"
+             "UNIX-ISATTY" "UNIX-ISCONSOLE" "UNIX-KILL" "UNIX-KILLPG"
+             "UNIX-LINK" "UNIX-LISTEN" "UNIX-LSEEK" "UNIX-LSTAT"
+             "UNIX-MAYBE-PREPEND-CURRENT-DIRECTORY" "UNIX-MKDIR" "UNIX-OPEN"
+             "UNIX-PIPE" "UNIX-READ" "UNIX-READLINK" "UNIX-RECV"
+             "UNIX-RECVFROM" "UNIX-RENAME" "UNIX-RESOLVE-LINKS" "UNIX-RMDIR"
+             "UNIX-SELECT" "UNIX-SEND" "UNIX-SENDTO" "UNIX-SETGROUPS"
+             "UNIX-SETHOSTID" "UNIX-SETHOSTNAME" "UNIX-SETITIMER"
+             "UNIX-SETPGRP" "UNIX-SETPRIORITY" "UNIX-SETQUOTA" "UNIX-SETREGID"
+             "UNIX-SETREUID" "UNIX-SETRLIMIT" "UNIX-SETTIMEOFDAY"
+             "UNIX-SIGBLOCK" "UNIX-SIGNAL-DESCRIPTION" "UNIX-SIGNAL-NAME"
+             "UNIX-SIGNAL-NUMBER" "UNIX-SIGPAUSE" "UNIX-SIGSETMASK"
+             "UNIX-SIMPLIFY-PATHNAME" "UNIX-SOCKET" "UNIX-STAT" "UNIX-SYMLINK"
+             "UNIX-SYNC" "UNIX-TRUNCATE" "UNIX-TTYNAME" "UNIX-UNLINK"
+             "UNIX-UTIMES" "UNIX-WAIT" "UNIX-WRITE" "UNSPECEXCEPTION"
+             "VM_ALLOCATE" "VM_COPY" "VM_DEALLOCATE" "VM_STATISTICS" "WINSIZE"
+             "WINSIZE-WS_COL" "WINSIZE-WS_ROW" "WINSIZE-WS_XPIXEL"
+             "WINSIZE-WS_YPIXEL" "WITH-TRAP-ARG-BLOCK" "WNOHANG" "WRITEGRP"
+             "WRITEOTH" "WRITEOWN" "WRONGARGS" "WSTOPPED" "WUNTRACED" "W_OK"
+             "X_OK"))
+(defpackage "UNIX"
+            (:export "CADDR-T" "D-INO" "D-NAME" "D-NAMLEN" "D-OFF" "D-RECLEN"
+             "DADDR-T" "DEV-T" "DIRECT" "EXECGRP" "EXECOTH" "EXECOWN" "F-DUPFD"
+             "F-GETFD" "F-GETFL" "F-GETOWN" "F-SETFD" "F-SETFL" "F-SETOWN"
+             "FAPPEND" "FASYNC" "FCREAT" "FEXCL" "FIONREAD" "FNDELAY" "FTRUNC"
+             "F_OK" "GET-UNIX-ERROR-MSG" "GID-T" "INO-T" "IT-INTERVAL"
+             "IT-VALUE" "ITIMERVAL" "KBDCGET" "KBDCRESET" "KBDCRST" "KBDCSET"
+             "KBDCSSTD" "KBDGCLICK" "KBDSCLICK" "KBDSGET" "L_INCR" "L_SET"
+             "L_XTND" "OFF-T" "O_APPEND" "O_CREAT" "O_EXCL" "O_RDONLY" "O_RDWR"
+             "O_TRUNC" "O_WRONLY" "READGRP" "READOTH" "READOWN" "RLIM-CUR"
+             "RLIM-MAX" "RLIMIT" "RU-IDRSS" "RU-INBLOCK" "RU-ISRSS" "RU-IXRSS"
+             "RU-MAJFLT" "RU-MAXRSS" "RU-MINFLT" "RU-MSGRCV" "RU-MSGSND"
+             "RU-NIVCSW" "RU-NSIGNALS" "RU-NSWAP" "RU-NVCSW" "RU-OUBLOCK"
+             "RU-STIME" "RU-UTIME" "RUSAGE_CHILDREN" "RUSAGE_SELF" "RUSEAGE"
+             "R_OK" "S-IEXEC" "S-IFBLK" "S-IFCHR" "S-IFDIR" "S-IFLNK" "S-IFMT"
+             "S-IFREG" "S-IFSOCK" "S-IREAD" "S-ISGID" "S-ISUID" "S-ISVTX"
+             "S-IWRITE" "SAVETEXT" "SC-MASK" "SC-ONSTACK" "SC-PC" "SETGIDEXEC"
+             "SETUIDEXEC" "SG-ERASE" "SG-FLAGS" "SG-ISPEED" "SG-KILL"
+             "SG-OSPEED" "SGTTYB" "SIGCONTEXT" "SIZE-T" "ST-ATIME" "ST-BLKSIZE"
+             "ST-BLOCKS" "ST-CTIME" "ST-DEV" "ST-GID" "ST-MODE" "ST-MTIME"
+             "ST-NLINK" "ST-RDEV" "ST-SIZE" "ST-UID" "STAT" "SWBLK-T" "T-BRKC"
+             "T-DSUSPC" "T-EOFC" "T-FLUSHC" "T-INTRC" "T-LNEXTC" "T-QUITC"
+             "T-RPRNTC" "T-STARTC" "T-STOPC" "T-SUSPC" "T-WERASC" "TCHARS"
+             "TERMINAL-SPEEDS" "TIME-T" "TIMEVAL" "TIMEZONE" "TIOCFLUSH"
+             "TIOCGETC" "TIOCGETP" "TIOCGLTC" "TIOCGPGRP" "TIOCGWINSZ"
+             "TIOCNOTTY" "TIOCSETC" "TIOCSETP" "TIOCSLTC" "TIOCSPGRP"
+             "TIOCSWINSZ" "TTY-CBREAK" "TTY-CRMOD" "TTY-ECHO" "TTY-LCASE"
+             "TTY-RAW" "TTY-TANDEM" "TV-SEC" "TV-USEC" "TZ-DSTTIME"
+             "TZ-MINUTESWEST" "UID-T" "UNIX-ACCEPT" "UNIX-ACCESS" "UNIX-BIND"
+             "UNIX-CHDIR" "UNIX-CHMOD" "UNIX-CHOWN" "UNIX-CLOSE" "UNIX-CONNECT"
+             "UNIX-CREAT" "UNIX-CURRENT-DIRECTORY" "UNIX-DUP" "UNIX-DUP2"
+             "UNIX-ERRNO" "UNIX-EXECVE" "UNIX-EXIT" "UNIX-FCHMOD" "UNIX-FCHOWN"
+             "UNIX-FCNTL" "UNIX-FD" "UNIX-FILE-MODE" "UNIX-FORK" "UNIX-FSTAT"
+             "UNIX-FSYNC" "UNIX-FTRUNCATE" "UNIX-GETDTABLESIZE" "UNIX-GETEGID"
+             "UNIX-GETGID" "UNIX-GETHOSTID" "UNIX-GETHOSTNAME"
+             "UNIX-GETPAGESIZE" "UNIX-GETPGRP" "UNIX-GETPID" "UNIX-GETPPID"
+             "UNIX-GETRUSAGE" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-GID"
+             "UNIX-IOCTL" "UNIX-ISATTY" "UNIX-LINK" "UNIX-LISTEN" "UNIX-LSEEK"
+             "UNIX-LSTAT" "UNIX-MKDIR" "UNIX-OPEN" "UNIX-PATHNAME" "UNIX-PID"
+             "UNIX-PIPE" "UNIX-READ" "UNIX-READLINK" "UNIX-RECV" "UNIX-RENAME"
+             "UNIX-RMDIR" "UNIX-SELECT" "UNIX-SEND" "UNIX-SETPGRP"
+             "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SOCKET" "UNIX-STAT"
+             "UNIX-SYMLINK" "UNIX-SYNC" "UNIX-TRUNCATE" "UNIX-TTYNAME"
+             "UNIX-UID" "UNIX-UNLINK" "UNIX-UTIMES" "UNIX-WRITE" "WINSIZE"
+             "WRITEGRP" "WRITEOTH" "WRITEOWN" "WS-COL" "WS-ROW" "WS-XPIXEL"
+             "WS-YPIXEL" "W_OK" "X_OK"))
+(intern "FUNCALLABLE-INSTANCE-P" "KERNEL")
+(defpackage "PCL"
+            (:import-from "KERNEL" "FUNCALLABLE-INSTANCE-P")
+            (:export "ADD-METHOD" "BUILT-IN-CLASS" "CALL-METHOD"
+             "CALL-NEXT-METHOD" "CHANGE-CLASS" "CLASS-NAME" "CLASS-OF"
+             "COMPUTE-APPLICABLE-METHODS" "DEFCLASS" "DEFGENERIC"
+             "DEFINE-METHOD-COMBINATION" "DEFMETHOD" "ENSURE-GENERIC-FUNCTION"
+             "FIND-CLASS" "FIND-METHOD" "FUNCTION-KEYWORDS" "GENERIC-FLET"
+             "GENERIC-LABELS" "INITIALIZE-INSTANCE" "INVALID-METHOD-ERROR"
+             "MAKE-INSTANCE" "MAKE-INSTANCES-OBSOLETE"
+             "METHOD-COMBINATION-ERROR" "METHOD-QUALIFIERS" "NEXT-METHOD-P"
+             "NO-APPLICABLE-METHOD" "NO-NEXT-METHOD" "PRINT-OBJECT"
+             "REINITIALIZE-INSTANCE" "REMOVE-METHOD" "SHARED-INITIALIZE"
+             "SLOT-BOUNDP" "SLOT-EXISTS-P" "SLOT-MAKUNBOUND" "SLOT-MISSING"
+             "SLOT-UNBOUND" "SLOT-VALUE" "STANDARD" "STANDARD-CLASS"
+             "STANDARD-GENERIC-FUNCTION" "STANDARD-METHOD" "STANDARD-OBJECT"
+             "STRUCTURE-CLASS" "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS"
+             "UPDATE-INSTANCE-FOR-REDEFINED-CLASS" "WITH-ACCESSORS"
+             "WITH-ADDED-METHODS" "WITH-SLOTS"))
+(defpackage "FORMAT")
+(defpackage "HEMLOCK")
+(defpackage "SPELL"
+            (:export "CORRECT-SPELLING" "MAX-ENTRY-LENGTH"
+             "MAYBE-READ-SPELL-DICTIONARY" "SPELL-ADD-ENTRY"
+             "SPELL-COLLECT-CLOSE-WORDS" "SPELL-READ-DICTIONARY"
+             "SPELL-REMOVE-ENTRY" "SPELL-ROOT-FLAGS" "SPELL-ROOT-WORD"
+             "SPELL-TRY-WORD"))
+(defpackage "LISP"
+            (:export "&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY"
+             "&OPTIONAL" "&REST" "&WHOLE" "*" "**" "***" "*APPLYHOOK*"
+             "*BREAK-ON-SIGNALS*" "*BREAK-ON-WARNINGS*"
+             "*COMPILE-FILE-PATHNAME*" "*COMPILE-FILE-TRUENAME*"
+             "*COMPILE-PRINT*" "*COMPILE-VERBOSE*" "*DEBUG-IO*"
+             "*DEBUGGER-HOOK*" "*DEFAULT-PATHNAME-DEFAULTS*"
+             "*DESCRIBE-INDENTATION*" "*DESCRIBE-LEVEL*"
+             "*DESCRIBE-PRINT-LENGTH*" "*DESCRIBE-PRINT-LEVEL*"
+             "*DESCRIBE-VERBOSE*" "*ERROR-OUTPUT*" "*EVALHOOK*" "*FEATURES*"
+             "*GENSYM-COUNTER*" "*LOAD-VERBOSE*" "*MACROEXPAND-HOOK*"
+             "*MODULES*" "*PACKAGE*" "*PRINT-ARRAY*" "*PRINT-BASE*"
+             "*PRINT-CASE*" "*PRINT-CIRCLE*" "*PRINT-ESCAPE*" "*PRINT-GENSYM*"
+             "*PRINT-LENGTH*" "*PRINT-LEVEL*" "*PRINT-LINES*"
+             "*PRINT-MISER-WIDTH*" "*PRINT-PPRINT-DISPATCH*" "*PRINT-PRETTY*"
+             "*PRINT-RADIX*" "*PRINT-READABLY*" "*PRINT-RIGHT-MARGIN*"
+             "*QUERY-IO*" "*RANDOM-STATE*" "*READ-BASE*"
+             "*READ-DEFAULT-FLOAT-FORMAT*" "*READ-EVAL*" "*READ-SUPPRESS*"
+             "*READTABLE*" "*STANDARD-INPUT*" "*STANDARD-OUTPUT*"
+             "*TERMINAL-IO*" "*TRACE-OUTPUT*" "+" "++" "+++" "-" "/" "//" "///"
+             "/=" "1+" "1-" "<" "<=" "=" ">" ">=" "ABORT" "ABS" "ACONS" "ACOS"
+             "ACOSH" "ADJOIN" "ADJUST-ARRAY" "ADJUSTABLE-ARRAY-P"
+             "ALPHA-CHAR-P" "ALPHANUMERICP" "AND" "APPEND" "APPLY" "APPLYHOOK"
+             "APROPOS" "APROPOS-LIST" "AREF" "ARITHMETIC-ERROR"
+             "ARITHMETIC-ERROR-OPERANDS" "ARITHMETIC-ERROR-OPERATION" "ARRAY"
+             "ARRAY-DIMENSION" "ARRAY-DIMENSION-LIMIT" "ARRAY-DIMENSIONS"
+             "ARRAY-ELEMENT-TYPE" "ARRAY-HAS-FILL-POINTER-P"
+             "ARRAY-IN-BOUNDS-P" "ARRAY-RANK" "ARRAY-RANK-LIMIT"
+             "ARRAY-ROW-MAJOR-INDEX" "ARRAY-TOTAL-SIZE"
+             "ARRAY-TOTAL-SIZE-LIMIT" "ARRAYP" "ASH" "ASIN" "ASINH" "ASSERT"
+             "ASSOC" "ASSOC-IF" "ASSOC-IF-NOT" "ATAN" "ATANH" "ATOM"
+             "BASE-CHAR" "BASE-CHARACTER" "BASE-STRING" "BIGNUM" "BIT"
+             "BIT-AND" "BIT-ANDC1" "BIT-ANDC2" "BIT-EQV" "BIT-IOR" "BIT-NAND"
+             "BIT-NOR" "BIT-NOT" "BIT-ORC1" "BIT-ORC2" "BIT-VECTOR"
+             "BIT-VECTOR-P" "BIT-XOR" "BLOCK" "BOOLE" "BOOLE-1" "BOOLE-2"
+             "BOOLE-AND" "BOOLE-ANDC1" "BOOLE-ANDC2" "BOOLE-C1" "BOOLE-C2"
+             "BOOLE-CLR" "BOOLE-EQV" "BOOLE-IOR" "BOOLE-NAND" "BOOLE-NOR"
+             "BOOLE-ORC1" "BOOLE-ORC2" "BOOLE-SET" "BOOLE-XOR" "BOTH-CASE-P"
+             "BOUNDP" "BREAK" "BUTLAST" "BYTE" "BYTE-POSITION" "BYTE-SIZE"
+             "CAAAAR" "CAAADR" "CAAAR" "CAADAR" "CAADDR" "CAADR" "CAAR"
+             "CADAAR" "CADADR" "CADAR" "CADDAR" "CADDDR" "CADDR" "CADR"
+             "CALL-ARGUMENTS-LIMIT" "CAR" "CASE" "CATCH" "CCASE" "CDAAAR"
+             "CDAADR" "CDAAR" "CDADAR" "CDADDR" "CDADR" "CDAR" "CDDAAR"
+             "CDDADR" "CDDAR" "CDDDAR" "CDDDDR" "CDDDR" "CDDR" "CDR" "CEILING"
+             "CELL-ERROR" "CERROR" "CHAR" "CHAR-BIT" "CHAR-BITS"
+             "CHAR-BITS-LIMIT" "CHAR-CODE" "CHAR-CODE-LIMIT" "CHAR-CONTROL-BIT"
+             "CHAR-DOWNCASE" "CHAR-EQUAL" "CHAR-FONT" "CHAR-FONT-LIMIT"
+             "CHAR-GREATERP" "CHAR-HYPER-BIT" "CHAR-INT" "CHAR-LESSP"
+             "CHAR-META-BIT" "CHAR-NAME" "CHAR-NOT-EQUAL" "CHAR-NOT-GREATERP"
+             "CHAR-NOT-LESSP" "CHAR-SUPER-BIT" "CHAR-UPCASE" "CHAR/=" "CHAR<"
+             "CHAR<=" "CHAR=" "CHAR>" "CHAR>=" "CHARACTER" "CHARACTERP"
+             "CHECK-TYPE" "CIS" "CLEAR-INPUT" "CLEAR-OUTPUT" "CLOSE" "CLRHASH"
+             "CODE-CHAR" "COERCE" "COMMON" "COMMONP" "COMPILATION-SPEED"
+             "COMPILE" "COMPILE-FILE" "COMPILED-FUNCTION" "COMPILED-FUNCTION-P"
+             "COMPILER-LET" "COMPLEMENT" "COMPLEX" "COMPLEXP"
+             "COMPUTE-RESTARTS" "CONCATENATE" "COND" "CONDITION" "CONJUGATE"
+             "CONS" "CONSP" "CONSTANTLY" "CONSTANTP" "CONTINUE" "CONTROL-ERROR"
+             "COPY-ALIST" "COPY-LIST" "COPY-PPRINT-DISPATCH" "COPY-READTABLE"
+             "COPY-SEQ" "COPY-SYMBOL" "COPY-TREE" "COS" "COSH" "COUNT"
+             "COUNT-IF" "COUNT-IF-NOT" "CTYPECASE" "DEBUG-INFO" "DECF"
+             "DECLAIM" "DECLARATION" "DECLARE" "DECODE-FLOAT"
+             "DECODE-UNIVERSAL-TIME" "DEFCONSTANT" "DEFINE-CONDITION"
+             "DEFINE-MODIFY-MACRO" "DEFINE-SETF-METHOD" "DEFMACRO" "DEFPACKAGE"
+             "DEFPARAMETER" "DEFSETF" "DEFSTRUCT" "DEFTYPE" "DEFUN" "DEFVAR"
+             "DELETE" "DELETE-DUPLICATES" "DELETE-FILE" "DELETE-IF"
+             "DELETE-IF-NOT" "DENOMINATOR" "DEPOSIT-FIELD" "DESCRIBE"
+             "DESTRUCTURING-BIND" "DIGIT-CHAR" "DIGIT-CHAR-P" "DIRECTORY"
+             "DIRECTORY-NAMESTRING" "DISASSEMBLE" "DIVISION-BY-ZERO" "DO" "DO*"
+             "DO-ALL-SYMBOLS" "DO-EXTERNAL-SYMBOLS" "DO-SYMBOLS"
+             "DOCUMENTATION" "DOLIST" "DOTIMES" "DOUBLE-FLOAT"
+             "DOUBLE-FLOAT-EPSILON" "DOUBLE-FLOAT-NEGATIVE-EPSILON" "DPB"
+             "DRIBBLE" "ECASE" "ED" "EIGHTH" "ELT" "ENCODE-UNIVERSAL-TIME"
+             "END-OF-FILE" "ENDP" "ENOUGH-NAMESTRING" "EQ" "EQL" "EQUAL"
+             "EQUALP" "ERROR" "ETYPECASE" "EVAL" "EVAL-WHEN" "EVALHOOK" "EVENP"
+             "EVERY" "EXP" "EXPORT" "EXPT" "EXTENDED-CHAR" "FBOUNDP" "FCEILING"
+             "FDEFINITION" "FFLOOR" "FIFTH" "FILE-AUTHOR" "FILE-ERROR"
+             "FILE-ERROR-PATHNAME" "FILE-LENGTH" "FILE-NAMESTRING"
+             "FILE-POSITION" "FILE-WRITE-DATE" "FILL" "FILL-POINTER" "FIND"
+             "FIND-ALL-SYMBOLS" "FIND-IF" "FIND-IF-NOT" "FIND-PACKAGE"
+             "FIND-RESTART" "FIND-SYMBOL" "FINISH-OUTPUT" "FIRST" "FIXNUM"
+             "FLET" "FLOAT" "FLOAT-DIGITS" "FLOAT-PRECISION" "FLOAT-RADIX"
+             "FLOAT-SIGN" "FLOATING-POINT-OVERFLOW" "FLOATING-POINT-UNDERFLOW"
+             "FLOATP" "FLOOR" "FMAKUNBOUND" "FORCE-OUTPUT" "FORMAT" "FORMATTER"
+             "FOURTH" "FRESH-LINE" "FROUND" "FTRUNCATE" "FTYPE" "FUNCALL"
+             "FUNCTION" "FUNCTION-LAMBDA-EXPRESSION" "FUNCTIONP" "GCD" "GENSYM"
+             "GENTEMP" "GET" "GET-DECODED-TIME" "GET-DISPATCH-MACRO-CHARACTER"
+             "GET-INTERNAL-REAL-TIME" "GET-INTERNAL-RUN-TIME"
+             "GET-MACRO-CHARACTER" "GET-OUTPUT-STREAM-STRING" "GET-PROPERTIES"
+             "GET-SETF-METHOD" "GET-SETF-METHOD-MULTIPLE-VALUE"
+             "GET-UNIVERSAL-TIME" "GETF" "GETHASH" "GO" "GRAPHIC-CHAR-P"
+             "HANDLER-BIND" "HANDLER-CASE" "HASH-TABLE" "HASH-TABLE-COUNT"
+             "HASH-TABLE-P" "HOST-NAMESTRING" "IDENTITY" "IF" "IGNORABLE"
+             "IGNORE" "IGNORE-ERRORS" "IMAGPART" "IMPORT" "IN-PACKAGE" "INCF"
+             "INLINE" "INPUT-STREAM-P" "INSPECT" "INT-CHAR" "INTEGER"
+             "INTEGER-DECODE-FLOAT" "INTEGER-LENGTH" "INTEGERP" "INTERN"
+             "INTERNAL-TIME-UNITS-PER-SECOND" "INTERSECTION" "INVOKE-DEBUGGER"
+             "INVOKE-RESTART" "INVOKE-RESTART-INTERACTIVELY" "ISQRT" "KEYWORD"
+             "KEYWORDP" "LABELS" "LAMBDA" "LAMBDA-LIST-KEYWORDS"
+             "LAMBDA-PARAMETERS-LIMIT" "LAST" "LCM" "LDB" "LDB-TEST" "LDIFF"
+             "LEAST-NEGATIVE-DOUBLE-FLOAT" "LEAST-NEGATIVE-LONG-FLOAT"
+	     "LEAST-NEGATIVE-NORMALIZED-DOUBLE-FLOAT"
+	     "LEAST-NEGATIVE-NORMALIZED-LONG-FLOAT"
+	     "LEAST-NEGATIVE-NORMALIZED-SHORT-FLOAT"
+	     "LEAST-NEGATIVE-NORMALIZED-SINGLE-FLOAT"
+             "LEAST-NEGATIVE-SHORT-FLOAT" "LEAST-NEGATIVE-SINGLE-FLOAT"
+             "LEAST-POSITIVE-DOUBLE-FLOAT" "LEAST-POSITIVE-LONG-FLOAT"
+             "LEAST-POSITIVE-NORMALIZED-DOUBLE-FLOAT"
+             "LEAST-POSITIVE-NORMALIZED-LONG-FLOAT"
+             "LEAST-POSITIVE-NORMALIZED-SHORT-FLOAT"
+             "LEAST-POSITIVE-NORMALIZED-SINGLE-FLOAT"
+             "LEAST-POSITIVE-SHORT-FLOAT" "LEAST-POSITIVE-SINGLE-FLOAT"
+             "LENGTH" "LET" "LET*" "LISP-IMPLEMENTATION-TYPE"
+             "LISP-IMPLEMENTATION-VERSION" "LIST" "LIST*" "LIST-ALL-PACKAGES"
+             "LIST-LENGTH" "LISTEN" "LISTP" "LOAD" "LOAD-TIME-VALUE" "LOCALLY"
+             "LOG" "LOGAND" "LOGANDC1" "LOGANDC2" "LOGBITP" "LOGCOUNT" "LOGEQV"
+             "LOGIOR" "LOGNAND" "LOGNOR" "LOGNOT" "LOGORC1" "LOGORC2" "LOGTEST"
+             "LOGXOR" "LONG-FLOAT" "LONG-FLOAT-EPSILON"
+             "LONG-FLOAT-NEGATIVE-EPSILON" "LONG-SITE-NAME" "LOOP"
+             "LOOP-FINISH" "LOWER-CASE-P" "MACHINE-INSTANCE" "MACHINE-TYPE"
+             "MACHINE-VERSION" "MACRO-FUNCTION" "MACROEXPAND" "MACROEXPAND-1"
+             "MACROLET" "MAKE-ARRAY" "MAKE-BROADCAST-STREAM" "MAKE-CHAR"
+             "MAKE-CONCATENATED-STREAM" "MAKE-CONDITION"
+             "MAKE-DISPATCH-MACRO-CHARACTER" "MAKE-ECHO-STREAM"
+             "MAKE-HASH-TABLE" "MAKE-LIST" "MAKE-PACKAGE" "MAKE-PATHNAME"
+             "MAKE-RANDOM-STATE" "MAKE-SEQUENCE" "MAKE-STRING"
+             "MAKE-STRING-INPUT-STREAM" "MAKE-STRING-OUTPUT-STREAM"
+             "MAKE-SYMBOL" "MAKE-SYNONYM-STREAM" "MAKE-TWO-WAY-STREAM"
+             "MAKUNBOUND" "MAP" "MAPC" "MAPCAN" "MAPCAR" "MAPCON" "MAPHASH"
+             "MAPL" "MAPLIST" "MASK-FIELD" "MAX" "MEMBER" "MEMBER-IF"
+             "MEMBER-IF-NOT" "MERGE" "MERGE-PATHNAMES" "MIN" "MINUSP"
+             "MISMATCH" "MOD" "MOST-NEGATIVE-DOUBLE-FLOAT"
+             "MOST-NEGATIVE-FIXNUM" "MOST-NEGATIVE-LONG-FLOAT"
+             "MOST-NEGATIVE-SHORT-FLOAT" "MOST-NEGATIVE-SINGLE-FLOAT"
+             "MOST-POSITIVE-DOUBLE-FLOAT" "MOST-POSITIVE-FIXNUM"
+             "MOST-POSITIVE-LONG-FLOAT" "MOST-POSITIVE-SHORT-FLOAT"
+             "MOST-POSITIVE-SINGLE-FLOAT" "MUFFLE-WARNING"
+             "MULTIPLE-VALUE-BIND" "MULTIPLE-VALUE-CALL" "MULTIPLE-VALUE-LIST"
+             "MULTIPLE-VALUE-PROG1" "MULTIPLE-VALUE-SETQ"
+             "MULTIPLE-VALUES-LIMIT" "NAME-CHAR" "NAMESTRING" "NBUTLAST"
+             "NCONC" "NIL" "NINTERSECTION" "NINTH" "NOT" "NOTANY" "NOTEVERY"
+             "NOTINLINE" "NRECONC" "NREVERSE" "NSET-DIFFERENCE"
+             "NSET-EXCLUSIVE-OR" "NSTRING-CAPITALIZE" "NSTRING-DOWNCASE"
+             "NSTRING-UPCASE" "NSUBLIS" "NSUBST" "NSUBST-IF" "NSUBST-IF-NOT"
+             "NSUBSTITUTE" "NSUBSTITUTE-IF" "NSUBSTITUTE-IF-NOT" "NTH"
+             "NTH-VALUE" "NTHCDR" "NULL" "NUMBER" "NUMBERP" "NUMERATOR"
+             "NUNION" "ODDP" "OPEN" "OPTIMIZE" "OR" "OTHERWISE"
+             "OUTPUT-STREAM-P" "PACKAGE" "PACKAGE-ERROR"
+             "PACKAGE-ERROR-PACKAGE" "PACKAGE-NAME" "PACKAGE-NICKNAMES"
+             "PACKAGE-SHADOWING-SYMBOLS" "PACKAGE-USE-LIST"
+             "PACKAGE-USED-BY-LIST" "PACKAGEP" "PAIRLIS" "PARSE-INTEGER"
+             "PARSE-NAMESTRING" "PATHNAME" "PATHNAME-DEVICE"
+             "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-MATCH-P"
+             "PATHNAME-NAME" "PATHNAME-TYPE" "PATHNAME-VERSION" "PATHNAMEP"
+             "PEEK-CHAR" "PHASE" "PI" "PLUSP" "POP" "POSITION" "POSITION-IF"
+             "POSITION-IF-NOT" "PPRINT" "PPRINT-DISPATCH"
+             "PPRINT-EXIT-IF-LIST-EXHAUSTED" "PPRINT-FILL" "PPRINT-INDENT"
+             "PPRINT-LINEAR" "PPRINT-LOGICAL-BLOCK" "PPRINT-NEWLINE"
+             "PPRINT-POP" "PPRINT-TAB" "PPRINT-TABULAR" "PRIN1"
+             "PRIN1-TO-STRING" "PRINC" "PRINC-TO-STRING" "PRINT"
+             "PRINT-UNREADABLE-OBJECT" "PROBE-FILE" "PROCLAIM" "PROG" "PROG*"
+             "PROG1" "PROG2" "PROGN" "PROGRAM-ERROR" "PROGV" "PROVIDE" "PSETF"
+             "PSETQ" "PUSH" "PUSHNEW" "QUOTE" "RANDOM" "RANDOM-STATE"
+             "RANDOM-STATE-P" "RASSOC" "RASSOC-IF" "RASSOC-IF-NOT" "RATIO"
+             "RATIONAL" "RATIONALIZE" "RATIONALP" "READ" "READ-BYTE"
+             "READ-CHAR" "READ-CHAR-NO-HANG" "READ-DELIMITED-LIST"
+             "READ-FROM-STRING" "READ-LINE" "READ-PRESERVING-WHITESPACE"
+             "READTABLE" "READTABLEP" "REAL" "REALPART" "REDUCE" "REM" "REMF"
+             "REMHASH" "REMOVE" "REMOVE-DUPLICATES" "REMOVE-IF" "REMOVE-IF-NOT"
+             "REMPROP" "RENAME-FILE" "RENAME-PACKAGE" "REPLACE" "REQUIRE"
+             "REST" "RESTART" "RESTART-BIND" "RESTART-CASE" "RESTART-NAME"
+             "RETURN" "RETURN-FROM" "REVAPPEND" "REVERSE" "ROOM" "ROTATEF"
+             "ROUND" "ROW-MAJOR-AREF" "RPLACA" "RPLACD" "SAFETY" "SATISFIES"
+             "SBIT" "SCALE-FLOAT" "SCHAR" "SEARCH" "SECOND" "SEQUENCE"
+             "SERIOUS-CONDITION" "SET" "SET-CHAR-BIT" "SET-DIFFERENCE"
+             "SET-DISPATCH-MACRO-CHARACTER" "SET-EXCLUSIVE-OR"
+             "SET-MACRO-CHARACTER" "SET-PPRINT-DISPATCH" "SET-SYNTAX-FROM-CHAR"
+             "SETF" "SETQ" "SEVENTH" "SHADOW" "SHADOWING-IMPORT" "SHIFTF"
+             "SHORT-FLOAT" "SHORT-FLOAT-EPSILON" "SHORT-FLOAT-NEGATIVE-EPSILON"
+             "SHORT-SITE-NAME" "SIGNAL" "SIGNED-BYTE" "SIGNUM" "SIMPLE-ARRAY"
+             "SIMPLE-BASE-STRING" "SIMPLE-BIT-VECTOR" "SIMPLE-BIT-VECTOR-P"
+             "SIMPLE-CONDITION" "SIMPLE-CONDITION-FORMAT-ARGUMENTS"
+             "SIMPLE-CONDITION-FORMAT-STRING" "SIMPLE-ERROR" "SIMPLE-STRING"
+             "SIMPLE-STRING-P" "SIMPLE-TYPE-ERROR" "SIMPLE-VECTOR"
+             "SIMPLE-VECTOR-P" "SIMPLE-WARNING" "SIN" "SINGLE-FLOAT"
+             "SINGLE-FLOAT-EPSILON" "SINGLE-FLOAT-NEGATIVE-EPSILON" "SINH"
+             "SIXTH" "SLEEP" "SOFTWARE-TYPE" "SOFTWARE-VERSION" "SOME" "SORT"
+             "SPACE" "SPECIAL" "SPECIAL-FORM-P" "SPEED" "SQRT" "STABLE-SORT"
+             "STACK-OVERFLOW" "STANDARD-CHAR" "STANDARD-CHAR-P" "STEP"
+             "STORAGE-CONDITION" "STORAGE-EXHAUSTED" "STORE-VALUE" "STREAM"
+             "STREAM-ELEMENT-TYPE" "STREAM-ERROR" "STREAM-ERROR-STREAM"
+             "STREAMP" "STRING" "STRING-CAPITALIZE" "STRING-CHAR"
+             "STRING-CHAR-P" "STRING-DOWNCASE" "STRING-EQUAL" "STRING-GREATERP"
+             "STRING-LEFT-TRIM" "STRING-LESSP" "STRING-NOT-EQUAL"
+             "STRING-NOT-GREATERP" "STRING-NOT-LESSP" "STRING-RIGHT-TRIM"
+             "STRING-TRIM" "STRING-UPCASE" "STRING/=" "STRING<" "STRING<="
+             "STRING=" "STRING>" "STRING>=" "STRINGP" "STRUCTURE" "SUBLIS"
+             "SUBSEQ" "SUBSETP" "SUBST" "SUBST-IF" "SUBST-IF-NOT" "SUBSTITUTE"
+             "SUBSTITUTE-IF" "SUBSTITUTE-IF-NOT" "SUBTYPEP" "SVREF" "SXHASH"
+             "SYMBOL" "SYMBOL-FUNCTION" "SYMBOL-MACROLET" "SYMBOL-NAME"
+             "SYMBOL-PACKAGE" "SYMBOL-PLIST" "SYMBOL-VALUE" "SYMBOLP" "T"
+             "TAGBODY" "TAILP" "TAN" "TANH" "TENTH" "TERPRI" "THE" "THIRD"
+             "THROW" "TIME" "TRACE" "TRANSLATE-PATHNAME" "TREE-EQUAL"
+             "TRUENAME" "TRUNCATE" "TYPE" "TYPE-ERROR" "TYPE-ERROR-DATUM"
+             "TYPE-ERROR-EXPECTED-TYPE" "TYPE-OF" "TYPECASE" "TYPEP"
+             "UNBOUND-VARIABLE" "UNDEFINED-FUNCTION" "UNEXPORT" "UNINTERN"
+             "UNION" "UNLESS" "UNREAD-CHAR" "UNSIGNED-BYTE" "UNTRACE"
+             "UNUSE-PACKAGE" "UNWIND-PROTECT" "UPPER-CASE-P" "USE-PACKAGE"
+             "USE-VALUE" "USER-HOMEDIR-PATHNAME" "VALUES" "VALUES-LIST"
+             "VARIABLE" "VECTOR" "VECTOR-POP" "VECTOR-PUSH"
+             "VECTOR-PUSH-EXTEND" "VECTORP" "WARN" "WARNING" "WHEN"
+             "WILD-PATHNAME-P" "WITH-COMPILATION-UNIT"
+             "WITH-HASH-TABLE-ITERATOR" "WITH-INPUT-FROM-STRING"
+             "WITH-OPEN-FILE" "WITH-OPEN-STREAM" "WITH-OUTPUT-TO-STRING"
+             "WITH-PACKAGE-ITERATOR" "WITH-SIMPLE-RESTART"
+             "WITH-STANDARD-IO-SYNTAX" "WRITE" "WRITE-BYTE" "WRITE-CHAR"
+             "WRITE-LINE" "WRITE-STRING" "WRITE-TO-STRING" "Y-OR-N-P"
+             "YES-OR-NO-P" "ZEROP"))
+(defpackage "EVAL"
+            (:export "*EVAL-STACK-TRACE*" "*INTERNAL-APPLY-NODE-TRACE*"
+             "*INTERPRETED-FUNCTION-CACHE-MINIMUM-SIZE*"
+             "*INTERPRETED-FUNCTION-CACHE-THRESHOLD*"
+             "FLUSH-INTERPRETED-FUNCTION-CACHE" "INTERNAL-EVAL"
+             "INTERPRETED-FUNCTION-ARGLIST" "INTERPRETED-FUNCTION-CLOSURE"
+             "INTERPRETED-FUNCTION-LAMBDA-EXPRESSION"
+             "INTERPRETED-FUNCTION-NAME" "INTERPRETED-FUNCTION-P"
+             "INTERPRETED-FUNCTION-TYPE" "MAKE-INTERPRETED-FUNCTION"
+             "TRACE-EVAL"))
+(defpackage "ITERATE"
+            (:export "*ITERATE-WARNINGS*" "COLLECTING" "EACHTIME" "ELEMENTS"
+             "GATHER" "GATHERING" "INTERVAL" "ITERATE" "ITERATE*" "JOINING"
+             "LIST-ELEMENTS" "LIST-TAILS" "MAXIMIZING" "MINIMIZING"
+             "PLIST-ELEMENTS" "SUMMING" "UNTIL" "WHILE" "WITH-GATHERING"))
+(dolist
+    (name
+     '("%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD"
+       "%SBITSET" "%SCHARSET" "%SET-DOCUMENTATION" "%SET-FDEFINITION"
+       "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF" "%SETELT" "%SETNTH"
+       "%SP-STRING-COMPARE" "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
+       "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
+       "DYNAMIC-0-SPACE-START" "DYNAMIC-1-SPACE-START" "FIXNUM" "LONG-FLOAT-P"
+       "READ-ONLY-SPACE-START" "SHORT-FLOAT-P" "STATIC-SPACE-START" "STRING/=*"
+       "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"))
+  (intern name "LISP"))
+(dolist (name '("%PRIMITIVE" "%STANDARD-CHAR-P" "%STRING-CHAR-P"))
+  (intern name "SYSTEM"))
+(intern "BIGNUM-TYPE" "BIGNUM")
+(dolist
+    (name
+     '("%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
+       "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
+  (intern name "KERNEL"))
+(defpackage "MIPS"
+            (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
+             "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
+             "%SET-DOCUMENTATION" "%SET-FDEFINITION" "%SET-FILL-POINTER"
+             "%SET-ROW-MAJOR-AREF" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
+             "%SVSET" "%TYPEP" "*READ-ONLY-SPACE-FREE-POINTER*"
+             "*STATIC-SPACE-FREE-POINTER*" "CURRENT-DYNAMIC-SPACE-START"
+             "DYNAMIC-0-SPACE-START" "DYNAMIC-1-SPACE-START" "FIXNUM"
+             "LONG-FLOAT-P" "READ-ONLY-SPACE-START" "SHORT-FLOAT-P"
+             "STATIC-SPACE-START" "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
+             "STRING>*" "STRING>=*")
+            (:import-from "SYSTEM" "%PRIMITIVE" "%STANDARD-CHAR-P"
+             "%STRING-CHAR-P")
+            (:import-from "BIGNUM" "BIGNUM-TYPE")
+            (:import-from "KERNEL" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
+             "ARRAY-HEADER-P" "BASE-CHAR-P" "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P"
+             "SINGLE-FLOAT-P")
+            (:export "*ASSEMBLY-UNIT-LENGTH*" "*PRIMITIVE-OBJECTS*"
+             "ANY-REG-SC-NUMBER" "ARRAY-DATA-SLOT" "ARRAY-DIMENSIONS-OFFSET"
+             "ARRAY-DISPLACED-P-SLOT" "ARRAY-DISPLACEMENT-SLOT"
+             "ARRAY-ELEMENTS-SLOT" "ARRAY-FILL-POINTER-P-SLOT"
+             "ARRAY-FILL-POINTER-SLOT" "ATOMIC-FLAG" "BASE-CHAR-REG-SC-NUMBER"
+             "BASE-CHAR-STACK-SC-NUMBER" "BASE-CHAR-TYPE"
+             "BIGNUM-DIGITS-OFFSET" "BIGNUM-TYPE" "BINDING-SIZE"
+             "BINDING-SYMBOL-SLOT" "BINDING-VALUE-SLOT" "BREAKPOINT-TRAP"
+             "BYTE-BITS" "CATCH-BLOCK-CURRENT-CODE-SLOT"
+             "CATCH-BLOCK-CURRENT-CONT-SLOT" "CATCH-BLOCK-CURRENT-UWP-SLOT"
+             "CATCH-BLOCK-ENTRY-PC-SLOT" "CATCH-BLOCK-PREVIOUS-CATCH-SLOT"
+             "CATCH-BLOCK-SC-NUMBER" "CATCH-BLOCK-SIZE" "CATCH-BLOCK-SIZE-SLOT"
+             "CATCH-BLOCK-TAG-SLOT" "CERROR-TRAP"
+             "CLOSURE-FUNCTION-HEADER-TYPE" "CLOSURE-FUNCTION-SLOT"
+             "CLOSURE-HEADER-TYPE" "CLOSURE-INFO-OFFSET" "CODE-BREAKDOWN"
+             "CODE-CODE-SIZE-SLOT" "CODE-CONSTANTS-OFFSET"
+             "CODE-DEBUG-INFO-SLOT" "CODE-ENTRY-POINTS-SLOT" "CODE-HEADER-TYPE"
+             "CODE-TRACE-TABLE-OFFSET-SLOT" "COMPLEX-ARRAY-TYPE"
+             "COMPLEX-BIT-VECTOR-TYPE" "COMPLEX-IMAG-SLOT" "COMPLEX-REAL-SLOT"
+             "COMPLEX-SIZE" "COMPLEX-STRING-TYPE" "COMPLEX-TYPE"
+             "COMPLEX-VECTOR-TYPE" "CONS-CAR-SLOT" "CONS-CDR-SLOT" "CONS-SIZE"
+             "CONSTANT-SC-NUMBER" "CONTROL-STACK-SC-NUMBER" "COUNT-NO-OPS"
+             "CURRENT-FLOAT-TRAP" "DEFINE-FOR-EACH-PRIMITIVE-OBJECT"
+             "DESCRIPTOR-REG-SC-NUMBER" "DESCRIPTOR-VS-NON-DESCRIPTOR-STORAGE"
+             "DOUBLE-FLAOT-EXPONENT-BYTE" "DOUBLE-FLOAT-BIAS"
+             "DOUBLE-FLOAT-DIGITS" "DOUBLE-FLOAT-EXPONENT-BYTE"
+             "DOUBLE-FLOAT-FILLER-SLOT" "DOUBLE-FLOAT-HIDDEN-BIT"
+             "DOUBLE-FLOAT-NORMAL-EXPONENT-MAX"
+             "DOUBLE-FLOAT-NORMAL-EXPONENT-MIN" "DOUBLE-FLOAT-SIGNIFICAND-BYTE"
+             "DOUBLE-FLOAT-SIZE" "DOUBLE-FLOAT-TRAPPING-NAN-BIT"
+             "DOUBLE-FLOAT-TYPE" "DOUBLE-FLOAT-VALUE-SLOT"
+             "DOUBLE-REG-SC-NUMBER" "DOUBLE-STACK-SC-NUMBER" "ERROR-TRAP"
+             "EVEN-FIXNUM-TYPE" "EXPORTED-STATIC-SYMBOLS" "FIND-HOLES" "FIXNUM"
+             "FIXUP-CODE-OBJECT" "FLOAT-DIVIDE-BY-ZERO-TRAP-BIT"
+             "FLOAT-IMPRECISE-TRAP-BIT" "FLOAT-INVALID-TRAP-BIT"
+             "FLOAT-OVERFLOW-TRAP-BIT" "FLOAT-SIGN-SHIFT"
+             "FLOAT-UNDERFLOW-TRAP-BIT" "FLOATING-POINT-MODES"
+             "FUNCALLABLE-INSTANCE-FUNCTION-SLOT"
+             "FUNCALLABLE-INSTANCE-HEADER-TYPE"
+             "FUNCALLABLE-INSTANCE-INFO-OFFSET" "FUNCTION-END-BREAKPOINT-TRAP"
+             "FUNCTION-HEADER-ARGLIST-SLOT" "FUNCTION-HEADER-CODE-OFFSET"
+             "FUNCTION-HEADER-NAME-SLOT" "FUNCTION-HEADER-NEXT-SLOT"
+             "FUNCTION-HEADER-SELF-SLOT" "FUNCTION-HEADER-TYPE"
+             "FUNCTION-HEADER-TYPE-SLOT" "FUNCTION-POINTER-TYPE" "GENESIS"
+             "HALT-TRAP" "IMMEDIATE-BASE-CHAR-SC-NUMBER"
+             "IMMEDIATE-SAP-SC-NUMBER" "IMMEDIATE-SC-NUMBER"
+             "INTERIOR-REG-SC-NUMBER" "INTERNAL-ERROR-ARGUMENTS"
+             "INTERRUPTED-FLAG" "LIST-POINTER-TYPE" "LOWTAG-BITS"
+             "LOWTAG-LIMIT" "LOWTAG-MASK" "MEMORY-USAGE" "MOST-POSITIVE-COST"
+             "NEGATIVE-IMMEDIATE-SC-NUMBER" "NON-DESCRIPTOR-REG-SC-NUMBER"
+             "NULL-SC-NUMBER" "ODD-FIXNUM-TYPE" "OFFSET-STATIC-SYMBOL"
+             "OTHER-IMMEDIATE-0-TYPE" "OTHER-IMMEDIATE-1-TYPE"
+             "OTHER-POINTER-TYPE" "PAD-DATA-BLOCK" "PENDING-INTERRUPT-TRAP"
+             "PRIMITIVE-OBJECT" "PRIMITIVE-OBJECT-HEADER"
+             "PRIMITIVE-OBJECT-LOWTAG" "PRIMITIVE-OBJECT-NAME"
+             "PRIMITIVE-OBJECT-OPTIONS" "PRIMITIVE-OBJECT-P"
+             "PRIMITIVE-OBJECT-SIZE" "PRIMITIVE-OBJECT-SLOTS"
+             "PRIMITIVE-OBJECT-VARIABLE-LENGTH" "PRINT-ALLOCATED-OBJECTS"
+             "RANDOM-IMMEDIATE-SC-NUMBER" "RATIO-DENOMINATOR-SLOT"
+             "RATIO-NUMERATOR-SLOT" "RATIO-SIZE" "RATIO-TYPE"
+             "REGISTER-SAVE-PENALTY" "RETURN-PC-HEADER-TYPE"
+             "RETURN-PC-RETURN-POINT-OFFSET" "SAP-POINTER-SLOT"
+             "SAP-REG-SC-NUMBER" "SAP-SIZE" "SAP-STACK-SC-NUMBER" "SAP-TYPE"
+             "SIGFPE-HANDLER" "SIGNED-REG-SC-NUMBER" "SIGNED-STACK-SC-NUMBER"
+             "SIMPLE-ARRAY-DOUBLE-FLOAT-TYPE" "SIMPLE-ARRAY-SINGLE-FLOAT-TYPE"
+             "SIMPLE-ARRAY-TYPE" "SIMPLE-ARRAY-UNSIGNED-BYTE-16-TYPE"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-2-TYPE"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-32-TYPE"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-4-TYPE"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-8-TYPE" "SIMPLE-BIT-VECTOR-TYPE"
+             "SIMPLE-STRING-TYPE" "SIMPLE-VECTOR-TYPE" "SINGLE-FLOAT-BIAS"
+             "SINGLE-FLOAT-DIGITS" "SINGLE-FLOAT-EXPONENT-BYTE"
+             "SINGLE-FLOAT-HIDDEN-BIT" "SINGLE-FLOAT-NORMAL-EXPONENT-MAX"
+             "SINGLE-FLOAT-NORMAL-EXPONENT-MIN" "SINGLE-FLOAT-SIGNIFICAND-BYTE"
+             "SINGLE-FLOAT-SIZE" "SINGLE-FLOAT-TRAPPING-NAN-BIT"
+             "SINGLE-FLOAT-TYPE" "SINGLE-FLOAT-VALUE-SLOT"
+             "SINGLE-REG-SC-NUMBER" "SINGLE-STACK-SC-NUMBER" "SLOT-DOCS"
+             "SLOT-LENGTH" "SLOT-NAME" "SLOT-OFFSET" "SLOT-OPTIONS"
+             "SLOT-REST-P" "STATIC-SYMBOL-OFFSET" "STATIC-SYMBOL-P"
+             "STATIC-SYMBOLS" "STRUCTURE-HEADER-TYPE" "STRUCTURE-POINTER-TYPE"
+             "STRUCTURE-SLOTS-OFFSET" "STRUCTURE-USAGE" "SYMBOL-FUNCTION-SLOT"
+             "SYMBOL-HEADER-TYPE" "SYMBOL-NAME-SLOT" "SYMBOL-PACKAGE-SLOT"
+             "SYMBOL-PLIST-SLOT" "SYMBOL-RAW-FUNCTION-ADDR-SLOT"
+             "SYMBOL-SETF-FUNCTION-SLOT" "SYMBOL-SIZE" "SYMBOL-VALUE-SLOT"
+             "TARGET-BINDING-STACK-START" "TARGET-BYTE-ORDER"
+             "TARGET-CONTROL-STACK-START" "TARGET-DYNAMIC-SPACE-START"
+             "TARGET-FASL-CODE-FORMAT" "TARGET-FASL-FILE-TYPE"
+             "TARGET-HEAP-ADDRESS-SPACE" "TARGET-MOST-NEGATIVE-FIXNUM"
+             "TARGET-MOST-POSITIVE-FIXNUM" "TARGET-READ-ONLY-SPACE-START"
+             "TARGET-STATIC-SPACE-START" "TRACE-TABLE-CALL-SITE"
+             "TRACE-TABLE-FUNCTION-EPILOGUE" "TRACE-TABLE-FUNCTION-PROLOGUE"
+             "TRACE-TABLE-NORMAL" "TYPE-BITS" "TYPE-MASK" "UNBOUND-MARKER-TYPE"
+             "UNINTERNED-SYMBOL-COUNT" "UNSIGNED-IMMEDIATE-SC-NUMBER"
+             "UNSIGNED-REG-SC-NUMBER" "UNSIGNED-STACK-SC-NUMBER"
+             "UNWIND-BLOCK-CURRENT-CODE-SLOT" "UNWIND-BLOCK-CURRENT-CONT-SLOT"
+             "UNWIND-BLOCK-CURRENT-UWP-SLOT" "UNWIND-BLOCK-ENTRY-PC-SLOT"
+             "UNWIND-BLOCK-SIZE" "VALUE-CELL-HEADER-TYPE" "VALUE-CELL-SIZE"
+             "VALUE-CELL-VALUE-SLOT" "VECTOR-DATA-OFFSET" "VECTOR-LENGTH-SLOT"
+             "VECTOR-MUST-REHASH-SUBTYPE" "VECTOR-NORMAL-SUBTYPE"
+             "VECTOR-STRUCTURE-SUBTYPE" "VECTOR-VALID-HASHING-SUBTYPE"
+             "WEAK-POINTER-BROKEN-SLOT" "WEAK-POINTER-NEXT-SLOT"
+             "WEAK-POINTER-SIZE" "WEAK-POINTER-TYPE" "WEAK-POINTER-VALUE-SLOT"
+             "WORD-BITS" "WORD-BYTES" "WORD-SHIFT" "ZERO-SC-NUMBER"))
+(defpackage "CONDITIONS")
+(intern "DISASSEMBLE" "LISP")
+(defpackage "DISASSEM"
+            (:import-from "LISP" "DISASSEMBLE")
+            (:export "*NOTE-COLUMN*" "*OPCODE-COLUMN-WIDTH*" "ADD-COMMENT-HOOK"
+             "ADD-HOOK" "ADD-NOTE-HOOK" "ARG-VALUE" "CREATE-DSTATE"
+             "DISASSEM-STATE" "DISASSEMBLE" "DISASSEMBLE-CODE-COMPONENT"
+             "DISASSEMBLE-FUNCTION" "DISASSEMBLE-MEMORY" "DISASSEMBLE-SEGMENT"
+             "DISASSEMBLE-SEGMENTS" "DSTATE-CODE" "DSTATE-CURPOS"
+             "DSTATE-GET-PROP" "DSTATE-NEXTPOS" "DSTATE-SEGMENT-LENGTH"
+             "DSTATE-SEGMENT-SAP" "DSTATE-SEGMENT-START" "FIELD-TYPE"
+             "FIND-INST" "GEN-FIELD-TYPE-DECL-FORM" "GEN-INST-DECL-FORM"
+             "GEN-INST-FORMAT-DECL-FORM" "GET-CODE-SEGMENTS"
+             "GET-FUNCTION-SEGMENTS" "GET-INST-SPACE" "HANDLE-BREAK-ARGS"
+             "INST" "INST-FORMAT" "LABEL-SEGMENTS"
+             "MAYBE-NOTE-ASSEMBLER-ROUTINE" "MAYBE-NOTE-ASSOCIATED-STORAGE-REF"
+             "MAYBE-NOTE-NIL-INDEXED-OBJECT"
+             "MAYBE-NOTE-NIL-INDEXED-SYMBOL-SLOT-REF"
+             "MAYBE-NOTE-SINGLE-STORAGE-REF" "NOTE" "NOTE-CODE-CONSTANT"
+             "PARAMS" "PRIN1-QUOTED-SHORT" "PRIN1-SHORT" "PRINT-BYTES"
+             "PRINT-CURRENT-ADDRESS" "PRINT-FIELD" "PRINT-INST"
+             "PRINT-INST-USING" "PRINT-NOTES-AND-NEWLINE" "PRINT-WORDS"
+             "SAP-REF-DCHUNK" "SEG-DEBUG-FUNCTION" "SEG-LENGTH" "SEG-START"
+             "SEGMENT" "SET-ADDRESS-PRINTING-RANGE" "SET-DISASSEM-PARAMS"
+             "SET-DSTATE-SEGMENT" "SIGN-EXTEND" "SPECIALIZE"))
+(dolist
+    (name
+     '("*MAX-TRACE-INDENTATION*" "*TRACE-PRINT-LENGTH*" "*TRACE-PRINT-LEVEL*"
+       "*TRACED-FUNCTION-LIST*"))
+  (intern name "EXTENSIONS"))
+(defpackage "DEBUG"
+            (:import-from "EXTENSIONS" "*MAX-TRACE-INDENTATION*"
+             "*TRACE-PRINT-LENGTH*" "*TRACE-PRINT-LEVEL*"
+             "*TRACED-FUNCTION-LIST*")
+            (:export "*AUTO-EVAL-IN-FRAME*" "*DEBUG-PRINT-LENGTH*"
+             "*DEBUG-PRINT-LEVEL*" "*DEBUG-PROMPT*" "*FLUSH-DEBUG-ERRORS*"
+             "*HELP-LINE-SCROLL-COUNT*" "*IN-THE-DEBUGGER*"
+             "*MAX-TRACE-INDENTATION*" "*TRACE-FRAME*" "*TRACE-PRINT-LENGTH*"
+             "*TRACE-PRINT-LEVEL*" "*TRACED-FUNCTION-LIST*" "ARG" "BACKTRACE"
+             "INTERNAL-DEBUG" "VAR"))
+(intern "CHAR" "LISP")
+(defpackage "EXTENSIONS"
+            (:import-from "LISP" "CHAR")
+            (:export "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
+             "*ALL-MODIFIER-NAMES*" "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
+             "*BEFORE-SAVE-INITIALIZATIONS*" "*BLOCK-COMPILE-DEFAULT*"
+             "*BYTES-CONSED-BETWEEN-GCS*" "*CHAR" "*CLX-FDS-TO-DISPLAYS*"
+             "*COMMAND-LINE-STRINGS*" "*COMMAND-LINE-SWITCHES*"
+             "*COMMAND-LINE-UTILITY-NAME*" "*COMMAND-LINE-WORDS*"
+             "*COMMAND-SWITCH-DEMONS*" "*COMPATIBILITY-WARNINGS*"
+             "*COMPILE-PROGRESS*" "*DERIVE-FUNCTION-TYPES*"
+             "*DESCRIBE-IMPLEMENTATION-DETAILS*" "*DESCRIBE-INDENTATION*"
+             "*DESCRIBE-LEVEL*" "*DESCRIBE-PRINT-LENGTH*"
+             "*DESCRIBE-PRINT-LEVEL*" "*DESCRIBE-VERBOSE*"
+             "*DISPLAY-EVENT-HANDLERS*" "*EDITOR-LISP-P*"
+             "*EFFICENCY-NOTE-COST-THRESHOLD*" "*EFFICENCY-NOTE-LIMIT*"
+             "*ENCLOSING-SOURCE-CUTOFF*" "*ENVIRONMENT-LIST*"
+             "*ERROR-PRINT-LENGTH*" "*ERROR-PRINT-LEVEL*" "*GC-INHIBIT-HOOK*"
+             "*GC-NOTIFY-AFTER*" "*GC-NOTIFY-BEFORE*" "*GC-VERBOSE*"
+             "*HEMLOCK-VERSION*" "*IGNORE-FLOATING-POINT-UNDERFLOW*"
+             "*INFO-ENVIRONMENT*" "*INTEXP-MAXIMUM-EXPONENENT*"
+             "*KEYWORD-PACKAGE*" "*LISP-PACKAGE*" "*LOAD-IF-SOURCE-NEWER*"
+             "*MAX-OLD-TRACE-INDENTATION*" "*MAX-STEP-INDENTATION*"
+             "*MAX-TRACE-INDENTATION*" "*MODULE-FILE-TRANSLATIONS*"
+             "*OLD-TRACE-PRINT-LENGTH*" "*OLD-TRACE-PRINT-LEVEL*"
+             "*OLD-TRACED-FUNCTION-LIST*" "*PROMPT*" "*REQUIRE-VERBOSE*"
+             "*SAFE-DEFSTRUCT-ACCESSORS*" "*SETF-FDEFINITION-HOOK*"
+             "*STEP-PRINT-LENGTH*" "*STEP-PRINT-LEVEL*" "*TERMINAL-LINE-MODE*"
+             "*TOP-LEVEL-AUTO-DECLARE*" "*TRACE-PRINT-LENGTH*"
+             "*TRACE-PRINT-LEVEL*" "*TRACED-FUNCTION-LIST*"
+             "*UNDEFINED-WARNING-LIMIT*" "ACCEPT-TCP-CONNECTION"
+             "ADD-OOB-HANDLER" "AMBIGUOUS-FILES" "ARGUMENT-LIST" "ASSQ"
+             "BASIC-DEFINITION" "BIGNUMP" "BITP" "CACHE-HASH-EQ"
+             "CALL-USER-MISCOP" "CANCEL-FINALIZATION" "CAREFUL-SYMBOL-FUNCTION"
+             "CAREFULLY-ADD-FONT-PATHS" "CHAR" "CHAR-KEY-EVENT"
+             "CLEAN-UP-COMPILER" "CLEAR-INFO" "CLEAR-SEARCH-LIST"
+             "CLOSE-SOCKET" "CMD-SWITCH-ARG" "CMD-SWITCH-NAME"
+             "CMD-SWITCH-STRING" "CMD-SWITCH-VALUE" "CMD-SWITCH-WORDS"
+             "COLLECT" "COMMAND-LINE-SWITCH" "COMMAND-LINE-SWITCH-P"
+             "COMPACT-INFO-ENVIRONMENT" "COMPILE-FROM-STREAM" "COMPILEDP"
+             "COMPLETE-FILE" "CONCAT-PNAMES" "CONNECT-TO-INET-SOCKET"
+             "CONSTANT" "CONSTANT-ARGUMENT" "CONSTANT-FUNCTION"
+             "CREATE-INET-LISTENER" "CREATE-INET-SOCKET" "DEBUG"
+	     "DEF-SOURCE-CONTEXT"
+             "DEFAULT-CLX-EVENT-HANDLER" "DEFAULT-DIRECTORY"
+             "DEFINE-CLX-MODIFIER" "DEFINE-HASH-CACHE" "DEFINE-INFO-CLASS"
+             "DEFINE-INFO-TYPE" "DEFINE-KEY-EVENT-MODIFIER"
+             "DEFINE-KEYBOARD-MODIFIER" "DEFINE-KEYSYM" "DEFINE-MOUSE-CODE"
+             "DEFINE-MOUSE-KEYSYM" "DEFMODULE" "DEFSWITCH" "DEFUN-CACHED"
+             "DELETEF" "DELQ" "DISABLE-CLX-EVENT-HANDLING"
+             "DO-ALPHA-KEY-EVENTS" "DO-ANONYMOUS" "DO-INFO"
+             "DOUBLE-FLOAT-NEGATIVE-INFINITY" "DOUBLE-FLOAT-POSITIVE-INFINITY"
+             "DOUBLE-FLOATP" "DOVECTOR" "E" "ENABLE-CLX-EVENT-HANDLING"
+             "ENCAPSULATE" "ENCAPSULATED-DEFINITION" "ENCAPSULATED-P"
+             "END-BLOCK" "ENUMERATE-SEARCH-LIST" "FILE-COMMENT" "FILE-WRITABLE"
+             "FINALIZE" "FIXNUMP" "FLOAT-DENORMALIZED-P" "FLOAT-INFINITY-P"
+             "FLOAT-NAN-P" "FLOAT-TRAPPING-NAN-P" "FLOATING-POINT-INEXACT"
+             "FLOATING-POINT-INVALID" "FLUSH-DISPLAY-EVENTS"
+             "FORMAT-DECODED-TIME" "FORMAT-UNIVERSAL-TIME" "FREEZE-TYPE" "GC"
+             "GC-OFF" "GC-ON" "GET-BYTES-CONSED" "GET-CODE-POINTER"
+             "GET-COMMAND-LINE-SWITCH" "GET-DATA-POINTER"
+             "GET-FLOATING-POINT-MODES" "GET-STREAM-COMMAND" "GRINDEF"
+             "HOST-ENTRY" "HOST-ENTRY-ADDR" "HOST-ENTRY-ADDR-LIST"
+             "HOST-ENTRY-ALIASES" "HOST-ENTRY-NAME" "HTONL" "HTONS"
+             "IGNORE-ERRORS" "INADDR-ANY" "INDENTING-FURTHER" "INFO"
+             "INHIBIT-WARNINGS" "INTERACTIVE-EVAL" "IPPROTO-TCP" "IPPROTO-UDP"
+             "ITERATE" "KEY-EVENT" "KEY-EVENT-BIT-P" "KEY-EVENT-BITS"
+             "KEY-EVENT-BITS-MODIFIERS" "KEY-EVENT-CHAR" "KEY-EVENT-KEYSYM"
+             "KEY-EVENT-MODIFIER-MASK" "KEY-EVENT-P" "KEYSYM-NAMES"
+             "KEYSYM-PREFERRED-NAME" "LETF" "LETF*" "LISTEN-SKIP-WHITESPACE"
+             "LOAD-FOREIGN" "LONG-FLOAT-NEGATIVE-INFINITY"
+             "LONG-FLOAT-POSITIVE-INFINITY" "LONG-FLOATP" "LOOKUP-HOST-ENTRY"
+             "MAKE-CASE-FROB-STREAM" "MAKE-INFO-ENVIRONMENT" "MAKE-KEY-EVENT"
+             "MAKE-KEY-EVENT-BITS" "MAKE-STREAM-COMMAND" "MAKE-WEAK-POINTER"
+             "MAYBE-INLINE" "MEMQ" "NAME-KEYSYM" "NTOHL" "NTOHS"
+             "OBJECT-SET-EVENT-HANDLER" "OLD-TRACE" "OLD-UNTRACE" "ONCE-ONLY"
+             "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE" "PARSE-TIME"
+             "PRINT-DIRECTORY" "PRINT-HERALD" "PRINT-PRETTY-KEY"
+             "PRINT-PRETTY-KEY-EVENT" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
+             "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
+             "PROCESS-INPUT" "PROCESS-KILL" "PROCESS-OUTPUT" "PROCESS-P"
+             "PROCESS-PID" "PROCESS-PLIST" "PROCESS-PTY" "PROCESS-STATUS"
+             "PROCESS-STATUS-HOOK" "PROCESS-WAIT" "PUTF" "QUIT" "RATIOP"
+             "READ-CHAR-NO-EDIT" "REALP" "REMOVE-ALL-OOB-HANDLERS"
+             "REMOVE-OOB-HANDLER" "REQUIRED-ARGUMENT" "RESET-FOREIGN-POINTERS"
+             "RUN-PROGRAM" "SAVE" "SAVE-ALL-BUFFERS" "SAVE-LISP"
+             "SCAVENGER-HOOK" "SCAVENGER-HOOK-P" "SEARCH-LIST"
+             "SEND-CHARACTER-OUT-OF-BAND" "SERVE-BUTTON-PRESS"
+             "SERVE-BUTTON-RELEASE" "SERVE-CIRCULATE-NOTIFY"
+             "SERVE-CIRCULATE-REQUEST" "SERVE-CLIENT-MESSAGE"
+             "SERVE-COLORMAP-NOTIFY" "SERVE-CONFIGURE-NOTIFY"
+             "SERVE-CONFIGURE-REQUEST" "SERVE-CREATE-NOTIFY"
+             "SERVE-DESTROY-NOTIFY" "SERVE-ENTER-NOTIFY" "SERVE-EXPOSURE"
+             "SERVE-FOCUS-IN" "SERVE-FOCUS-OUT" "SERVE-GRAPHICS-EXPOSURE"
+             "SERVE-GRAVITY-NOTIFY" "SERVE-KEY-PRESS" "SERVE-KEY-RELEASE"
+             "SERVE-LEAVE-NOTIFY" "SERVE-MAP-NOTIFY" "SERVE-MAP-REQUEST"
+             "SERVE-MOTION-NOTIFY" "SERVE-NO-EXPOSURE" "SERVE-PROPERTY-NOTIFY"
+             "SERVE-REPARENT-NOTIFY" "SERVE-RESIZE-REQUEST"
+             "SERVE-SELECTION-CLEAR" "SERVE-SELECTION-NOTIFY"
+             "SERVE-SELECTION-REQUEST" "SERVE-UNMAP-NOTIFY"
+             "SERVE-VISIBILITY-NOTIFY" "SET-FLOATING-POINT-MODES"
+             "SET-SYMBOL-FUNCTION-CAREFULLY" "SHORT-FLOAT-NEGATIVE-INFINITY"
+             "SHORT-FLOAT-POSITIVE-INFINITY" "SHORT-FLOATP"
+             "SINGLE-FLOAT-NEGATIVE-INFINITY" "SINGLE-FLOAT-POSITIVE-INFINITY"
+             "SINGLE-FLOATP" "START-BLOCK" "STREAM-COMMAND"
+             "STREAM-COMMAND-ARGS" "STREAM-COMMAND-NAME" "STREAM-COMMAND-P"
+             "STRUCTUREP" "SYMBOLICATE" "TRANSLATE-CHARACTER"
+             "TRANSLATE-KEY-EVENT" "TRANSLATE-MOUSE-CHARACTER"
+             "TRANSLATE-MOUSE-KEY-EVENT" "TRULY-THE" "UNCOMPILE"
+             "UNDEFINED-VALUE" "UNENCAPSULATE" "UNIX-NAMESTRING" "WEAK-POINTER"
+             "WEAK-POINTER-P" "WEAK-POINTER-VALUE" "WITH-CLX-EVENT-HANDLING"))
+(defpackage "LOOP")
+(defpackage "HEMLOCK-INTERNALS"
+            (:export "*BUFFER-LIST*" "*BUFFER-NAMES*"
+             "*CHARACTER-ATTRIBUTE-NAMES*" "*COMMAND-NAMES*"
+             "*CREATE-INITIAL-WINDOWS-HOOK*" "*CREATE-WINDOW-HOOK*"
+             "*DELETE-WINDOW-HOOK*" "*ECHO-AREA-BUFFER*" "*ECHO-AREA-STREAM*"
+             "*ECHO-AREA-WINDOW*" "*EDITOR-INPUT*" "*GLOBAL-VARIABLE-NAMES*"
+             "*INPUT-TRANSCRIPT*" "*INVOKE-HOOK*" "*KEY-EVENT-HISTORY*"
+             "*LAST-KEY-EVENT-TYPED*" "*LOGICAL-KEY-EVENT-NAMES*"
+             "*MODE-NAMES*" "*PARSE-DEFAULT*" "*PARSE-DEFAULT-STRING*"
+             "*PARSE-HELP*" "*PARSE-INPUT-REGION*" "*PARSE-PROMPT*"
+             "*PARSE-STARTING-MARK*" "*PARSE-STRING-TABLES*" "*PARSE-TYPE*"
+             "*PARSE-VALUE-MUST-EXIST*" "*PARSE-VERIFICATION-FUNCTION*"
+             "*PRINT-REGION*" "*RANDOM-TYPEOUT-BUFFERS*"
+             "*RANDOM-TYPEOUT-HOOK*" "*REAL-EDITOR-INPUT*" "*WINDOW-LIST*"
+             "ABORT-RECURSIVE-EDIT" "ADD-HOOK" "AFTER-EDITOR-INITIALIZATIONS"
+             "BIND-KEY" "BLANK-AFTER-P" "BLANK-BEFORE-P" "BLANK-LINE-P"
+             "BUFFER" "BUFFER-DELETE-HOOK" "BUFFER-END" "BUFFER-END-MARK"
+             "BUFFER-MAJOR-MODE" "BUFFER-MINOR-MODE" "BUFFER-MODELINE-FIELD-P"
+             "BUFFER-MODELINE-FIELDS" "BUFFER-MODES" "BUFFER-MODIFIED"
+             "BUFFER-NAME" "BUFFER-PATHNAME" "BUFFER-POINT" "BUFFER-REGION"
+             "BUFFER-SIGNATURE" "BUFFER-START" "BUFFER-START-MARK"
+             "BUFFER-VARIABLES" "BUFFER-WINDOWS" "BUFFER-WRITABLE"
+             "BUFFER-WRITE-DATE" "BUFFERP" "CENTER-WINDOW"
+             "CHARACTER-ATTRIBUTE" "CHARACTER-ATTRIBUTE-DOCUMENTATION"
+             "CHARACTER-ATTRIBUTE-HOOKS" "CHARACTER-ATTRIBUTE-NAME"
+             "CHARACTER-ATTRIBUTE-P" "CHARACTER-OFFSET" "CLEAR-ECHO-AREA"
+             "CLEAR-EDITOR-INPUT" "CLRSTRING" "COMMAND" "COMMAND-BINDINGS"
+             "COMMAND-CASE" "COMMAND-DOCUMENTATION" "COMMAND-FUNCTION"
+             "COMMAND-NAME" "COMMANDP" "COMPLETE-STRING" "COPY-MARK"
+             "COPY-REGION" "COUNT-CHARACTERS" "COUNT-LINES" "CURRENT-BUFFER"
+             "CURRENT-POINT" "CURRENT-VARIABLE-TABLES" "CURRENT-WINDOW"
+             "CURSORPOS-TO-MARK" "DEFATTRIBUTE" "DEFAULT-FONT" "DEFCOMMAND"
+             "DEFHVAR" "DEFINE-LOGICAL-KEY-EVENT" "DEFINE-TTY-FONT" "DEFMODE"
+             "DELETE-AND-SAVE-REGION" "DELETE-BUFFER" "DELETE-CHARACTERS"
+             "DELETE-FONT-MARK" "DELETE-KEY-BINDING" "DELETE-LINE-FONT-MARKS"
+             "DELETE-MARK" "DELETE-REGION" "DELETE-STRING" "DELETE-VARIABLE"
+             "DELETE-WINDOW" "DIRECTORYP" "DISPLAYED-P" "DO-ALPHA-CHARS"
+             "DO-STRINGS" "EDITOR-DESCRIBE-FUNCTION" "EDITOR-ERROR"
+             "EDITOR-ERROR-FORMAT-ARGUMENTS" "EDITOR-ERROR-FORMAT-STRING"
+             "EDITOR-FINISH-OUTPUT" "EDITOR-SLEEP" "EMPTY-LINE-P" "END-LINE-P"
+             "ENTER-WINDOW-AUTORAISE" "EXIT-HEMLOCK" "EXIT-RECURSIVE-EDIT"
+             "FETCH-CUT-STRING" "FILTER-REGION" "FIND-AMBIGUOUS"
+             "FIND-ATTRIBUTE" "FIND-CONTAINING" "FIND-PATTERN" "FIRST-LINE-P"
+             "FONT-MARK" "FUN-DEFINED-FROM-PATHNAME" "GET-COMMAND"
+             "GET-KEY-EVENT" "GETSTRING" "HANDLE-LISP-ERRORS" "HEMLOCK-BOUND-P"
+             "HEMLOCK-OUTPUT-STREAM" "HEMLOCK-OUTPUT-STREAM-P"
+             "HEMLOCK-REGION-STREAM" "HEMLOCK-REGION-STREAM-P" "HLET"
+             "IN-RECURSIVE-EDIT" "INPUT-WAITING" "INSERT-CHARACTER"
+             "INSERT-REGION" "INSERT-STRING" "INVOKE-HOOK" "KEY-TRANSLATION"
+             "LAST-COMMAND-TYPE" "LAST-KEY-EVENT-CURSORPOS" "LAST-LINE-P"
+             "LINE" "LINE-BUFFER" "LINE-CHARACTER" "LINE-END" "LINE-LENGTH"
+             "LINE-NEXT" "LINE-OFFSET" "LINE-PLIST" "LINE-PREVIOUS"
+             "LINE-SIGNATURE" "LINE-START" "LINE-STRING" "LINE-TO-REGION"
+             "LINE<" "LINE<=" "LINE>" "LINE>=" "LINEP" "LINES-RELATED"
+             "LISTEN-EDITOR-INPUT" "LOGICAL-KEY-EVENT-DOCUMENTATION"
+             "LOGICAL-KEY-EVENT-KEY-EVENTS" "LOGICAL-KEY-EVENT-NAME"
+             "LOGICAL-KEY-EVENT-P" "LOUD-MESSAGE" "MAKE-BUFFER" "MAKE-COMMAND"
+             "MAKE-EMPTY-REGION" "MAKE-HEMLOCK-OUTPUT-STREAM"
+             "MAKE-HEMLOCK-REGION-STREAM" "MAKE-KBDMAC-STREAM"
+             "MAKE-MODELINE-FIELD" "MAKE-RING" "MAKE-STRING-TABLE"
+             "MAKE-WINDOW" "MAKE-XWINDOW-LIKE-HWINDOW" "MAP-BINDINGS" "MARK"
+             "MARK-AFTER" "MARK-BEFORE" "MARK-CHARPOS" "MARK-COLUMN"
+             "MARK-KIND" "MARK-LINE" "MARK-TO-CURSORPOS" "MARK/=" "MARK<"
+             "MARK<=" "MARK=" "MARK>" "MARK>=" "MARKP"
+             "MERGE-RELATIVE-PATHNAMES" "MESSAGE" "MODE-DOCUMENTATION"
+             "MODE-MAJOR-P" "MODE-VARIABLES" "MODELINE-FIELD"
+             "MODELINE-FIELD-FUNCTION" "MODELINE-FIELD-NAME" "MODELINE-FIELD-P"
+             "MODELINE-FIELD-WIDTH" "MODIFY-KBDMAC-STREAM" "MOVE-FONT-MARK"
+             "MOVE-MARK" "MOVE-TO-COLUMN" "MOVE-TO-POSITION"
+             "NEW-SEARCH-PATTERN" "NEXT-CHARACTER" "NEXT-WINDOW"
+             "NINSERT-REGION" "PAUSE-HEMLOCK" "PREFIX-ARGUMENT"
+             "PREVIOUS-CHARACTER" "PREVIOUS-WINDOW" "PROMPT-FOR-BUFFER"
+             "PROMPT-FOR-EXPRESSION" "PROMPT-FOR-FILE" "PROMPT-FOR-INTEGER"
+             "PROMPT-FOR-KEY" "PROMPT-FOR-KEY-EVENT" "PROMPT-FOR-KEYWORD"
+             "PROMPT-FOR-STRING" "PROMPT-FOR-VARIABLE" "PROMPT-FOR-Y-OR-N"
+             "PROMPT-FOR-YES-OR-NO" "READ-FILE" "RECURSIVE-EDIT" "REDISPLAY"
+             "REDISPLAY-ALL" "REGION" "REGION-BOUNDS" "REGION-END"
+             "REGION-START" "REGION-TO-STRING" "REGIONP" "REMOVE-HOOK"
+             "REMOVE-SCHEDULED-EVENT" "REPLACE-PATTERN" "REPROMPT"
+             "REVERSE-FIND-ATTRIBUTE" "RING" "RING-LENGTH" "RING-POP"
+             "RING-PUSH" "RING-REF" "RINGP" "ROTATE-RING" "SAME-LINE-P"
+             "SCHEDULE-EVENT" "SCROLL-WINDOW" "SEARCH-CHAR-CODE-LIMIT"
+             "SEARCH-PATTERN" "SEARCH-PATTERN-P" "SET-REGION-BOUNDS" "SETV"
+             "SHADOW-ATTRIBUTE" "SHOW-MARK" "START-LINE-P" "STORE-CUT-STRING"
+             "STRING-TABLE" "STRING-TABLE-P" "STRING-TABLE-SEPARATOR"
+             "STRING-TO-REGION" "STRING-TO-VARIABLE" "SYNTAX-CHAR-CODE-LIMIT"
+             "UNGET-KEY-EVENT" "UNSHADOW-ATTRIBUTE" "UPDATE-MODELINE-FIELD"
+             "UPDATE-MODELINE-FIELDS" "USE-BUFFER" "VALUE"
+             "VARIABLE-DOCUMENTATION" "VARIABLE-HOOKS" "VARIABLE-NAME"
+             "VARIABLE-VALUE" "WINDOW" "WINDOW-BUFFER" "WINDOW-DISPLAY-END"
+             "WINDOW-DISPLAY-RECENTERING" "WINDOW-DISPLAY-START" "WINDOW-FONT"
+             "WINDOW-HEIGHT" "WINDOW-POINT" "WINDOW-WIDTH" "WINDOWP"
+             "WITH-INPUT-FROM-REGION" "WITH-MARK" "WITH-OUTPUT-TO-MARK"
+             "WITH-POP-UP-DISPLAY" "WITH-WRITABLE-BUFFER" "WRITE-FILE"))
+(dolist
+    (name
+     '("DEBUG-SOURCE" "DEBUG-SOURCE-COMPILED" "DEBUG-SOURCE-CREATED"
+       "DEBUG-SOURCE-FROM" "DEBUG-SOURCE-NAME" "DEBUG-SOURCE-P"
+       "DEBUG-SOURCE-START-POSITIONS"))
+  (intern name "C"))
+(defpackage "DEBUG-INTERNALS"
+            (:import-from "C" "DEBUG-SOURCE" "DEBUG-SOURCE-COMPILED"
+             "DEBUG-SOURCE-CREATED" "DEBUG-SOURCE-FROM" "DEBUG-SOURCE-NAME"
+             "DEBUG-SOURCE-P" "DEBUG-SOURCE-START-POSITIONS")
+            (:export "*DEBUGGING-INTERPRETER*" "ACTIVATE-BREAKPOINT"
+             "AMBIGUOUS-DEBUG-VARIABLES" "AMBIGUOUS-VARIABLE-NAME" "BREAKPOINT"
+             "BREAKPOINT-ACTIVE-P" "BREAKPOINT-HOOK-FUNCTION" "BREAKPOINT-INFO"
+             "BREAKPOINT-KIND" "BREAKPOINT-P" "BREAKPOINT-WHAT" "CODE-LOCATION"
+             "CODE-LOCATION-DEBUG-BLOCK" "CODE-LOCATION-DEBUG-FUNCTION"
+             "CODE-LOCATION-DEBUG-SOURCE" "CODE-LOCATION-FORM-NUMBER"
+             "CODE-LOCATION-P" "CODE-LOCATION-TOP-LEVEL-FORM-OFFSET"
+             "CODE-LOCATION-UNKNOWN-P" "CODE-LOCATION=" "DEACTIVATE-BREAKPOINT"
+             "DEBUG-BLOCK" "DEBUG-BLOCK-ELSEWHERE-P" "DEBUG-BLOCK-P"
+             "DEBUG-BLOCK-SUCCESSORS" "DEBUG-CONDITION" "DEBUG-ERROR"
+             "DEBUG-FUNCTION" "DEBUG-FUNCTION-FUNCTION" "DEBUG-FUNCTION-KIND"
+             "DEBUG-FUNCTION-LAMBDA-LIST" "DEBUG-FUNCTION-NAME"
+             "DEBUG-FUNCTION-P" "DEBUG-FUNCTION-START-LOCATION"
+             "DEBUG-FUNCTION-SYMBOL-VARIABLES" "DEBUG-SOURCE"
+             "DEBUG-SOURCE-COMPILED" "DEBUG-SOURCE-CREATED" "DEBUG-SOURCE-FROM"
+             "DEBUG-SOURCE-NAME" "DEBUG-SOURCE-P" "DEBUG-SOURCE-ROOT-NUMBER"
+             "DEBUG-SOURCE-START-POSITIONS" "DEBUG-VARIABLE"
+             "DEBUG-VARIABLE-ID" "DEBUG-VARIABLE-INFO-AVAILABLE"
+             "DEBUG-VARIABLE-NAME" "DEBUG-VARIABLE-P" "DEBUG-VARIABLE-PACKAGE"
+             "DEBUG-VARIABLE-SYMBOL" "DEBUG-VARIABLE-VALID-VALUE"
+             "DEBUG-VARIABLE-VALIDITY" "DEBUG-VARIABLE-VALUE"
+             "DELETE-BREAKPOINT" "DELETE-BREAKPOINT-FOR-EDITOR" "DO-BLOCKS"
+             "DO-DEBUG-BLOCK-LOCATIONS" "DO-DEBUG-FUNCTION-BLOCKS"
+             "DO-DEBUG-FUNCTION-VARIABLES" "EVAL-IN-FRAME"
+             "FORM-NUMBER-TRANSLATIONS" "FRAME" "FRAME-CATCHES"
+             "FRAME-CODE-LOCATION" "FRAME-DEBUG-FUNCTION" "FRAME-DOWN"
+             "FRAME-FUNCTION-MISMATCH" "FRAME-NUMBER" "FRAME-P" "FRAME-UP"
+             "FUNCTION-DEBUG-FUNCTION" "FUNCTION-END-COOKIE-VALID-P"
+             "INVALID-CONTROL-STACK-POINTER" "INVALID-VALUE"
+             "LAMBDA-LIST-UNAVAILABLE" "MAKE-BREAKPOINT" "NO-DEBUG-BLOCKS"
+             "NO-DEBUG-FUNCTION-RETURNS" "NO-DEBUG-INFO" "PREPROCESS-FOR-EVAL"
+             "RETURN-FROM-FRAME" "SET-BREAKPOINT-FOR-EDITOR"
+             "SET-LOCATION-BREAKPOINT-FOR-EDITOR" "SOURCE-PATH-CONTEXT"
+             "TOP-FRAME" "UNHANDLED-CONDITION" "UNKNOWN-CODE-LOCATION"
+             "UNKNOWN-CODE-LOCATION-P" "UNKNOWN-DEBUG-VARIABLE"))
+(dolist
+    (name
+     '("%ALIGNED-SAP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET" "%PUT"
+       "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET" "%SET-DOCUMENTATION"
+       "%SET-FDEFINITION" "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
+       "%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
+       "%SVSET" "%TYPEP" "LONG-FLOAT-P" "NIL" "RETURN" "SET" "SHORT-FLOAT-P"
+       "STRING/=*" "STRING<*" "STRING<=*" "STRING=*" "STRING>*" "STRING>=*"
+       "SYMBOL-FUNCTION" "SYMBOL-VALUE" "THROW" "VALUES-LIST"))
+  (intern name "LISP"))
+(intern "BOOLEAN" "ALIEN")
+(dolist
+    (name
+     '("%PRIMITIVE" "%STANDARD-CHAR-P" "%STRING-CHAR-P" "BITS" "BYTES"
+       "C-PROCEDURE" "CHECK<=" "CHECK=" "CT-A-VAL" "CT-A-VAL-OFFSET"
+       "CT-A-VAL-P" "CT-A-VAL-SAP" "CT-A-VAL-SIZE" "CT-A-VAL-TYPE"
+       "DEFENUMERATION" "DEFOPERATOR" "DEPORT-BOOLEAN" "DEPORT-INTEGER"
+       "ENUMERATION" "FOREIGN-SYMBOL-ADDRESS" "LONG-WORDS" "MAKE-CT-A-VAL"
+       "NATURALIZE-BOOLEAN" "NATURALIZE-INTEGER" "NULL-TERMINATED-STRING"
+       "PERQ-STRING" "POINTER" "PORT" "RECORD-SIZE" "SAP+" "SAP-REF-16"
+       "SAP-REF-32" "SAP-REF-8" "SAP-REF-SAP" "SIGNED-SAP-REF-16"
+       "SIGNED-SAP-REF-32" "SIGNED-SAP-REF-8" "SYSTEM-AREA-POINTER" "WORDS"))
+  (intern name "SYSTEM"))
+(intern "SYMBOLICATE" "EXTENSIONS")
+(dolist
+    (name
+     '("%RAW-BITS" "%SET-SAP-REF-16" "%SET-SAP-REF-32" "%SET-SAP-REF-8"
+       "%SET-SAP-REF-DOUBLE" "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE"
+       "%SP-SET-DEFINITION" "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P"
+       "CODE-INSTRUCTIONS" "DOUBLE-FLOAT-P" "ODD-KEYWORD-ARGUMENTS-ERROR"
+       "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P" "STRUCTURE-REF" "STRUCTURE-SET"
+       "UNKNOWN-KEYWORD-ARGUMENT-ERROR"))
+  (intern name "KERNEL"))
+(defpackage "C"
+            (:import-from "LISP" "%ALIGNED-SAP" "%ARRAY-TYPEP" "%ASET"
+             "%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD" "%SBITSET"
+             "%SCHARSET" "%SET-DOCUMENTATION" "%SET-FDEFINITION"
+             "%SET-FILL-POINTER" "%SET-ROW-MAJOR-AREF"
+             "%SET-SAP-REF-DESCRIPTOR" "%SETELT" "%SETNTH" "%SP-STRING-COMPARE"
+             "%SVSET" "%TYPEP" "LONG-FLOAT-P" "NIL" "RETURN" "SET"
+             "SHORT-FLOAT-P" "STRING/=*" "STRING<*" "STRING<=*" "STRING=*"
+             "STRING>*" "STRING>=*" "SYMBOL-FUNCTION" "SYMBOL-VALUE" "THROW"
+             "VALUES-LIST")
+            (:import-from "ALIEN" "BOOLEAN")
+            (:import-from "SYSTEM" "%PRIMITIVE" "%STANDARD-CHAR-P"
+             "%STRING-CHAR-P" "BITS" "BYTES" "C-PROCEDURE" "CHECK<=" "CHECK="
+             "CT-A-VAL" "CT-A-VAL-OFFSET" "CT-A-VAL-P" "CT-A-VAL-SAP"
+             "CT-A-VAL-SIZE" "CT-A-VAL-TYPE" "DEFENUMERATION" "DEFOPERATOR"
+             "DEPORT-BOOLEAN" "DEPORT-INTEGER" "ENUMERATION"
+             "FOREIGN-SYMBOL-ADDRESS" "LONG-WORDS" "MAKE-CT-A-VAL"
+             "NATURALIZE-BOOLEAN" "NATURALIZE-INTEGER" "NULL-TERMINATED-STRING"
+             "PERQ-STRING" "POINTER" "PORT" "RECORD-SIZE" "SAP+" "SAP-REF-16"
+             "SAP-REF-32" "SAP-REF-8" "SAP-REF-SAP" "SIGNED-SAP-REF-16"
+             "SIGNED-SAP-REF-32" "SIGNED-SAP-REF-8" "SYSTEM-AREA-POINTER"
+             "WORDS")
+            (:import-from "EXTENSIONS" "SYMBOLICATE")
+            (:import-from "KERNEL" "%RAW-BITS" "%SET-SAP-REF-16"
+             "%SET-SAP-REF-32" "%SET-SAP-REF-8" "%SET-SAP-REF-DOUBLE"
+             "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE" "%SP-SET-DEFINITION"
+             "%SP-SET-PLIST" "ARRAY-HEADER-P" "BASE-CHAR-P" "CODE-INSTRUCTIONS"
+             "DOUBLE-FLOAT-P" "ODD-KEYWORD-ARGUMENTS-ERROR" "SIMPLE-ARRAY-P"
+             "SINGLE-FLOAT-P" "STRUCTURE-REF" "STRUCTURE-SET"
+             "UNKNOWN-KEYWORD-ARGUMENT-ERROR")
+            (:export "%ALIEN-FUNCALL" "%CATCH-BREAKUP" "%CONTINUE-UNWIND"
+             "%LISTIFY-REST-ARGS" "%MORE-ARG" "%UNWIND-PROTECT-BREAKUP"
+             "*BACKEND*" "*CODE-SEGMENT*" "*COLLECT-DYNAMIC-STATISTICS*"
+             "*COMPILE-TIME-DEFINE-MACROS*" "*COMPILER-NOTIFICATION-FUNCTION*"
+             "*COMPILING-FOR-INTERPRETER*" "*CONVERTING-FOR-INTERPRETER*"
+             "*COUNT-VOP-USAGES*" "*ELSEWHERE*" "*NATIVE-BACKEND*"
+             "*SUPPRESS-VALUES-DECLARATION*" "*TARGET-BACKEND*"
+             "ALLOC-NUMBER-STACK-SPACE" "ALLOCATE-CODE-OBJECT" "ALLOCATE-FRAME"
+             "ALLOCATE-FULL-CALL-FRAME" "ANY" "ARGUMENT-COUNT-ERROR"
+             "ATTRIBUTES" "ATTRIBUTES-INTERSECTION" "ATTRIBUTES-UNION"
+             "ATTRIBUTES=" "BACKEND-ANY-PRIMITIVE-TYPE"
+             "BACKEND-ASSEMBLER-RESOURCES" "BACKEND-BYTE-ORDER"
+             "BACKEND-DISASSEM-PARAMS" "BACKEND-FASL-FILE-IMPLEMENTATION"
+             "BACKEND-FASL-FILE-TYPE" "BACKEND-FASL-FILE-VERSION"
+             "BACKEND-FEATURES" "BACKEND-INFO-ENVIRONMENT"
+             "BACKEND-INSTRUCTION-FLAVORS" "BACKEND-INSTRUCTION-FORMATS"
+             "BACKEND-NAME" "BACKEND-REGISTER-SAVE-PENALTY"
+             "BACKEND-SPECIAL-ARG-TYPES" "BACKEND-VERSION" "BIND" "BRANCH"
+             "CALL" "CALL-LOCAL" "CALL-NAMED" "CALL-OUT" "CALL-VARIABLE"
+             "CALLEE-NFP-TN" "CALLEE-RETURN-PC-TN" "CATCH-BLOCK" "CHECK-CONS"
+             "CHECK-FIXNUM" "CHECK-FUNCTION" "CHECK-FUNCTION-OR-SYMBOL"
+             "CHECK-SIGNED-BYTE-32" "CHECK-SYMBOL" "CHECK-UNSIGNED-BYTE-32"
+             "CLOSURE-INIT" "CLOSURE-REF" "CODE-CONSTANT-REF"
+             "CODE-CONSTANT-SET" "CODE-INSTRUCTIONS" "COERCE-TO-FUNCTION"
+             "COMPILE-FOR-EVAL" "COMPONENT" "COMPONENT-HEADER-LENGTH"
+             "COMPONENT-INFO" "COMPONENT-LIVE-TN" "COMPUTE-FUNCTION"
+             "COMPUTE-OLD-NFP" "COPY-MORE-ARG" "COUNT-ME"
+             "CURRENT-BINDING-POINTER" "CURRENT-NFP-TN" "CURRENT-STACK-POINTER"
+             "DEALLOC-NUMBER-STACK-SPACE" "DEF-BOOLEAN-ATTRIBUTE"
+             "DEF-IR1-TRANSLATOR" "DEF-PRIMITIVE-TRANSLATOR"
+             "DEF-PRIMITIVE-TYPE" "DEF-PRIMITIVE-TYPE-ALIAS"
+             "DEF-SOURCE-TRANSFORM" "DEF-VM-SUPPORT-ROUTINE"
+             "DEFINE-ASSEMBLY-ROUTINE" "DEFINE-MOVE-FUNCTION" "DEFINE-MOVE-VOP"
+             "DEFINE-STORAGE-BASE" "DEFINE-STORAGE-CLASS" "DEFINE-VOP"
+             "DEFKNOWN" "DEFOPTIMIZER" "DEFTRANSFORM" "DERIVE-TYPE"
+             "ENTRY-NODE-INFO-NLX-TAG" "ENTRY-NODE-INFO-ST-TOP"
+             "ENVIRONMENT-DEBUG-LIVE-TN" "ENVIRONMENT-LIVE-TN"
+             "FASL-FILE-IMPLEMENTATIONS" "FAST-SAFE-COERCE-TO-FUNCTION"
+             "FAST-SYMBOL-FUNCTION" "FAST-SYMBOL-VALUE" "FLUSHABLE" "FOLDABLE"
+             "FORCE-TN-TO-STACK" "FOREIGN-SYMBOL-ADDRESS" "GET-VECTOR-SUBTYPE"
+             "HALT" "IF-EQ" "IR2-COMPONENT-CONSTANTS" "IR2-CONVERT"
+             "IR2-ENVIRONMENT-NUMBER-STACK-P" "KNOWN-CALL-LOCAL" "KNOWN-RETURN"
+             "LAMBDA-EVAL-INFO-ARGS-PASSED" "LAMBDA-EVAL-INFO-ENTRIES"
+             "LAMBDA-EVAL-INFO-FRAME-SIZE" "LAMBDA-EVAL-INFO-FUNCTION"
+             "LOCATION=" "LTN-ANNOTATE" "MAKE-ALIAS-TN" "MAKE-CATCH-BLOCK"
+             "MAKE-CLOSURE" "MAKE-CONSTANT-TN" "MAKE-FIXNUM"
+             "MAKE-LOAD-TIME-CONSTANT-TN" "MAKE-N-TNS" "MAKE-NORMAL-TN"
+             "MAKE-OTHER-IMMEDIATE-TYPE" "MAKE-RANDOM-TN"
+             "MAKE-REPRESENTATION-TN" "MAKE-RESTRICTED-TN" "MAKE-SC-OFFSET"
+             "MAKE-STACK-POINTER-TN" "MAKE-TN-REF" "MAKE-UNWIND-BLOCK"
+             "MAKE-VALUE-CELL" "MAKE-WIRED-TN" "META-PRIMITIVE-TYPE-OR-LOSE"
+             "META-SB-OR-LOSE" "META-SC-NUMBER-OR-LOSE" "META-SC-OR-LOSE"
+             "MORE-ARG-CONTEXT" "MOVABLE" "MOVE" "MULTIPLE-CALL"
+             "MULTIPLE-CALL-LOCAL" "MULTIPLE-CALL-NAMED"
+             "MULTIPLE-CALL-VARIABLE" "NIL" "NLX-ENTRY" "NLX-ENTRY-MULTIPLE"
+             "NON-DESCRIPTOR-STACK" "NOTE-ENVIRONMENT-START"
+             "NOTE-THIS-LOCATION" "ODD-KEYWORD-ARGUMENTS-ERROR" "OPTIMIZER"
+             "PACK-TRACE-TABLE" "PMAX-FASL-FILE-IMPLEMENTATION" "POLICY"
+             "PREDICATE" "PRIMITIVE-TYPE" "PRIMITIVE-TYPE-OF"
+             "PRIMITIVE-TYPE-OR-LOSE" "PRIMITIVE-TYPE-VOP" "PUSH-VALUES"
+             "READ-PACKED-BIT-VECTOR" "READ-VAR-INTEGER" "READ-VAR-STRING"
+             "RESET-STACK-POINTER" "RESTORE-DYNAMIC-STATE" "RETURN"
+             "RETURN-MULTIPLE" "RT-AFPA-FASL-FILE-IMPLEMENTATION"
+             "RT-FASL-FILE-IMPLEMENTATION" "SAVE-DYNAMIC-STATE" "SB"
+             "SB-ALLOCATED-SIZE" "SB-NAME" "SB-OR-LOSE" "SB-P" "SC" "SC-CASE"
+             "SC-IS" "SC-NAME" "SC-NUMBER" "SC-NUMBER-OR-LOSE"
+             "SC-OFFSET-OFFSET" "SC-OFFSET-SCN" "SC-OR-LOSE" "SC-P" "SC-SB"
+             "SET" "SET-UNWIND-PROTECT" "SET-VECTOR-SUBTYPE"
+             "SETUP-CLOSURE-ENVIRONMENT" "SETUP-ENVIRONMENT"
+             "SPARC-FASL-FILE-IMPLEMENTATION" "SPECIFY-SAVE-TN" "STRUCTURE-REF"
+             "STRUCTURE-SET" "SXHASH-SIMPLE-STRING" "SXHASH-SIMPLE-SUBSTRING"
+             "SYMBOL-FUNCTION" "SYMBOL-VALUE" "SYMBOLICATE" "TAIL-CALL"
+             "TAIL-CALL-NAMED" "TAIL-CALL-VARIABLE" "TEMPLATE-OR-LOSE" "THROW"
+             "TN" "TN-OFFSET" "TN-P" "TN-REF" "TN-REF-ACROSS" "TN-REF-LOAD-TN"
+             "TN-REF-NEXT" "TN-REF-NEXT-REF" "TN-REF-P" "TN-REF-TARGET"
+             "TN-REF-TN" "TN-REF-VOP" "TN-REF-WRITE-P" "TN-SC" "TN-VALUE"
+             "TRACE-TABLE-ENTRY" "TYPE-CHECK-ERROR" "UNBIND" "UNBIND-TO-HERE"
+             "UNKNOWN-KEYWORD-ARGUMENT-ERROR" "UNSAFE" "UNWIND" "UWP-ENTRY"
+             "VALUE-CELL-REF" "VALUE-CELL-SET" "VALUES-LIST"
+             "VERIFY-ARGUMENT-COUNT" "WRITE-PACKED-BIT-VECTOR"
+             "WRITE-VAR-INTEGER" "WRITE-VAR-STRING" "XEP-ALLOCATE-FRAME"))
+(defpackage "DIRED"
+            (:export "*CLOBBER-DEFAULT*" "*ERROR-FUNCTION*"
+             "*RECURSIVE-DEFAULT*" "*REPORT-FUNCTION*" "*UPDATE-DEFAULT*"
+             "*YESP-FUNCTION*" "COPY-FILE" "DELETE-FILE" "FIND-FILE"
+             "MAKE-DIRECTORY" "PATHNAMES-FROM-PATTERN" "RENAME-FILE"))
+(defpackage "WIRE"
+            (:export "*CURRENT-WIRE*" "CONNECT-TO-REMOTE-SERVER"
+             "CREATE-REQUEST-SERVER" "DESTROY-REQUEST-SERVER"
+             "FORGET-REMOTE-TRANSLATION" "MAKE-REMOTE-OBJECT" "MAKE-WIRE"
+             "REMOTE" "REMOTE-OBJECT" "REMOTE-OBJECT-EQ"
+             "REMOTE-OBJECT-LOCAL-P" "REMOTE-OBJECT-P" "REMOTE-OBJECT-VALUE"
+             "REMOTE-VALUE" "REMOTE-VALUE-BIND" "WIRE-EOF" "WIRE-ERROR"
+             "WIRE-FD" "WIRE-FORCE-OUTPUT" "WIRE-GET-BIGNUM" "WIRE-GET-BYTE"
+             "WIRE-GET-NUMBER" "WIRE-GET-OBJECT" "WIRE-GET-STRING"
+             "WIRE-IO-ERROR" "WIRE-LISTEN" "WIRE-OUTPUT-BIGNUM"
+             "WIRE-OUTPUT-BYTE" "WIRE-OUTPUT-FUNCALL" "WIRE-OUTPUT-NUMBER"
+             "WIRE-OUTPUT-OBJECT" "WIRE-OUTPUT-STRING" "WIRE-P"))
+(defpackage "PRETTY-PRINT" (:export "PRETTY-STREAM" "PRETTY-STREAM-P"))
+(intern "LOAD-FOREIGN" "EXTENSIONS")
+(defpackage "SYSTEM"
+            (:import-from "EXTENSIONS" "LOAD-FOREIGN")
+            (:export "%ASSEMBLER-CODE-TYPE" "%BIND-ALIGNED-SAP" "%PRIMITIVE"
+             "%SP-BYTE-BLT" "%SP-FIND-CHARACTER"
+             "%SP-FIND-CHARACTER-WITH-ATTRIBUTE"
+             "%SP-REVERSE-FIND-CHARACTER-WITH-ATTRIBUTE" "%STANDARD-CHAR-P"
+             "%STRING-CHAR-P" "*BEEP-FUNCTION*" "*GR-MESSAGES*"
+             "*IN-THE-COMPILER*" "*LONG-SITE-NAME*"
+             "*MAXIMUM-INTERPRETER-ERROR-CHECKING*" "*NAMESERVERPORT*"
+             "*PORNOGRAPHY-OF-DEATH*" "*PORT-OWNERSHIP-RIGHTS-HANDLERS*"
+             "*PORT-RECEIVE-RIGHTS-HANDLERS*" "*SHORT-SITE-NAME*"
+             "*SOFTWARE-TYPE*" "*STDERR*" "*STDIN*" "*STDOUT*" "*TASK-DATA*"
+             "*TASK-NOTIFY*" "*TASK-SELF*" "*TTY*" "*TYPESCRIPTPORT*"
+             "*USERTYPESCRIPT*" "*USERWINDOW*" "*XWINDOW-TABLE*"
+             "ADD-FD-HANDLER" "ADD-PORT-DEATH-HANDLER" "ADD-PORT-OBJECT"
+             "ADD-XWINDOW-OBJECT" "ALLOCATE-SYSTEM-MEMORY" "BEEP" "BITS"
+             "BYTES" "C-PROCEDURE" "CHECK<=" "CHECK=" "COMPILER-VERSION"
+             "CT-A-VAL" "CT-A-VAL-OFFSET" "CT-A-VAL-P" "CT-A-VAL-SAP"
+             "CT-A-VAL-SIZE" "CT-A-VAL-TYPE" "DEALLOCATE-SYSTEM-MEMORY"
+             "DEFAULT-INTERRUPT" "DEFENUMERATION" "DEFOPERATOR" "DEFRECORD"
+             "DEPORT-BOOLEAN" "DEPORT-INTEGER" "DOUBLE-FLOAT-RADIX"
+             "ENABLE-INTERRUPT" "ENUMERATION" "FD-STREAM" "FD-STREAM-FD"
+             "FD-STREAM-P" "FEXPR" "FIND-IF-IN-CLOSURE"
+             "FOREIGN-SYMBOL-ADDRESS" "GET-PAGE-SIZE" "GET-SYSTEM-INFO"
+             "GR-BIND" "GR-CALL" "GR-CALL*" "GR-ERROR" "IGNORE-INTERRUPT"
+             "INT-SAP" "INVALIDATE-DESCRIPTOR" "IO-TIMEOUT" "LONG-FLOAT-RADIX"
+             "LONG-WORDS" "MACRO" "MAKE-CT-A-VAL" "MAKE-FD-STREAM"
+             "MAKE-INDENTING-STREAM" "MAKE-OBJECT-SET" "MAP-PORT" "MAP-XWINDOW"
+             "NATURALIZE-BOOLEAN" "NATURALIZE-INTEGER" "NULL-TERMINATED-STRING"
+             "OBJECT-SET-OPERATION" "OUTPUT-RAW-BYTES" "PARSE-BODY"
+             "PERQ-STRING" "POINTER" "POINTER<" "POINTER>" "PORT" "PRIMEP"
+             "READ-N-BYTES" "REALLOCATE-SYSTEM-MEMORY" "RECORD-SIZE"
+             "REMOVE-FD-HANDLER" "REMOVE-PORT-DEATH-HANDLER"
+             "REMOVE-PORT-OBJECT" "REMOVE-XWINDOW-OBJECT"
+             "RESOLVE-LOADED-ASSEMBLER-REFERENCES" "SAP+" "SAP-" "SAP-INT"
+             "SAP-REF-16" "SAP-REF-32" "SAP-REF-8" "SAP-REF-DESCRIPTOR"
+             "SAP-REF-DOUBLE" "SAP-REF-SAP" "SAP-REF-SINGLE" "SAP<" "SAP<="
+             "SAP=" "SAP>" "SAP>=" "SCRUB-CONTROL-STACK" "SERVE-ALL-EVENTS"
+             "SERVE-EVENT" "SERVER" "SERVER-MESSAGE" "SHORT-FLOAT-RADIX"
+             "SIGNED-SAP-REF-16" "SIGNED-SAP-REF-32" "SIGNED-SAP-REF-8"
+             "SINGLE-FLOAT-RADIX" "SYMBOL-MACRO-LET" "SYSTEM-AREA-POINTER"
+             "SYSTEM-AREA-POINTER-P" "UNPROCLAIM" "UNSTRUCTURED" "VECTOR-SAP"
+             "WAIT-UNTIL-FD-USABLE" "WITH-ENABLED-INTERRUPTS" "WITH-FD-HANDLER"
+             "WITH-INTERRUPTS" "WITH-REPLY-PORT" "WITHOUT-GCING"
+             "WITHOUT-HEMLOCK" "WITHOUT-INTERRUPTS" "WORDS"))
+(dolist
+    (name
+     '("*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION" "INTEGER" "SINGLE-FLOAT" "UNION"
+       "VALUES"))
+  (intern name "LISP"))
+(defpackage "ALIEN"
+            (:import-from "LISP" "*" "ARRAY" "DOUBLE-FLOAT" "FUNCTION"
+             "INTEGER" "SINGLE-FLOAT" "UNION" "VALUES")
+            (:export "*" "ADDR" "ALIEN" "ALIEN-FUNCALL" "ALIEN-SAP"
+             "ALIEN-SIZE" "ARRAY" "BOOLEAN" "CAST" "DEF-ALIEN-ROUTINE"
+             "DEF-ALIEN-TYPE" "DEF-ALIEN-VARIABLE" "DEF-BUILTIN-ALIEN-TYPE"
+             "DEREF" "DOUBLE-FLOAT" "ENUM" "EXTERN-ALIEN" "FUNCTION" "INTEGER"
+             "SAP-ALIEN" "SIGNED" "SINGLE-FLOAT" "SLOT" "STRUCT" "UNION"
+             "UNSIGNED" "VALUES" "WITH-ALIEN"))
+(dolist
+    (name
+     '("%CAST" "%DEREF-ADDR" "%HEAP-ALIEN" "%HEAP-ALIEN-ADDR"
+       "%LOCAL-ALIEN-ADDR" "%LOCAL-ALIEN-FORCED-TO-MEMORY-P" "%SAP-ALIEN"
+       "%SET-DEREF" "%SET-HEAP-ALIEN" "%SET-LOCAL-ALIEN" "%SET-SLOT"
+       "%SLOT-ADDR" "ALIEN" "ALIEN-ARRAY-TYPE" "ALIEN-ARRAY-TYPE-DIMENSIONS"
+       "ALIEN-ARRAY-TYPE-ELEMENT-TYPE" "ALIEN-ARRAY-TYPE-P"
+       "ALIEN-BOOLEAN-TYPE" "ALIEN-BOOLEAN-TYPE-P" "ALIEN-ENUM-TYPE"
+       "ALIEN-ENUM-TYPE-P" "ALIEN-FUNCTION-TYPE"
+       "ALIEN-FUNCTION-TYPE-ARG-TYPES" "ALIEN-FUNCTION-TYPE-P"
+       "ALIEN-FUNCTION-TYPE-RESULT-TYPE" "ALIEN-INTEGER-TYPE"
+       "ALIEN-INTEGER-TYPE-P" "ALIEN-INTEGER-TYPE-SIGNED" "ALIEN-POINTER-TYPE"
+       "ALIEN-POINTER-TYPE-P" "ALIEN-POINTER-TYPE-TO" "ALIEN-RECORD-FIELD"
+       "ALIEN-RECORD-FIELD-NAME" "ALIEN-RECORD-FIELD-OFFSET"
+       "ALIEN-RECORD-FIELD-P" "ALIEN-RECORD-FIELD-TYPE" "ALIEN-RECORD-TYPE"
+       "ALIEN-RECORD-TYPE-FIELDS" "ALIEN-RECORD-TYPE-P" "ALIEN-SUBTYPE-P"
+       "ALIEN-TYPE" "ALIEN-TYPE-=" "ALIEN-TYPE-ALIGNMENT" "ALIEN-TYPE-BITS"
+       "ALIEN-TYPE-P" "ALIEN-TYPEP" "ALIEN-VALUE" "ALIEN-VALUES-TYPE"
+       "ALIEN-VALUES-TYPE-P" "ALIEN-VALUES-TYPE-VALUES" "ALIGN-OFFSET"
+       "COMPUTE-ALIEN-REP-TYPE" "COMPUTE-DEPORT-LAMBDA"
+       "COMPUTE-DEPOSIT-LAMBDA" "COMPUTE-EXTRACT-LAMBDA"
+       "COMPUTE-LISP-REP-TYPE" "COMPUTE-NATURALIZE-LAMBDA"
+       "DEF-ALIEN-TYPE-CLASS" "DEF-ALIEN-TYPE-METHOD"
+       "DEF-ALIEN-TYPE-TRANSLATOR" "DEPORT" "DEPOSIT-ALIEN-VALUE"
+       "DISPOSE-LOCAL-ALIEN" "EXTRACT-ALIEN-VALUE" "HEAP-ALIEN-INFO"
+       "HEAP-ALIEN-INFO-P" "HEAP-ALIEN-INFO-SAP-FORM" "HEAP-ALIEN-INFO-TYPE"
+       "INVOKE-ALIEN-TYPE-METHOD" "LOCAL-ALIEN" "LOCAL-ALIEN-INFO"
+       "LOCAL-ALIEN-INFO-FORCE-TO-MEMORY-P" "LOCAL-ALIEN-INFO-P"
+       "LOCAL-ALIEN-INFO-TYPE" "MAKE-ALIEN-POINTER-TYPE" "MAKE-LOCAL-ALIEN"
+       "NATURALIZE" "NOTE-LOCAL-ALIEN-TYPE" "PARSE-ALIEN-TYPE"
+       "UNPARSE-ALIEN-TYPE"))
+  (intern name "ALIEN"))
+(defpackage "ALIEN-INTERNALS"
+            (:import-from "ALIEN" "%CAST" "%DEREF-ADDR" "%HEAP-ALIEN"
+             "%HEAP-ALIEN-ADDR" "%LOCAL-ALIEN-ADDR"
+             "%LOCAL-ALIEN-FORCED-TO-MEMORY-P" "%SAP-ALIEN" "%SET-DEREF"
+             "%SET-HEAP-ALIEN" "%SET-LOCAL-ALIEN" "%SET-SLOT" "%SLOT-ADDR"
+             "ALIEN" "ALIEN-ARRAY-TYPE" "ALIEN-ARRAY-TYPE-DIMENSIONS"
+             "ALIEN-ARRAY-TYPE-ELEMENT-TYPE" "ALIEN-ARRAY-TYPE-P"
+             "ALIEN-BOOLEAN-TYPE" "ALIEN-BOOLEAN-TYPE-P" "ALIEN-ENUM-TYPE"
+             "ALIEN-ENUM-TYPE-P" "ALIEN-FUNCTION-TYPE"
+             "ALIEN-FUNCTION-TYPE-ARG-TYPES" "ALIEN-FUNCTION-TYPE-P"
+             "ALIEN-FUNCTION-TYPE-RESULT-TYPE" "ALIEN-INTEGER-TYPE"
+             "ALIEN-INTEGER-TYPE-P" "ALIEN-INTEGER-TYPE-SIGNED"
+             "ALIEN-POINTER-TYPE" "ALIEN-POINTER-TYPE-P"
+             "ALIEN-POINTER-TYPE-TO" "ALIEN-RECORD-FIELD"
+             "ALIEN-RECORD-FIELD-NAME" "ALIEN-RECORD-FIELD-OFFSET"
+             "ALIEN-RECORD-FIELD-P" "ALIEN-RECORD-FIELD-TYPE"
+             "ALIEN-RECORD-TYPE" "ALIEN-RECORD-TYPE-FIELDS"
+             "ALIEN-RECORD-TYPE-P" "ALIEN-SUBTYPE-P" "ALIEN-TYPE"
+             "ALIEN-TYPE-=" "ALIEN-TYPE-ALIGNMENT" "ALIEN-TYPE-BITS"
+             "ALIEN-TYPE-P" "ALIEN-TYPEP" "ALIEN-VALUE" "ALIEN-VALUES-TYPE"
+             "ALIEN-VALUES-TYPE-P" "ALIEN-VALUES-TYPE-VALUES" "ALIGN-OFFSET"
+             "COMPUTE-ALIEN-REP-TYPE" "COMPUTE-DEPORT-LAMBDA"
+             "COMPUTE-DEPOSIT-LAMBDA" "COMPUTE-EXTRACT-LAMBDA"
+             "COMPUTE-LISP-REP-TYPE" "COMPUTE-NATURALIZE-LAMBDA"
+             "DEF-ALIEN-TYPE-CLASS" "DEF-ALIEN-TYPE-METHOD"
+             "DEF-ALIEN-TYPE-TRANSLATOR" "DEPORT" "DEPOSIT-ALIEN-VALUE"
+             "DISPOSE-LOCAL-ALIEN" "EXTRACT-ALIEN-VALUE" "HEAP-ALIEN-INFO"
+             "HEAP-ALIEN-INFO-P" "HEAP-ALIEN-INFO-SAP-FORM"
+             "HEAP-ALIEN-INFO-TYPE" "INVOKE-ALIEN-TYPE-METHOD" "LOCAL-ALIEN"
+             "LOCAL-ALIEN-INFO" "LOCAL-ALIEN-INFO-FORCE-TO-MEMORY-P"
+             "LOCAL-ALIEN-INFO-P" "LOCAL-ALIEN-INFO-TYPE"
+             "MAKE-ALIEN-POINTER-TYPE" "MAKE-LOCAL-ALIEN" "NATURALIZE"
+             "NOTE-LOCAL-ALIEN-TYPE" "PARSE-ALIEN-TYPE" "UNPARSE-ALIEN-TYPE")
+            (:export "%CAST" "%DEREF-ADDR" "%HEAP-ALIEN" "%HEAP-ALIEN-ADDR"
+             "%LOCAL-ALIEN-ADDR" "%LOCAL-ALIEN-FORCED-TO-MEMORY-P" "%SAP-ALIEN"
+             "%SET-DEREF" "%SET-HEAP-ALIEN" "%SET-LOCAL-ALIEN" "%SET-SLOT"
+             "%SLOT-ADDR" "ALIEN" "ALIEN-ARRAY-TYPE"
+             "ALIEN-ARRAY-TYPE-DIMENSIONS" "ALIEN-ARRAY-TYPE-ELEMENT-TYPE"
+             "ALIEN-ARRAY-TYPE-P" "ALIEN-BOOLEAN-TYPE" "ALIEN-BOOLEAN-TYPE-P"
+             "ALIEN-ENUM-TYPE" "ALIEN-ENUM-TYPE-P" "ALIEN-FUNCTION-TYPE"
+             "ALIEN-FUNCTION-TYPE-ARG-TYPES" "ALIEN-FUNCTION-TYPE-P"
+             "ALIEN-FUNCTION-TYPE-RESULT-TYPE" "ALIEN-INTEGER-TYPE"
+             "ALIEN-INTEGER-TYPE-P" "ALIEN-INTEGER-TYPE-SIGNED"
+             "ALIEN-POINTER-TYPE" "ALIEN-POINTER-TYPE-P"
+             "ALIEN-POINTER-TYPE-TO" "ALIEN-RECORD-FIELD"
+             "ALIEN-RECORD-FIELD-NAME" "ALIEN-RECORD-FIELD-OFFSET"
+             "ALIEN-RECORD-FIELD-P" "ALIEN-RECORD-FIELD-TYPE"
+             "ALIEN-RECORD-TYPE" "ALIEN-RECORD-TYPE-FIELDS"
+             "ALIEN-RECORD-TYPE-P" "ALIEN-SUBTYPE-P" "ALIEN-TYPE"
+             "ALIEN-TYPE-=" "ALIEN-TYPE-ALIGNMENT" "ALIEN-TYPE-BITS"
+             "ALIEN-TYPE-P" "ALIEN-TYPEP" "ALIEN-VALUE" "ALIEN-VALUES-TYPE"
+             "ALIEN-VALUES-TYPE-P" "ALIEN-VALUES-TYPE-VALUES" "ALIGN-OFFSET"
+             "COMPUTE-ALIEN-REP-TYPE" "COMPUTE-DEPORT-LAMBDA"
+             "COMPUTE-DEPOSIT-LAMBDA" "COMPUTE-EXTRACT-LAMBDA"
+             "COMPUTE-LISP-REP-TYPE" "COMPUTE-NATURALIZE-LAMBDA"
+             "DEF-ALIEN-TYPE-CLASS" "DEF-ALIEN-TYPE-METHOD"
+             "DEF-ALIEN-TYPE-TRANSLATOR" "DEPORT" "DEPOSIT-ALIEN-VALUE"
+             "DISPOSE-LOCAL-ALIEN" "EXTRACT-ALIEN-VALUE" "HEAP-ALIEN-INFO"
+             "HEAP-ALIEN-INFO-P" "HEAP-ALIEN-INFO-SAP-FORM"
+             "HEAP-ALIEN-INFO-TYPE" "INVOKE-ALIEN-TYPE-METHOD" "LOCAL-ALIEN"
+             "LOCAL-ALIEN-INFO" "LOCAL-ALIEN-INFO-FORCE-TO-MEMORY-P"
+             "LOCAL-ALIEN-INFO-P" "LOCAL-ALIEN-INFO-TYPE"
+             "MAKE-ALIEN-POINTER-TYPE" "MAKE-LOCAL-ALIEN" "NATURALIZE"
+             "NOTE-LOCAL-ALIEN-TYPE" "PARSE-ALIEN-TYPE" "UNPARSE-ALIEN-TYPE"))
+(defpackage "PROFILE"
+            (:export "*TIMED-FUNCTIONS*" "PROFILE" "REPORT-TIME" "RESET-TIME"
+             "UNPROFILE"))
+(defpackage "USER" (:export "DUMP-HASH-TABLE"))
+(dolist
+    (name
+     '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "CHAR-INT" "FLOAT-DIGITS" "FLOAT-RADIX"
+       "PATHNAME-DEVICE" "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-NAME"
+       "PATHNAME-TYPE" "PATHNAME-VERSION"))
+  (intern name "LISP"))
+(intern "BOOLEAN" "ALIEN")
+(defpackage "KERNEL"
+            (:import-from "LISP" "ARRAY-RANK" "ARRAY-TOTAL-SIZE" "CHAR-INT"
+             "FLOAT-DIGITS" "FLOAT-RADIX" "PATHNAME-DEVICE"
+             "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-NAME"
+             "PATHNAME-TYPE" "PATHNAME-VERSION")
+            (:import-from "ALIEN" "BOOLEAN")
+            (:export "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
+             "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"
+             "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"
+             "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"
+             "%CALLER-FRAME-AND-PC" "%CBRT" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
+             "%CLOSURE-INDEX-REF" "%COS" "%COSH" "%DEPOSIT-FIELD"
+             "%DOUBLE-FLOAT" "%DPB" "%EXP" "%EXPM1" "%FUNCTION-HEADER-ARGLIST"
+             "%FUNCTION-HEADER-NAME" "%FUNCTION-HEADER-TYPE" "%HYPOT" "%LDB"
+             "%LOG" "%LOG10" "%LOG1P" "%MAKE-COMPLEX"
+             "%MAKE-FUNCALLABLE-INSTANCE" "%MAKE-RATIO" "%MASK-FIELD" "%NEGATE"
+             "%POW" "%RAW-BITS" "%SET-FUNCALLABLE-INSTANCE-FUNCTION"
+             "%SET-FUNCALLABLE-INSTANCE-INFO" "%SET-RAW-BITS" "%SET-SAP-REF-16"
+             "%SET-SAP-REF-32" "%SET-SAP-REF-8" "%SET-SAP-REF-DOUBLE"
+             "%SET-SAP-REF-SAP" "%SET-SAP-REF-SINGLE" "%SET-STACK-REF" "%SIN"
+             "%SINGLE-FLOAT" "%SINH" "%SP-SET-DEFINITION" "%SP-SET-PLIST"
+             "%SQRT" "%SXHASH-SIMPLE-STRING" "%SXHASH-SIMPLE-SUBSTRING" "%TAN"
+             "%TANH" "%UNARY-ROUND" "%UNARY-TRUNCATE" "%WITH-ARRAY-DATA"
+             "*CURRENT-LEVEL*" "*EMPTY-TYPE*" "*EVAL-STACK-TOP*" "*NULL-TYPE*"
+             "*PRETTY-PRINTER*" "*UNIVERSAL-TYPE*"
+             "*UNPARSE-FUNCTION-TYPE-SIMPLIFY*" "*WILD-TYPE*"
+             "32BIT-LOGICAL-AND" "32BIT-LOGICAL-ANDC1" "32BIT-LOGICAL-ANDC2"
+             "32BIT-LOGICAL-EQV" "32BIT-LOGICAL-NAND" "32BIT-LOGICAL-NOR"
+             "32BIT-LOGICAL-NOT" "32BIT-LOGICAL-OR" "32BIT-LOGICAL-ORC1"
+             "32BIT-LOGICAL-ORC2" "32BIT-LOGICAL-XOR" "ALIEN-TYPE-TYPE"
+             "ALIEN-TYPE-TYPE-ALIEN-TYPE" "ALIEN-TYPE-TYPE-P" "ALLOCATE-VECTOR"
+             "ALWAYS-SUBTYPEP" "ARGS-TYPE" "ARGS-TYPE-ALLOWP" "ARGS-TYPE-KEYP"
+             "ARGS-TYPE-KEYWORDS" "ARGS-TYPE-OPTIONAL" "ARGS-TYPE-P"
+             "ARGS-TYPE-REQUIRED" "ARGS-TYPE-REST" "ARRAY-HEADER-P"
+             "ARRAY-RANK" "ARRAY-TOTAL-SIZE" "ARRAY-TYPE" "ARRAY-TYPE-COMPLEXP"
+             "ARRAY-TYPE-DIMENSIONS" "ARRAY-TYPE-ELEMENT-TYPE" "ARRAY-TYPE-P"
+             "ARRAY-TYPE-SPECIALIZED-ELEMENT-TYPE" "ASH-INDEX" "BASE-CHAR-P"
+             "BINDING-STACK-POINTER-SAP" "BIT-BASH-AND" "BIT-BASH-ANDC1"
+             "BIT-BASH-ANDC2" "BIT-BASH-CLEAR" "BIT-BASH-COPY" "BIT-BASH-EQV"
+             "BIT-BASH-IOR" "BIT-BASH-LOGNAND" "BIT-BASH-LOGNOR" "BIT-BASH-NOT"
+             "BIT-BASH-ORC1" "BIT-BASH-ORC2" "BIT-BASH-SET" "BIT-BASH-XOR"
+             "BIT-INDEX" "BOGUS-ARGUMENT-TO-VALUES-LIST-ERROR" "BOOLE-CODE"
+             "BOOLEAN" "BYTE-SPECIFIER" "CALLABLE" "CHAR-INT"
+             "CHECK-FOR-CIRCULARITY" "CODE-COMPONENT" "CODE-COMPONENT-P"
+             "CODE-DEBUG-INFO" "CODE-HEADER-REF" "CODE-HEADER-SET"
+             "CODE-INSTRUCTIONS" "CONSED-SEQUENCE" "CONSTANT-TYPE"
+             "CONSTANT-TYPE-P" "CONSTANT-TYPE-TYPE" "CONTAINING-INTEGER-TYPE"
+             "CONTROL-STACK-POINTER-SAP" "COPY-FROM-SYSTEM-AREA"
+             "COPY-NUMERIC-TYPE" "COPY-TO-SYSTEM-AREA" "CSUBTYPEP" "CTYPE"
+             "CTYPE-OF" "CTYPE-P" "CTYPEP" "CURRENT-FP" "CURRENT-SP"
+             "DATA-VECTOR-REF" "DATA-VECTOR-SET" "DECODE-DOUBLE-FLOAT"
+             "DECODE-SINGLE-FLOAT" "DESCEND-INTO" "DIVISION-BY-ZERO-ERROR"
+             "DOUBLE-FLOAT-EXPONENT" "DOUBLE-FLOAT-HIGH-BITS"
+             "DOUBLE-FLOAT-LOW-BITS" "DOUBLE-FLOAT-P"
+             "DYNAMIC-SPACE-FREE-POINTER" "ERROR-NUMBER-OR-LOSE" "FILENAME"
+             "FLOAT-DIGITS" "FLOAT-EXPONENT" "FLOAT-FORMAT-DIGITS"
+             "FLOAT-FORMAT-MAX" "FLOAT-RADIX" "FORM" "FUNCALLABLE-INSTANCE-P"
+             "FUNCTION-CODE-HEADER" "FUNCTION-TYPE" "FUNCTION-TYPE-ALLOWP"
+             "FUNCTION-TYPE-KEYP" "FUNCTION-TYPE-KEYWORDS"
+             "FUNCTION-TYPE-NARGS" "FUNCTION-TYPE-OPTIONAL" "FUNCTION-TYPE-P"
+             "FUNCTION-TYPE-REQUIRED" "FUNCTION-TYPE-REST"
+             "FUNCTION-TYPE-RETURNS" "FUNCTION-TYPE-WILD-ARGS"
+             "FUNCTION-WORD-OFFSET" "GET-CLOSURE-LENGTH" "GET-HEADER-DATA"
+             "GET-LISP-OBJ-ADDRESS" "GET-LOWTAG" "GET-TYPE" "HAIRY-TYPE"
+             "HAIRY-TYPE-CHECK-TEMPLATE" "HAIRY-TYPE-SPECIFIER"
+             "HANDLE-CIRCULARITY" "INDEX" "INTEGER-DECODE-DOUBLE-FLOAT"
+             "INTEGER-DECODE-SINGLE-FLOAT" "INTERNAL-TIME"
+             "INVALID-ARGUMENT-COUNT-ERROR" "INVALID-ARRAY-INDEX-ERROR"
+             "INVALID-UNWIND-ERROR" "IRRATIONAL" "KEY-INFO" "KEY-INFO-NAME"
+             "KEY-INFO-P" "KEY-INFO-TYPE" "LEXICAL-ENVIRONMENT" "LRA"
+             "LRA-CODE-HEADER" "LRA-P" "MAKE-ALIEN-TYPE-TYPE" "MAKE-ARGS-TYPE"
+             "MAKE-ARRAY-HEADER" "MAKE-DOUBLE-FLOAT" "MAKE-FUNCTION-TYPE"
+             "MAKE-KEY-INFO" "MAKE-LISP-OBJ" "MAKE-MEMBER-TYPE"
+             "MAKE-NAMED-TYPE" "MAKE-NUMERIC-TYPE" "MAKE-SINGLE-FLOAT"
+             "MAKE-STRUCTURE" "MAKE-STRUCTURE-TYPE" "MAKE-UNION-TYPE"
+             "MAKE-VALUES-TYPE" "MEMBER-TYPE" "MEMBER-TYPE-MEMBERS"
+             "MEMBER-TYPE-P" "MERGE-BITS" "MUTATOR-SELF" "NAMED-TYPE"
+             "NAMED-TYPE-NAME" "NAMED-TYPE-P" "NATIVE-BYTE-ORDER" "NEGATE"
+             "NEVER-SUBTYPEP" "NIL-FUNCTION-RETURNED-ERROR" "NOT-<=-ERROR"
+             "NOT-=-ERROR" "NUMERIC-CONTAGION" "NUMERIC-TYPE"
+             "NUMERIC-TYPE-CLASS" "NUMERIC-TYPE-COMPLEXP" "NUMERIC-TYPE-FORMAT"
+             "NUMERIC-TYPE-HIGH" "NUMERIC-TYPE-LOW" "NUMERIC-TYPE-P"
+             "OBJECT-NOT-ARRAY-ERROR" "OBJECT-NOT-BASE-CHAR-ERROR"
+             "OBJECT-NOT-BIGNUM-ERROR" "OBJECT-NOT-BIT-VECTOR-ERROR"
+             "OBJECT-NOT-COERCABLE-TO-FUNCTION-ERROR"
+             "OBJECT-NOT-COMPLEX-ERROR" "OBJECT-NOT-CONS-ERROR"
+             "OBJECT-NOT-DOUBLE-FLOAT-ERROR" "OBJECT-NOT-FIXNUM-ERROR"
+             "OBJECT-NOT-FLOAT-ERROR" "OBJECT-NOT-FUNCTION-ERROR"
+             "OBJECT-NOT-FUNCTION-OR-SYMBOL-ERROR" "OBJECT-NOT-INTEGER-ERROR"
+             "OBJECT-NOT-LIST-ERROR" "OBJECT-NOT-NUMBER-ERROR"
+             "OBJECT-NOT-RATIO-ERROR" "OBJECT-NOT-RATIONAL-ERROR"
+             "OBJECT-NOT-REAL-ERROR" "OBJECT-NOT-SAP-ERROR"
+             "OBJECT-NOT-SIGNED-BYTE-32-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-DOUBLE-FLOAT-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-SINGLE-FLOAT-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-UNSIGNED-BYTE-16-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-UNSIGNED-BYTE-2-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-UNSIGNED-BYTE-32-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-UNSIGNED-BYTE-4-ERROR"
+             "OBJECT-NOT-SIMPLE-ARRAY-UNSIGNED-BYTE-8-ERROR"
+             "OBJECT-NOT-SIMPLE-BIT-VECTOR-ERROR"
+             "OBJECT-NOT-SIMPLE-STRING-ERROR" "OBJECT-NOT-SIMPLE-VECTOR-ERROR"
+             "OBJECT-NOT-SINGLE-FLOAT-ERROR" "OBJECT-NOT-STRING-ERROR"
+             "OBJECT-NOT-STRUCTURE-ERROR" "OBJECT-NOT-SYMBOL-ERROR"
+             "OBJECT-NOT-TYPE-ERROR" "OBJECT-NOT-UNSIGNED-BYTE-32-ERROR"
+             "OBJECT-NOT-VECTOR-ERROR" "OBJECT-NOT-WEAK-POINTER-ERROR"
+             "ODD-KEYWORD-ARGUMENTS-ERROR" "OUTPUT-OBJECT" "OUTPUT-UGLY-OBJECT"
+             "PARSE-LAMBDA-LIST" "PARSE-UNKNOWN-TYPE"
+             "PARSE-UNKNOWN-TYPE-SPECIFIER" "PATHNAME-DEVICE"
+             "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-NAME"
+             "PATHNAME-TYPE" "PATHNAME-VERSION" "PATHNAMELIKE"
+             "PUNT-IF-TOO-LONG" "SCALE-DOUBLE-FLOAT" "SCALE-SINGLE-FLOAT"
+             "SEQUENCE-END" "SET-HEADER-DATA" "SHIFT-TOWARDS-END"
+             "SHIFT-TOWARDS-START" "SIGNAL-INIT" "SIGNED-BYTE-32-P"
+             "SIMPLE-ARRAY-DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P"
+             "SIMPLE-ARRAY-SINGLE-FLOAT-P" "SIMPLE-ARRAY-UNSIGNED-BYTE-16-P"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-2-P" "SIMPLE-ARRAY-UNSIGNED-BYTE-32-P"
+             "SIMPLE-ARRAY-UNSIGNED-BYTE-4-P" "SIMPLE-ARRAY-UNSIGNED-BYTE-8-P"
+             "SIMPLE-UNBOXED-ARRAY" "SINGLE-FLOAT-BITS" "SINGLE-FLOAT-EXPONENT"
+             "SINGLE-FLOAT-P" "SINGLE-VALUE-TYPE" "SPECIFIER-TYPE" "STACK-REF"
+             "STREAMLIKE" "STRINGABLE" "STRINGLIKE" "STRUCTURE-INDEX"
+             "STRUCTURE-INDEX-REF" "STRUCTURE-INDEX-SET" "STRUCTURE-LENGTH"
+             "STRUCTURE-REF" "STRUCTURE-SET" "STRUCTURE-TYPE"
+             "STRUCTURE-TYPE-NAME" "STRUCTURE-TYPE-P" "SYSTEM-AREA-CLEAR"
+             "SYSTEM-AREA-COPY" "TRUTH" "TWO-ARG-*" "TWO-ARG-+" "TWO-ARG--"
+             "TWO-ARG-/" "TWO-ARG-/=" "TWO-ARG-<" "TWO-ARG-<=" "TWO-ARG-="
+             "TWO-ARG->" "TWO-ARG->=" "TWO-ARG-AND" "TWO-ARG-GCD" "TWO-ARG-IOR"
+             "TWO-ARG-LCM" "TWO-ARG-XOR" "TYPE-DIFFERENCE" "TYPE-EXPAND"
+             "TYPE-INIT" "TYPE-INTERSECT" "TYPE-INTERSECTION" "TYPE-SPECIFIER"
+             "TYPE-SPECIFIER-SYMBOLS" "TYPE-UNION" "TYPE/=" "TYPE="
+             "TYPES-INTERSECT" "UNBOUND-SYMBOL-ERROR" "UNBOXED-ARRAY"
+             "UNDEFINED-SYMBOL-ERROR" "UNION-TYPE" "UNION-TYPE-P"
+             "UNION-TYPE-TYPES" "UNKNOWN-ERROR"
+             "UNKNOWN-KEYWORD-ARGUMENT-ERROR" "UNKNOWN-TYPE" "UNKNOWN-TYPE-P"
+             "UNKNOWN-TYPE-SPECIFIER" "UNSEEN-THROW-TAG-ERROR"
+             "UNSIGNED-BYTE-32-P" "VALUES-SPECIFIER-TYPE"
+             "VALUES-SPECIFIER-TYPE-CACHE-CLEAR" "VALUES-SUBTYPEP"
+             "VALUES-TYPE" "VALUES-TYPE-ALLOWP" "VALUES-TYPE-INTERSECT"
+             "VALUES-TYPE-INTERSECTION" "VALUES-TYPE-KEYP"
+             "VALUES-TYPE-KEYWORDS" "VALUES-TYPE-OPTIONAL" "VALUES-TYPE-P"
+             "VALUES-TYPE-REQUIRED" "VALUES-TYPE-REST" "VALUES-TYPE-UNION"
+             "VALUES-TYPES" "VALUES-TYPES-INTERSECT"
+             "WITH-CIRCULARITY-DETECTION" "WRONG-NUMBER-OF-INDICES-ERROR"))

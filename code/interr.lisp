@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.21 1992/01/21 23:41:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.22 1992/02/14 23:45:02 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,7 +110,6 @@
     `(%deferr ',name
 	      ,(meta-error-number name)
 	      ,description
-	      #+new-compiler
 	      #'(lambda (name ,fp ,sigcontext ,sc-offsets)
 		  (declare (ignorable name ,fp ,sigcontext ,sc-offsets))
 		  (macrolet ((set-value (var value)
@@ -144,7 +143,7 @@
 
 ) ; Eval-When (Compile Eval)
 
-(defun %deferr (name number description #+new-compiler function)
+(defun %deferr (name number description function)
   (when (>= number (length *internal-errors*))
     (setf *internal-errors*
 	  (replace (make-array (+ number 10) :initial-element nil)
@@ -152,7 +151,7 @@
   (setf (svref *internal-errors* number)
 	(make-error-info :name name
 			 :description description
-			 #+new-compiler :function #+new-compiler function))
+			 :function function))
   name)
 
 
@@ -682,49 +681,40 @@
 ;;;; internal-error signal handler.
 
 (defun internal-error (scp continuable)
-  (declare (ignore continuable))
+  (declare (type system-area-pointer scp) (ignore continuable))
   (infinite-error-protect
-    (alien-bind ((sc (make-alien 'mach:sigcontext
-				 #.(c-sizeof 'mach:sigcontext)
-				 scp)
-		     mach:sigcontext
-		     t))
-      (multiple-value-bind
-	  (error-number arguments)
-	  (vm:internal-error-arguments (alien-value sc))
-	(let ((fp (int-sap (di::escape-register (alien-value sc)
-						vm::cfp-offset)))
-	      (name (find-interrupted-name))
-	      (info (and (< -1 error-number (length *internal-errors*))
-			 (svref *internal-errors* error-number))))
-	  (cond ((null info)
-		 (error 'simple-error
-			:function-name name
-			:format-string
-			"Unknown internal error, ~D?  args=~S"
-			:format-arguments
-			(list error-number
-			      (mapcar #'(lambda (sc-offset)
-					  (di::sub-access-debug-var-slot
-					   fp
-					   sc-offset
-					   (alien-value sc)))
-				      arguments))))
-		((null (error-info-function info))
-		 (error 'simple-error
-			:function-name name
-			:format-string
-			"Internal error ~D: ~A.  args=~S"
-			:format-arguments
-			(list error-number
-			      (error-info-description info)
-			      (mapcar #'(lambda (sc-offset)
-					  (di::sub-access-debug-var-slot
-					   fp
-					   sc-offset
-					   (alien-value sc)))
-				      arguments))))
+   (let ((scp (alien:sap-alien scp (* unix:sigcontext))))
+     (multiple-value-bind
+	 (error-number arguments)
+	 (vm:internal-error-arguments scp)
+       (let ((fp (int-sap (vm:sigcontext-register scp vm::cfp-offset)))
+	     (name (find-interrupted-name))
+	     (info (and (< -1 error-number (length *internal-errors*))
+			(svref *internal-errors* error-number))))
+	 (cond ((null info)
+		(error 'simple-error
+		       :function-name name
+		       :format-string
+		       "Unknown internal error, ~D?  args=~S"
+		       :format-arguments
+		       (list error-number
+			     (mapcar #'(lambda (sc-offset)
+					 (di::sub-access-debug-var-slot
+					  fp sc-offset scp))
+				     arguments))))
+	       ((null (error-info-function info))
+		(error 'simple-error
+		       :function-name name
+		       :format-string
+		       "Internal error ~D: ~A.  args=~S"
+		       :format-arguments
+		       (list error-number
+			     (error-info-description info)
+			     (mapcar #'(lambda (sc-offset)
+					 (di::sub-access-debug-var-slot
+					  fp sc-offset scp))
+				     arguments))))
 		(t
-		 (funcall (error-info-function info) name fp sc
+		 (funcall (error-info-function info) name fp scp
 			  arguments))))))))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.11 1992/02/06 01:09:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.12 1992/02/14 23:45:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,8 +47,8 @@
 (defvar lisp-environment-list)
 
 
-(def-c-routine "save" (boolean)
-  (file null-terminated-string))
+(alien:def-alien-routine "save" (alien:boolean)
+  (file c-call:c-string))
 
 
 ;;; PARSE-UNIX-SEARCH-LIST  --  Internal
@@ -215,5 +215,4 @@
     (error "Change *PACKAGE* to the USER package and try again.")))
 
 (defun initial-init-function ()
-  (gc-on)
   (throw 'top-level-catcher nil))

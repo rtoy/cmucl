@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.6 1991/10/05 17:11:42 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.7 1992/02/14 23:45:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -136,8 +136,8 @@
   "Returns T iff the given remote object is defined locally."
   (declare (type remote-object remote))
   (unless *this-host*
-    (setf *this-host* (mach:unix-gethostid))
-    (setf *this-pid* (mach:unix-getpid)))
+    (setf *this-host* (unix:unix-gethostid))
+    (setf *this-pid* (unix:unix-getpid)))
   (and (eql (remote-object-host remote) *this-host*)
        (eql (remote-object-pid remote) *this-pid*)))
 
@@ -193,8 +193,8 @@
 (defun make-remote-object (local)
   "Convert the given local object to a remote object."
   (unless *this-host*
-    (setf *this-host* (mach:unix-gethostid))
-    (setf *this-pid* (mach:unix-getpid)))
+    (setf *this-host* (unix:unix-gethostid))
+    (setf *this-pid* (unix:unix-getpid)))
   (let ((id (gethash local *object-to-id*)))
     (unless id
       (setf id *next-id*)
@@ -232,7 +232,7 @@ object. Passing that remote object to remote-object-value will new return NIL."
 	 (wire-ibuf-end wire))
       (multiple-value-bind
 	  (number error)
-	  (mach:unix-select (1+ (wire-fd wire))
+	  (unix:unix-select (1+ (wire-fd wire))
 			    (ash 1 (wire-fd wire))
 			    0
 			    0
@@ -241,7 +241,7 @@ object. Passing that remote object to remote-object-value will new return NIL."
 	  (error 'wire-io-error
 		 :wire wire
 		 :when "listening to"
-		 :msg (mach:get-unix-error-msg error)))
+		 :msg (unix:get-unix-error-msg error)))
 	(not (zerop number)))))
 
 
@@ -264,12 +264,12 @@ is signaled."
       (error 'wire-eof :wire wire))
 
     (multiple-value-bind (bytes error)
-			 (mach:unix-read fd ibuf buffer-size)
+			 (unix:unix-read fd ibuf buffer-size)
       (cond ((null bytes)
 	     (error 'wire-io-error
 		    :wire wire
 		    :when "reading"
-		    :msg (mach:get-unix-error-msg error)))
+		    :msg (unix:get-unix-error-msg error)))
 	    ((zerop bytes)
 	     (setf (wire-ibuf wire) nil)
 	     (error 'wire-eof :wire wire))
@@ -471,7 +471,7 @@ signed (defaults to T)."
 
 ;;; WRITE-STUFF -- internal
 ;;;
-;;;   Slightly better interface to mach:unix-write. Choaks on errors.
+;;;   Slightly better interface to unix:unix-write. Choaks on errors.
 
 (defmacro write-stuff (fd string-form &optional end)
   (let ((string (gensym))
@@ -483,12 +483,12 @@ signed (defaults to T)."
 		`((,length (length ,string)))))
        (multiple-value-bind
 	   (,result ,error)
-	   (mach:unix-write ,fd ,string 0 ,(or end length))
+	   (unix:unix-write ,fd ,string 0 ,(or end length))
 	 (cond ((null ,result)
 		(error 'wire-io-error
 		       :wire wire
 		       :when "writing"
-		       :msg (mach:get-unix-error-msg ,error)))
+		       :msg (unix:get-unix-error-msg ,error)))
 	       ((eql ,result ,(or end length))
 		)
 	       (t

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.7 1991/08/30 17:23:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.8 1992/02/14 23:44:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,18 +24,18 @@
 (defun pick-temporary-file-name (&optional (base "/tmp/tmp~D~C"))
   (let ((code (char-code #\A)))
     (loop
-      (let ((name (format nil base (mach:unix-getpid) (code-char code))))
+      (let ((name (format nil base (unix:unix-getpid) (code-char code))))
 	(multiple-value-bind
 	    (fd errno)
-	    (mach:unix-open name
-			    (logior mach:o_wronly mach:o_creat mach:o_excl)
+	    (unix:unix-open name
+			    (logior unix:o_wronly unix:o_creat unix:o_excl)
 			    #o666)
 	  (cond ((not (null fd))
-		 (mach:unix-close fd)
+		 (unix:unix-close fd)
 		 (return name))
-		((not (= errno mach:eexist))
+		((not (= errno unix:eexist))
 		 (error "Could not create temporary file ~S: ~A"
-			name (mach:get-unix-error-msg errno)))
+			name (unix:get-unix-error-msg errno)))
 		
 		((= code (char-code #\Z))
 		 (setf code (char-code #\a)))
@@ -45,15 +45,16 @@
 		 (incf code))))))))
 
 #+sparc
-(ext:def-c-record exec
-  (magic ext:unsigned-long)
-  (text ext:unsigned-long)
-  (data ext:unsigned-long)
-  (bss ext:unsigned-long)
-  (syms ext:unsigned-long)
-  (entry ext:unsigned-long)
-  (trsize ext:unsigned-long)
-  (drsize ext:unsigned-long))
+(alien:def-alien-type exec
+  (alien:struct nil
+    (magic c-call:unsigned-long)
+    (text c-call:unsigned-long)
+    (data c-call:unsigned-long)
+    (bss c-call:unsigned-long)
+    (syms c-call:unsigned-long)
+    (entry c-call:unsigned-long)
+    (trsize c-call:unsigned-long)
+    (drsize c-call:unsigned-long)))
 
 (defun allocate-space-in-foreign-segment (bytes)
   (let* ((pagesize-1 (1- (get-page-size)))
@@ -69,45 +70,44 @@
 #+sparc
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
-  (multiple-value-bind (fd errno) (mach:unix-open name mach:o_rdonly 0)
+  (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
     (unless fd
-      (error "Could not open ~S: ~A" name (mach:get-unix-error-msg errno)))
+      (error "Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
     (unwind-protect
-	(with-stack-alien (header exec #.(ext:c-sizeof 'exec))
-	  (mach:unix-read fd
-			  (alien-sap (alien-value header))
-			  (truncate (alien-size (alien-value header))
-				    (bytes 1)))
+	(alien:with-alien ((header exec))
+	  (unix:unix-read fd
+			  (alien:alien-sap header)
+			  (alien:alien-size exec :bytes))
 	  (let* ((len-of-text-and-data
-		  (+ (alien-access (exec-text (alien-value header)))
-		     (alien-access (exec-data (alien-value header)))))
+		  (+ (alien:slot header 'text) (alien:slot header 'data)))
 		 (memory-needed
-		  (+ len-of-text-and-data
-		     (alien-access (exec-bss (alien-value header)))))
+		  (+ len-of-text-and-data (alien:slot header 'bss)))
 		 (addr (allocate-space-in-foreign-segment memory-needed)))
-	    (mach:unix-read fd addr len-of-text-and-data)))
-      (mach:unix-close fd))))
+	    (unix:unix-read fd addr len-of-text-and-data)))
+      (unix:unix-close fd))))
 
 #+pmax
-(ext:def-c-record filehdr
-  (magic ext:unsigned-short)
-  (nscns ext:unsigned-short)
-  (timdat ext:long)
-  (symptr ext:long)
-  (nsyms ext:long)
-  (opthdr ext:unsigned-short)
-  (flags ext:unsigned-short))
+(alien:def-alien-type filehdr
+  (alien:struct nil
+    (magic c-call:unsigned-short)
+    (nscns c-call:unsigned-short)
+    (timdat c-call:long)
+    (symptr c-call:long)
+    (nsyms c-call:long)
+    (opthdr c-call:unsigned-short)
+    (flags c-call:unsigned-short)))
 
 #+pmax
-(ext:def-c-record aouthdr
-  (magic ext:short)
-  (vstamp ext:short)
-  (tsize ext:long)
-  (dsize ext:long)
-  (bsize ext:long)
-  (entry ext:long)
-  (text_start ext:long)
-  (data_start ext:long))
+(alien:def-alien-type aouthdr
+  (alien:struct nil
+    (magic c-call:short)
+    (vstamp c-call:short)
+    (tsize c-call:long)
+    (dsize c-call:long)
+    (bsize c-call:long)
+    (entry c-call:long)
+    (text_start c-call:long)
+    (data_start c-call:long)))
 
 #+pmax
 (defconstant filhsz 20)
@@ -119,42 +119,33 @@
 #+pmax
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
-  (multiple-value-bind (fd errno) (mach:unix-open name mach:o_rdonly 0)
+  (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
     (unless fd
-      (error "Could not open ~S: ~A" name (mach:get-unix-error-msg errno)))
+      (error "Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
     (unwind-protect
-	(with-stack-alien (filehdr filehdr #.(ext:c-sizeof 'filehdr))
-	  (with-stack-alien (aouthdr aouthdr #.(ext:c-sizeof 'aouthdr))
-	    (mach:unix-read fd
-			    (alien-sap (alien-value filehdr))
-			    (truncate (alien-size (alien-value filehdr))
-				      (bytes 1)))
-	    (mach:unix-read fd
-			    (alien-sap (alien-value aouthdr))
-			    (truncate (alien-size (alien-value aouthdr))
-				      (bytes 1)))
-	    (let* ((len-of-text-and-data
-		    (+ (alien-access (aouthdr-tsize (alien-value aouthdr)))
-		       (alien-access (aouthdr-dsize (alien-value aouthdr)))))
-		   (memory-needed
-		    (+ len-of-text-and-data
-		       (alien-access (aouthdr-bsize (alien-value aouthdr)))))
-		   (addr (allocate-space-in-foreign-segment memory-needed))
-		   (pad-size-1 (if (< (alien-access
-				       (aouthdr-vstamp (alien-value aouthdr)))
-				      23)
-				   7 15)))
-	      (mach:unix-lseek fd
-			       (logandc2 (+ filhsz aouthsz
-					    (* scnhsz
-					       (alien-access
-						(filehdr-nscns
-						 (alien-value filehdr))))
-					    pad-size-1)
-					 pad-size-1)
-			       mach:l_set)
-	      (mach:unix-read fd addr len-of-text-and-data))))
-      (mach:unix-close fd))))
+	(alien:with-alien ((filehdr filehdr)
+			   (aouthdr aouthdr))
+	  (unix:unix-read fd
+			  (alien:alien-sap filehdr)
+			  (alien:alien-size filehdr :bytes))
+	  (unix:unix-read fd
+			  (alien:alien-sap aouthdr)
+			  (alien:alien-size aouthdr :bytes))
+	  (let* ((len-of-text-and-data
+		  (+ (alien:slot aouthdr 'tsize) (alien:slot aouthdr 'dsize)))
+		 (memory-needed
+		  (+ len-of-text-and-data (alien:slot aouthdr 'bsize)))
+		 (addr (allocate-space-in-foreign-segment memory-needed))
+		 (pad-size-1 (if (< (alien:slot aouthdr 'vstamp) 23) 7 15)))
+	    (unix:unix-lseek fd
+			     (logandc2 (+ filhsz aouthsz
+					  (* scnhsz
+					     (alien:slot filehdr 'nscns))
+					  pad-size-1)
+				       pad-size-1)
+			     unix:l_set)
+	    (unix:unix-read fd addr len-of-text-and-data)))
+      (unix:unix-close fd))))
 
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
@@ -219,9 +210,9 @@
 	       linker (get-output-stream-string error-output)))
       (load-object-file output-file)
       (parse-symbol-table symbol-table-file)
-      (mach:unix-unlink symbol-table-file)
+      (unix:unix-unlink symbol-table-file)
       (let ((old-file *previous-linked-object-file*))
 	(setf *previous-linked-object-file* output-file)
 	(when old-file
-	  (mach:unix-unlink old-file)))))
+	  (unix:unix-unlink old-file)))))
   (format t ";;; Done.~%"))
