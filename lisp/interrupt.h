@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.1 1992/07/28 20:14:37 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.h,v 1.2 1992/09/08 20:26:29 wlott Exp $ */
 
 #if !defined(_INCLUDE_INTERRUPT_H_)
 #define _INCLUDE_INTERRUPT_H_
@@ -22,10 +22,10 @@ extern void interrupt_handle_pending(struct sigcontext *scp);
 extern void interrupt_internal_error(int signal, int code,
 				     struct sigcontext *scp,
 				     boolean continuable);
-extern boolean interrupt_maybe_gc(struct sigcontext *context);
+extern boolean interrupt_maybe_gc(int sig, int code, struct sigcontext *scp);
 extern void interrupt_install_low_level_handler
     (int signal,
-     void handler(int signal, int code, struct sigcontext *handler));
+     void handler(int signal, int code, struct sigcontext *scp));
 extern unsigned long install_handler(int signal,
 				     void handler(int signal, int code,
 						  struct sigcontext *handler));

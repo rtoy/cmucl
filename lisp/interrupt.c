@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.1 1992/07/28 20:14:35 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.2 1992/09/08 20:25:46 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -231,12 +231,12 @@ static void maybe_now_maybe_later(int signal, int code,
 \****************************************************************/
 
 #ifndef INTERNAL_GC_TRIGGER
-static boolean gc_trigger_hit(struct sigcontext *context)
+static boolean gc_trigger_hit(int signal, int code, struct sigcontext *context)
 {
     if (current_auto_gc_trigger == NULL)
 	return FALSE;
     else{
-	lispobj *badaddr=(lispobj *)arch_get_bad_addr(context);
+	lispobj *badaddr=(lispobj *)arch_get_bad_addr(signal, code, context);
 
 	return (badaddr >= current_auto_gc_trigger &&
 		badaddr < current_dynamic_space + DYNAMIC_SPACE_SIZE);
@@ -245,11 +245,11 @@ static boolean gc_trigger_hit(struct sigcontext *context)
 #endif
 
 
-boolean interrupt_maybe_gc(struct sigcontext *context)
+boolean interrupt_maybe_gc(int signal, int code, struct sigcontext *context)
 {
     if (!foreign_function_call_active
 #ifndef INTERNAL_GC_TRIGGER
-		  && gc_trigger_hit(context)
+		  && gc_trigger_hit(signal, code, context)
 #endif
 	) {
 #ifndef INTERNAL_GC_TRIGGER
