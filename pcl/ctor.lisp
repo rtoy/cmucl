@@ -46,7 +46,7 @@
 ;;; is called.
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.6 2003/04/24 13:44:15 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.7 2003/05/02 16:25:51 gerd Exp $")
 
 (in-package "PCL")
 
@@ -534,9 +534,16 @@
 	    as allocation = (slot-definition-allocation slotd)
 	    as initfn = (slot-definition-initfunction slotd)
 	    as slot-type = (slot-type-or-t slotd)
-	    as initform = (slot-definition-initform slotd) do
-	      (unless (or (eq allocation :class)
-			  (and (not structure-p)
+	    as initform = (slot-definition-initform slotd) 
+	    if (eq allocation :class) do
+	      (when (and initfn (not (initialized-p location)))
+		(if (constantp initform)
+		    (class-init location 'constant-if-unbound
+				initform slot-type)
+		    (class-init location 'initfn-if-unbound
+				initfn slot-type)))
+	    else do
+	      (unless (or (and (not structure-p)
 			       (null initfn))
 			  (initialized-p location))
 		(if (constantp initform)
@@ -552,14 +559,28 @@
 			 (instance-init-forms slot-vector before-method-p))))
 	    (class-init-forms
 	     (unless structure-p
-	       (loop for (location type value slot-type) in class-inits
-		     collect
-		       `(setf (cdr ',location)
-			      (the ,slot-type
-				,(ecase type
-				   (constant `',(eval value))
-				   ((param var) `,value)
-				   (initfn `(funcall ,value)))))))))
+	       (ext:collect ((forms))
+		 (dolist (init class-inits (forms))
+		   (destructuring-bind (location type value slot-type) init
+		     (forms
+		      (ecase type
+			(constant
+			 `(setf (cdr ',location)
+				(the ,slot-type ',(eval value))))
+			((param var)
+			 `(setf (cdr ',location)
+				(the ,slot-type ,value)))
+			(initfn
+			 `(setf (cdr ',location)
+				(the ,slot-type (funcall ,value))))
+			(initfn-if-unbound
+			 `(when (eq +slot-unbound+ (cdr ',location))
+			    (setf (cdr ',location)
+				  (the ,slot-type (funcall ,value)))))
+			(constant-if-unbound
+			 `(when (eq +slot-unbound+ (cdr ',location))
+			    (setf (cdr ',location)
+				  (the ,slot-type ',(eval value)))))))))))))
 	(multiple-value-bind (vars bindings)
 	    (loop for (var . initfn) in (nreverse default-inits)
 		  collect var into vars
