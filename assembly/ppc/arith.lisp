@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.3 2004/07/25 18:15:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/ppc/arith.lisp,v 1.4 2004/08/09 03:23:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,17 +188,14 @@
 
   CONS-BIGNUM
   ;; Allocate a BIGNUM for the result.
-  (pseudo-atomic (pa-flag :extra (pad-data-block (1+ bignum-digits-offset)))
+  (with-fixed-allocation (res pa-flag temp bignum-type (+ 2 bignum-digits-offset))
     (let ((one-word (gen-label)))
-      (inst ori res alloc-tn other-pointer-type)
       ;; We start out assuming that we need one word.  Is that correct?
       (inst srawi temp lo 31)
       (inst xor. temp temp hi)
       (inst li temp (logior (ash 1 type-bits) bignum-type))
       (inst beq one-word)
       ;; Nope, we need two, so allocate the additional space.
-      (inst addi alloc-tn alloc-tn (- (pad-data-block (+ 2 bignum-digits-offset))
-			              (pad-data-block (1+ bignum-digits-offset))))
       (inst li temp (logior (ash 2 type-bits) bignum-type))
       (storew hi res (1+ bignum-digits-offset) other-pointer-type)
       (emit-label one-word)
