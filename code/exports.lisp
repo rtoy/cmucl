@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.198 2003/02/05 11:08:44 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.199 2003/02/05 19:32:19 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,6 +93,8 @@
 (if (find-package "C")
     (rename-package "C" "C" '("OLD-C"))
     (make-package "C" :nicknames '("OLD-C") :use nil))
+(if (find-package "XREF")
+    (rename-package "XREF" "XREF" 'nil))
 (if (find-package "WIRE")
     (rename-package "WIRE" "WIRE" 'nil)
     (make-package "WIRE" :nicknames 'nil :use nil))
@@ -1202,6 +1204,7 @@
 	   "PREDICATE" "PRIMITIVE-TYPE" "PRIMITIVE-TYPE-OF"
 	   "PRIMITIVE-TYPE-OR-LOSE" "PRIMITIVE-TYPE-VOP" "PUSH-VALUES"
 	   "READ-PACKED-BIT-VECTOR" "READ-VAR-INTEGER" "READ-VAR-STRING"
+           "*RECORD-XREF-INFO*"
 	   "RESET-STACK-POINTER" "RESTORE-DYNAMIC-STATE" "RETURN"
 	   "RETURN-MULTIPLE" "RT-AFPA-FASL-FILE-IMPLEMENTATION"
 	   "RT-FASL-FILE-IMPLEMENTATION" "SAVE-DYNAMIC-STATE" "SB"
@@ -1269,6 +1272,19 @@
 "IR2-COMPONENT-DYNCOUNT-INFO"
 "DYNCOUNT-INFO" "DYNCOUNT-INFO-P")
 )
+(defpackage "XREF"
+  (:export "INIT-XREF-DATABASE"
+           "REGISTER-XREF"
+           "WHO-CALLS"
+           "WHO-REFERENCES"
+           "WHO-BINDS"
+           "WHO-SETS"
+           #+pcl "WHO-SUBCLASSES"
+           #+pcl "WHO-SUPERCLASSES"
+           "MAKE-XREF-CONTEXT"
+           "XREF-CONTEXT-NAME"
+           "XREF-CONTEXT-FILE"
+           "XREF-CONTEXT-SOURCE-PATH"))
 (defpackage "WIRE"
             (:export "*CURRENT-WIRE*" "CONNECT-TO-REMOTE-SERVER"
              "CREATE-REQUEST-SERVER" "DESTROY-REQUEST-SERVER"

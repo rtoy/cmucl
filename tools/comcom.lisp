@@ -3,9 +3,11 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.53 2002/08/27 22:18:35 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/comcom.lisp,v 1.54 2003/02/05 19:32:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
+;;;
+;;; Loading this file causes the CMUCL compiler to be compiled.
 ;;;
 (in-package "USER")
 
@@ -21,7 +23,7 @@
 (unless (find-package "OLD-C")
   (rename-package "C" "C" '("OLD-C")))
 
-;;; Import so that these types which appear in the globldb are the same...
+;;; Import so that these types which appear in the globaldb are the same...
 #+bootstrap
 (import '(old-c::approximate-function-type
 	  old-c::function-info old-c::defstruct-description
@@ -223,7 +225,8 @@
 (comf "target:compiler/codegen")
 (with-compilation-unit
     (:optimize '(optimize (debug 2) (safety 2)))
-  (comf "target:compiler/debug" :byte-compile *byte-compile*))
+  (comf "target:compiler/debug" :byte-compile *byte-compile*)
+  (comf "target:compiler/xref" :byte-compile *byte-compile*))
 #+nil
 (comf "target:compiler/statcount")
 (comf "target:compiler/dyncount")

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.136 2003/02/05 11:08:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.137 2003/02/05 19:32:20 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3337,8 +3337,7 @@
 
     (let* ((*current-path* (revert-source-path 'defmacro))
 	   (fun (ir1-convert-lambda def name 'defmacro)))
-      (setf (leaf-name fun)
-	    (concatenate 'string "DEFMACRO " (symbol-name name)))
+      (setf (leaf-name fun) (list :macro name))
       (setf (functional-arg-documentation fun) (eval lambda-list))
 
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
@@ -3362,9 +3361,7 @@
 	(def (second def))) ; Don't want to make a function just yet...
     (let* ((*current-path* (revert-source-path 'define-compiler-macro))
 	   (fun (ir1-convert-lambda def name 'define-compiler-macro)))
-      (setf (leaf-name fun)
-	    (let ((*print-case* :upcase))
-	      (format nil "DEFINE-COMPILER-MACRO ~S" name)))
+      (setf (leaf-name fun) (list :compiler-macro name))
       (setf (functional-arg-documentation fun) (eval lambda-list))
 
       (ir1-convert start cont `(%%define-compiler-macro ',name ,fun ,doc)))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.131 2003/01/21 16:51:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.132 2003/02/05 19:32:21 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,7 @@
 (declaim (type (member t nil :maybe) *byte-compile* *byte-compiling*
 	       *byte-compile-default*))
 
-(defvar compiler-version "1.0")
+(defvar compiler-version "1.1")
 (pushnew :python *features*)
 (setf (getf ext:*herald-items* :python)
       `("    Python " ,compiler-version ", target "
@@ -74,6 +74,10 @@
 	     (write-string (backend-version *backend*) stream))))
 
 (defvar *check-consistency* nil)
+
+(defvar *record-xref-info* nil
+  "Whether the compiler should record cross-reference information.")
+
 (defvar *all-components*)
 
 ;;; The current block compilation state.  These are initialized to the 
@@ -437,6 +441,10 @@
 
     (delete-if-no-entries component)
 
+    (when *record-xref-info*
+      (maybe-mumble "[record-xref-info]~%")
+      (record-component-xrefs component))
+
     (unless (eq (block-next (component-head component))
 		(component-tail component))
       (if *byte-compiling*
@@ -541,8 +549,8 @@
 ;;;
 ;;;    This function is called by WITH-COMPILATION-UNIT at the end of a
 ;;; compilation unit.  It prints out any residual unknown function warnings and
-;;; the total error counts.  Abort-P should be true when the compilation unit
-;;; was aborted by throwing out.  Abort-Count is the number of dynamically
+;;; the total error counts.  ABORT-P should be true when the compilation unit
+;;; was aborted by throwing out.  ABORT-COUNT is the number of dynamically
 ;;; enclosed nested compilation units that were aborted.
 ;;;
 (defun print-summary (abort-p abort-count)
@@ -730,7 +738,7 @@
 ;;;    Return a SOURCE-INFO which will read from Stream.
 ;;;
 (defun make-stream-source-info (stream language)
-  (declare (type (member :lisp #+nil :dylan) language))
+  (declare (type (member :lisp) language))
   (let ((files (list (make-file-info :name :stream :language language))))
     (make-source-info
      :files files
@@ -1134,7 +1142,7 @@
 ;;; PRODUCING-FASL-FILE  --  interface.
 ;;;
 ;;; Returns T iff we are currently producing a fasl-file and hence constants
-;;; need to be dumped carfully.
+;;; need to be dumped carefully.
 ;;; 
 (defun producing-fasl-file ()
   (unless *converting-for-interpreter*
