@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.2 1991/12/18 11:40:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.3 1991/12/18 22:35:03 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -667,7 +667,7 @@
 	 (and (consp that)
 	      (components-match (car this) (car that))
 	      (components-match (cdr this) (cdr that))))
-	((member :back :up :unspecific)
+	((member :back :up :unspecific nil)
 	 (and (pattern-p that)
 	      (equal (pattern-pieces that) '(:multi-char-wild)))))))
 
