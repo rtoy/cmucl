@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.17 1992/08/02 19:41:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.18 1992/08/03 12:44:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,6 +133,7 @@
 ;;;
 (defun make-core-component (component segment length trace-table fixups object)
   (declare (type component component)
+	   (type new-assem:segment segment)
 	   (type index length)
 	   (list trace-table fixups)
 	   (type core-object object))
@@ -145,24 +146,17 @@
 	   (total-length (+ length (ceiling trace-table-bits vm:byte-bits)))
 	   (box-num (- (length constants) vm:code-trace-table-offset-slot))
 	   (code-obj (%primitive allocate-code-object box-num total-length))
-	   (trace-table-sap
-	    (cond ((backend-featurep :new-assembler)
-		   (let ((fill-ptr (code-instructions code-obj)))
-		     (new-assem:segment-map-output
-		      segment
-		      #'(lambda (sap amount)
-			  (declare (type system-area-pointer sap)
-				   (type index amount))
-			  (system-area-copy sap 0 fill-ptr 0
-					    (* amount vm:byte-bits))
-			  (setf fill-ptr (sap+ fill-ptr amount))))
-		     fill-ptr))
-		  (t
-		   (let ((inst-stream (make-code-instruction-stream code-obj)))
-		     (setf fixups (assem:emit-code-vector inst-stream segment))
-		     (code-instruction-stream-current inst-stream))))))
+	   (fill-ptr (code-instructions code-obj)))
       (declare (type index box-num total-length))
 
+      (new-assem:segment-map-output
+       segment
+       #'(lambda (sap amount)
+	   (declare (type system-area-pointer sap)
+		    (type index amount))
+	   (system-area-copy sap 0 fill-ptr 0
+			     (* amount vm:byte-bits))
+	   (setf fill-ptr (sap+ fill-ptr amount))))
       (do-core-fixups code-obj fixups)
       
       (dolist (entry (ir2-component-entries 2comp))
@@ -174,7 +168,7 @@
       
       (setf (code-header-ref code-obj vm:code-trace-table-offset-slot) length)
       (copy-to-system-area trace-table (* vm:vector-data-offset vm:word-bits)
-			   trace-table-sap 0 trace-table-bits)
+			   fill-ptr 0 trace-table-bits)
 
       (do ((index vm:code-constants-offset (1+ index)))
 	  ((>= index (length constants)))
