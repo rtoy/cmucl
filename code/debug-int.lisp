@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.84 1998/01/16 16:05:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.85 1998/01/19 05:48:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,7 +14,7 @@
 ;;;
 ;;; Written by Bill Chiles and Rob Maclachlan.
 ;;;
-;;; X86 support by Douglas Crosher 1996,1997.
+;;; X86 support by Douglas Crosher 1996,1997,1998.
 
 (in-package "DEBUG-INTERNALS")
 
@@ -1246,9 +1246,9 @@
 	       (when (and (kernel:code-component-p code)
 			  (eq (kernel:%code-debug-info code) :bogus-lra))
 		 ;; If :bogus-lra grab the real lra.
+		 (setq pc-offset (kernel:code-header-ref
+				  code (1+ real-lra-slot)))
 		 (setq code (kernel:code-header-ref code real-lra-slot))
-		 (setq pc-offset (kernel:code-header-ref code
-							 (1+ real-lra-slot)))
 ;		 (format t "ccf3 :bogus-lra ~s ~s~%" code pc-offset)
 		 (assert code)))
 	      (t
@@ -4210,7 +4210,7 @@
      #-x86
      (setf (kernel:code-header-ref code-object real-lra-slot) real-lra)
      #+x86
-     (multiple-value-bind (code offset)
+     (multiple-value-bind (offset code)
 	 (compute-lra-data-from-pc real-lra)
        (setf (kernel:code-header-ref code-object real-lra-slot) code)
        (setf (kernel:code-header-ref code-object (1+ real-lra-slot)) offset))
