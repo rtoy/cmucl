@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.40 2004/09/01 03:23:42 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.41 2004/09/02 18:26:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -339,17 +339,32 @@
   (prefix nil :type (or null simple-string))
   (suffix nil :type (or null simple-string)))
 
-(defun start-logical-block (stream prefix per-line-p suffix)
-  (declare (type (or null string) prefix))
-  (when prefix
-    (pretty-sout stream prefix 0 (length prefix)))
-  (let* ((pending-blocks (pretty-stream-pending-blocks stream))
-	 (start (enqueue stream block-start
-			 :prefix (and per-line-p prefix)
-			 :suffix suffix
-			 :depth (length pending-blocks))))
-    (setf (pretty-stream-pending-blocks stream)
-	  (cons start pending-blocks))))
+(defun start-logical-block (stream prefix per-line-p suffix
+			    &optional prefix-p per-line-prefix-p suffix-p)
+  (declare (type (or null string) prefix suffix))
+
+  ;; If a prefix (or per-line-prefix) is explicitly given, it must be
+  ;; a string.
+  (when (and (or prefix-p per-line-prefix-p) (not (stringp prefix)))
+    (error 'type-error
+	   :datum prefix
+	   :expected-type 'string))
+  ;; Likewise for a suffix
+  (when (and suffix-p (not (stringp suffix)))
+    (error 'type-error
+	   :datum suffix
+	   :expected-type 'string))
+
+  (let ((p (if prefix (coerce prefix 'simple-string) prefix)))
+    (when prefix
+      (pretty-sout stream p 0 (length p)))
+    (let* ((pending-blocks (pretty-stream-pending-blocks stream))
+	   (start (enqueue stream block-start
+			   :prefix (and per-line-p p)
+			   :suffix (coerce suffix 'simple-string)
+			   :depth (length pending-blocks))))
+      (setf (pretty-stream-pending-blocks stream)
+	    (cons start pending-blocks)))))
 
 (defstruct (block-end
 	    (:include queued-op))
@@ -696,12 +711,12 @@
 ;;;; User interface to the pretty printer.
 
 (defmacro pprint-logical-block
-	  ((stream-symbol object &key prefix per-line-prefix suffix)
+	  ((stream-symbol object &key (prefix "" prefix-p) (per-line-prefix nil per-line-p) (suffix "" suffix-p))
 	   &body body)
   "Group some output into a logical block.  STREAM-SYMBOL should be either a
    stream, T (for *TERMINAL-IO*), or NIL (for *STANDARD-OUTPUT*).  The printer
    control variable *PRINT-LEVEL* is automatically handled."
-  (when (and prefix per-line-prefix)
+  (when (and prefix-p per-line-prefix)
     (error "Cannot specify both a prefix and a per-line-prefix."))
   (multiple-value-bind
       (stream-var stream-expression)
@@ -725,8 +740,9 @@
 	    `(descend-into (,stream-var)
 	       (let ((,count-name 0))
 		 (declare (type index ,count-name) (ignorable ,count-name))
-		 (start-logical-block ,stream-var ,(or prefix per-line-prefix)
-				      ,(if per-line-prefix t nil) ,suffix)
+		 (start-logical-block ,stream-var ,(if prefix-p prefix per-line-prefix)
+				      ,(if per-line-prefix t nil) ,suffix
+				      ,prefix-p ,per-line-p ,suffix-p)
 		 (block ,block-name
 		   (flet ((,pp-pop-name ()
 			    ,@(when object
@@ -816,16 +832,16 @@
 
 (defun pprint-indent (relative-to n &optional stream)
   "Specify the indentation to use in the current logical block if STREAM
-   (which defaults to *STANDARD-OUTPUT*) is it is a pretty-printing stream
+   (which defaults to *STANDARD-OUTPUT*) is a pretty-printing stream
    and do nothing if not.  (See PPRINT-LOGICAL-BLOCK.)  N is the indention
    to use (in ems, the width of an ``m'') and RELATIVE-TO can be either:
      :BLOCK - Indent relative to the column the current logical block
         started on.
      :CURRENT - Indent relative to the current column.
    The new indention value does not take effect until the following line
-   break."
+   break.  The indention value is silently truncated to an integer."
   (declare (type (member :block :current) relative-to)
-	   (type integer n)
+	   (type real n)
 	   (type (or stream (member t nil)) stream)
 	   (values null))
   (let ((stream (case stream
@@ -833,7 +849,9 @@
 		  ((nil) *standard-output*)
 		  (t stream))))
     (when (and (pretty-stream-p stream) *print-pretty*)
-      (enqueue-indent stream relative-to n)))
+      ;; CMUCL doesn't really support non-fixed-width characters, so
+      ;; we silently truncate the indentation to an integer.
+      (enqueue-indent stream relative-to (truncate n))))
   nil)
 
 (defun pprint-tab (kind colnum colinc &optional stream)
@@ -867,8 +885,8 @@
    can be used with the ~/.../ format directive."
   (declare (ignore atsign?))
   (pprint-logical-block (stream list
-				:prefix (if colon? "(")
-				:suffix (if colon? ")"))
+				:prefix (if colon? "(" "")
+				:suffix (if colon? ")" ""))
     (pprint-exit-if-list-exhausted)
     (loop
       (output-object (pprint-pop) stream)
@@ -883,8 +901,8 @@
    can be used with the ~/.../ format directive."
   (declare (ignore atsign?))
   (pprint-logical-block (stream list
-				:prefix (if colon? "(")
-				:suffix (if colon? ")"))
+				:prefix (if colon? "(" "")
+				:suffix (if colon? ")" ""))
     (pprint-exit-if-list-exhausted)
     (loop
       (output-object (pprint-pop) stream)
@@ -901,8 +919,8 @@
    the ~/.../ format directive."
   (declare (ignore atsign?))
   (pprint-logical-block (stream list
-				:prefix (if colon? "(")
-				:suffix (if colon? ")"))
+				:prefix (if colon? "(" "")
+				:suffix (if colon? ")" ""))
     (pprint-exit-if-list-exhausted)
     (loop
        (output-object (pprint-pop) stream)

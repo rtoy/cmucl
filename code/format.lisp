@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.55 2004/08/31 16:31:43 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.56 2004/09/02 18:26:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2325,7 +2325,7 @@
   (multiple-value-bind
       (prefix insides suffix)
       (multiple-value-bind (prefix-default suffix-default)
-			   (if colonp (values "(" ")") (values nil nil))
+	  (if colonp (values "(" ")") (values "" ""))
 	(flet ((extract-string (list prefix-p)
 		 (let ((directive (find-if #'format-directive-p list)))
 		   (if directive
@@ -2408,8 +2408,8 @@
 	 '((setf args nil)))
      (pprint-logical-block
 	 (stream arg
-		 ,(if per-line-p :per-line-prefix :prefix) ,prefix
-		 :suffix ,suffix)
+		 ,(if per-line-p :per-line-prefix :prefix) (or ,prefix "")
+		 :suffix (or ,suffix ""))
        (let ((args arg)
 	     ,@(unless atsignp
 		 `((orig-args arg))))
