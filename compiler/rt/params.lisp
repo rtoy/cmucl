@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.7 1991/07/23 12:00:18 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/params.lisp,v 1.8 1991/07/23 12:04:51 ram Exp $
 ;;;
 ;;; This file contains some parameterizations of various VM attributes for the
 ;;; IBM RT.  This file is separate from other stuff, so we can compile and
@@ -46,6 +46,7 @@
 (eval-when (compile eval load)
 
 #-afpa (progn
+(setf *target-float-hardware* :mc68881)
 (setf (backend-name *target-backend*) "RT")
 (setf (backend-version *target-backend*) "IBM RT/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "rtf")
@@ -53,6 +54,7 @@
       rt-fasl-file-implementation))
 
 #+afpa (progn
+(setf *target-float-hardware* :afpa)
 (setf (backend-name *target-backend*) "RT")
 (setf (backend-version *target-backend*) "IBM RT EAPC/Mach 1.0")
 (setf (backend-fasl-file-type *target-backend*) "eapcf")
