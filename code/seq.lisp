@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.44 2002/11/20 16:17:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.45 2002/12/20 17:59:44 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -974,7 +974,16 @@
 		    :format-arguments (list object output-type-spec)))
 	   (check-seq-len (type length)
 	     (unless (valid-sequence-and-length-p type length)
-	       (coerce-error))))
+	       (coerce-error)))
+	   (output-type-or-lose (val)
+	     ;; Verify that the value really is of type
+	     ;; OUTPUT-TYPE-SPEC.  If so, return the value.  Intended
+	     ;; to catch things like
+	     ;;
+	     ;; (coerce 2 '(single-float 5.0 6.0))
+	     (unless (typep val output-type-spec)
+	       (coerce-error))
+	     val))
     (let ((type (specifier-type output-type-spec)))
       (cond
 	((%typep object output-type-spec)
@@ -989,14 +998,14 @@
 	 (let ((res
 		(cond
 		  ((csubtypep type (specifier-type 'single-float))
-		   (%single-float object))
+		   (output-type-or-lose (%single-float object)))
 		  ((csubtypep type (specifier-type 'double-float))
-		   (%double-float object))
+		   (output-type-or-lose (%double-float object)))
 		  #+long-float
 		  ((csubtypep type (specifier-type 'long-float))
-		   (%long-float object))
+		   (output-type-or-lose (%long-float object)))
 		  ((csubtypep type (specifier-type 'float))
-		   (%single-float object))
+		   (output-type-or-lose (%single-float object)))
 		  ((csubtypep type (specifier-type '(complex single-float)))
 		   (complex (%single-float (realpart object))
 			    (%single-float (imagpart object))))
