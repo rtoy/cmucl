@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.18 2002/09/07 13:28:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.19 2002/10/09 15:32:28 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -509,13 +509,6 @@
 		 (error "Wrapper returned from trap invalid.")))
 	  nwrapper))))
 
-(defmacro check-wrapper-validity1 (object)
-  (let ((owrapper (gensym)))
-    `(let ((,owrapper (kernel:layout-of object)))
-       (if (kernel:layout-invalid ,owrapper)
-	   (check-wrapper-validity ,object)
-	   ,owrapper))))
-
 
 (defvar *free-caches* nil)
 
@@ -839,23 +832,11 @@
 	   'invoke-effective-method-function)
       ,fn-variable ,applyp ,@required ,@(when applyp `(.dfun-rest-arg.)))))
 
-(defun make-dfun-call (metatypes applyp fn-variable)
-  (let ((required (dfun-arg-symbol-list metatypes)))
-    (if applyp
-	`(function-apply   ,fn-variable ,@required .dfun-rest-arg.)
-	`(function-funcall ,fn-variable ,@required))))
-
-(defun make-dfun-arg-list (metatypes applyp)
-  (let ((required (dfun-arg-symbol-list metatypes)))
-    (if applyp
-	`(list* ,@required .dfun-rest-arg.)
-	`(list ,@required))))
-
 (defun make-fast-method-call-lambda-list (metatypes applyp)
-  (nconc (list '.pv-cell. '.next-method-call.)
-	 (dfun-arg-symbol-list metatypes)
-	 (when applyp
-	   (list '.dfun-rest-arg.))))
+  (let ((required (dfun-arg-symbol-list metatypes)))
+    (if applyp
+	`(.pv-cell. .next-method-call. ,@required .dfun-rest-arg.)
+	`(.pv-cell. .next-method-call. ,@required))))
 
 
 ;;;

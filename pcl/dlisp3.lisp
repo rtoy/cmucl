@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.5 2002/08/27 19:01:38 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.6 2002/10/09 15:32:28 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -65,19 +65,6 @@
     (NIL NIL (T CLASS T) NIL)
     (NIL NIL (CLASS) T)
     (NIL NIL (CLASS CLASS) T))))
-
-(defmacro make-checking-or-caching-function-list ()
-  `(list ,@(mapcar #'(lambda (key)
-		       `(cons ',key (emit-checking-or-caching-macro ,@key)))
-		   checking-or-caching-list)))
-
-#+nil
-(defun initialize-checking-or-caching-function-list ()
-  (setq checking-or-caching-function-list
-	(make-checking-or-caching-function-list)))
-
-#+nil
-(initialize-checking-or-caching-function-list)
 
 ;;; Rather than compiling the constructors here, just tickle the range
 ;;; of shapes defined above, leaving the generation of the

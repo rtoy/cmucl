@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.33 2002/10/09 14:19:11 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.34 2002/10/09 15:32:27 pmai Exp $")
 
 (in-package :pcl)
 
@@ -831,31 +831,6 @@ work during bootstrapping.
 		  *slot-unbound*))))
     (function
      (apply emf args))))
-
-;; This can be improved alot.
-(defun gf-make-function-from-emf (gf emf)
-  (etypecase emf
-    (fast-method-call (let* ((arg-info (gf-arg-info gf))
-			     (nreq (arg-info-number-required arg-info))
-			     (restp (arg-info-applyp arg-info)))
-			(lambda (&rest args)
-			  #+copy-&rest-arg (setq args (copy-list args))
-			  (trace-emf-call emf t args)
-			  (apply (fast-method-call-function emf)
-				 (fast-method-call-pv-cell emf)
-				 (fast-method-call-next-method-call emf)
-				 (if restp
-				     (let* ((rest-args (nthcdr nreq args))
-					    (req-args (ldiff args rest-args)))
-				       (nconc req-args rest-args))
-				     args)))))
-    (method-call (lambda (&rest args)
-		   #+copy-&rest-arg (setq args (copy-list args))
-		   (trace-emf-call emf t args)
-		   (apply (method-call-function emf)
-			  args
-			  (method-call-call-method-args emf))))
-    (function emf)))
 
 (defmacro bind-fast-lexical-method-macros ((args rest-arg next-method-call)
 					   &body body)
@@ -1898,7 +1873,6 @@ work during bootstrapping.
 (defvar *fegf-debug-p* nil)
 
 (defun fix-early-generic-functions (&optional (noisyp *fegf-debug-p*))
-  (setq *fegf-started-p* t)
   (let ((accessors nil))
     ;; Rearrange *early-generic-functions* to speed up fix-early-generic-functions.
     (dolist (early-gf-spec *early-generic-functions*)

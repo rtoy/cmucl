@@ -28,33 +28,22 @@
 (in-package :pcl)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; Probably have to add 'compile' if you use defconstructor.
+  (defvar *defclass-times*   '(load eval))
   
-(defvar *defclass-times*   '(load eval))	;Probably have to change this
-						;if you use defconstructor.
-(defvar *defmethod-times*  '(load eval))
-(defvar *defgeneric-times* '(load eval))
+  (defvar *defmethod-times*  '(load eval))
+  (defvar *defgeneric-times* '(load eval))
 
-; defvar is now actually in macros
-;(defvar *boot-state* ())			;NIL
-						;EARLY
-						;BRAID
-						;COMPLETE
-(defvar *fegf-started-p* nil)
-
-
-)
-
-(eval-when (:load-toplevel :execute)
   (when (eq *boot-state* 'complete)
     (error "Trying to load (or compile) PCL in an environment in which it~%~
             has already been loaded.  This doesn't work, you will have to~%~
             get a fresh lisp (reboot) and then load PCL."))
+  
   (when *boot-state*
     (cerror "Try loading (or compiling) PCL anyways."
 	    "Trying to load (or compile) PCL in an environment in which it~%~
              has already been partially loaded.  This may not work, you may~%~
-             need to get a fresh lisp (reboot) and then load PCL."))
-  )
+             need to get a fresh lisp (reboot) and then load PCL.")))
 
 
 

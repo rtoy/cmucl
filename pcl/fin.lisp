@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.15 2002/08/27 19:01:39 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.16 2002/10/09 15:32:29 pmai Exp $")
 ;;;
 
   ;;   
@@ -110,23 +110,6 @@ explicitly marked saying who wrote it.
 ;;;       This must be SETF'able.
 ;;;       
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-(defconstant funcallable-instance-data
-             '(wrapper slots)
-  "These are the 'data-slots' which funcallable instances have so that
-   the meta-class funcallable-standard-class can store class, and static
-   slots in them.")
-)
-
-(defmacro funcallable-instance-data-position (data)
-  (if (and (consp data)
-           (eq (car data) 'quote))
-      (or (position (cadr data) funcallable-instance-data :test #'eq)
-          (progn
-            (warn "Unknown funcallable-instance data: ~S." (cadr data))
-            `(error "Unknown funcallable-instance data: ~S." ',(cadr data))))
-      `(position ,data funcallable-instance-data :test #'eq)))
-
 (declaim (notinline called-fin-without-function))
 (defun called-fin-without-function (&rest args)
   (declare (ignore args))
@@ -165,35 +148,15 @@ explicitly marked saying who wrote it.
   (assert (funcallable-instance-p fin))
   (setf (kernel:funcallable-instance-function fin) new-value))
 
-
-;;; FUNCALLABLE-INSTANCE-DATA-1  --  Interface
-;;;
-;;;    This "works" on non-PCL FINs, which allows us to weaken
-;;; FUNCALLABLE-INSTANCE-P to return trure for all FINs.  This is also
-;;; necessary for bootstrapping to work, since the layouts for early GFs are
-;;; not initially initialized.
-;;;
-(defmacro funcallable-instance-data-1 (fin slot)
-  (ecase (eval slot)
-    (wrapper `(kernel:%funcallable-instance-layout ,fin))
-    (slots `(kernel:%funcallable-instance-info ,fin 0))))
-
-(defmacro pcl-funcallable-instance-wrapper (x)
-  `(kernel:%funcallable-instance-layout ,x))
 
-  
 ;;;; Slightly Higher-Level stuff built on the implementation-dependent stuff.
-;;;
 ;;;
 
 (defmacro fsc-instance-p (fin)
   `(funcallable-instance-p ,fin))
 
-(defmacro fsc-instance-class (fin)
-  `(wrapper-class (funcallable-instance-data-1 ,fin 'wrapper)))
-
 (defmacro fsc-instance-wrapper (fin)
-  `(funcallable-instance-data-1 ,fin 'wrapper))
+  `(kernel:%funcallable-instance-layout ,fin))
 
 (defmacro fsc-instance-slots (fin)
-  `(funcallable-instance-data-1 ,fin 'slots))
+  `(kernel:%funcallable-instance-info ,fin 0))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.8 2002/08/26 02:23:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.9 2002/10/09 15:32:28 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -70,22 +70,11 @@
 		      (emit-one-or-n-index-reader/writer-macro :writer nil nil)))))
    nil))
 
-;;; Note this list is setup in dlisp3.lisp when all the necessary
-;;; macros have been loaded.
-(defvar checking-or-caching-function-list nil)
-
-(defmacro emit-checking-or-caching-function-precompiled ()
-  `(cdr (assoc (list cached-emf-p return-value-p metatypes applyp)
-	       checking-or-caching-function-list
-	       :test #'equal)))
-
-(defun emit-checking-or-caching-function (cached-emf-p return-value-p metatypes applyp)
-  (let ((fn (emit-checking-or-caching-function-precompiled)))
-    (if fn
-	(values fn nil)
-	(values (emit-checking-or-caching-function-preliminary
-		 cached-emf-p return-value-p metatypes applyp)
-		t))))
+(defun emit-checking-or-caching-function (cached-emf-p return-value-p
+					  metatypes applyp)
+  (values (emit-checking-or-caching-function-preliminary
+	   cached-emf-p return-value-p metatypes applyp)
+	  t))
 
 (defvar not-in-cache (make-symbol "not in cache"))
 
