@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.39 1992/11/03 07:06:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.40 1993/01/17 20:38:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,7 +150,7 @@
 	 (dotimes (i nargs)
 	   (temps (gensym)))
 	 `(lambda (,n-supplied ,@(temps))
-	    (declare (fixnum ,n-supplied))
+	    (declare (type index ,n-supplied))
 	    ,(if (policy nil (zerop safety))
 		 `(declare (ignore ,n-supplied))
 		 `(%verify-argument-count ,n-supplied ,nargs))
@@ -172,7 +172,7 @@
 		      (%funcall ,(first eps) ,@(subseq (temps) 0 n)))))
 
 	 `(lambda (,n-supplied ,@(temps))
-	    (declare (fixnum ,n-supplied))
+	    (declare (type index ,n-supplied))
 	    (cond
 	     ,@(if more (butlast (entries)) (entries))
 	     ,@(when more
