@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.21 1999/01/12 17:51:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.22 1999/02/12 21:47:14 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -467,8 +467,9 @@
   (setf (slot-value class 'class-eq-specializer)
 	(make-instance 'class-eq-specializer :class class)))
 
-(defmethod reinitialize-instance :before ((class slot-class) &key)
-  (remove-direct-subclasses class (class-direct-superclasses class))
+(defmethod reinitialize-instance :before ((class slot-class)
+					  &key direct-superclasses)
+  (remove-direct-subclasses class direct-superclasses)
   (remove-slot-accessors    class (class-direct-slots class)))
 
 (defmethod reinitialize-instance :after ((class slot-class)
