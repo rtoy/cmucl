@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.8 1990/02/28 18:26:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.9 1990/03/08 15:19:56 wlott Exp $
 ;;;
 ;;;    This file contains the RT VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -109,9 +109,11 @@
 ;;; to do anyway.)
 ;;;
 (define-vop (illegal-move)
+  (:args (x) (type))
   (:results (y))
   (:ignore y)
-  (:generator 666))
+  (:generator 666
+    (error-call di:object-not-type-error x type)))
 
 
 ;;;; Operand loading and saving:
