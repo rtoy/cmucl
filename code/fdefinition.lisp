@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.24 2003/05/23 13:34:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.25 2003/05/24 10:47:35 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,11 +196,11 @@
 
 ;;;; FDEFINITION.
 
-(defun fdefinition (name)
-  "Return name's global function definition taking care to regard any
-   encapsulations and to return the innermost encapsulated definition.
-   This is SETF'able."
-  (let* ((fdefn (fdefn-or-lose name))
+(defun fdefinition (function-name)
+  "Return FUNCTION-NAME's global function definition.
+   If FUNCTION-NAME is fwrapped, return the primary function definition
+   stored in the innermost fwrapper."
+  (let* ((fdefn (fdefn-or-lose function-name))
 	 (last (fwrappers:last-fwrapper fdefn)))
       (if last
 	  (fwrappers:fwrapper-next last)
@@ -210,13 +210,15 @@
   "This holds functions that (SETF FDEFINITION) invokes before storing the
    new value.  These functions take the function name and the new value.")
 
-(defun %set-fdefinition (name new-value)
-  "Set NAME's global function definition to NEW-VALUE."
+(defun %set-fdefinition (function-name new-value)
+  "Set FUNCTION-NAME's global function definition to NEW-VALUE.
+   If FUNCTION-NAME is fwrapped, set the primary function stored
+   in the innermost fwrapper."
   (declare (type function new-value) (optimize (safety 1)))
-  (let ((fdefn (fdefinition-object name t)))
+  (let ((fdefn (fdefinition-object function-name t)))
     (when (boundp '*setf-fdefinition-hook*)
       (dolist (f *setf-fdefinition-hook*)
-	(funcall f name new-value)))
+	(funcall f function-name new-value)))
     (let ((last (fwrappers:last-fwrapper fdefn)))
       (if last
 	  (setf (fwrappers:fwrapper-next last) new-value)

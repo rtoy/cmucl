@@ -2248,6 +2248,13 @@ Example:
 Fwrappers are used in the implementation of \code{trace} and
 \code{profile}.
 
+Please note that \code{fdefinition} always returns the primary
+definition of a function; if a function is fwrapped,
+\code{fdefinition} returns the primary function stored in the
+innermost fwrapper object.  Likewise, if a function is fwrapped,
+\code{(setf fdefinition)} will set the primary function in the
+innermost fwrapper.
+
 \begin{defmac}{fwrappers:}{define-fwrapper}{name lambda-list \ampbody body}
   This macro is like \code{defun}, but defines a function named
   \var{name} that can be used as an fwrapper definition.
