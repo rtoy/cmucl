@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.48 1997/01/18 14:31:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.49 2002/11/01 18:00:47 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,6 +55,7 @@
 (load "c:dyncount")
 (load "c:codegen")
 (load "c:main")
+(load "c:meta-vmdef")
 (load "c:disassem")
 (load "c:new-assem")
 (load "c:aliencomp")
