@@ -60,8 +60,8 @@ os_vm_size_t old_len, len;
     if(addr==NULL)
 	return os_allocate(len);
     else{
-	long len_diff=old_len-len;
-	
+	long len_diff=len-old_len;
+
 	if(len_diff<0)
 	    os_invalidate(addr+len,-len_diff);
 	else if(len_diff!=0){
