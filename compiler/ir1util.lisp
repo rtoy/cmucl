@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.48 1991/12/11 17:08:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.49 1991/12/14 05:27:37 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1873,18 +1873,19 @@
 ;;; increment the count, otherwise note the current error context.
 ;;;
 (defun note-undefined-reference (name kind)
-  (let* ((found (dolist (warn *undefined-warnings* nil)
-		  (when (and (equal (undefined-warning-name warn) name)
-			     (eq (undefined-warning-kind warn) kind))
-		    (return warn))))
-	 (res (or found
-		  (make-undefined-warning :name name :kind kind))))
-    (unless found (push res *undefined-warnings*))
-    (when (or (not *undefined-warning-limit*)
-	      (< (undefined-warning-count res) *undefined-warning-limit*))
+  (unless (policy nil (= brevity 3))
+    (let* ((found (dolist (warn *undefined-warnings* nil)
+		    (when (and (equal (undefined-warning-name warn) name)
+			       (eq (undefined-warning-kind warn) kind))
+		      (return warn))))
+	   (res (or found
+		    (make-undefined-warning :name name :kind kind))))
+      (unless found (push res *undefined-warnings*))
+      (when (or (not *undefined-warning-limit*)
+		(< (undefined-warning-count res) *undefined-warning-limit*))
 	(push (find-error-context (list name))
 	      (undefined-warning-warnings res)))
-    (incf (undefined-warning-count res)))
+      (incf (undefined-warning-count res))))
   (undefined-value))
 
 
