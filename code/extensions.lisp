@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.12 1991/07/11 16:31:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.13 1991/11/06 19:46:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -189,6 +189,7 @@
 
 (eval-when (compile load eval)
   (defun concat-pnames (name1 name2)
+    (declare (symbol name1 name2))
     (if name1
 	(intern (concatenate 'simple-string (symbol-name name1)
 			     (symbol-name name2)))
