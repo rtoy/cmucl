@@ -77,8 +77,10 @@ manually deleted to save disk space.
 
 SunOS/SPARC Notes:
 
-Note: CMU CL does not currently run on SPARC 10 systems, since the stack has
-been moved.  This problem should be fixed in version 17.
+Note: The regular release of CMU CL does not run on SPARC 10 systems, since
+the stack has been moved.  Pick up the file 16f-sun4m_413.core.Z,
+uncompress it, and use it instead of the lisp.core from the regular
+release.
 
 At least 16 meg of memory is recommended, and more is better.  Your system
 maintainer may need to configure extra paging space for large Lisp application.
