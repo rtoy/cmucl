@@ -28,7 +28,11 @@
   (:args (ptr1 :scs (descriptor-reg) :target temp)
 	 (ptr2 :scs (descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
-  (:temporary (:from (:argument 0) :to (:result 0) :target res) temp)
+  (:temporary (:sc any-reg
+	       :from (:argument 0)
+	       :to (:result 0)
+	       :target res)
+	      temp)
   (:generator 1
     (unless (location= ptr1 temp)
       (inst lr temp ptr1))
