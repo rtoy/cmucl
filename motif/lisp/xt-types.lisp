@@ -15,11 +15,14 @@
 
 (in-package "TOOLKIT")
 
-(declaim (vector *class-table*))
 (declaim (simple-vector *type-table*))
 
-(setf (fill-pointer *class-table*) 0)
-(setf next-type-tag 0)
+(defparameter *class-table* 
+  (make-array 40 :element-type 'cons
+	      :adjustable t :fill-pointer 0))
+(declaim (vector *class-table*))
+
+(defparameter next-type-tag 0)
 
 
 
