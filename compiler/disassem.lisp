@@ -1,4 +1,4 @@
-;;; -*- Package: C -*-
+;;; -*- Package: DISASSEM -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.2 1991/11/17 17:07:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.3 1991/11/26 22:40:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,30 +18,52 @@
 
 (in-package 'disassem)
 
-(export '(set-disassem-params
+(export '(;; for defining the instruction set
+	  set-disassem-params
 	  gen-inst-format-decl-form gen-field-type-decl-form gen-inst-decl-form
 	  specialize
+
+	  ;; main user entry-points
+	  disassemble
 	  disassemble-memory
-	  print-field field-suppressed-p
+
+	  ;; some variables to set
+	  *opcode-column-width*
+	  *note-column*
+
+	  ;; for printing instructions
+	  print-field
+	  print-inst-using
+	  print-inst
+
+	  ;; decoding a bit-pattern
+	  sap-ref-dchunk
+	  get-inst-space
+	  find-inst
+
+	  ;; getting at the dstate (usually from mach-dep code)
 	  disassem-state dstate-curpos dstate-nextpos dstate-code
 	  dstate-segment-start dstate-segment-length dstate-segment-sap
 	  dstate-get-prop
-	  inst inst-printer inst-name inst-format inst-id inst-mask
-	  print-inst-using
-	  get-code-constant
+
+	  ;; 
 	  arg-value
 	  sign-extend
+
+	  ;; making handy margin notes
 	  note
-	  print-notes-and-newline
-	  print-current-address
-	  print-bytes print-words
-	  prin1-short
-	  prin1-quoted-short
 	  note-code-constant
 	  maybe-note-nil-indexed-symbol-slot-ref
 	  maybe-note-nil-indexed-object
 	  maybe-note-assembler-routine
 	  handle-break-args
+
+	  ;; taking over and printing...
+	  print-notes-and-newline
+	  print-current-address
+	  print-bytes print-words
+	  prin1-short
+	  prin1-quoted-short
 	  ))
 
 (import 'xp:*print-lines*)
@@ -52,10 +74,16 @@
 
 ;;; ----------------------------------------------------------------
 
-(defvar *opcode-column-width* 10
-  "The width of the column in which instruction-names are printed.")
+(defvar *opcode-column-width* nil
+  "The width of the column in which instruction-names are printed.
+  NIL means use the default.  A value of zero gives the effect of not
+  aligning the arguments at all.")
 (defvar *note-column* 45
   "The column in which end-of-line comments for notes are started.")
+
+(defconstant default-opcode-column-width 10)
+(defconstant default-address-column-width 8)
+(defconstant label-column-width 5)
 
 ;;; ----------------------------------------------------------------
 
@@ -65,16 +93,21 @@
   (instructions (make-hash-table :test #'eq) :type hash-table)
   (inst-space nil :type (or null inst-space))
   (instruction-alignment vm:word-bytes :type fixnum)
-  (address-column-width 8 :type fixnum)
+  (address-column-width default-address-column-width :type fixnum)
+  (opcode-column-width default-opcode-column-width :type (or null fixnum))
   (backend (req) :type c::backend)	; for convenience
   )
 
-(defmacro set-disassem-params (&key instruction-alignment address-size)
+(defmacro set-disassem-params (&key instruction-alignment
+				    address-size
+				    (opcode-column-width nil opcode-column-width-p))
   "Specify global disassembler params for C:*TARGET-BACKEND*.  Currently
-includes:
+  includes:
 
-:INSTRUCTION-ALIGNMENT		Minimum alignment of instructions, in bytes.
-:ADDRESS-SIZE			Size of a machine address, in bytes."
+  :INSTRUCTION-ALIGNMENT	Minimum alignment of instructions, in bytes.
+  :ADDRESS-SIZE			Size of a machine address, in bytes.
+  :OPCODE-COLUMN-WIDTH		Width of the column used for printing the opcode
+  				portion of the instruction, or NIL."
   `(let ((params
 	  (or (c:backend-disassem-params c:*target-backend*)
 	      (setf (c:backend-disassem-params c:*target-backend*)
@@ -88,7 +121,9 @@ includes:
      ,(when address-size
 	`(setf (params-address-column-width params)
 	       (* 2 ,address-size)))
-     nil))
+     ,(when opcode-column-width-p
+	`(setf (params-opcode-column-width params) ,opcode-column-width))
+     (values)))
 
 ;;; ----------------------------------------------------------------
 ;;; I tried to keep this abstract so that if using integers > the machine
@@ -106,26 +141,30 @@ includes:
 (defmacro dchunk-copy (x)
   x)
 
-(defmacro dchunk-or (to from)
-  `(logior ,to ,from))
-(defmacro dchunk-and (to from)
-  `(logand ,to ,from))
-(defmacro dchunk-clear (x y)
-  `(logandc2 ,x ,y))
-(defmacro dchunk-not (x)
-  `(lognot ,x))
+(defun dchunk-or (to from)
+  (declare (type dchunk to from))
+  (the dchunk (logior to from)))
+(defun dchunk-and (to from)
+  (declare (type dchunk to from))
+  (the dchunk (logand to from)))
+(defun dchunk-clear (to from)
+  (declare (type dchunk to from))
+  (the dchunk (logandc2 to from)))
+(defun dchunk-not (from)
+  (declare (type dchunk from))
+  (the dchunk (lognot from)))
 
 (defmacro dchunk-andf (to from)
-  `(setf ,to (logand ,to ,from)))
+  `(setf ,to (dchunk-and ,to ,from)))
 (defmacro dchunk-orf (to from)
-  `(setf ,to (logior ,to ,from)))
+  `(setf ,to (dchunk-or ,to ,from)))
 (defmacro dchunk-clearf (to from)
-  `(setf ,to (logandc2 ,to ,from)))
+  `(setf ,to (dchunk-clear ,to ,from)))
 
-(defmacro dchunk-make-mask (pos)
-  `(mask-field ,pos -1))
-(defmacro dchunk-make-field (pos value)
-  `(dpb ,value ,pos 0))
+(defun dchunk-make-mask (pos)
+  (the dchunk (mask-field pos -1)))
+(defun dchunk-make-field (pos value)
+  (the dchunk (dpb value pos 0)))
 
 (defmacro make-dchunk (value)
   value)
@@ -148,11 +187,12 @@ includes:
       (byte (byte-size bs) (+ (byte-position bs) (- dchunk-bits unit-bits)))
       bs))
 
-(defmacro dchunk-extract (from pos)
-  `(ldb ,pos ,from))
+(defun dchunk-extract (from pos)
+  (declare (type dchunk from))
+  (ldb pos (the dchunk from)))
 
 (defmacro dchunk-insertf (place pos value)
-  `(setf ,place (dpb ,value ,pos ,place)))
+  `(setf ,place (the dchunk (dpb ,value ,pos (the dchunk,place)))))
 
 (defun dchunk= (x y)
   (declare (type dchunk x y))
@@ -171,6 +211,8 @@ includes:
 ;;; ----------------------------------------------------------------
 
 (defun sign-extend (int size)
+  (declare (type integer int)
+	   (fixnum size))
   (if (logbitp (1- size) int)
       (dpb int (byte size 0) -1)
       int))
@@ -221,9 +263,12 @@ includes:
   (field-name (finst-field fi)))
 
 (defun gen-field-type-decl-form (name options)
-  (destructuring-bind (&key disassem-printer disassem-use-label sign-extend &allow-other-keys)
+  (destructuring-bind (&key disassem-printer disassem-use-label
+			    sign-extend &allow-other-keys)
       options
-    `(setf (gethash ',name (params-field-types (c:backend-disassem-params c:*target-backend*)))
+    `(setf (gethash ',name
+		    (params-field-types
+		     (c:backend-disassem-params c:*target-backend*)))
 	   (make-field-type :name ',name
 			    :printer ,disassem-printer
 			    :sign-extend ,sign-extend
@@ -233,7 +278,8 @@ includes:
   (or (gethash name field-types)
       (if (integer-typespec-p name)
 	  name
-	  (error "Field-type ~s not defined, and not a subtype of integer" name))))
+	  (error "Field-type ~s not defined, and not a subtype of integer"
+		 name))))
 
 ;;; ----------------------------------------------------------------
 
@@ -254,7 +300,7 @@ includes:
   )
 
 (defun %print-inst-format (format stream level)
-  (declare (ignore level))
+  (declare (ignore level) (stream stream))
   (format stream "#<Instruction-format ~s ~:a>"
 	  (format-name format)
 	  (mapcar #'field-name (format-fields format))))
@@ -274,44 +320,47 @@ includes:
 		  fspec
 		(when (and (not (null function)) (null inverse-function))
 		  (setf ungrokable t))
-		`(make-inst-format-field :name ',name
-					 :pos (correct-dchunk-bytespec-for-endianness
-					       ,pos
-					       ,bits
-					       (c:backend-byte-order c:*target-backend*))
-					 :default ,default
-					 :default-type
-					   (parse-field-type ',default-type
-							     (params-field-types
-							      (c:backend-disassem-params
-							       c:*target-backend*)))
-					 :inverse-function
-					   ,(and inverse-function
-						 `#',inverse-function))))
+		`(make-inst-format-field
+		  :name ',name
+		  :pos (correct-dchunk-bytespec-for-endianness
+			,pos
+			,bits
+			(c:backend-byte-order c:*target-backend*))
+		  :default ,default
+		  :default-type
+		    (parse-field-type ',default-type
+				      (params-field-types
+				       (c:backend-disassem-params
+					c:*target-backend*)))
+		  :inverse-function
+		    ,(and inverse-function
+			  `#',inverse-function))))
 	      field-specs))
      ungrokable)))
 
 (defun gen-inst-format-decl-form (name bits field-specs options)
   "Return a form that declares an instruction format for the disassembler
-referenced by C:*TARGET-BACKEND*.  Fields are:
+  referenced by C:*TARGET-BACKEND*.  Fields are:
 
-NAME		Name of instruction format
-BITS		Length of format, in bits
-FIELD-SPECS	A list of descriptions of the fields in this format.  Each
-		entry is a list of:
-		    (NAME POS &KEY DEFAULT DEFAULT-TYPE FUNCTION INVERSE-FUNCTION)
-		Where POS is a byte-spec specifying the fields position
-		within the instruction, DEFAULT is an integer specifying the
-		value of the field when not otherwise specified, DEFAULT-TYPE
-		is the type of the field in this case, FUNCTION is not used,
-		but when present, means the field is unusable by the
-		disassembler except when INVERSE-FUNCTION is specified, which
-		is a mapping from the bits in a field to the correct value.
-OPTIONS		Keyword options.  Currently includes:
-		:DISASSEM-PRINTER 	default printer for this format."
+  NAME		Name of instruction format
+  BITS		Length of format, in bits
+  FIELD-SPECS	A list of descriptions of the fields in this format.  Each
+		  entry is a list of:
+		      (NAME POS &KEY DEFAULT DEFAULT-TYPE FUNCTION INVERSE-FUNCTION)
+		  Where POS is a byte-spec specifying the fields position
+		  within the instruction, DEFAULT is an integer specifying the
+		  value of the field when not otherwise specified, DEFAULT-TYPE
+		  is the type of the field in this case, FUNCTION is not used,
+		  but when present, means the field is unusable by the
+		  disassembler except when INVERSE-FUNCTION is specified, which
+		  is a mapping from the bits in a field to the correct value.
+  OPTIONS		Keyword options.  Currently includes:
+		  :DISASSEM-PRINTER 	default printer for this format."
   (multiple-value-bind (fields-form ungrokable)
       (gen-format-fields-maker-form field-specs bits)
-    `(setf (gethash ',name (params-inst-formats (c:backend-disassem-params c:*target-backend*)))
+    `(setf (gethash ',name
+		    (params-inst-formats
+		     (c:backend-disassem-params c:*target-backend*)))
 	   (make-inst-format :name ',name
 			     :length (truncate ,bits vm:byte-bits)
 			     :fields ,fields-form
@@ -329,6 +378,7 @@ OPTIONS		Keyword options.  Currently includes:
   (format nil :type (or null inst-format))
 
   (printer nil :type (or list function))
+  (printer-source nil :type (or list function))
   (control nil :type (or null function))
   (use-label nil :type (or null function))
 
@@ -338,16 +388,14 @@ OPTIONS		Keyword options.  Currently includes:
   )
 
 (defun %print-inst (inst stream level)
-  (declare (ignore level))
+  (declare (ignore level) (stream stream))
   (format stream "#<Instruction ~s ~:a {~s}>"
 	  (inst-name inst)
-	  (mapcar #'(lambda (fi)
-		      (let ((name (symbol-name (field-name (finst-field fi))))
-			    (type (finst-type fi)))
-			(if (field-type-p type)
-			    (list name (ftype-name type))
-			    name)))
-		  (remove-if #'finst-same-as (inst-args inst)))
+	  (mapcar #'field-name
+		  (remove-if #'(lambda (field)
+				 (or (inst-field-const-p inst field)
+				     (inst-field-same-as-p inst field)))
+			     (format-fields (inst-format inst))))
 	  (format-name (inst-format inst))))
     
 (defun format-field-or-lose (name format)
@@ -357,7 +405,9 @@ OPTIONS		Keyword options.  Currently includes:
 	     (format-name format))))
 
 (defun parse-inst-field (field-spec inst-format field-types)
-  (destructuring-bind (field-name &key constant type same-as mask inverse-function &allow-other-keys)
+  (destructuring-bind (field-name
+		       &key constant type same-as mask inverse-function
+		       &allow-other-keys)
       field-spec
     (when (eq inverse-function #'identity)
       (setf inverse-function nil))
@@ -366,7 +416,9 @@ OPTIONS		Keyword options.  Currently includes:
 	   (same-as
 	    (and same-as (format-field-or-lose same-as inst-format)))
 	   (type
-	    (and type (parse-field-type type field-types))))
+	    (if type
+		(parse-field-type type field-types)
+		(field-default-type field))))
       (values
        ;; constant mask
        (cond (constant
@@ -381,29 +433,36 @@ OPTIONS		Keyword options.  Currently includes:
 	   (dchunk-make-field pos constant)
 	   dchunk-zero)
        ;; field-instance
-       (and (not (and constant
-		      (null type)
-		      (null same-as)))
-	    (make-field-instance :field field
-				 :type type
-				 :same-as same-as
-				 :inverse-function inverse-function))))))
+       (if (and (eq type (field-default-type field)) ; using this instead of
+						     ; (null type) saves
+						     ; about 17kbytes
+		(null same-as)
+		(null inverse-function))
+	   nil
+	   (make-field-instance :field field
+				:type type
+				:same-as same-as
+				:inverse-function inverse-function))))))
 
 (defun propagate-same-as-types (inst)
   "Propagate the types of specified fields to fields that are constrained to
-be the same as them, but have no types of their own."
+  be the same as them, but have no types of their own."
   (let ((args (inst-args inst)))
     (do ((change t))
 	((not change))
       (setf change nil)
       (dolist (finst args)
 	(when (and (null (finst-type finst)) (finst-same-as finst))
-	  (let ((same-as-inst
-		 (find (field-name (finst-same-as finst)) args
-		       :key #'finst-name)))
-	    (unless (null same-as-inst)
+	  (let* ((same-as-inst
+		  (find (field-name (finst-same-as finst)) args
+			:key #'finst-name))
+		 (type
+		  (if same-as-inst
+		      (finst-type same-as-inst)
+		      (field-default-type (finst-same-as finst)))))
+	    (unless (null type)
 	      (setf change t)
-	      (setf (finst-type finst) (finst-type same-as-inst)))))))))
+	      (setf (finst-type finst) type))))))))
 
 (defun parse-inst-fields (inst-field-specs inst-format field-types)
   (let* ((mask dchunk-zero)
@@ -428,13 +487,72 @@ be the same as them, but have no types of their own."
 		   (format-name inst-format)))
 	  (cond (default
 		 (dchunk-insertf id (field-pos field) default)
-		 (dchunk-insertf mask (field-pos field) -1))
-		(default-type
-		  (push (make-field-instance :field field
-					     :type default-type)
-			args))))))
+		 (dchunk-insertf mask (field-pos field) -1))))))
 
     (values mask id args)))
+
+;;; ----------------------------------------------------------------
+
+(defun inst-field-type (inst field)
+  (let ((finst (find field (inst-args inst) :key #'finst-field)))
+    (if finst
+	(finst-type finst)
+	(field-default-type field))))
+
+(defun inst-field-const-value (inst field)
+  "Returns the bit-pattern of FIELD in the instruction object INST."
+  (dchunk-extract (inst-id inst) (field-pos field)))
+
+(defun inst-field-const-p (inst field &optional value)
+  "Returns non-NIL if FIELD in the instruction object INST is constrained to
+  be the constant bit-pattern VALUE.  If VALUE is NIL, then non-NIL is returned
+  if it's constrained to be any constant at all."
+  (and (= (integer-length (dchunk-extract (inst-mask inst) (field-pos field)))
+	  (byte-size (field-pos field)))
+       (or (null value)			; any constant will do
+	   (= value
+	      (inst-field-const-value inst field)))))
+
+(defun inst-nfield-const-p (inst name &optional value)
+  "Returns non-NIL if the field called NAME within the instruction object
+  INST is constrained to be the constant bit-pattern VALUE.  If VALUE is NIL,
+  then non-NIL is returned if it's constrained to be any constant at all."
+  (let ((field (find name (format-fields (inst-format inst)) :key #'field-name)))
+    (when (null field)
+      (error "Unknown field ~s in ~s" name inst))
+    (inst-field-const-p inst field value)))
+
+(defun inst-field-same-as-p (inst field &optional other-field)
+  "Returns non-NIL if FIELD within the instruction object
+  INST is constrained to be the :SAME-AS as the field OTHER-FIELD.  If
+  OTHER-FIELD is NIL, then non-NIL is returned if it's constrained to be the
+  same as any other field."
+  (let ((finst (find field (inst-args inst) :key #'finst-field)))
+    (cond ((null finst)
+	   nil)
+	  ((not (null (finst-same-as finst)))
+	   (or (null other-field)	; just generically
+	       (eq other-field (finst-same-as finst))))
+	  (t
+	   nil))))
+
+(defun inst-nfield-same-as-p (inst name &optional other-field)
+  "Returns non-NIL if the field called NAME within the instruction object
+  INST is constrained to be the :SAME-AS as the field named OTHER-FIELD.  If
+  OTHER-FIELD is NIL, then non-NIL is returned if it's constrained to be the
+  same as any other field."
+  (let ((finst (find name (inst-args inst) :key #'finst-name)))
+    (cond ((null finst)
+	   (unless (find name
+			 (format-fields (inst-format inst))
+			 :Key #'field-name)
+	     (error "Unknown field ~s in ~s" name inst))
+	   nil)
+	  ((not (null (finst-same-as finst)))
+	   (or (null other-field)	; just generically
+	       (eq other-field (field-name (finst-same-as finst)))))
+	  (t
+	   nil))))
 
 ;;; ----------------------------------------------------------------
 ;;; All this stuff here filters a printer specification-list, removing
@@ -453,13 +571,15 @@ be the same as them, but have no types of their own."
 	((symbolp printer)
 	 (find printer (format-fields format) :key #'field-name))
 	((listp printer)
-	 (every #'(lambda (x) (all-printer-fields-in-format-p x format)) printer))
+	 (every #'(lambda (x) (all-printer-fields-in-format-p x format))
+		printer))
 	(t
 	 t)))
 
 (defun find-choice-in-format (choices format)
   (dolist (choice choices
-		  (error "No suitable choice for format ~s found in ~s" format choices))
+		  (error "No suitable choice for format ~s found in ~s"
+			 format choices))
     (when (choose-in-printer-p choice)
       (setf choice (filter-printer-for-inst-format choice format)))
     (when (all-printer-fields-in-format-p choice format)
@@ -467,9 +587,9 @@ be the same as them, but have no types of their own."
 
 (defun filter-printer-for-inst-format (printer format)
   "Returns a version of the disassembly-template PRINTER with any :CHOOSE
-operators resolved properly for the instruction format FORMAT.  (:CHOOSE Sub*)
-simply returns the first Sub in which every field reference refers to a field
-within FORMAT."
+  operators resolved properly for the instruction format FORMAT.  (:CHOOSE Sub*)
+  simply returns the first Sub in which every field reference refers to a field
+  within FORMAT."
   (if (and (choose-in-printer-p printer) (listp printer))
       (if (eq (car printer) :choose)
 	  (find-choice-in-format (cdr printer) format)
@@ -480,55 +600,14 @@ within FORMAT."
 
 (defun cons-maybe-cat (s cdr)
   "Returns (CONS S CDR), but if both S and the car of CDR are strings, they
-are concatenated."
+  are concatenated."
   (if (and (stringp s) (stringp (car cdr)))
       (cons (concatenate 'string s (car cdr)) (cdr cdr))
       (cons s cdr)))
 
-(defun inst-field-const-value (inst field)
-  "Returns the bit-pattern of FIELD in the instruction object INST."
-  (dchunk-extract (inst-id inst) (field-pos field)))
-
-(defun inst-field-const-p (inst field value)
-  "Returns non-NIL if FIELD in the instruction object INST is constrained to
-be the constant bit-pattern VALUE.  If VALUE is NIL, then non-NIL is returned
-if it's constrained to be any constant at all."
-  (and (= (integer-length (dchunk-extract (inst-mask inst) (field-pos field)))
-	  (byte-size (field-pos field)))
-       (or (null value)			; any constant will do
-	   (= value
-	      (inst-field-const-value inst field)))))
-
-(defun inst-nfield-const-p (inst name value)
-  "Returns non-NIL if the field called NAME within the instruction object
-INST is constrained to be the constant bit-pattern VALUE.  If VALUE is NIL,
-then non-NIL is returned if it's constrained to be any constant at all."
-  (let ((field (find name (format-fields (inst-format inst)) :key #'field-name)))
-    (when (null field)
-      (error "Unknown field ~s in ~s" name inst))
-    (inst-field-const-p inst field value)))
-
-(defun inst-nfield-same-as-p (inst name other-field)
-  "Returns non-NIL if the field called NAME within the instruction object
-INST is constrained to be the :SAME-AS as the field named OTHER-FIELD.  If
-OTHER-FIELD is NIL, then non-NIL is returned if it's constrained to be the
-same as any other field."
-  (let ((finst (find name (inst-args inst) :key #'finst-name)))
-    (cond ((null finst)
-	   (unless (find name
-			 (format-fields (inst-format inst))
-			 :Key #'field-name)
-	     (error "Unknown field ~s in ~s" name inst))
-	   nil)
-	  ((not (null (finst-same-as finst)))
-	   (or (null other-field)	; just generically
-	       (eq other-field (field-name (finst-same-as finst)))))
-	  (t
-	   nil))))
-
 (defun eval-test (subj test inst)
   "Returns the result of the conditional TEST, with a default field-name of
-SUBJ, in the instruction object INST."
+  SUBJ, in the instruction object INST."
   (when (and (consp test) (symbolp (car test)) (not (keywordp (car test))))
     (setf subj (car test)
 	  test (cdr test)))
@@ -566,7 +645,7 @@ SUBJ, in the instruction object INST."
 
 (defun flatten-printer (printer inst)
   "Returns a flat version of the disassembly template PRINTER, resolving any
-conditionals, and substituting the instruction name for :NAME, etc."
+  conditionals, and substituting the instruction name for :NAME, etc."
   (labels ((flatten (printer accum)
 	     (flet ((handle-test-clause (clause do-when-true-p)
 		      (destructuring-bind (test &rest body)
@@ -579,7 +658,7 @@ conditionals, and substituting the instruction name for :NAME, etc."
 	       (cond ((null printer)
 		      accum)
 		     ((eq printer :name)
-		      (cons-maybe-cat (string (inst-name inst)) accum))
+		      (cons `',(inst-name inst) accum))
 		     ((atom printer)
 		      (when (and (symbolp printer)
 				 (not (keywordp printer)))
@@ -590,6 +669,8 @@ conditionals, and substituting the instruction name for :NAME, etc."
 			  (error "Unknown field name ~s in printer for ~s"
 				 printer inst)))
 		      (cons-maybe-cat printer accum))
+		     ((eq (car printer) 'quote)
+		      (cons printer accum))
 		     ((eq (car printer) :unless)
 		      (multiple-value-bind (result ok)
 			  (handle-test-clause (cdr printer) nil)
@@ -598,14 +679,16 @@ conditionals, and substituting the instruction name for :NAME, etc."
 			    accum)))
 		     ((eq (car printer) :cond)
 		      (dolist (clause (cdr printer)
-				      (error "No test clause succeeds: ~s" printer))
+				      (error "No test clause succeeds: ~s"
+					     printer))
 			(multiple-value-bind (result ok)
 			    (handle-test-clause clause t)
 			  (when ok
 			    (return result)))))
 		     ((eq (car printer) :or)
 		      (dolist (sub (cdr printer)
-				   (error "No suitable result for ~s found in ~s" inst printer))
+				   (error "No suitable result for ~s found in ~s"
+					  inst printer))
 			(cond ((null sub)
 			       (return nil))
 			      (t
@@ -613,16 +696,19 @@ conditionals, and substituting the instruction name for :NAME, etc."
 				 (unless (null result)
 				   (return result)))))))
 		     (t
-		      (flatten (car printer) (flatten (cdr printer) accum)))))))
+		      (flatten (car printer)
+			       (flatten (cdr printer) accum)))))))
     (flatten printer nil)))
       
 (defun filter-printer-for-inst (printer inst)
   "Takes a complicated conditionalized disassembly template PRINTER, and
-returns a simple version customized for the instruction object INST,
-containing only those things which PRINT-INST-USING can handle."
+  returns a simple version customized for the instruction object INST,
+  containing only those things which PRINT-INST-USING can handle."
   (if (functionp printer)
       printer
-      (flatten-printer (filter-printer-for-inst-format printer (inst-format inst)) inst)))
+      (flatten-printer (filter-printer-for-inst-format printer
+						       (inst-format inst))
+		       inst)))
 
 ;;; ----------------------------------------------------------------
 
@@ -655,7 +741,7 @@ containing only those things which PRINT-INST-USING can handle."
 
 (defun slow-reject-inst-p (inst)
   "Reject this instruction (slow becuase we've already gone to the trouble
-of making it)."
+  of making it)."
   (or (zerop (inst-mask inst))		; probably some sort of data
 					; instruction, which we can't handle
       (format-ungrokable (inst-format inst))
@@ -672,23 +758,26 @@ of making it)."
   (let ((inst-format (gethash format-name (params-inst-formats params)))
 	(field-types (params-field-types params)))
     (when (null inst-format)
-      (error "Unknown instruction format ~s (for instruction ~s)" format-name name))
+      (error "Unknown instruction format ~s (for instruction ~s)"
+	     format-name name))
     (multiple-value-bind (mask id args)
 	(parse-inst-fields field-specs inst-format field-types)
-      (let ((inst
-	     (make-inst :name name
-			:mask mask
-			:id id
-			:format inst-format
-			:args args
-			:control control
-			:use-label use-label)))
+      (let* ((printer-source
+	      (or printer (format-printer inst-format)))
+	     (inst
+	      (make-inst :name name
+			 :mask mask
+			 :id id
+			 :format inst-format
+			 :args args
+			 :control control
+			 :use-label use-label
+			 :printer-source printer-source
+			 )))
 	(unless (slow-reject-inst-p inst)
 	  (propagate-same-as-types inst)
 	  (setf (inst-printer inst)
-		(filter-printer-for-inst (or printer
-					     (format-printer (inst-format inst)))
-					 inst))
+		(filter-printer-for-inst printer-source inst))
 	  inst)))))
 		
 ;;; Notice any instruction flavor-specifications that we obviously can't
@@ -709,13 +798,15 @@ of making it)."
       (let ((flavor-forms
 	     (delete nil
 		     (mapcar #'(lambda (flavor)
-				 (destructuring-bind (format-name &rest inst-field-specs)
+				 (destructuring-bind (format-name
+						      &rest inst-field-specs)
 				     flavor
 				   (unless (fast-reject-inst-p flavor)
 				     `(let ((inst
 					     (create-inst ',inst-name
 							  ',format-name
-							  ,(gen-field-spec-forms inst-field-specs)
+							  ,(gen-field-spec-forms
+							    inst-field-specs)
 							  printer
 							  control
 							  use-label
@@ -729,11 +820,14 @@ of making it)."
 		  (control ,disassem-control)
 		  (use-label ,disassem-use-label)
 		  (insts nil))
+	     (setf (params-inst-space params) nil)
 	     ,@flavor-forms
 	     ,(if augment
 		  `(dolist (flav insts)
-		     (push flav (gethash ',inst-name (params-instructions params))))
-		  `(setf (gethash ',inst-name (params-instructions params)) insts))))))))
+		     (push flav
+			   (gethash ',inst-name (params-instructions params))))
+		  `(setf (gethash ',inst-name (params-instructions params))
+			 insts))))))))
 
 (defmacro augment-instruction ((name &rest options) &body forms)
   `(gen-inst-decl-form ,name ,forms ,options 'c:*target-backend* t))
@@ -753,7 +847,7 @@ of making it)."
 
 (defun inst-compatible-with-specs-p (inst specs)
   "Returns non-NIL if the instruction object INST does not violate any
-constraints in SPECS, and contains all fields therein."
+  constraints in SPECS, and contains all fields therein."
   (every #'(lambda (spec)
 	     (let ((field
 		    (find (if (atom spec) spec (car spec))
@@ -762,11 +856,8 @@ constraints in SPECS, and contains all fields therein."
 	       (and field
 		    (or (atom spec)
 			(inst-matches-spec-p inst spec)
-			(and (not (inst-field-const-p inst field nil))
-			     (not
-			      (inst-nfield-same-as-p inst
-						     (field-name field)
-						     nil)))))))
+			(and (not (inst-field-const-p inst field))
+			     (not (inst-field-same-as-p inst field)))))))
 	specs))
 
 (defun inst-matches-specs-p (inst specs)
@@ -785,20 +876,20 @@ constraints in SPECS, and contains all fields therein."
 
 (defun field-matches-in-insts-p (field inst other-inst)
   "Returns non-NIL if FIELD is the same in both INST and OTHER-INST."
-  (cond ((inst-field-const-p inst field nil)
+  (cond ((inst-field-const-p inst field)
 	 (inst-field-const-p other-inst
 			     field
 			     (inst-field-const-value inst field)))
-	((inst-nfield-same-as-p inst (field-name field) nil)
-	 (inst-nfield-same-as-p other-inst
-				(field-name field)
-				(finst-same-as
-				 (find field (inst-args inst)
-				       :key #'finst-field))))))
+	((inst-field-same-as-p inst field)
+	 (inst-field-same-as-p other-inst
+			       field
+			       (finst-same-as
+				(find field (inst-args inst)
+				      :key #'finst-field))))))
 
 (defun inst-matches-except-for (inst other-inst exception-specs)
   "Returns non-NIL if the instruction object INST matches OTHER-INST in all
-fields except for those named in EXCEPTION-SPECS."
+  fields except for those named in EXCEPTION-SPECS."
   (and (eq (inst-format inst) (inst-format other-inst))
        (every #'(lambda (field)
 		  (or (field-in-spec-p field exception-specs)
@@ -807,7 +898,7 @@ fields except for those named in EXCEPTION-SPECS."
 
 (defun transmogrify-inst (old-inst specs)
   "Return a new copy of the instruction object OLD-INST, but with the
-additional field constraints SPECS."
+  additional field constraints SPECS."
   (let ((new-inst (copy-inst old-inst))
 	(format (inst-format old-inst)))
 
@@ -829,22 +920,20 @@ additional field constraints SPECS."
 
 	       (cond ((null finst)
 		      (setf finst
-			    (make-field-instance :field field
-						 :type (field-default-type field))))
+			    (make-field-instance
+			     :field field
+			     :type (field-default-type field))))
 		     (t
 		      ;; we have to copy it, since it's currently shared with
 		      ;; the old instruction
-		      (setf (inst-args new-inst) (delete finst (inst-args new-inst)))
-		      (setf finst (copy-field-instance finst))))
+		      (setf (inst-args new-inst)
+			    (delete finst (inst-args new-inst)))
+		      (setf finst
+			    (copy-field-instance finst))))
 
 	       (push finst (inst-args new-inst))
 	       (setf (finst-same-as finst)
 		     (format-field-or-lose operand format))))))))
-
-    ;; after any changes
-    (setf (inst-printer new-inst)
-	  (filter-printer-for-inst (inst-printer old-inst)
-				   new-inst))
 
     new-inst))
 
@@ -856,6 +945,11 @@ additional field constraints SPECS."
     (setf (inst-printer inst) disassem-printer
 	  (inst-control inst) disassem-control
 	  (inst-name inst) name)
+
+    ;; after any changes
+    (propagate-same-as-types inst)
+    (setf (inst-printer inst)
+	  (filter-printer-for-inst (inst-printer-source inst) inst))
     inst))
 
 (defun specialize-insts (inst-list specs specializations)
@@ -883,7 +977,8 @@ additional field constraints SPECS."
 						       other-inst
 						       non-matching-specs))
 			  results))
-	  (push (apply-specializations (transmogrify-inst inst non-matching-specs)
+	  (push (apply-specializations (transmogrify-inst inst
+							  non-matching-specs)
 				       specializations)
 		results))
 	(push inst results)))
@@ -907,28 +1002,29 @@ additional field constraints SPECS."
 
 (defmacro specialize ((inst-name &rest specializations) &rest specs)
   "SPECIALIZE (Name Specialization-keywords*) Spec*
-where Spec is either a Field-name, or
-  (Field-name Constraint Value)
-Constraint is either :SAME-AS, in which case Value should be the name of
-another field, or :CONSTANT, in which case Value should be a constant
-integer.
+  where Spec is either a Field-name, or
+    (Field-name Constraint Value)
+  Constraint is either :SAME-AS, in which case Value should be the name of
+  another field, or :CONSTANT, in which case Value should be a constant
+  integer.
 
-Modifies the all instruction flavors named INST-NAME (possibly creating
-new, more specific ones), according to SPECS, and applies SPECIALIZATIONS to
-the resulting instructions.
+  Modifies the all instruction flavors named INST-NAME (possibly creating
+  new, more specific ones), according to SPECS, and applies SPECIALIZATIONS to
+  the resulting instructions.
 
-Specialization-keywords, is one of :DISASSEM-PRINTER or :DISASSEM-CONTROL,
-which have the same meaning as for DEFINE-INSTRUCTION, or :NAME, which lets
-you change the name to the given symbol/string.
+  Specialization-keywords, is one of :DISASSEM-PRINTER or :DISASSEM-CONTROL,
+  which have the same meaning as for DEFINE-INSTRUCTION, or :NAME, which lets
+  you change the name to the given symbol/string.
 
-Any instruction flavors that match all given field-constraints exactly will
-be simply modified.  Any that don't, and don't have any conflicting
-constraints, will have copies made with the constraints applied to the
-copies, and then the copies modified.  If the resulting copy would be the
-same as an existing instruction, then it is not made.
+  Any instruction flavors that match all given field-constraints exactly will
+  be simply modified.  Any that don't, and don't have any conflicting
+  constraints, will have copies made with the constraints applied to the
+  copies, and then the copies modified.  If the resulting copy would be the
+  same as an existing instruction, then it is not made.
 
-Only instruction flavors that contain all the the specified fields are used."
+  Only instruction flavors that contain all the the specified fields are used."
   `(let ((params (c:backend-disassem-params c:*target-backend*)))
+     (setf (params-inst-space params) nil)
      (setf (gethash ',inst-name (params-instructions params))
 	   (specialize-insts (gethash ',inst-name (params-instructions params))
 			     ,(make-specs-form specs)
@@ -962,8 +1058,8 @@ Only instruction flavors that contain all the the specified fields are used."
 
 (defun choose-inst-specialization (inst chunk)
   "Given an instruction object, INST, and a bit-pattern, CHUNK, picks the
-most specific instruction on INST's specializer list who's constraints are
-met by CHUNK.  If none do, then INST is returned."
+  most specific instruction on INST's specializer list who's constraints are
+  met by CHUNK.  If none do, then INST is returned."
   (declare (type inst inst)
 	   (type dchunk chunk))
   (or (dolist (spec (inst-specializers inst) nil)
@@ -973,15 +1069,17 @@ met by CHUNK.  If none do, then INST is returned."
 			(declare (type field-instance arg))
 			(let ((same-as (finst-same-as arg)))
 			  (or (null same-as)
-			      (= (dchunk-extract chunk (field-pos (finst-field arg)))
-				 (dchunk-extract chunk (field-pos same-as))))))
+			      (= (dchunk-extract chunk
+						 (field-pos (finst-field arg)))
+				 (dchunk-extract chunk
+						 (field-pos same-as))))))
 		    (inst-args spec))
 	     (return spec)))
       inst))
 
 (defun find-inst (chunk inst-space)
   "Returns the instruction object within INST-SPACE corresponding to the
-bit-pattern CHUNK."
+  bit-pattern CHUNK."
   (declare (type dchunk chunk)
 	   (type (or null inst-space inst) inst-space))
   (cond ((null inst-space)
@@ -1014,7 +1112,8 @@ bit-pattern CHUNK."
 
 (defun inst-specializes-p (special general)
   "Returns non-NIL if the instruction SPECIAL is a more specific version of
-GENERAL (i.e., the same instruction, but with more constraints)."
+  GENERAL (i.e., the same instruction, but with more constraints)."
+  (declare (type inst special general))
   (and (eq (inst-format special)
 	   (inst-format general))
        (let ((smask (inst-mask special))
@@ -1023,38 +1122,35 @@ GENERAL (i.e., the same instruction, but with more constraints)."
 		       (dchunk-and (inst-id special) gmask))
 	      (or (dchunk-strict-superset-p smask gmask)
 		  (and (dchunk= smask gmask)
-		       (let ((general-field-insts (inst-args general)))
-			 (some #'(lambda (spec-arg)
-				   (let ((general-arg
-					  (find (finst-field spec-arg)
-						general-field-insts
-						:key #'finst-field)))
-				     (and general-arg ; if not around, must be a
-					; constant
-					  (null (finst-same-as general-arg))
-					  (or (finst-same-as spec-arg) ; *we* have a same-as constraint, but
-					; general does not!
-					      (field-type-specializes-p (finst-type spec-arg)
-									(finst-type general-arg))))))
-			       (inst-args special)))))))))
+		       (some #'(lambda (spec-finst)
+				 (let ((field (finst-field spec-finst)))
+				   (and (not (inst-field-const-p general field))
+					(not (inst-field-same-as-p general field))
+					(or (finst-same-as spec-finst)
+					    (field-type-specializes-p (finst-type spec-finst)
+								      (inst-field-type general field))))))
+			     (inst-args special))))))))
 
 ;;; a bit arbitrary, but should work ok...
 (defun specializer-rank (inst)
   "Returns an integer corresponding to the specifivity of the instruction INST."
+  (declare (type inst inst))
   (+ (* (dchunk-count-bits (inst-mask inst)) 4)
      (count-if-not #'null (inst-args inst) :key #'finst-same-as)))
 
 (defun order-specializers (insts)
   "Order the list of instructions INSTS with more specific (more constant
-bits, or same-as argument constains) ones first.  Returns the ordered list."
+  bits, or same-as argument constains) ones first.  Returns the ordered list."
+  (declare (type list insts))
   (sort insts
 	#'(lambda (i1 i2)
 	    (> (specializer-rank i1) (specializer-rank i2)))))
 
 (defun try-specializing (insts)
   "Given a list of instructions INSTS, Sees if one of these instructions is a
-more general form of all the others, in which case they are put into its
-specializers list, and it is returned.  Otherwise an error is signaled."
+  more general form of all the others, in which case they are put into its
+  specializers list, and it is returned.  Otherwise an error is signaled."
+  (declare (type list insts))
   (let ((masters (copy-list insts)))
     (dolist (possible-master insts)
       (dolist (possible-specializer insts)
@@ -1075,8 +1171,8 @@ specializers list, and it is returned.  Otherwise an error is signaled."
 
 (defun build-inst-space (insts &optional (initial-mask dchunk-one))
   "Returns an instruction-space object corresponding to the list of
-instructions INSTS.  If the optional parameter INITIAL-MASK is supplied, only
-bits it has set are used."
+  instructions INSTS.  If the optional parameter INITIAL-MASK is supplied, only
+  bits it has set are used."
   ;; This is done by finding any set of bits that's common to
   ;; all instructions, building an instruction-space node that selects on those
   ;; bits, and recursively handle sets of instructions with a common value for
@@ -1111,7 +1207,9 @@ bits it has set are used."
 		       (let ((choices
 			      (mapcar #'(lambda (bucket)
 					  (make-inst-space-choice
-					   :subspace (build-inst-space (cdr bucket) submask)
+					   :subspace (build-inst-space
+						      (cdr bucket)
+						      submask)
 					   :common-id (car bucket)))
 				      buckets)))
 			 ;; note that we could instead build a vector of
@@ -1133,7 +1231,7 @@ bits it has set are used."
 			    (name (field-name (finst-field fi))))
 			(cond (same-as
 			       (list name '= (field-name same-as)))
-			      ((inst-field-const-p inst (finst-field fi) nil)
+			      ((inst-field-const-p inst (finst-field fi))
 			       (list name '=
 				     (inst-field-const-value inst
 							     (finst-field fi))))
@@ -1161,8 +1259,11 @@ bits it has set are used."
 	 (format t "~vt---- ~8,'0x ----~%" indent (ispace-valid-mask inst-space))
 	 (map nil
 	      #'(lambda (choice)
-		  (format t "~vt~8,'0x ==>~%" (+ 2 indent) (ischoice-common-id choice))
-		  (print-inst-space (ischoice-subspace choice) (+ 4 indent)))
+		  (format t "~vt~8,'0x ==>~%"
+			  (+ 2 indent)
+			  (ischoice-common-id choice))
+		  (print-inst-space (ischoice-subspace choice)
+				    (+ 4 indent)))
 	      (ispace-choices inst-space)))))
 
 ;;; ----------------------------------------------------------------
@@ -1199,7 +1300,7 @@ bits it has set are used."
 
   (labels nil :type list)		; alist of (address . name)
   (label-hash (make-hash-table) :type hash-table) ; same info in a different format
-  (fun-header-offsets nil :type list)	; list of byte-offsets from code
+  (fun-header-addresses nil :type list)	; list of byte-offsets from code
   (pending-notes nil :type list)	; list of strings or functions to print
 
   (params (req) :type params)		; a handy pointer ...
@@ -1213,19 +1314,19 @@ bits it has set are used."
 
 (defun arg-value (name chunk inst)
   "Given the NAME of a field in the instruction with bit-pattern CHUNK and
-corresponding to the instruction object INST, returns two values: the
-contents of the field, and the field's type (which is either the type-spec of
-a subtype of integer or a FIELD-TYPE).  Any sign-extension is done here.  An
-error is signaled if NAME doesn't correspond to any field in INST."
-  (let* ((finst
-	  (find name
-		(inst-args inst)
-		:key #'(lambda (fi)
-			 (field-name (finst-field fi)))))
+  corresponding to the instruction object INST, returns two values: the
+  contents of the field, and the field's type (which is either the type-spec of
+  a subtype of integer or a FIELD-TYPE).  Any sign-extension is done here.  An
+  error is signaled if NAME doesn't correspond to any field in INST."
+  (declare (type symbol name)
+	   (type dchunk chunk)
+	   (type inst inst))
+  (let* ((finst (find name (inst-args inst) :key #'finst-name))
 	 (field
 	  (if finst
 	      (finst-field finst)
-	      (find name (format-fields (inst-format inst)) :key #'field-name)))) 
+	      (find name (format-fields (inst-format inst))
+		    :key #'field-name)))) 
 
     (when (null field)
       ;; must be a constant?
@@ -1255,12 +1356,17 @@ error is signaled if NAME doesn't correspond to any field in INST."
 ;; sort of ugly, but it tries to handle everything
 (defun print-field (name chunk inst stream dstate)
   "Write the contents field called NAME of the instruction with bit-pattern
-CHUNK and corresponding to the instruction object INST, to STREAM.  The
-format in which the contents are written is either specified by the type of
-the field within the instruction, or as simple integer (signed or non-signed
-specified by the instruction).  If the instruction tags it as a label and
-it's value (modified by the field's COMPUTE-LABEL function) corresponds to a
-label known by DSTATE, then that is used instead."
+  CHUNK and corresponding to the instruction object INST, to STREAM.  The
+  format in which the contents are written is either specified by the type of
+  the field within the instruction, or as simple integer (signed or non-signed
+  specified by the instruction).  If the instruction tags it as a label and
+  it's value (modified by the field's COMPUTE-LABEL function) corresponds to a
+  label known by DSTATE, then that is used instead."
+  (declare (type symbol name)
+	   (type dchunk chunk)
+	   (type inst inst)
+	   (type stream stream)
+	   (type disassem-state dstate))
   (multiple-value-bind (value type)
       (arg-value name chunk inst)
     (cond ((field-type-p type)
@@ -1284,19 +1390,24 @@ label known by DSTATE, then that is used instead."
 		   ((vectorp printer)
 		    (princ (aref printer value)))
 		   (t
-		    (funcall printer value stream)))))
+		    (funcall printer value stream dstate)))))
 	  (t
 	   (princ value stream)))))
 
 (defun print-inst-using (printer chunk inst stream dstate)
   "Print a disassembled version of the instruction with bit-pattern CHUNK,
-and corresponding to the instruction object INST, to STREAM, using PRINTER as
-a template.  PRINTER should be a list, where each element is either a string,
-whose contents are written verbatim, :NAME, which causes the instruction name
-to be written, :TAB, which causes the cursor to be moved to the
-argument-column of the output, (QUOTE symbol), which causes the symbol to be
-written, or a symbol, which causes the contents of the field of this name
-within the instruction to be written."
+  and corresponding to the instruction object INST, to STREAM, using PRINTER as
+  a template.  PRINTER should be a list, where each element is either a string,
+  whose contents are written verbatim, :NAME, which causes the instruction name
+  to be written, :TAB, which causes the cursor to be moved to the
+  argument-column of the output, (QUOTE symbol), which causes the symbol to be
+  written, or a symbol, which causes the contents of the field of this name
+  within the instruction to be written."
+  (declare (type list printer)
+	   (type dchunk chunk)
+	   (type inst inst)
+	   (type stream stream)
+	   (type disassem-state dstate))
   (dolist (element printer)
     (etypecase element
       (string
@@ -1313,14 +1424,14 @@ within the instruction to be written."
 
 (defun print-inst (chunk inst stream dstate)
   "Print a disassembled version of the instruction with bit-pattern CHUNK,
-and corresponding to the instruction object INST to STREAM."
+  and corresponding to the instruction object INST to STREAM."
   (declare (type dchunk chunk)
 	   (type inst inst)
 	   (type stream stream)
 	   (type disassem-state dstate))
   (let ((printer (inst-printer inst)))
     (unless printer
-      (error "I don't know how to print ~s~" inst))
+      (error "I don't know how to print ~s" inst))
     (etypecase printer
       (function
        (funcall printer chunk inst stream dstate))
@@ -1369,10 +1480,14 @@ and corresponding to the instruction object INST to STREAM."
 
 (defun aligned-p (num size)
   "Returns non-NIL if NUM is aligned on a SIZE byte boundary."
+  (declare (type integer num)
+	   (type fixnum size))
   (zerop (logand (1- size) num)))
 
 (defun align (num size)
   "Return NUM aligned *upward* to a SIZE byte boundary."
+  (declare (type integer num)
+	   (type fixnum size))
   (logandc1 (1- size) (+ (1- size) num)))
 
 ;;; ----------------------------------------------------------------
@@ -1394,9 +1509,10 @@ symbol object that we know about.")
 
 (defun grok-symbol-slot-ref (address)
   "Given ADDRESS, try and figure out if which slot of which symbol is being
-refered to.  Of course we can just give up, so it's not a big deal...
-Returns two values, the symbol and the name of the access function of the
-slot."
+  refered to.  Of course we can just give up, so it's not a big deal...
+  Returns two values, the symbol and the name of the access function of the
+  slot."
+  (declare (type integer address))
   (if (not (aligned-p address vm:word-bytes))
       (values nil nil)
       (do ((slots-tail groked-symbol-slots (cdr slots-tail)))
@@ -1413,32 +1529,39 @@ slot."
 
 (defun grok-nil-indexed-symbol-slot-ref (byte-offset)
   "Given a BYTE-OFFSET from NIL, try and figure out if which slot of which
-symbol is being refered to.  Of course we can just give up, so it's not a big
-deal...  Returns two values, the symbol and the access function."
+  symbol is being refered to.  Of course we can just give up, so it's not a big
+  deal...  Returns two values, the symbol and the access function."
+  (declare (type fixnum byte-offset))
   (grok-symbol-slot-ref (+ nil-addr byte-offset)))
 
 (defun get-nil-indexed-object (byte-offset)
   "Returns the lisp object located BYTE-OFFSET from NIL."
+  (declare (type fixnum byte-offset))
   (kernel:make-lisp-obj (+ nil-addr byte-offset)))
 
 (defun get-code-constant (byte-offset dstate)
   "Returns two values; the lisp-object located at BYTE-OFFSET in the constant
-area of the code-object in DSTATE and T, or NIL and NIL if there is no
-code-object in DSTATE."
+  area of the code-object in DSTATE and T, or NIL and NIL if there is no
+  code-object in DSTATE."
+  (declare (type fixnum byte-offset)
+	   (type disassem-state dstate))
   (let ((code (dstate-code dstate)))
     (if code
-	(values (kernel:code-header-ref code
-					(ash (+ byte-offset vm:other-pointer-type)
-					     (- vm:word-shift)))
-		t)
-	(values nil
-		nil))))
+	(values
+	 (kernel:code-header-ref code
+				 (ash (+ byte-offset vm:other-pointer-type)
+				      (- vm:word-shift)))
+	 t)
+	(values
+	 nil
+	 nil))))
 
 (defvar *assembler-routines-by-addr* nil)
 
 (defun find-assembler-routine (address)
   "Returns the name of the primitive lisp assembler routine located at
-ADDRESS, or NIL if there isn't one."
+  ADDRESS, or NIL if there isn't one."
+  (declare (type integer address))
   (when (null *assembler-routines-by-addr*)
     (setf *assembler-routines-by-addr* (make-hash-table))
     (maphash #'(lambda (name address)
@@ -1448,36 +1571,45 @@ ADDRESS, or NIL if there isn't one."
 
 ;;; ----------------------------------------------------------------
 
-(defun code-sap-offset (code sap)
-  "Returns the offset from the beginning of the code-object CODE of SAP."
-  (- (system:sap-int sap)
-     (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address code))))
+(defun code-addr-offset (code addr)
+  "Returns the offset from the beginning of the code-object CODE of ADDR."
+  (declare (type integer addr))
+  (- addr (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address code))))
 
-(defun make-sorted-fun-header-list (code)
-  "Returns a sorted list of the addresses of function-headers in the
-code-object CODE."
-  (do ((fun (kernel:code-header-ref code vm:code-entry-points-slot)
-	    (system:%primitive function-next fun))
-       (fun-header-offsets nil))
-      ((null fun)
-       (sort fun-header-offsets #'<))
-    (let ((fun-offset (kernel:get-closure-length fun)))
-      ;; There is function header fun-offset words from the
-      ;; code header.
-      (push (to-bytes fun-offset) fun-header-offsets))))
+(defun code-offs-address (code offs)
+  "Returns the ADDRESS of OFFS from the beginning of the code-object CODE."
+  (declare (type fixnum offs))
+  (+ offs (logandc1 vm:lowtag-mask (kernel:get-lisp-obj-address code))))
 
-(defun code-offset (dstate)
-  "Returns the offset of the CURPOS in DSTATE from the beginning of
-its code object.  Insensitive to GC."
+(defun dstate-cur-code-offset (dstate)
+  "Returns the offset of the current position in DSTATE from the beginning of
+  its code object.  Insensitive to GC."
+  (declare (type disassem-state dstate))
   (+ (- (dstate-curpos dstate) (dstate-segment-start dstate))
      (- (system:sap-int (dstate-segment-sap dstate))
 	(dstate-code-insts-addr dstate))
      (dstate-code-insts-offset dstate)))
 
+(defun make-sorted-fun-header-addr-list (code)
+  "Returns a sorted list of the ADDRESSES of function-headers in the
+  code-object CODE."
+  (do ((fun (kernel:code-header-ref code vm:code-entry-points-slot)
+	    (system:%primitive function-next fun))
+       (fun-header-addrs nil))
+      ((null fun)
+       (sort fun-header-addrs #'<))
+    (let ((fun-offset (kernel:get-closure-length fun)))
+      ;; There is function header fun-offset words from the
+      ;; code header.
+      (push (code-offs-address code (to-bytes fun-offset))
+	    fun-header-addrs))))
+
 (defun lra-p (chunk dstate)
   "Returns non-NIL if CHUNK is a valid LRA header in DSTATE."
+  (declare (type dchunk chunk)
+	   (type disassem-state dstate))
   (and (aligned-p (dstate-curpos dstate) (* 2 vm:word-bytes))
-       (let ((byte-offset (code-offset dstate)))
+       (let ((byte-offset (dstate-cur-code-offset dstate)))
 	 (= (dchunk-extract chunk
 			    (correct-dchunk-bytespec-for-endianness
 			     (byte vm:word-bits 0)
@@ -1488,31 +1620,35 @@ its code object.  Insensitive to GC."
 
 (defun at-fun-header-p (dstate)
   "Returns non-NIL if DSTATE is currently pointing at a function header."
-  (let ((header-offsets (dstate-fun-header-offsets dstate)))
-    (and header-offsets
-	 (= (code-offset dstate) (car header-offsets)))))
+  (declare (type disassem-state dstate))
+  (let ((header-addresses (dstate-fun-header-addresses dstate)))
+    (and header-addresses
+	 (= (dstate-curpos dstate) (car header-addresses)))))
 
 (defun print-fun-header (stream dstate)
   "Print the function-header (entry-point) pseudo-instruction at the current
-location in DSTATE to STREAM."
-  (pop (dstate-fun-header-offsets dstate))
+  location in DSTATE to STREAM."
+  (declare (type stream stream)
+	   (type disassem-state dstate))
+  (pop (dstate-fun-header-addresses dstate))
   (let* ((code (dstate-code dstate))
-	 (woffs (to-words (code-offset dstate)))
+	 (woffs (to-words (dstate-cur-code-offset dstate)))
 	 (name
 	  (kernel:code-header-ref code (+ woffs vm:function-header-name-slot)))
 	 (args
 	  (kernel:code-header-ref code (+ woffs vm:function-header-arglist-slot)))
 	 (type
 	  (kernel:code-header-ref code (+ woffs vm:function-header-type-slot))))
-    (format stream ".ENTRY ~s~:a" name args)
+    (format stream ".~a ~s~:a" 'entry name args)
     (note #'(lambda (stream)
 	      (format stream "~:s" type)) ; use format to print NIL as ()
 	  dstate)))
 
 (defun check-for-moved-code (dstate)
   "If the code object in DSTATE has moved since we last checked, make the sap
-pointing to the start of the segment point to its corresponding location at
-the new address."
+  pointing to the start of the segment point to its corresponding location at
+  the new address."
+  (declare (type disassem-state dstate))
   (let ((code (dstate-code dstate)))
     (when code
       (let ((old-code-insts-addr
@@ -1533,10 +1669,11 @@ the new address."
 
 (defun compute-labels (dstate)
   "Make an initial non-printing disassembly pass through DSTATE, noting any
-addresses that are referenced by instructions that point within its segment,
-and recording them in the LABEL-HASH (a hashtable mapping addresses to
-label-names) and LABELS (an alist of (address . label-name) sorted by
-address) fields of DSTATE."
+  addresses that are referenced by instructions that point within its segment,
+  and recording them in the LABEL-HASH (a hashtable mapping addresses to
+  label-names) and LABELS (an alist of (address . label-name) sorted by
+  address) fields of DSTATE."
+  (declare (type disassem-state dstate))
   (let ((base-address (dstate-segment-start dstate))
 	(length (dstate-segment-length dstate))
 	(byte-order (dstate-byte-order dstate))
@@ -1547,7 +1684,8 @@ address) fields of DSTATE."
 
     (loop
       (unless (aligned-p (dstate-curpos dstate) (dstate-alignment dstate))
-	(setf (dstate-curpos dstate) (align (dstate-curpos dstate) (dstate-alignment dstate))))
+	(setf (dstate-curpos dstate)
+	      (align (dstate-curpos dstate) (dstate-alignment dstate))))
 
       (let ((offs (- (dstate-curpos dstate) (dstate-segment-start dstate))))
 	(when (>= offs (dstate-segment-length dstate))
@@ -1562,8 +1700,8 @@ address) fields of DSTATE."
 				(cons addr name)))
 			  (sort addrs #'<))))
 	  (setf (dstate-pending-notes dstate) nil) ; just in case any got
-						   ; left there by labeling
-						   ; (they shouldn't but...)
+					; left there by labeling
+					; (they shouldn't but...)
 	  (return))
 
 	(system:without-gcing
@@ -1578,42 +1716,61 @@ address) fields of DSTATE."
 					offs
 					byte-order))
 		       (inst (find-inst chunk ispace)))
-		  (flet ((add-label (addr)
-			   (unless (or (< addr base-address)
-				       (>= addr (+ base-address length))
-				       (find addr addrs :test #'=))
-			     (push addr addrs))))
+		  (labels ((add-label (addr)
+			     (unless (or (< addr base-address)
+					 (>= addr (+ base-address length))
+					 (find addr addrs :test #'=))
+			       (push addr addrs)))
+			   (maybe-label-field (field type)
+			     (when (field-type-p type)
+			       (let ((use-label (ftype-use-label type)))
+				 (when use-label
+				   (let* ((pos (field-pos field))
+					  (value (dchunk-extract chunk pos)))
+				     (when (ftype-sign-extend type)
+				       (setf value
+					     (sign-extend value
+							  (byte-size pos))))
 
+				     (let ((addr
+					    (if (eq use-label t)
+						value
+						(funcall use-label
+							 value dstate))))
+				       (add-label addr))))))))
 		    (cond ((lra-p chunk dstate)
 			   (incf (dstate-curpos dstate) lra-size))
 			  ((null inst)
-			   (incf (dstate-curpos dstate))) ; let alignment fix it up
+			   ;; let alignment fix it up
+			   (incf (dstate-curpos dstate)))
 			  ((inst-use-label inst)
 			   (add-label (funcall (inst-use-label inst)
 					       chunk inst dstate)))
 			  (t
 			   (setf (dstate-nextpos dstate)
-				 (+ (dstate-curpos dstate) (format-length (inst-format inst))))
+				 (+ (dstate-curpos dstate)
+				    (format-length (inst-format inst))))
 
-			   (dolist (finst (inst-args inst))
-			     (let ((field (finst-field finst))
-				   (type (finst-type finst)))
-			       (when (field-type-p type)
-				 (let ((use-label (ftype-use-label type)))
-				   (when use-label
-				     (let* ((pos (field-pos field))
-					    (value (dchunk-extract chunk pos)))
-				       (when (ftype-sign-extend type)
-					 (setf value (sign-extend value (byte-size pos))))
-
-				       (let ((addr
-					      (if (eq use-label t)
-						  value
-						  (funcall use-label value dstate))))
-					 (add-label addr))))))))
+			   (let ((inst-args (inst-args inst)))
+			     ;; Look at possible labels refered to in the
+			     ;; various instruction fields.
+			     ;; We do it in this order (explicit args, then fields
+			     ;; NOT in the arg list) instead of the obvious
+			     ;; one (just all fields, looking in arg list
+			     ;; for type overrides) for efficiency.
+			     (dolist (finst inst-args)
+			       (maybe-label-field (finst-field finst)
+						  (finst-type finst)))
+			     (dolist (field (format-fields (inst-format inst)))
+			       (let ((type (field-default-type field)))
+				 (when type
+				   (unless (find field inst-args :key #'finst-field)
+				     (maybe-label-field field type)))))
+			     )
 
 			   (if (inst-control inst)
-			       (funcall (inst-control inst) chunk inst nil dstate))
+			       (funcall (inst-control inst)
+					chunk inst nil dstate))
 
 			   (setf (dstate-curpos dstate)
 				 (dstate-nextpos dstate))
@@ -1621,8 +1778,9 @@ address) fields of DSTATE."
 
 ;;; ----------------------------------------------------------------
 
-(defun ensure-inst-space (params)
+(defun get-inst-space (params)
   "Get the instruction-space from PARAMS, creating it if necessary."
+  (declare (type params params))
   (let ((ispace (params-inst-space params)))
     (when (null ispace)
       (let ((insts nil))
@@ -1639,7 +1797,9 @@ address) fields of DSTATE."
 
 (defun print-current-address (stream dstate)
   "Print the current address in DSTATE to STREAM, plus any labels that
-correspond to it, and leave the cursor in the instruction column."
+  correspond to it, and leave the cursor in the instruction column."
+  (declare (type stream stream)
+	   (type disassem-state dstate))
   (let ((address (dstate-curpos dstate))
 	(address-column-width
 	 (params-address-column-width (dstate-params dstate)))
@@ -1673,6 +1833,8 @@ correspond to it, and leave the cursor in the instruction column."
 ;;; pseudo-instruction to STREAM and starting a new instruction line.  If
 ;;; this would put us past the end of the segment, don't print anything.
 (defun maybe-align (stream dstate)
+  (declare (type stream stream)
+	   (type disassem-state dstate))
   (unless (aligned-p (dstate-curpos dstate) (dstate-alignment dstate))
     (let ((aligned-pos
 	   (align (dstate-curpos dstate) (dstate-alignment dstate))))
@@ -1682,7 +1844,9 @@ correspond to it, and leave the cursor in the instruction column."
       (unless (>= aligned-pos		; we might be done anyway
 		  (+ (dstate-segment-start dstate)
 		     (dstate-segment-length dstate)))
-	(format stream ".ALIGN~vt~d" (dstate-argument-column dstate) (dstate-alignment dstate))
+	(format stream ".ALIGN~vt~d"
+		(dstate-argument-column dstate)
+		(dstate-alignment dstate))
 	(print-notes-and-newline stream dstate)
 	(print-current-address stream dstate))
     t)))
@@ -1696,8 +1860,10 @@ correspond to it, and leave the cursor in the instruction column."
 
 (defun print-notes-and-newline (stream dstate)
   "Print a newline to STREAM, inserting any pending notes in DSTATE as
-end-of-line comments.  If there is more than one note, a separate line will be
-used for each one."
+  end-of-line comments.  If there is more than one note, a separate line
+  will be used for each one."
+  (declare (type stream stream)
+	   (type disassem-state dstate))
   (with-print-restrictions
     (dolist (note (dstate-pending-notes dstate))
       (format stream "~vt; " *note-column*)
@@ -1712,7 +1878,10 @@ used for each one."
 
 (defun print-bytes (num stream dstate)
   "Disassemble NUM bytes to STREAM as simple `BYTE' instructions"
-  (format stream "BYTE~vt" (dstate-argument-column dstate))
+  (declare (type fixnum num)
+	   (type stream stream)
+	   (type disassem-state dstate))
+  (format stream "~a~vt" 'BYTE (dstate-argument-column dstate))
   (let ((sap (dstate-segment-sap dstate))
 	(start-offs (- (dstate-curpos dstate) (dstate-segment-start dstate))))
     (dotimes (offs num)
@@ -1722,51 +1891,78 @@ used for each one."
 
 (defun print-words (num stream dstate)
   "Disassemble NUM machine-words to STREAM as simple `WORD' instructions"
+  (declare (type fixnum num)
+	   (type stream stream)
+	   (type disassem-state dstate))
   (maybe-align stream dstate)
-  (format stream "WORD~vt" (dstate-argument-column dstate))
+  (format stream "~a~vt" 'WORD (dstate-argument-column dstate))
   (let ((sap (dstate-segment-sap dstate))
 	(start-offs (- (dstate-curpos dstate) (dstate-segment-start dstate))))
     (dotimes (offs num)
       (unless (zerop offs)
 	(write-string ", " stream))
-      (format stream "#x~8,'0x" (system:sap-ref-32 sap (+ offs start-offs))))))
+      (format stream "#x~8,'0x"
+	      (system:sap-ref-32 sap
+				 (/ (+ offs start-offs)
+				    vm:word-bytes))))))
 
 ;;; ----------------------------------------------------------------
 
 (defun create-dstate (base length code params)
   "Make a disassembler-state object for the area from BASE, LENGTH long,
-corresponding to the code object CODE.  BASE may be either a sap or an
-integer address; the call to this function should probably be done with GC
-disabled, but if CODE is non-NIL, then it's safe to turn GCing back on 
-again after it returns."
+  corresponding to the code object CODE.  BASE may be either a sap or an
+  integer address; the call to this function should probably be done with GC
+  disabled, but if CODE is non-NIL, then it's safe to turn GCing back on 
+  again after it returns."
   (declare (type (or integer system:system-area-pointer) base)
 	   (type fixnum length)
 	   ;?? (type code code)
 	   (type params params))
   (let ((sap (if (integerp base) (system:int-sap base) base))
-	(addr (if (integerp base) base (system:sap-int base))))
+	(addr (if (integerp base) base (system:sap-int base)))
+	(inst-area-sap (kernel:code-instructions code)))
     (make-disassem-state :code code
-			 :fun-header-offsets
-			   (and code (make-sorted-fun-header-list code))
-			 :code-insts-offset
-			   (if code (code-sap-offset code sap) 0)
-			 :code-insts-addr
-			   (if code
-			       (system:sap-int (kernel:code-instructions code))
-			       0)
 			 :segment-sap sap
 			 :segment-start addr
 			 :segment-length length
-			 :argument-column (+ (or *opcode-column-width* 0) 13)
-			 :alignment (params-instruction-alignment params)
-			 :byte-order (c:backend-byte-order (params-backend params))
-			 :params params)))
+			 :params params
+
+			 :fun-header-addresses
+			   (and code
+				(remove-if #'(lambda (fun-header-addr)
+					       (< fun-header-addr addr))
+					   (make-sorted-fun-header-addr-list
+					    code)))
+			 :code-insts-offset
+			   (if code
+			       (code-addr-offset code
+						 (system:sap-int
+						   inst-area-sap))
+			       0)
+			 :code-insts-addr
+			   (if code
+			       (system:sap-int inst-area-sap)
+			       0)
+			 :argument-column
+			   (+ (or *opcode-column-width*
+				  (params-opcode-column-width params)
+				  0)
+			      (params-address-column-width params)
+			      label-column-width)
+			 :alignment
+			   (params-instruction-alignment params)
+			 :byte-order
+			   (c:backend-byte-order (params-backend params))
+			 )))
 
 (defun disassemble-segment (dstate stream &optional (use-labels t))
   "Disassemble the memory segment in DSTATE to STREAM.  If USE-LABELS is
-non-NIL, calculate and print labels for branches, etc, instead of using raw
-addresses-- this requires that two passes be made."
-  (let ((ispace (ensure-inst-space (dstate-params dstate))))
+  non-NIL, calculate and print labels for branches, etc, instead of using raw
+  addresses-- this requires that two passes be made."
+  (declare (type stream stream)
+	   (type disassem-state dstate)
+	   (type (member t nil) t))
+  (let ((ispace (get-inst-space (dstate-params dstate))))
 
     (when use-labels
       (compute-labels dstate))
@@ -1795,7 +1991,8 @@ addresses-- this requires that two passes be made."
 
 	 (cond ((at-fun-header-p dstate)
 		(print-fun-header stream dstate)
-		(incf (dstate-curpos dstate) (to-bytes vm:function-header-code-offset)))
+		(incf (dstate-curpos dstate)
+		      (to-bytes vm:function-header-code-offset)))
 	       (t
 		(let* ((chunk
 			(sap-ref-dchunk (dstate-segment-sap dstate)
@@ -1804,7 +2001,7 @@ addresses-- this requires that two passes be made."
 		       (inst (find-inst chunk ispace)))
 
 		  (cond ((lra-p chunk dstate)
-			 (format stream ".LRA")
+			 (princ '.lra stream)
 			 (incf (dstate-curpos dstate) lra-size))
 			((null inst)
 			 (let ((alignment (dstate-alignment dstate)))
@@ -1817,11 +2014,13 @@ addresses-- this requires that two passes be made."
 			   (incf (dstate-curpos dstate) alignment)))
 			(t
 			 (setf (dstate-nextpos dstate)
-			       (+ (dstate-curpos dstate) (format-length (inst-format inst))))
+			       (+ (dstate-curpos dstate)
+				  (format-length (inst-format inst))))
 
 			 (print-inst chunk inst stream dstate)
 			 (when (inst-control inst)
-			   (funcall (inst-control inst) chunk inst stream dstate))
+			   (funcall (inst-control inst)
+				    chunk inst stream dstate))
 
 			 (setf (dstate-curpos dstate)
 			       (dstate-nextpos dstate))))))))
@@ -1858,9 +2057,12 @@ addresses-- this requires that two passes be made."
 	(format t "Fun-header ~s at offset ~d: ~s~a => ~s~%"
 		fun
 		fun-offset
-		(kernel:code-header-ref code (+ fun-offset vm:function-header-name-slot))
-		(kernel:code-header-ref code (+ fun-offset vm:function-header-arglist-slot))
-		(kernel:code-header-ref code (+ fun-offset vm:function-header-type-slot)))))))
+		(kernel:code-header-ref
+		 code (+ fun-offset vm:function-header-name-slot))
+		(kernel:code-header-ref
+		 code (+ fun-offset vm:function-header-arglist-slot))
+		(kernel:code-header-ref
+		 code (+ fun-offset vm:function-header-type-slot)))))))
 
 (defun fun-code (fun)
   (declare (type compiled-function fun))
@@ -1905,8 +2107,20 @@ addresses-- this requires that two passes be made."
 (defun disassemble (object &optional (stream *standard-output*)
 			   &key (use-labels t)
 			        (backend c:*backend*))
+  "Disassemble the machine code associated with OBJECT, which can be a
+  function, a lambda expression, or a symbol with a function definition.  If
+  it is not already compiled, the compiler is called to produce something to
+  disassemble.  Note that the code often includes multiple entry points, of
+  which only one is the actual function-- others include the code to DEFUN
+  the object, etc.  It should be obvious which entry point is the correct
+  one, however.  If STREAM is NIL, *STANDARD-OUTPUT* is used (so you can 
+  use the keywords without having to type it!)."
+  (declare (type (or function symbol cons) object)
+	   (type (or null stream) stream)
+	   (type (member t nil) use-labels)
+	   (type c::backend backend))
   (disassemble-function (compiled-function-or-lose object)
-			:stream stream
+			:stream (or stream *standard-output*)
 			:use-labels use-labels
 			:backend backend))
 
@@ -1914,8 +2128,13 @@ addresses-- this requires that two passes be made."
 				   &key (stream *standard-output*)
 				   (use-labels t) (backend c:*backend*))
   "Disassembles the given area of memory starting at ADDRESS and LENGTH long.
-Note that if this memory could move during a GC, you'd better disable it
-around the call to this function."
+  Note that if this memory could move during a GC, you'd better disable it
+  around the call to this function."
+  (declare (type (or integer system:system-area-pointer) address)
+	   (type fixnum length)
+	   (type stream stream)
+	   (type (member t nil) use-labels)
+	   (type c::backend backend))
   (disassemble-segment (create-dstate address
 				      length
 				      nil
