@@ -1,4 +1,4 @@
-;;; -*- Mode: completion; Log: code.log; Package: debug-internals -*-
+;;; -*- Mode: completion; Log: code.log; Package: DI -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.51 1992/07/09 19:26:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.52 1992/08/19 02:53:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -594,15 +594,8 @@
   ;; The original instruction replaced by the breakpoint.
   (instruction nil :type (or null (unsigned-byte 32)))
   ;;
-  ;; This saves the sigmask while we execute the instruction replaced by
-  ;; a user break.  When we hit the after-breakpoint, we restore this mask.
-  (sigmask nil :type (or null (unsigned-byte 32)))
-  ;;
   ;; A list of user breakpoints at this location.
-  (breakpoints nil :type list)
-  ;;
-  ;; An after-breakpoint might be at this location too.
-  (after-breakpoint nil :type (or null after-breakpoint)))
+  (breakpoints nil :type list))
 ;;;
 (defun print-breakpoint-data (obj str n)
   (declare (ignore n))
@@ -681,34 +674,6 @@
 
 (setf (documentation 'breakpoint-kind 'function)
   "Returns the breakpoint's kind specification.")
-
-;;; This is an internal structure.
-;;;
-(defstruct (after-breakpoint (:print-function print-after-breakpoint)
-			     (:constructor
-			      make-after-breakpoint
-			      (previous-data internal-data &optional partner)))
-  ;;
-  ;; This is the data for the location which this after-breakpoint follows.
-  ;; When execution flows through this after-breakpoint, the breakpoint
-  ;; mechanism re-establishes the break instruction at this location, and
-  ;; replaces the after-breakpoint's break instruction with the instruction
-  ;; that should run as part of the original program.
-  (previous-data nil :type breakpoint-data)
-  ;;
-  ;; This is a backpointer to a breakpoint-data.
-  (internal-data nil :type (or null breakpoint-data))
-  ;;
-  ;; When breakpoint is where a branching instruction used to be, partner is an
-  ;; after-breakpoint at the other code location at which execution could have
-  ;; gone.  In addition to what is describe for the previous slot, the
-  ;; breakpoint mechanism has to remove partner as well as this
-  ;; after-breakpoint.
-  (partner nil :type (or null after-breakpoint)))
-
-(defun print-after-breakpoint (obj str n)
-  (declare (ignore obj n))
-  (format str "#<After-Breakpoint ...>"))
 
 ;;;
 ;;; Code-locations.
@@ -3271,13 +3236,9 @@
   (pc-offset c-call:int)
   (old-inst c-call:unsigned-long))
 
-;;; BREAKPOINT-AFTER-OFFSET -- Internal.
-;;;
-;;; This returns the offset of the next instruction following the break that
-;;; generated the signal context we supply as an argument to this routine.
-;;;
-(alien:def-alien-routine "breakpoint_after_offset" c-call:int
-  (scp system:system-area-pointer))
+(alien:def-alien-routine "breakpoint_do_displaced_inst" c-call:void
+  (scp (* unix:sigcontext))
+  (orig-inst c-call:unsigned-long))
 
 ;;;
 ;;; Breakpoint handlers (layer between C and exported interface).
@@ -3329,15 +3290,16 @@
 ;;; handle breaks for internal errors.
 ;;;
 (defun handle-breakpoint (offset component signal-context)
-  (let ((data (breakpoint-data component offset)))
+  (let ((data (breakpoint-data component offset nil)))
     (unless data
       (error "Unknown breakpoint in ~S at offset ~S."
 	      (debug-function-name (debug-function-from-pc component offset))
 	      offset))
     (let ((breakpoints (breakpoint-data-breakpoints data)))
-      (if (and breakpoints
-	       (eq (breakpoint-kind (car breakpoints)) :function-end))
-	  (handle-function-end-breakpoint breakpoints data signal-context)
+      (unless breakpoints
+	(error "Breakpoint that nobody wants?"))
+      (if (eq (breakpoint-kind (car breakpoints)) :function-end)
+	  (handle-function-end-breakpoint-aux breakpoints data signal-context)
 	  (handle-breakpoint-aux breakpoints data
 				 offset component signal-context)))))
 
@@ -3354,69 +3316,26 @@
 ;;; This handles code-location and debug-function :function-start breakpoints.
 ;;;
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
-  (let ((after (breakpoint-data-after-breakpoint data)))
-    (when after
-      (handle-after-breakpoint after breakpoints data offset component)))
-  
-  (when breakpoints
-    (unless (member data *executing-breakpoint-hooks*)
-      (let ((*executing-breakpoint-hooks* (cons data
-						*executing-breakpoint-hooks*)))
-	(invoke-breakpoint-hooks breakpoints component offset)))
-    ;; At this point breakpoints may not hold the same list as
-    ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed a
-    ;; breakpoint deactivation.  In fact, if all breakpoints were deactivated
-    ;; then data is invalid since it was deleted and so the correct one must be
-    ;; looked up if it is to be used.  If there are no more breakpoints active
-    ;; at this location, then the normal instruction has been put back, and we
-    ;; do not need an after breakpoint to re-install a break instruction.
-    (setf data (breakpoint-data component offset nil))
-    (when (and data
-	       (breakpoint-data-breakpoints data))
-      ;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
-      ;; uses CALL-BREAKPOINT-AFTER-OFFSET.
-      (system:without-gcing
-       (breakpoint-remove (kernel:get-lisp-obj-address component) offset
-			  (breakpoint-data-instruction data)))
-      (set-after-breakpoints component data signal-context)
-      ;; Set the sigmask, to keep the system running until we can
-      ;; remove the after breakpoints and re-install the user breakpoints.
-      (setf (breakpoint-data-sigmask data)
-	    (unix:unix-sigblock (unix:sigmask :sigint :sigquit :sigtstp))))))
-
-(defun handle-after-breakpoint (after breakpoints data offset component)
-  (let ((previous-data (after-breakpoint-previous-data after)))
-    (unless (breakpoint-data-breakpoints previous-data)
-      (error "After-breakpoint found with no user breakpoints. -- ~s" after))
-    ;; If there are no user breakpoints at this after location, remove the
-    ;; break instruction.
-    (unless breakpoints
-      (system:without-gcing
-       (breakpoint-remove (kernel:get-lisp-obj-address component) offset
-			  (breakpoint-data-instruction data)))
-      (setf (breakpoint-data-after-breakpoint data) nil)
-      (delete-breakpoint-data data))
-    ;; Ditto for the partner of the after-breakpoint (if there were two).
-    (let ((partner (after-breakpoint-partner after)))
-      (when partner
-	(let ((partner-data (after-breakpoint-internal-data partner)))
-	  (unless (breakpoint-data-breakpoints partner-data)
-	    (system:without-gcing
-	     (breakpoint-remove (kernel:get-lisp-obj-address
-				 (breakpoint-data-component partner-data))
-				(breakpoint-data-offset partner-data)
-				(breakpoint-data-instruction partner-data)))
-	    (setf (breakpoint-data-after-breakpoint partner-data) nil)
-	    (delete-breakpoint-data partner-data)))))
-    ;; Put back previous's break instruction.
-    ;; We don't need to store the replaced instruction in the data since we
-    ;; have it from installing the break instruction before.
-    (system:without-gcing
-     (breakpoint-install (kernel:get-lisp-obj-address
-			  (breakpoint-data-component previous-data))
-			 (breakpoint-data-offset previous-data)))
-    ;; Restore sigmask that we saved before executing previous's inst.
-    (unix:unix-sigsetmask (breakpoint-data-sigmask previous-data))))
+  (unless (member data *executing-breakpoint-hooks*)
+    (let ((*executing-breakpoint-hooks* (cons data
+					      *executing-breakpoint-hooks*)))
+      (invoke-breakpoint-hooks breakpoints component offset)))
+  ;; At this point breakpoints may not hold the same list as
+  ;; BREAKPOINT-DATA-BREAKPOINTS since invoking hooks may have allowed a
+  ;; breakpoint deactivation.  In fact, if all breakpoints were deactivated
+  ;; then data is invalid since it was deleted and so the correct one must be
+  ;; looked up if it is to be used.  If there are no more breakpoints active
+  ;; at this location, then the normal instruction has been put back, and we
+  ;; do not need to do-displaced-inst.
+  (let ((data (breakpoint-data component offset nil)))
+    (when (and data (breakpoint-data-breakpoints data))
+      ;; There breakpoint is still active, so we need to execute the displaced
+      ;; instruction and leave the breakpoint instruction behind.  The best
+      ;; way to do this is different on each machine, so we just leave it up
+      ;; to the C code.
+      (breakpoint-do-displaced-inst signal-context
+				    (breakpoint-data-instruction data))
+      (error "BREAKPOINT-DO-DISPLACED-INST returned?"))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset)
   (let* ((debug-fun (debug-function-from-pc component offset))
@@ -3433,35 +3352,26 @@
 		   (breakpoint-unknown-return-partner bpt)
 		   bpt)))))
 
-(defun set-after-breakpoints (component data signal-context)
-  (multiple-value-bind (after-1 after-2)
-		       (call-breakpoint-after-offset signal-context)
-    (let* ((after-data-1 (breakpoint-data component after-1))
-	   (after-data-2 (if (not (zerop after-2))
-			     (breakpoint-data component after-2)))
-	   (after-bpt-1 (make-after-breakpoint data after-data-1)))
-      (setf (breakpoint-data-after-breakpoint after-data-1) after-bpt-1)
-      (when after-data-2
-	;; Set after-bpt-1's partner to an after-breakpoint.
-	(setf (after-breakpoint-partner after-bpt-1)
-	      ;; While making it, store it in the appropriate data obj.
-	      (setf (breakpoint-data-after-breakpoint after-data-2)
-		    (make-after-breakpoint data after-data-2 after-bpt-1))))
-      (system:without-gcing
-       (unless (breakpoint-data-breakpoints after-data-1)
-	 (setf (breakpoint-data-instruction after-data-1)
-	       (breakpoint-install (kernel:get-lisp-obj-address component)
-				   after-1)))
-       (when (and after-data-2 (not (breakpoint-data-breakpoints after-data-2)))
-	 (setf (breakpoint-data-instruction after-data-2)
-	       (breakpoint-install (kernel:get-lisp-obj-address component)
-				   after-2)))))))
+;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal Interface
+;;; 
+(defun handle-function-end-breakpoint (offset component signal-context)
+  (let ((data (breakpoint-data component offset nil)))
+    (unless data
+      (error "Unknown breakpoint in ~S at offset ~S."
+	      (debug-function-name (debug-function-from-pc component offset))
+	      offset))
+    (let ((breakpoints (breakpoint-data-breakpoints data)))
+      (unless breakpoints
+	(error "Breakpoint that nobody wants?"))
+      (assert (eq (breakpoint-kind (car breakpoints)) :function-end))
+      (handle-function-end-breakpoint-aux breakpoints data signal-context))))
 
-;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal.
+;;; HANDLE-FUNCTION-END-BREAKPOINT-AUX -- Internal.
 ;;;
-;;; HANDLE-BREAKPOINT calls this for :function-end breakpoints.
+;;; Either HANDLE-BREAKPOINT calls this for :function-end breakpoints [old C
+;;; code] or HANDLE-FUNCTION-END-BREAKPOINT calls this directly [new C code].
 ;;;
-(defun handle-function-end-breakpoint (breakpoints data signal-context)
+(defun handle-function-end-breakpoint-aux (breakpoints data signal-context)
   (delete-breakpoint-data data)
   (let* ((scp (alien:sap-alien signal-context (* unix:sigcontext)))
 	 (frame (do ((cfp (vm:sigcontext-register scp vm::cfp-offset))
@@ -3481,7 +3391,7 @@
   (let ((ocfp (system:int-sap (vm:sigcontext-register scp vm::ocfp-offset)))
 	(nargs (kernel:make-lisp-obj
 		(vm:sigcontext-register scp vm::nargs-offset)))
-	(reg-arg-offsets vm::register-arg-offsets)
+	(reg-arg-offsets '#.vm::register-arg-offsets)
 	(results nil))
     (system:without-gcing
      (dotimes (arg-num nargs)
@@ -3491,23 +3401,6 @@
 		 (kernel:stack-ref ocfp arg-num))
 	     results)))
     (nreverse results)))
-
-
-;;; CALL-BREAKPOINT-AFTER-OFFSET -- Internal.
-;;;
-;;; This calls the C routine and massages its return values.  Originally the
-;;; breakpoint code was designed for the C code to return multiple offsets when
-;;; the break generating the argument signal-context had replaced a branch
-;;; instruction.  The Lisp code would then set after-breakpoints at each
-;;; location, cleaning up both when one was hit after continuing execution.
-;;; Later the C code decided it could determine which way the branch would go,
-;;; so BREAKPOINT-AFTER-OFFSET could just return one offset.  In case this
-;;; won't be possible on all platforms, the Lisp code will stay with its
-;;; support for multiple after-breakpoints.  Then we only need to change this
-;;; routine to return all values of BREAKPOINT-AFTER-OFFSET.
-;;;
-(defun call-breakpoint-after-offset (signal-context)
-  (values (breakpoint-after-offset signal-context) 0))
 
 ;;;
 ;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
