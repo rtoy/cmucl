@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.42 2003/06/27 15:54:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.43 2003/10/29 22:34:32 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2100,9 +2100,7 @@
 				      (+ (dstate-cur-offs dstate)
 					 (1- lra-size))))
 		vm:return-pc-header-type))
-    (unless (null stream)
-      (princ '.lra stream))
-    (incf (dstate-next-offs dstate) lra-size))
+    (note (format nil "Possible ~A header word" '.lra) dstate))
   nil)
 
 (defun fun-header-hook (stream dstate)
