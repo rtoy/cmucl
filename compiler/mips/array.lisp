@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.16 1990/06/02 16:06:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.17 1990/06/04 05:21:36 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -33,7 +33,8 @@
       (inst addu alloc-tn rank)
       (inst li ndescr (lognot vm:lowtag-mask))
       (inst and alloc-tn ndescr)
-      (inst sll ndescr rank vm:type-bits)
+      (inst addu ndescr rank (fixnum (1- vm:array-dimensions-offset)))
+      (inst sll ndescr ndescr vm:type-bits)
       (inst or ndescr ndescr type)
       (inst srl ndescr ndescr 2)
       (storew ndescr header 0 vm:other-pointer-type))
@@ -69,9 +70,9 @@
   (:results (res :scs (any-reg descriptor-reg)))
   (:generator 6
     (loadw temp x 0 vm:other-pointer-type)
-    (inst sra temp temp vm:type-bits)
-    (inst sll res temp 2)
-    (inst addu res res (fixnum (- 1 vm:array-dimensions-offset)))))
+    (inst sra temp vm:type-bits)
+    (inst subu temp (1- vm:array-dimensions-offset))
+    (inst sll res temp 2)))
 
 
 
@@ -87,7 +88,7 @@
   (:results (result :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :type random) temp)
   (:generator 5
-    (let ((error (generate-error-code di:invalid-array-index-error
+    (let ((error (generate-error-code invalid-array-index-error
 				      array bound index)))
       (inst sltu temp index bound)
       (inst beq temp zero-tn error)
