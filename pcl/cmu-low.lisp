@@ -30,6 +30,13 @@
 (in-package 'pcl)
 
 
+;;; Just use our without-interrupts.  We don't have the INTERRUPTS-ON/OFF local
+;;; macros spec'ed in low.lisp, but they aren't used.
+;;;
+(defmacro without-interrupts (&rest stuff)
+  `(sys:without-interrupts ,@stuff))
+
+
 ;;; Print the object addr in default printers.
 ;;;
 (defun printing-random-thing-internal (thing stream)
