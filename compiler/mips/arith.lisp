@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.22 1990/05/19 09:40:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.23 1990/06/04 05:18:03 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -341,7 +341,7 @@
 	    (r :scs (signed-reg)))
   (:result-types * *)
   (:generator 11
-    (let ((zero (generate-error-code di:division-by-zero-error x y)))
+    (let ((zero (generate-error-code division-by-zero-error x y)))
       (inst beq y zero-tn zero))
     (inst div x y)
     (inst mflo q)
@@ -354,7 +354,7 @@
   (:results (r :scs (signed-reg)))
   (:result-types *)
   (:generator 10
-    (let ((zero (generate-error-code di:division-by-zero-error x y)))
+    (let ((zero (generate-error-code division-by-zero-error x y)))
       (inst beq y zero-tn zero))
     (inst div x y)
     (inst mfhi r)))
@@ -690,15 +690,28 @@
 (define-vop (bignum-floor)
   (:translate bignum::%floor)
   (:policy :fast-safe)
-  (:args (a :scs (unsigned-reg))
+  (:args (a :scs (unsigned-reg) :target rem)
 	 (b :scs (unsigned-reg))
 	 (c :scs (unsigned-reg)))
+  (:temporary (:scs (unsigned-reg)) temp result)
   (:results (quo :scs (unsigned-reg))
 	    (rem :scs (unsigned-reg)))
-  (:generator 3
-    (progn a b c quo rem)
-    (warn "Don't know how to divide a 64 bit number by a 32 bit number.")))
-
+  (:generator 230
+    (flet ((maybe-subtract (&optional (guess temp))
+	     (inst subu temp guess 1)
+	     (inst and temp c)
+	     (inst subu a temp)))
+      (inst sltu result a c)
+      (maybe-subtract result)
+      (dotimes (i 32)
+	(inst sll a 1)
+	(inst srl temp b 31)
+	(inst or a temp)
+	(inst sll b 1)
+	(inst sltu temp a c)
+	(maybe-subtract)))
+    (inst nor quo result)
+    (move rem a)))
 
 (define-vop (signify-digit)
   (:translate bignum::%fixnum-digit-with-correct-sign)
