@@ -642,7 +642,7 @@
 	      (setf (vop-save-set vop) ss)
 	      (when (eq save-p :force-to-stack)
 		(do-live-tns (tn ss block)
-		  (when (eq (tn-kind tn) :normal)
+		  (unless (eq (tn-kind tn) :component)
 		    (force-tn-to-stack tn)
 		    (convert-to-environment-tn tn)))))))
 	
