@@ -1,4 +1,6 @@
 /*
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/pager.h,v 1.2 1991/02/19 12:27:47 ch Exp $
+ * 
  * pager.h
  */
 
@@ -11,6 +13,8 @@ typedef struct pager_object {
 	memory_object_name_t name;
 	vm_size_t size;
 	vm_address_t backing_store;
+	vm_size_t page_size;
+	unsigned long *marked_pages;
 	struct pager_object *prev;
 	struct pager_object *next;
 } pager_object_t;

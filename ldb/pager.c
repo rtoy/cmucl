@@ -1,4 +1,6 @@
 /*
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/pager.c,v 1.2 1991/02/19 12:27:41 ch Exp $
+ * 
  * Mach Memory Manager for GC Support
  *
  * Written by Christopher Hoover
@@ -13,6 +15,28 @@
 
 static port_t pager_port;
 static port_set_name_t pager_port_set;
+
+
+/* Marking */
+
+#define PAGE_SIZE (4096)	/* ### Ack!  I want a constant here. */
+#define PAGE_SIZE_L2 (12)	/* log_{2} PAGE_SIZE  */
+
+#define OFFSET_TO_PAGE(offset) ((offset)>>PAGE_SIZE_L2)
+
+#define BITS_PER_BYTE (8)
+#define PAGES_PER_INDEX (sizeof(unsigned long) * BITS_PER_BYTE)
+
+#define PAGE_INDEX(page) ((page) / PAGES_PER_INDEX)
+#define PAGE_BIT(page) ((page) % PAGES_PER_INDEX)
+
+#define MARK(marked_pages,offset)					\
+	{ 								\
+		int page; 						\
+									\
+		page = OFFSET_TO_PAGE(offset); 				\
+	  	marked_pages[PAGE_INDEX(page)] |= (1<<PAGE_BIT(page));	\
+	}
 
 
 /* Pager Object Registry */
@@ -208,13 +232,21 @@ vm_size_t memory_object_page_size;
 	/* Find the pager object associated with this memory object. */
 	object = find_pager_object(memory_object);
 	if (object == NULL_PAGER_OBJECT) {
-		pagerlog("No pager object for memory object!\n");
+		pagerlog("No pager object for memory object in memory_object_init!\n");
+		return KERN_FAILURE;
+	}
+
+	if (memory_object_page_size != PAGE_SIZE) {
+		pagerlog("Hep me!  Page size, %d bytes, is not %d bytes!",
+			 memory_object_page_size, PAGE_SIZE);
 		return KERN_FAILURE;
 	}
 
 	/* Record the interesting information. */
 	object->control = memory_control;
 	object->name = memory_object_name;
+	object->page_size = memory_object_page_size;
+		
 
 	/* Handshake with kernel. */
 
@@ -241,7 +273,7 @@ memory_object_name_t memory_object_name;
 	/* Find the pager object associated with this memory object. */
 	object = find_pager_object(memory_object);
 	if (object == NULL_PAGER_OBJECT) {
-		pagerlog("No pager object for memory object!\n");
+		pagerlog("No pager object for memory object in memory_object_terminate!\n");
 		return KERN_FAILURE;
 	}
 
@@ -261,13 +293,15 @@ vm_prot_t desired_access;
 {
 	pager_object_t *object;
 
+#if defined(LOG_REQUESTS)
 	pagerlog("memory_object_data_request(memory_object = %d, memory_control = %d, offset = 0x%08x, length = 0x%08x, desired access = 0x%0x)\n",
 	       memory_object, memory_control, offset, length, desired_access);
+#endif
 
 	/* Find the pager object associated with this memory object. */
 	object = find_pager_object(memory_object);
 	if (object == NULL_PAGER_OBJECT) {
-		pagerlog("No pager object for memory object!\n");
+		pagerlog("No pager object for memory object in memory_object_data_request!\n");
 		return KERN_FAILURE;
 	}
 
@@ -280,7 +314,7 @@ vm_prot_t desired_access;
 							    length, VM_PROT_NONE));
 	} else {
 		/* Out of bounds. */
-		pagerlog("Out of bounds memory request\n");
+		pagerlog("Out of bounds memory request in memory_object_data_request\n");
 		SYSCALL_OR_LOSE(memory_object_data_error(memory_control,
 							 offset, length,
 							 KERN_INVALID_ADDRESS));
@@ -298,20 +332,23 @@ unsigned int dataCnt;
 {
 	pager_object_t *object;
 
+#if defined(LOG_REQUESTS)
 	pagerlog("memory_object_data_write(memory_object = %d, memory_control = %d, offset = 0x%08x, data = 0x%08x, dataCnt = 0x%08x)\n",
 	       memory_object, memory_control, offset, data, dataCnt);
+#endif
 
-	/* ### Stick recording mechanism in this routine. */
+	/* Mark the page as dirty.
+	MARK(object->marked_pages, offset);
 
 	/* Find the pager object associated with this memory object. */
 	object = find_pager_object(memory_object);
 	if (object == NULL_PAGER_OBJECT) {
-		pagerlog("No pager object for memory object!\n");
+		pagerlog("No pager object for memory object in memory_object_data_write!\n");
 		return KERN_FAILURE;
 	}
 
-	SYSCALL_OR_LOSE(vm_copy(task_self(), data, dataCnt,
-				object->backing_store + offset));
+	bcopy((char *) data, (char *) (object->backing_store + offset), dataCnt);
+
 	SYSCALL_OR_LOSE(vm_deallocate(task_self(), data, dataCnt));
 
 	return KERN_SUCCESS;
@@ -534,13 +571,15 @@ pager_init()
 {
 	pager_objects_mutex = mutex_alloc();
 
-	pagerlog("*** lisp pager log start ***\n");
+	pagerlog(";;; Lisp pager log started.\n;;;\n");
 
 	SYSCALL_OR_LOSE(port_allocate(task_self(), &pager_port));
-	pagerlog("pager_port = %d\n", pager_port);
+	pagerlog(";;; pager_port = %d\n", pager_port);
 
 	SYSCALL_OR_LOSE(port_set_allocate(task_self(), &pager_port_set));
-	pagerlog("pager_port_set = %d\n", pager_port_set);
+	pagerlog(";;; pager_port_set = %d\n", pager_port_set);
+
+	pagerlog(";;;\n");
 
 	SYSCALL_OR_LOSE(port_set_add(task_self(), pager_port_set, pager_port));
 
