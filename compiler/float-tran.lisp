@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.4 1990/10/18 02:53:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.5 1990/10/20 05:40:02 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -49,6 +49,15 @@
 			  (member double-float long-float))))
   '(%double-float n))
 
+
+(defknown %unary-truncate (real) integer (movable foldable flushable))
+
+;;; Not strictly a float function, but primarily useful on floats:
+;;;
+(deftransform truncate ((x &optional by)
+			(* &optional (constant-argument (member 1))))
+  '(let ((res (%unary-truncate x)))
+     (values res (- x res))))
 
 
 ;;;; Float accessors:
@@ -172,7 +181,25 @@
   '(scale-double-float f ex))
 
 
-;;;; Misc transforms:
+;;;; Float contagion:
+
+;;; FLOAT-CONTAGION-ARG1, ARG2  --  Internal
+;;;
+;;;    Do some stuff to recognize when the luser is doing mixed float and
+;;; rational arithmetic, and fix it up.  If we don't, he won't even get so much
+;;; as an efficency note.
+;;;
+(deftransform float-contagion-arg1 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+    (float x y) y))
+;;;
+(deftransform float-contagion-arg2 ((x y) * * :defun-only t :node node)
+  `(,(continuation-function-name (basic-combination-fun node))
+    x (float y x)))
+
+(dolist (x '(+ * / -))
+  (%deftransform x '(function (rational float) *) #'float-contagion-arg1)
+  (%deftransform x '(function (float rational) *) #'float-contagion-arg2))
 
 ;;; Prevent zerop, plusp, minusp from losing horribly.  We can't in general do
 ;;; float contagion on args to comparison, since Common Lisp semantics says we
@@ -189,16 +216,6 @@
   (frob <)
   (frob >)
   (frob =))
-
-
-(defknown %unary-truncate (real) integer (movable foldable flushable))
-
-;;; Not strictly a float function, but primarily useful on floats:
-;;;
-(deftransform truncate ((x &optional by)
-			(* &optional (constant-argument (member 1))))
-  '(let ((res (%unary-truncate x)))
-     (values res (- x res))))
 
 
 ;;;; Irrational stuff:
