@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.4 1990/11/30 11:44:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.5 1990/11/30 14:02:15 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -238,6 +238,7 @@
 
 #+assembler
 (defun emit-divide-loop (divisor rem quo tagged)
+  (inst li quo 0)
   (labels
       ((do-loop (depth)
 	 (cond
@@ -275,7 +276,6 @@
 			  (:res rem any-reg nl0-offset))
 
   (move rem dividend)
-  (inst li quo 0)
   (emit-divide-loop divisor rem quo t))
 
 
@@ -307,6 +307,7 @@
     (inst ba :lt label)
     (inst neg divisor)
     (emit-label label))
+  (move rem dividend)
   (emit-divide-loop divisor rem quo t)
   (let ((label (gen-label)))
     ;; If the quo-sign is negative, we need to negate quo.
@@ -351,6 +352,7 @@
     (inst ba :lt label)
     (inst neg divisor)
     (emit-label label))
+  (move rem dividend)
   (emit-divide-loop divisor rem quo nil)
   (let ((label (gen-label)))
     ;; If the quo-sign is negative, we need to negate quo.
