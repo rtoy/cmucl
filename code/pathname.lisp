@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.34 1998/12/19 16:09:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.35 1998/12/29 17:55:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -308,25 +308,30 @@
 
 ;;; DIRECTORY-COMPONENTS-MATCH  --  Internal
 ;;;
-;;;    Pathname-match-p for directory components.
+;;;    Pathname-match-p for directory components. If thing is empty
+;;; then it matches :wild, (:absolute :wild-inferiors), or (:relative
+;;; :wild-inferiors).
 ;;;
 (defun directory-components-match (thing wild)
   (or (eq thing wild)
       (eq wild :wild)
       (and (consp wild)
 	   (let ((wild1 (first wild)))
-	     (if (eq wild1 :wild-inferiors)
-		 (let ((wild-subdirs (rest wild)))
-		   (or (null wild-subdirs)
-		       (loop
-			 (when (directory-components-match thing wild-subdirs)
-			   (return t))
-			 (pop thing)
-			 (unless thing (return nil)))))
-		 (and (consp thing)
-		      (components-match (first thing) wild1)
-		      (directory-components-match (rest thing)
-						  (rest wild))))))))
+	     (cond ((and (null thing) (member wild1 '(:absolute :relative)))
+		    (equal (rest wild) '(:wild-inferiors)))
+		   ((eq wild1 :wild-inferiors)
+		    (let ((wild-subdirs (rest wild)))
+		      (or (null wild-subdirs)
+			  (loop
+			   (when (directory-components-match thing
+							     wild-subdirs)
+			     (return t))
+			   (pop thing)
+			   (unless thing (return nil))))))
+		   ((consp thing)
+		    (and (components-match (first thing) wild1)
+			 (directory-components-match (rest thing)
+						     (rest wild)))))))))
 
 
 ;;; COMPONENTS-MATCH -- Internal
@@ -1146,14 +1151,17 @@ a host-structure or string."
 ;;;    Called by TRANSLATE-PATHNAME on the directory components of its argument
 ;;; pathanames to produce the result directory component.  If any leaves the
 ;;; directory NIL, we return the source directory.  The :RELATIVE or :ABSOLUTE
-;;; is always taken from the source directory.
+;;; is always taken from the source directory. If TO is :absolute, the result
+;;; will be :absolute
 ;;;
 (defun translate-directories (source from to diddle-case)
   (if (not (and source to from))
-      (or to
+      (or (and to (null source) (remove :wild-inferiors to))
 	  (mapcar #'(lambda (x) (maybe-diddle-case x diddle-case)) source))
       (collect ((res))
-	(res (first source))
+	(res (if (eq (first to) :absolute)
+		 :absolute
+		 (first source)))
 	(let ((subs-left (compute-directory-substitutions (rest source)
 							  (rest from))))
 	  (dolist (to-part (rest to))
