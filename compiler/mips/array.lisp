@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.41 1993/05/25 19:07:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.42 1993/06/12 20:35:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -154,7 +154,8 @@
 
 ); eval-when (compile eval)
 
-(def-full-data-vector-frobs simple-vector * descriptor-reg any-reg)
+(def-full-data-vector-frobs simple-vector *
+  descriptor-reg any-reg null zero)
 
 (def-partial-data-vector-frobs simple-string base-char :byte nil
   base-char-reg)

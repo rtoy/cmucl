@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.33 1993/01/13 16:05:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.34 1993/06/12 20:35:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -65,7 +65,7 @@
     (loadw y nfp (tn-offset x))))
 
 (define-move-function (store-stack 5) (vop x y)
-  ((any-reg descriptor-reg) (control-stack))
+  ((any-reg descriptor-reg null zero) (control-stack))
   (store-stack-tn y x))
 
 (define-move-function (store-number-stack 5) (vop x y)
@@ -81,17 +81,22 @@
 ;;;
 (define-vop (move)
   (:args (x :target y
-	    :scs (any-reg descriptor-reg)
+	    :scs (any-reg descriptor-reg zero null)
 	    :load-if (not (location= x y))))
-  (:results (y :scs (any-reg descriptor-reg)
+  (:results (y :scs (any-reg descriptor-reg control-stack)
 	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
   (:generator 0
-    (move y x)))
+    (unless (location= x y)
+      (sc-case y
+	((any-reg descriptor-reg)
+	 (inst move y x))
+	(control-stack
+	 (store-stack-tn y x))))))
 
 (define-move-vop move :move
-  (any-reg descriptor-reg)
+  (any-reg descriptor-reg zero null)
   (any-reg descriptor-reg))
 
 ;;; Make Move the check VOP for T so that type check generation doesn't think
@@ -105,7 +110,7 @@
 ;;;
 (define-vop (move-argument)
   (:args (x :target y
-	    :scs (any-reg descriptor-reg))
+	    :scs (any-reg descriptor-reg null zero))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y any-reg descriptor-reg))))
   (:results (y))
@@ -117,7 +122,7 @@
        (storew x fp (tn-offset y))))))
 ;;;
 (define-move-vop move-argument :move-argument
-  (any-reg descriptor-reg)
+  (any-reg descriptor-reg null zero)
   (any-reg descriptor-reg))
 
 

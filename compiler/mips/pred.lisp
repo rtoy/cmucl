@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.6 1991/02/20 15:15:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.7 1993/06/12 20:35:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/pred.lisp,v 1.6 1991/02/20 15:15:00 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of predicate VOPs for the MIPS.
 ;;;
@@ -37,8 +35,6 @@
 
 ;;;; Conditional VOPs:
 
-;if-true (???), if-eql, ...
-
 (define-vop (if-eq)
   (:args (x :scs (any-reg descriptor-reg zero null))
 	 (y :scs (any-reg descriptor-reg zero null)))
@@ -47,17 +43,9 @@
   (:policy :fast-safe)
   (:translate eq)
   (:generator 3
-    (let ((x-prime (sc-case x
-		     ((any-reg descriptor-reg) x)
-		     (zero zero-tn)
-		     (null null-tn)))
-	  (y-prime (sc-case y
-		     ((any-reg descriptor-reg) y)
-		     (zero zero-tn)
-		     (null null-tn))))
-      (if not-p
-	  (inst bne x-prime y-prime target)
-	  (inst beq x-prime y-prime target)))
+    (if not-p
+	(inst bne x y target)
+	(inst beq x y target))
     (inst nop)))
 
 

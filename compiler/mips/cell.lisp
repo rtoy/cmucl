@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.73 1993/05/20 13:35:48 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.74 1993/06/12 20:35:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 
 (define-vop (set-slot)
   (:args (object :scs (descriptor-reg))
-	 (value :scs (descriptor-reg any-reg)))
+	 (value :scs (descriptor-reg any-reg null zero)))
   (:info name offset lowtag #+gengc remember)
   (:ignore name)
   (:results)
@@ -243,7 +243,7 @@
 
 (define-full-setter set-funcallable-instance-info *
   funcallable-instance-info-offset function-pointer-type
-  (descriptor-reg any-reg) * %set-funcallable-instance-info)
+  (descriptor-reg any-reg null zero) * %set-funcallable-instance-info)
 
 (define-full-reffer funcallable-instance-info *
   funcallable-instance-info-offset function-pointer-type
@@ -297,7 +297,7 @@
   instance-pointer-type (descriptor-reg any-reg) * %instance-ref)
 
 (define-full-setter instance-index-set * instance-slots-offset
-  instance-pointer-type (descriptor-reg any-reg) * %instance-set)
+  instance-pointer-type (descriptor-reg any-reg null zero) * %instance-set)
 
 
 
@@ -307,7 +307,7 @@
   (descriptor-reg any-reg) * code-header-ref)
 
 (define-full-setter code-header-set * 0 other-pointer-type
-  (descriptor-reg any-reg) * code-header-set)
+  (descriptor-reg any-reg null zero) * code-header-set)
 
 
 
@@ -345,7 +345,7 @@
     (move res arg)))
 
 (define-vop (mutator-descriptor-set mutator-ub32-set)
-  (:args (arg :scs (any-reg descriptor-reg) :target res))
+  (:args (arg :scs (any-reg descriptor-reg null zero) :target res))
   (:arg-types *)
   (:results (res :scs (any-reg descriptor-reg)))
   (:result-types *))

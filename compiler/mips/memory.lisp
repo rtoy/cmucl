@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.14 1993/01/13 16:06:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.15 1993/06/12 20:35:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,7 +35,7 @@
 ;;;
 (define-vop (cell-set)
   (:args (object :scs (descriptor-reg))
-         (value :scs (descriptor-reg any-reg)))
+         (value :scs (descriptor-reg any-reg null zero)))
   (:variant-vars offset lowtag)
   #+gengc (:info remember)
   (:policy :fast-safe)
@@ -61,7 +61,7 @@
 ;;;
 (define-vop (slot-set)
   (:args (object :scs (descriptor-reg))
-	 (value :scs (descriptor-reg any-reg)))
+	 (value :scs (descriptor-reg any-reg null zero)))
   (:variant-vars base lowtag)
   (:info offset #+gengc remember)
   (:generator 4

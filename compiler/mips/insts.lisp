@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.48 1993/05/21 21:31:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.49 1993/06/12 20:35:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,9 @@
     (fixup)
     (tn
      (ecase (sb-name (sc-sb (tn-sc loc)))
+       (immediate-constant
+	;; Can happen if $ZERO or $NULL are passed in.
+	nil)
        (registers
 	(unless (zerop (tn-offset loc))
 	  (tn-offset loc)))

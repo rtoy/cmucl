@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.19 1993/01/13 16:03:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.20 1993/06/12 20:35:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -77,7 +77,7 @@
 	(let ((arg-name (intern (format nil "ARG-~D" i))))
 	  (arg-names arg-name)
 	  (args `(,arg-name
-		  :scs (any-reg descriptor-reg)
+		  :scs (any-reg descriptor-reg null zero)
 		  :target ,(nth i (temp-names))))))
       `(define-vop (,(static-function-template-name num-args num-results)
 		    static-function-template)
