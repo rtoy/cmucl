@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.69 1999/09/23 16:14:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.70 1999/12/03 16:24:57 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1111,11 +1111,13 @@
   (let ((name (dd-name defstruct))
 	(pred (dd-predicate defstruct)))
     (when (and pred (dd-named defstruct))
-      (let ((ltype (dd-lisp-type defstruct)))
+      (let ((ltype (dd-lisp-type defstruct))
+	    (index (cdr (car (last (find-name-indices defstruct))))))
 	`((defun ,pred (object)
 	    (and (typep object ',ltype)
-		 (eq (elt (the ,ltype object)
-			  ,(cdr (car (last (find-name-indices defstruct)))))
+		 (eq ,(if (eq ltype 'list)
+			  `(nth ,index object)
+			  `(elt object ,index))
 		     ',name))))))))
 
 
