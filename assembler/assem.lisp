@@ -19,7 +19,7 @@
 
 (in-package 'compiler :use '(system))
 
-(import '(lisp::%fasl-code-format lisp::compiler-notification))
+(import '(lisp::%fasl-code-format))
 
 ;;; Version number.
 
@@ -28,7 +28,56 @@
 
 (proclaim '(special compiler-version target-machine target-system
 		    *compile-to-lisp* *lisp-package* *keyword-package*))
-   
+
+
+
+(defvar function-name nil
+  "Holds a symbol that names the function currently being compiled,
+  or nil if between functions.")
+
+;;; Output streams:
+;;; If a stream is NIL, don't produce that kind of output.
+(defvar *clc-fasl-stream* nil)
+(defvar *clc-lap-stream* nil)
+(defvar *clc-err-stream* nil)
+
+;;; Stuff we keep track of for the error log:
+
+(defvar functions-with-errors nil
+  "A list of all functions that did not compile properly due to errors in
+  the code.")
+
+(defvar error-count 0
+  "The number of errors generated during this compilation.")
+
+(defvar warning-count 0
+  "The number of warnings generated during this compilation.")
+
+(defvar unknown-functions nil
+  "List of functions called but not yet seen and not built-in.  The user
+  is informed of any function still on this list at the end of a file
+  compilation.")
+
+(defvar unknown-free-vars nil
+  "A list of all variables referenced free in the compilation, but not
+  bound or declared special anywhere.  These are assumed to be special
+  variables, but are listed in a warning message at the end of the
+  compilation.")
+
+(defvar *verbose* t
+  "If nil, only true error messages and warnings go to the error stream.
+  If non-null, prints a message as each function is compiled.")
+
+(defvar *compile-to-lisp* nil
+  "If non-null, stuff compiled definitions into the compiler's own Lisp
+  environment.")
+
+(defvar *clc-input-stream* nil)
+(defvar *input-filename* nil "Truename of file being compiled.")
+(defvar *compiler-is-reading* nil
+  "This is true only if we are actually doing a read from *clc-input-stream*.
+  #, (in the reader) looks at this.")
+
   
 ;;; The Line-Length of the lap stream...
 (defvar *lap-line-length*)
@@ -50,7 +99,6 @@
 ;;; probably not affect the correctness of his code.
 
 (defun clc-comment (string &rest args)
-  (compiler-notification :comment function-name)
   (when *clc-err-stream*
     (if (or (not function-name) (eq function-name 'lisp::top-level-form))
 	(format *clc-err-stream* "Comment between functions:~%  ")
@@ -64,7 +112,6 @@
 ;;; knows what he is doing.
 
 (defun clc-warning (string &rest args)
-  (compiler-notification :warning function-name)
   (when *clc-err-stream*
     (incf warning-count)
     (if (or (not function-name) (eq function-name 'lisp::top-level-form))
@@ -79,7 +126,6 @@
 ;;; as many errors as possible can be caught per compilation.
 
 (defun clc-error (string &rest args)
-  (compiler-notification :error function-name)
   (when *clc-err-stream*
     (incf error-count)
     (cond ((or (not function-name) (eq function-name 'lisp::top-level-form))
@@ -107,13 +153,12 @@
 	 (now (get-universal-time))
 	 (now-string (universal-time-to-string now))
 	 (in-string (if *input-filename* (namestring *input-filename*)))
-	 (then (if (and *input-filename*
-			(not *surrogate-input-filename*))
+	 (then (if *input-filename*
 		   (file-write-date *input-filename*)))
 	 (then-string (if then (universal-time-to-string then)))
 	 (where (cond ((not *clc-input-stream*)
 		       (format nil "Lisp on ~A, machine ~A" now-string host))
-		      ((and *surrogate-input-filename* in-string)
+		      (in-string
 		       (format nil "~A ~A" in-string now-string))
 		      ((not then)
 		       (format nil "~S on ~A, machine ~A" *clc-input-stream*
@@ -124,7 +169,7 @@
     ;; Set the defined-from string:
     (setq *current-defined-from* (format nil "~A ~D" where (or then now)))
 
-    (when (and *input-filename* (not *surrogate-input-filename*))
+    (when *input-filename*
       (setq *start-real-time* (get-internal-real-time))
       (setq *start-run-time* (get-internal-run-time))
       (clc-mumble "Error output from ~A.~@
@@ -145,7 +190,7 @@
 	      Targeted for ~A/~A, FASL code format ~D~%"
 	      where now-string host compiler-version assembler-version
 	      (lisp-implementation-version) target-machine target-system
-	      target-fasl-code-format)
+	      c::target-fasl-code-format)
       (start-fasl-file))))
 
 ;;; Also the ten-dozenth place this is defined...
@@ -175,7 +220,7 @@
   (when *clc-fasl-stream* (terminate-fasl-file))
   
   ;; All done.  Let the post-mortems begin.
-  (when (and *input-filename* (not *surrogate-input-filename*))
+  (when *input-filename*
     (clc-mumble "~%Finished compilation of file ~S.~%"
 		(namestring *input-filename*))
     (clc-mumble "~S Errors, ~S Warnings.~%" error-count warning-count)
@@ -301,7 +346,7 @@
   (dump-byte 255)
   ;; Perq code format.
   (dump-fop 'lisp::fop-code-format)
-  (dump-byte target-fasl-code-format))
+  (dump-byte c::target-fasl-code-format))
 
 ;;; Terminate-Fasl-File  --  Internal
 ;;;
@@ -330,122 +375,7 @@
     (dump-object form))
   (dump-fop 'lisp::fop-eval-for-effect)
   (dump-fop 'lisp::fop-maybe-cold-load))
-
-;;; Start-Fasl-Function  --  Internal
-;;;
-;;;    Push on the fasl stack the function-overhead pseudo-constants for
-;;; Lap-Function.
-;;;
-(defun start-fasl-function (lap-function)
-  ;;
-  ;; First comes the function type, which is not really a boxed thing
-  ;; at all, but rather the subtype of the function object.
-  (dump-integer (lap-function-subtype lap-function))
-  ;;
-  ;; The first actual boxed thing is Function-Name, which is the
-  ;; name of the innermost enclosing named function.
-  (dump-object (lap-function-name lap-function))
-  ;;
-  ;; Second, place holder for code vector.
-  (dump-fop 'lisp::fop-misc-trap)
-  ;;
-  ;; The Arg info is third:
-  (dump-integer (lap-function-arg-info lap-function))
-  ;;
-  ;; Fourth, the defined-from string:
-  (dump-object *current-defined-from*)
-  ;;
-  ;; Fifth, debug arguments:
-  (dump-object (make-arg-names lap-function)))
 
-;;; Finish-Fasl-Function  --  Internal
-;;;
-;;;    Turn the constants on the fop-stack into a function-object corresponding
-;;; to Lap-Function and Num-Consts.
-;;;
-(defun finish-fasl-function (lap-function num-consts fixups)
-  (declare (ignore lap-function))
-  (let ((num-consts (+ num-consts %function-constants-offset 1))
-	(num-bytes romp-code-size))
-    (cond ((and (< num-consts #x100) (< num-bytes #x10000))
-	   (dump-fop 'lisp::fop-small-code)
-	   (dump-byte num-consts)
-	   (quick-dump-number num-bytes 2))
-	  (t
-	   (dump-fop 'lisp::fop-code)
-	   (quick-dump-number num-consts 4)
-	   (quick-dump-number num-bytes 4)))
-    ;;
-    ;; Dump code bytes.
-    (dotimes (i romp-code-size)
-      (dump-byte (aref romp-code-vector i)))
-
-    ;;
-    ;; Dump loader function link fixups.
-    (dolist (fixup fixups)
-      (cond ((eq (car fixup) 'miscop)
-	     (let ((pc (cadr fixup))
-		   (index (caddr fixup)))
-	       (dump-fop 'lisp::fop-miscop-fixup)
-	       (quick-dump-number index 2)
-	       (quick-dump-number pc 4)))
-	    ((eq (car fixup) 'user-miscop)
-	     (let ((pc (cadr fixup)))
-	       (dump-symbol (caddr fixup))
-	       (dump-fop 'lisp::fop-user-miscop-fixup)
-	       (quick-dump-number pc 4)))
-	    ((eq (car fixup) 'load-link)
-	     (let* ((lte (caddr fixup))
-		    (function (cadr lte))
-		    (nargs (caddr lte))
-		    (flag (cadddr lte))
-		    (offset (cadr fixup)))
-	       (dump-symbol function)
-	       (dump-fop 'lisp::fop-link-address-fixup)
-	       (dump-byte nargs)
-	       (dump-byte (if flag 1 0))
-	       (quick-dump-number offset 4)))
-	    (T (clc-error "Unknown fixup block: ~A." fixup))))))
-
-;;; Dump-Function  --  Internal
-;;;
-;;;    Dump a compiled function object.  We signal an error if the
-;;; current fasl code format is different from the target fasl code format,
-;;; since dumping a function is ill-defined then.
-;;;
-(defun dump-function (fun)
-  (when (/= %fasl-code-format target-fasl-code-format)
-    (clc-error "Cannot dump compiled function for different fasl format:~%  ~S"
-	       fun)
-    (dump-object nil)
-    (return-from dump-function nil))
-  
-  (let* ((num-consts (1+ (%primitive header-length fun)))
-	 (code (%primitive header-ref fun %function-code-slot))
-	 (num-bytes (length code)))
-    ;;
-    ;; Dump the subtype which is a pseudo-boxed-thing.
-    (dump-integer (%primitive get-vector-subtype fun))
-    ;;
-    ;; Dump all the slots except for the code; leave a placeholder for it.
-    (dotimes (i (1- num-consts))
-      (if (= i %function-code-slot)
-	  (dump-fop 'lisp::fop-misc-trap)
-	  (dump-object (%primitive header-ref fun i))))
-    ;;
-    ;; Dump the appropriate fop.
-    (cond ((and (< num-consts #x100) (< num-bytes #x10000))
-	   (dump-fop 'lisp::fop-small-code)
-	   (dump-byte num-consts)
-	   (quick-dump-number num-bytes 2))
-	  (t
-	   (dump-fop 'lisp::fop-code)
-	   (quick-dump-number num-consts 4)
-	   (quick-dump-number num-bytes 4)))
-    ;;
-    ;; Dump code bytes.
-    (dotimes (i num-bytes)
-      (dump-byte (aref code i)))))
 
 ;;; Dump-Object  -- Internal
 ;;;
@@ -468,7 +398,7 @@
 	(dump-symbol x)))
    ((fixnump x) (dump-integer x))
    ((characterp x) (dump-character x))
-   ((short-floatp x) (dump-short-float x))
+   ((typep x 'short-float) (dump-short-float x))
    (t
     ;;
     ;; Look for it in the table; if it is there, push it, otherwise
@@ -504,19 +434,6 @@
 	  (dump-fop* fop-table-counter lisp::fop-byte-push lisp::fop-push)
 	  (setf (gethash x *table-table*) fop-table-counter)
 	  (incf fop-table-counter))))))))
-
-;;; Load-Time-Eval  --  Internal
-;;;
-;;;    This guy deals with the magical %Eval-At-Load-Time marker that
-;;; #, turns into when the *compiler-is-reading* and a fasl file is being
-;;; written.
-;;;
-(defun load-time-eval (x)
-  (when *compile-to-lisp*
-    (clc-error "#,~S in a bad place." (third x)))
-  (assemble-one-lambda (cadr x))
-  (dump-fop 'lisp::fop-funcall)
-  (dump-byte 0))
 
 ;;;; Number Dumping:
 
@@ -764,45 +681,6 @@
     (dump-fop 'lisp::fop-array)
     (quick-dump-number rank 4)))
 
-;;; Dump-I-Vector  --  Internal  
-;;;
-;;;    Dump an I-Vector using the Guy Steele memorial fasl-operation.
-;;;
-(defun dump-i-vector (vec)
-  (let* ((len (length vec))
-	 (ac (%primitive get-vector-access-code
-			 (if (%primitive complex-array-p vec)
-			     (%primitive header-ref vec %array-data-slot)
-			     vec)))
-	 (size (ash 1 ac))
-	 (count (ceiling size 8))
-	 (ints-per-entry (floor (* count 8) size)))
-    (declare (fixnum len ac size count ints-per-entry))
-    (dump-fop 'lisp::fop-int-vector)
-    (quick-dump-number len 4)
-    (dump-byte size)
-    (dump-byte count)
-    (if (> ints-per-entry 1)
-	(do ((prev 0 end)
-	     (end ints-per-entry (the fixnum (+ end ints-per-entry))))
-	    ((>= end len)
-	     (unless (= prev len)
-	       (do ((pos (* (1- ints-per-entry) size) (- pos size))
-		    (idx prev (1+ idx))
-		    (res 0))
-		   ((= idx len)
-		    (dump-byte res))
-		 (setq res (dpb (aref vec idx) (byte size pos) res)))))
-	  (declare (fixnum prev end))
-	  (do* ((idx prev (1+ idx))
-		(res 0))
-	       ((= idx end)
-		(dump-byte res))
-	    (declare (fixnum idx))
-	    (setq res (logior (ash res size) (aref vec idx)))))
-	(dotimes (i len)
-	  (declare (fixnum i))
-	  (quick-dump-number (aref vec i) count)))))
 
 ;;; Dump a character.
 
@@ -817,749 +695,3 @@
     (dump-byte (char-bits ch))
     (dump-byte (char-font ch)))))
 
-
-;;;; THE ASSEMBLER
-
-;;; List of (TAG . POSITION) for each tag within a function.
-(defvar Assemble-Label-List)
-
-;;; Vector to hold assembled code.
-(defvar Romp-Code-Vector)
-
-;;; List of free code vector buffers.
-(defvar free-code-vectors ())
-
-;;; Define macros to access information about Romp instructions.
-;;;
-;;; Romp-Instruction-Type given a symbol which is the name of a Romp
-;;; instruction returns the type of the instruction (i.e., one of JI, X,
-;;; DS, R, BI, BA, or D).
-
-(defmacro Get-Instruction-Type (Instruction)
-  `(get ,Instruction 'romp-instruction-type))
-
-;;; Romp-Operation-Code given a symbol which is the name of a Romp
-;;; instruction returns the integer code for the instruction.
-
-(defmacro Get-Operation-Code (Instruction)
-  `(get ,Instruction 'romp-operation-code))
-
-(defmacro Get-Condition-Code (Test)
-  `(if (symbolp ,Test) (get ,Test 'Condition-Code) ,Test))
-
-(defmacro Get-lis-label-value (label)
-  `(logand (ash (+ (cdr (assoc (cadr ,label) assemble-label-list))
-		   I-Vector-Header-Size) -16) #xF))
-
-;;; Assemble-Function  --  Internal
-;;;
-;;;    Assembles the supplied lap-function and puts the definition all the
-;;; places it belongs.
-;;;
-(defun assemble-function (lap-function)
-  (let ((name (lap-function-name lap-function)))
-    (case (lap-function-type lap-function)
-      ((expr fexpr)
-       (when *clc-fasl-stream* (dump-symbol name))
-       (let ((res (assemble-one-lambda lap-function)))
-	 (when *clc-fasl-stream* (dump-fop 'lisp::fop-fset))
-	 (when *compile-to-lisp*
-	   (set-symbol-function-carefully name res))))
-      (macro
-       (when *clc-fasl-stream*
-	 (dump-symbol name)
-	 (dump-symbol 'MACRO))
-       (let ((res (assemble-one-lambda lap-function)))
-	 (when *clc-fasl-stream*
-	   (dump-fop 'lisp::fop-list*-1)
-	   (dump-fop 'lisp::fop-fset))
-	 (when *compile-to-lisp*
-	   (set-symbol-function-carefully name res))))
-      (one-shot
-       (let ((res (assemble-one-lambda lap-function)))
-	 (when *clc-fasl-stream*
-	   (dump-fop 'lisp::fop-funcall-for-effect)
-	   (dump-byte 0))
-	 (when *compile-to-lisp* (funcall res))))
-      (t
-       (error "Bad function type for Assemble-Function: ~S" lap-function))))
-  (when *clc-fasl-stream* (dump-fop 'lisp::fop-verify-empty-stack)))
-
-;;;; Printing LAP files:
-;;;
-;;;    This code attempts to come up with an output file that is both
-;;; human and machine readable, without worrying a great deal about speed.
-;;; Unfortunately, human and machine readability conflict, so we have a switch:
-
-(defvar *print-readable-lap* nil
-  "If true, lap files will be printed so that they are READ'able, but less
-  readable.")
-
-
-(defparameter lap-indent-step 7)
-
-;;; Indent  --  Internal
-;;;
-;;;    This is the 10-millionth place where this is defined, but what the hey?
-;;;
-(defun indent (n stream)
-  (terpri stream)
-  (write-string "                                                                      "
-		stream :end n))
-;;;
-(defmacro iformat (n &rest args)
-  `(progn
-    (indent ,n stream)
-    (format stream ,@args)))
-
-;;; Start-Lap-Function  --  Internal
-;;;
-;;;    Write out all the info except the constants and code.
-;;;
-(defun start-lap-function (fun level idx)
-  (let ((stream *clc-lap-stream*)
-	(*print-pretty* t)
-	(n (* lap-indent-step level)))
-    (declare (stream stream))
-    (if (zerop level)
-	(format stream "~|~%")
-	(iformat n "#|~D|#" idx))
-	   
-    (iformat n "#S(Lap-Function" #|)|#)
-    (incf n 4)
-    (iformat n "name ~S  type ~A" (lap-function-name fun)
-	     (lap-function-type fun))
-    (iformat n "min-args ~D  max-args ~D  restp ~S"
-	     (lap-function-min-args fun)
-	     (lap-function-max-args fun) (lap-function-restp fun))
-    (iformat n "entry-points ~A" (lap-function-entry-points fun))
-    (iformat n "debug-arglist ~S" (lap-function-debug-arglist fun))
-    (iformat n "locals ~D" (lap-function-locals fun))
-    (cond (*print-readable-lap*
-	   (iformat n "storage-map ~S" (lap-function-storage-map fun))
-	   (iformat n "constants"))
-	  (t
-	   (iformat n "Interesting constants:")))
-    (iformat (+ n 2) "(" #|)|#)))
-
-;;; Print-Lap-Constant  --  Internal
-;;;
-;;;    Print a constant into the lap file.  If *print-readable-lap* is false,
-;;; this only prints things which are apt to be truncated in the operand
-;;; annotation.  Note that this doesn't get called on lap-function constants
-;;; or entry points.
-;;;
-(defun print-lap-constant (const level idx)
-  (let* ((str (let ((*print-pretty* nil))
-		(format nil "#|~D|# ~S " idx const)))
-	 (len (length str))
-	 (n (* (1+ level) lap-indent-step))
-	 (stream *clc-lap-stream*)
-	 (pos (lisp::charpos stream))
-	 (line-len *lap-line-length*))
-    (when (or *print-readable-lap*
-	      (and (not (symbolp const)) (> len (- line-len n 30))))
-      (cond ((> (+ pos len) line-len)
-	     (when (> pos n) (indent n stream))
-	     (cond ((< len (- line-len n))
-		    (write-string str stream))
-		   (t
-		    (iformat n "#|~D|#" idx )
-		    (let ((*print-pretty* t))
-		      (iformat n " ~S" const))
-		    (indent n stream))))
-	    (t
-	     (write-string str stream))))))
-
-;;; Finish-Lap-Function  --  Internal
-;;;
-;;;    Write out the code and stuff for a lap function.
-;;;
-(defun finish-lap-function (fun level)
-  (let* ((n (+ (* level lap-indent-step) 2))
-	 (stream *clc-lap-stream*)
-	 (line-len *lap-line-length*)
-	 (constants (lap-function-constants fun))
-	 (const-offset (+ (length (lap-function-entry-points fun))
-			  function-header-size-in-words)))
-    (write-char #|(|# #\) stream)
-    (iformat (+ n 2) "code (" #|)|#)
-    (let ((*print-pretty* nil)
-	  (*print-length* 20)
-	  (*print-level* 3))
-      (dolist (inst (lap-function-code fun))
-	(cond ((tagp inst)
-	       (iformat (- n 2) "~S ; Address: ~D" inst
-			(cdr (assq inst assemble-label-list))))
-	      (t
-	       (indent n stream)
-	       (if *print-readable-lap*
-		   (prin1 inst stream)
-		   (princ inst stream))
-	       (when (and (memq (first inst) '(ls l)) (eq (third inst) 'af))
-		 (let ((idx (- (ash (fourth inst) -2) const-offset)))
-		   (unless (minusp idx)
-		     (let* ((str (format nil " ; ~S" (elt constants idx)))
-			    (pos (lisp::charpos stream))
-			    (nlpos (position #\newline str))
-			    (len (or nlpos (length str)))
-			    (left (- line-len pos len)))
-		       (declare (simple-string str))
-		       (cond ((or nlpos (minusp left))
-			      (write-string str stream :end
-					    (min (max (+ len left) 8) len))
-			      (write-string "..." stream))
-			     (t
-			      (write-string str stream))))))))))
-    (write-string #|((|# "))" stream)
-    (when (zerop level) (terpri stream)))))
-
-;;; Get-Code-Vector  --  Internal
-;;;
-;;;    Return a code vector at least Bytes long.
-;;;
-(defun get-code-vector (bytes)
-  (if free-code-vectors
-      (let ((vec (pop free-code-vectors)))
-	(if (>= (length vec) bytes)
-	    vec
-	    (make-array (max (* (length vec) 2) bytes)
-			:element-type '(unsigned-byte 8))))
-      (make-array bytes :element-type '(unsigned-byte 8))))
-
-;;; Fixup-To-Lisp  --  Internal
-;;;
-;;;    Do the fixups on the code-vector for the function.
-;;;
-(defun fixup-to-lisp (fun fixups)
-  (let ((code (%primitive header-ref fun %function-code-slot)))
-    (dolist (fixup fixups)
-      (ecase (first fixup)
-	     (miscop
-	      (%primitive miscop-fixup code (second fixup) (third fixup)))
-	     (user-miscop
-	      (let* ((miscop-name (third fixup))
-		     (offset (second fixup))
-		     (loaded-addr (get miscop-name 'lisp::%loaded-address)))
-		(cond ((null loaded-addr)
-		       (format t "User miscop: ~A has not been loaded,~%  ~
-				  function ~A will not run."
-			       miscop-name
-			       (%primitive header-ref fun
-					   %function-name-slot)))
-		      (T (let ((addr (logand loaded-addr #xFFFFFF)))
-			   (declare (fixnum addr))
-			   (setf (aref code (+ offset 1))
-				 (logand (ash addr -16) #xFF))
-			   (setf (aref code (+ offset 2))
-				 (logand (ash addr -8) #xFF))
-			   (setf (aref code (+ offset 3))
-				 (logand loaded-addr #xFF)))))))
-	     (load-link
-	      (let* ((lte (third fixup))
-		     (symbol (second lte))
-		     (nargs (third lte))
-		     (flag (fourth lte)))
-		(%primitive link-address-fixup symbol
-			    (if flag (logior nargs #x8000) nargs)
-			    code (second fixup))))))))
- 
-;;; Assemble-One-Lambda  --  Internal
-;;;
-;;;    Assemble the supplied Lap-Function and dump output to the appropriate
-;;; streams.  If *Compile-To-Lisp* is true then a function object is returned
-;;; as well.
-;;;
-(defun assemble-one-lambda (lap-function &optional (depth 0) index)
-  (let* ((ep (lap-function-entry-points lap-function))
-	 (constants (append ep (lap-function-constants lap-function)))
-	 (num-consts (length constants))
-	 (code (lap-function-code lap-function))
-	 assemble-label-list
-	 romp-code-size)
-    (do ()
-	((not (change-branches-to-jumps code))))
-    (change-load-return code)
-    (let* ((romp-code-vector (get-code-vector romp-code-size))
-	   (fixups (translate code)))
-      ;;
-      ;; If there is a lap file, write out the header...
-      (if *clc-lap-stream* (start-lap-function lap-function depth index))
-      ;;
-      ;; If there is a fasl file, start the function definition by
-      ;; pushing the standard stuff that comes before the constants.
-      (if *clc-fasl-stream* (start-fasl-function lap-function))
-      ;;
-      ;; Loop over the constants, setting function slots and pushing
-      ;; on the stack, as appropriate.  We special-case the magical
-      ;; Lap-Function and **tag** constants.
-      (let ((fun (if *compile-to-lisp*
-		     (create-function lap-function num-consts)))
-	    (idx %function-constants-offset)
-	    (jdx (- (+ (length ep) %function-constants-offset))))
-	
-	(dolist (const constants)
-	  (cond ((lap-function-p const)
-		 (let ((res (assemble-one-lambda const (1+ depth) idx)))
-		   (when *compile-to-lisp*
-		     (%primitive header-set fun idx res))))
-		((or (atom const) (not (eq (car const) '**tag**)))
-		 (when (eq const make-const-lexical-slot)
-		   (setq const 0))
-		 (when (and *clc-lap-stream* (>= jdx 0))
-		   (print-lap-constant const depth jdx))
-		 (when *clc-fasl-stream* (dump-object const))
-		 (when *compile-to-lisp*
-		   (%primitive header-set fun idx const)))
-		(t
-		 (let ((pc (+ (cdr (assoc (cadr const) assemble-label-list))
-			      i-vector-header-size)))
-		   (when (and *clc-lap-stream* (>= jdx 0))
-		     (print-lap-constant const depth jdx))
-		   (when *clc-fasl-stream* (dump-integer pc))
-		   (when *compile-to-lisp*
-		     (%primitive header-set fun idx pc)))))
-	  (incf idx)
-	  (incf jdx))
-	;;
-	;; If dumping to a fasl file, emit the stuff to cons up the function
-	;; out of the constants we have pushed on the stack.
-	(if *clc-fasl-stream*
-	    (finish-fasl-function lap-function num-consts fixups))
-	(push romp-code-vector free-code-vectors)
-	;;
-	;; Dump lap code...
-	(if *clc-lap-stream* (finish-lap-function lap-function depth))
-	;;
-	;; Return the result, macroifying it if appropriate.
-	(when *compile-to-lisp*
-	  (fixup-to-lisp fun fixups)
-	  (if (eq (lap-function-type lap-function) 'macro)
-	      (cons 'macro fun)
-	      fun))))))
-
-;;; Make-Arg-Names  --  Internal
-;;;
-;;;    Takes the list representation of the debug arglist and turns it into a
-;;; string.
-;;;
-(defun make-arg-names (x)
-  (let ((args (lap-function-debug-arglist x)))
-    (if (null args)
-	"()"
-	(let ((*print-pretty* t)
-	      (*print-escape* nil)
-	      (*print-case* :downcase))
-	  (write-to-string args)))))
-  
-;;; Create-Function  --  Internal
-;;;
-;;;    Cons up a function object for the function currently being assembled.
-;;; Leaves the constants to be filled in by Assemble-One-Lambda.
-;;;
-(defun create-function (lap-function num-consts)
-  (let* ((fun-length (+ %function-constants-offset num-consts))
-	 (function (%primitive alloc-function fun-length))
-	 (code (%primitive alloc-i-vector romp-code-size 3)))
-    (%primitive set-vector-subtype code %i-vector-code-subtype)
-    (%primitive set-vector-subtype function
-		(lap-function-subtype lap-function))
-    (%primitive header-set function %function-name-slot
-		(lap-function-name lap-function))
-    (%primitive header-set function %function-code-slot code)
-    (%primitive header-set function %function-min-args-slot
-		(lap-function-arg-info lap-function))
-    (%primitive header-set function %function-defined-from-slot
-		*current-defined-from*)
-    (%primitive header-set function %function-arg-names-slot
-		(make-arg-names lap-function))
-
-    (replace code romp-code-vector :end2 romp-code-size)
-    function))
-
-;;; Lap-Function-Arg-Info  --  Internal
-;;;
-;;;    Returns the magical argument info corresponding to Lap-Function.
-;;;
-(defun lap-function-arg-info (lap-function)
-  (let ((res (dpb (lap-function-locals lap-function) %function-locals-byte
-		  (dpb (lap-function-min-args lap-function)
-		       %function-min-args-byte
-		       (dpb (lap-function-max-args lap-function)
-			    %function-max-args-byte
-			    0)))))
-     (if (lap-function-restp lap-function)
-	 (%primitive logdpb 1 (byte-size %function-rest-arg-byte)
-		     (byte-position %function-rest-arg-byte)
-		     res)
-	 res)))
-
-;;; Lap-Function-Subtype  --  Internal
-;;;
-;;;    Returns the function object subtype corresponding to the type of
-;;; Lap-Function.
-;;;
-(defun lap-function-subtype (lap-function)
-  (ecase (lap-function-type lap-function)
-    (expr %function-expr-subtype)
-    (fexpr %function-fexpr-subtype)
-    (macro %function-macro-subtype)
-    (break-off %function-anonymous-expr-subtype)
-    (one-shot %function-top-level-form-subtype)))
-
-;;;; Shorten branches and assign addresses to labels.
-
-(defun change-branches-to-jumps (code)
-  (declare (optimize (speed 3) (safety 0)))
-  (let ((label-list (assign-label-values code)))
-    (do* ((inst-ptr code (cdr inst-ptr))
-	  (inst (car inst-ptr) (car inst-ptr))
-	  (repeat NIL)
-	  (pc 0))
-	 ((null inst-ptr)
-	  repeat)
-      (declare (fixnum pc) (list inst-ptr))
-      (cond ((listp inst)
-	     (cond ((memq (opcode inst) '(bb bnb))
-		    (let ((label (cdr (assq (branch-tag inst) label-list))))
-		      (declare (fixnum label))
-		      (cond ((and (fixnump label)
-				  (< (the fixnum
-					  (abs (the fixnum
-						    (- pc label)))) 128))
-			     (setq repeat t)
-			     (rplaca inst-ptr
-				     `(,(if (eq (opcode inst) 'bb) 'jb 'jnb)
-				       ,@(cdr inst))))))))
-	     (setq PC (the fixnum
-			   (+ PC (the fixnum
-				      (romp-instruction-length
-				       (opcode (car inst-ptr))))))))))))
-
-(defun assign-label-values (code)
-  (declare (optimize (speed 3) (safety 0)))
-  (do* ((inst-ptr code (cdr inst-ptr))
-	(inst (car inst-ptr) (car inst-ptr))
-	(pc 0)
-	(label-list NIL))
-       ((null inst-ptr)
-	(setq assemble-label-list label-list)
-	(setq Romp-Code-Size pc)
-	label-list)
-    (declare (fixnum pc))
-    (if (atom inst)
-	(push (cons inst pc) label-list)
-	(setq  pc
-	       (the fixnum
-		    (+ pc (the fixnum
-			       (romp-instruction-length (opcode inst)))))))))
-
-(defun romp-instruction-length (opcode)
-  (cond ((eq opcode 'load-link) 8)
-	((memq opcode '(miscop miscopx user-miscop user-miscopx)) 4)
-	((eq opcode 'load-return) 8)
-	(T (case (get opcode 'romp-instruction-type)
-	     (ji 2)
-	     (x 2)
-	     (ds 2)
-	     (r 2)
-	     (bi 4)
-	     (ba 4)
-	     (d 4)
-	     (T (clc-error "Unknown opcode: ~A." opcode) 0)))))
-
-
-;;; Fix up load-return pseudos.
-
-(defun change-load-return (code)
-  (declare (optimize (speed 3) (safety 0)))
-  (assign-label-values code)
-  (do* ((inst-ptr (cdr code) (cdr inst-ptr))
-	(inst (car inst-ptr) (car inst-ptr))
-	(pc-diff 0)
-	(label-list assemble-label-list))
-       ((null inst-ptr)
-	(assign-label-values code))
-    (declare (fixnum pc-diff))
-    (cond ((and (listp inst) (eq (opcode inst) 'load-return))
-	   (let* ((label (operand1 inst))
-		  (offset (- (cdr (assoc (cadr label) label-list)) pc-diff)))
-	     (declare (fixnum offset))
-	     (cond ((<= offset romp-max-immed-number)
-		    (rplaca inst-ptr `(cal PC 0 ,label))
-		    (setq pc-diff (the fixnum (+ pc-diff 4))))
-		   ((= (the fixnum (ash offset -16)) 0)
-		    (setq pc-diff (the fixnum (+ pc-diff 2)))
-		    (rplaca inst-ptr `(lis pc ,label))
-		    (rplacd inst-ptr (cons `(oil pc pc ,label)
-					   (cdr inst-ptr))))
-		   (T (rplaca inst-ptr `(cau pc 0 ,label))
-		      (rplacd inst-ptr (cons `(oil pc pc ,label)
-					     (cdr inst-ptr))))))))))
-
-
-;;; Translate translates the assembler code into actual bits.  The list
-;;; of loader-fixups is returned.
-
-(defvar Assemble-PC)
-(defvar Assemble-Fixup-List NIL)
-
-(defun translate (code)
-  (declare (optimize (speed 3) (safety 0)))
-  (do* ((Rest code (cdr Rest))
-	(Instruction (car Rest) (car Rest))
-	(Assemble-PC 0)
-	(Assemble-Fixup-List NIL))
-       ((null Rest)
-	assemble-fixup-list)
-    (declare (fixnum assemble-pc))
-    (cond ((atom Instruction))
-	  ((eq (car Instruction) 'load-link)
-	   (push `(load-link ,assemble-pc ,(caddr instruction))
-		 assemble-fixup-list)
-	   (process-d-instruction `(cau ,(cadr Instruction) 0 0))
-	   (process-d-instruction `(oil ,(cadr Instruction)
-					,(cadr Instruction) 0)))
-	  ((memq (car Instruction) '(miscop miscopx))
-	   (let ((index (get (cadr Instruction) 'Transfer-Vector-Index)))
-	     (cond (index (push `(miscop ,assemble-pc ,index)
-				Assemble-Fixup-List)
-			  (process-ba-instruction (if (eq (car Instruction)
-							  'miscop)
-						      '(bala 0)
-						      '(balax 0))))
-		   (T (clc-error "Unknown primitive: ~A.~%"
-				 (cadr Instruction))))))
-	  ((memq (car Instruction) '(user-miscop user-miscopx))
-	   (push `(user-miscop ,assemble-pc ,(cadr Instruction))
-		 Assemble-Fixup-List)
-	   (process-ba-instruction  (if (eq (car Instruction) 'user-miscop)
-					'(bala 0)
-					'(balax 0))))
-	  (T (case (Get-Instruction-Type (car Instruction))
-	       (JI (Process-JI-Instruction Instruction))
-	       (X (Process-X-Instruction Instruction))
-	       (DS (Process-DS-Instruction Instruction))
-	       (R (Process-R-Instruction Instruction))
-	       (BI (Process-BI-Instruction Instruction))
-	       (BA (Process-BA-Instruction Instruction))
-	       (D (Process-D-Instruction Instruction))
-	       (T (clc-error "Undefined op-code in ~A.~%" Instruction)))))))
-
-(defun Process-JI-Instruction (Instruction)
-  (declare (optimize (speed 3) (safety 0)))
-  (let ((I-Length (length Instruction))
-	(operand (get-label-value (caddr Instruction) assemble-pc)))
-    (declare (fixnum operand i-length))
-    (cond ((< I-Length 3)
-	   (clc-error "Too few operands (~D) in ~A for JI instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 3)
-	   (clc-error "Too many operands (~D) in ~A for JI instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector Assemble-PC)
-		   (the fixnum
-			(+ (the fixnum
-				(ash (the fixnum (logand (the fixnum
-							      (Get-Operation-Code (car Instruction)))
-					     #x1F)) 3))
-			   (logand (the fixnum
-					(- (the fixnum
-						(Get-Condition-Code (cadr Instruction)))
-					   8)) #x7))))
-	     (setf (aref romp-code-vector (the fixnum (1+ (the fixnum assemble-pc))))
-		   (logand operand #xFF))))
-    (setq Assemble-PC (the fixnum (+ Assemble-PC 2)))))
-
-(defun Process-X-Instruction (Instruction)
-  (declare (optimize (speed 3) (safety 0)))
-  (let ((I-Length (length Instruction)))
-    (declare (fixnum i-length))
-    (cond ((< I-Length 4)
-	   (clc-error "Too few operands (~D) in ~A for X instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 4)
-	   (clc-error "Too many operands (~D) in ~A for X instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector Assemble-PC)
-		   (the fixnum
-			(+ (the fixnum
-				(ash (the fixnum
-					  (logand (the fixnum
-						       (Get-Operation-Code
-							(car Instruction))) #xF)) 4))
-			   (the fixnum
-				(logand (the fixnum
-					     (eval-register (cadr Instruction))) #xF)))))
-	     (setf (aref romp-code-vector (the fixnum (1+ assemble-pc)))
-		   (the fixnum
-			(+ (the fixnum
-				(ash (the fixnum
-					  (logand (the fixnum
-						       (eval-register
-							(caddr Instruction))) #xF)) 4))
-			   (the fixnum
-				(logand (the fixnum
-					     (eval-register
-					      (cadddr Instruction))) #xF)))))))
-    (setq Assemble-PC (the fixnum (+ (the fixnum Assemble-PC) 2)))))
-
-(defun Process-DS-Instruction (Instruction)
-  (declare (optimize (speed 3) (safety 0)))
-  (let ((I-Length (length Instruction)))
-    (declare (fixnum i-length))
-    (cond ((< I-Length 4)
-	   (clc-error "Too few operands (~D) in ~A for DS instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 4)
-	   (clc-error "Too many operands (~D) in ~A for DS instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector Assemble-PC)
-		   (the fixnum (+ (the fixnum
-				       (ash (the fixnum
-						 (logand (the fixnum
-							      (Get-Operation-Code
-							       (car Instruction))) #xF)) 4))
-				  (the fixnum
-				       (logand (the fixnum
-						    (Get-Immediate-Value (car Instruction)
-									 (cadddr Instruction)))
-					       #xF)))))
-	     (setf (aref romp-code-vector (the fixnum (1+ assemble-pc)))
-		   (the fixnum
-			(+ (the fixnum
-				(ash (the fixnum
-					  (logand (the fixnum
-						       (eval-register
-							(cadr Instruction))) #xF)) 4))
-			   (logand (the fixnum (eval-register (caddr Instruction)))))))))
-    (setq Assemble-PC (the fixnum (+ (the fixnum Assemble-PC) 2)))))
-
-(defun Process-R-Instruction (Instruction)
-  (let ((I-Length (length Instruction)))
-    (cond ((< I-Length 3)
-	   (clc-error "Too few operands (~D) in ~A for R instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 3)
-	   (clc-error "Too many operands (~D) in ~A for R instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector Assemble-PC)
-		   (logand (Get-Operation-Code (car Instruction)) #xFF))
-	     (setf (aref romp-code-vector (1+ assemble-pc))
-		   (+ (ash (logand (if (memq (car instruction)
-					     '(bbr bnbr bbrx bnbrx))
-				       (get-condition-code (cadr instruction))
-				       (eval-register (cadr Instruction)))
-				   #xF) 4)
-		      (if (and (eq (car Instruction) 'lis)
-			       (consp (caddr Instruction))
-			       (eq (caaddr Instruction) '*return-pc*))
-			  (get-lis-label-value (caddr instruction))
-			  (logand (eval-register (caddr Instruction)) #xF))))))
-    (setq Assemble-PC (+ Assemble-PC 2))))
-
-(defun Process-BI-Instruction (Instruction)
-  (let ((I-Length (length Instruction))
-	(operand (get-label-value (caddr Instruction) assemble-pc)))
-    (cond ((< I-Length 3)
-	   (clc-error "Too few operands (~D) in ~A for BI instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 3)
-	   (clc-error "Too many operands (~D) in ~A for BI instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector assemble-pc)
-		   (logand (get-operation-code (car Instruction)) #xFF))
-	     (setf (aref romp-code-vector (1+ assemble-pc))
-		   (+ (ash (get-condition-code (cadr Instruction)) 4)
-		      (logand (ash operand -16) #xF)))
-	     (setf (aref romp-code-vector (+ assemble-pc 2))
-		   (logand (ash operand -8) #xFF))
-	     (setf (aref romp-code-vector (+ assemble-pc 3))
-		   (logand operand #xFF))))
-    (setq assemble-pc (+ assemble-pc 4))))
-
-(defun Process-BA-Instruction (Instruction)
-  (let ((I-Length (length Instruction))
-	(operand (get-ba-operand (cadr Instruction))))
-    (cond ((< I-Length 2)
-	   (clc-error "Too few operands (~D) in ~A for BA instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 2)
-	   (clc-error "Too many operands (~D) in ~A for BA instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector Assemble-PC)
-		   (logand (get-operation-code (car Instruction)) #xFF))
-	     (setf (aref romp-code-vector (1+ assemble-pc))
-		   (logand (ash operand -16) #xFF))
-	     (setf (aref romp-code-vector (+ assemble-pc 2))
-		   (logand (ash operand -8) #xFF))
-	     (setf (aref romp-code-vector (+ assemble-pc 3))
-		   (logand operand #xFF))))
-    (setq assemble-pc (+ assemble-pc 4))))
-
-(defun Process-D-Instruction (Instruction)
-  (if (memq (car Instruction) '(ci cli))
-      (setq instruction
-	    `(,(car Instruction) 0 ,(cadr Instruction) ,(caddr Instruction))))
-  (let ((I-Length (length Instruction))
-	(operand (get-d-operand (car Instruction) (cadddr Instruction))))
-    (cond ((< I-Length 4)
-	   (clc-error "Too few operands (~D) in ~A for D instruction format.~%"
-		      I-Length Instruction))
-	  ((> I-Length 4)
-	   (clc-error "Too many operands (~D) in ~A for D instruction format.~%"
-		      I-Length Instruction))
-	  (T (setf (aref romp-code-vector assemble-pc)
-		   (logand (get-operation-code (car Instruction)) #xFF))
-	     (setf (aref romp-code-vector (1+ assemble-pc))
-		   (+ (ash (logand (eval-register (cadr Instruction)) #xF) 4)
-		      (logand (eval-register (caddr Instruction)))))
-	     (setf (aref romp-code-vector (+ assemble-pc 2))
-		   (logand (ash operand -8) #xFF))
-	     (setf (aref romp-code-vector (+ assemble-pc 3))
-		   (logand operand #xFF))))
-    (setq assemble-pc (+ assemble-pc 4))))
-
-
-(defun get-label-value (label pc)
-  (declare (fixnum pc) (optimize (speed 3) (safety 0)))
-  (let ((offset (cdr (assoc (cadr label) assemble-label-list))))
-    (declare (fixnum offset))
-    (the fixnum (ash (the fixnum (- offset pc)) -1))))
-
-(defun Get-Immediate-Value (Op-Code Value)
-  (declare (fixnum value))
-  (cond ((not (fixnump Value))
-	 (clc-error "Immediate field (~A) for op-code ~A should be a fixnum.~%"
-		Value Op-Code)
-	 0)
-	(T (case Op-Code
-	     ((lcs stcs) Value)
-	     ((lhas lhs sths) (ash Value -1))
-	     ((ls sts) (ash Value -2))
-	     (T Value)))))
-
-(defun Get-D-Operand (Instruction Operand)
-  (cond ((and (consp Operand) (or (eq (car operand) '*return-pc*)
-				  (eq (car operand) '**tag**)))
-	 (let ((offset (+ (cdr (assoc (cadr operand) assemble-label-list))
-			  I-Vector-header-size)))
-	   (cond ((eq Instruction 'cal)
-		  (logand offset #x7FFF))
-		 ((eq Instruction 'cau)
-		  (logand (ash offset -16) #xFFFF))
-		 (T (logand offset #xFFFF)))))
-	((fixnump Operand) Operand)
-	(T (clc-error "Illegal operand: ~A to D format instruction.~%" Operand))))
-
-(defun Get-BA-Operand (Operand &aux Index)
-  (cond ((and (consp Operand) (eq (car Operand) 'miscop))
-	 (cond ((null (setq Index (Get (cadr Operand) 'Transfer-Vector-Index)))
-		(clc-error "Unknow primitive: ~A.  Ignoring.~%" Operand)
-		(setq index -1)))
-	 
-	 (push `(miscop ,assemble-pc ,index) assemble-fixup-list)
-	 Index)
-	((fixnump Operand) Operand)
-	(T (clc-error "Illegal operand: ~A to BA format instruction.~%"
-		      Operand))))
