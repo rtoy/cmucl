@@ -662,7 +662,7 @@ default-value-5
 	    (return-pc :scs (descriptor-reg control-stack)
 		       :target return-pc-pass)))
       
-      ,@(unless variable '((args :more t))))
+      ,@(unless variable '((args :more t :scs (descriptor-reg)))))
 
      ,@(when (eq return :fixed)
 	 '((:results (values :more t))))
