@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.87 1993/05/15 18:27:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.88 1993/07/22 08:42:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -623,8 +623,10 @@
   ;; positions that reading of each form started at (i.e. the end of the
   ;; previous form.)
   (forms (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t))
-  (positions (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t)))
-
+  (positions (make-array 10 :fill-pointer 0 :adjustable t) :type (vector t))
+  ;;
+  ;; Language to use.  Normally Lisp, but sometimes Dylan.
+  (language :lisp :type (member :lisp :dylan)))
 
 ;;; The Source-Info structure provides a handle on all the source information
 ;;; for an entire compilation.
@@ -659,7 +661,12 @@
 	 (mapcar #'(lambda (x)
 		     (make-file-info :name (namestring (truename x))
 				     :untruename (namestring x)
-				     :write-date (file-write-date x)))
+				     :write-date (file-write-date x)
+				     :language
+				     (if (string-equal (pathname-type x)
+						       "dylan")
+					 :dylan
+					 :lisp)))
 		 files)))
 
     (make-source-info :files file-info
@@ -683,8 +690,9 @@
 ;;;
 ;;;    Return a SOURCE-INFO which will read from Stream.
 ;;;
-(defun make-stream-source-info (stream)
-  (let ((files (list (make-file-info :name :stream))))
+(defun make-stream-source-info (stream language)
+  (declare (type (member :lisp :dylan) language))
+  (let ((files (list (make-file-info :name :stream :language language))))
     (make-source-info
      :files files
      :current-file files
@@ -725,12 +733,14 @@
 ;;; *Read-Suppress* on, discarding the result.  If an error happens during this
 ;;; read, then bail out using Compiler-Error (fatal in this context).
 ;;;
-(defun ignore-error-form (stream pos)
+(defun ignore-error-form (stream pos language)
   (declare (type stream stream) (type unsigned-byte pos))
   (file-position stream pos)
   (handler-case (let ((*read-suppress* t)
 		      (*features* (backend-features *target-backend*)))
-		  (read stream))
+		  (ecase language
+		    (:lisp (read stream))
+		    (:dylan (dylan::dylan-read stream))))
     (error (condition)
       (declare (ignore condition))
       (compiler-error "Unable to recover from read error."))))
@@ -768,16 +778,19 @@
 ;;;    Read a form from Stream, returning EOF at EOF.  If a read error happens,
 ;;; then attempt to recover if possible, returing a proxy error form.
 ;;;
-(defun careful-read (stream eof pos)
+(defun careful-read (stream eof pos language)
   (handler-case (let ((*features* (backend-features *target-backend*)))
-		  (read stream nil eof))
+		  (ecase language
+		    (:lisp (read stream nil eof))
+		    (:dylan
+		     (dylan::dylan-read stream nil eof))))
     (error (condition)
       (let ((new-pos (file-position stream)))
 	(cond ((= new-pos (file-length stream))
 	       (unexpected-eof-error stream pos condition))
 	      (t
 	       (normal-read-error stream pos condition)
-	       (ignore-error-form stream pos))))
+	       (ignore-error-form stream pos language))))
       '(cerror "Skip this form."
 	       "Attempt to load a file having a compile-time read error."))))
 
@@ -802,7 +815,8 @@
 	   (setq *compile-file-truename* (pathname name))
 	   (setq *compile-file-pathname*
 		 (pathname (file-info-untruename finfo)))
-	   (setf (source-info-stream info) (open name :direction :input))))))
+	   (setf (source-info-stream info)
+		 (open name :direction :input))))))
 
 ;;; CLOSE-SOURCE-INFO  --  Internal
 ;;;
@@ -848,16 +862,20 @@
   (let ((eof '(*eof*)))
     (loop
       (let* ((file (first (source-info-current-file info)))
+	     (language (file-info-language file))
 	     (stream (get-source-stream info))
 	     (pos (file-position stream))
-	     (res (careful-read stream eof pos)))
+	     (res (careful-read stream eof pos language)))
 	(unless (eq res eof)
-	  (let* ((forms (file-info-forms file))
-		 (current-idx (+ (fill-pointer forms)
-				 (file-info-source-root file))))
-	    (vector-push-extend res forms)
-	    (vector-push-extend pos (file-info-positions file))
-	    (return (values res current-idx nil))))
+	  (let ((form (ecase language
+			(:dylan (dylan::convert-top-level res))
+			(:lisp res))))
+	    (let* ((forms (file-info-forms file))
+		   (current-idx (+ (fill-pointer forms)
+				   (file-info-source-root file))))
+	      (vector-push-extend form forms)
+	      (vector-push-extend pos (file-info-positions file))
+	      (return (values form current-idx nil)))))
 
 	(unless (advance-source-file info)
 	  (return (values nil nil t)))))))
@@ -1521,7 +1539,8 @@
 	       ((:block-compile *block-compile*) *block-compile-default*)
 	       ((:entry-points *entry-points*) nil)
 	       ((:byte-compile *byte-compile*) *byte-compile-default*)
-	       source-info)
+	       source-info
+	       (language :lisp))
   "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
   are supported:
@@ -1536,9 +1555,11 @@
   :Source-Info
         Some object to be placed in the DEBUG-SOURCE-INFO.
   :Byte-Compile {T, NIL, :MAYBE}
-        If true, then may compile to interpreted byte code."
-
-  (let ((info (make-stream-source-info stream))
+        If true, then may compile to interpreted byte code.
+  :Language {:LISP, :DYLAN}
+      The source language to compile.  Defaults to LISP."
+  (declare (type (member :lisp :dylan) language))
+  (let ((info (make-stream-source-info stream language))
 	(*backend* *native-backend*))
     (unwind-protect
 	(let* ((*compile-object* (make-core-object))
