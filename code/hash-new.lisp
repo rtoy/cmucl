@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.7 2000/01/13 16:54:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.8 2000/01/13 16:55:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,6 +13,7 @@
 ;;; Originally written by Skef Wholey.
 ;;; Everything except SXHASH rewritten by William Lott.
 ;;; Hash table functions rewritten by Douglas Crosher, 1997.
+;;; Equalp hashing by William Newman, Cadabra Inc, and Douglas Crosher, 2000.
 ;;;
 (in-package :common-lisp)
 
@@ -139,6 +140,9 @@
   (declare (values hash (member t nil)))
   (values (sxhash key) nil))
 
+(defun equalp-hash (key)
+  (values (internal-equalp-hash key 0) nil))
+
 
 (defun almost-primify (num)
   (declare (type index num))
@@ -179,8 +183,8 @@
 (defun make-hash-table (&key (test 'eql) (size 65) (rehash-size 1.5)
 			     (rehash-threshold 1) (weak-p nil))
   "Creates and returns a new hash table.  The keywords are as follows:
-     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, and EQUAL
-       are currently supported.
+     :TEST -- Indicates what kind of test to use.  Only EQ, EQL, EQUAL,
+       and EQUALP are currently supported.
      :SIZE -- A hint as to how many elements will be put in this hash
        table.
      :REHASH-SIZE -- Indicates how to expand the table when it fills up.
@@ -208,6 +212,8 @@
 	       (values 'eql #'eql #'eql-hash))
 	      ((or (eq test #'equal) (eq test 'equal))
 	       (values 'equal #'equal #'equal-hash))
+	      ((or (eq test #'equalp) (eq test 'equalp))
+	       (values 'equalp #'equalp #'equalp-hash))
 	      (t
 	       (dolist (info *hash-table-tests*
 			     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
@@ -259,6 +265,7 @@
 	  table)))))
 
 
+(declaim (inline hash-table-count))
 (defun hash-table-count (hash-table)
   "Returns the number of entries in the given HASH-TABLE."
   (declare (type hash-table hash-table)
@@ -271,6 +278,7 @@
 (setf (documentation 'hash-table-rehash-threshold 'function)
       "Return the rehash-threshold HASH-TABLE was created with.")
 
+(declaim (inline hash-table-size))
 (defun hash-table-size (hash-table)
   "Return a size that can be used with MAKE-HASH-TABLE to create a hash
    table that can hold however many entries HASH-TABLE can hold without
@@ -862,23 +870,19 @@
 	   (sxhash-simple-string (coerce (the string ,sequence)
 					 'simple-string))))))
 
-(defmacro sxhash-list (sequence depth)
+(defmacro sxhash-list (sequence depth &key (equalp nil))
   `(if (= ,depth sxhash-max-depth)
        0
        (do ((sequence ,sequence (cdr (the list sequence)))
 	    (index 0 (1+ index))
-	    (hash 2))
+	    (hash 2)
+	    (,depth (1+ ,depth)))
 	   ((or (atom sequence) (= index sxhash-max-len)) hash)
 	 (declare (fixnum hash index))
-	 (sxmash hash (internal-sxhash (car sequence) (1+ ,depth))))))
-
+	 (sxmash hash (,(if equalp 'internal-equalp-hash 'internal-sxhash)
+			(car sequence) ,depth)))))
 
 ); eval-when (compile eval)
-
-
-(defun sxhash (s-expr)
-  "Computes a hash code for S-EXPR and returns it as an integer."
-  (internal-sxhash s-expr 0))
 
 
 (defun internal-sxhash (s-expr depth)
@@ -887,6 +891,7 @@
     ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
     (fixnum (ldb sxhash-bits-byte s-expr))
+    (character (char-code (char-upcase s-expr)))
     (instance
      (if (typep s-expr 'structure-object)
 	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
@@ -929,6 +934,115 @@
      (typecase s-expr
        (string (sxhash-string s-expr))
        (t (array-rank s-expr))))
+    ;; Everything else.
+    (t 42)))
+
+(defun sxhash (s-expr)
+  "Computes a hash code for S-EXPR and returns it as an integer."
+  (internal-sxhash s-expr 0))
+
+
+;;;; Equalp hash.
+
+(eval-when (compile eval)
+
+(defmacro hash-table-equalp-hash (table)
+  `(let ((hash (hash-table-count ,table)))
+     (declare (type hash hash))
+     (sxmash hash (sxhash (hash-table-test ,table)))
+     hash))
+
+(defmacro structure-equalp-hash (structure depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let* ((layout (%instance-layout ,structure))
+	      (length (min (1- (layout-length layout)) sxhash-max-len))
+	      (hash (internal-sxhash (class-name (layout-class layout))
+				     depth))
+	      (,depth (+ ,depth 1)))
+	 (declare (type index length) (type hash hash))
+	 (do ((index 1 (1+ index)))
+	     ((= index length) hash)
+	   (declare (type index index))
+	   (sxmash hash (internal-equalp-hash
+			 (%instance-ref ,structure index) ,depth))))))
+
+(defmacro vector-equalp-hash (vector depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let ((hash 4)
+	     (length (length ,vector)))
+	 (declare (type hash hash) (type index length))
+	 (sxmash hash length)
+	 (let ((,depth (+ ,depth 1)))
+	   (dotimes (index (min length sxhash-max-len) hash)
+	     (declare (type index index))
+	     (sxmash hash (internal-equalp-hash (aref ,vector index)
+						,depth)))))))
+
+(defmacro array-equalp-hash (array depth)
+  `(if (= ,depth sxhash-max-depth)
+       0
+       (let ((hash 4))
+	 (declare (type hash hash))
+	 (dotimes (index (min sxhash-max-len (array-rank ,array)))
+	   (sxmash hash (array-dimension ,array index)))
+	 (let ((,depth (+ ,depth 1)))
+	   (dotimes (index (min sxhash-max-len (array-total-size ,array)) hash)
+	     (sxmash hash (internal-equalp-hash
+			   (row-major-aref ,array index) ,depth)))))))
+
+); eval-when (compile eval)
+
+
+(defun internal-equalp-hash (s-expr depth)
+  (declare (type index depth) (values hash))
+  (typecase s-expr
+    ;; The pointers and immediate types.
+    (list (sxhash-list s-expr depth :equalp t))
+    (fixnum (ldb sxhash-bits-byte s-expr))
+    (character (char-code (char-upcase s-expr)))
+    (instance
+     (typecase s-expr
+       (hash-table (hash-table-equalp-hash s-expr))
+       (structure-object (structure-equalp-hash s-expr depth))
+       (t 42)))
+    ;; Other-pointer types.
+    (simple-string (vector-equalp-hash (truly-the simple-string s-expr) depth))
+    (symbol (sxhash-simple-string (symbol-name s-expr)))
+    (number
+     (etypecase s-expr
+       (integer (sxhash s-expr))
+       (float
+	(macrolet ((frob (val type)
+		     (let ((lo (coerce most-negative-fixnum type))
+			   (hi (coerce most-positive-fixnum type)))
+		       `(if (<= ,lo ,val ,hi)
+			    (multiple-value-bind (q r)
+				(truncate ,val)
+			      (if (zerop r)
+				  (sxhash q)
+				  (sxhash (coerce ,val 'long-float))))
+			    (multiple-value-bind (q r)
+				(truncate ,val)
+			      (if (zerop r)
+				  (sxhash q)
+				  (sxhash (coerce ,val 'long-float))))))))
+	  (etypecase s-expr
+	    (single-float (frob s-expr single-float))
+	    (double-float (frob s-expr double-float))
+	    #+long-float (long-float (frob s-expr long-float)))))
+       (ratio
+	(let ((float (coerce s-expr 'long-float)))
+	  (if (= float s-expr)
+	      (sxhash float)
+	      (sxhash s-expr))))
+       (complex (if (zerop (imagpart s-expr))
+		    (internal-equalp-hash (realpart s-expr) 0)
+		    (logxor (internal-equalp-hash (realpart s-expr) 0)
+			    (internal-equalp-hash (realpart s-expr) 0))))))
+    (simple-vector (vector-equalp-hash (truly-the simple-vector s-expr) depth))
+    (array (array-equalp-hash s-expr depth))
     ;; Everything else.
     (t 42)))
 
