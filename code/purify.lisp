@@ -30,12 +30,14 @@
   (force-output)
   (setq *already-maybe-gcing* t)
   ;;
-  ;; Move symbols to static space, constants to read-only space.
-  (localify root-structures)
-  ;;
-  ;; Move everything else to either static or read-only space, depending
-  ;; on type.
+  ;; Find GC stack fixups before we go around trashing vector headers.
   (let ((fixups (gc-grovel-stack)))
+    ;;
+    ;; Move symbols to static space, constants to read-only space.
+    (localify root-structures)
+    ;;
+    ;; Move everything else to either static or read-only space, depending
+    ;; on type.
     (%primitive clear-registers)
     (%primitive purify)
     (gc-fixup-stack fixups))
@@ -108,11 +110,14 @@
 ;;; to be coded inline.
 ;;;
 (defmacro inlinep (sym)
+  #|Accesses global vars, so can't work....
   `(or (info function source-transform ,sym)
        (let ((info (info function info ,sym)))
 	 (and info
 	      (or (c::function-info-templates info)
-		  (c::function-info-ir2-convert info))))))
+		  (c::function-info-ir2-convert info)))))
+  |#
+  nil)
 
 
 ;;; Next-Symbol, Next-Cons  --  Internal
@@ -268,15 +273,16 @@
 (defun transport-function (fun)
   (unless (purep fun)
     (let ((def (ecase (%primitive get-vector-subtype fun)
-		 (#.%function-entry-subtype
+		 ((#.%function-entry-subtype #.%function-closure-entry-subtype)
 		  (transport-function-object fun)
 		  (%primitive header-ref fun %function-entry-constants-slot))
 		 (#.%function-closure-subtype
 		  (let ((entry (%primitive header-ref fun
 					   %function-name-slot)))
-		    (transport-function-object entry)
-		    (%primitive header-ref entry
-				%function-entry-constants-slot)))
+		    (unless (purep entry)
+		      (transport-function-object entry)
+		      (%primitive header-ref entry
+				  %function-entry-constants-slot))))
 		 (#.%function-funcallable-instance-subtype
 		  nil))))
       (when (and def (not (purep def)))
@@ -415,10 +421,13 @@
     (when (boundp sym)
       (let ((val (symbol-value sym)))
 	(cond ((purep val))
+	      #|Accesses global vars, so can't work...
 	      ((eq (info variable kind sym) :constant)
 	       (typecase val
 		 (cons (transport-cons val))
-		 (simple-vector (transport-g-vector val t)))))))
+		 (simple-vector (transport-g-vector val t))))
+	      |#
+	      )))
     ;;
     ;; Move any interned symbol that's left...
     (unless (or (purep sym) (not (symbol-package sym)))
