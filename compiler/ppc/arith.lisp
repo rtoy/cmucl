@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.8 2004/10/06 23:58:46 rtoy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ppc/arith.lisp,v 1.9 2005/02/11 05:42:19 rtoy Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -1007,6 +1007,93 @@
 (define-static-function two-arg-and (x y) :translate logand)
 (define-static-function two-arg-ior (x y) :translate logior)
 (define-static-function two-arg-xor (x y) :translate logxor)
+
+
+;; Truncation by a constant can be done by multiplication with the
+;; appropriate constant.
+;;
+;; See generic/vm-tran.lisp for the algorithm.
+
+(define-vop (signed-truncate-by-mult fast-signed-binop)
+  (:translate truncate)
+  (:args (x :scs (signed-reg)))
+  (:info y)
+  (:arg-types signed-num (:constant (integer 2 #.(1- (ash 1 vm:word-bits)))))
+  (:results (quo :scs (signed-reg))
+            (rem :scs (signed-reg)))
+  (:result-types signed-num signed-num)
+  (:note "inline (signed-byte 32) arithmetic")
+  (:temporary (:scs (signed-reg)) q)
+  (:temporary (:scs (signed-reg)) r)
+  (:temporary (:scs (signed-reg)) temp)
+  (:generator 6
+    (multiple-value-bind (recip shift)
+        (c::find-signed-reciprocal y vm:word-bits)
+      ;; Compute q = floor(M*n/2^32).  That is, the high half of the
+      ;; product.
+      (inst lr temp recip)
+      (inst mulhw q x temp)
+      ;; Adjust if the M is negative.
+      (when (minusp recip)
+        (inst add q q x))
+      ;; Shift quotient as needed.
+      (unless (zerop shift)
+        (inst srawi q q shift))
+      ;; Add one to quotient if X is negative.  This is done by right
+      ;; shifting X to give either -1 or 0.  Then subtract this from
+      ;; the quotient.  (NOTE: in the book, the sample code has this
+      ;; wrong and ADDS instead of SUBTRACTS.)
+      (inst srawi temp x 31)
+      (inst sub q q temp)
+      ;; Now compute remainder via r = x - q*d
+      (cond ((typep y '(signed-byte 13))
+             (inst mulli r q y))
+            (t
+             (inst lr temp y)
+             (inst mullw r q temp)))
+      (inst sub rem x r)
+      (unless (location= quo q)
+        (move quo q)))))
+
+(define-vop (unsigned-truncate-by-mult fast-signed-binop)
+  (:translate truncate)
+  (:args (x :scs (unsigned-reg)))
+  (:info y)
+  (:arg-types unsigned-num (:constant (integer 2 #.(1- (ash 1 vm:word-bits)))))
+  (:results (quo :scs (unsigned-reg))
+            (rem :scs (unsigned-reg)))
+  (:result-types unsigned-num unsigned-num)
+  (:note "inline (unsigned-byte 32) arithmetic")
+  (:temporary (:scs (unsigned-reg)) q)
+  (:temporary (:scs (unsigned-reg)) r)
+  (:temporary (:scs (unsigned-reg)) temp)
+  (:generator 6
+    (multiple-value-bind (recip shift overflowp)
+        (c::find-unsigned-reciprocal y vm:word-bits)
+      ;; q = floor(M*x/2^32)
+      (inst lr temp recip)
+      (inst mulhwu q x temp)
+      (cond (overflowp
+             ;; The complicated case.  PPC does not have a
+             ;; shift-with-carry instruction, so we use second idea
+             ;; given find-unsigned-reciprocal.
+             (inst sub temp x q)
+             (inst srwi temp temp 1)
+             (inst add temp temp q)
+             (inst srwi q temp (1- shift)))
+            (t
+             ;; The easy case
+             (unless (zerop shift)
+               (inst srwi q q shift))))
+      ;; Compute the remainder
+      (cond ((typep y '(signed-byte 16))
+             (inst mulli r q y))
+            (t
+             (inst lr temp y)
+             (inst mullw r q temp)))
+      (inst sub rem x r)
+      (unless (location= quo q)
+        (move quo q)))))
 
 
 #+modular-arith
