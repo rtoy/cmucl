@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.9 1991/08/25 18:15:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.10 1991/10/03 13:27:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -730,7 +730,7 @@
 (define-instruction (mfmqscr)
   (r (op :constant #x96)
      (r2 :constant 10)
-     (r3 :argument register)))
+     (r3 :argument register :read nil :write t)))
 
 
 
