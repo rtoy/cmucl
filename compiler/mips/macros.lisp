@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.33 1990/06/04 05:25:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.34 1990/06/20 21:34:53 ram Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -146,6 +146,23 @@
        (sc-case stack
 	 ((control-stack)
 	  (storew reg fp-tn offset))))))
+
+
+;;;; Storage allocation:
+
+(defmacro with-fixed-allocation ((result-tn temp-tn type-code size)
+				 &body body)
+  "Do stuff to allocate an other-pointer object of fixed Size with a single
+  word header having the specified Type-Code.  The result is placed in
+  Result-TN, and Temp-TN is a non-descriptor temp (which may be randomly used
+  by the body.)  The body is placed inside the PSEUDO-ATOMIC, and presumably
+  initializes the object."
+  `(pseudo-atomic (,temp-tn)
+     (inst addu ,result-tn alloc-tn vm:other-pointer-type)
+     (inst addu alloc-tn alloc-tn (vm:pad-data-block ,size))
+     (inst li ,temp-tn (logior (ash (1- ,size) vm:type-bits) ,type-code))
+     (storew ,temp-tn ,result-tn 0 vm:other-pointer-type)
+     ,@body))
 
 
 ;;;; Three Way Comparison
