@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.10 1991/02/20 15:17:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.11 1991/03/20 03:03:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.10 1991/02/20 15:17:20 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.11 1991/03/20 03:03:43 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -352,6 +352,7 @@
 	      :ref-trans di::code-debug-info
 	      :ref-known (flushable)
 	      :set-vop c::set-code-debug-info)
+  (trace-table-offset)
   (constants :rest-p t))
 
 (define-primitive-object (function-header :lowtag function-pointer-type
