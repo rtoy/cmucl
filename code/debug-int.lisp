@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.38 1992/02/21 23:14:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.39 1992/02/21 23:54:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3067,7 +3067,7 @@
    (unless (breakpoint-data-breakpoints data)
      (setf (breakpoint-data-instruction data)
 	   (system:without-gcing
-	    (breakpoint_install (kernel:get-lisp-obj-address
+	    (breakpoint-install (kernel:get-lisp-obj-address
 				 (breakpoint-data-component data))
 				(breakpoint-data-offset data)))))
    (push breakpoint (breakpoint-data-breakpoints data))
@@ -3150,7 +3150,7 @@
   (let ((bpts (delete breakpoint (breakpoint-data-breakpoints data))))
     (unless bpts
       (system:without-gcing
-       (breakpoint_remove (kernel:get-lisp-obj-address component)
+       (breakpoint-remove (kernel:get-lisp-obj-address component)
 			  offset (breakpoint-data-instruction data))))
     (setf (breakpoint-data-breakpoints data) bpts))
   (setf (breakpoint-status breakpoint) :inactive))
@@ -3219,7 +3219,7 @@
 ;;; C call out stubs.
 ;;;
 
-;;; BREAKPOINT_INSTALL -- Internal.
+;;; BREAKPOINT-INSTALL -- Internal.
 ;;;
 ;;; This actually installs the break instruction in the component.  It returns
 ;;; the overwritten bits.  You must call this in a context in which GC is
@@ -3229,7 +3229,7 @@
   (code-obj c-call:unsigned-long)
   (pc-offset c-call:int))
 
-;;; BREAKPOINT_REMOVE -- Internal.
+;;; BREAKPOINT-REMOVE -- Internal.
 ;;;
 ;;; This removes the break instruction and replaces the original instruction.
 ;;; You must call this in a context in which GC is disabled, so Lisp doesn't
@@ -3240,7 +3240,7 @@
   (pc-offset c-call:int)
   (old-inst c-call:unsigned-long))
 
-;;; BREAKPOINT_AFTER_OFFSET -- Internal.
+;;; BREAKPOINT-AFTER-OFFSET -- Internal.
 ;;;
 ;;; This returns the offset of the next instruction following the break that
 ;;; generated the signal context we supply as an argument to this routine.
@@ -3332,9 +3332,9 @@
       ;; no need an after breakpoint to re-install a break instruction.
       (when (breakpoint-data-breakpoints data)
 	;; Restore instruction.  Do this before SET-AFTER-BREAKPOINTS which
-	;; uses CALL-BREAKPOINT_AFTER_OFFSET.
+	;; uses CALL-BREAKPOINT-AFTER-OFFSET.
 	(system:without-gcing
-	 (breakpoint_remove (kernel:get-lisp-obj-address component) offset
+	 (breakpoint-remove (kernel:get-lisp-obj-address component) offset
 			    (breakpoint-data-instruction data)))
 	(set-after-breakpoints component data signal-context))
       ;; Set the sigmask, to keep the system running until we can
@@ -3350,7 +3350,7 @@
     ;; break instruction.
     (unless breakpoints
       (system:without-gcing
-       (breakpoint_remove (kernel:get-lisp-obj-address component) offset
+       (breakpoint-remove (kernel:get-lisp-obj-address component) offset
 			  (breakpoint-data-instruction data)))
       (setf (breakpoint-data-after-breakpoint data) nil))
     ;; Ditto for the partner of the after-breakpoint (if there were two).
@@ -3359,7 +3359,7 @@
 	(let ((partner-data (after-breakpoint-internal-data partner)))
 	  (unless (breakpoint-data-breakpoints partner-data)
 	    (system:without-gcing
-	     (breakpoint_remove (kernel:get-lisp-obj-address
+	     (breakpoint-remove (kernel:get-lisp-obj-address
 				 (breakpoint-data-component partner-data))
 				(breakpoint-data-offset partner-data)
 				(breakpoint-data-instruction partner-data)))
@@ -3368,7 +3368,7 @@
     ;; We don't need to store the replaced instruction in the data since we
     ;; have it from installing the break instruction before.
     (system:without-gcing
-     (breakpoint_install (kernel:get-lisp-obj-address
+     (breakpoint-install (kernel:get-lisp-obj-address
 			  (breakpoint-data-component previous-data))
 			 (breakpoint-data-offset previous-data)))
     ;; Restore sigmask that we saved before executing previous's inst.
@@ -3395,7 +3395,7 @@
 
 (defun set-after-breakpoints (component data signal-context)
   (multiple-value-bind (after-1 after-2)
-		       (call-breakpoint_after_offset signal-context)
+		       (call-breakpoint-after-offset signal-context)
     (let* ((after-data-1 (breakpoint-data component after-1))
 	   (after-data-2 (if (not (zerop after-2))
 			     (breakpoint-data component after-2)))
@@ -3410,11 +3410,11 @@
       (system:without-gcing
        (unless (breakpoint-data-breakpoints after-data-1)
 	 (setf (breakpoint-data-instruction after-data-1)
-	       (breakpoint_install (kernel:get-lisp-obj-address component)
+	       (breakpoint-install (kernel:get-lisp-obj-address component)
 				   after-1)))
        (when (and after-data-2 (not (breakpoint-data-breakpoints after-data-2)))
 	 (setf (breakpoint-data-instruction after-data-2)
-	       (breakpoint_install (kernel:get-lisp-obj-address component)
+	       (breakpoint-install (kernel:get-lisp-obj-address component)
 				   after-2)))))))
 
 ;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal.
@@ -3452,7 +3452,7 @@
     (nreverse results)))
 
 
-;;; CAL<L-BREAKPOINT_AFTER_OFFSET -- Internal.
+;;; CALL-BREAKPOINT-AFTER-OFFSET -- Internal.
 ;;;
 ;;; This calls the C routine and massages its return values.  Originally the
 ;;; breakpoint code was designed for the C code to return multiple offsets when
@@ -3460,13 +3460,13 @@
 ;;; instruction.  The Lisp code would then set after-breakpoints at each
 ;;; location, cleaning up both when one was hit after continuing execution.
 ;;; Later the C code decided it could determine which way the branch would go,
-;;; so BREAKPOINT_AFTER_OFFSET could just return one offset.  In case this
+;;; so BREAKPOINT-AFTER-OFFSET could just return one offset.  In case this
 ;;; won't be possible on all platforms, the Lisp code will stay with its
 ;;; support for multiple after-breakpoints.  Then we only need to change this
-;;; routine to return all values of BREAKPOINT_AFTER_OFFSET.
+;;; routine to return all values of BREAKPOINT-AFTER-OFFSET.
 ;;;
-(defun call-breakpoint_after_offset (signal-context)
-  (values (breakpoint_after_offset signal-context) 0))
+(defun call-breakpoint-after-offset (signal-context)
+  (values (breakpoint-after-offset signal-context) 0))
 
 ;;;
 ;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
