@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.24 1992/02/23 17:43:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.25 1992/04/09 20:09:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -698,6 +698,29 @@
   (undefined-value))
 
 
+;;; Unconvert-Tail-Calls  --  Internal
+;;;
+;;;    We are converting Fun to be a let when the call is in a non-tail
+;;; position.  Any previously tail calls in Fun are no longer tail calls, and
+;;; must be restored to normal calls which transfer to Next-Block (Fun's
+;;; return point.)
+;;;
+(defun unconvert-tail-calls (fun call next-block)
+  (dolist (called (lambda-calls fun))
+    (dolist (ref (leaf-refs called))
+      (let ((this-call (continuation-dest (node-cont ref))))
+	(when (and (node-tail-p this-call)
+		   (eq (node-home-lambda this-call) fun))
+	  (assert (member (functional-kind called) '(nil :cleanup :optional)))
+	  (setf (node-tail-p this-call) nil)
+	  (let ((block (node-block this-call)))
+	    (unlink-blocks block (first (block-succ block)))
+	    (link-blocks block next-block)
+	    (delete-continuation-use this-call)
+	    (add-continuation-use this-call (node-cont call)))))))
+  (undefined-value))
+
+
 ;;; MOVE-RETURN-STUFF  --  Internal
 ;;;
 ;;;    Deal with returning from a let or assignment that we are converting.
@@ -712,23 +735,27 @@
 ;;;    delete the callee's return, move its uses to the call's result
 ;;;    continuation, and transfer control to the appropriate return point.
 ;;; -- If the callee has a return, but the caller doesn't, then we move the
-;;;    return to the caller.  [Note: here CALL is always TR.]
+;;;    return to the caller.
 ;;;
 (defun move-return-stuff (fun call next-block)
   (declare (type clambda fun) (type basic-combination call)
 	   (type (or cblock null) next-block))
+  (when next-block
+    (unconvert-tail-calls fun call next-block))
   (let* ((return (lambda-return fun))
 	 (call-fun (node-home-lambda call))
 	 (call-return (lambda-return call-fun)))
-    (when return
-      (cond ((or next-block call-return)
-	     (unless (block-delete-p (node-block return))
-	       (move-return-uses fun call
-				 (or next-block (node-block call-return)))))
-	    (t
-	     (setf (lambda-return call-fun) return)
-	     (setf (return-lambda return) call-fun))))
-    (move-let-call-cont fun))
+    (cond ((not return))
+	  ((or next-block call-return)
+	   (unless (block-delete-p (node-block return))
+	     (move-return-uses fun call
+			       (or next-block (node-block call-return)))))
+	  (t
+	   (assert (node-tail-p call))
+ (break "Yow!")
+	   (setf (lambda-return call-fun) return)
+	   (setf (return-lambda return) call-fun))))
+  (move-let-call-cont fun)
   (undefined-value))
 
 
@@ -746,8 +773,8 @@
   (let ((next-block (if (node-tail-p call)
 			nil
 			(insert-let-body fun call))))
-    (merge-lets fun call)
-    (move-return-stuff fun call next-block))
+    (move-return-stuff fun call next-block)
+    (merge-lets fun call))
 
   (maybe-remove-free-function fun)
   (dolist (arg (basic-combination-args call))
@@ -849,16 +876,23 @@
 ;;; MAYBE-CONVERT-TO-ASSIGNMENT  --  Interface
 ;;;
 ;;;    Called when we believe it might make sense to convert Fun to an
-;;; assignment.  We can convert when:
+;;; assignment.  All this function really does is determine when a function
+;;; with more than one call can still be combined with the calling function's
+;;; environment.  We can convert when:
 ;;; -- The function is a normal, non-entry function, and
-;;; -- There is at most one non-tail call (which must not be recursive), and
-;;; -- All calls are self-recursive or appear in at most one other function (so
-;;;    we can be sure that we can merge all the code into a single
-;;;    environment.)
+;;; -- Except for one call, all calls must be tail recursive calls in the
+;;;    called function (i.e. are self-recursive tail calls)
 ;;;
-;;; If there is one non-tail call, then we convert exactly like a let.  If
-;;; there are no non-tail calls, then we merge the environments and deal with
-;;; the return.
+;;;    There may be one outside call, and it need not be tail-recursive.  Since
+;;; all tail local calls have already been converted to direct transfers, the
+;;; only control semantics needed are to splice in the body at the non-tail
+;;; call.  If there is no non-tail call, then we need only merge the
+;;; environments.  Both cases are handled by LET-CONVERT.
+;;;
+;;; ### It would actually be possible to allow any number of outside calls as
+;;; long as they all return to the same place (i.e. have the same conceptual
+;;; continuation.)  A special case of this would be when all of the outside
+;;; calls are tail recursive.
 ;;;
 (defun maybe-convert-to-assignment (fun)
   (declare (type clambda fun))
