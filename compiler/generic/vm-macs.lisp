@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.10 1992/12/16 18:11:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.11 1992/12/16 21:35:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,7 +121,7 @@
 	(destructuring-bind
 	    (slot-name &rest options
 		       &key docs rest-p (length (if rest-p 0 1))
-		       ((:type slot-type)) init
+		       ((:type slot-type) t) init
 		       (ref-known nil ref-known-p) ref-trans
 		       (set-known nil set-known-p) set-trans
 		       &allow-other-keys)
