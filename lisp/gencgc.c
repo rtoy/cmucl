@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.62 2004/07/27 22:03:53 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.63 2005/02/06 06:11:00 cshapiro Exp $
  *
  */
 
@@ -5626,12 +5626,6 @@ static void unprotect_oldspace(void)
  * generation. Bytes_allocated and the generation bytes_allocated
  * counter are updated.  The number of bytes freed is returned.
  */
-#ifdef i386
-extern void i586_bzero(void *addr, int nbytes);
-/* i586_bzero may be good on amd64. Eventually we should try it. */
-#else
-#define i586_bzero(addr, nbytes)        memset(addr, 0, nbytes)
-#endif
 static int free_oldspace(void)
 {
   int bytes_freed = 0;
@@ -5694,7 +5688,7 @@ static int free_oldspace(void)
       int *page_start;
 
       page_start = (int *) page_address(first_page);
-      i586_bzero(page_start, PAGE_SIZE * (last_page - first_page));
+      memset(page_start, 0, PAGE_SIZE * (last_page - first_page));
     }
 
     first_page = last_page;

@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.24 2003/10/24 04:29:14 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.25 2005/02/06 06:11:07 cshapiro Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -407,28 +407,6 @@ Lend:
 	ret
 	.size	GNAME(fastcopy16),.-GNAME(fastcopy16)
 #endif
-
-#ifdef GENCGC
-/* Fast bzero using the FPU. The first argument is the start address
-   which needs to be aligned on an 8 byte boundary, the second argument
-   is the number of bytes which needs to be a multiple of 8 bytes and
-   not zero. */
-	.text
-	.globl	GNAME(i586_bzero)
-	.type	GNAME(i586_bzero),@function
-	.align	align_4byte,0x90
-GNAME(i586_bzero):
-	movl	4(%esp),%edx	# Load the start address
-	movl	8(%esp),%eax	# Load the number of bytes
-	fldz
-l1:	fstl	0(%edx)
-	addl	$8,%edx
-	subl	$8,%eax
-	jnz	l1
-	fstp	%st(0)
-	ret
-	.size	GNAME(i586_bzero),.-GNAME(i586_bzero)
-#endif	
 
 
 /*
