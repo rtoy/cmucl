@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.46 1991/11/13 19:34:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.47 1991/11/25 12:07:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -100,7 +100,12 @@
   (when *compile-progress*
     (apply #'compiler-mumble foo)))
 
+
 (deftype object () '(or fasl-file core-object null))
+
+(defvar *compile-object* nil)
+(declaim (type object *compile-object*))
+
 
 
 ;;;; Component compilation:
@@ -205,7 +210,7 @@
 
 ;;; Compile-Component  --  Internal
 ;;;
-(defun compile-component (component object)
+(defun compile-component (component)
   (when *compile-print*
     (compiler-mumble "~&Compiling ~A: " (component-name component)))
   
@@ -295,15 +300,15 @@
       (when *collect-dynamic-statistics*
 	(setup-dynamic-count-info component))
 
-      (etypecase object
+      (etypecase *compile-object*
 	(fasl-file
 	 (maybe-mumble "FASL")
 	 (fasl-dump-component component *code-segment*
-			      length trace-table object))
+			      length trace-table *compile-object*))
 	(core-object
 	 (maybe-mumble "Core")
 	 (make-core-component component *code-segment*
-			      length trace-table object))
+			      length trace-table *compile-object*))
 	(null))
 
       (nuke-segment *code-segment*)))
@@ -810,8 +815,8 @@
 ;;;   The cookies at this time becomes the default policy for compiling the
 ;;; form.  Any enclosed PROCLAIMs will affect only subsequent forms.
 ;;;
-(defun convert-and-maybe-compile (form path object)
-  (declare (list path) (type object object))
+(defun convert-and-maybe-compile (form path)
+  (declare (list path))
   ;;
   ;; This W/O GC is pretty much of a hack, and should be replaced with a less
   ;; drastic GC procrastination mechanism.  The problem is that in addition to
@@ -824,7 +829,7 @@
 	   (tll (ir1-top-level form path nil)))
       (cond ((eq *block-compile* t) (push tll *top-level-lambdas*))
 	    (t
-	     (compile-top-level (list tll) object))))))
+	     (compile-top-level (list tll) nil))))))
 
 
 ;;; PROCESS-PROGN  --  Internal
@@ -832,10 +837,10 @@
 ;;;    Process a PROGN-like portion of a top-level form.  Forms is a list of
 ;;; the forms, and Path is source path of the form they came out of.
 ;;;
-(defun process-progn (forms path object)
-  (declare (list forms) (list path) (type object object))
+(defun process-progn (forms path)
+  (declare (list forms) (list path))
   (dolist (form forms)
-    (process-form form path object)))
+    (process-form form path)))
 
 
 ;;; PREPROCESSOR-MACROEXPAND  --  Internal
@@ -861,8 +866,8 @@
 ;;; The need for this hack is due to the quirk that there is no way to
 ;;; represent in a cookie that an optimize quality came from the default.
 ;;;
-(defun process-locally (form path object)
-  (declare (list path) (type object object))
+(defun process-locally (form path)
+  (declare (list path))
   (multiple-value-bind
       (body decls)
       (system:parse-body (cdr form) *lexical-environment* nil)
@@ -871,7 +876,7 @@
 	   (*default-cookie* (lexenv-cookie *lexical-environment*))
 	   (*default-interface-cookie*
 	    (lexenv-interface-cookie *lexical-environment*)))
-      (process-progn body path object))))
+      (process-progn body path))))
 
 
 ;;; PROCESS-FILE-COMMENT  --  Internal
@@ -897,16 +902,17 @@
 ;;; will be evaluated in the correct package environment.  Eval the form if
 ;;; Eval is true, then dump the form to evaled at (cold) load time.
 ;;;
-(defun process-cold-load-form (form path object eval)
-  (typecase object
-    (fasl-file
-     (compile-top-level-lambdas () t object)))
-  (when eval (eval form))
-  (etypecase object
-    (fasl-file
-     (fasl-dump-cold-load-form form object))
-    ((or null core-object)
-     (convert-and-maybe-compile form path object))))
+(defun process-cold-load-form (form path eval)
+  (let ((object *compile-object*))
+    (typecase object
+      (fasl-file
+       (compile-top-level-lambdas () t)))
+    (when eval (eval form))
+    (etypecase object
+      (fasl-file
+       (fasl-dump-cold-load-form form object))
+      ((or null core-object)
+       (convert-and-maybe-compile form path)))))
 
 
 ;;; PROCESS-PROCLAIM  --  Internal
@@ -915,22 +921,22 @@
 ;;; appropriate.  Otherwise, just convert-and-maybe-compile the form.  If
 ;;; *BLOCK-COMPILE* is NIL, then we ignore block declarations.
 ;;;
-(defun process-proclaim (form path object)
+(defun process-proclaim (form path)
   (if (and (eql (length form) 2) (constantp (cadr form)))
       (let ((spec (eval (cadr form))))
 	(if (consp spec)
 	    (case (first spec)
 	      (start-block
 	       (when *block-compile*
-		 (finish-block-compilation object)
+		 (finish-block-compilation)
 		 (setq *block-compile* t)
 		 (setq *entry-points* (rest spec))))
 	      (end-block
-	       (finish-block-compilation object))
+	       (finish-block-compilation))
 	      (t
-	       (convert-and-maybe-compile form path object)))
-	    (convert-and-maybe-compile form path object)))
-      (convert-and-maybe-compile form path object)))
+	       (convert-and-maybe-compile form path)))
+	    (convert-and-maybe-compile form path)))
+      (convert-and-maybe-compile form path)))
 
 
 (proclaim '(special *compiler-error-bailout*))
@@ -943,8 +949,8 @@
 ;;; -- If it is a macro expand it.
 ;;; -- Otherwise, just compile it.
 ;;;
-(defun process-form (form path object)
-  (declare (list path) (type object object))
+(defun process-form (form path)
+  (declare (list path))
   (catch 'process-form-error-abort
     (let* ((path (or (gethash form *source-paths*) (cons form path)))
 	   (*compiler-error-bailout*
@@ -952,41 +958,208 @@
 		(convert-and-maybe-compile
 		 `(error "Execution of a form compiled with errors:~% ~S"
 			 ',form)
-		 path object)
+		 path)
 		(throw 'process-form-error-abort nil))))
       (if (atom form)
-	  (convert-and-maybe-compile form path object)
+	  (convert-and-maybe-compile form path)
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
-	     (process-cold-load-form form path object t))
+	     (process-cold-load-form form path t))
 	    ((error cerror break signal)
-	     (process-cold-load-form form path object nil))
+	     (process-cold-load-form form path nil))
 	    ((eval-when)
 	     (unless (>= (length form) 2)
 	       (compiler-error "EVAL-WHEN form is too short: ~S." form))
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms path object))))
+		  (process-progn forms path))))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
 	       (compiler-error "MACROLET form is too short: ~S." form))
 	     (do-macrolet-stuff
 	      (cadr form)
 	      #'(lambda ()
-		  (process-progn (cddr form) path object))))
-	    (locally (process-locally form path object))
-	    (progn (process-progn (cdr form) path object))
+		  (process-progn (cddr form) path))))
+	    (locally (process-locally form path))
+	    (progn (process-progn (cdr form) path))
 	    (file-comment (process-file-comment form))
-	    (proclaim (process-proclaim form path object))
+	    (proclaim (process-proclaim form path))
 	    (t
 	     (let ((exp (preprocessor-macroexpand form)))
 	       (if (eq exp form)
-		   (convert-and-maybe-compile form path object)
-		   (process-form exp path object))))))))
+		   (convert-and-maybe-compile form path)
+		   (process-form exp path))))))))
       
   (undefined-value))
+
+
+;;;; Load time value support.
+
+;;; PRODUCING-FASL-FILE  --  interface.
+;;;
+;;; Returns T iff we are currently producing a fasl-file and hence constants
+;;; need to be dumped carfully.
+;;; 
+(defun producing-fasl-file ()
+  (unless *converting-for-interpreter*
+    (fasl-file-p *compile-object*)))
+
+;;; COMPILE-LOAD-TIME-VALUE  --  interface.
+;;;
+;;; Compile FORM and arrange for it to be called at load-time.  Returns the
+;;; dumper handle and our best guess at the type of the object.
+;;; 
+(defun compile-load-time-value
+       (form &optional
+	     (name (let ((*print-level* 2) (*print-length* 3))
+		     (format nil "Load Time Value of ~S" form))))
+  (let ((lambda (compile-load-time-stuff form name t)))
+    (values
+     (fasl-dump-load-time-value-lambda lambda *compile-object*)
+     (let ((type (leaf-type lambda)))
+       (if (function-type-p type)
+	   (single-value-type (function-type-returns type))
+	   *wild-type*)))))
+
+;;; COMPILE-MAKE-LOAD-FORM-INIT-FORMS  --  internal.
+;;;
+;;; Compile the FORMS and arrange for them to be called (for effect, not value)
+;;; at load-time.
+;;; 
+(defun compile-make-load-form-init-forms (forms name)
+  (let ((lambda (compile-load-time-stuff `(progn ,@forms) name nil)))
+    (fasl-dump-top-level-lambda-call lambda *compile-object*)))
+
+;;; COMPILE-LOAD-TIME-STUFF  --  internal.
+;;;
+;;; Does the actual work of COMPILE-LOAD-TIME-VALUE or COMPILE-MAKE-LOAD-FORM-
+;;; INIT-FORMS.
+;;; 
+(defun compile-load-time-stuff (form name for-value)
+  (compile-top-level-lambdas () t)
+  (with-ir1-namespace
+   (let* ((*lexical-environment* (make-null-environment))
+	  (lambda (ir1-top-level form *current-path* for-value)))
+     (setf (leaf-name lambda) name)
+     (compile-top-level (list lambda) t)
+     lambda)))
+
+;;; COMPILE-LOAD-TIME-VALUE-LAMBDA  --  internal.
+;;;
+;;; Called by COMPILE-TOP-LEVEL when it was pased T for LOAD-TIME-VALUE-P
+;;; (which happens in COMPILE-LOAD-TIME-STUFF).  We don't try to combine
+;;; this component with anything else and frob the name.
+;;; 
+(defun compile-load-time-value-lambda (lambdas)
+  (assert (null (cdr lambdas)))
+  (let* ((lambda (car lambdas))
+	 (component (block-component (node-block (lambda-bind lambda)))))
+    (setf (component-name component) (leaf-name lambda))
+    (compile-component component)
+    (clear-ir2-info component)
+    (clear-ir1-info component)))
+
+
+;;; EMIT-MAKE-LOAD-FORM  --  interface.
+;;;
+;;; The entry point for MAKE-LOAD-FORM support.  When IR1 conversion finds a
+;;; constant structure, it invokes this to arrange for proper dumping.  If it
+;;; turns out that the constant has already been dumped, then we don't need
+;;; to do anything.
+;;;
+;;; If the constant hasn't been dumped, then we check to see if we are in the
+;;; process of creating it.  We detect this by maintaining the special
+;;; *constants-being-created* as a list of all the constants we are in the
+;;; process of creating.  Actually, each entry is a list of the constant and
+;;; any init forms that need to be processed on behalf of that constant.
+;;;
+;;; It's not necessarily an error for this to happen.  If we are processing the
+;;; init form for some object that showed up *after* the original reference
+;;; to this constant, then we just need to defer the processing of that init
+;;; form.  To detect this, we maintain *constants-created-sense-last-init* as
+;;; a list of the constants created sense the last time we started processing
+;;; an init form.  If the constant passed to emit-make-load-form shows up in
+;;; this list, then there is a circular chain through creation forms, which is
+;;; an error.
+;;;
+;;; If there is some intervening init form, then we blow out of processing it
+;;; by throwing to the tag PENDING-INIT.  The value we throw is the entry from
+;;; *constants-being-created*.  This is so the offending init form can be
+;;; tacked onto the init forms for the circular object.
+;;;
+;;; If the constant doesn't show up in *constants-being-created*, then we have
+;;; to create it.  We call MAKE-LOAD-FORM and check to see if the creation
+;;; form is the magic value :just-dump-it-normally.  If it is, then we don't
+;;; do anything.  The dumper will eventually get it's hands on the object
+;;; and use the normal structure dumping noise on it.
+;;;
+;;; Otherwise, we bind *constants-being-created* and *constants-created-sense-
+;;; last-init* and compile the creation form a la load-time-value.  When this
+;;; finishes, we tell the dumper to use that result instead whenever it sees
+;;; this constant.
+;;;
+;;; Now we try to compile the init form.  We bind *constants-created-sense-
+;;; last-init* to NIL and compile the init form (and any init forms that were
+;;; added because of circularity detection).  If this works, great.  If not,
+;;; we add the init forms to the init forms for the object that caused the
+;;; problems and let it deal with it.
+;;; 
+(defvar *constants-being-created* nil)
+(defvar *constants-created-sense-last-init* nil)
+;;;
+(defun emit-make-load-form (constant)
+  (assert (fasl-file-p *compile-object*))
+  (unless (or (not (fboundp 'make-load-form))
+	      (fasl-constant-already-dumped constant *compile-object*))
+    (let ((circular-ref (assoc constant *constants-being-created* :test #'eq)))
+      (when circular-ref
+	(when (find constant *constants-created-sense-last-init* :test #'eq)
+	  (throw constant t))
+	(throw 'pending-init circular-ref)))
+    (multiple-value-bind
+	(creation-form init-form)
+	(make-load-form constant *lexical-environment*)
+      (unless (eq creation-form :just-dump-it-normally)
+	(let* ((name (let ((*print-level* 1) (*print-length* 2))
+		       (with-output-to-string (stream)
+			 (write constant :stream stream))))
+	       (info (if init-form
+			 (list constant name init-form)
+			 (list constant))))
+	  (let ((*constants-being-created*
+		 (cons info *constants-being-created*))
+		(*constants-created-sense-last-init*
+		 (cons constant *constants-created-sense-last-init*)))
+	    (when
+		(catch constant
+		  (fasl-note-handle-for-constant
+		   constant
+		   (compile-load-time-value
+		    creation-form
+		    (format nil "Creation Form for ~A" name))
+		   *compile-object*))
+	      (compiler-error "Circular references in creation form for ~S"
+			      constant)))
+	  (when (cdr info)
+	    (let* ((*constants-created-sense-last-init* nil)
+		   (circular-ref
+		    (catch 'pending-init
+		      (loop for (name form) on (cdr info) by #'cddr
+			collect name into names
+			collect form into forms
+			finally do
+			(compile-make-load-form-init-forms
+			 forms
+			 (format nil "Init Form~:[~;s~] for ~{~A~^, ~}"
+				 (cdr forms) names)))
+		      nil)))
+	      (when circular-ref
+		(setf (cdr circular-ref)
+		      (append (cdr circular-ref) (cdr info))))))))))
+  (undefined-value))
+
 
 
 ;;;; COMPILE-FILE and COMPILE-FROM-STREAM: 
@@ -1004,14 +1177,15 @@
 
 ;;; OBJECT-CALL-TOP-LEVEL-LAMBDA  --  Internal
 ;;;
-(defun object-call-top-level-lambda (tll object)
-  (declare (type functional tll) (type object object))
-  (etypecase object
-    (fasl-file
-     (fasl-dump-top-level-lambda-call tll object))
-    (core-object
-     (core-call-top-level-lambda tll object))
-    (null)))
+(defun object-call-top-level-lambda (tll)
+  (declare (type functional tll))
+  (let ((object *compile-object*))
+    (etypecase object
+      (fasl-file
+       (fasl-dump-top-level-lambda-call tll object))
+      (core-object
+       (core-call-top-level-lambda tll object))
+      (null))))
 
 
 ;;; SUB-COMPILE-TOP-LEVEL-LAMBDAS  --  Internal
@@ -1021,8 +1195,8 @@
 ;;; the lambdas into a single component, compile it, and call the resulting
 ;;; function.
 ;;;
-(defun sub-compile-top-level-lambdas (lambdas force-p object)
-  (declare (list lambdas) (type object object))
+(defun sub-compile-top-level-lambdas (lambdas force-p)
+  (declare (list lambdas))
   (setq *pending-top-level-lambdas*
 	(append *pending-top-level-lambdas* lambdas))
   (let ((pending *pending-top-level-lambdas*))
@@ -1032,10 +1206,10 @@
       (multiple-value-bind (component tll)
 			   (merge-top-level-lambdas pending)
 	(setq *pending-top-level-lambdas* ())
-	(compile-component component object)
+	(compile-component component)
 	(clear-ir2-info component)
 	(clear-ir1-info component)
-	(object-call-top-level-lambda tll object))))
+	(object-call-top-level-lambda tll))))
   (undefined-value))
 
 
@@ -1045,8 +1219,8 @@
 ;;; top-level lambdas in non-top-level components here, calling SUB-c-t-l-l on
 ;;; each subsequence of normal top-level lambdas.
 ;;;
-(defun compile-top-level-lambdas (lambdas force-p object)
-  (declare (list lambdas) (type object object))
+(defun compile-top-level-lambdas (lambdas force-p)
+  (declare (list lambdas))
   (let ((len (length lambdas)))
     (flet ((loser (start)
 	     (or (position-if #'(lambda (x)
@@ -1062,12 +1236,11 @@
 	    (loser (loser start) (loser start)))
 	   ((>= start len)
 	    (when force-p
-	      (sub-compile-top-level-lambdas nil t object)))
+	      (sub-compile-top-level-lambdas nil t)))
 	(sub-compile-top-level-lambdas (subseq lambdas start loser)
-				       (or force-p (/= loser len))
-				       object)
+				       (or force-p (/= loser len)))
 	(unless (= loser len)
-	  (object-call-top-level-lambda (elt lambdas loser) object)))))
+	  (object-call-top-level-lambda (elt lambdas loser))))))
   (undefined-value))
 
 
@@ -1078,8 +1251,8 @@
 ;;; single pass might miss something due to components being joined by let
 ;;; conversion.
 ;;;
-(defun compile-top-level (lambdas object)
-  (declare (list lambdas) (type object object))
+(defun compile-top-level (lambdas load-time-value-p)
+  (declare (list lambdas))
   (maybe-mumble "Locall ")
   (loop
     (let ((did-something nil))
@@ -1104,7 +1277,7 @@
 	(pre-environment-analyze-top-level component))
       
       (dolist (component components)
-	(compile-component component object)
+	(compile-component component)
 	(clear-ir2-info component)
 	(when (replace-top-level-xeps component)
 	    (setq top-level-closure t)))
@@ -1113,7 +1286,9 @@
 	(maybe-mumble "[Check]~%")
 	(check-ir1-consistency *all-components*))
       
-      (compile-top-level-lambdas lambdas top-level-closure object)
+      (if load-time-value-p
+	  (compile-load-time-value-lambda lambdas)
+	  (compile-top-level-lambdas lambdas top-level-closure))
 
       (dolist (component components)
 	(clear-ir1-info component))
@@ -1126,11 +1301,10 @@
 ;;;    Actually compile any stuff that has been queued up for block
 ;;; compilation.
 ;;;
-(defun finish-block-compilation (object)
-  (declare (type object object))
+(defun finish-block-compilation ()
   (when *block-compile*
     (when *top-level-lambdas*
-      (compile-top-level (nreverse *top-level-lambdas*) object)
+      (compile-top-level (nreverse *top-level-lambdas*) nil)
       (setq *top-level-lambdas* ()))
     (setq *block-compile* :specified)
     (setq *entry-points* nil)))
@@ -1142,8 +1316,8 @@
 ;;; return :ERROR, :WARNING, :NOTE or NIL to indicate the most severe kind of
 ;;; compiler diagnostic emitted.
 ;;;
-(defun sub-compile-file (info object &optional d-s-info)
-  (declare (type source-info info) (type object object))
+(defun sub-compile-file (info &optional d-s-info)
+  (declare (type source-info info))
   (with-ir1-namespace
     (clear-stuff)
     (let* ((start-errors *compiler-error-count*)
@@ -1185,14 +1359,15 @@
 	    (when eof-p (return))
 	    (clrhash *source-paths*)
 	    (find-source-paths form tlf)
-	    (process-form form `(original-source-start 0 ,tlf) object)))
+	    (process-form form `(original-source-start 0 ,tlf))))
 
-	(finish-block-compilation object)
-	(compile-top-level-lambdas () t object)
-	(etypecase object
-	  (fasl-file (fasl-dump-source-info info object))
-	  (core-object (fix-core-source-info info object d-s-info))
-	  (null))
+	(finish-block-compilation)
+	(compile-top-level-lambdas () t)
+	(let ((object *compile-object*))
+	  (etypecase object
+	    (fasl-file (fasl-dump-source-info info object))
+	    (core-object (fix-core-source-info info object d-s-info))
+	    (null)))
     
 	(cond ((> *compiler-error-count* start-errors) :error)
 	      ((> *compiler-warning-count* start-warnings) :warning)
@@ -1219,7 +1394,6 @@
 	  (if (listp stuff) stuff (list stuff))))
 
 
-#+new-compiler
 ;;; COMPILE-FROM-STREAM  --  Public
 ;;;
 ;;;    Just call SUB-COMPILE-FILE on the on a stream source info for the
@@ -1251,7 +1425,8 @@
   (let ((info (make-stream-source-info stream))
 	(*backend* *native-backend*))
     (unwind-protect
-	(let ((won (sub-compile-file info (make-core-object) source-info)))
+	(let* ((*compile-object* (make-core-object))
+	       (won (sub-compile-file info source-info)))
 	  (values (not (null won))
 		  (if (member won '(:error :warning)) t nil)))
       (close-source-info info))))
@@ -1359,8 +1534,6 @@
 	 (default (pathname (first source))))
     (unwind-protect
 	(progn
-	  #-new-compiler
-	  (pushnew :new-compiler *features*)
 	  (flet ((frob (file type)
 		   (if (eq file t)
 		       (make-pathname :type type  :defaults default)
@@ -1396,11 +1569,9 @@
 	  (when *compile-verbose*
 	    (start-error-output source-info))
 	  (setq error-severity
-		(sub-compile-file source-info fasl-file))
+		(let ((*compile-object* fasl-file))
+		  (sub-compile-file source-info)))
 	  (setq compile-won t))
-
-      #-new-compiler
-      (setq *features* (remove :new-compiler *features*))
 
       (close-source-info source-info)
 
@@ -1478,7 +1649,6 @@
 
 ;;; COMPILE  --  Public
 ;;;
-#+new-compiler
 (defun compile (name &optional (definition (fdefinition name)))
   "Compiles the function whose name is Name.  If Definition is supplied,
   it should be a lambda expression that is compiled and then placed in the
@@ -1514,7 +1684,7 @@
 	     (*last-format-string* nil)
 	     (*last-format-args* nil)
 	     (*last-message-count* 0)
-	     (object (make-core-object)))
+	     (*compile-object* (make-core-object)))
 	(find-source-paths form 0)
 	(let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
 	  
@@ -1528,12 +1698,12 @@
 			       (find-initial-dfo (list lambda))
 	    (let ((*all-components* (append components top-components)))
 	      (dolist (component *all-components*)
-		(compile-component component object)
+		(compile-component component)
 		(clear-ir2-info component))))
 	  
-	  (let* ((res (core-call-top-level-lambda lambda object))
+	  (let* ((res (core-call-top-level-lambda lambda *compile-object*))
 		 (return (or name res)))
-	    (fix-core-source-info *source-info* object res)
+	    (fix-core-source-info *source-info* *compile-object* res)
 	    (when name
 	      (setf (fdefinition name) res))
 	    
@@ -1545,7 +1715,6 @@
 		  (t
 		   (values return nil nil)))))))))
 
-#+new-compiler
 ;;; UNCOMPILE  --  Public
 ;;;
 (defun uncompile (name)
