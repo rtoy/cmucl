@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.36 1992/12/15 16:08:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37 1992/12/15 19:45:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,8 +22,10 @@
 (in-package :c)
 
 ;;; Always compile safe.  This code isn't very careful about protecting itself.
-;;;
-(declaim (optimize (safety 1)))
+;;; Note: we only do this at compile time because defstruct gets cold-loaded
+;;; before enough stuff to handle the declaim has been set up.
+(eval-when (compile)
+  (declaim (optimize (safety 1))))
 
 
 ;;;; Structure frobbing primitives.
