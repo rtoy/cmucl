@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.78 2002/11/15 15:08:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.79 2002/11/19 12:52:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2912,4 +2912,37 @@
                       :until (zerop (sap-int (alien-sap member)))
                       :collect (string (cast member c-call:c-string)))))))
 
+#+solaris
+(defun unix-setpwent ()
+  (void-syscall ("setpwent")))
+
+#+solaris
+(defun unix-endpwent ()
+  (void-syscall ("getpwent")))
+
+#+solaris
+(defun unix-getpwent ()
+  (with-alien ((buf (array c-call:char 1024))
+	       (user-info (struct passwd)))
+    (let ((result
+	   (alien-funcall
+	    (extern-alien "getpwent_r"
+			  (function (* (struct passwd))
+				    (* (struct passwd))
+				    (* c-call:char)
+				    c-call:unsigned-int))
+	    (addr user-info)
+	    (cast buf (* c-call:char))
+	    1024)))
+      (when (not (zerop (sap-int (alien-sap result))))
+	(make-user-info
+	 :name (string (cast (slot result 'pw-name) c-call:c-string))
+	 :password (string (cast (slot result 'pw-passwd) c-call:c-string))
+	 :uid (slot result 'pw-uid)
+	 :gid (slot result 'pw-gid)
+	 :age (string (cast (slot result 'pw-age) c-call:c-string))
+	 :comment (string (cast (slot result 'pw-comment) c-call:c-string))
+	 :gecos (string (cast (slot result 'pw-gecos) c-call:c-string))
+	 :dir (string (cast (slot result 'pw-dir) c-call:c-string))
+	 :shell (string (cast (slot result 'pw-shell) c-call:c-string)))))))  
 ;; EOF
