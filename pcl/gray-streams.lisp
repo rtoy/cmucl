@@ -5,7 +5,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.10 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.11 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,6 +31,10 @@
 (defmethod stream-element-type ((stream fundamental-character-stream))
   'character)
 
+(when (find-class 'stream:simple-stream nil)
+  (defmethod stream-element-type ((stream stream:simple-stream))
+    '(unsigned-byte 8)))
+
 
 
 (defgeneric pcl-open-stream-p (stream)
@@ -44,6 +48,10 @@
 
 (defmethod pcl-open-stream-p ((stream fundamental-stream))
   nil)
+
+(when (find-class 'stream:simple-stream nil)
+  (defmethod pcl-open-stream-p ((stream stream:simple-stream))
+    (stream::%open-stream-p stream)))
 
 ;;; Bootstrapping hack.
 (pcl-open-stream-p (make-string-output-stream))
@@ -63,6 +71,10 @@
     (funcall (lisp-stream-misc stream) stream :close abort))
   t)
 
+(when (find-class 'stream:simple-stream nil)
+  (defmethod pcl-close ((stream stream:simple-stream) &key abort)
+    (stream:device-close stream abort)))
+
 (setf (fdefinition 'close) #'pcl-close)
 
 
@@ -75,10 +87,15 @@
 (defmethod input-stream-p ((stream lisp-stream))
   (and (not (eq (lisp-stream-in stream) #'closed-flame))
        (or (not (eq (lisp-stream-in stream) #'ill-in))
-	   (not (eq (lisp-stream-bin stream) #'ill-bin)))))
+	   (not (eq (lisp-stream-bin stream) #'ill-bin))
+	   (not (eq (lisp-stream-n-bin stream) #'ill-n-bin)))))
 
 (defmethod input-stream-p ((stream fundamental-input-stream))
   t)
+
+(when (find-class 'stream:simple-stream nil)
+  (defmethod input-stream-p ((stream stream:simple-stream))
+    (stream::%input-stream-p stream)))
 
 
 
@@ -94,6 +111,10 @@
 
 (defmethod output-stream-p ((stream fundamental-output-stream))
   t)
+
+(when (find-class 'stream:simple-stream nil)
+  (defmethod output-stream-p ((stream stream:simple-stream))
+    (stream::%output-stream-p stream)))
 
 
 ;;; Character input streams.
@@ -408,11 +429,11 @@
 (defmethod stream-read-char-no-hang ((stream character-input-stream))
   (read-char-no-hang (character-input-stream-lisp-stream stream) nil :eof))
 
-#+nil
+#+(or)
 (defmethod stream-peek-char ((stream character-input-stream))
   (peek-char nil (character-input-stream-lisp-stream stream) nil :eof))
 
-#+nil
+#+(or)
 (defmethod stream-listen ((stream character-input-stream))
   (listen (character-input-stream-lisp-stream stream)))
 

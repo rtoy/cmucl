@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.26 2003/04/13 16:48:10 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.27 2003/06/06 16:23:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -78,6 +78,9 @@
 	  ru-msgsnd ru-msgrcv ru-nsignals ru-nvcsw ru-nivcsw
 	  rlimit rlim-cur rlim-max sc-onstack sc-mask sc-pc
 	  unix-errno get-unix-error-msg
+	  prot_read prot_write prot_exec prot_none
+	  map_shared map_private map_fixed map_anonymous
+	  unix-mmap unix-munmap
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
 	  unix-access r_ok w_ok x_ok f_ok unix-chdir unix-chmod setuidexec
@@ -220,6 +223,36 @@
 	     (prog1 (when name `(defconstant ,name ,cur))
 	       (setf cur (funcall inc cur 1)))))
     `(progn ,@(mapcar #'defform names))))
+
+;;;; Memory-mapped files
+
+(defconstant +null+ (sys:int-sap 0))
+
+(defconstant prot_read 1)
+(defconstant prot_write 2)
+(defconstant prot_exec 4)
+(defconstant prot_none 0)
+
+(defconstant map_shared 1)
+(defconstant map_private 2)
+(defconstant map_fixed 16)
+(defconstant map_anonymous 32)
+
+(defun unix-mmap (addr length prot flags fd offset)
+  (declare (type (or null system-area-pointer) addr)
+          (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot)
+          (type (unsigned-byte 32) flags)
+          (type unix-fd fd)
+          (type (signed-byte 32) offset))
+  (syscall ("mmap" system-area-pointer size-t int int int off-t)
+          (sys:int-sap result)
+          (or addr +null+) length prot flags (or fd -1) offset))
+
+(defun unix-munmap (addr length)
+  (declare (type system-area-pointer addr)
+          (type (unsigned-byte 32) length))
+  (syscall ("munmap" system-area-pointer size-t) t addr length))
 
 ;;;; Lisp types used by syscalls.
 
@@ -610,14 +643,14 @@
 #-alpha
 (progn
   (defconstant F-RDLCK 0 "for fcntl and lockf")
-  (defconstant F-WDLCK 1 "for fcntl and lockf")
+  (defconstant F-WRLCK 1 "for fcntl and lockf")
   (defconstant F-UNLCK 2 "for fcntl and lockf")
   (defconstant F-EXLCK 4 "old bsd flock (depricated)")
   (defconstant F-SHLCK 8 "old bsd flock (depricated)"))
 #+alpha
 (progn
   (defconstant F-RDLCK 1 "for fcntl and lockf")
-  (defconstant F-WDLCK 2 "for fcntl and lockf")
+  (defconstant F-WRLCK 2 "for fcntl and lockf")
   (defconstant F-UNLCK 8 "for fcntl and lockf")
   (defconstant F-EXLCK 16 "old bsd flock (depricated)")
   (defconstant F-SHLCK 32 "old bsd flock (depricated)"))

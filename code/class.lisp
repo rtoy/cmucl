@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.55 2003/04/26 18:24:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.56 2003/06/06 16:23:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -919,7 +919,14 @@
 ;;; correctly and the lisp layout replaced by a PCL wrapper after PCL
 ;;; is loaded and the class defined.
 (cold-load-init
-  (dolist (x '((fundamental-stream (t instance stream stream))))
+  (dolist (x '((fundamental-stream (t instance stream stream))
+	       (stream:simple-stream (t instance stream))
+	       (stream:single-channel-simple-stream (t instance stream
+						     stream:simple-stream))
+	       (stream:dual-channel-simple-stream (t instance stream
+						   stream:simple-stream))
+	       (stream:string-simple-stream (t instance stream
+					     stream:simple-stream))))
     (let* ((name (first x))
 	   (inherits (second x))
 	   (class (make-standard-class :name name))

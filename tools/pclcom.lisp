@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.27 2003/04/18 10:24:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/pclcom.lisp,v 1.28 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -114,3 +114,16 @@
  "pcl:gray-streams-library"
  "pcl:gray-streams-class"
  "pcl:gray-streams")
+
+(cat-if-anything-changed
+ "pcl:simple-streams-library"
+ "pcl:simple-streams/classes"
+ "pcl:simple-streams/internal"
+ "pcl:simple-streams/strategy"
+ "pcl:simple-streams/impl"
+ "pcl:simple-streams/null"
+ "pcl:simple-streams/direct"
+ "pcl:simple-streams/file"
+ "pcl:simple-streams/string"
+ "pcl:simple-streams/terminal"
+ "pcl:simple-streams/socket")

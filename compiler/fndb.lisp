@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.114 2003/04/29 12:25:21 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.115 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -571,7 +571,8 @@
   :derive-type (result-type-specifier-nth-arg 1))
 
 (defknown read-sequence (sequence stream &key (:start index)
-				  (:end sequence-end))
+					      (:end sequence-end)
+					      (:partial-fill boolean))
   (index) ())
 
 (defknown write-sequence (sequence stream &key (:start index)
@@ -870,9 +871,11 @@
 (defknown peek-char (&optional (or character (member nil t)) streamlike t t t)
   t
   (explicit-check))
-(defknown listen (&optional streamlike) boolean (flushable explicit-check))
+(defknown listen (&optional streamlike
+			    (or null (integer 1 10) (member 'character)))
+  boolean (flushable explicit-check))
 
-(defknown clear-input (&optional stream) null (explicit-check))
+(defknown clear-input (&optional stream boolean) null (explicit-check))
 
 (defknown read-from-string
   (string &optional t t &key (:start index) (:end sequence-end)
@@ -1003,16 +1006,22 @@
 
 (defknown user-homedir-pathname (&optional t) pathname (flushable))
 
-(defknown open
-  (pathnamelike &key (:direction (member :input :output :io :probe))
-		(:element-type type-specifier)
-		(:if-exists (member :error :new-version :rename
-				   :rename-and-delete :overwrite :append
-				   :supersede nil))
-		(:if-does-not-exist (member :error :create nil))
-		(:external-format (member :default))
-		(:class (or symbol class)))
-  (or stream null))
+(defknown open (t &rest t
+		  &key (:direction (member :input :output :io :probe))
+		       (:element-type type-specifier)
+		       (:if-exists (member :error :new-version :rename
+					   :rename-and-delete :overwrite
+					   :append :supersede nil))
+		       (:if-does-not-exist (member :error :create nil))
+		       (:external-format (member :default))
+		       (:class (or symbol class))
+		       (:mapped boolean)
+		       (:input-handle (or null fixnum stream))
+		       (:output-handle (or null fixnum stream))
+		  &allow-other-keys)
+  (or stream null)
+  ()
+  :derive-type #'result-type-open-class)
 
 (defknown rename-file (pathnamelike filename) (values pathname pathname pathname))
 (defknown delete-file (pathnamelike) t)

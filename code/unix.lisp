@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.83 2003/04/13 16:48:10 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.84 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,6 +35,10 @@
 	  rlimit rlim-cur rlim-max sc-onstack sc-mask sc-pc
 
 	  unix-errno get-unix-error-msg
+
+	  prot_read prot_write prot_exec prot_none
+	  map_shared map_private map_fixed map_anonymous
+	  unix-mmap unix-munmap
 
 	  unix-pathname unix-file-mode unix-fd unix-pid unix-uid unix-gid
 	  unix-setitimer unix-getitimer
@@ -834,6 +838,40 @@
 
 
 
+;;;; Memory-mapped files
+
+(defconstant +null+ (sys:int-sap 0))
+
+(defconstant prot_read 1)
+(defconstant prot_write 2)
+(defconstant prot_exec 4)
+(defconstant prot_none 0)
+
+(defconstant map_shared 1)
+(defconstant map_private 2)
+(defconstant map_fixed 16)
+(defconstant map_anonymous
+  #+solaris #x100			; Solaris
+  #+linux 32				; Linux
+  )
+
+(defun unix-mmap (addr length prot flags fd offset)
+  (declare (type (or null system-area-pointer) addr)
+	   (type (unsigned-byte 32) length)
+           (type (integer 1 7) prot)
+	   (type (unsigned-byte 32) flags)
+	   (type unix-fd fd)
+	   (type (signed-byte 32) offset))
+  (syscall ("mmap" system-area-pointer size-t int int int off-t)
+	   (sys:int-sap result)
+	   (or addr +null+) length prot flags (or fd -1) offset))
+
+(defun unix-munmap (addr length)
+  (declare (type system-area-pointer addr)
+	   (type (unsigned-byte 32) length))
+  (syscall ("munmap" system-area-pointer size-t) t addr length))
+
+
 ;;;; Lisp types used by syscalls.
 
 (deftype unix-pathname () 'simple-string)
@@ -1189,13 +1227,13 @@
    l_xtnd       Extend the file size.
   "
   (declare (type unix-fd fd)
-	   (type (unsigned-byte 32) offset)
+	   (type (signed-byte 32) offset)
 	   (type (integer 0 2) whence))
   #-(and x86 bsd) (int-syscall ("lseek" int off-t int) fd offset whence)
   ;; Need a 64-bit return value type for this. TBD. For now,
   ;; don't use this with any 2G+ partitions.
   #+(and bsd x86) (int-syscall ("lseek" int unsigned-long unsigned-long int)
-		     fd offset 0 whence ))
+		     fd offset 0 whence))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
 ;;; corresponding directory with mode mode.

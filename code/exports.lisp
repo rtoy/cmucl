@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.212 2003/05/23 13:34:05 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.213 2003/06/06 16:23:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -196,6 +196,9 @@
              "IT-VALUE" "ITIMERVAL" "UNIX-SETITIMER" "UNIX-GETITIMER"
 	     "BLKCNT-T" "FSBLKCNT-T" "FSFILCNT-T"
 	     "F_TEST" "F_TLOCK" "F_LOCK" "F_ULOCK" "UNIX-LOCKF"
+	     "PROT_READ" "PROT_WRITE" "PROT_EXEC" "PROT_NONE"
+	     "MAP_SHARED" "MAP_PRIVATE" "MAP_FIXED" "MAP_ANONYMOUS"
+	     "UNIX-MMAP" "UNIX-MUNMAP"
 	     "KBDCGET" "KBDCRESET" "KBDCRST" "KBDCSET"
              "KBDCSSTD" "KBDGCLICK" "KBDSCLICK" "KBDSGET" "L_INCR" "L_SET"
              "L_XTND" "OFF-T" "O_APPEND" "O_CREAT" "O_EXCL" "O_RDONLY" "O_RDWR"
@@ -1078,6 +1081,63 @@
 
 	     ;; PCL declaration identifiers.
 	     "SLOTS" "AUTO-COMPILE" "NOT-AUTO-COMPILE"))
+
+(defpackage "STREAM"
+  (:import-from "SYSTEM" "LISP-STREAM")
+  (:import-from "EXTENSIONS" "FUNDAMENTAL-STREAM")
+  (:import-from "COMMON-LISP" "LINE-LENGTH" "CHARPOS")
+  (:export ;; Stream classes
+           "STREAM"
+           "SIMPLE-STREAM"
+           "SINGLE-CHANNEL-SIMPLE-STREAM"
+           "DUAL-CHANNEL-SIMPLE-STREAM"
+           "STRING-SIMPLE-STREAM"
+           "PROBE-SIMPLE-STREAM"
+           "DIRECT-SIMPLE-STREAM"
+           "BUFFER-INPUT-SIMPLE-STREAM"
+           "BUFFER-OUTPUT-SIMPLE-STREAM"
+           "NULL-SIMPLE-STREAM"
+           "FILE-SIMPLE-STREAM"
+           "MAPPED-FILE-SIMPLE-STREAM"
+           "TERMINAL-SIMPLE-STREAM"
+           "SOCKET-SIMPLE-STREAM"
+           "SOCKET-BASE-SIMPLE-STREAM"
+           "COMPOSING-STREAM"
+           "STRING-INPUT-SIMPLE"
+           "STRING-OUTPUT-SIMPLE-STREAM"
+           "FILL-POINTER-OUTPUT-SIMPLE-STREAM"
+           "XP-SIMPLE-STREAM"
+           "ANNOTATION-OUTPUT-SIMPLE-STREAM"
+           ;; Standard streams
+           "*STANDARD-INPUT*" "*STANDARD-OUTPUT*" "*ERROR-OUTPUT*"
+           "*QUERY-IO*" "*DEBUG-IO*" "*TRACE-OUTPUT*" "*TERMINAL-IO*"
+           ;; Slot accessors
+           "STREAM-INPUT-HANDLE" "STREAM-OUTPUT-HANDLE"
+           "STREAM-PLIST"
+           ;; Device-level functions
+           "DEVICE-OPEN" "DEVICE-CLOSE" "DEVICE-BUFFER-LENGTH"
+           "DEVICE-FILE-POSITION" "DEVICE-FILE-LENGTH" "DEVICE-READ"
+           "DEVICE-CLEAR-INPUT" "DEVICE-WRITE" "DEVICE-CLEAR-OUTPUT"
+           "DEVICE-EXTEND" "DEVICE-FINISH-RECORD"
+           ;; Implementation functions/macros
+           "DEF-STREAM-CLASS" "WITH-STREAM-CLASS" "SM" "FUNCALL-STM-HANDLER"
+           "FUNCALL-STM-HANDLER-2" "ADD-STREAM-INSTANCE-FLAGS"
+           "REMOVE-STREAM-INSTANCE-FLAGS" "COMPOSE-ENCAPSULATING-STREAMS"
+           ;; User-level functions (mostly reexported from COMMON-LISP)
+           "OPEN" "CLOSE" "READ-BYTE" "READ-CHAR" "READ-NO-HANG-P"
+	   "READ-CHAR-NO-HANG" "UNREAD-CHAR" "PEEK-CHAR" "LISTEN" "READ-LINE"
+	   "READ-SEQUENCE" "CLEAR-INPUT" "WRITE-BYTE" "WRITE-CHAR"
+	   "WRITE-NO-HANG-P" "WRITE-STRING" "WRITE-SEQUENCE" "TERPRI"
+           "FRESH-LINE" "FINISH-OUTPUT" "FORCE-OUTPUT" "CLEAR-OUTPUT"
+           "FILE-POSITION" "FILE-LENGTH" "LINE-LENGTH" "CHARPOS"
+           "STREAM-ELEMENT-TYPE" "STREAM-EXTERNAL-FORMAT" "STREAMP"
+           "OPEN-STREAM-P" "INPUT-STREAM-P" "OUTPUT-STREAM-P"
+           "INTERACTIVE-STREAM-P" "READ-VECTOR" "WRITE-VECTOR" "READ-OCTETS"
+           "WRITE-OCTETS" "WRITE-ALL-OCTETS" "WAIT-FOR-INPUT-AVAILABLE"
+           "WITH-OPEN-FILE" "WITH-OPEN-STREAM" "FORMAT" "PPRINT" "PRIN1"
+           "PRIN1-TO-STRING" "PRINC" "PRINC-TO-STRING" "PRINT" "READ"
+           "READ-DELIMITED-LIST" "READ-FROM-STRING" "WRITE" "WRITE-LINE"
+           "WRITE-TO-STRING" "READ-PRESERVING-WHITESPACE"))
 
 (defpackage "LOOP")
 (dolist

@@ -5,13 +5,14 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.60 2003/03/19 03:31:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.61 2003/06/06 16:23:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
 ;;; Gray streams support by Douglas Crosher, 1998.
+;;; Simple-streams support by Paul Foley, 2003.
 ;;;
 ;;; This file contains the OS-independent stream functions.
 ;;;
@@ -100,7 +101,8 @@
   (error 'simple-type-error
 	 :datum stream
 	 :expected-type '(satisfies input-stream-p)
-	 :format-control "~S is not a binary input stream or does not support multi-byte read operations."
+	 :format-control "~S is not a binary input stream ~
+                          or does not support multi-byte read operations."
 	 :format-arguments (list stream)))
 (defun ill-bout (stream &rest ignore)
   (declare (ignore ignore))
@@ -114,6 +116,12 @@
   (error "~S is closed." stream))
 (defun do-nothing (&rest ignore)
   (declare (ignore ignore)))
+(defun no-gray-streams (stream)
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type 'stream
+	 :format-control "~S is an unsupported Gray stream."
+	 :format-arguments (list stream)))
 
 (defun %print-stream (structure stream d)
   (declare (ignore d structure))
@@ -140,6 +148,7 @@
 ;;; are handled by just one function, the Misc method.  This function
 ;;; is passed a keyword which indicates the operation to perform.
 ;;; The following keywords are used:
+;;;
 ;;;  :listen 		- Return the following values:
 ;;; 			     t if any input waiting.
 ;;; 			     :eof if at eof.
@@ -153,7 +162,7 @@
 ;;;  :finish-output,
 ;;;  :force-output	- Cause output to happen
 ;;;  :clear-output	- Clear any undone output
-;;;  :element-type 	- Return the type of element the stream deals wit<h.
+;;;  :element-type 	- Return the type of element the stream deals with.
 ;;;  :line-length	- Return the length of a line of output.
 ;;;  :charpos		- Return current output position on the line.
 ;;;  :file-length	- Return the file length of a file stream.
@@ -197,49 +206,104 @@
 
 (defun input-stream-p (stream)
   "Returns non-nil if the given Stream can perform input operations."
-  (and (lisp-stream-p stream)
-       (not (eq (lisp-stream-in stream) #'closed-flame))
-       (or (not (eq (lisp-stream-in stream) #'ill-in))
-	   (not (eq (lisp-stream-bin stream) #'ill-bin))
-	   (not (eq (lisp-stream-n-bin stream) #'ill-n-bin)))))
+  (declare (type stream stream))
+  ;; Note: Gray streams redefines this function; any changes made here need
+  ;; to be duplicated in .../pcl/gray-streams.lisp
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%input-stream-p stream)
+    ;; lisp-stream
+    (and (not (eq (lisp-stream-in stream) #'closed-flame))
+	 (or (not (eq (lisp-stream-in stream) #'ill-in))
+	     (not (eq (lisp-stream-bin stream) #'ill-bin))
+	     (not (eq (lisp-stream-n-bin stream) #'ill-n-bin))))))
 
 (defun output-stream-p (stream)
   "Returns non-nil if the given Stream can perform output operations."
-  (and (lisp-stream-p stream)
-       (not (eq (lisp-stream-in stream) #'closed-flame))
-       (or (not (eq (lisp-stream-out stream) #'ill-out))
-	   (not (eq (lisp-stream-bout stream) #'ill-bout)))))
+  (declare (type stream stream))
+  ;; Note: Gray streams redefines this function; any changes made here need
+  ;; to be duplicated in .../pcl/gray-streams.lisp
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%output-stream-p stream)
+    ;; lisp-stream
+    (and (not (eq (lisp-stream-in stream) #'closed-flame))
+	 (or (not (eq (lisp-stream-out stream) #'ill-out))
+	     (not (eq (lisp-stream-bout stream) #'ill-bout))))))
 
 (defun open-stream-p (stream)
   "Return true if Stream is not closed."
   (declare (type stream stream))
-  (not (eq (lisp-stream-in stream) #'closed-flame)))
+  ;; Note: Gray streams redefines this function; any changes made here need
+  ;; to be duplicated in .../pcl/gray-streams.lisp
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%open-stream-p stream)
+    ;; lisp-stream
+    (not (eq (lisp-stream-in stream) #'closed-flame))))
 
 (defun stream-element-type (stream)
   "Returns a type specifier for the kind of object returned by the Stream."
   (declare (type stream stream))
-  (funcall (lisp-stream-misc stream) stream :element-type))
+  ;; Note: Gray streams redefines this function; any changes made here need
+  ;; to be duplicated in .../pcl/gray-streams.lisp
+  (stream-dispatch stream
+    ;; simple-stream
+    '(unsigned-byte 8)
+    ;; lisp-stream
+    (funcall (lisp-stream-misc stream) stream :element-type)))
 
 (defun interactive-stream-p (stream)
   "Return true if Stream does I/O on a terminal or other interactive device."
   (declare (type stream stream))
-  (funcall (lisp-stream-misc stream) stream :interactive-p))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%interactive-stream-p stream)
+    ;; lisp-stream
+    (funcall (lisp-stream-misc stream) stream :interactive-p)))
 
-(defun open-stream-p (stream)
-  "Return true if and only if STREAM has not been closed."
+(defun (setf interactive-stream-p) (flag stream)
   (declare (type stream stream))
-  (not (eq (lisp-stream-in stream) #'closed-flame)))
+  (stream-dispatch stream
+    ;; simple-stream
+    (if flag
+	(stream::%interactive-stream-y stream)
+	(stream::%interactive-stream-n stream))
+    ;; lisp-stream
+    (error 'simple-type-error
+	   :datum stream
+	   :expected-type 'stream:simple-stream
+	   :format-control "Can't set interactive flag on ~S."
+	   :format-arguments (list stream))))
+
+(defun stream-external-format (stream)
+  "Returns the external format used by the given Stream."
+  (declare (type stream stream))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%stream-external-format stream)
+    ;; lisp-stream
+    :default
+    ;; fundamental-stream
+    :default))
 
 (defun close (stream &key abort)
   "Closes the given Stream.  No more I/O may be performed, but inquiries
   may still be made.  If :Abort is non-nil, an attempt is made to clean
   up the side effects of having created the stream."
   (declare (type stream stream))
-  (when (open-stream-p stream)
-    (funcall (lisp-stream-misc stream) stream :close abort))
+  ;; Note: Gray streams redefines this function; any changes made here need
+  ;; to be duplicated in .../pcl/gray-streams.lisp
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream:device-close stream abort)
+    ;; lisp-stream
+    (when (open-stream-p stream)
+      (funcall (lisp-stream-misc stream) stream :close abort)))
   t)
 
 (defun set-closed-flame (stream)
+  (declare (type lisp-stream stream))
   (setf (lisp-stream-in stream) #'closed-flame)
   (setf (lisp-stream-bin stream) #'closed-flame)
   (setf (lisp-stream-n-bin stream) #'closed-flame)
@@ -262,14 +326,20 @@
    this becomes the new file position.  The second argument may also
    be :start or :end for the start and end of the file, respectively."
   (declare (type stream stream)
-	   (type (or (integer 0) (member nil :start :end)) position))
-  (cond
-   (position
-    (setf (lisp-stream-in-index stream) in-buffer-length)
-    (funcall (lisp-stream-misc stream) stream :file-position position))
-   (t
-    (let ((res (funcall (lisp-stream-misc stream) stream :file-position nil)))
-      (when res (- res (- in-buffer-length (lisp-stream-in-index stream))))))))
+	   (type (or (integer 0 *) (member nil :start :end)) position))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%file-position stream position)
+    ;; lisp-stream
+    (cond
+      (position
+       (setf (lisp-stream-in-index stream) in-buffer-length)
+       (funcall (lisp-stream-misc stream) stream :file-position position))
+      (t
+       (let ((res (funcall (lisp-stream-misc stream) stream
+			   :file-position nil)))
+	 (when res
+	   (- res (- in-buffer-length (lisp-stream-in-index stream)))))))))
 
 
 ;;; File-Length  --  Public
@@ -278,8 +348,11 @@
 ;;;
 (defun file-length (stream)
   "This function returns the length of the file that File-Stream is open to."
-  (declare (stream stream))
-  (funcall (lisp-stream-misc stream) stream :file-length))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%file-length stream)
+    ;; lisp-stream
+    (funcall (lisp-stream-misc stream) stream :file-length)))
 
 
 ;;; Input functions:
@@ -288,41 +361,43 @@
 			    recursive-p)
   "Returns a line of text read from the Stream as a string, discarding the
   newline character."
-  (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-char stream
-          (let ((res (make-string 80))
-		(len 80)
-		(index 0))
-	    (loop
-	     (let ((ch (fast-read-char nil nil)))
-	       (cond (ch
-		      (when (char= ch #\newline)
-			(done-with-fast-read-char)
-			(return (values (shrink-vector res index) nil)))
-		      (when (= index len)
-			(setq len (* len 2))
-			(let ((new (make-string len)))
-			  (replace new res)
-			  (setq res new)))
-		      (setf (schar res index) ch)
-		      (incf index))
-		     ((zerop index)
-		      (done-with-fast-read-char)
-		      (return (values (eof-or-lose stream eof-errorp eof-value)
-				      t)))
-		     ;; since fast-read-char hit already the eof char, we
-		     ;; shouldn't do another read-char
-		     (t
-		      (done-with-fast-read-char)
-		      (return (values (shrink-vector res index) t))))))))
-	;; Fundamental-stream.
-	(multiple-value-bind (string eof)
-	    (stream-read-line stream)
-	  (if (and eof (zerop (length string)))
-	      (values (eof-or-lose stream eof-errorp eof-value) t)
-	      (values string eof))))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%read-line stream eof-errorp eof-value recursive-p)
+      ;; lisp-stream
+      (prepare-for-fast-read-char stream
+        (let ((res (make-string 80))
+	      (len 80)
+	      (index 0))
+	  (loop
+	    (let ((ch (fast-read-char nil nil)))
+	      (cond (ch
+		     (when (char= ch #\newline)
+		       (done-with-fast-read-char)
+		       (return (values (shrink-vector res index) nil)))
+		     (when (= index len)
+		       (setq len (* len 2))
+		       (let ((new (make-string len)))
+			 (replace new res)
+			 (setq res new)))
+		     (setf (schar res index) ch)
+		     (incf index))
+		    ((zerop index)
+		     (done-with-fast-read-char)
+		     (return (values (eof-or-lose stream eof-errorp eof-value)
+				     t)))
+		    ;; since fast-read-char hit already the eof char, we
+		    ;; shouldn't do another read-char
+		    (t
+		     (done-with-fast-read-char)
+		     (return (values (shrink-vector res index) t))))))))
+      ;; fundamental-stream
+      (multiple-value-bind (string eof)
+	  (stream-read-line stream)
+	(if (and eof (zerop (length string)))
+	    (values (eof-or-lose stream eof-errorp eof-value) t)
+	    (values string eof))))))
 
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
 ;;; so, except in this file, they are not inline by default, but they can be.
@@ -331,35 +406,40 @@
 (defun read-char (&optional (stream *standard-input*) (eof-errorp t) eof-value
 			    recursive-p)
   "Inputs a character from Stream and returns it."
-  (declare (ignore recursive-p))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-char stream
-          (prog1
-	      (fast-read-char eof-errorp eof-value)
-	    (done-with-fast-read-char)))
-	;; Fundamental-stream.
-	(let ((char (stream-read-char stream)))
-	  (if (eq char :eof)
-	      (eof-or-lose stream eof-errorp eof-value)
-	      char)))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%read-char stream eof-errorp eof-value recursive-p t)
+      ;; lisp-stream
+      (prepare-for-fast-read-char stream
+	(prog1
+	    (fast-read-char eof-errorp eof-value)
+	  (done-with-fast-read-char)))
+      ;; fundamental-stream
+      (let ((char (stream-read-char stream)))
+	(if (eq char :eof)
+	    (eof-or-lose stream eof-errorp eof-value)
+	    char)))))
 
 (defun unread-char (character &optional (stream *standard-input*))
   "Puts the Character back on the front of the input Stream."
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(let ((index (1- (lisp-stream-in-index stream)))
-	      (buffer (lisp-stream-in-buffer stream)))
-	  (declare (fixnum index))
-	  (when (minusp index) (error "Nothing to unread."))
-	  (cond (buffer
-		 (setf (aref buffer index) (char-code character))
-		 (setf (lisp-stream-in-index stream) index))
-		(t
-		 (funcall (lisp-stream-misc stream) stream 
-			  :unread character))))
-	;; Fundamental-stream
-	(stream-unread-char stream character)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%unread-char stream character)
+      ;; lisp-stream
+      (let ((index (1- (lisp-stream-in-index stream)))
+	    (buffer (lisp-stream-in-buffer stream)))
+	(declare (fixnum index))
+	(when (minusp index) (error "Nothing to unread."))
+	(cond (buffer
+	       (setf (aref buffer index) (char-code character))
+	       (setf (lisp-stream-in-index stream) index))
+	      (t
+	       (funcall (lisp-stream-misc stream) stream 
+			:unread character))))
+      ;; fundamental-stream
+      (stream-unread-char stream character)))
   nil)
 
 ;;; In the interest of ``once and only once'' this macro contains the
@@ -376,8 +456,9 @@
 ;;; SKIPPED-CHAR-FORM - the form to execute when skipping a character
 ;;; EOF-DETECTED-FORM - the form to execute when EOF has been detected
 ;;;                     (this will default to CHAR-VAR)
-(defmacro generalized-peeking-mechanism (peek-type eof-value char-var read-form unread-form
-						   &optional (skipped-char-form nil)
+(defmacro generalized-peeking-mechanism (peek-type eof-value char-var
+					 read-form unread-form
+					 &optional (skipped-char-form nil)
 						   (eof-detected-form nil))
   `(let ((,char-var ,read-form))
     (cond ((eql ,char-var ,eof-value) 
@@ -415,7 +496,6 @@
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
 			    (eof-errorp t) eof-value recursive-p)
   "Peeks at the next character in the input Stream.  See manual for details."
-  (declare (ignore recursive-p))
   ;; FIXME: The type of PEEK-TYPE is also declared in a DEFKNOWN, but
   ;; the compiler doesn't seem to be smart enough to go from there to
   ;; imposing a type check. Figure out why (because PEEK-TYPE is an
@@ -428,90 +508,103 @@
 	   :format-control "~@<bad PEEK-TYPE=~S, ~_expected ~S~:>"
 	   :format-arguments (list peek-type '(or character boolean))))
   (let ((stream (in-synonym-of stream)))
-    (cond ((typep stream 'echo-stream)
-	   (echo-misc stream 
-		      :peek-char
-		      peek-type
-		      (list eof-errorp eof-value)))
-	  ((lisp-stream-p stream)
-	   (generalized-peeking-mechanism
-	    peek-type eof-value char
-	    (read-char stream eof-errorp eof-value)
-	    (unread-char char stream)))
-	  (t
-	   ;; by elimination, must be Gray streams FUNDAMENTAL-STREAM
-	   (generalized-peeking-mechanism
-	    peek-type :eof char
-	    (if (null peek-type)
-		(stream-peek-char stream)
-		(stream-read-char stream))
-	    (if (null peek-type)
-		()
-		(stream-unread-char stream char))
-	    ()
-	    (eof-or-lose stream eof-errorp eof-value))))))
+    (if (typep stream 'echo-stream)
+	(echo-misc stream :peek-char peek-type (list eof-errorp eof-value))
+	(stream-dispatch stream
+	  ;; simple-stream
+	  (stream::%peek-char stream peek-type eof-errorp eof-value
+			      recursive-p)
+	  ;; lisp-stream
+	  (generalized-peeking-mechanism
+	   peek-type eof-value char
+	   (read-char stream eof-errorp eof-value)
+	   (unread-char char stream))
+	  ;; fundamental-stream
+	  (generalized-peeking-mechanism
+	   peek-type :eof char
+	   (if (null peek-type)
+	       (stream-peek-char stream)
+	       (stream-read-char stream))
+	   (if (null peek-type)
+	       ()
+	       (stream-unread-char stream char))
+	   ()
+	   (eof-or-lose stream eof-errorp eof-value))))))
 
-(defun listen (&optional (stream *standard-input*))
-  "Returns T if a character is availible on the given Stream."
+(defun listen (&optional (stream *standard-input*) (width 1))
+  "Returns T if a character is available on the given Stream."
+  (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
-	    ;; Test for t explicitly since misc methods return :eof sometimes.
-	    (eq (funcall (lisp-stream-misc stream) stream :listen) t))
-	;; Fundamental-stream.
-	(stream-listen stream))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%listen stream width)
+      ;; lisp-stream
+      (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
+	  ;; Test for t explicitly since misc methods return :eof sometimes.
+	  (eq (funcall (lisp-stream-misc stream) stream :listen) t))
+      ;; fundamental-stream
+      (stream-listen stream))))
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)
-  "Returns the next character from the Stream if one is availible, or nil."
-  (declare (ignore recursive-p))
+  "Returns the next character from the Stream if one is available, or nil."
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(if (funcall (lisp-stream-misc stream) stream :listen)
-	    ;; On t or :eof get READ-CHAR to do the work.
-	    (read-char stream eof-errorp eof-value)
-	    nil)
-	;; Fundamental-stream.
-	(let ((char (stream-read-char-no-hang stream)))
-	  (if (eq char :eof)
-	      (eof-or-lose stream eof-errorp eof-value)
-	      char)))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%read-char stream eof-errorp eof-value recursive-p nil)
+      ;; lisp-stream
+      (if (funcall (lisp-stream-misc stream) stream :listen)
+	  ;; On t or :eof get READ-CHAR to do the work.
+	  (read-char stream eof-errorp eof-value)
+	  nil)
+      ;; fundamental-stream
+      (let ((char (stream-read-char-no-hang stream)))
+	(if (eq char :eof)
+	    (eof-or-lose stream eof-errorp eof-value)
+	    char)))))
 
 
-(defun clear-input (&optional (stream *standard-input*))
+(defun clear-input (&optional (stream *standard-input*) buffer-only)
   "Clears any buffered input associated with the Stream."
   (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
-    (cond ((lisp-stream-p stream)
-	   (setf (lisp-stream-in-index stream) in-buffer-length)
-	   (funcall (lisp-stream-misc stream) stream :clear-input))
-	  (t
-	   (stream-clear-input stream))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%clear-input stream buffer-only)
+      ;; lisp-stream
+      (progn
+	(setf (lisp-stream-in-index stream) in-buffer-length)
+	(funcall (lisp-stream-misc stream) stream :clear-input))
+      ;; fundamental-stream
+      (stream-clear-input stream)))
   nil)
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
   (declare (type stream stream))
   (let ((stream (in-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(prepare-for-fast-read-byte stream
-          (prog1
-	      (fast-read-byte eof-errorp eof-value t)
-	    (done-with-fast-read-byte)))
-	;; Fundamental-stream.
-	(let ((char (stream-read-byte stream)))
-	  (if (eq char :eof)
-	      (eof-or-lose stream eof-errorp eof-value)
-	      char)))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%read-byte stream eof-errorp eof-value)
+      ;; lisp-stream
+      (prepare-for-fast-read-byte stream
+	(prog1
+	    (fast-read-byte eof-errorp eof-value t)
+	  (done-with-fast-read-byte)))
+      ;; fundamental-stream
+      (let ((char (stream-read-byte stream)))
+	(if (eq char :eof)
+	    (eof-or-lose stream eof-errorp eof-value)
+	    char)))))
 
 (defun read-n-bytes (stream buffer start numbytes &optional (eof-errorp t))
   "Reads Numbytes bytes into the Buffer starting at Start, returning the number
    of bytes read.
    -- If EOF-ERROR-P is true, an END-OF-FILE condition is signalled if
       end-of-file is encountered before Count bytes have been read.
-   -- If EOF-ERROR-P is false, READ-N-BYTES reads as much data is currently
-      available (up to count bytes.)  On pipes or similar devices, this
-      function returns as soon as any adata is available, even if the amount
+   -- If EOF-ERROR-P is false, READ-N-BYTES reads as much data as is currently
+      available (up to count bytes).  On pipes or similar devices, this
+      function returns as soon as any data is available, even if the amount
       read is less than Count and eof has not been hit."
   (declare (type lisp-stream stream)
 	   (type index numbytes start)
@@ -523,7 +616,8 @@
     (declare (fixnum index num-buffered))
     (cond
      ((not in-buffer)
-      (funcall (lisp-stream-n-bin stream) stream buffer start numbytes eof-errorp))
+      (funcall (lisp-stream-n-bin stream) stream
+	       buffer start numbytes eof-errorp))
      ((<= numbytes num-buffered)
       (%primitive byte-blt in-buffer index buffer start (+ start numbytes))
       (setf (lisp-stream-in-index stream) (+ index numbytes))
@@ -601,27 +695,45 @@
 (defun write-char (character &optional (stream *standard-output*))
   "Outputs the Character to the Stream."
   (declare (type streamlike stream))
-  (with-out-stream stream (lisp-stream-out character)
-		   (stream-write-char character))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (progn
+	(stream::%write-char stream character)
+	character)
+      ;; lisp-stream
+      (funcall (lisp-stream-out stream) stream character)
+      ;; fundamental-stream
+      (stream-write-char stream character)))
   character)
 
 (defun terpri (&optional (stream *standard-output*))
   "Outputs a new line to the Stream."
   (declare (type streamlike stream))
-  (with-out-stream stream (lisp-stream-out #\newline) (stream-terpri))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%write-char stream #\Newline)
+      ;; lisp-stream
+      (funcall (lisp-stream-out stream) stream #\Newline)
+      ;; fundamental-stream
+      (stream-terpri stream)))
   nil)
 
 (defun fresh-line (&optional (stream *standard-output*))
-  "Outputs a new line to the Stream if it is not positioned at the begining of
+  "Outputs a new line to the Stream if it is not positioned at the beginning of
    a line.  Returns T if it output a new line, nil otherwise."
   (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
-    (if (lisp-stream-p stream)
-	(when (/= (or (charpos stream) 1) 0)
-	  (funcall (lisp-stream-out stream) stream #\newline)
-	  t)
-	;; Fundamental-stream.
-	(stream-fresh-line stream))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%fresh-line stream)
+      ;; lisp-stream
+      (when (/= (or (charpos stream) 1) 0)
+	(funcall (lisp-stream-out stream) stream #\newline)
+	t)
+      ;; fundamental-stream
+      (stream-fresh-line stream))))
 
 (defun write-string (string &optional (stream *standard-output*)
 			    &key (start 0) end)
@@ -630,18 +742,24 @@
 
 (defun write-string* (string &optional (stream *standard-output*)
 			     (start 0) (end (length (the vector string))))
-  (declare (fixnum start end))
+  (declare (type streamlike stream) (fixnum start end))
   (let ((stream (out-synonym-of stream)))
-    (cond ((lisp-stream-p stream)
-	   (if (array-header-p string)
-	       (with-array-data ((data string) (offset-start start)
-				 (offset-end end))
-		 (funcall (lisp-stream-sout stream)
-			  stream data offset-start offset-end))
-	       (funcall (lisp-stream-sout stream) stream string start end))
-	   string)
-	  (t	; Fundamental-stream.
-	   (stream-write-string stream string start end)))))
+    (stream-dispatch stream
+      ;; simple-stream
+      (progn		     
+        (stream::%write-string stream string start end)
+	string)
+      ;; lisp-stream
+      (progn
+	(if (array-header-p string)
+	    (with-array-data ((data string) (offset-start start)
+			      (offset-end end))
+	      (funcall (lisp-stream-sout stream)
+		       stream data offset-start offset-end))
+	    (funcall (lisp-stream-sout stream) stream string start end))
+	string)
+      ;; fundamental-stream
+      (stream-write-string stream string start end))))
 
 (defun write-line (string &optional (stream *standard-output*)
 			  &key (start 0) (end (length string)))
@@ -650,65 +768,115 @@
 
 (defun write-line* (string &optional (stream *standard-output*)
 			   (start 0) (end (length string)))
-  (declare (fixnum start end))
+  (declare (type streamlike stream) (fixnum start end))
   (let ((stream (out-synonym-of stream)))
-    (cond ((lisp-stream-p stream)
-	   (if (array-header-p string)
-	       (with-array-data ((data string) (offset-start start)
-				 (offset-end end))
-		 (with-out-stream stream (lisp-stream-sout data offset-start
-							   offset-end)))
-	       (with-out-stream stream (lisp-stream-sout string start end)))
-	   (funcall (lisp-stream-out stream) stream #\newline))
-	  (t	; Fundamental-stream.
-	   (stream-write-string stream string start end)
-	   (stream-write-char stream #\Newline)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (progn
+	(if (array-header-p string)
+	    (with-array-data ((data string) (offset-start start)
+			      (offset-end end))
+	      (stream::%write-string stream data offset-start offset-end))
+	    (stream::%write-string stream string start end))
+	(stream::%write-char stream #\Newline))
+      ;; lisp-stream
+      (progn
+	(if (array-header-p string)
+	    (with-array-data ((data string) (offset-start start)
+			      (offset-end end))
+	      (funcall (lisp-stream-sout stream) stream data offset-start
+							offset-end))
+	    (funcall (lisp-stream-sout stream) stream string start end))
+	(funcall (lisp-stream-out stream) stream #\newline))
+      ;; fundamental-stream
+      (progn
+	(stream-write-string stream string start end)
+	(stream-write-char stream #\Newline)))
     string))
 
 (defun charpos (&optional (stream *standard-output*))
   "Returns the number of characters on the current line of output of the given
   Stream, or Nil if that information is not availible."
-  (with-out-stream stream (lisp-stream-misc :charpos) (stream-line-column)))
+  (declare (type streamlike stream))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%charpos stream)
+      ;; lisp-stream
+      (funcall (lisp-stream-misc stream) stream :charpos)
+      ;; fundamental-stream
+      (stream-line-column stream))))
 
 (defun line-length (&optional (stream *standard-output*))
   "Returns the number of characters that will fit on a line of output on the
   given Stream, or Nil if that information is not available."
-  (with-out-stream stream (lisp-stream-misc :line-length)
-		   (stream-line-length)))
+  (declare (type streamlike stream))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%line-length stream)
+      ;; lisp-stream
+      (funcall (lisp-stream-misc stream) stream :line-length)
+      ;; fundamental-stream
+      (stream-line-length stream))))
 
 (defun finish-output (&optional (stream *standard-output*))
   "Attempts to ensure that all output sent to the Stream has reached its
    destination, and only then returns."
   (declare (type streamlike stream))
-  (with-out-stream stream (lisp-stream-misc :finish-output)
-		   (stream-finish-output))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%finish-output stream)
+      ;; lisp-stream
+      (funcall (lisp-stream-misc stream) stream :finish-output)
+      ;; fundamental-stream
+      (stream-finish-output stream)))
   nil)
 
 (defun force-output (&optional (stream *standard-output*))
   "Attempts to force any buffered output to be sent."
   (declare (type streamlike stream))
-  (with-out-stream stream (lisp-stream-misc :force-output)
-		   (stream-force-output))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%force-output stream)
+      ;; lisp-stream-misc
+      (funcall (lisp-stream-misc stream) stream :force-output)
+      ;; fundamental-stream
+      (stream-force-output stream)))
   nil)
 
 (defun clear-output (&optional (stream *standard-output*))
   "Clears the given output Stream."
   (declare (type streamlike stream))
-  (with-out-stream stream (lisp-stream-misc :clear-output)
-		   (stream-force-output))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%clear-output stream)
+      ;; lisp-stream
+      (funcall (lisp-stream-misc stream) stream :clear-output)
+      ;; fundamental-stream
+      (stream-force-output stream)))
   nil)
 
 (defun write-byte (integer stream)
   "Outputs the Integer to the binary Stream."
   (declare (type stream stream))
-  (with-out-stream stream (lisp-stream-bout integer)
-		   (stream-write-byte integer))
+  (let ((stream (out-synonym-of stream)))
+    (stream-dispatch stream
+      ;; simple-stream
+      (stream::%write-byte stream integer)
+      ;; lisp-stream
+      (funcall (lisp-stream-bout stream) stream integer)
+      ;; fundamental-stream
+      (stream-write-byte stream integer)))
   integer)
 
 
 ;;; Stream-misc-dispatch
 ;;;
-;;; Called from lisp-steam routines that encapsulate CLOS streams to
+;;; Called from lisp-stream routines that encapsulate CLOS streams to
 ;;; handle the misc routines and dispatch to the appropriate Gray
 ;;; stream functions.
 ;;;
@@ -774,9 +942,13 @@ streams."
 (macrolet ((out-fun (fun method stream-method &rest args)
 	     `(defun ,fun (stream ,@args)
 		(dolist (stream (broadcast-stream-streams stream))
-		  (if (lisp-stream-p stream)
-		      (funcall (,method stream) stream ,@args)
-		      (,stream-method stream ,@args))))))
+		  (stream-dispatch stream
+		    ;; simple-stream
+		    (,stream-method stream ,@args) ; use gray-compat for now
+		    ;; lisp-stream
+		    (funcall (,method stream) stream ,@args)
+		    ;; fundamental-stream
+		    (,stream-method stream ,@args))))))
   (out-fun broadcast-out lisp-stream-out stream-write-char char)
   (out-fun broadcast-bout lisp-stream-bout stream-write-byte byte)
   (out-fun broadcast-sout lisp-stream-sout stream-write-string
@@ -1279,7 +1451,7 @@ output to Output-stream"
   (write-string "#<String-Output Stream>" stream))
 
 (setf (documentation 'make-string-output-stream 'function)
-  "Returns an Output stream which will accumulate all output given it for
+  "Returns an Output stream which will accumulate all output given to it for
    the benefit of the function Get-Output-Stream-String.")
 
 (defun string-ouch (stream character)
@@ -1454,8 +1626,8 @@ output to Output-stream"
   (declare (ignore s d))
   (write-string "#<Indenting Stream>" stream))
 
-;;; Indenting-Indent writes the right number of spaces needed to indent output on
-;;; the given Stream based on the specified Sub-Stream.
+;;; Indenting-Indent writes the right number of spaces needed to indent
+;;; output on the given Stream based on the specified Sub-Stream.
 
 (defmacro indenting-indent (stream sub-stream)
   `(do ((i 0 (+ i 60))
@@ -1801,7 +1973,7 @@ output to Output-stream"
 ;;; subtypes of SIMPLE-ARRAY.  Hence the distinction between simple
 ;;; and non simple input functions.
 
-(defun read-sequence (seq stream &key (start 0) (end nil))
+(defun read-sequence (seq stream &key (start 0) (end nil) partial-fill)
   "Destructively modify SEQ by reading elements from STREAM.
 SEQ is bounded by START and END. SEQ is destructively modified by
 copying successive elements into it from STREAM. If the end of file
@@ -1827,36 +1999,39 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
   (declare (type (or null (integer 0 *)) end))
   (declare (values (integer 0 *)))
 
-  (when (not (cl::lisp-stream-p stream))
-     (return-from read-sequence (stream-read-sequence stream seq start end)))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%read-sequence stream seq start end partial-fill)
+    ;; lisp-stream
+    (let ((end (or end (length seq))))
+      (declare (type (integer 0 *) start end))
 
-  (let ((end (or end (length seq))))
-    (declare (type (integer 0 *) start end))
-
-    ;; Just catch some errors earlier than it would be necessary.
-    (cond ((not (open-stream-p stream))
-	   (error 'stream-error
-		  :stream stream
-		  :format-control "The stream is not open."))
-	  ((not (input-stream-p stream))
-	   (error 'stream-error
-		  :stream stream
-		  :format-control "The stream is not open for input."))
-	  ((and seq (>= start end) 0))
-	  (t
-	   ;; So much for object-oriented programming!
-	   (etypecase seq
-	     (list
-	      (read-into-list seq stream start end))
-	     (simple-string
-	      (read-into-simple-string seq stream start end))
-	     (string
-	      (read-into-string seq stream start end))
-	     (simple-array		; We also know that it is a 'vector'.
-	      (read-into-simple-array seq stream start end))
-	     (vector
-	      (read-into-vector seq stream start end)))
-	   ))))
+      ;; Just catch some errors earlier than it would be necessary.
+      (cond ((not (open-stream-p stream))
+	     (error 'stream-error
+		    :stream stream
+		    :format-control "The stream is not open."))
+	    ((not (input-stream-p stream))
+	     (error 'stream-error
+		    :stream stream
+		    :format-control "The stream is not open for input."))
+	    ((and seq (>= start end) 0))
+	    (t
+	     ;; So much for object-oriented programming!
+	     (etypecase seq
+	       (list
+		(read-into-list seq stream start end))
+	       (simple-string
+		(read-into-simple-string seq stream start end))
+	       (string
+		(read-into-string seq stream start end))
+	       (simple-array		; We also know that it is a 'vector'.
+		(read-into-simple-array seq stream start end))
+	       (vector
+		(read-into-vector seq stream start end)))
+	     )))
+    ;; fundamental-stream
+    (stream-read-sequence stream seq start end)))
 
 
 ;;; READ-INTO-LIST, READ-INTO-LIST-1
@@ -2004,7 +2179,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
     ;; What is the purpose of this explicit test for characters?  It
     ;; prevents reading a string-stream into a vector, like the
     ;; example in the CLHS.
-    (cond #+nil
+    (cond #+(or)
 	  ((subtypep (stream-element-type stream) 'character)
 	   (error 'type-error
 		  :datum (read-byte stream nil 0)
@@ -2142,45 +2317,49 @@ SEQ:	a proper SEQUENCE
   (declare (type (or null (integer 0 *)) end))
   (declare (values (or list vector)))
 
-  (when (not (cl::lisp-stream-p stream))
-    (return-from write-sequence (stream-write-sequence stream seq start end)))
-  
-  (let ((end (or end (length seq))))
-    (declare (type (integer 0 *) start end))
+  (stream-dispatch stream
+    ;; simple-stream
+    (stream::%write-sequence stream seq start end)
+    ;; lisp-stream
+    (let ((end (or end (length seq))))
+      (declare (type (integer 0 *) start end))
 
-    ;; Just catch some errors earlier than it would be necessary.
-    (cond ((not (open-stream-p stream))
-	   (error 'stream-error
-		  :stream stream
-		  :format-control "The stream is not open."))
-	  ((not (output-stream-p stream))
-	   (error 'stream-error
-		  :stream stream
-		  :format-control "The stream is not open for output."))
-	  ((and seq (>= start end)) seq)
-	  (t
-	   ;; So much for object-oriented programming!
-	   ;; Note: order of type clauses is very important.  As a
-	   ;; matter of fact it is patterned after the class
-	   ;; precedence list of each of the types listed.
-	   (etypecase seq
-	     (list
-	      (write-list-out seq stream start end))
-	     (simple-string
-	      (write-simple-string-out seq stream start end))
-	     (string
-	      (write-string-out seq stream start end))
-	     (simple-vector		; This is necessary because of
+      ;; Just catch some errors earlier than it would be necessary.
+      (cond ((not (open-stream-p stream))
+	     (error 'stream-error
+		    :stream stream
+		    :format-control "The stream is not open."))
+	    ((not (output-stream-p stream))
+	     (error 'stream-error
+		    :stream stream
+		    :format-control "The stream is not open for output."))
+	    ((and seq (>= start end)) seq)
+	    (t
+	     ;; So much for object-oriented programming!
+	     ;; Note: order of type clauses is very important.  As a
+	     ;; matter of fact it is patterned after the class
+	     ;; precedence list of each of the types listed.
+	     (etypecase seq
+	       (list
+		(write-list-out seq stream start end))
+	       (simple-string
+		(write-simple-string-out seq stream start end))
+	       (string
+		(write-string-out seq stream start end))
+	       (simple-vector		; This is necessary because of
 					; the underlying behavior of
 					; OUTPUT-RAW-BYTES.  A vector
 					; produced by VECTOR has
 					; element-type T in CMUCL.
-	      (write-vector-out seq stream start end))
-	     (simple-array		; We know it is also a vector!
-	      (write-simple-array-out seq stream start end))
-	     (vector
-	      (write-vector-out seq stream start end)))
-	   ))))
+		(write-vector-out seq stream start end))
+	       (simple-array		; We know it is also a vector!
+		(write-simple-array-out seq stream start end))
+	       (vector
+		(write-vector-out seq stream start end)))
+	     )))
+    ;; fundamental-stream
+    (stream-write-sequence stream seq start end))
+  seq)
 
 
 ;;; The following functions operate under one - possibly wrong -

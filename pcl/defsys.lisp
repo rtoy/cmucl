@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.31 2003/05/04 13:11:21 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.32 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -66,7 +66,7 @@
 ;;; 
 (defvar *the-pcl-package* (find-package :pcl))
 
-(defvar *pcl-system-date* "$Date: 2003/05/04 13:11:21 $")
+(defvar *pcl-system-date* "$Date: 2003/06/06 16:23:46 $")
 
 (setf (getf ext:*herald-items* :pcl)
       `("    CLOS based on Gerd's PCL " ,(subseq *pcl-system-date* 7 26)))
@@ -492,6 +492,28 @@ and load your system with:
    (precom2     (dlisp)         t (defs low cache fin dfun cmucl-documentation))
    ))
 
+(defsystem simple-streams
+           (merge-pathnames "simple-streams/" *pcl-directory*)
+  ;;
+  ;; file         load           compile      files which       port
+  ;;              environment    environment  force the
+  ;;                                          recompilation
+  ;;                                          of this file
+  ;;                                          
+  ((iodefs        t           ()               ()               CMU)
+   (classes       t           (iodefs)         ()               CMU)
+   (internal      t           (classes)        ()               CMU)
+   (strategy      t           (internal)       ()               CMU)
+   (impl          t           (strategy)       ()               CMU)
+   (null          t           (classes)        (classes)        CMU)
+   (direct        t           (classes)        (classes)        CMU)
+   (file          t           (classes direct) (classes direct) CMU)
+   (string        t           (classes)        (classes)        CMU)
+   (terminal      t           (classes)        (classes)        CMU)
+   (socket        t           (classes)        (classes)        CMU)
+
+   (gray-compat   t           ()               ()               CMU)))
+
 (defsystem gray-streams
            *pcl-directory*
   ;;
@@ -508,6 +530,7 @@ and load your system with:
 (defun compile-pcl (&optional m)
   (cond ((null m)
 	 (operate-on-system 'pcl :compile)
+	 (operate-on-system 'simple-streams :compile)
 	 (operate-on-system 'gray-streams :compile))
 	((eq m :print)
 	 (operate-on-system 'pcl :compile () t))
@@ -517,6 +540,7 @@ and load your system with:
 	 (operate-on-system 'pcl :confirm-compile))
 	((eq m t)
 	 (operate-on-system 'pcl :recompile)
+	 (operate-on-system 'simple-streams :recompile)
 	 (operate-on-system 'gray-streams :recompile))
 	((listp m)
 	 (operate-on-system 'pcl :compile-from m))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.65 2003/06/05 14:34:22 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.66 2003/06/06 16:23:45 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,7 @@
 
 (in-package "LISP")
 
-(export '(file-stream file-string-length stream-external-format))
+(export '(file-stream file-string-length))
 
 
 ;;;; Buffer manipulation routines.
@@ -925,6 +925,40 @@
 			input-type
 			output-type))))))
 
+;;; REVERT-FILE -- internal
+;;;
+;;;   Revert a file, if possible; otherwise just delete it.  Used during
+;;; CLOSE when the abort flag is set.
+;;;
+(defun revert-file (filename original)
+  (declare (type simple-base-string filename)
+	   (type (or simple-base-string null) original))
+  (if original
+      (multiple-value-bind (okay err) (unix:unix-rename original filename)
+	(unless okay
+	  (cerror "Go on as if nothing bad happened."
+		  "Could not restore ~S to it's original contents: ~A"
+		  filename (unix:get-unix-error-msg err))))
+      (multiple-value-bind (okay err) (unix:unix-unlink filename)
+	(unless okay
+	  (cerror "Go on as if nothing bad happened."
+		  "Could not remove ~S: ~A"
+		  filename (unix:get-unix-error-msg err))))))
+
+;;; DELETE-ORIGINAL -- internal
+;;;
+;;;   Delete a backup file.  Used during CLOSE.
+;;;
+(defun delete-original (filename original)
+  (declare (type simple-base-string filename)
+	   (type (or simple-base-string null) original))
+  (when original
+    (multiple-value-bind (okay err) (unix:unix-unlink original)
+      (unless okay
+	(cerror "Go on as if nothing bad happened."
+		"Could not delete ~S during close of ~S: ~A"
+		original stream (unix:get-unix-error-msg err))))))
+
 ;;; FD-STREAM-MISC-ROUTINE -- input
 ;;;
 ;;;   Handle the various misc operations on fd-stream.
@@ -953,44 +987,14 @@
 	    (when (fd-stream-handler stream)
 		  (system:remove-fd-handler (fd-stream-handler stream))
 		  (setf (fd-stream-handler stream) nil))
-	    (when (and (fd-stream-file stream)
-		       (fd-stream-obuf-sap stream))
-	      ;; Can't do anything unless we know what file were dealing with,
-	      ;; and we don't want to do anything strange unless we were
-	      ;; writing to the file.
-	      (if (fd-stream-original stream)
-		  ;; Have an handle on the original, just revert.
-		  (multiple-value-bind
-		      (okay err)
-		      (unix:unix-rename (fd-stream-original stream)
-					(fd-stream-file stream))
-		    (unless okay
-		      (cerror "Go on as if nothing bad happened."
-		        "Could not restore ~S to it's original contents: ~A"
-			      (fd-stream-file stream)
-			      (unix:get-unix-error-msg err))))
-		  ;; Can't restore the orignal, so nuke that puppy.
-		  (multiple-value-bind
-		      (okay err)
-		      (unix:unix-unlink (fd-stream-file stream))
-		    (unless okay
-		      (cerror "Go on as if nothing bad happened."
-			      "Could not remove ~S: ~A"
-			      (fd-stream-file stream)
-			      (unix:get-unix-error-msg err)))))))
+	    (when (and (fd-stream-file stream) (fd-stream-obuf-sap stream))
+	      (revert-file (fd-stream-file stream)
+			   (fd-stream-original stream))))
 	   (t
 	    (fd-stream-misc-routine stream :finish-output)
-	    (when (and (fd-stream-original stream)
-		       (fd-stream-delete-original stream))
-	      (multiple-value-bind
-		  (okay err)
-		  (unix:unix-unlink (fd-stream-original stream))
-		(unless okay
-		  (cerror "Go on as if nothing bad happened."
-			  "Could not delete ~S during close of ~S: ~A"
-			  (fd-stream-original stream)
-			  stream
-			  (unix:get-unix-error-msg err)))))))
+	    (when (fd-stream-delete-original stream)
+	      (delete-original (fd-stream-file stream)
+			       (fd-stream-original stream)))))
      (when (fboundp 'cancel-finalization)
        (cancel-finalization stream))
      (unix:unix-close (fd-stream-fd stream))
@@ -1199,7 +1203,7 @@
     stream))
 
 
-;;; PICK-PACKUP-NAME -- internal
+;;; PICK-BACKUP-NAME -- internal
 ;;;
 ;;; Pick a name to use for the backup file.
 ;;;
@@ -1288,33 +1292,217 @@
 		   (unix:get-unix-error-msg err))
 	   nil))))
 
-;;; RETURN-STREAM -- internal
+;;; FD-OPEN  --  Internal
 ;;;
-;;; (this is just to save having to reindent the code in OPEN...move it there)
+;;;    Open a file.
 ;;;
-(defmacro return-stream (class &body body)
-  (let ((stream (gensym)))
-    `(let ((,stream (progn ,@body)))
-       (return (if ,class
-                  (make-instance ,class :lisp-stream ,stream)
-                  ,stream)))))
+(defun fd-open (pathname direction if-exists if-exists-given
+                          if-does-not-exist if-does-not-exist-given)
+  (declare (type pathname pathname)
+           (type (member :input :output :io :probe) direction)
+           (type (member :error :new-version :rename :rename-and-delete
+                         :overwrite :append :supersede nil) if-exists)
+           (type (member :error :create nil) if-does-not-exist))
+  (multiple-value-bind (input output mask)
+      (ecase direction
+        (:input (values t nil unix:o_rdonly))
+        (:output (values nil t unix:o_wronly))
+        (:io (values t t unix:o_rdwr))
+        (:probe (values t nil unix:o_rdonly)))
+    (declare (type index mask))
+    (let ((name (cond ((unix-namestring pathname input))
+                      ((and input (eq if-does-not-exist :create))
+                       (unix-namestring pathname nil)))))
+      ;; Process if-exists argument if we are doing any output.
+      (cond (output
+             (unless if-exists-given
+               (setf if-exists
+                     (if (eq (pathname-version pathname) :newest)
+                         :new-version
+                         :error)))
+             (case if-exists
+               ((:error nil)
+                (setf mask (logior mask unix:o_excl)))
+               ((:new-version :rename :rename-and-delete)
+                (setf mask (logior mask unix:o_creat)))
+               (:supersede
+                (setf mask (logior mask unix:o_trunc)))
+               (:append
+                (setf mask (logior mask unix:o_append)))))
+            (t
+             (setf if-exists nil)))     ; :ignore-this-arg
+
+      (unless if-does-not-exist-given
+        (setf if-does-not-exist
+              (cond ((eq direction :input) :error)
+                    ((and output
+                          (member if-exists '(:overwrite :append)))
+                     :error)
+                    ((eq direction :probe)
+                     nil)
+                    (t
+                     :create))))
+      (if (eq if-does-not-exist :create)
+          (setf mask (logior mask unix:o_creat)))
+
+      (let ((original (cond ((eq if-exists :new-version)
+			     (next-version name))
+			    ((member if-exists '(:rename :rename-and-delete))
+			     (pick-backup-name name))))
+            (delete-original (eq if-exists :rename-and-delete))
+            (mode #o666))
+        (when original
+          ;; We are doing a :rename or :rename-and-delete.
+          ;; Determine if the file already exists, make sure the original
+          ;; file is not a directory and keep the mode
+          (let ((exists
+                 (and name
+                      (multiple-value-bind
+                            (okay err/dev inode orig-mode)
+                          (unix:unix-stat name)
+                        (declare (ignore inode)
+                                 (type (or index null) orig-mode))
+                        (cond
+                          (okay
+                           (when (and output (= (logand orig-mode #o170000)
+                                                #o40000))
+                             (error 'simple-file-error
+                                 :pathname pathname
+                                 :format-control
+                                 "Cannot open ~S for output: Is a directory."
+                                 :format-arguments (list name)))
+                           (setf mode (logand orig-mode #o777))
+                           t)
+                          ((eql err/dev unix:enoent)
+                           nil)
+                          (t
+                           (error 'simple-file-error
+                                  :pathname pathname
+                                  :format-control "Cannot find ~S: ~A"
+                                  :format-arguments
+                                    (list name
+                                      (unix:get-unix-error-msg err/dev)))))))))
+            (unless (and exists
+                         (do-old-rename name original))
+              (setf original nil)
+              (setf delete-original nil)
+              ;; In order to use SUPERSEDE instead, we have
+              ;; to make sure unix:o_creat corresponds to
+              ;; if-does-not-exist.  unix:o_creat was set
+              ;; before because of if-exists being :rename.
+              (unless (eq if-does-not-exist :create)
+                (setf mask (logior (logandc2 mask unix:o_creat)
+                                   unix:o_trunc)))
+              (setf if-exists :supersede))))
+        
+        ;; Okay, now we can try the actual open.
+        (loop
+          (multiple-value-bind (fd errno)
+              (if name
+                  (unix:unix-open name mask mode)
+                  (values nil unix:enoent))
+            (cond ((fixnump fd)
+                   (return (values fd name original delete-original)))
+                  ((eql errno unix:enoent)
+                   (case if-does-not-exist
+                     (:error
+                       (cerror "Return NIL."
+                               'simple-file-error
+                               :pathname pathname
+                               :format-control "Error opening ~S, ~A."
+                               :format-arguments
+                                   (list pathname
+                                         (unix:get-unix-error-msg errno))))
+                     (:create
+                       (cerror "Return NIL."
+                               'simple-file-error
+                               :pathname pathname
+                               :format-control
+                                   "Error creating ~S, path does not exist."
+                               :format-arguments (list pathname))))
+                   (return nil))
+                  ((eql errno unix:eexist)
+                   (unless (eq nil if-exists)
+                     (cerror "Return NIL."
+                             'simple-file-error
+                             :pathname pathname
+                             :format-control "Error opening ~S, ~A."
+                             :format-arguments
+                                 (list pathname
+                                       (unix:get-unix-error-msg errno))))
+                   (return nil))
+                  ((eql errno unix:eacces)
+                   (cerror "Try again."
+                           'simple-file-error
+                           :pathname pathname
+                           :format-control "Error opening ~S, ~A."
+                           :format-arguments
+                               (list pathname
+                                     (unix:get-unix-error-msg errno))))
+                  (t
+                   (cerror "Return NIL."
+                           'simple-file-error
+                           :pathname pathname
+                           :format-control "Error opening ~S, ~A."
+                           :format-arguments
+                               (list pathname
+                                     (unix:get-unix-error-msg errno)))
+                   (return nil)))))))))
+
+;;; OPEN-FD-STREAM  --  Internal
+;;;
+;;;    Open an fd-stream connected to a file.
+;;;
+(defun open-fd-stream (pathname &key (direction :input)
+				(element-type 'base-char)
+				(if-exists nil if-exists-given)
+				(if-does-not-exist nil if-does-not-exist-given)
+				(external-format :default))
+  (declare (type pathname pathname)
+           (type (member :input :output :io :probe) direction)
+           (type (member :error :new-version :rename :rename-and-delete
+                         :overwrite :append :supersede nil) if-exists)
+           (type (member :error :create nil) if-does-not-exist)
+           (ignore external-format))
+  (multiple-value-bind (fd namestring original delete-original)
+      (fd-open pathname direction if-exists if-exists-given
+	       if-does-not-exist if-does-not-exist-given)
+    (when fd
+      (case direction
+	((:input :output :io)
+	 (make-fd-stream fd
+			 :input (member direction '(:input :io))
+			 :output (member direction '(:output :io))
+			 :element-type element-type
+			 :file namestring
+			 :original original
+			 :delete-original delete-original
+			 :pathname pathname
+			 :input-buffer-p t
+			 :auto-close t))
+	(:probe
+	 (let ((stream (%make-fd-stream :name namestring :fd fd
+					:pathname pathname
+					:element-type element-type)))
+	   (close stream)
+	   stream))))))
 
 ;;; OPEN -- public
 ;;;
 ;;;   Open the given file.
 ;;;
-(defun open (filename
-	     &key
-	     (direction :input)
-	     (element-type 'base-char)
-	     (if-exists nil if-exists-given)
-	     (if-does-not-exist nil if-does-not-exist-given)
-	     (external-format :default)
-	     class
-	     &aux ; Squelch assignment warning.
-	     (direction direction)
-	     (if-does-not-exist if-does-not-exist)
-	     (if-exists if-exists))
+(defun open (filename &rest options
+		      &key (direction :input)
+			   (element-type 'base-char element-type-given)
+			   (if-exists nil if-exists-given)
+			   (if-does-not-exist nil if-does-not-exist-given)
+			   (external-format :default)
+			   class mapped input-handle output-handle
+		      &allow-other-keys
+		      &aux ; Squelch assignment warning.
+		      (direction direction)
+		      (if-does-not-exist if-does-not-exist)
+		      (if-exists if-exists))
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
@@ -1322,8 +1510,9 @@
    :if-exists - one of :error, :new-version, :rename, :rename-and-delete,
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
+   :external-format - :default
   See the manual for details."
-  (declare (ignore external-format))
+  (declare (ignore external-format input-handle output-handle))
   
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
@@ -1331,169 +1520,51 @@
 		       '(:input :output :io :probe)
 		       :direction))
 
-  ;; Calculate useful stuff.
-  (multiple-value-bind
-      (input output mask)
-      (case direction
-	(:input (values t nil unix:o_rdonly))
-	(:output (values nil t unix:o_wronly))
-	(:io (values t t unix:o_rdwr))
-	(:probe (values t nil unix:o_rdonly)))
-    (declare (type index mask))
-    (let* ((pathname (pathname filename))
-	   (namestring
-	    (cond ((unix-namestring pathname input))
-		  ((and input (eq if-does-not-exist :create))
-		   (unix-namestring pathname nil)))))
-      ;; Process if-exists argument if we are doing any output.
-      (cond (output
-	     (unless if-exists-given
-	       (setf if-exists
-		     (if (eq (pathname-version pathname) :newest)
-			 :new-version
-			 :error)))
-	     (setf if-exists
-		   (assure-one-of if-exists
-				  '(:error :new-version :rename
-				    :rename-and-delete :overwrite
-				    :append :supersede nil)
-				  :if-exists))
-	     (case if-exists
-	       ((:error nil)
-		(setf mask (logior mask unix:o_excl)))
-	       ((:new-version :rename :rename-and-delete)
-		(setf mask (logior mask unix:o_creat)))
-	       ((:supersede)
-		(setf mask (logior mask unix:o_trunc)))
-	       (:append
-		(setf mask (logior mask unix:o_append)))))
-	    (t
-	     (setf if-exists :ignore-this-arg)))
-      
-      (unless if-does-not-exist-given
-	(setf if-does-not-exist
-	      (cond ((eq direction :input) :error)
-		    ((and output
-			  (member if-exists '(:overwrite :append)))
-		     :error)
-		    ((eq direction :probe)
-		     nil)
-		    (t
-		     :create))))
-      (setf if-does-not-exist
-	    (assure-one-of if-does-not-exist
-			   '(:error :create nil)
-			   :if-does-not-exist))
-      (if (eq if-does-not-exist :create)
-	(setf mask (logior mask unix:o_creat)))
-       
-      (let ((original (cond ((eq if-exists :new-version)
-			     (next-version namestring))
-			    ((member if-exists '(:rename :rename-and-delete))
-			     (pick-backup-name namestring))))
-	    (delete-original (eq if-exists :rename-and-delete))
-	    (mode #o666))
-	(when original
-	  ;; We are doing a :rename or :rename-and-delete.
-	  ;; Determine if the file already exists, make sure the original
-	  ;; file is not a directory and keep the mode
-	  (let ((exists
-		 (and namestring
-		      (multiple-value-bind
-			  (okay err/dev inode orig-mode)
-			  (unix:unix-stat namestring)
-			(declare (ignore inode)
-				 (type (or index null) orig-mode))
-			(cond
-			 (okay
-			  (when (and output (= (logand orig-mode #o170000)
-					       #o40000))
-			    (error 'simple-file-error
-                                   :format-control "Cannot open ~S for output: Is a directory."
-				   :format-arguments (list namestring)))
-			  (setf mode (logand orig-mode #o777))
-			  t)
-			 ((eql err/dev unix:enoent)
-			  nil)
-			 (t
-			  (error 'simple-file-error
-                                 :format-control "Cannot find ~S: ~A"
-				 :format-arguments
-                                 (list namestring (unix:get-unix-error-msg err/dev)))))))))
-	    (unless (and exists
-			 (do-old-rename namestring original))
-	      (setf original nil)
-	      (setf delete-original nil)
-	      ;; In order to use SUPERSEDE instead, we have
-	      ;; to make sure unix:o_creat corresponds to
-	      ;; if-does-not-exist.  unix:o_creat was set
-	      ;; before because of if-exists being :rename.
-	      (unless (eq if-does-not-exist :create)
-		(setf mask (logior (logandc2 mask unix:o_creat) unix:o_trunc)))
-	      (setf if-exists :supersede))))
-	
-	;; Okay, now we can try the actual open.
-	(loop
-	  (multiple-value-bind
-	      (fd errno)
-	      (if namestring
-		  (unix:unix-open namestring mask mode)
-		  (values nil unix:enoent))
-	    (cond ((numberp fd)
-		   (return-stream class
-		    (case direction
-		      ((:input :output :io)
-		       (make-fd-stream fd
-				       :input input
-				       :output output
-				       :element-type element-type
-				       :file namestring
-				       :original original
-				       :delete-original delete-original
-				       :pathname pathname
-				       :input-buffer-p t
-				       :auto-close t))
-		      (:probe
-		       (let ((stream
-			      (%make-fd-stream :name namestring :fd fd
-					       :pathname pathname
-					       :element-type element-type)))
-			 (close stream)
-			 stream)))))
-		  ((eql errno unix:enoent)
-		   (case if-does-not-exist
-		     (:error
-		      (cerror "Return NIL."
-			      'simple-file-error
-			      :pathname pathname
-			      :format-control "Error opening ~S, ~A."
-			      :format-arguments
-			      (list pathname (unix:get-unix-error-msg errno))))
-		     (:create
-		      (cerror "Return NIL."
-			      "Error creating ~S, path does not exist."
-			      pathname)))
-		   (return nil))
-		  ((eql errno unix:eexist)
-		   (unless (eq nil if-exists)
-		     (cerror "Return NIL."
-			     'simple-file-error
-			     :pathname pathname
-			     :format-control "Error opening ~S, ~A."
-			     :format-arguments
-			     (list pathname (unix:get-unix-error-msg errno))))
-		   (return nil))
-		  ((eql errno unix:eacces)
-		   (cerror "Try again."
-			  "Error opening ~S, ~A."
-			  pathname
-			  (unix:get-unix-error-msg errno)))
-		  (t
-		   (cerror "Return NIL."
-			   "Error opening ~S, ~A."
-			   pathname
-			   (unix:get-unix-error-msg errno))
-		   (return nil)))))))))
+  (when (and if-exists-given (member direction '(:output :io)))
+    (setq if-exists
+	  (assure-one-of if-exists
+			 '(:error :new-version :rename
+			   :rename-and-delete :overwrite
+			   :append :supersede nil)
+			 :if-exists))
+    (setf (getf options :if-exists) if-exists))
+
+  (when if-does-not-exist-given
+    (setq if-does-not-exist
+	  (assure-one-of if-does-not-exist
+			 '(:error :create nil)
+			 :if-does-not-exist))
+    (setf (getf options :if-does-not-exist) if-does-not-exist))
+
+  (let ((class (or class 'fd-stream))
+	(options (copy-list options))
+	(filespec (pathname filename)))
+    (cond ((eq class 'fd-stream)
+	   (remf options :class)
+           (remf options :mapped)
+           (remf options :input-handle)
+           (remf options :output-handle)
+           (apply #'open-fd-stream filespec options))
+	  ((subtypep class 'stream:simple-stream)
+	   (when element-type-given
+             (error "Can't create simple-streams with an element-type."))
+           (when (and (eq class 'file-simple-stream) mapped)
+             (setq class 'mapped-file-simple-stream)
+             (setf (getf options :class) 'mapped-file-simple-stream))
+           (when (subtypep class 'file-simple-stream)
+             (when (eq direction :probe)
+               (setq class 'probe-simple-stream)))
+           (apply #'make-instance class :filename filespec options))
+	  ((subtypep class 'ext:fundamental-stream)
+	   (remf options :class)
+           (remf options :mapped)
+           (remf options :input-handle)
+           (remf options :output-handle)
+	   (let ((stream (apply #'open-fd-stream filespec options)))
+	     (when stream
+	       (make-instance class :lisp-stream stream))))
+	  (t
+	   (error "Unable to open streams of class ~S." class)))))
 
 ;;;; Initialization.
 
@@ -1564,29 +1635,32 @@
 ;;; stuff to get and set the file name.
 ;;;
 (defun file-name (stream &optional new-name)
-  (when (typep stream 'fd-stream)
-      (cond (new-name
-	     (setf (fd-stream-pathname stream) new-name)
-	     (setf (fd-stream-file stream)
-		   (unix-namestring new-name nil))
-	     t)
-	    (t
-	     (fd-stream-pathname stream)))))
+  (typecase stream
+    (stream:simple-stream
+     (if new-name
+	 (stream::%file-rename stream new-name)
+	 (stream::%file-name stream)))
+    (fd-stream
+     (cond (new-name
+	    (setf (fd-stream-pathname stream) new-name)
+	    (setf (fd-stream-file stream)
+		  (unix-namestring new-name nil))
+	    t)
+	   (t
+	    (fd-stream-pathname stream))))))
 
 
 ;;;; Degenerate international character support:
 
 (defun file-string-length (stream object)
-  (declare (type (or string character) object) (type file-stream stream))
+  (declare (type (or string character) object)
+	   (type (or file-stream stream:simple-stream) stream))
   "Return the delta in Stream's FILE-POSITION that would be caused by writing
    Object to Stream.  Non-trivial only in implementations that support
    international character sets."
-  (declare (ignore stream))
-  (etypecase object
-    (character 1)
-    (string (length object))))
-
-(defun stream-external-format (stream)
-  (declare (type file-stream stream) (ignore stream))
-  "Returns :DEFAULT."
-  :default)
+  (typecase stream
+    (stream:simple-stream (stream::%file-string-length stream object))
+    (t
+     (etypecase object
+       (character 1)
+       (string (length object))))))

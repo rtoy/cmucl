@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.22 2000/07/07 09:33:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.23 2003/06/06 16:23:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,3 +292,47 @@
       (let ((cont (nth (1- n) (combination-args call))))
 	(when (and cont (constant-continuation-p cont))
 	  (specifier-type (continuation-value cont))))))
+
+;;; RESULT-TYPE-OPEN-CLASS  --  Interface
+;;;
+;;;    Derive the type of a call to OPEN
+;;;
+(defun result-type-open-class (call)
+  (declare (type combination call))
+  (let* ((not-set '#:not-set)
+	 (not-constant '#:not-constant)
+	 (direction not-set)
+	 (if-exists not-set)
+	 (if-does-not-exist not-set)
+	 (class not-set))
+    ;; find (the first occurence of) each interesting keyword argument
+    (do ((args (cdr (combination-args call)) (cddr args)))
+	((null args))
+      (macrolet ((maybe-set (var)
+		   `(when (and (eq ,var not-set) (cadr args))
+		      (if (constant-continuation-p (cadr args))
+			(setq ,var (continuation-value (cadr args)))
+			(setq ,var not-constant)))))
+	(case (continuation-value (car args))
+	  (:direction (maybe-set direction))
+	  (:if-exists (maybe-set if-exists))
+	  (:if-does-not-exist (maybe-set if-does-not-exist))
+	  (:class (maybe-set class)))))
+    ;; and set default values for any that weren't set above
+    (when (eq direction not-set) (setq direction :input))
+    (when (eq if-exists not-constant) (setq if-exists nil))
+    (when (eq if-does-not-exist not-constant) (set if-does-not-exist nil))
+    (when (or (eq class not-set) (eq class not-constant)) (setq class 'stream))
+    ;; now, NIL is a possible result only in the following cases:
+    ;;   direction is :probe or not-constant and :if-does-not-exist is
+    ;;                                                          not :error
+    ;;   direction is :output or :io or not-constant and :if-exists is nil
+    ;;   :if-does-not-exist is nil
+    (if (or (and (or (eq direction :probe) (eq direction not-constant))
+		 (not (eq if-does-not-exist :error)))
+	    (and (or (eq direction :output) (eq direction :io)
+		     (eq direction not-constant))
+		 (eq if-exists nil))
+	    (eq if-does-not-exist nil))
+      (specifier-type `(or null ,class))
+      (specifier-type class))))
