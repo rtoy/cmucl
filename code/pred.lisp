@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.9 1990/09/18 15:23:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.10 1990/10/03 09:58:48 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -58,12 +58,14 @@
       functionp
       integerp
       listp
+      long-float-p
       not
       null
       numberp
       rationalp
       ratiop
       realp
+      short-float-p
       simple-array-p
       simple-bit-vector-p
       simple-string-p
