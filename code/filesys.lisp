@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.54 1998/12/19 16:03:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.55 1999/02/02 12:18:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -412,7 +412,7 @@
 	(strings (if (eq version :wild)
 		     ".*"
 		     (format nil ".~D" version)))))
-    (apply #'concatenate 'simple-string (strings))))
+    (and (strings) (apply #'concatenate 'simple-string (strings)))))
 
 (defun unparse-unix-namestring (pathname)
   (declare (type pathname pathname))
