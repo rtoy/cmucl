@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.25 1990/03/21 19:58:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.26 1990/03/22 00:23:54 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -270,23 +270,9 @@
 
 ;;;; Hairy Type Checking Macros
 
-(defun enumerate-type-codes (types)
-  (let ((type-codes nil))
-    (dolist (type types)
-      (cond ((listp type)
-	     (let ((low (eval (first type)))
-		   (high (eval (second type))))
-	       (when (> low high) (rotatef low high))
-	       (do ((n low (1+ n)))
-		   ((> n high))
-		 (push n type-codes))))
-	    (t
-	     (push (eval type) type-codes))))
-    (sort (remove-duplicates type-codes) #'<)))
-
 (defun canonicalize-type-codes (type-codes &optional (shift 0))
   (unless type-codes (return-from canonicalize-type-codes nil))
-  (let* ((type-codes type-codes)
+  (let* ((type-codes (sort (remove-duplicates type-codes) #'<))
 	 (canonical-type-codes nil)
 	 (first-type-code (pop type-codes))
 	 (last-type-code (ash first-type-code shift))
@@ -358,11 +344,9 @@
   type codes.  All low tag type codes will be checked first.  Then the
   pointer will be checked to see if it is an other-pointer-type type
   pointer in which case it will be dereferenced and the remaining type
-  codes (the header word type codes) will be checked.  Each separately
-  specified Type is matched, and also all types between a Low-Type and
-  High-Type pair (inclusive) are matched.  All of the type-code
-  expressions are evaluated at macroexpand time.  Temp should be an
-  unboxed register." 
+  codes (the header word type codes) will be checked.  All of the
+  type-code expressions are evaluated at macroexpand time.  Temp should
+  be an unboxed register." 
   (once-only ((n-register register)
 	      (n-temp temp)
 	      (n-target target)
@@ -372,12 +356,13 @@
     ;; Partition the type codes.
     (collect ((low-tag-types)
 	      (header-word-types))
-      (dolist (type (enumerate-type-codes types))
-	(cond ((< type vm:lowtag-limit)
-	       (low-tag-types type))
-	      (t
-	       (header-word-types type))))
-
+      (dolist (type types)
+	(let ((type (eval type)))
+	  (cond ((< type vm:lowtag-limit)
+		 (low-tag-types type))
+		(t
+		 (header-word-types type)))))
+      
       (let ((low-tag-types (canonicalize-type-codes (low-tag-types)))
 	    (header-word-types (canonicalize-type-codes
 				(header-word-types) (- (1- lowtag-bits)))))
