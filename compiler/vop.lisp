@@ -63,20 +63,6 @@
   ;; returned by Primitive-Type, then this is the NIL (or empty) type.
   (type nil :type ctype)
   ;;
-  ;; These slots tell how to do implicit representation conversions and moves.
-  ;; If null, then the operation can be done using the standard Move
-  ;; VOP, otherwise the value is a template that is emitted to do the move or
-  ;; coercion.
-  ;;
-  ;; Coerce-To-T and Coerce-From-T convert objects of this type to and from the
-  ;; default descriptor (boxed) representation.  The Move slot is used to
-  ;; determine whether a special move operation is needed to do moves between
-  ;; TNs of this primitive type.  Since primitive types are disjoint except for
-  ;; their overlap with T, these are all the coercions that we need.
-  (coerce-to-t nil :type (or template null))
-  (coerce-from-t nil :type (or template null))
-  (move nil :type (or template null))
-  ;;
   ;; The template used to check that an object is of this type.  This is
   ;; a template of one argument and one result, both of primitive-type T.  If
   ;; the argument is of the correct type, then it is delivered into the result.
@@ -124,8 +110,10 @@
 ;;;    If an XEP lambda, then the corresponding Entry-Info structure.
 ;;;
 ;;; Basic-Combination-Info
-;;;    The Template chosen for this call by LTN, null if the call has an
-;;;    IR2-Convert method, or if it isn't special-cased at all.
+;;;    The template chosen by LTN, or
+;;;        :FULL if this is definitely a full call.
+;;;        :FUNNY if this is a random thing with IR2-convert.
+;;;        :LOCAL if this is a local call.
 ;;;    
 
 ;;; The IR2-Block structure holds information about a block that is used during
@@ -296,9 +284,13 @@
   (wired-tns nil :type (or tn null))
   (constant-tns nil :type (or tn null))
   ;;
-  ;; A list of all the pre-packed save TNs, so that they can have their
-  ;; lifetime info fixed up by conflicts analysis.
-  (pre-packed-save-tns nil :type list)
+  ;; A list of all the :COMPONENT TNs (live throughout the component.)  These
+  ;; TNs will also appear in the {NORMAL,RESTRICTED,WIRED} TNs as appropriate
+  ;; to their kind.
+  (component-tns () :type list)
+  ;;
+  ;; If this component has a NFP, then this is it.
+  (nfp nil :type (or tn null))
   ;;
   ;; Values-Generators is a list of all the blocks whose ir2-block has a
   ;; non-null value for Popped.  Values-Generators is a list of all blocks that
@@ -306,9 +298,6 @@
   ;; slots are initialized by LTN-Analyze as an input to Stack-Analyze. 
   (values-receivers nil :type list)
   (values-generators nil :type list)
-  ;;
-  ;; A list of all the Exit nodes for non-local exits.
-  (exits nil :type list)
   ;;
   ;; An adjustable vector that records all the constants in the constant pool.
   ;; A non-immediate :Constant TN with offset 0 refers to the constant in
@@ -387,28 +376,26 @@
   ;; ARG-LOCS.
   (environment nil :type list)
   ;;
-  ;; The TNs that hold the Old-Cont and Return-PC within the function.  We
+  ;; The TNs that hold the Old-Fp and Return-PC within the function.  We
   ;; always save these so that the debugger can do a backtrace, even if the
   ;; function has no return (and thus never uses them).  Null only temporarily.
-  (old-cont nil :type (or tn null))
+  (old-fp nil :type (or tn null))
   (return-pc nil :type (or tn null))
   ;;
-  ;; The passing locations for Old-Cont and Return-PC.
-  (old-cont-pass nil :type tn)
+  ;; The passing locations for Old-Fp and Return-PC.
+  (old-fp-pass nil :type tn)
   (return-pc-pass nil :type tn)
   ;;
-  ;; The passing location for the pointer to any stack arguments.
-  (argument-pointer nil :type tn)
+  ;; True if this function has a frame on the number stack.  This is set by
+  ;; representation selection whenever it is possible that some function in
+  ;; our tail set will make use of the number stack.
+  (number-stack-p nil :type boolean)
   ;;
   ;; A list of all the :Environment TNs live in this environment.
   (live-tns nil :type list)
   ;;
   ;; A list of all the keep-around TNs live in this environment.
   (keep-around-tns nil :type list)
-  ;;
-  ;; A list of all the IR2-Blocks in this environment, threaded by
-  ;; IR2-Block-Environment-Next.  This is filled in by control analysis.
-  (blocks nil :type (or ir2-block null))
   ;;
   ;; A label that marks the start of elsewhere code for this function.  Null
   ;; until this label is assigned by codegen.  Used for maintaining the debug
@@ -424,11 +411,10 @@
 (defprinter ir2-environment
   arg-locs
   environment
-  old-cont
-  old-cont-pass
+  old-fp
+  old-fp-pass
   return-pc
-  return-pc-pass
-  argument-pointer)
+  return-pc-pass)
 
 
 ;;; The Return-Info structure is used by GTN to represent the return strategy
@@ -618,7 +604,11 @@
   ;; If true, this is a TN-Ref also in VOP whose TN we would like packed in the
   ;; same location as our TN.  Read and write refs are always paired: Target in
   ;; the read points to the write, and vice-versa.
-  (target nil :type (or null tn-ref)))
+  (target nil :type (or null tn-ref))
+  ;;
+  ;; Load TN allocated for this operand, if any.
+  (load-tn nil :type (or tn null)))
+
 
 (defprinter tn-ref
   tn
@@ -641,22 +631,32 @@
   ;; phases that need to anticipate LTN's template selection.
   (type nil :type function-type)
   ;;
-  ;; Lists of the primitive types for the fixed arguments and results.  A list
-  ;; element may be *, indicating no restriction on that particular argument or
-  ;; result.
+  ;; Lists of restrictions on the argument and result types.  A restriction may
+  ;; take several forms:
+  ;; -- The restriction * is no restriction at all.
+  ;; -- A restriction (:OR <primitive-type>*) means that the operand must have
+  ;;    one of the specified primitive types.
+  ;; -- A restriction (:CONSTANT <predicate> <type-spec>) means that the
+  ;;    argument (not a result) must be a compile-time constant that satisfies
+  ;;    the specified predicate function.  In this case, the constant value
+  ;;    will be passed as an info argument rather than as a normal argument.
+  ;;    <type-spec> is a Lisp type specifier for the type tested by the
+  ;;    predicate, used when we want to represent the type constraint as a Lisp
+  ;;    function type. 
   ;;
   ;; If Result-Types is :Conditional, then this is an IF-xxx style conditional
-  ;; that yeilds its result as a control transfer.  The emit function takes some
-  ;; kind of additional arguments describing where to go to in the true and
-  ;; false cases.
+  ;; that yeilds its result as a control transfer.  The emit function takes two
+  ;; info arguments: the target label and a boolean flag indicating whether to
+  ;; negate the sense of the test.
   (arg-types nil :type list)
   (result-types nil :type (or list (member :conditional)))
   ;;
   ;; The primitive type restriction applied to each extra argument or result
-  ;; following the fixed operands.  If *, then there is no restriction.  If
-  ;; null, then extra operands are not allowed.
-  (more-args-type nil :type (or (member nil *) primitive-type))
-  (more-results-type nil :type (or (member nil *) primitive-type))
+  ;; following the fixed operands.  If NIL, no extra args/results are allowed.
+  ;; Otherwise, either * or a (:OR ...) list as described for the
+  ;; {ARG,RESULT}-TYPES.
+  (more-args-type nil :type (or (member nil *) cons))
+  (more-results-type nil :type (or (member nil *) cons))
   ;;
   ;; If true, this is a function that is called with no arguments to see if
   ;; this template can be emitted.  This is used to conditionally compile for
@@ -733,6 +733,27 @@
   ;;
   (save-p nil :type (member t nil :force-to-stack :compute-only))
   ;;
+  ;; Info for automatic emission of move-arg VOPs by representation selection.
+  ;; If NIL, then do nothing special.  If non-null, then there must be a more
+  ;; arg.  Each more arg is moved to its passing location using the appropriate
+  ;; representation-specific move-argument VOP.  The first (fixed) argument
+  ;; must be the control-stack frame pointer for the frame to move into.  The
+  ;; first info arg is the list of passing locations.
+  ;;
+  ;; Additional constraints depend on the value:
+  ;;
+  ;; :FULL-CALL
+  ;;     None.
+  ;;
+  ;; :LOCAL-CALL
+  ;;     The second (fixed) arg is the NFP for the called function (from
+  ;;     ALLOCATE-FRAME.)
+  ;;
+  ;; :KNOWN-RETURN
+  ;;     If needed, the old NFP is computed using COMPUTE-OLD-NFP.
+  ;;
+  (move-args nil :type (member nil :full-call :local-call :known-return))
+  ;;
   ;; A list of sc-vectors representing the loading costs of each fixed argument
   ;; and result.
   (arg-costs nil :type list)
@@ -743,10 +764,12 @@
   (more-arg-costs nil :type (or sc-vector null))
   (more-result-costs nil :type (or sc-vector null))
   ;;
-  ;; Lists of sc-bit-vectors representing the SC restrictions on each fixed
-  ;; argument and result.
-  (arg-restrictions nil :type list)
-  (result-restrictions nil :type list)
+  ;; Lists of sc-vectors holding the SC numbers mapping SCs to the SC that we
+  ;; load into.  The entry is null if there is no load function which loads
+  ;; from that SC to an SC allowed by the operand SC restriction.  If a SC is
+  ;; directly acceptable to the VOP, then the entry equals its index.
+  (arg-load-scs nil :type list)
+  (result-load-scs nil :type list)
   ;;
   ;; If true, a function that is called with the VOP to do operand targeting.
   ;; This is done by modifiying the TN-Ref-Target slots in the TN-Refs so that
@@ -837,7 +860,54 @@
   (element-size 0 :type unsigned-byte)
   ;;
   ;; If our SB is finite, a list of the locations in this SC.
-  (locations nil :type list))
+  (locations nil :type list)
+  ;;
+  ;; A list of the alternate (save) SCs for this SC.
+  (alternate-scs nil :type list)
+  ;;
+  ;; A list of the constant SCs that can me moved into this SC.
+  (constant-scs nil :type list)
+  ;;
+  ;; True if this values in this SC needs to be saved across calls.
+  (save-p nil :type boolean)
+  ;;
+  ;; Vectors mapping from SC numbers to information about how to load from the
+  ;; index SC to this one.  Load-Functions holds the names of the functions
+  ;; used to do loading, and Load-Costs holds the cost of the corresponding
+  ;; Load-Functions.  If loading is impossible, then the entries are NIL.
+  ;; Load-Costs is initialized to have a 0 for this SC.
+  (load-functions (make-array sc-number-limit :initial-element nil)
+		  :type sc-vector)
+  (load-costs (make-array sc-number-limit :initial-element nil)
+	      :type sc-vector)
+  ;;
+  ;; Vector mapping from SC numbers to representation move and coerce VOPs.  If
+  ;; an entry is non-null, then it is the VOP-INFO for the VOP that coerces an
+  ;; object in the index SC's representation info this SC's representation.  If
+  ;; null, no special VOP is necessary: just use MOVE.  This vector is filled
+  ;; out with entries for all SCs that can somehow be coerced into this SC, not
+  ;; just those VOPs defined to directly move into this SC (i.e. it allows for
+  ;; operand loading on the move VOP's operands.)
+  ;;
+  ;; If there are special non-coercing moves (i.e. non-null entries for this SC
+  ;; or its alternates), then they should not use any wired temporaries.
+  (move-vops (make-array sc-number-limit :initial-element nil)
+	     :type sc-vector)
+  ;;
+  ;; The costs corresponding to the MOVE-VOPS.  Separate because this info is
+  ;; needed at meta-compile time, while the MOVE-VOPs don't exist till load
+  ;; time.  If no move is defined, then the entry is NIL.
+  (move-costs (make-array sc-number-limit :initial-element nil)
+	      :type sc-vector)
+  ;;
+  ;; Similar to Move-VOPs, except that we only ever use the entries for this SC
+  ;; and its alternates, since we never combine complex representation
+  ;; conversion with argument passing.
+  (move-arg-vops (make-array sc-number-limit :initial-element nil)
+		 :type sc-vector)
+  ;;
+  ;; True if this SC or one of its alternates in in the NUMBER-STACK SB.
+  (number-stack-p nil :type boolean))
 
 (defprinter sc
   name)
@@ -868,6 +938,10 @@
   ;;        TNs never appear in the IR2-Block-XXX-TNs.  Environment TNs never
   ;;        have Local or Local-Number.
   ;;
+  ;;   :Component
+  ;;        Implicit conflict info like :Environment, but allocated over the
+  ;;        entire component.  No restriction on referencing environments.
+  ;;
   ;;   :Save
   ;;   :Save-Once
   ;;        A TN used for saving a :Normal TN across function calls.  The
@@ -894,10 +968,9 @@
   ;;        copies can be allocated.
   ;;
   (kind nil :type (member :normal :environment :save :save-once :load :constant
-			  :cached-constant))
+			  :component))
   ;;
-  ;; The primitive-type for this TN's value.  Since the allocation costs for
-  ;; VOP temporaries are explicitly specified, this slot is null in such TNs.
+  ;; The primitive-type for this TN's value.  Null in restricted or wired TNs.
   (primitive-type nil :type (or primitive-type null))
   ;;
   ;; If this TN represents a variable or constant, then this is the
@@ -941,17 +1014,12 @@
   ;; chain, for scanning through blocks in reverse DFO.
   (current-conflict nil)
   ;;
-  ;; In a :Save TN, this is the TN saved.  In a :Normal TN, this is the
-  ;; associated save TN.  In TNs with no save TN, this is null.
+  ;; In a :Save TN, this is the TN saved.  In a :Normal or :Environment TN,
+  ;; this is the associated save TN.  In TNs with no save TN, this is null.
   (save-tn nil :type (or tn null))
   ;;
-  ;; This is a vector indexed by SC numbers with the cost for packing in that
-  ;; SC.  If an entry for an SC is null, then it is not possible to pack in
-  ;; that SC, either because it is illegal or because the SC is full.
-  (costs (make-array sc-number-limit :initial-element nil)
-	 :type sc-vector)
-  ;;
-  ;; The SC packed into, or NIL if not packed.
+  ;; After pack, the SC we packed into.  Beforehand, the SC we want to pack
+  ;; into, or null if we don't know.
   (sc nil :type (or sc null))
   ;;
   ;; The offset within the SB that this TN is packed into.  This is what
