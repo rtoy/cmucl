@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.23 1992/05/28 23:15:39 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.24 1992/06/09 23:45:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,7 @@
 	  backend-instruction-formats backend-instruction-flavors
 	  backend-assembler-resources backend-special-arg-types
 	  backend-disassem-params backend-internal-errors
-	  backend-assembler-params
+	  backend-assembler-params backend-page-size
 	  
 	  ;; The various backends need to call these support routines
 	  make-stack-pointer-tn primitive-type primitive-type-of))
@@ -218,7 +218,11 @@
   (internal-errors nil :type (or simple-vector null))
 
   ;; Assembler parameters.
-  (assembler-params nil :type t))
+  (assembler-params nil :type t)
+
+  ;; The maximum number of bytes per page on this system.  Used by genesis.
+  (page-size 0 :type index))
+
 
 (defprinter backend
   name)
