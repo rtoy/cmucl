@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.164 1999/11/13 14:14:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.165 1999/12/04 15:58:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1426,14 +1426,13 @@
 	     "RESET-TIME" "UNPROFILE"))
 (dolist
     (name
-     '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "CHAR-INT" "FLOAT-DIGITS" "FLOAT-RADIX"
-       "PATHNAME-DEVICE" "PATHNAME-DIRECTORY" "PATHNAME-HOST" "PATHNAME-NAME"
-       "PATHNAME-TYPE" "PATHNAME-VERSION"))
+     '("ARRAY-RANK" "ARRAY-TOTAL-SIZE" "BOOLEAN" "CHAR-INT" "FLOAT-DIGITS"
+       "FLOAT-RADIX" "PATHNAME-DEVICE" "PATHNAME-DIRECTORY" "PATHNAME-HOST"
+       "PATHNAME-NAME" "PATHNAME-TYPE" "PATHNAME-VERSION"))
   (intern name "LISP"))
-(intern "BOOLEAN" "ALIEN")
 (intern "VOID" "C-CALL")
 (defpackage "KERNEL"
-  (:import-from "ALIEN" "BOOLEAN")
+  (:import-from "LISP" "BOOLEAN")
   (:import-from "C-CALL" "VOID")
   (:export "%ACOS" "%ACOSH" "%ARRAY-AVAILABLE-ELEMENTS"
 	   "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"
