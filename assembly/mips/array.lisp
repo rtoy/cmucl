@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.2 1990/03/18 23:53:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.3 1990/03/22 12:01:12 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -20,7 +20,7 @@
   `(pseudo-atomic (,ndescr)
      (inst ori ,vector alloc-tn vm:other-pointer-type)
      (inst addiu alloc-tn alloc-tn (+ (1- (ash 1 vm:lowtag-bits))
-				      (* vm:vector-base-size vm:word-bytes)))
+				      (* vm:vector-data-offset vm:word-bytes)))
      (inst addu alloc-tn alloc-tn ,words)
      (loadi ,ndescr (lognot vm:lowtag-mask))
      (inst and alloc-tn alloc-tn ,ndescr)
