@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.59 1990/07/02 04:47:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.60 1990/07/02 05:06:37 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -412,20 +412,15 @@
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type)
   (value :set-trans set
-	 :setf-vop set
-	 :init :unbound)
+	 :setf-vop set)
   (function :setf-vop c::set-symbol-function
-	    :set-trans c::%sp-set-definition
-	    :init :unbound)
+	    :set-trans c::%sp-set-definition)
   (plist :ref-trans symbol-plist
 	 :setf-vop c::set-symbol-plist
-	 :set-trans c::%sp-set-plist
-	 :init :null)
-  (name :ref-trans symbol-name
-	:init :arg)
+	 :set-trans c::%sp-set-plist)
+  (name :ref-trans symbol-name)
   (package :ref-trans symbol-package
-	   :setf-vop c::set-package
-	   :init :null))
+	   :setf-vop c::set-package))
 
 (define-primitive-object (sap :lowtag other-pointer-type
 			      :header sap-type)
