@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.1 1990/11/10 18:39:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.2 1990/11/10 19:20:54 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -357,13 +357,13 @@
       (give-up))
     (let ((dims (array-type-dimensions array-type)))
       (unless (listp dims)
-	(give-up "Can't tell the rank at compile time.")
-	(if (member '* dims)
-	    (do ((form 1 `(truly-the index
-				     (* (array-dimension array ,i) ,form)))
-		 (i 0 (1+ i)))
-		((= i (length dims)) form))
-	    (reduce #'* dims))))))
+	(give-up "Can't tell the rank at compile time."))
+      (if (member '* dims)
+	  (do ((form 1 `(truly-the index
+				   (* (array-dimension array ,i) ,form)))
+	       (i 0 (1+ i)))
+	      ((= i (length dims)) form))
+	  (reduce #'* dims)))))
 
 ;;; ARRAY-HAS-FILL-POINTER-P  --  transform.
 ;;;
