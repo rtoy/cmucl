@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.3 1991/02/08 16:36:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.4 1991/06/05 14:50:25 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -330,7 +330,13 @@
 
 ;;;; SAVE-ALL-BUFFERS.
 
+;;; SAVE-ALL-BUFFERS -- Public.
+;;;
 (defun save-all-buffers (&optional (list-unmodified-buffers nil))
+  "This prompts users with each modified buffer as to whether they want to
+   write it out.  If the buffer has no associated file, this will also prompt
+   for a file name.  Supplying the optional argument non-nil causes this
+   to prompt for every buffer."
   (dolist (buffer *buffer-list*)
     (when (or list-unmodified-buffers (buffer-modified buffer))
       (maybe-save-buffer buffer))))
