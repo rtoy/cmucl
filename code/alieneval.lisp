@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.15 1990/06/02 16:41:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.16 1990/06/08 17:59:56 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -423,14 +423,13 @@
 ;;;    Invalidate the memory pointed to by unless it is a statically
 ;;; allocated alien.
 ;;;
+#+new-compiler
 (defun dispose-alien (alien)
   "Release the storage allocated for Alien."
   (check-type alien alien-value)
   (let ((address (alien-value-sap alien)))
-    (unless (not (or (#-new-compiler %primitive pointer<
-				     address system-space-start)
-		     (#-new-compiler %primitive pointer>
-				     address alien-allocation-end)))
+    (unless (not (or (pointer< address system-space-start)
+		     (pointer> address alien-allocation-end)))
       (gr-call mach:vm_deallocate *task-self* address
 	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF)
 				   (- alien-address-shift)))))))
