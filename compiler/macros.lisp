@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.34 1993/05/11 13:56:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.35 1993/07/21 14:29:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1164,3 +1164,13 @@
 	   *event-info*)
   (values))
 
+
+;;;; WITH-COMPILER-ERROR-HANDLERS  --  Interface
+;;;
+;;;  Establish the compiler's condition handlers.
+;;;
+(defmacro with-compiler-error-handlers (&body body)
+  `(handler-bind ((compiler-error #'compiler-error-handler)
+		  (style-warning #'compiler-style-warning-handler)
+		  (warning #'compiler-warning-handler))
+     ,@body))
