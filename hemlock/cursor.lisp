@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.1.1.3 1991/02/08 16:33:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/cursor.lisp,v 1.1.1.4 1991/03/16 02:18:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,6 +195,7 @@
 ;;;
 (defun mark-to-cursorpos (mark window)
   "Return the (x, y) position of mark within window, or NIL if not displayed."
+  (maybe-update-window-image window)
   (let* ((line (mark-line mark))
 	 (number (line-number line))
 	 (charpos (mark-charpos mark))
@@ -313,7 +314,7 @@
 ;;;
 (defun displayed-p (mark window)
   "Return true if Mark is displayed on Window, false otherwise."
-  (update-window-image window)
+  (maybe-update-window-image window)
   (%displayed-p mark window))
 
 
