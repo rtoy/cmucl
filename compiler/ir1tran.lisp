@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.144 2003/04/14 21:15:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.145 2003/04/16 13:31:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1987,10 +1987,6 @@
       
     res))
 
-(defvar *allow-debug-catch-tag* t
-  "Controls whether we should allow the insertion a (CATCH ...) around
-code to allow the debugger RETURN command to function.")
-
     
 ;;; IR1-Convert-Lambda  --  Internal
 ;;;
@@ -2020,7 +2016,6 @@ code to allow the debugger RETURN command to function.")
 			  :test #'eq)
 		  (list name)
 		  *current-function-names*))
-	     
 	     (context-decls
 	      (and parent-form
 		   (loop for fun in *context-declarations*
@@ -2031,18 +2026,11 @@ code to allow the debugger RETURN command to function.")
 	      (process-declarations (append context-decls decls)
 				    (append aux-vars vars)
 				    nil cont))
-	     (new-body (cond ((and *allow-debug-catch-tag*
-				   (member parent-form '(defun flet labels function))
-				   (policy nil (> debug (max speed space))))
-			      ;; (format t "body: ~S~%" body)
-                              `((catch (make-symbol "DEBUG-RETURN-CATCH-TAG")
-                                  ,@body)))
-                             (t body)))
 	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
-		      (ir1-convert-hairy-lambda new-body vars keyp
+		      (ir1-convert-hairy-lambda body vars keyp
 						allow-other-keys
 						aux-vars aux-vals cont)
-		      (ir1-convert-lambda-body new-body vars aux-vars aux-vals
+		      (ir1-convert-lambda-body body vars aux-vars aux-vals
 					       t cont))))
 	(setf (functional-inline-expansion res) form)
 	(setf (functional-arg-documentation res) (cadr form))

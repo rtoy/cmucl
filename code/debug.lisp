@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.57 2003/04/14 21:15:03 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.58 2003/04/16 13:31:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1708,22 +1708,6 @@ See the CMU Common Lisp User's Manual for more information.
     (if function
 	(describe function)
 	(format t "Can't figure out the function for this frame."))))
-
-(def-debug-command "RETURN" ()
-  (let ((tag (find-if #'(lambda (x)
-			  (and (typep (car x) 'symbol)
-			       (not (symbol-package (car x)))
-			       (string= (car x) "DEBUG-RETURN-CATCH-TAG")))
-		      (di::frame-catches debug::*current-frame*))))
-    (if tag
-	(throw (car tag)
-	  (di::eval-in-frame debug::*current-frame*
-			     (debug::read-if-available '(values))))
-	(format t "~@<can't find the return tag for this frame ~
-                   ~2I~_(hint: try increasing the DEBUG optimization quality ~
-                   and recompiling)~:@>"))))
-
-
 
 
 ;;;
