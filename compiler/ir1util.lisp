@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.108 2004/12/06 17:03:56 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.109 2004/12/16 21:55:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -675,7 +675,8 @@
   (declare (values component))
   (let* ((head (make-block-key :start nil :component nil))
 	 (tail (make-block-key :start nil :component nil))
-	 (res (make-component :head head  :tail tail)))
+	 (res (make-component :head head :tail tail
+			      :outer-loop (make-loop :kind :outer :head head))))
     (setf (block-flag head) t)
     (setf (block-flag tail) t)
     (setf (block-component head) res)

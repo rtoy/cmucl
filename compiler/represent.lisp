@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.36 2001/03/04 20:12:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/represent.lisp,v 1.37 2004/12/16 21:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -697,6 +697,38 @@
     (note-number-stack-tn (tn-writes tn)))
   (undefined-value))
 
+;;; Iterate over the normal TNs, storing the depth of the deepest loop
+;;; that the TN is used in TN-LOOP-DEPTH.
+(defun assign-tn-depths (component)
+  (when *loop-analyze* 
+    (do-ir2-blocks (block component)
+      (do ((vop (ir2-block-start-vop block)
+		(vop-next vop)))
+	  ((null vop))
+	(flet ((find-all-tns (head-fun)
+		 (collect ((tns))
+		   (do ((ref (funcall head-fun vop) (tn-ref-across ref)))
+		       ((null ref))
+		     (tns (tn-ref-tn ref)))
+		   (tns))))
+	  (dolist (tn (nconc (find-all-tns #'vop-args)
+			     (find-all-tns #'vop-results)
+			     (find-all-tns #'vop-temps)
+			     ;; What does "references in this VOP
+			     ;; mean"? Probably something that isn't
+			     ;; useful in this context, since these
+			     ;; TN-REFs are linked with TN-REF-NEXT
+			     ;; instead of TN-REF-ACROSS. --JES
+			     ;; 2004-09-11
+			     ;; (find-all-tns #'vop-refs)
+			     ))
+	    (setf (tn-loop-depth tn)
+		  (max (tn-loop-depth tn)
+		       (let* ((ir1-block (ir2-block-block (vop-block vop)))
+			      (loop (block-loop ir1-block)))
+			 (if loop
+			     (loop-depth loop)
+			     0))))))))))
 
 ;;; SELECT-REPRESENTATIONS  --  Interface
 ;;;

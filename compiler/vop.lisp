@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.42 2004/11/05 22:02:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.43 2004/12/16 21:55:38 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1120,7 +1120,9 @@
   ;;
   ;; If a :ENVIRONMENT or :DEBUG-ENVIRONMENT TN, this is the environment that
   ;; the TN is live throughout.
-  (environment nil :type (or environment null)))
+  (environment nil :type (or environment null))
+  ;; The depth of the deepest loop that this TN is used in.
+  (loop-depth 0 :type fixnum))
 
 (defun %print-tn (s stream d)
   (declare (ignore d))

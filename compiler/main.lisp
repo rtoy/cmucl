@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.143 2004/10/26 13:31:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.144 2004/12/16 21:55:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,6 +54,10 @@
   "Similar to *BYTE-COMPILE-DEFAULT*, but controls the compilation of top-level
    forms (evaluated at load-time) when the :BYTE-COMPILE argument is :MAYBE
    (the default.)  When true, we decide to byte-compile.")
+
+;;; Exported:
+(defvar *loop-analyze* nil
+  "Whether loop analysis should be done or not.")
 
 ;;; Value of the :byte-compile argument to the compiler.
 (defvar *byte-compile* :maybe)
@@ -433,12 +437,13 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 
     (ir1-phases component)
 
-    #|
-    (maybe-mumble "Dom ")
-    (find-dominators component)
-    (maybe-mumble "Loop ")
-    (loop-analyze component)
-    |#
+    (when *loop-analyze*
+      (dfo-as-needed component)
+      (maybe-mumble "Dom ")
+      (find-dominators component)
+      (maybe-mumble "Loop ")
+      (loop-analyze component))
+
 
     (maybe-mumble "Env ")
     (environment-analyze component)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.45 2004/11/05 22:02:38 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.46 2004/12/16 21:55:38 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -522,7 +522,7 @@
   ;; NEW-FUNCTIONS, this is not disjoint from COMPONENT-LAMBDAS.
   (reanalyze-functions nil :type list)
   ;; The default LOOP in the component
-  (outer-loop nil :type (or null cloop)))
+  (outer-loop (required-argument) :type cloop))
 
 (defprinter component
   name
