@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.5 1991/06/05 14:05:45 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.6 1991/07/16 17:36:59 chiles Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -27,7 +27,7 @@ endif
 if (-e $lisp/VERSION) then
 	set version = `cat $lisp/VERSION`
 else
-	set version = `/bin/date | awk '{print $2 "-" $3 "-" $6}'`
+	set version = `/bin/date | awk '{print $3 "-" $2 "-" $6}'`
 endif
 
 # set a bunch of random env vars to fill up space.
