@@ -1,11 +1,27 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.2 1994/07/07 10:45:42 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-lispregs.h,v 1.3 1994/10/25 00:15:24 ram Exp $ */
+
+
 
 #ifdef LANGUAGE_ASSEMBLY
 
-#define GREG(num) %g ## num
-#define OREG(num) %o ## num
-#define LREG(num) %l ## num
-#define IREG(num) %i ## num
+#ifdef __STDC__
+				/* Standard C token concatenation */
+#define CAT(a,b) a ## b
+
+#else
+				/* Reisser CPP token concatenation */
+#define CAT(a,b) a/**/b
+
+#endif
+
+/*
+ * Note: concatenation to non preprocessor symbols is not defined,
+ * SunPRO C 2.0.1 yields % g0, perfectly valid according to ANSI
+ */
+#define GREG(num) CAT(%g,num)
+#define OREG(num) CAT(%o,num)
+#define LREG(num) CAT(%l,num)
+#define IREG(num) CAT(%i,num)
 
 #else
 
@@ -70,8 +86,25 @@
 
 #ifndef LANGUAGE_ASSEMBLY
 
+#ifdef SOLARIS
+
+#include <ucontext.h>
+
+extern int * solaris_register_address(struct ucontext *, int);
+
+#define SC_REG(sc, reg) (*solaris_register_address(sc,reg))
+
+/* short cuts */
+
+#define SC_PC(sc) ((sc)->uc_mcontext.gregs[REG_PC])
+#define SC_NPC(sc) ((sc)->uc_mcontext.gregs[REG_nPC])
+
+#else
+
 #define SC_REG(sc, n) (((int *)((sc)->sc_g1))[n])
 #define SC_PC(sc) ((sc)->sc_pc)
 #define SC_NPC(sc) ((sc)->sc_npc)
+
+#endif /* SOLARIS */
 
 #endif

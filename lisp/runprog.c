@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.1.1.1 1994/10/24 19:50:05 ram Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/runprog.c,v 1.2 1994/10/25 00:12:10 ram Exp $
  *
  * Support for run-program.
  *

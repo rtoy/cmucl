@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.1.1.1 1994/10/24 19:49:55 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/parse.c,v 1.2 1994/10/25 00:09:21 ram Exp $ */
 #include <stdio.h>
 #include <ctype.h>
 #include <signal.h>

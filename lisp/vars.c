@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.1.1.1 1994/10/24 19:53:01 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/vars.c,v 1.2 1994/10/25 00:21:19 ram Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>

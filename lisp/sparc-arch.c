@@ -1,23 +1,26 @@
 #include <stdio.h>
+#ifdef SOLARIS
+#include <sys/trap.h>
+#else
 #include <machine/trap.h>
+#endif
 
+#include "arch.h"
 #include "lisp.h"
 #include "internals.h"
 #include "globals.h"
 #include "validate.h"
 #include "os.h"
-#include "arch.h"
 #include "lispregs.h"
 #include "signal.h"
 #include "interrupt.h"
 
 char *arch_init()
 {
-    return NULL;
+    return 0;
 }
 
-os_vm_address_t arch_get_bad_addr(int signal, int code,
-				  struct sigcontext *context)
+os_vm_address_t arch_get_bad_addr(HANDLER_ARGS)
 {
     unsigned long badinst;
     int rs1;
@@ -26,19 +29,19 @@ os_vm_address_t arch_get_bad_addr(int signal, int code,
 
     /* Make sure it's not the pc thats bogus, and that it was lisp code */
     /* that caused the fault. */
-    if ((context->sc_pc & 3) != 0 ||
-	((context->sc_pc < READ_ONLY_SPACE_START ||
-	  context->sc_pc >= READ_ONLY_SPACE_START+READ_ONLY_SPACE_SIZE) &&
-	 ((lispobj *)context->sc_pc < current_dynamic_space &&
-	  (lispobj *)context->sc_pc >=
+    if ((SC_PC(context) & 3) != 0 ||
+	((SC_PC(context) < READ_ONLY_SPACE_START ||
+	  SC_PC(context) >= READ_ONLY_SPACE_START+READ_ONLY_SPACE_SIZE) &&
+	 ((lispobj *)SC_PC(context) < current_dynamic_space &&
+	  (lispobj *)SC_PC(context) >=
 	      current_dynamic_space + DYNAMIC_SPACE_SIZE)))
-	return NULL;
+	return 0;
 
-    badinst = *(unsigned long *)context->sc_pc;
+    badinst = *(unsigned long *)SC_PC(context);
 
     if ((badinst >> 30) != 3)
 	/* All load/store instructions have op = 11 (binary) */
-	return NULL;
+	return 0;
 
     rs1 = (badinst>>14)&0x1f;
 
@@ -64,13 +67,13 @@ void arch_skip_instruction(context)
 struct sigcontext *context;
 {
     /* Skip the offending instruction */
-    context->sc_pc = context->sc_npc;
-    context->sc_npc += 4;
+    SC_PC(context) = SC_NPC(context);
+    SC_NPC(context) += 4;
 }
 
 unsigned char *arch_internal_error_arguments(struct sigcontext *scp)
 {
-    return (unsigned char *)(scp->sc_pc+4);
+    return (unsigned char *)(SC_PC(scp)+4);
 }
 
 boolean arch_pseudo_atomic_atomic(struct sigcontext *scp)
@@ -97,99 +100,129 @@ void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 }
 
 static unsigned long *skipped_break_addr, displaced_after_inst;
+#ifdef POSIX_SIGS
+static sigset_t orig_sigmask;
+#else
 static int orig_sigmask;
+#endif
 
 void arch_do_displaced_inst(struct sigcontext *scp,
 				   unsigned long orig_inst)
 {
-    unsigned long *pc = (unsigned long *)scp->sc_pc;
-    unsigned long *npc = (unsigned long *)scp->sc_npc;
+    unsigned long *pc = (unsigned long *)SC_PC(scp);
+    unsigned long *npc = (unsigned long *)SC_NPC(scp);
 
+#ifdef POSIX_SIGS
+    orig_sigmask = scp->uc_sigmask;
+    sigemptyset(&scp->uc_sigmask);
+    FILLBLOCKSET(&scp->uc_sigmask);
+#else
     orig_sigmask = scp->sc_mask;
     scp->sc_mask = BLOCKABLE;
+#endif
 
     *pc = orig_inst;
     skipped_break_addr = pc;
     displaced_after_inst = *npc;
     *npc = trap_AfterBreakpoint;
 
+#ifdef SOLARIS
+    /* XXX never tested */
+    setcontext(scp);
+#else
     sigreturn(scp);
+#endif
 }
 
-static void sigill_handler(signal, code, scp)
-int signal, code;
-struct sigcontext *scp;
+static void sigill_handler(HANDLER_ARGS)
 {
     int badinst;
 
-    sigsetmask(scp->sc_mask);
+    SAVE_CONTEXT();
 
-    if (code == T_UNIMP_INSTR) {
+#ifdef POSIX_SIGS
+    sigprocmask(SIG_SETMASK, &context->uc_sigmask, 0);
+#else
+    sigsetmask(context->sc_mask);
+#endif
+
+#ifdef SOLARIS
+    if (CODE(code) == ILL_ILLOPC)
+#else
+    if (CODE(code) == T_UNIMP_INSTR)
+#endif
+    {
 	int trap;
 
-	trap = *(unsigned long *)(scp->sc_pc) & 0x3fffff;
+	trap = *(unsigned long *)(SC_PC(context)) & 0x3fffff;
 
 	switch (trap) {
 	  case trap_PendingInterrupt:
-	    arch_skip_instruction(scp);
-	    interrupt_handle_pending(scp);
+	    arch_skip_instruction(context);
+	    interrupt_handle_pending(context);
 	    break;
 
 	  case trap_Halt:
-	    fake_foreign_function_call(scp);
+	    fake_foreign_function_call(context);
 	    lose("%%primitive halt called; the party is over.\n");
 
 	  case trap_Error:
 	  case trap_Cerror:
-	    interrupt_internal_error(signal, code, scp, trap == trap_Cerror);
+	    interrupt_internal_error(signal, code, context, trap == trap_Cerror);
 	    break;
 
 	  case trap_Breakpoint:
-	    handle_breakpoint(signal, code, scp);
+	    handle_breakpoint(signal, code, context);
 	    break;
 
 	  case trap_FunctionEndBreakpoint:
-	    scp->sc_pc=(int)handle_function_end_breakpoint(signal, code, scp);
-	    scp->sc_npc=scp->sc_pc + 4;
+	    SC_PC(context)=(int)handle_function_end_breakpoint(signal, code, context);
+	    SC_NPC(context)=SC_PC(context) + 4;
 	    break;
 
 	  case trap_AfterBreakpoint:
 	    *skipped_break_addr = trap_Breakpoint;
 	    skipped_break_addr = NULL;
-	    *(unsigned long *)scp->sc_pc = displaced_after_inst;
-	    scp->sc_mask = orig_sigmask;
+	    *(unsigned long *)SC_PC(context) = displaced_after_inst;
+#ifdef POSIX_SIGS
+	    context->uc_sigmask = orig_sigmask;
+#else
+	    context->sc_mask = orig_sigmask;
+#endif
 	    break;
 
 	  default:
-	    interrupt_handle_now(signal, code, scp);
+	    interrupt_handle_now(signal, code, context);
 	    break;
 	}
     }
-    else if (code >= T_SOFTWARE_TRAP + 16 & code < T_SOFTWARE_TRAP + 32)
-	interrupt_internal_error(signal, code, scp, FALSE);
+#ifdef SOLARIS
+    else if (CODE(code) == ILL_ILLTRP)
+#else
+    else if (CODE(code) >= T_SOFTWARE_TRAP + 16 & CODE(code) < T_SOFTWARE_TRAP + 32)
+#endif
+	interrupt_internal_error(signal, code, context, FALSE);
     else
-	interrupt_handle_now(signal, code, scp);
+	interrupt_handle_now(signal, code, context);
 }
 
-static void sigemt_handler(signal, code, scp)
-     int signal, code;
-     struct sigcontext *scp;
+static void sigemt_handler(HANDLER_ARGS)
 {
     unsigned long badinst;
     boolean subtract, immed;
     int rd, rs1, op1, rs2, op2, result;
 
-    badinst = *(unsigned long *)scp->sc_pc;
+    badinst = *(unsigned long *)SC_PC(context);
     if ((badinst >> 30) != 2 || ((badinst >> 20) & 0x1f) != 0x11) {
 	/* It wasn't a tagged add.  Pass the signal into lisp. */
-	interrupt_handle_now(signal, code, scp);
+	interrupt_handle_now(signal, code, context);
 	return;
     }
 	
     /* Extract the parts of the inst. */
     subtract = badinst & (1<<19);
     rs1 = (badinst>>14) & 0x1f;
-    op1 = SC_REG(scp, rs1);
+    op1 = SC_REG(context, rs1);
 
     /* If the first arg is $ALLOC then it is really a signal-pending note */
     /* for the pseudo-atomic noise. */
@@ -202,15 +235,15 @@ static void sigemt_handler(signal, code, scp)
 	    result = op1 - op2;
 	else
 	    result = op1 + op2;
-	SC_REG(scp, reg_ALLOC) = result & ~7;
-	arch_skip_instruction(scp);
-	interrupt_handle_pending(scp);
+	SC_REG(context, reg_ALLOC) = result & ~7;
+	arch_skip_instruction(context);
+	interrupt_handle_pending(context);
 	return;
     }
 
     if ((op1 & 3) != 0) {
 	/* The first arg wan't a fixnum. */
-	interrupt_internal_error(signal, code, scp, FALSE);
+	interrupt_internal_error(signal, code, context, FALSE);
 	return;
     }
 
@@ -221,12 +254,12 @@ static void sigemt_handler(signal, code, scp)
     }
     else {
 	rs2 = badinst & 0x1f;
-	op2 = SC_REG(scp, rs2);
+	op2 = SC_REG(context, rs2);
     }
 
     if ((op2 & 3) != 0) {
 	/* The second arg wan't a fixnum. */
-	interrupt_internal_error(signal, code, scp, FALSE);
+	interrupt_internal_error(signal, code, context, FALSE);
 	return;
     }
 
@@ -239,15 +272,15 @@ static void sigemt_handler(signal, code, scp)
 	    result = (op1>>2) + (op2>>2);
 
         current_dynamic_space_free_pointer =
-            (lispobj *) SC_REG(scp, reg_ALLOC);
+            (lispobj *) SC_REG(context, reg_ALLOC);
 
-	SC_REG(scp, rd) = alloc_number(result);
+	SC_REG(context, rd) = alloc_number(result);
 
-	SC_REG(scp, reg_ALLOC) =
+	SC_REG(context, reg_ALLOC) =
 	    (unsigned long) current_dynamic_space_free_pointer;
     }
 
-    arch_skip_instruction(scp);
+    arch_skip_instruction(context);
 }
 
 void arch_install_interrupt_handlers()
