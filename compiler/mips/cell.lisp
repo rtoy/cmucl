@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.43 1990/09/21 05:46:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.44 1990/09/24 00:32:20 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -198,7 +198,8 @@
       (inst xor type (logxor vm:closure-header-type vm:function-header-type))
       (inst beq type zero-tn normal-fn)
       (inst addu temp function
-	    (- vm:function-header-code-offset vm:function-pointer-type))
+	    (- (ash vm:function-header-code-offset vm:word-shift)
+	       vm:function-pointer-type))
       (error-call vop kernel:object-not-function-error function)
       (emit-label closure)
       (inst li temp (make-fixup "closure_tramp" :foreign))
