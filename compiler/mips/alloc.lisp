@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.23 1993/05/07 07:27:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.24 1993/05/27 05:00:40 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,6 +138,8 @@
   (:temporary (:sc non-descriptor-reg :offset nl0-offset) lowtag)
   (:temporary (:sc any-reg :offset nl1-offset) header)
   (:temporary (:sc any-reg :offset nl2-offset) first-word)
+  (:temporary (:sc any-reg :offset ra-offset :from (:eval 0) :to (:eval 1)) ra)
+  (:ignore ra)
   (:generator 100
     (inst li lowtag (lognot lowtag-mask))
     (inst addu words boxed (fixnum (1+ code-debug-info-slot)))
@@ -265,7 +267,8 @@
   (:temporary (:sc descriptor-reg :offset a0-offset :target result
 	       :from (:argument 0) :to (:result 0))
 	      a0)
-  (:ignore name nl2)
+  (:temporary (:sc any-reg :offset ra-offset :from (:eval 0) :to (:eval 1)) ra)
+  (:ignore name nl2 ra)
   (:generator 10
     (inst addu nargs extra (fixnum words))
     (inst sll nl1 nargs (- type-bits word-shift))
