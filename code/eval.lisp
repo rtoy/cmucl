@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.23 1993/08/17 22:32:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.24 1994/02/14 11:46:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -188,6 +188,20 @@
 		(eval:internal-eval original-exp))))))
       (t
        exp))))
+
+
+;;; Dummy stubs for EVAL:INTERNAL-EVAL and EVAL:MAKE-INTERPRETED-FUNCTION in
+;;; case the compiler isn't loaded yet.
+;;;
+(defun eval:internal-eval (x)
+  (error "Attempt to evaluation a complex expression:~%     ~S~@
+	  This expression must be compiled, but the compiler is not loaded."
+	 x))
+;;;
+(defun eval:make-interpreted-function (x)
+  (error "EVAL called on #'(lambda (x) ...) when the compiler isn't loaded:~
+	  ~%     ~S~%"
+	 x))
 
 
 ;;; INTERPRETED-FUNCTION-P  --  Interface
