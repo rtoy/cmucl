@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.6 1991/11/09 02:47:18 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.7 1992/03/14 02:18:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -199,16 +199,21 @@ be simple strings."
 
 (defun %sp-string-search (string1 start1 end1 string2 start2 end2)
   "%SP-String-Search  String1, Start1, End1, String2, Start2, End2
-		Searches for the substring of String1 specified in String2.
-		Returns an index into String2 or NIL if the substring wasn't
-		found."
+   Searches for the substring of String1 specified in String2.
+   Returns an index into String2 or NIL if the substring wasn't
+   found."
+  (declare (simple-string string1 string2))
   (do ((index2 start2 (1+ index2)))
       ((= index2 end2) nil)
-    (if (do ((index1 start1 (1+ index1))
-	     (index2 index2 (1+ index2)))
-	    ((= index1 end1) t)
-	  (if (char/= (char string1 index1) (char string2 index2))
+    (declare (fixnum index2))
+    (when (do ((index1 start1 (1+ index1))
+	       (index2 index2 (1+ index2)))
+	      ((= index1 end1) t)
+	    (declare (fixnum index1 index2))
+	    (when (= index2 end2)
+	      (return-from %sp-string-search nil))
+	    (when (char/= (char string1 index1) (char string2 index2))
 	      (return nil)))
-	(return index2))))
+      (return index2))))
 
 
