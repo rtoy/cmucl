@@ -1,3 +1,131 @@
+7/7/92 to 7/24/92
+
+[SunOS SPARC only.]
+
+Code:
+
+Many improvements to the debugger:
+- Exported variables *use-block-starts-only* and *print-code-location-kind*
+which control the verbosity of LIST-LOCATIONS.
+- Imroved source file organization.
+- Changed PRINT-FRAME-CALL to print the source if verbosity >= 2 and the
+source is available. 
+- Removed mentions of *current-code-location*, which was only set, never read.
+- Changed source location printing to cache information so that it is much
+faster when many locations in the same function are printed.
+- The source file is now only printed when the file changes from one 
+printing to the next.
+- The format of LIST-LOCATIONS is now more readable.  The number: comes
+before the form, and consecutive locations with the same souce print as
+ranges, not as multiple lines.
+
+Changed BREAK to accept a condition as well as a format string.
+
+Changed default base file name for LOAD-FOREIGN to be the name used to run
+lisp, and not "lisp".
+
+Changed INSPECT::PLAN-DISPLAY-OBJECT to use WITH-SLOTS instead of
+accessors, since those accessors don't seem to exist anymore.
+
+Added code to support CONNECT-TO-UNIX-SOCKET so that Unix domain sockets
+are available for connecting to other processes.
+
+Changed timeout handling in SERVE-EVENT to work for non-integer timeouts.
+Moved WAIT-UNTIL-FD-USABLE into the SERVE-EVENT block so that it could
+share timeout hackery.  Compiled with efficiency notes & tweaked
+declarations.  Broke SERVE-EVENT into a couple of functions for
+readability.
+
+Changed #a reader to allow arbitrary sequences instead of just lists.
+
+Merged Olssons fix to WITH-ENABLED-INTERRUPTS now that it doesn't change
+interrupt characters anymore.
+
+Changed NTRACE to use PRINT-FRAME-CALL instead of the internal
+PRINT-CALL-FRAME-1.
+
+Added new SYSCALL* macro which signals an error instead of returing errno.
+Changed gettimeofday and rusage to use this version.  Changed timeval slots to
+be long, not unsigned-long, since they really are, and this simplifies
+representation problems.
+
+Fixed unix-select to shift the masks by -32 instead of shifting -32 by the
+masks.
+
+
+Compiler:
+
+Code generation changed to use the new assembler.
+
+Don't call CONTINUATION-CHECK-TYPES if PROBABLE-TYPE-CHECK-P returns NIL.
+This lets type checking assume that the continuation does have a DEST,
+and also avoids some unnecessary work.
+
+Fixed dump-1-location to also take integer positions directly, instead of
+always requiring labels.
+
+Added checking for potentially TR local calls with different tail sets.  Added
+BARF restart which allows conditional ignoring of particular error messages.
+
+Fixed IR2-CONVERT-ENTRY to correctly handle tagbodies with more than one tag
+that is non-locally exited to.
+
+MERGE-TAIL-SETS before potential let-conversion so that we will
+correctly recognize all tail calls.  Make the analogous change to
+CONVERT-MV-CALL.
+
+Fixed DUMP-DATA-MAYBE-BYTE-SWAPPING to work.  [Needed for cross compiling.]
+
+In the new assembler, fixed FORGET-OUTPUT-BLOCKS to also reset
+*ALL-OUTPUT-BLOCKS*.  When using ADJUST-ARRAY to extent the vector of
+OUTPUT-BLOCKS, spec the initial-element as nil so it doesn't just leave the
+0's behind.
+
+
+Tools:
+
+Change $* to $@ in sample-wrapper.
+
+When compiling the compiler, keep a bit more safety and debug-info when
+#-small.
+
+
+CLX:
+
+Fixed fast pixarray functions to return T when they do something.
+
+Fixed copy-bit-rect to correctly compute indices for bit-bash-copy
+so that it will actually work.
+
+Fixed ANGLEP to test for being a real before it assumes it is.
+
+Fixed several places where values that could really be negative were 
+declared to be array-indices.
+
+
+Documentation, etc.
+
+Clarified that CMUCL_EMPTYFILE must be a file in sunos-README.
+
+Update for new TR number, use cmu-titlepage style.
+
+Added new debugger breakpoint commands and new trace documentation.
+
+Ran spell checker.
+
+Fixed various minor formatting problems, especially w.r.t description
+environments.
+
+Updated debugger documentation to describe the prefix-completing command
+parser (which has been in for quite a while.)
+
+Incorporated Paul's suggested improvements in the debugger and aliens
+chapters.
+
+Updated indexing to make much greater use of subindexing.
+
+
+
 6/22/92 to 7/7/92
 
 Code:
