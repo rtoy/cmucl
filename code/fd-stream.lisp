@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.16 1991/11/09 02:47:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.17 1991/12/07 00:56:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -983,6 +983,8 @@ non-server method is also significantly more efficient for large reads.
 			  (fd-stream-original stream)
 			  stream
 			  (mach:get-unix-error-msg err)))))))
+     (when (fboundp 'cancel-finalization)
+       (cancel-finalization stream))
      (mach:unix-close (fd-stream-fd stream))
      (when (fd-stream-obuf-sap stream)
        (push (fd-stream-obuf-sap stream) *available-buffers*)
@@ -1135,7 +1137,8 @@ non-server method is also significantly more efficient for large reads.
 		       delete-original
 		       (name (if file
 				 (format nil "file ~S" file)
-				 (format nil "descriptor ~D" fd))))
+				 (format nil "descriptor ~D" fd)))
+		       auto-close)
   (declare (type index fd) (type (or index null) timeout)
 	   (type (member :none :line :full) buffering))
   "Create a stream for the given unix file descriptor.
@@ -1160,6 +1163,12 @@ non-server method is also significantly more efficient for large reads.
 				 :buffering buffering
 				 :timeout timeout)))
     (set-routines stream element-type input output)
+    (when (and auto-close (fboundp 'finalize))
+      (finalize stream
+		#'(lambda ()
+		    (mach:unix-close fd)
+		    (format *terminal-io* "** Closed file descriptor ~D~%"
+			    fd))))
     stream))
 
 ;;; PICK-PACKUP-NAME -- internal
@@ -1352,7 +1361,8 @@ non-server method is also significantly more efficient for large reads.
 				       :element-type element-type
 				       :file namestring
 				       :original original
-				       :delete-original delete-original))
+				       :delete-original delete-original
+				       :auto-close t))
 		      (:probe
 		       (let ((stream
 			      (%make-fd-stream :name namestring :fd fd
@@ -1434,7 +1444,7 @@ non-server method is also significantly more efficient for large reads.
     (if tty
 	(setf *tty*
 	      (make-fd-stream tty :name "the Terminal" :input t :output t
-			      :buffering :line))
+			      :buffering :line :auto-close t))
 	(setf *tty* (make-two-way-stream *stdin* *stdout*))))
   nil)
 
