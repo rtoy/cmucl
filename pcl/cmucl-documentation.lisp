@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.3 1997/09/03 20:33:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.4 1997/09/10 04:23:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,10 +88,12 @@
   (setf (ext:info type documentation (class-name x)) new-value))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'type)))
-  (let ((class (find-class x nil)))
-    (if class
-	(setf (plist-value class 'documentation) new-value)
-	(setf (ext:info type documentation x) new-value))))
+  (if (structure-type-p x)	; Catch structures first.
+      (setf (ext:info type documentation x) new-value)
+      (let ((class (find-class x nil)))
+	(if class
+	    (setf (plist-value class 'documentation) new-value)
+	    (setf (ext:info type documentation x) new-value)))))
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'structure)))
   (unless (eq (ext:info type kind x) :instance)
