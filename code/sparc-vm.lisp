@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.3 1990/11/26 18:49:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.4 1990/11/27 08:45:47 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
@@ -60,7 +60,7 @@
 	   (vector (make-array length :element-type '(unsigned-byte 8))))
       (declare (type system-area-pointer pc)
 	       (type (unsigned-byte 8) length)
-	       (type (simple-array (unsigned-byte 8) (*))) vector)
+	       (type (simple-array (unsigned-byte 8) (*)) vector))
       (copy-from-system-area pc (* vm:byte-bits 5)
 			     vector (* vm:word-bits
 				       vm:vector-data-offset)
