@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25 1997/01/18 14:30:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.26 1999/03/24 18:07:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.25 1997/01/18 14:30:33 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.26 1999/03/24 18:07:12 pw Exp $
 ;;;
 ;;; Code for handling UNIX signals.
 ;;; 
@@ -211,7 +211,7 @@
 
 (alien:def-alien-routine ("sigsetmask" unix-sigsetmask) c-call:unsigned-long
   "Unix-sigsetmask sets the current set of masked signals (those
-   begin blocked from delivery) to the argument.  The macro sigmask
+   being blocked from delivery) to the argument.  The macro sigmask
    can be used to create the mask.  The previous value of the signal
    mask is returned."
   (mask c-call:unsigned-long))
