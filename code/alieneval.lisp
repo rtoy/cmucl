@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.36 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.37 1996/07/12 20:51:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1937,6 +1937,10 @@
 		(error "Bogus argument style ~S in ~S." style arg))
 	      (unless (eq style :out)
 		(lisp-args name))
+	      (when (and (member style '(:out :in-out))
+			 (typep (parse-alien-type type) 'alien-pointer-type))
+		(error "Can't use :out or :in-out on pointer-like type:~%  ~S"
+		       type))
 	      (cond ((eq style :in)
 		     (arg-types type)
 		     (alien-args name))
