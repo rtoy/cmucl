@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.5 1993/05/21 15:47:30 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/gengc-genesis.lisp,v 1.6 1993/05/21 17:41:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -691,13 +691,15 @@
      (let ((des (allocate-simple-object *dynamic* vm:single-float-size
 					vm:other-pointer-type
 					vm:single-float-type)))
-       (write-bits des vm:single-float-value-slot (single-float-bits num))
+       (write-bits des vm:single-float-value-slot
+		   (ldb (byte vm:word-bits 0)
+			(single-float-bits num)))
        des))
     (double-float
      (let ((des (allocate-simple-object *dynamic* vm:double-float-size
 					vm:other-pointer-type
 					vm:double-float-type))
-	   (high-bits (double-float-high-bits num))
+	   (high-bits (ldb (byte vm:word-bits 0) (double-float-high-bits num)))
 	   (low-bits (double-float-low-bits num)))
        (ecase (c:backend-byte-order c:*backend*)
 	 (:little-endian
