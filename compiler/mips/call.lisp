@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.57 1993/05/22 16:15:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.58 1993/05/27 01:30:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -79,11 +79,12 @@
 		  ocfp-save-offset)))
 ;;;
 (def-vm-support-routine make-return-pc-save-location (env)
-  (specify-save-tn
-   (environment-debug-live-tn (make-normal-tn *any-primitive-type*) env)
-   (make-wired-tn *any-primitive-type*
-		  control-stack-arg-scn
-		  #-gengc lra-save-offset #+gengc ra-save-offset)))
+  (let ((ptype #-gengc *any-primitive-type*
+	       #+gengc *fixnum-primitive-type*))
+    (specify-save-tn
+     (environment-debug-live-tn (make-normal-tn ptype) env)
+     (make-wired-tn ptype control-stack-arg-scn
+		    #-gengc lra-save-offset #+gengc ra-save-offset))))
 
 ;;; Make-Argument-Count-Location  --  Interface
 ;;;
@@ -365,7 +366,6 @@ default-value-8
 	    (let ((defaults (defaults)))
 	      (assert defaults)
 	      (assemble (*elsewhere*)
-		(trace-table-entry trace-table-call-site)
 		(emit-label default-stack-vals)
 		(do ((remaining defaults (cdr remaining)))
 		    ((null remaining))
@@ -373,8 +373,7 @@ default-value-8
 		    (emit-label (car def))
 		    (when (null (cdr remaining))
 		      (inst b defaulting-done))
-		    (store-stack-tn (cdr def) null-tn)))
-		(trace-table-entry trace-table-normal)))))
+		    (store-stack-tn (cdr def) null-tn)))))))
 
 	(when lra-label
 	  #-gengc (inst compute-code-from-lra code-tn code-tn lra-label temp)
@@ -422,7 +421,6 @@ default-value-8
     (emit-label done)
     
     (assemble (*elsewhere*)
-      (trace-table-entry trace-table-call-site)
       (emit-label variable-values)
       (when lra-label
 	#-gengc (inst compute-code-from-lra code-tn code-tn lra-label temp)
@@ -434,8 +432,7 @@ default-value-8
       (move start args)
       (move count nargs)
       (inst b done)
-      (inst nop)
-      (trace-table-entry trace-table-normal)))
+      (inst nop)))
   (undefined-value))
 
 
@@ -491,8 +488,7 @@ default-value-8
   (:temporary (:sc any-reg :offset ocfp-offset :from :eval) ocfp)
   (:ignore arg-locs args ocfp)
   (:generator 5
-    (trace-table-entry trace-table-call-site)
-    (let (#-gengc (label (gen-label))
+    (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
@@ -500,18 +496,18 @@ default-value-8
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
+      (trace-table-entry trace-table-call-site)
       #-gengc
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
       (inst #-gengc b #+gengc bal target)
       (inst nop)
-      #-gengc (emit-return-pc label)
-      (default-unknown-values vop values nvals move-temp temp
-	#-gengc label #+gengc nil)
+      (trace-table-entry trace-table-normal)
+      (emit-return-pc label)
+      (default-unknown-values vop values nvals move-temp temp label)
       (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save)))
-    (trace-table-entry trace-table-normal)))
+	(load-stack-tn cur-nfp nfp-save)))))
 
 
 ;;; Non-TR local call for a variable number of return values passed according
@@ -533,8 +529,7 @@ default-value-8
   (:vop-var vop)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   (:generator 20
-    (trace-table-entry trace-table-call-site)
-    (let (#-gengc (label (gen-label))
+    (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
@@ -542,19 +537,19 @@ default-value-8
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
+      (trace-table-entry trace-table-call-site)
       #-gengc
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
       (inst #-gengc b #+gengc bal target)
       (inst nop)
-      #-gengc (emit-return-pc label)
+      (trace-table-entry trace-table-normal)
+      (emit-return-pc label)
       (note-this-location vop :unknown-return)
-      (receive-unknown-values values-start nvals start count
-			      #-gengc label #+gengc nil temp)
+      (receive-unknown-values values-start nvals start count label temp)
       (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save)))
-    (trace-table-entry trace-table-normal)))
+	(load-stack-tn cur-nfp nfp-save)))))
 
 
 ;;;; Local call with known values return:
@@ -579,7 +574,6 @@ default-value-8
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
   #-gengc (:temporary (:scs (non-descriptor-reg)) temp)
   (:generator 5
-    (trace-table-entry trace-table-call-site)
     (let (#-gengc (label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
       (when cur-nfp
@@ -588,17 +582,18 @@ default-value-8
 	(when callee-nfp
 	  (maybe-load-stack-tn callee-nfp nfp)))
       (maybe-load-stack-tn cfp-tn fp)
+      (trace-table-entry trace-table-call-site)
       #-gengc
       (inst compute-lra-from-code
 	    (callee-return-pc-tn callee) code-tn label temp)
       (note-this-location vop :call-site)
       (inst #-gengc b #+gengc bal target)
       (inst nop)
+      (trace-table-entry trace-table-normal)
       #-gengc (emit-return-pc label)
       (note-this-location vop :known-return)
       (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save)))
-    (trace-table-entry trace-table-normal)))
+	(load-stack-tn cur-nfp nfp-save)))))
 
 ;;; Return from known values call.  We receive the return locations as
 ;;; arguments to terminate their lifetimes in the returning function.  We
@@ -765,7 +760,6 @@ default-value-8
 		     (if (eq return :tail) 0 10)
 		     15
 		     (if (eq return :unknown) 25 0))
-       (trace-table-entry trace-table-call-site)
        (let* ((cur-nfp (current-nfp-tn vop))
 	      ,@(unless (eq return :tail)
 		  '((lra-label (gen-label))))
@@ -833,7 +827,8 @@ default-value-8
 				    '(move cfp-tn new-fp)
 				    '(if (> nargs register-arg-count)
 					 (move cfp-tn new-fp)
-					 (move cfp-tn csp-tn))))))
+					 (move cfp-tn csp-tn)))
+			       (trace-table-entry trace-table-call-site))))
 		      ((nil)
 		       (inst nop))))))
 
@@ -892,20 +887,21 @@ default-value-8
 
 	 ,@(ecase return
 	     (:fixed
-	      '((emit-return-pc lra-label)
+	      '((trace-table-entry trace-table-normal)
+		(emit-return-pc lra-label)
 		(default-unknown-values vop values nvals
 					move-temp temp lra-label)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
 	     (:unknown
-	      '((emit-return-pc lra-label)
+	      '((trace-table-entry trace-table-normal)
+		(emit-return-pc lra-label)
 		(note-this-location vop :unknown-return)
 		(receive-unknown-values values-start nvals start count
 					lra-label temp)
 		(when cur-nfp
 		  (load-stack-tn cur-nfp nfp-save))))
-	     (:tail)))
-       (trace-table-entry trace-table-normal))))
+	     (:tail))))))
 
 
 (define-full-call call nil :fixed nil)
@@ -962,7 +958,8 @@ default-value-8
 ;;; 
 (define-vop (return-single)
   (:args (ocfp :scs (any-reg))
-	 (return-pc :scs (descriptor-reg) #+gengc :target #+gengc ra)
+	 #-gengc (return-pc :scs (descriptor-reg))
+	 #+gengc (return-pc :scs (any-reg) :target ra)
 	 (value))
   (:ignore value)
   #-gengc (:temporary (:scs (interior-reg)) lip)
@@ -1006,7 +1003,7 @@ default-value-8
 ;;;
 (define-vop (return)
   (:args (ocfp :scs (any-reg))
-	 (return-pc :scs (descriptor-reg) :to (:eval 1)
+	 (return-pc :scs (#-gengc descriptor-reg #+gengc any-reg) :to (:eval 1)
 		    #+gengc :target #+gengc ra)
 	 (values :more t))
   (:ignore values)
@@ -1058,7 +1055,7 @@ default-value-8
 (define-vop (return-multiple)
   (:args (ocfp-arg :scs (any-reg) :target ocfp)
 	 #-gengc (lra-arg :scs (descriptor-reg) :target lra)
-	 #+gengc (return-pc :scs (descriptor-reg) :target ra)
+	 #+gengc (return-pc :scs (any-reg) :target ra)
 	 (vals-arg :scs (any-reg) :target vals)
 	 (nvals-arg :scs (any-reg) :target nvals))
 
