@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.21 1993/07/21 23:37:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.22 1993/08/17 22:30:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,7 +44,6 @@
 ;;; Abstract class represents any type of byte-compiled function.
 ;;;
 (defstruct (byte-function-or-closure
-	    (:print-function %print-byte-function)
 	    (:alternate-metaclass kernel:funcallable-instance
 				  kernel:funcallable-structure-class
 				  kernel:make-funcallable-structure-class)
@@ -52,9 +51,16 @@
 
 ;;; Represents a byte-compiled closure.
 ;;;
-(defstruct (byte-closure (:include byte-function-or-closure)
-			 (:constructor make-byte-closure (function data))
-			 (:type kernel:funcallable-structure))
+(defstruct (byte-closure
+	    (:include byte-function-or-closure)
+	    (:constructor make-byte-closure (function data))
+	    (:type kernel:funcallable-structure)
+	    (:print-function
+	     (lambda (s stream d)
+	       (declare (ignore d)) 
+	       (print-unreadable-object (s stream :identity t)
+		 (format stream "Byte closure ~S"
+			 (byte-function-name (byte-closure-function s)))))))
   ;;
   ;; Byte function that we call.
   (function (required-argument) :type byte-function)
@@ -67,6 +73,7 @@
 ;;; closure.)
 ;;;
 (defstruct (byte-function (:include byte-function-or-closure)
+			  (:print-function %print-byte-function)
 			  (:type kernel:funcallable-structure))
   ;;
   ;; The component that this XEP is an entry point into.  NIL until
