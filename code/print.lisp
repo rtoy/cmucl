@@ -1256,6 +1256,6 @@
   (if (compiled-function-p object)
       (output-function-object object stream)
       (let ((type (%primitive get-type object)))
-	(write-string "Pointer into Hell, level ")
+	(write-string "Pointer into Hell, level " stream)
 	(sub-output-integer type stream)))
   (finish-random object stream))
