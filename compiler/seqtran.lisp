@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.22 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/seqtran.lisp,v 1.23 1999/09/05 13:02:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,39 +18,39 @@
 
 
 (defun mapper-transform (fn arglists accumulate take-car)
-  (collect ((do-clauses)
-	    (args-to-fn)
-	    (tests))
-    (let ((n-first (gensym)))
-      (dolist (a (if accumulate
-		     arglists
-		     `(,n-first ,@(rest arglists))))
-	(let ((v (gensym)))
-	  (do-clauses `(,v ,a (cdr ,v)))
-	  (tests `(endp ,v))
-	  (args-to-fn (if take-car `(car ,v) v))))
-      
-      (let ((call `(funcall ,fn . ,(args-to-fn)))
-	    (endtest `(or ,@(tests))))
-	(ecase accumulate
-	  (:nconc
-	   (let ((temp (gensym))
-		 (map-result (gensym)))
-	     `(let ((,map-result (list nil)))
-		(do-anonymous ((,temp ,map-result) . ,(do-clauses))
-			      (,endtest (cdr ,map-result))
-		  (setq ,temp (last (nconc ,temp ,call)))))))
-	  (:list
-	   (let ((temp (gensym))
-		 (map-result (gensym)))
-	     `(let ((,map-result (list nil)))
-		(do-anonymous ((,temp ,map-result) . ,(do-clauses))
-			      (,endtest (cdr ,map-result))
-		  (rplacd ,temp (setq ,temp (list ,call)))))))
-	  ((nil)
-	   `(let ((,n-first ,(first arglists)))
-	      (do-anonymous ,(do-clauses)
-			    (,endtest ,n-first) ,call))))))))
+  (once-only ((fn fn))
+    (collect ((do-clauses)
+	      (args-to-fn)
+	      (tests))
+      (let ((n-first (gensym)))
+	(dolist (a (if accumulate
+		       arglists
+		       `(,n-first ,@(rest arglists))))
+	  (let ((v (gensym)))
+	    (do-clauses `(,v ,a (cdr ,v)))
+	    (tests `(endp ,v))
+	    (args-to-fn (if take-car `(car ,v) v))))
+	(let ((call `(funcall ,fn . ,(args-to-fn)))
+	      (endtest `(or ,@(tests))))
+	  (ecase accumulate
+	    (:nconc
+	     (let ((temp (gensym))
+		   (map-result (gensym)))
+	       `(let ((,map-result (list nil)))
+		  (do-anonymous ((,temp ,map-result) . ,(do-clauses))
+				 (,endtest (cdr ,map-result))
+		    (setq ,temp (last (nconc ,temp ,call)))))))
+	    (:list
+	     (let ((temp (gensym))
+		   (map-result (gensym)))
+	       `(let ((,map-result (list nil)))
+		  (do-anonymous ((,temp ,map-result) . ,(do-clauses))
+				 (,endtest (cdr ,map-result))
+		    (rplacd ,temp (setq ,temp (list ,call)))))))
+	    ((nil)
+	     `(let ((,n-first ,(first arglists)))
+	        (do-anonymous ,(do-clauses)
+			      (,endtest ,n-first) ,call)))))))))
 
 (def-source-transform mapc (function list &rest more-lists)
   (mapper-transform function (cons list more-lists) nil t))
