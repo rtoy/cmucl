@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.23 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.24 1994/11/01 17:57:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -365,9 +365,14 @@
       (done-with-fast-read-byte))))
 
 (defun read-n-bytes (stream buffer start numbytes &optional (eof-errorp t))
-  "Reads Numbytes bytes into the Buffer starting at Start, and returns
-   the number of bytes actually read if the end of file was hit before Numbytes
-   bytes were read (and Eof-Errorp is false)."
+  "Reads Numbytes bytes into the Buffer starting at Start, returning the number
+   of bytes read.
+   -- If EOF-ERROR-P is true, an END-OF-FILE condition is signalled if
+      end-of-file is encountered before Count bytes have been read.
+   -- If EOF-ERROR-P is false, READ-N-BYTES reads as much data is currently
+      available (up to count bytes.)  On pipes or similar devices, this
+      function returns as soon as any adata is available, even if the amount
+      read is less than Count and eof has not been hit."
   (declare (type index numbytes start)
 	   (type (or (simple-array * (*)) system-area-pointer) buffer))
   (let* ((stream (in-synonym-of stream))
