@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.35 2000/01/15 15:10:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.36 2000/01/16 20:10:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1019,8 +1019,11 @@
 		    (internal-equalp-hash (realpart s-expr) 0)
 		    (logxor (internal-equalp-hash (realpart s-expr) 0)
 			    (internal-equalp-hash (realpart s-expr) 0))))))
-    (simple-vector (vector-equalp-hash (truly-the simple-vector s-expr) depth))
-    (array (array-equalp-hash s-expr depth))
+    (array
+     (typecase s-expr
+       (simple-vector (vector-equalp-hash (truly-the simple-vector s-expr) depth))
+       (vector (vector-equalp-hash s-expr depth))
+       (t (array-equalp-hash s-expr depth))))
     ;; Everything else.
     (t 42)))
 
