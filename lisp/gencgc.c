@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.61 2004/07/24 03:52:45 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.62 2004/07/27 22:03:53 cwang Exp $
  *
  */
 
@@ -5626,8 +5626,9 @@ static void unprotect_oldspace(void)
  * generation. Bytes_allocated and the generation bytes_allocated
  * counter are updated.  The number of bytes freed is returned.
  */
-#if defined(i386) || defined(__x86_64)
+#ifdef i386
 extern void i586_bzero(void *addr, int nbytes);
+/* i586_bzero may be good on amd64. Eventually we should try it. */
 #else
 #define i586_bzero(addr, nbytes)        memset(addr, 0, nbytes)
 #endif
