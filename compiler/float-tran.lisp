@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.80 1999/09/06 15:27:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.81 2000/04/02 18:45:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1225,8 +1225,9 @@
 
 
 ;;; Define some transforms for complex operations.  We do this in lieu
-;;; of complex operation VOPs.
+;;; of complex operation VOPs.  Some architectures have vops, though.
 ;;;
+#-complex-fp-vops
 (macrolet ((frob (type)
 	     `(progn
 	       ;; Negation
@@ -1295,6 +1296,23 @@
 	       (deftransform = ((w z) (real (complex ,type)) *)
 		 '(and (= (realpart z) w) (zerop (imagpart z))))
 	       )))
+
+  (frob single-float)
+  (frob double-float))
+
+#+complex-fp-vops
+(macrolet
+    ((frob (type)
+       `(progn
+	 ;; Cis.
+	 (deftransform cis ((z) ((,type)) *)
+	   '(complex (cos z) (sin z)))
+	 ;; Comparison
+	 (deftransform = ((w z) ((complex ,type) real) *)
+	   '(and (= (realpart w) z) (zerop (imagpart w))))
+	 (deftransform = ((w z) (real (complex ,type)) *)
+	   '(and (= (realpart z) w) (zerop (imagpart z))))
+	 )))
 
   (frob single-float)
   (frob double-float))
