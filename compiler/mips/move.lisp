@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.25 1990/11/11 00:17:26 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.26 1991/02/01 21:51:55 ram Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -157,7 +157,7 @@
     (inst sra y x 2)))
 ;;;
 (define-move-vop move-to-word/fixnum :move
-  (any-reg) (signed-reg unsigned-reg))
+  (any-reg descriptor-reg) (signed-reg unsigned-reg))
 
 ;;; Arg is a non-immediate constant, load it.
 (define-vop (move-to-word-c)
@@ -201,7 +201,7 @@
     (inst sll y x 2)))
 ;;;
 (define-move-vop move-from-word/fixnum :move
-  (signed-reg unsigned-reg) (any-reg))
+  (signed-reg unsigned-reg) (any-reg descriptor-reg))
 
 ;;; Result may be a bignum, so we have to check.  Use a worst-case cost to make
 ;;; sure people know they may be number consing.
