@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.12 1992/09/02 13:26:02 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.13 1992/09/08 16:27:00 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,7 +36,7 @@
 	  disassemble-memory
 	  disassemble-function
 	  disassemble-code-component
-	  disassemble-blocks
+	  disassemble-assem-segment
 
 	  ;; some variables to set
 	  *opcode-column-width*
@@ -3288,7 +3288,8 @@
       (label-segments segments dstate))
     (disassemble-segments segments stream dstate)))
 
-;;; Code for disassembling segments.
+;;; ----------------------------------------------------------------
+;;; Code for making useful segments from arbitrary lists of code-blocks
 
 (defconstant max-instruction-size 16)
 
@@ -3304,11 +3305,11 @@
   (declare (type list seglist)
 	   (type integer location)
 	   (type (or null (vector (unsigned-byte 8))) connecting-vec)
-	   (type disassem:disassem-state dstate))
+	   (type disassem-state dstate))
   (flet ((addit (seg overflow)
-	   (let ((length (+ (disassem:seg-length seg) overflow)))
+	   (let ((length (+ (seg-length seg) overflow)))
 	     (when (> length 0)
-	       (setf (disassem:seg-length seg) length)
+	       (setf (seg-length seg) length)
 	       (incf location length)
 	       (push seg seglist)))))
     (let ((connecting-overflow 0))
@@ -3325,12 +3326,12 @@
 		    connecting-vec)))
 	  (when (> (length connecting-vec) 0)
 	    (let ((seg
-		   (disassem:make-vector-segment connecting-vec
-						 0
-						 (- (length connecting-vec)
-						    beginning-of-block-amount)
-						 :virtual-location location)))
-	      (setf connecting-overflow (disassem:segment-overflow seg dstate))
+		   (make-vector-segment connecting-vec
+					0
+					(- (length connecting-vec)
+					   beginning-of-block-amount)
+					:virtual-location location)))
+	      (setf connecting-overflow (segment-overflow seg dstate))
 	      (addit seg connecting-overflow)))))
       (if sap
 	  (let* ((initial-length
@@ -3339,51 +3340,59 @@
 			  max-instruction-size)
 		       0))
 		 (seg
-		  (disassem:make-segment
+		  (make-segment
 		   #'(lambda ()
 		       (system:sap+ sap connecting-overflow))
-		       initial-length
-		       :virtual-location location))
+		   initial-length
+		   :virtual-location location))
 		 (overflow
-		  (disassem:segment-overflow seg dstate)))
+		  (segment-overflow seg dstate)))
 	    (addit seg overflow)
-	    (values seglist location
+	    (values seglist
+		    location
 		    (sap-to-vector sap
 				   (+ connecting-overflow
-				      (disassem:seg-length seg)
+				      (seg-length seg)
 				      overflow)
 				   amount)))
 	  (values seglist location nil)))))
 
-(defun blocks-to-segments (segment dstate)
-  (declare (type new-assem:segment segment)
-	   (type disassem:disassem-state dstate))
+;;; ----------------------------------------------------------------
+;;; Code to disassemble assembler segments.
+
+(defun assem-segment-to-disassem-segments (assem-segment dstate)
+  (declare (type new-assem:segment assem-segment)
+	   (type disassem-state dstate))
   (let ((location 0)
-	(segments nil)
+	(disassem-segments nil)
 	(connecting-vec nil))
     (new-assem:segment-map-output
-     segment
+     assem-segment
      #'(lambda (sap amount)
-	 (multiple-value-setq (segments location connecting-vec)
-	   (add-block-segments sap amount segments location connecting-vec
+	 (multiple-value-setq (disassem-segments location connecting-vec)
+	   (add-block-segments sap amount
+			       disassem-segments location
+			       connecting-vec
 			       dstate))))
     (when connecting-vec
-      (setf segments
-	    (add-block-segments nil nil segments location connecting-vec
+      (setf disassem-segments
+	    (add-block-segments nil nil
+				disassem-segments location
+				connecting-vec
 				dstate)))
-    (sort segments #'< :key #'disassem:seg-virtual-location))) 
+    (sort disassem-segments #'< :key #'seg-virtual-location))) 
 
-(defun disassemble-blocks (segment stream backend)
+(defun disassemble-assem-segment (assem-segment stream backend)
   "Disassemble the machine code instructions associated with
-  SEGMENT (of type new-assem::segment)."
-  (declare (type new-assem:segment segment)
+  ASSEM-SEGMENT (of type new-assem:segment)."
+  (declare (type new-assem:segment assem-segment)
 	   (type stream stream)
 	   (type c::backend backend))
-  (let* ((dstate (disassem:make-dstate (c:backend-disassem-params backend)))
-	 (segments (blocks-to-segments segment dstate)))
-    (disassem:label-segments segments dstate)
-    (disassem:disassemble-segments segments stream dstate)))
-
+  (let* ((dstate (make-dstate (c:backend-disassem-params backend)))
+	 (disassem-segments
+	  (assem-segment-to-disassem-segments assem-segment dstate)))
+    (label-segments disassem-segments dstate)
+    (disassemble-segments disassem-segments stream dstate)))
 
 ;;; ----------------------------------------------------------------
 ;;; Routines to find things in the lisp environment.  Obviously highly
@@ -3538,7 +3547,7 @@ symbol object that we know about.")
       (get-code-constant byte-offset dstate)
     (when valid
       (note #'(lambda (stream)
-		(disassem:prin1-quoted-short const stream))
+		(prin1-quoted-short const stream))
 	    dstate))
     const))
 
