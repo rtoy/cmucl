@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.10 1993/05/15 14:45:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.11 1993/05/15 18:26:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -548,25 +548,19 @@
 	     (let ((nlx-info (continuation-value
 			      (first (basic-combination-args node)))))
 	       (when (eq (cleanup-kind (nlx-info-cleanup nlx-info)) :block)
-		 (push (nlx-info-continuation nlx-info) stack)))
+		 (let ((cont (nlx-info-continuation nlx-info)))
+		   (when (interesting cont)
+		     (push cont stack)))))
 	     (setf nlx-entry-p t)))
 	  (cif
 	   (consume (if-test node)))
 	  (creturn
 	   (consume (return-result node)))
 	  (entry
-	   ;;
-	   ;; If we hit the NLX ep for a unwind-protect, then we are unwinding,
-	   ;; and don't want to mess with the stack, so just say there's
-	   ;; nothing on it.
 	   (let* ((cup (entry-cleanup node))
 		  (nlx-info (cleanup-nlx-info cup)))
 	     (when nlx-info
-	       (push (list nlx-info
-			   (ecase (cleanup-kind cup)
-			     ((:catch :block :tagbody) stack)
-			     (:unwind-protect ()))
-			   (reverse consumes))
+	       (push (list nlx-info stack (reverse consumes))
 		     nlx-entries))))
 	  (exit
 	   (when (exit-value node)
@@ -602,13 +596,20 @@
 ;;; produced by this block before the ENTRY node.  Stack is the globally
 ;;; simulated stack at the start of this block.
 ;;;
+;;; If we hit the NLX ep for a unwind-protect, then we are unwinding, and don't
+;;; want to mess with the stack, so just say there's nothing on it.
+;;;
 (defun walk-nlx-entry (nlx-infos stack produce consume)
   (dolist (cont consume)
     (assert (eq (car stack) cont))
     (pop stack))
-  (setf stack (append produce stack))
   (dolist (nlx-info nlx-infos)
-    (walk-block (nlx-info-target nlx-info) nil stack)))
+    (walk-block (nlx-info-target nlx-info) nil 
+		(ecase (cleanup-kind (nlx-info-cleanup nlx-info))
+		  ((:block :tagbody :catch)
+		   (append produce stack))
+		  (:unwind-protect ()))))
+  (undefined-value))
 
 (defun walk-block (block pred stack)
   ;; Pop everything off of stack that isn't live.
