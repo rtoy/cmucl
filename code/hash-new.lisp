@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.31 2004/05/17 18:05:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.32 2004/06/09 14:50:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -935,12 +935,17 @@
      (etypecase s-expr
        (integer (ldb sxhash-bits-byte s-expr))
        (single-float
-	(let ((bits (single-float-bits s-expr)))
+	;; CLHS says sxhash must return the same thing for +0.0 and
+	;; -0.0.  We get the desired result by adding +0.0, which
+	;; converts -0.0 to 0.0.
+	(let* ((x (+ s-expr 0f0))
+	       (bits (single-float-bits x)))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash bits (- sxmash-rotate-bits)) bits))))
        (double-float
-	(let ((lo (double-float-low-bits s-expr))
-	      (hi (double-float-high-bits s-expr)))
+	(let* ((x (+ s-expr 0d0))
+	       (lo (double-float-low-bits x))
+	       (hi (double-float-high-bits x)))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash lo (- sxmash-rotate-bits)) lo
 		       (ldb sxhash-bits-byte
