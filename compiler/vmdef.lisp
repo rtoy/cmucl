@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.41 1992/05/18 17:55:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.42 1992/05/21 22:49:52 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,7 +24,8 @@
 	  define-move-function define-move-vop 
 	  primitive-type-or-lose meta-primitive-type-or-lose
 	  def-primitive-type def-primitive-type-alias
-	  primitive-type-vop define-vop sc-case sc-is note-this-location))
+	  primitive-type-vop define-vop sc-case sc-is
+	  note-this-location note-next-instruction))
 
 ;;; Template-Or-Lose  --  Internal
 ;;;
@@ -2447,10 +2448,21 @@
 ;;;
 (defun note-this-location (vop kind)
   "NOTE-THIS-LOCATION VOP Kind
-  Node that the current code location is an interesting (to the debugger)
+  Note that the current code location is an interesting (to the debugger)
   location of the specified Kind.  VOP is the VOP responsible for this code.
   This VOP must specify some non-null :SAVE-P value (perhaps :COMPUTE-ONLY) so
   that the live set is computed."
   (let ((lab (gen-label)))
     (emit-label lab)
     (note-debug-location vop lab kind)))
+
+;;; NOTE-NEXT-INSTRUCTION -- interface.
+;;; 
+(defun note-next-instruction (vop kind)
+  "NOTE-NEXT-INSTRUCTION VOP Kind
+   Similar to NOTE-THIS-LOCATION, except the use the location of the next
+   instruction for the code location, wherever the scheduler decided to put
+   it."
+  (assert (backend-featurep :new-assembler))
+  (new-assem:emit-postit #'(lambda (posn)
+			     (note-debug-location vop posn kind))))
