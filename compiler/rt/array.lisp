@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.2 1991/04/04 13:50:49 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.3 1991/04/15 15:40:00 ram Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -387,89 +387,83 @@
 
 ;;;; Float vectors.
 
-#|
-(define-vop (data-vector-ref/simple-array-single-float)
+(define-vop (data-vector-ref/simple-array-mc68881-single-float)
   (:note "inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg)))
   (:arg-types simple-array-single-float positive-fixnum)
-  (:results (value :scs (single-reg)))
-  (:result-types single-float)
+  (:results (value :scs (mc68881-single-reg)))
+  (:result-types mc68881-single-float)
+  (:temporary (:sc sap-reg :from :eval) scratch)
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
-    (inst add lip object index)
-    (inst lwc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
-    (inst nop)))
+    (inst cas lip object index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst mc68881-load value lip :single scratch)))
 
-(define-vop (data-vector-set/simple-array-single-float)
+(define-vop (data-vector-set/simple-array-mc68881-single-float)
   (:note "inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg))
-	 (value :scs (single-reg) :target result))
-  (:arg-types simple-array-single-float positive-fixnum single-float)
-  (:results (result :scs (single-reg)))
-  (:result-types single-float)
+	 (value :scs (mc68881-single-reg) :target result))
+  (:arg-types simple-array-single-float positive-fixnum mc68881-single-float)
+  (:results (result :scs (mc68881-single-reg)))
+  (:result-types mc68881-single-float)
   (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
   (:generator 20
-    (inst add lip object index)
-    (inst swc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
+    (inst cas lip object index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst mc68881-store value lip :single scratch)
+    (inst mc68881-wait)
     (unless (location= result value)
-      (inst move :single result value))))
+      (inst mc68881-move result value scratch))))
 
-(define-vop (data-vector-ref/simple-array-double-float)
+(define-vop (data-vector-ref/simple-array-mc68881-double-float)
   (:note "inline array access")
   (:translate data-vector-ref)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg)))
   (:arg-types simple-array-double-float positive-fixnum)
-  (:results (value :scs (double-reg)))
-  (:result-types double-float)
+  (:results (value :scs (mc68881-double-reg)))
+  (:result-types mc68881-double-float)
   (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
   (:generator 20
-    (inst add lip object index)
-    (inst add lip index)
-    (inst lwc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
-    (inst lwc1-odd value lip
-	  (+ (- (* vm:vector-data-offset vm:word-bytes)
-		vm:other-pointer-type)
-	     vm:word-bytes))
-    (inst nop)))
+    (inst cas lip object index)
+    (inst cas lip lip index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst mc68881-load value lip :double scratch)))
 
-(define-vop (data-vector-set/simple-array-double-float)
+(define-vop (data-vector-set/simple-array-mc68881-double-float)
   (:note "inline array store")
   (:translate data-vector-set)
   (:policy :fast-safe)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg))
-	 (value :scs (double-reg) :target result))
-  (:arg-types simple-array-double-float positive-fixnum double-float)
-  (:results (result :scs (double-reg)))
-  (:result-types double-float)
+	 (value :scs (mc68881-double-reg) :target result))
+  (:arg-types simple-array-double-float positive-fixnum mc68881-double-float)
+  (:results (result :scs (mc68881-double-reg)))
+  (:result-types mc68881-double-float)
   (:temporary (:scs (interior-reg)) lip)
+  (:temporary (:sc sap-reg :from :eval) scratch)
   (:generator 20
-    (inst add lip object index)
-    (inst add lip index)
-    (inst swc1 value lip
-	  (- (* vm:vector-data-offset vm:word-bytes)
-	     vm:other-pointer-type))
-    (inst swc1-odd value lip
-	  (+ (- (* vm:vector-data-offset vm:word-bytes)
-		vm:other-pointer-type)
-	     vm:word-bytes))
+    (inst cas lip object index)
+    (inst cas lip lip index)
+    (inst inc lip (- (* vm:vector-data-offset vm:word-bytes)
+		     vm:other-pointer-type))
+    (inst mc68881-store value lip :double scratch)
+    (inst mc68881-wait)
     (unless (location= result value)
-      (inst move :double result value))))
-|#
+      (inst mc68881-move result value scratch))))
 
 
 ;;;; Raw bits without regard to vector type.
