@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.46.2.3 2000/07/09 14:03:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.46.2.4 2000/09/07 12:17:11 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -733,8 +733,7 @@
       (setf (lambda-lets fun) ()))
 
     (setf (lambda-calls home)
-	  (nunion (lambda-calls fun)
-		  (delete fun (lambda-calls home))))
+	  (delete fun (nunion (lambda-calls fun) (lambda-calls home))))
     (setf (lambda-calls fun) ())
 
     (setf (lambda-entries home)
