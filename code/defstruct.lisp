@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.17 1990/11/18 17:00:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.18 1990/12/18 20:39:06 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -15,18 +15,21 @@
 (in-package 'c)
 (export '(lisp::defstruct) "LISP")
 
+(export '(structure-index make-structure structure-length
+	  structure-ref structure-set))
+
 
 ;;;; Structure frobbing primitives.
 
-;;; Note: STRUCTURIFY is defined in struct.lisp.  It converts a simple-vector
-;;; into a structure.  It should go away when we have a real structure
-;;; allocation primitive.
+(defun make-structure (length)
+  "Allocate a new structure with LENGTH data slots."
+  (declare (type index length))
+  (make-structure length))
 
-(defun structure-length (x)
-  "Return the number of slots used by the structure object X, including the
-  type slot."
-  (declare (type structure x))
-  (structure-length x))
+(defun structure-length (structure)
+  "Given a structure, return its length."
+  (declare (type structure structure))
+  (structure-length structure))
 
 (defun structure-ref (struct index)
   "Return the value from the INDEXth slot of STRUCT.  0 corresponds to the
@@ -411,16 +414,14 @@
 		(error "Structure for copier ~S is not a ~S:~% ~S"
 		       (dd-copier info) (dd-name info) structure))
 
-	      (let ((len (dd-length info)))
-		(declare (fixnum len))
-		(do ((i 1 (1+ i))
-		     (res (structurify (make-array len :element-type t))))
-		    ((= i len)
-		     (setf (structure-ref res 0) (dd-name info))
-		     res)
-		  (declare (fixnum i))
+	      (let* ((len (dd-length info))
+		     (res (make-structure len)))
+		(declare (type structure-index len))
+		(dotimes (i len)
+		  (declare (type structure-index i))
 		  (setf (structure-ref res i)
-			(structure-ref structure i)))))))
+			(structure-ref structure i)))
+		res))))
   (when (dd-doc info)
     (setf (documentation (dd-name info) 'type) (dd-doc info))))
 
@@ -482,9 +483,16 @@
 	       (list
 		`(list ,@initial-cruft ,@names))
 	       (structure
-		`(truly-the ,(dd-name defstruct)
-			    (structurify
-			     (vector ,@initial-cruft ,@names))))
+		(let ((temp (gensym)))
+		  `(let ((,temp (make-structure ,(dd-length defstruct))))
+		     (declare (type structure ,temp))
+		     (setf (structure-ref ,temp 0) ',(dd-name defstruct))
+		     ,@(mapcar #'(lambda (slot)
+				   `(setf (structure-ref ,temp
+							 ,(dsd-index slot))
+					  ,(dsd-name slot)))
+			       slots)
+		     (truly-the ,(dd-name defstruct) ,temp))))
 	       (vector
 		`(vector ,@initial-cruft ,@names))
 	       (t
@@ -577,8 +585,16 @@
 	     (list
 	      `(list ,@initial-cruft ,@thing))
 	     (structure
-	      `(truly-the ,(dd-name defstruct)
-			  (structurify (vector ,@initial-cruft ,@thing))))
+	      (let ((temp (gensym)))
+		`(let ((,temp (make-structure ,(dd-length defstruct))))
+		   (declare (type structure ,temp))
+		   (setf (structure-ref ,temp 0) ',(dd-name defstruct))
+		   ,@(mapcar #'(lambda (slot thing)
+				 `(setf (structure-ref ,temp
+						       ,(dsd-index slot))
+					,thing))
+			     slots thing)
+		   `(truly-the ,(dd-name defstruct) ,temp))))
 	     (vector
 	      `(vector ,@initial-cruft ,@thing))
 	     (t
@@ -650,7 +666,7 @@
 	 (dd (info type defined-structure-info type)))
     (cond (*print-pretty*
 	   (let ((index 0))
-	     (declare (type index index))
+	     (declare (type structure-index index))
 	     (xp:pprint-logical-block (stream (cons type (dd-slots dd))
 					      :prefix "#S("
 					      :suffix ")")
