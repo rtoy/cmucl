@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.16 1993/02/10 22:17:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.17 1993/02/12 20:21:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,7 +29,7 @@
 	  make-string-input-stream make-string-output-stream
 	  get-output-stream-string stream-element-type input-stream-p
 	  output-stream-p open-stream-p interactive-stream-p
-	  close read-line read-char
+	  open-stream-p close read-line read-char
 	  unread-char peek-char listen read-char-no-hang clear-input read-byte
 	  write-char write-string write-line terpri fresh-line
 	  finish-output force-output clear-output write-byte
@@ -177,23 +177,26 @@
 
 (defun stream-element-type (stream)
   "Returns a type specifier for the kind of object returned by the Stream."
-  (if (streamp stream)
-      (funcall (stream-misc stream) stream :element-type)
-      (error "~S is not a stream." stream)))
+  (declare (type stream stream))
+  (funcall (stream-misc stream) stream :element-type))
 
 (defun interactive-stream-p (stream)
   "Return true if Stream does I/O on a terminal or other interactive device."
   (declare (type stream stream))
   (funcall (stream-misc stream) stream :interactive-p))
 
+(defun open-stream-p (stream)
+  "Return true if and only if STREAM has not been closed."
+  (declare (type stream stream))
+  (not (eq (stream-in stream) #'closed-flame)))
+
 (defun close (stream &key abort)
   "Closes the given Stream.  No more I/O may be performed, but inquiries
   may still be made.  If :Abort is non-nil, an attempt is made to clean
   up the side effects of having created the stream."
-  (if (streamp stream)
-      (unless (eq (stream-in stream) #'closed-flame)
-	(funcall (stream-misc stream) stream :close abort))
-      (error "~S is not a stream." stream))
+  (declare (type stream stream))
+  (when (open-stream-p stream)
+    (funcall (stream-misc stream) stream :close abort))
   t)
 
 (defun set-closed-flame (stream)
@@ -873,10 +876,11 @@
 					(start 0) (end (length string)))
   "Returns an input stream which will supply the characters of String between
   Start and End in order."
-  (if (stringp string)
-      (internal-make-string-input-stream (coerce string 'simple-string)
-					 start end)
-      (error "~S is not a string." string)))
+  (declare (type string string)
+	   (type index start)
+	   (or (index null) end))
+  (internal-make-string-input-stream (coerce string 'simple-string)
+				     start end))
 
 ;;;; String Output Streams:
 
@@ -906,7 +910,7 @@
     (declare (simple-string workspace) (fixnum current))
     (if (= current (the fixnum (length workspace)))
 	(let ((new-workspace (make-string (* current 2))))
-	  (%primitive byte-blt workspace 0 new-workspace 0 current)
+	  (replace new-workspace workspace)
 	  (setf (aref new-workspace current) character)
 	  (setf (string-output-stream-string stream) new-workspace))
 	(setf (aref workspace current) character))
@@ -922,10 +926,14 @@
 	     (fixnum current length dst-end))
     (if (> dst-end (the fixnum (length workspace)))
 	(let ((new-workspace (make-string (+ (* current 2) length))))
-	  (%primitive byte-blt workspace 0 new-workspace 0 current)
-	  (%primitive byte-blt string start new-workspace current dst-end)
+	  (replace new-workspace workspace :end2 current)
+	  (replace new-workspace string
+		   :start1 current :end1 dst-end
+		   :start2 start :end2 end)
 	  (setf (string-output-stream-string stream) new-workspace))
-	(%primitive byte-blt string start workspace current dst-end))
+	(replace workspace string
+		 :start1 current :end1 dst-end
+		 :start2 start :end2 end))
     (setf (string-output-stream-index stream) dst-end)))
 
 (defun string-out-misc (stream operation &optional arg1 arg2)
@@ -949,14 +957,12 @@
 (defun get-output-stream-string (stream)
   "Returns a string of all the characters sent to a stream made by
    Make-String-Output-Stream since the last call to this function."
-  (if (streamp stream)
-      (let* ((length (string-output-stream-index stream))
-	     (result (make-string length)))
-	(%primitive byte-blt (string-output-stream-string stream) 0
-		      result 0 length)
-	(setf (string-output-stream-index stream) 0)
-	result)
-      (error "~S is not a string stream.")))
+  (declare (type string-output-stream stream))
+  (let* ((length (string-output-stream-index stream))
+	 (result (make-string length)))
+    (replace result (string-output-stream-string stream))
+    (setf (string-output-stream-index stream) 0)
+    result))
 
 (defun dump-output-stream-string (in-stream out-stream)
   "Dumps the characters buffer up in the In-Stream to the Out-Stream as
