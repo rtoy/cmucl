@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.93 1999/11/13 14:01:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.94 2000/04/02 18:26:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,7 +319,7 @@
 ;;; NUMERIC-TYPE->INTERVAL
 ;;;
 ;;; Convert a numeric-type object to an interval object.
-
+;;;
 (defun numeric-type->interval (x)
   (declare (type numeric-type x))
   (make-interval :low (numeric-type-low x)
@@ -927,7 +927,7 @@
 #-negative-zero-is-not-zero
 (defun convert-numeric-type (type)
   (declare (type numeric-type type))
-  ;;; Only convert real float interval delimiters types.
+  ;; Only convert real float interval delimiters types.
   (if (eq (numeric-type-complexp type) :real)
       (let* ((lo (numeric-type-low type))
 	     (lo-val (bound-value lo))
@@ -3289,7 +3289,7 @@
 ;;;
 ;;;    See if we can statically determine (< X Y) using type information.  If
 ;;; X's high bound is < Y's low, then X < Y.  Similarly, if X's low is >= to
-;;; Y's high, the X >= Y (so return NIL).  If not, at least make sure any
+;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
 #-propagate-float-type
@@ -3313,36 +3313,57 @@
 	       (give-up))))))
 	      
 #+propagate-float-type
+;;; IR1-TRANSFORM-<  --  Internal
+;;;
+;;;    See if we can statically determine (< X Y) using type information.  If
+;;; X's high bound is < Y's low, then X < Y.  Similarly, if X's low is >= to
+;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
+;;; constant arg is second.
+;;;
+;;; Union types are handled by comparing all types of X with all types of Y.
+;;; If all types of X are less than all types of Y, then X < Y. Similarly, if
+;;; all types of X are >= all types of Y, then X >= Y (so return NIL).
+;;;
 (defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
-      (let ((xi (numeric-type->interval (numeric-type-or-lose x)))
-	    (yi (numeric-type->interval (numeric-type-or-lose y))))
-	(cond ((interval-< xi yi)
-	       't)
-	      ((interval->= xi yi)
-	       'nil)
+      (let ((definitely-true t)
+	    (definitely-false t))
+	(flet ((maybe-convert (type)
+		 (numeric-type->interval (if (member-type-p type)
+					     (convert-member-type type)
+					     type))))
+	  (let ((xi (mapcar #'maybe-convert (prepare-arg-for-derive-type
+					     (continuation-type x))))
+		(yi (mapcar #'maybe-convert (prepare-arg-for-derive-type
+					     (continuation-type y)))))
+	    (dolist (x-arg xi)
+	      (dolist (y-arg yi)
+		(setf definitely-true (and definitely-true
+					   (interval-< x-arg y-arg)))
+		(setf definitely-false (and definitely-false
+					    (interval->= x-arg y-arg)))))))
+
+	(cond (definitely-true
+		  t)
+	      (definitely-false
+		  nil)
 	      ((and (constant-continuation-p first)
 		    (not (constant-continuation-p second)))
 	       `(,inverse y x))
 	      (t
 	       (give-up))))))
 
-(deftransform < ((x y) (integer integer) * :when :both)
+(deftransform < ((x y) #-propagate-float-type (integer integer)
+		       #+propagate-float-type (real real)
+		 * :when :both)
   (ir1-transform-< x y x y '>))
 
-(deftransform > ((x y) (integer integer) * :when :both)
+(deftransform > ((x y) #-propagate-float-type (integer integer)
+		       #+propagate-float-type (real real)
+		 * :when :both)
   (ir1-transform-< y x x y '<))
 
-#+propagate-float-type
-(deftransform < ((x y) (float float) * :when :both)
-  (ir1-transform-< x y x y '>))
-
-#+propagate-float-type
-(deftransform > ((x y) (float float) * :when :both)
-  (ir1-transform-< y x x y '<))
-
-  
 
 ;;;; Converting N-arg comparisons:
 ;;;
