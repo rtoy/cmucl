@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.4 1991/04/19 03:14:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.5 1991/10/26 05:48:13 wlott Exp $
 ;;;
 
 (in-package "RT")
@@ -111,10 +111,10 @@
   (inst c nvals 0)
   (inst bc :eq default-a0-and-on)
   (loadw a0 src 0)
-  (inst c nvals 1)
+  (inst c nvals (fixnum 1))
   (inst bc :eq default-a1-and-on)
   (loadw a1 src 1)
-  (inst c nvals 2)
+  (inst c nvals (fixnum 2))
   (inst bc :eq default-a2-and-on)
   (loadw a2 src 2)
   ;;
