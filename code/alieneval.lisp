@@ -84,7 +84,8 @@
   (sap-ref-32 sap offset))
 
 (defun sap-ref-sap (sap offset)
-  "Returns the 32-bit system-area-pointer at OFFSET words from SAP.")
+  "Returns the 32-bit system-area-pointer at OFFSET words from SAP."
+  (sap-ref-sap sap offset))
 
 (defun signed-sap-ref-8 (sap offset)
   "Returns the signed 8-bit byte at Offset bytes from SAP."
