@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.4 1997/04/19 20:13:24 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/message.c,v 1.5 2000/02/14 11:45:57 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -58,6 +58,8 @@ void message_add_packet(message_t message) {
 void message_insert_packet(message_t message, packet_t new) {
   packet_t scan=message->packets;
 
+  /* Inserts in reverse order of sequence number (->current) */
+
   if( !scan )
     message->packets = new;
   else
@@ -70,7 +72,6 @@ void message_insert_packet(message_t message, packet_t new) {
       new->next = scan->next;
       scan->next = new;
     }
-
   message->packet_count++;
 }
 
@@ -168,6 +169,21 @@ void kill_deferred_message(long serial) {
   target->next = NULL;
 }
 
+packet_t nreverse_packet_list (packet_t list)
+{
+  packet_t this = list->next;
+  packet_t next = list;
+  packet_t last = NULL;
+  while (this) {
+    next->next = last;
+    last = next;
+    next = this;
+    this = (this == list)? NULL : this->next;
+  }
+  list->next = last;
+  return last;
+}
+
 /*
 * The given packet needs to be held over and joined with it's friends.
 */
@@ -202,6 +218,7 @@ message_t message_defer_packet(packet_t packet) {
       current->next = target->next;
     }
     target->next = NULL;
+    target->packets = nreverse_packet_list(target->packets);
     return target;
   } else
     return NULL;
@@ -214,16 +231,28 @@ message_t message_read(int socket) {
 
   packet_read(socket,first);
   count=first->total;
-  if( !count && !first->current ) {
-    kill_deferred_message(first->serial);
-    if( global_will_trace ) {
-      printf("Got cancellation for serial %d\n",first->serial);
-      fflush(stdout); }
-  } else if( count == 1 ) {
+  if( count == 1 ) {
     new = message_new(next_serial++);
     new->packets = first;
     new->packet_count = 1;
     return new;
-  } else
-    return message_defer_packet(first);
+  } else {
+    new = message_defer_packet(first);
+    while (new == NULL) {
+      packet_t next = packet_new(0,1);
+      packet_read(socket,next);
+      if( !next->total && !next->current ) {
+	/* There is no client support for getting here yet! */
+	kill_deferred_message(first->serial);
+	if( global_will_trace ) {
+	  printf("Got cancellation for serial %d\n",first->serial);
+	  fflush(stdout); }
+	/* TBD now what? */
+	return NULL;
+      }
+      new = message_defer_packet(next);
+    }
+    return new;
+  }
 }
+
