@@ -558,14 +558,15 @@
 
 ;;; INSPECT -- Public.
 ;;;
-(defun inspect (object)
+(defun inspect (object &optional (style interface:*interface-style*))
   "This function allows the user to interactively examine Lisp objects.
-   INTERFACE indicates whether this should run with a :graphics interface
+   STYLE indicates whether this should run with a :graphics interface
    or a :command-line oriented one; when running without X, there is no
    choice.  Supplying :window, :windows, :graphics, :graphical, and :x gets
    a windowing interface, and supplying :command-line or :tty gets the
    other style."
 
-  (if (use-graphics-interface)
-      (start-motif-inspector object)
-      (inspect::tty-inspect object)))
+  (let ((interface:*interface-style* style))
+    (if (use-graphics-interface)
+	(start-motif-inspector object)
+        (inspect::tty-inspect object))))
