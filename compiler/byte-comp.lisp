@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.22 1993/09/01 13:25:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.23 1994/03/07 11:35:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2015,6 +2015,7 @@
 ;;; 
 (defun byte-compile-component (component)
   (setf (component-info component) (make-byte-component-info))
+  (maybe-mumble "ByteAnn ")
 
   ;; Assign offsets for all the locals, and figure out which args can
   ;; stay in the argument area and which need to be moved into locals.
@@ -2027,6 +2028,9 @@
   ;; Determine what stack values are dead, and emit cleanup code to pop
   ;; them.
   (byte-stack-analyze component)
+
+  ;; Make sure any newly added blocks have a block-number.
+  (dfo-as-needed component)
 
   ;; Assign an ordering of the blocks.
   (control-analyze component #'make-byte-block-info)
@@ -2048,6 +2052,7 @@
 	(setf (byte-block-info-next prev) next)
 	(setf (byte-block-info-prev next) prev))))
 
+  (maybe-mumble "ByteGen ")
   (let ((segment nil))
     (unwind-protect
 	(progn
