@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.32 1991/02/20 14:57:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.33 1991/03/20 03:02:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.32 1991/02/20 14:57:10 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.33 1991/03/20 03:02:05 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -421,17 +421,22 @@
 ;;;    We dump a trap object as a placeholder for the code vector, which is
 ;;; actually filled in by the loader.
 ;;;
-(defun dump-code-object (component code-segment code-length file)
+(defun dump-code-object (component code-segment code-length trace-table file)
   (declare (type component component) (type fasl-file file)
-	   (type index code-length))
+	   (list trace-table) (type index code-length))
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
-	 (num-consts (length constants)))
+	 (num-consts (length constants))
+	 (trace-table (pack-trace-table trace-table))
+	 (trace-table-length (length trace-table))
+	 (total-length (+ code-length (* trace-table-length 2))))
     (collect ((patches))
+      ;; Dump the offset of the trace table.
+      (dump-object code-length file)
 
       ;; Dump the constants, noting any :entries that have to be fixed up.
       (do ((i vm:code-constants-offset (1+ i)))
-	  ((= i num-consts))
+	  ((>= i num-consts))
 	(let ((entry (aref constants i)))
 	  (etypecase entry
 	    (constant
@@ -462,24 +467,25 @@
 	  (dump-push info-handle file)
 	  (push info-handle (fasl-file-debug-info file))))
 
-      (let ((num-consts (- num-consts vm:code-constants-offset)))
-	(cond ((and (< num-consts #x100) (< code-length #x10000))
+      (let ((num-consts (- num-consts vm:code-trace-table-offset-slot)))
+	(cond ((and (< num-consts #x100) (< total-length #x10000))
 	       (dump-fop 'lisp::fop-small-code file)
 	       (dump-byte num-consts file)
-	       (dump-var-signed code-length 2 file))
+	       (dump-var-signed total-length 2 file))
 	      (t
 	       (dump-fop 'lisp::fop-code file)
 	       (dump-unsigned-32 num-consts file)
-	       (dump-unsigned-32 code-length file))))
+	       (dump-unsigned-32 total-length file))))
 
       (flush-fasl-file-buffer file)
-      (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment))
-	    (handle (dump-pop file)))
-	(dump-fixups handle fixups file)
-	(dolist (patch (patches))
-	  (push (cons handle (cdr patch))
-		(gethash (car patch) (fasl-file-patch-table file))))
-	handle))))
+      (let ((fixups (emit-code-vector (fasl-file-stream file) code-segment)))
+	(dump-i-vector trace-table file t)
+	(let ((handle (dump-pop file)))
+	  (dump-fixups handle fixups file)
+	  (dolist (patch (patches))
+	    (push (cons handle (cdr patch))
+		  (gethash (car patch) (fasl-file-patch-table file))))
+	  handle)))))
 
 
 (defun dump-assembler-routines (code-segment length routines file)
@@ -584,14 +590,15 @@
 ;;;    Dump the code, constants, etc. for component.  We pass in the assembler
 ;;; fixups, code vector and node info.
 ;;;
-(defun fasl-dump-component (component code-segment length file)
-  (declare (type component component) (type fasl-file file))
+(defun fasl-dump-component (component code-segment length trace-table file)
+  (declare (type component component) (list trace-table) (type fasl-file file))
 
   (dump-fop 'lisp::fop-verify-empty-stack file)
   (dump-fop 'lisp::fop-verify-table-size file)
   (dump-unsigned-32 (fasl-file-table-free file) file)
 
-  (let ((code-handle (dump-code-object component code-segment length file))
+  (let ((code-handle (dump-code-object component code-segment
+				       length trace-table file))
 	(2comp (component-info component)))
     (dump-fop 'lisp::fop-verify-empty-stack file)
 
@@ -1089,7 +1096,7 @@
 ;;; then just write the bits.  Otherwise, dispatch off of the target byte order
 ;;; and write the vector one element at a time.
 ;;;
-(defun dump-i-vector (vec file)
+(defun dump-i-vector (vec file &optional data-only)
   (declare (type (simple-array * (*)) vec))
   (let* ((ac #-new-compiler
 	     (%primitive get-vector-access-code vec)
@@ -1106,9 +1113,10 @@
 	 (bytes (ash (+ (the index (ash len ac)) 7) -3)))
     (declare (type index ac len size bytes))
     
-    (dump-fop 'lisp::fop-int-vector file)
-    (dump-unsigned-32 len file)
-    (dump-byte size file)
+    (unless data-only
+      (dump-fop 'lisp::fop-int-vector file)
+      (dump-unsigned-32 len file)
+      (dump-byte size file))
     (cond ((or (eq (backend-byte-order *backend*)
 		   (backend-byte-order *native-backend*))
 	       (= size 8))
