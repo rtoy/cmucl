@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.4 1990/04/24 02:55:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.5 1990/05/25 12:24:49 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -73,3 +73,29 @@
 
 (define-vop (list* list-or-list*)
   (:variant t))
+
+
+(define-vop (allocate-code-object)
+  (:args (boxed-arg :scs (any-reg))
+	 (unboxed-arg :scs (any-reg)))
+  (:results (result :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
+  (:generator 100
+    (inst li ndescr (lognot vm:lowtag-mask))
+    (inst addu boxed boxed-arg (fixnum 1))
+    (inst and boxed ndescr)
+    (inst srl unboxed unboxed-arg vm:word-shift)
+    (inst addu unboxed unboxed vm:lowtag-mask)
+    (inst and unboxed ndescr)
+    (pseudo-atomic (ndesrc)
+      (inst addu result alloc-tn vm:other-pointer-type)
+      (inst addu alloc-tn boxed)
+      (inst addu alloc-tn unboxed)
+      (inst sll ndescr boxed (- vm:type-bits vm:word-shift))
+      (inst or ndescr vm:code-header-type)
+      (storew ndescr result 0 vm:other-pointer-type)
+      (storew unboxed result vm:code-code-size-slot vm:other-pointer-type)
+      (storew null-tn result vm:code-entry-points-slot vm:other-pointer-type)
+      (storew null-tn result vm:code-debug-info-slot vm:other-pointer-type))))
