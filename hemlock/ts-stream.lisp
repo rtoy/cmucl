@@ -30,7 +30,14 @@
   (output-buffer (make-string ts-stream-output-buffer-size)
 		 :type simple-string)
   (output-buffer-index 0 :type fixnum)
+  ;;
+  ;; The current output character position on the line, returned by the
+  ;; :CHARPOS method.
   (char-pos 0)
+  ;;
+  ;; The current length of a line of output.  Returned by the :LINE-LENGTH
+  ;; method.
+  (line-length 80)
   current-input
   (input-read-index 0 :type fixnum))
 
@@ -52,6 +59,15 @@
 		   (list string)))
       (setf (ts-stream-char-pos stream) 0))))
   nil)
+
+;;; TS-STREAM-SET-LINE-LENGTH  --  Internal interface
+;;;
+;;; This function is called by the editor to indicate that the line-length for
+;;; a TS stream should now be Length.
+;;;
+(defun ts-stream-set-line-length (remote length)
+  (let ((stream (wire:remote-object-value remote)))
+    (setf (ts-stream-line-length stream) length)))
 
 ;;; %TS-STREAM-LISTEN --- internal.
 ;;;
@@ -293,7 +309,4 @@
     (:charpos
      (ts-stream-char-pos stream))
     (:line-length
-     (system:without-interrupts
-      (system:without-gcing
-       (wire:remote-value (ts-stream-wire stream)
-	 (ts-buffer-line-length (ts-stream-typescript stream))))))))
+     (ts-stream-line-length stream))))
