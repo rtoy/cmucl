@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.11 2000/12/05 03:07:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.10 1994/10/31 04:46:41 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.11 2000/12/05 03:07:04 dtc Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -433,8 +433,17 @@
 (defmacro pseudo-atomic ((&key (extra 0)) &rest forms)
   (let ((n-extra (gensym)))
     `(let ((,n-extra ,extra))
+       ;; Set the pseudo-atomic flag
        (without-scheduling ()
 	 (inst add alloc-tn 4))
        ,@forms
+       ;; Reset the pseudo-atomic flag
        (without-scheduling ()
-	 (inst taddcctv alloc-tn (- ,n-extra 4))))))
+	 #+nil (inst taddcctv alloc-tn (- ,n-extra 4))
+	;; Remove the pseudo-atomic flag
+	(inst add alloc-tn (- ,n-extra 4))
+	;; Check to see if pseudo-atomic interrupted flag is set (bit 0 = 1)
+	(inst andcc zero-tn alloc-tn 3)
+	;; The C code needs to process this correctly and fixup alloc-tn.
+	(inst t :ne pseudo-atomic-trap)
+	))))
