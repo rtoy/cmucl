@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.1 1990/03/27 17:39:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.2 1990/03/27 21:19:56 wlott Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -33,7 +33,7 @@
 (define-type-predicate short-float-p short-float)
 (define-type-predicate single-float-p single-float)
 (define-type-predicate simple-array-p simple-array)
-(define-type-predicate system-area-pointer system-area-pointer-p)
+(define-type-predicate system-area-pointer-p system-area-pointer)
 
 ;;; Unlike the un-%'ed versions, these are true type predicates, accepting any
 ;;; type object.
