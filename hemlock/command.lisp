@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.4 1991/02/08 16:33:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/command.lisp,v 1.5 1991/05/20 15:54:33 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -375,6 +375,23 @@
 			0))
 	  (t (editor-error "Not enough lines."))))
   (unless p (redisplay-all)))
+
+
+(defcommand "Track Buffer Point" (p)
+  "Make the current window track the buffer's point.
+   This means that each time Hemlock redisplays, it will make sure the buffer's
+   point is visible in the window.  This is useful for windows into buffer's
+   that receive output from streams coming from other processes."
+  "Make the current window track the buffer's point."
+  (declare (ignore p))
+  (setf (window-display-recentering window) t))
+;;;
+(defun reset-window-display-recentering (window &optional buffer)
+  (declare (ignore buffer))
+  (setf (window-display-recentering window) nil))
+;;;
+(add-hook window-buffer-hook #'reset-window-display-recentering)
+
 
 (defcommand "Extended Command" (p)
   "Prompts for and executes an extended command."
