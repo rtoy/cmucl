@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.11 1998/03/11 17:11:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.12 1998/03/21 08:05:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,12 +148,17 @@
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
+  #+long-float
+  (long-stack non-descriptor-stack :element-size 4 :alignment 4) ; long floats.
   #+complex-float
   ;; complex-single-floats
   (complex-single-stack non-descriptor-stack :element-size 2)
   #+complex-float
   ;; complex-double-floats.
   (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
+  #+(and complex-float long-float)
+  ;; complex-long-floats.
+  (complex-long-stack non-descriptor-stack :element-size 8 :alignment 4)
 
 
   ;; **** Things that can go in the integer registers.
@@ -213,34 +218,60 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+   :locations #.(loop for i from 0 to 31 collect i)
+   :reserve-locations (28 29 30 31)
    :constant-scs ()
    :save-p t
    :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations (0 2 4 6 8 10 12 14 16 18 20 22 24 26 28 30)
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 2 collect i)
    :element-size 2 :alignment 2
+   :reserve-locations (28 30)
    :constant-scs ()
    :save-p t
    :alternate-scs (double-stack))
 
+  ;; Non-Descriptor double-floats.
+  #+long-float
+  (long-reg float-registers
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 4 collect i)
+   :element-size 4 :alignment 4
+   :reserve-locations (28)
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (long-stack))
+
   #+complex-float
   (complex-single-reg float-registers
-   :locations (0 4 8 12 16 20 24 28)
-   :element-size 4
+   :locations #.(loop for i from 0 to 31 by 2 collect i)
+   :element-size 2 :alignment 2
+   :reserve-locations (28 30)
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-single-stack))
 
   #+complex-float
   (complex-double-reg float-registers
-   :locations (0 4 8 12 16 20 24 28)
-   :element-size 4
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 4 collect i)
+   :element-size 4 :alignment 4
+   :reserve-locations (28)
    :constant-scs ()
    :save-p t
    :alternate-scs (complex-double-stack))
+
+  #+(and complex-float long-float)
+  (complex-long-reg float-registers
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+		      by 8 collect i)
+   :element-size 8 :alignment 8
+   :constant-scs ()
+   :save-p t
+   :alternate-scs (complex-long-stack))
 
 
   ;; A catch or unwind block.

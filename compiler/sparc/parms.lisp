@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.26 1998/03/11 18:04:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.27 1998/03/21 08:05:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -63,6 +63,11 @@
 	  double-float-normal-exponent-max double-float-hidden-bit
 	  double-float-trapping-nan-bit double-float-digits
 
+	  long-float-bias long-float-exponent-byte
+	  long-float-significand-byte long-float-normal-exponent-min
+	  long-float-normal-exponent-max long-float-hidden-bit
+	  long-float-trapping-nan-bit long-float-digits
+
 	  float-underflow-trap-bit float-overflow-trap-bit
 	  float-imprecise-trap-bit float-invalid-trap-bit
 	  float-divide-by-zero-trap-bit))
@@ -102,12 +107,24 @@
 (defconstant double-float-hidden-bit (ash 1 20))
 (defconstant double-float-trapping-nan-bit (ash 1 19))
 
+;;; X These values are for the x86 80 bit format and are no doubt
+;;; incorrect for the sparc.
+(defconstant long-float-bias 16382)
+(defconstant long-float-exponent-byte (byte 15 0))
+(defconstant long-float-significand-byte (byte 31 0))
+(defconstant long-float-normal-exponent-min 1)
+(defconstant long-float-normal-exponent-max #x7FFE)
+(defconstant long-float-hidden-bit (ash 1 31))
+(defconstant long-float-trapping-nan-bit (ash 1 30))
+
 (defconstant single-float-digits
   (+ (byte-size single-float-significand-byte) 1))
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
 
+(defconstant long-float-digits
+  (+ (byte-size long-float-significand-byte) word-bits 1))
 
 (defconstant float-inexact-trap-bit (ash 1 0))
 (defconstant float-divide-by-zero-trap-bit (ash 1 1))

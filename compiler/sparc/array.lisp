@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.19 1998/03/10 21:42:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.20 1998/03/21 08:05:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -13,7 +13,7 @@
 ;;;
 ;;; Written by William Lott
 ;;; Signed-array support by Douglas Crosher 1997.
-;;; Complex-float support by Douglas Crosher 1998.
+;;; Complex-float and long-float support by Douglas Crosher 1998.
 ;;;
 (in-package "SPARC")
 
@@ -393,6 +393,43 @@
     (unless (location= result value)
       (move-double-reg result value))))
 
+#+long-float
+(define-vop (data-vector-ref/simple-array-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-long-float positive-fixnum)
+  (:results (value :scs (long-reg)))
+  (:result-types long-float)
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:generator 7
+    (inst sll offset index 2)
+    (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))
+    (load-long-reg value object offset nil)))
+
+#+long-float
+(define-vop (data-vector-set/simple-array-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (long-reg) :target result))
+  (:arg-types simple-array-long-float positive-fixnum long-float)
+  (:results (result :scs (long-reg)))
+  (:result-types long-float)
+  (:temporary (:scs (non-descriptor-reg)) offset)
+  (:generator 20
+    (inst sll offset index 2)
+    (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			vm:other-pointer-type))
+    (store-long-reg value object offset nil)
+    (unless (location= result value)
+      (move-long-reg result value))))
+
 
 ;;;; Misc. Array VOPs.
 
@@ -552,6 +589,56 @@
       (unless (location= result-imag value-imag)
 	(move-double-reg result-imag value-imag)))))
 
+#+long-float
+(define-vop (data-vector-ref/simple-array-complex-long-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-long-float positive-fixnum)
+  (:results (value :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 7
+    (let ((real-tn (complex-long-reg-real-tn value)))
+      (inst sll offset index 3)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (load-long-reg real-tn object offset nil))
+    (let ((imag-tn (complex-long-reg-imag-tn value)))
+      (inst add offset (* 4 vm:word-bytes))
+      (load-long-reg imag-tn object offset nil))))
+
+#+long-float
+(define-vop (data-vector-set/simple-array-complex-long-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg) :to :result)
+	 (index :scs (any-reg))
+	 (value :scs (complex-long-reg) :target result))
+  (:arg-types simple-array-complex-long-float positive-fixnum
+	      complex-long-float)
+  (:results (result :scs (complex-long-reg)))
+  (:result-types complex-long-float)
+  (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) offset)
+  (:generator 20
+    (let ((value-real (complex-long-reg-real-tn value))
+	  (result-real (complex-long-reg-real-tn result)))
+      (inst sll offset index 3)
+      (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
+			  vm:other-pointer-type))
+      (store-long-reg value-real object offset nil)
+      (unless (location= result-real value-real)
+	(move-long-reg result-real value-real)))
+    (let ((value-imag (complex-long-reg-imag-tn value))
+	  (result-imag (complex-long-reg-imag-tn result)))
+      (inst add offset (* 4 vm:word-bytes))
+      (store-long-reg value-imag object offset nil)
+      (unless (location= result-imag value-imag)
+	(move-long-reg result-imag value-imag)))))
+
 ) ; end progn complex-float
 
 
@@ -573,6 +660,16 @@
 (define-vop (raw-set-double data-vector-set/simple-array-double-float)
   (:translate %raw-set-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+;;;
+#+long-float
+(define-vop (raw-ref-long data-vector-ref/simple-array-long-float)
+  (:translate %raw-ref-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+#+long-float
+(define-vop (raw-set-double data-vector-set/simple-array-long-float)
+  (:translate %raw-set-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum long-float))
 
 #+complex-float
 (progn
@@ -597,6 +694,20 @@
   (:translate %raw-set-complex-double)
   (:arg-types simple-array-unsigned-byte-32 positive-fixnum
 	      complex-double-float))
+;;;
+#+long-float
+(define-vop (raw-ref-complex-long
+	     data-vector-ref/simple-array-complex-long-float)
+  (:translate %raw-ref-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+#+long-float
+(define-vop (raw-set-complex-long
+	     data-vector-set/simple-array-complex-long-float)
+  (:translate %raw-set-complex-long)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-long-float))
+
 ) ; end progn complex-float
 
 ;;; These vops are useful for accessing the bits of a vector irrespective of

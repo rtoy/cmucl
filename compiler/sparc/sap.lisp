@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.8 1997/04/26 20:05:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.9 1998/03/21 08:05:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,13 +172,15 @@
 	 (:results (result :scs (,sc)))
 	 (:result-types ,type)
 	 (:generator 5
-	   (inst ,(ecase size
-		    (:byte (if signed 'ldsb 'ldub))
-		    (:short (if signed 'ldsh 'lduh))
-		    (:long 'ld)
-		    (:single 'ldf)
-		    (:double 'lddf))
-		 result sap offset)))
+	   ,@(if (eql size :long-float)
+		 '((load-long-reg result sap offset t))
+		 `((inst ,(ecase size
+			    (:byte (if signed 'ldsb 'ldub))
+			    (:short (if signed 'ldsh 'lduh))
+			    (:long 'ld)
+			    (:single 'ldf)
+			    (:double 'lddf))
+		    result sap offset)))))
        (define-vop (,ref-name-c)
 	 (:translate ,ref-name)
 	 (:policy :fast-safe)
@@ -188,13 +190,15 @@
 	 (:results (result :scs (,sc)))
 	 (:result-types ,type)
 	 (:generator 4
-	   (inst ,(ecase size
-		    (:byte (if signed 'ldsb 'ldub))
-		    (:short (if signed 'ldsh 'lduh))
-		    (:long 'ld)
-		    (:single 'ldf)
-		    (:double 'lddf))
-		 result sap offset)))
+	   ,@(if (eql size :long-float)
+		 '((load-long-reg result sap offset t))
+		 `((inst ,(ecase size
+			   (:byte (if signed 'ldsb 'ldub))
+			   (:short (if signed 'ldsh 'lduh))
+			   (:long 'ld)
+			   (:single 'ldf)
+			   (:double 'lddf))
+		       result sap offset)))))
        (define-vop (,set-name)
 	 (:translate ,set-name)
 	 (:policy :fast-safe)
@@ -205,20 +209,23 @@
 	 (:results (result :scs (,sc)))
 	 (:result-types ,type)
 	 (:generator 5
-	   (inst ,(ecase size
-		    (:byte 'stb)
-		    (:short 'sth)
-		    (:long 'st)
-		    (:single 'stf)
-		    (:double 'stdf))
-		 value sap offset)
+	   ,@(if (eql size :long-float)
+		 '((store-long-reg value sap offset t))
+		 `((inst ,(ecase size
+			   (:byte 'stb)
+			   (:short 'sth)
+			   (:long 'st)
+			   (:single 'stf)
+			   (:double 'stdf))
+		       value sap offset)))
 	   (unless (location= result value)
 	     ,@(case size
 		 (:single
 		  '((inst fmovs result value)))
 		 (:double
-		  '((inst fmovs result value)
-		    (inst fmovs-odd result value)))
+		  '((move-double-reg result value)))
+		 (:long-float
+		  '((move-long-reg result value)))
 		 (t
 		  '((inst move result value)))))))
        (define-vop (,set-name-c)
@@ -231,20 +238,23 @@
 	 (:results (result :scs (,sc)))
 	 (:result-types ,type)
 	 (:generator 4
-	   (inst ,(ecase size
-		    (:byte 'stb)
-		    (:short 'sth)
-		    (:long 'st)
-		    (:single 'stf)
-		    (:double 'stdf))
-		 value sap offset)
+	   ,@(if (eql size :long-float)
+		 '((store-long-reg value sap offset t))
+		 `((inst ,(ecase size
+			    (:byte 'stb)
+			    (:short 'sth)
+			    (:long 'st)
+			    (:single 'stf)
+			    (:double 'stdf))
+		    value sap offset)))
 	   (unless (location= result value)
 	     ,@(case size
 		 (:single
 		  '((inst fmovs result value)))
 		 (:double
-		  '((inst fmovs result value)
-		    (inst fmovs-odd result value)))
+		  '((move-double-reg result value)))
+		 (:long-float
+		  '((move-long-reg result value)))
 		 (t
 		  '((inst move result value))))))))))
 
@@ -268,6 +278,9 @@
   single-reg single-float :single)
 (def-system-ref-and-set sap-ref-double %set-sap-ref-double
   double-reg double-float :double)
+#+long-float
+(def-system-ref-and-set sap-ref-long %set-sap-ref-long
+  long-reg long-float :long-float)
 
 
 
