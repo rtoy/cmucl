@@ -48,7 +48,7 @@ specific conditions.
   connections on the given port.  If port is unavailable for any
   reason, this signals an error.  When a client connects to this port,
   the acceptance mechanism makes a wire structure and invokes the
-  \var{on-connect} function.  Invoking this function has a couple
+  \var{on-connect} function.  Invoking this function has a couple of
   purposes, and \var{on-connect} may be \nil{} in which case the
   system foregoes invoking any function at connect time.
   
@@ -406,31 +406,8 @@ Unfortunately, most implementations of TCP/IP are broken, so use of
 out-of-band data is limited for safety reasons.  You can only reliably
 send one character at a time.
 
-This routines in this section provide a mechanism for establishing
-handlers for out-of-band characters and for sending them out-of-band.
-These all take a Unix file descriptor instead of a wire, but you can
-fetch a wire's file descriptor with \code{wire-fd}.
-
-\begin{defun}{wire:}{add-oob-handler}{\args{\var{fd} \var{char} \var{handler}}}
-  
-  The function \code{add-oob-handler} arranges for \var{handler} to be
-  called whenever \var{char} shows up as out-of-band data on the file
-  descriptor \var{fd}.
-\end{defun}
-
-\begin{defun}{wire:}{remove-oob-handler}{\args{\var{fd} \var{char}}}
-  
-  This function removes the handler for the character \var{char} on
-  the file descriptor \var{fd}.
-\end{defun}
-
-\begin{defun}{wire:}{remove-all-oob-handlers}{\args{\var{fd}}}
-  
-  This function removes all handlers for the file descriptor \var{fd}.
-\end{defun}
-
-\begin{defun}{wire:}{send-character-out-of-band}{\args{\var{fd} \var{char}}}
-  
-  This function Sends the character \var{char} down the file
-  descriptor \var{fd} out-of-band.
-\end{defun}
+The Wire package is built on top of \cmucl{}s networking support. In
+view of this, it is possible to use the routines described in section
+\ref{internet-oob} for handling and sending out-of-band data. These
+all take a Unix file descriptor instead of a wire, but you can fetch a
+wire's file descriptor with \code{wire-fd}.
