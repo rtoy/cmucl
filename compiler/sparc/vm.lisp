@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.12 1998/03/21 08:05:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.13 1998/07/09 01:38:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -226,7 +226,7 @@
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 63
 		      by 2 collect i)
    :element-size 2 :alignment 2
    :reserve-locations (28 30)
@@ -237,7 +237,7 @@
   ;; Non-Descriptor double-floats.
   #+long-float
   (long-reg float-registers
-   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 63
 		      by 4 collect i)
    :element-size 4 :alignment 4
    :reserve-locations (28)
@@ -256,7 +256,7 @@
 
   #+complex-float
   (complex-double-reg float-registers
-   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 63
 		      by 4 collect i)
    :element-size 4 :alignment 4
    :reserve-locations (28)
@@ -266,7 +266,7 @@
 
   #+(and complex-float long-float)
   (complex-long-reg float-registers
-   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 61
+   :locations #.(loop for i from 0 to #-sparc-v9 31 #+sparc-v9 63
 		      by 8 collect i)
    :element-size 8 :alignment 8
    :constant-scs ()
