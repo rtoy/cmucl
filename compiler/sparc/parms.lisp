@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.15 1992/04/14 02:53:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.16 1992/05/21 22:53:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -141,6 +141,7 @@
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
+	  after-breakpoint-trap
 	  object-not-list-trap object-not-structure-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
@@ -151,7 +152,8 @@
   error
   cerror
   breakpoint
-  function-end-breakpoint)
+  function-end-breakpoint
+  after-breakpoint)
 
 (defenum (:prefix object-not- :suffix -trap :start 16)
   list
