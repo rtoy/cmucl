@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.42 1992/07/22 22:49:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.43 1992/08/02 19:41:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.42 1992/07/22 22:49:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.43 1992/08/02 19:41:09 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -686,6 +686,11 @@
 	     (:fdefinition
 	      (dump-object (cdr entry) file)
 	      (dump-fop 'lisp::fop-fdefinition file))
+	     (:type-predicate
+	      (dump-object 'load-type-predicate file)
+	      (dump-object (type-specifier (cdr entry)) file)
+	      (dump-fop 'lisp::fop-funcall file)
+	      (dump-byte 1 file))
 	     (:xep
 	      (xep-patches (cons (cdr entry) i))
 	      (dump-fop 'lisp::fop-misc-trap file)))))))
