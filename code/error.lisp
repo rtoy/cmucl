@@ -1,11 +1,11 @@
-;; -*- Package: conditions; Log: code.log -*-
+;;; -*- Package: conditions; Log: code.log -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.50 1998/07/16 13:30:43 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.51 1998/07/19 01:13:54 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
