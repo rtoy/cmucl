@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.2 1991/02/20 15:17:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.3 1991/03/15 04:08:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.2 1991/02/20 15:17:30 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-macs.lisp,v 1.3 1991/03/15 04:08:48 wlott Exp $
 ;;;
 ;;;    This file contains some macros and constants that are object-format
 ;;; specific or are used for defining the object format.
@@ -21,7 +21,7 @@
 (in-package "VM")
 
 (defmacro pad-data-block (words)
-  `(logandc2 (+ (ash ,words vm:word-shift) lowtag-mask) lowtag-mask))
+  `(logandc2 (+ (ash ,words word-shift) lowtag-mask) lowtag-mask))
 
 (defmacro defenum ((&key (prefix "") (suffix "") (start 0) (step 1))
 		   &rest identifiers)
