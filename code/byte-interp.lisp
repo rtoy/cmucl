@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.8 1993/05/11 18:11:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.9 1993/05/11 18:15:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 ;;; Represents a byte-compiled closure.
 ;;;
 (defstruct (byte-closure (:include byte-function-or-closure)
-			 (:constructor make-byte-closure function data)
+			 (:constructor make-byte-closure (function data))
 			 (:type kernel:funcallable-structure))
   ;;
   ;; Byte function that we call.
