@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.22 1992/05/18 18:27:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.23 1992/05/28 23:15:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,5 +304,6 @@
 				   :key #'info-env-name))
 		  :%features features
 		  :misfeatures misfeatures)))
-    (setf *target-backend* backend)))
-
+    (setf *target-backend* backend)
+    (define-standard-type-predicates)
+    backend))
