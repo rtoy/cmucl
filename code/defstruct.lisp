@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.5 1993/02/11 19:20:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.6 1993/02/13 13:30:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -565,6 +565,14 @@
   (or (info typed-structure info name)
       (error ":TYPE'd defstruct ~S not found for inclusion." name)))
 
+;;; %GET-COMPILER-LAYOUT  --  Internal
+;;;
+;;; Delay looking for compiler-layout until the constructor is being compiled,
+;;; since it doesn't exist until after the eval-when (compile) is compiled.
+;;;
+(defmacro %get-compiler-layout (name)
+  `',(compiler-layout-or-lose name))
+
 ;;; FIND-NAME-INDICES  --  Internal
 ;;;
 ;;;      Returns a list of pairs (name . index).  Used for :TYPE'd constructors
@@ -652,10 +660,7 @@
 		   (make-array ,(dd-raw-length defstruct)
 			       :element-type '(unsigned-byte 32)))))
 	 (setf (%instance-layout ,temp)
-	       (truly-the layout
-			  (load-time-value
-			   (class-layout
-			    (find-class ',(dd-name defstruct))))))
+	       (%get-compiler-layout ,(dd-name defstruct)))
 	 ,@(when n-raw-data
 	     `((setf (%instance-ref ,temp ,raw-index) ,n-raw-data)))
 	 ,@(mapcar #'(lambda (dsd value)
