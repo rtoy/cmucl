@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.54 1999/01/09 11:12:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.55 2000/07/11 04:19:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -978,6 +978,10 @@
 
 ;;;; HANDLER-CASE and IGNORE-ERRORS.
 
+#|
+;;; Version used in older versions of CMUCL which had lossage closing over
+;;; tags.
+;;;
 (defmacro handler-case (form &rest cases)
   "(HANDLER-CASE form
    { (type ([var]) body) }* )
@@ -1005,7 +1009,7 @@
 	  `(let ((,outer-tag (cons nil nil))
 		 (,inner-tag (cons nil nil))
 		 ,var ,tag-var)
-	     ,var			;ignoreable
+	     (declare (ignorable ,var))
 	     (catch ,outer-tag
 	       (catch ,inner-tag
 		 (throw ,outer-tag
@@ -1031,10 +1035,11 @@
 					     ,@body))
 					 body))))
 			   annotated-cases))))))))
-#|
-This macro doesn't work in our system due to lossage in closing over tags.
-The previous version sets up unique run-time tags.
+|#
 
+;;; This macro doesn't work in older version of CMUCL system due to lossage
+;;; in closing over tags.  The previous version sets up unique run-time tags.
+;;;
 (defmacro handler-case (form &rest cases)
   "(HANDLER-CASE form
    { (type ([var]) body) }* )
@@ -1059,7 +1064,7 @@ The previous version sets up unique run-time tags.
 				       cases)))
 	  `(block ,tag
 	     (let ((,var nil))
-	       ,var				;ignorable
+	       (declare (ignorable ,var))
 	       (tagbody
 		 (handler-bind
 		  ,(mapcar #'(lambda (annotated-case)
@@ -1086,7 +1091,6 @@ The previous version sets up unique run-time tags.
 					 (t
 					  `(progn ,@body)))))))
 			   annotated-cases))))))))
-|#
 
 (defmacro ignore-errors (&rest forms)
   "Executes forms after establishing a handler for all error conditions that
