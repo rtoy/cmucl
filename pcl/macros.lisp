@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.23 2003/04/06 09:10:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.24 2003/04/18 08:54:41 gerd Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -44,16 +44,18 @@
 
   ;; (CLASS-PREDICATE <CLASS-NAME>
   (ext:define-function-name-syntax class-predicate (name)
-    (symbolp (cadr name)))
+    (when (symbolp (cadr name))
+      (values t (cadr name))))
 
   ;; (SLOT-ACCESSOR <CLASS> <SLOT> <READER/WRITER/BOUNDP>)
   ;; <CLASS> is :GLOBAL for functions used by ACCESSOR-SLOT-VALUE etc.
   (ext:define-function-name-syntax slot-accessor (name)
-    (and (symbolp (cadr name))
-	 (consp (cddr name))
-	 (symbolp (caddr name))
-	 (consp (cdddr name))
-	 (member (cadddr name) '(reader writer boundp))))
+    (values (and (symbolp (cadr name))
+		 (consp (cddr name))
+		 (symbolp (caddr name))
+		 (consp (cdddr name))
+		 (member (cadddr name) '(reader writer boundp)))
+	    (caddr name)))
 
   ;; (METHOD NAME QUALIFIERS (SPECIALIZERS))
   (ext:define-function-name-syntax method (name)

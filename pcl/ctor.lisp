@@ -46,7 +46,7 @@
 ;;; is called.
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.3 2003/03/30 00:43:27 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.4 2003/04/18 08:54:41 gerd Exp $")
 
 (in-package "PCL")
 
@@ -110,7 +110,8 @@
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (ext:define-function-name-syntax ctor (name)
-    (symbolp (cadr name))))
+    (when (symbolp (cadr name))
+      (values t (cadr name)))))
 
 (defun make-ctor-function-name (class-name initargs)
   (list* 'ctor class-name initargs))
