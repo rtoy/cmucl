@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.12 1994/10/31 04:46:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.13 1994/11/02 03:39:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -423,7 +423,7 @@
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg zero immediate))
 	 (value :scs (unsigned-reg)))
-  (:arg-types * positive-fixnum unsigned-num)
+  (:arg-types * tagged-num unsigned-num)
   (:results (result :scs (unsigned-reg)))
   (:result-types unsigned-num)
   (:variant 0 vm:other-pointer-type))
