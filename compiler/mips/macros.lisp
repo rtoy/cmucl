@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.19 1990/02/27 11:37:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.20 1990/02/28 18:25:17 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -157,18 +157,18 @@
   (once-only ((n-reg reg)
 	      (n-stack stack))
     `(sc-case ,n-reg
-       ((any-reg descriptor-reg string-char-reg sap-reg)
+       ((any-reg descriptor-reg base-character-reg sap-reg)
 	(sc-case ,n-stack
-	  ((control-stack number-stack string-char-stack sap-stack)
+	  ((control-stack number-stack base-character-stack sap-stack)
 	   (loadw ,n-reg cont-tn (tn-offset ,n-stack))))))))
 
 (defmacro store-stack-tn (stack reg)
   (once-only ((n-stack stack)
 	      (n-reg reg))
     `(sc-case ,n-reg
-       ((any-reg descriptor-reg string-char-reg sap-reg)
+       ((any-reg descriptor-reg base-character-reg sap-reg)
 	(sc-case ,n-stack
-	  ((control-stack number-stack string-char-stack sap-stack)
+	  ((control-stack number-stack base-character-stack sap-stack)
 	   (storew ,n-reg cont-tn (tn-offset ,n-stack))))))))
 
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.7 1990/02/23 20:22:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.8 1990/02/28 18:26:05 wlott Exp $
 ;;;
 ;;;    This file contains the RT VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -27,11 +27,12 @@
   (assemble node
     (sc-case x
       ((zero negative-immediate unsigned-immediate immediate
-	     null random-immediate immediate-string-char immediate-sap)
+	     null random-immediate immediate-base-character immediate-sap)
        (let ((val (tn-value x))
 	     (dest (sc-case y
-		     ((any-reg descriptor-reg string-char-reg sap-reg) y)
-		     ((control-stack number-stack sap-stack string-char-stack)
+		     ((any-reg descriptor-reg base-character-reg sap-reg) y)
+		     ((control-stack number-stack sap-stack
+				     base-character-stack)
 		      temp))))
 	 (etypecase val
 	   (integer
@@ -42,7 +43,7 @@
 	    (load-symbol dest val))
 	   (string-char
 	    (loadi dest (logior (ash (char-code val) type-bits)
-				character-type))))
+				base-character-type))))
 	 (unless (eq dest y)
 	   (store-stack-tn y temp))))
       (constant
@@ -132,12 +133,12 @@
 	 ((any-reg descriptor-reg)
 	  (load-stack-tn y x))
 	 #+nil
-	 (string-char-reg
+	 (base-character-reg
 	  (load-stack-tn y x)
 	  (inst nilz y y system:%character-code-mask))))
-      (string-char-stack
+      (base-character-stack
        (sc-case y
-	 (string-char-reg
+	 (base-character-reg
 	  (load-stack-tn y x))))
       (t
        (unassemble (load-constant-tn x y nil node))))))
@@ -152,12 +153,12 @@
 	 ((any-reg descriptor-reg)
 	  (store-stack-tn y x))
 	 #+nil
-	 (string-char-reg
+	 (base-character-reg
 	  (inst oiu x x (ash system:%string-char-type clc::type-shift-16))
 	  (store-stack-tn y x))))
-      (string-char-stack
+      (base-character-stack
        (sc-case x
-	 (string-char-reg
+	 (base-character-reg
 	  (store-stack-tn y x)))))))
 
 
