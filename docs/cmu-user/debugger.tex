@@ -1126,6 +1126,14 @@ function entry or exit.
   printout.  This variable is initially set to 40.
 \end{defvar}
 
+\begin{defvar}{debug:}{trace-encapsulate-package-names}
+  
+  A list of package names.  Functions from these packages are traced
+  using encapsulation instead of function-end breakpoints.  This list
+  should at least include those packages containing functions used
+  directly or indirectly in the implementation of \code{trace}.
+\end{defvar}
+
 
 \subsection{Encapsulation Functions}
 \cindex{encapsulation}

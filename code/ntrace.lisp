@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.22 2003/05/11 08:57:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.23 2003/05/15 11:24:34 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 
 (in-package "DEBUG")
 
-(export '(*trace-values* *max-trace-indentation* *trace-encapsulate-default*))
+(export '(*trace-values* *max-trace-indentation* *trace-encapsulate-default*
+	  *trace-encapsulate-package-names*))
 
 (defvar *trace-values* nil
   "This is bound to the returned values when evaluating :BREAK-AFTER and
@@ -33,6 +34,21 @@
 
 (defvar *trace-encapsulate-default* :default
   "The default value for the :ENCAPSULATE option to trace.")
+
+(defvar *trace-encapsulate-package-names*
+  '("COMMON-LISP"
+    "CONDITIONS"
+    "DEBUG"
+    "EXTENSIONS"
+    "FORMAT"
+    "KERNEL"
+    "LOOP"
+    "PRETTY-PRINT"
+    "SYSTEM"
+    "TRACE")
+  "List of package names.  Encapsulate functions from these packages
+   by default.  This should at least include the packages of functions
+   used by TRACE, directly or indirectly.")
 
 
 ;;;; Internal state:
@@ -361,19 +377,21 @@
 ;;; we have cleverly contrived to work for our hook functions.
 ;;;
 (defun trace-call (info)
-  (multiple-value-bind
-      (start cookie)
-      (trace-start-breakpoint-fun info)
-    (let ((frame (di:frame-down (di:top-frame))))
-      (funcall start frame nil)
-      (let ((*traced-entries* *traced-entries*))
-	(declare (special basic-definition argument-list))
-	(funcall cookie frame nil)
-	(let ((vals
-	       (multiple-value-list
-		(apply basic-definition argument-list))))
-	  (funcall (trace-end-breakpoint-fun info) frame nil vals nil)
-	  (values-list vals))))))
+  (let* ((name (trace-info-what info))
+	 (fdefn (lisp::fdefinition-object name nil)))
+    (letf (((lisp::fdefn-function fdefn) (fdefinition name)))
+      (multiple-value-bind (start cookie)
+	  (trace-start-breakpoint-fun info)
+	(let ((frame (di:frame-down (di:top-frame))))
+	  (funcall start frame nil)
+	  (let ((*traced-entries* *traced-entries*))
+	    (declare (special basic-definition argument-list))
+	    (funcall cookie frame nil)
+	    (let ((vals
+		   (multiple-value-list
+		    (apply basic-definition argument-list))))
+	      (funcall (trace-end-breakpoint-fun info) frame nil vals nil)
+	      (values-list vals))))))))
 
 
 ;;; TRACE-1 -- Internal.
@@ -396,19 +414,22 @@
       (untrace-1 fun))
     
     (let* ((debug-fun (di:function-debug-function fun))
-	   (end-breakpoint-p (di::can-set-function-end-breakpoint-p debug-fun))
 	   (encapsulated
 	    (if (eq (trace-info-encapsulated info) :default)
-		(ecase kind
-		  (:compiled (not end-breakpoint-p))
-		  (:compiled-closure
-		   (unless (functionp function-or-name)
-		     (warn "Tracing shared code for ~S:~%  ~S"
-			   function-or-name fun))
-		   (not end-breakpoint-p))
-		  ((:interpreted :interpreted-closure
-				 :funcallable-instance)
-		   t))
+		(let ((encapsulate-p
+		       (or (di::can-set-function-end-breakpoint-p debug-fun)
+			   (encapsulate-by-package-p function-or-name))))
+		  (ecase kind
+		    (:compiled
+		     encapsulate-p)
+		    (:compiled-closure
+		     (unless (functionp function-or-name)
+		       (warn "Tracing shared code for ~S:~%  ~S"
+			     function-or-name fun))
+		     encapsulate-p)
+		    ((:interpreted :interpreted-closure
+				   :funcallable-instance)
+		     t)))
 		(trace-info-encapsulated info)))
 	   (loc (if encapsulated
 		    :encapsulated
@@ -463,6 +484,18 @@
       (setf (gethash fun *traced-functions*) info)))
 
   function-or-name)
+
+;;;
+;;; Return true if FUNCTION-OR-NAME's package indicates that TRACE
+;;; should use encapsulation instead of function-end breakpoints.
+;;;
+(defun encapsulate-by-package-p (function-or-name)
+  (multiple-value-bind (valid block)
+      (valid-function-name-p function-or-name)
+    (when (and valid (symbolp block))
+      (let* ((pkg (symbol-package block))
+	     (pkg-name (and pkg (package-name pkg))))
+	(member pkg-name *trace-encapsulate-package-names* :test #'equal)))))
 
 
 ;;;; The TRACE macro:

@@ -41,6 +41,9 @@ New in this release:
        breakpoints cannot be used.
      - INSPECT working on CLOS instances.
      - Callbacks from foreign code to Lisp.
+     - Functions like GETHASH that are used in the implementation of 
+       TRACE can now be traced.  See also
+       DEBUG:*TRACE-ENCAPSULATE-PACKAGE-NAMES*.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.209 2003/05/14 13:22:16 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.210 2003/05/15 11:24:34 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -906,6 +906,7 @@
 	     "*ONLY-BLOCK-START-LOCATIONS*" "*STACK-TOP-HINT*"
 	     "*TRACE-VALUES*" "DO-DEBUG-COMMAND"
 	     "*TRACE-ENCAPSULATE-DEFAULT*"
+	     "*TRACE-ENCAPSULATE-PACKAGE-NAMES*"
 	     "*DEFAULT-PRINT-FRAME-CALL-VERBOSITY*"))
 
 (intern "CHAR" "LISP")
