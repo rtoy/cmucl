@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.3 1993/02/04 22:39:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.4 1993/02/08 22:06:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1105,10 +1105,6 @@
 ;;; Expander function for a defined type.
 (define-info-type type expander (or function null) nil)
 
-;;; Layout for this type being used by the compiler.
-;;;
-(define-info-type type compiler-layout (or layout null) nil)
-
 (define-info-type type documentation (or string null))
 
 ;;; Function that parses type specifiers into CTYPE structures.
@@ -1127,6 +1123,12 @@
 ;;; that for built-in classes, the kind may be :PRIMITIVE and not :INSTANCE.
 ;;;
 (define-info-type type class (or class null) nil)
+
+;;; Layout for this type being used by the compiler.
+;;;
+(define-info-type type compiler-layout (or layout null)
+  (let ((class (info type class name)))
+    (when class (class-layout class))))
 
 #+ns-boot
 (define-info-type type printer (or function symbol null) nil)
