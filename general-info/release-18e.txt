@@ -33,7 +33,9 @@ New in this release:
        (getpwuid et al) have been added to the UNIX package.
      - Support for Unix sockets and for binding to specific IP
        addresses has been added to the networking code.
-
+     - Support for generalized function names of the form
+       (<SYMBOL> ...) has been added.  See EXT:DEFINE-FUNCTION-NAME-SYNTAX
+       and EXT:VALID-FUNCTION-NAME-P.
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
@@ -132,6 +134,10 @@ New in this release:
        requirements. 
      - the compiler now checks type declarations on array elements
        before believing them.
+     - Special declarations of the DOLIST iteration variable are
+       now honoured when evaluating the DOLIST result form.
+     - The argument evaluation order of MAKE-STRING in compiled
+       code has been fixed.
 
   * Other changes:
      - The sparc port has experimental support for native 64-bit
