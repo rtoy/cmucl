@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.45 2004/10/07 17:06:05 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.46 2004/10/08 19:13:37 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -766,15 +766,17 @@
 			    ,@(when object
 				`((pop ,object-var)))))
 		     (declare (ignorable #',pp-pop-name))
-		     (macrolet ((pprint-pop ()
-				  '(,pp-pop-name))
-				(pprint-exit-if-list-exhausted ()
-				  ,(if object
-				       `'(when (null ,object-var)
-					   (return-from ,block-name nil))
-				       `'(return-from ,block-name nil))))
-		       ,@body)))
-		 (end-logical-block ,stream-var)))))
+		     (unwind-protect
+			  (macrolet ((pprint-pop ()
+				       '(,pp-pop-name))
+				     (pprint-exit-if-list-exhausted ()
+				       ,(if object
+					    `'(when (null ,object-var)
+					       (return-from ,block-name nil))
+					    `'(return-from ,block-name nil))))
+			    ,@body)
+		       (end-logical-block ,stream-var))))
+		 ))))
       (when object
 	(setf body
 	      `(let ((,object-var ,object))
@@ -1295,7 +1297,10 @@
 
 (defun pprint-progn (stream list &rest noise)
   (declare (ignore noise))
-  (funcall (formatter "~:<~^~W~@{ ~_~W~}~:>") stream list))
+  #+nil
+  (funcall (formatter "~:<~^~W~@{ ~_~W~}~:>") stream list)
+  (funcall (formatter "~:<~^~W~1I~@{ ~@:_~W~}~:>") stream list)
+  )
 
 (defun pprint-progv (stream list &rest noise)
   (declare (ignore noise))
@@ -1449,6 +1454,152 @@
 	   stream
 	   list))
 
+(defun pprint-with-like (stream list &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^~3I ~:_~W~^~1I~@{ ~@:_~W~}~:>")
+	   stream list))
+
+
+;;; Pretty printer for loop and various other utilities.
+;;; This is taken from Dick Water's XP.
+
+;; The challenge here is that we have to effectively parse the clauses
+;; of the loop in order to know how to print things.  Also you want to
+;; do this in a purely incremental way so that all of the abbreviation
+;; things work, and you wont blow up on circular lists or the like.
+;; (More aesthic output could be produced by really parsing the
+;; clauses into nested lists before printing them.)
+;;
+;; The following program assumes the following simplified grammar of
+;; the loop clauses that explains how to print them.  Note that it
+;; does not bare much resemblence to the right parsing grammar,
+;; however, it produces half decent output.  The way to make the
+;; output better is to make the grammar more detailed.
+;;
+;; loop == (LOOP {clause}*)      ;one clause on each line.
+;; clause == block | linear | cond | finally
+;; block == block-head {expr}*   ;as many exprs as possible on each line.
+;; linear == linear-head {expr}* ;one expr on each line.
+;; finally == FINALLY [DO | DOING | RETURN] {expr}* ;one expr on each line.
+;; cond == cond-head [expr]
+;;           clause
+;;	    {AND clause}*       ;one AND on each line.
+;;         [ELSE
+;;           clause
+;;	    {AND clause}*]      ;one AND on each line.
+;;         [END]
+;; block-head == FOR | AS | WITH | AND
+;;               | REPEAT | NAMED | WHILE | UNTIL | ALWAYS | NEVER | THEREIS | RETURN
+;;               | COLLECT | COLLECTING | APPEND | APPENDING | NCONC | NCONCING | COUNT
+;;               | COUNTING | SUM | SUMMING | MAXIMIZE | MAXIMIZING | MINIMIZE | MINIMIZING 
+;; linear-head == DO | DOING | INITIALLY
+;; var-head == FOR | AS | WITH
+;; cond-head == IF | WHEN | UNLESS
+;; expr == <anything that is not a head symbol>
+;;
+;; Note all the string comparisons below are required to support some
+;; existing implementations of LOOP.
+
+(defun pprint-loop-token-type (token &aux string)
+  (cond ((not (symbolp token)) :expr)
+	((string= (setq string (string token)) "FINALLY") :finally)
+	((member string '("IF" "WHEN" "UNLESS") :test #'string=) :cond-head)
+	((member string '("DO" "DOING" "INITIALLY") :test #'string=) :linear-head)
+	((member string '("FOR" "AS" "WITH" "AND" "END" "ELSE"
+			  "REPEAT" "NAMED" "WHILE" "UNTIL" "ALWAYS" "NEVER"
+			  "THEREIS" "RETURN" "COLLECT" "COLLECTING" "APPEND"
+			  "APPENDING" "NCONC" "NCONCING" "COUNT" "COUNTING"
+			  "SUM" "SUMMING" "MAXIMIZE" "MAXIMIZING"
+			  "MINIMIZE" "MINIMIZING")
+		 :test #'string=)
+	 :block-head)
+	(T :expr)))
+
+(defun pprint-loop (xp loop)
+  (if (not (and (consp (cdr loop)) (symbolp (cadr loop)))) ; old-style loop
+      (funcall (formatter "~:<~W~^~2I~@:_~@{~W~^~_~}~:>")
+	       xp loop)
+      (progn
+	(pprint-logical-block (xp loop :prefix "(" :suffix ")")
+	  (let (token type)
+	    (labels ((next-token ()
+		       (pprint-exit-if-list-exhausted)
+		       (setq token (pprint-pop))
+		       (setq type (pprint-loop-token-type token)))
+		     (print-clause (xp)
+		       (case type
+			 (:linear-head (print-exprs xp nil :mandatory))
+			 (:cond-head (print-cond xp))
+			 (:finally (print-exprs xp T :mandatory))
+			 (otherwise (print-exprs xp nil :fill))))
+		     (print-exprs (xp skip-first-non-expr newline-type)
+		       (let ((first token))
+			 (next-token) ;so always happens no matter what
+			 (pprint-logical-block (xp nil)
+			   (write first :stream xp)
+			   (when (and skip-first-non-expr (not (eq type :expr)))
+			     (write-char #\space xp)
+			     (write token :stream xp)
+			     (next-token))
+			   (when (eq type :expr)
+			     (write-char #\space xp)
+			     (pprint-indent :current 0 xp)
+			     (loop (write token :stream xp)
+				(next-token)
+				(when (not (eq type :expr))
+				  (return nil))
+				(write-char #\space xp)
+				(pprint-newline newline-type xp))))))
+		     (print-cond (xp)
+		       (let ((first token))
+			 (next-token) ;so always happens no matter what
+			 (pprint-logical-block (xp nil)
+			   (write first :stream xp)
+			   (when (eq type :expr)
+			     (write-char #\space xp)
+			     (write token :stream xp)
+			     (next-token))
+			   (write-char #\space xp)
+			   (pprint-indent :block 2 xp)
+			   (pprint-newline :linear xp)
+			   (print-clause xp)
+			   (print-and-list xp)
+			   (when (and (symbolp token)
+				      (string= (string token) "ELSE"))
+			     (print-else-or-end xp)
+			     (write-char #\space xp)
+			     (pprint-newline :linear xp)
+			     (print-clause xp)
+			     (print-and-list xp))
+			   (when (and (symbolp token)
+				      (string= (string token) "END"))
+			     (print-else-or-end xp)))))
+		     (print-and-list (xp)
+		       (loop (when (not (and (symbolp token)
+					     (string= (string token) "AND")))
+			       (return nil))
+			  (write-char #\space xp)
+			  (pprint-newline :mandatory xp)
+			  (write token :stream xp)
+			  (next-token)
+			  (write-char #\space xp)
+			  (print-clause xp)))
+		     (print-else-or-end (xp)
+		       (write-char #\space xp)
+		       (pprint-indent :block 0 xp)
+		       (pprint-newline :linear xp)
+		       (write token :stream xp)
+		       (next-token)
+		       (pprint-indent :block 2 xp)))
+	      ;;(pprint-exit-if-list-exhausted)
+	      (write (pprint-pop) :stream xp)
+	      (next-token)
+	      (write-char #\space xp)
+	      (pprint-indent :current 0 xp)
+	      (loop (print-clause xp)
+		 (write-char #\space xp)
+		 (pprint-newline :linear xp))))))))
+
 
 ;;;; Interface seen by regular (ugly) printer and initialization routines.
 
@@ -1511,11 +1662,11 @@
     (etypecase pprint-typecase)
     (handler-bind pprint-handler-bind)
     (handler-case pprint-handler-bind)
-    #+nil (loop ...)
+    (loop pprint-loop)
     (multiple-value-bind pprint-multiple-value-bind)
     (multiple-value-setq pprint-block)
     (pprint-logical-block pprint-block)
-    (print-unreadable-object pprint-block)
+    (print-unreadable-object pprint-with-like)
     (prog pprint-prog)
     (prog* pprint-prog)
     (prog1 pprint-block)
@@ -1530,20 +1681,26 @@
     (typecase pprint-typecase)
     (unless pprint-block)
     (when pprint-block)
-    (with-compilation-unit pprint-block)
-    (with-condition-restarts pprint-multiple-value-bind)
-    (with-hash-table-iterator pprint-block)
-    (with-input-from-string pprint-block)
-    (with-open-file pprint-block)
-    (with-open-stream pprint-block)
-    (with-output-to-string pprint-block)
-    (with-package-iterator pprint-block)
-    (with-simple-restart pprint-block)
+    (with-compilation-unit pprint-with-like)
+    (with-condition-restarts pprint-with-like)
+    (with-hash-table-iterator pprint-with-like)
+    (with-input-from-string pprint-with-like)
+    (with-open-file pprint-with-like)
+    (with-open-stream pprint-with-like)
+    (with-output-to-string pprint-with-like)
+    (with-package-iterator pprint-with-like)
+    (with-simple-restart pprint-with-like)
     (with-standard-io-syntax pprint-progn)
 
+    ;; CLOS things
+    (with-slots pprint-with-like)
+    (with-accessors pprint-with-like)
+    
+
     ;; Other things in CMUCL that we ought to try to print out nicely.
-    (ext:collect pprint-block)
-    (ansi-loop::with-loop-list-collection-head pprint-block)))
+    (ext:collect pprint-with-like)
+    (ansi-loop::with-loop-list-collection-head pprint-with-like)
+    (lisp::descend-into pprint-with-like)))
 
 (defun pprint-init ()
   (setf *initial-pprint-dispatch* (make-pprint-dispatch-table))
