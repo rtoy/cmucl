@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.15 2002/11/22 18:13:08 toy Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.16 2002/11/25 18:57:29 toy Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -985,11 +985,22 @@ collected result will be returned as the value of the LOOP."
 
 
 
-
+(defun subst-gensyms-for-nil (tree)
+  (declare (special *ignores*))
+  (cond
+    ((null tree) (car (push (loop-gentemp) *ignores*)))
+    ((atom tree) tree)
+    (t (cons (subst-gensyms-for-nil (car tree))
+	     (subst-gensyms-for-nil (cdr tree))))))
+ 
 (defun loop-build-destructuring-bindings (crocks forms)
   (if crocks
-      `((destructuring-bind ,(car crocks) ,(cadr crocks)
-        ,@(loop-build-destructuring-bindings (cddr crocks) forms)))
+      (let ((*ignores* ()))
+	(declare (special *ignores*))
+	`((destructuring-bind ,(subst-gensyms-for-nil (car crocks))
+	      ,(cadr crocks)
+	    (declare (ignore ,@*ignores*))
+	    ,@(loop-build-destructuring-bindings (cddr crocks) forms))))
       forms))
 
 (defun loop-translate (*loop-source-code* *loop-macro-environment* *loop-universe*)
