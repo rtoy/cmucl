@@ -94,6 +94,8 @@
 (defmacro node-deinits ()
   '(progn
      (setf (node-derived-type structure) *wild-type*)
+     (setf (node-lexenv structure) *undefined*)
+     (setf (node-source-path structure) nil)
      (setf (node-reoptimize structure) t)
      (setf (node-cont structure) nil)
      (setf (node-prev structure) nil)
@@ -101,8 +103,7 @@
 
 (defmacro node-inits ()
   '(progn
-     (setf (node-cookie structure) *current-cookie*)
-     (setf (node-default-cookie structure) *default-cookie*)
+     (setf (node-lexenv structure) *lexical-environment*)
      (setf (node-source-path structure) *current-path*)))
 
 
@@ -128,12 +129,9 @@
     (setf (block-last structure) nil)
     (setf (block-next structure) nil)
     (setf (block-prev structure) nil)
-    (setf (block-reoptimize structure) t)
-    (setf (block-flush-p structure) t)
-    (setf (block-type-check structure) t)
-    (setf (block-delete-p structure) nil)
-    (setf (block-type-asserted structure) t)
-    (setf (block-test-modified structure) t)
+    (setf (block-flags structure)
+	  (block-attributes reoptimize flush-p type-check type-asserted
+			    test-modified))
     (setf (block-kill structure) nil)
     (setf (block-gen structure) nil)
     (setf (block-in structure) nil)
@@ -141,29 +139,24 @@
     (setf (block-flag structure) nil)
     (setf (block-info structure) nil)
     (setf (block-test-constraint structure) nil))
-   ((setf (block-lambda structure) *current-lambda*)
-    (setf (block-start-cleanup structure) *current-cleanup*)
-    (setf (block-end-cleanup structure) *current-cleanup*)
-    (setf (block-component structure) *current-component*)
+   ((setf (block-component structure) *current-component*)
     (setf (block-start structure) start)))
   
-  ((ref (derived-type source leaf inlinep)) node-source
+  ((ref (derived-type leaf inlinep)) node-source-path
    ((node-deinits)
     (setf (ref-leaf structure) *undefined*))
    ((node-inits)
     (setf (node-derived-type structure) derived-type)
-    (setf (node-source structure) source)
     (setf (ref-leaf structure) leaf)
     (setf (ref-inlinep structure) inlinep)))
 
-  ((combination (source fun)) node-source
+  ((combination (fun)) node-source-path
    ((node-deinits)
     (setf (basic-combination-fun structure) *undefined*)
     (setf (basic-combination-args structure) nil)
     (setf (basic-combination-kind structure) :full)
     (setf (basic-combination-info structure) nil))
    ((node-inits)
-    (setf (node-source structure) source)
     (setf (basic-combination-fun structure) fun)))
   
   ((ir2-block (block)) ir2-block-next
@@ -298,10 +291,10 @@
 
 ;;; MACERATE-IR1-COMPONENT  --  Interface
 ;;;
-(defun macerate-IR1-component (component)
-  (declare (type component component))
+(defun macerate-ir1-component (component)
+  (declare (type component component) (optimize (safety 0)))
   (zap-in (block (component-head component) block-next)
-    (when (block-lambda block)
+    (when (block-start block)
       (let ((cont (block-start block))
 	    (last-cont (node-cont (block-last block)))
 	    next-cont
@@ -311,7 +304,10 @@
 	  (setq next-cont (node-cont node))
 	  (typecase node
 	    (ref (unmake-ref node))
-	    (combination (unmake-combination node)))
+	    (combination (unmake-combination node))
+	    (t
+	     (let ((structure node))
+	       (node-deinits))))
 	  (unmake-continuation cont)
 	  (when (eq next-cont last-cont)
 	    (when (eq (continuation-block next-cont) block)
@@ -321,12 +317,25 @@
     (unmake-block block))
 
   (dolist (fun (component-lambdas component))
+    (setf (leaf-refs fun) nil)
     (let ((tails (lambda-tail-set fun)))
       (when tails
 	(setf (tail-set-info tails) nil)))
     (let ((env (lambda-environment fun)))
       (setf (environment-info env) nil)
+      (setf (environment-function env) *undefined*)
       (dolist (nlx (environment-nlx-info env))
 	(setf (nlx-info-info nlx) nil)))
-    (dolist (var (lambda-vars fun))
-      (setf (leaf-info var) nil))))
+    (macrolet ((frob (fun)
+		 `(progn
+		    (dolist (var (lambda-vars ,fun))
+		      (setf (leaf-refs var) nil)
+		      (setf (basic-var-sets var) nil)
+		      (setf (leaf-info var) nil))
+		    (setf (lambda-vars ,fun) nil)
+		    (setf (lambda-environment ,fun) nil))))
+      (frob fun)
+      (dolist (let (lambda-lets fun))
+	(frob let)
+	(setf (lambda-home let) nil))
+      (setf (lambda-lets fun) nil))))
