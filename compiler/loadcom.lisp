@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.43 1992/08/25 21:04:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/loadcom.lisp,v 1.44 1992/12/13 15:29:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -54,6 +54,7 @@
 (load "c:control")
 (load "c:entry")
 (load "c:ir2tran")
+(load "vm:vm-ir2tran")
 (load "c:pack")
 (load "c:dyncount")
 (load "c:statcount")
