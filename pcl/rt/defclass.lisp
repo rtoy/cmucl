@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.5 2003/04/07 11:13:17 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.6 2003/04/18 10:06:23 gerd Rel $")
 
 (in-package "PCL-TEST")
 
@@ -264,3 +264,18 @@
 	    (subtypep (find-class 'dfr16) (find-class 'dfr13)))))
       (values r (null c)))
   (t t t t t t t t) t)
+
+(deftest defclass-types.6
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr20 (dfr21) ())
+	  (defclass dfr21 (dfr22) ())
+	  (append 
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr20) (find-class 'dfr21)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr21) (find-class 'dfr22)))
+	   (multiple-value-list
+	    (subtypep (find-class 'dfr20) (find-class 'dfr22)))))
+      (values r (null c)))
+  (t t t t t t) t)

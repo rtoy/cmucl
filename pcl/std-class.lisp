@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.52 2003/04/13 11:57:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.53 2003/04/18 10:06:23 gerd Exp $")
 
 (in-package :pcl)
 
@@ -549,7 +549,8 @@
 		   (map 'simple-vector #'class-wrapper
 			(reverse (rest cpl))))))
 	  (kernel:register-layout layout :invalidate t)
-	  (setf (kernel:%class-layout kernel-class) layout))))))
+	  (setf (kernel:%class-layout kernel-class) layout)
+	  (mapc #'make-preliminary-layout (class-direct-subclasses class)))))))
 
 (defmethod shared-initialize :before ((class class) slot-names &key name)
   (declare (ignore slot-names name))
