@@ -139,8 +139,8 @@
 % <a href="../../">CMUCL</a> -&gt
 % <a href="../">Documentation</a> <br>}
 % \@hr[NOSHADE]{.8\linewidth}{}\@print{<br>}}
-\htmlfoot{\@hr[NOSHADE]{.99\linewidth}{}
-\copyright{} 1995-2003 CMUCL Project}
+% \htmlfoot{\@hr[NOSHADE]{.99\linewidth}{}
+% \copyright{} 1995-2003 CMUCL Project}
 
 
 \let\orig@meta=\@meta
