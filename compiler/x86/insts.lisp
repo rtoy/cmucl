@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.15 1998/02/15 20:24:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.16 1998/02/24 09:59:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -795,8 +795,7 @@
 				      :default-printer `(:name :tab reg/mem))
   (prefix :field (byte 5 3) :value #b11011)
   (op     :fields (list (byte 3 0) (byte 3 11)))
-  (reg/mem :fields (list (byte 2 14) (byte 3 8)) :type 'reg/mem)
-  )
+  (reg/mem :fields (list (byte 2 14) (byte 3 8)) :type 'reg/mem))
 
 ;;;
 ;;; fp insn to/from fp reg
@@ -806,8 +805,7 @@
   (prefix :field (byte 5 3) :value #b11011)
   (suffix :field (byte 2 14) :value #b11)
   (op     :fields (list (byte 3 0) (byte 3 11)))
-  (fp-reg :field (byte 3 8) :type 'fp-reg)
-  )
+  (fp-reg :field (byte 3 8) :type 'fp-reg))
 
 ;;;
 ;;; fp insn to/from fp reg, with the reversed source/destination flag.
@@ -819,8 +817,7 @@
   (suffix :field (byte 2 14) :value #b11)
   (op     :fields (list (byte 2 0) (byte 3 11)))
   (d      :field (byte 1 2))
-  (fp-reg :field (byte 3 8) :type 'fp-reg)
-  )
+  (fp-reg :field (byte 3 8) :type 'fp-reg))
 
 
 ;;; pfw
@@ -831,6 +828,12 @@
   (prefix :field (byte 8  0) :value #b11011001)
   (suffix :field (byte 3 13) :value #b111)
   (op     :field (byte 5  8)))
+
+(disassem:define-instruction-format (floating-point-3 16
+				      :default-printer '(:name))
+  (prefix :field (byte 5 3) :value #b11011)
+  (suffix :field (byte 2 14) :value #b11)
+  (op     :fields (list (byte 3 0) (byte 6 8))))
 
 (disassem:define-instruction-format (floating-point-5 16
 				      :default-printer '(:name))
@@ -2596,13 +2599,13 @@
 ;;;
 ;;; Comparison
 ;;;
-(define-instruction fcom(segment src)
+(define-instruction fcom (segment src)
   (:printer floating-point ((op '(#b000 #b010))))
   (:emitter
    (emit-byte segment #b11011000)
    (emit-fp-op segment src #b010)))
 
-(define-instruction fcomd(segment src)
+(define-instruction fcomd (segment src)
   (:printer floating-point ((op '(#b100 #b010))))
   (:printer floating-point-fp ((op '(#b000 #b010))))
   (:emitter
@@ -2611,10 +2614,17 @@
      (emit-byte segment #b11011100))
    (emit-fp-op segment src #b010)))
 
+;;; Compare ST1 to ST0, popping the stack twice.
+(define-instruction fcompp (segment)
+  (:printer floating-point-3 ((op '(#b110 #b011001))))
+  (:emitter
+   (emit-byte segment #b11011110)
+   (emit-byte segment #b11011001)))
+
 ;;;
 ;;; Unordered comparison
 ;;;
-(define-instruction fucom(segment src)
+(define-instruction fucom (segment src)
   ;; XX Printer conflicts with frstor
   ;; (:printer floating-point ((op '(#b101 #b100))))
   (:emitter
