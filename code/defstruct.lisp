@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.11 1990/10/05 15:13:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.12 1990/10/05 15:51:19 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -600,7 +600,8 @@
 	   (write-string "#S(" stream)
 	   (prin1 type stream)
 	   (do ((index 1 (1+ index))
-		(length (length structure))
+		(length (truly-the index
+				   (%primitive structure-ref structure -1)))
 		(slots (dd-slots dd) (cdr slots)))
 	       ((or (= index length)
 		    (and *print-length*
