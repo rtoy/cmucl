@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.25 2000/02/17 14:30:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.26 2000/02/21 22:24:50 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1524,7 +1524,8 @@
 (define-instruction move (segment dst src1)
   (:declare (type tn dst src1))
   (:printer format-3-reg ((op #b10) (op3 #b000010) (rs1 0))
-            '(:name :tab rs2 ", " rd))
+            '(:name :tab rs2 ", " rd)
+	    :print-name 'mov)
   (:attributes flushable)
   (:dependencies (reads src1) (writes dst))
   (:delay 0)
@@ -1692,6 +1693,7 @@
        (reads :psr)
        (reads :fsr))
    (reads src)
+   (reads dst)
    (writes dst))
   (:emitter
    (let ((op #b10)
@@ -1760,6 +1762,7 @@
 	  (reads :psr)
 	  (reads :fsr))
       (reads src)
+      (reads dst)
       (writes dst))
      (:emitter
       (multiple-value-bind (opf_cc2 opf_cc01)
@@ -1806,6 +1809,7 @@
    (reads :psr)
    (reads src2)
    (reads src1)
+   (reads dst)
    (writes dst))
   (:emitter
    (etypecase src2
@@ -1847,6 +1851,7 @@
      (:dependencies
       (reads src2)
       (reads src1)
+      (reads dst)
       (writes dst))
      (:emitter
       (emit-format-3-fpop2
