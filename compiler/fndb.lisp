@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.99 2002/11/13 19:47:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.100 2002/12/29 23:35:06 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -730,7 +730,7 @@
 
 (defknown adjust-array
   (array (or index list) &key (:element-type type-specifier)
-	 (:initial-element t) (:initial-contents list)
+	 (:initial-element t) (:initial-contents t)
 	 (:fill-pointer t) (:displaced-to (or array null))
 	 (:displaced-index-offset index))
   array (unsafe))
