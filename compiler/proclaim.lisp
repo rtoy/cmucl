@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.30.2.1 2000/07/07 09:34:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.30.2.2 2000/07/07 11:04:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -111,7 +111,7 @@
 ;;; use Compiler-Error, aborting compilation to the last recovery point.
 ;;;
 (defun parse-lambda-list (list)
-  (delcare (list list)
+  (declare (list list)
 	   (values list list boolean t boolean list boolean list boolean t t))
   (collect ((required)
 	    (optional)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26.2.2 2000/07/07 09:34:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.26.2.3 2000/07/07 11:04:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -362,7 +362,7 @@
 ;;; consistency.
 ;;;
 (defun check-block-consistency (block)
-  (declare (type cblock cblock))
+  (declare (type cblock block))
 
   (dolist (pred (block-pred block))
     (unless (gethash pred *seen-blocks*)
