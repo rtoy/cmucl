@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.9 1991/10/03 14:31:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/mc68881.lisp,v 1.10 1992/01/22 18:10:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -93,8 +93,7 @@
   ((mc68881-single-reg) (single-stack))
   (inst cal lip-tn (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes))
   (with-fp-temp (temp)
-    (inst mc68881-store x lip-tn :single temp))
-  (inst mc68881-wait))
+    (inst mc68881-store x lip-tn :single temp)))
 
 (define-move-function (load-double 7) (vop x y)
   ((double-stack) (mc68881-double-reg))
@@ -106,8 +105,7 @@
   ((mc68881-double-reg) (double-stack))
   (inst cal lip-tn (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes))
   (with-fp-temp (temp)
-    (inst mc68881-store x lip-tn :double temp))
-  (inst mc68881-wait))
+    (inst mc68881-store x lip-tn :double temp)))
 
 
 ;;;; Move VOPs:
@@ -157,8 +155,7 @@
   (:generator 20
     (with-fixed-allocation (y ndescr alloc type size)
       (inst cal lip-tn y (- (* data vm:word-bytes) vm:other-pointer-type))
-      (inst mc68881-store x lip-tn format ndescr)
-      (inst mc68881-wait))))
+      (inst mc68881-store x lip-tn format ndescr))))
 
 (macrolet ((frob (name sc &rest args)
 	     `(progn
@@ -187,8 +184,7 @@
 	 (inst mc68881-move y x temp)))
       ((single-stack double-stack)
        (inst cal lip-tn (current-nfp-tn vop) (* (tn-offset y) vm:word-bytes))
-       (inst mc68881-store y lip-tn format temp)
-       (inst mc68881-wait)))))
+       (inst mc68881-store y lip-tn format temp)))))
 
 (macrolet ((frob (name format sc)
 	     `(progn
@@ -294,7 +290,6 @@
       (let ((nfp (current-nfp-tn vop)))
 	(inst cal loc nfp (* (tn-offset loc-tn) word-bytes)))
       (inst mc68881-store-status :fpsr loc temp)
-      (inst mc68881-wait)
       (loadw temp loc)
       (ecase condition
 	((< >)
@@ -414,13 +409,11 @@
 		    (signed-stack
 		     (inst cal addr (current-nfp-tn vop)
 			  (* (tn-offset y) vm:word-bytes))
-		     (inst mc68881-store temp addr :integer scratch)
-		     (inst mc68881-wait))
+		     (inst mc68881-store temp addr :integer scratch))
 		    (signed-reg
 		     (inst cal addr (current-nfp-tn vop)
 			  (* (tn-offset stack-temp) vm:word-bytes))
 		     (inst mc68881-store temp addr :integer scratch)
-		     (inst mc68881-wait)
 		     (loadw y (current-nfp-tn vop)
 			    (tn-offset stack-temp))))))))
   (frob %unary-truncate mc68881-single-reg mc68881-single-float :intrz)
@@ -503,7 +496,6 @@
     (inst cal addr (current-nfp-tn vop)
 	  (* (tn-offset stack-temp) vm:word-bytes))
     (inst mc68881-store float addr :single scratch)
-    (inst mc68881-wait)
     (loadw bits (current-nfp-tn vop) (tn-offset stack-temp))))
 
 (define-vop (mc68881-double-float-high-bits)
@@ -523,7 +515,6 @@
     (inst cal addr (current-nfp-tn vop)
 	  (* (tn-offset stack-temp) vm:word-bytes))
     (inst mc68881-store float addr :double scratch)
-    (inst mc68881-wait)
     (loadw bits (current-nfp-tn vop) (+ (tn-offset stack-temp) offset))))
 
 (define-vop (mc68881-double-float-low-bits mc68881-double-float-high-bits)
