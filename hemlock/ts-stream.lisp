@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.9 1991/11/09 03:06:00 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-stream.lisp,v 1.1.1.10 1991/12/06 05:25:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,7 +84,14 @@
       (setf (ts-stream-current-input stream)
 	    (nconc (ts-stream-current-input stream)
 		   (list (etypecase input
-			   (string input)
+			   (string
+			    (let ((newline
+				   (position #\newline input :from-end t)))
+			      (setf (ts-stream-char-pos stream)
+				    (if newline
+					(- (length input) newline 1)
+					(length input)))
+			      input))
 			   (cons
 			    (ext:make-stream-command (car input)
 						     (cdr input)))
