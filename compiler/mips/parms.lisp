@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.31 1990/03/21 23:29:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.32 1990/03/22 06:46:31 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -367,29 +367,29 @@
 				:header t)
   (fill-pointer :type index
 		:ref-trans lisp::%array-fill-pointer
-		:ref-known (c::flushable)
+		:ref-known (c::flushable c::foldable)
 		:set-trans (setf lisp::%array-fill-pointer)
-		:set-known ())
+		:set-known (c::unsafe))
   (elements :type index
 	    :ref-trans lisp::%array-available-elements
-	    :ref-known (c::flushable)
+	    :ref-known (c::flushable c::foldable)
 	    :set-trans (setf lisp::%array-available-elements)
-	    :set-known ())
+	    :set-known (c::unsafe))
   (data :type array
 	:ref-trans lisp::%array-data-vector
-	:ref-known (c::flushable)
+	:ref-known (c::flushable c::foldable)
 	:set-trans (setf lisp::%array-data-vector)
-	:set-known ())
+	:set-known (c::unsafe))
   (displacement :type (or index null)
 		:ref-trans lisp::%array-displacement
-		:ref-known (c::flushable)
+		:ref-known (c::flushable c::foldable)
 		:set-trans (setf lisp::%array-displacement)
-		:set-known ())
+		:set-known (c::unsafe))
   (displaced-p :type (member t nil)
 	       :ref-trans lisp::%array-displaced-p
-	       :ref-known (c::flushable)
+	       :ref-known (c::flushable c::foldable)
 	       :set-trans (setf lisp::%array-displaced-p)
-	       :set-known ())
+	       :set-known (c::unsafe))
   (dimensions :rest-p t))
 
 (define-primitive-object (vector :lowtag other-pointer-type :header t)
