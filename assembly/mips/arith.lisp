@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.1 1990/10/28 06:01:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.2 1990/10/28 06:40:37 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
@@ -31,6 +31,7 @@
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg old-fp-offset))
   (inst and temp x 3)
@@ -43,6 +44,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-+)
+  (inst li nargs (fixnum 2))
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
@@ -65,6 +67,7 @@
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg old-fp-offset))
   (inst and temp x 3)
@@ -77,6 +80,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg--)
+  (inst li nargs (fixnum 2))
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
@@ -101,6 +105,7 @@
 			  (:temp hi non-descriptor-reg nl2-offset)
 			  (:temp lip interior-reg lip-offset)
 			  (:temp lra descriptor-reg lra-offset)
+			  (:temp nargs any-reg nargs-offset)
 			  (:temp cname descriptor-reg cname-offset)
 			  (:temp ocfp any-reg old-fp-offset))
   ;; If either arg is not a fixnum, call the static function.
@@ -151,6 +156,7 @@
 
   DO-STATIC-FUN
   (load-symbol cname 'two-arg-*)
+  (inst li nargs (fixnum 2))
   (inst lw lip cname
 	(- (ash vm:symbol-raw-function-addr-slot vm:word-shift)
 	   vm:other-pointer-type))
