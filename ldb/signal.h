@@ -18,8 +18,10 @@ struct lisp_sigcontext {
     int     sc_o0;
 
     /* And this is the part we have added. */
-    unsigned int sc_regs[32];
-    unsigned int sc_fpregs[32];
+    unsigned long sc_regs[32];
+    unsigned long sc_fpregs[32];
+    long sc_y;
+    unsigned long sc_fsr;
 };
 
 #define sigcontext lisp_sigcontext
