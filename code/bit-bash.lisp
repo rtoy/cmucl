@@ -281,8 +281,6 @@
 
 ;;; These are not supported as primitives.
 
-#|
-
 (proclaim '(inline 32bit-logical-eqv 32bit-logical-nand 32bit-logical-andc1
 		   32bit-logical-andc2 32bit-logical-orc1 32bit-logical-orc2))
 
@@ -307,6 +305,8 @@
 
 
 ;;;; The actual bashers.
+
+#|
 
 (proclaim '(optimize (speed 3) (safety 0)))
 
