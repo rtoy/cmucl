@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.37 2003/09/25 02:40:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.38 2003/10/15 15:21:49 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,11 +101,11 @@
 ;;;; Room.
 
 (defun room-minimal-info ()
-  (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage))
-  (format t "Read-Only Space Usage:  ~10:D bytes.~%" (read-only-space-usage))
-  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage))
-  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
-  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage))
+  (format t "Dynamic Space Usage:    ~13:D bytes.~%" (dynamic-usage))
+  (format t "Read-Only Space Usage:  ~13:D bytes.~%" (read-only-space-usage))
+  (format t "Static Space Usage:     ~13:D bytes.~%" (static-space-usage))
+  (format t "Control Stack Usage:    ~13:D bytes.~%" (control-stack-usage))
+  (format t "Binding Stack Usage:    ~13:D bytes.~%" (binding-stack-usage))
   (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
   (format t "Garbage collection is currently ~:[enabled~;DISABLED~].~%"
 	  *gc-inhibit*))
