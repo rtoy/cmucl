@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.43 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.44 1996/05/08 13:48:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1220,8 +1220,8 @@ See the CMU Common Lisp User's Manual for more information.
 	    (setf any-p t)
 	    (when (eq (di:debug-variable-validity v location) :valid)
 	      (setf any-valid-p t)
-	      (format t "~A~:[#~D~;~*~]  =  ~S~%"
-		      (di:debug-variable-name v)
+	      (format t "~S~:[#~D~;~*~]  =  ~S~%"
+		      (di:debug-variable-symbol v)
 		      (zerop (di:debug-variable-id v))
 		      (di:debug-variable-id v)
 		      (di:debug-variable-value v *current-frame*))))
