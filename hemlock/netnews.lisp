@@ -427,6 +427,8 @@
 				      (make-array length :fill-pointer 0
 						  :initial-element nil)))
 			     (message-ids
+			      (when (aref header-cache 0)
+				(fill header-cache nil))
 			      (setf (fill-pointer message-ids) 0)
 			      (setf (fill-pointer header-cache) 0)
 			      (values message-ids header-cache))
@@ -1337,6 +1339,16 @@
    pointer to the last message in this group."
   (nn-punt-headers (if p :punt :last-visible)))
 
+(defcommand "Netnews Quit Starting Here" (p)
+  "Go on to the next group in \"Netnews Groups\", setting the bboard pointer
+   to the message before the currently displayed one or the message under
+   the point if none is currently displayed."
+  "Go on to the next group in \"Netnews Groups\", setting the bboard pointer
+   to the message before the currently displayed one or the message under
+   the point if none is currently displayed."
+  (declare (ignore p))
+  (nn-punt-headers :just-before))
+
 (defun nn-punt-headers (pointer-type)
   (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
@@ -1347,6 +1359,11 @@
 	    (:latest (nn-info-latest nn-info))
 	    (:punt (nn-info-last nn-info))
 	    (:last-visible (nn-info-last-visible nn-info))
+	    (:just-before
+	     (1- (if (minusp (nn-info-current-displayed-message nn-info))
+		     (array-element-from-mark (buffer-point headers-buffer)
+					      (nn-info-message-ids nn-info))
+		     (nn-info-current-displayed-message nn-info))))
 	    (:none nil)))
     ;; This clears out all headers that waiting on header-stream.
     ;; Must process each response in case a message is not really there.
@@ -1359,6 +1376,26 @@
 	  (when response (with-input-from-nntp (string stream))))))
     (change-to-next-group nn-info headers-buffer)))
   
+(defcommand "Fetch All Headers" (p)
+  "Fetches the rest of the headers in the current group.
+   Warning: This will take a while if there are a lot."
+  "Fetches the rest of the headers in the current group.
+   Warning: This will take a while if there are a lot."
+  (declare (ignore p))
+  (let* ((headers-buffer (nn-get-headers-buffer))
+         (nn-info (variable-value 'netnews-info :buffer headers-buffer)))
+    (if (nn-info-messages-waiting nn-info)
+        (message "Fetching the rest of the headers for ~A"
+                 (nn-info-current nn-info))
+        (editor-error "All headers are in buffer."))
+    ;; The first of these calls writes the headers that are waiting on the
+    ;; headers stream and requests the rest.  The second inserts the rest, if
+    ;; there are any.
+    ;;
+    (nn-write-headers-to-mark nn-info headers-buffer t)
+    (nn-write-headers-to-mark nn-info headers-buffer)))
+
+
 (defcommand "List All Newsgroups" (p &optional buffer)
   "Shows all available newsgroups in a buffer."
   "Shows all available newsgroups in a buffer."
@@ -1712,7 +1749,8 @@
    it, delimited by forwarded message markers."
   "Creates a Draft buffer and places a copy of the current message in
    it, delimited by forwarded message markers."
-  (declare (ignore p)) (let* ((headers-buffer (nn-get-headers-buffer))
+  (declare (ignore p))
+  (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
 	 (message-buffer (nn-info-buffer nn-info))
 	 (nm-info (variable-value 'netnews-message-info :buffer message-buffer))
@@ -1726,7 +1764,7 @@
     (when headers-buffer
       (defhvar "Headers Buffer"
 	"This is bound in message and draft buffers to their associated
-	headers-buffer"
+	 headers-buffer"
 	:value headers-buffer :buffer draft-buffer))
     (setf (draft-info-headers-mark dinfo)
 	  (copy-mark (buffer-point headers-buffer)))
@@ -1749,7 +1787,7 @@
   (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
 	 (article (if (and (hemlock-bound-p 'netnews-info)
-			   (eq (value netnews-read-style) :single))
+			   (minusp (nn-info-current-displayed-message nn-info)))
 		      (nn-put-article-in-buffer nn-info headers-buffer)
 		      (nn-info-current-displayed-message nn-info)))
 	 (message-buffer (nn-info-buffer nn-info))
@@ -1822,9 +1860,9 @@
   (let* ((headers-buffer (nn-get-headers-buffer))
 	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
 	 (article (if (and (hemlock-bound-p 'netnews-info)
-			   (eq (value netnews-read-style) :single))
-			   (nn-put-article-in-buffer nn-info headers-buffer)
-			   (nn-info-current-displayed-message nn-info)))
+			   (minusp (nn-info-current-displayed-message nn-info)))
+		      (nn-put-article-in-buffer nn-info headers-buffer)
+		      (nn-info-current-displayed-message nn-info)))
 	 (post-buffer (nn-make-post-buffer))
 	 (point (buffer-point post-buffer)))
 
@@ -1877,7 +1915,7 @@
    signature, which is appended to every post you make."
   :value ".hemlock-sig")
 
-(defhvar "Netnews Confirm Post"
+(defhvar "Netnews Deliver Post Confirm"
   "This determines whether Netnews Deliver Post will ask for confirmation
    before posting the current message."
   :value t)
@@ -1889,7 +1927,7 @@
   "Deliver the current Post buffer to the NNTP server, cleaning up any windows
    we need and landing us in the headers buffer if this was a reply."
   (declare (ignore p))
-  (when (or (not (value netnews-confirm-post))
+  (when (or (not (value netnews-deliver-post-confirm))
 	    (prompt-for-y-or-n :prompt "Post message? " :default t))
     (let* ((*nntp-timeout-handler* #'nn-recover-from-posting-timeout)
 	   (stream (post-info-stream (value post-info))))
