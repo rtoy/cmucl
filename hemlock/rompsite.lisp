@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.6 1994/07/05 15:54:27 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.7 1994/10/07 20:47:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,13 +16,15 @@
 
 ;;; Stuff to set up the packages Hemlock uses.
 ;;;
-(in-package "HEMLOCK-INTERNALS"
-	    :nicknames '("HI")
-	    :use '("LISP" "EXTENSIONS" "SYSTEM"))
+(unless (find-package "HEMLOCK-INTERNALS")
+  (make-package "HEMLOCK-INTERNALS"
+		:nicknames '("HI")
+		:use '("LISP" "EXTENSIONS" "SYSTEM")))
 ;;;
-(in-package "HEMLOCK"
-	    :nicknames '("ED")
-	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
+(unless (find-package "HEMLOCK")
+  (make-package "HEMLOCK"
+		:nicknames '("ED")
+		:use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM")))
 ;;;
 (in-package "SYSTEM")
 (export '(without-hemlock %sp-byte-blt %sp-find-character
