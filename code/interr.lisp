@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.9 1990/08/14 16:34:25 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.10 1990/09/06 19:41:49 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -106,6 +106,7 @@
     `(%deferr ',name
 	      ,(meta-error-number name)
 	      ,description
+	      #+new-compiler
 	      #'(lambda (name ,fp ,sigcontext ,sc-offsets)
 		  (declare (ignorable name ,fp ,sigcontext ,sc-offsets))
 		  (macrolet ((set-value (var value)
@@ -138,7 +139,7 @@
 
 ) ; Eval-When (Compile Eval)
 
-(defun %deferr (name number description function)
+(defun %deferr (name number description #+new-compiler function)
   (when (>= number (length *internal-errors*))
     (setf *internal-errors*
 	  (replace (make-array (+ number 10) :initial-element nil)
@@ -146,7 +147,7 @@
   (setf (svref *internal-errors* number)
 	(make-error-info :name name
 			 :description description
-			 :function function))
+			 #+new-compiler :function #+new-compiler function))
   name)
 
 
@@ -425,8 +426,9 @@
 	  (let ((*finding-name* t))
 	    (do ((frame (di:top-frame) (di:frame-down frame)))
 		((or (null frame)
-		     (di::frame-escaped frame))
-		 (if frame
+		     (and (di::compiled-frame-p frame)
+			  (di::compiled-frame-escaped frame)))
+		 (if (di::compiled-frame-p frame)
 		     (di:debug-function-name
 		      (di:frame-debug-function frame))
 		     "<error finding name>"))))
