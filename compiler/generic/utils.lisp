@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.5 1994/10/31 04:38:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/utils.lisp,v 1.6 2001/06/25 16:48:22 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,3 +73,19 @@
        (- list-pointer-type)
        (* static-function-index (pad-data-block fdefn-size))
        (* fdefn-raw-addr-slot word-bytes))))
+
+(defun offset-static-function (offset)
+  "Given a byte offset, Offset, returns the appropriate static function
+   symbol."
+  (let* ((static-syms (length static-symbols))
+	 (offsets (+ (* static-syms (pad-data-block symbol-size))
+		     (pad-data-block (1- symbol-size))
+		     (- list-pointer-type)
+		     (* fdefn-raw-addr-slot word-bytes))))
+    (multiple-value-bind (index rmdr)
+	(floor (- offset offsets) (pad-data-block fdefn-size))
+      (unless (and (zerop rmdr)
+		   (>= index 0)
+		   (< index (length static-symbols)))
+	(error "Byte offset, ~D, is not correct." offset))
+      (elt static-functions index))))
