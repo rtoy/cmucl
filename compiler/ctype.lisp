@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.23 1991/11/05 15:15:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.24 1991/12/11 23:45:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -273,20 +273,6 @@
 				 (1+ n))))))))))
 
 
-;;; Lambda-Result-Type  --  Internal
-;;;
-;;;    Guess the return type of a Lambda.  We just return the derived type of
-;;; the result continuation, assuming that IR1 optimize and Type check have
-;;; made this be a good description of the return type.
-;;;
-(defun lambda-result-type (lambda)
-  (declare (type clambda lambda))
-  (let ((ret (lambda-return lambda)))
-    (if ret
-	(continuation-derived-type (return-result ret))
-	*empty-type*)))
-
-
 ;;; Definition-Type  --  Interface
 ;;;
 ;;;    Construct a function type from a definition.
@@ -299,7 +285,7 @@
   (if (lambda-p functional)
       (make-function-type
        :required (mapcar #'leaf-type (lambda-vars functional))
-       :returns (lambda-result-type functional))
+       :returns (tail-set-type (lambda-tail-set functional)))
       (let ((rest nil))
 	(collect ((req)
 		  (opt)
@@ -322,8 +308,9 @@
 	   :required (req)  :optional (opt)  :rest rest  :keywords (keys)
 	   :keyp (optional-dispatch-keyp functional)
 	   :allowp (optional-dispatch-allowp functional)
-	   :returns (lambda-result-type
-		     (optional-dispatch-main-entry functional)))))))
+	   :returns (tail-set-type-type
+		     (lambda-tail-set
+		      (optional-dispatch-main-entry functional))))))))
 
 
 
