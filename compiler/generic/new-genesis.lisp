@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.11 1994/04/06 17:07:31 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.12 1994/05/22 00:00:49 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1673,7 +1673,7 @@
       (#.c:pmax-fasl-file-implementation
        (ecase kind
 	 (:jump
-	  (assert (zerop (ash value -26)))
+	  (assert (zerop (ash value -28)))
 	  (setf (ldb (byte 26 0) (sap-ref-32 sap 0))
 		(ash value -2)))
 	 (:lui
