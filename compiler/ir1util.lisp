@@ -1179,6 +1179,30 @@
 				     (basic-combination-args dest)))))))))))
 	  
 
+;;; We bind print level and length when printing out messages so that we don't
+;;; dump huge amounts of garbage.
+;;;
+(proclaim '(type (or unsigned-byte null) *error-print-level*
+		 *error-print-length*))
+
+(defvar *error-print-level* 3
+  "The value for *Print-Level* when printing compiler error messages.")
+(defvar *error-print-length* 5
+  "The value for *Print-Length* when printing compiler error messages.")
+
+
+;;; STRINGIFY-FORM  --  Internal
+;;;
+;;;    Convert a source form to a string, formatted suitably for use in
+;;; compiler warnings.
+;;;
+(defun stringify-form (form)
+  (let ((*print-level* *error-print-level*)
+	(*print-length* *error-print-length*)
+	(*print-circle* t))
+    (format nil "  ~S~%")))
+
+
 ;;; FIND-ERROR-CONTEXT  --  Interface
 ;;;
 ;;;    Return a COMPILER-ERROR-CONTEXT structure describing the current error
@@ -1199,10 +1223,11 @@
 				   (when (and context (not *current-form*))
 				     (find-enclosing-source context))
 		(make-compiler-error-context
-		 :source source
-		 :original-source form
+		 :source (stringify-form source)
+		 :original-source (stringify-form form)
 		 :context src-context
-		 :enclosing-source enclosing
+		 :enclosing-source (when enclosing
+				     (stringify-form enclosing))
 		 :enclosed-how how))))))))
 
 
@@ -1213,15 +1238,6 @@
 (proclaim '(type (function () nil) *compiler-error-bailout*))
 (defvar *compiler-error-bailout*
   #'(lambda () (error "Compiler-Error with no bailout.")))
-
-;;; We bind print level and length when printing out messages so that we don't
-;;; dump huge amounts of garbage.
-;;;
-(proclaim '(type (or unsigned-byte null) *error-print-level* *error-print-length*))
-(defvar *error-print-level* 3
-  "The value for *Print-Level* when printing compiler error messages.")
-(defvar *error-print-length* 5
-  "The value for *Print-Length* when printing compiler error messages.")
 
 
 ;;; We save the context information that we printed out most recently so that
@@ -1286,37 +1302,37 @@
 	    (enclosing (compiler-error-context-enclosing-source context))
 	    (how (compiler-error-context-enclosed-how context)))
 	
-	(unless (tree-equal context *last-source-context*)
+	(unless (equal context *last-source-context*)
 	  (note-message-repeats)
 	  (setq *last-source-context* context)
-	  (setq *last-original-source* '#(invalid))
+	  (setq *last-original-source* nil)
 	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" context))
-
-	(unless (tree-equal form *last-original-source*)
+	
+	(unless (equal form *last-original-source*)
 	  (note-message-repeats)
 	  (setq *last-original-source* form)
-	  (setq *last-enclosing-source* '#(invalid))
-	  (setq *last-format-string* nil) 
-	  (format stream "  ~S~%" form))
-
-	(unless (or (tree-equal source form)
-		    (and (member source form) (member source format-args)))
-	  (unless (or (tree-equal enclosing *last-enclosing-source*)
-		      (tree-equal enclosing form))
+	  (setq *last-enclosing-source* nil)
+	  (setq *last-format-string* nil)
+	  (write-string form stream))
+	
+	(unless (equal source form)
+	  (unless (or (equal enclosing *last-enclosing-source*)
+		      (equal enclosing form))
 	    (note-message-repeats)
-	    (setq *last-source-form* '#(invalid))
+	    (setq *last-source-form* nil)
 	    (setq *last-enclosing-source* enclosing)
 	    (when enclosing
-	      (format stream "==>~%  ~S~%" enclosing)))
+	      (write-line "==>" stream)
+	      (write-string enclosing stream)))
 	  
 	  (unless (tree-equal source *last-source-form*)
 	    (note-message-repeats)
 	    (setq *last-source-form* source)
 	    (setq *last-format-string* nil)
-	    (unless (member source format-args)
-	      (if *last-enclosing-source*
-		  (format stream "The ~A:~%  ~S~%" how source)
-		  (format stream "==>~%  ~S~%" source)))))))
+	    (if *last-enclosing-source*
+		(format stream "The ~A:~%" how)
+		(write-line "==>" stream))
+	    (write-string source stream)))))
      (t
       (note-message-repeats)
       (format stream "~2&")))
