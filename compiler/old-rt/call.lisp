@@ -522,7 +522,7 @@ default-value-5
 		    '(unknown-values-receiver)))
      (:args
       ,@(unless (eq return :tail)
-	  '((new-fp :scs (descriptor-reg) :to :eval
+	  `((new-fp :scs (descriptor-reg) :to :eval
 		    ,@(unless variable
 			`(:load-if (> nargs register-arg-count))))))
 
