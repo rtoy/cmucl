@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.16 1993/02/26 08:25:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.17 1993/08/05 17:17:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -435,6 +435,7 @@
 	     (clear-auto-gc-trigger)
 	     (set-auto-gc-trigger *gc-trigger*))
 	    (t
+	     (system:scrub-control-stack)
 	     (sub-gc)))))
   val)
 ;;;
