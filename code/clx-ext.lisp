@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.11 1997/01/18 14:30:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.12 1997/05/14 21:03:53 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,13 +49,10 @@
   (when string
     (let* ((string (coerce string 'simple-string))
 	   (length (length string))
-	   ;;pw--unix seems to be a non-existent host on all the systems
-	   ;; I have access to, and certainly not on linux. Unless unix
-	   ;; is an alias in /etc/hosts this won't work. So, lets use
-	   ;; gethostname instead. There are also some issues regarding
-	   ;; DNS and full/part time internet connection to get in the
-	   ;; way of this working but those are not solved here.
-	   (host-name #+nil "unix" (unix:unix-gethostname))
+	   ;;pw-- "unix" is a signal to the connect_to_inet C code
+	   ;;     to open an AF_UNIX socket instead of an AF_INET one.
+	   ;;     This is supposed to be faster on a local server.
+	   (host-name "unix")
 	   (display-num nil)
 	   (screen-num nil))
       (declare (simple-string string))
@@ -85,7 +82,18 @@
 				 (setf screen-num
 				       (parse-integer string :start start
 						      :end second-dot)))))))))))
-      (let ((display (xlib:open-display host-name :display display-num)))
+      ;; CLX 5.2 adds support for authorization stuff. This breaks the
+      ;; use of "unix" as a host name because x-open-stream will by default
+      ;; attempt to get some authorization parameters and calls xlib::host-address
+      ;; which will try to resolve "unix" and fail, unless there is a valid 
+      ;; alias named "unix". I (pw) mis-diagnosed this originally and disabled
+      ;; "unix" as a default host (see above) which broke the AF_UNIX interface.
+      ;; The "fix" (lacking real support of authorization) is to set these data
+      ;; manually to what would have been returned by get-best-authorization.
+      (let ((display (xlib:open-display host-name
+					:display display-num
+					:authorization-name ""
+					:authorization-data "")))
 	(when screen-num
 	  (let* ((screens (xlib:display-roots display))
 		 (num-screens (length screens)))
@@ -95,7 +103,6 @@
 	    (setf (xlib:display-default-screen display)
 		  (elt screens screen-num))))
 	(values display (xlib:display-default-screen display))))))
-
 
 
 ;;;; Font Path Manipulation
