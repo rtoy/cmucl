@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.20 1992/02/23 21:16:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/aliencomp.lisp,v 1.21 1992/03/22 23:47:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -675,7 +675,7 @@
 	(cont (node-cont call))
 	(args args))
     (multiple-value-bind (nsp stack-frame-size arg-tns result-tns)
-			 (make-call-out-argument-tns type)
+			 (make-call-out-tns type)
       (vop alloc-number-stack-space call block stack-frame-size nsp)
       (dolist (tn arg-tns)
 	(let* ((arg (pop args))
