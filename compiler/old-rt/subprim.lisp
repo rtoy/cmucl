@@ -78,6 +78,7 @@ implementations, since they are accessed through %primitive.
 (define-miscop newspace-bit ())
 (define-miscop pointer-system-set (s i p))
 (define-miscop purify () :results ())
+(define-miscop putf (x y z))
 (define-miscop read-binding-stack (b))
 (define-miscop read-control-stack (f))
 (define-miscop reset-c-stack (sp) :results ())
