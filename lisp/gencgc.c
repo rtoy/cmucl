@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.8 1997/12/31 18:07:42 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.9 1998/01/14 10:40:58 dtc Exp $
  * */
 
 #include <stdio.h>
@@ -3838,7 +3838,7 @@ search_static_space(lispobj *pointer)
 
 /* Faster version for searching the dynamic space. This will work even
    if the object is in a current allocation region. */
-static lispobj*
+lispobj*
 search_dynamic_space(lispobj *pointer)
 {
   int  page_index = find_page_index(pointer);
@@ -3852,7 +3852,7 @@ search_dynamic_space(lispobj *pointer)
   return (search_space(start, (pointer+2)-start, pointer));
 }
 
-int
+static int
 valid_dynamic_space_pointer(lispobj *pointer)
 {
   lispobj *start_addr;
