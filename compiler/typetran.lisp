@@ -171,6 +171,7 @@
 ;;; type predicates, accepting any type object.
 ;;;
 (define-type-predicate %string-char-p string-char)
+(define-type-predicate base-char-p base-character)
 (define-type-predicate %standard-char-p standard-char)
 
 
