@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.12 1992/05/28 01:06:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.13 1992/06/24 03:59:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,6 +36,16 @@
 	  "target:assembly/rt/array.assem"
 	  "target:assembly/rt/arith.assem"
 	  "target:assembly/rt/alloc.assem"))
+    ,@(when (c:backend-featurep :hppa)
+	'("target:assembly/hppa/assem-rtns.assem"
+	  "target:assembly/hppa/array.assem"
+	  "target:assembly/hppa/arith.assem"
+	  "target:assembly/hppa/alloc.assem"))
+    ,@(when (c:backend-featurep :x86)
+	'("target:assembly/x86/assem-rtns.assem"
+	  "target:assembly/x86/array.assem"
+	  "target:assembly/x86/arith.assem"
+	  "target:assembly/x86/alloc.assem"))
 
     "target:code/fdefinition"
     "target:code/eval"
@@ -104,6 +114,10 @@
 	'("target:code/sparc-vm"))
     ,@(when (c:backend-featurep :rt)
 	'("target:code/rt-vm"))
+    ,@(when (c:backend-featurep :hppa)
+	'("target:code/hppa-vm"))
+    ,@(when (c:backend-featurep :x86)
+	'("target:code/x86-vm"))
 
     "target:code/signal"
     "target:code/interr"
@@ -112,15 +126,24 @@
     "target:code/debug"
     ))
 
-(setf *genesis-core-name*
-      (if (c:backend-featurep '(and :sparc :mach))
-	  "/usr/tmp/kernel.core"
-	  "target:ldb/kernel.core"))
-(setf *genesis-c-header-name* "target:ldb/lisp.h")
-(setf *genesis-map-name* "target:ldb/lisp.map")
-(setf *genesis-symbol-table* "target:ldb/ldb.map")
+(cond ((c:target-featurep '(or :hppa :x86))
+       (setf *genesis-core-name* "target:lisp/kernel.core")
+       (setf *genesis-c-header-name* "target:lisp/internals.h")
+       (setf *genesis-map-name* #+nil "target:lisp/kernel.map" nil)
+       (setf *genesis-symbol-table* "target:lisp/lisp.nm"))
+      (t
+       (setf *genesis-core-name*
+	     (if (c:backend-featurep '(and :sparc :mach))
+		 "/usr/tmp/kernel.core"
+		 "target:ldb/kernel.core"))
+       (setf *genesis-c-header-name* "target:ldb/lisp.h")
+       (setf *genesis-map-name* "target:ldb/lisp.map")
+       (setf *genesis-symbol-table* "target:ldb/ldb.map")))
 
-(when (c:backend-featurep :sunos)
-  (setf *target-page-size* 8192))
+(when (boundp '*target-page-size*)
+  (locally
+   (declare (optimize (inhibit-warnings 3)))
+   (setf *target-page-size*
+	 (c:backend-page-size c:*backend*))))
 
 (genesis lisp-files)
