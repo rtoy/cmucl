@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.37 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.38 1996/05/08 16:03:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,52 +202,54 @@
 
 ;;; LTN-Default-Call  --  Internal
 ;;;
-;;;    Set up stuff to do a full call for Call.  We always flush arg type
-;;; checks, but do it after annotation when the policy is safe, since we don't
-;;; want to choose the TNs according to a type assertions that may not hold.
-;;;
 ;;;    We set the kind to :FULL or :FUNNY, depending on whether there is an
-;;; IR2-CONVERT method.  If a funny function, then we inhibit tail recursion,
-;;; since the IR2 convert method is going to want to deliver values normally.
+;;; IR2-CONVERT method.  If a funny function, then we inhibit tail recursion
+;;; and type check normally, since the IR2 convert method is going to want to
+;;; deliver values normally.  We still annotate the function continuation,
+;;; since IR2tran might decide to call after all.
+;;;
+;;;    If not funny, we always flush arg type checks, but do it after
+;;; annotation when the policy is safe, since we don't want to choose the TNs
+;;; according to a type assertions that may not hold.
+;;;
+;;;   Note that args may already be annotated because template selection can
+;;; bail out to here.
 ;;;
 (defun ltn-default-call (call policy)
   (declare (type combination call) (type policies policy))
-  (annotate-function-continuation (basic-combination-fun call) policy)
-
-  (let ((safe-p (policy-safe-p policy)))
-    (dolist (arg (basic-combination-args call))
-      (unless safe-p (flush-type-check arg))
-      (unless (continuation-info arg)
-	(setf (continuation-info arg)
-	      (make-ir2-continuation
-	       (primitive-type
-		(continuation-type arg)))))
-      (annotate-1-value-continuation arg)
-      (when safe-p (flush-type-check arg))))
-
   (let ((kind (basic-combination-kind call)))
-    (cond ((and (function-info-p kind)
-		(function-info-ir2-convert kind))
-	   (setf (basic-combination-info call) :funny)
-	   (setf (node-tail-p call) nil))
-	  (t
-	   (when (eq kind :error)
-	     (setf (basic-combination-kind call) :full))
-	   (setf (basic-combination-info call) :full)
-	   (flush-full-call-tail-transfer call))))
+    (annotate-function-continuation (basic-combination-fun call) policy)
+    
+    (cond
+     ((and (function-info-p kind)
+	   (function-info-ir2-convert kind))
+      (setf (basic-combination-info call) :funny)
+      (setf (node-tail-p call) nil)
+      (dolist (arg (basic-combination-args call))
+	(unless (continuation-info arg)
+	  (setf (continuation-info arg)
+		(make-ir2-continuation
+		 (primitive-type
+		  (continuation-type arg)))))
+	(annotate-1-value-continuation arg)))
+     (t
+      (let ((safe-p (policy-safe-p policy)))
+	(dolist (arg (basic-combination-args call))
+	  (unless safe-p (flush-type-check arg))
+	  (unless (continuation-info arg)
+	    (setf (continuation-info arg)
+		  (make-ir2-continuation
+		   (primitive-type
+		    (continuation-type arg)))))
+	  (annotate-1-value-continuation arg)
+	  (when safe-p (flush-type-check arg))))
+      (when (eq kind :error)
+	(setf (basic-combination-kind call) :full))
+      (setf (basic-combination-info call) :full)
+      (flush-full-call-tail-transfer call))))
   
   (undefined-value))
 
-;;; Annotate-Funny-Call -- Internal.
-;;;
-;;; Annotate the call as ``funny.''  In other words, mark it as funny,
-;;; flush tail-call-ness, and mark all arg continuations as ordinary.
-;;;
-(defun annotate-funny-call (call policy)
-  (setf (basic-combination-info call) :funny)
-  (setf (node-tail-p call) nil)
-  (dolist (arg (basic-combination-args call))
-    (annotate-ordinary-continuation arg policy)))
 
 ;;; Annotate-Unknown-Values-Continuation  --  Internal
 ;;;
