@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.95 2003/07/09 08:14:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.96 2003/07/17 17:48:32 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1558,11 +1558,12 @@
 	 ,@(if index `((setf ,index (string-input-stream-current ,var))))))))
 
 
-(defmacro with-output-to-string ((var &optional string)
+(defmacro with-output-to-string ((var &optional string &key element-type)
 				 &parse-body (forms decls))
   "If STRING is specified, it must be a string with a fill pointer;
    the output is incrementally appended to the string (as if by use of
    VECTOR-PUSH-EXTEND)."
+  (declare (ignore element-type))
   (if string
       `(let ((,var (make-fill-pointer-output-stream ,string)))
 	 ,@decls
