@@ -1,6 +1,6 @@
 #!/bin/csh -fx
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.9 1994/11/04 15:46:53 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/inst-lisp,v 1.10 1994/11/06 22:13:24 ram Exp $
 #
 # Utility for installing CMU CL systems in the AFS release area.
 #
@@ -28,6 +28,6 @@ rm -f $dst/spell-dictionary.bin
 
 cp -p $src/lisp/lisp $dst/lisp
 cp -p lisp.core $dst/lisp.core
-cp -p $src/code/cmu-site.*f $dst
+cp -p $src/code/cmu-site.*f $dst/site-init.fasl
 cp -p $src/motif/server/motifd $dst
 cp -p $src/hemlock/spell-dictionary.bin $dst
