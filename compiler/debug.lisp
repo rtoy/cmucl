@@ -233,8 +233,6 @@
 	 (unless (eq (lambda-home fun) functional)
 	   (barf "Home in ~S not ~S." fun functional))
 	 (check-function-reached fun functional))
-       (when (lambda-cleanup functional)
-	 (barf "Non-let has cleanup: ~S." functional))
        (unless (eq (lambda-home functional) functional)
 	 (barf "Home not self-pointer in ~S." functional)))))
        
@@ -359,7 +357,7 @@
     (unless (member block (block-succ pred))
       (barf "Bad predecessor link ~S in ~S." pred block)))
 
-  (let ((fun (block-lambda block)))
+  (let ((fun (block-home-lambda block)))
     (when (eq (functional-kind fun) :deleted)
       (return-from check-block-consistency nil))
     (check-function-reached fun block))
@@ -514,11 +512,6 @@
 ;;;
 (defun check-node-consistency (node)
   (declare (type node node))
-  (unless (or (node-source node)
-	      (and (ref-p node)
-		   (not (leaf-name (ref-leaf node)))))
-    (burp "~S has no SOURCE." node))
-
   (etypecase node
     (ref
      (let ((leaf (ref-leaf node)))
@@ -557,22 +550,18 @@
      (unless (eq (block-last (node-block node)) node)
        (barf "RETURN not at block end: ~S" node)))
     (entry
-     (unless (member node
-		     (lambda-entries
-		      (lambda-home
-		       (block-lambda (node-block node)))))
+     (unless (member node (lambda-entries (node-home-lambda node)))
        (barf "~S not in Entries for its home lambda." node))
      (dolist (exit (entry-exits node))
-       (unless (eq (continuation-kind exit) :deleted)
-	 (do-uses (node exit)
-	   (check-node-reached node)))))
+       (unless (node-deleted exit)
+	 (check-node-reached node))))
     (exit
      (let ((entry (exit-entry node))
 	   (value (exit-value node)))
        (cond (entry
 	      (check-node-reached entry)
-	      (unless (member (node-cont node) (entry-exits entry))
-		(barf "CONT for ~S not in its ENTRY's EXITS." node))
+	      (unless (member node (entry-exits entry))
+		(barf "~S not in its ENTRY's EXITS." node))
 	      (when value
 		(check-dest value node)))
 	     (t
@@ -811,10 +800,9 @@
 	  (macrolet ((frob (refs)
 		       `(do ((ref ,refs (tn-ref-next ref)))
 			    ((null ref))
-			  (unless (eq (lambda-environment
-				       (block-lambda
-					(ir2-block-block
-					 (vop-block (tn-ref-vop ref)))))
+			  (unless (eq (block-environment
+				       (ir2-block-block
+					(vop-block (tn-ref-vop ref))))
 				      env)
 			    (barf "~S not in TN-Environment for ~S." ref
 				  tn)))))
@@ -995,11 +983,13 @@
 ;;;
 ;;;    Attempt to find a block given some thing that has to do with it.
 ;;;
-(proclaim '(function block-or-lose (t) block))
+(proclaim '(function block-or-lose (t) cblock))
 (defun block-or-lose (thing)
   (ctypecase thing
     (cblock thing)
-    (ir2-block (node-block (vop-node (ir2-block-start-vop thing))))
+    (ir2-block (ir2-block-block thing))
+    (vop (block-or-lose (vop-block thing)))
+    (tn-ref (block-or-lose (tn-ref-vop thing)))
     (continuation (continuation-block thing))
     (node (node-block thing))
     (component (component-head thing))
