@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.7 1997/08/01 19:33:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.8 1997/09/29 04:35:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1053,6 +1053,16 @@
    (emit-byte segment #b10001101)
    (emit-ea segment src (reg-tn-encoding dst))))
 
+(define-instruction cmpxchg (segment dst src)
+  ;; Register/Memory with Register.
+  (:printer ext-reg-reg/mem ((op #b1011000)) '(:name :tab reg/mem ", " reg))
+  (:emitter
+   (assert (register-p src))
+   (let ((size (matching-operand-size src dst)))
+     (maybe-emit-operand-size-prefix segment size)
+     (emit-byte segment #b00001111)
+     (emit-byte segment (if (eq size :byte) #b10110000 #b10110001))
+     (emit-ea segment dst (reg-tn-encoding src)))))
 
 
 ;;;; Flag control instructions.
