@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.25 1991/05/09 15:50:26 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.26 1991/05/16 14:58:22 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,7 @@
   (:documentation "There is absolutely no debugging information available.")
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
+	     (fresh-line stream)
 	     (write-line "No debugging information available." stream))))
 
 (define-condition no-debug-function-returns (debug-condition)
@@ -113,23 +114,23 @@
 	     (let ((fun (debug-function-function
 			 (no-debug-function-returns-debug-function condition))))
 	       (format stream
-		       "Cannot return values from ~:[frame~;~:*~S~] since the ~
-			debug information lacks details about returning values ~
-			here."
+		       "~&Cannot return values from ~:[frame~;~:*~S~] since ~
+			the debug information lacks details about returning ~
+			values here."
 		       fun)))))
 
 (define-condition no-debug-blocks (debug-condition)
   (debug-function)
   (:documentation "The debug-function has no debug-block information.")
   (:report (lambda (condition stream)
-	     (format stream "~S has no debug-block information."
+	     (format stream "~&~S has no debug-block information."
 		     (no-debug-blocks-debug-function condition)))))
 
 (define-condition no-debug-variables (debug-condition)
   (debug-function)
   (:documentation "The debug-function has no debug-variable information.")
   (:report (lambda (condition stream)
-	     (format stream "~S has no debug-variable information."
+	     (format stream "~&~S has no debug-variable information."
 		     (no-debug-variables-debug-function condition)))))
 
 (define-condition lambda-list-unavailable (debug-condition)
@@ -138,14 +139,14 @@
    "The debug-function has no lambda-list since argument debug-variables are
     unavailable.")
   (:report (lambda (condition stream)
-	     (format stream "~S has no lambda-list information available."
+	     (format stream "~&~S has no lambda-list information available."
 		     (lambda-list-unavailable-debug-function condition)))))
 
 (define-condition invalid-value (debug-condition)
   ((debug-variable)
    (frame))
   (:report (lambda (condition stream)
-	     (format stream "~S has :invalid or :unknown value in ~S."
+	     (format stream "~&~S has :invalid or :unknown value in ~S."
 		     (invalid-value-debug-variable condition)
 		     (invalid-value-frame condition)))))
 
@@ -153,7 +154,7 @@
   ((name)
    (frame))
   (:report (lambda (condition stream)
-	     (format stream "~S names more than one valid variable in ~S."
+	     (format stream "~&~S names more than one valid variable in ~S."
 		     (ambiguous-variable-name-name condition)
 		     (ambiguous-variable-name-frame condition)))))
 
@@ -183,19 +184,20 @@
   ()
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
+	     (fresh-line stream)
 	     (write-string "Invalid control stack pointer." stream))))
 
 (define-condition unknown-code-location (debug-error)
   ((code-location))
   (:report (lambda (condition stream)
-	     (format stream "Invalid use of an unknown code-location -- ~S."
+	     (format stream "~&Invalid use of an unknown code-location -- ~S."
 		     (unknown-code-location-code-location condition)))))
 
 (define-condition unknown-debug-variable (debug-error)
   ((debug-variable)
    (debug-function))
   (:report (lambda (condition stream)
-	     (format stream "~S not in ~S."
+	     (format stream "~&~S not in ~S."
 		     (unknown-debug-variable-debug-variable condition)
 		     (unknown-debug-variable-debug-function condition)))))
 
@@ -205,7 +207,7 @@
    (form))
   (:report (lambda (condition stream)
 	     (format stream
-		     "Form was preprocessed for ~S,~% but called on ~S:~%  ~S"
+		     "~&Form was preprocessed for ~S,~% but called on ~S:~%  ~S"
 		     (frame-function-mismatch-code-location condition)
 		     (frame-function-mismatch-frame condition)
 		     (frame-function-mismatch-form condition)))))
