@@ -1656,10 +1656,11 @@
 	 (vars (flet ((frob (ir1-lambda buf)
 			(dolist (v (c::lambda-vars ir1-lambda))
 			  (vector-push-extend
-			   (let ((id (c::leaf-name v)))
+			   (let* ((id (c::leaf-name v))
+				  (pkg (symbol-package id)))
 			     (make-interpreted-debug-variable
 			      (symbol-name id)
-			      (package-name (symbol-package id))
+			      (when pkg (package-name pkg))
 			      v))
 			   buf))))
 		 (with-parsing-buffer (buf)
@@ -1673,22 +1674,23 @@
       (when (> len 1)
 	(let ((i 0)
 	      (j 1))
-	  (loop
-	    (let* ((var-i (svref vars i))
-		   (var-j (svref vars j))
-		   (name (debug-variable-name var-i)))
-	      (when (string= name (debug-variable-name var-j))
-		(let ((count 1))
-		  (loop 
-		    (setf (debug-variable-id var-j) count)
-		    (when (= (incf j) len) (return))
-		    (setf var-j (svref vars j))
-		    (when (string/= name (debug-variable-name var-j))
-		      (return))
-		    (incf count))))
-	      (setf i j)
-	      (incf j)
-	      (when (= j len) (return)))))))
+	  (block PUNT
+	    (loop
+	      (let* ((var-i (svref vars i))
+		     (var-j (svref vars j))
+		     (name (debug-variable-name var-i)))
+		(when (string= name (debug-variable-name var-j))
+		  (let ((count 1))
+		    (loop 
+		      (setf (debug-variable-id var-j) count)
+		      (when (= (incf j) len) (return-from PUNT))
+		      (setf var-j (svref vars j))
+		      (when (string/= name (debug-variable-name var-j))
+			(return))
+		      (incf count))))
+		(setf i j)
+		(incf j)
+		(when (= j len) (return))))))))
     vars))
 
 ;;; PARSE-COMPILED-DEBUG-VARIABLES -- Internal.
