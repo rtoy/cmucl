@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.35 1992/02/03 22:15:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.36 1992/04/08 03:48:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1127,7 +1127,7 @@
   '((* x (%negate x))
     (/ x (%negate x))
     (expt x (/ 1 x))) do
-  (deftransform name ((x y) '(t (constant-argument t)) '* :eval-name t)
+  (deftransform name ((x y) '(t (constant-argument real)) '* :eval-name t)
     "fold identity operations"
     (let ((val (continuation-value y)))
       (unless (and (= (abs val) 1)
