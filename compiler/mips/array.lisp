@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.4 1990/03/20 00:19:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.5 1990/03/21 23:22:04 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -15,50 +15,12 @@
 ;;;
 (in-package "C")
 
-#|
-(define-miscop aref1 (a i) :translate aref)
-(define-miscop caref2 (a i j) :translate aref)
-(define-miscop caref3 (a i j k) :translate aref)
-(define-miscop aset1 (a i val) :translate %aset)
-(define-miscop caset2 (a i j val) :translate %aset)
-(define-miscop caset3 (a i j k val) :translate %aset)
-(define-miscop svref (v i) :translate aref
-  :arg-types (simple-vector t))
-(define-miscop svset (v i val) :translate %aset
-  :arg-types (simple-vector t t))
-(define-miscop schar (v i) :translate aref
-  :arg-types (simple-string t))
-(define-miscop scharset (v i val) :translate %aset
-  :arg-types (simple-string t t))
-(define-miscop sbit (v i) :translate aref
-  :arg-types (simple-bit-vector t))
-(define-miscop sbitset (v i val) :translate %aset
-  :arg-types (simple-bit-vector t t))
-|#
 
+
+;;;; Additional accessors and setters for the array header.
 
-;;; These VOPS are automatically generated in cell.lisp
-
-(defknown lisp::%array-fill-pointer (t) fixnum (flushable))
-(defknown lisp::%array-available-elements (t) fixnum (flushable))
-(defknown lisp::%array-data-vector (t) t (flushable))
-(defknown lisp::%array-displacement (t) (or fixnum null) (flushable))
-(defknown lisp::%array-displaced-p (t) (member t nil) (flushable))
-
-(defknown ((setf lisp::%array-fill-pointer))
-	  (t fixnum) fixnum ())
-(defknown ((setf lisp::%array-available-elements))
-	  (t fixnum) fixnum ())
-(defknown ((setf lisp::%array-data-vector))
-	  (t t) t ())
-(defknown ((setf lisp::%array-displacement))
-	  (t (or fixnum null)) (or fixnum null) ())
-(defknown ((setf lisp::%array-displaced-p))
-	  (t (member t nil)) (member t nil) ())
-
-;;; Define an accessor and setter for to the dimensions.
-
-(defknown lisp::%array-dimension (t fixnum) fixnum (flushable))
+(defknown lisp::%array-dimension (t fixnum) fixnum
+  (flushable))
 (defknown ((setf lisp::%array-dimension))
 	  (t fixnum fixnum) fixnum ())
 
@@ -67,13 +29,30 @@
   (:policy :fast-safe)
   (:variant vm:array-dimensions-offset vm:other-pointer-type))
 
-(define-vop (set-%array-dimension word-index-set)
+(define-vop (%set-array-dimension word-index-set)
   (:translate (setf lisp::%array-dimension))
   (:policy :fast-safe)
   (:variant vm:array-dimensions-offset vm:other-pointer-type))
 
 
-;;; Various length translations.
+
+(defknown lisp::%array-rank (t) fixnum (flushable))
+
+(define-vop (array-rank-vop)
+  (:translate lisp::%array-rank)
+  (:policy :fast-safe)
+  (:args (x :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 6
+    (loadw temp x 0 vm:other-pointer-type)
+    (inst sra temp temp vm:type-bits)
+    (inst sll res temp 2)
+    (inst addiu res res (fixnum (- 1 vm:array-dimensions-offset)))))
+
+
+
+;;;; Various length translations.
 
 (macrolet ((frob (type)
 	     `(define-vop (,(intern (concatenate 'simple-string
@@ -95,26 +74,88 @@
   (frob simple-array-double-float))
 
 
+
+;;;; Bounds checking routine.
 
 
-(define-vop (fast-schar byte-index-ref)
-  (:arg-types simple-string *)
-  (:results (value :scs (base-character-reg)))
-  (:result-types base-character)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
-  (:translate aref)
-  (:policy :fast))
+(define-vop (check-bound)
+  (:translate %check-bound)
+  (:policy :fast-safe)
+  (:args (array :scs (descriptor-reg))
+	 (bound :scs (any-reg descriptor-reg))
+	 (index :scs (any-reg descriptor-reg) :target result))
+  (:results (result :scs (any-reg descriptor-reg)))
+  (:node-var node)
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:generator 5
+    (let ((error (generate-error-code node di:invalid-array-index-error
+				      array bound index)))
+      (inst sltu temp index bound)
+      (inst beq temp zero-tn error)
+      (nop)
+      (move result index))))
 
-(define-vop (fast-scharset byte-index-set)
-  (:args (object :scs (descriptor-reg))
-	 (index :scs (any-reg descriptor-reg immediate unsigned-immediate))
-	 (value :scs (base-character-reg)))
-  (:results (result :scs (base-character-reg)))
-  (:result-types base-character)
-  (:variant vm:vector-data-offset vm:other-pointer-type)
-  (:translate %aset)
-  (:policy :fast)
-  (:arg-types simple-string * base-character))
+
+
+;;;; Accessors/Setters
+
+(defmacro def-data-vector-frobs (type variant &optional (element-type t) sc)
+  `(progn
+     (define-vop (,(intern (concatenate 'simple-string
+					"DATA-VECTOR-REF/"
+					(string type)))
+		  ,(intern (concatenate 'simple-string
+					(string variant)
+					"-REF")))
+       (:variant vm:vector-data-offset vm:other-pointer-type)
+       (:translate data-vector-ref)
+       (:policy :fast-safe)
+       (:arg-types ,type *)
+       ,@(when sc
+	   `((:results (value :scs (,sc)))
+	     (:result-types ,element-type))))
+     (define-vop (,(intern (concatenate 'simple-string
+					"DATA-VECTOR-SET/"
+					(string type)))
+		  ,(intern (concatenate 'simple-string
+					(string variant)
+					"-SET")))
+       (:variant vm:vector-data-offset vm:other-pointer-type)
+       (:translate data-vector-set)
+       (:policy :fast-safe)
+       (:arg-types ,type * ,element-type)
+       ,@(when sc
+	   `((:args (object :scs (descriptor-reg))
+		    (index :scs (any-reg descriptor-reg
+					 immediate unsigned-immediate))
+		    (value :scs (,sc)))
+	     (:results (result :scs (,sc)))
+	     (:result-types ,element-type))))))
+
+(def-data-vector-frobs simple-string byte-index
+  base-character base-character-reg)
+(def-data-vector-frobs simple-vector word-index)
+#|
+(def-data-vector-frobs simple-array-unsigned-byte-8 byte-index
+  unsigned-32-reg)
+(def-data-vector-frobs simple-array-unsigned-byte-16 halfword-index
+  unsigned-32-reg)
+(def-data-vector-frobs simple-array-unsigned-byte-32 word-index
+  unsigned-32-reg)
+|#
+
+
+
+;;;; Misc. Array VOPs.
+
+
+#+nil
+(define-vop (vector-word-length)
+  (:args (vec :scs (descriptor-reg)))
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 6
+    (loadw res vec clc::g-vector-header-words)
+    (inst niuo res res clc::g-vector-words-mask-16)))
 
 
 (define-vop (get-vector-subtype)
@@ -140,15 +181,3 @@
     (storew t1 x 0 vm:other-pointer-type)
     (move res x)))
 
-
-(define-vop (fast-svref word-index-ref)
-  (:variant vm:vector-base-size vm:other-pointer-type)
-  (:translate aref)
-  (:arg-types simple-vector *)
-  (:policy :fast))
-
-(define-vop (fast-svset word-index-set)
-  (:variant vm:vector-base-size vm:other-pointer-type)
-  (:translate %aset)
-  (:arg-types simple-vector * *)
-  (:policy :fast))
