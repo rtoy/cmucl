@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.48 1992/07/31 17:19:38 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.49 1992/08/04 21:34:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -767,6 +767,7 @@
       (let ((info (info function info name)))
 	(cond
 	 ((and convert-again
+	       (symbolp name)
 	       (or (info function source-transform name)
 		   (info function inline-expansion name)
 		   (and info
