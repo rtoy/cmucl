@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.7 1992/01/28 08:06:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.8 1992/02/13 02:24:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -747,14 +747,14 @@
   NIL and the Unix error number."
   (declare (type unix-pathname path))
   (with-alien ((buf (array char 1024)))
-    (syscall ("readlink" c-string int)
+    (syscall ("readlink" c-string (* char) int)
 	     (let ((string (make-string result)))
 	       (kernel:copy-from-system-area
 		(alien-sap buf) 0
 		string (* vm:vector-data-offset vm:word-bits)
 		(* result vm:byte-bits))
 	       string)
-	     path 1024)))
+	     path (cast buf (* char)) 1024)))
 
 ;;; Unix-rename accepts two files names and renames the first to the second.
 
