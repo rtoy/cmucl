@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.21 2004/07/07 15:13:05 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.22 2004/07/08 03:18:15 rtoy Exp $
  *
  */
 
@@ -85,7 +85,7 @@
 #endif
 #define DEFAULT_DYNAMIC_SPACE_SIZE	(0x20000000) /* 512MB */
 #ifdef LINKAGE_TABLE
-#define FOREIGN_LINKAGE_SPACE_START (LinkageSpaceStart)  
+#define FOREIGN_LINKAGE_SPACE_START ((unsigned long) LinkageSpaceStart)  
 #define FOREIGN_LINKAGE_SPACE_SIZE (0x100000) /* 1MB */
 #endif
 #endif /* __FreeBSD__ */

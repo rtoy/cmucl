@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.27 2004/06/28 23:04:40 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.28 2004/07/08 03:18:15 rtoy Exp $ 
 
    */
 #include <stdio.h>
@@ -262,20 +262,20 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
     case type_DylanFunctionHeader:
       if ((int)pointer != ((int)start_addr+type_FunctionPointer)) {
 	if (pointer_filter_verbose)
-	  fprintf(stderr,"*Wf2: %x %x %x\n", pointer, start_addr, *start_addr);
+	  fprintf(stderr,"*Wf2: %p %p %lx\n", pointer, start_addr, *start_addr);
 	return FALSE;
       }
       break;
     default:
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wf3: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wf3: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_ListPointer:
     if ((int)pointer != ((int)start_addr+type_ListPointer)) {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wl1: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wl1: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible cons? */
@@ -290,38 +290,38 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
       break;
     else {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wl2: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wl2: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
   case type_InstancePointer:
     if ((int)pointer != ((int)start_addr+type_InstancePointer)) {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wi1: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wi1: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     if (TypeOf(start_addr[0]) != type_InstanceHeader) {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wi2: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wi2: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   case type_OtherPointer:
     if ((int)pointer != ((int)start_addr+type_OtherPointer)) {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo1: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo1: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     /* Is it plausible?  Not a cons. X should check the headers. */
     if(Pointerp(start_addr[0]) || ((start_addr[0] & 3) == 0)) {
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo2: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo2: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     switch (TypeOf(start_addr[0])) {
     case type_UnboundMarker:
     case type_BaseChar:
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo3: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo3: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
       
       /* Only pointed to by function pointers? */
@@ -331,12 +331,12 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
     case type_ByteCodeClosure:
     case type_DylanFunctionHeader:
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo4: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo4: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
       
     case type_InstanceHeader:
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo5: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo5: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
       
       /* The valid other immediate pointer objects */
@@ -407,13 +407,13 @@ valid_dynamic_space_pointer(lispobj *pointer, lispobj *start_addr)
 
     default:
       if (pointer_filter_verbose)
-	fprintf(stderr,"*Wo6: %x %x %x\n", pointer, start_addr, *start_addr);
+	fprintf(stderr,"*Wo6: %p %p %lx\n", pointer, start_addr, *start_addr);
       return FALSE;
     }
     break;
   default:
     if (pointer_filter_verbose)
-      fprintf(stderr,"*W?: %x %x %x\n", pointer, start_addr, *start_addr);
+      fprintf(stderr,"*W?: %p %p %lx\n", pointer, start_addr, *start_addr);
     return FALSE;
   }
   
@@ -483,7 +483,7 @@ static void pscav_i386_stack(void)
     lispobj code_obj = (lispobj)(valid_stack_ra_code_objects[i]);
     pscav(&code_obj, 1, FALSE);
     if (pointer_filter_verbose)
-      fprintf(stderr, "*C moved RA %x to %x; for code object %x to %x\n",
+      fprintf(stderr, "*C moved RA %lx to %x; for code object %p to %lx\n",
 	      *valid_stack_ra_locations[i],
 	      (int) (*valid_stack_ra_locations[i])
 	      - ((int) valid_stack_ra_code_objects[i] - (int)code_obj),
@@ -742,7 +742,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
     /* Got the fixups for the code block.  Now work through the vector,
        and apply a fixup at each address. */
     int length = fixnum_value(fixups_vector->length);
-    unsigned int *offset_vector = fixups_vector->data;
+    unsigned long *offset_vector = fixups_vector->data;
     int i;
     for (i=0; i<length; i++) {
       unsigned offset = offset_vector[i];
