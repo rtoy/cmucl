@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.49 1998/05/04 01:27:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.50 1998/05/05 00:14:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -847,7 +847,7 @@
    non-nil, then Unix dot files are included too (as ls -a).  When :vervose
    is supplied and non-nil, then a long listing of miscellaneous
    information is output one file per line."
-  (let ((*standard-output* (stream-synonym-of stream))
+  (let ((*standard-output* (out-synonym-of stream))
 	(pathname pathname))
     (if verbose
 	(print-directory-verbose pathname all return-list)

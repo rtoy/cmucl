@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.71 1998/05/04 01:27:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.72 1998/05/05 00:14:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,14 +148,14 @@
 		     ((:pprint-dispatch *print-pprint-dispatch*)
 		      *print-pprint-dispatch*))
   "Outputs OBJECT to the specified stream, defaulting to *standard-output*"
-  (output-object object (stream-synonym-of stream))
+  (output-object object (out-synonym-of stream))
   object)
 
 (defun prin1 (object &optional stream)
   "Outputs a mostly READable printed representation of OBJECT on the specified
   stream."
   (let ((*print-escape* T))
-    (output-object object (stream-synonym-of stream)))
+    (output-object object (out-synonym-of stream)))
   object)
 
 (defun princ (object &optional stream)
@@ -163,13 +163,13 @@
   specified stream."
   (let ((*print-escape* NIL)
 	(*print-readably* NIL))
-    (output-object object (stream-synonym-of stream)))
+    (output-object object (out-synonym-of stream)))
   object)
 
 (defun print (object &optional stream)
   "Outputs a terpri, the mostly READable printed represenation of OBJECT, and 
   space to the stream."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (out-synonym-of stream)))
     (terpri stream)
     (prin1 object stream)
     (write-char #\space stream)
@@ -179,7 +179,7 @@
   "Prettily outputs the Object preceded by a newline."
   (let ((*print-pretty* t)
 	(*print-escape* t)
-	(stream (stream-synonym-of stream)))
+	(stream (out-synonym-of stream)))
     (terpri stream)
     (output-object object stream))
   (values))

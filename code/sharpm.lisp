@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.17 1998/05/04 01:27:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.18 1998/05/05 00:14:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -350,7 +350,7 @@
 
 (defun sharp-vertical-bar (stream sub-char numarg)
   (ignore-numarg sub-char numarg)
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream

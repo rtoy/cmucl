@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.25 1998/05/04 01:27:15 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.26 1998/05/05 00:14:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -335,7 +335,7 @@
 (defun flush-whitespace (stream)
   ;; This flushes whitespace chars, returning the last char it read (a
   ;; non-white one).  It always gets an error on end-of-file.
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream
@@ -543,7 +543,7 @@
 
 (defun read-comment (stream ignore)
   (declare (ignore ignore))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream
@@ -605,7 +605,7 @@
   ;;this accumulates chars until it sees same char that invoked it.
   ;;for a very long string, this could end up bloating the read buffer.
   (reset-read-buffer)
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream
@@ -984,7 +984,7 @@
 	(t (go SYMBOL)))
      SYMBOL
       ;;not a dot, dots, or number.
-      (let ((stream (stream-synonym-of stream)))
+      (let ((stream (in-synonym-of stream)))
 	(etypecase stream
 	  (lisp-stream
 	   (prepare-for-fast-read-char stream

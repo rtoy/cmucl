@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.31 1998/05/05 00:12:14 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.32 1998/05/05 00:14:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -254,7 +254,7 @@
   "Returns a line of text read from the Stream as a string, discarding the
   newline character."
   (declare (ignore recursive-p))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream
@@ -298,7 +298,7 @@
 			    recursive-p)
   "Inputs a character from Stream and returns it."
   (declare (ignore recursive-p))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-char stream
@@ -313,7 +313,7 @@
 
 (defun unread-char (character &optional (stream *standard-input*))
   "Puts the Character back on the front of the input Stream."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (let ((index (1- (lisp-stream-in-index stream)))
@@ -334,7 +334,7 @@
 			    (eof-errorp t) eof-value recursive-p)
   "Peeks at the next character in the input Stream.  See manual for details."
   (declare (ignore recursive-p))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (let ((char (read-char stream eof-errorp eof-value)))
@@ -379,7 +379,7 @@
 
 (defun listen (&optional (stream *standard-input*))
   "Returns T if a character is availible on the given Stream."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (or (/= (the fixnum (lisp-stream-in-index stream)) in-buffer-length)
@@ -392,7 +392,7 @@
 				    (eof-errorp t) eof-value recursive-p)
   "Returns the next character from the Stream if one is availible, or nil."
   (declare (ignore recursive-p))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (if (funcall (lisp-stream-misc stream) stream :listen)
@@ -408,7 +408,7 @@
 
 (defun clear-input (&optional (stream *standard-input*))
   "Clears any buffered input associated with the Stream."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (setf (lisp-stream-in-index stream) in-buffer-length)
@@ -419,7 +419,7 @@
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (in-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (prepare-for-fast-read-byte stream
@@ -444,7 +444,7 @@
   (declare (type lisp-stream stream)
 	   (type index numbytes start)
 	   (type (or (simple-array * (*)) system-area-pointer) buffer))
-  (let* ((stream (stream-synonym-of stream lisp-stream))
+  (let* ((stream (in-synonym-of stream lisp-stream))
 	 (in-buffer (lisp-stream-in-buffer stream))
 	 (index (lisp-stream-in-index stream))
 	 (num-buffered (- in-buffer-length index)))
@@ -528,19 +528,19 @@
 
 (defun write-char (character &optional (stream *standard-output*))
   "Outputs the Character to the Stream."
-  (with-stream stream (lisp-stream-out character)
-	       (stream-write-char character))
+  (with-out-stream stream (lisp-stream-out character)
+		   (stream-write-char character))
   character)
 
 (defun terpri (&optional (stream *standard-output*))
   "Outputs a new line to the Stream."
-  (with-stream stream (lisp-stream-out #\newline) (stream-terpri))
+  (with-out-stream stream (lisp-stream-out #\newline) (stream-terpri))
   nil)
 
 (defun fresh-line (&optional (stream *standard-output*))
   "Outputs a new line to the Stream if it is not positioned at the begining of
    a line.  Returns T if it output a new line, nil otherwise."
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (out-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (when (/= (or (charpos stream) 1) 0)
@@ -557,7 +557,7 @@
 (defun write-string* (string &optional (stream *standard-output*)
 			     (start 0) (end (length (the vector string))))
   (declare (fixnum start end))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (out-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (if (array-header-p string)
@@ -578,15 +578,15 @@
 (defun write-line* (string &optional (stream *standard-output*)
 			   (start 0) (end (length string)))
   (declare (fixnum start end))
-  (let ((stream (stream-synonym-of stream)))
+  (let ((stream (out-synonym-of stream)))
     (etypecase stream
       (lisp-stream
        (if (array-header-p string)
 	   (with-array-data ((data string) (offset-start start)
 			     (offset-end end))
-	     (with-stream stream (lisp-stream-sout data offset-start
-						   offset-end)))
-	   (with-stream stream (lisp-stream-sout string start end)))
+	     (with-out-stream stream (lisp-stream-sout data offset-start
+						       offset-end)))
+	   (with-out-stream stream (lisp-stream-sout string start end)))
        (funcall (lisp-stream-out stream) stream #\newline))
       (fundamental-stream
        (stream-write-string stream string start end)
@@ -596,32 +596,36 @@
 (defun charpos (&optional (stream *standard-output*))
   "Returns the number of characters on the current line of output of the given
   Stream, or Nil if that information is not availible."
-  (with-stream stream (lisp-stream-misc :charpos) (stream-line-column)))
+  (with-out-stream stream (lisp-stream-misc :charpos) (stream-line-column)))
 
 (defun line-length (&optional (stream *standard-output*))
   "Returns the number of characters that will fit on a line of output on the
   given Stream, or Nil if that information is not available."
-  (with-stream stream (lisp-stream-misc :line-length) (stream-line-length)))
+  (with-out-stream stream (lisp-stream-misc :line-length)
+		   (stream-line-length)))
 
 (defun finish-output (&optional (stream *standard-output*))
   "Attempts to ensure that all output sent to the Stream has reached its
    destination, and only then returns."
-  (with-stream stream (lisp-stream-misc :finish-output) (stream-finish-output))
+  (with-out-stream stream (lisp-stream-misc :finish-output)
+		   (stream-finish-output))
   nil)
 
 (defun force-output (&optional (stream *standard-output*))
   "Attempts to force any buffered output to be sent."
-  (with-stream stream (lisp-stream-misc :force-output) (stream-force-output))
+  (with-out-stream stream (lisp-stream-misc :force-output)
+		   (stream-force-output))
   nil)
 
 (defun clear-output (&optional (stream *standard-output*))
   "Clears the given output Stream."
-  (with-stream stream (lisp-stream-misc :clear-output) (stream-force-output))
+  (with-out-stream stream (lisp-stream-misc :clear-output)
+		   (stream-force-output))
   nil)
 
 (defun write-byte (integer stream)
   "Outputs the Integer to the binary Stream."
-  (with-stream stream (lisp-stream-bout integer) (stream-write-byte))
+  (with-out-stream stream (lisp-stream-bout integer) (stream-write-byte))
   integer)
 
 ;;;; Broadcast streams:

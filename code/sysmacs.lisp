@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.18 1998/05/04 01:27:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.19 1998/05/05 00:14:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -88,10 +88,18 @@
        (error 'end-of-file :stream ,stream)
        ,eof-value))
 
-;;; This macros handle the special cases of t and nil for input and
+;;; These macros handle the special cases of t and nil for input and
 ;;; output streams.
 ;;;
-(defmacro stream-synonym-of (stream &optional check-type)
+(defmacro in-synonym-of (stream &optional check-type)
+  (let ((svar (gensym)))
+    `(let ((,svar ,stream))
+       (cond ((null ,svar) *standard-input*)
+	     ((eq ,svar t) *terminal-io*)
+	     (T ,@(if check-type `((check-type ,svar ,check-type)))
+		,svar)))))
+
+(defmacro out-synonym-of (stream &optional check-type)
   (let ((svar (gensym)))
     `(let ((,svar ,stream))
        (cond ((null ,svar) *standard-output*)
@@ -102,8 +110,19 @@
 ;;; With-Mumble-Stream calls the function in the given Slot of the Stream with
 ;;; the Args for lisp-streams or the pcl-fn for fundamental-streams.
 ;;;
-(defmacro with-stream (stream lisp-dispatch &optional pcl-dispatch)
-  `(let ((stream (stream-synonym-of ,stream)))
+(defmacro with-in-stream (stream lisp-dispatch &optional pcl-dispatch)
+  `(let ((stream (in-synonym-of ,stream)))
+    (etypecase stream
+      (lisp-stream
+       ,(destructuring-bind (slot &rest args) lisp-dispatch
+          `(funcall (,slot stream) stream ,@args)))
+      ,@(when pcl-dispatch
+          `((fundamental-stream
+	     ,(destructuring-bind (pcl-fn &rest args) pcl-dispatch
+	        `(,pcl-fn stream ,@args))))))))
+
+(defmacro with-out-stream (stream lisp-dispatch &optional pcl-dispatch)
+  `(let ((stream (out-synonym-of ,stream)))
     (etypecase stream
       (lisp-stream
        ,(destructuring-bind (slot &rest args) lisp-dispatch
@@ -122,7 +141,7 @@
 ;;; macro within the enclosed lexical scope.
 ;;;
 (defmacro prepare-for-fast-read-char (stream &body forms)
-  `(let* ((%frc-stream% (stream-synonym-of ,stream lisp-stream))
+  `(let* ((%frc-stream% (in-synonym-of ,stream lisp-stream))
 	  (%frc-method% (lisp-stream-in %frc-stream%))
 	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
 	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
@@ -162,7 +181,7 @@
 ;;; method.
 ;;;
 (defmacro prepare-for-fast-read-byte (stream &body forms)
-  `(let* ((%frc-stream% (stream-synonym-of ,stream lisp-stream))
+  `(let* ((%frc-stream% (in-synonym-of ,stream lisp-stream))
 	  (%frc-method% (lisp-stream-bin %frc-stream%))
 	  (%frc-buffer% (lisp-stream-in-buffer %frc-stream%))
 	  (%frc-index% (lisp-stream-in-index %frc-stream%)))
