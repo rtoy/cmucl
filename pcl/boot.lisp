@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.57 2003/05/18 18:09:31 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.58 2003/05/19 10:40:28 gerd Exp $")
 
 (in-package :pcl)
 
@@ -234,8 +234,7 @@ work during bootstrapping.
 			format-control format-arguments)
 		function-specifier))
 	     (duplicate-option (name)
-	       (loose "The option ~s appears more than once"
-		      name))
+	       (loose "The option ~s appears more than once" name))
 	     (check-declaration (declaration-specifiers)
 	       (loop for specifier in declaration-specifiers
 		     when (and (consp specifier)
@@ -245,6 +244,17 @@ work during bootstrapping.
 				       :test #'eq)) do
 		     (loose "Declaration specifier ~s is not allowed"
 			    specifier)))
+	     (check-argument-precedence-order (precedence)
+	       (let ((required (parse-lambda-list lambda-list)))
+		 (when (set-difference required precedence)
+		   (loose "Argument precedence order must list all ~
+                           required parameters and only those: ~s"
+			  precedence))
+		 (when (/= (length (remove-duplicates precedence))
+			   (length precedence))
+		   (loose "Duplicate parameter names in argument ~
+                           precedence order: ~s"
+			  precedence))))
 	     (initarg (key &optional (new nil new-supplied-p))
 	       (if new-supplied-p
 		   (setf (getf initargs key) new)
@@ -257,9 +267,10 @@ work during bootstrapping.
       (dolist (option options)
 	(case (car option)
 	  (:argument-precedence-order
-	   (if (initarg :argument-precedence-order)
-	       (duplicate-option :argument-precedence-order)
-	       (initarg :argument-precedence-order `',(cdr option))))
+	   (when (initarg :argument-precedence-order)
+	     (duplicate-option :argument-precedence-order))
+	   (check-argument-precedence-order (cdr option))
+	   (initarg :argument-precedence-order `',(cdr option)))
 	  (declare
 	   (check-declaration (cdr option))
 	   (initarg :declarations
