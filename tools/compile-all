@@ -2,7 +2,7 @@
 #
 #  compile-all -- script to compile everything
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.5 1992/02/06 01:28:33 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/compile-all,v 1.6 1992/02/25 00:14:32 wlott Exp $
 
 set features = ()
 set misfeatures = ()
@@ -75,7 +75,7 @@ Try these:
   -release	[alpha]
 	Which source tree to compile: alpha, exp/foo...
 
-  -lisp		[/afs/cs/misc/cmucl/@sys/<release>]
+  -lisp		[/afs/cs/misc/cmucl/@sys/<release> or /usr/misc/.cmucl/]
 	The directory to run Lisp out of.
 
   -core		[<lisp>/lib/lisp.core]
@@ -110,7 +110,13 @@ END_HELP
 	shift
 end
 
-if (! $?lispdir) set lispdir = /afs/cs/misc/cmucl/@sys/$subdir
+if (! $?lispdir) then
+	set lispdir = /afs/cs/misc/cmucl/@sys/$subdir
+	if (! -e $lispdir) then
+		echo "Release $subdir not installed; using /usr/misc/.cmucl"
+		set lispdir = /usr/misc/.cmucl
+	endif
+endif
 setenv CMUCLLIB "$lispdir/lib"
 set lisp = "$lispdir/bin/lisp$core"
 
@@ -166,8 +172,6 @@ endif
 if ($?LISP) then
 	echo "LISP environment variable override: $LISP"
 	set lisp = "$LISP"
-else
-	set lisp = lisp
 endif
 
 echo "Compiling setup and bootstrap ..."
