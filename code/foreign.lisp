@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.30 2000/04/19 11:33:13 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.31 2000/09/27 11:10:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -504,7 +504,7 @@ to skip undefined symbols which don't have an address."
 			output-file
 			symbol-table-file
 			(append (mapcar #'(lambda (name)
-					    (unix-namestring name nil))
+					    (unix-namestring name))
 					files)
 				libraries))
 		 :env env
@@ -634,7 +634,7 @@ to skip undefined symbols which don't have an address."
 			"-o"
 			output-file
 			(append (mapcar #'(lambda (name)
-					    (unix-namestring name nil))
+					    (unix-namestring name))
 					(if (atom files)
 					    (list files)
 					    files))
