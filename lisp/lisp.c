@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.45 2005/01/13 19:55:01 fgilham Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.46 2005/02/04 15:03:52 rtoy Exp $
  *
  */
 
@@ -465,7 +465,34 @@ int main(int argc, char *argv[], char *envp[])
                 fprintf(stderr, "-dynamic-space-size must be followed by the size to use in MBytes.\n");
                 exit(1);
 	      }
+#ifndef sparc
 	    dynamic_space_size = atoi(str) * 1024 * 1024;
+#else
+            {
+              int val;
+
+              /*
+               * Martin Rydstrom says core sizes that aren't a
+               * multiple of 8 MB eventually causes GC lossage with
+               * gencgc on Solaris 10.  No one seems to understand why
+               * that is, but it is.  So here we enforce the 8 MB
+               * boundary by rounding up the size.  We print a warning
+               * message if we do have to round.
+               *
+               * We do this for all versions, since it doesn't hurt
+               * other versions of Solaris.
+               */
+              val = atoi(str);
+              dynamic_space_size = (val + 7) & ~7;
+
+              if (val != dynamic_space_size)
+                {
+                  fprintf(stderr, "Note:  Rounding dynamic-space-size from %d MB to %d MB\n",
+                          val, dynamic_space_size);
+                }
+              dynamic_space_size *= 1024 * 1024;
+            }
+#endif
 	    if (dynamic_space_size > DYNAMIC_SPACE_SIZE)
 	      {
                 fprintf(stderr, "-dynamic-space-size must be no greater than %d MBytes.\n",
