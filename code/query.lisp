@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.2 1991/02/08 13:35:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/query.lisp,v 1.3 1991/02/14 19:03:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,24 +31,20 @@
 
 ;;; Y-OR-N-P  --  Public.
 ;;;
-;;; This prints the message, if any, and reads characters from *QUERY-IO* until
-;;; any of "y", "Y", or <newline> are seen as an affirmative, or either "n" or
-;;; "N" is seen as a negative answer.  It ignores preceding whitespace and asks
-;;; again if other characters are seen.
-;;;
 (defun y-or-n-p (&optional format-string &rest arguments)
-  "Y-OR-N-P prints the message, if any, and reads characters from
-   *QUERY-IO* until any of y, Y, or <newline> are seen as an 
-   affirmative, or either n or N is seen as a negative answer.
-   It ignores preceding whitespace and asks again if other characters
-   are seen."
+  "Y-OR-N-P prints the message, if any, and reads characters from *QUERY-IO*
+   until the user enters y or Y as an affirmative, or either n or N as a
+   negative answer.  It ignores preceding whitespace and asks again if you
+   enter any other characters."
   (when format-string
     (fresh-line *query-io*)
     (apply #'format *query-io* format-string arguments)
     (force-output *query-io*))
   (loop
     (let* ((line (query-readline))
-	   (ans (if (string= line "") :ignore-and-warn (schar line 0))))
+	   (ans (if (string= line "")
+		    #\? ;Force CASE below to issue instruction.
+		    (schar line 0))))
       (unless (whitespacep ans)
 	(case ans
 	  ((#\y #\Y) (return t))
