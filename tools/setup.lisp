@@ -124,9 +124,9 @@
 (defvar *log-file* nil)
 (defvar *last-file-position*)
 
-(defmacro with-compiler-log-file ((name) &body forms)
+(defmacro with-compiler-log-file ((name &rest wcu-keys) &body forms)
   `(if *interactive*
-       (with-compilation-unit ()
+       (with-compilation-unit (,@wcu-keys)
 	 ,@forms)
        (let ((*log-file* (open ,name :direction :output
 			       :if-exists :append
@@ -134,7 +134,7 @@
 	 (unwind-protect
 	     (let ((*error-output* *log-file*)
 		   (*last-file-position* (file-position *log-file*)))
-	       (with-compilation-unit ()
+	       (with-compilation-unit (,@wcu-keys)
 		 ,@forms))
 	   (close *log-file*)))))
 
