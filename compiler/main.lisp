@@ -12,6 +12,9 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "C")
+(in-package "EXTENSIONS")
+(export '(compile-from-stream))
+(in-package "C")
 
 (proclaim '(special *constants* *free-variables* *compile-component*
 		    *code-vector* *next-location* *result-fixups*
@@ -767,21 +770,30 @@
 	  (return (values nil nil t)))))))
 
 
-;;; Find-Source-Root  --  Interface
+;;; FIND-FILE-INFO  --  Interface
+;;;
+;;;    Return the File-Info describing the Index'th form.
+;;;
+(defun find-file-info (index info)
+  (declare (type index index) (type source-info info))
+  (dolist (file (source-info-files info))
+    (when (> (+ (length (file-info-forms file))
+		(file-info-source-root file))
+	     index)
+      (return file))))
+
+
+;;; FIND-SOURCE-ROOT  --  Interface
 ;;;
 ;;;    Return the Index'th source form read from Info and the position that it
 ;;; was read at.
 ;;;
 (defun find-source-root (index info)
-  (declare (type unsigned-byte index) (type source-info info))
-  (dolist (file (source-info-files info))
-    (let ((root (file-info-source-root file))
-	  (forms (file-info-forms file)))
-      (when (> (+ (length forms) root) index)
-	(let ((idx (- index root)))
-	  (return (values (aref forms idx)
-			  (aref (file-info-positions file) idx))))))))
-
+  (declare (type source-info info) (type index index))
+  (let* ((file (find-file-info index info))
+	 (idx (- index (file-info-source-root file))))
+    (values (aref (file-info-forms file) idx)
+	    (aref (file-info-positions file) idx))))
 
 ;;;; Top-level form processing:
 
@@ -1012,7 +1024,7 @@
 ;;; :NOTE or NIL to indicate the most severe kind of compiler diagnostic
 ;;; emitted.
 ;;;
-(defun sub-compile-file (info object)
+(defun sub-compile-file (info object &optional d-s-info)
   (declare (type source-info info) (type object object))
   (with-ir1-namespace
     (clear-stuff)
@@ -1057,7 +1069,7 @@
 	
 	(etypecase object
 	  (fasl-file (fasl-dump-source-info info object))
-	  (core-object (fix-core-source-info info object))
+	  (core-object (fix-core-source-info info object d-s-info))
 	  (null))
     
 	(cond ((> *compiler-error-count* start-errors) :error)
@@ -1092,9 +1104,8 @@
 			    ((:error-stream *compiler-error-output*)
 			     *error-output*)
 			    ((:trace-stream *compiler-trace-output*) nil)
-			    (defined-from-pathname nil)
-			    ((:block-compile *block-compile*) nil))
-  (declare (ignore defined-from-pathname))
+			    ((:block-compile *block-compile*) nil)
+			    source-info)
   "Similar to COMPILE-FILE, but compiles text from Stream into the current lisp
   environment.  Stream is closed when compilation is complete.  These keywords
   are supported:
@@ -1105,10 +1116,12 @@
       The stream that we write compiler trace output to, or NIL (the default)
       to inhibit trace output.
   :Block-Compile
-        If true, then function names will be resolved at compile time."
+        If true, then function names will be resolved at compile time.
+  :Source-Info
+        Some object to be placed in the DEBUG-SOURCE-INFO."
   (let ((info (make-stream-source-info stream)))
     (unwind-protect
-	(let ((won (sub-compile-file info (make-core-object))))
+	(let ((won (sub-compile-file info (make-core-object) source-info)))
 	  (values (not (null won))
 		  (if (member won '(:error :warning)) t nil)))
       (close-source-info info))))
@@ -1302,7 +1315,10 @@
 		 (node-cont (lambda-bind lambda))))))
       (setf (leaf-name fun) name)
       (let ((old (gethash name *free-functions*)))
-	(when old (substitute-leaf fun old)))
+	(when old
+	  (substitute-leaf-if #'(lambda (x)
+				  (not (eq (ref-inlinep x) :notinline)))
+			      fun old)))
       name)))
 
 
@@ -1356,9 +1372,9 @@
 		(compile-component component object)
 		(clear-ir2-info component))))
 	  
-	  (fix-core-source-info *source-info* object)
 	  (let* ((res (core-call-top-level-lambda lambda object))
 		 (return (or name res)))
+	    (fix-core-source-info *source-info* object res)
 	    (when name
 	      (setf (fdefinition name) res))
 	    
