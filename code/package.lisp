@@ -712,9 +712,14 @@
 (defun find-symbol-or-lose (symbol package)
   "Tries to find SYMBOL in PACKAGE, but signals a continuable error if
    it's not there."
-  (or (find-symbol symbol package)
-      (cerror "Ignore this symbol." "Can't find the symbol named ~S in ~S."
-	      symbol package)))
+  (multiple-value-bind (sym how)
+		       (find-symbol symbol package)
+    (cond ((not how)
+	   (cerror "INTERN this symbol."
+		   "Can't find the symbol named ~S in ~S."
+		   symbol package)
+	   (values (intern symbol package)))
+	  (t sym))))
 
 (defun stringify-symbols (symbols)
   "Takes a list of symbols and/or strings and returns a list of
