@@ -28,7 +28,7 @@
 ;;; DAMAGE.
 
 #+cmu
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.4 2003/04/06 09:10:09 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/rt/defclass.lisp,v 1.5 2003/04/07 11:13:17 gerd Exp $")
 
 (in-package "PCL-TEST")
 
@@ -185,6 +185,17 @@
 	(ignore-errors
 	  (defclass dfr0 (dfr1 dfr2) ())
 	  (defclass dfr1 (dfr3 dfr4) ())
+	  t)
+      (values r (null c)))
+  t t)
+
+(deftest defclass-forward-referenced-class.1
+    (multiple-value-bind (r c)
+	(ignore-errors
+	  (defclass dfr.c1 (dfr.c2) ())
+	  (defclass dfr.c2 (dfr.c3) ())
+	  (defclass dfr.c3 () ())
+	  (make-instance 'dfr.c1)
 	  t)
       (values r (null c)))
   t t)

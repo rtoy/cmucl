@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.50 2003/04/06 09:10:09 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.51 2003/04/07 11:13:18 gerd Exp $")
 
 (in-package :pcl)
 
@@ -786,35 +786,34 @@
 	(force-cache-flushes class))
       (setf (slot-value class 'class-precedence-list) cpl))
   (update-class-can-precede-p cpl))
-
+  
 (defun update-class-can-precede-p (cpl)
-  (when cpl
-    (let ((first (car cpl)))
-      (dolist (c (cdr cpl))
-	(pushnew c (slot-value first 'can-precede-list))))
-    (update-class-can-precede-p (cdr cpl))))
+  (loop for (class . rest) on cpl do
+	  (with-slots (can-precede-list) class
+	    (setq can-precede-list
+		  (union rest can-precede-list :test #'eq)))))
 
 (defun class-can-precede-p (class1 class2)
   (member class2 (class-can-precede-list class1)))
 
 (defun update-slots (class eslotds)
-  (let ((instance-slots ())
-	(class-slots    ()))
+  (ext:collect ((instance-slots) (class-slots))
     (dolist (eslotd eslotds)
       (ecase (slot-definition-allocation eslotd)
-	(:instance (push eslotd instance-slots))
-	(:class    (push eslotd class-slots))))
+	(:instance (instance-slots eslotd))
+	(:class (class-slots eslotd))))
     ;;
     ;; If there is a change in the shape of the instances then the
     ;; old class is now obsolete.
-    ;;
     (let* ((nlayout (mapcar #'slot-definition-name
-			    (sort instance-slots #'<
+			    (sort (instance-slots) #'<
 				  :key #'slot-definition-location)))
 	   (nslots (length nlayout))
-	   (nwrapper-class-slots (compute-class-slots class-slots))
-	   (owrapper (class-wrapper class))
-	   (olayout (and owrapper (wrapper-instance-slots-layout owrapper)))
+	   (nwrapper-class-slots (compute-class-slots (class-slots)))
+	   (owrapper (when (class-finalized-p class)
+		       (class-wrapper class)))
+	   (olayout (when owrapper
+		      (wrapper-instance-slots-layout owrapper)))
 	   (nwrapper
 	    (cond ((null owrapper)
 		   (make-wrapper nslots class))
@@ -836,18 +835,17 @@
 		   ;; state as the old wrapper.  We will then have to change
 		   ;; that.  This may seem like wasted work (it is), but the
 		   ;; spec requires that we call make-instances-obsolete.
-		   ;;
 		   (make-instances-obsolete class)
 		   (class-wrapper class)))))
 
-      (with-slots (wrapper slots) class
+      (with-slots (wrapper slots finalized-p) class
 	(update-lisp-class-layout class nwrapper)
 	(setf slots eslotds
 	      (wrapper-instance-slots-layout nwrapper) nlayout
 	      (wrapper-class-slots nwrapper) nwrapper-class-slots
 	      (wrapper-no-of-instance-slots nwrapper) nslots
-	      wrapper nwrapper))
-      (setf (slot-value class 'finalized-p) t)
+	      wrapper nwrapper
+	      finalized-p t))
 
       (unless (eq owrapper nwrapper)
 	(update-inline-access class)
