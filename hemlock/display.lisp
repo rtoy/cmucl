@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.4 1991/03/15 13:37:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.5 1991/03/15 22:23:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,31 +47,44 @@
 ;;; handling.  Routines such as INTERNAL-REDISPLAY don't want to worry about
 ;;; this since they are called from the input/event-handling loop.
 ;;;
+;;; We establish the REDISPLAY-CATCHER, and return T if any of the forms
+;;; returns true, otherwise NIL.  People throw :EDITOR-INPUT to indicate an
+;;; abort.  A return of T in effect indicates that redisplay should be called
+;;; again to make sure that it has converged.
+;;;
+;;; When we go to position the cursor, it is possible that we will find that it
+;;; doesn't lie within the window after all (due to buffer modifications during
+;;; output for previous redisplays.)  If so, we just make sure to return T.
+;;;
 (defmacro redisplay-loop ((win-var) general-form current-window-form
 			  &optional (afterp t))
-  (let ((device (gensym)) (point (gensym)) (hunk (gensym)))
-    `(catch 'redisplay-catcher
-       (when (listen-editor-input *real-editor-input*)
-	 (throw 'redisplay-catcher nil))
-       ,current-window-form
-       (dolist (,win-var *window-list*)
-	 (unless (eq ,win-var *current-window*)
-	   (when (listen-editor-input *real-editor-input*)
-	     (throw 'redisplay-catcher nil))
-	   ,general-form))
-       (let* ((,hunk (window-hunk *current-window*))
-	      (,device (device-hunk-device ,hunk))
-	      (,point (window-point *current-window*)))
-	 (move-mark ,point (buffer-point (window-buffer *current-window*)))
-	 (multiple-value-bind (x y) (mark-to-cursorpos ,point *current-window*)
-	   (when x
-	     (funcall (device-put-cursor ,device) ,hunk x y)))
-	 (when (device-force-output ,device)
-	   (funcall (device-force-output ,device)))
-	 ,@(if afterp
-	       `((when (device-after-redisplay ,device)
-		   (funcall (device-after-redisplay ,device) ,device))))
-	 t))))
+  (let ((device (gensym)) (point (gensym)) (hunk (gensym))
+	(n-res (gensym)))
+    `(let ((,n-res nil))
+       (catch 'redisplay-catcher
+	 (when (listen-editor-input *real-editor-input*)
+	   (throw 'redisplay-catcher :editor-input))
+	 (when ,current-window-form (setq ,n-res t))
+	 (dolist (,win-var *window-list*)
+	   (unless (eq ,win-var *current-window*)
+	     (when (listen-editor-input *real-editor-input*)
+	       (throw 'redisplay-catcher :editor-input))
+	     (when ,general-form (setq ,n-res t))))
+	 (let* ((,hunk (window-hunk *current-window*))
+		(,device (device-hunk-device ,hunk))
+		(,point (window-point *current-window*)))
+	   (move-mark ,point (buffer-point (window-buffer *current-window*)))
+	   (multiple-value-bind (x y)
+				(mark-to-cursorpos ,point *current-window*)
+	     (if x
+		 (funcall (device-put-cursor ,device) ,hunk x y)
+		 (setq ,n-res t)))
+	   (when (device-force-output ,device)
+	     (funcall (device-force-output ,device)))
+	   ,@(if afterp
+		 `((when (device-after-redisplay ,device)
+		     (funcall (device-after-redisplay ,device) ,device))))
+	   ,n-res)))))
 
 ) ;eval-when
 
@@ -90,8 +103,9 @@
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
   (cond (*screen-image-trashed*
-	 (setq *screen-image-trashed* nil)
-	 (redisplay-all))
+	 (when (eq (redisplay-all) t)
+	   (setq *screen-image-trashed* nil)
+	   t))
 	(t
 	 (redisplay-loop (w)
 	   (redisplay-window w)
@@ -103,7 +117,8 @@
 ;;;    Update the screen making no assumptions about what is on it.
 ;;; useful if the screen (or redisplay) gets trashed.  Since windows
 ;;; potentially may be on different devices, we have to go through the
-;;; list clearing all possible devices.
+;;; list clearing all possible devices.  Always returns T or :EDITOR-INPUT,
+;;; never NIL.
 ;;;
 (defun redisplay-all ()
   "An entry into redisplay; causes all windows to be fully refreshed."
@@ -125,8 +140,8 @@
       (maybe-recenter-window *current-window*)
       (funcall (device-dumb-redisplay
 		(device-hunk-device (window-hunk *current-window*)))
-	       *current-window*))))
-
+	       *current-window*)
+      t)))
 
 
 ;;;; Internal redisplay entry points.
@@ -138,13 +153,13 @@
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
   (cond (*screen-image-trashed*
-	 (setq *screen-image-trashed* nil)
-	 (redisplay-all))
+	 (when (eq (redisplay-all) t)
+	   (setq *screen-image-trashed* nil)
+	   t))
 	(t
 	 (redisplay-loop (w)
 	   (redisplay-window w)
-	   (redisplay-window-recentering *current-window*)
-	   nil))))
+	   (redisplay-window-recentering *current-window*)))))
 
 ;;; REDISPLAY-WINDOWS-FROM-MARK is called from the hemlock-output-stream
 ;;; methods to bring the screen up to date.  It only redisplays windows which
@@ -160,8 +175,9 @@
     (setq *things-to-do-once* nil))
   (cond ((listen-editor-input *real-editor-input*))
 	(*screen-image-trashed*
-	 (redisplay-all)
-	 (setq *screen-image-trashed* nil))
+	 (when (eq (redisplay-all) t)
+	   (setq *screen-image-trashed* nil)
+	   t))
 	(t
 	 (catch 'redisplay-catcher
 	   (let ((buffer (line-buffer (mark-line mark))))
@@ -181,20 +197,25 @@
 		       (redisplay-window window)
 		       (frob window)))))))))))
 
+;;; We return T if there are any changed lines, NIL otherwise.
+;;;
 (defun redisplay-window (window)
   "Maybe updates the window's image and calls the device's smart redisplay
    method.  NOTE: the smart redisplay method may throw to
    'hi::redisplay-catcher to abort redisplay."
   (maybe-update-window-image window)
-  (funcall (device-smart-redisplay (device-hunk-device (window-hunk window)))
-	   window))
+  (prog1
+      (not (eq (window-first-changed window) the-sentinel))
+    (funcall (device-smart-redisplay (device-hunk-device (window-hunk window)))
+	     window)))
 
 (defun redisplay-window-all (window)
   "Updates the window's image and calls the device's dumb redisplay method."
   (setf (window-tick window) (tick))
   (update-window-image window)
   (funcall (device-dumb-redisplay (device-hunk-device (window-hunk window)))
-	   window))
+	   window)
+  t)
 
 (defun random-typeout-redisplay (window)
   (catch 'redisplay-catcher
@@ -215,13 +236,17 @@
 ;;; if nothing happened, then the smart method shouldn't do anything anyway.
 ;;; NOTE: the smart redisplay method may throw to 'hi::redisplay-catcher to
 ;;; abort redisplay.
+;;;
+;;; We return T if there are any changed lines, NIL otherwise.
 ;;; 
 (defun redisplay-window-recentering (window)
   (setup-for-recentering-redisplay window)
   (invoke-hook ed::redisplay-hook window)
   (setup-for-recentering-redisplay window)
-  (funcall (device-smart-redisplay (device-hunk-device (window-hunk window)))
-	   window))
+  (prog1
+      (not (eq (window-first-changed window) the-sentinel))
+    (funcall (device-smart-redisplay (device-hunk-device (window-hunk window)))
+	     window)))
 
 (defun setup-for-recentering-redisplay (window)
   (let* ((display-start (window-display-start window))
