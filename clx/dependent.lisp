@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;; This file contains some of the system dependent code for CLX
 
@@ -32,7 +32,7 @@
 	  char->card8
 	  card8->char
 	  default-error-handler
-	  #-ansi-common-lisp define-condition))
+	  #-(ansi-common-lisp CMU) define-condition))
 
 #+explorer
 (zwei:define-indentation event-case (1 1))
@@ -832,10 +832,27 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or lispm excl lcl3.0)
+#-(or lispm excl lcl3.0 CMU)
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
+
+;;; HOLDING-LOCK for CMU Common Lisp.
+;;;
+;;; We are not multi-processing, but we use this macro to try to protect
+;;; against re-entering request functions.  This can happen if an interrupt
+;;; occurs and the handler attempts to use X over the same display connection.
+;;; This can happen if the GC hooks are used to notify the user over the same
+;;; display connection.  We lock out GC's just as a dummy check for our users.
+;;; Locking out interrupts has the problem that CLX always waits for replies
+;;; within this dynamic scope, so if the server cannot reply for some reason,
+;;; we potentially dead-lock without interrupts.
+;;;
+#+CMU
+(defmacro holding-lock ((locator display &optional whostate &key timeout)
+			&body body)
+  (declare (ignore locator display whostate timeout))
+  `(lisp::without-gcing (system:without-interrupts (progn ,@body))))
 
 #+Genera
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
@@ -1129,7 +1146,7 @@
 ;;; OPEN-X-STREAM - create a stream for communicating to the appropriate X
 ;;; server
 
-#-(or explorer Genera lucid kcl ibcl excl)
+#-(or explorer Genera lucid kcl ibcl excl CMU)
 (defun open-x-stream (host display protocol)
   host display protocol ;; unused
   (error "OPEN-X-STREAM not implemented yet."))
@@ -1230,6 +1247,20 @@
       (error "Failed to connect to server: ~A ~D" host display))
     fd))
 
+;;; OPEN-X-STREAM -- for CMU Common Lisp.
+;;;
+;;; The file descriptor here just gets tossed into the stream slot of the
+;;; display object instead of a stream.
+;;;
+#+CMU
+(defun open-x-stream (host display protocol)
+  (declare (ignore protocol))
+  (let ((server-fd (connect-to-server host display)))
+    (unless (plusp server-fd)
+      (error "Failed to connect to X11 server: ~A (display ~D)" host display))
+    server-fd))
+
+
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
 
 #+(or Genera explorer)
@@ -1311,6 +1342,136 @@
 		  (return t)
 		  (setf (aref vector index) (the card8 c)))))))))
 
+;;;
+;;; BUFFER-READ-DEFAULT for CMU Common Lisp.
+;;;
+
+;;; Jim Healy comments:
+;;;
+;;; I don't know if all this buffering is necessary, but I think that other CLX
+;;; code and buffer-read-default should be redefined so that it can return the
+;;; actual number read.  Then we could read into the passed array directly
+;;; without fear (assuming the higher-level routines are used appropriately).
+;;; Although I guess there wouldn't be a problem if BSD 4.3 let you see how
+;;; many characters were on a socket without reading.
+;;;
+;;; I believe that the vector we write into expects numbers for the bytes.
+;;;
+;;; The BUFFER defstruct in depdefs.lisp was changed to include an internal
+;;; buffer.  (used here only).  It's not circular; byte 0 is in byte 0.
+;;;
+;;; Timeout, when non-nil, is in seconds. (can it be a float?)  Null timeout
+;;; means don't come back until you're done.  Returns non-nil if EOF
+;;; encountered Returns :TIMEOUT when timeout exceeeded.
+
+;;; Bill Chiles comments:
+;;;
+;;; I think we can do away with the alien stuff and read into an array of
+;;; unsigned-byte eight.  We might even be able to read directly into the
+;;; CLX buffer.  I don't know why Healy is going to all this trouble, but
+;;; I'll save worrying about this until we get this stuff up under the new
+;;; compiler.
+;;;
+
+#+CMU
+(extensions::def-c-array clx-buff (unsigned-byte 8))
+
+#+CMU
+(defun buffer-to-byte-array (display array start length)
+  (system::alien-bind ((buffer (display-internal-buffer display) clx-buff t))
+    (let ((ilength (display-internal-buffer-length display)))
+      (dotimes (i length)
+	(setf (aref (the buffer-bytes array) (+ i start))
+	      (system::alien-access (clx-buff-ref (system::alien-value buffer)
+						  i))))
+      (setf (display-internal-buffer-length display)
+	    (- ilength length))
+      (dotimes (i (- ilength length))
+	(setf (system::alien-access (clx-buff-ref (system::alien-value buffer)
+						  (+ i length)))
+	      (system::alien-access (clx-buff-ref (system::alien-value buffer) 
+						  i)))))))
+#+CMU
+(defun verify-internal-buffer-size (display size)
+  (let ((length (display-internal-buffer-length display))
+	(buffer (display-internal-buffer display)))
+    (cond ((null buffer)
+	   (setf (display-internal-buffer display)
+		 (setq buffer (make-clx-buff (max size 4096)))))
+	  ((< (system::alien-size buffer) size)
+	   (system::alien-bind ((new (make-clx-buff size) clx-buff t)
+				(buffer buffer clx-buff))
+	     (dotimes (i length)
+	       (setf (system::alien-access 
+		       (clx-buff-ref (system::alien-value new) i))
+		     (system::alien-access 
+		       (clx-buff-ref (system::alien-value buffer) i))))
+	     (system:dispose-alien buffer)
+	     (setf (display-internal-buffer display)
+		   (system::alien-value new)))))))
+ 
+#+CMU   
+(defun read-into-ibuff (display number)
+  (lisp::alien-bind ((ibuff (display-internal-buffer display) clx-buff t))
+    (let ((ilength (display-internal-buffer-length display)))
+      (multiple-value-bind (length err)
+	  (mach:unix-read (display-input-stream display) 
+			  (system::alien-sap 
+			    (clx-buff-ref (system::alien-value ibuff) ilength))
+			  number)
+	(when length
+	  (setf (display-internal-buffer-length display)
+		(setq ilength (+ ilength length))))
+	(values length err)))))
+
+#+CMU
+(defun buffer-read-default (display vector start end timeout)
+  (declare (type display display)
+	   (type buffer-bytes vector)
+	   (type array-index start end)
+	   (type (or null number) timeout))
+  #.(declare-buffun)
+  (let* ((fd (display-input-stream display))
+	 (wanted (- end start)))
+    (verify-internal-buffer-size display wanted)
+    (let ((saved (display-internal-buffer-length display)))
+      (when (>= saved wanted)
+	(buffer-to-byte-array display vector start wanted)
+	(return-from buffer-read-default nil))
+      (let ((endtime (when (and timeout (not (zerop timeout)))
+		       (+ (get-internal-real-time)
+			  (truncate (* timeout
+				       internal-time-units-per-second)))))
+	    (needed (- wanted saved)))
+	(loop
+	  (let ((available-p
+		  (cond ((and timeout (zerop timeout))
+			 (mach::unix-select (1+ fd) (ash 1 fd) 0 0 0))
+			(timeout
+			  (let ((remaining (- endtime (get-internal-real-time))))
+			    (when (minusp remaining) (return :TIMEOUT))
+			    (multiple-value-bind (secs rem)
+				(truncate remaining
+					  internal-time-units-per-second)
+			      (let ((msecs (truncate (* 1000000 rem))))
+				(mach::unix-select (1+ fd) (ash 1 fd) 0 0
+						   secs msecs)))))
+			(t (mach::unix-select (1+ fd) (ash 1 fd) 0 0 nil)))))
+	    
+	    (when (not (zerop available-p))
+	      (multiple-value-bind (length err) (read-into-ibuff display needed)
+		(cond ((null length)
+		       (error "CLX read err: ~A" (mach:get-unix-error-msg err)))
+		      ((zerop length) 
+		       (return :EOF))
+		      (t (cond ((= length needed)
+				(buffer-to-byte-array display vector
+						      start wanted)
+				(return nil))
+			       (t (setq needed (- needed length))))))))
+	    (when (and timeout (zerop timeout))
+	      (return :timeout))))))))
+
 
 
 ;;; WARNING:
@@ -1318,7 +1479,7 @@
 ;;;	receiving all data from the X Window System server.
 ;;;	You are encouraged to write a specialized version of
 ;;;	buffer-read-default that does block transfers.
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defun buffer-read-default (display vector start end timeout)
   (declare (type display display)
 	   (type buffer-bytes vector)
@@ -1386,7 +1547,7 @@
 ;;;	You are STRONGLY encouraged to write a specialized version
 ;;;	of buffer-write-default that does block transfers.
 
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defun buffer-write-default (vector display start end)
   ;; The default buffer write function for use with common-lisp streams
   (declare (type buffer-bytes vector)
@@ -1402,6 +1563,22 @@
 	  (declare (type array-index index))
 	  (write-byte (aref vector index) stream))))))
 
+#+CMU
+(defun buffer-write-default (vector display start end)
+  (declare (type buffer-bytes vector)
+	   (type display display)
+	   (type array-index start end))
+  #.(declare-buffun)
+  (multiple-value-bind (length error-number)
+		       (mach:unix-write (display-output-stream display)
+					vector start end)
+    (cond ((null length)
+	   ;; This error possibly should go through the CLX error system.
+	   (error "Can't write to server: ~A"
+		  (mach:get-unix-error-msg error-number)))
+	  (t nil))))
+
+
 ;;; buffer-force-output-default - force output to the X stream
 
 #+excl
@@ -1409,7 +1586,12 @@
   ;; buffer-write-default does the actual writing.
   (declare (ignore display)))
 
-#-excl
+#+CMU
+(defun buffer-force-output-default (display)
+  (declare (type display display))
+  (mach:unix-ioctl (display-output-stream display) mach:tiocflush 0))
+
+#-(or excl CMU)
 (defun buffer-force-output-default (display)
   ;; The default buffer force-output function for use with common-lisp streams
   (declare (type display display))
@@ -1428,7 +1610,14 @@
   #.(declare-buffun)
   (excl::filesys-checking-close (display-output-stream display)))
 
-#-excl
+#+CMU
+(defun buffer-close-default (display &key abort)
+  (declare (type display display) (ignore abort))
+  #.(declare-buffun)
+  (mach:unix-ioctl (display-output-stream display) mach:tiocflush 0)
+  (mach:unix-close (display-output-stream display)))
+
+#-(or excl CMU)
 (defun buffer-close-default (display &key abort)
   ;; The default buffer close function for use with common-lisp streams
   (declare (type display display))
@@ -1446,10 +1635,10 @@
 ;;; The default implementation
 
 ;; Poll for input every *buffer-read-polling-time* SECONDS.
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defparameter *buffer-read-polling-time* 0.5)
 
-#-(or Genera explorer excl lcl3.0)
+#-(or Genera explorer excl lcl3.0 CMU)
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
 	   (type (or null number) timeout))
@@ -1472,6 +1661,24 @@
 	       (when (listen stream)		; and listen one last time
 		 (return-from buffer-input-wait-default nil)))
 	     :timeout)))))
+
+#+CMU
+(defun buffer-input-wait-default (display timeout)
+  (declare (type display display)
+	   (type (or null number) timeout))
+  (declare (values timeout))
+  (let ((fd (display-input-stream display)))
+    (cond ((null fd))
+	  ((or (null timeout) (= timeout 0))
+	   (if (zerop (mach::unix-select (1+ fd) (ash 1 fd) 0 0 timeout))
+	       :timeout
+	       nil))
+	  (t
+	   (multiple-value-bind (secs rem) (truncate timeout)
+	     (let ((usecs (truncate (* 1000000 rem))))
+	       (if (zerop (mach::unix-select (1+ fd) (ash 1 fd) 0 0 secs usecs))
+		   :timeout
+		   nil)))))))
 
 #+Genera
 (defun buffer-input-wait-default (display timeout)
@@ -1596,7 +1803,7 @@
 ;;; buffer. This should never block, so it can be called from the scheduler.
 
 ;;; The default implementation is to just use listen.
-#-excl
+#-(or excl CMU)
 (defun buffer-listen-default (display)
   (declare (type display display))
   (let ((stream (display-input-stream display)))
@@ -1604,6 +1811,11 @@
     (if (null stream)
 	t
       (listen stream))))
+
+#+CMU
+(defun buffer-listen-default (display)
+  (declare (type display display))
+  (not (buffer-input-wait-default display 0)))
 
 #+excl 
 (defun buffer-listen-default (display)
@@ -1899,12 +2111,40 @@
   (declare (dynamic-extent keyargs))
   (apply #'cerror proceed-format-string condition keyargs))
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+;;; X-ERROR for CMU Common Lisp
+;;;
+;;; We detect a couple condition types for which we disable event handling in
+;;; our system.  This prevents going into the debugger or returning to a
+;;; command prompt with CLX repeatedly seeing the same condition.  This occurs
+;;; because CMU Common Lisp provides for all events (that is, X, input on file
+;;; descriptors, Mach messages, etc.) to come through one routine anyone can
+;;; use to wait for input.
+;;;
+#+CMU
+(defun x-error (condition &rest keyargs)
+  (let ((condx (apply #'make-condition condition keyargs)))
+    #|This condition no longer exists.
+    (when (eq condition 'server-disconnect)
+      (let ((disp (server-disconnect-display condx)))
+	(warn "Disabled event handling on ~S." disp)
+	(ext::disable-clx-event-handling disp)))|#
+    (when (eq condition 'closed-display)
+      (let ((disp (closed-display-display condx)))
+	(warn "Disabled event handling on ~S." disp)
+	(ext::disable-clx-event-handling disp)))
+    (error condx)))
+
+#+CMU
+(defun x-cerror (proceed-format-string condition &rest keyargs)
+  (apply #'cerror proceed-format-string condition keyargs))
+
+
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun x-error (condition &rest keyargs)
   (error "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (cerror proceed-format-string "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
@@ -1971,18 +2211,18 @@
 (sys:defmethod (dbg:document-proceed-type x-error :continue) (stream)
   (format stream continue-format-string))
 
-#+(or ansi-common-lisp excl lcl3.0)
+#+(or ansi-common-lisp excl lcl3.0 CMU)
 (define-condition x-error (error))
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defstruct x-error
   report-function)
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun reporter-for-condition (name)
   (xintern "." name '-reporter.))
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defmacro define-condition (name parents &body options)
   ;; Define a structure that when printed displays an error message
   (let ((slots (pop options))
@@ -2013,7 +2253,7 @@
 	     ,condition))
        ',name)))
 
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun condition-print (condition stream depth)
   (declare (type x-error condition)
 	   (type stream stream)
@@ -2023,7 +2263,7 @@
     (funcall (x-error-report-function condition) condition stream))
   condition)
   
-#-(or lispm ansi-common-lisp excl lcl3.0)
+#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
 (defun make-condition (type &rest slot-initializations)
   (declare (dynamic-extent slot-initializations))
   (let ((make-function (intern (concatenate 'string (string 'make-) (string type))
@@ -2166,7 +2406,8 @@
 ;;; a resource manager isn't running.
 
 (defun default-resources-pathname ()
-  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
+  (when #+(or unix mach) t
+        #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
     (merge-pathnames (user-homedir-pathname) (pathname ".Xdefaults"))))
 
 
@@ -2175,11 +2416,13 @@
 ;;; defaults have been loaded.
 
 (defun resources-pathname ()
-  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
-    (or #+(or excl lcl3.0)
-	(let ((string (#+excl sys:getenv
-		       #+lcl3.0 lcl:environment-variable
-		       "XENVIRONMENT")))
+  (when #+(or unix mach) t
+        #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
+    (or #+(or excl lcl3.0 CMU)
+	(let ((string #-CMU (#+excl sys:getenv
+				    #+lcl3.0 lcl:environment-variable
+				    "XENVIRONMENT")
+		      #+CMU (cdr (assoc :xenvironment ext:*environment-list*))))
 	  (when string
 	    (pathname string)))
 	(merge-pathnames
