@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.4 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.5 2000/01/17 16:42:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,16 +207,16 @@
 
 ;;; Shifting
 
-(define-vop (fast-ash)
+(define-vop (fast-ash/unsigned=>unsigned)
   (:policy :fast-safe)
   (:translate ash)
   (:note "inline word ASH")
-  (:args (number :scs (signed-reg unsigned-reg))
+  (:args (number :scs (unsigned-reg))
 	 (count :scs (signed-reg)))
-  (:arg-types (:or signed-num unsigned-num) tagged-num)
+  (:arg-types unsigned-num tagged-num)
   (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:generator 8
     (inst comb :>= count zero-tn positive :nullify t)
     (inst sub zero-tn count temp)
@@ -232,21 +232,64 @@
     (inst zdep number :variable 32 result)
     DONE))
 
-(define-vop (fast-ash-c)
+(define-vop (fast-ash/signed=>signed)
+  (:policy :fast-safe)
+  (:translate ash)
+  (:note "inline word ASH")
+  (:args (number :scs (signed-reg))
+	 (count :scs (signed-reg)))
+  (:arg-types signed-num tagged-num)
+  (:temporary (:scs (unsigned-reg) :to (:result 0)) temp)
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:generator 8
+    (inst comb :>= count zero-tn positive :nullify t)
+    (inst sub zero-tn count temp)
+    (inst comiclr 31 temp zero-tn :>=)
+    (inst li 31 temp)
+    (inst mtctl temp :sar)
+    (inst extrs number 0 1 temp)
+    (inst b done)
+    (inst shd temp number :variable result)
+    POSITIVE
+    (inst subi 31 count temp)
+    (inst mtctl temp :sar)
+    (inst zdep number :variable 32 result)
+    DONE))
+
+(define-vop (fast-ash-c/unsigned=>unsigned)
   (:policy :fast-safe)
   (:translate ash)
   (:note nil)
-  (:args (number :scs (signed-reg unsigned-reg)))
+  (:args (number :scs (unsigned-reg)))
   (:info count)
-  (:arg-types (:or signed-num unsigned-num) (:constant integer))
-  (:results (result :scs (signed-reg unsigned-reg)))
-  (:result-types (:or signed-num unsigned-num))
+  (:arg-types unsigned-num (:constant integer))
+  (:results (result :scs (unsigned-reg)))
+  (:result-types unsigned-num)
   (:generator 1
     (cond ((< count 0)
 	   ;; It is a right shift.
-	   (sc-case number
-	     (signed-reg (inst sra number (min (- count) 31) result))
-	     (unsigned-reg (inst srl number (min (- count) 31) result))))
+	   (inst srl number (min (- count) 31) result))
+	  ((> count 0)
+	   ;; It is a left shift.
+	   (inst sll number (min count 31) result))
+	  (t
+	   ;; Count=0?  Shouldn't happen, but it's easy:
+	   (move number result)))))
+
+(define-vop (fast-ash-c/signed=>signed)
+  (:policy :fast-safe)
+  (:translate ash)
+  (:note nil)
+  (:args (number :scs (signed-reg)))
+  (:info count)
+  (:arg-types signed-num (:constant integer))
+  (:results (result :scs (signed-reg)))
+  (:result-types signed-num)
+  (:generator 1
+    (cond ((< count 0)
+	   ;; It is a right shift.
+	   (inst sra number (min (- count) 31) result))
 	  ((> count 0)
 	   ;; It is a left shift.
 	   (inst sll number (min count 31) result))
