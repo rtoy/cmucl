@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.5 1990/03/21 23:22:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.6 1990/03/29 21:34:15 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -15,6 +15,26 @@
 ;;;
 (in-package "C")
 
+
+;;;; Allocator for the array header.
+
+(define-vop (make-array-header)
+  (:args (type :scs (any-reg descriptor-reg))
+	 (rank :scs (any-reg descriptor-reg)))
+  (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:results (result :scs (descriptor-reg)))
+  (:generator 0
+    (pseudo-atomic (ndescr)
+      (inst addiu header alloc-tn vm:other-pointer-type)
+      (inst addiu alloc-tn alloc-tn
+	    (* vm:array-dimensions-offset vm:word-bytes))
+      (inst addu alloc-tn alloc-tn rank)
+      (inst sll ndescr rank vm:type-bits)
+      (inst or ndescr ndescr type)
+      (inst srl ndescr ndescr 2)
+      (storew ndescr header 0 vm:other-pointer-type))
+    (move result header)))
 
 
 ;;;; Additional accessors and setters for the array header.
@@ -143,6 +163,17 @@
 (def-data-vector-frobs simple-array-unsigned-byte-32 word-index
   unsigned-32-reg)
 |#
+
+
+
+(define-vop (raw-bits halfword-index-ref)
+  (:translate %raw-bits)
+  (:variant 1 vm:other-pointer-type))
+
+(define-vop (set-raw-bits halfword-index-set)
+  (:translate (setf %raw-bits))
+  (:variant 1 vm:other-pointer-type))
+
 
 
 
