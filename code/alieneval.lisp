@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.20 1992/03/04 09:05:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.21 1992/03/04 17:50:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,16 +19,16 @@
 (use-package "SYSTEM")
 
 (export '(alien * array struct union enum function integer signed unsigned
-	  boolean values single-float double-float
+	  boolean values single-float double-float system-area-pointer
 	  def-alien-type def-alien-variable sap-alien
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
-	  alien-funcall def-alien-routine))
+	  alien-funcall def-alien-routine make-alien free-alien))
 
 (in-package "ALIEN-INTERNALS")
 (in-package "ALIEN")
 
-(export '(alien alien-value parse-alien-type unparse-alien-type
-	  alien-type-= alien-subtype-p alien-typep
+(export '(alien alien-value alien-value-type parse-alien-type
+	  unparse-alien-type alien-type-= alien-subtype-p alien-typep
 
 	  def-alien-type-class def-alien-type-translator def-alien-type-method
 	  invoke-alien-type-method
@@ -1321,7 +1321,7 @@
 (defun %print-alien-value (value stream depth)
   (declare (ignore depth))
   (print-unreadable-object (value stream)
-    (funcall (formatter "Alien-Value of type ~S: #x~8,'0X")
+    (funcall (formatter "Alien ~S at #x~8,'0X")
 	     stream 
 	     (unparse-alien-type (alien-value-type value))
 	     (sap-int (alien-value-sap value)))))
@@ -1351,9 +1351,11 @@
 (defmacro make-alien (type &optional size)
   "Allocate an alien of type TYPE and return an alien pointer to it.  If SIZE
    is supplied, how it is interpreted depends on TYPE.  If TYPE is an array
-   type, SIZE is used as the first dimension for the allocated array.  If
-   TYPE is not an array, then SIZE is the number of elements to allocate."
-  (let ((alien-type (parse-alien-type type)))
+   type, SIZE is used as the first dimension for the allocated array.  If TYPE
+   is not an array, then SIZE is the number of elements to allocate.  The
+   memory is allocated using ``malloc'', so it can be passed to foreign
+   functions which use ``free''."
+  (let ((alien-type (if (alien-type-p type) type (parse-alien-type type))))
     (multiple-value-bind
 	(size-expr element-type)
 	(if (alien-array-type-p alien-type)
@@ -1390,17 +1392,18 @@
 ;;; area pointer to it.
 ;;;
 (defun %make-alien (bits)
-  (declare (ignore bits))
-  nil)
+  (declare (type kernel:index bits) (optimize-interface (safety 2)))
+  (alien-funcall (extern-alien "malloc" (function system-area-pointer unsigned))
+		 (ash (the kernel:index (+ bits 7)) -3)))
 
 ;;; FREE-ALIEN -- public
 ;;;
 (defun free-alien (alien)
   "Dispose of the storage pointed to by ALIEN.  ALIEN must have been allocated
-   by MAKE-ALIEN."
-  (let ((sap (alien-sap alien)))
-    (declare (ignore sap))
-    nil))
+   by MAKE-ALIEN or ``malloc''."
+  (alien-funcall (extern-alien "free" (function (values) system-area-pointer))
+		 (alien-sap alien))
+  nil))
 
 
 ;;;; The SLOT operator
@@ -1598,7 +1601,6 @@
 
 (defun make-local-alien (info)
   (let ((alien (eval `(make-alien ,(local-alien-info-type info)))))
-    #+nil
     (finalize info #'(lambda () (free-alien alien)))
     alien))
 
@@ -1687,6 +1689,7 @@
 (defun %cast (alien target-type)
   (declare (type alien-value alien)
 	   (type alien-type target-type)
+	   (optimize-interface (safety 2))
 	   (optimize (inhibit-warnings 3)))
   (if (or (alien-pointer-type-p target-type)
 	  (alien-array-type-p target-type)
