@@ -8,7 +8,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.3 1990/07/02 04:36:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.1.1.4 1990/07/13 20:38:56 wlott Exp $
 ;;;
 ;;; Dump the current lisp image into a core file.  All the real work is done
 ;;; be C.
@@ -129,7 +129,6 @@
     (funcall init-function)))
 
 
-
 (defun print-herald ()
   (macrolet ((frob (variable)
 	       `(if (boundp ',variable)
@@ -145,3 +144,15 @@
     (write-line (frob compiler-version))
     (write-line "Send bug reports and questions to Gripe."))
   (values))
+
+
+;;;; Random functions used by worldload.
+
+(defun assert-user-package ()
+  (unless (eq *package* (find-package "USER"))
+    (error "Change *PACKAGE* to the USER package and try again.")))
+
+(defun initial-init-function ()
+  (gc-on)
+  (throw 'top-level-catcher nil))
+
