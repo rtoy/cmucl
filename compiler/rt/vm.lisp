@@ -42,7 +42,8 @@
 							 "-SC-NUMBER"))))
 		(list* `(define-storage-class ,sc-name ,index
 			  ,@(cdr class))
-		       `(defconstant ,constant-name ,index)
+		       `(eval-when (compile load eval)
+			  (defconstant ,constant-name ,index))
 		       `(export ',constant-name)
 		       forms)))
        (index 0 (1+ index))
@@ -77,8 +78,9 @@
   ;; Immediate descriptor objects.  Don't have to be seen by GC, but nothing
   ;; bad will happen if they are.  (fixnums, characters, header values, etc).
   (any-reg registers
-   :locations (0 2 3 4 9 10 11 12 13 14)
+   :locations (9 10 11 12 13 14 0 2 3 4)
    :constant-scs (immediate)
+   :reserve-locations (0 2 3 4)
    :save-p t
    :alternate-scs (control-stack))
 
@@ -185,6 +187,15 @@
   (catch-block control-stack :element-size vm:catch-block-size))
 
 
+(export '(single-reg-sc-number double-reg-sc-number))
+(defconstant single-reg-sc-number
+  (list mc68881-single-reg-sc-number
+	FPA-single-reg-sc-number
+	AFPA-single-reg-sc-number))
+(defconstant double-reg-sc-number
+  (list mc68881-double-reg-sc-number
+	FPA-double-reg-sc-number
+	AFPA-double-reg-sc-number))
 
 
 ;;;; Primitive Type Definitions
@@ -422,7 +433,8 @@
 	     (return (values *any-primitive-type* nil))))))
       (named-type
        (case (named-type-name type)
-	 ((t bignum ratio complex function system-area-pointer weak-pointer)
+	 ((t bignum ratio complex function system-area-pointer weak-pointer
+	     structure)
 	  (values (primitive-type-or-lose (named-type-name type)) t))
 	 ((character base-character string-char)
 	  (exactly base-character))
