@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.25 1994/11/01 19:35:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.26 1994/11/06 19:48:24 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,8 +91,8 @@
 
   (setf (search-list "library:")
 	(or (parse-unix-search-list :cmucllib)
-	    '(#-mach "/usr/misc/.cmucl/lib/"
-	      #+mach "/usr/local/lib/cmucl/lib/"))))
+	    '(#+mach "/usr/misc/.cmucl/lib/"
+	      #-mach "/usr/local/lib/cmucl/lib/"))))
 
 
 
