@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.37 1999/02/11 12:24:30 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.38 1999/04/10 15:05:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -959,7 +959,7 @@ a host-structure or string."
 	     (wild-pathname-p pathname :type)
 	     (wild-pathname-p pathname :version)))
 	(:host (frob (%pathname-host pathname)))
-	(:device (frob (%pathname-host pathname)))
+	(:device (frob (%pathname-device pathname)))
 	(:directory (some #'frob (%pathname-directory pathname)))
 	(:name (frob (%pathname-name pathname)))
 	(:type (frob (%pathname-type pathname)))
