@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.35 1991/11/26 15:37:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.36 1991/11/27 19:24:58 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,11 +161,11 @@
 	     (vop value-cell-ref node block tn res)
 	     (emit-move node block tn res))))
       (constant
-       (if (and name
-		(typecase (constant-value leaf)
-		  ((or number character) t)
-		  (symbol (symbol-package (constant-value leaf)))
-		  (t t)))
+       (if (or (null name)
+	       (typecase (constant-value leaf)
+		 ((or number character) t)
+		 (symbol (symbol-package (constant-value leaf)))
+		 (t t)))
 	   (emit-move node block (constant-tn leaf) res)
 	   (let ((name-tn (emit-constant name)))
 	     (if (policy node (zerop safety))
