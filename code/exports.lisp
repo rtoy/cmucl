@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.43 1990/07/13 11:57:45 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.44 1990/07/13 13:44:18 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -274,7 +274,9 @@
 	  %sxhash-simple-substring *empty-type* *eval-stack-top*
 	  *null-type* *universal-type* *unparse-function-type-simplify*
 	  *wild-type* 32bit-logical-not 32bit-logical-nor 32bit-logical-and
-	  32bit-logical-or 32bit-logical-xor always-subtypep args-type
+	  32bit-logical-or 32bit-logical-xor 32bit-logical-eqv
+	  32bit-logical-nand 32bit-logical-andc1 32bit-logical-andc2
+	  32bit-logical-orc1 32bit-logical-orc2 always-subtypep args-type
 	  args-type-allowp args-type-keyp args-type-keywords
 	  args-type-optional args-type-p args-type-required args-type-rest
 	  array-rank array-total-size array-type array-type-complexp
