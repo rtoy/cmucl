@@ -32,7 +32,8 @@
   (set variable
        (%primitive make-other-immediate-type
 		   0
-		   vm:unbound-marker-type)))
+		   vm:unbound-marker-type))
+  variable)
 
 (defun symbol-value (variable)
   "VARIABLE must evaluate to a symbol.  This symbol's current special
