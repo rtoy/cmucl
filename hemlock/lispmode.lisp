@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.8 1998/04/10 11:14:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.9 1998/09/05 23:21:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -889,6 +889,7 @@
 (defindent "with-open-file" 1)
 (defindent "with-open-stream" 1)
 (defindent "with-output-to-string" 1)
+(defindent "with-package-iterator" 1)
 
 ;;; Error/condition system forms.
 ;;; 
@@ -989,6 +990,9 @@
 ;;; Multiprocessing forms.
 (defindent "with-lock-held" 1)
 (defindent "process-wait" 1)
+
+;;; Alien forms.
+(defindent "with-alien" 1)
 
 
 ;;;; Indentation.
