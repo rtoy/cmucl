@@ -676,6 +676,57 @@ been exceeded, and only then does a garbage collection.
   side-effect, and the functions take no arguments.
 \end{defvar}
 
+\subsection{Generational GC}
+Generational GC also supports some additional functions and variables
+to control it.
+
+\begin{defun}[-gencgc]{extensions:}{gc}{\args{\keys{\kwd{verbose} \kwd{gen} \kwd{full}}}}
+  
+  This function runs the garbage collector.  If
+  \code{ext:*gc-verbose*} is non-\nil, then it invokes
+  \code{ext:*gc-notify-before*} before GC'ing and
+  \code{ext:*gc-notify-after*} afterwards.
+
+  \begin{Lentry}
+  \item[\code{verbose}] Print GC statistics if non-\code{NIL}.
+  \item[\code{gen}] The number of generations to be collected.
+  \item[\code{full}] If non-\code{NIL}, a full collection of all
+    generations is performed.
+  \end{Lentry}
+\end{defun}
+
+\begin{defun}{lisp::}{gencgc-stats}{\args{\var{generation}}}
+  Returns statistics about the generation, as multiple values:
+  \begin{enumerate}
+  \item Bytes allocated in this generation
+  \item The GC trigger for this generation.  When this many bytes have
+    been allocated, a GC is started automatically.
+  \item The number of bytes consed between GCs.
+  \item The number of GCs that have been done on this generation.
+    This is reset to zero when the generation is raised.
+  \item The trigger age, which is the maximum number of GCs to perform
+    before this generation is raised.
+  \item The total number of bytes allocated to this generation.
+  \item Average age of the objects in this generations.  The average
+    age is the cumulative bytes allocated divided by current number of
+    bytes allocated.
+  \end{enumerate}
+\end{defun}
+
+\begin{defun}{lisp::}{set-gc-trigger}{\args{\var{gen} \var{trigger}}}
+  Sets the GC trigger value for the specified generation.
+\end{defun}
+
+\begin{defun}{lisp::}{set-trigger-age}{\args{\var{gen} \var{trigger-age}}}
+  Sets the GC trigger age for the specified generation.
+\end{defun}
+
+\begin{defun}{lisp::}{set-min-mem-age}{\args{\var{gen} \var{min-mem-age}}}
+  Sets the minimum average memory age for the specified generation.
+  If the computed memory age is below this, GC is not performed, which
+  helps prevent a GC when a large number of new live objects have been
+  added in which case a GC would usually be a waste of time.
+\end{defun}
 
 \subsection{Weak Pointers}
 
