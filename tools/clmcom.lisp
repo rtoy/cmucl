@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.7 1993/08/03 20:50:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clmcom.lisp,v 1.8 1993/08/24 13:39:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,67 +24,85 @@
 
 (pushnew :motif *features*)
 
+(defparameter tk-internals-files 
+  '("target:motif/lisp/initial"
+    "target:motif/lisp/internals"
+    "target:motif/lisp/transport"
+    "target:motif/lisp/events"
+    "target:motif/lisp/conversion"))
+
+(defparameter tk-files 
+  '("target:motif/lisp/interface-glue"
+    "target:motif/lisp/xt-types"
+    "target:motif/lisp/string-base"
+    "target:motif/lisp/prototypes"
+    "target:motif/lisp/interface-build"
+    "target:motif/lisp/callbacks"
+    "target:motif/lisp/widgets"
+    "target:motif/lisp/main"))
+
+(defparameter interface-files
+  '("target:interface/initial"
+    "target:interface/interface"
+    "target:interface/inspect"
+    "target:interface/debug"))
+
+
+;;; Make sure we don't try to debug a possibly broken new version with the
+;;; windowing debugger.
+;;;
+(unless (find-package "INTERFACE")
+  (make-package "INTERFACE"))
+(eval `(defparameter ,(intern "*INTERFACE-STYLE*" "INTERFACE") :tty))
+
+;;; Load any existing toolkit files:
+;;;
+#-motif
+(dolist (f (append tk-internals-files tk-files))
+  (flet ((try (type) (probe-file (make-pathname :defaults f :type type))))
+    (let ((pn (or (try (c:backend-fasl-file-type c:*backend*))
+		  (try (c:backend-byte-fasl-file-type c:*backend*)))))
+      (when pn (load pn)))))
+
 (with-compiler-log-file
     ("target:compile-motif.log"
-     :optimize '(optimize (speed 3) (safety 1) (ext:inhibit-warnings 3)))
-
- (comf "target:motif/lisp/initial" :load t)
- (comf "target:motif/lisp/internals" :load t)
- (comf "target:motif/lisp/transport" :load t)
- (comf "target:motif/lisp/events" :load t)
- (comf "target:motif/lisp/conversion" :load t))
+     :optimize '(optimize (speed 3) (ext:inhibit-warnings 3)
+			  #+small (safety 0)
+			  #+small (debug-info .5)))
+  
+  (dolist (f tk-internals-files)
+    (comf f :load t)))
 
 (with-compiler-log-file
     ("target:compile-motif.log"
-     :optimize '(optimize (speed 2) (ext:inhibit-warnings 2)))
+     :optimize
+     '(optimize (debug #-small 2 #+small .5) 
+		(speed 2) (inhibit-warnings 2)
+		(safety #-small 1 #+small 0))
+     :optimize-interface
+     '(optimize-interface (debug .5))
+     :context-declarations
+     '(((:and :external :global)
+	(declare (optimize-interface (safety 2) (debug 1))))
+       ((:and :external :macro)
+	(declare (optimize (safety 2))))
+       (:macro (declare (optimize (speed 0))))))
 
-  (comf "target:motif/lisp/interface-glue" :load t)
-  (comf "target:motif/lisp/xt-types" :load t)
-  (comf "target:motif/lisp/string-base" :load t)
-  (comf "target:motif/lisp/prototypes" :load t)
-  (comf "target:motif/lisp/interface-build" :load t)
-  (comf "target:motif/lisp/callbacks" :load t)
-  (comf "target:motif/lisp/widgets" :load t)
-  (comf "target:motif/lisp/main" :load t))
+  (dolist (f tk-files)
+    (comf f :load t))
 
-(when (fboundp 'xt::build-toolkit-interface)
-  (xt::build-toolkit-interface))
+  (unless (fboundp 'xt::build-toolkit-interface)
+    (mapc #'load tk-internals-files)
+    (mapc #'load tk-files)
+    (xt::build-toolkit-interface))
 
-;;; Make sure that the INTERFACE package is defined before we start
-;;; talking about it.
-(with-compiler-log-file
-    ("target:compile-motif.log")
-  (comf "target:interface/initial" :load t))
+  (with-compilation-unit (:optimize '(optimize #+small (speed 0)
+					       #+small (debug .5)))
+    (dolist (f interface-files)
+      (comf f :load t))))
 
-(with-compiler-log-file
-    ("target:compile-motif.log")
-
-  (comf "target:interface/interface" :load t)
-  (comf "target:interface/inspect" :load t)
-  ;;
-  ;; We don't want to fall into the Motif debugger while compiling.
-  ;; It may be that the motifd server hasn't been (re)compiled yet.
-  (let ((interface:*interface-style* :tty))
-    (comf "target:interface/debug" :load t)))
-
-(cat-if-anything-changed
- "target:interface/clm-library"
- 
- "target:motif/lisp/initial"
- "target:motif/lisp/internals"
- "target:motif/lisp/transport"
- "target:motif/lisp/events"
- "target:motif/lisp/conversion"
- 
- "target:motif/lisp/interface-glue"
- "target:motif/lisp/xt-types"
- "target:motif/lisp/string-base"
- "target:motif/lisp/prototypes"
- ;"target:motif/lisp/interface-build"
- "target:motif/lisp/callbacks"
- "target:motif/lisp/widgets"
- "target:motif/lisp/main"
- "target:interface/initial"
- "target:interface/interface"
- "target:interface/inspect"
- "target:interface/debug")
+(apply #'cat-if-anything-changed
+       "target:interface/clm-library"
+       (remove "target:motif/lisp/interface-build"
+	       (append tk-internals-files tk-files interface-files)
+	       :test #'string=))
