@@ -66,6 +66,8 @@ please see the web site for more information.
 
 
 \section{Command Line Options}
+\cindex{command line options}
+\label{command-line-options}
 
 The command line syntax and environment is described in the
 \verb|lisp(1)| man page in the man/man1 directory of the distribution.
@@ -87,6 +89,14 @@ switches:
   core file.  Rather than using the default core file
   (\file{lib/lisp.core}), the specified core file is loaded.
   
+\item[\code{-dynamic-space-size}] requires an argument that should be
+  the number of megabytes (1048576 bytes) that should be allocated to
+  the heap.  If not specified, a platform-specific default is used.
+  The actual maximum allowed heap size is platform-specific.
+
+  Currently, this option is only available for the x86 and sparc
+  platforms. 
+
 \item[\code{-edit}] specifies to enter Hemlock.  A file to edit may be
   specified by placing the name of the file between the program name
   (usually \file{lisp}) and the first switch.
@@ -113,7 +123,10 @@ switches:
   file should not be loaded during the normal start up sequence.
   Also, this switch suppresses the loading of a hemlock init file when
   Hemlock is started up with the \code{-edit} switch.
-  
+
+\item[\code{-nositeinit}] accepts no arguments and specifies that the
+  site init file should not be loaded during the normal start up
+  sequence. 
 \item[\code{-load}] accepts an argument which should be the name of a
   file to load into Lisp before entering Lisp's read-eval-print loop.
   
