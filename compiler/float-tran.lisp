@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.60 1998/01/24 14:49:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.61 1998/02/05 16:55:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1244,7 +1244,8 @@
 
 #+propagate-fun-type
 (progn
-(defun sincos-derive-type-aux (arg)
+(defun trig-derive-type-aux (arg domain fcn
+				 &optional def-lo def-hi (increasingp t))
   (etypecase arg
     (numeric-type
      (cond ((eq (numeric-type-complexp arg) :complex)
@@ -1253,34 +1254,65 @@
 			       :complexp :complex))
 	   ((numeric-type-real-p arg)
 	    (let ((float-type (or (numeric-type-format arg) 'float)))
+	      ;; If the argument is a subset of the "principal" domain
+	      ;; of the function, we can compute the bounds because
+	      ;; the function is monotonic.  We can't do this in
+	      ;; general for these periodic functions because we can't
+	      ;; (and don't want to) do the argument reduction in
+	      ;; exactly the same way as the functions themselves do
+	      ;; it.
+	      (if (csubtypep arg domain)
+		  (let ((lo (bound-func fcn (numeric-type-low arg)))
+			(hi (bound-func fcn (numeric-type-high arg))))
+		    (unless increasingp
+		      (rotatef lo hi))
 	      (specifier-type `(,float-type
-				,(coerce -1 float-type)
-				,(coerce 1 float-type)))))
+				      ,(or lo *)
+				      ,(or hi *))))
+		  (specifier-type `(,float-type
+				    ,(if def-lo
+					 (coerce def-lo float-type)
+					 '*)
+				    ,(if def-hi
+					 (coerce def-hi float-type)
+					 '*))))))
 	   (t
-	    (float-or-complex-type arg -1 1))))))
+	    (float-or-complex-type arg def-lo def-hi))))))
 
 (defoptimizer (sin derive-type) ((num))
-  (one-arg-derive-type num #'sincos-derive-type-aux #'sin))
+  (one-arg-derive-type
+   num
+   #'(lambda (arg)
+       ;; Derive the bounds if the arg is in [-pi/2, pi/2]
+       (trig-derive-type-aux
+	arg
+	(specifier-type `(float ,#.(- (/ pi 2)) ,#.(/ pi 2)))
+	#'sin
+	-1 1))
+   #'sin))
        
 (defoptimizer (cos derive-type) ((num))
-  (one-arg-derive-type num #'sincos-derive-type-aux #'cos))
-
-
-(defun tan-derive-type-aux (arg)
-  (etypecase arg
-    (numeric-type
-     (cond ((eq (numeric-type-complexp arg) :complex)
-	    (make-numeric-type :class (numeric-type-class arg)
-			       :format (numeric-type-format arg)
-			       :complexp :complex))
-	   ((numeric-type-real-p arg)
-	    (let ((float-type (or (numeric-type-format arg) 'float)))
-	      (specifier-type float-type)))
-	   (t
-	    (float-or-complex-type arg))))))
+  (one-arg-derive-type
+   num
+   #'(lambda (arg)
+       ;; Derive the bounds if the arg is in [0, pi]
+       (trig-derive-type-aux arg
+			     (specifier-type `(float 0d0 ,pi))
+			     #'cos
+			     -1 1
+			     nil))
+   #'cos))
 
 (defoptimizer (tan derive-type) ((num))
-  (one-arg-derive-type num #'tan-derive-type-aux #'tan))
+  (one-arg-derive-type
+   num
+   #'(lambda (arg)
+       ;; Derive the bounds if the arg is in [-pi/2, pi/2]
+       (trig-derive-type-aux arg
+			     (specifier-type `(float ,#.(- (/ pi 2)) ,#.(/ pi 2)))
+			     #'tan
+			     nil nil))
+   #'tan))
 
 ;;; conjugate always returns the same type as the input type  
 (defoptimizer (conjugate derive-type) ((num))
