@@ -132,7 +132,7 @@
   post-buffer
   ;; This is need because we want to display what message this is in the
   ;; modeline field of a message buffer.
-  (message-number :type (or null fixnum))
+  (message-number nil :type (or null fixnum))
   ;;  Set to T when we do not want to reuse this buffer.
   keep-p)
 
