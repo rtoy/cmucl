@@ -1,6 +1,6 @@
 ;;; -*- Mode: Lisp; Package: MIPS -*-
 ;;; 
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.10 1990/02/21 19:35:32 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pmax-disassem.lisp,v 1.11 1990/02/24 17:07:35 wlott Exp $
 ;;;
 ;;; A simple dissambler for the MIPS R2000.
 ;;;
@@ -129,7 +129,7 @@
 	   ;; Major hack ...
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~48,8T; ~S~%"
 		   name (register-name rt) (register-name rs) immed
-		   (vm:offset-initial-symbol immed)))
+		   (vm:offset-static-symbol immed)))
 	  (t
 	   (format stream "~16,8T~A~8,8T~A, ~A, #x~X~%"
 		   name (register-name rt) (register-name rs) immed)))))
@@ -233,7 +233,7 @@
 	    name (register-name rd) (register-name rt) (register-name rs))))
 
 (def-mips-instruction-type (:break-type)
-  (let ((code (ldb (byte 20 6) word))) ; MIPS assembler uses (byte 10 16)
+  (let ((code (ldb (byte 10 16) word))) ; The entire field is (byte 20 6)
     (format stream "~16,8T~A~8,8T#x~X~%" name code)))
 
 (def-mips-instruction-type (:syscall-type)
