@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.6 1990/08/07 16:06:02 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.7 1990/10/01 17:15:05 ram Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -140,7 +140,9 @@
   (:variant-vars format operation)
   (:policy :fast-safe)
   (:note "inline float arithmetic")
+  (:vop-var vop)
   (:generator 0
+    (note-this-location vop :internal-error)
     (inst float-op operation format r x y)))
 
 (macrolet ((frob (name sc ptype)
@@ -177,7 +179,9 @@
 		(:arg-types ,type)
 		(:result-types ,type)
 		(:note "inline float arithmetic")
+		(:vop-var vop)
 		(:generator 1
+		  (note-this-location vop :internal-error)
 		  (inst ,inst ,format y x)))))
   (frob abs/single-float fabs abs :single single-reg single-float)
   (frob abs/double-float fabs abs :double double-reg double-float)
@@ -194,7 +198,9 @@
   (:variant-vars format operation complement)
   (:policy :fast-safe)
   (:note "inline float comparison")
+  (:vop-var vop)
   (:generator 3
+    (note-this-location vop :internal-error)
     (inst fcmp operation format x y)
     (inst nop)
     (if (if complement (not not-p) not-p)
@@ -237,12 +243,15 @@
 		  (:policy :fast-safe)
 		  (:note "inline float coercion")
 		  (:translate ,translate)
+		  (:vop-var vop)
 		  (:generator ,(if word-p 3 2)
 		    ,@(if word-p
 			  `((inst mtc1 y x)
 			    (inst nop)
+			    (note-this-location vop :internal-error)
 			    (inst fcvt ,to-format :word y y))
-			  `((inst fcvt ,to-format ,from-format y x))))))))
+			  `((note-this-location vop :internal-error)
+			    (inst fcvt ,to-format ,from-format y x))))))))
   (frob %single-float/signed %single-float
     signed-reg signed-num :word
     single-reg single-float :single)
@@ -267,7 +276,9 @@
 		(:translate %unary-truncate)
 		(:policy :fast-safe)
 		(:note "inline float truncate")
+		(:vop-var vop)
 		(:generator 3
+		  (note-this-location vop :internal-error)
 		  (inst fcvt :word ,from-format temp x)
 		  (inst mfc1 y temp)
 		  (inst nop)))))
@@ -366,3 +377,31 @@
   (:results (result :scs (double-reg)))
   (:result-types double-float)
   (:variant :double))
+
+
+;;;; Float mode hackery:
+
+(deftype float-modes () '(unsigned-byte 24))
+(defknown floating-point-modes () float-modes (flushable))
+(defknown ((setf floating-point-modes)) (float-modes)
+  float-modes)
+
+(define-vop (floating-point-modes)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:translate floating-point-modes)
+  (:policy :fast-safe)
+  (:generator 3
+    (inst cfc1 res 31)
+    (inst nop)))
+
+(define-vop (set-floating-point-modes)
+  (:args (new :scs (unsigned-reg) :target res))
+  (:results (res :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:result-types unsigned-num)
+  (:translate (setf floating-point-modes))
+  (:policy :fast-safe)
+  (:generator 3
+    (inst ctc1 res 31)
+    (move res new)))
