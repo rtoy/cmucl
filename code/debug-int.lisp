@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.56 1993/02/15 20:32:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.57 1993/05/21 15:08:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1283,11 +1283,18 @@
 ;;;
 (defun function-debug-function (fun)
   "Returns a debug-function that represents debug information for function."
-  (if (eval:interpreted-function-p fun)
-      (let ((eval-fun (eval::get-eval-function fun)))
-	(make-interpreted-debug-function
-	 (or (eval::eval-function-definition eval-fun)
-	     (eval::convert-eval-fun eval-fun))))
+  (case (get-type fun)
+    (#.vm:closure-header-type
+     (cond ((eval:interpreted-function-p fun)
+	    (let ((eval-fun (eval::get-eval-function fun)))
+	      (make-interpreted-debug-function
+	       (or (eval::eval-function-definition eval-fun)
+		   (eval::convert-eval-fun eval-fun)))))
+	   (t
+	    (function-debug-function (%closure-function fun)))))
+    (#.vm:funcallable-instance-header-type
+     (function-debug-function (funcallable-instance-function fun)))
+    ((#.vm:function-header-type #.vm:closure-function-header-type)
       (let* ((name (kernel:%function-name fun))
 	     (component (kernel:function-code-header fun))
 	     (res (find-if
@@ -1307,7 +1314,7 @@
 	    (debug-function-from-pc component
 				    (* (- (kernel:function-word-offset fun)
 					  (kernel:get-header-data component))
-				       vm:word-bytes))))))
+				       vm:word-bytes)))))))
 
 
 ;;; DEBUG-FUNCTION-KIND -- Public.
