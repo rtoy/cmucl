@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.16 2000/04/12 17:41:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/x86-vm.lisp,v 1.17 2001/12/06 19:15:41 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -102,6 +102,32 @@
 	(sc-efl     unsigned-int)		; sc_ps
 	(sc-sp      unsigned-int)	
 	(sc-ss	    unsigned-int)))
+
+;;; OpenBSD also has a sigcontext that looks more like Linux.
+#+openbsd
+(def-alien-type sigcontext
+    (struct nil
+	(sc-gs      unsigned-int)
+	(sc-fs      unsigned-int)
+	(sc-es	    unsigned-int)
+	(sc-ds	    unsigned-int)
+	(sc-edi	    unsigned-int)
+	(sc-esi	    unsigned-int)
+	(sc-fp	    unsigned-int) ;; ebp
+	(sc-ebx	    unsigned-int)
+	(sc-edx	    unsigned-int)
+	(sc-ecx	    unsigned-int)
+	(sc-eax	    unsigned-int)
+	(sc-pc      unsigned-int)
+	(sc-cs	    unsigned-int)
+	(sc-efl     unsigned-int)		; sc_ps
+	(sc-sp      unsigned-int)	
+	(sc-ss	    unsigned-int)
+	(sc-onstack unsigned-int)
+	(sc-mask    unsigned-int)
+	(sc-trapno  unsigned-int)
+	(sc-err     unsigned-int)
+	))
 
 ;; For Linux...
 #+linux
@@ -358,9 +384,9 @@
 				     index))))
       (coerce (sys:sap-ref-long reg-sap 0) format))))
 
-;;; Not supported on FreeBSD because the floating point state is not
-;;; saved.
-#+FreeBSD
+;;; Not supported on Free/OpenBSD because the floating point state is not
+;;; saved.  For now we assume this is true for all modern BSDs
+#+BSD
 (defun sigcontext-float-register (scp index format)
   (declare (ignore scp index))
   (coerce 0l0 format))
@@ -377,8 +403,8 @@
       (setf (sys:sap-ref-long reg-sap 0) (coerce new-value 'long-float))
       (coerce new-value format))))
 
-;;; Not supported on FreeBSD.
-#+FreeBSD
+;;; Not supported on Free/OpenBSD.
+#+BSD
 (defun %set-sigcontext-float-register (scp index format new-value)
   (declare (ignore scp index))
   (coerce new-value format))
@@ -392,11 +418,11 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 
-#+FreeBSD
+#+BSD
 (defun sigcontext-floating-point-modes (scp)
   (declare (type (alien (* sigcontext)) scp)
 	   (ignore scp))
-  ;; This is broken until some future release of FreeBSD!!!
+  ;; This is broken until some future release of FreeBSD/OpenBSD!!!
   (floating-point-modes))
   
 #+linux
@@ -428,7 +454,7 @@
 	value
 	(multiple-value-bind (value found)
 	    (gethash
-	     (concatenate 'string #+linux "PVE_stub_" #+freebsd "_" name)
+	     (concatenate 'string #+linux "PVE_stub_" #+bsd "_" name)
 	     lisp::*foreign-symbols* 0)
 	  (if found
 	      value

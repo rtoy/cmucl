@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.24 2000/10/27 19:25:55 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.25 2001/12/06 19:15:44 pmai Exp $
  *
  */
 
@@ -85,9 +85,9 @@ boolean check_code_fixups = FALSE;
 
 /*
  * To enable unmapping of a page and re-mmaping it to have it zero filled.
- * Note: this can waste a lot of swap on FreeBSD so don't unmap.
+ * Note: this can waste a lot of swap on FreeBSD and OpenBSD(?) so don't unmap.
  */
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
 boolean gencgc_unmap_zero = FALSE;
 #else
 boolean gencgc_unmap_zero = TRUE;

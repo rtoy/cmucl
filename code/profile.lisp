@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.19 2001/03/04 20:12:40 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.20 2001/12/06 19:15:41 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -281,17 +281,17 @@
 					    ,@required-args optional-args)
 				    `(funcall old-definition ,@required-args))
 			     (setq time-inc
-				   #-FreeBSD
+				   #-BSD
 				   (- (quickly-get-time) start-time)
-				   #+FreeBSD
+				   #+BSD
 				   (max (- (quickly-get-time) start-time) 0))
 			     (setq cons-inc (- (total-consing) start-consed))
 			     (setq profile-inc *enclosed-profilings*)
 			     (incf time
 				   (the time-type
-					#-FreeBSD
+					#-BSD
 					(- time-inc *enclosed-time*)
-					#+FreeBSD
+					#+BSD
 					(max (- time-inc *enclosed-time*) 0)))
 			     (incf consed
 				   (the consing-type

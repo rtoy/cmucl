@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.16 2001/04/12 19:42:36 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.17 2001/12/06 19:15:40 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
 ;;;    Signal the appropriate condition when we get a floating-point error.
 ;;;
 
-#+FreeBSD
+#+BSD
 (define-condition floating-point-exception (arithmetic-error)
   ((flags :initarg :traps
 	  :reader floating-point-exception-traps))
@@ -189,7 +189,7 @@
 	   (error 'floating-point-underflow))
 	  ((not (zerop (logand float-inexact-trap-bit traps)))
 	   (error 'ext:floating-point-inexact))
-	  #+FreeBSD
+	  #+BSD
 	  ((zerop (ldb float-exceptions-byte modes))
 	   ;; I can't tell what caused the exception!!
 	   (error 'floating-point-exception

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.34 2001/10/30 22:14:36 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.35 2001/12/06 19:15:41 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,9 +25,9 @@
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
 
-#+(and freebsd x86)
+#+(and bsd x86)
 (defconstant foreign-segment-start #x0E000000)
-#+(and freebsd x86) 
+#+(and bsd x86) 
 (defconstant foreign-segment-size  #x02000000)
 
 (defvar *previous-linked-object-file* nil)
@@ -57,7 +57,7 @@
 		(t
 		 (incf code))))))))
 
-#+(or (and FreeBSD (not elf)) (and sparc (not svr4)))
+#+(or OpenBSD (and FreeBSD (not elf)) (and sparc (not svr4)))
 (alien:def-alien-type exec
   (alien:struct nil
     (magic c-call:unsigned-long)
@@ -216,10 +216,10 @@ to skip undefined symbols which don't have an address."
 	  (unless (eql (aref line 0) #\space)   ; Skip undefined symbols....
 	    (let* ((symbol (subseq line 11))
 		   (address (parse-integer line :end 8 :radix 16))
-		   #+FreeBSD (kind (aref line 9))	; filter out .o file names
+		   (kind (aref line 9))	; filter out .o file names
 		   (old-address (gethash symbol lisp::*foreign-symbols*)))
 	      (unless (or (null old-address) (= address old-address)
-			  #+FreeBSD (char= kind #\F))
+			  (char= kind #\F))
 		(warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
 		      symbol old-address address))
 	      (setf (gethash symbol symbol-table) address))))))
@@ -230,7 +230,8 @@ to skip undefined symbols which don't have an address."
 ;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
 ;;; for correct file format so it may croak if ld fails to produce the
 ;;; expected results. It is probably good enough for now.
-#+(or (and FreeBSD (not ELF)) (and sparc (not svr4)))
+;;; prm- We assume this works for OpenBSD as well, needs testing...
+#+(or OpenBSD (and FreeBSD (not ELF)) (and sparc (not svr4)))
 (defun load-object-file (name)
   (format t ";;; Loading object file...~%")
   (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
@@ -446,10 +447,10 @@ to skip undefined symbols which don't have an address."
 	    (return))
 	  (let* ((symbol (subseq line 11))
 		 (address (parse-integer line :end 8 :radix 16))
-		 #+FreeBSD (kind (aref line 9))	; filter out .o file names
+		 #+BSD (kind (aref line 9))	; filter out .o file names
 		 (old-address (gethash symbol lisp::*foreign-symbols*)))
 	    (unless (or (null old-address) (= address old-address)
-			#+FreeBSD (char= kind #\F))
+			#+BSD (char= kind #\F))
 	      (warn "~S moved from #x~8,'0X to #x~8,'0X.~%"
 		    symbol old-address address))
 	    (setf (gethash symbol symbol-table) address)))))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.3 1998/03/10 18:28:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bsd-os.lisp,v 1.4 2001/12/06 19:15:40 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,15 +15,17 @@
 ;;; Scott Fahlman, Dan Aronson, and Steve Handerson did stuff here, too.
 ;;;
 ;;; Hacked into (Free)bsd-os.lisp by Paul Werkowski.
+;;; Generalized a bit for OpenBSD by Pierre R. Mai.
 
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
 (export '(get-system-info get-page-size os-init))
 
 (pushnew :bsd *features*)
-(pushnew :freebsd *features*)
 
-(setq *software-type* #+FreeBSD "FreeBSD" #-FreeBSD "BSD")
+(setq *software-type* #+OpenBSD "OpenBSD"
+                      #+FreeBSD "FreeBSD"
+		      #-(or FreeBSD OpenBSD) "BSD")
 
 (defvar *software-version* nil "Version string for supporting software")
 

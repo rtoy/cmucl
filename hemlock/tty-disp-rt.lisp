@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.6 2001/03/13 15:50:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-disp-rt.lisp,v 1.7 2001/12/06 19:15:43 pmai Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -61,16 +61,16 @@
 ;;;
 (defun get-terminal-attributes (&optional (fd 1))
   (alien:with-alien ((winsize (alien:struct unix:winsize))
-                     #-(or glibc2 freebsd)
+                     #-(or glibc2 bsd)
 		     (sgtty (alien:struct unix:sgttyb))
-                     #+freebsd ; termios
+                     #+bsd ; termios
 		     (tios (alien:struct unix:termios)))
     (let ((size-win (unix:unix-ioctl fd unix:TIOCGWINSZ
 				     (alien:alien-sap winsize)))
-          #-(or glibc2 freebsd)
+          #-(or glibc2 bsd)
 	  (speed-win (unix:unix-ioctl fd unix:TIOCGETP
 				      (alien:alien-sap sgtty)))
-	  #+freebsd
+	  #+bsd
 	  (speed-win (unix:unix-tcgetattr fd (alien:alien-sap tios))))
       (flet ((frob (val)
 	       (if (and size-win (not (zerop val)))
@@ -79,12 +79,12 @@
 	(values
 	 (frob (alien:slot winsize 'unix:ws-row))
 	 (frob (alien:slot winsize 'unix:ws-col))
-         #-(or glibc2 freebsd)
+         #-(or glibc2 bsd)
 	 (and speed-win
 	      (setq *terminal-baud-rate*
 		    (svref unix:terminal-speeds
 			   (alien:slot sgtty 'unix:sg-ospeed))))
-	 #+freebsd
+	 #+bsd
 	 (and speed-win
 	      (setq *terminal-baud-rate* (unix:unix-cfgetospeed tios)))
          #+glibc2

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.41 2001/02/11 14:22:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.42 2001/12/06 19:15:42 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1809,13 +1809,13 @@
   (let ((linux-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
 			  #.c:x86-fasl-file-implementation)
 		      (c:backend-featurep :linux)))
-	(freebsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
-			    #.c:x86-fasl-file-implementation)
-			(c:backend-featurep :freebsd))))
+	(bsd-p (and (eq (c:backend-fasl-file-implementation c:*backend*)
+			#.c:x86-fasl-file-implementation)
+		    (c:backend-featurep :bsd))))
     
     (cond
-     ((and freebsd-p (gethash (concatenate 'string "_" name)
-			      *cold-foreign-symbol-table* nil)))
+     ((and bsd-p (gethash (concatenate 'string "_" name)
+			  *cold-foreign-symbol-table* nil)))
      ((and linux-p (gethash (concatenate 'string "PVE_stub_" name)
 			    *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
@@ -1840,6 +1840,7 @@
 ;; syscalls and Unix library things. Linux doesn't or maybe does
 ;; depending on things I don't know about yet? FreeBSD version 3
 ;; is ELF based and looks more like the other systems.
+;; For the moment we assume all non-elf BSDs are the same as non-elf FreeBSD.
 ;; Maybe these x86 hacks can be fixed when the non-elf's are obsoleted.
 
 (defun lookup-maybe-prefix-foreign-symbol (name)
@@ -1859,9 +1860,9 @@
 		       ""
 		       "_"))
 		  (#.c:x86-fasl-file-implementation
-		   (if (and (c:backend-featurep :freebsd)
+		   (if (and (c:backend-featurep :bsd)
 			    (not (c:backend-featurep :elf)))
-		       "_" ; older FreeBSD
+		       "_" ; older FreeBSD, OpenBSD
 		       "")) ; Linux and FreeBSD V3+
 		  )
 		name)))

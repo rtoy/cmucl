@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.25 2000/10/24 13:32:32 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.26 2001/12/06 19:15:45 pmai Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -34,7 +34,7 @@ void (*interrupt_low_level_handlers[NSIG]) (HANDLER_ARGS) = {0};
 
 static int pending_signal = 0;
 
-#ifdef SOLARIS
+#if defined(SOLARIS) || defined(__OpenBSD__)
 static siginfo_t *pending_code;
 #define PASSCODE(code) ((code))
 #define DEREFCODE(code) ((code))
@@ -233,7 +233,7 @@ interrupt_handle_pending(struct sigcontext *context)
 
     if (pending_signal) {
 	int signal;
-#ifdef SOLARIS
+#if defined(SOLARIS) || defined(__OpenBSD__)
 	siginfo_t *code;
 #else
 	int code;

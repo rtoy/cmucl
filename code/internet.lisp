@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.30 2001/04/10 13:42:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.31 2001/12/06 19:15:41 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,7 +119,7 @@
   (declare (type host-entry host))
   (car (host-entry-addr-list host)))
 
-#-FreeBSD
+#-BSD
 (def-alien-type unix-sockaddr
   (struct nil
     (family #-(or linux alpha) short #+(or linux alpha)  unsigned-short)
@@ -132,7 +132,7 @@ struct  sockaddr_un {
 };
 |#
 
-#+FreeBSD
+#+BSD
 (def-alien-type unix-sockaddr
     (struct nil
       (sun-len unsigned-char)
@@ -154,7 +154,7 @@ struct in_addr {
 };
 
 |#
-#+FreeBSD
+#+BSD
 (def-alien-type inet-sockaddr
     (struct nil
       (sin-len unsigned-char)
@@ -163,7 +163,7 @@ struct in_addr {
       (addr    unsigned-long)
       (zero    (array char 8))))
 
-#-FreeBSD
+#-BSD
 (def-alien-type inet-sockaddr
   (struct nil
     (family #-alpha short #+alpha unsigned-short)
@@ -287,10 +287,10 @@ struct in_addr {
       socket)))
 
 ;;; Socket levels.
-(defconstant sol-socket #+linux 1 #+(or solaris freebsd) #xffff)
+(defconstant sol-socket #+linux 1 #+(or solaris bsd) #xffff)
 
 ;;; Socket options.
-(defconstant so-reuseaddr #+linux 2 #+(or solaris freebsd) 4)
+(defconstant so-reuseaddr #+linux 2 #+(or solaris bsd) 4)
 
 (defun get-socket-option (socket level optname)
   "Get an integer value socket option."

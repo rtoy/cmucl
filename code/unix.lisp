@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.73 2001/09/27 11:28:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.74 2001/12/06 19:15:41 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,8 +45,8 @@
 	  unix-fcntl f-dupfd f-getfd f-setfd f-getfl f-setfl f-getown f-setown
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
 	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
-	  #+(or hpux svr4 freebsd linux) o_ndelay
-	  #+(or hpux svr4 freebsd linux) o_noctty #+(or hpux svr4) o_nonblock
+	  #+(or hpux svr4 bsd linux) o_ndelay
+	  #+(or hpux svr4 bsd linux) o_noctty #+(or hpux svr4) o_nonblock
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
@@ -56,108 +56,108 @@
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
 	  #-hpux tty-cbreak #-(or hpux linux) tty-tandem
-	  #+(or hpux svr4 linux freebsd) termios
-          #+(or hpux svr4 linux freebsd) c-lflag
-	  #+(or hpux svr4 linux freebsd) c-iflag
-          #+(or hpux svr4 linux freebsd) c-oflag
-	  #+(or hpux svr4 linux freebsd) tty-icrnl
+	  #+(or hpux svr4 linux bsd) termios
+          #+(or hpux svr4 linux bsd) c-lflag
+	  #+(or hpux svr4 linux bsd) c-iflag
+          #+(or hpux svr4 linux bsd) c-oflag
+	  #+(or hpux svr4 linux bsd) tty-icrnl
           #+(or hpux svr4 linux) tty-ocrnl
-	  #+(or hpux svr4 freebsd) vdsusp #+(or hpux svr4 linux freebsd) veof
-	  #+(or hpux svr4 linux freebsd) vintr
-          #+(or hpux svr4 linux freebsd) vquit
-          #+(or hpux svr4 linux freebsd) vstart
-	  #+(or hpux svr4 linux freebsd) vstop
-          #+(or hpux svr4 linux freebsd) vsusp
-	  #+(or hpux svr4 linux freebsd) c-cflag
-	  #+(or hpux svr4 linux freebsd) c-cc
+	  #+(or hpux svr4 bsd) vdsusp #+(or hpux svr4 linux bsd) veof
+	  #+(or hpux svr4 linux bsd) vintr
+          #+(or hpux svr4 linux bsd) vquit
+          #+(or hpux svr4 linux bsd) vstart
+	  #+(or hpux svr4 linux bsd) vstop
+          #+(or hpux svr4 linux bsd) vsusp
+	  #+(or hpux svr4 linux bsd) c-cflag
+	  #+(or hpux svr4 linux bsd) c-cc
 	  #+(or bsd osf1) c-ispeed
 	  #+(or bsd osf1) c-ospeed
-          #+(or hpux svr4 linux freebsd) tty-icanon
-	  #+(or hpux svr4 linux freebsd) vmin
-          #+(or hpux svr4 linux freebsd) vtime
-	  #+(or hpux svr4 linux freebsd) tty-ixon
-          #+(or hpux svr4 freebsd linux) tcsanow
-          #+(or hpux svr4 freebsd linux) tcsadrain
-          #+(or hpux svr4 freebsd linux) tciflush
-          #+(or hpux svr4 freebsd linux) tcoflush
-          #+(or hpux svr4 freebsd linux) tcioflush
-	  #+(or hpux svr4 freebsd linux) tcsaflush
-          #+(or hpux svr4 linux freebsd) unix-tcgetattr
-          #+(or hpux svr4 linux freebsd) unix-tcsetattr
-          #+(or hpux svr4 freebsd) unix-cfgetospeed
-          #+(or hpux svr4 freebsd) unix-cfsetospeed
-          #+(or hpux svr4 freebsd) unix-cfgetispeed
-          #+(or hpux svr4 freebsd) unix-cfsetispeed
-          #+(or hpux svr4 linux freebsd) tty-ignbrk
-          #+(or hpux svr4 linux freebsd) tty-brkint
-          #+(or hpux svr4 linux freebsd) tty-ignpar
-          #+(or hpux svr4 linux freebsd) tty-parmrk
-          #+(or hpux svr4 linux freebsd) tty-inpck
-          #+(or hpux svr4 linux freebsd) tty-istrip
-          #+(or hpux svr4 linux freebsd) tty-inlcr
-          #+(or hpux svr4 linux freebsd) tty-igncr
+          #+(or hpux svr4 linux bsd) tty-icanon
+	  #+(or hpux svr4 linux bsd) vmin
+          #+(or hpux svr4 linux bsd) vtime
+	  #+(or hpux svr4 linux bsd) tty-ixon
+          #+(or hpux svr4 linux bsd) tcsanow
+          #+(or hpux svr4 linux bsd) tcsadrain
+          #+(or hpux svr4 linux bsd) tciflush
+          #+(or hpux svr4 linux bsd) tcoflush
+          #+(or hpux svr4 linux bsd) tcioflush
+	  #+(or hpux svr4 linux bsd) tcsaflush
+          #+(or hpux svr4 linux bsd) unix-tcgetattr
+          #+(or hpux svr4 linux bsd) unix-tcsetattr
+          #+(or hpux svr4 bsd) unix-cfgetospeed
+          #+(or hpux svr4 bsd) unix-cfsetospeed
+          #+(or hpux svr4 bsd) unix-cfgetispeed
+          #+(or hpux svr4 bsd) unix-cfsetispeed
+          #+(or hpux svr4 linux bsd) tty-ignbrk
+          #+(or hpux svr4 linux bsd) tty-brkint
+          #+(or hpux svr4 linux bsd) tty-ignpar
+          #+(or hpux svr4 linux bsd) tty-parmrk
+          #+(or hpux svr4 linux bsd) tty-inpck
+          #+(or hpux svr4 linux bsd) tty-istrip
+          #+(or hpux svr4 linux bsd) tty-inlcr
+          #+(or hpux svr4 linux bsd) tty-igncr
           #+(or hpux svr4 linux) tty-iuclc
-          #+(or hpux svr4 linux freebsd) tty-ixany
-          #+(or hpux svr4 linux freebsd) tty-ixoff
+          #+(or hpux svr4 linux bsd) tty-ixany
+          #+(or hpux svr4 linux bsd) tty-ixoff
           #+hpux tty-ienqak
-          #+(or hpux irix solaris linux freebsd) tty-imaxbel
-          #+(or hpux svr4 linux freebsd) tty-opost
+          #+(or hpux irix solaris linux bsd) tty-imaxbel
+          #+(or hpux svr4 linux bsd) tty-opost
           #+(or hpux svr4 linux) tty-olcuc
-          #+(or hpux svr4 linux freebsd) tty-onlcr
+          #+(or hpux svr4 linux bsd) tty-onlcr
           #+(or hpux svr4 linux) tty-onocr
           #+(or hpux svr4 linux) tty-onlret
           #+(or hpux svr4 linux) tty-ofill
           #+(or hpux svr4 linux) tty-ofdel
-          #+(or hpux svr4 linux freebsd) tty-isig
+          #+(or hpux svr4 linux bsd) tty-isig
           #+(or hpux svr4 linux) tty-xcase
-          #+(or hpux svr4 linux freebsd) tty-echoe
-          #+(or hpux svr4 linux freebsd) tty-echok
-          #+(or hpux svr4 linux freebsd) tty-echonl
-          #+(or hpux svr4 linux freebsd) tty-noflsh
-          #+(or hpux svr4 linux freebsd) tty-iexten
-          #+(or hpux svr4 linux freebsd) tty-tostop
-          #+(or hpux irix solaris linux freebsd) tty-echoctl
-          #+(or hpux irix solaris linux freebsd) tty-echoprt
-          #+(or hpux irix solaris linux freebsd) tty-echoke
+          #+(or hpux svr4 linux bsd) tty-echoe
+          #+(or hpux svr4 linux bsd) tty-echok
+          #+(or hpux svr4 linux bsd) tty-echonl
+          #+(or hpux svr4 linux bsd) tty-noflsh
+          #+(or hpux svr4 linux bsd) tty-iexten
+          #+(or hpux svr4 linux bsd) tty-tostop
+          #+(or hpux irix solaris linux bsd) tty-echoctl
+          #+(or hpux irix solaris linux bsd) tty-echoprt
+          #+(or hpux irix solaris linux bsd) tty-echoke
           #+(or hpux irix solaris) tty-defecho
-          #+(or hpux irix solaris freebsd) tty-flusho
-          #+(or hpux irix solaris linux freebsd) tty-pendin
-          #+(or hpux svr4 linux freebsd) tty-cstopb
-          #+(or hpux svr4 linux freebsd) tty-cread
-          #+(or hpux svr4 linux freebsd) tty-parenb
-          #+(or hpux svr4 linux freebsd) tty-parodd
-          #+(or hpux svr4 linux freebsd) tty-hupcl
-          #+(or hpux svr4 linux freebsd) tty-clocal
+          #+(or hpux irix solaris bsd) tty-flusho
+          #+(or hpux irix solaris linux bsd) tty-pendin
+          #+(or hpux svr4 linux bsd) tty-cstopb
+          #+(or hpux svr4 linux bsd) tty-cread
+          #+(or hpux svr4 linux bsd) tty-parenb
+          #+(or hpux svr4 linux bsd) tty-parodd
+          #+(or hpux svr4 linux bsd) tty-hupcl
+          #+(or hpux svr4 linux bsd) tty-clocal
           #+(or irix solaris) rcv1en
           #+(or irix solaris) xmt1en
           #+(or hpux irix solaris) tty-loblk
-          #+(or hpux svr4 linux freebsd) vintr
-          #+(or hpux svr4 linux freebsd) verase
-          #+(or hpux svr4 linux freebsd) vkill
-          #+(or hpux svr4 linux freebsd) veol
-          #+(or hpux irix solaris linux freebsd) veol2
+          #+(or hpux svr4 linux bsd) vintr
+          #+(or hpux svr4 linux bsd) verase
+          #+(or hpux svr4 linux bsd) vkill
+          #+(or hpux svr4 linux bsd) veol
+          #+(or hpux irix solaris linux bsd) veol2
           #+(or hpux irix solaris) tty-cbaud
-          #+(or hpux svr4 freebsd) tty-csize #+(or hpux svr4 freebsd) tty-cs5
-          #+(or hpux svr4 freebsd) tty-cs6 #+(or hpux svr4 freebsd) tty-cs7
-          #+(or hpux svr4 freebsd) tty-cs8
-          #+(or hpux svr4 freebsd) unix-tcsendbreak
-          #+(or hpux svr4 freebsd) unix-tcdrain
-          #+(or hpux svr4 freebsd) unix-tcflush
-          #+(or hpux svr4 freebsd) unix-tcflow
+          #+(or hpux svr4 bsd) tty-csize #+(or hpux svr4 bsd) tty-cs5
+          #+(or hpux svr4 bsd) tty-cs6 #+(or hpux svr4 bsd) tty-cs7
+          #+(or hpux svr4 bsd) tty-cs8
+          #+(or hpux svr4 bsd) unix-tcsendbreak
+          #+(or hpux svr4 bsd) unix-tcdrain
+          #+(or hpux svr4 bsd) unix-tcflush
+          #+(or hpux svr4 bsd) unix-tcflow
           
 	  TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  TIOCSIGSEND
 
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
-	  KBDSCLICK FIONREAD #+(or hpux freebsd) siocspgrp
+	  KBDSCLICK FIONREAD #+(or hpux bsd) siocspgrp
 	  unix-exit unix-stat unix-lstat unix-fstat
 	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
 	  unix-gettimeofday
 	  #-hpux unix-utimes #-(or svr4 hpux) unix-setreuid
 	  #-(or svr4 hpux) unix-setregid
 	  unix-getpid unix-getppid
-	  #+(or svr4 freebsd)unix-setpgid
+	  #+(or svr4 bsd)unix-setpgid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
@@ -186,19 +186,19 @@
 
 (def-alien-type dev-t #-(or alpha svr4 bsd linux) short #+linux unsigned-short
 	 #+alpha int #+(and (not linux) (or bsd svr4)) unsigned-long)
-#-FreeBSD
+#-BSD
 (def-alien-type off-t #-alpha long #+alpha unsigned-long)
-#+FreeBSD
+#+BSD
 (def-alien-type off-t quad-t)
-#-FreeBSD
+#-BSD
 (def-alien-type uid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
   #+svr4 long)
-#+FreeBSD
+#+BSD
 (def-alien-type uid-t unsigned-long)
-#-FreeBSD
+#-BSD
 (def-alien-type gid-t #-(or alpha svr4) unsigned-short #+alpha unsigned-int
   #+svr4 long)
-#+FreeBSD
+#+BSD
 (def-alien-type gid-t unsigned-long)
 (def-alien-type mode-t #-(or alpha svr4) unsigned-short
   #+alpha unsigned-int #+svr4 unsigned-long)
@@ -271,7 +271,7 @@
     (tv-sec time-t)
     (tv-nsec long)))
 
-#+(or linux FreeBSD)
+#+(or linux BSD)
 (def-alien-type nil
   (struct timespec-t
     (ts-sec long)
@@ -391,7 +391,7 @@
 ;;; From sys/stat.h
 ;; oh boy, in linux-> 2 stat(s)!!
 
-#-(or svr4 freebsd linux)		; eg hpux and alpha
+#-(or svr4 bsd linux)		; eg hpux and alpha
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -412,7 +412,7 @@
     (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
-#+FreeBSD
+#+BSD
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
@@ -1139,10 +1139,10 @@
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) offset)
 	   (type (integer 0 2) whence))
-  #-(and x86 freebsd) (int-syscall ("lseek" int off-t int) fd offset whence)
+  #-(and x86 bsd) (int-syscall ("lseek" int off-t int) fd offset whence)
   ;; Need a 64-bit return value type for this. TBD. For now,
   ;; don't use this with any 2G+ partitions.
-  #+(and freebsd x86) (int-syscall ("lseek" int unsigned-long unsigned-long int)
+  #+(and bsd x86) (int-syscall ("lseek" int unsigned-long unsigned-long int)
 		     fd offset 0 whence ))
 
 ;;; Unix-mkdir accepts a name and a mode and attempts to create the
@@ -1162,7 +1162,7 @@
 (defconstant o_rdonly 0 "Read-only flag.") 
 (defconstant o_wronly 1 "Write-only flag.")
 (defconstant o_rdwr 2   "Read-write flag.")
-#+(or hpux linux svr4 freebsd)
+#+(or hpux linux svr4 bsd)
 (defconstant o_ndelay #-linux 4 #+linux #o4000 "Non-blocking I/O")
 (defconstant o_append #-linux #o10 #+linux #o2000   "Append flag.")
 #+(or hpux svr4 linux)
@@ -1450,14 +1450,14 @@
 
 (defconstant tty-raw #-linux #o40 #+linux 1)
 (defconstant tty-crmod #-linux #o20 #+linux 4)
-#-(or hpux svr4 freebsd linux) (defconstant tty-echo #o10) ;; 8
+#-(or hpux svr4 bsd linux) (defconstant tty-echo #o10) ;; 8
 (defconstant tty-lcase #-linux #o4 #+linux 2)
 #-hpux
 (defconstant tty-cbreak #-linux #o2 #+linux 64)
 #-(or linux hpux)
 (defconstant tty-tandem #o1)
 
-#+(or hpux svr4 freebsd linux)
+#+(or hpux svr4 bsd linux)
 (progn
   (defmacro def-enum (inc cur &rest names)
     (flet ((defform (name)
@@ -1467,41 +1467,41 @@
 
   ;; Input modes. Linux: /usr/include/asm/termbits.h
   (def-enum ash 1 tty-ignbrk tty-brkint tty-ignpar tty-parmrk tty-inpck
-            tty-istrip tty-inlcr tty-igncr tty-icrnl #-freebsd tty-iuclc
-            tty-ixon #-freebsd tty-ixany tty-ixoff #+freebsd tty-ixany
-            #+hpux tty-ienqak #+freebsd nil tty-imaxbel)
+            tty-istrip tty-inlcr tty-igncr tty-icrnl #-bsd tty-iuclc
+            tty-ixon #-bsd tty-ixany tty-ixoff #+bsd tty-ixany
+            #+hpux tty-ienqak #+bsd nil tty-imaxbel)
 
   ;; output modes
-  #-freebsd (def-enum ash 1 tty-opost tty-olcuc tty-onlcr tty-ocrnl tty-onocr
+  #-bsd (def-enum ash 1 tty-opost tty-olcuc tty-onlcr tty-ocrnl tty-onocr
                       tty-onlret tty-ofill tty-ofdel)
-  #+freebsd (def-enum ash 1 tty-opost tty-onlcr)
+  #+bsd (def-enum ash 1 tty-opost tty-onlcr)
 
   ;; local modes
-  #-freebsd (def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
+  #-bsd (def-enum ash 1 tty-isig tty-icanon tty-xcase tty-echo tty-echoe
                       tty-echok tty-echonl tty-noflsh #+irix tty-iexten
                       #+(or sunos linux) tty-tostop tty-echoctl tty-echoprt
                       tty-echoke #+(or sunos svr4) tty-defecho tty-flusho
                       #+linux nil tty-pendin #+irix tty-tostop
                       #+(or sunos linux) tty-iexten)
-  #+freebsd (def-enum ash 1 tty-echoke tty-echoe tty-echok tty-echo tty-echonl
+  #+bsd (def-enum ash 1 tty-echoke tty-echoe tty-echok tty-echo tty-echonl
                       tty-echoprt tty-echoctl tty-isig tty-icanon nil
                       tty-iexten)
-  #+freebsd (defconstant tty-tostop #x00400000)
-  #+freebsd (defconstant tty-flusho #x00800000)
-  #+freebsd (defconstant tty-pendin #x20000000)
-  #+freebsd (defconstant tty-noflsh #x80000000)
+  #+bsd (defconstant tty-tostop #x00400000)
+  #+bsd (defconstant tty-flusho #x00800000)
+  #+bsd (defconstant tty-pendin #x20000000)
+  #+bsd (defconstant tty-noflsh #x80000000)
   #+hpux (defconstant tty-tostop #o10000000000)
   #+hpux (defconstant tty-iexten #o20000000000)
 
   ;; control modes
-  (def-enum ash #-freebsd #o100 #+freebsd #x400 #+hpux nil tty-cstopb
+  (def-enum ash #-bsd #o100 #+bsd #x400 #+hpux nil tty-cstopb
             tty-cread tty-parenb tty-parodd tty-hupcl tty-clocal
             #+svr4 rcv1en #+svr4 xmt1en #+(or hpux svr4) tty-loblk)
 
   ;; special control characters
   #+(or hpux svr4 linux) (def-enum + 0 vintr vquit verase vkill veof
                                    #-linux veol #-linux veol2)
-  #+freebsd (def-enum + 0 veof veol veol2 verase nil vkill nil nil vintr vquit)
+  #+bsd (def-enum + 0 veof veol veol2 verase nil vkill nil nil vintr vquit)
   #+linux (defconstant veol 11)
   #+linux (defconstant veol2 16)
   
@@ -1509,7 +1509,7 @@
   (defconstant tcoflush 1)
   (defconstant tcioflush 2))
 
-#+freebsd
+#+bsd
 (progn
   (defconstant vmin 16)
   (defconstant vtime 17)
@@ -1527,7 +1527,7 @@
   (defconstant vstop 15)
   (defconstant vdsusp 21))
 
-#+(or hpux freebsd linux)
+#+(or hpux bsd linux)
 (progn
   (defconstant tcsanow 0)
   (defconstant tcsadrain 1)
@@ -1552,7 +1552,7 @@
   (defconstant tty-cs7 #o40)
   (defconstant tty-cs8 #o60))
 
-#+freebsd
+#+bsd
 (progn
   ;; control modes
   (defconstant tty-csize #x300)
@@ -1647,7 +1647,7 @@
 	   (type (unsigned-byte 32) cmd))
   (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
-#+(or svr4 hpux freebsd linux)
+#+(or svr4 hpux bsd linux)
 (progn
   (defun unix-tcgetattr (fd termios)
     "Get terminal attributes."
@@ -1661,7 +1661,7 @@
 
   ;; XXX rest of functions in this progn probably are present in linux, but
   ;; not verified.
-  #-freebsd
+  #-bsd
   (defun unix-cfgetospeed (termios)
     "Get terminal output speed."
     (multiple-value-bind (speed errno)
@@ -1670,24 +1670,24 @@
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
 
-  #+freebsd
+  #+bsd
   (defun unix-cfgetospeed (termios)
     "Get terminal output speed."
     (int-syscall ("cfgetospeed" (* (struct termios))) termios))
 
-  #-freebsd
+  #-bsd
   (defun unix-cfsetospeed (termios speed)
     "Set terminal output speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetospeed" (* (struct termios)) int) termios baud)))
   
-  #+freebsd
+  #+bsd
   (defun unix-cfsetospeed (termios speed)
     "Set terminal output speed."
     (void-syscall ("cfsetospeed" (* (struct termios)) int) termios speed))
   
-  #-freebsd
+  #-bsd
   (defun unix-cfgetispeed (termios)
     "Get terminal input speed."
     (multiple-value-bind (speed errno)
@@ -1696,19 +1696,19 @@
           (values (svref terminal-speeds speed) 0)
           (values speed errno))))
 
-  #+freebsd
+  #+bsd
   (defun unix-cfgetispeed (termios)
     "Get terminal input speed."
     (int-syscall ("cfgetispeed" (* (struct termios))) termios))
   
-  #-freebsd
+  #-bsd
   (defun unix-cfsetispeed (termios speed)
     "Set terminal input speed."
     (let ((baud (or (position speed terminal-speeds)
                     (error "Bogus baud rate ~S" speed))))
       (void-syscall ("cfsetispeed" (* (struct termios)) int) termios baud)))
 
-  #+freebsd
+  #+bsd
   (defun unix-cfsetispeed (termios speed)
     "Set terminal input speed."
     (void-syscall ("cfsetispeed" (* (struct termios)) int) termios speed))
@@ -1793,13 +1793,13 @@
 
 ;;; Socket options.
 
-#+(or hpux freebsd)
+#+(or hpux bsd)
 (define-ioctl-command SIOCSPGRP #\s 8 int :in)
 
 #+linux
 (define-ioctl-command SIOCSPGRP #\s #x8904 int :in)
 
-#+(or hpux freebsd linux)
+#+(or hpux bsd linux)
 (defun siocspgrp (fd pgrp)
   "Set the socket process-group for the unix file-descriptor FD to PGRP."
   (alien:with-alien ((alien-pgrp c-call:int pgrp))
@@ -1828,15 +1828,15 @@
 	   (slot ,buf 'st-gid)
 	   (slot ,buf 'st-rdev)
 	   (slot ,buf 'st-size)
-	   #-(or svr4 FreeBSD) (slot ,buf 'st-atime)
+	   #-(or svr4 BSD) (slot ,buf 'st-atime)
 	   #+svr4    (slot (slot ,buf 'st-atime) 'tv-sec)
-           #+FreeBSD (slot (slot ,buf 'st-atime) 'ts-sec)
-	   #-(or svr4 FreeBSD)(slot ,buf 'st-mtime)
+           #+BSD (slot (slot ,buf 'st-atime) 'ts-sec)
+	   #-(or svr4 BSD)(slot ,buf 'st-mtime)
 	   #+svr4   (slot (slot ,buf 'st-mtime) 'tv-sec)
-           #+FreeBSD(slot (slot ,buf 'st-mtime) 'ts-sec)
-	   #-(or svr4 FreeBSD) (slot ,buf 'st-ctime)
+           #+BSD(slot (slot ,buf 'st-mtime) 'ts-sec)
+	   #-(or svr4 BSD) (slot ,buf 'st-ctime)
 	   #+svr4   (slot (slot ,buf 'st-ctime) 'tv-sec)
-           #+FreeBSD(slot (slot ,buf 'st-ctime) 'ts-sec)
+           #+BSD(slot (slot ,buf 'st-ctime) 'ts-sec)
 	   (slot ,buf 'st-blksize)
 	   (slot ,buf 'st-blocks)))
 

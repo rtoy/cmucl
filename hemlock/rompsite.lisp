@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.13 2001/03/13 15:49:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.14 2001/12/06 19:15:43 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -936,7 +936,7 @@
 #-glibc2
 (defvar old-ltchars)
 
-#+(or hpux irix freebsd glibc2)
+#+(or hpux irix bsd glibc2)
 (progn
   (defvar old-c-iflag)
   (defvar old-c-oflag)
@@ -947,7 +947,7 @@
 (defun setup-input ()
   (let ((fd *editor-file-descriptor*))
     (when (unix:unix-isatty 0)
-      #+(or hpux irix freebsd glibc2)
+      #+(or hpux irix bsd glibc2)
       (alien:with-alien ((tios (alien:struct unix:termios)))
 	(multiple-value-bind
 	    (val err)
@@ -977,8 +977,8 @@
 		      (lognot (logior unix:tty-icrnl unix:tty-ixon))))
 	(setf (alien:slot tios 'unix:c-oflag)
 	      (logand (alien:slot tios 'unix:c-oflag)
-		      (lognot #-freebsd unix:tty-ocrnl
-			      #+freebsd unix:tty-onlcr)))
+		      (lognot #-bsd unix:tty-ocrnl
+			      #+bsd unix:tty-onlcr)))
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vdsusp) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:veof) #xff)
 	(setf (alien:deref (alien:slot tios 'unix:c-cc) unix:vintr)
@@ -995,7 +995,7 @@
 	  (when (null val)
 	    (error "Could not tcsetattr, unix error ~S."
 		   (unix:get-unix-error-msg err)))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	(multiple-value-bind
 	    (val err)
@@ -1006,7 +1006,7 @@
 	(let ((flags (alien:slot sg 'unix:sg-flags)))
 	  (setq old-flags flags)
 	  (setf (alien:slot sg 'unix:sg-flags)
-		(logand #-(or hpux irix freebsd glibc2) (logior flags unix:tty-cbreak)
+		(logand #-(or hpux irix bsd glibc2) (logior flags unix:tty-cbreak)
 			(lognot unix:tty-echo)
 			(lognot unix:tty-crmod)))
 	  (multiple-value-bind
@@ -1015,7 +1015,7 @@
 	    (if (null val)
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (alien:with-alien ((tc (alien:struct unix:tchars)))
 	(multiple-value-bind
 	    (val err)
@@ -1076,7 +1076,7 @@
 (defun reset-input ()
   (when (unix:unix-isatty 0)
     (let ((fd *editor-file-descriptor*))
-      #+(or hpux irix freebsd glibc2)
+      #+(or hpux irix bsd glibc2)
       (when (boundp 'old-c-lflag)
 	(alien:with-alien ((tios (alien:struct unix:termios)))
 	  (multiple-value-bind
@@ -1113,7 +1113,7 @@
 	    (when (null val)
 	      (error "Could not tcsetattr, unix error ~S."
 		     (unix:get-unix-error-msg err))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (when (boundp 'old-flags)
 	(alien:with-alien ((sg (alien:struct unix:sgttyb)))
 	  (multiple-value-bind
@@ -1129,7 +1129,7 @@
 	      (unless val
 		(error "Could not set tty information, unix error ~S."
 		       (unix:get-unix-error-msg err)))))))
-      #-(or hpux irix freebsd glibc2)
+      #-(or hpux irix bsd glibc2)
       (when (and (boundp 'old-tchars)
 		 (simple-vector-p old-tchars)
 		 (eq (length old-tchars) 6))

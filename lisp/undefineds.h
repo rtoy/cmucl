@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.23 1999/02/20 15:54:45 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.24 2001/12/06 19:15:45 pmai Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -10,7 +10,7 @@ F(adjtime)
 #endif
 F(bind)
 F(brk)
-#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__)
+#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__) || defined(__OpenBSD__)
 F(cfgetospeed)
 F(cfsetospeed)
 F(cfgetispeed)
@@ -116,7 +116,7 @@ F(setpgrp)
 #if !defined(SVR4) ||  defined(SOLARIS25)
 F(setpriority)
 #endif
-#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix) && !defined(hpux) && !(defined(linux) && defined(alpha))
+#if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix) && !defined(hpux) && !(defined(linux) && defined(alpha))
 F(setquota)
 #endif
 #if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
@@ -134,7 +134,7 @@ F(sigpause)
 #if !defined(ibmrt) && !defined(hpux) && !defined(SVR4) && !defined(i386)
 F(sigreturn)
 #endif
-#if !defined(SVR4) && !defined(__FreeBSD__)
+#if !defined(SVR4) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
 F(sigsetmask)
 F(sigstack)
 F(sigvec)
@@ -153,7 +153,7 @@ F(closedir)
 F(opendir)
 F(readdir)
 #endif
-#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__) || defined(__linux__)
+#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__linux__)
 F(tcgetattr)
 F(tcsetattr)
 F(tcsendbreak)
@@ -167,7 +167,7 @@ F(times)
 F(truncate)
 F(umask)
 #if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS) \
-  && !defined(__FreeBSD__)
+  && !defined(__FreeBSD__) && !defined(__OpenBSD__)
 F(umount)
 #endif
 F(unlink)
@@ -177,7 +177,7 @@ F(utimes)
 #ifndef irix
 F(vfork)
 #endif
-#if !defined(osf1) && !defined(__FreeBSD__)
+#if !defined(osf1) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
 F(vhangup)
 #endif
 F(wait)

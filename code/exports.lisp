@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.185 2001/10/03 16:00:24 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.186 2001/12/06 19:15:40 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,7 +280,7 @@
              "TTY-CSIZE" "TTY-CS5" "TTY-CS6" "TTY-CS7" "TTY-CS8" "VMIN" "VTIME"
              "VSUSP" "VSTART" "VSTOP" "VDSUSP" "UNIX-TCSENDBREAK"
              "UNIX-TCDRAIN" "UNIX-TCFLUSH" "UNIX-TCFLOW"
-	     #+(or svr4 freebsd linux) "O_NDELAY")
+	     #+(or svr4 bsd linux) "O_NDELAY")
             #+(or svr4 linux)
             (:export "EADDRINUSE" "EADDRNOTAVAIL" "EADV" "EAFNOSUPPORT"
 	     "EALREADY" "EBADE" "EBADFD" "EBADMSG" "EBADR" "EBADRQC"
