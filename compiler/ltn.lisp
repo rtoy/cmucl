@@ -77,15 +77,12 @@
 ;;; Continuation-Delayed-Leaf  --  Internal
 ;;;
 ;;;    If Cont is used only by a Ref to a leaf that can be delayed, then return
-;;; the leaf, otherwise return NIL.  We have to explicitly check for NLX
-;;; continuations, since they are sleazily referenced by IR2 conversion.
+;;; the leaf, otherwise return NIL.
 ;;;
 (defun continuation-delayed-leaf (cont)
   (declare (type continuation cont)) 
   (let ((use (continuation-use cont)))
     (and (ref-p use)
-	 (not (find cont (environment-nlx-info (node-environment use))
-		    :key #'nlx-info-continuation))
 	 (let ((leaf (ref-leaf use)))
 	   (etypecase leaf
 	     (lambda-var (if (null (lambda-var-sets leaf)) leaf nil))
