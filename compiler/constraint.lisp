@@ -225,35 +225,36 @@
 ;;;    
 (defun find-block-type-constraints (block)
   (declare (type cblock block))
-  (let ((gen (make-sset))
-	(kill (make-sset)))
+  (let ((gen (make-sset)))
+    (collect ((kill nil adjoin))
 
-    (let ((test (block-test-constraint block)))
-      (when test
-	(sset-union gen test)))
-
-    (do-nodes (node cont block)
-      (typecase node
-	(ref
-	 (when (continuation-type-check cont)
-	   (let ((var (ok-ref-lambda-var node)))
-	     (when var
-	       (let* ((atype (continuation-derived-type cont))
-		      (con (find-constraint 'typep var atype nil)))
-		 (sset-adjoin con gen))))))
-	(cset
-	 (let ((var (set-var node)))
-	   (when (lambda-var-p var)
-	     (let ((cons (lambda-var-constraints var)))
-	       (when cons
-		 (sset-difference gen cons)
-		 (sset-union kill cons))))))))
-
-    (setf (block-gen block) gen)
-    (setf (block-kill block) kill)
-    (setf (block-out block) (copy-sset gen))
-    (setf (block-type-asserted block) nil)
-    (undefined-value)))
+      (let ((test (block-test-constraint block)))
+	(when test
+	  (sset-union gen test)))
+      
+      (do-nodes (node cont block)
+	(typecase node
+	  (ref
+	   (when (continuation-type-check cont)
+	     (let ((var (ok-ref-lambda-var node)))
+	       (when var
+		 (let* ((atype (continuation-derived-type cont))
+			(con (find-constraint 'typep var atype nil)))
+		   (sset-adjoin con gen))))))
+	  (cset
+	   (let ((var (set-var node)))
+	     (when (lambda-var-p var)
+	       (kill var)
+	       (let ((cons (lambda-var-constraints var)))
+		 (when cons
+		   (sset-difference gen cons))))))))
+      
+      (setf (block-in block) nil)
+      (setf (block-gen block) gen)
+      (setf (block-kill block) (kill))
+      (setf (block-out block) (copy-sset gen))
+      (setf (block-type-asserted block) nil)
+      (undefined-value))))
 
 
 ;;; INTEGER-TYPE-P  --  Internal
@@ -429,13 +430,40 @@
 
 ;;; FLOW-PROPAGATE-CONSTRAINTS  --  Internal
 ;;;
+;;;    BLOCK-IN becomes the intersection of the OUT of the prececessors.  Our
+;;; OUT is:
+;;;     out U (in - kill)
+;;;
+;;;    BLOCK-KILL is just a list of the lambda-vars killed, so we must compute
+;;; the kill set when there are any vars killed.  We bum this a bit by
+;;; special-casing when only one var is killed, and just using that var's
+;;; constraints as the kill set.  This set could possibly be precomputed, but
+;;; it would have to be invalidated whenever any constraint is added, which
+;;; would be a pain.
+;;;
 (defun flow-propagate-constraints (block)
   (let* ((pred (block-pred block))
 	 (in (copy-sset (block-out (first pred)))))
     (dolist (b (rest pred))
       (sset-intersection in (block-out b)))
     (setf (block-in block) in)
-    (sset-union-of-difference (block-out block) in (block-kill block))))
+
+    (let ((kill (block-kill block))
+	  (out (block-out block)))
+      (cond ((null kill)
+	     (sset-union (block-out block) in))
+	    ((null (rest kill))
+	     (let ((con (lambda-var-constraints (first kill))))
+	       (if con
+		   (sset-union-of-difference out in con)
+		   (sset-union out in))))
+	    (t
+	     (let ((kill-set (make-sset)))
+	       (dolist (var kill)
+		 (let ((con (lambda-var-constraints var)))
+		   (when con
+		     (sset-union kill-set con))))
+	       (sset-union-of-difference (block-out block) in kill-set)))))))
 
 
 ;;; CONSTRAINT-PROPAGATE  --  Interface
@@ -443,12 +471,18 @@
 (defun constraint-propagate (component)
   (declare (type component component))
   (init-var-constraints component)
+
   (do-blocks (block component)
     (when (block-test-modified block)
       (find-test-constraints block)))
+
   (do-blocks (block component)
-    (when (block-type-asserted block)
-      (find-block-type-constraints block)))
+    (cond ((block-type-asserted block)
+	   (find-block-type-constraints block))
+	  (t
+	   (setf (block-in block) nil)
+	   (setf (block-out block) (copy-sset (block-gen block))))))
+
   (setf (block-out (component-head component)) (make-sset))
 
   (let ((did-something nil))
