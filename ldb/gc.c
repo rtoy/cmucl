@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.23 1990/12/18 23:26:27 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.24 1991/01/28 09:21:55 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -333,7 +333,7 @@ long nwords;
                         lispobj first_word;
 
                         first_word = *((lispobj *)PTR(object));
-                        if (new_space_p(first_word)) {
+                        if (Pointerp(first_word) && new_space_p(first_word)) {
                             /* Yep, there be a forwarding pointer. */
                             *start = first_word;
                             words_scavenged = 1;
