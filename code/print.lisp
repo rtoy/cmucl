@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.55 1993/06/24 14:18:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.56 1993/07/23 11:48:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1109,6 +1109,9 @@
 	   (funcall (or (basic-structure-class-print-function class)
 			#'default-structure-print)
 		    instance stream *current-level*))
+	  ((and (fboundp 'dylan::dylan-instance-p)
+		(dylan::dylan-instance-p instance))
+	   (dylan::%print-dylan-instance instance stream))
 	  ((fboundp 'pcl:print-object)
 	   (pcl:print-object instance stream))
 	  (t
