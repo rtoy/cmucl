@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.34 1992/07/28 20:37:57 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.35 1992/08/04 14:16:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,7 +458,6 @@
       ;; Is it one?
       (inst xor temp (+ (ash 1 type-bits) bignum-type))
       (inst beq temp zero-tn single-word)
-      (inst nop)
       ;; If it's other than two, we can't be an (unsigned-byte 32)
       (inst xor temp (logxor (+ (ash 1 type-bits) bignum-type)
 			     (+ (ash 2 type-bits) bignum-type)))
@@ -466,9 +465,12 @@
       ;; Get the second digit.
       (loadw temp value (1+ bignum-digits-offset) other-pointer-type)
       ;; All zeros, its an (unsigned-byte 32).
-      (if not-p
-	  (inst beq temp zero-tn target)
-	  (inst bne temp zero-tn target))
+      (cond (not-p
+	     (inst beq temp zero-tn not-target)
+	     (inst bne temp zero-tn target))
+	    (t
+	     (inst beq temp zero-tn target)
+	     (inst bne temp zero-tn not-target)))
       (inst nop)
 	
       SINGLE-WORD
