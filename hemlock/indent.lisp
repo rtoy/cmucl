@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/indent.lisp,v 1.2 1991/02/08 16:35:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/indent.lisp,v 1.3 1991/06/23 15:15:26 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,7 +150,8 @@
 	  (if (and (plusp spaces) 
 		   (not (zerop len)))
 	      (funcall indent-function temp (ceiling spaces 2)))
-	  (line-start (line-offset temp 1)))))))
+	  (unless (line-offset temp 1) (return))
+	  (line-start temp))))))
 
 
 (defcommand "Quote Tab" (p)
