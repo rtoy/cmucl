@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.10 1990/08/24 18:22:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.11 1990/10/04 19:19:03 wlott Exp $
 ;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
@@ -151,6 +151,13 @@
 (eval-when (compile eval)
 
 ;;; LAMBDA-LIST-ELEMENT-DISPATCH -- Internal.
+(defstruct (unprintable-object
+	    (:constructor make-unprintable-object (string))
+	    (:print-function (lambda (x s d)
+			       (declare (ignore d))
+			       (format s "#<~A>"
+				       (unprintable-object-string x)))))
+  string)
 
 ;;;
 ;;; This is a convenient way to express what to do for each type of lambda-list
@@ -170,125 +177,47 @@
 	     (t ,other)))))
 			       (format s "#<~A>"
 				       (unprintable-object-string x)))))
-;;; This prints frame with verbosity level 1.  This pays attention to
-;;; *print-length*, and if we hit a rest-arg before the length runs out, then
-;;; print as many of the values as possible, punting the loop over lambda-list
-;;; variables since any other arguments will be in the rest-arg's list of
-;;; values.
+  string)
+
+;;; PRINT-FRAME-CALL-1 -- Internal.
+;;;
 ;;; This prints frame with verbosity level 1.  If we hit a rest-arg, 
 (defun print-frame-call-1 (frame)
-  (handler-case
-      (let* ((d-fun (di:frame-debug-function frame))
-	     (loc (di:frame-code-location frame))
-	     (count (or *print-length* most-positive-fixnum)))
-	(terpri)
-	(write-char #\()
-	(prin1 (di:debug-function-name d-fun))
+;;; punting the loop over lambda-list variables since any other arguments
+;;; will be in the rest-arg's list of values.
+;;;
+(defun print-frame-call-1 (frame)
   (let* ((d-fun (di:frame-debug-function frame))
-	  (write-char #\space)
-	  (when (zerop count)
-	    ;; We know there are more arguments to print since we haven't
-	    ;; printed ele on this iteration yet.
-	    (write-string "...")
-	    (return))
 	 (loc (di:frame-code-location frame))
-	    :required ((print-frame-call-arg ele loc frame))
-	    :optional ((print-frame-call-arg (second ele) loc frame))
-	    :keyword ((prin1 (second ele))
-		      (write-char #\space)
-		      (print-frame-call-arg (third ele) loc frame)
-		      ;; Extra decrement for printing two items.
-		      (decf count))
-	    :deleted ((print-frame-call-arg ele loc frame))
+	 (results (list (di:debug-function-name d-fun))))
+    (handler-case
+	(dolist (ele (di:debug-function-lambda-list d-fun))
+	  (lambda-list-element-dispatch ele
+	    :required ((push (frame-call-arg ele loc frame) results))
 	    :optional ((push (frame-call-arg (second ele) loc frame) results))
-		     (write-string "<unused-rest-arg> ...")
-		     (let ((values (di:debug-variable-value (second ele) frame)))
-		       (prin1 (car values))
-		       (dolist (value (cdr values))
-			 (write-char #\space)
-			 (when (zerop count)
-			   (write-string "...")
-			   (return))
-			 (prin1 value)
-			 (decf count)))
-		     (write-string "<unavaliable-rest-arg> ..."))
-		   (return)))
-	  (decf count))
-	(write-char #\))
-	(when (di:debug-function-kind d-fun)
-	  (write-string " [")
-	  (prin1 (di:debug-function-kind d-fun))
-	  (write-char #\])))
-    (di:lambda-list-unavailable ()
-      (let ((d-fun (di:frame-debug-function frame)))
-	(format t " <lambda-list-unavailable>)~@[ [~S]~]"
-		(di:debug-function-kind d-fun))))))
+	    :keyword ((push (second ele) results)
+		      (push (frame-call-arg (third ele) loc frame) results))
+	    :deleted ((push (frame-call-arg ele loc frame) results))
+	    :rest ((lambda-var-dispatch (second ele) loc
+		     nil
+		     (progn
+		       (setf results
+			     (append (reverse (di:debug-variable-value
+					       (second ele) frame))
+				     results))
+		       (return))
+		     (push (make-unprintable-object "unavaliable-rest-arg")
+    (print (nreverse results))
+       ()
+       (push (make-unprintable-object "lambda-list-unavailable") results)))
+    (prin1 (nreverse results))
+    (when (di:debug-function-kind d-fun)
 
-(defun print-frame-call-arg (var location frame)
+      (prin1 (di:debug-function-kind d-fun))
       (write-char #\]))))
-    (write-string "<unused-arg>")
-    (prin1 (di:debug-variable-value var frame))
-    (write-string "<unavailable-arg>")))
-
-
-
-;;;; ROBS-BACKTRACE.
-
-#+nil
-(defun robs-backtrace (&optional (frames most-positive-fixnum)
-			    (*standard-output* *debug-io*))
-  "Show a listing of the call stack going down from the current frame.  Frames
-  is how many frames to show."
-  (do ((callee (system:%primitive current-fp)
-	       (di::stack-ref callee c::old-fp-save-offset))
-       (n 0 (1+ n)))
-      ((or (not (di::cstack-pointer-valid-p callee))
-	   (>= n frames))
-       (values))
-    (let* ((caller (di::stack-ref callee c::old-fp-save-offset))
-	   (pc (di::stack-ref callee c::return-pc-save-offset)))
-      (unless (di::cstack-pointer-valid-p caller)
-	(return (values)))
-      (let ((env (di::stack-ref caller c::env-save-offset)))
-	(cond 
-	 ((eql env 0)
-	  (let ((env (di::escape-register caller c::env-offset)))
-	    (cond ((eql (system:%primitive get-type env) system:%trap-type)
-		   (format t "~%<undefined> ~S"
-			   (di::escape-register caller c::call-name-offset))
-		   (setq callee
-			 (check-valid
-			  (di::escape-register caller c::old-fp-offset))))
-		  ((di::env-valid-p env)
-		   (format t "~%<escape frame> ")
-		   (print-code-and-stuff
-		    env
-		    (di::escape-register caller c::return-pc-offset))
-		   (setq callee
-			 (check-valid
-			  (di::stack-ref callee c::old-fp-save-offset))))
-		  (t
-		   (error "Escaping frame ENV invalid?")))))
-	 ((di::env-valid-p env)
-	  (terpri)
-	  (print-code-and-stuff env pc))
-	 (t
-	  (format t "~%<invalid frame>")))))))
-
-#+nil
-(defun print-code-and-stuff (env pc)
-  (let* ((code (system:%primitive header-ref env system:%function-code-slot))
-	 (code-int (system:%primitive make-fixnum code)))
-    (format t "~A, Code = #x~X, PC = ~D"
-	    (system:%primitive header-ref env system:%function-name-slot)
-	    (logior code-int (ash system:%code-type 27))
-	    (- (system:%primitive make-fixnum pc) code-int))))
-
-#+nil
-(defun check-valid (x)
-  (unless (di::cstack-pointer-valid-p x)
-    (error "Invalid control stack pointer."))
-  x)
+;;;
+(defun frame-call-arg (var location frame)
+  (lambda-var-dispatch var location
     (make-unprintable-object "unused-arg")
     (di:debug-variable-value var frame)
     (make-unprintable-object "unavailable-arg")))
