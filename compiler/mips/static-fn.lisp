@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.9 1990/05/18 00:56:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/static-fn.lisp,v 1.10 1990/06/25 21:13:43 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -23,7 +23,7 @@
   (:policy :safe)
   (:variant-vars symbol)
   (:vop-var vop)
-  (:temporary (:scs (any-reg)) temp)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:temporary (:sc descriptor-reg :offset lra-offset) lra)
   (:temporary (:sc descriptor-reg :offset cname-offset) cname)
@@ -96,7 +96,7 @@
 	       (store-stack-tn nfp-save cur-nfp))
 	     (move old-fp fp-tn)
 	     (move fp-tn csp-tn)
-	     (inst compute-lra-from-code lra code-tn lra-label)
+	     (inst compute-lra-from-code lra code-tn lra-label temp)
 	     (loadw function lexenv vm:closure-function-slot
 		    vm:function-pointer-type)
 	     (lisp-jump function lip)
