@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.30 1990/04/24 02:56:19 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.31 1990/05/18 07:06:36 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -177,8 +177,8 @@
 	    (:signed
 	     (inst slt ,n-temp ,n-y ,n-x)))
 	  (if ,n-not-p
-	      (inst beq ,n-temp zero-tn ,n-target)
-	      (inst bne ,n-temp zero-tn ,n-target))))
+	      (inst bne ,n-temp zero-tn ,n-target)
+	      (inst beq ,n-temp zero-tn ,n-target))))
        (inst nop))))
 
 
