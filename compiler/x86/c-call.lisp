@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.2 1997/02/12 23:03:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.3 1997/04/27 18:12:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,8 +57,7 @@
 
 (def-alien-type-method (double-float :arg-tn) (type state)
   (declare (ignore type))
-  (let ((stack-frame-size
-	 (logandc2 (1+ (arg-state-stack-frame-size state)) 1)))
+  (let ((stack-frame-size (arg-state-stack-frame-size state)))
     (setf (arg-state-stack-frame-size state) (+ stack-frame-size 2))
     (my-make-wired-tn 'double-float 'double-stack stack-frame-size)))
 
