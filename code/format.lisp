@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.44 2002/03/14 11:50:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.45 2002/10/15 15:50:24 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2064,6 +2064,23 @@
 
 ;;;; Justification.
 
+(defparameter *illegal-inside-justification*
+  (mapcar (lambda (x) (parse-directive x 0))
+	  '("~W" "~:W" "~@W" "~:@W"
+	    "~_" "~:_" "~@_" "~:@_"
+	    "~:>" "~:@>"
+	    "~I" "~:I" "~@I" "~:@I"
+	    "~:T" "~:@T")))
+
+(defun illegal-inside-justification-p (directive)
+  (member directive *illegal-inside-justification*
+	  :test (lambda (x y)
+		  (and (format-directive-p x)
+		       (format-directive-p y)
+		       (eql (format-directive-character x) (format-directive-character y))
+		       (eql (format-directive-colonp x) (format-directive-colonp y))
+		       (eql (format-directive-atsignp x) (format-directive-atsignp y))))))
+
 (def-complex-format-directive #\< (colonp atsignp params string end directives)
   (multiple-value-bind
       (segments first-semi close remaining)
@@ -2076,8 +2093,15 @@
 					 close params string end)
 	   (expand-format-logical-block prefix per-line-p insides
 					suffix atsignp))
-	 (expand-format-justification segments colonp atsignp
-				      first-semi params))
+	 (let ((count (apply #'+ (mapcar (lambda (x) (count-if #'illegal-inside-justification-p x)) segments))))
+	   (when (> count 0)
+	     ;; ANSI specifies that "an error is signalled" in this
+	     ;; situation.
+	     (error 'format-error
+		    :complaint "~D illegal directive~:P found inside justification block"
+		    :arguments (list count)))
+	   (expand-format-justification segments colonp atsignp
+				      first-semi params)))
      remaining)))
 
 (def-complex-format-interpreter #\<
@@ -2094,9 +2118,16 @@
 		(interpret-format-logical-block stream orig-args args
 						prefix per-line-p insides
 						suffix atsignp))
-	      (interpret-format-justification stream orig-args args
-					      segments colonp atsignp
-					      first-semi params)))
+	      (let ((count (apply #'+ (mapcar (lambda (x) (count-if #'illegal-inside-justification-p x)) segments))))
+		(when (> count 0)
+		  ;; ANSI specifies that "an error is signalled" in this
+		  ;; situation.
+		  (error 'format-error
+			 :complaint "~D illegal directive~:P found inside justification block"
+			 :arguments (list count)))
+		(interpret-format-justification stream orig-args args
+						segments colonp atsignp
+						first-semi params))))
     remaining))
 
 (defun parse-format-justification (directives)
