@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.126 2002/08/12 16:08:14 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.127 2002/08/25 18:56:55 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1722,13 +1722,16 @@
 			:type type
 			:defaults (translate-logical-pathname default))
 		       (pathname file))))
-	    
+
 	    (when output-file
 	      (setq output-file-pathname
 		    (translate-logical-pathname
-		     (compile-file-pathname (first source)
-					    :output-file output-file
-					    :byte-compile *byte-compile*)))
+		     (if (eq output-file t)
+			 (compile-file-pathname (first source)
+						:byte-compile *byte-compile*)
+			 (compile-file-pathname (first source)
+						:output-file output-file
+						:byte-compile *byte-compile*))))
 	      (setq fasl-file (open-fasl-file output-file-pathname
 					      (namestring (first source))
 					      (eq *byte-compile* t))))
