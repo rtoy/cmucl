@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.2 1991/04/01 13:47:07 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.3 1991/04/08 14:47:58 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -539,21 +539,22 @@
 
 (define-vop (shift-towards-someplace)
   (:policy :fast-safe)
-  (:args (num :scs (unsigned-reg))
-	 (amount :scs (signed-reg)))
-  (:arg-types unsigned-num fixnum)
+  (:args (num :scs (unsigned-reg) :target r)
+	 (amount :scs (signed-reg) :to (:result 1)))
+  (:arg-types unsigned-num tagged-num)
   (:results (r :scs (unsigned-reg)))
-  (:result-types unsigned-num)
-  (:policy :fast-safe))
+  (:result-types unsigned-num))
 
 (define-vop (shift-towards-start shift-towards-someplace)
   (:translate shift-towards-start)
+  (:note "SHIFT-TOWARDS-START")
   (:generator 1
     (move r num)
     (inst sl r amount)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
+  (:note "SHIFT-TOWARDS-END")
   (:generator 1
     (move r num)
     (inst sr r amount)))
