@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.102 2003/04/24 13:55:44 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.103 2003/05/11 08:57:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3849,6 +3849,13 @@
     (interpreted-debug-function
      (error ":function-end breakpoints are currently unsupported ~
 	     for interpreted-debug-functions."))))
+
+(defun can-set-function-end-breakpoint-p (what)
+  (typecase what
+    (compiled-debug-function
+     (eq (c::compiled-debug-function-returns
+	  (compiled-debug-function-compiler-debug-fun what))
+	 :what))))
 
 ;;; These are unique objects created upon entry into a function by a
 ;;; :function-end breakpoint's starter hook.  These are only created when users

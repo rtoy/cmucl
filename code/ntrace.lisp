@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.21 2003/05/09 14:16:40 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.22 2003/05/11 08:57:13 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -135,8 +135,7 @@
 ;;; :FUNCALLABLE-INSTANCE.
 ;;;
 (defun trace-fdefinition (x)
-  (multiple-value-bind
-      (res named-p)
+  (multiple-value-bind (res named-p)
       (typecase x
 	(symbol
 	 (cond ((special-operator-p x)
@@ -387,8 +386,7 @@
 ;;; automatically retracing; this 
 ;;;
 (defun trace-1 (function-or-name info &optional definition)
-  (multiple-value-bind
-      (fun named kind)
+  (multiple-value-bind (fun named kind)
       (if definition
 	  (values definition t
 		  (nth-value 2 (trace-fdefinition definition)))
@@ -398,16 +396,18 @@
       (untrace-1 fun))
     
     (let* ((debug-fun (di:function-debug-function fun))
-	   (encapsulated 
+	   (end-breakpoint-p (di::can-set-function-end-breakpoint-p debug-fun))
+	   (encapsulated
 	    (if (eq (trace-info-encapsulated info) :default)
 		(ecase kind
-		  (:compiled nil)
+		  (:compiled (not end-breakpoint-p))
 		  (:compiled-closure
 		   (unless (functionp function-or-name)
 		     (warn "Tracing shared code for ~S:~%  ~S"
 			   function-or-name fun))
-		   nil)
-		  ((:interpreted :interpreted-closure :funcallable-instance)
+		   (not end-breakpoint-p))
+		  ((:interpreted :interpreted-closure
+				 :funcallable-instance)
 		   t))
 		(trace-info-encapsulated info)))
 	   (loc (if encapsulated
