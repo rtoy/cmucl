@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.36 1991/02/20 15:00:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vmdef.lisp,v 1.37 1991/04/15 15:13:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1029,8 +1029,8 @@
 ;;;
 ;;;    Return an alist that translates from lists of SCs we can load OP from to
 ;;; the move function used for loading those SCs.  We quietly ignore
-;;; restrictions to :non-packed (constant) SCs, since we don't load into those
-;;; SCs.
+;;; restrictions to :non-packed (constant) and :unbounded SCs, since we don't
+;;; load into those SCs.
 ;;;
 (eval-when (compile load eval)
 
@@ -1065,7 +1065,7 @@
 		       (pushnew alt (car found)))
 		      (t
 		       (funs (cons (list alt) name))))))))
-	 ((eq (sb-kind (sc-sb sc)) :non-packed))
+	 ((member (sb-kind (sc-sb sc)) '(:non-packed :unbounded)))
 	 (t
 	  (error "SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
 	          mentioned in the restriction for operand ~S."
