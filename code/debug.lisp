@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.23 1991/12/12 16:56:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.24 1991/12/15 19:38:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,6 +278,27 @@
    which causes the standard debugger to execute.  The system passes the value
    of this variable to the function because it binds *debugger-hook* to nil
    around the invocation.")
+
+;;; These are bound on each invocation of INVOKE-DEBUGGER.
+;;;
+(defvar *debug-restarts*)
+(defvar *debug-condition*)
+
+;;; INVOKE-DEBUGGER -- Public.
+;;;
+(defun invoke-debugger (condition)
+  "The CMU Common Lisp debugger.  Type h for help."
+  (when *debugger-hook*
+    (let ((hook *debugger-hook*)
+	  (*debugger-hook* nil))
+      (funcall hook condition hook)))
+  (unix:unix-sigsetmask 0)
+  (let* ((*debug-condition* condition)
+	 (*debug-restarts* (compute-restarts))
+	 (*standard-input* *debug-io*)		;in case of setq
+	 (*standard-output* *debug-io*)		;''  ''  ''  ''
+	 (*error-output* *debug-io*)
+
     (do ((p restarts (cdr p))
 	 (i 0 (1+ i)))
 	((endp p))
@@ -691,10 +712,23 @@
 		      ((null lead)
 		       (princ "Bottom of stack encountered.")
 		       prev)
-      (write-string "Restart number: ")
+		    (when (= n (di:frame-number prev))
 		      (return prev))))))
 	  (t
-    (invoke-restart-interactively (nth num *debug-restarts*))))
+	   (print-frame-call
+	    (setf *current-frame*
+		  (do ((prev *current-frame* lead)
+		       (lead (di:frame-up *current-frame*)
+			     (di:frame-up lead)))
+		      ((null lead)
+		       (princ "Top of stack encountered.")
+		       prev)
+		    (when (= n (di:frame-number prev))
+		      (return prev)))))))))
+
+(def-debug-command-alias "F" "FRAME")
+
+
 ;;;
 ;;; In and Out commands.
 ;;;
