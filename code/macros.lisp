@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.100 2004/05/18 13:43:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.101 2004/06/29 20:44:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1257,9 +1257,12 @@
       (dolist (place places)
 	(multiple-value-bind (dummies vals newval setter getter)
 	    (get-setf-expansion place env)
-	  (setf all-dummies (append all-dummies dummies))
-	  (setf all-vals (append all-vals vals))
-	  (setf newvals (append newvals newval))
+	  ;; ANSI CL 5.1.2.3 explains that extra places are set to
+	  ;; nil.
+	  (setf all-dummies (append all-dummies dummies (cdr newval)))
+	  (setf all-vals (append all-vals vals
+				 (mapcar (constantly nil) (cdr newval))))
+	  (setf newvals (append newvals (list (car newval))))
 	  (setters setter)
 	  (getters getter)))
       (values all-dummies all-vals newvals
