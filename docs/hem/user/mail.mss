@@ -515,7 +515,7 @@ Matching of @f[<component>] fields is case sensitive, so this example will
 @example[(or (-- "replied" "") (-- "Replied" ""))]
 
 
-@defhvar[var "MH Scan Line Form", val {"/usr/misc/.lisp/lib/mh-scan"}]
+@defhvar[var "MH Scan Line Form", val {"library:mh-scan"}]
 This is a pathname of a file containing an @mh format expression used for
 header lines.
 
@@ -607,7 +607,7 @@ When this is set, the user is only prompted once for his password, and the
 password is stored for future use.
 @enddefhvar
 
-@defhvar[var "Authenticate Incorporation", val {t}]
+@defhvar[var "Authenticate Incorporation", val {nil}]
 @defhvar1[var "Authentication User Name", val {nil}]
 When @hid[Authenticate Incorporation] is set, incorporating new mail prompts
 for a password to access a remote mail-drop.
