@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.12 1992/04/28 15:38:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.13 1992/04/29 16:50:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -915,7 +915,7 @@ default-value-8
     (move csp-tn cfp-tn)
     (move cfp-tn old-fp)
     ;; Out of here.
-    (lisp-return return-pc :offset 2)))
+    (lisp-return return-pc :offset 2)
     (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of a fixed number of values.  The Values are
