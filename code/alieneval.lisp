@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.4 1990/10/03 15:01:15 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.5 1990/10/03 15:15:55 ram Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -315,8 +315,8 @@
 				 ,(length args) ',arg-types ',result-type))
 	  (setf (info function source-transform ',name)
 		#'c::alien=>lisp-transform)
-	  (defun ,name (&rest dummy-arglist)
-	    (displace-operator-definition ',name dummy-arglist))))
+	  (setf (fdefinition ',name)
+		(make-operator-definition ',name))))
     (cond
      ((symbolp (car arg))
       (push (car arg) argnames))
@@ -743,38 +743,39 @@
 		    type))
 
 
-;;; Displace-Operator-Definition  --  Internal
+;;; MAKE-OPERATOR-DEFINITION  --  Internal
 ;;;
 ;;;    To save space and load & compile time for defoperators, we don't
-;;; actually generate the function for the operator until it is called.
-;;; This results in a significant space savings at the cost of
-;;; always running the operator definition interpreted when called
-;;; that way.
+;;; actually generate the function for the operator until it is called.  This
+;;; function returns a closure that, when called, computes the definition and
+;;; installs as the definition of Name.  This results in a significant space
+;;; savings at the cost of always running the operator definition interpreted
+;;; when called that way.
 ;;;
-(defun displace-operator-definition (name actual-args)
-  (let ((info (info function alien-operator name)))
-    (unless info
-      (error "Operator ~S has no Alien-Operator-Info property."))
-    (let ((num-args (alien-info-num-args info))
-	  (arg-types (alien-info-arg-types info)))
-      (do ((i 0 (1+ i))
-	   (args ())
-	   (binds ()))
-	  ((= i num-args)
-	   (let* ((args (nreverse args))
-		  (res (coerce `(lambda ,args
-				  (alien-bind ,(nreverse binds)
+(defun make-operator-definition (name)
+  #'(lambda (&rest actual-args)
+      (let ((info (info function alien-operator name)))
+	(unless info
+	  (error "Operator ~S has no Alien-Operator-Info property."))
+	(let ((num-args (alien-info-num-args info))
+	      (arg-types (alien-info-arg-types info)))
+	  (collect ((args)
+		    (binds))
+	    (dotimes (i num-args)
+	      (let ((type (assoc i arg-types))
+		    (sym (gensym)))
+		(args sym)
+		(when type
+		  (binds `(,sym ,sym ,(cdr type))))))
+
+	    (let ((res (coerce `(lambda ,(args)
+				  (alien-bind ,(binds)
 				    (assert-alien-type
-				     ,(apply (alien-info-function info) args)
+				     ,(apply (alien-info-function info) (args))
 				     ',(alien-info-result-type info))))
 			       'function)))
-	     (setf (symbol-function name) res)
-	     (apply res actual-args)))
-	(let ((type (assoc i arg-types))
-	      (sym (gensym)))
-	  (push sym args)
-	  (if type
-	      (push `(,sym ,sym ,(cdr type)) binds)))))))
+	      (setf (fdefinition name) res)
+	      (apply res actual-args)))))))
 
 
 ;;;; Alien access method definition:
