@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.3 1991/04/23 17:00:07 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/system.lisp,v 1.4 1991/04/23 21:39:07 chiles Exp $
 ;;;
 ;;; IBM RT VM definitions of various system hacking operations.
 ;;;
@@ -286,3 +286,17 @@
   (:generator 1
     (inst break halt-trap)))
 
+
+
+;;;; Dynamic vop count collection support
+
+(define-vop (count-me)
+  (:args (count-vector :scs (descriptor-reg)))
+  (:info index)
+  (:temporary (:scs (non-descriptor-reg)) count)
+  (:generator 1
+    (let ((offset
+	   (- (* (+ index vector-data-offset) word-bytes) other-pointer-type)))
+      (inst l count count-vector offset)
+      (inst inc count 1)
+      (inst st count count-vector offset))))
