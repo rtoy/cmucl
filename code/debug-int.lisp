@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.101 2002/08/27 22:18:23 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.102 2003/04/24 13:55:44 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -948,6 +948,7 @@
 		   (c-path-fp (x86-call-context c-ocfp :depth (1+ depth))))
 	       (cond ((and lisp-path-fp c-path-fp)
 		      ;; Both still seem valid - choose the lisp frame.
+		      #+nil
 		      (when (zerop depth)
 			(format t "Debug: Both still valid ~s ~s ~s ~s~%"
 				lisp-ocfp lisp-ra c-ocfp c-ra))
