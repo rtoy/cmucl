@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.9 1990/06/18 14:47:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/memory.lisp,v 1.10 1990/08/15 02:55:01 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions of some general purpose memory
 ;;; reference VOPs inherited by basic memory reference operations.
@@ -22,7 +22,9 @@
 
 ;;; Cell-Ref and Cell-Set are used to define VOPs like CAR, where the offset to
 ;;; be read or written is a property of the VOP used.  Cell-Setf is similar to
-;;; Cell-Set, but delivers the new value as the result.
+;;; Cell-Set, but delivers the new value as the result.  Cell-Setf-Function
+;;; takes its arguments as if it were a setf function (new value first, as
+;;; apposed to a setf macro, which takes the new value last).
 ;;;
 (define-vop (cell-ref)
   (:args (object :scs (descriptor-reg)))
@@ -44,6 +46,17 @@
   (:args (object :scs (descriptor-reg))
 	 (value :scs (descriptor-reg any-reg)
 		:target result))
+  (:results (result :scs (descriptor-reg any-reg)))
+  (:variant-vars offset lowtag)
+  (:policy :fast-safe)
+  (:generator 4
+    (storew value object offset lowtag)
+    (move result value)))
+;;;
+(define-vop (cell-setf-function)
+  (:args (value :scs (descriptor-reg any-reg)
+		:target result)
+	 (object :scs (descriptor-reg)))
   (:results (result :scs (descriptor-reg any-reg)))
   (:variant-vars offset lowtag)
   (:policy :fast-safe)
