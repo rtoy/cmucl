@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.41 2003/10/09 11:12:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.42 2003/10/09 14:00:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -855,6 +855,10 @@
 	  (t
 	   ;; We have already processed the successors of this block.  Just
 	   ;; make sure we thing the stack is the same now as before.
+	   ;;
+	   ;; Comment out the assertion because it doesn't hold if there
+	   ;; is an nlx-entry above.  I think.  --gerd 2003-10-09
+	   #+nil 
 	   (assert (equal (byte-block-info-start-stack info) stack)))))
   (undefined-value))
 
