@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.22 1993/08/04 10:58:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.23 1993/08/15 14:44:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -843,11 +843,12 @@
   (declare (type path-designator pathname)
 	   (values (or null simple-base-string)))
   (with-pathname (pathname pathname)
-    (let ((host (%pathname-host pathname)))
-      (unless host
-	(error "Cannot determine the namestring for pathnames with no ~
-		host:~%  ~S" pathname))
-      (funcall (host-unparse host) pathname))))
+    (when pathname
+      (let ((host (%pathname-host pathname)))
+	(unless host
+	  (error "Cannot determine the namestring for pathnames with no ~
+		  host:~%  ~S" pathname))
+	(funcall (host-unparse host) pathname)))))
 
 
 ;;; HOST-NAMESTRING -- Interface
