@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.9 1997/12/03 15:30:22 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.10 1998/01/17 05:56:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1998.
 ;;;
 (in-package :x86)
 
@@ -107,8 +107,6 @@
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp block unwind-block-current-uwp-slot)
     (storew ebp-tn block unwind-block-current-cont-slot)
-    ;; The code slot is unused - fill with 0.
-    (storew 0 block vm:unwind-block-current-code-slot)
     (storew (make-fixup nil :code-object entry-label)
 	    block catch-block-entry-pc-slot)))
 
@@ -127,8 +125,6 @@
     (load-symbol-value temp lisp::*current-unwind-protect-block*)
     (storew temp block  unwind-block-current-uwp-slot)
     (storew ebp-tn block  unwind-block-current-cont-slot)
-    ;; The code slot is unused - fill with 0.
-    (storew 0 block vm:catch-block-current-code-slot)
     (storew (make-fixup nil :code-object entry-label)
 	    block catch-block-entry-pc-slot)
     (storew tag block catch-block-tag-slot)

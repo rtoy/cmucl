@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.7 1997/11/23 08:52:51 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/monitor.c,v 1.8 1998/01/17 05:56:35 dtc Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -399,7 +399,19 @@ static void catchers_cmd(char **ptr)
         printf("There are no active catchers!\n");
     else {
         while (catch != NULL) {
-            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ", (unsigned long)catch, (unsigned long)(catch->current_uwp), (unsigned long)(catch->current_cont), catch->current_code, catch->entry_pc);
+#ifndef i386
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
+		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
+		   (unsigned long)(catch->current_cont),
+		   catch->current_code,
+		   catch->entry_pc);
+#else
+            printf("0x%08lX:\n\tuwp: 0x%08lX\n\tfp: 0x%08lX\n\tcode: 0x%08lx\n\tentry: 0x%08lx\n\ttag: ",
+		   (unsigned long)catch, (unsigned long)(catch->current_uwp),
+		   (unsigned long)(catch->current_cont),
+		   component_ptr_from_pc(catch->entry_pc) + type_OtherPointer,
+		   catch->entry_pc);
+#endif
             brief_print((lispobj)catch->tag);
             catch = catch->previous_catch;
         }
