@@ -14,7 +14,7 @@
 ;;;
 (in-package 'c)
 
-(export '(*compile-time-define-macros* *compiling-for-interpreter*))
+(export '(*compile-time-define-macros* *converting-for-interpreter*))
 
 (in-package 'ext)
 (export '(ignorable truly-the maybe-inline))
@@ -510,20 +510,23 @@
 ;;;
 ;;;    Convert a call to a global function which has an inline expansion.  We
 ;;; make a number of speed v.s. space policy decisions using information from
-;;; our extended inline declaration.  If space is more important than speed,
-;;; then we never do anything funny unless the function is :Always-Inline, in
-;;; which case we do a standard inline substitution.  Otherwise, we do a
-;;; standard inline expansion if it is :Inline or a semi-inline call if it is
-;;; :Semi-Inline.
+;;; our extended inline declaration.  We don't do anything unless either the
+;;; function is :INLINE or space is totally unimportant.  If :INLINE, we do
+;;; normal copy-per-call inlining, otherwise we share a single copy across all
+;;; calls.
+;;;
+;;;   We allow inlining of recursive functions through a similar hack to that
+;;; used for LABELS.  Recursive inline expansion is prevented, instead we do a
+;;; recursive local call.
 ;;;
 (proclaim '(function ir1-convert-global-inline
 		     (continuation continuation t leaf inlinep list)
 		     void))
 (defun ir1-convert-global-inline (start cont form var inlinep expansion)
-  (if (and (policy nil
-		   (>= speed cspeed)
-		   (or (> speed space)
-		       (and (= speed space) (eq inlinep :inline))))
+  (if (and (case inlinep
+	     (:notinline nil)
+	     (:inline t)
+	     (t (policy nil (zerop space))))
 	   (not (functional-p var)))
       (let* ((name (leaf-name var))
 	     (dummy (make-functional :name name)))
@@ -532,8 +535,7 @@
 	  (setf (leaf-name fun) name)
 	  (substitute-leaf fun dummy)
 	  (setf (gethash name *free-functions*)
-		(if (or (eq inlinep :inline)
-			(policy nil (= space 0)))
+		(if (eq inlinep :inline)
 		    var
 		    fun))
 	  (ir1-convert-combination start cont form fun)))
@@ -2276,13 +2278,11 @@
 ;;;
 (proclaim '(function process-type-proclamation (t list) void))
 (defun process-type-proclamation (spec names)
-  (let ((type (single-value-type (specifier-type spec))))
+  (let ((type (specifier-type spec)))
     (unless (policy nil (= brevity 3))
       (dolist (name names)
 	(let ((old-type (info variable type name)))
-	  (unless (or (function-type-p type)
-		      (function-type-p old-type)
-		      (types-intersect type old-type))
+	  (unless (types-intersect type old-type)
 	    (compiler-warning
 	     "New proclaimed type ~S for ~S conflicts with old type ~S."
 	     (type-specifier type) name (type-specifier old-type))))))
@@ -2322,7 +2322,7 @@
 (proclaim '(function process-ftype-proclamation (t list) void))
 (defun process-ftype-proclamation (spec names)
   (let ((type (specifier-type spec)))
-    (unless (function-type-p type)
+    (unless (csubtypep type (specifier-type 'function))
       (compiler-error
        "Declared functional type is not a function type: ~S." spec))
     (dolist (name names)
@@ -2494,7 +2494,9 @@
 
       (let ((name (check-function-name (first def))))
 	(names name)
-	(defs (cons 'lambda (rest def)))))
+	(defs `(lambda ,(second def)
+		 (block ,(if (consp name) (second name) name)
+		   (cddr def))))))
     (values (names) (defs))))
 
 
@@ -2556,7 +2558,7 @@
 ;;; type.
 
 (def-ir1-translator the ((type value) start cont)
-  (let ((ctype (specifier-type type)))
+  (let ((ctype (values-specifier-type type)))
     (if (null (find-uses cont))
 	(let* ((old-type (continuation-asserted-type cont))
 	       (int (values-type-intersection old-type ctype)))
@@ -2582,7 +2584,7 @@
   Like the THE special form, except that it believes whatever you tell it.  It
   will never generate a type check, but will cause a warning if the compiler
   can prove the assertion is wrong."
-  (let ((type (specifier-type type))
+  (let ((type (values-specifier-type type))
 	(old (find-uses cont)))
     (ir1-convert start cont value)
     (do-uses (use cont)
