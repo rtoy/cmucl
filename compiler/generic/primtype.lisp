@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.6 1991/11/09 02:39:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.7 1992/10/11 21:09:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.6 1991/11/09 02:39:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.7 1992/10/11 21:09:27 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -100,10 +100,7 @@
 
 ;;; Random primitive types that don't exist at the LISP level.
 ;;; 
-(def-primitive-type random (non-descriptor-reg) :type nil)
-(def-primitive-type interior (interior-reg) :type nil)
 (def-primitive-type catch-block (catch-block) :type nil)
-
 
 
 
