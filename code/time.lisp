@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.16 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.17 1996/07/12 19:19:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -194,7 +194,7 @@
   (let ((years (- year 1901)))
     (+ (- (truncate years 4)
 	  (truncate years 100))
-       (truncate years 400))))
+       (truncate (+ years 300) 400))))
 
 (defvar *days-before-month*
   (collect ((results))
