@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.4 2004/07/14 20:58:45 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/macros.lisp,v 1.5 2004/07/15 17:57:54 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -212,6 +212,8 @@
   ;; C call to allocate via dispatch routines. Each destination has a
   ;; special entry point. The size may be a register or a constant.
   ;; This is used only if space is more important than speed.
+  ;; Since linkage table will trash r11, the easiest solution is to make sure temp-tn is r11
+  (assert (= (tn-offset temp-tn) #.r11-offset))
   (ecase (tn-offset alloc-tn)
     (#.rax-offset
      (load-size alloc-tn rax-tn size)
@@ -249,10 +251,7 @@
      (load-size alloc-tn r10-tn size)
      (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r10")
 				       :foreign)))
-    (#.r11-offset
-     (load-size alloc-tn r11-tn size)
-     (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r11")
-				       :foreign)))
+    ;; no r11
     (#.r12-offset
      (load-size alloc-tn r12-tn size)
      (inst mov-imm temp-tn (make-fixup (extern-alien-name "alloc_to_r12")
