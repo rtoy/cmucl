@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.9 2002/09/05 15:19:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.10 2002/09/12 15:57:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.9 2002/09/05 15:19:51 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.10 2002/09/12 15:57:59 toy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -198,6 +198,8 @@
       
       (emit-label done))))
 
+;; Same as above, but we the number is sign-extended to a full 64-bit
+;; length.  Not really needed, I suppose.
 #+(and sparc-v9 sparc-v8plus)
 (define-vop (move-to-word/integer)
   (:args (x :scs (descriptor-reg)))
@@ -484,7 +486,7 @@
   (:args (arg :scs (signed64-reg) :target x))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (signed64-reg) :from (:argument 0)) x temp)
-  (:note "signed quad word to integer coercion")
+  (:note "signed 64-bit word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((fixnum (gen-label))
@@ -524,7 +526,7 @@
   (:args (arg :scs (unsigned64-reg) :target x))
   (:results (y :scs (descriptor-reg)))
   (:temporary (:scs (unsigned64-reg) :from (:argument 0)) x temp)
-  (:note "signed quad word to integer coercion")
+  (:note "unsigned 64-bit word to integer coercion")
   (:generator 20
     (move x arg)
     (let ((two-words (gen-label))
@@ -620,7 +622,7 @@
 ;; Move untagged number arguments/return-values.
 (define-vop (move-64bit-word-argument)
   (:args (x :target y
-	    :scs (signed64-reg unsigned64-reg))
+	    :scs (signed-reg signed64-reg unsigned64-reg immediate))
 	 (fp :scs (any-reg)
 	     :load-if (not (sc-is y sap-reg))))
   (:results (y))
@@ -628,7 +630,13 @@
   (:generator 0
     (sc-case y
       ((signed64-reg unsigned64-reg)
-       (move y x))
+       (sc-case x
+	 ((signed64-reg unsigned64-reg)
+	  (move y x))
+	 (signed-reg
+	  (inst sra y x 0))
+	 (immediate
+	  (inst li64 y (tn-value x)))))
       ((signed64-stack unsigned64-stack)
        (store64 x fp (tn-offset y))))))
 
