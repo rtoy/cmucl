@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.152 2003/05/08 20:49:17 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.153 2003/05/14 12:03:15 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1993,9 +1993,9 @@
     
 ;;; IR1-Convert-Lambda  --  Internal
 ;;;
-;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  Name and
-;;; Parent-Form are context that is used to drive the context sensitive
-;;; declaration mechanism.  If we find an entry in *context-declarations* that
+;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  NAME and
+;;; PARENT-FORM are context that is used to drive the context sensitive
+;;; declaration mechanism.  If we find an entry in *CONTEXT-DECLARATIONS* that
 ;;; matches this context (by returning a non-null value) then we add it into
 ;;; the local declarations.
 ;;;
@@ -2035,9 +2035,20 @@
 						aux-vars aux-vals cont)
 		      (ir1-convert-lambda-body body vars aux-vars aux-vals
 					       t cont))))
-	(setf (functional-inline-expansion res) form)
+        (setf (functional-inline-expansion res) form)
 	(setf (functional-arg-documentation res) (cadr form))
-	(setf (leaf-name res) name)
+	(setf (leaf-name res)
+              (or name
+                  ;; PCL-generated lambdas end up here without an explicit NAME.
+                  ;; To avoid ending up with IR1 lambda-nodes that are unnamed,
+                  ;; we extract a name from the "method-name" declaration that
+                  ;; is inserted by PCL. A cleaner solution would be to add a
+                  ;; NAMED-LAMBDA IR1 translator, similar to that used in SBCL,
+                  ;; and make PCL use that instead of LAMBDA.
+                  (let ((decl (find 'pcl::method-name decls :key 'caadr)))
+                    (and decl
+                         (eq 'declare (first decl))
+                         (cons :method (cadadr decl))))))
 	res))))
 
 (declaim (end-block))
@@ -2748,7 +2759,7 @@
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
 ;;;
-;;;    This is a frob that DEFMACRO expands into to establish the compiler
+;;;    This is a frob that DEFSTRUCT expands into to establish the compiler
 ;;; semantics.  The other code in the expansion and %%COMPILER-DEFSTRUCT do
 ;;; most of the work, we just clear all of the functions out of
 ;;; *FREE-FUNCTIONS* to keep things in synch.  %%COMPILER-DEFSTRUCT is also
