@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.8.2.2 2000/05/23 16:38:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.8.2.3 2000/07/06 08:15:18 dtc Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -604,7 +604,7 @@
 	(values (logxor (the fixnum (1- cache-size)) (the fixnum (1- line-size)))
 		cache-size
 		line-size
-		(the fixnum (floor cache-size line-size))))
+		(the (values fixnum t) (floor cache-size line-size))))
       (let* ((line-size (power-of-two-ceiling (if valuep (1+ nkeys) nkeys)))
 	     (cache-size (if (typep nlines-or-cache-vector 'fixnum)
 			     (the fixnum
@@ -617,7 +617,7 @@
 	(values (logxor (the fixnum (1- cache-size)) (the fixnum (1- line-size)))
 		(the fixnum (1+ cache-size))
 		line-size
-		(the fixnum (floor cache-size line-size))))))
+		(the (values fixnum t) (floor cache-size line-size))))))
 
 
 
