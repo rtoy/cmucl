@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.5 1992/03/11 21:29:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.6 1992/03/21 21:44:12 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -433,4 +433,4 @@
     `(let ((,n-extra ,extra))
        (inst add alloc-tn 4)
        ,@forms
-       (inst taddcctv alloc-tn (- ,extra 4)))))
+       (inst taddcctv alloc-tn (- ,n-extra 4)))))
