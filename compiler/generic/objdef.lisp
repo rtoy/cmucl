@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.8 1990/12/11 21:39:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.9 1990/12/18 20:43:03 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -266,6 +266,11 @@
   (cdr :ref-vop cdr :ref-trans cdr
        :setf-vop set-cdr :set-trans c::%rplacd
        :init :arg))
+
+(define-primitive-object (structure :lowtag structure-pointer-type
+				    :header structure-header-type
+				    :alloc-trans make-structure)
+  (slots :rest-p t))
 
 (define-primitive-object (bignum :lowtag other-pointer-type
 				 :header bignum-type
