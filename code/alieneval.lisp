@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.46 1998/03/21 08:11:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.47 1998/03/21 10:27:41 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -850,7 +850,7 @@
 
 
 #+long-float
-(def-alien-type-class (long-float :include (float (:bits 96))
+(def-alien-type-class (long-float :include (float (:bits #+x86 96 #+sparc 128))
 				  :include-args (type)))
 
 #+long-float
