@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.31 1992/06/04 17:42:35 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.32 1992/06/10 13:57:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -331,7 +331,11 @@
 ;;;
 (defun convert-call-if-possible (ref call)
   (declare (type ref ref) (type basic-combination call))
-  (unless (eq (basic-combination-kind call) :local)
+  (unless (or (eq (basic-combination-kind call) :local)
+	      (let ((block (node-block call)))
+		(or (block-delete-p block)
+		    (eq (functional-kind (block-home-lambda block))
+			:deleted))))
     (let ((fun (let ((fun (ref-leaf ref)))
 		 (if (external-entry-point-p fun)
 		     (functional-entry-function fun)
