@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.36 2003/06/14 14:37:00 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.37 2003/06/15 12:16:35 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1067,7 +1067,8 @@
 		      (read-buffer-to-string)))
       (setq colons 1)
       (setq package
-	    (if (eql (char-class firstchar) #.package-delimiter)
+	    (if (eql (char-class firstchar attribute-table)
+		     #.package-delimiter)
 		*keyword-package*
 		(read-buffer-to-string)))
       (reset-read-buffer)
