@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.25 2004/09/14 17:08:24 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.26 2004/09/24 13:17:00 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -278,6 +278,23 @@ static void pop_fake_control_stack_frame(struct sigcontext *context)
 }
 #endif
 
+/*
+ * Use this function to enable the minimum number of signals we need
+ * when our trap handler needs to call Lisp code that might cons.  For
+ * consing to work with gencgc, we need to be able to trap the SIGILL
+ * signal to perform allocation.
+ */
+void enable_some_signals()
+{
+#ifdef GENCGC
+  sigset_t sigs;
+  
+  sigemptyset(&sigs);
+  sigaddset(&sigs, SIGILL);
+  sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+#endif
+}
+
 #ifdef GENCGC
 void handle_allocation_trap(struct sigcontext *context)
 {
@@ -310,9 +327,7 @@ void handle_allocation_trap(struct sigcontext *context)
    * alloc might call GC, we need to have SIGILL enabled so we can do
    * allocation.  Do we need more?
    */
-  sigemptyset(&block);
-  sigaddset(&block, SIGILL);
-  sigprocmask(SIG_UNBLOCK, &block, NULL);
+  enable_some_signals();
 #endif
   
   pc = (unsigned int*) SC_PC(context);
@@ -470,23 +485,12 @@ static void sigill_handler(HANDLER_ARGS)
 	    break;
 
 	  case trap_Breakpoint:
-#ifdef GENCGC            
-            /*
-             * This eventually calls in to Lisp code, so we want to
-             * have at least SIGILL enabled so we can do allocations
-             * (gencgc).
-             */
-            {
-              sigset_t sigs;
-              sigemptyset(&sigs);
-              sigaddset(&sigs, SIGILL);
-              sigprocmask(SIG_UNBLOCK, &sigs, NULL);
-            }
-#endif            
+            enable_some_signals();
 	    handle_breakpoint(signal, CODE(code), context);
 	    break;
 
 	  case trap_FunctionEndBreakpoint:
+            enable_some_signals();
 	    SC_PC(context)=(long)handle_function_end_breakpoint(signal, CODE(code), context);
 	    SC_NPC(context)=SC_PC(context) + 4;
 	    break;
@@ -507,6 +511,7 @@ static void sigill_handler(HANDLER_ARGS)
 #ifdef trap_DynamicSpaceOverflowWarning
           case trap_DynamicSpaceOverflowWarning:
             arch_skip_instruction(context);
+            enable_some_signals();
             interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
                                             context);
             break;
@@ -514,6 +519,7 @@ static void sigill_handler(HANDLER_ARGS)
 #ifdef trap_DynamicSpaceOverflowError
           case trap_DynamicSpaceOverflowError:
             arch_skip_instruction(context);
+            enable_some_signals();
             interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
                                             context);
             break;
