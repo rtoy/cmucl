@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.40 1991/04/04 14:34:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.41 1991/04/20 14:09:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,6 +38,15 @@
 ;;;
 (defvar *lexical-environment*)
 (proclaim '(type lexenv *lexical-environment*))
+
+;;; That variable is used to control the context-sensitive declarations
+;;; mechanism (see WITH-COMPILATION-UNIT).  Each entry is a function which is
+;;; called with the function name and parent form name.  If it returns non-nil,
+;;; then that is a list of DECLARE forms which should be inserted at the head
+;;; of the body.
+;;;
+(defvar *context-declarations* ())
+(declaim (list *context-declarations*))
 
 ;;; *free-variables* translates from the names of variables referenced globally
 ;;; to the Leaf structures for them.  *free-functions* is like
@@ -453,8 +462,10 @@
 ;;;
 (defun ir1-convert-global-lambda (fun)
   (let ((*lexical-environment*
-	 (make-lexenv :default (make-null-environment)
-		      :cookie (lexenv-cookie *lexical-environment*))))
+	 (make-lexenv
+	  :default (make-null-environment)
+	  :cookie (lexenv-cookie *lexical-environment*)
+	  :interface-cookie (lexenv-interface-cookie *lexical-environment*))))
     (ir1-convert-lambda fun)))
 
 
@@ -880,6 +891,12 @@
      (make-lexenv
       :default res
       :cookie (process-optimize-declaration spec (lexenv-cookie res))))
+    (optimize-interface
+     (make-lexenv
+      :default res
+      :interface-cookie (process-optimize-declaration
+			 spec
+			 (lexenv-interface-cookie res))))
     (type
      (process-type-declaration (cdr spec) res vars))
     (values
@@ -901,7 +918,7 @@
 	      res))))))
 
 
-;;; Process-Declarations  --  Internal
+;;; Process-Declarations  --  Interface
 ;;;
 ;;;    Use a list of Declare forms to annotate the lists of Lambda-Var and
 ;;; Functional structures which are being bound.  In addition to filling in
@@ -1082,6 +1099,9 @@
 ;;; mark the corresponding var as Ever-Used to inhibit "defined but not read"
 ;;; warnings for arguments that are only used by default forms.
 ;;;
+;;;    We bind *lexical-environment* to change the policy over to the interface
+;;; policy.
+;;;
 (defun convert-optional-entry (fun vars vals defaults)
   (declare (type clambda fun) (list vars vals defaults))
   (let* ((fvars (reverse vars))
@@ -1092,6 +1112,8 @@
 				:where-from (leaf-where-from var)
 				:specvar (lambda-var-specvar var)))
 			   fvars))
+	 (*lexical-environment*
+	  (make-lexenv :cookie (make-interface-cookie *lexical-environment*)))
 	 (fun
 	  (ir1-convert-lambda-body
 	   `((%funcall ,fun ,@(reverse vals) ,@defaults))
@@ -1170,6 +1192,10 @@
 ;;;
 ;;;    We deal with :allow-other-keys by delaying unknown keyword errors until
 ;;; we have scanned all the keywords.
+;;;
+;;;    When converting the function, we bind *lexical-environment* to change
+;;; the compilation policy over to the interface policy, so that keyword args
+;;; will be checked even when type checking isn't on in general.
 ;;;
 (defun convert-more-entry (res entry-vars entry-vals rest keys)
   (declare (type optional-dispatch res) (list entry-vars entry-vals keys))
@@ -1252,7 +1278,10 @@
 	      (body `(when (and ,n-losep (not ,n-allowp))
 		       (%unknown-keyword-argument-error ,n-losep)))))))
       
-      (let ((ep (ir1-convert-lambda-body
+      (let* ((*lexical-environment*
+	      (make-lexenv :cookie
+			   (make-interface-cookie *lexical-environment*)))
+	     (ep (ir1-convert-lambda-body
 		 `((let ,(temps)
 		     ,@(body)
 		     (%funcall ,(optional-dispatch-main-entry res)
@@ -1467,9 +1496,13 @@
     
 ;;; IR1-Convert-Lambda  --  Internal
 ;;;
-;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.
+;;;    Convert a Lambda into a Lambda or Optional-Dispatch leaf.  Name and
+;;; Parent-Form are context that is used to drive the context sensitive
+;;; declaration mechanism.  If we find an entry in *context-declarations* that
+;;; matches this context (by returning a non-null value) then we add it into
+;;; the local declarations.
 ;;;
-(defun ir1-convert-lambda (form)
+(defun ir1-convert-lambda (form &optional name parent-form)
   (unless (and (consp form) (eq (car form) 'lambda) (consp (cdr form))
 	       (listp (cadr form)))
     (compiler-error "Malformed lambda expression: ~S." form))
@@ -1479,9 +1512,15 @@
     (multiple-value-bind
 	(body decls)
 	(system:parse-body (cddr form) *lexical-environment* t)
-      (let* ((cont (make-continuation))
+      (let* ((context-decls
+	      (and parent-form
+		   (loop for fun in *context-declarations*
+		         append (funcall fun name parent-form))))
+	     (cont (make-continuation))
 	     (*lexical-environment*
-	      (process-declarations decls (append aux-vars vars) nil cont))
+	      (process-declarations (append context-decls decls)
+				    (append aux-vars vars)
+				    nil cont))
 	     (res (if (or (find-if #'lambda-var-arg-info vars) keyp)
 		      (ir1-convert-hairy-lambda body vars keyp
 						allow-other-keys
@@ -2312,7 +2351,7 @@
   Return the lexically apparent definition of the function Name.  Name may also
   be a lambda."
   (if (and (consp thing) (eq (car thing) 'lambda))
-      (reference-leaf start cont (ir1-convert-lambda thing) nil)
+      (reference-leaf start cont (ir1-convert-lambda thing nil 'function) nil)
       (multiple-value-bind (var inlinep)
 			   (find-lexically-apparent-function
 			    thing "as the argument to FUNCTION")
@@ -2487,7 +2526,8 @@
 	     (process-ftype-proclamation (first args) (rest args)))
 	    ;;
 	    ;; No non-global state to be updated.
-	    ((inline notinline maybe-inline optimize declaration freeze-type))
+	    ((inline notinline maybe-inline optimize optimize-interface
+		     declaration freeze-type))
 	    ;;
 	    ;; Totally ignore these operations at non-top-level.
 	    ((start-block end-block)
@@ -2634,7 +2674,7 @@
   (multiple-value-bind (names defs)
 		       (extract-flet-variables definitions 'flet)
     (let* ((fvars (mapcar #'(lambda (n d)
-			      (let ((res (ir1-convert-lambda d)))
+			      (let ((res (ir1-convert-lambda d n 'flet)))
 				(setf (leaf-name res) n)
 				res))
 			  names defs))
@@ -2667,7 +2707,7 @@
 	   (real-funs 
 	    (let ((*lexical-environment* (make-lexenv :functions new-fenv)))
 	      (mapcar #'(lambda (n d)
-			  (let ((res (ir1-convert-lambda d)))
+			  (let ((res (ir1-convert-lambda d n 'labels)))
 			    (setf (leaf-name res) n)
 			    res))
 		      names defs))))
@@ -3074,7 +3114,7 @@
 	    #-new-compiler def))
 
     (let* ((*current-path* (revert-source-path 'defmacro))
-	   (fun (ir1-convert-lambda def)))
+	   (fun (ir1-convert-lambda def name 'defmacro)))
       (setf (leaf-name fun)
 	    (concatenate 'string "DEFMACRO " (symbol-name name)))
       (setf (functional-arg-documentation fun) (eval lambda-list))
@@ -3134,7 +3174,7 @@
     ;; If not in a null environment, discard any forward references to this
     ;; function.
     (unless null-fenv-p (remhash name *free-functions*))
-    (let ((fun (ir1-convert-lambda (cadr def)))
+    (let ((fun (ir1-convert-lambda (cadr def) name 'defun))
 	  (old (gethash name *free-functions*)))
       (setf (leaf-name fun) name)
       ;;
