@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.51 2002/08/06 17:32:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.52 2002/08/12 20:53:37 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,6 +64,20 @@
 (defvar *trace-output* () "Trace output stream.")
 (defvar *debug-io* () "Interactive debugging stream.")
 
+(defun ill-in-any (stream &rest ignore)
+  (declare (ignore ignore))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies input-stream-p)
+	 :format-control "~S is not an input stream."
+	 :format-arguments (list stream)))
+(defun ill-out-any (stream &rest ignore)
+  (declare (ignore ignore))
+  (error 'simple-type-error
+	 :datum stream
+	 :expected-type '(satisfies output-stream-p)
+	 :format-control "~S is not an output stream."
+	 :format-arguments (list stream)))
 (defun ill-in (stream &rest ignore)
   (declare (ignore ignore))
   (error 'simple-type-error
@@ -427,6 +441,7 @@
 
 (defun clear-input (&optional (stream *standard-input*))
   "Clears any buffered input associated with the Stream."
+  (declare (type streamlike stream))
   (let ((stream (in-synonym-of stream)))
     (cond ((lisp-stream-p stream)
 	   (setf (lisp-stream-in-index stream) in-buffer-length)
@@ -437,6 +452,7 @@
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
+  (declare (type stream stream))
   (let ((stream (in-synonym-of stream)))
     (if (lisp-stream-p stream)
 	(prepare-for-fast-read-byte stream
@@ -545,18 +561,21 @@
 
 (defun write-char (character &optional (stream *standard-output*))
   "Outputs the Character to the Stream."
+  (declare (type streamlike stream))
   (with-out-stream stream (lisp-stream-out character)
 		   (stream-write-char character))
   character)
 
 (defun terpri (&optional (stream *standard-output*))
   "Outputs a new line to the Stream."
+  (declare (type streamlike stream))
   (with-out-stream stream (lisp-stream-out #\newline) (stream-terpri))
   nil)
 
 (defun fresh-line (&optional (stream *standard-output*))
   "Outputs a new line to the Stream if it is not positioned at the begining of
    a line.  Returns T if it output a new line, nil otherwise."
+  (declare (type streamlike stream))
   (let ((stream (out-synonym-of stream)))
     (if (lisp-stream-p stream)
 	(when (/= (or (charpos stream) 1) 0)
@@ -621,24 +640,28 @@
 (defun finish-output (&optional (stream *standard-output*))
   "Attempts to ensure that all output sent to the Stream has reached its
    destination, and only then returns."
+  (declare (type streamlike stream))
   (with-out-stream stream (lisp-stream-misc :finish-output)
 		   (stream-finish-output))
   nil)
 
 (defun force-output (&optional (stream *standard-output*))
   "Attempts to force any buffered output to be sent."
+  (declare (type streamlike stream))
   (with-out-stream stream (lisp-stream-misc :force-output)
 		   (stream-force-output))
   nil)
 
 (defun clear-output (&optional (stream *standard-output*))
   "Clears the given output Stream."
+  (declare (type streamlike stream))
   (with-out-stream stream (lisp-stream-misc :clear-output)
 		   (stream-force-output))
   nil)
 
 (defun write-byte (integer stream)
   "Outputs the Integer to the binary Stream."
+  (declare (type stream stream))
   (with-out-stream stream (lisp-stream-bout integer)
 		   (stream-write-byte integer))
   integer)
@@ -692,12 +715,18 @@
 				       (sout #'broadcast-sout)
 				       (misc #'broadcast-misc))
 			     (:print-function %print-broadcast-stream)
-			     (:constructor make-broadcast-stream (&rest streams)))
+			     (:constructor %make-broadcast-stream (&rest streams)))
   ;; This is a list of all the streams we broadcast to.
   (streams () :type list :read-only t))
 
-(setf (documentation 'make-broadcast-stream 'function)
- "Returns an output stream which sends its output to all of the given streams.")
+(defun make-broadcast-stream (&rest streams)
+  "Returns an output stream which sends its output to all of the given
+streams."
+  (dolist (s streams)
+    (unless (output-stream-p s)
+      (ill-out-any s)))
+  
+  (apply #'%make-broadcast-stream streams))
 
 (defun %print-broadcast-stream (s stream d)
   (declare (ignore s d))
@@ -830,7 +859,7 @@
 		      (sout #'two-way-sout)
 		      (misc #'two-way-misc))
 	    (:print-function %print-two-way-stream)
-	    (:constructor make-two-way-stream (input-stream output-stream)))
+	    (:constructor %make-two-way-stream (input-stream output-stream)))
   ;; We read from this stream...
   (input-stream (required-argument) :type stream :read-only t)
   ;; And write to this one
@@ -842,9 +871,15 @@
 	  (two-way-stream-input-stream s)
 	  (two-way-stream-output-stream s)))
 
-(setf (documentation 'make-two-way-stream 'function)
+(defun make-two-way-stream (input-stream output-stream)
   "Returns a bidirectional stream which gets its input from Input-Stream and
-   sends its output to Output-Stream.")
+   sends its output to Output-Stream."
+  (unless (input-stream-p input-stream)
+    (ill-in-any input-stream))
+  (unless (output-stream-p output-stream)
+    (ill-out-any output-stream))
+  
+  (%make-two-way-stream input-stream output-stream))
 
 (macrolet ((out-fun (name slot stream-method &rest args)
 	     `(defun ,name (stream ,@args)
@@ -906,7 +941,7 @@
 		      (n-bin #'concatenated-n-bin)
 		      (misc #'concatenated-misc))
 	    (:print-function %print-concatenated-stream)
-	    (:constructor make-concatenated-stream (&rest streams)))
+	    (:constructor %make-concatenated-stream (&rest streams)))
   ;; This is a list of all the streams. The car of this is the stream
   ;; we are reading from now.
   (streams nil :type list))
@@ -916,9 +951,13 @@
   (format stream "#<Concatenated Stream, Streams = ~S>"
 	  (concatenated-stream-streams s)))
 
-(setf (documentation 'make-concatenated-stream 'function)
+(defun make-concatenated-stream (&rest streams)
   "Returns a stream which takes its input from each of the Streams in turn,
-   going on to the next at EOF.")
+   going on to the next at EOF."
+  (dolist (s streams)
+    (unless (input-stream-p s)
+      (ill-in-any s)))
+  (apply #'%make-concatenated-stream streams))
 
 (macrolet ((in-fun (name fun)
 	     `(defun ,name (stream eof-errorp eof-value)
@@ -993,9 +1032,17 @@
 		      (misc #'echo-misc)
 		      (n-bin #'ill-n-bin))
 	    (:print-function %print-echo-stream)
-	    (:constructor make-echo-stream (input-stream output-stream)))
+	    (:constructor %make-echo-stream (input-stream output-stream)))
   unread-stuff)
 
+(defun make-echo-stream (input-stream output-stream)
+  "Returns an echo stream that takes input from Input-stream and sends
+output to Output-stream"
+  (unless (input-stream-p input-stream)
+    (ill-in-any input-stream))
+  (unless (output-stream-p output-stream)
+    (ill-out-any output-stream))
+  (%make-echo-stream input-stream output-stream))
 
 (macrolet ((in-fun (name fun out-slot stream-method)
 	     `(defun ,name (stream eof-errorp eof-value)
@@ -1928,7 +1975,7 @@ POSITION: an INTEGER greater than or equal to zero, and less than or
 			(+ offset-start (truncate bytes-read x8-mult))
 			offset-end)))
 		)
-	   
+	     
 	     ;; According to the definition of OPEN and READ-N-BYTES,
 	     ;; these are the only cases when we can use the multi-byte read
 	     ;; operation on a binary stream.
