@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.7 1990/04/01 17:38:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.8 1990/04/01 18:08:02 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -69,29 +69,6 @@
     (inst sra temp temp vm:type-bits)
     (inst sll res temp 2)
     (inst addiu res res (fixnum (- 1 vm:array-dimensions-offset)))))
-
-
-
-;;;; Various length translations.
-
-(macrolet ((frob (type)
-	     `(define-vop (,(intern (concatenate 'simple-string
-						 "FAST-LENGTH/"
-						 (string type)))
-			   vector-length)
-		(:translate length)
-		(:arg-types ,type)
-		(:policy :fast-safe))))
-  (frob simple-string)
-  (frob simple-bit-vector)
-  (frob simple-vector)
-  (frob simple-array-unsigned-byte-2)
-  (frob simple-array-unsigned-byte-4)
-  (frob simple-array-unsigned-byte-8)
-  (frob simple-array-unsigned-byte-16)
-  (frob simple-array-unsigned-byte-32)
-  (frob simple-array-single-float)
-  (frob simple-array-double-float))
 
 
 
