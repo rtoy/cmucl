@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.93 2004/03/31 11:21:01 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.94 2004/09/03 03:05:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1823,15 +1823,27 @@
       (let* ((type (%instance-layout structure))
 	     (name (%class-name (layout-class type)))
 	     (dd (layout-info type)))
-	(if *print-pretty*
-	    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
-	      (prin1 name stream)
-	      (let ((slots (dd-slots dd)))
-		(when slots
-		  (write-char #\space stream)
-		  (pprint-indent :block 2 stream)
-		  (pprint-newline :linear stream)
-		  (loop
+	(cond
+	  ((and (null (dd-slots dd)) *print-level* (>= *current-level* *print-level*))
+	   ;; The CLHS entry for *PRINT-LENGTH* says "If an object to
+	   ;; be recursively printed has components and is at a level
+	   ;; equal to or greater than the value of *print-level*,
+	   ;; then the object is printed as ``#''."
+	   ;;
+	   ;; So, if it has no components, and we're at *PRINT-LEVEL*,
+	   ;; we print out #(S<name>).
+	   (write-string "#S(" stream)
+	   (prin1 name stream)
+	   (write-char #\) stream))
+	  (*print-pretty*
+	   (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	     (prin1 name stream)
+	     (let ((slots (dd-slots dd)))
+	       (when slots
+		 (write-char #\space stream)
+		 (pprint-indent :block 2 stream)
+		 (pprint-newline :linear stream)
+		 (loop
 		    (pprint-pop)
 		    (let ((slot (pop slots)))
 		      (write-char #\: stream)
@@ -1844,26 +1856,27 @@
 		      (when (null slots)
 			(return))
 		      (write-char #\space stream)
-		      (pprint-newline :linear stream))))))
-	    (descend-into (stream)
-	      (write-string "#S(" stream)
-	      (prin1 name stream)
-	      (do ((index 0 (1+ index))
-		   (slots (dd-slots dd) (cdr slots)))
-		  ((or (null slots)
-		       (and (not *print-readably*) (eql *print-length* index)))
-		   (if (null slots)
-		       (write-string ")" stream)
-		       (write-string " ...)" stream)))
-		(declare (type index index))
-		(write-char #\space stream)
-		(write-char #\: stream)
-		(let ((slot (first slots)))
-		  (output-symbol-name (dsd-%name slot) stream)
-		  (write-char #\space stream)
-		  (output-object (funcall (fdefinition (dsd-accessor slot))
-					  structure)
-				 stream))))))))
+		      (pprint-newline :linear stream)))))))
+	  (t
+	   (descend-into (stream)
+	     (write-string "#S(" stream)
+	     (prin1 name stream)
+	     (do ((index 0 (1+ index))
+		  (slots (dd-slots dd) (cdr slots)))
+		 ((or (null slots)
+		      (and (not *print-readably*) (eql *print-length* index)))
+		  (if (null slots)
+		      (write-string ")" stream)
+		      (write-string " ...)" stream)))
+	       (declare (type index index))
+	       (write-char #\space stream)
+	       (write-char #\: stream)
+	       (let ((slot (first slots)))
+		 (output-symbol-name (dsd-%name slot) stream)
+		 (write-char #\space stream)
+		 (output-object (funcall (fdefinition (dsd-accessor slot))
+					 structure)
+				stream)))))))))
 
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))

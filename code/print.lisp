@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.96 2004/08/27 12:25:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.97 2004/09/03 03:05:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -282,6 +282,8 @@
     (cond ((and (pp:pretty-stream-p stream) *print-pretty*)
 	   (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
 	     (print-description)))
+	  ((and *print-level* (>= *current-level* *print-level*))
+	   (write-char #\# stream))
 	  (t
 	   (write-string "#<" stream)
 	   (print-description)
