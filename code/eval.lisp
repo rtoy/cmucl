@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.5 1990/08/24 18:22:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.6 1990/09/28 00:56:15 ram Exp $
 ;;;    
 (in-package "LISP")
 (export '(eval constantp quote proclaim
@@ -180,7 +180,7 @@
 	(if info
 	    (let ((source (first (c::compiled-debug-info-source info))))
 	      (cond ((eq (c::debug-source-from source) :lisp)
-		     (values (c::debug-source-name source)
+		     (values (second (c::debug-source-name source))
 			     nil name))
 		    ((stringp name)
 		     (values nil t name))
