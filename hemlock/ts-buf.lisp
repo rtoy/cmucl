@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.6 1991/05/14 16:44:46 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ts-buf.lisp,v 1.7 1991/05/16 20:11:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,7 +213,7 @@
 ;;;
 (defun set-recentering-for-typescript-windows (window buffer)
   (setf (window-display-recentering window) nil)
-  (when (variable-value 'typescript-data :buffer buffer)
+  (when (hemlock-bound-p 'typescript-data :buffer buffer)
     (setf (window-display-recentering window) t)))
 ;;;
 (add-hook window-buffer-hook #'set-recentering-for-typescript-windows)
