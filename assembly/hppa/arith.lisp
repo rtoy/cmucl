@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.6 1992/06/27 03:18:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/arith.lisp,v 1.7 1992/07/13 01:47:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -225,7 +225,7 @@
      (:temp nargs any-reg nargs-offset)
      (:temp ocfp any-reg ocfp-offset))
 
-  (inst comb := x y return-t)
+  (inst comb := x y return-t :nullify t)
   (inst extru x 31 2 zero-tn :<>)
   (inst b return-nil :nullify t)
   (inst extru y 31 2 zero-tn :=)
