@@ -21,7 +21,7 @@
      '(((:or :external (:and (:match "%") (:match "SET")))
 	(declare (optimize-interface (safety 2))))
        ((:or (:and :external :macro)
-	     (match "$PARSE-"))
+	     (:match "$PARSE-"))
 	(declare (optimize (safety 2))))
        ((:and :external (:match "LIST"))
 	(declare (optimize (safety 1))))))
