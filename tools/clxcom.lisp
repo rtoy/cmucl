@@ -64,7 +64,7 @@
 	     (namestring
 	      (truename
 	       (make-pathname
-		:name x
+		:defaults x
 		:type (c:backend-fasl-file-type c:*target-backend*)))))
 	 '(
 	   "target:clx/package"
