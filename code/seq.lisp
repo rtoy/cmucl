@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.10 1991/10/01 16:12:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.11 1992/05/15 17:56:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,12 +99,12 @@
   "Returns the element of SEQUENCE specified by INDEX."
   (etypecase sequence
     (list
-     (do ((count index (1- count)))
-	 ((= count 0) (car sequence))
+     (do ((count index (1- count))
+	  (list list (cdr list)))
+	 ((= count 0) (car list))
        (declare (fixnum count))
-       (if (atom sequence)
-	   (error "~S: index too large." index)
-	   (setq sequence (cdr sequence)))))
+       (when (endp list)
+	 (error "~S: index too large." index))))
     (vector
      (when (>= index (length sequence))
        (error "~S: index too large." index))
@@ -411,15 +411,15 @@
 		((:end2 source-end)))
   "The target sequence is destructively modified by copying successive
    elements into it from the source sequence."
-  (unless target-end (setq target-end (length target-sequence)))
-  (unless source-end (setq source-end (length source-sequence)))
-  (seq-dispatch target-sequence
-		(seq-dispatch source-sequence
-			      (list-replace-from-list)
-			      (list-replace-from-mumble))
-		(seq-dispatch source-sequence
-			      (mumble-replace-from-list)
-			      (mumble-replace-from-mumble))))
+  (let ((target-end (or target-end (length target-sequence)))
+	(source-end (or source-end (length source-sequence))))
+    (seq-dispatch target-sequence
+		  (seq-dispatch source-sequence
+				(list-replace-from-list)
+				(list-replace-from-mumble))
+		  (seq-dispatch source-sequence
+				(mumble-replace-from-list)
+				(mumble-replace-from-mumble)))))
 
 
 ;;; Reverse:
@@ -747,26 +747,30 @@
 			end (initial-value nil ivp))
   "The specified Sequence is ``reduced'' using the given Function.
   See manual for details."
-  (declare (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (cond ((= (the fixnum end) start)
-	 (if ivp initial-value (funcall function)))
-	((listp sequence)
-	 (if from-end
-	     (list-reduce-from-end function sequence key start end
-				   initial-value ivp)
-	     (list-reduce function sequence key start end initial-value ivp)))
-	(from-end
-	 (when (not ivp)
-	   (setq end (1- (the fixnum end)))
-	   (setq initial-value (apply-key key (aref sequence end))))
-	 (mumble-reduce-from-end function sequence key start end
-				 initial-value aref))
-	(t
-	 (when (not ivp)
-	   (setq initial-value (apply-key key (aref sequence start)))
-	   (setq start (1+ start)))
-	 (mumble-reduce function sequence key start end initial-value aref))))
+  (declare (type index start))
+  (let ((start start)
+	(end (or end (length sequence))))
+    (declare (type index start end))
+    (cond ((= end start)
+	   (if ivp initial-value (funcall function)))
+	  ((listp sequence)
+	   (if from-end
+	       (list-reduce-from-end function sequence key start end
+				     initial-value ivp)
+	       (list-reduce function sequence key start end
+			    initial-value ivp)))
+	  (from-end
+	   (when (not ivp)
+	     (setq end (1- (the fixnum end)))
+	     (setq initial-value (apply-key key (aref sequence end))))
+	   (mumble-reduce-from-end function sequence key start end
+				   initial-value aref))
+	  (t
+	   (when (not ivp)
+	     (setq initial-value (apply-key key (aref sequence start)))
+	     (setq start (1+ start)))
+	   (mumble-reduce function sequence key start end
+			  initial-value aref)))))
 
 
 ;;; Coerce:
@@ -1024,9 +1028,9 @@
   "Returns a sequence formed by destructively removing the specified Item from
   the given Sequence."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length )))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-delete-from-end)
@@ -1060,9 +1064,9 @@
   "Returns a sequence formed by destructively removing the elements satisfying
   the specified Predicate from the given Sequence."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-delete-from-end)
@@ -1096,9 +1100,9 @@
   "Returns a sequence formed by destructively removing the elements not
   satisfying the specified Predicate from the given Sequence."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-delete-from-end)
@@ -1172,7 +1176,9 @@
 ;;; LIST-REMOVE-MACRO does not include (removes) each element that satisfies
 ;;; the predicate.
 (defmacro list-remove-macro (pred reverse?)
-  `(let* (,@(if reverse? '((sequence (reverse (the list sequence)))))
+  `(let* ((sequence ,(if reverse?
+			 '(reverse (the list sequence))
+			 'sequence))
 	  (splice (list nil))
 	  (results (do ((index 0 (1+ index))
 			(before-start splice))
@@ -1238,9 +1244,9 @@
   "Returns a copy of SEQUENCE with elements satisfying the test (default is
    EQL) with ITEM removed."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (normal-list-remove-from-end)
@@ -1254,9 +1260,9 @@
   "Returns a copy of sequence with elements such that predicate(element)
    is non-null are removed"
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-list-remove-from-end)
@@ -1271,9 +1277,9 @@
   "Returns a copy of sequence with elements such that predicate(element)
    is null are removed"
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or length end)))
+    (declare (type index length end))
     (seq-dispatch sequence
 		  (if from-end
 		      (if-not-list-remove-from-end)
@@ -1544,9 +1550,9 @@
   except that all elements equal to Old are replaced with New.  See manual
   for details."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence)))
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index length end))
     (subst-dispatch 'normal)))
 
 
@@ -1558,11 +1564,11 @@
   except that all elements satisfying the Test are replaced with New.  See
   manual for details."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence))
-	test-not
-	old)
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length))
+	 test-not
+	 old)
+    (declare (type index length end))
     (subst-dispatch 'if)))
   
 
@@ -1574,11 +1580,11 @@
   except that all elements not satisfying the Test are replaced with New.
   See manual for details."
   (declare (fixnum start count))
-  (when (null end) (setf end (length sequence)))
-  (let ((length (length sequence))
-	test-not
-	old)
-    (declare (fixnum length))
+  (let* ((length (length sequence))
+	 (end (or end length))
+	 test-not
+	 old)
+    (declare (type index length end))
     (subst-dispatch 'if-not)))
 
 
@@ -1591,19 +1597,19 @@
   except that all elements equal to Old are replaced with New.  The Sequence
   may be destroyed.  See manual for details."
   (declare (fixnum count start))
-  (when (null end) (setf end (length sequence)))
-  (if (listp sequence)
-      (if from-end
-	  (nreverse (nlist-substitute*
-		     new old (nreverse (the list sequence))
-		     test test-not start end count key))
-	  (nlist-substitute* new old sequence
-			     test test-not start end count key))
-      (if from-end
-	  (nvector-substitute* new old sequence -1
-			       test test-not (1- end) (1- start) count key)
-	  (nvector-substitute* new old sequence 1
-			       test test-not start end count key))))
+  (let ((end (or end (length sequence))))
+    (if (listp sequence)
+	(if from-end
+	    (nreverse (nlist-substitute*
+		       new old (nreverse (the list sequence))
+		       test test-not start end count key))
+	    (nlist-substitute* new old sequence
+			       test test-not start end count key))
+	(if from-end
+	    (nvector-substitute* new old sequence -1
+				 test test-not (1- end) (1- start) count key)
+	    (nvector-substitute* new old sequence 1
+				 test test-not start end count key)))))
 
 (defun nlist-substitute* (new old sequence test test-not start end count key)
   (declare (fixnum start count end))
@@ -1879,10 +1885,11 @@
 (defun position-if (test sequence &key from-end (start 0) key end)
   "Returns the zero-origin index of the first element satisfying test(el)"
   (declare (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-position-if test sequence)
-		(vector-position-if test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-position-if test sequence)
+		  (vector-position-if test sequence))))
 
 
 ;;; Position-if-not:
@@ -1900,10 +1907,11 @@
 (defun position-if-not (test sequence &key from-end (start 0) key end)
   "Returns the zero-origin index of the first element not satisfying test(el)"
   (declare (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-position-if-not test sequence)
-		(vector-position-if-not test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-position-if-not test sequence)
+		  (vector-position-if-not test sequence))))
 
 
 ;;; Find:
@@ -1960,10 +1968,11 @@
 (defun find-if (test sequence &key from-end (start 0) end key)
   "Returns the zero-origin index of the first element satisfying the test."
   (declare (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-find-if test sequence)
-		(vector-find-if test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-find-if test sequence)
+		  (vector-find-if test sequence))))
 
 
 ;;; Find-if-not:
@@ -1981,10 +1990,11 @@
 (defun find-if-not (test sequence &key from-end (start 0) end key)
   "Returns the zero-origin index of the first element not satisfying the test."
   (declare (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-find-if-not test sequence)
-		(vector-find-if-not test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-find-if-not test sequence)
+		  (vector-find-if-not test sequence))))
 
 
 ;;; Count:
@@ -2021,10 +2031,11 @@
   "Returns the number of elements in SEQUENCE satisfying a test with ITEM,
    which defaults to EQL."
   (declare (ignore from-end) (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-count item sequence)
-		(vector-count item sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-count item sequence)
+		  (vector-count item sequence))))
 
 
 ;;; Count-if:
@@ -2053,10 +2064,11 @@
 (defun count-if (test sequence &key from-end (start 0) end key)
   "Returns the number of elements in SEQUENCE satisfying TEST(el)."
   (declare (ignore from-end) (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-count-if test sequence)
-		(vector-count-if test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-count-if test sequence)
+		  (vector-count-if test sequence))))
 
 
 ;;; Count-if-not:
@@ -2085,10 +2097,11 @@
 (defun count-if-not (test sequence &key from-end (start 0) end key)
   "Returns the number of elements in SEQUENCE not satisfying TEST(el)."
   (declare (ignore from-end) (fixnum start))
-  (when (null end) (setf end (length sequence)))
-  (seq-dispatch sequence
-		(list-count-if-not test sequence)
-		(vector-count-if-not test sequence)))
+  (let ((end (or end (length sequence))))
+    (declare (type index end))
+    (seq-dispatch sequence
+		  (list-count-if-not test sequence)
+		  (vector-count-if-not test sequence))))
 
 
 ;;; Mismatch utilities:
@@ -2106,6 +2119,7 @@
      ,@body))
 
 (defmacro matchify-list (sequence start length end)
+  (declare (ignore end)) ;; ### Should END be used below?
   `(setq ,sequence
 	 (if from-end
 	     (nthcdr (- (the fixnum ,length) (the fixnum ,start) 1)
@@ -2155,7 +2169,9 @@
      (if-mismatch (pop sequence1) (aref sequence2 index2))))
 
 (defmacro list-list-mismatch ()
-  `(do ((index1 start1 (+ index1 (the fixnum inc)))
+  `(do ((sequence1 sequence1)
+	(sequence2 sequence2)
+	(index1 start1 (+ index1 (the fixnum inc)))
 	(index2 start2 (+ index2 (the fixnum inc))))
        (())
      (declare (fixnum index1 index2))
@@ -2174,11 +2190,11 @@
   keyword argument is given, then one plus the index of the rightmost position in
   which the sequences differ is returned."
   (declare (fixnum start1 start2))
-  (when (null end1) (setf end1 (length sequence1)))
-  (when (null end2) (setf end2 (length sequence2)))
-  (let ((length1 (length sequence1))
-	(length2 (length sequence2)))
-    (declare (fixnum length1 length2))
+  (let* ((length1 (length sequence1))
+	 (end1 (or end1 length1))
+	 (length2 (length sequence2))
+	 (end2 (or end2 length2)))
+    (declare (type index length1 end1 length2 end2))
     (match-vars
      (seq-dispatch sequence1
       (progn (matchify-list sequence1 start1 length1 end1)
@@ -2289,8 +2305,8 @@
    sequence2, the index of the its leftmost element is returned; 
    otherwise () is returned."
   (declare (fixnum start1 start2))
-  (when (null end1) (setf end1 (length sequence1)))
-  (when (null end2) (setf end2 (length sequence2)))
-  (seq-dispatch sequence2
-    (list-search sequence2 sequence1)
-    (vector-search sequence2 sequence1)))
+  (let ((end1 (or end1 (length sequence1)))
+	(end2 (or end2 (length sequence2))))
+    (seq-dispatch sequence2
+		  (list-search sequence2 sequence1)
+		  (vector-search sequence2 sequence1))))

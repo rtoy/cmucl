@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.10 1992/01/27 10:56:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.11 1992/05/15 17:54:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -410,16 +410,17 @@
 (defun %rplacd (x val) (rplacd x val) val)
 
 (defun %setnth (n list newval)
-  (declare (fixnum n))
+  (declare (type index n))
   "Sets the Nth element of List (zero based) to Newval."
-  (if (< n 0)
-      (error "~S is an illegal N for SETF of NTH." n)
-      (do ((count n (1- count)))
-	  ((zerop count) (rplaca list newval) newval)
-	(declare (fixnum count))
-	(if (endp (cdr list))
-	    (error "~S is too large an index for SETF of NTH." n)
-	    (setq list (cdr list))))))
+  (do ((count n (1- count))
+       (list list (cdr list)))
+      ((endp list)
+       (error "~S is too large an index for SETF of NTH." n))
+    (declare (fixnum count))
+    (when (<= count 0)
+      (rplaca list newval)
+      (return newval))))
+
 
 ;;;; Macros for (&key (key #'identity) (test #'eql testp) (test-not nil notp)).
 ;;; Use these with the following keyword args:
@@ -607,7 +608,7 @@
   (do ((list list (cdr list)))
       ((endp list) ())
     (if (not (funcall test (funcall key (car list))))
-	(return list)))))
+	(return list))))
 
 (defun tailp (sublist list)
   "Returns T if (EQL Sublist (NTHCDR <n> List)) for some value of <n>, NIL
@@ -617,7 +618,8 @@
     (if (eql sublist list)
 	(return t))))
 
-(defun adjoin (item list &key (key #'identity) (test #'eql) (test-not nil notp))
+(defun adjoin (item list &key (key #'identity) (test #'eql)
+		    (test-not nil notp))
   "Add item to list unless it is already a member"
   (declare (inline member))
   (if (if notp (member (funcall key item) list :test-not test-not :key key)
@@ -659,7 +661,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res list2))
+  (let ((res list2)
+	(list1 list1))
     (do ()
 	((endp list1))
       (if (not (with-set-keys (member (funcall key (car list1)) list2)))
@@ -686,7 +689,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res nil))
+  (let ((res nil)
+	(list1 list1))
     (do () ((endp list1))
       (if (with-set-keys (member (funcall key (car list1)) list2))
 	  (steve-splice list1 res)
@@ -714,7 +718,8 @@
   (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
-  (let ((res nil))
+  (let ((res nil)
+	(list1 list1))
     (do () ((endp list1))
       (if (not (with-set-keys (member (funcall key (car list1)) list2)))
 	  (steve-splice list1 res)
@@ -747,7 +752,9 @@
 				(key #'identity))
   "Destructively return a list with elements which appear but once in list1
    and list2."
-  (do ((x list1 (cdr x))
+  (do ((list1 list1)
+       (list2 list2)
+       (x list1 (cdr x))
        (splicex ()))
       ((endp x)
        (if (null splicex)
@@ -768,7 +775,7 @@
 		 (setq list2 (cdr y))
 		 (rplacd splicey (cdr y)))
 	     (return ()))			; assume lists are really sets
-	    (t (setq splicey y)))))))
+	    (t (setq splicey y))))))
 
 (defun subsetp (list1 list2 &key (key #'identity)
 		      (test #'eql testp) (test-not nil notp))
