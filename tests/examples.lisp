@@ -17,3 +17,29 @@
     (declare (fixnum x))
     (foo x)))
 
+(defun f+ (x y)
+  (declare (single-float x y))
+  (+ x y))
+
+(defun if-f+ (x y)
+  (declare (single-float x y))
+  (+ (if (yow) (zunk) x) y))
+
+(defun cf+ (x y)
+  (declare (single-float x y))
+  (cons (+ x y) t))
+
+(defun set-flo (x)
+  (declare (single-float x))
+  (prog ((var 0.0))
+    (setq var (gorp))
+    (setq var x)
+    (return var)))
+
+(defun if-cf+ (x y)
+  (declare (single-float x y))
+  (cons (if (grue) (+ x y) (snoc)) t))
+
+(defun zf+ (x y)
+  (declare (single-float x y))
+  (zork (+ x y)))
