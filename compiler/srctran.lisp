@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.8 1990/05/09 12:00:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.9 1990/05/23 16:39:30 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -790,21 +790,25 @@
 ;;; IR1-TRANSFORM-<  --  Internal
 ;;;
 ;;;    See if we can statically determine (< X Y) using type information.  If
-;;; the types don't intersect, then we can always determine the relationship.
-;;; < can only be true if X has a high bound and Y has a low bound, and X's
-;;; high bound is < Y's low bound.
+;;; X's high bound is < Y's low, then X < Y.  Similarly, if X's low is >= to
+;;; Y's high, the X >= Y (so return NIL).
 ;;;
 (defun ir1-transform-< (x y)
   (if (same-leaf-ref-p x y)
       'nil
       (let* ((x (numeric-type-or-lose x))
+	     (x-lo (numeric-type-low x))
 	     (x-hi (numeric-type-high x))
 	     (y (numeric-type-or-lose y))
-	     (y-lo (numeric-type-low y)))
-	(when (types-intersect x y) (give-up))
-	(if (and x-hi y-lo (< x-hi y-lo))
-	    't
-	    'nil))))
+	     (y-lo (numeric-type-low y))
+	     (y-hi (numeric-type-high y)))
+	(cond ((and x-hi y-lo (< x-hi y-lo))
+	       't)
+	      ((and y-hi x-lo (>= x-lo y-hi))
+	       'nil)
+	      (t
+	       (give-up))))))
+	      
 
 (deftransform < ((x y) (integer integer))
   (ir1-transform-< x y))
