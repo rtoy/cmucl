@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.128 2003/08/31 19:03:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.129 2003/09/01 20:47:37 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,10 +396,9 @@
 (declaim (inline number-sign))
 (defun number-sign (x)
   (declare (real x))
-  (cond ((integerp x)
-	 (if (minusp x) -1.0 1.0))
-	((floatp x)
-	 (float-sign x))))
+  (if (floatp x)
+      (float-sign x)
+      (if (minusp x) -1.0 1.0)))
 
 ;;; Signed zero comparison functions.  Use these functions if we need
 ;;; to distinguish between signed zeroes.  Thus -0.0 < 0.0, which not
