@@ -1,231 +1,241 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.18 1997/06/07 15:25:41 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.19 1997/08/23 16:00:23 pw Exp $ */
 
 /* Pick up all the syscalls. */
-accept,
-access,
-acct,
+F(accept)
+F(access)
+F(acct)
 #ifndef hpux
-adjtime,
+F(adjtime)
 #endif
-bind,
-brk,
-chdir,
-chmod,
-chown,
-chroot,
-close,
-connect,
-creat,
-dup,
-dup2,
-execve,
-exit,
-fchmod,
-fchown,
-fcntl,
+F(bind)
+F(brk)
+#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__)
+F(cfgetospeed)
+F(cfsetospeed)
+F(cfgetispeed)
+F(cfsetispeed)
+#endif
+F(chdir)
+F(chmod)
+F(chown)
+F(chroot)
+F(close)
+F(connect)
+F(creat)
+F(dup)
+F(dup2)
+F(execve)
+F(exit)
+F(fchmod)
+F(fchown)
+F(fcntl)
 #if !defined(hpux) && !defined(SVR4)
-flock,
+F(flock)
 #endif
-fork,
-fstat,
-fsync,
-ftruncate,
-#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25)
-getdtablesize,
+F(fork)
+F(fstat)
+F(fsync)
+F(ftruncate)
+#if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25) || defined(irix)
+F(getdtablesize)
 #endif
-getegid,
-geteuid,
-getgid,
-getgroups,
+F(getegid)
+F(geteuid)
+F(getgid)
+F(getgroups)
 #if !defined (SOLARIS) || defined(SOLARIS25)
-gethostid,
+F(gethostid)
 #endif
-gethostname,
-getitimer,
+F(gethostname)
+F(getitimer)
 #if !defined(hpux) && !defined(SVR4) || defined(SOLARIS25)
-getpagesize,
+F(getpagesize)
 #endif
-getpeername,
-getpgrp,
-getpid,
-getppid,
+F(getpeername)
+F(getpgrp)
+F(getpid)
+F(getppid)
 #if !defined(SVR4)  ||  defined(SOLARIS25)
-getpriority,
+F(getpriority)
 #endif
-getrlimit,
+F(getrlimit)
 #if !defined(SOLARIS) ||  defined(SOLARIS25)
-getrusage,
+F(getrusage)
 #endif
-getsockname,
-getsockopt,
-gettimeofday,
-getuid,
-ioctl,
-kill,
+F(getsockname)
+F(getsockopt)
+F(gettimeofday)
+F(getuid)
+F(ioctl)
+F(kill)
 #if !defined(SOLARIS) || defined(SOLARIS25)
-killpg,
+F(killpg)
 #endif
-link,
-listen,
-lseek,
-lstat,
-mkdir,
-mknod,
-mount,
-open,
-pipe,
-profil,
-ptrace,
+F(link)
+F(listen)
+F(lseek)
+F(lstat)
+F(mkdir)
+F(mknod)
+F(mount)
+F(open)
+F(pipe)
+F(profil)
+F(ptrace)
 #ifdef mach
-quota,
+F(quota)
 #endif
-read,
-readlink,
-readv,
+F(read)
+F(readlink)
+F(readv)
 #ifndef SVR4
-reboot,
+F(reboot)
 #endif
-recv,
-recvfrom,
-recvmsg,
-rename,
-rmdir,
-sbrk,
-select,
-send,
-sendmsg,
-sendto,
-setgroups,
+F(recv)
+F(recvfrom)
+F(recvmsg)
+F(rename)
+F(rmdir)
+F(sbrk)
+F(select)
+F(send)
+F(sendmsg)
+F(sendto)
+F(setgroups)
 #if !defined(SUNOS) && !(defined(SOLARIS) ||  defined(SOLARIS25))
-sethostid,
+F(sethostid)
 #endif
 #if !defined(SVR4) ||  defined(SOLARIS25)
-sethostname,
+F(sethostname)
 #endif
-setitimer,
-setpgrp,
+F(setitimer)
+F(setpgrp)
 #if !defined(SVR4) ||  defined(SOLARIS25)
-setpriority,
+F(setpriority)
 #endif
 #if !defined(mach) && !defined(SOLARIS) && !defined(__FreeBSD__) && !defined(SUNOS) && !defined(osf1) && !defined(irix)
-setquota,
+F(setquota)
 #endif
 #if !defined(hpux) && !defined(SVR4) ||  defined(SOLARIS25)
-setregid,
-setreuid,
+F(setregid)
+F(setreuid)
 #endif
-setrlimit,
-setsockopt,
-settimeofday,
-shutdown,
+F(setrlimit)
+F(setsockopt)
+F(settimeofday)
+F(shutdown)
 #ifndef SVR4
-sigblock,
+F(sigblock)
 #endif
-sigpause,
+F(sigpause)
 #if !defined(ibmrt) && !defined(hpux) && !defined(SVR4) && !defined(i386)
-sigreturn,
+F(sigreturn)
 #endif
 #if !defined(SVR4) && !defined(__FreeBSD__)
-sigsetmask,
-sigstack,
-sigvec,
+F(sigsetmask)
+F(sigstack)
+F(sigvec)
 #endif
-socket,
-socketpair,
-stat,
+F(socket)
+F(socketpair)
+F(stat)
 #ifndef SVR4
-swapon,
+F(swapon)
 #endif
-symlink,
-sync,
-syscall,
+F(symlink)
+F(sync)
+F(syscall)
 #if defined(hpux) || defined(SVR4)
-closedir,
-opendir,
-readdir,
-tcgetattr,
-tcsetattr,
+F(closedir)
+F(opendir)
+F(readdir)
 #endif
-truncate,
-umask,
+#if defined(hpux) || defined(SVR4) || defined(__FreeBSD__) || defined(__linux__)
+F(tcgetattr)
+F(tcsetattr)
+F(tcsendbreak)
+F(tcdrain)
+F(tcflush)
+F(tcflow)
+#endif
+F(truncate)
+F(umask)
 #if !defined(SUNOS) && !defined(parisc) && !defined(SOLARIS) \
   && !defined(__FreeBSD__)
-umount,
+F(umount)
 #endif
-unlink,
+F(unlink)
 #ifndef hpux
-utimes,
+F(utimes)
 #endif
 #ifndef irix
-vfork,
+F(vfork)
 #endif
 #if !defined(osf1) && !defined(__FreeBSD__)
-vhangup,
+F(vhangup)
 #endif
-wait,
+F(wait)
 #if !defined(SOLARIS) ||  defined(SOLARIS25)
-wait3,
+F(wait3)
 #endif
-write,
-writev,
+F(write)
+F(writev)
 
 /* Math routines. */
-cos,
-sin,
-tan,
-acos,
-asin,
-atan,
-atan2,
-sinh,
-cosh,
-tanh,
-asinh,
-acosh,
-atanh,
-exp,
+F(cos)
+F(sin)
+F(tan)
+F(acos)
+F(asin)
+F(atan)
+F(atan2)
+F(sinh)
+F(cosh)
+F(tanh)
+F(asinh)
+F(acosh)
+F(atanh)
+F(exp)
 #ifndef hpux
-expm1,
+F(expm1)
 #endif
-log,
-log10,
+F(log)
+F(log10)
 #ifndef hpux
-log1p,
+F(log1p)
 #endif
-pow,
+F(pow)
 #ifndef hpux
-cbrt,
+F(cbrt)
 #endif
 #ifndef i386
-sqrt,
+F(sqrt)
 #endif
-hypot,
+F(hypot)
 
 /* Network support. */
-gethostbyname,
-gethostbyaddr,
+F(gethostbyname)
+F(gethostbyaddr)
 
 /* Other random things. */
 #if defined(SVR4) 
-setpgid,
-getpgid,
-timezone,
-altzone,
-daylight,
-tzname,
-#if !defined (irix)
-dlopen,
-dlsym,
-dlclose,
-dlerror,
-#endif
+F(setpgid)
+F(getpgid)
+D(timezone)
+D(altzone)
+D(daylight)
+D(tzname)
+F(dlopen)
+F(dlsym)
+F(dlclose)
+F(dlerror)
 #endif
 #if !defined (SOLARIS) ||  defined(SOLARIS25)
-getwd,
+F(getwd)
 #endif
-ttyname
+F(ttyname)
 
 #ifdef irix
-,_getpty
+F(_getpty)
 #endif

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.120 1997/06/11 18:32:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.121 1997/08/23 15:59:56 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -642,6 +642,7 @@
 	   "DOUBLE-FLOAT-NORMAL-EXPONENT-MIN" "DOUBLE-FLOAT-SIGNIFICAND-BYTE"
 	   "DOUBLE-FLOAT-SIZE" "DOUBLE-FLOAT-TRAPPING-NAN-BIT"
 	   "DOUBLE-FLOAT-TYPE" "DOUBLE-FLOAT-VALUE-SLOT"
+	   #+SGI "DOUBLE-INT-CARG-REG-SC-NUMBER"
 	   "DOUBLE-REG-SC-NUMBER" "DOUBLE-STACK-SC-NUMBER" "ERROR-TRAP"
 	   "EVEN-FIXNUM-TYPE" "EXPORTED-STATIC-SYMBOLS" "FIND-HOLES" "FIXNUM"
 	   "FIXUP-CODE-OBJECT" "FLOAT-DIVIDE-BY-ZERO-TRAP-BIT"
@@ -692,6 +693,7 @@
 	   "SINGLE-FLOAT-NORMAL-EXPONENT-MIN" "SINGLE-FLOAT-SIGNIFICAND-BYTE"
 	   "SINGLE-FLOAT-SIZE" "SINGLE-FLOAT-TRAPPING-NAN-BIT"
 	   "SINGLE-FLOAT-TYPE" "SINGLE-FLOAT-VALUE-SLOT"
+	   #+SGI "SINGLE-INT-CARG-REG-SC-NUMBER"
 	   "SINGLE-REG-SC-NUMBER" "SINGLE-STACK-SC-NUMBER" "SLOT-DOCS"
 	   "SLOT-LENGTH" "SLOT-NAME" "SLOT-OFFSET" "SLOT-OPTIONS"
 	   "SLOT-REST-P" "STATIC-SYMBOL-OFFSET" "STATIC-SYMBOL-P"

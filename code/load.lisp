@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.63 1997/06/11 18:22:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.64 1997/08/23 16:00:01 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1270,7 +1270,10 @@
   (multiple-value-bind
       (value found)
       (gethash symbol *foreign-symbols* 0)
-    (if found
+    ;; can't make irix linker give values in the symbol table to global vars
+    ;;from dsos, so we have to resolve at runtime (and handle symbols being
+    ;;defined with null values)
+    (if #-irix found #+irix (and found (not (zerop value)))
 	value
 	(let ((value (system:alternate-get-global-address symbol)))
 	  (when (zerop value)

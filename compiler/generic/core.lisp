@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.34 1997/04/02 20:53:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.35 1997/08/23 16:00:06 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,8 +95,13 @@
 	     (gethash name lisp::*assembler-routines*))
 	    (:foreign
 	     (assert (stringp name))
+             ;; XXX perhaps we should use foreign-symbol-address-aux on linux
+	     ;;too?
 	     #-linux
-	     (gethash name lisp::*foreign-symbols*)
+	     (let ((val (lisp::foreign-symbol-address-aux name)))
+	       ;; lisp::foreign-symbol-address-aux always signals exactly the
+	       ;; same error we would if the symbol isn't found
+	       (values val t))
 	     #+linux
 	     (multiple-value-bind
 		   (value found)

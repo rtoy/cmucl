@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.20 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.21 1997/08/23 16:00:12 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,6 +177,66 @@
 
 (define-move-vop move-argument :move-argument
   (single-reg double-reg) (descriptor-reg))
+
+;; stuff for c-call float-in-int-register arguments
+
+(define-vop (move-to-single-int-reg)
+  (:args (x :scs (single-reg descriptor-reg)))
+  (:results (y :scs (single-int-carg-reg) :load-if nil))
+  (:note "pointer to float-in-int coercion")
+  (:generator 1
+    (sc-case x
+      (single-reg
+       (inst mfc1 y x))
+      (descriptor-reg
+       (inst lw y x (- (* single-float-value-slot word-bytes)
+                       other-pointer-type))))
+    (inst nop)))                        ;nop needed here?
+(define-move-vop move-to-single-int-reg
+    :move (single-reg descriptor-reg) (single-int-carg-reg))
+
+(define-vop (move-single-int-reg)
+  (:args (x :target y :scs (single-int-carg-reg) :load-if nil)
+         (fp :scs (any-reg) :load-if (not (sc-is y single-int-carg-reg))))
+  (:results (y :scs (single-int-carg-reg) :load-if nil))
+  (:generator 1
+    (unless (location= x y)
+      (error "Huh? why did it do that?"))))
+(define-move-vop move-single-int-reg :move-argument
+  (single-int-carg-reg) (single-int-carg-reg))
+
+(define-vop (move-to-double-int-reg)
+  (:args (x :scs (double-reg descriptor-reg)))
+  (:results (y :scs (double-int-carg-reg) :load-if nil))
+  (:note "pointer to float-in-int coercion")
+  (:generator 2
+    (sc-case x
+      (double-reg
+       (ecase (backend-byte-order *backend*)
+         (:big-endian
+          (inst mfc1-odd2 y x)
+          (inst mfc1-odd y x))
+         (:little-endian
+          (inst mfc1 y x)
+          (inst mfc1-odd3 y x))))
+      (descriptor-reg
+       (inst lw y x (- (* double-float-value-slot word-bytes)
+                       other-pointer-type))
+       (inst lw-odd y x (- (* (1+ double-float-value-slot) word-bytes)
+                           other-pointer-type))))
+    (inst nop)))                        ;nop needed here?
+(define-move-vop move-to-double-int-reg
+    :move (double-reg descriptor-reg) (double-int-carg-reg))
+
+(define-vop (move-double-int-reg)
+  (:args (x :target y :scs (double-int-carg-reg) :load-if nil)
+         (fp :scs (any-reg) :load-if (not (sc-is y double-int-carg-reg))))
+  (:results (y :scs (double-int-carg-reg) :load-if nil))
+  (:generator 2
+    (unless (location= x y)
+      (error "Huh? why did it do that?"))))
+(define-move-vop move-double-int-reg :move-argument
+  (double-int-carg-reg) (double-int-carg-reg))
 
 
 ;;;; Arithmetic VOPs:

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.49 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.50 1997/08/23 16:00:17 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -228,7 +228,19 @@
    :alternate-scs (double-stack))
 
   ;; A catch or unwind block.
-  (catch-block control-stack :element-size vm:catch-block-size))
+  (catch-block control-stack :element-size vm:catch-block-size)
+
+  ;; floating point numbers temporarily stuck in integer registers for c-call
+  (single-int-carg-reg registers
+                  :locations (4 5 6 7)
+                  :alternate-scs ()
+                  :constant-scs ())
+  (double-int-carg-reg registers
+                  :locations (4 6)
+                  :constant-scs ()
+                  :alternate-scs ()
+                  :alignment 2          ;is this needed?
+                  :element-size 2))
 
 
 

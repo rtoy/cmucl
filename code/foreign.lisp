@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.23 1997/08/05 20:41:12 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.24 1997/08/23 15:59:59 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -241,7 +241,11 @@
 #+hppa
 (defconstant reloc-magic #x106)
 #+hppa
+(defconstant cpu-pa-risc1-0 #x20b)
+#+hppa
 (defconstant cpu-pa-risc1-1 #x210)
+#+hppa
+(defconstant cpu-pa-risc-max #x2ff)
 
 #+hppa
 (defun load-object-file (name)
@@ -284,7 +288,7 @@
             ))
       (unix:unix-close fd))))
 
-#-(or linux solaris)
+#-(or linux solaris irix)
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -332,7 +336,10 @@
     #+hpux
     (dolist (f files)
       (with-open-file (stream f :element-type '(unsigned-byte 16))
-	(unless (eql (read-byte stream) cpu-pa-risc1-1)
+	(unless (let ((sysid (read-byte stream)))
+                  (or (eql sysid cpu-pa-risc1-0)
+		      (and (>= sysid cpu-pa-risc1-1)
+			   (<= sysid cpu-pa-risc-max))))
 	  (error "Object file is wrong format, so can't load-foreign:~
 		  ~%  ~S"
 		 f))
@@ -375,19 +382,22 @@
 
 (export '(alternate-get-global-address))
 
-#-(or freebsd solaris linux)
+#-(or freebsd solaris linux irix)
 (defun alternate-get-global-address (symbol)
   (declare (type simple-string symbol)
 	   (ignore symbol))
   0)
 
-#+(or linux solaris)
+#+(or linux solaris irix)
 (progn
 
 (defconstant rtld-lazy 1)
 (defconstant rtld-now 2)
-(defconstant rtld-global #o400)
+(defconstant rtld-global #-irix #o400 #+irix 4)
 (defvar *global-table* NIL)
+(defvar *dso-linker*
+  #+solaris "/usr/ccs/bin/ld"
+  #+(or linux irix) "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
   (str c-call:c-string) (i c-call:int))
@@ -403,7 +413,7 @@
   (let ((sap (dlopen file (logior rtld-now rtld-global))))
        (if (zerop (sap-int sap))
 	   (error "Can't open object ~S: ~S" file (dlerror))
-	   (pushnew sap *global-table*))))
+	   (pushnew sap *global-table* :test #'sap=))))
 
 (defun alternate-get-global-address (symbol)
   (unless *global-table*
@@ -441,15 +451,13 @@
   (let ((output-file (pick-temporary-file-name
 		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
 	(error-output (make-string-output-stream)))
-
-    #-linux (format t ";;; Running /usr/ccs/bin/ld...~%")
-    #+linux (format t ";;; Running /usr/bin/ld...~%")
+ 
+    (format t ";;; Running ~A...~%" *dso-linker*)
     (force-output)
     (let ((proc (ext:run-program
-		 #-linux "/usr/ccs/bin/ld"
-		 #+linux "/usr/bin/ld"
+		 *dso-linker*
 		 (list*
-			"-G"
+		        #+(or solaris linux) "-G" #+irix "-shared"
 			"-o"
 			output-file
 			(append (mapcar #'(lambda (name)
@@ -463,12 +471,10 @@
 		 :output error-output
 		 :error :output)))
       (unless proc
-	(error  #+linux "Could not run /usr/bin/ld"
-                #-linux "Could not run /usr/ccs/bin/ld"))
+       (error "Could not run ~A" *dso-linker*))
       (unless (zerop (ext:process-exit-code proc))
 	(system:serve-all-events 0)
-	(error #-linux "/usr/ccs/bin/ld failed:~%~A" 
-               #+linux "/usr/bin/ld failed:~%~A"
+        (error "~A failed:~%~A" *dso-linker*
 	       (get-output-stream-string error-output)))
       (load-object-file output-file)
       (unix:unix-unlink output-file)

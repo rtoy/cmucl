@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.3 1997/01/21 00:28:13 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.4 1997/08/23 16:00:21 pw Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
@@ -52,4 +52,4 @@ typedef u32 lispobj;
 #define SymbolFunction(sym) \
     (((struct fdefn *)(SymbolValue(sym)-type_OtherPointer))->function)
 
-#endif _LISP_H_
+#endif /* _LISP_H_ */

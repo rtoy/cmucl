@@ -1,5 +1,8 @@
-#!/bin/csh -f
+#!/bin/sh
 
-/bin/nm -Bgv $argv | sed -e 's/ (weak)//'
+#errnoaddr=`/bin/nm -Bg /usr/lib/libc.so|fgrep ' D errno'|sed -e 's/ .*//'`
+tznameaddr=`/bin/nm -Bg /usr/lib/libc.so|fgrep ' D tzname'|sed -e 's/ .*//'`
+
+/bin/nm -Bgv $* | sed -e 's/ (weak)//' -e "/ U errno/ s/00000000 /$errnoaddr /" -e "/ U tzname/ s/00000000 /$tznameaddr /"|sort -k1,1
 
 exit 0

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.6 1994/07/20 16:52:41 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/mips-assem.S,v 1.7 1997/08/23 16:00:22 pw Exp $ */
 #ifdef mach
 #include <machine/regdef.h>
 #else
@@ -102,8 +102,16 @@ call_into_lisp:
 
 	.set	noreorder
 	.align	3
+#ifdef irix
+.globl  mipsmungelra /* for our munging afterwards in irix-asm-munge */
+mipsmungelra:
+#endif
 lra:
+#ifndef irix
 	.word	type_ReturnPcHeader
+#else
+        break 11
+#endif
 
 	/* Multiple value return spot, clear stack */
 	move	reg_CSP, reg_OCFP
@@ -168,6 +176,9 @@ call_into_c:
 	addu	reg_NL4, type_OtherPointer
 	sw	reg_NL4, 4(reg_CFP)
 	sw	reg_CODE, 8(reg_CFP)
+#ifdef irix
+        sw      gp, 12(reg_CFP)
+#endif
 
 	/* Note: the C stack is already set up. */
 
@@ -197,6 +208,10 @@ call_into_c:
 	move	t9, reg_CFUNC
 #endif
 	jal	reg_CFUNC
+#ifdef irix
+        /* we rely on assembler to insert a nop between the jal and this */
+        lw      gp, 12(reg_CFP)
+#endif
 
 	/* Clear unsaved descriptor regs */
 	move	t0, zero
@@ -259,12 +274,17 @@ start_of_tramps:
         .ent    undefined_tramp
 undefined_tramp:
         break   10
+#ifdef irix
+        break 11
+        break 11
+#else
         .byte    4
         .byte    23
         .byte    254
         .byte    204
         .byte    1
         .align 2
+#endif
         .end    undefined_tramp
 
 /*
@@ -294,7 +314,11 @@ end_of_tramps:
 	.set	noreorder
 	.globl	function_end_breakpoint_guts
 function_end_breakpoint_guts:
+#ifndef irix
 	.word	type_ReturnPcHeader
+#else
+        break 11
+#endif
 	beq	zero, zero, 1f
 	nop
 	move	reg_OCFP, reg_CSP

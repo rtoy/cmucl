@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.111 1994/10/31 04:44:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.112 1997/08/23 16:00:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -41,7 +41,7 @@
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) #+pmax :little-endian
       #+sgi :big-endian)
-(setf (backend-page-size *target-backend*) 4096)
+(setf (backend-page-size *target-backend*) 16384)
 
 ); eval-when
 

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.23 1997/03/15 19:54:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.24 1997/08/23 16:00:08 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1638,7 +1638,10 @@
      ((and is-linux (gethash (concatenate 'string "PVE_stub_" name)
 			     *cold-foreign-symbol-table* nil)))
      ;; Non-linux case
-     ((gethash name *cold-foreign-symbol-table* nil))
+     ((let ((value (gethash name *cold-foreign-symbol-table* nil)))
+        #+irix (when (and (numberp value) (zerop value))
+                 (warn "Not-really-defined foreign symbol: ~S" name))
+        value))
      ((and is-linux (gethash (concatenate 'string "__libc_" name)
 			     *cold-foreign-symbol-table* nil)))
      ((and is-linux (gethash (concatenate 'string "__" name)

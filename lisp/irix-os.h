@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/irix-os.h,v 1.2 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/irix-os.h,v 1.3 1997/08/23 16:00:20 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -19,4 +19,6 @@ typedef int os_vm_prot_t;
 #define OS_VM_PROT_WRITE PROT_WRITE
 #define OS_VM_PROT_EXECUTE PROT_EXECUTE
 
-#define OS_VM_DEFAULT_PAGESIZE	4096
+/* formerly 4096, on irix 6.2 on an R4400 Onyx, and irix 6.4 on an Octane,
+   pagesize is 16384 */
+#define OS_VM_DEFAULT_PAGESIZE	16384
