@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.27 1991/12/11 17:19:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.28 1991/12/12 14:57:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,21 @@
   (ir2-continuation-primitive-type (continuation-info cont)))
 
 
+;;; LEGAL-IMMEDIATE-CONSTANT-P  --  Interface
+;;;
+;;;    Return true if a constant Leaf is of a type which we can legally
+;;; directly reference in code.  Named constants with arbitrary pointer values
+;;; cannot, since we must preserve EQLness.
+;;;
+(defun legal-immediate-constant-p (leaf)
+  (declare (type constant leaf))
+  (or (null (leaf-name leaf))
+      (typecase (constant-value leaf)
+	((or number character) t)
+	(symbol (symbol-package (constant-value leaf)))
+	(t nil))))
+
+
 ;;; Continuation-Delayed-Leaf  --  Internal
 ;;;
 ;;;    If Cont is used only by a Ref to a leaf that can be delayed, then return
@@ -87,7 +102,7 @@
 	 (let ((leaf (ref-leaf use)))
 	   (etypecase leaf
 	     (lambda-var (if (null (lambda-var-sets leaf)) leaf nil))
-	     (constant leaf)
+	     (constant (if (legal-immediate-constant-p leaf) leaf nil))
 	     ((or functional global-var) nil))))))
 
 
