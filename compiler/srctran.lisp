@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.72 1998/01/05 23:05:04 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.73 1998/01/07 06:22:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -826,7 +826,7 @@
 	      ;; member types.
 	      (dolist (member (member-type-members arg))
 		(push (if (numberp member)
-			  (specifier-type `(member ,member))
+			  (make-member-type :members (list member))
 			  *empty-type*)
 		      new-args))
 	      (push arg new-args)))
@@ -982,6 +982,49 @@
     (t
      type-list)))
 
+;;; Make-Canonical-Union-Type
+;;;
+;;; Take a list of types and return a canonical type specifier,
+;;; combining any members types together. If both positive and
+;;; negative members types are present they are converted to a float
+;;; type. X This would be far simpler if the type-union methods could
+;;; handle member/number unions.
+;;;
+(defun make-canonical-union-type (type-list)
+  (let ((members '())
+	(misc-types '()))
+    (dolist (type type-list)
+      (if (member-type-p type)
+	  (setf members (union members (member-type-members type)))
+	  (push type misc-types)))
+    (when (null (set-difference '(-0d0 0d0) members))
+      #-negative-zero-is-not-zero
+      (push (specifier-type '(double-float 0d0 0d0)) misc-types)
+      #+negative-zero-is-not-zero
+      (push (specifier-type '(double-float -0d0 0d0)) misc-types)
+      (setf members (set-difference members '(-0d0 0d0))))
+    (when (null (set-difference '(-0f0 0f0) members))
+      #-negative-zero-is-not-zero
+      (push (specifier-type '(single-float 0f0 0f0)) misc-types)
+      #+negative-zero-is-not-zero
+      (push (specifier-type '(single-float -0f0 0f0)) misc-types)
+      (setf members (set-difference members '(-0f0 0f0))))
+    (cond ((null members)
+	   (let ((res (first misc-types)))
+	     (dolist (type (rest misc-types))
+	       (setq res (type-union res type)))
+	     res))
+	  ((null misc-types)
+	   (make-member-type :members members))
+	  (t
+	   (let ((res (first misc-types)))
+	     (dolist (type (rest misc-types))
+	       (setq res (type-union res type)))
+	     (dolist (type members)
+	       (setq res (type-union
+			  res (make-member-type :members (list type)))))
+	     res)))))
+
 ;;; ONE-ARG-DERIVE-TYPE
 ;;;
 ;;; This is used in defoptimizers for computing the resulting type of
@@ -1026,7 +1069,7 @@
 		  (setf results (append results result))
 		  (push result results))))
 	  (if (rest results)
-	      (make-union-type results)
+	      (make-canonical-union-type results)
 	      (first results)))))))
 
 ;;; TWO-ARG-DERIVE-TYPE
@@ -1130,7 +1173,7 @@
 			(setf results (append results result))
 			(push result results))))))
 	  (if (rest results)
-	      (make-union-type results)
+	      (make-canonical-union-type results)
 	      (first results)))))))
 
 ) ; end progn
