@@ -1,3 +1,49 @@
+12/13/91 to 12/19/91
+
+Code:
+
+All pathname support has been rewritten to conform to X3J13.  (Except logical
+pathnames haven't been written yet).  Any code that makes assumptions about
+the format for pathnames (e.g. pathname-device being the search-list, or
+pathname-directory being a simple-vector) will have to be rewritten.
+
+Changed SHOW-RESTARTS to also display the restart name (but only if it's
+not shadowed by a higher priority restart).  Changed the restart command to
+look for restarts by name if a symbol is typed.
+
+Substantially rearranged function describing to make it more consistent, and
+added support for describing interpreted functions.
+
+Changed the FORMATTER stuff to use positional args where possible instead
+of always extracting elements from the rest arg.
+
+The control stack is now zeroed between top level forms to reduce the
+number of dangling pointers.
+
+Fixed pprint-logical-block :suffixes and *print-line* abbreviations to work
+together.
+
+
+
+Compiler:
+
+Dumping of constant structures has been fixed to conform to X3J13, except
+that the generic function MAKE-LOAD-FORM isn't really used.  Instead, a new
+defstruct option, :make-load-form-fun, has been added that can be used to
+specify a function that acts like a MAKE-LOAD-FORM method.  When we have a
+CLOS that supports STRUCTURE-CLASS, the default method for MAKE-LOAD-FORM
+will use this information instead of having the compiler use it directly.
+
+When the INHIBIT-WARNINGS optimize policy is 3, suppress warnings about
+undefined functions and variables.
+
+
+PCL:
+
+Fixed SET-FUNCTION-NAME to correctly set interpreted function names.
+
+
+
 12/12/91 to 12/13/91
 
 Code:
