@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.34 1992/06/02 19:13:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.35 1992/08/25 17:42:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -822,7 +822,28 @@
   ;; A list of things that are used to parameterize an inherited generator.
   ;; This allows the same generator function to be used for a group of VOPs
   ;; with similar implementations.
-  (variant nil :type list))
+  (variant nil :type list)
+  ;;
+  ;; The number of arguments and results.  Each regular arg/result counts as
+  ;; one, and all the more args/results together count as 1.
+  (num-args 0 :type index)
+  (num-results 0 :type index)
+  ;;
+  ;; Vector of the temporaries the vop needs.  See emit-generic-vop in vmdef
+  ;; for information on how the temps are encoded.
+  (temps nil :type (or null (simple-array (unsigned-byte 16) (*))))
+  ;;
+  ;; The order all the refs for this vop should be put in.  Each operand is
+  ;; assigned a number in the following ordering:
+  ;;  args, more-args, results, more-results, temps
+  ;; This vector represents the order the operands should be put into in the
+  ;; next-ref link.
+  (ref-ordering nil :type (or null (simple-array (unsigned-byte 8) (*))))
+  ;;
+  ;; Array of the various targets that should be done.  Each element encodes
+  ;; the source ref (shifted 8) and the dest ref index.
+  (targets nil :type (or null (simple-array (unsigned-byte 16) (*)))))
+
 
 
 ;;;; SBs and SCs:
