@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.12 1990/02/22 20:35:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.13 1990/02/22 23:41:47 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -204,6 +204,7 @@
     lisp::*lisp-initialization-functions*
 
     ;; Values needed for interfacing C and LISP.
+    lisp::*foreign-function-call-active*
     lisp::*saved-global-pointer*
     lisp::*saved-control-stack-pointer*
     lisp::*saved-binding-stack-pointer*
