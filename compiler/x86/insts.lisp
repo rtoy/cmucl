@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.28 2003/04/25 13:51:44 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/insts.lisp,v 1.29 2003/04/26 01:49:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,7 +26,8 @@
 (def-assembler-params
   :scheduler-p nil)
 
-(disassem:set-disassem-params :instruction-alignment 8)
+(disassem:set-disassem-params :instruction-alignment 8
+			      :opcode-column-width 8)
 
 
 
@@ -659,7 +660,7 @@
 (eval-when (compile load eval)
 (defun print-fp-reg (value stream dstate)
   (declare (ignore dstate))
-  (format stream "ST(~D)" value))
+  (format stream "~A(~D)" 'st value))
 
 (defun prefilter-fp-reg (value dstate)
   ;; just return it
@@ -2254,14 +2255,18 @@
 ;;; st(i) = st(0) + st(i)
 ;;;
 (define-instruction fadd-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b000))))
+  (:printer floating-point-fp ((op '(#b100 #b000)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fadd)
   (:emitter
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
    (emit-fp-op segment destination #b000)))
 ;;; With pop
 (define-instruction faddp-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b110 #b000))))
+  (:printer floating-point-fp ((op '(#b110 #b000)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'faddp)
   (:emitter
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011110)
@@ -2321,14 +2326,18 @@
 ;;; Gdb    syntax: fsubr %st,%st(i)
 ;;;
 (define-instruction fsub-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b101))))
+  (:printer floating-point-fp ((op '(#b100 #b101)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fsub)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
    (emit-fp-op segment destination #b101)))
 ;;; With a pop
 (define-instruction fsubp-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b110 #b101))))
+  (:printer floating-point-fp ((op '(#b110 #b101)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fsubp)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011110)
@@ -2342,14 +2351,18 @@
 ;;; Gdb    syntax: fsub %st,%st(i)
 ;;;
 (define-instruction fsubr-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b100))))
+  (:printer floating-point-fp ((op '(#b100 #b100)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fsubr)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
    (emit-fp-op segment destination #b100)))
 ;;; With a pop
 (define-instruction fsubrp-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b110 #b100))))
+  (:printer floating-point-fp ((op '(#b110 #b100)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fsubrp)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011110)
@@ -2384,7 +2397,9 @@
 ;;; st(i) = st(i) * st(0)
 ;;;
 (define-instruction fmul-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b001))))
+  (:printer floating-point-fp ((op '(#b100 #b001)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fmul)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
@@ -2446,7 +2461,9 @@
 ;;; Gdb    syntax: fdivr %st,%st(i)
 ;;;
 (define-instruction fdiv-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b111))))
+  (:printer floating-point-fp ((op '(#b100 #b111)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fdiv)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
@@ -2460,7 +2477,9 @@
 ;;; Gdb    syntax: fdiv %st,%st(i)
 ;;;
 (define-instruction fdivr-sti (segment destination)
-  (:printer floating-point-fp ((op '(#b100 #b110))))
+  (:printer floating-point-fp ((op '(#b100 #b110)))
+	    '(:name :tab fp-reg ", " '|ST(0)|)
+	    :print-name 'fdivr)
   (:emitter 
    (assert (fp-reg-tn-p destination))
    (emit-byte segment #b11011100)
@@ -2667,7 +2686,6 @@
 ;;; Restore FP State
 ;;;
 (define-instruction frstor (segment src)
-  ;; This conflicts with fucom due to the mod bits
   (:printer floating-point ((op '(#b101 #b100))))
   (:emitter
    (emit-byte segment #b11011101)
@@ -2709,10 +2727,10 @@
 ;;;
 ;;; Compare ST(i) to ST0 and update the flags.
 ;;;
-;;; Intel syntal: FCOMI ST, ST(i)
+;;; Intel syntax: FCOMI ST, ST(i)
 ;;;
 (define-instruction fcomi (segment src)
-  (:printer floating-point ((op '(#b011 #b110))))
+  (:printer floating-point-fp ((op '(#b011 #b110))))
   (:emitter
    (assert (fp-reg-tn-p src))
    (emit-byte segment #b11011011)
@@ -2722,7 +2740,6 @@
 ;;; Unordered comparison
 ;;;
 (define-instruction fucom (segment src)
-  ;; XX Printer conflicts with frstor due to the mod bits
   (:printer floating-point-fp ((op '(#b101 #b100))))
   (:emitter
    (assert (fp-reg-tn-p src))
@@ -2731,11 +2748,10 @@
 ;;;
 ;;; Unordered compare ST(i) to ST0 and update the flags.
 ;;;
-;;; Intel syntal: FUCOMI ST, ST(i)
+;;; Intel syntax: FUCOMI ST, ST(i)
 ;;;
 (define-instruction fucomi (segment src)
-  ;; XX Printer conflicts with fldl due to the mod bits.
-  #+nil (:printer floating-point ((op '(#b011 #b101))))
+  (:printer floating-point-fp ((op '(#b011 #b101))))
   (:emitter
    (assert (fp-reg-tn-p src))
    (emit-byte segment #b11011011)
