@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.19 1992/07/11 16:05:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.20 1992/07/17 18:19:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,8 +121,8 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec unsigned-long)		; seconds
-    (tv-usec unsigned-long)))		; and microseconds
+    (tv-sec long)		; seconds
+    (tv-usec long)))		; and microseconds
 
 (def-alien-type nil
   (struct timezone
@@ -396,11 +396,23 @@
 
 ;;;; System calls.
 
+
 (defmacro syscall ((name &rest arg-types) success-form &rest args)
   `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
 				,@args)))
      (if (minusp result)
 	 (values nil unix-errno)
+	 ,success-form)))
+
+;;; Like syscall, but if it fails, signal an error instead of returing error
+;;; codes.  Should only be used for syscalls that will never really get an
+;;; error.
+;;;
+(defmacro syscall* ((name &rest arg-types) success-form &rest args)
+  `(let ((result (alien-funcall (extern-alien ,name (function int ,@arg-types))
+				,@args)))
+     (if (minusp result)
+	 (error "Syscall ~A failed: ~A" ,name (get-unix-error-msg))
 	 ,success-form)))
 
 (defmacro void-syscall ((name &rest arg-types) &rest args)
@@ -784,8 +796,8 @@
   (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)
 	   (type (or (alien (* (struct fd-set))) null)
 		 read-fds write-fds exception-fds)
-	   (type (or null (unsigned-byte 32)) timeout-secs)
-	   (type (unsigned-byte 32) timeout-usecs)
+	   (type (or null (unsigned-byte 31)) timeout-secs)
+	   (type (unsigned-byte 31) timeout-usecs)
 	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
   (with-alien ((tv (struct timeval)))
     (when timeout-secs
@@ -805,8 +817,8 @@
    Programmers Manual for more information."
   (declare (type (integer 0 #.FD-SETSIZE) nfds)
 	   (type unsigned-byte rdfds wrfds xpfds)
-	   (type (or (unsigned-byte 32) null) to-secs)
-	   (type (unsigned-byte 32) to-usecs)
+	   (type (or (unsigned-byte 31) null) to-secs)
+	   (type (unsigned-byte 31) to-usecs)
 	   (optimize (speed 3) (safety 0)))
   (with-alien ((tv (struct timeval))
 	       (rdf (struct fd-set))
@@ -1127,6 +1139,7 @@
 (defconstant rusage_self 0 "The calling process.")
 (defconstant rusage_children -1 "Terminated child processes.")
 
+(declaim (inline unix-getrusage))
 (defun unix-getrusage (who)
   "Unix-getrusage returns information about the resource usage
    of the process specified by who.  Who can be either the
@@ -1134,27 +1147,27 @@
    child processes (rusage_children).  NIL and an error number
    is returned if the call fails."
   (with-alien ((usage (struct rusage)))
-    (syscall ("getrusage" int (* (struct rusage)))
-	     (values t
-		     (+ (* (slot (slot usage 'ru-utime) 'tv-sec) 1000000)
-			(slot (slot usage 'ru-utime) 'tv-usec))
-		     (+ (* (slot (slot usage 'ru-stime) 'tv-sec) 1000000)
-			(slot (slot usage 'ru-stime) 'tv-usec))
-		     (slot usage 'ru-maxrss)
-		     (slot usage 'ru-ixrss)
-		     (slot usage 'ru-idrss)
-		     (slot usage 'ru-isrss)
-		     (slot usage 'ru-minflt)
-		     (slot usage 'ru-majflt)
-		     (slot usage 'ru-nswap)
-		     (slot usage 'ru-inblock)
-		     (slot usage 'ru-oublock)
-		     (slot usage 'ru-msgsnd)
-		     (slot usage 'ru-msgrcv)
-		     (slot usage 'ru-nsignals)
-		     (slot usage 'ru-nvcsw)
-		     (slot usage 'ru-nivcsw))
-	     who (addr usage))))
+    (syscall* ("getrusage" int (* (struct rusage)))
+	      (values t
+		      (+ (* (slot (slot usage 'ru-utime) 'tv-sec) 1000000)
+			 (slot (slot usage 'ru-utime) 'tv-usec))
+		      (+ (* (slot (slot usage 'ru-stime) 'tv-sec) 1000000)
+			 (slot (slot usage 'ru-stime) 'tv-usec))
+		      (slot usage 'ru-maxrss)
+		      (slot usage 'ru-ixrss)
+		      (slot usage 'ru-idrss)
+		      (slot usage 'ru-isrss)
+		      (slot usage 'ru-minflt)
+		      (slot usage 'ru-majflt)
+		      (slot usage 'ru-nswap)
+		      (slot usage 'ru-inblock)
+		      (slot usage 'ru-oublock)
+		      (slot usage 'ru-msgsnd)
+		      (slot usage 'ru-msgrcv)
+		      (slot usage 'ru-nsignals)
+		      (slot usage 'ru-nvcsw)
+		      (slot usage 'ru-nivcsw))
+	      who (addr usage))))
 
 (declaim (inline unix-gettimeofday))
 (defun unix-gettimeofday ()
@@ -1164,14 +1177,14 @@
    returns NIL and the errno."
   (with-alien ((tv (struct timeval))
 	       (tz (struct timezone)))
-    (syscall ("gettimeofday" (* (struct timeval)) (* (struct timezone)))
-	     (values T
-		     (slot tv 'tv-sec)
-		     (slot tv 'tv-usec)
-		     (slot tz 'tz-minuteswest)
-		     (slot tz 'tz-dsttime))
-	     (addr tv)
-	     (addr tz))))
+    (syscall* ("gettimeofday" (* (struct timeval)) (* (struct timezone)))
+	      (values T
+		      (slot tv 'tv-sec)
+		      (slot tv 'tv-usec)
+		      (slot tz 'tz-minuteswest)
+		      (slot tz 'tz-dsttime))
+	      (addr tv)
+	      (addr tz))))
 
 ;;; Unix-utimes changes the accessed and updated times on UNIX
 ;;; files.  The first argument is the filename (a string) and
