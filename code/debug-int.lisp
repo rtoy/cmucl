@@ -840,7 +840,7 @@
     (alien-bind ((scp (interrupt-array-ref
 		       (alien-value lisp_interrupt_contexts)
 		       index)
-		      (alien mach:sigcontext 2400)
+		      (alien mach:sigcontext #.(c-sizeof 'mach:sigcontext))
 		      t)
 		 (sc (mach:indirect-*sigcontext scp)
 		     mach:sigcontext
