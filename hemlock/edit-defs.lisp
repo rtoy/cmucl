@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.2 1991/02/08 16:34:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/edit-defs.lisp,v 1.3 1991/11/07 17:44:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -267,7 +267,9 @@
 ;;; portion), the list of post image directories, and the file name.
 ;;; 
 (defun maybe-translate-definition-file (file)
-  (let* ((dirs (pathname-directory file))
+  (let* ((pathname (pathname file))
+	 (maybe-truename (or (probe-file pathname) pathname))
+	 (dirs (pathname-directory maybe-truename))
 	 (len (length dirs))
 	 (i len))
     (declare (simple-vector dirs)
@@ -280,7 +282,7 @@
 				*definition-directory-translation-table*)))
 	(when new-dirs
 	  (return (values (subseq dirs i len) new-dirs
-			  (file-namestring file)))))
+			  (file-namestring maybe-truename)))))
       (decf i))))
 
 ;;; TRANSLATE-DEFINITION-FILE creates a directory sequence from unmatched-dir
