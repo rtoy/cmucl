@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.7 1992/02/14 23:45:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/wire.lisp,v 1.8 1992/02/18 16:56:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -263,8 +263,10 @@ is signaled."
     (unless ibuf
       (error 'wire-eof :wire wire))
 
-    (multiple-value-bind (bytes error)
-			 (unix:unix-read fd ibuf buffer-size)
+    (multiple-value-bind
+	(bytes error)
+	(system:without-gcing
+	 (unix:unix-read fd (system:vector-sap ibuf) buffer-size))
       (cond ((null bytes)
 	     (error 'wire-io-error
 		    :wire wire
