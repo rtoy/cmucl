@@ -1052,7 +1052,15 @@
   original-source
   ;;
   ;; A list of prefixes of "interesting" forms that enclose original-source.
-  context)
+  context
+  ;;
+  ;; Source for a form enclosing this one, or NIL if unknown.
+  enclosing-source
+  ;;
+  ;; Description of how the value of SOURCE is used by ENCLOSING-SOURCE such as
+  ;; "third argument", "set value", etc.  Null when there is no
+  ;; ENCLOSING-SOURCE.
+  (enclosed-how nil :type (or simple-string null)))
 
   
 ;;; If true, this is the node which is used as context in compiler warning
@@ -1120,6 +1128,31 @@
 		       '((some strange place)))))))))
 
 
+;;; FIND-ENCLOSING-SOURCE  --  Internal
+;;;
+;;;    Look at the DEST of node, and return the source for it, along with a
+;;; description of how the value is used by the DEST.
+;;;
+(defun find-enclosing-source (node)
+  (declare (type node node))
+  (let* ((cont (node-cont node))
+	 (dest (continuation-dest cont)))
+    (when dest
+      (values
+	(node-source dest)
+	(etypecase dest
+	  (cif "conditional test value")
+	  (cset "assigned value")
+	  (creturn "function return value")
+	  (exit "RETURN'ed value")
+	  (basic-combination
+	   (if (eq cont (basic-combination-fun dest))
+	       "called function"
+	       (format nil "~:R argument"
+		       (1+ (position cont
+				     (basic-combination-args dest)))))))))))
+	  
+
 ;;; FIND-ERROR-CONTEXT  --  Interface
 ;;;
 ;;;    Return a COMPILER-ERROR-CONTEXT structure describing the current error
@@ -1136,10 +1169,15 @@
 	  (when (and *source-info* path)
 	    (multiple-value-bind (form src-context)
 				 (find-original-source path)
-	      (make-compiler-error-context
-	       :source source
-	       :original-source form
-	       :context src-context)))))))
+	      (multiple-value-bind (enclosing how)
+				   (when (and context (not *current-form*))
+				     (find-enclosing-source context))
+		(make-compiler-error-context
+		 :source source
+		 :original-source form
+		 :context src-context
+		 :enclosing-source enclosing
+		 :enclosed-how how))))))))
 
 
 ;;;; Printing error messages:
@@ -1167,6 +1205,7 @@
 (defvar *last-source-context* nil)
 (defvar *last-original-source* nil)
 (defvar *last-source-form* nil)
+(defvar *last-enclosing-source* nil)
 (defvar *last-format-string* nil)
 (defvar *last-format-args* nil)
 (defvar *last-message-count* 0)
@@ -1185,9 +1224,10 @@
 ;;; when we are done.
 ;;;
 (defun note-message-repeats ()
-  (when (> *last-message-count* 1)
-    (format *compiler-error-output* "[Last message occurs ~D times]~%"
-	    *last-message-count*))
+  (cond ((= *last-message-count* 1) (terpri *compiler-error-output*))
+	((> *last-message-count* 1)
+	 (format *compiler-error-output* "[Last message occurs ~D times]~2%"
+		 *last-message-count*)))
   (setq *last-message-count* 0))
 
 
@@ -1215,32 +1255,45 @@
      (context
       (let ((context (compiler-error-context-context context))
 	    (form (compiler-error-context-original-source context))
-	    (source (compiler-error-context-source context)))
+	    (source (compiler-error-context-source context))
+	    (enclosing (compiler-error-context-enclosing-source context))
+	    (how (compiler-error-context-enclosed-how context)))
 	
-	(unless (equal context *last-source-context*)
+	(unless (tree-equal context *last-source-context*)
 	  (note-message-repeats)
 	  (setq *last-source-context* context)
 	  (setq *last-original-source* nil)
 	  (format stream "~2&In:~{~<~%   ~4:;~{ ~S~}~>~^ =>~}~%" context))
-	
-	(unless (equal form *last-original-source*)
+l	
+	(unless (tree-equal form *last-original-source*)
 	  (note-message-repeats)
 	  (setq *last-original-source* form)
-	  (setq *last-source-form* nil)
+	  (setq *last-enclosing-source* nil)
+	  (setq *last-format-string* nil) 
 	  (format stream "  ~S~%" form))
-	
-	(unless (equal source *last-source-form*)
-	  (note-message-repeats)
-	  (setq *last-source-form* source)
-	  (setq *last-format-string* nil)
-	  (unless (or (equal source form) (member source format-args))
-	    (format stream "==>~%  ~S~%" source)))))
+
+	(unless (or (tree-equal source form)
+		    (member source form))
+	  (unless (tree-equal enclosing *last-enclosing-source*)
+	    (note-message-repeats)
+	    (setq *last-source-form* '#(invalid))
+	    (setq *last-enclosing-source* enclosing)
+	    (format stream "==>~%  ~S~%" enclosing))
+	  
+	  (unless (tree-equal source *last-source-form*)
+	    (note-message-repeats)
+	    (setq *last-source-form* source)
+	    (setq *last-format-string* nil)
+	    (unless (member source format-args)
+	      (if *last-enclosing-source*
+		  (format stream "The ~A:~%  ~S~%" how source)
+		  (format stream "==>~%  ~S~%" source)))))))
      (t
       (note-message-repeats)
       (format stream "~2&")))
     
     (unless (and (equal format-string *last-format-string*)
-		 (equal format-args *last-format-args*))
+		 (tree-equal format-args *last-format-args*))
       (note-message-repeats)
       (setq *last-format-string* format-string)
       (setq *last-format-args* format-args)
