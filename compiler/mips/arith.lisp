@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.40 1990/12/12 14:00:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.41 1991/02/11 16:09:29 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -427,7 +427,9 @@
 
 
 (defmacro define-conditional-vop (translate &rest generator)
-  `(progn
+  ;;
+  ;; Squelch dead-code notes...
+  `(locally (declare (optimize (inhibit-warnings 3)))
      ,@(mapcar #'(lambda (suffix cost signed)
 		   (unless (and (member suffix '(/fixnum -c/fixnum))
 				(eq translate 'eql))
@@ -495,13 +497,16 @@
       (inst beq x y target))
   (inst nop))
 
-
-
-
+;;; These versions specify a fixnum restriction on their first arg.  We have
+;;; also generic-eql/fixnum VOPs which are the same, but have no restriction on
+;;; the first arg and a higher cost.  The reason for doing this is to prevent
+;;; fixnum specific operations from being used on word integers, spuriously
+;;; consing the argument.
+;;;
 (define-vop (fast-eql/fixnum fast-conditional)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg)))
-  (:arg-types * tagged-num)
+  (:arg-types tagged-num tagged-num)
   (:note "inline fixnum comparison")
   (:translate eql)
   (:ignore temp)
@@ -510,10 +515,14 @@
 	(inst bne x y target)
 	(inst beq x y target))
     (inst nop)))
+;;;
+(define-vop (generic-eql/fixnum fast-eql/fixnum)
+  (:arg-types * tagged-num)
+  (:variant-cost 7))
 
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg)))
-  (:arg-types * (:constant (signed-byte 14)))
+  (:arg-types tagged-num (:constant (signed-byte 14)))
   (:info target not-p y)
   (:translate eql)
   (:generator 2
@@ -525,6 +534,10 @@
 	  (inst bne x y target)
 	  (inst beq x y target))
       (inst nop))))
+;;;
+(define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
+  (:arg-types * (:constant (signed-byte 14)))
+  (:variant-cost 6))
   
 
 ;;;; 32-bit logical operations
