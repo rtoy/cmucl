@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.17 1990/06/20 14:05:46 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.18 1990/07/23 14:51:33 ram Exp $
 ;;;
 ;;;    This file contains the virtual machine independent parts of the code
 ;;; which does the actual translation of nodes to VOPs.
@@ -75,10 +75,7 @@
 	 (assert (eq env (lambda-environment (lambda-var-home thing))))
 	 (leaf-info thing))
 	(nlx-info
-	 (assert (eq env
-		     (lambda-environment
-		      (block-lambda
-		       (continuation-block (nlx-info-continuation thing))))))
+	 (assert (eq env (block-environment (nlx-info-target thing))))
 	 (ir2-nlx-info-home (nlx-info-info thing))))))
 
 
@@ -1315,10 +1312,8 @@
 ;;; IR2-Convert-Exit  --  Internal
 ;;;
 ;;;    Convert a non-local lexical exit.  First find the NLX-Info in our
-;;; environment.  After indirecting the value cell, we invalidate the exit by
-;;; setting the cell to 0.  Note that this is never called on the escape exits
-;;; for Catch and Unwind-Protect, since the escape functions aren't IR2
-;;; converted.
+;;; environment.  Note that this is never called on the escape exits for Catch
+;;; and Unwind-Protect, since the escape functions aren't IR2 converted.
 ;;;
 (defun ir2-convert-exit (node block)
   (declare (type exit node) (type ir2-block block))
@@ -1328,7 +1323,6 @@
 	(temp (make-stack-pointer-tn))
 	(value (exit-value node)))
     (vop value-cell-ref node block loc temp)
-    (vop value-cell-set node block loc (emit-constant 0))
     (if value
 	(let ((locs (ir2-continuation-locs (continuation-info value))))
 	  (vop unwind node block temp (first locs) (second locs)))
@@ -1398,11 +1392,11 @@
       (:catch
        (vop make-catch-block node block block-tn
 	    (continuation-tn node block tag) target-tn res))
-      ((:unwind-protect :entry)
+      ((:unwind-protect :block :tagbody)
        (vop make-unwind-block node block block-tn target-tn res)))
 
     (ecase kind
-      (:entry
+      ((:block :tagbody)
        (vop make-value-cell node block res (ir2-nlx-info-home 2info)))
       (:unwind-protect
        (vop set-unwind-protect node block block-tn))
@@ -1418,8 +1412,10 @@
 (defun ir2-convert-entry (node block)
   (declare (type entry node) (type ir2-block block))
   (dolist (exit (entry-exits node))
-    (let ((info (find-nlx-info node exit)))
-      (when (and info (eq (cleanup-kind (nlx-info-cleanup info)) :entry))
+    (let ((info (find-nlx-info node (node-cont exit))))
+      (when (and info
+		 (member (cleanup-kind (nlx-info-cleanup info))
+			 '(:block :tagbody)))
 	(emit-nlx-start node block info nil)
 	(return))))
   (undefined-value))
@@ -1468,7 +1464,7 @@
 	 (count-loc (make-argument-count-location)))
 
     (ecase (cleanup-kind (nlx-info-cleanup info))
-      ((:catch :entry)
+      ((:catch :block :tagbody)
        (if (and 2cont (eq (ir2-continuation-kind 2cont) :unknown))
 	   (vop* nlx-entry-multiple node block
 		 (top-loc start-loc count-loc nil)
