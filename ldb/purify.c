@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.15 1991/12/20 18:47:02 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/purify.c,v 1.16 1992/01/25 14:39:55 wlott Exp $ */
 
 #include <stdio.h>
 
@@ -511,7 +511,7 @@ static lispobj *pscav(addr, nwords, constant)
                 /* Maybe.  Have we already moved it? */
                 thingp = (lispobj *)PTR(thing);
                 header = *thingp;
-                if (forwarding_pointer_p(header))
+                if (Pointerp(header) && forwarding_pointer_p(header))
                     /* Yep, so just copy the forwarding pointer. */
                     thing = header;
                 else {
