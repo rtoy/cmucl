@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.20 2003/03/02 18:55:55 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float-trap.lisp,v 1.21 2003/04/14 21:03:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -206,23 +206,39 @@
 		 (alien:sap-alien scp (* unix:sigcontext))))
 	 (traps (logand (ldb float-exceptions-byte modes)
 			(ldb float-traps-byte modes))))
-    (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
-	   (error 'division-by-zero))
-	  ((not (zerop (logand float-invalid-trap-bit traps)))
-	   (error 'floating-point-invalid-operation))
-	  ((not (zerop (logand float-overflow-trap-bit traps)))
-	   (error 'floating-point-overflow))
-	  ((not (zerop (logand float-underflow-trap-bit traps)))
-	   (error 'floating-point-underflow))
-	  ((not (zerop (logand float-inexact-trap-bit traps)))
-	   (error 'ext:floating-point-inexact))
-	  #+BSD
-	  ((zerop (ldb float-exceptions-byte modes))
-	   ;; I can't tell what caused the exception!!
-	   (error 'floating-point-exception
-		  :traps (getf (get-floating-point-modes) :traps)))
-	  (t
-	   (error "SIGFPE with no exceptions currently enabled?")))))
+    (multiple-value-bind (fop operands)
+	(let ((sym (find-symbol "GET-FP-OPERANDS" "VM")))
+	  (if (fboundp sym)
+	      (funcall sym (alien:sap-alien scp (* unix:sigcontext)))
+	      (values nil nil)))
+      (cond ((not (zerop (logand float-divide-by-zero-trap-bit traps)))
+	     (error 'division-by-zero
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-invalid-trap-bit traps)))
+	     (error 'floating-point-invalid-operation
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-overflow-trap-bit traps)))
+	     (error 'floating-point-overflow
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-underflow-trap-bit traps)))
+	     (error 'floating-point-underflow
+		    :operation fop
+		    :operands operands))
+	    ((not (zerop (logand float-inexact-trap-bit traps)))
+	     (error 'ext:floating-point-inexact
+		    :operation fop
+		    :operands operands))
+	    #+BSD
+	    ((zerop (ldb float-exceptions-byte modes))
+	     ;; I can't tell what caused the exception!!
+	     (error 'floating-point-exception
+		    :traps (getf (get-floating-point-modes) :traps)))
+	    (t
+	     (error "SIGFPE with no exceptions currently enabled?"))))))
+
 
 ;;; WITH-FLOAT-TRAPS-MASKED  --  Public
 ;;;
