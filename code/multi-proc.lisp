@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.12 1997/12/30 16:36:27 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.13 1997/12/31 04:43:15 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,7 +318,8 @@
 ;;; and it executes the initial-function.
 ;;;
 (defun make-stack-group (name initial-function &optional
-			      (resumer *current-stack-group*))
+			      (resumer *current-stack-group*)
+			      (inherit t))
   (declare (type simple-base-string name)
 	   (type function initial-function)
 	   (type stack-group resumer))
@@ -350,53 +351,95 @@
 				   :initial-element nil)))
 	     (setf (aref x86::*control-stacks* control-stack-id) control-stack)
 	     (values control-stack control-stack-id)))
+	 ;; Allocate a stack group inheriting stacks and bindings from
+	 ;; the current stack group.
 	 (allocate-child-stack-group (control-stack-id)
 	   ;; Save the interrupt-contexts while the size is still
 	   ;; bound.
 	   (let ((interrupt-contexts
 		  (save-interrupt-contexts
 		   (make-array 0 :element-type '(unsigned-byte 32)))))
-	     ;; Save the binding stack.
-	     (unbind-binding-stack)
-	     (multiple-value-bind (binding-stack binding-stack-size)
-		 (save-binding-stack #())
-	       (rebind-binding-stack)
-	       ;; Save the Alien stack
-	       (multiple-value-bind (alien-stack alien-stack-size
-						 alien-stack-pointer)
-		   (save-alien-stack
-		    (make-array 0 :element-type '(unsigned-byte 32)))
-		 ;; Allocate a stack-group structure.
-		 (%make-stack-group
-		  :name name
-		  :state :active
-		  :control-stack-id control-stack-id
-		  ;; Save the Eval stack.
-		  :eval-stack (copy-seq (the (simple-array t (*))
-					     kernel:*eval-stack*))
-		  :eval-stack-top kernel:*eval-stack-top*
-		  ;; Misc stacks.
-		  :current-catch-block lisp::*current-catch-block*
-		  :current-unwind-protect-block
-		  lisp::*current-unwind-protect-block*
-		  ;; Alien stack.
-		  :alien-stack alien-stack
-		  :alien-stack-size alien-stack-size
-		  :alien-stack-pointer alien-stack-pointer
-		  ;; Interrupt contexts
-		  :interrupt-contexts interrupt-contexts
-		  ;; Binding stack.
-		  :binding-stack binding-stack
-		  :binding-stack-size binding-stack-size
-		  ;; Resumer
-		  :resumer resumer))))))
+	     ;; Save the binding stack.  Note that
+	     ;; *interrutps-enabled* could be briefly set during the
+	     ;; unbinding and re-binding process so signals are
+	     ;; blocked.
+	     (let ((old-sigs (unix:unix-sigblock
+			      (unix:sigmask :sigint :sigalrm))))
+	       (declare (type (unsigned-byte 32) old-sigs))
+	       (unbind-binding-stack)
+	       (multiple-value-bind (binding-stack binding-stack-size)
+		   (save-binding-stack #())
+		 (rebind-binding-stack)
+		 (unix:unix-sigsetmask old-sigs)
+		 ;; Save the Alien stack
+		 (multiple-value-bind (alien-stack alien-stack-size
+						   alien-stack-pointer)
+		     (save-alien-stack
+		      (make-array 0 :element-type '(unsigned-byte 32)))
+		   ;; Allocate a stack-group structure.
+		   (%make-stack-group
+		    :name name
+		    :state :active
+		    :control-stack-id control-stack-id
+		    ;; Save the Eval stack.
+		    :eval-stack (copy-seq (the (simple-array t (*))
+					       kernel:*eval-stack*))
+		    :eval-stack-top kernel:*eval-stack-top*
+		    ;; Misc stacks.
+		    :current-catch-block lisp::*current-catch-block*
+		    :current-unwind-protect-block
+		    lisp::*current-unwind-protect-block*
+		    ;; Alien stack.
+		    :alien-stack alien-stack
+		    :alien-stack-size alien-stack-size
+		    :alien-stack-pointer alien-stack-pointer
+		    ;; Interrupt contexts
+		    :interrupt-contexts interrupt-contexts
+		    ;; Binding stack.
+		    :binding-stack binding-stack
+		    :binding-stack-size binding-stack-size
+		    ;; Resumer
+		    :resumer resumer))))))
+	 ;; Allocate a new stack group with fresh stacks and bindings.
+	 (allocate-new-stack-group (control-stack-id)
+	   ;; Allocate a stack-group structure.
+	   (%make-stack-group
+	    :name name
+	    :state :active
+	    :control-stack-id control-stack-id
+	    ;; Eval stack. Needs at least one element be because push
+	    ;; doubles the size when full.
+	    :eval-stack (make-array 32)
+	    :eval-stack-top 0
+	    ;; Misc stacks.
+	    :current-catch-block lisp::*current-catch-block*
+	    :current-unwind-protect-block lisp::*current-unwind-protect-block*
+	    ;; Alien stack.
+	    :alien-stack (make-array 0 :element-type '(unsigned-byte 32))
+	    :alien-stack-size 0
+	    :alien-stack-pointer *alien-stack-top*
+	    ;; Interrupt contexts
+	    :interrupt-contexts (make-array 0 :element-type
+					    '(unsigned-byte 32))
+	    ;; Binding stack - some initial bindings.
+	    :binding-stack (vector 
+			    nil '*  nil '**  nil '***  nil '-
+			    nil '+  nil '++  nil '+++
+			    nil '///  nil '//  nil '/
+			    nil 'unix::*interrupts-enabled*
+			    t 'lisp::*gc-inhibit*)
+	    :binding-stack-size (* 2 12)
+	    ;; Resumer
+	    :resumer resumer)))
     (let ((child-stack-group nil))
       (let ((unix::*interrupts-enabled* nil)
 	    (lisp::*gc-inhibit* t))
 	(multiple-value-bind (control-stack control-stack-id)
 	    (allocate-control-stack)
 	  (setq child-stack-group
-		(allocate-child-stack-group control-stack-id))
+		(if inherit
+		    (allocate-child-stack-group control-stack-id)
+		    (allocate-new-stack-group control-stack-id)))
 	  ;; Fork the control-stack
 	  (if (x86:control-stack-fork control-stack)
 	      ;; Current-stack-group returns the child-stack-group.
@@ -407,15 +450,18 @@
 		     (setq *current-stack-group* child-stack-group)
 		     (assert (eq *current-stack-group*
 				 (process-stack-group *current-process*)))
-		     ;; Child start with interrupts and GC enabled.
-		     (let ((unix::*interrupts-enabled* t)
-			   (lisp::*gc-inhibit* nil))
-		       (when unix::*interrupt-pending*
-			 (unix::do-pending-interrupt))
-		       (when lisp::*need-to-collect-garbage*
-			 (lisp::maybe-gc))
-		       (funcall initial-function)))
+		     ;; Enable interrupts and GC.
+		     (setf unix::*interrupts-enabled* t)
+		     (setf lisp::*gc-inhibit* nil)
+		     (when unix::*interrupt-pending*
+		       (unix::do-pending-interrupt))
+		     (when lisp::*need-to-collect-garbage*
+		       (lisp::maybe-gc))
+		     (funcall initial-function))
 		(let ((resumer (stack-group-resumer child-stack-group)))
+		  ;; Disable interrupts and GC.
+		  (setf unix::*interrupts-enabled* nil)
+		  (setf lisp::*gc-inhibit* t)
 		  (inactivate-stack-group child-stack-group)
 		  ;; Verify the resumer.
 		  (unless (and resumer
@@ -429,12 +475,19 @@
 		  (setf kernel:*eval-stack* (stack-group-eval-stack resumer))
 		  (setf kernel:*eval-stack-top*
 			(stack-group-eval-stack-top resumer))
-		  ;; The binding stack.
-		  (unbind-binding-stack)
-		  (restore-binding-stack
-		   (stack-group-binding-stack resumer)
-		   (stack-group-binding-stack-size resumer))
-		  (rebind-binding-stack)
+		  ;; The binding stack.  Note that
+		  ;; *interrutps-enabled* could be briefly set during
+		  ;; the unbinding and re-binding process so signals
+		  ;; are blocked.
+		  (let ((old-sigs (unix:unix-sigblock
+				   (unix:sigmask :sigint :sigalrm))))
+		    (declare (type (unsigned-byte 32) old-sigs))
+		    (unbind-binding-stack)
+		    (restore-binding-stack
+		     (stack-group-binding-stack resumer)
+		     (stack-group-binding-stack-size resumer))
+		    (rebind-binding-stack)
+		    (unix:unix-sigsetmask old-sigs))
 		  ;; Misc stacks.
 		  (setf lisp::*current-catch-block*
 			(stack-group-current-catch-block resumer))
@@ -523,15 +576,21 @@
 	    (save-interrupt-contexts
 	     (stack-group-interrupt-contexts stack-group)))
 
-      ;; The binding stack.
-      (unbind-binding-stack)
-      (multiple-value-bind (stack size)
-	  (save-binding-stack (stack-group-binding-stack stack-group))
-	(setf (stack-group-binding-stack stack-group) stack)
-	(setf (stack-group-binding-stack-size stack-group) size))
-      (restore-binding-stack (stack-group-binding-stack new-stack-group)
-			     (stack-group-binding-stack-size new-stack-group))
-      (rebind-binding-stack)
+      ;; The binding stack.  Note that *interrutps-enabled* could be
+      ;; briefly set during the unbinding and re-binding process so
+      ;; signals are blocked.
+      (let ((old-sigs (unix:unix-sigblock (unix:sigmask :sigint :sigalrm))))
+	(declare (type (unsigned-byte 32) old-sigs))
+	(unbind-binding-stack)
+	(multiple-value-bind (stack size)
+	    (save-binding-stack (stack-group-binding-stack stack-group))
+	  (setf (stack-group-binding-stack stack-group) stack)
+	  (setf (stack-group-binding-stack-size stack-group) size))
+	(restore-binding-stack (stack-group-binding-stack new-stack-group)
+			       (stack-group-binding-stack-size
+				new-stack-group))
+	(rebind-binding-stack)
+	(unix:unix-sigsetmask old-sigs))
       
       ;; Restore the interrupt-contexts.
       (restore-interrupt-contexts
@@ -775,7 +834,7 @@
 			(update-process-timers *current-process*
 					       *initial-process*)
 			(setf *current-process* *initial-process*)))
-		  *initial-stack-group*))))
+		  *initial-stack-group* nil))))
 	   (push process *all-processes*)
 	   process))))
 
@@ -843,7 +902,7 @@
 	       (setf (process-interrupts *current-process*) nil)
 	       (update-process-timers *current-process* *initial-process*)
 	       (setf *current-process* *initial-process*)))
-	 *initial-stack-group*))
+	 *initial-stack-group* nil))
   (setf (process-%whostate process) nil)
   (setf (process-wait-function process) nil)
   (setf (process-wait-timeout process) nil)
