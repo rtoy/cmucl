@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.11 1991/04/23 12:58:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.12 1991/06/10 16:57:47 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.11 1991/04/23 12:58:28 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.12 1991/06/10 16:57:47 chiles Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -1107,3 +1107,44 @@
        (funcall method sub-stream operation arg1 arg2)))))
 
 (proclaim '(notinline read-char unread-char read-byte listen))
+
+
+
+;;;; Public interface from "EXTENSIONS" package.
+
+(in-package "EXT")
+
+(export '(get-stream-command stream-command stream-command-p stream-command-name
+	  stream-command-args make-stream-command))
+
+(defstruct (stream-command (:print-function print-stream-command)
+			   (:constructor make-stream-command
+					 (name &optional args)))
+  (name nil :type symbol)
+  (args nil :type list))
+
+(defun print-stream-command (obj str n)
+  (declare (ignore n))
+  (format str "#<Stream-Cmd ~S>" (stream-command-name obj)))
+
+
+;;; GET-STREAM-COMMAND -- Public.
+;;;
+;;; We can't simply call the stream's misc method because because nil is an
+;;; ambiguous return value: does it mean text arrived, or does it mean the
+;;; stream's misc method had no :get-command implementation.  We can't return
+;;; nil until there is text input.  We don't need to loop because any stream
+;;; implementing :get-command would wait until it had some input.  If the
+;;; LISTEN fails, then we have some random stream we must wait on.
+;;;
+(defun get-stream-command (stream)
+  "This takes a stream and waits for text or a command to appear on it.  If
+   text appears before a command, this returns nil, and otherwise it returns
+   a command."
+  (let ((cmdp (funcall (lisp::stream-misc stream) stream :get-command)))
+    (cond (cmdp)
+	  ((listen stream)
+	   nil)
+	  (t
+	   ;; This waits for input and returns nil when it arrives.
+	   (unread-char (read-char stream) stream)))))
