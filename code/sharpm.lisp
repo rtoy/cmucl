@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.15 1998/02/11 10:03:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.16 1998/04/17 00:42:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,13 +119,6 @@
      (colon
       (%reader-error stream "Symbol following #: contains a package marker: ~S"
 		     token))
-     ((eql (length token) 0)
-      (let ((ch (read-char stream nil nil t)))
-	(when ch
-	  (%reader-error stream
-			 "Illegal terminating character after a colon: ~S."
-			 ch))
-	(reader-eof-error stream "after a colon")))
      (t
       (make-symbol token)))))
 
