@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.3 1990/11/01 01:22:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.4 1990/11/03 17:14:59 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
-(defun generate-call-sequence (name style vop)
+(def-vm-support-routine generate-call-sequence (name style vop)
   (ecase style
     (:raw
      (values
@@ -55,7 +55,7 @@
       nil))))
 
 
-(defun generate-return-sequence (style)
+(def-vm-support-routine generate-return-sequence (style)
   (ecase style
     (:raw
      `((inst j lip-tn)
