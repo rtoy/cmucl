@@ -8,8 +8,7 @@ extern char *arch_init(void);
 extern void arch_skip_instruction(struct sigcontext *scp);
 extern boolean arch_pseudo_atomic_atomic(struct sigcontext *scp);
 extern void arch_set_pseudo_atomic_interrupted(struct sigcontext *scp);
-extern os_vm_address_t arch_get_bad_addr(int signal, int code,
-					 struct sigcontext *scp);
+extern os_vm_address_t arch_get_bad_addr(HANDLER_ARGS);
 extern unsigned char *arch_internal_error_arguments(struct sigcontext *scp);
 extern unsigned long arch_install_breakpoint(void *pc);
 extern void arch_remove_breakpoint(void *pc, unsigned long orig_inst);
