@@ -1,3 +1,38 @@
+5/17/92 to 5/25/92
+
+Code:
+
+Lots of internal fixes to how breakpoints are handled.  There currently is
+nothing that uses this stuff, but it works better now.
+
+Fixed DEFPACKAGE not to loose when the :use option is specified.
+
+
+Compiler:
+
+More internal changes to help facilitate future ports.
+
+Internal changes to support the above mentioned breakpoint improvements.
+
+
+PCL
+
+Fixed a bug in WALK-ARGLIST where it would ignore the rest of the current
+arglist if the current arg destructured.  This was causing it to compile
+forms like:
+	(macrolet ((foo ((a b) c) ...)) ...)
+as:
+	(macrolet ((foo ((a b)) ...)) ...)
+note the loss of the arg c.
+
+
+Other:
+
+The loading of CLX and Hemlock has been changed to more easily allow
+loading them into cores originally built without them.
+
+
+
 4/30/92 to 5/17/92
 
 Code:
