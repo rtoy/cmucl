@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.16 1992/02/26 00:56:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.17 1992/03/12 15:23:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.16 1992/02/26 00:56:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.17 1992/03/12 15:23:20 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation.
@@ -39,7 +39,7 @@
 	  value-cell-header-type symbol-header-type base-char-type
 	  sap-type unbound-marker-type weak-pointer-type
 	  structure-header-type funcallable-instance-header-type
-	  vector-normal-subtype
+	  fdefn-type vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
 	  primitive-object primitive-object-p
 	  primitive-object-name primitive-object-header
@@ -141,8 +141,8 @@
   sap
   unbound-marker
   weak-pointer
-  structure-header)
-
+  structure-header
+  fdefn)
 
 ;;; The different vector subtypes.
 ;;; 
@@ -357,6 +357,12 @@
   (trace-table-offset)
   (constants :rest-p t))
 
+(define-primitive-object (fdefn :lowtag other-pointer-type
+				:header fdefn-type)
+  (name :ref-trans fdefn-name)
+  (function :ref-trans fdefn-function)
+  (raw-addr :c-type "char *"))
+
 (define-primitive-object (function-header :lowtag function-pointer-type
 					  :header function-header-type)
   (self :ref-vop c::function-self :set-vop c::set-function-self)
@@ -411,19 +417,21 @@
 	 :init :arg))
 
 (define-primitive-object (symbol :lowtag other-pointer-type
-				 :header symbol-header-type)
+				 :header symbol-header-type
+				 :alloc-trans make-symbol)
   (value :set-trans %set-symbol-value
-	 :setf-vop set)
-  (function)
-  (raw-function-addr :c-type "char *")
-  (setf-function)
+	 :setf-vop set
+	 :init :arg)
+  unused
   (plist :ref-trans symbol-plist
 	 :setf-vop %set-symbol-plist
-	 :set-trans %set-symbol-plist)
-  (name :ref-trans symbol-name)
+	 :set-trans %set-symbol-plist
+	 :init :null)
+  (name :ref-trans symbol-name :init :null)
   (package :ref-trans symbol-package
 	   :setf-vop %set-symbol-package
-	   :set-trans %set-symbol-package))
+	   :set-trans %set-symbol-package
+	   :init :null))
 
 (define-primitive-object (sap :lowtag other-pointer-type
 			      :header sap-type)
