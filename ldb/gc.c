@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.1 1990/03/28 22:46:26 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.2 1990/03/29 21:18:11 ch Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -10,10 +10,14 @@
 #include <mach.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <signal.h>
 #include "lisp.h"
 #include "ldb.h"
 #include "gc.h"
 #include "globals.h"
+#include "interrupt.h"
+#include "validate.h"
+#include "lispregs.h"
 
 lispobj *from_space;
 lispobj *from_space_free_pointer;
@@ -23,12 +27,12 @@ lispobj *new_space_free_pointer;
 
 static int (*scavtab[256])();
 static lispobj (*transother[256])();
+static int (*sizetab[256])();
 
 
-/* Support */
+/* Predicates */
 
-/* ### The following couple of predicates may get turned intro macros if */
-/* the compiler won't open code them for me. */
+#if defined(DEBUG_SPACE_PREDICATES)
 
 from_space_p(object)
 lispobj object;
@@ -56,6 +60,18 @@ lispobj object;
 		(ptr < new_space_free_pointer));
 }	    
 
+#else
+
+#define from_space_p(ptr) \
+	((from_space <= ((lispobj *) ptr)) && \
+	 (((lispobj *) ptr) < from_space_free_pointer))
+
+#define new_space_p(ptr) \
+	((new_space <= ((lispobj *) ptr)) && \
+	 (((lispobj *) ptr) < new_space_free_pointer))
+
+#endif
+
 
 /* GC Lossage */
 
@@ -68,9 +84,9 @@ gc_lose()
 
 /* Copying Objects */
 
-#if 0
+#if defined(DEBUG_USE_ANAL_BCOPY)
 
-static my_bcopy(src, dest, length)
+static bcopy(src, dest, length)
 char *src, *dest;
 int length;
 {
@@ -129,14 +145,21 @@ collect_garbage()
 	lispobj *current_static_space_free_pointer;
 	long static_space_size;
 	long control_stack_size, binding_stack_size;
+	long size_retained, size_discarded;
+	int oldmask;
 	
 	getrusage(RUSAGE_SELF, &start_rusage);
 	gettimeofday(&start_tv, (struct timezone *) 0);
 
-	fprintf(stderr, "[Collecting garbage ... \n");
+	printf("[Collecting garbage ... \n");
+
+	oldmask = sigblock(BLOCKABLE);
 
 	current_static_space_free_pointer =
 		(lispobj *) SymbolValue(STATIC_SPACE_FREE_POINTER);
+
+
+	/* Set up from space and new space pointers */
 
 	from_space = current_dynamic_space;
 	from_space_free_pointer = current_dynamic_space_free_pointer;
@@ -149,56 +172,73 @@ collect_garbage()
 		fprintf(stderr, "GC lossage.  Current dynamic space is bogus!\n");
 		gc_lose();
 	}
+
+	os_validate(new_space, DYNAMIC_SPACE_SIZE);
 	new_space_free_pointer = new_space;
 
-#if 0
-	scavenge(descriptor_registers, sizeof(descriptor_registers));
-#endif
+
+	/* Scavenge the roots */
+
+	printf("Scavenging interrupt contexts ...\n");
+	scavenge_interrupt_contexts();
+
+	printf("Scavenging interrupt handlers (%d bytes) ...\n",
+	       sizeof(interrupt_handlers));
+	scavenge((lispobj *) interrupt_handlers,
+		 sizeof(interrupt_handlers) / sizeof(lispobj));
 
 	control_stack_size = current_control_stack_pointer - control_stack;
-	fprintf(stderr, "Scavenging the control stack (%d bytes) ...\n",
-		control_stack_size * sizeof(lispobj));
+	printf("Scavenging the control stack (%d bytes) ...\n",
+	       control_stack_size * sizeof(lispobj));
 	scavenge(control_stack, control_stack_size);
 
 	binding_stack_size = current_binding_stack_pointer - binding_stack;
-	fprintf(stderr, "Scavenging the binding stack (%d bytes) ...\n",
-		binding_stack_size * sizeof(lispobj));
+	printf("Scavenging the binding stack (%d bytes) ...\n",
+	       binding_stack_size * sizeof(lispobj));
 	scavenge(binding_stack, binding_stack_size);
 
 	static_space_size = current_static_space_free_pointer - static_space;
-	fprintf(stderr, "Scavenging static space (%d bytes) ...\n",
-		static_space_size * sizeof(lispobj));
+	printf("Scavenging static space (%d bytes) ...\n",
+	       static_space_size * sizeof(lispobj));
 	scavenge(static_space, static_space_size);
 
-	fprintf(stderr, "Scavenging new space ...\n");
+	printf("Scavenging new space ...\n");
 	scavenge_newspace();
 
 #if defined(DEBUG_PRINT_GARBAGE)
 	print_garbage(from_space, from_space_free_pointer);
 #endif
 
+	/* Flip spaces */
+	os_invalidate(current_dynamic_space, DYNAMIC_SPACE_SIZE);
 	current_dynamic_space = new_space;
 	current_dynamic_space_free_pointer = new_space_free_pointer;
 
-	fprintf(stderr, "Total of %d bytes out of %d bytes retained.\n",
-		(new_space_free_pointer - new_space) * sizeof(lispobj),
-		(from_space_free_pointer - from_space) * sizeof(lispobj));
+	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
+	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
 
-	fprintf(stderr, "done.]\n");
+	(void) sigsetmask(oldmask);
+
+	printf("done.]\n");
+
+	printf("Total of %d bytes out of %d bytes retained (%3.2f%%).\n",
+	       size_retained, size_discarded,
+	       (((float) size_retained) / ((float) size_discarded)) * 100.0);
 
 	gettimeofday(&stop_tv, (struct timezone *) 0);
 	getrusage(RUSAGE_SELF, &stop_rusage);
 
-	real_time = tv_diff(&stop_tv, &start_tv) * 1000.0;
-	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime) *
-		1000.0;
-	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime) *
-		1000.0;
+	real_time = tv_diff(&stop_tv, &start_tv);
+	user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime);
+	system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime);
 
 	printf("Statistics:\n");
-	printf("%10.2f msec of real time\n", real_time);
-	printf("%10.2f msec of user time,\n", user_time);
-	printf("%10.2f msec of system time.\n", system_time);
+	printf("%10.2f msec of real time\n", real_time * 1000.0);
+	printf("%10.2f msec of user time,\n", user_time * 1000.0);
+	printf("%10.2f msec of system time.\n", system_time * 1000.0);
+
+	printf("%10.2f M bytes/sec collected.\n",
+	       (((float) size_retained / (float) (1<<20)) / real_time));
 }
 
 
@@ -216,9 +256,9 @@ long nwords;
 		object = *start;
 		type = TypeOf(object);
 
-#if 0
-		fprintf(stderr, "Scavenging object at 0x%08x, object = 0x%08x, type = %d\n",
-			(unsigned long) start, (unsigned long) object, type);
+#if defined(DEBUG_SCAVENGE_VERBOSE)
+		printf("Scavenging object at 0x%08x, object = 0x%08x, type = %d\n",
+		       (unsigned long) start, (unsigned long) object, type);
 #endif
 
 		words_scavenged = (scavtab[type])(start, object);
@@ -242,9 +282,9 @@ scavenge_newspace()
 		object = *here;
 		type = TypeOf(object);
 
-#if 0
-		fprintf(stderr, "Scavenging object at 0x%08x, object = 0x%08x, type = %d\n",
-			(unsigned long) here, (unsigned long) object, type);
+#if defined(DEBUG_SCAVENGE_VERBOSE)
+		printf("Scavenging object at 0x%08x, object = 0x%08x, type = %d\n",
+		       (unsigned long) here, (unsigned long) object, type);
 #endif
 
 		words_scavenged = (scavtab[type])(here, object);
@@ -252,6 +292,170 @@ scavenge_newspace()
 		here += words_scavenged;
 	}
 	gc_assert(here == new_space_free_pointer);
+}
+
+
+/* Scavenging Interrupt Contexts */
+
+scavenge_interrupt_contexts()
+{
+	int i, index;
+	struct sigcontext *context;
+
+	index = FIXNUM_TO_INT(SymbolValue(FREE_INTERRUPT_CONTEXT_INDEX));
+#if defined(DEBUG_PRINT_CONTEXT_INDEX)
+	printf("Number of active contexts: %d\n", index);
+#endif
+
+	for (i = 0; i < index; i++) {
+		context = lisp_interrupt_contexts[i];
+		scavenge_interrupt_context(context); 
+	}
+}
+
+static int boxed_registers[] = {
+	A0, A1, A2, A3, A4, A5, CNAME, LEXENV,
+	ARGS, OLDCONT, LRA, L0, L1, L2, CODE
+};
+
+scavenge_interrupt_context(context)
+struct sigcontext *context;
+{
+	int i;
+	unsigned long lip;
+	unsigned long lip_offset;
+	int lip_register_pair;
+	unsigned long pc_code_offset;
+
+	/* Find the LIP's register pair and calculate it's offset */
+	/* before we scavenge the context. */
+	lip = context->sc_regs[LIP];
+	lip_offset = 0xFFFFFFFF;
+	lip_register_pair = -1;
+	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
+		unsigned long reg, offset;
+		int index;
+
+		index = boxed_registers[i];
+		reg = context->sc_regs[index];
+		if (reg <= lip) {
+			offset = lip - reg;
+			if (offset < lip_offset) {
+				lip_offset = offset;
+				lip_register_pair = index;
+			}
+		}
+	}
+
+#if defined(DEBUG_LIP)
+	printf("LIP = %08x, Pair is R%d = %08x, Offset = %08x\n",
+	       context->sc_regs[LIP],
+	       lip_register_pair,
+	       context->sc_regs[lip_register_pair],
+	       lip_offset);
+#endif
+
+	/* Compute the PC's offset from the start of the CODE */
+	/* register. */
+	pc_code_offset = context->sc_pc - context->sc_regs[CODE];
+
+#if defined(DEBUG_PC)
+	printf("PC = %08x, CODE = %08x, Offset = %08x\n",
+	       context->sc_pc, context->sc_regs[CODE], pc_code_offset);
+#endif
+	       
+	/* Scanvenge all boxed registers in the context. */
+	for (i = 0; i < (sizeof(boxed_registers) / sizeof(int)); i++) {
+		int index;
+		unsigned long reg;
+
+		index = boxed_registers[i];
+		reg = context->sc_regs[index];
+		scavenge((lispobj *) &(context->sc_regs[index]), 1);
+#if defined(DEBUG_SCAVENGE_REGISTERS)
+		printf("Scavenged R%d: was 0x%08x now 0x%08x\n",
+		       index, reg, context->sc_regs[index]);
+#endif
+	}
+
+	/* Fix the LIP */
+	context->sc_regs[LIP] =
+		context->sc_regs[lip_register_pair] + lip_offset;
+	
+#if defined(DEBUG_LIP)
+	printf("LIP = %08x, Pair is R%d = %08x, Offset = %08x\n",
+	       context->sc_regs[LIP],
+	       lip_register_pair,
+	       context->sc_regs[lip_register_pair],
+	       lip_offset);
+#endif
+
+	/* Fix the PC if it was in from space */
+	if (from_space_p(context->sc_pc))
+		context->sc_pc = context->sc_regs[CODE] + pc_code_offset;
+
+#if defined(DEBUG_PC)
+	printf("PC = %08x, CODE = %08x, Offset = %08x\n",
+	       context->sc_pc, context->sc_regs[CODE], pc_code_offset);
+#endif
+	       
+}
+
+
+/* Debugging Code */
+
+print_garbage(from_space, from_space_free_pointer)
+lispobj *from_space, *from_space_free_pointer;
+{
+	lispobj *start;
+	int total_words_not_copied;
+
+	printf("Scanning from space ...\n");
+
+	total_words_not_copied = 0;
+	start = from_space;
+	while (start < from_space_free_pointer) {
+		lispobj object;
+		int forwardp, type, nwords;
+		lispobj header;
+
+		object = *start;
+		forwardp = pointerp(object) && new_space_p(object);
+
+		if (forwardp) {
+			int tag;
+			lispobj *pointer;
+
+			tag = LowtagOf(object);
+
+			switch (tag) {
+			case type_ListPointer:
+				nwords = 2;
+				break;
+			case type_StructurePointer:
+				printf("Don't know about structures yet!\n");
+				nwords = 1;
+				break;
+			case type_FunctionPointer:
+				nwords = 1;
+				break;
+			case type_OtherPointer:
+				pointer = (lispobj *) PTR(object);
+				header = *pointer;
+				type = TypeOf(header);
+				nwords = (sizetab[type])(pointer);
+			}
+		} else {
+			type = TypeOf(object);
+			nwords = (sizetab[type])(start);
+			total_words_not_copied += nwords;
+			printf("%4d words not copied at 0x%08x; ",
+			       nwords, (unsigned long) start);
+			printf("Header word is 0x%08x\n", (unsigned long) object);
+		}
+		start += nwords;
+	}
+	printf("%d total words not copied.\n", total_words_not_copied);
 }
 
 
@@ -315,8 +519,8 @@ struct code *code;
 	gc_assert(TypeOf(code->header) == type_CodeHeader);
 
 #if defined(DEBUG_CODE_GC)
-	fprintf(stderr, "\nTransporting code object located at 0x%08x.\n",
-		(unsigned long) code);
+	printf("\nTransporting code object located at 0x%08x.\n",
+	       (unsigned long) code);
 #endif
 
 	/* if object has already been transported, just return pointer */
@@ -330,7 +534,7 @@ struct code *code;
 	ncode_words = FIXNUM_TO_INT(code->code_size);
 	nheader_words = HEADER_VALUE(code->header);
 	nwords = ncode_words + nheader_words;
-	nwords = ROUND_TO_BOUNDARY(nwords, 2);
+	nwords = CEILING(nwords, 2);
 
 	l_new_code = copy_object(l_code, nwords);
 	new_code = (struct code *) PTR(l_new_code);
@@ -338,9 +542,9 @@ struct code *code;
 	displacement = l_new_code - l_code;
 
 #if defined(DEBUG_CODE_GC)
-	fprintf(stderr, "Old code object at 0x%08x, new code object at 0x%08x.\n",
-		(unsigned long) code, (unsigned long) new_code);
-	fprintf(stderr, "Code object is %d words long.\n", nwords);
+	printf("Old code object at 0x%08x, new code object at 0x%08x.\n",
+	       (unsigned long) code, (unsigned long) new_code);
+	printf("Code object is %d words long.\n", nwords);
 #endif
 
 	/* set forwarding pointer */
@@ -393,14 +597,14 @@ lispobj *where, object;
 	ncode_words = FIXNUM_TO_INT(code->code_size);
 	nheader_words = HEADER_VALUE(object);
 	nwords = ncode_words + nheader_words;
-	nwords = ROUND_TO_BOUNDARY(nwords, 2);
+	nwords = CEILING(nwords, 2);
 
 #if defined(DEBUG_CODE_GC)
-	fprintf(stderr, "\nScavening code object at 0x%08x.\n",
-		(unsigned long) where);
-	fprintf(stderr, "Code object is %d words long.\n", nwords);
-	fprintf(stderr, "Scavenging boxed section of code data block (%d words).\n",
-		nheader_words - 1);
+	printf("\nScavening code object at 0x%08x.\n",
+	       (unsigned long) where);
+	printf("Code object is %d words long.\n", nwords);
+	printf("Scavenging boxed section of code data block (%d words).\n",
+	       nheader_words - 1);
 #endif
 
 	/* Scavenge the boxed section of the code data block */
@@ -417,8 +621,8 @@ lispobj *where, object;
 		gc_assert(TypeOf(header) == type_FunctionHeader);
 		
 #if defined(DEBUG_CODE_GC)
-		fprintf(stderr, "Scavenging boxed section of entry point located at 0x%08x.\n",
-			(unsigned long) PTR(fheaderl));
+		printf("Scavenging boxed section of entry point located at 0x%08x.\n",
+		       (unsigned long) PTR(fheaderl));
 #endif
 		scavenge(&fheaderp->name, 1);
 		scavenge(&fheaderp->arglist, 1);
@@ -438,6 +642,23 @@ lispobj object;
 
 	ncode = trans_code((struct code *) PTR(object));
 	return (lispobj) ncode | type_OtherPointer;
+}
+
+static
+size_code_header(where)
+lispobj *where;
+{
+	struct code *code;
+	int nheader_words, ncode_words, nwords;
+
+	code = (struct code *) where;
+	
+	ncode_words = FIXNUM_TO_INT(code->code_size);
+	nheader_words = HEADER_VALUE(code->header);
+	nwords = ncode_words + nheader_words;
+	nwords = CEILING(nwords, 2);
+
+	return nwords;
 }
 
 
@@ -658,6 +879,14 @@ lispobj *where, object;
 /* Immediate, Boxed, and Unboxed Objects */
 
 static
+size_pointer(where)
+lispobj *where;
+{
+	return 1;
+}
+
+
+static
 scav_immediate(where, object)
 lispobj *where, object;
 {
@@ -670,6 +899,13 @@ lispobj object;
 {
 	fprintf(stderr, "GC lossage.  Trying to transport an immediate!?\n");
 	gc_lose();
+}
+
+static
+size_immediate(where)
+lispobj *where;
+{
+	return 1;
 }
 
 
@@ -691,9 +927,23 @@ lispobj object;
 
 	header = *((lispobj *) PTR(object));
 	length = HEADER_VALUE(header) + 1;
-	length = ROUND_TO_BOUNDARY(length, 2);
+	length = CEILING(length, 2);
 
 	return copy_object(object, length);
+}
+
+static
+size_boxed(where)
+lispobj *where;
+{
+	lispobj header;
+	unsigned long length;
+
+	header = *where;
+	length = HEADER_VALUE(header) + 1;
+	length = CEILING(length, 2);
+
+	return length;
 }
 
 
@@ -704,7 +954,7 @@ lispobj *where, object;
 	unsigned long length;
 
 	length = HEADER_VALUE(object) + 1;
-	length = ROUND_TO_BOUNDARY(length, 2);
+	length = CEILING(length, 2);
 
 	return length;
 }
@@ -721,15 +971,29 @@ lispobj object;
 
 	header = *((lispobj *) PTR(object));
 	length = HEADER_VALUE(header) + 1;
-	length = ROUND_TO_BOUNDARY(length, 2);
+	length = CEILING(length, 2);
 
 	return copy_object(object, length);
+}
+
+static
+size_unboxed(where)
+lispobj *where;
+{
+	lispobj header;
+	unsigned long length;
+
+	header = *where;
+	length = HEADER_VALUE(header) + 1;
+	length = CEILING(length, 2);
+
+	return length;
 }
 
 
 /* Vector-Like Objects */
 
-#define NWORDS(x,y) (ROUND_TO_BOUNDARY((x),(y)) / (y))
+#define NWORDS(x,y) (CEILING((x),(y)) / (y))
 
 static
 scav_string(where, object)
@@ -743,7 +1007,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length) + 1;
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 4) + 2, 2);
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
 
 	return nwords;
 }
@@ -761,9 +1025,26 @@ trans_string(object)
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length) + 1;
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 4) + 2, 2);
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_string(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	/* NOTE: Strings contain one more byte of data than the length */
+	/* slot indicates. */
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length) + 1;
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -778,9 +1059,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length + 2, 2);
+	nwords = CEILING(length + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(length + 2, 2);
+
+	return nwords;
 }
 
 
@@ -793,7 +1088,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 32) + 2, 2);
+	nwords = CEILING(NWORDS(length, 32) + 2, 2);
 
 	return nwords;
 }
@@ -809,9 +1104,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 32) + 2, 2);
+	nwords = CEILING(NWORDS(length, 32) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_bit(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(NWORDS(length, 32) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -824,7 +1133,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 16) + 2, 2);
+	nwords = CEILING(NWORDS(length, 16) + 2, 2);
 
 	return nwords;
 }
@@ -840,9 +1149,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 16) + 2, 2);
+	nwords = CEILING(NWORDS(length, 16) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_unsigned_byte_2(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(NWORDS(length, 16) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -855,7 +1178,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 8) + 2, 2);
+	nwords = CEILING(NWORDS(length, 8) + 2, 2);
 
 	return nwords;
 }
@@ -871,9 +1194,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 8) + 2, 2);
+	nwords = CEILING(NWORDS(length, 8) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_unsigned_byte_4(where, object)
+lispobj *where, object;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(NWORDS(length, 8) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -886,7 +1223,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 4) + 2, 2);
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
 
 	return nwords;
 }
@@ -902,9 +1239,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 4) + 2, 2);
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_unsigned_byte_8(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(NWORDS(length, 4) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -917,7 +1268,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 2) + 2, 2);
+	nwords = CEILING(NWORDS(length, 2) + 2, 2);
 
 	return nwords;
 }
@@ -933,9 +1284,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(NWORDS(length, 2) + 2, 2);
+	nwords = CEILING(NWORDS(length, 2) + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_unsigned_byte_16(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(NWORDS(length, 2) + 2, 2);
+
+	return nwords;
 }
 
 
@@ -948,7 +1313,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length + 2, 2);
+	nwords = CEILING(length + 2, 2);
 
 	return nwords;
 }
@@ -964,9 +1329,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length + 2, 2);
+	nwords = CEILING(length + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_unsigned_byte_32(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(length + 2, 2);
+
+	return nwords;
 }
 
 
@@ -979,7 +1358,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length + 2, 2);
+	nwords = CEILING(length + 2, 2);
 
 	return nwords;
 }
@@ -995,9 +1374,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length + 2, 2);
+	nwords = CEILING(length + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_single_float(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(length + 2, 2);
+
+	return nwords;
 }
 
 
@@ -1010,7 +1403,7 @@ lispobj *where, object;
 
 	vector = (struct vector *) where;
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length * 2 + 2, 2);
+	nwords = CEILING(length * 2 + 2, 2);
 
 	return nwords;
 }
@@ -1026,9 +1419,23 @@ lispobj object;
 
 	vector = (struct vector *) PTR(object);
 	length = FIXNUM_TO_INT(vector->length);
-	nwords = ROUND_TO_BOUNDARY(length * 2 + 2, 2);
+	nwords = CEILING(length * 2 + 2, 2);
 
 	return copy_object(object, nwords);
+}
+
+static
+size_vector_double_float(where)
+lispobj *where;
+{
+	struct vector *vector;
+	int length, nwords;
+
+	vector = (struct vector *) where;
+	length = FIXNUM_TO_INT(vector->length);
+	nwords = CEILING(length * 2 + 2, 2);
+
+	return nwords;
 }
 
 
@@ -1052,10 +1459,22 @@ lispobj object;
 	gc_lose();
 }
 
+static
+size_lose(where)
+lispobj *where;
+{
+	fprintf(stderr, "Size lossage.  No size function for object at 0x%08x\n",
+		(unsigned long) where);
+	fprintf(stderr, "First word of object: 0x%08x\n",
+		(unsigned long) *where);
+	return 1;
+}
+
 gc_init()
 {
 	int i;
 
+	/* Scavenge Table */
 	for (i = 0; i < 256; i++)
 		scavtab[i] = scav_lose;
 
@@ -1102,6 +1521,7 @@ gc_init()
 	scavtab[type_UnboundMarker] = scav_immediate;
 
 
+	/* Transport Other Table */
 	for (i = 0; i < 256; i++)
 		transother[i] = trans_lose;
 
@@ -1135,4 +1555,55 @@ gc_init()
 	transother[type_BaseCharacter] = trans_immediate;
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
+
+	/* Size table */
+
+	for (i = 0; i < 256; i++)
+		sizetab[i] = size_lose;
+
+	for (i = 0; i < 32; i++) {
+		sizetab[type_EvenFixnum|(i<<3)] = size_immediate;
+		sizetab[type_FunctionPointer|(i<<3)] = size_pointer;
+		/* OtherImmediate0 */
+		sizetab[type_ListPointer|(i<<3)] = size_pointer;
+		sizetab[type_OddFixnum|(i<<3)] = size_immediate;
+		sizetab[type_StructurePointer|(i<<3)] = size_pointer;
+		/* OtherImmediate1 */
+		sizetab[type_OtherPointer|(i<<3)] = size_pointer;
+	}
+
+	sizetab[type_Bignum] = size_unboxed;
+	sizetab[type_Ratio] = size_boxed;
+	sizetab[type_SingleFloat] = size_unboxed;
+	sizetab[type_DoubleFloat] = size_unboxed;
+	sizetab[type_Complex] = size_boxed;
+	sizetab[type_SimpleArray] = size_boxed;
+	sizetab[type_SimpleString] = size_string;
+	sizetab[type_SimpleBitVector] = size_vector_bit;
+	sizetab[type_SimpleVector] = size_vector;
+	sizetab[type_SimpleArrayUnsignedByte2] = size_vector_unsigned_byte_2;
+	sizetab[type_SimpleArrayUnsignedByte4] = size_vector_unsigned_byte_4;
+	sizetab[type_SimpleArrayUnsignedByte8] = size_vector_unsigned_byte_8;
+	sizetab[type_SimpleArrayUnsignedByte16] = size_vector_unsigned_byte_16;
+	sizetab[type_SimpleArrayUnsignedByte32] = size_vector_unsigned_byte_32;
+	sizetab[type_SimpleArraySingleFloat] = size_vector_single_float;
+	sizetab[type_SimpleArrayDoubleFloat] = size_vector_double_float;
+	sizetab[type_ComplexString] = size_boxed;
+	sizetab[type_ComplexBitVector] = size_boxed;
+	sizetab[type_ComplexVector] = size_boxed;
+	sizetab[type_ComplexArray] = size_boxed;
+	sizetab[type_CodeHeader] = size_code_header;
+#if 0
+	/* Shouldn't see these so just lose if it happens */
+	sizetab[type_FunctionHeader] = size_function_header;
+	sizetab[type_ClosureFunctionHeader] = size_closure_function_header;
+	sizetab[type_ReturnPcHeader] = size_return_pc_header;
+#endif
+	sizetab[type_ClosureHeader] = size_boxed;
+	sizetab[type_ValueCellHeader] = size_boxed;
+	sizetab[type_SymbolHeader] = size_boxed;
+	sizetab[type_BaseCharacter] = size_immediate;
+	sizetab[type_Sap] = size_unboxed;
+	sizetab[type_UnboundMarker] = size_immediate;
 }
+

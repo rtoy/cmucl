@@ -1,15 +1,13 @@
 /*
  * Header file for GC
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.h,v 1.1 1990/03/28 22:46:48 ch Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.h,v 1.2 1990/03/29 21:18:26 ch Exp $
  */
 
 #if !defined(_INCLUDED_GC_H_)
 #define _INCLUDED_GC_H_
 
 #include "lisp.h"
-
-extern from_space_p(), new_space_p();
 
 extern void gc_lose();
 
@@ -24,7 +22,7 @@ extern void gc_lose();
 #define pointerp(object) ((object) & 0x01)
 
 #define HEADER_VALUE(object) ((unsigned long) ((object)>>8))
-#define ROUND_TO_BOUNDARY(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
+#define CEILING(x,y) (((x) + ((y) - 1)) & (~((y) - 1)))
 #define FIXNUM_TO_INT(x) ((x)>>2)
 #define INT_TO_FIXNUM(x) ((x)<<2)
 
