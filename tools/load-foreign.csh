@@ -13,8 +13,14 @@ switch ( `uname` )
    breaksw
 
  case FreeBSD:
- case NetBSD:
+   ld -shared -R $argv[1] -Ttext $argv[2] -o $argv[3] $argv[5-]
+   if ($status != 0) exit 1
 
+   nm -gp $argv[3] > $argv[4]
+   if ($status != 0) exit 2
+   breaksw
+
+ case NetBSD:
    ld -N -R $argv[1] -Ttext $argv[2] -o $argv[3] $argv[5-]
    if ($status != 0) exit 1
 
