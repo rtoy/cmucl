@@ -89,6 +89,21 @@ struct sigcontext *context;
 	    interrupt_internal_error(signal, code, context, trap == trap_Cerror);
 	    break;
 
+	  case trap_Breakpoint:
+	    sigsetmask(context->sc_mask);
+	    fake_foreign_function_call(context);
+	    handle_breakpoint(signal, code, context);
+	    undo_fake_foreign_function_call(context);
+	    break;
+
+	  case trap_FunctionEndBreakpoint:
+	    sigsetmask(context->sc_mask);
+	    fake_foreign_function_call(context);
+	    handle_breakpoint(signal, code, context);
+	    undo_fake_foreign_function_call(context);
+	    scp->sc_npc = scp->sc_pc + 4;
+	    break;
+
 	  default:
 	    interrupt_handle_now(signal, code, context);
 	    break;

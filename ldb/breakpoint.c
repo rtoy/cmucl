@@ -87,19 +87,41 @@ int breakpoint_after_offset(scp)
 #endif
 }
 
-
-handle_breakpoint(signal, subcode, scp)
-     struct sigcontext *scp;
+static void internal_handle_breakpoint(scp, code)
+struct sigcontext *scp;
+lispobj code;
 {
-    struct code *code = (struct code *)PTR(scp->sc_regs[CODE]);
+    struct code *codeptr = (struct code *)PTR(code);
     lispobj *args;
 
     args = current_control_stack_pointer;
     current_control_stack_pointer += 3;
-    args[0] = fixnum(calc_offset(code, scp->sc_pc));
-    args[1] = scp->sc_regs[CODE];
+    args[0] = fixnum(calc_offset(codeptr, scp->sc_pc));
+    args[1] = code;
     args[2] = alloc_sap(scp);
     call_into_lisp(HANDLE_BREAKPOINT, SymbolFunction(HANDLE_BREAKPOINT),
 		   args, 3);
     scp->sc_mask = sigblock(0);
+}
+
+handle_breakpoint(signal, subcode, scp)
+     struct sigcontext *scp;
+{
+    internal_handle_breakpoint(scp, scp->sc_regs[CODE]);
+}
+
+handle_function_end_breakpoint(signal, subcode, scp)
+int signal, subcode;
+struct sigcontext *scp;
+{
+    extern char function_end_breakpoint_guts[], function_end_breakpoint_trap[];
+
+    lispobj code = scp->sc_pc - (unsigned long)function_end_breakpoint_trap
+	+ (unsigned long)function_end_breakpoint_guts -
+	((sizeof(struct code)+7)&~7) + type_OtherPointer;
+    struct code *codeptr = (struct code *)PTR(code);
+
+    internal_handle_breakpoint(scp, code);
+
+    scp->sc_pc = codeptr->constants[0]-type_OtherPointer+sizeof(lispobj);
 }

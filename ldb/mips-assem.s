@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.11 1991/04/27 18:22:50 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.12 1991/05/29 12:14:21 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -322,3 +322,34 @@ closure_tramp:
 	.text
 	.globl	end_of_tramps
 end_of_tramps:
+
+
+/*
+ * Function-end breakpoint magic.
+ */
+
+	.text
+	.align	2
+	.set	noreorder
+	.globl	function_end_breakpoint_guts
+function_end_breakpoint_guts:
+	.word	type_ReturnPcHeader
+	beq	zero, zero, 1f
+	nop
+	li	NARGS, 4
+	move	A1, NULLREG
+	move	A2, NULLREG
+	move	A3, NULLREG
+	move	A4, NULLREG
+	move	A5, NULLREG
+1:
+
+	.globl	function_end_breakpoint_trap
+function_end_breakpoint_trap:
+	break	trap_FunctionEndBreakpoint
+	beq	zero, zero, 1b
+	nop
+
+	.globl	function_end_breakpoint_end
+function_end_breakpoint_end:
+	.set	reorder

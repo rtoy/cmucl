@@ -258,6 +258,36 @@ _closure_tramp:
 
 
 
+/*
+ * Function-end breakpoint magic.
+ */
+
+	.text
+	.align	8
+	.global	function_end_breakpoint_guts
+function_end_breakpoint_guts:
+	.word	type_ReturnPcHeader
+	b	1f
+	nop
+	mov	4, NARGS
+	mov	NULLREG, A1
+	mov	NULLREG, A2
+	mov	NULLREG, A3
+	mov	NULLREG, A4
+	mov	NULLREG, A5
+1:
+
+	.global	function_end_breakpoint_trap
+function_end_breakpoint_trap:
+	unimp	trap_FunctionEndBreakpoint
+	b	1b
+	nop
+
+	.global	function_end_breakpoint_end
+function_end_breakpoint_end:
+
+
+
 
 /****************************************************************\
 
