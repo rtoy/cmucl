@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.3 1993/02/11 00:17:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.4 1993/02/16 21:26:10 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -259,7 +259,7 @@
   "DEFINE-TYPE-CLASS Name [Inherits]"
   `(cold-load-init
      ,(once-only ((n-class (if inherits
-			       `(copy-structure (type-class-or-lose ',inherits))
+			       `(copy-type-class (type-class-or-lose ',inherits))
 			       '(make-type-class))))
 	`(progn
 	   (setf (type-class-name ,n-class) ',name)
