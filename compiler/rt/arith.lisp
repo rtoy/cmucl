@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.3 1991/04/08 14:47:58 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.4 1991/04/12 22:47:07 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -474,7 +474,7 @@
   (:info target not-p y)
   (:translate eql)
   (:generator 3
-    (inst c x y)
+    (inst c x (fixnum y))
     (if not-p
 	(inst bnc :eq target)
 	(inst bc :eq target))))
@@ -539,8 +539,9 @@
 
 (define-vop (shift-towards-someplace)
   (:policy :fast-safe)
-  (:args (num :scs (unsigned-reg) :target r)
-	 (amount :scs (signed-reg) :to (:result 1)))
+  (:args (num :scs (unsigned-reg) :target r :to (:eval 0))
+	 (amount :scs (signed-reg) :target temp))
+  (:temporary (:scs (signed-reg) :from (:argument 1)) temp)
   (:arg-types unsigned-num tagged-num)
   (:results (r :scs (unsigned-reg)))
   (:result-types unsigned-num))
@@ -549,15 +550,19 @@
   (:translate shift-towards-start)
   (:note "SHIFT-TOWARDS-START")
   (:generator 1
+    (move temp amount)
+    (inst nilz temp #x1f)
     (move r num)
-    (inst sl r amount)))
+    (inst sl r temp)))
 
 (define-vop (shift-towards-end shift-towards-someplace)
   (:translate shift-towards-end)
   (:note "SHIFT-TOWARDS-END")
   (:generator 1
+    (move temp amount)
+    (inst nilz temp #x1f)
     (move r num)
-    (inst sr r amount)))
+    (inst sr r temp)))
 
 
 
@@ -868,10 +873,6 @@
 (define-static-function two-arg-lcm (x y) :translate lcm)
 
 (define-static-function two-arg-/ (x y) :translate /)
-
-(define-static-function two-arg-< (x y) :translate <)
-(define-static-function two-arg-> (x y) :translate >)
-(define-static-function two-arg-= (x y) :translate =)
 
 (define-static-function %negate (x) :translate %negate)
 
