@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.34 2003/05/14 13:37:06 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.35 2003/05/15 12:28:56 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,107 +246,108 @@ this, the functions are listed.  If NIL, then always list the functions.")
 		  (fixnum count))
 	 (pushnew name *timed-functions*)
 
-	 (setf (fdefinition name)
-	       #'(lambda (,@required-args
-			  ,@(if optionals-p
-				#+cmu
-				`(c:&more arg-context arg-count)
-				#-cmu
-				`(&rest optional-args)))
-		   (incf count)
-		   (when callers-p
-		     (let ((caller (get-caller-info)))
-		       (do ((prev nil current)
-			    (current callers (cdr current)))
-			   ((null current)
-			    (push (cons caller 1) callers))
-			 (let ((old-caller-info (car current)))
-			   (when #-(and cmu x86) (eq caller
-						     (car old-caller-info))
-				 #+(and cmu x86) (sys:sap=
-						  caller (car old-caller-info))
-			     (if prev
-				 (setf (cdr prev) (cdr current))
-				 (setq callers (cdr current)))
-			     (setf (cdr old-caller-info)
-				   (the fixnum
-					(+ (cdr old-caller-info) 1)))
-			     (setf (cdr current) callers)
-			     (setq callers current)
-			     (return))))))
+	 (without-package-locks
+	  (setf (fdefinition name)
+		#'(lambda (,@required-args
+			   ,@(if optionals-p
+				 #+cmu
+				 `(c:&more arg-context arg-count)
+				 #-cmu
+				 `(&rest optional-args)))
+		    (incf count)
+		    (when callers-p
+		      (let ((caller (get-caller-info)))
+			(do ((prev nil current)
+			     (current callers (cdr current)))
+			    ((null current)
+			     (push (cons caller 1) callers))
+			  (let ((old-caller-info (car current)))
+			    (when #-(and cmu x86) (eq caller
+						      (car old-caller-info))
+				  #+(and cmu x86) (sys:sap=
+						   caller (car old-caller-info))
+				  (if prev
+				      (setf (cdr prev) (cdr current))
+				      (setq callers (cdr current)))
+				  (setf (cdr old-caller-info)
+					(the fixnum
+					  (+ (cdr old-caller-info) 1)))
+				  (setf (cdr current) callers)
+				  (setq callers current)
+				  (return))))))
 			       
-		   (let ((time-inc 0)
-			 (cons-inc-h 0)
-			 (cons-inc-l 0)
-			 (profile-inc 0))
-		     (declare (type time-type time-inc)
-			      (type dfixnum:dfparttype cons-inc-h cons-inc-l)
-			      (fixnum profile-inc))
-		     (multiple-value-prog1
-			 (let ((start-time (quickly-get-time))
-			       (start-consed-h 0)
-			       (start-consed-l 0)
-			       (end-consed-h 0)
-			       (end-consed-l 0)
-			       (*enclosed-time* 0)
-			       (*enclosed-consing-h* 0)
-			       (*enclosed-consing-l* 0)
-			       (*enclosed-profilings* 0))
-			   (dfixnum:dfixnum-set-pair start-consed-h
-						     start-consed-l
-						     (total-consing))
-			   (multiple-value-prog1
-			       ,(if optionals-p
-				    #+cmu
-				    `(multiple-value-call
-					 old-definition
-				       (values ,@required-args)
-				       (c:%more-arg-values arg-context
-							   0
-							   arg-count))
-				    #-cmu
-				    `(apply old-definition
-					    ,@required-args optional-args)
-				    `(funcall old-definition ,@required-args))
-			     (setq time-inc
-				   #-BSD
-				   (- (quickly-get-time) start-time)
-				   #+BSD
-				   (max (- (quickly-get-time) start-time) 0))
-			     ;; How much did we cons so far?
-			     (dfixnum:dfixnum-set-pair end-consed-h
-						       end-consed-l
-						       (total-consing))
-			     (dfixnum:dfixnum-copy-pair cons-inc-h cons-inc-l
-							end-consed-h
-							end-consed-l)
-			     (dfixnum:dfixnum-dec-pair cons-inc-h cons-inc-l
-						       start-consed-h
-						       start-consed-l)
-			     ;; (incf consed (- cons-inc *enclosed-consing*))
-			     (dfixnum:dfixnum-inc-pair consed-h consed-l
-						       cons-inc-h cons-inc-l)
-			     (dfixnum:dfixnum-inc-pair consed-w/c-h
-						       consed-w/c-l
-						       cons-inc-h cons-inc-l)
+		    (let ((time-inc 0)
+			  (cons-inc-h 0)
+			  (cons-inc-l 0)
+			  (profile-inc 0))
+		      (declare (type time-type time-inc)
+			       (type dfixnum:dfparttype cons-inc-h cons-inc-l)
+			       (fixnum profile-inc))
+		      (multiple-value-prog1
+			  (let ((start-time (quickly-get-time))
+				(start-consed-h 0)
+				(start-consed-l 0)
+				(end-consed-h 0)
+				(end-consed-l 0)
+				(*enclosed-time* 0)
+				(*enclosed-consing-h* 0)
+				(*enclosed-consing-l* 0)
+				(*enclosed-profilings* 0))
+			    (dfixnum:dfixnum-set-pair start-consed-h
+						      start-consed-l
+						      (total-consing))
+			    (multiple-value-prog1
+				,(if optionals-p
+				     #+cmu
+				     `(multiple-value-call
+					  old-definition
+					(values ,@required-args)
+					(c:%more-arg-values arg-context
+							    0
+							    arg-count))
+				     #-cmu
+				     `(apply old-definition
+					     ,@required-args optional-args)
+				     `(funcall old-definition ,@required-args))
+			      (setq time-inc
+				    #-BSD
+				    (- (quickly-get-time) start-time)
+				    #+BSD
+				    (max (- (quickly-get-time) start-time) 0))
+			      ;; How much did we cons so far?
+			      (dfixnum:dfixnum-set-pair end-consed-h
+							end-consed-l
+							(total-consing))
+			      (dfixnum:dfixnum-copy-pair cons-inc-h cons-inc-l
+							 end-consed-h
+							 end-consed-l)
+			      (dfixnum:dfixnum-dec-pair cons-inc-h cons-inc-l
+							start-consed-h
+							start-consed-l)
+			      ;; (incf consed (- cons-inc *enclosed-consing*))
+			      (dfixnum:dfixnum-inc-pair consed-h consed-l
+							cons-inc-h cons-inc-l)
+			      (dfixnum:dfixnum-inc-pair consed-w/c-h
+							consed-w/c-l
+							cons-inc-h cons-inc-l)
 
-			     (setq profile-inc *enclosed-profilings*)
-			     (incf time
-				   (the time-type
-				     #-BSD
-				     (- time-inc *enclosed-time*)
-				     #+BSD
-				     (max (- time-inc *enclosed-time*) 0)))
-			     (dfixnum:dfixnum-dec-pair consed-h consed-l
-						       *enclosed-consing-h*
-						       *enclosed-consing-l*)
-			     (incf profile profile-inc)))
-		       (incf *enclosed-time* time-inc)
-		       ;; *enclosed-consing* = *enclosed-consing + cons-inc
-		       (dfixnum:dfixnum-inc-pair *enclosed-consing-h*
-						 *enclosed-consing-l*
-						 cons-inc-h
-						 cons-inc-l)))))
+			      (setq profile-inc *enclosed-profilings*)
+			      (incf time
+				    (the time-type
+				      #-BSD
+				      (- time-inc *enclosed-time*)
+				      #+BSD
+				      (max (- time-inc *enclosed-time*) 0)))
+			      (dfixnum:dfixnum-dec-pair consed-h consed-l
+							*enclosed-consing-h*
+							*enclosed-consing-l*)
+			      (incf profile profile-inc)))
+			(incf *enclosed-time* time-inc)
+			;; *enclosed-consing* = *enclosed-consing + cons-inc
+			(dfixnum:dfixnum-inc-pair *enclosed-consing-h*
+						  *enclosed-consing-l*
+						  cons-inc-h
+						  cons-inc-l))))))
 	 
 	 (setf (gethash name *profile-info*)
 	       (make-profile-info
@@ -557,10 +558,11 @@ this, the functions are listed.  If NIL, then always list the functions.")
     (setq *timed-functions*
 	  (delete name *timed-functions*
 		  :test #'equal))
-    (if (eq (fdefinition name) (profile-info-new-definition info))
-	(setf (fdefinition name) (profile-info-old-definition info))
-	(warn "Preserving current definition of redefined function ~S."
-	      name))))
+    (without-package-locks
+     (if (eq (fdefinition name) (profile-info-new-definition info))
+	 (setf (fdefinition name) (profile-info-old-definition info))
+	 (warn "Preserving current definition of redefined function ~S."
+	       name)))))
 
 ;;; COMPENSATE-TIME  --  Internal
 ;;;
@@ -834,21 +836,20 @@ this, the functions are listed.  If NIL, then always list the functions.")
 			   (float timer-overhead-iterations))))))
     (frob *call-overhead*)
 
-    (without-package-locks
-     (unwind-protect
-	  (progn
-	    (profile compute-time-overhead-aux)
-	    (frob *total-profile-overhead*)
-	    (decf *total-profile-overhead* *call-overhead*)
-	    (let ((pinfo (profile-info-or-lose 'compute-time-overhead-aux)))
-	      (multiple-value-bind (calls time)
-		  (funcall (profile-info-read-time pinfo))
-		(declare (ignore calls))
-		(setq *internal-profile-overhead*
-		      (/ (float time)
-			 (float quick-time-units-per-second)
-			 (float timer-overhead-iterations))))))
-       (unprofile compute-time-overhead-aux)))))
+    (unwind-protect
+	 (progn
+	   (profile compute-time-overhead-aux)
+	   (frob *total-profile-overhead*)
+	   (decf *total-profile-overhead* *call-overhead*)
+	   (let ((pinfo (profile-info-or-lose 'compute-time-overhead-aux)))
+	     (multiple-value-bind (calls time)
+		 (funcall (profile-info-read-time pinfo))
+	       (declare (ignore calls))
+	       (setq *internal-profile-overhead*
+		     (/ (float time)
+			(float quick-time-units-per-second)
+			(float timer-overhead-iterations))))))
+      (unprofile compute-time-overhead-aux))))
 
 #+cmu
 (pushnew #'(lambda ()

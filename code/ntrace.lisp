@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.23 2003/05/15 11:24:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.24 2003/05/15 12:28:56 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -459,7 +459,8 @@
 	(unless named
 	  (error "Can't use encapsulation to trace anonymous function ~S."
 		 fun))
-	(ext:encapsulate function-or-name 'trace `(trace-call ',info)))
+	(without-package-locks
+	 (encapsulate function-or-name 'trace `(trace-call ',info))))
        (t
 	(multiple-value-bind
 	    (start-fun cookie-fun)
@@ -693,17 +694,17 @@
 (defun untrace-1 (function-or-name)
   (let* ((fun (trace-fdefinition function-or-name))
 	 (info (gethash fun *traced-functions*)))
-    (cond
-     ((not info) (warn "Function is not TRACE'd -- ~S." function-or-name))
-     (t
-      (cond
-       ((trace-info-encapsulated info)
-	(ext:unencapsulate (trace-info-what info) 'trace))
-       (t
-	(di:delete-breakpoint (trace-info-start-breakpoint info))
-	(di:delete-breakpoint (trace-info-end-breakpoint info))))
-      (setf (trace-info-untraced info) t)
-      (remhash fun *traced-functions*)))))
+    (cond ((not info)
+	   (warn "Function is not TRACE'd -- ~S." function-or-name))
+	  (t
+	   (cond ((trace-info-encapsulated info)
+		  (without-package-locks
+		   (unencapsulate (trace-info-what info) 'trace)))
+		 (t
+		  (di:delete-breakpoint (trace-info-start-breakpoint info))
+		  (di:delete-breakpoint (trace-info-end-breakpoint info))))
+	   (setf (trace-info-untraced info) t)
+	   (remhash fun *traced-functions*)))))
 
 ;;; UNTRACE-ALL  --  Internal
 ;;;
