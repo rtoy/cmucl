@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.4 1991/12/05 05:09:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.5 1991/12/06 05:23:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -121,9 +121,7 @@
 	  (kernel:get-lisp-obj-address pstream)))
 
 
-(declaim (inline index-position position-index
-		 index-column column-index
-		 position-column))
+(declaim (inline index-position position-index position-column))
 (defun index-position (index stream)
   (declare (type index index) (type pretty-stream stream)
 	   (values position))
@@ -132,14 +130,6 @@
   (declare (type position position) (type pretty-stream stream)
 	   (values index))
   (- position (pretty-stream-buffer-offset stream)))
-(defun index-column (index stream)
-  (declare (type index index) (type pretty-stream stream)
-	   (values column))
-  (+ index (pretty-stream-buffer-start-column stream)))
-(defun column-index (column stream)
-  (declare (type column column) (type pretty-stream stream)
-	   (values index))
-  (- column (pretty-stream-buffer-start-column stream)))
 (defun position-column (position stream)
   (declare (type position position) (type pretty-stream stream)
 	   (values position))
@@ -202,6 +192,9 @@
   ;; The column this logical block started in.
   (start-column 0 :type column)
   ;;
+  ;; The column the current section started in.
+  (section-column 0 :type column)
+  ;;
   ;; The length of the per-line prefix.  We can't move the indentation
   ;; left of this.
   (per-line-prefix-end 0 :type index)
@@ -223,6 +216,7 @@
 	 (suffix-length (logical-block-suffix-length prev-block))
 	 (block (make-logical-block
 		 :start-column column
+		 :section-column column
 		 :per-line-prefix-end per-line-end
 		 :prefix-length prefix-length
 		 :suffix-length suffix-length
@@ -331,8 +325,7 @@
 		 (null (section-start-section-end entry))
 		 (<= depth (section-start-depth entry)))
 	(setf (section-start-section-end entry) newline))))
-  (when (or (eq kind :literal) (eq kind :mandatory))
-    (do-some-output stream t)))
+  (maybe-output stream (or (eq kind :literal) (eq kind :mandatory))))
 
 (defstruct (indentation
 	    (:include queued-op))
@@ -371,10 +364,113 @@
       (pretty-sout stream suffix 0 (length suffix)))
     (setf (block-start-block-end start) end)))
 
-(defun enqueue-tab (stream kind colnum colinc)
-  ;; ### Need to figure this out.
-  (declare (ignore stream kind colnum colinc)))
+(defstruct (tab
+	    (:include queued-op))
+  (sectionp nil :type (member t nil))
+  (relativep nil :type (member t nil))
+  (colnum 0 :type column)
+  (colinc 0 :type column))
 
+(defun enqueue-tab (stream kind colnum colinc)
+  (multiple-value-bind
+      (sectionp relativep)
+      (ecase kind
+	(:line (values nil nil))
+	(:line-relative (values nil t))
+	(:section (values t nil))
+	(:section-relative (values t t)))
+    (enqueue stream tab :sectionp sectionp :relativep relativep
+	     :colnum colnum :colinc colinc)))
+
+
+;;;; Tab support.
+
+(defun compute-tab-size (tab section-start column)
+  (let ((origin (if (tab-sectionp tab) section-start 0))
+	(colnum (tab-colnum tab))
+	(colinc (tab-colinc tab)))
+    (cond ((tab-relativep tab)
+	   (unless (<= colinc 1)
+	     (let ((newposn (+ column colnum)))
+	       (let ((rem (rem newposn colinc)))
+		 (unless (zerop rem)
+		   (incf colnum (- colinc rem))))))
+	   colnum)
+	  ((<= column (+ colnum origin))
+	   (- (+ colnum origin) column))
+	  (t
+	   (- colinc
+	      (rem (- column origin) colinc))))))
+
+(defun index-column (index stream)
+  (let ((column (pretty-stream-buffer-start-column stream))
+	(section-start (logical-block-section-column
+			(first (pretty-stream-blocks stream))))
+	(end-position (index-position index stream)))
+    (dolist (op (pretty-stream-queue-tail stream))
+      (when (>= (queued-op-position op) end-position)
+	(return))
+      (typecase op
+	(tab
+	 (incf column
+	       (compute-tab-size op
+				 section-start
+				 (+ column
+				    (position-index (tab-position op)
+						    stream)))))
+	((or newline block-start)
+	 (setf section-start
+	       (+ column (position-index (queued-op-position op)
+					 stream))))))
+    (+ column index)))
+
+(defun expand-tabs (stream through)
+  (let ((insertions nil)
+	(additional 0)
+	(column (pretty-stream-buffer-start-column stream))
+	(section-start (logical-block-section-column
+			(first (pretty-stream-blocks stream)))))
+    (dolist (op (pretty-stream-queue-tail stream))
+      (typecase op
+	(tab
+	 (let* ((index (position-index (tab-position op) stream))
+		(tabsize (compute-tab-size op
+					   section-start
+					   (+ column index))))
+	   (unless (zerop tabsize)
+	     (push (cons index tabsize) insertions)
+	     (incf additional tabsize)
+	     (incf column tabsize))))
+	((or newline block-start)
+	 (setf section-start
+	       (+ column (position-index (queued-op-position op) stream)))))
+      (when (eq op through)
+	(return)))
+    (when insertions
+      (let* ((fill-ptr (pretty-stream-buffer-fill-pointer stream))
+	     (new-fill-ptr (+ fill-ptr additional))
+	     (buffer (pretty-stream-buffer stream))
+	     (new-buffer buffer)
+	     (length (length buffer))
+	     (end fill-ptr))
+	(when (> new-fill-ptr length)
+	  (let ((new-length (max (* length 2)
+				 (+ fill-ptr
+				    (floor (* additional 5) 4)))))
+	    (setf new-buffer (make-string new-length))
+	    (setf (pretty-stream-buffer stream) new-buffer)))
+	(setf (pretty-stream-buffer-fill-pointer stream) new-fill-ptr)
+	(decf (pretty-stream-buffer-offset stream) additional)
+	(dolist (insertion insertions)
+	  (let* ((srcpos (car insertion))
+		 (amount (cdr insertion))
+		 (dstpos (+ srcpos additional)))
+	    (replace new-buffer buffer :start1 dstpos :start2 srcpos :end2 end)
+	    (fill new-buffer #\space :start srcpos :end dstpos)
+	    (decf additional amount)
+	    (setf end srcpos)))
+	(unless (eq new-buffer buffer)
+	  (replace new-buffer buffer :end1 end :end2 end))))))
 
 
 ;;;; Stuff to do the actual outputting.
@@ -389,7 +485,8 @@
     (cond ((plusp available)
 	   available)
 	  ((> fill-ptr (pretty-stream-line-length stream))
-	   (do-some-output stream nil)
+	   (unless (maybe-output stream nil)
+	     (output-partial-line stream))
 	   (assure-space-in-buffer stream want))
 	  (t
 	   (let* ((new-length (max (* length 2)
@@ -400,9 +497,10 @@
 	     (replace new-buffer buffer :end1 fill-ptr)
 	     (- new-length fill-ptr))))))
 
-(defun do-some-output (stream force-newlines-p)
+(defun maybe-output (stream force-newlines-p)
   (declare (type pretty-stream stream))
-  (let ((tail (pretty-stream-queue-tail stream)))
+  (let ((tail (pretty-stream-queue-tail stream))
+	(output-anything nil))
     (loop
       (unless tail
 	(setf (pretty-stream-queue-head stream) nil)
@@ -425,6 +523,7 @@
 			  ((nil) t)
 			  (:dont-know
 			   (return))))))
+	     (setf output-anything t)
 	     (output-line stream next)))
 	  (indentation
 	   (unless (misering-p stream)
@@ -444,7 +543,9 @@
 	     ((t)
 	      ;; Just nuke the whole logical block and make it look like one
 	      ;; nice long literal.
-	      (setf tail (cdr (member (block-start-block-end next) tail))))
+	      (let ((end (block-start-block-end next)))
+		(expand-tabs stream end)
+		(setf tail (cdr (member end tail)))))
 	     ((nil)
 	      (really-start-logical-block
 	       stream
@@ -454,11 +555,11 @@
 	     (:dont-know
 	      (return))))
 	  (block-end
-	   (really-end-logical-block stream))))
-      (setf (pretty-stream-queue-tail stream) tail)))
-  (when (> (pretty-stream-buffer-fill-pointer stream)
-	   (pretty-stream-line-length stream))
-    (output-partial-line stream)))
+	   (really-end-logical-block stream))
+	  (tab
+	   (expand-tabs stream next))))
+      (setf (pretty-stream-queue-tail stream) tail))
+    output-anything))
 
 (defun misering-p (stream)
   (declare (type pretty-stream stream))
@@ -518,7 +619,7 @@
       (write-char #\newline target)
       (setf (pretty-stream-buffer-start-column stream) 0)
       (let* ((fill-ptr (pretty-stream-buffer-fill-pointer stream))
-	     (block (car (pretty-stream-blocks stream)))
+	     (block (first (pretty-stream-blocks stream)))
 	     (prefix-len
 	      (if literal-p
 		  (logical-block-per-line-prefix-end block)
@@ -529,19 +630,22 @@
 	(replace buffer (pretty-stream-prefix stream)
 		 :end1 prefix-len)
 	(setf (pretty-stream-buffer-fill-pointer stream) (- fill-ptr shift))
-	(incf (pretty-stream-buffer-offset stream) shift))
-      (unless literal-p
-	(setf (logical-block-section-start-line
-	       (first (pretty-stream-blocks stream)))
-	      line-number)))))
+	(incf (pretty-stream-buffer-offset stream) shift)
+	(unless literal-p
+	  (setf (logical-block-section-column block) prefix-len)
+	  (setf (logical-block-section-start-line block) line-number))))))
 
 (defun output-partial-line (stream)
   (let* ((fill-ptr (pretty-stream-buffer-fill-pointer stream))
-	 (count (column-index (- (index-column fill-ptr stream)
-				 (pretty-stream-line-length stream))
-			      stream))
+	 (tail (pretty-stream-queue-tail stream))
+	 (count
+	  (if tail
+	      (position-index (queued-op-position (car tail)) stream)
+	      fill-ptr))
 	 (new-fill-ptr (- fill-ptr count))
 	 (buffer (pretty-stream-buffer stream)))
+    (when (zerop count)
+      (error "Output-partial-line called when nothing can be output."))
     (write-string buffer (pretty-stream-target stream)
 		  :start 0 :end count)
     (incf (pretty-stream-buffer-start-column stream) count)
@@ -550,7 +654,7 @@
     (incf (pretty-stream-buffer-offset stream) count)))
 
 (defun force-pretty-output (stream)
-  (do-some-output stream nil)
+  (maybe-output stream nil)
   (write-string (pretty-stream-buffer stream)
 		(pretty-stream-target stream)
 		:end (pretty-stream-buffer-fill-pointer stream)))
@@ -1201,7 +1305,7 @@
 
 (defun pprint-do (stream list &rest noise)
   (declare (ignore noise))
-  (pprint-logical-block (stream list)
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
     (pprint-exit-if-list-exhausted)
     (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
@@ -1218,7 +1322,7 @@
 
 (defun pprint-dolist (stream list &rest noise)
   (declare (ignore noise))
-  (pprint-logical-block (stream list)
+  (pprint-logical-block (stream list :prefix "(" :suffix ")")
     (pprint-exit-if-list-exhausted)
     (output-object (pprint-pop) stream)
     (pprint-exit-if-list-exhausted)
@@ -1360,7 +1464,8 @@
 	(*building-initial-table* t))
     ;; Printers for regular types.
     (set-pprint-dispatch 'array #'pprint-array)
-    (set-pprint-dispatch 'cons #'pprint-function-call -1)
+    (set-pprint-dispatch '(cons symbol) #'pprint-function-call -1)
+    (set-pprint-dispatch 'cons #'pprint-fill -2)
     ;; Cons cells with interesting things for the car.
     (dolist (magic-form magic-forms)
       (set-pprint-dispatch `(cons (eql ,(first magic-form)))
