@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.4 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/input.lisp,v 1.5 1995/02/17 21:10:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -206,12 +206,13 @@
 	 (invoke-scheduled-events)
 	 (unless (or (system:serve-event 0)
 		     (internal-redisplay))
+	   (internal-redisplay)
 	   (when nrw-fun (funcall nrw-fun t))
 	   (let ((wait (next-scheduled-event-wait)))
 	     (if wait (system:serve-event wait) (system:serve-event)))))
        (when nrw-fun (funcall nrw-fun nil))
        (when (and (abort-key-event-p key-event)
-		  ;; ingore-abort-attempts-p must exist outside the macro.
+		  ;; ignore-abort-attempts-p must exist outside the macro.
 		  ;; in this case it is bound in GET-KEY-EVENT.
 		  (not ignore-abort-attempts-p))
 	 (beep)
