@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.140 2004/04/06 20:44:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.140.2.1 2004/05/10 17:12:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -800,12 +800,13 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
 ;;; Unexpected-EOF-Error  --  Internal
 ;;;
 ;;;    Print an error message giving some context for an EOF error.  We print
-;;; the first line after Pos that contains #\" or #\(, or lacking that, the
+;;; the first line after POS that contains #\" or #\(, or lacking that, the
 ;;; first non-empty line.
 ;;;
 (defun unexpected-eof-error (stream pos condition)
   (declare (type stream stream) (type unsigned-byte pos))
-  (let ((res nil))
+  (let ((eof-pos (file-position stream))
+        (res nil))
     (file-position stream pos)
     (loop
       (let ((line (read-line stream nil nil))) 
@@ -820,25 +821,24 @@ in the user USER-INFO slot of STREAM-SOURCE-LOCATIONs.")
      "Read error in form starting at ~D:~%~@[ \"~A\"~%~]~A"
      pos res condition))
 
-  (file-position stream (file-length stream))
+  (file-position stream eof-pos)
   (undefined-value))
 
 
 ;;; Careful-Read  --  Internal
 ;;;
-;;;    Read a form from Stream, returning EOF at EOF.  If a read error happens,
+;;;    Read a form from STREAM, returning EOF at EOF.  If a read error happens,
 ;;; then attempt to recover if possible, returing a proxy error form.
 ;;;
 (defun careful-read (stream eof pos)
   (handler-case (let ((*features* (backend-features *target-backend*)))
 		  (read stream nil eof))
     (error (condition)
-      (let ((new-pos (file-position stream)))
-	(cond ((= new-pos (file-length stream))
-	       (unexpected-eof-error stream pos condition))
-	      (t
-	       (normal-read-error stream pos condition)
-	       (ignore-error-form stream pos))))
+      (if (null (peek-char nil stream nil))
+          (unexpected-eof-error stream pos condition)
+          (progn
+            (normal-read-error stream pos condition)
+            (ignore-error-form stream pos)))
       '(cerror "Skip this form."
 	       "Attempt to load a file having a compile-time read error."))))
 
