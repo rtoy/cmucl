@@ -155,6 +155,11 @@ Don't install any dir translations, 'cause we want the real things.
 (clrhash lisp::*search-list-table*)
 
 
+;;; And we want to be in the USER package when the command line switches
+;;; run.
+;;; 
+(in-package "USER")
+
 ;;; Okay, build the thing!
 ;;;
 (progn
