@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.5 1991/03/15 22:23:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.6 1991/03/18 13:23:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,6 +32,10 @@
   "This variable is set to true if the screen has been trashed by some screen
    manager operation, and thus should be totally refreshed.  This is currently
    only used by tty redisplay.")
+
+;;; True if we are in redisplay, and thus don't want to enter it recursively.
+;;;
+(defvar *in-redisplay* nil)
 
 (proclaim '(special *window-list*))
 
@@ -60,7 +64,8 @@
 			  &optional (afterp t))
   (let ((device (gensym)) (point (gensym)) (hunk (gensym))
 	(n-res (gensym)))
-    `(let ((,n-res nil))
+    `(let ((,n-res nil)
+	   (*in-redisplay* t))
        (catch 'redisplay-catcher
 	 (when (listen-editor-input *real-editor-input*)
 	   (throw 'redisplay-catcher :editor-input))
@@ -102,7 +107,8 @@
   (when *things-to-do-once*
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
-  (cond (*screen-image-trashed*
+  (cond (*in-redisplay* t)
+	(*screen-image-trashed*
 	 (when (eq (redisplay-all) t)
 	   (setq *screen-image-trashed* nil)
 	   t))
@@ -152,7 +158,8 @@
   (when *things-to-do-once*
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
-  (cond (*screen-image-trashed*
+  (cond (*in-redisplay* t)
+	(*screen-image-trashed*
 	 (when (eq (redisplay-all) t)
 	   (setq *screen-image-trashed* nil)
 	   t))
@@ -173,7 +180,8 @@
   (when *things-to-do-once*
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
-  (cond ((listen-editor-input *real-editor-input*))
+  (cond ((or *in-redisplay* (not *in-the-editor*)) t)
+	((listen-editor-input *real-editor-input*) :editor-input)
 	(*screen-image-trashed*
 	 (when (eq (redisplay-all) t)
 	   (setq *screen-image-trashed* nil)
