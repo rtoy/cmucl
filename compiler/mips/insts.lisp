@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.31 1991/05/24 19:41:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.32 1991/07/31 07:06:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.31 1991/05/24 19:41:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.32 1991/07/31 07:06:38 wlott Exp $
 ;;;
 ;;; Description of the MIPS architecture.
 ;;;
@@ -101,11 +101,23 @@
 
 (defun register-p (object)
   (and (tn-p object)
-       (eq (sb-name (sc-sb (tn-sc object))) 'registers)))
+       (let* ((sc (tn-sc object))
+	      (sc-name (sc-name sc))
+	      (sb (sc-sb sc))
+	      (sb-name (sb-name sb)))
+	 (or (eq sc-name 'zero)
+	     (eq sc-name 'null)
+	     (eq sb-name 'registers)))))
+
+(defun tn-register-number (tn)
+  (sc-case tn
+    (zero zero-offset)
+    (null null-offset)
+    (t (tn-offset tn))))
 
 (define-argument-type register
   :type '(satisfies register-p)
-  :function tn-offset)
+  :function tn-register-number)
 
 (defun fp-reg-p (object)
   (and (tn-p object)
