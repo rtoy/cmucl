@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.28 1990/11/03 03:25:14 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.29 1990/11/10 18:43:30 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -19,12 +19,15 @@
 ;;;; Allocator for the array header.
 
 (define-vop (make-array-header)
-  (:args (type :scs (any-reg descriptor-reg))
-	 (rank :scs (any-reg descriptor-reg)))
+  (:policy :fast-safe)
+  (:translate make-array-header)
+  (:args (type :scs (any-reg))
+	 (rank :scs (any-reg)))
+  (:arg-types positive-fixnum positive-fixnum)
   (:temporary (:scs (descriptor-reg) :to (:result 0) :target result) header)
   (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
   (:results (result :scs (descriptor-reg)))
-  (:generator 0
+  (:generator 25
     (pseudo-atomic (ndescr)
       (inst addu header alloc-tn vm:other-pointer-type)
       (inst addu alloc-tn
