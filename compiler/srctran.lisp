@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.73 1998/01/07 06:22:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.74 1998/01/07 22:54:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -640,20 +640,26 @@
 ;;;
 (defun interval-div (top bot)
   (declare (type interval top bot))
-  (flet ((bound-div (x y)
-	 ;; Compute x/y
-	 (cond ((null y)
-		;; Divide by infinity means result is 0
-		0)
-	       ((zerop (bound-value y))
-		;; Divide by zero means result is infinity
-		nil)
-	       ((and (numberp x) (zerop x))
-		;; Zero divided by anything is zero.
-		x)
-	       (t
-		(bound-binop / x y)))))
-	       
+  (flet ((bound-div (x y y-low-p)
+	   ;; Compute x/y
+	   (cond ((null y)
+		  ;; Divide by infinity means result is 0.  However,
+		  ;; we need to watch out for the sign of the result,
+		  ;; to correctly handle signed zeros.  We also need
+		  ;; to watch out for positive or negative infinity.
+		  (if (floatp (bound-value x))
+		      (if y-low-p
+			  (- (float-sign (bound-value x) 0.0))
+			  (float-sign (bound-value x) 0.0))
+		      0))
+		 ((zerop (bound-value y))
+		  ;; Divide by zero means result is infinity
+		  nil)
+		 ((and (numberp x) (zerop x))
+		  ;; Zero divided by anything is zero.
+		  x)
+		 (t
+		  (bound-binop / x y)))))
     (let ((top-range (interval-range-info top))
 	  (bot-range (interval-range-info bot)))
       (cond ((null bot-range)
