@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.4 1991/04/12 22:47:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.5 1991/04/15 15:51:09 chiles Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -656,9 +656,7 @@
   (:vop-var vop)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg))
-	 (carry-in :scs (unsigned-reg)
-		   :load-if (not (sc-is carry-in unsigned-stack))
-		   :to :save))
+	 (carry-in :scs (unsigned-reg unsigned-stack) :to :save))
   (:arg-types unsigned-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
   (:results (high :scs (unsigned-reg) :from :load)
@@ -683,12 +681,8 @@
   (:policy :fast-safe)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg))
-	 (prev :scs (unsigned-reg)
-	       :load-if (not (sc-is prev unsigned-stack))
-	       :to :save)
-	 (carry-in :scs (unsigned-reg)
-		   :load-if (not (sc-is carry-in unsigned-stack))
-		   :to :save))
+	 (prev :scs (unsigned-reg unsigned-stack) :to :save)
+	 (carry-in :scs (unsigned-reg unsigned-stack) :to :save))
   (:arg-types unsigned-num unsigned-num unsigned-num unsigned-num)
   (:temporary (:scs (unsigned-reg) :from (:eval 0)) temp)
   (:results (high :scs (unsigned-reg) :from :load)
