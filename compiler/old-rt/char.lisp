@@ -30,7 +30,8 @@
     (unless (location= x y)
       (inst lr y x))))
 ;;;
-(define-move-vop string-char-move :move (string-char-reg) (string-char-reg))
+(define-move-vop string-char-move :move
+  (string-char-reg) (string-char-reg))
 
 
 ;;; Move untagged string-char arguments/return-values.
@@ -97,6 +98,22 @@
   (:generator 0
     (unless (location= code res)
       (inst lr res code))))
+
+
+(define-vop (pointer-compare)
+  (:args (x :scs (any-reg descriptor-reg))
+	 (y :scs (any-reg descriptor-reg)))
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:note "inline comparison")
+  (:variant-vars condition)
+  (:generator 3
+    (inst cl x y)
+    (if not-p
+	(inst bnb condition target)
+	(inst bb condition target))))
+
 
 ;;; For comparison of string-chars, we require both operands to be in the
 ;;; untagged string-char-reg representation.  This will be a pessimization if
