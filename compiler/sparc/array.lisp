@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.26 2003/07/03 17:17:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.27 2003/07/19 15:47:36 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -806,9 +806,9 @@
 	     (inst add temp 8)
 	     (inst stdf value-imag object temp)))
       (unless (location= result-real value-real)
-	(move-double-reg result-real value-real)))
+	(move-double-reg result-real value-real))
       (unless (location= result-imag value-imag)
-	(move-double-reg result-imag value-imag))))
+	(move-double-reg result-imag value-imag)))))
 
 #+long-float
 (define-vop (data-vector-ref/simple-array-complex-long-float)
