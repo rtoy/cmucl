@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.16 1990/10/11 14:33:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.17 1990/10/12 02:52:54 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -611,8 +611,7 @@
 	      ;; during IR1 conversion.
 	      (error "This object cannot be dumped into a fasl file:~% ~S"
 		     x))))))
-
-  (undefined-value)
+  (undefined-value))
 
 
 ;;; Sub-Dump-Object  --  Internal
