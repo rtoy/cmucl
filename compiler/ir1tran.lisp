@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.3 1993/02/08 22:08:13 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83.1.4 1993/02/10 12:49:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -209,10 +209,12 @@
 	       (inlinep (info function inlinep name)))
 	   (setf (gethash name *free-functions*)
 		 (if (or expansion inlinep)
-		     (make-defined-function :name name
-					    :inline-expansion expansion
-					    :inlinep inlinep
-					    :type (info function type name))
+		     (make-defined-function
+		      :name name
+		      :inline-expansion expansion
+		      :inlinep inlinep
+		      :where-from (info function where-from name)
+		      :type (info function type name))
 		     (let ((info (info function accessor-for name)))
 		       (etypecase info
 			 (null
@@ -2632,13 +2634,13 @@
 		    ((info) start cont :kind :function)
   (let* ((info (eval info)))
     (kernel:%%compiler-defstruct info)
-    (dolist (slot (dd-slots info))
-      (let ((fun (dsd-accessor slot)))
+    (dolist (slot (kernel:dd-slots info))
+      (let ((fun (kernel:dsd-accessor slot)))
 	(remhash fun *free-functions*)
-	(unless (dsd-read-only slot)
+	(unless (kernel:dsd-read-only slot)
 	  (remhash `(setf ,fun) *free-functions*))))
-    (remhash (dd-predicate info) *free-functions*)
-    (remhash (dd-copier info) *free-functions*)
+    (remhash (kernel:dd-predicate info) *free-functions*)
+    (remhash (kernel:dd-copier info) *free-functions*)
     (ir1-convert start cont `(kernel:%%compiler-defstruct ',info))))
 
 
