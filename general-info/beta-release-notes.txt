@@ -1,3 +1,84 @@
+	    Release notes for CMU Common Lisp 16f, 11 December 92
+
+The changes between 16e and 16f are almost exclusively bug-fixes.  When we
+announce a version 17 beta, 16f will probably become the default release
+(replacing 15e).  The PCL has been upgraded from "March 92 (2a)" to 
+"March 92 (2c)", which provides some bug-fixes; also, all of the patches in
+the March-92-PCL-bugs file have been applied.
+
+Enhancements:
+ -- PROVIDE & REQUIRE are now back in the system, since proposed ANSI CL has
+    reinstated them as deprecated features.  See the doc strings for these
+    functions and EXT:DEFMODULE.
+ -- The SPARC dynamic heap size limit has been doubled from 64meg to 128meg.
+
+Pretty printer:
+ -- Fixed a bug in pprint-let that caused to to barf on (let (nil) ...).
+ -- Fixed pprint-lambda-list to print a space before the dot when the tail of
+    the lambda list is shared.  In other words, print (foo . #1=(bar baz))
+    instead of (foo. #1=(bar baz)).
+ -- Added an additional use of ~^ in pprint-flet so that (flet (nil) ...)
+    doesn't flame out.
+ -- Make pretty printer properly process pprint tabs when output is forced.
+ -- In format pprint logical blocks, fixed ~^ to act like
+    PPRINT-EXIT-IF-LIST-EXHAUSTED instead of blowing out to some containing
+    directive.
+
+Compiler:
+ -- Fixed compiler internal error with dead-code deletion of top-level code.
+ -- Bind *gensym-counter* instead of setting it so that compiling doesn't
+    globally reset the gensym counter.
+ -- Fixed problem with interpreted LOAD-TIME-VALUE causing undefined function
+    VALUE-CELL-REF errors.
+ -- Preserve the arglist in interpreted functions for DESCRIBE, etc.
+ -- Gag bound-but-not-referenced warnings when the EXT:INHIBIT-WARNINGS
+    optimize quality is 3.
+ -- Fixed a problem with register allocation conflict analysis which appeared
+    when a function was called with ~>= 50 arguments.
+ -- Fixed bug with optimization of tail local calls.
+ -- Fixed interpreted PROCLAIM/DECLAIM to ignore
+    START-BLOCK, END-BLOCK and declared DECLARATION declarations.
+    Changed the unrecognized proclamation error to be a warning.
+ -- Fixed float heap allocation to not wedge when the store causes a trap
+    (SPARC only.)
+
+Trace:
+ -- Added pretty-printer directives so that arg lists and results print better.
+ -- Fixed UNTRACE not to flame out when untracing untraced functions.
+ -- Fixed bug with redefining function traced with encapsulation (e.g.
+    interpreted functions.
+
+Misc bug fixes:
+ -- Fixed I/O timeout handling (e.g. for CLX) to correctly borrow from the
+    timeout seconds when computing the new value for the timeout microseconds.
+ -- Restored proper (prompt) handling of queued CLX events in SERVE-EVENT
+ -- Alien enums always take up an int to be compatable with C.  Also,
+    sort the from-alist so that enum aliens are unparsed in a canonical
+    format.
+ -- When doing macro destructuring, check to see if some part of a lambda-list
+    is a LIST before checking to see if it is a SYMBOL, because we want NIL to
+    act like the empty list, and not an attempt to bind NIL.  
+ -- Fixed PACKAGE-ERROR to have a PACKAGE slot instead of a PATHNAME slot.
+ -- Changed DOLIST not to introduce the spurious let around the result form
+    when there is no result form.  Also, just read the var in the spurious
+    let, instead of using IGNORABLE, since the var might be special.
+ -- In complex DEFSETF, don't bother creating temp vars for constants.  This
+    is necessary so that keywords stay keywords, and are not changed to
+    gensyms.
+
+Enhancements:
+ -- Changed the backquote expanded functions (backq-list, ...) from being
+    inline functions to compiler-macros, since although the optimizer does
+    eventually get the right code, it has to work awful hard.  Changed BREAK
+    to accept a condition as well as a format string.
+ -- Exported EXT:CONNECT-TO-UNIX-SOCKET and EXT:CREATE-UNIX-SOCKET, which had
+    been forgotten before.  Added code to CONNECT-TO-UNIX-SOCKET so that Unix
+    domain sockets are available for connecting to other processes.
+ -- Removed sys:*task-data* and sys:*task-notify* because they aren't used
+    even under Mach.
+
+
+
 	    Release notes for CMU Common Lisp 16e, 5 August 92
 
 16e is primarily a bug-fix release.  The main changes from 16d are:
@@ -5,6 +86,12 @@
     developed by Richard Harris which incorporates many bug-fixes and ANSI
     compliance cleanups.  He has also back-merged the CMU changes into his
     sources so that we can release future PCLs without time-consuming merging.
+    On the downside, there are a couple of new bugs (discrimination on 
+    pcl::structure-object doesn't always work; generic functions which contain
+    methods which discriminate on both null and list sometimes do not work).
+    Patches for these bugs are available in March-92-PCL-bugs in the CMU CL
+    release area and by anonymous ftp from host parcftp.xerox.com 
+    (13.1.64.94), in the directory pub/pcl/.
  -- TRACE has been reimplemented, has a new syntax and new features.
  -- The hardcopy and info documentation has been updated.  Note that it
     describes some debugger capabilities (breakpoints) which won't appear
@@ -136,6 +223,13 @@ System code:
     disallow digits as sub-characters.
  -- Changed #A reader to allow arbitrary sequences instead of just lists.
  -- RUN-PROGRAM now gives a proper error message when "fork" fails (i.e. too
+    many processes.)
+ -- Fixed a bug in initialization of saved cores which caused the old
+    environment to be left on the end of EXT:*ENVIRONMENT-LIST*.  One symptom
+    was that RUN-PROGRAM would run programs with strange environment values
+    based on those in effect at the time the core was saved.  In particular,
+    Lisp subprocesses (i.e. Hemlock slaves) might get the wrong value of
+    CMUCLLIB, which caused the slave to die before connecting.
  -- SYSTEM:SERVE-EVENT (and XLIB:EVENT-CASE, etc.) now correctly handle
     non-integer timeouts.  Added declarations to improve the efficiency of
     event handling.
