@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.10 1990/09/18 22:42:23 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.11 1990/09/19 21:31:12 ram Exp $
 ;;;
 ;;; CMU Common Lisp printer.
 ;;;
@@ -1215,6 +1215,20 @@
     (write-string "Function " stream)
     (prin1 name stream)))
 
+
+;;; OUTPUT-INTERPRETED-FUNCTION  --  Internal
+;;;
+;;;    Print the name or definition of an interpreted function.
+;;;
+(defun output-interpreted-function (subr stream)
+  (multiple-value-bind
+      (def ignore name)
+      (eval:interpreted-function-lambda-expression subr)
+    (declare (ignore ignore))
+    (let ((*print-level* 3))
+      (format stream "Interpreted Function ~S" (or name def)))))
+
+
 ;;; FINISH-RANDOM is a helping function for OUTPUT-RANDOM below.  
 ;;; It outputs the numerical value of the low 28 bits of 
 ;;; RANDOM-OBJECT, enclosed in braces, followed by the closing
@@ -1244,9 +1258,13 @@
 	   (#.vm:return-pc-header-type
 	    (write-string "Return PC Object" stream))
 	   (#.vm:closure-header-type
-	    (write-string "Closure Over " stream)
-	    (output-function-object (%primitive c::closure-function object)
-				    stream))
+	    (cond
+	     ((eval:interpreted-function-p object)
+	      (output-interpreted-function object stream))
+	     (t
+	      (write-string "Closure Over " stream)
+	      (output-function-object (%primitive c::closure-function object)
+				      stream))))
 	   (#.vm:value-cell-header-type
 	    (write-string "Value Cell" stream))
 	   (#.vm:unbound-marker-type
