@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.10 1994/10/29 05:11:34 ram Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.11 1995/02/17 00:51:01 wlott Exp $
 
 all: lisp.nm
 
@@ -14,7 +14,7 @@ SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
 
 
-OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRCS)))
+OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(patsubst %.s,%.o,$(SRCS))))
 
 ### Don't look in RCS for the files, because we might not want the latest.
 %: RCS/%,v
