@@ -116,6 +116,7 @@
 	    (let* ((block (global-conflicts-block conf))
 		   (num (ir2-block-number block))
 		   (local-confs (svref loc-confs num)))
+	      (declare (type local-tn-bit-vector local-confs))
 	      (setf (sbit loc-live num) 1)
 	      (if (eq (global-conflicts-kind conf) :live)
 		  (set-bit-vector local-confs)
@@ -123,7 +124,8 @@
 	 (t
 	  (let ((num (ir2-block-number (tn-local tn))))
 	    (setf (sbit loc-live num) 1)
-	    (bit-ior (svref loc-confs num) (tn-local-conflicts tn) t))))))))
+	    (bit-ior (the local-tn-bit-vector (svref loc-confs num))
+		     (tn-local-conflicts tn) t))))))))
 
 
 ;;; IR2-BLOCK-COUNT  --  Internal
@@ -849,7 +851,8 @@
 	 (alignment (sc-alignment sc))
 	 (size (finite-sb-current-size sb))
 	 (start-offset (finite-sb-last-offset sb)))
-    (let ((current-start (* (ceiling start-offset alignment) alignment))
+    (let ((current-start (* (the index (ceiling start-offset alignment))
+			    alignment))
 	  (wrap-p nil))
       (declare (type index current-start))
       (loop
@@ -867,7 +870,8 @@
 	      (let ((offset (+ current-start i)))
 		(when (offset-conflicts-in-sb tn sb offset)
 		  (setq current-start
-			(* (ceiling (1+ offset) alignment) alignment))
+			(* (the index (ceiling (1+ offset) alignment))
+			   alignment))
 		  (return))))
 	    (incf current-start alignment))))))
 
