@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.14 1990/11/24 07:45:50 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.15 1990/11/26 19:44:32 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -32,7 +32,7 @@ static void fake_foreign_function_call(context)
     /* Get current LISP state from context */
     current_dynamic_space_free_pointer = (lispobj *) context->sc_regs[ALLOC];
     current_binding_stack_pointer = (lispobj *) context->sc_regs[BSP];
-#ifdef MIPS
+#ifdef mips
     current_flags_register = context->sc_regs[FLAGS]|(1<<flag_Atomic);
 #endif
     
@@ -195,11 +195,28 @@ static void skip_instruction(context)
     call_into_lisp(MAYBE_GC, SymbolFunction(MAYBE_GC), \
                    current_control_stack_pointer, 0)
 
-static trap_handler(signal, code, context)
+static break_handler(signal, code, context)
 int signal, code;
 struct sigcontext *context;
 {
-    if (code == trap_PendingInterrupt) {
+    int trap;
+    lispobj *args;
+
+#ifdef mips
+    trap = code;
+#endif
+#ifdef sparc
+    int badinst;
+
+    badinst = *(unsigned long *)(context->sc_pc);
+    if ((badinst & 0xc1c00000) == 0)
+	trap = 0x3fffff & badinst;
+    else
+	trap = 0;
+#endif
+
+    switch (trap) {
+      case trap_PendingInterrupt:
         if (foreign_function_call_active)
             crap_out("Oh no, got a PendingInterrupt while foreign function call was active.\n");
 
@@ -223,9 +240,36 @@ struct sigcontext *context;
         context->sc_mask = pending_mask;
         pending_mask = 0;
         skip_instruction(context);
-    }
-    else
+	break;
+
+      case trap_Halt:
+	crap_out("%primitive halt called; the party is over.\n");
+
+      case trap_Error:
+	fake_foreign_function_call(context);
+	args = current_control_stack_pointer;
+	current_control_stack_pointer += 2;
+	args[0] = alloc_sap(context);
+	args[1] = NIL;
+	call_into_lisp(INTERNAL_ERROR,SymbolFunction(INTERNAL_ERROR),args,2);
+	undo_fake_foreign_function_call(context);
+	break;
+
+      case trap_Cerror:
+	fake_foreign_function_call(context);
+	args = current_control_stack_pointer;
+	current_control_stack_pointer += 2;
+	args[0] = alloc_sap(context);
+	args[1] = T;
+	call_into_lisp(INTERNAL_ERROR,SymbolFunction(INTERNAL_ERROR),args,2);
+	undo_fake_foreign_function_call(context);
+	skip_instruction(context);
+	break;
+
+      default:
         handle_now(signal, code, context);
+	break;
+    }
 }
 
 #ifdef mips
@@ -339,13 +383,17 @@ int (*handler)();
     int oldmask;
     union interrupt_handler oldhandler;
 
-    if (signal == SIGTRAP)
-        sv.sv_handler = trap_handler;
 #ifdef mips
+    if (signal == SIGTRAP)
+        sv.sv_handler = break_handler;
     else if (signal == SIGFPE)
         sv.sv_handler = sigfpe_handler;
     else if (signal == SIGBUS)
         sv.sv_handler = sigbus_handler;
+#endif
+#ifdef sparc
+    if (signal == SIGILL)
+	sv.sv_handler = break_handler;
 #endif
     else if (handler == SIG_DFL || handler == SIG_IGN)
         sv.sv_handler = handler;
