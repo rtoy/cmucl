@@ -130,19 +130,17 @@
 
 ;;;; NEW-BACKEND
 
-(defparameter machine-specific-features
-  '(:small :mach :sunos :unix :pmax :decstation-3100
-    :ibm-pc-rt :ibmrt :rt :SPARCstation :sparc :sun4))
-
-(defun new-backend (name &rest features)
+(defun new-backend (name features misfeatures)
   ;; If VM names a different package, rename that package so that VM doesn't
   ;; name it.  
-  (let* ((pkg (find-package "VM"))
-	 (pkg-name (package-name pkg)))
-    (unless (string= pkg-name name)
-      (rename-package pkg pkg-name
-		      (remove "VM" (package-nicknames pkg) :test #'string=))
-      (unuse-package pkg "C")))
+  (let ((pkg (find-package "VM")))
+    (when pkg
+      (let ((pkg-name (package-name pkg)))
+	(unless (string= pkg-name name)
+	  (rename-package pkg pkg-name
+			  (remove "VM" (package-nicknames pkg)
+				  :test #'string=))
+	  (unuse-package pkg "C")))))
   ;; Make sure VM names our package, creating it if necessary.
   (let* ((pkg (or (find-package name)
 		  (make-package name :nicknames '("VM"))))
@@ -178,9 +176,7 @@
 				   *info-environment*
 				   :key #'c::info-env-name))
 		  :features
-		  (append features
-			  (set-difference *features*
-					  machine-specific-features)))))
+		  (append features (set-difference *features* misfeatures)))))
     (setf c:*target-backend* backend)))
 
 
