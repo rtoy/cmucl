@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.36 2004/06/29 15:17:54 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bignum.lisp,v 1.37 2004/08/04 20:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1118,10 +1118,30 @@ down to individual words.")
 		(negate-bignum a nil)))
 	 (b (if (%bignum-0-or-plusp b (%bignum-length b))
 		b
-		(negate-bignum b nil)))
-	 (len-a (%bignum-length a))
+		(negate-bignum b nil))))
+    (declare (type bignum-type a b))
+    (when (< a b)
+      (rotatef a b))
+    ;; While the length difference of A and B is sufficiently large,
+    ;; reduce using MOD (slowish, but it should equalize the sizes of
+    ;; A and B pretty quickly). After that, use the binary GCD
+    ;; algorithm to handle the rest.  This gives a very large speedup
+    ;; in cl-bench.
+    (loop until (and (= (%bignum-length b) 1) (zerop (%bignum-ref b 0))) do
+	 (when (<= (%bignum-length a) (1+ (%bignum-length b)))
+	   (return-from bignum-gcd (bignum-binary-gcd a b)))
+	 (let ((rem (mod a b)))
+	   (if (fixnump rem)
+	       (setf a (make-small-bignum rem))
+	       (setf a rem))
+	   (rotatef a b)))
+    a))
+  
+(defun bignum-binary-gcd (a b)
+  (declare (type bignum-type a b))
+  (let* ((len-a (%bignum-length a))
 	 (len-b (%bignum-length b)))
-      (declare (type bignum-index len-a len-b))
+    (declare (type bignum-index len-a len-b))
     (with-bignum-buffers ((a-buffer len-a a)
 			  (b-buffer len-b b)
 			  (res-buffer (max len-a len-b)))
