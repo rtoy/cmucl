@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.39 2001/11/22 13:39:15 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.40 2002/02/23 01:48:57 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1013,16 +1013,35 @@
 
 (define-type-method (hairy :complex-subtypep-arg2) (type1 type2)
   (let ((hairy-spec (hairy-type-specifier type2)))
-    (cond ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
-	   (multiple-value-bind (val win)
-	       (type-intersection type1 (specifier-type (cadr hairy-spec)))
-	     (if win
-		 (values (eq val *empty-type*) t)
-		 (values nil nil))))
-	  (t
-	   (values nil nil)))))
+    (cond
+      ((and (consp hairy-spec) (eq (car hairy-spec) 'not))
+       (multiple-value-bind (val win)
+	   (type-intersection type1 (specifier-type (cadr hairy-spec)))
+	 (if win
+	     (values (eq val *empty-type*) t)
+	     (values nil nil))))
+      ((and (consp hairy-spec) (eq (car hairy-spec) 'and))
+       (block PUNT
+	 (values (every-type-op csubtypep type1
+				(mapcar #'specifier-type (cdr hairy-spec)))
+		 t)))
+      (t
+       (values nil nil)))))
 
-(define-type-method (hairy :complex-subtypep-arg1 :complex-=) (type1 type2)
+(define-type-method (hairy :complex-subtypep-arg1) (type1 type2)
+  (let ((hairy-spec (hairy-type-specifier type1)))
+    (cond
+      ((and (consp hairy-spec) (eq (car hairy-spec) 'and))
+       (block PUNT
+	 (if (any-type-op csubtypep type2
+			  (mapcar #'specifier-type (cdr hairy-spec))
+			  :list-first t)
+	     (values t t)
+	     (values nil nil))))
+      (t
+       (values nil nil)))))
+
+(define-type-method (hairy :complex-=) (type1 type2)
   (declare (ignore type1 type2))
   (values nil nil))
 
