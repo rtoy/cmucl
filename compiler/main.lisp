@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.89 1993/07/22 11:17:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.90 1993/07/25 21:25:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -505,36 +505,37 @@
 ;;;
 (defun print-summary (abort-p abort-count)
   (unless abort-p
-    (let ((undefs (sort *undefined-warnings* #'string<
-			:key #'(lambda (x)
-				 (let ((x (undefined-warning-name x)))
-				   (if (symbolp x)
-				       (symbol-name x)
-				       (prin1-to-string x)))))))
-      (unless *converting-for-interpreter*
-	(dolist (undef undefs)
-	  (let ((name (undefined-warning-name undef))
-		(kind (undefined-warning-kind undef))
-		(warnings (undefined-warning-warnings undef))
-		(count (undefined-warning-count undef)))
-	    (dolist (*compiler-error-context* warnings)
-	      (compiler-warning "Undefined ~(~A~): ~S" kind name))
-	    
-	    (let ((warn-count (length warnings)))
-	      (when (and warnings (> count warn-count))
-		(let ((more (- count warn-count)))
-		  (compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
-				    more kind name)))))))
-  
-      (dolist (kind '(:variable :function :type))
-	(let ((summary (mapcar #'undefined-warning-name
-			       (remove kind undefs :test-not #'eq
-				       :key #'undefined-warning-kind))))
-	  (when summary
-	    (compiler-warning
-	     "~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
-	      ~%  ~{~<~%  ~1:;~S~>~^ ~}"
-	     (cdr summary) kind summary))))))
+    (handler-bind ((warning #'compiler-warning-handler))
+      (let ((undefs (sort *undefined-warnings* #'string<
+			  :key #'(lambda (x)
+				   (let ((x (undefined-warning-name x)))
+				     (if (symbolp x)
+					 (symbol-name x)
+					 (prin1-to-string x)))))))
+	(unless *converting-for-interpreter*
+	  (dolist (undef undefs)
+	    (let ((name (undefined-warning-name undef))
+		  (kind (undefined-warning-kind undef))
+		  (warnings (undefined-warning-warnings undef))
+		  (count (undefined-warning-count undef)))
+	      (dolist (*compiler-error-context* warnings)
+		(compiler-warning "Undefined ~(~A~): ~S" kind name))
+	      
+	      (let ((warn-count (length warnings)))
+		(when (and warnings (> count warn-count))
+		  (let ((more (- count warn-count)))
+		    (compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
+				      more kind name)))))))
+	
+	(dolist (kind '(:variable :function :type))
+	  (let ((summary (mapcar #'undefined-warning-name
+				 (remove kind undefs :test-not #'eq
+					 :key #'undefined-warning-kind))))
+	    (when summary
+	      (compiler-warning
+	       "~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
+		~%  ~{~<~%  ~1:;~S~>~^ ~}"
+	       (cdr summary) kind summary)))))))
   
   (unless (or *converting-for-interpreter*
 	      (and (not abort-p) (zerop abort-count)
