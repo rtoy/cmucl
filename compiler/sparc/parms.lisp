@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.39 2003/02/12 15:53:49 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.40 2003/04/30 16:16:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,9 @@
 (adjoin :solaris (backend-features *target-backend*))
 (setf (backend-name *target-backend*) "SPARC")
 #+svr4
-(setf (backend-version *target-backend*) "SPARCstation/Solaris 2")
+(setf (backend-version *target-backend*)
+      #-sparc-v9 "SPARCstation/Solaris 2.x"
+      #+sparc-v9 "UltraSparc/Solaris 7")
 #-svr4
 (setf (backend-version *target-backend*) "SPARCstation/Sun 4")
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
