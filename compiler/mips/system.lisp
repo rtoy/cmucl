@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.15 1990/05/18 00:57:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.16 1990/05/25 12:29:32 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -147,6 +147,36 @@
        (inst sll res val (- vm:type-bits 2))
        (inst or res res temp)))))
 
+
+
+;;;; Code object frobbing.
+
+(define-vop (code-constant-set word-index-set)
+  (:variant vm:code-constants-offset vm:other-pointer-type))
+
+(define-vop (code-instructions)
+  (:args (code :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:results (sap :scs (sap-reg)))
+  (:generator 10
+    (loadw ndescr code 0 vm:other-pointer-type)
+    (inst srl ndescr vm:type-bits)
+    (inst sll ndescr vm:word-shift)
+    (inst subu ndescr vm:code-header-type)
+    (inst addu sap code ndescr)))
+
+(define-vop (compute-function)
+  (:args (code :scs (descriptor-reg))
+	 (offset :scs (any-reg)))
+  (:results (func :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg)) ndescr)
+  (:generator 10
+    (loadw ndescr code 0 vm:other-pointer-type)
+    (inst srl ndescr vm:type-bits)
+    (inst sll ndescr vm:word-shift)
+    (inst addu ndescr offset)
+    (inst addu ndescr (- vm:function-pointer-type vm:other-pointer-type))
+    (inst addu func code ndescr)))
 
 
 ;;;; Other random VOPs.
