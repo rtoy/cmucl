@@ -159,7 +159,8 @@
 ;;;
 (define-vop (allocate-full-call-frame)
   (:info nargs)
-  (:results (res :scs (any-reg descriptor-reg)))
+  (:results (res :scs (any-reg descriptor-reg)
+		 :load-if (> nargs register-arg-count)))
   (:generator 2
     (when (> nargs register-arg-count)
       (inst lr res sp-tn)
@@ -509,7 +510,9 @@ default-value-5
 		    '(unknown-values-receiver)))
      (:args
       ,@(unless (eq return :tail)
-	  '((new-fp :scs (descriptor-reg) :to :eval)))
+	  '((new-fp :scs (descriptor-reg) :to :eval
+		    ,@(unless variable
+			`(:load-if (> nargs register-arg-count))))))
 
       ,(if named
 	   '(name :scs (descriptor-reg)
