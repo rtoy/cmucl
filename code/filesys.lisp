@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.64 2001/05/31 17:00:51 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.65 2001/12/13 13:45:08 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -202,7 +202,8 @@
 	   (explicit-version namestr start end)
 	   (cond ((not (eq version :newest))
 		  (values version where))
-		 ((and (char= (schar namestr (- end 1)) #\*)
+		 ((and (>= (- end 2) start)
+		       (char= (schar namestr (- end 1)) #\*)
 		       (char= (schar namestr (- end 2)) #\.)
 		       (find #\. namestr
 			     :start (min (1+ start) (- end 2))
