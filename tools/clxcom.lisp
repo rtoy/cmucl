@@ -3,7 +3,7 @@
 ;;; **********************************************************************
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.27 2003/06/18 09:23:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/clxcom.lisp,v 1.28 2003/11/25 22:07:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,12 @@
   #-gencgc (ext:purify))
 
 (pushnew :clx-ansi-common-lisp *features*)
+
+;; I (rtoy) think we need this so the condition accessors are defined.
+;; setup.lisp sets this to NIL, and the Pierre Mai's build scripts
+;; load setup.lisp before clxcom.lisp.
+#+pcl
+(setf conditions::*make-condition-accessor-methods* t)
 
 (with-compiler-log-file
     ("target:compile-clx.log"
