@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.33 2001/12/13 01:04:20 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.34 2003/01/24 16:05:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -477,7 +477,9 @@
     (array t)
     (symbol
      (eq (info variable kind object) :constant))
-    (list (eq (car object) 'quote))))
+    (list (eq (car object) 'quote))
+    (function t)
+    (instance t)))
 
 
 ;;; Function invocation:
