@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.80 1997/12/05 00:48:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.81 1997/12/07 17:46:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -985,11 +985,10 @@
   "Returns the top frame of the control stack as it was before calling this
    function."
   (multiple-value-bind (fp pc)
-		       (kernel:%caller-frame-and-pc)
+      (kernel:%caller-frame-and-pc)
     (possibly-an-interpreted-frame
      (compute-calling-frame (descriptor-sap fp)
-			    #-(or gengc x86) pc
-			    #+(or gengc x86) (descriptor-sap pc)
+			    #-gengc pc #+gengc (descriptor-sap pc)
 			    nil)
      nil)))
 
