@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.42 2002/11/19 14:39:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/seq.lisp,v 1.43 2002/11/19 18:23:36 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2232,48 +2232,6 @@
 
 (eval-when (compile eval)
 
-(defmacro vector-count (item sequence)
-  `(do ((index start (1+ index))
-	(count 0))
-       ((= index (the fixnum end)) count)
-     (declare (fixnum index count))
-     (if test-not
-	 (unless (funcall test-not ,item
-			  (apply-key key (aref ,sequence index)))
-	   (setq count (1+ count)))
-	 (when (funcall test ,item (apply-key key (aref ,sequence index)))
-	   (setq count (1+ count))))))
-
-(defmacro list-count (item sequence)
-  `(do ((sequence (nthcdr start ,sequence))
-	(index start (1+ index))
-	(count 0))
-       ((or (= index (the fixnum end)) (null sequence)) count)
-     (declare (fixnum index count))
-     (if test-not
-	 (unless (funcall test-not ,item (apply-key key (pop sequence)))
-	   (setq count (1+ count)))
-	 (when (funcall test ,item (apply-key key (pop sequence)))
-	   (setq count (1+ count))))))
-
-)
-
-(defun count (item sequence &key from-end (test #'eql) test-not (start 0)
-		end key)
-  "Returns the number of elements in SEQUENCE satisfying a test with ITEM,
-   which defaults to EQL."
-  (declare (ignore from-end) (fixnum start))
-  (let ((end (or end (length sequence))))
-    (declare (type index end))
-    (seq-dispatch sequence
-		  (list-count item sequence)
-		  (vector-count item sequence))))
-
-
-;;; Count-if:
-
-(eval-when (compile eval)
-
 (defmacro vector-count-if (not-p from-end-p predicate sequence)
   (let ((next-index (if from-end-p '(1- index) '(1+ index)))
 	(pred `(funcall ,predicate (apply-key key (aref ,sequence index)))))
@@ -2300,6 +2258,34 @@
 	   (setq count (1+ count)))))))
 
 )
+
+(defun count (item sequence &key from-end (test #'eql test-p) (test-not nil test-not-p)
+		   (start 0) end key)
+  "Returns the number of elements in SEQUENCE satisfying a test with ITEM,
+   which defaults to EQL."
+  (declare (fixnum start))
+  (when (and test-p test-not-p)
+    ;; ANSI Common Lisp has left the behavior in this situation unspecified.
+    ;; (CLHS 17.2.1)
+    (error ":TEST and :TEST-NOT are both present."))
+  (let* ((length (length sequence))
+	 (end (or end length)))
+    (declare (type index end))
+    (let ((%test (if test-not-p
+		     (lambda (x)
+		       (not (funcall test-not item x)))
+		     (lambda (x)
+		       (funcall test item x)))))
+      (seq-dispatch sequence
+		    (if from-end
+			(list-count-if nil t %test sequence)
+			(list-count-if nil nil %test sequence))
+		    (if from-end
+			(vector-count-if nil t %test sequence)
+			(vector-count-if nil nil %test sequence))))))
+
+
+;;; Count-if:
 
 (defun count-if (test sequence &key from-end (start 0) end key)
   "Returns the number of elements in SEQUENCE satisfying TEST(el)."
@@ -2411,7 +2397,7 @@
 			   (start1 0) end1 (start2 0) end2 key)
   "The specified subsequences of Sequence1 and Sequence2 are compared
    element-wise.  If they are of equal length and match in every element, the
-   result is Nil.  Otherwise, the result is a non-negative integer, the index
+   result is NIL.  Otherwise, the result is a non-negative integer, the index
    within Sequence1 of the leftmost position at which they fail to match; or,
    if one is shorter than and a matching prefix of the other, the index within
    Sequence1 beyond the last position tested is returned.  If a non-Nil
