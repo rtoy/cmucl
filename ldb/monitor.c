@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.14 1991/02/16 01:00:36 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.15 1991/04/13 13:58:46 chiles Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -323,10 +323,10 @@ static void quit()
 {
     char buf[10];
 
-    printf("Really quit? [n] ");
+    printf("Really quit? [y] ");
     fflush(stdout);
     fgets(buf, sizeof(buf), stdin);
-    if (buf[0] == 'y' || buf[0] == 'Y')
+    if (buf[0] == 'y' || buf[0] == 'Y' || buf[0] == '\n')
         exit(0);
 }
 
