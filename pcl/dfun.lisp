@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.12 2001/05/26 18:30:18 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.13 2001/10/30 22:50:58 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -37,7 +37,7 @@ This implementation of method lookup was redone in early August of 89.
 
 It has the following properties:
 
- - It's modularity makes it easy to modify the actual caching algorithm.
+ - Its modularity makes it easy to modify the actual caching algorithm.
    The caching algorithm is almost completely separated into the files
    cache.lisp and dlap.lisp.  This file just contains the various uses
    of it. There will be more tuning as we get more results from Luis'
