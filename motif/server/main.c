@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.9 1997/08/22 20:49:35 pw Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.10 1998/05/07 14:57:25 pw Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -153,6 +153,7 @@ void establish_client(int s)
     main_err("establish_client:  Unable to accept client connection.");
 
   printf("Accepted client on fd %d\n",socket);
+  fflush(stdout);
 
   if( will_fork )
     pid = fork();
@@ -260,7 +261,7 @@ main(int argc, char **argv)
     nfound = select(nfds, &rfds, NULL, NULL, 0);
     if( nfound < 0 && errno != EINTR )
       main_err("main:  Unable to select on sockets.");
-    else {
+    else if( nfound > 0 ){
       if( FD_ISSET(unix_socket, &rfds) ) {
 	printf("Accepting client on Unix socket.\n");
 	fflush(stdout);
