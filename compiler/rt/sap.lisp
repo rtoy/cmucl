@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.9 1991/10/03 13:28:26 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.10 1992/03/09 20:35:07 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -171,25 +171,22 @@
 ;;; (the machines address units).  Translate and signed-translate are the Lisp
 ;;; function calls for which these VOP's are in-line expansions.
 ;;;
-(defmacro define-system-ref (name shift 
-				  translate result-sc result-type
+(defmacro define-system-ref (name size translate result-sc result-type
 				  &optional
 				  signed-translate signed-result-sc
 				  signed-result-type)
   (let ((access-form 
-	 (ecase shift
-	   (0 ;want a byte, indexed in bytes.
+	 (ecase size
+	   (:byte
 	    '((inst lc result base offset)
 	      (when signed
 		(inst sl result 24)
 		(inst sar result 24))))
-	   (1 ;Want 16 bits.  Incoming offset is in 16-bit quantities.
-	      ;Offset here is in bytes.
+	   (:halfword
 	    '((if signed
 		  (inst lha result base offset)
 		  (inst lh result base offset))))
-	   (2 ;Want 32 bits.  Incoming offset is in 32-bit quantities.
-	      ;Offset here is in bytes.
+	   (:word
 	    '(signed ; suppress silly warnings.
 	      (inst l result base offset)))))
 	(name-c (symbolicate name "-C")))
@@ -200,20 +197,18 @@
 	 (:args (base :scs (sap-reg)))
 	 (:results (result :scs (,result-sc)))
 	 (:result-types ,result-type)
-	 (:arg-types system-area-pointer
-		     (:constant (signed-byte ,(- 16 shift))))
+	 (:arg-types system-area-pointer (:constant (unsigned-byte 15)))
 	 (:info offset)
 	 (:variant-vars signed)
 	 (:variant nil)
 	 (:generator 5
-	   (let ((offset (ash offset ,shift)))
-	     ,@access-form)))
+	   ,@access-form))
        
        (define-vop (,name)
 	 (:policy :fast-safe)
 	 (:translate ,translate)
 	 (:args (object :scs (sap-reg) :to (:eval 0))
-		(offset :scs (any-reg) :target base))
+		(offset :scs (unsigned-reg) :target base))
 	 (:results (result :scs (,result-sc)))
 	 (:arg-types system-area-pointer positive-fixnum)
 	 (:result-types ,result-type)
@@ -222,12 +217,6 @@
 	 (:variant nil)
 	 (:generator 7
 	   (move base offset)
-	   ;;
-	   ;; We shift right because the offset has fixnum lowtag.  Effectively
-	   ;; the index has already been multiplied by 4.
-	   ,@(let ((adj (- 2 shift)))
-	       (unless (zerop adj)
-		 `((inst sr base ,adj))))
 	   (inst a base object)
 	   (let ((offset 0))
 	     ,@access-form)))
@@ -247,19 +236,19 @@
 
 ) ;eval-when
 
-(define-system-ref 8bit-system-ref 0
+(define-system-ref 8bit-system-ref :byte
   sap-ref-8 unsigned-reg positive-fixnum
   signed-sap-ref-8 signed-reg tagged-num)
 
-(define-system-ref 16bit-system-ref 1
+(define-system-ref 16bit-system-ref :halfword
   sap-ref-16 unsigned-reg positive-fixnum
   signed-sap-ref-16 signed-reg tagged-num)
 
-(define-system-ref 32bit-system-ref 2
+(define-system-ref 32bit-system-ref :word
   sap-ref-32 unsigned-reg unsigned-num
   signed-sap-ref-32 signed-reg signed-num)
 
-(define-system-ref sap-system-ref 2
+(define-system-ref sap-system-ref :word
   sap-ref-sap sap-reg system-area-pointer)
 
 
@@ -273,17 +262,12 @@
 ;;; (the machines address units).  Translate and signed-translate are the Lisp
 ;;; function calls for which these VOP's are in-line expansions.
 ;;;
-(defmacro define-system-set (name shift translate data-scs data-type)
+(defmacro define-system-set (name :size translate data-scs data-type)
   (let ((set-form 
-	 (ecase shift
-	   (0 ;Want a byte.  Incoming offset is in bytes.  No shifting.
-	    '(inst stc data base offset))
-	   (1 ;Want 16 bits.  Incoming offset is in 16-bit quantities.
-	    ;Offset here is in bytes.
-	    '(inst sth data base offset))
-	   (2 ;Want 32 bits.  Incoming offset is in 32-bit quantities.
-	    ;Offset here is in bytes.
-	    '(inst st data base offset))))
+	 (ecase :size
+	   (:byte '(inst stc data base offset))
+	   (:halfword '(inst sth data base offset))
+	   (:word '(inst st data base offset))))
 	(name-c (symbolicate name "-C")))
     `(progn
        (define-vop (,name-c)
@@ -292,21 +276,20 @@
 	 (:args (base :scs (sap-reg))
 		(data :scs (,@data-scs) :target result :to (:result 0)))
 	 (:arg-types system-area-pointer
-		     (:constant (signed-byte ,(- 16 shift)))
+		     (:constant (unsigned-byte 15))
 		     ,data-type)
 	 (:results (result :scs (,@data-scs)))
 	 (:result-types ,data-type)
 	 (:info offset)
 	 (:generator 5
-	   (let ((offset (ash offset ,shift)))
-	     ,set-form)
+	   ,set-form
 	   (move result data)))
        
        (define-vop (,name)
 	 (:policy :fast-safe)
 	 (:translate ,translate)
 	 (:args (object :scs (sap-reg) :to (:eval 0))
-		(offset :scs (any-reg) :target base)
+		(offset :scs (unsigned-reg) :target base)
 		(data :scs (,@data-scs) :target result
 		      :to (:eval 1)))
 	 (:arg-types system-area-pointer positive-fixnum ,data-type)
@@ -315,12 +298,6 @@
 	 (:result-types ,data-type)
 	 (:generator 7
 	   (move base offset)
-	   ;;
-	   ;; We shift right because the offset has fixnum lowtag.  Effectively
-	   ;; the index has already been multiplied by 4.
-	   ,@(let ((adj (- 2 shift)))
-	       (unless (zerop adj)
-		 `((inst sr base ,adj))))
 	   (inst cas base base object)
 	   (let ((offset 0))
 	     ,set-form)
@@ -337,6 +314,15 @@
 (define-system-set 32bit-system-set 2 %set-sap-ref-32
   (signed-reg unsigned-reg) (:or signed-num unsigned-num))
 
+(define-system-set signed-8bit-system-set 0 %set-signed-sap-ref-8
+  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+
+(define-system-set signed-16bit-system-set 1 %set-signed-sap-ref-16
+  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+
+(define-system-set signed-32bit-system-set 2 %set-signed-sap-ref-32
+  (signed-reg unsigned-reg) (:or signed-num unsigned-num))
+
 ;;; Ugly, because there are only 2 free sap-regs.  We stash the data value in
 ;;; NARGS to free up a sap-reg for BASE.
 ;;;
@@ -344,7 +330,7 @@
   (:policy :fast-safe)
   (:translate %set-sap-ref-sap)
   (:args (object :scs (sap-reg))
-	 (offset :scs (any-reg) :target base)
+	 (offset :scs (unsigned-reg) :target base)
 	 (data :scs (sap-reg sap-stack)))
   (:arg-types system-area-pointer positive-fixnum system-area-pointer)
   (:temporary (:scs (sap-reg) :from (:eval 0) :to (:eval 1)) base)
@@ -364,6 +350,45 @@
     (inst st save base)
     (move result save)))
 
+(define-vop (sap-system-set-c)
+  (:policy :fast-safe)
+  (:translate %set-sap-ref-sap)
+  (:args (object :scs (sap-reg))
+	 (data :scs (sap-reg) :target result))
+  (:arg-types system-area-pointer
+	      (:constant (unsigned-byte 16))
+	      system-area-pointer)
+  (:results (result :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:generator 4
+    (inst st data object offset)
+    (move result data)))
+
+;;; fake the presence of sap-ref-single and sap-ref-double.
+
+(def-source-transform sap-ref-single (sap offset)
+  `(make-single-float (signed-sap-ref-32 ,sap ,offset)))
+
+(def-source-transform %set-sap-ref-single (sap offset value)
+  (once-only ((sap sap) (offset offset) (value value))
+    `(progn
+       (setf (signed-sap-ref-32 ,sap ,offset) ,value)
+       ,value)))
+
+(def-source-transform sap-ref-double (sap offset)
+  (once-only ((sap sap) (offset offset))
+    `(make-double-float (signed-sap-ref-32 ,sap ,offset)
+			(sap-ref-32 sap (+ ,offset word-bytes)))))
+
+(def-source-transform %set-sap-ref-double (sap offset value)
+  (once-only ((sap sap) (offset offset) (value value))
+    `(progn
+       (setf (signed-sap-ref-32 ,sap ,offset)
+	     (double-float-high-bits ,value))
+       (setf (sap-ref-32 ,sap (+ ,offset word-bytes))
+	     (double-float-low-bits ,value))
+       ,value)))
+
 
 ;;;; Noise to convert normal lisp data objects into SAPs.
 
@@ -376,27 +401,3 @@
   (:generator 2
     (inst cal sap vector
 	  (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))))
-
-
-
-;;;; ### Noise to allow old forms to continue to work until they are gone.
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim ',func)
-		`(,',func ,@args))))
-  (frob 32bit-system-ref sap-ref-32)
-  (frob unsigned-32bit-system-ref sap-ref-32)
-  (frob 16bit-system-ref sap-ref-16)
-  (frob 8bit-system-ref sap-ref-8))
-
-(macrolet ((frob (prim func)
-	     `(def-primitive-translator ,prim (&rest args)
-		(warn "Someone used %primitive ~S -- should be ~S."
-		      ',prim (list 'setf ',func))
-		`(setf ,',func ,@args))))
-  (frob 32bit-system-set sap-ref-32)
-  (frob signed-32bit-system-set sap-ref-32)
-  (frob 16bit-system-set sap-ref-16)
-  (frob 8bit-system-set sap-ref-8))
