@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.22 1993/08/17 22:30:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.23 1993/08/20 13:56:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -355,6 +355,9 @@
 
 ;;;; Inlines.
 
+(eval-when (compile eval)
+  (setq ext:*inline-expansion-limit* 100))
+
 (defmacro expand-into-inlines ()
   (declare (optimize (inhibit-warnings 3)))
   (iterate build-dispatch
@@ -407,6 +410,9 @@
 (defun setf-symbol-value (value symbol)
   (setf (symbol-value symbol) value))
 
+(declaim (inline %setf-instance-ref))
+(defun %setf-instance-ref (new-value instance index)
+  (setf (%instance-ref instance index) new-value))
 
 (eval-when (compile)
 
@@ -486,6 +492,24 @@
 ;;; tail-calls the corresponding XOP routine extracted from *byte-xops*.
 ;;; The XOP routine can do whatever it wants, probably re-invoking the
 ;;; byte interpreter.
+
+;;; Fetch and 8/24 bit operand out of the code stream.
+;;;
+(eval-when (compile eval)
+  (defmacro with-extended-operand ((component pc operand new-pc)
+				   &body body)
+    (once-only ((n-component component)
+		(n-pc pc))
+      `(multiple-value-bind
+	   (,operand ,new-pc)
+	   (let ((,operand (component-ref ,n-component ,n-pc)))
+	     (if (= ,operand #xff)
+		 (values (component-ref-24 ,n-component (1+ ,n-pc))
+			 (+ ,n-pc 4))
+		 (values ,operand (1+ ,n-pc))))
+	 (declare (type index ,operand ,new-pc))
+	 ,@body))))
+
 
 ;;; UNDEFINED-XOP -- internal.
 ;;;
@@ -795,6 +819,16 @@
 	     (error 'undefined-function :name (fdefn-name fdefn)))))))
 
 
+;;; Used to insert placeholder arguments for unused arguments to local calls.
+;;;
+(define-xop push-n-under (component old-pc pc fp)
+  (declare (ignore old-pc))
+  (with-extended-operand (component pc howmany new-pc)
+    (let ((val (pop-eval-stack)))
+      (allocate-eval-stack howmany)
+      (push-eval-stack val))
+    (byte-interpret component new-pc fp)))
+
 
 ;;;; Type checking:
 
@@ -848,12 +882,7 @@
   (declare (type code-component component)
 	   (type pc old-pc pc)
 	   (type stack-pointer fp))
-  (multiple-value-bind
-      (operand new-pc)
-      (let ((operand (component-ref component pc)))
-	(if (= operand #xff)
-	    (values (component-ref-24 component (1+ pc)) (+ pc 4))
-	    (values operand (1+ pc))))
+  (with-extended-operand (component pc operand new-pc)
     (let ((value (eval-stack-ref (1- (current-stack-pointer))))
 	  (type (code-header-ref component
 				 (+ operand vm:code-constants-offset))))
