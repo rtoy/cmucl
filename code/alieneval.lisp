@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.34 1994/04/06 16:59:05 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.35 1994/10/01 00:46:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1284,7 +1284,7 @@
 ;;;
 (defmacro def-alien-variable (name type)
   "Define NAME as an external alien variable of type TYPE.  NAME should be
-   a list of a symbol to use as the Lisp name, and a string holding the alien
+   a list of a string holding the alien name and a symbol to use as the Lisp
    name.  If NAME is just a symbol or string, then the other name is guessed
    from the one supplied."
   (multiple-value-bind
@@ -1896,8 +1896,8 @@
                     {(Arg-Name Arg-Type [Style])}*
 
   Define a foreign interface function for the routine with the specified Name,
-  which may be either a string, symbol or list of the form (symbol string).
-  Return-Type is the Alien fypte for the function return value.  VOID may be
+  which may be either a string, symbol or list of the form (string symbol).
+  Return-Type is the Alien type for the function return value.  VOID may be
   used to specify a function with no result.
 
   The remaining forms specifiy individual arguments that are passed to the
