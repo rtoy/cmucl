@@ -731,32 +731,69 @@
 (defsetf stack-ref %set-stack-ref)
 
 
+;;; FRAME-REAL-FRAME  --  Internal
+;;;
+;;;    If an interpreted frame, return the real frame, otherwise frame.
+;;;
+(defun frame-real-frame (frame)
+  (etypecase frame
+    (compiled-frame frame)
+    (interpreted-frame (interpreted-frame-real-frame frame))))
+
 ;;; TOP-FRAME -- Public.
 ;;;
 (defun top-frame ()
   "Returns the top frame of the control stack as it was before calling this
    function."
-  (possibly-an-interpreted-frame
-   (compute-calling-frame (system:%primitive current-fp) nil)
-   nil))
+  (multiple-value-bind (fp pc)
+		       (kernel:%caller-frame-and-pc)
+    (possibly-an-interpreted-frame
+     (compute-calling-frame fp pc nil)
+     nil)))
 
+
+;;; GET-CONTEXT-VALUE  --  Internal
+;;;
+;;;    Get the old FP or return PC out of Frame.  Stack-Slot is offset the
+;;; standard save location on the stack.  Loc the the saved SC-Offset
+;;; describing the main location.
+;;;
+(defun get-context-value (frame stack-slot loc)
+  (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
+	   (type c::sc-offset loc))
+  (let ((pointer (frame-pointer frame))
+	(escaped (compiled-frame-escaped frame)))
+    (if escaped
+	(sub-access-debug-var-slot pointer loc escaped)
+	(stack-ref pointer stack-slot))))
+
+  
 ;;; FRAME-DOWN -- Public.
+;;;
+;;;    We have to access the old-fp and return-pc out of Frame and pass them to
+;;; COMPUTE-CALLING-FRAME.
 ;;;
 (defun frame-down (frame)
   "Returns the frame immediately below frame on the stack.  When frame is
    the bottom of the stack, this returns nil."
   (let ((down (frame-%down frame)))
     (if (eq down :unparsed)
-	(setf (frame-%down frame)
-	      (possibly-an-interpreted-frame
-	       (etypecase frame
-		 (compiled-frame
-		  (compute-calling-frame (frame-pointer frame) frame))
-		 (interpreted-frame
-		  (compute-calling-frame
-		   (frame-pointer (interpreted-frame-real-frame frame))
-		   frame)))
-	       frame))
+	(let* ((real (frame-real-frame frame))
+	       (c-d-f (compiled-debug-function-compiler-debug-fun
+		       (frame-debug-function real))))
+	  (setf (frame-%down frame)
+		(possibly-an-interpreted-frame
+		 (compute-calling-frame
+		  (get-context-value
+		   frame
+		   c::old-fp-save-offset
+		   (c::compiled-debug-function-old-fp c-d-f))
+		  (get-context-value
+		   frame
+		   c::return-pc-save-offset
+		   (c::compiled-debug-function-return-pc c-d-f))
+		  frame)
+		 frame)))
 	down)))
 
 (defvar *debugging-interpreter* nil
@@ -818,34 +855,32 @@
 ;;; want, and the current frame contains the pc at which we will continue
 ;;; executing upon returning to that previous frame.
 ;;;
-(defun compute-calling-frame (current-fp up-frame)
-  (let ((caller (stack-ref current-fp c::old-fp-save-offset)))
-    (unless (cstack-pointer-valid-p caller)
-      (return-from compute-calling-frame nil))
-    (multiple-value-bind (env env-fp escaped)
-			 (fp-env caller current-fp)
-      (if escaped
-	  ;; If env-fp is escaped, then caller is the escape frame.
-	  (multiple-value-bind
-	      (env pc)
-	      (pc-offset (escape-register caller c::return-pc-offset)
-			 env up-frame)
-	    (let ((d-fun (debug-function-from-pc env pc)))
-	      (make-compiled-frame env-fp up-frame d-fun
-				   (code-location-from-pc d-fun pc escaped)
-				   (if up-frame (1+ (frame-number up-frame)) 0)
-				   escaped)))
-	  (multiple-value-bind
-	      (env pc)
-	      (pc-offset (stack-ref current-fp c::return-pc-save-offset)
-			 env up-frame)
-	    (let ((d-fun (debug-function-from-pc env pc)))
-	      ;; env-fp = caller.
-	      (make-compiled-frame env-fp up-frame d-fun
-				   (code-location-from-pc d-fun pc escaped)
-				   (if up-frame
-				       (1+ (frame-number up-frame))
-				       0))))))))
+(defun compute-calling-frame (caller caller-pc up-frame)
+  (unless (cstack-pointer-valid-p caller)
+    (return-from compute-calling-frame nil))
+  (multiple-value-bind (env env-fp escaped)
+		       (fp-env caller caller-pc)
+    (if escaped
+	;; If env-fp is escaped, then caller is the escape frame.
+	(multiple-value-bind
+	    (env pc)
+	    (pc-offset (escape-register caller c::return-pc-offset)
+		       env up-frame)
+	  (let ((d-fun (debug-function-from-pc env pc)))
+	    (make-compiled-frame env-fp up-frame d-fun
+				 (code-location-from-pc d-fun pc escaped)
+				 (if up-frame (1+ (frame-number up-frame)) 0)
+				 escaped)))
+	(multiple-value-bind
+	    (env pc)
+	    (pc-offset caller-pc env up-frame)
+	  (let ((d-fun (debug-function-from-pc env pc)))
+	    ;; env-fp = caller.
+	    (make-compiled-frame env-fp up-frame d-fun
+				 (code-location-from-pc d-fun pc escaped)
+				 (if up-frame
+				     (1+ (frame-number up-frame))
+				     0)))))))
 
 ;;; PC-OFFSET -- Internal.
 ;;;
@@ -922,14 +957,13 @@
 ;;; fp referenced an escape.  If fp is an escape frame, then we return fp as
 ;;; the last value for convenience in accessing data saved in the escape frame.
 ;;;
-(defun fp-env (fp current-fp)
+(defun fp-env (fp caller-pc)
   (let ((env (stack-ref fp c::env-save-offset)))
     (if (and (eql env 0)
-	     ;; If env is zero indicating an escape frame, then its return-pc
-	     ;; must point into an assembler routine for interrupts.
-	     (= (system:%primitive get-type
-				   (stack-ref current-fp
-					      c::return-pc-save-offset))
+	     ;; If env is zero, then see if it is really an escape frame by
+	     ;; checking whether its pc points into an assembler routine for
+	     ;; interrupts.
+	     (= (system:%primitive get-type caller-pc)
 		 system:%assembler-code-type))
 	;; Get the env of the interrupted frame.
 	(let ((env (escape-register fp c::env-offset)))
@@ -2142,12 +2176,12 @@
   (let ((escaped (compiled-frame-escaped frame)))
     (if escaped
 	(sub-set-debug-var-slot (frame-pointer frame)
-				(debug-variable-sc-offset debug-var)
+				(compiled-debug-variable-sc-offset debug-var)
 				value escaped)
 	(sub-set-debug-var-slot
 	 (frame-pointer frame)
-	 (or (debug-variable-save-sc-offset debug-var)
-	     (debug-variable-sc-offset debug-var))
+	 (or (compiled-debug-variable-save-sc-offset debug-var)
+	     (compiled-debug-variable-sc-offset debug-var))
 	 value))))
 
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
