@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.37 2003/07/23 09:39:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.38 2004/04/06 17:18:03 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -778,26 +778,34 @@
 	    (t
 	     (let ((old-length (%array-available-elements array))
 		   (new-length (apply #'* dimensions)))
-	       (declare (fixnum old-length new-length))
-	       (with-array-data ((old-data array) (old-start)
-				 (old-end old-length))
-		 (declare (ignore old-end))
-		 (let ((new-data (if (or (%array-displaced-p array)
-					 (> new-length old-length))
-				     (data-vector-from-inits
-				      dimensions new-length
-				      element-type () nil
-                                      initial-element initial-element-p)
-				     old-data)))
-		   (if (or (zerop old-length) (zerop new-length))
-		       (when initial-element-p (fill new-data initial-element))
-		       (zap-array-data old-data (array-dimensions array)
-				       old-start
-				       new-data dimensions new-length
-				       element-type initial-element
-				       initial-element-p))
-		   (set-array-header array new-data new-length
-				     new-length 0 dimensions nil)))))))))
+               (declare (fixnum old-length new-length))
+               (cond ((null dimensions)
+                      array)
+                     (t
+                      (with-array-data ((old-data array) (old-start)
+                                        (old-end old-length))
+                        (declare (ignore old-end))
+                        (let ((new-data (if (or (%array-displaced-p array)
+                                                (> new-length old-length))
+                                            (data-vector-from-inits
+                                             dimensions new-length
+                                             element-type () nil
+                                             initial-element initial-element-p)
+                                            old-data)))
+                          (if (or (zerop old-length) (zerop new-length))
+                              (when initial-element-p (fill new-data initial-element))
+                              (zap-array-data old-data (array-dimensions array)
+                                              old-start
+                                              new-data dimensions new-length
+                                              element-type initial-element
+                                              initial-element-p))
+                          (if (adjustable-array-p array)
+                              (set-array-header array new-data new-length
+                                                new-length 0 dimensions nil)
+                              (let ((new-array
+                                     (make-array-header vm:simple-array-type array-rank)))
+                                (set-array-header new-array new-data new-length
+                                                  new-length 0 dimensions nil)))))))))))))
 
 (defun get-new-fill-pointer (old-array new-array-size fill-pointer)
   (cond ((not fill-pointer)
