@@ -428,7 +428,8 @@
 				      (and ef (leaf-name ef))))
 				   (t
 				    (component-name component)))
-		       :kind (functional-kind fun))))
+		       :kind (functional-kind fun)
+		       :start-pc 0)))
 	    
 	    (when (>= level 1)
 	      (setf (compiled-debug-function-variables dfun)
