@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.14 1997/12/31 18:05:45 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.15 1998/01/01 17:20:35 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -319,13 +319,26 @@
   ;; Binding stack.
   (let ((binding-save-stack (stack-group-binding-stack stack-group)))
     (when binding-save-stack
-      (let ((size (stack-group-binding-stack-size stack-group))
+      (let ((size
+	     ;; The stored binding stack for the current stack group
+	     ;; can be completely scrubbed.
+	     (if (eq stack-group *current-stack-group*)
+		 0
+		 (stack-group-binding-stack-size stack-group)))
 	    (len (length binding-save-stack)))
 	;; Scrub the remainder of the binding stack.
 	(do ((index size (+ index 1)))
 	    ((>= index len))
 	  (declare (type (unsigned-byte 29) index))
 	  (setf (aref binding-save-stack index) 0)))))
+  ;; If this is the current stack group then update the stored
+  ;; eval-stack and eval-stack-top before scrubbing.
+  (when (eq stack-group *current-stack-group*)
+    ;; Updare the stored vector, flushing an old vector if a new one
+    ;; has been allocated.
+    (setf (stack-group-eval-stack stack-group) lisp::*eval-stack*)
+    ;; Ensure that the stack-top is valid.
+    (setf (stack-group-eval-stack-top stack-group) lisp::*eval-stack-top*))
   ;; Scrub the eval stack.
   (let ((eval-stack (stack-group-eval-stack stack-group)))
     (when eval-stack
@@ -1294,7 +1307,10 @@
 ;;; Show-Processes
 ;;;
 (defun show-processes (&optional verbose)
+  (fresh-line)
   (dolist (process *all-processes*)
+    (when (eq process *current-process*)
+      (format t "* "))
     (format t "~s ~s ~a~%" process (process-whostate process) 
 	    (process-state process))
     (when verbose
@@ -1317,13 +1333,35 @@
   (name nil)
   (process nil :type (or null process)))
 
+;;; Lock-Wait
+;;;
+;;; Wait for the lock to be free and acquire it for the
+;;; *current-process*. Handled here as a function rather than inlining
+;;; to ensure that the process-wait predicate is fast native code and
+;;; that locks in byte compiled code don't slow the scheduler.
+;;;
+(defun lock-wait (lock whostate)
+  (declare (type lock lock))
+  (process-wait whostate
+		#'(lambda ()
+		    (declare (optimize (speed 3)))
+		    #-i486
+		    (unless (lock-process lock)
+		      (setf (lock-process lock) *current-process*))
+		    #+i486
+		    (null (kernel:%instance-set-conditional
+			   lock 2 nil *current-process*)))))
+
 #-i486
 (defun seize-lock (lock)
-  (declare (type lock lock))
+  (declare (type lock lock)
+	   (optimize (speed 3)))
   (sys:without-interrupts
    (unless (lock-process lock)
      (setf (lock-process lock) *current-process*))))
 
+;;; With-Lock-Held
+;;;
 #-i486
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
@@ -1333,16 +1371,16 @@
 	   (progn
 	     (unless (or (eq ,orig-process *current-process*)
 			 (seize-lock ,lock))
-	       (process-wait ,whostate
-		     #'(lambda ()
-			 (unless (lock-process ,lock)
-			   (setf (lock-process ,lock) *current-process*)))))
+	       (lock-wait ,lock ,whostate))
 	     ,@body)
 	(unless (or (eq ,orig-process *current-process*)
 		    (not (eq (lock-process ,lock) *current-process*)))
 	  (setf (lock-process ,lock) nil))))))
 
+;;; With-Lock-Held
+;;;
 ;;; Fast locking for the i486 and above.
+;;;
 #+i486
 (defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
 			  &body body)
@@ -1353,10 +1391,7 @@
 	     (unless (or (eq ,orig-process *current-process*)
 			 (null (kernel:%instance-set-conditional
 				,lock 2 nil *current-process*)))
-	       (process-wait ,whostate
-			     #'(lambda ()
-				 (null (kernel:%instance-set-conditional
-					,lock 2 nil *current-process*)))))
+	       (lock-wait ,lock ,whostate))
 	     ,@body)
 	(unless (eq ,orig-process *current-process*)
 	  (kernel:%instance-set-conditional ,lock 2 *current-process* nil))))))
