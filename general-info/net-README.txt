@@ -40,8 +40,9 @@ directory that is to be the root of the tree, then type:
     uncompress <file.tar.Z | tar xf - .
 
 The latest SunOS Sparc release is:
-    15a-sun4c_41.tar.Z
-This tar file is 10 megabytes, and the resulting tree is 23 megabytes.
+    -rw-r--r--  1 wlott     9330285 Nov  1 17:35 15b-sun4c_41.tar.Z
+
+The resulting tree is 23 megabytes.
 
 The release area also contains source distributions and other binary
 distributions.  A listing of the current contents of the release are is in
@@ -86,6 +87,18 @@ distribution information.]  All CMU written code is public domain, but CMU CL
 also makes use of several imported packages: PCL, CLX and XP.  Although these
 packages are copyrighted, they may be freely distributed without any licensing
 agreement or fee.
+
+Also in /afs/cs/project/clisp/release:
+
+-rw-r--r--  1 ram       3257791 Oct 19 19:50 15b-sun4-source.tar.Z
+	Image of all ".lisp" source files used to build version 15b for SPARC
+	machines.  Probably more interesting to most people than the RCS
+        distribution. 
+
+-rw-r--r--  1 ram       7267593 Oct 16 16:42 10-16-91-cmucl-master.tar.Z
+	The project/clisp/master subtree: the RCS source (,v) files for all of
+	CMU CL.
+
 
 Totally machine-independent compiler code:
     /afs/cs/project/clisp/pmax_mach/alpha/compiler/*.lisp
