@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.30 2003/06/05 12:35:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.31 2003/07/17 12:40:35 gerd Exp $")
 
 (in-package :pcl)
 
@@ -769,20 +769,25 @@ And so, we are saved.
 ;;; 
 (defvar *early-p* nil)
 
+(defvar *max-emf-precomputation-methods* 100
+  "Precompute effective methods only if the generic function
+   has less than this number of methods.")
+
 ;;;
 ;;; Try to finalize all unfinalized class specializers of all methods
 ;;; of generic function GF.  Value is true if successful.
 ;;;
 (defun finalize-specializers (gf)
-  (let ((all-finalized t))
-    (dolist (method (generic-function-methods gf))
-      (dolist (specializer (method-specializers method))
-	(when (and (classp specializer)
-		   (not (class-finalized-p specializer)))
-	  (if (class-has-a-forward-referenced-superclass-p specializer)
-	      (setq all-finalized nil)
-	      (finalize-inheritance specializer)))))
-    all-finalized))
+  (let ((methods (generic-function-methods gf)))
+    (when (< (length methods) *max-emf-precomputation-methods*)
+      (let ((all-finalized t))
+	(dolist (method (generic-function-methods gf) all-finalized)
+	  (dolist (specializer (method-specializers method))
+	    (when (and (classp specializer)
+		       (not (class-finalized-p specializer)))
+	      (if (class-has-a-forward-referenced-superclass-p specializer)
+		  (setq all-finalized nil)
+		  (finalize-inheritance specializer)))))))))
       
 (defun make-initial-dfun (gf)
   (let ((initial-dfun 
