@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemload.lisp,v 1.1 1991/06/10 16:26:23 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hemload.lisp,v 1.2 1991/06/10 16:48:00 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,4 +119,5 @@
   (load "hem:lisp-lib")
   (load "hem:completion")
   (load "hem:shell")
+  (load "hem:debug")
   (load "hem:bindings"))
