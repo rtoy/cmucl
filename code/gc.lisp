@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.11 1992/02/19 19:19:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.12 1992/03/26 03:24:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -84,7 +84,12 @@
 (defun room-minimal-info ()
   (format t "Dynamic Space Usage:    ~10:D bytes.~%" (dynamic-usage))
   (format t "Read-Only Space Usage:  ~10:D bytes.~%" (read-only-space-usage))
-  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage)))
+  (format t "Static Space Usage:     ~10:D bytes.~%" (static-space-usage))
+  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
+  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage))
+  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
+  (format t "Garbage collection is currently ~:[DISABLED~;enabled.~]~%"
+	  *gc-trigger*))
 
 (defun room-intermediate-info ()
   (room-minimal-info)
@@ -95,9 +100,6 @@
 
 (defun room-maximal-info ()
   (room-minimal-info)
-  (format t "Control Stack Usage:    ~10:D bytes.~%" (control-stack-usage))
-  (format t "Binding Stack Usage:    ~10:D bytes.~%" (binding-stack-usage))
-  (format t "The current dynamic space is ~D.~%" (current-dynamic-space))
   (vm:memory-usage :count-spaces '(:static :dynamic))
   (vm:structure-usage :dynamic :top-n 10)
   (vm:structure-usage :static :top-n 10))
@@ -120,7 +122,8 @@
      (room-intermediate-info))
     (t
      (error "No way man!  The optional argument to ROOM must be T, NIL, ~
-     or :DEFAULT.~%What do you think you are doing?"))))
+     or :DEFAULT.~%What do you think you are doing?")))
+  (values))
 
 
 ;;;; GET-BYTES-CONSED.
@@ -163,14 +166,16 @@
 ;;; 
 (defvar *bytes-consed-between-gcs* default-bytes-consed-between-gcs
   "This number specifies the minimum number of bytes of dynamic space
-  that must be consed before the next gc will occur.")
+   that must be consed before the next gc will occur.")
+
+(declaim (type index *bytes-consed-between-gcs*))
 
 ;;; Public
 (defvar *gc-run-time* 0
   "The total CPU time spend doing garbage collection (as reported by
    GET-INTERNAL-RUN-TIME.)")
 
-(declaim (type index *bytes-consed-between-gcs* *gc-run-time*))
+(declaim (type index *gc-run-time*))
 
 ;;; Internal trigger.  When the dynamic usage increases beyond this
 ;;; amount, the system notes that a garbage collection needs to occur by
@@ -309,16 +314,6 @@
 (defun clear-auto-gc-trigger ()
   (setf rt::*internal-gc-trigger* -1))
 
-
-(defun %gc ()
-  (let ((old-usage (dynamic-usage)))
-    (collect-garbage)
-    (let ((new-bytes (dynamic-usage)))
-      (when *last-bytes-in-use*
-	(incf *total-bytes-consed* (- old-usage *last-bytes-in-use*))
-	(setq *last-bytes-in-use* new-bytes)))))
-
-
 ;;;
 ;;; *INTERNAL-GC*
 ;;;
@@ -326,7 +321,7 @@
 ;;; for low-level GC experimentation.  Do not touch it if you do not
 ;;; know what you are doing.
 ;;; 
-(defvar *internal-gc* #'%gc)
+(defvar *internal-gc* #'collect-garbage)
 
 
 ;;;; SUB-GC
@@ -350,22 +345,20 @@
 ;;; called.  The FORCE-P flags controls if a GC should occur even if the
 ;;; dynamic usage is not greater than *GC-TRIGGER*.
 ;;; 
-(defun sub-gc (verbose-p force-p)
+(defun sub-gc (&key (verbose-p *gc-verbose*) force-p)
   (unless *already-maybe-gcing*
     (let* ((*already-maybe-gcing* t)
 	   (start-time (get-internal-run-time))
 	   (pre-gc-dyn-usage (dynamic-usage)))
       (unless (integerp (symbol-value '*bytes-consed-between-gcs*))
+	;; The noise w/ symbol-value above is to keep the compiler from
+	;; optimizing the test away because of the type declaim for
+	;; *bytes-consed-between-gcs*.
 	(warn "The value of *BYTES-CONSED-BETWEEN-GCS*, ~S, is not an ~
 	       integer.  Reseting it to ~D." *bytes-consed-between-gcs*
 	       default-bytes-consed-between-gcs)
 	(setf *bytes-consed-between-gcs* default-bytes-consed-between-gcs))
-      (when (or (not *gc-trigger*)
-		(> *bytes-consed-between-gcs* *gc-trigger*))
-	(when *gc-trigger* (clear-auto-gc-trigger))
-	(setf *gc-trigger* *bytes-consed-between-gcs*)
-	(set-auto-gc-trigger *gc-trigger*))
-      (when (> pre-gc-dyn-usage *gc-trigger*)
+      (when (and *gc-trigger* (> pre-gc-dyn-usage *gc-trigger*))
 	(setf *need-to-collect-garbage* t))
       (when (or force-p
 		(and *need-to-collect-garbage* (not *gc-inhibit*)))
@@ -385,6 +378,10 @@
 	    (funcall *internal-gc*)
 	    (let* ((post-gc-dyn-usage (dynamic-usage))
 		   (bytes-freed (- pre-gc-dyn-usage post-gc-dyn-usage)))
+	      (when *last-bytes-in-use*
+		(incf *total-bytes-consed*
+		      (- pre-gc-dyn-usage *last-bytes-in-use*))
+		(setq *last-bytes-in-use* post-gc-dyn-usage))
 	      (setf *need-to-collect-garbage* nil)
 	      (setf *gc-trigger*
 		    (+ post-gc-dyn-usage *bytes-consed-between-gcs*))
@@ -406,7 +403,7 @@
 ;;; which must be returned to the caller.
 ;;; 
 (defun maybe-gc (&optional object)
-  (sub-gc *gc-verbose* nil)
+  (sub-gc)
   object)
 
 ;;;
@@ -418,7 +415,7 @@
   "Initiates a garbage collection.  The optional argument, VERBOSE-P,
   which defaults to the value of the variable *GC-VERBOSE* controls
   whether or not GC statistics are printed."
-  (sub-gc verbose-p t))
+  (sub-gc :verbose-p verbose-p :force-p t))
 
 
 ;;;; Auxiliary Functions.
@@ -427,14 +424,21 @@
 (defun gc-on ()
   "Enables the garbage collector."
   (setq *gc-inhibit* nil)
-  (unless *gc-trigger*
-    (setf *gc-trigger* *bytes-consed-between-gcs*)
-    (set-auto-gc-trigger *gc-trigger*))
   (when *need-to-collect-garbage*
-    (sub-gc *gc-verbose* nil))
+    (sub-gc))
   nil)
 
 (defun gc-off ()
   "Disables the garbage collector."
   (setq *gc-inhibit* t)
   nil)
+
+
+
+;;;; Initialization stuff.
+
+(defun gc-init ()
+  (when *gc-trigger*
+    (if (< *gc-trigger* (dynamic-usage))
+	(sub-gc)
+	(set-auto-gc-trigger *gc-trigger*))))
