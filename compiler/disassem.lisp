@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.36 2003/03/06 13:38:13 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.37 2003/04/26 01:51:10 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1846,6 +1846,11 @@
 	      (print-inst-space (ischoice-subspace choice)
 				(+ 4 indent)))
 	  (ispace-choices inst-space)))))
+
+(defun print-backend-inst-space (&optional (backend c:*target-backend*))
+  "Print the inst space for the specified backend"
+  (let ((ext:*gc-verbose* nil))
+    (print-inst-space (get-inst-space (c:backend-disassem-params backend)))))
 
 ;;;; ----------------------------------------------------------------
 ;;;; the actual disassembly part
