@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.90 1993/07/22 10:42:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.91 1993/07/22 20:57:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -458,7 +458,8 @@
             (:shadow "DESTRUCTURING-BIND" "DOCUMENTATION"
 		     "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
 		     "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
-		     "STRUCTURE-OBJECT" "STANDARD-CLASS" "DOCUMENTATION"))
+		     "STRUCTURE-OBJECT" "STANDARD-CLASS" "DOCUMENTATION"
+		     "DOTIMES"))
 (defpackage "FORMAT")
 (defpackage "HEMLOCK" (:nicknames "ED"))
 (defpackage "SPELL"
