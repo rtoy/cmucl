@@ -13,7 +13,10 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
+(in-package "EXTENSIONS")
+(export '(*efficency-note-limit* *efficency-note-cost-threshold*))
+(in-package "C")
 
 
 ;;;; Utilities:
@@ -298,10 +301,11 @@
 ;;; function:
 ;;; -- If the tail-set has a fixed values count, then use that many values.
 ;;; -- If the actual uses of the result continuation in this function have a
-;;;    fixed number of values, then use that number.  We throw out TAIL-P
-;;;    :FULL and :LOCAL calls, since we know they will truly end up as TR
-;;;    calls.  We can use the BASIC-COMBINATION-INFO even though it is assigned
-;;;    by this phase, since the initial value NIL doesn't look like a TR call.
+;;;    fixed number of values (after intersection with the assertion), then use
+;;;    that number.  We throw out TAIL-P :FULL and :LOCAL calls, since we know
+;;;    they will truly end up as TR calls.  We can use the
+;;;    BASIC-COMBINATION-INFO even though it is assigned by this phase, since
+;;;    the initial value NIL doesn't look like a TR call.
 ;;;
 ;;;    If there are *no* non-tail-call uses, then it falls out that we annotate
 ;;;    for one value (type is NIL), but the return will end up being deleted.
@@ -325,13 +329,17 @@
 			 (member (basic-combination-info use) '(:local :full)))
 	      (res (node-derived-type use))))
 	  
-	  (multiple-value-bind (types kind)
-			       (values-types (res))
-	    (if (eq kind :unknown)
-		(annotate-unknown-values-continuation cont policy)
-		(annotate-fixed-values-continuation
-		 cont policy
-		 (mapcar #'primitive-type types)))))
+	  (let ((int (values-type-intersection
+		      (res)
+		      (continuation-asserted-type cont))))
+	    (multiple-value-bind
+		(types kind)
+		(values-types (if (eq int *empty-type*) (res) int))
+	      (if (eq kind :unknown)
+		  (annotate-unknown-values-continuation cont policy)
+		  (annotate-fixed-values-continuation
+		   cont policy
+		   (mapcar #'primitive-type types))))))
 	(annotate-fixed-values-continuation cont policy types)))
 
   (undefined-value))
