@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.23 1993/09/01 10:00:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.24 1993/09/02 15:48:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -985,7 +985,7 @@
 		(type instruction inst)
 		(type stream stream)
 		(type disassem-state dstate)
-		#+small (declare (optimize (speed 0) (safety 0) (debug 0))))
+		#+small (optimize (speed 0) (safety 0) (debug 0)))
 
        (macrolet ((local-format-arg (arg fmt)
 		    `(funcall (formatter ,fmt) stream ,arg)))
@@ -1224,7 +1224,7 @@
 			(type dchunk chunk)
 			(type disassem-state dstate)
 			#+small
-			(declare (optimize (speed 0) (safety 0) (debug 0))))
+			(optimize (speed 0) (safety 0) (debug 0)))
 	       (flet ((local-filtered-value (offset)
 			(declare (type filtered-value-index offset))
 			(aref (dstate-filtered-values dstate) offset))
