@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.10 1991/11/29 19:38:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.11 1991/11/29 23:00:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,19 +176,42 @@
 
 ;;;; FORMAT
 
-(defun my-format (dest string &rest args)
-  (etypecase dest
+(defun format (destination control-string &rest format-arguments)
+  "Provides various facilities for formatting output.
+  CONTROL-STRING contains a string to be output, possibly with embedded
+  directives, which are flagged with the escape character \"~\".  Directives
+  generally expand into additional text to be output, usually consuming one
+  or more of the FORMAT-ARGUMENTS in the process.  A few useful directives
+  are:
+        ~A or ~nA     Prints one argument as if by PRINC
+        ~S or ~nS     Prints one argument as if by PRIN1
+        ~D or ~nD     Prints one argument as a decimal integer
+        ~%            Does a TERPRI
+        ~&            Does a FRESH-LINE
+
+         where n is the width of the field in which the object is printed.
+  
+  DESTINATION controls where the result will go.  If DESTINATION is T, then
+  the output is sent to the standard output stream.  If it is NIL, then the
+  output is returned in a string as the value of the call.  Otherwise,
+  DESTINATION must be a stream to which the output will be sent.
+
+  Example:   (FORMAT NIL \"The answer is ~D.\" 10) => \"The answer is 10.\"
+
+  FORMAT has many additional capabilities not described here.  Consult the
+  manual for details."
+  (etypecase destination
     (null
      (with-output-to-string (stream)
-       (%format stream string args)))
+       (%format stream control-string format-arguments)))
     (string
-     (with-output-to-string (stream dest)
-       (%format stream string args)))
+     (with-output-to-string (stream destination)
+       (%format stream control-string format-arguments)))
     ((member t)
-     (%format *standard-output* string args)
+     (%format *standard-output* control-string format-arguments)
      nil)
     (stream
-     (%format dest string args)
+     (%format destination control-string format-arguments)
      nil)))
 
 (defun %format (stream string-or-fun orig-args &optional (args orig-args))
