@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.36 2002/09/04 14:04:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.37 2002/09/12 15:59:29 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,12 +276,18 @@ about function addresses and register values.")
 	      (disassem:note "Set pseudo-atomic flag" dstate)
 	      (setf *pseudo-atomic-set* t))
 	     ((= rd alloc-offset)
-	      ;; "ADD n, %ALLOC" is reseting the flag, with extra
-	      ;; allocation.
-	      (disassem:note
-	       (format nil "Reset pseudo-atomic, allocated ~D bytes"
-		       (+ immed-val 4)) dstate)
-	      (setf *pseudo-atomic-set* nil))))
+	      ;; "ADD n, %ALLOC" is either allocating space or
+	      ;; resetting the flag.
+	      (if (= immed-val -4)
+		  (progn
+		    (disassem:note
+		     (format nil "Reset pseudo-atomic")
+		     dstate)
+		    (setf *pseudo-atomic-set* nil))
+		  (disassem:note
+		   (format nil "Allocating ~D bytes" immed-val)
+		   dstate))
+	      )))
       ((and (= rs1 zero-offset) *pseudo-atomic-set*)
        ;; "ADD %ZERO, num, RD" inside a pseudo-atomic is very
        ;; likely loading up a header word.  Make a note to that
@@ -293,6 +299,7 @@ about function addresses and register values.")
 			  dstate)))))))
 
 (defun handle-jmpl-inst (rs1 immed-val rd dstate)
+  (declare (ignore rd))
   (let* ((sethi (assoc rs1 *note-sethi-inst*)))
     (when sethi
       ;; RS1 was used in a SETHI instruction.  Assume that
