@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.236 2004/09/24 14:59:53 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.237 2004/10/16 23:49:05 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,7 +329,23 @@
 	   "UNIX-GETPWNAM" "UNIX-GETPWUID" "UNIX-GETGRNAM" "UNIX-GETGRGID"
 	   "USER-INFO" "USER-INFO-NAME" "USER-INFO-PASSWORD" "USER-INFO-UID"
 	   "USER-INFO-GID" "USER-INFO-GECOS" "USER-INFO-DIR" "USER-INFO-SHELL"
-	   "GROUP-INFO" "GROUP-INFO-NAME" "GROUP-INFO-GID" "GROUP-INFO-MEMBERS"))
+	   "GROUP-INFO" "GROUP-INFO-NAME" "GROUP-INFO-GID" "GROUP-INFO-MEMBERS")
+  #+ppc
+  (:export "UNIX-GETPWUID"
+	   "USER-INFO"
+	   "USER-INFO-SHELL"
+	   "USER-INFO-GECOS"
+	   "UNIX-GETPWNAM"
+	   "GROUP-INFO-NAME"
+	   "GROUP-INFO-MEMBERS"
+	   "USER-INFO-NAME"
+	   "USER-INFO-PASSWORD"
+	   "GROUP-INFO"
+	   "USER-INFO-UID"
+	   "USER-INFO-DIR"
+	   "USER-INFO-GID"
+	   "GROUP-INFO-GID")
+  )
   
 (defpackage "FORMAT")
 
