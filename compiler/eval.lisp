@@ -225,7 +225,7 @@
   (let* ((eval-fun (get-eval-function x))
 	 (lambda (eval-function-lambda eval-fun)))
     (if lambda
-	(values lambda nil (or (eval-function-name eval-fun) lambda))
+	(values lambda nil (eval-function-name eval-fun))
 	(let ((fun (c::functional-entry-function
 		    (eval-function-definition eval-fun))))
 	  (values (c::functional-inline-expansion fun)
