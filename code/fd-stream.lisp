@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.55 2001/03/04 20:12:35 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.56 2001/06/17 19:06:58 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1023,6 +1023,12 @@
     (:charpos
      (fd-stream-char-pos stream))
     (:file-length
+     (unless (fd-stream-file stream)
+       (error 'simple-type-error
+	      :datum stream
+	      :expected-type 'file-stream
+	      :format-control "~s is not a stream associated with a file."
+	      :format-arguments (list stream)))
      (multiple-value-bind
 	 (okay dev ino mode nlink uid gid rdev size
 	       atime mtime ctime blksize blocks)
