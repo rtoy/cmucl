@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.44 1992/10/08 22:11:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.45 1992/10/09 14:01:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -988,7 +988,6 @@
 	     (system:without-gcing
 	      (read-n-bytes *fasl-file* (code-instructions code) 0
 			    code-length))
-	     (vm:sanctify-for-execution code)
 	     code)))
        (error
 	"Code Format not set?  Can't load code until after FOP-CODE-FORMAT.")))
@@ -1002,6 +1001,10 @@
 (define-fop (fop-fdefinition 60)
   (fdefinition-object (pop-stack) t))
 
+(define-fop (fop-sanctify-for-execution 61)
+  (let ((component (pop-stack)))
+    (vm:sanctify-for-execution component)
+    component))
 
 ;;; Now a NOOP except in cold load... 
 (define-fop (fop-fset 74 nil)
@@ -1037,7 +1040,6 @@
       (when *load-print*
 	(load-fresh-line)
 	(format t "~S defined~%" fun))
-      (vm:sanctify-for-execution code-object)
       fun)))
 
 (define-fop (fop-make-byte-compiled-function 143)
