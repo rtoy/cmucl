@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.2 1992/10/11 10:54:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.3 1993/10/07 11:41:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -89,3 +89,37 @@
       (emit-label done)
       (inst sub count csp-tn start))))
 
+
+
+;;; Copy the more arg block to the top of the stack so we can use them
+;;; as function arguments.
+;;;
+(define-vop (%more-arg-values)
+  (:args (context :scs (descriptor-reg any-reg) :target src)
+	 (skip :scs (any-reg zero immediate))
+	 (num :scs (any-reg) :target count))
+  (:arg-types * positive-fixnum positive-fixnum)
+  (:temporary (:sc any-reg :from (:argument 0)) src)
+  (:temporary (:sc any-reg :from (:argument 2)) dst)
+  (:temporary (:sc descriptor-reg :from (:argument 1)) temp)
+  (:results (start :scs (any-reg))
+	    (count :scs (any-reg)))
+  (:generator 20
+    (sc-case skip
+      (zero
+       (move src context))
+      (immediate
+       (inst add src context (* (tn-value skip) word-bytes)))
+      (any-reg
+       (inst add src context skip)))
+    (inst orcc count zero-tn num)
+    (inst b :eq done)
+    (inst move start csp-tn)
+    (inst move dst csp-tn)
+    (inst add csp-tn count)
+    LOOP
+    (inst subcc count 4)
+    (inst ld temp src count)
+    (inst b :ne loop)
+    (inst st temp dst count)
+    DONE))
