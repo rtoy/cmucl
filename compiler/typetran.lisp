@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.36 2000/05/02 04:44:28 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.37 2000/05/23 06:52:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -428,7 +428,7 @@
 ;;; for the object is invalid and signal an error if so.  Otherwise, look up
 ;;; the indirect class-cell and call CLASS-CELL-TYPEP at runtime.
 ;;;
-(deftransform %instance-typep ((object spec))
+(deftransform %instance-typep ((object spec) (* *) * :when :both)
   (assert (constant-continuation-p spec))
   (let* ((spec (continuation-value spec))
 	 (class (specifier-type spec))
