@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.49 1991/07/18 02:08:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.50 1991/08/23 16:28:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,10 +153,8 @@
 		 (ir1-convert-variable start cont form))
 		((leaf-p form)
 		 (reference-leaf start cont form nil))
-		((constantp form)
-		 (reference-constant start cont form))
 		(t
-		 (compiler-error "Cannot evaluate this object: ~S" form)))
+		 (reference-constant start cont form)))
 	  (let ((fun (car form)))
 	    (cond
 	     ((symbolp fun)
