@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.29 2003/02/18 15:48:29 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.30 2003/02/25 15:51:17 toy Exp $
  *
  */
 
@@ -441,8 +441,12 @@ int main(int argc, char *argv[], char *envp[])
 	struct stat statbuf;
 	
 	if (stat(core, &statbuf) != 0) {
-	    /* Can't find it so print a message and die */
-	    fprintf(stderr, "Cannot find core file %s\n", core);
+	    /* Can't find it so print a message and exit */
+            fprintf(stderr, "Cannot find core file");
+            if (core != NULL) {
+                fprintf(stderr, " %s", core);
+            }
+            fprintf(stderr, "\n");
 	    exit(1);
 	}
     }
