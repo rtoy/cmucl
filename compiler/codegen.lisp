@@ -111,13 +111,6 @@
   (finalize-segment *code-segment*))
 
 
-(defun count-vops (component)
-  (do-ir2-blocks (block component)
-    (do ((vop (ir2-block-start-vop block) (vop-next vop)))
-	((null vop))
-      (count-vop (vop-info-name (vop-info vop))))))
-
-
 (defun emit-label-elsewhere (label)
   (assemble (*elsewhere* nil)
     (emit-label label)))
