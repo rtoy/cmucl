@@ -35,13 +35,13 @@
 
 ;;; The number of bits corresponding to a change of 1 in the value of a SAP.
 ;;;
-(defconstant alien-address-unit 8)
+(defconstant alien-address-unit vm:byte-bits)
 (defconstant alien-address-shift (1- (integer-length alien-address-unit)))
 
 ;;; The address pointed to by the SAP in an alien is always a multiple of this
 ;;; number of bits.
 ;;;
-(defconstant alien-alignment 32)
+(defconstant alien-alignment vm:word-bits)
 
 
 (defvar *alien-eval-when* '(compile load eval)
@@ -50,10 +50,11 @@
 (defun %print-alien-value (s stream d)
   (declare (ignore d))
   (let ((offset (alien-value-offset s)))
-    (format stream
-	    "#<Alien value, Address = #x~X~:[+~D/8~;~*~], Size = ~D, Type = ~S>"
-	    (sap-int (alien-value-sap s)) (zerop offset) offset
-	    (alien-value-size s) (alien-value-type s))))
+    (format
+     stream
+     "#<Alien value, Address = #x~X~:[+~D/~D~;~2*~], Size = ~D, Type = ~S>"
+     (sap-int (alien-value-sap s)) (zerop offset) offset alien-address-unit
+     (alien-value-size s) (alien-value-type s))))
 
 (defun %print-alien-info (s stream d)
   (declare (ignore s d))
@@ -63,52 +64,83 @@
 ;;;; Interpreter stubs for SAP functions:
 
 #+new-compiler (progn
+
+(defun sap+ (sap offset)
+  "Return a new sap OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (fixnum offset))
+  (sap+ sap offset))
+
 (defun sap-int (sap)
   "Converts a System Area Pointer into an integer."
+  (declare (type system-area-pointer sap))
   (sap-int sap))
 
 (defun int-sap (int)
   "Converts an integer into a System Area Pointer."
+  (declare (type (unsigned-byte #.vm:word-bits) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
   "Returns the 8-bit byte at OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-8 sap offset))
 
 (defun sap-ref-16 (sap offset)
   "Returns the 16-bit word at OFFSET half-words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-16 sap offset))
 
 (defun sap-ref-32 (sap offset)
   "Returns the 32-bit dualword at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-32 sap offset))
 
 (defun sap-ref-sap (sap offset)
   "Returns the 32-bit system-area-pointer at OFFSET words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (sap-ref-sap sap offset))
 
 (defun signed-sap-ref-8 (sap offset)
   "Returns the signed 8-bit byte at Offset bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (signed-sap-ref-8 sap offset))
 
 (defun signed-sap-ref-16 (sap offset)
   "Returns the signed 16-bit word at Offset words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (signed-sap-ref-16 sap offset))
 
 (defun signed-sap-ref-32 (sap offset)
   "Returns the signed 32-bit dualword at Offset words from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (signed-sap-ref-32 sap offset))
 
 (defun (setf sap-ref-8) (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (setf (sap-ref-8 sap offset) new-value))
 
 (defun (setf sap-ref-16) (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (setf (sap-ref-16 sap offset) new-value))
 
 (defun (setf sap-ref-32) (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset))
   (setf (sap-ref-32 sap offset) new-value))
 
 (defun (setf sap-ref-sap) (sap offset new-value)
+  (declare (type system-area-pointer sap new-value)
+	   (type index offset))
   (setf (sap-ref-sap sap offset) new-value))
 
 ); #+New-Compiler
@@ -133,17 +165,19 @@
     (unless (= size (alien-value-size from-alien))
       (error "Arguments to Alien-Assign are of different sizes:~%~S~%~S"
 	     to-alien from-alien))
-    (unless (zerop (logand size 7))
+    (unless (zerop (logand size (1- alien-address-unit)))
       (error "Size of assigned Alien is not a byte multiple:~%~S"
 	     from-alien))
-    (unless (zerop (logand src-off 7))
+    (unless (zerop (logand src-off (1- alien-address-unit)))
       (error "Alien is not byte aligned:~%~S" from-alien))
-    (unless (zerop (logand dst-off 7))
+    (unless (zerop (logand dst-off (1- alien-address-unit)))
       (error "Alien is not byte aligned:~%~S" to-alien))
-    (let ((dst-start (ash dst-off -3)))
-      (%primitive byte-blt (alien-value-sap from-alien) (ash src-off -3)
+    (let ((dst-start (ash dst-off (- alien-address-shift))))
+      (%primitive byte-blt
+		  (alien-value-sap from-alien)
+		  (ash src-off (- alien-address-shift))
 		  (alien-value-sap to-alien) dst-start
-		  (+ dst-start (ash size -3))))
+		  (+ dst-start (ash size (- alien-address-shift)))))
     to-alien))
 
 
@@ -211,22 +245,11 @@
 (defmacro define-alien-stack (name type size)
   "Define-Stack-Alien Name Type Size
   Defines a new alien stack for use with the With-Stack-Alien macro.
-  The aliens have the specifed Type and Size, and are static."
-  (let ((n-head (concat-pnames name '-alien-stack-head))
-	(n-current (concat-pnames name '-alien-stack))
-	(grow-fun (concat-pnames name '-grow-stack)))
-  `(progn
-    (eval-when ,*alien-eval-when*
-      (setf (info alien-stack info ',name)
-	    (make-stack-info :head ',n-head  :current ',n-current
-			     :grow ',grow-fun  :type ',type
-			     :size ,size)))
-    (defvar ,n-head ())
-    (defvar ,n-current ())
-    (defun ,grow-fun ()
-      (let ((new (list (make-alien ',type ,size :static))))
-	(setq ,n-head (nconc ,n-head new)  ,n-current new)
-	(car new))))))
+  The aliens have the specifed Type and Size, and are allocated on the
+  number stack."
+  `(eval-when ,*alien-eval-when*
+     (setf (info alien-stack info ',name)
+	   (make-stack-info :type ',type :size ,size))))
 
 
 ;;; Defoperator  --  Public
@@ -326,9 +349,7 @@
     (:static
      (setq address (allocate-static-alien size)))
     (t
-     (if (not (integerp address))
-	 (setq address (sap-int address)))
-     (check-type address (rational 0))))
+     (check-type address (or system-area-pointer (rational 0)))))
   (check-type size (integer 0))
   (if (numberp address)
       (multiple-value-bind (base frac) (truncate address)
@@ -352,9 +373,11 @@
   (check-type alien alien-value)
   (let* ((offset (alien-value-offset alien))
 	 (length (alien-value-size alien))
-	 (bytes (ash (+ length offset 15) -3))
+	 (bytes (ash (+ length offset alien-alignment -1)
+		     (- alien-address-shift)))
 	 (new (int-sap (do-validate 0 bytes -1))))
-    (%primitive byte-blt (alien-value-sap alien) (ash offset -3)
+    (%primitive byte-blt
+		(alien-value-sap alien) (ash offset (- alien-address-shift))
 		new 0 bytes)
     (make-alien-value new offset length (alien-value-type alien))))
 
@@ -371,7 +394,8 @@
     (unless (not (or (%primitive pointer< address system-space-start)
 		     (%primitive pointer> address alien-allocation-end)))
       (gr-call mach:vm_deallocate *task-self* address
-	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF) -3))))))
+	       (logand #x-200 (ash (+ (alien-value-size alien) #xFFF)
+				   (- alien-address-shift)))))))
 
 
 ;;;; Operator definition primitives:
@@ -467,7 +491,7 @@
   (unless (zerop (logand offset #x1F))
     (error "Offset ~S was declared to be word aligned, but isn't:~% ~S"
 	   offset form))
-  (sap+ sap (ash offset -3)))
+  (sap+ sap (ash offset (- alien-address-unit))))
 
 #+new-compiler
 ;;; Naturalize-Integer  --  Internal
@@ -492,7 +516,7 @@
 	  (signed-sap-ref-8 sap (ash offset -3))
 	  (sap-ref-8 sap (ash offset -3))))
      ((> size 32)
-      (error "Access of ~D bit integers is not supported." size))
+      (error "Access of ~D bit integers is not supported:~% ~S" size form))
      ((zerop r)
       (let ((value (ldb (byte size 0) (sap-ref-32 sap q))))
 	(if (and signed (logbitp value (1- size)))
