@@ -310,7 +310,12 @@
   (flag nil)
   ;;
   ;; Some kind of info used by the back end.
-  (info nil))
+  (info nil)
+  ;;
+  ;; If true, then constraints that hold in this block and its successors by
+  ;; merit of being tested by its IF predecessor.
+  (test-constraint nil :type (or sset null)))
+
 
 (defun %print-block (s stream d)
   (declare (ignore d))
