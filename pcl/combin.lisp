@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.21 2003/11/05 17:01:18 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.22 2004/03/29 23:39:38 rtoy Exp $")
 
 (in-package "PCL")
 
@@ -513,9 +513,12 @@
 ;;;
 (defun memf-test-converter (form gf method-alist-p wrappers-p)
   (flet ((method-key (method)
-	   (if (inlinable-method-p method)
-	       (method-function-name method)
-	       '.fast-call-method.)))
+	   (cond ((inlinable-method-p method)
+		  (method-function-name method))
+		 ((eq (get-method-call-type gf form method-alist-p wrappers-p)
+		      'fast-method-call)
+		  '.fast-call-method.)
+		 (t .call-method.))))
     (case (car-safe form)
       ;;
       (call-method
@@ -525,10 +528,7 @@
 	   '.call-method.))
       ;;
       (call-method-list
-       (if (eq (get-method-list-call-type gf form method-alist-p wrappers-p)
-	       'fast-method-call)
-	  (mapcar #'method-key (call-method-list-methods form))
-	  '.call-method-list.))
+       (mapcar #'method-key (call-method-list-methods form)))
       ;;
       (check-applicable-keywords
        'check-applicable-keywords)
