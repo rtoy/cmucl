@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.70 2000/07/06 18:37:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.71 2000/07/07 09:33:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -26,8 +26,8 @@
 ;;;
 ;;;    Return true if the sole use of Cont is a reference to a constant leaf.
 ;;;
-(proclaim '(function constant-continuation-p (continuation) boolean))
 (defun constant-continuation-p (cont)
+  (declare (type continuation cont) (values boolean))
   (let ((use (continuation-use cont)))
     (and (ref-p use)
 	 (constant-p (ref-leaf use)))))
@@ -38,8 +38,8 @@
 ;;;    Return the constant value for a continuation whose only use is a
 ;;; constant node.
 ;;;
-(proclaim '(function continuation-value (continuation) t))
 (defun continuation-value (cont)
+  (declare (type continuation cont))
   (assert (constant-continuation-p cont))
   (constant-value (ref-leaf (continuation-use cont))))
 
@@ -128,8 +128,8 @@
 ;;;    Return the derived type for Cont's first value.  This is guaranteed not
 ;;; to be a Values or Function type.
 ;;;
-(proclaim '(function continuation-type (continuation) ctype))
 (defun continuation-type (cont)
+  (declare (type continuation cont) (values ctype))
   (single-value-type (continuation-derived-type cont)))
 
 
@@ -737,8 +737,8 @@
 ;;;
 ;;;    Do IR1 optimizations on a Combination node.
 ;;;
-(proclaim '(function ir1-optimize-combination (combination) void))
 (defun ir1-optimize-combination (node)
+  (declare (type combination node))
   (when (continuation-reoptimize (basic-combination-fun node))
     (propagate-function-change node))
   (let ((args (basic-combination-args node))
@@ -1066,12 +1066,12 @@
 ;;;
 ;;;    Just throw the severity and args...
 ;;;
-(proclaim '(function give-up (&rest t) nil))
 (defun give-up (&rest args)
   "This function is used to throw out of an IR1 transform, aborting this
   attempt to transform the call, but admitting the possibility that this or
   some other transform will later suceed.  If arguments are supplied, they are
   format arguments for an efficiency note."
+  (values nil)
   (throw 'give-up (values :failure args)))
 ;;;
 (defun abort-transform (&rest args)

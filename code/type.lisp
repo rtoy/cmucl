@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.36 2000/07/06 18:36:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.37 2000/07/07 09:32:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -335,8 +335,8 @@
 ;;; structure, fill in the slots in the structure accordingly.  This is used
 ;;; for both FUNCTION and VALUES types.
 ;;;
-(proclaim '(function parse-args-types (list args-type) void))
 (defun parse-args-types (lambda-list result)
+  (declare (list lambda-list) (type args-type result))
   (multiple-value-bind (required optional restp rest keyp keys allowp aux)
 		       (parse-lambda-list lambda-list)
     (when aux
@@ -363,8 +363,8 @@
 ;;;    Return the lambda-list like type specification corresponding
 ;;; to a Args-Type.
 ;;;
-(proclaim '(function unparse-args-types (args-type) list))
 (defun unparse-args-types (type)
+  (declare (type args-type type) (values list))
   (collect ((result))
 
     (dolist (arg (args-type-required type))
@@ -921,8 +921,8 @@
 ;;;    Take a list of type specifiers, compute the translation and define it as
 ;;; a builtin type.
 ;;;
-(proclaim '(function precompute-types (list) void)) 
 (defun precompute-types (specs)
+  (declare (list specs))
   (dolist (spec specs)
     (let ((res (specifier-type spec)))
       (unless (unknown-type-p res)
@@ -2435,7 +2435,6 @@
 ;;; than trying to come up with the one that the user might find most
 ;;; informative.
 ;;;
-(proclaim '(function ctype-of (t) ctype))
 (defun-cached (ctype-of
 	       :hash-function (lambda (x)
 				(the fixnum
@@ -2444,6 +2443,7 @@
 	       :hash-bits 9
 	       :init-form cold-load-init)
 	      ((x eq))
+  (declare (values ctype))
   (typecase x
     (function
      (if (funcallable-instance-p x)

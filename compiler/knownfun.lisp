@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.21 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.22 2000/07/07 09:33:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,11 +170,12 @@
 ;;;    Grab the Function-Info and enter the function, replacing any old one
 ;;; with the same type and note.
 ;;;
-(proclaim '(function %deftransform
-		     (t list function &optional (or string null)
-			(member t nil) (member :native :byte :both))))
 (defun %deftransform (name type fun &optional note important
 			   (when :native))
+  (declare (list type) (function fun)
+	   (type (or string null) note)
+	   (type (member t nil) important)
+	   (type (member :native :byte :both) when))
   (let* ((ctype (specifier-type type))
 	 (note (or note "optimize"))
 	 (info (function-info-or-lose name))
@@ -197,10 +198,9 @@
 ;;;    Make a function-info structure with the specified type, attributes and
 ;;; optimizers.
 ;;;
-(proclaim '(function %defknown (list list attributes &key
-				(:derive-type (or function null))
-				(:optimizer (or function null)))))
 (defun %defknown (names type attributes &key derive-type optimizer)
+  (declare (list names type) (type attributes attributes)
+	   (type (or function null) derive-type optimizer))
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
 				  :derive-type derive-type
@@ -222,8 +222,8 @@
 ;;; We don't have to copy the lists, since each function that has generators or
 ;;; transforms has already been through here.
 ;;;
-(proclaim '(function function-info-or-lose (t) function-info))
 (defun function-info-or-lose (name)
+  (declare (values function-info))
   (let ((*info-environment* (or (backend-info-environment *target-backend*)
 				*info-environment*)))
     (let ((old (info function info name)))

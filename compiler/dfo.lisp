@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.25 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dfo.lisp,v 1.26 2000/07/07 09:33:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,8 +23,8 @@
 ;;; any other components we reach.  We repeatedly iterate over the entry
 ;;; points, since new ones may show up during the walk.
 ;;;
-(proclaim '(function find-dfo (component) void))
 (defun find-dfo (component)
+  (declare (type component component))
   (clear-flags component)
   (setf (component-reanalyze component) nil)
   (let ((head (component-head component)))
@@ -52,8 +52,8 @@
 ;;; when we are about in insert the body of a let in a different component.  [A
 ;;; local call can be to a different component before FIND-INITIAL-DFO runs.]
 ;;;
-(proclaim '(function join-components (component component) void))
 (defun join-components (new old)
+  (declare (type component new old))
   (assert (eq (component-kind new) (component-kind old)))
   (let ((old-head (component-head old))
 	(old-tail (component-tail old))
@@ -98,8 +98,8 @@
 ;;; Head.  If we somehow find ourselves in another component, then we join that
 ;;; component to our component.
 ;;;
-(proclaim '(function find-dfo-aux (cblock cblock component) void))
 (defun find-dfo-aux (block head component)
+  (declare (type cblock block head) (type component component))
   (unless (eq (block-component block) component)
     (join-components component (block-component block)))
 	

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.32 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.33 2000/07/07 09:33:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,13 +47,14 @@
 ;;;
 ;;;    Signal a warning if appropriate and set the *lossage-detected* flag.
 ;;;
-(proclaim '(ftype (function (string &rest t) void) note-lossage note-slime))
 (defun note-lossage (format-string &rest format-args)
+  (declare (string format-string))
   (setq *lossage-detected* t)
   (when *error-function*
     (apply *error-function* format-string format-args)))
 ;;;
 (defun note-slime (format-string &rest format-args)
+  (declare (string format-string))
   (setq *slime-detected* t)
   (when *warning-function*
     (apply *warning-function* format-string format-args)))
@@ -225,8 +226,8 @@
 ;;; the type specified for that argument.  If we can't tell, then we complain
 ;;; about the slime.
 ;;;
-(proclaim '(function check-fixed-and-rest (list list (or ctype null)) void))
 (defun check-fixed-and-rest (args types rest)
+  (declare (list args types) (type (or ctype null) rest))
   (do ((arg args (cdr arg))
        (type types (cdr type))
        (n 1 (1+ n)))
@@ -246,8 +247,8 @@
 ;;; type.  If the keyword isn't a constant, then we can't tell, so we note
 ;;; slime.
 ;;;
-(proclaim '(function check-keywords (list fixnum function-type) void))
 (defun check-keywords (args pre-key type)
+  (declare (list args) (fixnum pre-key))
   (do ((key (nthcdr pre-key args) (cddr key))
        (n (1+ pre-key) (+ n 2)))
       ((null key))
@@ -278,8 +279,8 @@
 ;;; Due to the lack of a (list x) type specifier, we can't reconstruct the
 ;;; &rest type.
 ;;;
-(proclaim '(function definition-type (functional) function-type))
 (defun definition-type (functional)
+  (declare (type functional functional) (values function-type))
   (if (lambda-p functional)
       (make-function-type
        :required (mapcar #'leaf-type (lambda-vars functional))
@@ -364,10 +365,10 @@
 ;;; If Type is supplied and not null, then we merge the information into the
 ;;; information already accumulated in Type.
 ;;;
-(proclaim '(function note-function-use
-		     (combination &optional (or approximate-function-type null))
-		     approximate-function-type))
 (defun note-function-use (call &optional type)
+  (declare (type combination call)
+	   (type (or approximate-function-type null) type)
+	   (values approximate-function-type))
   (let* ((type (or type (make-approximate-function-type)))
 	 (types (approximate-function-type-types type))
 	 (args (combination-args call))
@@ -430,14 +431,14 @@
 ;;;    Similar to Valid-Function-Use, but checks an Approximate-Function-Type
 ;;; against a real function type.
 ;;;
-(proclaim '(function valid-approximate-type
-		     (approximate-function-type function-type &optional
-						function function function)
-		     (values boolean boolean)))
 (defun valid-approximate-type (call-type type &optional
 					 (*test-function* #'types-intersect)
 					 (*error-function* #'compiler-warning)
 					 (*warning-function* #'compiler-note))
+  (declare (type approximate-function-type call-type)
+	   (type function-type type)
+	   (function *test-function* *error-function* *warning-function*)
+	   (values boolean boolean))
   (let* ((*lossage-detected* nil)
 	 (*slime-detected* nil)
 	 (required (function-type-required type))
@@ -483,10 +484,10 @@
 ;;;    Check that each of the types used at each arg position is compatible
 ;;; with the actual type.
 ;;;
-(proclaim '(function check-approximate-fixed-and-rest
-		     (approximate-function-type list (or ctype null))
-		     void))
 (defun check-approximate-fixed-and-rest (call-type fixed rest)
+  (declare (type approximate-function-type call-type)
+	   (list fixed)
+	   (type (or ctype null) rest))
   (do ((types (approximate-function-type-types call-type) (cdr types))
        (n 1 (1+ n))
        (arg fixed (cdr arg)))
@@ -501,10 +502,8 @@
 ;;;    Check that each of the call-types is compatible with Decl-Type,
 ;;; complaining if not or if we can't tell.
 ;;;
-(proclaim '(function check-approximate-arg-type
-		     (list ctype string &rest t)
-		     void))
 (defun check-approximate-arg-type (call-types decl-type context &rest args)
+  (declare (list call-types) (type ctype decl-type) (string context))
   (let ((losers *empty-type*))
     (dolist (ctype call-types)
       (multiple-value-bind (int win)

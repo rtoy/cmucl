@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.30 1994/10/31 04:27:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.31 2000/07/07 09:33:04 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -110,10 +110,9 @@
 ;;; specifiers are just passed through untouched.  If something is wrong, we
 ;;; use Compiler-Error, aborting compilation to the last recovery point.
 ;;;
-(proclaim '(function parse-lambda-list (list)
-		     (values list list boolean t boolean list boolean list
-			     boolean t t)))
 (defun parse-lambda-list (list)
+  (delcare (list list)
+	   (values list list boolean t boolean list boolean list boolean t t))
   (collect ((required)
 	    (optional)
 	    (keys)
@@ -229,7 +228,6 @@
 ;;;    structure. 
 ;;; -- Check for conflicting setf macros.
 ;;;
-(proclaim '(function define-function-name (t) void))
 (defun define-function-name (name)
   (check-function-name name)
   (ecase (info function kind name)
@@ -283,8 +281,8 @@
 ;;; optimize declaration Spec.  Any parameters not specified are defaulted from
 ;;; Cookie.
 ;;;
-(proclaim '(function process-optimize-declaration (list cookie) cookie))
 (defun process-optimize-declaration (spec cookie)
+  (declare (list spec) (type cookie cookie) (values cookie))
   (let ((res (copy-cookie cookie)))
     (dolist (quality (cdr spec))
       (let ((quality (if (atom quality) (list quality 3) quality)))

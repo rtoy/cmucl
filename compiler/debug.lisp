@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.29 1999/11/25 15:57:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.30 2000/07/07 09:33:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,8 +30,8 @@
 ;;;    A definite inconsistency has been detected.  Signal an error with
 ;;; *args* bound to the list of the format args.
 ;;;
-(proclaim '(function barf (string &rest t) void))
 (defun barf (string &rest *args*)
+  (declare (string string))
   (unless (gethash string *ignored-errors*)
     (restart-case
 	(apply #'error string *args*)
@@ -52,8 +52,8 @@
 ;;;    Called when something funny but possibly correct is noticed.  Otherwise
 ;;; similar to Barf.
 ;;;
-(proclaim '(function burp (string &rest t) void))
 (defun burp (string &rest *args*)
+  (declare (string string))
   (ecase *burp-action*
     (:warn (apply #'warn string *args*))
     (:error (apply #'cerror "press on anyway." string *args*))
@@ -76,8 +76,8 @@
 ;;;    Barf if Node is in a block which wasn't reached during the graph
 ;;; walk.
 ;;;
-(proclaim '(function check-node-reached (node) void))
 (defun check-node-reached (node)
+  (declare (type node node))
   (unless (gethash (continuation-block (node-prev node)) *seen-blocks*)
     (barf "~S was not reached." node)))
 
@@ -95,8 +95,8 @@
 ;;; control flow.  Finally, we scan the global leaf hashtables, looking for
 ;;; lossage.
 ;;;
-(proclaim '(function check-ir1-consistency (list) void))
 (defun check-ir1-consistency (components)
+  (declare (list components))
   (let ((*seen-blocks* (make-hash-table :test #'eq))
 	(*seen-functions* (make-hash-table :test #'eq)))
     (dolist (c components)
@@ -308,8 +308,8 @@
 ;;; that we see so that we can do a check later to detect blocks that weren't
 ;;; in any loop.
 ;;;
-(proclaim '(function check-loop-consistency (loop (or loop null)) void))
 (defun check-loop-consistency (loop superior)
+  (declare (type loop loop) (type (or loop null) superior))
   (unless (eq (loop-superior loop) superior)
     (barf "Wrong superior in ~S, should be ~S." loop superior))
   (when (and superior
@@ -340,8 +340,8 @@
 ;;;
 ;;;    Check that Block is either in Loop or an inferior.
 ;;;
-(proclaim '(function check-loop-block (block loop) void))
 (defun check-loop-block (block loop)
+  (declare (type block block) (type loop loop))
   (unless (gethash block *seen-blocks*)
     (barf "Unseen block ~S in loop info for ~S." block loop))
   (labels ((walk (l)
@@ -361,8 +361,8 @@
 ;;; Check-Node-Consistency on each node to locally check for semantic
 ;;; consistency.
 ;;;
-(proclaim '(function check-block-consistency (cblock) void))
 (defun check-block-consistency (block)
+  (declare (type cblock cblock))
 
   (dolist (pred (block-pred block))
     (unless (gethash pred *seen-blocks*)
@@ -455,8 +455,8 @@
 ;;;    Check that Block is properly terminated.  Each successor must be
 ;;; accounted for by the type of the last node.
 ;;;
-(proclaim '(function check-block-successors (cblock) void))
 (defun check-block-successors (block)
+  (declare (type cblock block))
   (let ((last (block-last block))
 	(succ (block-succ block)))
 
@@ -502,8 +502,8 @@
 ;;;    Check that the Dest for Cont is the specified Node.  We also mark the
 ;;; block Cont is in as Seen.
 ;;;
-(proclaim '(function check-dest (continuation node) void))
 (defun check-dest (cont node)
+  (declare (type continuation cont) (type node node))
   (let ((kind (continuation-kind cont)))
     (ecase kind
       (:deleted
@@ -1023,8 +1023,8 @@
 ;;;
 ;;;    Attempt to find a block given some thing that has to do with it.
 ;;;
-(proclaim '(function block-or-lose (t) cblock))
 (defun block-or-lose (thing)
+  (declare (values cblock))
   (ctypecase thing
     (cblock thing)
     (ir2-block (ir2-block-block thing))

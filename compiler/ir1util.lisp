@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.80 2000/06/18 15:45:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.81 2000/07/07 09:33:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -76,8 +76,8 @@
 ;;;
 ;;;    Return a list of all the nodes which use Cont.
 ;;;
-(proclaim '(function find-uses (continuation) list))
 (defun find-uses (cont)
+  (declare (type continuation cont) (values list))
   (ecase (continuation-kind cont)
     ((:block-start :deleted-block-start)
      (block-start-uses (continuation-block cont)))
@@ -85,7 +85,7 @@
     (:unused nil)
     (:deleted nil)))
 
-      
+
 ;;; Delete-Continuation-Use  --  Interface
 ;;;
 ;;;    Update continuation use information so that Node is no longer a use of
@@ -96,8 +96,8 @@
 ;;; REOPTIMIZE-CONTINUATION to inform IR1 optimization that something has
 ;;; changed.
 ;;;
-(proclaim '(function delete-continuation-use (node) void))
 (defun delete-continuation-use (node)
+  (declare (type node node))
   (let* ((cont (node-cont node))
 	 (block (continuation-block cont)))
     (ecase (continuation-kind cont)
@@ -124,8 +124,8 @@
 ;;; REOPTIMIZE-CONTINUATION to inform IR1 optimization that something has
 ;;; changed.
 ;;;
-(proclaim '(function add-continuation-use (node continuation) void))
 (defun add-continuation-use (node cont)
+  (declare (type node node) (type continuation cont))
   (assert (not (node-cont node)))
   (let ((block (continuation-block cont)))
     (ecase (continuation-kind cont)
@@ -539,9 +539,9 @@
 ;;;    Unlink a block from the next/prev chain.  We also null out the
 ;;; Component.
 ;;;
-(proclaim '(function remove-from-dfo (cblock) void))
 (declaim (inline remove-from-dfo))
 (defun remove-from-dfo (block)
+  (declare (type cblock block))
   (let ((next (block-next block))
 	(prev (block-prev block)))
     (setf (block-component block) nil)
@@ -572,8 +572,8 @@
 ;;;    Set the Flag for all the blocks in Component to NIL, except for the head
 ;;; and tail which are set to T.
 ;;;
-(proclaim '(function clear-flags (component) void))
 (defun clear-flags (component)
+  (declare (type component component))
   (let ((head (component-head component))
 	(tail (component-tail component)))
     (setf (block-flag head) t)
@@ -587,8 +587,8 @@
 ;;;    Make a component with no blocks in it.  The Block-Flag is initially true
 ;;; in the head and tail blocks.
 ;;;
-(proclaim '(function make-empty-component () component))
 (defun make-empty-component ()
+  (declare (values component))
   (let* ((head (make-block-key :start nil :component nil))
 	 (tail (make-block-key :start nil :component nil))
 	 (res (make-component :head head  :tail tail)))
@@ -1394,8 +1394,8 @@
 ;;;    If Functional is a Lambda, just return it; if it is an
 ;;; optional-dispatch, return the main-entry.
 ;;;
-(proclaim '(function main-entry (functional) clambda))
 (defun main-entry (functional)
+  (declare (type functional functional) (values clambda))
   (etypecase functional
     (clambda functional)
     (optional-dispatch
@@ -1408,8 +1408,8 @@
 ;;; null default and no supplied-p.  There must be a rest arg with no
 ;;; references.
 ;;;
-(proclaim '(function looks-like-an-mv-bind (functional) boolean))
 (defun looks-like-an-mv-bind (functional)
+  (declare (type functional functional) (values boolean))
   (and (optional-dispatch-p functional)
        (do ((arg (optional-dispatch-arglist functional) (cdr arg)))
 	   ((null arg) nil)
@@ -1916,8 +1916,8 @@
 ;;; needs to be reprinted, and we also Force-Output so that the message gets
 ;;; seen right away.
 ;;;
-(proclaim '(function compiler-mumble (string &rest t) void))
 (defun compiler-mumble (format-string &rest format-args)
+  (declare (string format-string))
   (note-message-repeats)
   (setq *last-error-context* nil)
   (apply #'format *compiler-error-output* format-string format-args)
@@ -1930,8 +1930,8 @@
 ;;; source path for the bind node for an arbitrary entry point to find the
 ;;; source context, then return that as a string.
 ;;;
-(proclaim  '(function find-component-name (component) simple-string))
 (defun find-component-name (component)
+  (declare (type component component) (values simple-string))
   (let ((ep (first (block-succ (component-head component)))))
     (assert ep () "No entry points?")
     (multiple-value-bind
@@ -1993,10 +1993,8 @@
 ;;; Compiler-Error-Message returns like Compiler-Warning, but signals a
 ;;; Compiler-Error.
 ;;;
-(proclaim '(ftype (function (string &rest t) void)
-		  compiler-error compiler-warning compiler-note))
-;;;
 (defun compiler-error (format-string &rest format-args)
+  (declare (string format-string))
   (cerror "replace form with call to ERROR."
 	  'compiler-error :format-control format-string
 	  :format-arguments format-args)
@@ -2008,9 +2006,11 @@
 	  :format-arguments format-args))
 ;;;
 (defun compiler-warning (format-string &rest format-args)
+  (declare (string format-string))
   (apply #'warn format-string format-args))
 ;;;
 (defun compiler-note (format-string &rest format-args)
+  (declare (string format-string))
   (unless (if *compiler-error-context*
 	      (policy *compiler-error-context* (= brevity 3))
 	      (policy nil (= brevity 3)))
@@ -2065,9 +2065,9 @@
 ;;; value to indicate this.  Node is used as the error context for any error
 ;;; message, and Context is a string that is spliced into the warning.
 ;;;
-(proclaim '(function careful-call ((or symbol function) list node string)
-		     (values list boolean)))
 (defun careful-call (function args node context)
+  (declare (type (or symbol function) function) (list args) (type node node)
+	   (string context) (values list boolean))
   (values
    (multiple-value-list
     (handler-case (apply function args)
@@ -2088,8 +2088,8 @@
 ;;; or NIL otherwise.  The legality and constantness of the keywords should
 ;;; already have been checked. 
 ;;;
-(proclaim '(function find-keyword-continuation (list keyword) (or continuation null)))
 (defun find-keyword-continuation (args key)
+  (declare (list args) (type keyword key))
   (do ((arg args (cddr arg)))
       ((null arg) nil)
     (when (eq (continuation-value (first arg)) key)
@@ -2102,8 +2102,8 @@
 ;;; alternating continuations in Args are constant and that there is an even
 ;;; number of args.
 ;;;
-(proclaim '(function check-keywords-constant (list) boolean))
 (defun check-keywords-constant (args)
+  (declare (list args) (values boolean))
   (do ((arg args (cddr arg)))
       ((null arg) t)
     (unless (and (rest arg)
@@ -2117,8 +2117,8 @@
 ;;; the list of continuations Args is a well-formed keyword arglist and that
 ;;; only keywords present in the list Keys are supplied.
 ;;;
-(proclaim '(function check-transform-keys (list list) boolean))
 (defun check-transform-keys (args keys)
+  (declare (list args keys) (values boolean))
   (and (check-keywords-constant args)
        (do ((arg args (cddr arg)))
 	   ((null arg) t)
@@ -2130,8 +2130,8 @@
 ;;;
 ;;;    Called by the expansion of the EVENT macro.
 ;;;
-(proclaim '(function %event (event-info (or node null))))
 (defun %event (info node)
+  (declare (type event-info info) (type (or node null) node))
   (incf (event-info-count info))
   (when (and (>= (event-info-level info) *event-note-threshold*)
 	     (if node
