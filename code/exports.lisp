@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.241 2005/02/06 19:24:21 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.242 2005/03/08 17:04:51 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1177,6 +1177,7 @@
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
+  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
 	     "FLOATING-POINT-INEXACT"
@@ -1337,6 +1338,8 @@
 	     "STREAM-START-LINE-P" "STREAM-TERPRI" "STREAM-UNREAD-CHAR"
 	     "STREAM-WRITE-BYTE" "STREAM-WRITE-CHAR" "STREAM-WRITE-STRING"
 	     "STREAM-READ-SEQUENCE" "STREAM-WRITE-SEQUENCE"
+             
+             "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"
 
 	     "&PARSE-BODY"
 
@@ -1689,7 +1692,8 @@
 	   "INT-SAP" "INVALIDATE-DESCRIPTOR" "IO-TIMEOUT"
 	   "LISP-STREAM" "LONG-FLOAT-RADIX" "LONG-WORDS"
 	   "MACRO" "MAKE-CT-A-VAL" "MAKE-FD-STREAM"
-	   "MAKE-INDENTING-STREAM" "MAKE-OBJECT-SET" "MAP-PORT" "MAP-XWINDOW"
+	   "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"
+           "MAKE-OBJECT-SET" "MAP-PORT" "MAP-XWINDOW"
 	   "NATURALIZE-BOOLEAN" "NATURALIZE-INTEGER" "NULL-TERMINATED-STRING"
 	   "OBJECT-SET-OPERATION" "OUTPUT-RAW-BYTES" "PARSE-BODY"
 	   "PERQ-STRING" "POINTER" "POINTER<" "POINTER>" "PORT" "PRIMEP"
