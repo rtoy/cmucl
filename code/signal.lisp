@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.31 2001/04/10 12:44:57 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/signal.lisp,v 1.32 2001/04/10 13:42:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -259,7 +259,8 @@
 (defmacro define-signal-handler (name what &optional (function 'error))
   `(defun ,name (signal code scp)
      (declare (ignore signal code)
-	      (type system-area-pointer scp))
+	      (type system-area-pointer scp)
+	      (optimize (inhibit-warnings 3)))
      (system:without-hemlock
       (,function ,(concatenate 'simple-string what " at #x~x.")
 		 (with-alien ((scp (* sigcontext) scp))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.29 2001/03/04 20:12:37 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.30 2001/04/10 13:42:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -191,6 +191,8 @@ struct in_addr {
 (defun lookup-host-entry (host)
   "Return a host-entry for the given host. The host may be an address
   string or an IP address in host order."
+  (declare (type (or host-entry string (unsigned-byte 32)) host)
+	   (optimize (inhibit-warnings 3)))
   (if (typep host 'host-entry)
       host
       (with-alien
