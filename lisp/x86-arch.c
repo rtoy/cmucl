@@ -1,6 +1,6 @@
 /* x86-arch.c -*- Mode: C; comment-column: 40 -*-
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.10 1998/02/19 18:58:20 dtc Exp $ 
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-arch.c,v 1.11 1999/11/11 16:14:16 dtc Exp $ 
  *
  */
 
@@ -200,6 +200,14 @@ sigtrap_handler(HANDLER_ARGS)
 
   /* this is just for info in case monitor wants to print an approx */
   current_control_stack_pointer = (unsigned long*)context->sc_sp;
+
+#if defined(__linux__) && defined(i386)
+  /*
+   * Restore the FPU control word, setting the rounding mode to nearest.
+   */
+
+  setfpucw(contextstruct.fpstate->cw & ~0xc00);
+#endif
 
  /* On entry %eip points just after the INT3 byte and aims at the
   * 'kind' value (eg trap_Cerror). For error-trap and Cerror-trap a

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.20 1999/09/16 15:26:01 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.21 1999/11/11 16:14:16 dtc Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -259,15 +259,19 @@ interrupt_handle_pending(struct sigcontext *context)
 void 
 interrupt_handle_now(HANDLER_ARGS)
 {
-#if ( defined( __linux__ ) && defined( i386 ) )
-  GET_CONTEXT
+#if defined(__linux__) && defined(i386)
+    GET_CONTEXT
 #endif
 
     int were_in_lisp;
     union interrupt_handler handler;
 
-#if ( defined( __linux__ ) && defined( i386 ) )
-    setfpucw(contextstruct.fpstate->cw);
+#if defined(__linux__) && defined(i386)
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
+
+    setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
     handler = interrupt_handlers[signal];
@@ -349,14 +353,18 @@ interrupt_handle_now(HANDLER_ARGS)
 static void 
 maybe_now_maybe_later(HANDLER_ARGS)
 {
-#if ( defined( __linux__ ) && defined( i386 ) )
-  GET_CONTEXT
+#if defined(__linux__) && defined(i386)
+    GET_CONTEXT
 #endif
 
     SAVE_CONTEXT(); /**/
 
-#if ( defined( __linux__ ) && defined( i386 ) )
-    setfpucw(contextstruct.fpstate->cw);
+#if defined(__linux__) && defined(i386)
+    /*
+     * Restore the FPU control word, setting the rounding mode to nearest.
+     */
+
+    setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
 
     if (SymbolValue(INTERRUPTS_ENABLED) == NIL) {
