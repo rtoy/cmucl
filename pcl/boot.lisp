@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.70 2003/10/29 12:14:35 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.71 2004/01/09 05:18:08 toy Exp $")
 
 (in-package :pcl)
 
@@ -611,8 +611,9 @@ work during bootstrapping.
 	       ;; such parameters because we can't easily tell what they are
 	       ;; actually bound to at each point where they are used.
 	       (assigned-params
-		(let ((assigned (assigned-method-params
-				 method-lambda required-params env)))
+		(let ((assigned #+nil
+			(assigned-method-params
+			 method-lambda required-params env)))
 		  (when assigned
 		    (warn 'kernel:simple-style-warning
 			  :format-control
