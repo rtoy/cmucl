@@ -168,9 +168,9 @@
 	    (array-element-type a) dimensions)))
 
 (defmethod inspector-pane-title ((l list))
-  (if (not (listp (cdr l)))
-      (format nil "Dotted Pair")
-      (format nil "List of length ~a" (length l))))
+  (if (listp (cdr l))
+      (format nil "List of length ~a" (length l))
+      (format nil "Dotted Pair")))
 
 
 
@@ -244,6 +244,7 @@
 		     form "label"
 		     :label-string (format nil "~s" object))))
 	 (manage-child label))))))
+
 
 
 (defmethod display-inspector-pane ((sym symbol))
@@ -399,77 +400,90 @@
     (error (e)
 	   (interface-error (format nil "~a" e) pane))))
 
+(defun display-cons-pane (p form)
+  (let* ((rc (create-row-column form "rowColumn"))
+	 (car-view (create-value-box rc "Car:" (car p)
+				     :callback #'inspect-object-callback))
+	 (cdr-view (create-value-box rc "Cdr:" (cdr p)
+				     :callback #'inspect-object-callback)))
+    (manage-children car-view cdr-view)
+    (manage-child rc)))
+
 (defmethod display-inspector-pane ((v sequence))
   (with-inspector-pane (v)
-    (let* ((length (length v))
-	   (controls (create-row-column form "sequenceStartHolder"
-					:left-attachment :attach-form
-					:right-attachment :attach-form
-					:orientation :horizontal))
-	   (slabel (create-label-gadget controls "sequenceStartLabel"
-					:font-list *header-font*
-					:label-string "Start:"))
-	   (start (create-text controls "sequenceStart"
-			       :value "0"
-			       :columns 4))
-	   (clabel (create-label-gadget controls "sequenceCountLabel"
-					:font-list *header-font*
-					:label-string "Count:"))
-	   (count (create-text controls "sequenceCount"
-			       :value "5"
-			       :columns 4))
-	   (filter (create-row-column form "sequenceFilterHolder"
-				      :top-attachment :attach-widget
-				      :top-widget controls
-				      :left-attachment :attach-form
-				      :right-attachment :attach-form
-				      :orientation :horizontal))
-	   (flabel (create-label-gadget filter "sequenceFilterLabel"
-					:font-list *header-font*
-					:label-string "Filter:"))
-	   (fexp (create-text filter "sequenceFilterExp" :value "T"))
-	   (apply (create-push-button-gadget filter "sequenceFilterApply"
-					     :label-string "Apply"))
-	   (unapply (create-push-button-gadget filter "sequenceFilterUnapply"
-					       :label-string "No Filter"))
-	   (view (create-scrolled-window form "sequenceViewPort"
-					 :scrolling-policy :automatic
-					 :top-attachment :attach-widget
-					 :top-widget filter
-					 :bottom-attachment :attach-form
-					 :left-attachment :attach-form
-					 :right-attachment :attach-form))
-	   (rc (create-row-column view "sequenceView"
-				  :spacing 0))
-	   (widgets))
-
-      (manage-children slabel start clabel count)
-      (manage-children flabel fexp apply unapply)
-
-      (dotimes (i (min length *inspector-sequence-initial-display*))
-	(let ((item (elt v i)))
-	  (push (create-value-box rc (format nil "~a:" i) item
-				  :callback #'inspect-object-callback)
-		widgets)))
-
-      (apply #'manage-children widgets)
-
-      (add-callback start :activate-callback 'sequence-redisplay-callback
-		    v start count rc pane)
-      (add-callback count :activate-callback 'sequence-redisplay-callback
-		    v start count rc pane)
-      (add-callback apply :activate-callback 'sequence-filter-callback
-		    v fexp rc pane)
-      (add-callback fexp :activate-callback 'sequence-filter-callback
-		    v fexp rc pane)
-      (add-callback unapply :activate-callback
-		    #'(lambda (widget call-data)
-			(declare (ignore widget call-data))
-			(sequence-redisplay-callback
-			 nil nil v start count rc pane)))
-
-      (manage-children view controls filter)
-      (manage-child rc))))
+    (if (and (listp v)
+	     (not (listp (cdr v))))
+	(display-cons-pane v form)
+	(let* ((length (length v))
+	       (controls (create-row-column form "sequenceStartHolder"
+					    :left-attachment :attach-form
+					    :right-attachment :attach-form
+					    :orientation :horizontal))
+	       (slabel (create-label-gadget controls "sequenceStartLabel"
+					    :font-list *header-font*
+					    :label-string "Start:"))
+	       (start (create-text controls "sequenceStart"
+				   :value "0"
+				   :columns 4))
+	       (clabel (create-label-gadget controls "sequenceCountLabel"
+					    :font-list *header-font*
+					    :label-string "Count:"))
+	       (count (create-text controls "sequenceCount"
+				   :value "5"
+				   :columns 4))
+	       (filter (create-row-column form "sequenceFilterHolder"
+					  :top-attachment :attach-widget
+					  :top-widget controls
+					  :left-attachment :attach-form
+					  :right-attachment :attach-form
+					  :orientation :horizontal))
+	       (flabel (create-label-gadget filter "sequenceFilterLabel"
+					    :font-list *header-font*
+					    :label-string "Filter:"))
+	       (fexp (create-text filter "sequenceFilterExp" :value "T"))
+	       (apply (create-push-button-gadget filter "sequenceFilterApply"
+						 :label-string "Apply"))
+	       (unapply (create-push-button-gadget filter
+						   "sequenceFilterUnapply"
+						   :label-string "No Filter"))
+	       (view (create-scrolled-window form "sequenceViewPort"
+					     :scrolling-policy :automatic
+					     :top-attachment :attach-widget
+					     :top-widget filter
+					     :bottom-attachment :attach-form
+					     :left-attachment :attach-form
+					     :right-attachment :attach-form))
+	       (rc (create-row-column view "sequenceView"
+				      :spacing 0))
+	       (widgets))
+	  
+	  (manage-children slabel start clabel count)
+	  (manage-children flabel fexp apply unapply)
+	  
+	  (dotimes (i (min length *inspector-sequence-initial-display*))
+	    (let ((item (elt v i)))
+	      (push (create-value-box rc (format nil "~a:" i) item
+				      :callback #'inspect-object-callback)
+		    widgets)))
+	  
+	  (apply #'manage-children widgets)
+	  
+	  (add-callback start :activate-callback 'sequence-redisplay-callback
+			v start count rc pane)
+	  (add-callback count :activate-callback 'sequence-redisplay-callback
+			v start count rc pane)
+	  (add-callback apply :activate-callback 'sequence-filter-callback
+			v fexp rc pane)
+	  (add-callback fexp :activate-callback 'sequence-filter-callback
+			v fexp rc pane)
+	  (add-callback unapply :activate-callback
+			#'(lambda (widget call-data)
+			    (declare (ignore widget call-data))
+			    (sequence-redisplay-callback
+			     nil nil v start count rc pane)))
+	  
+	  (manage-children view controls filter)
+	  (manage-child rc)))))
 
 (defun show-slot-list (object slot-list view allocp label)
   (let ((label (create-label-gadget view "slotLabel"
