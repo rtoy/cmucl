@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.1 1990/11/30 17:04:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.2 1990/12/01 16:33:49 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -223,7 +223,7 @@
 		     (tn (tn-ref-tn tn-ref)))
 		 (defaults (cons default-lab tn))
 		 
-		 (inst b :l default-lab)
+		 (inst b :lt default-lab)
 		 (inst subcc count (fixnum 1))
 		 (sc-case tn
 			  ((descriptor-reg any-reg)
