@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.35 2004/04/01 17:52:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.36 2004/05/05 16:37:22 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -212,7 +212,7 @@
 
 (defconstant array-info
   '((base-char #\NULL 8 vm:simple-string-type)
-    (single-float 0.0s0 32 vm:simple-array-single-float-type)
+    (single-float 0.0f0 32 vm:simple-array-single-float-type)
     (double-float 0.0d0 64 vm:simple-array-double-float-type)
     #+long-float (long-float 0.0l0 #+x86 96 #+sparc 128
 		  vm:simple-array-long-float-type)
@@ -226,7 +226,7 @@
     ((signed-byte 16) 0 16 vm:simple-array-signed-byte-16-type)
     ((signed-byte 30) 0 32 vm:simple-array-signed-byte-30-type)
     ((signed-byte 32) 0 32 vm:simple-array-signed-byte-32-type)
-    ((complex single-float) #C(0.0s0 0.0s0) 64
+    ((complex single-float) #C(0.0f0 0.0f0) 64
      vm:simple-array-complex-single-float-type)
     ((complex double-float) #C(0.0d0 0.0d0) 128
      vm:simple-array-complex-double-float-type)
