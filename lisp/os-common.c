@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.17 2005/02/06 19:43:15 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/os-common.c,v 1.18 2005/02/07 00:49:02 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -250,7 +250,7 @@ unsigned long os_link_one_symbol(long entry)
     type = fixnum_value(data_vector->data[table_index + 1]);
     target_addr = os_dlsym((char *)symbol_name->data,
 			   data_vector->data[table_index + 2]);
-#if 1
+#if 0
     fprintf(stderr, "Looked up %s symbol %s at %lx\n",
             type == 1 ? "code" : "data",
             (char*) symbol_name->data, (unsigned long) target_addr);
