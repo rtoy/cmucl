@@ -67,8 +67,26 @@
 		       `(cons ',key (emit-checking-or-caching-macro ,@key)))
 		   checking-or-caching-list)))
 
+#+nil
 (defun initialize-checking-or-caching-function-list ()
   (setq checking-or-caching-function-list
 	(make-checking-or-caching-function-list)))
 
+#+nil
 (initialize-checking-or-caching-function-list)
+
+;;; Rather than compiling the constructors here, just tickle the range
+;;; of shapes defined above, leaving the generation of the
+;;; constructors to precompile-dfun-constructors.
+;;;
+(dolist (key checking-or-caching-list)
+  (destructuring-bind (cached-emf-p return-value-p metatypes applyp) key
+    (multiple-value-bind (args generator)
+	(if cached-emf-p
+	    (if return-value-p
+		(values (list metatypes) 'emit-constant-value)
+		(values (list metatypes applyp) 'emit-caching))
+	    (if return-value-p
+		(values (list metatypes) 'emit-in-checking-p)
+		(values (list metatypes applyp) 'emit-checking)))
+      (apply #'get-dfun-constructor generator args))))
