@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hpux-startup.c,v 1.1 1993/08/02 16:08:51 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/hpux-startup.c,v 1.2 1994/01/28 17:48:42 wlott Exp $
  *
  * This file copies the lisp startup code, forks a process that will delete
  * the copy when the parent exits, and then exec's the copy of the lisp
@@ -26,7 +26,7 @@ static char *find_lisp_orig(void)
     struct stat statbuf;
 
     if (library == NULL)
-	library = "/usr/misc/.cmucl/lib";
+	library = "/usr/local/cmucl/lib";
 
     src = library;
     found = FALSE;
