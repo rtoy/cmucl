@@ -1595,11 +1595,12 @@
 ;;; Reference-Constant  --  Internal
 ;;;
 ;;;    Generate a reference to a manifest constant, creating a new leaf if
-;;; necessary.
+;;; necessary.  We disallow odd type constants, except in the interpreter.
 ;;;
 (defun reference-constant (start cont value)
   (declare (type continuation start cont))
-  (unless (typep value '(or list number array symbol character structure))
+  (unless (or *converting-for-interpreter*
+	      (typep value '(or list number array symbol character structure)))
     (compiler-error "~S constants not supported." (type-of value)))
   (let* ((leaf (find-constant value))
 	 (res (make-ref (leaf-type leaf) leaf nil)))
@@ -3060,6 +3061,7 @@
 	  (info (info function info name)))
       (setf (leaf-name fun) name)
       (cond ((and (in-null-environment t)
+		  (not (eq (info function inlinep name) :notinline))
 		  (or (not info)
 		      (and (null (function-info-transforms info))
 			   (null (function-info-templates info))
