@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.238 2004/11/11 15:48:02 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.239 2004/12/24 15:05:27 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1726,7 +1726,7 @@
 	   "LONG-FLOAT" "SAP-ALIEN" "SIGNED" "SINGLE-FLOAT" "SLOT" "STRUCT"
 	   "UNION" "UNSIGNED" "VALUES" "WITH-ALIEN" "FREE-ALIEN" "NULL-ALIEN"
 	   "MAKE-ALIEN" "LOAD-FOREIGN" "SYSTEM-AREA-POINTER"
-	   "DEF-CALLBACK" "CALLBACK"))
+	   "DEF-CALLBACK" "CALLBACK" "CALLBACK-FUNCALL"))
 
 (dolist
     (name

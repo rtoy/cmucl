@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.61 2004/10/24 16:58:52 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.62 2004/12/24 15:05:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,8 @@
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
 	  alien-funcall def-alien-routine make-alien free-alien
 	  null-alien
-	  def-callback callback))
+	  def-callback callback
+	  callback-funcall))
 
 (in-package "ALIEN-INTERNALS")
 (in-package "ALIEN")

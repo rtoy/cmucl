@@ -774,6 +774,12 @@ macro:
   \code{def-callback} macro.
 \end{defmac}
 
+\begin{defmac}{alien:}{callback-funcall}{\var{callback-name} \amprest
+    \var{args}}
+  This macro does the necessary stuff to call the callback named
+  \var{callback-name} with the given arguments.
+\end{defmac}
+
 \subsection{Callback Example}
 
 Here is a simple example of using callbacks.
