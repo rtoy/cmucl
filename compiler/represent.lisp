@@ -89,7 +89,7 @@
   (declare (type sc-vector restr))
   (collect ((res))
     (dotimes (i sc-number-limit)
-      (when (eql (svref restr i) i)
+      (when (eq (svref restr i) t)
 	(res (svref *sc-numbers* i))))
     (res)))
 
@@ -137,6 +137,32 @@
           ~S (SC ~S.)"
 	 val (sc-name (tn-sc val))
 	 pass (sc-name (tn-sc pass))))
+
+#|
+;;; ILLEGAL-REPRESENTATION-ERROR  --  Internal
+;;;
+;;;    Called when we find that doing an implicit coercion for an operand
+;;; results in a representation not allowed by the primitive type.
+;;;
+(defun illegal-representation-error (ref sc)
+  (declare (type tn-ref ref))
+  (let* ((tn (tn-ref-tn ref))
+	 (ptype (tn-primitive-type tn)))
+    (multiple-value-bind (arg-p pos more-p costs load-scs incon)
+			 (get-operand-info ref)
+      (declare (ignore more-p costs load-scs))
+      (error "~S is not valid as the ~:R ~:[result~;argument~] to the~@
+              ~S VOP, since the TN's primitive type ~S disallows coercion to~@
+	      SC ~S.  Either the SC restriction is too restrictive, or the ~
+	      operand~@
+	      primitive type restriction is not restrictive enough. ~:[~;~@
+	      Current cost info inconsistent with that in effect at compile ~
+	      time.  Recompile.~%Compilation order may be incorrect.~]"
+	     tn pos arg-p
+	     (template-name (vop-info (tn-ref-vop ref)))
+	     (primitive-type-name ptype)
+	     (sc-name sc) incon))))
+|#
 
 
 ;;;; VM Consistency Checking:
@@ -260,10 +286,10 @@
 ;;; VOP will accept.  We pick any acceptable coerce VOP, since it practice it
 ;;; seems uninteresting to have more than one applicable.
 ;;;
-;;;    What we do is look at each SC allowed by the operand restriction, and
-;;; see if there is a move VOP which moves between the operand's SC and load
-;;; SC.  If we find such a VOP, then we make a TN having the load SC as the
-;;; representation.
+;;;    What we do is look at each SC allowed by both the operand restriction
+;;; and the operand primitive-type, and see if there is a move VOP which moves
+;;; between the operand's SC and load SC.  If we find such a VOP, then we make
+;;; a TN having the load SC as the representation.
 ;;;
 ;;;    If the TN is an unused result TN, then we don't actually emit the move;
 ;;; we just change to the right kind of TN.
@@ -273,26 +299,28 @@
   (let* ((op-tn (tn-ref-tn op))
 	 (op-sc (tn-sc op-tn))
 	 (op-scn (sc-number op-sc))
+	 (ptype (tn-primitive-type op-tn))
 	 (write-p (tn-ref-write-p op))
 	 (vop (tn-ref-vop op))
 	 (node (vop-node vop))
 	 (block (vop-block vop)))
     (dotimes (i sc-number-limit (bad-costs-error op))
-      (when (eql (svref scs i) i)
-	(let ((res (if write-p
-		       (svref (sc-move-vops op-sc) i)
-		       (svref (sc-move-vops (svref *sc-numbers* i))
-			      op-scn))))
-	  (when res
-	    (let ((temp (make-representation-tn i)))
-	      (change-tn-ref-tn op temp)
-	      (cond
-	       ((not write-p)
-		(emit-move-template node block res op-tn temp before))
-	       ((null (tn-reads op-tn)))
-	       (t
-		(emit-move-template node block res temp op-tn before))))
-	    (return)))))))
+      (let ((i-sc (svref *sc-numbers* i)))
+	(when (and (eq (svref scs i) t)
+		   (sc-allowed-by-primitive-type i-sc ptype))
+	  (let ((res (if write-p
+			 (svref (sc-move-vops op-sc) i)
+			 (svref (sc-move-vops i-sc) op-scn))))
+	    (when res
+	      (let ((temp (make-representation-tn ptype i)))
+		(change-tn-ref-tn op temp)
+		(cond
+		 ((not write-p)
+		  (emit-move-template node block res op-tn temp before))
+		 ((null (tn-reads op-tn)))
+		 (t
+		  (emit-move-template node block res temp op-tn before))))
+	      (return))))))))
 
 
 ;;; COERCE-SOME-OPERANDS  --  Internal
@@ -366,6 +394,7 @@
 		       (assert (eq how :known-return))
 		       (setq nfp-tn
 			     (make-representation-tn
+			      *any-primitive-type*
 			      (first (primitive-type-scs
 				      *any-primitive-type*))))
 		       (emit-context-template
@@ -449,6 +478,7 @@
     (do ((tn (ir2-component-normal-tns 2comp)
 	     (tn-next tn)))
 	((null tn))
+      (assert (tn-primitive-type tn))
       (unless (tn-sc tn)
 	(let* ((scs (primitive-type-scs (tn-primitive-type tn)))
 	       (sc (if (rest scs)
