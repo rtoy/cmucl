@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.80 1992/05/18 19:18:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.81 1992/05/18 23:03:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -372,7 +372,7 @@
              "INSTRUCTION-ARGUMENT-TWO" "INSTRUCTION-ARGUMENT-ZERO"
              "INSTRUCTION-CONSTANT-ONE" "INSTRUCTION-CONSTANT-TWO"
              "INSTRUCTION-CONSTANT-ZERO" "INSTRUCTION-RESULT-ZERO" "LABEL"
-             "LABEL-POSITION" "MAKE-FIXUP" "MAKE-SEGMENT" "NOP"
+             "LABEL-POSITION" "MAKE-SEGMENT" "NOP"
              "NUKE-SEGMENT" "OPTIMIZE-SEGMENT" "RELATIVE-BRANCH"
              "SEGMENT-CHECK-REGISTERS" "UNCONDITIONAL-BRANCH"))
 (dolist (name '("CHAR" "FLOAT")) (intern name "LISP"))
@@ -1292,7 +1292,7 @@
              "VERIFY-ARGUMENT-COUNT" "WRITE-PACKED-BIT-VECTOR"
              "WRITE-VAR-INTEGER" "WRITE-VAR-STRING" "XEP-ALLOCATE-FRAME"
 	     "LABEL-ID" "FIXUP" "FIXUP-FLAVOR" "FIXUP-NAME" "FIXUP-OFFSET"
-	     "FIXUP-P"))
+	     "FIXUP-P" "MAKE-FIXUP"))
 (defpackage "DIRED"
             (:export "*CLOBBER-DEFAULT*" "*ERROR-FUNCTION*"
              "*RECURSIVE-DEFAULT*" "*REPORT-FUNCTION*" "*UPDATE-DEFAULT*"
