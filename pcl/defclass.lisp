@@ -45,16 +45,48 @@
 (defun make-top-level-form (name times form)
   (flet ((definition-name ()
 	   (if (and (listp name)
-		    (memq (car name) '(class method method-combination)))
+		    (memq (car name) '(defmethod defclass class method method-combination)))
 	       (format nil "~A~{ ~S~}"
 		       (capitalize-words (car name) ()) (cdr name))
 	       (format nil "~S" name))))
     (definition-name)
     #+Genera
-    (let ((thunk-name (make-symbol "TOP-LEVEL-FORM")))
-      `(eval-when ,times
-	 (defun ,thunk-name () (declare (sys:function-parent ,@name)) ,form)
-	 (,thunk-name)))
+    (progn
+      #-Genera-Release-8
+      (let ((thunk-name (gensym "TOP-LEVEL-FORM")))
+	`(eval-when ,times
+	   (defun ,thunk-name ()
+	     (declare (sys:function-parent
+			,(cond ((listp name)
+				(case (first name)
+				  (defmethod `(method ,@(rest name)))
+				  (otherwise (second name))))
+			       (t name))
+			,(cond ((listp name)
+				(case (first name)
+				  ((defmethod defgeneric) 'defun)
+				  ((defclass) 'defclass)
+				  (otherwise (first name))))
+			       (t 'defun))))
+	     ,form)
+	   (,thunk-name)))
+      #+Genera-Release-8
+      `(compiler-let ((compiler:default-warning-function ',name))
+	 (eval-when ,times
+	   (funcall #'(lambda ()
+			(declare ,(cond ((listp name)
+					 (case (first name)
+					   ((defclass)
+					    `(sys:function-parent ,(second name) defclass))
+					   ((defmethod)
+					    `(sys:function-name (method ,@(rest name))))
+					   ((defgeneric)
+					    `(sys:function-name ,(second name)))
+					   (otherwise
+					     `(sys:function-name ,name))))
+					(t
+					 `(sys:function-name ,name))))
+			,form)))))
     #+LCL3.0
     `(compiler-let ((lucid::*compiler-message-string*
 		      (or lucid::*compiler-message-string*
@@ -255,3 +287,4 @@
     (setq *early-class-definitions*
 	  (cons ecd (remove existing *early-class-definitions*)))
     ecd))
+

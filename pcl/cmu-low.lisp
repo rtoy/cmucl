@@ -57,3 +57,5 @@
   `(logand (the fixnum (system:%primitive lisp::make-immediate-type
 					  ,symbol
 					  system::%+-fixnum-type))
+	   (the fixnum ,mask)))
+

@@ -89,23 +89,59 @@
 
 (defvar *pvs* (make-hash-table :test #'equal))
 
-(defun lookup-pv (isl &rest args)
+(defvar *original-methods-table* (make-hash-table :test #'eq))
+
+(defun optimize-method-call-p (gfun-name types original-method-spec)
+  (let ((gfun (gdefinition gfun-name)))
+    (multiple-value-bind (applicable-methods possibly-applicable-methods)
+	(compute-applicable-methods-using-types gfun types)
+      (and applicable-methods (null (cdr applicable-methods))
+	   (null possibly-applicable-methods)
+	   (eq (car applicable-methods)
+	       (or (gethash gfun *original-methods-table*)
+		   (setf (gethash gfun *original-methods-table*)
+			 (get-method gfun nil
+				     (mapcar #'find-class original-method-spec)))))))))
+
+(defun optimize-slot-value-by-class-p (class slot-name operation)
+  (or (not (eq *boot-state* 'complete))
+      (let ((slot-definition (find-slot-definition class slot-name)))
+	(multiple-value-bind (gfun-name setf-p)
+	    (case operation
+	      (slot-value     (values 'slot-value-using-class nil))
+	      (set-slot-value (values '(setf slot-value-using-class) t))
+	      (slot-boundp    (values 'slot-boundp-using-class nil)))
+	  (flet ((add-value-type (list) 
+		   (if setf-p (cons 't list) list)))
+	    (optimize-method-call-p
+	     gfun-name
+	     (add-value-type `((eql ,class) (class-eq ,class) (eql ,slot-definition)))
+	     (add-value-type '(std-class 
+			       standard-object
+			       standard-effective-slot-definition))))))))
+
+(defun lookup-pv (isl args)
   (let* ((class-slot-p nil)
 	 (elements
-	   (gathering1 (collecting)
-	     (iterate ((slot-names (list-elements (%isl-slot-name-lists isl)))
-		       (arg (list-elements args)))
-	       (when slot-names
-		 (let* ((wrapper     (check-wrapper-validity arg))
-			(class-slots (wrapper-class-slots wrapper)))
-		   (dolist (slot-name slot-names)
-		     (let ((index (instance-slot-index wrapper slot-name)))
-		       (if index
-			   (gather1 index)
-			   (let ((cell (assq slot-name class-slots)))
-			     (if cell
-				 (progn (setq class-slot-p t) (gather1 cell))
-				 (gather1 nil))))))))))))
+	  (gathering1 (collecting)
+	    (iterate ((slot-names (list-elements (%isl-slot-name-lists isl)))
+		      (arg (list-elements args)))
+	      (when slot-names
+		(let* ((wrapper     (check-wrapper-validity arg))
+		       (class       (wrapper-class wrapper))
+		       (class-slots (wrapper-class-slots wrapper)))
+		  (dolist (slot-name slot-names)
+		    (if (dolist (op '(slot-value set-slot-value slot-boundp) t)
+			  (unless (optimize-slot-value-by-class-p class slot-name op)
+			    (return nil)))
+			(let ((index (instance-slot-index wrapper slot-name)))
+			  (if index
+			      (gather1 index)
+			      (let ((cell (assq slot-name class-slots)))
+				(if cell
+				    (progn (setq class-slot-p t) (gather1 cell))
+				    (gather1 nil)))))
+			(gather1 nil)))))))))
     (if class-slot-p				;Sure is a shame Common Lisp doesn't
 	(make-permutation-vector elements)	;give me the right kind of hash table.
 	(or (gethash elements *pvs*)
@@ -131,12 +167,17 @@
 (defun optimize-slot-value (slots parameter form)
   (destructuring-bind (ignore ignore slot-name)
 		      form
-    (optimize-instance-access slots :read parameter (reduce-constant slot-name) nil)))
+    (optimize-instance-access slots :read parameter (eval slot-name) nil)))
 
 (defun optimize-set-slot-value (slots parameter form)
   (destructuring-bind (ignore ignore slot-name new-value)
 		      form
-    (optimize-instance-access slots :write  parameter (reduce-constant slot-name) new-value)))
+    (optimize-instance-access slots :write parameter (eval slot-name) new-value)))
+
+(defun optimize-slot-boundp (slots parameter form)
+  (destructuring-bind (ignore ignore slot-name new-value)
+		      form
+    (optimize-instance-access slots :boundp parameter (eval slot-name) new-value)))
 
 ;;;
 ;;; The <slots> argument is an alist, the CAR of each entry is the name of
@@ -146,7 +187,7 @@
 ;;; 
 (defun optimize-instance-access (slots read/write parameter slot-name new-value)
   (let* ((parameter-entry (assq parameter slots))
-	 (slot-entry      (assq slot-name  (cdr parameter-entry)))
+	 (slot-entry      (assq slot-name (cdr parameter-entry)))
 	 (position (position parameter-entry slots)))
     (unless parameter-entry
       (error "Internal error in slot optimization."))
@@ -155,19 +196,27 @@
       (push slot-entry (cdr parameter-entry)))
     (ecase read/write
       (:read
-	(let ((form (list 'instance-read  ''.PV-OFFSET. parameter position)))
+	(let ((form (list 'instance-read ''.PV-OFFSET. parameter position 
+			  `',slot-name)))
 	  (push form (cdr slot-entry))
 	  form))
       (:write
-	(let ((form (list 'instance-write ''.PV-OFFSET. parameter position '.new-value.)))
+	(let ((form (list 'instance-write ''.PV-OFFSET. parameter position 
+			  `',slot-name '.new-value.)))
 	  (push form (cdr slot-entry))
-	  `(let ((.new-value. ,new-value)) ,form))))))
+	  `(let ((.new-value. ,new-value)) ,form)))
+      (:boundp
+	(let ((form (list 'instance-boundp ''.PV-OFFSET. parameter position 
+			  `',slot-name)))
+	  (push form (cdr slot-entry))
+	  form)))))
 
 (define-walker-template instance-read)
 (define-walker-template instance-write)
+(define-walker-template instance-boundp)
 
 
-(defmacro instance-read (pv-offset parameter position)
+(defmacro instance-read (pv-offset parameter position slot-name)
   `(locally
      (declare (optimize (speed 3) (safety 0) (compilation-speed 0)))
      (let ((.INDEX. (pvref .PV. ,pv-offset)))
@@ -175,39 +224,30 @@
 		(neq (setq .INDEX. (%svref ,(slot-vector-symbol position) .INDEX.))
 		     ',*slot-unbound*))
 	   .INDEX.
-	   (pv-access-trap ,parameter .PV. ,pv-offset .ISL.)))))
+	   (if (consp .INDEX.)
+	       (cdr .INDEX.)
+	       (funcall #'slot-value ,parameter ,slot-name))))))
 
-(defmacro instance-write (pv-offset parameter position new-value)
+(defmacro instance-write (pv-offset parameter position slot-name new-value)
   `(locally
      (declare (optimize (speed 3) (safety 0) (compilation-speed 0)))
      (let ((.INDEX. (pvref .PV. ,pv-offset)))
        (if (typep .INDEX. 'fixnum)
 	   (setf (%svref ,(slot-vector-symbol position) .INDEX.) ,new-value)
-	   (pv-access-trap ,parameter .PV. ,pv-offset .ISL. ,new-value)))))
+	   (if (consp .INDEX.)
+	       (setf (cdr .INDEX.) ,new-value)
+	       (funcall #'set-slot-value ,parameter ,slot-name ,new-value))))))
 
-(defun pv-access-trap (instance pv offset isl &optional (new-value nil nvp))
-  ;;
-  ;; First thing we do is a quick check to see if this is a class variable.
-  ;; This could be done inline by moving it to INSTANCE-READ/WRITE.  I did
-  ;; not do that because I don't know whether its worth it.
-  ;;
-  (let ((cell (pvref pv offset)))
-    (if (consp cell)
-	(if nvp (setf (cdr cell) new-value) (cdr cell))
-	;;
-	;; Well, now do a slow trap.
-	;; 
-	(let* ((i 0)
-	       (slot-name
-		 (block lookup-slot-name
-		   (dolist (slot-name-list (%isl-slot-name-lists isl))
-		     (dolist (name slot-name-list)
-		       (if (= i offset)
-			   (return-from lookup-slot-name name)
-			   (incf i)))))))    
-	  (if nvp
-	      (setf (slot-value-using-class (class-of instance) instance slot-name) new-value)
-	      (slot-value-using-class (class-of instance) instance slot-name))))))
+(defmacro instance-boundp (pv-offset parameter position slot-name)
+  `(locally
+     (declare (optimize (speed 3) (safety 0) (compilation-speed 0)))
+     (let ((.INDEX. (pvref .PV. ,pv-offset)))
+       (if (typep .INDEX. 'fixnum)
+	   (neq (setq .INDEX. (%svref ,(slot-vector-symbol position) .INDEX.))
+		',*slot-unbound*)
+	   (if (consp .INDEX.)
+	       (neq (cdr .INDEX.) ',*slot-unbound*)
+	       (funcall #'slot-boundp ,parameter ,slot-name))))))
 
 ;;;
 ;;; This magic function has quite a job to do indeed.
@@ -280,22 +320,33 @@
 	    ,(generating-lap-in-lisp '(cache size mask field)
 				     required-parameters
 	       (flatten-lap
-		 (emit-dlap required-parameters
-			    metatypes
-			    'pv-miss
-			    (opcode :exit-lap-in-lisp)
-			    (flatten-lap
-			      (opcode :label 'pv-miss)
-			      (opcode :move
-				      (operand :lisp `(primary-pv-cache-miss
-							.ISL. ,@required-parameters))
-				      (operand :lisp-variable '.PV.))
-			      (opcode :exit-lap-in-lisp))
-			    (operand :lisp-variable '.PV.)
-			    (mapcar #'(lambda (sv) (and sv (operand :lisp-variable sv)))
-				    slot-variables)))))
-	
+		 (emit-pv-dlap required-parameters metatypes slot-variables))))
+
 	  ,@method-body)))))
+
+(defun emit-pv-dlap (required-parameters metatypes slot-variables)
+  (let* ((slot-regs (mapcar #'(lambda (sv) (and sv (operand :lisp-variable sv)))
+			    slot-variables))
+	 (wrappers (dlap-wrappers metatypes))
+	 (nwrappers (remove nil wrappers)))
+    (flet ((wrapper-moves (miss-label)
+	     (dlap-wrapper-moves wrappers required-parameters metatypes miss-label slot-regs)))
+      (prog1 (emit-dlap-internal
+	       nwrappers                   ;wrapper-regs
+	       (wrapper-moves 'pv-miss)    ;wrapper-moves
+	       (opcode :exit-lap-in-lisp)  ;hit
+	       (flatten-lap		   ;miss
+		 (opcode :label 'pv-miss)
+		 (opcode :move
+			 (operand :lisp `(primary-pv-cache-miss
+					  .ISL. ,@required-parameters))
+			 (operand :lisp-variable '.PV.))
+		 (apply #'flatten-lap (wrapper-moves 'pv-wrapper-miss)) ; -- Maybe the wrappers have changed.
+		 (opcode :label 'pv-wrapper-miss)
+		 (opcode :exit-lap-in-lisp))                               
+	       'pv-miss			    ;miss-label
+	       (operand :lisp-variable '.PV.)) ;value-reg
+	   (mapc #'deallocate-register nwrappers)))))
 
 (defun compute-primary-pv-cache-size (slot-name-lists)
   (compute-cache-parameters (- (length slot-name-lists) (count nil slot-name-lists))
@@ -311,7 +362,7 @@
 	     (iterate ((slot-names (list-elements (%isl-slot-name-lists isl)))
 		       (arg        (list-elements args)))
 	       (when slot-names (gather1 (check-wrapper-validity arg))))))
-	 (pv (apply #'lookup-pv isl args))
+	 (pv (lookup-pv isl args))
 	 (field (%isl-field isl))
 	 (cache (%isl-cache isl))
 	 (nkeys (length wrappers)))
@@ -341,3 +392,5 @@
   'std-instance-slots)
 
 (defmethod raw-instance-allocator ((class standard-class))
+  '%%allocate-instance--class)
+

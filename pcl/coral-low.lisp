@@ -59,3 +59,5 @@
 	    (if (and arglist (listp arglist))
 		(format nil "~{~A~^ ~}" arglist)
 		(format nil "~:A" arglist)))))
+  dfun)
+

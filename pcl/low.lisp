@@ -288,3 +288,5 @@
   (declare (ignore type spec args))
   ())
 
+(defun doctor-dfun-for-the-debugger (gf dfun) (declare (ignore gf)) dfun)
+

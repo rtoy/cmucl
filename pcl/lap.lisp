@@ -478,3 +478,5 @@
 		 (eq (funcall closure 'foo) (svref array 0)))
       (error "LAP TEST 5 failed."))))
 
+|#
+

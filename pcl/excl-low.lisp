@@ -142,3 +142,4 @@
 
 (defun (:property pcl::std-instance :inspector-type-function) (x)
   (class-name (class-of x)))
+

@@ -28,3 +28,5 @@
 (in-package 'pcl)
 
 (precompile-dfun-constructors pcl)		;this is half of a call to
+						;precompile-random-code-segments
+

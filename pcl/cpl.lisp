@@ -308,3 +308,5 @@
 	(unless (zerop (cpd-count cpd))
 	  (chase (list cpd))))
 
+      cycle-reasons)))
+

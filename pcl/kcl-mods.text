@@ -218,3 +218,5 @@ Insert the lines:
         ADD_FEATURE("TURBO-CLOSURE");
         ADD_FEATURE("TURBO-CLOSURE-ENV-SIZE");
 After the line:
+        ADD_FEATURE("AKCL");
+

@@ -29,45 +29,6 @@
 
 (in-package 'pcl)
 
-#+Genera
-(progn
-
-(defvar *old-arglist*)
-
-(defun pcl-arglist (function &rest other-args)
-  (let ((defn nil))
-    (cond ((and (fsc-instance-p function)
-		(generic-function-p function))
-	   (generic-function-pretty-arglist function))
-	  ((and (sys:validate-function-spec function)
-		(sys:fdefinedp function)
-		(setq defn (sys:fdefinition function))
-		(fsc-instance-p defn)
-		(generic-function-p defn))
-	   (generic-function-pretty-arglist defn))
-	  (t (apply *old-arglist* function other-args)))))
-
-(eval-when (eval load)
-  (unless (boundp '*old-arglist*)
-    (setq *old-arglist* (symbol-function 'zl:arglist))
-    (setf (symbol-function 'zl:arglist) #'pcl-arglist)))
-
-
-(defvar *old-function-name*)
-
-(defun pcl-function-name (function &rest other-args)
-  (if (and (fsc-instance-p function)
-	   (generic-function-p function))
-      (generic-function-name function)
-      (apply *old-function-name* function other-args)))
-
-(eval-when (eval load)
-  (unless (boundp '*old-function-name*)
-    (setq *old-function-name* (symbol-function 'si:function-name))
-    (setf (symbol-function 'si:function-name) #'pcl-function-name)))
-
-)
-
 #+Lucid
 (progn
 
@@ -100,6 +61,8 @@
 
 (defgeneric describe-object (object stream))
 
+#-Genera (progn
+
 (defvar *old-describe* ())
 
 (eval-when (load)
@@ -119,6 +82,7 @@
 (defmethod describe-object (object stream)
   (let ((*standard-output* stream))
     (funcall *old-describe* object)))
+)
 
 (defmethod describe-object ((object standard-object) stream)
   (let* ((class (class-of object))
@@ -298,4 +262,5 @@
     (when (and gf method)
       (remove-method gf method)
       method)))
+
 

@@ -77,3 +77,4 @@
   (cond ((system::slisp-compiled-function-p fn)
 	 (system::%sp-b-store fn 3 name)))
   fn)
+

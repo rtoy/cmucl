@@ -25,11 +25,53 @@
 ;;; *************************************************************************
 ;;;
 
+
+(in-package "COMPILER")
+
+#+akcl
+(progn
+
+;(proclaim '(optimize (safety 0) (speed 3) (space 1)))
+
+(setq compiler::*compile-ordinaries* t)
+
+(defun print-current-form ()
+  (when *first-error*
+    (setq *first-error* nil)
+    (fresh-line)
+    (let ((*current-form* (if (and (consp *current-form*)
+				   (eq (first *current-form*) 'defun)
+				   (symbolp (second *current-form*))
+				   (null (symbol-package (second *current-form*)))
+				   (let ((prefix "progn 'compile"))
+				     (string= prefix
+					      (symbol-name (second *current-form*))
+					      :end2 (length prefix))))
+			      (fourth *current-form*)
+			      *current-form*)))
+    (cond
+      ((and (consp *current-form*)
+	    (eq (car *current-form*) 'si:|#,|))
+       (format t "; #,~s is being compiled.~%" (cdr *current-form*)))
+      ((and (consp *current-form*)
+	    (symbolp (first *current-form*))
+	    (string= "LOAD-DEFMETHOD" (first *current-form*))
+	    (string= "PCL" (package-name (symbol-package (first *current-form*)))))
+       (format t "; ~s is being compiled.~%"
+	       `(,(intern "DEFMETHOD" "PCL")
+		 ,(eval (third *current-form*))
+		 ,@(eval (fourth *current-form*))
+		 ,(eval (fifth *current-form*)))))
+      (t
+       (let ((*print-length* 2)
+	     (*print-level* 2))
+	 (format t "; ~s is being compiled.~%" *current-form*))))))
+  nil)
+)
+
+#-(or akcl xkcl)
+(progn
 (in-package 'system)
-
-()
-
-#|
 
 ;;;   This makes DEFMACRO take &WHOLE and &ENVIRONMENT args anywhere
 ;;;   in the lambda-list.  The former allows deviation from the CL spec,
@@ -128,4 +170,6 @@
 	 (get-setf-method-multiple-value (macroexpand-1 form)))
 	(t
 	 (error "Cannot expand the SETF form ~S." form))))
+
+)
 

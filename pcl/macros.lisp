@@ -383,6 +383,7 @@
 (defun find-wrapper (symbol)
   (class-wrapper (find-class symbol)))
 
+#|| ; Anything that used this should use eval instead.
 (defun reduce-constant (old)
   (let ((new (eval old)))
     (if (eq new old)
@@ -390,6 +391,7 @@
 	(if (constantp new)
 	    (reduce-constant new)
 	    new))))
+||#
 
 (defmacro gathering1 (gatherer &body body)
   `(gathering ((.gathering1. ,gatherer))
@@ -432,3 +434,4 @@
 		     (funcall finish)
 		     tail)
 	         (setq tail (funcall ,by tail))))))
+

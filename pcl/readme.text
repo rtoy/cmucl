@@ -7,3 +7,5 @@ Also whenever there is a new release, you should read the notes.text
 file carefully.
 
 To install PCL at your site, follow the instructions in the defsys.lisp
+file.
+

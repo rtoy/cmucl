@@ -107,7 +107,8 @@
 			  ,(lap-reg-initial-value-form reg)))
 		    (append i-regs v-regs t-regs))
 	   (declare (type fixnum ,@(mapcar #'lap-reg *lap-i-regs*))
-		    (type simple-vector ,@(mapcar #'lap-reg *lap-v-regs*)))
+		    (type simple-vector ,@(mapcar #'lap-reg *lap-v-regs*))
+	            (optimize . ,*lap-optimize-declaration*))
 	   ,.code)))
 
 (defconstant *empty-vector* '#())
@@ -299,4 +300,5 @@
     (dotimes (i cache-size-in-bits) (setq mask (dpb 1 (byte 1 i) mask)))
     (dotimes (i line-size-in-bits)  (setq mask (dpb 0 (byte 1 i) mask)))
     mask))
+
 

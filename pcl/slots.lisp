@@ -105,21 +105,66 @@
     (set-class-slot-value-1 nv prototype wrapper slot-name)))
 
 
+(defun find-slot-definition (class slot-name)
+  (cond ((and (eq class *the-class-standard-class*)
+	      (eq slot-name 'slots))
+	 *the-eslotd-standard-class-slots*)
+	((and (eq class *the-class-funcallable-standard-class*)
+	      (eq slot-name 'slots))
+	 *the-eslotd-funcallable-standard-class-slots*)
+	(t
+	 (unless (class-finalized-p class) (finalize-inheritance class))
+	 (dolist (eslotd (class-slots class))
+	   (when (eq (slotd-name eslotd) slot-name) (return eslotd))))))
 
 (defun slot-value (object slot-name)
-  (slot-value-using-class (class-of object) object slot-name))
+  (let ((class (class-of object)))
+    (if (eq class *the-class-standard-effective-slot-definition*)
+	(let* ((wrapper (check-wrapper-validity object))
+	       (slots   (get-slots object))
+	       (index   (instance-slot-index wrapper slot-name)))
+	  (if index
+	      (get-slot-value-2 object wrapper slot-name slots index)
+	      (get-class-slot-value-1 object wrapper slot-name)))
+	(let ((slot-definition (find-slot-definition class slot-name)))
+	  (if (null slot-definition)
+	      (slot-missing class object slot-name 'slot-value)
+	      (slot-value-using-class class object slot-definition))))))
 
 (defun set-slot-value (object slot-name new-value)
-  (setf (slot-value-using-class (class-of object) object slot-name) new-value))
+  (let ((class (class-of object)))
+    (if (eq class *the-class-standard-effective-slot-definition*)
+	(let* ((wrapper (check-wrapper-validity object))
+	       (slots   (get-slots object))
+	       (index   (instance-slot-index wrapper slot-name)))
+	  (if index
+	      (set-slot-value-2 new-value object wrapper slot-name slots index)
+	      (set-class-slot-value-1 new-value object wrapper slot-name)))
+	(let ((slot-definition (find-slot-definition class slot-name)))
+	  (if (null slot-definition)
+	      (slot-missing class object slot-name 'setf)
+	      (setf (slot-value-using-class class object slot-definition) 
+		    new-value))))))
 
 (defun slot-boundp (object slot-name)
-  (slot-boundp-using-class (class-of object) object slot-name))
+  (let* ((class (class-of object))
+         (slot-definition (find-slot-definition class slot-name)))
+    (if (null slot-definition)
+        (slot-missing class object slot-name 'slot-boundp)
+        (slot-boundp-using-class class object slot-definition))))
 
 (defun slot-makunbound (object slot-name)
-  (slot-makunbound-using-class (class-of object) object slot-name))
+  (let* ((class (class-of object))
+         (slot-definition (find-slot-definition class slot-name)))
+    (if (null slot-definition)
+        (slot-missing class object slot-name 'slot-makunbound)
+        (slot-makunbound-using-class class object slot-definition))))
 
 (defun slot-exists-p (object slot-name)
-  (slot-exists-p-using-class (class-of object) object slot-name))
+  (let* ((class (class-of object))
+         (slot-definition (find-slot-definition class slot-name)))
+    (and slot-definition
+	 (slot-exists-p-using-class class object slot-definition))))
 
 ;;;
 ;;; This isn't documented, but is used within PCL in a number of print
@@ -134,29 +179,37 @@
 ;;;
 ;;; 
 ;;; 
-(defmethod slot-value-using-class
-	   ((class std-class) (object standard-object) slot-name)
+(defmethod slot-value-using-class ((class std-class)
+                                   (object standard-object)
+                                   (slotd standard-effective-slot-definition))
   (let* ((wrapper (check-wrapper-validity object))	;trap if need be
 	 (slots   (get-slots object))
-	 (index   (instance-slot-index wrapper slot-name)))
+	 (slot-name (slotd-name slotd))
+	 (index   (slotd-instance-index slotd)))
     (if index
 	(get-slot-value-2 object wrapper slot-name slots index)
 	(get-class-slot-value-1 object wrapper slot-name))))
 
 (defmethod (setf slot-value-using-class)
-	   (new-value (class std-class) (object standard-object) slot-name)
+	   (new-value (class std-class)
+		      (object standard-object)
+		      (slotd standard-effective-slot-definition))
   (let* ((wrapper (check-wrapper-validity object))	;trap if need be
 	 (slots   (get-slots object))
-	 (index   (instance-slot-index wrapper slot-name)))
+	 (slot-name (slotd-name slotd))
+	 (index   (slotd-instance-index slotd)))
     (if index
 	(set-slot-value-2 new-value object wrapper slot-name slots index)
 	(set-class-slot-value-1 new-value object wrapper slot-name))))
 
 (defmethod slot-boundp-using-class
-	   ((class std-class) (object standard-object) slot-name)
+	   ((class std-class) 
+	    (object standard-object) 
+	    (slotd standard-effective-slot-definition))
   (let* ((wrapper (check-wrapper-validity object))	;trap if need be
 	 (slots   (get-slots object))
-	 (index   (instance-slot-index wrapper slot-name)))
+	 (slot-name (slotd-name slotd))
+	 (index   (slotd-instance-index slotd)))
     (if index
 	(neq (svref slots index) *slot-unbound*)
 	(let ((entry (assq slot-name (wrapper-class-slots wrapper))))
@@ -165,10 +218,13 @@
 	      (neq (cdr entry) *slot-unbound*))))))
 
 (defmethod slot-makunbound-using-class
-	   ((class std-class) (object standard-object) slot-name)
+	   ((class std-class)
+	    (object standard-object) 
+	    (slotd standard-effective-slot-definition))
   (let* ((wrapper (check-wrapper-validity object))	;trap if need be
 	 (slots   (get-slots object))
-	 (index   (instance-slot-index wrapper slot-name)))
+	 (slot-name (slotd-name slotd))
+	 (index   (slotd-instance-index slotd)))
     (cond (index
 	   (setf (%svref slots index) *slot-unbound*)
 	   object)
@@ -180,8 +236,10 @@
 		  object))))))
 
 (defmethod slot-exists-p-using-class
-	   ((class std-class) (object standard-object) slot-name)
-  (not (null (find-slot-definition class slot-name))))
+	   ((class std-class)
+	    (object standard-object)
+	    (slotd standard-effective-slot-definition))
+  t)
 
 
 
@@ -213,3 +271,4 @@
 		     (class-no-of-instance-slots class))))
     (setf (std-instance-wrapper instance) class-wrapper)
     instance))
+

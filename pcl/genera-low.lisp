@@ -29,6 +29,8 @@
 
 (in-package 'pcl)
 
+(pushnew ':pcl-internals dbg:*all-invisible-frame-types*)
+
 #+IMach						;On the I-Machine these are
 (eval-when (compile load eval)			;faster than the versions
 						;that use :test #'eq.  
@@ -164,6 +166,9 @@ compiler::
   (declare (ignore slashify))
   (print-std-instance scl:self stream depth))
 
+(scl:defmethod (:describe std-instance) ()
+  (describe-object scl:self *standard-output*))
+
 (defmacro %std-instance-wrapper (std-instance)
   `(sys:%instance-ref ,std-instance 1))
 
@@ -174,7 +179,7 @@ compiler::
 
 
 (defun printing-random-thing-internal (thing stream)
-  (format stream "~O" (si:%pointer thing)))
+  (format stream "~\\si:address\\" (si:%pointer thing)))
 
 ;;;
 ;;; This is hard, I am sweating.
@@ -184,72 +189,6 @@ compiler::
 (defun function-pretty-arglist (function) (zl:arglist function))
 
 
-;;;
-;;; This code is adapted from frame-lexical-environment and frame-function.
-;;;
-(defvar *old-function-name*)
-(defvar *boot-state* ())			;Copied from defs.lisp
-
-(defun new-function-name (function)
-  (or (and (eq *boot-state* 'complete)
-	   (generic-function-p function)
-	   (generic-function-name function))
-      (funcall *old-function-name* function)))
-
-(eval-when (load)
-  (unless (boundp '*old-function-name*)
-    (setq *old-function-name* #'si:function-name)
-    (setf (symbol-function 'si:function-name) 'new-function-name)))
-;
-;dbg:
-;(progn
-;
-;(defvar *old-frame-function*)
-;
-;(defvar *envs->fins* (make-hash-table))
-;
-;(defun set-env->fin (env fin)
-;  (setf (gethash env *envs->fins*) fin))
-;
-;(defun new-frame-function (frame)
-;  (let* ((fn (funcall *old-frame-function* frame))
-;	 (location (%pointer-plus frame #+imach (defstorage-size stack-frame) #-imach 0))
-;	 (env? #+3600 (location-contents location)
-;	       #+imach (%memory-read location :cycle-type %memory-scavenge)))
-;    (or (when (and (cl:consp env?)
-;		   (not (null (assq :lexical-variable-instructions (debugging-info fn)))))
-;	  (gethash env? *envs->fins*))
-;	fn)))
-;
-;(defun pcl::doctor-dfun-for-the-debugger (gf dfun)
-;  (when (sys:lexical-closure-p dfun)
-;    (let* ((env (si:lexical-closure-environment dfun))
-;	   (l2 (last2 env)))
-;      (unless (eq (car l2) '.this-is-a-dfun.)
-;	(setf (si:lexical-closure-environment dfun)
-;	      (nconc env (list '.this-is-a-dfun. gf))))))
-;  dfun)
-;
-;(defun last2 (l)
-;  (labels ((scan (2ago tail)
-;	     (if (null tail)
-;		 2ago
-;		 (if (cl:consp tail)
-;		     (scan (cdr 2ago) (cdr tail))
-;		     nil))))
-;    (and (cl:consp l)
-;	 (cl:consp (cdr l))
-;	 (scan l (cddr l)))))
-;
-;(eval-when (load)
-;  (unless (boundp '*old-frame-function*)
-;    (setq *old-frame-function* #'frame-function)
-;    (setf (cl:symbol-function 'frame-function) 'new-frame-function)))
-;
-;)
-
-
-
 ;; New (& complete) fspec handler.
 ;;   1. uses a single #'equal htable where stored elements are (fn . plist)
 ;;       (maybe we should store the method object instead)
@@ -269,7 +208,7 @@ compiler::
 ;;
 
 (defvar *method-htable* (make-hash-table :test #'equal :size 500))
-(si:define-function-spec-handler method (op spec &optional arg1 arg2)
+(sys:define-function-spec-handler method (op spec &optional arg1 arg2)
   (if (eq op 'sys:validate-function-spec)
       (and (let ((gspec (cadr spec)))
 	     (or (symbolp gspec)
@@ -291,7 +230,6 @@ compiler::
 	    (remhash key table))
 	  (si:fdefine
 	    (let ((old (gethash key table nil))
-		  (gspec (cadr spec))
 		  (quals nil)
 		  (specs nil)
 		  (ptr (cddr spec)))
@@ -299,7 +237,6 @@ compiler::
 		    (loop (cond ((null ptr) (return nil))
 				((listp (car ptr)) (return (car ptr)))
 				(t (push (pop ptr) quals)))))
-	      (pcl-fdefine-helper gspec (nreverse quals) specs arg1)
 	      (setf (gethash key table) (cons arg1 (cdr old)))))
 	  (si:get
 	    (let ((old (gethash key table nil)))
@@ -320,23 +257,27 @@ compiler::
 	  (otherwise
 	    (si:function-spec-default-handler op spec arg1 arg2))))))
 
+
+#||
 ;; this guy is just a stub to make the fspec handler simpler (and so I could trace it
 ;; easier).
 (defun pcl-fdefine-helper (gspec qualifiers specializers fn)
   (let* ((dlist (scl:debugging-info fn))
 	 (class (cadr (assoc 'pcl-method-class dlist)))
+	 (lambda-list (let ((ll-stuff (assoc 'pcl-lambda-list dlist)))
+			(if ll-stuff (cadr ll-stuff) (arglist fn))))
 	 (doc (cadr (assoc 'pcl-documentation dlist)))
 	 (plist (cadr (assoc 'pcl-plist dlist))))
     (load-defmethod (or class 'standard-method)
 		    gspec
 		    qualifiers
 		    specializers
-		    (arglist fn)
+		    lambda-list
 		    doc
 		    (getf plist :isl-cache-symbol)
 		    plist
 		    fn)))
-
+||#
 
 ;; define a few special declarations to get pushed onto the function's debug-info
 ;; list... note that we do not need to do a (proclaim (declarations ...)) here.
@@ -360,141 +301,7 @@ compiler::
     (get 'defclass 'zwei:definition-function-spec-finder-template) '(0 1))
   )
 
-;;;
-;;; The variable zwei::*sectionize-line-lookahead* controls how many lines the parser
-;;;  is willing to look ahead while trying to parse a definition.  Even 2 lines is enough
-;;;  for just about all cases, but there isn't much overhead, and 10 should be enough
-;;;  to satisfy pretty much everyone... but feel free to change it.
-;;;        - MT 880921
-;;;
-zwei:
-(defvar *sectionize-line-lookahead* 3)
 
-zwei:
-(DEFMETHOD (:SECTIONIZE-BUFFER MAJOR-MODE :DEFAULT)
-	   (FIRST-BP LAST-BP BUFFER STREAM INT-STREAM ADDED-COMPLETIONS)
-  ADDED-COMPLETIONS ;ignored, obsolete
-  (WHEN STREAM
-    (SEND-IF-HANDLES STREAM :SET-RETURN-DIAGRAMS-AS-LINES T))
-  (INCF *SECTIONIZE-BUFFER*)
-  (LET ((BUFFER-TICK (OR (SEND-IF-HANDLES BUFFER :SAVE-TICK) *TICK*))
-	OLD-CHANGED-SECTIONS)
-    (TICK)
-    ;; Flush old section nodes.  Also collect the names of those that are modified, they are
-    ;; the ones that will be modified again after a revert buffer.
-    (DOLIST (NODE (NODE-INFERIORS BUFFER))
-      (AND (> (NODE-TICK NODE) BUFFER-TICK)
-	   (PUSH (LIST (SECTION-NODE-FUNCTION-SPEC NODE)
-		       (SECTION-NODE-DEFINITION-TYPE NODE))
-		 OLD-CHANGED-SECTIONS))
-      (FLUSH-BP (INTERVAL-FIRST-BP NODE))
-      (FLUSH-BP (INTERVAL-LAST-BP NODE)))
-    (DO ((LINE (BP-LINE FIRST-BP) (LINE-NEXT INT-LINE))
-	 (LIMIT (BP-LINE LAST-BP))
-	 (EOFFLG)
-	 (ABNORMAL T)
-	 (DEFINITION-LIST NIL)
-	 (BP (COPY-BP FIRST-BP))
-	 (FUNCTION-SPEC)
-	 (DEFINITION-TYPE)
-	 (STR)
-	 (INT-LINE)
-	 (first-time t)
-	 (future-line)				; we actually read into future line
-	 (future-int-line)
-	 (PREV-NODE-START-BP FIRST-BP)
-	 (PREV-NODE-DEFINITION-LINE NIL)
-	 (PREV-NODE-FUNCTION-SPEC NIL)
-	 (PREV-NODE-TYPE 'HEADER)
-	 (PREVIOUS-NODE NIL)
-	 (NODE-LIST NIL)
-	 (STATE (SEND SELF :INITIAL-SECTIONIZATION-STATE)))
-	(NIL)
-      ;; If we have a stream, read another line.
-      (when (AND STREAM (NOT EOFFLG))
-	(let ((lookahead (if future-line 1 *sectionize-line-lookahead*)))
-	  (dotimes (i lookahead)		; startup lookahead
-	    (MULTIPLE-VALUE (future-LINE EOFFLG)
-	      (LET ((DEFAULT-CONS-AREA *LINE-AREA*))
-		(SEND STREAM ':LINE-IN LINE-LEADER-SIZE)))
-	    (IF future-LINE (SETQ future-INT-LINE (FUNCALL INT-STREAM ':LINE-OUT future-LINE)))
-	    (when first-time
-	      (setq first-time nil)
-	      (setq line future-line)
-	      (setq int-line future-int-line))
-	    (when eofflg
-	      (return)))))
-
-      (SETQ INT-LINE LINE)
-
-      (when int-line
-	(MOVE-BP BP INT-LINE 0))		;Record as potentially start-bp for a section
-
-      ;; See if the line is the start of a defun.
-      (WHEN (AND LINE
-		 (LET (ERR)
-		   (MULTIPLE-VALUE (FUNCTION-SPEC DEFINITION-TYPE STR ERR STATE)
-		     (SEND SELF ':SECTION-NAME INT-LINE BP STATE))
-		   (NOT ERR)))
-	(PUSH (LIST FUNCTION-SPEC DEFINITION-TYPE) DEFINITION-LIST)
-	(SECTION-COMPLETION FUNCTION-SPEC STR NIL)
-	;; List methods under both names for user ease.
-	(LET ((OTHER-COMPLETION (SEND SELF ':OTHER-SECTION-NAME-COMPLETION
-				      FUNCTION-SPEC INT-LINE)))
-	  (WHEN OTHER-COMPLETION
-	    (SECTION-COMPLETION FUNCTION-SPEC OTHER-COMPLETION NIL)))
-	(LET ((PREV-NODE-END-BP (BACKWARD-OVER-COMMENT-LINES BP ':FORM-AS-BLANK)))
-	  ;; Don't make a section node if it's completely empty.  This avoids making
-	  ;; a useless Buffer Header section node. Just set all the PREV variables
-	  ;; so that the next definition provokes the *right thing*
-	  (UNLESS (BP-= PREV-NODE-END-BP PREV-NODE-START-BP)
-	    (SETQ PREVIOUS-NODE
-		  (ADD-SECTION-NODE PREV-NODE-START-BP
-				    (SETQ PREV-NODE-START-BP PREV-NODE-END-BP)
-				    PREV-NODE-FUNCTION-SPEC PREV-NODE-TYPE
-				    PREV-NODE-DEFINITION-LINE BUFFER PREVIOUS-NODE
-				    (IF (LOOP FOR (FSPEC TYPE) IN OLD-CHANGED-SECTIONS
-					      THEREIS (AND (EQ PREV-NODE-FUNCTION-SPEC FSPEC)
-							   (EQ PREV-NODE-TYPE TYPE)))
-					*TICK* BUFFER-TICK)
-				    BUFFER-TICK))
-	    (PUSH PREVIOUS-NODE NODE-LIST)))
-	(SETQ PREV-NODE-FUNCTION-SPEC FUNCTION-SPEC
-	      PREV-NODE-TYPE DEFINITION-TYPE
-	      PREV-NODE-DEFINITION-LINE INT-LINE))
-      ;; After processing the last line, exit.
-      (WHEN (OR #+ignore EOFFLG (null line) (AND (NULL STREAM) (EQ LINE LIMIT)))
-	;; If reading a stream, we should not have inserted a CR
-	;; after the eof line.
-	(WHEN STREAM
-	  (DELETE-INTERVAL (FORWARD-CHAR LAST-BP -1 T) LAST-BP T))
-	;; The rest of the buffer is part of the last node
-	(UNLESS (SEND SELF ':SECTION-NAME-TRIVIAL-P)
-	  ;; ---oh dear, what sort of section will this be? A non-empty HEADER
-	  ;; ---node.  Well, ok for now.
-	  (PUSH (ADD-SECTION-NODE PREV-NODE-START-BP LAST-BP
-				  PREV-NODE-FUNCTION-SPEC PREV-NODE-TYPE
-				  PREV-NODE-DEFINITION-LINE BUFFER PREVIOUS-NODE
-				  (IF (LOOP FOR (FSPEC TYPE) IN OLD-CHANGED-SECTIONS
-					    THEREIS (AND (EQ PREV-NODE-FUNCTION-SPEC FSPEC)
-							 (EQ PREV-NODE-TYPE TYPE)))
-				      *TICK* BUFFER-TICK)
-				  BUFFER-TICK)
-		NODE-LIST)
-	  (SETF (LINE-NODE (BP-LINE LAST-BP)) (CAR NODE-LIST)))
-	(SETF (NODE-INFERIORS BUFFER) (NREVERSE NODE-LIST))
-	(SETF (NAMED-BUFFER-WITH-SECTIONS-FIRST-SECTION BUFFER) (CAR (NODE-INFERIORS BUFFER)))
-	(SETQ ABNORMAL NIL)			;timing windows here
-	;; Speed up completion if enabled.
-	(WHEN SI:*ENABLE-AARRAY-SORTING-AFTER-LOADS*
-	  (SI:SORT-AARRAY *ZMACS-COMPLETION-AARRAY*))
-	(SETQ *ZMACS-COMPLETION-AARRAY*
-	      (FOLLOW-STRUCTURE-FORWARDING *ZMACS-COMPLETION-AARRAY*))
-	(RETURN
-	  (VALUES 
-	    (CL:SETF (ZMACS-SECTION-LIST BUFFER)
-		     (NREVERSE DEFINITION-LIST))
-	    ABNORMAL))))))
 
 (defun (:property defmethod zwei::definition-function-spec-parser) (bp)
   (zwei:parse-pcl-defmethod-for-zwei bp nil))
@@ -612,4 +419,5 @@ zwei:
 				     (unparse-specializers
 				       (method-specializers m))))
 	       (generic-function-methods (gdefinition spec)))))
+
 

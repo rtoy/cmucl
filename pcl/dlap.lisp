@@ -273,26 +273,31 @@
 
 
 
+(defun dlap-wrappers (metatypes)
+  (mapcar #'(lambda (x) (and (neq x 't) (allocate-register 'vector)))
+	  metatypes))
+
+(defun dlap-wrapper-moves (wrappers args metatypes miss-label slot-regs)
+  (gathering1 (collecting)
+    (iterate ((mt (list-elements metatypes))
+	      (arg (list-elements args))
+	      (wrapper (list-elements wrappers))
+	      (i (interval :from 0)))
+       (when wrapper
+         (gather1
+	   (emit-fetch-wrapper mt arg wrapper miss-label (nth i slot-regs)))))))
 
 (defun emit-dlap (args metatypes miss-label hit miss value-reg &optional slot-regs)
-  (let* ((wrappers
-	   (mapcar #'(lambda (x) (and (neq x 't) (allocate-register 'vector))) metatypes))
-	 (wrapper-moves
-	   (gathering1 (collecting)
-	     (iterate ((mt (list-elements metatypes))
-		       (arg (list-elements args))
-		       (wrapper (list-elements wrappers))
-		       (i (interval :from 0)))
-	       (when wrapper
-		 (gather1
-		   (emit-fetch-wrapper mt arg wrapper miss-label (nth i slot-regs))))))))
-    (prog1 (emit-dlap-internal (remove nil wrappers)
+  (let* ((wrappers (dlap-wrappers metatypes))
+	 (nwrappers (remove nil wrappers))
+	 (wrapper-moves (dlap-wrapper-moves wrappers args metatypes miss-label slot-regs)))
+    (prog1 (emit-dlap-internal nwrappers
 			       wrapper-moves
 			       hit
 			       miss
 			       miss-label
 			       value-reg)
-	   (mapcar #'(lambda (x) (deallocate-register x)) (remove nil wrappers)))))
+	   (mapc #'deallocate-register nwrappers))))
 
 (defun emit-dlap-internal (wrapper-regs wrapper-moves hit miss miss-label value-reg)
   (cond ((cdr wrapper-regs)
@@ -473,5 +478,6 @@
     (opcode :move (operand :constant (index-value->index 1)) location)
     (opcode :go cont-label)))
      
+
 
 

@@ -146,7 +146,9 @@
       )))
 
 (defun setfboundp (symbol)
-  #+Genera nil
+  #+Genera (not (null (get-properties (symbol-plist symbol)
+				      'lt::(derived-setf-function trivial-setf-method
+					    setf-equivalence setf-method))))
   #+Lucid  (locally
 	     (declare (special lucid::*setf-inverse-table*
 			       lucid::*simple-setf-method-table*
@@ -282,29 +284,87 @@
     (name (fdefine-carefully (get-setf-function-name name) new-value))))
 
 
+(defun type-class (type)
+  (if (consp type)
+      (case (car type)
+	(class-eq (cadr type))
+	(eql (class-of (cadr type)))
+	(t (and (null (cdr type)) (find-class (car type) nil))))
+      (if (symbolp type)
+	  (find-class type nil)
+	  (and (class-specializer-p type)
+	       (specializer-class type)))))
+
+(defun class-type-p (type)
+  (if (consp type)
+      (and (null (cdr type)) (find-class (car type) nil))
+      (if (symbolp type)
+	  (find-class type nil)
+	  (and (classp type) type))))
+;;;;;;
+(defun exact-class-type-p (type)
+  (if (consp type)
+      (or (eq (car type) 'class-eq) (eq (car type) 'eql))
+      (exact-class-specializer-p type)))
+
+(defun make-class-eq-predicate (class)
+  (when (symbolp class) (setq class (find-class class)))
+  #'(lambda (object) (eq class (class-of object))))
+
+(deftype class-eq (class)
+  `(satisfies ,(make-class-eq-predicate class)))
+
+(defun class-eq-type-p (type)
+  (if (consp type)
+      (eq (car type) 'class-eq)
+      (class-eq-specializer-p type)))
+;;;;;;
+(defun make-eql-predicate (eql-object)
+  #'(lambda (object) (eql eql-object object)))
+
+(deftype eql (type-object)
+  `(satisfies ,(make-eql-predicate type-object)))
+
+(defun eql-type-p (type)
+  (if (consp type)
+      (eq (car type) 'eql)
+      (eql-specializer-p type)))
+
+(defun type-object (type)
+  (if (consp type)
+      (cadr type)
+      (specializer-object type)))
+
+;;;;;;
+(defun not-type-p (type)
+  (and (consp type) (eq (car type) 'not)))
+
+(defun not-type (type)
+  (cadr type))
+
 ;;;
 ;;; These functions are a pale imitiation of their namesake.  They accept
 ;;; class objects or types where they should.
 ;;; 
 (defun *typep (object type)
-  (if (classp type)
-      (let ((class (class-of object)))
-	(if class
-	    (memq type (class-precedence-list class))
-	    nil))
-      (let ((class (find-class type nil)))
-	(if class
-	    (*typep object class)
-	    (typep object type)))))
+  (let ((specializer (or (class-type-p type) 
+			 (and (specializerp type) type))))
+    (cond (specializer
+	    (specializer-type-p object specializer))
+	  ((not-type-p type)
+	   (not (*typep object (not-type type))))
+	  (t
+	   (typep object type)))))
 
 (defun *subtypep (type1 type2)
-  (let ((c1 (if (classp type1) type1 (find-class type1 nil)))
-	(c2 (if (classp type2) type2 (find-class type2 nil))))
-    (if (and c1 c2)
-	(memq c2 (class-precedence-list c1))
-	(if (or c1 c2)
-	    nil					;This isn't quite right, but...
-	    (subtypep type1 type2)))))
+  (let ((c1 (class-type-p type1))
+	(c2 (class-type-p type2)))
+    (cond ((and c1 c2)
+	   (values (memq c2 (class-precedence-list c1)) t))
+	  ((setq c1 (or c1 (specializerp type1)))
+	   (specializer-applicable-using-type-p c1 type2))
+	  ((or (null c2) (classp c2))
+	   (subtypep type1 (if c2 (class-name c2) type2))))))
 
 (defun do-satisfies-deftype (name predicate)
   (let* ((specifier `(satisfies ,predicate))
@@ -352,8 +412,13 @@
 		    *the-class-method*
 		    *the-class-generic-function*
 		    *the-class-standard-class*
+	            *the-class-funcallable-standard-class*
 		    *the-class-standard-method*
-		    *the-class-standard-generic-function*))
+		    *the-class-standard-generic-function*
+	            *the-class-standard-effective-slot-definition*
+
+	            *the-eslotd-standard-class-slots*
+	            *the-eslotd-funcallable-standard-class-slots*))
 
 (proclaim '(special *the-wrapper-of-t*
 		    *the-wrapper-of-vector* *the-wrapper-of-symbol*
@@ -493,6 +558,8 @@
 
 (defclass specializer (metaobject) ())
 
+(defclass class-specializer (specializer) ())
+
 (defclass definition-source-mixin (standard-object)
      ((source
 	:initform (load-truename)
@@ -515,7 +582,7 @@
 ;;; have the class CLASS in its class precedence list.
 ;;; 
 (defclass class (documentation-mixin dependent-update-mixin definition-source-mixin
-				     specializer)
+				     class-specializer)
      ((name
 	:initform nil
 	:initarg  :name
@@ -604,7 +671,13 @@
 	:accessor slotd-type)
       (documentation
 	:initform ""
-	:initarg :documentation)))
+	:initarg :documentation)
+      (class
+        :initform nil
+	:accessor slotd-class)
+      (instance-index
+        :initform nil
+	:accessor slotd-instance-index)))
 
 (defclass standard-direct-slot-definition (standard-slot-definition
 					   direct-slot-definition)
@@ -621,7 +694,7 @@
 
 
 (defclass eql-specializer (specializer)
-     ((object :initarg :object :reader eql-specializer-object)))
+     ((object :initarg :object :reader specializer-object)))
 
 
 
@@ -638,52 +711,4 @@
 		 ,@body)
 	       (,improper-list-handler)))))
 
-(defun legal-std-documentation-p (x)
-  (if (or (null x) (stringp x))
-      t
-      "a string or NULL"))
 
-(defun legal-std-lambda-list-p (x)
-  (declare (ignore x))
-  t)
-
-(defun legal-std-method-function-p (x)
-  (if (functionp x)
-      t
-      "a function"))
-
-(defun legal-std-qualifiers-p (x)
-  (flet ((improper-list ()
-	   (return-from legal-std-qualifiers-p "Is not a proper list.")))
-    (dolist-carefully (q x improper-list)
-      (let ((ok (legal-std-qualifier-p q)))
-	(unless (eq ok t)
-	  (return-from legal-std-qualifiers-p
-	    (format nil "Contains ~S which ~A" q ok)))))
-    t))
-
-(defun legal-std-qualifier-p (x)
-  (if (and x (atom x))
-      t
-      "is not a non-null atom"))
-
-(defun legal-std-slot-name-p (x)
-  (cond ((not (symbolp x)) "is not a symbol and so cannot be bound")
-	((keywordp x)      "is a keyword and so cannot be bound")
-	((memq x '(t nil)) "cannot be bound")
-	(t t)))
-
-(defun legal-std-specializers-p (x)
-  (flet ((improper-list ()
-	   (return-from legal-std-specializers-p "Is not a proper list.")))
-    (dolist-carefully (s x improper-list)
-      (let ((ok (legal-std-specializer-p s)))
-	(unless (eq ok t)
-	  (return-from legal-std-specializers-p
-	    (format nil "Contains ~S which ~A" s ok)))))
-    t))
-
-(defun legal-std-specializer-p (x)
-  (if (or (classp x)
-	  (eql-specializer-p x))
-      t
