@@ -434,9 +434,7 @@
          (shared
            (compute-applicable-methods #'shared-initialize (list proto t)))
          (code-generators
-           (constructor-code-generators constructor))
-	 (code-generators
-	   (constructor-code-generators constructor)))
+           (constructor-code-generators constructor)))
     (flet ((call-code-generator (generator)
 	     (when (null generator)
 	       (unless (setq generator (getf code-generators 'fallback))
