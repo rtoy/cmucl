@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.32 2002/12/13 19:25:50 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval-comp.lisp,v 1.33 2003/01/21 16:51:09 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,7 @@
 (defun compile-for-eval (form quietly &optional env)
   (with-ir1-namespace
     (let* ((*block-compile* nil)
+	   (*coalesce-constants* nil)
 	   (*lexical-environment* (or env (make-null-environment)))
 	   ;;
 	   (*compiler-error-output*
