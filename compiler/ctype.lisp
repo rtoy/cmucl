@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.16 1991/02/20 14:56:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.17 1991/03/24 18:41:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -245,26 +245,26 @@
 (proclaim '(function check-keywords (list fixnum function-type) void))
 (defun check-keywords (args pre-key type)
   (do ((key (nthcdr pre-key args) (cddr key))
-       (n pre-key (+ n 2)))
+       (n (1+ pre-key) (+ n 2)))
       ((null key))
     (declare (fixnum n))
     (let ((k (car key)))
-      (check-arg-type k (specifier-type 'symbol) n)
-      (cond ((not (check-arg-type k (specifier-type 'keyword) n)))
-	    ((not (constant-continuation-p k))
-	     (note-slime "The keyword for the ~:R argument is not a constant."
-			 n))
-	    (t
-	     (let* ((name (continuation-value k))
-		    (info (find name (function-type-keywords type)
-				:key #'key-info-name)))
-	       (cond ((not info)
-		      (unless (function-type-allowp type)
-			(note-lossage "~S is not a known argument keyword."
-				      name)))
-		     (t
-		      (check-arg-type (second key) (key-info-type info)
-				      n)))))))))
+      (cond
+       ((not (check-arg-type k (specifier-type 'symbol) n)))
+       ((not (constant-continuation-p k))
+	(note-slime "The ~:R argument (in keyword position) is not a constant."
+		    n))
+       (t
+	(let* ((name (continuation-value k))
+	       (info (find name (function-type-keywords type)
+			   :key #'key-info-name)))
+	  (cond ((not info)
+		 (unless (function-type-allowp type)
+		   (note-lossage "~S is not a known argument keyword."
+				 name)))
+		(t
+		 (check-arg-type (second key) (key-info-type info)
+				 (1+ n))))))))))
 
 
 ;;; Lambda-Result-Type  --  Internal
