@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.55 2003/09/09 12:33:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.56 2004/01/09 04:18:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1351,7 +1351,13 @@ significant bit of INTEGER is bit 0."
   (declare (integer n m))
   (if (or (zerop n) (zerop m))
       0
-      (/ (abs (* n m)) (gcd n m))))
+      (let ((m (abs m))
+	    (n (abs n)))
+	(multiple-value-bind (max min)
+	    (if (> m n)
+		(values m n)
+		(values n m))
+	  (* (truncate max (gcd n m)) min)))))
 
 
 ;;; TWO-ARG-GCD  --  Internal
