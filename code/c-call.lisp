@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.13 1993/02/12 19:09:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/c-call.lisp,v 1.14 1994/04/06 17:02:04 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,12 +28,12 @@
 (def-alien-type char (integer 8))
 (def-alien-type short (integer 16))
 (def-alien-type int (integer 32))
-(def-alien-type long (integer 32))
+(def-alien-type long (integer #-alpha 32 #+alpha 64))
 
 (def-alien-type unsigned-char (unsigned 8))
 (def-alien-type unsigned-short (unsigned 16))
 (def-alien-type unsigned-int (unsigned 32))
-(def-alien-type unsigned-long (unsigned 32))
+(def-alien-type unsigned-long (unsigned #-alpha 32 #+alpha 64))
 
 (def-alien-type float single-float)
 (def-alien-type double double-float)
