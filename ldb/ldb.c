@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.5 1990/05/23 19:02:45 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.6 1990/06/03 22:37:00 ch Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -64,6 +64,8 @@ char *envp[];
 
     if (core == NULL)
         core = "test.core";
+
+    os_init();
 
 #if defined(EXT_PAGER)
     pager_init();
