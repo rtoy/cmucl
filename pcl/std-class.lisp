@@ -113,29 +113,28 @@
   (when documentation-p
     (setf (plist-value object 'documentation) documentation)))
 
-(defmethod documentation (object &optional doc-type)
+(defmethod documentation (object doc-type)
   (declare (ignore object doc-type))
   nil)
 
-(defmethod (setf documentation) (new-value object &optional doc-type)
+(defmethod (setf documentation) (new-value object doc-type)
   (declare (ignore new-value doc-type))
   (error "Can't change the documentation of ~S." object))
 
-
-(defmethod documentation ((object documentation-mixin) &optional doc-type)
+(defmethod documentation ((object documentation-mixin) doc-type)
   (declare (ignore doc-type))
   (plist-value object 'documentation))
 
-(defmethod (setf documentation) (new-value (object documentation-mixin) &optional doc-type)
+(defmethod (setf documentation) (new-value (object documentation-mixin) doc-type)
   (declare (ignore doc-type))
   (setf (plist-value object 'documentation) new-value))
 
 
-(defmethod documentation ((slotd standard-slot-definition) &optional doc-type)
+(defmethod documentation ((slotd standard-slot-definition) doc-type)
   (declare (ignore doc-type))
   (slot-value slotd 'documentation))
 
-(defmethod (setf documentation) (new-value (slotd standard-slot-definition) &optional doc-type)
+(defmethod (setf documentation) (new-value (slotd standard-slot-definition) doc-type)
   (declare (ignore doc-type))
   (setf (slot-value slotd 'documentation) new-value))
 

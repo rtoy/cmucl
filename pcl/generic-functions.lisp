@@ -622,6 +622,18 @@
 ;          (slot-class forward-referenced-class)
 ;          (funcallable-standard-class standard-class)
 
+(defgeneric (setf documentation) (new-value slotd doc-type)
+  (:argument-precedence-order doc-type slotd new-value))
+;          (t t)
+;          (t documentation-mixin)
+;          (t standard-slot-definition)
+
+(defgeneric documentation (slotd doc-type)
+  (:argument-precedence-order doc-type slotd))
+;          (t)
+;          (documentation-mixin)
+;          (standard-slot-definition)
+
 
 ;;; 3 arguments 
 (defgeneric add-boundp-method (class generic-function slot-name))
@@ -693,16 +705,6 @@
 
 
 ;;; optional arguments  
-(defgeneric (setf documentation) (new-value slotd &optional doc-type))
-;          (t t)
-;          (t documentation-mixin)
-;          (t standard-slot-definition)
-
-(defgeneric documentation (slotd &optional doc-type))
-;          (t)
-;          (documentation-mixin)
-;          (standard-slot-definition)
-
 (defgeneric get-method (generic-function qualifiers specializers &optional (errorp t)))
 ;          (standard-generic-function t t)
 
