@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.75 2003/04/24 13:59:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.76 2003/04/26 18:39:30 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -486,10 +486,23 @@
 	     (let ((attr (function-info-attributes info)))
 	       (when (and (ir1-attributep attr flushable)
 			  (not (ir1-attributep attr call)))
-		 (flush-dest (combination-fun node))
-		 (dolist (arg (combination-args node))
-		   (flush-dest arg))
-		 (unlink-node node))))))
+		 (if (policy node (= safety 3))
+		     ;; Don't flush calls to flushable functions if
+		     ;; their value is unused in safe code, because
+		     ;; this means something like (PROGN (FBOUNDP 42)
+		     ;; T) won't signal an error.  KLUDGE: The right
+		     ;; thing to do here is probably teaching
+		     ;; MAYBE-NEGATE-CHECK and friends to accept nil
+		     ;; continuation-dests instead of faking one.
+		     ;; Can't be bothered at present.
+		     ;; Gerd, 2003-04-26.
+		     (setf (continuation-dest cont)
+			   (continuation-next cont))
+		     (progn
+		       (flush-dest (combination-fun node))
+		       (dolist (arg (combination-args node))
+			 (flush-dest arg))
+		       (unlink-node node))))))))
 	(mv-combination
 	 (when (eq (basic-combination-kind node) :local)
 	   (let ((fun (combination-lambda node)))
@@ -1145,7 +1158,6 @@
       (setf (combination-kind node) :full)
       (local-call-analyze *current-component*)))
   (undefined-value))
-
 
 ;;; Constant-Fold-Call  --  Internal
 ;;;
