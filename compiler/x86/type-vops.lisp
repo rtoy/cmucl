@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.6 1997/11/15 04:39:03 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/type-vops.lisp,v 1.7 1997/12/20 19:29:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -117,13 +117,36 @@
 
 ); eval-when (compile eval)
 
+;;; Emit the most compact form of the test immediate instruction,
+;;; using an 8 bit test when the immediate is only 8 bits and the
+;;; value is one of the four low registers (eax, ebx, ecx, edx) or the
+;;; control-stack.
+;;;
+(defun maybe-byte-test (value immed)
+  (let ((offset (tn-offset value)))
+    (cond ((> immed #xff)
+	   (inst test value 3))
+	  ((and (sc-is value any-reg descriptor-reg)
+		(or (= offset eax-offset) (= offset ebx-offset)
+		    (= offset ecx-offset) (= offset edx-offset)))
+	   (inst test (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'byte-reg)
+				      :offset offset)
+		 immed))
+	  ((sc-is value control-stack)
+	   (inst test (make-ea :byte :base ebp-tn
+			       :disp (- (* (1+ offset) vm:word-bytes)))
+		 immed))
+	  (t
+	   (inst test value 3)))))
+
 (defun %test-fixnum (value target not-p)
-  (inst test value 3)
+  (maybe-byte-test value 3)
   (inst jmp (if not-p :nz :z) target))
 
 (defun %test-fixnum-and-headers (value target not-p headers)
   (let ((drop-through (gen-label)))
-    (inst test value 3)
+    (maybe-byte-test value 3)
     (inst jmp :z (if not-p drop-through target))
     (%test-headers value target not-p nil headers drop-through)))
 
@@ -242,6 +265,21 @@
   (:info target not-p)
   (:policy :fast-safe))
 
+;;; Simpler VOP that don't need a temporary register.
+(define-vop (simple-check-type)
+  (:args (value :target result :scs (any-reg descriptor-reg)))
+  (:results (result :scs (any-reg descriptor-reg)
+		    :load-if (not (and (sc-is value any-reg descriptor-reg)
+				       (sc-is result control-stack)))))
+  (:vop-var vop)
+  (:save-p :compute-only))
+
+(define-vop (simple-type-predicate)
+  (:args (value :scs (any-reg descriptor-reg control-stack)))
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe))
+
 (eval-when (compile eval)
 
 (defun cost-to-test-types (type-codes)
@@ -267,9 +305,28 @@
        ,@(when ptype
 	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
 
+(defmacro def-simple-type-vops (pred-name check-name ptype error-code
+					  &rest type-codes)
+  (let ((cost (cost-to-test-types (mapcar #'eval type-codes))))
+    `(progn
+       ,@(when pred-name
+	   `((define-vop (,pred-name simple-type-predicate)
+	       (:translate ,pred-name)
+	       (:generator ,cost
+		 (test-type value target not-p ,@type-codes)))))
+       ,@(when check-name
+	   `((define-vop (,check-name simple-check-type)
+	       (:generator ,cost
+		 (let ((err-lab
+			(generate-error-code vop ,error-code value)))
+		   (test-type value err-lab t ,@type-codes)
+		   (move result value))))))
+       ,@(when ptype
+	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
+
 ); eval-when (compile eval)
 
-(def-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
+(def-simple-type-vops fixnump check-fixnum fixnum object-not-fixnum-error
   even-fixnum-type odd-fixnum-type)
 
 (def-type-vops functionp check-function function
@@ -519,7 +576,7 @@
 	(if not-p
 	    (values not-target target)
 	    (values target not-target))
-      (inst test value #x3)
+      (maybe-byte-test value 3)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -535,7 +592,7 @@
     (let ((nope (generate-error-code vop
 				     object-not-signed-byte-32-error
 				     value)))
-      (inst test value #x3)
+      (maybe-byte-test value 3)
       (inst jmp :e yep)
       (move eax-tn value)
       (inst and al-tn lowtag-mask)
@@ -563,7 +620,7 @@
 	      (values not-target target)
 	      (values target not-target))
 	;; Is it a fixnum?
-	(inst test value 3)
+	(maybe-byte-test value 3)
 	(move eax-tn value)
 	(inst jmp :e fixnum)
 
@@ -606,7 +663,7 @@
 	  (single-word (gen-label)))
 
       ;; Is it a fixnum?
-      (inst test value 3)
+      (maybe-byte-test value 3)
       (move eax-tn value)
       (inst jmp :e fixnum)
 
