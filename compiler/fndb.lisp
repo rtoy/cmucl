@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.23 1991/06/04 00:07:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.24 1991/06/04 14:21:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -593,8 +593,9 @@
 ;;;; In the "Arrays" chapter:
 
 (defknown make-array ((or index list) &key (element-type type-specifier)
-		      (initial-element t) (initial-contents list) (adjustable t)
-		      (fill-pointer t) (displaced-to (or array null))
+		      (initial-element t) (initial-contents sequence)
+		      (adjustable t) (fill-pointer t)
+		      (displaced-to (or array null))
 		      (displaced-index-offset index))
   array (flushable unsafe))
 
