@@ -326,7 +326,7 @@ Raw slots:
     read/written without number-consing overhead.
 
 Type tests:
- -- The default (non-frozen) structure type predicate is now significantly more
+ -- The default (non-frozen) structure type predicate is now significantly
     faster (no function call) in the case where the argument is a structure
     of another type or the type is a supertype of the object's type.  The code
     is also somewhat smaller.
@@ -337,14 +337,14 @@ Redefinition:
     added, slot types are changed to a type that is not a subtype of the old
     type, or the inheritance structure has changed.  Previously any change at
     all would produce a warning.
- -- When a change is compatible, the default restart (CONTINUE) invalidates old
-    instances, constructors and predicate uses.  When speed <= safety, a
+ -- When a change is incompatible, the default restart (CONTINUE) invalidates
+    old instances, constructors and predicate uses.  When speed <= safety, a
     LAYOUT-INVALID error will be signalled when obsolete instances are passed
     to a type test (e.g. for type checking.)  Use of old code on new instances
     or old instances when speed > safety > 0 will result in type errors.
     Other restarts allow you to ignore the redefinition or to clobber the
-    existing information, preserving the old code (in case the change is really
-    compatible.)
+    existing information, preserving the old code (in case the change is
+    actually compatible.)
  -- If the structure length or inheritance structure has changed, an error
     is signalled when you load code that was compiled with a different
     structure definition than the one currently in effect.
@@ -363,7 +363,6 @@ The largest changes are:
     more efficiently dispatch on structure and built-in types.  Some
     miscellaneous tuning.  CLOS symbols are now exported from the LISP package,
     so you don't need to USE-PACKAGE PCL anymore.
- -- New version of CLX: R5.01
 
 PCL notes:
 
