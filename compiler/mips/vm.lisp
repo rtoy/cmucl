@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.38 1990/11/13 23:00:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.39 1990/11/26 16:01:56 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -54,12 +54,14 @@
 (defreg cname 14)
 (defreg lexenv 15)
 (defreg nfp 16)
-(defreg old-fp 17)
+(defreg ocfp 17)
+(defconstant old-fp-offset 17) ; for backwards compatibility
 (defreg lra 18)
 (defreg l0 19)
 (defreg null 20)
 (defreg bsp 21)
-(defreg fp 22)
+(defreg cfp 22)
+(defconstant fp-offset 22) ; for backwards compatibility
 (defreg csp 23)
 (defreg l1 24)
 (defreg alloc 25)
@@ -72,7 +74,7 @@
   nl0 nl1 nl2 nl3 nl4 nargs)
 
 (defregset descriptor-regs
-  a0 a1 a2 a3 a4 a5 cname lexenv nfp old-fp lra l0 l1 l2)
+  a0 a1 a2 a3 a4 a5 cname lexenv nfp ocfp lra l0 l1 l2)
 
 (defregset register-arg-offsets
   a0 a1 a2 a3 a4 a5)
@@ -272,8 +274,10 @@
 
 (defregtn bsp any-reg)
 (defregtn csp any-reg)
-(defregtn fp any-reg)
-(defregtn old-fp any-reg)
+(defregtn cfp any-reg)
+(defregtn ocfp any-reg)
+(defregtn fp any-reg) ; for backwards compatibility
+(defregtn old-fp any-reg) ; for backwards compatibility
 (defregtn nsp any-reg)
 (defregtn nfp any-reg)
 
@@ -336,7 +340,8 @@
 (eval-when (compile load eval)
 
 ;;; Offsets of special stack frame locations
-(defconstant old-fp-save-offset 0)
+(defconstant ocfp-save-offset 0)
+(defconstant old-fp-save-offset 0) ; for backwards compatablility.
 (defconstant lra-save-offset 1)
 (defconstant nfp-save-offset 2)
 
