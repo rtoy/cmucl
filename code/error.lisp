@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.61 2002/02/01 12:54:53 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.62 2002/07/25 14:49:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,8 @@
 
 (in-package "KERNEL")
 (export '(layout-invalid condition-function-name simple-control-error
-	  simple-file-error simple-program-error simple-style-warning
+	  simple-file-error simple-program-error simple-parse-error
+          simple-style-warning
 	  simple-undefined-function))
 
 (in-package "LISP")
@@ -907,6 +908,7 @@
 
 ;;; INTERNAL
 (define-condition simple-program-error (simple-condition program-error)())
+(define-condition simple-parse-error (simple-condition program-error)())
 (define-condition simple-control-error (simple-condition control-error)())
 
 (define-condition simple-file-error (simple-condition file-error) ()

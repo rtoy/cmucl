@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.31 2001/07/16 13:21:07 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.32 2002/07/25 14:49:25 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1380,7 +1380,7 @@
   ;;get the dispatch char for macro (error if not there), diddle
   ;;entry for sub-char.
   (when (digit-char-p sub-char)
-    (error "Sub-Char must not be a decibal digit: ~S" sub-char))
+    (error "Sub-Char must not be a decimal digit: ~S" sub-char))
   (let* ((sub-char (char-upcase sub-char))
 	 (dpair (find disp-char (dispatch-tables rt)
 		      :test #'char= :key #'car)))
@@ -1388,7 +1388,7 @@
 	(setf (elt (the simple-vector (cdr dpair))
 		   (char-code sub-char))
 	      (coerce function 'function))
-	(error "~S is not a dispatch char." disp-char))))
+	(error "~S is not a dispatch character." disp-char))))
 
 (defun get-dispatch-macro-character
        (disp-char sub-char &optional (rt *readtable*))
@@ -1476,7 +1476,8 @@
 		     ((= i end)
 		      (if junk-allowed
 			  (return-from parse-integer (values nil end))
-			  (error "No non-whitespace characters in number.")))
+			  (error 'simple-parse-error
+                                 :format-control "No non-whitespace characters in number.")))
 		   (declare (fixnum i))
 		   (unless (whitespacep (char string i)) (return i))))
 	  (minusp nil)
@@ -1502,17 +1503,23 @@
 		     ((= jndex end))
 		   (declare (fixnum jndex))
 		   (unless (whitespacep (char string jndex))
-		     (error "There's junk in this string: ~S." string)))
+		     (error 'simple-parse-error
+                            :format-control "There's junk in this string: ~S."
+                            :format-arguments (list string))))
 		 (return nil))
 		(t
-		 (error "There's junk in this string: ~S." string))))
+		 (error 'simple-parse-error
+                        :format-control "There's junk in this string: ~S."
+                        :format-arguments (list string)))))
 	(incf index))
       (values
        (if found-digit
 	   (if minusp (- result) result)
 	   (if junk-allowed
 	       nil
-	       (error "There's no digits in this string: ~S" string)))
+	       (error 'simple-parse-error
+                      :format-control "There are no digits in this string: ~S"
+                      :format-arguments (list string))))
        index))))
 
 
