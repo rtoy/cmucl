@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.28 1993/03/13 10:56:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.29 1993/03/13 12:06:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -318,12 +318,10 @@
 			  :alloc-trans %make-funcallable-instance)
   #-gengc
   (function
-   :init :arg
    :ref-known (flushable) :ref-trans %funcallable-instance-function
    :set-known (unsafe) :set-trans (setf %funcallable-instance-function))
   #+gengc (entry-point :c-type "char *")
-  (lexenv :init :arg
-	  :ref-known (flushable) :ref-trans %funcallable-instance-lexenv
+  (lexenv :ref-known (flushable) :ref-trans %funcallable-instance-lexenv
 	  :set-known (unsafe) :set-trans (setf %funcallable-instance-lexenv))
   (layout :init :arg
 	  :ref-known (flushable) :ref-trans %funcallable-instance-layout
