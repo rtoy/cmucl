@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.117 2004/11/17 23:28:21 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.118 2004/11/19 19:07:24 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -851,25 +851,25 @@
 (declaim (inline cstack-pointer-valid-p))
 (defun cstack-pointer-valid-p (x)
   (declare (type system:system-area-pointer x))
-  #-:x86
+  #-(or :x86 :amd64)
   (and (system:sap< x (kernel:current-sp))
        (system:sap<= #-gengc (alien:alien-sap
 			      (alien:extern-alien "control_stack" (* t)))
 		     #+gengc (kernel:mutator-control-stack-base)
 		     x)
        (zerop (logand (system:sap-int x) #b11)))
-  #+:x86 ;; stack grows to low address values
+  #+(or :x86 :amd64) ;; stack grows to low address values
   (and (system:sap>= x (kernel:current-sp))
        (system:sap> (alien:alien-sap
 		     (alien:extern-alien "control_stack_end" (* t)))
 		    x)
        (zerop (logand (system:sap-int x) #b11))))
 
-#+(or gengc x86)
+#+(or gengc x86 amd64)
 (alien:def-alien-routine component-ptr-from-pc (system:system-area-pointer)
   (pc system:system-area-pointer))
 
-#+(or gengc x86)
+#+(or gengc x86 amd64)
 (defun component-from-component-ptr (component-ptr)
   (declare (type system:system-area-pointer component-ptr))
   (kernel:make-lisp-obj
@@ -932,8 +932,10 @@
     nil)
    (t
     ;; Check the two possible frame pointers.
-    (let ((lisp-ocfp (sap-ref-sap fp (- (* (1+ vm::ocfp-save-offset) 4))))
-	  (lisp-ra (sap-ref-sap fp (- (* (1+ vm::return-pc-save-offset) 4))))
+    (let ((lisp-ocfp (sap-ref-sap fp (- (* (1+ vm::ocfp-save-offset) 
+					   vm:word-bytes))))
+	  (lisp-ra (sap-ref-sap fp (- (* (1+ vm::return-pc-save-offset)
+					 vm:word-bytes))))
 	  (c-ocfp (sap-ref-sap fp (* 0 vm:word-bytes)))
 	  (c-ra (sap-ref-sap fp (* 1 vm:word-bytes))))
       (cond ((and (sap> lisp-ocfp fp) (cstack-pointer-valid-p lisp-ocfp)
@@ -985,7 +987,7 @@
 ;	     (format t "Debug: no valid fp found ~s ~s~%" lisp-ocfp c-ocfp)
 	     nil))))))
 
-) ; end progn x86
+) ; end progn x86 amd64
 
 
 ;;; TOP-FRAME -- Public.
@@ -1079,7 +1081,7 @@
 ;;; location offset on the stack.  Loc is the saved sc-offset describing the
 ;;; main location.
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun get-context-value (frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
 	   (type c::sc-offset loc))
@@ -1088,7 +1090,7 @@
     (if escaped
 	(sub-access-debug-var-slot pointer loc escaped)
 	(kernel:stack-ref pointer stack-slot))))
-#+x86
+#+(or x86 amd64)
 (defun get-context-value (frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
 	   (type c::sc-offset loc))
@@ -1103,7 +1105,7 @@
 	   (sap-ref-sap pointer (- (* (1+ stack-slot) 4))))))))
 
 ;;;
-#-x86
+#-(or x86 amd64)
 (defun (setf get-context-value) (value frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
 	   (type c::sc-offset loc))
@@ -1113,7 +1115,7 @@
 	(sub-set-debug-var-slot pointer loc value escaped)
 	(setf (kernel:stack-ref pointer stack-slot) value))))
 
-#+x86
+#+(or x86 amd64)
 (defun (setf get-context-value) (value frame stack-slot loc)
   (declare (type compiled-frame frame) (type unsigned-byte stack-slot)
 	   (type c::sc-offset loc))
@@ -1176,7 +1178,7 @@
 	      frame)))))
 
 
-#+(or sparc (and x86 linux))
+#+(or sparc (and (or x86 amd64) linux))
 (defun find-foreign-function-name (address)
   "Return a string describing the foreign function near ADDRESS"
   (let ((addr (sys:sap-int address)))
@@ -1199,7 +1201,7 @@
 		       (alien:slot info 'filename)
 		       )))))))
 
-#-(or sparc (and x86 linux))
+#-(or sparc (and (or x86 amd64) linux))
 (defun find-foreign-function-name (ra)
   (declare (ignore ra))
   "Foreign function call land")
@@ -1248,7 +1250,7 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; into C.  In this case, the code object is stored on the stack after the
 ;;; LRA, and the LRA is the word offset.
 ;;;
-#-(or gengc x86)
+#-(or gengc x86 amd64)
 (defun compute-calling-frame (caller lra up-frame)
   (declare (type system:system-area-pointer caller))
   (when (cstack-pointer-valid-p caller)
@@ -1299,7 +1301,7 @@ The result is a symbol or nil if the routine cannot be found."
 				 (if up-frame (1+ (frame-number up-frame)) 0)
 				 escaped))))))
 
-#+x86
+#+(or x86 amd64)
 (defun compute-calling-frame (caller ra up-frame)
   (declare (type system:system-area-pointer caller ra))
 ;  (format t "ccf: ~a ~a ~a~%" caller ra up-frame)
@@ -1775,19 +1777,19 @@ The result is a symbol or nil if the routine cannot be found."
 		   (system:sap-ref-32 catch
 				      (* vm:catch-block-current-cont-slot
 					 vm:word-bytes))))
-	(let* (#-(or gengc x86)
+	(let* (#-(or gengc x86 amd64)
 	       (lra (kernel:stack-ref catch vm:catch-block-entry-pc-slot))
-	       #+(or gengc x86)
+	       #+(or gengc x86 amd64)
 	       (ra (system:sap-ref-sap
 		    catch (* vm:catch-block-entry-pc-slot vm:word-bytes)))
-	       #-x86
+	       #-(or x86 amd64)
 	       (component
 		(kernel:stack-ref catch vm:catch-block-current-code-slot))
-	       #+x86
+	       #+(or x86 amd64)
 	       (component (component-from-component-ptr 
 			   (component-ptr-from-pc ra)))
 	       (offset
-		#-(or gengc x86)
+		#-(or gengc x86 amd64)
 		(* (- (1+ (kernel:get-header-data lra))
 		      (kernel:get-header-data component))
 		   vm:word-bytes)
@@ -1796,14 +1798,14 @@ The result is a symbol or nil if the routine cannot be found."
 		      (kernel:get-lisp-obj-address component)
 		      (kernel:get-header-data component))
 		   vm:other-pointer-type)
-		#+x86
+		#+(or x86 amd64)
 		(- (system:sap-int ra)
 		   (- (kernel:get-lisp-obj-address component)
 		      vm:other-pointer-type)
 		   (* (kernel:get-header-data component) vm:word-bytes))))
-	  (push (cons #-x86
+	  (push (cons #-(or x86 amd64)
 		      (kernel:stack-ref catch vm:catch-block-tag-slot)
-		      #+x86
+		      #+(or x86 amd64)
 		      (kernel:make-lisp-obj
 		       (system:sap-ref-32 catch (* vm:catch-block-tag-slot
 						   vm:word-bytes)))
@@ -4070,7 +4072,7 @@ The result is a symbol or nil if the routine cannot be found."
     (do ((frame frame (frame-down frame)))
 	((not frame) nil)
       (when (and (compiled-frame-p frame)
-		 (#-x86 eq #+x86 sys:sap= lra
+		 (#-(or x86 amd64) eq #+(or x86 amd64) sys:sap= lra
 		     (get-context-value frame
 					#-gengc vm::lra-save-offset
 					#+gengc vm::ra-save-offset
@@ -4395,7 +4397,7 @@ The result is a symbol or nil if the routine cannot be found."
       (breakpoint-do-displaced-inst signal-context
 				    (breakpoint-data-instruction data))
       ; Under HPUX we can't sigreturn so bp-do-disp-i has to return.
-      #-(or hpux irix x86)
+      #-(or hpux irix x86 amd64)
       (error "BREAKPOINT-DO-DISPLACED-INST returned?"))))
 
 (defun invoke-breakpoint-hooks (breakpoints component offset)
@@ -4452,8 +4454,8 @@ The result is a symbol or nil if the routine cannot be found."
 
 (defun get-function-end-breakpoint-values (scp)
   (let ((ocfp (system:int-sap (vm:sigcontext-register scp
-						      #-x86 vm::ocfp-offset
-						      #+x86 vm::ebx-offset)))
+						      #-(or x86 amd64) vm::ocfp-offset
+						      #+(or x86 amd64) vm::ebx-offset)))
 	(nargs (kernel:make-lisp-obj
 		(vm:sigcontext-register scp vm::nargs-offset)))
  	(reg-arg-offsets '#.vm::register-arg-offsets)
@@ -4471,8 +4473,8 @@ The result is a symbol or nil if the routine cannot be found."
 ;;; MAKE-BOGUS-LRA (used for :function-end breakpoints)
 ;;;
 
-(defconstant bogus-lra-constants #-x86 2 #+x86 3)
-(defconstant known-return-p-slot (+ vm:code-constants-offset #-x86 1 #+x86 2))
+(defconstant bogus-lra-constants #-(or x86 amd64) 2 #+(or x86 amd64) 3)
+(defconstant known-return-p-slot (+ vm:code-constants-offset #-(or x86 amd64) 1 #+(or x86 amd64) 2))
 
 ;;; MAKE-BOGUS-LRA -- Interface.
 ;;;
@@ -4494,8 +4496,8 @@ The result is a symbol or nil if the routine cannot be found."
 	  (length (system:sap- src-end src-start))
 	  (code-object
 	   (system:%primitive
-	    #-(and x86 gencgc) c:allocate-code-object
-	    #+(and x86 gencgc) c::allocate-dynamic-code-object
+	    #-(and (or x86 amd64) gencgc) c:allocate-code-object
+	    #+(and (or x86 amd64) gencgc) c::allocate-dynamic-code-object
 	    (1+ bogus-lra-constants)
 	    length))
 	  (dst-start (kernel:code-instructions code-object)))
@@ -4505,9 +4507,9 @@ The result is a symbol or nil if the routine cannot be found."
      (setf (kernel:%code-debug-info code-object) :bogus-lra)
      (setf (kernel:code-header-ref code-object vm:code-trace-table-offset-slot)
 	   length)
-     #-x86
+     #-(or x86 amd64)
      (setf (kernel:code-header-ref code-object real-lra-slot) real-lra)
-     #+x86
+     #+(or x86 amd64)
      (multiple-value-bind (offset code)
 	 (compute-lra-data-from-pc real-lra)
        (setf (kernel:code-header-ref code-object real-lra-slot) code)
@@ -4516,9 +4518,9 @@ The result is a symbol or nil if the routine cannot be found."
 	   known-return-p)
      (kernel:system-area-copy src-start 0 dst-start 0 (* length vm:byte-bits))
      (vm:sanctify-for-execution code-object)
-     #+x86
+     #+(or x86 amd64)
      (values dst-start code-object (system:sap- trap-loc src-start))
-     #-x86
+     #-(or x86 amd64)
      (let ((new-lra (kernel:make-lisp-obj (+ (system:sap-int dst-start)
 					     vm:other-pointer-type))))
        (kernel:set-header-data
