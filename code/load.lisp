@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.22 1990/12/19 02:34:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.23 1991/01/11 22:39:32 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -475,12 +475,12 @@
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
   (let* ((size (clone-arg))
-	 (res (c:make-structure size)))
+	 (res (make-structure size)))
     (declare (type index size))
     (do ((n (1- size) (1- n)))
 	((minusp n))
       (declare (type (integer -1 #.most-positive-fixnum) n))
-      (setf (c::structure-ref res n) (pop-stack)))
+      (setf (structure-ref res n) (pop-stack)))
     res))
 
 (define-fop (fop-end-group 64 :nope) (throw 'group-end t))
