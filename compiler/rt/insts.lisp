@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.10 1991/10/03 13:27:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.11 1991/10/22 16:43:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -702,6 +702,16 @@
 
 
 ;;;; Breaking.
+
+(define-instruction (tge)
+  (r (op :constant #xBD)
+     (r2 :argument register)
+     (r3 :argument register)))
+
+(define-instruction (tlt)
+  (r (op :constant #xBE)
+     (r2 :argument register)
+     (r3 :argument register)))
 
 ;;; break.
 ;;;
