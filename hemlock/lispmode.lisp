@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.8 1991/07/07 17:31:24 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/lispmode.lisp,v 1.1.1.9 1991/07/09 21:50:09 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1056,12 +1056,10 @@
 ;;;
 (defun lisp-indentation-check-for-local-def (mark temp1 temp2 start arg-list)
   ;; We know this succeeds from LISP-INDENTATION.
-  (backward-up-list (move-mark temp1 mark))
-  (cond ((and (mark-before temp1)
-	      (eq (character-attribute :lisp-syntax (next-character temp1))
-		  :open-paren)
-	      (backward-up-list temp1))
-	 ;; We have FLET structure, so see if that's the name of the form.
+  (backward-up-list (move-mark temp1 mark)) ;Paren for local definition.
+  (cond ((and (backward-up-list temp1)	    ;Paren opening the list of defs
+	      (backward-up-list temp1))	    ;Paren for FLET or MACROLET.
+	 ;; See if the containing form is named FLET or MACROLET.
 	 (mark-after temp1)
 	 (unless (and (scan-char temp1 :lisp-syntax
 				 (not (or :space :prefix :char-quote)))
