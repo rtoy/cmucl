@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.8 1993/02/26 17:32:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/streams.lisp,v 1.1.1.9 1993/02/26 18:23:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,12 +172,21 @@
 	  (t eof-value))))
 
 (defun region-misc (stream operation &optional arg1 arg2)
+  (declare (ignore arg2))
   (case operation
     (:listen (mark< (hemlock-region-stream-mark stream)
 		    (region-end (hemlock-region-stream-region stream))))
     (:clear-input (move-mark
                    (hemlock-region-stream-mark stream)
                    (region-end (hemlock-region-stream-region stream))))
+    (:unread
+     (let ((mark (hemlock-region-stream-mark stream)))
+       (unless (mark> mark
+		      (region-start (hemlock-region-stream-region stream)))
+	 (error "Nothing to unread."))
+       (unless (char= arg1 (previous-character mark))
+	 (error "Unreading something not read: ~S" arg1))
+       (mark-before mark)))
     (:close
      (delete-mark (hemlock-region-stream-mark stream))
      (setf (hemlock-region-stream-region stream) nil))
