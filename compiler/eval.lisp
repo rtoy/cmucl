@@ -498,7 +498,8 @@
 		   (setf block (c::nlx-info-target nlx-info))
 		   (setf cont last-cont)))))
 	 (c::%unwind-protect
-	  (eval-stack-pop) ;Through away some cleanup thing.
+	  ;; Cleanup function not pushed due to special-case :UNUSED
+	  ;; annotation in ANNOTATE-COMPONENT-FOR-EVAL.
 	  (let* ((nlx-info (eval-stack-pop))
 		 (fell-through-p nil)
 		 (stack-top *eval-stack-top*))
