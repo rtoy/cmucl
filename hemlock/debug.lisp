@@ -6,10 +6,8 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-#|
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.2 1991/05/29 11:40:48 chiles Exp $")
-|#
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/debug.lisp,v 1.3 1991/06/13 15:05:31 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,7 +21,7 @@
 
 
 
-;;;; Commands for slave buffers.
+;;;; DEFINE-DEBUGGER-COMMAND.
 
 (defmacro define-debugger-command (name doc cmd &key uses-argument)
   `(defcommand ,(concatenate 'simple-string "Debug " name) (p)
@@ -41,9 +39,9 @@
 	       cmd)))
        (wire:wire-force-output wire))))
 
-;;;
-;;; Frame changing commands.
-;;;
+
+
+;;;; Frame changing commands.
 
 (define-debugger-command "Up"
   "Moves the \"Current Eval Server\" up one debugger frame."
@@ -67,9 +65,9 @@
   :frame
   :uses-argument t)
 
-;;;
-;;; In and Out commands.
-;;;
+
+
+;;;; In and Out commands.
 
 (define-debugger-command "Quit"
   "In the \"Current Eval Server\", throws to top level out of the debugger."
@@ -89,9 +87,9 @@
   :restart
   :uses-argument t)
 
-;;;
-;;; Information commands.
-;;;
+
+
+;;;; Information commands.
 
 (define-debugger-command "Help"
   "In the \"Current Eval Server\", prints the debugger's help text."
@@ -121,9 +119,6 @@
    current frame."
   :list-locals)
 
-;;; This should probably take you to the source in the editor.
-;;; Maybe split the windows?
-;;;
 (define-debugger-command "Source"
   "In the \"Current Eval Server\", prints the source form for the debugger's
    current frame."
@@ -134,33 +129,16 @@
    current frame with surrounding forms for context."
   :vsource)
 
-;;; Okay, the :edit-source command in the debugger initiates a synchronous RPC
-;;; into the editor via the wire in *termina-io*, a typescript stream.  This
-;;; routine takes the necessary values, a file and source-path, and changes
-;;; the editor's state to edit that.
-;;;
-;;; This command has to wait on SERVE-EVENT until some special is set by the
-;;; RPC routine saying it is okay to return to the editor's top level.
-;;;
-(defcommand "Debug Edit Source" (p)
-  "Give the \"Current Eval Server\"'s current debugger frame, place the user
-   at the location's source in the editor."
-  "Give the \"Current Eval Server\"'s current debugger frame, place the user
-   at the location's source in the editor."
-  (declare (ignore p))
-  (let* ((server-info (get-current-eval-server t))
-	 (wire (server-info-wire server-info)))
-    (wire:remote wire
-      (ts-stream-accept-input
-       (ts-data-stream (server-info-slave-info server-info))
-       :edit-source))
-    (wire:wire-force-output wire))))
 
+
+;;;; Source editing.
 
-;;; Okay, the :edit-source command in the slave debugger initiates a
-;;; synchronous RPC into the editor via the wire in *termina-io*, a typescript
-;;; stream.  This routine takes the necessary values, a file and source-path,
-;;; and changes the editor's state to edit that.
+;;; "Debug Edit Source" -- Command.
+;;;
+;;; The :edit-source command in the slave debugger initiates a synchronous RPC
+;;; into the editor via the wire in *terminal-io*, a typescript stream.  This
+;;; routine takes the necessary values, a file and source-path, and changes the
+;;; editor's state to display that location.
 ;;;
 ;;; This command has to wait on SERVE-EVENT until some special is set by the
 ;;; RPC routine saying it is okay to return to the editor's top level.
@@ -292,9 +270,22 @@
 (defun cannot-edit-source-location ()
   (throw 'editor-top-level nil))
 
-;;;
-;;; Miscellaneous commands.
-;;;
+#|
+(defcommand "Debug Breakpoint" (p)
+  "This tries to set a breakpoint in the \"Current Eval Server\" at the
+   location designated by the current point.  If there is no known code
+   location at the point, then this moves the point to the closest location
+   before the point."
+  "This tries to set a breakpoint in the \"Current Eval Server\" at the
+   location designated by the current point.  If there is no known code
+   location at the point, then this moves the point to the closest location
+   before the point."
+  (declare (ignore p))
+  (with-mark ((m (current-point)))
+    (
+|#
+
+;;;; Miscellaneous commands.
 
 (define-debugger-command "Flush Errors"
   "In the \"Current Eval Server\", toggles whether the debugger ignores errors
