@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.21 1990/03/06 19:23:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.22 1990/03/06 19:57:21 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -171,6 +171,42 @@
 	  ((control-stack number-stack base-character-stack sap-stack)
 	   (storew ,n-reg cont-tn (tn-offset ,n-stack))))))))
 
+
+;;;; Three Way Comparison
+
+(defmacro three-way-comparison (x y condition flavor not-p target temp)
+  (once-only ((n-x x)
+	      (n-y y)
+	      (n-condition condition)
+	      (n-flavor flavor)
+	      (n-not-p not-p)
+	      (n-target target)
+	      (n-temp temp))
+    `(progn
+       (ecase ,n-condition
+	 (:eq
+	  (if ,n-not-p
+	      (inst bne ,n-x ,n-y ,n-target)
+	      (inst beq ,n-x ,n-y ,n-target)))
+	 (:lt
+	  (ecase ,n-flavor
+	    (:unsigned
+	     (inst sltu ,n-temp ,n-x ,n-y))
+	    (:signed
+	     (inst slt ,n-temp ,n-x ,n-y)))
+	  (if ,n-not-p
+	      (inst beq ,n-temp zero-tn ,n-target)
+	      (inst bne ,n-temp zero-tn ,n-target)))
+	 (:gt
+	  (ecase ,n-flavor
+	    (:unsigned
+	     (inst sltu ,n-temp ,n-y ,n-x))
+	    (:signed
+	     (inst slt ,n-temp ,n-y ,n-x)))
+	  (if ,n-not-p
+	      (inst beq ,n-temp zero-tn ,n-target)
+	      (inst bne ,n-temp zero-tn ,n-target))))
+       (nop))))
 
 
 ;;;; Simple Type Checking Macros
