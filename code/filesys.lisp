@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.27 1992/02/15 12:47:35 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.28 1992/08/19 18:45:34 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -205,21 +205,23 @@
 		   nil
 		   version)))))
 
-(defun split-at-slashes (namestr start end)
-  (declare (type simple-base-string namestr)
+(defun split-at-slashes (namestr start end &optional (char #\/))
+  "Take a string and return a list of cons cells that mark the char
+   separated subseq. The first value t if absolute directories location."
+    (declare (type simple-base-string namestr)
 	   (type index start end))
   (let ((absolute (and (/= start end)
-		       (char= (schar namestr start) #\/))))
+		       (char= (schar namestr start) char))))
     (when absolute
       (incf start))
-    ;; Next, split the remainder into slash seperated chunks.
+    ;; Next, split the remainder into ; separated chunks.
     (collect ((pieces))
       (loop
-	(let ((slash (position #\/ namestr :start start :end end)))
-	  (pieces (cons start (or slash end)))
-	  (unless slash
+	(let ((char-pos (position char namestr :start start :end end)))
+	  (pieces (cons start (or char-pos end)))
+	  (unless char-pos
 	    (return))
-	  (setf start (1+ slash))))
+	  (setf start (1+ char-pos))))
       (values absolute (pieces)))))
 
 (defun maybe-extract-search-list (namestr start end)
@@ -298,6 +300,10 @@
 
 (defun unparse-unix-piece (thing)
   (etypecase thing
+    (keyword
+     (cond ((eq thing ':wild) "*")
+	   ((eq thing ':wild-inferiors) "**")
+	   (t (error "Invalid keyword piece: ~S~%" thing))))
     (simple-string
      (let* ((srclen (length thing))
 	    (dstlen srclen))
@@ -324,6 +330,8 @@
 	    (strings piece))
 	   (symbol
 	    (case piece
+	      (:wild
+	       (strings "*"))
 	      (:multi-char-wild
 	       (strings "*"))
 	      (:single-char-wild
