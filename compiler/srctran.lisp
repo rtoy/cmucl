@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.55 1997/09/05 17:28:37 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.56 1997/09/08 02:26:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -708,6 +708,18 @@
 	     ;; Limits are equal.  Check for open or closed bounds.
 	     ;; Don't overlap if one or the other are open.
 	     (or (consp left) (consp right)))))))
+
+;;; INVTERVAL->=
+;;;
+;;; Return T if X >= Y.  That is, every number in the interval X is
+;;; always greater than any number in the interval Y.
+;;;
+(defun interval->= (x y)
+  (declare (type interval x y))
+  ;; X >= Y if lower bound of X >= upper bound of Y
+  (when (and (interval-bounded-p x 'below)
+	     (interval-bounded-p y 'above))
+    (>= (bound-value (interval-low x)) (bound-value (interval-high y)))))
 
 ;;; INTERVAL-ABS
 ;;;
@@ -2692,7 +2704,8 @@
 ;;; Y's high, the X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
-(defun ir1-transform-integer-< (x y first second inverse)
+#-propagate-float-type
+(defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
       (let* ((x-type (numeric-type-or-lose x))
@@ -2712,15 +2725,15 @@
 	       (give-up))))))
 	      
 #+propagate-float-type
-(defun ir1-transform-float-< (x y first second inverse)
+(defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
       (let ((xi (numeric-type->interval (numeric-type-or-lose x)))
 	    (yi (numeric-type->interval (numeric-type-or-lose y))))
 	(cond ((interval-< xi yi)
-	       t)
-	      ((interval-< yi xi)
-	       nil)
+	       't)
+	      ((interval->= xi yi)
+	       'nil)
 	      ((and (constant-continuation-p first)
 		    (not (constant-continuation-p second)))
 	       `(,inverse y x))
@@ -2728,18 +2741,18 @@
 	       (give-up))))))
 
 (deftransform < ((x y) (integer integer) * :when :both)
-  (ir1-transform-integer-< x y x y '>))
+  (ir1-transform-< x y x y '>))
 
 (deftransform > ((x y) (integer integer) * :when :both)
-  (ir1-transform-integer-< y x x y '<))
+  (ir1-transform-< y x x y '<))
 
 #+propagate-float-type
 (deftransform < ((x y) (float float) * :when :both)
-  (ir1-transform-float-< x y x y '>))
+  (ir1-transform-< x y x y '>))
 
 #+propagate-float-type
 (deftransform > ((x y) (float float) * :when :both)
-  (ir1-transform-float-< y x x y '<))
+  (ir1-transform-< y x x y '<))
 
   
 
