@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.54 1997/12/18 16:42:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.55 1997/12/18 19:01:00 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,9 +280,9 @@
 			   :high new-hi)))))
 ;;;
 (defoptimizer (scale-single-float derive-type) ((f ex))
-  (two-arg-derive-type f ex #'scale-float-derive-type-aux))
+  (two-arg-derive-type f ex #'scale-float-derive-type-aux #'scale-single-float))
 (defoptimizer (scale-double-float derive-type) ((f ex))
-  (two-arg-derive-type f ex #'scale-float-derive-type-aux))
+  (two-arg-derive-type f ex #'scale-float-derive-type-aux #'scale-double-float))
 	     
 ;;; toy@rtp.ericsson.se:
 ;;;
@@ -307,7 +307,7 @@
 	       (specifier-type `(,',type ,(or lo '*) ,(or hi '*)))))
 	   
 	   (defoptimizer (,fun derive-type) ((num))
-	     (one-arg-derive-type num #',aux-name))))))
+	     (one-arg-derive-type num #',aux-name #',fun))))))
   (frob %single-float single-float)
   (frob %double-float double-float))
 ) ; end progn  
@@ -628,7 +628,8 @@
 	    #'(lambda (arg)
 		(elfun-derive-type-simple arg #',name
 					  ,cond
-					  ,def-lo-bnd ,def-hi-bnd)))))))
+					  ,def-lo-bnd ,def-hi-bnd))
+	    #',name)))))
   ;; These functions are easy because they are defined for the whole
   ;; real line.
   (frob exp (constantly t)
@@ -688,12 +689,12 @@
 				((consp lo) (list (coerce 0 f-type)))
 				(t (coerce 0 f-type)))
 		     :high (bound-func #'sqrt hi)))
-		  (float-or-complex-type arg))))
+		  (float-or-complex-type arg 0))))
 	   (t
 	    (float-or-complex-type arg 0))))))
 ;;;
 (defoptimizer (sqrt derive-type) ((num))
-  (one-arg-derive-type num #'sqrt-derive-type-aux))
+  (one-arg-derive-type num #'sqrt-derive-type-aux #'sqrt))
 
 
 ;;; Acos is monotonic decreasing, so we need to swap the function
@@ -725,7 +726,7 @@
 	    (float-or-complex-type arg 0 pi))))))
 ;;;
 (defoptimizer (acos derive-type) ((num))
-  (one-arg-derive-type num #'acos-derive-type-aux))
+  (one-arg-derive-type num #'acos-derive-type-aux #'acos))
 
 
 ;;; Compute bounds for (expt x y).  This should be easy since (expt x
@@ -890,7 +891,7 @@
 		(float-or-complex-type (numeric-contagion x y)))))))
 
 (defoptimizer (expt derive-type) ((x y))
-  (two-arg-derive-type x y #'expt-derive-type-aux))
+  (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
 
 
 ;;; Note must assume that a type including 0.0 may also include -0.0
@@ -940,8 +941,8 @@
 
 (defoptimizer (log derive-type) ((x &optional y))
   (if y
-      (two-arg-derive-type x y #'log-derive-type-aux-2)
-      (one-arg-derive-type x #'log-derive-type-aux-1)))
+      (two-arg-derive-type x y #'log-derive-type-aux-2 #'log)
+      (one-arg-derive-type x #'log-derive-type-aux-1 #'log)))
 
 
 (defun atan-derive-type-aux-1 (y)
@@ -967,9 +968,9 @@
 
 (defoptimizer (atan derive-type) ((y &optional x))
   (cond ((null x)
-	 (one-arg-derive-type y #'atan-derive-type-aux-1))
+	 (one-arg-derive-type y #'atan-derive-type-aux-1 #'atan))
 	(t
-	 (two-arg-derive-type y x #'atan-derive-type-aux-2))))
+	 (two-arg-derive-type y x #'atan-derive-type-aux-2 #'atan))))
 
 
 (defun cosh-derive-type-aux (x)
@@ -980,7 +981,7 @@
    #'cosh (constantly t) 0 nil))
 
 (defoptimizer (cosh derive-type) ((num))
-  (one-arg-derive-type num #'cosh-derive-type-aux))
+  (one-arg-derive-type num #'cosh-derive-type-aux #'cosh))
 
 
 (defun phase-derive-type-aux (type)
@@ -1031,7 +1032,7 @@
 			    :high pi))))
 
 (defoptimizer (phase derive-type) ((num))
-  (one-arg-derive-type num #'phase-derive-type-aux))
+  (one-arg-derive-type num #'phase-derive-type-aux #'phase))
 
 ) ;end progn for propagate-fun-type
 
@@ -1067,7 +1068,7 @@
 			      :high (numeric-type-high type)))))
 
 (defoptimizer (realpart derive-type) ((num))
-  (one-arg-derive-type num #'realpart-derive-type-aux))
+  (one-arg-derive-type num #'realpart-derive-type-aux #'realpart))
 
 (defun imagpart-derive-type-aux (type)
   (cond ((numeric-type-real-p type)
@@ -1089,7 +1090,7 @@
 			    :high (numeric-type-high type)))))
 
 (defoptimizer (imagpart derive-type) ((num))
-  (one-arg-derive-type num #'imagpart-derive-type-aux))
+  (one-arg-derive-type num #'imagpart-derive-type-aux #'imagpart))
 
 (defun complex-derive-type-aux-1 (re-type)
   (if (numeric-type-p re-type)
@@ -1133,8 +1134,8 @@
 
 (defoptimizer (complex derive-type) ((re &optional im))
   (if im
-      (two-arg-derive-type re im #'complex-derive-type-aux-2)
-      (one-arg-derive-type re #'complex-derive-type-aux-1)))
+      (two-arg-derive-type re im #'complex-derive-type-aux-2 #'complex)
+      (one-arg-derive-type re #'complex-derive-type-aux-1 #'complex)))
 
 
 ;;; Define some transforms for complex operations.  We do this in lieu
@@ -1224,10 +1225,10 @@
 	    (float-or-complex-type arg -1 1))))))
 
 (defoptimizer (sin derive-type) ((num))
-  (one-arg-derive-type num #'sincos-derive-type-aux))
+  (one-arg-derive-type num #'sincos-derive-type-aux #'sin))
        
 (defoptimizer (cos derive-type) ((num))
-  (one-arg-derive-type num #'sincos-derive-type-aux))
+  (one-arg-derive-type num #'sincos-derive-type-aux #'cos))
 
 
 (defun tan-derive-type-aux (arg)
@@ -1244,7 +1245,7 @@
 	    (float-or-complex-type arg))))))
 
 (defoptimizer (tan derive-type) ((num))
-  (one-arg-derive-type num #'tan-derive-type-aux))
+  (one-arg-derive-type num #'tan-derive-type-aux #'tan))
 
 ;;; conjugate always returns the same type as the input type  
 (defoptimizer (conjugate derive-type) ((num))
@@ -1254,6 +1255,7 @@
   (one-arg-derive-type num
      #'(lambda (arg)
 	 (c::specifier-type
-	  `(complex ,(or (numeric-type-format arg) 'single-float))))))
+	  `(complex ,(or (numeric-type-format arg) 'single-float))))
+     #'cis))
 
 ) ; end progn

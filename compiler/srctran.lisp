@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.66 1997/12/17 19:24:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.67 1997/12/18 19:00:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -812,21 +812,18 @@
 	     (t
 	      (list arg))))
 	 (convert-member-type (type)
-	   ;; Run down the list of members and convert to the
-	   ;; appropriate numeric-type.
+	   ;; Run down the list of members and convert to a list of
+	   ;; member types.
 	   (mapcar #'(lambda (element)
 		       (if (numberp element)
-			   (let ((type (type-of element)))
-			     (specifier-type `(,(if (subtypep type 'integer)
-						    'integer
-						    type) ,element ,element)))
+			   (specifier-type `(member ,element))
 			   *empty-type*))
 		   (member-type-members type))))
     (when (eq arg *empty-type*)
       (return-from prepare-arg-for-derive-type nil))
     ;; Make sure all args are some type of numeric-type.  For member
     ;; types, convert the list of members into a union of equivalent
-    ;; numeric-types.
+    ;; single-element member-type's.
     (let ((new-args (flatten-list (mapcar #'(lambda (x)
 					      (if (member-type-p x)
 						  (convert-member-type x)
@@ -844,19 +841,32 @@
 ;;;
 ;;; Given the continuation ARG, derive the resulting type using the
 ;;; DERIVE-FCN.  DERIVE-FCN takes exactly one argument which is some
-;;; "atomic" continuation type like numeric-type.  It should return
-;;; the resulting type, which can be a list of types.
+;;; "atomic" continuation type like numeric-type or member-type
+;;; (containing just one element).  It should return the resulting
+;;; type, which can be a list of types.
 ;;;
-(defun one-arg-derive-type (arg derive-fcn)
-  (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg)))
-	(result '()))
+;;; For the case of member types, we call FCN on the element of the
+;;; member type to get the resulting member type result.
+;;;
+(defun one-arg-derive-type (arg derive-fcn fcn)
+  (let ((arg-list (prepare-arg-for-derive-type (continuation-type arg))))
     (when arg-list
-      ;; Run down the list of args and derive the type of each one and
-      ;; save all of the results in a list.
-      (setf result (flatten-list (mapcar derive-fcn arg-list)))
-      (if (rest result)
-	  (make-union-type result)
-	  (first result)))))
+      (flet
+	  ((deriver (x)
+	     (etypecase x
+	       (member-type
+		(with-float-traps-masked (:underflow :overflow :divide-by-zero)
+		    
+		  (specifier-type
+		   `(member ,(funcall fcn (first (member-type-members x)))))))
+	       (numeric-type
+		(funcall derive-fcn x)))))
+	;; Run down the list of args and derive the type of each one and
+	;; save all of the results in a list.
+	(let ((result (flatten-list (mapcar #'deriver arg-list))))
+	  (if (rest result)
+	      (make-union-type result)
+	      (first result)))))))
 
 ;;; TWO-ARG-DERIVE-TYPE
 ;;;
@@ -867,27 +877,53 @@
 ;;; deriving the type of things like (* x x), which should always be
 ;;; positive.  If we didn't do this, we wouldn't be able to tell.
 ;;;
-(defun two-arg-derive-type (arg1 arg2 derive-fcn)
-  (let ((same-arg (same-leaf-ref-p arg1 arg2))
-	(a1 (prepare-arg-for-derive-type (continuation-type arg1)))
-	(a2 (prepare-arg-for-derive-type (continuation-type arg2)))
-	(result '()))
-    (when (and a1 a2)
-      (if same-arg
-	  ;; Since the args are the same continuation, just run down on
-	  ;; of the lists.
-	  (dolist (x a1)
-	    (push (funcall derive-fcn x x same-arg) result))
-	  ;; Try all pairwise combinations and gather the result
-	  (dolist (x a1)
-	    (dolist (y a2)
-	      (push (or (funcall derive-fcn x y same-arg)
-			(numeric-contagion x y))
-		    result))))
-      (setf result (flatten-list result))
-      (if (rest result)
-	      (make-union-type result)
-	      (first result)))))
+(defun two-arg-derive-type (arg1 arg2 derive-fcn fcn)
+  (labels
+      ((maybe-convert-member-type (arg)
+	 (etypecase arg
+	   (numeric-type arg)
+	   (member-type
+	    (let* ((val (first (member-type-members arg)))
+		   (val-type (type-of val)))
+	      (specifier-type `(,(if (subtypep val-type 'integer)
+				     'integer
+				     val-type)
+				,val ,val))))))
+       (deriver (x y same-arg)
+	 (let* ((member-result-p (and (member-type-p x) (member-type-p y)))
+		(x (maybe-convert-member-type x))
+		(y (maybe-convert-member-type y))
+		(result
+		 (if member-result-p
+		     (with-float-traps-masked
+			 (:underflow :overflow :divide-by-zero)
+		       (funcall fcn
+				(numeric-type-low x)
+				(numeric-type-low y)))
+		     (funcall derive-fcn x y same-arg))))
+	   (if (and member-result-p result)
+	       (specifier-type `(member ,result))
+	       result))))
+    (let ((same-arg (same-leaf-ref-p arg1 arg2))
+	  (a1 (prepare-arg-for-derive-type (continuation-type arg1)))
+	  (a2 (prepare-arg-for-derive-type (continuation-type arg2)))
+	  (result '()))
+      (when (and a1 a2)
+	(if same-arg
+	    ;; Since the args are the same continuation, just run down on
+	    ;; of the lists.
+	    (dolist (x a1)
+	      (push (deriver x x same-arg) result))
+	    ;; Try all pairwise combinations and gather the result
+	    (dolist (x a1)
+	      (dolist (y a2)
+		(push (or (deriver x y same-arg)
+			  (numeric-contagion x y))
+		      result))))
+	(setf result (flatten-list result))
+	(if (rest result)
+	    (make-union-type result)
+	    (first result))))))
 
 ) ; end progn
 
@@ -978,7 +1014,7 @@
 
 
 (defoptimizer (+ derive-type) ((x y))
-  (two-arg-derive-type x y #'+-derive-type-aux))
+  (two-arg-derive-type x y #'+-derive-type-aux #'+))
 
 (defun --derive-type-aux (x y same-arg)
   (if (and (numeric-type-real-p x)
@@ -1011,7 +1047,7 @@
       (numeric-contagion x y)))
 
 (defoptimizer (- derive-type) ((x y))
-  (two-arg-derive-type x y #'--derive-type-aux))
+  (two-arg-derive-type x y #'--derive-type-aux #'-))
 
 (defun *-derive-type-aux (x y same-arg)
   (if (and (numeric-type-real-p x)
@@ -1044,7 +1080,7 @@
       (numeric-contagion x y)))
 
 (defoptimizer (* derive-type) ((x y))
-  (two-arg-derive-type x y #'*-derive-type-aux))
+  (two-arg-derive-type x y #'*-derive-type-aux #'*))
 
 (defun /-derive-type-aux (x y same-arg)
   (if (and (numeric-type-real-p x)
@@ -1076,7 +1112,7 @@
 
 
 (defoptimizer (/ derive-type) ((x y))
-  (two-arg-derive-type x y #'/-derive-type-aux))
+  (two-arg-derive-type x y #'/-derive-type-aux #'/))
 
 ) ;end progn
 
@@ -1152,7 +1188,8 @@
 				      (if hi (negate-bound hi) nil))
 			       (setf (numeric-type-high result)
 				     (if lo (negate-bound lo) nil))
-			       result)))))
+			       result))
+			 #'-)))
 
 #-propagate-float-type
 (defoptimizer (abs derive-type) ((num))
@@ -1196,7 +1233,7 @@
 			      :high (interval-high abs-bnd))))))
 #+propagate-float-type
 (defoptimizer (abs derive-type) ((num))
-  (one-arg-derive-type num #'abs-derive-type-aux))
+  (one-arg-derive-type num #'abs-derive-type-aux #'abs))
 
 #-propagate-float-type
 (defoptimizer (truncate derive-type) ((number divisor))
@@ -1340,8 +1377,8 @@
   (make-values-type
    :required
    (list
-    (two-arg-derive-type number divisor #'truncate-derive-type-quot-aux)
-    (two-arg-derive-type number divisor #'truncate-derive-type-rem-aux))))
+    (two-arg-derive-type number divisor #'truncate-derive-type-quot-aux #'truncate)
+    (two-arg-derive-type number divisor #'truncate-derive-type-rem-aux #'rem))))
 
 (defun ftruncate-derive-type-quot (number-type divisor-type)
   ;; The bounds are the same as for truncate.  However, the first
@@ -1365,15 +1402,17 @@
   (make-values-type
    :required
    (list
-    (two-arg-derive-type number divisor #'ftruncate-derive-type-quot-aux)
-    (two-arg-derive-type number divisor #'truncate-derive-type-rem-aux))))
+    (two-arg-derive-type number divisor #'ftruncate-derive-type-quot-aux #'ftruncate)
+    (two-arg-derive-type number divisor #'truncate-derive-type-rem-aux #'rem))))
 
 
 (defun %unary-truncate-derive-type-aux (number)
   (truncate-derive-type-quot number (specifier-type '(integer 1 1))))
 
 (defoptimizer (%unary-truncate derive-type) ((number))
-  (one-arg-derive-type number #'%unary-truncate-derive-type-aux))
+  (one-arg-derive-type number
+		       #'%unary-truncate-derive-type-aux
+		       #'%unary-truncate))
 
 ;;; Define optimizers for floor and ceiling
 (macrolet
@@ -1435,8 +1474,8 @@
 			  *empty-type*)))
 	       (make-values-type
 		:required
-		(list (two-arg-derive-type number divisor #'derive-q)
-		      (two-arg-derive-type number divisor #'derive-r)))))
+		(list (two-arg-derive-type number divisor #'derive-q #',name)
+		      (two-arg-derive-type number divisor #'derive-r #'mod)))))
 	   ))))
   
   (frob-opt floor floor-quotient-bound floor-rem-bound)
@@ -1478,8 +1517,8 @@
 			  *empty-type*)))
 	       (make-values-type
 		:required
-		(list (two-arg-derive-type number divisor #'derive-q)
-		      (two-arg-derive-type number divisor #'derive-r)))))))))
+		(list (two-arg-derive-type number divisor #'derive-q #',name)
+		      (two-arg-derive-type number divisor #'derive-r #'mod)))))))))
   
   (frob-opt ffloor floor-quotient-bound floor-rem-bound)
   (frob-opt fceiling ceiling-quotient-bound ceiling-rem-bound))
