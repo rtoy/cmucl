@@ -25,9 +25,7 @@
 ;;; with TN:
 ;;; -- If an component-live TN (:component kind), then iterate over all the
 ;;;    blocks.  If the element at Offset is used anywhere in any of the
-;;;    environment's blocks (always-live /= 0), then there is a conflict.
-;;; -- :Environment is similar to :Component, except that we iterate only over
-;;;    the blocks in the environment.
+;;;    component's blocks (always-live /= 0), then there is a conflict.
 ;;; -- If TN is global (Confs true), then iterate over the blocks TN is live in
 ;;;    (using TN-Global-Conflicts).  If the TN is live everywhere in the block
 ;;;    (:Live), then there is a conflict if the element at offset is used
@@ -46,11 +44,6 @@
       (let ((loc-live (svref (finite-sb-always-live sb) offset)))
 	(dotimes (i (ir2-block-count *compile-component*) nil)
 	  (when (/= (sbit loc-live i) 0)
-	    (return t)))))
-     ((eq kind :environment)
-      (let ((loc-live (svref (finite-sb-always-live sb) offset)))
-	(do-environment-ir2-blocks (env-block (tn-environment tn) nil)
-	  (when (/= (sbit loc-live (ir2-block-number env-block)) 0)
 	    (return t)))))
      (confs
       (let ((loc-confs (svref (finite-sb-conflicts sb) offset))
@@ -95,8 +88,6 @@
 ;;;    all of the local conflict bits and the always-live bit.  This records a
 ;;;    conflict with any TN that has a LTN number in the block, as well as with
 ;;;    :Always-Live and :Environment TNs.
-;;; -- :Environment is similar to :Component, except that we iterate over only
-;;;    the blocks in the environment.
 ;;; -- If TN is global, then iterate over the blocks TN is live in.  In
 ;;;    addition to setting the always-live bit to represent the conflict with
 ;;;    TNs live throughout the block, we also set bits in the local conflicts.
@@ -119,11 +110,6 @@
 	  (dotimes (num (ir2-block-count *compile-component*) nil)
 	    (setf (sbit loc-live num) 1)
 	    (set-bit-vector (svref loc-confs num))))
-	 ((eq kind :environment)
-	  (do-environment-ir2-blocks (env-block (tn-environment tn))
-	    (let ((num (ir2-block-number env-block)))
-	      (setf (sbit loc-live num) 1)
-	      (set-bit-vector (svref loc-confs num)))))
 	 (confs
 	  (do ((conf confs (global-conflicts-tn-next conf)))
 	      ((null conf))
@@ -391,14 +377,14 @@
 
 ;;;; Register saving:
 
-;;; Orignal-TN  --  Internal
+;;; Original-TN  --  Internal
 ;;;
 ;;;    If a save TN, return the saved TN, otherwise return TN.  Useful for
 ;;; getting the conflicts of a TN that might be a save TN.
 ;;;
 (defun original-tn (tn)
   (declare (type tn tn))
-  (if (member (tn-kind tn) '(:save :save-once))
+  (if (member (tn-kind tn) '(:save :save-once :specified-save))
       (tn-save-tn tn)
       tn))
 
@@ -427,23 +413,42 @@
 ;;;    Find the load function for moving from Src to Dest and emit a
 ;;; MOVE-OPERAND VOP with that function as its info arg.
 ;;;
-(defun emit-operand-load (node block src dest after)
+(defun emit-operand-load (node block src dest before)
   (declare (type node node) (type ir2-block block)
-	   (type tn src dest) (type (or vop null) after))
+	   (type tn src dest) (type (or vop null) before))
   (emit-load-template node block
 		      (template-or-lose 'move-operand)
 		      src dest
 		      (list (or (svref (sc-move-functions (tn-sc dest))
 				       (sc-number (tn-sc src)))
 				(no-load-function-error src dest)))
-		      after)
+		      before)
   (undefined-value))
 
-  
+
+;;; REVERSE-FIND-VOP  --  Internal
+;;;
+;;;    Find the preceding use of the VOP NAME in the emit order, starting with
+;;; VOP.  We must find the VOP in the same IR1 block.
+;;;
+(defun reverse-find-vop (name vop)
+  (do ((block (vop-block vop) (ir2-block-prev block)))
+      (nil)
+    (assert (eq (ir2-block-block block) (ir2-block-block (vop-block vop))))
+    (do ((current vop (vop-prev current)))
+	((null current))
+      (when (eq (vop-info-name (vop-info current)) name)
+	(return-from reverse-find-vop current)))))
+
+
 ;;; Save-Complex-Writer-TN  --  Internal
 ;;;
 ;;;    For TNs that have other than one writer, we save the TN before each
-;;; call.
+;;; call.  If a local call (MOVE-ARGS is :LOCAL-CALL), then we scan back for
+;;; the ALLOCATE-FRAME VOP, and emit the save there.  This is necessary because
+;;; in a self-recursive local call, the registers holding the current arguments
+;;; may get trashed by setting up the call arguments.  The ALLOCATE-FRAME VOP
+;;; marks a place at which the values are known to be good.
 ;;;
 (defun save-complex-writer-tn (tn vop)
   (let ((save (or (tn-save-tn tn)
@@ -451,7 +456,14 @@
 	(node (vop-node vop))
 	(block (vop-block vop))
 	(next (vop-next vop)))
-    (emit-operand-load node block tn save vop)
+    (when (eq (tn-kind save) :specified-save)
+      (setf (tn-kind save) :save))
+    (assert (eq (tn-kind save) :save))
+    (emit-operand-load node block tn save
+		       (if (eq (vop-info-move-args (vop-info vop))
+			       :local-call)
+			   (reverse-find-vop 'allocate-frame vop)
+			   vop))
     (emit-operand-load node block save tn next)))
 
 
@@ -464,22 +476,16 @@
   (let* ((old-save (tn-save-tn tn))
 	 (save (or old-save (pack-save-tn tn))))
 
-    (unless old-save
+    (when (or (not old-save)
+	      (eq (tn-kind old-save) :specified-save))
       (let ((writer (tn-ref-vop (tn-writes tn))))
 	(emit-operand-load (vop-node writer) (vop-block writer)
-			    tn save (vop-next writer)))
+			   tn save (vop-next writer)))
       (setf (tn-kind save) :save-once))
 
     (emit-operand-load (vop-node vop) (vop-block vop) save tn (vop-next vop)))
 
   (undefined-value))
-
-
-;;; Emit-Saves  --  Internal
-;;;
-;;;    Scan over the VOPs in Block, emiting saving code for TNs noted in the
-;;; codegen info that are packed into saved SCs.
-;;;
 
 
 ;;; Emit-Saves  --  Internal
@@ -503,6 +509,194 @@
 		(save-complex-writer-tn tn vop)))))))
 
   (undefined-value))
+
+
+;;;; Optimized saving:
+
+;;; SAVE-IF-NECESSARY  --  Internal
+;;;
+;;;    Save TN if it isn't a single-writer TN that has already been saved.  If
+;;; multi-write, we insert the save Before the specified VOP.  Context is a VOP
+;;; used to tell which node/block to use for the new VOP.
+;;;
+(defun save-if-necessary (tn before context)
+  (declare (type tn tn) (type (or vop null) before) (type vop context))
+  (let ((writes (tn-writes tn))
+	(save (tn-save-tn tn)))
+    (assert save)
+    (cond
+     ((eq (tn-kind save) :save-once))
+     ((and writes (null (tn-ref-next writes)))
+      (let ((writer (tn-ref-vop (tn-writes tn))))
+	(emit-operand-load (vop-node writer) (vop-block writer)
+			   tn save (vop-next writer)))
+      (setf (tn-kind save) :save-once))
+     (t
+      (emit-operand-load (vop-node context) (vop-block context)
+			 tn save before)))))
+
+;;; RESTORE-TN  --  Internal
+;;;
+;;;    Load the TN from its save location, allocating one if necessary.  The
+;;; load is inserted Before the specifier VOP.  Context is a VOP used to tell
+;;; which node/block to use for the new VOP.
+;;;
+(defun restore-tn (tn before context)
+  (declare (type tn tn) (type (or vop null) before) (type vop context))
+  (let ((save (or (tn-save-tn tn) (pack-save-tn tn))))
+    (emit-operand-load (vop-node context) (vop-block context)
+		       save tn before))
+  (undefined-value))
+
+
+;;; OPTIMIZED-EMIT-SAVES-BLOCK  --  Internal
+;;;
+;;;    Start scanning backward at the end of Block, looking tracking which TNs
+;;; are live and looking for places where we have to save.  We manipulate two
+;;; sets: SAVES and RESTORES.
+;;;
+;;;    SAVES is a set of all the TNs that have to be saved because they are
+;;; restored after some call.  We normally delay saving until the beginning of
+;;; the block, but we must save immediately if we see a write of the saved TN.
+;;; We also immediately save all TNs and exit when we see a
+;;; NOTE-ENVIRONMENT-START VOP, since saves can't be done before the
+;;; environment is properly initialized.
+;;;
+;;;    RESTORES is a set of all the TNs read (and not written) between here and
+;;; the next call, i.e. the set of TNs that must be restored when we reach the
+;;; next (earlier) call VOP.   Unlike SAVES, this set is cleared when we do
+;;; the restoring after a call.  Any TNs that were in RESTORES are moved into
+;;; SAVES to ensure that they are saved at some point.
+;;;
+;;;    SAVES and RESTORES are represented using both a list and a bit-vector so
+;;; that we can quickly iterate and test for membership.  The incoming Saves
+;;; and Restores args are used for computing theses sets (the initial contents
+;;; are ignored.)
+;;;
+(defun optimized-emit-saves-block (block saves restores)
+  (declare (type ir2-block block) (type simple-bit-vector saves restores))
+  (let ((1block (ir2-block-block block))
+	(saves-list ())
+	(restores-list ())
+	(skipping nil))
+    (clear-bit-vector saves)
+    (clear-bit-vector restores)
+    (do-live-tns (tn (ir2-block-live-in block) block)
+      (when (and (sc-save-p (tn-sc tn))
+		 (not (eq (tn-kind tn) :component)))
+	(let ((num (tn-number tn)))
+	  (setf (sbit restores num) 1)
+	  (push tn restores-list))))
+
+    (do ((block block (ir2-block-prev block))
+	 (prev nil block))
+	((not (eq (ir2-block-block block) 1block))
+	 (assert (not skipping))
+	 (dolist (save saves-list)
+	   (let ((start (ir2-block-start-vop prev)))
+	     (save-if-necessary save start start)))
+	 prev)
+      (do ((vop (ir2-block-last-vop block) (vop-prev vop)))
+	  ((null vop))
+	(let ((info (vop-info vop)))
+	  (case (vop-info-name info)
+	    (allocate-frame
+	     (assert skipping)
+	     (setq skipping nil))
+	    (note-environment-start
+	     (assert (not skipping))
+	     (dolist (save saves-list)
+	       (save-if-necessary save (vop-next vop) vop))
+	     (return-from optimized-emit-saves-block block)))
+	  
+	  (unless skipping
+	    (do ((write (vop-results vop) (tn-ref-across write)))
+		((null write))
+	      (let* ((tn (tn-ref-tn write))
+		     (num (tn-number tn)))
+		(unless (zerop (sbit restores num))
+		  (setf (sbit restores num) 0)
+		  (setq restores-list (delete tn restores-list)))
+		(unless (zerop (sbit saves num))
+		  (setf (sbit saves num) 0)
+		  (save-if-necessary tn (vop-next vop) vop)
+		  (setq saves-list (delete tn saves-list))))))
+	  
+	  (when (eq (vop-info-save-p info) t)
+	    (dolist (tn restores-list)
+	      (restore-tn tn (vop-next vop) vop)
+	      (let ((num (tn-number tn)))
+		(when (zerop (sbit saves num))
+		  (push tn saves-list)
+		  (setf (sbit saves num) 1))))
+	    (setq restores-list nil)
+	    (clear-bit-vector restores))
+	  
+	  (if (eq (vop-info-move-args info) :local-call)
+	      (setq skipping t)
+	      (do ((read (vop-args vop) (tn-ref-across read)))
+		  ((null read))
+		(let* ((tn (tn-ref-tn read))
+		       (num (tn-number tn)))
+		  (when (and (sc-save-p (tn-sc tn))
+			     (zerop (sbit restores num))
+			     (not (eq (tn-kind tn) :component)))
+		    (setf (sbit restores num) 1)
+		    (push tn restores-list))))))))))
+	
+
+;;; OPTIMIZED-EMIT-SAVES  --  Internal
+;;;
+;;;    Like EMIT-SAVES, only different.  We avoid redundant saving within the
+;;; block, and don't restore values that aren't used before the next call.
+;;; This function is just the top-level loop over the blocks in the component,
+;;; which locates blocks that need saving done.
+;;;
+(defun optimized-emit-saves (component)
+  (declare (type component component))
+  (let* ((gtn-count (1+ (ir2-component-global-tn-counter
+			 (component-info component))))
+	 (saves (make-array gtn-count :element-type 'bit))
+	 (restores (make-array gtn-count :element-type 'bit))
+	 (block (ir2-block-prev (block-info (component-tail component))))
+	 (head (block-info (component-head component))))
+    (loop
+      (when (eq block head) (return))
+      (when (do ((vop (ir2-block-start-vop block) (vop-next vop)))
+		((null vop) nil)
+	      (when (eq (vop-info-save-p (vop-info vop)) t)
+		(return t)))
+	(setq block (optimized-emit-saves-block block saves restores)))
+      (setq block (ir2-block-prev block)))))
+
+
+;;; ASSIGN-TN-COSTS  --  Internal
+;;;
+;;;    Iterate over the normal TNs, finding the cost of packing on the stack in
+;;; units of the number of references.  We count all references as +1, and
+;;; subtract out REGISTER-SAVE-PENALTY for each place where we would have to
+;;; save a register.
+;;;
+(defun assign-tn-costs (component)
+  (do-ir2-blocks (block component)
+    (do ((vop (ir2-block-start-vop block) (vop-next vop)))
+	((null vop))
+      (when (eq (vop-info-save-p (vop-info vop)) t)
+	(do-live-tns (tn (vop-save-set vop) block)
+	  (decf (tn-cost tn) register-save-penalty)))))
+  
+  (do ((tn (ir2-component-normal-tns (component-info component))
+	   (tn-next tn)))
+      ((null tn))
+    (let ((cost (tn-cost tn)))
+      (declare (fixnum cost))
+      (do ((ref (tn-reads tn) (tn-ref-next ref)))
+	  ((null ref))
+	(incf cost))
+      (do ((ref (tn-writes tn) (tn-ref-next ref)))
+	  ((null ref))
+	(incf cost))
+      (setf (tn-cost tn) cost))))
 
 
 ;;;; Targeting:
@@ -950,9 +1144,15 @@
 
 ;;; Pack-TN  --  Internal
 ;;;
-;;;    Attempt to pack TN in all possible SCs, in order of decreasing
-;;; desirability (according to the costs.)  If Restricted, then we can only
-;;; pack in TN-SC, not in any Alternate-SCs.
+;;;    Attempt to pack TN in all possible SCs, first in the SC chosen by
+;;; representation selection, then in the alternate SCs in the order they were
+;;; specified in the SC definition.  If the TN-COST is negative, then we
+;;; don't attempt to pack in SCs that must be saved.  If Restricted, then we
+;;; can only pack in TN-SC, not in any Alternate-SCs.
+;;;
+;;;    If we can't pack in the initial SC, and the TN has a :SPECIFIED-SAVE TN,
+;;; then instead of using the latnerate SCs, pack the save TN (if necessary)
+;;; and then pack this TN in the same location.
 ;;;
 (defun pack-tn (tn restricted)
   (declare (type tn tn))
@@ -962,22 +1162,30 @@
     (do ((sc fsc (pop alternates)))
 	((null sc)
 	 (failed-to-pack-error tn restricted))
-      (let ((loc (or (find-ok-target-offset original sc)
-		     (select-location original sc)
-		     (when (eq (sb-kind (sc-sb sc)) :unbounded)
-		       (grow-sc sc)
-		       (or (select-location original sc)
-			   (error "Failed to pack after growing SC?"))))))
-	(when loc
-	  (add-location-conflicts original sc loc)
-	  (setf (tn-sc tn) sc)
-	  (setf (tn-offset tn) loc)
-	  (return)))))
+      (when (or restricted
+		(not (and (minusp (tn-cost tn)) (sc-save-p sc))))
+	(let ((loc (or (find-ok-target-offset original sc)
+		       (select-location original sc)
+		       (when (eq (sb-kind (sc-sb sc)) :unbounded)
+			 (grow-sc sc)
+			 (or (select-location original sc)
+			     (error "Failed to pack after growing SC?"))))))
+	  (when loc
+	    (add-location-conflicts original sc loc)
+	    (setf (tn-sc tn) sc)
+	    (setf (tn-offset tn) loc)
+	    (return))
+	  (let ((save (tn-save-tn tn)))
+	    (when (and save
+		       (eq (tn-kind save) :specified-save))
+	      (unless (tn-offset save)
+		(pack-tn save nil))
+	      (setf (tn-offset tn) (tn-offset save))
+	      (setf (tn-sc tn) (tn-sc save))
+	      (return)))))))
+	    
   (undefined-value))
 
-
-(defun pack-targeting-tns (tn)
-  )
 
 ;;; Pack-Wired-TN  --  Internal
 ;;;
@@ -986,70 +1194,99 @@
 ;;; location.  If the TN is wired to a location beyond the end of a :Unbounded
 ;;; SB, then grow the SB enough to hold the TN.
 ;;;
+;;; ### Checking for conflicts is disabled for :SPECIFIED-SAVE TNs.  This is
+;;; kind of a hack to make specifying wired stack save locations for local call
+;;; arguments (such as OLD-FP) work, since the caller and callee OLD-FP save
+;;; locations may conflict when the save locations don't really (due to being
+;;; in different frames.)
+;;;
 (defun pack-wired-tn (tn)
   (declare (type tn tn))
   (let* ((sc (tn-sc tn))
 	 (sb (sc-sb sc))
 	 (offset (tn-offset tn))
-	 (end (+ offset (sc-element-size sc))))
+	 (end (+ offset (sc-element-size sc)))
+	 (original (original-tn tn)))
     (when (> end (finite-sb-current-size sb))
       (unless (eq (sb-kind sb) :unbounded)
 	(error "~S wired to a location that is out of bounds." tn))
       (grow-sc sc end))
-    (when (conflicts-in-sc tn sc offset)
+    (when (and (not (eq (tn-kind tn) :specified-save))
+	       (conflicts-in-sc original sc offset))
       (error "~S wired to a location that it conflicts with." tn))
-    (add-location-conflicts tn sc offset)))
+    (add-location-conflicts original sc offset)))
 
 
 ;;; Pack  --  Interface
 ;;;
 (defun pack (component)
-  (let ((*in-pack* t))
+  (let ((*in-pack* t)
+	(optimize (policy nil (or (>= speed cspeed) (>= space cspeed))))
+	(2comp (component-info component)))
     (init-sb-vectors component)
-
+    ;;
+    ;; Call the target functions.
     (do-ir2-blocks (block component)
       (do ((vop (ir2-block-start-vop block) (vop-next vop)))
 	  ((null vop))
 	(let ((target-fun (vop-info-target-function (vop-info vop))))
 	  (when target-fun
 	    (funcall target-fun vop)))))
-
-    (let ((2comp (component-info component)))
-      (do ((tn (ir2-component-wired-tns 2comp) (tn-next tn)))
-	  ((null tn))
-	(pack-wired-tn tn))
-      
-      (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
-	  ((null tn))
-	(when (eq (tn-kind tn) :component)
-	  (pack-tn tn t)))
-
-      (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
-	  ((null tn))
-	(unless (tn-offset tn)
-	  (pack-tn tn t)))
-      
-      (do ((tn (ir2-component-normal-tns 2comp) (tn-next tn)))
-	  ((null tn))
-	(unless (and (eq (tn-kind tn) :normal)
-		     (not (tn-global-conflicts tn)))
-	  (pack-tn tn nil)
-	  (pack-targeting-tns tn))))
     
+    ;;
+    ;; Pack wired TNs first.
+    (do ((tn (ir2-component-wired-tns 2comp) (tn-next tn)))
+	((null tn))
+      (pack-wired-tn tn))
+    ;;
+    ;; Pack restricted component TNs.
+    (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
+	((null tn))
+      (when (eq (tn-kind tn) :component)
+	(pack-tn tn t)))
+    ;;
+    ;; Pack other restricted TNs.
+    (do ((tn (ir2-component-restricted-tns 2comp) (tn-next tn)))
+	((null tn))
+      (unless (tn-offset tn)
+	(pack-tn tn t)))
+    ;;
+    ;; Assign costs to normal TNs so we know which ones should always be
+    ;; packed on the stack.
+    (when optimize
+      (assign-tn-costs component))
+    ;;
+    ;; Pack normal TNs in the order that they appear in the code.  This
+    ;; should have some tendency to pack important TNs first, since control
+    ;; analysis favors the drop-through.  This should also help targeting,
+    ;; since we will pack the target TN soon after we determine the location
+    ;; of the targeting TN.
+    (do-ir2-blocks (block component)
+      (let ((ltns (ir2-block-local-tns block)))
+	(do ((i (1- (ir2-block-local-tn-count block)) (1- i)))
+	    ((minusp i))
+	  (declare (fixnum i))
+	  (let ((tn (svref ltns i)))
+	    (unless (or (null tn) (tn-offset tn) (eq tn :more))
+	      (pack-tn tn nil))))))
+    ;;
+    ;; Pack any leftover normal TNs.  This is to deal with :MORE TNs, which
+    ;; could possibly not appear in any local TN map.
+    (do ((tn (ir2-component-normal-tns 2comp) (tn-next tn)))
+	((null tn))
+      (unless (tn-offset tn)
+	(pack-tn tn nil)))
+    ;;
+    ;; Do load TN packing and emit saves.
     (let ((*live-block* nil)
 	  (*live-vop* nil))
-      (do-ir2-blocks (block component)
-	(let ((ltns (ir2-block-local-tns block)))
-	  (dotimes (i (ir2-block-local-tn-count block))
-	    (let ((tn (svref ltns i)))
-	      (unless (or (null tn)
-			  (eq tn :more)
-			  (tn-global-conflicts tn)
-			  (tn-offset tn))
-		(pack-tn tn nil)
-		(pack-targeting-tns tn)))))
-	
-	(emit-saves block)
-	(pack-load-tns block)))
+      (cond (optimize
+	     (optimized-emit-saves component)
+	     (do-ir2-blocks (block component)
+	       (pack-load-tns block)))
+	    (t
+	     (do-ir2-blocks (block component)
+	       (emit-saves block)
+	       (pack-load-tns block)))))
     
     (undefined-value)))
