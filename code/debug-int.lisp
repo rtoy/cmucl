@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.31 1991/11/03 17:41:51 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.32 1991/11/10 22:24:05 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2469,7 +2469,7 @@
        (system:without-gcing
 	(with-escaped-value (val)
 	  (kernel:make-lisp-obj val))))
-      (#.vm:base-character-reg-sc-number
+      (#.vm:base-char-reg-sc-number
        (with-escaped-value (val)
 	 (code-char val)))
       (#.vm:sap-reg-sc-number
@@ -2499,7 +2499,7 @@
 	 (system:sap-ref-double nfp (c::sc-offset-offset sc-offset))))
       (#.vm:control-stack-sc-number
        (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
-      (#.vm:base-character-stack-sc-number
+      (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
 	 (code-char (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset)))))
       (#.vm:unsigned-stack-sc-number
@@ -2590,7 +2590,7 @@
        (system:without-gcing
 	(set-escaped-value
 	  (kernel:get-lisp-obj-address value))))
-      (#.vm:base-character-reg-sc-number
+      (#.vm:base-char-reg-sc-number
        (set-escaped-value (char-code value)))
       (#.vm:sap-reg-sc-number
        (set-escaped-value (system:sap-int value)))
@@ -2616,7 +2616,7 @@
 	       (the double-float value))))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
-      (#.vm:base-character-stack-sc-number
+      (#.vm:base-char-stack-sc-number
        (with-nfp (nfp)
 	 (setf (system:sap-ref-32 nfp (c::sc-offset-offset sc-offset))
 	       (char-code (the character value)))))
