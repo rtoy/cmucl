@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.2 1990/06/04 08:14:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.3 1990/06/05 14:43:05 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -73,7 +73,7 @@
 
 (eval-when (compile eval)
 
-(defvar *meta-error*)
+(defvar *meta-errors*)
 (setf *meta-errors* (make-array 10 :initial-element nil))
 
 (defun meta-error-number (name)
@@ -374,6 +374,10 @@
   (&rest args)
   (error "object-not-complex:~{ ~S~}" args))
 
+(deferr object-not-weak-pointer
+  "Object is not a WEAK-POINTER."
+  (&rest args)
+  (error "object-not-weak-pointer:~{ ~S~}" args))
 
 
 
