@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/alloc.lisp,v 1.2 1992/03/11 21:40:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/alloc.lisp,v 1.3 1992/03/21 22:18:56 wlott Exp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -61,7 +61,6 @@
 			      `(:arg ,name (descriptor-reg any-reg)
 				     ,(pop arg-offsets)))
 			  (args)))
-		(:temp ndescr non-descriptor-reg nl0-offset)
 		,@(when (or need-unbound-marker header variable-length)
 		    '((:temp temp non-descriptor-reg nl1-offset)))
 		(:res result descriptor-reg a0-offset))
@@ -79,7 +78,7 @@
 			  (inst add alloc-tn temp)
 			  (inst sll temp extra-words (- type-bits word-shift))
 			  (inst add temp (+ (ash (1- ,size) type-bits)
-					    header))
+					    ,header))
 			  (storew temp result 0 ,lowtag)))
 		       (header
 			`((inst li temp
