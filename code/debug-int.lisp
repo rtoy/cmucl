@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.58 1993/05/27 01:36:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.59 1993/05/28 05:20:44 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -356,16 +356,16 @@
 				   #+gengc saved-state-chain
 				   &optional escaped)))
   ;;
-  ;; List of saps to saved states.  Each time we unwind past an exception,
-  ;; we pop the next entry off this list.  When we get to the end of the
-  ;; list, there is nothing else on the stack.
-  #+gengc (saved-state-chain nil :type list)
-  ;;
   ;; Indicates whether someone interrupted frame.  (unexported).
   ;; If escaped, this is a pointer to the state that was saved when we were
   ;; interrupted.  On the non-gengc system, this is a sigcontext pointer.
   ;; On the gengc system, this is a state pointer from saved-state-chain.
-  escaped)
+  escaped
+  ;;
+  ;; List of saps to saved states.  Each time we unwind past an exception,
+  ;; we pop the next entry off this list.  When we get to the end of the
+  ;; list, there is nothing else on the stack.
+  #+gengc (saved-state-chain nil :type list))
 
 (defun print-compiled-frame (obj str n)
   (declare (ignore n))
@@ -1146,9 +1146,26 @@
 (defun lookup-trace-table-entry (component pc)
   (declare (type code-component component)
 	   (type unsigned-byte pc))
-  ;; ### Need to do something real.
-  (declare (ignore component pc))
-  (random 4))
+  (let ((tt (system:sap+ (kernel:code-instructions component)
+			 (kernel:code-header-ref
+			  component
+			  vm:code-trace-table-offset-slot)))
+	(end (system:sap+ (kernel:code-instructions component)
+			  (* (kernel:%code-code-size component)
+			     vm:word-bytes))))
+    (iterate repeat ((sap tt) (offset 0) (state vm:trace-table-normal))
+      (cond ((> offset pc)
+	     state)
+	    ((system:sap< sap end)
+	     (let ((entry (system:sap-ref-16 tt 0)))
+	       (repeat (system:sap+ sap 2)
+		       (+ offset
+			  (ldb (byte c::tt-bits-per-offset
+				     c::tt-bits-per-state)
+			       entry))
+		       (ldb (byte c::tt-bits-per-state 0) entry))))
+	    (t
+	     vm:trace-table-normal)))))
 
 ;;; EXTRACT-INFO-FROM-STATE -- internal.
 ;;;
