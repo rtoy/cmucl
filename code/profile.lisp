@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.38 2004/05/04 14:29:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/profile.lisp,v 1.39 2004/09/28 16:43:26 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -339,6 +339,7 @@ this, the functions are listed.  If NIL, then always list the functions.")
   (def-profile-fwrapper 2)
   (def-profile-fwrapper 3))
 
+#+(or)
 (defun ensure-profile-fwrapper (nreq optionals-p)
   "Ensure that a profile fwrapper for functions with NREQ required
    arguments and optional arguments according to OPTIONALS-P exists.
@@ -348,6 +349,21 @@ this, the functions are listed.  If NIL, then always list the functions.")
       (without-package-locks
        (eval (make-profile-fwrapper nreq optionals-p))
        (compile name)))
+    name))
+
+(defun ensure-profile-fwrapper (nreq optionals-p)
+  "Ensure that a profile fwrapper for functions with NREQ required
+   arguments and optional arguments according to OPTIONALS-P exists.
+   Return the name of that fwrapper."
+  (let ((name (make-profile-fwrapper-name nreq optionals-p)))
+    (unless (fboundp name)
+      (without-package-locks
+	;; I (rtoy) do not know why the above version does not work,
+	;; but this seems to work better.  
+	(destructuring-bind (def name args &body body)
+	    (macroexpand-1 (make-profile-fwrapper nreq optionals-p))
+	  (declare (ignore def))
+	  (compile name `(lambda ,args ,@body)))))
     name))
 
 (defun find-profile-fwrapper (name)
