@@ -819,8 +819,12 @@
 	      (let ((op (tn-ref-tn ref)))
 		(when (and (eq (sc-sb (tn-sc op)) sb)
 			   (eql (tn-offset op) loc))
+		  (return nil)))
+	      (let ((ltn (tn-ref-load-tn ref)))
+		(when (and ltn
+			   (eq (sc-sb (tn-sc ltn)) sb)
+			   (eql (tn-offset ltn) loc))
 		  (return nil))))
-	
 	(let ((victim (svref (finite-sb-live-tns sb) loc)))
 	  (assert victim)
 	  (save-complex-writer-tn victim vop)
@@ -983,7 +987,7 @@
 		(pack-tn tn nil)
 		(pack-targeting-tns tn)))))
 	
-	(pack-load-tns block)
-	(emit-saves block)))
+	(emit-saves block)
+	(pack-load-tns block)))
     
     (undefined-value)))
