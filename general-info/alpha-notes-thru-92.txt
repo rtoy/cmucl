@@ -1,3 +1,13 @@
+11/23/92 to 12/5/92:
+
+Code:
+
+Minor fixes to LOOP and DELETE-PACKAGE.
+
+Low level support for various subtypes of function for use with Dylan.
+
+
+
 10/21/92 to 11/23/92:
 
 Code:
