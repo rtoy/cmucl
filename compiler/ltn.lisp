@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.22 1991/04/09 17:34:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.23 1991/04/15 00:16:33 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -785,7 +785,14 @@
 			      (continuation-info x))))
 			(combination-args call)))
        (funcall frob "Argument type assertions:~%  ~S"
-		(template-arg-types template)))
+		(mapcar #'(lambda (x)
+			    (if (atom x)
+				x
+				(ecase (car x)
+				  (:or `(:or .,(mapcar #'primitive-type-name
+						       (cdr x))))
+				  (:constant `(:constant ,(third x))))))
+			(template-arg-types template))))
       (:conditional
        (funcall frob "Conditional in a non-conditional context."))
       (:result-types
