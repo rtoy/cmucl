@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.22 2003/05/28 09:22:41 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.23 2003/08/28 14:14:57 gerd Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -1287,46 +1287,47 @@ collected result will be returned as the value of the LOOP."
 
 (defun loop-do-if (for negatep)
   (let ((form (loop-get-form))
-	(*loop-inside-conditional* t)
 	(it-p nil)
-	(first-clause-p t))
-    (flet ((get-clause (for)
-	     (do ((body nil)) (nil)
-	       (let ((key (car *loop-source-code*)) (*loop-body* nil) data)
-		 (cond ((not (symbolp key))
-			(loop-error
-			  "~S found where keyword expected getting LOOP clause after ~S."
-			  key for))
-		       (t (setq *loop-source-context* *loop-source-code*)
-			  (loop-pop-source)
-			  (when (and (loop-tequal (car *loop-source-code*) 'it)
-				     first-clause-p)
-			    (setq *loop-source-code*
-				  (cons (or it-p (setq it-p (loop-when-it-variable)))
-					(cdr *loop-source-code*))))
-			  (cond ((or (not (setq data (loop-lookup-keyword
-						       key (loop-universe-keywords *loop-universe*))))
-				     (progn (apply (symbol-function (car data)) (cdr data))
-					    (null *loop-body*)))
-				 (loop-error
-				   "~S does not introduce a LOOP clause that can follow ~S."
-				   key for))
-				(t (setq body (nreconc *loop-body* body)))))))
-	       (setq first-clause-p nil)
-	       (if (loop-tequal (car *loop-source-code*) :and)
-		   (loop-pop-source)
-		   (return (if (cdr body) `(progn ,@(nreverse body)) (car body)))))))
-      (let ((then (get-clause for))
-	    (else (when (loop-tequal (car *loop-source-code*) :else)
-		    (loop-pop-source)
-		    (list (get-clause :else)))))
-	(when (loop-tequal (car *loop-source-code*) :end)
-	  (loop-pop-source))
-	(when it-p (setq form `(setq ,it-p ,form)))
-	(loop-pseudo-body
-	  `(if ,(if negatep `(not ,form) form)
-	       ,then
-	       ,@else))))))
+	(first-clause-p t) then else)
+    (let ((*loop-inside-conditional* t))
+      (flet ((get-clause (for)
+	       (do ((body nil)) (nil)
+		 (let ((key (car *loop-source-code*)) (*loop-body* nil) data)
+		   (cond ((not (symbolp key))
+			  (loop-error
+			     "~S found where keyword expected getting LOOP clause after ~S."
+			     key for))
+			 (t (setq *loop-source-context* *loop-source-code*)
+			    (loop-pop-source)
+			    (when (and (loop-tequal (car *loop-source-code*) 'it)
+				       first-clause-p)
+			      (setq *loop-source-code*
+				    (cons (or it-p (setq it-p (loop-when-it-variable)))
+					  (cdr *loop-source-code*))))
+			    (cond ((or (not (setq data (loop-lookup-keyword
+							     key (loop-universe-keywords *loop-universe*))))
+				       (progn (apply (symbol-function (car data)) (cdr data))
+					      (null *loop-body*)))
+				   (loop-error
+				      "~S does not introduce a LOOP clause that can follow ~S."
+				      key for))
+				  (t (setq body (nreconc *loop-body* body)))))))
+		 (setq first-clause-p nil)
+		 (if (loop-tequal (car *loop-source-code*) :and)
+		     (loop-pop-source)
+		     (return (if (cdr body) `(progn ,@(nreverse body)) (car body)))))))
+	(setq then (get-clause for))
+	(setq else (when (loop-tequal (car *loop-source-code*) :else)
+		     (loop-pop-source)
+		     (list (get-clause :else)))))
+      (when (loop-tequal (car *loop-source-code*) :end)
+	(loop-pop-source))
+      (when it-p
+	(setq form `(setq ,it-p ,form))))
+    (loop-pseudo-body
+       `(if ,(if negatep `(not ,form) form)
+	    ,then
+	    ,@else))))
 
 
 (defun loop-do-initially ()
