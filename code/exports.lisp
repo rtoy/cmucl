@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.163 1999/09/06 06:47:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.164 1999/11/13 14:14:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,7 +170,8 @@
              "BIGNUM-ASHIFT-LEFT" "BIGNUM-ASHIFT-RIGHT" "BIGNUM-COMPARE"
              "BIGNUM-DEPOSIT-BYTE" "BIGNUM-ELEMENT-TYPE" "BIGNUM-GCD"
              "BIGNUM-INDEX" "BIGNUM-INTEGER-LENGTH" "BIGNUM-LOAD-BYTE"
-             "BIGNUM-LOGCOUNT" "BIGNUM-LOGICAL-AND" "BIGNUM-LOGICAL-IOR"
+	     "BIGNUM-LOGBITP" "BIGNUM-LOGCOUNT"
+	     "BIGNUM-LOGICAL-AND" "BIGNUM-LOGICAL-IOR"
              "BIGNUM-LOGICAL-NOT" "BIGNUM-LOGICAL-XOR" "BIGNUM-PLUS-P"
              "BIGNUM-TO-FLOAT" "BIGNUM-TRUNCATE" "BIGNUM-TYPE"
              "FLOAT-BIGNUM-RATIO" "MAKE-SMALL-BIGNUM"
