@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.32 2001/04/16 16:13:56 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.33 2002/09/05 16:13:46 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -508,7 +508,8 @@
 			   (float-sign y pi))
 		       (float-sign y (/ pi 2)))
 		   (%atan2 y x))))
-	(number-dispatch ((y number) (x number))
+	;; If X is given, both X and Y must be real numbers.
+	(number-dispatch ((y real) (x real))
 	  ((double-float
 	    (foreach double-float single-float fixnum bignum ratio))
 	   (atan2 y (coerce x 'double-float)))
