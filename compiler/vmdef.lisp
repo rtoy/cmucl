@@ -496,7 +496,7 @@
   (policy :fast :type policies)
   ;;
   ;; Stuff used by life analysis.
-  (save-p nil :type (member t nil :force-to-stack)))
+  (save-p nil :type (member t nil :compute-only :force-to-stack)))
 
 (defprinter vop-parse
   name
@@ -1176,7 +1176,8 @@
        (setf (vop-parse-policy parse) (vop-spec-arg spec 'policies)))
       (:save-p
        (setf (vop-parse-save-p parse)
-	     (vop-spec-arg spec '(member t nil :force-to-stack))))
+	     (vop-spec-arg spec
+			   '(member t nil :compute-only :force-to-stack))))
       (t
        (error "Unknown option specifier: ~S." (first spec)))))
   (undefined-value))
@@ -1632,7 +1633,7 @@
       form returns NIL, then emission of this VOP is prohibited even when
       all other restrictions are met.
 
-  :Save-P {T | NIL | :Force-To-Stack}
+  :Save-P {NIL | T | :Compute-Only | :Force-To-Stack}
       Indicates how a VOP wants live registers saved."
   
   (check-type name symbol)
