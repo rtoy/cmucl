@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.7 1992/02/26 01:26:32 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.8 1992/05/15 17:40:34 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -253,12 +253,14 @@ Non-CMU users may get documentation from the doc/ directory in the binary
 distribution:
 .TP 10n
 .BR cmu-user.info
-CMU CL User's Manual in Gnu Info format.  You can either have your EMACS
+CMU CL User's Manual in Gnu Info format.  The ``cmu-user.info-<N>'' files
+are subfiles.  You can either have your EMACS
 maintainer install this in the info root, or you can use the info 
 ``g(...whatever.../doc/cmu-user.info)'' command.
 .TP
-.BR cmu-user.ps
-Postscript version of the CMU CL User's Manual (180 pages.)
+.BR cmu-user.dvi
+The CMU CL User's Manual (148 pages) in TeX DVI format.  You can convert to
+Postscript with ``dvips''.
 .TP
 .BR release-notes.txt
 Information on the changes between releases.
