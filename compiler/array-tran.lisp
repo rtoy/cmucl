@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.4 1990/11/13 06:16:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.5 1990/11/16 06:01:07 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -158,7 +158,7 @@
 (def-source-transform make-string (length &key (initial-element #\NULL))
   `(make-array ,length
 	       :element-type 'base-character
-	       :initial-element ',initial-element))
+	       :initial-element ,initial-element))
 
 (defconstant array-info
   '((base-character #\NULL 8 vm:simple-string-type)
