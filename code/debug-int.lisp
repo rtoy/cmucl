@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.27 1991/10/12 20:52:04 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.28 1991/10/13 14:27:02 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2884,9 +2884,17 @@
    and ends of functions may not have code-locations representing them,
    designate these places by supplying what as a debug-function and kind
    indicating the :function-start or :function-end.  When what is a
-   debug-function and kind is :function-end, then hook-function must take an
-   additional argument, a list of values returned by the function.
+   debug-function and kind is :function-end, then hook-function must take two
+   additional arguments, a list of values returned by the function and a
+   function-end-cookie.
       Info is information supplied by and used by the user.
+      Function-end-cookie is a function.  To implement :function-end breakpoints,
+   the system uses starter breakpoints to establish the :function-end breakpoint
+   for each invocation of the function.  Upon each entry, the system creates a
+   unique cookie to identify the invocation, and when the user supplies a
+   function for this argument, the system invokes it on the cookie.  The system
+   later invokes the :function-end breakpoint hook on the same cookie.  The
+   user may save the cookie for comparison in the hook function.
       This signals an error if what is an unknown code-location."
   (etypecase what
     (code-location
@@ -2985,7 +2993,8 @@
 ;;;
 (defun activate-breakpoint (breakpoint)
   "This causes the system to invoke the breakpoint's hook-function until the
-   next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT."
+   next call to DEACTIVATE-BREAKPOINT or DELETE-BREAKPOINT.  The system invokes
+   breakpoint hook functions in the opposite order that you activate them."
   (when (eq (breakpoint-status breakpoint) :deleted)
     (error "Cannot activate a deleted breakpoint -- ~S." breakpoint))
   (unless (eq (breakpoint-status breakpoint) :active)
