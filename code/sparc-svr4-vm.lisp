@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.3 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-svr4-vm.lisp,v 1.4 1997/02/19 01:41:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -301,5 +301,12 @@
 ;;; have a split I&D cache and do require cahce flusing.
 ;;; 
 (defun sanctify-for-execution (component)
-  (declare (ignore component))
+  (without-gcing
+    (alien-funcall (extern-alien "os_flush_icache"
+				 (function void
+					   system-area-pointer
+					   unsigned-long))
+		   (code-instructions component)
+		   (* (code-header-ref component code-code-size-slot)
+		      word-bytes)))
   nil)
