@@ -18,13 +18,10 @@
 
 (in-package "HEMLOCK-INTERNALS" :nicknames '("HI"))
 
-(export '(show-mark editor-sleep text-character print-pretty-character
-	  *input-transcript* *real-editor-input* input-waiting
-	  fun-defined-from-pathname editor-describe-function pause-hemlock
-	  store-cut-string fetch-cut-string schedule-event
-	  remove-scheduled-event enter-window-autoraise directoryp
-	  last-key-event-cursorpos merge-relative-pathnames *editor-input*
-	  *last-character-typed* *character-history*
+(export '(show-mark editor-sleep *input-transcript* fun-defined-from-pathname
+	  editor-describe-function pause-hemlock store-cut-string
+	  fetch-cut-string schedule-event remove-scheduled-event
+	  enter-window-autoraise directoryp merge-relative-pathnames
 	  ;;
 	  ;; Export default-font to prevent a name conflict that occurs due to
 	  ;; the Hemlock variable "Default Font" defined in SITE-INIT below.
@@ -53,11 +50,10 @@
 
 ;;;; SITE-INIT.
 
-;;; *character-history* is defined much later in this file, but it needs to
-;;; be set in SITE-INIT, since MAKE-RING doesn't exist at load time for this
-;;; file.
+;;; *key-event-history* is defined in input.lisp, but it needs to be set in
+;;; SITE-INIT, since MAKE-RING doesn't exist at load time for this file.
 ;;;
-(proclaim '(special *character-history*))
+(proclaim '(special *key-event-history*))
 
 ;;; SITE-INIT  --  Internal
 ;;;
@@ -128,7 +124,7 @@
      a ruler in the bottom border of the window."
     :value t)
 
-  (setf *character-history* (make-ring 60))
+  (setf *key-event-history* (make-ring 60))
   nil)
 
 
@@ -173,14 +169,6 @@
 
 
 ;;;; I/O specials and initialization
-
-(defvar *editor-input* nil
-  "Input stream to get unechoed unbuffered terminal input.")
-
-(defvar *real-editor-input* ()
-  "The real editor input stream.  Useful when we want to read from the
-  terminal when *editor-input* is rebound.")
-
 
 ;;; File descriptor for the terminal.
 ;;; 
@@ -232,6 +220,9 @@
     "/afs/cs.cmu.edu/unix/rt_mach/omega/usr/misc/.lisp/lib/fonts/"))
 
 |#
+
+(proclaim '(special *editor-input* *real-editor-input*))
+
 ;;; INIT-RAW-IO  --  Internal
 ;;;
 ;;;    This function should be called whenever the editor is entered in a new
@@ -241,7 +232,7 @@
   (setf *editor-windowed-input* nil)
   (cond #+nil(display
 	 (setf *editor-windowed-input* (ext:open-clx-display display))
-	 (setf *editor-input* (make-editor-window-input-stream))
+	 (setf *editor-input* (make-windowed-editor-input))
 	 (ext:carefully-add-font-paths *editor-windowed-input*
 				       lisp-fonts-pathnames)
 	 (setup-font-family *editor-windowed-input*
@@ -253,7 +244,7 @@
 	   ;; take care of this.
 	   ;;
 	 (setf *editor-file-descriptor* 0)
-	 (setf *editor-input* (make-editor-tty-input-stream 0))))
+	 (setf *editor-input* (make-tty-editor-input 0))))
   (setf *real-editor-input* *editor-input*)
   *editor-windowed-input*)
 
@@ -499,7 +490,7 @@
   (let ((win (bitmap-hunk-xwindow (window-hunk *current-window*)))
 	(ewin (bitmap-hunk-xwindow (window-hunk *echo-area-window*))))
     (cond (on (setf (xlib:window-priority ewin) :above)
-	      (clear-input *editor-input*)
+	      (clear-editor-input *editor-input*)
 	      (setf (xlib:window-priority win) :above))
 	  (t (setf (xlib:window-priority ewin) :below)
 	     (setf (xlib:window-priority win) :below))))
@@ -519,425 +510,16 @@
 
 
 
+;;;; Line Wrap Char.
+
+(defvar *line-wrap-char* #\!
+  "The character to be displayed to indicate wrapped lines.")
+
+
 ;;;; Current terminal character translation.
-
-(defvar *terminal-translation-table* (make-array 128))
-
-;;; Converting ASCII control characters to Common Lisp control characters:
-;;; ASCII control character codes are separated from the codes of the
-;;; "non-controlified" characters by the code of atsign.  The ASCII control
-;;; character codes range from ^@ (0) through ^_ (one less than the code of
-;;; space).  We iterate over this range adding the ASCII code of atsign to
-;;; get the "non-controlified" character code.  With each of these, we turn
-;;; the code into a Common Lisp character and set its :control bit.  Certain
-;;; ASCII control characters have to be translated to special Common Lisp
-;;; characters outside of the loop.
-;;;    With the advent of Hemlock running under X, and all the key bindings
-;;; changing, we also downcase each Common Lisp character (where normally
-;;; control characters come in upcased) in an effort to obtain normal command
-;;; bindings.  Commands bound to uppercase modified characters will not be
-;;; accessible to terminal interaction.
-;;; 
-(let ((@-code (char-code #\@)))
-  (dotimes (i (char-code #\space))
-    (setf (svref *terminal-translation-table* i)
-	  (set-char-bit (char-downcase (code-char (+ i @-code))) :control t))))
-(setf (svref *terminal-translation-table* 9) #\tab)
-(setf (svref *terminal-translation-table* 10) #\linefeed)
-(setf (svref *terminal-translation-table* 13) #\return)
-(setf (svref *terminal-translation-table* 27) #\alt)
-(setf (svref *terminal-translation-table* 8) #\backspace)
-;;;
-;;; Other ASCII codes are exactly the same as the Common Lisp codes.
-;;; 
-(do ((i (char-code #\space) (1+ i)))
-    ((= i 128))
-  (setf (svref *terminal-translation-table* i) (code-char i)))
-
-;;; TRANSLATE-TTY-CHAR is our interface to be used in GET-EDITOR-INPUT.
-;;; 
-(proclaim '(inline translate-tty-char))
-(defun translate-tty-char (char)
-  (svref *terminal-translation-table* char))
-
 
 (defconstant termcap-file "/etc/termcap")
 
-(defun cl-termcap-char (char)
-  (if (char-bit char :control)
-      (code-char (the fixnum
-		      (- (the fixnum (char-code char))
-			 64))) ;(char-code #\@)
-      (case char
-	(#\alt (code-char 27))
-	(#\newline (code-char 10))
-	(#\return (code-char 13))
-	(#\tab (code-char 9))
-	(#\backspace (code-char 8))
-	(#\formfeed (code-char 12))
-	(t char))))
-
-
-
-;;;; Common editor input: stream def, event queue mngt, kbdmac waiting,
-;;;; more prompt, input method macro.
-
-;;; This is the basic editor stream definition.  More particular stream
-;;; definitions below include this.
-;;; 
-(defstruct (editor-input-stream
-	    (:include stream)
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore s d))
-	       (write-string "#<Editor-Input stream>" stream)))
-	    (:constructor make-editor-input-stream
-			  (head &optional (tail head))))
-  ;;
-  ;; FIFO queue of events on this stream.  The queue always contains
-  ;; at least one one element, which is the character most recently read.
-  ;; If no event has been read, the event is a dummy with a NIL char.
-  head		; First key event in queue.
-  tail)		; Last event in queue.
-
-
-;;; Key event queue.
-;;; 
-
-(defstruct (key-event
-	    (:constructor make-key-event ())) 
-  next		; Next queued event, or NIL if none.
-  hunk		; Screen hunk event was read from.
-  char		; Character read.
-  x		; X and Y character position of mouse cursor.
-  y
-  unread-p)
-
-(defvar *free-key-events* ())
-
-(defun new-event (char x y hunk next &optional unread-p)
-  (let ((res (if *free-key-events*
-		 (shiftf *free-key-events* (key-event-next *free-key-events*))
-		 (make-key-event))))
-    (setf (key-event-char res) char)
-    (setf (key-event-x res) x)
-    (setf (key-event-y res) y)
-    (setf (key-event-hunk res) hunk)
-    (setf (key-event-next res) next)
-    (setf (key-event-unread-p res) unread-p)
-    res))
-
-(defvar *last-character-typed* ()
-  "This variable contains the last character typed to the command
-  interpreter.") 
-
-;;; *character-history* is setup in SITE-INIT.
-;;;
-(defvar *character-history* nil
-  "This ring holds the last 60 characters read by the command interpreter.")
-
-(proclaim '(special *input-transcript*))
-
-;;; DQ-EVENT is used in editor stream methods for popping off input.
-;;; If there is an event not yet read in Stream, then pop the queue
-;;; and return the character.  If there is none, return NIL.
-;;;
-(defun dq-event (stream)
-  (without-interrupts
-   (let* ((head (editor-input-stream-head stream))
-	  (next (key-event-next head)))
-     (if next
-	 (let ((char (key-event-char next)))
-	   (setf (editor-input-stream-head stream) next)
-	   (shiftf (key-event-next head) *free-key-events* head)
-	   (ring-push char *character-history*)
-	   (setq *last-character-typed* char)
-	   (when *input-transcript* 
-	     (vector-push-extend char *input-transcript*))
-	   char)))))
-
-;;; Q-EVENT is used in low level input fetching routines to add input to the
-;;; editor stream.
-;;; 
-(defun q-event (stream char &optional x y hunk)
-  (without-interrupts
-   (let ((new (new-event char x y hunk nil))
-	 (tail (editor-input-stream-tail stream)))
-     (setf (key-event-next tail) new)
-     (setf (editor-input-stream-tail stream) new))))
-
-(defun un-event (char stream)
-  (without-interrupts
-   (let* ((head (editor-input-stream-head stream))
-	  (next (key-event-next head))
-	  (new (new-event char (key-event-x head) (key-event-y head)
-			  (key-event-hunk head) next t)))
-     (setf (key-event-next head) new)
-     (unless next (setf (editor-input-stream-tail stream) new)))))
-
-
-;;; Keyboard macro hacks.
-;;; 
-
-(defvar *input-transcript* ()
-  "If this variable is non-null then it should contain an adjustable vector
-  with a fill pointer into which all keyboard input will be pushed.")
-
-;;; INPUT-WAITING  --  Internal
-;;;
-;;;    An Evil hack that tells us whether there is an unread character on
-;;; *editor-input*.  Note that this is applied to the real *editor-input*
-;;; rather than to a kbdmac stream.
-;;;
-(defun input-waiting ()
-  "Returns true if there is a character which has been unread-char'ed
-   on *editor-input*.  Used by the keyboard macro stuff."
-  (let ((next (key-event-next (editor-input-stream-head *real-editor-input*))))
-    (and next (key-event-unread-p next))))
-
-
-;;; Random typeout hacks.
-;;; 
-
-(defun wait-for-more (stream)
-  (let ((ch (more-read-ch)))
-    (cond ((logical-char= ch :yes))
-	  ((or (logical-char= ch :do-all)
-	       (logical-char= ch :exit))
-	   (setf (random-typeout-stream-no-prompt stream) t)
-	   (random-typeout-cleanup stream))
-	  ((logical-char= ch :keep)
-	   (setf (random-typeout-stream-no-prompt stream) t)
-	   (maybe-keep-random-typeout-window stream)
-	   (random-typeout-cleanup stream))
-	  ((logical-char= ch :no)
-	   (random-typeout-cleanup stream)
-	   (throw 'more-punt nil))
-	  (t
-	   (unread-char ch *editor-input*)
-	   (random-typeout-cleanup stream)
-	   (throw 'more-punt nil)))))
-
-(proclaim '(special *more-prompt-action*))
-
-(defun maybe-keep-random-typeout-window (stream)
-  (let* ((window (random-typeout-stream-window stream))
-	 (buffer (window-buffer window))
-	 (start (buffer-start-mark buffer)))
-    (when (typep (hi::device-hunk-device (hi::window-hunk window))
-		 'hi::bitmap-device)
-      (let ((*more-prompt-action* :normal))
-	(update-modeline-field buffer window :more-prompt)
-	(random-typeout-redisplay window))
-      (buffer-start (buffer-point buffer))
-      (unless (make-window start :window (make-xwindow-like-hwindow window))
-	(editor-error "Could not create random typeout window.")))))
-
-(defun end-random-typeout (stream)
-  (let ((*more-prompt-action* :flush)
-	(window (random-typeout-stream-window stream)))
-    (update-modeline-field (window-buffer window) window :more-prompt)
-    (random-typeout-redisplay window))
-  (unless (random-typeout-stream-no-prompt stream)
-    (let* ((ch (more-read-ch))
-	   (keep-p (logical-char= ch :keep)))
-      (when keep-p (maybe-keep-random-typeout-window stream))
-      (random-typeout-cleanup stream)
-      (unless (or (logical-char= ch :do-all)
-		  (logical-char= ch :exit)
-		  (logical-char= ch :no)
-		  (logical-char= ch :yes)
-		  keep-p)
-	(unread-char ch *editor-input*)))))
-
-;;; MORE-READ-CH gets some input from the type of stream bound to
-;;; *editor-input*.  Need to loop over SERVE-EVENT since it returns on any kind
-;;; of event (not necessarily a key or button event).
-;;;
-;;; Currently this does not work for keyboard macro streams!
-;;; 
-(defun more-read-ch ()
-  (clear-input *editor-input*)
-  (let ((ch (do ((ch (dq-event *editor-input*) (dq-event *editor-input*)))
-		(ch ch)
-	      (system:serve-event))))
-    (when (or (char= ch #\control-g) (char= ch #\control-\g))
-      (beep)
-      (throw 'editor-top-level-catcher nil))
-    ch))
-
-
-;;; Input method macro.
-;;; 
-
-(defvar *in-hemlock-stream-input-method* nil
-  "This keeps us from undefined nasties like re-entering Hemlock stream
-   input methods from input hooks and scheduled events.")
-
-(proclaim '(special *screen-image-trashed*))
-
-;;; EDITOR-INPUT-METHOD-MACRO is used in EDITOR-TTY-IN and EDITOR-WINDOW-IN.
-;;; Somewhat odd stuff goes on here because this is the place where Hemlock
-;;; waits, so this is where we redisplay, check the time for scheduled
-;;; events, etc.  In the loop, we call the input hook when we get a character
-;;; and leave the loop.  If there isn't any input, invoke any scheduled
-;;; events whose time is up.  Unless SERVE-EVENT returns immediately and did
-;;; something, (serve-event 0), call redisplay, note that we are going into
-;;; a read wait, and call SERVE-EVENT with a wait or infinite timeout.  Upon
-;;; exiting the loop, turn off the read wait note and check for the abort
-;;; character.  Return the character we got.
-;;; We bind an error condition handler here because the default Hemlock
-;;; error handler goes into a little debugging prompt loop, but if we got
-;;; an error in getting input, we should prompt the user using the input
-;;; method (recursively even).
-;;; 
-(eval-when (compile eval)
-(defmacro editor-input-method-macro (&optional screen-image-trashed-concern)
-  `(handler-bind ((error #'(lambda (condition)
-			     (let ((device (device-hunk-device
-					    (window-hunk (current-window)))))
-			       (funcall (device-exit device) device))
-			     (invoke-debugger condition))))
-;     (when *in-hemlock-stream-input-method*
-;       (error "Entering Hemlock stream input method recursively!"))
-     (let ((*in-hemlock-stream-input-method* t)
-	   (nrw-fun (device-note-read-wait
-		     (device-hunk-device (window-hunk (current-window)))))
-	   char)
-       (loop
-	 (when (setf char (dq-event stream))
-	   (dolist (f (variable-value 'ed::input-hook)) (funcall f))
-	   (return))
-	 (invoke-scheduled-events)
-	 (unless (system:serve-event 0)
-	   (internal-redisplay)
-	   ,@(if screen-image-trashed-concern
-		 '((when *screen-image-trashed* (internal-redisplay))))
-	   (when nrw-fun (funcall nrw-fun t))
-	   (let ((wait (next-scheduled-event-wait)))
-	     (if wait (system:serve-event wait) (system:serve-event)))))
-       (when nrw-fun (funcall nrw-fun nil))
-       (when (and (or (char= char #\control-g) (char= char #\control-\g))
-		  eof-error-p)
-	 (beep)
-	 (throw 'editor-top-level-catcher nil))
-       char)))
-) ;eval-when
-
-
-
-;;;; Editor tty input streams.
-
-(defstruct (editor-tty-input-stream
-	    (:include editor-input-stream
-		      (:in #'editor-tty-in)
-		      (:misc #'editor-tty-misc))
-	    (:print-function
-	     (lambda (obj stream n)
-	       (declare (ignore obj n))
-	       (write-string "#<Editor-Tty-Input stream>" stream)))
-	    (:constructor make-editor-tty-input-stream
-			  (fd &optional (head (make-key-event)) (tail head))))
-  fd)
-
-
-(defun editor-tty-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg2))
-  (case operation
-    (:listen (cond ((key-event-next (editor-input-stream-head stream)) t)
-		   ((editor-tty-listen stream) t)
-		   (t nil)))
-    (:unread
-     (un-event arg1 stream))
-    (:clear-input
-     (without-interrupts
-      (let* ((head (editor-input-stream-head stream))
-	     (next (key-event-next head)))
-	(when next
-	  (setf (key-event-next head) nil)
-	  (shiftf (key-event-next (editor-input-stream-tail stream))
-		  *free-key-events* next)
-	  (setf (editor-input-stream-tail stream) head)))))
-    (:element-type 'character)))
-
-
-(defun editor-tty-in (stream eof-error-p eof-value)
-  (declare (ignore eof-value))
-  (editor-input-method-macro t))
-
-
-
-;;;; Editor window input streams.
-
-#|
-(defstruct (editor-window-input-stream
-	    (:include editor-input-stream
-		      (:in #'editor-window-in)
-		      (:misc #'editor-window-misc))
-	    (:print-function
-	     (lambda (s stream d)
-	       (declare (ignore s d))
-	       (write-string "#<Editor-Window-Input stream>" stream)))
-	    (:constructor make-editor-window-input-stream
-			  (&optional (head (make-key-event)) (tail head))))
-  hunks)    ; List of bitmap-hunks which input to this stream.
-
-
-(defun editor-window-misc (stream operation &optional arg1 arg2)
-  (declare (ignore arg2))
-  (case operation
-    (:listen
-     (loop (unless (system:serve-event 0)
-	     ;; If nothing is pending, check the queued input.
-	     (return (not (null (key-event-next
-				 (editor-input-stream-head stream))))))
-           (when (key-event-next (editor-input-stream-head stream))
-	     ;; Don't service anymore events if we just got some input.
-	     (return t))))
-    (:unread
-     (un-event arg1 stream))
-    (:clear-input
-     (loop (unless (system:serve-event 0) (return)))
-     (without-interrupts
-      (let* ((head (editor-input-stream-head stream))
-	     (next (key-event-next head)))
-	(when next
-	  (setf (key-event-next head) nil)
-	  (shiftf (key-event-next (editor-input-stream-tail stream))
-		  *free-key-events* next)
-	  (setf (editor-input-stream-tail stream) head)))))
-    (:element-type 'character)))
-
-
-(defun editor-window-in (stream eof-error-p eof-value)
-  (declare (ignore eof-value))
-  (editor-input-method-macro))
-
-|#
-
-;;; LAST-KEY-EVENT-CURSORPOS  --  Public
-;;;
-;;;    Just look up the saved info in the last read key event.
-;;;
-(defun last-key-event-cursorpos ()
-  "Return as values, the (X, Y) character position and window where the
-  last key event happened.  If this cannot be determined, Nil is returned.
-  If in the modeline, return a Y position of NIL and the correct X and window.
-  Returns nil for terminal input."
-  (let* ((ev (editor-input-stream-head *real-editor-input*))
-	 (hunk (key-event-hunk ev))
-	 (window (and hunk (device-hunk-window hunk))))
-    (when window
-      (values (key-event-x ev) (key-event-y ev) window))))
-
-
-;;; Window-Input-Handler  --  Internal
-;;;
-;;;    This is the input-handler function for hunks that implement windows.
-;;; It just queues the events on the *real-editor-input* stream.
-;;;
-(defun window-input-handler (hunk char x y)
-  (q-event *real-editor-input* char x y hunk))
 
 
 ;;;; Event scheduling.
@@ -1049,7 +631,7 @@
 
 (defun editor-sleep (time)
   "Sleep for approximately Time seconds."
-  (unless (or (zerop time) (listen *editor-input*))
+  (unless (or (zerop time) (listen-editor-input *editor-input*))
     (internal-redisplay)
     (sleep-for-time time)
     nil))
@@ -1060,7 +642,8 @@
 	(end (+ (get-internal-real-time)
 		(truncate (* time internal-time-units-per-second)))))
     (loop
-      (when (listen *editor-input*) (return))
+      (when (listen-editor-input *editor-input*)
+	(return))
       (let ((left (- end (get-internal-real-time))))
 	(unless (plusp left) (return nil))
 	(when nrw-fun (funcall nrw-fun t))
@@ -1087,7 +670,7 @@
     result))
 
 (defun tty-show-mark (window x y time)
-  (cond ((listen *editor-input*))
+  (cond ((listen-editor-input *editor-input*))
 	(x (internal-redisplay)
 	   (let* ((hunk (window-hunk window))
 		  (device (device-hunk-device hunk)))
@@ -1100,7 +683,7 @@
 
 #|
 (defun bitmap-show-mark (window x y time)
-  (cond ((listen *editor-input*))
+  (cond ((listen-editor-input *editor-input*))
 	(x (let* ((hunk (window-hunk window))
 		  (display (bitmap-device-display (device-hunk-device hunk))))
 	     (internal-redisplay)
@@ -1113,53 +696,6 @@
 	(t nil)))
 
 |#
-
-;;;; Funny character stuff.
-
-;;; TEXT-CHARACTER and PRINT-PRETTY-CHARACTER are documented Hemlock primitives.
-;;;
-
-(defun text-character (char)
-  "Translate a character as read from *editor-input* into one suitable for
-   inserting into text.  If this is not possible, nil is returned."
-  (cond ((or (char-bit char :meta)
-	     (char-bit char :super)
-	     (char-bit char :hyper))
-	 nil)
-	((char= char #\return) #\newline)
-	((char-bit char :control)
-	 (let* ((nchar (char-upcase (make-char char)))
-		(code (char-code nchar)))
-	   (if (<= 64 code 95)
-	       (code-char (- code 64))
-	       nil)))
-	(t char)))
-
-(defun print-pretty-character (char stream)
-  "Prints char to stream suitably for documentation, data displays, etc.
-   Control, Meta, Super, and Hyper bits are shown as C-, M-, S-, and H-,
-   respectively.  If the character is not a standard character other than
-   #\space or #\newline, and it has a name, then the name is printed."
-  (when (char-bit char :control) (write-string "C-" stream))
-  (when (char-bit char :meta) (write-string "M-" stream))
-  (when (char-bit char :super) (write-string "S-" stream))
-  (when (char-bit char :hyper) (write-string "H-" stream))
-  (let ((code (char-code char))
-	(safe-char (make-char char)))
-    (if (<= (char-code #\!) code (char-code #\~))
-	(write-char safe-char stream)
-	(let ((name (char-name (code-char code))))
-	  (cond (name (write-string (string-capitalize name) stream))
-		((< code (char-code #\space))
-		 (write-char #\^ stream)
-		 (write-char (code-char (+ code (char-code #\@))) stream))
-		(t
-		 (write-char safe-char stream)))))))
-
-(defvar *line-wrap-char* #\!
-  "The character to be displayed to indicate wrapped lines.")
-
-
 
 ;;;; Function description and defined-from.
 
@@ -1357,7 +893,7 @@
     (loop
       (when (>= i len) (return t))
       (q-event *real-editor-input*
-	       (translate-tty-char (char-code (schar buf i))))
+	       (ext:char-key-event (schar buf i)))
       (incf i))))
 
 ;;; This is used to get listening during smart redisplay to pick up input
@@ -1371,7 +907,7 @@
   (mach::with-trap-arg-block mach::int1 nc
     (dotimes (i listen-iterations-hack nil)
       (multiple-value-bind (val err) 
-			   (mach::Unix-ioctl (editor-tty-input-stream-fd stream)
+			   (mach::Unix-ioctl (tty-editor-input-fd stream)
 					     mach::FIONREAD
 					     (lisp::alien-value-sap
 					      mach::int1))

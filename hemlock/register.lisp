@@ -42,7 +42,7 @@
        (setf (gethash ,name *registers*) ,value))))
 
 (defun prompt-for-register (&optional (prompt "Register: ") must-exist)
-  (let ((reg-name (char-upcase (prompt-for-character :prompt prompt))))
+  (let ((reg-name (prompt-for-key-event :prompt prompt)))
     (unless (or (not must-exist) (gethash reg-name *registers*))
       (editor-error "Register ~A is empty." reg-name))
     reg-name))
@@ -133,7 +133,7 @@
   (with-pop-up-display (f :height (* 2 (register-count)))
     (do-registers (name val :sorted)
       (write-string "Reg " f)
-      (print-pretty-character name f)
+      (ext:print-pretty-key-event name f)
       (write-string ":  " f)
       (etypecase val
 	(mark

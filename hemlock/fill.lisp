@@ -125,7 +125,7 @@
     ;; transparent key bindings are per binding instead of
     ;; per mode.
     (multiple-value-bind (command t-bindings)
-			 (get-command #\linefeed :current)
+			 (get-command #k"Linefeed" :current)
       (declare (ignore command)) ;command is this one, so don't invoke it
       (dolist (c t-bindings) (funcall *invoke-hook* c p)))
     (indent-new-line-command nil)))
@@ -144,7 +144,7 @@
     ;; transparent key bindings are per binding instead of
     ;; per mode.
     (multiple-value-bind (command t-bindings)
-			 (get-command #\return :current)
+			 (get-command #k"Return" :current)
       (declare (ignore command)) ;command is this one, so don't invoke it
       (dolist (c t-bindings) (funcall *invoke-hook* c p)))
     (new-line-command nil)))

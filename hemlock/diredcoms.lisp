@@ -64,13 +64,14 @@
      "  Type ? for help.  "))
 
 (defcommand "Dired" (p &optional directory)
-  "Prompt for a directory and edit it.  If a dired for that directory already
+  "Prompts for a directory and edits it.  If a dired for that directory already
    exists, go to that buffer, otherwise create one.  With an argument, include
    UNIX dot files."
-  "Prompt for a directory and edit it.  If a dired for that directory already
+  "Prompts for a directory and edits it.  If a dired for that directory already
    exists, go to that buffer, otherwise create one.  With an argument, include
    UNIX dot files."
-  (let ((info (if directory (value dired-information))))
+  (let ((info (if (hemlock-bound-p 'dired-information)
+		  (value dired-information))))
     (dired-guts nil
 		;; Propagate dot-files property to subdirectory edits.
 		(or (and info (dired-info-dot-files-p info))
@@ -319,6 +320,22 @@
     (if pathname
 	(dired-command p (directory-namestring pathname))
 	(editor-error "No pathname associated with buffer."))))
+
+(defcommand "Dired Up Directory" (p)
+  "Invokes \"Dired\" on the directory up one level from the current Dired
+   buffer."
+  "Invokes \"Dired\" on the directory up one level from the current Dired
+   buffer."
+  (declare (ignore p))
+  (unless (hemlock-bound-p 'dired-information)
+    (editor-error "Not in Dired buffer."))
+  (let ((dirs (pathname-directory
+	       (dired-info-pathname (value dired-information)))))
+    (declare (simple-vector dirs))
+    (dired-command nil
+		   (make-pathname
+		    :device :absolute
+		    :directory (subseq dirs 0 (1- (length dirs)))))))
 
 
 

@@ -162,7 +162,8 @@
       (:keyword
        (let ((point (current-point)))
 	 (unless (blank-after-p point)
-	   (insert-character point *last-character-typed*)))
+	   (insert-character point
+			     (ext:key-event-char *last-key-event-typed*))))
        (multiple-value-bind
 	   (prefix key value field ambig)
 	   (complete-string typein *parse-string-tables*)
@@ -173,7 +174,9 @@
 			       (subseq prefix 0 field)
 			       (concatenate 'string
 					    (subseq prefix 0 field)
-					    (string *last-character-typed*)))))
+					    (string
+					     (ext:key-event-char
+					      *last-key-event-typed*))))))
 	   (insert-string (region-start *parse-input-region*) new-typein))))
       (t
        (editor-error "Cannot complete input for this prompt.")))))

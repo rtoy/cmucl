@@ -171,7 +171,7 @@
   "Prompt for stuff to do a bind-key."
   (declare (ignore p))
   (multiple-value-call #'bind-key 
-    (values (prompt-for-keyword 
+    (values (prompt-for-keyword
 	     (list *command-names*)
 	     :prompt "Command to bind: "
 	     :help "Name of command to bind to a key."))
@@ -429,9 +429,8 @@
 		       (last-key-event-cursorpos)
     (unless y (editor-error))
     (cond ((< x 2)
-	   (do ((ch (read-char-no-hang *editor-input*)
-		    (read-char-no-hang *editor-input*)))
-	       (ch)
+	   (loop
+	     (when (listen-editor-input *editor-input*) (return))
 	     (scroll-window window -1)
 	     (redisplay)
 	     (editor-finish-output window)))
@@ -448,9 +447,8 @@
 		       (last-key-event-cursorpos)
     (unless y (editor-error))
     (cond ((< x 2)
-	   (do ((ch (read-char-no-hang *editor-input*)
-		    (read-char-no-hang *editor-input*)))
-	       (ch)
+	   (loop
+	     (when (listen-editor-input *editor-input*) (return))
 	     (scroll-window window 1)
 	     (redisplay)
 	     (editor-finish-output window)))
@@ -816,9 +814,44 @@
   (declare (ignore p))
   (setf (buffer-major-mode (current-buffer)) "Fundamental"))
 
+;;;
+;;; Text mode.
+;;;
+
 (defmode "Text" :major-p t)
+
 (defcommand "Text Mode" (p)
   "Put the current buffer into \"Text\" mode."
   "Put the current buffer into \"Text\" mode."
   (declare (ignore p))
   (setf (buffer-major-mode (current-buffer)) "Text"))
+
+;;;
+;;; Caps-lock mode.
+;;;
+
+(defmode "CAPS-LOCK")
+
+(defcommand "Caps Lock Mode" (p)
+  "Simulate having a CAPS LOCK key.  Toggle CAPS-LOCK mode.  Zero or a
+   negative argument turns it off, while a positive argument turns it
+   on."
+  "Simulate having a CAPS LOCK key.  Toggle CAPS-LOCK mode.  Zero or a
+   negative argument turns it off, while a positive argument turns it
+   on."
+  (setf (buffer-minor-mode (current-buffer) "CAPS-LOCK")
+	(if p
+	    (plusp p)
+	    (not (buffer-minor-mode (current-buffer) "CAPS-LOCK")))))
+
+(defcommand "Self Insert Caps Lock" (p)
+  "Insert the last character typed, or the argument number of them.
+   If the last character was an alphabetic character, then insert its
+   capital form."
+  "Insert the last character typed, or the argument number of them.
+   If the last character was an alphabetic character, then insert its
+   capital form."
+  (let ((char (char-upcase (ext:key-event-char *last-key-event-typed*))))
+    (if (and p (> p 1))
+	(insert-string (current-point) (make-string p :initial-element char))
+	(insert-character (current-point) char))))

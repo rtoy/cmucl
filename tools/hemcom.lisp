@@ -36,26 +36,10 @@
 (in-package "C")
 (export 'compile-from-stream)
 
-(in-package "HI")
-
-;;; ### bootstrap hack...
-(defmacro parse-forms ((decls-var forms-var forms) &body gorms)
-  "Parse-Forms (Decls-Var Forms-Var Forms) {Form}*
-  Binds Decls-Var to leading declarations off of Forms and Forms-Var
-  to what is left."
-  `(do ((,forms-var ,forms (cdr ,forms-var))
-	(,decls-var ()))
-       ((or (atom ,forms-var) (atom (car ,forms-var))
-	    (not (eq (caar ,forms-var) 'declare)))
-	,@gorms)
-     (push (car ,forms-var) ,decls-var)))
-
 (in-package "USER")
-
 
 (pushnew :command-bits *features*)
 (pushnew :buffered-lines *features*)
-
 
 (with-compiler-log-file ("hem:lossage.log")
 
@@ -65,10 +49,18 @@
 (comf "hem:struct-ed" :always-once t)
 (comf "hem:rompsite" :always-once t)
 (comf "hem:charmacs" :always-once t)
-;; keytran and keytrandefs used to be in rompsite, but they are too big now.
-;; They also need to go after charmacs due to the funny characters named.
-;(comf "hem:keytran")
-;(comf "hem:keytrandefs")
+(comf "hem:key-event" :load t)
+;;;
+;;; This is necessary since all the #k uses in Hemlock will expand into
+;;; EXT:MAKE-KEY-EVENT calls with keysyms and bits from the compiling Lisp, not
+;;; for the Lisp new code will run in.  This destroys the compiling Lisp with
+;;; respect to running code with #k's compiled for it, but it causes the
+;;; compilation to see new keysyms, modifiers, and CLX modifier maps correctly
+;;; for the new system.
+;;;
+(ext::re-initialize-key-events)
+(comf "hem:keysym-defs" :load t)
+(comf "hem:input.lisp")
 (comf "hem:macros" :always-once t)
 (comf "hem:line" :always-once t)
 (comf "hem:ring")

@@ -223,7 +223,7 @@
 
 
 ;;;; Editor input from windowing system.
-
+#|
 (defstruct (windowed-editor-input
 	    (:include editor-input
 		      (:get #'windowed-get-key-event)
@@ -263,7 +263,7 @@
       ;; Don't service anymore events if we just got some input.
       (return t))))
 
-
+|#
 
 ;;;; Editor input from a tty.
 

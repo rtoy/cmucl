@@ -429,7 +429,7 @@
 	     (:no
 	      "Change to the buffer without reading the new version."
 	      t)
-	     (#\R
+	     (#\r
 	      "Read in the new version, clobbering the changes in the buffer."
 	      nil)))
 	   (t
@@ -1031,6 +1031,26 @@
 	  (current-window))
       (editor-error "Cannot delete only window")
       (delete-window (next-window (current-window)))))
+
+(defcommand "Go to One Window" (p)
+  "Deletes all windows leaving one with the \"Default Initial Window X\",
+   \"Default Initial Window Y\", \"Default Initial Window Width\", and
+   \"Default Initial Window Height\"."
+  "Deletes all windows leaving one with the \"Default Initial Window X\",
+   \"Default Initial Window Y\", \"Default Initial Window Width\", and
+   \"Default Initial Window Height\"."
+  (declare (ignore p))
+  (let ((win (make-window (window-display-start (current-window))
+			  :ask-user t
+			  :x (value default-initial-window-x)
+			  :y (value default-initial-window-y)
+			  :width (value default-initial-window-width)
+			  :height (value default-initial-window-height))))
+    (setf (current-window) win)
+    (dolist (w *window-list*)
+      (unless (or (eq w win)
+		  (eq w *echo-area-window*))
+	(delete-window w)))))
 
 (defcommand "Line to Center of Window" (p)
   "Moves current line to the center of the window."
