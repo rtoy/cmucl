@@ -90,6 +90,12 @@ New in this release:
      - DEFSTRUCT recording slot-names as specified by users.
      - Generic function call keyword argument checking according to
        ANSI 7.6.5.
+     - CALL-NEXT-METHOD without arguments being called with original
+       arguments when method parameters are changed with SETQ.
+     - When CALL-NEXT-METHOD is called with arguments, an error is
+       signaled in safe code when the set of methods applicable to
+       CALL-NEXT-METHOD's arguments is different from the set of
+       methods applicable to the original method arguments.
 
   * Numerous bugfixes:
      - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
@@ -138,7 +144,6 @@ New in this release:
        NOT-AUTO-COMPILE have been moved from PCL to EXT.
      - Support for inlineing methods in effective methods; see the 
        CMU User Manual.
-     - CALL-NEXT-METHOD always being called with original arguments.
 
   * Improvements to Hemlock, the Emacs-like editor:
 

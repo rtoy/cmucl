@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.64 2003/06/02 09:32:44 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.65 2003/06/03 09:59:47 gerd Exp $")
 
 (in-package :pcl)
 
@@ -752,10 +752,12 @@ work during bootstrapping.
 		       (,',next-methods (cdr ,',next-methods)))
 		   (declare (ignorable .next-method. ,',next-methods))
 		   ,@body))
-	      (with-rebound-original-arguments (call-next-method-p
-						&body body)
-		(declare (ignore call-next-method-p))
+	      (with-rebound-original-arguments (cnm-p &body body)
+		(declare (ignore cnm-p))
 		`(let () ,@body))
+	      (check-cnm-args-body (method-name-declaration cnm-args)
+		`(%check-cnm-args ,cnm-args ,',method-args
+				  ',method-name-declaration))
 	      (call-next-method-body (method-name-declaration cnm-args)
 		`(if .next-method.
 		     (funcall (if (std-instance-p .next-method.)
@@ -943,6 +945,11 @@ work during bootstrapping.
 			 (declare (ignorable ,@',all-params))
 			 ,@body)
 		      `(let () ,@body)))
+		;;
+		(check-cnm-args-body (method-name-declaration cnm-args)
+		  `(%check-cnm-args ,cnm-args (list ,@',args)
+				    ',method-name-declaration))
+		;;
 		(call-next-method-body (method-name-declaration cnm-args)
 		  `(if ,',next-method-call
 		       ,(if (and (null ',rest-arg)
@@ -981,6 +988,7 @@ work during bootstrapping.
      &body body)
   `(call-next-method-bind
     (flet ((call-next-method (&rest cnm-args)
+	     (check-cnm-args-body ,method-name-declaration cnm-args)
 	     (call-next-method-body ,method-name-declaration cnm-args))
 	   (next-method-p ()
 	     (next-method-p-body)))
@@ -988,6 +996,47 @@ work during bootstrapping.
       (with-rebound-original-arguments (call-next-method-p)
 	,@body))))
 
+;;;
+;;; The standard says it's an error if CALL-NEXT-METHOD is called with
+;;; arguments, and the set of methods applicable to those arguments is
+;;; different from the set of methods applicable to the original
+;;; method arguments.  (According to Barry Margolin, this rule was
+;;; probably added to ensure that before and around methods are always
+;;; run before primary methods.)
+;;;
+;;; This could be optimized for the case that the generic function
+;;; doesn't have hairy methods, does have standard method combination,
+;;; is a standard generic function, there are no methods defined on it
+;;; for COMPUTE-APPLICABLE-METHODS and probably a lot more of such
+;;; preconditions.  That looks hairy and is probably not worth it,
+;;; because this check will never be fast.
+;;;
+(defun %check-cnm-args (cnm-args orig-args method-name-declaration)
+  (when cnm-args
+    (let* ((gf (fdefinition (caar method-name-declaration)))
+	   (omethods (compute-applicable-methods gf orig-args))
+	   (nmethods (compute-applicable-methods gf cnm-args)))
+      (unless (equal omethods nmethods)
+	(error "~@<The set of methods ~s applicable to argument~p ~
+                ~{~s~^, ~} to call-next-method is different from ~
+                the set of methods ~s applicable to the original ~
+                method argument~p ~{~s~^, ~}.~@:>"
+	       nmethods (length cnm-args) cnm-args omethods
+	       (length orig-args) orig-args)))))
+
+;;;
+;;; Remove the above check, unless in safe code.
+;;;
+(in-package :c)
+
+(defknown pcl::%check-cnm-args (t t t) t
+  (movable foldable flushable))
+
+(deftransform pcl::%check-cnm-args ((x y z) (t t t) t :policy (= safety 3))
+  nil)
+	  
+(in-package :pcl)
+	
 (defun too-many-args ()
   (simple-program-error "Too many arguments."))
 
