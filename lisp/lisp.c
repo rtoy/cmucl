@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.43 2004/07/30 18:11:08 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.44 2004/08/17 20:19:57 rtoy Exp $
  *
  */
 
@@ -98,6 +98,10 @@ static char* cmucllib_search_list[] =
     NULL
 };
 
+
+/* Set this to see how we're doing our search */
+static int debug_lisp_search = FALSE;
+
 /*
  * Define this to get some debugging printfs for searching for the
  * lisp core file.  Sometimes needed because you can't debug this with
@@ -134,18 +138,20 @@ default_cmucllib(const char* argv0arg)
      * Create the full pathname of the directory containing the
      * executable.  argv[0] can be an absolute or relative path.
      */
-#ifdef DEBUG_LISP_SEARCH
-    fprintf(stderr, "argv[0] = %s\n", argv0arg);
-    fprintf(stderr, "argv_dir = %s\n", argv0_dir);
-#endif
+    if (debug_lisp_search) {
+      fprintf(stderr, "argv[0] = %s\n", argv0arg);
+      fprintf(stderr, "argv_dir = %s\n", argv0_dir);
+    }
+    
     
     if (argv0_dir[0] == '/') {
         cwd = malloc(strlen(argv0_dir) + 2);
         strcpy(cwd, argv0_dir);
         strcat(cwd, "/");
-#ifdef DEBUG_LISP_SEARCH
-        fprintf(stderr, "absolute path, argv[0] = %s\n", cwd);
-#endif
+        if (debug_lisp_search) {
+          fprintf(stderr, "absolute path, argv[0] = %s\n", cwd);
+        }
+        
     } else if (*argv0_dir != '\0') {
         /*
          * argv[0] is a relative path.  Get the current directory and
@@ -158,9 +164,9 @@ default_cmucllib(const char* argv0arg)
             strcat(cwd, argv0_dir);
             strcat(cwd, "/");
         }
-#ifdef DEBUG_LISP_SEARCH
-        fprintf(stderr, "relative path, argv[0] = %s\n", cwd);
-#endif
+        if (debug_lisp_search) {
+          fprintf(stderr, "relative path, argv[0] = %s\n", cwd);
+        }
     } else {
        /*
         * argv[0] is someplace on the user's PATH
@@ -170,9 +176,10 @@ default_cmucllib(const char* argv0arg)
        char *p1, *p2 = NULL;
        struct stat buf;
 
-#ifdef DEBUG_LISP_SEARCH
-       fprintf(stderr, "User's PATH = %s\n", path ? path : "<NULL>");
-#endif
+       if (debug_lisp_search) {
+         fprintf(stderr, "User's PATH = %s\n", path ? path : "<NULL>");
+       }
+       
        cwd = malloc(MAXPATHLEN + strlen(argv0arg) + 100);
        cwd[0] = '\0';
 
@@ -191,15 +198,23 @@ default_cmucllib(const char* argv0arg)
            cwd[p2 - p1 + 1] = '\0';
            strcpy(cwd + (p2 - p1 + 1), p);
 
-#ifdef DEBUG_LISP_SEARCH
-           fprintf(stderr, "User's PATH, trying %s\n", cwd);
-#endif
+           if (debug_lisp_search) {
+             fprintf(stderr, "User's PATH, trying %s\n", cwd);
+           }
+           
            if (stat(cwd, &buf) == 0) {
 
-#ifdef DEBUG_LISP_SEARCH
-             fprintf(stderr, "User's PATH, found %s\n", cwd);
-#endif
-             break;
+             if (debug_lisp_search) {
+               fprintf(stderr, "User's PATH, found %s\n", cwd);
+             }
+             if (access(cwd, X_OK) == 0) {
+               break;
+             } else {
+               if (debug_lisp_search) {
+                 fprintf(stderr, " But not executable.  Continuing...\n");
+               }
+             }
+
            }
            
            if (*p2 == ':') {
@@ -212,9 +227,10 @@ default_cmucllib(const char* argv0arg)
          } else {
            cwd[p2 - p1 + 1] = '\0';
          }
-#ifdef DEBUG_LISP_SEARCH
-         fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
-#endif
+         if (debug_lisp_search) {
+           fprintf(stderr, "User's PATH, Final cwd %s\n", cwd);
+         }
+         
        }
     }
 
@@ -302,11 +318,20 @@ search_core(const char* lib, const char* default_core)
 	strcpy(dst, default_core);
 	/* If it exists, we are done! */
 
-#ifdef DEBUG_LISP_SEARCH
-        fprintf(stderr, "Looking at `%s'\n", buf);
-#endif
-	if (stat(buf, &statbuf) == 0) {
-	    return buf;
+        if (debug_lisp_search) {
+          fprintf(stderr, "Looking at `%s'\n", buf);
+        }
+        
+	if (access(buf, R_OK) == 0) {
+          if (debug_lisp_search) {
+            fprintf(stderr, "Found it!\n");
+          }
+          
+          return buf;
+        } else {
+          if (debug_lisp_search) {
+            fprintf(stderr, "Found it, but we can't read it!\n");
+          }
 	}
     } while (*lib++ == ':');
 
@@ -460,6 +485,10 @@ int main(int argc, char *argv[], char *envp[])
 	  {
 	    monitor = TRUE;
 	  }
+        else if (strcmp(arg, "-debug-lisp-search") == 0)
+          {
+            debug_lisp_search = TRUE;
+          }
       }
 
     default_core = arch_init();
