@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.94 2004/06/09 15:01:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.95 2004/08/27 03:08:56 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1440,8 +1440,18 @@ radix-R.  If you have a power-list then pass it in as PL."
 		  (digits (float-digits x))
 		  (fudge (- digits precision))
 		  (width (if width (max width 1) nil)))
-	   (float-string (ash sig (- fudge)) (+ exp fudge) precision width
-			 fdigits scale fmin))))))
+	     ;; If the number won't fit in the width, we need to
+	     ;; increase the width so that it will.
+	     (when width
+	       (let ((xwidth (ceiling (log x (float 10 x)))))
+		 (when (< width xwidth)
+		   (setf width xwidth))
+		 ;; FIXME: It also seems that float-string doesn't
+		 ;; produce enough.  Increase width by one.  Is this
+		 ;; right?
+		 (incf width)))
+	     (float-string (ash sig (- fudge)) (+ exp fudge) precision width
+			   fdigits scale fmin))))))
 
 
 (defun float-string (fraction exponent precision width fdigits scale fmin)
