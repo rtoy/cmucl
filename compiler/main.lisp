@@ -26,7 +26,8 @@
 		    *compiler-trace-output*
 		    *last-source-context* *last-original-source*
 		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *lexical-environment*))
+		    *last-message-count* *lexical-environment*
+		    *count-vop-usages*))
 
 (defparameter compiler-version "0.0")
 
@@ -67,6 +68,80 @@
     (apply #'compiler-mumble foo)))
 
 (deftype object () '(or fasl-file core-object null))
+
+
+;;;; Vop counting utilities
+
+;;; T if we should count the number of times we use each vop and the number
+;;; of instructions that come from each.
+;;; 
+(defvar *count-vop-usages* nil)
+
+;;; Hash table containing all the current counts.  The key is the name of the
+;;; vop, and the value is a cons of the car holding the number of times that
+;;; vop has been used and the cdr holding the number of instructions that
+;;; vop has accounted for.
+;;; 
+(defvar *vop-counts* (make-hash-table :test #'eq))
+
+(defun count-vop (vop)
+  (let ((entry (gethash vop *vop-counts*)))
+    (unless entry
+      (setf entry (cons 0 0))
+      (setf (gethash vop *vop-counts*) entry))
+    (incf (car entry))))
+
+(defun count-vop-instructions (vop instructions)
+  (let ((entry (gethash vop *vop-counts*)))
+    (unless entry
+      (setf entry (cons 0 0))
+      (setf (gethash vop *vop-counts*) entry))
+    (incf (cdr entry) instructions)))
+
+;;; Clear-Vop-Counts -- interface
+;;; 
+(defun clear-vop-counts ()
+  (clrhash *vop-counts*)
+  nil)
+
+;;; Report-Vop-Counts -- interface
+;;;
+(defun report-vop-counts (&key (cut-off 15) (sort-by :size))
+  (declare (type (or null unsigned-byte) cut-off)
+	   (type (member :size :count :name) sort-by))
+  (let ((results nil)
+	(total-count 0)
+	(total-size 0))
+    (maphash #'(lambda (key value)
+		 (push (cons key value) results)
+		 (incf total-count (car value))
+		 (incf total-size (cdr value)))
+	     *vop-counts*)
+    (format t "~20<Vop ~> ~20:@<Count~> ~20:@<Bytes~> Ave Sz~%")
+    (dolist (info (sort results
+			(ecase sort-by
+			  (:name #'(lambda (name-1 name-2)
+				     (string< (symbol-name name-1)
+					      (symbol-name name-2))))
+			  ((:count :size) #'>))
+			:key (ecase sort-by
+			       (:name #'car)
+			       (:count #'cadr)
+			       (:size #'cddr))))
+      (when cut-off
+	(if (zerop cut-off)
+	    (return)
+	    (decf cut-off)))
+      (format t "~20<~S~> ~20<~:D (~4,1,2F%)~> ~20<~D (~4,1,2F%)~> ~6D~%"
+	      (car info)
+	      (cadr info)
+	      (/ (coerce (cadr info) 'double-float)
+		 (coerce total-count 'double-float))
+	      (cddr info)
+	      (/ (coerce (cddr info) 'double-float)
+		 (coerce total-size 'double-float))
+	      (truncate (cddr info) (cadr info)))))
+  (values))
 
 
 ;;;; Component compilation:
@@ -225,6 +300,10 @@
 		"~|~%Assembly code for ~S~2%"
 		component)
 	(dump-segment *code-segment* *compiler-trace-output*))
+
+      (when *count-vop-usages*
+	(count-vops component)
+	(count-instructions *code-segment*))
 
       (etypecase object
 	(fasl-file
