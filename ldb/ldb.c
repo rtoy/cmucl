@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.7 1990/07/01 04:42:29 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.8 1990/07/18 10:53:33 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -10,6 +10,7 @@
 #include "lisp.h"
 #include "alloc.h"
 #include "vars.h"
+#include "globals.h"
 
 lispobj lisp_nil_reg = NIL;
 char *lisp_csp_reg, *lisp_bsp_reg;
@@ -43,10 +44,11 @@ char *envp[];
 {
     char *arg, **argptr;
     char *core = NULL;
-    boolean restore_state;
+    boolean restore_state, monitor;
 
     define_var("nil", NIL, TRUE);
     define_var("t", T, TRUE);
+    monitor = FALSE;
 
     argptr = argv;
     while ((arg = *++argptr) != NULL) {
@@ -61,10 +63,13 @@ char *envp[];
                 exit(1);
             }
         }
+	else if (strcmp(arg, "-monitor") == 0) {
+	    monitor = TRUE;
+	}
     }
 
     if (core == NULL)
-        core = "test.core";
+        core = "/usr/clisp/lib/lisp.core";
 
     os_init();
 
@@ -89,9 +94,14 @@ char *envp[];
     /* Snag a few of the signal */
     test_init();
 
-    if (restore_state)
-        restore();
-    else
-        while (1)
-            ldb_monitor();
+    if (!monitor) {
+	if (restore_state)
+            restore();
+	else
+	    call_into_lisp(INITIAL_FUNCTION, SymbolFunction(INITIAL_FUNCTION),
+			   current_control_stack_pointer, 0);
+	printf("%INITIAL-FUNCTION returned?");
+    }
+    while (1)
+	ldb_monitor();
 }
