@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.97 2000/04/07 20:33:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.98 2000/04/13 05:29:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2597,6 +2597,31 @@
   (frob logand)
   (frob logior)
   (frob logxor))
+
+(defoptimizer (integer-length derive-type) ((num))
+  (one-arg-derive-type
+   num
+   #'(lambda (type)
+       (when (and (numeric-type-p type)
+		  (eq (numeric-type-class type) 'integer))
+	 (let ((low (numeric-type-low type))
+	       (high (numeric-type-high type)))
+	   (cond ((and low (>= low 0))
+		  (make-numeric-type :class 'integer :complexp :real
+				     :low (integer-length low)
+				     :high (and high (integer-length high))))
+		 ((and high (<= high 0))
+		  (make-numeric-type :class 'integer :complexp :real
+				     :low (integer-length high)
+				     :high (and low (integer-length low))))
+		 ((and low (<= low 0) high (>= high 0))
+		  (make-numeric-type :class 'integer :complexp :real
+				     :low 0 :high (max (integer-length low)
+						       (integer-length high))))
+		 (t
+		  (make-numeric-type :class 'integer :complexp :real
+				     :low 0 :high nil))))))
+   #'integer-length))
 
 ) ; end progn
 
