@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.18 1991/12/16 13:04:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.19 1991/12/16 19:42:56 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -574,12 +574,11 @@
 		 (mach:close-dir dir)))))
 	  (t
 	   (let ((file (concatenate 'string directory name)))
-	     (unless (eq type :unspecific)
+	     (unless (or (null type) (eq type :unspecific))
 	       (setf file (concatenate 'string file "." type)))
-	     (when version
-	       (unless (eq version :newest)
-		 (setf file (concatenate 'string file "."
-					 (quick-integer-to-string version)))))
+	     (unless (or (null version) (eq version :newest))
+	       (setf file (concatenate 'string file "."
+				       (quick-integer-to-string version)))))
 	     (when (or (not verify-existance)
 		       (mach:unix-file-kind file))
 	       (funcall function file)))))))
