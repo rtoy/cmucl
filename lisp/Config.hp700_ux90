@@ -1,4 +1,4 @@
-CPPFLAGS = -Dparisc -I. -I/usr/local/lib/gcc-lib/hppa1.1-hp-hpux/2.6.0 \
+CPPFLAGS = -Dparisc -I. -I/usr/local/lib/gcc-lib/hppa1.1-hp-hpux/2.6.0/include \
 	-I/usr/include -I/usr/include/X11R5
 LINK.o = gcc $(LDFLAGS) $(TARGET_ARCH)
 CC = gcc
