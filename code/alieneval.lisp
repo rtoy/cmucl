@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.3 1990/08/24 18:09:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.4 1990/10/03 15:01:15 ram Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -920,10 +920,10 @@
 					  ((:minimum smin) nil)
 					  ((:unit sunit) 32))
 				    &body (body decls))
-				   (%with-alien sap offset ounit
-						size sconst smin sunit
-						',n-sap ',n-offset ',n-size
-						body decls)))
+			 (%with-alien sap offset ounit
+				      size sconst smin sunit
+				      ',n-sap ',n-offset ',n-size
+				      body decls)))
 	      ,@body)))
        #-new-compiler
        (eval-when (compile)
@@ -945,10 +945,10 @@
        `(let ((,',n-scaled-offset (/ ,,n-offset ,,ounit))
 	      (,',n-scaled-size (/ ,,n-size ,,sunit)))
 	  ,',n-scaled-size ; Ignorable...
-	  ,@',(when sconst
-		`((check= ,n-scaled-size ,sconst)))
-	  ,@',(when smin
-		`((check<= ,smin ,n-scaled-size)))
+	  ,,@(when sconst
+	       `(`(check= ,',n-scaled-size ,,sconst)))
+	  ,,@(when smin
+	       `(`(check<= ,,smin ,',n-scaled-size)))
 	  ,,@body))))
 
 ); Eval-When (Compile Load Eval)
@@ -986,22 +986,24 @@
 ;;;
 (defun %set-alien-access (alien lisp-type &optional (new-value nil nvp))
   (declare (type alien-value alien))
-  (let* ((lisp-type (if nvp lisp-type nil))
-	 (new-value (if nvp new-value lisp-type))
-	 (alien-type (alien-value-type alien))
-	 (access (get-alien-access-method alien-type lisp-type))
-	 (n-sap (gensym))
-	 (n-offset (gensym))
-	 (n-size (gensym))
-	 (n-nval (gensym)))
-    (eval
-     `(let ((,n-sap ',(alien-value-sap alien))
-	    (,n-offset ',(alien-value-offset alien))
-	    (,n-size ',(alien-value-size alien))
-	    (,n-nval ,new-value))
-	,(funcall access n-sap n-offset n-size alien-type :write n-nval
-		  '(setf alien-access))))
-    new-value))
+  (multiple-value-bind (lisp-type new-value)
+		       (if nvp
+			   (values lisp-type new-value)
+			   (values nil lisp-type))
+    (let* ((alien-type (alien-value-type alien))
+	   (access (get-alien-access-method alien-type lisp-type))
+	   (n-sap (gensym))
+	   (n-offset (gensym))
+	   (n-size (gensym))
+	   (n-nval (gensym)))
+      (eval
+       `(let ((,n-sap ',(alien-value-sap alien))
+	      (,n-offset ',(alien-value-offset alien))
+	      (,n-size ',(alien-value-size alien))
+	      (,n-nval ,new-value))
+	  ,(funcall access n-sap n-offset n-size alien-type :write n-nval
+		    '(setf alien-access))))
+      new-value)))
 
 
 ;;;; Miscellaneous alien access methods:
