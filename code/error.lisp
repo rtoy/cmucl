@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.35 1993/08/31 09:02:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.36 1993/09/01 00:23:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -549,7 +549,9 @@
 	     (register-layout layout)))
 	  ((redefine-layout-warning old-layout "current"
 				    layout "new")
-	   (register-layout layout :invalidate t)))
+	   (register-layout layout :invalidate t))
+	  ((not (class-layout class))
+	   (register-layout layout)))
 
     (setf (find-class name) class)
     ;;
