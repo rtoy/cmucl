@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.76 1992/03/11 10:02:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.77 1992/05/15 21:54:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,6 +164,7 @@
              "KERNEL")
 (intern "TYPE-ERROR" "LISP")
 (defpackage "XLIB"
+	    (:nicknames "OLD-XLIB")
             (:import-from "LISP" "TYPE-ERROR")
             (:export "*VERSION*" "ACCESS-CONTROL" "ACCESS-ERROR" "ACCESS-HOSTS"
              "ACTIVATE-SCREEN-SAVER" "ADD-ACCESS-HOST" "ADD-RESOURCE"
@@ -351,6 +352,7 @@
        "VOP-INFO-SAVE-P" "VOP-REFS" "VOP-RESULTS" "VOP-SAVE-SET" "VOP-TEMPS"))
   (intern name "C"))
 (defpackage "ASSEMBLER"
+	    (:nicknames "ASSEM")
             (:import-from "C" "BACKEND-SB-LIST" "DO-LIVE-TNS" "FINITE-SB"
              "FINITE-SB-LIVE-TNS" "IR2-BLOCK-BLOCK" "IR2-BLOCK-LIVE-IN"
              "MAKE-INSTRUCTION" "PRINT-TN" "REALLY-MAKE-INSTRUCTION" "SB-KIND"
@@ -471,15 +473,16 @@
              "UPDATE-INSTANCE-FOR-REDEFINED-CLASS" "WITH-ACCESSORS"
              "WITH-ADDED-METHODS" "WITH-SLOTS"))
 (defpackage "FORMAT")
-(defpackage "HEMLOCK")
+(defpackage "HEMLOCK" (:nicknames "ED"))
 (defpackage "SPELL"
             (:export "CORRECT-SPELLING" "MAX-ENTRY-LENGTH"
              "MAYBE-READ-SPELL-DICTIONARY" "SPELL-ADD-ENTRY"
              "SPELL-COLLECT-CLOSE-WORDS" "SPELL-READ-DICTIONARY"
              "SPELL-REMOVE-ENTRY" "SPELL-ROOT-FLAGS" "SPELL-ROOT-WORD"
              "SPELL-TRY-WORD"))
-(defpackage "LISP"
-            (:export "&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY"
+(defpackage "COMMON-LISP"
+	    (:nicknames "CL" "LISP")
+	    (:export "&ALLOW-OTHER-KEYS" "&AUX" "&BODY" "&ENVIRONMENT" "&KEY"
              "&OPTIONAL" "&REST" "&WHOLE" "*" "**" "***" "*APPLYHOOK*"
              "*BREAK-ON-SIGNALS*" "*BREAK-ON-WARNINGS*"
              "*COMPILE-FILE-PATHNAME*" "*COMPILE-FILE-TRUENAME*"
@@ -730,6 +733,8 @@
        "DOUBLE-FLOAT-P" "SIMPLE-ARRAY-P" "SINGLE-FLOAT-P"))
   (intern name "KERNEL"))
 (defpackage #+pmax "MIPS" #+sparc "SPARC" #+ibmrt "RT"
+            (:nicknames "VM"
+			#+pmax "OLD-MIPS" #+sparc "OLD-SPARC" #+ibmrt "OLD-RT")
             (:import-from "LISP" "%ARRAY-TYPEP" "%ASET" "%BITSET" "%CHARSET"
              "%PUT" "%RPLACA" "%RPLACD" "%SBITSET" "%SCHARSET"
              "%SET-DOCUMENTATION" "%SET-FDEFINITION" "%SET-FILL-POINTER"
@@ -891,6 +896,7 @@
              "INTERNAL-DEBUG" "VAR"))
 (intern "CHAR" "LISP")
 (defpackage "EXTENSIONS"
+	    (:nicknames "EXTENSIONS")
             (:import-from "LISP" "CHAR")
             (:export "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
              "*ALL-MODIFIER-NAMES*" "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
@@ -1002,6 +1008,7 @@
              "WEAK-POINTER-P" "WEAK-POINTER-VALUE" "WITH-CLX-EVENT-HANDLING"))
 (defpackage "LOOP")
 (defpackage "HEMLOCK-INTERNALS"
+	    (:nicknames "HI")
             (:export "*BUFFER-LIST*" "*BUFFER-NAMES*"
              "*CHARACTER-ATTRIBUTE-NAMES*" "*COMMAND-NAMES*"
              "*CREATE-INITIAL-WINDOWS-HOOK*" "*CREATE-WINDOW-HOOK*"
@@ -1102,6 +1109,7 @@
        "DEBUG-SOURCE-START-POSITIONS"))
   (intern name "C"))
 (defpackage "DEBUG-INTERNALS"
+	    (:nicknames "DI")
             (:import-from "C" "DEBUG-SOURCE" "DEBUG-SOURCE-COMPILED"
              "DEBUG-SOURCE-CREATED" "DEBUG-SOURCE-FROM" "DEBUG-SOURCE-NAME"
              "DEBUG-SOURCE-P" "DEBUG-SOURCE-START-POSITIONS")
@@ -1174,6 +1182,7 @@
        "UNKNOWN-KEYWORD-ARGUMENT-ERROR"))
   (intern name "KERNEL"))
 (defpackage "C"
+	    (:nicknames "OLD-C")
             (:import-from "LISP" "%ALIGNED-SAP" "%ARRAY-TYPEP" "%ASET"
              "%BITSET" "%CHARSET" "%PUT" "%RPLACA" "%RPLACD" "%SBITSET"
              "%SCHARSET" "%SET-DOCUMENTATION" "%SET-FDEFINITION"
@@ -1301,9 +1310,12 @@
              "WIRE-IO-ERROR" "WIRE-LISTEN" "WIRE-OUTPUT-BIGNUM"
              "WIRE-OUTPUT-BYTE" "WIRE-OUTPUT-FUNCALL" "WIRE-OUTPUT-NUMBER"
              "WIRE-OUTPUT-OBJECT" "WIRE-OUTPUT-STRING" "WIRE-P"))
-(defpackage "PRETTY-PRINT" (:export "PRETTY-STREAM" "PRETTY-STREAM-P"))
+(defpackage "PRETTY-PRINT"
+	    (:nicknames "PP")
+	    (:export "PRETTY-STREAM" "PRETTY-STREAM-P"))
 (intern "LOAD-FOREIGN" "EXTENSIONS")
 (defpackage "SYSTEM"
+	    (:nicknames "SYS")
             (:import-from "EXTENSIONS" "LOAD-FOREIGN")
             (:export "%ASSEMBLER-CODE-TYPE" "%BIND-ALIGNED-SAP" "%PRIMITIVE"
              "%SP-BYTE-BLT" "%SP-FIND-CHARACTER"
