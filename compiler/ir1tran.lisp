@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.41 1991/04/20 14:09:59 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.42 1991/04/23 16:23:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3202,15 +3202,21 @@
 	(unless null-fenv-p (remhash name *free-functions*)))
       ;;
       ;; Check for consistency with previous declaration or definition, and
-      ;; assert argument/result types if appropriate.
-      ;; ### For now, assertion is suppressed for all known functions so that
-      ;; we don't defeat explicit argument type checking.
+      ;; assert argument/result types if appropriate.  This this assertion is
+      ;; suppressed by the EXPLICIT-CHECK attribute, which is specified on
+      ;; functions that check their argument types as a consequence of type
+      ;; dispatching.  This avoids redundant checks such as NUMBERP on the args
+      ;; to +, etc.
       (when (function-type-p save-type)
 	(let ((for-real (eq where-from :declared)))
 	  (assert-definition-type
 	   fun save-type
 	   :error-function (if for-real #'compiler-warning #'compiler-note)
-	   :really-assert (and for-real (not function-info))
+	   :really-assert
+	   (and for-real
+		(or (not function-info)
+		    (ir1-attributep (function-info-attributes function-info)
+				    explicit-check)))
 	   :where (if for-real "declaration" "definition"))))
 
       (ir1-convert
