@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.11 1992/07/28 20:42:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.12 1993/05/07 07:37:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,7 +32,8 @@
 
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
@@ -41,6 +42,12 @@
   (inst bne temp DO-STATIC-FUN)
   (inst nop)
   (inst add res x y)
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
@@ -64,7 +71,8 @@
 
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst and temp x 3)
@@ -73,6 +81,12 @@
   (inst bne temp DO-STATIC-FUN)
   (inst nop)
   (inst sub res x y)
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
@@ -97,9 +111,10 @@
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lo non-descriptor-reg nl1-offset)
 			  (:temp hi non-descriptor-reg nl2-offset)
-			  (:temp pa-flag non-descriptor-reg nl4-offset)
+			  #-gengc (:temp pa-flag non-descriptor-reg nl4-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   ;; If either arg is not a fixnum, call the static function.
@@ -126,22 +141,38 @@
   (inst sll temp hi 30)
   (inst or lo temp)
   (inst sra hi 2)
-  ;; Allocate a BIGNUM for the result.
+
+  ;; Do we need one word or two?  Assume two.
+  (inst sra temp lo 31)
+  (inst xor temp hi)
+  (inst bne temp two-words)
+  (inst li temp (logior (ash 2 type-bits) bignum-type))
+
+  ;; Only need one word, fix the header and zero the high-word.
+  (inst li temp (logior (ash 1 type-bits) bignum-type))
+  (inst li hi 0)
+
+  TWO-WORDS
+  #-gengc
   (pseudo-atomic (pa-flag :extra (pad-data-block (+ 2 bignum-digits-offset)))
-    (let ((one-word (gen-label)))
-      (inst or res alloc-tn other-pointer-type)
-      ;; Do we need one word or two?
-      (inst sra temp lo 31)
-      (inst xor temp hi)
-      (inst beq temp one-word)
-      (inst li temp (logior (ash 1 type-bits) bignum-type))
-      ;; Nope, we need two.
-      (inst li temp (logior (ash 2 type-bits) bignum-type))
-      (storew hi res (1+ bignum-digits-offset) other-pointer-type)
-      (emit-label one-word)
-      (storew temp res 0 other-pointer-type)
-      (storew lo res bignum-digits-offset other-pointer-type)))
+    (inst or res alloc-tn other-pointer-type)
+    (storew temp res 0 other-pointer-type))
+  #+gengc
+  (without-scheduling ()
+    (inst or res alloc-tn other-pointer-type)
+    (storew temp alloc-tn)
+    (inst addu alloc-tn (pad-data-block (+ 2 bignum-digits-offset))))
+
+  (storew lo res bignum-digits-offset other-pointer-type)
+  (storew hi res (1+ bignum-digits-offset) other-pointer-type)
+
   ;; Out of here
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FUN
@@ -210,7 +241,8 @@
 			  
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
@@ -222,6 +254,12 @@
 
   RETURN-NIL
   (inst move res null-tn)
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
@@ -247,7 +285,8 @@
 			  
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-T)
@@ -258,6 +297,12 @@
   (inst nop)
 
   (inst move res null-tn)
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
@@ -283,7 +328,8 @@
 			  
 			  (:temp temp non-descriptor-reg nl0-offset)
 			  (:temp lip interior-reg lip-offset)
-			  (:temp lra descriptor-reg lra-offset)
+			  #-gengc (:temp lra descriptor-reg lra-offset)
+			  #+gengc (:temp ra any-reg ra-offset)
 			  (:temp nargs any-reg nargs-offset)
 			  (:temp ocfp any-reg ocfp-offset))
   (inst beq x y RETURN-NIL)
@@ -294,6 +340,12 @@
   (inst nop)
 
   (load-symbol res t)
+  #+gengc
+  (progn
+    (inst addu lip ra (* 2 word-bytes))
+    (inst j lip)
+    (inst nop))
+  #-gengc
   (lisp-return lra lip :offset 2)
 
   DO-STATIC-FN
