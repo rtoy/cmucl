@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.8 1992/02/13 02:24:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.9 1992/02/13 15:57:08 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -735,7 +735,7 @@
 				     (+ (sap-int sap) 1-page-size))
 				(logxor 1-page-size (ldb (byte 32 0) -1))))
 	       (sap+ sap page-size)))
-	 ((not (pointer< sap end)))
+	 ((sap>= sap end))
        (declare (type system-area-pointer sap))
        (setf (sap-ref-8 sap 0) (sap-ref-8 sap 0)))))
   (int-syscall ("read" int (* char) int) fd buf len))

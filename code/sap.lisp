@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.4 1992/01/29 06:34:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.5 1992/02/13 15:56:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,7 @@
 (defun sap> (x y)
   "Return T iff the SAP X points to a larger address then the SAP Y."
   (declare (type system-area-pointer x y))
-  (pointer> x y))
+  (sap> x y))
 
 (defun sap+ (sap offset)
   "Return a new sap OFFSET bytes from SAP."
