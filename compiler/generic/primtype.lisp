@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.1 1990/11/03 03:16:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.2 1990/11/03 15:35:27 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -22,7 +22,8 @@
 ;;; *Anything*
 ;;; 
 (def-primitive-type t (descriptor-reg))
-(setf (backend-any-primitive-type *backend*) (primitive-type-or-lose 't))
+(defvar *any-primitive-type* (primitive-type-or-lose 't))
+(setf (backend-any-primitive-type *backend*) *any-primitive-type*)
 
 ;;; Primitive integer types that fit in registers.
 ;;;
