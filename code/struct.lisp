@@ -16,44 +16,6 @@
 
 (in-package 'c)
 
-;;; Initialization hacks:
-
-#+new-compiler
-(progn
-;;; Make these types be sort-of-defined to allow bootstrapping.
-(setf (info type defined-structure-info 'defstruct-description)
-      (make-defstruct-description))
-
-(setf (info type defined-structure-info 'defstruct-slot-description)
-      (make-defstruct-description))
-
-
-;;; Define this now so that EQUAL works:
-;;;
-(defun pathnamep (x)
-  (and (structurep x)
-       (eq (%primitive header-ref x %g-vector-structure-name-slot)
-	   'pathname)))
-
-;;; Define so that we can test for VOLATILE-INFO-ENVs from the beginning of
-;;; initialization.
-;;;
-(defun c::volatile-info-env-p (x)
-  (and (structurep x)
-       (eq (%primitive header-ref x %g-vector-structure-name-slot)
-	   'c::volatile-info-env)))
-
-;;; Not really a structure, but at least a type-related initialization hack:
-;;;
-(deftype c::inlinep ()
-  '(member :inline :maybe-inline :notinline nil))
-;;;
-(deftype c::boolean ()
-  '(member t nil))
-
-); #+new-compiler
-
-
 (defstruct (defstruct-description
              (:conc-name dd-)
              (:print-function print-defstruct-description))
