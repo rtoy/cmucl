@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.21 2003/05/30 02:46:53 toy Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.22 2003/08/20 16:53:59 gerd Exp $
 
 all: lisp.nm
 
@@ -7,6 +7,7 @@ CC = gcc
 DEPEND = $(CC) -MM -E
 DEPEND_FLAGS = 
 
+-include internals.inc
 include Config
 
 ifndef GC_SRC
@@ -45,7 +46,7 @@ version:
 socket.o: socket.c
 	$(COMPILE.c) -DUNIXCONN $<
 
-internals.h:
+internals.h internals.inc:
 	@echo "You must run genesis to create internals.h!"
 	@false
 

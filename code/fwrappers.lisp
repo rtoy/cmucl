@@ -27,7 +27,7 @@
 ;;; USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 ;;; DAMAGE.
 
-(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.3 2003/06/18 09:38:10 gerd Exp $")
+(ext:file-comment "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fwrappers.lisp,v 1.4 2003/08/20 16:54:00 gerd Exp $")
 
 (in-package :fwrappers)
 
@@ -123,13 +123,15 @@
 (defun funwrap (function-name &key (type nil type-p) test)
   "Remove fwrappers from the function named FUNCTION-NAME.
    If TYPE is supplied, remove fwrappers whose type is equal to TYPE.
-   If TEST is supplied, remove fwrappers satisfying TEST."
+   If TEST is supplied, remove fwrappers satisfying TEST.
+   If both are not specified, remove all fwrappers."
   (collect ((new))
-    (do-fwrappers (f (fdefn-or-lose function-name))
-      (when (or (not type-p) (not (equal type (fwrapper-type f))))
-	(when (or (null test) (not (funcall test f)))
-	  (new f))))
-    (set-fwrappers function-name (new))))
+    (when (or type-p test)
+      (do-fwrappers (f (fdefn-or-lose function-name))
+	(when (or (not type-p) (not (equal type (fwrapper-type f))))
+	  (when (or (null test) (not (funcall test f)))
+	    (new f))))
+      (set-fwrappers function-name (new)))))
 
 (defun update-fwrapper (f)
   "Update the funcallable instance function of fwrapper F from its

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.57 2003/05/31 23:58:12 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.58 2003/08/20 16:53:59 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2357,6 +2357,15 @@
 	   (unix:unix-unlink unix-newname))))
   (undefined-value))
 
+(defun emit-makefile-header (name)
+  (with-open-file (*standard-output* name :direction :output
+				     :if-exists :supersede)
+    ;;
+    ;; Write out features.
+    (dolist (feature (c:backend-features c:*backend*))
+      (format t "FEATURE_~a = 1~%"
+	      (substitute #\_ #\- (symbol-name feature))))))
+
 
 ;;;; The actual genesis function.
 
@@ -2444,6 +2453,13 @@
 				    (merge-pathnames
 				     header-name
 				     (make-pathname :type "h")))
+				core-name))
+	      (emit-makefile-header
+	       (merge-pathnames (if (eq header-name t)
+				    "internals.inc"
+				    (merge-pathnames
+				     (make-pathname :type "inc")
+				     header-name))
 				core-name)))
 	    (write-initial-core-file
 	     core-name version
