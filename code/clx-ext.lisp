@@ -17,7 +17,7 @@
 
 (export '(open-clx-display with-clx-event-handling enable-clx-event-handling
 	  disable-clx-event-handling object-set-event-handler
-	  default-clx-event-handler 
+	  default-clx-event-handler *display-event-handlers*
 	  flush-display-events carefully-add-font-paths
 
 	  serve-key-press serve-key-release serve-button-press
@@ -115,14 +115,19 @@
 
 
 
-;;;; Enabling and disabling event handling through SYSTEM:SERVER.
+;;;; Enabling and disabling event handling through SYSTEM:SERVE-EVENT.
 
 (defvar *clx-fds-to-displays* (make-hash-table :test #'eql)
-  "This is a hash table that maps CLX file descriptors to CLX display structures.
-   For every CLX file descriptor in system:*file-input-handlers*, there must
-   be a mapping from that file descriptor to its CLX display structure when
-   events are handled via SYSTEM:SERVER.")
+  "This is a hash table that maps CLX file descriptors to CLX display
+   structures.  For every CLX file descriptor know to SYSTEM:SERVE-EVENT,
+   there must be a mapping from that file descriptor to its CLX display
+   structure when events are handled via SYSTEM:SERVE-EVENT.")
 
+(defvar *display-event-handlers* nil
+  "This is an alist mapping displays to user functions to be called when
+   SYSTEM:SERVE-EVENT notices input on a display connection.  Do not modify
+   this directly; use EXT:ENABLE-CLX-EVENT-HANDLING.  A given display
+   should be represented here only once.")
 
 (defmacro with-clx-event-handling ((display handler) &rest body)
   "Evaluates body in a context where events are handled for the display
@@ -135,56 +140,50 @@
      (disable-clx-event-handling ,display)))
 
 ;;; ENABLE-CLX-EVENT-HANDLING associates the display with the handler in
-;;; *display-event-handlers*.  It also associates the display's file descriptor
-;;; (connection to X11 server) with CALL-DISPLAY-EVENT-HANDLER in
-;;; system:*file-input-handlers*.  These are both necessary for SYSTEM:SERVER
-;;; to serve CLX events.  Since CALL-DISPLAY-EVENT-HANDLER is called on a
+;;; *display-event-handlers*.  It also uses SYSTEM:ADD-FD-HANDLER to have
+;;; SYSTEM:SERVE-EVENT call CALL-DISPLAY-EVENT-HANDLER whenever anything shows
+;;; up from the display. Since CALL-DISPLAY-EVENT-HANDLER is called on a
 ;;; file descriptor, the file descriptor is also mapped to the display in
 ;;; *clx-fds-to-displays*, so the user's handler can be called on the display.
 ;;;
 (defun enable-clx-event-handling (display handler)
-  "After calling this, when SYSTEM:SERVER notices input on display's connection
-   to the X11 server, handler is called on the display.  Handler is invoked in
-   a dynamic context with an error handler bound that will flush all events
-   from the display and return.  By returning, it declines to handle the error,
-   but it will have cleared all events; thus, entering the debugger will not
-   result in infinite errors due to streams that wait via SYSTEM:SERVER for
-   input.  Calling this repeatedly on the same display establishes handler as
-   a new handler, replacing any previous one for display."
+  "After calling this, when SYSTEM:SERVE-EVENT notices input on display's
+   connection to the X11 server, handler is called on the display.  Handler
+   is invoked in a dynamic context with an error handler bound that will
+   flush all events from the display and return.  By returning, it declines
+   to handle the error, but it will have cleared all events; thus, entering
+   the debugger will not result in infinite errors due to streams that wait
+   via SYSTEM:SERVE-EVENT for input.  Calling this repeatedly on the same
+   display establishes handler as a new handler, replacing any previous one
+   for display."
   (check-type display xlib:display)
   (let ((change-handler (assoc display *display-event-handlers*)))
     (if change-handler
 	(setf (cdr change-handler) handler)
 	(let ((fd (xlib::display-input-stream display)))
-	  (push (cons fd #'call-display-event-handler)
-		system::*file-input-handlers*)
+	  (system:add-fd-handler fd :input #'call-display-event-handler)
 	  (setf (gethash fd *clx-fds-to-displays*) display)
 	  (push (cons display handler) *display-event-handlers*)))))
 
 ;;; CALL-DISPLAY-EVENT-HANDLER maps the file descriptor to its display and maps
 ;;; the display to its handler.  If we can't find the display, we remove the
-;;; file descriptor from system:*file-input-handlers* and try to remove the
+;;; file descriptor using SYSTEM:INVALIDATE-DESCRIPTOR and try to remove the
 ;;; display from *display-event-handlers*.  This is necessary to try to keep
-;;; SYSTEM:SERVER from repeatedly trying to handle the same event over and
+;;; SYSTEM:SERVE-EVENT from repeatedly trying to handle the same event over and
 ;;; over.  This is possible since many CMU Common Lisp streams loop over
-;;; SYSTEM:SERVER, so when the debugger is entered, infinite errors are
+;;; SYSTEM:SERVE-EVENT, so when the debugger is entered, infinite errors are
 ;;; possible.
 ;;;
 (defun call-display-event-handler (file-descriptor)
   (let ((display (gethash file-descriptor *clx-fds-to-displays*)))
     (unless display
-      (setf system:*file-input-handlers*
-	    (delete file-descriptor system:*file-input-handlers*
-		    :key #'car))
+      (system:invalidate-descriptor file-descriptor)
       (setf *display-event-handlers*
-	    (remove display *display-event-handlers*
-		    :key #'car
-		    :test #'(lambda (ignore d)
-			      (declare (ignore ignore))
-			      (= (xlib::display-input-stream d)
-				 file-descriptor))))
+	    (delete file-descriptor *display-event-handlers*
+		    :key #'(lambda (d/h)
+			     (xlib::display-input-stream (car d/h)))))
       (error "File descriptor ~S not associated with any CLX display.~%~
-              It has been removed from system:*file-input-handlers*."
+                It has been removed from system:serve-event's knowledge."
 	     file-descriptor))
     (let ((handler (cdr (assoc display *display-event-handlers*))))
       (unless handler
@@ -198,11 +197,10 @@
 (defun disable-clx-event-handling (display)
   "Undoes the effect of EXT:ENABLE-CLX-EVENT-HANDLING."
   (setf *display-event-handlers*
-	(remove display *display-event-handlers* :key #'car))
+	(delete display *display-event-handlers* :key #'car))
   (let ((fd (xlib::display-input-stream display)))
     (remhash fd *clx-fds-to-displays*)
-    (setf system:*file-input-handlers*
-	  (remove fd system:*file-input-handlers* :key #'car))))
+    (system:invalidate-descriptor fd)))
 
 
 
@@ -222,17 +220,18 @@
 
 (defun object-set-event-handler (display)
   "This display event handler uses object sets to map event windows cross
-   event types to handlers.  It uses XLIB:EVENT-CASE to bind all the slots of
-   each event, calling the handlers on all these values in addition to the
-   event key and send-event-p.  Describe EXT:SERVE-MUMBLE, where mumble is an
-   event keyword name for the exact order of arguments.  :mapping-notify and
-   :keymap-notify events are ignored since they do not occur on any particular
-   window.  After calling a handler, each branch returns t to discard the
-   event.  While the handler is executing, all errors go through a handler that
-   flushes all the display's events and returns.  This prevents infinite errors
-   since the debug and terminal streams loop over SYSTEM:SERVER.  This function
-   returns t if there were some event to handle, nil otherwise.  It returns
-   immediately if there is no event to handle."
+   event types to handlers.  It uses XLIB:EVENT-CASE to bind all the slots
+   of each event, calling the handlers on all these values in addition to
+   the event key and send-event-p.  Describe EXT:SERVE-MUMBLE, where mumble
+   is an event keyword name for the exact order of arguments.
+   :mapping-notify and :keymap-notify events are ignored since they do not
+   occur on any particular window.  After calling a handler, each branch
+   returns t to discard the event.  While the handler is executing, all
+   errors go through a handler that flushes all the display's events and
+   returns.  This prevents infinite errors since the debug and terminal
+   streams loop over SYSTEM:SERVE-EVENT.  This function returns t if there
+   were some event to handle, nil otherwise.  It returns immediately if
+   there is no event to handle."
   (macrolet ((dispatch (event-key &rest args)
 	       `(multiple-value-bind (object object-set)
 				     (lisp::map-xwindow event-window)
