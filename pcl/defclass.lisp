@@ -136,7 +136,6 @@
 	     ,@(mapcar #'(lambda (x)
 			   `(declaim (ftype (function (t t) t) ,x)))
 		       *writers*)
-	     ,@(declare-accessor-methods canonical-slots)
 	     (let ,(mapcar #'cdr *initfunctions*)
 	       (load-defclass ',name
 			      ',metaclass
