@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.8 1991/02/08 13:32:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.9 1991/04/25 13:25:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.8 1991/02/08 13:32:39 ram Exp $
 ;;;
 ;;; Ugly pathname functions for Spice Lisp.
 ;;;    these functions are part of the standard Spice Lisp environment.
@@ -219,10 +217,11 @@
 	 (pathname
 	  (etypecase thing
 	    ((or string symbol)
-	     (let ((string (coerce (string thing) 'simple-string)))
+	     (with-array-data ((string (string thing))
+			       (start start)
+			       (end end))
 	       (multiple-value-bind (device directories name type)
 				    (do-filename-parse string start end)
-		 (unless end (setf end (length string)))
 		 (make-pathname :host host
 				:device device
 				:directory directories
