@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.8 1991/10/22 18:38:02 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/globals.c,v 1.9 1991/10/22 19:20:34 wlott Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -48,9 +48,11 @@ globals_init()
         /* Set the Atomic flag */
 	current_flags_register = 1<<flag_Atomic;
 #endif
+#ifndef ibmrt
 
         /* No GC trigger yet */
         current_auto_gc_trigger = NULL;
+#endif
 
 	/* Set foreign function call active. */
 	foreign_function_call_active = 1;
