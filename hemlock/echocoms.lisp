@@ -21,7 +21,7 @@
 (defhvar "Ignore File Types"
   "File types to ignore when trying to complete a filename."
   :value
-  (list "err" "fasl" "mipsf" "sparcf" "rtf" ; Lisp
+  (list "fasl" "pmaxf" "sparcf" "rtf" "err" ; Lisp
 	"BAK" "CKP"			    ; Backups & Checkpoints
 	"PS" "ps" "press" "otl" "dvi" "toc" ; Formatting
 	"bbl" "lof" "idx" "lot" "aux"	    ; Formatting
