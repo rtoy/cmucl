@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.45 1990/10/08 13:18:30 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.46 1990/10/10 12:54:07 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -296,7 +296,13 @@
 
 ;;;; Structure hackery:
 
-;;; ### This is only necessary until we get real structures up and running.
+(define-vop (structure-length cell-ref)
+  (:variant vm:vector-length-slot vm:other-pointer-type)
+  (:policy :fast-safe)
+  (:translate structure-length))
+
+;;; These two are needed until the compiler is recompiled with the version
+;;; of defstruct that has had all uses of %primitive removed.
 
 (define-vop (structure-ref slot-ref)
   (:variant vm:vector-data-offset vm:other-pointer-type))
@@ -304,12 +310,30 @@
 (define-vop (structure-set slot-set)
   (:variant vm:vector-data-offset vm:other-pointer-type))
 
+
+(define-vop (structure-const-ref slot-ref)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:policy :fast-safe)
+  (:translate structure-ref)
+  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29))))))
+
+(define-vop (structure-const-set slot-set)
+  (:policy :fast-safe)
+  (:translate structure-set)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:arg-types structure (:constant (integer 0 #.(1- (ash 1 29)))) *))
+
 (define-vop (structure-index-ref word-index-ref)
-  (:variant vm:vector-data-offset vm:other-pointer-type))
+  (:policy :fast-safe) 
+  (:translate structure-ref)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:arg-types structure positive-fixnum))
 
 (define-vop (structure-index-set word-index-set)
-  (:variant vm:vector-data-offset vm:other-pointer-type))
-
+  (:policy :fast-safe) 
+  (:translate structure-set)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
+  (:arg-types structure positive-fixnum *))
 
 
 
