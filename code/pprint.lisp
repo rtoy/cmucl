@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.35 2004/05/05 19:59:33 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pprint.lisp,v 1.36 2004/08/28 04:39:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -395,11 +395,13 @@
 		 (unless (zerop rem)
 		   (incf colnum (- colinc rem))))))
 	   colnum)
-	  ((<= column (+ colnum origin))
+	  ((< column (+ colnum origin))
 	   (- (+ colnum origin) column))
 	  (t
-	   (- colinc
-	      (rem (- column origin) colinc))))))
+	   (if (zerop colinc)
+	       0
+	       (- colinc
+		  (rem (- column origin) colinc)))))))
 
 (defun index-column (index stream)
   (let ((column (pretty-stream-buffer-start-column stream))
@@ -898,16 +900,19 @@
    ATSIGN? is ignored (but allowed so that PPRINT-TABULAR can be used with
    the ~/.../ format directive."
   (declare (ignore atsign?))
-  (pprint-logical-block (stream list
-				:prefix (if colon? "(")
-				:suffix (if colon? ")"))
-    (pprint-exit-if-list-exhausted)
-    (loop
-      (output-object (pprint-pop) stream)
+  ;; I (rtoy) think the given tabsize is one less than the colinc
+  ;; parameter to pprint-tab. (16 is the default tabsize.)
+  (let ((colinc (1+ (or tabsize 16))))
+    (pprint-logical-block (stream list
+				  :prefix (if colon? "(")
+				  :suffix (if colon? ")"))
       (pprint-exit-if-list-exhausted)
-      (write-char #\space stream)
-      (pprint-tab :section-relative 0 (or tabsize 16) stream)
-      (pprint-newline :fill stream))))
+      (loop
+	 (output-object (pprint-pop) stream)
+	 (pprint-exit-if-list-exhausted)
+	 (write-char #\space stream)
+	 (pprint-tab :section-relative 0 colinc stream)
+	 (pprint-newline :fill stream)))))
 
 
 ;;;; Pprint-dispatch tables.
