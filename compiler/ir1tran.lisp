@@ -1146,7 +1146,9 @@
 ;;;    The most interesting thing that we do is parse keywords.  We create a
 ;;; bunch of temporary variables to hold the result of the parse, and then loop
 ;;; over the supplied arguments, setting the appropriate temps for the supplied
-;;; keyword.
+;;; keyword.  Note that it is significant that we iterate over the keywords in
+;;; reverse order --- this implements the CL requirement that (when a keyword
+;;; appears more than once) the first value is used.
 ;;;
 ;;;    If there is no supplied-p var, then we initialize the temp to the
 ;;; default and just pass the temp into the main entry.  Since non-constant
@@ -1192,7 +1194,7 @@
 	      (allowp (or (optional-dispatch-allowp res)
 			  (policy nil (zerop safety)))))
 	  
-	  (temps `(,n-index 0) n-key n-value-temp)
+	  (temps `(,n-index (1- ,n-count)) n-key n-value-temp)
 	  (body `(declare (fixnum ,n-index) (ignorable ,n-key ,n-value-temp)))
 
 	  (collect ((tests))
@@ -1230,11 +1232,11 @@
 	     `(locally
 		(declare (optimize (safety 0)))
 		(loop
-		  (when (= ,n-index ,n-count) (return))
-		  (setq ,n-key (%more-arg ,n-context ,n-index))
-		  (incf ,n-index)
+		  (when (minusp ,n-index) (return))
 		  (setf ,n-value-temp (%more-arg ,n-context ,n-index))
-		  (incf ,n-index)
+		  (decf ,n-index)
+		  (setq ,n-key (%more-arg ,n-context ,n-index))
+		  (decf ,n-index)
 		  (cond ,@(tests)))))
 
 	    (unless allowp
