@@ -33,6 +33,7 @@
 (load "c:type" :verbose t)
 (load "c:vm-type" :verbose t)
 (load "c:type-init" :verbose t)
+(setq *type-system-initialized* t)
 (load "c:sset" :verbose t)
 (load "c:node" :verbose t)
 (load "c:alloc" :verbose t)
