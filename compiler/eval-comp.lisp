@@ -71,11 +71,12 @@
 	   (*compiler-note-count* 0)
 	   (*source-info* (make-lisp-source-info form)))
       (clear-stuff)
+      (find-source-paths form 0)
       ;;
       ;; This LET comes from COMPILE-TOP-LEVEL.
       ;; The noted DOLIST is a splice from a call that COMPILE-TOP-LEVEL makes.
       (let* ((*converting-for-interpreter* t)
-	     (lambdas (list (ir1-top-level form '(0) t))))
+	     (lambdas (list (ir1-top-level form 0 t))))
 	(declare (list lambdas))
 	(dolist (lambda lambdas)
 	  (let* ((component
