@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.2 1998/03/21 08:11:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash-new.lisp,v 1.3 1998/07/02 10:44:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -659,7 +659,7 @@
 		  (when hash-vector
 		    (setf (aref hash-vector next) #x80000000))
 		  (decf (hash-table-number-entries hash-table))
-		  t)))
+		  (return t))))
 	     (t
 	      ;; Not EQ based
 	      (do ((prior next next)
@@ -680,7 +680,7 @@
 		  (when hash-vector
 		    (setf (aref hash-vector next) #x80000000))
 		  (decf (hash-table-number-entries hash-table))
-		  t))))))))
+		  (return t)))))))))
 
 ;;; CLRHASH -- public.
 ;;; 
