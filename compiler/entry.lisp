@@ -65,7 +65,7 @@
 	(internal-fun (functional-entry-function fun)))
     (make-entry-info
      :closure-p (not (null (environment-closure (lambda-environment fun))))
-     :offset (block-label block)
+     :offset (gen-label)
      :name (let ((name (leaf-name internal-fun)))
 	     (or name
 		 (component-name (block-component block))))
