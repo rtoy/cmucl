@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.17 1992/06/22 13:51:56 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.18 1992/07/10 17:48:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -589,7 +589,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 	(invoke-debugger condition))))
   nil)
 
-(defun break (&optional (format-string "Break") &rest format-arguments)
+(defun break (&optional (datum "Break") &rest arguments)
   "Prints a message and invokes the debugger without allowing any possibility
    of condition handling occurring."
   (kernel:infinite-error-protect
@@ -598,9 +598,7 @@ The previous version is uglier, but it sets up unique run-time tags.
 	     (or debug:*stack-top-hint*
 		 (nth-value 1 (kernel:find-caller-name)))))
 	(invoke-debugger
-	 (make-condition 'simple-condition
-			 :format-string format-string
-			 :format-arguments format-arguments)))))
+	 (coerce-to-condition datum arguments 'simple-condition 'break)))))
   nil)
 
 (define-condition warning (condition) ())
