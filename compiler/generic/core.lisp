@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.22 1993/05/11 14:06:41 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.23 1993/05/11 17:31:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,9 +217,8 @@
       (dolist (noise xeps)
 	(let ((xep (cdr noise)))
 	  (setf (byte-function-component xep) code-obj)
-	  (note-function (lambda-info (car noise))
-			 (make-byte-compiled-function xep)
-			 object)))
+	  (initialize-byte-compiled-function xep)
+	  (note-function (lambda-info (car noise)) xep object)))
 
       (dotimes (index num-constants)
 	(let ((const (aref constants index))
