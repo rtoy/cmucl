@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.38 2001/03/04 20:12:44 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.39 2001/11/22 13:39:15 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2451,25 +2451,32 @@
 	 (extract-function-type x)))
     (symbol
      (make-member-type :members (list x)))
+    (complex
+     (let ((real (realpart x))
+	   (imag (imagpart x)))
+       (make-numeric-type :class (etypecase real
+				   (integer
+				    (etypecase imag
+				      (integer 'integer)
+				      (rational 'rational)))
+				   (rational 'rational)
+				   (float 'float))
+			  :format (if (floatp real)
+				      (float-format-name real)
+				      nil)
+			  :complexp :complex
+			  :low (min real imag)
+			  :high (max real imag))))
     (number
-     (let* ((num (if (complexp x) (realpart x) x))
-	    (res (make-numeric-type
-		  :class (etypecase num
-			   (integer 'integer)
-			   (rational 'rational)
-			   (float 'float))
-		  :format (if (floatp num)
-			      (float-format-name num)
-			      nil))))
-       (cond ((complexp x)
-	      (setf (numeric-type-complexp res) :complex)
-	      (let ((imag (imagpart x)))
-		(setf (numeric-type-low res) (min num imag))
-		(setf (numeric-type-high res) (max num imag))))
-	     (t
-	      (setf (numeric-type-low res) num)
-	      (setf (numeric-type-high res) num)))
-       res))
+     (make-numeric-type :class (etypecase x
+				 (integer 'integer)
+				 (rational 'rational)
+				 (float 'float))
+			:format (if (floatp x)
+				    (float-format-name x)
+				    nil)
+			:low x
+			:high x))
     (array
      (let ((etype (specifier-type (array-element-type x))))
        (make-array-type :dimensions (array-dimensions x)
