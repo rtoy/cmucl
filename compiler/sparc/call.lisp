@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.7 1991/11/09 20:50:29 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.8 1992/03/06 11:03:24 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -888,8 +888,7 @@ default-value-8
 		 number-stack-displacement))))
 
     ;; And jump to the assembly-routine that does the bliting.
-    (inst li temp (make-fixup 'tail-call-variable :assembly-routine))
-    (inst j temp)
+    (inst ji temp (make-fixup 'tail-call-variable :assembly-routine))
     (inst nop)))
 
 
@@ -1003,8 +1002,7 @@ default-value-8
       (move lra lra-arg)
       (move vals vals-arg)
       (move nvals nvals-arg)
-      (inst li temp (make-fixup 'return-multiple :assembly-routine))
-      (inst j temp)
+      (inst ji temp (make-fixup 'return-multiple :assembly-routine))
       (inst nop))
     (trace-table-entry trace-table-normal)))
 
