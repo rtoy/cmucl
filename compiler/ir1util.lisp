@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.42 1991/11/06 14:08:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.43 1991/11/09 12:27:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1445,10 +1445,10 @@
 (def-source-context pcl::defmethod (name &rest stuff)
   (let ((arg-pos (position-if #'listp stuff)))
     (if arg-pos
-	`(defmethod ,name ,@(subseq stuff 0 arg-pos)
+	`(pcl::defmethod ,name ,@(subseq stuff 0 arg-pos)
 	   ,@(nth-value 2 (pcl::parse-specialized-lambda-list
 			   (elt stuff arg-pos))))
-	`(defmethod ,name "<illegal syntax>"))))
+	`(pcl::defmethod ,name "<illegal syntax>"))))
 
 
 ;;; SOURCE-FORM-CONTEXT  --  Internal
