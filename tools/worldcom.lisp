@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.52 1993/05/12 15:59:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.53 1993/05/20 13:59:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -148,9 +148,14 @@
 (comf "target:code/extensions")
 (comf "target:code/commandline")
 
-(comf "target:code/room")
-(comf "target:code/gc")
-(comf "target:code/purify")
+(unless (c:backend-featurep :gengc)
+  (comf "target:code/room")
+  (comf "target:code/gc")
+  (comf "target:code/purify"))
+(when (c:backend-featurep :gengc)
+  (comf "target:code/gengc")
+  (comf "target:code/scavhook"))
+
 (comf "target:code/save")
 
 (comf "target:code/stream")
