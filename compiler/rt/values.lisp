@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.2 1991/03/31 18:45:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/values.lisp,v 1.3 1991/12/21 23:05:29 ram Exp $
 ;;;
 ;;; This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -21,7 +21,7 @@
 
 
 (define-vop (reset-stack-pointer)
-  (:args (ptr :scs (any-reg)))
+  (:args (ptr :scs (word-pointer-reg)))
   (:generator 1
     (move csp-tn ptr)))
 
