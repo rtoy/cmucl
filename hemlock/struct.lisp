@@ -57,8 +57,7 @@
   font)
 
 (defmacro fast-font-mark-p (s)
-  `(eq (svref ,s 0) 'font-mark))
-
+  `(typep ,s 'font-mark))
 
 
 ;;;; Regions, buffers, modeline fields.
