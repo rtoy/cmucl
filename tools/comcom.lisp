@@ -26,7 +26,9 @@
   (comf "code:globals" :always-once t) ; For global variables.
   (comf "code:struct" :always-once t) ; For structures.
   (comf "c:globals" :always-once t)
-  (comf "c:proclaim" :always-once t)) ; For COOKIE structure.
+  (comf "c:proclaim" :always-once t) ; For COOKIE structure.
+  (let ((c:*compile-time-define-macros* nil))
+    (comf "c:macros" :load t)))
 
 (comf "c:type" :always-once *new-compile*)
 (comf "c:rt/vm-type")
@@ -38,8 +40,10 @@
 (comf "c:knownfun" :always-once *new-compile*)
 (comf "c:vop" :always-once *new-compile*)
 (comf "c:alloc")
+(comf "c:knownfun")
 (comf "c:fndb")
 (comf "c:main")
+(comf "c:vmdef" :load t :bootstrap-macros :both)
 
 #-new-compiler
 (unless *new-compile*
@@ -58,8 +62,6 @@
 (comf "c:constraint")
 (comf "c:envanal")
 (comf "c:rt/parms")
-
-(comf "c:vmdef" :load t :bootstrap-macros :both)
 
 (comf "c:tn" :bootstrap-macros :both)
 (comf "c:bit-util")
@@ -80,9 +82,7 @@
 
 (when *new-compile*
   (comf "c:eval-comp")
-  (comf "c:eval" :bootstrap-macros :both)
-  (let ((c:*compile-time-define-macros* nil))
-    (comf "c:macros" :load t)))
+  (comf "c:eval" :bootstrap-macros :both))
 
 
 (comf "c:aliencomp")
