@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.7 1991/08/23 18:23:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/time.lisp,v 1.8 1991/08/30 17:41:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,6 +270,8 @@
   (and (dst-check-start-of-month-ge day hour weekday april-1)
        (not (dst-check-end-of-month-ge day hour weekday october-31))))
 
+;;;; Time:
+
 (defmacro time (form)
   "Evaluates the Form and prints timing information on *Trace-Output*."
   `(%time #'(lambda () ,form)))
@@ -293,66 +295,48 @@
 	(compile nil fun)))))
    (t fun)))
 
+;;; TIME-GET-SYS-INFO  --  Internal
+;;;
+;;;    Return all the files that we want time to report.
+;;;
+(defun time-get-sys-info ()
+  (multiple-value-bind (user sys faults)
+		       (system:get-system-info)
+    (values user sys faults (get-bytes-consed))))
+
+;;; %TIME  --  Internal
+;;;
+;;;    The guts of the TIME macro.  Compute overheads, run the (compiled)
+;;; function, report the times.
+;;;
 (defun %time (fun)
   (let ((fun (massage-time-function fun))
 	old-run-utime
-	new-run-utime
-	old-run-stime
-	new-run-stime
-	old-real-time
-	new-real-time
-	old-page-faults
-	new-page-faults
-	real-time-overhead
-	run-utime-overhead
-	run-stime-overhead
-	page-faults-overhead
-	old-bytes-consed
-	new-bytes-consed
-	cons-overhead)
+        new-run-utime
+        old-run-stime
+        new-run-stime
+        old-real-time
+        new-real-time
+        old-page-faults
+        new-page-faults
+        real-time-overhead
+        run-utime-overhead
+        run-stime-overhead
+        page-faults-overhead
+        old-bytes-consed
+        new-bytes-consed
+        cons-overhead)
     ;; Calculate the overhead...
-    (multiple-value-bind (err? utime stime)
-			 (mach:unix-getrusage mach:rusage_self)
-      (cond ((null err?)
-	     (error "Unix system call getrusage failed: ~A."
-		    (mach:get-unix-error-msg utime)))
-	    (T (setq old-run-utime utime)
-	       (setq old-run-stime stime))))
-    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			 (mach:vm_statistics *task-self*)
-      (declare (ignore ps fc ac ic wc zf ra in ot))
-      (gr-error 'mach:vm_allocate gr)
-      (setq old-page-faults pf))
-    (setq old-bytes-consed (get-bytes-consed))
+    (multiple-value-setq
+        (old-run-utime old-run-stime old-page-faults old-bytes-consed)
+      (time-get-sys-info))
     ;; Do it a second time to make sure everything is faulted in.
-    (multiple-value-bind (err? utime stime)
-			 (mach:unix-getrusage mach:rusage_self)
-      (cond ((null err?)
-	     (error "Unix system call getrusage failed: ~A."
-		    (mach:get-unix-error-msg utime)))
-	    (T (setq old-run-utime utime)
-	       (setq old-run-stime stime))))
-    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			 (mach:vm_statistics *task-self*)
-      (declare (ignore ps fc ac ic wc zf ra in ot))
-      (gr-error 'mach:vm_statistics gr)
-      (setq old-page-faults pf))
-    (setq old-bytes-consed (get-bytes-consed))
-    
-    (multiple-value-bind (err? utime stime)
-			 (mach:unix-getrusage mach:rusage_self)
-      (cond ((null err?)
-	     (error "Unix system call getrusage failed: ~A."
-		    (mach:get-unix-error-msg utime)))
-	    (T (setq new-run-utime utime)
-	       (setq new-run-stime stime))))
-    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			 (mach:vm_statistics *task-self*)
-      (declare (ignore ps fc ac ic wc zf ra in ot))
-      (gr-error 'mach:vm_statistics gr)
-      (setq new-page-faults pf))
-    (setq new-bytes-consed (get-bytes-consed))
-    
+    (multiple-value-setq
+        (old-run-utime old-run-stime old-page-faults old-bytes-consed)
+      (time-get-sys-info))
+    (multiple-value-setq
+        (new-run-utime new-run-stime new-page-faults new-bytes-consed)
+      (time-get-sys-info))
     (setq run-utime-overhead (- new-run-utime old-run-utime))
     (setq run-stime-overhead (- new-run-stime old-run-stime))
     (setq page-faults-overhead (- new-page-faults old-page-faults))
@@ -362,48 +346,28 @@
     (setq real-time-overhead (- new-real-time old-real-time))
     (setq cons-overhead (- new-bytes-consed old-bytes-consed))
     ;; Now get the initial times.
-    (multiple-value-bind (err? utime stime)
-			 (mach:unix-getrusage mach:rusage_self)
-      (cond ((null err?)
-	     (error "Unix system call getrusage failed: ~A."
-		    (mach:get-unix-error-msg utime)))
-	    (T (setq old-run-utime utime)
-	       (setq old-run-stime stime))))
-    (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			 (mach:vm_statistics *task-self*)
-      (declare (ignore ps fc ac ic wc zf ra in ot))
-      (gr-error 'mach:vm_statistics gr)
-      (setq old-page-faults pf))
+    (multiple-value-setq
+        (old-run-utime old-run-stime old-page-faults old-bytes-consed)
+      (time-get-sys-info))
     (setq old-real-time (get-internal-real-time))
-    (setq old-bytes-consed (get-bytes-consed))
     (multiple-value-prog1
-	;; Execute the form and return its values.
-	(funcall fun)
-      (multiple-value-bind (err? utime stime)
-			   (mach:unix-getrusage mach:rusage_self)
-	(cond ((null err?)
-	       (error "Unix system call getrusage failed: ~A."
-		      (mach:get-unix-error-msg utime)))
-	      (T (setq new-run-utime (- utime run-utime-overhead))
-		 (setq new-run-stime (- stime run-stime-overhead)))))
-      (multiple-value-bind (gr ps fc ac ic wc zf ra in ot pf)
-			   (mach:vm_statistics *task-self*)
-	(declare (ignore ps fc ac ic wc zf ra in ot))
-	(gr-error 'mach:vm_statistics gr)
-	(setq new-page-faults (- pf page-faults-overhead)))
+        ;; Execute the form and return its values.
+        (funcall fun)
+      (multiple-value-setq
+        (new-run-utime new-run-stime new-page-faults new-bytes-consed)
+      (time-get-sys-info))
       (setq new-real-time (- (get-internal-real-time) real-time-overhead))
-      (setq new-bytes-consed (- (get-bytes-consed) cons-overhead))
       (format *trace-output*
-	      "~&Evaluation took:~%  ~
-	      ~S second~:P of real time~%  ~
-	      ~S second~:P of user run time~%  ~
-	      ~S second~:P of system run time~%  ~
-	      ~S page fault~:P and~%  ~
-	      ~S bytes consed.~%"
-	      (max (/ (- new-real-time old-real-time)
-		      (float internal-time-units-per-second))
-		   0.0)
-	      (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
-	      (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
-	      (max (- new-page-faults old-page-faults) 0)
-	      (max (- new-bytes-consed old-bytes-consed) 0)))))
+              "~&Evaluation took:~%  ~
+              ~S second~:P of real time~%  ~
+              ~S second~:P of user run time~%  ~
+              ~S second~:P of system run time~%  ~
+              ~S page fault~:P and~%  ~
+              ~S bytes consed.~%"
+              (max (/ (- new-real-time old-real-time)
+                      (float internal-time-units-per-second))
+                   0.0)
+              (max (/ (- new-run-utime old-run-utime) 1000000.0) 0.0)
+              (max (/ (- new-run-stime old-run-stime) 1000000.0) 0.0)
+              (max (- new-page-faults old-page-faults) 0)
+              (max (- new-bytes-consed old-bytes-consed) 0)))))
