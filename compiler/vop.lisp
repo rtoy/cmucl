@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.37 1993/02/26 08:39:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.38 1993/03/12 15:16:47 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,10 @@
 	  tn tn-p make-random-tn tn-sc tn-offset
 
 	  ;; Call.lisp and core.lisp need to get at these slots.
-	  ir2-component-constants ir2-environment-number-stack-p))
+	  ir2-component-constants ir2-environment-number-stack-p
+	  ;; New-assem.lisp needs these.
+	  ir2-component-dyncount-info ir2-block-block vop-block))
+
 
 (eval-when (compile load eval)
 
