@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.30 1991/02/24 16:20:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.31 1991/02/24 19:59:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1047,8 +1047,8 @@
 	 (size (finite-sb-current-size sb)))
     (loop for i from offset
           repeat (sc-element-size sc)
-          any (or (>= i size)
-		  (load-tn-offset-conflicts-in-sb op i)))))
+          thereis (or (>= i size)
+		      (load-tn-offset-conflicts-in-sb op sb i)))))
 
 
 ;;; Find-Load-TN-Target  --  Internal
@@ -1079,7 +1079,7 @@
 (defun select-load-tn-location (op sc)
   (declare (type tn-ref op) (type sc sc))
   (dolist (loc (sc-locations sc) nil)
-    (unless (load-tn-conflicts-in-sb op sc loc)
+    (unless (load-tn-conflicts-in-sc op sc loc)
       (return loc))))
 
 
