@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.4 1991/10/22 16:50:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/alloc.lisp,v 1.5 1991/10/22 19:07:16 wlott Exp $
 ;;;
 ;;; Stuff to handle allocating simple objects.
 ;;;
@@ -62,8 +62,7 @@
 				     ,(pop arg-offsets)))
 			  (args)))
 		(:temp alloc non-descriptor-reg nl0-offset)
-		,@(when (or need-unbound-marker header variable-length)
-		    '((:temp temp non-descriptor-reg ocfp-offset)))
+		(:temp temp non-descriptor-reg ocfp-offset)
 		(:res result descriptor-reg a0-offset))
 	   (pseudo-atomic (temp)
 	     (load-symbol-value alloc *allocation-pointer*)
