@@ -502,7 +502,7 @@ harmfull will happen if called when the output buffer is empty."
       (wire-force-output wire)
       (setf fill-pointer 0))
     (setf (schar obuf fill-pointer)
-	  (int-char byte))
+	  (code-char byte))
     (setf (wire-obuf-end wire) (1+ fill-pointer)))
   (values))
 
