@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.9 1992/02/15 12:50:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.10 1992/02/17 03:11:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -536,28 +536,31 @@
 				  (unix:get-unix-error-msg readable/errno)))
 			  ((zerop result)
 			   (return))))
-		  (multiple-value-bind
-		      (count errno)
-		      (unix:unix-read descriptor
-				      string
-				      (length string))
-		    (cond ((or (and (null count)
-				    (eql errno unix:eio))
-			       (eql count 0))
-			   (system:remove-fd-handler handler)
-			   (setf handler nil)
-			   (decf (car cookie))
-			   (unix:unix-close descriptor)
-			   (return))
-			  ((null count)
-			   (system:remove-fd-handler handler)
-			   (setf handler nil)
-			   (decf (car cookie))
-			   (error "Could not read input from sub-process: ~A"
-				  (unix:get-unix-error-msg errno)))
-			  (t
-			   (write-string string stream
-					 :end count))))))))))
+		  (alien:with-alien ((buf (alien:array c-call:char 256)))
+		    (multiple-value-bind
+			(count errno)
+			(unix:unix-read descriptor (alien-sap buf) 256)
+		      (cond ((or (and (null count)
+				      (eql errno unix:eio))
+				 (eql count 0))
+			     (system:remove-fd-handler handler)
+			     (setf handler nil)
+			     (decf (car cookie))
+			     (unix:unix-close descriptor)
+			     (return))
+			    ((null count)
+			     (system:remove-fd-handler handler)
+			     (setf handler nil)
+			     (decf (car cookie))
+			     (error "Could not read input from sub-process: ~A"
+				    (unix:get-unix-error-msg errno)))
+			    (t
+			     (kernel:copy-from-system-area
+			      (alien-sap buf) 0
+			      string (* vm:vector-data-offset vm:word-bits)
+			      (* count vm:byte-bits))
+			     (write-string string stream
+					   :end count)))))))))))
 
 ;;; GET-DESCRIPTOR-FOR -- internal
 ;;;
