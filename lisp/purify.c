@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.28 2004/07/08 03:18:15 rtoy Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.29 2004/08/04 18:37:25 cwang Exp $ 
 
    */
 #include <stdio.h>
@@ -591,7 +591,7 @@ static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
 
       /* Copy it. */
       bcopy(old, new, nwords * sizeof(lispobj));
-      
+
       /* Deposit forwarding pointer. */
       result = (lispobj)new | LowtagOf(thing);
       *old = result;
@@ -669,7 +669,11 @@ static lispobj ptrans_vector(lispobj thing, int bits, int extra,
     lispobj result, *new;
 
     vector = (struct vector *)PTR(thing);
+#ifdef __x86_64    
+    nwords = 2 + (CEILING((fixnum_value(vector->length)+extra)*bits,64)>>6);
+#else
     nwords = 2 + (CEILING((fixnum_value(vector->length)+extra)*bits,32)>>5);
+#endif
 
     if (boxed && !constant) {
         new = static_free;
@@ -742,7 +746,9 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
     /* Got the fixups for the code block.  Now work through the vector,
        and apply a fixup at each address. */
     int length = fixnum_value(fixups_vector->length);
-    unsigned long *offset_vector = fixups_vector->data;
+    /* offset_vector still has 32-bit elements on amd64.
+       Eventually we will make this consistent with internals.h */
+    unsigned int *offset_vector = fixups_vector->data;
     int i;
     for (i=0; i<length; i++) {
       unsigned offset = offset_vector[i];
@@ -1017,7 +1023,11 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
         return ptrans_vector(thing, 1, 0, FALSE, constant);
 
       case type_SimpleVector:
+#ifdef __x86_64    
+        return ptrans_vector(thing, 64, 0, TRUE, constant);
+#else
         return ptrans_vector(thing, 32, 0, TRUE, constant);
+#endif
 
       case type_SimpleArrayUnsignedByte2:
         return ptrans_vector(thing, 2, 0, FALSE, constant);
