@@ -84,11 +84,9 @@
 (defun ir1-transform-type-predicate (object type)
   (declare (type continuation object) (type ctype type))
   (let ((otype (continuation-type object)))
-    (values 
-     (cond ((not (types-intersect otype type)) 'nil)
-	   ((csubtypep otype type) 't)
-	   (t (give-up)))
-     '((declare (ignore object type))))))
+    (cond ((not (types-intersect otype type)) 'nil)
+	  ((csubtypep otype type) 't)
+	  (t (give-up)))))
 
 
 ;;; %Typep IR1 transform  --  Internal
@@ -107,7 +105,7 @@
 ;;; the single argument is known to (not) be of the appropriate type, expanding
 ;;; to T or NIL as apprporiate.
 ;;;
-(deftransform fold-type-predicate ((object type) * * :node node :defun-only t)
+(deftransform fold-type-predicate ((object) * * :node node :defun-only t)
   (let ((ctype (gethash (leaf-name
 			 (ref-leaf
 			  (continuation-use
