@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/type-vops.lisp,v 1.1 1992/07/13 03:48:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/type-vops.lisp,v 1.2 1992/10/28 16:13:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -143,7 +143,7 @@
 
 (defun %test-headers (value temp target not-p function-p headers
 			    &optional (drop-through (gen-label)) temp-loaded)
-  (let ((lowtag (if function-p function-header-type other-pointer-type)))
+  (let ((lowtag (if function-p function-pointer-type other-pointer-type)))
     (multiple-value-bind
 	(equal greater-or-equal when-true when-false)
 	;; EQUAL and GREATER-OR-EQUAL are the conditions for branching to
