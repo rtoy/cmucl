@@ -1,5 +1,5 @@
 /* cgc.c -*- Mode: C; comment-column: 40; -*-
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.5 1997/09/24 15:48:08 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/cgc.c,v 1.6 1997/11/02 09:49:11 dtc Exp $
  *
  * Conservative Garbage Collector for CMUCL x86.
  *
@@ -772,6 +772,12 @@ static void init_osc()
   SETSCT(type_Ratio			,SC_ISBOXED,0);
   SETSCT(type_SingleFloat		,SC_UNBOXED,0);
   SETSCT(type_DoubleFloat		,SC_UNBOXED,0);
+#if defined type_ComplexSingleFloat
+  SETSCT(type_ComplexSingleFloat	,SC_UNBOXED,0);
+#endif
+#if defined type_ComplexDoubleFloat
+  SETSCT(type_ComplexDoubleFloat	,SC_UNBOXED,0);
+#endif
   SETSCT(type_Complex			,SC_ISBOXED,0);
   SETSCT(type_SimpleArray		,SC_ISBOXED,0);
   SETSCT(type_SimpleString		,SC_STRING,3);
@@ -796,6 +802,12 @@ static void init_osc()
 #endif
   SETSCT(type_SimpleArraySingleFloat	,SC_VECTOR,5);
   SETSCT(type_SimpleArrayDoubleFloat	,SC_VECTOR,6);
+#if defined type_SimpleArrayComplexSingleFloat
+  SETSCT(type_SimpleArrayComplexSingleFloat	,SC_VECTOR,6);
+#endif
+#if defined type_SimpleArrayComplexDoubleFloat
+  SETSCT(type_SimpleArrayComplexDoubleFloat	,SC_VECTOR,7);
+#endif
   SETSCT(type_ComplexString		,SC_ISBOXED,0);
   SETSCT(type_ComplexBitVector		,SC_ISBOXED,0);
   SETSCT(type_ComplexVector		,SC_ISBOXED,0);
