@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.8 1990/04/24 02:56:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.9 1990/06/03 19:02:10 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -191,7 +191,8 @@
 
 
 (define-vop (nlx-entry)
-  (:args (sp :scs (descriptor-reg))
+  (:args (sp) ; Note: we can't list an sc-restriction, 'cause any load vops
+	      ; would be inserted before the LRA.
 	 (start)
 	 (count))
   (:results (values :more t))
@@ -240,11 +241,11 @@
 			       (store-stack-tn tn null-tn)))))
 		 (inst b defaulting-done)
 		 (inst nop))))))
-    (move csp-tn sp)))
+    (load-stack-tn csp-tn sp)))
 
 
 (define-vop (nlx-entry-multiple)
-  (:args (top :scs (descriptor-reg) :target dst)
+  (:args (top :target dst)
 	 (start :target src)
 	 (count :target num))
   (:results (new-start) (new-count))
@@ -260,7 +261,7 @@
 	  (done (gen-label)))
       
       ;; Copy args.
-      (move dst top)
+      (load-stack-tn dst top)
       (move src start)
       (move num count)
       
