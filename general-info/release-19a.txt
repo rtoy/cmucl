@@ -54,8 +54,8 @@ New in this release:
      - DECLARE no longer being a special operator.
 
   * Numerous bugfixes:
-     - NSET-EXCLUSIVE-OR implemented in terms of SET-EXCLUSIVE-OR
-       because it returned different results than SET-EXCLUSIVE-OR.
+     - NSET-EXCLUSIVE-OR returns the same results as SET-EXCLUSIVE-OR
+       wrt to duplicate elements.
      - Forms like (MULTIPLE-VALUE-BIND 'LIST) no longer trapping
        an internal compiler error when compiled.
 
