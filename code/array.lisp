@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.14 1991/11/09 02:47:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.15 1991/12/02 17:10:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -289,48 +289,50 @@
 
 (defun data-vector-ref (array index)
   (with-array-data ((vector array) (index index) (end))
-    (declare (ignore end))
+    (declare (ignore end) (optimize (safety 3)))
     (macrolet ((dispatch (&rest stuff)
 		 `(etypecase vector
 		    ,@(mapcar #'(lambda (type)
-				  `(,type
-				    (data-vector-ref (the ,type vector)
-						     index)))
+				  (let ((atype `(simple-array ,type (*))))
+				    `(,atype
+				      (data-vector-ref (the ,atype vector)
+						       index))))
 			      stuff))))
       (dispatch
-       simple-vector
-       simple-bit-vector
-       simple-string
-       (simple-array (unsigned-byte 2) (*))
-       (simple-array (unsigned-byte 4) (*))
-       (simple-array (unsigned-byte 8) (*))
-       (simple-array (unsigned-byte 16) (*))
-       (simple-array (unsigned-byte 32) (*))
-       (simple-array single-float (*))
-       (simple-array double-float (*))))))
+       t
+       bit
+       character
+       (unsigned-byte 2)
+       (unsigned-byte 4)
+       (unsigned-byte 8)
+       (unsigned-byte 16)
+       (unsigned-byte 32)
+       single-float
+       double-float))))
 
 (defun data-vector-set (array index new-value)
   (with-array-data ((vector array) (index index) (end))
-    (declare (ignore end))
+    (declare (ignore end) (optimize (safety 3)))
     (macrolet ((dispatch (&rest stuff)
 		 `(etypecase vector
 		    ,@(mapcar #'(lambda (type)
-				  `(,type
-				    (data-vector-set (the ,type vector)
-						     index
-						     new-value)))
+				  (let ((atype `(simple-array ,type (*))))
+				    `(,atype
+				      (data-vector-set (the ,atype vector)
+						       index
+						       (the ,type new-value)))))
 			      stuff))))
       (dispatch
-       simple-vector
-       simple-bit-vector
-       simple-string
-       (simple-array (unsigned-byte 2) (*))
-       (simple-array (unsigned-byte 4) (*))
-       (simple-array (unsigned-byte 8) (*))
-       (simple-array (unsigned-byte 16) (*))
-       (simple-array (unsigned-byte 32) (*))
-       (simple-array single-float (*))
-       (simple-array double-float (*))))))
+       t
+       bit
+       character
+       (unsigned-byte 2)
+       (unsigned-byte 4)
+       (unsigned-byte 8)
+       (unsigned-byte 16)
+       (unsigned-byte 32)
+       single-float
+       double-float))))
 
 
 
