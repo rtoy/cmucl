@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.1 1992/06/12 03:58:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/hppa/array.lisp,v 1.2 1992/06/28 12:16:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,11 +94,11 @@
   (inst shd accum accum 5 accum)
 
   TEST
+  (inst ldwx string offset data)
   (inst addib :< (fixnum -4) length loop)
-  (inst ldwx string offset data :modify t)
+  (inst addi (fixnum 1) offset offset)
 
-  (inst addi (fixnum 4) length length)
-  (inst comb := length zero-tn done :nullify t)
+  (inst addib := (fixnum 4) length done :nullify t)
   (inst uaddcm zero-tn length length)
   (inst sll length 1 length)
   (inst mtctl length :sar)
