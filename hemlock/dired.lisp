@@ -108,53 +108,53 @@
    user will be asked whether it should be overwritten or not."
   (cond
    ((not directoryp)
-    (multiple-value-bind (ses-name1 exists1p)
-			 (lisp::predict-name spec1 t)
-      (let* ((ses-name2 (lisp::predict-name spec2 nil))
-	     (pname1 (pathname ses-name1))
-	     (pname2 (pathname ses-name2))
-	     (dirp1 (directoryp pname1))
-	     (dirp2 (directoryp pname2))
-	     (wildp1 (wildcardp (file-namestring pname1)))
-	     (wildp2 (wildcardp (file-namestring pname2))))
-	(when (and dirp1 wildp1)
-	  (funcall *error-function*
-		   "Cannot have wildcards in directory names -- ~S." pname1))
-	(when (and dirp2 wildp2)
-	  (funcall *error-function*
-		   "Cannot have wildcards in directory names -- ~S." pname2))
-	(when (and dirp1 (not dirp2))
-	  (funcall *error-function*
-		   "Cannot handle spec1 being a directory and spec2 a file."))
-	(when (and wildp2 (not wildp1))
-	  (funcall *error-function*
-		   "Cannot handle destination having wildcards without ~
-		   source having wildcards."))
-	(when (and wildp1 (not wildp2) (not dirp2))
-	  (funcall *error-function*
-		   "Cannot handle source with wildcards and destination ~
-		   without, unless destination is a directory."))
-	(cond ((and dirp1 dirp2)
-	       (unless (directory-existsp ses-name1)
-		 (funcall *error-function*
-			  "Directory does not exist -- ~S." pname1))
-	       (unless (directory-existsp ses-name2)
-		 (enter-directory ses-name2))
-	       (recursive-copy pname1 pname2 update clobber pname2
-			       ses-name1 ses-name2))
-	      (dirp2
-	       ;; merge pname2 with pname1 to pick up a similar file-namestring.
-	       (copy-file-1 pname1 wildp1 exists1p
-			    (merge-pathnames pname2 pname1)
-			    wildp1 update clobber))
-	      (t (copy-file-1 pname1 wildp1 exists1p
-			      pname2 wildp2 update clobber))))))
+    (let* ((ses-name1 (ext:unix-namestring spec1 t))
+	   (exists1p (mach:unix-file-kind ses-name1))
+	   (ses-name2 (ext:unix-namestring spec2 nil))
+	   (pname1 (pathname ses-name1))
+	   (pname2 (pathname ses-name2))
+	   (dirp1 (directoryp pname1))
+	   (dirp2 (directoryp pname2))
+	   (wildp1 (wildcardp (file-namestring pname1)))
+	   (wildp2 (wildcardp (file-namestring pname2))))
+      (when (and dirp1 wildp1)
+	(funcall *error-function*
+		 "Cannot have wildcards in directory names -- ~S." pname1))
+      (when (and dirp2 wildp2)
+	(funcall *error-function*
+		 "Cannot have wildcards in directory names -- ~S." pname2))
+      (when (and dirp1 (not dirp2))
+	(funcall *error-function*
+		 "Cannot handle spec1 being a directory and spec2 a file."))
+      (when (and wildp2 (not wildp1))
+	(funcall *error-function*
+		 "Cannot handle destination having wildcards without ~
+		 source having wildcards."))
+      (when (and wildp1 (not wildp2) (not dirp2))
+	(funcall *error-function*
+		 "Cannot handle source with wildcards and destination ~
+		 without, unless destination is a directory."))
+      (cond ((and dirp1 dirp2)
+	     (unless (directory-existsp ses-name1)
+	       (funcall *error-function*
+			"Directory does not exist -- ~S." pname1))
+	     (unless (directory-existsp ses-name2)
+	       (enter-directory ses-name2))
+	     (recursive-copy pname1 pname2 update clobber pname2
+			     ses-name1 ses-name2))
+	    (dirp2
+	     ;; merge pname2 with pname1 to pick up a similar file-namestring.
+	     (copy-file-1 pname1 wildp1 exists1p
+			  (merge-pathnames pname2 pname1)
+			  wildp1 update clobber))
+	    (t (copy-file-1 pname1 wildp1 exists1p
+			    pname2 wildp2 update clobber)))))
     (directory
      (when (pathname-directory spec1)
        (funcall *error-function*
 		"Spec1 is just a pattern when supplying directory -- ~S."
 		spec1))
-     (let* ((pname2 (pathname (lisp::predict-name spec2 nil)))
+     (let* ((pname2 (pathname (ext:unix-namestring spec2 nil)))
 	    (dirp2 (directoryp pname2))
 	    (wildp1 (wildcardp spec1))
 	    (wildp2 (wildcardp (file-namestring pname2))))
@@ -295,37 +295,37 @@
    specify the trailing slash."
   (cond
    ((not directoryp)
-    (multiple-value-bind (ses-name1 exists1p)
-			 (lisp::predict-name spec1 t)
-      (let* ((ses-name2 (lisp::predict-name spec2 nil))
-	     (pname1 (pathname ses-name1))
-	     (pname2 (pathname ses-name2))
-	     (dirp2 (directoryp pname2))
-	     (wildp1 (wildcardp (file-namestring pname1)))
-	     (wildp2 (wildcardp (file-namestring pname2))))
-	(if (and dirp2 wildp2)
-	    (funcall *error-function*
-		     "Cannot have wildcards in directory names -- ~S." pname2))
-	(if (and wildp2 (not wildp1))
-	    (funcall *error-function*
-		     "Cannot handle destination having wildcards without ~
-		      source having wildcards."))
-	(if (and wildp1 (not wildp2) (not dirp2))
-	    (funcall *error-function*
-		     "Cannot handle source with wildcards and destination ~
-		     without, unless destination is a directory."))
-	(if dirp2
-	    (rename-file-1 pname1 wildp1 exists1p (merge-pathnames pname2
-								   pname1)
-			   wildp1 clobber)
-	    (rename-file-1 pname1 wildp1 exists1p pname2 wildp2 clobber)))))
+    (let* ((ses-name1 (ext:unix-namestring spec1 t))
+	   (exists1p (mach:unix-file-kind ses-name1))
+	   (ses-name2 (ext:unix-namestring spec2 nil))
+	   (pname1 (pathname ses-name1))
+	   (pname2 (pathname ses-name2))
+	   (dirp2 (directoryp pname2))
+	   (wildp1 (wildcardp (file-namestring pname1)))
+	   (wildp2 (wildcardp (file-namestring pname2))))
+      (if (and dirp2 wildp2)
+	  (funcall *error-function*
+		   "Cannot have wildcards in directory names -- ~S." pname2))
+      (if (and wildp2 (not wildp1))
+	  (funcall *error-function*
+		   "Cannot handle destination having wildcards without ~
+		   source having wildcards."))
+      (if (and wildp1 (not wildp2) (not dirp2))
+	  (funcall *error-function*
+		   "Cannot handle source with wildcards and destination ~
+		   without, unless destination is a directory."))
+      (if dirp2
+	  (rename-file-1 pname1 wildp1 exists1p (merge-pathnames pname2
+								 pname1)
+			 wildp1 clobber)
+	  (rename-file-1 pname1 wildp1 exists1p pname2 wildp2 clobber))))
     (directory
      (when (pathname-directory spec1)
        (funcall *error-function*
 		"Spec1 is just a pattern when supplying directory -- ~S."
 		spec1))
 
-     (let* ((pname2 (pathname (lisp::predict-name spec2 nil)))
+     (let* ((pname2 (pathname (ext:unix-namestring spec2 nil)))
 	    (dirp2 (directoryp pname2))
 	    (wildp1 (wildcardp spec1))
 	    (wildp2 (wildcardp (file-namestring pname2))))
@@ -434,7 +434,7 @@
    subdirectory structure.  An empty directory may be specified without
    recursive being non-nil.  When specifying a directory, the trailing slash
    must be included."
-  (let* ((ses-name (lisp::predict-name spec t))
+  (let* ((ses-name (ext:unix-namestring spec t))
 	 (pname (pathname ses-name)) 
 	 (wildp (wildcardp (file-namestring pname)))
 	 (dirp (directoryp pname)))
@@ -549,10 +549,9 @@
 
 (defun make-directory (name)
   "Creates directory name.  If name exists, then an error is signaled."
-  (multiple-value-bind (ses-name existsp)
-		       (lisp::predict-name name nil)
-    (when existsp (funcall *error-function*
-			   "Name already exists -- ~S" ses-name))
+  (let ((ses-name (ext:unix-namestring name nil)))
+    (when (mach:unix-file-kind ses-name)
+      (funcall *error-function* "Name already exists -- ~S" ses-name))
     (enter-directory ses-name))
   t)
 
@@ -637,9 +636,7 @@
 	       ses-name1 ses-name2 (mach:get-unix-error-msg err)))))
 
 (defun directory-existsp (ses-name)
-  (multiple-value-bind (winp type)
-		       (mach:unix-subtestname ses-name)
-    (and winp (eq type :entry_directory))))
+  (eq (mach:unix-file-kind ses-name) :directory))
 
 (defun enter-directory (ses-name)
   (declare (simple-string ses-name))
