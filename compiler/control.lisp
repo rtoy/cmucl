@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.8 1991/11/09 22:04:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.9 1991/11/11 22:07:32 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -55,7 +55,9 @@
 ;;;
 ;;; This optimization is inhibited in functions with NLX EPs, since it is hard
 ;;; to do this without possibly messing up the special-case walking from NLX
-;;; EPs described in CONTROL-ANALYZE-1-FUN.
+;;; EPs described in CONTROL-ANALYZE-1-FUN.  We also suppress rotation of loop
+;;; heads which are the start of a function (i.e. tail calls), as the debugger
+;;; wants functions to start at the start.
 ;;;
 (defun find-rotated-loop-head (block)
   (declare (type cblock block))
@@ -67,7 +69,10 @@
 			    (< (block-number pred) num))
 		   (return pred)))))
     (cond
-     ((and pred (not (environment-nlx-info env)))
+     ((and pred
+	   (not (environment-nlx-info env))
+	   (not (eq (node-block (lambda-bind (block-home-lambda block)))
+		    block)))
       (let ((current pred)
 	    (current-num (block-number pred)))
 	(block DONE
