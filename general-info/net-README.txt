@@ -262,6 +262,10 @@ CMU CL only runs with HP/UX version 9.x.  Currently there are two major quirks:
 
 Alpha/OSF1 and SGI/Irix notes:
 
+IMPORTANT Alpha/OSF1 NOTE: CMU CL requires lazy allocation of paging space.
+If you get "map: not enough space" errors on startup, then you (or your
+sysadmin) need to do "rm /sbin/swapdefault" to enable lazy allocation.
+
 LOAD-FOREIGN has not been implemented for these platforms yet.  Feel free to
 add support to code/foreign.lisp (and let us know.)
 
