@@ -73,6 +73,8 @@ New in this release:
      - COMPUTE-EFFECTIVE-SLOT-DEFINITION now takes a slot name as
        argument, for AMOP compliance.
      - SUBTYPEP works in presence of forward-referenced classes.
+     - Accessing slots of specialized parameters in (SETF
+       SLOT-VALUE-USING-CLASS) methods works.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
