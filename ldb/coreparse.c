@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.2 1990/03/28 22:49:20 ch Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.3 1990/03/29 00:50:53 ch Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
@@ -79,7 +79,7 @@ char *file;
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
 
     if (fd < 0) {
-	    fprintf(stderr, "Could not open file \"%s\".", file);
+	    fprintf(stderr, "Could not open file \"%s\".\n", file);
 	    perror("open");
 	    exit(1);
     }
