@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.43 1998/02/06 19:48:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.44 1998/02/08 16:20:59 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1428,9 +1428,9 @@
 			       (dispose-local-alien ',info ,var)
 			       )))))))))))
     (verify-local-auxiliaries-okay)
-    `(compiler-let (*auxiliary-type-definitions*
-		    ',(append *new-auxiliary-types*
-			      *auxiliary-type-definitions*))
+    `(compiler-let ((*auxiliary-type-definitions*
+		     ',(append *new-auxiliary-types*
+			       *auxiliary-type-definitions*)))
        ,@body)))
 
 
