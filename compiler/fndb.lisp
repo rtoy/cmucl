@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.25 1991/06/04 14:33:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.26 1991/10/03 15:19:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -344,7 +344,7 @@
 
 ;;; Unsafe for :Initial-Value...
 (defknown reduce (callable sequence &key (from-end t) (start index)
-			   (end sequence-end) (initial-value t))
+			   (end sequence-end) (initial-value t) (key callable))
   t
   (foldable flushable call unsafe))
 
