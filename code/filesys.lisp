@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.13 1991/10/22 16:31:32 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.14 1991/11/16 15:56:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -705,8 +705,6 @@
 						    remainder)
 				       pattern
 				       all)
-	      (when won
-		(setf really-won t))
 	      (setf results (append results files))))))
     (setf results (sort (delete-duplicates results :test #'string=) #'string<))
     (mapcar #'(lambda (name)
