@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.23 1991/12/20 15:35:56 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.24 1991/12/20 21:17:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -691,12 +691,14 @@
   (let ((namestring (unix-namestring file t)))
     (when (streamp file)
       (close file :abort t))
-    (when namestring
-      (multiple-value-bind (res err) (mach:unix-unlink namestring)
-	(unless res
-	  (error "Could not delete ~A: ~A."
-		 namestring
-		 (mach:get-unix-error-msg err))))))
+    (unless namestring
+      (error "~S doesn't exist." file))
+
+    (multiple-value-bind (res err) (mach:unix-unlink namestring)
+      (unless res
+	(error "Could not delete ~A: ~A."
+	       namestring
+	       (mach:get-unix-error-msg err)))))
   t)
 
 
