@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.57 2003/04/23 15:19:41 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.58 2003/04/23 17:36:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -272,11 +272,43 @@
 (defstruct (member-type (:include ctype
 				  (:class-info (type-class-or-lose 'member))
 				  (:enumerable t))
+			(:constructor %make-member-type (members))
 			(:print-function %print-type)
 			(:pure nil))
   ;;
   ;; The things in the set, with no duplications.
   (members nil :type list))
+
+(defun make-member-type (&key members)
+  (declare (type list members))
+  ;; make sure that we've removed duplicates
+  (assert (= (length members) (length (remove-duplicates members))))
+  ;; if we have a pair of zeros (e.g. 0.0d0 and -0.0d0), then we can
+  ;; canonicalize to (DOUBLE-FLOAT 0.0d0 0.0d0), because numeric
+  ;; ranges are compared by arithmetic operators (while MEMBERship is
+  ;; compared by EQL).  -- CSR, 2003-04-23
+  (let ((singlep (subsetp '(-0.0f0 0.0f0) members))
+	(doublep (subsetp '(-0.0d0 0.0d0) members))
+	#+long-float
+	(longp (subsetp '(-0.0l0 0.0l0) members)))
+    (if (or singlep doublep #+long-float longp)
+	(let (union-types)
+	  (when singlep
+	    (push (ctype-of 0.0f0) union-types)
+	    (setf members (set-difference members '(-0.0f0 0.0f0))))
+	  (when doublep
+	    (push (ctype-of 0.0d0) union-types)
+	    (setf members (set-difference members '(-0.0d0 0.0d0))))
+	  #+long-float
+	  (when longp
+	    (push (ctype-of 0.0l0) union-types)
+	    (setf members (set-difference members '(-0.0l0 0.0l0))))
+	  (assert (not (null union-types)))
+	  (make-union-type (if (null members)
+			       union-types
+			       (cons (%make-member-type members)
+				     union-types))))
+	(%make-member-type members))))
 
 ;;; The Union-Type represents uses of the OR type specifier which can't be
 ;;; canonicalized to something simpler.  Canonical form:
@@ -1741,6 +1773,39 @@
 	      (mapcar #'(lambda (x)
 			  (specifier-type `(not ,(type-specifier x))))
 		      (union-type-types not-type))))
+      ((member-type-p not-type)
+       (let ((members (member-type-members not-type)))
+	 (if (some #'floatp members)
+	     (let (floats)
+	       (dolist (pair '((0.0f0 . -0.0f0) (0.0d0 . -0.0d0)
+			       #+long-float (0.0l0 . -0.0l0)))
+		 (when (member (car pair) members)
+		   (assert (not (member (cdr pair) members)))
+		   (push (cdr pair) floats)
+		   (setf members (remove (car pair) members)))
+		 (when (member (cdr pair) members)
+		   (assert (not (member (car pair) members)))
+		   (push (car pair) floats)
+		   (setf members (remove (cdr pair) members))))
+	       (apply #'type-intersection
+		      (if (null members)
+			  *universal-type*
+			  (make-negation-type
+			   :type (make-member-type :members members)))
+		      (mapcar
+		       (lambda (x)
+			 (let ((type (ctype-of x)))
+			   (type-union
+			    (make-negation-type
+			     :type (modified-numeric-type type
+							  :low nil :high nil))
+			    (modified-numeric-type type
+						   :low nil :high (list x))
+			    (make-member-type :members (list x))
+			    (modified-numeric-type type
+						   :low (list x) :high nil))))
+		       floats)))
+	     (make-negation-type :type not-type))))
       ((and (cons-type-p not-type)
 	    (eq (cons-type-car-type not-type) *universal-type*)
 	    (eq (cons-type-cdr-type not-type) *universal-type*))
@@ -2840,6 +2905,7 @@
       (collect ((non-numbers) (numbers))
 	(dolist (m (remove-duplicates members))
 	  (if (and (numberp m)
+		   #-negative-zero-is-not-zero
 		   (not (and (floatp m) (zerop m))))
 	      (numbers (ctype-of m))
 	      (non-numbers m)))
