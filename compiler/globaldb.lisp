@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.4 1993/02/08 22:06:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.26.1.5 1993/02/23 11:56:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -526,6 +526,7 @@
 ;;;
 (defstruct (compact-info-env
 	    (:include info-env)
+	    (:pure t)
 	    (:print-function %print-info-environment))
   ;;
   ;; If this value is EQ to the name we want to look up, then the cache hit
