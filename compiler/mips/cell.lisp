@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.5 1990/02/13 17:13:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.6 1990/02/14 21:51:21 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -16,27 +16,29 @@
 ;;;
 ;;; Converted by William Lott.
 ;;; 
+
 (in-package "VM")
 
-(export '(cons-car-slot cons-cdr-slot
+(export '(cons-structure cons-car-slot cons-cdr-slot
 
-	  symbol-value-slot symbol-function-slot symbol-plist-slot
-	  symbol-name-slot symbol-package-slot
+	  symbol-structure symbol-value-slot symbol-function-slot
+	  symbol-plist-slot symbol-name-slot symbol-package-slot
 
-	  vector-length-slot vector-data-offset
+	  vector-structure vector-length-slot vector-data-offset
 
-	  array-fill-pointer-slot array-elements-slot array-data-slot
-	  array-displacement-slot array-displaced-p-slot
+	  array-structure array-fill-pointer-slot array-elements-slot
+	  array-data-slot array-displacement-slot array-displaced-p-slot
 	  array-dimensions-offset
 
-	  code-code-size-slot code-entry-points-slot code-debug-info-slot
-	  code-constants-offset
+	  code-structure code-code-size-slot code-entry-points-slot
+	  code-debug-info-slot code-constants-offset
 
-	  function-header-self-slot function-header-next-slot
-	  function-header-name-slot function-header-arglist-slot
-	  function-header-type-slot function-header-code-offset
+	  function-header-structure function-header-self-slot
+	  function-header-next-slot function-header-name-slot
+	  function-header-arglist-slot function-header-type-slot
+	  function-header-code-offset
 
-	  closure-function-slot closure-info-offset))
+	  closure-structure closure-function-slot closure-info-offset))
 
 (in-package "C")
 
@@ -46,8 +48,10 @@
 (eval-when (compile eval load)
   (defun parse-slot (slot)
     (if (atom slot)
-	(values slot nil nil nil nil nil)
+	(values slot nil t nil nil nil nil nil)
 	(values (car slot)
+		(getf (cdr slot) :rest)
+		(getf (cdr slot) :boxed t)
 		(getf (cdr slot) :ref-vop)
 		(getf (cdr slot) :ref-trans)
 		(getf (cdr slot) :set-vop)
@@ -58,34 +62,39 @@
   (let ((compile-time nil)
 	(load-time nil)
 	(index (if header 1 0))
-	(rest nil))
+	(slot-names (if header '(header))))
     (dolist (slot slots)
-      (if (eq slot '&rest)
-	  (setf rest t)
-	  (multiple-value-bind
-	      (slot-name ref-vop ref-trans set-vop set-trans docs)
-	      (parse-slot slot)
-	    (let ((const (intern (concatenate 'simple-string
-					      (string name)
-					      "-"
-					      (string slot-name)
-					      (if rest "-OFFSET" "-SLOT")))))
-	      (push `(defconstant ,const
-		       ,index
-		       ,@(if docs (list docs)))
-		    compile-time)
-	      (when (or set-vop set-trans ref-vop ref-trans)
-		(push `(define-cell-accessors ,const ,lowtag
-			 ,ref-vop ,ref-trans ,set-vop ,set-trans)
-		      load-time))
-	      (if rest
-		  (setf rest nil)
-		  (incf index))))))
+      (multiple-value-bind
+	  (slot-name rest boxed ref-vop ref-trans set-vop set-trans docs)
+	  (parse-slot slot)
+	(let ((const (intern (concatenate 'simple-string
+					  (string name)
+					  "-"
+					  (string slot-name)
+					  (if rest "-OFFSET" "-SLOT")))))
+	  (push `(defconstant ,const
+		   ,index
+		   ,@(if docs (list docs)))
+		compile-time)
+	  (when (or set-vop set-trans ref-vop ref-trans)
+	    (push `(define-cell-accessors ,const ,lowtag
+		     ,ref-vop ,ref-trans ,set-vop ,set-trans)
+		  load-time)))
+	(push (if (or (not boxed) rest)
+		  `(,slot-name
+		    ,@(if (not boxed) '(:boxed nil))
+		    ,@(if rest '(:rest t)))
+		  slot-name)
+	      slot-names))
+      (incf index))
     `(progn
        (eval-when (compile load eval)
 	 ,@(nreverse compile-time))
-       ,@(nreverse load-time))))
-
+       ,@(nreverse load-time)
+       (defconstant ,(intern (concatenate 'simple-string
+					   (string name)
+					   "-STRUCTURE"))
+	 ',(reverse slot-names)))))
 
 (defslots (cons :lowtag list-pointer-type :header nil)
   (car :ref-vop car :ref-trans car
@@ -106,8 +115,7 @@
 
 (defslots (vector :lowtag other-pointer-type)
   length
-  &rest
-  data)
+  (data :rest t :boxed nil))
 
 (defslots (array :lowtag other-pointer-type)
   fill-pointer
@@ -115,15 +123,13 @@
   data
   displacement
   displaced-p
-  &rest
-  dimensions)
+  (dimensions :rest t))
 
 (defslots (code :lowtag other-pointer-type)
   code-size
   entry-points
   debug-info
-  &rest
-  constants)
+  (constants :rest t))
 
 (defslots (function-header :lowtag function-pointer-type)
   self
@@ -131,13 +137,12 @@
   name
   arglist
   type
-  &rest
-  code)
+  (code :rest t :boxed nil))
 
 (defslots (closure :lowtag function-pointer-type)
   function
-  &rest
-  info)
+  (info :rest t))
+
 
 
 
