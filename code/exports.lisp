@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.199 2003/02/05 19:32:19 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.200 2003/02/09 17:24:28 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1670,6 +1670,7 @@
 	   "TYPE-SPECIFIER-SYMBOLS" "TYPE-UNION" "TYPE/=" "TYPE="
 	   "TYPES-INTERSECT" "UNBOUND-SYMBOL-ERROR" "UNBOXED-ARRAY"
 	   "UNDEFINED-SYMBOL-ERROR" "UNDEFINED-FOREIGN-SYMBOL-ERROR"
+           "UNDEFINED-FOREIGN-SYMBOL-ERROR-HANDLER"
 	   "UNION-TYPE" "UNION-TYPE-P"
 	   "UNION-TYPE-TYPES" "UNKNOWN-ERROR"
 	   "UNKNOWN-KEYWORD-ARGUMENT-ERROR" "UNKNOWN-TYPE" "UNKNOWN-TYPE-P"
