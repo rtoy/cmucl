@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.16 1993/08/19 23:42:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.17 1993/08/20 16:45:21 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,9 +27,8 @@
 
 ;;; ### Remaining work:
 ;;;
-;;; - add more inline operations & calls to two-arg functions.  structure slots
+;;; - add more inline operations.
 ;;; - Breakpoints/debugging info.
-;;; - The XEP needs to have the arglist, etc. in it. (?)
 ;;;
 
 
@@ -209,7 +208,7 @@
     type-check; 2
     fdefn-function-or-lose; 3
     default-unknown-values; 4
-    xop5
+    push-n-under; 5
     xop6
     xop7
     merge-unknown-values
@@ -267,7 +266,9 @@
 	     (length (list) t)
 	     (cons (t t) t)
 	     (list (t t) t)
-	     (list* (t t t) t)))
+	     (list* (t t t) t)
+	     (%instance-ref (t t) t)
+	     (%setf-instance-ref (t t t) (values))))
     (destructuring-bind (name arg-types result-type
 			      &key (interpreter-function name) alias safe)
 			stuff
@@ -369,45 +370,82 @@
 (defstruct (byte-continuation-info
 	    (:include sset-element)
 	    (:print-function %print-byte-continuation-info)
-	    (:constructor make-byte-continuation-info (continuation results)))
+	    (:constructor make-byte-continuation-info
+			  (continuation results placeholders)))
   (continuation (required-argument) :type continuation)
   (results (required-argument)
-	   :type (or (member :fdefinition :eq-test :unknown) unsigned-byte)))
+	   :type (or (member :fdefinition :eq-test :unknown) index))
+  ;;
+  ;; If the DEST is a local non-MV call, then we may need to push some number
+  ;; of placeholder args corresponding to deleted (unreferenced) args.  If
+  ;; PLACEHOLDERS /= 0, then RESULTS is PLACEHOLDERS + 1.
+  (placeholders (required-argument) :type index))
 
 (defprinter byte-continuation-info
   continuation
-  results)
-
+  results
+  (placeholders :test (/= placeholders 0)))
 
 
 ;;;; Annotate the IR1
 
-(defun annotate-continuation (cont results)
+(defun annotate-continuation (cont results &optional (placeholders 0))
   ;; For some reason, do-nodes does the same return node multiple times,
   ;; which causes annotate-continuation to be called multiple times on the
   ;; same continuation.  So we can't assert that we haven't done it.
   #+nil
   (assert (null (continuation-info cont)))
   (setf (continuation-info cont)
-	(make-byte-continuation-info cont results))
+	(make-byte-continuation-info cont results placeholders))
   (undefined-value))
 
 (defun annotate-set (set)
   ;; Annotate the value for one value.
   (annotate-continuation (set-value set) 1))
 
+(defun real-local-call-p (node)
+  (and (combination-p node)
+))
+
+
+;;; ANNOTATE-BASIC-COMBINATION-ARGS  --  Internal
+;;; 
+;;;    We do different stack magic for non-MV and MV calls to figure out how
+;;; many values should be pushed during compilation of each arg.
+;;;
+;;; Since byte functions are directly caller by the interpreter (there is no
+;;; XEP), and it doesn't know which args are actually used, byte functions must
+;;; allow unused args to be passed.  But this creates a problem with local
+;;; calls, because these unused args would not otherwise be pushed (since the
+;;; continuation has been deleted.)  So, in this function, we count up
+;;; placeholders for any unused args contiguously preceding this one.  These
+;;; placeholders are inserted under the referenced arg by
+;;; CHECKED-CANONICALIZE-VALUES. 
+;;;
+;;; With MV calls, we try to figure out how many values are actually generated.
+;;; We allow initial args to supply a fixed number of values, but everything
+;;; after the first :unknown arg must also be unknown.  This picks off most of
+;;; the standard uses (i.e. calls to apply), but still is easy to implement.
+;;;
 (defun annotate-basic-combination-args (call)
   (declare (type basic-combination call))
   (etypecase call
     (combination
-     (dolist (arg (combination-args call))
-       (when arg
-	 (annotate-continuation arg 1))))
+     (if (and (eq (basic-combination-kind call) :local)
+	      (member (functional-kind (combination-lambda call))
+		      '(nil :optional :cleanup)))
+	 (let ((placeholders 0))
+	   (declare (type index placeholders))
+	   (dolist (arg (combination-args call))
+	     (cond (arg
+		    (annotate-continuation arg (1+ placeholders) placeholders)
+		    (setq placeholders 0))
+		   (t
+		    (incf placeholders)))))
+	 (dolist (arg (combination-args call))
+	   (when arg
+	     (annotate-continuation arg 1)))))
     (mv-combination
-     ;; annotate the args.  We allow initial args to supply a fixed number of
-     ;; values, but everything after the first :unknown arg must also be
-     ;; unknown.  This picks off most of the standard uses (i.e. calls to
-     ;; apply), but still is easy to implement.
      (labels
 	 ((allow-fixed (remaining)
 	    (when remaining
@@ -430,10 +468,17 @@
   (undefined-value))
 
 (defun annotate-local-call (call)
-  (if (mv-combination-p call)
-      (annotate-continuation (first (basic-combination-args call))
-			     (length (lambda-vars (combination-lambda call))))
-      (annotate-basic-combination-args call))
+  (cond ((mv-combination-p call)
+	 (annotate-continuation
+	  (first (basic-combination-args call))
+	  (length (lambda-vars (combination-lambda call)))))
+	(t
+	 (annotate-basic-combination-args call)
+	 (when (member (functional-kind (combination-lambda call))
+		       '(nil :optional :cleanup))
+	   (dolist (arg (basic-combination-args call))
+	     (when arg
+	       (setf (continuation-%type-check arg) nil))))))
   (annotate-continuation (basic-combination-fun call) 0)
   (when (node-tail-p call)
     (set-tail-local-call-successor call)))
@@ -445,8 +490,12 @@
 ;;; inline operation, then clear any type-check annotations.  When we are done,
 ;;; remove jump to return for tail calls.
 ;;;
+;;; Also, we annotate slot accessors as inline if no type check is needed and
+;;; (for setters) no value needs to be left on the stack.
+;;;
 (defun annotate-full-call (call)
   (let* ((fun (basic-combination-fun call))
+	 (args (basic-combination-args call))
 	 (name (continuation-function-name fun))
 	 (info (gethash name *inline-function-table*)))
     (cond ((and info
@@ -456,19 +505,32 @@
 	   (setf (basic-combination-info call) info)
 	   (annotate-continuation fun 0)
 	   (when (inline-function-info-safe info)
-	     (dolist (arg (basic-combination-args call))
+	     (dolist (arg args)
 	       (when (continuation-type-check arg)
 		 (setf (continuation-%type-check arg) :deleted)))))
 	  ((and (mv-combination-p call) (eq name '%throw))
-	   (let ((args (basic-combination-args call)))
-	     (assert (= (length args) 2))
-	     (annotate-continuation (first args) 1)
-	     (annotate-continuation (second args) :unknown))
+	   (assert (= (length args) 2))
+	   (annotate-continuation (first args) 1)
+	   (annotate-continuation (second args) :unknown)
 	   (setf (node-tail-p call) nil)
 	   (annotate-continuation fun 0))
+	  ((and name 
+		(let ((leaf (ref-leaf (continuation-use fun))))
+		  (and (slot-accessor-p leaf)
+		       (or (policy call (zerop safety))
+			   (not (find 't args :key #'continuation-type-check)))
+		       (if (consp name)
+			   (not (continuation-dest (node-cont call)))
+			   t))))
+	   (setf (basic-combination-info call)
+		 (gethash (if (consp name) '%setf-instance-ref '%instance-ref)
+			  *inline-function-table*))
+	   (setf (node-tail-p call) nil)
+	   (annotate-continuation fun 0)
+	   (annotate-basic-combination-args call))
 	  (t
 	   (annotate-basic-combination-args call)
-	   (dolist (arg (basic-combination-args call))
+	   (dolist (arg args)
 	     (when (continuation-type-check arg)
 	       (setf (continuation-%type-check arg) :deleted)))
 	   (annotate-continuation
@@ -884,6 +946,10 @@
 	   (output-byte segment (logior byte-xop 7))
 	   (output-byte segment index)))))
 
+(defun closure-position (var env)
+  (or (position var (environment-closure env))
+      (error "Can't find ~S" var)))
+
 (defun output-ref-lambda-var (segment var env
 				     &optional (indirect-value-cells t))
   (declare (type new-assem:segment segment)
@@ -898,7 +964,7 @@
 				  (byte-lambda-var-info-offset info)))
       (output-byte-with-operand segment
 				byte-push-arg
-				(position var (environment-closure env))))
+				(closure-position var env)))
   (when (and indirect-value-cells (lambda-var-indirect var))
     (output-do-inline-function segment 'value-cell-ref)))
 
@@ -910,7 +976,7 @@
 				 (nlx-info-info info)))
       (output-byte-with-operand segment
 				byte-push-arg
-				(position info (environment-closure env)))))
+				(closure-position info env))))
 
 (defun output-set-lambda-var (segment var env &optional make-value-cells)
   (declare (type new-assem:segment segment)
@@ -923,7 +989,7 @@
 	   (assert indirect)
 	   (assert (not make-value-cells))
 	   (output-byte-with-operand segment byte-push-arg
-				     (position var (environment-closure env)))
+				     (closure-position var env))
 	   (output-do-inline-function segment 'value-cell-setf))
 	  (t
 	   (let* ((pushp (and indirect (not make-value-cells)))
@@ -996,12 +1062,21 @@
 ;;;    This function is used when we are generating code which delivers values
 ;;; to a continuation.  If this continuation needs a type check, and has a
 ;;; single value, then we do a type check.  We also CANONICALIZE-VALUES for the
-;;; continuation's desired number of values.
+;;; continuation's desired number of values (w/o the placeholders.)
+;;;
+;;; Somewhat unrelatedly, we also push placeholders for deleted arguments to
+;;; local calls.  Although we check first, the actual PUSH-N-UNDER is done
+;;; afterward, since then the single value we want is stack top.
 ;;;
 (defun checked-canonicalize-values (segment cont supplied)
   (let ((info (continuation-info cont)))
     (if info
-	(let ((desired (byte-continuation-info-results info)))
+	(let ((desired (byte-continuation-info-results info))
+	      (placeholders (byte-continuation-info-placeholders info)))
+	  (unless (zerop placeholders)
+	    (assert (eql desired (1+ placeholders)))
+	    (setq desired 1))
+
 	  (flet ((do-check ()
 		   (byte-generate-type-check
 		    segment
@@ -1017,10 +1092,20 @@
 	      (canonicalize-values segment desired supplied)
 	      (do-check))
 	     (t
-	      (canonicalize-values segment desired supplied)))))
+	      (canonicalize-values segment desired supplied))))
+
+	  (unless (zerop placeholders)
+	    (output-do-xop segment 'push-n-under)
+	    (output-extended-operand segment placeholders)))
+
 	(canonicalize-values segment 0 supplied))))
 
 
+;;; GENERATE-BYTE-CODE-FOR-BIND  --  Internal
+;;;
+;;;    Emit prologue for non-let functions.  Assigned arguments must be copied
+;;; into locals, and argument type checking may need to be done.
+;;;
 (defun generate-byte-code-for-bind (segment bind cont)
   (declare (type new-assem:segment segment) (type bind bind)
 	   (ignore cont))
@@ -1029,6 +1114,7 @@
     (ecase (lambda-kind lambda)
       ((nil :top-level :escape :cleanup :optional)
        (let* ((info (lambda-info lambda))
+	      (type-check (policy (lambda-bind lambda) (not (zerop safety))))
 	      (frame-size (byte-lambda-info-stack-size info)))
 	 (cond ((< frame-size (* 255 2))
 		(output-byte segment (ceiling frame-size 2)))
@@ -1037,18 +1123,35 @@
 		(output-byte segment (ldb (byte 8 16) frame-size))
 		(output-byte segment (ldb (byte 8 8) frame-size))
 		(output-byte segment (ldb (byte 8 0) frame-size))))
-	 (loop
-	   for argnum downfrom (1- (+ (length (lambda-vars lambda))
-				      (length (environment-closure
-					       (lambda-environment lambda)))))
-	   for var in (lambda-vars lambda)
-	   for info = (lambda-var-info var)
-	   do (unless (or (null info) (byte-lambda-var-info-argp info))
-		(output-byte-with-operand segment byte-push-arg argnum)
-		(output-set-lambda-var segment var env t)))))
-      ((:let :mv-let :assignment)
-       ;; Everything has been taken care of in the combination node.
-       )))
+
+	 (do ((argnum (1- (+ (length (lambda-vars lambda))
+			     (length (environment-closure
+				      (lambda-environment lambda)))))
+		      (1- argnum))
+	      (vars (lambda-vars lambda) (cdr vars))
+	      (pops 0))
+	     ((null vars)
+	      (unless (zerop pops)
+		(output-byte-with-operand segment byte-pop-n pops)))
+	   (declare (fixnum argnum pops)) 
+	   (let* ((var (car vars))
+		  (info (lambda-var-info var))
+		  (type (leaf-type var)))
+	     (cond ((not info))
+		   ((byte-lambda-var-info-argp info)
+		    (when (and type-check
+			       (not (csubtypep *universal-type* type)))
+		      (output-byte-with-operand segment byte-push-arg argnum)
+		      (byte-generate-type-check segment type bind)
+		      (incf pops)))
+		   (t
+		    (output-byte-with-operand segment byte-push-arg argnum)
+		    (when type-check
+		      (byte-generate-type-check segment type bind))
+		    (output-set-lambda-var segment var env t)))))))
+
+      ;; Everything has been taken care of in the combination node.
+      ((:let :mv-let :assignment))))
   (undefined-value))
 
 
@@ -1195,7 +1298,13 @@
       ((nil :optional :cleanup)
        ;; We got us a local call.  
        (assert (not (eq num-args :unknown)))
-       ;; First push closure vars.
+       ;;
+       ;; Push any trailing placeholder args...
+       (dolist (x (reverse (basic-combination-args call)))
+	 (when x (return))
+	 (output-push-int segment 0))
+       ;;
+       ;; Then push closure vars.
        (let ((closure (environment-closure env)))
 	 (when closure
 	   (let ((my-env (node-environment call)))
@@ -1252,8 +1361,13 @@
 	     (desired-args (function-type-nargs type))
 	     (supplied-results
 	      (nth-value 1
-			 (values-types (function-type-returns type)))))
-	(canonicalize-values segment desired-args num-args)
+			 (values-types (function-type-returns type))))
+	     (leaf (ref-leaf (continuation-use (basic-combination-fun call)))))
+	(cond ((slot-accessor-p leaf)
+	       (assert (= num-args (1- desired-args)))
+	       (output-push-int segment (dsd-index (slot-accessor-slot leaf))))
+	      (t
+	       (canonicalize-values segment desired-args num-args)))
 	;; ### :call-site
 	(output-byte segment (logior byte-inline-function
 				     (inline-function-info-number info)))
@@ -1309,45 +1423,44 @@
 (defun generate-byte-code-for-generic-combination (segment call cont)
   (declare (type new-assem:segment segment) (type basic-combination call)
 	   (type continuation cont))
-  (let ((num-args
-	 (labels
-	     ((examine (args num-fixed)
-		(cond
-		 ((null args)
-		  ;; None of the arugments supply :unknown values, so
-		  ;; we know exactly how many there are.
-		  num-fixed)
-		 ((null (car args))
-		  ;; This arg has been deleted.  Ignore it.
-		  (examine (cdr args) num-fixed))
-		 (t
-		  (let* ((vals
-			  (byte-continuation-info-results
-			   (continuation-info (car args)))))
-		    (cond
-		     ((eq vals :unknown)
-		      (unless (null (cdr args))
-			;; There are (length args) :unknown value blocks on
-			;; the top of the stack.  We need to combine them.
-			(output-push-int segment (length args))
-			(output-do-xop segment 'merge-unknown-values))
-		      (unless (zerop num-fixed)
-			;; There are num-fixed fixed args above the unknown
-			;; values block that want in on the action also.
-			;; So add num-fixed to the count.
-			(output-push-int segment num-fixed)
-			(output-do-inline-function segment '+))
-		      :unknown)
-		     (t
-		      (examine (cdr args) (+ num-fixed vals)))))))))
-	   (examine (basic-combination-args call) 0))))
+  (labels ((examine (args num-fixed)
+	     (cond
+	      ((null args)
+	       ;; None of the arugments supply :unknown values, so
+	       ;; we know exactly how many there are.
+	       num-fixed)
+	      ((null (car args))
+	       ;; A local call arg has been deleted, but we have to pass
+	       ;; a place-holder anyway. (MVs impossible here.)
+	       (examine (cdr args) (1+ num-fixed)))
+	      (t
+	       (let* ((vals
+		       (byte-continuation-info-results
+			(continuation-info (car args)))))
+		 (cond
+		  ((eq vals :unknown)
+		   (unless (null (cdr args))
+		     ;; There are (length args) :unknown value blocks on
+		     ;; the top of the stack.  We need to combine them.
+		     (output-push-int segment (length args))
+		     (output-do-xop segment 'merge-unknown-values))
+		   (unless (zerop num-fixed)
+		     ;; There are num-fixed fixed args above the unknown
+		     ;; values block that want in on the action also.
+		     ;; So add num-fixed to the count.
+		     (output-push-int segment num-fixed)
+		     (output-do-inline-function segment '+))
+		   :unknown)
+		  (t
+		   (examine (cdr args) (+ num-fixed vals)))))))))
+  (let ((num-args (examine (basic-combination-args call) 0)))
     (case (basic-combination-kind call)
       (:local
        (generate-byte-code-for-local-call segment call cont num-args))
       (:full
        (generate-byte-code-for-full-call segment call cont num-args))
       (t
-       (generate-byte-code-for-known-call segment call cont num-args)))))
+       (generate-byte-code-for-known-call segment call cont num-args))))))
 
 (defun generate-byte-code-for-basic-combination (segment call cont)
   (cond ((and (mv-combination-p call)
@@ -1438,9 +1551,8 @@
   (let ((nlx-info (find-nlx-info (exit-entry exit) (node-cont exit))))
     (output-byte-with-operand segment
 			      byte-push-arg
-			      (position nlx-info
-					(environment-closure
-					 (node-environment exit))))
+			      (closure-position nlx-info
+						(node-environment exit)))
     (ecase (cleanup-kind (nlx-info-cleanup nlx-info))
       (:block
        ;; ### :internal-error
