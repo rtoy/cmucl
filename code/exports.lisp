@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.242 2005/03/08 17:04:51 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.243 2005/04/04 14:33:16 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1177,7 +1177,7 @@
   (:nicknames "EXTENSIONS")
   (:import-from "LISP" "GET-SETF-METHOD")
   (:import-from "KERNEL" "*ANSI-DEFSTRUCT-OPTIONS-P*")
-  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P")
+  (:import-from "SYSTEM" "MAKE-INDENTING-STREAM" "INDENTING-STREAM-P"  "BINARY-TEXT-STREAM")
   (:export   "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
 	     "DEBUG"
 	     "FLOATING-POINT-INEXACT"
@@ -1262,7 +1262,8 @@
              "OBJECT-SET-EVENT-HANDLER" "OLD-TRACE" "OLD-UNTRACE" "ONCE-ONLY"
              "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE"
 	     "PACKAGE-CHILDREN" "PACKAGE-PARENT" "PARSE-TIME"
-             "PACKAGE-LOCK" "PACKAGE-DEFINITION-LOCK" "WITHOUT-PACKAGE-LOCKS" "UNLOCK-ALL-PACKAGES"
+             "PACKAGE-LOCK" "PACKAGE-DEFINITION-LOCK" "WITHOUT-PACKAGE-LOCKS"
+	     "UNLOCK-ALL-PACKAGES"
              "PRINT-DIRECTORY" "PRINT-HERALD" "PRINT-PRETTY-KEY"
              "PRINT-PRETTY-KEY-EVENT" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"
@@ -1349,7 +1350,9 @@
 	     "*TRUST-DYNAMIC-EXTENT-DECLARATIONS*"
 
 	     "INET-RECVFROM" "INET-SENDTO" "INET-SHUTDOWN"
-	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"))
+	     "SHUT-RD" "SHUT-WR" "SHUT-RDWR"
+
+	     "BINARY-TEXT-STREAM"))
 
 (defpackage "STREAM"
   (:import-from "SYSTEM" "LISP-STREAM")
