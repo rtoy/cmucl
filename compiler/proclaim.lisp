@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.15 1991/02/20 14:59:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/proclaim.lisp,v 1.16 1991/04/20 14:15:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 (in-package "C")
 
 (in-package "EXTENSIONS")
-(export '(inhibit-warnings freeze-type))
+(export '(inhibit-warnings freeze-type optimize-interface))
 (in-package "LISP")
 (export '(declaim proclaim))
 (in-package "C")
@@ -32,7 +32,7 @@
 (defvar *type-system-initialized* nil)
 
 ;;; The Cookie holds information about the compilation environment for a node.
-;;; See the Node definition for a description of how it is used.
+;;; See the Lexenv definition for a description of how it is used.
 ;;;
 (defstruct cookie
   (speed nil :type (or (rational 0 3) null))
@@ -45,12 +45,13 @@
 
 ;;; The *default-cookie* represents the current global compiler policy
 ;;; information.  Whenever the policy is changed, we copy the structure so that
-;;; old uses will still get the old values.
+;;; old uses will still get the old values.  *default-interface-cookie* holds
+;;; any values specified by an OPTIMIZE-INTERFACE declaration.
 ;;;
-(proclaim '(type cookie *default-cookie*))
+(proclaim '(type cookie *default-cookie* *default-interface-cookie*))
 (defvar *default-cookie* (make-cookie :safety 1 :speed 1 :space 1 :cspeed 1
 				      :brevity 1 :debug 2))
-
+(defvar *default-interface-cookie* (make-cookie))
 
 
 ;;; A list of UNDEFINED-WARNING structures representing the calls to unknown
@@ -338,6 +339,9 @@
       (optimize
        (setq *default-cookie*
 	     (process-optimize-declaration form *default-cookie*)))
+      (optimize-interface
+       (setq *default-interface-cookie*
+	     (process-optimize-declaration form *default-interface-cookie*)))
       ((inline notinline maybe-inline)
        (dolist (name args)
 	 (define-function-name name)
