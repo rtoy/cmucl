@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.31 1991/11/12 16:01:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.32 1991/11/14 05:51:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -929,6 +929,51 @@
     (if (minusp y)
 	`(- (ash x ,len))
 	`(ash x ,len))))
+
+;;; If both arguments and the result are (unsigned-byte 32), try to come up
+;;; with a ``better'' multiplication using multiplier recoding.  There are two
+;;; different ways the multiplier can be recoded.  The more obvious is to shift
+;;; X by the correct amount for each bit set in Y and to sum the results.  But
+;;; if there is a string of bits that are all set, you can add X shifted by
+;;; one more then the bit position of the first set bit and subtract X shifted
+;;; by the bit position of the last set bit.  We can't use this second method
+;;; when the high order bit is bit 31 because shifting by 32 doesn't work
+;;; too well.
+;;; 
+(deftransform * ((x y)
+		 ((unsigned-byte 32) (unsigned-byte 32))
+		 (unsigned-byte 32))
+  (unless (constant-continuation-p y)
+    (give-up))
+  (let ((y (continuation-value y))
+	(result nil)
+	(first-one nil))
+    (flet ((add (next-factor)
+	     (setf result
+		   (if result
+		       `(+ ,next-factor ,result)
+		       next-factor))))
+      (declare (inline add))
+      (dotimes (bitpos 32)
+	(if first-one
+	  (when (not (logbitp bitpos y))
+	    (add (if (= (1+ first-one) bitpos)
+		     ;; There is only a single bit in the string.
+		     `(ash x ,first-one)
+		     ;; There are at least two.
+		     `(- (ash x ,bitpos)
+			 (ash x ,first-one))))
+	    (setf first-one nil))
+	  (when (logbitp bitpos y)
+	    (setf first-one bitpos))))
+      (when first-one
+	(cond ((= first-one 31))
+	      ((= first-one 30)
+	       (add '(ash x 30)))
+	      (t
+	       (add `(- (ash x 31) (ash x ,first-one)))))
+	(add '(ash x 31))))
+    (or result 0)))
 
 ;;; If arg is a constant power of two, turn floor into a shift and mask.
 ;;; If ceiling, add in (1- (abs y)) and then do floor.
