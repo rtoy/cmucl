@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.36 2002/01/28 20:17:09 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.37 2002/02/13 22:30:49 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -116,11 +116,41 @@
     (elf-section-header-count        elf-half-word)
     (elf-section-name-strings        elf-half-word)))
 
+;; Indices into the elf-ident array, as per SVR4 ABI
+(defconstant ei-mag0          0) ; Magic number, byte 0
+(defconstant ei-mag1          1) ; Magic number, byte 1
+(defconstant ei-mag2          2) ; Magic number, byte 2
+(defconstant ei-mag3          3) ; Magic number, byte 3
+(defconstant ei-class         4) ; class of machine
+(defconstant ei-data          5) ; data format
+(defconstant ei-version       6) ; ELF format version
+(defconstant ei-osabi         7) ; Operating system / ABI identification
+(defconstant ei-abiversion    8) ; ABI version
+(defconstant ei-pad           9) ; Start of padding
+(defconstant ei-nident       16) ; Size of elf-ident array
+
 ;; values for elf-type
 (defconstant et-relocatable   1)
 (defconstant et-executable    2)
 (defconstant et-shared-object 3)
 (defconstant et-core-file     4)
+
+;; values for elf-ident[ei-osabi]
+(defconstant elfosabi-sysv         0)
+(defconstant elfosabi-hpux         1)
+(defconstant elfosabi-netbsd       2)
+(defconstant elfosabi-linux        3)
+(defconstant elfosabi-hurd         4)
+(defconstant elfosabi-86open       5)
+(defconstant elfosabi-solaris      6)
+(defconstant elfosabi-monterey     7)
+(defconstant elfosabi-irix         8)
+(defconstant elfosabi-freebsd      9)
+(defconstant elfosabi-tru64       10)
+(defconstant elfosabi-modesto     11)
+(defconstant elfosabi-openbsd     12)
+(defconstant elfosabi-arm         97)
+(defconstant elfosabi-standalone 255)
 
 (alien:def-alien-type pheader
 ;;"Program header."
@@ -143,13 +173,28 @@
     (unless (= (alien:deref h i) (aref +elf-magic+ i))
       (return nil))))
 
-(defun elf-brand (h)
-  "Return the `brand' in the padding of the ELF file."
-  (let ((return (make-string 8 :initial-element #\space)))
-    (dotimes (i 8 return)
-      (let ((code (alien:deref h (+ i 8))))
-	(unless (= code 0)
-	  (setf (aref return i) (code-char code)))))))
+(defun elf-osabi (h)
+  "Return the `osabi' field in the padding of the ELF file."
+  (alien:deref h ei-osabi))
+
+(defun elf-osabi-name (id)
+  (cond
+    ((eql id elfosabi-sysv) "Unix System V ABI")
+    ((eql id elfosabi-hpux) "HP-UX")
+    ((eql id elfosabi-netbsd) "NetBSD")
+    ((eql id elfosabi-linux) "Linux")
+    ((eql id elfosabi-hurd) "GNU/Hurd")
+    ((eql id elfosabi-86open) "86Open common IA32 ABI")
+    ((eql id elfosabi-solaris) "Solaris")
+    ((eql id elfosabi-monterey) "Monterey")
+    ((eql id elfosabi-irix) "IRIX")
+    ((eql id elfosabi-freebsd) "FreeBSD")
+    ((eql id elfosabi-tru64) "Tru64 Unix")
+    ((eql id elfosabi-modesto) "Novell Modesto")
+    ((eql id elfosabi-openbsd) "OpenBSD")
+    ((eql id elfosabi-arm) "ARM")
+    ((eql id elfosabi-standalone) "Standalone/Embedded")
+    (t (format nil "Unknown ABI (~D)" id))))
 
 (defun elf-executable-p (n)
   "Given a file type number, determine if the file is executable."
@@ -181,14 +226,16 @@
 			  (alien:alien-sap header)
 			  (alien:alien-size eheader :bytes))
 	  (unless (elf-p (alien:slot header 'elf-ident))
-	      (error (format nil "~A is not an ELF file." name)))
+	    (error (format nil "~A is not an ELF file." name)))
 
-	  #-NetBSD
-	  (let ((brand (elf-brand (alien:slot header 'elf-ident)))
-		(correct-brand #+NetBSD "NetBSD" #+FreeBSD "FreeBSD"))
-	    (unless (string= brand correct-brand :end1 (length correct-brand))
-	      (error (format nil "~A is not a ~A executable. Brand: ~A"
-			     name correct-brand brand))))
+	  (let ((osabi (elf-osabi (alien:slot header 'elf-ident)))
+		(expected-osabi #+NetBSD elfosabi-netbsd
+				#+FreeBSD elfosabi-freebsd))
+	    (unless (= osabi expected-osabi)
+	      (error "~A is not a ~A executable, it's a ~A executable."
+		     name
+		     (elf-osabi-name expected-osabi)
+		     (elf-osabi-name osabi))))
 
 	  (unless (elf-executable-p (alien:slot header 'elf-type))
 	    (error (format nil "~A is not executable." name)))
