@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.6 1998/02/19 19:34:50 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/cell.lisp,v 1.7 1999/03/04 11:49:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,1999.
 ;;; 
 
 (in-package :x86)
@@ -271,6 +271,7 @@
 (define-vop (closure-init slot-set)
   (:variant closure-info-offset function-pointer-type))
 
+
 
 ;;;; Value Cell hackery.
 
@@ -329,8 +330,8 @@
 	 (new-value :scs (descriptor-reg any-reg) :target temp))
   (:arg-types instance positive-fixnum * *)
   (:temporary (:sc descriptor-reg :offset eax-offset
-		   :from (:argument 1) :to :result :target result)  eax)
-  (:temporary (:sc descriptor-reg :from (:argument 2) :to :result) temp)
+		   :from (:argument 2) :to :result :target result)  eax)
+  (:temporary (:sc descriptor-reg :from (:argument 3) :to :result) temp)
   (:results (result :scs (descriptor-reg)))
   (:policy :fast-safe)
   (:generator 5
@@ -358,5 +359,25 @@
 (define-full-setter code-header-set * 0 other-pointer-type
   (any-reg descriptor-reg) * code-header-set)
 
+
+;;;; Cons conditional setters.
 
+(export 'kernel::rplaca-conditional "KERNEL")
+(defknown kernel::rplaca-conditional (cons t t) t
+  (unsafe))
 
+(define-vop (rplaca-conditional cell-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::rplaca-conditional)
+  (:variant cons-car-slot list-pointer-type)
+  (:arg-types list * *))
+
+(export 'kernel::rplacd-conditional "KERNEL")
+(defknown kernel::rplacd-conditional (cons t t) t
+  (unsafe))
+
+(define-vop (rplacd-conditional cell-set-conditional)
+  (:policy :fast-safe)
+  (:translate kernel::rplacd-conditional)
+  (:variant cons-cdr-slot list-pointer-type)
+  (:arg-types list * *))
