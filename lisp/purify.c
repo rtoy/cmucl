@@ -10,7 +10,7 @@
    and x86/GENCGC stack scavenging, by Douglas Crosher, 1996, 1997,
    1998.
 
-   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.24 2004/04/28 13:05:56 emarsden Exp $ 
+   $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.25 2004/05/19 23:52:56 cwang Exp $ 
 
    */
 #include <stdio.h>
@@ -33,7 +33,7 @@
 
 #undef PRINTNOISE
 
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 static lispobj *current_dynamic_space_free_pointer;
 #endif
 
@@ -106,7 +106,7 @@ forwarding_pointer_p(lispobj obj)
 static boolean 
 dynamic_pointer_p(lispobj ptr)
 {
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
     return (ptr >= (lispobj)dynamic_0_space);
 #else
     /* Be more conservative, and remember, this is a maybe */
@@ -117,7 +117,7 @@ dynamic_pointer_p(lispobj ptr)
 }
 
 
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 
 #ifdef WANT_CGC
 /* Original x86/CGC stack scavenging code by Paul Werkowski */
@@ -224,7 +224,7 @@ carefully_pscav_stack(lispobj*lowaddr, lispobj*base)
 }
 #endif
 
-#if defined(GENCGC) && defined(i386)
+#if defined(GENCGC) && (defined(i386) || defined(__x86_64))
 /*
  * Enhanced x86/GENCGC stack scavenging by Douglas Crosher.
  *
@@ -480,7 +480,7 @@ static void pscav_i386_stack(void)
     pscav(valid_stack_locations[i], 1, FALSE);
 
   for (i = 0; i < num_valid_stack_ra_locations; i++) {
-    lispobj code_obj = valid_stack_ra_code_objects[i];
+    lispobj code_obj = (lispobj)(valid_stack_ra_code_objects[i]);
     pscav(&code_obj, 1, FALSE);
     if (pointer_filter_verbose)
       fprintf(stderr, "*C moved RA %x to %x; for code object %x to %x\n",
@@ -489,8 +489,8 @@ static void pscav_i386_stack(void)
 	      - ((int) valid_stack_ra_code_objects[i] - (int)code_obj),
 	      valid_stack_ra_code_objects[i], code_obj);
     *valid_stack_ra_locations[i] = 
-      (lispobj *)((int) (*valid_stack_ra_locations[i])
-		  - ((int) valid_stack_ra_code_objects[i] - (int) code_obj));
+      (lispobj)((int) (*valid_stack_ra_locations[i])
+		- ((int) valid_stack_ra_code_objects[i] - (int) code_obj));
   }
 }
 #endif
@@ -603,6 +603,7 @@ static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
     }
     default:
       gc_abort();
+      return 0; /* squelch stupid warning */
     }
 }
     
@@ -692,13 +693,12 @@ static lispobj ptrans_vector(lispobj thing, int bits, int extra,
     return result;
 }
 
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 static void
 apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
 {
   int nheader_words, ncode_words, nwords;
-  void  *constants_start_addr, *constants_end_addr;
-  void  *code_start_addr, *code_end_addr;
+  void  *code_start_addr;
   lispobj fixups = NIL;
   unsigned  displacement = (unsigned)new_code - (unsigned)old_code;
   struct vector *fixups_vector;
@@ -713,10 +713,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   nheader_words = HeaderValue(*(lispobj *)new_code);
   nwords = ncode_words + nheader_words;
 
-  constants_start_addr = (void *)new_code + 5*4;
-  constants_end_addr = (void *)new_code + nheader_words*4;
-  code_start_addr = (void *)new_code + nheader_words*4;
-  code_end_addr = (void *)new_code + nwords*4;
+  code_start_addr = (void *)new_code + nheader_words*sizeof(lispobj);
 
   /* The first constant should be a pointer to the fixups for this
      code objects. Check. */
@@ -725,7 +722,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   /* It will be 0 or the unbound-marker if there are no fixups, and
      will be an other-pointer to a vector if it is valid. */
   if ((fixups==0) || (fixups==type_UnboundMarker) || !Pointerp(fixups)) {
-#if defined(GENCGC) && defined(i386)
+#if defined(GENCGC) && (defined(i386) || defined(__x86_64))
     /* Check for a possible errors. */
     sniff_code_object(new_code,displacement);
 #endif
@@ -745,16 +742,17 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
     /* Got the fixups for the code block.  Now work through the vector,
        and apply a fixup at each address. */
     int length = fixnum_value(fixups_vector->length);
+    unsigned int *offset_vector = fixups_vector->data;
     int i;
     for (i=0; i<length; i++) {
-      unsigned offset = fixups_vector->data[i];
+      unsigned offset = offset_vector[i];
       /* Now check the current value of offset. */
       unsigned  old_value = *(unsigned *)((unsigned)code_start_addr + offset);
     
       /* If it's within the old_code object then it must be an
 	 absolute fixup (relative ones are not saved) */
       if ((old_value>=(unsigned)old_code)
-	  && (old_value<((unsigned)old_code + nwords*4)))
+	  && (old_value<((unsigned)old_code + nwords*sizeof(lispobj))))
 	/* So add the dispacement. */
 	*(unsigned *)((unsigned)code_start_addr + offset) = old_value
 	  + displacement;
@@ -770,7 +768,7 @@ apply_code_fixups_during_purify(struct code *old_code, struct code *new_code)
   /* No longer need the fixups. */
   new_code->constants[0] = 0;
   
-#if defined(GENCGC) && defined(x86)
+#if defined(GENCGC) && (defined(i386) || defined(__x86_64))
   /* Check for possible errors. */
   sniff_code_object(new_code,displacement);
 #endif
@@ -792,7 +790,7 @@ static lispobj ptrans_code(lispobj thing)
 
     bcopy(code, new, nwords * sizeof(lispobj));
 
-#ifdef i386    
+#if (defined(i386) || defined(__x86_64))
     apply_code_fixups_during_purify(code,new);
 #endif
 
@@ -832,13 +830,13 @@ static lispobj ptrans_code(lispobj thing)
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
 
-#ifdef i386    
-	/* Temporarly convert the self pointer to a real function
+#if (defined(i386) || defined(__x86_64))
+	/* Temporarily convert the self pointer to a real function
            pointer. */
 	((struct function *)PTR(func))->self -= RAW_ADDR_OFFSET;
 #endif
         pscav(&((struct function *)PTR(func))->self, 2, TRUE);
-#ifdef i386    
+#if (defined(i386) || defined(__x86_64))
 	((struct function *)PTR(func))->self += RAW_ADDR_OFFSET;
 #endif
         pscav_later(&((struct function *)PTR(func))->name, 3);
@@ -1056,7 +1054,7 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 
 #ifdef type_SimpleArrayLongFloat
       case type_SimpleArrayLongFloat:
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
         return ptrans_vector(thing, 96, 0, FALSE, constant);
 #endif
 #ifdef sparc
@@ -1076,7 +1074,7 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 
 #ifdef type_SimpleArrayComplexLongFloat
       case type_SimpleArrayComplexLongFloat:
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
         return ptrans_vector(thing, 192, 0, FALSE, constant);
 #endif
 #ifdef sparc
@@ -1112,7 +1110,7 @@ static int pscav_fdefn(struct fdefn *fdefn)
     return sizeof(struct fdefn) / sizeof(lispobj);
 }
 
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 /* now putting code objects in static space */
 static int
 pscav_code(struct code*code)
@@ -1149,15 +1147,11 @@ pscav_code(struct code*code)
         gc_assert(LowtagOf(func) == type_FunctionPointer);
         gc_assert(!dynamic_pointer_p(func));
 
-#ifdef i386
 	/* Temporarly convert the self pointer to a real function
            pointer. */
 	((struct function *)PTR(func))->self -= RAW_ADDR_OFFSET;
-#endif
         pscav(&((struct function *)PTR(func))->self, 2, TRUE);
-#ifdef i386
 	((struct function *)PTR(func))->self += RAW_ADDR_OFFSET;
-#endif
         pscav_later(&((struct function *)PTR(func))->name, 3);
     }
 
@@ -1166,7 +1160,7 @@ pscav_code(struct code*code)
 #endif
 
 #ifdef type_ScavengerHook
-static struct scavenger_hook *scavenger_hooks=NIL;
+static struct scavenger_hook *scavenger_hooks=(void*)NIL;
 
 static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
 {
@@ -1194,7 +1188,7 @@ static int pscav_scavenger_hook(struct scavenger_hook *scav_hook)
 static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 {
     lispobj thing, *thingp, header;
-    int count;
+    int count = 0;
     struct vector *vector;
 
     while (nwords > 0) {
@@ -1260,22 +1254,38 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 
               case type_SimpleString:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length)+1,8)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length)+1,4)+2,2);
+#endif
                 break;
 
               case type_SimpleBitVector:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),64)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length),32)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayUnsignedByte2:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),32)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length),16)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayUnsignedByte4:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),16)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length),8)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayUnsignedByte8:
@@ -1283,7 +1293,11 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_SimpleArraySignedByte8:
 #endif
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),8)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length),4)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayUnsignedByte16:
@@ -1291,7 +1305,11 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_SimpleArraySignedByte16:
 #endif
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),4)+2,2);
+#else
                 count = CEILING(NWORDS(fixnum_value(vector->length),2)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayUnsignedByte32:
@@ -1302,12 +1320,20 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_SimpleArraySignedByte32:
 #endif
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),2)+2,2);
+#else
                 count = CEILING(fixnum_value(vector->length)+2,2);
+#endif
                 break;
 
               case type_SimpleArraySingleFloat:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(NWORDS(fixnum_value(vector->length),2)+2,2);
+#else
                 count = CEILING(fixnum_value(vector->length)+2,2);
+#endif
                 break;
 
               case type_SimpleArrayDoubleFloat:
@@ -1315,7 +1341,11 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
               case type_SimpleArrayComplexSingleFloat:
 #endif
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = CEILING(fixnum_value(vector->length)+2,2);
+#else
                 count = fixnum_value(vector->length)*2+2;
+#endif
                 break;
 
 #ifdef type_SimpleArrayLongFloat
@@ -1323,6 +1353,9 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                 vector = (struct vector *)addr;
 #ifdef i386
                 count = fixnum_value(vector->length)*3+2;
+#endif
+#ifdef __x86_64
+                count = fixnum_value(vector->length)*2+2;
 #endif
 #ifdef sparc
                 count = fixnum_value(vector->length)*4+2;
@@ -1333,7 +1366,11 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 #ifdef type_SimpleArrayComplexDoubleFloat
               case type_SimpleArrayComplexDoubleFloat:
                 vector = (struct vector *)addr;
+#ifdef __x86_64
+                count = fixnum_value(vector->length)*2+2;
+#else
                 count = fixnum_value(vector->length)*4+2;
+#endif
                 break;
 #endif
 
@@ -1343,6 +1380,9 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 #ifdef i386
                 count = fixnum_value(vector->length)*6+2;
 #endif
+#ifdef __x86_64
+                count = fixnum_value(vector->length)*4+2;
+#endif
 #ifdef sparc
                 count = fixnum_value(vector->length)*8+2;
 #endif
@@ -1350,7 +1390,7 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 #endif
 
               case type_CodeHeader:
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
                 gc_abort(); /* No code headers in static space */
 #else
 		count = pscav_code((struct code*)addr);
@@ -1368,7 +1408,7 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 		
 		break;
 
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 	      case type_ClosureHeader:
 	      case type_FuncallableInstanceHeader:
 	      case type_ByteCodeFunction:
@@ -1439,7 +1479,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
         return 0;
     }
 
-#if defined(ibmrt) || defined(i386)
+#if defined(ibmrt) || defined(i386) || defined(__x86_64)
     current_dynamic_space_free_pointer = 
       (lispobj*)SymbolValue(ALLOCATION_POINTER);
 #endif
@@ -1455,7 +1495,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
 #endif
 
 #ifdef GENCGC
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
     gc_assert(control_stack_end > ((&read_only_roots)+1));
     setup_i386_stack_scav(((&static_roots)-2), control_stack_end);
 #elif defined(sparc)
@@ -1477,7 +1517,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" stack");
     fflush(stdout);
 #endif
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
     pscav(control_stack, current_control_stack_pointer - control_stack, FALSE);
 #else
 #ifdef GENCGC
@@ -1493,7 +1533,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     printf(" bindings");
     fflush(stdout);
 #endif
-#if !defined(ibmrt) && !defined(i386)
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64)
     pscav(binding_stack, current_binding_stack_pointer - binding_stack, FALSE);
 #else
     pscav(binding_stack, (lispobj *)SymbolValue(BINDING_STACK_POINTER) - binding_stack, FALSE);
@@ -1562,7 +1602,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
      * Zero stack. Note the stack is also zeroed by sub-gc calling
      * scrub-control-stack - this zeros the stack on the x86.
      */
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
     os_zero((os_vm_address_t) current_control_stack_pointer,
             (os_vm_size_t) (CONTROL_STACK_SIZE -
                             ((current_control_stack_pointer - control_stack) *
@@ -1593,7 +1633,7 @@ int purify(lispobj static_roots, lispobj read_only_roots)
     SetSymbolValue(READ_ONLY_SPACE_FREE_POINTER, (lispobj) read_only_free);
     SetSymbolValue(STATIC_SPACE_FREE_POINTER, (lispobj) static_free);
 
-#if !defined(ibmrt) && !defined(i386) && !(defined(sparc) && defined(GENCGC))
+#if !defined(ibmrt) && !defined(i386) && !defined(__x86_64) && !(defined(sparc) && defined(GENCGC))
     current_dynamic_space_free_pointer = current_dynamic_space;
 #else
 #if defined(WANT_CGC) && defined(X86_CGC_ACTIVE_P)
