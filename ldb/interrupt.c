@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.20 1990/12/18 23:25:00 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.21 1991/01/08 01:21:21 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -544,7 +544,7 @@ int signal, code;
 struct sigcontext *context;
 {
     if (!foreign_function_call_active && gc_trigger_hit(context)) {
-#ifdef MIPS
+#ifdef mips
 	set_global_pointer(saved_global_pointer);
 #endif
 	clear_auto_gc_trigger();
