@@ -542,7 +542,8 @@ inlines
 ;;;
 ;;;    Deal with deleting the last (read) reference to a lambda-var.  We
 ;;; iterate over all local calls flushing the corresponding argument, allowing
-;;; the computation of the argument to be deleted.
+;;; the computation of the argument to be deleted.  We also mark the let for
+;;; reoptimization, since it may be that we have deleted the last variable.
 ;;;
 ;;;    The lambda-var may still have some sets, but this doesn't cause too much
 ;;; difficulty, since we can efficiently implement write-only variables.  We
@@ -559,8 +560,10 @@ inlines
 	(when (and (combination-p dest)
 		   (eq (basic-combination-fun dest) cont)
 		   (eq (basic-combination-kind dest) :local))
-	  (let ((args (basic-combination-args dest)))
-	    (flush-dest (elt args n))
+	  (let* ((args (basic-combination-args dest))
+		 (arg (elt args n)))
+	    (reoptimize-continuation arg)
+	    (flush-dest arg)
 	    (setf (elt args n) nil))))))
 
   (dolist (set (lambda-var-sets leaf))
@@ -1125,7 +1128,10 @@ inlines
     (push ref (leaf-refs leaf))
     (delete-ref ref)
     (setf (ref-leaf ref) leaf)
-    (derive-node-type ref (leaf-type leaf))
+    (let ((ltype (leaf-type leaf)))
+      (if (function-type-p ltype)
+	  (setf (node-derived-type ref) ltype)
+	  (derive-node-type ref ltype)))
     (reoptimize-continuation (node-cont ref)))
   (undefined-value))
 
