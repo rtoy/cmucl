@@ -82,32 +82,22 @@
 	   (name (fixup-name fixup))
 	   (flavor (fixup-flavor fixup))
 	   (offset (third info)))
-      (ecase kind
-	(:addi
-	 ;; ### The lui fixup assumes that an addi follows it.
-	 )
-	(:lui
-	 (ecase flavor
-	   (:assembly-routine
-	    (assert (symbolp name))
-	    (multiple-value-bind
-		(value found)
-		(gethash name lisp::*assembler-routines*)
-	      (unless found
-		(error "Undefined assembler routine: ~S" name))
-	      (lisp::fixup-code-object code offset value)))
-	   (:foreign
-	    (assert (stringp name))
-	    (multiple-value-bind
-		(value found)
-		(gethash name lisp::*foreign-symbols* 0)
-	      (unless found
-		(error "Unknown foreign symbol: ~S" name))
-	      (lisp::fixup-code-object code offset value)))))
-	#+nil
-	(:jump
-	 ;; ### Need to impliment this.
-	 )))))
+      (multiple-value-bind
+	  (value found)
+	  (ecase flavor
+	    (:assembly-routine
+	     (assert (symbolp name))
+	     (gethash name lisp::*assembler-routines*))
+	    (:foreign
+	     (assert (stringp name))
+	     (gethash name lisp::*foreign-symbols*)))
+	(unless found
+	  (error (ecase flavor
+		   (:assembly-routine "Undefined assembler routine: ~S")
+		   (:foreign "Unknown foreign symbol: ~S"))
+		 name))
+	(lisp::fixup-code-object code offset value kind)))))
+
 
 ;;; MAKE-CORE-COMPONENT  --  Interface
 ;;;
