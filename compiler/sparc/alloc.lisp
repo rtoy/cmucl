@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.1 1990/11/30 17:04:22 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/alloc.lisp,v 1.2 1991/04/03 00:54:51 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the SPARC port.
 ;;;
@@ -86,7 +86,7 @@
   (:temporary (:scs (any-reg) :from (:argument 0)) boxed)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
-    (inst add boxed boxed-arg (fixnum (1+ code-constants-offset)))
+    (inst add boxed boxed-arg (fixnum (1+ code-trace-table-offset-slot)))
     (inst and boxed (lognot lowtag-mask))
     (inst srl unboxed unboxed-arg word-shift)
     (inst add unboxed lowtag-mask)
