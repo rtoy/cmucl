@@ -341,10 +341,14 @@
 (defun spell-root-word (index)
   "Return the root word corresponding to a dictionary entry at index."
   (let* ((start (descriptor-string-start index))
-	 (end (+ start (the fixnum (ldb stored-length-byte
-					(the fixnum (descriptor-ref index)))))))
-    (declare (fixnum start end))
-    (subseq (the simple-string *string-table*) start end)))
+	 (len (the fixnum (ldb stored-length-byte
+			       (the fixnum (descriptor-ref index)))))
+	 (result (make-string len)))
+    (declare (fixnum start len)
+	     (simple-string result))
+    (sap-replace result (the system-area-pointer *string-table*)
+		 start 0 len)
+    result))
 
 
 (eval-when (compile eval)
