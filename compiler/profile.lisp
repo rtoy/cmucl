@@ -20,6 +20,7 @@
 	 ltn-analyze
 	 stack-analyze
 	 ir2-convert
+	 copy-propagate
 	 select-representations
 	 lifetime-pre-pass
 	 lifetime-flow-analysis
@@ -29,8 +30,9 @@
 
 	 pack-wired-tn
 	 pack-tn
-	 pack-targeting-tns
 	 pack-load-tns
+	 assign-tn-costs
+	 optimized-emit-saves
 	 emit-saves
 
 	 generate-code
