@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/filecoms.lisp,v 1.1.1.4 1991/02/08 16:34:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/filecoms.lisp,v 1.1.1.5 1991/04/25 20:20:15 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -780,6 +780,14 @@
     (message "Buffer ~S is now ~:[read-only~;writable~]."
 	     (buffer-name buffer)
 	     (setf (buffer-writable buffer) (not (buffer-writable buffer))))))
+
+(defcommand "Set Buffer Writable" (p)
+  "Make the current buffer modifiable."
+  "Make the current buffer modifiable."
+  (declare (ignore p))
+  (let ((buffer (current-buffer)))
+    (setf (buffer-writable buffer) t)
+    (message "Buffer ~S is now writable." (buffer-name buffer))))
 
 (defcommand "Kill Buffer" (p &optional buffer-name)
   "Prompts for a buffer to delete.
