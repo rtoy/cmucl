@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.3 1993/08/02 20:20:35 hallgren Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/hpux-os.c,v 1.4 1993/11/12 20:08:22 wlott Exp $
  *
  * OS-dependent routines.  This file (along with os.h) exports an
  * OS-independent interface to the operating system VM facilities.
@@ -39,6 +39,7 @@ the particular section in.
 #include "interrupt.h"
 #include <netdb.h>
 #include <sys/times.h>
+#include <errno.h>
 
 os_vm_size_t os_vm_page_size=(-1);
 
@@ -306,28 +307,41 @@ os_reallocate(os_vm_address_t addr, os_vm_size_t old_len,
   return addr;
 }
 
-void
-getrusage(int who,struct rusage *rusage)
+int getrusage(int who,struct rusage *rusage)
 {
-  long clk_tck;
+  static long ticks_per_sec = 0;
+  static long usec_per_tick = 0;
   struct tms buf;
+  clock_t uticks, sticks;
+
   bzero(rusage,sizeof(struct rusage));
-  clk_tck=sysconf(_SC_CLK_TCK);
-  if(times(&buf) == -1) {
-    perror("times");
-    return;
+  if (ticks_per_sec == 0) {
+    ticks_per_sec = sysconf(_SC_CLK_TCK);
+    usec_per_tick = 1000000 / ticks_per_sec;
   }
+
+  if(times(&buf) == -1)
+    return -1;
+
   if(who == RUSAGE_SELF) {
-    rusage->ru_utime.tv_sec=buf.tms_utime/clk_tck;
-    rusage->ru_utime.tv_usec=(buf.tms_utime%clk_tck) * 100000;
-    rusage->ru_stime.tv_sec=buf.tms_stime/clk_tck;
-    rusage->ru_stime.tv_usec=(buf.tms_stime%clk_tck) * 100000;
-  } else if(who == RUSAGE_CHILDREN) {
-    rusage->ru_utime.tv_sec=buf.tms_cutime/clk_tck;
-    rusage->ru_utime.tv_usec=(buf.tms_cutime%clk_tck) * 100000;
-    rusage->ru_stime.tv_sec=buf.tms_cstime/clk_tck;
-    rusage->ru_stime.tv_usec=(buf.tms_cstime%clk_tck) * 100000;
+    uticks = buf.tms_utime;
+    sticks = buf.tms_stime;
   }
+  else if(who == RUSAGE_CHILDREN) {
+    uticks = buf.tms_utime;
+    sticks = buf.tms_stime;
+  }
+  else {
+    errno = EINVAL;
+    return -1;
+  }
+
+  rusage->ru_utime.tv_sec = uticks / ticks_per_sec;
+  rusage->ru_utime.tv_usec = (uticks % ticks_per_sec) * usec_per_tick;
+  rusage->ru_stime.tv_sec = sticks / ticks_per_sec;
+  rusage->ru_stime.tv_usec = (sticks % ticks_per_sec) * usec_per_tick;
+
+  return 0;
 }
 
 int
