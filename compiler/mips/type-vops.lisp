@@ -7,12 +7,10 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.30 1991/07/25 15:48:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.31 1991/11/05 15:56:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.30 1991/07/25 15:48:14 wlott Exp $
-;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
 ;;;
@@ -134,6 +132,13 @@
   (frob weak-pointer-p check-weak-pointer weak-pointer
     vm:weak-pointer-type object-not-weak-pointer-error))
 
+(define-vop (funcallable-instance-p simple-type-predicate)
+  (:translate funcallable-instance-p)
+  (:variant-vars)
+  (:generator 4
+    (test-simple-type value temp target not-p
+		      vm:funcallable-instance-header-type
+		      :lowtag vm:function-pointer-type)))
 
 (define-vop (code-component-p simple-type-predicate)
   (:variant code-header-type)
