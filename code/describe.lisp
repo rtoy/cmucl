@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.15 1991/12/20 18:33:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.16 1991/12/20 19:09:54 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -389,8 +389,7 @@
   (desc-doc x 'type "Type")
   (desc-doc x 'setf "Setf macro")
   (dolist (assoc (info random-documentation stuff x))
-    (unless (member (cdr assoc) *used-documentation*)
-      (format t "~&Documentation on the ~(~A~):~%~A" (car assoc) (cdr assoc))))
+    (format t "~&Documentation on the ~(~A~):~%~A" (car assoc) (cdr assoc)))
   ;;
   ;; Print out properties, possibly ignoring implementation details.
   (do ((plist (symbol-plist X) (cddr plist)))
