@@ -1,3 +1,37 @@
+10/8/91 to 10/14/91
+
+This is version 15b (destined for beta release.)
+
+Debugger:
+    Fixed to use SYMBOL-MACROLET instead of "SYMBOL-MACRO-LET."
+    Updated documentation on MAKE-BREAKPOINT and ACTIVATE-BREAKPOINT.
+
+    The latest alpha test breakpoint interface is available as described in the
+    Debugging Tools Programmer's Interface.  Also, support for setting
+    breakpoints from the editor has been changed to use the "WIRE" package
+    directly.  There is a new interface for deleting breakpoints set by the
+    editor.  This is all alpha test code.
+
+    Added an optional argument to PRINT-FRAME-CALL-1, an internal function, to
+    control whether it precedes its output with a newline.
+
+Hemlock:
+    Added a form to SERVER-DIED to clean up breakpoint-infos for that server.
+    Added a missing ~ in slave compilation the echo area message.  Oops...
+
+    Changed hemlock init file loading to accept .hemlock-init as well as
+    hemlock-init.  Fixed ED doc string.
+
+    Modified TTY-DELETE-WINDOW to be consistent with TTY-MAKE-WINDOW's creation
+    policy; that is, if the latter makes window by putting the new one after
+    some hunk it shrunk to make room, then the former should prefer to grow the
+    previous hunk, not the next.  This was the intended behavior.
+    
+    The "Debug Breakpoint" and "Debug Delete Breakpoints" commands are ready
+    for alpha testing, which they need a lot.  Some other bugs have been fixed
+    too, but those were long enough ago, I don't remember them.
+
+
 9/18/91 to 10/8/91
 
 Code:
