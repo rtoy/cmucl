@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.7 1990/03/19 17:36:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.8 1990/03/21 23:32:43 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -17,14 +17,8 @@
 ;;;
 (in-package "C")
 
-#+nil
-(define-vop (vector-word-length)
-  (:args (vec :scs (descriptor-reg)))
-  (:results (res :scs (any-reg descriptor-reg)))
-  (:generator 6
-    (loadw res vec clc::g-vector-header-words)
-    (inst niuo res res clc::g-vector-words-mask-16)))
-
+
+;;;; Random pointer comparison VOPs
 
 (define-vop (pointer-compare)
   (:args (x :scs (any-reg descriptor-reg))
@@ -48,6 +42,10 @@
   (frob pointer< :lt)
   (frob pointer> :gt))
 
+
+
+;;;; Random assertions VOPS.
+
 (define-vop (check-op)
   (:args (x :scs (any-reg descriptor-reg))
 	 (y :scs (any-reg descriptor-reg)))
@@ -67,6 +65,35 @@
   (:variant :eq nil di:not-=-error)
   (:translate check=))
 
+
+
+;;;; Type frobbing VOPs
+
+(define-vop (get-type)
+  (:args (object :scs (any-reg descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:results (result :scs (any-reg descriptor-reg)))
+  (:generator 10
+    (let ((other-ptr (gen-label))
+	  (shift (gen-label)))
+      (simple-test-simple-type object ndescr other-ptr
+			       nil vm:other-pointer-type)
+      (inst andi ndescr object (logand (logeqv vm:other-immediate-0-type
+					       vm:other-immediate-1-type)
+				       vm:lowtag-mask))
+      (inst xori ndescr ndescr (logand vm:other-immediate-0-type
+				       vm:other-immediate-1-type))
+      (inst bne ndescr zero-tn shift)
+      (inst andi ndescr object vm:lowtag-mask)
+
+      (b shift)
+      (inst andi ndescr object vm:type-mask)
+
+      (emit-label other-ptr)
+      (load-type ndescr object)
+
+      (emit-label shift)
+      (inst sll result ndescr 2))))
 
 
 (define-vop (make-fixnum)
@@ -92,6 +119,8 @@
        (inst or res res temp)))))
 
 
+
+;;;; Other random VOPs.
 
 
 (define-vop (halt)
