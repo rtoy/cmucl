@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.60 2004/12/15 16:20:40 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format.lisp,v 1.61 2005/02/02 17:58:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1104,6 +1104,7 @@
 ;;; instead of spaces.
 ;;;
 (defun format-fixed-aux (stream number w d k ovf pad atsign)
+  (declare (type float number))
   (cond
    ((and (floatp number)
 	 (or (float-infinity-p number)
@@ -1215,26 +1216,31 @@
 	       (fmin (if (minusp k) (- 1 k) nil))
 	       (spaceleft (if w
 			      (- w 2 elen
-				 (if (or atsign (minusp number))
+				 (if (or atsign (minusp (float-sign number)))
 				     1 0))
 			      nil)))
 	  (if (and w ovf e (> elen e)) ;exponent overflow
 	      (dotimes (i w) (write-char ovf stream))
 	      (multiple-value-bind
-		  (fstr flen lpoint)
+		  (fstr flen lpoint tpoint)
 		  (lisp::flonum-to-string num spaceleft fdig k fmin)
+		(when (and d (zerop d)) (setq tpoint nil))
 		(when w 
 		  (decf spaceleft flen)
 		  (when lpoint
+		    (if (or (> spaceleft 0) tpoint)
+			(decf spaceleft)
+			(setq lpoint nil)))
+		  (when tpoint
 		    (if (> spaceleft 0)
 			(decf spaceleft)
-			(setq lpoint nil))))
+			(setq tpoint nil))))
 		(cond ((and w (< spaceleft 0) ovf)
 		       ;;significand overflow
 		       (dotimes (i w) (write-char ovf stream)))
 		      (t (when w
 			   (dotimes (i spaceleft) (write-char pad stream)))
-			 (if (minusp number)
+			 (if (minusp (float-sign number))
 			     (write-char #\- stream)
 			     (if atsign (write-char #\+ stream)))
 			 (when lpoint (write-char #\0 stream))
@@ -1328,7 +1334,7 @@
 (defun format-dollars (stream number d n w pad colon atsign)
   (if (rationalp number) (setq number (coerce number 'single-float)))
   (if (floatp number)
-      (let* ((signstr (if (minusp number) "-" (if atsign "+" "")))
+      (let* ((signstr (if (minusp (float-sign number)) "-" (if atsign "+" "")))
 	     (signlen (length signstr)))
 	(multiple-value-bind (str strlen ig2 ig3 pointplace)
 			     (lisp::flonum-to-string number nil d nil)
