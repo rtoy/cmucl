@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.70 2001/06/13 14:43:51 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.71 2001/12/04 22:27:42 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1480,7 +1480,7 @@
   (cond ((numberp count)
          `(do ((,var 0 (1+ ,var)))
               ((>= ,var ,count) ,result)
-	    (declare (type unsigned-byte ,var))
+	    (declare (type (integer 0 ,count) ,var))
             ,@body))
         (t (let ((v1 (gensym)))
              `(do ((,var 0 (1+ ,var)) (,v1 ,count))
