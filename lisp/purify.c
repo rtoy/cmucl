@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.2 1992/08/20 02:43:37 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.3 1992/12/05 22:36:32 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -604,6 +604,7 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
 	      case type_FuncallableInstanceHeader:
 	      case type_ByteCodeFunction:
 	      case type_ByteCodeClosure:
+	      case type_DylanFunctionHeader:
 		count = pscav_closure_header((struct closure *)addr);
 		break;
 #endif

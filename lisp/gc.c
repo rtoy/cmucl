@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.2 1992/09/08 20:17:52 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.3 1992/12/05 22:36:17 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1675,11 +1675,13 @@ void gc_init(void)
 	scavtab[type_FuncallableInstanceHeader] = scav_closure_header;
 	scavtab[type_ByteCodeFunction] = scav_closure_header;
 	scavtab[type_ByteCodeClosure] = scav_closure_header;
+	scavtab[type_DylanFunctionHeader] = scav_closure_header;
 #else
 	scavtab[type_ClosureHeader] = scav_boxed;
 	scavtab[type_FuncallableInstanceHeader] = scav_boxed;
 	scavtab[type_ByteCodeFunction] = scav_boxed;
 	scavtab[type_ByteCodeClosure] = scav_boxed;
+	scavtab[type_DylanFunctionHeader] = scav_boxed;
 #endif
 	scavtab[type_ValueCellHeader] = scav_boxed;
         scavtab[type_SymbolHeader] = scav_boxed;
