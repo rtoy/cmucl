@@ -996,7 +996,7 @@
   (undefined-value))
 
 
-;;; CONSTANT-REFERENCE-P  --  Internal
+;;; CONSTANT-REFERENCE-P  --  Interface
 ;;;
 ;;;    Return true if the value of Ref will always be the same (and is thus
 ;;; legal to substitute.)
