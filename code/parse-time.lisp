@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.5 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/parse-time.lisp,v 1.6 1996/07/12 19:26:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -347,7 +347,7 @@
 	  (let ((zone (/ thing 100)))
 	    (and (integerp zone) (<= -23 zone 23))))))
 
-(defun special (string)
+(defun special-string-p (string)
   (and (simple-string-p string) (gethash string *special-strings*)))
 
 (defun secondp (number)
@@ -393,7 +393,7 @@
 	  (if test-value (cons 'noon-midn test-value)))
 	(let ((test-value (zone substring)))
 	  (if test-value (cons 'zone test-value)))
-	(let ((test-value (special substring)))
+	(let ((test-value (special-string-p substring)))
 	  (if test-value  (cons 'special test-value)))
 	(if *error-on-mismatch*
 	    (error "\"~A\" is not a recognized word or abbreviation."
