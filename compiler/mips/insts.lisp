@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.3 1990/02/07 00:13:31 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.4 1990/02/07 00:25:45 ch Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -350,11 +350,11 @@
 ;;;
 ;;; code = fn - fn-tag - header - label-offset + other-pointer-tag
 ;;; 
-(def-instruction-format (compute-code-from-fn-format 4) (rt rs immed)
+(def-instruction-format (compute-code-from-fn-format 4) (rt rs label)
   (op :unsigned 6 :instruction-constant)
   (rs :unsigned 5 :register)
   (rt :unsigned 5 :register)
-  (immed :signed 16
+  (label :signed 16
 	 :label #'(lambda (label-offset instr-offset)
 		    (declare (ignore instr-offset))
 		    (- other-pointer-type function-pointer-type label-offset
@@ -371,11 +371,11 @@
 ;;;
 ;;; code = lra - other-pointer-tag - header - label-offset + other-pointer-tag
 ;;; 
-(def-instruction-format (compute-code-from-lra-format 4) (rt rs immed)
+(def-instruction-format (compute-code-from-lra-format 4) (rt rs label)
   (op :unsigned 6 :instruction-constant)
   (rs :unsigned 5 :register)
   (rt :unsigned 5 :register)
-  (immed :signed 16
+  (label :signed 16
 	 :label #'(lambda (label-offset instr-offset)
 		    (declare (ignore instr-offset))
 		    (- (+ label-offset (component-header-length))))))
@@ -391,11 +391,11 @@
 ;;;
 ;;; lra = code + other-pointer-tag + header + label-offset - other-pointer-tag
 ;;; 
-(def-instruction-format (compute-lra-from-code-format 4) (rt rs immed)
+(def-instruction-format (compute-lra-from-code-format 4) (rt rs label)
   (op :unsigned 6 :instruction-constant)
   (rs :unsigned 5 :register)
   (rt :unsigned 5 :register)
-  (immed :signed 16
+  (label :signed 16
 	 :label #'(lambda (label-offset instr-offset)
 		    (declare (ignore instr-offset))
 		    (+ label-offset (component-header-length)))))
@@ -405,3 +405,10 @@
 
 (def-label-ref compute-lra-from-code (rt rs label) label
   compute-lra-from-code-inst)
+
+;;;
+;;; ###  LRA-HEADER-WORD, FUNCTION-HEADER-WORD
+;;; 
+;;; More hacks here.
+;;;
+
