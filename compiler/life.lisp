@@ -642,7 +642,7 @@
 	
 	(let ((save-p (vop-info-save-p (vop-info vop))))
 	  (when save-p
-	    (setf (vop-save-set vop) (copy-bit-vector live-bits))
+	    (setf (vop-save-set vop) (bit-vector-copy live-bits))
 	    (when (eq save-p :force-to-stack)
 	      (dolist (tn (compute-save-set vop block live-list))
 		(force-tn-to-stack tn)
