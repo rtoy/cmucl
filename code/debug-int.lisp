@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.72 1997/11/04 09:10:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.73 1997/11/04 15:02:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -14,6 +14,7 @@
 ;;;
 ;;; Written by Bill Chiles and Rob Maclachlan.
 ;;;
+;;; Enhancements/debugging for the x86 port by Douglas Crosher 1996, 1997.
 
 (in-package "DEBUG-INTERNALS")
 
@@ -1107,12 +1108,13 @@
 			#-x86
 		       (compute-calling-frame
 			#-alpha
-			(system:sap-ref-sap
-			 fp (* vm::ocfp-save-offset vm:word-bytes))
+			(system:sap-ref-sap fp (* vm::ocfp-save-offset
+						  vm:word-bytes))
 			#+alpha
 			(kernel::int-sap
-			 (system:sap-ref-32
-			  fp (* vm::ocfp-save-offset vm:word-bytes)))
+			 (system:sap-ref-32 fp (* vm::ocfp-save-offset
+						  vm:word-bytes)))
+
 			#-gengc
 			(kernel:stack-ref fp vm::lra-save-offset)
 			#+gengc
@@ -2947,7 +2949,7 @@
 	 (frame-pointer frame)
 	 (or (compiled-debug-variable-save-sc-offset debug-var)
 	     (compiled-debug-variable-sc-offset debug-var))))))
-
+
 ;;; SUB-ACCESS-DEBUG-VAR-SLOT -- Internal.
 ;;;
 #-x86
@@ -3034,6 +3036,7 @@
        (with-nfp (nfp)
 	 (system:sap-ref-sap nfp (* (c::sc-offset-offset sc-offset)
 				    vm:word-bytes)))))))
+
 #+x86
 (defun sub-access-debug-var-slot (fp sc-offset &optional escaped)
   (declare (type system:system-area-pointer fp))
@@ -3050,13 +3053,31 @@
 		  escaped
 		  (c::sc-offset-offset sc-offset)
 		  ',format)
-		 :invalid-value-for-unescaped-register-storage)))
+		 :invalid-value-for-unescaped-register-storage))
+	     ;; The debug variable locations are not always valid, and
+	     ;; on the x86 locations can contain raw values.  To
+	     ;; prevent later problems from invalid objects, they are
+	     ;; filtered here.
+	     (make-valid-lisp-obj (val)
+	       `(if (or 
+		     ;; Fixnum
+		     (zerop (logand ,val 3))
+		     ;; Character
+		     (and (zerop (logand ,val #xffff0000)) ; Top bits zero
+		      (= (logand ,val #xff) vm:base-char-type)) ; Char tag
+		     ;; Pointer
+		     (and (logand ,val 1)
+		      ;; Check that the pointer is valid. XX Should do
+		      ;; a better job.
+		      (< vm:target-read-only-space-start ,val #x11000000)))
+		 (kernel:make-lisp-obj ,val)
+		 :invalid-object)))
     (case (c::sc-offset-scn sc-offset)
       ((#.vm:any-reg-sc-number
 	#.vm:descriptor-reg-sc-number)
        (system:without-gcing
 	(with-escaped-value (val)
-	  (kernel:make-lisp-obj val))))
+	  (make-valid-lisp-obj val))))
       (#.vm:base-char-reg-sc-number
        (with-escaped-value (val)
 	 (code-char val)))
@@ -3080,43 +3101,29 @@
       (#.vm:double-reg-sc-number
        (escaped-float-value double-float))
       (#.vm:single-stack-sc-number
-       (system:sap-ref-single
-	(system:int-sap (- (system:sap-int fp)
-			   (* (1+ (c::sc-offset-offset sc-offset))
-			      vm:word-bytes))) 0))
+       (system:sap-ref-single fp (- (* (1+ (c::sc-offset-offset sc-offset))
+				       vm:word-bytes))))
       (#.vm:double-stack-sc-number
-	(system:sap-ref-double
-	  (system:int-sap (- (system:sap-int fp)
-			  (* (+ (c::sc-offset-offset sc-offset) 2)
-				vm:word-bytes))) 0))
+       (system:sap-ref-double fp (- (* (+ (c::sc-offset-offset sc-offset) 2)
+				       vm:word-bytes))))
       (#.vm:control-stack-sc-number
-       (kernel:stack-ref fp (c::sc-offset-offset sc-offset)))
+       (make-valid-lisp-obj
+	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+				    vm:word-bytes)))))
       (#.vm:base-char-stack-sc-number
        (code-char
-	(system:sap-ref-32
-	 (system:int-sap (- (system:sap-int fp)
-			    (* (1+ (c::sc-offset-offset sc-offset))
-			       vm:word-bytes))) 0)))
+	(system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+				    vm:word-bytes)))))
       (#.vm:unsigned-stack-sc-number
-       (system:sap-ref-32
-	(system:int-sap (- (system:sap-int fp)
-			   (* (1+ (c::sc-offset-offset sc-offset))
-			      vm:word-bytes))) 0))
+       (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+				   vm:word-bytes))))
       (#.vm:signed-stack-sc-number
-       (system:signed-sap-ref-32
-	(system:int-sap (- (system:sap-int fp)
-			   (* (1+ (c::sc-offset-offset sc-offset))
-			      vm:word-bytes))) 0))
+       (system:signed-sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+					  vm:word-bytes))))
       (#.vm:sap-stack-sc-number
-       (system:sap-ref-sap 
-	(system:int-sap (- (system:sap-int fp)
-			   (* (1+ (c::sc-offset-offset sc-offset))
-			      vm:word-bytes))) 0))
-      ;; Not using ecase to avoid recursive processing.
-      ;; I would rather see some hint as to what is wrong
-      (t (format t "Sc-offset-scn ~a fell through CASE ~%"
-		 (c::sc-offset-scn sc-offset)) nil))
-    ))
+       (system:sap-ref-sap fp (- (* (1+ (c::sc-offset-offset sc-offset))
+				    vm:word-bytes)))))))
+
 
 ;;; %SET-DEBUG-VARIABLE-VALUE -- Internal.
 ;;;
@@ -3167,7 +3174,7 @@
 
 ;;; SUB-SET-DEBUG-VAR-SLOT -- Internal.
 ;;;
-#-x86 ;; preserve original
+#-x86
 (defun sub-set-debug-var-slot (fp sc-offset value &optional escaped)
   (macrolet ((set-escaped-value (val)
 	       `(if escaped
@@ -3296,38 +3303,33 @@
 	#+nil ;;  don't have escaped floats -- still in npx?
        (set-escaped-float-value double-float value))
       (#.vm:single-stack-sc-number
-       (setf (system:sap-ref-single
-	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
-				 (- vm:word-bytes))) 0)
+       (setf (system:sap-ref-single fp
+				    (- (* (1+ (c::sc-offset-offset sc-offset))
+					  vm:word-bytes)))
 	     (the single-float value)))
       (#.vm:double-stack-sc-number
-       (setf (system:sap-ref-double
-	      (system:sap+ fp (* (+ (c::sc-offset-offset sc-offset) 2)
-				 (- vm:word-bytes))) 0)
+       (setf (system:sap-ref-double fp
+				    (- (* (+ (c::sc-offset-offset sc-offset) 2)
+					  vm:word-bytes)))
 	     (the double-float value)))
       (#.vm:control-stack-sc-number
        (setf (kernel:stack-ref fp (c::sc-offset-offset sc-offset)) value))
       (#.vm:base-char-stack-sc-number
-       (setf (system:sap-ref-32
-	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
-				 (- vm:word-bytes))) 0)
-  	     (char-code (the character value))))
+       (setf (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+					 vm:word-bytes)))
+	     (char-code (the character value))))
       (#.vm:unsigned-stack-sc-number
-       (setf (system:sap-ref-32
-	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
-				 (- vm:word-bytes))) 0)
+       (setf (system:sap-ref-32 fp (- (* (1+ (c::sc-offset-offset sc-offset))
+					 vm:word-bytes)))
 	     (the (unsigned-byte 32) value)))
       (#.vm:signed-stack-sc-number
        (setf (system:signed-sap-ref-32
-	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
-				 (- vm:word-bytes))) 0)
- 	     (the (signed-byte 32) value)))
+	      fp (- (* (1+ (c::sc-offset-offset sc-offset)) vm:word-bytes)))
+	     (the (signed-byte 32) value)))
       (#.vm:sap-stack-sc-number
-       (setf (system:sap-ref-sap
-	      (system:sap+ fp (* (1+ (c::sc-offset-offset sc-offset))
-				 (- vm:word-bytes))) 0)
+       (setf (system:sap-ref-sap fp (- (* (1+ (c::sc-offset-offset sc-offset))
+					  vm:word-bytes)))
 	     (the system:system-area-pointer value))))))
-
 
 
 (defsetf debug-variable-value %set-debug-variable-value)
@@ -3374,8 +3376,6 @@
 ;;; This is the method for DEBUG-VARIABLE-VALIDITY for compiled-debug-variables.
 ;;; For safety, make sure basic-code-loc is what we think.
 ;;;
-;;#+x86-compile-botch ;; tn conflict S1
-
 (defun compiled-debug-variable-validity (debug-var basic-code-loc)
   (check-type basic-code-loc compiled-code-location)
   (cond ((debug-variable-alive-p debug-var)
@@ -3428,7 +3428,6 @@
 ;;; Temporary buffer used to build form-number => source-path translation in
 ;;; FORM-NUMBER-TRANSLATIONS.
 ;;;
-
 (defvar *form-number-temp* (make-array 10 :fill-pointer 0 :adjustable t))
 
 ;;; Table used to detect CAR circularities in FORM-NUMBER-TRANSLATIONS.
