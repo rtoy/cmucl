@@ -3,13 +3,13 @@
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
 
-  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.5 1998/05/01 01:21:42 dtc Exp $
+  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.6 1998/05/27 03:20:22 dtc Exp $
 */
 
 
 #define READ_ONLY_SPACE_START   (0x01000000)
 #ifdef GENCGC
-#define READ_ONLY_SPACE_SIZE    (0x02000000) /* 32MB */
+#define READ_ONLY_SPACE_SIZE    (0x02800000) /* 40MB */
 #else
 #define READ_ONLY_SPACE_SIZE    (0x01800000) /* 24MB */
 #endif
