@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.1 1992/08/01 17:44:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.2 1992/08/02 19:38:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -310,6 +310,19 @@
 (declaim (inline cons-unique-tag))
 (defun cons-unique-tag ()
   (list '#:%unique-tag%))
+
+
+;;;; Two-arg function stubs:
+;;;
+;;; We have two-arg versions of some n-ary functions that are normally
+;;; open-coded.
+
+(defun two-arg-char= (x y) (char= x y))
+(defun two-arg-char< (x y) (char< x y))
+(defun two-arg-char> (x y) (char> x y))
+(defun two-arg-char-equal (x y) (char-equal x y))
+(defun two-arg-char-lessp (x y) (char-lessp x y))
+(defun two-arg-char-greaterp (x y) (char-greaterp x y))
 
 
 ;;;; XOPs
@@ -623,6 +636,82 @@
 	   (with-debugger-info (component old-pc fp)
 	     (error 'undefined-function :name (fdefn-name fdefn)))))))
 
+
+
+;;;; Type checking:
+
+;;;
+;;; These two hashtables map between type specifiers and type predicate
+;;; functions that test those types.  They are initialized according to the
+;;; standard type predicates of the target system.
+;;;
+(defvar *byte-type-predicates* (make-hash-table :test #'equal))
+(defvar *byte-predicate-types* (make-hash-table :test #'eq))
+
+(loop for (type predicate) in
+          '#.(loop for (type . predicate) in
+	           (backend-type-predicates *target-backend*)
+	       collect `(,(type-specifier type) ,predicate))
+      do
+  (let ((fun (fdefinition predicate)))
+    (setf (gethash type *byte-type-predicates*) fun)
+    (setf (gethash fun *byte-predicate-types*) type)))
+	    
+
+;;; LOAD-TYPE-PREDICATE  --  Internal
+;;;
+;;;    Called by the loader to convert a type specifier into a type predicate
+;;; (as used by the TYPE-CHECK XOP.)  If it is a structure type with a
+;;; predicate or has a predefined predicate, then return the predicate
+;;; function, otherwise return the CTYPE structure for the type.
+;;;
+(defun load-type-predicate (desc)
+  (or (gethash desc *byte-type-predicates*)
+      (let ((type (specifier-type desc)))
+	(if (structure-type-p type)
+	    (let ((info (info type defined-structure-info
+			      (structure-type-name type))))
+	      (if (and info (eq (dd-type info) 'structure))
+		  (let ((pred (dd-predicate info)))
+		    (if (and pred (fboundp pred))
+			(fdefinition pred)
+			type))
+		  type))
+	    type))))
+
+  
+;;; TYPE-CHECK -- Xop.
+;;;
+;;;    Check the type of the value on the top of the stack.  The type is
+;;; designated by an entry in the constants.  If the value is a function, then
+;;; it is called as a type predicate.  Otherwise, the value is a CTYPE object,
+;;; and we call %%TYPEP on it.
+;;;
+(define-xop type-check (component old-pc pc fp)
+  (declare (type code-component component)
+	   (type pc old-pc pc)
+	   (type stack-pointer fp))
+  (multiple-value-bind
+      (operand new-pc)
+      (let ((operand (component-ref component pc)))
+	(if (= operand #xff)
+	    (values (component-ref-24 component (1+ pc)) (+ pc 4))
+	    (values operand (1+ pc))))
+    (let ((value (eval-stack-ref (1- (current-stack-pointer))))
+	  (type (code-header-ref component
+				 (+ operand vm:code-constants-offset))))
+      (unless (if (functionp type)
+		  (funcall type value)
+		  (lisp::%%typep value type))
+	(with-debugger-info (component old-pc fp)
+	  (error 'type-error
+		 :datum value
+		 :expected-type (if (functionp type)
+				    (gethash type *byte-predicate-types*)
+				    (type-specifier type))))))
+    
+    (byte-interpret component new-pc fp)))
+
 
 ;;;; The byte-interpreter.
 
@@ -698,8 +787,8 @@
 	    (if (= operand #xf)
 		(let ((operand (component-ref component (1+ pc))))
 		  (if (= operand #xff)
-		      (values (component-ref-32 component (+ pc 2))
-			      (+ pc 6))
+		      (values (component-ref-24 component (+ pc 2))
+			      (+ pc 5))
 		      (values operand (+ pc 2))))
 		(values operand (1+ pc))))
 	(if (zerop (logand byte #x40))
@@ -852,6 +941,41 @@
       (byte-interpret component entry-pc fp))))
 
 
+;;; BYTE-APPLY  --  Internal
+;;;
+;;;    Call a function with some arguments popped off of the interpreter stack,
+;;; and restore the SP to the specifier value.
+;;;
+(defun byte-apply (function num-args restore-sp)
+  (let ((start (- (current-stack-pointer) num-args)))
+    (declare (type stack-pointer start))
+    (macrolet ((frob ()
+		 `(case num-args
+		    ,@(loop for n below 8
+			collect `(,n (call-1 ,n)))
+		    (t
+		     (let ((args ())
+			   (end (+ start num-args)))
+		       (declare (type stack-pointer end))
+		       (do ((i start (1+ i)))
+			   ((= i end))
+			 (declare (type stack-pointer i))
+			 (push (eval-stack-ref i) args))
+		       (setf (current-stack-pointer) restore-sp)
+		       (apply function args)))))
+	       (call-1 (n)
+		 (collect ((binds)
+			   (args))
+		   (dotimes (i n)
+		     (let ((dum (gensym)))
+		       (binds `(,dum (eval-stack-ref (+ start ,i))))
+		       (args dum)))
+		   `(let ,(binds)
+		      (setf (current-stack-pointer) restore-sp)
+		      (funcall function ,@(args))))))
+      (frob))))
+
+
 (defun do-call (old-component call-pc ret-pc old-fp num-args named)
   (declare (type code-component old-component)
 	   (type pc call-pc)
@@ -879,30 +1003,23 @@
 		   (byte-compiled-closure-xep function)
 		   (byte-compiled-closure-closure-vars function)))
       (t
-       (let ((args nil)
-	     (index (current-stack-pointer)))
-	 (declare (type list args)
-		  (type stack-pointer index))
-	 (dotimes (i num-args)
-	   (push (eval-stack-ref (decf index)) args))
-	 (setf (current-stack-pointer) old-sp)
-	 (cond ((minusp ret-pc)
-		(let* ((ret-pc (- ret-pc))
-		       (results
-			(multiple-value-list
-			 (with-debugger-info
-			     (old-component ret-pc old-fp)
-			   (apply function args)))))
-		  (dolist (result results)
-		    (push-eval-stack result))
-		  (push-eval-stack (length results))
-		  (byte-interpret old-component ret-pc old-fp)))
-	       (t
-		(push-eval-stack
-		 (with-debugger-info
-		     (old-component ret-pc old-fp)
-		   (apply function args)))
-		(byte-interpret old-component ret-pc old-fp))))))))
+       (cond ((minusp ret-pc)
+	      (let* ((ret-pc (- ret-pc))
+		     (results
+		      (multiple-value-list
+		       (with-debugger-info
+			(old-component ret-pc old-fp)
+			(byte-apply function num-args old-sp)))))
+		(dolist (result results)
+		  (push-eval-stack result))
+		(push-eval-stack (length results))
+		(byte-interpret old-component ret-pc old-fp)))
+	     (t
+	      (push-eval-stack
+	       (with-debugger-info
+		(old-component ret-pc old-fp)
+		(byte-apply function num-args old-sp)))
+	      (byte-interpret old-component ret-pc old-fp)))))))
 
 
 (defun do-tail-call (component pc fp num-args named)
@@ -941,13 +1058,9 @@
 		   (byte-compiled-closure-closure-vars function)))
       (t
        ;; We are tail-calling native code.
-       (let ((args nil))
-	 (dotimes (i num-args)
-	   (push (eval-stack-ref (- (current-stack-pointer) i 1)) args))
-	 (setf (current-stack-pointer) old-sp)
 	 (cond ((null old-component)
 		;; We were called by native code.
-		(apply function args))
+		(byte-apply function num-args old-sp))
 	       ((minusp old-pc)
 		;; We were called for multiple values.  So return multiple
 		;; values.
@@ -955,7 +1068,7 @@
 		       (multiple-value-list
 			(with-debugger-info
 			    (old-component old-pc old-fp)
-			  (apply function args)))))
+			  (byte-apply function num-args old-sp)))))
 		  (dolist (result results)
 		    (push-eval-stack result))
 		  (push-eval-stack (length results)))
@@ -965,8 +1078,8 @@
 		(push-eval-stack
 		 (with-debugger-info
 		     (old-component old-pc old-fp)
-		   (apply function args)))
-		(byte-interpret old-component old-pc old-fp))))))))
+		   (byte-apply function num-args old-sp)))
+		(byte-interpret old-component old-pc old-fp)))))))
 
 (defun invoke-xep (old-component ret-pc old-sp old-fp num-args xep
 				 &optional closure-vars)
@@ -1139,13 +1252,15 @@
 	       (logior (ash (next-byte) 16)
 		       (ash (next-byte) 8)
 		       (next-byte)))
+	     (extract-extended-op ()
+	       (let ((byte (next-byte)))
+		 (if (= byte 255)
+		     (extract-24-bits)
+		     byte)))       
 	     (extract-4-bit-op (byte)
 	       (let ((4-bits (ldb (byte 4 0) byte)))
 		 (if (= 4-bits 15)
-		     (let ((byte (next-byte)))
-		       (if (= byte 255)
-			   (extract-24-bits)
-			   byte))
+		     (extract-extended-op)
 		     4-bits)))
 	     (extract-3-bit-op (byte)
 	       (let ((3-bits (ldb (byte 3 0) byte)))
@@ -1160,7 +1275,15 @@
 			 (+ index disp)))
 		   (extract-24-bits)))
 	     (note (string &rest noise)
-	       (format t "~24,8T~?" string noise)))
+	       (format t "~12T~?" string noise))
+	     (get-constant (index)
+	       (let ((index (+ index vm:code-constants-offset)))
+		 (if (< (1- vm:code-constants-offset)
+			index
+			(get-header-data component))
+		     (code-header-ref component index)
+		     "<bogus index>"))))
+
       (newline)
       (let ((frame-size
 	     (let ((byte (next-byte)))
@@ -1265,13 +1388,17 @@
 	      (let* ((low-3-bits (extract-3-bit-op byte))
 		     (xop (nth (if (eq low-3-bits :var) (next-byte) low-3-bits)
 			       *xop-names*)))
-		(note "xop ~S~@[ pc=~D~]"
+		(note "xop ~A~@[ ~D~]"
 		      xop
-		      (and (member xop '(catch go unwind-protect))
-			   (extract-24-bits)))))
+		      (case xop
+			((catch go unwind-protect)
+			 (extract-24-bits))
+			(type-check
+			 (get-constant (extract-extended-op)))))))
+			 
 	     ((#b11100000 #b11100000)
 	      ;; inline
-	      (note "inline ~S"
+	      (note "inline ~A"
 		    (inline-function-info-function
 		     (nth (ldb (byte 5 0) byte) *inline-functions*)))))))))))
 
