@@ -13,13 +13,14 @@
 (with-compiler-log-file
     ("target:compile-lisp.log"
      :optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
-			  (debug-info #-small 2 #+small 1)
+			  (debug-info #-small 2 #+small .5)
 			  (safety #-small 1 #+small 0))
      :optimize-interface '(optimize-interface (safety #-small 2 #+small 1)
-					      (debug-info 1))
+					      (debug-info .5))
      :context-declarations
      '(((:or :external (:and (:match "%") (:match "SET")))
-	(declare (optimize-interface (safety 2))))
+	(declare (optimize-interface (safety 2) (debug-info 1))
+		 (optimize (debug-info 1))))
        ((:or (:and :external :macro)
 	     (:match "$PARSE-"))
 	(declare (optimize (safety 2))))
