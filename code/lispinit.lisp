@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.28 1992/02/14 23:45:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.29 1992/02/18 02:03:49 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -545,6 +545,9 @@
   (setf (alien:extern-alien "internal_errors_enabled" alien:boolean) t)
   (set-floating-point-modes :traps '(:overflow :underflow :invalid
 					       :divide-by-zero))
+  ;; This is necessary because some of the initial top level forms might
+  ;; have changed the compliation policy in strange ways.
+  (print-and-call c::proclaim-init)
 
   (%primitive print "Done initializing.")
 
