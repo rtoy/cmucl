@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.29 2003/12/03 17:52:17 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.30 2004/01/09 05:07:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.29 2003/12/03 17:52:17 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.30 2004/01/09 05:07:39 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -236,7 +236,7 @@
 		(inst andn ,result-tn alloc-tn lowtag-mask)
 		(inst or ,result-tn ,lowtag)
 		(inst add alloc-tn ,size))))
-	 #+gencgc
+	 #+nil
 	 (t
 	  (let ((done (gen-label))
 		(full-alloc (gen-label)))
@@ -272,7 +272,33 @@
 	      
 	    (emit-label done)
 	    ;; Set lowtag appropriately
-	    (inst or ,result-tn ,lowtag)))))
+	    (inst or ,result-tn ,lowtag)))
+	 #+gencgc
+	 (t
+	  ;; See if we can do an inline allocation.  The updated
+	  ;; free pointer should not point past the end of the
+	  ;; current region.  If it does, a full alloc needs to be
+	  ;; done.
+	  (load-symbol-value ,result-tn *current-region-end-addr*)
+	  (inst add alloc-tn ,size)	; Point to end
+	  (inst andn ,temp-tn alloc-tn lowtag-mask) ; Zap PA bits
+	      
+	  ;; temp-tn points to the new end of region.  Did we go
+	  ;; past the actual end of the region?  If so, we need a
+	  ;; full alloc.
+	  (inst cmp ,temp-tn ,result-tn)
+	  (without-scheduling ()
+	    ;; NOTE: alloc-tn has been updated to point to the new
+	    ;; end.  But the allocation routines expect alloc-tn
+	    ;; points to original free region.  Thus, the allocation
+	    ;; trap handler MUST subtract SIZE from alloc-tn before
+	    ;; calling the alloc routine.  This allows for
+	    ;; (slightly) faster code for inline allocation.
+	    (inst sub ,result-tn ,temp-tn ,size) ; Set result-tn to old alloc-tn, minus PA
+	    (inst t :gt allocation-trap))
+	  ;; Set lowtag appropriately
+	  (inst or ,result-tn ,lowtag))
+	 ))
 
 
 (defmacro with-fixed-allocation ((result-tn temp-tn type-code size

@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.19 2003/10/24 02:57:00 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.20 2004/01/09 05:07:39 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -244,9 +244,11 @@ boolean allocation_trap_p(struct sigcontext *context)
   
   if (trap_inst_p(pc, &trapno) && (trapno == trap_Allocation))
     {
-      /* Got the trap.  Is it preceeded by an OR instruction? */
+      /* Got the trap.  Is it preceeded by an OR instruction or SUB
+         instruction? */
       or_inst = pc[-1];
-      if (((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 2))
+      if ((((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 2)) ||
+          (((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 4)))
         {
           result = 1;
         }
@@ -278,7 +280,7 @@ void handle_allocation_trap(struct sigcontext *context)
 {
   unsigned int* pc;
   unsigned int or_inst;
-  int rs1;
+  int target;
   int size;
   int immed;
   int context_index;
@@ -301,27 +303,50 @@ void handle_allocation_trap(struct sigcontext *context)
 
   /*
    * The instruction before this trap instruction had better be an OR
-   * instruction!
+   * instruction or SUB instruction!
    */
 
-  /*
-   * An OR instruction.  RS1 is the register we want to allocate to.
-   * RS2 (or an immediate) is the size.
-   */
+  if (((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 2))
+    {
+      /*
+       * An OR instruction.  RS1 is the register we want to allocate
+       * to.  RS2 (or an immediate) is the size.
+       */
 
-  rs1 = (or_inst >> 14) & 0x1f;
+      target = (or_inst >> 14) & 0x1f;
       
-  immed = (or_inst >> 13) & 1;
+      immed = (or_inst >> 13) & 1;
 
-  if (immed == 1)
-    {
-      size = or_inst & 0x1fff;
+      if (immed == 1)
+        {
+          size = or_inst & 0x1fff;
+        }
+      else
+        {
+          size = or_inst & 0x1f;
+          size = SC_REG(context, size);
+        }
     }
-  else
+  else if (((or_inst >> 30) == 2) && (((or_inst >> 19) & 0x1f) == 4))
     {
-      size = or_inst & 0x1f;
-      size = SC_REG(context, size);
+      /*
+       * A SUB instruction.  RD is the register to allocate to, RS2
+       * (or an immediate) is the size.
+       */
+     
+      target = (or_inst >> 25) & 0x1f;
+      immed = (or_inst >> 13) & 1;
+      if (immed == 1)
+        {
+          size = or_inst & 0x1fff;
+        }
+      else
+        {
+          size = or_inst & 0x1f;
+          size = SC_REG(context, size);
+        }
     }
+  
 
   /*
    * I don't think it's possible for us NOT to be in lisp when we get
@@ -337,17 +362,25 @@ void handle_allocation_trap(struct sigcontext *context)
     {
       fprintf(stderr, "**** Whoa! allocation trap and we weren't in lisp!\n");
     }
+
+  /*
+   * alloc-tn was incremented by size.  If we get here, we need to
+   * decrement it by size to restore it's original value.
+   */
+  /*  current_dynamic_space_free_pointer = (lispobj *) SC_REG(context, reg_ALLOC);*/
+  current_dynamic_space_free_pointer = (lispobj*) ((long)current_dynamic_space_free_pointer - size);
   
   /*
-   * Allocate some memory, store the memory address in rs1.
+   * Allocate some memory, store the memory address in target.
    */
 
 #if 0
-  fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[rs1]);
+  fprintf(stderr, "Alloc %d to %s\n", size, lisp_register_names[target]);
 #endif
 
   memory = (char *) alloc(size);
-  SC_REG(context, rs1) = (unsigned long) memory;
+  SC_REG(context, target) = (unsigned long) memory;
+  SC_REG(context, reg_ALLOC) = current_dynamic_space_free_pointer;
 
   if (were_in_lisp)
     {

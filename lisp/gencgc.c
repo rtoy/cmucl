@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.46 2003/10/24 02:57:00 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.47 2004/01/09 05:07:39 toy Exp $
  *
  */
 
@@ -47,6 +47,16 @@
 #define clr_pseudo_atomic_interrupted() \
   SetSymbolValue (PSEUDO_ATOMIC_INTERRUPTED, make_fixnum (0))
 
+#define set_current_region_free(value) \
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (value))
+#define set_current_region_end(value) \
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
+#define get_current_region_free() \
+  SymbolValue(CURRENT_REGION_FREE_POINTER)
+
+#define set_current_region_end(value) \
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
+
 #elif defined(sparc)
 
 /*
@@ -54,9 +64,13 @@
  * stuff, so we need to preserve those bits when we give it a value.
  * This value better not have any bits set there either!
  */
+#if 0
 #define set_alloc_pointer(value) \
   (current_dynamic_space_free_pointer = (lispobj*) ((value) \
          | ((unsigned long) current_dynamic_space_free_pointer & lowtag_Mask)))
+#else
+#define set_alloc_pointer(value) 
+#endif
 #define get_alloc_pointer() \
   ((unsigned long) current_dynamic_space_free_pointer & ~lowtag_Mask)
 #define get_binding_stack_pointer() \
@@ -74,6 +88,24 @@
 #define clr_pseudo_atomic_interrupted() \
   (current_dynamic_space_free_pointer \
    = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_InterruptedValue))
+
+#if 0
+#define set_current_region_free(value) \
+  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (value))
+
+#define get_current_region_free() \
+  SymbolValue(CURRENT_REGION_FREE_POINTER)
+
+#else
+#define set_current_region_free(value) \
+  current_dynamic_space_free_pointer = (lispobj*)((value) | ((long)current_dynamic_space_free_pointer & lowtag_Mask))
+
+#define get_current_region_free() \
+  ((long)current_dynamic_space_free_pointer & (~(lowtag_Mask)))
+#endif
+
+#define set_current_region_end(value) \
+  SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
 
 #else
 #error gencgc is not supported on this platform
@@ -835,7 +867,11 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
 
     /* Check for a failure */
     if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+#if 0
       handle_heap_overflow("*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
+#else
+      break;
+#endif
     }
 
     gc_assert(!PAGE_WRITE_PROTECTED(first_page));
@@ -877,6 +913,10 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
   }
   while (restart_page < dynamic_space_pages && bytes_found < nbytes);
 
+  if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+    handle_heap_overflow("*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
+  }
+  
   /* Check for a failure */
   if (restart_page >= (dynamic_space_pages - reserved_heap_pages) && bytes_found < nbytes) {
     handle_heap_overflow("*A1 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
@@ -1275,9 +1315,12 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
 
     /* Check for a failure */
     if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+#if 0
       handle_heap_overflow("*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
+#else
+      break;
+#endif
     }
-
     gc_assert(!PAGE_WRITE_PROTECTED(first_page));
 
 #if 0
@@ -1311,6 +1354,10 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   }
   while ((restart_page < dynamic_space_pages) && (bytes_found < nbytes));
 
+  if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+    handle_heap_overflow("*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
+  }
+  
   /* Check for a failure */
   if (restart_page >= (dynamic_space_pages - reserved_heap_pages) && bytes_found < nbytes) {
     handle_heap_overflow("*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
@@ -6157,14 +6204,13 @@ void gencgc_verify_zero_fill(void)
 {
   /* Flush the alloc regions updating the tables. */
   
-  boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
+  boxed_region.free_pointer = (void *) get_current_region_free();
   gc_alloc_update_page_tables(0, &boxed_region);
   gc_alloc_update_page_tables(1, &unboxed_region);
   fprintf(stderr, "* Verifying zero fill\n");
   verify_zero_fill();
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER,
-		 (lispobj)boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj)boxed_region.end_addr);
+  set_current_region_free((lispobj)boxed_region.free_pointer);
+  set_current_region_end((lispobj)boxed_region.end_addr);
 }
 
 static void verify_dynamic_space(void)
@@ -6533,7 +6579,7 @@ void	collect_garbage(unsigned last_gen)
   int gen_to_wp;
   int i;
 
-  boxed_region.free_pointer = (void *) SymbolValue(CURRENT_REGION_FREE_POINTER);
+  boxed_region.free_pointer = (void *) get_current_region_free();
 
   /* Check last_gen */
   if (last_gen > NUM_GENERATIONS) {
@@ -6641,10 +6687,15 @@ void	collect_garbage(unsigned last_gen)
   gc_assert(boxed_region.free_pointer - boxed_region.start_addr == 0);
   gc_alloc_generation = 0;
 
+  /* Sparc doesn't need this because the dynamic space free pointer is
+     the same as the current region free pointer, which is updated by
+     the allocation routines appropriately. */
+#if !defined(sparc)
   update_dynamic_space_free_pointer();
-
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
+#endif
+  
+  set_current_region_free((lispobj) boxed_region.free_pointer);
+  set_current_region_end((lispobj) boxed_region.end_addr);
 
   /* Call the scavenger hook functions */
   {
@@ -6757,8 +6808,8 @@ void	gc_free_heap(void)
 
   set_alloc_pointer((lispobj) heap_base);
   
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
+  set_current_region_free((lispobj) boxed_region.free_pointer);
+  set_current_region_end((lispobj) boxed_region.end_addr);
 
   if (verify_after_free_heap) {
     /* Check if purify has left any bad pointers. */
@@ -6833,8 +6884,8 @@ void gc_init(void)
 
   last_free_page = 0;
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
+  set_current_region_free((lispobj) boxed_region.free_pointer);
+  set_current_region_end((lispobj) boxed_region.end_addr);
 }
 
 /*
@@ -6867,8 +6918,8 @@ void	gencgc_pickup_dynamic(void)
   generations[0].bytes_allocated = PAGE_SIZE * page;
   bytes_allocated = PAGE_SIZE * page;
 
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (lispobj) boxed_region.free_pointer);
-  SetSymbolValue(CURRENT_REGION_END_ADDR, (lispobj) boxed_region.end_addr);
+  set_current_region_free((lispobj) boxed_region.free_pointer);
+  set_current_region_end((lispobj) boxed_region.end_addr);
 }
 
 
@@ -6897,7 +6948,9 @@ void do_pending_interrupt (void);
 char *
 alloc (int nbytes)
 {
-  gc_assert (((unsigned) SymbolValue (CURRENT_REGION_FREE_POINTER) & lowtag_Mask) == 0);
+#ifndef sparc
+  gc_assert (((unsigned) get_current_region_free() & lowtag_Mask) == 0);
+#endif
   gc_assert ((nbytes & lowtag_Mask) == 0);
   gc_assert (get_pseudo_atomic_atomic ());
 
@@ -6907,26 +6960,24 @@ alloc (int nbytes)
     {
       void *new_obj;
       char *new_free_pointer
-  	= (void *) (SymbolValue (CURRENT_REGION_FREE_POINTER) + nbytes);
+  	= (void *) (get_current_region_free() + nbytes);
 	  
       if (new_free_pointer <= boxed_region.end_addr)
 	{
 	  /* Allocate from the current region. */
-	  new_obj = (void *) SymbolValue (CURRENT_REGION_FREE_POINTER);
-	  SetSymbolValue (CURRENT_REGION_FREE_POINTER,
-			  (lispobj) new_free_pointer);
+	  new_obj = (void *) get_current_region_free();
+	  set_current_region_free((lispobj) new_free_pointer);
 	  return new_obj;
 	}
       else if (bytes_allocated <= auto_gc_trigger)
 	{
 	  /* Call gc_alloc.  */
-	  boxed_region.free_pointer
-	    = (void *) SymbolValue (CURRENT_REGION_FREE_POINTER);
+	  boxed_region.free_pointer = (void *) get_current_region_free();
+          boxed_region.end_addr = (void *) SymbolValue(CURRENT_REGION_END_ADDR);
+          
 	  new_obj = gc_alloc (nbytes);
-	  SetSymbolValue (CURRENT_REGION_FREE_POINTER,
-			  (lispobj) boxed_region.free_pointer);
-	  SetSymbolValue (CURRENT_REGION_END_ADDR,
-			  (lispobj) boxed_region.end_addr);
+	  set_current_region_free((lispobj) boxed_region.free_pointer);
+	  set_current_region_end((lispobj) boxed_region.end_addr);
 	  return new_obj;
 	}
       else
@@ -7013,9 +7064,13 @@ int get_bytes_consed_upper(void)
   return ((int)bytes_allocated_sum / 0x10000000) & 0xFFFFFFF;
 }
 
+#if 0
 #define current_region_free_pointer SymbolValue(CURRENT_REGION_FREE_POINTER)
 #define current_region_end_addr     ((void *) SymbolValue(CURRENT_REGION_END_ADDR))
-
+#else
+#define current_region_free_pointer get_current_region_free()
+#define current_region_end_addr     ((void *) SymbolValue(CURRENT_REGION_END_ADDR))
+#endif
 int get_bytes_allocated_lower(void)
 {
   int size = bytes_allocated;
