@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.30 1990/03/20 00:17:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.31 1990/03/21 23:29:44 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -106,9 +106,7 @@
 ;;; How much memory to validate for lisp.
 ;;; 
 (defparameter target-heap-address-space
-  '((#x40000000 . #x40000) ; Dynamic space
-    (#x50000000 . #x4000) ; Control stack
-    (#x60000000 . #x4000))) ; Binding stack
+  '((#x20000000 . #x50000000)))
 
 
 
@@ -365,17 +363,33 @@
   (real :ref-vop realpart :init :arg)
   (imag :ref-vop imagpart :init :arg))
 
-(define-primitive-object (array :lowtag other-pointer-type :header t)
-  (fill-pointer :ref-trans lisp::%array-fill-pointer
-		:set-trans (setf lisp::%array-fill-pointer))
-  (elements :ref-trans lisp::%array-available-elements
-	    :set-trans (setf lisp::%array-available-elements))
-  (data :ref-trans lisp::%array-data-vector
-	:set-trans (setf lisp::%array-data-vector))
-  (displacement :ref-trans lisp::%array-displacement
-		:set-trans (setf lisp::%array-displacement))
-  (displaced-p :ref-trans lisp::%array-displaced-p
-	       :set-trans (setf lisp::%array-displaced-p))
+(define-primitive-object (array :lowtag other-pointer-type
+				:header t)
+  (fill-pointer :type index
+		:ref-trans lisp::%array-fill-pointer
+		:ref-known (c::flushable)
+		:set-trans (setf lisp::%array-fill-pointer)
+		:set-known ())
+  (elements :type index
+	    :ref-trans lisp::%array-available-elements
+	    :ref-known (c::flushable)
+	    :set-trans (setf lisp::%array-available-elements)
+	    :set-known ())
+  (data :type array
+	:ref-trans lisp::%array-data-vector
+	:ref-known (c::flushable)
+	:set-trans (setf lisp::%array-data-vector)
+	:set-known ())
+  (displacement :type (or index null)
+		:ref-trans lisp::%array-displacement
+		:ref-known (c::flushable)
+		:set-trans (setf lisp::%array-displacement)
+		:set-known ())
+  (displaced-p :type (member t nil)
+	       :ref-trans lisp::%array-displaced-p
+	       :ref-known (c::flushable)
+	       :set-trans (setf lisp::%array-displaced-p)
+	       :set-known ())
   (dimensions :rest-p t))
 
 (define-primitive-object (vector :lowtag other-pointer-type :header t)
