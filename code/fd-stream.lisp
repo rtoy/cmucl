@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.7 1990/09/24 17:22:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.8 1990/11/03 00:26:39 wlott Exp $
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
@@ -1074,9 +1074,9 @@
 	(:input (values t nil mach:o_rdonly))
 	(:output (values nil t mach:o_wronly))
 	(:io (values t t mach:o_rdwr))
-	(:probe (values nil nil mach:o_rdonly)))
+	(:probe (values t nil mach:o_rdonly)))
     (let* ((pathname (pathname filename))
-	   (namestring (predict-name pathname input)))
+	   (namestring (unix-namestring pathname input)))
       
       ;; Process if-exists argument if we are doing any output.
       (cond (output
