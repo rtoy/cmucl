@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.8 1991/11/05 14:18:20 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.9 1991/11/05 15:10:26 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,7 @@
 
 (in-package "EXTENSIONS")
 (export '(assq memq delq))
-;; Assq & memq are just interpreter stubs.
+(proclaim '(inline assq memq))
 (proclaim '(maybe-inline delq))
 (in-package 'lisp)
 
@@ -533,6 +533,7 @@
 (defun sublis (alist tree &key (key #'identity)
 		     (test #'eql) (test-not nil notp))
   "Substitutes from alist into tree nondestructively."
+  (declare (inline assoc))
   (labels ((s (subtree)
 	      (let ((assoc
 		     (if notp
@@ -557,6 +558,7 @@
 (defun nsublis (alist tree &key (key #'identity)
 		  (test #'eql) (test-not nil notp))
   "Substitutes new for subtrees matching old."
+  (declare (inline assoc))
   (let (temp)
     (labels ((s (subtree)
 		(cond ((Setq temp (nsublis-macro))
@@ -614,6 +616,7 @@
 
 (defun adjoin (item list &key (key #'identity) (test #'eql) (test-not nil notp))
   "Add item to list unless it is already a member"
+  (declare (inline member))
   (if (if notp (member (funcall key item) list :test-not test-not :key key)
 	  (member (funcall key item) list :test test :key key))
       list
@@ -630,6 +633,7 @@
 (defun union (list1 list2 &key
 		    (key #'identity) (test #'eql testp) (test-not nil notp))
   "Returns the union of list1 and list2."
+  (declare (inline member))
   (when (and testp notp) (error "Test and test-not both supplied."))
   (let ((res list2))
     (dolist (elt list1)
@@ -649,6 +653,7 @@
 (defun nunion (list1 list2 &key (key #'identity)
 		     (test #'eql testp) (test-not nil notp))
   "Destructively returns the union list1 and list2."
+  (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res list2))
@@ -663,6 +668,7 @@
 (defun intersection (list1 list2  &key (key #'identity)
 			       (test #'eql testp) (test-not nil notp))
   "Returns the intersection of list1 and list2."
+  (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res nil))
@@ -671,9 +677,10 @@
 	  (push elt res)))
     res))
 
-(Defun nintersection (list1 list2 &key (key #'identity)
+(defun nintersection (list1 list2 &key (key #'identity)
 		     (test #'eql testp) (test-not nil notp))
   "Destructively returns the intersection of list1 and list2."
+  (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res nil))
@@ -683,9 +690,10 @@
 	  (setq list1 (Cdr list1))))
     res))
 
-(Defun set-difference (list1 list2 &key (key #'identity)
+(defun set-difference (list1 list2 &key (key #'identity)
 			     (test #'eql testp) (test-not nil notp))
   "Returns the elements of list1 which are not in list2."
+  (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (if (null list2)
@@ -697,9 +705,10 @@
 	res)))
 
 
-(Defun nset-difference (list1 list2 &key (key #'identity)
+(defun nset-difference (list1 list2 &key (key #'identity)
 			      (test #'eql testp) (test-not nil notp))
   "Destructively returns the elements of list1 which are not in list2."
+  (declare (inline member))
   (if (and testp notp)
       (error "Test and test-not both supplied."))
   (let ((res nil))
@@ -713,6 +722,7 @@
 (defun set-exclusive-or (list1 list2 &key (key #'identity)
 			       (test #'eql testp) (test-not nil notp))
   "Returns new list of elements appearing exactly once in list1 and list2."
+  (declare (inline member))
   (let ((result nil))
     (dolist (elt list1)
       (unless (with-set-keys (member (funcall key elt) list2))
@@ -760,6 +770,7 @@
 (defun subsetp (list1 list2 &key (key #'identity)
 		      (test #'eql testp) (test-not nil notp))
   "Returns T if every element in list1 is also in list2."
+  (declare (inline member))
   (dolist (elt list1)
     (unless (with-set-keys (member (funcall key elt) list2))
       (return-from subsetp nil)))
