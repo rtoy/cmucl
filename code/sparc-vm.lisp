@@ -7,16 +7,17 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.10 1992/02/27 07:59:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.11 1992/03/02 00:05:30 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.10 1992/02/27 07:59:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sparc-vm.lisp,v 1.11 1992/03/02 00:05:30 wlott Exp $
 ;;;
 ;;; This file contains the SPARC specific runtime stuff.
 ;;;
 (in-package "SPARC")
 (use-package "SYSTEM")
+(use-package "UNIX")
 
 (export '(fixup-code-object internal-error-arguments
 	  sigcontext-register sigcontext-float-register
