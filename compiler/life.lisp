@@ -316,8 +316,8 @@
 
     (do ((op (do ((op ops (tn-ref-across op))
 		  (i 0 (1+ i)))
-		 ((= i (length fixed)) op))
-	     (declare (type index i))
+		 ((= i (length fixed)) op)
+	       (declare (type index i)))
 	     (tn-ref-across op)))
 	((null op))
       (let ((tn (tn-ref-tn op)))
