@@ -16,11 +16,8 @@
 ; authors or by Carnegie-Mellon University.
 ;
 
-;;;; This file handles the loading of all files composing the OPS interpreter.
-;;;; It also performs the necessary initialization.
+;;;; This file performs the necessary initialization of the OPS interpreter.
 
-
-(setf (search-list "ops:") '("/afs/cs/project/clisp/library/ops/"))
 
 (in-package "OPS")
 
@@ -42,11 +39,4 @@
   (io-init)
   (rhs-init))
 
-(load "ops:ops-util")
-(load "ops:ops-backup")
-(load "ops:ops-compile")
-(load "ops:ops-main")
-(load "ops:ops-match")
-(load "ops:ops-io")
-(load "ops:ops-rhs")
 (ops-init)
