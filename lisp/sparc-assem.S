@@ -266,7 +266,8 @@ _call_on_stack:
 _save_state:
 	save	%sp, -(SA(8*4)+SA(MINFRAME)), %sp
 	ta	ST_FLUSH_WINDOWS
-	std	%g0, [%sp+SA(MINFRAME)]
+	st	%i7, [%sp+SA(MINFRAME)]
+	st	%g1, [%sp+SA(MINFRAME)+4]
 	std	%g2, [%sp+SA(MINFRAME)+8]
 	std	%g4, [%sp+SA(MINFRAME)+16]
 	std	%g6, [%sp+SA(MINFRAME)+24]
@@ -285,11 +286,12 @@ restore_state:
 
 	.global	_restore_state
 _restore_state:
-	mov	%i0, %sp
+	mov	%o0, %sp
 	add	%sp, (SA(8*4)+SA(MINFRAME)), %fp
 	ta	ST_CLEAN_WINDOWS
+	ld	[%sp+SA(MINFRAME)], %i7
 	b restore_state
-	mov	%i1, %i0
+	mov	%o1, %i0
 
 
 /****************************************************************\
