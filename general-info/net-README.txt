@@ -17,13 +17,14 @@ Distribution:
 
 CMU Common Lisp is only available via anonymous FTP.  We don't have the
 manpower to make tapes.  These are our distribution machines:
+    lisp-sun1.slisp.cs.cmu.edu (128.2.250.58)
     lisp-rt1.slisp.cs.cmu.edu (128.2.217.9)
     lisp-rt2.slisp.cs.cmu.edu (128.2.217.10)
 
 Log in with the user "anonymous" and "username@host" as password (i.e. your
-EMAIL address.)  When you log in, the current directory should be set to the
-CMU CL release area.  If you have any trouble with FTP access, please send mail
-to slisp@cs.cmu.edu.
+EMAIL address.)  When you log in, cd to /pub (a symbolic link to the CMU CL
+release area.)  If you have any trouble with FTP access, please send mail to
+slisp@cs.cmu.edu.
 
 The release area holds compressed tar files with names of the form:
     <version>-<machine>_<os>.tar.Z
@@ -36,6 +37,8 @@ directory that is to be the root of the tree, then type:
 As of 11/11/93, the latest SunOS Sparc release is:
     17c-sunos.tar.Z (6.6 meg)
     17c-extra-sunos.tar.Z (3.9 meg)
+This version works with all the versions of SunOS we've tried it on, but does
+*NOT* work under Solaris.
 
 The first file holds binaries and documentation for the basic Lisp system,
 while the second `-extra' file contains the Hemlock editor, the Motif toolkit,
