@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.12 2000/01/16 20:12:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/arith.lisp,v 1.13 2000/09/12 07:36:01 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997,2000.
 ;;; 
 
 (in-package :x86)
@@ -329,6 +329,34 @@
 	   (if (= y 1)
 	       (inst inc r)
 	     (inst add r y))))))
+
+
+;;;; Special logand cases: (logand signed unsigned) => unsigned
+
+(define-vop (fast-logand/signed-unsigned=>unsigned
+	     fast-logand/unsigned=>unsigned)
+  (:args (x :target r :scs (signed-reg)
+	    :load-if (not (and (sc-is x signed-stack)
+			       (sc-is y unsigned-reg)
+			       (sc-is r unsigned-stack)
+			       (location= x r))))
+	 (y :scs (unsigned-reg unsigned-stack)))
+  (:arg-types signed-num unsigned-num))
+
+(define-vop (fast-logand-c/signed-unsigned=>unsigned
+	     fast-logand-c/unsigned=>unsigned)
+  (:args (x :target r :scs (signed-reg signed-stack)))
+  (:arg-types signed-num (:constant (unsigned-byte 32))))
+
+(define-vop (fast-logand/unsigned-signed=>unsigned
+	     fast-logand/unsigned=>unsigned)
+  (:args (x :target r :scs (unsigned-reg)
+	    :load-if (not (and (sc-is x unsigned-stack)
+			       (sc-is y signed-reg)
+			       (sc-is r unsigned-stack)
+			       (location= x r))))
+	 (y :scs (signed-reg signed-stack)))
+  (:arg-types unsigned-num signed-num))
 
 
 ;;;; Multiplication and division.
