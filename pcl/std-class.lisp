@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.55 2003/04/26 17:35:08 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.56 2003/04/26 21:24:06 gerd Exp $")
 
 (in-package :pcl)
 
@@ -507,16 +507,20 @@
 	    direct-default-initargs)
       (setq direct-default-initargs
 	    (plist-value class 'direct-default-initargs)))
-  (setf (plist-value class 'class-slot-cells)
-	(let ((collected ()))
-	  (dolist (dslotd direct-slots (nreverse collected))
-	    (when (eq (slot-definition-allocation dslotd) :class)
-	      (let ((initfunction (slot-definition-initfunction dslotd)))
-		(push (cons (slot-definition-name dslotd)
-			    (if initfunction 
-				(funcall initfunction)
-				+slot-unbound+))
-		      collected))))))
+  ;;
+  ;; Initialize shared slots.  A class may inherit initforms for
+  ;; shared slots from superclasses.  Such initializations are
+  ;; done in UPDATE-CLASS-SLOT-VALUES.
+  (ext:collect ((cells))
+    (dolist (dslotd direct-slots)
+      (when (eq (slot-definition-allocation dslotd) :class)
+	(let ((initfn (slot-definition-initfunction dslotd)))
+	  (cells (cons (slot-definition-name dslotd)
+		       (if initfn
+			   (funcall initfn)
+			   +slot-unbound+))))))
+    (setf (plist-value class 'class-slot-cells) (cells)))
+  ;;
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
 				 (car predicate-name))
@@ -784,11 +788,25 @@
     (update-slots class (compute-slots class))
     (update-gfs-of-class class)
     (update-inits class (compute-default-initargs class))
+    (update-shared-slot-values class)
     (update-ctors 'finalize-inheritance :class class))
   ;;
   (unless finalizep
     (dolist (sub (class-direct-subclasses class))
       (update-class sub nil))))
+
+;;;
+;;; Set values of shared slots from initforms inherited from
+;;; superclasses, which can't be done before the cpl is known.
+;;; 
+(defun update-shared-slot-values (class)
+  (dolist (slot (class-slots class))
+    (when (eq (slot-definition-allocation slot) :class)
+      (let ((cell (assq (slot-definition-name slot) (class-slot-cells class))))
+	(when cell
+	  (let ((initfn (slot-definition-initfunction slot)))
+	    (when initfn
+	      (setf (cdr cell) (funcall initfn)))))))))
 
 (defun update-cpl (class cpl)
   (if (class-finalized-p class)
