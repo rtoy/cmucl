@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.9 1991/11/05 15:10:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.10 1992/01/27 10:56:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -341,7 +341,10 @@
 		 (t (error "Argument is not a list -- ~S." ele)))))
 	   (return result)))
 	(null)
-	(atom (return top-of-top))
+	(atom
+	 (if (cdr top)
+	     (error "Argument is not a list -- ~S." top-of-top)
+	     (return top-of-top)))
 	(t (error "Argument is not a list -- ~S." top-of-top))))))
 
 (defun nreconc (x y)
