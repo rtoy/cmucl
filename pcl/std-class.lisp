@@ -649,10 +649,13 @@
     (dolist (sub (class-direct-subclasses class)) (update-class sub nil))))
 
 (defun update-cpl (class cpl)
-  (when (class-finalized-p class)
-    (unless (equal (class-precedence-list class) cpl)
-      (force-cache-flushes class)))
-  (setf (slot-value class 'class-precedence-list) cpl)
+  (if (class-finalized-p class)
+      (unless (equal (class-precedence-list class) cpl)
+	;; Need to have the cpl setup before update-lisp-class-layout
+	;; is called on CMUCL.
+	(setf (slot-value class 'class-precedence-list) cpl)
+	(force-cache-flushes class))
+      (setf (slot-value class 'class-precedence-list) cpl))
   (update-class-can-precede-p cpl))
 
 (defun update-class-can-precede-p (cpl)
