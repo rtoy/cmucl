@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.10 1990/06/26 06:27:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.11 1990/07/10 10:23:07 ram Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -748,17 +748,20 @@
 ;;; Compute how many bytes it will take to represent signed integer N.
 
 (defun compute-bytes (n)
-  (truncate (+ (integer-length n) 8) 8))
+  (ceiling (1+ (integer-length n)) 8))
 
 (defun dump-float (x file)
-  (multiple-value-bind (f exponent sign) (decode-float x)
-    (let ((mantissa (truncate (scale-float (* f sign) (float-precision f)))))
-      (dump-fop 'lisp::fop-float file)
-      (dump-byte (1+ (integer-length exponent)) file)
-      (quick-dump-number exponent (compute-bytes exponent) file)
-      (dump-byte (1+ (integer-length mantissa)) file)
-      (quick-dump-number mantissa (compute-bytes mantissa) file))))
-
+  (let ((digits (float-digits x)))
+    (multiple-value-bind (sig exp sign)
+			 (integer-decode-float x)
+      (let ((significand (* sig #-new-compiler (truncate sign)
+			        #+new-compiler sign)) ;### i-d-f bug.
+	    (exponent (+ exp digits)))
+	(dump-fop 'lisp::fop-float file)
+	(dump-byte (1+ (integer-length exponent)) file)
+	(quick-dump-number exponent (compute-bytes exponent) file)
+	(dump-byte (1+ digits) file)
+	(quick-dump-number significand (ceiling (1+ digits) 8) file)))))
 
 
 ;;;; Symbol Dumping:
