@@ -1,47 +1,75 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.1 1990/02/24 19:37:14 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/coreparse.c,v 1.2 1990/03/28 22:49:20 ch Exp $ */
 #include <stdio.h>
 #include <mach.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#include "lisp.h"
+#include "globals.h"
 
 extern int version;
 
 #define CORE_PAGESIZE (4*1024)
 #define CORE_MAGIC (('C' << 24) | ('O' << 16) | ('R' << 8) | 'E')
 #define CORE_END 3840
-#define CORE_DIRECTORY 3841
+#define CORE_NDIRECTORY 3861
 #define CORE_VALIDATE 3845
 #define CORE_VERSION 3860
 
-static void process_validate(ptr, count)
-long *ptr;
-{
-    long addr, len;
+#define DYNAMIC_SPACE_ID (1)
+#define STATIC_SPACE_ID (2)
+#define READ_ONLY_SPACE_ID (3)
 
-    while (count-- > 0) {
-        addr = *ptr++ * CORE_PAGESIZE;
-        len = *ptr++ * CORE_PAGESIZE;
-        printf("validating %d bytes at 0x%x\n", len, addr);
-        os_validate(addr, len);
-    }
-}
+struct ndir_entry {
+	long identifier;
+	long nwords;
+	long data_page;
+	long address;
+	long page_count;
+};
 
 static void process_directory(fd, ptr, count)
+int fd, count;
 long *ptr;
-int count;
 {
-    long offset, addr, len;
+	long id, offset, len;
+	lispobj *free_pointer;
+	vm_address_t addr;
+	struct ndir_entry *entry;
 
-    while (count-- > 0) {
-        offset = CORE_PAGESIZE * (1 + *ptr++);
-        addr = CORE_PAGESIZE * *ptr++;
-        len = CORE_PAGESIZE * *ptr++;
+	entry = (struct ndir_entry *) ptr;
 
-        if (len != 0) {
-            printf("mapping %d bytes at 0x%x\n", len, addr);
-            os_map(fd, offset, addr, len);
-        }
-    }
+	while (count-- > 0) {
+		id = entry->identifier;
+		offset = CORE_PAGESIZE * (1 + entry->data_page);
+		addr = (vm_address_t) CORE_PAGESIZE * entry->address;
+		free_pointer = (lispobj *) addr + entry->nwords;
+		len = CORE_PAGESIZE * entry->page_count;
+
+		if (len != 0) {
+			printf("Mapping %d bytes at 0x%x.\n", len, addr);
+			os_map(fd, offset, addr, len);
+		}
+
+		printf("Space ID = %d, free pointer = 0x%08x.\n", id, free_pointer);
+
+		switch (id) {
+		case DYNAMIC_SPACE_ID:
+			if (current_dynamic_space != (lispobj *) addr)
+				printf("Strange ... dynamic space lossage.\n");
+			current_dynamic_space_free_pointer = free_pointer;
+			break;
+		case STATIC_SPACE_ID:
+			static_space = (lispobj *) addr;
+			break;
+		case READ_ONLY_SPACE_ID:
+			/* Don't care about read only space */
+			break;
+		default:
+			printf("Strange space ID: %d; ignored.\n", id);
+			break;
+		}
+		entry++;
+	}
 }
 
 void load_core_file(file)
@@ -51,8 +79,9 @@ char *file;
     long header[CORE_PAGESIZE / sizeof(long)], val, len, *ptr;
 
     if (fd < 0) {
-        perror("open");
-        exit(1);
+	    fprintf(stderr, "Could not open file \"%s\".", file);
+	    perror("open");
+	    exit(1);
     }
 
     count = read(fd, header, CORE_PAGESIZE);
@@ -69,7 +98,8 @@ char *file;
     val = *ptr++;
 
     if (val != CORE_MAGIC) {
-        fprintf(stderr, "Invalid magic number: 0x%x should have been 0x%x\n", val, CORE_MAGIC);
+        fprintf(stderr, "Invalid magic number: 0x%x should have been 0x%x.\n",
+		val, CORE_MAGIC); 
         exit(1);
     }
 
@@ -83,20 +113,21 @@ char *file;
 
             case CORE_VERSION:
                 if (*ptr != version) {
-                    fprintf(stderr, "*** Warning, ldb version (%d) different from core version (%d)\nYou will probably lose big.\n", version, *ptr);
+                    fprintf(stderr, "WARNING: ldb version (%d) different from core version (%d).\nYou may lose big.\n", version, *ptr);
                 }
                 break;
 
             case CORE_VALIDATE:
-                process_validate(ptr, (len-2)/2);
+		fprintf(stderr, "Validation no longer supported; ignored.\n");
                 break;
 
-            case CORE_DIRECTORY:
-                process_directory(fd, ptr, (len-2)/3);
+            case CORE_NDIRECTORY:
+                process_directory(fd, ptr,
+				  (len-2) / (sizeof(struct ndir_entry) / sizeof(long)));
                 break;
 
             default:
-                printf("Unknown header entry: %d. Skipping.\n", val);
+                printf("Unknown core file entry: %d; skipping.\n", val);
                 break;
         }
 
