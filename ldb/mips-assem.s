@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.9 1990/09/21 05:53:39 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/mips-assem.s,v 1.10 1990/10/29 14:13:33 wlott Exp $ */
 #include <machine/regdef.h>
 
 #include "lisp.h"
@@ -80,11 +80,15 @@ call_into_lisp:
 	/* No longer in foreign call. */
 	sw	zero, foreign_function_call_active
 
+        .set    reorder
+
 	/* Load the rest of the LISP state. */
 	lw	ALLOC, current_dynamic_space_free_pointer
 	lw	BSP, current_binding_stack_pointer
 	lw	CSP, current_control_stack_pointer
-	lw	OLDCONT, current_control_frame_pointer
+	lw	OCFP, current_control_frame_pointer
+
+        .set    noreorder
 
 	/* Check for interrupt */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
@@ -101,14 +105,14 @@ call_into_lisp:
 	/* Pass in args */
 	move	CNAME, $4
 	move	LEXENV, $5
-	move	CONT, $6
+	move	CFP, $6
 	sll	NARGS, $7, 2
-	lw	A0, 0(CONT)
-	lw	A1, 4(CONT)
-	lw	A2, 8(CONT)
-	lw	A3, 12(CONT)
-	lw	A4, 16(CONT)
-	lw	A5, 20(CONT)
+	lw	A0, 0(CFP)
+	lw	A1, 4(CFP)
+	lw	A2, 8(CFP)
+	lw	A3, 12(CFP)
+	lw	A4, 16(CFP)
+	lw	A5, 20(CFP)
 
 	/* Calculate LRA */
 	la	LRA, lra + type_OtherPointer
@@ -117,10 +121,8 @@ call_into_lisp:
 	lw	CODE, 4-1(LEXENV)
 
 	/* Jump into lisp land. */
-        .set    noat
 	addu	LIP, CODE, 6*4 - type_FunctionPointer
 	j	LIP
-        .set    at
 
 	.set	noreorder
 
@@ -129,7 +131,7 @@ lra:
 	.word	type_ReturnPcHeader
 
 	/* Multiple value return spot, clear stack */
-	move	CSP, OLDCONT
+	move	CSP, OCFP
 	nop
 
 	/* Pass one return value back to C land. */
@@ -142,7 +144,7 @@ lra:
 	sw	ALLOC, current_dynamic_space_free_pointer
 	sw	BSP, current_binding_stack_pointer
 	sw	CSP, current_control_stack_pointer
-	sw	CONT, current_control_frame_pointer
+	sw	CFP, current_control_frame_pointer
 	sw	FLAGS, current_flags_register
 
 	/* Back in foreign function call */
@@ -190,12 +192,12 @@ lra:
 	.ent	call_into_c
 call_into_c:
 	/* Set up a stack frame. */
-	move	OLDCONT, CONT
-	move	CONT, CSP
-	addu	CSP, CONT, 32
-	sw	OLDCONT, 0(CONT)
-	sw	LRA, 4(CONT)
-	sw	CODE, 8(CONT)
+	move	OCFP, CFP
+	move	CFP, CSP
+	addu	CSP, CFP, 32
+	sw	OCFP, 0(CFP)
+	sw	LRA, 4(CFP)
+	sw	CODE, 8(CFP)
 
 	/* Note: the C stack is already set up. */
 
@@ -207,7 +209,7 @@ call_into_c:
 	sw	ALLOC, current_dynamic_space_free_pointer
 	sw	BSP, current_binding_stack_pointer
 	sw	CSP, current_control_stack_pointer
-	sw	CONT, current_control_frame_pointer
+	sw	CFP, current_control_frame_pointer
 	sw	FLAGS, current_flags_register
 
 	/* Mark us as in C land. */
@@ -219,8 +221,8 @@ call_into_c:
 
 	/* Were we interrupted? */
 	and	FLAGS, (0xffff^(1<<flag_Atomic))
-	and	v1, FLAGS, (1<<flag_Interrupted)
-	beq	v1, zero, 1f
+	and	t0, FLAGS, (1<<flag_Interrupted)
+	beq	t0, zero, 1f
 	nop
 
 	/* We were interrupted. Hit the trap. */
@@ -269,17 +271,17 @@ call_into_c:
 	.set	reorder
 
 	/* Restore LRA & CODE (they may have been GC'ed) */
-	lw	CODE, 8(CONT)
-	lw	LRA, 4(CONT)
+	lw	CODE, 8(CFP)
+	lw	LRA, 4(CFP)
 
 	/* Reset the lisp stack. */
-	/* Note: OLDCONT and CONT are in saved regs. */
-	move	CSP, CONT
-	move	CONT, OLDCONT
+	/* Note: OCFP and CFP are in saved regs. */
+	move	CSP, CFP
+	move	CFP, OCFP
 
 	/* Return to LISP. */
-	addu	a0, LRA, 4-type_OtherPointer
-	j	a0
+	addu	LIP, LRA, 4-type_OtherPointer
+	j	LIP
 
 	.end	call_into_c
 
@@ -309,8 +311,6 @@ undefined_tramp:
 closure_tramp:
         lw      LEXENV, SYMBOL_FUNCTION_OFFSET(CNAME)
         lw      L0, CLOSURE_FUNCTION_OFFSET(LEXENV)
-        .set    noat
         add     LIP, L0, FUNCTION_HEADER_CODE_OFFSET
         j       LIP
-        .set     at
         .end    closure_tramp
