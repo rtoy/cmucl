@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.31 1992/04/02 02:01:40 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.32 1992/04/02 02:48:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -487,8 +487,14 @@
    for the new values, the setting function, and the accessing function."
   (let (temp)
     (cond ((symbolp form)
-	   (let ((new-var (gensym)))
-	     (values nil nil (list new-var) `(setq ,form ,new-var) form)))
+	   (multiple-value-bind
+	       (expansion expanded)
+	       (macroexpand-1 form environment)
+	     (if expanded
+		 (get-setf-method-multiple-value expansion)
+		 (let ((new-var (gensym)))
+		   (values nil nil (list new-var)
+			   `(setq ,form ,new-var) form)))))
 	  ;;
 	  ;; Local functions inhibit global setf methods...
 	  ((and environment
