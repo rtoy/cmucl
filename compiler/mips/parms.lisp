@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.86 1990/12/07 18:03:58 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.87 1991/01/09 02:07:15 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -38,7 +38,7 @@
 (setf (backend-fasl-file-type *target-backend*) "pmaxf")
 (setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) 1)
+(setf (backend-fasl-file-version *target-backend*) 2)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
