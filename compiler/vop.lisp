@@ -954,10 +954,9 @@
   ;;
   ;; True if this SC or one of its alternates in in the NUMBER-STACK SB.
   (number-stack-p nil :type boolean)
-
   ;;
   ;; Alignment restriction.  The offset must be an even multiple of this.
-  (alignment 1 :type (integer 1)))
+  (alignment 1 :type (and index (integer 1))))
 
 (defprinter sc
   name)
