@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.27 2001/04/10 22:37:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.28 2001/11/29 03:50:35 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -363,7 +363,6 @@
 	 (unsupplied (list 1))
 	 (supplied-meta   (getf initargs :metaclass unsupplied))
 	 (supplied-supers (getf initargs :direct-superclasses unsupplied))
-	 (supplied-slots  (getf initargs :direct-slots unsupplied))
 	 (meta
 	   (cond ((neq supplied-meta unsupplied)
 		  (find-class supplied-meta))
@@ -383,14 +382,13 @@
 					     :name s)))))))      
       (loop (unless (remf initargs :metaclass) (return)))
       (loop (unless (remf initargs :direct-superclasses) (return)))
-      (loop (unless (remf initargs :direct-slots) (return)))
       (values meta
-	      (list* :direct-superclasses
-		     (and (neq supplied-supers unsupplied)
-			  (mapcar #'fix-super supplied-supers))
-		     :direct-slots
-		     (and (neq supplied-slots unsupplied) supplied-slots)
-		     initargs)))))
+	      (nconc
+	       (when (neq supplied-supers unsupplied)
+		 (list 
+		  :direct-superclasses
+		  (mapcar #'fix-super supplied-supers)))
+	       initargs)))))
 
 
 ;;;
@@ -413,7 +411,8 @@
 		 (direct-default-initargs nil direct-default-initargs-p)
 	         (predicate-name nil predicate-name-p))
   (declare (ignore slot-names))
-  (cond (direct-superclasses-p
+  (cond ((or direct-superclasses-p
+	     (null (slot-value class 'direct-superclasses)))
 	 (setq direct-superclasses
 	       (or direct-superclasses
 		   (list (if (funcallable-standard-class-p class)
