@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.30 1992/07/28 20:37:37 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.31 1992/08/03 15:12:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -248,7 +248,7 @@
   (:note "unsigned word to integer coercion")
   (:generator 20
     (move x arg)
-    (inst sra temp x 29)
+    (inst srl temp x 29)
     (inst beq temp done)
     (inst sll y x 2)
       
