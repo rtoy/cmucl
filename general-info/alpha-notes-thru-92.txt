@@ -1,4 +1,41 @@
-2/25/92 to 9/29/92
+10/9/92 to 10/21/92:
+
+Compiler:
+
+Changed %MORE-ARG-CONTEXT to be a :translate instead of a def-source-
+transform to get rid of one more use of %primitive.
+
+Changed MOVE-FROM-mumble-FLOAT to do the st[d]f after the pseudo-atomic so
+that if we take a trap, we won't try to handle it while pseudo-atomic is
+active.  [Sparc only]
+
+Removed definitions for primitive types random and interior because they
+arn't needed anymore.
+
+Couple patches from Miles to make the disassembler work better when
+disassembling into a trace file during a compile-file.
+
+
+C Runtime Support:
+
+When we get a trap_PendingInterrupt, skip over the breakpoint instruction.
+Otherwise, we will try to handle the signal again and again.
+
+When done fixing up after a pseudo-atomic-interrupted, skip past the
+tagged-add instruction.  Otherwise, we turn pseudo-atomic off twice, which
+results in it being left on, which confuses the garbage collector.  [Sparc
+only.]
+
+
+9/29/92 to 10/9/92
+
+Added arch specific routine SANCTIFY-FOR-EXECUTION that is suppowed to do
+whatever cache magic is necessary to make it so we can execute newly
+created code objects, and changed load and in-core compile to call it.
+[This is needed for the HP port.]
+
+
+9/25/92 to 9/29/92
 
 Compiler fix to inline expansion of functions in non-null environments.
 Recompiled CLX with this fix so that it works again.
