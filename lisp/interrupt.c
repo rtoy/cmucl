@@ -1,6 +1,6 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.40 2004/07/13 00:26:22 pmai Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.41 2004/08/02 16:19:47 cwang Exp $ */
 
-/* Interrupt handing magic. */
+/* Interrupt handling magic. */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -565,22 +565,15 @@ interrupt_install_low_level_handler (int signal, void handler (HANDLER_ARGS))
   /* But we only need this on x86 since the Lisp control stack and the
      C control stack are the same.  For others, they're separate so
      the C stack can still be used.  */
-#if defined(RED_ZONE_HIT) && (defined( i386 ) || defined(__x86_64))
+#ifdef RED_ZONE_HIT
   if (signal == PROTECTION_VIOLATION_SIGNAL)
     {
       stack_t sigstack;
+#if (defined( i386 ) || defined(__x86_64))
       sigstack.ss_sp = (void *) SIGNAL_STACK_START;
-      sigstack.ss_flags = 0;
-      sigstack.ss_size = SIGNAL_STACK_SIZE;
-      if (sigaltstack (&sigstack, 0) == -1)
-	perror ("sigaltstack");
-      sa.sa_flags |= SA_ONSTACK;
-    }
 #else
-  if (signal == PROTECTION_VIOLATION_SIGNAL)
-    {
-      stack_t sigstack;
       sigstack.ss_sp = (void *) altstack;
+#endif
       sigstack.ss_flags = 0;
       sigstack.ss_size = SIGNAL_STACK_SIZE;
       if (sigaltstack (&sigstack, 0) == -1)
