@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.16 1990/11/28 17:11:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.17 1990/12/11 18:08:55 ram Exp $
 ;;;
 ;;; Initialization stuff for CMU Common Lisp, plus some other random functions
 ;;; that we don't have any better place for.
@@ -525,6 +525,8 @@
   (print-and-call package-init)
   (print-and-call kernel::signal-init)
   (setf (alien-access (alien-value internal_errors_enabled)) t)
+  (set-floating-point-modes :traps '(:overflow :underflow :invalid
+					       :divide-by-zero))
 
   (%primitive print "Done initializing.")
 
