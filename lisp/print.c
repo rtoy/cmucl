@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.1 1992/07/28 20:15:17 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.1.1.1 1993/02/23 12:01:22 ram Exp $ */
 #include <stdio.h>
 
 #include "print.h"
@@ -24,7 +24,7 @@ char *lowtag_Names[] = {
     "other immediate [0]",
     "list pointer",
     "odd fixnum",
-    "structure pointer",
+    "instance pointer",
     "other immediate [1]",
     "other pointer"
 };
@@ -67,7 +67,7 @@ char *subtype_Names[] = {
     "SAP",
     "unbound marker",
     "weak pointer",
-    "structure header",
+    "instance header",
     "fdefn"
 };
 
@@ -262,21 +262,19 @@ static void print_list(lispobj obj)
 
 static void brief_struct(lispobj obj)
 {
-    printf("#<ptr to ");
-    print_obj(NULL, ((struct structure *)PTR(obj))->slots[0]);
-    printf(" structure>");
+    printf("#<ptr to 0x%08x instance>",
+           ((struct instance *)PTR(obj))->slots[0]);
 }
 
 static void print_struct(lispobj obj)
 {
-    struct structure *structure = (struct structure *)PTR(obj);
+    struct instance *instance = (struct instance *)PTR(obj);
     int i;
     char buffer[16];
-
-    print_obj("type: ", structure->slots[0]);
-    for (i = 1; i < HeaderValue(structure->header); i++) {
+    print_obj("type: ", ((struct instance *)PTR(obj))->slots[0]);
+    for (i = 1; i < HeaderValue(instance->header); i++) {
 	sprintf(buffer, "slot %d: ", i);
-	print_obj(buffer, structure->slots[i]);
+	print_obj(buffer, instance->slots[i]);
     }
 }
 
@@ -415,7 +413,7 @@ static void print_otherptr(lispobj obj)
                 break;
 
             case type_SimpleVector:
-            case type_StructureHeader:
+            case type_InstanceHeader:
                 NEWLINE;
                 printf("length = %d", length);
                 ptr++;
@@ -505,7 +503,7 @@ static void print_obj(char *prefix, lispobj obj)
     if (var != NULL && var_clock(var) == cur_clock)
         dont_decend = TRUE;
 
-    if (var == NULL && (obj & type_FunctionPointer & type_ListPointer & type_StructurePointer & type_OtherPointer) != 0)
+    if (var == NULL && (obj & type_FunctionPointer & type_ListPointer & type_InstancePointer & type_OtherPointer) != 0)
         var = define_var(NULL, obj, FALSE);
 
     if (var != NULL)
