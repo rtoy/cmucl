@@ -61,6 +61,8 @@ New in this release:
      - (SETF EXT:WEAK-POINTER-VALUE) has been added.
      - CMUCL no longer entering an infinite loop when dumping
        circular constant lists to fasl files.
+     - COMPILE-FILE-PATHNAME's BYTE-COMPILE keyword arg defaulting
+       to *BYTE-COMPILE-DEFAULT* like COMPILE-FILE.
 
   * Numerous ANSI compliance fixes:
      - Many bugs in CMUCL's type system detected by Paul Dietz'
