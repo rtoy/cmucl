@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.22 1993/04/04 14:11:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.23 1993/05/13 16:49:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -534,16 +534,16 @@
 		      collection))
 	  (string
 	   :translation string  :codes (#.vm:complex-string-type)
-	   :inherits (generic-vector array generic-array
+	   :inherits (vector generic-vector array generic-array
 		      mutable-explicit-key-collection explicit-key-collection
-		      sequence mutable-sequence mutable-collection
-		      generic-sequence collection))
+		      sequence generic-string mutable-sequence
+		      mutable-collection generic-sequence collection))
 	  (simple-string
 	   :translation simple-string  :codes (#.vm:simple-string-type)
-	   :inherits (string generic-vector array generic-array
+	   :inherits (string vector generic-vector array generic-array
 		      mutable-explicit-key-collection explicit-key-collection
-		      sequence mutable-sequence mutable-collection
-		      generic-sequence collection))
+		      sequence generic-string mutable-sequence
+		      mutable-collection generic-sequence collection))
 
 	  (generic-number :state :read-only)
 	  (number :translation number)
@@ -609,14 +609,17 @@
 	(setf (info type class name) class)
 	(unless trans-p
 	  (setf (info type builtin name) class))
-	(register-layout
-	 (find-layout name 0
-		      (map 'vector
-			   #'(lambda (x)
-			       (class-layout (find-class x)))
-			   inherits)
-		      (if hierarchical (length inherits) -1))
-	 :invalidate nil)))))
+	(let* ((inheritance-depth (if hierarchical (length inherits) -1))
+	       (inherit-layouts
+		(map 'vector
+		     #'(lambda (x)
+			 (let ((super-layout (class-layout (find-class x))))
+			   (when (= (layout-inheritance-depth super-layout) -1)
+			     (setf inheritance-depth -1))))
+		     inherits)))
+	  (register-layout
+	   (find-layout name 0 inherit-layouts inheritance-depth)
+	   :invalidate nil))))))
 
 
 ;;; Now that we have set up the class heterarchy, seal the sealed classes.
