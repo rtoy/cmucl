@@ -1,11 +1,10 @@
 ;;; -*- Package: Hemlock; Log: hemlock.log -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;; **********************************************************************
 ;;;
 ;;;    Written by Blaine Burks
@@ -39,57 +38,76 @@
 	     (lambda (nn s d)
 	       (declare (ignore nn d))
 	       (write-string "#<Netnews Info>" s))))
-  ;;
   (updatep (ext:required-argument) :type (or null t))
   (from-end-p nil :type (or null t))
+  ;;
   ;; The string name of the current bboard.
   (current (ext:required-argument) :type simple-string)
+  ;;
   ;; The number of the latest message read in the current group.
   (latest nil :type (or null fixnum))
+  ;;
   ;; The cache of header info for the current bboard.  Each element contains
   ;; an association list of header fields to contents of those fields.  Indexed
   ;; by id offset by the first message in the group.
-  ;; 
   (header-cache nil :type (or null vector))
+  ;;
   ;; The number of HEAD requests currently waiting on the header stream.
-  ;; 
   (batch-count nil :type (or null fixnum))
+  ;;
   ;; The list of newsgroups to read.
   (groups (ext:required-argument) :type cons)
+  ;;
   ;; A vector of message ids indexed by buffer-line for this headers buffer.
   (message-ids nil :type (or null vector))
+  ;;
   ;; Where to insert the next batch of headers.
   mark
+  ;;
   ;; The message buffer used to view article bodies.
   buffer
+  ;;
   ;; A list of message buffers that have been marked as undeletable by the user.
   (other-buffers nil :type (or null cons))
+  ;;
   ;; The window used to display buffer when \"Netnews Read Style\" is :multiple.
   message-window
-  ;; The window used to display headers when \"Netnews Read Style\" is :multiple.
+  ;;
+  ;; The window used to display headers when \"Netnews Read Style\" is
+  ;; :multiple.
   headers-window
+  ;;
   ;; How long the message-ids and header-cache arrays are.  Reuse this array,
   ;; but don't break if there are more messages than we can handle.
   (array-length default-netnews-headers-length :type fixnum)
+  ;;
   ;; The id of the first message in the current group.
   (first nil :type (or null fixnum))
+  ;;
   ;; The id of the last message in the current-group.
   (last nil :type (or null fixnum))
+  ;;
   ;; Article number of the first visible header.
   (first-visible nil :type (or null fixnum))
+  ;;
   ;; Article number of the last visible header.
   (last-visible nil :type (or null fixnum))
+  ;;
   ;; Number of the message that is currently displayed in buffer.  Initialize
   ;; to -1 so I don't have to constantly check for the nullness of it.
   (current-displayed-message -1 :type (or null fixnum))
+  ;;
   ;; T if the last batch of headers is waiting on the header stream.
   ;; This is needed so NN-WRITE-HEADERS-TO-MARK can set the messages-waiting
   ;; slot to nil.
   (last-batch-p nil :type (or null t))
+  ;;
   ;; T if there are more headers in the current group. Nil otherwise.
   (messages-waiting nil :type (or null t))
+  ;;
   ;; The stream on which we request headers from NNTP.
   header-stream
+  ;;
   ;; The stream on which we request everything but headers from NNTP.
   stream)
 
@@ -411,9 +429,9 @@
 		   (setf (nn-info-first nn-info) first)
 		   (setf (nn-info-last nn-info) last)
 		   (setf (nn-info-latest nn-info) latest))
+		 ;;
 		 ;; Request the batch before setting message-ids so they start
 		 ;; coming before we need them.
-		 ;;
 		 (nn-request-next-batch nn-info
 					(value netnews-fetch-all-headers))
 		 (let ((message-ids (nn-info-message-ids nn-info))
@@ -427,7 +445,7 @@
 				      (make-array length :fill-pointer 0
 						  :initial-element nil)))
 			     (message-ids
-			      (when (aref header-cache 0)
+			      (unless (zerop (length header-cache))
 				(fill header-cache nil))
 			      (setf (fill-pointer message-ids) 0)
 			      (setf (fill-pointer header-cache) 0)
@@ -1330,7 +1348,7 @@
    pointer."
   (nn-punt-headers (if p :none :latest)))
 
-(defcommand "Netnews Punt Headers" (p)
+(defcommand "Netnews Group Punt Messages" (p)
   "Go on to the next group in \"Netnews Groups\" setting the netnews pointer
    for this bboard to the last visible message.  With an argument, set the
    pointer to the last message in this group."
@@ -1678,7 +1696,7 @@
 
 ;;; NN-REPLY-USING-CURRENT-WINDOW makes sure there is only one window for a
 ;;; normal reply.  *netnews-post-frob-windows-hook* is bound to this when
-;;; "Netnews Reply To Message" is invoked."
+;;; "Netnews Reply to Group" is invoked."
 ;;;
 (defun nn-reply-using-current-window (post-info buffer)
   (declare (ignore post-info))
@@ -1711,7 +1729,7 @@
 	  (post-info-reply-window post-info) reply-window)))
 
 ;;; NN-REPLY-CLEANUP-SPLIT-WINDOWS just deletes one of the windows that
-;;; "Netnews Reply to Message in Other Window" created, if they still exist.
+;;; "Netnews Reply to Group in Other Window" created, if they still exist.
 ;;; 
 (defun nn-reply-cleanup-split-windows (post-buffer)
   (let* ((post-info (variable-value 'post-info :buffer post-buffer))
@@ -1720,7 +1738,7 @@
 	       (member reply-window *window-list*))
       (delete-window reply-window))))
 
-(defcommand "Netnews Reply to Message" (p)
+(defcommand "Netnews Reply to Group" (p)
   "Set up a POST buffer and insert the proper newgroups: and subject: fields.
    Should be invoked from a \"News-Message\" or \"News-Headers\" buffer.
    In a message buffer, reply to the message in that buffer, in a headers
@@ -1733,11 +1751,11 @@
   (let ((*netnews-post-frob-windows-hook* #'nn-reply-using-current-window))
     (nn-reply-to-message)))
 
-(defcommand "Netnews Reply to Message in Other Window" (p)
-  "Does exactly what \"Netnews Reply to Message\" does, but makes two windows.
+(defcommand "Netnews Reply to Group in Other Window" (p)
+  "Does exactly what \"Netnews Reply to Group\" does, but makes two windows.
    One of the windows displays the message being replied to, and the other
    displays the reply."
-  "Does exactly what \"Netnews Reply to Message\" does, but makes two windows.
+  "Does exactly what \"Netnews Reply to Group\" does, but makes two windows.
    One of the windows displays the message being replied to, and the other
    displays the reply."
   (declare (ignore p))
@@ -1780,7 +1798,7 @@
     (nn-reply-using-current-window nil draft-buffer)))
 
 
-(defcommand "Netnews Reply via Mail" (p)
+(defcommand "Netnews Reply to Sender" (p)
   "Reply to the sender of a message via mail using the Hemlock mailer."
   "Reply to the sender of a message via mail using the Hemlock mailer."
   (declare (ignore p))
@@ -2303,4 +2321,3 @@
 
 (defun nntp-post (stream)
   (write-nntp-command "post" stream :post))
-
