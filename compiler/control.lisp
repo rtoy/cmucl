@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.9 1991/11/11 22:07:32 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/control.lisp,v 1.10 1991/12/11 16:48:42 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -96,11 +96,11 @@
 ;;;    Do a graph walk linking blocks into the emit order as we go.  We call
 ;;; FIND-ROTATED-LOOP-HEAD to do while-loop optimization.
 ;;;
-;;;    We treat blocks ending in tail local calls specially.  We can't walked
-;;; the called function immediately, since it is in a different function and we
-;;; must keep the code for a function contiguous.  Instead, we return the
-;;; function that we want to call so that it can be walked as soon as possible,
-;;; which is hopefully immediately.
+;;;    We treat blocks ending in tail local calls to other environments
+;;; specially.  We can't walked the called function immediately, since it is in
+;;; a different function and we must keep the code for a function contiguous.
+;;; Instead, we return the function that we want to call so that it can be
+;;; walked as soon as possible, which is hopefully immediately.
 ;;;
 ;;;    If any of the recursive calls ends in a tail local call, then we return
 ;;; the last such function, since it is the only one we can possibly drop
@@ -123,7 +123,9 @@
       
       (let ((last (block-last block)))
 	(cond ((and (combination-p last) (node-tail-p last)
-		    (eq (basic-combination-kind last) :local))
+		    (eq (basic-combination-kind last) :local)
+		    (not (eq (node-environment last)
+			     (lambda-environment (combination-lambda last)))))
 	       (combination-lambda last))
 	      (t
 	       (let ((component-tail (component-tail (block-component block)))
@@ -143,9 +145,8 @@
 ;;;    Analyze all of the NLX EPs first to ensure that code reachable only from
 ;;; a NLX is emitted contiguously with the code reachable from the Bind.  Code
 ;;; reachable from the Bind is inserted *before* the NLX code so that the Bind
-;;; marks the beginning of the code for the function.  The walk from a NLX EP
-;;; will never reach the bind block, so we will always get to insert it at the
-;;; beginning.
+;;; marks the beginning of the code for the function.  If the walks from NLX
+;;; EPs reach the bind block, then we just move it to the beginning.
 ;;;
 ;;;    If the walk from the bind node encountered a tail local call, then we
 ;;; start over again there to help the call drop through.  Of course, it will
@@ -159,11 +160,19 @@
     (unless (block-flag bind-block)
       (dolist (nlx (environment-nlx-info (lambda-environment fun)))
 	(control-analyze-block (nlx-info-target nlx) tail-block))
-      (assert (not (block-flag bind-block)))
-      (let ((new-fun (control-analyze-block bind-block
-					    (ir2-block-next prev-block))))
-	(when new-fun
-	  (control-analyze-1-fun new-fun component)))))
+      (cond
+       ((block-flag bind-block)
+	(let* ((2block (block-info bind-block))
+	       (prev (ir2-block-prev 2block))
+	       (next (ir2-block-next 2block)))
+	  (setf (ir2-block-prev next) prev)
+	  (setf (ir2-block-next prev) next)
+	  (add-to-emit-order 2block prev-block)))
+       (t
+	(let ((new-fun (control-analyze-block bind-block
+					      (ir2-block-next prev-block))))
+	  (when new-fun
+	    (control-analyze-1-fun new-fun component)))))))
   (undefined-value))
 
   
@@ -173,10 +182,10 @@
 ;;; cleverness here is that we walk XEP's first to increase the probability
 ;;; that the tail call will be a drop-through.
 ;;;
-;;;    When we are done, we delete all blocks that weren't reached during our
-;;; walk.  This allows IR2 phases to assume that all IR1 blocks in the DFO have
-;;; valid IR2 blocks in their Info.  We remove all deleted blocks from the
-;;; IR2-COMPONENT VALUES-RECEIVERS so that stack analysis won't get confused.
+;;;    When we are done, we delete blocks that weren't reached by the walk.
+;;; Some return blocks are made unreachable by LTN without setting
+;;; COMPONENT-REANALYZE.  We remove all deleted blocks from the IR2-COMPONENT
+;;; VALUES-RECEIVERS to keep stack analysis from getting confused.
 ;;;
 (defun control-analyze (component)
   (let* ((head (component-head component))
