@@ -23,7 +23,7 @@
 ;;;    This is here until we figure out what to do with it.
 ;;;
 (proclaim '(inline undefined-value))
-(eval-when (compile load eval)
+(eval-when (#-new-compiler compile load eval)
 (defun undefined-value ()
   '%undefined%)
 );
