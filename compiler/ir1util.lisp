@@ -640,7 +640,7 @@ inlines
 	       (return (lambda-return leaf)))
 	  (unless (leaf-ever-used leaf)
 	    (let ((*compiler-error-context* bind))
-	      (compiler-note "Deleting unused function~[.~;~:*~%  ~S~]"
+	      (compiler-note "Deleting unused function~:[.~;~:*~%  ~S~]"
 			     (leaf-name leaf))))
 	  (unlink-blocks (component-head component) bind-block)
 	  (when return
