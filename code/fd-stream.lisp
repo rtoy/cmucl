@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.81 2005/02/10 17:49:46 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.82 2005/02/21 17:14:28 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -637,13 +637,15 @@
 ;;;
 ;;;   Macro to wrap around all input routines to handle eof-error noise.
 ;;;
-(defmacro input-wrapper ((stream bytes eof-error eof-value) &body read-forms)
+(defmacro input-wrapper ((stream bytes eof-error eof-value &optional type) &body read-forms)
   (let ((stream-var (gensym))
 	(element-var (gensym)))
     `(let ((,stream-var ,stream))
        (if (fd-stream-unread ,stream-var)
 	   (prog1
-	       (fd-stream-unread ,stream-var)
+	       ,(if (eq type 'character) 
+		    `(fd-stream-unread ,stream-var)
+		    `(char-code (fd-stream-unread ,stream-var)))
 	     (setf (fd-stream-unread ,stream-var) nil)
 	     (setf (fd-stream-listen ,stream-var) nil))
 	   (let ((,element-var
@@ -665,7 +667,7 @@
 			     &rest body)
   `(progn
      (defun ,name (stream eof-error eof-value)
-       (input-wrapper (stream ,size eof-error eof-value)
+       (input-wrapper (stream ,size eof-error eof-value ,type)
 	 (let ((,sap (fd-stream-ibuf-sap stream))
 	       (,head (fd-stream-ibuf-head stream)))
 	   ,@body)))
@@ -871,8 +873,10 @@
 	(system-area-pointer
 	 (assert (= 1 (fd-stream-element-size stream)))
 	 (setf (sap-ref-8 buffer start) (char-code (read-char stream))))
+	(string 
+	 (setf (aref buffer start) (read-char stream)))
 	(vector
-	 (setf (aref buffer start) (read-char stream))))
+	 (setf (aref buffer start) (char-code(read-char stream)))))
       (return-from fd-stream-read-n-bytes
 	(1+ (fd-stream-read-n-bytes stream buffer (1+ start) (1- requested)
 				    eof-error-p))))
@@ -974,6 +978,12 @@
 ;;; output-p indicate what slots to fill. The buffering slot must be set prior
 ;;; to calling this routine.
 ;;;
+
+;;; Hack to enable fd-streams to be opened for both character and binary input.
+;;; Set this to T to enable.  When there is confidence that this doesn't break anything,
+;;; remove this global and the change the test in set-routines to just (eql size 1).
+(defvar *fd-stream-enable-character-and-binary-input* nil)
+
 (defun set-routines (stream type input-p output-p buffer-p)
   (let ((target-type (case type
 		       ((:default unsigned-byte)
@@ -1006,7 +1016,10 @@
 	(if (subtypep type 'character)
 	    (setf (fd-stream-in stream) routine
 		  (fd-stream-bin stream) #'ill-bin)
-	    (setf (fd-stream-in stream) #'ill-in
+	    (setf (fd-stream-in stream) (if (and *fd-stream-enable-character-and-binary-input*
+						 (eql size 1))
+					    (pick-input-routine 'character) 
+					    #'ill-in)
 		  (fd-stream-bin stream) routine))
 	(when (or (eql size 1)
 		  (eql size 2)

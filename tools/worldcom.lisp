@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.94 2004/10/14 13:53:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.95 2005/02/21 17:14:29 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -280,6 +280,8 @@
 (comf "target:code/run-program" :proceed t)
 
 (comf "target:code/loop" :byte-compile *byte-compile*)
+
+(comf "target:code/stream-vector-io.lisp")
 
 (comf "target:code/foreign")
 (comf "target:code/internet")
