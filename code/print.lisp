@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.41 1992/04/07 22:56:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.42 1992/04/21 04:24:01 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1746,9 +1746,13 @@
 
 (defun output-function (function stream)
   (print-unreadable-object (function stream :identity t)
-    (case (get-type function)
+    (case (function-subtype function)
       ((#.vm:function-header-type #.vm:closure-function-header-type)
        (output-function-object function stream))
+      (#.vm:byte-code-function-type
+       (write-string "Byte Compiled Function" stream))
+      (#.vm:byte-code-closure-type
+       (write-string "Byte Compiled Closure" stream))
       (#.vm:closure-header-type
        (cond
 	((eval:interpreted-function-p function)
@@ -1757,7 +1761,6 @@
 	 (write-string "Closure Over " stream)
 	 (output-function-object (%primitive c::closure-function function)
 				 stream)))))))
-    
 
 
 ;;;; Catch-all for unknown things.
