@@ -729,6 +729,26 @@
     (process-form form tlf-num object)))
 
 
+;;; PREPROCESSOR-MACROEXPAND  --  Internal
+;;;
+;;;    Macroexpand form in the current environment with an error handler.
+;;;
+(defun preprocessor-macroexpand (form)
+  (handler-case #+new-compiler (macroexpand form *fenv*)
+                #-new-compiler
+                (if (consp form)
+		    (let* ((name (car form))
+			   (exp (or (cddr (assoc name *fenv*))
+				    (info function macro-function name))))
+		      (if exp
+			  (funcall exp form *fenv*)
+			  form))
+		    form)
+    (error (condition)
+	   (compiler-error "(during macroexpansion)~%~A"
+			   condition))))
+
+
 (proclaim '(special *compiler-error-bailout*))
 
 ;;; PROCESS-FORM  --  Internal
@@ -750,11 +770,7 @@
 			 ',form)
 		 tlf-num object)
 		(throw 'process-form-error-abort nil)))
-	   (form
-	    (handler-case (macroexpand form *fenv*)
-	      (error (condition)
-		     (compiler-error "(during macroexpansion)~%~A"
-				     condition)))))
+	   (form (preprocessor-macroexpand form)))
       (if (atom form)
 	  (convert-and-maybe-compile form tlf-num object)
 	  (case (car form)
