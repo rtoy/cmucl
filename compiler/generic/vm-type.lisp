@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.17 1990/09/06 17:47:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.18 1990/09/28 06:44:23 ram Exp $
 ;;;
 ;;;    This file contains implementation-dependent parts of the type support
 ;;; code.  This is stuff which deals with the mapping from types defined in
@@ -59,11 +59,9 @@
 (deftype lexical-environment () 'c::lexenv)
 ;;;
 ;;; Worst case values for float attributes.
-;;; ### long-float exponent range seems to be this, but I don't know why.
-;;; Perhaps IEEE double uses some of the negative exponents for NAN, etc?
 ;;;
-(deftype float-exponent () '(integer -1021 1024))
-(deftype float-digits () '(unsigned-byte 6))
+(deftype float-exponent () 'double-float-exponent)
+(deftype float-digits () `(integer 0 ,double-float-digits))
 (deftype float-radix () '(integer 2 2))
 ;;;
 ;;; A code for Boole.
