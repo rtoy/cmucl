@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.20 1993/08/19 14:14:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.21 1993/08/19 14:17:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -606,8 +606,7 @@
 
 ;;; CACHE-HASH-EQ  -- Public
 ;;;
-(proclaim '(inline cache-hash-eq))
-(defun cache-hash-eq (x)
+(defmacro cache-hash-eq (x)
   "Return an EQ hash of X.  The value of this hash for any given object can (of
   course) change at arbitary times."
-  (lisp::pointer-hash x))
+  `(lisp::pointer-hash ,x))
