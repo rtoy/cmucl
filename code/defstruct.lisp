@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.16 1990/10/17 03:47:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.17 1990/11/18 17:00:48 wlott Exp $
 ;;;
 ;;; Defstruct structure definition package (Mark II).
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -414,7 +414,7 @@
 	      (let ((len (dd-length info)))
 		(declare (fixnum len))
 		(do ((i 1 (1+ i))
-		     (res (structurify (%primitive alloc-g-vector len nil))))
+		     (res (structurify (make-array len :element-type t))))
 		    ((= i len)
 		     (setf (structure-ref res 0) (dd-name info))
 		     res)
