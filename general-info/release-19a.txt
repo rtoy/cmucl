@@ -147,6 +147,10 @@ New in this release:
        NOT-AUTO-COMPILE have been moved from PCL to EXT.
      - Support for inlineing methods in effective methods; see the 
        CMU User Manual.
+     - Wrong results could be returned from generic functions when
+       all methods returned constant values, and some methods were
+       qualified, or the generic function didn't use the standard
+       method combination.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
