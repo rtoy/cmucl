@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.14 1998/06/19 14:26:13 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.15 1999/09/09 16:26:34 pw Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -17,8 +17,12 @@
 #define LANGUAGE_ASSEMBLY
 #include "internals.h"
 
+#if defined __FreeBSD__
+#include <osreldate.h>
+#endif
+
 /* Minimize conditionalization for different OS naming schemes */
-#if defined __linux__
+#if defined __linux__ || (__FreeBSD_version >= 300000)
 #define GNAME(var) var
 #else
 #define GNAME(var) _##var
