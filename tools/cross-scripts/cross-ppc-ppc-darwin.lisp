@@ -8,16 +8,20 @@
 (c::new-backend "PPC"
    ;; Features to add here
    '(:ppc
+     :new-assembler
      :conservative-float-type
-     :hash-new :random-mt19937
+     :hash-new
+     :random-mt19937
      :darwin :bsd
      :cmu :cmu19 :cmu19a
      :relative-package-names		; Relative package names from Allegro
+     :linkage-table
+     :modular-arith
      )
    ;; Features to remove from current *features* here
    '(:x86-bootstrap :alpha :osf1 :mips :x86 :i486 :pentium :ppro
      :propagate-fun-type :propagate-float-type :constrain-float-type
-     :openbsd :freebsd :glibc2 :linux :pentium :linkage-table :elf :mp
+     :openbsd :freebsd :glibc2 :linux :pentium :elf :mp
      :stack-checking :heap-overflow-check
      :gencgc :cgc :long-float :new-random :small))
 
