@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ring.lisp,v 1.1.1.3 1993/08/25 02:10:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/ring.lisp,v 1.1.1.4 1993/08/25 02:23:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;;  This file defines a ring-buffer type and access functions.
 ;;;
-(in-package "HEMLOCK"-internals)
+(in-package "HEMLOCK-INTERNALS")
 (export '(ring ringp make-ring ring-push ring-pop ring-length ring-ref
 	       rotate-ring))
 

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.1.1.4 1993/08/25 02:07:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/bit-stream.lisp,v 1.1.1.5 1993/08/25 02:23:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by Rob MacLachlan.
 ;;; Modified by Bill Chiles to run under X on the IBM RT.
 ;;;
-(in-package "HEMLOCK"-internals)
+(in-package "HEMLOCK-INTERNALS")
 
 
 ;;; These streams have an associated bitmap-hunk that is used for its
