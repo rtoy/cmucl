@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/vm.lisp,v 1.1 2004/05/24 22:35:01 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/vm.lisp,v 1.2 2004/07/06 20:23:30 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 ;;; 
 (eval-when (compile load eval)
   (defvar *byte-register-names* (make-array 8 :initial-element nil)))
-;;;
+;;; what about the other 8-bit registers?
 (defreg al 0 :byte)
 (defreg ah 1 :byte)
 (defreg cl 2 :byte)
@@ -64,7 +64,7 @@
 ;;; Word registers.
 ;;;
 (eval-when (compile load eval)
-  (defvar *word-register-names* (make-array 16 :initial-element nil)))
+  (defvar *word-register-names* (make-array 32 :initial-element nil)))
 ;;;
 (defreg ax 0 :word)
 (defreg cx 2 :word)
@@ -74,13 +74,21 @@
 (defreg bp 10 :word)
 (defreg si 12 :word)
 (defreg di 14 :word)
+(defreg r8w 16 :word)
+(defreg r9w 18 :word)
+(defreg r10w 20 :word)
+(defreg r11w 22 :word)
+(defreg r12w 24 :word)
+(defreg r13w 26 :word)
+(defreg r14w 28 :word)
+(defreg r15w 30 :word)
 ;;;
-(defregset word-regs ax cx dx bx si di)
+(defregset word-regs ax cx dx bx si di r8w r9w r10w r11w r12w r13w r14w r15w)
 
 ;;; Double Word registers.
 ;;;
 (eval-when (compile load eval)
-  (defvar *dword-register-names* (make-array 16 :initial-element nil)))
+  (defvar *dword-register-names* (make-array 32 :initial-element nil)))
 ;;;
 (defreg eax 0 :dword)
 (defreg ecx 2 :dword)
@@ -90,13 +98,22 @@
 (defreg ebp 10 :dword)
 (defreg esi 12 :dword)
 (defreg edi 14 :dword)
+(defreg r8d 16 :dword)
+(defreg r9d 18 :dword)
+(defreg r10d 20 :dword)
+(defreg r11d 22 :dword)
+(defreg r12d 24 :dword)
+(defreg r13d 26 :dword)
+(defreg r14d 28 :dword)
+(defreg r15d 30 :dword)
 ;;;
-(defregset dword-regs eax ecx edx ebx esi edi)
+(defregset dword-regs eax ecx edx ebx esi edi r8d r9d r10d r11d r12d r13d r14d
+	   r15d)
 
 ;;; Quad Word registers.
 ;;;
 (eval-when (compile load eval)
-  (defvar *qword-register-names* (make-array 16 :initial-element nil)))
+  (defvar *qword-register-names* (make-array 32 :initial-element nil)))
 ;;;
 (defreg rax 0 :qword)
 (defreg rcx 2 :qword)
@@ -106,8 +123,16 @@
 (defreg rbp 10 :qword)
 (defreg rsi 12 :qword)
 (defreg rdi 14 :qword)
+(defreg r8 16 :qword)
+(defreg r9 18 :qword)
+(defreg r10 20 :qword)
+(defreg r11 22 :qword)
+(defreg r12 24 :qword)
+(defreg r13 26 :qword)
+(defreg r14 28 :qword)
+(defreg r15 30 :qword)
 ;;;
-(defregset qword-regs rax rcx rdx rbx rsi rdi)
+(defregset qword-regs rax rcx rdx rbx rsi rdi r8 r9 r10 r11 r12 r13 r14 r15)
 
 ;;; added by jrd
 (eval-when (compile load eval)
@@ -132,7 +157,7 @@
 ;;; don't need to tell the difference between words, dwords, and qwords, because
 ;;; you can't put two words in a dword.
 
-(define-storage-base registers :finite :size 16)
+(define-storage-base registers :finite :size 32)
 
 ;;;
 ;;; jrd changed this from size 1 to size 8.  it doesn't seem to make much
@@ -214,7 +239,6 @@
   (any-reg registers
 	   :locations #.qword-regs
 	   :element-size 2
-;	   :reserve-locations (#.rax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (control-stack))
@@ -223,7 +247,6 @@
   (descriptor-reg registers
 		  :locations #.qword-regs
 		  :element-size 2
-;		  :reserve-locations (#.rax-offset)
 		  :constant-scs (constant immediate)
 		  :save-p t
 		  :alternate-scs (control-stack))
@@ -240,7 +263,6 @@
   (sap-reg registers
 	   :locations #.qword-regs
 	   :element-size 2
-;	   :reserve-locations (#.rax-offset)
 	   :constant-scs (immediate)
 	   :save-p t
 	   :alternate-scs (sap-stack))
@@ -249,14 +271,12 @@
   (signed-reg registers
 	      :locations #.qword-regs
 	      :element-size 2
-;	      :reserve-locations (#.rax-offset)
 	      :constant-scs (immediate)
 	      :save-p t
 	      :alternate-scs (signed-stack))
   (unsigned-reg registers
 		:locations #.qword-regs
 		:element-size 2
-;		:reserve-locations (#.rax-offset)
 		:constant-scs (immediate)
 		:save-p t
 		:alternate-scs (unsigned-stack))
@@ -269,11 +289,9 @@
   (word-reg registers
 	    :locations #.word-regs
 	    :element-size 2
-;	    :reserve-locations (#.ax-offset)
 	    )
   (byte-reg registers
 	    :locations #.byte-regs
-;	    :reserve-locations (#.al-offset #.ah-offset)
 	    )
 
   ;; **** Things that can go in the floating point registers.
@@ -361,9 +379,12 @@
 				    :offset ,reg-offset-name)))))
       `(progn ,@(forms)))))
 
-(def-random-reg-tns unsigned-reg rax rbx rcx rdx rbp rsp rdi rsi)
-(def-random-reg-tns dword-reg eax ebx ecx edx ebp esp edi esi)
-(def-random-reg-tns word-reg ax bx cx dx bp sp di si)
+(def-random-reg-tns unsigned-reg rax rbx rcx rdx rbp rsp rdi rsi r8 r9 r10 r11
+		    r12 r13 r14 r15)
+(def-random-reg-tns dword-reg eax ebx ecx edx ebp esp edi esi r8d r9d r10d r11d
+		    r12d r13d r14d r15d)
+(def-random-reg-tns word-reg ax bx cx dx bp sp di si r8w r9w r10w r11w r12w r13w
+		    r14w r15w)
 (def-random-reg-tns byte-reg al ah bl bh cl ch dl dh)
 
 ;; added by jrd
@@ -498,4 +519,12 @@
     (#.rcx-offset ecx-tn)
     (#.rdx-offset edx-tn)
     (#.rsi-offset esi-tn)
-    (#.rdi-offset edi-tn)))
+    (#.rdi-offset edi-tn)
+    (#.r8-offset r8d-tn)
+    (#.r9-offset r9d-tn)
+    (#.r10-offset r10d-tn)
+    (#.r11-offset r11d-tn)
+    (#.r12-offset r12d-tn)
+    (#.r13-offset r13d-tn)
+    (#.r14-offset r14d-tn)
+    (#.r15-offset r15d-tn)))
