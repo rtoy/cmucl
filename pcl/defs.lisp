@@ -191,7 +191,8 @@
   ;; exists so as to avoid undefined-function compiler warnings. The
   ;; skeleton class will be replaced at load-time with the correct object.
   ;; Earlier revisions (<= 1.17) of this function were essentially NOOPs.
-
+  (declare (ignorable name))
+  #+nil ;; This is causing problems with native compile of defcombin.lisp
   (when (and (eq *boot-state* 'complete)
 	     (null (lisp:find-class name nil)))
     (setf (lisp:find-class name)
