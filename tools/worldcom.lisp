@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.73 1997/09/24 06:19:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.74 1997/11/04 14:47:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -125,7 +125,9 @@
 (comf "target:code/bit-bash")
 (comf "target:code/byte-interp")
 (comf "target:code/array")
-(comf "target:code/hash")
+(if (c:backend-featurep :hash-new)
+    (comf "target:code/hash-new")
+    (comf "target:code/hash"))
 
 (with-compilation-unit
   (:optimize '(optimize (safety 1)))
