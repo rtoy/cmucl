@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.15 1993/05/11 13:49:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.16 1993/05/12 11:10:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,7 +157,7 @@
 ;;; Convert VECTOR into a make-array followed by setfs of all the elements.
 ;;;
 (def-source-transform vector (&rest elements)
-  (if *byte-compiling*
+  (if (byte-compiling)
       (values nil t)
       (let ((len (length elements))
 	    (n -1))
@@ -177,7 +177,7 @@
 ;;; Just convert it into a make-array.
 ;;;
 (def-source-transform make-string (length &key (initial-element #\NULL))
-  (if *byte-compiling*
+  (if (byte-compiling)
       (values nil t)
       `(make-array (the index ,length)
 		   :element-type 'base-char
@@ -504,11 +504,11 @@
 (macrolet ((frob (reffer setter type)
 	     `(progn
 		(def-source-transform ,reffer (a &rest i)
-		  (if *byte-compiling*
+		  (if (byte-compiling)
 		      (values nil t)
 		      `(aref (the ,',type ,a) ,@i)))
 		(def-source-transform ,setter (a &rest i)
-		  (if *byte-compiling*
+		  (if (byte-compiling)
 		      (values nil t)
 		      `(%aset (the ,',type ,a) ,@i))))))
   (frob svref %svset simple-vector)
