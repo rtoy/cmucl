@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.8 1997/06/03 19:11:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rand.lisp,v 1.9 1997/06/05 00:20:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -497,8 +497,8 @@
   (declare (type (integer 1) arg)
 	   (type random-state state))
   (flet ((random-chunk (state)
-	   (truncate (* (float (1+ random-chunk-max) 1d0)
-			(new-random-float state)))))
+	   (values (truncate (* (float (1+ random-chunk-max) 1d0)
+				(new-random-float state))))))
     (let ((shift random-chunk-size))
       (do ((bits (random-chunk state)
 		 (logxor (ash bits shift) (random-chunk state)))
