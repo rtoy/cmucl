@@ -405,8 +405,8 @@
 ; the following two functions encode indices so that gelm can
 ; decode them as fast as possible
 
-(defun encode-pair (a b) (+ (* 10000. (1- a)) (1- b))) 
-;"plus" changed to "+" by gdw
+(defun encode-pair (a b)
+  (logior (ash (1- a) encode-pair-shift) (1- b))) 
 
 (defun encode-singleton (a) (1- a)) 
 
