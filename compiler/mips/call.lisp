@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.39 1991/05/16 16:06:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.40 1991/11/08 15:14:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.39 1991/05/16 16:06:25 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.40 1991/11/08 15:14:11 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -659,7 +659,7 @@ default-value-8
 	  '((old-fp :target old-fp-pass)
 	    (return-pc :target return-pc-pass)))
       
-      ,@(unless variable '((args :more t))))
+      ,@(unless variable '((args :more t :scs (descriptor-reg)))))
 
      ,@(when (eq return :fixed)
 	 '((:results (values :more t))))
