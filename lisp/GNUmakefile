@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.6 1993/08/04 11:27:10 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/GNUmakefile,v 1.7 1993/11/12 19:22:03 wlott Exp $
 
 all: lisp.nm
 
@@ -9,7 +9,8 @@ include Config
 SRCS = lisp.c coreparse.c alloc.c monitor.c print.c interr.c \
 	vars.c parse.c interrupt.c search.c validate.c gc.c globals.c \
 	dynbind.c breakpoint.c regnames.c backtrace.c save.c purify.c \
-	socket.c runprog.c undefineds.c ${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
+	socket.c runprog.c time.c undefineds.c \
+	${ARCH_SRC} ${ASSEM_SRC} ${OS_SRC}
 
 OBJS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SRCS)))
 
