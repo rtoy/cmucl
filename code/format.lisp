@@ -945,13 +945,12 @@
     (let ((char (pop-format-arg)))
       (unless (characterp char)
 	(format-error "Argument must be a character"))
-      (cond ((not colon)
-	     (cond (atsign
-		    (prin1 char))
-		   (t
-		    (format-print-named-character char nil))))
+      (cond (colon
+	     (format-print-named-character char))
+	    (atsign
+	     (prin1 char))
 	    (t
-	     (format-print-named-character char t))))))
+	     (write-char char))))))
 
 (defun format-print-named-character (char)
   (let* ((name (char-name char)))
