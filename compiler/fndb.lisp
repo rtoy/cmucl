@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.14 1990/10/17 04:04:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.15 1991/01/02 19:14:51 ram Exp $
 ;;;
 ;;;    This file defines all the standard functions to be known functions.
 ;;; Each function has type and side-effect information, and may also have IR1
@@ -114,7 +114,11 @@
 
 (defknown (mapc mapl) (callable list &rest list) list (foldable call))
 
-(defknown values (&rest t) * (movable foldable flushable unsafe))
+;;; We let values-list be foldable, since constant-folding will turn it into
+;;; VALUES.  VALUES is not foldable, since MV constants are represented by a
+;;; call to VALUES.
+;;; 
+(defknown values (&rest t) * (movable flushable unsafe))
 (defknown values-list (list) * (movable foldable flushable))
 
 
