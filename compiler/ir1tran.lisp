@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.151 2003/05/08 15:00:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.152 2003/05/08 20:49:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3013,26 +3013,17 @@
   Assert that Form evaluates to the specified type (which may be a VALUES
   type.)"
   (let ((ctype (values-specifier-type type)))
-    (cond ((values-type-p ctype)
-	   (flet ((or-null (type)
-		    (specifier-type `(or null ,(type-specifier type)))))
-	     (setq ctype
-		   (make-values-type
-		    :required (mapcar #'or-null (values-type-required ctype))
-		    :optional (values-type-optional ctype)
-		    :rest (let ((rest (values-type-rest ctype)))
-			    (cond ((null rest)
-				   *universal-type*)
-				  ((eq rest (specifier-type nil))
-				   nil)
-				  (t
-				   rest)))))))
-	  ((csubtypep (specifier-type 'null) ctype)
-	   (setq ctype (make-values-type :optional (list ctype)
-					 :rest *universal-type*)))
-	  (t
-	   (setq ctype (make-values-type :required (list ctype)
-					 :rest *universal-type*))))
+    (if (values-type-p ctype)
+	(let ((rest (values-type-rest ctype)))
+	  (when (or (null rest)
+		    (eq rest (specifier-type nil)))
+	    (setq ctype
+		  (make-values-type
+		   :required (copy-list (values-type-required ctype))
+		   :optional (values-type-optional ctype)
+		   :rest (if (null rest) *universal-type* nil)))))
+	(setq ctype (make-values-type :required (list ctype)
+				      :rest *universal-type*)))
     (let ((*lexical-environment*
 	   (do-the-stuff ctype cont *lexical-environment* 'the)))
       (ir1-convert start cont value))))
