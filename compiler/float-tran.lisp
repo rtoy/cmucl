@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.74 1998/09/20 15:13:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.75 1998/09/20 15:17:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -587,7 +587,7 @@
 ;;; Compute a specifier like '(or float (complex float)), except float
 ;;; should be the right kind of float.  Allow bounds for the float
 ;;; part too.
-(defun float-or-complex-type (arg &optional lo hi)
+(defun float-or-complex-float-type (arg &optional lo hi)
   (declare (type numeric-type arg))
   (let* ((format (case (numeric-type-class arg)
 		   ((integer rational) 'single-float)
@@ -612,13 +612,16 @@
 ;;; 
 ;;; Handle monotonic functions of a single variable whose domain is
 ;;; possibly part of the real line.  ARG is the variable, FCN is the
-;;; function, and CSPEC is a specifier that gives the (real) domain of
-;;; the function.  If ARG is not a subtype of CSPEC, then the function
-;;; is assumed to return either a float or a complex number.
+;;; function, and DOMAIN is a specifier that gives the (real) domain
+;;; of the function.  If ARG is a subset of the DOMAIN, we compute the
+;;; bounds directly.  Otherwise, we compute the bounds for the
+;;; intersection between ARG and DOMAIN, and then append a complex
+;;; result, which occurs for the parts of ARG not in the DOMAIN.
+;;;
 ;;; DEFAULT-LO and DEFAULT-HI are the lower and upper bounds if we
 ;;; can't compute the bounds using FCN.
 ;;;
-(defun elfun-derive-type-simple (arg fcn cspec default-lo default-hi
+(defun elfun-derive-type-simple (arg fcn domain default-lo default-hi
 				     &optional (increasingp t))
   (etypecase arg
     (numeric-type
@@ -627,36 +630,58 @@
 			       :format (numeric-type-format arg)
 			       :complexp :complex))
 	   ((numeric-type-real-p arg)
-	    (if (csubtypep arg cspec)
-		(let* ((low (numeric-type-low arg))
-		       (high (numeric-type-high arg))
-		       (res-lo (or (bound-func fcn (if increasingp low high))
-				   default-lo))
-		       (res-hi (or (bound-func fcn (if increasingp high low))
-				   default-hi))
-		       ;; Result specifier type.
-		       (format (case (numeric-type-class arg)
-				 ((integer rational) 'single-float)
-				 (t (numeric-type-format arg))))
-		       (bound-type (or format 'float)))
-		  (make-numeric-type
-		   :class 'float
-		   :format format
-		   :low (coerce-numeric-bound res-lo bound-type)
-		   :high (coerce-numeric-bound res-hi bound-type)))
-		(float-or-complex-type arg)))
+	    ;; The argument is real, so let's find the intersection
+	    ;; between the argument and the domain of the function.
+	    ;; We compute the bounds on the intersection, and for
+	    ;; everything else, we return a complex number of the
+	    ;; appropriate type.
+	    (multiple-value-bind (intersection difference)
+		(interval-intersection/difference
+		 (numeric-type->interval arg)
+		 (if (numeric-type-p domain)
+		     (numeric-type->interval domain)
+		     (make-interval)))
+	      (cond
+		(intersection
+		 ;; Process the intersection.
+		 (let* ((low (interval-low intersection))
+			(high (interval-high intersection))
+			(res-lo (or (bound-func fcn (if increasingp low high))
+				    default-lo))
+			(res-hi (or (bound-func fcn (if increasingp high low))
+				    default-hi))
+			;; Result specifier type.
+			(format (case (numeric-type-class arg)
+				  ((integer rational) 'single-float)
+				  (t (numeric-type-format arg))))
+			(bound-type (or format 'float))
+			(result-type 
+			 (make-numeric-type
+			  :class 'float
+			  :format format
+			  :low (coerce-numeric-bound res-lo bound-type)
+			  :high (coerce-numeric-bound res-hi bound-type))))
+		   ;; If the ARG is a subset of the domain, we don't
+		   ;; have to worry about the difference, because that
+		   ;; can't occur.
+		   (if (or (null difference) (csubtypep arg domain))
+		       result-type
+		       (list result-type
+			     (specifier-type `(complex ,bound-type))))))
+		(t
+		 (float-or-complex-float-type arg)))))
 	   (t
-	    (float-or-complex-type arg default-lo default-hi))))))
+	    (float-or-complex-float-type arg default-lo default-hi))))))
 
 (macrolet
-    ((frob (name cspec def-lo-bnd def-hi-bnd &key (increasingp t))
+    ((frob (name domain def-lo-bnd def-hi-bnd &key (increasingp t))
        (let ((num (gensym)))
 	 `(defoptimizer (,name derive-type) ((,num))
 	   (one-arg-derive-type
 	    ,num
 	    #'(lambda (arg)
 		(elfun-derive-type-simple arg #',name
-					  ,cspec
+					  ,domain
 					  ,def-lo-bnd ,def-hi-bnd
 					  ,increasingp))
 	    #',name)))))
@@ -905,7 +930,7 @@
 	       (t
 		;; A real to some power.  The result could be a real
 		;; or a complex.
-		(float-or-complex-type (numeric-contagion x y)))))))
+		(float-or-complex-float-type (numeric-contagion x y)))))))
 
 (defoptimizer (expt derive-type) ((x y))
   (two-arg-derive-type x y #'expt-derive-type-aux #'expt))
@@ -963,7 +988,7 @@
 				:high (coerce pi bound-format))))
 	  (t
 	   ;; The result is a float or a complex number
-	   (float-or-complex-type result-type)))))
+	   (float-or-complex-float-type result-type)))))
 
 (defoptimizer (atan derive-type) ((y &optional x))
   (if x
@@ -1252,7 +1277,7 @@
 		   :low (and def-lo (coerce def-lo bound-type))
 		   :high (and def-hi (coerce def-hi bound-type))))))
 	   (t
-	    (float-or-complex-type arg def-lo def-hi))))))
+	    (float-or-complex-float-type arg def-lo def-hi))))))
 
 (defoptimizer (sin derive-type) ((num))
   (one-arg-derive-type
