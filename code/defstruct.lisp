@@ -68,9 +68,12 @@
 	   ;; So the print function is in the right lexical environment, and
 	   ;; can be compiled...
 	   (let ((new ',defstruct))
-	     ,@(when (dd-print-function defstruct)
-		 `((setf (info type printer ',name)
-			 #',(dd-print-function defstruct))))
+	     ,@(let ((pf (dd-print-function defstruct)))
+		 (when pf
+		   `((setf (info type printer ',name)
+			   ,(if (symbolp pf)
+				`',pf
+				`#',pf)))))
 	     (%defstruct new))
 	   ',name)
 	`(progn
