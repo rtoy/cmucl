@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.90 2004/04/22 15:49:26 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.91 2004/04/22 18:04:19 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -946,7 +946,7 @@
 			    (char-upcase char)
 			    char))
 		    stream)
-	(setq prev-not-alpha (not (alpha-char-p char)))))))
+	(setq prev-not-alpha (not (alphanumericp char)))))))
 
 ;; Called when:
 ;; READTABLE-CASE	*PRINT-CASE*
