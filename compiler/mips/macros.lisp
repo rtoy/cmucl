@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.15 1990/02/23 20:22:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.16 1990/02/25 02:39:32 ch Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -75,9 +75,22 @@
 	    (error "Constant ~D cannot be loaded." ,n-const)))))
 
 (defmacro load-symbol (reg symbol)
-  `(inst addi ,reg null-tn (initial-symbol-offset ,symbol)))
+  `(inst addi ,reg null-tn (vm:static-symbol-offset ,symbol)))
 
+(defmacro load-type (target source &optional (offset 0))
+  "Loads the type bits of a pointer into target independent of
+  byte-ordering issues."
+  (once-only ((n-target target)
+	      (n-source source)
+	      (n-offset offset))
+    (ecase vm:target-byte-order
+      (:little-endian
+       `(inst lb ,n-target ,n-source ,n-offset ))
+      (:big-endian
+       `(inst lb ,n-target ,n-source (+ ,n-offset 3))))))
 
+
+;;;; Stack TN's
 
 ;;; Load-Stack-TN, Store-Stack-TN  --  Interface
 ;;;
@@ -107,7 +120,8 @@
 
 (defmacro simple-test-tag (register temp target not-p tag-type tag-mask)
   `(progn
-     (inst andi ,temp ,register ,tag-mask)
+     (unless (zerop ,tag-mask)
+       (inst andi ,temp ,register ,tag-mask))
      (inst xori ,temp ,temp ,tag-type)
      (if ,not-p
 	 (inst bne ,temp zero-tn ,target)
@@ -126,7 +140,9 @@
 	    (simple-test-tag ,n-register ,n-temp ,n-target ,n-not-p
 			     ,n-type-code lowtag-mask))
 	   (t
-	    ;; nothing clever in this version
+	    ;; Nothing clever in this version.  Assume other-immediate
+	    ;; type is already in register.
+	    ;; 
 	    (simple-test-tag ,n-temp ,n-temp ,n-target ,n-not-p
 			     ,n-type-code type-mask)))))
 
@@ -148,13 +164,14 @@
 		   (not-other-label (if ,n-not-p ,n-target out-label)))
 	      (simple-test-tag ,n-register ,n-temp not-other-label t
 			       vm:other-pointer-type vm:lowtag-mask)
-	      (inst lw ,n-temp ,n-register (- vm:other-pointer-type))
+	      (load-type ,n-temp ,n-register (- vm:other-pointer-type))
 	      (nop)
 	      (simple-test-tag ,n-temp ,n-temp ,n-target ,n-not-p
-			       ,n-type-code vm:type-mask)
+			       ,n-type-code 0)
 	      (emit-label out-label))))))
 
-;;; Hairy Type Checking Macros
+
+;;;; Hairy Type Checking Macros
 
 (defun enumerate-type-codes (types)
   (let ((type-codes nil))
@@ -170,22 +187,24 @@
 	     (push (eval type) type-codes))))
     (sort (remove-duplicates type-codes) #'<)))
 
-(defun canonicalize-type-codes (type-codes)
-  (assert type-codes)
+(defun canonicalize-type-codes (type-codes &optional (shift 0))
+  (unless type-codes (return-from canonicalize-type-codes nil))
   (let* ((type-codes type-codes)
 	 (canonical-type-codes nil)
-	 (last-type-code (pop type-codes))
-	 (range-start last-type-code)
+	 (first-type-code (pop type-codes))
+	 (last-type-code (ash first-type-code shift))
+	 (range-start first-type-code)
 	 (range-end nil))
     (dolist (type-code type-codes)
-      (cond ((= last-type-code (1- type-code))
-	     (setf range-end type-code))
-	    (t
-	     (push (if range-end (cons range-start range-end) range-start)
-		   canonical-type-codes)
-	     (setf range-start type-code)
-	     (setf range-end nil)))
-      (setf last-type-code type-code))
+      (let ((shifted-type-code (ash type-code shift)))
+	(cond ((= last-type-code (1- shifted-type-code))
+	       (setf range-end type-code))
+	      (t
+	       (push (if range-end (cons range-start range-end) range-start)
+		     canonical-type-codes)
+	       (setf range-start type-code)
+	       (setf range-end nil)))
+	(setf last-type-code shifted-type-code)))
     (push (if range-end (cons range-start range-end) range-start)
 	  canonical-type-codes)
     (nreverse canonical-type-codes)))
@@ -228,7 +247,8 @@
 	      (,in-label (if ,not-p drop-through ,target))
 	      (,out-label (if ,not-p ,target drop-through)))
 	 ,out-label			    ; squelch possible warning
-	 (inst andi ,temp ,register ,tag-mask)
+	 (unless (zerop ,tag-mask)
+	   (inst andi ,temp ,register ,tag-mask))
 	 ,@(emit)
 	 (nop)
 	 (emit-label drop-through)))))
@@ -260,9 +280,9 @@
 	      (t
 	       (header-word-types type))))
 
-      (let ((low-tag-types (low-tag-types))
-	    (header-word-types (mapcar #'(lambda (x) (ash x (- vm:lowtag-bits)))
-				       (header-word-types))))
+      (let ((low-tag-types (canonicalize-type-codes (low-tag-types)))
+	    (header-word-types (canonicalize-type-codes
+				(header-word-types) (- (1- lowtag-bits)))))
 	;; 
 	;; Generate code
 	`(let* ((out-label (gen-label))
@@ -273,20 +293,16 @@
 	   ,@(when low-tag-types
 	       (if header-word-types
 		   `((hairy-test-tag ,n-register ,n-temp in-low-tag-label nil
-				     ,(canonicalize-type-codes low-tag-types)
-				     vm:lowtag-mask))
+				     ,low-tag-types vm:lowtag-mask))
 		   `((hairy-test-tag ,n-register ,n-temp ,n-target ,n-not-p
-				     ,(canonicalize-type-codes low-tag-types)
-				     vm:lowtag-mask))))
+				     ,low-tag-types vm:lowtag-mask))))
 	   ,@(when header-word-types
 	       `((simple-test-tag ,n-register ,n-temp not-other-label t
 				  vm:other-pointer-type vm:lowtag-mask)
-		 (inst lw ,n-temp ,n-register (- vm:other-pointer-type))
+		 (load-type ,n-temp ,n-register (- vm:other-pointer-type))
 		 (nop)
-		 (inst srl ,n-temp ,n-temp vm:lowtag-bits)
 		 (hairy-test-tag ,n-register ,n-temp ,n-target ,n-not-p
-				 ,(canonicalize-type-codes header-word-types)
-				 (ash vm:type-mask (- vm:lowtag-bits)))))
+				 ,header-word-types 0)))
 	   (emit-label out-label))))))
 
 (defmacro simple-test-hairy-type (register temp target not-p &rest types)
@@ -330,86 +346,10 @@
 	      (t
 	       (error "Lost big.  Should not be here.")))))))
 
-;;;
-;;; Old RT code
-;;; 
+
+;;;; Test-Special-Value
 
-#+nil
-(defmacro test-simple-type (register temp target not-p type-code)
-  "Emit conditional code that tests whether Register holds an object with the
-  specified Type-Code.  Temp is an unboxed temporary."
-  (once-only ((n-register register)
-	      (n-temp temp)
-	      (n-target target)
-	      (n-not-p not-p)
-	      (n-type-code type-code))
-    `(progn
-       (inst niuz ,n-temp ,n-register clc::type-mask-16)
-       (inst xiu ,n-temp ,n-temp (ash ,n-type-code clc::type-shift-16))
-       (if ,n-not-p
-	   (inst bnb :eq ,n-target)
-	   (inst bb :eq ,n-target)))))
-
-#+nil
-(defmacro test-hairy-type (register temp target not-p &rest types)
-  "Test-Hairy-Type Register Temp Target Not-P {Type | (Low-Type High-Type)}*
-  Test whether Register holds a value with one of a specified union of type
-  codes.  Each separately specified Type is matched, and also all types
-  between a Low-Type and High-Type pair (inclusive) are matched.  All of the
-  type-code expressions are evaluated at macroexpand time.
-  Temp may be any register."
-  (once-only ((n-register register)
-	      (n-temp temp)
-	      (n-target target)
-	      (n-not-p not-p))
-    (assert types)
-    (let ((codes
-	   (sort (mapcar #'(lambda (x)
-			     (if (listp x)
-				 (cons (eval (first x)) (eval (second x)))
-				 (eval x)))
-			 types)
-		 #'<
-		 :key #'(lambda (x)
-			  (if (consp x) (car x) x)))))
-	  (n-drop-thru (gensym)) (n-in-lab (gensym)) (n-out-lab (gensym)))
-      
-      (collect ((tests))
-	(do ((codes codes (cdr codes)))
-	    ((null codes))
-	  (let ((code (car codes))
-		(last (null (cdr codes))))
-	    (cond ((consp code)
-		   (tests
-		    `(progn
-		       (cmpi ,n-temp ,(car code))
-		       (inst bb :lt ,n-out-lab)
-		       (cmpi ,n-temp ,(cdr code))))
-		   
-		   (if last
-		       (tests `(if ,n-not-p
-				   (inst bb :gt ,n-target)
-				   (inst bnb :gt ,n-target)))
-		       (tests `(inst bnb :gt ,n-in-lab))))
-		  (t
-		   (tests `(cmpi ,n-temp ,code))
-		   (if last
-		       (tests `(if ,n-not-p
-				   (inst bnb :eq ,n-target)
-				   (inst bb :eq ,n-target)))
-		       (tests `(inst bb :eq ,n-in-lab)))))))
-	
-	`(let* ((,n-drop-thru (gen-label))
-		(,n-in-lab (if ,n-not-p ,n-drop-thru ,n-target))
-		(,n-out-lab (if ,n-not-p ,n-target ,n-drop-thru)))
-	   ,n-out-lab
-	   (unless (location= ,n-temp ,n-register)
-	     (inst lr ,n-temp ,n-register))
-	   (inst sri16 ,n-temp clc::type-shift-16)
-	   
-	   ,@(tests)
-	   
-	   (emit-label ,n-drop-thru))))))
+;;; ### We may want this.
 
 #+nil
 (defmacro test-special-value (reg temp value target not-p)
