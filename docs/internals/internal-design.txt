@@ -274,12 +274,25 @@ Symbol data-block has the following format:
     -------------------------------------------------------
     |			Function Pointer 		  |
     -------------------------------------------------------
+    |		      Raw Function Address 		  |
+    -------------------------------------------------------
+    |			 Setf Function	 		  |
+    -------------------------------------------------------
     |			 Property List			  |
     -------------------------------------------------------
     |			   Print Name			  |
     -------------------------------------------------------
     |			    Package			  |
     -------------------------------------------------------
+
+Most of these slots are self-explanatory given what symbols must do in Common
+Lisp, but a couple require comments.  We added the Raw Function Address slot to
+speed up named call which is the most common calling convention.  This is a
+non-descriptor slot, but since objects are dual word aligned, the value
+inherently has fixnum low-tag bits.  The GC method for symbols must know to
+update this slot.  The Setf Function slot is currently unused, but we had an
+extra slot due to adding Raw Function Address since objects must be dual-word
+aligned.
 
 The issues with nil are that we want it to act like a symbol, and we need list
 operations such as CAR and CDR to be fast on it.  CMU Common Lisp solves this
@@ -293,6 +306,10 @@ reside, so it has a known address in the system:
     |			    Value/CAR			  |
     -------------------------------------------------------
     |			  Definition/CDR		  |
+    -------------------------------------------------------
+    |		       Raw Function Address 		  |
+    -------------------------------------------------------
+    |			  Setf Function	 		  |
     -------------------------------------------------------
     |			  Property List			  |
     -------------------------------------------------------
