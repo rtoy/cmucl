@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.34 2000/02/03 15:35:59 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.35 2000/04/22 17:50:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1200,6 +1200,12 @@
 
 ;;;; Comparison:
 
+#+long-float
+(deftransform eql ((x y) (long-float long-float))
+  `(and (= (long-float-low-bits x) (long-float-low-bits y))
+	(= (long-float-high-bits x) (long-float-high-bits y))
+	(= (long-float-exp-bits x) (long-float-exp-bits y))))
+
 (define-vop (=/float)
   (:args (x) (y))
   (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
@@ -1208,6 +1214,7 @@
   (:policy :fast-safe)
   (:vop-var vop)
   (:save-p :compute-only)
+  #+not-yet (:guard (not (backend-featurep :ppro)))
   (:note "inline float comparison")
   (:ignore temp)
   (:generator 3
@@ -1216,7 +1223,7 @@
       ;; x is in ST0; y is in any reg.
       ((zerop (tn-offset x))
        (inst fucom y))
-      ;; y is in ST0; x is in another reg.
+      ;; y is in ST0; x is in another reg. Can swap args saving a reg. swap.
       ((zerop (tn-offset y))
        (inst fucom x))
       ;; x and y are the same register, not ST0
@@ -1234,300 +1241,230 @@
      (inst cmp ah-tn #x40)
      (inst jmp (if not-p :ne :e) target)))
 
-(define-vop (=/single-float =/float)
-  (:translate =)
-  (:args (x :scs (single-reg))
-	 (y :scs (single-reg)))
-  (:arg-types single-float single-float))
+(macrolet ((frob (type sc)
+	     `(define-vop (,(symbolicate "=/" type) =/float)
+	        (:translate =)
+		(:args (x :scs (,sc))
+		       (y :scs (,sc)))
+	        (:arg-types ,type ,type))))
+  (frob single-float single-reg)
+  (frob double-float double-reg)
+  #+long-float (frob long-float long-reg))
 
-(define-vop (=/double-float =/float)
-  (:translate =)
-  (:args (x :scs (double-reg))
-	 (y :scs (double-reg)))
-  (:arg-types double-float double-float))
+(macrolet ((frob (translate test ntest)
+	     `(define-vop (,(symbolicate translate "/SINGLE-FLOAT"))
+		(:translate ,translate)
+		(:args (x :scs (single-reg single-stack descriptor-reg))
+		       (y :scs (single-reg single-stack descriptor-reg)))
+		(:arg-types single-float single-float)
+		(:temporary (:sc single-reg :offset fr0-offset :from :eval)
+			    fr0)
+		(:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
+		(:conditional)
+		(:info target not-p)
+		(:policy :fast-safe)
+		(:guard (not (backend-featurep :ppro)))
+		(:note "inline float comparison")
+		(:ignore temp fr0)
+		(:generator 3
+		   ;; Handle a few special cases
+		   (cond
+		     ;; y is ST0.
+		     ((and (sc-is y single-reg) (zerop (tn-offset y)))
+		      (sc-case x
+			(single-reg
+			 (inst fcom x))
+			((single-stack descriptor-reg)
+			 (if (sc-is x single-stack)
+			     (inst fcom (ea-for-sf-stack x))
+			     (inst fcom (ea-for-sf-desc x)))))
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)
+		      ,@(unless (zerop ntest)
+			  `((inst cmp ah-tn ,ntest))))
+		     ;; General case when y is not in ST0.
+		     (t
+		      ,@(if (zerop ntest)
+			    `(;; y to ST0
+			      (sc-case y
+			        (single-reg
+				 (unless (zerop (tn-offset y))
+				   (copy-fp-reg-to-fr0 y)))
+			        ((single-stack descriptor-reg)
+				 (fp-pop)
+				 (if (sc-is y single-stack)
+				     (inst fld (ea-for-sf-stack y))
+				     (inst fld (ea-for-sf-desc y)))))
+			      (sc-case x
+			        (single-reg
+				 (inst fcom x))
+			        ((single-stack descriptor-reg)
+				 (if (sc-is x single-stack)
+				     (inst fcom (ea-for-sf-stack x))
+				     (inst fcom (ea-for-sf-desc x)))))
+			      (inst fnstsw)		; status word to ax
+			      (inst and ah-tn #x45))	; C3 C2 C0
+			    `(;; x to ST0
+			      (sc-case x
+			        (single-reg
+				 (unless (zerop (tn-offset x))
+				   (copy-fp-reg-to-fr0 x)))
+			        ((single-stack descriptor-reg)
+				 (fp-pop)
+				 (if (sc-is x single-stack)
+				     (inst fld (ea-for-sf-stack x))
+				     (inst fld (ea-for-sf-desc x)))))
+			      (sc-case y
+			        (single-reg
+				 (inst fcom y))
+			        ((single-stack descriptor-reg)
+				 (if (sc-is y single-stack)
+				     (inst fcom (ea-for-sf-stack y))
+				     (inst fcom (ea-for-sf-desc y)))))
+			      (inst fnstsw)		; status word to ax
+			      (inst and ah-tn #x45)		; C3 C2 C0
+			      ,@(unless (zerop test)
+				  `((inst cmp ah-tn ,test)))))))
+		 (inst jmp (if not-p :ne :e) target)))))
+  (frob < #x01 #x00)
+  (frob > #x00 #x01))
 
-#+long-float
-(define-vop (=/long-float =/float)
-  (:translate =)
-  (:args (x :scs (long-reg))
-	 (y :scs (long-reg)))
-  (:arg-types long-float long-float))
-
-
-(define-vop (<single-float)
-  (:translate <)
-  (:args (x :scs (single-reg single-stack descriptor-reg))
-	 (y :scs (single-reg single-stack descriptor-reg)))
-  (:arg-types single-float single-float)
-  (:temporary (:sc single-reg :offset fr0-offset :from :eval) fr0)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp fr0)
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-     ;; y is ST0.
-     ((and (sc-is y single-reg) (zerop (tn-offset y)))
-      (sc-case x
-        (single-reg
-	 (inst fcom x))
-	((single-stack descriptor-reg)
-	 (if (sc-is x single-stack)
-	     (inst fcom (ea-for-sf-stack x))
-	   (inst fcom (ea-for-sf-desc x)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45))
-
-     ;; General case when y is not in ST0.
-     (t
-      ;; x to ST0
-      (sc-case x
-         (single-reg
-	  (unless (zerop (tn-offset x))
-		  (copy-fp-reg-to-fr0 x)))
-	 ((single-stack descriptor-reg)
-	  (fp-pop)
-	  (if (sc-is x single-stack)
-	      (inst fld (ea-for-sf-stack x))
-	    (inst fld (ea-for-sf-desc x)))))
-      (sc-case y
-        (single-reg
-	 (inst fcom y))
-	((single-stack descriptor-reg)
-	 (if (sc-is y single-stack)
-	     (inst fcom (ea-for-sf-stack y))
-	   (inst fcom (ea-for-sf-desc y)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)		; C3 C2 C0
-      (inst cmp ah-tn #x01)))
-    (inst jmp (if not-p :ne :e) target)))
-
-(define-vop (<double-float)
-  (:translate <)
-  (:args (x :scs (double-reg double-stack descriptor-reg))
-	 (y :scs (double-reg double-stack descriptor-reg)))
-  (:arg-types double-float double-float)
-  (:temporary (:sc double-reg :offset fr0-offset :from :eval) fr0)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp fr0)
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-     ;; y is ST0.
-     ((and (sc-is y double-reg) (zerop (tn-offset y)))
-      (sc-case x
-        (double-reg
-	 (inst fcomd x))
-	((double-stack descriptor-reg)
-	 (if (sc-is x double-stack)
-	     (inst fcomd (ea-for-df-stack x))
-	   (inst fcomd (ea-for-df-desc x)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45))
-
-     ;; General case when y is not in ST0.
-     (t
-      ;; x to ST0
-      (sc-case x
-         (double-reg
-	  (unless (zerop (tn-offset x))
-		  (copy-fp-reg-to-fr0 x)))
-	 ((double-stack descriptor-reg)
-	  (fp-pop)
-	  (if (sc-is x double-stack)
-	      (inst fldd (ea-for-df-stack x))
-	    (inst fldd (ea-for-df-desc x)))))
-      (sc-case y
-        (double-reg
-	 (inst fcomd y))
-	((double-stack descriptor-reg)
-	 (if (sc-is y double-stack)
-	     (inst fcomd (ea-for-df-stack y))
-	   (inst fcomd (ea-for-df-desc y)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)		; C3 C2 C0
-      (inst cmp ah-tn #x01)))
-    (inst jmp (if not-p :ne :e) target)))
-
-#+long-float
-(define-vop (<long-float)
-  (:translate <)
-  (:args (x :scs (long-reg))
-	 (y :scs (long-reg)))
-  (:arg-types long-float long-float)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp)
-  (:generator 3
-    (cond
-      ;; x is in ST0; y is in any reg.
-      ((zerop (tn-offset x))
-       (inst fcomd y)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45)		; C3 C2 C0
-       (inst cmp ah-tn #x01))
-      ;; y is in ST0; x is in another reg.
-      ((zerop (tn-offset y))
-       (inst fcomd x)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45))
-      ;; x and y are the same register, not ST0
-      ;; x and y are different registers, neither ST0.
-      (t
-       (inst fxch y)
-       (inst fcomd x)
-       (inst fxch y)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45)))		; C3 C2 C0
-    (inst jmp (if not-p :ne :e) target)))
-
-
-(define-vop (>single-float)
-  (:translate >)
-  (:args (x :scs (single-reg single-stack descriptor-reg))
-	 (y :scs (single-reg single-stack descriptor-reg)))
-  (:arg-types single-float single-float)
-  (:temporary (:sc single-reg :offset fr0-offset :from :eval) fr0)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp fr0)
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-     ;; y is ST0.
-     ((and (sc-is y single-reg) (zerop (tn-offset y)))
-      (sc-case x
-        (single-reg
-	 (inst fcom x))
-	((single-stack descriptor-reg)
-	 (if (sc-is x single-stack)
-	     (inst fcom (ea-for-sf-stack x))
-	   (inst fcom (ea-for-sf-desc x)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)
-      (inst cmp ah-tn #x01))
-
-     ;; General case when y is not in ST0.
-     (t
-      ;; x to ST0
-      (sc-case x
-         (single-reg
-	  (unless (zerop (tn-offset x))
-		  (copy-fp-reg-to-fr0 x)))
-	 ((single-stack descriptor-reg)
-	  (fp-pop)
-	  (if (sc-is x single-stack)
-	      (inst fld (ea-for-sf-stack x))
-	    (inst fld (ea-for-sf-desc x)))))
-      (sc-case y
-        (single-reg
-	 (inst fcom y))
-	((single-stack descriptor-reg)
-	 (if (sc-is y single-stack)
-	     (inst fcom (ea-for-sf-stack y))
-	   (inst fcom (ea-for-sf-desc y)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)))
-    (inst jmp (if not-p :ne :e) target)))
-
-(define-vop (>double-float)
-  (:translate >)
-  (:args (x :scs (double-reg double-stack descriptor-reg))
-	 (y :scs (double-reg double-stack descriptor-reg)))
-  (:arg-types double-float double-float)
-  (:temporary (:sc double-reg :offset fr0-offset :from :eval) fr0)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp fr0)
-  (:generator 3
-    ;; Handle a few special cases
-    (cond
-     ;; y is ST0.
-     ((and (sc-is y double-reg) (zerop (tn-offset y)))
-      (sc-case x
-        (double-reg
-	 (inst fcomd x))
-	((double-stack descriptor-reg)
-	 (if (sc-is x double-stack)
-	     (inst fcomd (ea-for-df-stack x))
-	   (inst fcomd (ea-for-df-desc x)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)
-      (inst cmp ah-tn #x01))
-
-     ;; General case when y is not in ST0.
-     (t
-      ;; x to ST0
-      (sc-case x
-         (double-reg
-	  (unless (zerop (tn-offset x))
-		  (copy-fp-reg-to-fr0 x)))
-	 ((double-stack descriptor-reg)
-	  (fp-pop)
-	  (if (sc-is x double-stack)
-	      (inst fldd (ea-for-df-stack x))
-	    (inst fldd (ea-for-df-desc x)))))
-      (sc-case y
-        (double-reg
-	 (inst fcomd y))
-	((double-stack descriptor-reg)
-	 (if (sc-is y double-stack)
-	     (inst fcomd (ea-for-df-stack y))
-	   (inst fcomd (ea-for-df-desc y)))))
-      (inst fnstsw)			; status word to ax
-      (inst and ah-tn #x45)))
-    (inst jmp (if not-p :ne :e) target)))
+(macrolet ((frob (translate test ntest)
+	     `(define-vop (,(symbolicate translate "/DOUBLE-FLOAT"))
+		(:translate ,translate)
+		(:args (x :scs (double-reg double-stack descriptor-reg))
+		       (y :scs (double-reg double-stack descriptor-reg)))
+		(:arg-types double-float double-float)
+		(:temporary (:sc double-reg :offset fr0-offset :from :eval)
+			    fr0)
+		(:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
+		(:conditional)
+		(:info target not-p)
+		(:policy :fast-safe)
+		(:guard (not (backend-featurep :ppro)))
+		(:note "inline float comparison")
+		(:ignore temp fr0)
+		(:generator 3
+		   ;; Handle a few special cases
+		   (cond
+		     ;; y is ST0.
+		     ((and (sc-is y double-reg) (zerop (tn-offset y)))
+		      (sc-case x
+			(double-reg
+			 (inst fcomd x))
+			((double-stack descriptor-reg)
+			 (if (sc-is x double-stack)
+			     (inst fcomd (ea-for-df-stack x))
+			     (inst fcomd (ea-for-df-desc x)))))
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)
+		      ,@(unless (zerop ntest)
+			  `((inst cmp ah-tn ,ntest))))
+		     ;; General case when y is not in ST0.
+		     (t
+		      ,@(if (zerop ntest)
+			    `(;; y to ST0
+			      (sc-case y
+			        (double-reg
+				 (unless (zerop (tn-offset y))
+				   (copy-fp-reg-to-fr0 y)))
+			        ((double-stack descriptor-reg)
+				 (fp-pop)
+				 (if (sc-is y double-stack)
+				     (inst fldd (ea-for-df-stack y))
+				     (inst fldd (ea-for-df-desc y)))))
+			      (sc-case x
+			        (double-reg
+				 (inst fcomd x))
+			        ((double-stack descriptor-reg)
+				 (if (sc-is x double-stack)
+				     (inst fcomd (ea-for-df-stack x))
+				     (inst fcomd (ea-for-df-desc x)))))
+			      (inst fnstsw)		; status word to ax
+			      (inst and ah-tn #x45))	; C3 C2 C0
+			    `(;; x to ST0
+			      (sc-case x
+			        (double-reg
+				 (unless (zerop (tn-offset x))
+				   (copy-fp-reg-to-fr0 x)))
+			        ((double-stack descriptor-reg)
+				 (fp-pop)
+				 (if (sc-is x double-stack)
+				     (inst fldd (ea-for-df-stack x))
+				     (inst fldd (ea-for-df-desc x)))))
+			      (sc-case y
+			        (double-reg
+				 (inst fcomd y))
+			        ((double-stack descriptor-reg)
+				 (if (sc-is y double-stack)
+				     (inst fcomd (ea-for-df-stack y))
+				     (inst fcomd (ea-for-df-desc y)))))
+			      (inst fnstsw)		; status word to ax
+			      (inst and ah-tn #x45)	; C3 C2 C0
+			      ,@(unless (zerop test)
+				  `((inst cmp ah-tn ,test)))))))
+		 (inst jmp (if not-p :ne :e) target)))))
+  (frob < #x01 #x00)
+  (frob > #x00 #x01))
 
 #+long-float
-(define-vop (>long-float)
-  (:translate >)
-  (:args (x :scs (long-reg))
-	 (y :scs (long-reg)))
-  (:arg-types long-float long-float)
-  (:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline float comparison")
-  (:ignore temp)
-  (:generator 3
-    (cond
-      ;; y is in ST0; x is in any reg.
-      ((zerop (tn-offset y))
-       (inst fcomd x)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45)
-       (inst cmp ah-tn #x01))
-      ;; x is in ST0; y is in another reg.
-      ((zerop (tn-offset x))
-       (inst fcomd y)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45))
-      ;; y and x are the same register, not ST0
-      ;; y and x are different registers, neither ST0.
-      (t
-       (inst fxch x)
-       (inst fcomd y)
-       (inst fxch x)
-       (inst fnstsw)			; status word to ax
-       (inst and ah-tn #x45)))
-    (inst jmp (if not-p :ne :e) target)))
+(macrolet ((frob (translate test ntest)
+	     `(define-vop (,(symbolicate translate "/LONG-FLOAT"))
+		(:translate ,translate)
+		(:args (x :scs (long-reg))
+		       (y :scs (long-reg)))
+		(:arg-types long-float long-float)
+		(:temporary (:sc word-reg :offset eax-offset :from :eval) temp)
+		(:conditional)
+		(:info target not-p)
+		(:policy :fast-safe)
+		(:guard (not (backend-featurep :ppro)))
+		(:note "inline float comparison")
+		(:ignore temp)
+		(:generator 3
+		   (cond
+		     ;; x is in ST0; y is in any reg.
+		     ((zerop (tn-offset x))
+		      (inst fcomd y)
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)		; C3 C2 C0
+		      ,@(unless (zerop test)
+			  `((inst cmp ah-tn ,test))))
+		     ;; y is in ST0; x is in another reg.
+		     ((zerop (tn-offset y))
+		      (inst fcomd x)
+		      (inst fnstsw)			; status word to ax
+		      (inst and ah-tn #x45)
+		      ,@(unless (zerop ntest)
+			  `((inst cmp ah-tn ,ntest))))
+		     ;; x and y are the same register, not ST0
+		     ((location= x y)
+		      (inst fxch x)
+		      (inst fcomd fr0-tn)
+		      (inst fxch x)
+		      (inst fnstsw)		; status word to ax
+		      (inst and ah-tn #x45)	; C3 C2 C0
+		      ,@(unless (or (zerop test) (zerop ntest))
+			  `((inst cmp ah-tn ,test))))
+		     ;; x and y are different registers, neither ST0.
+		     (t
+		      ,@(cond ((zerop ntest)
+			       `((inst fxch y)
+				 (inst fcomd x)
+				 (inst fxch y)
+				 (inst fnstsw)		; status word to ax
+				 (inst and ah-tn #x45)))	; C3 C2 C0
+			      (t
+			       `((inst fxch x)
+				 (inst fcomd y)
+				 (inst fxch x)
+				 (inst fnstsw)		; status word to ax
+				 (inst and ah-tn #x45)	; C3 C2 C0
+				 ,@(unless (zerop test)
+				     `((inst cmp ah-tn ,test))))))))
+		   (inst jmp (if not-p :ne :e) target)))))
+  (frob < #x01 #x00)
+  (frob > #x00 #x01))
 
 ;;; Comparisons with 0 can use the FTST instruction.
 
@@ -1556,92 +1493,167 @@
      (inst fnstsw)			; status word to ax
      (inst and ah-tn #x45)		; C3 C2 C0
      (unless (zerop code)
-        (inst cmp ah-tn code))
+       (inst cmp ah-tn code))
      (inst jmp (if not-p :ne :e) target)))
 
-(define-vop (=0/single-float float-test)
-  (:translate =)
-  (:args (x :scs (single-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float 0f0 0f0)))
-  #+negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float -0f0 0f0)))
-  (:variant #x40))
-(define-vop (=0/double-float float-test)
-  (:translate =)
-  (:args (x :scs (double-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float 0d0 0d0)))
-  #+negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float -0d0 0d0)))
-  (:variant #x40))
-#+long-float
-(define-vop (=0/long-float float-test)
-  (:translate =)
-  (:args (x :scs (long-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float 0l0 0l0)))
-  #+negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float -0l0 0l0)))
-  (:variant #x40))
+(macrolet ((frob (translate test)
+	     `(progn
+		(define-vop (,(symbolicate translate "0/SINGLE-FLOAT")
+			      float-test)
+		  (:translate ,translate)
+		  (:args (x :scs (single-reg)))
+		  #-negative-zero-is-not-zero
+		  (:arg-types single-float (:constant (single-float 0f0 0f0)))
+		  #+negative-zero-is-not-zero
+		  (:arg-types single-float (:constant (single-float -0f0 0f0)))
+		  (:variant ,test))
+		(define-vop (,(symbolicate translate "0/DOUBLE-FLOAT")
+			      float-test)
+		  (:translate ,translate)
+		  (:args (x :scs (double-reg)))
+		  #-negative-zero-is-not-zero
+		  (:arg-types double-float (:constant (double-float 0d0 0d0)))
+		  #+negative-zero-is-not-zero
+		  (:arg-types double-float (:constant (double-float -0d0 0d0)))
+		  (:variant ,test))
+		#+long-float
+		(define-vop (,(symbolicate translate "0/LONG-FLOAT")
+			      float-test)
+		  (:translate ,translate)
+		  (:args (x :scs (long-reg)))
+		  #-negative-zero-is-not-zero
+		  (:arg-types long-float (:constant (long-float 0l0 0l0)))
+		  #+negative-zero-is-not-zero
+		  (:arg-types long-float (:constant (long-float -0l0 0l0)))
+		  (:variant ,test)))))
+  (frob > #x00)
+  (frob < #x01)
+  (frob = #x40))
 
-(define-vop (<0/single-float float-test)
-  (:translate <)
-  (:args (x :scs (single-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float 0f0 0f0)))
-  #+negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float -0f0 0f0)))
-  (:variant #x01))
-(define-vop (<0/double-float float-test)
-  (:translate <)
-  (:args (x :scs (double-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float 0d0 0d0)))
-  #+negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float -0d0 0d0)))
-  (:variant #x01))
-#+long-float
-(define-vop (<0/long-float float-test)
-  (:translate <)
-  (:args (x :scs (long-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float 0l0 0l0)))
-  #+negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float -0l0 0l0)))
-  (:variant #x01))
+
 
-(define-vop (>0/single-float float-test)
-  (:translate >)
-  (:args (x :scs (single-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float 0f0 0f0)))
-  #+negative-zero-is-not-zero
-  (:arg-types single-float (:constant (single-float -0f0 0f0)))
-  (:variant #x00))
-(define-vop (>0/double-float float-test)
-  (:translate >)
-  (:args (x :scs (double-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float 0d0 0d0)))
-  #+negative-zero-is-not-zero
-  (:arg-types double-float (:constant (double-float -0d0 0d0)))
-  (:variant #x00))
-#+long-float
-(define-vop (>0/long-float float-test)
-  (:translate >)
-  (:args (x :scs (long-reg)))
-  #-negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float 0l0 0l0)))
-  #+negative-zero-is-not-zero
-  (:arg-types long-float (:constant (long-float -0l0 0l0)))
-  (:variant #x00))
+;;;; Pentium Pro floating point comparisons, using FCOMI and FUCOMI which
+;;;; directly write to the condition codes.
 
-#+long-float
-(deftransform eql ((x y) (long-float long-float))
-  `(and (= (long-float-low-bits x) (long-float-low-bits y))
-	(= (long-float-high-bits x) (long-float-high-bits y))
-	(= (long-float-exp-bits x) (long-float-exp-bits y))))
+#+not-yet
+(define-vop (ppro-=/float)
+  (:args (x) (y))
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:guard (backend-featurep :ppro))
+  (:note "inline float comparison")
+  (:generator 3
+    ;; Handle a few special cases
+    (cond
+      ;; x is in ST0; y is in any reg.
+      ((zerop (tn-offset x))
+       (inst fucomi y))
+      ;; y is in ST0; x is in another reg; can swap argument order.
+      ((zerop (tn-offset y))
+       (inst fucomi x))
+      ;; x and y are the same register, not ST0.
+      ((location= x y)
+       (inst fxch x)
+       (inst fucomi fr0-tn)
+       (inst fxch x))
+      ;; x and y are different registers, neither ST0.
+      (t
+       (inst fxch x)
+       (inst fucomi y)
+       (inst fxch x)))
+    (inst jmp (if not-p :ne :e) target)))
+
+#+not-yet
+(macrolet ((frob (type sc)
+	     `(define-vop (,(symbolicate "PPRO-=/" type) ppro-=/float)
+	        (:translate =)
+		(:args (x :scs (,sc))
+		       (y :scs (,sc)))
+	        (:arg-types ,type ,type))))
+  (frob single-float single-reg)
+  (frob double-float double-reg)
+  #+long-float (frob long-float long-reg))
+
+(define-vop (ppro-</float)
+  (:args (x) (y))
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:guard (backend-featurep :ppro))
+  (:note "inline float comparison")
+  (:generator 3
+    ;; Handle a few special cases
+    (cond
+      ;; x is in ST0; y is in any reg.
+      ((zerop (tn-offset x))
+       (inst fxch y)
+       (inst fcomi y)
+       (inst fxch y))
+      ;; y is in ST0; x is in another reg.
+      ((zerop (tn-offset y))
+       (inst fcomi x))
+      ;; x and y are the same register, not ST0.
+      ((location= x y)
+       (inst fxch x)
+       (inst fcomi fr0-tn)
+       (inst fxch x))
+      ;; x and y are different registers, neither ST0.
+      (t
+       (inst fxch y)
+       (inst fcomi x)
+       (inst fxch y)))
+    (inst jmp (if not-p :be :nbe) target)))
+
+(macrolet ((frob (type sc)
+	     `(define-vop (,(symbolicate "PPRO-</" type) ppro-</float)
+	        (:translate <)
+		(:args (x :scs (,sc))
+		       (y :scs (,sc)))
+	        (:arg-types ,type ,type))))
+  (frob single-float single-reg)
+  (frob double-float double-reg)
+  #+long-float (frob long-float long-reg))
+
+(define-vop (ppro->/float)
+  (:args (x) (y))
+  (:conditional)
+  (:info target not-p)
+  (:policy :fast-safe)
+  (:guard (backend-featurep :ppro))
+  (:note "inline float comparison")
+  (:generator 3
+    ;; Handle a few special cases
+    (cond
+      ;; x is in ST0; y is in any reg.
+      ((zerop (tn-offset x))
+       (inst fcomi y))
+      ;; y is in ST0; x is in another reg.
+      ((zerop (tn-offset y))
+       (inst fxch x)
+       (inst fcomi x)
+       (inst fxch x))
+      ;; x and y are the same register, not ST0.
+      ((location= x y)
+       (inst fxch x)
+       (inst fcomi fr0-tn)
+       (inst fxch x))
+      ;; x and y are different registers, neither ST0.
+      (t
+       (inst fxch x)
+       (inst fcomi y)
+       (inst fxch x)))
+    (inst jmp (if not-p :be :nbe) target)))
+
+(macrolet ((frob (type sc)
+	     `(define-vop (,(symbolicate "PPRO->/" type) ppro->/float)
+	        (:translate >)
+		(:args (x :scs (,sc))
+		       (y :scs (,sc)))
+	        (:arg-types ,type ,type))))
+  (frob single-float single-reg)
+  (frob double-float double-reg)
+  #+long-float (frob long-float long-reg))
 
 
 ;;;; Conversion:
