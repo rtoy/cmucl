@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.7 1991/01/13 23:38:31 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.8 1991/01/14 01:44:09 wlott Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -915,7 +915,7 @@
   (let ((result-bit-array (pick-result-array result-bit-array bit-array)))
     (if (and (simple-bit-vector-p bit-array)
 	     (simple-bit-vector-p result-bit-array))
-	(locally (optimize (speed 3) (safety 0))
+	(locally (declare (optimize (speed 3) (safety 0)))
 	  (bit-not bit-array result-bit-array))
 	(with-array-data ((src bit-array) (src-start) (src-end))
 	  (declare (ignore src-end))
