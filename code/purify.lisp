@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.16 1994/02/14 13:48:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.17 1994/02/14 14:05:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -23,6 +23,28 @@
   (static-roots c-call:unsigned-long)
   (read-only-roots c-call:unsigned-long))
 
+
+;;; COMPACT-ENVIRONMENT-AUX  --  Internal
+;;;
+;;;    Compact the info environment.  Written with gratuitous recursion to
+;;; make sure that our (and compact-info-environment's) local variables are
+;;; above the stack top when purify runs.
+;;;
+(defun compact-environment-aux (name n)
+  (cond
+   ((zerop n)
+    (let ((old-ie (car *info-environment*)))
+      (setq *info-environment*
+	    (list* (make-info-environment :name "Working")
+		   (compact-info-environment (first *info-environment*)
+					     :name name)
+		   (rest *info-environment*)))
+      (shrink-vector (c::volatile-info-env-table old-ie) 0)))
+   (t
+    (compact-environment-aux name (1- n))
+    n)))
+
+
 (defun purify (&key root-structures (environment-name "Auxiliary"))
   "This function optimizes garbage collection by moving all currently live
    objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
@@ -35,16 +57,8 @@
    ENVIRONMENT-NAME is gratuitous documentation for compacted version of the
    current global environment (as seen in C::*INFO-ENVIRONMENT*.)  If NIL is
    supplied, then environment compaction is inhibited."
-  (when environment-name
-    (let ((old-ie (car *info-environment*)))
-      (setq *info-environment*
-	    (list* (make-info-environment :name "Working")
-		   (compact-info-environment (first *info-environment*)
-					     :name environment-name)
-		   (rest *info-environment*)))
-      ;; next 2 lines for GC.
-      (shrink-vector (c::volatile-info-env-table old-ie) 0)
-      (setq old-ie nil)))
+
+  (when environment-name (compact-environment-aux environment-name 200))
 
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
