@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.14 1991/03/20 03:00:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/codegen.lisp,v 1.15 1991/08/25 18:14:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,9 @@
   "Set to NIL to inhibit assembly-level optimization.  For compiler debugging,
   rather than policy control.")
 
+(defvar *assembly-check* nil
+  "Set to T to enable lifetime consistency checking of the assembly code.")
+
 ;;; Generate-Code  --  Interface
 ;;;
 (defun generate-code (component)
@@ -117,9 +120,13 @@
 	      (funcall gen vop)
 	      (format t "Missing generator for ~S.~%"
 		      (template-name (vop-info vop)))))))
+    
     (assemble (*code-segment* nil)
       (insert-segment *elsewhere*))
     (expand-pseudo-instructions *code-segment*)
+    (when *assembly-check*
+      (segment-check-registers *code-segment* *elsewhere*))
+    
     (when (and (policy (lambda-bind
 			(block-home-lambda
 			 (block-next (component-head component))))
