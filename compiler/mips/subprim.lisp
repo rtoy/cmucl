@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.10 1990/04/26 20:27:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.11 1990/05/15 01:17:45 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -99,8 +99,13 @@
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
   (:temporary (:scs (any-reg) :type fixnum) temp)
+  (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:vop-var vop)
   (:generator 0
-    (let ((lra-label (gen-label)))
+    (let ((lra-label (gen-label))
+	  (cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(store-stack-tn nfp-save cur-nfp))
       (inst li v0 (make-fixup function :foreign))
       (inst li temp (make-fixup "call_into_c" :foreign))
       (inst j temp)
@@ -108,6 +113,8 @@
       (align vm:lowtag-bits)
       (emit-label lra-label)
       (inst lra-header-word)
+      (when cur-nfp
+	(load-stack-tn cur-nfp nfp-save))
       (move result v0))))
 
 
