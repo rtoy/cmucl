@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.183 2001/07/08 17:37:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.184 2001/09/27 11:27:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -927,7 +927,7 @@
              "DELETEF" "DELQ" "DISABLE-CLX-EVENT-HANDLING"
              "DO-ALPHA-KEY-EVENTS" "DO-ANONYMOUS" "DO-INFO"
              "DOUBLE-FLOAT-NEGATIVE-INFINITY" "DOUBLE-FLOAT-POSITIVE-INFINITY"
-             "DOUBLE-FLOATP" "DOVECTOR" "E" "ENABLE-CLX-EVENT-HANDLING"
+             "DOUBLE-FLOATP" "DOVECTOR" "ENABLE-CLX-EVENT-HANDLING"
              "ENCAPSULATE" "ENCAPSULATED-DEFINITION" "ENCAPSULATED-P"
              "END-BLOCK" "ENUMERATE-SEARCH-LIST" "FILE-COMMENT" "FILE-WRITABLE"
              "FINALIZE" "FIXNUMP" "FLOAT-DENORMALIZED-P" "FLOAT-INFINITY-P"
