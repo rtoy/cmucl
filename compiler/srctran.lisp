@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.121 2003/06/27 17:27:42 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.122 2003/07/01 18:44:18 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3094,6 +3094,9 @@
 ;;; Y's high, then X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
+;;; Note that "inverse" isn't really the inverse---it's the function
+;;; that would return the same answer if the args were reversed.  So 2
+;;; < 3 gives the same answer as 3 > 2.
 (defun ir1-transform-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
@@ -3114,6 +3117,24 @@
 
 (deftransform > ((x y) (real real) * :when :both)
   (ir1-transform-< y x x y '<))
+
+;; Like IR1-TRANSFORM-< but for CHAR<.  This is needed so that the
+;; vops for base-char comparison with a constant gets used when the
+;; first arg is the constant.
+(defun ir1-transform-char< (x y first second inverse)
+  (if (same-leaf-ref-p x y)
+      'nil
+      (cond ((and (constant-continuation-p first)
+		  (not (constant-continuation-p second)))
+	     `(,inverse y x))
+	    (t
+	     (give-up)))))
+
+(deftransform char< ((x y) (base-char base-char) * :when :both)
+  (ir1-transform-char< x y x y 'char>))
+
+(deftransform char> ((x y) (base-char base-char) * :when :both)
+  (ir1-transform-char< y x x y 'char<))
 
 
 ;;;; Converting N-arg comparisons:
