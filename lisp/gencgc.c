@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.51 2004/05/03 14:17:20 rtoy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.52 2004/05/06 09:49:50 emarsden Exp $
  *
  */
 
@@ -590,8 +590,7 @@ void print_generation_stats(int  verbose)
 
   /* Print the heap stats */
   fprintf(stderr, "          Page count (%d KB)\n", PAGE_SIZE / 1024);
-  fprintf(stderr, "   Gen  Boxed Unboxed  LB   LUB    Alloc    Waste    Trigger   WP  GCs Mem-age
-\n");
+  fprintf(stderr, "   Gen  Boxed Unboxed  LB   LUB    Alloc    Waste    Trigger   WP  GCs Mem-age\n");
   
   for (i = 0; i < gens; i++) {
     int j;
