@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.6 1991/05/21 18:35:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.7 1991/05/23 17:01:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -181,7 +181,9 @@
       (setf *display-event-handlers*
 	    (delete file-descriptor *display-event-handlers*
 		    :key #'(lambda (d/h)
-			     (xlib::display-input-stream (car d/h)))))
+			     (fd-stream-fd
+			      (xlib::display-input-stream
+			       (car d/h))))))
       (error "File descriptor ~S not associated with any CLX display.~%~
                 It has been removed from system:serve-event's knowledge."
 	     file-descriptor))
