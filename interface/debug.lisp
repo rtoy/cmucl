@@ -549,6 +549,10 @@
 
 
 
+;;; Used to prevent recursive invocations of the windowing debugger.
+;;;
+(defvar *in-windowing-debugger* nil)
+
 ;;; INVOKE-DEBUGGER -- Public
 ;;;
 ;;; Invokes the Lisp debugger.  It executes some common debugger setup code
@@ -572,12 +576,13 @@
 	 (*print-readably* nil)
 	 (*read-eval* t))
     (if (or (not (use-graphics-interface))
+	    *in-windowing-debugger*
 	    (typep condition 'xti:toolkit-error))
 	(progn
 	  (format *error-output* "~2&~A~2&" *debug-condition*)
 	  (unless (typep condition 'step-condition)
 	    (show-restarts *debug-restarts* *error-output*))
 	  (internal-debug))
-	(progn
+	(let ((*in-windowing-debugger* t))
 	  (write-line "Invoking debugger...")
 	  (invoke-motif-debugger condition)))))
