@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.32 1993/08/30 14:53:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.33 1994/02/10 20:06:21 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -550,75 +550,75 @@
 		      collection))
 	  (vector
 	   :translation vector  :codes (#.vm:complex-vector-type)
-	   :direct-superclasses (generic-vector array sequence)
-	   :inherits (generic-vector array generic-array sequence
+	   :direct-superclasses (array sequence generic-vector)
+	   :inherits (array sequence generic-vector generic-array
 		      mutable-sequence mutable-collection generic-sequence
 		      collection))
 	  (simple-vector
 	   :translation simple-vector  :codes (#.vm:simple-vector-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (bit-vector
 	   :translation bit-vector  :codes (#.vm:complex-bit-vector-type)
-	   :inherits (vector generic-vector array generic-array sequence
+	   :inherits (vector array sequence generic-vector generic-array
 		      mutable-sequence mutable-collection generic-sequence
 		      collection))
 	  (simple-bit-vector
 	   :translation simple-bit-vector  :codes (#.vm:simple-bit-vector-type)
 	   :direct-superclasses (bit-vector simple-array)
-	   :inherits (bit-vector vector generic-vector simple-array array
-		      generic-array sequence mutable-sequence
+	   :inherits (bit-vector vector simple-array array sequence
+		      generic-vector generic-array mutable-sequence
 		      mutable-collection generic-sequence collection))
 	  (simple-array-unsigned-byte-2
 	   :translation (simple-array (unsigned-byte 2) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-2-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-unsigned-byte-4
 	   :translation (simple-array (unsigned-byte 4) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-4-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-unsigned-byte-8
 	   :translation (simple-array (unsigned-byte 8) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-8-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-unsigned-byte-16
 	   :translation (simple-array (unsigned-byte 16) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-16-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-unsigned-byte-32
 	   :translation (simple-array (unsigned-byte 32) (*))
 	   :codes (#.vm:simple-array-unsigned-byte-32-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-single-float
 	   :translation (simple-array single-float (*))
 	   :codes (#.vm:simple-array-single-float-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-array-double-float
 	   :translation (simple-array double-float (*))
 	   :codes (#.vm:simple-array-double-float-type)
 	   :direct-superclasses (vector simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence mutable-sequence mutable-collection
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (generic-string
 	   :state :read-only
@@ -627,14 +627,14 @@
 	  (string
 	   :translation string  :codes (#.vm:complex-string-type)
 	   :direct-superclasses (vector generic-string)
-	   :inherits (vector generic-vector array generic-array sequence
+	   :inherits (vector array sequence generic-vector generic-array
 		      generic-string mutable-sequence mutable-collection
 		      generic-sequence collection))
 	  (simple-string
 	   :translation simple-string  :codes (#.vm:simple-string-type)
 	   :direct-superclasses (string simple-array)
-	   :inherits (vector generic-vector simple-array array generic-array
-		      sequence generic-string mutable-sequence
+	   :inherits (string vector generic-string simple-array array sequence
+		      generic-vector generic-array mutable-sequence
 		      mutable-collection generic-sequence collection))
 
 	  (generic-number :state :read-only)
