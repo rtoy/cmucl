@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.44 1992/08/03 12:37:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.45 1992/10/09 14:02:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.44 1992/08/03 12:37:12 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.45 1992/10/09 14:02:25 wlott Exp $
 ;;;
 ;;;    This file contains stuff that knows about dumping FASL files.
 ;;;
@@ -509,6 +509,7 @@
 	(dolist (patch (patches))
 	  (push (cons handle (cdr patch))
 		(gethash (car patch) (fasl-file-patch-table file))))
+	(dump-fop 'lisp::fop-sanctify-for-execution file)
 	handle))))
 
 
