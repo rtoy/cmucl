@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.33 1992/04/04 01:03:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.34 1992/08/13 13:31:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -628,18 +628,21 @@
 	 (error "Ill-formed DEFSETF for ~S." access-fn))))
 
 (defun %defsetf (orig-access-form num-store-vars expander)
-  (collect ((subform-vars) (store-vars))
-    (let ((subforms (cdr orig-access-form)))
-      (dolist (subform subforms)
-	(declare (ignore subform))
-	(subform-vars (gensym)))
-      (dotimes (i num-store-vars)
-	(store-vars (gensym)))
-      (values (subform-vars)
-	      subforms
-	      (store-vars)
-	      (funcall expander (cons (subform-vars) (store-vars)))
-	      `(,(car orig-access-form) ,@(subform-vars))))))
+  (collect ((subforms) (subform-vars) (subform-exprs) (store-vars))
+    (dolist (subform (cdr orig-access-form))
+      (if (constantp subform)
+	  (subforms subform)
+	  (let ((var (gensym)))
+	    (subforms var)
+	    (subform-vars var)
+	    (subform-exprs subform))))
+    (dotimes (i num-store-vars)
+      (store-vars (gensym)))
+    (values (subform-vars)
+	    (subform-exprs)
+	    (store-vars)
+	    (funcall expander (cons (subforms) (store-vars)))
+	    `(,(car orig-access-form) ,@(subforms)))))
 
 
 ;;; SETF  --  Public
