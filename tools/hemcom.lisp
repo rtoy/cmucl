@@ -272,5 +272,6 @@
 	   "target:hemlock/debug"
 	   "target:hemlock/netnews"
 	   "target:hemlock/bindings"))
+ :if-output-exists :supersede
  :output (make-pathname :defaults "target:hemlock/hemlock-library"
 			:type (c:backend-fasl-file-type c:*target-backend*)))
