@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.77 2000/12/27 13:24:29 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.78 2001/01/01 09:30:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -252,11 +252,17 @@
 	   (*print-array* nil))
        (format stream "~S cannot be printed readably." obj)))))
 
+;;; Guts of print-unreadable-object.
+;;;
+;;; When *print-pretty* and the stream is a pretty-stream, format the object
+;;; within a logical block - pprint-logical-block does not rebind the stream
+;;; when it is already a pretty stream so output from the body will go to the
+;;; same stream.
+;;;
 (defun %print-unreadable-object (object stream type identity body)
   (when *print-readably*
     (error 'print-not-readable :object object))
-  (cond (*print-pretty*
-	 (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
+  (flet ((print-description ()
 	   (when type
 	     (write (type-of object) :stream stream :circle nil
 		    :level nil :length nil)
@@ -273,23 +279,13 @@
 	     (write (get-lisp-obj-address object) :stream stream
 		    :radix nil :base 16)
 	     (write-char #\} stream))))
-	(t
-	 (write-string "#<" stream)
-	 (when type
-	   (write (type-of object) :stream stream :circle nil
-		  :level nil :length nil)
-	   (when (or body identity)
-	     (write-char #\space stream)))
-	 (when body
-	   (funcall body))
-	 (when identity
-	   (when body
-	     (write-char #\space stream))
-	   (write-char #\{ stream)
-	   (write (get-lisp-obj-address object) :stream stream
-		  :radix nil :base 16)
-	   (write-char #\} stream))
-	 (write-char #\> stream)))
+    (cond ((and (pp:pretty-stream-p stream) *print-pretty*)
+	   (pprint-logical-block (stream nil :prefix "#<" :suffix ">")
+	     (print-description)))
+	  (t
+	   (write-string "#<" stream)
+	   (print-description)
+	   (write-char #\> stream))))
   nil)
 
 
