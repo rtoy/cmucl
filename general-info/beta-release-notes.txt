@@ -1,3 +1,185 @@
+	    Release notes for CMU Common Lisp 16e, 5 August 92
+
+16e is primarily a bug-fix release.  The main changes from 16d are:
+ -- CLOS support is from March 92 PCL (2a).  This is a new version of PCL
+    developed by Richard Harris which incorporates many bug-fixes and ANSI
+    compliance cleanups.  He has also back-merged the CMU changes into his
+    sources so that we can release future PCLs without time-consuming merging.
+ -- TRACE has been reimplemented, has a new syntax and new features.
+ -- The hardcopy and info documentation has been updated.  Note that it
+    describes some debugger capabilities (breakpoints) which won't appear
+    until version 17.
+
+The fasl file format is the same as for 16d, but some code may need to be
+recompiled.  In particular, the expansion of PPRINT-LOGICAL-BLOCK has changed.
+
+
+March 92 PCL highlights:  (see notes.text in the sources for details)
+ -- This version of PCL is much closer than previous versions of PCL to the
+    metaobject protocol specified in "The Art of the Metaobject Protocol",
+    chapters 5 and 6, by Gregor Kiczales, Jim des Riveres, and Daniel G.
+    Bobrow.
+ -- You can use structure-class as a metaclass to create new classes.
+    Classes created this way create and evaluate defstruct forms which
+    have generated symbols for the structure accessors and constructor.
+ -- Various optimization of instance variable access, both inside and outside
+    of methods.
+ -- More work (lookups and precompilation) is done at compile and load time,
+    rather than run-time.
+
+
+New TRACE:
+
+Trace has been substantially rewritten, and has a new syntax as well as new
+functionality:
+ -- Tracing of compiled functions is now implemented using breakpoints.
+    Breakpoints destructively modify the code object, causing all calls to the
+    function to be trapped, instead of only those calls that indirect through
+    the symbol.  This makes TRACE more useful for debugging programs that use
+    data structures containing function values, since you can now trace
+    anonymous functions and macros.  Also, the breakpoint stops the function
+    after the arguments have been parsed, so arguments can accessed by name in
+    the debugger or in TRACE options.
+ -- Depending on the ENCAPSULATE option and DEBUG:*TRACE-ENCAPSULATE-DEFAULT*,
+    encapsulation may be used instead.  This is the default for closures,
+    generic functions and interpreted functions.
+ -- TRACE options are no longer set off by extra parens, and you can specify
+    global trace options which affect all functions traced by a particular
+    call to TRACE.
+ -- Conditional breakpoints now work much better than before.
+ -- *DEBUG-PRINT-LEVEL*, -LENGTH* are used instead of a separate
+    *TRACE-PRINT-LEVEL*, etc.
+
+Here is the documentation string (see also the hardcopy/info documentation):
+   TRACE {Option Global-Value}* {Name {Option Value}*}*
+   TRACE is a debugging tool that prints information when specified functions
+   are called.  In its simplest form:
+       (trace Name-1 Name-2 ...)
+
+   TRACE causes a printout on *TRACE-OUTPUT* each time that one of the named
+   functions is entered or returns (the Names are not evaluated.)  The output
+   is indented according to the number of pending traced calls, and this trace
+   depth is printed at the beginning of each line of output.
+
+   Options allow modification of the default behavior.  Each option is a pair
+   of an option keyword and a value form.  Options may be interspersed with
+   function names.  Options only affect tracing of the function whose name they
+   appear immediately after.  Global options are specified before the first
+   name, and affect all functions traced by a given use of TRACE.
+
+   The following options are defined:
+
+   :CONDITION Form
+   :CONDITION-AFTER Form
+   :CONDITION-ALL Form
+       If :CONDITION is specified, then TRACE does nothing unless Form
+       evaluates to true at the time of the call.  :CONDITION-AFTER is
+       similar, but suppresses the initial printout, and is tested when the
+       function returns.  :CONDITION-ALL tries both before and after.
+
+   :WHEREIN Names
+       If specified, Names is a function name or list of names.  TRACE does
+       nothing unless a call to one of those functions encloses the call to
+       this function (i.e. it would appear in a backtrace.)  Anonymous
+       functions have string names like "DEFUN FOO".
+
+   :BREAK Form
+   :BREAK-AFTER Form
+   :BREAK-ALL Form
+       If specified, and Form evaluates to true, then the debugger is invoked
+       at the start of the function, at the end of the function, or both,
+       according to the respective option.
+
+   :PRINT Form
+   :PRINT-AFTER Form
+   :PRINT-ALL Form
+       In addition to the usual prinout, he result of evaluating Form is
+       printed at the start of the function, at the end of the function, or
+       both, according to the respective option.  Multiple print options cause
+       multiple values to be printed.
+
+   :FUNCTION Function-Form
+       This is a not really an option, but rather another way of specifying
+       what function to trace.  The Function-Form is evaluated immediately,
+       and the resulting function is traced.
+
+   :ENCAPSULATE {:DEFAULT | T | NIL}
+       If T, the tracing is done via encapsulation (redefining the function
+       name) rather than by modifying the function.  :DEFAULT is the default,
+       and means to use encapsulation for interpreted functions and funcallable
+       instances, breakpoints otherwise.  When encapsulation is used, forms are
+       *not* evaluated in the function's lexical environment, but DEBUG:ARG can
+       still be used.
+
+   :CONDITION, :BREAK and :PRINT forms are evaluated in the lexical environment
+   of the called function; DEBUG:VAR and DEBUG:ARG can be used.  The -AFTER and
+   -ALL forms are evaluated in the null environment.
+
+
+Assorted bug fixes and enhancements:
+
+System code:
+ -- Changed default base file name for LOAD-FOREIGN to be argv[0] rather than
+    being hard-wired to "lisp".
+ -- Fixed a bad declaration which caused garbage collection to fail if more
+    than MOST-POSITIVE-FIXNUM bytes had been consed since process creation.
+ -- Changed GET-INTERNAL-RUN-TIME to use UNIX-FAST-GETRUSAGE to avoid
+    number-consing and generic arithmetic.  Also, rearranged the computation
+    so that the time is correctly computed for up to 457 days, instead of only
+    71 minutes.
+ -- Merged Miles' fix to MAKE-PATHNAME so that it knows the difference between 
+    an arg being NIL and being unsupplied.
+ -- Some partial fixes to circular printing (the #1=#1# bug).
+    PPRINT-LOGICAL-BLOCK no longer checks the list argument for CAR
+    circularity, now that OUTPUT-OBJECT does it for us.
+ -- Fixed reader dispatch macro characters to be case-insensitive, and to
+    disallow digits as sub-characters.
+ -- Changed #A reader to allow arbitrary sequences instead of just lists.
+ -- RUN-PROGRAM now gives a proper error message when "fork" fails (i.e. too
+ -- SYSTEM:SERVE-EVENT (and XLIB:EVENT-CASE, etc.) now correctly handle
+    non-integer timeouts.  Added declarations to improve the efficiency of
+    event handling.
+ -- Fixed some bugs in UNIX-SELECT which could cause Lisp to hang when more
+    than 32 files were open.  Also, improved efficiency in this case.
+ -- Merged Olssons fix to WITH-ENABLED-INTERRUPTS to not try to change
+    interrupt characters anymore.
+ -- A number of bug-fixes for breakpoint support in compiled code (but there
+    are still problems with arbitrary breakpoints.)
+ -- Fixed DI:FRAME-CATCHES
+
+CLX:
+ -- Fixed the implementation-dependent pixarray copying routines (for
+    GET-IMAGE, etc.) so that they don't occasionally trash memory, and are
+    actually faster.
+ -- Fixed the definition of the ANGLE type (used by DRAW-ARC, etc.) to work
+    regardless of the kind of real number (single or double float, rational,
+    etc.)
+ -- Fixed several places in image operations where values that could really
+    be negative were declared to be non-negative.
+
+Compiler:
+ -- Fixed a bug which caused an internal error whenever a call to random
+    was compiled and the argument type wasn't known to be either a float or
+    an integer.
+ -- Fixed a bug which caused an internal compiler error when a value that
+    wasn't used had an unproven type assertion.
+ -- Fixed some more dead-code deletion bugs.
+ -- Fixed a problem with the new "assignment" optimization of local function
+    call where the compiler could get assertion failures such as tail-sets not
+    being equal.
+ -- Fixed a few places where reoptimization wasn't being triggered when it
+    should have been.
+ -- You can now have a TAGBODY with more than one tag that is non-locally
+    exited to.  Evidently this never worked...
+ -- Some changes in debug-info format related to breakpoint support.
+
+Misc:
+ -- Fixed some Hemlock Dired commands to know that PATHNAME-DIRECTORY is
+    now a list, not a vector.
+ -- Fixed the bin/sample-wrapper script to use "$@" instead of $* so that
+    arguments are properly passed through.
+
+
 	    Release notes for CMU Common Lisp 16d, 30 May 92
 
 16d is our first version 16 general release, and incorporates many changes not
