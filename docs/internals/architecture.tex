@@ -298,7 +298,8 @@ system.  These symbols are:
 \begin{description}
 \item[:no-compiler] don't load the compiler.
 \item[:no-clx] don't load CLX.
-\item[:no-hemlock] don't load hemlock.
+\item[:no-clm] don't load CLM.
+\item[:no-hemlock] don't load Hemlock.
 \item[:no-pcl] don't load PCL.
 \item[:runtime] build a runtime code, implies all of the above, and then some.
 \end{description}
@@ -306,3 +307,6 @@ system.  These symbols are:
 Note: if you don't load the compiler, you can't (successfully) load the
 pretty-printer or pcl.  And if you compiled hemlock with CLX loaded, you can't
 load it without CLX also being loaded.
+
+These features are only used during the worldload process, and are
+not propagated to the generated \verb|lisp.core| file. 
