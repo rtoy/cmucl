@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.5 1990/08/24 18:11:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.6 1990/10/04 15:06:54 ram Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -585,6 +585,14 @@
     (multiple-value-bind (f ex s) (decode-float number)
       (declare (ignore ex))
       (* s (scale-float f exponent)))))
+
+(define-fop (fop-single-float 46)
+  (vm:make-single-float (load-s-integer 4)))
+
+(define-fop (fop-double-float 47)
+  (let ((lo (ldb (byte 32 0) (load-s-integer 4))))
+    (vm:make-double-float (load-s-integer 4) lo)))
+
 
 ;;;; Loading lists:
 
