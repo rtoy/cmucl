@@ -27,6 +27,16 @@
 
 (in-package :pcl)
 
+;;; ANSI CL condition for unbound slots.
+
+(define-condition unbound-slot (cell-error)
+  ((instance :reader unbound-slot-instance :initarg :instance)
+   (slot :reader unbound-slot-slot :initarg :slot))
+  (:report (lambda(condition stream)
+	     (format stream "The slot ~S is unbound in the object ~S"
+		     (unbound-slot-slot condition)
+		     (unbound-slot-instance condition)))))
+
 (defmethod wrapper-fetcher ((class standard-class))
   'std-instance-wrapper)
 
@@ -355,7 +365,7 @@
 	 instance))
 
 (defmethod slot-unbound ((class t) instance slot-name)
-  (error "The slot ~S is unbound in the object ~S." slot-name instance))
+  (error 'unbound-slot :slot slot-name :instance instance))
 
 (defun slot-unbound-internal (instance position)
   (slot-unbound (class-of instance) instance 
