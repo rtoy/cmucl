@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.59 2003/05/23 11:05:16 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.60 2003/05/25 14:33:50 gerd Exp $")
 
 (in-package :pcl)
 
@@ -181,11 +181,9 @@ work during bootstrapping.
 
 (defun check-generic-function-lambda-list (function-specifier lambda-list)
   (multiple-value-bind (required optional restp rest keyp keys
-				 allow-other-keys-p auxp aux morep
-				 more-context more-count)
+				 allow-other-keys-p auxp aux)
       (parse-generic-function-lambda-list lambda-list)
-    (declare (ignore restp rest keyp aux allow-other-keys-p more-context
-		     more-count))
+    (declare (ignore restp rest keyp aux allow-other-keys-p))
     (labels ((lambda-list-error (format-control &rest format-arguments)
 	       (simple-program-error
 		(format nil "~~@<Generic function ~a: ~?.~~@:>"
@@ -209,14 +207,9 @@ work during bootstrapping.
 		  "Optional and key parameters of generic functions ~
                    may not have default values or supplied-p ~
                    parameters: ~<~s~>" parameter))))
-      (when morep
-	(lambda-list-error
-	 "~s is not allowed in generic function lambda lists"
-	 '&more))
       (when auxp
 	(lambda-list-error
-	 "~s is not allowed in generic function lambda lists"
-	 '&aux))
+	 "~s is not allowed in generic function lambda lists" '&aux))
       (mapc #'check-required-parameter required)
       (mapc #'check-key-or-optional-parameter optional)
       (mapc #'check-key-or-optional-parameter keys))))
@@ -384,12 +377,10 @@ work during bootstrapping.
 
 (defvar *inline-access*)
 (defvar *method-source-info*)
-(defvar *make-method-lambda-gf-name* nil)
 
 (defun expand-defmethod (name proto-gf proto-method qualifiers
 			 lambda-list body env)
-  (let ((*inline-access* ())
-	(*make-method-lambda-gf-name* name))
+  (let ((*inline-access* ()))
     (multiple-value-bind (method-lambda unspecialized-lambda-list specializers)
 	(add-method-declarations name qualifiers lambda-list body env)
       (let* ((auto-compile-p (auto-compile-p name qualifiers specializers))
@@ -653,6 +644,7 @@ work during bootstrapping.
 		  (multiple-value-bind (slot-name-lists call-list)
 		      (slot-name-lists-from-slots slots calls)
 		    (let ((pv-table-symbol (make-symbol "pv-table")))
+		      ;;
 		      ;; PV-TABLE-SYMBOL's symbol-value is later set
 		      ;; to an actual PV table for the method
 		      ;; function; see INITIALIZE-METHOD-FUNCTION.
@@ -668,23 +660,11 @@ work during bootstrapping.
 					   ,pv-table-symbol)
 			       ,@walked-lambda-body))))))
 		;;
-		;; When the GF contains &KEY, and the method has no
-		;; &KEY, add &KEY to the method function's
-		;; lambda-list, so that it checks for invalid keyword
-		;; arguments lists.  This is hack that works only for
-		;; methods defined with DEFMETHOD.  Don't know how to
-		;; do any better, though.  MAKE-METHOD-LAMBDA really
-		;; wants a NAME argument telling it the name of the
-		;; generic function for which the method lambda is
-		;; made, or maybe the lambda-list of the generic
-		;; function, or something.
-		(when (and (gf-key-p *make-method-lambda-gf-name*)
-			   (not (memq '&key lambda-list)))
-		  (setq lambda-list (append lambda-list '(&key))))
-		;;
 		;; When the lambda-list contains &KEY but not
 		;; &ALLOW-OTHER-KEYS, insert an &ALLOW-OTHER-KEYS
-		;; into the lambda-list.
+		;; into the lambda-list.  This corresponds to
+		;; CLHS 7.6.4 which says that methods are effectively
+		;; called as if :ALLOW-OTHER-KEYS T were supplied.
 		(when (and (memq '&key lambda-list)
 			   (not (memq '&allow-other-keys lambda-list)))
 		  (let ((aux (memq '&aux lambda-list)))
@@ -821,23 +801,11 @@ work during bootstrapping.
 	       (if (eq value +slot-unbound+)
 		   (slot-unbound-internal ,(car required-args+rest-arg) ,emf)
 		   value)))))
-       ;;
        ,@(when (and (null restp) (= 2 (length required-args+rest-arg)))
-	  `((fixnum
-	     (let ((.new-value. ,(car required-args+rest-arg))
-		   (.slots. (get-slots-or-nil ,(cadr required-args+rest-arg))))
-	       (when .slots. ; just to avoid compiler wranings
-		 (setf (%slot-ref .slots. ,emf) .new-value.))))))
-       #|| 
-       ,@(when (and (null restp) (= 1 (length required-args+rest-arg)))
-          `(((typep ,emf 'fast-instance-boundp)
-              (let ((.slots. (get-slots-or-nil
-				  ,(car required-args+rest-arg))))
-		    (and .slots.
-			 (not (eq (%slot-ref
-				   .slots. (fast-instance-boundp-index ,emf))
-				  +slot-unbound+)))))))
-       ||#
+	   (destructuring-bind (new-value object) required-args+rest-arg
+	     `((fixnum
+		(setf (%slot-ref (get-slots-or-nil ,object) ,emf)
+		      ,new-value)))))
        (method-call
 	(invoke-method-call ,emf ,restp ,@required-args+rest-arg))
        (function
@@ -954,104 +922,65 @@ work during bootstrapping.
 			 (next-method-p-body)))))
 	      ,@body))))
 
-(defmacro bind-args ((lambda-list args) &body body)
-  (let ((args-tail '.args-tail.)
-	(key '.key.)
-	(state 'required)
-	(key-seen nil)
-	(nkeys 0))
-    (flet ((process-var (var)
-	     (if (memq var lambda-list-keywords)
-		 (progn
-		   (ecase var
-		     (&optional         (setq state 'optional))
-		     (&key              (setq state 'key key-seen t))
-		     (&allow-other-keys)
-		     (&rest             (setq state 'rest))
-		     (&aux              (setq state 'aux)))
-		   nil)
-		 (case state
-		   (required
-		    `((,var (pop ,args-tail))))
-		   (optional
-		    (cond ((not (consp var))
-			   `((,var (when ,args-tail (pop ,args-tail)))))
-			  ((null (cddr var))
-			   `((,(car var) (if ,args-tail
-					     (pop ,args-tail)
-					     ,(cadr var)))))
-			  (t
-			   `((,(caddr var) ,args-tail)
-			     (,(car var) (if ,args-tail
-					     (pop ,args-tail)
-					     ,(cadr var)))))))
-		   (rest
-		    `((,var ,args-tail)))
-		   (key
-		    (incf nkeys)
-		    (cond ((not (consp var))
-			   `((,var (get-key-arg ,(make-keyword var)
-						,args-tail ',(= 1 nkeys)))))
-			  ((null (cddr var))
-			   (multiple-value-bind (keyword variable)
-			       (if (consp (car var))
-				   (values (caar var) (cadar var))
-				   (values (make-keyword (car var)) (car var)))
-			     `((,key (get-key-arg1 ',keyword ,args-tail
-						   ',(= 1 nkeys)))
-			       (,variable (if (consp ,key)
-					      (car ,key)
-					      ,(cadr var))))))
-			  (t
-			   (multiple-value-bind (keyword variable)
-			       (if (consp (car var))
-				   (values (caar var) (cadar var))
-				   (values (make-keyword (car var)) (car var)))
-			     `((,key (get-key-arg1 ',keyword ,args-tail
-						   ',(= 1 nkeys)))
-			       (,(caddr var) ,key)
-			       (,variable (if (consp ,key)
-					      (car ,key)
-					      ,(cadr var))))))))
-		   (aux
-		    `(,var))))))
-      (let ((bindings (mapcan #'process-var lambda-list)))
-	`(let* ((,args-tail ,args)
-		,@bindings
-		(.dummy1. ,@(when (eq state 'optional)
-			      `((unless (null ,args-tail)
-				  (too-many-args)))))
-		(.dummy. ,@(when (and key-seen (zerop nkeys))
-			     `((get-key-arg1 :allow-other-keys
-					     ,args-tail t)))))
-	   (declare (ignorable ,args-tail .dummy. .dummy1.))
-	   ,@body)))))
-
 (defun too-many-args ()
   (simple-program-error "Too many arguments."))
 
-(defun odd-number-of-keyword-arguments ()
-  (simple-program-error "Odd number of keyword arguments."))
+(declaim (inline get-key-arg))
+(defun get-key-arg (keyword list)
+  (car (get-key-arg1 keyword list)))
 
-(defun invalid-keyword-argument (key)
-  (simple-program-error "Invalid keyword argument ~s" key))
+(defun get-key-arg1 (keyword list)
+  (loop for (key . more) on list by #'cddr
+	when (eq key keyword) return more))
 
-(defun get-key-arg (keyword list first-time)
-  (car (get-key-arg1 keyword list first-time)))
-
-(defun get-key-arg1 (keyword list first-time)
-  (if first-time
-      (loop with cell = nil
-	    for (key . more) on list by #'cddr do
-	      (cond ((not (symbolp key))
-		     (invalid-keyword-argument key))
-		    ((null more)
-		     (odd-number-of-keyword-arguments))
-		    ((and (null cell) (eq key keyword))
-		     (setq cell more)))
-	    finally (return cell))
-      (loop for (key . more) on list by #'cddr
-	    when (eq key keyword) return more)))
+(defmacro bind-args ((lambda-list args) &body body)
+  (let ((state 'required))
+    (collect ((bindings) (ignorable (list '.args.)))
+      (dolist (var lambda-list)
+	(if (memq var lambda-list-keywords)
+	    (ecase var
+	      ((&optional &key &rest &aux)
+	       (setq state var))
+	      (&allow-other-keys))
+	    (case state
+	      (required
+	       (bindings `(,var (pop .args.))))
+	      (&optional
+	       (etypecase var
+		 (symbol
+		  (bindings `(,var (when .args. (pop .args.)))))
+		 (cons
+		  (destructuring-bind (var &optional default
+					   (supplied nil supplied-p))
+		      var
+		    (when supplied-p (bindings `(,supplied .args.)))
+		    (bindings `(,var (if .args. (pop .args.) ,default)))))))
+	      (&rest
+	       (bindings `(,var .args.)))
+	      (&key
+	       (etypecase var
+		 (symbol
+		  (bindings `(,var (get-key-arg ,(make-keyword var) .args.))))
+		 (cons
+		  (destructuring-bind (var &optional default
+					   (supplied nil supplied-p))
+		      var
+		    (multiple-value-bind (key var)
+			(if (consp var)
+			    (destructuring-bind (key var) var
+			      (values key var))
+			    (values (make-keyword var) var))
+		      (bindings `(.key. (get-key-arg1 ',key .args.)))
+		      (when supplied-p (bindings `(,supplied .key.)))
+		      (bindings `(,var (if .key. (car .key.) ,default))))))))
+	      (&aux
+	       (bindings var)))))
+      (when (eq state '&optional)
+	(bindings '(.dummy. (unless (null .args.) (too-many-args))))
+	(ignorable '.dummy.))
+      `(let* ((.args. ,args) ,@(bindings))
+	 (declare (ignorable ,@(ignorable)))
+	 ,@body))))
 
 (defun walk-method-lambda (method-lambda required-parameters env slots calls)
   (let ((call-next-method-p nil)   ;flag indicating that call-next-method
@@ -1471,6 +1400,30 @@ work during bootstrapping.
     (set-arg-info1 gf arg-info new-method methods was-valid-p first-p)
     arg-info))
 
+(declaim (inline generic-function-name*))
+(defun generic-function-name* (gf)
+  (if (early-gf-p gf)
+      (early-gf-name gf)
+      (generic-function-name gf)))
+
+(declaim (inline generic-function-methods*))
+(defun generic-function-methods* (gf)
+  (if (early-gf-p gf)
+      (early-gf-methods gf)
+      (generic-function-methods gf)))
+
+(declaim (inline gf-arg-info*))
+(defun gf-arg-info* (gf)
+  (if (early-gf-p gf)
+      (early-gf-arg-info gf)
+      (gf-arg-info gf)))
+
+(declaim (inline method-lambda-list*))
+(defun method-lambda-list* (method)
+  (if (consp method)
+      (early-method-lambda-list method)
+      (method-lambda-list method)))
+
 (defun compute-precedence (lambda-list nreq argument-precedence-order)
   (if (null argument-precedence-order)
       (let ((list nil))
@@ -1482,9 +1435,7 @@ work during bootstrapping.
 
 (defun check-method-arg-info (gf arg-info method)
   (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
-      (analyze-lambda-list (if (consp method)
-			       (early-method-lambda-list method)
-			       (method-lambda-list method)))
+      (analyze-lambda-list (method-lambda-list* method))
     (flet ((lose (format-control &rest format-args)
 	     (simple-program-error
 	      (format nil "~~@<Attempt to add the method ~~S to the generic ~
@@ -1716,6 +1667,13 @@ work during bootstrapping.
 (defun early-gf-name (gf)
   (slot-ref (get-slots gf) *sgf-name-index*))
 
+(defun gf-lambda-list-from-method (method)
+  (multiple-value-bind (parameters unspecialized-lambda-list)
+      (parse-specialized-lambda-list (method-lambda-list* method))
+    (declare (ignore parameters))
+    (let ((aux (memq '&aux unspecialized-lambda-list)))
+      (ldiff unspecialized-lambda-list aux))))
+
 (defun gf-lambda-list (gf)
   (let ((arg-info (if (eq *boot-state* 'complete)
 		      (gf-arg-info gf)
@@ -1725,17 +1683,8 @@ work during bootstrapping.
 			   (generic-function-methods gf)
 			   (early-gf-methods gf))))
 	  (if (null methods)
-	      (progn
-		(warn "~@<No way to determine the lambda list for ~S.~@:>" gf)
-		nil)
-	      (let* ((method (car (last methods)))
-		     (ll (if (consp method)
-			     (early-method-lambda-list method)
-			     (method-lambda-list method)))
-		     (k (member '&key ll)))
-		(if k 
-		    (append (ldiff ll (cdr k)) '(&allow-other-keys))
-		    ll))))
+	      (internal-error "~@<No way to determine the lambda list~@:>")
+	      (gf-lambda-list-from-method (car (last methods)))))
 	(arg-info-lambda-list arg-info))))
 
 (defmacro real-ensure-gf-internal (gf-class all-keys env)
@@ -1840,9 +1789,7 @@ work during bootstrapping.
 (defun get-generic-function-info (gf)
   ;; values   nreq applyp metatypes nkeys arg-info
   (multiple-value-bind (applyp metatypes arg-info)
-      (let* ((arg-info (if (early-gf-p gf)
-			   (early-gf-arg-info gf)
-			   (gf-arg-info gf)))
+      (let* ((arg-info (gf-arg-info* gf))
 	     (metatypes (arg-info-metatypes arg-info)))
 	(values (arg-info-applyp arg-info)
 		metatypes
@@ -2196,7 +2143,6 @@ work during bootstrapping.
   (multiple-value-bind (required optional restp rest keyp keys
 				 allow-other-keys-p aux)
       (parse-lambda-list lambda-list t)
-    (declare (ignore more-context more-count))
     (collect ((req) (spec))
       (dolist (x required)
 	(req (if (consp x) (car x) x))

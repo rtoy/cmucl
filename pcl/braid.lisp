@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.42 2003/05/19 19:16:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.43 2003/05/25 14:33:50 gerd Exp $")
 
 ;;;
 ;;; Bootstrapping the meta-braid.
@@ -514,19 +514,15 @@
 ;;; for the corresponding KERNEL::CLASS.
 ;;; 
 (defun ensure-non-standard-class (name &optional existing-class)
-  (flet ((ensure (metaclass &optional (slots nil slotsp))
+  (flet ((ensure (metaclass slots)
 	   (let* ((class (kernel::find-class name))
 		  (kernel-supers (kernel:%class-direct-superclasses class))
 		  (supers (mapcar #'kernel:%class-name kernel-supers)))
              (without-package-locks
-              (if slotsp
-                  (ensure-class-using-class
-                   existing-class name :metaclass metaclass :name name
-                   :direct-superclasses supers
-                   :direct-slots slots)
-                  (ensure-class-using-class
-                   existing-class name :metaclass metaclass :name name
-                   :direct-superclasses supers)))))
+	      (ensure-class-using-class
+	       existing-class name :metaclass metaclass :name name
+	       :direct-superclasses supers
+	       :direct-slots slots))))
 	 (slot-initargs-from-structure-slotd (slotd)
 	   (let ((accessor (structure-slotd-accessor-symbol slotd)))
 	     `(:name ,(structure-slotd-name slotd)

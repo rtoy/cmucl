@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.27 2003/05/11 11:30:34 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dfun.lisp,v 1.28 2003/05/25 14:33:49 gerd Exp $")
 
 (in-package :pcl)
 
@@ -493,15 +493,13 @@ And so, we are saved.
 		      classes-list new-class)))
 	  (make-checking-dfun generic-function function cache)))))
 
-(defun use-caching-dfun-p (generic-function)
+(defun use-caching-dfun-p (gf)
   (some (lambda (method)
 	  (let ((fmf (if (listp method)
 			 (third method)
 			 (method-fast-function method))))
 	    (method-function-get fmf :slot-name-lists)))
-	(if (early-gf-p generic-function)
-	    (early-gf-methods generic-function)
-	    (generic-function-methods generic-function))))
+	(generic-function-methods* gf)))
 
 
 ;;;
@@ -546,9 +544,7 @@ And so, we are saved.
       (get-generic-function-info gf)
     (declare (ignore nreq metatypes nkeys))
     (let* ((early-p (early-gf-p gf))
-	   (methods (if early-p
-			(early-gf-methods gf)
-			(generic-function-methods gf)))
+	   (methods (generic-function-methods* gf))
 	   (default '(unknown)))
       (and (null applyp)
 	   (or (not (eq *boot-state* 'complete))
@@ -590,7 +586,7 @@ And so, we are saved.
 
 (defun use-dispatch-dfun-p (gf &optional (caching-p (use-caching-dfun-p gf)))
   (when (eq *boot-state* 'complete)
-    (unless caching-p
+    (unless (or caching-p (emfs-must-check-applicable-keywords-p gf))
       ;; This should return T when almost all dispatching is by
       ;; eql specializers or built-in classes.  In other words,
       ;; return NIL if we might ever need to do more than
@@ -796,9 +792,7 @@ And so, we are saved.
 		       (t
 			(values initial-dfun nil (make-initial-dfun-info))))))
 	      (t
-	       (let ((arg-info (if (early-gf-p gf)
-				   (early-gf-arg-info gf)
-				   (gf-arg-info gf)))
+	       (let ((arg-info (gf-arg-info* gf))
 		     (type nil))
 		 (if (and (gf-precompute-dfun-and-emf-p arg-info)
 			  (setq type (final-accessor-dfun-type gf)))
@@ -844,18 +838,16 @@ And so, we are saved.
       (make-final-dfun-internal gf classes-list)
     (set-dfun gf dfun cache info)))
 
-(defun update-dfun (generic-function &optional dfun cache info)
-  (let* ((early-p (early-gf-p generic-function))
-	 (gf-name (if early-p
-		      (early-gf-name generic-function)
-		      (generic-function-name generic-function))))
-    (set-dfun generic-function dfun cache info)
+(defun update-dfun (gf &optional dfun cache info)
+  (let* ((early-p (early-gf-p gf))
+	 (gf-name (generic-function-name* gf)))
+    (set-dfun gf dfun cache info)
     (let ((dfun (if early-p
-		    (or dfun (make-initial-dfun generic-function))
-		    (compute-discriminating-function generic-function))))
-      (set-funcallable-instance-function generic-function dfun)
-      (set-function-name generic-function gf-name)
-      (update-pv-calls-for-gf generic-function)
+		    (or dfun (make-initial-dfun gf))
+		    (compute-discriminating-function gf))))
+      (set-funcallable-instance-function gf dfun)
+      (set-function-name gf gf-name)
+      (update-pv-calls-for-gf gf)
       dfun)))
 
 (defun gfs-of-type (type)
@@ -884,9 +876,7 @@ And so, we are saved.
   `(with-hash-table (,table eq) ,@forms))
 
 (defun final-accessor-dfun-type (gf)
-  (let ((methods (if (early-gf-p gf)
-		     (early-gf-methods gf)
-		     (generic-function-methods gf))))
+  (let ((methods (generic-function-methods* gf)))
     (cond ((every (lambda (method) 
 		    (if (consp method)
 			(eq *the-class-standard-reader-method*
@@ -1315,9 +1305,7 @@ And so, we are saved.
 ;;;
 (defun make-accessor-table (gf type table)
   (let ((table (or table (make-hash-table :test 'eq)))
-	(methods (if (early-gf-p gf)
-		     (early-gf-methods gf)
-		     (generic-function-methods gf)))
+	(methods (generic-function-methods* gf))
 	(all-index nil)
 	(no-class-slots-p t)
 	(early-p (not (eq *boot-state* 'complete)))
@@ -1392,9 +1380,7 @@ And so, we are saved.
 (defun compute-applicable-methods-using-types (gf types)
   (let ((definite-p t)
 	(possibly-applicable-methods ()))
-    (dolist (method (if (early-gf-p gf)
-			(early-gf-methods gf)
-			(generic-function-methods gf)))
+    (dolist (method (generic-function-methods* gf))
       (let ((specls (if (consp method)
 			(early-method-specializers method t)
 			(method-specializers method)))
@@ -1413,9 +1399,7 @@ And so, we are saved.
 	  (unless applicable-p
 	    (setq definite-p nil))
 	  (push method possibly-applicable-methods))))
-    (let ((precedence (arg-info-precedence (if (early-gf-p gf)
-					       (early-gf-arg-info gf)
-					       (gf-arg-info gf)))))
+    (let ((precedence (arg-info-precedence (gf-arg-info* gf))))
       (values (sort-applicable-methods (nreverse possibly-applicable-methods)
 				       types precedence)
 	      definite-p))))

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.32 2003/05/20 18:39:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.33 2003/05/25 14:33:49 gerd Exp $")
 
 (in-package :pcl)
 
@@ -894,7 +894,7 @@
   (case type
     (reader (setq *condition-slot-value-using-class-method* method))
     (writer (setq *condition-setf-slot-value-using-class-method* method))
-    (boundp (setq *condition-boundp-using-class-method* method))))
+    (boundp (setq *condition-slot-boundp-using-class-method* method))))
 
 (defun update-std-or-str-methods (gf type)
   (dolist (method (generic-function-methods gf))
@@ -1529,9 +1529,7 @@
 ;;;
 (defmethod function-keywords ((method standard-method))
   (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
-      (analyze-lambda-list (if (consp method)
-			       (early-method-lambda-list method)
-			       (method-lambda-list method)))
+      (analyze-lambda-list (method-lambda-list* method))
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
 

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.30 2003/05/19 19:16:26 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.31 2003/05/25 14:33:49 gerd Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -364,6 +364,7 @@ the compiler as completely as possible.  Currently this means that
 		 (if (consp var)
 		     (destructuring-bind (var &optional value supplied-p)
 			 var
+		       (declare (ignore value))
 		       (if (consp var)
 			   (check-var (cadr var))
 			   (check-var var))

@@ -46,7 +46,7 @@
 ;;; is called.
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.12 2003/05/13 10:49:01 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/ctor.lisp,v 1.13 2003/05/25 14:33:50 gerd Exp $")
 
 (in-package "PCL")
 
@@ -258,7 +258,7 @@
 	      (unless (class-finalized-p class)
 		(finalize-inheritance class))
 	      (pushnew ctor (plist-value class 'ctors))
-	      (install (null *cold-boot-state*))))))))
+	      (install (null *cold-boot-state*)))))))
 
 (defun constructor-function-form (ctor)
   (let* ((class (ctor-class ctor))

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.66 2003/05/20 18:39:36 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.67 2003/05/25 14:33:49 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1131,9 +1131,12 @@
 (defmethod compute-effective-slot-definition-initargs :around
     ((class structure-class) direct-slotds)
   (let ((slotd (car direct-slotds)))
-    (list* :defstruct-accessor-symbol (slot-definition-defstruct-accessor-symbol slotd)
-	   :internal-reader-function (slot-definition-internal-reader-function slotd)
-	   :internal-writer-function (slot-definition-internal-writer-function slotd)
+    (list* :defstruct-accessor-symbol
+	   (slot-definition-defstruct-accessor-symbol slotd)
+	   :internal-reader-function
+	   (slot-definition-internal-reader-function slotd)
+	   :internal-writer-function
+	   (slot-definition-internal-writer-function slotd)
 	   (call-next-method))))
 
 ;;;

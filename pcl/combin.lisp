@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.15 2003/05/04 13:11:22 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/combin.lisp,v 1.16 2003/05/25 14:33:50 gerd Exp $")
 
 (in-package "PCL")
 
@@ -120,9 +120,21 @@
 	   `(%no-primary-method ',gf .args.))
 	  ((and (null before) (null after) (null around))
 	   ;;
-	   ;; By returning a single CALL-METHOD form here, we enable an
-	   ;; important implementation-specific optimization.
-	   `(call-method ,(first primary) ,(rest primary)))
+	   ;; By returning a single CALL-METHOD form here, we enable
+	   ;; an important implementation-specific optimization, which
+	   ;; uses fast-method functions directly for effective method
+	   ;; functions.  (Which is also the reason emfs have a
+	   ;; lambda-list like fast method functionts.)
+	   ;;
+	   ;; This cannot be done if the gf requires keyword argument
+	   ;; checking as in CLHS 7.6.5 because we can't tell in
+	   ;; method functions if they are used as emfs only.  If they
+	   ;; are not used as emfs only, they should accept any keyword
+	   ;; argumests, per CLHS 7.6.4, for instance.
+	   (let ((call-method `(call-method ,(first primary) ,(rest primary))))
+	     (if (emfs-must-check-applicable-keywords-p gf)
+		 `(progn ,call-method)
+		 call-method)))
 	  (t
 	   (let ((main-effective-method
 		   (if (or before after)
@@ -273,17 +285,15 @@
 
 ;;;
 ;;; Return a closure returning a FAST-METHOD-CALL instance for the
-;;; call of the effective method of generic function GF with body
+;;; call of an effective method of generic function GF with body
 ;;; BODY.
 ;;;
 (defun callable-generator-for-emf (gf body method-alist-p wrappers-p)
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
       (get-generic-function-info gf)
     (declare (ignore nkeys arg-info))
-    (let* ((name (if (early-gf-p gf)
-		     (early-gf-name gf)
-		     (generic-function-name gf)))
-	   (arg-info (cons nreq applyp))
+    (let* ((name (generic-function-name* gf))
+	   (fmc-info (cons nreq applyp))
 	   (effective-method-lambda (make-effective-method-lambda gf body)))
       (multiple-value-bind (cfunction constants)
 	  (get-function1 effective-method-lambda
@@ -296,21 +306,118 @@
 			 (lambda (form)
 			   (memf-constant-converter form gf)))
 	(lambda (method-alist wrappers)
-	  (let* ((constants 
-		  (mapcar (lambda (constant)
-			    (case (car-safe constant)
-			      (.meth.
-			       (funcall (cdr constant) method-alist wrappers))
-			      (.meth-list.
-			       (mapcar (lambda (fn)
-					 (funcall fn method-alist wrappers))
-				       (cdr constant)))
-			      (t constant)))
-			  constants))
-		 (function (set-function-name (apply cfunction constants)
-					      `(effective-method ,name))))
-	    (make-fast-method-call :function function
-				   :arg-info arg-info)))))))
+	  (declare (special *applicable-methods*))
+	  (multiple-value-bind (valid-keys keyargs-start)
+	      (when (memq '.valid-keys. constants)
+		(compute-applicable-keywords gf *applicable-methods*))
+	    (flet ((compute-constant (constant)
+		     (if (consp constant)
+			 (case (car constant)
+			   (.meth.
+			    (funcall (cdr constant) method-alist wrappers))
+			   (.meth-list.
+			    (mapcar (lambda (fn)
+				      (funcall fn method-alist wrappers))
+				    (cdr constant)))
+			   (t constant))
+			 (case constant
+			   (.keyargs-start. keyargs-start)
+			   (.valid-keys. valid-keys)
+			   (t constant)))))
+	      (let ((fn (apply cfunction
+			       (mapcar #'compute-constant constants))))
+		(set-function-name fn `(effective-method ,name))
+		(make-fast-method-call :function fn :arg-info fmc-info)))))))))
+
+;;;
+;;; Return true if emfs of generic function GF must do keyword
+;;; argument checking with CHECK-APPLICABLE-KEYWORDS.
+;;;
+;;; We currently do this if the generic function type has &KEY, which
+;;; should be the case if the gf or any method has &KEY.  It would be
+;;; possible to avoid the check if it also has &ALLOW-OTHER-KEYS, iff
+;;; method functions do checks of their own, which is ugly to do,
+;;; so we don't.
+;;;
+(defun emfs-must-check-applicable-keywords-p (gf)
+  (let ((type (info function type (generic-function-name* gf))))
+    (and (kernel::function-type-p type)
+	 (kernel::function-type-keyp type))))
+
+;;;
+;;; Compute which keyword args are valid in a call of generic function
+;;; GF with applicable methods METHODS.  See also CLHS 7.6.5.
+;;;
+;;; First value is either a list of valid keywords or T meaning all
+;;; keys are valid.  Second value is the number of optional arguments
+;;; that GF takes.  This number is used as an offset in the supplied
+;;; args .DFUN-REST-ARG. in CHECK-APPLICABLE-KEYWORDS.
+;;;
+(defun compute-applicable-keywords (gf methods)
+  (let ((any-keyp nil))
+    (flet ((analyze (lambda-list)
+	     (multiple-value-bind (nreq nopt keyp restp allowp keys)
+		 (analyze-lambda-list lambda-list)
+	       (declare (ignore nreq restp))
+	       (when keyp
+		 (setq any-keyp t))
+	       (values nopt allowp keys))))
+      (multiple-value-bind (nopt allowp keys)
+	  (analyze (generic-function-lambda-list gf))
+	(if allowp
+	    (setq keys t)
+	    (dolist (method methods)
+	      (multiple-value-bind (n allowp method-keys)
+		  (analyze (method-lambda-list* method))
+		(declare (ignore n))
+		(if allowp
+		    (return (setq keys t))
+		    (setq keys (union method-keys keys))))))
+	;;
+	;; It shouldn't happen thet neither the gf nor any method has
+	;; &KEY, when this method is called.  Let's handle the case
+	;; anyway, just for generality.
+	(values (if any-keyp keys t) nopt)))))
+
+;;;
+;;; Check ARGS for invalid keyword arguments, beginning at position
+;;; START in ARGS.  VALID-KEYS is a list of valid keywords.  VALID-KEYS
+;;; being T means all keys are valid.
+;;;
+(defun check-applicable-keywords (args start valid-keys)
+  (let ((allow-other-keys-seen nil)
+	(allow-other-keys nil)
+	(args (nthcdr start args)))
+    (collect ((invalid))
+      (loop
+	 (when (null args)
+	   (when (and (invalid) (not allow-other-keys))
+	     (simple-program-error
+	      "~@<Invalid keyword argument~p ~{~s~^, ~}.  ~
+               Valid keywords are: ~{~s~^, ~}.~@:>"
+	      (length (invalid))
+	      (invalid)
+	      valid-keys))
+	   (return))
+	 (let ((key (pop args)))
+	   (cond ((not (symbolp key))
+		  (invalid-keyword-argument key))
+		 ((null args)
+		  (odd-number-of-keyword-arguments))
+		 ((eq key :allow-other-keys)
+		  (unless allow-other-keys-seen
+		    (setq allow-other-keys-seen t
+			  allow-other-keys (car args))))
+		 ((eq t valid-keys))
+		 ((not (memq key valid-keys))
+		  (invalid key))))
+	 (pop args)))))
+
+(defun odd-number-of-keyword-arguments ()
+  (simple-program-error "Odd number of keyword arguments."))
+
+(defun invalid-keyword-argument (key)
+  (simple-program-error "Invalid keyword argument ~s" key))
 
 ;;;
 ;;; Return a lambda-form for an effective method of generic function
@@ -320,7 +427,17 @@
   (multiple-value-bind (nreq applyp metatypes nkeys arg-info)
       (get-generic-function-info gf)
     (declare (ignore nreq nkeys arg-info))
+    ;;
+    ;; Note that emfs use the same lambda-lists as fast method
+    ;; functions, although they don't need all the arguments that a
+    ;; fast method function needs, because this makes it possible to
+    ;; use fast method functions directly as emfs.  This is achieved
+    ;; by returning a single CALL-METHOD form from the method
+    ;; combination.
     (let ((ll (make-fast-method-call-lambda-list metatypes applyp))
+	  (check-applicable-keywords
+	   (when (and applyp (emfs-must-check-applicable-keywords-p gf))
+	     '((check-applicable-keywords))))
 	  (error-p (eq (first body) '%no-primary-method))
 	  (mc-args-p
 	   (when (eq *boot-state* 'complete)
@@ -341,10 +458,12 @@
 		  (declare (ignore .pv-cell. .next-method-call.))
 		  (let ((.gf-args. ,gf-args))
 		    (declare (ignorable .gf-args.))
+		    ,@check-applicable-keywords
 		    ,body))))
 	    (t
 	     `(lambda ,ll
 		(declare (ignore .pv-cell. .next-method-call.))
+		,@check-applicable-keywords
 		,body))))))
 
 (defun memf-test-converter (form gf method-alist-p wrappers-p)
@@ -357,6 +476,8 @@
      (case (get-method-list-call-type gf form method-alist-p wrappers-p)
        (fast-method-call '.fast-call-method-list.)
        (t '.call-method-list.)))
+    (check-applicable-keywords
+     'check-applicable-keywords)
     (t
      (default-test-converter form))))
 
@@ -376,6 +497,10 @@
        (values `(dolist (emf ,gensym nil)
 		  ,(make-emf-call metatypes applyp 'emf type))
 	       (list gensym))))
+    (check-applicable-keywords
+     (values `(check-applicable-keywords .dfun-rest-arg.
+					 .keyargs-start. .valid-keys.)
+	      '(.keyargs-start. .valid-keys.)))
     (t
      (default-code-converter form))))
 
@@ -389,6 +514,8 @@
 		 (mapcar (lambda (form)
 			   (callable-generator-for-call-method gf form))
 			 (cdr form)))))
+    (check-applicable-keywords
+     '(.keyargs-start. .valid-keys.))
     (t
      (default-constant-converter form))))
 
@@ -444,8 +571,11 @@
 ;;; CALLABLE-GENERATOR.  Call it with two args METHOD-ALIST and
 ;;; WRAPPERS to obtain the actual callable.
 ;;;
+(defvar *applicable-methods*)
+
 (defun make-callable (gf methods generator method-alist wrappers)
-  (let ((callable (function-funcall generator method-alist wrappers)))
+  (let* ((*applicable-methods* methods)
+	 (callable (function-funcall generator method-alist wrappers)))
     (set-emf-name gf methods callable)))
 
 ;;;
@@ -484,9 +614,7 @@
 
 (defun make-emf-name (gf methods)
   (let* ((early-p (early-gf-p gf))
-	 (gf-name (if early-p
-		     (early-gf-name gf)
-		     (generic-function-name gf)))
+	 (gf-name (generic-function-name* gf))
 	 (emf-name
 	  (if (or early-p
 		  (eq (generic-function-method-combination gf)

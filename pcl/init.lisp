@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.23 2003/05/09 15:19:19 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.24 2003/05/25 14:33:49 gerd Rel $")
 
 ;;;
 ;;; This file defines the initialization and related protocols.
@@ -210,9 +210,7 @@
     ;; just quit.
     (dolist (method methods)
       (multiple-value-bind (nreq nopt keysp restp allow-other-keys keys)
-	  (analyze-lambda-list (if (consp method)
-				   (early-method-lambda-list method)
-				   (method-lambda-list method)))
+	  (analyze-lambda-list (method-lambda-list* method))
 	(declare (ignore nreq nopt keysp restp))
 	(when allow-other-keys
 	  (return-from valid-initargs (values nil t)))
