@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.6 1990/02/09 21:11:05 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.7 1990/02/13 17:03:18 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -343,7 +343,7 @@
   (let* ((2comp (component-info component))
 	 (constants (ir2-component-constants 2comp))
 	 (num-consts (length constants)))
-    (ash num-consts word-shift)))
+    (ash (logandc2 (1+ num-consts) 1) word-shift)))
 
 
 ;;; COMPUTE-CODE-FROM-FN
