@@ -276,19 +276,17 @@
     (dolist (field fields)
       (unless (= (length field) 2)
 	(error "Malformed field specification: ~S." field))
-      (let* ((ftype (second field))
-	     (type (if (eq ftype pname) pname (get-c-type (second field))))
-	     (size (if (eq ftype pname) 32 (c-type-size type)))
-	     (start (align-offset pos (if (eq ftype pname) 32
-					  (c-type-alignment type)))))
+      (let* ((type (get-c-type (second field)))
+	     (size (c-type-size type))
+	     (start (align-offset pos (c-type-alignment type))))
+	(unless size
+	  (error "Variable size field ~A in record ~A not allowed."
+		 (first field) name))
 	(push (make-field-info :name (first field)
 			       :type type
 			       :offset start
 			       :size size)
 	      info)
-	(unless size
-	  (error "Variable size field ~A in record ~A not allowd."
-		 (first field) name))
 	(setq pos (+ start size))
 	(setq align (max (find-alignment size) align))))
 
@@ -319,9 +317,7 @@
   (let ((name (c-type-description record)))
     (mapcar #'(lambda (x)
 		`(defoperator (,(symbolicate name "-" (field-info-name x))
-			       ,(c-type-description (let ((type (field-info-type x)))
-						      (if (structurep type) type
-							  (get-c-type type)))))
+			       ,(c-type-description (field-info-type x)))
 			      ((rec ,name))
 		  `(alien-index (alien-value ,rec)
 				,,(field-info-offset x)
