@@ -1,3 +1,24 @@
+3/2/92 to 3/4/92  [16a]
+
+Code:
+
+Fixed a major bug in def-alien-type where the macroexpansion wouldn't
+include the code to define the type if the type was defined at compile
+time.
+
+Allow LISP:AND, LISP:OR, and LISP:NOT in features lists in addition to
+:AND, :OR, and :NOT.  This makes FEATUREP useful outside of #+ and #-.
+
+Added ``:verbose nil'' to the load of site-init.lisp.
+
+
+C Runtime support:
+
+Whenever we allocate a chunk of memory, set the protections to include
+VM_PROT_EXECUTE so that we can execute code on it.
+
+
+
 2/24/92 to 3/2/92
 
 Code:
