@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.26 1990/10/02 00:36:20 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.27 1990/11/01 17:16:34 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -170,7 +170,7 @@
 	 (:generator 20
 	   (inst srl temp index ,bit-shift)
 	   (inst sll temp 2)
-	   (inst add lip object temp)
+	   (inst addu lip object temp)
 	   (inst lw result lip
 		 (- (* vm:vector-data-offset vm:word-bytes)
 		    vm:other-pointer-type))
@@ -219,7 +219,7 @@
 	 (:generator 25
 	   (inst srl temp index ,bit-shift)
 	   (inst sll temp 2)
-	   (inst add lip object temp)
+	   (inst addu lip object temp)
 	   (inst lw old lip
 		 (- (* vm:vector-data-offset vm:word-bytes)
 		    vm:other-pointer-type))
@@ -325,7 +325,7 @@
   (:result-types single-float)
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
-    (inst add lip object index)
+    (inst addu lip object index)
     (inst lwc1 value lip
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
@@ -343,7 +343,7 @@
   (:result-types single-float)
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
-    (inst add lip object index)
+    (inst addu lip object index)
     (inst swc1 value lip
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
@@ -361,8 +361,8 @@
   (:result-types double-float)
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
-    (inst add lip object index)
-    (inst add lip index)
+    (inst addu lip object index)
+    (inst addu lip index)
     (inst lwc1 value lip
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
@@ -384,8 +384,8 @@
   (:result-types double-float)
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
-    (inst add lip object index)
-    (inst add lip index)
+    (inst addu lip object index)
+    (inst addu lip index)
     (inst swc1 value lip
 	  (- (* vm:vector-data-offset vm:word-bytes)
 	     vm:other-pointer-type))
