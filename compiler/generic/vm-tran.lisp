@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.53 2004/05/18 02:30:13 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.54 2004/06/10 01:46:47 cwang Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -424,11 +424,11 @@
 (deftransform sxhash ((s-expr) (simple-string))
   '(%sxhash-simple-string s-expr))
 
-#-(or sparc x86)
+#-(or sparc x86 amd64)
 (deftransform sxhash ((s-expr) (symbol))
   '(%sxhash-simple-string (symbol-name s-expr)))
 
-#+(or sparc x86)
+#+(or sparc x86 amd64)
 (deftransform sxhash ((s-expr) (symbol))
   ;; Pick off the constant case first. (Important!)
   (if (constant-continuation-p s-expr)
@@ -439,7 +439,7 @@
 	;; have a negative hash value.
 	(if (<= result 0)
 	    (let ((sxhash (%sxhash-simple-string (symbol-name s-expr))))
-	      ;; If 0 is the unitialized indicator, should we make
+	      ;; If 0 is the uninitialized indicator, should we make
 	      ;; sure we never store 0 into this slot?  It would be
 	      ;; pretty bad if it that happens.
 	      (%set-symbol-hash s-expr sxhash)
