@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.10 1990/02/20 19:34:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.11 1990/02/20 19:39:39 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -163,7 +163,7 @@
 		 (:temporary (:scs (descriptor-reg) :to (:result 0)
 				   :target real-result) result)
 		 (:results (real-result :scs (descriptor-reg)))
-		 (:policy fast-safe)
+		 (:policy :fast-safe)
 		 ,@(when alloc-trans
 		     `((:translate ,alloc-trans)))
 		 (:generator 37
