@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.41 1991/03/20 03:09:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.42 1991/03/23 12:30:42 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.41 1991/03/20 03:09:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.42 1991/03/23 12:30:42 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -226,17 +226,6 @@
 
 
 ;;;; Code object frobbing.
-
-(define-vop (code-header-ref word-index-ref)
-  (:translate code-header-ref)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
-
-(define-vop (code-header-set word-index-set)
-  (:translate code-header-set)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
-
 
 (define-vop (code-instructions)
   (:translate code-instructions)

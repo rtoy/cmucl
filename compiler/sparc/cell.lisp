@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.5 1991/03/22 14:05:43 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.6 1991/03/23 12:32:31 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the SPARC.
@@ -338,4 +338,18 @@
   (:translate structure-set)
   (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum *))
+
+
+
+;;;; Code object frobbing.
+
+(define-vop (code-header-ref word-index-ref)
+  (:translate code-header-ref)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))
+
+(define-vop (code-header-set word-index-set)
+  (:translate code-header-set)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))
 

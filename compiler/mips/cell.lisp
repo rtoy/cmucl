@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.53 1991/03/20 03:08:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.54 1991/03/23 12:30:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.53 1991/03/20 03:08:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.54 1991/03/23 12:30:09 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -343,3 +343,17 @@
   (:translate structure-set)
   (:variant structure-slots-offset structure-pointer-type)
   (:arg-types structure positive-fixnum *))
+
+
+
+;;;; Code object frobbing.
+
+(define-vop (code-header-ref word-index-ref)
+  (:translate code-header-ref)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))
+
+(define-vop (code-header-set word-index-set)
+  (:translate code-header-set)
+  (:policy :fast-safe)
+  (:variant 0 other-pointer-type))

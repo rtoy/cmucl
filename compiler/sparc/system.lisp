@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.5 1991/03/22 14:03:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.6 1991/03/23 12:32:42 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -215,17 +215,6 @@
 
 
 ;;;; Code object frobbing.
-
-(define-vop (code-header-ref word-index-ref)
-  (:translate code-header-ref)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
-
-(define-vop (code-header-set word-index-set)
-  (:translate code-header-set)
-  (:policy :fast-safe)
-  (:variant 0 other-pointer-type))
-
 
 (define-vop (code-instructions)
   (:translate code-instructions)
