@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.34 2003/04/11 15:17:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.35 2003/05/29 12:35:05 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,15 +57,17 @@
 ;; #+(or cgc gencgc)
 ;; (c-var-frob dynamic-usage "bytes_allocated")
 
-#+(or cgc gencgc)
+#+gencgc
 (progn
-(alien:def-alien-routine get_bytes_allocated_lower c-call:int)
-(alien:def-alien-routine get_bytes_allocated_upper c-call:int)
+  (alien:def-alien-routine get_bytes_allocated_lower c-call:int)
+  (alien:def-alien-routine get_bytes_allocated_upper c-call:int)
 
-(defun dynamic-usage ()
-  (dfixnum:dfixnum-pair-integer
-   (get_bytes_allocated_upper) (get_bytes_allocated_lower)))
-)
+  (defun dynamic-usage ()
+    (dfixnum:dfixnum-pair-integer
+     (get_bytes_allocated_upper) (get_bytes_allocated_lower))))
+
+#+cgc
+(c-var-frob dynamic-usage "bytes_allocated")
 
 (defun static-space-usage ()
   (- (* lisp::*static-space-free-pointer* vm:word-bytes)
