@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.21 1993/03/01 14:51:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.22 1994/10/24 22:56:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,14 @@
 
 (eval-when (compile eval load)
 
+#+svr4
+(adjoin :svr4 (backend-features *target-backend*))
+#+svr4
+(adjoin :solaris (backend-features *target-backend*))
 (setf (backend-name *target-backend*) "SPARC")
+#+svr4
+(setf (backend-version *target-backend*) "SPARCstation/Solaris 2")
+#-svr4
 (setf (backend-version *target-backend*) "SPARCstation/Sun 4")
 (setf (backend-fasl-file-type *target-backend*) "sparcf")
 (setf (backend-fasl-file-implementation *target-backend*)
@@ -143,9 +150,9 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x00200000)
-(defparameter target-static-space-start    #x0c000000)
-(defparameter target-dynamic-space-start   #x10000000)
+(defparameter target-read-only-space-start #x01000000)
+(defparameter target-static-space-start    #x05000000)
+(defparameter target-dynamic-space-start   #x07000000)
 
 
 
