@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.7 1990/10/03 12:53:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.8 1991/01/03 13:13:37 ram Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -336,6 +336,41 @@
 	`(%typep ,obj ',(type-specifier type)))))
 
 
+;;; SOURCE-TRANSFORM-STRUCTURE-TYPEP  --  Internal
+;;;
+;;;    If not currently defined as a structure to the compiler (must have been
+;;; undefined) or there is no predicate, then we call STRUCTURE-TYPEP.
+;;; Otherwise, we do an EQ test for a direct type match, and if that fails,
+;;; deal with inherited types.  If the type is frozen, we can inline the
+;;; supertype check, otherwise we have to call the predicate.
+;;;
+(defun source-transform-structure-typep (obj desc)
+  (let* ((type (structure-type-name desc))
+	 (def (info type structure-info type)))
+    (cond
+     ((not def)
+      `(lisp::structure-typep ,obj ',type))
+     ((not (eq (dd-type def) 'structure))
+      (compiler-error "Structure type has :TYPE specified, so it can't ~
+      		       be used as an argument to TYPEP:~%  ~S"
+		      type))
+     (t
+      (let ((frozen (info type frozen type))
+	    (includes (dd-includes def))
+	    (n-name (gensym)))
+	(if (or frozen (dd-predicate def))
+	    (once-only ((object obj))
+	      `(and (structurep ,object)
+		    (let ((,n-name (structure-ref ,object 0)))
+		      (if (eq ,n-name ',type)
+			  t
+			  ,(if frozen
+			       (when includes
+				 `(member ,n-name ',includes :test #'eq))
+			       `(,(dd-predicate def) ,object))))))
+	    `(lisp::structure-typep ,obj ',type)))))))
+
+
 ;;; Source-Transform-Typep  --  Internal
 ;;;
 ;;;    If the specifier argument is a quoted constant, then we consider
@@ -367,8 +402,7 @@
 	      (member-type
 	       `(member ,object ',(member-type-members type)))
 	      (structure-type
-	       (once-only ((n-obj object))
-		 (structure-predicate n-obj (structure-type-name type))))
+	       (source-transform-structure-typep object type))
 	      (args-type
 	       (compiler-warning "Illegal type specifier for Typep: ~S."
 				 (cadr spec))
