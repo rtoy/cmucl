@@ -1,17 +1,17 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.h,v 1.3 1990/08/30 16:39:52 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/validate.h,v 1.4 1990/10/13 16:28:53 wlott Exp $ */
 
 #if !defined(_INCLUDE_VALIDATE_H_)
 #define _INCLUDE_VALIDATE_H_
 
-#define READ_ONLY_SPACE_START	(0x20000000)
-#define READ_ONLY_SPACE_SIZE	(0x04000000)
+#define READ_ONLY_SPACE_START	(0x01000000)
+#define READ_ONLY_SPACE_SIZE	(0x03000000)
 
-#define STATIC_SPACE_START	(0x30000000)
-#define STATIC_SPACE_SIZE	(0x04000000)
+#define STATIC_SPACE_START	(0x04000000)
+#define STATIC_SPACE_SIZE	(0x02000000)
 
-#define DYNAMIC_0_SPACE_START	(0x40000000)
-#define DYNAMIC_1_SPACE_START	(0x48000000)
-#define DYNAMIC_SPACE_SIZE	(0x08000000)
+#define DYNAMIC_0_SPACE_START	(0x06000000)
+#define DYNAMIC_1_SPACE_START	(0x0b000000)
+#define DYNAMIC_SPACE_SIZE	(0x05000000)
 
 #define CONTROL_STACK_START	(0x50000000)
 #define CONTROL_STACK_SIZE	(0x00100000)
