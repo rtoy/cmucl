@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.26 1993/06/24 13:48:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.27 1993/06/24 13:58:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,7 +33,7 @@
 
 (in-package "LISP")
 
-(export '(file-stream))
+(export '(file-stream file-string-length stream-external-format))
 (deftype file-stream () 'fd-stream)
 
 
@@ -1192,7 +1192,8 @@ non-server method is also significantly more efficient for large reads.
 	     (direction :input)
 	     (element-type 'base-char)
 	     (if-exists nil if-exists-given)
-	     (if-does-not-exist nil if-does-not-exist-given))
+	     (if-does-not-exist nil if-does-not-exist-given)
+	     (external-format :default))
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
@@ -1201,6 +1202,11 @@ non-server method is also significantly more efficient for large reads.
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil
   See the manual for details."
+
+  (unless (eq external-format :default)
+    (cerror "use default ASCII format"
+	    "External format must be :DEFAULT: ~S" external-format))
+
   ;; First, make sure that DIRECTION is valid. Allow it to be changed if not.
   (setf direction
 	(assure-one-of direction
@@ -1431,3 +1437,19 @@ non-server method is also significantly more efficient for large reads.
     (if new-name
 	(setf (fd-stream-file stream) new-name)
 	(fd-stream-file stream))))
+
+;;;; Degenerate international character support:
+
+(defun file-string-length (stream object)
+  (declare (type (or string character) object) (type file-stream stream))
+  "Return the delta in Stream's FILE-POSITION that would be caused by writing
+   Object to Stream.  Non-trivial only in implementations that support
+   international character sets."
+  (etypecase object
+    (character 1)
+    (string (length object))))
+
+(defun stream-external-format (stream)
+  (declare (type file-stream stream))
+  "Returns :DEFAULT."
+  :default)
