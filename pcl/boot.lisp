@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.53 2003/05/04 17:52:06 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.54 2003/05/07 16:59:30 gerd Exp $")
 
 (in-package :pcl)
 
@@ -928,78 +928,97 @@ work during bootstrapping.
 	      ,@body))))
 
 (defmacro bind-args ((lambda-list args) &body body)
-  (let ((state 'required)
-	(key-seen nil))
-    (collect ((keys) (binds))
-      (flet ((process-var (var)
-	       (if (memq var lambda-list-keywords)
-		   (progn
-		     (when (eq var '&key) (setq key-seen t))
-		     (setq state var))
-		   (ecase state
-		     (required (binds `(,var (pop .args.))))
-		     (&optional
-		      (etypecase var
-			(symbol
-			 (binds `(,var (when .args. (pop .args.)))))
-			(cons
-			 (destructuring-bind (var &optional def supplied)
-			     var
-			   (when supplied
-			     (binds `(,supplied .args.)))
-			   (binds `(,var (if .args. (pop .args.) ,def)))))))
-		     (&rest (binds `(,var .args.)))
-		     (&key (keys var))
-		     (&aux (binds var))))))
-	(mapc #'process-var lambda-list)
-	(multiple-value-bind (key-processor key-bindings)
-	    (when key-seen
-	      (keyword-argument-processor (keys)))
-	  (multiple-value-bind (real-body declarations doc)
-	      (system:parse-body body nil nil)
-	    (declare (ignore doc))
-	    `(let* ((.args. ,args) ,@(binds) ,@key-bindings)
-	       (declare (ignorable .args.))
-	       ,@declarations
-	       ,@(and key-processor (list key-processor))
-	       ,@real-body)))))))
-
-(defun keyword-argument-processor (keys)
-  (collect ((cases) (binds))
-    (flet ((make-case (keyword var &optional value supplied)
-	     (let ((supplied (or supplied (gensym))))
-	       (cases `(,keyword
-			(unless ,supplied
-			  (setq ,var (car .more.) ,supplied .more.))))
-	       (binds `(,var ,value))
-	       (binds `(,supplied nil)))))
-      (dolist (key keys)
-	(etypecase key
-	  (symbol
-	   (make-case (make-keyword key) key))
-	  (cons
-	   (destructuring-bind (var &optional value supplied) key
-	     (multiple-value-bind (keyword var)
-		 (if (consp var)
-		     (destructuring-bind (keyword var) var
-		       (values keyword var))
-		     (values (make-keyword var) var))
-	       (make-case keyword var value supplied))))))
-      (values `(loop for (.keyword. . .more.) on .args. by #'cddr do
-		       (cond ((null .more.)
-			      (odd-number-of-keyword-arguments))
-			     ((not (symbolp .keyword.))
-			      (invalid-keyword-argument .keyword.))
-			     (t
-			      (case .keyword.
-				,@(cases)))))
-	      (binds)))))
+  (let ((args-tail '.args-tail.)
+	(key '.key.)
+	(state 'required)
+	(key-seen nil)
+	(nkeys 0))
+    (flet ((process-var (var)
+	     (if (memq var lambda-list-keywords)
+		 (progn
+		   (ecase var
+		     (&optional         (setq state 'optional))
+		     (&key              (setq state 'key key-seen t))
+		     (&allow-other-keys)
+		     (&rest             (setq state 'rest))
+		     (&aux              (setq state 'aux)))
+		   nil)
+		 (case state
+		   (required
+		    `((,var (pop ,args-tail))))
+		   (optional
+		    (cond ((not (consp var))
+			   `((,var (when ,args-tail (pop ,args-tail)))))
+			  ((null (cddr var))
+			   `((,(car var) (if ,args-tail
+					     (pop ,args-tail)
+					     ,(cadr var)))))
+			  (t
+			   `((,(caddr var) ,args-tail)
+			     (,(car var) (if ,args-tail
+					     (pop ,args-tail)
+					     ,(cadr var)))))))
+		   (rest
+		    `((,var ,args-tail)))
+		   (key
+		    (incf nkeys)
+		    (cond ((not (consp var))
+			   `((,var (get-key-arg ,(make-keyword var)
+						,args-tail ',(= 1 nkeys)))))
+			  ((null (cddr var))
+			   (multiple-value-bind (keyword variable)
+			       (if (consp (car var))
+				   (values (caar var) (cadar var))
+				   (values (make-keyword (car var)) (car var)))
+			     `((,key (get-key-arg1 ',keyword ,args-tail
+						   ',(= 1 nkeys)))
+			       (,variable (if (consp ,key)
+					      (car ,key)
+					      ,(cadr var))))))
+			  (t
+			   (multiple-value-bind (keyword variable)
+			       (if (consp (car var))
+				   (values (caar var) (cadar var))
+				   (values (make-keyword (car var)) (car var)))
+			     `((,key (get-key-arg1 ',keyword ,args-tail
+						   ',(= 1 nkeys)))
+			       (,(caddr var) ,key)
+			       (,variable (if (consp ,key)
+					      (car ,key)
+					      ,(cadr var))))))))
+		   (aux
+		    `(,var))))))
+      (let ((bindings (mapcan #'process-var lambda-list)))
+	`(let* ((,args-tail ,args)
+		,@bindings
+		(.dummy. ,@(when (and key-seen (zerop nkeys))
+			     `((get-key-arg1 :allow-other-keys
+					     ,args-tail t)))))
+	   (declare (ignorable ,args-tail .dummy.))
+	   ,@body)))))
 
 (defun odd-number-of-keyword-arguments ()
   (simple-program-error "Odd number of keyword arguments."))
 
 (defun invalid-keyword-argument (key)
   (simple-program-error "Invalid keyword argument ~s" key))
+
+(defun get-key-arg (keyword list first-time)
+  (car (get-key-arg1 keyword list first-time)))
+
+(defun get-key-arg1 (keyword list first-time)
+  (if first-time
+      (loop with cell = nil
+	    for (key . more) on list by #'cddr do
+	      (cond ((not (symbolp key))
+		     (invalid-keyword-argument key))
+		    ((null more)
+		     (odd-number-of-keyword-arguments))
+		    ((and (null cell) (eq key keyword))
+		     (setq cell more)))
+	    finally (return cell))
+      (loop for (key . more) on list by #'cddr
+	    when (eq key keyword) return more)))
 
 (defun walk-method-lambda (method-lambda required-parameters env slots calls)
   (let ((call-next-method-p nil)   ;flag indicating that call-next-method
