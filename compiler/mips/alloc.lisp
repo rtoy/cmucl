@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.11 1990/09/17 23:42:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.12 1990/09/21 00:48:01 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -116,7 +116,7 @@
       (storew temp result vm:symbol-value-slot vm:other-pointer-type)
       (storew temp result vm:symbol-function-slot vm:other-pointer-type)
       (storew temp result vm:symbol-setf-function-slot vm:other-pointer-type)
-      (inst li temp (make-fixup 'undefined-function :assembly-routine))
+      (inst li temp (make-fixup "undefined_tramp" :foreign))
       (storew temp result vm:symbol-raw-function-addr-slot
 	      vm:other-pointer-type)
       (storew null-tn result vm:symbol-plist-slot vm:other-pointer-type)
