@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.16 1999/03/04 11:54:48 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.17 1999/03/08 00:57:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1567,7 +1567,7 @@
 (defknown data-vector-set-conditional (array index t t) t
   (unsafe c::explicit-check))
 
-(define-full-conditional-setter data-vector-set-condition/simple-vector
+(define-full-conditional-setter data-vector-set-conditional/simple-vector
   simple-vector vector-data-offset other-pointer-type
   (descriptor-reg any-reg) *
   data-vector-set-conditional)
