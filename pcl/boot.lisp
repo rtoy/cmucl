@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.25 2001/04/10 22:37:21 pw Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.26 2001/05/10 21:28:41 pmai Exp $")
 
 (in-package :pcl)
 
@@ -1615,7 +1615,10 @@ work during bootstrapping.
 	       (find-method-combination (class-prototype ,gf-class)
 					(car combin)
 					(cdr combin)))))
-     ))
+     (let ((method-class (getf ,all-keys :method-class '.shes-not-there.)))
+       (unless (eq method-class '.shes-not-there.)
+	 (setf (getf ,all-keys :method-class)
+	       (find-class method-class t ,env))))))
      
 (defun real-ensure-gf-using-class--generic-function
        (existing
