@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.46 1991/11/18 12:52:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.47 1991/11/20 21:38:53 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1208,7 +1208,9 @@
 	  (change-ref-leaf (continuation-use inside-fun)
 			   (find-free-function 'list "???"))
 	  (setf (combination-kind inside) :full)
+	  (setf (node-derived-type inside) *wild-type*)
 	  (flush-dest cont)
+	  (setf (continuation-asserted-type cont) *wild-type*)
 	  (undefined-value))))))
 
 
