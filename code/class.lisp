@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.18 1993/03/14 12:12:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.19 1993/03/14 14:35:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 		 layout-inherits layout-inheritance-depth layout-length
 		 layout-info layout-pure
 		 layout-of structure-class-p
-		 structure-class-print-function
+		 basic-structure-class-print-function
 		 structure-class-make-load-form-fun find-layout
 		 class-proper-name class-layout class-state class-subclasses
 		 class-init
