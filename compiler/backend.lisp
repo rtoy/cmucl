@@ -26,70 +26,57 @@
 
 ;;;; VM support routine stuff.
 
-(eval-when (compile load eval)
-  (defvar *vm-support-routines* nil))
+(eval-when (compile eval load)
+
+(defconstant vm-support-routines
+  '(;; From VM.LISP
+    immediate-constant-sc
+    location-print-name
+    
+    ;; From PRIMTYPE.LISP
+    primitive-type-of
+    primitive-type
+    
+    ;; From C-CALL.LISP
+    make-call-out-nsp-tn
+    make-call-out-argument-tns
+    make-call-out-result-tn
+    
+    ;; From CALL.LISP
+    standard-argument-location
+    make-return-pc-passing-location
+    make-old-fp-passing-location
+    make-old-fp-save-location
+    make-return-pc-save-location
+    make-argument-count-location
+    make-nfp-tn
+    make-stack-pointer-tn
+    make-number-stack-pointer-tn
+    make-unknown-values-locations
+    select-component-format
+    
+    ;; From NLX.LISP
+    make-nlx-sp-tn
+    make-dynamic-state-tns
+    
+    ;; From SUPPORT.LISP
+    generate-call-sequence
+    generate-return-sequence))
+
+); eval-when
+
 
 (defmacro def-vm-support-routine (name ll &body body)
-  (unless (member (string name) *vm-support-routines*
-		  :test #'string=)
+  (unless (member (intern (string name) (find-package "C"))
+		  vm-support-routines)
     (warn "Unknown VM support routine: ~A" name))
   (let ((local-name (symbolicate (backend-name *backend*) "-" name)))
     `(progn
        (defun ,local-name ,ll ,@body)
        (setf (,(intern (concatenate 'simple-string "BACKEND-" (string name))
-		       (symbol-package 'foo))
+		       (find-package "C"))
 	      *backend*)
 	     #',local-name))))
-
-(eval-when (compile eval)
-
-(defmacro def-vm-support-routine-stub (name)
-  `(progn
-     #-bootstrap-backend
-     (defun ,name (&rest args)
-       (apply (or (,(symbolicate "BACKEND-" name) *backend*)
-		  (error "Machine specific support routine ~S undefined for ~S"
-			 ',name *backend*))
-	      args))
-     (eval-when (compile load eval)
-       (pushnew ,(string name) *vm-support-routines*
-		:test #'string=))))
-
-); eval-when (compile eval)
-
-;;; From VM.LISP
-(def-vm-support-routine-stub immediate-constant-sc)
-(def-vm-support-routine-stub location-print-name)
-
-;;; From PRIMTYPE.LISP
-(def-vm-support-routine-stub primitive-type-of)
-(def-vm-support-routine-stub primitive-type)
-
-;;; From C-CALL.LISP
-(def-vm-support-routine-stub make-call-out-nsp-tn)
-(def-vm-support-routine-stub make-call-out-argument-tns)
-(def-vm-support-routine-stub make-call-out-result-tn)
-
-;;; From CALL.LISP
-(def-vm-support-routine-stub standard-argument-location)
-(def-vm-support-routine-stub make-return-pc-passing-location)
-(def-vm-support-routine-stub make-old-fp-passing-location)
-(def-vm-support-routine-stub make-old-fp-save-location)
-(def-vm-support-routine-stub make-return-pc-save-location)
-(def-vm-support-routine-stub make-argument-count-location)
-(def-vm-support-routine-stub make-nfp-tn)
-(def-vm-support-routine-stub make-stack-pointer-tn)
-(def-vm-support-routine-stub make-number-stack-pointer-tn)
-(def-vm-support-routine-stub make-unknown-values-locations)
-(def-vm-support-routine-stub select-component-format)
-
-;;; From NLX.LISP
-(def-vm-support-routine-stub make-nlx-sp-tn)
-(def-vm-support-routine-stub make-dynamic-state-tns)
-
-;;; From SUPPORT.LISP
-(def-vm-support-routine-stub generate-call-sequence)
-(def-vm-support-routine-stub generate-return-sequence)
 
 
 
@@ -173,8 +160,10 @@
   (info-environment (make-info-environment :name "Backend Info"))
 
   . #.(mapcar #'(lambda (slot)
-		  `(,(intern slot) nil :type (or null function)))
-	      (sort (copy-list *vm-support-routines*) #'string<)))
+		  `(,slot nil :type (or null function)))
+	      (sort (copy-list vm-support-routines)
+		    #'string<
+		    :key #'symbol-name)))
 
 (defprinter backend
   name)
@@ -186,3 +175,21 @@
   "The backend we are attempting to compile.")
 (defvar *backend* *native-backend*
   "The backend we are using to compile.")
+
+
+
+;;;; Generate the stubs.
+
+(macrolet
+    ((frob ()
+       `(progn
+	  ,@(mapcar
+	     #'(lambda (name)
+		 `(defun ,name (&rest args)
+		    (apply (or (,(symbolicate "BACKEND-" name) *backend*)
+			       (error "Machine specific support routine ~S ~
+					undefined for ~S"
+				      ',name *backend*))
+			   args)))
+	     vm-support-routines))))
+  (frob))
