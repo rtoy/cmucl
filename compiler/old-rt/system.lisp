@@ -28,7 +28,11 @@
   (:args (ptr1 :scs (descriptor-reg) :target temp)
 	 (ptr2 :scs (descriptor-reg)))
   (:results (res :scs (any-reg descriptor-reg)))
-  (:temporary (:from (:argument 0) :to (:result 0) :target res) temp)
+  (:temporary (:sc any-reg
+	       :from (:argument 0)
+	       :to (:result 0)
+	       :target res)
+	      temp)
   (:generator 1
     (unless (location= ptr1 temp)
       (inst lr temp ptr1))
@@ -57,19 +61,6 @@
       (loadw res x (/ clc::bignum-header-size 4))
       (emit-label fixp))))
 
-(define-vop (pointer-compare)
-  (:args (x :scs (any-reg descriptor-reg))
-	 (y :scs (any-reg descriptor-reg)))
-  (:conditional)
-  (:info target not-p)
-  (:policy :fast-safe)
-  (:note "inline comparison")
-  (:variant-vars condition)
-  (:generator 3
-    (inst cl x y)
-    (if not-p
-	(inst bnb condition target)
-	(inst bb condition target))))
 
 (macrolet ((frob (name cond)
 	     `(progn
