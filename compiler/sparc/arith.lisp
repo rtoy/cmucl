@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.6 1991/04/09 17:39:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.7 1992/01/10 17:14:06 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -173,7 +173,7 @@
 (define-vop (+/fixnum fast-+/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types *)
+  (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 4
     (inst taddcctv r x y)))
@@ -181,7 +181,7 @@
 (define-vop (+-c/fixnum fast-+-c/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types *)
+  (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 3
     (inst taddcctv r x (fixnum y))))
@@ -189,7 +189,7 @@
 (define-vop (-/fixnum fast--/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types *)
+  (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 4
     (inst tsubcctv r x y)))
@@ -197,7 +197,7 @@
 (define-vop (--c/fixnum fast---c/fixnum=>fixnum)
   (:policy :safe)
   (:results (r :scs (any-reg descriptor-reg)))
-  (:result-types *)
+  (:result-types tagged-num)
   (:note "safe inline fixnum arithmetic")
   (:generator 3
     (inst tsubcctv r x (fixnum y))))
@@ -384,28 +384,42 @@
 ;;; EQL/FIXNUM is funny because the first arg can be of any type, not just a
 ;;; known fixnum.
 
+;;; These versions specify a fixnum restriction on their first arg.  We have
+;;; also generic-eql/fixnum VOPs which are the same, but have no restriction on
+;;; the first arg and a higher cost.  The reason for doing this is to prevent
+;;; fixnum specific operations from being used on word integers, spuriously
+;;; consing the argument.
+;;;
+
 (define-vop (fast-eql/fixnum fast-conditional)
   (:args (x :scs (any-reg descriptor-reg zero))
 	 (y :scs (any-reg zero)))
-  (:arg-types * tagged-num)
+  (:arg-types tagged-num tagged-num)
   (:note "inline fixnum comparison")
   (:translate eql)
   (:generator 3
     (inst cmp x y)
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
+;;;
+(define-vop (generic-eql/fixnum fast-eql/fixnum)
+  (:arg-types * tagged-num)
+  (:variant-cost 7))
 
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg zero)))
-  (:arg-types * (:constant (signed-byte 11)))
+  (:arg-types tagged-num (:constant (signed-byte 11)))
   (:info target not-p y)
   (:translate eql)
   (:generator 2
     (inst cmp x (fixnum y))
     (inst b (if not-p :ne :eq) target)
     (inst nop)))
+;;;
+(define-vop (generic-eql-c/fixnum fast-eql-c/fixnum)
+  (:arg-types * (:constant (signed-byte 11)))
+  (:variant-cost 6))
 
-  
 
 ;;;; 32-bit logical operations
 
