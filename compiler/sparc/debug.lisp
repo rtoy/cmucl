@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.1 1990/11/30 17:04:41 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.2 1991/03/12 17:52:44 wlott Exp $
 ;;;
 ;;; Compiler support for the new whizzy debugger.
 ;;;
@@ -23,6 +23,7 @@
 (defknown di::function-code-header (t) t (movable flushable))
 (defknown di::make-lisp-obj ((unsigned-byte 32)) t (movable flushable))
 (defknown di::get-lisp-obj-address (t) (unsigned-byte 32) (movable flushable))
+(defknown di::function-word-offset (function) index (movable flushable))
 
 (define-vop (debug-cur-sp)
   (:translate di::current-sp)
@@ -106,3 +107,14 @@
   (:result-types unsigned-num)
   (:generator 1
     (move result thing)))
+
+
+(define-vop (function-word-offset)
+  (:policy :fast-safe)
+  (:translate di::function-word-offset)
+  (:args (fun :scs (descriptor-reg)))
+  (:results (res :scs (unsigned-reg)))
+  (:result-types positive-fixnum)
+  (:generator 5
+    (loadw res fun 0 function-pointer-type)
+    (inst srl res vm:type-bits)))
