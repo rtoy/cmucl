@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.28 1990/06/03 16:42:44 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.29 1990/06/03 18:38:26 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -82,6 +82,8 @@
 (in-package "C")
 (in-package "ASSEMBLER" :nicknames '("ASSEM"))
 (in-package "BIGNUM")
+(in-package "DEBUG")
+(in-package "DEBUG-INTERNALS" :nicknames '("DI"))
 
 
 (in-package "LISP")
@@ -552,3 +554,62 @@
 	  bignum-logical-xor bignum-plus-p bignum-to-double-float
 	  bignum-to-single-float bignum-truncate bignum-type make-small-bignum
 	  multiply-bignums negate-bignum subtract-bignum))
+
+
+
+(in-package "DEBUG")
+
+(export '(internal-debug *in-the-debugger* backtrace *flush-debug-errors*
+	  *debug-print-level* *debug-print-length* *debug-prompt*
+
+	  var arg))
+
+
+(in-package "DEBUG-INTERNALS")
+
+(use-package "SYSTEM")
+(use-package "EXT")
+
+;;; The compiler's debug-source structure is almost exactly what we want, so
+;;; just get these symbols and export them.
+;;;
+(import '(c::debug-source-from c::debug-source-name c::debug-source-created
+	  c::debug-source-compiled c::debug-source-start-positions
+	  c::debug-source c::debug-source-p))
+
+(export '(debug-variable-name debug-variable-package debug-variable-symbol
+	  debug-variable-id debug-variable-value debug-variable-validity
+	  debug-variable-valid-value debug-variable debug-variable-p
+
+	  top-frame frame-down frame-up frame-debug-function
+	  frame-code-location eval-in-frame return-from-frame frame-catches
+	  frame-number frame frame-p
+
+	  do-blocks debug-function-lambda-list debug-variable-info-available
+	  do-debug-function-variables debug-function-symbol-variables
+	  ambiguous-debug-variables preprocess-for-eval function-debug-function
+	  debug-function-function debug-function-kind debug-function-name
+	  debug-function debug-function-p
+
+	  do-debug-block-locations debug-block-successors debug-block
+	  debug-block-p debug-block-elsewhere-p
+
+	  make-breakpoint activate-breakpoint deactivate-breakpoint
+	  breakpoint-hook-function breakpoint-info breakpoint-kind
+	  breakpoint-what breakpoint breakpoint-p
+
+	  code-location-debug-function code-location-debug-block
+	  code-location-top-level-form-offset code-location-form-number
+	  code-location-debug-source code-location code-location-p
+	  unknown-code-location unknown-code-location-p
+
+	  debug-source-from debug-source-name debug-source-created
+	  debug-source-compiled debug-source-root-number
+	  debug-source-start-positions form-number-translations
+	  source-path-context debug-source debug-source-p
+
+	  debug-condition no-debug-info no-debug-function-returns
+	  no-debug-blocks lambda-list-unavailable
+
+	  debug-error unhandled-condition invalid-control-stack-pointer
+	  unknown-code-location unknown-debug-variable invalid-value))
