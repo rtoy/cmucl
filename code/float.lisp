@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.5 1990/12/02 13:24:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.6 1990/12/06 18:47:44 ram Exp $
 ;;;
 ;;;    This file contains the definitions of float specific number support
 ;;; (other than irrational stuff, which is in irrat.)  There is code in here
@@ -283,8 +283,8 @@
 	 (sign (if (minusp (float-sign x)) -1 1))
 	 (biased (- exp vm:single-float-bias vm:single-float-digits)))
     (declare (fixnum biased))
-    (assert (<= exp vm:single-float-normal-exponent-max) ()
-	    "Can't decode NAN or infinity: ~S." x)
+    (unless (<= exp vm:single-float-normal-exponent-max)
+      (error "Can't decode NAN or infinity: ~S." x))
     (cond ((and (zerop exp) (zerop sig))
 	   (values 0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -343,8 +343,8 @@
 	 (sign (if (minusp (float-sign x)) -1 1))
 	 (biased (- exp vm:double-float-bias vm:double-float-digits)))
     (declare (fixnum biased))
-    (assert (<= exp vm:double-float-normal-exponent-max) ()
-	    "Can't decode NAN or infinity: ~S." x)
+    (unless (<= exp vm:double-float-normal-exponent-max)
+      (error "Can't decode NAN or infinity: ~S." x))
     (cond ((and (zerop exp) (zerop sig) (zerop lo))
 	   (values 0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -405,9 +405,10 @@
   (let* ((bits (single-float-bits (abs x)))
 	 (exp (ldb vm:single-float-exponent-byte bits))
 	 (sign (float-sign x))
-	 (biased (truly-the single-float-exponent (- exp vm:single-float-bias))))
-    (assert (<= exp vm:single-float-normal-exponent-max) ()
-	    "Can't decode NAN or infinity: ~S." x)
+	 (biased (truly-the single-float-exponent
+			    (- exp vm:single-float-bias))))
+    (unless (<= exp vm:single-float-normal-exponent-max) 
+      (error "Can't decode NAN or infinity: ~S." x))
     (cond ((zerop x)
 	   (values 0.0f0 biased sign))
 	  ((< exp vm:single-float-normal-exponent-min)
@@ -448,9 +449,10 @@
 	 (lo (double-float-low-bits abs))
 	 (exp (ldb vm:double-float-exponent-byte hi))
 	 (sign (float-sign x))
-	 (biased (truly-the double-float-exponent (- exp vm:double-float-bias))))
-    (assert (<= exp vm:double-float-normal-exponent-max) ()
-	    "Can't decode NAN or infinity: ~S." x)
+	 (biased (truly-the double-float-exponent
+			    (- exp vm:double-float-bias))))
+    (unless (<= exp vm:double-float-normal-exponent-max)
+      (error "Can't decode NAN or infinity: ~S." x))
     (cond ((zerop x)
 	   (values 0.0d0 biased sign))
 	  ((< exp vm:double-float-normal-exponent-min)
@@ -502,21 +504,18 @@
 	   (etypecase x
 	     (single-float vm:single-float-normal-exponent-min)
 	     (double-float vm:double-float-normal-exponent-min)))
-	(when (and (not (float-denormalized-p x))
-		   (vm:current-float-trap :inexact))
+	(when (vm:current-float-trap :inexact)
 	  (error 'floating-point-inexact :operation 'scale-float
 		 :operands (list x exp)))
+	(when (vm:current-float-trap :underflow)
+	  (error 'floating-point-underflow :operation 'scale-float
+		 :operands (list x exp)))
 	(let ((shift (1- new-exp)))
-	  (cond
-	   ((< shift (- (1- digits)))
-	    (when (vm:current-float-trap :underflow)
-	      (error 'floating-point-underflow :operation 'scale-float
-		     :operands (list x exp)))
-	    (float-sign x 0.0))
-	   (t
-	    (etypecase x
-	      (single-float (single-from-bits sign 0 (ash sig shift)))
-	      (double-float (double-from-bits sign 0 (ash sig shift))))))))
+	  (if (< shift (- (1- digits)))
+	      (float-sign x 0.0)
+	      (etypecase x
+		(single-float (single-from-bits sign 0 (ash sig shift)))
+		(double-float (double-from-bits sign 0 (ash sig shift)))))))
        (t
 	(etypecase x
 	  (single-float (single-from-bits sign new-exp sig))
