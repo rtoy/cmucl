@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.36 2003/08/21 15:26:36 gerd Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.37 2003/09/04 14:22:01 toy Exp $
  *
  */
 
@@ -94,6 +94,7 @@ static char* cmucllib_search_list[] =
     "./../lib/cmucl/lib",
     "./../lib",
     "/usr/local/lib/cmucl/lib",
+    "/usr/lib/cmucl",
     NULL
 };
 

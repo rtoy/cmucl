@@ -202,6 +202,8 @@ New in this release:
      - Generational GC (gencgc) available for Sparc/Solaris on an
        experimental basis.  Despite the name and feature, it is not
        conservative. 
+     - Search in /usr/lib/cmucl for the lisp core file as well, to
+       support x86/Linux
 
   * Numerous improvements to the PCL implementation of CLOS:
      - Gerd's PCL has been added, which fixes numerous bugs and ANSI/
