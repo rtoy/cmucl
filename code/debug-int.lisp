@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.55 1993/01/15 02:25:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.56 1993/02/15 20:32:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3297,9 +3297,8 @@
 	      (debug-function-name (debug-function-from-pc component offset))
 	      offset))
     (let ((breakpoints (breakpoint-data-breakpoints data)))
-      (unless breakpoints
-	(error "Breakpoint that nobody wants?"))
-      (if (eq (breakpoint-kind (car breakpoints)) :function-end)
+      (if (or (null breakpoints)
+	      (eq (breakpoint-kind (car breakpoints)) :function-end))
 	  (handle-function-end-breakpoint-aux breakpoints data signal-context)
 	  (handle-breakpoint-aux breakpoints data
 				 offset component signal-context)))))
@@ -3317,6 +3316,8 @@
 ;;; This handles code-location and debug-function :function-start breakpoints.
 ;;;
 (defun handle-breakpoint-aux (breakpoints data offset component signal-context)
+  (unless breakpoints
+    (error "Breakpoint that nobody wants?"))
   (unless (member data *executing-breakpoint-hooks*)
     (let ((*executing-breakpoint-hooks* (cons data
 					      *executing-breakpoint-hooks*)))
@@ -3355,17 +3356,16 @@
 
 ;;; HANDLE-FUNCTION-END-BREAKPOINT -- Internal Interface
 ;;; 
-(defun handle-function-end-breakpoint (offset component signal-context)
+(defun handle-function-end-breakpoint (offset component sigcontext)
   (let ((data (breakpoint-data component offset nil)))
     (unless data
       (error "Unknown breakpoint in ~S at offset ~S."
 	      (debug-function-name (debug-function-from-pc component offset))
 	      offset))
     (let ((breakpoints (breakpoint-data-breakpoints data)))
-      (unless breakpoints
-	(error "Breakpoint that nobody wants?"))
-      (assert (eq (breakpoint-kind (car breakpoints)) :function-end))
-      (handle-function-end-breakpoint-aux breakpoints data signal-context))))
+      (when breakpoints
+	(assert (eq (breakpoint-kind (car breakpoints)) :function-end))
+	(handle-function-end-breakpoint-aux breakpoints data sigcontext)))))
 
 ;;; HANDLE-FUNCTION-END-BREAKPOINT-AUX -- Internal.
 ;;;
