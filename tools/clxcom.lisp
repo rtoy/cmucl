@@ -50,7 +50,7 @@
   (comf "target:hemlock/key-event" :load t)
   (comf "target:hemlock/keysym-defs" :load t)
 
-  #+pcl
+  #+nil
   (comf "target:code/inspect"))
 
 (cat-if-anything-changed
