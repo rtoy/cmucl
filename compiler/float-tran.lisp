@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.5 1990/10/20 05:40:02 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.6 1990/10/24 16:44:14 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -186,8 +186,8 @@
 ;;; FLOAT-CONTAGION-ARG1, ARG2  --  Internal
 ;;;
 ;;;    Do some stuff to recognize when the luser is doing mixed float and
-;;; rational arithmetic, and fix it up.  If we don't, he won't even get so much
-;;; as an efficency note.
+;;; rational arithmetic, or different float types, and fix it up.  If we don't,
+;;; he won't even get so much as an efficency note.
 ;;;
 (deftransform float-contagion-arg1 ((x y) * * :defun-only t :node node)
   `(,(continuation-function-name (basic-combination-fun node))
@@ -201,13 +201,22 @@
   (%deftransform x '(function (rational float) *) #'float-contagion-arg1)
   (%deftransform x '(function (float rational) *) #'float-contagion-arg2))
 
-;;; Prevent zerop, plusp, minusp from losing horribly.  We can't in general do
-;;; float contagion on args to comparison, since Common Lisp semantics says we
-;;; are supposed to compare as rationals, but we can do it for any rational
-;;; that has a precise representation as a float (such as 0).
+(dolist (x '(= < > + * / -))
+  (%deftransform x '(function (single-float double-float) *)
+		 #'float-contagion-arg1)
+  (%deftransform x '(function (double-float single-float) *)
+		 #'float-contagion-arg2))
+
+
+;;; Prevent zerop, plusp, minusp from losing horribly.  We can't in general
+;;; float rational args to comparison, since Common Lisp semantics says we are
+;;; supposed to compare as rationals, but we can do it for any rational that
+;;; has a precise representation as a float (such as 0).
 ;;;
 (macrolet ((frob (op)
-	     `(deftransform ,op ((x y) (float (constant-argument rational)))
+	     `(deftransform ,op ((x y) (float rational))
+		(unless (constant-continuation-p y)
+		  (give-up "Can't open-code float to rational comparison."))
 		(let ((val (continuation-value y)))
 		  (unless (eql (rational (float val)) val)
 		    (give-up "~S doesn't have a precise float representation."
@@ -243,8 +252,8 @@
 					 `(coerce ,arg 'double-float))
 				     args))
 		    'single-float))
-	   (deftransform ,name (,args ,(frob 'double-float) ,@rtype)
-	     '(,prim ,@args))))))
+	 (deftransform ,name (,args ,(frob 'double-float) ,@rtype)
+	   '(,prim ,@args))))))
 
 (def-irrat-transforms exp %exp (x))
 (def-irrat-transforms expt %pow (x y) t)
