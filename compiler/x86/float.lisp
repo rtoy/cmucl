@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.23 1998/02/24 18:10:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.24 1998/03/10 18:22:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,64 +16,68 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Re-written and enhanced by Douglas Crosher, 1996, 1997, 1998.
+;;;
+;;; Rewrite, enhancements, complex-float support by
+;;; Douglas Crosher, 1996, 1997, 1998.
 ;;;
 
 (in-package :x86)
 
 
-(defmacro ea-for-xf-desc(tn slot)
-  `(make-ea
-    :dword :base ,tn :disp (- (* ,slot vm:word-bytes) vm:other-pointer-type)))
+(macrolet ((ea-for-xf-desc (tn slot)
+	     `(make-ea
+	       :dword :base ,tn
+	       :disp (- (* ,slot vm:word-bytes) vm:other-pointer-type))))
+  (defun ea-for-sf-desc (tn)
+    (ea-for-xf-desc tn vm:single-float-value-slot))
+  (defun ea-for-df-desc (tn)
+    (ea-for-xf-desc tn vm:double-float-value-slot))
+  ;; Complex floats
+  #+complex-float
+  (defun ea-for-csf-real-desc (tn)
+    (ea-for-xf-desc tn vm:complex-single-float-real-slot))
+  #+complex-float
+  (defun ea-for-csf-imag-desc (tn)
+    (ea-for-xf-desc tn vm:complex-single-float-imag-slot))
+  #+complex-float
+  (defun ea-for-cdf-real-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-float-real-slot))
+  #+complex-float
+  (defun ea-for-cdf-imag-desc (tn)
+    (ea-for-xf-desc tn vm:complex-double-float-imag-slot)))
 
-(defun ea-for-sf-desc(tn)
-  (ea-for-xf-desc tn vm:single-float-value-slot))
+(macrolet ((ea-for-xf-stack (tn kind)
+	     `(make-ea
+	       :dword :base ebp-tn
+	       :disp (- (* (+ (tn-offset ,tn)
+			      (ecase ,kind (:single 1) (:double 2) (:long 3)))
+			 vm:word-bytes)))))
+  (defun ea-for-sf-stack (tn)
+    (ea-for-xf-stack tn :single))
+  (defun ea-for-df-stack (tn)
+    (ea-for-xf-stack tn :double)))
 
-(defun ea-for-df-desc(tn)
-  (ea-for-xf-desc tn vm:double-float-value-slot))
-
-(defmacro ea-for-xf-stack(tn kind)
-  `(make-ea
-    :dword :base ebp-tn
-    :disp (- (* (+ (tn-offset ,tn) (case ,kind (:single 1) (:double 2)))
-	      vm:word-bytes))))
-
-(defun ea-for-sf-stack(tn)
-  (ea-for-xf-stack tn :single))
-
-(defun ea-for-df-stack(tn)
-  (ea-for-xf-stack tn :double))
-
-;;; Complex float EAs
+;;; Complex float stack EAs
 #+complex-float
-(progn
-(defun ea-for-csf-real-desc(tn)
-  (ea-for-xf-desc tn vm:complex-single-float-real-slot))
-(defun ea-for-csf-imag-desc(tn)
-  (ea-for-xf-desc tn vm:complex-single-float-imag-slot))
-
-(defun ea-for-cdf-real-desc(tn)
-  (ea-for-xf-desc tn vm:complex-double-float-real-slot))
-(defun ea-for-cdf-imag-desc(tn)
-  (ea-for-xf-desc tn vm:complex-double-float-imag-slot))
-
-(defmacro ea-for-cxf-stack(tn kind slot)
-  `(make-ea
-    :dword :base ebp-tn
-    :disp (- (* (+ (tn-offset ,tn) (* (case ,kind (:single 1) (:double 2))
-				      (case ,slot (:real 1) (:imag 2))))
-	      vm:word-bytes))))
-
-(defun ea-for-csf-real-stack(tn)
-  (ea-for-cxf-stack tn :single :real))
-(defun ea-for-csf-imag-stack(tn)
-  (ea-for-cxf-stack tn :single :imag))
-
-(defun ea-for-cdf-real-stack(tn)
-  (ea-for-cxf-stack tn :double :real))
-(defun ea-for-cdf-imag-stack(tn)
-  (ea-for-cxf-stack tn :double :imag))
-) ; complex-float
+(macrolet ((ea-for-cxf-stack (tn kind slot &optional base)
+	     `(make-ea
+	       :dword :base ,base
+	       :disp (- (* (+ (tn-offset ,tn)
+			      (* (ecase ,kind
+				   (:single 1)
+				   (:double 2)
+				   (:long 3))
+				 (ecase ,slot (:real 1) (:imag 2))))
+			 vm:word-bytes)))))
+  (defun ea-for-csf-real-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :single :real base))
+  (defun ea-for-csf-imag-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :single :imag base))
+  ;;
+  (defun ea-for-cdf-real-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :double :real base))
+  (defun ea-for-cdf-imag-stack (tn &optional (base ebp-tn))
+    (ea-for-cxf-stack tn :double :imag base)))
 
 ;;; Abstract out the copying of a FP register to the FP stack top, and
 ;;; provide two alternatives for its implementation. Note: it's not
@@ -81,21 +85,19 @@
 ;;; here.
 ;;;
 ;;; Using a Pop then load.
-(defmacro copy-fp-reg-to-fr0 (reg)
-  `(progn 
-     (assert (not (zerop (tn-offset ,reg))))
-     (inst fstp fr0-tn)
-     (inst fld (make-random-tn :kind :normal
-			       :sc (sc-or-lose 'double-reg *backend*)
-			       :offset (1- (tn-offset ,reg))))))
+(defun copy-fp-reg-to-fr0 (reg)
+  (assert (not (zerop (tn-offset ,reg))))
+  (inst fstp fr0-tn)
+  (inst fld (make-random-tn :kind :normal
+			    :sc (sc-or-lose 'double-reg *backend*)
+			    :offset (1- (tn-offset reg)))))
 ;;;
 ;;; Using Fxch then Fst to restore the original reg contents.
 #+nil
-(defmacro copy-fp-reg-to-fr0 (reg)
-  `(progn
-     (assert (not (zerop (tn-offset ,reg))))
-     (inst fxch ,reg)
-     (inst fst  ,reg)))
+(defun copy-fp-reg-to-fr0 (reg)
+  (assert (not (zerop (tn-offset reg))))
+  (inst fxch reg)
+  (inst fst  reg))
 
 
 ;;;; Move functions:
@@ -503,24 +505,28 @@
 			 (cond ((zerop (tn-offset real-tn))
 				,@(ecase format
 				    (:single
-				     '((inst fst (ea-for-csf-real-stack y))))
+				     '((inst fst
+					(ea-for-csf-real-stack y fp))))
 				    (:double
-				     '((inst fstd (ea-for-cdf-real-stack y))))))
+				     '((inst fstd
+					(ea-for-cdf-real-stack y fp))))))
 			       (t
 				(inst fxch real-tn)
 				,@(ecase format
 				    (:single
-				     '((inst fst (ea-for-csf-real-stack y))))
+				     '((inst fst
+					(ea-for-csf-real-stack y fp))))
 				    (:double
-				     '((inst fstd (ea-for-cdf-real-stack y)))))
+				     '((inst fstd
+					(ea-for-cdf-real-stack y fp)))))
 				(inst fxch real-tn))))
 		       (let ((imag-tn (complex-double-reg-imag-tn x)))
 			 (inst fxch imag-tn)
 			 ,@(ecase format
 			     (:single
-			      '((inst fst (ea-for-csf-imag-stack y))))
+			      '((inst fst (ea-for-csf-imag-stack y fp))))
 			     (:double
-			      '((inst fstd (ea-for-cdf-imag-stack y)))))
+			      '((inst fstd (ea-for-cdf-imag-stack y fp)))))
 			 (inst fxch imag-tn))))))
 		(define-move-vop ,name :move-argument
 		  (,sc descriptor-reg) (,sc)))))
