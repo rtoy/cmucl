@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.17 1994/10/25 00:41:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.18 1994/10/26 23:55:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -776,9 +776,9 @@
     (write-indexed fdefn vm:fdefn-raw-addr-slot
 		   (ecase type
 		     (#.vm:function-header-type
-		      (make-random-descriptor
-		       (if (c:backend-featurep :sparc)
-			   defn
+		      (if (c:backend-featurep :sparc)
+			  defn
+			  (make-random-descriptor
 			   (+ (logandc2 (descriptor-bits defn) vm:lowtag-mask)
 			      (ash vm:function-code-offset vm:word-shift)))))
 		     (#.vm:closure-header-type
@@ -1635,8 +1635,8 @@
 		   "")
 		  (#.c:sparc-fasl-file-implementation
 		   (if (c:backend-featurep :svr4)
-		       "_"
-		       "")))
+		       ""
+		       "_")))
 		name)))
 
 (defvar *cold-assembler-routines* nil)
