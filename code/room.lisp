@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.19 1993/02/26 08:26:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.20 1993/02/27 01:11:28 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,8 @@
 (use-package "SYSTEM")
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
 		       instance-usage find-holes print-allocated-objects
-		       code-breakdown uninterned-symbol-count))
+		       code-breakdown uninterned-symbol-count
+		       list-allocated-objects))
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -29,21 +30,23 @@
 
 ;;;; Type format database.
 
-(defstruct room-info
-  ;;
-  ;; The name of this type.
-  (name nil :type symbol)
-  ;;
-  ;; Kind of type (how we determine length).
-  (kind (required-argument)
-	:type (member :lowtag :fixed :header :vector
-		      :string :code :closure :instance))
-  ;;
-  ;; Length if fixed-length, shift amount for element size if :vector.
-  (length nil :type (or fixnum null)))
+(eval-when (compile load eval)
+  (defstruct (room-info (:make-load-form-fun :just-dump-it-normally))
+    ;;
+    ;; The name of this type.
+    (name nil :type symbol)
+    ;;
+    ;; Kind of type (how we determine length).
+    (kind (required-argument)
+	  :type (member :lowtag :fixed :header :vector
+			:string :code :closure :instance))
+    ;;
+    ;; Length if fixed-length, shift amount for element size if :vector.
+    (length nil :type (or fixnum null))))
 
-(defvar *room-info* (make-array 256 :initial-element nil))
+(eval-when (compile eval)
 
+(defvar *meta-room-info* (make-array 256 :initial-element nil))
 
 (dolist (obj *primitive-objects*)
   (let ((header (primitive-object-header obj))
@@ -58,22 +61,22 @@
 	    (lowtag (symbol-value lowtag)))
 	(declare (fixnum lowtag))
 	(dotimes (i 32)
-	  (setf (svref *room-info* (logior lowtag (ash i 3))) info))))
+	  (setf (svref *meta-room-info* (logior lowtag (ash i 3))) info))))
      (variable)
      (t
-      (setf (svref *room-info* (symbol-value header))
+      (setf (svref *meta-room-info* (symbol-value header))
 	    (make-room-info :name name  :kind :fixed  :length size))))))
 
 (dolist (code (list complex-string-type simple-array-type
 		    complex-bit-vector-type complex-vector-type 
 		    complex-array-type))
-  (setf (svref *room-info* code)
+  (setf (svref *meta-room-info* code)
 	(make-room-info :name 'array-header  :kind :header)))
 
-(setf (svref *room-info* bignum-type)
+(setf (svref *meta-room-info* bignum-type)
       (make-room-info :name 'bignum  :kind :header))
 
-(setf (svref *room-info* closure-header-type)
+(setf (svref *meta-room-info* closure-header-type)
       (make-room-info :name 'closure  :kind :closure))
 
 (dolist (stuff '((simple-bit-vector-type . -3)
@@ -87,18 +90,21 @@
 		 (simple-array-double-float-type . 3)))
   (let ((name (car stuff))
 	(size (cdr stuff)))
-    (setf (svref *room-info* (symbol-value name))
+    (setf (svref *meta-room-info* (symbol-value name))
 	  (make-room-info :name name  :kind :vector  :length size))))
 
-(setf (svref *room-info* simple-string-type)
+(setf (svref *meta-room-info* simple-string-type)
       (make-room-info :name 'simple-string-type :kind :string :length 0))
 
-(setf (svref *room-info* code-header-type)
+(setf (svref *meta-room-info* code-header-type)
       (make-room-info :name 'code  :kind :code))
 
-(setf (svref *room-info* instance-header-type)
+(setf (svref *meta-room-info* instance-header-type)
       (make-room-info :name 'instance :kind :instance))
 
+); eval-when (compile eval)
+
+(defparameter *room-info* '#.*meta-room-info*)
 (deftype spaces () '(member :static :dynamic :read-only))
 
 
@@ -601,58 +607,135 @@
 	   (space-size (- space-end space-start))
 	   (pagesize (system:get-page-size))
 	   (start (+ space-start (round (* space-size percent) 100)))
+	   (printed-conses (make-hash-table :test #'eq))
 	   (pages-so-far 0)
 	   (count-so-far 0)
 	   (last-page 0))
       (declare (type (unsigned-byte 32) last-page start)
 	       (fixnum pages-so-far count-so-far pagesize))
+      (labels ((note-conses (x)
+		 (unless (or (atom x) (gethash x printed-conses))
+		   (setf (gethash x printed-conses) t)
+		   (note-conses (car x))
+		   (note-conses (cdr x)))))
+	(map-allocated-objects
+	 #'(lambda (obj obj-type size)
+	     (declare (optimize (safety 0)))
+	     (let ((addr (get-lisp-obj-address obj)))
+	       (when (>= addr start)
+		 (when (if count
+			   (> count-so-far count)
+			   (> pages-so-far pages))
+		   (return-from print-allocated-objects (values)))
+		 
+		 (unless count
+		   (let ((this-page (* (the (unsigned-byte 32)
+					    (truncate addr pagesize))
+				       pagesize)))
+		     (declare (type (unsigned-byte 32) this-page))
+		     (when (/= this-page last-page)
+		       (when (< pages-so-far pages)
+			 (format stream "~2&**** Page ~D, address ~X:~%"
+				 pages-so-far addr))
+		       (setq last-page this-page)
+		       (incf pages-so-far))))
+		 
+		 (when (and (or (not type) (eql obj-type type))
+			    (or (not smaller) (<= size smaller))
+			    (or (not larger) (>= size larger)))
+		   (incf count-so-far)
+		   (case type
+		     (#.code-header-type
+		      (let ((dinfo (%code-debug-info obj)))
+			(format stream "~&Code object: ~S~%"
+				(if dinfo
+				    (c::compiled-debug-info-name dinfo)
+				    "No debug info."))))
+		     (#.symbol-header-type
+		      (format stream "~&~S~%" obj))
+		     (#.list-pointer-type
+		      (unless (gethash obj printed-conses)
+			(note-conses obj)
+			(let ((*print-circle* t)
+			      (*print-level* 5)
+			      (*print-length* 10))
+			  (format stream "~&~S~%" obj))))
+		     (t
+		      (fresh-line stream)
+		      (let ((str (write-to-string obj :level 5 :length 10
+						  :pretty nil)))
+			(unless (eql type instance-header-type)
+			  (format stream "~S: " (type-of obj)))
+			(format stream "~A~%"
+				(subseq str 0 (min (length str) 60))))))))))
+	 space))))
+  (values))
+
+
+;;;; LIST-ALLOCATED-OBJECTS, LIST-REFERENCING-OBJECTS
+
+(defvar *ignore-after* nil)
+
+(defun maybe-cons (space x stuff)
+  (if (or (not (eq space :dynamic))
+	  (< (get-lisp-obj-address x) (get-lisp-obj-address *ignore-after*)))
+      (cons x stuff)
+      stuff))
+
+(defun list-allocated-objects (space &key type larger smaller count
+				     test)
+  (declare (type spaces space)
+	   (type (or c::index null) larger smaller type count)
+	   (type (or function null) test)
+	   (inline map-allocated-objects))
+  (unless *ignore-after* (setq *ignore-after* (cons 1 2)))
+  (collect ((counted 0 1+))
+    (let ((res ()))
       (map-allocated-objects
        #'(lambda (obj obj-type size)
 	   (declare (optimize (safety 0)))
-	   (let ((addr (get-lisp-obj-address obj)))
-	     (when (>= addr start)
-	       (when (if count
-			 (> count-so-far count)
-			 (> pages-so-far pages))
-		 (return-from print-allocated-objects (values)))
+	   (when (and (or (not type) (eql obj-type type))
+		      (or (not smaller) (<= size smaller))
+		      (or (not larger) (>= size larger))
+		      (or (not test) (funcall test obj)))
+	     (setq res (maybe-cons space obj res))
+	     (when (and count (>= (counted) count))
+	       (return-from list-allocated-objects res))))
+       space)
+      res)))
 
-	       (unless count
-		 (let ((this-page (* (the (unsigned-byte 32)
-					  (truncate addr pagesize))
-				     pagesize)))
-		   (declare (type (unsigned-byte 32) this-page))
-		   (when (/= this-page last-page)
-		     (when (< pages-so-far pages)
-		       (format stream "~2&**** Page ~D, address ~X:~%"
-			       pages-so-far addr))
-		     (setq last-page this-page)
-		     (incf pages-so-far))))
-		   
-	       (when (and (or (not type) (eql obj-type type))
-			  (or (not smaller) (<= size smaller))
-			  (or (not larger) (>= size larger)))
-		 (incf count-so-far)
-		 (case type
-		   (#.code-header-type
-		    (let ((dinfo (%code-debug-info obj)))
-		      (format stream "~&Code object: ~S~%"
-			      (if dinfo
-				  (c::compiled-debug-info-name dinfo)
-				  "No debug info."))))
-		   (#.symbol-header-type
-		    (format stream "~&~S~%" obj))
-		   (#.list-pointer-type
-		    (write-char #\. stream))
-		   (t
-		    (fresh-line stream)
-		    (let ((str (write-to-string obj :level 5 :length 10
-						:pretty nil)))
-		      (unless (eql type instance-header-type)
-			(format stream "~S: " (type-of obj)))
-		      (format stream "~A~%"
-			      (subseq str 0 (min (length str) 60))))))))))
-       space)))
-  (values))
+(defun list-referencing-objects (space object)
+  (declare (type spaces space) (inline map-allocated-objects))
+  (unless *ignore-after* (setq *ignore-after* (cons 1 2)))
+  (let ((res ()))
+    (flet ((res (x)
+	     (setq res (maybe-cons space x res))))
+      (map-allocated-objects
+       #'(lambda (obj obj-type size)
+	   (declare (optimize (safety 0)) (ignore obj-type size))
+	   (typecase obj
+	     (cons
+	      (when (or (eq (car obj) object) (eq (cdr obj) object))
+		(res obj)))
+	     (instance
+	      (dotimes (i (%instance-length obj))
+		(when (eq (%instance-ref obj i) object)
+		  (res obj)
+		  (return))))
+	     (simple-vector
+	      (dotimes (i (length obj))
+		(when (eq (svref obj i) object)
+		  (res obj)
+		  (return))))
+	     (symbol
+	      (when (or (eq (symbol-name obj) object)
+			(eq (symbol-package obj) object)
+			(eq (symbol-plist obj) object)
+			(eq (symbol-value obj) object))
+		(res obj)))))
+       space))
+    res))
+
 
 ;;;; Misc:
 
