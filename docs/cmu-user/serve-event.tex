@@ -146,16 +146,18 @@ descriptor as it's single argument.
 \end{defun}
 
 \begin{defmac}{system:}{with-fd-handler}{%
-    \args{(\var{direction} \var{fd} \var{function})
+    \args{(\var{fd} \var{direction} \var{function})
       \mstar{\var{form}}}}
       
   This macro executes the supplied forms with a handler installed
   using \var{fd}, \var{direction}, and \var{function}.  See
-  \code{system:add-fd-handler}.
+  \code{system:add-fd-handler}.  The forms are wrapped in an
+  \code{unwind-protect};  the handler is removed (see
+  \code{system:remove-fd-handler}) when done.
 \end{defmac}
 
 \begin{defun}{system:}{wait-until-fd-usable}{%
-    \args{\var{direction} \var{fd} \ampoptional{} \var{timeout}}}
+    \args{\var{fd} \var{direction} \ampoptional{} \var{timeout}}}
       
   This function waits for up to \var{timeout} seconds for \var{fd} to
   become usable for \var{direction} (either \kwd{input} or
