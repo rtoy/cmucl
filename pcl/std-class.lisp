@@ -26,7 +26,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.18 1998/12/20 04:30:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.19 1999/01/06 13:43:47 pw Exp $")
 ;;;
 
 (in-package :pcl)
@@ -379,6 +379,9 @@
 	     (cond ((classp s) s)
 		   ((not (legal-class-name-p s))
 		    (error "~S is not a class or a legal class name." s))
+		   #+cmu17
+		   ((eq s 'lisp:standard-class) ; map from lisp to pcl
+		    *the-class-standard-class*)
 		   (t
 		    (or (find-class s nil)
 			(setf (find-class s)
