@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.13 1998/01/21 05:10:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.14 1998/01/21 10:10:06 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -142,7 +142,7 @@
 		  :offset (tn-offset x)))
 (defun complex-double-reg-imag-tn (x)
   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg *backend*)
-		  :offset (1+ (tn-offset x))))
+		  :offset (+ (tn-offset x) 2)))
 
 
 (define-move-function (load-complex-single 2) (vop x y)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.8 1998/01/21 05:10:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.9 1998/01/21 10:10:05 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -149,10 +149,11 @@
   (double-stack non-descriptor-stack
 		:element-size 2 :alignment 2) ; double floats.
   #+complex-float
-  (complex-single-stack stack :element-size 2)	; complex-single-floats
+  ;; complex-single-floats
+  (complex-single-stack non-descriptor-stack :element-size 2)
   #+complex-float
-  (complex-double-stack stack
-			:element-size 4 :alignment 2) ; complex-double-floats.
+  ;; complex-double-floats.
+  (complex-double-stack non-descriptor-stack :element-size 4 :alignment 2)
 
 
   ;; **** Things that can go in the integer registers.
