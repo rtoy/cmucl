@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.2 1990/03/07 00:22:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.3 1990/03/07 18:38:35 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -60,18 +60,20 @@
 
 
 (define-vop (fast-schar byte-index-ref)
+  (:arg-types simple-string *)
   (:results (value :scs (base-character-reg)))
-  (:variant vm:vector-base-size vm:other-pointer-type)
+  (:result-types base-character)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate aref)
-  (:policy :fast)
-  (:arg-types simple-string *))
+  (:policy :fast))
 
 (define-vop (fast-scharset byte-index-set)
   (:args (object :scs (descriptor-reg))
 	 (index :scs (any-reg descriptor-reg immediate unsigned-immediate))
 	 (value :scs (base-character-reg)))
   (:results (result :scs (base-character-reg)))
-  (:variant vm:vector-base-size vm:other-pointer-type)
+  (:result-types base-character)
+  (:variant vm:vector-data-offset vm:other-pointer-type)
   (:translate %aset)
   (:policy :fast)
   (:arg-types simple-string * base-character))
