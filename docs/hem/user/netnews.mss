@@ -1,4 +1,4 @@
-@comment{-*- Dictionary: /afs/cs/project/clisp/scribe/hem/hem; Mode: spell; Package: Hemlock -*-}
+@comment{-*- Dictionary: /afs/cs/project/clisp/docs/hem/hem; Mode: spell; Package: Hemlock -*-}
 
 @chap[The Hemlock Netnews Interface]
 @section[Introduction to Netnews in Hemlock]
@@ -45,6 +45,17 @@ File).
    groups into it alphabetically.  You may find this useful if you choose to set
    up your @hid(Netnews Group File) manually.
 @enddefcom
+
+@defhvar[var "Netnews NNTP Server", val{"netnews.srv.cs.cmu.edu"}]
+This variable stores the host name of the machine which @hemlock will use
+as the NNTP server.
+@enddefhvar
+
+@defhvar[var "Netnews NNTP Timeout Period", val{30}]
+This is the number of seconds @hemlock will wait trying to connect to the
+NNTP server.  If a connection is not made within this time period, the
+connection will time out and an error will be signalled.
+@enddefhvar
 
 @subsection[News-Browse Mode]
 
@@ -329,7 +340,7 @@ not modify the group pointer for the current group.
 The @hemlock Netnews interface also provides an easy way of replying to
 messages through the @hemlock Mailer or via @hid{Post} mode.
 
-@defcom[com "Netnews Reply to Sender", stuff (bound to @bf[r] in @hid{News-Headers} and @hid{News-Message} modes.)]
+@defcom[com "Netnews Reply to Sender"]
    When you invoke this command, @hemlock creates a @hid(Draft) buffer and
    tries to fill in the @i(to) and @i(subject) fields of the draft.  For
    the @i(to) field, @hemlock looks at the @i(reply-to) field of the
@@ -338,13 +349,20 @@ messages through the @hemlock Mailer or via @hid{Post} mode.
    string, signifying that this is a reply.
 @enddefcom
 
-@defcom[com "Netnews Reply to Group", stuff (bound to @bf[R] in @hid{News-Headers} mode)]
+@defcom[com "Netnews Reply to Sender in Other Window", stuff (bound to @bf[r] in @hid{News-Headers} and @hid{News-Message}.)]
+This command splits the current window, placing the message you are
+replying to in the top window and a new @hid{Draft} buffer in the bottom
+one.  This command fills in the header fields in the same manner as
+@hid(Netnews Reply to Sender).
+@enddefcom
+
+@defcom[com "Netnews Reply to Group"]
 This command creates a @hid{Post} buffer with the @i(newsgroups) field set
 to the current group and the @i(subject) field constructed in the same way
 as in @hid(Netnews Reply to Sender).
 @enddefcom
 
-@defcom[com "Netnews Reply to Group in Other Window", stuff (bound to @bf[R] in @hid{News-Message}.)]
+@defcom[com "Netnews Reply to Group in Other Window", stuff (bound to @bf[R] in @hid{News-Headers} and @hid{News-Message}.)]
    This command splits the current window, placing the message you are
    replying to in the top window and a new @hid{Post} buffer in the bottom
    one.  This command will fill in the header fields in the same manner as
@@ -420,7 +438,8 @@ In all cases, the same binding is used: @bf[H-y].
 @hid[List All Groups]@\@\@\@bf[l]
 @hid[Netnews Append to File]@\@\@bf[a]
 @hid[Netnews Forward Message]@\@\@bf[f]
-@hid[Netnews Reply to Sender]@\@\@bf[r]
+@hid[Netnews Reply to Sender in Other Window]@\@\@bf[r]
+@hid[Netnews Reply to Group in Other Window]@\@\@bf[R]
 @hid[Netnews Quit Starting Here]@\@\@bf[.]
 
 @Begin[Center] @b[News-Headers mode bindings:] @End[Center]
@@ -433,7 +452,6 @@ In all cases, the same binding is used: @bf[H-y].
 @hid[Netnews Select Message Buffer]@\@\@bf[H-m]
 @hid[Netnews Exit]@\@\@\@bf[q]
 @hid[Netnews Headers File Message]@\@\@bf[o]
-@hid[Netnews Reply to Group]@\@\@bf[R]
 
 
 @Begin[Center] @b[News-Message mode bindings:] @End[Center]
@@ -444,7 +462,6 @@ In all cases, the same binding is used: @bf[H-y].
 @hid[Netnews Message Keep Buffer]@\@\@bf[k]
 @hid[Netnews Message Quit]@\@\@bf[q]
 @hid[Netnews Message File Message]@\@\@bf[o]
-@hid[Netnews Reply to Group in Other Window]@\@\@bf[R]
 @hid[Netnews Goto Post Buffer]@\@\@bf[H-p]
 @hid[Netnews Goto Draft Buffer]@\@\@bf[H-d]
 @hid[Insert Message Region]@\@\@bf[H-y]
