@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.85 1998/07/24 17:22:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.86 1998/09/20 15:16:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -492,6 +492,83 @@
     (or (adjacent (interval-low y) (interval-high x))
 	(adjacent (interval-low x) (interval-high y)))))
 
+;;; INTERVAL-INTERSECTION/DIFFERENCE
+;;;
+;;; Compute the intersection and difference between two intervals.
+;;; Two values are returned: the intersection and the difference.
+;;;
+;;; Let the two intervals be X and Y, and let I and D be the two
+;;; values returned by this function.  Then I = X intersect Y.  If I
+;;; is NIL (the empty set), then D is X union Y, represented as the
+;;; list of X and Y.  If I is not the empty set, then D is (X union Y)
+;;; - I, which is a list of two intervals.
+;;;
+;;; For example, let X = [1,5] and Y = [-1,3).  Then I = [1,3) and D =
+;;; [-1,1) union [3,5], which is returned as a list of two intervals.
+;;;
+(defun interval-intersection/difference (x y)
+  (declare (type interval x y))
+  (let ((closed-intervals-p nil)
+	(x-lo (interval-low x))
+	(x-hi (interval-high x))
+	(y-lo (interval-low y))
+	(y-hi (interval-high y)))
+    (labels
+	((opposite-bound (p)
+	   ;; If p is an open bound, make it closed.  If p is a closed
+	   ;; bound, make it open.
+	   (if (listp p)
+	       (first p)
+	       (list p)))
+	 (test-number (p int)
+	   ;; Test if P is in the interval.
+	   (when (interval-contains-p (bound-value p)
+				      (interval-closure int))
+	     (let ((lo (interval-low int))
+		   (hi (interval-high int)))
+	       ;; Check for endpoints
+	       (cond ((or (null lo) (null hi))
+		      t)
+		     ((= (bound-value p) (bound-value lo))
+		      (or closed-intervals-p
+			  (not (and (consp p) (numberp lo)))))
+		     ((= (bound-value p) (bound-value hi))
+		      (or closed-intervals-p
+			  (not (and (numberp p) (consp hi)))))
+		     (t t)))))
+	 (test-lower-bound (p int)
+	   ;; P is a lower bound of an interval.
+	   (if p
+	       (test-number p int)
+	       (not (interval-bounded-p int 'below))))
+	 (test-upper-bound (p int)
+	   ;; P is an upper bound of an interval
+	   (if p
+	       (test-number p int)
+	       (not (interval-bounded-p int 'above)))))
+      (let ((x-lo-in-y (test-lower-bound x-lo y))
+	    (x-hi-in-y (test-upper-bound x-hi y))
+	    (y-lo-in-x (test-lower-bound y-lo x))
+	    (y-hi-in-x (test-upper-bound y-hi x)))
+	(cond ((or x-lo-in-y x-hi-in-y y-lo-in-x y-hi-in-x)
+	       ;; Intervals intersect.  Let's compute the intersection
+	       ;; and the difference.
+	       (multiple-value-bind (lo left-lo left-hi)
+		   (cond (x-lo-in-y
+			  (values x-lo y-lo (opposite-bound x-lo)))
+			 (y-lo-in-x
+			  (values y-lo x-lo (opposite-bound y-lo))))
+		 (multiple-value-bind (hi right-lo right-hi)
+		     (cond (x-hi-in-y
+			    (values x-hi (opposite-bound x-hi) y-hi))
+			   (y-hi-in-x
+			    (values y-hi (opposite-bound y-hi) x-hi)))
+		   (values (make-interval :low lo :high hi)
+			   (list (make-interval :low left-lo :high left-hi)
+				 (make-interval :low right-lo :high right-hi))))))
+	      (t
+	       (values nil (list x y))))))))
+
 ;;; INTERVAL-MERGE-PAIR
 ;;;
 ;;; If intervals X and Y intersect, return a new interval that is the
@@ -502,7 +579,7 @@
   ;; If x and y intersect or are adjacent, create the union.
   ;; Otherwise return nil
   (when (or (interval-intersect-p x y)
-	     (interval-adjacent-p x y))
+	    (interval-adjacent-p x y))
     (flet ((select-bound (x1 x2 min-op max-op)
 	     (let ((x1-val (bound-value x1))
 		   (x2-val (bound-value x2)))
