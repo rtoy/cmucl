@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.11 1991/08/07 14:55:49 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.12 1991/10/28 12:22:23 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -227,15 +227,6 @@
 	       (format t "~&It has no fill pointer."))))
   (format t "~&Its element type is ~S." (array-element-type x))))
 
-(defmacro describe-function-arg-list (object test output)
-  `(progn
-     (print-for-describe ,object)
-     (if ,test
-	 (write-string " is called with zero arguments.")
-	 (indenting-further *standard-output* 2
-	   (format t " can be called with these arguments:~%")
-	   ,output))))
-
 (defun describe-function (x &optional macro-p)
   (declare (type function x))
   (case (get-type x)
@@ -250,13 +241,19 @@
 
 (defun describe-function-compiled (x macro-p)
   (let ((name (%function-header-name x)))
+    (format t "~&Function:~%  ~S~%" x)
+    (let ((args (%function-header-arglist x)))
+      (write-line "Function Arguments:")
+      (cond ((not args)
+	     (format t "  There is no argument information available."))
+	    ((string= args "()")
+	     (write-string "  There are no arguments."))
+	    (t
+	     (write-string "  ")
+	     (indenting-further *standard-output* 2
+	       (write-string args)))))
     (when (symbolp name)
       (desc-doc name 'function "Function Documention:"))
-    (let ((args (%function-header-arglist x)))
-      (if args
-	  (describe-function-arg-list
-	   *current-describe-object* (string= args "()") (write-string args))
-	  (format t "~&No argument information available.")))
     (unless macro-p
       (let ((*print-level* nil)
 	    (*print-length* nil))
@@ -277,7 +274,7 @@
 	  (format t "~&It is currently declared ~(~A~);~
 		     ~:[no~;~] expansion is available."
 		  inlinep (info function inline-expansion name))))))
-  (let ((info (di::code-debug-info (di::function-code-header x))))
+  (let ((info (kernel:code-debug-info (kernel:function-code-header x))))
     (when info
       (let ((sources (c::compiled-debug-info-source info)))
 	(format t "~&On ~A it was compiled from:"
