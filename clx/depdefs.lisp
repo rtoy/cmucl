@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;; This file contains some of the system dependent code for CLX
 
@@ -595,6 +595,15 @@
   (input-wait-function 'buffer-input-wait-default)
   ;; Function to call to listen for input data
   (listen-function 'buffer-listen-default)
+  ;;
+  ;; This is an alien array.  We use it for, somewhat unnecessarily, to have
+  ;; interior pointers into it when calling UNIX-READ.
+  #+:CMU
+  (internal-buffer nil)
+  ;;
+  ;; How much of the internal-buffer have we filled so far.
+  #+:CMU
+  (internal-buffer-length 0)
 
   #+Genera (debug-io nil :type (or null stream))
   ) 
