@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.30 1991/04/09 16:13:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.31 1991/04/23 15:01:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.30 1991/04/09 16:13:07 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -260,8 +258,8 @@
 ;;; Fasload:
 
 (defun fasload (stream)
-  (unless (listen stream)
-    (error "Attempt to load an empty FASL FILE:~%  ~S" stream))
+  (when (zerop (file-length stream))
+    (error "Attempt to load an empty FASL FILE:~%  ~S" (namestring stream)))
   (when *load-verbose*
     (load-fresh-line)
     (format t "Loading stuff from ~S.~%" stream))
@@ -418,16 +416,19 @@
   (declare (type (or null (member :source :binary)) contents))
   (let ((*package* *package*)
 	(*load-depth* (1+ *load-depth*)))
-    (if (streamp filename)
-	(if (or (eq contents :binary)
-		(and (null contents)
-		     (equal (stream-element-type filename)
-			    '(unsigned-byte 8))))
-	    (fasload filename)
-	    (sloload filename))
-	(let ((pn (merge-pathnames (pathname filename)
-				   *default-pathname-defaults*)))
-	  (internal-load pn (probe-file pn) if-does-not-exist contents)))))
+    (values 
+     (with-simple-restart (continue "Return NIL from load of ~S." filename)
+       (if (streamp filename)
+	   (if (or (eq contents :binary)
+		   (and (null contents)
+			(equal (stream-element-type filename)
+			       '(unsigned-byte 8))))
+	       (fasload filename)
+	       (sloload filename))
+	   (let ((pn (merge-pathnames (pathname filename)
+				      *default-pathname-defaults*)))
+	     (internal-load pn (probe-file pn) if-does-not-exist
+			    contents)))))))
 
 (defun internal-load (pathname truename if-does-not-exist contents)
   (cond
@@ -444,11 +445,20 @@
       (t
        (let ((first-line (with-open-file (file truename :direction :input)
 			   (read-line file nil))))
-	 (if (and first-line
-		  (>= (length first-line) 9)
-		  (string= first-line "FASL FILE" :end1 9))
-	     (internal-load pathname truename if-does-not-exist :binary)
-	     (internal-load pathname truename if-does-not-exist :source))))))
+	 (cond
+	  ((and first-line
+		(>= (length first-line) 9)
+		(string= first-line "FASL FILE" :end1 9))
+	   (internal-load pathname truename if-does-not-exist :binary))
+	  (t
+	   (when (member (pathname-type truename)
+			 '(#.(c:backend-fasl-file-type c:*backend*) "fasl")
+			 :test #'string=)
+	     (cerror
+	      "Load it as a source file."
+	      "File has a fasl file type, but no fasl file header:~%  ~S"
+	      (namestring truename)))
+	   (internal-load pathname truename if-does-not-exist :source)))))))
    ((pathname-type pathname)
     (with-open-file (stream pathname :direction :input
 			    :if-does-not-exist if-does-not-exist)
