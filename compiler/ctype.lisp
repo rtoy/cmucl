@@ -489,7 +489,7 @@
 ;;; with the actual type.
 ;;;
 (proclaim '(function check-approximate-fixed-and-rest
-		     (approximate-function-type list (or type null))
+		     (approximate-function-type list (or ctype null))
 		     void))
 (defun check-approximate-fixed-and-rest (call-type fixed rest)
   (do ((types (approximate-function-type-types call-type) (cdr types))
@@ -506,7 +506,9 @@
 ;;;    Check that each of the call-types is compatible with Decl-Type,
 ;;; complaining if not or if we can't tell.
 ;;;
-(proclaim '(function check-approximate-arg-type (list type string &rest t) void))
+(proclaim '(function check-approximate-arg-type
+		     (list ctype string &rest t)
+		     void))
 (defun check-approximate-arg-type (call-types decl-type context &rest args)
   (let ((losers *empty-type*))
     (dolist (ctype call-types)
