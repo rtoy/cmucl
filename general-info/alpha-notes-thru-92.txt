@@ -1,3 +1,51 @@
+8/4/92 to 8/17/92
+
+Many low level interal improvements for the pmax.  None of this is user
+visable, except that allocation should be faster.  *** Note: these internal
+changes require all files to be recompiled.  If you try to load an old fasl
+file, you will get an error message to this effect.
+
+
+Code:
+
+Changed backq-list, etc., from being inline functions to compiler-macros, since
+although the optimizer does eventually get the right code, it has to work awful
+hard.
+
+When groveling a defmacro lambda list, check to see if some part is a LIST
+before checking to see if it is a SYMBOL, because we want NIL to act like
+the empty list, and not an attempt to bind NIL.
+
+Fixed quote-string to stop at the fill pointer for strings with fill
+pointers.
+
+In %defsetf, don't bother creating temp vars for constants.  This is
+necessary so that keywords stay keywords, and are not changed to gensyms.
+
+Set *ENVIRONMENT-LIST* to NIL before we start to push things on it in
+ENVIRONMENT-INIT so that we don't keep around the old values.
+
+Changed GET-INTERNAL-RUN-TIME to use UNIX-FAST-GETRUSAGE to avoid
+number-consing and generic arithmetic.  Also, rearranged the computation so
+that the time is correctly computed for up to 457 days, instead of only 71
+minutes.
+
+Added UNIX-FAST-GETRUSAGE which is inline, only returns the system and user
+time, and returns them as seconds and microseconds.
+
+
+Compiler:
+
+Fixed a problem with conflict analysis of :more TNs (which are created
+when a single vop has ~>= 50 operands.)
+
+
+PCL:
+
+Don't clobber DEFINE-COMPILER-MACRO, because we have it now.
+
+
+
 7/31/92 to 8/4/92
 
 [SPARC only]
