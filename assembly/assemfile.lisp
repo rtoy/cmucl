@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.8 1990/04/24 19:06:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.9 1990/04/27 19:21:01 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -239,7 +239,9 @@
 
 (defun arg-or-res-spec (reg)
   `(,(reg-spec-name reg)
-    :scs (any-reg descriptor-reg)
+    :scs ,(if (reg-spec-sc reg)
+	      (list (sc-name (reg-spec-sc reg)))
+	      '(any-reg descriptor-reg))
     ,@(unless (eq (reg-spec-kind reg) :res)
 	`(:target ,(reg-spec-name (reg-spec-temp reg))))
     ,@(do ((keys (reg-spec-keys reg) (cddr keys))
