@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.23 2003/06/06 16:23:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.24 2003/07/30 15:33:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -291,7 +291,24 @@
       (declare (type combination call))
       (let ((cont (nth (1- n) (combination-args call))))
 	(when (and cont (constant-continuation-p cont))
-	  (specifier-type (continuation-value cont))))))
+	  (let ((ctype (specifier-type (continuation-value cont))))
+	    ;; If ctype is an array with element type *wild-type* (*),
+	    ;; convert it to an array with element type
+	    ;; *universal-type* (T).  (Because this function is only
+	    ;; used where vectors are really (vector t).)
+	    (if (and (array-type-p ctype)
+		     (eq (array-type-specialized-element-type ctype)
+			    *wild-type*))
+		   ;; I don't think I'm allowed to modify what I get
+		   ;; back from SPECIFIER-TYPE; it is, after all,
+		   ;; cached.  Better copy it, then.
+		   (let ((real-ctype (copy-structure ctype)))
+		     (setf (array-type-element-type real-ctype)
+			   *universal-type*
+			   (array-type-specialized-element-type real-ctype)
+			   *universal-type*)
+		     real-ctype)
+		   ctype))))))
 
 ;;; RESULT-TYPE-OPEN-CLASS  --  Interface
 ;;;
