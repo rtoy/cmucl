@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.23 1990/11/03 03:25:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.24 1990/12/18 20:49:49 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -66,7 +66,6 @@
   (frob listp check-list list
     vm:list-pointer-type object-not-list-error)
 
-  #+nil ;; ### Only after we have real structures.
   (frob structurep check-structure structure
     vm:structure-pointer-type object-not-structure)
 
@@ -129,10 +128,7 @@
     vm:sap-type object-not-sap-error)
 
   (frob weak-pointer-p check-weak-pointer weak-pointer
-    vm:weak-pointer-type object-not-weak-pointer-error)
-
-  (frob structurep check-structure structure
-    vm:structure-header-type object-not-structure-error))
+    vm:weak-pointer-type object-not-weak-pointer-error))
 
 
 ;;; Slightly tenser versions for FIXNUM's
