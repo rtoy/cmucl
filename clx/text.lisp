@@ -20,24 +20,6 @@
 
 (in-package :xlib)
 
-(export '(
-	  translation-function
-	  translate-default
-	  text-extents
-	  text-width
-	  draw-glyph
-	  draw-glyphs
-	  draw-image-glyph
-	  draw-image-glyphs
-	  display-keycode-range
-	  set-modifier-mapping
-	  modifier-mapping
-	  keysym
-	  change-keyboard-mapping
-	  keyboard-mapping
-	  keyboard-mapping
-	  ))
-
 ;; Strings are broken up into chunks of this size
 (defparameter *max-string-size* 254)
 
@@ -128,7 +110,10 @@
   (declare (type sequence sequence)
 	   (type (or font gcontext) font))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values width ascent descent left right
 		  font-ascent font-descent direction
 		  (or null array-index)))
@@ -154,7 +139,7 @@
     (with-display (display)
       (do* ((wbuf (display-tbuf16 display))
 	    (src-end (or end (length sequence)))
-	    (src-start start end)
+	    (src-start start (index+ src-start buf-end))
 	    (end (index-min src-end (index+ src-start *buffer-text16-size*))
 		 (index-min src-end (index+ src-start *buffer-text16-size*)))
 	    (buf-end 0)
@@ -176,8 +161,7 @@
 		   sequence src-start end font wbuf 0))
 	(setq buf-end (- buf-end src-start))
 	(cond ((null new-font) (setq stop-p t))
-	      ((integerp new-font) (incf width (the int32 new-font)))
-	      ((type? new-font 'font) (setq font new-font)))
+	      ((integerp new-font) (incf width (the int32 new-font))))
 	
 	(let (w a d l r)
 	  (if (or (font-char-infos-internal font) (font-local-only-p font))
@@ -203,7 +187,10 @@
 		 (setq right-bearing (the int32 (max right-bearing (the int32 r))))
 		 (setq ascent (the int16 (max ascent (the int16 a))))
 		 (setq descent (the int16 (max descent (the int16 d)))))))
-	
+
+	(when (type? new-font 'font)
+	  (setq font new-font))
+
 	(setq overall-ascent (the int16 (max overall-ascent font-ascent)))
 	(setq overall-descent (the int16 (max overall-descent font-descent)))
 	(case overall-direction
@@ -230,7 +217,10 @@
 	   (type array-index start)
 	   (type (or null array-index) end))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values integer (or null integer)))
   (when (type? font 'gcontext)
     (force-gcontext-changes font)
@@ -245,7 +235,7 @@
     (with-display (display)
       (do* ((wbuf (display-tbuf16 display))
 	    (src-end (or end (length sequence)))
-	    (src-start start end)
+	    (src-start start (index+ src-start buf-end))
 	    (end (index-min src-end (index+ src-start *buffer-text16-size*))
 		 (index-min src-end (index+ src-start *buffer-text16-size*)))
 	    (buf-end 0)
@@ -263,20 +253,15 @@
 		   sequence src-start end font wbuf 0))
 	(setq buf-end (- buf-end src-start))
 	(cond ((null new-font) (setq stop-p t))
-	      ((integerp new-font) (incf width (the int32 new-font)))
-	      ((type? new-font 'font) (setq font new-font)))
+	      ((integerp new-font) (incf width (the int32 new-font))))
 	
 	(incf width
 	      (if (or (font-char-infos-internal font) (font-local-only-p font))
 		  (text-extents-local font wbuf 0 buf-end :width-only)
-		(text-width-server font wbuf 0 buf-end)))))
+		(text-width-server font wbuf 0 buf-end)))
+	(when (type? new-font 'font)
+	  (setq font new-font))))
     (values width next-start)))
-
-#+clx-little-endian
-(defun byte-swap-card16 (card16)
-  (declare (type card16 card16))
-  (declare (values card16))
-  (dpb card16 (byte 8 8) (ash card16 -8)))  
 
 (defun text-extents-server (font string start end)
   (declare (type font font)
@@ -293,10 +278,7 @@
 	 (((data boolean) (oddp length))
 	  (length (index+ (index-ceiling length 2) 2))
 	  (resource-id font-id)
-	  ((sequence :format card16 :start start :end end :appending t
-		     #+clx-little-endian :transform
-		     #+clx-little-endian ;; Byte swap for little-endian
-		     #'byte-swap-card16)
+	  ((sequence :format char2b :start start :end end :appending t)
 	   string))
       (values
 	(integer-get 16)
@@ -323,10 +305,7 @@
 	 (((data boolean) (oddp length))
 	  (length (index+ (index-ceiling length 2) 2))
 	  (resource-id font-id)
-	  ((sequence :format card16 :start start :end end :appending t
-		     #+clx-little-endian :transform
-		     #+clx-little-endian ;; Byte swap for little-endian
-		     #'byte-swap-card16)
+	  ((sequence :format char2b :start start :end end :appending t)
 	   string))
       (values (integer-get 16)))))
 
@@ -390,10 +369,10 @@
 		;; extents
 		(do ((i start (index1+ i))
 		     (width 0)
-		     (ascent 0)
-		     (descent 0)
+		     (ascent #x-7fff)
+		     (descent #x-7fff)
 		     (left #x7fff)
-		     (right 0))
+		     (right #x-7fff))
 		    ((index>= i end)
 		     (values width ascent descent left right))
 		  (declare (type array-index i)
@@ -429,10 +408,10 @@
 	      ;; extents
 	      (do ((i start (index1+ i))
 		   (width 0)
-		   (ascent 0)
-		   (descent 0)
+		   (ascent #x-7fff)
+		   (descent #x-7fff)
 		   (left #x7fff)
-		   (right 0))
+		   (right #x-7fff))
 		  ((index>= i end)
 		   (values width ascent descent left right))
 		(declare (type array-index i)
@@ -483,7 +462,10 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
@@ -531,7 +513,10 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values (or null array-index) (or null int32)))
   (unless end (setq end (length sequence)))
   (ecase size
@@ -545,14 +530,17 @@
   ;; overall width, if known.
   (declare (type drawable drawable)
 	   (type gcontext gcontext)
-	   (type int32 x y)
+	   (type int16 x y)
 	   (type array-index start)
-	   (type (or array-index null) end)
 	   (type sequence sequence)
-	   (type (or int32 null) width))
+	   (type (or null array-index) end)
+	   (type (or null int32) width))
   (declare (values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
-	   (downward-funarg translate)) 
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg translate)) 
   (let* ((src-start start)
 	 (src-end (or end (length sequence)))
 	 (next-start nil)
@@ -647,12 +635,15 @@
 	   (type gcontext gcontext)
 	   (type int16 x y)
 	   (type array-index start)
-	   (type (or array-index null) end)
-	   (type (or null int32) width)
-	   (type sequence sequence))
+	   (type sequence sequence)
+	   (type (or null array-index) end)
+	   (type (or null int32) width))
   (declare (values (or null array-index) (or null int32)))
   (declare (type translation-function translate)
-	   (downward-funarg translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg translate))
   (let* ((src-start start)
 	 (src-end (or end (length sequence)))
 	 (next-start nil)
@@ -702,9 +693,7 @@
 	      (setq dst-chunk (index- new-start src-start)
 		    length (index- length dst-chunk)
 		    src-start new-start)
-	      (write-sequence-card16 display (index+ boffset 2) buffer 0 dst-chunk
-				     #+clx-little-endian ;; Byte swap for little-endian
-				     #'byte-swap-card16)
+	      (write-sequence-char2b display (index+ boffset 2) buffer 0 dst-chunk)
 	      (if translated-width
 		  (when overall-width (incf overall-width translated-width))
 		(setq overall-width nil))
@@ -754,7 +743,10 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values boolean (or null int32)))
   (let* ((display (gcontext-display gcontext))
 	 (result t)
@@ -790,7 +782,7 @@
       (values t width))))
 
 (defun draw-image-glyphs (drawable gcontext x y sequence
-			  &key (start 0) end width translate (size :default))
+			  &key (start 0) end translate width (size :default))
   ;; An initial font change is allowed from translate, but any subsequent font
   ;; change or horizontal motion will cause termination (because the protocol
   ;; doesn't support chaining).  [Alternatively, font changes could be accepted
@@ -807,16 +799,19 @@
 	   (type (or null int32) width)
 	   (type index-size size))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg #+Genera * #-Genera translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg #+Genera * #-Genera translate))
   (declare (values (or null array-index) (or null int32)))
-  (unless end (setq end (length sequence)))
+  (setf end (index-min (index+ start 255) (or end (length sequence))))
   (ecase size
     ((:default 8)
-     (draw-image-glyphs8 drawable gcontext x y sequence start end width translate))
+     (draw-image-glyphs8 drawable gcontext x y sequence start end translate width))
     (16
-     (draw-image-glyphs16 drawable gcontext x y sequence start end width translate))))
+     (draw-image-glyphs16 drawable gcontext x y sequence start end translate width))))
 
-(defun draw-image-glyphs8 (drawable gcontext x y sequence start end width translate)
+(defun draw-image-glyphs8 (drawable gcontext x y sequence start end translate width)
   ;; An initial font change is allowed from translate, but any subsequent font
   ;; change or horizontal motion will cause termination (because the protocol
   ;; doesn't support chaining).  [Alternatively, font changes could be accepted
@@ -832,7 +827,10 @@
 	   (type (or null array-index) end)
 	   (type (or null int32) width)) 
   (declare (type (or null translation-function) translate)
-	   (downward-funarg translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg translate))
   (declare (values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
@@ -879,7 +877,7 @@
 	(values (if (index= chunk length) nil new-start)
 		(or translated-width width))))))
 
-(defun draw-image-glyphs16 (drawable gcontext x y sequence start end width translate)
+(defun draw-image-glyphs16 (drawable gcontext x y sequence start end translate width)
   ;; An initial font change is allowed from translate, but any subsequent font
   ;; change or horizontal motion will cause termination (because the protocol
   ;; doesn't support chaining).  [Alternatively, font changes could be accepted
@@ -895,7 +893,10 @@
 	   (type (or null array-index) end)
 	   (type (or null int32) width))
   (declare (type (or null translation-function) translate)
-	   (downward-funarg translate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent translate)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg translate))
   (declare (values (or null array-index) (or null int32)))
   (do* ((display (gcontext-display gcontext))
 	(length (index- end start))
@@ -935,9 +936,7 @@
 	    ;; Quit when nothing translated
 	    (when (index-zerop chunk)
 	      (return-from draw-image-glyphs16 new-start))
-	    (write-sequence-card16 display (index+ buffer-boffset 16) buffer 0 chunk
-				   #+clx-little-endian ;; Byte swap for little-endian
-				   #'byte-swap-card16)
+	    (write-sequence-char2b display (index+ buffer-boffset 16) buffer 0 chunk)
 	    ;; Update buffer pointers
 	    (data-put 1 chunk)
 	    (let ((blen (lround (index+ 16 (index-ash chunk 1)))))

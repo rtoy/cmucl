@@ -20,27 +20,6 @@
 
 (in-package :xlib)
 
-(export '(resource-database
-	   resource-database-timestamp
-	   make-resource-database
-	   resource-key
-	   get-resource
-	   get-search-table
-	   get-search-resource
-	   add-resource
-	   delete-resource 
-	   map-resource 
-	   merge-resources
-	   read-resources
-	   write-resources
-	   wm-resources
-	   set-wm-resources
-	   root-resources))
-
-#+clue ;; for CLUE only
-(defparameter *resource-subclassp* nil
-  "When non-nil and no match found, search superclasses.")
-
 ;; The C version of this uses a 64 entry hash table at each entry.
 ;; Small hash tables lose in Lisp, so we do linear searches on lists.
 
@@ -59,9 +38,9 @@
   (declare (type resource-database database)
 	   (ignore depth))
   (print-unreadable-object (database stream :type t)
-    (princ (resource-database-name database) stream)
+    (write-string (string (resource-database-name database)) stream)
     (when (resource-database-value database)
-      (princ " " stream)
+      (write-string " " stream)
       (prin1 (resource-database-value database) stream))))
 
 ;; The value slot of the top-level resource-database structure is used for a
@@ -113,33 +92,53 @@
 	    (format t "  duplicate at ~s" db))))
       )))
 
+;;
+;; If this is true, resource symbols will be compared in a case-insensitive
+;; manner, and converting a resource string to a keyword will uppercaseify it.
+;;
+(defparameter *uppercase-resource-symbols* nil)
+
 (defun resource-key (stringable)
   ;; Ensure STRINGABLE is a keyword.
   (declare (type stringable stringable))
-  (if (symbolp stringable)
+  (etypecase stringable
+    (symbol
       (if (keywordp (the symbol stringable))
 	  stringable
-	(kintern (symbol-name (the symbol stringable))))
-    (kintern (#-excl string-upcase
-	      #+excl correct-case
-	      (the string stringable)))))
+	  (kintern (symbol-name (the symbol stringable)))))
+    (string
+      (if *uppercase-resource-symbols*
+	  (setq stringable (#-allegro string-upcase #+allegro correct-case
+			    (the string stringable))))
+      (kintern (the string stringable)))))
 
 (defun stringable-equal (a b)
   ;; Compare two stringables.
   ;; Ignore case when comparing to a symbol.
   (declare (type stringable a b))
   (declare (values boolean))
-  (if (symbolp a)
-      (if (symbolp b)
+  (etypecase a
+    (string
+      (etypecase b
+	(string
+	  (string= (the string a) (the string b)))
+	(symbol
+	  (if *uppercase-resource-symbols*
+	      (string-equal (the string a)
+			    (the string (symbol-name (the symbol b))))
+	      (string= (the string a)
+		       (the string (symbol-name (the symbol b))))))))
+    (symbol
+      (etypecase b
+	(string
+	  (if *uppercase-resource-symbols*
+	      (string-equal (the string (symbol-name (the symbol a)))
+			    (the string b))
+	      (string= (the string (symbol-name (the symbol a)))
+		       (the string b))))
+	(symbol
 	  (string= (the string (symbol-name (the symbol a)))
-		   (the string (symbol-name (the symbol b))))
-	(string-equal (the string (symbol-name (the symbol a)))
-		      (the string b)))
-    (if (symbolp b)
-	(string-equal (the string a)
-		      (the string (symbol-name (the symbol b))))
-      (string= (the string a)
-	       (the string b)))))
+		   (the string (symbol-name (the symbol b)))))))))
 
 
 ;;;-----------------------------------------------------------------------------
@@ -273,19 +272,7 @@
 		(get-entry-lookup tight class names classes)))
 	  ((and loose
 		(not (stringable-equal name class))
-		(get-entry-lookup loose class names classes)))
-	  #+clue ;; for CLUE only
-	  ((and *resource-subclassp*
-		(or loose tight)
-		(dolist (class (cluei::class-all-superclasses class))
-		  (when tight
-		    (when (setq result
-				(get-entry-lookup tight class names classes))
-		      (return result)))
-		  (when loose
-		    (when (setq result
-				(get-entry-lookup loose class names classes))
-		      (return result))))))	
+		(get-entry-lookup loose class names classes)))	
 	  (loose
 	   (loop
 	     (pop names) (pop classes)
@@ -298,12 +285,6 @@
 			(setq result
 			      (get-entry-lookup loose class names classes)))
 	       (return result))
-	     #+clue ;; for CLUE only
-	     (when *resource-subclassp*
-	       (dolist (class (cluei::class-all-superclasses class))
-		 (when (setq result
-			     (get-entry-lookup loose class names classes))
-		   (return-from get-entry result))))
 	     )))))
 
 
@@ -405,15 +386,6 @@
       (get-tables-lookup tight class names classes))
     (when (and loose (not (stringable-equal name class)))
       (get-tables-lookup loose class names classes))
-    #+clue ;; for CLUE only
-    (when *resource-subclassp*
-      (dolist (class (cluei::class-all-superclasses class))
-	(declare (type symbol class))
-	(setq class class)
-	(when tight
-	  (get-tables-lookup tight class names classes))
-	(when loose
-	  (get-tables-lookup loose class names classes))))
     (when loose
       (loop
 	(pop names) (pop classes)
@@ -423,10 +395,6 @@
 	(get-tables-lookup loose name names classes)
 	(unless (stringable-equal name class)
 	  (get-tables-lookup loose class names classes))
-	#+clue ;; for CLUE only
-	(when *resource-subclassp*
-	  (dolist (class (cluei::class-all-superclasses class))
-	    (get-tables-lookup loose class names classes)))
 	))))
 
 
@@ -438,14 +406,20 @@
   ;; FUNCTION is called with arguments (name-list value . args)
   (declare (type resource-database database)
 	   (type (function (list t &rest t) t) function)
-	   (downward-funarg function)
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg function)
 	   (dynamic-extent args))
   (declare (values nil))
   (labels ((map-resource-internal (database function args name)
 	     (declare (type resource-database database)
 		      (type (function (list t &rest t) t) function)
 		      (type list name)
-		      (downward-funarg function))		      
+		      #+clx-ansi-common-lisp
+		      (dynamic-extent function)
+		      #+(and lispm (not clx-ansi-common-lisp))
+		      (sys:downward-funarg function))		      
 	     (let ((tight (resource-database-tight database))
 		   (loose (resource-database-loose database)))
 	       (declare (type list tight loose))
@@ -472,12 +446,16 @@
 (defun merge-resources (database with-database)
   (declare (type resource-database database with-database))
   (declare (values resource-database))
-  (map-resource database #'add-resource with-database)
+  (map-resource
+    database
+    #'(lambda (name value database)
+	(add-resource database name value))
+    with-database)
   with-database)
 
 (defun char-memq (key char)
   ;; Used as a test function for POSITION
-  (declare (type string-char char))
+  (declare (type base-char char))
   (member char key))
 
 (defmacro resource-with-open-file ((stream pathname &rest options) &body body)
@@ -489,8 +467,8 @@
 	    (,streamp (streamp pathname))
 	    (,stream (if ,streamp pathname (open ,pathname ,@options))))
        (unwind-protect
-	   (progn
-	     ,@body
+	   (multiple-value-prog1
+	     (progn ,@body)
 	     (setq ,abortp nil))
 	 (unless ,streamp
 	   (close stream :abort ,abortp))))))
@@ -510,7 +488,7 @@
   (resource-with-open-file (stream pathname)
     (loop
       (let ((string (read-line stream nil :eof)))
-	(declare (type string string))
+	(declare (type (or string keyword) string))
 	(when (eq string :eof) (return database))
 	(let* ((end (length string))
 	       (i (position '(#\tab #\space) string
@@ -525,8 +503,7 @@
 	      (#\#       ;; Include
 	       (setq term (position '(#\tab #\space) string :test #'char-memq
 				    :start i :end end))
-	       (if (not (string-equal string "#INCLUDE" :start1 i :end1 term))
-		   (format t "~%Resource File error. Ignoring: ~a" string)
+	       (when (string-equal string "#INCLUDE" :start1 i :end1 term) 
 		 (let ((path (merge-pathnames
 			       (subseq string (1+ term)) (truename stream))))
 		   (read-resources database path
@@ -534,12 +511,13 @@
 	      (otherwise
 	       (multiple-value-bind (name-list value)
 		   (parse-resource string i end)
-		 (when key (setq value (funcall key value)))
-		 (when
-		   (cond (test (funcall test name-list value))
-			 (test-not (not (funcall test-not name-list value)))
-			 (t t))
-		   (add-resource database name-list value)))))))))))
+		 (when name-list 
+		   (when key (setq value (funcall key value)))
+		   (when
+		     (cond (test (funcall test name-list value))
+			   (test-not (not (funcall test-not name-list value)))
+			   (t t))
+		     (add-resource database name-list value))))))))))))
 
 (defun parse-resource (string &optional (start 0) end)
   ;; Parse a resource specfication string into a list of names and a value
@@ -571,7 +549,12 @@
        (return
 	 (values
 	   (nreverse name-list)
-	   (string-trim '(#\tab #\space) (subseq string (1+ term)))))))
+	   (string-trim '(#\tab #\space) (subseq string (1+ term))))))
+      (otherwise
+	(return
+	  (values
+	    (nreverse name-list)
+	    (subseq string i term)))))
     (setq i (1+ term))))
 
 (defun write-resources (database pathname &key write test test-not)
@@ -669,7 +652,7 @@
     (wm-resources database window :key key :test test :test-not test-not)
     database))
 
-(defun set-root-resources (screen &key test test-not (write #'princ) database)
+(defun set-root-resources (screen &key test test-not (write 'princ) database)
   "Changes the contents of the root window RESOURCE_MANAGER property for the
    given SCREEN. If SCREEN is a display, then its default screen is used. 
 

@@ -18,111 +18,8 @@
 
 (in-package :xlib)
 
-(export '(create-window
-	  destroy-window
-	  destroy-subwindows
-	  add-to-save-set
-	  remove-from-save-set
-	  reparent-window
-	  map-window
-	  map-subwindows
-	  unmap-window
-	  unmap-subwindows
-	  circulate-window-up
-	  circulate-window-down
-	  query-tree
-	  intern-atom
-	  find-atom
-	  atom-name
-	  change-property
-	  delete-property
-	  get-property
-	  rotate-properties
-	  list-properties
-	  set-selection-owner
-	  selection-owner
-	  selection-owner
-	  convert-selection
-	  send-event
-	  grab-pointer
-	  ungrab-pointer
-	  grab-button
-	  ungrab-button
-	  change-active-pointer-grab
-	  grab-keyboard
-	  ungrab-keyboard
-	  grab-key
-	  ungrab-key
-	  allow-events
-	  grab-server
-	  ungrab-server
-	  with-server-grabbed
-	  query-pointer
-	  pointer-position
-	  global-pointer-position
-	  motion-events
-	  translate-coordinates
-	  warp-pointer
-	  warp-pointer-relative
-	  warp-pointer-if-inside
-	  warp-pointer-relative-if-inside
-	  set-input-focus
-	  input-focus
-	  query-keymap
-	  create-pixmap
-	  free-pixmap
-	  clear-area
-	  copy-area
-	  copy-plane
-	  create-colormap
-	  free-colormap
-	  copy-colormap-and-free
-	  install-colormap
-	  uninstall-colormap
-	  installed-colormaps
-	  alloc-color
-	  alloc-color-cells
-	  alloc-color-planes
-	  free-colors
-	  store-color
-	  store-colors
-	  query-colors
-	  lookup-color
-	  create-cursor
-	  create-glyph-cursor
-	  free-cursor
-	  recolor-cursor
-	  query-best-cursor
-	  query-best-tile
-	  query-best-stipple
-	  query-extension
-	  list-extensions
-	  change-keyboard-control
-	  keyboard-control
-	  bell
-	  pointer-mapping
-	  set-pointer-mapping
-	  pointer-mapping
-	  change-pointer-control
-	  pointer-control
-	  set-screen-saver
-	  screen-saver
-	  activate-screen-saver
-	  reset-screen-saver
-	  add-access-host
-	  remove-access-host
-	  access-hosts
-	  access-control
-	  set-access-control
-	  access-control
-	  close-down-mode
-	  set-close-down-mode
-	  kill-client
-	  kill-temporary-clients
-	  no-operation
-	  ))
-
 (defun create-window (&key
+		      window
 		      (parent (required-arg parent))
 		      (x (required-arg x))
 		      (y (required-arg y))
@@ -138,7 +35,8 @@
   ;; Display is obtained from parent.  Only non-nil attributes are passed on in
   ;; the request: the function makes no assumptions about what the actual protocol
   ;; defaults are.  Width and height are the inside size, excluding border.
-  (declare (type window parent) ; required
+  (declare (type (or null window) window)
+	   (type window parent)		; required
 	   (type int16 x y) ;required
 	   (type card16 width height) ;required
 	   (type card16 depth border-width)
@@ -157,7 +55,7 @@
 	   (type (or null (member :none) cursor) cursor))
   (declare (values window))
   (let* ((display (window-display parent))
-	 (window (make-window :display display))
+	 (window (or window (make-window :display display)))
 	 (wid (allocate-resource-id display window 'window))
 	 back-pixmap back-pixel
 	 border-pixmap border-pixel)
@@ -304,10 +202,12 @@
   (declare (type display display)
 	   (type xatom name))
   (declare (values resource-id))
-  (let ((keyword (if (keywordp name) name (kintern (string name)))))
-    (declare (type keyword keyword))
-    (or (atom-id keyword display)
-	(let ((string (symbol-name keyword)))
+  (let ((name (if (or (null name) (keywordp name))
+		  name
+		(kintern (string name)))))
+    (declare (type symbol name))
+    (or (atom-id name display)
+	(let ((string (symbol-name name)))
 	  (declare (type string string))
 	  (multiple-value-bind (id)
 	      (with-buffer-request-and-reply (display *x-internatom* 12 :sizes 32)
@@ -318,7 +218,7 @@
 		(values
 		  (resource-id-get 8)))
 	    (declare (type resource-id id))
-	    (setf (atom-id keyword display) id)
+	    (setf (atom-id name display) id)
 	    id)))))
 
 (defun find-atom (display name)
@@ -326,10 +226,12 @@
   (declare (type display display)
 	   (type xatom name))
   (declare (values (or null resource-id)))
-  (let ((keyword (if (keywordp name) name (kintern (string name)))))
-    (declare (type keyword keyword))
-    (or (atom-id keyword display)
-	(let ((string (symbol-name keyword)))
+  (let ((name (if (or (null name) (keywordp name))
+		  name
+		(kintern (string name)))))
+    (declare (type symbol name))
+    (or (atom-id name display)
+	(let ((string (symbol-name name)))
 	  (declare (type string string))
 	  (multiple-value-bind (id)
 	      (with-buffer-request-and-reply (display *x-internatom* 12 :sizes 32)
@@ -341,23 +243,26 @@
 		  (or-get 8 null resource-id)))
 	    (declare (type (or null resource-id) id))
 	    (when id 
-	      (setf (atom-id keyword display) id))
+	      (setf (atom-id name display) id))
 	    id)))))
 
 (defun atom-name (display atom-id)
   (declare (type display display)
 	   (type resource-id atom-id))
   (declare (values keyword))
+  (if (zerop atom-id)
+      nil
   (or (id-atom atom-id display)
       (let ((keyword
 	      (kintern
-		(with-buffer-request-and-reply (display *x-getatomname* nil :sizes (16))
+		  (with-buffer-request-and-reply
+		       (display *x-getatomname* nil :sizes (16))
 		     ((resource-id atom-id))
 		  (values
 		    (string-get (card16-get 8) *replysize*))))))
 	(declare (type keyword keyword))
 	(setf (atom-id keyword display) atom-id)
-	keyword)))
+	  keyword))))
 
 ;;; For binary compatibility with older code
 (defun lookup-xatom (display atom-id)
@@ -845,10 +750,10 @@
 (defun set-input-focus (display focus revert-to &optional time)
   (declare (type display display)
 	   (type (or (member :none :pointer-root) window) focus)
-	   (type (member :none :parent :pointer-root) revert-to)
+	   (type (member :none :pointer-root :parent) revert-to)
 	   (type timestamp time))
   (with-buffer-request (display *x-setinputfocus*)
-    ((data (member :none :parent :pointer-root)) revert-to)
+    ((data (member :none :pointer-root :parent)) revert-to)
     ((or window (member :none :pointer-root)) focus)
     ((or null card32) time)))
 
@@ -871,16 +776,18 @@
       (bit-vector256-get 8 8 bit-vector))))
 
 (defun create-pixmap (&key
+		      pixmap
 		      (width (required-arg width))
 		      (height (required-arg height))
 		      (depth (required-arg depth))
 		      (drawable (required-arg drawable)))
-  (declare (type card8 depth) ;; required
+  (declare (type (or null pixmap) pixmap)
+	   (type card8 depth) ;; required
 	   (type card16 width height) ;; required
 	   (type drawable drawable)) ;; required
   (declare (values pixmap))
   (let* ((display (drawable-display drawable))
-	 (pixmap (make-pixmap :display display))
+	 (pixmap (or pixmap (make-pixmap :display display)))
 	 (pid (allocate-resource-id display pixmap 'pixmap)))
     (setf (pixmap-id pixmap) pid)
     (with-buffer-request (display *x-createpixmap*)
@@ -1025,12 +932,12 @@
 		(string string))
 	    (values
 	      (card32-get 8)
-	      (make-color :red (rgb-val-get 12)
-			  :green (rgb-val-get 14)
-			  :blue (rgb-val-get 16)) 
 	      (make-color :red (rgb-val-get 18)
 			  :green (rgb-val-get 20)
-			  :blue (rgb-val-get 22)))))))))
+			  :blue (rgb-val-get 22))
+	      (make-color :red (rgb-val-get 12)
+			  :green (rgb-val-get 14)
+			  :blue (rgb-val-get 16)))))))))
 
 (defun alloc-color-cells (colormap colors &key (planes 0) contiguous-p (result-type 'list))
   (declare (type colormap colormap)
@@ -1121,18 +1028,14 @@
 	   (type boolean red-p green-p blue-p))
   (etypecase specs
     (list
-     (do* ((spec specs (cddr spec))
-	   (pixel (car spec) (car spec))
-	   (color (cadr spec) (cadr spec)))
+      (do ((spec specs (cddr spec)))
 	  ((endp spec))
-       (store-color colormap pixel color :red-p red-p :green-p green-p :blue-p blue-p)))
+	(store-color colormap (car spec) (cadr spec) :red-p red-p :green-p green-p :blue-p blue-p)))
     (vector
-     (do* ((i 0 (+ i 2))
-	   (len (length specs))
-	   (pixel (aref specs i) (aref specs i))
-	   (color (aref specs (1+ i)) (aref specs (1+ i))))
+      (do ((i 0 (+ i 2))
+	   (len (length specs)))
 	  ((>= i len))
-       (store-color colormap pixel color :red-p red-p :green-p green-p :blue-p blue-p)))))
+	(store-color colormap (aref specs i) (aref specs (1+ i)) :red-p red-p :green-p green-p :blue-p blue-p)))))
 
 (defun query-colors (colormap pixels &key (result-type 'list))
   (declare (type colormap colormap)

@@ -80,212 +80,12 @@
 
 (in-package :xlib)
 
-(export '(
-	  *version*
-	  card32
-	  card29
-	  int32
-	  card16
-	  int16
-	  card8
-	  int8
-	  rgb-val
-	  angle
-	  mask32
-	  mask16
-	  array-index
-	  pixel
-	  image-depth
-	  display
-	  display-p
-	  display-host
-	  display-display
-	  display-after-function
-	  display-protocol-major-version
-	  display-protocol-minor-version
-	  display-vendor-name
-	  display-resource-id-base
-	  display-resource-id-mask
-	  display-xid
-	  display-byte-order
-	  display-release-number
-	  display-max-request-length
-	  display-default-screen
-	  display-nscreens
-	  display-roots
-	  display-motion-buffer-size
-	  display-xdefaults
-	  display-image-lsb-first-p
-	  display-bitmap-format
-	  display-pixmap-formats
-	  display-min-keycode
-	  display-max-keycode
-	  display-error-handler
-	  display-authorization-name
-	  display-authorization-data
-	  display-plist
-	  display-report-asynchronous-errors
-	  color
-	  color-p
-	  color-red
-	  color-green
-	  color-blue
-	  make-color
-	  color-rgb
-	  resource-id
-	  drawable
-	  drawable-p
-	  drawable-equal
-	  drawable-id
-	  drawable-display
-	  drawable-plist
-	  window
-	  window-p
-	  window-equal
-	  window-id
-	  window-display
-	  window-plist
-	  pixmap
-	  pixmap-p
-	  pixmap-equal
-	  pixmap-id
-	  pixmap-display
-	  pixmap-plist
-	  colormap
-	  colormap-p
-	  colormap-equal
-	  colormap-id
-	  colormap-display
-	  colormap-visual-info
-	  cursor
-	  cursor-p
-	  cursor-equal
-	  cursor-id
-	  cursor-display
-	  xatom
-	  stringable
-	  fontable
-	  timestamp
-	  bit-gravity
-	  win-gravity
-	  grab-status
-	  boolean
-	  alist
-	  repeat-seq
-	  point-seq
-	  seg-seq
-	  rect-seq
-	  arc-seq
-	  gcontext
-	  gcontext-p
-	  gcontext-equal
-	  gcontext-id
-	  gcontext-display
-	  gcontext-plist
-	  event-mask-class
-	  event-mask
-	  pointer-event-mask-class
-	  pointer-event-mask
-	  device-event-mask-class
-	  device-event-mask
-	  modifier-key
-	  modifier-mask
-	  state-mask-key
-	  gcontext-key
-	  event-key
-	  error-key
-	  draw-direction
-	  boole-constant
-	  bitmap-format
-	  bitmap-format-p
-	  bitmap-format-unit
-	  bitmap-format-pad
-	  bitmap-format-lsb-first-p
-	  pixmap-format
-	  pixmap-format-p
-	  pixmap-format-depth
-	  pixmap-format-bits-per-pixel
-	  pixmap-format-scanline-pad
-	  visual-info
-	  visual-info-p
-	  visual-info-id
-	  visual-info-display
-	  visual-info-class
-	  visual-info-red-mask
-	  visual-info-green-mask
-	  visual-info-blue-mask
-	  visual-info-bits-per-rgb
-	  visual-info-colormap-entries
-	  visual-info-plist
-	  screen
-	  screen-p
-	  screen-root
-	  screen-width
-	  screen-height
-	  screen-width-in-millimeters
-	  screen-height-in-millimeters
-	  screen-depths
-	  screen-root-depth
-	  screen-root-visual-info
-	  screen-root-visual
-	  screen-default-colormap
-	  screen-white-pixel
-	  screen-black-pixel
-	  screen-min-installed-maps
-	  screen-max-installed-maps
-	  screen-backing-stores
-	  screen-save-unders-p
-	  screen-event-mask-at-open
-	  screen-plist
-	  font
-	  font-p
-	  font-equal
-	  font-id
-	  font-display
-	  font-name
-	  font-direction
-	  font-min-char
-	  font-max-char
-	  font-min-byte1
-	  font-max-byte1
-	  font-min-byte2
-	  font-max-byte2
-	  font-all-chars-exist-p
-	  font-default-char
-	  font-ascent
-	  font-descent
-	  font-properties
-	  font-property
-	  font-plist
-	  char-left-bearing
-	  max-char-left-bearing
-	  min-char-left-bearing
-	  char-right-bearing
-	  max-char-right-bearing
-	  min-char-right-bearing
-	  char-width
-	  max-char-width
-	  min-char-width
-	  char-ascent
-	  max-char-ascent
-	  min-char-ascent
-	  char-descent
-	  max-char-descent
-	  min-char-descent
-	  char-attributes
-	  max-char-attributes
-	  min-char-attributes
-	  make-event-mask
-	  make-event-keys
-	  make-state-mask
-	  make-state-keys
-	  ))
-
 (pushnew :clx *features*)
 (pushnew :xlib *features*)
 
-(defparameter *version* "MIT R4.2")
+(defparameter *version* "MIT R5.0")
 (pushnew :clx-mit-r4 *features*)
+(pushnew :clx-mit-r5 *features*)
 
 (defparameter *protocol-major-version* 11.)
 (defparameter *protocol-minor-version* 0)
@@ -361,6 +161,7 @@
 
 (deftype card4 () '(unsigned-byte 4))
 
+#-clx-ansi-common-lisp
 (deftype real (&optional (min '*) (max '*))
   (labels ((convert (limit floatp)
 	     (typecase limit
@@ -369,6 +170,10 @@
 	       (otherwise limit))))
     `(or (float ,(convert min t) ,(convert max t))
 	 (rational ,(convert min nil) ,(convert max nil)))))
+
+#-clx-ansi-common-lisp
+(deftype base-char ()
+  'string-char)
 
 ; Note that we are explicitly using a different rgb representation than what
 ; is actually transmitted in the protocol.
@@ -408,9 +213,9 @@
 	   (ignore depth))
   (print-unreadable-object (color stream :type t)
     (prin1 (color-red color) stream)
-    (princ " " stream)
+    (write-string " " stream)
     (prin1 (color-green color) stream)
-    (princ " " stream)
+    (write-string " " stream)
     (prin1 (color-blue color) stream)))
 
 (defun make-color (&key (red 1.0) (green 1.0) (blue 1.0) &allow-other-keys)
@@ -451,7 +256,7 @@
     nil :type (or null reply-buffer))
   (event-queue-head				; Threaded queue of events
     nil :type (or null reply-buffer))
-  (atom-cache (make-hash-table :test #'eq :size *atom-cache-size*)
+  (atom-cache (make-hash-table :test (atom-cache-map-test) :size *atom-cache-size*)
 	      :type hash-table)			; Hash table relating atoms keywords
 						; to atom id's
   (font-cache nil)				; list of font
@@ -524,18 +329,27 @@
 	       :type hash-table)
   )
 
+(defun print-display-name (display stream)
+  (declare (type (or null display) display))
+  (cond (display
+	 #-allegro (princ (display-host display) stream)
+	 #+allegro (write-string (string (display-host display)) stream)
+	 (write-string ":" stream)
+	 (princ (display-display display) stream))
+	(t
+	 (write-string "(no display)" stream)))
+  display)
+
 (defun print-display (display stream depth)
   (declare (type display display)
 	   (ignore depth))
   (print-unreadable-object (display stream :type t)
-    (princ (display-host display) stream)
-    (princ ":" stream)
-    (princ (display-display display) stream)
-    (princ " (" stream)
-    (princ (display-vendor-name display) stream)
-    (princ " R" stream)
+    (print-display-name display stream)
+    (write-string " (" stream)
+    (write-string (display-vendor-name display) stream)
+    (write-string " R" stream)
     (prin1 (display-release-number display) stream)
-    (princ ")" stream)))
+    (write-string ")" stream)))
 
 ;;(deftype drawable () '(or window pixmap))
 
@@ -549,10 +363,8 @@
   (declare (type drawable drawable)
 	   (ignore depth))
   (print-unreadable-object (drawable stream :type t)
-    (princ (display-host (drawable-display drawable)) stream)
-    (princ ":" stream)
-    (princ (display-display (drawable-display drawable)) stream)
-    (princ " " stream)
+    (print-display-name (drawable-display drawable) stream)
+    (write-string " " stream)
     (prin1 (drawable-id drawable) stream)))
 
 (def-clx-class (window (:include drawable) (:copier nil)
@@ -581,13 +393,11 @@
 	   (ignore depth))
   (print-unreadable-object (visual-info stream :type t)
     (prin1 (visual-info-bits-per-rgb visual-info) stream)
-    (princ "-bit " stream)
+    (write-string "-bit " stream)
     (princ (visual-info-class visual-info) stream)
-    (princ " " stream)
-    (princ (display-host (visual-info-display visual-info)) stream)
-    (princ ":" stream)
-    (princ (display-display (visual-info-display visual-info)) stream)
-    (princ " " stream)
+    (write-string " " stream)
+    (print-display-name (visual-info-display visual-info) stream)
+    (write-string " " stream)
     (prin1 (visual-info-id visual-info) stream)))
 
 (def-clx-class (colormap (:copier nil) (:print-function print-colormap))
@@ -602,11 +412,9 @@
   (print-unreadable-object (colormap stream :type t)
     (when (colormap-visual-info colormap)
       (princ (visual-info-class (colormap-visual-info colormap)) stream)
-      (princ " " stream))
-    (princ (display-host (colormap-display colormap)) stream)
-    (princ ":" stream)
-    (princ (display-display (colormap-display colormap)) stream)
-    (princ " " stream)
+      (write-string " " stream))
+    (print-display-name (colormap-display colormap) stream)
+    (write-string " " stream)
     (prin1 (colormap-id colormap) stream)))
 
 (def-clx-class (cursor (:copier nil) (:print-function print-cursor))
@@ -618,10 +426,8 @@
   (declare (type cursor cursor)
 	   (ignore depth))
   (print-unreadable-object (cursor stream :type t)
-    (princ (display-host (cursor-display cursor)) stream)
-    (princ ":" stream)
-    (princ (display-display (cursor-display cursor)) stream)
-    (princ " " stream)
+    (print-display-name (cursor-display cursor) stream)
+    (write-string " " stream)
     (prin1 (cursor-id cursor) stream)))
 
 ; Atoms are accepted as strings or symbols, and are always returned as keywords.
@@ -719,10 +525,8 @@
   (declare (type gcontext gcontext)
 	   (ignore depth))
   (print-unreadable-object (gcontext stream :type t)
-    (princ (display-host (gcontext-display gcontext)) stream)
-    (princ ":" stream)
-    (princ (display-display (gcontext-display gcontext)) stream)
-    (princ " " stream)
+    (print-display-name (gcontext-display gcontext) stream)
+    (write-string " " stream)
     (prin1 (gcontext-id gcontext) stream)))
 
 (defconstant *event-mask-vector*
@@ -853,19 +657,17 @@
 	   (ignore depth))
   (print-unreadable-object (screen stream :type t)
     (let ((display (drawable-display (screen-root screen))))
-      (princ (display-host display) stream)
-      (princ ":" stream)
-      (princ (display-display display) stream)
-      (princ "." stream)
+      (print-display-name display stream)
+      (write-string "." stream)
       (princ (position screen (display-roots display)) stream))
-    (princ " " stream)
+    (write-string " " stream)
     (prin1 (screen-width screen) stream)
-    (princ "x" stream)
+    (write-string "x" stream)
     (prin1 (screen-height screen) stream)
-    (princ "x" stream)
+    (write-string "x" stream)
     (prin1 (screen-root-depth screen) stream)
     (when (screen-root-visual-info screen)
-      (princ " " stream)
+      (write-string " " stream)
       (princ (visual-info-class (screen-root-visual-info screen)) stream))))
 
 (defun screen-root-visual (screen)
@@ -910,13 +712,11 @@
   (print-unreadable-object (font stream :type t)
     (if (font-name font)
 	(princ (font-name font) stream)
-      (princ "(gcontext)" stream))
-    (princ " " stream)
-    (princ (display-host (font-display font)) stream)
-    (princ ":" stream)
-    (princ (display-display (font-display font)) stream)
+      (write-string "(gcontext)" stream))
+    (write-string " " stream)
+    (print-display-name (font-display font) stream)
     (when (font-id-internal font)
-      (princ " " stream)
+      (write-string " " stream)
       (prin1 (font-id font) stream))))
 
 (defun font-id (font)
@@ -1021,7 +821,7 @@
   ;; Returns NIL when KEY-LIST is not a list or mask.
   (declare (type (simple-array keyword (*)) key-vector)
 	   (type (or mask32 list) key-list))
-  (declare (values (or mask32 nil)))
+  (declare (values (or mask32 null)))
   (typecase key-list
     (mask32 key-list)
     (list (let ((mask 0))

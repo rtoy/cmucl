@@ -1,8 +1,8 @@
      This file contains instructions on how to make CLX work with Franz
 Common Lisp.  CLX should work on any machine that supports Allegro Common
 Lisp version 3.0.1 or greater.  It also works under ExCL version 2.0.10.
-However it has been tested extensively with only Allegro CL versions 3.0
-and 3.1.
+However it has been tested extensively with only Allegro CL versions 3.0,
+3.1, and 4.0.
 
      There are three steps to compile and install CLX.  The first is simply
 moving files around.  In this directory, execute (assuming you using csh):
@@ -10,9 +10,6 @@ moving files around.  In this directory, execute (assuming you using csh):
 % foreach i (*.l */*.l)
 ? mv $i $i:r.cl
 ? end
-% mkdir MIT
-% mv defsystem.cl MIT
-% mv excldefsys.cl defsystem.cl
 % mv exclMakefile Makefile
 
      The second is compiling the source files into fasl files.  The fasl files

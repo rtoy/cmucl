@@ -183,9 +183,6 @@
 
 (deftype array-index () `(integer 0 ,array-dimension-limit))
 
-(deftype real (&optional (min '*) (max '*))
-  `(or (real ,min ,max) (rational ,min ,max)))
-
 ;; An association list.
 
 (deftype alist (key-type-and-name datum-type-and-name) 'list)
@@ -1960,7 +1957,7 @@
   (boolean same-screen-p)
   (int16 x y root-x root-y)
   (card16 state)
-  (card32 time)
+  ((or null card32) time)
   ;; for key-press and key-release, code is the keycode
   ;; for button-press and button-release, code is the button number
   (card8 code))
@@ -1972,7 +1969,7 @@
   (boolean same-screen-p)
   (int16 x y root-x root-y)
   (card16 state)
-  (card32 time)
+  ((or null card32) time)
   (boolean hint-p))
 
 (declare-event (:enter-notify :leave-notify)
@@ -1982,7 +1979,7 @@
   (boolean same-screen-p)
   (int16 x y root-x root-y)
   (card16 state)
-  (card32 time)
+  ((or null card32) time)
   ((member :normal :grab :ungrab) mode)
   ((member :ancestor :virtual :inferior :nonlinear :nonlinear-virtual) kind)
   (boolean focus-p))
@@ -2094,27 +2091,27 @@
   (window (window event-window))
   (keyword atom)
   ((member :new-value :deleted) state)
-  (card32 time))
+  ((or null card32) time))
 
 (declare-event :selection-clear
   (card16 sequence)
   (window (window event-window))
   (keyword selection)
-  (card32 time))
+  ((or null card32) time))
 
 (declare-event :selection-request
   (card16 sequence)
   (window (window event-window) requestor)
   (keyword selection target)
   ((or null keyword) property)
-  (card32 time))
+  ((or null card32) time))
 
 (declare-event :selection-notify
   (card16 sequence)
   (window (window event-window))
   (keyword selection target)
   ((or null keyword) property)
-  (card32 time))
+  ((or null card32) time))
 
 (declare-event :colormap-notify
   (card16 sequence)
@@ -2176,11 +2173,10 @@
 	   (values (list string))))
 
 (defsetf wm-command (window) (command)
-  ;; Uses PRIN1 to a string-stream with the following bindings:
-  ;; (*print-length* nil) (*print-level* nil) (*print-radix* nil)
-  ;; (*print-base* 10.) (*print-array* t) (*package* (find-package 'lisp))
-  ;; each element of command is seperated with NULL characters.
-  ;; This enables (mapcar #'read-from-string (wm-command window))
+  ;; Uses PRIN1 inside the ANSI common lisp form WITH-STANDARD-IO-SYNTAX (or
+  ;; equivalent), with elements of command separated by NULL characters.  This
+  ;; enables 
+  ;;   (with-standard-io-syntax (mapcar #'read-from-string (wm-command window)))
   ;; to recover a lisp command.
   (declare (type window window)
 	   (type (list stringable) command)))
@@ -2276,8 +2272,8 @@
 			  name icon-name resource-name resource-class command
 			  hints normal-hints
 			  ;; the following are used for wm-normal-hints
-			  user-specified-position-p
-			  user-specified-size-p
+			  user-specified-position-p user-specified-size-p
+			  program-specified-position-p program-specified-size-p
 			  min-width min-height max-width max-height
 			  width-inc height-inc min-aspect max-aspect
 			  base-width base-height win-gravity
@@ -2290,7 +2286,8 @@
 	   (type (or null list) command)
 	   (type (or null wm-hints) hints)
 	   (type (or null wm-size-hints) normal-hints)
-	   (type (or null boolean) user-specified-position-p user-specified-size-p)
+	   (type boolean user-specified-position-p user-specified-size-p)
+	   (type boolean program-specified-position-p program-specified-size-p)
 	   (type (or null card16) min-width min-height max-width max-height width-inc height-inc base-width base-height win-gravity)
 	   (type (or null number) min-aspect max-aspect)
 	   (type (or null (member :off :on)) input)
@@ -2397,7 +2394,7 @@
   ;;      when mask and modifiers aren't lists of keysyms]
   ;; The default is #'default-keysym-translate
   ;;
-  (declare (type (or string-char t) object)
+  (declare (type (or base-char t) object)
 	   (type keysym keysym)
 	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
 	         modifiers)
@@ -2415,7 +2412,7 @@
 (defun undefine-keysym (object keysym &key display modifiers &allow-other-keys)	              
   ;; Undefine the keysym-translation translating KEYSYM to OBJECT with MODIFIERS.
   ;; If DISPLAY is non-nil, undefine the translation for DISPLAY if it exists.
-  (declare (type (or string-char t) object)
+  (declare (type (or base-char t) object)
 	   (type keysym keysym)
 	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
 	         modifiers)
@@ -2424,7 +2421,7 @@
 (defun default-keysym-translate (display state object)
   ;; If object is a character, char-bits are set from state.
   ;; If object is a list, it is an alist with entries:
-  ;; (string-char [modifiers] [mask-modifiers)
+  ;; (base-char [modifiers] [mask-modifiers)
   ;; When MODIFIERS are specified, this character translation
   ;; will only take effect when the specified modifiers are pressed.
   ;; MASK-MODIFIERS can be used to specify a set of modifiers to ignore.

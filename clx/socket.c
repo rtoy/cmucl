@@ -34,7 +34,10 @@ extern int errno;		/* Certain (broken) OS's don't have this */
 #endif /* hpux */
 #endif /* X_UNIX_PATH */
 #endif /* UNIXCONN */
+
+#ifndef hpux
 void bcopy();
+#endif /* hpux */
 
 /* 
  * Attempts to connect to server, given host and display. Returns file 
@@ -61,7 +64,7 @@ int connect_to_server (host, display)
 	/* Connect locally using Unix domain. */
 	unaddr.sun_family = AF_UNIX;
 	(void) strcpy(unaddr.sun_path, X_UNIX_PATH);
-	sprintf(&unaddr.sun_path[strlen(unaddr.sun_path)], "%d", display);
+	(void) sprintf(&unaddr.sun_path[strlen(unaddr.sun_path)], "%d", display);
 	addr = (struct sockaddr *) &unaddr;
 	addrlen = strlen(unaddr.sun_path) + 2;
 	/*
@@ -70,7 +73,7 @@ int connect_to_server (host, display)
 	if ((fd = socket((int) addr->sa_family, SOCK_STREAM, 0)) < 0) {
 #ifdef hpux /* this is disgusting */  /* cribbed from X11R4 xlib source */
   	    if (errno == ENOENT) {  /* No such file or directory */
-	      sprintf(unaddr.sun_path, "%s%d", OLD_UNIX_PATH, display);
+	      (void) sprintf(unaddr.sun_path, "%s%d", OLD_UNIX_PATH, display);
               addrlen = strlen(unaddr.sun_path) + 2;
               if ((fd = socket ((int) addr->sa_family, SOCK_STREAM, 0)) < 0)
                 return(-1);     /* errno set by most recent system call. */
@@ -99,9 +102,15 @@ int connect_to_server (host, display)
 	    }
 	  /* Set up the socket data. */
 	  inaddr.sin_family = host_ptr->h_addrtype;
-	  bcopy((char *)host_ptr->h_addr, 
-		(char *)&inaddr.sin_addr, 
-		sizeof(inaddr.sin_addr));
+#ifdef hpux
+	  (void) memcpy((char *)&inaddr.sin_addr, 
+			(char *)host_ptr->h_addr, 
+			sizeof(inaddr.sin_addr));
+#else /* hpux */
+	  (void) bcopy((char *)host_ptr->h_addr, 
+		       (char *)&inaddr.sin_addr, 
+		       sizeof(inaddr.sin_addr));
+#endif /* hpux */
 	} 
       else 
 	{

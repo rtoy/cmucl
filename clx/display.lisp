@@ -20,22 +20,6 @@
 
 (in-package :xlib)
 
-(export '(
-	  with-display
-	  with-event-queue
-	  open-display
-	  display-force-output
-	  close-display
-	  display-protocol-version
-	  display-vendor
-	  display-roots
-	  display-motion-buffer-size
-	  display-max-request-length
-	  display-error-handler
-	  display-after-function
-	  display-invoke-after-function
-	  display-finish-output))
-
 ;;
 ;; Resource id management
 ;;
@@ -61,12 +45,11 @@
 
 (defmacro allocate-resource-id (display object type)
   ;; Allocate a resource-id for OBJECT in DISPLAY
-  `(the resource-id
-	,(if (member (eval type) *clx-cached-types*)
-	     `(let ((id (funcall (display-xid ,display) ,display)))
-		(save-id ,display id ,object)
-		id)
-	     `(funcall (display-xid ,display) ,display))))
+  (if (member (eval type) *clx-cached-types*)
+      `(let ((id (funcall (display-xid ,display) ,display)))
+	 (save-id ,display id ,object)
+	 id)
+    `(funcall (display-xid ,display) ,display)))
 
 (defmacro deallocate-resource-id (display id type)
   ;; Deallocate a resource-id for OBJECT in DISPLAY
@@ -142,9 +125,7 @@
   (declare (type xatom atom)
 	   (type display display))
   (declare (values (or null resource-id)))
-  (gethash (if (keywordp atom)
-	       atom
-	       (kintern atom))
+  (gethash (if (or (null atom) (keywordp atom)) atom (kintern atom))
 	   (display-atom-cache display)))
 
 (defun set-atom-id (atom display id)
@@ -153,8 +134,7 @@
 	   (type display display)
 	   (type resource-id id))
   (declare (values resource-id))
-  (let ((atom (if (keywordp atom) atom (kintern atom))))
-    (declare (type keyword atom))
+  (let ((atom (if (or (null atom) (keywordp atom)) atom (kintern atom))))
     (setf (gethash id (display-atom-id-map display)) atom)
     (setf (gethash atom (display-atom-cache display)) id)
     id))
@@ -162,9 +142,7 @@
 (defsetf atom-id set-atom-id)
 
 (defun initialize-predefined-atoms (display)
-  (do ((i 1 (1+ i))
-       (end (length *predefined-atoms*)))
-      ((>= i end))
+  (dotimes (i (length *predefined-atoms*))
     (declare (type resource-id i))
     (setf (atom-id (svref *predefined-atoms* i) display) i)))
 
@@ -214,7 +192,7 @@
 		   ,@body)))
      ,(if (and (null inline) (macroexpand '(use-closures) env))
 	  `(flet ((.with-event-queue-body. () ,@body))
-	     #+ansi-common-lisp
+	     #+clx-ansi-common-lisp
 	     (declare (dynamic-extent #'.with-event-queue-body.))
 	     (with-event-queue-function
 	       ,display ,timeout #'.with-event-queue-body.))
@@ -230,7 +208,10 @@
   (declare (type display display)
 	   (type (or null number) timeout)
 	   (type function function)
-	   (downward-funarg function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg function))
   (with-event-queue (display :timeout timeout :inline t)
     (funcall function)))
 
@@ -258,7 +239,8 @@
   ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
   (let* ((stream (open-x-stream host display protocol))
 	 (disp (apply #'make-buffer
-		      #x2000 'make-display-internal
+		      *output-buffer-size*
+		      'make-display-internal
 		      :host host
 		      :display display
 		      :output-stream stream
@@ -358,6 +340,7 @@
 		    (string-get vendor-length 0 :reply-buffer reply-buffer))
 	      ;; Initialize the pixmap formats
 	      (dotimes (i num-formats) ;; loop gathering pixmap formats
+		(declare (ignorable i))
 		(buffer-input display buffer-bbuf 0 8)
 		(push (make-pixmap-format :depth (card8-get 0)
 					  :bits-per-pixel (card8-get 1)
@@ -368,12 +351,14 @@
 		    (nreverse (display-pixmap-formats display)))
 	      ;; Initialize the screens
 	      (dotimes (i num-roots)
+		(declare (ignorable i))
 		(buffer-input display buffer-bbuf 0 40)
-		(let* ((root (make-window :id (card32-get 0) :display display))
+		(let* ((root-id (card32-get 0))
+		       (root (make-window :id root-id :display display))
 		       (root-visual (card32-get 32))
+		       (default-colormap-id (card32-get 4))
 		       (default-colormap
-			 (make-colormap :id (card32-get 4)
-					:display display))
+			 (make-colormap :id default-colormap-id :display display))
 		       (screen
 			 (make-screen
 			   :root root
@@ -393,14 +378,17 @@
 		       (num-depths (card8-get 39))
 		       (depths nil))
 		  ;; Save root window for event reporting
-		  (save-id display (window-id root) root)
+		  (save-id display root-id root)
+		  (save-id display default-colormap-id default-colormap)
 		  ;; Create the depth AList for a screen, (depth . visual-infos)
 		  (dotimes (j num-depths)
+		    (declare (ignorable j))
 		    (buffer-input display buffer-bbuf 0 8)
 		    (let ((depth (card8-get 0))
 			  (num-visuals (card16-get 2))
 			  (visuals nil)) ;; 4 bytes unused
 		      (dotimes (k num-visuals)
+			(declare (ignorable k))
 			(buffer-input display buffer-bbuf 0 24)
 			(let* ((visual (card32-get 0))
 			       (visual-info (make-visual-info

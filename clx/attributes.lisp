@@ -42,39 +42,6 @@
 
 (in-package :xlib)
 
-(export '(
-	  with-state
-	  window-visual-info
-	  window-visual
-	  window-class
-	  window-background ;; setf only
-	  window-border
-	  window-bit-gravity
-	  window-gravity
-	  window-backing-store
-	  window-backing-planes
-	  window-backing-pixel
-	  window-save-under
-	  window-override-redirect
-	  window-event-mask
-	  window-do-not-propagate-mask
-	  window-colormap
-	  window-cursor
-	  window-colormap-installed-p
-	  window-all-event-masks
-	  window-map-state
-	  
-	  drawable-root
-	  drawable-x
-	  drawable-y
-	  drawable-width
-	  drawable-height
-	  drawable-depth
-	  drawable-border-width
-
-	  window-priority
-	  ))
-
 (eval-when (compile load eval)			;needed by Franz Lisp
 (defconstant *attribute-size* 44)
 (defconstant *geometry-size* 24)

@@ -68,6 +68,17 @@
   #-clx-overlapping-arrays
   `(aset-card29 (the card29 ,item) buffer-bbuf
 		(index+ buffer-boffset ,byte-index)))
+
+;; This is used for 2-byte characters, which may not be aligned on 2-byte boundaries
+;; and always are written high-order byte first.
+(defmacro write-char2b (byte-index item)
+  ;; It is impossible to do an overlapping write, so only nonoverlapping here.
+  `(let ((%item ,item)
+	 (%byte-index (index+ buffer-boffset ,byte-index)))
+     (declare (type card16 %item)
+	      (type array-index %byte-index))
+     (aset-card8 (the card8 (ldb (byte 8 8) %item)) buffer-bbuf %byte-index)
+     (aset-card8 (the card8 (ldb (byte 8 0) %item)) buffer-bbuf (index+ %byte-index 1))))
 
 (defmacro set-buffer-offset (value &environment env)
   env
@@ -132,8 +143,11 @@
 	   (when (member 8  sizes) '(buffer-bbuf))
 	   (when (member 16 sizes) '(buffer-woffset buffer-wbuf))
 	   (when (member 32 sizes) '(buffer-loffset buffer-lbuf)))
+       #+clx-overlapping-arrays
        (macrolet ((%buffer-sizes () ',sizes))
-	 ,@body))))
+	 ,@body)
+       #-clx-overlapping-arrays
+       ,@body)))
 
 ;;; This macro is just used internally in buffer
 

@@ -18,24 +18,6 @@
 
 (in-package :xlib)
 
-(export '(define-keysym-set
-	  keysym-set
-	  define-keysym
-	  undefine-keysym
-	  default-keysym-translate
-	  keysym
-	  character->keysyms
-	  keycode->keysym 
-	  keysym->character
-	  default-keysym-index
-	  keycode->character
-	  state-keysym-p
-	  mapping-notify
-	  keysym-in-map-p
-	  character-in-map-p
-	  keysym->keycodes
-	  ))
-
 (defvar *keysym-sets* nil) ;; Alist of (name first-keysym last-keysym)
 
 (defun define-keysym-set (set first-keysym last-keysym)
@@ -80,7 +62,7 @@
 	   (type list bytes)
 	   (values keysym))
   (typecase keysym
-    ((integer 0)
+    ((integer 0 *)
      (dolist (b bytes keysym) (setq keysym (+ (ash keysym 8) b))))
     (otherwise
      (or (car (character->keysyms keysym))
@@ -155,7 +137,7 @@
   ;;      when mask and modifiers aren't lists of keysyms]
   ;; The default is #'default-keysym-translate
   ;;
-  (declare (type (or string-char t) object)
+  (declare (type (or base-char t) object)
 	   (type keysym keysym)
 	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
 	         modifiers)
@@ -163,7 +145,7 @@
 	         mask)
 	   (type (or null display) display)
            (type (or null keysym) lowercase)
-	   (type (or null (function (display card16 t) t)) translate))
+	   (type (function (display card16 t) t) translate))
   (flet ((merge-keysym-mappings (new old)
 	   ;; Merge new keysym-mapping with list of old mappings.
 	   ;; Ensure that the mapping with no modifiers or mask comes first.
@@ -205,7 +187,7 @@
 (defun undefine-keysym (object keysym &key display modifiers &allow-other-keys)	              
   ;; Undefine the keysym-translation translating KEYSYM to OBJECT with MODIFIERS.
   ;; If DISPLAY is non-nil, undefine the translation for DISPLAY if it exists.
-  (declare (type (or string-char t) object)
+  (declare (type (or base-char t) object)
 	   (type keysym keysym)
 	   (type (or null mask16 list) ;; (list (or keysym state-mask-key))
 	         modifiers)
@@ -313,11 +295,7 @@
 
 (defun keysym->character (display keysym &optional (state 0))
   ;; Find the character associated with a keysym.
-  ;; STATE is used for adding char-bits to character as follows:
-  ;;    control -> char-control-bit
-  ;;    mod-1 -> char-meta-bit
-  ;;    mod-2 -> char-super-bit
-  ;;    mod-3 -> char-hyper-bit
+  ;; STATE can be used to set character attributes.
   ;; Implementation dependent function.
   (declare (type display display)
 	   (type keysym keysym)
@@ -379,36 +357,6 @@
 		   (modifiers->mask display-mapping mapping-mask nil))))
       (declare (type mask16 modifiers mask))
       (= (logand state mask) modifiers))))
-
-(defun default-keysym-translate (display state object)
-  ;; If object is a character, char-bits are set from state.
-  ;;
-  ;; [the following isn't implemented (should it be?)]
-  ;; If object is a list, it is an alist with entries:
-  ;; (string-char [modifiers] [mask-modifiers])
-  ;; When MODIFIERS are specified, this character translation
-  ;; will only take effect when the specified modifiers are pressed.
-  ;; MASK-MODIFIERS can be used to specify a set of modifiers to ignore.
-  ;; When MASK-MODIFIERS is missing, all other modifiers are ignored.
-  ;; In ambiguous cases, the most specific translation is used.
-  (declare (type display display)
-	   (type card16 state)
-	   (type t object))
-  (declare (values t)) ;; Object returned by keycode->character
-  (macrolet ((keystate-p (state keyword)
-			 `(the boolean
-			       (logbitp ,(position keyword *state-mask-vector*)
-					,state))))
-    (when (characterp object)
-      (when (keystate-p state :control)
-	(setf (char-bit object :control) 1))
-      (when (state-keysymp display state left-meta-keysym)
-	(setf (char-bit object :meta) 1))
-      (when (state-keysymp display state left-super-keysym)
-	(setf (char-bit object :super) 1))
-      (when (state-keysymp display state left-hyper-keysym)
-	(setf (char-bit object :hyper) 1))))
-  object)
 
 (defun default-keysym-index (display keycode state)
   ;; Returns a keysym-index for use with keycode->character
@@ -494,17 +442,13 @@
   ;; where char0 is the "character" object associated with keysym-index 0 and
   ;; caps-lock-p is non-nil when the keysym associated with the lock
   ;; modifier is for caps-lock.
-  ;; STATE is also used for setting char-bits:
-  ;;    control -> char-control-bit
-  ;;    mod-1 -> char-meta-bit
-  ;;    mod-2 -> char-super-bit
-  ;;    mod-3 -> char-hyper-bit
+  ;; STATE can also used for setting character attributes.
   ;; Implementation dependent function.
   (declare (type display display)
 	   (type card8 keycode)
 	   (type card16 state)
 	   (type (or null card8) keysym-index)
-	   (type (or null (function (string-char card16 boolean card8) card8))
+	   (type (or null (function (base-char card16 boolean card8) card8))
 		 keysym-index-function))
   (declare (values (or null character)))
   (let* ((index (or keysym-index

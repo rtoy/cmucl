@@ -29,8 +29,8 @@ compiled with (make-system "CLX" :compile :noconfirm) and loaded with
 
 For Lucid systems, you should rename all the .l files to .lisp too (This might
 not be possible on SysV systems).  After loading the defsystem.l file, CLX can
-be compiled with the (xlib:compile-clx) function and loaded with the
-(xlib:load-clx) form.  
+be compiled with the (compile-clx) function and loaded with the
+(load-clx) form.  
 
 The ms-patch.uu file is a patch to Lucid version 2 systems.  You probably
 don't need it, as you are probably running Lucid version 3 or later, but if
@@ -40,7 +40,7 @@ uudecode it to produce the binary.
 
 
 For kcl systems, after loading the defsystem.l file, CLX can be compiled with
-the (xlib:compile-clx) function and loaded with the (xlib:load-clx) form.
+the (compile-clx) function and loaded with the (load-clx) form.
 
 
 

@@ -20,19 +20,6 @@
 
 (in-package :xlib)
 
-(export '(
-	  draw-point
-	  draw-points
-	  draw-line
-	  draw-lines
-	  draw-segments
-	  draw-rectangle
-	  draw-rectangles
-	  draw-arc
-	  draw-arcs
-	  put-raw-image
-	  get-raw-image))
-
 (defvar *inhibit-appending* nil)
 
 (defun draw-point (drawable gcontext x y)

@@ -1,4 +1,4 @@
-;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
+;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
 
 ;; This file contains some of the system dependent code for CLX
 
@@ -20,19 +20,8 @@
 
 (in-package :xlib)
 
-#+lcl3.0
-(import '(
-	  lcl:define-condition
-	  lcl:type-error
-	  lucid::type-error-datum
-	  lucid::type-error-expected-type
-	  sys:underlying-simple-vector))
-
-(export '(
-	  char->card8
-	  card8->char
-	  default-error-handler
-	  #-(ansi-common-lisp CMU) define-condition))
+;;; The size of the output buffer.  Must be a multiple of 4.
+(defparameter *output-buffer-size* 8192)
 
 #+explorer
 (zwei:define-indentation event-case (1 1))
@@ -78,9 +67,6 @@
 ;;; declaration is available, it would be a good idea to make it here when
 ;;; *buffer-speed* is 3 and *buffer-safety* is 0.
 (defun declare-buffun ()
-  #+(and cmu clx-debugging)
-  '(declare (optimize (speed 1) (safety 1)))
-  #-(and cmu clx-debugging)
   `(declare (optimize (speed ,*buffer-speed*) (safety ,*buffer-safety*))))
 
 )
@@ -167,7 +153,7 @@
 
 (declaim (inline aref-card8 aset-card8 aref-int8 aset-int8))
 
-#-(or Genera lcl3.0)
+#-(or Genera lcl3.0 excl)
 (progn
 
 (defun aref-card8 (a i)
@@ -217,41 +203,7 @@
 
 )
 
-#+lcl3.0 ;in lcl2.1 these symbols are in different packages and making too
-         ;many conditionalizations makes my brain hurt.
-(progn
-
-(defun aref-card8 (a i)
-  (declare (type buffer-bytes a)
-	   (type array-index i))
-  (declare (values card8))
-  #.(declare-buffun)
-  (the card8 (sys:svref-8bit a i)))
-
-(defun aset-card8 (v a i)
-  (declare (type card8 v)
-	   (type buffer-bytes a)
-	   (type array-index i))
-  #.(declare-buffun)
-  (setf (sys:svref-8bit a i) v))
-
-(defun aref-int8 (a i)
-  (declare (type buffer-bytes a)
-	   (type array-index i))
-  (declare (values int8))
-  #.(declare-buffun)
-  (the int8 (sys:svref-signed-8bit a i)))
-
-(defun aset-int8 (v a i)
-  (declare (type int8 v)
-	   (type buffer-bytes a)
-	   (type array-index i))
-  #.(declare-buffun)
-  (setf (sys:svref-signed-8bit a i) v))
-
-)
-
-#+clx-overlapping-arrays
+#+(or excl lcl3.0 clx-overlapping-arrays)
 (declaim (inline aref-card16 aref-int16 aref-card32 aref-int32 aref-card29
 		 aset-card16 aset-int16 aset-card32 aset-int32 aset-card29))
 
@@ -330,153 +282,221 @@
 #+excl
 (progn
   
-  (defun aref-card16 (a i)
-    (declare (type buffer-bytes a)
-	     (type array-index i))
-    (declare (values card16))
-    #.(declare-buffun)
-    (the card16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-			    :unsigned-word)))
+(defun aref-card8 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values card8))
+  #.(declare-buffun)
+  (the card8 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			 :unsigned-byte)))
+
+(defun aset-card8 (v a i)
+  (declare (type card8 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :unsigned-byte) v))
+
+(defun aref-int8 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values int8))
+  #.(declare-buffun)
+  (the int8 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			:signed-byte)))
+
+(defun aset-int8 (v a i)
+  (declare (type int8 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :signed-byte) v))
+
+(defun aref-card16 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values card16))
+  #.(declare-buffun)
+  (the card16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			  :unsigned-word)))
   
-  (defun aset-card16 (v a i)
-    (declare (type card16 v)
-	     (type buffer-bytes a)
-	     (type array-index i))
-    #.(declare-buffun)
-    (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-		      :unsigned-word) v))
+(defun aset-card16 (v a i)
+  (declare (type card16 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :unsigned-word) v))
   
-  (defun aref-int16 (a i)
-    (declare (type buffer-bytes a)
-	     (type array-index i))
-    (declare (values int16))
-    #.(declare-buffun)
-    (the int16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-			   :signed-word)))
+(defun aref-int16 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values int16))
+  #.(declare-buffun)
+  (the int16 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			 :signed-word)))
   
-  (defun aset-int16 (v a i)
-    (declare (type int16 v)
-	     (type buffer-bytes a)
-	     (type array-index i))
-    #.(declare-buffun)
-    (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-		      :signed-word) v))
+(defun aset-int16 (v a i)
+  (declare (type int16 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :signed-word) v))
   
-  (defun aref-card32 (a i)
-    (declare (type buffer-bytes a)
-	     (type array-index i))
-    (declare (values card32))
-    #.(declare-buffun)
-    (the card32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-			    :unsigned-long)))
+(defun aref-card32 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values card32))
+  #.(declare-buffun)
+  (the card32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			  :unsigned-long)))
     
-  (defun aset-card32 (v a i)
-    (declare (type card32 v)
-	     (type buffer-bytes a)
-	     (type array-index i))
-    #.(declare-buffun)
-    (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-		      :unsigned-long) v))
+(defun aset-card32 (v a i)
+  (declare (type card32 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :unsigned-long) v))
 
-  (defun aref-int32 (a i)
-    (declare (type buffer-bytes a)
-	     (type array-index i))
-    (declare (values int32))
-    #.(declare-buffun)
-    (the int32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-			   :signed-long)))
+(defun aref-int32 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values int32))
+  #.(declare-buffun)
+  (the int32 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			 :signed-long)))
     
-  (defun aset-int32 (v a i)
-    (declare (type int32 v)
-	     (type buffer-bytes a)
-	     (type array-index i))
-    #.(declare-buffun)
-    (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-		      :signed-long) v))
+(defun aset-int32 (v a i)
+  (declare (type int32 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :signed-long) v))
 
-  (defun aref-card29 (a i)
-    ;; Do I need to mask off a few bits here?  XXX
-    (declare (type buffer-bytes a)
-	     (type array-index i))
-    (declare (values card29))
-    #.(declare-buffun)
-    (the card29 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-			    :unsigned-long)))
+(defun aref-card29 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i))
+  (declare (values card29))
+  #.(declare-buffun)
+  (the card29 (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+			  :unsigned-long)))
 
-  (defun aset-card29 (v a i)
-    (declare (type card29 v)
-	     (type buffer-bytes a)
-	     (type array-index i))
-    #.(declare-buffun)
-    (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
-		      :unsigned-long) v))
-
+(defun aset-card29 (v a i)
+  (declare (type card29 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (sys:memref a #.(comp::mdparam 'comp::md-svector-data0-adj) i
+		    :unsigned-long) v))
   
 )
 
 #+lcl3.0
-(progn ;; all these lucid optimizations need to be compiled to work.
+(progn
+
+(defun aref-card8 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values card8))
+  #.(declare-buffun)
+  (the card8 (lucid::%svref-8bit a i)))
+
+(defun aset-card8 (v a i)
+  (declare (type card8 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (lucid::%svref-8bit a i) v))
+
+(defun aref-int8 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values int8))
+  #.(declare-buffun)
+  (the int8 (lucid::%svref-signed-8bit a i)))
+
+(defun aset-int8 (v a i)
+  (declare (type int8 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
+  #.(declare-buffun)
+  (setf (lucid::%svref-signed-8bit a i) v))
 
 (defun aref-card16 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values card16))
   #.(declare-buffun)
-  (the card16 (sys:svref-16bit (the buffer-bytes a)
-			       (lucid:ash& (the array-index i) -1))))
+  (the card16 (lucid::%svref-16bit a (index-ash i -1))))
   
 (defun aset-card16 (v a i)
+  (declare (type card16 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
   #.(declare-buffun)
-  (setf (sys:svref-16bit (the buffer-bytes a)
-			 (lucid:ash& (the array-index i) -1))
-	(the card16 v)))
+  (setf (lucid::%svref-16bit a (index-ash i -1)) v))
   
 (defun aref-int16 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values int16))
   #.(declare-buffun)
-  (the int16 
-       (sys:svref-signed-16bit (the buffer-bytes a)
-			       (lucid:ash& (the array-index i) -1))))
+  (the int16 (lucid::%svref-signed-16bit a (index-ash i -1))))
   
 (defun aset-int16 (v a i)
+  (declare (type int16 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
   #.(declare-buffun)
-  (setf (sys:svref-signed-16bit (the buffer-bytes a)
-				(lucid:ash& (the array-index i) -1))
-	(the int16 v)))
+  (setf (lucid::%svref-signed-16bit a (index-ash i -1)) v))
 
 (defun aref-card32 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values card32))
   #.(declare-buffun)
-  (the card32
-       (sys:svref-32bit (the buffer-bytes a)
-			(lucid:ash& (the array-index i) -2))))
+  (the card32 (lucid::%svref-32bit a (index-ash i -2))))
     
 (defun aset-card32 (v a i)
+  (declare (type card32 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
   #.(declare-buffun)
-  (setf (sys:svref-32bit (the buffer-bytes a)
-			 (lucid:ash& (the array-index i) -2))
-	(the card32 v)))
+  (setf (lucid::%svref-32bit a (index-ash i -2)) v))
 
 (defun aref-int32 (a i)
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values int32))
   #.(declare-buffun)
-  (the int32
-       (sys:svref-signed-32bit (the buffer-bytes a)
-			       (lucid:ash& (the array-index i) -2))))
+  (the int32 (lucid::%svref-signed-32bit a (index-ash i -2))))
     
 (defun aset-int32 (v a i)
+  (declare (type int32 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
   #.(declare-buffun)
-  (setf (sys:svref-signed-32bit (the buffer-bytes a)
-				(lucid:ash& (the array-index i) -2))
-	(the int32 v)))
+  (setf (lucid::%svref-signed-32bit a (index-ash i -2)) v))
 
 (defun aref-card29 (a i)
-  ;; Don't need to mask bits here since X protocol guarantees top bits zero
+  (declare (type buffer-bytes a)
+	   (type array-index i)
+	   (values card29))
   #.(declare-buffun)
-  (the card29
-       (sys:svref-32bit (the buffer-bytes a)
-			(lucid:ash& (the array-index i) -2))))
+  (the card29 (lucid::%svref-32bit a (index-ash i -2))))
 
 (defun aset-card29 (v a i)
-  ;; I also assume here Lisp is passing a number that fits in 29 bits.
+  (declare (type card29 v)
+	   (type buffer-bytes a)
+	   (type array-index i))
   #.(declare-buffun)
-  (setf (sys:svref-32bit (the buffer-bytes a)
-			 (lucid:ash& (the array-index i) -2))
-	(the card29 v)))
+  (setf (lucid::%svref-32bit a (index-ash i -2)) v))
+
 )
 
 
@@ -750,7 +770,7 @@
 			 #-Genera
 			 (progn
   			   (defun char->card8 (char)
-			     (declare (type string-char char))
+			     (declare (type base-char char))
 			     #.(declare-buffun)
 			     (the card8 (aref (the (simple-array card8 (*))
 						   *char-to-card8-translation-table*)
@@ -758,7 +778,7 @@
 			   (defun card8->char (card8)
 			     (declare (type card8 card8))
 			     #.(declare-buffun)
-			     (the string-char
+			     (the base-char
 				  (aref (the simple-string *card8-to-char-translation-table*)
 					card8)))
 			   )
@@ -789,13 +809,13 @@
 		     (t
 		      `(progn
 			 (defun char->card8 (char)
-			   (declare (type string-char char))
+			   (declare (type base-char char))
 			   #.(declare-buffun)
 			   (the card8 (char-code char)))
 			 (defun card8->char (card8)
 			   (declare (type card8 card8))
 			   #.(declare-buffun)
-			   (the string-char (code-char card8)))
+			   (the base-char (code-char card8)))
 			 ))))))
   (char-translators))
 
@@ -810,7 +830,7 @@
 
 ;;; MAKE-PROCESS-LOCK: Creating a process lock.
 
-#-(or LispM excl)
+#-(or LispM excl Minima)
 (defun make-process-lock (name)
   (declare (ignore name))
   nil)
@@ -827,6 +847,10 @@
 (defun make-process-lock (name)
   (process:make-lock name :flavor 'clx-lock))
 
+#+Minima
+(defun make-process-lock (name)
+  (minima:make-lock name))
+
 ;;; HOLDING-LOCK: Execute a body of code with a lock held.
 
 ;;; The holding-lock macro takes a timeout keyword argument.  EVENT-LISTEN
@@ -835,27 +859,10 @@
 
 ;; If you're not sharing DISPLAY objects within a multi-processing
 ;; shared-memory environment, this is sufficient
-#-(or lispm excl lcl3.0 CMU)
+#-(or lispm excl lcl3.0 Minima)
 (defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
   (declare (ignore locator display whostate timeout))
   `(progn ,@body))
-
-;;; HOLDING-LOCK for CMU Common Lisp.
-;;;
-;;; We are not multi-processing, but we use this macro to try to protect
-;;; against re-entering request functions.  This can happen if an interrupt
-;;; occurs and the handler attempts to use X over the same display connection.
-;;; This can happen if the GC hooks are used to notify the user over the same
-;;; display connection.  We lock out GC's just as a dummy check for our users.
-;;; Locking out interrupts has the problem that CLX always waits for replies
-;;; within this dynamic scope, so if the server cannot reply for some reason,
-;;; we potentially dead-lock without interrupts.
-;;;
-#+CMU
-(defmacro holding-lock ((locator display &optional whostate &key timeout)
-			&body body)
-  (declare (ignore locator display whostate timeout))
-  `(lisp::without-gcing (system:without-interrupts (progn ,@body))))
 
 #+Genera
 (defmacro holding-lock ((locator display &optional whostate &key timeout)
@@ -914,7 +921,11 @@
 			  t)
 			 ((lcl:process-wait-with-timeout ,whostate .timeout.
 			    #'(lambda ()
-				(conditional-store ,locator nil lcl:*current-process*)))))
+				(conditional-store ,locator nil lcl:*current-process*))))
+			 ;; abort the PROCESS-UNLOCK if actually timing out
+			 (t
+			  (setf .have-lock. :abort)
+			  nil))
 	       ,@body)
 	   (unless .have-lock. 
 	     (lcl:process-unlock ,locator))))
@@ -942,6 +953,11 @@
 			 (return-from .hl-doit. nil))
 		  `(mp::process-lock .hl-lock. .hl-curproc.
 				     ,@(when whostate `(,whostate))))
+	       ;; There is an apparent race condition here.  However, there is
+	       ;; no actual race condition -- our implementation of mp:process-
+	       ;; lock guarantees that the lock will still be held when it
+	       ;; returns, and no interrupt can happen between that and the
+	       ;; execution of the next form.  -- jdi 2/27/91
 	       (setq .hl-obtained-lock. t)))
 	   ,@body)
        (if (and .hl-obtained-lock.
@@ -952,6 +968,18 @@
 		(eq (mp::process-lock-locker .hl-lock.) .hl-curproc.))
 	   (mp::process-unlock .hl-lock. .hl-curproc.)))))
 
+#+Minima
+(defmacro holding-lock ((locator display &optional whostate &key timeout) &body body)
+  `(holding-lock-1 #'(lambda () ,@body) ,locator ,display
+		   ,@(and whostate `(:whostate ,whostate))
+		   ,@(and timeout `(:timeout ,timeout))))
+
+#+Minima
+(defun holding-lock-1 (continuation lock display &key (whostate "Lock") timeout)
+  (declare (dynamic-extent continuation))
+  (declare (ignore display whostate timeout))
+  (minima:with-lock (lock)
+    (funcall continuation)))
 
 ;;; WITHOUT-ABORTS
 
@@ -981,7 +1009,7 @@
 ;;; Caller guarantees that PROCESS-WAKEUP will be called after the predicate's
 ;;; value changes.
 
-#-(or lispm excl lcl3.0)
+#-(or lispm excl lcl3.0 Minima)
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (ignore whostate))
   (or (apply predicate predicate-args)
@@ -990,13 +1018,19 @@
 #+Genera
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (type function predicate)
-	   (downward-funarg predicate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent predicate)
+	   #-clx-ansi-common-lisp
+	   (sys:downward-funarg predicate))
   (apply #'process:block-process whostate predicate predicate-args))
 
 #+(and lispm (not Genera))
 (defun process-block (whostate predicate &rest predicate-args)
   (declare (type function predicate)
-	   (downward-funarg predicate))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent predicate)
+	   #-clx-ansi-common-lisp 
+	   (sys:downward-funarg predicate))
   (apply #'global:process-wait whostate predicate predicate-args))
 
 #+excl
@@ -1011,11 +1045,17 @@
   (declare (dynamic-extent predicate-args))
   (apply #'lcl:process-wait whostate predicate predicate-args))
 
+#+Minima
+(defun process-block (whostate predicate &rest predicate-args)
+  (declare (type function predicate)
+	   (dynamic-extent predicate))
+  (apply #'minima:process-wait whostate predicate predicate-args))
+
 ;;; PROCESS-WAKEUP: Check some other process' wait function.
 
 (declaim (inline process-wakeup))
 
-#-(or excl Genera)
+#-(or excl Genera Minima)
 (defun process-wakeup (process)
   (declare (ignore process))
   nil)
@@ -1035,6 +1075,10 @@
 (defun process-wakeup (process)
   (process:wakeup process))
 
+#+Minima
+(defun process-wakeup (process)
+  (minima:process-wakeup process))
+
 ;;; CURRENT-PROCESS: Return the current process object for input locking and
 ;;; for calling PROCESS-WAKEUP.
 
@@ -1042,7 +1086,7 @@
 
 ;;; Default return NIL, which is acceptable even if there is a scheduler.
 
-#-(or lispm excl lcl3.0)
+#-(or lispm excl lcl3.0 Minima)
 (defun current-process ()
   nil)
 
@@ -1059,9 +1103,13 @@
 (defun current-process ()
   lcl:*current-process*)
 
+#+Minima
+(defun current-process ()
+  (minima:current-process))
+
 ;;; WITHOUT-INTERRUPTS -- provide for atomic operations.
 
-#-(or lispm excl lcl3.0)
+#-(or lispm excl lcl3.0 Minima)
 (defmacro without-interrupts (&body body)
   `(progn ,@body))
 
@@ -1076,6 +1124,10 @@
 #+LCL3.0
 (defmacro without-interrupts (&body body)
   `(lcl:with-scheduling-inhibited ,@body))
+
+#+Minima
+(defmacro without-interrupts (&body body)
+  `(minima:with-no-other-processes ,@body))
 
 ;;; CONDITIONAL-STORE:
 
@@ -1149,7 +1201,7 @@
 ;;; OPEN-X-STREAM - create a stream for communicating to the appropriate X
 ;;; server
 
-#-(or explorer Genera lucid kcl ibcl excl CMU)
+#-(or explorer Genera lucid kcl ibcl excl Minima)
 (defun open-x-stream (host display protocol)
   host display protocol ;; unused
   (error "OPEN-X-STREAM not implemented yet."))
@@ -1250,20 +1302,12 @@
       (error "Failed to connect to server: ~A ~D" host display))
     fd))
 
-;;; OPEN-X-STREAM -- for CMU Common Lisp.
-;;;
-;;; The file descriptor here just gets tossed into the stream slot of the
-;;; display object instead of a stream.
-;;;
-#+CMU
+#+Minima
 (defun open-x-stream (host display protocol)
-  (declare (ignore protocol))
-  (let ((server-fd (connect-to-server host display)))
-    (unless (plusp server-fd)
-      (error "Failed to connect to X11 server: ~A (display ~D)" host display))
-    (system:make-fd-stream server-fd :input t :output t
-			   :element-type '(unsigned-byte 8))))
-
+  (declare (ignore protocol));; unused
+  (minima:open-tcp-stream (minima:gensym-tcp-port)
+			  (apply #'minima:make-ip-address (cdr (host-address host)))
+			  (+ *x-tcp-port* display) :element-type '(unsigned-byte 8)))
 
 ;;; BUFFER-READ-DEFAULT - read data from the X stream
 
@@ -1309,72 +1353,67 @@
 
 
 #+lcl3.0
-(defmacro extract-underlying-stream (stream display direction)
-  ;;;Our job is to quickly get at the underlying stream for this display's
-  ;;;input stream structure.
-  `(or (getf (display-plist ,display) ,direction)
-       (setf (getf (display-plist ,display) ,direction)
-	     (lucid::underlying-stream
-	       ,stream (if (eq ,direction 'input) :input :output)))))
+(defmacro with-underlying-stream ((variable stream display direction) &body body)
+  `(let ((,variable
+	  (or (getf (display-plist ,display) ',direction)
+	      (setf (getf (display-plist ,display) ',direction)
+		    (lucid::underlying-stream
+		      ,stream ,(if (eq direction 'input) :input :output))))))
+     ,@body))
 
 #+lcl3.0
 (defun buffer-read-default (display vector start end timeout)
   ;;Note that LISTEN must still be done on "slow stream" or the I/O system
   ;;gets confused.  But reading should be done from "fast stream" for speed.
-  ;;We used to inhibit scheduling because there were races in Lucid's 
+  ;;We used to inhibit scheduling because there were races in Lucid's
   ;;multitasking system.  Empirical evidence suggests they may be gone now.
-  ;;Should you decide you need to inhibit scheduling, do it around the do*.
+  ;;Should you decide you need to inhibit scheduling, do it around the
+  ;;lcl:read-array.
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null number) timeout)
-	   (optimize (speed 3)
-		     (safety 0)))
+	   (type (or null number) timeout))
+  #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (or (cond ((null stream))
 	      ((listen stream) nil)
 	      ((eql timeout 0) :timeout)
 	      ((buffer-input-wait-default display timeout)))
-	(let ((stream (extract-underlying-stream stream display 'input)))
-	  (do* ((index start (index1+ index)))
-	       ((index>= index end) nil)
-	    (declare (type array-index index))
-	    (let ((c (lcl:fast-read-byte stream (unsigned-byte 8) nil nil)))
-	      (declare (type (or null card8) c))
-	      (if (null c)
-		  (return t)
-		  (setf (aref vector index) (the card8 c)))))))))
+	(with-underlying-stream (stream stream display input)
+	  (eq (lcl:read-array stream vector start end nil :eof) :eof)))))
 
-
-;;; BUFFER-READ-DEFAULT for CMU Common Lisp.
-;;;
-;;;    If timeout is 0, then we call LISTEN to see if there is any input.
-;;; Timeout 0 is the only case where READ-INPUT dives into BUFFER-READ without
-;;; first calling BUFFER-INPUT-WAIT-DEFAULT.
-;;;
-#+CMU
+#+Minima
 (defun buffer-read-default (display vector start end timeout)
+  ;; returns non-NIL if EOF encountered
+  ;; Returns :TIMEOUT when timeout exceeded
   (declare (type display display)
 	   (type buffer-bytes vector)
 	   (type array-index start end)
-	   (type (or null fixnum) timeout))
+	   (type (or null number) timeout))
   #.(declare-buffun)
-  (cond ((and (eql timeout 0)
-	      (not (listen (display-input-stream display))))
-	 :timeout)
-	(t
-	 (system:read-n-bytes (display-input-stream display)
-			      vector start (- end start))
-	 nil)))
-
+  (let ((stream (display-input-stream display)))
+    (or (cond ((null stream))
+	      ((listen stream) nil)
+	      ((eql timeout 0) :timeout)
+	      ((buffer-input-wait-default display timeout)))
+	(loop while (< start end) do
+	  (multiple-value-bind (buffer bstart bend)
+	      (minima:get-input-buffer stream nil)
+	    (when (null buffer) (return t))
+	    (let ((n (min (- end start) (- bend bstart))))
+	      (replace vector buffer
+		       :start1 start :end1 (incf start n)
+		       :start2 bstart :end2 (incf bstart n)))
+	    (minima:advance-input-buffer stream bstart)))
+	nil)))
 
 ;;; WARNING:
 ;;;	CLX performance will suffer if your lisp uses read-byte for
 ;;;	receiving all data from the X Window System server.
 ;;;	You are encouraged to write a specialized version of
 ;;;	buffer-read-default that does block transfers.
-#-(or Genera explorer excl lcl3.0 CMU)
+#-(or Genera explorer excl lcl3.0 Minima)
 (defun buffer-read-default (display vector start end timeout)
   (declare (type display display)
 	   (type buffer-bytes vector)
@@ -1421,20 +1460,37 @@
   
 #+lcl3.0
 (defun buffer-write-default (vector display start end)
-  ;;We inhibit scheduling here because there seem to be races in Lucid's
-  ;;multitasking implementation.  Anyway, when we take it out we get bugs!
+  ;;We used to inhibit scheduling because there were races in Lucid's
+  ;;multitasking system.  Empirical evidence suggests they may be gone now.
+  ;;Should you decide you need to inhibit scheduling, do it around the
+  ;;lcl:write-array.
   (declare (type display display)
 	   (type buffer-bytes vector)
-	   (type array-index start end)
-	   (optimize (:tail-merge nil)
-		     (speed 3)
-		     (safety 0)))
+	   (type array-index start end))
+  #.(declare-buffun)
   (let ((stream (display-output-stream display)))
     (declare (type (or null stream) stream))
     (unless (null stream) 
-      (let ((stream (extract-underlying-stream stream display 'output)))
-	(lcl:with-scheduling-inhibited
-          (lcl:write-array stream vector start end))))))
+      (with-underlying-stream (stream stream display output)
+	(lcl:write-array stream vector start end)))))
+
+#+Minima
+(defun buffer-write-default (vector display start end)
+  ;; The default buffer write function for use with common-lisp streams
+  (declare (type buffer-bytes vector)
+	   (type display display)
+	   (type array-index start end))
+  #.(declare-buffun)
+  (let ((stream (display-output-stream display)))
+    (declare (type (or null stream) stream))
+    (unless (null stream) 
+      (loop while (< start end) do
+	(multiple-value-bind (buffer bstart bend)
+	    (minima:get-output-buffer stream)
+	  (let ((n (min (- end start) (- bend bstart))))
+	    (replace buffer vector
+		     :start1 bstart :end1 (incf bstart n) :start2 start :end2 (incf start n) ))
+	    (minima:advance-output-buffer stream bstart))))))
 
 ;;; WARNING:
 ;;;	CLX performance will be severely degraded if your lisp uses
@@ -1442,7 +1498,7 @@
 ;;;	You are STRONGLY encouraged to write a specialized version
 ;;;	of buffer-write-default that does block transfers.
 
-#-(or Genera explorer excl lcl3.0 CMU)
+#-(or Genera explorer excl lcl3.0 Minima)
 (defun buffer-write-default (vector display start end)
   ;; The default buffer write function for use with common-lisp streams
   (declare (type buffer-bytes vector)
@@ -1458,15 +1514,6 @@
 	  (declare (type array-index index))
 	  (write-byte (aref vector index) stream))))))
 
-#+CMU
-(defun buffer-write-default (vector display start end)
-  (declare (type buffer-bytes vector)
-	   (type display display)
-	   (type array-index start end))
-  #.(declare-buffun)
-  (system:output-raw-bytes (display-output-stream display) vector start end)
-  nil)
-
 ;;; buffer-force-output-default - force output to the X stream
 
 #+excl
@@ -1474,7 +1521,7 @@
   ;; buffer-write-default does the actual writing.
   (declare (ignore display)))
 
-#-(or excl)
+#-excl
 (defun buffer-force-output-default (display)
   ;; The default buffer force-output function for use with common-lisp streams
   (declare (type display display))
@@ -1493,7 +1540,7 @@
   #.(declare-buffun)
   (excl::filesys-checking-close (display-output-stream display)))
 
-#-(or excl)
+#-excl
 (defun buffer-close-default (display &key abort)
   ;; The default buffer close function for use with common-lisp streams
   (declare (type display display))
@@ -1511,10 +1558,10 @@
 ;;; The default implementation
 
 ;; Poll for input every *buffer-read-polling-time* SECONDS.
-#-(or Genera explorer excl lcl3.0 CMU)
+#-(or Genera explorer excl lcl3.0)
 (defparameter *buffer-read-polling-time* 0.5)
 
-#-(or Genera explorer excl lcl3.0 CMU)
+#-(or Genera explorer excl lcl3.0)
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
 	   (type (or null number) timeout))
@@ -1537,21 +1584,6 @@
 	       (when (listen stream)		; and listen one last time
 		 (return-from buffer-input-wait-default nil)))
 	     :timeout)))))
-
-#+CMU
-(defun buffer-input-wait-default (display timeout)
-  (declare (type display display)
-	   (type (or null number) timeout))
-  (let ((stream (display-input-stream display)))
-    (declare (type (or null stream) stream))
-    (cond ((null stream))
-	  ((listen stream) nil)
-	  ((eql timeout 0) :timeout)
-	  (t
-	   (if (system:wait-until-fd-usable (system:fd-stream-fd stream)
-					    :input timeout)
-	       nil
-	       :timeout)))))
 
 #+Genera
 (defun buffer-input-wait-default (display timeout)
@@ -1596,7 +1628,7 @@
 ;; This is used so an 'eq' test may be used to find out whether or not we can
 ;; safely throw this process out of the CLX read loop.
 ;;
-(defparameter *read-whostate* "blocked on read from X server")
+(defparameter *read-whostate* "waiting for input from X server")
 
 ;;
 ;; Note that this function returns nil on error if the scheduler is running,
@@ -1654,14 +1686,14 @@
 (defun buffer-input-wait-default (display timeout)
   (declare (type display display)
 	   (type (or null number) timeout)
-	   (optimize (speed 3) (safety 0)))
-  (declare (values timeout))
+	   (values timeout))
+  #.(declare-buffun)
   (let ((stream (display-input-stream display)))
     (declare (type (or null stream) stream))
     (cond ((null stream))
 	  ((listen stream) nil)
 	  ((eql timeout 0) :timeout)
-	  ((let ((stream (extract-underlying-stream stream display 'input)))
+	  ((with-underlying-stream (stream stream display input)
 	     (lucid::waiting-for-input-from-stream stream
                (lucid::with-io-unlocked
 		 (if (null timeout)
@@ -1676,7 +1708,7 @@
 ;;; buffer. This should never block, so it can be called from the scheduler.
 
 ;;; The default implementation is to just use listen.
-#-(or excl)
+#-excl
 (defun buffer-listen-default (display)
   (declare (type display display))
   (let ((stream (display-input-stream display)))
@@ -1705,21 +1737,16 @@
 ;; consing garbage, you may want to re-write this to allocate and
 ;; initialize lists from a resource.
 ;;
-#+lispm
-(defmacro with-stack-list ((var &rest elements) &body body)
-  `(sys:with-stack-list (,var ,@elements) ,@body))
-
-#+lispm
-(defmacro with-stack-list* ((var &rest elements) &body body)
-  `(sys:with-stack-list* (,var ,@elements) ,@body))
-
 #-lispm
 (defmacro with-stack-list ((var &rest elements) &body body)
   ;; SYNTAX: (WITH-STACK-LIST (var exp1 ... expN) body)
   ;; Equivalent to (LET ((var (MAPCAR #'EVAL '(exp1 ... expN)))) body)
   ;; except that the list produced by MAPCAR resides on the stack and
   ;; therefore DISAPPEARS when WITH-STACK-LIST is exited.
-  `(let ((,var (list ,@elements))) ,@body))
+  `(let ((,var (list ,@elements)))
+     (declare (type cons ,var)
+	      #+clx-ansi-common-lisp (dynamic-extent ,var))
+     ,@body))
 
 #-lispm
 (defmacro with-stack-list* ((var &rest elements) &body body)
@@ -1727,7 +1754,10 @@
   ;; Equivalent to (LET ((var (APPLY #'LIST* (MAPCAR #'EVAL '(exp1 ... expN))))) body)
   ;; except that the list produced by MAPCAR resides on the stack and
   ;; therefore DISAPPEARS when WITH-STACK-LIST is exited.
-  `(let ((,var (list* ,@elements))) ,@body))
+  `(let ((,var (list* ,@elements)))
+     (declare (type cons ,var)
+	      #+clx-ansi-common-lisp (dynamic-extent ,var))
+     ,@body))
 
 (declaim (inline buffer-replace))
 
@@ -1747,8 +1777,8 @@
   (let ((source-end (length source-sequence)))
     (declare (type array-index source-end))
     
-    (if* (and (eq target-sequence source-sequence)
-	      (> target-start source-start))
+    (excl:if* (and (eq target-sequence source-sequence)
+		   (> target-start source-start))
        then (let ((nelts (min (- target-end target-start)
 			      (- source-end source-start))))
 	      (do ((target-index (+ target-start nelts -1) (1- target-index))
@@ -1766,18 +1796,6 @@
 
 	      (setf (aref target-sequence target-index)
 		(aref source-sequence source-index))))))
-
-#+cmu
-(defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
-  (declare (type buffer-bytes buf1 buf2)
-	   (type array-index start1 end1 start2))
-  #.(declare-buffun)
-  (kernel:bit-bash-copy
-   buf2 (+ (* start2 vm:byte-bits)
-	   (* vm:vector-data-offset vm:word-bits))
-   buf1 (+ (* start1 vm:byte-bits)
-	   (* vm:vector-data-offset vm:word-bits))
-   (* (- end1 start1) vm:byte-bits)))
 
 #+lucid
 ;;;The compiler is *supposed* to optimize calls to replace, but in actual
@@ -1797,7 +1815,7 @@
 	   (type array-index start1 end1 start2))
   (replace buf1 buf2 :start1 start1 :end1 end1 :start2 start2))
 
-#-(or lispm lucid excl cmu clx-overlapping-arrays)
+#-(or lispm lucid excl clx-overlapping-arrays)
 (defun buffer-replace (buf1 buf2 start1 end1 &optional (start2 0))
   (declare (type buffer-bytes buf1 buf2)
 	   (type array-index start1 end1 start2))
@@ -1902,7 +1920,7 @@
 ;;; This controls macro expansion, and isn't changable at run-time You will
 ;;; probably want to set this to nil if you want good performance at
 ;;; production time.
-(defconstant *type-check?* #+(or cmu Genera) nil #-(or cmu Genera) t)
+(defconstant *type-check?* #+(or Genera Minima) nil #-(or Genera Minima) t)
 
 ;; TYPE? is used to allow the code to do error checking at a different level from
 ;; the declarations.  It also does some optimizations for systems that don't have
@@ -1910,23 +1928,16 @@
 ;; include range checks.  You can modify TYPE? to do less extensive checking
 ;; for these types if you desire.
 
-;;
-;; ### This comment is a lie!  TYPE? is really also used for run-time type
-;; dispatching, not just type checking.  -- Ram.
-
 (defmacro type? (object type)
-  #+cmu
-  `(typep ,object ,type)
-  #-cmu
   (if (not (constantp type))
       `(typep ,object ,type)
     (progn
       (setq type (eval type))
-      #+(or Genera explorer)
+      #+(or Genera explorer Minima)
       (if *type-check?*
 	  `(locally (declare (optimize safety)) (typep ,object ',type))
 	`(typep ,object ',type))
-      #-(or Genera explorer)
+      #-(or Genera explorer Minima)
       (let ((predicate (assoc type
 			      '((drawable drawable-p) (window window-p)
 				(pixmap pixmap-p) (cursor cursor-p)
@@ -1950,7 +1961,7 @@
   (x-error 'x-type-error
 	   :datum object
 	   :expected-type type
-	   #-CMU :error-string #+CMU :type-string error-string))
+	   :type-string error-string))
 
 
 ;;-----------------------------------------------------------------------------
@@ -1969,69 +1980,41 @@
       (apply #'x-cerror "Ignore" error-key :display display :error-key error-key key-vals)
       (apply #'x-error error-key :display display :error-key error-key key-vals)))
 
-#+(and lispm (not Genera) (not ansi-common-lisp))
+#+(and lispm (not Genera) (not clx-ansi-common-lisp))
 (defun x-error (condition &rest keyargs)
   (apply #'sys:signal condition keyargs))
 
-#+(and lispm (not Genera) (not ansi-common-lisp))
+#+(and lispm (not Genera) (not clx-ansi-common-lisp))
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (sys:signal (apply #'zl:make-condition condition keyargs)
 	      :proceed-types proceed-format-string))
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (defun x-error (condition &rest keyargs)
   (declare (dbg:error-reporter))
   (apply #'sys:signal condition keyargs))
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (declare (dbg:error-reporter))
   (apply #'sys:signal condition :continue-format-string proceed-format-string keyargs))
 
-#+(or ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0)
 (defun x-error (condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'error condition keyargs))
 
-#+(or ansi-common-lisp excl lcl3.0)
+#+(or clx-ansi-common-lisp excl lcl3.0)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (declare (dynamic-extent keyargs))
   (apply #'cerror proceed-format-string condition keyargs))
 
-;;; X-ERROR for CMU Common Lisp
-;;;
-;;; We detect a couple condition types for which we disable event handling in
-;;; our system.  This prevents going into the debugger or returning to a
-;;; command prompt with CLX repeatedly seeing the same condition.  This occurs
-;;; because CMU Common Lisp provides for all events (that is, X, input on file
-;;; descriptors, Mach messages, etc.) to come through one routine anyone can
-;;; use to wait for input.
-;;;
-#+CMU
-(defun x-error (condition &rest keyargs)
-  (let ((condx (apply #'make-condition condition keyargs)))
-    #|This condition no longer exists.
-    (when (eq condition 'server-disconnect)
-      (let ((disp (server-disconnect-display condx)))
-	(warn "Disabled event handling on ~S." disp)
-	(ext::disable-clx-event-handling disp)))|#
-    (when (eq condition 'closed-display)
-      (let ((disp (closed-display-display condx)))
-	(warn "Disabled event handling on ~S." disp)
-	(ext::disable-clx-event-handling disp)))
-    (error condx)))
-
-#+CMU
-(defun x-cerror (proceed-format-string condition &rest keyargs)
-  (apply #'cerror proceed-format-string condition keyargs))
-
-
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
 (defun x-error (condition &rest keyargs)
   (error "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
 
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
 (defun x-cerror (proceed-format-string condition &rest keyargs)
   (cerror proceed-format-string "X-Error: ~a"
 	 (princ-to-string (apply #'make-condition condition keyargs))))
@@ -2041,9 +2024,27 @@
 ;; Where option is one of: (:documentation doc-string) (:conc-name symbol-or-string)
 ;; or (:report exp)
 
-#+(and lispm (not ansi-common-lisp))
-(defmacro define-condition (name parents &body options)
-  (let ((slots (pop options))
+#+lcl3.0 
+(defmacro define-condition (name parent-types &optional slots &rest args)
+  `(lcl:define-condition
+     ,name (,(first parent-types))
+     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
+	      slots)
+     ,@args))
+
+#+(and excl (not clx-ansi-common-lisp))
+(defmacro define-condition (name parent-types &optional slots &rest args)
+  `(excl::define-condition
+     ,name (,(first parent-types))
+     ,(mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
+	      slots)
+     ,@args))
+
+#+(and lispm (not clx-ansi-common-lisp))
+(defmacro define-condition (name parent-types &body options)
+  (let ((slot-names
+	  (mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
+		  (pop options)))
 	(documentation nil)
 	(conc-name (concatenate 'string (string name) "-"))	       
 	(reporter nil))
@@ -2053,16 +2054,16 @@
 	(:conc-name (setq conc-name (string (second item))))
 	(:report (setq reporter (second item)))))
     `(within-definition (,name define-condition)
-       (zl:defflavor ,name ,slots ,parents
+       (zl:defflavor ,name ,slot-names ,parent-types
 	 :initable-instance-variables
 	 #-Genera
 	 (:accessor-prefix ,conc-name)
 	 #+Genera
 	 (:conc-name ,conc-name)
 	 #-Genera
-	 (:outside-accessible-instance-variables ,@slots)
+	 (:outside-accessible-instance-variables ,@slot-names)
 	 #+Genera
-	 (:readable-instance-variables ,@slots))
+	 (:readable-instance-variables ,@slot-names))
        ,(when reporter ;; when no reporter, parent's is inherited
 	  `(zl:defmethod #-Genera (,name :report)
 	                 #+Genera (dbg:report ,name) (stream)
@@ -2075,72 +2076,74 @@
 	  `(setf (documentation name 'type) ,documentation))
        ',name)))
 
-#+(and lispm (not Genera) (not ansi-common-lisp))
+#+(and lispm (not Genera) (not clx-ansi-common-lisp))
 (zl:defflavor x-error () (global:error))
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (scl:defflavor x-error
 	((dbg:proceed-types '(:continue))	;
 	 continue-format-string)
 	(sys:error)
   (:initable-instance-variables continue-format-string))
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (scl:defmethod (scl:make-instance x-error) (&rest ignore)
   (when (not (sys:variable-boundp continue-format-string))
     (setf dbg:proceed-types (remove :continue dbg:proceed-types))))
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (scl:defmethod (dbg:proceed x-error :continue) ()
   :continue)
 
-#+(and Genera (not ansi-common-lisp))
+#+(and Genera (not clx-ansi-common-lisp))
 (sys:defmethod (dbg:document-proceed-type x-error :continue) (stream)
   (format stream continue-format-string))
 
-#+(or ansi-common-lisp excl lcl3.0 CMU)
-(define-condition x-error (error))
+#+(or clx-ansi-common-lisp excl lcl3.0)
+(define-condition x-error (error) ())
 
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
 (defstruct x-error
   report-function)
 
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
-(defun reporter-for-condition (name)
-  (xintern "." name '-reporter.))
-
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
-(defmacro define-condition (name parents &body options)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
+(defmacro define-condition (name parent-types &body options)
   ;; Define a structure that when printed displays an error message
-  (let ((slots (pop options))
-	(documentation nil)
-	(conc-name (concatenate 'string (string name) "-"))	       
-	(reporter nil)
-	(condition (gensym))
-	(stream (gensym))
-	(report-function (reporter-for-condition name)))
-    (dolist (item options)
-      (ecase (first item)
-	(:documentation (setq documentation (second item)))
-	(:conc-name (setq conc-name (string (second item))))
-	(:report (setq reporter (second item)))))
-    (unless reporter (setq report-function (reporter-for-condition (car parents))))
-    `(within-definition (,name define-condition)
-       (defstruct (,name (:conc-name ,(intern conc-name))
-		         (:print-function condition-print)
-			 (:include ,(car parents) (report-function ',report-function)))
-	 ,@slots)
-       ,(when documentation
-	  `(setf (documentation name 'type) ,documentation))
-       ,(when reporter
-	  `(defun ,report-function (,condition ,stream)
-	     ,(if (stringp reporter)
-		  `(write-string ,reporter ,stream)
-		`(,reporter ,condition ,stream))
-	     ,condition))
-       ',name)))
+  (flet ((reporter-for-condition (name)
+	   (xintern "." name '-reporter.)))
+    (let ((slot-names
+	    (mapcar #'(lambda (slot) (if (consp slot) (car slot) slot))
+		    (pop options)))
+	  (documentation nil)
+	  (conc-name (concatenate 'string (string name) "-"))	       
+	  (reporter nil)
+	  (condition (gensym))
+	  (stream (gensym))
+	  (report-function (reporter-for-condition name)))
+      (dolist (item options)
+	(ecase (first item)
+	  (:documentation (setq documentation (second item)))
+	  (:conc-name (setq conc-name (string (second item))))
+	  (:report (setq reporter (second item)))))
+      (unless reporter
+	(setq report-function (reporter-for-condition (first parent-types))))
+      `(within-definition (,name define-condition)
+	 (defstruct (,name (:conc-name ,(intern conc-name))
+		     (:print-function condition-print)
+		     (:include ,(first parent-types)
+		      (report-function ',report-function)))
+	   ,@slot-names)
+	 ,(when documentation
+	    `(setf (documentation name 'type) ,documentation))
+	 ,(when reporter
+	    `(defun ,report-function (,condition ,stream)
+	       ,(if (stringp reporter)
+		    `(write-string ,reporter ,stream)
+		  `(,reporter ,condition ,stream))
+	       ,condition))
+	 ',name))))
 
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
 (defun condition-print (condition stream depth)
   (declare (type x-error condition)
 	   (type stream stream)
@@ -2150,28 +2153,29 @@
     (funcall (x-error-report-function condition) condition stream))
   condition)
   
-#-(or lispm ansi-common-lisp excl lcl3.0 CMU)
+#-(or lispm clx-ansi-common-lisp excl lcl3.0)
 (defun make-condition (type &rest slot-initializations)
   (declare (dynamic-extent slot-initializations))
   (let ((make-function (intern (concatenate 'string (string 'make-) (string type))
 			       (symbol-package type))))
     (apply make-function slot-initializations)))
 
-#-(or ansi-common-lisp excl lcl3.0 CMU)
+#-(or clx-ansi-common-lisp excl lcl3.0)
 (define-condition type-error (x-error)
-  (datum
-   expected-type)
-  (:report (lambda (condition stream)
-	     (format stream "~s isn't a ~a"
-		     (type-error-datum condition)
-		     (type-error-expected-type condition)))))
+  ((datum :reader type-error-datum :initarg :datum)
+   (expected-type :reader type-error-expected-type :initarg :expected-type))
+  (:report
+    (lambda (condition stream)
+      (format stream "~s isn't a ~a"
+	      (type-error-datum condition)
+	      (type-error-expected-type condition)))))
 
 
 ;;-----------------------------------------------------------------------------
 ;;  HOST hacking
 ;;-----------------------------------------------------------------------------
 
-#-(or explorer Genera)
+#-(or explorer Genera Minima)
 (defun host-address (host &optional (family :internet))
   ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
   ;; and cdr is a list of network address bytes.
@@ -2227,6 +2231,29 @@
 		    ((:chaos :DECnet)
 		     (list family (ldb (byte 8 0) address) (ldb (byte 8 8) address))))))))))
 
+#+Minima
+(defun host-address (host &optional (family :internet))
+  ;; Return a list whose car is the family keyword (:internet :DECnet :Chaos)
+  ;; and cdr is a list of network address bytes.
+  (declare (type (or stringable list) host)
+	   (type (or null (member :internet :decnet :chaos) card8) family))
+  (declare (values list))
+  (check-type family (member :internet))
+  (or (loop with (num delim)
+	    repeat 4
+	    for idx = 0 then (1+ delim)
+	    when (and delim (or (= delim (length host))
+				(char-not-equal (char host delim) #\.)))
+	      return nil
+	    do (multiple-value-setq (num delim)
+	         (parse-integer host :start idx :junk-allowed t))
+	    when (or (null num) (< num 0) (> num 255))
+	      return nil
+	    else collect num into nums
+	    finally (return (when (= delim (length host))
+			      (cons :internet nums))))
+      (error "Invalid internet address [~A]." host)))
+
 #+explorer ;; This isn't required, but it helps make sense of the results from access-hosts
 (defun get-host (host-object)
   ;; host-object is a list whose car is the family keyword (:internet :DECnet :Chaos)
@@ -2281,7 +2308,8 @@
 ;;; want to make this expand to T, as it makes the code more compact.
 
 (defmacro use-closures ()
-  #+lispm t #-lispm nil)
+  #+(or lispm Minima) t
+  #-(or lispm Minima) nil)
 
 
 ;;-----------------------------------------------------------------------------
@@ -2293,8 +2321,7 @@
 ;;; a resource manager isn't running.
 
 (defun default-resources-pathname ()
-  (when #+(or unix mach) t
-        #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
+  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
     (merge-pathnames (user-homedir-pathname) (pathname ".Xdefaults"))))
 
 
@@ -2303,13 +2330,11 @@
 ;;; defaults have been loaded.
 
 (defun resources-pathname ()
-  (when #+(or unix mach) t
-        #-(or unix mach) (search "Unix" (software-type) :test #'char-equal)
-    (or #+(or excl lcl3.0 CMU)
-	(let ((string #-CMU (#+excl sys:getenv
-				    #+lcl3.0 lcl:environment-variable
-				    "XENVIRONMENT")
-		      #+CMU (cdr (assoc :xenvironment ext:*environment-list*))))
+  (when #+unix t #-unix (search "Unix" (software-type) :test #'char-equal)
+    (or #+(or excl (and lcl3.0 (not vax-vms)))
+	(let ((string (#+excl sys:getenv
+		       #+lcl3.0 lcl:environment-variable
+		       "XENVIRONMENT")))
 	  (when string
 	    (pathname string)))
 	(merge-pathnames
@@ -2324,8 +2349,7 @@
 ;; GC stuff
 ;;-----------------------------------------------------------------------------
 
-#+Genera
-(si:define-gc-cleanup clx-cleanup ("CLX Cleanup")
+(defun gc-cleanup ()
   (declare (special *event-free-list*
 		    *pending-command-free-list*
 		    *reply-buffer-free-lists*
@@ -2333,32 +2357,121 @@
 		    *temp-gcontext-cache*))
   (setq *event-free-list* nil)
   (setq *pending-command-free-list* nil)
-  (fill *reply-buffer-free-lists* nil)
+  (when (boundp '*reply-buffer-free-lists*)
+    (fill *reply-buffer-free-lists* nil))
   (setq *gcontext-local-state-cache* nil)
-  (setq *temp-gcontext-cache* nil))
+  (setq *temp-gcontext-cache* nil)
+  nil)
+
+#+Genera
+(si:define-gc-cleanup clx-cleanup ("CLX Cleanup")
+  (gc-cleanup))
+
+
+;;-----------------------------------------------------------------------------
+;; WITH-STANDARD-IO-SYNTAX equivalent, used in (SETF WM-COMMAND)
+;;-----------------------------------------------------------------------------
+
+#-(or clx-ansi-common-lisp Genera)
+(defun with-standard-io-syntax-function (function)
+  (declare #+lispm
+	   (sys:downward-funarg function))
+  (let ((*package* (find-package :user))
+	(*print-array* t)
+	(*print-base* 10)
+	(*print-case* :upcase)
+	(*print-circle* nil)
+	(*print-escape* t)
+	(*print-gensym* t)
+	(*print-length* nil)
+	(*print-level* nil)
+	(*print-pretty* nil)
+	(*print-radix* nil)
+	(*read-base* 10)
+	(*read-default-float-format* 'single-float)
+	(*read-suppress* nil)
+	#+ticl (ticl:*print-structure* t)
+	#+lucid (lucid::*print-structure* t))
+    (funcall function)))
+
+#-(or clx-ansi-common-lisp Genera)
+(defmacro with-standard-io-syntax (&body body)
+  `(flet ((.with-standard-io-syntax-body. () ,@body))
+     (with-standard-io-syntax-function #'.with-standard-io-syntax-body.)))
+
+
+;;-----------------------------------------------------------------------------
+;; DEFAULT-KEYSYM-TRANSLATE
+;;-----------------------------------------------------------------------------
+
+;;; If object is a character, char-bits are set from state.
+;;;
+;;; [the following isn't implemented (should it be?)]
+;;; If object is a list, it is an alist with entries:
+;;; (base-char [modifiers] [mask-modifiers])
+;;; When MODIFIERS are specified, this character translation
+;;; will only take effect when the specified modifiers are pressed.
+;;; MASK-MODIFIERS can be used to specify a set of modifiers to ignore.
+;;; When MASK-MODIFIERS is missing, all other modifiers are ignored.
+;;; In ambiguous cases, the most specific translation is used.
+
+#+(or (not clx-ansi-common-lisp) lispm allegro)
+(defun default-keysym-translate (display state object)
+  (declare (type display display)
+	   (type card16 state)
+	   (type t object)
+	   (values t)
+	   (special left-meta-keysym right-meta-keysym
+		    left-super-keysym right-super-keysym
+		    left-hyper-keysym right-hyper-keysym))
+  (when (characterp object)
+    (when (logbitp (position :control *state-mask-vector*) state)
+      (setf (char-bit object :control) 1))
+    (when (or (state-keysymp display state left-meta-keysym)
+	      (state-keysymp display state right-meta-keysym))
+      (setf (char-bit object :meta) 1))
+    (when (or (state-keysymp display state left-super-keysym)
+	      (state-keysymp display state right-super-keysym))
+      (setf (char-bit object :super) 1))
+    (when (or (state-keysymp display state left-hyper-keysym)
+	      (state-keysymp display state right-hyper-keysym))
+      (setf (char-bit object :hyper) 1)))
+  object)
+
+#+(and clx-ansi-common-lisp (not lispm) (not allegro))
+(defun default-keysym-translate (display state object)
+  (declare (type display display)
+	   (type card16 state)
+	   (type t object)
+	   (ignore display state)
+	   (values t))
+  object)
 
 
 ;;-----------------------------------------------------------------------------
 ;; Image stuff
 ;;-----------------------------------------------------------------------------
 
+;;; Types
+
 (deftype pixarray-1-element-type ()
   'bit)
 
 (deftype pixarray-4-element-type ()
-  'card4)
+  '(unsigned-byte 4))
 
 (deftype pixarray-8-element-type ()
-  'card8)
+  '(unsigned-byte 8))
 
 (deftype pixarray-16-element-type ()
-  'card16)
+  '(unsigned-byte 16))
 
 (deftype pixarray-24-element-type ()
-  #-Genera 'card24 #+Genera 'int32)
+  '(unsigned-byte 24))
 
 (deftype pixarray-32-element-type ()
-  #-Genera 'card32 #+Genera 'int32)
+  #-(or Genera Minima) '(unsigned-byte 32)
+  #+(or Genera Minima) 'fixnum)
 
 (deftype pixarray-1  ()
   '(array pixarray-1-element-type (* *)))
@@ -2384,24 +2497,57 @@
 (deftype bitmap ()
   'pixarray-1)
 
+;;; WITH-UNDERLYING-SIMPLE-VECTOR 
+
+#+Genera
+(defmacro with-underlying-simple-vector
+	  ((variable element-type pixarray) &body body)
+  (let ((bits-per-element
+	  (sys:array-bits-per-element
+	    (symbol-value (sys:type-array-element-type element-type)))))
+    `(scl:stack-let ((,variable
+		      (make-array
+			(index-ceiling
+			  (index* (array-total-size ,pixarray)
+				  (sys:array-element-size ,pixarray))
+			  ,bits-per-element)
+			:element-type ',element-type
+			:displaced-to ,pixarray)))
+       (declare (array-register ,variable))
+       ,@body)))
+
+#+lcl3.0
+(defmacro with-underlying-simple-vector
+	  ((variable element-type pixarray) &body body)
+  `(let ((,variable (sys:underlying-simple-vector ,pixarray)))
+     (declare (type (simple-array ,element-type (*)) ,variable))
+     ,@body))
+
+#+excl
+(defmacro with-underlying-simple-vector
+	  ((variable element-type pixarray) &body body)
+  `(let ((,variable (cdr (excl::ah_data ,pixarray))))
+     (declare (type (simple-array ,element-type (*)) ,variable))
+     ,@body))
 
 ;;; These are used to read and write pixels from and to CARD8s.
 
 ;;; READ-IMAGE-LOAD-BYTE is used to extract 1 and 4 bit pixels from CARD8s.
 
 (defmacro read-image-load-byte (size position integer)
+  (unless *image-bit-lsb-first-p* (setq position (- 7 position)))
   `(the (unsigned-byte ,size)
 	(#-Genera ldb #+Genera sys:%logldb
-	 (byte ,size ,(if *image-bit-lsb-first-p* position (- 7 position)))
+	 (byte ,size ,position)
 	 (the card8 ,integer))))
 
 ;;; READ-IMAGE-ASSEMBLE-BYTES is used to build 16, 24 and 32 bit pixels from
 ;;; the appropriate number of CARD8s.
 
 (defmacro read-image-assemble-bytes (&rest bytes)
-  (let* ((bytes (if *image-byte-lsb-first-p* bytes (reverse bytes)))
-	 (it (first bytes))
-	 (count 0))
+  (unless *image-byte-lsb-first-p* (setq bytes (reverse bytes)))
+  (let ((it (first bytes))
+	(count 0))
     (dolist (byte (rest bytes))
       (setq it
 	    `(#-Genera dpb #+Genera sys:%logdpb 
@@ -2416,23 +2562,22 @@
 
 (defmacro write-image-load-byte (position integer integer-size)
   integer-size
+  (unless *image-byte-lsb-first-p* (setq position (- integer-size 8 position)))
   `(the card8
 	(#-Genera ldb #+Genera sys:%logldb
-	  (byte 8 ,(if *image-byte-lsb-first-p*
-		       position
-		     (- integer-size 8 position)))
-	  #-Genera (the (unsigned-byte ,integer-size) ,integer)
-	  #+Genera ,integer
-	  )))
+	 (byte 8 ,position)
+	 #-Genera (the (unsigned-byte ,integer-size) ,integer)
+	 #+Genera ,integer
+	 )))
 
 ;;; WRITE-IMAGE-ASSEMBLE-BYTES is used to build a CARD8 from 1 or 4 bit
 ;;; pixels.
 
 (defmacro write-image-assemble-bytes (&rest bytes)
-  (let* ((bytes (if *image-bit-lsb-first-p* bytes (reverse bytes)))
-	 (size (floor 8 (length bytes)))
-	 (it (first bytes))
-	 (count 0))
+  (unless *image-bit-lsb-first-p* (setq bytes (reverse bytes)))
+  (let ((size (floor 8 (length bytes)))
+	(it (first bytes))
+	(count 0))
     (dolist (byte (rest bytes))
       (setq it `(#-Genera dpb #+Genera sys:%logdpb
 		 (the (unsigned-byte ,size) ,byte)
@@ -2440,15 +2585,95 @@
 		 (the (unsigned-byte ,count) ,it))))
     `(the card8 ,it)))
 
-#+cmu
-(progn
-  (declaim (inline underlying-simple-vector))
-  (defun underlying-simple-vector (x)
-    (lisp::with-array-data ((res x)
-			    (start)
-			    (end))
-      (declare (ignore start end))
-      res)))
+#+(or Genera lcl3.0 excl)
+(defvar *computed-image-byte-lsb-first-p* *image-byte-lsb-first-p*)
+
+#+(or Genera lcl3.0 excl)
+(defvar *computed-image-bit-lsb-first-p* *image-bit-lsb-first-p*)
+
+;;; The following table gives the bit ordering within bytes (when accessed
+;;; sequentially) for a scanline containing 32 bits, with bits numbered 0 to
+;;; 31, where bit 0 should be leftmost on the display.  For a given byte
+;;; labelled A-B, A is for the most significant bit of the byte, and B is
+;;; for the least significant bit.
+;;; 
+;;; legend:
+;;; 	1   scanline-unit = 8
+;;; 	2   scanline-unit = 16
+;;; 	4   scanline-unit = 32
+;;; 	M   byte-order = MostSignificant
+;;; 	L   byte-order = LeastSignificant
+;;; 	m   bit-order = MostSignificant
+;;; 	l   bit-order = LeastSignificant
+;;; 
+;;; 
+;;; format	ordering
+;;; 
+;;; 1Mm	00-07 08-15 16-23 24-31
+;;; 2Mm	00-07 08-15 16-23 24-31
+;;; 4Mm	00-07 08-15 16-23 24-31
+;;; 1Ml	07-00 15-08 23-16 31-24
+;;; 2Ml	15-08 07-00 31-24 23-16
+;;; 4Ml	31-24 23-16 15-08 07-00
+;;; 1Lm	00-07 08-15 16-23 24-31
+;;; 2Lm	08-15 00-07 24-31 16-23
+;;; 4Lm	24-31 16-23 08-15 00-07
+;;; 1Ll	07-00 15-08 23-16 31-24
+;;; 2Ll	07-00 15-08 23-16 31-24
+;;; 4Ll	07-00 15-08 23-16 31-24
+
+#+(or Genera lcl3.0 excl) 
+(defconstant
+  *image-bit-ordering-table*
+  '(((1 (00 07) (08 15) (16 23) (24 31)) (nil nil))
+    ((2 (00 07) (08 15) (16 23) (24 31)) (nil nil))
+    ((4 (00 07) (08 15) (16 23) (24 31)) (nil nil))
+    ((1 (07 00) (15 08) (23 16) (31 24)) (nil t))
+    ((2 (15 08) (07 00) (31 24) (23 16)) (nil t))
+    ((4 (31 24) (23 16) (15 08) (07 00)) (nil t))
+    ((1 (00 07) (08 15) (16 23) (24 31)) (t   nil))
+    ((2 (08 15) (00 07) (24 31) (16 23)) (t   nil))
+    ((4 (24 31) (16 23) (08 15) (00 07)) (t   nil))
+    ((1 (07 00) (15 08) (23 16) (31 24)) (t   t))
+    ((2 (07 00) (15 08) (23 16) (31 24)) (t   t))
+    ((4 (07 00) (15 08) (23 16) (31 24)) (t   t))))
+  
+#+(or Genera lcl3.0 excl) 
+(defun compute-image-byte-and-bit-ordering ()
+  (declare (values image-byte-lsb-first-p image-bit-lsb-first-p))
+  ;; First compute the ordering 
+  (let ((ordering nil)
+	(a (make-array '(1 32) :element-type 'bit :initial-element 0)))
+    (dotimes (i 4)
+      (push (flet ((bitpos (a i n)
+		     (declare (optimize (speed 3) (safety 0) (space 0)))
+		     (declare (type (simple-array bit (* *)) a)
+			      (type fixnum i n))
+		     (with-underlying-simple-vector (v (unsigned-byte 8) a)
+		       (prog2
+			 (setf (aref v i) n)
+			 (dotimes (i 32)
+			   (unless (zerop (aref a 0 i))
+			     (return i)))
+			 (setf (aref v i) 0)))))
+	      (list (bitpos a i #b10000000)
+		    (bitpos a i #b00000001)))
+	    ordering))
+    (setq ordering (cons (floor *image-unit* 8) (nreverse ordering)))
+    ;; Now from the ordering, compute byte-lsb-first-p and bit-lsb-first-p
+    (let ((byte-and-bit-ordering
+	    (second (assoc ordering *image-bit-ordering-table*
+			   :test #'equal))))
+      (unless byte-and-bit-ordering
+	(error "Couldn't determine image byte and bit ordering~@
+                measured image ordering = ~A"
+	       ordering))
+      (values-list byte-and-bit-ordering))))
+
+#+(or Genera lcl3.0 excl) 
+(multiple-value-setq
+  (*computed-image-byte-lsb-first-p* *computed-image-bit-lsb-first-p*)
+  (compute-image-byte-and-bit-ordering))
 
 ;;; If you can write fast routines that can read and write pixarrays out of a
 ;;; buffer-bytes, do it!  It makes the image code a lot faster.  The
@@ -2457,680 +2682,562 @@
 
 ;;; FAST-READ-PIXARRAY - fill part of a pixarray from a buffer of card8s
 
-#+(or lcl3.0 excl cmu)
+#+(or lcl3.0 excl)
 (defun fast-read-pixarray-1 (buffer-bbuf index array x y width height  
-			     padded-bytes-per-line)
+			     padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-1 array)
 	   (type card16 x y width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index-ceiling x 8))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y))
-	  (left-bits (the array-index (mod (the fixnum (- x)) 8)))
-	  (right-bits (index-mod (index- width left-bits) 8))
-	  (middle-bits (the fixnum (- (the fixnum (- width left-bits))
-				      right-bits)))
-	  (middle-bytes (index-floor middle-bits 8)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-1-element-type (*)) vector)
-	       (fixnum middle-bits)
-	       (type array-index start y
-		     left-bits right-bits middle-bytes))
-      (cond ((< middle-bits 0)
-	     (let ((byte (aref buffer-bbuf (index1- start)))
-		   (x (array-row-major-index array y left-bits)))
-	       (declare (type card8 byte)
-			(type array-index x))
-	       (when (index> right-bits 6)
-		 (setf (aref vector (index- x 1))
-		       (read-image-load-byte 1 7 byte)))
-	       (when (and (index> left-bits 1)
-			  (index> right-bits 5))
-		 (setf (aref vector (index- x 2))
-		       (read-image-load-byte 1 6 byte)))
-	       (when (and (index> left-bits 2)
-			  (index> right-bits 4))
-		 (setf (aref vector (index- x 3))
-		       (read-image-load-byte 1 5 byte)))
-	       (when (and (index> left-bits 3)
-			  (index> right-bits 3))
-		 (setf (aref vector (index- x 4))
-		       (read-image-load-byte 1 4 byte)))
-	       (when (and (index> left-bits 4)
-			  (index> right-bits 2))
-		 (setf (aref vector (index- x 5))
-		       (read-image-load-byte 1 3 byte)))
-	       (when (and (index> left-bits 5)
-			  (index> right-bits 1))
-		 (setf (aref vector (index- x 6))
-		       (read-image-load-byte 1 2 byte)))
-	       (when (index> left-bits 6)
-		 (setf (aref vector (index- x 7))
-		       (read-image-load-byte 1 1 byte)))))
-	    (t
-	     (unless (index-zerop left-bits)
+    (with-underlying-simple-vector (vector pixarray-1-element-type array)
+      (do* ((start (index+ index
+			   (index* y padded-bytes-per-line)
+			   (index-ceiling x 8))
+		   (index+ start padded-bytes-per-line))
+	    (y 0 (index1+ y))
+	    (left-bits (index-mod (index- x) 8))
+	    (right-bits (index-mod (index- width left-bits) 8))
+	    (middle-bits (index- width left-bits right-bits))
+	    (middle-bytes (index-floor middle-bits 8)))
+	   ((index>= y height))
+	(declare (type array-index start y
+		       left-bits right-bits middle-bits middle-bytes))
+	(cond ((index< middle-bits 0)
 	       (let ((byte (aref buffer-bbuf (index1- start)))
 		     (x (array-row-major-index array y left-bits)))
 		 (declare (type card8 byte)
 			  (type array-index x))
-		 (setf (aref vector (index- x 1))
-		       (read-image-load-byte 1 7 byte))
-		 (when (index> left-bits 1)
+		 (when (index> right-bits 6)
+		   (setf (aref vector (index- x 1))
+			 (read-image-load-byte 1 7 byte)))
+		 (when (and (index> left-bits 1)
+			    (index> right-bits 5))
 		   (setf (aref vector (index- x 2))
+			 (read-image-load-byte 1 6 byte)))
+		 (when (and (index> left-bits 2)
+			    (index> right-bits 4))
+		   (setf (aref vector (index- x 3))
+			 (read-image-load-byte 1 5 byte)))
+		 (when (and (index> left-bits 3)
+			    (index> right-bits 3))
+		   (setf (aref vector (index- x 4))
+			 (read-image-load-byte 1 4 byte)))
+		 (when (and (index> left-bits 4)
+			    (index> right-bits 2))
+		   (setf (aref vector (index- x 5))
+			 (read-image-load-byte 1 3 byte)))
+		 (when (and (index> left-bits 5)
+			    (index> right-bits 1))
+		   (setf (aref vector (index- x 6))
+			 (read-image-load-byte 1 2 byte)))
+		 (when (index> left-bits 6)
+		   (setf (aref vector (index- x 7))
+			 (read-image-load-byte 1 1 byte)))))
+	      (t
+	       (unless (index-zerop left-bits)
+		 (let ((byte (aref buffer-bbuf (index1- start)))
+		       (x (array-row-major-index array y left-bits)))
+		   (declare (type card8 byte)
+			    (type array-index x))
+		   (setf (aref vector (index- x 1))
+			 (read-image-load-byte 1 7 byte))
+		   (when (index> left-bits 1)
+		     (setf (aref vector (index- x 2))
+			   (read-image-load-byte 1 6 byte))
+		     (when (index> left-bits 2)
+		       (setf (aref vector (index- x 3))
+			     (read-image-load-byte 1 5 byte))
+		       (when (index> left-bits 3)
+			 (setf (aref vector (index- x 4))
+			       (read-image-load-byte 1 4 byte))
+			 (when (index> left-bits 4)
+			   (setf (aref vector (index- x 5))
+				 (read-image-load-byte 1 3 byte))
+			   (when (index> left-bits 5)
+			     (setf (aref vector (index- x 6))
+				   (read-image-load-byte 1 2 byte))
+			     (when (index> left-bits 6)
+			       (setf (aref vector (index- x 7))
+				     (read-image-load-byte 1 1 byte))
+			       ))))))))
+	       (do* ((end (index+ start middle-bytes))
+		     (i start (index1+ i))
+		     (x (array-row-major-index array y left-bits) (index+ x 8)))
+		    ((index>= i end)
+		     (unless (index-zerop right-bits)
+		       (let ((byte (aref buffer-bbuf end))
+			     (x (array-row-major-index
+				  array y (index+ left-bits middle-bits))))
+			 (declare (type card8 byte)
+				  (type array-index x))
+			 (setf (aref vector (index+ x 0))
+			       (read-image-load-byte 1 0 byte))
+			 (when (index> right-bits 1)
+			   (setf (aref vector (index+ x 1))
+				 (read-image-load-byte 1 1 byte))
+			   (when (index> right-bits 2)
+			     (setf (aref vector (index+ x 2))
+				   (read-image-load-byte 1 2 byte))
+			     (when (index> right-bits 3)
+			       (setf (aref vector (index+ x 3))
+				     (read-image-load-byte 1 3 byte))
+			       (when (index> right-bits 4)
+				 (setf (aref vector (index+ x 4))
+				       (read-image-load-byte 1 4 byte))
+				 (when (index> right-bits 5)
+				   (setf (aref vector (index+ x 5))
+					 (read-image-load-byte 1 5 byte))
+				   (when (index> right-bits 6)
+				     (setf (aref vector (index+ x 6))
+					   (read-image-load-byte 1 6 byte))
+				     )))))))))
+		 (declare (type array-index end i x))
+		 (let ((byte (aref buffer-bbuf i)))
+		   (declare (type card8 byte))
+		   (setf (aref vector (index+ x 0))
+			 (read-image-load-byte 1 0 byte))
+		   (setf (aref vector (index+ x 1))
+			 (read-image-load-byte 1 1 byte))
+		   (setf (aref vector (index+ x 2))
+			 (read-image-load-byte 1 2 byte))
+		   (setf (aref vector (index+ x 3))
+			 (read-image-load-byte 1 3 byte))
+		   (setf (aref vector (index+ x 4))
+			 (read-image-load-byte 1 4 byte))
+		   (setf (aref vector (index+ x 5))
+			 (read-image-load-byte 1 5 byte))
+		   (setf (aref vector (index+ x 6))
 			 (read-image-load-byte 1 6 byte))
-		   (when (index> left-bits 2)
-		     (setf (aref vector (index- x 3))
-			   (read-image-load-byte 1 5 byte))
-		     (when (index> left-bits 3)
-		       (setf (aref vector (index- x 4))
-			     (read-image-load-byte 1 4 byte))
-		       (when (index> left-bits 4)
-			 (setf (aref vector (index- x 5))
-			       (read-image-load-byte 1 3 byte))
-			 (when (index> left-bits 5)
-			   (setf (aref vector (index- x 6))
-				 (read-image-load-byte 1 2 byte))
-			   (when (index> left-bits 6)
-			     (setf (aref vector (index- x 7))
-				   (read-image-load-byte 1 1 byte))
-			     ))))))))
-	     (do* ((end (index+ start middle-bytes))
-		   (i start (index1+ i))
-		   (x (array-row-major-index array y left-bits) (index+ x 8)))
-		  ((index>= i end)
-		   (unless (index-zerop right-bits)
-		     (let ((byte (aref buffer-bbuf end))
-			   (x (array-row-major-index
-				array y (index+ left-bits middle-bits))))
-		       (declare (type card8 byte)
-				(type array-index x))
-		       (setf (aref vector (index+ x 0))
-			     (read-image-load-byte 1 0 byte))
-		       (when (index> right-bits 1)
-			 (setf (aref vector (index+ x 1))
-			       (read-image-load-byte 1 1 byte))
-			 (when (index> right-bits 2)
-			   (setf (aref vector (index+ x 2))
-				 (read-image-load-byte 1 2 byte))
-			   (when (index> right-bits 3)
-			     (setf (aref vector (index+ x 3))
-				   (read-image-load-byte 1 3 byte))
-			     (when (index> right-bits 4)
-			       (setf (aref vector (index+ x 4))
-				     (read-image-load-byte 1 4 byte))
-			       (when (index> right-bits 5)
-				 (setf (aref vector (index+ x 5))
-				       (read-image-load-byte 1 5 byte))
-				 (when (index> right-bits 6)
-				   (setf (aref vector (index+ x 6))
-					 (read-image-load-byte 1 6 byte))
-				   )))))))))
-	       (declare (type array-index end i x))
-	       (let ((byte (aref buffer-bbuf i)))
-		 (declare (type card8 byte))
-		 (setf (aref vector (index+ x 0))
-		       (read-image-load-byte 1 0 byte))
-		 (setf (aref vector (index+ x 1))
-		       (read-image-load-byte 1 1 byte))
-		 (setf (aref vector (index+ x 2))
-		       (read-image-load-byte 1 2 byte))
-		 (setf (aref vector (index+ x 3))
-		       (read-image-load-byte 1 3 byte))
-		 (setf (aref vector (index+ x 4))
-		       (read-image-load-byte 1 4 byte))
-		 (setf (aref vector (index+ x 5))
-		       (read-image-load-byte 1 5 byte))
-		 (setf (aref vector (index+ x 6))
-		       (read-image-load-byte 1 6 byte))
-		 (setf (aref vector (index+ x 7))
-		       (read-image-load-byte 1 7 byte))))
-	     ))))
+		   (setf (aref vector (index+ x 7))
+			 (read-image-load-byte 1 7 byte))))
+	       )))))
   t)
 
-#+(or lcl3.0 excl cmu)
+#+(or lcl3.0 excl)
 (defun fast-read-pixarray-4 (buffer-bbuf index array x y width height 
-			     padded-bytes-per-line)
+			     padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-4 array)
 	   (type card16 x y width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index-ceiling x 2))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y))
-	  (left-nibbles (the array-index (mod (the fixnum (- (the fixnum x)))
-					2)))
-	  (right-nibbles (index-mod (index- width left-nibbles) 2))
-	  (middle-nibbles (index- width left-nibbles right-nibbles))
-	  (middle-bytes (index-floor middle-nibbles 2)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-4-element-type (*)) vector)
-	       (type array-index start y
-		     left-nibbles right-nibbles middle-nibbles middle-bytes))
-      (unless (index-zerop left-nibbles)
-	(setf (aref array y 0)
-	      (read-image-load-byte
-		4 4 (aref buffer-bbuf (index1- start)))))
-      (do* ((end (index+ start middle-bytes))
-	    (i start (index1+ i))
-	    (x (array-row-major-index array y left-nibbles) (index+ x 2)))
-	   ((index>= i end)
-	    (unless (index-zerop right-nibbles)
-	      (setf (aref array y (index+ left-nibbles middle-nibbles))
-		    (read-image-load-byte 4 0 (aref buffer-bbuf end)))))
-	(declare (type array-index end i x))
-	(let ((byte (aref buffer-bbuf i)))
-	  (declare (type card8 byte))
-	  (setf (aref vector (index+ x 0))
-		(read-image-load-byte 4 0 byte))
-	  (setf (aref vector (index+ x 1))
-		(read-image-load-byte 4 4 byte))))
-      ))
+    (with-underlying-simple-vector (vector pixarray-4-element-type array)
+      (do* ((start (index+ index
+			   (index* y padded-bytes-per-line)
+			   (index-ceiling x 2))
+		   (index+ start padded-bytes-per-line))
+	    (y 0 (index1+ y))
+	    (left-nibbles (index-mod (index- x) 2))
+	    (right-nibbles (index-mod (index- width left-nibbles) 2))
+	    (middle-nibbles (index- width left-nibbles right-nibbles))
+	    (middle-bytes (index-floor middle-nibbles 2)))
+	   ((index>= y height))
+	(declare (type array-index start y
+		       left-nibbles right-nibbles middle-nibbles middle-bytes))
+	(unless (index-zerop left-nibbles)
+	  (setf (aref array y 0)
+		(read-image-load-byte
+		  4 4 (aref buffer-bbuf (index1- start)))))
+	(do* ((end (index+ start middle-bytes))
+	      (i start (index1+ i))
+	      (x (array-row-major-index array y left-nibbles) (index+ x 2)))
+	     ((index>= i end)
+	      (unless (index-zerop right-nibbles)
+		(setf (aref array y (index+ left-nibbles middle-nibbles))
+		      (read-image-load-byte 4 0 (aref buffer-bbuf end)))))
+	  (declare (type array-index end i x))
+	  (let ((byte (aref buffer-bbuf i)))
+	    (declare (type card8 byte))
+	    (setf (aref vector (index+ x 0))
+		  (read-image-load-byte 4 0 byte))
+	    (setf (aref vector (index+ x 1))
+		  (read-image-load-byte 4 4 byte))))
+	)))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-read-pixarray-8 (buffer-bbuf index array x y width height 
-			     padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-8 array)
-	   (type card16 x y width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 x)
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-8-element-type (*)) vector)
-	       (type array-index start y))
-      (do* ((end (index+ start width))
- 	    (i start (index1+ i))
- 	    (x (array-row-major-index array y 0) (index1+ x)))
- 	   ((index>= i end))
- 	(declare (type array-index end i x))
- 	(setf (aref vector x)
- 	      (the card8 (aref buffer-bbuf i))))))
-  t)
-
-#+(or lcl3.0 excl cmu)
-(defun fast-read-pixarray-16 (buffer-bbuf index array x y width height 
-			      padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-16 array)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index* x 2))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-16-element-type (*)) vector)
-	       (type array-index start y))
-      (do* ((end (index+ start (index* width 2)))
-	    (i start (index+ i 2))
-	    (x (array-row-major-index array y 0) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(setf (aref vector x)
-	      (read-image-assemble-bytes
-		(aref buffer-bbuf (index+ i 0))
-		(aref buffer-bbuf (index+ i 1)))))))
-  t)
-
-#+Genera
+#+(or Genera lcl3.0 excl)
 (defun fast-read-pixarray-24 (buffer-bbuf index array x y width height 
-			      padded-bytes-per-line)
+			      padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-24 array)
 	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((array array)
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index* x 3))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y)))
-	 ((index>= y height))
-      (declare (sys:array-register-1d array)
-	       (type array-index start y))
-      (do* ((end (index+ start (index* width 3)))
-	    (i start (index+ i 3))
-	    (x (array-row-major-index array y 0) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(setf (sys:%1d-aref array x)
-	      (read-image-assemble-bytes
-		(aref buffer-bbuf (index+ i 0))
-		(aref buffer-bbuf (index+ i 1))
-		(aref buffer-bbuf (index+ i 2)))))))
+    (with-underlying-simple-vector (vector pixarray-24-element-type array)
+      (do* ((start (index+ index
+			   (index* y padded-bytes-per-line)
+			   (index* x 3))
+		   (index+ start padded-bytes-per-line))
+	    (y 0 (index1+ y)))
+	   ((index>= y height))
+	(declare (type array-index start y))
+	(do* ((end (index+ start (index* width 3)))
+	      (i start (index+ i 3))
+	      (x (array-row-major-index array y 0) (index1+ x)))
+	     ((index>= i end))
+	  (declare (type array-index end i x))
+	  (setf (aref vector x)
+		(read-image-assemble-bytes
+		  (aref buffer-bbuf (index+ i 0))
+		  (aref buffer-bbuf (index+ i 1))
+		  (aref buffer-bbuf (index+ i 2))))))))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-read-pixarray-24 (buffer-bbuf index array x y width height 
-			      padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-24 array)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index* x 3))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-24-element-type (*)) vector)
-	       (type array-index start y))
-      (do* ((end (index+ start (index* width 3)))
-	    (i start (index+ i 3))
-	    (x (array-row-major-index array y 0) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(setf (aref vector x)
-	      (read-image-assemble-bytes
-		(aref buffer-bbuf (index+ i 0))
-		(aref buffer-bbuf (index+ i 1))
-		(aref buffer-bbuf (index+ i 2)))))))
+#+lispm
+(defun fast-read-pixarray-using-bitblt
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel)
+  (#+Genera sys:stack-let* #-Genera let*
+   ((dimensions (list (+ y height)
+		      (floor (* padded-bytes-per-line 8) bits-per-pixel)))
+    (a (make-array
+	 dimensions
+	 :element-type (array-element-type pixarray)
+	 :displaced-to bbuf
+	 :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
+   (sys:bitblt boole-1 width height a x y pixarray 0 0))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-read-pixarray-32 (buffer-bbuf index array x y width height 
-			      padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-32 array)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (start (index+ index
-			 (index* y padded-bytes-per-line)
-			 (index* x 4))
-		 (index+ start padded-bytes-per-line))
-	  (y 0 (index1+ y)))
-	 ((index>= y height))
-      (declare (type (simple-array pixarray-32-element-type (*)) vector)
-	       (type array-index start y))
-      (do* ((end (index+ start (index* width 4)))
-	    (i start (index+ i 4))
-	    (x (array-row-major-index array y 0) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(setf (aref vector x)
-	      (read-image-assemble-bytes
-		(aref buffer-bbuf (index+ i 0))
-		(aref buffer-bbuf (index+ i 1))
-		(aref buffer-bbuf (index+ i 2))
-		(aref buffer-bbuf (index+ i 3)))))))
-  t)
-
-(defun fast-read-pixarray (bbuf boffset pixarray
-			   x y width height padded-bytes-per-line
-			   bits-per-pixel)
+#+(or Genera lcl3.0 excl)
+(defun fast-read-pixarray-with-swap
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (declare (type buffer-bytes bbuf)
 	   (type array-index boffset
 		 padded-bytes-per-line)
 	   (type pixarray pixarray)
 	   (type card16 x y width height)
-	   (type (member 1 4 8 16 24 32) bits-per-pixel))
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (type (member 8 16 32) unit)
+	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+  (unless (index= bits-per-pixel 24)
+    (let ((pixarray-padded-bits-per-line
+	    (if (index= height 1) 0
+	      (index* (index- (array-row-major-index pixarray 1 0)
+			      (array-row-major-index pixarray 0 0))
+		      bits-per-pixel)))
+	  (x-bits (index* x bits-per-pixel)))
+      (declare (type array-index pixarray-padded-bits-per-line x-bits))
+      (when (if (eq *computed-image-byte-lsb-first-p* *computed-image-bit-lsb-first-p*)
+		(and (index-zerop (index-mod pixarray-padded-bits-per-line 8))
+		     (index-zerop (index-mod x-bits 8)))
+	      (and (index-zerop (index-mod pixarray-padded-bits-per-line *image-unit*))
+		   (index-zerop (index-mod x-bits *image-unit*))))
+	(multiple-value-bind (image-swap-function image-swap-lsb-first-p)
+	    (image-swap-function
+	      bits-per-pixel 
+	      unit byte-lsb-first-p bit-lsb-first-p
+	      *image-unit* *computed-image-byte-lsb-first-p*
+	      *computed-image-bit-lsb-first-p*)
+	  (declare (type symbol image-swap-function)
+		   (type boolean image-swap-lsb-first-p))
+	  (with-underlying-simple-vector (dst card8 pixarray)
+	    (funcall
+	      (symbol-function image-swap-function) bbuf dst
+	      (index+ boffset
+		      (index* y padded-bytes-per-line)
+		      (index-floor x-bits 8))
+	      0 (index-ceiling (index* width bits-per-pixel) 8)
+	      padded-bytes-per-line
+	      (index-floor pixarray-padded-bits-per-line 8)
+	      height image-swap-lsb-first-p)))
+	t))))
+
+(defun fast-read-pixarray (bbuf boffset pixarray
+			   x y width height padded-bytes-per-line
+			   bits-per-pixel
+			   unit byte-lsb-first-p bit-lsb-first-p)
+  (declare (type buffer-bytes bbuf)
+	   (type array-index boffset
+		 padded-bytes-per-line)
+	   (type pixarray pixarray)
+	   (type card16 x y width height)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (type (member 8 16 32) unit)
+	   (type boolean byte-lsb-first-p bit-lsb-first-p))
   (progn bbuf boffset pixarray x y width height padded-bytes-per-line
-	 bits-per-pixel)
+	 bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (or
-    #+lispm
-    (let* ((padded-bits-per-line (* padded-bytes-per-line 8))
-	   (padded-pixels-per-line
-	     (floor padded-bits-per-line bits-per-pixel))
-	   (pixarray-padded-pixels-per-line
-	     #+Genera (sys:array-row-span pixarray)
-	     #-Genera (array-dimension pixarray 1))
-	   (pixarray-padded-bits-per-line
-	     (* pixarray-padded-pixels-per-line bits-per-pixel)))
-      (when (and (= (sys:array-element-size pixarray) bits-per-pixel)
-		 (zerop (index-mod padded-bits-per-line 32))
-		 (zerop (index-mod pixarray-padded-bits-per-line 32)))
-	(#+Genera sys:stack-let* #-Genera let*
-	 ((dimensions (list height padded-pixels-per-line))
-	  (a (make-array
-	       dimensions
-	       :element-type (array-element-type pixarray)
-	       :displaced-to bbuf
-	       :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
-	 (sys:bitblt boole-1 width height a x y pixarray 0 0))
-	t))
-    #+Genera
-    (when (= bits-per-pixel 24)
-      (fast-read-pixarray-24
-	bbuf boffset pixarray x y width height padded-bytes-per-line))
-    #+(or lcl3.0 excl cmu)
-    (funcall
-      (ecase bits-per-pixel 
-	(1 #'fast-read-pixarray-1) (4 #'fast-read-pixarray-4)
-	(8 #'fast-read-pixarray-8) (16 #'fast-read-pixarray-16)
-	(24 #'fast-read-pixarray-24) (32 #'fast-read-pixarray-32))
-      bbuf boffset pixarray x y width height padded-bytes-per-line)
-    ))
+    #+(or Genera lcl3.0 excl)
+    (fast-read-pixarray-with-swap
+      bbuf boffset pixarray x y width height padded-bytes-per-line
+      bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
+    (let ((function
+	    (or #+lispm
+		(and (= (sys:array-element-size pixarray) bits-per-pixel)
+		     (zerop (index-mod padded-bytes-per-line 4))
+		     (zerop (index-mod
+			      (* #+Genera (sys:array-row-span pixarray)
+				 #-Genera (array-dimension pixarray 1)
+				 bits-per-pixel)
+			      32))
+		     #'fast-read-pixarray-using-bitblt)
+		#+(or lcl3.0 excl)
+		(and (index= bits-per-pixel 1)
+		     #'fast-read-pixarray-1)
+		#+(or lcl3.0 excl)
+		(and (index= bits-per-pixel 4)
+		     #'fast-read-pixarray-4)
+		#+(or Genera lcl3.0 excl)
+		(and (index= bits-per-pixel 24)
+		     #'fast-read-pixarray-24))))
+      (when function
+	(read-pixarray-internal
+	  bbuf boffset pixarray x y width height padded-bytes-per-line
+	  bits-per-pixel function
+	  unit byte-lsb-first-p bit-lsb-first-p
+	  *image-unit* *image-byte-lsb-first-p* *image-bit-lsb-first-p*)))))
 
 ;;; FAST-WRITE-PIXARRAY - copy part of a pixarray into an array of CARD8s
 
-#+(or lcl3.0 excl cmu)
+#+(or lcl3.0 excl)
 (defun fast-write-pixarray-1 (buffer-bbuf index array x y width height
-			      padded-bytes-per-line)
+			      padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-1 array)
 	   (type card16 x y width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (right-bits (index-mod width 8))
-	  (middle-bits (index- width right-bits))
-	  (middle-bytes (index-ceiling middle-bits 8))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-1-element-type (*)) vector)
-	       (type array-index h y right-bits middle-bits
-		     middle-bytes start))
-      (do* ((end (index+ start middle-bytes))
-	    (i start (index1+ i))
-	    (start-x x)
-	    (x (array-row-major-index array y start-x) (index+ x 8)))
-	   ((index>= i end)
-	    (unless (index-zerop right-bits)
-	      (let ((x (array-row-major-index
-			 array y (index+ start-x middle-bits))))
-		(declare (type array-index x))
-		(setf (aref buffer-bbuf end)
-		      (write-image-assemble-bytes
-			(aref vector (index+ x 0))
-			(if (index> right-bits 1)
-			    (aref vector (index+ x 1))
-			  0)
-			(if (index> right-bits 2)
-			    (aref vector (index+ x 2))
-			  0)
-			(if (index> right-bits 3)
-			    (aref vector (index+ x 3))
-			  0)
-			(if (index> right-bits 4)
-			    (aref vector (index+ x 4))
-			  0)
-			(if (index> right-bits 5)
-			    (aref vector (index+ x 5))
-			  0)
-			(if (index> right-bits 6)
-			    (aref vector (index+ x 6))
-			  0)
-			0)))))
-	(declare (type array-index end i start-x x))
-	(setf (aref buffer-bbuf i)
-	      (write-image-assemble-bytes
-		(aref vector (index+ x 0))
-		(aref vector (index+ x 1))
-		(aref vector (index+ x 2))
-		(aref vector (index+ x 3))
-		(aref vector (index+ x 4))
-		(aref vector (index+ x 5))
-		(aref vector (index+ x 6))
-		(aref vector (index+ x 7)))))))
+    (with-underlying-simple-vector (vector pixarray-1-element-type array)
+      (do* ((h 0 (index1+ h))
+	    (y y (index1+ y))
+	    (right-bits (index-mod width 8))
+	    (middle-bits (index- width right-bits))
+	    (middle-bytes (index-ceiling middle-bits 8))
+	    (start index (index+ start padded-bytes-per-line)))
+	   ((index>= h height))
+	(declare (type array-index h y right-bits middle-bits
+		       middle-bytes start))
+	(do* ((end (index+ start middle-bytes))
+	      (i start (index1+ i))
+	      (start-x x)
+	      (x (array-row-major-index array y start-x) (index+ x 8)))
+	     ((index>= i end)
+	      (unless (index-zerop right-bits)
+		(let ((x (array-row-major-index
+			   array y (index+ start-x middle-bits))))
+		  (declare (type array-index x))
+		  (setf (aref buffer-bbuf end)
+			(write-image-assemble-bytes
+			  (aref vector (index+ x 0))
+			  (if (index> right-bits 1)
+			      (aref vector (index+ x 1))
+			    0)
+			  (if (index> right-bits 2)
+			      (aref vector (index+ x 2))
+			    0)
+			  (if (index> right-bits 3)
+			      (aref vector (index+ x 3))
+			    0)
+			  (if (index> right-bits 4)
+			      (aref vector (index+ x 4))
+			    0)
+			  (if (index> right-bits 5)
+			      (aref vector (index+ x 5))
+			    0)
+			  (if (index> right-bits 6)
+			      (aref vector (index+ x 6))
+			    0)
+			  0)))))
+	  (declare (type array-index end i start-x x))
+	  (setf (aref buffer-bbuf i)
+		(write-image-assemble-bytes
+		  (aref vector (index+ x 0))
+		  (aref vector (index+ x 1))
+		  (aref vector (index+ x 2))
+		  (aref vector (index+ x 3))
+		  (aref vector (index+ x 4))
+		  (aref vector (index+ x 5))
+		  (aref vector (index+ x 6))
+		  (aref vector (index+ x 7))))))))
   t)
 
-#+(or lcl3.0 excl cmu)
+#+(or lcl3.0 excl)
 (defun fast-write-pixarray-4 (buffer-bbuf index array x y width height
-			      padded-bytes-per-line)
+			      padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-4 array)
 	   (type int16 x y)
 	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (right-nibbles (index-mod width 2))
-	  (middle-nibbles (index- width right-nibbles))
-	  (middle-bytes (index-ceiling middle-nibbles 2))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-4-element-type (*)) vector)
-	       (type array-index h y right-nibbles middle-nibbles
-		     middle-bytes start))
-      (do* ((end (index+ start middle-bytes))
-	    (i start (index1+ i))
-	    (start-x x)
-	    (x (array-row-major-index array y start-x) (index+ x 2)))
-	   ((index>= i end)
-	    (unless (index-zerop right-nibbles)
-	      (setf (aref buffer-bbuf end)
-		    (write-image-assemble-bytes
-		      (aref array y (index+ start-x middle-nibbles))
-		      0))))
-	(declare (type array-index end i start-x x))
-	(setf (aref buffer-bbuf i)
-	      (write-image-assemble-bytes
-		(aref vector (index+ x 0))
-		(aref vector (index+ x 1)))))))
+    (with-underlying-simple-vector (vector pixarray-4-element-type array)
+      (do* ((h 0 (index1+ h))
+	    (y y (index1+ y))
+	    (right-nibbles (index-mod width 2))
+	    (middle-nibbles (index- width right-nibbles))
+	    (middle-bytes (index-ceiling middle-nibbles 2))
+	    (start index (index+ start padded-bytes-per-line)))
+	   ((index>= h height))
+	(declare (type array-index h y right-nibbles middle-nibbles
+		       middle-bytes start))
+	(do* ((end (index+ start middle-bytes))
+	      (i start (index1+ i))
+	      (start-x x)
+	      (x (array-row-major-index array y start-x) (index+ x 2)))
+	     ((index>= i end)
+	      (unless (index-zerop right-nibbles)
+		(setf (aref buffer-bbuf end)
+		      (write-image-assemble-bytes
+			(aref array y (index+ start-x middle-nibbles))
+			0))))
+	  (declare (type array-index end i start-x x))
+	  (setf (aref buffer-bbuf i)
+		(write-image-assemble-bytes
+		  (aref vector (index+ x 0))
+		  (aref vector (index+ x 1))))))))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-write-pixarray-8 (buffer-bbuf index array x y width height
-			      padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-8 array)
-	   (type int16 x y)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-8-element-type (*)) vector)
-	       (type array-index h y start))
-      (do* ((end (index+ start width))
-	    (i start (index1+ i))
-	    (x (array-row-major-index array y x) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(setf (aref buffer-bbuf i) (the card8 (aref vector x))))))
-  t)
-
-#+(or lcl3.0 excl cmu)
-(defun fast-write-pixarray-16 (buffer-bbuf index array x y width height
-			       padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-16 array)
-	   (type int16 x y)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-16-element-type (*)) vector)
-	       (type array-index h y start))
-      (do* ((end (index+ start (index* width 2)))
-	    (i start (index+ i 2))
-	    (x (array-row-major-index array y x) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(let ((pixel (aref vector x)))
-	  (declare (type pixarray-16-element-type pixel))
-	  (setf (aref buffer-bbuf (index+ i 0))
-		(write-image-load-byte 0 pixel 16))
-	  (setf (aref buffer-bbuf (index+ i 1))
-		(write-image-load-byte 8 pixel 16))))))
-  t)
-
-#+Genera
+#+(or Genera lcl3.0 excl)
 (defun fast-write-pixarray-24 (buffer-bbuf index array x y width height
-			       padded-bytes-per-line)
+			       padded-bytes-per-line bits-per-pixel)
   (declare (type buffer-bytes buffer-bbuf)
 	   (type pixarray-24 array)
 	   (type int16 x y)
 	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
+	   (type array-index index padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (ignore bits-per-pixel))
   #.(declare-buffun)
   (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((array array)
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (sys:array-register-1d array)
-	       (type array-index y start))
-      (do* ((end (index+ start (index* width 3)))
-	    (i start (index+ i 3))
-	    (x (array-row-major-index array y x) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(let ((pixel (sys:%1d-aref array x)))
-	  (declare (type pixarray-24-element-type pixel))
-	  (setf (aref buffer-bbuf (index+ i 0))
-		(write-image-load-byte 0 pixel 24))
-	  (setf (aref buffer-bbuf (index+ i 1))
-		(write-image-load-byte 8 pixel 24))
-	  (setf (aref buffer-bbuf (index+ i 2))
-		(write-image-load-byte 16 pixel 24))))))
+    (with-underlying-simple-vector (vector pixarray-24-element-type array)
+      (do* ((h 0 (index1+ h))
+	    (y y (index1+ y))
+	    (start index (index+ start padded-bytes-per-line)))
+	   ((index>= h height))
+	(declare (type array-index y start))
+	(do* ((end (index+ start (index* width 3)))
+	      (i start (index+ i 3))
+	      (x (array-row-major-index array y x) (index1+ x)))
+	     ((index>= i end))
+	  (declare (type array-index end i x))
+	  (let ((pixel (aref vector x)))
+	    (declare (type pixarray-24-element-type pixel))
+	    (setf (aref buffer-bbuf (index+ i 0))
+		  (write-image-load-byte 0 pixel 24))
+	    (setf (aref buffer-bbuf (index+ i 1))
+		  (write-image-load-byte 8 pixel 24))
+	    (setf (aref buffer-bbuf (index+ i 2))
+		  (write-image-load-byte 16 pixel 24)))))))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-write-pixarray-24 (buffer-bbuf index array x y width height
-			       padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-24 array)
-	   (type int16 x y)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-24-element-type (*)) vector)
-	       (type array-index y start))
-      (do* ((end (index+ start (index* width 3)))
-	    (i start (index+ i 3))
-	    (x (array-row-major-index array y x) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(let ((pixel (aref vector x)))
-	  (declare (type pixarray-24-element-type pixel))
-	  (setf (aref buffer-bbuf (index+ i 0))
-		(write-image-load-byte 0 pixel 24))
-	  (setf (aref buffer-bbuf (index+ i 1))
-		(write-image-load-byte 8 pixel 24))
-	  (setf (aref buffer-bbuf (index+ i 2))
-		(write-image-load-byte 16 pixel 24))))))
+#+lispm
+(defun fast-write-pixarray-using-bitblt
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel)
+  (#+Genera sys:stack-let* #-Genera let*
+   ((dimensions (list (+ y height)
+		      (floor (* padded-bytes-per-line 8) bits-per-pixel)))
+    (a (make-array
+	 dimensions
+	 :element-type (array-element-type pixarray)
+	 :displaced-to bbuf
+	 :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
+   (sys:bitblt boole-1 width height pixarray x y a 0 0))
   t)
 
-#+(or lcl3.0 excl cmu)
-(defun fast-write-pixarray-32 (buffer-bbuf index array x y width height
-			       padded-bytes-per-line)
-  (declare (type buffer-bytes buffer-bbuf)
-	   (type pixarray-32 array)
-	   (type int16 x y)
-	   (type card16 width height)
-	   (type array-index index padded-bytes-per-line))
-  #.(declare-buffun)
-  (with-vector (buffer-bbuf buffer-bytes)
-    (do* ((vector (underlying-simple-vector array))
-	  (h 0 (index1+ h))
-	  (y y (index1+ y))
-	  (start index (index+ start padded-bytes-per-line)))
-	 ((index>= h height))
-      (declare (type (simple-array pixarray-32-element-type (*)) vector)
-	       (type array-index h y start))
-      (do* ((end (index+ start (index* width 4)))
-	    (i start (index+ i 4))
-	    (x (array-row-major-index array y x) (index1+ x)))
-	   ((index>= i end))
-	(declare (type array-index end i x))
-	(let ((pixel (aref vector x)))
-	  (declare (type pixarray-32-element-type pixel))
-	  (setf (aref buffer-bbuf (index+ i 0))
-		(write-image-load-byte 0 pixel 32))
-	  (setf (aref buffer-bbuf (index+ i 1))
-		(write-image-load-byte 8 pixel 32))
-	  (setf (aref buffer-bbuf (index+ i 2))
-		(write-image-load-byte 16 pixel 32))
-	  (setf (aref buffer-bbuf (index+ i 2))
-		(write-image-load-byte 24 pixel 32))))))
-  t)
-
-(defun fast-write-pixarray (bbuf boffset pixarray x y width height
-			    padded-bytes-per-line bits-per-pixel)
+#+(or Genera lcl3.0 excl)
+(defun fast-write-pixarray-with-swap
+       (bbuf boffset pixarray x y width height padded-bytes-per-line
+	bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (declare (type buffer-bytes bbuf)
 	   (type pixarray pixarray)
 	   (type card16 x y width height)
 	   (type array-index boffset padded-bytes-per-line)
-	   (type (member 1 4 8 16 24 32) bits-per-pixel))
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (type (member 8 16 32) unit)
+	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+  (unless (index= bits-per-pixel 24)
+    (let ((pixarray-padded-bits-per-line
+	    (if (index= height 1) 0
+	      (index* (index- (array-row-major-index pixarray 1 0)
+			      (array-row-major-index pixarray 0 0))
+		      bits-per-pixel)))
+	  (pixarray-start-bit-offset
+	    (index* (array-row-major-index pixarray y x)
+		    bits-per-pixel)))
+      (declare (type array-index pixarray-padded-bits-per-line
+		     pixarray-start-bit-offset))
+      (when (if (eq *computed-image-byte-lsb-first-p* *computed-image-bit-lsb-first-p*)
+		(and (index-zerop (index-mod pixarray-padded-bits-per-line 8))
+		     (index-zerop (index-mod pixarray-start-bit-offset 8)))
+	      (and (index-zerop (index-mod pixarray-padded-bits-per-line *image-unit*))
+		   (index-zerop (index-mod pixarray-start-bit-offset *image-unit*))))
+	(multiple-value-bind (image-swap-function image-swap-lsb-first-p)
+	    (image-swap-function
+	      bits-per-pixel
+	      *image-unit* *computed-image-byte-lsb-first-p*
+	      *computed-image-bit-lsb-first-p*
+	      unit byte-lsb-first-p bit-lsb-first-p)
+	  (declare (type symbol image-swap-function)
+		   (type boolean image-swap-lsb-first-p))
+	  (with-underlying-simple-vector (src card8 pixarray)
+	    (funcall
+	      (symbol-function image-swap-function)
+	      src bbuf (index-floor pixarray-start-bit-offset 8) boffset
+	      (index-ceiling (index* width bits-per-pixel) 8)
+	      (index-floor pixarray-padded-bits-per-line 8)
+	      padded-bytes-per-line height image-swap-lsb-first-p))
+	  t)))))
+
+(defun fast-write-pixarray (bbuf boffset pixarray x y width height
+			    padded-bytes-per-line bits-per-pixel
+			    unit byte-lsb-first-p bit-lsb-first-p)
+  (declare (type buffer-bytes bbuf)
+	   (type pixarray pixarray)
+	   (type card16 x y width height)
+	   (type array-index boffset padded-bytes-per-line)
+	   (type (member 1 4 8 16 24 32) bits-per-pixel)
+	   (type (member 8 16 32) unit)
+	   (type boolean byte-lsb-first-p bit-lsb-first-p))
   (progn bbuf boffset pixarray x y width height padded-bytes-per-line
-	 bits-per-pixel)
+	 bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (or
-    #+lispm
-    (let* ((padded-bits-per-line (* padded-bytes-per-line 8))
-	   (padded-pixels-per-line
-	     (floor padded-bits-per-line bits-per-pixel))
-	   (pixarray-padded-pixels-per-line
-	     #+Genera (sys:array-row-span pixarray)
-	     #-Genera (array-dimension pixarray 1))
-	   (pixarray-padded-bits-per-line
-	     (* pixarray-padded-pixels-per-line bits-per-pixel)))
-      (when (and (= (sys:array-element-size pixarray) bits-per-pixel)
-		 (zerop (index-mod padded-bits-per-line 32))
-		 (zerop (index-mod pixarray-padded-bits-per-line 32)))
-	(#+Genera sys:stack-let* #-Genera let*
-	 ((dimensions (list height padded-pixels-per-line))
-	  (a (make-array
-	       dimensions
-	       :element-type (array-element-type pixarray)
-	       :displaced-to bbuf
-	       :displaced-index-offset (floor (* boffset 8) bits-per-pixel))))
-	 (sys:bitblt boole-1 width height pixarray x y a 0 0))
-	t))
-    #+Genera
-    (when (= bits-per-pixel 24)
-      (fast-write-pixarray-24
-	bbuf boffset pixarray x y width height padded-bytes-per-line))
-    #+(or lcl3.0 excl cmu)
-    (funcall
-      (ecase bits-per-pixel 
-	(1 #'fast-write-pixarray-1) (4 #'fast-write-pixarray-4)
-	(8 #'fast-write-pixarray-8) (16 #'fast-write-pixarray-16)
-	(24 #'fast-write-pixarray-24) (32 #'fast-write-pixarray-32))
-      bbuf boffset pixarray x y width height padded-bytes-per-line)
-    ))
+    #+(or Genera lcl3.0 excl)
+    (fast-write-pixarray-with-swap
+      bbuf boffset pixarray x y width height padded-bytes-per-line
+      bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
+    (let ((function
+	    (or #+lispm
+		(and (= (sys:array-element-size pixarray) bits-per-pixel)
+		     (zerop (index-mod padded-bytes-per-line 4))
+		     (zerop (index-mod
+			      (* #+Genera (sys:array-row-span pixarray)
+				 #-Genera (array-dimension pixarray 1)
+				 bits-per-pixel)
+			      32))
+		     #'fast-write-pixarray-using-bitblt)
+		#+(or lcl3.0 excl)
+		(and (index= bits-per-pixel 1)
+		     #'fast-write-pixarray-1)
+		#+(or lcl3.0 excl)
+		(and (index= bits-per-pixel 4)
+		     #'fast-write-pixarray-4)
+		#+(or Genera lcl3.0 excl)
+		(and (index= bits-per-pixel 24)
+		     #'fast-write-pixarray-24))))
+      (when function
+	(write-pixarray-internal
+	  bbuf boffset pixarray x y width height padded-bytes-per-line
+	  bits-per-pixel function
+	  *image-unit* *image-byte-lsb-first-p* *image-bit-lsb-first-p*
+	  unit byte-lsb-first-p bit-lsb-first-p)))))
 
 ;;; FAST-COPY-PIXARRAY - copy part of a pixarray into another
 
@@ -3138,7 +3245,7 @@
   (declare (type pixarray pixarray copy)
 	   (type card16 x y width height)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel))
-  (progn pixarray copy x y width height bits-per-pixel)
+  (progn pixarray copy x y width height bits-per-pixel nil)
   (or
     #+lispm
     (let* ((pixarray-padded-pixels-per-line
@@ -3156,47 +3263,62 @@
 		 (zerop (index-mod copy-padded-bits-per-line 32)))
 	(sys:bitblt boole-1 width height pixarray x y copy 0 0)
 	t))
-    #+Genera
-    (let ((src pixarray)
-	  (dest copy))
-      (declare (sys:array-register-1d src dest))
-      (do* ((dst-y 0 (index1+ dst-y))
-	    (src-y y (index1+ src-y)))
-	   ((index>= dst-y height))
-	(declare (type card16 dst-y src-y))
-	(do* ((dst-idx (array-row-major-index copy dst-y 0)
-		       (index1+ dst-idx))
-	      (dst-end (index+ dst-idx width))
-	      (src-idx (array-row-major-index pixarray src-y x)
-		       (index1+ src-idx)))
-	     ((index>= dst-idx dst-end))
-	  (declare (type array-index dst-idx src-idx dst-end))
-	  (setf (sys:%1d-aref dest dst-idx)
-		(sys:%1d-aref src src-idx))))
-      t)
-    #+(or lcl3.0 excl cmu)
+    #+(or lcl3.0 excl)
+    (unless (index= bits-per-pixel 24)
+      (let ((pixarray-padded-bits-per-line
+	      (if (index= height 1) 0
+		(index* (index- (array-row-major-index pixarray 1 0)
+				(array-row-major-index pixarray 0 0))
+			bits-per-pixel)))
+	    (copy-padded-bits-per-line
+	      (if (index= height 1) 0
+		(index* (index- (array-row-major-index copy 1 0)
+				(array-row-major-index copy 0 0))
+			bits-per-pixel)))
+	    (pixarray-start-bit-offset
+	      (index* (array-row-major-index pixarray y x)
+		      bits-per-pixel)))
+	(declare (type array-index pixarray-padded-bits-per-line
+		       copy-padded-bits-per-line pixarray-start-bit-offset))
+	(when (if (eq *computed-image-byte-lsb-first-p* *computed-image-bit-lsb-first-p*)
+		  (and (index-zerop (index-mod pixarray-padded-bits-per-line 8))
+		       (index-zerop (index-mod copy-padded-bits-per-line 8))
+		       (index-zerop (index-mod pixarray-start-bit-offset 8)))
+		(and (index-zerop (index-mod pixarray-padded-bits-per-line *image-unit*))
+		     (index-zerop (index-mod copy-padded-bits-per-line *image-unit*))
+		     (index-zerop (index-mod pixarray-start-bit-offset *image-unit*))))
+	  (with-underlying-simple-vector (src card8 pixarray)
+	    (with-underlying-simple-vector (dst card8 copy)
+	      (image-noswap
+		src dst
+		(index-floor pixarray-start-bit-offset 8) 0
+		(index-ceiling (index* width bits-per-pixel) 8)
+		(index-floor pixarray-padded-bits-per-line 8)
+		(index-floor copy-padded-bits-per-line 8)
+		height nil)))
+	  t)))
+    #+(or lcl3.0 excl)
     (macrolet
       ((copy (type element-type)
-	 `(let* ((pixarray pixarray)
-		 (copy copy)
-		 (src (underlying-simple-vector pixarray))
-		 (dst (underlying-simple-vector copy)))
-	    (declare (type ,type pixarray copy)
-		     (type (simple-array ,element-type (*)) src dst))
+	 `(let ((pixarray pixarray)
+		(copy copy))
+	    (declare (type ,type pixarray copy))
 	    #.(declare-buffun)
-	    (do* ((dst-y 0 (index1+ dst-y))
-		  (src-y y (index1+ src-y)))
-		 ((index>= dst-y height))
-	      (declare (type card16 dst-y src-y))
-	      (do* ((dst-idx (array-row-major-index copy dst-y 0)
-			     (index1+ dst-idx))
-		    (dst-end (index+ dst-idx width))
-		    (src-idx (array-row-major-index pixarray src-y x)
-			     (index1+ src-idx)))
-		   ((index>= dst-idx dst-end))
-		(declare (type array-index dst-idx src-idx dst-end))
-		(setf (aref dst dst-idx)
-		      (the ,element-type (aref src src-idx))))))))
+	    (with-underlying-simple-vector (src ,element-type pixarray)
+	      (with-underlying-simple-vector (dst ,element-type copy)
+		(do* ((dst-y 0 (index1+ dst-y))
+		      (src-y y (index1+ src-y)))
+		     ((index>= dst-y height))
+		  (declare (type card16 dst-y src-y))
+		  (do* ((dst-idx (array-row-major-index copy dst-y 0)
+				 (index1+ dst-idx))
+			(dst-end (index+ dst-idx width))
+			(src-idx (array-row-major-index pixarray src-y x)
+				 (index1+ src-idx)))
+		       ((index>= dst-idx dst-end))
+		    (declare (type array-index dst-idx src-idx dst-end))
+		    (setf (aref dst dst-idx)
+			  (the ,element-type (aref src src-idx))))))))))
       (ecase bits-per-pixel
 	(1  (copy pixarray-1  pixarray-1-element-type))
 	(4  (copy pixarray-4  pixarray-4-element-type))

@@ -68,7 +68,7 @@
 		   ,@body)))
      ,(if (and (null inline) (macroexpand '(use-closures) env))
 	  `(flet ((.with-buffer-body. () ,@body))
-	     #+ansi-common-lisp
+	     #+clx-ansi-common-lisp
 	     (declare (dynamic-extent #'.with-buffer-body.))
 	     (with-buffer-function ,buffer ,timeout #'.with-buffer-body.))
 	(let ((buf (if (or (symbolp buffer) (constantp buffer))
@@ -87,7 +87,10 @@
   (declare (type display buffer)
 	   (type (or null number) timeout)
 	   (type function function)
-	   (downward-funarg function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg function))
   (with-buffer (buffer :timeout timeout :inline t)
     (funcall function)))
 
@@ -193,8 +196,11 @@
 	   (when (member 8  sizes) '(buffer-bbuf))
 	   (when (member 16 sizes) '(buffer-woffset buffer-wbuf))
 	   (when (member 32 sizes) '(buffer-loffset buffer-lbuf)))
+       #+clx-overlapping-arrays
        (macrolet ((%buffer-sizes () ',sizes))
-	 ,@body))))
+	 ,@body)
+       #-clx-overlapping-arrays
+       ,@body)))
 
 (defun make-buffer (output-size constructor &rest options)
   (declare (dynamic-extent options))
@@ -280,7 +286,10 @@
   (declare (type display display)
 	   (type (or null gcontext) gc-force))
   (declare (type function request-function)
-	   (downward-funarg request-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent request-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg request-function))
   (with-buffer (display :inline t)
     (multiple-value-prog1
       (progn
@@ -292,7 +301,10 @@
   (declare (type display display)
 	   (type (or null gcontext) gc-force))
   (declare (type function request-function)
-	   (downward-funarg request-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent request-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg request-function))
   (multiple-value-prog1
     (progn
       (when gc-force (force-gcontext-changes-internal gc-force))
@@ -310,7 +322,10 @@
   (declare (type display display)
 	   (type boolean multiple-reply))
   (declare (type function request-function reply-function)
-	   (downward-funarg request-function reply-function))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent request-function reply-function)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg request-function reply-function))
   (let ((pending-command nil)
 	(reply-buffer nil))
     (declare (type (or null pending-command) pending-command)
@@ -479,12 +494,15 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (character) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((card8->char->transform (v)
 	       (declare (type card8 v))
 	       (funcall transform (card8->char v))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'card8->char->transform))
 	(read-sequence-card8
 	  reply-buffer result-type nitems #'card8->char->transform
@@ -513,7 +531,10 @@
 	   (type array-index nitems start index)
 	   (type list data))
   (declare (type (function (card8) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-buffer-input (reply-buffer :sizes (8) :index index)
     (do* ((j nitems (index- j 1))
 	  (lst (nthcdr start data) (cdr lst))
@@ -538,14 +559,17 @@
 	   (type array-index nitems start index)
 	   (type (simple-array card8 (*)) data))
   (declare (type (function (card8) card8) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card8 (*)))
     (with-buffer-input (reply-buffer :sizes (8) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 1)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (the card8 (funcall transform (read-card8 index))))))))
 
 (defun read-vector-card8 (reply-buffer nitems data start index)
@@ -553,22 +577,30 @@
 	   (type array-index nitems start index)
 	   (type vector data))
   (with-vector (data vector)
-    (with-buffer-input (reply-buffer :sizes (8))
-      (buffer-replace data buffer-bbuf start (index+ start nitems) index))))
+    (with-buffer-input (reply-buffer :sizes (8) :index index)
+      (do* ((j start (index+ j 1))
+	    (end (index+ start nitems))
+	    (index 0 (index+ index 1)))
+	   ((index>= j end))
+	(declare (type array-index j end index))
+	(setf (aref data j) (read-card8 index))))))
 
 (defun read-vector-card8-with-transform (reply-buffer nitems data transform start index)
   (declare (type reply-buffer reply-buffer)
 	   (type array-index nitems start index)
 	   (type vector data))
   (declare (type (function (card8) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (with-buffer-input (reply-buffer :sizes (8) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 1)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (funcall transform (read-card8 index)))))))
 
 (defun read-sequence-card8 (reply-buffer result-type nitems &optional transform data
@@ -578,7 +610,10 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (card8) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (let ((result (or data (make-sequence result-type nitems))))
     (typecase result
       (list
@@ -608,12 +643,15 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (int8) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((card8->int8->transform (v)
 	       (declare (type card8 v))
 	       (funcall transform (card8->int8 v))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'card8->int8->transform))
 	(read-sequence-card8
 	  reply-buffer result-type nitems #'card8->int8->transform
@@ -642,7 +680,10 @@
 	   (type array-index nitems start index)
 	   (type list data))
   (declare (type (function (card16) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-buffer-input (reply-buffer :sizes (16) :index index)
     (do* ((j nitems (index- j 1))
 	  (lst (nthcdr start data) (cdr lst))
@@ -664,7 +705,7 @@
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 2)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (the card16 (read-card16 index))))
       #+clx-overlapping-arrays
       (buffer-replace data buffer-wbuf start (index+ start nitems) (index-floor index 2)))))
@@ -675,14 +716,17 @@
 	   (type array-index nitems start index)
 	   (type (simple-array card16 (*)) data))
   (declare (type (function (card16) card16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card16 (*)))
     (with-buffer-input (reply-buffer :sizes (16) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 2)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (the card16 (funcall transform (read-card16 index))))))))
 
 (defun read-vector-card16 (reply-buffer nitems data start index)
@@ -696,7 +740,7 @@
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 2)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (read-card16 index)))
       #+clx-overlapping-arrays
       (buffer-replace data buffer-wbuf start (index+ start nitems) (index-floor index 2)))))
@@ -706,14 +750,17 @@
 	   (type array-index nitems start index)
 	   (type vector data))
   (declare (type (function (card16) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (with-buffer-input (reply-buffer :sizes (16) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 2)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (funcall transform (read-card16 index)))))))
 
 (defun read-sequence-card16 (reply-buffer result-type nitems &optional transform data
@@ -723,7 +770,10 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (card16) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (let ((result (or data (make-sequence result-type nitems))))
     (typecase result
       (list
@@ -752,12 +802,15 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (int16) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((card16->int16->transform (v)
 	       (declare (type card16 v))
 	       (funcall transform (card16->int16 v))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'card16->int16->transform))
 	(read-sequence-card16
 	  reply-buffer result-type nitems #'card16->int16->transform
@@ -786,7 +839,10 @@
 	   (type array-index nitems start index)
 	   (type list data))
   (declare (type (function (card32) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-buffer-input (reply-buffer :sizes (32) :index index)
     (do* ((j nitems (index- j 1))
 	  (lst (nthcdr start data) (cdr lst))
@@ -808,7 +864,7 @@
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 4)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (the card32 (read-card32 index))))
       #+clx-overlapping-arrays
       (buffer-replace data buffer-lbuf start (index+ start nitems) (index-floor index 4)))))
@@ -819,14 +875,17 @@
 	   (type array-index nitems start index)
 	   (type (simple-array card32 (*)) data))
   (declare (type (function (card32) card32) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card32 (*)))
     (with-buffer-input (reply-buffer :sizes (32) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 4)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (the card32 (funcall transform (read-card32 index))))))))
 
 (defun read-vector-card32 (reply-buffer nitems data start index)
@@ -840,7 +899,7 @@
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 4)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (read-card32 index)))
       #+clx-overlapping-arrays
       (buffer-replace data buffer-lbuf start (index+ start nitems) (index-floor index 4)))))
@@ -850,14 +909,17 @@
 	   (type array-index nitems start index)
 	   (type vector data))
   (declare (type (function (card32) t) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (with-buffer-input (reply-buffer :sizes (32) :index index)
       (do* ((j start (index+ j 1))
 	    (end (index+ start nitems))
 	    (index 0 (index+ index 4)))
 	   ((index>= j end))
-	(declare (type array-index j index))
+	(declare (type array-index j end index))
 	(setf (aref data j) (funcall transform (read-card32 index)))))))
 
 (defun read-sequence-card32 (reply-buffer result-type nitems &optional transform data
@@ -867,7 +929,10 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (card32) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (let ((result (or data (make-sequence result-type nitems))))
     (typecase result
       (list
@@ -896,12 +961,15 @@
 	   (type array-index nitems start index)
 	   (type (or null sequence) data))
   (declare (type (or null (function (int32) t)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((card32->int32->transform (v)
 	       (declare (type card32 v))
 	       (funcall transform (card32->int32 v))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'card32->int32->transform))
 	(read-sequence-card32
 	  reply-buffer result-type nitems #'card32->int32->transform
@@ -918,11 +986,14 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) character)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((transform->char->card8 (x)
 	       (char->card8 (the character (funcall transform x)))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'transform->char->card8))
 	(write-sequence-card8
 	  buffer boffset data start end #'transform->char->card8))
@@ -949,7 +1020,10 @@
 	   (type list data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card8) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (writing-buffer-chunks card8
 			 ((lst (nthcdr start data)))
 			 ((type list lst))
@@ -980,7 +1054,10 @@
 	   (type (simple-array card8 (*)) data)
 	   (type array-index boffset start end))
   (declare (type (function (card8) card8) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card8 (*)))
     (writing-buffer-chunks card8
 			   ((index start))
@@ -997,12 +1074,12 @@
 	   (type array-index boffset start end))
   (with-vector (data vector)
     (writing-buffer-chunks card8
-			   ((index start (index+ index chunk)))
+			   ((index start))
 			   ((type array-index index))
-      (buffer-replace buffer-bbuf data
-		      buffer-boffset
-		      (index+ buffer-boffset chunk)
-		      index)))
+      (dotimes (j chunk)
+	(declare (type array-index j))
+	(write-card8 j (aref data index))
+	(setq index (index+ index 1)))))
   nil)
 
 (defun write-vector-card8-with-transform (buffer boffset data start end transform)
@@ -1010,7 +1087,10 @@
 	   (type vector data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card8) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (writing-buffer-chunks card8
 			   ((index start))
@@ -1027,7 +1107,10 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) card8)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (typecase data
     (list
       (if transform
@@ -1051,11 +1134,14 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) int8)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((transform->int8->card8 (x)
 	       (int8->card8 (the int8 (funcall transform x)))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'transform->int8->card8))
 	(write-sequence-card8
 	  buffer boffset data start end #'transform->int8->card8))
@@ -1082,7 +1168,10 @@
 	   (type list data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (writing-buffer-chunks card16
 			 ((lst (nthcdr start data)))
 			 ((type list lst))
@@ -1123,7 +1212,10 @@
 	   (type (simple-array card16 (*)) data)
 	   (type array-index boffset start end))
   (declare (type (function (card16) card16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card16 (*)))
     (writing-buffer-chunks card16
 			   ((index start))
@@ -1164,7 +1256,10 @@
 	   (type vector data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (writing-buffer-chunks card16
 			   ((index start))
@@ -1183,7 +1278,10 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) card16)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (typecase data
     (list
       (if transform
@@ -1220,7 +1318,10 @@
 	   (type list data)
 	   (type array-index boffset start end))
   (declare (type (function (t) int16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (writing-buffer-chunks int16
 			 ((lst (nthcdr start data)))
 			 ((type list lst))
@@ -1261,7 +1362,10 @@
 	   (type (simple-array int16 (*)) data)
 	   (type array-index boffset start end))
   (declare (type (function (int16) int16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array int16 (*)))
     (writing-buffer-chunks int16
 			   ((index start))
@@ -1302,7 +1406,10 @@
 	   (type vector data)
 	   (type array-index boffset start end))
   (declare (type (function (t) int16) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (writing-buffer-chunks int16
 			   ((index start))
@@ -1321,7 +1428,10 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) int16)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (typecase data
     (list
       (if transform
@@ -1358,7 +1468,10 @@
 	   (type list data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card32) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (writing-buffer-chunks card32
 			 ((lst (nthcdr start data)))
 			 ((type list lst))
@@ -1399,7 +1512,10 @@
 	   (type (simple-array card32 (*)) data)
 	   (type array-index boffset start end))
   (declare (type (function (card32) card32) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data (simple-array card32 (*)))
     (writing-buffer-chunks card32
 			   ((index start))
@@ -1440,7 +1556,10 @@
 	   (type vector data)
 	   (type array-index boffset start end))
   (declare (type (function (t) card32) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (with-vector (data vector)
     (writing-buffer-chunks card32
 			   ((index start))
@@ -1459,7 +1578,10 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) card32)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (typecase data
     (list
       (if transform
@@ -1483,11 +1605,14 @@
 	   (type sequence data)
 	   (type array-index boffset start end))
   (declare (type (or null (function (t) int32)) transform)
-	   (downward-funarg transform))
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
   (if transform 
       (flet ((transform->int32->card32 (x)
 	       (int32->card32 (the int32 (funcall transform x)))))
-	#+ansi-common-lisp
+	#+clx-ansi-common-lisp
 	(declare (dynamic-extent #'transform->int32->card32))
 	(write-sequence-card32
 	  buffer boffset data start end #'transform->int32->card32))
@@ -1509,7 +1634,8 @@
 	  ((zerop byte)
 	   (when data ;; Clear uninitialized bits in data
 	     (do ((end (index+ j 8)))
-		 ((= k end))
+		 ((index= k end))
+	       (declare (type array-index end))
 	       (setf (aref result k) 0)
 	       (index-incf k))))
 	(declare (type array-index k)
@@ -1533,3 +1659,134 @@
 	(declare (type array-index bit)
 		 (type card8 byte))
 	(setq byte (the card8 (logior (the card8 (ash byte 1)) (aref map bit))))))))
+
+;;; Writing sequences of char2b's
+
+(defun write-list-char2b (buffer boffset data start end)
+  (declare (type buffer buffer)
+	   (type list data)
+	   (type array-index boffset start end))
+  (writing-buffer-chunks card16
+			 ((lst (nthcdr start data)))
+			 ((type list lst))
+    (do ((j 0 (index+ j 2)))
+	((index>= j (1- chunk)) (setf chunk j))
+      (declare (type array-index j))
+      (write-char2b j (pop lst))))
+  nil)
+
+(defun write-list-char2b-with-transform (buffer boffset data start end transform)
+  (declare (type buffer buffer)
+	   (type list data)
+	   (type array-index boffset start end))
+  (declare (type (function (t) card16) transform)
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
+  (writing-buffer-chunks card16
+			 ((lst (nthcdr start data)))
+			 ((type list lst))
+    (do ((j 0 (index+ j 2)))
+	((index>= j (1- chunk)) (setf chunk j))
+      (declare (type array-index j))
+      (write-char2b j (funcall transform (pop lst)))))
+  nil)
+
+#-lispm
+(defun write-simple-array-char2b (buffer boffset data start end)
+  (declare (type buffer buffer)
+	   (type (simple-array card16 (*)) data)
+	   (type array-index boffset start end))
+  (with-vector (data (simple-array card16 (*)))
+    (writing-buffer-chunks card16
+			   ((index start))
+			   ((type array-index index))
+      (do ((j 0 (index+ j 2)))
+	  ((index>= j (1- chunk)) (setf chunk j))
+	(declare (type array-index j))
+	(write-char2b j (aref data index))
+	(setq index (index+ index 1)))))
+  nil)
+
+#-lispm
+(defun write-simple-array-char2b-with-transform (buffer boffset data start end transform)
+  (declare (type buffer buffer)
+	   (type (simple-array card16 (*)) data)
+	   (type array-index boffset start end))
+  (declare (type (function (card16) card16) transform)
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
+  (with-vector (data (simple-array card16 (*)))
+    (writing-buffer-chunks card16
+			   ((index start))
+			   ((type array-index index))
+      (do ((j 0 (index+ j 2)))
+	  ((index>= j (1- chunk)) (setf chunk j))
+	(declare (type array-index j))
+	(write-char2b j (funcall transform (aref data index)))
+	(setq index (index+ index 1)))))
+  nil)
+
+(defun write-vector-char2b (buffer boffset data start end)
+  (declare (type buffer buffer)
+	   (type vector data)
+	   (type array-index boffset start end))
+  (with-vector (data vector)
+    (writing-buffer-chunks card16
+			   ((index start))
+			   ((type array-index index))
+      (do ((j 0 (index+ j 2)))
+	  ((index>= j (1- chunk)) (setf chunk j))
+	(declare (type array-index j))
+	(write-char2b j (aref data index))
+	(setq index (index+ index 1)))))
+  nil)
+
+(defun write-vector-char2b-with-transform (buffer boffset data start end transform)
+  (declare (type buffer buffer)
+	   (type vector data)
+	   (type array-index boffset start end))
+  (declare (type (function (t) card16) transform)
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
+  (with-vector (data vector)
+    (writing-buffer-chunks card16
+			   ((index start))
+			   ((type array-index index))
+      (do ((j 0 (index+ j 2)))
+	  ((index>= j (1- chunk)) (setf chunk j))
+	(declare (type array-index j))
+	(write-char2b j (funcall transform (aref data index)))
+	(setq index (index+ index 1)))))
+  nil)
+
+(defun write-sequence-char2b
+       (buffer boffset data &optional (start 0) (end (length data)) transform)
+  (declare (type buffer buffer)
+	   (type sequence data)
+	   (type array-index boffset start end))
+  (declare (type (or null (function (t) card16)) transform)
+	   #+clx-ansi-common-lisp
+	   (dynamic-extent transform)
+	   #+(and lispm (not clx-ansi-common-lisp))
+	   (sys:downward-funarg transform))
+  (typecase data
+    (list
+      (if transform
+	  (write-list-char2b-with-transform buffer boffset data start end transform)
+	  (write-list-char2b buffer boffset data start end)))
+    #-lispm
+    ((simple-array card16 (*))
+     (if transform
+	 (write-simple-array-char2b-with-transform buffer boffset data start end transform)
+	 (write-simple-array-char2b buffer boffset data start end)))
+    (t
+      (if transform
+	  (write-vector-char2b-with-transform buffer boffset data start end transform)
+	  (write-vector-char2b buffer boffset data start end)))))
+

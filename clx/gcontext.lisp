@@ -1,4 +1,4 @@
-;;; -*- Package: XLIB; Log: clx.log -*-
+;;; -*- Mode: LISP; Syntax: Common-lisp; Package: XLIB; Base: 10; Lowercase: Yes -*-
 
 ;;; GContext
 
@@ -44,41 +44,6 @@
 
 (in-package :xlib)
 
-(export '(force-gcontext-changes
-	  with-gcontext
-	  create-gcontext
-	  copy-gcontext-components
-	  copy-gcontext
-	  free-gcontext
-	  
-	  gcontext-function
-	  gcontext-plane-mask
-	  gcontext-foreground
-	  gcontext-background
-	  gcontext-line-width
-	  gcontext-line-style
-	  gcontext-cap-style
-	  gcontext-join-style
-	  gcontext-fill-style
-	  gcontext-fill-rule
-	  gcontext-tile
-	  gcontext-stipple
-	  gcontext-ts-x
-	  gcontext-ts-y
-	  gcontext-font
-	  gcontext-subwindow-mode
-	  gcontext-exposures
-	  gcontext-clip-x
-	  gcontext-clip-y
-	  gcontext-clip-mask
-	  gcontext-dashes
-	  gcontext-arc-mode
-	  gcontext-dash-offset
-          gcontext-clip-ordering
-
-	  define-gcontext-accessor
-	  ))
-
 ;; GContext state accessors
 ;;	The state vector contains all card32s to speed server updating
 
@@ -86,9 +51,6 @@
 
 (defconstant *gcontext-fast-change-length* #.(length *gcontext-components*))
 
-;;; CMU Common Lisp's old compiler has a bug in compiling DEFCONSTANT's within
-;;; MACROLET's.
-#-CMU
 (macrolet ((def-gc-internals (name &rest extras)
 	    (let ((macros nil)
 		  (indexes nil)
@@ -123,44 +85,6 @@
 				',(coerce (nreverse masks) 'simple-vector)))))))
   (def-gc-internals ignore
     (:clip :clip-mask) (:dash :dashes) (:font-obj :font) (:timestamp)))
-
-#+CMU
-(defmacro def-gc-internals (name &rest extras)
-  (let ((macros nil)
-	(indexes nil)
-	(masks nil)
-	(index 0))
-    (dolist (name *gcontext-components*)
-      (push `(defmacro ,(xintern 'gcontext-internal- name) (state)
-	       `(svref ,state ,,index))
-	    macros)
-      (setf (getf indexes name) index)
-      (push (ash 1 index) masks)
-      (incf index))
-    (dolist (extra extras)
-      (push `(defmacro ,(xintern 'gcontext-internal- (first extra)) (state)
-	       `(svref ,state ,,index))
-	    macros)
-      ;; don't override already correct index entries
-      (unless (or (getf indexes (second extra)) (getf indexes (first extra)))
-	(setf (getf indexes (or (second extra) (first extra))) index))
-      (push (logior (ash 1 index)
-		    (if (second extra)
-			(ash 1 (position (second extra) *gcontext-components*))
-			0))
-	    masks)
-      (incf index))
-    `(within-definition (def-gc-internals ,name)
-			,@(nreverse macros)
-			(eval-when (eval compile load)
-			  (defconstant *gcontext-data-length* ,index)
-			  (defconstant *gcontext-indexes* ',indexes)
-			  (defconstant *gcontext-masks*
-			    ',(coerce (nreverse masks) 'simple-vector))))))
-
-#+CMU
-(def-gc-internals ignore
-  (:clip :clip-mask) (:dash :dashes) (:font-obj :font) (:timestamp))
 
 ) ;; end EVAL-WHEN
 
@@ -617,16 +541,14 @@
 	    (temp-var (gensym)))
 	(when value
 	  (push `(,temp-var ,value) temp-vars)
-	  (push #-CMU `(setf ,accessor ,temp-var)
-		#+CMU `(when ,temp-var (setf ,accessor ,temp-var))
-		setfs))))
+	  (push `(when ,temp-var (setf ,accessor ,temp-var)) setfs))))
     (if setfs
 	`(multiple-value-bind (,gc ,saved-state ,temp-mask ,temp-gc)
 	     (copy-gcontext-local-state ,gcontext ',indexes ,@extension-indexes)
 	   (declare (type gcontext ,gc)
-		    (type (or null gcontext) ,temp-gc)
 		    (type gcontext-state ,saved-state)
-		    (type xgcmask ,temp-mask))
+		    (type xgcmask ,temp-mask)
+		    (type (or null resource-id) ,temp-gc))
 	   (with-gcontext-bindings (,gc ,saved-state
 					,(append indexes extension-indexes)
 				    ,ts-index ,temp-mask ,temp-gc)
@@ -833,7 +755,15 @@
     (when dashes (setf (gcontext-dashes gcontext) dashes))
     
     (setf (gcontext-internal-timestamp server-state) 1)
-    (setf (gcontext-internal-timestamp local-state) 1)
+    (setf (gcontext-internal-timestamp local-state)
+	  ;; SetClipRectangles or SetDashes request need to be sent?
+	  (if (or (gcontext-internal-clip local-state)
+		  (gcontext-internal-dash local-state))
+	      ;; Yes, mark local state "modified" to ensure
+	      ;; force-gcontext-changes will occur.
+	      0
+	    ;; No, mark local state "unmodified"
+	    1))
     
     (with-buffer-request (display *x-creategc*)
       (resource-id gcontextid)
@@ -968,7 +898,10 @@
   ;;	    (,set-function dst-gc value)
   ;;	  (error "Can't copy unknown GContext component ~a" ',name)))
   (declare (type symbol name)
-	   (type t default))
+	   (type t default)
+	   (type (function (gcontext t) t) set-function) ;; required
+	   (type (or null (function (gcontext gcontext t) t))
+		 copy-function))
   (let* ((gc-name (intern (concatenate 'string
 				       (string 'gcontext-)
 				       (string name)))) ;; in current package

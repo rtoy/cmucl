@@ -14,28 +14,43 @@
 ;;;			(require :clx <pathname-of-this-file>)
 ;;;
 
+#-clx-ansi-common-lisp 
 (in-package :user)
 
+#+clx-ansi-common-lisp
+(in-package :common-lisp-user)
+
+#-clx-ansi-common-lisp
 (provide :clx)
 
-;;; Load the defsystem file from the source directory.  You may
-;;; want to include an explicit extension (such as ".l" or ".lisp").
-;;;
-(load "/src/local/clx/defsystem.l")
+(defvar *clx-source-pathname*
+	(pathname "/src/local/clx/*.l"))
 
-;;; The binary files for a particular lisp implementation and architecture.
-;;;
-(let ((lisp
-	(or #+lucid "lucid"
-            #+excl  "franz"
-	    #+akcl  "akcl"
-	    #+kcl   "kcl"
-            #+ibcl  "ibcl"
-	    (error "Can't figure out what lisp vendor this lisp is from.")))
-      (computer
-	(or #+(or sun3 (and sun (or mc68000 mc68020))) "sun3"
-	    #+(or sun4 sparc) "sparc"
-	    #+(and hp (or mc68000 mc68020)) "hp9000-300"
-	    #+vax "vax"
-	    (error "Can't figure out what computer vendor this computer is from."))))
-  (xlib:load-clx (format nil "/src/local/clx/~A.~A/" lisp computer)))
+(defvar *clx-binary-pathname*
+	(let ((lisp
+		(or #+lucid "lucid"
+		    #+akcl  "akcl"
+		    #+kcl   "kcl"
+		    #+ibcl  "ibcl"
+		    (error "Can't provide CLX for this lisp.")))
+	      (architecture
+		(or #+(or sun3 (and sun (or mc68000 mc68020))) "sun3"
+		    #+(or sun4 sparc) "sparc"
+		    #+(and hp (or mc68000 mc68020)) "hp9000s300"
+		    #+vax "vax"
+		    #+prime "prime"
+		    #+sunrise "sunrise"
+		    #+ibm-rt-pc "ibm-rt-pc"
+		    #+mips "mips"
+		    #+prism "prism"
+		    (error "Can't provide CLX for this architecture."))))
+	  (pathname (format nil "/src/local/clx/~A.~A/" lisp architecture))))
+
+(defvar *compile-clx*
+	nil)
+
+(load (merge-pathnames "defsystem" *clx-source-pathname*))
+
+(if *compile-clx*
+    (compile-clx *clx-source-pathname* *clx-binary-pathname*)
+  (load-clx *clx-binary-pathname*))
