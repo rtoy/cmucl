@@ -1,5 +1,4 @@
 ;;; -*- Log: code.log; Package: Lisp -*-
-;;; ### Some day fix to accept :wild in any pathname component.
 ;;; **********************************************************************
 ;;; This code was written as part of the CMU Common Lisp project at
 ;;; Carnegie Mellon University, and has been placed in the public domain.
@@ -7,27 +6,20 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.15 1991/12/01 18:10:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.16 1991/12/16 10:31:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Ugly pathname functions for Spice Lisp.
-;;;    these functions are part of the standard Spice Lisp environment.
+;;; File system interface functions.  This file is pretty UNIX specific.
 ;;;
-;;; Written by Jim Large and Rob MacLachlan
+;;; Written by William Lott
 ;;;
 ;;; **********************************************************************
 
 (in-package "LISP")
 
-(export '(pathname pathnamep *default-pathname-defaults* truename
-	  parse-namestring merge-pathnames make-pathname
-	  pathname-host pathname-device pathname-directory
-	  pathname-name pathname-type pathname-version
-	  namestring file-namestring directory-namestring
-	  host-namestring enough-namestring user-homedir-pathname
-          probe-file rename-file delete-file file-write-date
-	  file-author directory))
+(export '(truename probe-file user-homedir-pathname directory
+          rename-file delete-file file-write-date file-author))
 
 (use-package "EXTENSIONS")
 
@@ -36,276 +28,563 @@
 			  file-writable unix-namestring))
 (in-package "LISP")
 
-
 
-;;; Pathname structure
+;;;; Unix pathname host support.
 
-
-;;; *Default-Pathname-defaults* has all values unspecified except for the
-;;;  host.  All pathnames must have a host.
-(defvar *default-pathname-defaults* ()
-  "Set to the default pathname-defaults pathname (Got that?)")
-
-(defun filesys-init ()
-  (setq *default-pathname-defaults*
-	(%make-pathname "Mach" nil nil nil nil nil))
-  (multiple-value-bind (won dir)
-		       (mach:unix-current-directory)
-    (when won
-      (setf (search-list "default:") (list dir)))))
-
-
-;;; The pathname type is defined with a defstruct.
-;;; This declaration implicitly defines the common lisp function Pathnamep
-(defstruct (pathname
-	    (:conc-name %pathname-)
-	    (:print-function %print-pathname)
-	    (:constructor
-	     %make-pathname (host device directory name type version))
-	    (:predicate pathnamep))
-  "Pathname is the structure of the file pathname.  It consists of a
-   host, a device, a directory, a name, and a type."
-  (host nil :type (or simple-string null))
-  (device nil :type (or simple-string (member nil :absolute)))
-  (directory nil :type (or simple-vector null))
-  (name nil :type (or simple-string null))
-  (type nil :type (or simple-string null))
-  (version nil :type (or integer (member nil :newest))))
-
-(defun %print-pathname (s stream d)
-  (declare (ignore d))
-  (format stream "#p~S" (namestring s)))
-
-(defun make-pathname (&key defaults (host nil hostp) (device nil devicep)
-			   (directory nil directoryp) (name nil namep)
-			   (type nil typep) (version nil versionp))
-  "Create a pathname from :host, :device, :directory, :name, :type and :version.
-  If any field is ommitted, it is obtained from :defaults as though by 
-  merge-pathnames."
-  (flet ((make-it (host device directory name type version)
-	   (%make-pathname
-	    (if host
-		(if (stringp host) (coerce host 'simple-string) host)
-		(%pathname-host *default-pathname-defaults*))
-	    (if (stringp device) (coerce device 'simple-string) device)
-	    (if (stringp directory)
-		(%pathname-directory (parse-namestring directory))
-		directory)
-	    (if (stringp name) (coerce name 'simple-string) name)
-	    (if (stringp type) (coerce type 'simple-string) type)
-	    version)))
-  (if defaults
-      (let ((defaults (pathname defaults)))
-	(make-it (if hostp host (%pathname-host defaults))
-		 (if devicep device (%pathname-device defaults))
-		 (if directoryp directory (%pathname-directory defaults))
-		 (if namep name (%pathname-name defaults))
-		 (if typep type (%pathname-type defaults))
-		 (if versionp version (%pathname-version defaults))))
-      (make-it host device directory name type version))))
-
-
-;;; These can not be done by the accessors because the pathname arg may be
-;;;  a string or a symbol or etc.
-
-(defun pathname-host (pathname)
-  "Returns the host slot of pathname.  Pathname may be a string, symbol,
-  or stream."
-  (%pathname-host (if (pathnamep pathname) pathname (pathname pathname))))
-
-(defun pathname-device (pathname)
-  "Returns the device slot of pathname.  Pathname may be a string, symbol,
-  or stream."
-  (%pathname-device (if (pathnamep pathname) pathname (pathname pathname))))
-
-(defun pathname-directory (pathname)
-  "Returns the directory slot of pathname.  Pathname may be a string,
-  symbol, or stream."
-  (%pathname-directory (if (pathnamep pathname) pathname (pathname pathname))))
-
-(defun pathname-name (pathname)
-  "Returns the name slot of pathname.  Pathname may be a string,
-  symbol, or stream."
-  (%pathname-name (if (pathnamep pathname) pathname (pathname pathname))))
-
-(defun pathname-type (pathname)
-  "Returns the type slot of pathname.  Pathname may be a string,
-  symbol, or stream."
-  (%pathname-type (if (pathnamep pathname) pathname (pathname pathname))))
-
-(defun pathname-version (pathname)
-  "Returns the version slot of pathname.  Pathname may be a string,
-  symbol, or stream."
-  (%pathname-version (if (pathnamep pathname) pathname (pathname pathname))))
-
-
-
-;;;; PARSE-NAMESTRING and PATHNAME.
-
-;;; SPLIT-FILENAME -- internal
+;;; Unix namestrings have the following format:
 ;;;
-;;; Splits the filename into the name and type.  If someone wants to change
-;;; this yet again, just change this.
-;;; 
-(defun split-filename (filename)
-  (declare (simple-string filename))
-  (let ((posn (position #\. filename :from-end t)))
-    (cond ((null posn)
-	   (values filename nil))
-	  ((or (zerop posn) (= posn (1- (length filename))))
-	   (values filename ""))
+;;; namestring := [ directory ] [ file [ type [ version ]]]
+;;; directory := [ "/" | search-list ] { file "/" }*
+;;; search-list := [^:/]*:
+;;; file := [^/]*
+;;; type := "." [^/.]*
+;;; version := "." ([0-9]+ | "*")
+;;;
+;;; Note: this grammer is ambiguous.  The string foo.bar.5 can be parsed
+;;; as either just the file specified or as specifying the file, type, and
+;;; version.  Therefore, we use the following rules when confronted with
+;;; an ambiguous file.type.version string:
+;;;
+;;; - If the first character is a dot, it's part of the file.  It is not
+;;; considered a dot in the following rules.
+;;;
+;;; - If there is only one dot, it seperates the file and the type.
+;;;
+;;; - If there are multiple dots and the stuff following the last dot
+;;; is a valid version, then that is the version and the stuff between
+;;; the second to last dot and the last dot is the type.
+;;;
+;;; Wildcard characters:
+;;;
+;;; If the directory, file, type components contain any of the following
+;;; characters, it is considered part of a wildcard pattern and has the
+;;; following meaning.
+;;;
+;;; ? - matches any character
+;;; * - matches any zero or more characters.
+;;; [abc] - matches any of a, b, or c.
+;;; {str1,str2,...,strn} - matches any of str1, str2, ..., or strn.
+;;;
+;;; Any of these special characters can be preceeded by a backslash to
+;;; cause it to be treated as a regular character.
+;;;
+
+(defun remove-backslashes (namestr start end)
+  "Remove and occurences of \\ from the string because we've already
+   checked for whatever they may have been backslashed."
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (let* ((result (make-string (- end start)))
+	 (dst 0)
+	 (quoted nil))
+    (do ((src start (1+ src)))
+	((= src end))
+      (cond (quoted
+	     (setf (schar result dst) (schar namestr src))
+	     (setf quoted nil)
+	     (incf dst))
+	    (t
+	     (let ((char (schar namestr src)))
+	       (cond ((char= char #\\)
+		      (setq quoted t))
+		     (t
+		      (setf (schar result dst) char)
+		      (incf dst)))))))
+    (when quoted
+      (error 'namestring-parse-error
+	     :complaint "Backslash in bad place."
+	     :namestring namestr
+	     :offset (1- end)))
+    (shrink-vector result dst)))
+
+(defvar *ignore-wildcards* nil)
+
+(defun maybe-make-pattern (namestr start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (if *ignore-wildcards*
+      (subseq namestr start end)
+      (collect ((pattern))
+	(let ((quoted nil)
+	      (any-quotes nil)
+	      (last-regular-char nil)
+	      (index start))
+	  (flet ((flush-pending-regulars ()
+		   (when last-regular-char
+		     (pattern (if any-quotes
+				  (remove-backslashes namestr
+						      last-regular-char
+						      index)
+				  (subseq namestr last-regular-char index)))
+		     (setf any-quotes nil)
+		     (setf last-regular-char nil))))
+	    (loop
+	      (when (>= index end)
+		(return))
+	      (let ((char (schar namestr index)))
+		(cond (quoted
+		       (incf index)
+		       (setf quoted nil))
+		      ((char= char #\\)
+		       (setf quoted t)
+		       (setf any-quotes t)
+		       (unless last-regular-char
+			 (setf last-regular-char index))
+		       (incf index))
+		      ((char= char #\?)
+		       (flush-pending-regulars)
+		       (pattern :single-char-wild)
+		       (incf index))
+		      ((char= char #\*)
+		       (flush-pending-regulars)
+		       (pattern :multi-char-wild)
+		       (incf index))
+		      ((char= char #\[)
+		       (flush-pending-regulars)
+		       (let ((close-bracket
+			      (position #\] namestr :start index :end end)))
+			 (unless close-bracket
+			   (error 'namestring-parse-error
+				  :complaint "``['' with no corresponding ``]''"
+				  :namestring namestr
+				  :offset index))
+			 (pattern (list :character-set
+					(subseq namestr
+						(1+ index)
+						close-bracket)))
+			 (setf index (1+ close-bracket))))
+		      (t
+		       (unless last-regular-char
+			 (setf last-regular-char index))
+		       (incf index)))))
+	    (flush-pending-regulars)))
+	(cond ((null (pattern))
+	       "")
+	      ((and (null (cdr (pattern)))
+		    (simple-string-p (car (pattern))))
+	       (car (pattern)))
+	      (t
+	       (make-pattern (pattern)))))))
+
+(defun extract-name-type-and-version (namestr start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (let* ((last-dot (position #\. namestr :start (1+ start) :end end
+			     :from-end t))
+	 (second-to-last-dot (and last-dot
+				  (position #\. namestr :start (1+ start)
+					    :end last-dot :from-end t)))
+	 (version :newest))
+    ;; If there is a second-to-last dot, check to see if there is a valid
+    ;; version after the last dot.
+    (when second-to-last-dot
+      (cond ((and (= (+ last-dot 2) end)
+		  (char= (schar namestr (1+ last-dot)) #\*))
+	     (setf version :wild))
+	    ((and (< (1+ last-dot) end)
+		  (do ((index (1+ last-dot) (1+ index)))
+		      ((= index end) t)
+		    (unless (char<= #\0 (schar namestr index) #\9)
+		      (return nil))))
+	     (setf version
+		   (parse-integer namestr :start (1+ last-dot) :end end)))
+	    (t
+	     (setf second-to-last-dot nil))))
+    (cond (second-to-last-dot
+	   (values (maybe-make-pattern namestr start second-to-last-dot)
+		   (maybe-make-pattern namestr
+				       (1+ second-to-last-dot)
+				       last-dot)
+		   version))
+	  (last-dot
+	   (values (maybe-make-pattern namestr start last-dot)
+		   (maybe-make-pattern namestr (1+ last-dot) end)
+		   version))
 	  (t
-	   (values (subseq filename 0 posn)
-		   (subseq filename (1+ posn)))))))
+	   (values (maybe-make-pattern namestr start end)
+		   nil
+		   version)))))
 
-;;; DO-FILENAME-PARSE -- internal
-;;;
-;;; Split string into a logical name, a vector of directories, a file name and
-;;; a file type.
-;;;
-(defun do-filename-parse (string &optional (start 0) end)
-  (declare (simple-string string))
-  (let ((end (or end (length string))))
-    (let* ((directories nil)
-	   (filename nil)
-	   (absolutep (and (> end start) (eql (schar string start) #\/)))
-	   (logical-name
-	    (cond (absolutep
-		   (setf start (position #\/ string :start start :end end
-					 :test-not #'char=))
-		   :absolute)
-		  ((find #\: string
-			 :start start
-			 :end (or (position #\/ string :start start :end end)
-				  end))
-		   (let ((posn (position #\: string :start start)))
-		     (prog1
-			 (subseq string start posn)
-		       (setf start (1+ posn))))))))
+(defun split-at-slashes (namestr start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (let ((absolute (and (/= start end)
+		       (char= (schar namestr start) #\/))))
+    (when absolute
+      (incf start))
+    ;; Next, split the remainder into slash seperated chunks.
+    (collect ((pieces))
       (loop
-	(unless (and start (> end start))
-	  (return))
-	(let ((next-slash (position #\/ string :start start :end end)))
-	  (cond (next-slash
-		 (push (subseq string start next-slash) directories)
-		 (setf start
-		       (position #\/ string :start next-slash :end end
-				 :test-not #'char=)))
-		(t
-		 (setf filename (subseq string start end))
-		 (return)))))
-      (multiple-value-bind (name type)
-			   (if filename (split-filename filename))
-	(values (cond (logical-name logical-name)
-		      (directories "Default"))
-		(if (or logical-name directories)
-		  (coerce (nreverse directories) 'vector))
+	(let ((slash (position #\/ namestr :start start :end end)))
+	  (pieces (cons start (or slash end)))
+	  (unless slash
+	    (return))
+	  (setf start (1+ slash))))
+      (values absolute (pieces)))))
+
+(defun maybe-extract-search-list (namestr start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (let ((quoted nil))
+    (do ((index start (1+ index)))
+	((= index end)
+	 (values nil start))
+      (if quoted
+	  (setf quoted nil)
+	  (case (schar namestr index)
+	    (#\\
+	     (setf quoted t))
+	    (#\:
+	     (return (values (remove-backslashes namestr start index)
+			     (1+ index)))))))))
+
+(defun parse-unix-namestring (namestr start end)
+  (declare (type simple-base-string namestr)
+	   (type index start end))
+  (multiple-value-bind
+      (absolute pieces)
+      (split-at-slashes namestr start end)
+    (let ((search-list
+	   (if absolute
+	       nil
+	       (let ((first (car pieces)))
+		 (multiple-value-bind
+		     (search-list new-start)
+		     (maybe-extract-search-list namestr
+						(car first) (cdr first))
+		   (when search-list
+		     (setf absolute t)
+		     (setf (car first) new-start))
+		   search-list)))))
+      (multiple-value-bind
+	  (name type version)
+	  (let* ((tail (car (last pieces)))
+		 (tail-start (car tail))
+		 (tail-end (cdr tail)))
+	    (unless (= tail-start tail-end)
+	      (setf pieces (butlast pieces))
+	      (extract-name-type-and-version namestr tail-start tail-end)))
+	;; Now we have everything we want.  So return it.
+	(values nil ; no host for unix namestrings.
+		nil ; no devices for unix namestrings.
+		(collect ((dirs))
+		  (when search-list
+		    (dirs (intern-search-list search-list)))
+		  (dolist (piece pieces)
+		    (let ((piece-start (car piece))
+			  (piece-end (cdr piece)))
+		      (unless (= piece-start piece-end)
+			(let ((dir (maybe-make-pattern namestr
+						       piece-start
+						       piece-end)))
+			  (if (and (simple-string-p dir)
+				   (string= dir ".."))
+			      (dirs :up)
+			      (dirs dir))))))
+		  (if (dirs)
+		      (cons (if absolute :absolute :relative) (dirs))
+		      nil))
 		name
-		type)))))
+		type
+		version)))))
 
-(defun parse-namestring (thing &optional host
-			 (defaults *default-pathname-defaults*)
-			 &key (start 0) end junk-allowed)
-  "Convert THING (string, symbol, pathname, or stream) into a pathname."
-  (declare (ignore junk-allowed))
-  (let* ((host (or host (pathname-host defaults)))
-	 (pathname
-	  (etypecase thing
-	    ((or string symbol)
-	     (with-array-data ((string (string thing))
-			       (start start)
-			       (end end))
-	       (multiple-value-bind (device directories name type)
-				    (do-filename-parse string start end)
-		 (make-pathname :host host
-				:device device
-				:directory directories
-				:name name
-				:type type))))
-	    (pathname
-	     thing)
-	    (stream
-	     (pathname (file-name thing))))))
-    (unless (or (null host)
-		(null (pathname-host pathname))
-		(string-equal host (pathname-host pathname)))
-      (cerror "Ignore it."
-	      "Host mismatch in ~S: ~S isn't ~S"
-	      'parse-namestring
-	      (pathname-host pathname)
-	      host))
-    ;;
-    ;; ### ??? what should the second value be???
-    (values pathname (or end start))))
+(defun unparse-unix-host (pathname)
+  (declare (type pathname pathname)
+	   (ignore pathname))
+  "Unix")
+
+(defun unparse-unix-piece (thing)
+  (etypecase thing
+    (simple-string
+     (let* ((srclen (length thing))
+	    (dstlen srclen))
+       (dotimes (i srclen)
+	 (case (schar thing i)
+	   ((#\* #\? #\[)
+	    (incf dstlen))))
+       (let ((result (make-string dstlen))
+	     (dst 0))
+	 (dotimes (src srclen)
+	   (let ((char (schar thing src)))
+	     (case char
+	       ((#\* #\? #\[)
+		(setf (schar result dst) #\\)
+		(incf dst)))
+	     (setf (schar result dst) char)
+	     (incf dst)))
+	 result)))
+    (pattern
+     (collect ((strings))
+       (dolist (piece (pattern-pieces thing))
+	 (etypecase piece
+	   (simple-string
+	    (strings piece))
+	   (symbol
+	    (case piece
+	      (:multi-char-wild
+	       (strings "*"))
+	      (:single-char-wild
+	       (strings "?"))
+	      (t
+	       (error "Invalid pattern piece: ~S" piece))))
+	   (cons
+	    (case (car piece)
+	      (:character-set
+	       (strings "[")
+	       (strings (cdr piece))
+	       (strings "]"))
+	      (t
+	       (error "Invalid pattern piece: ~S" piece))))))
+       (apply #'concatenate
+	      'simple-string
+	      (strings))))))
+
+(defun unparse-unix-directory-list (directory)
+  (declare (type list directory))
+  (collect ((pieces))
+    (when directory
+      (ecase (pop directory)
+	(:absolute
+	 (cond ((search-list-p (car directory))
+		(pieces (search-list-name (pop directory)))
+		(pieces ":"))
+	       (t
+		(pieces "/"))))
+	(:relative
+	 ;; Nothing special.
+	 ))
+      (dolist (dir directory)
+	(typecase dir
+	  ((member :up)
+	   (pieces "../"))
+	  ((member :back)
+	   (error ":BACK cannot be represented in namestrings."))
+	  ((or simple-string pattern)
+	   (pieces (unparse-unix-piece dir))
+	   (pieces "/"))
+	  (t
+	   (error "Invalid directory component: ~S" dir)))))
+    (apply #'concatenate 'simple-string (pieces))))
+
+(defun unparse-unix-directory (pathname)
+  (declare (type pathname pathname))
+  (unparse-unix-directory-list (%pathname-directory pathname)))
+  
+(defun unparse-unix-file (pathname)
+  (declare (type pathname pathname))
+  (collect ((strings))
+    (let* ((name (%pathname-name pathname))
+	   (type (%pathname-type pathname))
+	   (type-supplied (not (or (null type) (eq type :unspecific))))
+	   (version (%pathname-version pathname))
+	   (version-supplied (not (or (null version) (eq version :newest)))))
+      (when name
+	(strings (unparse-unix-piece name)))
+      (when type-supplied
+	(unless name
+	  (error "Cannot specify the type without a file: ~S" pathname))
+	(strings ".")
+	(strings (unparse-unix-piece type)))
+      (when version-supplied
+	(unless type-supplied
+	  (error "Cannot specify the version without a type: ~S" pathname))
+	(strings (if (eq version :wild)
+		     ".*"
+		     (format nil ".~D" version)))))
+    (apply #'concatenate 'simple-string (strings))))
+
+(defun unparse-unix-namestring (pathname)
+  (declare (type pathname pathname))
+  (concatenate 'simple-string
+	       (unparse-unix-directory pathname)
+	       (unparse-unix-file pathname)))
+
+(defun unparse-unix-enough (pathname defaults)
+  (declare (type pathname pathname defaults))
+  (flet ((lose ()
+	   (error "~S cannot be represented relative to ~S"
+		  pathname defaults)))
+    (collect ((strings))
+      (let* ((pathname-directory (%pathname-directory pathname))
+	     (defaults-directory (%pathname-directory defaults))
+	     (prefix-len (length defaults-directory))
+	     (result-dir
+	      (cond ((and (> prefix-len 1)
+			  (>= (length pathname-directory) prefix-len)
+			  (compare-component (subseq pathname-directory
+						     0 prefix-len)
+					     defaults-directory))
+		     ;; Pathname starts with a prefix of default.  So just
+		     ;; use a relative directory from then on out.
+		     (cons :relative (nthcdr prefix-len pathname-directory)))
+		    ((eq (car pathname-directory) :absolute)
+		     ;; We are an absolute pathname, so we can just use it.
+		     pathname-directory)
+		    (t
+		     ;; We are a relative directory.  So we lose.
+		     (lose)))))
+	(strings (unparse-unix-directory-list result-dir)))
+      (let* ((pathname-version (%pathname-version pathname))
+	     (version-needed (and pathname-version
+				  (not (eq pathname-version :newest))))
+	     (pathname-type (%pathname-type pathname))
+	     (type-needed (or version-needed
+			      (and pathname-type
+				   (not (eq pathname-type :unspecific)))))
+	     (pathname-name (%pathname-name pathname))
+	     (name-needed (or type-needed
+			      (and pathname-name
+				   (not (compare-component pathname-name
+							   (%pathname-name
+							    defaults)))))))
+	(when name-needed
+	  (unless pathname-name (lose))
+	  (strings (unparse-unix-piece pathname-name)))
+	(when type-needed
+	  (when (or (null pathname-type) (eq pathname-type :unspecific))
+	    (lose))
+	  (strings ".")
+	  (strings (unparse-unix-piece pathname-type)))
+	(when version-needed
+	  (typecase pathname-version
+	    ((member :wild)
+	     (strings ".*"))
+	    (integer
+	     (strings (format nil ".~D" pathname-version)))
+	    (t
+	     (lose)))))
+      (apply #'concatenate 'simple-string (strings)))))
 
 
-(defun pathname (thing)
-  "Turns thing into a pathname.  Thing may be a string, symbol, stream, or
-   pathname."
-  (values (parse-namestring thing)))
+(defstruct (unix-host
+	    (:include host
+		      (:parse #'parse-unix-namestring)
+		      (:unparse #'unparse-unix-namestring)
+		      (:unparse-host #'unparse-unix-host)
+		      (:unparse-directory #'unparse-unix-directory)
+		      (:unparse-file #'unparse-unix-file)
+		      (:unparse-enough #'unparse-unix-enough)
+		      (:customary-case :lower))
+	    (:make-load-form-fun make-unix-host-load-form))
+  )
 
+(defvar *unix-host* (make-unix-host))
+
+(defun make-unix-host-load-form (host)
+  (declare (ignore host))
+  '*unix-host*)
 
 
-;;; Merge-Pathnames  --  Public
-;;;
-;;; Returns a new pathname whose fields are the same as the fields in PATHNAME
-;;;  except that () fields are filled in from defaults.  Type and Version field
-;;;  are only done if name field has to be done (see manual for explanation).
-;;;
-(defun merge-pathnames (pathname &optional
-				 (defaults *default-pathname-defaults*)
-				 default-version)
-  "Fills in unspecified slots of Pathname from Defaults (defaults to
-   *default-pathname-defaults*).  If the version remains unspecified,
-   gets it from Default-Version."
-  ;;
-  ;; finish hairy argument defaulting
-  (let ((pathname (pathname pathname))
-	(defaults (pathname defaults)))
-    ;;
-    ;; make a new pathname
-    (let ((name (%pathname-name pathname)))
-      (%make-pathname
-       (or (%pathname-host pathname) (%pathname-host defaults))
-       (or (%pathname-device pathname) (%pathname-device defaults))
-       (or (%pathname-directory pathname) (%pathname-directory defaults))
-       (or name (%pathname-name defaults))
-       (or (%pathname-type pathname) (%pathname-type defaults))
-       (or (%pathname-version pathname)
-	   (if name
-	       default-version
-	       (or (%pathname-version defaults) default-version)))))))
+;;;; Wildcard matching stuff.
 
-
-;;;; NAMESTRING and other stringification stuff.
+(defmacro enumerate-matches ((var pathname &optional result
+				  &key (verify-existance t))
+			     &body body)
+  (let ((body-name (gensym)))
+    `(block nil
+       (flet ((,body-name (,var)
+		,@body))
+	 (%enumerate-matches (pathname ,pathname)
+			     ,verify-existance
+			     #',body-name)
+	 ,result))))
 
-;;; %Dirstring  --  Internal
-;;;
-;;; %Dirstring converts a vector of the form #("foo" "bar" ... "baz") into a
-;;;  string of the form "foo/bar/ ... /baz/"
+(defun %enumerate-matches (pathname verify-existance function)
+  (when (pathname-type pathname)
+    (unless (pathname-name pathname)
+      (error "Cannot supply a type without a name:~%  ~S" pathname)))
+  (when (and (integerp (pathname-version pathname))
+	     (member (pathname-type pathname) '(nil :unspecific)))
+    (error "Cannot supply a version without a type:~%  ~S" pathname))
+  (let ((directory (pathname-directory pathname)))
+    (if directory
+	(ecase (car directory)
+	  (:absolute
+	   (%enumerate-directories "/" (cdr directory) pathname
+				   verify-existance function))
+	  (:relative
+	   (%enumerate-directories "" (cdr directory) pathname
+				   verify-existance function)))
+	(%enumerate-files "" pathname verify-existance function))))
 
-(defun %dirstring (dirlist)
-  (declare (simple-vector dirlist))
-  (let* ((numdirs (length dirlist))
-	 (length numdirs))
-    (declare (fixnum numdirs length))
-    (dotimes (i numdirs)
-      (incf length (the fixnum (length (svref dirlist i)))))
-    (do ((result (make-string length))
-	 (index 0 (1+ index))
-	 (position 0))
-	((= index numdirs) result)
-      (declare (simple-string result))
-      (let* ((string (svref dirlist index))
-	     (len (length string))
-	     (end (+ position len)))
-	(declare (simple-string string)
-		 (fixnum len end))
-	(replace result string :start1 position  :end1 end  :end2 len)
-	(setf (schar result end) #\/)
-	(setq position (+ end 1))))))
+(defun %enumerate-directories (head tail pathname verify-existance function)
+  (if tail
+      (let ((piece (car tail)))
+	(etypecase piece
+	  (simple-string
+	   (%enumerate-directories (concatenate 'string head piece "/")
+				   (cdr tail) pathname verify-existance
+				   function))
+	  (pattern
+	   (let ((dir (mach:open-dir head)))
+	     (when dir
+	       (unwind-protect
+		   (loop
+		     (let ((name (mach:read-dir dir)))
+		       (cond ((null name)
+			      (return))
+			     ((string= name "."))
+			     ((string= name ".."))
+			     ((pattern-matches piece name)
+			      (let ((subdir (concatenate 'string
+							 head name "/")))
+				(when (eq (mach:unix-file-kind subdir)
+					  :directory)
+				  (%enumerate-directories
+				   subdir (cdr tail) pathname verify-existance
+				   function)))))))
+		 (mach:close-dir dir)))))
+	  ((member :up)
+	   (%enumerate-directories (concatenate 'string head "../")
+				   (cdr tail) pathname verify-existance
+				   function))))
+      (%enumerate-files head pathname verify-existance function)))
+
+(defun %enumerate-files (directory pathname verify-existance function)
+  (let ((name (pathname-name pathname))
+	(type (pathname-type pathname))
+	(version (pathname-version pathname)))
+    (cond ((null name)
+	   (when (or (not verify-existance)
+		     (mach:unix-file-kind directory))
+	     (funcall function directory)))
+	  ((or (pattern-p name)
+	       (pattern-p type)
+	       (eq version :wild))
+	   (let ((dir (mach:open-dir directory)))
+	     (when dir
+	       (unwind-protect
+		   (loop
+		     (let ((file (mach:read-dir dir)))
+		       (if file
+			   (multiple-value-bind
+			       (file-name file-type file-version)
+			       (let ((*ignore-wildcards* t))
+				 (extract-name-type-and-version
+				  file 0 (length file)))
+			     (when (and (components-match file-name name)
+					(components-match file-type type)
+					(components-match file-version
+							  version))
+			       (funcall function
+					(concatenate 'string
+						     directory
+						     file))))
+			   (return))))
+		 (mach:close-dir dir)))))
+	  (t
+	   (let ((file (concatenate 'string directory name)))
+	     (unless (eq type :unspecific)
+	       (setf file (concatenate 'string file "." type)))
+	     (unless (eq version :newest)
+	       (setf file (concatenate 'string file "."
+				       (quick-integer-to-string version))))
+	     (when (or (not verify-existance)
+		       (mach:unix-file-kind file))
+	       (funcall function file)))))))
 
 (defun quick-integer-to-string (n)
+  (declare (type integer n))
   (cond ((zerop n) "0")
 	((eql n 1) "1")
 	((minusp n)
@@ -325,153 +604,26 @@
 		    (fixnum len i r))
 	   (multiple-value-setq (q r) (truncate q 10))
 	   (setf (schar res i) (schar "0123456789" r))))))
-	   
-(defun %device-string (device)
-  (cond ((eq device :absolute) "/")
-	(device
-	 (if (string-equal device "Default")
-	     ""
-	     (concatenate 'simple-string (the simple-string device) ":")))
-	(T "")))
 
-(defun namestring (pathname)
-  "Returns the full form of PATHNAME as a string."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (directory (%pathname-directory pathname))
-	 (name (%pathname-name pathname))
-	 (type (%pathname-type pathname))
-	 (result (%device-string (%pathname-device pathname))))
-    (declare (simple-string result))
-    (when directory
-      (setq result (concatenate 'simple-string result
-				(the simple-string (%dirstring directory)))))
-    (when name
-      (setq result (concatenate 'simple-string result 
-				(the simple-string name))))
-    (when (and type (not (zerop (length type))))
-      (setq result (concatenate 'simple-string result "."
-				(the simple-string type))))
-    result))
-
-(defun namestring-without-device (pathname)
-  "NAMESTRING of pathname ignoring the device slot."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (directory (%pathname-directory pathname))
-	 (name (%pathname-name pathname))
-	 (type (%pathname-type pathname))
-	 (result ""))
-    (declare (simple-string result))
-    (when directory
-      (setq result (concatenate 'simple-string result
-				(the simple-string (%dirstring directory)))))
-    (when name
-      (setq result (concatenate 'simple-string result 
-				(the simple-string name))))
-    (when (and type (not (zerop (length type))))
-      (setq result (concatenate 'simple-string result "."
-				(the simple-string type))))
-    result))
-
-;;; This function is somewhat bummed to make the Hemlock directory command
-;;; is fast.
-;;;
-(defun file-namestring (pathname)
-  "Returns the name, type, and version of PATHNAME as a string."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (name (%pathname-name pathname))
-	 (type (%pathname-type pathname))
-	 (result (or name "")))
-    (declare (simple-string result))
-    (if (and type (not (zerop (length type))))
-	(concatenate 'simple-string result "." type)
-	result)))
-
-(defun directory-namestring (pathname)
-  "Returns the device & directory parts of PATHNAME as a string."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (directory (%pathname-directory pathname))
- 	 (result (%device-string (%pathname-device pathname))))
-    (declare (simple-string result))
-    (when directory
-      (setq result (concatenate 'simple-string result
-				(the simple-string (%dirstring directory)))))
-    result))
-
-(defun host-namestring (pathname)
-  "Returns the host part of PATHNAME as a string."
-  (%pathname-host (if (pathnamep pathname) pathname (pathname pathname))))
-
-
-;;; Do-Search-List  --  Internal
-;;;
-;;;    Bind var in turn to each element of search list with the specifed
-;;; name.
-;;;
-(defmacro do-search-list ((var name &optional exit-form) . body)
-  "Do-Search-List (Var Name [Exit-Form]) {Form}*"
-  `(dolist (,var (resolve-search-list ,name nil) ,exit-form)
-     (declare (simple-string ,var))
-     ,@body))
-
-;;; UNIX-NAMESTRING -- public
+
+;;;; UNIX-NAMESTRING -- public
 ;;; 
 (defun unix-namestring (pathname &optional (for-input t))
-  "Convert PATHNAME into a string that can be used with UNIX system calls."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (device (%pathname-device pathname)))
-    (cond ((or (eq device :absolute)
-	       (null device)
-	       (string= device "Default"))
-	   (namestring pathname))
-	  (for-input
-	   (let ((remainder (namestring-without-device pathname))
-		 (first nil))
-	     (do-search-list (entry device first)
-	       (let ((name (concatenate 'simple-string entry remainder)))
-		 (unless first
-		   (setf first name))
-		 (when (mach:unix-file-kind name)
-		   (return name))))))
-	  (t
-	   (concatenate 'simple-string
-			(car (resolve-search-list device t))
-			(namestring-without-device pathname))))))
-
+  "Convert PATHNAME into a string that can be used with UNIX system calls.
+   Search-lists and wild-cards are expanded."
+  (enumerate-search-list
+      (pathname pathname)
+    (collect ((names))
+      (enumerate-matches (name pathname nil :verify-existance for-input)
+	(names name))
+      (let ((names (names)))
+	(when names
+	  (when (cdr names)
+	    (error "~S is ambiguous:~{~%  ~A~}" pathname names))
+	  (return (car names)))))))
 
 
-;;;; ENOUGH-NAMESTRING
-
-(defun enough-namestring (pathname &optional
-				   (defaults *default-pathname-defaults*))
-  "Returns a string which uniquely identifies PATHNAME w.r.t. DEFAULTS." 
-  (let* ((pathname (pathname pathname))
-	 (defaults (pathname defaults))
-	 (device (%pathname-device pathname))
-	 (directory (%pathname-directory pathname))
-	 (name (%pathname-name pathname))
-	 (type (%pathname-type pathname))
-	 (result "")
-	 (need-name nil))
-    (declare (simple-string result))
-    (when (and device (string-not-equal device (%pathname-device defaults)))
-      (setq result (%device-string device)))
-    (when (and directory
-	       (not (equalp directory (%pathname-directory defaults))))
-      (setq result (concatenate 'simple-string result
-				(the simple-string (%dirstring directory)))))
-    (when (and name (string-not-equal name (%pathname-name defaults)))
-      (setq result (concatenate 'simple-string result 
-				(the simple-string name))
-	    need-name t))
-    (when (and type (or need-name
-			(string-not-equal type (%pathname-type defaults))))
-      (setq result (concatenate 'simple-string result "."
-				(the simple-string type))))
-    result))
-
-
-
-;;;; TRUENAME and other stuff probing stuff.
+;;;; TRUENAME and PROBE-FILE.
 
 ;;; Truename  --  Public
 ;;;
@@ -491,30 +643,27 @@
 ;;;
 (defun probe-file (pathname)
   "Return a pathname which is the truename of the file if it exists, NIL
-  otherwise.  Returns NIL for directories and other non-file entries."
+  otherwise."
   (let ((namestring (unix-namestring pathname t)))
-    (when (mach:unix-file-kind namestring)
+    (when (and namestring (mach:unix-file-kind namestring))
       (let ((truename (mach:unix-resolve-links
 		       (mach:unix-maybe-prepend-current-directory
 			namestring))))
 	(when truename
-	  (pathname (mach:unix-simplify-pathname truename)))))))
+	  (let ((*ignore-wildcards* t))
+	    (pathname (mach:unix-simplify-pathname truename))))))))
 
 
 ;;;; Other random operations.
 
 ;;; Rename-File  --  Public
 ;;;
-;;;    If File is a File-Stream, then rename the associated file if it exists,
-;;; otherwise just change the name in the stream.  If not a file stream, then
-;;; just rename the file.
-;;;
 (defun rename-file (file new-name)
   "Rename File to have the specified New-Name.  If file is a stream open to a
   file, then the associated file is renamed.  If the file does not yet exist
   then the file is created with the New-Name when the stream is closed."
   (let* ((original (truename file))
-	 (original-namestring (namestring original))
+	 (original-namestring (unix-namestring original t))
 	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
     (multiple-value-bind (res error)
@@ -525,7 +674,7 @@
 	       original new-name (mach:get-unix-error-msg error)))
       (when (streamp file)
 	(file-name file new-namestring))
-      (values new-name original (truename new-namestring)))))
+      (values new-name original (truename new-name)))))
 
 ;;; Delete-File  --  Public
 ;;;
@@ -580,139 +729,29 @@
 
 ;;;; DIRECTORY.
 
-;;; PARSE-PATTERN  --  internal.
-;;;
-;;; Parse-pattern extracts the name portion of pathname and converts it into
-;;; a pattern usable in match-pattern-p.
-;;; 
-(defun parse-pattern (pathname)
-  (let ((string (file-namestring pathname))
-	(pattern nil)
-	(last-regular-char nil)
-	(index 0))
-    (flet ((flush-pending-regulars ()
-	     (when last-regular-char
-	       (push (subseq string last-regular-char index) pattern))
-	     (setf last-regular-char nil)))
-      (loop
-	(when (>= index (length string))
-	  (return))
-	(let ((char (schar string index)))
-	  (cond ((char= char #\?)
-		 (flush-pending-regulars)
-		 (push :single-char-wild pattern)
-		 (incf index))
-		((char= char #\*)
-		 (flush-pending-regulars)
-		 (push :multi-char-wild pattern)
-		 (incf index))
-		((char= char #\[)
-		 (flush-pending-regulars)
-		 (let ((close-bracket (position #\] string :start index)))
-		   (unless close-bracket
-		     (error "``['' with no corresponding ``]'': ~S" string))
-		   (push :character-set pattern)
-		   (push (subseq string (1+ index) close-bracket)
-			 pattern)
-		   (setf index (1+ close-bracket))))
-		(t
-		 (unless last-regular-char
-		   (setf last-regular-char index))
-		 (incf index)))))
-      (flush-pending-regulars))
-    (nreverse pattern)))
-
-;;; MATCH-PATTERN-P  --  internal.
-;;;
-;;; Determine if string (starting at start) matches pattern.
-;;; 
-(defun match-pattern-p (string pattern &optional (start 0))
-  (cond ((null pattern)
-	 (= start (length string)))
-	((eq (car pattern) :single-char-wild)
-	 (and (> (length string) start)
-	      (match-pattern-p string (cdr pattern) (1+ start))))
-	((eq (car pattern) :character-set)
-	 (and (> (length string) start)
-	      (find (schar string start) (cadr pattern))
-	      (match-pattern-p string (cddr pattern) (1+ start))))
-	((eq (car pattern) :multi-char-wild)
-	 (do ((new-start (length string) (1- new-start)))
-	     ((< new-start start) nil)
-	   (when (match-pattern-p string (cdr pattern) new-start)
-	     (return t))))
-	((stringp (car pattern))
-	 (let* ((expected (car pattern))
-		(len (length expected))
-		(new-start (+ start len)))
-	   (and (>= (length string) new-start)
-		(string= string expected :start1 start :end1 new-start)
-		(match-pattern-p string (cdr pattern) new-start))))
-	(t
-	 (error "Bogus thing in pattern: ~S" (car pattern)))))
-
-;;; MATCHING-FILES-IN-DIR  --  internal
-;;;
-;;; Return a list of all the files in the directory dirname that match
-;;; pattern.  If all is nil, ignore files starting with a ``.''.
-;;; 
-(defun matching-files-in-dir (dirname pattern all)
-  (let ((dir (mach:open-dir dirname)))
-    (if dir
-	(unwind-protect
-	    (let ((results nil))
-	      (loop
-		(let ((name (mach:read-dir dir)))
-		  (cond ((null name)
-			 (return))
-			((or (string= name ".")
-			     (string= name "..")
-			     (and (not all)
-				  (char= (schar name 0) #\.))))
-			((or (null pattern)
-			     (match-pattern-p name pattern))
-			 (if (zerop (length dirname))
-			     (push name results)
-			     (push (concatenate 'string dirname name)
-				   results))))))
-	      (values results t))
-	  (mach:close-dir dir))
-	(values nil nil))))
-
 ;;; DIRECTORY  --  public.
 ;;; 
 (defun directory (pathname &key (all t) (check-for-subdirs t))
   "Returns a list of pathnames, one for each file that matches the given
    pathname.  Supplying :all as nil causes this to ignore Unix dot files.  This
    never includes Unix dot and dot-dot in the result."
-  (let* ((pathname (if (pathnamep pathname) pathname (pathname pathname)))
-	 (device (%pathname-device pathname))
-	 (pattern (parse-pattern pathname))
-	 (results nil))
-    (if (or (eq device :absolute)
-	    (null device)
-	    (string= device "Default"))
-	(setf results
-	      (matching-files-in-dir (directory-namestring pathname)
-				     pattern all))
-	(let ((remainder (namestring-without-device
-			  (directory-namestring pathname))))
-	  (do-search-list (dir device)
-	    (multiple-value-bind
-		(files won)
-		(matching-files-in-dir (concatenate 'simple-string
-						    dir
-						    remainder)
-				       pattern
-				       all)
-	      (setf results (append results files))))))
-    (setf results (sort (delete-duplicates results :test #'string=) #'string<))
-    (mapcar #'(lambda (name)
-		(if (and check-for-subdirs
-			 (eq (mach:unix-file-kind name) :directory))
-		    (pathname (concatenate 'string name "/"))
-		    (pathname name)))
-	    results)))
+  (let ((results nil))
+    (enumerate-search-list
+	(pathname pathname)
+      (enumerate-matches (name pathname)
+	(when (or all
+		  (let ((slash (position #\/ name :from-end t)))
+		    (or (null slash)
+			(= (1+ slash) (length name))
+			(char/= (schar name (1+ slash)) #\.))))
+	  (push name results))))
+    (let ((*ignore-wildcards* t))
+      (mapcar #'(lambda (name)
+		  (if (and check-for-subdirs
+			   (eq (mach:unix-file-kind name) :directory))
+		      (pathname (concatenate 'string name "/"))
+		      (pathname name)))
+	      (sort (delete-duplicates results :test #'string=) #'string<)))))
 
 
 ;;;; Printing directories.
@@ -725,8 +764,8 @@
    non-nil, then Unix dot files are included too (as ls -a).  When :vervose
    is supplied and non-nil, then a long listing of miscellaneous
    information is output one file per line."
-  (setf pathname (pathname pathname))
-  (let ((*standard-output* (out-synonym-of stream)))
+  (let ((*standard-output* (out-synonym-of stream))
+	(pathname pathname))
     (if verbose
 	(print-directory-verbose pathname all return-list)
 	(print-directory-formatted pathname all return-list))))
@@ -946,7 +985,8 @@
 	  (t
 	   (let ((good-files
 		  (delete-if #'(lambda (pathname)
-				 (and (pathname-type pathname)
+				 (and (simple-string-p
+				       (pathname-type pathname))
 				      (member (pathname-type pathname)
 					      ignore-types
 					      :test #'string=)))
@@ -974,69 +1014,56 @@
 
 ;;; COMPLETE-FILE-DIRECTORY-ARG -- Internal.
 ;;;
-;;; This is necessary to make COMPLETE-FILE reasonable.  The problem is that
-;;; MERGE-PATHNAMES of pathname and defaults fails us when pathname has a
-;;; non-nil directory slot, and pathname is relative to the "default" device.
-;;; There is no good argument for making MERGE-PATHNAMES do what COMPLETE-FILE
-;;; wants, but since COMPLETE-FILE is used in the context of the defaults
-;;; argument, it should always complete relative to the defaults, not relative
-;;; to the "default" logical name.  That is, what users want when pathname is
-;;; not absolute and specifies directories is something relative to the
-;;; absolute defaults supplied.
-;;;
 (defun complete-file-directory-arg (pathname defaults)
-  (let ((pathname (pathname pathname))
-	(defaults (pathname defaults)))
-    (concatenate 'simple-string
-		 (namestring
-		  (cond
-		   ((not (and (string= (pathname-device pathname) "Default")
-			      (pathname-directory pathname)))
-		    (merge-pathnames pathname defaults))
-		   ((eq (pathname-device defaults) :absolute)
-		    ;;
-		    (make-pathname
-		     :host (or (pathname-host pathname) (pathname-host defaults))
-		     :device :absolute
-		     :directory (concatenate 'simple-vector
-					     (pathname-directory defaults)
-					     (pathname-directory pathname))
-		     :name (or (pathname-name pathname) (pathname-name defaults))
-		     :type (or (pathname-type pathname)
-			       (pathname-type defaults))))
-		   (t
-		    ;; This branch should never fire, but just in case ...
-		    (merge-pathnames pathname defaults))))
-		 "*")))
+  (let* ((pathname (merge-pathnames pathname defaults))
+	 (type (pathname-type pathname)))
+    (flet ((append-multi-char-wild (thing)
+	     (etypecase thing
+	       (null :wild)
+	       (pattern
+		(make-pattern (append (pattern-pieces thing)
+				      (list :multi-char-wild))))
+	       (simple-string
+		(make-pattern (list thing :multi-char-wild))))))
+      (if (or (null type) (eq type :unspecific))
+	  ;; There is no type.
+	  (make-pathname :defaults pathname
+	    :name (append-multi-char-wild (pathname-name pathname))
+	    :type :wild)
+	  ;; There already is a type, so just extend it.
+	  (make-pathname :defaults pathname
+	    :name (pathname-name pathname)
+	    :type (append-multi-char-wild (pathname-type pathname)))))))
 
 ;;; Ambiguous-Files  --  Public
 ;;;
-(defun ambiguous-files (pathname &optional defaults)
+(defun ambiguous-files (pathname
+			&optional (defaults *default-pathname-defaults*))
   "Return a list of all files which are possible completions of Pathname.
    We look in the directory specified by Defaults as well as looking down
    the search list."
-  (directory (concatenate 'string
-			  (namestring
-			   (merge-pathnames pathname
-					    (make-pathname :defaults defaults
-							   :name nil
-							   :type nil)))
-			  "*")))
+  (directory (complete-file-directory-arg pathname defaults)
+	     :check-for-subdirs nil))
+
 
 
 ;;; File-writable -- exported from extensions.
 ;;;
 ;;;   Determines whether the single argument (which should be a pathname)
 ;;;   can be written by the the current task.
-
+;;;
 (defun file-writable (name)
   "File-writable accepts a pathname and returns T if the current
   process can write it, and NIL otherwise."
-  (let ((truename (probe-file name)))
+  (let ((name (unix-namestring name nil)))
     (values
-     (mach:unix-access
-      (unix-namestring (or truename (directory-namestring name)) t)
-      (if truename mach:w_ok (logior mach:w_ok mach:x_ok))))))
+     (if (mach:unix-file-kind name)
+	 (mach:unix-access name mach:w_ok)
+	 (mach:unix-access (subseq name
+				   0
+				   (or (position #\/ name :from-end t)
+				       0))
+			   (logior mach:w_ok mach:x_ok))))))
 
 
 ;;; Pathname-Order  --  Internal
@@ -1057,9 +1084,6 @@
 
 ;;; Default-Directory  --  Public
 ;;;
-;;;    This fills in a hole in Common Lisp.  We return the first thing we
-;;; find by doing a ResolveSearchList on Default.
-;;; 
 (defun default-directory ()
   "Returns the pathname for the default directory.  This is the place where
   a file will be written if no directory is specified.  This may be changed
@@ -1067,22 +1091,24 @@
   (multiple-value-bind (gr dir-or-error)
 		       (mach:unix-current-directory)
     (if gr
-	(pathname (concatenate 'simple-string dir-or-error "/"))
+	(let ((*ignore-wildcards* t))
+	  (pathname (concatenate 'simple-string dir-or-error "/")))
 	(error dir-or-error))))
 
-;;;
-;;; Maybe this shouldn't go here...
-(defsetf default-directory %set-default-directory)
-
 ;;; %Set-Default-Directory  --  Internal
-;;;
-;;;    The setf method for Default-Directory.  We actually set the environment
-;;; variable Current which is by convention the head of the search list.
 ;;; 
 (defun %set-default-directory (new-val)
   (multiple-value-bind (gr error)
 		       (mach:unix-chdir (unix-namestring new-val t))
     (if gr
-	(car (setf (search-list "default:")
-		   (list (default-directory))))
-	(error (mach:get-unix-error-msg error)))))
+	(setf (search-list "default:") (default-directory))
+	(error (mach:get-unix-error-msg error))))
+  new-val)
+;;;
+(defsetf default-directory %set-default-directory)
+
+(defun filesys-init ()
+  (setf *default-pathname-defaults*
+	(%make-pathname *unix-host* nil nil nil nil :newest))
+  (setf (search-list "default:") (default-directory))
+  nil)
