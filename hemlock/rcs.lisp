@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.4 1990/02/09 21:08:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.5 1990/02/09 21:20:32 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under hemlock.
 ;;; 
@@ -319,7 +319,7 @@
 			  :directory (concatenate 'simple-vector
 						  (pathname-directory dir)
 						  (vector "RCS"))))
-	  (did-any nil))
+	  (count 0))
       (unless (directoryp rcsdir)
 	(editor-error "Could not find the RCS directory."))
       (dolist (rcsfile (directory rcsdir))
@@ -328,7 +328,8 @@
 	    (let* ((name (subseq rcsname 0 (- (length rcsname) 2)))
 		   (file (merge-pathnames (parse-namestring name)
 					  dir)))
-	      (when (< (file-write-date file) (file-write-date rcsfile))
+	      (when (and (probe-file file)
+			 (< (file-write-date file) (file-write-date rcsfile)))
 		(multiple-value-bind
 		    (won dev inode mode)
 		    (mach:unix-stat (namestring file))
@@ -354,7 +355,8 @@
 			     (rename-file file private)))
 			  (t
 			   (delete-file file))))
-		  (setf did-any t)
+		  (incf count)
 		  (rcs-check-out-file file nil)))))))
-      (unless did-any
-	(message "No files are out of date.")))))
+      (if (zerop count)
+	  (message "No files are out of date.")
+	  (message "Checked out ~D file~:P" count)))))
