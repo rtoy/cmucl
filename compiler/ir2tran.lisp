@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.42 1992/05/03 21:45:07 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.43 1992/06/02 19:08:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -928,13 +928,11 @@
 		 (values loc nil))
 		(t
 		 (let ((temp (make-normal-tn function-ptype)))
-		   (cond ((eq (ir2-continuation-primitive-type 2cont)
-			      function-ptype)
-			  (assert (eq check t))
-			  (emit-type-check node block loc temp
-					   (specifier-type 'function)))
-			 (t
-			  (error "This shouldn't happen.")))
+		   (assert (and (eq (ir2-continuation-primitive-type 2cont)
+				    function-ptype)
+				(eq check t)))
+		   (emit-type-check node block loc temp
+				    (specifier-type 'function))
 		   (values temp nil))))))))
 
 
