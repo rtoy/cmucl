@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.31 2001/01/23 17:25:19 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.32 2001/05/10 18:38:23 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2359,7 +2359,7 @@
 		(inst ,fcmp xi yi)
 		(inst cmove (if not-p :eq :ne) true null-tn :fcc0)
 		(inst cmp true null-tn)
-		(inst b (if not-p :eq :ne) target :icc :pt)
+		(inst b (if not-p :eq :ne) target :pt)
 		(inst nop)))))))
   (frob single fcmps)
   (frob double fcmpd))
