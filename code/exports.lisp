@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.16 1990/04/29 02:53:26 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.17 1990/04/29 23:32:28 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -405,7 +405,7 @@
 	  pointer port primep read-n-bytes record-size remove-fd-handler
 	  remove-port-death-handler remove-port-object
 	  remove-xwindow-object resolve-loaded-assembler-references sap+
-	  sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
+	  sap- sap-int sap-ref-16 sap-ref-32 sap-ref-8 sap-ref-sap
 	  serve-all-events serve-event server server-message
 	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
 	  signed-sap-ref-8 single-float-radix symbol-macro-let
