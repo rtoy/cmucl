@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.4 1990/07/06 21:22:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.5 1990/07/07 13:30:50 ram Exp $
 ;;;
 ;;; This file contains the definitions of most number functions.
 ;;;
@@ -753,7 +753,9 @@
     ((double-float single-float)
      (,op x (coerce y 'double-float)))
     (((foreach single-float double-float) rational)
-     (,op (rational x) y))
+     (if (eql y 0)
+	 (,op x (coerce 0 '(dispatch-type x)))
+	 (,op (rational x) y)))
     (((foreach bignum fixnum ratio) float)
      (,op x (rational y)))
 
@@ -1223,25 +1225,13 @@
 
 ;;;; Random number predicates:
 
-(defun zerop (number)
-  "Returns T if number = 0, NIL otherwise."
-  (zerop number))
-
-(defun plusp (number)
-  "Returns T if number > 0, NIL otherwise."
-  (plusp number))
-
-(defun minusp (number)
-  "Returns T if number < 0, NIL otherwise."
-  (minusp number))
-
-(defun oddp (number)
-  "Returns T if number is odd, NIL otherwise."
-  (oddp number))
-
-(defun evenp (number)
-  "Returns T if number is even, NIL otherwise."
-  (evenp number))
+(macrolet ((frob (name doc)
+	     `(defun ,name (number) ,doc (,name number))))
+  (frob zerop "Returns T if number = 0, NIL otherwise.")
+  (frob plusp "Returns T if number > 0, NIL otherwise.")
+  (frob minusp "Returns T if number < 0, NIL otherwise.")
+  (frob oddp "Returns T if number is odd, NIL otherwise.")
+  (frob evenp "Returns T if number is even, NIL otherwise."))
 
 
 ;;; Float operations:
@@ -1293,8 +1283,8 @@
    representation of it's argument.  See Common Lisp: The Language
    by Guy Steele for more details."
   (number-dispatch ((f float))
-    ((single-float) 24)
-    ((double-float) 53)))
+    ((single-float) single-float-digits)
+    ((double-float) double-float-digits)))
 
 (defun float-precision (f)
   "Returns a non-negative number of significant radix-b digits
