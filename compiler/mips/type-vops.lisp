@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.4 1990/03/13 00:03:17 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.5 1990/03/13 16:55:36 ch Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -18,7 +18,7 @@
 ;;;
 (in-package "C")
 
-;;; ### These belongs in compiler/fundb.lisp
+;;; ### These belongs in compiler/fndb.lisp
 ;;; 
 (defknown realp (t) boolean (movable foldable flushable))
 (defknown system-area-pointer-p (t) boolean (movable foldable flushable))
@@ -71,9 +71,6 @@
   ;; ### May want to add all of the (simple-array <mumble> (*))
   ;; primitive types.
   ;;
-  ;; ### May need to add array-header-p and friends.  Whoever ports the
-  ;; array code will probably have to frob stuff here.
-  ;; 
   (frob functionp check-function function
     vm:function-pointer-type di:object-not-function-error)
 
@@ -173,6 +170,9 @@
 					    node ,error-code obj)))
 			      (test-hairy-type obj temp err-lab t ,@types))
 			    (move res obj)))))))))
+
+  (frob array-header-p nil nil
+    vm:simple-array-type (vm:complex-string-type vm:complex-array-type))
 
   (frob nil check-function-or-symbol di:object-not-function-or-symbol-error
     vm:function-pointer-type vm:symbol-header-type)
