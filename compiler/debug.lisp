@@ -724,7 +724,8 @@
 	(unused 0)
 	(const 0)
 	(temps 0)
-	(environment 0))
+	(environment 0)
+	(comp 0))
     (do-packed-tns (tn component)
       (let ((reads (tn-reads tn))
 	    (writes (tn-writes tn)))
@@ -736,7 +737,9 @@
 	(incf wired))
       (unless (or (tn-reads tn) (tn-writes tn))
 	(incf unused))
-      (cond ((eq (tn-kind tn) :environment)
+      (cond ((eq (tn-kind tn) :component)
+	     (incf comp))
+	    ((eq (tn-kind tn) :environment)
 	     (incf environment))
 	    ((tn-global-conflicts tn)
 	     (incf global)
@@ -753,9 +756,9 @@
       (incf const))
 
     (format stream
-     "~%TNs: ~D local, ~D temps, ~D constant, ~D environment, ~D global.~@
+     "~%TNs: ~D local, ~D temps, ~D constant, ~D env, ~D comp, ~D global.~@
        Wired: ~D, Unused: ~D.  ~D block~:P, ~D global conflict~:P.~%"
-       local temps const environment global wired unused
+       local temps const environment comp global wired unused
        (1+ (ir2-block-number
 	    (block-info (block-next (component-head component)))))
        confs))
@@ -788,25 +791,29 @@
     (unless (or (tn-reads tn) (tn-writes tn))
       (barf "No references to ~S." tn))
 
+    (unless (tn-sc tn) (barf "~S has no SC." tn))
+
     (let ((conf (tn-global-conflicts tn))
 	  (kind (tn-kind tn)))
       (cond
+       ((eq kind :component)
+	(unless (member tn (ir2-component-component-tns component))
+	  (barf "~S not in Component-TNs for ~S." tn component)))
        ((eq kind :environment)
 	(let ((env (tn-environment tn)))
 	  (macrolet ((frob (refs)
 		       `(do ((ref ,refs (tn-ref-next ref)))
 			    ((null ref))
-			  (unless (eq (environment-info
-				       (lambda-environment
-					(block-lambda
-					 (ir2-block-block
-					  (vop-block (tn-ref-vop ref))))))
+			  (unless (eq (lambda-environment
+				       (block-lambda
+					(ir2-block-block
+					 (vop-block (tn-ref-vop ref)))))
 				      env)
 			    (barf "~S not in TN-Environment for ~S." ref
 				  tn)))))
 	    (frob (tn-reads tn))
 	    (frob (tn-writes tn)))
-	  (unless (member tn (ir2-environment-live-tns env))
+	  (unless (member tn (ir2-environment-live-tns (environment-info env)))
 	    (barf "~S not in Live-TNs for ~S." tn env))
 	  (when (or (tn-local tn) (tn-global-conflicts tn))
 	    (barf ":Environment TN ~S has Local or Global-Conflicts." tn))))
@@ -894,8 +901,7 @@
 	   (2env (environment-info env))
 	   (locs (ir2-environment-arg-locs 2env))
 	   (pc (ir2-environment-return-pc-pass 2env))
-	   (cont (ir2-environment-old-cont-pass 2env))
-	   (argp (ir2-environment-argument-pointer 2env))
+	   (fp (ir2-environment-old-fp-pass 2env))
 	   (2block (block-info
 		    (node-block
 		     (lambda-bind
@@ -908,8 +914,7 @@
 		      (eq (tn-kind tn) :cached-constant)
 		      (member tn locs)
 		      (eq tn pc)
-		      (eq tn cont)
-		      (eq tn argp))
+		      (eq tn fp))
 	    (barf "Strange TN live at head of ~S: ~S." env tn))))))
   (undefined-value))
 
@@ -1080,14 +1085,7 @@
 	  (t
 	   (format stream "t~D" (tn-id tn))))
     (when (and (tn-sc tn) (tn-offset tn))
-      ;; ### hack...
-      (let ((sb (sb-name (sc-sb (tn-sc tn)))))
-	(if (eq sb 'registers)
-	    (format stream "[~A]"
-		    (svref '#(NL0 A0 NL1 A1 A3 A2 SP L0 L1 L2 L3 L4
-				  BS CONT ENV PC)
-			   (tn-offset tn)))
-	    (format stream "[~A~D]" (char (string sb) 0) (tn-offset tn)))))))
+      (format stream "[~A]" (location-print-name tn)))))
 
 
 ;;; Print-Operands  --  Internal
@@ -1100,7 +1098,14 @@
   (do ((ref refs (tn-ref-across ref)))
       ((null ref))
     (format t " ")
-    (print-tn (tn-ref-tn ref))))
+    (let ((tn (tn-ref-tn ref))
+	  (ltn (tn-ref-load-tn ref)))
+      (cond ((not ltn)
+	     (print-tn tn))
+	    (t
+	     (print-tn tn)
+	     (write-char (if (tn-ref-write-p ref) #\< #\>))
+	     (print-tn ltn))))))
 
 
 ;;; Print-IR2-Block  --  Internal
@@ -1239,16 +1244,15 @@
 
 ;;;  List-Conflicts  --  Interface
 ;;;
-;;;    Return a list of a the TNs that conflict with TN.
-;;;
 (defun list-conflicts (tn)
+  "Return a list of a the TNs that conflict with TN.  Sort of, kind of.  For
+  debugging use only.  Probably doesn't work on :COMPONENT and :ENVIRONMENT
+  TNs."
   (assert (member (tn-kind tn) '(:normal :cached-constant :environment)))
   (let ((confs (tn-global-conflicts tn)))
     (cond ((eq (tn-kind tn) :environment)
 	   (clrhash *list-conflicts-table*)
-	   (do ((env-block (ir2-environment-blocks (tn-environment tn))
-			   (ir2-block-environment-next env-block)))
-	       ((null env-block))
+	   (do-environment-ir2-blocks (env-block (tn-environment tn))
 	     (add-always-live-tns env-block tn)
 	     (add-all-local-tns env-block))
 	   (listify-conflicts-table))
