@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.8 1991/02/08 13:34:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.9 1991/03/19 13:30:43 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.8 1991/02/08 13:34:17 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.9 1991/03/19 13:30:43 chiles Exp $
 ;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
@@ -29,17 +29,18 @@
   "Returns the documentation string of Doc-Type for Name, or NIL if
   none exists.  System doc-types are VARIABLE, FUNCTION, STRUCTURE, TYPE,
   and SETF."
-  (case doc-type
-    (variable (info variable documentation name))
-    (function (info function documentation name))
-    (structure
-     (when (eq (info type kind name) :structure)
-       (info type documentation name)))
-    (type
-     (info type documentation name))
-    (setf (info setf documentation name))
-    (t
-     (cdr (assoc doc-type (info random-documentation stuff name))))))
+  (values
+   (case doc-type
+     (variable (info variable documentation name))
+     (function (info function documentation name))
+     (structure
+      (when (eq (info type kind name) :structure)
+	(info type documentation name)))
+     (type
+      (info type documentation name))
+     (setf (info setf documentation name))
+     (t
+      (cdr (assoc doc-type (info random-documentation stuff name)))))))
 
 (defun %set-documentation (name doc-type string)
   (case doc-type
