@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.23 1997/11/04 09:10:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/symbol.lisp,v 1.24 1998/03/26 19:06:27 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,11 +186,15 @@
 
 (defun copy-symbol (symbol &optional (copy-props nil) &aux new-symbol)
   "Make and return a new uninterned symbol with the same print name
-  as SYMBOL.  If COPY-PROPS is null, the new symbol has no properties.
-  Else, it has a copy of SYMBOL's property list."
+  as SYMBOL.  If COPY-PROPS is null, the new symbol is neither bound
+   nor fbound and  has has no properties.
+  Else, it has a copy of SYMBOL's function, value and property list."
+  (declare (type symbol symbol))
   (setq new-symbol (make-symbol (symbol-name symbol)))
-  (if copy-props
-      (setf (symbol-plist new-symbol) (copy-list (symbol-plist symbol))))
+  (when copy-props
+    (setf (symbol-value new-symbol) (symbol-value symbol)
+	  (symbol-plist new-symbol) (copy-list (symbol-plist symbol))
+	  (symbol-function new-symbol)(symbol-function symbol)))
   new-symbol)
 
 (proclaim '(special *keyword-package*))
@@ -209,28 +213,30 @@
 
 (defun gensym (&optional thing)
   "Creates a new uninterned symbol whose name is a prefix string (defaults
-  to \"G\"), followed by a decimal number.  Thing, when supplied, will
-  alter the prefix if it is a string, or the decimal number if it is a
-  number, of this symbol.  The number, defaultly *gensym-counter*, is
-  incremented by each call to GENSYM."
+   to \"G\"), followed by a decimal number.  Thing, when supplied, will
+   alter the prefix if it is a string, or be used for the decimal number
+   if it is a number, of this symbol.
+   The default value of the number is the current value of *gensym-counter*
+   which is incremented each time it is used."
   (let ((old *gensym-counter*))
-    (let ((new (etypecase old
-		 (index (1+ old))
-		 (unsigned-byte (1+ old)))))
-      (declare (optimize (speed 3) (safety 0)))
-      (setq *gensym-counter* new)
-  (multiple-value-bind
-      (prefix int)
-      (etypecase thing
-	(null (values "G" new))
-	(simple-string (values thing new))
-	(fixnum (values "G" thing))
-	(string (values (coerce thing 'simple-string) new)))
-    (declare (simple-string prefix) (fixnum int))
-    (make-symbol
-     (concatenate 'simple-string prefix
-		  (the simple-string
-		       (quick-integer-to-string int))))))))
+    (when (numberp thing)
+      (let ((new (etypecase old
+		   (index (1+ old))
+		   (unsigned-byte (1+ old)))))
+	(declare (optimize (speed 3) (safety 0)(inhibit-warnings 3)))
+	(setq *gensym-counter* new)))
+    (multiple-value-bind
+	(prefix int)
+	(etypecase thing
+	  (null (values "G" old))
+	  (simple-string (values thing old))
+	  (fixnum (values "G" thing))
+	  (string (values (coerce thing 'simple-string) old)))
+      (declare (simple-string prefix) (fixnum int))
+      (make-symbol
+       (concatenate 'simple-string prefix
+		    (the simple-string
+			 (quick-integer-to-string int)))))))
 
 (defvar *gentemp-counter* 0)
 (declaim (type index *gentemp-counter*))
