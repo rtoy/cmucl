@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.5 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/debug.lisp,v 1.6 2003/10/27 18:30:27 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,7 +50,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
-    (inst ld result sap offset)))
+    (inst ldn result sap offset)))
 
 (define-vop (write-control-stack)
   (:translate kernel:%set-stack-ref)
@@ -62,7 +62,7 @@
   (:results (result :scs (descriptor-reg)))
   (:result-types *)
   (:generator 5
-    (inst st value sap offset)
+    (inst stn value sap offset)
     (move result value)))
 
 (define-vop (code-from-mumble)

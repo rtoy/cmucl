@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.30 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.31 2003/10/27 18:30:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,7 +185,7 @@
 	   (inst slln temp fixnum-tag-bits)
 	   (inst add temp (- (* vm:vector-data-offset vm:word-bytes)
 			     vm:other-pointer-type))
-	   (inst ld result object temp)
+	   (inst ldn result object temp)
 	   ;; temp = mod(index, bit-shift) to figure out what part of
 	   ;; word we want.  (XOR is a quick way of computing
 	   ;; elements-per-word minus temp.)
@@ -214,10 +214,10 @@
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 13))
-		      (inst ld result object offset))
+		      (inst ldn result object offset))
 		     (t
 		      (inst li temp offset)
-		      (inst ld result object temp))))
+		      (inst ldn result object temp))))
 	     (unless (zerop extra)
 	       (inst srln result (* ,bits extra)))
 	     ;; Always need the mask unless the bits we wanted were the
@@ -241,7 +241,7 @@
 	   (inst slln offset fixnum-tag-bits)
 	   (inst add offset (- (* vm:vector-data-offset vm:word-bytes)
 			       vm:other-pointer-type))
-	   (inst ld old object offset)
+	   (inst ldn old object offset)
 	   (inst and shift index ,(1- elements-per-word))
 	   (inst xor shift ,(1- elements-per-word))
 	   ,@(unless (= bits 1)
@@ -260,7 +260,7 @@
 		(inst and temp value ,(1- (ash 1 bits)))))
 	     (inst slln temp shift)
 	     (inst or old temp))
-	   (inst st old object offset)
+	   (inst stn old object offset)
 	   (sc-case value
 	     (immediate
 	      (inst li result (tn-value value)))
@@ -283,10 +283,10 @@
 	     (let ((offset (- (* (+ word vm:vector-data-offset) vm:word-bytes)
 			      vm:other-pointer-type)))
 	       (cond ((typep offset '(signed-byte 13))
-		      (inst ld old object offset))
+		      (inst ldn old object offset))
 		     (t
 		      (inst li offset-reg offset)
-		      (inst ld old object offset-reg)))
+		      (inst ldn old object offset-reg)))
 	       (unless (and (sc-is value immediate)
 			    (= (tn-value value) ,(1- (ash 1 bits))))
 		 (cond ((zerop extra)
@@ -317,8 +317,8 @@
 			(* (logxor extra ,(1- elements-per-word)) ,bits))
 		  (inst or old temp)))
 	       (if (typep offset '(signed-byte 13))
-		   (inst st old object offset)
-		   (inst st old object offset-reg)))
+		   (inst stn old object offset)
+		   (inst stn old object offset-reg)))
 	     (sc-case value
 	       (immediate
 		(inst li result (tn-value value)))

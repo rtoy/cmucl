@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.42 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.43 2003/10/27 18:30:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -932,7 +932,7 @@
 		    (signed-reg
 		     (inst stf temp (current-nfp-tn vop)
 			   (* (tn-offset stack-temp) vm:word-bytes))
-		     (inst ld y (current-nfp-tn vop)
+		     (inst ldsw y (current-nfp-tn vop)
 			   (* (tn-offset stack-temp) vm:word-bytes))))))))
   (frob %unary-truncate single-reg single-float fstoi)
   (frob %unary-truncate double-reg double-float fdtoi)
@@ -1040,7 +1040,7 @@
 		(* (tn-offset bits) vm:word-bytes)))
 	 (single-stack
 	  (unless (location= bits res)
-	    (inst ld temp (current-nfp-tn vop)
+	    (inst ldsw temp (current-nfp-tn vop)
 		  (* (tn-offset bits) vm:word-bytes))
 	    (inst st temp (current-nfp-tn vop)
 		  (* (tn-offset res) vm:word-bytes)))))))))
@@ -1117,10 +1117,10 @@
 	 (single-reg
 	  (inst stf float (current-nfp-tn vop)
 		(* (tn-offset stack-temp) vm:word-bytes))
-	  (inst ld bits (current-nfp-tn vop)
+	  (inst ldsw bits (current-nfp-tn vop)
 		(* (tn-offset stack-temp) vm:word-bytes)))
 	 (single-stack
-	  (inst ld bits (current-nfp-tn vop)
+	  (inst ldsw bits (current-nfp-tn vop)
 		(* (tn-offset float) vm:word-bytes)))
 	 (descriptor-reg
 	  (loadw bits float vm:single-float-value-slot
@@ -1146,10 +1146,10 @@
       (double-reg
        (inst stdf float (current-nfp-tn vop)
 	     (* (tn-offset stack-temp) vm:word-bytes))
-       (inst ld hi-bits (current-nfp-tn vop)
+       (inst ldsw hi-bits (current-nfp-tn vop)
 	     (* (tn-offset stack-temp) vm:word-bytes)))
       (double-stack
-       (inst ld hi-bits (current-nfp-tn vop)
+       (inst ldsw hi-bits (current-nfp-tn vop)
 	     (* (tn-offset float) vm:word-bytes)))
       (descriptor-reg
        (loadw hi-bits float vm:double-float-value-slot
@@ -1170,10 +1170,10 @@
       (double-reg
        (inst stdf float (current-nfp-tn vop)
 	     (* (tn-offset stack-temp) vm:word-bytes))
-       (inst ld lo-bits (current-nfp-tn vop)
+       (inst ldsw lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset stack-temp)) vm:word-bytes)))
       (double-stack
-       (inst ld lo-bits (current-nfp-tn vop)
+       (inst ldsw lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset float)) vm:word-bytes)))
       (descriptor-reg
        (loadw lo-bits float (1+ vm:double-float-value-slot)
@@ -1195,12 +1195,12 @@
       (double-reg
        (inst stdf float (current-nfp-tn vop)
 	     (* (tn-offset stack-temp) vm:word-bytes))
-       (inst ld hi-bits (current-nfp-tn vop)
+       (inst ldsw hi-bits (current-nfp-tn vop)
 	     (* (tn-offset stack-temp) vm:word-bytes))
        (inst ld lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset stack-temp)) vm:word-bytes)))
       (double-stack
-       (inst ld hi-bits (current-nfp-tn vop)
+       (inst ldsw hi-bits (current-nfp-tn vop)
 	     (* (tn-offset float) vm:word-bytes))
        (inst ld lo-bits (current-nfp-tn vop)
 	     (* (1+ (tn-offset float)) vm:word-bytes)))

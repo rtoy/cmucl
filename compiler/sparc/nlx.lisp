@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.12 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.13 2003/10/27 18:30:27 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -278,11 +278,11 @@
 
       ;; Copy stuff down the stack.
       (emit-label loop)
-      (inst ld temp src num)
+      (inst ldn temp src num)
       (inst add num (fixnumize 1))
       (inst cmp num count)
       (inst b :ne loop)
-      (inst st temp dst num)
+      (inst stn temp dst num)
 
       ;; Reset the CSP.
       (emit-label done)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.6 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/values.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -119,7 +119,7 @@
     (inst move i count)
     LOOP
     (inst subcc i 4)
-    (inst ld temp src i)
+    (inst ldn temp src i)
     (inst b :ne loop)
-    (inst st temp dst i)
+    (inst stn temp dst i)
     DONE))

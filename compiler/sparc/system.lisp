@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.14 2003/10/20 01:25:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/system.lisp,v 1.15 2003/10/27 18:30:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -243,9 +243,9 @@
     (let ((offset
 	   (- (* (+ index vector-data-offset) word-bytes) other-pointer-type)))
       (assert (typep offset '(signed-byte 13)))
-      (inst ld count count-vector offset)
+      (inst ldn count count-vector offset)
       (inst add count 1)
-      (inst st count count-vector offset))))
+      (inst stn count count-vector offset))))
 
 ;; The RDTICK instruction on Sparc V9s allows access to a 63-bit cycle
 ;; counter.

@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.6 2003/08/03 11:27:46 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.6 2003/08/03 11:27:46 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/static-fn.lisp,v 1.7 2003/10/27 18:30:27 toy Rel $
 ;;;
 ;;; This file contains the VOPs and macro magic necessary to call static
 ;;; functions.
@@ -88,7 +88,7 @@
 	   (let ((lra-label (gen-label))
 		 (cur-nfp (current-nfp-tn vop)))
 	     ,@(moves (temp-names) (arg-names))
-	     (inst ld func null-tn (static-function-offset symbol))
+	     (inst ldn func null-tn (static-function-offset symbol))
 	     (inst li nargs (fixnumize ,num-args))
 	     (when cur-nfp
 	       (store-stack-tn nfp-save cur-nfp))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.35 2003/10/20 01:25:01 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.36 2003/10/27 18:30:27 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,7 +186,7 @@
       
       ;; Zero out the args that correspond to register args
       (dotimes (k register-arg-count)
-	(inst st zero-tn cfp-tn (* k vm:word-bytes)))
+	(inst stn zero-tn cfp-tn (* k vm:word-bytes)))
 	
       ;; Zero out memory from CSP to CFP+size
       (let ((zero-out-mem (gen-label))
@@ -197,7 +197,7 @@
 	      (* vm:word-bytes (1- (sb-allocated-size 'control-stack))))
 
 	(emit-label zero-out-mem)
-	(inst st zero-tn csp-tn (- vm:word-bytes))
+	(inst stn zero-tn csp-tn (- vm:word-bytes))
 	(emit-label loop-test)
 	(inst cmp csp-tn temp)
 	(inst b :lt zero-out-mem)
@@ -231,7 +231,7 @@
 	(emit-label zero-out-test)
 	(inst subcc temp vm:word-bytes)
 	(inst b :gt zero-out-loop)
-	(inst st zero-tn csp-tn temp)
+	(inst stn zero-tn csp-tn temp)
 	))
     (inst add csp-tn csp-tn
 	  (* vm:word-bytes (sb-allocated-size 'control-stack)))
@@ -367,7 +367,7 @@ default-value-8
 		(defaults (cons default-lab tn))
 		
 		(inst b :le default-lab)
-		(inst ld move-temp ocfp-tn (* i vm:word-bytes))
+		(inst ldn move-temp ocfp-tn (* i vm:word-bytes))
 		(inst subcc temp (fixnumize 1))
 		(store-stack-tn tn move-temp)))
 	    
@@ -1050,7 +1050,7 @@ default-value-8
       ;; Check for the single case.
       (inst cmp nvals-arg (fixnumize 1))
       (inst b :ne not-single)
-      (inst ld a0 vals-arg)
+      (inst ldn a0 vals-arg)
 
       ;; Return with one value.
       (move csp-tn cfp-tn)
