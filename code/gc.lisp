@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.40 2004/08/02 16:03:54 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.41 2005/01/27 14:54:10 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,7 +172,7 @@
 (defvar *last-bytes-in-use* nil)
 (defvar *total-bytes-consed* (dfixnum:make-dfixnum))
 
-(declaim (type (or fixnum null) *last-bytes-in-use*))
+(declaim (type (or (unsigned-byte 32) null) *last-bytes-in-use*))
 (declaim (type dfixnum:dfixnum *total-bytes-consed*))
 
 ;;; GET-BYTES-CONSED -- Exported
@@ -256,7 +256,7 @@
 ;;; 
 (defvar *gc-trigger* nil)
 
-(declaim (type (or index null) *gc-trigger*))
+(declaim (type (or (unsigned-byte 32) null) *gc-trigger*))
 
 ;;; On the RT, we store the GC trigger in a ``static'' symbol instead of
 ;;; letting magic C code handle it.  It gets initialized by the startup
@@ -569,7 +569,8 @@
 
 ;;; setters and accessors for gencgc parameters
 
-#+gencgc(eval-when (load eval)
+#+gencgc
+(eval-when (load eval)
 (alien:def-alien-type nil
   (alien:struct generation-stats
     (bytes-allocated c-call:int)
@@ -581,6 +582,12 @@
     (min-av-mem-age c-call:double)))
 
 (defun gencgc-stats (generation)
+  "Return some GC statistics for the specified GENERATION.  The
+  statistics are the number of bytes allocated in this generation; the
+  gc-trigger; the number of bytes consed between GCs; the number of
+  GCs that have occurred; the trigger age; the cumulative number of
+  bytes allocated in this generation; and the average age of this
+  generation.  See the gencgc source code for more info."
   (alien:with-alien ((stats (alien:struct generation-stats)))
     (alien:alien-funcall (alien:extern-alien "get_generation_stats"
 					     (function c-call:void
