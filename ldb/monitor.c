@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.10 1990/07/01 04:47:20 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.11 1990/10/23 00:07:23 wlott Exp $ */
 
 #include <stdio.h>
 #include <setjmp.h>
@@ -123,12 +123,15 @@ char **ptr;
     printf("FP\t=\t0x%08x\n", current_control_frame_pointer);
     printf("BSP\t=\t0x%08x\n", current_binding_stack_pointer);
 
-    printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
     printf("DYNAMIC\t=\t0x%08x\n", current_dynamic_space);
+    printf("ALLOC\t=\t0x%08x\n", current_dynamic_space_free_pointer);
+    printf("TRIGGER\t=\t0x%08x\n", current_auto_gc_trigger);
     printf("STATIC\t=\t0x%08x\n", SymbolValue(STATIC_SPACE_FREE_POINTER));
     printf("RDONLY\t=\t0x%08x\n", SymbolValue(READ_ONLY_SPACE_FREE_POINTER));
 
+#ifdef MIPS
     printf("FLAGS\t=\t0x%08x\n", current_flags_register);
+#endif
 }
 
 static void search_cmd(ptr)
