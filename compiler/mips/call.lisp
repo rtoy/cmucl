@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.2 1993/01/23 14:48:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.52.1.3 1993/02/08 22:13:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,7 +178,7 @@
     (emit-label start-lab)
     ;; Allocate function header.
     (inst function-header-word)
-    (dotimes (i (1- vm:function-header-code-offset))
+    (dotimes (i (1- vm:function-code-offset))
       (inst word 0))
     ;; The start of the actual code.
     ;; Fix CODE, cause the function object was passed in.
@@ -844,7 +844,7 @@ default-value-8
 			    vm:function-pointer-type))
 		   (do-next-filler)
 		   (inst addu lip function
-			 (- (ash vm:function-header-code-offset
+			 (- (ash vm:function-code-offset
 				 vm:word-shift)
 			    vm:function-pointer-type))))
 	   (loop
