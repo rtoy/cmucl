@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.51 1993/05/11 17:28:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.52 1993/05/11 22:18:12 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1004,7 +1004,7 @@
       (error "~A was compiled for a ~A, but this is a ~A"
 	     *Fasl-file*
 	     (imp-name implementation)
-	     (imp-name #.(c:backend-fasl-file-implementation *backend*)))))))
+	     (imp-name #.(c:backend-fasl-file-implementation c:*backend*)))))))
 
 
 ;;; Load-Code loads a code object.  NItems objects are popped off the stack for
