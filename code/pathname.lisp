@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.47 2001/03/23 14:57:48 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.48 2001/03/27 20:23:45 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -804,7 +804,8 @@ a host-structure or string."
 ;;;
 (defun %parse-namestring (namestr host defaults start end junk-allowed)
   (declare (type string namestr)
-	   (type (or host null) host)
+	   (type (or host string null) host)
+	   (type pathname defaults)
 	   (type index start)
 	   (type (or index null) end))
   (if junk-allowed
@@ -813,9 +814,13 @@ a host-structure or string."
 	(namestring-parse-error (condition)
 	  (values nil (namestring-parse-error-offset condition))))
       (let* ((end (or end (length namestr)))
+	     (host (if (and host (stringp host))
+		       (find-logical-host host)
+		       host))
+	     (default-host (pathname-host defaults))
 	     (parse-host (or host
 			     (extract-logical-host-prefix namestr start end)
-			     (pathname-host defaults))))
+			     default-host)))
 	(unless parse-host
 	  (error "When Host arg is not supplied, Defaults arg must ~
 		  have a non-null PATHNAME-HOST."))
@@ -856,7 +861,7 @@ a host-structure or string."
    for a physical pathname, returns the printed representation. Host may be
    a physical host structure or host namestring."
   (declare (type path-designator thing)
-	   (type (or null host) host)
+	   (type (or null string host) host)
 	   (type pathname defaults)
 	   (type index start)
 	   (type (or index null) end))
