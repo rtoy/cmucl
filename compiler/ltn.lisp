@@ -94,16 +94,25 @@
 ;;;    Annotate a normal single-value continuation.  If its only use is a ref
 ;;; that we are allowed to delay the evaluation of, then we mark the
 ;;; continuation for delayed evaluation, otherwise we assign a TN to hold the
-;;; continuation's value.
+;;; continuation's value.  If the continuation has a type check, we make the TN
+;;; according to the proven type to ensure that the possibly erroneous value
+;;; can be represented.
 ;;;
 (defun annotate-1-value-continuation (cont)
   (declare (type continuation cont))
   (let ((info (continuation-info cont)))
     (assert (eq (ir2-continuation-kind info) :fixed))
-    (if (continuation-delayed-leaf cont)
-	(setf (ir2-continuation-kind info) :delayed)
-	(setf (ir2-continuation-locs info)
-	      (list (make-normal-tn (ir2-continuation-primitive-type info))))))
+    (cond
+     ((continuation-delayed-leaf cont)
+      (setf (ir2-continuation-kind info) :delayed))
+     ((member (continuation-type-check cont) '(:deleted nil))
+      (setf (ir2-continuation-locs info)
+	    (list (make-normal-tn (ir2-continuation-primitive-type info)))))
+     (t
+      (setf (ir2-continuation-locs info)
+	    (list (make-normal-tn
+		   (primitive-type
+		    (single-value-type (continuation-proven-type cont)))))))))
   (undefined-value))
 
 
@@ -119,29 +128,8 @@
   (let ((info (make-ir2-continuation
 	       (primitive-type (continuation-type cont)))))
     (setf (continuation-info cont) info)
-    (annotate-1-value-continuation cont)
-    (unless (policy-safe-p policy) (flush-type-check cont)))
-  (undefined-value))
-
-
-;;; Annotate-Full-Call-Continuation  --  Internal
-;;;
-;;;    Annotate a continuation that is an argument to a full call.  Kind of
-;;; like Annotate-Ordinary-Continuation, but we always clear the type-check
-;;; flag, since it is assumed that the callee does appropriate checking.
-;;;
-(defun annotate-full-call-continuation (cont)
-  (declare (type continuation cont))
-  (let ((info (or (continuation-info cont)
-		  (setf (continuation-info cont)
-			(make-ir2-continuation *any-primitive-type*))))
-	(leaf (continuation-delayed-leaf cont)))
-    (flush-type-check cont)
-    (setf (ir2-continuation-primitive-type info) *any-primitive-type*)
-    (if leaf
-	(setf (ir2-continuation-kind info) :delayed)
-	(setf (ir2-continuation-locs info)
-	      (list (make-normal-tn *any-primitive-type*)))))
+    (unless (policy-safe-p policy) (flush-type-check cont))
+    (annotate-1-value-continuation cont))
   (undefined-value))
 
 
@@ -153,16 +141,17 @@
 ;;;
 ;;;   Unlike for an argument, we only clear the type check flag when the policy
 ;;; is unsafe, since the check for a valid function object must be done before
-;;; the call.  Note that in the common case of a delayed global function
-;;; reference, the type checking is postponed, letting the call sequence do the
-;;; type checking however it wants.
+;;; the call.
 ;;;
 (defun annotate-function-continuation (cont policy &optional (delay t))
   (declare (type continuation cont) (type policies policy))
-  (let* ((ptype (primitive-type (continuation-derived-type cont)))
+  (unless (policy-safe-p policy) (flush-type-check cont))
+  (let* ((ptype (primitive-type
+		 (if (member (continuation-type-check cont) '(:deleted nil))
+		     (continuation-type cont)
+		     (single-value-type (continuation-proven-type cont)))))
 	 (info (make-ir2-continuation ptype)))
     (setf (continuation-info cont) info)
-    (unless (policy-safe-p policy) (flush-type-check cont))
     (let ((name (continuation-function-name cont)))
       (if (and delay name (symbolp name))
 	  (setf (ir2-continuation-kind info) :delayed)
@@ -193,18 +182,28 @@
 
 ;;; LTN-Default-Call  --  Internal
 ;;;
-;;;    Set up stuff to do a full call for Call.  We assume that that
-;;; IR2-Continuation structures have already been assigned to the args.  We set
-;;; the kind to :FULL or :FUNNY, depending on whether there is an IR2-CONVERT
-;;; method.  If a funny function, then we inhibit tail recursion, since the IR2
-;;; convert method is going to want to deliver values normally.
+;;;    Set up stuff to do a full call for Call.  We always flush arg type
+;;; checks, but do it after annotation when the policy is safe, since we don't
+;;; want to choose the TNs according to a type assertions that may not hold.
+;;;
+;;;    We set the kind to :FULL or :FUNNY, depending on whether there is an
+;;; IR2-CONVERT method.  If a funny function, then we inhibit tail recursion,
+;;; since the IR2 convert method is going to want to deliver values normally.
 ;;;
 (defun ltn-default-call (call policy)
   (declare (type combination call) (type policies policy))
-
   (annotate-function-continuation (basic-combination-fun call) policy)
-  (dolist (arg (basic-combination-args call))
-    (annotate-full-call-continuation arg))
+
+  (let ((safe-p (policy-safe-p policy)))
+    (dolist (arg (basic-combination-args call))
+      (unless safe-p (flush-type-check arg))
+      (unless (continuation-info arg)
+	(setf (continuation-info arg)
+	      (make-ir2-continuation
+	       (primitive-type
+		(continuation-type arg)))))
+      (annotate-1-value-continuation arg)
+      (when safe-p (flush-type-check arg))))
 
   (let ((kind (basic-combination-kind call)))
     (cond ((and (function-info-p kind)
@@ -271,15 +270,34 @@
 
 ;;; Annotate-Fixed-Values-Continuation  --  Internal
 ;;;
-;;;    Annotate Cont for a fixed, but arbitrary number of values, to be kept in
-;;; the list of TNs Locs.
+;;;    Annotate Cont for a fixed, but arbitrary number of values, of the
+;;; specified primitive Types.  If the continuation has a type check, we
+;;; annotate for the number of values indicated by Types, but only use proven
+;;; type information.
 ;;;
-(defun annotate-fixed-values-continuation (cont policy locs)
-  (declare (type continuation cont) (type policies policy) (list locs))
+(defun annotate-fixed-values-continuation (cont policy types)
+  (declare (type continuation cont) (type policies policy) (list types))
   (unless (policy-safe-p policy) (flush-type-check cont))
 
   (let ((res (make-ir2-continuation nil)))
-    (setf (ir2-continuation-locs res) locs)
+    (if (member (continuation-type-check cont) '(:deleted nil))
+	(setf (ir2-continuation-locs res) (mapcar #'make-normal-tn types))
+	(let* ((proven (mapcar #'(lambda (x)
+				   (make-normal-tn (primitive-type x)))
+			       (values-types
+				(continuation-proven-type cont))))
+	       (num-proven (length proven))
+	       (num-types (length types)))
+	  (setf (ir2-continuation-locs res)
+		(cond
+		 ((< num-proven num-types)
+		  (append proven
+			  (make-n-tns (- num-types num-proven)
+				      *any-primitive-type*)))
+		 ((> num-proven num-types)
+		  (subseq proven 0 num-types))
+		 (t
+		  proven)))))
     (setf (continuation-info cont) res))
 
   (undefined-value))
@@ -291,14 +309,7 @@
 ;;;
 ;;;    Annotate the result continuation for a function.  We use the Return-Info
 ;;; computed by GTN to determine how to represent the return values within the
-;;; function.
-;;;
-;;;    If the kind is :Fixed, and the function being returned from isn't an
-;;; XEP, then we allocate a fixed number of locations to compute the function
-;;; result in.
-;;;
-;;;    Otherwise, we are going to use the unknown return convention.  We still
-;;; try to annotate for a fixed number of values:
+;;; function:
 ;;; -- If the tail-set has a fixed values count, then use that many values.
 ;;; -- If the actual uses of the result continuation in this function have a
 ;;;    fixed number of values, then use that number.  We throw out TAIL-P
@@ -320,32 +331,23 @@
 	 (fun (return-lambda node))
 	 (returns (tail-set-info (lambda-tail-set fun)))
 	 (types (return-info-types returns)))
-    (cond
-     ((and (eq (return-info-kind returns) :fixed)
-	   (not (external-entry-point-p fun)))
-      (annotate-fixed-values-continuation cont policy
-					 (mapcar #'make-normal-tn types)))
-     ((not (eq (return-info-count returns) :unknown))
-      (annotate-fixed-values-continuation
-       cont policy
-       (make-n-tns (return-info-count returns) *any-primitive-type*)))
-     (t
-      (collect ((res *empty-type* values-type-union))
-	(do-uses (use (return-result node))
-	  (unless (and (node-tail-p use)
-		       (basic-combination-p use)
-		       (member (basic-combination-info use) '(:local :full)))
-	    (res (node-derived-type use))))
-	
-	(multiple-value-bind (types kind)
-			     (values-types (res))
-	  (if (eq kind :unknown)
-	      (annotate-unknown-values-continuation cont policy)
-	      (annotate-fixed-values-continuation
-	       cont policy
-	       (mapcar #'(lambda (x)
-			   (make-normal-tn (primitive-type x)))
-		       types))))))))
+    (if (eq (return-info-count returns) :unknown)
+	(collect ((res *empty-type* values-type-union))
+	  (do-uses (use (return-result node))
+	    (unless (and (node-tail-p use)
+			 (basic-combination-p use)
+			 (member (basic-combination-info use) '(:local :full)))
+	      (res (node-derived-type use))))
+	  
+	  (multiple-value-bind (types kind)
+			       (values-types (res))
+	    (if (eq kind :unknown)
+		(annotate-unknown-values-continuation cont policy)
+		(annotate-fixed-values-continuation
+		 cont policy
+		 (mapcar #'primitive-type types)))))
+	(annotate-fixed-values-continuation cont policy types)))
+
   (undefined-value))
 
 
@@ -364,8 +366,7 @@
   (annotate-fixed-values-continuation
    (first (basic-combination-args call)) policy
    (mapcar #'(lambda (var)
-	       (make-normal-tn
-		(primitive-type (basic-var-type var))))
+	       (primitive-type (basic-var-type var)))
 	   (lambda-vars
 	    (ref-leaf
 	     (continuation-use
@@ -525,8 +526,13 @@
 
 ;;; OPERAND-RESTRICTION-OK  --  Internal
 ;;;
+;;;    Return true if Restr is satisfied by Type.  Cont is continuation used to
+;;; test for constant arguments.  If T-OK is true, then a T restriction allows
+;;; any operand type.  This is also called by IR2tran when it determines
+;;; whether a result temporary needs to be made.
+;;;
 (proclaim '(inline operand-restriction-ok))
-(defun operand-restriction-ok (restr type &optional cont)
+(defun operand-restriction-ok (restr type &key cont (t-ok t))
   (declare (type (or (member *) cons) restr)
 	   (type primitive-type type)
 	   (type (or continuation null) cont))
@@ -535,7 +541,9 @@
       (ecase (first restr)
 	(:or
 	 (dolist (mem (rest restr) nil)
-	   (when (eq mem type) (return t))))
+	   (when (or (and t-ok (eq mem *any-primitive-type*))
+		     (eq mem type))
+	     (return t))))
 	(:constant
 	 (funcall (second restr) (continuation-value cont))))))
 
@@ -567,7 +575,8 @@
 		   safe-p
 		   (not (eq (template-policy template) :safe)))
 	  (return nil))
-	(unless (operand-restriction-ok type (continuation-ptype arg) arg)
+	(unless (operand-restriction-ok type (continuation-ptype arg)
+					:cont arg)
 	  (return nil))))))
 
 
@@ -584,6 +593,8 @@
 (defun template-results-ok (template result-type)
   (declare (type template template)
 	   (type ctype result-type))
+  (when (template-more-results-type template)
+    (error "~S has :MORE results with :TRANSLATE." (template-name template)))
   (let ((types (template-result-types template)))
     (cond
      ((values-type-p result-type)
@@ -602,10 +613,7 @@
 	    (return nil)))))
      (types
       (operand-restriction-ok (first types) (primitive-type result-type)))
-     (t
-      (let ((mtype (template-more-args-type template)))
-	(or (not mtype)
-	    (operand-restriction-ok mtype (primitive-type result-type))))))))
+     (t t))))
 
 
 ;;; Find-Template  --  Internal
@@ -624,12 +632,12 @@
 ;;;    template.
 ;;; -- If the template is :Conditional, then we accept it only when the
 ;;;    destination of the value is an immediately following IF node.
-;;; -- We accept a template if the Node-Derived-Type satisfies the
-;;;    output assertion, since this type has been proven to be statisfied.
-;;; -- Unless the policy is safe and the template is :Fast-Safe, we also accept
-;;;    a template when the continuation derived type satisfies the output
-;;;    assertion.  We only attempt this when TYPE-CHECK is non-null, since when
-;;;    this is NIL, the assertion is a supertype of the node type.
+;;; -- If either the template is safe or the policy is unsafe (i.e. we can
+;;;    believe output assertions), then we test against the intersection of the
+;;;    node derived type and the continuation asserted type.  Otherwise, we
+;;;    just use the node type.  If TYPE-CHECK is null, there is no point in
+;;;    doing the intersection, since the node type must be a subtype of the
+;;;    assertion.
 ;;;
 (defun find-template (templates call safe-p)
   (declare (list templates) (type combination call))
@@ -648,14 +656,13 @@
 		    (let ((dest (continuation-dest cont)))
 		      (and (if-p dest)
 			   (immediately-used-p (if-test dest) call)))
-		    (or (template-results-ok template dtype)
-			(and (or (not (eq (template-policy template)
-					  :fast-safe))
-				 (not safe-p))
-			     (continuation-type-check cont)
-			     (template-results-ok template
-						  (values-type-intersection
-						   dtype atype)))))
+		    (template-results-ok
+		     template
+		     (if (and (or (eq (template-policy template) :safe)
+				  (not safe-p))
+			      (continuation-type-check cont))
+			 (values-type-intersection dtype atype)
+			 dtype)))
 	    (return (values template rejected (rest templates))))))
       (setq rejected template))))
 
@@ -783,22 +790,15 @@
 ;;;
 ;;;    Flush type checks according to policy.  If the policy is unsafe, then we
 ;;; never do any checks.  If our policy is safe, and we are using a safe
-;;; template, then we can also flush arg type checks, but we must make the
-;;; continuation type be *any-primitive-type* so that objects of the incorrect
-;;; type can be represented.
+;;; template, then we can also flush arg type checks.
 ;;;
 (defun flush-type-checks-according-to-policy (call policy template)
   (declare (type combination call) (type policies policy)
 	   (type template template))
-  (if (policy-safe-p policy)
-      (when (eq (template-policy template) :safe)
-	(dolist (arg (basic-combination-args call))
-	  (when (continuation-type-check arg)
-	    (flush-type-check arg)
-	    (setf (ir2-continuation-primitive-type (continuation-info arg))
-		  *any-primitive-type*))))
-      (dolist (arg (basic-combination-args call))
-	(flush-type-check arg)))
+  (when (or (not (policy-safe-p policy))
+	    (eq (template-policy template) :safe))
+    (dolist (arg (basic-combination-args call))
+      (flush-type-check arg)))
   (undefined-value))
 
 
