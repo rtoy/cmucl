@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.4 1990/03/06 22:11:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.5 1990/03/07 18:42:45 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -174,12 +174,7 @@
        (inst lw temp sap 0)
        (sc-case result
 	 (sap-reg
-	  (move result temp))
-	 (descriptor-reg
-	  ;; ### Need to allocate the silly thing instead of stripping
-	  ;; off the low two bits.
-	  (inst sra temp temp 2)
-	  (inst sll result temp 2)))))))
+	  (move result temp)))))))
 
 
 (define-vop (sap-set)
@@ -229,7 +224,7 @@
 
 
 (define-vop (sap-system-ref sap-ref)
-  (:results (result :scs (descriptor-reg sap-reg)))
+  (:results (result :scs (sap-reg)))
   (:variant :pointer nil))
 
 (define-vop (sap-system-set sap-set)
