@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.8 1990/04/06 00:15:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.9 1990/04/24 07:15:16 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -32,7 +32,8 @@
   (nuke "NEGATE" "LISP")
   (nuke "STRUCTURE-TYPE" "XP")
   (nuke "CONCAT-PNAMES" "LISP")
-  (nuke "ONCE-ONLY" "COMPILER"))
+  (nuke "ONCE-ONLY" "COMPILER")
+  (nuke "CONSTANT" "COMPILER"))
 
 (labels
     ((lisp->system (name)
@@ -52,7 +53,8 @@
   (lisp->system "DEPORT-INTEGER")
   (lisp->system "MAKE-CT-A-VAL")
   (lisp->system "NATURALIZE-BOOLEAN")
-  (lisp->system "NATURALIZE-INTEGER"))
+  (lisp->system "NATURALIZE-INTEGER")
+  (lisp->system "SAP-REF-SAP"))
 
 (let ((symbol (find-symbol "CHECK=" (find-package "COMPILER"))))
   (when symbol (import symbol (find-package "SYSTEM"))))
@@ -70,6 +72,7 @@
 (in-package "USER")
 (in-package "VM")
 (in-package "C")
+(in-package "ASSEMBLER" :nicknames '("ASSEM"))
 
 
 
@@ -262,36 +265,38 @@
 	  bit-bash-xor bit-bash-eqv bit-bash-lognand bit-bash-lognor
 	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
 	  bit-index boole-code boolean byte-specifier callable char-int
-	  consed-sequence csubtypep ctype ctype-of ctype-p ctypep
-	  data-vector-ref data-vector-set filename float-digits
-	  float-exponent float-format-max float-radix form function-type
+	  consed-sequence constant-type constant-type-p constant-type-type
+	  csubtypep ctype ctype-of ctype-p ctypep data-vector-ref
+	  data-vector-set filename float-digits float-exponent
+	  float-format-max float-radix form function-type
 	  function-type-allowp function-type-keyp function-type-keywords
 	  function-type-optional function-type-p function-type-required
-	  function-type-rest function-type-returns hairy-type
-	  hairy-type-check-template hairy-type-specifier index
+	  function-type-rest function-type-returns function-type-wild-args
+	  hairy-type hairy-type-check-template hairy-type-specifier index
 	  internal-time irrational key-info key-info-name key-info-p
 	  key-info-type lexical-environment make-args-type
 	  make-function-type make-key-info make-member-type make-named-type
 	  make-numeric-type make-structure-type make-union-type
 	  make-values-type member-type member-type-members member-type-p
-	  named-type named-type-name named-type-p negate never-subtypep
-	  numeric-contagion numeric-type numeric-type-class
+	  named-type named-type-name named-type-p native-byte-order negate
+	  never-subtypep numeric-contagion numeric-type numeric-type-class
 	  numeric-type-complexp numeric-type-format numeric-type-high
-	  numeric-type-low numeric-type-p pathname-device
-	  pathname-directory pathname-host pathname-name pathname-type
-	  pathname-version pathnamelike sequence-end single-value-type
-	  specifier-type streamlike stringable stringlike structure-type
-	  structure-type-name structure-type-p truth type-init two-arg-*
-	  two-arg-+ two-arg-- two-arg-/ two-arg-/= two-arg-< two-arg-<=
-	  two-arg-= two-arg-> two-arg->= two-arg-and two-arg-ior
-	  two-arg-xor type-difference type-intersect type-intersection
-	  type-specifier type-specifier-symbols type-union type/= type=
-	  types-intersect union-type union-type-p union-type-types
-	  values-subtypep values-type values-type-allowp
-	  values-type-intersect values-type-intersection values-type-keyp
-	  values-type-keywords values-type-optional values-type-p
-	  values-type-required values-type-rest values-type-union
-	  values-types values-types-intersect void))
+	  numeric-type-low numeric-type-p parse-unknown-type
+	  pathname-device pathname-directory pathname-host pathname-name
+	  pathname-type pathname-version pathnamelike sequence-end
+	  single-value-type specifier-type streamlike stringable stringlike
+	  structure-type structure-type-name structure-type-p truth
+	  type-init two-arg-* two-arg-+ two-arg-- two-arg-/ two-arg-/=
+	  two-arg-< two-arg-<= two-arg-= two-arg-> two-arg->= two-arg-and
+	  two-arg-ior two-arg-xor type-difference type-intersect
+	  type-intersection type-specifier type-specifier-symbols
+	  type-union type/= type= types-intersect union-type union-type-p
+	  union-type-types unknown-type unknown-type-p values-subtypep
+	  values-type values-type-allowp values-type-intersect
+	  values-type-intersection values-type-keyp values-type-keywords
+	  values-type-optional values-type-p values-type-required
+	  values-type-rest values-type-union values-types
+	  values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
@@ -322,9 +327,9 @@
  	  command-line-switch command-line-switch-p
  	  compact-info-environment compile-from-stream compiledp
  	  complete-file concat-pnames connect-to-inet-socket
- 	  create-inet-listener create-inet-socket debug def-c-array
- 	  def-c-pointer def-c-procedure def-c-record def-c-routine
- 	  def-c-type def-c-variable default-clx-event-handler
+ 	  constant-argument create-inet-listener create-inet-socket debug
+ 	  def-c-array def-c-pointer def-c-procedure def-c-record
+ 	  def-c-routine def-c-type def-c-variable default-clx-event-handler
  	  default-directory define-info-class define-info-type
  	  define-keyboard-modifier define-keysym define-mouse-code
  	  defmodule defswitch deletef delq disable-clx-event-handling
@@ -396,13 +401,14 @@
 	  record-size remove-fd-handler remove-port-death-handler
 	  remove-port-object remove-xwindow-object
 	  resolve-loaded-assembler-references sap-int sap-ref-16 sap-ref-32
-	  sap-ref-8 serve-all-events serve-event server server-message
-	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
-	  signed-sap-ref-8 single-float-radix symbol-macro-let
-	  system-area-pointer system-area-pointer-p unproclaim unstructured
-	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
-	  with-interrupts with-reply-port with-stack-alien without-gcing
-	  without-hemlock without-interrupts words))
+	  sap-ref-8 sap-ref-sap serve-all-events serve-event server
+	  server-message short-float-radix signed-sap-ref-16
+	  signed-sap-ref-32 signed-sap-ref-8 single-float-radix
+	  symbol-macro-let system-area-pointer system-area-pointer-p
+	  unproclaim unstructured wait-until-fd-usable
+	  with-enabled-interrupts with-fd-handler with-interrupts
+	  with-reply-port with-stack-alien without-gcing without-hemlock
+	  without-interrupts words))
 
 
 (in-package "USER")
@@ -483,11 +489,23 @@
 (use-package "KERNEL")
 (use-package "SYSTEM")
 (use-package "VM")
+(use-package "ASSEM")
 
 (export '(*compile-time-define-macros* *compiling-for-interpreter*
 	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
 	  lambda-eval-info-args-passed lambda-eval-info-entries
 	  lambda-eval-info-frame-size))
+
+
+(in-package "ASSEM")
+
+(export '(*current-position* align assemble define-argument-type
+	  define-fixup-type define-format define-instruction
+	  define-pseudo-instruction define-random-resources
+	  define-register-file dump-segment emit-code-vector emit-label
+	  finalize-segment fixup fixup-flavor fixup-name fixup-offset
+	  fixup-p gen-label insert-segment inst label label-position
+	  make-fixup make-segment))
 
 
 (in-package "EVAL")
