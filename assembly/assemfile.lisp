@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.35 1993/05/25 21:23:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.36 1994/04/06 16:55:45 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -43,7 +43,8 @@
 	 (*elsewhere* nil)
 	 (*assembly-optimize* nil)
 	 (*compiler-trace-output* nil)
-	 (*fixups* nil))
+	 (*fixups* nil)
+	 (*coalesce-constants* t))
     (unwind-protect
 	(let ((*features* (cons :assembler (backend-features *backend*))))
 	  (when trace-file
@@ -193,7 +194,8 @@
 		      :key #'car)
 	 (:generator ,cost
 	   ,@(mapcar #'(lambda (arg)
-			 (if (target-featurep :hppa)
+			 (if (or (target-featurep :hppa)
+				 (target-featurep :alpha))
 			     `(move ,(reg-spec-name arg)
 				    ,(reg-spec-temp arg))
 			     `(move ,(reg-spec-temp arg)
@@ -201,7 +203,8 @@
 		     args)
 	   ,@call-sequence
 	   ,@(mapcar #'(lambda (res)
-			 (if (target-featurep :hppa)
+			 (if (or (target-featurep :hppa)
+				 (target-featurep :alpha))
 			     `(move ,(reg-spec-temp res)
 				    ,(reg-spec-name res))
 			     `(move ,(reg-spec-name res)
