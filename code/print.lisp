@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.61 1993/08/25 01:14:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.62 1993/08/30 14:55:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1114,13 +1114,10 @@
 
     (if (typep layout 'layout)
 	(let ((class (layout-class layout)))
-	  (cond ((typep class 'basic-structure-class)
-		 (funcall (or (basic-structure-class-print-function class)
+	  (cond ((typep class 'slot-class)
+		 (funcall (or (slot-class-print-function class)
 			      #'default-structure-print)
 			  instance stream *current-level*))
-		((and (fboundp 'dylan::dylan-instance-p)
-		      (dylan::dylan-instance-p instance))
-		 (dylan::%print-dylan-instance instance stream))
 		((fboundp 'print-object)
 		 (print-object instance stream))
 		(t
