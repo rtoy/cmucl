@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.11 1991/10/22 16:43:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/insts.lisp,v 1.12 1991/12/20 21:40:35 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,6 +24,7 @@
 
 ;;;; Resources:
 
+(disassem:set-disassem-params :instruction-alignment 16)
 (define-resources memory float-status mq cc)
 
 
