@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.19 1993/09/01 00:09:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.20 1993/09/03 13:44:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1655,9 +1655,9 @@
 	   (values nil t)))))
 
 (define-superclasses array
-  (generic-string string)
-  (generic-vector vector)
-  (generic-array))
+  (string string)
+  (vector vector)
+  (array))
 
 (defun array-types-intersect (type1 type2)
   (declare (type array-type type1 type2))
