@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.38 1993/08/19 12:46:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.39 1993/08/19 17:15:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -72,6 +72,181 @@
 ); #-gengc progn
 
 
+;;;; Random stuff that needs to be in the cold load which would otherwise be
+;;;; byte-compiled.
+;;;;
+(defvar hi::*in-the-editor* nil)
+
+;;;; Called by defmacro expanders...
+
+;;; VERIFY-KEYWORDS -- internal
+;;;
+;;; Determine if key-list is a valid list of keyword/value pairs.  Do not
+;;; signal the error directly, 'cause we don't know how it should be signaled.
+;;; 
+(defun verify-keywords (key-list valid-keys allow-other-keys)
+  (do ((already-processed nil)
+       (unknown-keyword nil)
+       (remaining key-list (cddr remaining)))
+      ((null remaining)
+       (if (and unknown-keyword
+		(not allow-other-keys)
+		(not (lookup-keyword :allow-other-keys key-list)))
+	   (values :unknown-keyword (list unknown-keyword valid-keys))
+	   (values nil nil)))
+    (cond ((not (and (consp remaining) (listp (cdr remaining))))
+	   (return (values :dotted-list key-list)))
+	  ((null (cdr remaining))
+	   (return (values :odd-length key-list)))
+	  ((member (car remaining) already-processed)
+	   (return (values :duplicate (car remaining))))
+	  ((or (eq (car remaining) :allow-other-keys)
+	       (member (car remaining) valid-keys))
+	   (push (car remaining) already-processed))
+	  (t
+	   (setf unknown-keyword (car remaining))))))
+
+(defun lookup-keyword (keyword key-list)
+  (do ((remaining key-list (cddr remaining)))
+      ((endp remaining))
+    (when (eq keyword (car remaining))
+      (return (cadr remaining)))))
+;;;
+(defun keyword-supplied-p (keyword key-list)
+  (do ((remaining key-list (cddr remaining)))
+      ((endp remaining))
+    (when (eq keyword (car remaining))
+      (return t))))
+
+(in-package "CONDTIIONS")
+
+(defvar *break-on-signals* nil
+  "When (typep condition *break-on-signals*) is true, then calls to SIGNAL will
+   enter the debugger prior to signalling that condition.")
+
+(defun signal (datum &rest arguments)
+  "Invokes the signal facility on a condition formed from datum and arguments.
+   If the condition is not handled, nil is returned.  If
+   (TYPEP condition *BREAK-ON-SIGNALS*) is true, the debugger is invoked before
+   any signalling is done."
+  (let ((condition (coerce-to-condition datum arguments
+					'simple-condition 'signal))
+        (*handler-clusters* *handler-clusters*))
+    (when (typep condition *break-on-signals*)
+      (let ((*break-on-signals* nil))
+	(break "~A~%Break entered because of *break-on-signals* (now NIL.)"
+	       condition)))
+    (loop
+      (unless *handler-clusters* (return))
+      (let ((cluster (pop *handler-clusters*)))
+	(dolist (handler cluster)
+	  (when (typep condition (car handler))
+	    (funcall (cdr handler) condition)))))
+    nil))
+
+;;; COERCE-TO-CONDITION is used in SIGNAL, ERROR, CERROR, WARN, and
+;;; INVOKE-DEBUGGER for parsing the hairy argument conventions into a single
+;;; argument that's directly usable by all the other routines.
+;;;
+(defun coerce-to-condition (datum arguments default-type function-name)
+  (cond ((typep datum 'condition)
+	 (if arguments
+	     (cerror "Ignore the additional arguments."
+		     'simple-type-error
+		     :datum arguments
+		     :expected-type 'null
+		     :format-control "You may not supply additional arguments ~
+				     when giving ~S to ~S."
+		     :format-arguments (list datum function-name)))
+	 datum)
+        ((symbolp datum) ;Roughly, (subtypep datum 'condition).
+         (apply #'make-condition datum arguments))
+        ((or (stringp datum) (functionp datum))
+	 (make-condition default-type
+                         :format-control datum
+                         :format-arguments arguments))
+        (t
+         (error 'simple-type-error
+		:datum datum
+		:expected-type '(or symbol string)
+		:format-control "Bad argument to ~S: ~S"
+		:format-arguments (list function-name datum)))))
+
+(defun error (datum &rest arguments)
+  "Invokes the signal facility on a condition formed from datum and arguments.
+   If the condition is not handled, the debugger is invoked."
+  (kernel:infinite-error-protect
+    (let ((condition (coerce-to-condition datum arguments
+					  'simple-error 'error))
+	  (debug:*stack-top-hint* debug:*stack-top-hint*))
+      (unless (and (error-function-name condition) debug:*stack-top-hint*)
+	(multiple-value-bind
+	    (name frame)
+	    (kernel:find-caller-name)
+	  (unless (error-function-name condition)
+	    (setf (error-function-name condition) name))
+	  (unless debug:*stack-top-hint*
+	    (setf debug:*stack-top-hint* frame))))
+      (let ((debug:*stack-top-hint* nil))
+	(signal condition))
+      (invoke-debugger condition))))
+
+;;; CERROR must take care to not use arguments when datum is already a
+;;; condition object.
+;;;
+(defun cerror (continue-string datum &rest arguments)
+  (kernel:infinite-error-protect
+    (with-simple-restart
+	(continue "~A" (apply #'format nil continue-string arguments))
+      (let ((condition (if (typep datum 'condition)
+			   datum
+			   (coerce-to-condition datum arguments
+						'simple-error 'error)))
+	    (debug:*stack-top-hint* debug:*stack-top-hint*))
+	(unless (and (error-function-name condition) debug:*stack-top-hint*)
+	  (multiple-value-bind
+	      (name frame)
+	      (kernel:find-caller-name)
+	    (unless (error-function-name condition)
+	      (setf (error-function-name condition) name))
+	    (unless debug:*stack-top-hint*
+	      (setf debug:*stack-top-hint* frame))))
+	(with-condition-restarts condition (list (find-restart 'continue))
+	  (let ((debug:*stack-top-hint* nil))
+	    (signal condition))
+	  (invoke-debugger condition)))))
+  nil)
+
+(defun break (&optional (datum "Break") &rest arguments)
+  "Prints a message and invokes the debugger without allowing any possibility
+   of condition handling occurring."
+  (kernel:infinite-error-protect
+    (with-simple-restart (continue "Return from BREAK.")
+      (let ((debug:*stack-top-hint*
+	     (or debug:*stack-top-hint*
+		 (nth-value 1 (kernel:find-caller-name)))))
+	(invoke-debugger
+	 (coerce-to-condition datum arguments 'simple-condition 'break)))))
+  nil)
+
+(defun warn (datum &rest arguments)
+  "Warns about a situation by signalling a condition formed by datum and
+   arguments.  While the condition is being signaled, a muffle-warning restart
+   exists that causes WARN to immediately return nil."
+  (kernel:infinite-error-protect
+    (let ((condition (coerce-to-condition datum arguments
+					  'simple-warning 'warn)))
+      (check-type condition warning "a warning condition")
+      (restart-case (signal condition)
+	(muffle-warning ()
+	  :report "Skip warning."
+	  (return-from warn nil)))
+      (format *error-output* "~&~@<Warning:  ~3i~:_~A~:>~%" condition)))
+  nil)
+
+(in-package "LISP")
+
+
 ;;; %Initial-Function is called when a cold system starts up.  First we zoom
 ;;; down the *Lisp-Initialization-Functions* doing things that wanted to happen
 ;;; at "load time."  Then we initialize the various subsystems and call the
@@ -88,8 +263,6 @@
     `(progn
        (%primitive print ,(symbol-name name))
        (,name))))
-
-(defvar hi::*in-the-editor* nil)
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
