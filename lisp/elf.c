@@ -69,10 +69,10 @@ elseek(int d, off_t o, const char *func)
 static void
 read_elf_header(int fd, Elf_Ehdr *ehp)
 {
-  eread(fd, ehp, sizeof(Elf_Ehdr), __FUNCTION__);
+  eread(fd, ehp, sizeof(Elf_Ehdr), "read_elf_header");
 
   if (strncmp(ehp->e_ident, elf_magic_string, 4)) {
-    fprintf(stderr, "Bad ELF magic number --- not an elf file.  Exiting in %s.\n", __FUNCTION__);
+    fprintf(stderr, "Bad ELF magic number --- not an elf file.  Exiting in %s.\n", "read_elf_header");
     exit(-1);
   }
 }
@@ -81,7 +81,7 @@ read_elf_header(int fd, Elf_Ehdr *ehp)
 static void
 read_section_header_entry(int fd, Elf_Shdr *shp)
 {
-  eread(fd, shp, eh.e_shentsize, __FUNCTION__);
+  eread(fd, shp, eh.e_shentsize, "read_section_header_entry");
 }
 
 
@@ -112,19 +112,19 @@ map_core_sections(char *exec_name)
 
   /* Find the section name string section.  Save its file offset. */
   soff = eh.e_shoff + eh.e_shstrndx * eh.e_shentsize;
-  elseek(exec_fd, soff, __FUNCTION__);
+  elseek(exec_fd, soff, "map_core_sections");
   read_section_header_entry(exec_fd, &strsecent);
   strsecoff = strsecent.sh_offset;
 
   for (i = 0; i < eh.e_shnum && sections_remaining > 0; i++) {
 
     /* Read an entry from the section header table. */
-    elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, __FUNCTION__);
+    elseek(exec_fd, eh.e_shoff + i * eh.e_shentsize, "map_core_sections");
     read_section_header_entry(exec_fd, &sh);
 
     /* Read the name from the string section. */
-    elseek(exec_fd, strsecoff + sh.sh_name, __FUNCTION__);
-    eread(exec_fd, nambuf, 6, __FUNCTION__);
+    elseek(exec_fd, strsecoff + sh.sh_name, "map_core_sections");
+    eread(exec_fd, nambuf, 6, "map_core_sections");
 
     if (sh.sh_type == SHT_PROGBITS) {
       /* See if this section is one of the lisp core sections. */
