@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/undefineds.src,v 1.1 1990/10/21 14:41:21 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/undefineds.src,v 1.2 1990/11/24 15:39:13 wlott Exp $ */
 
 /* Pick up all the syscalls. */
 accept
@@ -119,6 +119,7 @@ cos
 sin
 tan
 acos
+asin
 atan
 atan2
 sinh
