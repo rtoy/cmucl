@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.29 1998/03/30 03:17:09 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.30 1998/03/31 18:29:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2523,11 +2523,11 @@
   (:translate %expm1)
   (:args (x :scs (double-reg) :target fr0))
   (:temporary (:sc word-reg :offset eax-offset :from :eval :to :result) temp)
-  (:temporary (:sc long-reg :offset fr0-offset
+  (:temporary (:sc double-reg :offset fr0-offset
 		   :from :argument :to :result) fr0)
-  (:temporary (:sc long-reg :offset fr1-offset
+  (:temporary (:sc double-reg :offset fr1-offset
 		   :from :argument :to :result) fr1)
-  (:temporary (:sc long-reg :offset fr2-offset
+  (:temporary (:sc double-reg :offset fr2-offset
 		   :from :argument :to :result) fr2)
   (:results (y :scs (double-reg)))
   (:arg-types double-float)
