@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.20 1997/01/18 14:31:16 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.21 1997/02/05 15:53:16 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -698,13 +698,15 @@
     (frob *static-space-free-pointer*
       (allocate-descriptor *static* 0 vm:even-fixnum-type))
     (frob *initial-dynamic-space-free-pointer*
-      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type))
-    
-    (when (c:backend-featurep :x86)
-	  (frob x86::*fp-constant-0d0* (number-to-core 0d0))
-	  (frob x86::*fp-constant-1d0* (number-to-core 1d0))
-	  (frob x86::*fp-constant-0s0* (number-to-core 0s0))
-	  (frob x86::*fp-constant-1s0* (number-to-core 1s0)))))
+      (allocate-descriptor *dynamic* 0 vm:even-fixnum-type)))
+
+  (when (c:backend-featurep :x86)
+    (macrolet ((frob (name pkg value)
+		 `(cold-setq (cold-intern (intern ,name ,pkg)) ,value)))
+      (frob "*FP-CONSTANT-0D0*" "X86" (number-to-core 0d0))
+      (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
+      (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
+      (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0)))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
