@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.22 1991/04/28 11:55:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.23 1991/06/04 00:07:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -249,7 +249,7 @@
 	  (integer integer) integer
   (movable foldable flushable explicit-check))
 
-(defknown boole (integer integer boole-code) integer
+(defknown boole (boole-code integer integer) integer
   (movable foldable flushable))
 
 (defknown lognot (integer) integer (movable foldable flushable explicit-check))
