@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.26 1993/08/27 18:56:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.27 1993/09/03 04:10:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -133,11 +133,13 @@
   (:args (boxed :scs (any-reg))
 	 (unboxed :scs (any-reg)))
   (:results (result :scs (descriptor-reg)))
-  (:temporary (:sc any-reg :offset nargs-offset :to (:result 0) :target result)
-	      words)
-  (:temporary (:sc non-descriptor-reg :offset nl0-offset) lowtag)
-  (:temporary (:sc any-reg :offset nl1-offset) header)
-  (:temporary (:sc any-reg :offset nl2-offset) first-word)
+  (:temporary (:sc descriptor-reg :offset a0-offset :from (:eval 0)
+	       :to (:result 0) :target result)
+	      a0)
+  (:temporary (:sc any-reg :offset nargs-offset :to (:eval 1)) words)
+  (:temporary (:sc non-descriptor-reg :offset nl0-offset :to (:eval 1)) lowtag)
+  (:temporary (:sc any-reg :offset nl1-offset :to (:eval 1)) header)
+  (:temporary (:sc any-reg :offset nl2-offset :to (:eval 1)) first-word)
   (:temporary (:sc any-reg :offset ra-offset :from (:eval 0) :to (:eval 1)) ra)
   (:ignore ra)
   (:generator 100
@@ -151,7 +153,7 @@
     (inst addu words first-word)
     (inst jal (make-fixup 'large-alloc :assembly-routine))
     (inst li lowtag other-pointer-type)
-    (move result words)
+    (move result a0)
     (storew null-tn result code-entry-points-slot other-pointer-type)
     (storew null-tn result code-debug-info-slot other-pointer-type)))
 
