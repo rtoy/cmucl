@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.62 1991/12/14 18:15:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.63 1991/12/19 22:10:44 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1044,12 +1044,14 @@
     (continuation-starts-block cont)
     (let ((cleanup (make-cleanup :kind :special-bind))
 	  (var (first svars))
-	  (next-cont (make-continuation)))
+	  (next-cont (make-continuation))
+	  (nnext-cont (make-continuation)))
       (ir1-convert start next-cont
 		   `(%special-bind ',(lambda-var-specvar var) ,var))
       (setf (cleanup-mess-up cleanup) (continuation-use next-cont))
       (let ((*lexical-environment* (make-lexenv :cleanup cleanup)))
-	(ir1-convert-special-bindings next-cont cont body aux-vars aux-vals
+	(ir1-convert next-cont nnext-cont '(%cleanup-point))
+	(ir1-convert-special-bindings nnext-cont cont body aux-vars aux-vals
 				      (rest svars)))))))
 
 
@@ -2970,14 +2972,16 @@
 ;;; one.
 ;;;
 (def-ir1-translator %within-cleanup ((kind mess-up &body body) start cont)
-  (let ((dummy (make-continuation)))
+  (let ((dummy (make-continuation))
+	(dummy2 (make-continuation)))
     (ir1-convert start dummy mess-up)
     (let* ((mess-node (continuation-use dummy))
 	   (cleanup (make-cleanup :kind kind  :mess-up mess-node))
 	   (old-cup (lexenv-cleanup *lexical-environment*))
 	   (*lexical-environment* (make-lexenv :cleanup cleanup)))
       (setf (entry-cleanup (cleanup-mess-up old-cup)) cleanup)
-      (ir1-convert-progn-body dummy cont body))))
+      (ir1-convert dummy dummy2 '(%cleanup-point))
+      (ir1-convert-progn-body dummy2 cont body))))
 
 
 ;;; This is a special special form that makes an "escape function" which
