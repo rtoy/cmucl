@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.10 1990/10/03 09:58:48 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.11 1990/10/09 23:05:12 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -143,7 +143,7 @@
 	     (symbol-package :foo))
 	 'keyword
 	 'symbol))
-    (structure (%primitive c::structure-ref object 0))
+    (structure (c::structure-ref object 0))
     (array (type-specifier (ctype-of object)))
     (system-area-pointer 'system-area-pointer)
     (weak-pointer 'weak-pointer)
@@ -305,7 +305,7 @@
   (let ((info (info type defined-structure-info type)))
     (if info
 	(and (structurep object)
-	     (let ((obj-name (%primitive structure-ref object 0)))
+	     (let ((obj-name (c::structure-ref object 0)))
 	       (or (eq obj-name type)
 		   (if (member obj-name (c::dd-included-by info)
 			       :test #'eq)
