@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4 1997/02/13 01:20:35 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.4.2.1 1997/09/08 02:37:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,7 +171,8 @@
 ;;;; Other random constants.
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
-	  breakpoint-trap function-end-breakpoint-trap single-step-breakpoint
+	  breakpoint-trap function-end-breakpoint-trap
+	  single-step-breakpoint-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
 
