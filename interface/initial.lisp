@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.3 1993/08/22 20:31:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/interface/initial.lisp,v 1.4 1994/09/30 15:43:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,7 +19,7 @@
       `("    Motif toolkit and graphical debugger 1.0"))
 
 (defpackage "INTERFACE"
-  (:use "TOOLKIT" "LISP" "PCL" "EXTENSIONS" "KERNEL")
+  (:use "TOOLKIT" "LISP" "EXTENSIONS" "KERNEL")
   (:shadow "CLASS-DIRECT-SUPERCLASSES")
   (:export "*HEADER-FONT*" "*ITALIC-FONT*" "*ENTRY-FONT*" "*INTERFACE-STYLE*"
 	   "USE-GRAPHICS-INTERFACE" "VERIFY-SYSTEM-SERVER-EXISTS"
