@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.11 1998/06/16 06:58:59 dtc Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/motif/server/main.c,v 1.12 1998/07/09 02:14:06 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -25,7 +25,7 @@
 #include <asm/posix_types.h>
 #include <linux/posix_types.h>
 #include <linux/types.h>
-#if 0
+#if !defined(FD_ZERO)
 #define FD_ZERO __FD_ZERO
 #define FD_SET __FD_SET
 #define FD_ISSET __FD_ISSET
@@ -38,7 +38,7 @@
 
 #define PORT 8000
 
-#ifndef __linux__
+#if    !defined(MAX)
 #define MAX(x,y) ((x<y)?y:x)
 #endif
 
