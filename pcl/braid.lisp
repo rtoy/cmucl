@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.15 1999/05/30 23:13:52 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.16 2000/08/03 16:58:55 pw Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -118,11 +118,6 @@
 	      classes)))		        
 
 (defun bootstrap-meta-braid ()
-  (let* ((name 'class)
-	 (predicate-name (make-type-predicate-name name)))
-    (setf (gdefinition predicate-name)
-	  #'(lambda (x) (declare (ignore x)) t))
-    (do-satisfies-deftype name predicate-name))  
   (let* ((*create-classes-from-internal-structure-definitions-p* nil)
 	 std-class-wrapper std-class
 	 standard-class-wrapper standard-class
