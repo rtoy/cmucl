@@ -511,11 +511,11 @@
 					 frame-ptr lambda args closure))
 		  (setf fell-through-p t))
 	      (cond (fell-through-p
-		     ;; We got here because we just saw the C::%CATCH-BREAKUP
-		     ;; funny function inside the above recursive call to
-		     ;; INTERNAL-APPLY-LOOP.  Therefore, we just received and
-		     ;; stored the current state of evaluation for falling
-		     ;; through.
+		     ;; We got here because we just saw the
+		     ;; C::%UNWIND-PROTECT-BREAKUP funny function inside the
+		     ;; above recursive call to INTERNAL-APPLY-LOOP.
+		     ;; Therefore, we just received and stored the current
+		     ;; state of evaluation for falling through.
 		     )
 		    (t
 		     ;; Fix up the interpreter's stack after having thrown here.
