@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.82 2003/04/13 12:31:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.83 2003/04/13 16:48:10 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2213,7 +2213,7 @@
 
 #-bsd
 (defun read-dir (dir)
-  (declare (type directory dir))
+  (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
 					    (function system-area-pointer
 						      system-area-pointer))
@@ -2237,7 +2237,7 @@
 		  (slot direct 'd-ino))))))
 #+bsd
 (defun read-dir (dir)
-  (declare (type directory dir))
+  (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir"
 					    (function system-area-pointer
 						      system-area-pointer))
@@ -2259,7 +2259,7 @@
 
 
 (defun close-dir (dir)
-  (declare (type directory dir))
+  (declare (type %directory dir))
   (alien-funcall (extern-alien "closedir"
 			       (function void system-area-pointer))
 		 (directory-dir-struct dir))

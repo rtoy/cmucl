@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.25 2003/04/13 12:31:52 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.26 2003/04/13 16:48:10 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -359,7 +359,7 @@
 (def-alien-type gid-t unsigned-int)
 (def-alien-type ino-t u-int32-t)
 (def-alien-type ino64-t u-int64-t)
-(def-alien-type mode-t unsigned-int)
+(def-alien-type mode-t u-int32-t)
 (def-alien-type nlink-t unsigned-int)
 (def-alien-type off-t int64-t)
 (def-alien-type blkcnt-t u-int64-t)
@@ -434,7 +434,7 @@
        (values nil enotdir)))))
 
 (defun read-dir (dir)
-  (declare (type directory dir))
+  (declare (type %directory dir))
   (let ((daddr (alien-funcall (extern-alien "readdir64"
 					    (function system-area-pointer
 						      system-area-pointer))
@@ -447,7 +447,7 @@
 		  (slot dirent 'd-ino))))))
 
 (defun close-dir (dir)
-  (declare (type directory dir))
+  (declare (type %directory dir))
   (alien-funcall (extern-alien "closedir"
 			       (function void system-area-pointer))
 		 (directory-dir-struct dir))
@@ -2788,7 +2788,6 @@ in at a time in poll.")
   (void-syscall ("fchmod" int int) fd mode))
 
 
-#+nil
 (defun unix-umask (mask)
   "Set the file creation mask of the current process to MASK,
    and return the old creation mask."
