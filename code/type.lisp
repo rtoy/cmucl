@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.12 1993/08/21 00:21:46 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.13 1993/08/23 12:02:52 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,6 +58,74 @@
 
 (cold-load-init (setq *use-implementation-types* t))
 (proclaim '(type boolean *use-implementation-types*))
+
+;;; DELEGATE-COMPLEX-SUBTYPEP-ARG2  --  Interface
+;;;
+;;;    This function is used as the COMPLEX-SUBTYPEP-ARG2 method for types
+;;; which need a ARG1 method to handle some superclasses, but cover a subtree
+;;; of the type graph (i.e. there is no simple way for any other type class to
+;;; be a subtype.)  There are always still complex ways, namely UNION and
+;;; MEMBER types, so we must give TYPE1's ARG1 method a chance to run, instead
+;;; of immediately returning NIL, T.
+;;;
+(defun delegate-complex-subtypep-arg2 (type1 type2)
+  (let ((subtypep-arg1
+	 (type-class-complex-subtypep-arg1
+	  (type-class-info type1))))
+    (if subtypep-arg1
+	(funcall subtypep-arg1 type1 type2)
+	(values nil t))))
+
+;;; HAS-SUPERCLASSES-COMPLEX-SUBTYPEP-ARG1  --  Internal
+;;;
+;;;    Used by DEFINE-SUPERCLASSES to define the SUBTYPE-ARG1 method.  Info is
+;;; a list of conses (SUPERCLASS-CLASS . {GUARD-TYPE-SPECIFIER | NIL}).
+;;;
+(defun has-superclasses-complex-subtypep-arg1 (type1 type2 info)
+  (values
+   (and (typep type2 'class)
+	(dolist (x info nil)
+	  (when (or (not (cdr x))
+		    (csubtypep type1 (specifier-type (cdr x))))
+	    (return
+	     (or (eq type2 (car x))
+		 (let ((inherits (layout-inherits (class-layout (car x)))))
+		   (dotimes (i (length inherits) nil)
+		     (when (eq type2 (layout-class (svref inherits i)))
+		       (return t)))))))))
+   t))
+
+(eval-when (compile eval)
+;;; DEFINE-SUPERCLASSES  --  Interface
+;;;
+;;;    Takes a list of specs of the form (superclass &optional guard).
+;;; Consider one spec (with no guard): any instance of type-class is also a
+;;; subtype of SUPERCLASS and of any of its superclasses.  If there are
+;;; multiple specs, then some will have guards.  We choose the first spec whose
+;;; guard is a supertype of TYPE1 and use its superclass.  In effect, a
+;;; sequence of guards G0, G1, G2 is actually G0, (and G1 (not G0)),
+;;; (and G2 (not (or G0 G1))).
+;;;
+(defmacro define-superclasses (type-class &rest specs)
+  (let ((info
+	 (mapcar #'(lambda (spec)
+		     (destructuring-bind (super &optional guard)
+					 spec
+		       (cons (find-class super) guard)))
+		 specs)))
+    `(cold-load-init
+       (define-type-method (,type-class :complex-subtypep-arg1) (type1 type2)
+	 (has-superclasses-complex-subtypep-arg1 type1 type2 ',info))
+       
+       (setf (type-class-complex-subtypep-arg2
+	      (type-class-or-lose ',type-class))
+	     #'delegate-complex-subtypep-arg2)
+       
+       (setf (type-class-complex-intersection
+	      (type-class-or-lose ',type-class))
+	     #'vanilla-intersection))))
+
+); eval-when (compile eval)
 
 
 ;;;; Function and Values types.
@@ -167,7 +235,6 @@
 					      (values-type-optional type2))
 	       (values (and req-val opt-val) (and req-win opt-win))))))))
 
-
 (define-type-class function)
 
 (defstruct (function-type
@@ -208,17 +275,7 @@
   (declare (ignore type1 type2))
   (values t t))
 
-;;; A function-type is a subtype of any type that intersects with FUNCTION, but
-;;; nothing is a subtype of function-types but themselves.
-;;;
-(define-type-method (function :complex-subtypep-arg1) (type1 type2)
-  (declare (ignore type1))
-  (types-intersect type2 (specifier-type 'function)))
-;;;
-(define-type-method (function :complex-subtypep-arg2) (type1 type2)
-  (declare (ignore type1 type2))
-  (values nil t))
-
+(define-superclasses function (function))
 
 ;;; The union or intersection of two FUNCTION types is FUNCTION.
 ;;;
@@ -229,9 +286,6 @@
 (define-type-method (function :simple-intersection) (type1 type2)
   (declare (ignore type1 type2))
   (values (specifier-type 'function) t))
-
-(define-type-method (function :complex-intersection) (type1 type2)
-  (vanilla-intersection type1 type2))
 
 
 ;;; ### Not very real, but good enough for redefining transforms according to
@@ -529,7 +583,7 @@
 ;;; is guaranteed that it will be no smaller (more restrictive) than the
 ;;; precise result.
 ;;;
-(defun-cached (values-type-union :hash-function type-cache-hash
+(defun-cached (values-type-union :hash-<function type-cache-hash
 				 :hash-bits 8
 				 :default nil
 				 :init-form cold-load-init)
@@ -1146,6 +1200,7 @@
 	  (t
 	   (values nil t)))))
 
+(define-superclasses number (generic-number))
 
 ;;; NUMERIC-TYPES-ADJACENT  --  Internal
 ;;;
@@ -1588,6 +1643,10 @@
 	  (t
 	   (values nil t)))))
 
+(define-superclasses array
+  (generic-string string)
+  (generic-vector vector)
+  (generic-array))
 
 (defun array-types-intersect (type1 type2)
   (declare (type array-type type1 type2))
@@ -1971,16 +2030,7 @@
 			   (alien-type-type-alien-type type2))
 	  t))
 
-;;; An alien-type is a subtype of any type that intersects with alien-value,
-;;; but nothing is a subtype of alien-types but themselves.
-;;;
-(define-type-method (alien :complex-subtypep-arg1) (type1 type2)
-  (declare (ignore type1))
-  (types-intersect type2 (specifier-type 'alien-value)))
-;;;
-(define-type-method (alien :complex-subtypep-arg2) (type1 type2)
-  (declare (ignore type1 type2))
-  (values nil t))
+(define-superclasses alien (alien-value))
 
 (define-type-method (alien :simple-=) (type1 type2)
   (let ((alien-type-1 (alien-type-type-alien-type type1))
@@ -1989,8 +2039,6 @@
 		(alien-type-= alien-type-1 alien-type-2))
 	    t)))
 
-(define-type-method (alien :complex-intersection) (type1 type2)
-  (vanilla-intersection type1 type2))
 
 (def-type-translator alien (&optional (alien-type nil))
   (typecase alien-type
