@@ -1,3 +1,16 @@
+1/17/92 to 1/26/91
+
+Fixed the multi-dim array printer to use aref on the data vector instead
+of svref, because despite being simple and being a vector, it's not a
+simple-vector.
+
+Fixed compiler error context stuff to know that the source-info-name for a file
+is now the namestring and not the pathname.  This allows filenames to be
+printed in error context once again.
+
+Fixed a bug in Purify that was manifesting on the RT.
+
+
 12/22/91 to 1/17/92
 
 	Mostly minor bug fixes and cosmetic improvements.
