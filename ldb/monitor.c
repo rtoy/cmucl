@@ -1,14 +1,17 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/monitor.c,v 1.2 1990/02/28 18:23:28 wlott Exp $ */
+/* $Header */
+
 #include <stdio.h>
 #include <setjmp.h>
-
-
+#include <sys/time.h>
+#include <sys/resource.h>
 #include "ldb.h"
 #include "lisp.h"
 #include "vars.h"
 #include "parse.h"
 
-static void call_cmd(), dump_cmd(), print_cmd(), quit(), help(), flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
+static void call_cmd(), dump_cmd(), print_cmd(), quit(), help();
+static void flush_cmd(), search_cmd(), regs_cmd(), exit_cmd(), throw_cmd();
+static void timed_call_cmd();
 
 static struct cmd {
     char *cmd, *help;
@@ -28,8 +31,14 @@ static struct cmd {
     {"search", "search for TYPE starting at ADDRESS for a max of COUNT words.", search_cmd},
     {"s", NULL, search_cmd},
     {"throw", "Throw to the top level monitor.", throw_cmd},
+    {"time", "call FUNCTION with ARG1, ARG2, ... and time it", timed_call_cmd},
     {NULL, NULL, NULL}
 };
+
+
+static jmp_buf topbuf;
+static jmp_buf curbuf;
+static int level = 0;
 
 
 static int visable(c)
@@ -149,20 +158,19 @@ char **ptr;
 
     printf("searching for 0x%x at 0x%x\n", val, end);
 
-    while ((count == -1 || (count-- > 0)) && valid_addr(end)) {
+    while (search_for_type(val, &end, &count)) {
+        printf("found 0x%x at 0x%x:\n", val, end);
         obj = *end;
         addr = end;
         end += 2;
-
-        if (((long)obj & 0xff) == val) {
-            printf("found 0x%x at 0x%x:\n", val, addr);
-            if (LowtagOf(obj) == type_OtherImmediate0 ||    LowtagOf(obj) == type_OtherImmediate1)
-                print((long)addr | type_OtherPointer);
-            else
-                print(addr);
-            if (count == -1)
-                return;
-        }
+        if (TypeOf(obj) == type_FunctionHeader)
+            print((long)addr | type_FunctionPointer);
+        else if (LowtagOf(obj) == type_OtherImmediate0 || LowtagOf(obj) == type_OtherImmediate1)
+            print((long)addr | type_OtherPointer);
+        else
+            print(addr);
+        if (count == -1)
+            return;
     }
 }
 
@@ -172,17 +180,24 @@ char **ptr;
     extern lispobj call_into_lisp();
 
     static lispobj args[16];
+    int start_level = level;
 
     lispobj call_name = parse_lispobj(ptr);
     lispobj function, result, arg, *argptr;
     int numargs;
 
-    if (LowtagOf(call_name) == type_OtherPointer && TypeOf(call_name) == type_SymbolHeader) {
+    if (LowtagOf(call_name) == type_OtherPointer) {
         struct symbol *sym = (struct symbol *)PTR(call_name);
 
-        function = sym->function;
-        if (LowtagOf(function) != type_FunctionPointer) {
-            printf("undefined function: ``%s''\n", (char *)PTR(sym->name) + 8);
+        if (TypeOf(sym->header) == type_SymbolHeader) {
+            function = sym->function;
+            if (LowtagOf(function) != type_FunctionPointer) {
+                printf("undefined function: ``%s''\n", (char *)PTR(sym->name) + 8);
+                return;
+            }
+        }
+        else {
+            printf("0x%x is not a function pointer.\n", call_name);
             return;
         }
     }
@@ -205,6 +220,89 @@ char **ptr;
     result = call_into_lisp(call_name, function, args, numargs);
 
     print(result);
+
+    if (start_level != level) {
+        printf("Back to level %d\n", start_level);
+        level = start_level;
+    }
+}
+
+static double tv_diff(x, y)
+struct timeval *x, *y;
+{
+    return (((double) x->tv_sec + (double) x->tv_usec * 1.0e-6) -
+	    ((double) y->tv_sec + (double) y->tv_usec * 1.0e-6));
+}
+
+static void timed_call_cmd(ptr)
+char **ptr;
+{
+    extern lispobj call_into_lisp();
+
+    lispobj args[16];
+    int start_level = level;
+
+    lispobj call_name = parse_lispobj(ptr);
+    lispobj function, result, arg, *argptr;
+    int numargs;
+    struct timeval start_tv, stop_tv;
+    struct rusage start_rusage, stop_rusage;
+    double real_time, system_time, user_time;
+
+    if (LowtagOf(call_name) == type_OtherPointer) {
+        struct symbol *sym = (struct symbol *)PTR(call_name);
+
+        if (TypeOf(sym->header) == type_SymbolHeader) {
+            function = sym->function;
+            if (LowtagOf(function) != type_FunctionPointer) {
+                printf("undefined function: ``%s''\n", (char *)PTR(sym->name) + 8);
+                return;
+            }
+        }
+        else {
+            printf("0x%x is not a function pointer.\n", call_name);
+            return;
+        }
+    }
+    else if (LowtagOf(call_name) != type_FunctionPointer) {
+        printf("0x%x is not a function pointer.\n", call_name);
+        return;
+    }
+    else
+        function = call_name;
+
+    numargs = 0;
+    argptr = args;
+    while (more_p(ptr)) {
+        *argptr++ = parse_lispobj(ptr);
+        numargs++;
+    }
+    while (argptr < args + 6)
+        *argptr++ = NIL;
+
+    getrusage(RUSAGE_SELF, &start_rusage);
+    gettimeofday(&start_tv, (struct timezone *) 0);
+    result = call_into_lisp(call_name, function, args, numargs);
+    gettimeofday(&stop_tv, (struct timezone *) 0);
+    getrusage(RUSAGE_SELF, &stop_rusage);
+
+    print(result);
+
+    real_time = tv_diff(&stop_tv, &start_tv) * 1000.0;
+    user_time = tv_diff(&stop_rusage.ru_utime, &start_rusage.ru_utime) *
+	    1000.0;
+    system_time = tv_diff(&stop_rusage.ru_stime, &start_rusage.ru_stime) *
+	    1000.0;
+
+    printf("Call took:\n");
+    printf("%20.8f msec of real time\n", real_time);
+    printf("%20.8f msec of user time,\n", user_time);
+    printf("%20.8f msec of system time.\n", system_time);
+
+    if (start_level != level) {
+        printf("Back to level %d\n", start_level);
+        level = start_level;
+    }
 }
 
 static void flush_cmd()
@@ -257,7 +355,6 @@ unsigned long csp, bsp;
     extern char *egets();
     struct cmd *cmd, *found;
     char *line, *ptr, *token;
-    static char *last = NULL;
     int ambig;
     unsigned long new;
 
@@ -275,16 +372,12 @@ unsigned long csp, bsp;
         fflush(stdout);
         line = egets();
         if (line == NULL) {
-            last = NULL;
             putchar('\n');
             continue;
         }
         ptr = line;
-        if ((token = parse_token(&ptr)) == NULL) {
-            if (last == NULL)
-                continue;
-            token = last;
-        }
+        if ((token = parse_token(&ptr)) == NULL)
+            continue;
         ambig = 0;
         found = NULL;
         for (cmd = Cmds; cmd->cmd != NULL; cmd++) {
@@ -305,16 +398,11 @@ unsigned long csp, bsp;
         else if (found == NULL)
             printf("unknown command: ``%s''\n", token);
         else {
-            last = found->cmd;
+            reset_printer();
             (*found->fn)(&ptr);
         }
     }
 }
-
-
-static jmp_buf topbuf;
-static jmp_buf curbuf;
-static int level = 0;
 
 void monitor()
 {
