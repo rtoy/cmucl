@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.14 1990/06/18 14:47:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.15 1990/06/22 17:31:03 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -316,8 +316,11 @@
 ;;; Noise to convert normal lisp data objects into SAPs.
 
 (define-vop (vector-sap)
+  (:translate vector-sap)
+  (:policy :fast-safe)
   (:args (vector :scs (descriptor-reg)))
   (:results (sap :scs (sap-reg)))
+  (:result-types system-area-pointer)
   (:generator 2
     (inst addu sap vector
 	  (- (* vm:vector-data-offset vm:word-bytes) vm:other-pointer-type))))
