@@ -17,7 +17,8 @@
 (export '(letf* letf dovector deletef indenting-further file-comment
 		read-char-no-edit listen-skip-whitespace concat-pnames
 		iterate once-only collect do-anonymous undefined-value
-		define-hash-cache defun-cached cache-hash-eq))
+		required-argument define-hash-cache defun-cached
+		cache-hash-eq))
 
 (import 'lisp::whitespace-char-p)
 
@@ -30,6 +31,19 @@
 (proclaim '(inline undefined-value))
 (defun undefined-value ()
   '%undefined%)
+
+;;; REQUIRED-ARGUMENT  --  Public
+;;;
+(proclaim '(ftype (function () nil) required-argument))
+(defun required-argument ()
+  "This function can be used as the default value for keyword arguments that
+  must be always be supplied.  Since it is known by the compiler to never
+  return, it will avoid any compile-time type warnings that would result from a
+  default value inconsistent with the declared type.  When this function is
+  called, it signals an error indicating that a required keyword argument was
+  not supplied.  This function is also useful for DEFSTRUCT slot defaults
+  corresponding to required arguments."
+  (error "A required keyword argument was not supplied."))
 
 
 ;;; FILE-COMMENT  --  Public
