@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.26 1991/12/16 18:47:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.27 1992/01/21 17:25:39 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -532,7 +532,6 @@
 
   (print-and-call os-init)
   (print-and-call filesys-init)
-  (print-and-call conditions::error-init)
 
   (print-and-call reader-init)
   (print-and-call backq-init)
