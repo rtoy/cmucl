@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.13 1993/05/29 07:01:10 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.14 1993/06/02 13:21:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -171,14 +171,15 @@
 	(cons "Package" (symbol-package object))))
 
 (defun describe-instance-parts (object kind)
-  (let ((dd-slots (dd-slots (layout-info (kernel:layout-of object))))
+  (let ((info (layout-info (kernel:layout-of object)))
 	(parts-list ()))
     (push (format nil "~s is a ~(~A~).~%" object kind) parts-list)
     (push t parts-list)
-    (dolist (dd-slot dd-slots (nreverse parts-list))
-      (push (cons (dsd-%name dd-slot)
-		  (funcall (dsd-accessor dd-slot) object))
-	    parts-list))))
+    (when (kernel::defstruct-description-p info)
+      (dolist (dd-slot (dd-slots info) (nreverse parts-list))
+	(push (cons (dsd-%name dd-slot)
+		    (funcall (dsd-accessor dd-slot) object))
+	      parts-list)))))
 
 (defun describe-function-parts (object)
   (let* ((type (kernel:get-type object))
