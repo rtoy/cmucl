@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.9 1990/05/19 09:48:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.10 1990/05/23 06:15:35 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -20,17 +20,16 @@
 ;;; function, because it magically gets called in place of a function when
 ;;; there is no real function to call.
 
-(define-assembly-routine (undefined-function (:arg cname :sc any-reg
-						   :offset cname-offset)
-					     (:temp lexenv :sc any-reg
-						    :offset lexenv-offset)
-					     (:temp function :sc any-reg
-						    :offset code-offset)
-					     (:temp nargs :sc any-reg
-						    :offset nargs-offset)
-					     (:temp lip :sc interior-reg)
-					     (:temp temp
-						    :sc non-descriptor-reg))
+(eval-when (eval)
+
+(define-assembly-routine (undefined-function
+			  ()
+			  (:temp cname any-reg cname-offset)
+			  (:temp lexenv any-reg lexenv-offset)
+			  (:temp function any-reg code-offset)
+			  (:temp nargs any-reg nargs-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp temp non-descriptor-reg nl0-offset))
   ;; Allocate function header.
   (align vm:lowtag-bits)
   (inst word vm:function-header-type)
@@ -48,18 +47,22 @@
   (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
   (lisp-jump function lip))
 
+); eval-when (eval)
+
 
 ;;;; Non-local exit noise.
 
 
-(define-assembly-routine (unwind (:arg block)
-				 (:arg start :sc any-reg :offset args-offset)
-				 (:arg count :sc any-reg :offset nargs-offset)
-				 (:temp lip :sc interior-reg :type interior)
-				 (:temp lra :sc descriptor-reg)
-				 (:temp cur-uwp :sc any-reg :type fixnum)
-				 (:temp next-uwp :sc any-reg :type fixnum)
-				 (:temp target-uwp :sc any-reg :type fixnum))
+(define-assembly-routine (unwind
+			  ()
+			  (:arg block any-reg a0-offset)
+			  (:arg start any-reg args-offset)
+			  (:arg count any-reg nargs-offset)
+			  (:temp lip interior-reg lip-offset)
+			  (:temp lra descriptor-reg lra-offset)
+			  (:temp cur-uwp any-reg nl0-offset)
+			  (:temp next-uwp any-reg nl1-offset)
+			  (:temp target-uwp any-reg nl2-offset))
   (declare (ignore start count))
 
   (let ((error (generate-error-code di:invalid-unwind-error)))
@@ -87,29 +90,31 @@
 
 
 
-(define-assembly-routine (throw (:arg target)
-				(:arg start :sc any-reg :offset args-offset)
-				(:arg count :sc any-reg :offset nargs-offset)
-				(:temp catch :sc any-reg :offset l0-offset)
-				(:temp tag :sc descriptor-reg :offset l1-offset)
-				(:temp ndescr :sc non-descriptor-reg))
-
+(define-assembly-routine (throw
+			  ()
+			  (:arg target any-reg a0-offset)
+			  (:arg start any-reg args-offset)
+			  (:arg count any-reg nargs-offset)
+			  (:temp catch any-reg a1-offset)
+			  (:temp tag descriptor-reg a2-offset)
+			  (:temp ndescr non-descriptor-reg nl0-offset))
+  
   (load-symbol-value catch lisp::*current-catch-block*)
-    
+  
   loop
-    
+  
   (let ((error (generate-error-code di:unseen-throw-tag-error target)))
     (inst beq catch zero-tn error)
     (inst nop))
-    
+  
   (loadw tag catch vm:catch-block-tag-slot)
   (inst beq tag target exit)
   (inst nop)
   (inst b loop)
   (loadw catch catch vm:catch-block-previous-catch-slot)
-    
+  
   exit
-
+  
   (move target catch)
   (inst li ndescr (make-fixup 'unwind :assembly-routine))
   (inst j ndescr)
