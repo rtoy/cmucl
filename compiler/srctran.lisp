@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.8 2000/07/09 14:03:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.51.2.9 2000/09/12 07:37:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,7 +224,7 @@
 		       (member nil t))
   `(if (>= index #.vm:word-bits)
        (minusp integer)
-       (not (zerop (logand (ash 1 index) integer)))))
+       (not (zerop (logand integer (ash 1 index))))))
 
 ;;;; Interval arithmetic for computing bounds
 ;;;; (toy@rtp.ericsson.se)
