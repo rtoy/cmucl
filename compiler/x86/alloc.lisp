@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.1 1997/01/18 14:31:20 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.2 1997/02/08 21:15:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,7 +232,7 @@
     (with-cgc-allocation(temp (pad-data-block words))
       (inst lea result (make-ea :byte :base temp :disp lowtag)))
 
-    (when type				; dunno what this does yet
+    (when type
       (inst mov temp (logior (ash (1- words) type-bits) type))
       (storew temp result 0 lowtag))))
 
