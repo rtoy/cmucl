@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.4 1991/08/31 22:11:00 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/nlx.lisp,v 1.5 1992/05/21 23:22:31 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -176,8 +176,10 @@
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:info label nvals)
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
     (emit-return-pc label)
+    (note-this-location vop :non-local-entry)
     (cond ((zerop nvals))
 	  ((= nvals 1)
 	   (let ((no-values (gen-label)))
@@ -233,8 +235,10 @@
   (:results (result :scs (any-reg) :from (:argument 0))
 	    (num :scs (any-reg) :from (:argument 0)))
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
     (emit-return-pc label)
+    (note-this-location vop :non-local-entry)
     (let ((loop (gen-label))
 	  (done (gen-label)))
 
@@ -268,6 +272,8 @@
   (:save-p :force-to-stack)
   (:results (block) (start) (count))
   (:ignore block start count)
+  (:vop-var vop)
   (:generator 0
-    (emit-return-pc label)))
+    (emit-return-pc label)
+    (note-this-location vop :non-local-entry)))
 

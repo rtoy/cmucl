@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.15 1991/08/19 22:48:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.16 1992/05/21 23:21:11 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.15 1991/08/19 22:48:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.16 1992/05/21 23:21:11 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -180,8 +180,10 @@
   (:temporary (:scs (descriptor-reg)) move-temp)
   (:info label nvals)
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
     (emit-return-pc label)
+    (note-this-location vop :non-local-entry)
     (cond ((zerop nvals))
 	  ((= nvals 1)
 	   (let ((no-values (gen-label)))
@@ -236,8 +238,10 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:results (new-start) (new-count))
   (:save-p :force-to-stack)
+  (:vop-var vop)
   (:generator 30
     (emit-return-pc label)
+    (note-this-location vop :non-local-entry)
     (let ((loop (gen-label))
 	  (done (gen-label)))
 
