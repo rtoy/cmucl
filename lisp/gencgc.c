@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.49 2004/01/09 15:14:57 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.50 2004/01/09 23:05:32 toy Exp $
  *
  */
 
@@ -64,13 +64,14 @@
  * stuff, so we need to preserve those bits when we give it a value.
  * This value better not have any bits set there either!
  */
-#if 0
-#define set_alloc_pointer(value) \
-  (current_dynamic_space_free_pointer = (lispobj*) ((value) \
-         | ((unsigned long) current_dynamic_space_free_pointer & lowtag_Mask)))
-#else
+
+/*
+ * On sparc, we don't need to set the alloc_pointer in the code here
+ * because the alloc pointer (current_dynamic_space_free_pointer) is
+ * the same as *current-region-free-pointer* and is stored in
+ * alloc-tn.
+ */
 #define set_alloc_pointer(value) 
-#endif
 #define get_alloc_pointer() \
   ((unsigned long) current_dynamic_space_free_pointer & ~lowtag_Mask)
 #define get_binding_stack_pointer() \
@@ -89,20 +90,11 @@
   (current_dynamic_space_free_pointer \
    = (lispobj*) ((unsigned long) current_dynamic_space_free_pointer & ~pseudo_atomic_InterruptedValue))
 
-#if 0
-#define set_current_region_free(value) \
-  SetSymbolValue(CURRENT_REGION_FREE_POINTER, (value))
-
-#define get_current_region_free() \
-  SymbolValue(CURRENT_REGION_FREE_POINTER)
-
-#else
 #define set_current_region_free(value) \
   current_dynamic_space_free_pointer = (lispobj*)((value) | ((long)current_dynamic_space_free_pointer & lowtag_Mask))
 
 #define get_current_region_free() \
   ((long)current_dynamic_space_free_pointer & (~(lowtag_Mask)))
-#endif
 
 #define set_current_region_end(value) \
   SetSymbolValue(CURRENT_REGION_END_ADDR, (value))
@@ -6960,6 +6952,11 @@ char *
 alloc (int nbytes)
 {
 #ifndef sparc
+  /*
+   * *current-region-free-pointer* is the same as alloc-tn (=
+   * current_dynamic_space_free_pointer) and therefore contains the
+   * pseudo-atomic bits.
+   */
   gc_assert (((unsigned) get_current_region_free() & lowtag_Mask) == 0);
 #endif
   gc_assert ((nbytes & lowtag_Mask) == 0);
@@ -7075,13 +7072,9 @@ int get_bytes_consed_upper(void)
   return ((int)bytes_allocated_sum / 0x10000000) & 0xFFFFFFF;
 }
 
-#if 0
-#define current_region_free_pointer SymbolValue(CURRENT_REGION_FREE_POINTER)
-#define current_region_end_addr     ((void *) SymbolValue(CURRENT_REGION_END_ADDR))
-#else
 #define current_region_free_pointer get_current_region_free()
 #define current_region_end_addr     ((void *) SymbolValue(CURRENT_REGION_END_ADDR))
-#endif
+
 int get_bytes_allocated_lower(void)
 {
   int size = bytes_allocated;
