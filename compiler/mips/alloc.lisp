@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.9 1990/07/02 04:47:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.10 1990/07/16 17:40:10 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -202,9 +202,7 @@
 				   (vm:pad-data-block ,size))
 			     (inst li temp
 				   ,(logior (ash (1- size) vm:type-bits)
-					    (if (integerp header)
-						header
-						0)))
+					    (symbol-value header)))
 			     (storew temp result 0 ,lowtag)))
 			  (t
 			   `((inst addu alloc-tn alloc-tn
