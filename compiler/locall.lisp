@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.40 1993/01/17 20:38:06 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.41 1993/05/08 00:42:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -817,6 +817,7 @@
 	       (link-blocks block next-block)
 	       (delete-continuation-use this-call)
 	       (add-continuation-use this-call (node-cont call))))
+	    (:deleted)
 	    (:assignment
 	     (assert (eq called fun))))))))
   (undefined-value))
