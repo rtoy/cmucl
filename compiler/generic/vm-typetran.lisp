@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.7 1991/02/20 15:17:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.8 1991/07/22 19:20:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.7 1991/02/20 15:17:37 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.8 1991/07/22 19:20:47 wlott Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -55,10 +55,12 @@
 (define-type-predicate unsigned-byte-32-p (unsigned-byte 32))
 (define-type-predicate signed-byte-32-p (signed-byte 32))
 (define-type-predicate weak-pointer-p weak-pointer)
+(define-type-predicate scavenger-hook-p scavenger-hook)
+(define-type-predicate code-component-p code-component)
+(define-type-predicate lra-p lra)
 
 ;;; Unlike the un-%'ed versions, these are true type predicates, accepting any
 ;;; type object.
 ;;;
 ;(define-type-predicate %string-char-p string-char)
 (define-type-predicate %standard-char-p standard-char)
-
