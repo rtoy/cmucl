@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.200 2003/02/09 17:24:28 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.201 2003/02/18 18:34:47 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1573,7 +1573,7 @@
 	   "FUNCTION-WORD-OFFSET" "GET-CLOSURE-LENGTH" "GET-HEADER-DATA"
 	   "GET-LISP-OBJ-ADDRESS" "GET-LOWTAG" "GET-TYPE" "HAIRY-TYPE"
 	   "HAIRY-TYPE-CHECK-TEMPLATE" "HAIRY-TYPE-SPECIFIER"
-	   "HANDLE-CIRCULARITY" "INDEX" "INTEGER-DECODE-DOUBLE-FLOAT"
+	   "HANDLE-CIRCULARITY" "INDEX" "INIT-RANDOM-STATE" "INTEGER-DECODE-DOUBLE-FLOAT"
 	   "INTEGER-DECODE-LONG-FLOAT" "INTEGER-DECODE-SINGLE-FLOAT"
 	   "INTERNAL-TIME"
 	   "INVALID-ARGUMENT-COUNT-ERROR" "INVALID-ARRAY-INDEX-ERROR"
