@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.12 1994/04/06 17:10:33 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.13 1994/10/30 18:04:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -714,12 +714,13 @@
 	      (cond ((/= extra 1)
 		     (assert (> extra 1)))
 		    ((oddp fraction-and-guard)
-		     (if (zerop rem)
-			 (float-and-scale
-			  (if (zerop (logand fraction-and-guard 2))
-			      fraction-and-guard
-			      (1+ fraction-and-guard)))
-			 (return (float-and-scale (1+ fraction-and-guard)))))
+		     (return
+		      (if (zerop rem)
+			  (float-and-scale
+			   (if (zerop (logand fraction-and-guard 2))
+			       fraction-and-guard
+			       (1+ fraction-and-guard)))
+			  (float-and-scale (1+ fraction-and-guard)))))
 		    (t
 		     (return (float-and-scale fraction-and-guard)))))
 	    (setq shifted-num (ash shifted-num -1))
