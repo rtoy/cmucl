@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.16 2001/05/18 16:25:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/arith.lisp,v 1.17 2001/10/05 15:13:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -178,31 +178,12 @@
   (inst srl lo fixnum-tag-bits)
   (inst or lo temp)
   (inst sra hi fixnum-tag-bits)
-  ;; Allocate a BIGNUM for the result.
-  #+nil
-  (pseudo-atomic (:extra (pad-data-block (1+ bignum-digits-offset)))
-    (let ((one-word (gen-label)))
-      (inst or res alloc-tn other-pointer-type)
-      ;; We start out assuming that we need one word.  Is that correct?
-      (inst sra temp lo 31)
-      (inst xorcc temp hi)
-      (inst b :eq one-word)
-      (inst li temp (logior (ash 1 type-bits) bignum-type))
-      ;; Nope, we need two, so allocate the addition space.
-      (inst add alloc-tn (- (pad-data-block (+ 2 bignum-digits-offset))
-			    (pad-data-block (1+ bignum-digits-offset))))
-      (inst li temp (logior (ash 2 type-bits) bignum-type))
-      (storew hi res (1+ bignum-digits-offset) other-pointer-type)
-      (emit-label one-word)
-      (storew temp res 0 other-pointer-type)
-      (storew lo res bignum-digits-offset other-pointer-type)))
-  ;; Always allocate 2 words for the bignum result, even if we only
-  ;; need one.  The copying GC will take care of the extra word if it
-  ;; isn't needed.
+  ;; Allocate a BIGNUM for the result. We always allocate 2 words for
+  ;; the bignum result, even if we only need one.  The copying GC will
+  ;; take care of the extra word if it isn't needed.
   (with-fixed-allocation
       (res temp bignum-type (+ 2 bignum-digits-offset))
     (let ((one-word (gen-label)))
-      (inst or res alloc-tn other-pointer-type)
       ;; We start out assuming that we need one word.  Is that correct?
       (inst sra temp lo 31)
       (inst xorcc temp hi)
