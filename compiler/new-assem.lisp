@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.13 1992/07/29 20:39:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.14 1992/07/30 04:47:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -264,7 +264,14 @@
 		     (incf *next-inst-id*)))
 	   stream)
     (format stream #+debug " emitter=~S" #-debug "emitter=~S"
-	    (inst-emitter inst))
+	    (let ((emitter (inst-emitter inst)))
+	      (if emitter
+		  (multiple-value-bind
+		      (lambda lexenv-p name)
+		      (function-lambda-expression emitter)
+		    (declare (ignore lambda lexenv-p))
+		    name)
+		  '<flushed>)))
     (when (inst-depth inst)
       (format stream ", depth=~D" (inst-depth inst)))))
 
@@ -314,13 +321,15 @@
 ;;; see if the basic block is terminated.
 ;;; 
 (defun queue-inst (segment inst reads writes)
-  #+debug (format *trace-output* "Queuing ~S~%" inst)
+  #+debug (format *trace-output* "~&Queuing ~S~%" inst)
   (assert (segment-run-scheduler segment))
   (let* ((writers (segment-writers segment))
 	 (readers (segment-readers segment))
 	 (read-dependencies nil)
 	 (write-dependencies nil)
 	 (emittable-insts (segment-emittable-insts segment)))
+    ;; For everything we read, find out who wrote it and note that we
+    ;; depend on them.
     (dolist (read reads)
       (let ((writer (assoc read writers :test #'eq)))
 	(when writer
@@ -328,41 +337,38 @@
 	    (pushnew prev-inst read-dependencies)
 	    (pushnew inst (inst-read-dependents prev-inst))
 	    (setf emittable-insts
-		  (delete prev-inst emittable-insts :test #'eq)))))
-      (push (cons read inst) readers))
+		  (delete prev-inst emittable-insts :test #'eq))))))
+    ;; For everything we write, find out who has read the old value and
+    ;; note that we depend on them also.  Also, change the writers record
+    ;; to indicate that we wrote that location last.
     (dolist (write writes)
-      (let ((writer (assoc write writers :test #'eq)))
-	(when writer
-	  (let ((prev-inst (cdr writer)))
+      (let ((reader (assoc write readers :test #'eq)))
+	(when reader
+	  (dolist (prev-inst (cdr reader))
 	    (pushnew prev-inst write-dependencies)
 	    (pushnew inst (inst-write-dependents prev-inst))
 	    (setf emittable-insts
 		  (delete prev-inst emittable-insts :test #'eq)))
-	  (setf writers (delete writer writers :test #'eq))))
-      (let ((reader (assoc write readers :test #'eq)))
-	(when reader
-	  (let ((prev-inst (cdr reader)))
-	    (unless (eq prev-inst inst)
-	      (pushnew prev-inst write-dependencies)
-	      (pushnew inst (inst-write-dependents prev-inst))
-	      (setf emittable-insts
-		    (delete prev-inst emittable-insts :test #'eq)))
-	    (setf readers (delete reader readers :test #'eq))))))
+	  (setf readers (delete reader readers :test #'eq))))
+      (setf writers
+	    (acons write inst
+		   (delete write writers :test #'eq :key #'car))))
     #+debug
     (when read-dependencies
       (format *trace-output* " Reads values produced by ~:S.~%"
 	      read-dependencies))
+    (setf (inst-read-dependencies inst) read-dependencies)
     #+debug
     (when write-dependencies
-      (format *trace-output* " Writes values used by ~:S.~%"
+      (format *trace-output* " Writes values needed by ~:S.~%"
 	      write-dependencies))
-    (setf (inst-read-dependencies inst) read-dependencies)
     (setf (inst-write-dependencies inst) write-dependencies)
     (dolist (read reads)
-      (push (cons read inst) readers))
+      (let ((reader (assoc read readers :test #'eq)))
+	(if reader
+	    (pushnew inst (cdr reader))
+	    (push (list read inst) readers))))
     (setf (segment-readers segment) readers)
-    (dolist (write writes)
-      (push (cons write inst) writers))
     (setf (segment-writers segment) writers)
     (let ((countdown (segment-branch-countdown segment)))
       (cond ((instruction-attributep (inst-attributes inst) branch)
@@ -454,19 +460,29 @@
     ;; Schedule all the branches in their exact locations.
     (let ((insts-from-end 0))
       (dolist (branch (segment-queued-branches segment))
-	(dotimes (i (- (car branch) insts-from-end))
-	  #+debug
-	  (format *trace-output* "Filling branch delay slot...~%")
-	  (let ((inst (or (schedule-one-inst segment) :nop)))
-	    (push inst results))
-	  (advance-one-inst segment)
-	  (incf insts-from-end))
 	(let ((inst (cdr branch)))
+	  (dotimes (i (- (car branch) insts-from-end))
+	    #+debug
+	    (format *trace-output* "Filling branch delay slot...~%")
+	    (flet ((maybe-schedule-dependent (dependents)
+		     (when dependents
+		       (let ((inst (car dependents)))
+			 (note-resolved-dependencies segment inst)
+			 (setf (segment-emittable-insts segment)
+			       (delete inst (segment-emittable-insts segment)))
+			 inst))))
+	      (push (or (maybe-schedule-dependent (inst-read-dependents inst))
+			(maybe-schedule-dependent (inst-write-dependents inst))
+			(schedule-one-inst segment)
+			:nop)
+		    results))
+	    (advance-one-inst segment)
+	    (incf insts-from-end))
 	  (note-resolved-dependencies segment inst)
-	  (push inst results))
-	#+debug
-	(format *trace-output* "Emitting ~S~%" (cdr branch))
-	(advance-one-inst segment)))
+	  (push inst results)
+	  #+debug
+	  (format *trace-output* "Emitting ~S~%" inst)
+	  (advance-one-inst segment))))
     ;;
     ;; Keep scheduling stuff until we run out.
     (loop
@@ -518,8 +534,6 @@
   (let ((inst (pop (segment-emittable-insts segment))))
     (cond (inst
 	   ;; We've got us a live one here.  Go for it.
-	   (assert (null (inst-write-dependents inst)))
-	   (assert (null (inst-read-dependents inst)))
 	   #+debug
 	   (format *Trace-output* "Emitting ~S~%" inst)
 	   (note-resolved-dependencies segment inst)
@@ -547,6 +561,8 @@
 ;;; dependency can be emitted now.
 ;;;
 (defun note-resolved-dependencies (segment inst)
+  (assert (null (inst-read-dependents inst)))
+  (assert (null (inst-write-dependents inst)))
   (dolist (dep (inst-write-dependencies inst))
     ;; These are the instructions who have to be completed before our
     ;; write fires.  Doesn't matter how far before, just before.
@@ -597,19 +613,21 @@
 ;;;
 ;;; Note that inst is emittable by sticking it in the SEGMENT-EMITTABLE-INSTS
 ;;; list.  We keep the emittable-insts sorted with the largest ``depths''
-;;; first.
+;;; first.  Except that if INST is a branch, don't bother.  It will be handled
+;;; correctly by the branch emitting code in SCHEDULE-PENDING-INSTRUCTIONS.
 ;;;
 (defun insert-emittable-inst (segment inst)
-  #+debug
-  (format *Trace-output* "Now emittable: ~S~%" inst)
-  (do ((my-depth (inst-depth inst))
-       (remaining (segment-emittable-insts segment) (cdr remaining))
-       (prev nil remaining))
-      ((or (null remaining) (> my-depth (inst-depth (car remaining))))
-       (if prev
-	   (setf (cdr prev) (cons inst remaining))
-	   (setf (segment-emittable-insts segment) (cons inst remaining)))
-       (ext:undefined-value))))
+  (unless (instruction-attributep (inst-attributes inst) branch)
+    #+debug
+    (format *Trace-output* "Now emittable: ~S~%" inst)
+    (do ((my-depth (inst-depth inst))
+	 (remaining (segment-emittable-insts segment) (cdr remaining))
+	 (prev nil remaining))
+	((or (null remaining) (> my-depth (inst-depth (car remaining))))
+	 (if prev
+	     (setf (cdr prev) (cons inst remaining))
+	     (setf (segment-emittable-insts segment) (cons inst remaining))))))
+  (ext:undefined-value))
 
 
 ;;;; Structure used during output emission.
