@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.18 1991/11/09 02:47:16 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.19 1991/11/09 20:49:49 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.18 1991/11/09 02:47:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.19 1991/11/09 20:49:49 ram Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -51,7 +51,7 @@
 	  object-not-simple-array-single-float-error
 	  object-not-simple-array-double-float-error
 	  object-not-complex-error object-not-weak-pointer-error
-	  object-not-structure-error))
+	  object-not-structure-error nil-function-returned-error))
 
 
 
@@ -407,6 +407,15 @@
 	 :function-name name
 	 :format-string "Attempt to THROW to a tag that does not exist: ~S"
 	 :format-arguments (list tag)))
+
+(deferr nil-function-returned-error
+  "Function with declared result type NIL returned."
+  (function)
+  (error 'control-error
+	 :function-name name
+	 :format-string
+	 "Function with declared result type NIL returned:~%  ~S"
+	 :format-arguments (list function)))
 
 (deferr division-by-zero-error
   "Attempt to divide by zero."
