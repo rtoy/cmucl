@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.58 2002/12/12 19:11:11 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.59 2003/03/17 10:36:42 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,8 +261,8 @@
    File-Stream is open to.  If the second argument is supplied, then
    this becomes the new file position.  The second argument may also
    be :start or :end for the start and end of the file, respectively."
-  (declare (stream stream)
-	   (type (or index (member nil :start :end)) position))
+  (declare (type stream stream)
+	   (type (or (integer 0) (member nil :start :end)) position))
   (cond
    (position
     (setf (lisp-stream-in-index stream) in-buffer-length)
