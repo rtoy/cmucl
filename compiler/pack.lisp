@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.40 1991/08/05 15:51:28 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.41 1991/09/26 17:50:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1281,9 +1281,10 @@
 		     (unpack-em (victims)))
 		    ((eq conf :overflow))
 		    ((not fallback)
-		     (if (find conf (victims))
-			 (setq fallback (victims))
-			 (setq fallback (list conf)))))))))
+		     (cond ((find conf (victims))
+			    (setq fallback (victims)))
+			   ((find-in #'tn-next conf normal-tns)
+			    (setq fallback (list conf))))))))))
       
       (when fallback
 	(event unpack-fallback node)
