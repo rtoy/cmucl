@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.39 2003/06/06 12:22:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.40 2003/07/21 17:36:47 gerd Exp $")
 
 (in-package :pcl)
 
@@ -90,7 +90,7 @@
 		  (unparse-specializers method)))
 	(call-next-method))))
 
-(defmethod print-object ((gf generic-function) stream)
+(defmethod print-object ((gf standard-generic-function) stream)
   (named-object-print-function
     gf
     stream
