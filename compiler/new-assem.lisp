@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.5 1992/07/12 19:35:19 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.6 1992/07/24 03:31:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,7 @@
 	  define-emitter define-instruction define-instruction-macro
 	  def-assembler-params
 
-	  make-segment segment-name assemble align inst
+	  segment make-segment segment-name assemble align inst
 	  label label-p gen-label emit-label label-position
 	  append-segment finalize-segment
 	  segment-map-output release-segment))
@@ -266,6 +266,21 @@
   (setf *next-inst-id* 0))
 
 
+;;;; Locations, and operations thereon.
+
+(defun canonicalize-locations (locations)
+  (let ((results nil))
+    (labels ((grovel (location)
+	       (typecase location
+		 (list (dolist (x location) (grovel x)))
+		 (c:tn (push (c:tn-location location) results))
+		 (number) ; blow off immediates
+		 (t (push location results)))))
+      (grovel locations))
+    results))
+
+
+
 ;;;; The scheduler itself.
 
 ;;; WITHOUT-SCHEDULING -- interface.
@@ -451,7 +466,7 @@
     (setf (segment-run-scheduler segment) nil)
     (dolist (inst results)
       (if (eq inst :nop)
-	  (format t "*** NOP ***~%")
+	  (emit-nop segment)
 	  (funcall (inst-emitter inst) segment)))
     (setf (segment-run-scheduler segment) t))
   ;;
@@ -1501,6 +1516,14 @@
 		  vop-var
 		  reconstructor))))))
 
+(defun extract-nths (index glue list-of-lists-of-lists)
+  (mapcar #'(lambda (list-of-lists)
+	      (cons glue
+		    (mapcar #'(lambda (list)
+				(nth index list))
+			    list-of-lists)))
+	  list-of-lists-of-lists))
+
 ;;; DEFINE-INSTRUCTION -- interface.
 ;;; 
 (defmacro define-instruction (name lambda-list &rest options)
@@ -1514,7 +1537,8 @@
 	 (reads nil)
 	 (writes nil)
 	 (delay nil)
-	 (pinned nil))
+	 (pinned nil)
+	 (pdefs nil))
     (dolist (option-spec options)
       (multiple-value-bind
 	  (option args)
@@ -1531,12 +1555,12 @@
 	  (:attributes
 	   (setf attributes (append attributes args)))
 	  (:reads
-	   (when reads
+	   (when (or reads (cdr args))
 	     (error
 	      "Can only specify one reads expression per instruction."))
 	   (setf reads args))
 	  (:writes
-	   (when writes
+	   (when (or writes (cdr args))
 	     (error
 	      "Can only specify one writes expression per instruction."))
 	   (setf writes args))
@@ -1550,8 +1574,28 @@
 	   (if vop-var
 	       (error "Can only specify :vop-var once.")
 	       (setf vop-var (car args))))
+	  (:printer
+	   (push
+	    (eval
+	     `(list
+	       (multiple-value-list
+		,(disassem:gen-printer-def-forms-def-form name
+							  (cdr option-spec)))))
+	    pdefs))
+	  (:printer-list
+	   ;; same as :printer, but is evaled first, and is a list of printers
+	   (push
+	    (eval
+	     `(eval
+	       `(list ,@(mapcar #'(lambda (printer)
+				    `(multiple-value-list
+				      ,(disassem:gen-printer-def-forms-def-form
+					',name printer nil)))
+				,(cadr option-spec)))))
+	    pdefs))
 	  (t
-	   (error "Unknown option: ~S" (car option))))))
+	   (error "Unknown option: ~S" option)))))
+    (setf pdefs (nreverse pdefs))
     (multiple-value-bind
 	(new-lambda-list segment-name vop-name arg-reconstructor)
 	(grovel-lambda-list lambda-list vop-var)
@@ -1581,8 +1625,10 @@
 						 (instruction-attributes
 						  ,@attributes)
 						 (progn ,@delay))
-						(progn ,@reads)
-						(progn ,@writes))
+						(canonicalize-locations
+						 ,reads)
+						(canonicalize-locations
+						 ,writes))
 				    (,flet-name ,segment-name))))))))
       `(progn
 	 (defun ,defun-name ,new-lambda-list
@@ -1599,7 +1645,11 @@
 	       ,@emitter))
 	   (ext:undefined-value))
 	 (eval-when (compile load eval)
-	   (%define-instruction ,sym-name ',defun-name))))))
+	   (%define-instruction ,sym-name ',defun-name))
+	 ,@(extract-nths 1 'progn pdefs)
+	 (disassem:install-inst-flavors
+	  ',name
+	  (append ,@(extract-nths 0 'list pdefs)))))))
 
 ;;; DEFINE-INSTRUCTION-MACRO -- interface.
 ;;;
