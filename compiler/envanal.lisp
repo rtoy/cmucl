@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.31 2003/09/14 10:13:27 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/envanal.lisp,v 1.32 2003/10/04 12:21:49 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,11 +160,22 @@
 	    (setq did-something t)
 	    (close-over var ref-env env))))
       (dolist (set (basic-var-sets var))
-	(let ((set-env (get-node-environment set)))
-	  (unless (eq set-env env)
-	    (setq did-something t)
-	    (setf (lambda-var-indirect var) t)
-	    (close-over var set-env env)))))
+	;;
+	;; SBCL comment:
+	;; Variables which are set but never referenced can be
+	;; optimized away, and closing over them here would just
+	;; interfere with that. (In bug 147, it *did* interfere with
+	;; that, causing confusion later. This UNLESS solves that
+	;; problem, but I (WHN) am not 100% sure it's best to solve
+	;; the problem this way instead of somehow solving it
+	;; somewhere upstream and just doing (AVER (LEAF-REFS VAR))
+	;; here.)
+	(unless (null (leaf-refs var))
+	  (let ((set-env (get-node-environment set)))
+	    (unless (eq set-env env)
+	      (setq did-something t)
+	      (setf (lambda-var-indirect var) t)
+	      (close-over var set-env env))))))
     did-something))
 
 
@@ -418,7 +429,7 @@
 
 ;;;; Dynamic-Extent Closures
 
-(defvar *suppress-dynamic-extent-safe-closures* t)
+(defvar *suppress-dynamic-extent-safe-closures* nil)
 
 ;;;
 ;;; Mark closures that can be allocated on the stack because they are
