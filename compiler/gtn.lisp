@@ -212,7 +212,8 @@
     (dolist (nlx (environment-nlx-info env))
       (setf (nlx-info-info nlx)
 	    (make-ir2-nlx-info
-	     :home (when (eq (cleanup-kind (nlx-info-cleanup nlx)) :entry)
+	     :home (when (member (cleanup-kind (nlx-info-cleanup nlx))
+				 '(:block :tagbody))
 		     (make-normal-tn *any-primitive-type*))
 	     :save-sp (make-nlx-sp-tn env)))))
   (undefined-value))
