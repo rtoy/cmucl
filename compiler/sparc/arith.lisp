@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.28 2002/07/30 13:07:09 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.29 2002/08/07 15:22:05 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -172,8 +172,8 @@
 
 (define-vop (fast-logand/signed-unsigned=>unsigned
 	     fast-logand/unsigned=>unsigned)
-    (:args (x :target r :scs (signed-reg))
-	   (y :scs (unsigned-reg)))
+    (:args (x :scs (signed-reg))
+	   (y :target r :scs (unsigned-reg)))
   (:arg-types signed-num unsigned-num))
 
 (define-vop (fast-logand/unsigned-signed=>unsigned
