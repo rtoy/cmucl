@@ -71,3 +71,36 @@
 		 (component-name (block-component block))))
      :arguments (make-arg-names internal-fun)
      :type (type-specifier (leaf-type internal-fun)))))
+
+
+;;; REPLACE-TOP-LEVEL-XEPS  --  Interface
+;;;
+;;;    Replace all references in other components to non-closure XEPs in
+;;; Component with :TOP-LEVEL-XEP functionals.  We return true if any closure
+;;; references were encountered.  We deliberately don't use the normal
+;;; reference deletion, since we don't want to trigger deletion of the XEP
+;;; (although it shouldn't hurt, since this is called after Component is
+;;; compiled.)  Instead, we just clobber the REF-LEAF.
+;;;
+(defun replace-top-level-xeps (component)
+  (let ((res nil))
+    (dolist (lambda (component-lambdas component))
+      (when (eq (functional-kind lambda) :external)
+	(let* ((ef (functional-entry-function lambda))
+	       (new (make-functional :kind :top-level-xep
+				     :info (leaf-info lambda)
+				     :name (leaf-name ef)
+				     :fenv nil :venv nil
+				     :benv nil :tenv nil))
+	       (closure (environment-closure
+			 (lambda-environment (main-entry ef)))))
+	  (dolist (ref (leaf-refs lambda))
+	    (let ((ref-component (block-component (node-block ref))))
+	      (unless (eq ref-component component)
+		(assert (eq (component-kind ref-component) :top-level))
+		(cond (closure
+		       (setq res t))
+		      (t
+		       (setf (ref-leaf ref) new)
+		       (push ref (leaf-refs new))))))))))
+    res))
