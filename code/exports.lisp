@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.17 1990/04/29 23:32:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.18 1990/05/06 05:36:36 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -75,7 +75,7 @@
 (in-package "VM")
 (in-package "C")
 (in-package "ASSEMBLER" :nicknames '("ASSEM"))
-
+(in-package "BIGNUM")
 
 
 (in-package "LISP")
@@ -83,6 +83,7 @@
 (use-package "KERNEL")
 (use-package "EXT")
 (use-package "SYSTEM")
+(use-package "BIGNUM")
 
 (export '(&allow-other-keys &aux &body &environment &key &optional &rest
 	  &whole * ** *** *applyhook* *break-on-signals*
@@ -253,6 +254,7 @@
 
 (use-package "EXT")
 (use-package "SYSTEM")
+(use-package "BIGNUM")
 
 (export '(%array-fill-pointer %array-available-elements %array-data-vector
 	  %array-displacement %array-displaced-p %array-dimension
@@ -270,9 +272,9 @@
 	  bit-bash-andc1 bit-bash-andc2 bit-bash-orc1 bit-bash-orc2
 	  bit-index boole-code boolean byte-specifier callable char-int
 	  consed-sequence constant-type constant-type-p constant-type-type
-	  csubtypep ctype ctype-of ctype-p ctypep data-vector-ref
-	  data-vector-set filename float-digits float-exponent
-	  float-format-max float-radix form function-type
+	  containing-integer-type csubtypep ctype ctype-of ctype-p ctypep
+	  data-vector-ref data-vector-set filename float-digits
+	  float-exponent float-format-max float-radix form function-type
 	  function-type-allowp function-type-keyp function-type-keywords
 	  function-type-optional function-type-p function-type-required
 	  function-type-rest function-type-returns function-type-wild-args
@@ -297,11 +299,11 @@
 	  type-intersection type-specifier type-specifier-symbols
 	  type-union type/= type= types-intersect unboxed-array union-type
 	  union-type-p union-type-types unknown-type unknown-type-p
-	  values-subtypep values-type values-type-allowp values-type-intersect
-	  values-type-intersection values-type-keyp values-type-keywords
-	  values-type-optional values-type-p values-type-required
-	  values-type-rest values-type-union values-types
-	  values-types-intersect void))
+	  values-subtypep values-type values-type-allowp
+	  values-type-intersect values-type-intersection values-type-keyp
+	  values-type-keywords values-type-optional values-type-p
+	  values-type-required values-type-rest values-type-union
+	  values-types values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
@@ -494,6 +496,7 @@
 (use-package "SYSTEM")
 (use-package "VM")
 (use-package "ASSEM")
+(use-package "BIGNUM")
 
 (export '(*compile-time-define-macros* *compiling-for-interpreter*
 	  compile-for-eval entry-node-info-nlx-tag entry-node-info-st-top
@@ -520,4 +523,17 @@
 	  interpreted-function-closure
 	  interpreted-function-lambda-expression interpreted-function-name
 	  interpreted-function-p make-interpreted-function))
+
+
+(in-package "BIGNUM")
+
+(use-package "KERNEL")
+
+(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
+	  bignum-ashift-right bignum-ashift-left bignum-gcd bignum=
+	  bignum-to-short-float bignum-to-long-float bignum-integer-length
+	  bignum-logical-and bignum-logical-ior bignum-logical-xor
+	  bignum-logical-not bignum-load-byte bignum-deposit-byte
+	  bignum-truncate bignum= bignum/= bignum> bignum< bignum<= bignum>=
+	  bignum-type bignum-element-type bignum-index))
 
