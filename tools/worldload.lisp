@@ -78,6 +78,7 @@
 (load "code:internet")
 (load "code:wire")
 (load "code:remote")
+(load "code:foreign")
 
 ;;; Load the compiler.
 (load "c:loadcom.lisp")
