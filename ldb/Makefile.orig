@@ -1,4 +1,4 @@
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.8 1990/04/04 18:26:15 ch Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.9 1990/05/10 17:50:58 wlott Exp $
 CFLAGS = -g
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
@@ -12,15 +12,20 @@ ldb.map: ldb
 	nm -gp ldb >> ldb.map
 
 
-ldb: ${OBJS} version
+ldb: ${OBJS} version syscalls
 	echo -n '1 + ' | cat - version | bc > ,version
 	mv ,version version
 	cc ${CFLAGS} -DVERSION=`cat version` -c version.c
-	cc -o ,ldb ${OBJS} version.o -lmach -lc
+	cc `cat syscalls` -o ,ldb ${OBJS} version.o -lmach -lc
 	mv -f ,ldb ldb
 
 version:
 	echo 0 > version
+
+syscalls: /usr/man/man2
+	ls /usr/man/man2 | sed -e '/intro/d' -e 's/^/-u /' -e 's/\.2$$//' > ,syscalls
+	mv ,syscalls syscalls
+	
 
 # If we get an interrupt while in lisp code, the global pointer
 # is trash.  Therefore, we can't use the GP relative addressing
@@ -56,6 +61,13 @@ assem.o: lisp.h
 assem.o: lispregs.h
 assem.o: globals.h
 assem.o: lisp.h
+backtrace.o: backtrace.c
+backtrace.o: ldb.h
+backtrace.o: lisp.h
+backtrace.o: globals.h
+backtrace.o: lisp.h
+backtrace.o: interrupt.h
+backtrace.o: lispregs.h
 coreparse.o: coreparse.c
 coreparse.o: lisp.h
 coreparse.o: globals.h
@@ -76,13 +88,6 @@ gc.o: lisp.h
 gc.o: interrupt.h
 gc.o: validate.h
 gc.o: lispregs.h
-gc_debug.o: gc_debug.c
-gc_debug.o: lisp.h
-gc_debug.o: ldb.h
-gc_debug.o: gc.h
-gc_debug.o: lisp.h
-gc_debug.o: globals.h
-gc_debug.o: lisp.h
 globals.o: globals.c
 globals.o: lisp.h
 globals.o: globals.h
