@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.8 1990/07/18 10:53:33 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.9 1990/09/21 06:03:26 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -46,6 +46,8 @@ char *envp[];
     char *core = NULL;
     boolean restore_state, monitor;
 
+    number_stack_start = (char *)&monitor;
+
     define_var("nil", NIL, TRUE);
     define_var("t", T, TRUE);
     monitor = FALSE;
@@ -69,7 +71,7 @@ char *envp[];
     }
 
     if (core == NULL)
-        core = "/usr/clisp/lib/lisp.core";
+        core = "/usr/misc/.cmucl/lib/lisp.core";
 
     os_init();
 
