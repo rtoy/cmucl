@@ -57,6 +57,18 @@ New in this release:
       - A socket reset signals a SOCKET-ERROR condition instead of a
         general ERROR condition.
       - :LINKAGE-TABLE feature is now supported on PPC.
+      - MAKE-INDENTING-STREAM and INDENTING-STREAM-P are exported from
+        the EXTENSIONS package instead of being internal.
+      - TRACE will work now for the known-return convention, which
+        used to require encapsulation so that only the first call was
+        traced.  Useful for tracing recursive functions.
+      - Bivalent streams are supported.  Thus, streams with
+        element-type (unsigned-byte 8) can be used for character
+        input/output as well as binary input/output.  Supply the
+        option :CLASS 'EXT:BINARY-TEXT-STREAM for OPEN to get bivalen
+        streams.  EXT:READ-VECTOR and EXT:WRITE-VECTOR also
+        implemented.  This is somewhat experimental right now, and may
+        change slightly in a future version.
 
   * Numerous ANSI compliance fixes:
       - FILE-AUTHOR should signal errors appropriately.
@@ -174,6 +186,12 @@ New in this release:
         smallest new interval that contains all of the disjoint
         intervals.  (This needs a better fix.)
       - The :WHEREIN option to TRACE handles methods now.
+      - The maximum dynamic space size was wrong on Linux.
+      - Type inferencing for OPEN was broken when :IF-DOES-NOT-EXIST
+        was given and was not a compile-time constant.
+      - ~G output always had a zero for the last digit when
+        exponential form was used.  Fix this so the last digit has the
+        correct digit.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
@@ -190,22 +208,11 @@ New in this release:
         rounded to a multiple of 8 MB.  Without this, CMUCL eventually
         gets a GC error on Solaris 10 when using gencgc.  There appear
         to be no problems with Cheney GC on Solaris 10.
-      - Bivalent streams are supported, if
-        LISP::*FD-STREAM-ENABLE-CHARACTER-AND-BINARY-INPUT* is
-        non-NIL.  Thus, streams with element-type (unsigned-byte 8)
-        can be used for character input.  READ-VECTOR and WRITE-VECTOR
-        also implemented.  This is somewhat experimental right now,
-        and may change slightly in a future version.
       - The config script uses REQUIRE instead of LOAD to load up
         CMUCL's system libraries so there are no package-lock errors.
       - REQUIRE no longer disables package-locks when loading
         requested file.  But package-locks are disabled for CMUCL's
         own system libraries like gray-streams, clx, etc.
-      - MAKE-INDENTING-STREAM and INDENTING-STREAM-P are exported from
-        the EXTENSIONS package instead of being internal.
-      - TRACE will work now for the known-return convention, which
-        used to require encapsulation so that only the first call was
-        traced.  Useful for tracing recursive functions.
 
   * Improvements to the PCL implementation of CLOS:
       - AMOP-style custom slot allocation supported.
