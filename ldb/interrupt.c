@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.12 1990/10/29 19:24:18 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/interrupt.c,v 1.13 1990/11/03 16:32:44 wlott Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -216,12 +216,12 @@ struct sigcontext *context;
         if (pending_signal) {
             signal = pending_signal;
             code = pending_code;
-            context->sc_mask = pending_mask;
             pending_signal = 0;
             pending_code = 0;
-            pending_mask = 0;
             handle_now(signal, code, context);
         }
+        context->sc_mask = pending_mask;
+        pending_mask = 0;
         skip_instruction(context);
     }
     else
@@ -314,7 +314,10 @@ struct sigcontext *context;
 
         if (context->sc_regs[FLAGS] & (1<<flag_Atomic)) {
             maybe_gc_pending = TRUE;
-            context->sc_mask |= BLOCKABLE;
+            if (pending_signal == 0) {
+                pending_mask = context->sc_mask;
+                context->sc_mask |= BLOCKABLE;
+            }
             context->sc_regs[FLAGS] |= (1<<flag_Interrupted);
         }
         else {
