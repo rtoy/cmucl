@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.84 1990/11/27 09:08:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.85 1990/12/06 17:34:37 ram Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -86,6 +86,23 @@
 
 (defconstant double-float-digits
   (+ (byte-size double-float-significand-byte) word-bits 1))
+
+(defconstant float-inexact-trap-bit (ash 1 0))
+(defconstant float-underflow-trap-bit (ash 1 1))
+(defconstant float-overflow-trap-bit (ash 1 2))
+(defconstant float-divide-by-zero-trap-bit (ash 1 3))
+(defconstant float-invalid-trap-bit (ash 1 4))
+
+(defconstant float-round-to-nearest 0)
+(defconstant float-round-to-zero 1)
+(defconstant float-round-to-positive 2)
+(defconstant float-round-to-negative 3)
+
+(defconstant float-rounding-mode (byte 2 0))
+(defconstant float-sticky-bits (byte 5 2))
+(defconstant float-traps-byte (byte 5 7))
+(defconstant float-exceptions-byte (byte 5 12))
+(defconstant float-condition-bit (ash 1 23))
 
 ); eval-when
 
