@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.47 2004/01/09 05:07:39 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.48 2004/01/09 15:10:52 toy Exp $
  *
  */
 
@@ -6277,7 +6277,7 @@ scavenge_interrupt_handlers()
     }
 }
 
-#ifndef x86
+#ifndef i386
 static void
 scavenge_control_stack()
 {
