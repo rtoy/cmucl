@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.4 2000/06/17 06:34:23 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.25.2.5 2000/07/23 14:59:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -804,6 +804,8 @@
 	  (:listen (or (/= (the fixnum (lisp-stream-in-index syn))
 			   in-buffer-length)
 		       (funcall (lisp-stream-misc syn) syn :listen)))
+	  (:clear-input (clear-input syn))
+	  (:unread (unread-char arg1 syn))
 	  (t
 	   (funcall (lisp-stream-misc syn) syn operation arg1 arg2)))
 	(stream-misc-dispatch syn operation arg1 arg2))))
@@ -869,10 +871,8 @@
        (if out-lisp-stream-p
 	   (funcall (lisp-stream-misc out) out operation arg1 arg2)
 	   (stream-misc-dispatch out operation arg1 arg2)))
-      ((:clear-input :unread)
-       (if in-lisp-stream-p
-	   (funcall (lisp-stream-misc in) in operation arg1 arg2)
-	   (stream-misc-dispatch in operation arg1 arg2)))
+      (:clear-input (clear-input in))
+      (:unread (unread-char arg1 in))
       (:element-type
        (let ((in-type (stream-element-type in))
 	     (out-type (stream-element-type out)))
@@ -951,6 +951,8 @@
 		      (return nil))))))
 	  (:close
 	   (set-closed-flame stream))
+	  (:clear-input (clear-input current))
+	  (:unread (unread-char arg1 current))
 	  (t
 	   (if (lisp-stream-p current)
 	       (funcall (lisp-stream-misc current) current operation arg1 arg2)
