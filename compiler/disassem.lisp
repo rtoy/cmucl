@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.6 1992/02/21 22:01:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/disassem.lisp,v 1.7 1992/04/14 03:00:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3353,7 +3353,8 @@ symbol object that we know about.")
 ;;; these should be somewhere else...
 
 (defun get-error-name (errnum)
-  (kernel::error-info-name (svref kernel::*internal-errors* errnum)))
+  (car (svref (c:backend-internal-errors c:*backend*) errnum)))
+
 
 (defun get-sc-name (sc-offs)
   (c::location-print-name
