@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.8 1991/06/17 12:59:41 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/shell.lisp,v 1.1.1.9 1991/06/20 10:05:44 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,6 +48,122 @@
 
 (defmode "Process" :major-p nil :setup-function #'setup-process-buffer)
 
+
+
+;;;; Shell-filter streams.
+
+;;; We use shell-filter-streams to capture text going from the shell process to
+;;; a Hemlock output stream.  They pass character and misc operations through
+;;; to the attached hemlock-output-stream.  The string output function scans
+;;; the string for ^A_____^B, denoting a change of directory.
+;;;
+;;; The following aliases in a .cshrc file are required for using filename
+;;; completion:
+;;;    alias cd 'cd \!* ; echo ""`pwd`"/"'
+;;;    alias popd 'popd \!* ; echo ""`pwd`"/"'
+;;;    alias pushd 'pushd \!* ; echo ""`pwd`"/"'
+;;;
+
+(defstruct (shell-filter-stream
+	    (:include stream
+		      (:out #'shell-filter-out)
+		      (:sout #'shell-filter-string-out)
+		      (:misc #'shell-filter-output-misc))
+	    (:print-function print-shell-filter-stream)
+	    (:constructor 
+	     make-shell-filter-stream (buffer hemlock-stream)))
+  ;; The buffer where output will be going
+  buffer
+  ;; The Hemlock stream to which output will be directed
+  hemlock-stream)
+
+
+;;; PRINT-SHELL-FILTER-STREAM  -- Internal
+;;;
+;;; Function for printing a shell-filter-stream.
+;;;
+(defun print-shell-filter-stream (s stream d)
+  (declare (ignore d s))
+  (write-string "#<Shell filter stream>" stream))
+
+
+;;; SHELL-FILTER-OUT -- Internal
+;;;
+;;; This is the character-out handler for the shell-filter-stream.
+;;; It writes the character it is given to the underlying
+;;; hemlock-output-stream.
+;;;
+(defun shell-filter-out (stream character)
+  (write-char character (shell-filter-stream-hemlock-stream stream)))
+
+
+;;; SHELL-FILTER-OUTPUT-MISC -- Internal
+;;;
+;;; This will also simply pass the output request on the the
+;;; attached hemlock-output-stream.
+;;;
+(defun shell-filter-output-misc (stream operation &optional arg1 arg2)
+  (let ((hemlock-stream (shell-filter-stream-hemlock-stream stream)))
+    (funcall (hi::hemlock-output-stream-misc hemlock-stream)
+	     hemlock-stream operation arg1 arg2)))
+
+
+;;; CATCH-CD-STRING -- Internal
+;;;
+;;; Scans String for the sequence ^A...^B.  Returns as multiple values
+;;; the breaks in the string.  If the second start/end pair is nil, there
+;;; was no cd sequence.
+;;;
+(defun catch-cd-string (string start end)
+  (declare (simple-string string))
+  (let ((cd-start (position (code-char 1) string :start start :end end)))
+    (if cd-start
+	(let ((cd-end (position (code-char 2) string :start cd-start :end end)))
+	  (if cd-end
+	      (values start cd-start cd-end end)
+	      (values start end nil nil)))
+	(values start end nil nil))))
+
+;;; SHELL-FILTER-STRING-OUT -- Internal
+;;;
+;;; The string output function for shell-filter-stream's.
+;;; Any string containing a ^A...^B is caught and assumed to be
+;;; the path-name of the new current working directory.  This is
+;;; removed from the orginal string and the result is passed along
+;;; to the Hemlock stream.
+;;;
+(defun shell-filter-string-out (stream string start end)
+  (declare (simple-string string))
+  (let ((hemlock-stream (shell-filter-stream-hemlock-stream stream))
+	(buffer (shell-filter-stream-buffer stream)))
+
+    (multiple-value-bind (start1 end1 start2 end2)
+			 (catch-cd-string string start end)
+      (write-string string hemlock-stream :start start1 :end end1)
+      (when start2
+	(write-string string hemlock-stream :start (+ 2 start2) :end end2)
+	(let ((cd-string (subseq string (1+ end1) start2)))
+	  (setf (variable-value 'current-working-directory :buffer buffer)
+		(pathname cd-string)))))))
+
+
+;;; FILTER-TILDES -- Internal
+;;;
+;;; Since COMPLETE-FILE does not seem to deal with ~'s in the filename
+;;; this function expands them to a full path name.
+;;;
+(defun filter-tildes (name)
+  (declare (simple-string name))
+  (if (char= (schar name 0) #\~)
+      (concatenate 'simple-string
+		   (if (or (= (length name) 1)
+			   (char= (schar name 1) #\/))
+		       (cdr (assoc :home *environment-list*))
+		       "/usr/")
+		 (subseq name 1))
+      name))
+
+
 
 ;;;; Support for handling input before the prompt in process buffers.
 
@@ -67,6 +183,7 @@
    happen if the the user chooses to be unwedged."
   :value "Interrupt and throw to end of buffer?"
   :mode "Process")
+
 
 
 ;;;; Some Global Variables.
@@ -319,6 +436,37 @@
       (insert-character (current-point) #\newline)
       ;; Move "Buffer Input Mark" to end of buffer.
       (move-mark (region-start input-region) (region-end input-region)))))
+
+(defcommand "Shell Complete Filename" (p)
+  "Attempts to complete the filename immediately preceding the point.
+   It will beep if the result of completion is not unique."
+  "Attempts to complete the filename immediately preceding the point.
+   It will beep if the result of completion is not unique."
+  (declare (ignore p))
+  (unless (hemlock-bound-p 'current-working-directory)
+    (editor-error "Shell filename completion only works in shells."))
+  (let ((point (current-point)))
+    (with-mark ((start point))
+      (pre-command-parse-check start)
+      (unless (form-offset start -1) (editor-error "Can't grab filename."))
+      (when (member (next-character start) '(#\" #\' #\< #\>))
+	(mark-after start))
+      (let* ((name-region (region start point))
+	     (fragment (filter-tildes (region-to-string name-region)))
+	     (dir (default-directory))
+	     (shell-dir (value current-working-directory)))
+	(multiple-value-bind (filename unique)
+			     (unwind-protect
+				 (progn
+				   (setf (default-directory) shell-dir)
+				   (complete-file fragment :defaults shell-dir))
+			       (setf (default-directory) dir))
+	  (cond (filename
+		 (delete-region name-region)
+		 (insert-string point (namestring filename))
+		 (when (not unique)
+		   (editor-error)))
+		(t (editor-error "No such file exists."))))))))
 
 (defcommand "Kill Main Process" (p)
   "Kills the process in the current buffer."
