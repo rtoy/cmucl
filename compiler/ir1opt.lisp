@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.76 2003/04/26 18:39:30 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.77 2003/04/29 11:58:16 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -304,8 +304,14 @@
 	(let ((last (block-last block)))
 	  (typecase last
 	    (cif
-	     (flush-dest (if-test last))
-	     (when (unlink-node last) (return)))
+	     ;;
+	     ;; Don't flush an if-test if it requires a type check.
+	     (cond ((memq (continuation-type-check (if-test last))
+			  '(nil :deleted))
+		    (flush-dest (if-test last))
+		    (when (unlink-node last) (return)))
+		   (t
+		    (return))))
 	    (exit
 	     (when (maybe-delete-exit last) (return)))))
 	
@@ -628,23 +634,25 @@
 	(when (immediately-used-p test use)
 	  (convert-if-if use node)
 	  (when (continuation-use test) (return)))))
-
-    (let* ((type (continuation-type test))
-	   (victim
-	    (cond ((constant-continuation-p test)
-		   (if (continuation-value test)
-		       (if-alternative node)
-		       (if-consequent node)))
-		  ((not (types-intersect type *null-type*))
-		   (if-alternative node))
-		  ((type= type *null-type*)
-		   (if-consequent node)))))
-      (when victim
-	(flush-dest test)
-	(when (rest (block-succ block))
-	  (unlink-blocks block victim))
-	(setf (component-reanalyze (block-component (node-block node))) t)
-	(unlink-node node))))
+    ;;
+    ;; Don't flush if-tests when they require a type check.
+    (when (memq (continuation-type-check test) '(nil :deleted))
+      (let* ((type (continuation-type test))
+	     (victim
+	      (cond ((constant-continuation-p test)
+		     (if (continuation-value test)
+			 (if-alternative node)
+			 (if-consequent node)))
+		    ((not (types-intersect type *null-type*))
+		     (if-alternative node))
+		    ((type= type *null-type*)
+		     (if-consequent node)))))
+	(when victim
+	  (flush-dest test)
+	  (when (rest (block-succ block))
+	    (unlink-blocks block victim))
+	  (setf (component-reanalyze (block-component (node-block node))) t)
+	  (unlink-node node)))))
   (undefined-value))
 
 
@@ -1178,44 +1186,23 @@
 	 (fun (leaf-name (ref-leaf ref))))
     
     (multiple-value-bind (values win)
-			 (careful-call fun args call "constant folding")
-      (cond
-       ((not win)
-	(setf (combination-kind call) :error))
-       ;; X Always transform the call below so that non-flushable
-       ;; functions get flushed if the constant folding works.
-       #+nil
-       ((= (length values) 1)
-	(with-ir1-environment call
-	  (when (producing-fasl-file)
-	    (maybe-emit-make-load-forms (first values)))
-	  (let* ((leaf (find-constant (first values)))
-		 (node (make-ref (leaf-type leaf) leaf))
-		 (dummy (make-continuation))
-		 (cont (node-cont call))
-		 (block (node-block call))
-		 (next (continuation-next cont)))
-	    (push node (leaf-refs leaf))
-	    (setf (leaf-ever-used leaf) t)
-	    
-	    (delete-continuation-use call)
-	    (add-continuation-use call dummy)
-	    (prev-link node dummy)
-	    (add-continuation-use node cont)
-	    (setf (continuation-next cont) next)
-	    (when (eq call (block-last block))
-	      (setf (block-last block) node))
-	    (reoptimize-continuation cont))))
-       (t
-	(let ((dummies (loop repeat (length args)
-			     collect (gensym))))
-	  (transform-call
-	   call
-	   `(lambda ,dummies
-	      (declare (ignore ,@dummies))
-	      (values ,@(mapcar #'(lambda (x) `',x) values)))))))))
-  
-  (undefined-value))
+	(careful-call fun args call "constant folding")
+      (cond ((not win)
+	     (setf (combination-kind call) :error))
+	    ;;
+	    ;; Don't constand-fold a call if one of its arguments
+	    ;; requires a type check.
+	    ((or (policy call (< safety 3))
+		 (loop for arg in (basic-combination-args call)
+		       as check = (continuation-type-check arg)
+		       always (member check '(nil :deleted))))
+	     (let ((dummies (loop repeat (length args) collect (gensym))))
+	       (transform-call
+		call
+		`(lambda ,dummies
+		   (declare (ignore ,@dummies))
+		   (values ,@(mapcar (lambda (x) `',x) values)))))))))
+  (values))
 
 
 ;;;; Local call optimization:

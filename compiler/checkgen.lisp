@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.31 2003/04/13 11:57:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.32 2003/04/29 11:58:17 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,7 +290,7 @@
 ;;; destination receives only a single value, a :hairy type check is
 ;;; generated for the single-values-type of the asserted type.
 ;;;
-(defun continuation-check-types (cont)
+(defun continuation-check-types (cont &optional force-hairy)
   (declare (type continuation cont))
   (let ((atype (continuation-asserted-type cont))
 	(dest (continuation-dest cont)))
@@ -307,12 +307,12 @@
 			      (declare (ignore ignore))
 			      (eq count :unknown))))
 		   (maybe-negate-check cont types t)
-		   (maybe-negate-check cont types nil))))
+		   (maybe-negate-check cont types force-hairy))))
 	    ((and (mv-combination-p dest)
 		  (eq (basic-combination-kind dest) :local))
 	     (assert (values-type-p atype))
 	     (assert (null (args-type-required atype)))
-	     (maybe-negate-check cont (args-type-optional atype) nil))
+	     (maybe-negate-check cont (args-type-optional atype) force-hairy))
 	    ((or (exit-p dest) (return-p dest) (mv-combination-p dest))
 	     (values :too-hairy nil))
 	    (t
@@ -350,7 +350,7 @@
   (let ((dest (continuation-dest cont)))
     (cond ((eq (continuation-type-check cont) :error)
 	   (if (and (combination-p dest) (eq (combination-kind dest) :error))
-	       nil
+	       (policy dest (= safety 3))
 	       t))
 	  ((or (not dest)
 	       (policy dest (zerop safety)))
@@ -589,7 +589,10 @@
 
     (dolist (cont (conts))
       (multiple-value-bind (check types)
-	  (continuation-check-types cont)
+	  (continuation-check-types
+	   cont
+	   (and (eq (continuation-%type-check cont) :error)
+		(policy (continuation-dest cont) (= safety 3))))
 	(ecase check
 	  (:simple)
 	  (:hairy
