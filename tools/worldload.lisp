@@ -6,8 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-(ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.65 1993/08/19 17:16:06 ram Exp $")
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.66 1993/08/19 21:30:54 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,10 +19,12 @@
 (load "target:code/backq")
 (backq-init)
 (setf *readtable* (copy-readtable std-lisp-readtable))
+(load "target:code/extensions")
+(load "target:code/defmacro")
+(load "target:code/sysmacs")
 
 ;;; Overwrite some cold-loaded stuff with byte-compiled versions, if any.
 (load "target:code/debug.*bytef" :if-does-not-exist nil)
-(load "target:code/defmacro.*bytef" :if-does-not-exist nil) 
 (load "target:code/error.*bytef" :if-does-not-exist nil)
 
 ;;; Define a bunch of search lists relative to target:
