@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.36 1998/06/24 20:30:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.37 2000/08/24 19:55:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -160,46 +160,51 @@
       ((restart-lisp ()
 	 (unix:unix-exit
 	  (catch '%end-of-the-world
-	    (with-simple-restart (abort "Skip remaining initializations.")
-	      (catch 'top-level-catcher
-		(reinit)
-		(environment-init)
-		(dolist (f *after-save-initializations*) (funcall f))
-		(when process-command-line
-		  (ext::process-command-strings))
-		(setf *editor-lisp-p* nil)
-		(macrolet ((find-switch (name)
-			     `(find ,name *command-line-switches*
+	    (unwind-protect
+	       (progn
+		 (with-simple-restart (abort "Skip remaining initializations.")
+		   (catch 'top-level-catcher
+		     (reinit)
+		     (environment-init)
+		     (dolist (f *after-save-initializations*) (funcall f))
+		     (when process-command-line
+		       (ext::process-command-strings))
+		     (setf *editor-lisp-p* nil)
+		     (macrolet ((find-switch (name)
+				  `(find ,name *command-line-switches*
 				    :key #'cmd-switch-name
 				    :test #'(lambda (x y)
 					      (declare (simple-string x y))
 					      (string-equal x y)))))
-		  (when site-init
-		    (load site-init :if-does-not-exist nil :verbose nil))
-		  (when (and process-command-line (find-switch "edit"))
-		    (setf *editor-lisp-p* t))
-		  (when (and load-init-file
-			     (not (and process-command-line
-				       (find-switch "noinit"))))
-		    (let* ((cl-switch (find-switch "init"))
-			   (name (and cl-switch
-				      (or (cmd-switch-value cl-switch)
-					  (car (cmd-switch-words
-						cl-switch))))))
-		      (if name
-			  (load (merge-pathnames name #p"home:")
-				:if-does-not-exist nil)
-			  (or (load "home:init" :if-does-not-exist nil)
-			      (load "home:.cmucl-init"
-				    :if-does-not-exist nil))))))
-		(when process-command-line
-		  (ext::invoke-switch-demons *command-line-switches*
-					     *command-switch-demons*))
-		(when print-herald
-		  (print-herald))))
-	    (funcall (if (and *batch-mode* (eq init-function #'%top-level))
-			 #'%handled-top-level
-			 init-function))))))
+		       (when site-init
+			 (load site-init :if-does-not-exist nil :verbose nil))
+		       (when (and process-command-line (find-switch "edit"))
+			 (setf *editor-lisp-p* t))
+		       (when (and load-init-file
+				  (not (and process-command-line
+					    (find-switch "noinit"))))
+			 (let* ((cl-switch (find-switch "init"))
+				(name (and cl-switch
+					   (or (cmd-switch-value cl-switch)
+					       (car (cmd-switch-words
+						     cl-switch))))))
+			   (if name
+			       (load (merge-pathnames name #p"home:")
+				     :if-does-not-exist nil)
+			       (or (load "home:init" :if-does-not-exist nil)
+				   (load "home:.cmucl-init"
+					 :if-does-not-exist nil))))))
+		     (when process-command-line
+		       (ext::invoke-switch-demons *command-line-switches*
+						  *command-switch-demons*))
+		     (when print-herald
+		       (print-herald))))
+		 (funcall (if (and *batch-mode*
+				   (eq init-function #'%top-level))
+			      #'%handled-top-level
+			      init-function)))
+	      (finish-standard-output-streams))))))
+
 
     (let ((initial-function (get-lisp-obj-address #'restart-lisp)))
       (without-gcing

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.43 2000/07/23 14:59:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.44 2000/08/24 19:55:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1745,3 +1745,16 @@
 	     ((>= i end) seq)
 	   (declare (type index i))
 	   (funcall write-function (aref seq i) stream)))))))
+
+
+
+;;; finish-standard-output-streams  --  Public
+;;;
+;;; Finish output on some of the standard output streams.
+;;;
+(defun finish-standard-output-streams ()
+  (dolist (stream '(*standard-output* *error-output* *trace-output*))
+    (when (boundp stream)
+      (let ((stream (symbol-value stream)))
+	(when (and (streamp stream) (open-stream-p stream))
+	  (finish-output stream))))))
