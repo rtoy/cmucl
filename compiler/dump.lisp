@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.68 1998/03/10 18:33:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.69 1998/03/10 18:34:03 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1396,12 +1396,12 @@
 		 (dump-unsigned-32 len file)
 		 (dump-byte size file))
 	       (dump-data-maybe-byte-swapping vec bytes size file))
-	     (dump-signed (size bytes)
+	     (dump-signed (size dump-size bytes)
 	       (unless data-only
 		 (dump-fop 'lisp::fop-signed-int-vector file)
 		 (dump-unsigned-32 len file)
 		 (dump-byte size file))
-	       (dump-data-maybe-byte-swapping vec bytes size file)))
+	       (dump-data-maybe-byte-swapping vec bytes dump-size file)))
       (etypecase vec
 	(simple-bit-vector
 	 (dump-unsigned 1 (ash (+ (the index len) 7) -3)))
@@ -1416,13 +1416,13 @@
 	((simple-array (unsigned-byte 32) (*))
 	 (dump-unsigned 32 (* 4 len)))
 	((simple-array (signed-byte 8) (*))
-	 (dump-signed 8 len))
+	 (dump-signed 8 8 len))
 	((simple-array (signed-byte 16) (*))
-	 (dump-signed 16 (* 2 len)))
+	 (dump-signed 16 16 (* 2 len)))
 	((simple-array (signed-byte 30) (*))
-	 (dump-signed 30 (* 4 len)))
+	 (dump-signed 30 32 (* 4 len)))
 	((simple-array (signed-byte 32) (*))
-	 (dump-signed 32 (* 4 len)))))))
+	 (dump-signed 32 32 (* 4 len)))))))
 
 ;;; DUMP-SINGLE-FLOAT-VECTOR  --  internal.
 ;;; 
