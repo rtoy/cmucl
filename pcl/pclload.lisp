@@ -1,6 +1,6 @@
 (in-package "PCL")
 (import 'kernel:funcallable-instance-p)
-(load "pcl:defsys")
+(load "target:pcl/defsys")
 (load-pcl)
 
 ;; hack, hack...
