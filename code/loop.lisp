@@ -1117,14 +1117,7 @@ collected result will be returned as the value of the LOOP."
 		;; type specifier is unambiguously, and without need of translation,
 		;; a common lisp type specifier or pattern (matching the variable) thereof.
 		(loop-pop-source)
-		#-cmu
-		(loop-pop-source)
-		#+cmu
-		(let* ((spec (loop-pop-source))
-		       (init (loop-typed-init spec)))
-		  (if (typep init spec)
-		      spec
-		      `(or (member ,init) spec))))
+		(loop-pop-source))
 		      
 	       ((symbolp z)
 		;;This is the (sort of) "old" syntax, even though we didn't used to support all of
@@ -1228,7 +1221,13 @@ collected result will be returned as the value of the LOOP."
   (cond ((or (null name) (null dtype) (eq dtype t)) nil)
 	((symbolp name)
 	 (unless (or (eq dtype t) (member (the symbol name) *loop-nodeclare*))
-	   (push `(type ,dtype ,name) *loop-declarations*)))
+	   (let ((dtype #-cmu dtype
+			#+cmu
+			(let ((init (loop-typed-init dtype)))
+			  (if (typep init dtype)
+			      dtype
+			      `(or (member ,init) ,dtype)))))
+	     (push `(type ,dtype ,name) *loop-declarations*))))
 	((consp name)
 	 (cond ((consp dtype)
 		(loop-declare-variable (car name) (car dtype))
