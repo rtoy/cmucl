@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.41 1992/02/19 16:15:21 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.42 1992/04/01 13:38:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1169,10 +1169,10 @@
 ;;;
 (defun delete-let (fun)
   (declare (type clambda fun))
-  (assert (eq (functional-kind fun) :let))
+  (assert (member (functional-kind fun) '(:let :mv-let)))
   (note-unreferenced-vars fun)
   (let ((call (let-combination fun)))
-    (flush-dest (combination-fun call))
+    (flush-dest (basic-combination-fun call))
     (unlink-node call)
     (unlink-node (lambda-bind fun))
     (setf (lambda-bind fun) nil))
@@ -1587,6 +1587,15 @@
 		 (dolist (arg (combination-args node))
 		   (flush-dest arg))
 		 (unlink-node node))))))
+	(mv-combination
+	 (when (eq (basic-combination-kind node) :local)
+	   (let ((fun (combination-lambda node)))
+	     (when (dolist (var (lambda-vars fun) t)
+		     (when (or (leaf-refs var)
+			       (lambda-var-sets var))
+		       (return nil)))
+	       (flush-dest (first (basic-combination-args node)))
+	       (delete-let fun)))))
 	(exit
 	 (let ((value (exit-value node)))
 	   (when value
