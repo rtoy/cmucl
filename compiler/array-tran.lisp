@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.33 2003/04/27 11:43:43 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.34 2003/07/01 09:38:07 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -461,7 +461,7 @@
   (unless (constant-continuation-p dimension)
     (give-up))
   (let ((dim (continuation-value dimension)))
-    `(the (integer 0 ,dim) index)))
+    `(the (integer 0 (,dim)) index)))
 ;;;
 (deftransform %check-bound ((array dimension index) * *
 			    :policy (and (> speed safety) (= safety 0)))

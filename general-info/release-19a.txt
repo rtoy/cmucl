@@ -140,6 +140,7 @@ New in this release:
        made them undisplayable.
      - Structure predicates no longer signaling an error when applied
        to obsolete instances.
+     - A DEFTRANSFORM for array bounds checking had an off-by-1 error.
 
   * Other changes:
      - Removed obsolete alias from MAKE-VECTOR to MAKE-ARRAY
