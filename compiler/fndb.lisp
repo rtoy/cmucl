@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.75 1997/10/24 18:08:10 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.76 1997/12/03 08:19:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -261,7 +261,7 @@
   (movable foldable flushable explicit-check))
 
 (defknown (sin cos) (number)
-  (or (float -1.0 1.0) (complex (float -1.0 1.0)))
+  (or (float -1.0 1.0) (complex float))
   (movable foldable flushable explicit-check recursive)
   :derive-type #'result-type-float-contagion)
 
