@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.42 1992/05/15 17:52:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.43 1992/07/09 00:05:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -371,7 +371,7 @@
 	    (*current-fop-table-index* 0))
 	(loop
 	  (let ((byte (read-byte file)))
-	    #+nil ;; Uncomment this to get a trace of the fops executed.
+	    #+debug ; Add :debug to *features* to get a trace of the fops.
 	    (let ((ptr *fop-stack-pointer*)
 		  (stack *fop-stack*))
 	      (fresh-line *trace-output*)
