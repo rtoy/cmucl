@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.10 1993/05/07 07:43:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.11 1993/05/25 21:21:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,11 +22,16 @@
      (values
       `((inst jal (make-fixup ',name :assembly-routine))
 	(inst nop))
-      nil))
+      (let ((ra (make-symbol "RA")))
+	`((:temporary (:sc descriptor-reg :from (:eval 0) :to (:eval 1)
+		       :offset #-gengc lip-offset #+gengc ra-offset)
+		      ,ra)
+	  (:ignore ,ra)))))
     (:full-call
      (let ((temp (make-symbol "TEMP"))
 	   (nfp-save (make-symbol "NFP-SAVE"))
-	   #-gengc (lra (make-symbol "LRA")))
+	   #-gengc (lra (make-symbol "LRA"))
+	   #+gengc (ra (make-symbol "RA")))
        (values
 	`((let ((lra-label (gen-label))
 		(cur-nfp (current-nfp-tn ,vop)))
@@ -55,6 +60,11 @@
 	  (:temporary (:sc descriptor-reg :offset lra-offset
 		       :from (:eval 0) :to (:eval 1))
 		      ,lra)
+	  #+gengc
+	  (:temporary (:sc any-reg :offset ra-offset
+		       :from (:eval 0) :to (:eval 1))
+		      ,ra)
+	  #+gengc (:ignore ,ra)
 	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
 		      ,nfp-save)
 	  (:save-p t)))))
