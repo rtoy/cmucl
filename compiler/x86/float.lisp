@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.16 1997/11/19 03:00:36 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.17 1997/11/30 22:53:51 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1665,121 +1665,15 @@
 		      (t
 		       (inst fst y)))))))
 
-  (frob fsin-quick  %sin-quick fsin)		; arg range is 2^63
-  (frob fcos-quick  %cos-quick fcos)		; so may need frem1
+  ;; Quick versions of fsin and fcos that require the argument to be
+  ;; within range 2^63.
+  (frob fsin-quick %sin-quick fsin)
+  (frob fcos-quick %cos-quick fcos)
+  ;;
   (frob fsqrt %sqrt fsqrt))
 
-;;; Versions of fsin and fcos which handle a larger arg. range.
-(macrolet ((frob (func trans op)
-	     `(define-vop (,func)
-		(:translate ,trans)
-		(:args (x :scs (double-reg) :target fr0))
-		#+nil(:temporary (:sc word-reg :offset eax-offset
-				 :from :eval :to :result) temp)
-		(:temporary (:sc double-reg :offset fr0-offset
-				 :from :argument :to :result) fr0)
-		#+nil(:temporary (:sc double-reg :offset fr1-offset
-				 :from :argument :to :result) fr1)
-		(:results (y :scs (double-reg)))
-		(:arg-types double-float)
-		(:result-types double-float)
-		(:policy :fast-safe)
-		(:note "inline sin/cos function")
-		(:vop-var vop)
-		(:save-p :compute-only)
-		#+nil(:ignore temp)
-		(:generator 5
-		  (note-this-location vop :internal-error)
-		  (unless (zerop (tn-offset x))
-			  (inst fxch x)		 ; x to top of stack
-			  (unless (location= x y)
-				  (inst fst x))) ; maybe save it
-		  (inst ,op)
-		  (inst fnstsw)			 ; status word to %ea
-		  (inst and ah-tn #x04)		 ; C2
-		  (inst jmp :z DONE)
-		  ;; Else x was out of range so reduce it; ST0 is unchanged.
-		  #+nil				; @@@
-		  (progn			; Arg reduction is errorful
-		    (inst fstp fr1) 		; Load 2*PI
-		    (inst fldpi)
-		    (inst fadd fr0)
-		    (inst fxch fr1)
-		    LOOP
-		    (inst fprem1)
-		    (inst fnstsw)		; status word to %ea
-		    (inst and ah-tn #x04)	; C2
-		    (inst jmp :nz LOOP)
-		    (inst ,op))
-		  (progn			; @@@
-		    (inst fstp fr0)		; Else Load 0.0
-		    (inst fldz))		; on too big args
-		  DONE
-		  (unless (zerop (tn-offset y))
-			  (inst fstd y))))))
-	  (frob fsin  %sin fsin)
-	  (frob fcos  %cos fcos))
-	     
-(define-vop (ftan)
-  (:translate %tan)
-  (:args (x :scs (double-reg) :target fr0))
-  #+nil(:temporary (:sc word-reg :offset eax-offset
-		   :from :eval :to :result) temp)
-  (:temporary (:sc double-reg :offset fr0-offset
-		   :from :argument :to :result) fr0)
-  (:temporary (:sc double-reg :offset fr1-offset
-		   :from :argument :to :result) fr1)
-  (:results (y :scs (double-reg)))
-  (:arg-types double-float)
-  (:result-types double-float)
-  (:policy :fast-safe)
-  (:note "inline tan function")
-  (:vop-var vop)
-  (:save-p :compute-only)
-  #+nil(:ignore temp)
-  (:generator 5
-    (note-this-location vop :internal-error)
-    (case (tn-offset x)
-       (0 
-	(inst fstp fr1))
-       (1
-	(inst fstp fr0))
-       (t
-	(inst fstp fr0)
-	(inst fstp fr0)
-	(inst fldd (make-random-tn :kind :normal
-				   :sc (sc-or-lose 'double-reg)
-				   :offset (- (tn-offset x) 2)))))
-    (inst fptan)
-    (inst fnstsw)			 ; status word to %ea
-    (inst and ah-tn #x04)		 ; C2
-    (inst jmp :z DONE)
-    ;; Else x was out of range so reduce it; ST0 is unchanged.
-    #+nil
-    (progn				; @@@ Reduction doesn't work well.
-      (inst fldpi)                         ; Load 2*PI
-      (inst fadd fr0)
-      (inst fxch fr1)
-      LOOP
-      (inst fprem1)
-      (inst fnstsw)			 ; status word to %ea
-      (inst and ah-tn #x04)		 ; C2
-      (inst jmp :nz LOOP)
-      (inst fstp fr1)
-      (inst fptan))
-    (progn				; @@@ just load 0.0 
-      (inst fldz)
-      (inst fxch fr1))
-    DONE
-    ;; Result is in fr1
-    (case (tn-offset y)
-       (0
-	(inst fxch fr1))
-       (1)
-       (t
-	(inst fxch fr1)
-	(inst fstd y)))))
-
+;;; Quick version of ftan that requires the argument to be within
+;;; range 2^63.
 (define-vop (ftan-quick)
   (:translate %tan-quick)
   (:args (x :scs (double-reg) :target fr0))
@@ -1810,13 +1704,204 @@
     (inst fptan)
     ;; Result is in fr1
     (case (tn-offset y)
-      (0
-       (inst fxch fr1))
-      (1)
-      (t
-       (inst fxch fr1)
-       (inst fstd y)))))
+       (0
+	(inst fxch fr1))
+       (1)
+       (t
+	(inst fxch fr1)
+	(inst fstd y)))))
 	     
+;;; These versions of fsin, fcos, and ftan try to use argument
+;;; reduction but to do this accurately requires greater precision and
+;;; it is hopelessly inaccurate.
+#+nil
+(macrolet ((frob (func trans op)
+	     `(define-vop (,func)
+		(:translate ,trans)
+		(:args (x :scs (double-reg) :target fr0))
+		(:temporary (:sc dword-reg :offset eax-offset
+				 :from :eval :to :result) eax)
+		(:temporary (:sc double-reg :offset fr0-offset
+				 :from :argument :to :result) fr0)
+		(:temporary (:sc double-reg :offset fr1-offset
+				 :from :argument :to :result) fr1)
+		(:results (y :scs (double-reg)))
+		(:arg-types double-float)
+		(:result-types double-float)
+		(:policy :fast-safe)
+		(:note "inline sin/cos function")
+		(:vop-var vop)
+		(:save-p :compute-only)
+		(:ignore eax)
+		(:generator 5
+		  (note-this-location vop :internal-error)
+		  (unless (zerop (tn-offset x))
+			  (inst fxch x)		 ; x to top of stack
+			  (unless (location= x y)
+				  (inst fst x))) ; maybe save it
+		  (inst ,op)
+		  (inst fnstsw)			 ; status word to %ea
+		  (inst and ah-tn #x04)		 ; C2
+		  (inst jmp :z DONE)
+		  ;; Else x was out of range so reduce it; ST0 is unchanged.
+		  (inst fstp fr1) 		; Load 2*PI
+		  (inst fldpi)
+		  (inst fadd fr0)
+		  (inst fxch fr1)
+		  LOOP
+		  (inst fprem1)
+		  (inst fnstsw)		; status word to %ea
+		  (inst and ah-tn #x04)	; C2
+		  (inst jmp :nz LOOP)
+		  (inst ,op)
+		  DONE
+		  (unless (zerop (tn-offset y))
+			  (inst fstd y))))))
+	  (frob fsin  %sin fsin)
+	  (frob fcos  %cos fcos))
+	     
+#+nil
+(define-vop (ftan)
+  (:translate %tan)
+  (:args (x :scs (double-reg) :target fr0))
+  (:temporary (:sc dword-reg :offset eax-offset
+		   :from :argument :to :result) eax)
+  (:temporary (:sc double-reg :offset fr0-offset
+		   :from :argument :to :result) fr0)
+  (:temporary (:sc double-reg :offset fr1-offset
+		   :from :argument :to :result) fr1)
+  (:results (y :scs (double-reg)))
+  (:arg-types double-float)
+  (:result-types double-float)
+  (:policy :fast-safe)
+  (:note "inline tan function")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:ignore eax)
+  (:generator 5
+    (note-this-location vop :internal-error)
+    (case (tn-offset x)
+       (0 
+	(inst fstp fr1))
+       (1
+	(inst fstp fr0))
+       (t
+	(inst fstp fr0)
+	(inst fstp fr0)
+	(inst fldd (make-random-tn :kind :normal
+				   :sc (sc-or-lose 'double-reg)
+				   :offset (- (tn-offset x) 2)))))
+    (inst fptan)
+    (inst fnstsw)			 ; status word to %ea
+    (inst and ah-tn #x04)		 ; C2
+    (inst jmp :z DONE)
+    ;; Else x was out of range so reduce it; ST0 is unchanged.
+    (inst fldpi)                         ; Load 2*PI
+    (inst fadd fr0)
+    (inst fxch fr1)
+    LOOP
+    (inst fprem1)
+    (inst fnstsw)			 ; status word to %ea
+    (inst and ah-tn #x04)		 ; C2
+    (inst jmp :nz LOOP)
+    (inst fstp fr1)
+    (inst fptan)
+    DONE
+    ;; Result is in fr1
+    (case (tn-offset y)
+       (0
+	(inst fxch fr1))
+       (1)
+       (t
+	(inst fxch fr1)
+	(inst fstd y)))))
+
+;;; These versions of fsin, fcos, and ftan simply load a 0.0 result if
+;;; the argument is out of range 2^63 and would thus be hopelessly
+;;; inaccurate.
+(macrolet ((frob (func trans op)
+	     `(define-vop (,func)
+		(:translate ,trans)
+		(:args (x :scs (double-reg) :target fr0))
+		(:temporary (:sc double-reg :offset fr0-offset
+				 :from :argument :to :result) fr0)
+		(:temporary (:sc dword-reg :offset eax-offset
+			     :from :argument :to :result) eax)
+		(:results (y :scs (double-reg)))
+	        (:arg-types double-float)
+	        (:result-types double-float)
+		(:policy :fast-safe)
+		(:note "inline sin/cos function")
+		(:vop-var vop)
+		(:save-p :compute-only)
+	        (:ignore eax)
+		(:generator 5
+		  (note-this-location vop :internal-error)
+		  (unless (zerop (tn-offset x))
+			  (inst fxch x)		 ; x to top of stack
+			  (unless (location= x y)
+				  (inst fst x))) ; maybe save it
+		  (inst ,op)
+		  (inst fnstsw)			 ; status word to %ea
+		  (inst and ah-tn #x04)		 ; C2
+		  (inst jmp :z DONE)
+		  ;; Else x was out of range so reduce it; ST0 is unchanged.
+		  (inst fstp fr0)                ; Load 0.0
+		  (inst fldz)
+		  DONE
+		  (unless (zerop (tn-offset y))
+			  (inst fstd y))))))
+	  (frob fsin  %sin fsin)
+	  (frob fcos  %cos fcos))
+	     
+(define-vop (ftan)
+  (:translate %tan)
+  (:args (x :scs (double-reg) :target fr0))
+  (:temporary (:sc double-reg :offset fr0-offset
+		   :from :argument :to :result) fr0)
+  (:temporary (:sc double-reg :offset fr1-offset
+		   :from :argument :to :result) fr1)
+  (:temporary (:sc dword-reg :offset eax-offset
+		   :from :argument :to :result) eax)
+  (:results (y :scs (double-reg)))
+  (:arg-types double-float)
+  (:result-types double-float)
+  (:ignore eax)
+  (:policy :fast-safe)
+  (:note "inline tan function")
+  (:vop-var vop)
+  (:save-p :compute-only)
+  (:ignore eax)
+  (:generator 5
+    (note-this-location vop :internal-error)
+    (case (tn-offset x)
+       (0 
+	(inst fstp fr1))
+       (1
+	(inst fstp fr0))
+       (t
+	(inst fstp fr0)
+	(inst fstp fr0)
+	(inst fldd (make-random-tn :kind :normal
+				   :sc (sc-or-lose 'double-reg)
+				   :offset (- (tn-offset x) 2)))))
+    (inst fptan)
+    (inst fnstsw)			 ; status word to %ea
+    (inst and ah-tn #x04)		 ; C2
+    (inst jmp :z DONE)
+    ;; Else x was out of range so reduce it; ST0 is unchanged.
+    (inst fldz)                         ; Load 0.0
+    (inst fxch fr1)
+    DONE
+    ;; Result is in fr1
+    (case (tn-offset y)
+       (0
+	(inst fxch fr1))
+       (1)
+       (t
+	(inst fxch fr1)
+	(inst fstd y)))))
+
 #+nil
 (define-vop (fexp)
   (:translate %exp)
