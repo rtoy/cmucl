@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.10 1993/02/18 01:13:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.11 1993/02/23 11:51:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,7 +20,7 @@
 
 (export '(layout layout-hash layout-hash-length layout-class layout-invalid
 		 layout-inherits layout-inheritance-depth layout-length
-		 layout-info
+		 layout-info layout-pure
 		 layout-of structure-class-p
 		 structure-class-print-function
 		 structure-class-make-load-form-fun find-layout
@@ -109,7 +109,14 @@
   ;;
   ;; If this layout has some kind of compiler meta-info, then this is it.  If a
   ;; structure, then we store the DEFSTRUCT-DESCRIPTION here.
-  (info nil))
+  (info nil)
+  ;;
+  ;; True if objects of this class are never modified to contain dynamic
+  ;; pointers in their slots or constant-like substructure (hence can be copied
+  ;; into read-only space by purify.)
+  ;;
+  ;; ### this slot is known to the C startup code.
+  (pure nil :type boolean))
 
 (defconstant layout-hash-length 8)
 (declaim (inline layout-hash))
@@ -128,7 +135,8 @@
 	    (:make-load-form-fun class-make-load-form-fun)
 	    (:print-function %print-class)
 	    (:include ctype
-		      (:class-info (type-class-or-lose 'class))))
+		      (:class-info (type-class-or-lose 'class)))
+	    (:pure nil))
   ;;
   ;; Optional name, for printing.
   (name nil)
@@ -249,6 +257,7 @@
 	(error "Class not yet defined:~%  ~S" name))))
 ;;;
 (defun (setf find-class) (new-value name)
+  (declare (type class new-value))
   (ecase (info type kind name)
     ((nil))
     (#+ns-boot (:instance :structure) #-ns-boot :instance
@@ -277,6 +286,7 @@
 ;;; the desired class.  The second result is any existing layout for this name.
 ;;;
 (defun insured-find-class (name predicate constructor)
+  (declare (function predicate constructor))
   (let* ((old (find-class name nil))
 	 (res (if (and old (funcall predicate old))
 		  old
@@ -295,6 +305,7 @@
 ;;; the class.
 ;;;
 (defun class-proper-name (class)
+  (declare (type class class))
   (let ((name (class-name class)))
     (if (and name (eq (find-class name nil) class))
 	name
@@ -327,6 +338,7 @@
 ;;; shared subclasses.
 ;;;
 (defun sealed-class-intersection (sealed other)
+  (declare (type class sealed other))
   (let ((s-sub (class-subclasses sealed))
 	(o-sub (class-subclasses other)))
     (if (and s-sub o-sub)
@@ -390,7 +402,7 @@
 ;;;     The value of CLASS-STATE which we want on completion, indicating
 ;;;     whether subclasses can be created at run-time.
 ;;;
-;;; :HIERARCHICAL (default T)
+;;; :HIERARCHICAL (default T unless any of the inherits are non-hierarchical)
 ;;;     True if we can assign this class a unique INHERITANCE-DEPTH.
 ;;;
 ;;; :CODES (default none)
@@ -410,18 +422,8 @@
 	  (base-char :enumerable t :inherits (character)
 		     :codes (#.vm:base-char-type))
 	  
-	  (array :translation array
-		 :codes
-		 (#.vm:complex-array-type
-		  #.vm:simple-array-type
-		  #.vm:simple-array-double-float-type
-		  #.vm:simple-array-single-float-type
-		  #.vm:simple-array-unsigned-byte-2-type
-		  #.vm:simple-array-unsigned-byte-4-type
-		  #.vm:simple-array-unsigned-byte-8-type
-		  #.vm:simple-array-unsigned-byte-16-type
-		  #.vm:simple-array-unsigned-byte-32-type))
-	  (sequence :translation (or cons (member nil) vector))
+	  (sequence :translation (or cons (member nil) vector)
+		    :hierarchical nil)
 	  (symbol :codes (#.vm:symbol-header-type))
 	  
 	  (instance :state :read-only)
@@ -444,48 +446,91 @@
 	   :state :read-only)
 	  (generic-function :inherits (function)  :state :read-only
 			    :codes (#.vm:funcallable-instance-header-type))
-	  
+
+	  (array :translation array
+		 :hierarchical nil  :codes (#.vm:complex-array-type))
+	  (simple-array :translation simple-array  :inherits (array)
+			:hierarchical nil  :codes (#.vm:simple-array-type))
 	  (vector :translation vector :inherits (array sequence)
-		  :hierarchical nil
-		  :codes (#.vm:complex-vector-type #.vm:simple-vector-type))
+		  :hierarchical nil  :codes (#.vm:complex-vector-type))
+	  (simple-vector :translation simple-vector
+			 :inherits (vector simple-array array sequence)
+			 :hierarchical nil  :codes (#.vm:simple-vector-type))
 	  (bit-vector
 	   :translation bit-vector  :inherits (vector array sequence)
-	   :hierarchical nil
-	   :codes (#.vm:complex-bit-vector-type #.vm:simple-bit-vector-type))
+	   :hierarchical nil  :codes (#.vm:complex-bit-vector-type))
+	  (simple-bit-vector
+	   :translation simple-bit-vector
+	   :inherits (bit-vector vector simple-array array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-bit-vector-type))
+	  (simple-array-unsigned-byte-2
+	   :translation (simple-array (unsigned-byte 2) (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-2-type))
+	  (simple-array-unsigned-byte-4
+	   :translation (simple-array (unsigned-byte 4) (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-4-type))
+	  (simple-array-unsigned-byte-8
+	   :translation (simple-array (unsigned-byte 8) (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-8-type))
+	  (simple-array-unsigned-byte-16
+	   :translation (simple-array (unsigned-byte 16) (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-16-type))
+	  (simple-array-unsigned-byte-32
+	   :translation (simple-array (unsigned-byte 32) (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-unsigned-byte-32-type))
+	  (simple-array-single-float
+	   :translation (simple-array single-float (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-single-float-type))
+	  (simple-array-double-float
+	   :translation (simple-array double-float (*))
+	   :inherits (vector array simple-array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-array-double-float-type))
 	  (string
 	   :translation string  :inherits (vector array sequence)
-	   :hierarchical nil
-	   :codes (#.vm:complex-string-type #.vm:simple-string-type))
+	   :hierarchical nil  :codes (#.vm:complex-string-type))
+	  (simple-string
+	   :translation simple-string
+	   :inherits (string vector simple-array array sequence)
+	   :hierarchical nil  :codes (#.vm:simple-string-type))
 	  
+	  (generic-number :state :read-only)
 	  (number :translation number)
-	  (complex :translation complex :inherits (number)
+	  (complex :translation complex :inherits (number generic-number)
 		   :codes (#.vm:complex-type))
-	  (float :translation float :inherits (number))
+	  (float :translation float :inherits (number generic-number))
 	  (single-float
-	   :translation single-float :inherits (float number)
+	   :translation single-float :inherits (float number generic-number)
 	   :codes (#.vm:single-float-type))
 	  (double-float
-	   :translation double-float  :inherits (float number)
+	   :translation double-float  :inherits (float number generic-number)
 	   :codes (#.vm:double-float-type))
-	  (rational :translation rational :inherits (number))
+	  (rational :translation rational :inherits (number generic-number))
 	  (ratio
 	   :translation (and rational (not integer))
-	   :inherits (rational number)
+	   :inherits (rational number generic-number)
 	   :codes (#.vm:ratio-type))
 	  (integer
-	   :translation integer  :inherits (rational number))
+	   :translation integer  :inherits (rational number generic-number))
 	  (fixnum
 	   :translation (integer #.vm:target-most-negative-fixnum
 				 #.vm:target-most-positive-fixnum)
-	   :inherits (integer rational number)
+	   :inherits (integer rational number generic-number)
 	   :codes (#.vm:even-fixnum-type #.vm:odd-fixnum-type))
 	  (bignum
 	   :translation (and integer (not fixnum))
-	   :inherits (integer rational number)
+	   :inherits (integer rational number generic-number)
 	   :codes (#.vm:bignum-type))
 	  
-	  (list :translation (or cons (member nil)) :inherits (sequence))
-	  (cons :inherits (list sequence) :codes (#.vm:list-pointer-type))
+	  (list :translation (or cons (member nil)) :inherits (sequence)
+		:hierarchical nil)
+	  (cons :inherits (list sequence) :hierarchical nil
+		:codes (#.vm:list-pointer-type))
 	  (null :translation (member nil) :inherits (symbol list sequence)
 		:hierarchical nil))))
 
@@ -597,11 +642,21 @@
 ;;; INVALIDATE-LAYOUT  --  Internal
 ;;;
 ;;;    Mark a layout as invalid.  Depth -1 causes unsafe structure type tests
-;;; to fail.
+;;; to fail.  Remove class from all superclasses (might not be registered, so
+;;; might not be in subclasses of the nominal superclasses.)
 ;;;
 (defun invalidate-layout (layout)
+  (declare (type layout layout))
   (setf (layout-invalid layout) t)
-  (setf (layout-inheritance-depth layout) -1))
+  (setf (layout-inheritance-depth layout) -1)
+  (let ((inherits (layout-inherits layout))
+	(class (layout-class layout)))
+    (dotimes (i (length inherits))
+      (let* ((super (svref inherits i))
+	     (subs (class-subclasses super)))
+	(when subs
+	  (remhash class subs)))))
+  (undefined-value))
 
 
 ;;; REGISTER-LAYOUT  --  Interface
@@ -617,6 +672,7 @@
 ;;;    destructively modified to hold the same type information.
 ;;;
 (defun register-layout (layout invalidate-p destruct-p)
+  (declare (type layout layout))
   (let* ((class (layout-class layout))
 	 (class-layout (class-layout class)))
     (assert (not (eq class-layout layout)))
@@ -662,19 +718,23 @@
 (defun layout-proper-name (layout)
   (class-proper-name (layout-class layout)))
 
+
 ;;; REDEFINE-LAYOUT-WARNING  --  Interface
 ;;;
 ;;;    If layouts Old and New differ in any interesting way, then give a
 ;;; warning and return T.
 ;;;
 (defun redefine-layout-warning (old old-context new new-context)
+  (declare (type layout old new) (simple-string old-context new-context))
+  (when (typep (layout-class old) 'undefined-class)
+    (setf (layout-class old) (layout-class new)))
   (assert (eq (layout-class old) (layout-class new)))
   (let ((name (layout-proper-name old)))
     (or (let ((oldi (layout-inherits old))
 	      (newi (layout-inherits new)))
 	  (or (when (mismatch oldi newi :key #'layout-proper-name)
 		(warn
-		 "Change in superclasses of class ~S:~@  ~
+		 "Change in superclasses of class ~S:~%  ~
 		  ~A superclasses: ~S~%  ~
 		  ~A superclasses: ~S"
 		 name
@@ -722,6 +782,8 @@
 ;;; incompatible, we allow the layout to be replaced, altered or left alone.
 ;;;
 (defun find-layout (name length inherits depth)
+  (declare (type index length) (simple-vector inherits)
+	   (type (or index (integer -1 -1)) depth))
   (let* ((class (or (find-class name nil)
 		    (make-undefined-class name)))
 	 (old (or (class-layout class)
@@ -738,8 +800,8 @@
 	   old)
 	  ((redefine-layout-warning old "current" res "compile time")
 	   (restart-case
-	       (error "Loading a reference to class ~S when the compile ~@
-		       time definition was incompatible with the current ~
+	       (error "Loading a reference to class ~S when the compile~
+		       ~%  time definition was incompatible with the current ~
 		       one."
 		      name)
 	     (continue ()
@@ -767,5 +829,16 @@
 
 
 ;;;; Cold loading initializations.
+
+(defun class-finalize ()
+  (do-hash (name layout *forward-referenced-layouts*)
+    (let ((class (find-class name nil)))
+      (cond ((not class)
+	     (setf (layout-class layout) (make-undefined-class name)))
+	    ((eq (class-layout class) layout)
+	     (remhash name *forward-referenced-layouts*))
+	    (t
+	     (warn "Something strange with forward layout for ~S:~%  ~S"
+		   name layout))))))
 
 (emit-cold-load-defuns "CLASS")
