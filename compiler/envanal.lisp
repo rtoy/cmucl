@@ -48,7 +48,7 @@
 	       (node (lambda-bind fun)))
 	  (setf (leaf-type f) dtype)
 	  (when (and (eq (function-type-returns dtype) *empty-type*)
-		     (policy node (>= safety brevity)))
+		     (policy node (zerop brevity)))
 	    (let ((*compiler-error-context* node))
 	      (compiler-note "Function does not return."))))))
 
