@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.7 1991/10/04 17:00:30 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/main.lisp,v 1.8 1991/10/04 17:18:47 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,7 +215,7 @@
     "This is the default list of modeline-fields for the echo area window's
      modeline which is used for general information."
     :value (list (make-modeline-field
-		  :name :hemlock-banner :width 28
+		  :name :hemlock-banner :width 27
 		  :function #'(lambda (buffer window)
 				(declare (ignore buffer window))
 				(format nil "Hemlock ~A  "
