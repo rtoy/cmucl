@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.3 1997/02/13 01:20:36 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/system.lisp,v 1.4 1997/09/24 06:15:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
-;;; Enhancements/debugging by Douglas T. Crosher 1996.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 
 (in-package :x86)
@@ -178,6 +178,20 @@
   (:generator 1
     (load-symbol-value int *binding-stack-pointer*)))
 
+(defknown (setf binding-stack-pointer-sap)
+    (system-area-pointer) system-area-pointer ())
+
+(define-vop (set-binding-stack-pointer-sap)
+  (:args (new-value :scs (sap-reg) :target int))
+  (:arg-types system-area-pointer)
+  (:results (int :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:translate (setf binding-stack-pointer-sap))
+  (:policy :fast-safe)
+  (:generator 1
+    (store-symbol-value new-value *binding-stack-pointer*)
+    (move int new-value)))
+
 (define-vop (control-stack-pointer-sap)
   (:results (int :scs (sap-reg)))
   (:result-types system-area-pointer)
@@ -298,3 +312,173 @@
     (inst inc (make-ea :dword :base count-vector
 		       :disp (- (* (+ vector-data-offset index) word-bytes)
 				other-pointer-type)))))
+
+
+;;;; Primitive multi-thread support.
+
+(export 'control-stack-fork)
+(defknown control-stack-fork ((simple-array (unsigned-byte 32) (*)))
+  (member t nil))
+
+(define-vop (control-stack-fork)
+  (:policy :fast-safe)
+  (:translate control-stack-fork)
+  (:args (save-stack :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-unsigned-byte-32)
+  (:results (child :scs (descriptor-reg)))
+  (:result-types t)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) index)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) stack)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) temp)
+  (:save-p t)
+  (:generator 25
+    ;; Setup the return context.
+    (inst push (make-fixup nil :code-object RETURN))
+    (inst push ebp-tn)
+    ;; Save the stack.
+    (inst xor index index)
+    ;; First the stack-pointer.
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type))
+	  esp-tn)
+    (inst inc index)
+    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
+				:foreign))
+    LOOP
+    (inst cmp stack esp-tn)
+    (inst jmp :le STACK-SAVE-DONE)
+    (inst sub stack 4)
+    (inst mov temp (make-ea :dword :base stack))
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type))
+	  temp)
+    (inst inc index)
+    (inst jmp-short LOOP)
+    
+    RETURN
+    ;; Stack already clean if it reaches here. Parent returns NIL.
+    (inst mov child nil-value)
+    (inst jmp-short DONE)
+    
+    STACK-SAVE-DONE
+    ;; Cleanup the stack
+    (inst add esp-tn 8)
+    ;; Child returns T.
+    (load-symbol child t)
+    DONE))
+
+(export 'control-stack-resume)
+(defknown control-stack-resume ((simple-array (unsigned-byte 32) (*))
+				(simple-array (unsigned-byte 32) (*)))
+  (values))
+
+(define-vop (control-stack-resume)
+  (:policy :fast-safe)
+  (:translate control-stack-resume)
+  (:args (save-stack :scs (descriptor-reg) :to :result)
+	 (new-stack :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-unsigned-byte-32 simple-array-unsigned-byte-32)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) index)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) stack)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) temp)
+  (:save-p t)
+  (:generator 25
+    ;; Setup the return context.
+    (inst push (make-fixup nil :code-object RETURN))
+    (inst push ebp-tn)
+    ;; Save the stack.
+    (inst xor index index)
+    ;; First the stack-pointer.
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type))
+	  esp-tn)
+    (inst inc index)
+    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
+				:foreign))
+    LOOP
+    (inst cmp stack esp-tn)
+    (inst jmp :le STACK-SAVE-DONE)
+    (inst sub stack 4)
+    (inst mov temp (make-ea :dword :base stack))
+    (inst mov (make-ea :dword :base save-stack :index index :scale 4
+		       :disp (- (* vm:vector-data-offset vm:word-bytes)
+				vm:other-pointer-type))
+	  temp)
+    (inst inc index)
+    (inst jmp-short LOOP)
+
+    STACK-SAVE-DONE
+    ;; Cleanup the stack
+    (inst add esp-tn 8)
+
+    ;; Restore the new-stack.
+    (inst xor index index)
+    ;; First the stack-pointer.
+    (inst mov esp-tn
+	  (make-ea :dword :base new-stack :index index :scale 4
+		   :disp (- (* vm:vector-data-offset vm:word-bytes)
+			    vm:other-pointer-type)))
+    (inst inc index)
+    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
+				:foreign))
+    LOOP2
+    (inst cmp stack esp-tn)
+    (inst jmp :le STACK-RESTORE-DONE)
+    (inst sub stack 4)
+    (inst mov temp (make-ea :dword :base new-stack :index index :scale 4
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))
+    (inst mov (make-ea :dword :base stack) temp)
+    (inst inc index)
+    (inst jmp-short LOOP2)
+    STACK-RESTORE-DONE
+    ;; Pop the frame pointer, and resume at the return address.
+    (inst pop ebp-tn)
+    (inst ret)
+    
+    ;; Original thread resumes, stack has been cleaned up.
+    RETURN))
+
+
+(export 'control-stack-return)
+(defknown control-stack-return ((simple-array (unsigned-byte 32) (*)))
+  (values))
+
+(define-vop (control-stack-return)
+  (:policy :fast-safe)
+  (:translate control-stack-return)
+  (:args (new-stack :scs (descriptor-reg) :to :result))
+  (:arg-types simple-array-unsigned-byte-32)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) index)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) stack)
+  (:temporary (:sc unsigned-reg :from (:eval 0) :to (:eval 1)) temp)
+  (:save-p t)
+  (:generator 25
+    ;; Restore the new-stack.
+    (inst xor index index)
+    ;; First the stack-pointer.
+    (inst mov esp-tn
+	  (make-ea :dword :base new-stack :index index :scale 4
+		   :disp (- (* vm:vector-data-offset vm:word-bytes)
+			    vm:other-pointer-type)))
+    (inst inc index)
+    (inst mov stack (make-fixup (extern-alien-name "control_stack_end")
+				:foreign))
+    LOOP
+    (inst cmp stack esp-tn)
+    (inst jmp :le STACK-RESTORE-DONE)
+    (inst sub stack 4)
+    (inst mov temp (make-ea :dword :base new-stack :index index :scale 4
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))
+    (inst mov (make-ea :dword :base stack) temp)
+    (inst inc index)
+    (inst jmp-short LOOP)
+    STACK-RESTORE-DONE
+    ;; Pop the frame pointer, and resume at the return address.
+    (inst pop ebp-tn)
+    (inst ret)))
+

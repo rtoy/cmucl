@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.6 1997/09/15 10:40:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/parms.lisp,v 1.7 1997/09/24 06:15:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996,1997.
 ;;;
 
 (in-package :x86)
@@ -129,7 +130,7 @@
 
 ;;; pfw -- from i486 microprocessor programmers reference manual
 (defconstant float-invalid-trap-bit        (ash 1 0))
-(defconstant float-denormal-trap-bit       (ash 1 1)) ; not used by lisp
+(defconstant float-denormal-trap-bit       (ash 1 1))
 (defconstant float-divide-by-zero-trap-bit (ash 1 2))
 (defconstant float-overflow-trap-bit       (ash 1 3))
 (defconstant float-underflow-trap-bit      (ash 1 4))
@@ -258,8 +259,9 @@
 
       *alien-stack*
 
+      *control-stacks*
+
       ;; Some unused static variables - very handy for hacking.
-      *unused-static-7*
       *unused-static-6*
       *unused-static-5*
       *unused-static-4*
