@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.54 1997/09/05 02:46:18 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.55 1997/09/05 17:28:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -692,7 +692,8 @@
   ;; don't overlap.
   (when (and (interval-bounded-p x 'above)
 	     (interval-bounded-p y 'below))
-    ;; Intervals are bounded in the appropriate way.  Make sure that don't overlap.
+    ;; Intervals are bounded in the appropriate way.  Make sure they
+    ;; don't overlap.
     (let ((left (interval-high x))
 	  (right (interval-low y))) 
       (cond ((> (bound-value left)
@@ -2691,8 +2692,7 @@
 ;;; Y's high, the X >= Y (so return NIL).  If not, at least make sure any
 ;;; constant arg is second.
 ;;;
-#-propagate-float-type
-(defun ir1-transform-< (x y first second inverse)
+(defun ir1-transform-integer-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
       (let* ((x-type (numeric-type-or-lose x))
@@ -2712,7 +2712,7 @@
 	       (give-up))))))
 	      
 #+propagate-float-type
-(defun ir1-transform-< (x y first second inverse)
+(defun ir1-transform-float-< (x y first second inverse)
   (if (same-leaf-ref-p x y)
       'nil
       (let ((xi (numeric-type->interval (numeric-type-or-lose x)))
@@ -2728,18 +2728,18 @@
 	       (give-up))))))
 
 (deftransform < ((x y) (integer integer) * :when :both)
-  (ir1-transform-< x y x y '>))
+  (ir1-transform-integer-< x y x y '>))
 
 (deftransform > ((x y) (integer integer) * :when :both)
-  (ir1-transform-< y x x y '<))
+  (ir1-transform-integer-< y x x y '<))
 
 #+propagate-float-type
 (deftransform < ((x y) (float float) * :when :both)
-  (ir1-transform-< x y x y '>))
+  (ir1-transform-float-< x y x y '>))
 
 #+propagate-float-type
 (deftransform > ((x y) (float float) * :when :both)
-  (ir1-transform-< y x x y '<))
+  (ir1-transform-float-< y x x y '<))
 
   
 
