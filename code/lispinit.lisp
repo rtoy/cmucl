@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.12 1990/09/23 17:44:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.13 1990/09/25 23:36:21 wlott Exp $
 ;;;
 ;;; Initialization and low-level interrupt support for the Spice Lisp system.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -615,33 +615,21 @@
       (throw '%end-of-the-world nil)))
 
 
-#| might be something different.
-
-(defalien sleep-msg mach:msg (record-size 'mach:msg))
-(setf (alien-access (mach:msg-simplemsg sleep-msg)) T)
-(setf (alien-access (mach:msg-msgtype sleep-msg)) 0)
-(setf (alien-access (mach:msg-msgsize sleep-msg))
-      (/ (record-size 'mach:msg) 8))
-
-;;; Currently there is a bug in the Mach timeout code that if the timeout
-;;; period is too short the receive never returns.
-
 (defun sleep (n)
   "This function causes execution to be suspended for N seconds.  N may
   be any non-negative, non-complex number."
-  (with-reply-port (sleep-port)
-    (let ((m (round (* 1000 n))))
-      (cond ((minusp m)
-	     (error "Argument to Sleep, ~S, is a negative number." n))
-	    ((zerop m))
-	    (t
-	     (setf (alien-access (mach:msg-localport sleep-msg)) sleep-port)
-	     (let ((gr (mach:msg-receive sleep-msg mach:rcv-timeout m)))
-	       (unless (eql gr mach:rcv-timed-out)
-		 (gr-error 'mach:receive gr)))))))
+  (when (or (not (realp n))
+	    (minusp n))
+    (error "Invalid argument to SLEEP: ~S.~%~
+            Must be a non-negative, non-complex number."
+	   n))
+  (multiple-value-bind (sec usec)
+		       (if (integerp n)
+			   (values n 0)
+			   (values (truncate n)
+				   (truncate (* n 1000000))))
+    (mach:unix-select 0 0 0 0 sec usec))
   nil)
-
-|#
 
 
 ;;;; TOP-LEVEL loop.
