@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.82 1997/11/25 18:33:32 dtc Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.83 1997/11/25 18:58:24 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,8 +18,9 @@
 
 (in-package "LISP")
 
-#+gencgc (setf *load-x86-tlf-to-dynamic-space* t)  ; potentially dangerous.
-#+gencgc (setf cl::*enable-dynamic-space-code* t)
+;;; Uncomment for GENCGC.
+;(setf *load-x86-tlf-to-dynamic-space* t)  ; potentially dangerous.
+;(setf cl::*enable-dynamic-space-code* t)
 
 ;;; Get some data on this core.
 ;;;
