@@ -52,6 +52,8 @@
 ;;; for the entries uses three '(unsigned-byte 16) elements per descriptor
 ;;; unit.  See the beginning of Spell-Correct.Lisp.
 ;;;
+(eval-when (compile load eval)
+
 (defconstant max-entry-count-estimate 15600)
 
 (defconstant new-dictionary-size 20011)
@@ -60,6 +62,7 @@
 
 (defconstant max-string-table-length (* 10 max-entry-count-estimate))
 
+); eval-when
 
 
 ;;;; Hashing
