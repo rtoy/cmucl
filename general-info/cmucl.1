@@ -6,7 +6,7 @@
 .\" If you want to use this code or any part of CMU Common Lisp, please contact
 .\" Scott Fahlman or slisp-group@cs.cmu.edu.
 .\"
-.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.1 1991/10/16 15:51:52 ram Exp $
+.\"$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/general-info/cmucl.1,v 1.2 1991/10/17 16:41:37 ram Exp $
 .\"
 .\" **********************************************************************
 .\"
@@ -20,14 +20,17 @@ CMU Common Lisp
 .SH DESCRIPTION
 
 CMU Common Lisp is public domain "industrial strength" Common Lisp programming
-environment.  It is currently available for Sparcstations and DECstations
-(pmaxes) running Mach (or OSF/1).  We are beta-testing a SunOS SPARC version
-and an IBM RT Mach version.
+environment.  Many of the X3j13 changes have been incorporated into CMU CL.
+Wherever possible, this has been done so as to transparently allow use of
+either CLtL1 or proposed ANSI CL.  Probably the new features most interesting
+to users are SETF functions, LOOP and the WITH-COMPILATION-UNIT macro.
 
-Many of the X3j13 changes have been incorporated into CMU CL.  Wherever
-possible, this has been done so as to transparently allow use of either CLTL1
-or proposed ANSI CL.  Probably the new features most interesting to
-users are SETF functions, LOOP and the WITH-COMPILATION-UNIT macro.
+.SH HARDWARE REQUIREMENTS
+
+CMU CL is currently available for Sparcstations and DECstations (pmaxes)
+running Mach (or OSF/1).  We are beta-testing a SunOS SPARC version and an IBM
+RT Mach version.  At least 16 megabytes of memory and 25 megabytes of disk
+space are recommended.  As usual, more is better.
 
 .SH OVERVIEW
 When compared other Common Lisp implementations (such as Allegro), CMU CL has
@@ -126,6 +129,10 @@ with type checking suppressed (due to the SAFETY optimize quality being
 reduced), then the type error may cause obscure errors or infinite looping.
 See the section `Getting Existing Programs to Run' (6.6) in the compiler
 chapter of the user manual.
+
+CMU CL adheres to the X3J13 function type cleanup, which means that quoted
+lambda-lists are not of type FUNCTION, and are no longer directly callable.
+Use COERCE with the FUNCTION result type.
 
 .SH OPTIMIZATION
 
