@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.34 1992/02/04 21:10:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.35 1992/02/11 16:56:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1761,7 +1761,7 @@
 	(t
 	 (case (get-type object)
 	   (#.vm:unbound-marker-type
-	    (write-string "Unbound Marker"))
+	    (write-string "Unbound Marker" stream))
 	   (t
 	    (write-string "Unknown Immediate Object, lowtag=" stream)
 	    (let ((*print-base* 2) (*print-radix* t))
