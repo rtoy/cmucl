@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.15 1990/11/06 14:06:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.16 1990/11/07 20:21:48 wlott Exp $
 ;;;
 ;;; Loader for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -761,18 +761,18 @@
        (let ((implementation (car *current-code-format*))
 	     (version (cdr *current-code-format*)))
 	 (unless (= implementation
-		    #.(c:backend-fasl-file-implementation *backend*))
+		    #.(c:backend-fasl-file-implementation c:*backend*))
 	   (error "~A was compiled for a ~A, but this is a ~A"
 		  *Fasl-file*
 		  (or (elt c:fasl-file-implementations implementation)
 		      "unknown machine")
 		  (or (elt c:fasl-file-implementations
-			   #.(c:backend-fasl-file-implementation *backend*))
+			   #.(c:backend-fasl-file-implementation c:*backend*))
 		      "unknown machine")))
-	 (unless (= version #.(c:backend-fasl-file-version *backend*))
+	 (unless (= version #.(c:backend-fasl-file-version c:*backend*))
 	   (error "~A was compiled for fasl-file version ~A, ~
 	           but this is version ~A"
-	    *Fasl-file* version #.(c:backend-fasl-file-version *backend*)))
+	    *Fasl-file* version #.(c:backend-fasl-file-version c:*backend*)))
 	 (let ((box-num ,nitems)
 	       (code-length ,size))
 	   (declare (fixnum box-num code-length))
