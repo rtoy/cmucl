@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.53 2004/05/17 17:22:30 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.54 2004/05/18 01:14:04 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -471,7 +471,7 @@
   (flushable movable))
 
 #+(or gengc sparc x86)
-(defknown symbol-hash (symbol) index
+(defknown symbol-hash (symbol) fixnum
   (flushable movable))
 
 #+(or gencgc sparc x86)
