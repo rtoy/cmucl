@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.41 2003/09/08 17:34:25 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.42 2003/09/08 17:34:57 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1546,15 +1546,15 @@
 	    (cond ((not any-digits)
 		   (if junk-allowed
 		       (values nil real-index)
-		     (error 'simple-parse-error
-			    :format-control "There are no digits in this string: ~S"
-			    :format-arguments (list string))))
-		((and (< index end) (not junk-allowed))
-		 (error 'simple-parse-error
-			:format-control "There's junk in this string: ~S."
-			:format-arguments (list string)))
-		(t
-		 (values (* sign result) real-index)))))))))
+		       (error 'simple-parse-error
+			      :format-control "There are no digits in this string: ~S"
+			      :format-arguments (list string))))
+		  ((and (< index end) (not junk-allowed))
+		   (error 'simple-parse-error
+			  :format-control "There's junk in this string: ~S."
+			  :format-arguments (list string)))
+		  (t
+		   (values (* sign result) real-index)))))))))
 
 
 ;;;; Reader initialization code.
