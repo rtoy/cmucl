@@ -1215,7 +1215,6 @@
 	    (when (and (ref-p use) (functional-p (ref-leaf use))
 		       (not (eq (ref-inlinep use) :notinline)))
 	      (convert-call-if-possible use node)
-	      (when (eq (basic-combination-kind node) :local))
 	      (maybe-let-convert (ref-leaf use)))))
 	(when (and (not (eq (basic-combination-kind node) :local))
 		   (or fun-changed (find-if #'continuation-reoptimize args))
@@ -1254,8 +1253,9 @@
 ;;;
 ;;;    If possible, convert a general MV call to an MV-BIND.  We can do this
 ;;; if:
+;;; -- The call has only one argument, and
 ;;; -- The function has a known fixed number of arguments, or
-;;; -- All the arguments yield a known fixed number of values.
+;;; -- The argument yields a known fixed number of values.
 ;;;
 ;;; What we do is change the function in the MV-CALL to be a lambda that "looks
 ;;; like an MV bind", which allows IR1-OPTIMIZE-MV-COMBINATION to notice that
@@ -1277,55 +1277,55 @@
 ;;;
 (defun ir1-optimize-mv-call (node)
   (let ((fun (basic-combination-fun node))
-	(total-nvals 0)
 	(*compiler-error-context* node)
-	(ref (continuation-use (basic-combination-fun node))))
+	(ref (continuation-use (basic-combination-fun node)))
+	(args (basic-combination-args node)))
 
-    (unless (and (ref-p ref) (constant-reference-p ref))
+    (unless (and (ref-p ref) (constant-reference-p ref)
+		 args (null (rest args)))
       (return-from ir1-optimize-mv-call))
 
     (multiple-value-bind (min max)
 			 (function-type-nargs (continuation-type fun))
-      (dolist (arg (basic-combination-args node))
-	(multiple-value-bind (types nvals)
-			     (values-types (continuation-derived-type arg))
-	  (declare (ignore types))
-	  (when (eq nvals :unknown)
-	    (setq total-nvals nil)
-	    (return))
-	  (incf total-nvals nvals)))
+      (let ((total-nvals 
+	     (multiple-value-bind
+		 (types nvals)
+		 (values-types (continuation-derived-type (first args)))
+	       (declare (ignore types))
+	       (if (eq nvals :unknown) nil nvals))))
 
-      (when total-nvals
-	(when (and min (< total-nvals min))
-	  (compiler-warning
-	   "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
-	    at least ~R."
-	   total-nvals min)
-	  (setf (ref-inlinep ref) :notinline)
-	  (return-from ir1-optimize-mv-call))
-	(when (and max (> total-nvals max))
-	  (compiler-warning
-	   "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
-	    at most ~R."
-	   total-nvals max)
-	  (setf (ref-inlinep ref) :notinline)
-	  (return-from ir1-optimize-mv-call)))
+	(when total-nvals
+	  (when (and min (< total-nvals min))
+	    (compiler-warning
+	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     at least ~R."
+	     total-nvals min)
+	    (setf (ref-inlinep ref) :notinline)
+	    (return-from ir1-optimize-mv-call))
+	  (when (and max (> total-nvals max))
+	    (compiler-warning
+	     "MULTIPLE-VALUE-CALL with ~R values when the function expects ~
+	     at most ~R."
+	     total-nvals max)
+	    (setf (ref-inlinep ref) :notinline)
+	    (return-from ir1-optimize-mv-call)))
 
-      (let ((count (cond (total-nvals)
-			 ((and (policy node (zerop safety)) (eql min max))
-			  min)
-			 (t nil))))
-	(when count
-	  (with-ir1-environment node
-	    (let* ((dums (loop repeat count collect (gensym)))
-		   (ignore (gensym))
-		   (fun (ir1-convert-lambda
-			 `(lambda (&optional ,@dums &rest ,ignore)
-			    (declare (ignore ,ignore))
-			    (funcall ,(ref-leaf ref) ,@dums)))))
-	      (change-ref-leaf ref fun)
-	      (setf (basic-combination-kind node) :full)
-	      (local-call-analyze *current-component*)))))))
+	(let ((count (cond (total-nvals)
+			   ((and (policy node (zerop safety)) (eql min max))
+			    min)
+			   (t nil))))
+	  (when count
+	    (with-ir1-environment node
+	      (let* ((dums (loop repeat count collect (gensym)))
+		     (ignore (gensym))
+		     (fun (ir1-convert-lambda
+			   `(lambda (&optional ,@dums &rest ,ignore)
+			      (declare (ignore ,ignore))
+			      (funcall ,(ref-leaf ref) ,@dums)))))
+		(change-ref-leaf ref fun)
+		(assert (eq (basic-combination-kind node) :full))
+		(local-call-analyze *current-component*)
+		(assert (eq (functional-kind (ref-leaf ref)) :mv-let)))))))))
 
   (undefined-value))
 
