@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.26 1991/03/23 14:45:15 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/gc.c,v 1.27 1991/05/05 02:20:38 wlott Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -140,8 +140,8 @@ collect_garbage()
 	double real_time, system_time, user_time;
 	double percent_retained, gc_rate;
 	unsigned long size_discarded;
-#endif
 	unsigned long size_retained;
+#endif
 	lispobj *current_static_space_free_pointer;
 	unsigned long static_space_size;
 	unsigned long control_stack_size, binding_stack_size;
@@ -261,8 +261,8 @@ collect_garbage()
 
 #ifdef PRINTNOISE
 	size_discarded = (from_space_free_pointer - from_space) * sizeof(lispobj);
-#endif
 	size_retained = (new_space_free_pointer - new_space) * sizeof(lispobj);
+#endif
 
 	/* Zero stack. */
 #ifdef PRINTNOISE
