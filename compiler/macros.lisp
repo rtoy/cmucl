@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.51 2003/04/19 20:52:42 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.52 2003/09/24 09:48:18 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -680,8 +680,9 @@
 	    (,n-last (block-last ,n-block)))
        (do* ((,cont-var (node-cont ,n-last) ,n-next)
 	     (,node-var ,n-last (continuation-use ,cont-var))
-	     (,n-next (node-prev ,node-var) (node-prev ,node-var)))
-	    (())
+	     (,n-next (and ,node-var (node-prev ,node-var))
+		      (and ,node-var (node-prev ,node-var))))
+	    ((null ,node-var))
 	 ,@body
 	 (when (eq ,n-next ,n-start)
 	   (return nil))))))
