@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.11 1991/12/11 16:54:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/gtn.lisp,v 1.12 1991/12/11 18:26:08 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -204,23 +204,23 @@
 
 ;;; Assign-Return-Locations  --  Internal
 ;;;
-;;;    If Env has a Tail-Set with a non-empty type, and the Tail-Set doesn't
-;;; have any Info, then make a Return-Info for it.  If we choose a return
-;;; convention other than :Unknown, and this environment is for an XEP, then
-;;; break tail recursion on the XEP calls, since we must always use unknown
-;;; values when returning from an XEP.
+;;;    If Tail-Set doesn't have any Info, then make a Return-Info for it.  If
+;;; we choose a return convention other than :Unknown, and this environment is
+;;; for an XEP, then break tail recursion on the XEP calls, since we must
+;;; always use unknown values when returning from an XEP.
 ;;;
 (defun assign-return-locations (fun)
   (declare (type clambda fun))
-  (let ((tails (lambda-tail-set fun)))
-    (unless (eq (tail-set-type tails) *empty-type*)
-      (let ((returns (or (tail-set-info tails)
-			 (setf (tail-set-info tails)
-			       (return-info-for-set tails)))))
-	(when (and (not (eq (return-info-kind returns) :unknown))
-		   (external-entry-point-p fun))
-	  (do-uses (use (return-result (lambda-return fun)))
-	    (setf (node-tail-p use) nil))))))
+  (let* ((tails (lambda-tail-set fun))
+	 (returns (or (tail-set-info tails)
+		      (setf (tail-set-info tails)
+			    (return-info-for-set tails))))
+	 (return (lambda-return fun)))
+    (when (and return
+	       (not (eq (return-info-kind returns) :unknown))
+	       (external-entry-point-p fun))
+      (do-uses (use (return-result return))
+	(setf (node-tail-p use) nil))))
   (undefined-value))
 
 
