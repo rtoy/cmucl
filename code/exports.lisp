@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.97 1993/09/13 19:54:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.98 1993/11/06 04:32:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1306,11 +1306,11 @@
 	   "%ARRAY-DATA-VECTOR" "%ARRAY-DIMENSION" "%ARRAY-DISPLACED-P"
 	   "%ARRAY-DISPLACEMENT" "%ARRAY-FILL-POINTER"
 	   "%ARRAY-FILL-POINTER-P" "%ASIN" "%ASINH" "%ATAN" "%ATAN2" "%ATANH"
-	   "%CALLER-FRAME-AND-PC" "%CBRT" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
+	   "%CALLER-FRAME-AND-PC" "%CHECK-BOUND" "%CLOSURE-FUNCTION"
 	   "%CLOSURE-INDEX-REF" "%COS" "%COSH" "%DEPOSIT-FIELD"
-	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%EXPM1" "%FUNCTION-HEADER-ARGLIST"
+	   "%DOUBLE-FLOAT" "%DPB" "%EXP" "%FUNCTION-HEADER-ARGLIST"
 	   "%FUNCTION-HEADER-NAME" "%FUNCTION-HEADER-TYPE" "%HYPOT" "%LDB"
-	   "%LOG" "%LOG10" "%LOG1P" "%MAKE-COMPLEX"
+	   "%LOG" "%LOG10" "%MAKE-COMPLEX"
 	   "%MAKE-FUNCALLABLE-INSTANCE" "%MAKE-RATIO" "%MASK-FIELD" "%NEGATE"
 	   "%POW" "%RAW-BITS" "%SET-FUNCALLABLE-INSTANCE-FUNCTION"
 	   "%SET-FUNCALLABLE-INSTANCE-INFO" "%SET-RAW-BITS" "%SET-SAP-REF-16"
