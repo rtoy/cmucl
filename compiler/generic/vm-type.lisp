@@ -31,6 +31,13 @@
 ;;;
 (deftype compiled-function () 'function)
 
+;;; Character is the same as base-character.
+;;; ### Bootstrap hack: base characters don't exist in the old compiler,
+;;; so leave characters alone.
+(compiler-let ((lisp::*bootstrap-deftype* t))
+  (remhash 'character *builtin-types*)
+  (deftype character () 'base-character))
+
 ;;;
 ;;; An index into an integer.
 (deftype bit-index () `(integer 0 ,most-positive-fixnum))
@@ -59,10 +66,7 @@
 (deftype byte-specifier () 'cons)
 ;;;
 ;;; Result of Char-Int...
-(deftype char-int () '(unsigned-byte 16))
-;;;
-;;; Legal character bit names:
-(deftype bit-names () '(member :control :meta :super :hyper))
+(deftype char-int () 'char-code)
 ;;;
 ;;; Pathname pieces, as returned by the PATHNAME-xxx functions.
 (deftype pathname-host () '(or simple-string null)); Host not really supported...
