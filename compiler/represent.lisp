@@ -117,7 +117,7 @@
 	(error "~S is not valid as the ~:R ~:[result~;argument~] to the~@
 	        ~S VOP, since the TN's primitive type ~S allows SCs:~%  ~S~@
 		~:[which cannot be coerced or loaded into the allowed SCs:~
-		~%  ~S~;~]~:[~;~@
+		~%  ~S~;~*~]~:[~;~@
 		Current cost info inconsistent with that in effect at compile ~
 		time.  Recompile.~%Compilation order may be incorrect.~]"
 	       tn pos arg-p
@@ -129,6 +129,58 @@
 	       incon)))))
 
 
+;;; BAD-COERCE-ERROR  --  Internal
+;;;
+;;;    Try to give a helpful error message when we fail to do a coercion
+;;; for some reason.
+;;;
+(defun bad-coerce-error (op)
+  (declare (type tn-ref op))
+  (let* ((op-tn (tn-ref-tn op))
+	 (op-sc (tn-sc op-tn))
+	 (op-scn (sc-number op-sc))
+	 (ptype (tn-primitive-type op-tn))
+	 (write-p (tn-ref-write-p op)))
+    (multiple-value-bind (arg-p pos more-p costs load-scs incon)
+			 (get-operand-info op)
+      (declare (ignore costs more-p))
+      (collect ((load-lose)
+		(move-lose))
+	(dotimes (i sc-number-limit)
+	  (let ((i-sc (svref *sc-numbers* i)))
+	    (when (eq (svref load-scs i) t)
+	      (cond ((not (sc-allowed-by-primitive-type i-sc ptype))
+		     (load-lose i-sc))
+		    ((not (if write-p
+			      (svref (sc-move-vops op-sc) i)
+			      (svref (sc-move-vops i-sc) op-scn)))
+		     (move-lose i-sc))
+		    (t
+		     (error "Representation selection flamed out for no ~
+		             obvious reason."))))))
+	
+	(unless (or (load-lose) (move-lose))
+	  (error "Representation selection flamed out for no obvious reason.~@
+	          Try again after recompiling the VM definition."))
+
+	(error "~S is not valid as the ~:R ~:[result~;argument~] to VOP:~
+	        ~%  ~S~%Primitive type: ~S~@
+		SC restrictions:~%  ~S~@
+		~@[The primitive type disallows these loadable SCs:~%  ~S~%~]~
+		~@[No move VOPs are defined to coerce to these allowed SCs:~
+		~%  ~S~%~]~
+		~:[~;~@
+		Current cost info inconsistent with that in effect at compile ~
+		time.  Recompile.~%Compilation order may be incorrect.~]"
+	       op-tn pos arg-p
+	       (template-name (vop-info (tn-ref-vop op)))
+	       (primitive-type-name ptype)
+	       (mapcar #'sc-name (listify-restrictions load-scs))
+	       (mapcar #'sc-name (load-lose))
+	       (mapcar #'sc-name (move-lose))
+	       incon)))))
+
+
 ;;; BAD-MOVE-ARG-ERROR  --  Internal
 ;;;
 (defun bad-move-arg-error (val pass)
@@ -137,32 +189,6 @@
           ~S (SC ~S.)"
 	 val (sc-name (tn-sc val))
 	 pass (sc-name (tn-sc pass))))
-
-#|
-;;; ILLEGAL-REPRESENTATION-ERROR  --  Internal
-;;;
-;;;    Called when we find that doing an implicit coercion for an operand
-;;; results in a representation not allowed by the primitive type.
-;;;
-(defun illegal-representation-error (ref sc)
-  (declare (type tn-ref ref))
-  (let* ((tn (tn-ref-tn ref))
-	 (ptype (tn-primitive-type tn)))
-    (multiple-value-bind (arg-p pos more-p costs load-scs incon)
-			 (get-operand-info ref)
-      (declare (ignore more-p costs load-scs))
-      (error "~S is not valid as the ~:R ~:[result~;argument~] to the~@
-              ~S VOP, since the TN's primitive type ~S disallows coercion to~@
-	      SC ~S.  Either the SC restriction is too restrictive, or the ~
-	      operand~@
-	      primitive type restriction is not restrictive enough. ~:[~;~@
-	      Current cost info inconsistent with that in effect at compile ~
-	      time.  Recompile.~%Compilation order may be incorrect.~]"
-	     tn pos arg-p
-	     (template-name (vop-info (tn-ref-vop ref)))
-	     (primitive-type-name ptype)
-	     (sc-name sc) incon))))
-|#
 
 
 ;;;; VM Consistency Checking:
@@ -304,7 +330,7 @@
 	 (vop (tn-ref-vop op))
 	 (node (vop-node vop))
 	 (block (vop-block vop)))
-    (dotimes (i sc-number-limit (bad-costs-error op))
+    (dotimes (i sc-number-limit (bad-coerce-error op))
       (let ((i-sc (svref *sc-numbers* i)))
 	(when (and (eq (svref scs i) t)
 		   (sc-allowed-by-primitive-type i-sc ptype))
