@@ -9,8 +9,9 @@
 #include "lispregs.h"
 #include "signal.h"
 
-void arch_init()
+char *arch_init()
 {
+    return NULL;
 }
 
 os_vm_address_t arch_get_bad_addr(context)

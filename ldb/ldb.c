@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.17 1992/03/22 20:02:40 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/ldb.c,v 1.18 1992/04/28 21:37:25 wlott Exp $ */
 /* Lisp kernel core debugger */
 
 #include <stdio.h>
@@ -44,7 +44,7 @@ char *argv[];
 char *envp[];
 {
     char *arg, **argptr;
-    char *core = NULL;
+    char *core = NULL, *default_core;
     boolean restore_state, monitor;
 
     number_stack_start = (char *)&monitor;
@@ -71,17 +71,19 @@ char *envp[];
 	}
     }
 
+    default_core = arch_init();
+    if (default_core == NULL)
+	default_core = "lisp.core";
+
     /* Note: the /usr/misc/.cmucl/lib/ default path is also wired into */
     /* the lisp code in .../code/save.lisp. */
 
     if (core == NULL) {
+	static char buf[MAXPATHLEN];
 	extern char *getenv();
 	char *lib = getenv("CMUCLLIB");
 
-	if (lib == NULL)
-	    core = "/usr/misc/.cmucl/lib/lisp.core";
-	else {
-	    static char buf[MAXPATHLEN];
+	if (lib != NULL) {
 	    char *dst;
 	    struct stat statbuf;
 
@@ -91,18 +93,19 @@ char *envp[];
 		    *dst++ = *lib++;
 		if (dst != buf && dst[-1] != '/')
 		    *dst++ = '/';
-		strcpy(dst, "lisp.core");
+		strcpy(dst, default_core);
 		if (stat(buf, &statbuf) == 0) {
 		    core = buf;
 		    break;
 		}
 	    } while (*lib++ == ':');
-	    if (core == NULL)
-		core = "/usr/misc/.cmucl/lib/lisp.core";
+	}
+	if (core == NULL) {
+	    strcpy(buf, "/usr/misc/.cmucl/lib/";
+	    strcat(buf, default_core);
 	}
     }
 
-    arch_init();
     os_init();
 
 #if defined(EXT_PAGER)
