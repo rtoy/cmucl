@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.8 1991/10/22 16:43:21 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/array.lisp,v 1.9 1991/11/09 02:37:15 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT definitions for array operations.
 ;;;
@@ -159,7 +159,7 @@
 ) ;EVAL-WHEN
 
 (def-data-vector-frobs simple-string byte-index
-  base-character base-character-reg)
+  base-char base-char-reg)
 (def-data-vector-frobs simple-vector word-index
   * descriptor-reg any-reg)
 

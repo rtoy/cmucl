@@ -146,7 +146,7 @@
        (control-stack
 	(loadw ,n-reg cfp-tn (tn-offset ,n-stack)))
        ,@(when vop
-	   `(((unsigned-stack signed-stack base-character-stack sap-stack)
+	   `(((unsigned-stack signed-stack base-char-stack sap-stack)
 	      (loadw ,n-reg (current-nfp-tn ,vop) (tn-offset ,n-stack))))))))
 ;;;
 (defmacro store-stack-tn (reg stack &optional vop)
@@ -156,7 +156,7 @@
        (control-stack
 	(storew ,n-reg cfp-tn (tn-offset ,n-stack)))
        ,@(when vop
-	   `(((unsigned-stack signed-stack base-character-stack sap-stack)
+	   `(((unsigned-stack signed-stack base-char-stack sap-stack)
 	      (storew ,n-reg (current-nfp-tn ,vop) (tn-offset ,n-stack))))))))
 
 
@@ -348,7 +348,7 @@
 			   hdrs type-separation min-type))))))
 
 (defconstant immediate-types
-  (list base-character-type unbound-marker-type))
+  (list base-char-type unbound-marker-type))
 
 (defconstant function-subtypes
   (list funcallable-instance-header-type closure-header-type

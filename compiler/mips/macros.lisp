@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.45 1991/11/05 15:57:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.46 1991/11/09 02:37:41 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,7 +255,7 @@
     `(cond ((< ,n-type-code vm:lowtag-limit)
 	    (simple-test-tag ,n-register ,n-temp ,n-target ,n-not-p
 			     ,n-type-code vm:lowtag-mask))
-	   ((or (= ,n-type-code vm:base-character-type)
+	   ((or (= ,n-type-code vm:base-char-type)
 		(= ,n-type-code vm:unbound-marker-type))
 	    (simple-test-tag ,n-register ,n-temp ,n-target ,n-not-p
 			     ,n-type-code vm:type-mask))

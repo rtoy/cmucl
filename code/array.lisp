@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.13 1991/06/05 10:54:52 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.14 1991/11/09 02:47:04 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -120,7 +120,7 @@
 
 (defun %vector-type-code (type)
   (pick-type type
-    (base-character (values #.vm:simple-string-type #.vm:byte-bits))
+    (base-char (values #.vm:simple-string-type #.vm:byte-bits))
     (bit (values #.vm:simple-bit-vector-type 1))
     ((unsigned-byte 2) (values #.vm:simple-array-unsigned-byte-2-type 2))
     ((unsigned-byte 4) (values #.vm:simple-array-unsigned-byte-4-type 4))
@@ -133,7 +133,7 @@
 
 (defun %complex-vector-type-code (type)
   (pick-type type
-    (base-character #.vm:complex-string-type)
+    (base-char #.vm:complex-string-type)
     (bit #.vm:complex-bit-vector-type)
     (t #.vm:complex-vector-type)))
 
@@ -477,7 +477,7 @@
 				       (cdr stuff)))
 						   stuff))))
       (pick-element-type
-       ((vm:simple-string-type vm:complex-string-type) 'base-character)
+       ((vm:simple-string-type vm:complex-string-type) 'base-char)
        ((vm:simple-bit-vector-type vm:complex-bit-vector-type) 'bit)
        (vm:simple-vector-type t)
        (vm:simple-array-unsigned-byte-2-type '(unsigned-byte 2))

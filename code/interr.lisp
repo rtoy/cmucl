@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.17 1991/05/24 19:55:09 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.18 1991/11/09 02:47:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.17 1991/05/24 19:55:09 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.18 1991/11/09 02:47:16 wlott Exp $
 ;;;
 ;;; Functions and macros to define and deal with internal errors (i.e.
 ;;; problems that can be signaled from assembler code).
@@ -36,7 +36,7 @@
 	  object-not-cons-error object-not-symbol-error
 	  undefined-symbol-error object-not-coercable-to-function-error
 	  invalid-argument-count-error bogus-argument-to-values-list-error
-	  unbound-symbol-error object-not-base-character-error
+	  unbound-symbol-error object-not-base-char-error
 	  object-not-sap-error invalid-unwind-error unseen-throw-tag-error
 	  division-by-zero-error object-not-type-error
 	  odd-keyword-arguments-error unknown-keyword-argument-error
@@ -376,13 +376,13 @@
   (symbol)
   (error 'unbound-variable :function-name name :name symbol))
 
-(deferr object-not-base-character-error
-  "Object is not of type BASE-CHARACTER."
+(deferr object-not-base-char-error
+  "Object is not of type BASE-CHAR."
   (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
-	 :expected-type 'base-character))
+	 :expected-type 'base-char))
 
 (deferr object-not-sap-error
   "Object is not a System Area Pointer (SAP)."

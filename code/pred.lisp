@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.18 1991/07/25 15:44:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.19 1991/11/09 02:47:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.18 1991/07/25 15:44:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pred.lisp,v 1.19 1991/11/09 02:47:23 wlott Exp $
 ;;;
 ;;; Predicate functions for CMU Common Lisp.
 ;;;
@@ -129,7 +129,7 @@
     (character
      (typecase object
        (standard-char 'standard-char)
-       (base-character 'base-character)
+       (base-char 'base-char)
        (t 'character)))
 
     ;; And now for the complicated ones.
@@ -204,9 +204,9 @@
        ((nil)
 	nil)
        (character (characterp object))
-       (base-character (base-char-p object))
+       (base-char (base-char-p object))
        (standard-char (and (characterp object) (standard-char-p object)))
-       (extended-character
+       (extended-char
 	(and (characterp object) (not (base-char-p object))))
        (function (functionp object))
        (cons (consp object))

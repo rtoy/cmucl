@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.5 1991/02/20 15:17:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.6 1991/11/09 02:39:50 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.5 1991/02/20 15:17:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.6 1991/11/09 02:39:50 wlott Exp $
 ;;;
 ;;; This file contains the machine independent aspects of the object
 ;;; representation and primitive types.
@@ -54,7 +54,7 @@
 					  positive-fixnum))
 
 ;;; Other primitive immediate types.
-(def-primitive-type base-character (base-character-reg any-reg))
+(def-primitive-type base-char (base-char-reg any-reg))
 
 ;;; Primitive pointer types.
 ;;; 
@@ -123,7 +123,7 @@
 
 ;;; 
 (defvar *simple-array-primitive-types*
-  '((base-character . simple-string)
+  '((base-char . simple-string)
     (string-char . simple-string)
     (bit . simple-bit-vector)
     ((unsigned-byte 2) . simple-array-unsigned-byte-2)
@@ -248,10 +248,10 @@
 	 ((t bignum ratio complex function structure
 	     system-area-pointer weak-pointer)
 	  (values (primitive-type-or-lose (named-type-name type) *backend*) t))
-	 ((character base-character string-char)
-	  (exactly base-character))
+	 ((character base-char string-char)
+	  (exactly base-char))
 	 (standard-char
-	  (part-of base-character))
+	  (part-of base-char))
 	 (cons
 	  (part-of list))
 	 (t

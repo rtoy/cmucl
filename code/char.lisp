@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.5 1991/10/01 14:42:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/char.lisp,v 1.6 1991/11/09 02:47:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -73,7 +73,7 @@
 (defun char-code (char)
   "Returns the integer code of CHAR."
   (etypecase char
-    (base-character (char-code (truly-the base-character char)))))
+    (base-char (char-code (truly-the base-char char)))))
 
 
 (defun char-int (char)
@@ -126,8 +126,8 @@
    argument is a standard character -- one of the 95 ASCII printing characters
    or <return>."
   (declare (character char))
-  (and (typep char 'base-character)
-       (let ((n (char-code (the base-character char))))
+  (and (typep char 'base-char)
+       (let ((n (char-code (the base-char char))))
 	 (or (< 31 n 127)
 	     (= n 10)))))
 
@@ -141,9 +141,9 @@
   argument is a printing character (space through ~ in ASCII), otherwise
   returns ()."
   (declare (character char))
-  (and (typep char 'base-character)
+  (and (typep char 'base-char)
        (< 31
-	  (char-code (the base-character char))
+	  (char-code (the base-char char))
 	  127)))
 
 

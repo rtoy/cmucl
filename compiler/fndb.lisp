@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.28 1991/11/05 16:50:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.29 1991/11/09 02:42:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,7 @@
 
 (defknown character (t) character (movable foldable flushable))
 (defknown char-code (character) char-code (movable foldable flushable))
-(defknown code-char (char-code) base-character (movable foldable flushable))
+(defknown code-char (char-code) base-char (movable foldable flushable))
 (defknown (char-upcase char-downcase) (character) character
   (movable foldable flushable))
 (defknown digit-char (integer &optional integer)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.24 1991/10/20 23:31:55 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.25 1991/11/09 02:47:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -959,7 +959,7 @@
 (defvar *digits* "0123456789")
 
 (defvar *digit-string*
-  (make-array 50 :element-type 'base-character :fill-pointer 0 :adjustable t
+  (make-array 50 :element-type 'base-char :fill-pointer 0 :adjustable t
 	      :initial-element #\?)) ; ### Hack around make-array bug.
 
 (defun flonum-to-string (x &optional width fdigits scale fmin)

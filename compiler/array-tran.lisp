@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.11 1991/06/05 10:58:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.12 1991/11/09 02:42:34 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.11 1991/06/05 10:58:50 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/array-tran.lisp,v 1.12 1991/11/09 02:42:34 wlott Exp $
 ;;;
 ;;; This file contains array specific optimizers and transforms.
 ;;; 
@@ -177,11 +177,11 @@
 ;;;
 (def-source-transform make-string (length &key (initial-element #\NULL))
   `(make-array ,length
-	       :element-type 'base-character
+	       :element-type 'base-char
 	       :initial-element ,initial-element))
 
 (defconstant array-info
-  '((base-character #\NULL 8 vm:simple-string-type)
+  '((base-char #\NULL 8 vm:simple-string-type)
     (single-float 0.0s0 32 vm:simple-array-single-float-type)
     (double-float 0.0d0 64 vm:simple-array-double-float-type)
     (bit 0 1 vm:simple-bit-vector-type)

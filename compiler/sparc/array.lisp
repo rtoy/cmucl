@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.5 1991/05/04 18:46:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/array.lisp,v 1.6 1991/11/09 02:38:12 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC definitions for array operations.
 ;;;
@@ -137,7 +137,7 @@
        (:result-types ,element-type))))
 
 (def-data-vector-frobs simple-string byte-index
-  base-character base-character-reg)
+  base-char base-char-reg)
 (def-data-vector-frobs simple-vector word-index
   * descriptor-reg any-reg)
 

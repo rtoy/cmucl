@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.68 1991/03/14 14:24:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.69 1991/11/09 02:47:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.68 1991/03/14 14:24:53 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.69 1991/11/09 02:47:25 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -64,7 +64,7 @@
 	  array-has-fill-pointer-p array-in-bounds-p array-rank
 	  array-rank-limit array-row-major-index array-total-size
 	  array-total-size-limit arrayp ash asin asinh assert assoc
-	  assoc-if assoc-if-not atan atanh atom base-character base-string
+	  assoc-if assoc-if-not atan atanh atom base-char base-string
 	  bignum bit bit-and bit-andc1 bit-andc2 bit-eqv bit-ior bit-nand
 	  bit-nor bit-not bit-orc1 bit-orc2 bit-vector bit-vector-p bit-xor
 	  block boole boole-1 boole-2 boole-and boole-andc1 boole-andc2
@@ -99,7 +99,7 @@
 	  double-float-negative-epsilon dpb dribble ecase ed eighth elt
 	  encode-universal-time end-of-file endp enough-namestring eq eql
 	  equal equalp error etypecase eval eval-when evalhook evenp every
-	  exp export expt extended-character fboundp fceiling fdefinition
+	  exp export expt extended-char fboundp fceiling fdefinition
 	  ffloor fifth file-author file-error file-error-pathname
 	  file-length file-namestring file-position file-write-date fill
 	  fill-pointer find find-all-symbols find-if find-if-not
@@ -434,7 +434,7 @@
 (export '(*assembly-unit-length* *primitive-objects* array-data-slot
 	  array-dimensions-offset array-displaced-p-slot
 	  array-displacement-slot array-elements-slot
-	  array-fill-pointer-slot atomic-flag base-character-type
+	  array-fill-pointer-slot atomic-flag base-char-type
 	  binding-size binding-symbol-slot
 	  binding-value-slot byte-bits catch-block-current-code-slot
 	  catch-block-current-cont-slot catch-block-current-uwp-slot

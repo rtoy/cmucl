@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.31 1991/11/05 15:56:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.32 1991/11/09 02:37:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,8 +123,8 @@
     simple-array-double-float vm:simple-array-double-float-type
     object-not-simple-array-double-float-error)
 
-  (frob base-char-p check-base-character base-character
-    vm:base-character-type object-not-base-character-error)
+  (frob base-char-p check-base-char base-char
+    vm:base-char-type object-not-base-char-error)
 
   (frob system-area-pointer-p check-system-area-pointer system-area-pointer
     vm:sap-type object-not-sap-error)

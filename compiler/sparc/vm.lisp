@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.3 1990/12/02 02:10:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/vm.lisp,v 1.4 1991/11/09 02:38:23 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the SPARC.
 ;;;
@@ -138,7 +138,7 @@
   ;; The non-descriptor stacks.
   (signed-stack non-descriptor-stack) ; (signed-byte 32)
   (unsigned-stack non-descriptor-stack) ; (unsigned-byte 32)
-  (base-character-stack non-descriptor-stack) ; non-descriptor characters.
+  (base-char-stack non-descriptor-stack) ; non-descriptor characters.
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack
@@ -164,11 +164,11 @@
    :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters
-  (base-character-reg registers
+  (base-char-reg registers
    :locations #.non-descriptor-regs
    :constant-scs (immediate)
    :save-p t
-   :alternate-scs (base-character-stack))
+   :alternate-scs (base-char-stack))
 
   ;; Non-Descriptor SAP's (arbitrary pointers into address space)
   (sap-reg registers

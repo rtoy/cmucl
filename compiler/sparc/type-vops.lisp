@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.8 1991/11/05 16:23:15 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.9 1991/11/09 02:38:22 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -154,8 +154,8 @@
   simple-array-double-float object-not-simple-array-double-float-error
   vm:simple-array-double-float-type)
 
-(def-type-vops base-char-p check-base-character base-character
-  object-not-base-character-error vm:base-character-type)
+(def-type-vops base-char-p check-base-char base-char
+  object-not-base-char-error vm:base-char-type)
 
 (def-type-vops system-area-pointer-p check-system-area-pointer
   system-area-pointer object-not-sap-error vm:sap-type)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.5 1991/05/22 15:35:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/internet.lisp,v 1.6 1991/11/09 02:47:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -293,7 +293,7 @@
 	     (setf handled t)
 	     (let ((char (schar buffer 0))
 		   (handled nil))
-	       (declare (base-character char))
+	       (declare (base-char char))
 	       (dolist (handler (cdr handlers))
 		 (declare (list handler))
 		 (when (eql (car handler) char)
@@ -320,7 +320,7 @@
 (defun add-oob-handler (fd char handler)
   "Arange to funcall HANDLER when CHAR shows up out-of-band on FD."
   (declare (integer fd)
-	   (base-character char))
+	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
     (declare (list handlers))
     (cond (handlers
@@ -344,7 +344,7 @@
 (defun remove-oob-handler (fd char)
   "Remove any handlers for CHAR on FD."
   (declare (integer fd)
-	   (base-character char))
+	   (base-char char))
   (let ((handlers (assoc fd *oob-handlers*)))
     (declare (list handlers))
     (when handlers
@@ -379,7 +379,7 @@
 
 (defun send-character-out-of-band (fd char)
   (declare (integer fd)
-	   (base-character char))
+	   (base-char char))
   (let ((buffer (make-string 1 :initial-element char)))
     (declare (simple-string buffer))
     (when (minusp (mach:unix-send fd buffer 1 msg-oob))

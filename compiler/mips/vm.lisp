@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.43 1991/02/20 15:15:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.44 1991/11/09 02:37:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.43 1991/02/20 15:15:34 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.44 1991/11/09 02:37:48 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -151,7 +151,7 @@
 
   ;; Immediate SCs for things other than numbers. 
   (null immediate-constant)
-  (immediate-base-character immediate-constant)
+  (immediate-base-char immediate-constant)
   (immediate-sap immediate-constant)
 
   ;; Anything else that can be computed faster than loaded that doesn't fit in
@@ -168,7 +168,7 @@
   ;; The non-descriptor stacks.
   (signed-stack non-descriptor-stack) ; (signed-byte 32)
   (unsigned-stack non-descriptor-stack) ; (unsigned-byte 32)
-  (base-character-stack non-descriptor-stack) ; non-descriptor characters.
+  (base-char-stack non-descriptor-stack) ; non-descriptor characters.
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack :element-size 2) ; double floats.
@@ -185,7 +185,7 @@
    :reserve-locations #.(append reserve-non-descriptor-regs
 				reserve-descriptor-regs)
    :constant-scs (negative-immediate zero immediate unsigned-immediate
-			   immediate-base-character random-immediate)
+			   immediate-base-char random-immediate)
    :save-p t
    :alternate-scs (control-stack))
 
@@ -198,12 +198,12 @@
    :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters
-  (base-character-reg registers
+  (base-char-reg registers
    :locations #.non-descriptor-regs
    :reserve-locations #.reserve-non-descriptor-regs
-   :constant-scs (immediate-base-character)
+   :constant-scs (immediate-base-char)
    :save-p t
-   :alternate-scs (base-character-stack))
+   :alternate-scs (base-char-stack))
 
   ;; Non-Descriptor SAP's (arbitrary pointers into address space)
   (sap-reg registers
@@ -330,10 +330,10 @@
     (character
      #-new-compiler
      (if (string-char-p value)
-	 (sc-number-or-lose 'immediate-base-character *backend*)
+	 (sc-number-or-lose 'immediate-base-char *backend*)
 	 nil)
      #+new-compiler
-     (sc-number-or-lose 'immediate-base-character *backend*))))
+     (sc-number-or-lose 'immediate-base-char *backend*))))
 
 
 ;;;; Function Call Parameters

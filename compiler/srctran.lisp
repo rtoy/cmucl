@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.29 1991/10/03 18:27:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.30 1991/11/09 02:42:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -647,7 +647,7 @@
 
 
 (defoptimizer (code-char derive-type) ((code))
-  (specifier-type 'base-character))
+  (specifier-type 'base-char))
 
 
 (defoptimizer (values derive-type) ((&rest values))
@@ -1001,7 +1001,7 @@
 
 ;;;; Character operations:
 
-(deftransform char-equal ((a b) (base-character base-character))
+(deftransform char-equal ((a b) (base-char base-char))
   "open code"
   '(let* ((ac (char-code a))
 	  (bc (char-code b))
@@ -1011,7 +1011,7 @@
 	   (let ((sum (+ ac bc)))
 	     (and (> sum 161) (< sum 213)))))))
 
-(deftransform char-upcase ((x) (base-character))
+(deftransform char-upcase ((x) (base-char))
   "open code"
   '(let ((n-code (char-code x)))
      (if (and (> n-code #o140)	; Octal 141 is #\a.
@@ -1019,7 +1019,7 @@
 	 (code-char (logxor #x20 n-code))
 	 x)))
 
-(deftransform char-downcase ((x) (base-character))
+(deftransform char-downcase ((x) (base-char))
   "open code"
   '(let ((n-code (char-code x)))
      (if (and (> n-code 64)	; 65 is #\A.

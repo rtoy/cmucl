@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.3 1991/11/05 16:21:47 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.4 1991/11/09 02:38:18 wlott Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -296,7 +296,7 @@
 	 ,@(gen-other-immediate-test temp target not-target not-p hdrs))))))
 
 (defconstant immediate-types
-  (list base-character-type unbound-marker-type))
+  (list base-char-type unbound-marker-type))
 
 (defconstant function-subtypes
   (list funcallable-instance-header-type closure-header-type

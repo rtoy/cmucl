@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/char.lisp,v 1.1 1991/02/18 15:07:48 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/char.lisp,v 1.2 1991/11/09 02:37:16 wlott Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -20,84 +20,84 @@
 
 ;;;; Moves and coercions:
 
-;;; MOVE-TO-BASE-CHARACTER -- VOP.
+;;; MOVE-TO-BASE-CHAR -- VOP.
 ;;;
 ;;; Move a tagged char to an untagged representation.
 ;;;
-(define-vop (move-to-base-character)
+(define-vop (move-to-base-char)
   (:args (x :scs (any-reg descriptor-reg) :target y))
-  (:arg-types base-character)
-  (:results (y :scs (base-character-reg)))
+  (:arg-types base-char)
+  (:results (y :scs (base-char-reg)))
   (:generator 1
     (move y x)
     (inst sr y vm:type-bits)))
 ;;;
-(define-move-vop move-to-base-character :move
-  (any-reg descriptor-reg) (base-character-reg))
+(define-move-vop move-to-base-char :move
+  (any-reg descriptor-reg) (base-char-reg))
 
 
-;;; MOVE-FROM-BASE-CHARACTER -- VOP.
+;;; MOVE-FROM-BASE-CHAR -- VOP.
 ;;;
 ;;; Move an untagged char to a tagged representation.
 ;;;
-(define-vop (move-from-base-character)
-  (:args (x :scs (base-character-reg) :target temp))
-  (:temporary (:scs (base-character-reg) :from (:argument 0)) temp)
+(define-vop (move-from-base-char)
+  (:args (x :scs (base-char-reg) :target temp))
+  (:temporary (:scs (base-char-reg) :from (:argument 0)) temp)
   (:results (y :scs (any-reg descriptor-reg)))
-  (:result-types base-character)
+  (:result-types base-char)
   (:generator 1
     (move temp x)
     (inst sl temp vm:type-bits)
-    (inst oil y temp vm:base-character-type)))
+    (inst oil y temp vm:base-char-type)))
 ;;;
-(define-move-vop move-from-base-character :move
-  (base-character-reg) (any-reg descriptor-reg))
+(define-move-vop move-from-base-char :move
+  (base-char-reg) (any-reg descriptor-reg))
 
-;;; BASE-CHARACTER-MOVE -- VOP.
+;;; BASE-CHAR-MOVE -- VOP.
 ;;;
-;;; Move untagged base-character values.
+;;; Move untagged base-char values.
 ;;;
-(define-vop (base-character-move)
+(define-vop (base-char-move)
   (:args (x :target y
-	    :scs (base-character-reg)
+	    :scs (base-char-reg)
 	    :load-if (not (location= x y))))
-  (:results (y :scs (base-character-reg)
+  (:results (y :scs (base-char-reg)
 	       :load-if (not (location= x y))))
   (:effects)
   (:affected)
   (:generator 0
     (move y x)))
 ;;;
-(define-move-vop base-character-move :move
-  (base-character-reg) (base-character-reg))
+(define-move-vop base-char-move :move
+  (base-char-reg) (base-char-reg))
 
 
-;;; MOVE-BASE-CHARACTER-ARGUMENT -- VOP.
+;;; MOVE-BASE-CHAR-ARGUMENT -- VOP.
 ;;;
-;;; Move untagged base-character arguments/return-values.
+;;; Move untagged base-char arguments/return-values.
 ;;;
-(define-vop (move-base-character-argument)
+(define-vop (move-base-char-argument)
   (:args (x :target y
-	    :scs (base-character-reg))
+	    :scs (base-char-reg))
 	 (fp :scs (word-pointer-reg)
-	     :load-if (not (sc-is y base-character-reg))))
+	     :load-if (not (sc-is y base-char-reg))))
   (:results (y))
   (:generator 0
     (sc-case y
-      (base-character-reg
+      (base-char-reg
        (move y x))
-      (base-character-stack
+      (base-char-stack
        (storew x fp (tn-offset y))))))
 ;;;
-(define-move-vop move-base-character-argument :move-argument
-  (any-reg base-character-reg) (base-character-reg))
+(define-move-vop move-base-char-argument :move-argument
+  (any-reg base-char-reg) (base-char-reg))
 
 
-;;; Use standard MOVE-ARGUMENT + coercion to move an untagged base-character
+;;; Use standard MOVE-ARGUMENT + coercion to move an untagged base-char
 ;;; to a descriptor passing location.
 ;;;
 (define-move-vop move-argument :move-argument
-  (base-character-reg) (any-reg descriptor-reg))
+  (base-char-reg) (any-reg descriptor-reg))
 
 
 
@@ -110,9 +110,9 @@
 (define-vop (char-code)
   (:translate char-code)
   (:policy :fast-safe)
-  (:args (ch :scs (base-character-reg) :target temp))
-  (:arg-types base-character)
-  (:temporary (:scs (base-character-reg)
+  (:args (ch :scs (base-char-reg) :target temp))
+  (:arg-types base-char)
+  (:temporary (:scs (base-char-reg)
 		    :from (:argument 0) :to (:result 0)
 		    :target res) temp)
   (:results (res :scs (any-reg)))
@@ -129,29 +129,29 @@
   (:policy :fast-safe)
   (:args (code :scs (any-reg) :target res))
   (:arg-types positive-fixnum)
-  (:results (res :scs (base-character-reg)))
-  (:result-types base-character)
+  (:results (res :scs (base-char-reg)))
+  (:result-types base-char)
   (:generator 1
     (move res code)
     (inst sr res 2)))
 
 
 
-;;; Comparison of base-characters.
+;;; Comparison of base-chars.
 ;;;
-(define-vop (base-character-compare pointer-compare)
-  (:args (x :scs (base-character-reg))
-	 (y :scs (base-character-reg)))
-  (:arg-types base-character base-character))
+(define-vop (base-char-compare pointer-compare)
+  (:args (x :scs (base-char-reg))
+	 (y :scs (base-char-reg)))
+  (:arg-types base-char base-char))
 
-(define-vop (fast-char=/base-character base-character-compare)
+(define-vop (fast-char=/base-char base-char-compare)
   (:translate char=)
   (:variant :eq))
 
-(define-vop (fast-char</base-character base-character-compare)
+(define-vop (fast-char</base-char base-char-compare)
   (:translate char<)
   (:variant :lt))
 
-(define-vop (fast-char>/base-character base-character-compare)
+(define-vop (fast-char>/base-char base-char-compare)
   (:translate char>)
   (:variant :gt))

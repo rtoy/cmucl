@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.5 1991/02/08 13:34:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mipsstrops.lisp,v 1.6 1991/11/09 02:47:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,7 +144,7 @@ be simple strings."
   returned."
   (declare (fixnum start end)
 	   (type (or simple-string system-area-pointer) string)
-	   (base-character character))
+	   (base-char character))
   (maybe-sap-maybe-string (string)
     (do ((index start (1+ index)))
 	((>= index end) nil)
@@ -155,7 +155,7 @@ be simple strings."
 (defun %sp-reverse-find-character (string start end character)
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
-	   (base-character character))
+	   (base-char character))
   "%SP-Reverse-Find-Character  String, Start, End, Character
   Searches String for Character from End to Start.  If the character is
   found, the corresponding index into String is returned, otherwise NIL is
@@ -171,7 +171,7 @@ be simple strings."
 (defun %sp-skip-character (string start end character)
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
-	   (base-character character))
+	   (base-char character))
   "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the first character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."
@@ -185,7 +185,7 @@ be simple strings."
 (defun %sp-reverse-skip-character (string start end character)
   (declare (type (or simple-string system-area-pointer) string)
 	   (fixnum start end)
-	   (base-character character))
+	   (base-char character))
   "%SP-Skip-Character  String, Start, End, Character
   Returns the index of the last character between Start and End which
   is not Char=  to Character, or NIL if there is no such character."

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.32 1991/05/24 19:40:55 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.33 1991/11/09 02:37:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.32 1991/05/24 19:40:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.33 1991/11/09 02:37:36 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -143,7 +143,7 @@
        (:result-types ,element-type))))
 
 (def-data-vector-frobs simple-string byte-index
-  base-character base-character-reg)
+  base-char base-char-reg)
 (def-data-vector-frobs simple-vector word-index
   * descriptor-reg any-reg)
 

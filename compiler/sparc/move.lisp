@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.1 1990/11/30 17:04:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.2 1991/11/09 02:38:21 wlott Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -31,15 +31,15 @@
        (load-symbol y val))
       (character
        (inst li y (logior (ash (char-code val) type-bits)
-			  base-character-type))))))
+			  base-char-type))))))
 
 (define-move-function (load-number 1) (vop x y)
   ((immediate zero)
    (signed-reg unsigned-reg))
   (inst li y (tn-value x)))
 
-(define-move-function (load-base-character 1) (vop x y)
-  ((immediate) (base-character-reg))
+(define-move-function (load-base-char 1) (vop x y)
+  ((immediate) (base-char-reg))
   (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-system-area-pointer 1) (vop x y)
@@ -55,7 +55,7 @@
   (load-stack-tn y x))
 
 (define-move-function (load-number-stack 5) (vop x y)
-  ((base-character-stack) (base-character-reg)
+  ((base-char-stack) (base-char-reg)
    (sap-stack) (sap-reg)
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
@@ -67,7 +67,7 @@
   (store-stack-tn y x))
 
 (define-move-function (store-number-stack 5) (vop x y)
-  ((base-character-reg) (base-character-stack)
+  ((base-char-reg) (base-char-stack)
    (sap-reg) (sap-stack)
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))

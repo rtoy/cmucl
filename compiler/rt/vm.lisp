@@ -67,7 +67,7 @@
   ;; The non-descriptor stack SC's.
   (signed-stack non-descriptor-stack) ; (signed-byte 32)
   (unsigned-stack non-descriptor-stack) ; (unsigned-byte 32)
-  (base-character-stack non-descriptor-stack) ; non-descriptor characters.
+  (base-char-stack non-descriptor-stack) ; non-descriptor characters.
   (sap-stack non-descriptor-stack) ; System area pointers.
   (single-stack non-descriptor-stack) ; single-floats
   (double-stack non-descriptor-stack :element-size 2) ; double floats.
@@ -93,11 +93,11 @@
    :alternate-scs (control-stack))
 
   ;; Non-Descriptor characters.
-  (base-character-reg registers
+  (base-char-reg registers
    :locations (0 2 3 4)
    :constant-scs (immediate)
    :save-p t
-   :alternate-scs (base-character-stack))
+   :alternate-scs (base-char-stack))
 
   ;; Non-Descriptor SAP's (arbitrary pointers into address space).
   (sap-reg registers
@@ -250,7 +250,7 @@
 					  positive-fixnum))
 
 ;;; Other primitive immediate types.
-(def-primitive-type base-character (base-character-reg any-reg))
+(def-primitive-type base-char (base-char-reg any-reg))
 
 ;;; Primitive pointer types.
 ;;; 
@@ -333,7 +333,7 @@
 
 ;;; 
 (defvar *simple-array-primitive-types*
-  '((base-character . simple-string)
+  '((base-char . simple-string)
     (string-char . simple-string)
     (bit . simple-bit-vector)
     ((unsigned-byte 2) . simple-array-unsigned-byte-2)
@@ -436,10 +436,10 @@
 	 ((t bignum ratio complex function system-area-pointer weak-pointer
 	     structure)
 	  (values (primitive-type-or-lose (named-type-name type)) t))
-	 ((character base-character string-char)
-	  (exactly base-character))
+	 ((character base-char string-char)
+	  (exactly base-char))
 	 (standard-char
-	  (part-of base-character))
+	  (part-of base-char))
 	 (cons
 	  (part-of list))
 	 (t

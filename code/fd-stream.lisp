@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.15 1991/05/24 17:02:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.16 1991/11/09 02:47:09 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,7 +70,7 @@
   ;;
   ;;; Number of bytes per element.
   (element-size 1 :type index)
-  (element-type 'base-character) ; The type of element being transfered.
+  (element-type 'base-char)   ; The type of element being transfered.
   (fd -1 :type fixnum)	      ; The file descriptor
   ;;
   ;; Controls when the output buffer is flushed.
@@ -890,7 +890,7 @@ non-server method is also significantly more efficient for large reads.
 		(fd-stream-bout stream) #'ill-bout)
 	  (setf (fd-stream-out stream)
 		(or (if (eql size 1)
-		      (pick-output-routine 'base-character
+		      (pick-output-routine 'base-char
 					   (fd-stream-buffering stream)))
 		    #'ill-out)
 		(fd-stream-bout stream) routine))
@@ -1127,7 +1127,7 @@ non-server method is also significantly more efficient for large reads.
 		       &key
 		       (input nil input-p)
 		       (output nil output-p)
-		       (element-type 'base-character)
+		       (element-type 'base-char)
 		       (buffering :full)
 		       timeout
 		       file
@@ -1228,13 +1228,13 @@ non-server method is also significantly more efficient for large reads.
 (defun open (filename
 	     &key
 	     (direction :input)
-	     (element-type 'base-character)
+	     (element-type 'base-char)
 	     (if-exists nil if-exists-given)
 	     (if-does-not-exist nil if-does-not-exist-given))
   "Return a stream which reads from or writes to Filename.
   Defined keywords:
    :direction - one of :input, :output, :io, or :probe
-   :element-type - Type of object to read or write, default BASE-CHARACTER
+   :element-type - Type of object to read or write, default BASE-CHAR
    :if-exists - one of :error, :new-version, :rename, :rename-and-delete,
                        :overwrite, :append, :supersede or nil
    :if-does-not-exist - one of :error, :create or nil

@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.8 1991/07/22 19:20:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.9 1991/11/09 02:39:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.8 1991/07/22 19:20:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-typetran.lisp,v 1.9 1991/11/09 02:39:51 wlott Exp $
 ;;;
 ;;; This file contains the implimentation specific type transformation magic.
 ;;; Basically, the various non-standard predicates that can be used in typep
@@ -28,7 +28,7 @@
 ;;;    These type predicates are used to implement simple cases of typep.  They
 ;;; shouldn't be used explicitly.
 
-(define-type-predicate base-char-p base-character)
+(define-type-predicate base-char-p base-char)
 (define-type-predicate bignump bignum)
 (define-type-predicate double-float-p double-float)
 (define-type-predicate fixnump fixnum)

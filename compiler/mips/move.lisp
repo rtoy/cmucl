@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.28 1991/02/20 15:14:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.29 1991/11/09 02:37:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.28 1991/02/20 15:14:50 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.29 1991/11/09 02:37:43 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -24,7 +24,7 @@
 
 (define-move-function (load-immediate 1) (vop x y)
   ((null unsigned-immediate immediate zero negative-immediate
-	 random-immediate immediate-base-character)
+	 random-immediate immediate-base-char)
    (any-reg descriptor-reg))
   (let ((val (tn-value x)))
     (etypecase val
@@ -36,15 +36,15 @@
        (load-symbol y val))
       (character
        (inst li y (logior (ash (char-code val) type-bits)
-			  base-character-type))))))
+			  base-char-type))))))
 
 (define-move-function (load-number 1) (vop x y)
   ((unsigned-immediate immediate zero negative-immediate random-immediate)
    (signed-reg unsigned-reg))
   (inst li y (tn-value x)))
 
-(define-move-function (load-base-character 1) (vop x y)
-  ((immediate-base-character) (base-character-reg))
+(define-move-function (load-base-char 1) (vop x y)
+  ((immediate-base-char) (base-char-reg))
   (inst li y (char-code (tn-value x))))
 
 (define-move-function (load-system-area-pointer 1) (vop x y)
@@ -60,7 +60,7 @@
   (load-stack-tn y x))
 
 (define-move-function (load-number-stack 5) (vop x y)
-  ((base-character-stack) (base-character-reg)
+  ((base-char-stack) (base-char-reg)
    (sap-stack) (sap-reg)
    (signed-stack) (signed-reg)
    (unsigned-stack) (unsigned-reg))
@@ -72,7 +72,7 @@
   (store-stack-tn y x))
 
 (define-move-function (store-number-stack 5) (vop x y)
-  ((base-character-reg) (base-character-stack)
+  ((base-char-reg) (base-char-stack)
    (sap-reg) (sap-stack)
    (signed-reg) (signed-stack)
    (unsigned-reg) (unsigned-stack))
