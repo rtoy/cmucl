@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.5 1997/09/16 17:12:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.6 1998/05/04 00:08:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -59,11 +59,21 @@
 (defmethod documentation ((x structure-class) (doc-type (eql 't)))
   (values (ext:info type documentation (class-name x))))
 
+(defmethod documentation ((x lisp:standard-class) (doc-type (eql 't)))
+  (or (values (ext:info type documentation (lisp:class-name x)))
+      (let ((pcl-class (kernel:class-pcl-class x)))
+	(and pcl-class (plist-value pcl-class 'documentation)))))
+
 (defmethod documentation ((x lisp:structure-class) (doc-type (eql 'type)))
   (values (ext:info type documentation (lisp:class-name x))))
 
 (defmethod documentation ((x structure-class) (doc-type (eql 'type)))
   (values (ext:info type documentation (class-name x))))
+
+(defmethod documentation ((x lisp:standard-class) (doc-type (eql 'type)))
+  (or (values (ext:info type documentation (lisp:class-name x)))
+      (let ((pcl-class (kernel:class-pcl-class x)))
+	(and pcl-class (plist-value pcl-class 'documentation)))))
 
 (defmethod documentation ((x symbol) (doc-type (eql 'type)))
   (or (values (ext:info type documentation x))
