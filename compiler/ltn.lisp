@@ -682,8 +682,16 @@
 ;;; our policy is safe, then only safe policies are O.K., otherwise anything
 ;;; goes.
 ;;;
-;;; If we rejected a template and Speed > Brevity, then we call
-;;; Note-Rejected-Templates to emit any appropriate efficiency notes.
+;;; If we find a template with :SAFE policy, then we return it, or any cheaper
+;;; fallback template.  The theory behind this is that if it is cheapest, small
+;;; and safe, we can't lose.  If it is not cheapest, then we use the fallback,
+;;; which won't have the desired policy, but :SAFE isn't desired either, so we
+;;; might as well go with the cheaper one.  The main reason for doing this is
+;;; to make sure that cheap safe templates are used when they apply and the
+;;; current policy is something else.  This is useful because :SAFE has the
+;;; additional semantics of implicit argument type checking, so we may be
+;;; forced to define a template with :SAFE policy when it is really small and
+;;; fast as well.
 ;;;
 (defun find-template-for-policy (call policy)
   (declare (type combination call)
@@ -704,9 +712,11 @@
 	  (let ((tpolicy (template-policy template)))
 	    (cond ((eq tpolicy policy)
 		   (return (values template rejected)))
-		  (fallback)
-		  ((or (not safe-p) (policy-safe-p tpolicy))
-		   (setq fallback template)))))))))
+		  ((eq tpolicy :safe)
+		   (return (values (or fallback template) rejected)))
+		  ((or (not safe-p) (eq tpolicy :fast-safe))
+		   (unless fallback
+		     (setq fallback template))))))))))
 
 
 (defvar *efficency-note-limit* 2
