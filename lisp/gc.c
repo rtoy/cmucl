@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.18 2000/11/06 17:18:25 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.19 2002/01/23 19:04:13 toy Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -58,8 +58,6 @@ static void scan_weak_pointers(void);
 boolean from_space_p(lispobj object)
 {
 	lispobj *ptr;
-
-	gc_assert(Pointerp(object));
 
 	ptr = (lispobj *) PTR(object);
 
