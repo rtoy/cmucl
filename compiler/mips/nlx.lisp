@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.4 1990/03/06 19:33:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.5 1990/03/14 16:06:12 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
@@ -173,10 +173,11 @@
 	 (count))
   (:results (values :more t))
   (:temporary (:scs (descriptor-reg)) move-temp)
-  (:info nvals)
+  (:info label nvals)
   (:save-p :force-to-stack)
   (:node-var node)
   (:generator 30
+    (emit-return-pc label)
     (cond ((zerop nvals))
 	  ((= nvals 1)
 	   (let ((no-values (gen-label)))
@@ -226,6 +227,7 @@
 	 (start :target src)
 	 (count :target num))
   (:results (new-start) (new-count))
+  (:info label)
   (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 0))
 	      dst)
   (:temporary (:scs (any-reg descriptor-reg) :type fixnum :from (:argument 1))
@@ -235,6 +237,7 @@
   (:temporary (:scs (descriptor-reg)) temp)
   (:save-p :force-to-stack)
   (:generator 30
+    (emit-return-pc label)
     (let ((loop (gen-label))
 	  (done (gen-label)))
       
@@ -264,7 +267,10 @@
 ;;; This VOP is just to force the TNs used in the cleanup onto the stack.
 ;;;
 (define-vop (uwp-entry)
+  (:info label)
   (:save-p :force-to-stack)
   (:results (block) (start) (count))
   (:ignore block start count)
-  (:generator 0))
+  (:generator 0
+    (emit-return-pc label)))
+
