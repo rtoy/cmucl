@@ -18,7 +18,7 @@
 	  tn-ref-next tn-ref-vop tn-ref-next-ref tn-ref-across
 	  tn-ref-target tn-ref-load-tn
 
-	  sc sc-p sc-name sc-number sc-sb
+	  sb sb-p sb-name sc sc-p sc-name sc-number sc-sb
 
 	  tn tn-p make-random-tn tn-sc tn-offset
 
