@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.17 1991/02/20 14:56:43 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/checkgen.lisp,v 1.18 1991/03/18 20:54:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,6 +138,10 @@
 	    count)))
 
 
+;;; Switch to disable check complementing, for evaluation.
+;;;
+(defvar *complement-type-checks* t)
+
 ;;; MAYBE-NEGATE-CHECK  --  Internal
 ;;;
 ;;;    Cont is a continuation we are doing a type check on and Types is a list
@@ -172,7 +176,8 @@
 				     (weak (maybe-weaken-check c cont)))
 				 (if (and diff
 					  (< (type-test-cost diff)
-					     (type-test-cost weak)))
+					     (type-test-cost weak))
+					  *complement-type-checks*)
 				     (list t diff c)
 				     (list nil weak c))))
 			   ptypes types)))
