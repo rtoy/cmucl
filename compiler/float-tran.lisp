@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.33 1997/09/05 02:32:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.34 1997/09/05 11:36:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -895,6 +895,9 @@
 			  (set-bound (log (bound-value hi)) (consp hi))
 			  nil)))))
 	(t
+	 ;; Hack patch.
+	 (specifier-type '(or float (complex float)))
+	 #+nil
 	 ;; The hard case with a base given.  Use the definition of
 	 ;; (log x y) = (/ (log x) (log y)) to figure out what the
 	 ;; answer should be.
