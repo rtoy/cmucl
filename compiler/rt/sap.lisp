@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.12 1992/03/10 09:22:49 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/sap.lisp,v 1.13 1992/03/10 12:23:22 wlott Exp $
 ;;;
 ;;; This file contains the IBM RT VM definition of SAP operations.
 ;;;
@@ -373,7 +373,8 @@
 (def-source-transform %set-sap-ref-single (sap offset value)
   (once-only ((sap sap) (offset offset) (value value))
     `(progn
-       (setf (signed-sap-ref-32 ,sap ,offset) ,value)
+       (setf (signed-sap-ref-32 ,sap ,offset)
+	     (single-float-bits ,value))
        ,value)))
 
 (def-source-transform sap-ref-double (sap offset)
