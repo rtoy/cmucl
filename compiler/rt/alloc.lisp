@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.2 1991/04/20 17:01:34 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/alloc.lisp,v 1.3 1991/04/23 17:23:50 chiles Exp $
 ;;;
 ;;; Allocation VOPs for the IBM RT port.
 ;;;
@@ -94,7 +94,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 1)) unboxed)
   (:generator 100
     (inst li ndescr (lognot lowtag-mask))
-    (inst cal boxed boxed-arg (fixnum (1+ code-constants-offset)))
+    (inst cal boxed boxed-arg (fixnum (1+ vm:code-trace-table-offset-slot)))
     (inst n boxed ndescr)
     (move unboxed unboxed-arg)
     (inst sr unboxed word-shift)
