@@ -19,6 +19,9 @@
 ;;;;   '(... :stack-checking ...)
 ;;;;   '(...))
 ;;;;
+;;;; -- Change occurrences of KERNEL:CLASS-LAYOUT in your
+;;;; cross-compilation script to KERNEL:%CLASS-LAYOUT.
+;;;;
 ;;;; -- Cross-compile to fasl-head via cross-fasl-head.  This will fail
 ;;;; and tell you that the C header file has changed.  Build a new
 ;;;; runtime, and start over.
