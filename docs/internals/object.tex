@@ -296,15 +296,11 @@ already has to deal with rounding up various objects to dual-word alignment.
 Symbol data-block has the following format:
 \begin{verbatim}
 -------------------------------------------------------
-|     7 (data-block words)     | Symbol Type (8 bits) |
+|     5 (data-block words)     | Symbol Type (8 bits) |
 -------------------------------------------------------
-|               Value Descriptor                      |
+|                       Value Descriptor              |
 -------------------------------------------------------
-|                       Function Pointer              |
--------------------------------------------------------
-|                     Raw Function Address            |
--------------------------------------------------------
-|                        Setf Function                |
+|  Hash Value (x86/amd64/sparc) Unused (other arch.)  |
 -------------------------------------------------------
 |                        Property List                |
 -------------------------------------------------------
@@ -314,14 +310,8 @@ Symbol data-block has the following format:
 -------------------------------------------------------
 \end{verbatim}
 
-Most of these slots are self-explanatory given what symbols must do in Common
-Lisp, but a couple require comments.  We added the Raw Function Address slot to
-speed up named call which is the most common calling convention.  This is a
-non-descriptor slot, but since objects are dual word aligned, the value
-inherently has fixnum low-tag bits.  The GC method for symbols must know to
-update this slot.  The Setf Function slot is currently unused, but we had an
-extra slot due to adding Raw Function Address since objects must be dual-word
-aligned.
+All of these slots are self-explanatory given what symbols must do in Common
+Lisp.
 
 The issues with nil are that we want it to act like a symbol, and we need list
 operations such as CAR and CDR to be fast on it.  CMU Common Lisp solves this
@@ -329,17 +319,13 @@ by putting nil as the first object in static space, where other global values
 reside, so it has a known address in the system:
 \begin{verbatim}
 -------------------------------------------------------  <-- space
-|                               0                     |      start
+|     6 (data-block words)     |         0            |      start
 -------------------------------------------------------
-|     7 (data-block words)     | Symbol Type (8 bits) |
+|     0 (data-block words)     | Symbol Type (8 bits) |
 -------------------------------------------------------  <-- nil
 |                           Value/CAR                 |
 -------------------------------------------------------
-|                         Definition/CDR              |
--------------------------------------------------------
-|                      Raw Function Address           |
--------------------------------------------------------
-|                         Setf Function               |
+|                         Hash Value/CDR              |
 -------------------------------------------------------
 |                         Property List               |
 -------------------------------------------------------
@@ -352,7 +338,7 @@ reside, so it has a known address in the system:
 \end{verbatim}
 In addition, we make the list typed pointer to nil actually point past the
 header word of the nil symbol data-block.  This has usefulness explained below.
-The value and definition of nil are nil.  Therefore, any reference to nil used
+The value and hash-value of nil are nil.  Therefore, any reference to nil used
 as a list has quick list type checking, and CAR and CDR can go right through
 the first and second words as if nil were a cons object.
 
@@ -364,7 +350,7 @@ type tag, but nil points four additional bytes into its symbol data-block.
 
 
 
-;;;; Array Headers.
+\section{Array Headers}
 
 The array-header data-block has the following format:
 \begin{verbatim}
