@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.76 1992/09/23 17:09:48 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.77 1992/11/18 23:33:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -290,7 +290,8 @@
 	      (length trace-table fixups)
 	      (generate-code component)
 	    
-	    (when *compiler-trace-output*
+	    (when (and *compiler-trace-output*
+		       (backend-disassem-params *backend*))
 	      (format *compiler-trace-output*
 		      "~|~%Disassembly of code for ~S~2%" component)
 	      (disassem:disassemble-assem-segment *code-segment*
