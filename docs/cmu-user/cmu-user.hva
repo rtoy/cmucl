@@ -28,7 +28,7 @@
 
 \newcommand{\fcntype}[1]{\@open{TT}{class=function-type}#1\@close{TT}}
 \newcommand{\argtype}[1]{\@open{TT}{class=argument-type}#1\@close{TT}}
-\newcommand{\fcnname}[1]{\@open{I}{class=function-name}#1\@close{I}}
+\newcommand{\fcnname}[1]{\@open{TT}{class=function-name}#1\@close{TT}}
 \newcommand{\var}[1]{\@open{TT}{class=variable}#1\@close{TT}}
 \newcommand{\code}[1]{\@open{TT}{class=code}#1\@close{TT}}
 \newcommand{\file}[1]{\@open{TT}{class=filename}#1\@close{TT}}
@@ -139,8 +139,8 @@
 % <a href="../../">CMUCL</a> -&gt
 % <a href="../">Documentation</a> <br>}
 % \@hr[NOSHADE]{.8\linewidth}{}\@print{<br>}}
-% \htmlfoot{\@hr[NOSHADE]{.8\linewidth}{}
-% \copyright{} 1995-2001 CMUCL Project}
+\htmlfoot{\@hr[NOSHADE]{.99\linewidth}{}
+\copyright{} 1995-2003 CMUCL Project}
 
 
 \let\orig@meta=\@meta
@@ -156,6 +156,7 @@
 % instead of machine-generated numbers
 \let\orig@input\input
 \renewcommand{\input}[1]{\orig@input{#1}\cutname{#1.html}}
+\htmlprefix{CMUCL User's Manual: }
 
 
 % generate HTML with section headers on a blue background
