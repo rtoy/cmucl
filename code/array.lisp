@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.9 1991/02/08 13:30:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.10 1991/04/24 23:48:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.9 1991/02/08 13:30:44 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.10 1991/04/24 23:48:15 ram Exp $
 ;;;
 ;;; Functions to implement arrays for CMU Common Lisp.
 ;;; Written by Skef Wholey.
@@ -28,6 +28,9 @@
 	  fill-pointer vector-push vector-push-extend vector-pop adjust-array
           adjustable-array-p row-major-aref))
 
+(in-package "KERNEL")
+(export '(%with-array-data))
+(in-package "LISP")
 
 (defconstant array-rank-limit 65529
   "The exclusive upper bound on the rank of an array.")
@@ -72,17 +75,34 @@
 	   (fixnum index))
   (%check-bound array bound index))
 
-;;; Random function used by WITH-ARRAY-DATA, which has to be defined in
-;;; sysmacs.lisp.
+;;; %WITH-ARRAY-DATA  --  Interface
 ;;;
-(defun find-data-vector (array)
-  (let ((cumulative-offset 0))
-    (declare (fixnum cumulative-offset))
-    (do ((data array (%array-data-vector array)))
+;;;    The guts of the WITH-ARRAY-DATA macro (in sysmacs).  Note that this
+;;; function is only called if we have an array header or an error, so it
+;;; doesn't have to be too tense.
+;;;
+(defun %with-array-data (array start end)
+  (declare (array array) (type index start) (type (or index null) end)
+	   (values (simple-array * (*)) index index index))
+  (let* ((size (array-total-size array))
+	 (end (cond (end
+		     (unless (<= end size)
+		       (error "End ~D is greater than total size ~D."
+			      end size))
+		     end)
+		    (t size))))
+    (when (> start end)
+      (error "Start ~D is greater than end ~D." start end))
+    (do ((data array (%array-data-vector data))
+	 (cumulative-offset 0
+			    (+ cumulative-offset
+			       (%array-displacement data))))
 	((not (array-header-p data))
-	 (values data cumulative-offset))
-      (when (%array-displaced-p array)
-	(incf cumulative-offset (%array-displacement array))))))
+	 (values data
+		 (+ cumulative-offset start)
+		 (+ cumulative-offset end)
+		 cumulative-offset))
+      (declare (type index cumulative-offset)))))
 
 
 ;;;; MAKE-ARRAY
@@ -375,38 +395,40 @@
 (defun row-major-aref (array index)
   "Returns the element of array corressponding to the row-major index.  This is
    SETF'able."
+  (declare (optimize (safety 1)))
   (row-major-aref array index))
 
 (defun %set-row-major-aref (array index new-value)
+  (declare (optimize (safety 1)))
   (setf (row-major-aref array index) new-value))
 
 
 
 (defun svref (simple-vector index)
   "Returns the Index'th element of the given Simple-Vector."
-  (declare (simple-vector simple-vector) (fixnum index))
+  (declare (optimize (safety 1)))
   (aref simple-vector index))
 
 (defun %svset (simple-vector index new)
-  (declare (simple-vector simple-vector) (fixnum index))
+  (declare (optimize (safety 1)))
   (setf (aref simple-vector index) new))
 
 ;;; The following function is used when (setf (apply #'svref ...) new
 ;;; is compiled.
 
 (defun %apply-svset (new simple-vector index)
-  (declare (simple-vector simple-vector) (fixnum index))
+  (declare (simple-vector simple-vector) (fixnum index) (optimize (safety 1)))
   (setf (aref simple-vector index) new))
 
 
 (defun bit (bit-array &rest subscripts)
   "Returns the bit from the Bit-Array at the specified Subscripts."
-  (declare (type (array bit) bit-array))
+  (declare (type (array bit) bit-array) (optimize (safety 1)))
   (row-major-aref bit-array (%array-row-major-index bit-array subscripts)))
 
 
 (defun %bitset (bit-array &rest stuff)
-  (declare (type (array bit) bit-array))
+  (declare (type (array bit) bit-array) (optimize (safety 1)))
   (let ((subscripts (butlast stuff))
 	(new-value (car (last stuff))))
     (setf (row-major-aref bit-array
@@ -415,13 +437,13 @@
 
 (defun sbit (simple-bit-array &rest subscripts)
   "Returns the bit from the Simple-Bit-Array at the specified Subscripts."
-  (declare (type (simple-array bit) simple-bit-array))
+  (declare (type (simple-array bit) simple-bit-array) (optimize (safety 1)))
   (row-major-aref simple-bit-array
 		  (%array-row-major-index simple-bit-array subscripts)))
 
 
 (defun %sbitset (simple-bit-array &rest stuff)
-  (declare (type (simple-array bit) simple-bit-array))
+  (declare (type (simple-array bit) simple-bit-array) (optimize (safety 1)))
   (let ((subscripts (butlast stuff))
 	(new-value (car (last stuff))))
     (setf (row-major-aref simple-bit-array
@@ -511,8 +533,6 @@
   "Returns T if the given Array is adjustable, or NIL otherwise."
   (declare (array array))
   (array-header-p array))
-
-
 
 
 ;;;; Fill pointer frobbing stuff.
