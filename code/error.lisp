@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.27 1993/07/21 12:52:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.28 1993/07/21 23:33:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -411,6 +411,8 @@
   "(DEFINE-CONDITION name (parent-type)
       ( {slot-name | (slot-name {slot-option}*)}*)
       options)"
+  (when (eq parent-type 'simple-condition)
+    (setq parent-type 'internal-simple-condition))
   (let ((constructor (let ((*package* (find-package "CONDITIONS")))
 		       ;; Bind for the INTERN and the FORMAT.
 		       (intern (format nil "Constructor for ~S" name)))))
@@ -654,22 +656,19 @@
   (apply #'format stream (simple-condition-format-control condition)
 	 		 (simple-condition-format-arguments condition)))
 
-;;; The simple-condition is reall called internal-simple-condition, so
+;;; The simple-condition is really called internal-simple-condition, so
 ;;; SIMPLE-CONDITION-FORMAT-CONTROL and SIMPLE-CONDITION-FORMAT-ARGUMENTS could
 ;;; be written to handle the simple-condition, simple-warning,
-;;; simple-style-warning, simple-type-error, and simple-error types.  We stash
-;;; the plist of INTERNAL-SIMPLE-CONDITION into SIMPLE-CONDITION so that as far
-;;; as the condition system is concerned, that is also a valid name.  This
-;;; seems to create some kind of bogus multiple inheritance that the user sees.
+;;; simple-style-warning, simple-type-error, and simple-error types.
+;;; DEFINE-CONDITION special-cases inheriting simple-condition to make this
+;;; work.  This seems to create some kind of bogus multiple inheritance that
+;;; the user sees.
 ;;;
 (define-condition internal-simple-condition (condition)
   ((format-control :acessor internal-simple-condition-format-control)
    (format-arguments :init-form '()
 		     :accessor internal-simple-condition-format-arguments))
   (:report simple-condition-printer))
-
-(setf (symbol-plist 'simple-condition)
-      (symbol-plist 'internal-simple-condition))
 
 (deftype simple-condition ()
   '(or internal-simple-condition simple-warning simple-type-error
