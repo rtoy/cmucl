@@ -26,7 +26,7 @@
 		    *compiler-trace-output*
 		    *last-source-context* *last-original-source*
 		    *last-source-form* *last-format-string* *last-format-args*
-		    *last-message-count* *fenv*))
+		    *last-message-count* *lexical-environment*))
 
 (defparameter compiler-version "0.0")
 
@@ -273,9 +273,10 @@
 (defun clear-stuff (&optional (debug-too t))
   ;;
   ;; Clear global tables.
-  (clrhash *free-functions*)
-  (clrhash *free-variables*)
-  (clrhash *constants*)
+  (when (boundp '*free-functions*)
+    (clrhash *free-functions*)
+    (clrhash *free-variables*)
+    (clrhash *constants*))
   (clrhash *failed-optimizations*)
   ;;
   ;; Clear debug counters and tables.
@@ -321,33 +322,36 @@
 				   (if (symbolp x)
 				       (symbol-name x)
 				       (prin1-to-string x)))))))
-      (dolist (undef undefs)
-	(let ((name (undefined-warning-name undef))
-	      (kind (undefined-warning-kind undef))
-	      (warnings (undefined-warning-warnings undef))
-	      (count (undefined-warning-count undef)))
-	  (dolist (*compiler-error-context* warnings)
-	    (compiler-warning "Undefined ~(~A~): ~S" kind name))
-	  
-	  (let ((warn-count (length warnings)))
-	    (when (and warnings (> count warn-count))
-	      (let ((more (- count warn-count)))
-		(compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
-				  more kind name))))))
-      
+      (unless *converting-for-interpreter*
+	(dolist (undef undefs)
+	  (let ((name (undefined-warning-name undef))
+		(kind (undefined-warning-kind undef))
+		(warnings (undefined-warning-warnings undef))
+		(count (undefined-warning-count undef)))
+	    (dolist (*compiler-error-context* warnings)
+	      (compiler-warning "Undefined ~(~A~): ~S" kind name))
+	    
+	    (let ((warn-count (length warnings)))
+	      (when (and warnings (> count warn-count))
+		(let ((more (- count warn-count)))
+		  (compiler-warning "~D more use~:P of undefined ~(~A~) ~S."
+				    more kind name)))))))
+  
       (dolist (kind '(:variable :function :type))
 	(let ((summary (mapcar #'undefined-warning-name
 			       (remove kind undefs :test-not #'eq
 				       :key #'undefined-warning-kind))))
 	  (when summary
 	    (compiler-warning
-	     "Undefined ~(~A~) summary:~%  ~{~<~%  ~1:;~S~>~^ ~}"
-	     kind summary))))))
+	     "~:[This ~(~A~) is~;These ~(~A~)s are~] undefined:~
+	      ~%  ~{~<~%  ~1:;~S~>~^ ~}"
+	     (cdr summary) kind summary))))))
   
-  (unless (and (not abort-p) (zerop abort-count)
-	       (zerop *compiler-error-count*)
-	       (zerop *compiler-warning-count*)
-	       (zerop *compiler-note-count*))
+  (unless (or *converting-for-interpreter*
+	      (and (not abort-p) (zerop abort-count)
+		   (zerop *compiler-error-count*)
+		   (zerop *compiler-warning-count*)
+		   (zerop *compiler-note-count*)))
     (compiler-mumble
      "~2&Compilation unit ~:[finished~;aborted~].~
       ~[~:;~:*~&  ~D fatal error~:P~]~
@@ -359,7 +363,7 @@
      *compiler-error-count*
      *compiler-warning-count*
      *compiler-note-count*)))
-   
+
    
 ;;; Describe-Component  --  Internal
 ;;;
@@ -367,7 +371,7 @@
 ;;;
 (defun describe-component (component &optional
 				     (*standard-output* *standard-output*))
-  (declare (type component component) (type stream stream))
+  (declare (type component component))
   (format t "~|~%;;;; Component: ~S~2%" (component-name component))
   (print-blocks component)
   
@@ -497,7 +501,7 @@
 ;;; operation.
 ;;;
 (defun normal-read-error (stream old-pos condition)
-  (declare (type stream stream) (type unsigned-byte old-pos pos))
+  (declare (type stream stream) (type unsigned-byte old-pos))
   (let ((pos (file-position stream)))
     (file-position stream old-pos)
     (let ((start old-pos))
@@ -679,9 +683,9 @@
 ;;; form, but delay compilation, pushing the result on *TOP-LEVEL-LAMBDAS*
 ;;; instead.
 ;;; 
-(defun convert-and-maybe-compile (form tlf-num object)
-  (declare (type index tlf-num) (type object object))
-  (let ((tll (ir1-top-level form tlf-num nil)))
+(defun convert-and-maybe-compile (form path object)
+  (declare (list path) (type object object))
+  (let ((tll (ir1-top-level form path nil)))
     (cond (*block-compile* (push tll *top-level-lambdas*))
 	  (t
 	   (compile-top-level (list tll) object)
@@ -691,21 +695,22 @@
 ;;; PROCESS-PROGN  --  Internal
 ;;;
 ;;;    Process a PROGN-like portion of a top-level form.  Forms is a list of
-;;; the forms, and TLF-Num is the top-level form number of the form they came
-;;; out of.
+;;; the forms, and Path is source path of the form they came out of.
 ;;;
-(defun process-progn (forms tlf-num object)
-  (declare (list forms) (type index tlf-num) (type object object))
+(defun process-progn (forms path object)
+  (declare (list forms) (list path) (type object object))
   (dolist (form forms)
-    (process-form form tlf-num object)))
+    (process-form form path object)))
 
 
 ;;; PREPROCESSOR-MACROEXPAND  --  Internal
 ;;;
-;;;    Macroexpand form in the current environment with an error handler.
+;;;    Macroexpand form in the current environment with an error handler.  We
+;;; only expand one level, so that we retain all the intervening forms in the
+;;; source path.
 ;;;
 (defun preprocessor-macroexpand (form)
-  (handler-case #+new-compiler (macroexpand form *fenv*)
+  (handler-case #+new-compiler (macroexpand-1 form *lexical-environment*)
                 #-new-compiler
                 (if (consp form)
 		    (let* ((name (car form))
@@ -716,8 +721,7 @@
 			  form))
 		    form)
     (error (condition)
-	   (compiler-error "(during macroexpansion)~%~A"
-			   condition))))
+       (compiler-error "(during macroexpansion)~%~A" condition))))
 
 
 (proclaim '(special *compiler-error-bailout*))
@@ -733,20 +737,19 @@
 ;;; ### At least for now, always dump package frobbing as interpreted cold load
 ;;; forms.  This might want to be on a switch someday.
 ;;;
-(defun process-form (form tlf-num object)
-  (declare (type index tlf-num) (type object object))
+(defun process-form (form path object)
+  (declare (list path) (type object object))
   (catch 'process-form-error-abort
-    (let* ((*compiler-error-bailout*
+    (let* ((path (or (gethash form *source-paths*) (cons form path)))
+	   (*compiler-error-bailout*
 	    #'(lambda ()
 		(convert-and-maybe-compile
 		 `(error "Execution of a form compiled with errors:~% ~S"
 			 ',form)
-		 tlf-num object)
-		(throw 'process-form-error-abort nil)))
-	   (*current-path* (or (gethash form *source-paths*)
-			       *current-path*)))
+		 path object)
+		(throw 'process-form-error-abort nil))))
       (if (atom form)
-	  (convert-and-maybe-compile form tlf-num object)
+	  (convert-and-maybe-compile form path object)
 	  (case (car form)
 	    ((make-package in-package shadow shadowing-import export
 			   unexport use-package unuse-package import)
@@ -760,29 +763,31 @@
 	     (do-eval-when-stuff
 	      (cadr form) (cddr form)
 	      #'(lambda (forms)
-		  (process-progn forms tlf-num object))))
+		  (process-progn forms path object))))
 	    ((macrolet)
 	     (unless (>= (length form) 2)
 	       (compiler-error "MACROLET form is too short: ~S." form))
 	     (do-macrolet-stuff
 	      (cadr form)
 	      #'(lambda ()
-		  (process-progn (cddr form) tlf-num object))))
-	    (progn (process-progn (cdr form) tlf-num object))
+		  (process-progn (cddr form) path object))))
+	    (progn (process-progn (cdr form) path object))
 	    (file-comment
 	     (unless (and (= (length form) 2) (stringp (second form)))
 	       (compiler-error "Bad FILE-COMMENT form: ~S." form))
 	     (let ((file (first (source-info-current-file *source-info*))))
-	       (if (file-info-comment file)
-		   (compiler-warning "Ignoring extra file comment:~%  ~S."
-				     form)
-		   (setf (file-info-comment file)
-			 (coerce (second form) 'simple-string)))))
+	       (cond ((file-info-comment file)
+		      (compiler-warning "Ignoring extra file comment:~%  ~S."
+					form))
+		     (t
+		      (setf (file-info-comment file)
+			    (coerce (second form) 'simple-string))
+		      (compiler-mumble "~&Comment:~%  ~A~&")))))
 	    (t
 	     (let ((exp (preprocessor-macroexpand form)))
 	       (if (eq exp form)
-		   (convert-and-maybe-compile form tlf-num object)
-		   (process-form exp tlf-num object))))))))
+		   (convert-and-maybe-compile form path object)
+		   (process-form exp path object))))))))
       
   (undefined-value))
 
@@ -897,8 +902,8 @@
 	   (*initial-package* *package*)
 	   (*initial-cookie* *default-cookie*)
 	   (*default-cookie* (copy-cookie *initial-cookie*))
-	   (*current-cookie* (make-cookie))
-	   (*fenv* ())
+	   (*lexical-environment* (make-null-environment))
+	   (*converting-for-interpreter* nil)
 	   (*source-info* info)
 	   (*top-level-lambdas* ())
 	   (*pending-top-level-lambdas* ())
@@ -921,7 +926,7 @@
 	    (when eof-p (return))
 	    (clrhash *source-paths*)
 	    (find-source-paths form tlf)
-	    (process-form form tlf object)))
+	    (process-form form `(original-source-start 0 ,tlf) object)))
 	
 	(when *block-compile*
 	  (compile-top-level (nreverse *top-level-lambdas*) object)
@@ -1005,12 +1010,14 @@
   (compiler-mumble "~2&Python version ~A, VM version ~A on ~A.~%"
 		   compiler-version vm-version
 		   (ext:format-universal-time nil (get-universal-time)
+					      :style :government
 					      :print-weekday nil
 					      :print-timezone nil))
   (dolist (x (source-info-files source-info))
     (compiler-mumble "Compiling: ~A ~A~%"
 		     (namestring (file-info-name x))
 		     (ext:format-universal-time nil (file-info-write-date x)
+						:style :government
 						:print-weekday nil
 						:print-timezone nil)))
   (compiler-mumble "~%")
@@ -1062,7 +1069,7 @@
   (let* ((fasl-file nil)
 	 (error-file-stream nil)
 	 (output-file-name nil)
-	 (*compiler-error-output* nil)
+	 (*compiler-error-output* *compiler-error-output*)
 	 (*compiler-trace-output* nil)
 	 (compile-won nil)
 	 (error-severity nil)
@@ -1191,11 +1198,11 @@
       (let* ((start-errors *compiler-error-count*)
 	     (start-warnings *compiler-warning-count*)
 	     (start-notes *compiler-note-count*)
-	     (*current-cookie* (make-cookie))
-	     (*fenv* ())
+	     (*lexical-environment* (make-null-environment))
 	     (form `#',(get-lambda-to-compile definition))
 	     (*source-info* (make-lisp-source-info form))
 	     (*top-level-lambdas* ())
+	     (*converting-for-interpreter* nil)
 	     (*compiler-error-bailout*
 	      #'(lambda ()
 		  (compiler-mumble
@@ -1212,7 +1219,7 @@
 	     (*last-message-count* 0)
 	     (object (make-core-object)))
 	(find-source-paths form 0)
-	(let ((lambda (ir1-top-level form 0 t)))
+	(let ((lambda (ir1-top-level form '(original-source-start 0 0) t)))
 	  
 	  (compile-fix-function-name lambda name)
 	  (let* ((component
