@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.68 2003/05/28 08:50:39 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.69 2003/06/10 09:20:43 gerd Exp $")
 
 (in-package :pcl)
 
@@ -357,8 +357,16 @@
 
 (setf (gdefinition 'load-defclass) #'real-load-defclass)
 
+;;;
+;;; The DEFCLASS spec says that this redefines a class with proper
+;;; name NAME, where S is the proper name of class C if S =
+;;; (CLASS-NAME C) and (FIND-CLASS S) = C.
+;;;
 (defun ensure-class (name &rest all)
-  (apply #'ensure-class-using-class (find-class name nil) name all))
+  (let ((class (find-class name nil)))
+    (when (and class (neq name (class-name class)))
+      (setq class nil))
+    (apply #'ensure-class-using-class class name all)))
 
 (defmethod ensure-class-using-class ((class null) name &rest args &key)
   (multiple-value-bind (meta initargs)
