@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.2 1991/02/20 14:59:51 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.3 1991/05/24 19:39:59 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.2 1991/02/20 14:59:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/statcount.lisp,v 1.3 1991/05/24 19:39:59 wlott Exp $
 ;;;
 ;;; Functions and utilities for collecting statistics on static vop usages.
 ;;;
@@ -63,7 +63,8 @@
 					 (if elsewherep 3 2))
 				  count))
 			*code-segment*
-			*elsewhere*))
+			*elsewhere*
+			:size))
   (undefined-value))
 
 
@@ -105,7 +106,9 @@
 			  :key (ecase sort-by
 				 (:name #'(lambda (x) (svref x 0)))
 				 (:count #'(lambda (x) (svref x 1)))
-				 (:size #'(lambda (x) (svref x 2))))))
+				 (:size #'(lambda (x)
+					    (+ (svref x 2)
+					       (svref x 3)))))))
 	(when cut-off
 	  (if (zerop cut-off)
 	      (return)
@@ -129,8 +132,8 @@
 		  (/ (coerce size 'double-float) total-size)
 		  w/o-elsewhere
 		  (/ (coerce w/o-elsewhere 'double-float) w/o-elsewhere-size)
-		  (truncate size count)
-		  (truncate w/o-elsewhere count))))))
+		  (round size count)
+		  (round w/o-elsewhere count))))))
   (values))
 
 (defun save-vop-counts (filename)
