@@ -146,10 +146,12 @@
 ;;;
 (defun ir2-block-count (component)
   (declare (type component component))
-  (1+ (ir2-block-number
-       (block-info
-	(block-next
-	 (component-head component))))))
+  (do ((2block (block-info (block-next (component-head component)))
+	       (ir2-block-next 2block)))
+      ((null 2block)
+       (error "What?  No ir2 blocks have a non-nil number?"))
+    (when (ir2-block-number 2block)
+      (return (ir2-block-number 2block)))))
 
 
 ;;; Init-SB-Vectors  --  Internal
