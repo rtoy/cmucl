@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.8 1991/05/15 16:31:54 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.9 1991/05/15 16:38:30 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,6 +49,10 @@
   (if (numbered-parts-p parts)
       (cdr (nth (+ n parts-offset) parts))
       (nth (+ n parts-offset) parts)))
+
+;;; Dummy definition for when we have no CLX...
+(defun inspect (object)
+  (tty-inspect object))
 
 (defun tty-inspect (object)
   (unwind-protect
