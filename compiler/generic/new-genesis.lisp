@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.6 1993/05/13 17:56:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.7 1993/05/13 18:10:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1325,7 +1325,7 @@
 (define-cold-fop (fop-sanctify-for-execution)
   (pop-stack))
 
-(define-cold-vop (fop-code-format :nope)
+(define-cold-fop (fop-code-format :nope)
   (let ((implementation (read-arg 1))
 	(version (read-arg 1)))
     (unless (= implementation (c:backend-fasl-file-implementation c:*backend*))
