@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.13 1993/05/25 22:09:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.14 1993/11/06 04:15:47 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,18 +68,15 @@
 (def-math-rtn "sinh" 1)
 (def-math-rtn "cosh" 1)
 (def-math-rtn "tanh" 1)
-(def-math-rtn "asinh" 1)
-(def-math-rtn "acosh" 1)
-(def-math-rtn "atanh" 1)
+#-hpux (def-math-rtn "asinh" 1)
+#-hpux (def-math-rtn "acosh" 1)
+#-hpux (def-math-rtn "atanh" 1)
 
 ;;; Exponential and Logarithmic.
 (def-math-rtn "exp" 1)
-(def-math-rtn "expm1" 1)
 (def-math-rtn "log" 1)
 (def-math-rtn "log10" 1)
-(def-math-rtn "log1p" 1)
 (def-math-rtn "pow" 2)
-(def-math-rtn "cbrt" 1)
 (def-math-rtn "sqrt" 1)
 (def-math-rtn "hypot" 2)
 
@@ -377,3 +374,29 @@
   "Return the hyperbolic arc tangent of NUMBER."
   (log (* (1+ number) (sqrt (/ (- 1 (* number number)))))))
 
+
+;;; HP-UX does not supply C versions of asinh, acosh, and atanh, so just
+;;; use the same equations as above, but force double-float arith.
+
+#+hpux
+(defun %asinh (number)
+  (declare (type double-float number)
+	   (values double-float)
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
+  (log (+ number (the double-float (sqrt (1+ (* number number)))))))
+
+#+hpux
+(defun %acosh (number)
+  (declare (type double-float number)
+	   (values double-float)
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
+  (log (+ number
+	  (* (1+ number)
+	     (the double-float (sqrt (/ (1- number) (1+ number))))))))
+
+#+hpux
+(defun %atanh (number)
+  (declare (type double-float number)
+	   (values double-float)
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
+  (log (* (1+ number) (the double-float (sqrt (/ (- 1 (* number number))))))))
