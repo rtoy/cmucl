@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.128 2002/01/27 18:29:23 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.129 2002/08/09 21:26:48 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -339,7 +339,7 @@
 
 ;;;; Some flow-graph hacking utilities:
 
-(eval-when (compile eval)
+(eval-when (:compile-toplevel :execute)
 ;;; IR1-Error-Bailout  --  Internal
 ;;;
 ;;;    Bind *compiler-error-bailout* to a function that throws out of the body
@@ -360,7 +360,7 @@
 	   (return-from ,skip nil)))
        (ir1-convert ,start ,cont ,proxy))))
 
-); eval-when (compile eval)
+); eval-when (:compile-toplevel :execute)
 
 
 ;;; Prev-Link  --  Internal
@@ -2489,6 +2489,9 @@
 	    (def (second spec)))
 	(unless (symbolp name)
 	  (compiler-error "Symbol macro name is not a symbol: ~S." name))
+	(let ((kind (info variable kind name)))
+	  (when (member kind '(:special :constant))
+	    (compiler-error "Attempt to bind a special or constant variable with SYMBOL-MACROLET: ~S." name)))
 	(when (assoc name (res) :test #'eq)
 	  (compiler-warning "Repeated name in SYMBOL-MACROLET: ~S." name))
 	(res `(,name . (MACRO . ,def)))))
