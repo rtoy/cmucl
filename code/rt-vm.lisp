@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.3 1991/04/28 20:13:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.4 1992/01/02 22:49:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/rt-vm.lisp,v 1.3 1991/04/28 20:13:53 wlott Exp $
 ;;;
 ;;; This file contains the RT specific runtime stuff.
 ;;;
@@ -101,6 +99,8 @@
 ;;; same format as returned by FLOATING-POINT-MODES.
 ;;;
 (defun sigcontext-floating-point-modes (scp)
+  0
+  #+nil
   (alien-bind ((sc (make-alien 'mach:sigcontext
 					     #.(ext:c-sizeof 'mach:sigcontext)
 					     scp)
