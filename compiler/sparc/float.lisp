@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.1 1990/11/30 17:04:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.2 1990/12/01 22:34:45 wlott Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -198,6 +198,7 @@
     (ecase format
       (:single (inst fcmps x y))
       (:double (inst fcmpd x y)))
+    (inst nop)
     (inst fb (if not-p nope yep) target)
     (inst nop)))
 
