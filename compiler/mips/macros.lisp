@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.10 1990/02/18 05:58:53 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/macros.lisp,v 1.11 1990/02/20 16:19:15 wlott Exp $
 ;;;
 ;;;    This file contains various useful macros for generating MIPS code.
 ;;;
@@ -15,6 +15,21 @@
 ;;; 
 
 (in-package "C")
+
+;;; Handy macro for defining top-level forms that depend on the compile
+;;; environment.
+
+(defmacro expand (expr)
+  (let ((gensym (gensym)))
+    `(macrolet
+	 ((,gensym ()
+	    ,expr))
+       (,gensym))))
+
+
+
+;;; Instruction-like macros.
+
 
 (defmacro nop ()
   "Emit a nop."
@@ -125,7 +140,7 @@
        (inst andi ,ndescr-temp flags-tn (ash 1 interrupted-flag))
        (inst beq ,ndescr-temp zero-tn ,label)
        (nop)
-       (load-foreign ,ndescr-temp "interrupt-resumer")
+       (inst load-foreign-address ,ndescr-temp "interrupt-resumer")
        (inst jr ,ndescr-temp)
        (nop)
        (emit-label ,label))))
