@@ -5,13 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.11 1998/03/21 08:05:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.12 1999/06/19 16:01:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/arith.lisp,v 1.11 1998/03/21 08:05:20 dtc Exp $
-;;;
-;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
+;;; This file contains the VM definition arithmetic VOPs for the SPARC.
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
@@ -288,6 +286,7 @@
   (:results (res :scs (any-reg)))
   (:result-types positive-fixnum)
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) shift temp)
+  (:guard (not (backend-featurep :sparc-v9)))
   (:generator 30
     (let ((loop (gen-label))
 	  (done (gen-label)))
@@ -302,6 +301,21 @@
       (inst add res (fixnum 1))
 
       (emit-label done))))
+
+(define-vop (unsigned-byte-32-count)
+  (:translate logcount)
+  (:note "inline (unsigned-byte 32) logcount")
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg)))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:guard (backend-featurep :sparc-v9))
+  (:generator 2
+    ;; Clear the upper 32-bits, just in case.  Is this really needed?
+    (inst srl res res 0)
+    (inst popc res arg)))
+
 
 ;;; Multiply and Divide.
 
@@ -632,21 +646,46 @@
   Note: the lifetimes of MULTIPLICAND and RESULT-HIGH overlap."
   (declare (type tn multiplier result-high result-low)
 	   (type (or tn (signed-byte 13)) multiplicand))
-  (let ((label (gen-label)))
-    (inst wry multiplier)
-    (inst andcc result-high zero-tn)
-    ;; Note: we can't use the Y register until three insts after it's written.
-    (inst nop)
-    (inst nop)
-    (dotimes (i 32)
-      (inst mulscc result-high multiplicand))
-    (inst mulscc result-high zero-tn)
-    (inst cmp multiplicand)
-    (inst b :ge label)
-    (inst nop)
-    (inst add result-high multiplier)
-    (emit-label label)
-    (inst rdy result-low)))
+  (cond #+nil
+	((backend-featurep :sparc-v9)
+	 ;; Take advantage of V9's 64-bit multiplier.  It seems that
+	 ;; emit-multiply is only used to do an unsigned multiply, so
+	 ;; the code only does an unsigned multiply.
+	 ;;
+	 ;; Clear out the high bits of the multiplier and
+	 ;; multiplicand.  Multiply the two numbers and put the result
+	 ;; in result-high.  Copy the low 32-bits to result-low.  Then
+	 ;; shift result-high so the high 32-bits end up in the low
+	 ;; 32-bits.
+	 (inst srl multiplier multiplier 0)
+	 (unless (numberp multiplicand)
+	   (inst srl multiplicand multiplicand 0))
+	 (inst mulx result-high multiplier multiplicand)
+	 (inst move result-low result-high)
+	 (inst srax result-high 32))
+	((backend-featurep :sparc-v8)
+	 ;; V8 has a multiply instruction.  Same restrictions as
+	 ;; :sparc-v9.  This should also work for the V9, but umul and
+	 ;; the Y register is deprecated on the V9.
+	 (inst umul result-low multiplier multiplicand)
+	 (inst rdy result-high))
+	(t
+	 (let ((label (gen-label)))
+	   (inst wry multiplier)
+	   (inst andcc result-high zero-tn)
+	   ;; Note: we can't use the Y register until three insts
+	   ;; after it's written.
+	   (inst nop)
+	   (inst nop)
+	   (dotimes (i 32)
+	     (inst mulscc result-high multiplicand))
+	   (inst mulscc result-high zero-tn)
+	   (inst cmp multiplicand)
+	   (inst b :ge label)
+	   (inst nop)
+	   (inst add result-high multiplier)
+	   (emit-label label)
+	   (inst rdy result-low)))))
 
 (define-vop (bignum-mult-and-add-3-arg)
   (:translate bignum::%multiply-and-add)
