@@ -46,6 +46,7 @@
 (load "c:ir2tran")
 (load "c:pack")
 (load "c:dyncount")
+(load "c:statcount")
 (load "c:codegen")
 (load "c:main")
 (load "c:assembler")
