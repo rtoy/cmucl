@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.36 1991/04/04 14:13:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.37 1991/04/04 14:31:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1192,6 +1192,9 @@
        (stream &key
 	       ((:error-stream *compiler-error-output*) *error-output*)
 	       ((:trace-stream *compiler-trace-output*) nil)
+	       ((:verbose *compile-verbose*) *compile-verbose*)
+	       ((:print *compile-print*) *compile-print*)
+	       ((:progress *compile-progress*) *compile-progress*)
 	       ((:block-compile *block-compile*) *block-compile-default*)
 	       ((:entry-points *entry-points*) nil)
 	       source-info)
@@ -1270,6 +1273,9 @@
 	  (trace-file nil) 
 	  (error-output t)
 	  (load nil)
+	  ((:verbose *compile-verbose*) *compile-verbose*)
+	  ((:print *compile-print*) *compile-print*)
+	  ((:progress *compile-progress*) *compile-progress*)
 	  ((:block-compile *block-compile*) *block-compile-default*)
 	  ((:entry-points *entry-points*) nil))
   "Compiles Source, producing a corresponding .FASL file.  Source may be a list
