@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.1.1.7 1992/01/22 15:11:16 phg Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/diredcoms.lisp,v 1.1.1.8 1992/01/24 11:17:16 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -334,25 +334,9 @@
     (editor-error "Not in Dired buffer."))
   (let ((dirs (pathname-directory
 	       (dired-info-pathname (value dired-information)))))
-    (declare (simple-vector dirs))
-    (dired-command nil
-		   (make-pathname
-		    :device :absolute
-		    :directory (subseq dirs 0 (1- (length dirs)))))))
-
-(defcommand "Dired Up Directory" (p)
-  "Invokes \"Dired\" on the directory up one level from the current Dired
-   buffer."
-  "Invokes \"Dired\" on the directory up one level from the current Dired
-   buffer."
-  (declare (ignore p))
-  (unless (hemlock-bound-p 'dired-information)
-    (editor-error "Not in Dired buffer."))
-  (let ((dirs (pathname-directory
-	       (dired-info-pathname (value dired-information)))))
     (declare (list dirs))
     (dired-command nil
-		   (truename (make-pathname :directory (nconc dirs ':UP))))))
+		   (truename (make-pathname :directory (nconc dirs '(:UP)))))))
 
 
 
