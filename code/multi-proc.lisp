@@ -5,7 +5,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.34 1999/03/13 15:13:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/multi-proc.lisp,v 1.35 1999/09/04 19:43:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1456,22 +1456,28 @@
       ;; Other processes use process-wait.
       (flet ((fd-usable-for-input ()
 	       (declare (optimize (speed 3) (safety 1)))
-	       (not (eql (alien:with-alien ((read-fds
-					     (alien:struct unix:fd-set)))
-			   (unix:fd-zero read-fds)
-			   (unix:fd-set fd read-fds)
-			   (unix:unix-fast-select
-			    (1+ fd) (alien:addr read-fds) nil nil 0 0))
-			 0)))
+	       (alien:with-alien ((read-fds (alien:struct unix:fd-set)))
+		 (unix:fd-zero read-fds)
+		 (unix:fd-set fd read-fds)
+		 (multiple-value-bind (value err)
+		     (unix:unix-fast-select
+		      (1+ fd) (alien:addr read-fds) nil nil 0 0)
+		   ;; Return true when input is available or there is
+		   ;; an error other than an interrupt.
+		   (and (not (eql value 0))
+			(or value (not (eql err unix:eintr)))))))
 	     (fd-usable-for-output ()
 	       (declare (optimize (speed 3) (safety 1)))
-	       (not (eql (alien:with-alien ((write-fds
-					     (alien:struct unix:fd-set)))
-			   (unix:fd-zero write-fds)
-			   (unix:fd-set fd write-fds)
-			   (unix:unix-fast-select
-			    (1+ fd) nil (alien:addr write-fds) nil 0 0))
-			 0))))
+	       (alien:with-alien ((write-fds (alien:struct unix:fd-set)))
+		 (unix:fd-zero write-fds)
+		 (unix:fd-set fd write-fds)
+		 (multiple-value-bind (value err)
+		     (unix:unix-fast-select
+		      (1+ fd) nil (alien:addr write-fds) nil 0 0)
+		   ;; Return true when ready for output or there is an
+		   ;; error other than an interrupt.
+		   (and (not (eql value 0))
+			(or value (not (eql err unix:eintr))))))))
 
 	(ecase direction
 	  (:input
