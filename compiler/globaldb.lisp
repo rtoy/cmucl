@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.21 1992/02/15 12:07:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.22 1992/03/11 21:21:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1031,6 +1031,9 @@
 (define-info-type function info (or function-info null) nil)
 
 (define-info-type function documentation (or string null) nil)
+
+(define-info-type function definition t nil)
+
 
 ); defun function-info-init
 
