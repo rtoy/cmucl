@@ -65,10 +65,7 @@
   (zap-sym "CONCAT-PNAMES" "LISP")
   (zap-sym "ARG" "LISP")
   (zap-sym "VAR" "LISP")
-  (zap-sym "ONCE-ONLY" "COMPILER")
-  (zap-sym "UNIX-PIPE" "COMPILER")
-  (zap-sym "MAKE-UNIX-PIPE" "MACH")
-  (zap-sym "UNIX-PIPE-P" "MACH"))
+  (zap-sym "ONCE-ONLY" "COMPILER"))
   
 #-new-compiler
 (let ((sym (find-symbol "%CHARACTER-TYPE" (find-package "SYSTEM"))))
@@ -83,8 +80,7 @@
 (export '(info clear-info define-info-class define-info-type))
 #-new-compiler
 (export '(ignorable truly-the maybe-inline))
-#-new-compiler
-(export '(unix-pipe make-unix-pipe unix-pipe-p))
+
 #-new-compiler
 (export '(lisp::with-compilation-unit lisp::debug-info) "LISP")
 
@@ -212,17 +208,6 @@
 #-new-compiler
 (setq lisp::*maximum-interpreter-error-checking* nil)
 
-
-(setq *bytes-consed-between-gcs* 1500000)
-
-(setq *gc-notify-before*
-      #'(lambda (&rest foo)
-	  (declare (ignore foo))
-	  (write-char #\. *terminal-io*)
-	  (force-output *terminal-io*)))
-
-(setq *gc-notify-after* #'list)
-
 
 ;;;; Compile utility:
 
@@ -230,6 +215,22 @@
 ;;;
 (defvar *interactive* nil) ; Batch compilation mode?
 (defvar *new-compile* t) ; Use new compiler?
+
+(setq *bytes-consed-between-gcs* 1500000)
+
+(setq *gc-notify-before*
+      #'(lambda (&rest foo)
+	  (cond (*interactive*
+		 (apply #'lisp::default-gc-notify-before foo))
+		(t
+		 (write-char #\. *terminal-io*)
+		 (force-output *terminal-io*)))))
+
+(setq *gc-notify-after*
+      #'(lambda (&rest foo)
+	  (when *interactive*
+	    (apply #'lisp::default-gc-notify-after foo))))
+
 
 (defvar *log-file* nil)
 (defvar *last-file-position*)
