@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.46 1993/08/05 15:38:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.47 1993/08/12 17:32:36 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,7 +17,9 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
+
+(declaim (optimize (inhibit-warnings 1)))
 
 ;;; Some parameters controlling which optimizations we attempt (for debugging.)
 ;;;
@@ -28,6 +30,7 @@
 
 ;;;; Conflict determination:
 
+(declaim (start-block offset-conflicts-in-sb conflicts-in-sc))
 
 ;;; Offset-Conflicts-In-SB  --  Internal
 ;;;
@@ -88,6 +91,7 @@
       (when (offset-conflicts-in-sb tn sb (+ offset i))
 	(return t)))))
 
+(declaim (end-block))
 
 ;;; Add-Location-Conflicts  --  Internal
 ;;;
@@ -112,12 +116,14 @@
 	(sb (sc-sb sc))
 	(kind (tn-kind tn)))
     (dotimes (i (sc-element-size sc))
+      (declare (type index i))
       (let* ((this-offset (+ offset i))
 	     (loc-confs (svref (finite-sb-conflicts sb) this-offset))
 	     (loc-live (svref (finite-sb-always-live sb) this-offset)))
 	(cond
 	 ((eq kind :component)
 	  (dotimes (num (ir2-block-count *compile-component*) nil)
+	    (declare (type index num))
 	    (setf (sbit loc-live num) 1)
 	    (set-bit-vector (svref loc-confs num))))
 	 (confs
@@ -188,7 +194,7 @@
 		(declare (simple-vector conf))
 		(dotimes (j (length conf))
 		  (declare (type index j))
-		  (clear-bit-vector (svref conf j))))
+		  (clear-ltn-bit-vector (svref conf j))))
 	      (clear-bit-vector (svref always-live i)))))
 
 	(setf (finite-sb-current-size sb) (sb-size sb))
@@ -202,13 +208,13 @@
 ;;; size.
 ;;;
 (defun grow-sc (sc &optional (needed-size 0))
-  (declare (type sc sc))
+  (declare (type sc sc) (type index needed-size))
   (let* ((sb (sc-sb sc))
 	 (size (finite-sb-current-size sb))
+	 (align-mask (1- (sc-alignment sc)))
 	 (inc (max (sb-size sb)
 		   (+ (sc-element-size sc)
-		      (- (* (ceiling size (sc-alignment sc))
-			    (sc-alignment sc))
+		      (- (logandc2 (+ size align-mask) align-mask)
 			 size))
 		   (- needed-size size)))
 	 (new-size (+ size inc))
@@ -223,6 +229,7 @@
 	(replace new-conf conflicts)
 	(do ((i size (1+ i)))
 	    ((= i new-size))
+	  (declare (type index i))
 	  (let ((loc-confs (make-array block-size)))
 	    (dotimes (j block-size)
 	      (setf (svref loc-confs j)
@@ -286,6 +293,7 @@
 
 
 ;;;; Internal errors:
+(declaim (optimize (inhibit-warnings 2)))
 
 ;;; NO-LOAD-FUNCTION-ERROR  --  Internal
 ;;;
@@ -342,8 +350,7 @@
 		 (sc-name sc) (primitive-type-name ptype)))
 	 (t
 	  (error "SC ~S doesn't have any :Unbounded alternate SCs."
-		 (sc-name sc))))))))
-  (undefined-value))
+		 (sc-name sc)))))))))
 
 
 ;;; DESCRIBE-TN-USE  --  Internal
@@ -394,16 +401,19 @@
 	     (confs (finite-sb-live-tns sb)))
 	(assert (eq (sb-kind sb) :finite))
 	(dolist (el (sc-locations sc))
+	  (declare (type index el))
 	  (let ((conf (load-tn-conflicts-in-sc op sc el t)))
 	    (if conf
 		(used (describe-tn-use el conf op))
-		(loop for i from el
-		      as victim = (svref confs i)
-		      repeat (sc-element-size sc) do
-		  (when (and victim (eq (tn-kind victim) :component))
-		    (used (describe-tn-use el victim op))
-		    (return t))
-		  finally (unused el)))))))
+		(do ((i el (1+ i))
+		     (end (+ el (sc-element-size sc))))
+		    ((= i end)
+		     (unused el))
+		  (declare (type index i end))
+		  (let ((victim (svref confs i)))
+		    (when (and victim (eq (tn-kind victim) :component))
+		      (used (describe-tn-use el victim op))
+		      (return t)))))))))
       
     (multiple-value-bind (arg-p n more-p costs load-scs incon)
 			 (get-operand-info op)
@@ -421,8 +431,7 @@
 	       n arg-p
 	       (vop-info-name (vop-info (tn-ref-vop op)))
 	       (unused) (used)
-	       incon)))
-  (undefined-value))
+	       incon))))
 
 
 ;;; NO-LOAD-SCS-ALLOWED-BY-PRIMITIVE-TYPE-ERROR  --  Internal
@@ -449,23 +458,14 @@
 	     (template-name (vop-info (tn-ref-vop ref)))
 	     (primitive-type-name ptype)
 	     (mapcar #'sc-name (listify-restrictions load-scs))
-	     incon)))
-  (undefined-value))
+	     incon))))
+
+(declaim (optimize (inhibit-warnings 1)))
 
 
 ;;;; Register saving:
 
-;;; Original-TN  --  Internal
-;;;
-;;;    If a save TN, return the saved TN, otherwise return TN.  Useful for
-;;; getting the conflicts of a TN that might be a save TN.
-;;;
-(defun original-tn (tn)
-  (declare (type tn tn))
-  (if (member (tn-kind tn) '(:save :save-once :specified-save))
-      (tn-save-tn tn)
-      tn))
-
+(declaim (start-block optimized-emit-saves emit-saves assign-tn-costs))
 
 ;;; Note-Spilled-TN  --  Internal
 ;;;
@@ -577,12 +577,13 @@
        (res nil))
       ((null write)
        (when (and res
-		  (loop for read = (tn-reads tn) then (tn-ref-next read)
-		        while read
-		        never (eq (vop-info-move-args
-				   (vop-info
-				    (tn-ref-vop read)))
-				  :local-call)))
+		  (do ((read (tn-reads tn) (tn-ref-next read)))
+		      ((not read) t)
+		    (when (eq (vop-info-move-args
+			       (vop-info
+				(tn-ref-vop read)))
+			      :local-call)
+		      (return nil))))
 	 (tn-ref-vop res)))
 
     (unless (eq (vop-info-name (vop-info (tn-ref-vop write)))
@@ -851,7 +852,8 @@
 	((null vop))
       (when (eq (vop-info-save-p (vop-info vop)) t)
 	(do-live-tns (tn (vop-save-set vop) block)
-	  (decf (tn-cost tn) (backend-register-save-penalty *backend*))))))
+	  (decf (tn-cost tn)
+		(the index (backend-register-save-penalty *backend*)))))))
   
   (do ((tn (ir2-component-normal-tns (component-info component))
 	   (tn-next tn)))
@@ -866,142 +868,12 @@
 	(incf cost))
       (setf (tn-cost tn) cost))))
 
-
-;;;; Targeting:
-
-;;; Target-If-Desirable  --  Internal
-;;;
-;;;    Link the TN-Refs Read and Write together using the TN-Ref-Target when
-;;; this seems like a good idea.  Currently we always do, as this increases the
-;;; sucess of load-TN targeting.
-;;;
-(defun target-if-desirable (read write)
-  (declare (type tn-ref read write))
-  (setf (tn-ref-target read) write)
-  (setf (tn-ref-target write) read))
-
-
-;;; Check-OK-Target  --  Internal
-;;;
-;;;    If TN can be packed into SC so as to honor a preference to Target, then
-;;; return the offset to pack at, otherwise return NIL.  Target must be already
-;;; packed.  We can honor a preference if:
-;;; -- Target's location is in SC's locations.
-;;; -- The element sizes of the two SCs are the same.
-;;; -- TN doesn't conflict with target's location.
-;;; 
-(defun check-ok-target (target tn sc)
-  (declare (type tn target tn) (type sc sc) (inline member))
-  (let* ((loc (tn-offset target))
-	 (target-sc (tn-sc target))
-	 (target-sb (sc-sb target-sc)))
-    (declare (type index loc))
-    (if (and (eq target-sb (sc-sb sc))
-	     (or (eq (sb-kind target-sb) :unbounded)
-		 (member loc (sc-locations sc)))
-	     (= (sc-element-size target-sc) (sc-element-size sc))
-	     (not (conflicts-in-sc tn sc loc))
-	     (zerop (mod loc (sc-alignment sc))))
-	loc
-	nil)))
-
-
-;;; Find-OK-Target-Offset  --  Internal
-;;;
-;;;    Scan along the target path from TN, looking at readers or writers.  When
-;;; we find a packed TN, return Check-OK-Target of that TN.  If there is no
-;;; target, or if the TN has multiple readers (writers), then we return NIL.
-;;; We also always return NIL after 10 iterations to get around potential
-;;; circularity problems.
-;;;
-(macrolet ((frob (slot)
-	     `(let ((count 10)
-		    (current tn))
-		(declare (type index count))
-		(loop
-		  (let ((refs (,slot current)))
-		    (unless (and (plusp count) refs (not (tn-ref-next refs)))
-		      (return nil))
-		    (let ((target (tn-ref-target refs)))
-		      (unless target (return nil))
-		      (setq current (tn-ref-tn target))
-		      (when (tn-offset current)
-			(return (check-ok-target current tn sc)))
-		      (decf count)))))))
-  (defun find-ok-target-offset (tn sc)
-    (declare (type tn tn) (type sc sc))
-    (or (frob tn-reads)
-	(frob tn-writes))))
-
-
-
-;;;; Location selection:
-
-;;; Select-Location  --  Internal
-;;;
-;;;    Select some location for TN in SC, returning the offset if we succeed,
-;;; and NIL if we fail.  We start scanning at the Last-Offset in an attempt
-;;; to distribute the TNs across all storage.
-;;;
-;;; We call Offset-Conflicts-In-SB directly, rather than using Conflicts-In-SC.
-;;; This allows us to more efficient in packing multi-location TNs: we don't
-;;; have to multiply the number of tests by the TN size.  This falls out
-;;; natually, since we have to be aware of TN size anyway so that we don't call
-;;; Conflicts-In-SC on a bogus offset.
-;;;
-;;; We give up on finding a location after our current pointer has wrapped
-;;; twice.  This will result in testing some locations twice in the case that
-;;; we fail, but is simpler than trying to figure out the soonest failure
-;;; point.
-;;;
-;;; We also give up without bothering to wrap if the current size isn't large
-;;; enough to hold a single element of element-size without bothering to wrap.
-;;; If it doesn't fit this iteration, it won't fit next.
-;;; 
-;;; ### Note that we actually try to pack as many consecutive TNs as possible
-;;; in the same location, since we start scanning at the same offset that the
-;;; last TN was successfully packed in.  This is a weakening of the scattering
-;;; hueristic that was put in to prevent restricted VOP temps from hogging all
-;;; of the registers.  This way, all of these temps probably end up in one
-;;; register.
-;;;
-(defun select-location (tn sc &optional use-reserved-locs)
-  (declare (type tn tn) (type sc sc) (inline member))
-  (let* ((sb (sc-sb sc))
-	 (element-size (sc-element-size sc))
-	 (alignment (sc-alignment sc))
-	 (size (finite-sb-current-size sb))
-	 (start-offset (finite-sb-last-offset sb)))
-    (let ((current-start (* (the index (ceiling start-offset alignment))
-			    alignment))
-	  (wrap-p nil))
-      (declare (type index current-start))
-      (loop
-	(when (> (+ current-start element-size) size)
-	  (cond ((or wrap-p (> element-size size))
-		 (return nil))
-		(t
-		 (setq current-start 0)
-		 (setq wrap-p t))))
-
-	(if (or (eq (sb-kind sb) :unbounded)
-		(and (member current-start (sc-locations sc))
-		     (or use-reserved-locs
-			 (not (member current-start
-				      (sc-reserve-locations sc))))))
-	    (dotimes (i element-size
-			(return-from select-location current-start))
-	      (let ((offset (+ current-start i)))
-		(when (offset-conflicts-in-sb tn sb offset)
-		  (setq current-start
-			(* (the index (ceiling (1+ offset) alignment))
-			   alignment))
-		  (return))))
-	    (incf current-start alignment))))))
+(declaim (end-block))
 
 
 ;;;; Load TN packing:
 
+(declaim (start-block pack-load-tns))
 
 ;;; These variables indicate the last location at which we computed the
 ;;; Live-TNs.  They hold the Block and VOP values that were passed to
@@ -1031,8 +903,10 @@
     (let* ((sc (tn-sc tn))
 	   (sb (sc-sb sc)))
       (when (eq (sb-kind sb) :finite)
-	(loop for offset from (tn-offset tn)
-	      repeat (sc-element-size sc) do
+	(do ((offset (tn-offset tn) (1+ offset))
+	     (end (+ (tn-offset tn) (sc-element-size sc))))
+	    ((= offset end))
+	  (declare (type index offset end))
 	  (setf (svref (finite-sb-live-tns sb) offset) tn)))))
 
   (setq *live-block* block)
@@ -1061,8 +935,10 @@
 		(sc (tn-sc tn))
 		(sb (sc-sb sc)))
 	   (when (eq (sb-kind sb) :finite)
-	     (loop for offset from (tn-offset tn)
-	           repeat (sc-element-size sc) do
+	     (do ((offset (tn-offset tn) (1+ offset))
+		  (end (+ (tn-offset tn) (sc-element-size sc))))
+		 ((= offset end))
+	       (declare (type index offset end))
 	       (setf (svref (finite-sb-live-tns sb) offset) nil))))))
     (do ((ref (vop-refs current) (tn-ref-next-ref ref)))
 	((null ref))
@@ -1072,8 +948,10 @@
 		 (sb (sc-sb sc)))
 	    (when (eq (sb-kind sb) :finite)
 	      (let ((tns (finite-sb-live-tns sb)))
-		(loop for offset from (tn-offset ltn)
-		      repeat (sc-element-size sc) do
+		(do ((offset (tn-offset ltn) (1+ offset))
+		     (end (+ (tn-offset ltn) (sc-element-size sc))))
+		    ((= offset end))
+		  (declare (type index offset end))
 		  (assert (null (svref tns offset)))))))))
 
       (let* ((tn (tn-ref-tn ref))
@@ -1081,8 +959,10 @@
 	     (sb (sc-sb sc)))
 	(when (eq (sb-kind sb) :finite)
 	  (let ((tns (finite-sb-live-tns sb)))
-	    (loop for offset from (tn-offset tn)
-	          repeat (sc-element-size sc) do
+	    (do ((offset (tn-offset tn) (1+ offset))
+		 (end (+ (tn-offset tn) (sc-element-size sc))))
+		((= offset end))
+	      (declare (type index offset end))
 	      (if (tn-ref-write-p ref)
 		  (setf (svref tns offset) nil)
 		  (let ((old (svref tns offset)))
@@ -1171,12 +1051,15 @@
 (defun load-tn-conflicts-in-sc (op sc offset ignore-live)
   (let* ((sb (sc-sb sc))
 	 (size (finite-sb-current-size sb)))
-    (loop for i from offset
-          repeat (sc-element-size sc)
-          thereis (or (when (>= i size) :overflow)
-		      (and (not ignore-live)
-			   (svref (finite-sb-live-tns sb) offset))
-		      (load-tn-offset-conflicts-in-sb op sb i)))))
+    (do ((i offset (1+ i))
+	 (end (+ offset (sc-element-size sc))))
+	((= i end) nil)
+      (declare (type index i end))
+      (let ((res (or (when (>= i size) :overflow)
+		     (and (not ignore-live)
+			  (svref (finite-sb-live-tns sb) offset))
+		     (load-tn-offset-conflicts-in-sb op sb i))))
+	(when res (return res))))))
 
 
 ;;; Find-Load-TN-Target  --  Internal
@@ -1278,13 +1161,15 @@
 	(declare (type index loc))
 	(block SKIP
 	  (collect ((victims nil adjoin))
-	    (loop for i from loc
-	      as victim = (svref (finite-sb-live-tns sb) i)
-	      repeat (sc-element-size sc) do
-	      (when victim
-		(unless (find-in #'tn-next victim normal-tns)
-		  (return-from SKIP))
-		(victims victim)))
+	    (do ((i loc (1+ i))
+		 (end (+ loc (sc-element-size sc))))
+		((= i end))
+	      (declare (type index i end))
+	      (let ((victim (svref (finite-sb-live-tns sb) i)))
+		(when victim
+		  (unless (find-in #'tn-next victim normal-tns)
+		    (return-from SKIP))
+		  (victims victim))))
 	    
 	    (let ((conf (load-tn-conflicts-in-sc op sc loc t)))
 	      (cond ((not conf)
@@ -1390,6 +1275,159 @@
   (undefined-value))
 
 
+;;;; Location-selection, targeting & pack interface.
+
+(declaim (start-block pack pack-tn target-if-desirable))
+
+
+;;;; Targeting:
+
+;;; Target-If-Desirable  --  Internal
+;;;
+;;;    Link the TN-Refs Read and Write together using the TN-Ref-Target when
+;;; this seems like a good idea.  Currently we always do, as this increases the
+;;; sucess of load-TN targeting.
+;;;
+(defun target-if-desirable (read write)
+  (declare (type tn-ref read write))
+  (setf (tn-ref-target read) write)
+  (setf (tn-ref-target write) read))
+
+
+;;; Check-OK-Target  --  Internal
+;;;
+;;;    If TN can be packed into SC so as to honor a preference to Target, then
+;;; return the offset to pack at, otherwise return NIL.  Target must be already
+;;; packed.  We can honor a preference if:
+;;; -- Target's location is in SC's locations.
+;;; -- The element sizes of the two SCs are the same.
+;;; -- TN doesn't conflict with target's location.
+;;; 
+(defun check-ok-target (target tn sc)
+  (declare (type tn target tn) (type sc sc) (inline member))
+  (let* ((loc (tn-offset target))
+	 (target-sc (tn-sc target))
+	 (target-sb (sc-sb target-sc)))
+    (declare (type index loc))
+    (if (and (eq target-sb (sc-sb sc))
+	     (or (eq (sb-kind target-sb) :unbounded)
+		 (member loc (sc-locations sc)))
+	     (= (sc-element-size target-sc) (sc-element-size sc))
+	     (not (conflicts-in-sc tn sc loc))
+	     (zerop (mod loc (sc-alignment sc))))
+	loc
+	nil)))
+
+
+;;; Find-OK-Target-Offset  --  Internal
+;;;
+;;;    Scan along the target path from TN, looking at readers or writers.  When
+;;; we find a packed TN, return Check-OK-Target of that TN.  If there is no
+;;; target, or if the TN has multiple readers (writers), then we return NIL.
+;;; We also always return NIL after 10 iterations to get around potential
+;;; circularity problems.
+;;;
+(macrolet ((frob (slot)
+	     `(let ((count 10)
+		    (current tn))
+		(declare (type index count))
+		(loop
+		  (let ((refs (,slot current)))
+		    (unless (and (plusp count) refs (not (tn-ref-next refs)))
+		      (return nil))
+		    (let ((target (tn-ref-target refs)))
+		      (unless target (return nil))
+		      (setq current (tn-ref-tn target))
+		      (when (tn-offset current)
+			(return (check-ok-target current tn sc)))
+		      (decf count)))))))
+  (defun find-ok-target-offset (tn sc)
+    (declare (type tn tn) (type sc sc))
+    (or (frob tn-reads)
+	(frob tn-writes))))
+
+
+;;;; Location selection:
+
+;;; Select-Location  --  Internal
+;;;
+;;;    Select some location for TN in SC, returning the offset if we succeed,
+;;; and NIL if we fail.  We start scanning at the Last-Offset in an attempt
+;;; to distribute the TNs across all storage.
+;;;
+;;; We call Offset-Conflicts-In-SB directly, rather than using Conflicts-In-SC.
+;;; This allows us to more efficient in packing multi-location TNs: we don't
+;;; have to multiply the number of tests by the TN size.  This falls out
+;;; natually, since we have to be aware of TN size anyway so that we don't call
+;;; Conflicts-In-SC on a bogus offset.
+;;;
+;;; We give up on finding a location after our current pointer has wrapped
+;;; twice.  This will result in testing some locations twice in the case that
+;;; we fail, but is simpler than trying to figure out the soonest failure
+;;; point.
+;;;
+;;; We also give up without bothering to wrap if the current size isn't large
+;;; enough to hold a single element of element-size without bothering to wrap.
+;;; If it doesn't fit this iteration, it won't fit next.
+;;; 
+;;; ### Note that we actually try to pack as many consecutive TNs as possible
+;;; in the same location, since we start scanning at the same offset that the
+;;; last TN was successfully packed in.  This is a weakening of the scattering
+;;; hueristic that was put in to prevent restricted VOP temps from hogging all
+;;; of the registers.  This way, all of these temps probably end up in one
+;;; register.
+;;;
+(defun select-location (tn sc &optional use-reserved-locs)
+  (declare (type tn tn) (type sc sc) (inline member))
+  (let* ((sb (sc-sb sc))
+	 (element-size (sc-element-size sc))
+	 (alignment (sc-alignment sc))
+	 (align-mask (1- alignment))
+	 (size (finite-sb-current-size sb))
+	 (start-offset (finite-sb-last-offset sb)))
+    (let ((current-start
+	   (logandc2 (the index (+ start-offset align-mask)) align-mask))
+	  (wrap-p nil))
+      (declare (type index current-start))
+      (loop
+	(when (> (+ current-start element-size) size)
+	  (cond ((or wrap-p (> element-size size))
+		 (return nil))
+		(t
+		 (setq current-start 0)
+		 (setq wrap-p t))))
+
+	(if (or (eq (sb-kind sb) :unbounded)
+		(and (member current-start (sc-locations sc))
+		     (or use-reserved-locs
+			 (not (member current-start
+				      (sc-reserve-locations sc))))))
+	    (dotimes (i element-size
+			(return-from select-location current-start))
+	      (declare (type index i))
+	      (let ((offset (+ current-start i)))
+		(when (offset-conflicts-in-sb tn sb offset)
+		  (setq current-start
+			(logandc2 (the index (+ (the index (1+ offset))
+						align-mask))
+				  align-mask))
+		  (return))))
+	    (incf current-start alignment))))))
+
+
+;;; Original-TN  --  Internal
+;;;
+;;;    If a save TN, return the saved TN, otherwise return TN.  Useful for
+;;; getting the conflicts of a TN that might be a save TN.
+;;;
+(defun original-tn (tn)
+  (declare (type tn tn))
+  (if (member (tn-kind tn) '(:save :save-once :specified-save))
+      (tn-save-tn tn)
+      tn))
+
+;;;; Pack interface:
+
 ;;; Pack-TN  --  Internal
 ;;;
 ;;;    Attempt to pack TN in all possible SCs, first in the SC chosen by
