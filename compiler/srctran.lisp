@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.10 1990/06/01 13:49:21 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.11 1990/06/01 15:41:29 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -1121,7 +1121,7 @@
 
 	  (when (= command-index penultimus)
 	    (abort-transform "FORMAT control string ends in a ~~: ~S"
-			     (continuation-value control)))
+			     control))
 
 	  ;; Non-command stuff gets write-string'ed out.
 	  (when (/= index command-index)
