@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.30 1993/03/14 18:50:34 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.31 1993/05/18 19:25:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -276,10 +276,11 @@
 
 ;;; INFO-HASH  --  Internal
 ;;;
-;;;    Semantically equivalent to SXHASH, but optimized for legal function
-;;; names.  Note: semantically equivalent does *not* mean that it always
-;;; returns the same value as SXHASH, just that it satisfies the formal
-;;; definition of SXHASH.
+;;;    Sorta semantically equivalent to SXHASH, but optimized for legal
+;;; function names.  Note: semantically equivalent does *not* mean that it
+;;; always returns the same value as SXHASH, just that it satisfies the formal
+;;; definition of SXHASH.  The ``sorta'' is because symbol-hash will not
+;;; necessarily return the same value in different lisps.
 ;;;
 ;;;    All we do for now is pick off the cases of a symbol and a list of two
 ;;; symbols [e.g. (SETF FOO)].  The symbol case is the same as what SXHASH
@@ -290,14 +291,16 @@
 (defun info-hash (x)
   (cond
    ((symbolp x)
-    (%sxhash-simple-string (symbol-name x)))
+    #-gengc (%sxhash-simple-string (symbol-name x))
+    #+gengc (symbol-hash x))
    ((and (listp x)
 	 (eq (car x) 'setf)
 	 (let ((next (cdr x)))
 	   (when (listp next)
 	     (let ((name (car next)))
 	       (when (and (symbolp name) (null (cdr next)))
-		 (logxor (%sxhash-simple-string (symbol-name name))
+		 (logxor #-gengc (%sxhash-simple-string (symbol-name name))
+			 #+gengc (symbol-hash name)
 			 110680597)))))))
    (t
     (sxhash x))))
@@ -457,7 +460,9 @@
   `(the fixnum
 	(logand
 	 (the fixnum
-	      (logxor (the fixnum (cache-hash-eq ,name))
+	      (logxor (the fixnum
+			   #+gengc (info-hash ,name)
+			   #-gengc (cache-hash-eq ,name))
 		      (the fixnum (ash (the fixnum ,type) 7))))
 	 #x3FF)))
 
@@ -486,9 +491,14 @@
 ;;; become unreachable (and hence not be updated), and then could become
 ;;; reachable again in a future GC.
 ;;;
+;;; Not needed with the gengc system, because we use an address independent
+;;; hashing.
+;;; 
+#-gengc
 (defun info-cache-gc-hook ()
   (setq *cached-info-environment* nil))
 ;;;
+#-gengc
 (pushnew 'info-cache-gc-hook *after-gc-hooks*)
 
 
