@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.7 1992/05/21 02:30:24 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/support.lisp,v 1.8 1992/05/21 22:34:15 wlott Exp $
 ;;;
 ;;; This file contains the machine specific support routines needed by
 ;;; the file assembler.
@@ -35,9 +35,9 @@
 	    (inst j (make-fixup ',name :assembly-routine))
 	    (inst nop)
 	    (emit-return-pc lra-label)
+	    (note-this-location ,vop :single-value-return)
 	    (move csp-tn ocfp-tn)
 	    (inst nop)
-	    (note-this-location ,vop :single-value-return)
 	    (inst entry-point)
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
@@ -49,7 +49,8 @@
 			   :from (:eval 0) :to (:eval 1))
 		      ,lra)
 	  (:temporary (:scs (control-stack) :offset nfp-save-offset)
-		      ,nfp-save)))))
+		      ,nfp-save)
+	  (:save-p :compute-only)))))
     (:none
      (values
       `((inst j (make-fixup ',name :assembly-routine))
