@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.36 1991/03/14 21:42:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.37 1991/03/20 03:04:43 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.36 1991/03/14 21:42:22 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.37 1991/03/20 03:04:43 wlott Exp $
 ;;;
 ;;; This file defines the machine specific function signatures.
 ;;;
@@ -22,12 +22,12 @@
 (import '(lisp::%raw-bits lisp::simple-array-p))
 
 (in-package "KERNEL")
-(export '(
-	  current-sp current-fp 
+(export '(current-sp current-fp 
 	  stack-ref %set-stack-ref lra-code-header
 	  function-code-header make-lisp-obj get-lisp-obj-address
 	  function-word-offset code-debug-info
-	  funcallable-instance-p %set-funcallable-instance-info))
+	  funcallable-instance-p %set-funcallable-instance-info
+	  code-header-ref code-header-set code-instructions))
 
 (in-package "C")
 
@@ -255,6 +255,13 @@
 	   (simple-unboxed-array (*)) index index)
   null
   ())
+
+
+;;;; Code object manipulation routines.
+
+(defknown code-instructions (t) system-area-pointer (flushable movable))
+(defknown code-header-ref (t index) t (flushable))
+(defknown code-header-set (t index t) t ())
 
 
 
