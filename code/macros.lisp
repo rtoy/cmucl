@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.79 2002/11/01 17:41:53 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.80 2002/11/20 16:15:39 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1563,16 +1563,20 @@
 ;;; don't want to use IGNORABLE on what might be a special var.
 ;;;
 (defmacro dolist ((var list &optional (result nil)) &body body)
-  (let ((n-list (gensym)))
-    `(do ((,n-list ,list (cdr ,n-list)))
-	 ((endp ,n-list)
-	  ,@(if result
-		`((let ((,var nil))
-		    ,var
-		    ,result))
-		'(nil)))
-       (let ((,var (car ,n-list)))
-	 ,@body))))
+  (multiple-value-bind (forms decls)
+      (parse-body body nil nil)
+    (let ((n-list (gensym)))
+      `(do* ((,n-list ,list (cdr ,n-list)))
+	((endp ,n-list)
+	 ,@(if result
+	       `((let ((,var nil))
+		   ,var
+		   ,result))
+	       '(nil)))
+	(let ((,var (car ,n-list)))
+	  ,@decls
+	  (tagbody
+	     ,@forms))))))
 
 
 (defmacro do (varlist endlist &body (body decls))
