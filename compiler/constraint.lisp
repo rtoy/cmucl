@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.23 2001/04/12 19:45:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/constraint.lisp,v 1.24 2002/08/25 19:01:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,7 +138,9 @@
 ;;;
 (declaim (inline add-complement-constraints))
 (defun add-complement-constraints (if fun x y not-p)
-  (when x
+  (when (and x
+	     (not (eq (if-consequent if)
+		      (if-alternative if))))
     (add-test-constraint (if-consequent if) fun x y not-p)
     (add-test-constraint (if-alternative if) fun x y (not not-p)))
   (undefined-value))
