@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.2 1990/02/27 00:12:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/nlx.lisp,v 1.3 1990/03/05 21:07:54 wlott Exp $
 ;;;
 ;;;    This file contains the definitions of VOPs used for non-local exit
 ;;; (throw, lexical exit, etc.)
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package "C")
 
 
 ;;; Save and restore dynamic environment.
@@ -82,83 +82,6 @@
   (:generator 1
     (move res csp-tn)))
 
-
-;;;; Unwind miscop VOPs:
-
-(define-vop (unwind)
-  (:translate %continue-unwind)
-  (:args (block-arg :target block)
-	 (start :target args)
-	 (count :target nargs))
-  (:temporary (:sc any-reg :offset (first register-arg-offsets)
-		   :from (:argument 0)) block)
-  (:temporary (:sc any-reg :offset args-offset :from (:argument 1)) args)
-  (:temporary (:sc any-reg :offset nargs-offset :from (:argument 2)) nargs)
-  (:temporary (:scs (any-reg) :type fixnum) cur-uwp target-uwp next-uwp)
-  (:temporary (:scs (descriptor-reg)) return-pc)
-  (:temporary (:scs (interior-reg) :type interior) lip)
-  (:node-var node)
-  (:generator 0
-    (let ((error (generate-error-code node di:invalid-unwind-error))
-	  (do-uwp (gen-label))
-	  (do-exit (gen-label)))
-      (move block block-arg)
-      (inst beq block zero-tn error)
-      
-      (move args start)
-      (move nargs count)
-      
-      (load-symbol-value cur-uwp lisp::*current-unwind-protect-block*)
-      (loadw target-uwp block vm:unwind-block-current-uwp-slot)
-      (inst bne cur-uwp target-uwp do-uwp)
-      (nop)
-      
-      (move cur-uwp block)
-
-      (emit-label do-exit)
-      
-      (loadw cont-tn cur-uwp vm:unwind-block-current-cont-slot)
-      (loadw code-tn cur-uwp vm:unwind-block-current-code-slot)
-      (loadw return-pc cur-uwp vm:unwind-block-entry-pc-slot)
-      (lisp-return return-pc lip)
-	     
-      (emit-label do-uwp)
-
-      (loadw next-uwp cur-uwp vm:unwind-block-current-uwp-slot)
-      (b do-exit)
-      (store-symbol-value next-uwp lisp::*current-unwind-protect-block*))))
-
-
-(define-vop (throw)
-  (:args (target)
-	 (start)
-	 (count))
-  (:temporary (:scs (any-reg) :type fixnum)
-	      catch)
-  (:temporary (:scs (descriptor-reg))
-	      tag)
-  (:node-var node)
-  (:generator 0
-    (let ((loop (gen-label))
-	  (exit (gen-label))
-	  (error (generate-error-code node di:unseen-throw-tag-error target)))
-      (load-symbol-value catch lisp::*current-catch-block*)
-
-      (emit-label loop)
-
-      (inst bne catch zero-tn error)
-
-      (loadw tag catch vm:catch-block-tag-slot)
-      (inst beq tag target exit)
-      (nop)
-      (b loop)
-      (loadw catch catch vm:catch-block-previous-catch-slot)
-
-      (emit-label exit)
-
-      ;; ### Need to call unwind somehow.
-
-    )))
 
 
 
@@ -168,8 +91,8 @@
 ;;; block the current Cont, Env, Unwind-Protect, and the entry PC.
 ;;;
 (define-vop (make-unwind-block)
-  (:args (tn)
-	 (entry-offset :scs (any-reg descriptor-reg)))
+  (:args (tn))
+  (:info entry-label)
   (:results (block :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
@@ -179,7 +102,8 @@
     (storew temp result vm:unwind-block-current-uwp-slot)
     (storew cont-tn result vm:unwind-block-current-cont-slot)
     (storew code-tn result vm:unwind-block-current-code-slot)
-    (storew entry-offset result vm:unwind-block-entry-pc-slot)
+    (inst compute-lra-from-code temp code-tn entry-label)
+    (storew temp result vm:catch-block-entry-pc-slot)
     (move block result)))
 
 
@@ -188,8 +112,8 @@
 ;;;
 (define-vop (make-catch-block)
   (:args (tn)
-	 (tag :scs (any-reg descriptor-reg))
-	 (entry-offset :scs (any-reg descriptor-reg)))
+	 (tag :scs (any-reg descriptor-reg)))
+  (:info entry-label)
   (:results (block :scs (descriptor-reg)))
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (descriptor-reg) :target block) result)
@@ -199,10 +123,11 @@
     (storew temp result vm:catch-block-current-uwp-slot)
     (storew cont-tn result vm:catch-block-current-cont-slot)
     (storew code-tn result vm:catch-block-current-code-slot)
-    (storew entry-offset result vm:catch-block-entry-pc-slot)
+    (inst compute-lra-from-code temp code-tn entry-label)
+    (storew temp result vm:catch-block-entry-pc-slot)
 
     (storew tag result vm:catch-block-tag-slot)
-    (load-symbol-value temp lisp::*current-catch-block-slot*)
+    (load-symbol-value temp lisp::*current-catch-block*)
     (storew temp result vm:catch-block-previous-catch-slot)
     (store-symbol-value result lisp::*current-catch-block*)
 
@@ -240,30 +165,67 @@
 
 
 ;;;; NLX entry VOPs:
-;;;
-;;;    We can't just make these miscop variants, since they take funny wired
-;;; operands.
-;;;
+
 
 (define-vop (nlx-entry)
-  (:args (top :scs (descriptor-reg))
+  (:args (sp :scs (descriptor-reg))
 	 (start)
 	 (count))
   (:results (values :more t))
+  (:temporary (:scs (descriptor-reg)) move-temp)
   (:info nvals)
   (:save-p :force-to-stack)
-  #+nil
+  (:node-var node)
   (:generator 30
-    (unless (location= a0 top)
-      (inst lr a0 top))
-    (inst miscopx 'clc::nlx-entry-default-values)
-    (inst cal a1 zero-tn nvals)))
+    (cond ((zerop nvals))
+	  ((= nvals 1)
+	   (let ((no-values (gen-label)))
+	     (inst beq count zero-tn no-values)
+	     (move (tn-ref-tn values) null-tn)
+	     (loadw (tn-ref-tn values) start)
+	     (emit-label no-values)))
+	  (t
+	   (collect ((defaults))
+	     (do ((i 0 (1+ i))
+		  (tn-ref values (tn-ref-across tn-ref)))
+		 ((null tn-ref))
+	       (let ((default-lab (gen-label))
+		     (tn (tn-ref-tn tn-ref)))
+		 (defaults (cons default-lab tn))
+		 
+		 (inst beq count zero-tn default-lab)
+		 (inst addiu count count (fixnum -1))
+		 (sc-case tn
+		   ((descriptor-reg any-reg)
+		    (loadw tn start i))
+		   (control-stack
+		    (loadw move-temp start i)
+		    (store-stack-tn tn move-temp)))))
+		    
+	     (let ((defaulting-done (gen-label)))
+	       
+	       (emit-label defaulting-done)
+	       
+	       (unassemble
+		(assemble-elsewhere node
+		  (dolist (def (defaults))
+		    (emit-label (car def))
+		    (let ((tn (cdr def)))
+		      (sc-case tn
+			((descriptor-reg any-reg)
+			 (move tn null-tn))
+			(control-stack
+			 (store-stack-tn tn null-tn)))))
+		  (b defaulting-done)
+		  (nop)))))))
+    (move csp-tn sp)))
 
 
 (define-vop (nlx-entry-multiple)
   (:args (top :scs (descriptor-reg))
 	 (start)
 	 (count))
+  (:results (new-start) (new-count))
   (:save-p :force-to-stack)
   #+nil
   (:generator 30
