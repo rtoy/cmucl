@@ -52,6 +52,7 @@
 (load "c:codegen")
 (load "c:main")
 (load "c:assembler")
+(load "c:disassem")
 (load "c:assem-opt")
 (load "assem:assemfile")
 (load "assem:support")
