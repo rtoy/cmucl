@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.77 2003/04/29 11:58:16 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.78 2003/10/05 12:34:35 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -881,11 +881,13 @@
   (declare (type combination call))
   (let* ((ref (continuation-use (basic-combination-fun call)))
 	 (leaf (when (ref-p ref) (ref-leaf ref)))
-	 (inlinep (if (and (defined-function-p leaf)
-			   (not (byte-compiling))
-			   (not *converting-for-interpreter*))
+	 (inlinep (if (defined-function-p leaf)
 		      (defined-function-inlinep leaf)
 		      :no-chance)))
+    (when (and (or (byte-compiling)
+		   *converting-for-interpreter*)
+	       (member inlinep '(:inline :maybe-inline)))
+      (setq inlinep :notinline))
     (cond
      ((eq inlinep :notinline) (values nil nil))
      ((not (and (global-var-p leaf)
