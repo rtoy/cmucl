@@ -1,3 +1,60 @@
+12/5/91 to 12/11/91
+
+Code:
+
+Added finalization of opened FD-streams.
+
+Fixed the interpretive indexing conditional (~[...~]) to take into account
+the list of sections is reversed.  Also, check to see if zero is less than
+or equal the index, not the index less than or equal zero.
+
+Added doc strings for pretty-printer defvars.  Added a decend-into for
+print-vector.  Added an export for *print-pprint-dispatch*.
+
+Changed the dispatch for cons to pprint-fill and added a dispatch for
+(cons symbol) to pprint-function-call.  This way the results of
+(list-all-packages) won't show up as a function call.
+
+Picked up Miles' latest disassembler changes (source printing.)
+
+Compiler:
+
+Fixed various places where the result type of a node was spuriously being
+inferred to be NIL, causing spurious code deletion. 
+
+Give a warning in DERIVE-NODE-TYPE when we prove inconsistent types.  This 
+is probably always a bug, but I don't want to use ASSERT until all 
+the problems are fixed.
+
+The compiler now recognizes a new class of local functions and compiles them
+more efficiently.  Basically, in many cases local functions with more than one
+call can share the same stack frame with the caller as long as there is only
+one place that the function ever returns to (all other calls must be
+tail-recursive.)  This compiles recursion-loops much more like setq/go loops.
+
+Fixed various bugs related to dead code deletion which were revealed by the new
+optimizations.
+
+Fixed a bug in the implementation of tail-recursive calls which could cause
+functions to use the number stack without a frame having been allocated.
+
+If we undefine a structure type because of incompatible redefinition, then
+unfreeze it also.
+
+Startup code:
+
+Fixed to install the correct instruction on non-mips machines instead of
+always installing a mips break instruction.
+
+Hemlock:
+
+Fixed indentation for FLET&c to check that we are actually in the first arg
+form before doing funny indentation.
+
+Set the typescript stream character position to zero whenever the user presses
+enter.
+
+
 11/27/91 to 12/5/91
 
 Code:
