@@ -1009,7 +1009,8 @@
 ;;; inhibited when:
 ;;; -- CONT has other uses, or
 ;;; -- CONT receives multiple values, or
-;;; -- the reference is in a different environment from the variable.
+;;; -- the reference is in a different environment from the variable, or
+;;; -- either continuation has a funky TYPE-CHECK annotation.
 ;;;
 ;;;    We change the Ref to be a reference to NIL with unused value, and let it
 ;;; be flushed as dead code.  A side-effect of this substitution is to delete
@@ -1024,7 +1025,9 @@
 	       dest
 	       (not (typep dest '(or creturn exit mv-combination)))
 	       (eq (lambda-home (block-lambda (node-block ref)))
-		   (lambda-home (lambda-var-home var))))
+		   (lambda-home (lambda-var-home var)))
+	       (member (continuation-type-check arg) '(t nil))
+	       (member (continuation-type-check cont) '(t nil)))
       (assert-continuation-type arg (continuation-asserted-type cont))
       (change-ref-leaf ref (find-constant nil))
       (substitute-continuation arg cont)
