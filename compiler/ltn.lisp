@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.28 1991/12/12 14:57:07 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.29 1992/01/10 17:10:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -918,15 +918,21 @@
 ;;;
 ;;;    Flush type checks according to policy.  If the policy is unsafe, then we
 ;;; never do any checks.  If our policy is safe, and we are using a safe
-;;; template, then we can also flush arg type checks.
+;;; template, then we can also flush arg and result type checks.  Result type
+;;; checks are only flushed when the continuation as a single use.
 ;;;
 (defun flush-type-checks-according-to-policy (call policy template)
   (declare (type combination call) (type policies policy)
 	   (type template template))
-  (when (or (not (policy-safe-p policy))
-	    (eq (template-policy template) :safe))
-    (dolist (arg (basic-combination-args call))
-      (flush-type-check arg)))
+  (let ((safe-op (eq (template-policy template) :safe)))
+    (when (or (not (policy-safe-p policy)) safe-op)
+      (dolist (arg (basic-combination-args call))
+	(flush-type-check arg)))
+    (when safe-op
+      (let ((cont (node-cont call)))
+	(when (eq (continuation-use cont) call)
+	  (flush-type-check cont)))))
+
   (undefined-value))
 
 
