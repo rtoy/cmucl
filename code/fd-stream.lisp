@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.62 2002/12/12 19:09:45 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.63 2002/12/12 19:11:11 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -32,8 +32,6 @@
 (in-package "LISP")
 
 (export '(file-stream file-string-length stream-external-format))
-#+nil
-(deftype file-stream () 'fd-stream)
 
 
 ;;;; Buffer manipulation routines.

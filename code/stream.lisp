@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.57 2002/12/12 19:09:46 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.58 2002/12/12 19:11:11 moore Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,11 +46,6 @@
 	  stream-command-args make-stream-command make-case-frob-stream))
 
 (in-package "LISP")
-
-#+nil
-(deftype string-stream ()
-  '(or string-input-stream string-output-stream
-       fill-pointer-output-stream))
 
 ;;;; Standard streams:
 ;;;
