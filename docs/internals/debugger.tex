@@ -36,6 +36,66 @@ runtime logic is localized.
 Handling asynchronous errors and deferred asynchronous errors is a bit more
 involved\ldots
 
+\section{Tracing and Breakpoints}
+\label{sec:trace-and-breakpoints}
+
+Here are a few notes on how tracing of compiled code works.
+
+When a function is traced, a breakpoint instruction is placed at the
+start of the function, replacing the instruction that was there.
+(This is a \verb+:function-start+ breakpoint.)  (This appears to be
+one instruction after the no-arg parsing entry point.)  The breakpoint
+instruction is, of course, architecture-specific, but it must signal a
+\verb+trap_Breakpoint+ trap.
+
+When the code is run, the breakpoint instruction is executed causing a
+trap.  The trap handler runs \verb+HANDLE-BREAKPOINT+ to process it.
+After doing the appropriate processing, we now need to continue.  Of
+course, since the real instruction has been replaced, we to run the
+original instruction.  This is done by now inserting a \emph{new}
+breakpoint after the original breakpoint.  This breakpoint must be of
+the type \verb+trap_AfterBreakpoint+.  The original instruction is
+restored and execution continues from there.  Then the
+\verb+trap_AfterBreakpoint+ instruction gets executed.  The handler
+for this puts back the original breakpoint, thereby preserving the
+breakpoint.  Then we replace the AfterBreakpoint with the original
+instruction and continue from there.
+
+That's all pretty straightforward in concept.
+
+When tracing, additional information is needed.  Breakpoints have the
+ability to run arbitrary lisp code to process the breakpoint.  Tracing
+uses this feature.
+
+When this breakpoint is reached, \verb+HANDLE-BREAKPOINT+ runs the
+breakpoint hook function.  This function figures out where this
+function would return to and creates a new return area and replaces
+the original return address with this new address.  Thus, when the
+function returns, it returns to this new location instead of the
+original.
+
+This new return address is a specially created bogus LRA object.  It
+is a code-component whose body consists of a code template copied from
+an assembly routine into the body.  The assembly routine is the code
+in \verb+function_end_breakpoint_guts+.  This bogus LRA object stores
+the real LRA for the function, and also an indication if the
+known-return convention is used for this function.
+
+The bogus LRA object contains a function-end breakpoint
+(\verb+trap_FunctionEndBreakpoint+).  When it's executed the trap
+handler handles this breakpoint.  It figures out where this trap come
+from and calls \verb+HANDLE-BREAKPOINT+ to handle it.
+\verb+HANDLE-BREAKPOINT+ returns and the trap handler arranges it so
+that this bogus LRA returns to the real LRA.  
+
+Thus, we can do something when a Lisp function returns, like printing
+out the return value for the function for tracing.
+
+There are lots of internal details left out here, but gives a short
+overview of how this works.  For more info, look at
+\verb+code/debug-int.lisp+ and \verb+lisp/breakpoint.c+, and, of
+course, the various \verb+<foo>-arch.c+ files.
+
 \chapter{Debugger Information}
 \index{debugger information}
 \label{debug-info}
@@ -209,7 +269,9 @@ locations (i.e. source paths) must be known, and the \verb+source=>code+ operati
 should return a list of \verb+<source,code>+ pairs, rather than just a list of code
 locations.  This allows the debugger to resolve the ambiguity however it wants.
 
-I guess the formal definition of which source paths we would return is:
+I guess the formal definition of which source paths we would return
+is:
+\begin{quote}
     All source paths in the debug info that have a maximal common prefix with
     the specified path.  i.e. if several paths have the complete specified path
     as a prefix, we return them all.  Otherwise, all paths with an equally
@@ -218,6 +280,7 @@ I guess the formal definition of which source paths we would return is:
     in the first three elements.  As a degenerate case (which probably
     shouldn't happen), if there is no path with anything in common, then we
     return *all* of the paths.
+\end{quote}
 
 
 
@@ -241,8 +304,10 @@ the node for each individual instruction.
 
 
 For tracing block-compiled calls:
+\begin{verbatim}
     Info about return value passing locations?
     Info about where all the returns are?
+\end{verbatim}
 
 We definitely need the return-value passing locations for debug-return.  The
 question is what the interface should be.  We don't really want to have a
@@ -331,8 +396,9 @@ Block:
 
 There are about five things that the debugger might want to know about a
 variable:
+\begin{itemize}
 
-    Name
+\item[Name]
 	Although a lexical variable's name is "really" a symbol (package and
 	all), in practice it doesn't seem worthwhile to require all the symbols
 	for local variable names to be retained.  There is much less VM and GC
@@ -340,7 +406,7 @@ variable:
 	to be able to access gensyms in the debugger, even though they are
 	theoretically ineffable).
 
-    ID
+\item[ID]
 	Which variable with the specified name is this?  It is possible to have
 	multiple variables with the same name in a given function.  The ID is
 	something that makes Name unique, probably a small integer.  When
@@ -349,16 +415,16 @@ variable:
 	since in many cases lifetime information can be used to disambiguate,
 	making qualification unnecessary.
 
-    SC
+\item[SC]
 	When unboxed representations are in use, we must have type information
 	to properly read and write a location.  We only need to know the
 	SC for this, which would be amenable to a space-saving
 	numeric encoding.
 
-    Location
+\item[Location]
 	Simple: the offset in SC.  [Actually, we need the save location too.]
 
-    Lifetime
+\item[Lifetime]
 	In what parts of the program does this variable hold a meaningful
 	value?  It seems prohibitive to record precise lifetime information,
 	both in space and compiler effort, so we will have to settle for some
@@ -373,7 +439,7 @@ variable:
 	Note that this subsumes the notion of which function a variable belongs
 	to.  A given block is only in one function, so the function is
 	implicit.
-
+\end{itemize}
 
 The variable map should represent this information space-efficiently and with
 adequate computational efficiency.
@@ -478,25 +544,29 @@ ADB.]
 
 
 There are currently three relevant context pointers:
-  -- The PC.  The current PC is wired (implicit in the machine).  A saved
+\begin{itemize}
+   \item The PC.  The current PC is wired (implicit in the machine).  A saved
      PC (RETURN-PC) may be anywhere in the current frame.
-  -- The current stack context (CONT).  The current CONT is wired.  A saved
-     CONT (OLD-CONT) may be anywhere in the current frame.
-  -- The current code object (ENV).  The current ENV is wired.  When saved,
-     this is extra-difficult to locate, since it is saved by the caller, and is
-     thus at an unknown offset in OLD-CONT, rather than anywhere in the current
-     frame.
+   \item The current stack context (CONT).  The current CONT is wired.
+     A saved CONT (OLD-CONT) may be anywhere in the current frame.
+   \item The current code object (ENV).  The current ENV is wired.
+     When saved, this is extra-difficult to locate, since it is saved
+     by the caller, and is thus at an unknown offset in OLD-CONT,
+     rather than anywhere in the current frame.
+\end{itemize}
 
 We must have all of these to parse the stack.
 
 With the proposed Debug-Function, we parse the stack (starting at the top) like
 this:
- 1] Use ENV to locate the current Debug-Info
- 2] Use the Debug-Info and PC to determine the current Debug-Function.
- 3] Use the Debug-Function to find the OLD-CONT and RETURN-PC.
- 4] Find the old ENV by searching up the stack for a saved code object
+\begin{enumerate}
+\item Use ENV to locate the current Debug-Info
+\item Use the Debug-Info and PC to determine the current Debug-Function.
+\item Use the Debug-Function to find the OLD-CONT and RETURN-PC.
+\item Find the old ENV by searching up the stack for a saved code object
     containing the RETURN-PC.
- 5] Assign old ENV to ENV, OLD-CONT to CONT, RETURN-PC to PC and goto 1.
+\item Assign old ENV to ENV, OLD-CONT to CONT, RETURN-PC to PC and goto 1.
+\end{enumerate}
 
 If we changed the function representation so that the code and environment were
 a single object, then the location of the old ENV would be simplified.  But we
@@ -510,7 +580,7 @@ it is damaged.  As long as we can locate the start of some frame, we can trace
 the stack above that frame.  We can recognize a probable frame start by
 scanning the stack for a code object (presumably a saved ENV).
 
- Probably we want some fairly general
+Probably we want some fairly general
 mechanism for specifying that a TN should be considered to be live for the
 duration of a specified environment.  It would be somewhat easier to specify
 that the TN is live for all time, but this would become very space-inefficient
