@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.15 1991/02/20 14:58:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/node.lisp,v 1.16 1991/04/20 14:14:38 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 
 ;;; Defvars for these variables appear later.
 (proclaim '(special *current-path* *lexical-environment* *current-component*
-		    *default-cookie*))
+		    *default-cookie* *default-interface-cookie*))
   
 
 (proclaim '(inline internal-make-lexenv))
@@ -33,7 +33,8 @@
 	    (:constructor make-null-environment ())
 	    (:constructor internal-make-lexenv
 			  (functions variables blocks tags type-restrictions
-				     inlines lambda cleanup cookie)))
+				     inlines lambda cleanup cookie
+				     interface-cookie)))
   ;;
   ;; Alist (name . what), where What is either a Functional (a local function)
   ;; or a list (MACRO . <function>) (a local macro, with the specifier
@@ -76,7 +77,12 @@
   (cleanup nil :type (or cleanup null))
   ;;
   ;; The representation of the current OPTIMIZE policy. 
-  (cookie *default-cookie* :type cookie))
+  (cookie *default-cookie* :type cookie)
+  ;;
+  ;; The policy that takes effect in XEPs and related syntax parsing functions.
+  ;; Slots in this cookie may be null to indicate that the normal value in
+  ;; effect.
+  (interface-cookie *default-interface-cookie* :type cookie))
 
 
 ;;; The front-end data structure (IR1) is composed of nodes and continuations.
