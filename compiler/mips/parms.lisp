@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.108 1993/05/07 07:34:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.109 1993/05/20 11:46:31 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -232,6 +232,8 @@
     mach::handle-exception
     di::handle-breakpoint
     di::handle-function-end-breakpoint
+    lisp::do-before-gc-stuff
+    lisp::do-after-gc-stuff
     lisp::fdefinition-object
     apply
 
