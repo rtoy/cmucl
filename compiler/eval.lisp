@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.16 1991/02/20 14:57:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.17 1991/04/09 14:40:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.16 1991/02/20 14:57:25 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.17 1991/04/09 14:40:43 ram Exp $
 ;;; 
 ;;; This file contains the interpreter.  We first convert to the compiler's
 ;;; IR1 and interpret that.
@@ -24,6 +24,7 @@
 (export '(internal-eval *eval-stack-trace* *internal-apply-node-trace*
 			*interpreted-function-cache-minimum-size*
 			*interpreted-function-cache-threshold*
+			flush-interpreted-function-cache
 			trace-eval interpreted-function-p
 			interpreted-function-lambda-expression
 			interpreted-function-closure
@@ -340,6 +341,16 @@
 ;;;
 (pushnew 'interpreter-gc-hook ext:*before-gc-hooks*)
 
+
+;;; FLUSH-INTERPRETED-FUNCTION-CACHE  --  Interface
+;;;
+(defun flush-interpreted-function-cache ()
+  "Clear all entries in the eval function cache.  This allows the internal
+  representation of the functions to be reclaimed, and also lazily forces
+  macroexpansions to be recomputed."
+  (dolist (fun *interpreted-function-cache*)
+    (setf (eval-function-definition fun) nil))
+  (setq *interpreted-function-cache* ()))
 
 
 ;;;; INTERNAL-APPLY-LOOP macros.
