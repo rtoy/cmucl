@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: C -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.3 1990/10/28 08:21:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/arith.lisp,v 1.4 1990/11/03 17:22:51 wlott Exp $
 ;;;
 ;;; Stuff to handle simple cases for generic arithmetic.
 ;;;
 ;;; Written by William Lott.
 ;;;
 
-(in-package "C")
+(in-package "MIPS")
 
 
 (define-assembly-routine (generic-+

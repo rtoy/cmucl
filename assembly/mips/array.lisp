@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,13 +7,13 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.15 1990/10/28 06:01:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.16 1990/11/03 17:22:54 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
 ;;; Written by William Lott.
 ;;; 
-(in-package "C")
+(in-package "MIPS")
 
 
 #+assembler

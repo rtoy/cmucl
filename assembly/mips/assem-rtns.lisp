@@ -1,4 +1,4 @@
-;;; -*- Package: C; Log: C.Log -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,10 +7,10 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.26 1990/10/28 06:01:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.27 1990/11/03 17:22:57 wlott Exp $
 ;;;
 ;;;
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Return-multiple with other than one value

@@ -1,4 +1,4 @@
-;;; -*- Log: code.log; Package: C -*-
+;;; -*- Package: MIPS -*-
 ;;;
 ;;; **********************************************************************
 ;;; This code was written as part of the Spice Lisp project at
@@ -7,14 +7,14 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.10 1990/10/28 06:01:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/bit-bash.lisp,v 1.11 1990/11/03 17:23:00 wlott Exp $
 ;;;
 ;;; Stuff to implement bit bashing.
 ;;;
 ;;; Written by William Lott.
 ;;;
 
-(in-package "C")
+(in-package "MIPS")
 
 
 ;;;; Blitting macros.  Used only at assemble time.
