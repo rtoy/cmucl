@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.29 1990/07/03 17:27:59 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.30 1990/07/10 13:58:44 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -204,17 +204,15 @@
 
 (define-vop (fast-ash)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg))
+  (:args (number :scs (signed-reg unsigned-reg) :to :save)
 	 (amount :scs (signed-reg immediate negative-immediate)))
   (:arg-types (:or signed-num unsigned-num) signed-num)
   (:results (result :scs (signed-reg unsigned-reg)))
   (:result-types (:or signed-num unsigned-num))
   (:translate ash)
   (:policy :fast-safe)
-  (:temporary (:scs (non-descriptor-reg) :type random :to (:result 0))
-	      ndesc)
-  (:temporary (:scs (non-descriptor-reg) :type random :from (:argument 1))
-	      foo)
+  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:temporary (:sc non-descriptor-reg :to :eval) temp)
   (:generator 3
     (sc-case amount
       (signed-reg
@@ -222,8 +220,8 @@
 	     (done (gen-label)))
 	 (inst bgez amount positive)
 	 (inst subu ndesc zero-tn amount)
-	 (inst and foo ndesc #x1f)
-	 (inst beq foo ndesc done)
+	 (inst slt temp ndesc 31)
+	 (inst bne temp zero-tn done)
 	 (inst sra result number ndesc)
 	 (inst b done)
 	 (inst sra result number 31)
