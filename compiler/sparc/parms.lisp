@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.16 1992/05/21 22:53:33 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.17 1992/05/24 15:57:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -122,6 +122,14 @@
 
 ); eval-when
 
+;;; NUMBER-STACK-DISPLACEMENT
+;;;
+;;; The number of bytes reserved above the number stack pointer.  These
+;;; slots are required by architecture for a place to spill register windows.
+;;; 
+(defconstant number-stack-displacement
+  (* 16 vm:word-bytes))
+
 
 ;;;; Description of the target address space.
 
@@ -164,7 +172,6 @@
   call-site
   function-prologue
   function-epilogue)
-
 
 
 ;;;; Static symbols.
