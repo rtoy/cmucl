@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hi-integrity.lisp,v 1.3 1993/08/25 02:08:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/hi-integrity.lisp,v 1.4 1993/08/25 02:23:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,7 +15,7 @@
 ;;;
 ;;; Hack to check a buffer's integrity.
 ;;;
-(in-package "HEMLOCK"-internals)
+(in-package "HEMLOCK-INTERNALS")
 
 (defun checkit (&optional (buffer (current-buffer)))
   "Returns NIL if the buffer's region is OK, or a losing line if it ain't.
