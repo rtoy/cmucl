@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.5 1997/03/15 17:35:03 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/alpha-assem.S,v 1.6 1997/03/19 20:06:34 pw Exp $ */
 #include <machine/regdef.h>
 #include <machine/pal.h>
 
@@ -111,6 +111,9 @@ call_into_lisp_LRA:
 	ldq	s4, framesize-8*3(sp)
 	ldq	s5, framesize-8*2(sp)
 	ldq	s6, framesize-8*1(sp)
+
+	/* Restore the C stack! */
+	lda	sp, framesize(sp)
 
 	ret	zero,(ra),1
 	.globl	call_into_lisp_end
