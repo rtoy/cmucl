@@ -1,25 +1,5 @@
 #define LANGUAGE_ASSEMBLY
 
-#include <machine/asm.h>
-
-#ifdef hpux
-#define r0 %r0
-#define r1 %r1
-#define r2 %r2
-#define r4 %r4
-#define r19 %r19
-#define r31 %r31
-#define sp %sp
-#define sr1 %sr1
-#define sr4 %sr4
-#define t1 %t1
-#define arg0 %arg0
-#define arg1 %arg1
-#define arg2 %arg2
-#define ret0 %ret0
-#define dp %dp
-#endif
-
 #include "internals.h"
 #include "lispregs.h"
 
@@ -252,13 +232,13 @@ sanctify_for_execution
 	ldo	-1(arg1),arg1
 	depi	0,31,5,arg0
 	depi	0,31,5,arg1
-	ldsid	(arg0),t1
-	mtsp	t1,sr1
-	ldi	32,t1			; bytes per cache line
+	ldsid	(arg0),r19
+	mtsp	r19,sr1
+	ldi	32,r19			; bytes per cache line
 sanctify_loop
 	fdc	0(sr1,arg0)
 	comb,<	arg0,arg1,sanctify_loop
-	fic,m	t1(sr1,arg0)
+	fic,m	r19(sr1,arg0)
 	.leave
 	.procend
 
