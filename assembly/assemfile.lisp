@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.28 1992/05/22 15:33:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.29 1992/05/22 17:09:08 wlott Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -70,7 +70,7 @@
 				  :direction :output
 				  :if-exists :supersede)
 	      (format file "Assembly listing for ~A:~3%" (namestring name))
-	      (assem:dump-segment *code-segment* file)
+	      (assem:dump-segment *code-segment* :stream file)
 	      (fresh-line file)))
 	  (setq won t))
       (deletef :assembler *features*)
