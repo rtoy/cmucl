@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.46 1997/05/17 16:54:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.47 1997/05/29 20:49:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -306,7 +306,7 @@
 ;;; From sys/stat.h
 ;; oh boy, in linux-> 2 stat(s)!!
 
-#-(or svr4 alpha freebsd linux)
+#-(or svr4 freebsd linux)		; eg hpux and alpha
 (def-alien-type nil
   (struct stat
     (st-dev dev-t)
