@@ -5,8 +5,8 @@
 (c::%proclaim '(optimize (speed 2) (space 2) (c::brevity 2)))
 (setq *print-pretty* nil)
 
-(with-compiler-log-file ("c:compile-compiler.log")
-
+;(with-compiler-log-file ("c:compile-compiler.log")
+#+nil
 (unless *new-compile*
   (comf "code:fdefinition")
   (load "code:extensions.lisp")
@@ -22,7 +22,7 @@
   (comf "code:struct" :load t)
   (comf "c:macros" :load t :bootstrap-macros :both))
 
-(when *new-compile*
+;(when *new-compile*
   (comf "code:globals" :always-once t) ; For global variables.
   (comf "code:struct" :always-once t) ; For structures.
   (comf "c:globals" :always-once t)
@@ -80,7 +80,7 @@
 (comf "c:rt/assem-insts" :load t)
 
 
-(when *new-compile*
+;(when *new-compile*
   (comf "c:eval-comp")
   (comf "c:eval" :bootstrap-macros :both))
 
@@ -88,6 +88,7 @@
 (comf "c:aliencomp")
 (comf "c:debug-dump")
 
+#+nil
 (unless *new-compile*
   (comf "code:constants" :load t :proceed t)
   (comf "assem:rompconst" :load t :proceed t)
@@ -98,7 +99,7 @@
 
 (comf "c:rt/dump")
 
-(when *new-compile*
+;(when *new-compile*
   (comf "c:rt/core"))
 
 (comf "c:rt/vm" :always-once *new-compile*)
@@ -137,6 +138,7 @@
 #+new-compiler
 (comf "c:rt/genesis")
 
+#+nil
 (unless *new-compile*
   (comf "code:defstruct")
   (comf "code:error")
