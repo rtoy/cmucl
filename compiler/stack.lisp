@@ -95,9 +95,7 @@
 	(dolist (pred (block-pred block))
 	  (if (eq pred (component-head (block-component block)))
 	      (assert (find block
-			    (environment-nlx-info
-			     (lambda-environment
-			      (block-lambda block)))
+			    (environment-nlx-info (block-environment block))
 			    :key #'nlx-info-target))
 	      (let ((pred-stack (ir2-block-end-stack (block-info pred))))
 		(unless (tailp new-stack pred-stack)
@@ -236,7 +234,7 @@
     (do-blocks (block component)
       (let ((top (car (ir2-block-end-stack (block-info block)))))
 	(dolist (succ (block-succ block))
-	  (when (and (block-lambda succ)
+	  (when (and (block-start succ)
 		     (not (eq (car (ir2-block-start-stack (block-info succ)))
 			      top)))
 	    (discard-unused-values block succ))))))
