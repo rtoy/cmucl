@@ -83,21 +83,23 @@
 		    (block-component (node-block (lambda-bind lambda))))
 		   (*all-components* (list component)))
 	      (local-call-analyze component)))
-	  (let* ((components (find-initial-dfo lambdas))
-		 (*all-components* components))
+	  (multiple-value-bind (components top-components)
+			       (find-initial-dfo lambdas)
+	    (let ((*all-components* (append components top-components)))
+	      (when *check-consistency*
+		(maybe-mumble "[Check]~%")
+		(check-ir1-consistency *all-components*))
+	      ;;
+	      ;; This DOLIST body comes from the beginning of
+	      ;; COMPILE-COMPONENT.
+	      (dolist (component *all-components*)
+		(let ((*compile-component* component))
+		  (maybe-mumble "Env ")
+		  (environment-analyze component))
+		(annotate-component-for-eval component))
 	    (when *check-consistency*
 	      (maybe-mumble "[Check]~%")
-	      (check-ir1-consistency components))
-	    ;;
-	    ;; This DOLIST body comes from the beginning of COMPILE-COMPONENT.
-	    (dolist (component components)
-	      (let ((*compile-component* component))
-		(maybe-mumble "Env ")
-		(environment-analyze component))
-	      (annotate-component-for-eval component))
-	    (when *check-consistency*
-	      (maybe-mumble "[Check]~%")
-	      (check-ir1-consistency components)))
+	      (check-ir1-consistency *all-components*))))
 	  (ir1-finalize)
 	  (car lambdas))))))
 
