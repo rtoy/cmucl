@@ -788,7 +788,9 @@
 ;;;
 (defun check-tn-conflicts (component)
   (do-packed-tns (tn component)
-    (unless (or (tn-reads tn) (tn-writes tn))
+    (unless (or (not (eq (tn-kind tn) :normal))
+		(tn-reads tn)
+		(tn-writes tn))
       (barf "No references to ~S." tn))
 
     (unless (tn-sc tn) (barf "~S has no SC." tn))
@@ -797,7 +799,8 @@
 	  (kind (tn-kind tn)))
       (cond
        ((eq kind :component)
-	(unless (member tn (ir2-component-component-tns component))
+	(unless (member tn (ir2-component-component-tns
+			    (component-info component)))
 	  (barf "~S not in Component-TNs for ~S." tn component)))
        ((eq kind :environment)
 	(let ((env (tn-environment tn)))
