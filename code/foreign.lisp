@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.42 2002/08/28 07:16:36 moore Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.43 2003/01/21 20:55:49 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -693,7 +693,7 @@ to skip undefined symbols which don't have an address."
   (let ((result 0))
        (do ((table *global-table* (cdr table)))
 	   ((or (null (car table)) (not (zerop result))))
-	   (setq result (sap-int (dlsym (car table) symbol))))
+	   (setq result (sap-int (dlsym (caar table) symbol))))
        (values result)))
 
 (defun load-foreign (files &key
