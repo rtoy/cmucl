@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.37 1992/02/13 10:37:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.38 1992/03/08 18:32:38 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -550,6 +550,12 @@
      (output-sap object stream))
     (weak-pointer
      (output-weak-pointer object stream))
+    (lra
+     (output-lra object stream))
+    (code-component
+     (output-code-component object stream))
+    (fdefn
+     (output-fdefn object stream))
     (t
      (output-random object stream))))
 
@@ -1686,6 +1692,27 @@
 	  (t
 	   (write-string "#<Broken Weak Pointer>" stream)))))
 
+(defun output-code-component (component stream)
+  (print-unreadable-object (component stream :identity t)
+    (let ((dinfo (code-header-ref object vm:code-debug-info-slot)))
+      (cond ((eq dinfo :bogus-lra)
+	     (write-string "Bogus Code Object" stream))
+	    (t
+	     (write-string "Code Object" stream)
+	     (when dinfo
+	       (write-char #\space stream)
+	       (output-object (c::compiled-debug-info-name dinfo) stream)))))))
+
+(defun output-lra (lra stream)
+  (print-unreadable-object (object stream :identity t)
+    (write-string "Return PC Object" stream)))
+
+(defun output-fdefn (fdefn stream)
+  (print-unreadable-object (object stream)
+    (write-string "FDEFINITION object for ")
+    (output-object (fdefn-name fdefn))))
+
+
 
 ;;;; Various flavors of function pointers.
 
@@ -1737,18 +1764,6 @@
 	(#.vm:other-pointer-type
 	  (let ((type (get-type object)))
 	    (case type
-	      (#.vm:code-header-type
-	       (let ((dinfo (code-header-ref object vm:code-debug-info-slot)))
-		 (cond ((eq dinfo :bogus-lra)
-			(write-string "Bogus Code Object" stream))
-		       (t
-			(write-string "Code Object" stream)
-			(when dinfo
-			  (write-char #\space stream)
-			  (output-object (c::compiled-debug-info-name dinfo)
-					 stream))))))
-	      (#.vm:return-pc-header-type
-	       (write-string "Return PC Object" stream))
 	      (#.vm:value-cell-header-type
 	       (write-string "Value Cell " stream)
 	       (output-object (%primitive value-cell-ref object) stream))
