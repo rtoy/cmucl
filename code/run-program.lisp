@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.23 1998/06/16 06:58:57 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.24 2001/04/10 12:46:37 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,6 +153,7 @@
    whom is :process-group, use the killpg Unix system call.  If whom is
    :pty-process-group deliver the signal to whichever process group is currently
    in the foreground."
+  (declare (type process proc))
   (let ((pid (ecase whom
 	       ((:pid :process-group)
 		(process-pid proc))
