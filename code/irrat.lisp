@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.20 1997/08/26 18:00:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.21 1997/08/30 18:21:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -610,7 +610,6 @@
 ;;;;
 ;;;; Internal functions:
 ;;;;    square coerce-to-complex-type cssqs complex-log-scaled
-;;;;    suppress-divide-by-zero
 ;;;;
 ;;;;
 ;;;; Please send any bug reports, comments, or improvements to Raymond
@@ -687,49 +686,41 @@ and Y are coerced to single-float."
 	       (float y 1.0))))
 
 (defun cssqs (z)
-  ;; Compute |x+i*y|^2/2^k carefully.  The result is r + i*k, where k
-  ;; is an integer.
+  ;; Compute |(x+i*y)/2^k|^2 scaled to avoid over/underflow. The
+  ;; result is r + i*k, where k is an integer.
   
   ;; Save all FP flags
-  (let* ((fp-modes (get-floating-point-modes))
-	 (x (float (realpart z) 1d0))
-	 (y (float (imagpart z) 1d0))
-	 (k 0)
-	 (rho 0d0)
-	 )
+  (let ((x (float (realpart z) 1d0))
+	(y (float (imagpart z) 1d0))
+	(k 0)
+	(rho 0d0))
     (declare (double-float x y)
 	     (type (double-float 0d0) rho)
 	     (fixnum k))
-    (unwind-protect
-	 (progn
-	   ;; Would this be better handled using an exception handler
-	   ;; to catch the overflow or underflow signal?  For now, we
-	   ;; turn all traps off and look at the accrued exceptions to
-	   ;; see if any signal would have been raised.
-
-	   (set-floating-point-modes :traps nil :accrued-exceptions nil)
-
-	   (setf rho (+ (square x) (square y)))
-	   (cond ((and (or (float-trapping-nan-p rho)
-			   (float-infinity-p rho))
-		       (or (float-infinity-p (abs x))
-			   (float-infinity-p (abs y))))
-		  (setf rho #.ext:double-float-positive-infinity))
-		 ((let* ((exceptions (getf (get-floating-point-modes)
-					   :accrued-exceptions))
-			 (threshold #.(/ least-positive-double-float
-					 double-float-epsilon)))
-		    ;; overflow raised or (underflow raised and rho <
-		    ;; lambda/eps)
-		    (or (member :overflow exceptions)
-			(and (member :underflow exceptions)
-			     (< rho threshold))))
-		  (setf k (logb (max (abs x) (abs y))))
-		  (setf rho (+ (square (scalb x (- k)))
-			       (square (scalb y (- k)))))))
-	   (values rho k))
-      ;; restore over/underflow flags
-      (apply #'set-floating-point-modes fp-modes))))
+    ;; Would this be better handled using an exception handler to
+    ;; catch the overflow or underflow signal?  For now, we turn all
+    ;; traps off and look at the accrued exceptions to see if any
+    ;; signal would have been raised.
+    (with-float-traps-masked (:underflow :overflow)
+      (setf rho (+ (square x) (square y)))
+      (cond ((and (or (float-trapping-nan-p rho)
+		      (float-infinity-p rho))
+		  (or (float-infinity-p (abs x))
+		      (float-infinity-p (abs y))))
+	     (setf rho #.ext:double-float-positive-infinity))
+	    ((let ((threshold #.(/ least-positive-double-float
+				   double-float-epsilon))
+		   (traps (ldb vm::float-exceptions-byte
+			       (vm:floating-point-modes))))
+	       ;; Overflow raised or (underflow raised and rho <
+	       ;; lambda/eps)
+	       (or (not (zerop (logand vm:float-overflow-trap-bit traps)))
+		   (and (not (zerop (logand vm:float-underflow-trap-bit traps)))
+			(< rho threshold))))
+	     (setf k (logb (max (abs x) (abs y))))
+	     (setf rho (+ (square (scalb x (- k)))
+			  (square (scalb y (- k))))))))
+    (values rho k)))
 
 (defun complex-sqrt (z)
   "Principle square root of Z
@@ -916,22 +907,6 @@ Z may be any number, but the result is always a complex."
 ;; However, we take a pragmatic approach and just use the whole
 ;; expression.
 
-;; This macro suppresses any divide-by-zero errors in the body.  After
-;; execution of the body, the floating point modes are returned as
-;; they were before entry.
-
-(defmacro suppress-divide-by-zero (&body body)
-  (let ((fp-modes (gensym)))
-    `(let ((,fp-modes (get-floating-point-modes)))
-      (unwind-protect
-	   (progn
-	     ;; Remove the divide-by-zero trap but leave everything
-	     ;; else undisturbed.
-	     (set-floating-point-modes
-	      :traps (remove :divide-by-zero (getf ,fp-modes :traps)))
-	     ,@body)
-	(apply #'set-floating-point-modes ,fp-modes)))))
-
 ;; NOTE: The formula given by Kahan is somewhat ambiguous in whether
 ;; it's the conjugate of the square root or the square root of the
 ;; conjugate.  This needs to be checked.
@@ -953,11 +928,11 @@ Z may be any number, but the result is always a complex."
   (declare (number z))
   (let ((sqrt-1+z (complex-sqrt (+ 1 z)))
 	(sqrt-1-z (complex-sqrt (- 1 z))))
-    (suppress-divide-by-zero
-     (complex (* 2 (atan (/ (realpart sqrt-1-z)
-			    (realpart sqrt-1+z))))
-	      (asinh (imagpart (* (conjugate sqrt-1+z)
-				  sqrt-1-z)))))))
+    (with-float-traps-masked (:divide-by-zero)
+      (complex (* 2 (atan (/ (realpart sqrt-1-z)
+			     (realpart sqrt-1+z))))
+	       (asinh (imagpart (* (conjugate sqrt-1+z)
+				   sqrt-1-z)))))))
 
 (defun complex-acosh (z)
   "Compute acosh z = 2 * log(sqrt((z+1)/2) + sqrt((z-1)/2))
@@ -966,11 +941,11 @@ Z may be any number, but the result is always a complex."
   (declare (number z))
   (let ((sqrt-z-1 (complex-sqrt (- z 1)))
 	(sqrt-z+1 (complex-sqrt (+ z 1))))
-    (suppress-divide-by-zero
-     (complex (asinh (realpart (* (conjugate sqrt-z-1)
-				  sqrt-z+1)))
-	      (* 2 (atan (/ (imagpart sqrt-z-1)
-			    (realpart sqrt-z+1))))))))
+    (with-float-traps-masked (:divide-by-zero)
+      (complex (asinh (realpart (* (conjugate sqrt-z-1)
+				   sqrt-z+1)))
+	       (* 2 (atan (/ (imagpart sqrt-z-1)
+			     (realpart sqrt-z+1))))))))
 
 
 (defun complex-asin (z)
@@ -980,11 +955,11 @@ Z may be any number, but the result is always a complex."
   (declare (number z))
   (let ((sqrt-1-z (complex-sqrt (- 1 z)))
 	(sqrt-1+z (complex-sqrt (+ 1 z))))
-    (suppress-divide-by-zero
-     (complex (atan (/ (realpart z)
-		       (realpart (* sqrt-1-z sqrt-1+z))))
-	      (asinh (imagpart (* (conjugate sqrt-1-z)
-				  sqrt-1+z)))))))
+    (with-float-traps-masked (:divide-by-zero)
+      (complex (atan (/ (realpart z)
+			(realpart (* sqrt-1-z sqrt-1+z))))
+	       (asinh (imagpart (* (conjugate sqrt-1-z)
+				   sqrt-1+z)))))))
 
 (defun complex-asinh (z)
   "Compute asinh z = log(z + sqrt(1 + z*z))

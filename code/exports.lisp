@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.123 1997/08/25 19:18:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.124 1997/08/30 18:21:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -961,6 +961,7 @@
              "TRANSLATE-MOUSE-KEY-EVENT" "TRULY-THE" "UNCOMPILE"
              "UNDEFINED-VALUE" "UNENCAPSULATE" "UNIX-NAMESTRING" "WEAK-POINTER"
              "WEAK-POINTER-P" "WEAK-POINTER-VALUE" "WITH-CLX-EVENT-HANDLING"
+	     "WITH-FLOAT-TRAPS-MASKED"
 	     "FEATUREP" "*IGNORE-EXTRA-CLOSE-PARENTHESES*" "*HERALD-ITEMS*"
 	     "SEARCH-LIST-DEFINED-P" "BYTES-CONSED-BETWEEN-GCS"
 	     "*LOAD-SOURCE-TYPES*" "*LOAD-OBJECT-TYPES*"

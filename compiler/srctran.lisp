@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.52 1997/06/16 18:51:33 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.53 1997/08/30 18:21:40 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -296,17 +296,6 @@
     (%make-interval :low (normalize-bound low)
 		    :high (normalize-bound high))))
 
-(defmacro without-over/under-flow-traps (&body body)
-  "Executes BODY with traps on overflow, underflow, and divide-by-zero
-turned off"
-  (let ((modes (gensym)))
-    `(let ((,modes (ext:get-floating-point-modes)))
-      (unwind-protect
-	   (progn
-	     (ext:set-floating-point-modes :traps '(:invalid))
-	     ,@body)
-	(apply #'ext:set-floating-point-modes ,modes)))))
-
 (proclaim '(inline bound-value set-bound bound-func))
 
 ;;; Extract the numeric value of a bound.  Return NIL, if X is NIL.
@@ -322,15 +311,15 @@ turned off"
 ;;; the result will be open.  IF X is NIL, the result is NIL.
 (defun bound-func (f x)
   (and x
-       (without-over/under-flow-traps
-        (set-bound (funcall f (bound-value x)) (consp x)))))
+       (with-float-traps-masked (:underflow :overflow :inexact :divide-by-zero)
+	 (set-bound (funcall f (bound-value x)) (consp x)))))
 
 ;;; Apply a binary operator OP to two bounds X and Y.  The result is
 ;;; NIL if either is NIL.  Otherwise bound is computed and the result
 ;;; is open if either X or Y is open.
 (defmacro bound-binop (op x y)
   `(and ,x ,y
-        (without-over/under-flow-traps
+       (with-float-traps-masked (:underflow :overflow :inexact :divide-by-zero)
 	 (set-bound (,op (bound-value ,x)
 			 (bound-value ,y))
 	            (or (consp ,x) (consp ,y))))))
