@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.10 2001/10/03 14:09:35 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.11 2002/05/02 21:09:33 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -158,9 +158,16 @@ static int pseudo_atomic_trap_p(struct sigcontext *context)
   badinst = *pc;
   result = 0;
 
-  /* Check to see if the current instruction is a trap #16 */
-  if (((badinst >> 30) == 2) && (((badinst >> 19) & 0x3f) == 0x3a)
-      && (((badinst >> 13) & 1) == 1) && ((badinst & 0x3f) == trap_PseudoAtomic))
+  /*
+   * Check to see if the current instruction is a trap #16.  We check
+   * to make sure this instruction was a trap instruction with rs1 = 0
+   * and a software trap number (immediate value) of 16.
+   */
+  if (((badinst >> 30) == 2)
+      && (((badinst >> 19) & 0x3f) == 0x3a)
+      && (((badinst >> 14) & 0x1f) == reg_ZERO)
+      && (((badinst >> 13) & 1) == 1)
+      && ((badinst & 0x3f) == trap_PseudoAtomic))
     {
       unsigned int previnst;
       previnst = pc[-1];
