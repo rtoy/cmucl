@@ -811,6 +811,11 @@
 ;;; the TN in that location.  There must be some TN live in every location,
 ;;; since normal load TN packing failed.
 ;;;
+;;; We never spill component TNs, since there are used magically within VOPs.
+;;;
+;;; ### Somewhat dubious to spill environment TNs, but we would get in
+;;; ### trouble if we never did.
+;;;
 ;;;     Spilling is done using the same mechanism as register saving.
 ;;;
 (defun spill-and-pack-load-tn (sc op)
@@ -818,7 +823,7 @@
   (let ((vop (tn-ref-vop op))
 	(sb (sc-sb sc)))
     (event spill-tn (vop-node vop))
-
+    
     (dolist (loc (sc-locations sc)
 		 (failed-to-pack-load-tn-error op))
       (when (do ((ref (vop-refs vop) (tn-ref-next-ref ref)))
@@ -834,13 +839,14 @@
 		  (return nil))))
 	(let ((victim (svref (finite-sb-live-tns sb) loc)))
 	  (assert victim)
-	  (save-complex-writer-tn victim vop)
-	  (when (eq (template-result-types (vop-info vop)) :conditional)
-	    (spill-conditional-arg-tn victim vop)))
-	
-	(let ((res (make-tn 0 :load nil sc)))
-	  (setf (tn-offset res) loc)
-	  (return res))))))
+	  (unless (eq (tn-kind victim) :component)
+	    (save-complex-writer-tn victim vop)
+	    (when (eq (template-result-types (vop-info vop)) :conditional)
+	      (spill-conditional-arg-tn victim vop))
+	    
+	    (let ((res (make-tn 0 :load nil sc)))
+	      (setf (tn-offset res) loc)
+	      (return res))))))))
 
 
 ;;; Pack-Load-TN  --  Internal
