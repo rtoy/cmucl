@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.33 1991/11/24 22:55:31 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.34 1991/12/04 18:20:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -269,7 +269,6 @@
   (let* ((*fasl-file* stream)
 	 (*current-fop-table* (pop *free-fop-tables*))
 	 (*current-fop-table-size* ())
-	 (*current-fop-table-index* 0)
 	 (*fop-stack-pointer-on-entry* *fop-stack-pointer*))
     (if (null *current-fop-table*)
 	(setq *current-fop-table* (make-array 1000)))
@@ -279,18 +278,16 @@
       (do ((loaded-group (load-group stream) (load-group stream)))
 	  ((not loaded-group)))
       (setq *fop-stack-pointer* *fop-stack-pointer-on-entry*)
+      (push *current-fop-table* *free-fop-tables*)
       ;;
-      ;; Nil out the table, so we don't hold onto garbage.
-      (let ((tab *current-fop-table*))
-	(dotimes (i *current-fop-table-index*)
-	  (declare (fixnum i))
-	  (setf (svref tab i) nil))
-	(push tab *free-fop-tables*))
-      ;;
-      ;; Ditto for the stack...
+      ;; Nil out the stack and table, so we don't hold onto garbage.
       (dotimes (i *fop-stack-pointer-on-entry*)
 	(declare (fixnum i))
-	(setf (svref *fop-stack* i) nil))))
+	(setf (svref *fop-stack* i) nil))
+      (let ((tab *current-fop-table*))
+	(dotimes (i (length tab))
+	  (declare (fixnum i))
+	  (setf (svref tab i) nil)))))
   t)
 
 #|
@@ -340,7 +337,8 @@
 (defun load-group (file)
   (when (check-header file)
     (catch 'group-end
-      (let ((*current-code-format* nil))
+      (let ((*current-code-format* nil)
+	    (*current-fop-table-index* 0))
 	(loop
 	  (let ((byte (read-byte file)))
 	    (if (eql byte 3)
@@ -353,6 +351,7 @@
 		  (setf (svref *fop-stack* index)
 			(svref *current-fop-table* (read-byte file))))
 		(funcall (svref fop-functions byte)))))))))
+
 
 ;;; Check-Header returns t if t succesfully read a header from the file,
 ;;; or () if EOF was hit before anything was read.  An error is signaled
