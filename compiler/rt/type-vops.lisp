@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/type-vops.lisp,v 1.2 1991/10/22 15:50:55 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/type-vops.lisp,v 1.3 1991/11/05 16:24:27 ram Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the IBM RT.
@@ -220,6 +220,9 @@
 (def-type-vops code-component-p nil nil nil code-header-type)
 (def-type-vops lra-p nil nil nil return-pc-header-type)
 (def-type-vops scavenger-hook-p nil nil nil 0)
+
+(def-type-vops funcallable-instance-p nil nil nil
+  vm:funcallable-instance-header-type)
 
 
 ;;;; Other integer ranges.

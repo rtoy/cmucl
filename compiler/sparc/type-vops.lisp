@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.7 1991/10/31 16:19:55 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.8 1991/11/05 16:23:15 ram Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -62,7 +62,6 @@
 	   `((primitive-type-vop ,check-name (:check) ,ptype))))))
 
 ); eval-when (compile eval)
-
 
 (def-type-vops fixnump nil nil nil vm:even-fixnum-type vm:odd-fixnum-type)
 (define-vop (check-fixnum check-type)
@@ -172,6 +171,9 @@
 
 (def-type-vops lra-p nil nil nil
   vm:return-pc-header-type)
+
+(def-type-vops funcallable-instance-p nil nil nil
+  vm:funcallable-instance-header-type)
 
 (def-type-vops array-header-p nil nil nil
   vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
