@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.22 2003/03/03 16:03:40 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.23 2003/03/05 15:54:52 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1790,7 +1790,9 @@ length LEN and type TYPE."
                  (extern-alien "lseek64" (function off-t int off-t int))
                  fd offset whence)))
     (if (minusp result)
-        (values nil (unix-get-errno))
+        (progn
+          (unix-get-errno)
+          (values nil unix-errno))
         (values result 0))))
 
 
