@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.2 1991/02/08 16:33:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/display.lisp,v 1.3 1991/03/13 23:22:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -155,7 +155,8 @@
   (when *things-to-do-once*
     (dolist (thing *things-to-do-once*) (apply (car thing) (cdr thing)))
     (setq *things-to-do-once* nil))
-  (cond (*screen-image-trashed*
+  (cond ((listen-editor-input *real-editor-input*))
+	(*screen-image-trashed*
 	 (redisplay-all)
 	 (setq *screen-image-trashed* nil))
 	(t
