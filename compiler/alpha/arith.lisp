@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.1 2000/05/23 16:37:27 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.2 2000/10/23 16:22:10 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.1 2000/05/23 16:37:27 pw Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/arith.lisp,v 1.3.2.2 2000/10/23 16:22:10 dtc Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -695,7 +695,7 @@
   (:generator 6
     (inst mulq x y lo)
     (inst addq lo carry-in lo)
-    (inst sra lo 32 hi)
+    (inst srl lo 32 hi)
     (inst mskll lo 4 lo)))
 
 
@@ -714,7 +714,7 @@
     (inst mulq x y lo)
     (inst addq lo prev lo)
     (inst addq lo carry-in lo)
-    (inst sra lo 32 hi)
+    (inst srl lo 32 hi)
     (inst mskll lo 4 lo)))
 
 (define-vop (bignum-mult)
