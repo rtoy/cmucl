@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.7 1992/02/29 02:29:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/mach-os.lisp,v 1.8 1992/03/26 03:21:16 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 (in-package "SYSTEM")
 (use-package "EXTENSIONS")
 (export '(get-system-info get-page-size os-init))
+(export '(*task-self* *task-data* *task-notify*))
 
 (pushnew :mach *features*)
 (setq *software-type* "MACH/4.3BSD")
@@ -33,9 +34,14 @@
 		 (run-program "/usr/cs/etc/version" ; Site dependent???
 			      nil :output stream))))
 
+
 ;;; OS-Init initializes our operating-system interface.  It sets the values
 ;;; of the global port variables to what they should be and calls the functions
 ;;; that set up the argument blocks for the server interfaces.
+
+(defvar *task-self*)
+(defvar *task-data*)
+(defvar *task-notify*)
 
 (defun os-init ()
   (setf *task-self* (mach:mach-task_self))
