@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.34 1990/11/14 17:33:51 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.35 1990/11/21 12:39:03 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -442,11 +442,12 @@ default-value-8
   (:save-p t)
   (:move-args :local-call)
   (:info arg-locs callee target nvals)
-  (:ignore arg-locs args)
   (:vop-var vop)
-  (:temporary (:scs (descriptor-reg)) move-temp)
+  (:temporary (:scs (descriptor-reg) :from :eval) move-temp)
   (:temporary (:scs (non-descriptor-reg)) temp)
   (:temporary (:sc control-stack :offset nfp-save-offset) nfp-save)
+  (:temporary (:sc any-reg :offset old-fp-offset :from :eval) ocfp)
+  (:ignore arg-locs args ocfp)
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
@@ -657,7 +658,8 @@ default-value-8
      (:temporary (:sc descriptor-reg
 		  :offset old-fp-offset
 		  :from (:argument 1)
-		  :to :eval)
+		  ,@(unless (eq return :fixed)
+		      '(:to :eval)))
 		 old-fp-pass)
 
      (:temporary (:sc descriptor-reg
