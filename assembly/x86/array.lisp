@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.6 1997/12/05 06:53:13 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.7 1998/02/19 19:37:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,9 +56,9 @@
 			  (:res result any-reg edx-offset)
 
 			  (:temp length any-reg edi-offset)
-			  (:temp esi dword-reg esi-offset)
-			  (:temp ecx dword-reg ecx-offset)
-			  (:temp eax dword-reg eax-offset))
+			  (:temp esi unsigned-reg esi-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset))
   (declare (ignore result esi ecx eax))
   (loadw length string vector-length-slot other-pointer-type)
   (inst jmp (make-fixup 'sxhash-simple-substring :assembly-routine)))
@@ -72,9 +72,9 @@
 			  (:arg length any-reg edi-offset)
 			  (:res result any-reg edx-offset)
 
-			  (:temp esi dword-reg esi-offset)
-			  (:temp ecx dword-reg ecx-offset)
-			  (:temp eax dword-reg eax-offset))
+			  (:temp esi unsigned-reg esi-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset))
   ;; Compute a pointer to where we are going to be extracting the bits.
   (inst lea esi	(make-ea :byte :base string
 			 :disp (- (* vector-data-offset word-bytes)

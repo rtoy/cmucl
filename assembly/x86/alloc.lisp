@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.4 1997/11/19 02:57:16 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.5 1998/02/19 19:37:25 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,8 +25,8 @@
 #+assembler ; we don't want a vop for this one.
 (define-assembly-routine
     (move-from-signed)
-    ((:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset))
+    ((:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset))
   (inst mov ebx eax)
   (inst shl ebx 1)
   (inst jmp :o bignum)
@@ -43,8 +43,8 @@
 #+assembler ; we don't want a vop for this one either.
 (define-assembly-routine
   (move-from-unsigned)
-  ((:temp eax dword-reg eax-offset)
-   (:temp ebx dword-reg ebx-offset))
+  ((:temp eax unsigned-reg eax-offset)
+   (:temp ebx unsigned-reg ebx-offset))
 
   (inst test eax #xe0000000)
   (inst jmp :nz bignum)

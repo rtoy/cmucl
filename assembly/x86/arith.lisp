@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.9 1997/12/11 17:41:26 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/arith.lisp,v 1.10 1998/02/19 19:37:26 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,9 +37,9 @@
 
 			     (:res res (descriptor-reg any-reg) edx-offset)
 
-			     (:temp eax dword-reg eax-offset)
-			     (:temp ebx dword-reg ebx-offset)
-			     (:temp ecx dword-reg ecx-offset))
+			     (:temp eax unsigned-reg eax-offset)
+			     (:temp ebx unsigned-reg ebx-offset)
+			     (:temp ecx unsigned-reg ecx-offset))
     (declare (ignorable ebx))
 
     (inst test x 3)			; fixnum?
@@ -138,8 +138,8 @@
 			 ((:arg x (descriptor-reg any-reg) edx-offset)
 			  (:res res (descriptor-reg any-reg) edx-offset)
 
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset))
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset))
   (inst test x 3)
   (inst jmp :z FIXNUM)
 
@@ -182,8 +182,8 @@
 			     
 			     (:res res descriptor-reg edx-offset)
 
-			     (:temp eax dword-reg eax-offset)
-			     (:temp ecx dword-reg ecx-offset))
+			     (:temp eax unsigned-reg eax-offset)
+			     (:temp ecx unsigned-reg ecx-offset))
     (inst test x 3)
     (inst jmp :nz DO-STATIC-FN)
     (inst test y 3)
@@ -227,8 +227,8 @@
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset))
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset))
   (inst cmp x y)
   (inst jmp :e RETURN-T)
   (inst test x 3)
@@ -266,8 +266,8 @@
 			  
 			  (:res res descriptor-reg edx-offset)
 			  
-			  (:temp eax dword-reg eax-offset)
-			  (:temp ecx dword-reg ecx-offset)
+			  (:temp eax unsigned-reg eax-offset)
+			  (:temp ecx unsigned-reg ecx-offset)
 			  )
   (inst test x 3)			; descriptor?
   (inst jmp :nz DO-STATIC-FN)		; yes do it here
@@ -316,10 +316,10 @@
 #+assembler ; we don't want a vop for this one.
 (define-assembly-routine
     (random-mt19937-update)
-    ((:temp state dword-reg eax-offset)
-     (:temp k dword-reg ebx-offset)
-     (:temp y dword-reg ecx-offset)
-     (:temp tmp dword-reg edx-offset))
+    ((:temp state unsigned-reg eax-offset)
+     (:temp k unsigned-reg ebx-offset)
+     (:temp y unsigned-reg ecx-offset)
+     (:temp tmp unsigned-reg edx-offset))
 
   ;; Save the temporary registers.
   (inst push k)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.4 1997/12/05 06:53:14 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/assem-rtns.lisp,v 1.5 1998/02/19 19:37:29 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;; 
@@ -32,14 +32,14 @@
 (define-assembly-routine
     (return-multiple (:return-style :none))
     (;; These four are really arguments.
-     (:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset)
-     (:temp ecx dword-reg ecx-offset)
-     (:temp esi dword-reg esi-offset)
+     (:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset)
+     (:temp ecx unsigned-reg ecx-offset)
+     (:temp esi unsigned-reg esi-offset)
 
      ;; These we need as temporaries.
-     (:temp edx dword-reg edx-offset)
-     (:temp edi dword-reg edi-offset))
+     (:temp edx unsigned-reg edx-offset)
+     (:temp edi unsigned-reg edi-offset))
      
   ;; Pick off the cases where everything fits in register args.
   (inst jecxz zero-values)
@@ -128,12 +128,12 @@
     (tail-call-variable
      (:return-style :none))
 
-    ((:temp eax dword-reg eax-offset)
-     (:temp ebx dword-reg ebx-offset)
-     (:temp ecx dword-reg ecx-offset)
-     (:temp edx dword-reg edx-offset)
-     (:temp edi dword-reg edi-offset)
-     (:temp esi dword-reg esi-offset))
+    ((:temp eax unsigned-reg eax-offset)
+     (:temp ebx unsigned-reg ebx-offset)
+     (:temp ecx unsigned-reg ecx-offset)
+     (:temp edx unsigned-reg edx-offset)
+     (:temp edi unsigned-reg edi-offset)
+     (:temp esi unsigned-reg esi-offset))
 
   ;; Calculate NARGS (as a fixnum)
   (move ecx esi)
@@ -239,7 +239,7 @@
 			 ((:arg block (any-reg descriptor-reg) eax-offset)
 			  (:arg start (any-reg descriptor-reg) ebx-offset)
 			  (:arg count (any-reg descriptor-reg) ecx-offset)
-			  (:temp uwp dword-reg esi-offset))
+			  (:temp uwp unsigned-reg esi-offset))
   (declare (ignore start count))
 
   (let ((error (generate-error-code nil invalid-unwind-error)))
