@@ -93,9 +93,6 @@ New in this release:
      - ALLOCATE-INSTANCE working with structures defined with DEFSTRUCT.
      - With (DEFGENERIC FOO (&REST X &KEY)) (DEFMETHOD FOO (&REST X) X),
        (FOO 1) now signals an error.
-     - Condition slots can be read with SLOT-VALUE, written with
-       (SETF SLOT-VALUE), and checked with SLOT-BOUNDP.  It's not
-       possible to SLOT-MAKUNBOUND them, though.
 
   * Improvements to Hemlock, the Emacs-like editor:
 
