@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.39 1992/03/09 08:45:08 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.40 1992/04/02 02:30:27 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -30,7 +30,7 @@
 (in-package "KERNEL")
 (export '(*current-level* *pretty-printer* output-object output-ugly-object
 	  check-for-circularity handle-circularity with-circularity-detection
-	  descend-into punt-if-too-long))
+	  descend-into punt-if-too-long output-symbol-name))
 
 (in-package "LISP")
 
@@ -626,7 +626,6 @@
   (if (or *print-escape* *print-readably*)
       (let ((package (symbol-package object))
 	    (name (symbol-name object)))
-	(setup-printer-state)
 	(cond
 	 ;; If the symbol's home package is the current one, then a
 	 ;; prefix is never necessary.
@@ -652,22 +651,28 @@
 	    ;; qualified.  This can happen if the symbol has been inherited
 	    ;; from a package other than its home package.
 	    (unless (and accessible (eq symbol object))
-	      (let ((pkg-name (package-name package)))
-		(if (symbol-quotep pkg-name)
-		    (output-quoted-symbol-name pkg-name stream)
-		    (funcall *internal-symbol-output-function* pkg-name
-			     stream)))
+	      (output-symbol-name (package-name package) stream)
 	      (multiple-value-bind (symbol externalp)
 				   (find-external-symbol name package)
 		(declare (ignore symbol))
 		(if externalp
 		    (write-char #\: stream)
 		    (write-string "::" stream)))))))
-	(if (symbol-quotep name)
-	    (output-quoted-symbol-name name stream)
-	    (funcall *internal-symbol-output-function* name stream)))
-      (funcall *internal-symbol-output-function* (symbol-name object) stream)))
+	(output-symbol-name name stream))
+      (output-symbol-name name stream nil)))
 	    
+;;; OUTPUT-SYMBOL-NAME -- internal interface.
+;;;
+;;; Output the string NAME as if it were a symbol name.  In other words,
+;;; diddle it's case according to *print-case* and readtable-case.
+;;; 
+(defun output-symbol-name (name stream &optional (maybe-quote t))
+  (declare (type simple-base-string name))
+  (setup-printer-state)
+  (if (and maybe-quote (symbol-quotep name))
+      (output-quoted-symbol-name name stream)
+      (funcall *internal-symbol-output-function* name stream)))
+
 
 ;;;; Escaping symbols:
 
