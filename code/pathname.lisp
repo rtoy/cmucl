@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.29 1997/02/09 22:49:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.30 1997/02/11 21:27:31 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -247,7 +247,7 @@
 
 ;;; PATTERN-MATCHES -- Internal
 ;;;
-;;;   If the string matches the pattern returns the multiple valuse T and a
+;;;   If the string matches the pattern returns the multiple values T and a
 ;;; list of the matched strings.
 ;;;
 (defun pattern-matches (pattern string)
@@ -1577,7 +1577,7 @@ a host-structure or string."
 		    (directory :relative)
 		    (parse-directory (cdr chunks)))
 		   (t
-		    (directory :absolute)
+		    (directory :absolute) ; Assumption! Maybe revoked later.
 		    (parse-directory chunks))))
 	       (parse-directory (chunks)
 		 (case (caadr chunks)
@@ -1635,7 +1635,9 @@ a host-structure or string."
 			  :namestring namestr
 			  :offset (cdadr chunks)))))
 	(parse-host (logical-chunkify namestr start end)))
-      (values host :unspecific (directory) name type version))))
+      (values host :unspecific
+	      (and (not (equal (directory)'(:absolute)))(directory))
+	      name type version))))
 
 
 ;;; Can't defvar here because not all host methods are loaded yet.
