@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.5 1994/10/27 17:13:54 ram Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.6 1997/02/19 05:09:52 dtc Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -100,12 +100,14 @@ unsigned long arch_install_breakpoint(void *pc)
     unsigned long *ptr = (unsigned long *)pc;
     unsigned long result = *ptr;
     *ptr = trap_Breakpoint;
+    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
     return result;
 }
 
 void arch_remove_breakpoint(void *pc, unsigned long orig_inst)
 {
     *(unsigned long *)pc = orig_inst;
+    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
 }
 
 static unsigned long *skipped_break_addr, displaced_after_inst;
@@ -131,9 +133,11 @@ void arch_do_displaced_inst(struct sigcontext *scp,
 #endif
 
     *pc = orig_inst;
+    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
     skipped_break_addr = pc;
     displaced_after_inst = *npc;
     *npc = trap_AfterBreakpoint;
+    os_flush_icache((os_vm_address_t) npc, sizeof(unsigned long));
 
 #ifdef SOLARIS
     /* XXX never tested */
@@ -162,8 +166,22 @@ static void sigill_handler(HANDLER_ARGS)
 #endif
     {
 	int trap;
+	unsigned inst;
+	unsigned * pc = (unsigned *)(SC_PC(context));
 
-	trap = *(unsigned long *)(SC_PC(context)) & 0x3fffff;
+	inst = *pc;
+#ifdef SOLARIS
+	/* SPARC v9 doesn't like our trap instructions */
+	if ((inst & 0xe1f82000) == 0x81d02000) {
+	    /* only 7 bits of trap # are allowed, not 13 as previously */
+	    /* clear reserved bits */
+	    inst &= ~ 0x1f80;
+	    *pc = inst;
+	    os_flush_icache((os_vm_address_t) pc, sizeof(unsigned long));
+	    return;
+	}
+#endif
+	trap = inst & 0x3fffff;
 
 	switch (trap) {
 	  case trap_PendingInterrupt:
@@ -198,6 +216,8 @@ static void sigill_handler(HANDLER_ARGS)
 #else
 	    context->sc_mask = orig_sigmask;
 #endif
+	    os_flush_icache((os_vm_address_t) SC_PC(context),
+			    sizeof(unsigned long));
 	    break;
 
 	  default:
