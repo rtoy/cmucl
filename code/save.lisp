@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.26 1994/11/06 19:48:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.27 1995/07/26 15:02:21 phg Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -106,7 +106,9 @@
 				 (purify t)
 				 (root-structures ())
 				 (environment-name "Auxiliary")
-				 (init-function #'%top-level)
+				 (init-function (if *batch-mode*
+						    #'%top-level
+						    #'%handled-top-level))
 				 (load-init-file t)
 				 (site-init "library:site-init")
 				 (print-herald t)
