@@ -1519,18 +1519,23 @@
 
     `(flet ((,n-fun () ,@body))
        (if (or ,force (not *in-compilation-unit*))
-	   (let ((c::*unknown-functions* nil)
+	   (let ((c::*undefined-warnings* nil)
 		 (c::*compiler-error-count* 0)
 		 (c::*compiler-warning-count* 0)
 		 (c::*compiler-note-count* 0)
 		 (*in-compilation-unit* t)
 		 (*aborted-compilation-units* 0)
 		 (,n-abort-p t))
-	     (unwind-protect
-		 (multiple-value-prog1
-		     (,n-fun)
-		   (setq ,n-abort-p nil))
-	       (c::print-summary ,n-abort-p *aborted-compilation-units*)))
+	     (handler-bind ((c::parse-unknown-type
+			     #'(lambda (c)
+				 (c::note-undefined-reference
+				  (c::parse-unknown-type-specifier c)
+				  :type))))
+	       (unwind-protect
+		   (multiple-value-prog1
+		       (,n-fun)
+		     (setq ,n-abort-p nil))
+		 (c::print-summary ,n-abort-p *aborted-compilation-units*))))
 	   (let ((,n-abort-p t))
 	     (unwind-protect
 		 (multiple-value-prog1
