@@ -25,10 +25,11 @@ some suggested gateway machines:
     lisp-rt1.slisp.cs.cmu.edu
     lisp-rt2.slisp.cs.cmu.edu
 
-Log in with the user "anonymous" and your real userid as password.  Due to the
-way anonymous FTP access control is done, it is important to "cd" to the
-source directory with a single command, and then do a "get" operation.  If you
-have any trouble with FTP access, please send mail to slisp@cs.cmu.edu.
+Log in with the user "anonymous" and "username@host" as password (i.e. your
+EMAIL address.)  Due to the way anonymous FTP access control is done, it is
+important to "cd" to the source directory with a single command, and then do a
+"get" operation.  If you have any trouble with FTP access, please send mail to
+slisp@cs.cmu.edu.
 
 The binary release area is /afs/cs.cmu.edu/project/clisp/release.  This
 directory holds compressed tar files with names of the form:
