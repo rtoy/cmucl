@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.1 1990/03/05 21:13:52 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/assem-rtns.lisp,v 1.2 1990/03/12 22:39:11 wlott Exp $
 ;;;
 ;;;
 (in-package "C")
@@ -21,15 +21,34 @@
 ;;; there is no real function to call.
 
 (define-assembly-routine (undefined-function (:arg name :sc any-reg
-						   :offset cname-offset))
+						   :offset cname-offset)
+					     (:temp lexenv :sc any-reg
+						    :offset lexenv-offset)
+					     (:temp function :sc any-reg
+						    :offset code-offset)
+					     (:temp nargs :sc any-reg
+						    :offset nargs-offset)
+					     (:temp lip :sc interior-reg)
+					     (:temp temp
+						    :sc non-descriptor-reg))
   ;; Allocate function header.
   (align vm:lowtag-bits)
   (inst word vm:function-header-type)
   (dotimes (i (1- vm:function-header-code-offset))
     (nop))
   ;; Cause the error.
-  (error-call di:undefined-symbol-error name))
+  (cerror-call continue di:undefined-symbol-error name)
 
+  continue
+
+  (let ((not-sym (generate-cerror-code 'undefined-function
+				       di:object-not-symbol-error
+				       cname)))
+    (test-simple-type cname name not-sym t vm:symbol-header-type))
+
+  (loadw lexenv cname vm:symbol-function-slot vm:other-pointer-type)
+  (loadw function lexenv vm:closure-function-slot vm:function-pointer-type)
+  (lisp-jump function lip))
 
 
 ;;;; Non-local exit noise.
