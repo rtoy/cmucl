@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.23 1991/02/20 14:58:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.24 1991/07/11 16:30:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -941,7 +941,7 @@
 	   "Automagically generated boolean attribute setter.  See
 	    Def-Boolean-Attribute."
 	   (multiple-value-bind (temps values stores set get)
-				(lisp::foo-get-setf-method place env)
+				(get-setf-method place env)
 	     (let ((newval (gensym))
 		   (n-place (gensym))
 		   (mask (compute-attribute-mask attributes ,const-name)))
