@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.26 1997/11/04 09:10:51 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.27 1997/11/04 14:50:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -544,9 +544,9 @@
 		 vm:word-bits (1- vm:symbol-size) vm:symbol-header-type)))
     (write-indexed symbol vm:symbol-value-slot unbound-marker)
     (when (c:backend-featurep :x86)
-      (write-indexed symbol vm:symbol-hash-slot
-		     (make-fixnum-descriptor
-		      (1+ (random vm:target-most-positive-fixnum)))))
+      (write-indexed
+       symbol #+x86 vm:symbol-hash-slot #-x86 vm:symbol-unused-slot
+       (make-fixnum-descriptor (1+ (random vm:target-most-positive-fixnum)))))
     (write-indexed symbol vm:symbol-plist-slot *nil-descriptor*)
     (write-indexed symbol vm:symbol-name-slot (string-to-core name *dynamic*))
     (write-indexed symbol vm:symbol-package-slot *nil-descriptor*)
@@ -755,7 +755,8 @@
       (frob "*FP-CONSTANT-1D0*" "X86" (number-to-core 1d0))
       (frob "*FP-CONSTANT-0S0*" "X86" (number-to-core 0s0))
       (frob "*FP-CONSTANT-1S0*" "X86" (number-to-core 1s0))
-      (frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern t)))))
+      (when (c:backend-featurep :gencgc)
+	(frob "*SCAVENGE-READ-ONLY-SPACE*" "X86" (cold-intern t))))))
 
 ;;; Make-Make-Package-Args  --  Internal
 ;;;
