@@ -24,12 +24,6 @@ forms have some string to be printed.
    Importance: often beeps and don't know why.
    Difficulty: pervasive search for EDITOR-ERROR.
 
-Consider how to use tty standout mode to highlight active regions.  We can know
-a font mark as pointing to the highlight font due to
-*active-region-highlight-font*.  The trouble is in smart redisplay and knowing
-about highlighted portions of the screen.  Currently we just look at the
-strings characters, but this would complicate things.
-
 Probably the ERROR for trying to modify a read-only buffer could/should be an
 EDITOR-ERROR.  Maybe the error message should be a Hemlock variable that can be
 set for certain buffers or modes.
@@ -64,12 +58,6 @@ Optional doc strings for commands?
    Importance: suggested by a couple people.
    Difficulty: ???
 
-Fix "fill as region" case in auto-fill space.  Doesn't indent right in Lisp
-strings, for example.
-   Importance: correctness.
-   Difficulty: unknown.
-   Probably Bill will have to do this.
-
 Get a real italic comment mode.
    Importance: some people want it, like Scott.
    Difficulty: hard to do right.
@@ -101,13 +89,6 @@ other problems.
    Importance: necessary or non-experienced users.
    Difficulty: slight.  Error system wants to use *terminal-io* if you go
                into a break loop from the editor.
-   Bill.
-
-Improve echo area window raising.  On output?  Raise when any window
-raised?  Now it is raised when made current, but output can be displayed
-there when it is not current -- EDITOR-ERROR messages.
-   Importance: more user friendly (maybe).
-   Difficulty: variable.  Could just modify MESSAGE (or something).
    Bill.
 
 Make Lisp indentation respect user indentation even when in a form with known
@@ -194,13 +175,6 @@ pointer to buffer.
    Importance: could be important, maybe nothing is wrong.
    Difficulty: identifying problems.
    Bill or Rob.
-
-Bounds on searches (e.g., give search primitives a region or an end mark
-instead of just a start mark).
-   Importance: would save a lot of work when searches look at whole buffer
-               instead of just the current line or region or etc.
-   Difficulty: possibly high.
-   Bill
 
 Two reproducible window image builder bugs:
 THIS IS NUMBER ONE:
@@ -338,14 +312,6 @@ Look at open paren highlighting and the Scribe bracket table stuff to make a
 general bracket highlighter.  Possibly have to call function based on mode or
 something since Lisp parens are found differently than Scribe brackets (Lisp
 parse groveling versus counting open and close brackets).
-
-Make "Next Page" and "Goto Page" be more aware of the end of the buffer and how
-it is displayed as a result of these commands.
-Maybe :page-delimiters should be allowed to fall within a line instead of only
-at the beginning.  Only bother changing this if we hit a language we care about
-that supports only line-oriented comments (Postscript?).
-   Importance: low.
-   Difficulty: low.
 
 Make hooks that are lists of function have list in the name, so users can know
 easily whether to set this to a list or function.
