@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.15 1993/03/01 14:51:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/cell.lisp,v 1.16 1993/03/16 04:14:17 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -216,6 +216,9 @@
 (define-vop (set-funcallable-instance-info word-index-set)
   (:variant funcallable-instance-info-offset function-pointer-type)
   (:translate %set-funcallable-instance-info))
+
+(define-vop (funcallable-instance-lexenv cell-ref)
+  (:variant funcallable-instance-lexenv-slot function-pointer-type))
 
 
 (define-vop (closure-ref slot-ref)
