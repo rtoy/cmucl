@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.59 1998/03/01 21:46:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.60 1998/03/03 17:35:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,8 +15,7 @@
 (in-package "LISP")
 (export '(defstruct copy-structure structure-object))
 (in-package "KERNEL")
-(export '(
-	  default-structure-print make-structure-load-form 
+(export '(default-structure-print make-structure-load-form 
 	  %compiler-defstruct %%compiler-defstruct
 	  %compiler-only-defstruct
 	  %make-instance
@@ -69,6 +68,27 @@
 (defun %raw-set-double (vec index val)
   (declare (type index index))
   (%raw-set-double vec index val))
+
+#+complex-float
+(progn
+
+(defun %raw-ref-complex-single (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-single vec index))
+
+(defun %raw-ref-complex-double (vec index)
+  (declare (type index index))
+  (%raw-ref-complex-double vec index))
+
+(defun %raw-set-complex-single (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-single vec index val))
+
+(defun %raw-set-complex-double (vec index val)
+  (declare (type index index))
+  (%raw-set-complex-double vec index val))
+
+) ; end progn complex-float
 
 (defun %instance-layout (instance)
   (%instance-layout instance))
@@ -125,6 +145,10 @@
 (defsetf %instance-ref %instance-set)
 (defsetf %raw-ref-single %raw-set-single)
 (defsetf %raw-ref-double %raw-set-double)
+#+complex-float
+(defsetf %raw-ref-complex-single %raw-set-complex-single)
+#+complex-float
+(defsetf %raw-ref-complex-double %raw-set-complex-double)
 (defsetf %instance-layout %set-instance-layout)
 (defsetf %funcallable-instance-info %set-funcallable-instance-info)
 
@@ -238,7 +262,10 @@
   (type t)			; declared type specifier
   ;;
   ;; If a raw slot, what it holds.  T means not raw.
-  (raw-type t :type (member t single-float double-float unsigned-byte))
+  (raw-type t :type (member t single-float double-float
+			    #+complex-float complex-single-float
+			    #+complex-float complex-double-float
+			    unsigned-byte))
   (read-only nil :type (member t nil)))
 
 (defun print-defstruct-description (structure stream depth)
@@ -565,6 +592,12 @@
 	       (values 'single-float 1))
 	      ((subtypep type 'double-float)
 	       (values 'double-float 2))
+	      #+complex-float
+	      ((subtypep type '(complex single-float))
+	       (values 'complex-single-float 2))
+	      #+complex-float
+	      ((subtypep type '(complex double-float))
+	       (values 'complex-double-float 4))
 	      (t (values nil nil)))
 
       (cond ((not raw-type)
@@ -929,14 +962,26 @@
      (ecase rtype
        (single-float '%raw-ref-single)
        (double-float '%raw-ref-double)
+       #+complex-float
+       (complex-single-float '%raw-ref-complex-single)
+       #+complex-float
+       (complex-double-float '%raw-ref-complex-double)
        (unsigned-byte 'aref)
        ((t)
 	(if (eq (dd-type defstruct) 'funcallable-structure)
 	    '%funcallable-instance-info
 	    '%instance-ref)))
-     (if (eq rtype 'double-float)
-	 (ash (dsd-index slot) -1)
-	 (dsd-index slot))
+     (case rtype
+       (double-float
+	(ash (dsd-index slot) -1))
+       #+complex-float
+       (complex-double-float
+	(ash (dsd-index slot) -2))
+       #+complex-float
+       (complex-single-float
+	(ash (dsd-index slot) -1))
+       (t
+	(dsd-index slot)))
      (cond
       ((eq rtype 't) object)
       (data)

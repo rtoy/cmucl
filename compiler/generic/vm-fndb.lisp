@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.58 1998/02/03 19:22:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.59 1998/03/03 17:35:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -113,7 +113,9 @@
   (unsafe))
 (defknown %layout-invalid-error (t layout) nil)
 
+
 (deftype raw-vector () '(simple-array (unsigned-byte 32) (*)))
+
 (defknown %raw-ref-single (raw-vector index) single-float
   (foldable flushable))
 (defknown %raw-ref-double (raw-vector index) double-float
@@ -127,6 +129,27 @@
   (foldable flushable))
 (defknown (%set-raw-bits) (t fixnum (unsigned-byte 32)) (unsigned-byte 32)
   (unsafe))
+
+#+complex-float
+(progn
+(defknown %raw-ref-complex-single (raw-vector index) (complex single-float)
+  (foldable flushable))
+(defknown %raw-ref-complex-double (raw-vector index) (complex double-float)
+  (foldable flushable))
+#+long-float
+(defknown %raw-ref-complex-long (raw-vector index) (complex long-float)
+  (foldable flushable))
+(defknown %raw-set-complex-single (raw-vector index (complex single-float))
+  (complex single-float)
+  (unsafe))
+(defknown %raw-set-complex-double (raw-vector index (complex double-float))
+  (complex double-float)
+  (unsafe))
+#+long-float
+(defknown %raw-set-complex-long (raw-vector index (complex long-float))
+  (complex long-float)
+  (unsafe))
+) ; end progn complex-float
 
 
 (defknown allocate-vector ((unsigned-byte 8) index index) (simple-array * (*))

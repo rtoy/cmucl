@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.5 1998/01/22 02:24:22 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/array.lisp,v 1.6 1998/03/03 17:35:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -415,43 +415,6 @@
     (unless (location= result value)
       (inst fmove value result))))
 
-
-;;; These VOPs are used for implementing float slots in structures (whose raw
-;;; data is an unsigned-32 vector.
-;;;
-(define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
-  (:translate %raw-ref-single)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
-;;;
-(define-vop (raw-set-single data-vector-set/simple-array-single-float)
-  (:translate %raw-set-single)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
-;;;
-(define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
-  (:translate %raw-ref-double)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
-;;;
-(define-vop (raw-set-double data-vector-set/simple-array-double-float)
-  (:translate %raw-set-double)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
-
-
-;;; These vops are useful for accessing the bits of a vector irrespective of
-;;; what type of vector it is.
-;;; 
-
-(define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg) unsigned-num
-  %raw-bits)
-(define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
-  unsigned-num %set-raw-bits #+gengc nil)
-
-
-
-;;;; Misc. Array VOPs.
-
-(define-vop (get-vector-subtype get-header-data))
-(define-vop (set-vector-subtype set-header-data))
-
 
 ;;; Complex float arrays.
 #+complex-float
@@ -566,3 +529,65 @@
 	(inst fmove value-imag result-imag)))))
 
 ) ; end progn complex-float
+
+
+;;; These VOPs are used for implementing float slots in structures (whose raw
+;;; data is an unsigned-32 vector.
+;;;
+(define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-single data-vector-set/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
+;;;
+(define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-double data-vector-set/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+
+#+complex-float
+(progn
+(define-vop (raw-ref-complex-single
+	     data-vector-ref/simple-array-complex-single-float)
+  (:translate %raw-ref-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-complex-single
+	     data-vector-set/simple-array-complex-single-float)
+  (:translate %raw-set-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-single-float))
+;;;
+(define-vop (raw-ref-complex-double
+	     data-vector-ref/simple-array-complex-double-float)
+  (:translate %raw-ref-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+;;;
+(define-vop (raw-set-complex-double
+	     data-vector-set/simple-array-complex-double-float)
+  (:translate %raw-set-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-double-float))
+) ; end progn complex-float
+
+
+;;; These vops are useful for accessing the bits of a vector irrespective of
+;;; what type of vector it is.
+;;; 
+
+(define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg) unsigned-num
+  %raw-bits)
+(define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
+  unsigned-num %set-raw-bits #+gengc nil)
+
+
+
+;;;; Misc. Array VOPs.
+
+(define-vop (get-vector-subtype get-header-data))
+(define-vop (set-vector-subtype set-header-data))

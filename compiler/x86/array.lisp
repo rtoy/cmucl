@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.11 1998/02/19 19:34:41 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.12 1998/03/03 17:35:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -782,57 +782,11 @@
       (unless (location= value-imag result-imag)
 	(inst fstd result-imag))
       (inst fxch value-imag))))
+
+
 ) ; complex-float
 
-;;; These VOPs are used for implementing float slots in structures (whose raw
-;;; data is an unsigned-32 vector.
-;;;
-(define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
-  (:translate %raw-ref-single)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
-(define-vop (raw-ref-single-c data-vector-ref-c/simple-array-single-float)
-  (:translate %raw-ref-single)
-  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
-;;;
-(define-vop (raw-set-single data-vector-set/simple-array-single-float)
-  (:translate %raw-set-single)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
-(define-vop (raw-set-single-c data-vector-set-c/simple-array-single-float)
-  (:translate %raw-set-single)
-  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
-	      single-float))
-;;;
-(define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
-  (:translate %raw-ref-double)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
-(define-vop (raw-ref-double-c data-vector-ref-c/simple-array-double-float)
-  (:translate %raw-ref-double)
-  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
-;;;
-(define-vop (raw-set-double data-vector-set/simple-array-double-float)
-  (:translate %raw-set-double)
-  (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
-(define-vop (raw-set-double-c data-vector-set-c/simple-array-double-float)
-  (:translate %raw-set-double)
-  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
-	      double-float))
-
-
-;;; These vops are useful for accessing the bits of a vector irrespective of
-;;; what type of vector it is.
-;;; 
-
-(define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg) unsigned-num
-  %raw-bits)
-(define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
-  unsigned-num %set-raw-bits)
-
 
-;;;; Misc. Array VOPs.
-
-(define-vop (get-vector-subtype get-header-data))
-(define-vop (set-vector-subtype set-header-data))
-
 ;;;;
 ;;;; dtc expanded and fixed the following:
 
@@ -1213,3 +1167,98 @@
     (move result eax)))
 
 ) ; end signed-array
+
+
+;;; These VOPs are used for implementing float slots in structures (whose raw
+;;; data is an unsigned-32 vector.
+;;;
+(define-vop (raw-ref-single data-vector-ref/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-single-c data-vector-ref-c/simple-array-single-float)
+  (:translate %raw-ref-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+(define-vop (raw-set-single data-vector-set/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum single-float))
+(define-vop (raw-set-single-c data-vector-set-c/simple-array-single-float)
+  (:translate %raw-set-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      single-float))
+;;;
+(define-vop (raw-ref-double data-vector-ref/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-double-c data-vector-ref-c/simple-array-double-float)
+  (:translate %raw-ref-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+(define-vop (raw-set-double data-vector-set/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum double-float))
+(define-vop (raw-set-double-c data-vector-set-c/simple-array-double-float)
+  (:translate %raw-set-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      double-float))
+
+;;;; Complex-float raw structure slot accessors.
+#+complex-float
+(progn
+
+(define-vop (raw-ref-complex-single
+	     data-vector-ref/simple-array-complex-single-float)
+  (:translate %raw-ref-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-complex-single-c
+	     data-vector-ref-c/simple-array-complex-single-float)
+  (:translate %raw-ref-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+(define-vop (raw-set-complex-single
+	     data-vector-set/simple-array-complex-single-float)
+  (:translate %raw-set-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum complex-single-float))
+(define-vop (raw-set-complex-single-c
+	     data-vector-set-c/simple-array-complex-single-float)
+  (:translate %raw-set-complex-single)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      complex-single-float))
+;;;
+(define-vop (raw-ref-complex-double
+	     data-vector-ref/simple-array-complex-double-float)
+  (:translate %raw-ref-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum))
+(define-vop (raw-ref-complex-double-c
+	     data-vector-ref-c/simple-array-complex-double-float)
+  (:translate %raw-ref-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))))
+;;;
+(define-vop (raw-set-complex-double
+	     data-vector-set/simple-array-complex-double-float)
+  (:translate %raw-set-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 positive-fixnum
+	      complex-double-float))
+(define-vop (raw-set-complex-double-c
+	     data-vector-set-c/simple-array-complex-double-float)
+  (:translate %raw-set-complex-double)
+  (:arg-types simple-array-unsigned-byte-32 (:constant (signed-byte 30))
+	      complex-double-float))
+
+) ; end progn complex-float
+
+
+;;; These vops are useful for accessing the bits of a vector irrespective of
+;;; what type of vector it is.
+;;; 
+(define-full-reffer raw-bits * 0 other-pointer-type (unsigned-reg)
+  unsigned-num %raw-bits)
+(define-full-setter set-raw-bits * 0 other-pointer-type (unsigned-reg)
+  unsigned-num %set-raw-bits)
+
+
+;;;; Misc. Array VOPs.
+
+(define-vop (get-vector-subtype get-header-data))
+(define-vop (set-vector-subtype set-header-data))
+
