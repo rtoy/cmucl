@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.39 1997/02/22 19:19:50 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.40 1997/08/24 03:15:48 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -930,7 +930,7 @@
 	     (if to2
 		 (alien-subtype-p to1 to2)
 		 t)
-	     nil))))
+	     (null to2)))))
 
 (def-alien-type-method (pointer :deport-gen) (type value)
   (values
