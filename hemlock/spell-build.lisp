@@ -225,7 +225,7 @@
   (declare (type (array (unsigned-byte 16) (*)) dictionary descriptors)
 	   (simple-string string-table)
 	   (fixnum string-table-length))
-  (let ((filename (lisp::predict-name (namestring (pathname f)) nil)))
+  (let ((filename (ext:unix-namestring (pathname f) nil)))
     (with-open-file (s filename :direction :output
 		       :element-type '(unsigned-byte 16)
 		       :if-exists :overwrite

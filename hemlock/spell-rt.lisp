@@ -72,9 +72,9 @@
 ;;;; Binary Dictionary File I/O
 
 (defun open-dictionary (f)
-  (multiple-value-bind (filename existsp)
-		       (lisp::predict-name f :for-input)
-    (unless existsp (error "Cannot find dictionary -- ~S." filename))
+  (let* ((filename (ext:unix-namestring f))
+	 (kind (mach:unix-file-kind filename)))
+    (unless kind (error "Cannot find dictionary -- ~S." filename))
     (multiple-value-bind (fd err)
 			 (mach:unix-open filename mach:o_rdonly 0)
       (unless fd
