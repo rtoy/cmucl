@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.6 1991/11/26 22:47:01 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.7 1991/12/08 07:13:08 wlott Exp $
 ;;;
 ;;; Description of the SPARC architecture.
 ;;;
@@ -19,18 +19,28 @@
 (use-package "EXT")
 (use-package "C")
 
-(disassem:set-disassem-params :instruction-alignment 32) 
+(disassem:set-disassem-params
+ :instruction-alignment 32
+ :storage-class-sets '((register any-reg descriptor-reg base-character-reg
+				 sap-reg signed-reg unsigned-reg
+				 non-descriptor-reg interior-reg)
+		       (float-reg single-reg double-reg)
+		       (control-stack control-stack)
+		       (number-stack signed-stack unsigned-stack
+				     base-character-stack sap-stack
+				     single-stack double-stack))
+ )
 
 
 ;;;; Special argument types and fixups.
 
 (defvar *disassem-use-lisp-reg-names* t)
 
-(defconstant reg-name-vec
+(defconstant reg-symbols
   (map 'vector
        #'(lambda (name)
 	   (cond ((null name) nil)
-		 (t (make-symbol name))))
+		 (t (make-symbol (concatenate 'string "%" name)))))
        *register-names*))
 
 (define-argument-type reg
@@ -46,17 +56,20 @@
 		(zero 0)
 		(t (tn-offset tn))))
   :disassem-printer #'(lambda (value stream dstate)
-			(declare (stream stream) (fixnum value) (ignore dstate))
-			(cond (*disassem-use-lisp-reg-names*
- 			       (write-char #\% stream)
-			       (princ (aref reg-name-vec value) stream))
- 			      (t
-			       (multiple-value-bind (set num)
-				   (truncate value 8)
-				 (format stream "%~a~d"
-					 (aref #(g o l i) set)
-					 num))))))
+			(declare (stream stream) (fixnum value))
+			(let ((regname (aref reg-symbols value)))
+			  (princ regname stream)
+			  (disassem:maybe-note-associated-storage-ref
+			   value
+			   'register
+			   regname
+			   dstate)))
+  )
 
+(defconstant float-reg-symbols
+  (coerce 
+   (loop for n from 0 to 31 collect (make-symbol (format nil "%F~d" n)))
+   'vector))
 
 (define-argument-type fp-reg
   :type '(and tn
@@ -64,7 +77,16 @@
 			   (eq (sb-name (sc-sb (tn-sc object)))
 			       'float-registers))))
   :function tn-offset
-  :disassem-printer "%f~d")
+  :disassem-printer #'(lambda (value stream dstate)
+			(declare (stream stream) (fixnum value))
+			(let ((regname (aref float-reg-symbols value)))
+			  (princ regname stream)
+			  (disassem:maybe-note-associated-storage-ref
+			   value
+			   'float-reg
+			   regname
+			   dstate)))
+  )
 
 (define-argument-type odd-fp-reg
   :type '(and tn
@@ -277,6 +299,28 @@
 ;;; ----------------------------------------------------------------
 (define-f3-inst ld #b11 #b000000 :load-store :load)
 
+(defun note-niss-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-nil-indexed-symbol-slot-ref
+     (disassem:arg-value 'immed chunk inst)
+     dstate)))
+
+(defun note-control-stack-var-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-single-storage-ref
+     (/ (disassem:arg-value 'immed chunk inst) word-bytes)
+     'control-stack
+     dstate))
+  )
+
+(defun note-number-stack-var-ref (chunk inst stream dstate)
+  (when stream
+    (disassem:maybe-note-single-storage-ref
+     (/ (disassem:arg-value 'immed chunk inst) word-bytes)
+     'number-stack
+     dstate))
+  )
+
 (disassem:specialize (ld
 		      :disassem-control
 		        #'(lambda (chunk inst stream dstate)
@@ -287,22 +331,35 @@
   immed
   (rs1 :constant code-offset))
 
-(disassem:specialize (ld
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
-			       (disassem:arg-value 'immed chunk inst)
-			       dstate))))
+(disassem:specialize (ld :disassem-control #'note-niss-ref)
   immed
   (rs1 :constant null-offset))
+
+(disassem:specialize (ld :disassem-control #'note-control-stack-var-ref)
+  immed
+  (rs1 :constant cfp-offset))
+
+(disassem:specialize (ld :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
+
 ;;; ----------------------------------------------------------------
 
 (define-f3-inst ldd #b11 #b000011 :load-store :load)
+(disassem:specialize (ldd :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
 
 (define-f3-inst ldf #b11 #b100000 :dest-kind fp-reg :load-store :load)
+(disassem:specialize (ldf :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
+
 (define-f3-inst ldf-odd #b11 #b100000 :dest-kind odd-fp-reg :load-store :load)
 (define-f3-inst lddf #b11 #b100011 :dest-kind fp-reg :load-store :load)
+(disassem:specialize (lddf :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
 
 (define-f3-inst stb #b11 #b000101 :load-store :store)
 (define-f3-inst sth #b11 #b000110 :load-store :store)
@@ -310,22 +367,34 @@
 ;;; ----------------------------------------------------------------
 (define-f3-inst st #b11 #b000100 :load-store :store)
 
-(disassem:specialize (st
-		      :disassem-control
-		        #'(lambda (chunk inst stream dstate)
-			    (when stream
-			      (disassem:maybe-note-nil-indexed-symbol-slot-ref
-			       (disassem:arg-value 'immed chunk inst)
- 			       dstate))))
+(disassem:specialize (st :disassem-control #'note-niss-ref)
   immed
   (rs1 :constant null-offset))
+
+(disassem:specialize (st :disassem-control #'note-control-stack-var-ref)
+  immed
+  (rs1 :constant cfp-offset))
+
+(disassem:specialize (st :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
 ;;; ----------------------------------------------------------------
 
 (define-f3-inst std #b11 #b000111 :load-store :store)
+(disassem:specialize (std :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
 
 (define-f3-inst stf #b11 #b100100 :dest-kind fp-reg :load-store :store)
+(disassem:specialize (stf :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
+
 (define-f3-inst stf-odd #b11 #b100100 :dest-kind odd-fp-reg :load-store :store)
 (define-f3-inst stdf #b11 #b100111 :dest-kind fp-reg :load-store :store)
+(disassem:specialize (stdf :disassem-control #'note-number-stack-var-ref)
+  immed
+  (rs1 :constant nfp-offset))
 
 (define-f3-inst ldstub #b11 #b001101 :load-store t)
 (define-f3-inst swap #b11 #b001111 :load-store t)
