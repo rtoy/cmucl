@@ -5,12 +5,12 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.14 2000/08/20 14:42:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/generic-site.lisp,v 1.15 2003/02/05 14:41:11 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; Generic site specific initialization for CMU CL.  This can be used as a
-;;; template for non-cmu "library:site-init" files.
+;;; This file is installed as "library:site-init" in binary
+;;; distributions of CMUCL.
 ;;;
 (in-package "SYSTEM")
 
@@ -23,8 +23,8 @@
 ;;; found a bug.  Fill in the maintainer's address here..
 (rplaca
  (cdr (member :bugs *herald-items*))
- '("Send questions and bug reports to your local CMU CL maintainer, " terpri
-   "or to cmucl-help@cons.org. and cmucl-imp@cons.org. respectively." terpri
+ '("Send questions and bug reports to your local CMUCL maintainer, " terpri
+   "or see <http://www.cons.org/cmucl/support.html>." terpri
    "Loaded subsystems:" terpri))
 
 ;;; If you have sources installed on your system, un-comment the following form

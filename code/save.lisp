@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.46 2003/01/30 17:18:59 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.47 2003/02/05 14:41:10 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -270,7 +270,7 @@
 	))
 
 (setf (getf *herald-items* :bugs)
-      '("Send questions to cmucl-help@cons.org. and bug reports to cmucl-imp@cons.org."
+      '("See <http://www.cons.org/cmucl/> for support information."
 	terpri
 	"Loaded subsystems:"))
 
