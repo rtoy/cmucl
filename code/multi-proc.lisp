@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.20 1998/01/11 20:35:45 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.21 1998/01/12 16:56:55 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1067,12 +1067,33 @@
 ;;; based event server, which is assumed to be setup to call
 ;;; process-yielding periodically.
 ;;;
+(declaim (double-float *idle-loop-timeout*))
+(defvar *idle-loop-timeout* 0.1d0)
+;;;
 (defun idle-process-loop ()
+  (declare (optimize (speed 3)))
   (assert (eq *current-process* *initial-process*) ()
 	  "Only the *initial-process* is intended to run this idle loop")
+  ;; Ensure the *idle-process* is setup.
+  (unless *idle-process*
+    (setf *idle-process* *current-process*))
   (do ()
       (*quitting-lisp*)
-    (sys:serve-all-events))
+    ;; Calculate the wait period.
+    (let ((real-time (get-real-time))
+	  (timeout *idle-loop-timeout*))
+      (declare (double-float timeout))
+      (dolist (process *all-processes*)
+	(when (process-active-p process)
+	  (let ((wait-timeout (process-wait-timeout process)))
+	    (when wait-timeout
+	      (let ((delta (- wait-timeout real-time)))
+		(when (< delta timeout)
+		  (x86::double-float-reg-bias timeout)
+		  (setf timeout delta)))))))
+      (when (> timeout 1d-5)
+	(sys:serve-all-events timeout))
+      (process-yield)))
   (shutdown-multi-processing)
   (throw 'lisp::%end-of-the-world *quitting-lisp*))
 
