@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.33 2003/05/25 14:33:49 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.34 2003/05/25 17:01:51 gerd Exp $")
 
 (in-package :pcl)
 
@@ -1529,7 +1529,7 @@
 ;;;
 (defmethod function-keywords ((method standard-method))
   (multiple-value-bind (nreq nopt keysp restp allow-other-keys-p keywords)
-      (analyze-lambda-list (method-lambda-list* method))
+      (analyze-lambda-list (method-lambda-list method))
     (declare (ignore nreq nopt keysp restp))
     (values keywords allow-other-keys-p)))
 
