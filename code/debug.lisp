@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.24 1991/12/15 19:38:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.25 1991/12/16 09:27:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -298,11 +298,6 @@
 	 (*standard-input* *debug-io*)		;in case of setq
 	 (*standard-output* *debug-io*)		;''  ''  ''  ''
 	 (*error-output* *debug-io*)
-
-    (do ((p restarts (cdr p))
-	 (i 0 (1+ i)))
-	((endp p))
-      (format s "~&  ~D: ~A~%" i (car p)))))
 	 ;; Rebind some printer control variables.
 	 (kernel:*current-level* 0)
 	 (*print-readably* nil)
