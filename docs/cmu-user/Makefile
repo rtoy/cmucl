@@ -41,7 +41,7 @@ FILES = *.tex
 %.gz : %
 	gzip --best $<
 
-.INTERMEDIATE: cmu-user-letter.tex
+#.INTERMEDIATE: cmu-user-letter.tex
 cmu-user-letter.tex: cmu-user.tex
 	cp $< $@
 	perl -pi -e 's/documentclass\[a4paper\]/documentclass\[letter\]/' $@
