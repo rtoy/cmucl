@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.93 2004/04/23 12:33:39 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.94 2004/06/09 15:01:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1234,59 +1234,100 @@
 
 ;;;; Bignum printing
 
-;;; Written by Steven Handerson
-;;;  (based on Skef's idea)
-;;;
-;;; Rewritten to remove assumptions about the length of fixnums for the
-;;; MIPS port by William Lott.
-;;; 
+;;; Contributed by Mark Wooding, based on the algorithm in Emacs calc
+;;; by David I. Bell and Landon Curt Noll.  Slightly modified to be
+;;; less scheme-like by rtoy.  Caching by rtoy.
 
-;;; *BASE-POWER* holds the number that we keep dividing into the bignum for
-;;; each *print-base*.  We want this number as close to *most-positive-fixnum*
-;;; as possible, i.e. (floor (log most-positive-fixnum *print-base*)).
-;;; 
-(defparameter *base-power* (make-array 37 :initial-element nil))
-
-;;; *FIXNUM-POWER--1* holds the number of digits for each *print-base* that
-;;; fit in the corresponding *base-power*.
-;;; 
-(defparameter *fixnum-power--1* (make-array 37 :initial-element nil))
+;;; A cache of the power lists we need for the algorithm.  A power
+;;; list is an alist of (2^k . r^(2^k)), where r is the desired
+;;; *print-base*.  The last entry in the alist should be (1 . r).
+(defparameter *power-lists*
+  (make-array 37 :initial-contents (let ((r '()))
+				     (dotimes (k 37)
+				       (push (list (cons 1 k)) r))
+				     (nreverse r))))
 
 ;;; PRINT-BIGNUM -- internal.
 ;;;
-;;; Print the bignum to the stream.  We first generate the correct value for
-;;; *base-power* and *fixnum-power--1* if we have not already.  Then we call
-;;; bignum-print-aux to do the printing.
-;;; 
 (defun print-bignum (big stream)
-  (unless (aref *base-power* *print-base*)
-    (do ((power-1 -1 (1+ power-1))
-	 (new-divisor *print-base* (* new-divisor *print-base*))
-	 (divisor 1 new-divisor))
-	((not (fixnump new-divisor))
-	 (setf (aref *base-power* *print-base*) divisor)
-	 (setf (aref *fixnum-power--1* *print-base*) power-1))))
-  (bignum-print-aux (cond ((minusp big)
-			   (write-char #\- stream)
-			   (- big))
-			  (t big))
-		    (aref *base-power* *print-base*)
-		    (aref *fixnum-power--1* *print-base*)
-		    stream)
+  (print-bignum-fast big stream)
   big)
 
-;;; BIGNUM-PRINT-AUX -- internal.
-;;;
-(defun bignum-print-aux (big divisor power-1 stream)
-  (multiple-value-bind (newbig fix) (truncate big divisor)
-    (if (fixnump newbig)
-	(sub-output-integer newbig stream)
-	(bignum-print-aux newbig divisor power-1 stream))
-    (do ((zeros power-1 (1- zeros))
-	 (base-power *print-base* (* base-power *print-base*)))
-	((> base-power fix)
-	 (dotimes (i zeros) (write-char #\0 stream))
-	 (sub-output-integer fix stream)))))
+(defun power-list (n r)
+  "Compute a list of pairs (2^i . r^{2^i}), stopping with the largest r^{2^i}
+greater than n."
+  (declare (integer n) (fixnum r))
+  (do ((l nil (acons i r l))
+       (i 1 (* 2 i))
+       (r r (* r r)))
+      ((> r n) l)))
+
+(declaim (inline digit-to-char))
+(defun digit-to-char (d)
+  "Convert digit into a character representation.  We use 0..9, a..z for
+10..35, and A..Z for 36..52."
+  (declare (fixnum d))
+  (labels ((offset (d b) (code-char (+ d (char-code b)))))
+    (cond ((< d 10) (offset d #\0))
+	  ((< d 36) (offset (- d 10) #\A))
+	  (t (error "overflow in digit-to-char")))))
+
+(defun print-fixnum-sub (n r z s)
+  "Print a fixnum N to stream S, maybe with leading zeros.  This isn't
+ever-so efficient, but we probably don't need to care."
+  (declare (fixnum n r z)
+	   (stream s))
+  (labels ((gen-digits (n l z)
+	     (declare (fixnum n z)
+		      (list l))
+	     (cond ((zerop n)
+		    (dotimes (i z)
+		      (write-char #\0 s))
+		    (dolist (d l)
+		      (write-char d s)))
+		   (t
+		    (multiple-value-bind (n d)
+			(truncate n r)
+		      (gen-digits n (cons (digit-to-char d) l) (1- z)))))))
+    (gen-digits n nil z)))
+
+(defun print-bignum-fast-sub (n r z s pl)
+  "Use the power list (see power-list) PL to split N roughly in half; then
+print the left and right halves using (cdr PL).  Make sure we count the
+leading zeroes correctly."
+  (declare (integer n)
+	   (type (integer 2 36) r)
+	   (stream s)
+	   (list pl)
+	   (fixnum z))
+  (if (fixnump n)
+      (print-fixnum-sub n r z s)
+      (do ((nz (caar pl) (caar rest))
+	   (split (cdar pl) (cdar rest))
+	   (rest pl (rest rest)))
+	  ((<= split n)
+	   (multiple-value-bind (u v)
+	       (truncate n split)
+	     (print-bignum-fast-sub u r (if (> z nz) (- z nz) 0) s rest)
+	     (print-bignum-fast-sub v r nz s rest))))))
+
+(defun maybe-update-power-list (n base)
+  ;; Look up entry and see if we need to add entries to it
+  (let ((pl (aref *power-lists* base)))
+    (do ((index (caar pl) (caar pl))
+	 (max (cdar pl) (cdar pl)))
+	((>= max n))
+      (setf pl (acons (* index 2) (* max max)  pl)))
+    (setf (aref *power-lists* base) pl)
+    pl))
+
+(defun print-bignum-fast (n s)
+  "Primary fast bignum-printing interface.  Prints integer N to stream S in
+radix-R.  If you have a power-list then pass it in as PL."
+  (when (minusp n)
+    (write-char #\- s)
+    (setf n (- n)))
+  (print-bignum-fast-sub n *print-base* 0 s (maybe-update-power-list n *print-base*)))
 
 
 (defun output-ratio (ratio stream)

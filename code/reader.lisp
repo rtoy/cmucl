@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.47 2004/04/23 12:32:32 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.48 2004/06/09 15:01:20 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1314,6 +1314,7 @@
 
 ;;;; Number reading functions.
 
+#+nil
 (defmacro digit* nil
   `(do ((ch char (inch-read-buffer)))
        ((or (eofp ch) (not (digit-char-p ch))) (setq char ch))
@@ -1355,6 +1356,7 @@
 	    (expt base digits)))))
 |#
 
+#+nil
 (defun make-integer ()
   "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
   then multiplying by a power of the base and adding."
@@ -1385,6 +1387,102 @@
 		 (t (setq num (+ (digit-char-p ch base)
 				 (the index (* num base))))))))
        (setq number (+ num (* number base-power)))))))
+
+(defun make-integer ()
+  "Minimizes bignum-fixnum multiplies by reading a 'safe' number of digits, 
+  then multiplying by a power of the base and adding."
+  (read-unwind-read-buffer)
+  ;; Use the fast reader if the number has enough digits.  It seems
+  ;; that the fast reader is slower for small numbers but much faster
+  ;; for large numbers.  The value of 500 is an approximate break-even
+  ;; point.
+  (if (>= (the fixnum *ouch-ptr*) 500)
+      (fast-read-integer *read-base*)
+      (let* ((base *read-base*)
+	     (digits-per (aref *integer-reader-safe-digits* base))
+	     (base-power (aref *integer-reader-base-power* base)) 
+	     (negativep nil)
+	     (number 0))
+	(declare (type index digits-per base-power))
+	(let ((char (inch-read-buffer)))
+	  (cond ((char= char #\-)
+		 (setq negativep t))
+		((char= char #\+))
+		(t (unread-buffer))))
+	(loop
+	   (let ((num 0))
+	     (declare (type index num))
+	     (dotimes (digit digits-per)
+	       (let* ((ch (inch-read-buffer)))
+		 (cond ((or (eofp ch) (char= ch #\.))
+			(return-from make-integer
+			  (let ((res
+				 (if (zerop number) num
+				     (+ num (* number
+					       (expt base digit))))))
+			    (if negativep (- res) res))))
+		       (t (setq num (+ (digit-char-p ch base)
+				       (the index (* num base))))))))
+	     (setq number (+ num (* number base-power))))))))
+
+(defun fast-read-integer (r)
+  "Fast bignum-reading interface.  Reads from stream S an integer in radix
+R.  If we find some kind of error (bad characters, EOF), then NIL is
+returned; otherwise the number.  Reads at least one digit, but may not get to
+the end of the stream."
+  (let ((v (make-array 32 :element-type 'integer
+		       :adjustable t :fill-pointer 0)))
+    ;; V maps integers i to r^(2^i).
+    (vector-push-extend r v)
+    (labels ((scan (ch l)
+	       ;; Character CH has been read.  L contains a list of entries
+	       ;; of the form (n . i), where i is the base-2 log of the
+	       ;; length of n in digits.  We read digits and push entries
+	       ;; onto the front of the list as (d . 1), and then fix the
+	       ;; list to maintain the invariant that entries on the list
+	       ;; have strictly increasing length.
+	       (declare (type (or character list) ch) (list l))
+	       (if (or (eofp ch) (char= ch #\.))
+		   (finish l)
+		   (let ((d (digit-char-p ch r)))
+		     (declare (type (or null fixnum) d))
+		     (labels ((fix (x i l)
+				(declare (integer x) (fixnum i) (list l))
+				(if (>= i (fill-pointer v))
+				    (vector-push-extend
+				     (let ((x (aref v (1- i))))
+				       (* x x))
+				     v))
+				(if (null l)
+				    (scan (inch-read-buffer) (cons (cons x i) nil))
+				    (let ((y (caar l)) (j (cdar l)) (rest (cdr l)))
+				      (declare (integer y) (fixnum j) (list l))
+				      (if (= i j)
+					  (fix (+ (* y (aref v i)) x) (1+ i) rest)
+					  (scan (inch-read-buffer) (cons (cons x i) l)))))))
+		       (fix d 0 l)))))
+	     (finish (l)
+	       ;; Convert the list into a final answer.  The main loop below
+	       ;; counts Z as the length of what we've built so far in
+	       ;; digits.  Remember that, since this is a stack, we're
+	       ;; effectively working right-to-left here.
+	       (declare (list l))
+	       (labels ((create-integer (a z l)
+			  (declare (integer a z) (list l))
+			  (if (null l)
+			      a
+			      (create-integer (+ (* z (the integer (caar l))) a)
+					      (* z (aref v (cdar l)))
+					      (cdr l)))))
+		 (create-integer 0 1 l))))
+      (let ((ch (inch-read-buffer)))
+	(cond ((char= ch #\-)
+	       (let ((n (scan (inch-read-buffer) nil)))
+		 (- n)))
+	      ((char= ch #\+)
+	       (scan (inch-read-buffer) nil))
+	      (t
+	       (scan ch nil)))))))
 
 
 (defun make-float ()
