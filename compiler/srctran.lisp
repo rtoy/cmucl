@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.9 1990/05/23 16:39:30 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.10 1990/06/01 13:49:21 ram Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -432,7 +432,7 @@
 
 
 (defoptimizer (values derive-type) ((&rest values))
-  (specifier-type
+  (values-specifier-type
    `(values ,@(mapcar #'(lambda (x)
 			  (type-specifier (continuation-type x)))
 		      values))))
@@ -721,7 +721,7 @@
 	 'nil)))
 
 (dolist (x '(eq char= equal))
-  (%deftransform x 'function #'simple-equality-transform))
+  (%deftransform x '(function * *) #'simple-equality-transform))
 
 
 ;;; EQL IR1 Transform  --  Internal
