@@ -39,7 +39,8 @@
        (:external (declare (optimize-interface (safety 2) (debug 1))))))
 
 
-(comf "target:compiler/macros" :load *load-stuff* :byte-compile *byte-compile*)
+(comf "target:compiler/macros" :load *load-stuff*
+      :byte-compile #+bootstrap t #-bootstrap *byte-compile*)
 
 (comf "target:compiler/generic/vm-macs" :load *load-stuff* :proceed t
 	:byte-compile #+bootstrap t #-bootstrap nil)
@@ -65,6 +66,7 @@
 (comf "target:compiler/vop" :proceed t)
 (comf "target:compiler/vmdef")
 
+#-bootstrap
 (comf "target:compiler/meta-vmdef" :proceed t)
 #+bootstrap ;; pw adds
 (comf "target:compiler/meta-vmdef" :byte-compile t)
@@ -110,6 +112,7 @@
 
 (comf "target:compiler/debug-dump")
 (comf "target:compiler/generic/utils")
+#-bootstrap
 (comf "target:assembly/assemfile")
 #+bootstrap
 (comf "target:assembly/assemfile" :byte-compile t)
