@@ -180,9 +180,9 @@
 
 (macrolet ((frob (name sc ptype)
 	     `(define-vop (,name mc68881-op)
-		(:args (x :scs (,sc) :to (:result 0))
-		       (y :scs (,sc) :target r :to (:result 0)))
-		(:results (r :scs (,sc)))
+		(:args (x :scs (,sc) :target r)
+		       (y :scs (,sc)))
+		(:results (r :scs (,sc) :from (:argument 0)))
 		(:arg-types ,ptype ,ptype)
 		(:result-types ,ptype)
 		(:variant-vars op)
@@ -252,30 +252,20 @@
   (:generator 20
     (let ((drop-thru (gen-label)))
       (note-this-location vop :internal-error)
-      (inst mc68881-compare y x :cmp temp)
+      (if (eq condition '<)
+	  (inst mc68881-compare y x :cmp temp)
+	  (inst mc68881-compare x y :cmp temp))
       (let ((nfp (current-nfp-tn vop)))
 	(inst cal loc nfp (* (tn-offset loc-tn) word-bytes)))
       (inst mc68881-store-status :fpsr loc temp)
       (inst mc68881-wait)
       (loadw temp loc)
       (ecase condition
-	(>
+	((< >)
 	 (inst niuz temp temp
 	       (ash (logior mc68881-zero-condition
 			    mc68881-negative-condition
 			    mc68881-nan-condition)
-		    mc68881-fpsr-condition-code-shift-16)))
-	(<
-	 (inst niuz loc temp
-	       (ldb (byte 16 0)
-		    (lognot (ash mc68881-negative-condition
-				 mc68881-fpsr-condition-code-shift-16))))
-	 (inst bc :eq (if not-p target drop-thru))
-	 (inst niuz temp temp
-	       (ash (ldb (byte 16 0)
-			 (logior mc68881-zero-condition
-				 mc68881-negative-condition
-				 mc68881-nan-condition))
 		    mc68881-fpsr-condition-code-shift-16)))
 	(eql
 	 (inst niuz temp temp
