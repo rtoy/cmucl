@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.33 1994/10/26 17:33:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.34 1994/10/27 15:29:04 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -34,7 +34,7 @@
 	  ruseage ru-utime ru-stime ru-maxrss ru-ixrss ru-idrss
 	  ru-isrss ru-minflt ru-majflt ru-nswap ru-inblock ru-oublock
 	  ru-msgsnd ru-msgrcv ru-nsignals ru-nvcsw ru-nivcsw
-	  rlimit rlim-cur rlim-max s-context sc-onstack sc-mask sc-pc
+	  rlimit rlim-cur rlim-max sc-onstack sc-mask sc-pc
 
 	  unix-errno get-unix-error-msg
 
