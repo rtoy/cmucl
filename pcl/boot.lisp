@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.30 2002/08/27 18:46:48 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.31 2002/08/27 19:01:37 pmai Exp $")
 
 (in-package :pcl)
 
@@ -98,7 +98,7 @@ work during bootstrapping.
 ;;; a separate piece of code because of a bug in ExCL which causes this not
 ;;; to work if it is inlined.
 ;;;
-(eval-when (load eval)
+(eval-when (:load-toplevel :execute)
 
 (defun redirect-early-function-internal (real early)
   (setf (gdefinition real)
@@ -636,7 +636,7 @@ work during bootstrapping.
 
 (declaim (ext:freeze-type fast-instance-boundp))
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defvar *allow-emf-call-tracing-p* nil)
 (defvar *enable-emf-call-tracing-p* #-testing nil #+testing t)
 )
@@ -2062,7 +2062,7 @@ work during bootstrapping.
 		     (cons (if (listp arg) (car arg) arg) required)))))))
 
 
-(eval-when (load eval)
+(eval-when (:load-toplevel :execute)
   (setq *boot-state* 'early))
 
 (defmacro with-slots (slots instance &body body)

@@ -26,12 +26,12 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.4 1999/05/30 23:13:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp3.lisp,v 1.5 2002/08/27 19:01:38 pmai Exp $")
 ;;;
 
 (in-package :pcl)
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defparameter checking-or-caching-list
   '((T NIL (CLASS) NIL)
     (T NIL (CLASS CLASS) NIL)

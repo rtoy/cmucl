@@ -27,7 +27,7 @@
 
 (in-package :pcl)
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   
 (defvar *defclass-times*   '(load eval))	;Probably have to change this
 						;if you use defconstructor.
@@ -44,7 +44,7 @@
 
 )
 
-(eval-when (load eval)
+(eval-when (:load-toplevel :execute)
   (when (eq *boot-state* 'complete)
     (error "Trying to load (or compile) PCL in an environment in which it~%~
             has already been loaded.  This doesn't work, you will have to~%~

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.22 2002/08/26 02:23:16 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.23 2002/08/27 19:01:40 pmai Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -384,7 +384,7 @@
 ;;;       walker.
 ;;;
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defmacro get-walker-template-internal (x) ;Has to be inside eval-when because
   `(get ,x 'walker-template))		   ;Golden Common Lisp doesn't hack
@@ -393,7 +393,7 @@
 
 (defmacro define-walker-template
 	  (name &optional (template '(nil repeat (eval))))
-  `(eval-when (load eval)
+  `(eval-when (:load-toplevel :execute)
      (setf (get-walker-template-internal ',name) ',template)))
 )
 

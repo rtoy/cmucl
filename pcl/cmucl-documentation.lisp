@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.7 1998/06/21 10:02:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.8 2002/08/27 19:01:37 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -134,7 +134,7 @@
 
 ;;; Replace the minimal documentation function with the PCL version
 ;;; when loaded.
-(eval-when (load)
+(eval-when (:load-toplevel)
   (setf (symbol-function 'lisp:documentation) #'documentation)
   (setf (documentation 'documentation 'function)
     "Returns the documentation string of Doc-Type for X, or NIL if

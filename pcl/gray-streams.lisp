@@ -4,7 +4,7 @@
 ;;; the Public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.6 2001/11/20 15:10:04 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/gray-streams.lisp,v 1.7 2002/08/27 19:01:39 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -95,7 +95,7 @@
   t)
 
 
-(eval-when (compile)
+(eval-when (:compile-toplevel)
   (pushnew 'compile pcl::*defgeneric-times*))
 
 ;;; Character input streams.

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.15 2002/08/26 02:23:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.16 2002/08/27 19:01:37 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -125,7 +125,7 @@
   '(integer 0    ;#.(position 'number wrapper-layout)
             7))  ;#.(position 'number wrapper-layout :from-end t)
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defun power-of-two-ceiling (x)
   (declare (fixnum x))
   ;;(expt 2 (ceiling (log x 2)))
@@ -280,7 +280,7 @@
 
 ; In CMUCL we want to do type checking as early as possible; structures help this.
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defconstant wrapper-cache-number-vector-length
   kernel:layout-hash-length)
@@ -868,7 +868,7 @@
 ;;; to practically write my own compiler in order to get just this simple
 ;;; thing is something of a drag.
 ;;;
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defvar *cache* nil)
 
@@ -1388,7 +1388,7 @@
 ;;; This preallocation only creates about 25% more caches than PCL itself
 ;;; uses.  Some ports may want to preallocate some more of these.
 ;;; 
-(eval-when (load)
+(eval-when (:load-toplevel)
   (dolist (n-size '((1 513)(3 257)(3 129)(14 128)(6 65)(2 64)(7 33)(16 32)
 		    (16 17)(32 16)(64 9)(64 8)(6 5)(128 4)(35 2)))
     (let ((n (car n-size))

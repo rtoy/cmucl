@@ -36,7 +36,7 @@
 ;;; This preallocation only creates about 25% more caches than PCL itself
 ;;; uses need.  Some ports may want to preallocate some more of these.
 ;;; 
-(eval-when (load)
+(eval-when (:load-toplevel)
   (flet ((allocate (n size)
 	   (mapcar #'free-cache-vector
 		   (mapcar #'get-cache-vector

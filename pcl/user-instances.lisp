@@ -20,7 +20,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.4 2002/08/26 02:23:16 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.5 2002/08/27 19:01:40 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -48,12 +48,12 @@
 ;;;
 
 #-pcl-user-instances
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (error "Cannot use user-instances, since PCL was compiled without
         PCL-USER-INSTANCES on the *features* list (see pcl file low.lisp.)")
 )
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defclass user-vector-class-mixin () ()
   (:documentation
     "Use this mixin for metaclasses whose instances are USER-INSTANCES
@@ -129,7 +129,7 @@
 (defmacro get-user-instance-slots (x)
   `(user-vector-instance-slots ,x))
 
-(eval-when (eval load)
+(eval-when (:execute :load-toplevel)
   (force-compile 'user-instance-p)
   (force-compile 'user-instance-slots)
   (force-compile 'user-instance-wrapper)

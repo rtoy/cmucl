@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.22 2002/08/26 02:23:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.23 2002/08/27 19:01:37 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -580,7 +580,7 @@
 	(setf (lisp:find-class name) lclass
 	      (lisp:class-name lclass) name)))))
 
-(eval-when (load eval)
+(eval-when (:load-toplevel :execute)
   (clrhash *find-class*)
   (bootstrap-meta-braid)
   (bootstrap-accessor-definitions t)

@@ -24,12 +24,7 @@
 ;;; jeff morrill
 ;;; jmorrill@bbn.com
 
-#+Genera
-(eval-when (compile load eval)
-  (import '(clos-internals::allocate-instance)))
-
-#+cmu
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
   (import '(pcl:allocate-instance)))
 
 (declaim (optimize (speed 3) (safety 3 #+nil 1) (space 0)
@@ -119,7 +114,7 @@
 (declaim (single-float *speed-of-empty-loop*))
 (defvar *speed-of-empty-loop*)
 
-(eval-when (load eval)
+(eval-when (:load-toplevel :execute)
   (setq *empty-iterations* (compute-empty-iterations))
   (setq *speed-of-empty-loop* (/ (empty-speed *empty-iterations*)
 				 (float *empty-iterations*))))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.14 2001/03/13 15:49:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.15 2002/08/27 19:01:39 pmai Exp $")
 ;;;
 
   ;;   
@@ -110,7 +110,7 @@ explicitly marked saying who wrote it.
 ;;;       This must be SETF'able.
 ;;;       
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 (defconstant funcallable-instance-data
              '(wrapper slots)
   "These are the 'data-slots' which funcallable instances have so that

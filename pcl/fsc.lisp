@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.9 1999/05/30 23:14:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fsc.lisp,v 1.10 2002/08/27 19:01:39 pmai Exp $")
 ;;;
 ;;; This file contains the definition of the FUNCALLABLE-STANDARD-CLASS
 ;;; metaclass.  Much of the implementation of this metaclass is actually
@@ -96,7 +96,7 @@
 ;				 slot-name)
 ;	 nv))))
 ;
-;(eval-when (load)
+;(eval-when (:load-toplevel)
 ;  (pre-make-templated-function-constructor reader-function--fsc)
 ;  (pre-make-templated-function-constructor writer-function--fsc))
 

@@ -18,12 +18,12 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.5 2002/08/26 02:23:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.6 2002/08/27 19:01:38 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
 
-(eval-when (compile load eval)
+(eval-when (:compile-toplevel :load-toplevel :execute)
 
 (defvar *extensions-exports*
         '(set-standard-instance-access
