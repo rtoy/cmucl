@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.34 2004/05/04 12:38:13 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.35 2004/05/19 22:28:43 cwang Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -56,7 +56,7 @@ static boolean maybe_gc_pending = FALSE;
 void
 build_fake_control_stack_frame(struct sigcontext *context)
 {
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
   lispobj oldcont;
   
   /* Build a fake stack frame */
@@ -100,7 +100,7 @@ void
 fake_foreign_function_call(struct sigcontext *context)
 {
     int context_index;
-#ifndef i386
+#if !defined(i386) && !defined(__x86_64)
     lispobj oldcont;
 #endif
 
@@ -171,7 +171,7 @@ void
 interrupt_internal_error(HANDLER_ARGS, boolean continuable)
 {
     lispobj context_sap;
-#if ( defined( __linux__ ) && defined( i386 ) )
+#if ( defined( __linux__ ) && (defined( i386 ) || defined( __x86_64 ) ) )
     GET_CONTEXT
 #endif
 
@@ -249,7 +249,7 @@ interrupt_handle_pending(struct sigcontext *context)
 	code = pending_code;
 	pending_signal = 0;
 	/* pending_code = 0; */
-#if ( defined( __linux__ ) && defined( i386 ) )
+#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
         interrupt_handle_now(signal, *context);
 #else
 	interrupt_handle_now(signal, PASSCODE(code), context);
@@ -266,20 +266,24 @@ interrupt_handle_pending(struct sigcontext *context)
 void 
 interrupt_handle_now(HANDLER_ARGS)
 {
-#if defined(__linux__) && defined(i386)
+#if defined(__linux__) && (defined(i386) || defined(__x86_64))
     GET_CONTEXT
 #endif
 
     int were_in_lisp;
     union interrupt_handler handler;
 
-#if defined(__linux__) && defined(i386)
+#if defined(__linux__) && ( defined(i386) || defined(__x86_64) )
     /*
      * Restore the FPU control word, setting the rounding mode to nearest.
      */
 
     if (contextstruct.fpstate)
+#if defined(__x86_64)
+      setfpucw(contextstruct.fpstate->cwd & ~0xc00);
+#else
       setfpucw(contextstruct.fpstate->cw & ~0xc00);
+#endif
 #endif
 
     handler = interrupt_handlers[signal];
@@ -290,7 +294,7 @@ interrupt_handle_now(HANDLER_ARGS)
     SAVE_CONTEXT(); /**/
 
     were_in_lisp = !foreign_function_call_active;
-#ifndef i386
+#if ! (defined(i386) || defined(_x86_64))
     if (were_in_lisp)
 #endif
         fake_foreign_function_call(context);
@@ -345,14 +349,14 @@ interrupt_handle_now(HANDLER_ARGS)
         sigsetmask(context->sc_mask);
 #endif /* POSIX_SIGS */
       
-#if ( defined( __linux__ ) && defined( i386 ) )
+#if ( defined( __linux__ ) && ( defined( i386 ) || defined ( __x86_64 ) ) )
         (*handler.c)(signal, contextstruct);
 #else
         (*handler.c)(signal, code, context);
 #endif
     }
     
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
     if (were_in_lisp)
 #endif
         undo_fake_foreign_function_call(context);
@@ -361,7 +365,7 @@ interrupt_handle_now(HANDLER_ARGS)
 static void 
 maybe_now_maybe_later(HANDLER_ARGS)
 {
-#if defined(__linux__) && defined(i386)
+#if defined(__linux__) && (defined(i386) || defined(__x86_64))
     GET_CONTEXT
 #endif
 
@@ -393,7 +397,7 @@ maybe_now_maybe_later(HANDLER_ARGS)
 
         SetSymbolValue(INTERRUPT_PENDING, T);
     } else if (
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
 	       (!foreign_function_call_active) &&
 #endif
 	       arch_pseudo_atomic_atomic(context)) {
@@ -420,16 +424,20 @@ maybe_now_maybe_later(HANDLER_ARGS)
 
 	arch_set_pseudo_atomic_interrupted(context);
     } else {
-#if defined(__linux__) && defined(i386)
+#if defined(__linux__) && (defined(i386) || defined(__x86_64))
       /*
        * Restore the FPU control word, setting the rounding mode to nearest.
        */
 
       if (contextstruct.fpstate)
+#if defined(__x86_64)
+	setfpucw(contextstruct.fpstate->cwd & ~0xc00);
+#else
 	setfpucw(contextstruct.fpstate->cw & ~0xc00);
 #endif
+#endif
 
-#if ( defined( __linux__ ) && defined( i386 ) )
+#if ( defined( __linux__ ) && ( defined( i386 ) || defined( __x86_64 ) ) )
         interrupt_handle_now(signal, contextstruct);
 #else
         interrupt_handle_now(signal, code, context);
@@ -460,7 +468,7 @@ static boolean gc_trigger_hit(HANDLER_ARGS)
 }
 #endif
 
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
 boolean interrupt_maybe_gc(HANDLER_ARGS)
 {
     if (!foreign_function_call_active

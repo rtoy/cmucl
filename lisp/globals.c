@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.3 2000/10/24 13:32:32 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/globals.c,v 1.4 2004/05/19 22:24:49 cwang Exp $ */
 
 /* Variables everybody needs to look at or frob on. */
 
@@ -22,7 +22,7 @@ lispobj *dynamic_0_space;
 lispobj *dynamic_1_space;
 unsigned dynamic_space_size;
 lispobj *control_stack;
-#ifdef i386
+#if (defined(i386) || defined(__x86_64))
 lispobj *control_stack_end;
 #endif
 lispobj *binding_stack;
@@ -49,7 +49,7 @@ void globals_init(void)
     foreign_function_call_active = 1;
 
     /* Initialize the current lisp state. */
-#ifndef i386
+#if !(defined(i386) || defined(__x86_64))
     current_control_stack_pointer = control_stack;
 #else
     current_control_stack_pointer = control_stack_end;
