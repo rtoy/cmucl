@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.70 2001/02/22 20:31:50 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.71 2001/02/23 12:46:42 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -541,7 +541,7 @@
 (def-unix-error ESRCH 3 "No such process")
 (def-unix-error EINTR 4 "Interrupted system call")
 (def-unix-error EIO 5 "I/O error")
-(def-unix-error ENXIO 6 "Device not configured"
+(def-unix-error ENXIO 6 "Device not configured")
 (def-unix-error E2BIG 7 "Arg list too long")
 (def-unix-error ENOEXEC 8 "Exec format error")
 (def-unix-error EBADF 9 "Bad file descriptor")
