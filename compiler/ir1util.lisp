@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.54 1992/04/18 12:06:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.55 1992/06/02 00:35:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -922,9 +922,12 @@
 
   (let ((dest (continuation-dest cont)))
     (when dest
-      (let ((block (node-block dest)))
-	(unless (block-delete-p block)
-	  (mark-for-deletion block)))))
+      (let ((prev (node-prev dest)))
+	(when (and prev
+		   (not (eq (continuation-kind prev) :deleted)))
+	  (let ((block (continuation-block prev)))
+	    (unless (block-delete-p block)
+	      (mark-for-deletion block)))))))
   
   (setf (continuation-kind cont) :deleted)
   (setf (continuation-dest cont) nil)
