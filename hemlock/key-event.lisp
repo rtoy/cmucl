@@ -424,8 +424,12 @@
 (defvar *modifier-count* 0
   "The number of modifiers that is currently defined.")
 
+(eval-when (compile eval load)
+
 (defconstant modifier-count-limit 6
   "The maximum number of modifiers supported.")
+
+); eval-when
 
 ;;; This is purely a list for users.
 ;;;
