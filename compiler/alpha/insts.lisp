@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.1 1994/04/06 16:54:42 hallgren Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/insts.lisp,v 1.2 1994/04/30 17:18:43 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -551,7 +551,7 @@
 		    (if (logbitp (1- n) x)
 			(logior (ash -1 (1- n)) x)
 			x))))
-	   (let* ((value (se (funcall calc label posn 0) 2))
+	   (let* ((value (se (funcall calc label posn 0) 32))
 		  (low (ldb (byte 16 0) value))
 		  (tmp1 (- value (se low 16)))
 		  (high (ldb (byte 16 16) tmp1))
