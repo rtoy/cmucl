@@ -1000,7 +1000,7 @@
       (when error-file-stream
 	(let ((name (pathname error-file-stream)))
 	  (close error-file-stream)
-	  (unless error-severity
+	  (when (and compile-won (not error-severity))
 	    (delete-file name))))
 
       (when *compiler-trace-output*
