@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.15 1991/02/08 13:31:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.16 1991/03/07 17:48:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.15 1991/02/08 13:31:52 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.16 1991/03/07 17:48:06 wlott Exp $
 ;;;
 ;;; CMU Common Lisp Debugger.  This is a very basic command-line oriented
 ;;; debugger.
@@ -311,16 +311,16 @@
 ;;; on whatever is causing recursive errors.
 				      (throw 'debug-loop-catcher nil))
 				    (invoke-debugger condition))))
-	    (funcall *debug-prompt*)
-	    (let* ((exp (read))
-		   (cmd-fun (debug-command-p exp))
-		   ;; Must bind level for restart function created by
-		   ;; WITH-SIMPLE-RESTART.
-		   (level *debug-command-level*))
+(defun internal-debug ()
+  (let ((*in-the-debugger* t)
+	    (let ((level *debug-command-level*))
       (clear-input *debug-io*)
-		(if cmd-fun
-		    (funcall cmd-fun)
-		    (debug-eval-print exp))))))))))
+      (format *debug-io* "~2&Debug  (type H for help)~2%"))
+		(let* ((exp (read))
+		       (cmd-fun (debug-command-p exp)))
+		  (if cmd-fun
+		      (funcall cmd-fun)
+		      (debug-eval-print exp)))))))))))
 				    (when *flush-debug-errors*
 				      (clear-input *debug-io*)
 				      (princ condition)
