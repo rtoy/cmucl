@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.88 1993/05/02 14:52:10 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.89 1993/06/17 22:17:23 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1020,12 +1020,12 @@
              "*DESCRIBE-LEVEL*" "*DESCRIBE-PRINT-LENGTH*"
              "*DESCRIBE-PRINT-LEVEL*" "*DESCRIBE-VERBOSE*"
              "*DISPLAY-EVENT-HANDLERS*" "*EDITOR-LISP-P*"
-             "*EFFICENCY-NOTE-COST-THRESHOLD*" "*EFFICENCY-NOTE-LIMIT*"
+             "*EFFICIENCY-NOTE-COST-THRESHOLD*" "*EFFICIENCY-NOTE-LIMIT*"
              "*ENCLOSING-SOURCE-CUTOFF*" "*ENVIRONMENT-LIST*"
              "*ERROR-PRINT-LENGTH*" "*ERROR-PRINT-LEVEL*" "*GC-INHIBIT-HOOK*"
              "*GC-NOTIFY-AFTER*" "*GC-NOTIFY-BEFORE*" "*GC-VERBOSE*"
              "*HEMLOCK-VERSION*" "*IGNORE-FLOATING-POINT-UNDERFLOW*"
-             "*INFO-ENVIRONMENT*" "*INTEXP-MAXIMUM-EXPONENENT*"
+             "*INFO-ENVIRONMENT*" "*INTEXP-MAXIMUM-EXPONENT*"
              "*KEYWORD-PACKAGE*" "*LISP-PACKAGE*" "*LOAD-IF-SOURCE-NEWER*"
              "*MAX-OLD-TRACE-INDENTATION*" "*MAX-STEP-INDENTATION*"
              "*MAX-TRACE-INDENTATION*" "*MODULE-FILE-TRANSLATIONS*"
