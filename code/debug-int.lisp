@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.28 1991/10/13 14:27:02 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.29 1991/10/14 10:51:59 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2793,7 +2793,7 @@
 
 ;;; PREPROCESS-FOR-EVAL  --  Public.
 ;;;
-;;; Create a SYMBOL-MACRO-LET for each variable valid at the location which
+;;; Create a SYMBOL-MACROLET for each variable valid at the location which
 ;;; accesses that variable from the frame argument.
 ;;;
 (defun preprocess-for-eval (form loc)
@@ -2833,7 +2833,7 @@
 					  :frame ,n-frame)))))))
       (let ((res (coerce `(lambda (,n-frame)
 			    (declare (ext:ignorable ,n-frame))
-			    (symbol-macro-let ,(specs) ,form))
+			    (symbol-macrolet ,(specs) ,form))
 			 'function)))
 	#'(lambda (frame)
 	    ;; This prevents these functions from use in any location other
