@@ -186,8 +186,9 @@
 	     (sb-kind sb))))
 
   (let ((nstack-p
-	 (if (or (eq sb-name 'number-stack)
-		 (find 'number-stack (mapcar #'sc-or-lose alternate-scs)
+	 (if (or (eq sb-name 'non-descriptor-stack)
+		 (find 'non-descriptor-stack
+		       (mapcar #'sc-or-lose alternate-scs)
 		       :key #'(lambda (x)
 				(sb-name (sc-sb x)))))
 	     t nil)))
