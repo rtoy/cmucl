@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.74 2002/08/07 15:19:47 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.75 2002/10/25 14:38:43 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1320,13 +1320,13 @@
   "CTYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then a correctable error is signalled."
-  (case-body 'ctypecase keyform cases nil 'typep t t))
+  (case-body 'ctypecase keyform cases nil 'typep nil t t))
 
 (defmacro etypecase (keyform &body cases)
   "ETYPECASE Keyform {(Type Form*)}*
   Evaluates the Forms in the first clause for which TYPEP of Keyform and Type
   is true.  If no form is satisfied then an error is signalled."
-  (case-body 'etypecase keyform cases nil 'typep t nil))
+  (case-body 'etypecase keyform cases nil 'typep nil nil t))
 
 
 ;;;; ASSERT and CHECK-TYPE.
