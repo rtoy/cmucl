@@ -2,7 +2,7 @@
 #
 #  mk-lisp -- script for building full lisp cores.
 #
-# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.4 1991/04/20 22:44:05 wlott Exp $
+# $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/Attic/mk-lisp,v 1.5 1991/06/05 14:05:45 ram Exp $
 
 if ($#argv) then
 	set subdir = $argv[1]
@@ -24,7 +24,11 @@ else
 	endif
 endif
 
-set date = `/bin/date | awk '{print $2 "-" $3 "-" $6}'`
+if (-e $lisp/VERSION) then
+	set version = `cat $lisp/VERSION`
+else
+	set version = `/bin/date | awk '{print $2 "-" $3 "-" $6}'`
+endif
 
 # set a bunch of random env vars to fill up space.
 setenv FOO XXXXXXXXXXXXXXXX
@@ -36,16 +40,14 @@ setenv ACK $FOO
 setenv RAZ $FOO
 setenv GORP $FOO
 
-echo Building lisp.core dated $date from the \`\`$subdir\'\' subdir.
+echo Building lisp.core dated $version from the \`\`$subdir\'\' subdir.
 
 $lisp/ldb/ldb -core $core << EOF
 (setf *features* (append '($features) *features*))
 (setf (search-list "lisp:") '("$lisp/"))
 (in-package "USER")
 (load (open "lisp:tools/worldload.lisp"))
-$date
-$date
-$date
+$version
 (quit)
 EOF
 
