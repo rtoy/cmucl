@@ -465,8 +465,10 @@
 (defun find-attribute (mark attribute &optional (test #'not-zerop))
   "Find the next character whose attribute value satisfies test."
   (let ((charpos (mark-charpos mark))
-	(line (mark-line mark)) vector mask end-wins)
-    (declare (type (simple-array (mod 256)) vector) (fixnum mask))
+	(line (mark-line mark))
+	(mask 0)
+	vector end-wins)
+    (declare (type (or (simple-array (mod 256)) null) vector) (fixnum mask))
     (cached-attribute-lookup attribute test vector mask end-wins)
     (cond
      ((cond
@@ -533,7 +535,7 @@
   "Find the previous character whose attribute value satisfies test."
   (let* ((charpos (mark-charpos mark))
 	 (line (mark-line mark)) vector mask end-wins)
-    (declare (type (simple-array (mod 256)) vector)
+    (declare (type (or (simple-array (mod 256)) null) vector)
 	     (fixnum charpos))
     (cached-attribute-lookup attribute test vector mask end-wins)
     (cond 
