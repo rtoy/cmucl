@@ -52,7 +52,7 @@ do
     rm -f $d/compile-*.log $d/hemlock/spell-dictionary.bin 2> /dev/null
     if [ -n "$CLEAN_C" ]; then
 	rm -f $d/lisp/* $d/motif/server/*
-    done
+    fi
 done
 
 
