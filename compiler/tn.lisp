@@ -50,9 +50,10 @@
 	       `(let ((prev nil))
 		  (do ((tn ,name (tn-next tn)))
 		      ((null tn))
-		    (cond ((or (not (eq (tn-kind tn) :normal))
-			       (tn-reads tn)
-			       (tn-writes tn))
+		    (cond ((or (tn-reads tn)
+			       (tn-writes tn)
+			       (member (tn-kind tn)
+				       '(:component :specified-save)))
 			   (setq prev tn))
 			  (t
 			   (if prev
@@ -62,9 +63,9 @@
     (let ((2comp (component-info component)))
       (frob (ir2-component-normal-tns 2comp))
       (frob (ir2-component-restricted-tns 2comp))
-      (frob (ir2-component-wired-tns 2comp))))
+      (frob (ir2-component-wired-tns 2comp))
+      (frob (ir2-component-alias-tns 2comp))))
   (undefined-value))
-
 
 
 ;;;; TN Creation:
@@ -129,16 +130,27 @@
     res))
 
 
-;;; Environment-Live-TN  --  Interface
+;;; ENVIRONMENT-LIVE-TN, ENVIRONMENT-DEBUG-LIVE-TN  --  Interface
 ;;;
-;;;    Make TN be live throughout environment.  TN must be referenced only in
-;;; Env.  Return TN.
+;;;    Make TN be live throughout environment.  Return TN.  In the DEBUG case,
+;;; the TN is treated normally in blocks in the environment which reference the
+;;; TN, allowing targeting to/from the TN.  This results in move efficient
+;;; code, but may result in the TN sometimes not being live when you want it.
 ;;;
 (defun environment-live-tn (tn env)
   (declare (type tn tn) (type environment env))
   (assert (eq (tn-kind tn) :normal))
   (setf (tn-kind tn) :environment)
+  (setf (tn-environment tn) env)
   (push tn (ir2-environment-live-tns (environment-info env)))
+  tn)
+;;;
+(defun environment-debug-live-tn (tn env)
+  (declare (type tn tn) (type environment env))
+  (assert (eq (tn-kind tn) :normal))
+  (setf (tn-kind tn) :debug-environment)
+  (setf (tn-environment tn) env)
+  (push tn (ir2-environment-debug-live-tns (environment-info env)))
   tn)
 
 
@@ -151,6 +163,23 @@
   (assert (eq (tn-kind tn) :normal))
   (setf (tn-kind tn) :component)
   (push tn (ir2-component-component-tns (component-info *compile-component*)))
+  tn)
+
+
+;;; SPECIFY-SAVE-TN  --  Interface
+;;;
+;;;    Specify that Save be used as the save location for TN.  TN is returned. 
+;;;
+(defun specify-save-tn (tn save)
+  (declare (type tn tn save))
+  (assert (eq (tn-kind save) :normal))
+  (assert (and (not (tn-save-tn tn)) (not (tn-save-tn save))))
+  (setf (tn-kind save) :specified-save)
+  (setf (tn-save-tn tn) save)
+  (setf (tn-save-tn save) tn)
+  (push save
+	(ir2-component-specified-save-tns
+	 (component-info *compile-component*)))
   tn)
 
 
@@ -172,6 +201,21 @@
 	(vector-push-extend constant constants)))
     (push-in tn-next res (ir2-component-constant-tns component))
     (setf (tn-leaf res) constant)
+    res))
+
+
+;;; MAKE-ALIAS-TN  --  Interface
+;;;
+;;;    Make a TN that aliases TN for use in local call argument passing.
+;;;
+(defun make-alias-tn (tn)
+  (declare (type tn tn))
+  (let* ((component (component-info *compile-component*))
+	 (res (make-tn (incf (ir2-component-global-tn-counter component))
+		       :alias (tn-primitive-type tn) nil)))
+    (setf (tn-save-tn res) tn)
+    (push-in tn-next res
+	     (ir2-component-alias-tns component))
     res))
 
 
