@@ -18,18 +18,21 @@
 
 ;;; Entry-Analyze  --  Interface
 ;;;
-;;;    This phase runs before IR2 conversion, assigning each XEP a Entry-Info
-;;; structure.  We call the VM-supplied Select-Component-Format function to
-;;; make VM-dependent initializations in the IR2-Component.  This includes
-;;; setting the IR2-Component-Kind and allocating fixed implementation overhead
-;;; in the constant pool.
+;;;    This phase runs before IR2 conversion, initializing each XEP's
+;;; Entry-Info structure.  We call the VM-supplied Select-Component-Format
+;;; function to make VM-dependent initializations in the IR2-Component.  This
+;;; includes setting the IR2-Component-Kind and allocating fixed implementation
+;;; overhead in the constant pool.  If there was a forward reference to a
+;;; function, then the ENTRY-INFO will already exist, but will be
+;;; uninitialized.
 ;;;
 (defun entry-analyze (component)
   (let ((2comp (component-info component)))
     (dolist (fun (component-lambdas component))
       (when (external-entry-point-p fun)
-	(let ((info (compute-entry-info fun)))
-	  (setf (leaf-info fun) info)
+	(let ((info (or (leaf-info fun)
+			(setf (leaf-info fun) (make-entry-info)))))
+	  (compute-entry-info fun info)
 	  (push info (ir2-component-entries 2comp))))))
 
   (select-component-format component)
@@ -57,20 +60,22 @@
 
 ;;; Compute-Entry-Info  --  Internal
 ;;;
-;;;    Return the an Entry-Info structure corresponding to the XEP lambda Fun.
+;;;    Initialize Info structure to correspond to the XEP lambda Fun.
 ;;;
-(defun compute-entry-info (fun)
-  (declare (type clambda fun))
+(defun compute-entry-info (fun info)
+  (declare (type clambda fun) (type entry-info info))
   (let ((block (node-block (lambda-bind fun)))
 	(internal-fun (functional-entry-function fun)))
-    (make-entry-info
-     :closure-p (not (null (environment-closure (lambda-environment fun))))
-     :offset (gen-label)
-     :name (let ((name (leaf-name internal-fun)))
-	     (or name
-		 (component-name (block-component block))))
-     :arguments (make-arg-names internal-fun)
-     :type (type-specifier (leaf-type internal-fun)))))
+    (setf (entry-info-closure-p info)
+	  (not (null (environment-closure (lambda-environment fun)))))
+    (setf (entry-info-offset info) (gen-label))
+    (setf (entry-info-name info)
+	  (let ((name (leaf-name internal-fun)))
+	    (or name
+		(component-name (block-component block)))))
+    (setf (entry-info-arguments info) (make-arg-names internal-fun))
+    (setf (entry-info-type info) (type-specifier (leaf-type internal-fun))))
+  (undefined-value))
 
 
 ;;; REPLACE-TOP-LEVEL-XEPS  --  Interface
@@ -95,8 +100,8 @@
 			 (lambda-environment (main-entry ef)))))
 	  (dolist (ref (leaf-refs lambda))
 	    (let ((ref-component (block-component (node-block ref))))
-	      (unless (eq ref-component component)
-		(assert (eq (component-kind ref-component) :top-level))
+	      (when (and (not (eq ref-component component))
+			 (eq (component-kind ref-component) :top-level))
 		(cond (closure
 		       (setq res t))
 		      (t
