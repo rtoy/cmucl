@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.1 1997/08/30 18:47:40 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.1.2.1 1997/09/03 01:10:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -104,3 +104,16 @@
 
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
   (setf (ext:info variable documentation x) new-value))
+
+;;; CMUCL random documentation.
+(defmethod documentation ((x symbol) (doc-type symbol))
+  (cdr (assoc doc-type
+	      (values (ext:info random-documentation stuff x)))))
+
+(defmethod (setf documentation) (new-value (x symbol) (doc-type symbol))
+  (let ((pair (assoc doc-type (ext:info random-documentation stuff x))))
+    (if pair
+	(setf (cdr pair) new-value)
+	(push (cons doc-type new-value)
+	      (ext:info random-documentation stuff x))))
+  new-value)
