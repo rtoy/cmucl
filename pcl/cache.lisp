@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.20 2002/10/19 01:11:41 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.21 2002/10/29 16:20:44 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -312,26 +312,6 @@
   `(kernel:class-pcl-class (kernel:layout-class ,wrapper)))
 (defmacro wrapper-no-of-instance-slots (wrapper)
   `(kernel:layout-length ,wrapper))
-(declaim (inline wrapper-state (setf wrapper-state)))
-
-(defun wrapper-state (wrapper)
-  (let ((invalid (kernel:layout-invalid wrapper)))
-    (cond ((null invalid)
-	   t)
-	  ((atom invalid)
-	   ;; Some non-pcl object.  invalid is probably :INVALID
-	   ;; We should compute the new wrapper here instead
-	   ;; of returning nil, but why bother, since
-	   ;; obsolete-instance-trap can't use it.
-	   '(:obsolete nil))
-	  (t
-	   invalid))))
-
-(defun (setf wrapper-state) (new-value wrapper)
-  (setf (kernel:layout-invalid wrapper)
-	(if (eq new-value t)
-	    nil
-	  new-value)))
 
 (defmacro wrapper-instance-slots-layout (wrapper)
   `(%wrapper-instance-slots-layout ,wrapper))
@@ -448,66 +428,57 @@
 ;;; validity as well.  This is done by calling check-wrapper-validity.
 ;;; 
 
-(defmacro invalid-wrapper-p (wrapper)
-  `(neq (wrapper-state ,wrapper) t))
+(declaim (inline invalid-wrapper-p))
+
+(defun invalid-wrapper-p (wrapper)
+  (not (null (kernel:layout-invalid wrapper))))
 
 (defvar *previous-nwrappers* (make-hash-table))
 
 (defun invalidate-wrapper (owrapper state nwrapper)
-  (ecase state
-    ((:flush :obsolete)
-     (let ((new-previous ()))
-       ;;
-       ;; First off, a previous call to invalidate-wrapper may have recorded
-       ;; owrapper as an nwrapper to update to.  Since owrapper is about to
-       ;; be invalid, it no longer makes sense to update to it.
-       ;;
-       ;; We go back and change the previously invalidated wrappers so that
-       ;; they will now update directly to nwrapper.  This corresponds to a
-       ;; kind of transitivity of wrapper updates.
-       ;; 
-       (dolist (previous (gethash owrapper *previous-nwrappers*))
-	 (when (eq state :obsolete)
-	   (setf (car previous) :obsolete))
-	 (setf (cadr previous) nwrapper)
-	 (push previous new-previous))
+  (assert (member state '(:flush :obsolete) :test #'eq))
+  (let ((new-previous ()))
+    ;;
+    ;; First off, a previous call to invalidate-wrapper may have recorded
+    ;; owrapper as an nwrapper to update to.  Since owrapper is about to
+    ;; be invalid, it no longer makes sense to update to it.
+    ;;
+    ;; We go back and change the previously invalidated wrappers so that
+    ;; they will now update directly to nwrapper.  This corresponds to a
+    ;; kind of transitivity of wrapper updates.
+    ;; 
+    (dolist (previous (gethash owrapper *previous-nwrappers*))
+      (when (eq state :obsolete)
+	(setf (first previous) :obsolete))
+      (setf (second previous) nwrapper)
+      (push previous new-previous))
 
-       (loop with ocnv = (wrapper-cache-number-vector owrapper)
-	     for type in wrapper-layout and i from 0
-	     when (eq type 'number) do
-	       (setf (cache-number-vector-ref ocnv i) 0))
-       
-       (push (setf (wrapper-state owrapper) (list state nwrapper))
-	     new-previous)
-       
-       (setf (gethash owrapper *previous-nwrappers*) ()
-	     (gethash nwrapper *previous-nwrappers*) new-previous)))))
+    (loop for i below kernel:layout-hash-length do
+	    (setf (kernel:layout-hash owrapper i) 0))
+    
+    (let ((new-state (list state nwrapper)))
+      (setf (kernel:layout-invalid owrapper) new-state)
+      (push new-state new-previous)
+      (setf (gethash owrapper *previous-nwrappers*) ()
+	    (gethash nwrapper *previous-nwrappers*) new-previous))))
 
 (defun check-wrapper-validity (instance)
   (let* ((owrapper (wrapper-of instance))
-	 (state (wrapper-state owrapper)))
-    (if (eq state  t)
+	 (state (kernel:layout-invalid owrapper)))
+    (if (null state)
 	owrapper
-	(let ((nwrapper
-		(ecase (car state)
-		  (:flush
-		    (flush-cache-trap owrapper (cadr state) instance))
-		  (:obsolete
-		    (obsolete-instance-trap owrapper (cadr state) instance)))))
-	  ;;
-	  ;; This little bit of error checking is superfluous.  It only
-	  ;; checks to see whether the person who implemented the trap
-	  ;; handling screwed up.  Since that person is hacking internal
-	  ;; PCL code, and is not a user, this should be needless.  Also,
-	  ;; since this directly slows down instance update and generic
-	  ;; function cache refilling, feel free to take it out sometime
-	  ;; soon.
-	  ;; 
-	  (cond ((neq nwrapper (wrapper-of instance))
-		 (error "Wrapper returned from trap not wrapper of instance."))
-		((invalid-wrapper-p nwrapper)
-		 (error "Wrapper returned from trap invalid.")))
-	  nwrapper))))
+	(ecase (first state)
+	  (:flush
+	   (flush-cache-trap owrapper (second state) instance))
+	  (:obsolete
+	   (obsolete-instance-trap owrapper (second state) instance))))))
+
+(declaim (inline check-obsolete-instance))
+
+(defun check-obsolete-instance (instance)
+  (when (invalid-wrapper-p (kernel:layout-of instance))
+    (check-wrapper-validity instance)))
+
 
 
 (defvar *free-caches* nil)

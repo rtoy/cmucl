@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.36 2002/10/19 14:56:03 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.37 2002/10/29 16:20:45 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -1054,19 +1054,37 @@
 
 
 ;;;
+;;; Force the flushing of caches by creating a new wrapper for CLASS,
+;;; if necessary.
 ;;;
+;;; If the LAYOUT-INVALID slot of CLASS's wrapper is
+;;;
+;;; -- (:FLUSH <new wrapper>) or (:OBSOLETE <new wrapper>), there's
+;;;    nothing to do.  The new wrapper has already been created.
+;;;
+;;; -- :INVALID, then it has been set to that value by a previous
+;;;    call to REGISTER-LAYOUT for a superclass S of CLASS; S's
+;;;    wrapper has been invalidated together with its subclasses.  In
+;;;    this case, CLASS's caches must obviously be flushed, too, like
+;;;    S's.  So, make a new wrapper for CLASS, and translate kernel's
+;;;    :INVALID to PCL (:FLUSH <new wrapper>).  UPDATE-SLOTS can later
+;;;    decide if it wants to make this (:OBSOLETE ...).
+;;;
+;;; -- NIL, then the wrapper is still valid, in which case we do
+;;;    the same as for :INVALID, but for the obviously slightly
+;;;    different reason.
 ;;;
 (defun force-cache-flushes (class)
-  (let* ((owrapper (class-wrapper class))
-	 (state (wrapper-state owrapper)))
+  (let* ((owrapper (class-wrapper class)))
     ;;
-    ;; We only need to do something if the state is still T.  If the
-    ;; state isn't T, it will be FLUSH or OBSOLETE, and both of those
+    ;; We only need to do something if the wrapper is still valid.  If the
+    ;; wrapper isn't valid, state will be FLUSH or OBSOLETE, and both of those
     ;; will already be doing what we want.  In particular, we must be
     ;; sure we never change an OBSOLETE into a FLUSH since OBSOLETE
     ;; means do what FLUSH does and then some.
     ;; 
-    (when (eq state t)
+    (when (or (not (invalid-wrapper-p owrapper))
+	      (eq :invalid (kernel:layout-invalid owrapper)))
       (let ((nwrapper (make-wrapper (wrapper-no-of-instance-slots owrapper)
 				    class)))
 	(setf (wrapper-instance-slots-layout nwrapper)

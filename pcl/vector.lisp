@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.20 2002/10/19 14:32:45 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/vector.lisp,v 1.21 2002/10/29 16:20:45 pmai Exp $")
 ;;;
 ;;; Permutation vectors.
 ;;;
@@ -1064,7 +1064,7 @@
     (dolist (arg args)
       (setq w
 	    (wrapper-of arg))
-      (unless (eq 't (wrapper-state w))
+      (when (invalid-wrapper-p w)
 	(setq w (check-wrapper-validity arg)))
       (setf (car w-t) w))
       (setq w-t (cdr w-t))

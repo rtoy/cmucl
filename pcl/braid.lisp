@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.25 2002/10/19 14:56:02 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.26 2002/10/29 16:20:44 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -566,13 +566,8 @@
 	    (kernel:order-layout-inherits
 	     (map 'simple-vector #'class-wrapper
 		  (reverse (rest (class-precedence-list class))))))
-      
-      ;; The invalidate nil is wrong, since it leaves the CMUCL type-system
-      ;; with obsolete information, but fixing it requires extensive changes
-      ;; to the PCL instance-updating mechanism, which relies on access to
-      ;; the old wrapper.
-      (kernel:register-layout layout :invalidate nil)
-
+      (kernel:register-layout layout :invalidate t)
+      ;;
       ;; Subclasses of formerly forward-referenced-class may be unknown
       ;; to lisp:find-class and also anonymous. This functionality moved
       ;; here from (setf find-class).

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.14 2002/10/19 15:26:10 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots-boot.lisp,v 1.15 2002/10/29 16:20:44 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -113,16 +113,19 @@
    (etypecase index
      (fixnum (if fsc-p
 		 (lambda (instance)
+		   (check-obsolete-instance instance)
 		   (let ((value (%instance-ref (fsc-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
 			 (slot-unbound (class-of instance) instance slot-name)
 			 value)))
 		 (lambda (instance)
+		   (check-obsolete-instance instance)
 		   (let ((value (%instance-ref (std-instance-slots instance) index)))
 		     (if (eq value +slot-unbound+)
 			 (slot-unbound (class-of instance) instance slot-name)
 			 value)))))
      (cons   (lambda (instance)
+	       (check-obsolete-instance instance)
 	       (let ((value (cdr index)))
 		 (if (eq value +slot-unbound+)
 		     (slot-unbound (class-of instance) instance slot-name)
@@ -135,11 +138,13 @@
    (etypecase index
      (fixnum (if fsc-p
 		 (lambda (nv instance)
+		   (check-obsolete-instance instance)
 		   (setf (%instance-ref (fsc-instance-slots instance) index) nv))
 		 (lambda (nv instance)
+		   (check-obsolete-instance instance)
 		   (setf (%instance-ref (std-instance-slots instance) index) nv))))
      (cons   (lambda (nv instance)
-	       (declare (ignore instance))
+	       (check-obsolete-instance instance)
 	       (setf (cdr index) nv))))
    `(writer ,slot-name)))
 
@@ -149,15 +154,17 @@
    (etypecase index
      (fixnum (if fsc-p
 		 (lambda (instance)
+		   (check-obsolete-instance instance)
 		   (not (eq (%instance-ref (fsc-instance-slots instance)
 					   index)
 			    +slot-unbound+)))
 		 (lambda (instance)
+		   (check-obsolete-instance instance)
 		   (not (eq (%instance-ref (std-instance-slots instance)
 					   index)
 			    +slot-unbound+)))))
      (cons   (lambda (instance)
-	       (declare (ignore instance))
+	       (check-obsolete-instance instance)
 	       (not (eq (cdr index) +slot-unbound+)))))
    `(boundp ,slot-name)))
 
@@ -210,20 +217,21 @@
     (fixnum (if fsc-p
 		(lambda (class instance slotd)
 		  (declare (ignore slotd))
-		  (unless (fsc-instance-p instance) (error "not fsc"))
+		  (check-obsolete-instance instance)
 		  (let ((value (%instance-ref (fsc-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
 			(slot-unbound class instance slot-name)
 			value)))
 		(lambda (class instance slotd)
 		  (declare (ignore slotd))
-		  (unless (std-instance-p instance) (error "not std"))
+		  (check-obsolete-instance instance)
 		  (let ((value (%instance-ref (std-instance-slots instance) index)))
 		    (if (eq value +slot-unbound+)
 			(slot-unbound class instance slot-name)
 			value)))))
     (cons   (lambda (class instance slotd)
 	      (declare (ignore slotd))
+	      (check-obsolete-instance instance)
 	      (let ((value (cdr index)))
 		(if (eq value +slot-unbound+)
 		    (slot-unbound class instance slot-name)
@@ -237,12 +245,15 @@
     (fixnum (if fsc-p
 		(lambda (nv class instance slotd)
 		  (declare (ignore class slotd))
+		  (check-obsolete-instance instance)
 		  (setf (%instance-ref (fsc-instance-slots instance) index) nv))
 		(lambda (nv class instance slotd)
 		  (declare (ignore class slotd))
+		  (check-obsolete-instance instance)
 		  (setf (%instance-ref (std-instance-slots instance) index) nv))))
     (cons   (lambda (nv class instance slotd)
-	      (declare (ignore class instance slotd))
+	      (declare (ignore class slotd))
+	      (check-obsolete-instance instance)
 	      (setf (cdr index) nv)))))
 
 (defun make-optimized-std-slot-boundp-using-class-method-function
@@ -253,16 +264,19 @@
     (fixnum (if fsc-p
 		(lambda (class instance slotd)
 		  (declare (ignore class slotd))
+		  (check-obsolete-instance instance)
 		  (not (eq (%instance-ref (fsc-instance-slots instance)
 					  index)
 			   +slot-unbound+)))
 		(lambda (class instance slotd)
 		  (declare (ignore class slotd))
+		  (check-obsolete-instance instance)
 		  (not (eq (%instance-ref (std-instance-slots instance)
 					  index)
 			   +slot-unbound+)))))
     (cons   (lambda (class instance slotd)
-	      (declare (ignore class instance slotd))
+	      (declare (ignore class slotd))
+	      (check-obsolete-instance instance)
 	      (not (eq (cdr index) +slot-unbound+))))))
 
 (defun get-accessor-from-svuc-method-function (class slotd sdfun name)

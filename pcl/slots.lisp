@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.14 2002/10/19 14:32:44 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/slots.lisp,v 1.15 2002/10/29 16:20:45 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -210,16 +210,13 @@
 (defmethod slot-value-using-class ((class std-class)
                                    (object std-object)
                                    (slotd standard-effective-slot-definition))
+  (check-obsolete-instance object)
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
 		  (fixnum 
 		   (cond ((std-instance-p object)
-			  (unless (eq 't (wrapper-state (std-instance-wrapper object)))
-			    (check-wrapper-validity object))
 			  (%instance-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
-			  (unless (eq 't (wrapper-state (fsc-instance-wrapper object)))
-			    (check-wrapper-validity object))
 			  (%instance-ref (fsc-instance-slots object) location))
 			 (t (error "What kind of instance is this?"))))
 		  (cons
@@ -236,16 +233,13 @@
 	   (new-value (class std-class)
 		      (object std-object)
 		      (slotd standard-effective-slot-definition))
+  (check-obsolete-instance object)
   (let ((location (slot-definition-location slotd)))
     (typecase location
       (fixnum 
        (cond ((std-instance-p object)
-	      (unless (eq 't (wrapper-state (std-instance-wrapper object)))
-		(check-wrapper-validity object))
 	      (setf (%instance-ref (std-instance-slots object) location) new-value))
 	     ((fsc-instance-p object)
-	      (unless (eq 't (wrapper-state (fsc-instance-wrapper object)))
-		(check-wrapper-validity object))
 	      (setf (%instance-ref (fsc-instance-slots object) location) new-value))
 	     (t (error "What kind of instance is this?"))))
       (cons
@@ -259,16 +253,13 @@
 	   ((class std-class) 
 	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
+  (check-obsolete-instance object)
   (let* ((location (slot-definition-location slotd))
 	 (value (typecase location
 		  (fixnum 
 		   (cond ((std-instance-p object)
-			  (unless (eq 't (wrapper-state (std-instance-wrapper object)))
-			    (check-wrapper-validity object))
 			  (%instance-ref (std-instance-slots object) location))
 			 ((fsc-instance-p object)
-			  (unless (eq 't (wrapper-state (fsc-instance-wrapper object)))
-			    (check-wrapper-validity object))
 			  (%instance-ref (fsc-instance-slots object) location))
 			 (t (error "What kind of instance is this?"))))
 		  (cons
@@ -283,16 +274,13 @@
 	   ((class std-class)
 	    (object std-object) 
 	    (slotd standard-effective-slot-definition))
+  (check-obsolete-instance object)
   (let ((location (slot-definition-location slotd)))
     (typecase location
       (fixnum 
        (cond ((std-instance-p object)
-	      (unless (eq 't (wrapper-state (std-instance-wrapper object)))
-		(check-wrapper-validity object))
 	      (setf (%instance-ref (std-instance-slots object) location) +slot-unbound+))
 	     ((fsc-instance-p object)
-	      (unless (eq 't (wrapper-state (fsc-instance-wrapper object)))
-		(check-wrapper-validity object))
 	      (setf (%instance-ref (fsc-instance-slots object) location) +slot-unbound+))
 	     (t (error "What kind of instance is this?"))))
       (cons
