@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.37 2003/01/29 18:51:48 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.38 2004/05/12 02:52:42 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1012,13 +1012,42 @@ Z may be any number, but the result is always a complex."
 ;; and these two expressions are equal if and only if arg conj z =
 ;; -arg z, which is clearly true for all z.
 
+;; NOTE: The rules of Common Lisp says that if you mix a real with a
+;; complex, the real is converted to a complex before performing the
+;; operation.  However, Kahan says in this paper (pg 176):
+;;
+;; (iii) Careless handling can turn infinity or the sign of zero into
+;;       misinformation that subsequently disappears leaving behind
+;;       only a plausible but incorrect result.  That is why compilers
+;;       must not transform z-1 into z-(1+i*0), as we have seen above,
+;;       nor -(-x-x^2) into (x+x^2), as we shall see below, lest a
+;;       subsequent logarithm or square root produce a non-zero
+;;       imaginary part whose sign is opposite to what was intended.
+;;
+;; The interesting examples are too long and complicated to reproduce
+;; here.  We refer the reader to his paper.
+;;
+;; The functions below are intended to handle the cases where a real
+;; is mixed with a complex and we don't want CL complex contagion to
+;; occur..
+
+(declaim (inline 1+z 1-z z-1 z+1))
+(defun 1+z (z)
+  (complex (+ 1 (realpart z)) (imagpart z)))
+(defun 1-z (z)
+  (complex (- 1 (realpart z)) (- (imagpart z))))
+(defun z-1 (z)
+  (complex (- (realpart z) 1) (imagpart z)))
+(defun z+1 (z)
+  (complex (+ (realpart z) 1) (imagpart z)))
+
 (defun complex-acos (z)
   "Compute acos z = pi/2 - asin z
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-1+z (complex-sqrt (+ 1 z)))
-	(sqrt-1-z (complex-sqrt (- 1 z))))
+  (let ((sqrt-1+z (complex-sqrt (1+z z)))
+	(sqrt-1-z (complex-sqrt (1-z z))))
     (with-float-traps-masked (:divide-by-zero)
       (complex (* 2 (atan (/ (realpart sqrt-1-z)
 			     (realpart sqrt-1+z))))
@@ -1030,8 +1059,8 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-z-1 (complex-sqrt (- z 1)))
-	(sqrt-z+1 (complex-sqrt (+ z 1))))
+  (let ((sqrt-z-1 (complex-sqrt (z-1 z)))
+	(sqrt-z+1 (complex-sqrt (z+1 z))))
     (with-float-traps-masked (:divide-by-zero)
       (complex (asinh (realpart (* (conjugate sqrt-z-1)
 				   sqrt-z+1)))
@@ -1044,8 +1073,8 @@ Z may be any number, but the result is always a complex."
 
 Z may be any number, but the result is always a complex."
   (declare (number z))
-  (let ((sqrt-1-z (complex-sqrt (- 1 z)))
-	(sqrt-1+z (complex-sqrt (+ 1 z))))
+  (let ((sqrt-1-z (complex-sqrt (1-z z)))
+	(sqrt-1+z (complex-sqrt (1+z z))))
     (with-float-traps-masked (:divide-by-zero)
       (complex (atan (/ (realpart z)
 			(realpart (* sqrt-1-z sqrt-1+z))))
