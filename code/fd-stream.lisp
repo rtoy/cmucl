@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.8 1990/11/03 00:26:39 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.9 1991/01/13 00:52:08 wlott Exp $
 ;;;
 ;;; Streams for UNIX file descriptors.
 ;;;
@@ -1170,50 +1170,57 @@
 	      (setf if-exists :supersede))))
 	
 	;; Okay, now we can try the actual open.
-	(multiple-value-bind
-	    (fd errno)
-	    (mach:unix-open namestring mask mode)
-	  (cond ((numberp fd)
-		 (case direction
-		   ((:input :output :io)
-		    (make-fd-stream fd
-				    :input input
-				    :output output
-				    :element-type element-type
-				    :file namestring
-				    :original original
-				    :delete-original delete-original))
-		   (:probe
-		    (let ((stream (%make-fd-stream :name namestring
-						   :fd fd
-						   :element-type element-type)))
-		      (close stream)
-		      stream))))
-		((eql errno mach:enoent)
-		 (case if-does-not-exist
-		   (:error
-		    (cerror "Return NIL."
-			    "Error opening ~S, ~A."
-			    pathname
-			    (mach:get-unix-error-msg errno)))
-		   (:create
-		    (cerror "Return NIL."
-			    "Error creating ~S, path does not exist."
-			    pathname)))
-		 nil)
-		((eql errno mach:eexist)
-		 (unless (eq nil if-exists)
+	(loop
+	  (multiple-value-bind
+	      (fd errno)
+	      (mach:unix-open namestring mask mode)
+	    (cond ((numberp fd)
+		   (return
+		    (case direction
+		      ((:input :output :io)
+		       (make-fd-stream fd
+				       :input input
+				       :output output
+				       :element-type element-type
+				       :file namestring
+				       :original original
+				       :delete-original delete-original))
+		      (:probe
+		       (let ((stream
+			      (%make-fd-stream :name namestring :fd fd
+					       :element-type element-type)))
+			 (close stream)
+			 stream)))))
+		  ((eql errno mach:enoent)
+		   (case if-does-not-exist
+		     (:error
+		      (cerror "Return NIL."
+			      "Error opening ~S, ~A."
+			      pathname
+			      (mach:get-unix-error-msg errno)))
+		     (:create
+		      (cerror "Return NIL."
+			      "Error creating ~S, path does not exist."
+			      pathname)))
+		   (return nil))
+		  ((eql errno mach:eexist)
+		   (unless (eq nil if-exists)
+		     (cerror "Return NIL."
+			     "Error opening ~S, ~A."
+			     pathname
+			     (mach:get-unix-error-msg errno)))
+		   (return nil))
+		  ((eql errno mach:eacces)
+		   (cerror "Try again."
+			  "Error opening ~S, ~A."
+			  pathname
+			  (mach:get-unix-error-msg errno)))
+		  (t
 		   (cerror "Return NIL."
 			   "Error opening ~S, ~A."
 			   pathname
-			   (mach:get-unix-error-msg errno)))
-		 nil)
-		(t
-		 (cerror "Return NIL."
-			 "Error opening ~S, ~A."
-			 pathname
-			 (mach:get-unix-error-msg errno))
-		 nil)))))))
+			   (mach:get-unix-error-msg errno))
+		   (return nil)))))))))
 
 ;;;; Initialization.
 
