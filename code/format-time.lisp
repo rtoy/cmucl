@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.6 2000/01/30 13:58:27 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/format-time.lisp,v 1.7 2000/06/07 07:12:52 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 
@@ -68,11 +68,12 @@
    destination which can be accepted by the Format function.  The
    timezone keyword is an integer specifying hours west of Greenwich.
    The style keyword can be :short (numeric date), :long (months and
-   weekdays expressed as words), :abbreviated (like :long but words are
-   abbreviated), or :government (of the form \"XX Mon XX XX:XX:XX\")
-   The keyword date-first, if nil, will print the time first instead
-   of the date (the default).  The print- keywords, if nil, inhibit
-   the printing of the obvious part of the time/date."
+   weekdays expressed as words), :abbreviated (like :long but words
+   are abbreviated), :rfc1123 (conforming to RFC 1123), or :government
+   (of the form \"XX Mon XX XX:XX:XX\").
+   The keyword date-first, if nil, will print the time first instead of
+   the date (the default).  The print- keywords, if nil, inhibit the
+   printing of the obvious part of the time/date."
   (unless (valid-destination-p destination)
     (error "~A: Not a valid format destination." destination))
   (unless (integerp universal-time)
@@ -93,11 +94,14 @@
 	   (case style
 	     (:short "~D/~D/~2,'0D")			;;  MM/DD/YY
 	     ((:abbreviated :long) "~A ~D, ~D")		;;  Month DD, YYYY
+	     (:rfc1123 "~2,'0D ~A ~4,'0D")		;;  DD Mon YYYY
 	     (:government "~2,'0D ~:@(~A~) ~2,'0D")	;;  DD MON YY
 	     (t
 	      (error "~A: Unrecognized :style keyword value." style))))
 	  (time-args
-	   (list mins (max (mod hours 12) (1+ (mod (1- hours) 12)))))
+	   (if (eq style :rfc1123)
+	       (list mins hours)
+	       (list mins (max (mod hours 12) (1+ (mod (1- hours) 12))))))
 	  (date-args (case style
 		       (:short
 			(list month day (mod year 100)))
@@ -105,15 +109,20 @@
 			(list (svref abbrev-month-table (1- month)) day year))
 		       (:long
 			(list (svref long-month-table (1- month)) day year))
+		       (:rfc1123
+			(list day (svref abbrev-month-table (1- month)) year))
 		       (:government
 			(list day (svref abbrev-month-table (1- month))
-			      (mod year 100))))))
-      (declare (simple-string time-string date-string))
+			      (mod year 100)))))
+	  (timezone-name (if (eq style :rfc1123)
+			     (timezone-rfc1123-name dst tz)
+			     (timezone-name dst tz))))
+      (declare (simple-string time-string date-string timezone-name))
       (when print-weekday
 	(push (case style
 		((:short :long) (svref long-weekday-table dow))
-		(:abbreviated (svref abbrev-weekday-table dow))
-		(:government (svref abbrev-weekday-table dow)))
+		((:abbreviated :rfc1123 :government)
+		 (svref abbrev-weekday-table dow)))
 	      date-args)
 	(setq date-string
 	      (concatenate 'simple-string "~A, " date-string)))
@@ -121,7 +130,7 @@
 	(push secs time-args)
 	(setq time-string
 	      (concatenate 'simple-string time-string ":~2,'0D")))
-      (when print-meridian
+      (when (and print-meridian (not (eq style :rfc1123)))
 	(push (signum (floor hours 12)) time-args)
 	(setq time-string
 	      (concatenate 'simple-string time-string " ~[am~;pm~]")))
@@ -134,14 +143,14 @@
 	     (if date-first
 		 (nconc date-args (nreverse time-args)
 			(if print-timezone
-			    (list (timezone-name dst tz))))
+			    (list timezone-name)))
 		 (nconc (nreverse time-args) date-args
 			(if print-timezone
-			    (list (timezone-name dst tz)))))))))
+			    (list timezone-name))))))))
 
 (defun timezone-name (dst tz)
   (if (and (integerp tz)
-	   (or (and dst (= tz 0))
+	   (or (and (not dst) (= tz 0))
 	       (<= 5 tz 8)))
       (svref (if dst daylight-table timezone-table) tz)
       (multiple-value-bind
@@ -158,6 +167,22 @@
 		  (not (zerop seconds))
 		  (abs seconds))))))
 
+;;; RFC 1123 style timezone: GMT, +1000, -1000.
+;;; Timezone is the negative of the CL timezone.
+;;;
+(defun timezone-rfc1123-name (dst tz)
+  (let ((tz (- tz)))
+    (if (and (integerp tz)
+	     (or (and (not dst) (= tz 0))
+		 (<= 5 tz 8)))
+	(svref (if dst daylight-table timezone-table) tz)
+	(multiple-value-bind
+	      (hours minutes)
+	    (truncate tz)
+	  (format nil "~C~2,'0D~2,'0D"
+		  (if (minusp tz) #\- #\+)
+		  (abs hours)
+		  (abs (truncate (* minutes 60))))))))
 
 
 ;;; Format-Decoded-Time - External.
