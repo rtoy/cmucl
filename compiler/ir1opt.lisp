@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.7 2000/08/09 12:56:55 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1opt.lisp,v 1.65.2.8 2000/09/26 16:41:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1371,8 +1371,8 @@
 ;;; over top-level lambda vars.  In such cases, the references may have already
 ;;; been compiled, and thus can't be retroactively modified.
 ;;;
-;;;    If all of the variables are deleted (have no references or sets) when
-;;; we are done, then we delete the let.
+;;;    If all of the variables are deleted (have no references) when we are
+;;; done, then we delete the let.
 ;;;
 ;;;    Note that we are responsible for clearing the Continuation-Reoptimize
 ;;; flags.
@@ -1410,9 +1410,8 @@
 	     (substitute-single-use-continuation arg var)))
        (t
 	(propagate-to-refs var (continuation-type arg))))))
-  
-  (when (and (every #'null (combination-args call))
-	     (notany #'lambda-var-sets (lambda-vars fun)))
+
+  (when (every #'null (combination-args call))
     (delete-let fun))
 
   (undefined-value))
