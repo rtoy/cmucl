@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.15 2004/07/08 04:10:09 rtoy Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.16 2004/08/06 21:53:37 cwang Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -386,7 +386,13 @@ static char *symbol_slots[] = {"value: ", "unused: ",
 static char *ratio_slots[] = {"numer: ", "denom: ", NULL};
 static char *complex_slots[] = {"real: ", "imag: ", NULL};
 static char *code_slots[] = {"words: ", "entry: ", "debug: ", NULL};
+
+#if (defined(i386) || defined(__x86_64))
+static char *fn_slots[] = {"inst start: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
+#else
 static char *fn_slots[] = {"self: ", "next: ", "name: ", "arglist: ", "type: ", NULL};
+#endif
+
 static char *closure_slots[] = {"fn: ", NULL};
 static char *funcallable_instance_slots[] = {"fn: ", "lexenv: ", "layout: ", NULL};
 static char *weak_pointer_slots[] = {"value: ", NULL};
