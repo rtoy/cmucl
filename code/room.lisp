@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.8 1991/04/19 13:31:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.9 1991/04/23 17:01:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.8 1991/04/19 13:31:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.9 1991/04/23 17:01:34 ram Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
@@ -551,9 +551,11 @@
   (nth-value 1 (mach:vm_statistics system:*task-self*)))
 
 (defun print-allocated-objects (space &key (percent 0) (pages 5)
+				      type larger smaller count
 				      (stream *standard-output*))
   (declare (type (integer 0 99) percent) (type c::index pages)
-	   (type stream stream) (type spaces space)) 
+	   (type stream stream) (type spaces space)
+	   (type (or c::index null) type larger smaller count))
   (multiple-value-bind (start-sap end-sap)
 		       (space-bounds space)
     (let* ((space-start (sap-int start-sap))
@@ -562,45 +564,55 @@
 	   (pagesize (pagesize))
 	   (start (+ space-start (round (* space-size percent) 100)))
 	   (pages-so-far 0)
+	   (count-so-far 0)
 	   (last-page 0))
       (declare (type (unsigned-byte 32) last-page start)
-	       (fixnum pages-so-far pagesize))
+	       (fixnum pages-so-far count-so-far pagesize))
       (map-allocated-objects
-       #'(lambda (obj type size)
-	   (declare (ignore size) (optimize (speed 3) (safety 0)))
+       #'(lambda (obj obj-type size)
+	   (declare (optimize (speed 3) (safety 0)))
 	   (let ((addr (get-lisp-obj-address obj)))
-	     (when (and (>= addr start)
-			(<= pages-so-far pages))
-	       (let ((this-page (* (the (unsigned-byte 32)
-					(truncate addr pagesize))
-				   pagesize)))
-		 (declare (type (unsigned-byte 32) this-page))
-		 (when (/= this-page last-page)
-		   (when (< pages-so-far pages)
-		     (format stream "~2&**** Page ~D, address ~X:~%"
-			     pages-so-far addr))
-		   (setq last-page this-page)
-		   (incf pages-so-far)))
+	     (when (>= addr start)
+	       (when (if count
+			 (> count-so-far count)
+			 (> pages-so-far pages))
+		 (return-from print-allocated-objects (values)))
+
+	       (unless count
+		 (let ((this-page (* (the (unsigned-byte 32)
+					  (truncate addr pagesize))
+				     pagesize)))
+		   (declare (type (unsigned-byte 32) this-page))
+		   (when (/= this-page last-page)
+		     (when (< pages-so-far pages)
+		       (format stream "~2&**** Page ~D, address ~X:~%"
+			       pages-so-far addr))
+		     (setq last-page this-page)
+		     (incf pages-so-far))))
 		   
-	       (case type
-		 (#.code-header-type
-		  (let ((dinfo (code-debug-info obj)))
-		    (format stream "~&Code object: ~S~%"
-			    (if dinfo
-				(c::compiled-debug-info-name dinfo)
-				"No debug info."))))
-		 (#.symbol-header-type
-		  (format stream "~&~S~%" obj))
-		 (#.list-pointer-type
-		  (write-char #\. stream))
-		 (t
-		  (fresh-line stream)
-		  (let ((str (write-to-string obj :level 5 :length 10
-					      :pretty nil)))
-		    (unless (eql type structure-header-type)
-		      (format stream "~S: " (type-of obj)))
-		    (format stream "~A~%"
-			    (subseq str 0 (min (length str) 60)))))))))
+	       (when (and (or (not type) (eql obj-type type))
+			  (or (not smaller) (<= size smaller))
+			  (or (not larger) (>= size larger)))
+		 (incf count-so-far)
+		 (case type
+		   (#.code-header-type
+		    (let ((dinfo (code-debug-info obj)))
+		      (format stream "~&Code object: ~S~%"
+			      (if dinfo
+				  (c::compiled-debug-info-name dinfo)
+				  "No debug info."))))
+		   (#.symbol-header-type
+		    (format stream "~&~S~%" obj))
+		   (#.list-pointer-type
+		    (write-char #\. stream))
+		   (t
+		    (fresh-line stream)
+		    (let ((str (write-to-string obj :level 5 :length 10
+						:pretty nil)))
+		      (unless (eql type structure-header-type)
+			(format stream "~S: " (type-of obj)))
+		      (format stream "~A~%"
+			      (subseq str 0 (min (length str) 60))))))))))
        space)))
   (values))
 
@@ -667,7 +679,7 @@
 			       (function
 				#'(lambda (obj type size)
 				    (declare (ignore obj type) (fixnum size))
-				    (integer-length size)))
+				    (integer-length (1- size))))
 			       (type nil))
   (let ((function (if (eval:interpreted-function-p function)
 		      (compile nil function)
