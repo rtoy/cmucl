@@ -440,12 +440,13 @@
       (setf type (lisp::stack-info-type info))
       (setf size (lisp::stack-info-size info))))
   (let* ((sap-var (gensym))
-	 (*venv* (acons var
-			(make-ct-a-val :type type
-				       :size size
-				       :sap sap-var
-				       :offset 0)
-			*venv*)))
+	 (*lexical-environment*
+	  (make-lexenv :variables
+		       (list (cons var
+				   (make-ct-a-val :type type
+						  :size size
+						  :sap sap-var
+						  :offset 0))))))
     (ir1-convert start cont
       `(let ((,sap-var
 	      (truly-the system-area-pointer
