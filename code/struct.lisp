@@ -21,8 +21,11 @@
 #+new-compiler
 (progn
 ;;; Make these types be sort-of-defined to allow bootstrapping.
-(setf (info type kind 'defstruct-description) :structure)
-(setf (info type kind 'defstruct-slot-description) :structure)
+(setf (info type defined-structure-info 'defstruct-description)
+      (make-defstruct-description))
+
+(setf (info type defined-structure-info 'defstruct-slot-description)
+      (make-defstruct-description))
 
 
 ;;; Define this now so that EQUAL works:
