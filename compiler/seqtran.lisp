@@ -116,7 +116,7 @@ member map concatenate position find
 ;;;; Simple string transforms:
 
 
-(deftransform subseq ((seq start &optional (end nil))
+(deftransform subseq ((string start &optional (end nil))
 		      (simple-string t &optional t))
   '(let* ((length (- (or end (length string))
 		     start))
@@ -183,7 +183,7 @@ member map concatenate position find
   (unless (or (not test)
 	      (continuation-function-is test char=-functions))
     (give-up))
-  `(and (string-char-p item)
+  `(and (typep item 'string-char)
 	(,@(if (constant-value-or-lose from-end)
 	       '(lisp::%sp-reverse-find-character)
 	       '(%primitive find-character))
@@ -193,9 +193,9 @@ member map concatenate position find
 
 (deftransform find ((item sequence &key from-end (test #'eql) (start 0) end)
 		    (t simple-string &rest t))
-  `(if (find item sequence
-	     ,@(when from-end `(:from-end from-end))
-	     :test test :start start :end end)
+  `(if (position item sequence
+		 ,@(when from-end `(:from-end from-end))
+		 :test test :start start :end end)
        item
        nil))
 
