@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/htext2.lisp,v 1.3 1994/10/31 04:50:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/htext2.lisp,v 1.4 2004/03/28 15:48:11 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -239,13 +239,13 @@
 (defun buffer-start (mark &optional (buffer (line-buffer (mark-line mark))))
   "Change Mark to point to the beginning of Buffer, which defaults to
   the buffer Mark is currently in."
-  (unless buffer (error "Mark ~S does not point into a buffer."))
+  (unless buffer (error "Mark ~S does not point into a buffer." mark))
   (move-mark mark (buffer-start-mark buffer)))
 
 (defun buffer-end (mark &optional (buffer (line-buffer (mark-line mark))))
   "Change Mark to point to the end of Buffer, which defaults to
   the buffer Mark is currently in."
-  (unless buffer (error "Mark ~S does not point into a buffer."))
+  (unless buffer (error "Mark ~S does not point into a buffer." mark))
   (move-mark mark (buffer-end-mark buffer)))
 
 (defun move-mark (mark new-position)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.5 2001/03/13 15:50:00 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/tty-display.lisp,v 1.6 2004/03/28 15:48:11 emarsden Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,7 @@
 	       (cons (car stuff) (cadr stuff))))
 	(t
 	 (error "Bogus font spec: ~S~%Must be either a list of keywords or ~
-		 a list of the start string and end string."))))
+		 a list of the start string and end string." stuff))))
 
 
 (defun compute-font-usages (dis-line)
