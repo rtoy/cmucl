@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.40 1997/10/15 17:01:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.41 1997/11/16 14:05:23 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1052,21 +1052,17 @@
 		 
 ) ;end progn for propagate-fun-type
 
+#+complex-float
+(progn
 ;;; Make REALPART and IMAGPART return the appropriate types.  This
 ;;; helps a lot in optimized code.
 
-;;; Doesn't work yet.
-#+nil
-(progn
-(defknown (%realpart)
-    (complex) real
-    (flushable movable))
+(deftransform realpart ((x) ((complex rational)) *)
+  '(kernel:%realpart x))
+(deftransform imagpart ((x) ((complex rational)) *)
+  '(kernel:%imagpart x))
 
-(defknown (%imagpart)
-    (complex) real
-    (flushable movable))
-
-(defoptimizer (%realpart derive-type) ((num))
+(defoptimizer (realpart derive-type) ((num))
   (let ((type (continuation-type num)))
     (cond ((numeric-type-real-p type)
 	   ;; The realpart of a real has the same type and range as the input.
@@ -1085,7 +1081,7 @@
 			      :low (numeric-type-low type)
 			      :high (numeric-type-high type))))))
 
-(defoptimizer (%imagpart derive-type) ((num))
+(defoptimizer (imagpart derive-type) ((num))
   (let ((type (continuation-type num)))
     (cond ((numeric-type-real-p type)
 	   ;; The imagpart of a real has the same type as the input,
@@ -1106,7 +1102,7 @@
 			      :high (numeric-type-high type))))))
 
   
-) ;end progn
+) ;end progn complex-float
 	   
 
 ;;; Here are simple optimizers for sin, cos, and tan.  They do not
