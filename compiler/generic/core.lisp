@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.11 1992/02/14 23:50:14 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/core.lisp,v 1.12 1992/04/15 01:29:55 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,7 +166,10 @@
 	     (ecase (car const)
 	       (:entry
 		(reference-core-function code-obj index
-					 (cdr const) object)))))))))
+					 (cdr const) object))
+	       (:fdefinition
+		(setf (code-header-ref code-obj index)
+		      (lisp::fdefinition-object (cdr const) t))))))))))
   (undefined-value))
 
 
