@@ -38,8 +38,12 @@
 		(t
 		 (setf (kernel:class-pcl-class class) nil)))))))
 
-  (rename-package "PCL" "OLD-PCL")
-  (make-package "PCL"))
+  ;; Shadowing-import 'pcl::class so that this symbol is the same as
+  ;; used by the compiler in ir1tran.
+  (let ((class 'pcl::class))
+    (rename-package "PCL" "OLD-PCL")
+    (make-package "PCL")
+    (shadowing-import class "PCL")))
 
 (when (find-package  "SLOT-ACCESSOR-NAME")
   (rename-package "SLOT-ACCESSOR-NAME" "OLD-SLOT-ACCESSOR-NAME"))
