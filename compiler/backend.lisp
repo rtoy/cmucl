@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.16 1992/03/21 19:39:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.17 1992/03/22 17:29:20 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,7 +170,7 @@
 	#'(lambda (name)
 	    `(defun ,name (&rest args)
 	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
-			   (backend-vm-support-routines *backend*))
+			   (backend-support-routines *backend*))
 			  (error "Machine specific support routine ~S ~
 				  undefined for ~S"
 				 ',name *backend*))
@@ -225,7 +225,7 @@
 				    "VM-SUPPORT-ROUTINES-"
 				    (string name))
 		       (find-package "C"))
-	      (backend-vm-support-routines *target-backend*))
+	      (backend-support-routines *target-backend*))
 	     #',local-name))))
 
 
@@ -306,3 +306,10 @@
 		  :%features features
 		  :misfeatures misfeatures)))
     (setf *target-backend* backend)))
+
+
+
+;;;; temporary hack.
+
+(defun backend-vm-support-routines (backend)
+  (backend-support-routines backend))
