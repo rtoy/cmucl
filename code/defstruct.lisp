@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.80 2003/01/23 21:40:31 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.81 2003/02/01 20:42:29 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1158,16 +1158,7 @@
 ;;; structure.
 ;;;
 (defun dsd-inherited-p (defstruct slot)
-  (let* ((aname (dsd-accessor slot))
-	 (existing (info function accessor-for aname)))
-    (and (structure-class-p existing)
-	 (not (eq (class-name existing) (dd-name defstruct)))
-	 (string= (dsd-%name (find aname
-				   (dd-slots
-				    (layout-info (class-layout existing)))
-				   :key #'dsd-accessor))
-		  (dsd-%name slot)))))
-
+  (assoc (dsd-accessor slot) (dd-inherited-accessor-alist defstruct) :test #'eq))
 
 ;;; DEFINE-RAW-ACCESSORS  --  Internal
 ;;;
@@ -1288,12 +1279,14 @@
     (when (and pred (dd-named defstruct))
       (let ((ltype (dd-lisp-type defstruct))
 	    (index (cdr (car (last (find-name-indices defstruct))))))
-	`((defun ,pred (object)
-	    (and (typep object ',ltype)
-		 (eq ,(if (eq ltype 'list)
-			  `(nth ,index object)
-			  `(elt object ,index))
-		     ',name))))))))
+	(if (eq ltype 'list)
+	    `((defun ,pred (object)
+		(and (typep object 'list)
+		     (eq (nth ,index object) ',name))))
+	    `((defun ,pred (object)
+		(and (typep object 'vector)
+		     (array-in-bounds-p object ,index)
+		     (eq (aref object ,index) ',name)))))))))
 
 
 ;;;; Load time support for default structures (%DEFSTRUCT)

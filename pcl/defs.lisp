@@ -289,7 +289,8 @@
 
 (defun make-class-predicate-name (name)
   (intern (format nil "~A::~A class predicate"
-		  (package-name (symbol-package name))
+		  (let ((pkg (symbol-package name)))
+		    (if pkg (package-name pkg) ""))
 		  name)
 	  *the-pcl-package*))
 
