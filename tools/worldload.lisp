@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.39 1991/12/16 10:39:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.40 1992/02/12 18:20:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -91,6 +91,14 @@
 (load "code:foreign")
 (load "code:setf-funs")
 
+(setq *info-environment*
+      (list* (make-info-environment)
+	     (compact-info-environment (first *info-environment*)
+				       :name "Kernel")
+	     (rest *info-environment*)))
+(purify :root-structures
+	`(lisp::%top-level extensions:save-lisp ,lisp::fop-codes))
+
 ;;; Load the compiler.
 #-no-compiler
 (load "c:loadcom.lisp")
@@ -101,6 +109,14 @@
 (set 'compiler-version
      (concatenate 'string compiler-version
 		  "(" *lisp-implementation-version* ")"))
+#-no-compiler
+(progn
+  (setq *info-environment*
+	(list* (make-info-environment)
+	       (compact-info-environment (first *info-environment*)
+					 :name "Compiler")
+	       (rest *info-environment*)))
+  (purify :root-structures '(compile-file)))
 
 ;;; The pretty printer is part of the kernel core, but we can't turn in on
 ;;; until after the compiler is loaded because it compiles some lambdas
@@ -133,6 +149,9 @@
      (concatenate 'string *hemlock-version* " "
 		  "(" *lisp-implementation-version* ")"))
 
+#-(and no-clx no-hemlock)
+(purify :root-structures `(ed #-no-hemlock ,hi::*global-command-table*))
+
 ;;; PCL.
 ;;;
 #-no-pcl (load "pcl:pclload")
@@ -159,16 +178,13 @@
   (setq /// nil)
   (setq *load-verbose* nil)
   (setq *info-environment*
-	(list (make-info-environment :name "Working")
-	      (compact-info-environment (car *info-environment*))))
+	(list* (make-info-environment :name "Working")
+	       (compact-info-environment (first *info-environment*)
+					 :name "Auxiliary")
+	       (rest *info-environment*)))
+
   (save-lisp (namestring (merge-pathnames "lisp.core" (default-directory)))
 	     :purify t
 	     :init-function #'initial-init-function
-	     :root-structures `(ed
-				#-no-hemlock ,hi::*global-command-table*
-				lisp::%top-level
-				extensions:save-lisp
-				,lisp::fop-codes
-				compile-file)
 	     #| :constants (cadr *info-environment*) |#
 	     ))
