@@ -7,7 +7,9 @@
 #+bootstrap
 (export '(assem::nop) "ASSEM")
 
-(defparameter *load-stuff* #+bootstrap t #-bootstrap nil)
+(defparameter *load-stuff*
+  #+bootstrap t
+  #-bootstrap (eq c:*backend* c:*native-backend*))
 
 ;;; Import so that these types which appear in the globldb are the same...
 #+bootstrap
