@@ -2443,7 +2443,8 @@
 	(compiler-error "Malformed PROCLAIM spec: ~S." form))
        
       (let ((name (first form))
-	    (args (rest form)))
+	    (args (rest form))
+	    (ignore nil))
 	(case (first form)
 	  (special
 	   (dolist (old (get-old-vars (rest form)))
@@ -2477,12 +2478,15 @@
 	  (t
 	   (cond ((member name type-specifier-symbols)
 		  (process-type-proclamation name args))
-		 ((info declaration recognized name))
+		 ((info declaration recognized name)
+		  (setq ignore t))
 		 (t
+		  (setq ignore t)
 		  (compiler-warning "Unrecognized proclamation: ~S." form))))))
 
-      (funcall #'%proclaim form)))
-  (ir1-convert start cont `(%proclaim ,what)))
+      (unless ignore
+	(funcall #'%proclaim form)
+	(ir1-convert start cont `(%proclaim ,what))))))
 
 
 ;;; %Compiler-Defstruct IR1 Convert  --  Internal
