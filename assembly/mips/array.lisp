@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.9 1990/06/16 14:38:40 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/mips/array.lisp,v 1.10 1990/06/16 17:19:45 wlott Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -58,7 +58,7 @@
 (define-assembly-routine (alloc-g-vector
 			  ()
 			  (:arg length any-reg a0-offset)
-			  (:arg fill descriptor-reg a1-offset)
+			  (:arg fill (descriptor-reg any-reg) a1-offset)
 			  (:res result descriptor-reg a0-offset)
 
 			  (:temp ndescr non-descriptor-reg nl0-offset)
