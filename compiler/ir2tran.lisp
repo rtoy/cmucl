@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.46 1993/02/26 08:38:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.47 1993/03/01 18:25:16 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -67,6 +67,16 @@
 	   (type ctype type))
   (emit-move-template node block (type-check-template type) value result)
   (undefined-value))
+
+;;; MAKE-VALUE-CELL  --  Internal
+;;;
+;;;    Allocate an indirect value cell.  Maybe do some clever stack allocation
+;;; someday.
+;;;
+(defevent make-value-cell "Allocate heap value cell for lexical var.")
+(defun make-value-cell (node block value res)
+  (event make-value-cell node)
+  (vop make-value-cell node block value res))
 
 
 ;;;; Leaf reference:
@@ -685,7 +695,7 @@
 	      (let ((src (continuation-tn node block arg))
 		    (dest (leaf-info var)))
 		(if (lambda-var-indirect var)
-		    (vop make-value-cell node block src dest)
+		    (make-value-cell node block src dest)
 		    (emit-move node block src dest)))))
 	(lambda-vars fun) (basic-combination-args node))
   (undefined-value))
@@ -724,7 +734,7 @@
 	     ((lambda-var-indirect var)
 	      (let ((temp
 		     (make-normal-tn (backend-any-primitive-type *backend*))))
-		(vop make-value-cell node block actual temp)
+		(make-value-cell node block actual temp)
 		(temps temp)))
 	     ((member actual (locs))
 	      (let ((temp (make-normal-tn (tn-primitive-type loc))))
@@ -1118,7 +1128,7 @@
 	    (let ((pass (standard-argument-location n))
 		  (home (leaf-info arg)))
 	      (if (lambda-var-indirect arg)
-		  (vop make-value-cell node block pass home)
+		  (make-value-cell node block pass home)
 		  (emit-move node block pass home))))
 	  (incf n))))
     
@@ -1249,7 +1259,7 @@
 	      (when (leaf-refs var)
 		(let ((dest (leaf-info var)))
 		  (if (lambda-var-indirect var)
-		      (vop make-value-cell node block src dest)
+		      (make-value-cell node block src dest)
 		      (emit-move node block src dest)))))
 	  (continuation-tns node block cont
 			    (mapcar #'(lambda (x)
@@ -1475,7 +1485,7 @@
 
     (ecase kind
       ((:block :tagbody)
-       (vop make-value-cell node block res (ir2-nlx-info-home 2info)))
+       (make-value-cell node block res (ir2-nlx-info-home 2info)))
       (:unwind-protect
        (vop set-unwind-protect node block block-tn))
       (:catch)))
