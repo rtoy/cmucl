@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.32 1992/04/02 02:48:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.33 1992/04/04 01:03:36 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,8 @@
 	  locally etypecase ctypecase ecase ccase
 	  get-setf-method get-setf-method-multiple-value
           define-modify-macro destructuring-bind nth-value
-          otherwise)) ; Sacred to CASE and related macros.
+          otherwise ; Sacred to CASE and related macros.
+	  define-compiler-macro))
 
 (in-package "EXTENSIONS")
 (export '(do-anonymous collect iterate))
@@ -110,6 +111,38 @@
   (setf (macro-function name) definition)
   (setf (documentation name 'function) doc)
   name)
+
+
+
+;;;; DEFINE-COMPILER-MACRO
+
+(defmacro define-compiler-macro (name lambda-list &body body)
+  "Define a compiler-macro for NAME."
+  (let ((whole (gensym "WHOLE-"))
+	(environment (gensym "ENV-")))
+    (multiple-value-bind
+	(body local-decs doc)
+	(parse-defmacro lambda-list whole body name 'define-compiler-macro
+			:environment environment)
+      (let ((def `(lambda (,whole ,environment)
+		    ,@local-decs
+		    (block ,name
+		      ,body))))
+	`(c::%define-compiler-macro ',name #',def ',lambda-list ,doc)))))
+
+(defun c::%define-compiler-macro (name definition lambda-list doc)
+  (assert (eval:interpreted-function-p definition))
+  (setf (eval:interpreted-function-name definition)
+	(let ((*print-case* :upcase))
+	  (format nil "DEFINE-COMPILER-MACRO ~S" name)))
+  (setf (eval:interpreted-function-arglist definition) lambda-list)
+  (c::%%define-compiler-macro name definition doc))
+;;;
+(defun c::%%define-compiler-macro (name definition doc)
+  (setf (compiler-macro-function name) definition)
+  (setf (documentation name 'compiler-macro) doc)
+  name)
+
 
 
 ;;; DEFTYPE is a lot like DEFMACRO.
