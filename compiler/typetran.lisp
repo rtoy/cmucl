@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.1.1.2 1990/03/26 21:57:20 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.1.1.3 1990/03/27 17:02:25 wlott Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -153,29 +153,6 @@
 
 (def-source-transform atom (x)
   `(not (consp ,x)))
-
-
-;;;; Internal predicates:
-;;;
-;;;    These type predicates are used to implement simple cases of typep.  They
-;;; shouldn't be used explicitly.
-
-;;; Numeric type predicates:
-;;;
-(define-type-predicate bignump bignum)
-(define-type-predicate double-float-p double-float)
-(define-type-predicate fixnump fixnum)
-(define-type-predicate long-float-p long-float)
-(define-type-predicate ratiop ratio)
-(define-type-predicate short-float-p short-float)
-(define-type-predicate single-float-p single-float)
-
-;;; Character type predicates.  Unlike the un-%'ed versions, these are true
-;;; type predicates, accepting any type object.
-;;;
-(define-type-predicate %string-char-p string-char)
-(define-type-predicate base-char-p base-character)
-(define-type-predicate %standard-char-p standard-char)
 
 
 ;;;; Typep source transform:
