@@ -167,9 +167,9 @@
   (once-only ((n-reg reg)
 	      (n-stack reg-or-stack))
     `(sc-case ,n-reg
-       ((any-reg descriptor-reg)
+       ((any-reg descriptor-reg non-descriptor-reg word-pointer-reg)
 	(sc-case ,n-stack
-	  ((any-reg descriptor-reg)
+	  ((any-reg descriptor-reg non-descriptor-reg word-pointer-reg)
 	   (move ,n-reg ,n-stack))
 	  ((control-stack)
 	   (loadw ,n-reg cfp-tn (tn-offset ,n-stack))))))))
