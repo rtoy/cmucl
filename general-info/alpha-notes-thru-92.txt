@@ -1,3 +1,60 @@
+4/30/92 to 5/17/92
+
+Code:
+
+Inline expand %MAKE-ALIEN and FREE-ALIEN to avoid spurious Alien-value consing.
+
+Changed DESCRIBE to allow T or NIL as the stream argument.
+
+Rewrote most of the hash table support:
+- MAKE-HASH-TABLE now conforms to the ANSI spec.
+- EQL hash tables now work with complex numbers, and better in general.
+- HASH-TABLE-mumble accessors now exist.
+
+Changed several uses of DEFINE-CONDITION to use the new syntax.
+
+Removed several extra )'s
+
+Changed several setfs of arguments that were inhibiting the compiler from
+using all the argument type information available for list and sequence
+functions.
+
+Changed IN-PACKAGE to conform to the new definition.  But if you use an
+old-style IN-PACKAGE, it will use the old behavior.
+
+Rewrote DEFPACKAGE to tell you about inconsistencies between the package
+and the DEFPACKAGE form.
+
+Rewrote the DO-mumble-SYMBOLS iterators in order to stamp out more uses of
+prog.  They now wrap the user body in an flet and then just use regular
+looping constructs to grovel through the packages.
+
+Several fixes to the new TRACE:
+- Fixed to actually allow tracing anonymous function objects.
+- Changed to allow tracing of macros.
+- When tracing an already traced function, untrace and retrace it, instead
+of ignoring the second request.
+- Moved the undefined error for UNTRACE to the UNTRACE-1 subfunction,
+instead of signalling it at macroexpand time.
+- In TRACE-1, added an assertion that there isn't already an entry in the
+trace breakpoint table, since sometimes we seem to be forgetting about
+breakpoints.
+
+
+Compiler:
+
+Several internal changes in preperation for supporting the x86.
+
+
+CLX:
+
+READ-BITMAP-FILE modified to decrement the indexed property :x-hot only if 
+non-nil and positive. If already negative, it is left unchanged to indicate
+that the bitmap has no hotspot.
+
+
+
+
 4/7/92 to 4/30/92
 
 **** FASL files have been incompatibly changed in this release.  You must
