@@ -87,7 +87,7 @@ int breakpoint_after_offset(scp)
 }
 
 
-handle_breakpoint(signal, code, scp)
+handle_breakpoint(signal, subcode, scp)
      struct sigcontext *scp;
 {
     struct code *code = (struct code *)PTR(scp->sc_regs[CODE]);
