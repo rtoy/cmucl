@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.10 1990/04/25 21:47:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/system.lisp,v 1.11 1990/05/06 05:25:50 wlott Exp $
 ;;;
 ;;;    MIPS VM definitions of various system hacking operations.
 ;;;
@@ -93,6 +93,34 @@
       
       (emit-label shift)
       (inst sll result ndescr 2))))
+
+
+(define-vop (get-header-data)
+  (:args (x :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:generator 6
+    (loadw temp x 0 vm:other-pointer-type)
+    (inst sra temp temp vm:type-bits)
+    (inst sll res temp 2)))
+
+(define-vop (set-header-data)
+  (:args (x :scs (descriptor-reg) :target res)
+	 (data :scs (any-reg immediate)))
+  (:results (res :scs (descriptor-reg)))
+  (:temporary (:scs (non-descriptor-reg) :type random) t1 t2)
+  (:generator 6
+    (loadw t1 x 0 vm:other-pointer-type)
+    (inst li t2 vm:type-mask)
+    (inst and t1 t1 t2)
+    (sc-case data
+      (any-reg
+       (inst sll t2 data (- vm:type-bits 2))
+       (inst or t1 t1 t2))
+      (immediate
+       (inst or t1 t1 (ash (tn-value data) vm:type-bits))))
+    (storew t1 x 0 vm:other-pointer-type)
+    (move res x)))
 
 
 (define-vop (make-fixnum)
