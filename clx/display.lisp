@@ -49,8 +49,11 @@
 	    (let* ((host-family (ecase protocol
 				  ((:tcp :internet nil) 0)
 				  ((:dna :DECnet) 1)
-				  ((:chaos) 2)))
-		   (host-address (rest (host-address host host-family)))
+				  ((:chaos) 2)
+				  ((:unix) 256)))
+		   (host-address (if (eq protocol :unix)
+				     (map 'list #'char-int (machine-instance))
+				     (rest (host-address host host-family))))
 		   (best-name nil)
 		   (best-data nil))
 	      (loop
@@ -290,10 +293,16 @@
   ;; if any, is assumed to come from the environment somehow.
   (declare (type integer display))
   (declare (clx-values display))
-  ;; Get the authorization mechanism from the environment.
+  ;; Get the authorization mechanism from the environment.  Handle the
+  ;; special case of a host name of "" and "unix" which means the
+  ;; protocol is :unix
   (when (null authorization-name)
     (multiple-value-setq (authorization-name authorization-data)
-      (get-best-authorization host display protocol)))
+      (get-best-authorization host
+			      display
+			      (if (member host '("" "unix") :test #'equal)
+				  :unix
+				  protocol))))
   ;; PROTOCOL is the network protocol (something like :TCP :DNA or :CHAOS). See OPEN-X-STREAM.
   (let* ((stream (open-x-stream host display protocol))
 	 (disp (make-buffer *output-buffer-size* #'make-display-internal
