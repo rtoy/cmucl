@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.1 1993/02/04 12:13:24 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.2 1993/02/04 22:37:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,6 +19,7 @@
 ;;; Written by Rob MacLachlan
 ;;;
 (in-package "KERNEL")
+(export '(ctype typedef-init))
 
 ;;; These are the Common Lisp defined type specifier symbols.  These are the
 ;;; things which can be used as declarations without requiring the use of TYPE.
