@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.44 1991/08/25 18:11:12 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/main.lisp,v 1.45 1991/11/08 15:28:02 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -207,6 +207,9 @@
 	(*elsewhere* nil))
     (maybe-mumble "Env ")
     (environment-analyze component)
+    (when (component-reanalyze component)
+      (maybe-mumble "DFO ")
+      (find-dfo component))
     (maybe-mumble "GTN ")
     (gtn-analyze component)
     (maybe-mumble "LTN ")
