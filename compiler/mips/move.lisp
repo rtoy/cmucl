@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.18 1990/07/02 16:37:32 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/move.lisp,v 1.19 1990/07/03 06:31:12 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -128,8 +128,10 @@
   (:args (x) (type))
   (:results (y))
   (:ignore y)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 666
-    (error-call object-not-type-error x type)))
+    (error-call vop object-not-type-error x type)))
 
 
 

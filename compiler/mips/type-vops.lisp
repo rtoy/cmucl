@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.18 1990/06/16 15:35:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.19 1990/07/03 06:31:21 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the RT.
@@ -30,7 +30,9 @@
 	  :scs (any-reg descriptor-reg)))
   (:results
    (result :scs (any-reg descriptor-reg)))
-  (:temporary (:type random :scs (non-descriptor-reg)) temp))
+  (:temporary (:type random :scs (non-descriptor-reg)) temp)
+  (:vop-var vop)
+  (:save-p :compute-only))
 
 (define-vop (simple-type-predicate)
   (:args
@@ -50,7 +52,8 @@
 		  (:translate ,pred-name))
 		(define-vop (,check-name check-simple-type)
 		  (:generator 4
-		    (let ((err-lab (generate-error-code ,error-code value)))
+		    (let ((err-lab
+			   (generate-error-code vop ,error-code value)))
 		      (test-simple-type value temp err-lab t ,type-code)
 		      (move result value))))
 		(primitive-type-vop ,check-name (:check) ,ptype))))
@@ -134,7 +137,7 @@
 ;;; 
 (define-vop (check-fixnum check-simple-type)
   (:generator 3
-    (let ((err-lab (generate-error-code object-not-fixnum-error value)))
+    (let ((err-lab (generate-error-code vop object-not-fixnum-error value)))
       (inst and temp value #x3)
       (inst bne temp zero-tn err-lab)
       (move result value t))))
@@ -170,7 +173,9 @@
 	:target res))
   (:results
    (res :scs (any-reg descriptor-reg)))
-  (:temporary (:type random :scs (non-descriptor-reg)) temp))
+  (:temporary (:type random :scs (non-descriptor-reg)) temp)
+  (:vop-var vop)
+  (:save-p :compute-only))
 
 (macrolet ((frob (pred-name check-name error-code &rest types)
 	     (let ((cost (* (+ (length types)
@@ -186,7 +191,8 @@
 		  ,@(when check-name
 		      `((define-vop (,check-name check-hairy-type)
 			  (:generator ,cost
-			    (let ((err-lab (generate-error-code ,error-code
+			    (let ((err-lab (generate-error-code vop
+								,error-code
 								obj)))
 			      (test-hairy-type obj temp err-lab t ,@types))
 			    (move res obj)))))))))
@@ -453,6 +459,8 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
   (:temporary (:scs (descriptor-reg)) saved-object)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
     (let ((not-function-label (gen-label))
 	  (not-coercable-label (gen-label))
@@ -470,10 +478,10 @@
 	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
 	(test-simple-type result nd-temp done-label nil
 			  vm:function-pointer-type)
-	(error-call undefined-symbol-error saved-object)
+	(error-call vop undefined-symbol-error saved-object)
 	
 	(emit-label not-coercable-label)
-	(error-call object-not-coercable-to-function-error object)))))
+	(error-call vop object-not-coercable-to-function-error object)))))
 
 (define-vop (fast-safe-coerce-to-function)
   (:args (object :scs (descriptor-reg)
@@ -481,6 +489,8 @@
   (:results (result :scs (descriptor-reg)))
   (:temporary (:type random  :scs (non-descriptor-reg)) nd-temp)
   (:temporary (:scs (descriptor-reg)) saved-object)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
     (let ((not-function-label (gen-label))
 	  (done-label (gen-label)))
@@ -495,4 +505,4 @@
 	(loadw result object vm:symbol-function-slot vm:other-pointer-type)
 	(test-simple-type result nd-temp done-label nil
 			  vm:function-pointer-type)
-	(error-call undefined-symbol-error saved-object)))))
+	(error-call vop undefined-symbol-error saved-object)))))

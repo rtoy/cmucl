@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.15 1990/06/26 03:50:31 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.16 1990/07/03 06:31:15 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -29,10 +29,12 @@
 	      count)
   (:results (result :scs (any-reg descriptor-reg)))
   (:policy :fast-safe)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 50
     (let ((done (gen-label))
 	  (loop (gen-label))
-	  (not-list (generate-cerror-code object-not-list-error object)))
+	  (not-list (generate-cerror-code vop object-not-list-error object)))
       (move ptr object)
       (move count zero-tn)
 
@@ -47,7 +49,7 @@
       (inst addu count count (fixnum 1))
       (simple-test-simple-type ptr temp loop nil vm:list-pointer-type)
 
-      (cerror-call done object-not-list-error ptr)
+      (cerror-call vop done object-not-list-error ptr)
 
       (emit-label done)
       (move result count))))

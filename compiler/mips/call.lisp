@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.23 1990/06/27 06:43:46 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.24 1990/07/03 06:31:02 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -1188,9 +1188,11 @@ default-value-5
   (:arg-types positive-fixnum)
   (:temporary (:scs (any-reg) :type fixnum) temp)
   (:info count)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 3
-    (let ((err-lab (generate-error-code invalid-argument-count-error
-					nargs)))
+    (let ((err-lab
+	   (generate-error-code vop invalid-argument-count-error nargs)))
       (cond ((zerop count)
 	     (inst bne nargs zero-tn err-lab)
 	     (inst nop))
@@ -1206,8 +1208,10 @@ default-value-5
 		(:args ,@(mapcar #'(lambda (arg)
 				     `(,arg :scs (any-reg descriptor-reg)))
 				 args))
+		(:vop-var vop)
+		(:save-p :compute-only)
 		(:generator 1000
-		  (error-call ,error ,@args)))))
+		  (error-call vop ,error ,@args)))))
   (frob argument-count-error invalid-argument-count-error nargs)
   (frob type-check-error object-not-type-error object type)
   (frob odd-keyword-arguments-error odd-keyword-arguments-error)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.19 1990/06/18 14:47:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.20 1990/07/03 06:30:56 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS definitions for array operations.
 ;;;
@@ -87,8 +87,10 @@
 	 (index :scs (any-reg descriptor-reg) :target result))
   (:results (result :scs (any-reg descriptor-reg)))
   (:temporary (:scs (non-descriptor-reg) :type random) temp)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 5
-    (let ((error (generate-error-code invalid-array-index-error
+    (let ((error (generate-error-code vop invalid-array-index-error
 				      array bound index)))
       (inst sltu temp index bound)
       (inst beq temp zero-tn error)

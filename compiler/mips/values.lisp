@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.9 1990/06/16 15:35:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/values.lisp,v 1.10 1990/07/03 06:31:25 wlott Exp $
 ;;;
 ;;;    This file contains the implementation of unknown-values VOPs.
 ;;;
@@ -73,6 +73,8 @@
   (:temporary (:scs (descriptor-reg) :type list :from (:argument 0)) list)
   (:temporary (:scs (descriptor-reg)) temp)
   (:temporary (:scs (non-descriptor-reg) :type random) ndescr)
+  (:vop-var vop)
+  (:save-p :compute-only)
   (:generator 0
     (let ((loop (gen-label))
 	  (done (gen-label)))
@@ -87,7 +89,7 @@
       (inst addu csp-tn csp-tn vm:word-bytes)
       (storew temp csp-tn -1)
       (test-simple-type list ndescr loop nil vm:list-pointer-type)
-      (error-call bogus-argument-to-values-list-error list)
+      (error-call vop bogus-argument-to-values-list-error list)
 
       (emit-label done)
       (inst subu count csp-tn start))))
