@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.34 2002/05/02 21:07:21 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.35 2002/08/07 13:51:15 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1386,9 +1386,10 @@ about function addresses and register values.")
 ;; instructions. However, the disassembler uses the correct V9
 ;; mnemonic.
 #-sparc-v9
-(define-instruction b (segment cond-or-target &optional target)
+(define-instruction b (segment cond-or-target &optional target &rest ignored)
   (:declare (type (or label branch-condition) cond-or-target)
-	    (type (or label null) target))
+	    (type (or label null) target)
+	    (ignore ignored))
   (:printer format-2-branch ((op #b00) (op2 #b010)))
   (:attributes branch)
   (:dependencies (reads :psr))
@@ -1449,6 +1450,7 @@ about function addresses and register values.")
   (:declare (type branch-condition condition)
 	    (type (or tn (unsigned-byte 8)) src1-or-imm)
 	    (type (or null tn (unsigned-byte 8)) src2)
+	    #+sparc-v9
 	    (type integer-condition-register cc))
   (:printer format-4-trap-immed ((op #b10)
 				 (rd nil :type 'branch-condition)
@@ -1465,42 +1467,44 @@ about function addresses and register values.")
   (:dependencies (reads :psr))
   (:delay 0)
   (:emitter
-   (etypecase src1-or-imm
-     (integer
-      ;; src2 shouldn't be given (or should be NIL) in this case.
-      (assert (null src2))
-      (unless (typep src1-or-imm '(integer 16 31))
-	(cerror "Use it anyway"
-		"Immediate trap number ~A specified, but only trap numbers
+   (let ((cc-reg #+sparc-v9 (integer-condition cc)
+		 #-sparc-v9 0))
+     (etypecase src1-or-imm
+       (integer
+	;; src2 shouldn't be given (or should be NIL) in this case.
+	(assert (null src2))
+	(unless (typep src1-or-imm '(integer 16 31))
+	  (cerror "Use it anyway"
+		  "Immediate trap number ~A specified, but only trap numbers
    16 to 31 are available to the application"
-		src1-or-imm))
-      (emit-format-4-trap segment
-			  #b10
-			  (branch-condition condition)
-			  #b111010 0 1
-			  (integer-condition cc)
-			  src1-or-imm))
-     (tn
-      ;; src1 is a register.  src2 must be given.
-      (etypecase src2
-	(integer
-	 (emit-format-4-trap segment
-			     #b10
-			     (branch-condition condition)
-			     #b111010
-			     (reg-tn-encoding src1-or-imm)
-			     1
-			     (integer-condition cc)
-			     src2))
-	(tn
-	 (emit-format-4-trap segment
-			     #b10
-			     (branch-condition condition)
-			     #b111010
-			     (reg-tn-encoding src1-or-imm)
-			     0
-			     (integer-condition cc)
-			     (reg-tn-encoding src2)))))))
+		  src1-or-imm))
+	(emit-format-4-trap segment
+			    #b10
+			    (branch-condition condition)
+			    #b111010 0 1
+			    cc-reg
+			    src1-or-imm))
+       (tn
+	;; src1 is a register.  src2 must be given.
+	(etypecase src2
+	  (integer
+	   (emit-format-4-trap segment
+			       #b10
+			       (branch-condition condition)
+			       #b111010
+			       (reg-tn-encoding src1-or-imm)
+			       1
+			       cc-reg
+			       src2))
+	  (tn
+	   (emit-format-4-trap segment
+			       #b10
+			       (branch-condition condition)
+			       #b111010
+			       (reg-tn-encoding src1-or-imm)
+			       0
+			       cc-reg
+			       (reg-tn-encoding src2))))))))
   )
 
 ;; Same as for the branch instructions.  On the Sparc V9, we will use
