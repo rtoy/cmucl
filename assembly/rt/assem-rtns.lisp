@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.2 1991/04/01 13:38:59 chiles Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.3 1991/04/01 13:43:06 wlott Exp $
 ;;;
 
 (in-package "RT")
@@ -258,6 +258,7 @@
   (loadw srcstart csp-tn -3)
   (loadw dstend csp-tn -2)
   (loadw temp csp-tn -1)
+  (inst dec csp-tn (* 3 word-bytes))
   (inst b lip-tn))
 
 
@@ -268,36 +269,45 @@
 			 ;; These are really args.
 			 ((:temp args any-reg nl0-offset)
 			  ;; These are needed by the blitting code.
-			  (:temp nargs/src any-reg lra-offset)
-			  (:temp lexenv/dst any-reg lexenv-offset)
-			  (:temp count any-reg nargs-offset)
+			  (:temp count any-reg lra-offset)
+			  (:temp dst any-reg lexenv-offset)
+			  (:temp nargs any-reg nargs-offset)
 			  (:temp temp descriptor-reg cname-offset)
 			  ;; These are needed so we can get at the register args.
 			  (:temp a0 descriptor-reg a0-offset)
 			  (:temp a1 descriptor-reg a1-offset)
 			  (:temp a2 descriptor-reg a2-offset))
   ;; Calculate NARGS (as a fixnum).
-  (move nargs/src csp-tn)
-  (inst s nargs/src args)
+  (move nargs csp-tn)
+  (inst s nargs args)
   ;; Load the argument registers now because the argument moving might trash
   ;; these locations.
-  (loadw a0 args (* 0 vm:word-bytes))
-  (loadw a1 args (* 1 vm:word-bytes))
-  (loadw a2 args (* 2 vm:word-bytes))
-  ;; Calc SRC, DST, and COUNT.
-  (inst a count nargs/src (fixnum (- register-arg-count)))
+  (loadw a0 args 0)
+  (loadw a1 args 1)
+  (loadw a2 args 2)
+  ;; Are we done?
+  (inst c nargs (fixnum register-arg-count))
   (inst bnc :gt done)
-  (inst a nargs/src args (* vm:word-bytes register-arg-count))
-  (inst a lexenv/dst cfp-tn (* vm:word-bytes register-arg-count))
+  ;; Calc DST and COUNT after saving those registers.
+  (inst inc csp-tn (* word-bytes 2))
+  (storew count csp-tn -1)
+  (storew dst csp-tn -2)
+  (inst a count nargs (fixnum (- register-arg-count)))
+  (inst a args (* vm:word-bytes register-arg-count))
+  (inst a dst cfp-tn (* vm:word-bytes register-arg-count))
   LOOP
   ;; Copy one arg.
-  (loadw temp nargs/src)
-  (inst a nargs/src vm:word-bytes)
-  (storew temp lexenv/dst)
-  (inst a count (fixnum -1))
-  (inst bc :gt loop)
-  (inst a lexenv/dst vm:word-bytes)
+  (loadw temp args)
+  (inst inc args vm:word-bytes)
+  (storew temp dst)
+  (inst s count (fixnum 1))
+  (inst bcx :gt loop)
+  (inst inc dst vm:word-bytes)
+  ;; Restore
+  (loadw count csp-tn -1)
+  (loadw dst csp-tn -2)
+  (inst dec csp-tn (* word-bytes 2))
   DONE
   ;; We are done.  Do the jump.
-  (loadw temp lexenv/dst vm:closure-function-slot vm:function-pointer-type)
+  (loadw temp dst vm:closure-function-slot vm:function-pointer-type)
   (lisp-jump temp lip-tn))
