@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.43 1993/03/13 14:38:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.44 1993/03/14 12:25:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -170,13 +170,14 @@
   ;; Any INITIAL-OFFSET option on this direct type.
   (offset nil :type (or index null))
   ;;
-  ;; The next four slots are only meaningful in real default structures (TYPE =
-  ;; STRUCTURE).
-  ;;
   ;; The argument to the PRINT-FUNCTION option, or NIL if none.  If we see an
   ;; explicit (:PRINT-FUNCTION) option, then this is DEFAULT-STRUCTURE-PRINT.
-  ;; See also STRUCTURE-CLASS-PRINTER.
+  ;; See also BASIC-STRUCTURE-CLASS-PRINTER.  Only for classed structures.
+  ;;
   (print-function nil :type (or cons symbol null))
+  ;;
+  ;; The next four slots are only meaningful in real default structures (TYPE =
+  ;; STRUCTURE).
   ;;
   ;; Make-load-form function option.  See also STRUCTURE-CLASS-LOAD-FORM-MAKER.
   (make-load-form-fun nil :type (or symbol cons null))
@@ -189,6 +190,7 @@
   ;; Value of the :PURE option, or :UNSPECIFIED.  Only meaningful if
   ;; CLASS-STRUCTURE-P = T.
   (pure :unspecified :type (member t nil :unspecified)))
+
 
 ;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
 ;;; slots.
@@ -1442,48 +1444,51 @@
 
 (defun default-structure-print (structure stream depth)
   (declare (ignore depth))
-  (let* ((type (%instance-layout structure))
-	 (name (class-name (layout-class type)))
-	 (dd (layout-info type)))
-    (if *print-pretty*
-	(pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
-	  (prin1 name stream)
-	  (let ((slots (dd-slots dd)))
-	    (when slots
-	      (write-char #\space stream)
-	      (pprint-indent :block 2 stream)
-	      (pprint-newline :linear stream)
-	      (loop
-		(pprint-pop)
-		(let ((slot (pop slots)))
-		  (write-char #\: stream)
-		  (output-symbol-name (dsd-%name slot) stream)
+  (if (funcallable-instance-p structure)
+      (print-unreadable-object (stream instance :identity t :type t)
+	(write-string "Funcallable Structure" stream))
+      (let* ((type (%instance-layout structure))
+	     (name (class-name (layout-class type)))
+	     (dd (layout-info type)))
+	(if *print-pretty*
+	    (pprint-logical-block (stream nil :prefix "#S(" :suffix ")")
+	      (prin1 name stream)
+	      (let ((slots (dd-slots dd)))
+		(when slots
 		  (write-char #\space stream)
-		  (pprint-newline :miser stream)
-		  (output-object (%instance-ref structure (dsd-index slot))
-				 stream)
-		  (when (null slots)
-		    (return))
-		  (write-char #\space stream)
-		  (pprint-newline :linear stream))))))
-	(descend-into (stream)
-	  (write-string "#S(" stream)
-	  (prin1 name stream)
-	  (do ((index 1 (1+ index))
-	       (length (%instance-length structure))
-	       (slots (dd-slots dd) (cdr slots)))
-	      ((or (= index length)
-		   (and *print-length*
-			(= index *print-length*)))
-	       (if (= index length)
-		   (write-string ")" stream)
-		   (write-string "...)" stream)))
-	    (declare (type index index))
-	    (write-char #\space stream)
-	    (write-char #\: stream)
-	    (output-symbol-name (dsd-%name (car slots)) stream)
-	    (write-char #\space stream)
-	    (output-object (%instance-ref structure index) stream))))))
+		  (pprint-indent :block 2 stream)
+		  (pprint-newline :linear stream)
+		  (loop
+		    (pprint-pop)
+		    (let ((slot (pop slots)))
+		      (write-char #\: stream)
+		      (output-symbol-name (dsd-%name slot) stream)
+		      (write-char #\space stream)
+		      (pprint-newline :miser stream)
+		      (output-object (%instance-ref structure (dsd-index slot))
+				     stream)
+		      (when (null slots)
+			(return))
+		      (write-char #\space stream)
+		      (pprint-newline :linear stream))))))
+	    (descend-into (stream)
+	      (write-string "#S(" stream)
+	      (prin1 name stream)
+	      (do ((index 1 (1+ index))
+		   (length (%instance-length structure))
+		   (slots (dd-slots dd) (cdr slots)))
+		  ((or (= index length)
+		       (and *print-length*
+			    (= index *print-length*)))
+		   (if (= index length)
+		       (write-string ")" stream)
+		       (write-string "...)" stream)))
+		(declare (type index index))
+		(write-char #\space stream)
+		(write-char #\: stream)
+		(output-symbol-name (dsd-%name (car slots)) stream)
+		(write-char #\space stream)
+		(output-object (%instance-ref structure index) stream)))))))
 
 (defun make-structure-load-form (structure)
   (declare (type structure-object structure))
