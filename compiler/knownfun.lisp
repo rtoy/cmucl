@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.8 1991/04/09 17:22:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.9 1991/04/23 12:10:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -70,8 +70,16 @@
   ;;
   ;; Function is a true predicate likely to be open-coded.  Convert any
   ;; non-conditional uses into (IF <pred> T NIL).
-  predicate)
-
+  predicate
+  ;;
+  ;; Inhibit any warning for compiling a recursive definition.  [Normally the
+  ;; compiler warns when compiling a recursive definition for a known function,
+  ;; since it might be a botched interpreter stub.]
+  recursive
+  ;;
+  ;; Function does explicit argument type checking, so the declared type should
+  ;; not be asserted when a definition is compiled.
+  explicit-check)
 
 (defstruct (function-info
 	    (:print-function %print-function-info))
