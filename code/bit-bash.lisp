@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.15 1992/02/21 23:56:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/bit-bash.lisp,v 1.16 1992/07/31 17:50:18 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -123,7 +123,8 @@
 (defun fix-sap-and-offset (sap offset)
   "Align the SAP to a word boundry, and update the offset accordingly."
   (declare (type system-area-pointer sap)
-	   (type index offset))
+	   (type index offset)
+	   (values system-area-pointer index))
   (let ((address (sap-int sap)))
     (values (int-sap (32bit-logical-andc2 address 3))
 	    (+ (* (logand address 3) byte-bits) offset))))
@@ -134,7 +135,7 @@
   (declare (type system-area-pointer sap)
 	   (type index offset)
 	   (values (unsigned-byte 32))
-	   (optimize (speed 3) (safety 0)))
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
   (sap-ref-32 sap (the index (ash offset 2))))
 ;;;
 (defun %set-word-sap-ref (sap offset value)
@@ -142,7 +143,7 @@
 	   (type index offset)
 	   (type (unsigned-byte 32) value)
 	   (values (unsigned-byte 32))
-	   (optimize (speed 3) (safety 0)))
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
   (setf (sap-ref-32 sap (the index (ash offset 2))) value))
 ;;;
 (defsetf word-sap-ref %set-word-sap-ref)
@@ -489,8 +490,10 @@
    (declare (optimize (speed 3) (safety 0)))
    (multiple-value-bind (src src-offset)
 			(fix-sap-and-offset src src-offset)
+     (declare (type system-area-pointer src))
      (multiple-value-bind (dst dst-offset)
 			  (fix-sap-and-offset dst dst-offset)
+       (declare (type system-area-pointer dst))
        (do-unary-bit-bash src src-offset dst dst-offset length
 			  #'word-sap-ref #'%set-word-sap-ref
 			  #'word-sap-ref)))))
