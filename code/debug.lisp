@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.19 1991/07/14 02:48:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.20 1991/10/12 21:01:52 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -128,6 +128,7 @@
 	       (bp (di:make-breakpoint #'main-hook-function debug-function
       (print-frame-call frame))))
 	  (di:activate-breakpoint bp)
+
 	  (push (create-breakpoint-info debug-function bp 0)
 		*step-breakpoints*))))))))
 
@@ -158,14 +159,6 @@
 (eval-when (compile eval)
 
 ;;; LAMBDA-LIST-ELEMENT-DISPATCH -- Internal.
-(defstruct (unprintable-object
-	    (:constructor make-unprintable-object (string))
-	    (:print-function (lambda (x s d)
-			       (declare (ignore d))
-			       (format s "#<~A>"
-				       (unprintable-object-string x)))))
-  string)
-
 ;;;
 ;;; This is a convenient way to express what to do for each type of lambda-list
 ;;; element.
@@ -184,6 +177,17 @@
     (1 (print-frame-call-1 frame))
     ((2 3 4 5))))
 	     (t ,other)))))
+
+) ;EVAL-WHEN
+
+
+;;; This is used in constructing arg lists for debugger printing when the arg
+;;; list is unavailable, some arg is unavailable or unused, etc.
+;;;
+(defstruct (unprintable-object
+	    (:constructor make-unprintable-object (string))
+	    (:print-function (lambda (x s d)
+			       (declare (ignore d))
 			       (format s "#<~A>"
 				       (unprintable-object-string x)))))
   string)
@@ -191,7 +195,7 @@
 ;;; PRINT-FRAME-CALL-1 -- Internal.
 ;;;
 ;;; This prints frame with verbosity level 1.  If we hit a rest-arg, 
-(defun print-frame-call-1 (frame)
+;;; then print as many of the values as possible,
 ;;; punting the loop over lambda-list variables since any other arguments
 ;;; will be in the rest-arg's list of values.
 ;;;
@@ -216,12 +220,13 @@
 				     results))
 		       (return))
 		     (push (make-unprintable-object "unavaliable-rest-arg")
-    (print (nreverse results))
+			   results)))))
+      (di:lambda-list-unavailable
        ()
        (push (make-unprintable-object "lambda-list-unavailable") results)))
     (prin1 (nreverse results))
     (when (di:debug-function-kind d-fun)
-
+      (write-char #\[)
       (prin1 (di:debug-function-kind d-fun))
       (write-char #\]))))
 ;;;
