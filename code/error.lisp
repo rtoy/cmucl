@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.76 2003/07/20 11:02:48 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.77 2003/10/24 02:56:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -22,7 +22,7 @@
 (export '(layout-invalid condition-function-name simple-control-error
 	  simple-file-error simple-program-error simple-parse-error
           simple-style-warning simple-undefined-function
-	  stack-overflow))
+	  stack-overflow heap-overflow))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -950,6 +950,13 @@
   (:report (lambda (condition stream)
 	     (declare (ignore condition))
 	     (format stream "Control stack overflow"))))
+
+#+heap-overflow-check
+(define-condition heap-overflow (storage-condition)
+  ()
+  (:report (lambda (condition stream)
+	     (declare (ignore condition))
+	     (format stream "Heap (dynamic space) overflow"))))
 
 (define-condition type-error (error)
   ((datum :reader type-error-datum :initarg :datum)

@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.62 2003/10/13 21:51:04 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.63 2003/10/24 02:56:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -707,6 +707,10 @@
     (progn
       (frob kernel::yellow-zone-hit)
       (frob kernel::red-zone-hit))
+    #+heap-overflow-check
+    (progn
+      (frob kernel::dynamic-space-overflow-error-hit)
+      (frob kernel::dynamic-space-overflow-warning-hit))
     (frob di::handle-breakpoint)
     (frob di::handle-function-end-breakpoint)
     (frob lisp::fdefinition-object))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.72 2003/09/25 02:40:12 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.73 2003/10/24 02:56:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,6 +37,9 @@
 
 #+stack-checking
 (sys:register-lisp-runtime-feature :stack-checking)
+
+#+heap-overflow-check
+(sys:register-lisp-runtime-feature :heap-overflow-check)
 
 ;;; Make the error system enable interrupts.
 
@@ -616,6 +619,13 @@
 
 (defconstant eofs-before-quit 10)
 
+(defparameter *reserved-heap-pages* 256
+  "How many pages to reserve from the total heap space so we can handle
+heap overflow.")
+
+#+heap-overflow-check
+(alien:def-alien-variable "reserved_heap_pages" c-call:unsigned-long)
+
 (defun %top-level ()
   "Top-level READ-EVAL-PRINT loop.  Do not call this."
   (let  ((* nil) (** nil) (*** nil)
@@ -631,6 +641,8 @@
 	    (loop
 	      (scrub-control-stack)
 	      (fresh-line)
+	      ;; Reset reserved pages in the heap
+	      #+heap-overflow-check (setf reserved-heap-pages *reserved-heap-pages*)
 	      (princ (if (functionp *prompt*)
 			 (funcall *prompt*)
 			 *prompt*))

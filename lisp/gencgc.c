@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.45 2003/10/16 16:18:03 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.46 2003/10/24 02:57:00 toy Exp $
  *
  */
 
@@ -269,6 +269,16 @@ volatile unsigned long long bytes_allocated_sum = 0;
  * GC trigger; a value of 0xffffffff represents disabled.
  */
 unsigned long auto_gc_trigger = 0xffffffff;
+
+/*
+ * Number of pages to reserve for heap overflow.  We want some space
+ * available on the heap when we are close to a heap overflow, so we
+ * can handle the overflow.  But how much do we really need?  I (rtoy)
+ * think 256 pages is probably a decent amount.  (That's 1 MB for x86,
+ * 2 MB for sparc, which has 8K pages.)
+ */
+
+unsigned long reserved_heap_pages = 256;
 
 /*
  * The src. and dest. generations. Set before a GC starts scavenging.
@@ -706,6 +716,43 @@ void *current_region_end_addr;
 /* The generation currently being allocated to. X */
 static int  gc_alloc_generation;
 
+/* Handle heap overflow here, maybe. */
+static void
+handle_heap_overflow(const char* msg, int size)
+{
+  unsigned long heap_size_mb;
+  
+  if (msg)
+    {
+      fprintf(stderr, msg, size);
+    }
+#ifndef SPARSE_BLOCK_SIZE
+#define SPARSE_BLOCK_SIZE (0)
+#endif  
+
+  /* Figure out how many MB of heap we have */
+  heap_size_mb = (dynamic_space_size + SPARSE_BLOCK_SIZE) >> 20;
+  
+  fprintf(stderr, " CMUCL has run out of dynamic heap space (%lu MB).\n", heap_size_mb);
+  /* Try to handle heap overflow somewhat gracefully if we can. */
+#if defined(trap_DynamicSpaceOverflow) || defined(FEATURE_HEAP_OVERFLOW_CHECK)
+  if (reserved_heap_pages == 0)
+    {
+      fprintf(stderr, "\n Returning to top-level.\n");
+      do_dynamic_space_overflow_error();
+    }
+  else
+    {
+      fprintf(stderr, "  You can control heap size with the -dynamic-space-size commandline option.\n");
+      do_dynamic_space_overflow_warning();
+    }
+#else
+  print_generation_stats(1);
+
+  exit(1);
+#endif
+}
+
 /*
  * Find a new region with room for at least the given number of bytes.
  *
@@ -787,12 +834,8 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
     }
 
     /* Check for a failure */
-    if (first_page >= dynamic_space_pages) {
-      fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
-      fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
-      fprintf(stderr, "*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
-      print_generation_stats(1);
-      exit(1);
+    if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+      handle_heap_overflow("*A2 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
     }
 
     gc_assert(!PAGE_WRITE_PROTECTED(first_page));
@@ -835,12 +878,8 @@ static void gc_alloc_new_region(int nbytes, int unboxed,
   while (restart_page < dynamic_space_pages && bytes_found < nbytes);
 
   /* Check for a failure */
-  if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
-    fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
-    fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
-    fprintf(stderr, "*A1 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
-    print_generation_stats(1);
-    exit(1);
+  if (restart_page >= (dynamic_space_pages - reserved_heap_pages) && bytes_found < nbytes) {
+    handle_heap_overflow("*A1 gc_alloc_new_region failed, nbytes=%d.\n", nbytes);
   }
 
 #if 0
@@ -1235,12 +1274,8 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
       }
 
     /* Check for a failure */
-    if (first_page >= dynamic_space_pages) {
-      fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
-      fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
-      fprintf(stderr, "*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
-      print_generation_stats(1);
-      exit(1);
+    if (first_page >= dynamic_space_pages - reserved_heap_pages) {
+      handle_heap_overflow("*A2 gc_alloc_large failed, nbytes=%d.\n", nbytes);
     }
 
     gc_assert(!PAGE_WRITE_PROTECTED(first_page));
@@ -1277,12 +1312,8 @@ static void *gc_alloc_large(int  nbytes, int unboxed,
   while ((restart_page < dynamic_space_pages) && (bytes_found < nbytes));
 
   /* Check for a failure */
-  if (restart_page >= dynamic_space_pages && bytes_found < nbytes) {
-    fprintf(stderr, "*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
-    fprintf(stderr, "!!! CMUCL has run out of dynamic heap space. You can control heap size\n");
-    fprintf(stderr, "!!! with the -dynamic-space-size commandline option.\n");
-    print_generation_stats(1);
-    exit(1);
+  if (restart_page >= (dynamic_space_pages - reserved_heap_pages) && bytes_found < nbytes) {
+    handle_heap_overflow("*A1 gc_alloc_large failed, nbytes=%d.\n", nbytes);
   }
 
 #if 0  

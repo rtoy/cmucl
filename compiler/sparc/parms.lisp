@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.46 2003/10/09 21:55:46 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.47 2003/10/24 02:57:00 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -210,7 +210,10 @@
 
 (export '(halt-trap pending-interrupt-trap error-trap cerror-trap
 	  breakpoint-trap function-end-breakpoint-trap
-	  after-breakpoint-trap allocation-trap pseudo-atomic-trap
+	  after-breakpoint-trap allocation-trap
+	  dynamic-space-overflow-error-trap
+	  dynamic-space-overflow-warning-trap
+	  pseudo-atomic-trap
 	  object-not-list-trap object-not-instance-trap
 	  trace-table-normal trace-table-call-site
 	  trace-table-function-prologue trace-table-function-epilogue))
@@ -222,7 +225,10 @@
   cerror
   breakpoint
   function-end-breakpoint
-  after-breakpoint)
+  after-breakpoint
+  dynamic-space-overflow-warning
+  dynamic-space-overflow-error
+  )
 
 ;; Make sure this starts AFTER the last element of the above enum!
 (defenum (:prefix object-not- :suffix -trap :start 16)
@@ -263,6 +269,8 @@
     kernel::internal-error
     #+stack-checking kernel::yellow-zone-hit
     #+stack-checking kernel::red-zone-hit
+    #+heap-overflow-check kernel::dynamic-space-overflow-warning-hit
+    #+heap-overflow-check kernel::dynamic-space-overflow-error-hit
     di::handle-breakpoint
     lisp::fdefinition-object
 
@@ -354,7 +362,7 @@
 ;;;;
 ;;;; This value is added to alloc-tn to indicate a pseudo-atomic
 ;;;; section.
-(defconstant pseudo-atomic-value (ash 1 (1- vm:lowtag-bits)))
+(defconstant pseudo-atomic-value (ash 1 (1- vm::lowtag-bits)))
 
 ;;;; Pseudo-atomic-interrupted-mask
 ;;;;

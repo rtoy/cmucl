@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.42 2003/05/26 20:20:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.43 2003/10/24 02:56:59 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,8 @@
 (in-package "KERNEL")
 
 (export '(infinite-error-protect find-caller-name *maximum-error-depth*
-	  red-zone-hit yellow-zone-hit))
+	  red-zone-hit yellow-zone-hit
+	  dynamic-space-overflow-error-hit dynamic-space-overflow-warning-hit))
 
 
 
@@ -657,4 +658,19 @@
            Returning to Top-Level.~@:>~2%")
   (throw 'lisp::top-level-catcher nil))
 
+#+heap-overflow-check
+(defun dynamic-space-overflow-warning-hit ()
+  (let ((debug:*stack-top-hint* nil))
+    ;; Don't reserve any more pages
+    (setf lisp::reserved-heap-pages 0)
+    (format *error-output*
+	    "~2&~@<Imminent dynamic space overflow has occurred:  ~
+            Only a small amount of dynamic space is available now. ~
+            Please note that you will be returned to the Top-Level without ~
+            warning if you run out of space while debugging.~@:>~%")
+    (infinite-error-protect (error 'heap-overflow))))
+
+#+heap-overflow-check
+(defun dynamic-space-overflow-error-hit ()
+  (throw 'lisp::top-level-catcher nil))
 

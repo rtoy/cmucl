@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.18 2003/10/16 16:21:59 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.19 2003/10/24 02:57:00 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -426,6 +426,20 @@ static void sigill_handler(HANDLER_ARGS)
 			    sizeof(unsigned long));
 	    break;
 
+#ifdef trap_DynamicSpaceOverflowWarning
+          case trap_DynamicSpaceOverflowWarning:
+            arch_skip_instruction(context);
+            interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_WARNING_HIT),
+                                            context);
+            break;
+#endif
+#ifdef trap_DynamicSpaceOverflowError
+          case trap_DynamicSpaceOverflowError:
+            arch_skip_instruction(context);
+            interrupt_handle_space_overflow(SymbolFunction(DYNAMIC_SPACE_OVERFLOW_ERROR_HIT),
+                                            context);
+            break;
+#endif
 	  default:
 	    interrupt_handle_now(signal, code, context);
 	    break;

@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.30 2003/07/19 14:10:16 emarsden Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.31 2003/10/24 02:57:00 toy Exp $ */
 
 /* Interrupt handing magic. */
 
@@ -629,6 +629,21 @@ unsigned long install_handler(int signal,
     return (unsigned long) oldhandler.lisp;
 }
 #endif
+
+void
+interrupt_handle_space_overflow(lispobj error, struct sigcontext *context)
+{
+
+  build_fake_control_stack_frame (context);
+  /* This part should be common to all non-x86 ports */
+  SC_PC(context) = (long) ((struct function *) PTR (error))->code;
+  SC_NPC(context) = SC_PC(context) + 4;
+  SC_REG(context, reg_NARGS) = 0;
+  SC_REG(context, reg_LIP) = (long) ((struct function *) PTR (error))->code;
+  SC_REG(context, reg_CFP) = (long) current_control_frame_pointer;
+  /* This is sparc specific */
+  SC_REG(context, reg_CODE) = ((long) PTR(error)) + type_FunctionPointer;
+}
 
 void interrupt_init(void)
 {

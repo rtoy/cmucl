@@ -18,6 +18,8 @@
 #define _call_into_c call_into_c
 #define _flush_icache flush_icache
 #define	_do_pending_interrupt do_pending_interrupt
+#define _do_dynamic_space_overflow_error do_dynamic_space_overflow_error
+#define _do_dynamic_space_overflow_warning do_dynamic_space_overflow_warning
 #ifdef GENCGC
 /*#define _collect_garbage collect_garbage*/
 #define _fpu_save fpu_save
@@ -370,6 +372,26 @@ _do_pending_interrupt:
 	nop
 	SET_SIZE(_do_pending_interrupt)
 
+#ifdef trap_DynamicSpaceOverflowError
+	.global _do_dynamic_space_overflow_error
+	FUNCDEF(_do_dynamic_space_overflow_error)
+_do_dynamic_space_overflow_error:	
+	unimp trap_DynamicSpaceOverflowError
+	retl
+	nop
+	SET_SIZE(_do_dynamic_space_overflow_error)		
+#endif				
+
+#ifdef trap_DynamicSpaceOverflowWarning
+	.global _do_dynamic_space_overflow_warning
+	FUNCDEF(_do_dynamic_space_overflow_warning)
+_do_dynamic_space_overflow_warning:	
+	unimp trap_DynamicSpaceOverflowWarning
+	retl
+	nop
+	SET_SIZE(_do_dynamic_space_overflow_warning)		
+#endif				
+		
 #ifdef LINKAGE_TABLE
 /*
  * Call into C code to resolve a linkage entry.
