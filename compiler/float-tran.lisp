@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.8 1990/12/02 15:59:07 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.9 1990/12/12 00:08:45 ram Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -49,15 +49,18 @@
 			  (member double-float long-float))))
   '(%double-float n))
 
-
-(defknown %unary-truncate (real) integer (movable foldable flushable))
-
-;;; Not strictly a float function, but primarily useful on floats:
+;;; Not strictly float functions, but primarily useful on floats:
 ;;;
-(deftransform truncate ((x &optional by)
-			(* &optional (constant-argument (member 1))))
-  '(let ((res (%unary-truncate x)))
-     (values res (- x res))))
+(macrolet ((frob (fun ufun)
+	     `(progn
+		(defknown ,ufun (real) integer (movable foldable flushable))
+		(deftransform ,fun ((x &optional by)
+				    (* &optional
+				       (constant-argument (member 1))))
+		  '(let ((res (,ufun x)))
+		     (values res (- x res)))))))
+  (frob truncate %unary-truncate)
+  (frob round %unary-round))
 
 
 ;;;; Float accessors:
@@ -237,7 +240,7 @@
 		       (declare (ignore x))
 		       type)
 		   args)))
-    (let ((rtype (when assert-result '(float))))
+    (let ((rtype (when assert-result '(float :policy (zerop safety)))))
       `(progn
 	 (deftransform ,name (,args ,(frob 'single-float) ,@rtype)
 	   '(coerce (,prim ,@(mapcar #'(lambda (arg)
@@ -251,7 +254,7 @@
 (def-irrat-transforms expt %pow (x y) t)
 (def-irrat-transforms log %log (x) t)
 
-(deftransform log ((x y) (float float) float)
+(deftransform log ((x y) (float float) float :policy (zerop safety))
   '(/ (log x) (log y)))
 
 (def-irrat-transforms sqrt %sqrt (x) t)
