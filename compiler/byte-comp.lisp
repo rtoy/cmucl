@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.14 1993/05/20 11:26:24 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/byte-comp.lisp,v 1.15 1993/05/25 20:35:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1656,6 +1656,21 @@
   (assert (member results '(0 nil)))
   (assert (eql num-args 0))
   (output-do-xop segment 'breakup))
+
+
+(defoptimizer (%load-time-value byte-annotate) ((handle) node)
+  (annotate-continuation handle 0)
+  (annotate-continuation (basic-combination-fun node) 0)
+  (setf (node-tail-p node) nil)
+  t)
+
+(defoptimizer (%load-time-value byte-compile)
+	      ((handle) node results num-args segment)
+  (progn node) ; ignore
+  (assert (zerop num-args))
+  (output-push-load-time-constant segment :load-time-value
+				  (continuation-value handle))
+  (canonicalize-values segment results 1))
 
 
 ;;; MAKE-XEP-FOR -- internal
