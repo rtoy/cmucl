@@ -2,7 +2,7 @@
 @Device[postscript]
 @Style(Spacing = 1.2 lines)
 @Style(StringMax = 5000)
-@Use(Database "/afs/cs/project/clisp/new-compiler/scribe/database/")
+@Use(Database "/afs/cs/project/clisp/docs/database/")
 @Style(FontFamily=TimesRoman)
 @Style(Date="March 1952")
 @style(DOUBLESIDED)
