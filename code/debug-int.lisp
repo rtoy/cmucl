@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.103 2003/05/11 08:57:13 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.104 2003/07/21 13:41:53 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -3855,7 +3855,7 @@
     (compiled-debug-function
      (eq (c::compiled-debug-function-returns
 	  (compiled-debug-function-compiler-debug-fun what))
-	 :what))))
+	 :standard))))
 
 ;;; These are unique objects created upon entry into a function by a
 ;;; :function-end breakpoint's starter hook.  These are only created when users

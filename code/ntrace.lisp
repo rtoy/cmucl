@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.27 2003/06/18 09:23:11 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/ntrace.lisp,v 1.28 2003/07/21 13:41:53 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -422,7 +422,7 @@
 	   (encapsulated
 	    (if (eq (trace-info-encapsulated info) :default)
 		(let ((encapsulate-p
-		       (or (di::can-set-function-end-breakpoint-p debug-fun)
+		       (or (not (di::can-set-function-end-breakpoint-p debug-fun))
 			   (encapsulate-by-package-p function-or-name))))
 		  (ecase kind
 		    (:compiled
