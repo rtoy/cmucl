@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.3 1994/10/25 00:20:38 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.c,v 1.3.2.1 1997/06/18 08:58:47 dtc Exp $ */
 
 #ifdef sun
 #ifndef MACH
@@ -15,6 +15,14 @@ extern func
 #include "undefineds.h"
 ;
 
+#ifdef SOLARIS
+void reference_random_symbols_fun(void) {
+#endif
+
 func *reference_random_symbols[] = {
 #include "undefineds.h"
 };
+
+#ifdef SOLARIS
+}
+#endif
