@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.23 1993/08/20 13:56:37 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.24 1993/08/20 22:58:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1240,9 +1240,11 @@
     (typecase function
       (byte-function
        (stack-copy old-sp start-of-args num-args)
+       (setf (current-stack-pointer) (+ old-sp num-args))
        (invoke-xep old-component old-pc old-sp old-fp num-args function))
       (byte-closure
        (stack-copy old-sp start-of-args num-args)
+       (setf (current-stack-pointer) (+ old-sp num-args))
        (invoke-xep old-component old-pc old-sp old-fp num-args
 		   (byte-closure-function function)
 		   (byte-closure-data function)))
@@ -1272,6 +1274,7 @@
 		 (byte-apply function num-args old-sp)))
 	      (byte-interpret old-component old-pc old-fp)))))))
 
+(defvar *byte-trace-calls* nil)
 
 (defun invoke-xep (old-component ret-pc old-sp old-fp num-args xep
 				 &optional closure-vars)
@@ -1281,6 +1284,20 @@
 	   (type stack-pointer old-sp old-fp)
 	   (type byte-function xep)
 	   (type (or null simple-vector) closure-vars))
+  (when *byte-trace-calls*
+    (let ((*byte-trace-calls* nil)
+	  (*byte-trace* nil)
+	  (*print-level* debug:*debug-print-level*)
+	  (*print-length* debug:*debug-print-length*)
+	  (sp (current-stack-pointer)))
+      (format *trace-output*
+	      "~&Invoke-XEP: ocode= ~S[~D]~%  ~
+	       osp= ~D, ofp= ~D, nargs= ~D, SP= ~D:~%  ~
+	       Fun= ~S ~@[~S~]~%  Args= ~S~%"
+	      old-component ret-pc old-sp old-fp num-args sp
+	      xep closure-vars (subseq *eval-stack* (- sp num-args) sp))
+      (force-output *trace-output*)))
+
   (let ((entry-point
 	 (cond
 	  ((typep xep 'simple-byte-function)
