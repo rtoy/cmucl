@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.15 1998/01/01 17:20:35 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.16 1998/01/02 23:31:14 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1336,9 +1336,7 @@
 ;;; Lock-Wait
 ;;;
 ;;; Wait for the lock to be free and acquire it for the
-;;; *current-process*. Handled here as a function rather than inlining
-;;; to ensure that the process-wait predicate is fast native code and
-;;; that locks in byte compiled code don't slow the scheduler.
+;;; *current-process*.
 ;;;
 (defun lock-wait (lock whostate)
   (declare (type lock lock))
@@ -1352,6 +1350,24 @@
 		    (null (kernel:%instance-set-conditional
 			   lock 2 nil *current-process*)))))
 
+;;; Lock-Wait-With-Timeout
+;;;
+;;; Wait with a timeout for the lock to be free and acquire it for the
+;;; *current-process*.
+;;;
+(defun lock-wait-with-timeout (lock whostate timeout)
+  (declare (type lock lock))
+  (process-wait-with-timeout
+   whostate timeout
+   #'(lambda ()
+       (declare (optimize (speed 3)))
+       #-i486
+       (unless (lock-process lock)
+	 (setf (lock-process lock) *current-process*))
+       #+i486
+       (null (kernel:%instance-set-conditional
+	      lock 2 nil *current-process*)))))
+
 #-i486
 (defun seize-lock (lock)
   (declare (type lock lock)
@@ -1362,36 +1378,30 @@
 
 ;;; With-Lock-Held
 ;;;
-#-i486
-(defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
+(defmacro with-lock-held ((lock &optional (whostate "Lock Wait") &key timeout)
 			  &body body)
-  (let ((orig-process (gensym)))
-    `(let ((,orig-process (lock-process ,lock)))
+  (let ((have-lock (gensym)))
+    `(let ((,have-lock (eq (lock-process ,lock) *current-process*)))
       (unwind-protect
-	   (progn
-	     (unless (or (eq ,orig-process *current-process*)
-			 (seize-lock ,lock))
-	       (lock-wait ,lock ,whostate))
-	     ,@body)
-	(unless (or (eq ,orig-process *current-process*)
-		    (not (eq (lock-process ,lock) *current-process*)))
-	  (setf (lock-process ,lock) nil))))))
-
-;;; With-Lock-Held
-;;;
-;;; Fast locking for the i486 and above.
-;;;
-#+i486
-(defmacro with-lock-held ((lock &optional (whostate "Waiting for lock"))
-			  &body body)
-  (let ((orig-process (gensym)))
-    `(let ((,orig-process (lock-process ,lock)))
-      (unwind-protect
-	   (progn
-	     (unless (or (eq ,orig-process *current-process*)
-			 (null (kernel:%instance-set-conditional
-				,lock 2 nil *current-process*)))
-	       (lock-wait ,lock ,whostate))
-	     ,@body)
-	(unless (eq ,orig-process *current-process*)
-	  (kernel:%instance-set-conditional ,lock 2 *current-process* nil))))))
+	   ,(if timeout
+		`(when (cond (,have-lock)
+			     #+i486 ((null (kernel:%instance-set-conditional
+					    ,lock 2 nil *current-process*)))
+			     #-i486 ((seize-lock ,lock))
+			     ((null ,timeout)
+			      (lock-wait ,lock ,whostate))
+			     ((lock-wait-with-timeout
+			       ,lock ,whostate ,timeout)))
+		  ,@body)
+		`(progn
+		  (unless (or ,have-lock
+			      #+i486 (null (kernel:%instance-set-conditional
+					    ,lock 2 nil *current-process*))
+			      #-i486 (seize-lock ,lock))
+		    (lock-wait ,lock ,whostate))
+		  ,@body))
+	(unless ,have-lock
+	  #+i486 (kernel:%instance-set-conditional
+		  ,lock 2 *current-process* nil)
+	  #-i486 (when (eq (lock-process ,lock) *current-process*)
+		   (setf (lock-process ,lock) nil)))))))
