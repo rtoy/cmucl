@@ -25,10 +25,21 @@ New in this release:
        cores with foreign libraries and reload the core without having
        to reload the libraries. Available if the feature
        :linkage-table is present.
+     - A cross-referencing facility has been added to the compiler,
+       providing WHO-CALLS, WHO-BINDS, WHO-REFERENCES, WHO-SETS
+       information. See the corresponding chapter of the User's Manual
+       for more information.
+     - Bindings to the POSIX user and group database access functions
+       (getpwuid et al) have been added to the UNIX package.
+     - Support for Unix sockets and for binding to specific IP
+       addresses has been added to the networking code.
+
 
   * Numerous ANSI compliance fixes:
      - SYMBOL-MACROLET signals an error when an attempt is made to
        bind a special variable or a constant
+     - the function COMPILE no longer coalesces constants (however,
+       COMPILE-FILE continues to do so)
      - WITH-OUTPUT-TO-STRING accepts the :external-format keyword
        argument
      - the function WRITE-STRING accepts a NIL value for the :end
@@ -127,6 +138,16 @@ New in this release:
        integers (unsigned-byte 64) and (signed-byte 64) on sparc v9
        (64-bit) architectures.  Enabled if the feature :sparc-v8plus
        is present (you will need to rebuild CMUCL).
+     - The CMUCL release tarballs are now relocatable. The lisp image
+       (in the lisp.core file) is now searched for relative to the
+       lisp runtime. The previous search mechanisms still take
+       precedence: the -core commandline option, the CMUCLLIB
+       environment variable, the default /usr/local/lib/cmucl search
+       path.
+     - Messages from the compiler are now preceded by a semicolon, for
+       better interaction with environments with syntax highlighting.
+     - An improved initializer for random state is available (function
+       KERNEL:INIT-RANDOM-STATE accepts an argument of type vector).
      - the function PROFILE:REPORT-TIME no longer prints out a long
        list of functions that were not profiled. The cutoff is
        user-configurable by setting the new variable
@@ -136,13 +157,20 @@ New in this release:
      - DESCRIBE will print a note if a symbol names a type-specifier
      - numeric types with empty ranges are accepted silently (instead
        of signalling an error), and treated as the empty type.
+     - on Linux, the function SOFTWARE-VERSION returns more useful
+       information than in the past, including the kernel version
+       number. 
+     - the function MAKE-DISPATCH-MACRO-CHARACTER will quietly
+       override existing definitions, instead of signalling an error
+       if a previous binding for a macro character existed.
   
   * Code cleanups:
-     - very numerous changes to the PCL implementation of CLOS, to
-       delete unused code, improve error checking.     
      - a number of stale symbols have been deleted from CMUCL images
 
   * Numerous improvements to the PCL implementation of CLOS:
+     - some unused code has been deleted
+     - error checking of CLOS functions has been significantly improved
+     - the hash function for PCL instances has been improved
      - superfluous SLOT-BOUNDP checking for structure-classes has been
        removed 
      - the preallocation of caches for generic functions has been
