@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.6 1998/05/04 01:27:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/struct.lisp,v 1.7 1998/10/04 08:27:32 dtc Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,7 +466,7 @@
 			; device-columns long.
   ;;
   ;; This terminal's baud rate, or NIL for infinite.
-  (speed nil :type (or (unsigned-byte 16) null)))
+  (speed nil :type (or (unsigned-byte 24) null)))
 
 
 ;;;; Device screen hunks and window-group.
