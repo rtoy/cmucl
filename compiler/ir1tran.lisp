@@ -232,14 +232,16 @@
   (let ((inlinep (leaf-inlinep var))
 	(expansion (if (functional-p var)
 		       (functional-inline-expansion var))))
-    (if (and expansion (eq inlinep :inline)
+    (cond ((and expansion (eq inlinep :inline)
 	     (policy nil (>= speed space) (>= speed cspeed)))
-	(ir1-convert-combination start cont form 
-				 (let ((*lexical-environment*
-					(functional-lexenv var)))
-				   (ir1-convert-lambda expansion))
-				 :inline)
-	(ir1-convert-combination start cont form var inlinep))))
+	   (setf (leaf-ever-used var) t)
+	   (ir1-convert-combination start cont form 
+				    (let ((*lexical-environment*
+					   (functional-lexenv var)))
+				      (ir1-convert-lambda expansion))
+				    :inline))
+	  (t
+	   (ir1-convert-combination start cont form var inlinep)))))
 
 
 ;;; IR1-Convert-Combination  --  Internal
@@ -1447,6 +1449,7 @@
     (flet ((frob (ep)
 	     (when ep
 	       (setf (functional-kind ep) :optional)
+	       (setf (leaf-ever-used ep) t)
 	       (setf (lambda-optional-dispatch ep) res))))
       (dolist (ep (optional-dispatch-entry-points res)) (frob ep))
       (frob (optional-dispatch-more-entry res))
@@ -2470,7 +2473,7 @@
 	   (process-ftype-proclamation (first args) (rest args)))
 	  ;;
 	  ;; No non-global state to be updated.
-	  ((inline notinline maybe-inline optimize declaration))
+	  ((inline notinline maybe-inline optimize declaration freeze-type))
 	  (t
 	   (cond ((member name type-specifier-symbols)
 		  (process-type-proclamation name args))
@@ -2619,7 +2622,8 @@
 ;;; For Labels, we have to create dummy function vars and add them to the
 ;;; function namespace while converting the functions.  We then modify all the
 ;;; references to these leaves so that they point to the real functional
-;;; leaves.
+;;; leaves.  We also backpatch the FENV so that if the lexical environment is
+;;; used for inline expansion we will get the right functions.
 ;;;
 ;;; [### Perhaps not totally correct, since the declarations aren't processed
 ;;; until after the function definitions.  This means that declarations for
@@ -2633,18 +2637,20 @@
   each other."
   (multiple-value-bind (names defs)
 		       (extract-flet-variables definitions 'labels)
-    (let* ((dummies (mapcar #'(lambda (x)
-				(make-functional :name x)) names))
+    (let* ((new-fenv (loop for name in names
+		       collect (cons name (make-functional :name name))))
 	   (real-funs 
-	    (let ((*lexical-environment*
-		   (make-lexenv :functions (pairlis names dummies))))
+	    (let ((*lexical-environment* (make-lexenv :functions new-fenv)))
 	      (mapcar #'(lambda (n d)
 			  (let ((res (ir1-convert-lambda d)))
 			    (setf (leaf-name res) n)
 			    res))
 		      names defs))))
 
-      (mapc #'substitute-leaf real-funs dummies)
+      (loop for real in real-funs and env in new-fenv do
+	(let ((dum (cdr env)))
+	  (substitute-leaf real dum)
+	  (setf (cdr env) real)))
 
       (let ((*lexical-environment*
 	     (make-lexenv
