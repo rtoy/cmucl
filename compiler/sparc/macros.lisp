@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.17 2002/09/04 14:04:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.18 2002/09/05 15:19:50 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.17 2002/09/04 14:04:18 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/macros.lisp,v 1.18 2002/09/05 15:19:50 toy Exp $
 ;;;
 ;;; This file contains various useful macros for generating SPARC code.
 ;;;
@@ -74,8 +74,8 @@
 		     (inst li ,temp ,offs)
 		     (inst ,',inst ,object ,base ,temp)))))
 	   `(inst ,',inst ,object ,base (- (ash ,offset ,',shift) ,lowtag))))))
-  (frob loadq ldx (* 2 word-shift))
-  (frob storeq stx (* 2 word-shift)))
+  (frob load64 ldx (* 2 word-shift))
+  (frob store64 stx (* 2 word-shift)))
 
 (defmacro load-symbol (reg symbol)
   `(inst add ,reg null-tn (static-symbol-offset ,symbol)))

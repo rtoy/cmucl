@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.8 2002/09/04 14:04:19 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.9 2002/09/05 15:19:51 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.8 2002/09/04 14:04:19 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/move.lisp,v 1.9 2002/09/05 15:19:51 toy Exp $
 ;;;
 ;;;    This file contains the SPARC VM definition of operand loading/saving and
 ;;; the Move VOP.
@@ -374,14 +374,14 @@
   ((signed64-stack) (signed64-reg)
    (unsigned64-stack) (unsigned64-reg))
   (let ((nfp (current-nfp-tn vop)))
-    (loadq y nfp (tn-offset x))))
+    (load64 y nfp (tn-offset x))))
 
 ;; Save a 64-bit number to the stack
 (define-move-function (store-number-stack-64 5) (vop x y)
   ((signed64-reg) (signed64-stack)
    (unsigned64-reg) (unsigned64-stack))
   (let ((nfp (current-nfp-tn vop)))
-    (storeq x nfp (tn-offset y))))
+    (store64 x nfp (tn-offset y))))
 
 ;; Move a tagged integer to a raw double-word representation.
 (define-vop (move-to-64bit-word/fixnum)
@@ -630,7 +630,7 @@
       ((signed64-reg unsigned64-reg)
        (move y x))
       ((signed64-stack unsigned64-stack)
-       (storeq x fp (tn-offset y))))))
+       (store64 x fp (tn-offset y))))))
 
 (define-move-vop move-64bit-word-argument :move-argument
   (descriptor-reg signed64-reg unsigned64-reg) (signed64-reg unsigned64-reg))
