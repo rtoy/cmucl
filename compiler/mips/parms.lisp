@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.80 1990/11/03 15:34:32 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.81 1990/11/16 04:29:15 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -33,14 +33,14 @@
 
 (eval-when (compile eval load)
 
-(setf (backend-name *backend*) "PMAX")
-(setf (backend-version *backend*) "DECstation 3100/Mach 0.0")
-(setf (backend-fasl-file-type *backend*) "mips-fasl")
-(setf (backend-fasl-file-implementation *backend*)
+(setf (backend-name *target-backend*) "PMAX")
+(setf (backend-version *target-backend*) "DECstation 3100/Mach 0.0")
+(setf (backend-fasl-file-type *target-backend*) "mips-fasl")
+(setf (backend-fasl-file-implementation *target-backend*)
       pmax-fasl-file-implementation)
-(setf (backend-fasl-file-version *backend*) 1)
-(setf (backend-register-save-penalty *backend*) 3)
-(setf (backend-byte-order *backend*) :little-endian)
+(setf (backend-fasl-file-version *target-backend*) 1)
+(setf (backend-register-save-penalty *target-backend*) 3)
+(setf (backend-byte-order *target-backend*) :little-endian)
 
 ); eval-when
 
