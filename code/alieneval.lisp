@@ -811,9 +811,9 @@
 						',n-sap ',n-offset ',n-size
 						body decls)))
 	      ,@body)))
-       #-new-compile
+       #-new-compiler
        (eval-when (compile)
-	 (clc::clc-mumble "alien-access ~S compiled.~%" lisp-type)))))
+	 (clc::clc-mumble "alien-access ~S compiled.~%" ',lisp-type)))))
 
 
 (eval-when (compile load eval)
