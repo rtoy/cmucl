@@ -606,9 +606,9 @@
     (values
      (or (let ((sap (fd-stream-ibuf-sap stream))
 	       (results (if (fd-stream-unread stream)
-			  (prog1
-			      (string (fd-stream-unread stream))
-			    (setf (fd-stream-unread stream) nil)))))
+			    (prog1
+				(list (string (fd-stream-unread stream)))
+			      (setf (fd-stream-unread stream) nil)))))
 	   (catch 'eof-input-catcher
 	     (loop
 	       (input-at-least stream 1)
@@ -622,7 +622,7 @@
 		      (end (or newline tail)))
 		 (push (string-from-sap sap head end)
 		       results)
-
+		 
 		 (when newline
 		   (setf eof nil)
 		   (setf (fd-stream-ibuf-head stream)
@@ -636,8 +636,8 @@
 		 (t
 		  (apply #'concatenate 'simple-string (nreverse results)))))
 	 (if eof-error-p
-	   (error "EOF while reading ~S" stream)
-	   eof-value))
+	     (error "EOF while reading ~S" stream)
+	     eof-value))
      eof)))
 
 
