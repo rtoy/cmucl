@@ -174,10 +174,6 @@
 
 (comf "target:code/loop")
 
-;;; XP won't cross-compile.
-#+new-compiler
-(comf "target:code/xp")
-
 #+clx
 (comf "target:code/clx-ext")
 
