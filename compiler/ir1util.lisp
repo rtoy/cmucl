@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.106 2004/08/23 11:37:52 emarsden Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.107 2004/10/26 13:31:38 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2107,6 +2107,15 @@ these can be NIL if unavailable or inapplicable.")
 ;;;
 (define-condition compiler-error (simple-program-error) ())
 
+;;; A special condition for read time errors.  It includes the source
+;;; position where the error occured.
+;;;
+(define-condition compiler-read-error (compiler-error)
+  ((position :initarg :position :reader compiler-read-error-position)
+   (message :initarg :message :reader compiler-read-error-message))
+  (:report (lambda (condition stream)
+             (format stream "~A~%" (compiler-read-error-message condition)))))
+
 ;;; COMPILER-{ERROR,WARNING,STYLE-WARNING}-HANDLER  --  Interface
 ;;;
 ;;;    Condition handlers established by the compiler.  We re-signal the
@@ -2138,7 +2147,8 @@ these can be NIL if unavailable or inapplicable.")
 ;;; simple-style-warning, inhibited if brevity is 3.  anything when Brevity is
 ;;; 3.  Compiler-Error calls the bailout function so that it never returns.
 ;;; Compiler-Error-Message returns like Compiler-Warning, but signals a
-;;; Compiler-Error.
+;;; Compiler-Error.  Compiler-Read-Error is like Compiler-Error-Message but
+;;; signals a Compile-Read-Error.
 ;;;
 (defun compiler-error (format-string &rest format-args)
   (declare (string format-string))
@@ -2151,6 +2161,11 @@ these can be NIL if unavailable or inapplicable.")
   (cerror "ignore it." 
 	  'compiler-error :format-control format-string
 	  :format-arguments format-args))
+;;; 
+(defun compiler-read-error (position format-string &rest format-args)
+  (cerror "replace form with call to ERROR."
+	  'compiler-read-error :position position
+	  :message (apply #'format nil format-string format-args)))
 ;;;
 (defun compiler-warning (format-string &rest format-args)
   (declare (string format-string))
