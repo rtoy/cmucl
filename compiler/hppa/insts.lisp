@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.2 1992/10/16 15:10:00 hallgren Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/insts.lisp,v 1.3 1992/10/19 18:22:15 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -176,9 +176,9 @@
   :printer #'(lambda (value stream dstate)
 	       (declare (ignore dstate) (stream stream) (fixnum value))
 	       (ecase value
-		 (0 (format stream ",SGL"))
-		 (1 (format stream ",DBL"))
-		 (3 (format stream ",QUAD")))))
+		 (0 (format stream "~A" '\,SGL))
+		 (1 (format stream "~A" '\,DBL))
+		 (3 (format stream "~A" '\,QUAD)))))
 
 (defun low-sign-extend (x n)
   (let ((normal (dpb x (byte 1 (1- n)) (ldb (byte (1- n) 1) x))))
@@ -234,31 +234,30 @@
 	       (format stream "~S" (- 32 value))))
 
 (disassem:define-argument-type compare-condition
-  :printer #("" ",=" ",<" ",<=" ",<<" ",<<=" ",SV" ",OD" ",TR" ",<>" ",>="
-	     ",>" ",>>=" ",>>" ",NSV" ",EV"))
+  :printer #("" \,= \,< \,<= \,<< \,<<= \,SV \,OD \,TR \,<> \,>=
+	     \,> \,>>= \,>> \,NSV \,EV))
 
 (disassem:define-argument-type add-condition
-  :printer #("" ",=" ",<" ",<=" ",NUV" ",ZNV" ",SV" ",OD" ",TR" ",<>" ",>="
-	     ",>" ",UV" ",VNZ" ",NSV" ",EV"))
+  :printer #("" \,= \,< \,<= \,NUV \,ZNV \,SV \,OD \,TR \,<> \,>= \,> \,UV
+	     \,VNZ \,NSV \,EV))
 
 (disassem:define-argument-type logical-condition
-  :printer #("" ",=" ",<" ",<=" "" "" "" ",OD" ",TR" ",<>" ",>=" ",>" "" ""
-	     "" ",EV"))
+  :printer #("" \,= \,< \,<= "" "" "" \,OD \,TR \,<> \,>= \,> "" "" "" \,EV))
 
 (disassem:define-argument-type unit-condition
-  :printer #("" "" ",SBZ" ",SHZ" ",SDC" ",SBC" ",SHC" ",TR" "" ",NBZ" ",NHZ"
-	     ",NDC" ",NBC" ",NHC"))
+  :printer #("" "" \,SBZ \,SHZ \,SDC \,SBC \,SHC \,TR "" \,NBZ \,NHZ \,NDC
+	     \,NBC \,NHC))
 
 (disassem:define-argument-type extract/deposit-condition
-  :printer #("" ",=" ",<" ",OD" ",TR" ",<>" ",>=" ",EV"))
+  :printer #("" \,= \,< \,OD \,TR \,<> \,>= \,EV))
 
 (disassem:define-argument-type nullify
-  :printer #("" ",N"))
+  :printer #("" \,N))
 
 (disassem:define-argument-type fcmp-cond
-  :printer #("false?" "false" "?" "!<=>" "=" "=T" "?=" "!<>" "!?>=" "<" "?<"
-	     "!>=" "!?>" "<=" "?<=" "!>" "!?<=" ">" "?>" "!<=" "!?<" ">="
-	     "?>=" "!<" "!?=" "<>" "!=" "!=T" "!?" "<=>" "true?" "true"))
+  :printer #(\FALSE? \FALSE \? \!<=> \= \=T \?= \!<> \!?>= \< \?<
+		     \!>= \!?> \<= \?<= \!> \!?<= \> \?>\ \!<= \!?< \>=
+		     \?>= \!< \!?= \<> \!= \!=T \!? \<=> \TRUE? \TRUE))
 
 (disassem:define-argument-type integer
   :printer #'(lambda (value stream dstate)
@@ -276,16 +275,16 @@
   (s    :field (byte 2 14))
   (im14 :field (byte 14 0) :type 'im14))
 
-(defconstant cmplt-index-print '((:cond ((u :constant 1) ",S"))
-				 (:cond ((m :constant 1) ",M"))))
+(defconstant cmplt-index-print '((:cond ((u :constant 1) '\,S))
+				 (:cond ((m :constant 1) '\,M))))
 
 (defconstant cmplt-disp-print '((:cond ((m :constant 1)
-				  (:cond ((s :constant 0) ",MA")
-					 (t ",MB"))))))
+				  (:cond ((s :constant 0) '\,MA)
+					 (t '\,MB))))))
 
-(defconstant cmplt-store-print '((:cond ((s :constant 0) ",B")
-					 (t ",E"))
-				  (:cond ((m :constant 1) ",M"))))
+(defconstant cmplt-store-print '((:cond ((s :constant 0) '\,B)
+					 (t '\,E))
+				  (:cond ((m :constant 1) '\,M))))
 
 (disassem:define-instruction-format
     (extended-load/store 32)
@@ -808,11 +807,11 @@
 		     (type label target)
 		     (type (member t nil) nullify))
 	   (:printer branch12 ((op1 ,r-opcode) (c nil :type ',conditional))
-		     '(:name "T" c n :tab r1 "," r2 "," w))
+		     '(:name 'T c n :tab r1 "," r2 "," w))
 	   ,@(unless (= r-opcode #x32)
 	       `((:printer branch12 ((op1 ,(+ 2 r-opcode))
 				     (c nil :type ',conditional))
-			 '(:name "F" c n :tab r1 "," r2 "," w))))
+			 '(:name 'F c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -828,11 +827,11 @@
 		     (type (member t nil) nullify))
 	   (:printer branch12 ((op1 ,i-opcode) (r1 nil :type 'im5)
 			       (c nil :type ',conditional))
-		     '(:name "T" c n :tab r1 "," r2 w))
+		     '(:name 'T c n :tab r1 "," r2 w))
 	   ,@(unless (= r-opcode #x32)
 	       `((:printer branch12 ((op1 ,(+ 2 i-opcode))
 				     (c nil :type ',conditional))
-			 '(:name "F" c n :tab r1 "," r2 "," w))))
+			 '(:name 'F c n :tab r1 "," r2 "," w))))
 	   (:emitter
 	    (multiple-value-bind
 		(cond-encoding false)
@@ -851,7 +850,7 @@
 	    (type tn reg)
 	    (type (or (member :variable) (unsigned-byte 5)) posn))
   (:printer branch12 ((op1 30) (c nil :type 'extract/deposit-condition))
-		      '("BVB" c n :tab r1 "," w))
+		      '('BVB c n :tab r1 "," w))
   (:emitter
    (multiple-value-bind
        (opcode posn-encoding)
@@ -962,7 +961,7 @@
   (:printer extract/deposit-inst ((op1 #x34) (op2 2) (t/clen nil :type 'reg))
 	    '(:name c :tab r1 "," r2 "," cp "," t/clen))
   (:printer extract/deposit-inst ((op1 #x34) (op2 0) (t/clen nil :type 'reg))
-	    '("VSHD" c :tab r1 "," r2 "," t/clen))
+	    '('VSHD c :tab r1 "," r2 "," t/clen))
   (:emitter
    (etypecase count
      ((member :variable)
@@ -987,7 +986,7 @@
 				       (op2 ,opcode))
 		 '(:name c :tab r2 "," cp "," t/clen "," r1))
        (:printer extract/deposit-inst ((op1 #x34) (op2 ,(- opcode 2)))
-		 '("V" :name c :tab r2 "," t/clen "," r1))
+		 '('V :name c :tab r2 "," t/clen "," r1))
        (:emitter
 	(etypecase posn
 	  ((member :variable)
@@ -1012,19 +1011,19 @@
 		 (type (or (member :variable) (integer 0 31)) posn)
 		 (type (integer 1 32) len))
        (:printer extract/deposit-inst ((op1 #x35) (op2 ,opcode))
-		 ',(let ((base '("VDEP" c :tab r1 "," t/clen "," r2)))
-		     (if (= opcode 0) (cons "Z" base) base)))
+		 ',(let ((base '('VDEP c :tab r1 "," t/clen "," r2)))
+		     (if (= opcode 0) (cons ''Z base) base)))
        (:printer extract/deposit-inst ((op1 #x35) (op2 ,(+ 2 opcode)))
-		 ',(let ((base '("DEP" c :tab r1 "," cp "," t/clen "," r2)))
-		     (if (= opcode 0) (cons "Z" base) base)))
+		 ',(let ((base '('DEP c :tab r1 "," cp "," t/clen "," r2)))
+		     (if (= opcode 0) (cons ''Z base) base)))
        (:printer extract/deposit-inst ((op1 #x35) (r1 nil :type 'im5)
 				       (op2 ,(+ 4 opcode)))
-		 ',(let ((base '("VDEPI" c :tab r1 "," t/clen "," r2)))
-		     (if (= opcode 0) (cons "Z" base) base)))
+		 ',(let ((base '('VDEPI c :tab r1 "," t/clen "," r2)))
+		     (if (= opcode 0) (cons ''Z base) base)))
        (:printer extract/deposit-inst ((op1 #x35) (r1 nil :type 'im5)
 				       (op2 ,(+ 6 opcode)))
-		 ',(let ((base '( "DEPI" c :tab r1 "," cp "," t/clen "," r2)))
-		     (if (= opcode 0) (cons "Z" base) base)))
+		 ',(let ((base '('DEPI c :tab r1 "," cp "," t/clen "," r2)))
+		     (if (= opcode 0) (cons ''Z base) base)))
        (:emitter
 	(multiple-value-bind
 	    (opcode src-encoding)
@@ -1126,9 +1125,9 @@
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 0))
-	    `("FLDDX" ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
+	    `('FLDDX ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
   (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 0))
-	    `("FLDWX" ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
+	    `('FLDWX ,@cmplt-index-print :tab x "(" s "," b ")" "," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -1145,9 +1144,9 @@
 	    (type (member t nil) modify scale)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x1 0) (x2 0) (x3 1))
-	    `("FSTDX",@cmplt-index-print :tab t "," x "(" s "," b ")"))
+	    `('FSTDX ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
   (:printer fp-load/store ((op #x09) (x1 0) (x2 0) (x3 1))
-	    `("FSTWX" ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
+	    `('FSTWX ,@cmplt-index-print :tab t "," x "(" s "," b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
@@ -1165,9 +1164,9 @@
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
-	    `("FLDDS" ,@cmplt-disp-print :tab x "(" s "," b ")," t))
+	    `('FLDDS ,@cmplt-disp-print :tab x "(" s "," b ")," t))
   (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 0))
-	    `("FLDWS" ,@cmplt-disp-print :tab x "(" s "," b ")," t))
+	    `('FLDWS ,@cmplt-disp-print :tab x "(" s "," b ")," t))
   (:emitter
    (multiple-value-bind
        (result-encoding double-p)
@@ -1186,9 +1185,9 @@
 	    (type (member :before :after nil) modify)
 	    (type (member nil 0 1) side))
   (:printer fp-load/store ((op #x0b) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
-	    `("FSTDS" ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
+	    `('FSTDS ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
   (:printer fp-load/store ((op #x09) (x nil :type 'im5) (x1 1) (x2 0) (x3 1))
-	    `("FSTWS" ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
+	    `('FSTWS ,@cmplt-disp-print :tab t "," x "(" s "," b ")"))
   (:emitter
    (multiple-value-bind
        (value-encoding double-p)
@@ -1222,13 +1221,13 @@
   (:declare (type funop op)
 	    (type tn from to))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 2) (x2 0))
-	    '("FCPY" fmt :tab r "," t))
+	    '('FCPY fmt :tab r "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 3) (x2 0))
-	    '("FABS" fmt  :tab r "," t))
+	    '('FABS fmt  :tab r "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 4) (x2 0))
-	    '("FSQRT" fmt :tab r "," t))
+	    '('FSQRT fmt :tab r "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 5) (x2 0))
-	    '("FRND" fmt :tab r "," t))
+	    '('FRND fmt :tab r "," t))
   (:emitter
    (multiple-value-bind
        (from-encoding from-double-p)
@@ -1293,13 +1292,13 @@
   (:declare (type fbinop op)
 	    (type tn r1 r2 result))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 0) (x2 3))
-	    '("FADD" fmt :tab r "," x1 "," t))
+	    '('FADD fmt :tab r "," x1 "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 1) (x2 3))
-	    '("FSUB" fmt :tab r "," x1 "," t))
+	    '('FSUB fmt :tab r "," x1 "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 2) (x2 3))
-	    '("FMPY" fmt :tab r "," x1 "," t))
+	    '('FMPY fmt :tab r "," x1 "," t))
   (:printer fp-class-0-inst ((op1 #x0C) (op2 3) (x2 3))
-	    '("FDIV" fmt :tab r "," x1 "," t))
+	    '('FDIV fmt :tab r "," x1 "," t))
   (:emitter
    (multiple-value-bind
        (r1-encoding r1-double-p)
