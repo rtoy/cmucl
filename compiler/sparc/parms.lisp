@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.10 1991/05/24 20:37:33 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/parms.lisp,v 1.11 1991/09/18 06:36:05 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the SPARC.  This file is separate from other stuff so 
@@ -130,8 +130,8 @@
 ;;; Where to put the different spaces.
 ;;; 
 (defparameter target-read-only-space-start #x01000000)
-(defparameter target-static-space-start    #x04000000)
-(defparameter target-dynamic-space-start   #x06000000)
+(defparameter target-static-space-start    #x05000000)
+(defparameter target-dynamic-space-start   #x07000000)
 
 
 
