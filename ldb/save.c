@@ -104,6 +104,7 @@ struct sigcontext *context;
     ms.fp = current_control_frame_pointer;
     ms.bsp = current_binding_stack_pointer;
     ms.flags = current_flags_register;
+    ms.number_stack_start = number_stack_start;
     ms.sigcontext_page = write_bytes((char *)context, sizeof(struct sigcontext));
     ms.control_stack_page = write_stack("Control",
        (char *)control_stack,
@@ -113,7 +114,7 @@ struct sigcontext *context;
        (char *)current_binding_stack_pointer);
     ms.number_stack_page = write_stack("Number",
        (char *)(context->sc_regs[NSP]),
-       (char *)0x80000000);
+       number_stack_start);
 
     fwrite(&ms, sizeof(ms), 1, save_file);
 }
@@ -236,12 +237,34 @@ struct machine_state *ms;
     current_binding_stack_pointer = ms->bsp;
     current_flags_register = ms->flags;
 
+    if (ms->number_stack_start > number_stack_start) {
+        fprintf(stderr, "Your environment is too large.  Use ``unsetenv''\n");
+        fprintf(stderr, "to get rid of any unnecessary variables and try again.\n");
+        exit(1);
+    }
+    else
+        number_stack_start = ms->number_stack_start;
+
     lseek(fd, CORE_PAGESIZE * (1+ms->sigcontext_page), L_SET);
     read(fd, &context, sizeof(context));
 
-    map_stack(fd, (vm_address_t)control_stack, (vm_address_t)current_control_stack_pointer, ms->control_stack_page, "Control");
-    map_stack(fd, (vm_address_t)binding_stack, (vm_address_t)current_binding_stack_pointer, ms->binding_stack_page, "Binding");
-    number_stack = map_stack(fd, (vm_address_t)NULL, (vm_address_t)0x80000000 - (vm_address_t)context.sc_regs[NSP], ms->number_stack_page, "Number");
+    map_stack(fd,
+              (vm_address_t)control_stack,
+              (vm_address_t)current_control_stack_pointer,
+              ms->control_stack_page,
+              "Control");
+
+    map_stack(fd,
+              (vm_address_t)binding_stack,
+              (vm_address_t)current_binding_stack_pointer,
+              ms->binding_stack_page,
+              "Binding");
+
+    number_stack = map_stack(fd,
+                             (vm_address_t)NULL,
+                             round_page((vm_address_t)number_stack_start) - (vm_address_t)context.sc_regs[NSP],
+                             ms->number_stack_page,
+                             "Number");
 }
 
 static restore_handler(signal, code, old_context)
@@ -256,20 +279,12 @@ struct sigcontext *old_context;
 
     /* We have to move the number stack into place. */
     nsp = trunc_page((vm_address_t)context.sc_regs[NSP]);
-    len = (vm_address_t)0x80000000 - nsp;
+    len = (vm_address_t)number_stack_start - nsp;
     printf("Moving the number stack from 0x%08x to 0x%08x.\n", number_stack, nsp);
 
-#if 0
-    res = vm_copy(task_self(), number_stack, len, nsp);
-
-    if (res != KERN_SUCCESS) {
-        mach_error("Could not move the number stack into place: ", res);
-    }
-#else
     bcopy(number_stack, nsp, len);
-#endif
 
-    vm_deallocate(task_self(), number_stack, len);
+    vm_deallocate(task_self(), number_stack, round_page(len));
 
     /* Flush the old number stack from the cache. */
     flush = MATTR_VAL_CACHE_FLUSH;
