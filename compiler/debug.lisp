@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.19 1992/05/18 18:31:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug.lisp,v 1.20 1992/05/18 18:52:45 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -233,7 +233,7 @@
 	   (barf "Entry-Function in ~S isn't an XEP: ~S." functional ef)))))
     (:deleted
      (return-from check-function-stuff)))
-
+  
   (case (functional-kind functional)
     ((nil :optional :external :top-level :escape :cleanup)
      (when (lambda-p functional)
@@ -243,7 +243,7 @@
 	 (check-function-reached fun functional))
        (unless (eq (lambda-home functional) functional)
 	 (barf "Home not self-pointer in ~S." functional)))))
-       
+  
   (etypecase functional
     (clambda
      (when (lambda-bind functional)
@@ -264,7 +264,7 @@
      (let ((more (optional-dispatch-more-entry functional)))
        (when more (check-function-reached more functional)))
      (check-function-reached (optional-dispatch-main-entry functional)
-			     functional)))))
+			     functional))))
 
 
 ;;; Check-Function-Consistency  --  Internal
@@ -883,7 +883,7 @@
 		      (null tn)
 		      (tn-global-conflicts tn)
 		      (eq (tn-local tn) block))
-	    (barf "Strange TN ~S in LTN map for ~S." tn block)))))))))
+	    (barf "Strange TN ~S in LTN map for ~S." tn block)))))))
 
 
 ;;; Check-Environment-Lifetimes  --  Internal
@@ -1038,7 +1038,7 @@
 ;;;
 (defun print-continuation (cont)
   (declare (type continuation cont))
-  (format t " c~D" (cont-num cont)))
+  (format t " c~D" (cont-num cont))
   (undefined-value))
 
 
