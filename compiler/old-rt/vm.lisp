@@ -125,7 +125,7 @@
 (def-primitive-type list (descriptor-reg))
 
 ;;; Dummy primitive type for catch block TNs.
-(def-primitive-type catch-block (stack) :type nil)
+(def-primitive-type catch-block (catch-block) :type nil)
 
 
 ;;; Primitive-Type-Of  --  Interface
