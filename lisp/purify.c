@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.5 1993/02/26 09:02:06 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.6 1993/03/29 03:39:58 wlott Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -137,9 +137,9 @@ static lispobj ptrans_boxed(lispobj thing, lispobj header, boolean constant)
 static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
 {
     lispobj layout = ((struct instance *)PTR(thing))->slots[0];
-    ptrans_boxed(thing, header,
-                 (((struct instance *)PTR(layout))->slots[15])
-		 != NIL);
+    return ptrans_boxed(thing, header,
+			(((struct instance *)PTR(layout))->slots[15])
+			!= NIL);
 }
     
 static lispobj ptrans_fdefn(lispobj thing, lispobj header)
