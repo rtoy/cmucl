@@ -175,11 +175,16 @@
        (result list (cdr result)))
       ((not (plusp i)) result)))
 
-(defun last (list)
-  "Returns the last cons (not the last element!) of a list."
-  (do ((list list (cdr list))
-       (result nil list))
-      ((null list) result)))
+(defun last (list &optional (n 1))
+  "Returns the last N conses (not the last element!) of a list."
+  (declare (type index n))
+  (do ((checked-list list (cdr checked-list))
+       (returned-list list)
+       (index 0 (1+ index)))
+      ((atom checked-list) returned-list)
+    (declare (type index index))
+    (if (>= index n)
+	(pop returned-list))))
 
 (defun list (&rest args)
   "Returns constructs and returns a list of its arguments."
@@ -596,10 +601,12 @@
 	(return list)))))
 
 (defun tailp (sublist list)
-  "Returns T if sublist is one of the cons'es in list"
-  (do ((x list (cdr x)))
-      ((endp x) '())
-    (if (eq x sublist) (return T))))
+  "Returns T if (EQL Sublist (NTHCDR <n> List)) for some value of <n>, NIL
+  otherwise."
+  (do ((list list (cdr list)))
+      ((atom list) (eql list sublist))
+    (if (eql sublist list)
+	(return t))))
 
 (defun adjoin (item list &key (key #'identity) (test #'eql) (test-not nil notp))
   "Add item to list unless it is already a member"
