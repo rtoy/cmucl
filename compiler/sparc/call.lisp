@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.24 1993/03/01 14:50:49 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.25 1993/07/20 11:34:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -329,7 +329,7 @@ default-value-8
 		    (tn (tn-ref-tn val)))
 		(defaults (cons default-lab tn))
 		
-		(inst b :lt default-lab)
+		(inst b :le default-lab)
 		(inst ld move-temp ocfp-tn (* i vm:word-bytes))
 		(inst subcc temp (fixnum 1))
 		(store-stack-tn tn move-temp)))
