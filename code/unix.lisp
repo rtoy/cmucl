@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.68 2001/01/23 12:24:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.69 2001/01/23 17:21:34 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2094,9 +2094,9 @@
 (defun unix-gethostname ()
   "Unix-gethostname returns the name of the host machine as a string."
   (with-alien ((buf (array char 256)))
-    (syscall ("gethostname" (* char) int)
-	     (cast buf c-string)
-	     (cast buf (* char)) 256)))
+    (syscall* ("gethostname" (* char) int)
+	      (cast buf c-string)
+	      (cast buf (* char)) 256)))
 
 (def-alien-routine ("gethostid" unix-gethostid) unsigned-long
   "Unix-gethostid returns a 32-bit integer which provides unique

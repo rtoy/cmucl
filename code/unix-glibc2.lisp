@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.13 2001/01/22 10:49:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.14 2001/01/23 17:21:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2163,21 +2163,21 @@ length LEN and type TYPE."
   values returned upon success are: sysname, nodename, release, version,
   machine, and domainname. Upon failure, 'nil and the 'errno are returned."
   (with-alien ((utsname (struct utsname)))
-    (syscall ("uname" (* (struct utsname)))
-	     (values (cast (slot utsname 'sysname) c-string)
-		     (cast (slot utsname 'nodename) c-string)
-		     (cast (slot utsname 'release) c-string)
-		     (cast (slot utsname 'version) c-string)
-		     (cast (slot utsname 'machine) c-string)
+    (syscall* ("uname" (* (struct utsname)))
+	      (values (cast (slot utsname 'sysname) c-string)
+		      (cast (slot utsname 'nodename) c-string)
+		      (cast (slot utsname 'release) c-string)
+		      (cast (slot utsname 'version) c-string)
+		      (cast (slot utsname 'machine) c-string)
 		     (cast (slot utsname 'domainname) c-string))
-	     (addr utsname))))
+	      (addr utsname))))
 
 (defun unix-gethostname ()
   "Unix-gethostname returns the name of the host machine as a string."
   (with-alien ((buf (array char 256)))
-    (syscall ("gethostname" (* char) int)
-	     (cast buf c-string)
-	     (cast buf (* char)) 256)))
+    (syscall* ("gethostname" (* char) int)
+	      (cast buf c-string)
+	      (cast buf (* char)) 256)))
 
 #+nil
 (defun unix-sethostname (name len)
