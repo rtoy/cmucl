@@ -197,21 +197,25 @@
 ;;;    Set up stuff to do a full call for Call.  We assume that that
 ;;; IR2-Continuation structures have already been assigned to the args.  We set
 ;;; the kind to :FULL or :FUNNY, depending on whether there is an IR2-CONVERT
-;;; method.
+;;; method.  If a funny function, then we inhibit tail recursion, since the IR2
+;;; convert method is going to want to deliver values normally.
 ;;;
 (defun ltn-default-call (call policy)
   (declare (type combination call) (type policies policy))
-  (let ((kind (basic-combination-kind call)))
-    (setf (basic-combination-info call)
-	  (if (and (function-info-p kind)
-		   (function-info-ir2-convert kind))
-	      :funny :full)))
 
   (annotate-function-continuation (basic-combination-fun call) policy)
   (dolist (arg (basic-combination-args call))
     (annotate-full-call-continuation arg))
 
-  (flush-full-call-tail-transfer call)
+  (let ((kind (basic-combination-kind call)))
+    (cond ((and (function-info-p kind)
+		(function-info-ir2-convert kind))
+	   (setf (basic-combination-info call) :funny)
+	   (setf (node-tail-p call) nil))
+	  (t
+	   (setf (basic-combination-info call) :full)
+	   (flush-full-call-tail-transfer call))))
+  
   (undefined-value))
 
 
