@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.33 1990/06/16 15:56:30 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.34 1990/06/22 18:10:26 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -267,7 +267,8 @@
 
 (export '(%array-fill-pointer %array-available-elements %array-data-vector
 	  %array-displacement %array-displaced-p %array-dimension
-	  %check-bound %dpb %ldb %negate *empty-type* *eval-stack-top*
+	  %check-bound %dpb %ldb %negate %sxhash-simple-string
+	  %sxhash-simple-substring *empty-type* *eval-stack-top*
 	  *null-type* *universal-type* *unparse-function-type-simplify*
 	  *wild-type* 32bit-logical-not 32bit-logical-nor 32bit-logical-and
 	  32bit-logical-or 32bit-logical-xor always-subtypep args-type
@@ -282,20 +283,19 @@
 	  bit-index boole-code boolean byte-specifier callable char-int
 	  consed-sequence constant-type constant-type-p constant-type-type
 	  containing-integer-type copy-from-system-area copy-numeric-type
-	  copy-to-system-area
-	  csubtypep ctype ctype-of ctype-p ctypep data-vector-ref
-	  data-vector-set error-number-or-lose filename float-digits
-	  float-exponent float-format-max float-radix form function-type
-	  function-type-allowp function-type-keyp function-type-keywords
-	  function-type-optional function-type-p function-type-required
-	  function-type-rest function-type-returns function-type-wild-args
-	  hairy-type hairy-type-check-template hairy-type-specifier index
-	  internal-time irrational key-info key-info-name key-info-p
-	  key-info-type lexical-environment make-args-type
-	  make-function-type make-key-info make-member-type make-named-type
-	  make-numeric-type make-structure-type make-union-type
-	  make-values-type member-type member-type-members member-type-p
-	  merge-bits named-type named-type-name named-type-p
+	  copy-to-system-area csubtypep ctype ctype-of ctype-p ctypep
+	  data-vector-ref data-vector-set error-number-or-lose filename
+	  float-digits float-exponent float-format-max float-radix form
+	  function-type function-type-allowp function-type-keyp
+	  function-type-keywords function-type-optional function-type-p
+	  function-type-required function-type-rest function-type-returns
+	  function-type-wild-args hairy-type hairy-type-check-template
+	  hairy-type-specifier index internal-time irrational key-info
+	  key-info-name key-info-p key-info-type lexical-environment
+	  make-args-type make-function-type make-key-info make-member-type
+	  make-named-type make-numeric-type make-structure-type
+	  make-union-type make-values-type member-type member-type-members
+	  member-type-p merge-bits named-type named-type-name named-type-p
 	  native-byte-order negate never-subtypep numeric-contagion
 	  numeric-type numeric-type-class numeric-type-complexp
 	  numeric-type-format numeric-type-high numeric-type-low
@@ -313,12 +313,11 @@
 	  type-union type/= type= types-intersect unboxed-array union-type
 	  union-type-p union-type-types unknown-type unknown-type-p
 	  unknown-type-specifier values-specifier-type
-	  values-specifier-type-cache-clear values-subtypep
-	  values-type values-type-allowp values-type-intersect
-	  values-type-intersection values-type-keyp values-type-keywords
-	  values-type-optional values-type-p values-type-required
-	  values-type-rest values-type-union values-types
-	  values-types-intersect void))
+	  values-specifier-type-cache-clear values-subtypep values-type
+	  values-type-allowp values-type-intersect values-type-intersection
+	  values-type-keyp values-type-keywords values-type-optional
+	  values-type-p values-type-required values-type-rest
+	  values-type-union values-types values-types-intersect void))
 
 
 (in-package "EXTENSIONS")
@@ -431,9 +430,9 @@
 	  short-float-radix signed-sap-ref-16 signed-sap-ref-32
 	  signed-sap-ref-8 single-float-radix symbol-macro-let
 	  system-area-pointer system-area-pointer-p unproclaim unstructured
-	  wait-until-fd-usable with-enabled-interrupts with-fd-handler
-	  with-interrupts with-reply-port with-stack-alien without-gcing
-	  without-hemlock without-interrupts words))
+	  vector-sap wait-until-fd-usable with-enabled-interrupts
+	  with-fd-handler with-interrupts with-reply-port with-stack-alien
+	  without-gcing without-hemlock without-interrupts words))
 
 
 (in-package "USER")
