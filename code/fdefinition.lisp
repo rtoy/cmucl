@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.8 1991/11/01 11:37:00 chiles Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fdefinition.lisp,v 1.9 1991/11/05 16:51:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,8 +58,18 @@
       ,setf-form)
      (t
       (error "Malformed function name: ~S." ,name))))
+
 ) ;EVAL-WHEN
 
+;;; CHECKING-SYMBOL-FUNCTION  --  Internal
+;;;
+;;;    Do a safe SYMBOL-FUNCTION.  The guts of functions in this file are
+;;; normally compiled unsafe.
+;;;
+(declaim (inline checking-symbol-function))
+(defun checking-symbol-function (x)
+  (declare (optimize (safety 1)))
+  (symbol-function x))
 
 
 ;;;; Definition Encapsulation.
@@ -70,7 +80,7 @@
   "Returns whatever definition is stored for name, regardless of whether it is
    encapsulated.  This is SETF'able."
   (function-name-dispatch name
-    (symbol-function name)
+    (checking-symbol-function name)
     (gethash (cadr name) *setf-functions*)))
 ;;;
 (defun %set-encapsulated-definition (name value)
@@ -207,7 +217,7 @@
 			(setf encap-info (encapsulation-info-next encap-info)))
 		      ,fetch))))
     (function-name-dispatch name
-      (basic-def name (symbol-function name))
+      (basic-def name (checking-symbol-function name))
       (basic-def name (or (gethash (cadr name) *setf-functions*)
 			  (error "Undefined function: ~S." name))))))
 
@@ -217,7 +227,7 @@
 
 (defun %set-fdefinition (name new-value)
   "Set name's global function definition."
-  (declare (type function new-value))
+  (declare (type function new-value) (optimize (safety 1)))
   (macrolet ((set-basic-def (name new-value form)
 	       `(let ((encap-info (gethash ,name *encapsulation-info*)))
 		  (cond (encap-info
