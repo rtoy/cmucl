@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.41 1997/11/04 15:05:39 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.42 1998/01/17 10:24:55 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -391,13 +391,13 @@
 (define-primitive-object (unwind-block)
   (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
   (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
-  current-code
+  #-x86 current-code
   entry-pc)
 
 (define-primitive-object (catch-block)
   (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
   (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
-  current-code
+  #-x86 current-code
   entry-pc
   tag
   (previous-catch :c-type #-alpha "struct catch_block *" #+alpha "u32")
