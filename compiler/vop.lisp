@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.38 1993/03/12 15:16:47 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/vop.lisp,v 1.39 1993/08/12 20:21:46 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -901,8 +901,13 @@
   ;;
   ;; A vector containing the TN currently live in each location in the SB, or
   ;; NIL if the location is unused.  This is used during load-tn pack.
-  (live-tns '#() :type simple-vector))
-
+  (live-tns '#() :type simple-vector)
+  ;;
+  ;; The number of blocks for which the ALWAYS-LIVE and CONFLICTS might not be
+  ;; virgin, and thus must be reinitialized when PACK starts.  Less then the
+  ;; length of those vectors when not all of the length was used on the
+  ;; previously packed component.
+  (last-block-count 0 :type index))
 
 ;;; the SC structure holds the storage base that storage is allocated in and
 ;;; information used to select locations within the SB.
