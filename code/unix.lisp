@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.4 1992/01/28 05:57:42 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.5 1992/01/28 06:26:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -943,8 +943,8 @@
 (define-ioctl-command TIOCGPGRP #\t 119 int :out)
 
 ;;; Keyboard iotctl commands.
-(define-ioctl-command KBDCGET #\k 0 kbdarg :inout)
-(define-ioctl-command KBDCSET #\k 1 kbdarg :in)
+(define-ioctl-command KBDCGET #\k 0 (struct kbdarg) :inout)
+(define-ioctl-command KBDCSET #\k 1 (struct kbdarg) :in)
 (define-ioctl-command KBDCRESET #\k 2 nil :void)
 (define-ioctl-command KBDCRST #\k 3 nil :void)
 (define-ioctl-command KBDCSSTD #\k 4 nil :void)
