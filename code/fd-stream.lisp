@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.56 2001/06/17 19:06:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.57 2001/07/08 17:37:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1243,6 +1243,16 @@
 		   (unix:get-unix-error-msg err))
 	   nil))))
 
+;;; RETURN-STREAM -- internal
+;;;
+;;; (this is just to save having to reindent the code in OPEN...move it there)
+;;;
+(defmacro return-stream (class &body body)
+  (let ((stream (gensym)))
+    `(let ((,stream (progn ,@body)))
+       (return (if ,class
+                  (make-instance ,class :lisp-stream ,stream)
+                  ,stream)))))
 
 ;;; OPEN -- public
 ;;;
@@ -1255,6 +1265,7 @@
 	     (if-exists nil if-exists-given)
 	     (if-does-not-exist nil if-does-not-exist-given)
 	     (external-format :default)
+	     class
 	     &aux ; Squelch assignment warning.
 	     (direction direction)
 	     (if-does-not-exist if-does-not-exist)
@@ -1381,7 +1392,7 @@
 		  (unix:unix-open namestring mask mode)
 		  (values nil unix:enoent))
 	    (cond ((numberp fd)
-		   (return
+		   (return-stream class
 		    (case direction
 		      ((:input :output :io)
 		       (make-fd-stream fd

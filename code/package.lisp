@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.57 2000/11/30 05:33:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.58 2001/07/08 17:37:54 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -890,7 +890,7 @@
 		    ',shadows ',shadowing-imports ',(if use-p use :default)
 		    ',imports ',interns ',exports ',doc))))
 
-(defun check-disjoint(&rest args)
+(defun check-disjoint (&rest args)
   ;; An arg is (:key . set)
   (do ((list args (cdr list)))
       ((endp list))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.46 2001/04/07 13:45:25 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.47 2001/07/08 17:37:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -689,7 +689,7 @@
   (streams () :type list :read-only t))
 
 (setf (documentation 'make-broadcast-stream 'function)
- "Returns an ouput stream which sends its output to all of the given streams.")
+ "Returns an output stream which sends its output to all of the given streams.")
 
 (defun %print-broadcast-stream (s stream d)
   (declare (ignore s d))
@@ -1319,7 +1319,7 @@
   (indentation 0))
 
 (setf (documentation 'make-indenting-stream 'function)
- "Returns an ouput stream which indents its output by some amount.")
+ "Returns an output stream which indents its output by some amount.")
 
 (defun %print-indenting-stream (s stream d)
   (declare (ignore s d))
@@ -1681,6 +1681,8 @@
 	   (type index start)
 	   (type sequence-end end)
 	   (values index))
+  (when (not (cl::lisp-stream-p stream))
+     (return-from read-sequence (stream-read-sequence seq stream start end)))
   (let ((end (or end (length seq))))
     (declare (type index end))
     (etypecase seq
@@ -1737,6 +1739,8 @@
 	   (type index start)
 	   (type sequence-end end)
 	   (values sequence))
+  (when (not (cl::lisp-stream-p stream))
+    (return-from write-sequence (stream-write-sequence seq stream start end)))
   (let ((end (or end (length seq))))
     (declare (type index start end))
     (etypecase seq
