@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.66 2004/09/08 15:01:47 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.67 2004/09/09 14:52:31 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2208,11 +2208,16 @@
 		    (mapcar #'complex-union
 			    (member-type-members ctype)))))
 	(named-type
-	 (if (eq (named-type-name ctype) '*)
-	     (apply #'type-union
-		    (mapcar #'complex1
-			    (union-type-types (specifier-type 'real))))
-	     (not-real)))
+	 (cond ((eq (named-type-name ctype) '*)
+		;; (COMPLEX *) is the same as (COMPLEX REAL) for us.
+		(apply #'type-union
+		       (mapcar #'complex1
+			       (union-type-types (specifier-type 'real)))))
+	       ((eq (named-type-name ctype) nil)
+		;; (COMPLEX NIL) is the NIL type
+		*empty-type*)
+	       (t
+		(not-real))))
 	(t
 	 (multiple-value-bind (subtypep certainly)
 	     (csubtypep ctype (specifier-type 'real))
