@@ -929,21 +929,22 @@
 ;;; A macro-like function which transforms a call to this function into some
 ;;; other Lisp form.  This expansion is inhibited if inline expansion is
 ;;; inhibited.
-(define-info-type function source-transform (or function null))
+(define-info-type function source-transform (or function null
+						#-new-compiler list))
 
 ;;; The macroexpansion function for this macro.
-;;; ### For now, allow List, since in our bootstrapping environment, a List
-;;; isn't function, but there also isn't any way to coerce a lambda-list to a
-;;; function.
-(define-info-type function macro-function (or function null list)
+(define-info-type function macro-function (or function null
+					      #-new-compiler list)
   nil)
 
 ;;; A function which converts this special form into IR1.
-(define-info-type function ir1-convert (or function null))
+(define-info-type function ir1-convert (or function null
+					   #-new-compiler list))
 
 ;;; A function which gets a chance to do stuff to the IR1 for any call to this
 ;;; function.
-(define-info-type function ir1-transform (or function null))
+(define-info-type function ir1-transform (or function null
+					     #-new-compiler list))
 
 ;;; If a function is an alien-operator, then this is the Alien-Info.
 (define-info-type function alien-operator (or lisp::alien-info null) nil)
@@ -1017,10 +1018,12 @@
       nil))
 
 ;;; Expander function for a defined type.
-(define-info-type type expander (or function null) nil)
+(define-info-type type expander (or function null
+				    #-new-compiler list) nil)
 
 ;;; Print function for a type.
-(define-info-type type printer (or function symbol null) nil)
+(define-info-type type printer (or function symbol null
+				   #-new-compiler list) nil)
 
 ;;; Defstruct description information for a structure type.  DEFINED is the
 ;;; current global definition, and is not shadowed by compilation of
@@ -1047,10 +1050,8 @@
 
 (define-info-type setf documentation (or string null) nil)
 
-;;; ### bootstrap hack...
-;;; Allow List for function for now.
-;;;
-(define-info-type setf expander (or function null list) nil)
+(define-info-type setf expander (or function null 
+				    #-new-compiler list) nil)
 
 ;;; Used for storing random documentation types.  The stuff is an alist
 ;;; translating documentation kinds to values.
