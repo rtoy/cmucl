@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.7 1998/05/01 01:02:55 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.8 1999/03/19 13:45:50 dtc Exp $")
 
 ;;;; LOOP Iteration Macro
 
@@ -346,9 +346,16 @@ constructed.
 	    (single-float	most-positive-single-float	most-negative-single-float)
 	    (double-float	most-positive-double-float	most-negative-double-float)
 	    (long-float		most-positive-long-float	most-negative-long-float))
+	;; CMUCL has infinities so let's use them.
+	#+CMU
+	  '((fixnum             most-positive-fixnum            most-negative-fixnum)
+	    (short-float        single-float-positive-infinity  single-float-negative-infinity)
+	    (single-float       single-float-positive-infinity  single-float-negative-infinity)
+	    (double-float       double-float-positive-infinity  double-float-negative-infinity)
+	    (long-float         long-float-positive-infinity    long-float-negative-infinity))
 	;;If we don't know, then we cannot provide "infinite" initial values for any of the
 	;; types but FIXNUM:
-	#-(or Genera CLOE-Runtime Minima)
+	#-(or Genera CLOE-Runtime Minima CMU)
 	  '((fixnum   		most-positive-fixnum		most-negative-fixnum))
 	  )
 
