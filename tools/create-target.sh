@@ -4,6 +4,24 @@ LISP_VARIANT=
 MOTIF_VARIANT=
 TARGET_DIR=
 
+usage() {
+    echo "Usage: `basename $0` target-dir [lisp-variant [motif-variant]]"
+    echo ""
+    echo "Creates a directory structure in TARGET-DIR for use in compiling"
+    echo "CMUCL.  If the lisp-variant is not given, uname is used to select"
+    echo "a version, if possible.  If motif-variant is not given, one is"
+    echo "determined from the lisp-variant."
+    echo ""
+    # List possible values for lisp-variant and motif-variant
+    echo "Possible lisp-variants:"
+    ( cd src/lisp/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
+	    pr -3at -o 8
+    echo "Possible Motif-variants:"
+    ( cd src/motif/server/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
+	    pr -3at -o 8
+    exit 1
+}
+
 if [ $# = 1 ]; then
     # Only target directory given.  Try to deduce the lisp-variant
     TARGET_DIR="$1"
@@ -24,15 +42,7 @@ elif [ $# = 3 ]; then
     LISP_VARIANT="$2"
     MOTIF_VARIANT="$3"
 else
-    echo "Usage: $0 target-directory [lisp-variant [motif-variant]]"
-    # List the available lisp-variants
-    echo Possible lisp-variants:
-    ( cd src/lisp/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
-	    pr -3at -o 8
-    echo Possible Motif-variants:
-    ( cd src/motif/server/ ; ls -1 Config.* ) | sed 's;^Config[.];;g' | \
-	    pr -3at -o 8
-    exit 1
+    usage
 fi
 
 [ -d $1 ] && echo "Error: Directory $1 exists already!" && exit 2
