@@ -180,7 +180,7 @@
 			     (type-specifier
 			      (continuation-asserted-type cont)))
 	       nil)
-	      (t t))))
+	      (t t)))))
     ((not (constant-continuation-p cont))
      (note-slime "The ~:R argument is not a constant." n)
      nil)
@@ -198,7 +198,7 @@
 		(note-lossage "The ~:R argument is not a constant ~S:~%  ~S"
 			      n (type-specifier type) val)
 		nil)
-	       (t t))))))))
+	       (t t)))))))
 
   
 ;;; Check-Fixed-And-Rest  --  Internal
