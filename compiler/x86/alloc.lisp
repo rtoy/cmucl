@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.11 2003/08/25 20:50:58 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.12 2004/05/15 18:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -255,6 +255,7 @@
 
 
 
+#+nil
 (define-vop (make-symbol)
   (:policy :fast-safe)
   (:translate make-symbol)

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.51 2004/05/14 13:40:19 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.52 2004/05/15 18:30:47 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -466,29 +466,28 @@
 
 ;;;; Symbols
 
-#+(or gengc sparc)
+#+(or gengc sparc x86)
 (defknown %make-symbol (index simple-string) symbol
   (flushable movable))
 
-#+(or gengc sparc)
+#+(or gengc sparc x86)
 (defknown symbol-hash (symbol) index
   (flushable movable))
 
-#+x86
+#+(and nil x86)
 (defknown symbol-hash (symbol) lisp::hash
   (flushable movable))
 
 (define-primitive-object (symbol :lowtag other-pointer-type
 				 :header symbol-header-type
-				 #-x86 :alloc-trans
+				 :alloc-trans
 				 #-(or gengc x86 sparc) make-symbol
-				 #+(or gengc sparc) %make-symbol)
+				 #+(or gengc x86 sparc) %make-symbol)
   (value :set-trans %set-symbol-value
 	 :init :unbound)
   #-(or gengc x86 sparc) unused
-  #+(or gengc sparc)
+  #+(or gengc x86 sparc)
   (hash :init :arg)
-  #+x86 (hash)
   (plist :ref-trans symbol-plist
 	 :set-trans %set-symbol-plist
 	 :init :null)
