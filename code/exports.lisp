@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.180 2001/03/13 02:10:27 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.181 2001/03/13 16:39:07 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -876,8 +876,10 @@
 (intern "CHAR" "LISP")
 (defpackage "EXTENSIONS"
 	    (:nicknames "EXTENSIONS")
+            (:import-from "LISP" "GET-SETF-METHOD")
             (:export "*AFTER-GC-HOOKS*" "*AFTER-SAVE-INITIALIZATIONS*"
-             "*ALL-MODIFIER-NAMES*" "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
+             "*ALL-MODIFIER-NAMES*" "*AUTOLOAD-TRANSLATIONS*"
+	     "*BACKUP-EXTENSION*" "*BEFORE-GC-HOOKS*"
              "*BEFORE-SAVE-INITIALIZATIONS*" "*BLOCK-COMPILE-DEFAULT*"
              "*BYTES-CONSED-BETWEEN-GCS*" "*CHAR" "*CLX-FDS-TO-DISPLAYS*"
              "*COMMAND-LINE-STRINGS*" "*COMMAND-LINE-SWITCHES*"
@@ -892,6 +894,7 @@
              "*ENCLOSING-SOURCE-CUTOFF*" "*ENVIRONMENT-LIST*"
              "*ERROR-PRINT-LENGTH*" "*ERROR-PRINT-LEVEL*" "*GC-INHIBIT-HOOK*"
              "*GC-NOTIFY-AFTER*" "*GC-NOTIFY-BEFORE*" "*GC-VERBOSE*"
+	     "GET-SETF-METHOD" ; temp until uses are converted to g-s-expansion
              "*HEMLOCK-VERSION*" "*IGNORE-FLOATING-POINT-UNDERFLOW*"
              "*INFO-ENVIRONMENT*" "*INTEXP-MAXIMUM-EXPONENT*"
              "*KEYWORD-PACKAGE*" "*LISP-PACKAGE*" "*LOAD-IF-SOURCE-NEWER*"
@@ -1158,6 +1161,7 @@
 	   "NON-DESCRIPTOR-STACK" "NOTE-ENVIRONMENT-START"
 	   "NOTE-THIS-LOCATION" "OPTIMIZER"
 	   "PACK-TRACE-TABLE" "PMAX-FASL-FILE-IMPLEMENTATION" "POLICY"
+	   "PPC-FASL-FILE-IMPLEMENTATION"
 	   "PREDICATE" "PRIMITIVE-TYPE" "PRIMITIVE-TYPE-OF"
 	   "PRIMITIVE-TYPE-OR-LOSE" "PRIMITIVE-TYPE-VOP" "PUSH-VALUES"
 	   "READ-PACKED-BIT-VECTOR" "READ-VAR-INTEGER" "READ-VAR-STRING"
