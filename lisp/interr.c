@@ -1,5 +1,5 @@
 /*
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.4 2000/09/04 15:35:52 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interr.c,v 1.5 2001/04/11 18:01:34 pw Exp $
  *
  * Stuff to handle internal errors.
  *
@@ -152,6 +152,7 @@ void internal_error(struct sigcontext *context)
 lispobj debug_print(lispobj string)
 {
     printf("%s\n", (char *)(((struct vector *)PTR(string))->data));
+    fflush(stdout);
 
     return NIL;
 }
