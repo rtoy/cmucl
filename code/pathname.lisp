@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.28 1997/02/05 16:15:56 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.29 1997/02/09 22:49:30 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -469,7 +469,7 @@
 		     (mapcar #'(lambda (piece)
 				 (typecase piece
 				   (simple-base-string
-				    (funcall fun thing))
+				    (funcall fun piece))
 				   (cons
 				    (case (car piece)
 				      (:character-set
