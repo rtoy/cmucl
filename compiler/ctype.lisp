@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.22 1991/10/23 12:47:57 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ctype.lisp,v 1.23 1991/11/05 15:15:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -781,7 +781,8 @@
 	    (assert-continuation-type (return-result return) atype))
 	  (loop for var in vars and type in types do
 	    (cond ((basic-var-sets var)
-		   (when warning-function
+		   (when (and warning-function
+			      (not (csubtypep (leaf-type var) type)))
 		     (funcall warning-function
 			      "Assignment to argument: ~S~%  ~
 			       prevents use of assertion from function ~
