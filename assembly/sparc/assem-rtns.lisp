@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.3 2003/08/03 11:27:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4 2005/02/11 21:02:32 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.3 2003/08/03 11:27:50 gerd Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/assem-rtns.lisp,v 1.4 2005/02/11 21:02:32 rtoy Rel $
 ;;;
 ;;;
 (in-package "SPARC")
@@ -32,7 +32,7 @@
      (:temp count any-reg nl2-offset)
      (:temp src any-reg nl3-offset)
      (:temp dst any-reg nl4-offset)
-     (:temp temp descriptor-reg l0-offset)
+     (:temp temp descriptor-reg cname-offset)
 
      ;; These are needed so we can get at the register args.
      (:temp a0 descriptor-reg a0-offset)
@@ -120,7 +120,7 @@
      (:temp src any-reg nl1-offset)
      (:temp dst any-reg nl2-offset)
      (:temp count any-reg nl3-offset)
-     (:temp temp descriptor-reg l0-offset)
+     (:temp temp descriptor-reg cname-offset)
 
      ;; These are needed so we can get at the register args.
      (:temp a0 descriptor-reg a0-offset)

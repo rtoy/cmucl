@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.37 2004/04/16 04:49:25 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.38 2005/02/11 21:02:34 rtoy Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1110,7 +1110,7 @@ default-value-8
   (:temporary (:sc any-reg :offset nl1-offset) count)
   (:temporary (:sc any-reg :offset nl2-offset) src)
   (:temporary (:sc any-reg :offset nl3-offset) dst)
-  (:temporary (:sc descriptor-reg :offset l0-offset) temp)
+  (:temporary (:sc descriptor-reg :offset cname-offset) temp)
   (:info fixed)
   (:generator 20
     (let ((loop (gen-label))
