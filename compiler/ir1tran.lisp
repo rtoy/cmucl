@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.82 1992/12/08 17:59:14 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.83 1992/12/10 16:48:17 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1203,10 +1203,11 @@
 ;;; already used by one of the Vars.  We also check that the keyword isn't the
 ;;; magical :allow-other-keys.
 ;;;
-(proclaim '(function make-keyword (symbol list) keyword))
-(defun make-keyword (symbol vars)
-  (let ((key (if (keywordp symbol) symbol
-		 (intern (symbol-name symbol) "KEYWORD"))))
+(proclaim '(function make-keyword (symbol list t) keyword))
+(defun make-keyword (symbol vars keywordify)
+  (let ((key (if (and keywordify (not (keywordp symbol)))
+		 (intern (symbol-name symbol) "KEYWORD")
+		 symbol)))
     (when (eq key :allow-other-keys)
       (compiler-error "You can't have a keyword arg called :allow-other-keys."))
     (dolist (var vars)
@@ -1287,14 +1288,15 @@
 	    (let ((var (varify-lambda-arg spec (names-so-far))))
 	      (setf (lambda-var-arg-info var)
 		    (make-arg-info :kind :keyword
-				   :keyword (make-keyword spec (vars))))
+				   :keyword (make-keyword spec (vars) t)))
 	      (vars var)
 	      (names-so-far spec)))
 	   ((atom (first spec))
 	    (let* ((name (first spec))
 		   (var (varify-lambda-arg name (names-so-far)))
-		   (info (make-arg-info :kind :keyword
-					:keyword (make-keyword name (vars)))))
+		   (info (make-arg-info
+			  :kind :keyword
+			  :keyword (make-keyword name (vars) t))))
 	      (setf (lambda-var-arg-info var) info)
 	      (vars var)
 	      (names-so-far name)
@@ -1305,9 +1307,9 @@
 		(error "Malformed keyword arg specifier: ~S." spec))
 	      (let* ((name (second head))
 		     (var (varify-lambda-arg name (names-so-far)))
-		     (info (make-arg-info :kind :keyword
-					  :keyword (make-keyword (first head)
-								 (vars)))))
+		     (info (make-arg-info
+			    :kind :keyword
+			    :keyword (make-keyword (first head) (vars) nil))))
 		(setf (lambda-var-arg-info var) info)
 		(vars var)
 		(names-so-far name)
