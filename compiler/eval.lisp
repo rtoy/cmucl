@@ -927,7 +927,11 @@
 ;;;		     that calls INTERNAL-APPLY, closing over the leaf.  We also
 ;;;		     have to compute a closure, running environment, for the
 ;;;		     lambda in case it references stuff in the current
-;;;		     environment.
+;;;		     environment.  If the closure is empty and there is no
+;;;                  functional environment, then we use
+;;;                  MAKE-INTERPRETED-FUNCTION to make a cached translation.
+;;;                  Since it is too late to lazily convert, we set up the
+;;;                  EVAL-FUNCTION to be already converted. 
 ;;;
 (defun leaf-value (node frame-ptr closure)
   (let ((leaf (c::ref-leaf node)))
@@ -954,19 +958,32 @@
 	     (indirect-value temp)
 	     temp)))
       (c::functional
-       (let ((calling-closure (compute-closure node leaf frame-ptr closure))
-	     (eval-fun (make-eval-function
-			:definition leaf
-			:name (c::leaf-name leaf)
-			:arglist (c::functional-arg-documentation
-				  (c::functional-entry-function leaf)))))
-	 ;; Make interpreter IR1 thing be a real function that you can
-	 ;; call anytime, anywhere.
-	 #'(lambda (&rest args)
-	     (declare (list args))
-	     (internal-apply (eval-function-definition eval-fun)
-			     (cons (length args) args)
-			     calling-closure)))))))
+       (let* ((calling-closure (compute-closure node leaf frame-ptr closure))
+	      (real-fun (c::functional-entry-function leaf))
+	      (arg-doc (c::functional-arg-documentation real-fun)))
+	 (cond ((c:lambda-eval-info-function (c::leaf-info leaf)))
+	       ((and (zerop (length closure))
+		     (null (c::functional-fenv real-fun)))
+		(let* ((res (make-interpreted-function
+			     (c::functional-inline-expansion real-fun)))
+		       (eval-fun (get-eval-function res)))
+		  (push eval-fun *interpreted-function-cache*)
+		  (setf (eval-function-definition eval-fun) leaf)
+		  (setf (eval-function-converted-once eval-fun) t)
+		  (setf (eval-function-arglist eval-fun) arg-doc)
+		  (setf (eval-function-name eval-fun) (c::leaf-name real-fun))
+		  (setf (c:lambda-eval-info-function (c::leaf-info leaf)) res)
+		  res))
+	       (t
+		(let ((eval-fun (make-eval-function
+				 :definition leaf
+				 :name (c::leaf-name real-fun)
+				 :arglist arg-doc)))
+		  #'(lambda (&rest args)
+		      (declare (list args))
+		      (internal-apply (eval-function-definition eval-fun)
+				      (cons (length args) args)
+				      calling-closure))))))))))
 
 
 ;;; COMPUTE-CLOSURE -- Internal.
