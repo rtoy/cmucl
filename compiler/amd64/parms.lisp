@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.2 2004/06/10 01:45:07 cwang Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/parms.lisp,v 1.3 2004/06/18 23:44:42 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -42,7 +42,7 @@
 (setf (backend-fasl-file-type *target-backend*) "amd64f")
 (setf (backend-fasl-file-implementation *target-backend*)
       amd64-fasl-file-implementation)
-(setf (backend-fasl-file-version *target-backend*) #x18e)
+(setf (backend-fasl-file-version *target-backend*) byte-fasl-file-version)
 (setf (backend-register-save-penalty *target-backend*) 3)
 (setf (backend-byte-order *target-backend*) :little-endian)
 
