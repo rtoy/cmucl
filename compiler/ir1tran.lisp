@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.131 2002/11/21 20:02:26 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.132 2002/11/25 22:07:14 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2270,6 +2270,9 @@
 				    :environment environment)
 	    (unless (symbolp name)
 	      (compiler-error "Macro name ~S is not a symbol." name))
+	    (unless (listp arglist)
+	      (compiler-error "Local macro ~S has argument list that is not a list: ~S."
+			      name arglist))
 	    (when (< (length def) 3)
 	      (compiler-error
 	       "Local macro ~S is too short to be a legal definition." name))
