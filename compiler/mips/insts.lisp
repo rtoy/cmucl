@@ -7,7 +7,7 @@
 ;;; contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU).
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.9 1990/02/24 17:09:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/insts.lisp,v 1.10 1990/02/26 23:45:28 wlott Exp $
 ;;; 
 ;;; Assembler instruction definitions for the MIPS R2000.
 ;;;
@@ -362,7 +362,7 @@
 		       (component-header-length)))))
 
 (def-instruction compute-code-from-fn compute-code-from-fn-format
-  :op #b001000)
+  :op #b001001)
 
 
 ;;; COMPUTE-CODE-FROM-LRA
@@ -379,7 +379,7 @@
 		    (- (+ label-offset (component-header-length))))))
 
 (def-instruction compute-code-from-lra compute-code-from-lra-format
-  :op #b001000)
+  :op #b001001)
 
 
 ;;; COMPUTE-LRA-FROM-CODE
@@ -396,7 +396,7 @@
 		    (+ label-offset (component-header-length)))))
 
 (def-instruction compute-lra-from-code compute-lra-from-code-format
-  :op #b001000)
+  :op #b001001)
 
 
 ;;;
