@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.50 2004/01/09 23:05:32 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.51 2004/05/03 14:17:20 rtoy Exp $
  *
  */
 
@@ -589,8 +589,10 @@ void print_generation_stats(int  verbose)
     gens = NUM_GENERATIONS;
 
   /* Print the heap stats */
-  fprintf(stderr, "   Generation Boxed Unboxed LB   LUB    Alloc  Waste   Trig    WP  GCs Mem-age\n");
-
+  fprintf(stderr, "          Page count (%d KB)\n", PAGE_SIZE / 1024);
+  fprintf(stderr, "   Gen  Boxed Unboxed  LB   LUB    Alloc    Waste    Trigger   WP  GCs Mem-age
+\n");
+  
   for (i = 0; i < gens; i++) {
     int j;
     int boxed_cnt = 0;
@@ -621,7 +623,7 @@ void print_generation_stats(int  verbose)
     }
 
     gc_assert(generations[i].bytes_allocated == generation_bytes_allocated(i));
-    fprintf(stderr, "   %8d: %5d %5d %5d %5d %8d %5d %8d %4d %3d %7.4f\n",
+    fprintf(stderr, " %5d: %5d %5d %5d %5d %10d %6d %10d %4d %3d %7.4f\n",
 	    i, boxed_cnt, unboxed_cnt, large_boxed_cnt, large_unboxed_cnt,
 	    generations[i].bytes_allocated,
 	    PAGE_SIZE * count_generation_pages(i) -
