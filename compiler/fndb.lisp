@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.38 1991/12/20 14:56:47 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.39 1991/12/22 03:38:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,7 +1006,8 @@
 (defknown inspect (t) (values))
 
 (defknown room (&optional (member t nil :default)) void)
-(defknown ed (&optional (or symbol cons filename) &key init display) t)
+(defknown ed (&optional (or symbol cons filename) &key (:init t) (:display t))
+  t)
 (defknown dribble (&optional filename &key (if-exists t)) t)
 
 (defknown apropos (stringlike &optional packagelike t) (values))
