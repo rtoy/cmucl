@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.80 2001/02/11 14:22:08 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.81 2001/03/03 15:16:07 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 (in-package "USER")
 
 (defvar *byte-compile* #+small t #-small :maybe)
+(defvar *original-%deftype* #'lisp::%deftype)
 
 (with-compiler-log-file
     ("target:compile-lisp.log"
@@ -114,7 +115,6 @@
 ;;; prevent deftypes from taking effect at compile time so that we don't
 ;;; install interpreted type expanders causing the compiler to infinitely
 ;;; recurse.
-(defvar *original-%deftype* #'lisp::%deftype)
 (setf (fdefinition 'lisp::%deftype) #'list)
 (comf "target:code/typedefs")
 
