@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.41 1998/03/01 21:46:13 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.42 1998/04/20 11:32:52 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -507,18 +507,24 @@
 		 (:internal
 		  `(let ((,symbols (package-internal-symbols
 				    (car ,',packages))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector (package-hashtable-hash ,symbols)))))
 		 (:external
 		  `(let ((,symbols (package-external-symbols
 				    (car ,',packages))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector
+			     (package-hashtable-hash ,symbols)))))
 		 (:inherited
-		  `(let ((,symbols (package-external-symbols
-				    (car ,',package-use-list))))
-		     (setf ,',vector (package-hashtable-table ,symbols))
-		     (setf ,',hash-vector (package-hashtable-hash ,symbols))))))))
+		  `(let ((,symbols (and ,',package-use-list
+					(package-external-symbols
+					 (car ,',package-use-list)))))
+		     (when ,symbols
+		       (setf ,',vector (package-hashtable-table ,symbols))
+		       (setf ,',hash-vector
+			     (package-hashtable-hash ,symbols)))))))))
 		  (,end-test-macro (this-kind)
 		     `,(let ((next-kind (cadr (member this-kind
 						      ',ordered-types))))
@@ -529,12 +535,16 @@
 				  (,',init-macro ,(car ',ordered-types)))))))
 	 (when ,packages
 	   ,(when (null symbol-types)
-	      (error "Must supply at least one of :internal, :external, or ~
-	      :inherited."))
+	      (error 'program-error
+		     :format-control
+		     "Must supply at least one of :internal, :external, or ~
+		      :inherited."))
 	   ,(dolist (symbol symbol-types)
 	      (unless (member symbol '(:internal :external :inherited))
-		(error "~S is not one of :internal, :external, or :inherited."
-		       symbol)))
+		(error 'program-error
+		       :format-control
+		       "~S is not one of :internal, :external, or :inherited."
+		       :format-argument symbol)))
 	   (,init-macro ,(car ordered-types))
 	   (flet ((,real-symbol-p (number)
 		    (> number 1)))
@@ -592,7 +602,6 @@
 					 (t (,',init-macro :inherited)
 					    (setf ,',counter nil)))))))))))))
 	       ,@body)))))))
-
 
 ;;;; DEFPACKAGE:
 
@@ -608,7 +617,7 @@
      (:INTERN {symbol-name}*)
      (:EXPORT {symbol-name}*)
      (:DOCUMENTATION doc-string)
-   All options except :SIZE can be used multiple times."
+   All options except :SIZE and :DOCUMENTATION can be used multiple times."
   (let ((nicknames nil)
 	(size nil)
 	(shadows nil)
@@ -623,20 +632,25 @@
 	(doc nil))
     (dolist (option options)
       (unless (consp option)
-	(error "Bogus DEFPACKAGE option: ~S" option))
+	(error 'program-error
+	       :format-control "Bogus DEFPACKAGE option: ~S"
+	       :format-arguments (list option)))
       (case (car option)
 	(:nicknames
 	 (let ((new (stringify-names (cdr option) "package")))
 	   (setf nicknames (append-unique new nicknames :nicknames))))
 	(:size
 	 (cond (size
-		(error "Can't specify :SIZE twice."))
+		(error 'program-error
+		       :format-control "Can't specify :SIZE twice."))
 	       ((and (consp (cdr option))
 		     (typep (second option) 'unsigned-byte))
 		(setf size (second option)))
 	       (t
-		(error "Bogus :SIZE, must be a positive integer: ~S"
-		       (second option)))))
+		(error
+		 'program-error
+		 :format-control "Bogus :SIZE, must be a positive integer: ~S"
+		 :format-arguments (list (second option))))))
 	(:shadow
 	 (let ((new (stringify-names (cdr option) "symbol")))
 	   (setf incomming (append-unique new incomming :shadow))
@@ -674,9 +688,14 @@
 	   (setf outgoing (append-unique new outgoing :export))
 	   (setf exports (append exports new))))
 	(:documentation
+	 (when doc
+	   (error 'program-error
+		  :format-control "Can't specify :DOCUMENTATION twice."))
 	 (setf doc (coerce (second option) 'simple-string)))
 	(t
-	 (error "Bogus DEFPACKAGE option: ~S" option))))
+	 (error 'program-error
+		:format-control "Bogus DEFPACKAGE option: ~S"
+		:format-arguments (list option)))))
     `(eval-when (compile load eval)
        (%defpackage ,(stringify-name package "package") ',nicknames ',size
 		    ',shadows ',shadowing-imports ',(if use-p use :default)
@@ -719,8 +738,10 @@
 				     :internal-symbols (or size 10)
 				     :external-symbols (length exports))))))
     (unless (string= (the string (package-name package)) name)
-      (error "~A is a nick-name for the package ~A"
-	     name (package-name name)))
+      (error 'package-error
+	     :package name
+	     :format-control "~A is a nick-name for the package ~A"
+	     :format-arguments (list name (package-name name))))
     (enter-new-nicknames package nicknames)
     ;; Shadows and Shadowing-imports.
     (let ((old-shadows (package-%shadowing-symbols package)))
@@ -825,6 +846,7 @@
   estimates for the number of internal and external symbols which
   will ultimately be present in the package."
   (when (find-package name)
+    ;; @@@ this is supposed to be a correctable error @@@
     (error "A package named ~S already exists" name))
   (let* ((name (package-namify name))
 	 (package (internal-make-package
@@ -1140,9 +1162,15 @@
 		(pushnew p cpackages))))))
       (when cset
 	(restart-case
-	    (error "Exporting these symbols from the ~A package:~%~S~%~
-		    results in name conflicts with these packages:~%~{~A ~}"
-		   (package-%name package) cset (mapcar #'package-%name cpackages))
+	    (error
+	     'package-error
+	     :package package
+	     :format-control
+	     "Exporting these symbols from the ~A package:~%~S~%~
+	      results in name conflicts with these packages:~%~{~A ~}"
+	     :format-arguments
+	     (list (package-%name package) cset
+		   (mapcar #'package-%name cpackages)))
 	  (unintern-conflicting-symbols ()
 	   :report "Unintern conflicting symbols."
 	   (dolist (p cpackages)
@@ -1186,8 +1214,10 @@
     (dolist (sym (symbol-listify symbols))
       (multiple-value-bind (s w) (find-symbol (symbol-name sym) package)
 	(cond ((or (not w) (not (eq s sym)))
-	       (error "~S is not accessible in the ~A package."
-		      sym (package-%name package)))
+	       (error 'package-error
+		      :package package
+		      :format-control "~S is not accessible in the ~A package."
+		      :format-arguments (list sym (package-%name package))))
 	      ((eq w :external) (pushnew sym syms)))))
 
     (let ((internal (package-internal-symbols package))

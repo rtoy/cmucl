@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.46 1997/02/05 16:15:41 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.47 1998/04/20 11:32:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -815,8 +815,48 @@
 
 
 ;;;; Condition definitions.
+;;; 4/18/98 pw wants to make format-control and format-arguments
+;;; slots in the condition class so this facility is available
+;;; for all conditions internally -- however, that presents an
+;;; un-nice bootstrap problem. So, for now, lets have 
+;;; serious-condition-xxx so they are easy to grep and get the
+;;; new stuff working, then change to just condition-format-control etc.
+;;;
+;;; On the other hand, we have these two classes serious-condition
+;;; and simple-condition so that default report schemes can be different
+;;; if desired.
 
-(define-condition serious-condition (condition) ())
+(defun serious-condition-printer (condition stream)
+  (apply #'format stream (serious-condition-format-control condition)
+	 		 (serious-condition-format-arguments condition)))
+
+;;; The CLHS 9.1.3.1.5 says that the name of the containing function
+;;; should generally not be mentioned in report printers assuming that
+;;; the debugger will make that info available when appropriate. I (pw)
+;;; do so here because many CMUCL error conditions were previously signaled
+;;; using (error "format-string" (format-args..)) and thus invoking
+;;; the simple-error system. Now that we are changing to providing
+;;; the correct condition type, using this default reporter retains
+;;; the familiar behavior. It is a candidate for change some day.
+;;; Perhaps better would be do define subtypes of file-error and
+;;; package-error with their own :report functions as is done in
+;;; other places (debug-int format ...)
+
+(defun print-serious-condition (condition stream)
+  (format stream "~&~@<Error in function ~S:  ~3i~:_~?~:>"
+	  (condition-function-name condition)
+	  (serious-condition-format-control condition)
+	  (serious-condition-format-arguments condition)))
+
+(define-condition serious-condition (condition)
+  ((format-control :reader serious-condition-format-control
+		   :initarg :format-control
+		   :initform "")
+   (format-arguments :reader serious-condition-format-arguments
+		     :initarg :format-arguments
+		     :initform '()))
+  (:report print-serious-condition))
+
 
 (define-condition error (serious-condition) ())
 
@@ -845,6 +885,8 @@
 	  (simple-condition-format-arguments condition)))
 
 (define-condition simple-error (simple-condition error) ()
+  ;; This is the condition type used by error and cerror when
+  ;; a format-control string is supplied as the first argument.
   (:report print-simple-error))
 
 (define-condition storage-condition (serious-condition) ())
@@ -883,9 +925,9 @@
 
 
 (define-condition program-error (error) ())
-(define-condition parse-error (error) ())
-(define-condition control-error (simple-error) ())
-(define-condition stream-error (error)
+(define-condition parse-error   (error) ())
+(define-condition control-error (error) ())
+(define-condition stream-error  (error)
   ((stream :reader stream-error-stream :initarg :stream)))
 
 (define-condition end-of-file (stream-error) ()

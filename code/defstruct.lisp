@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.61 1998/03/21 08:11:53 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.62 1998/04/20 11:32:50 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -564,7 +564,9 @@
 		spec))
 	spec))
     (when (find name (dd-slots defstruct) :test #'string= :key #'dsd-%name)
-      (error "Duplicate slot name ~S." name))
+      (error 'program-error
+	     :format-control "Duplicate slot name ~S."
+	     :format-arguments (list name)))
     (setf (dsd-%name islot) (string name))
     (setf (dd-slots defstruct) (nconc (dd-slots defstruct) (list islot)))
 

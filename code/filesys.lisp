@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.46 1998/03/01 21:46:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.47 1998/04/20 11:32:51 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -661,11 +661,19 @@
 ;;;
 (defun truename (pathname)
   "Return the pathname for the actual file described by the pathname
-  An error is signalled if no such file exists."
-  (let ((result (probe-file pathname)))
-    (unless result
-      (error "The file ~S does not exist." (namestring pathname)))
-    result))
+  An error of type file-error is signalled if no such file exists,
+  or the pathname is wild."
+  (if (wild-pathname-p pathname)
+      (error 'file-error
+	     :format-control "Bad place for a wild pathname."
+	     :pathname pathname)
+      (let ((result (probe-file pathname)))
+	(unless result
+	  (error 'file-error
+		 :pathname pathname
+		 :format-control "The file ~S does not exist."
+		 :format-arguments (list (namestring pathname))))
+	result)))
 
 ;;; Probe-File  --  Public
 ;;;
@@ -673,15 +681,19 @@
 ;;;
 (defun probe-file (pathname)
   "Return a pathname which is the truename of the file if it exists, NIL
-  otherwise."
-  (let ((namestring (unix-namestring pathname t)))
-    (when (and namestring (unix:unix-file-kind namestring))
-      (let ((truename (unix:unix-resolve-links
-		       (unix:unix-maybe-prepend-current-directory
-			namestring))))
-	(when truename
-	  (let ((*ignore-wildcards* t))
-	    (pathname (unix:unix-simplify-pathname truename))))))))
+  otherwise. An error of type file-error is signaled if pathname is wild."
+  (if (wild-pathname-p pathname)
+      (error 'file-error 
+	     :pathname pathname
+	     :format-control "Bad place for a wild pathname.")
+      (let ((namestring (unix-namestring pathname t)))
+	(when (and namestring (unix:unix-file-kind namestring))
+	  (let ((truename (unix:unix-resolve-links
+			   (unix:unix-maybe-prepend-current-directory
+			    namestring))))
+	    (when truename
+	      (let ((*ignore-wildcards* t))
+		(pathname (unix:unix-simplify-pathname truename)))))))))
 
 
 ;;;; Other random operations.
@@ -696,13 +708,19 @@
 	 (new-name (merge-pathnames new-name original))
 	 (new-namestring (unix-namestring new-name nil)))
     (unless new-namestring
-      (error "~S can't be created." new-name))
+      (error 'file-error
+	     :pathname new-name
+	     :format-control "~S can't be created."
+	     :format-arguments (list new-name)))
     (multiple-value-bind (res error)
 			 (unix:unix-rename original-namestring
 					   new-namestring)
       (unless res
-	(error "Failed to rename ~A to ~A: ~A"
-	       original new-name (unix:get-unix-error-msg error)))
+	(error 'file-error
+	       :pathname new-name
+	       :format-control "Failed to rename ~A to ~A: ~A"
+	       :format-arguments (list original new-name
+				       (unix:get-unix-error-msg error))))
       (when (streamp file)
 	(file-name file new-namestring))
       (values new-name original (truename new-name)))))
@@ -717,13 +735,18 @@
     (when (streamp file)
       (close file :abort t))
     (unless namestring
-      (error "~S doesn't exist." file))
+      (error 'file-error
+	     :pathname file
+	     :format-control "~S doesn't exist."
+	     :format-arguments (list file)))
 
     (multiple-value-bind (res err) (unix:unix-unlink namestring)
       (unless res
-	(error "Could not delete ~A: ~A."
-	       namestring
-	       (unix:get-unix-error-msg err)))))
+	(error 'file-error
+	       :pathname namestring
+	       :format-control "Could not delete ~A: ~A."
+	       :format-arguments (list namestring
+				       (unix:get-unix-error-msg err))))))
   t)
 
 
@@ -740,29 +763,41 @@
 ;;; File-Write-Date  --  Public
 ;;;
 (defun file-write-date (file)
-  "Return file's creation date, or NIL if it doesn't exist."
-  (let ((name (unix-namestring file t)))
-    (when name
-      (multiple-value-bind
-	  (res dev ino mode nlink uid gid rdev size atime mtime)
-	  (unix:unix-stat name)
-	(declare (ignore dev ino mode nlink uid gid rdev size atime))
-	(when res
-	  (+ unix-to-universal-time mtime))))))
+  "Return file's creation date, or NIL if it doesn't exist.
+ An error of type file-error is signaled if file is a wild pathname"
+  (if (wild-pathname-p file)
+      (error 'file-error 
+	     :pathname file
+	     :format-control "Bad place for a wild pathname.")
+      (let ((name (unix-namestring file t)))
+	(when name
+	  (multiple-value-bind
+	      (res dev ino mode nlink uid gid rdev size atime mtime)
+	      (unix:unix-stat name)
+	    (declare (ignore dev ino mode nlink uid gid rdev size atime))
+	    (when res
+	      (+ unix-to-universal-time mtime)))))))
 
 ;;; File-Author  --  Public
 ;;;
 (defun file-author (file)
   "Returns the file author as a string, or nil if the author cannot be
-   determined.  Signals an error if file doesn't exist."
-  (let ((name (unix-namestring (pathname file) t)))
-    (unless name
-      (error "~S doesn't exist." file))
-    (multiple-value-bind (winp dev ino mode nlink uid)
-			 (unix:unix-stat name)
-      (declare (ignore dev ino mode nlink))
-      (if winp (lookup-login-name uid)))))
-
+ determined.  Signals an error of type file-error if file doesn't exist,
+ or file is a wild pathname."
+  (if (wild-pathname-p file)
+      (error 'file-error
+	     :pathname file
+	     "Bad place for a wild pathname.")
+      (let ((name (unix-namestring (pathname file) t)))
+	(unless name
+	  (error 'file-error
+		 :pathname file
+		 :format-control "~S doesn't exist."
+		 :format-arguments (list file)))
+	(multiple-value-bind (winp dev ino mode nlink uid)
+			     (unix:unix-stat name)
+	  (declare (ignore dev ino mode nlink))
+	  (if winp (lookup-login-name uid))))))
 
 
 ;;;; DIRECTORY.
@@ -1181,7 +1216,9 @@
 		       pathname))
 	 (created-p nil))
     (when (wild-pathname-p pathname)
-      (error (make-condition 'file-error :pathname pathspec)))
+      (error 'file-error
+	     :format-control "Bad place for a wild pathname."
+	     :pathname pathspec))
     (enumerate-search-list (pathname pathname)
        (let ((dir (pathname-directory pathname)))
 	 (loop for i from 1 upto (length dir)
@@ -1196,8 +1233,10 @@
 				  namestring))
 			(unix:unix-mkdir namestring mode)
 			(unless (probe-file namestring)
-			  (error (make-condition 'file-error
-						 :pathname pathspec)))
+			  (error 'file-error
+				 :pathname pathspec
+				 :format-control "Can't create directory ~A."
+				 :format-arguments (list namestring))))
 			(setf created-p t)))))
 	 ;; Only the first path in a search-list is considered.
 	 (return (values pathname created-p))))))
