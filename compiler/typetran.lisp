@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.25 1993/09/10 19:09:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.26 1993/11/30 18:02:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -145,6 +145,7 @@
   (define-type-predicate null null)
   (define-type-predicate numberp number)
   (define-type-predicate rationalp rational)
+  (define-type-predicate realp real)
   (define-type-predicate simple-bit-vector-p simple-bit-vector)
   (define-type-predicate simple-string-p simple-string)
   (define-type-predicate simple-vector-p simple-vector)
@@ -215,7 +216,7 @@
 		 (integer (containing-integer-type type))
 		 (rational 'rational)
 		 (float (or (numeric-type-format type) 'float))
-		 ((nil) 'number))))
+		 ((nil) 'real))))
     (once-only ((n-object object))
       (ecase (numeric-type-complexp type)
 	(:real
