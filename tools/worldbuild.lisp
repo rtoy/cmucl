@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.25 1993/07/13 17:05:21 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.26 1993/08/19 12:51:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,7 +82,6 @@
     "target:code/list"
     "target:code/hash"
     "target:code/macros"
-    "target:code/sysmacs"
     "target:code/symbol"
     "target:code/string"
     "target:code/mipsstrops"
