@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.6 1992/01/15 18:15:06 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/cell.lisp,v 1.7 1992/03/10 10:00:02 wlott Exp $
 ;;;
 ;;; This file contains the VM definition of various primitive memory access
 ;;; VOPs for the IBM RT.
@@ -166,7 +166,7 @@
   (:translate symbol-function))
 
 (define-vop (set-symbol-function)
-  (:translate %sp-set-definition)
+  (:translate %set-symbol-function)
   (:policy :fast-safe)
   (:args (symbol :scs (descriptor-reg))
 	 (function :scs (descriptor-reg) :target result))
@@ -200,9 +200,8 @@
 (defknown fmakunbound/symbol (symbol) symbol (unsafe))
 ;;;
 (deftransform fmakunbound ((symbol) (symbol))
-  '(progn
-     (fmakunbound/symbol symbol)
-     t))
+  '(when symbol
+     (fmakunbound/symbol symbol)))
 ;;;
 (define-vop (fmakunbound/symbol)
   (:translate fmakunbound/symbol)
