@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.24 1991/12/20 00:03:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.25 1992/02/15 13:12:53 wlott Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;;
@@ -86,13 +86,13 @@
   (in-directory pathname
     (let ((file (file-namestring pathname)))
       (do-command "rcs" `("-l" ,file))
-      (multiple-value-bind (won dev ino mode) (mach:unix-stat file)
+      (multiple-value-bind (won dev ino mode) (unix:unix-stat file)
 	(declare (ignore ino))
 	(cond (won
-	       (mach:unix-chmod file (logior mode mach:writeown)))
+	       (unix:unix-chmod file (logior mode unix:writeown)))
 	      (t
-	       (editor-error "MACH:UNIX-STAT lost in RCS-LOCK-FILE: ~A"
-			     (mach:get-unix-error-msg dev)))))))
+	       (editor-error "UNIX:UNIX-STAT lost in RCS-LOCK-FILE: ~A"
+			     (unix:get-unix-error-msg dev)))))))
   (invoke-hook rcs-lock-file-hook buffer pathname))
 
 
@@ -175,18 +175,18 @@
 	  ;; the rcs file.
 	  (multiple-value-bind
 	      (dev ino mode nlink uid gid rdev size atime mtime)
-	      (mach:unix-stat rcs-filename)
+	      (unix:unix-stat rcs-filename)
 	    (declare (ignore mode nlink uid gid rdev size))
 	    (cond (dev
 		   (multiple-value-bind
 		       (wonp errno)
-		       (mach:unix-utimes filename (list atime 0 mtime 0))
+		       (unix:unix-utimes filename (list atime 0 mtime 0))
 		     (unless wonp
-		       (editor-error "MACH:UNIX-UTIMES failed: ~A"
-				     (mach:get-unix-error-msg errno)))))
+		       (editor-error "UNIX:UNIX-UTIMES failed: ~A"
+				     (unix:get-unix-error-msg errno)))))
 		  (t
-		   (editor-error "MACH:UNIX-STAT failed: ~A"
-				 (mach:get-unix-error-msg ino)))))
+		   (editor-error "UNIX:UNIX-STAT failed: ~A"
+				 (unix:get-unix-error-msg ino)))))
 	  (delete-buffer-if-possible buffer)))))
 
 
