@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.13 1991/02/20 14:56:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.14 1991/11/15 15:27:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,7 +25,7 @@
 	   backend-any-primitive-type backend-info-environment
 	   backend-instruction-formats backend-instruction-flavors
 	   backend-assembler-resources backend-special-arg-types
-	   backend-features
+	   backend-features backend-disassem-params
 
 	   ;; The various backends need to call these support routines
 	   make-stack-pointer-tn primitive-type primitive-type-of))
@@ -176,6 +176,9 @@
 
   ;; The backend specific features list, if any.
   (features nil :type list)
+
+  ;; Disassembler information.
+  (disassem-params nil :type t)
 
   . #.(mapcar #'(lambda (slot)
 		  `(,slot nil :type (or null function)))
