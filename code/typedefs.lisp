@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.2 1993/02/04 22:37:40 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/typedefs.lisp,v 1.3 1993/02/11 00:17:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -58,9 +58,8 @@
 ;;; This condition is signalled whenever we make a UNKNOWN-TYPE so that
 ;;; compiler warnings can be emitted as appropriate.
 ;;;
-(eval-when (compile load eval)
-  (define-condition parse-unknown-type (condition)
-    (specifier)))
+(define-condition parse-unknown-type (condition)
+  (specifier))
 
 
 ;;;; Cold load hack magic.
