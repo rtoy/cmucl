@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.2 1990/11/03 18:13:36 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/c-call.lisp,v 1.3 1990/11/13 22:59:51 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -16,10 +16,13 @@
 ;;;
 (in-package "MIPS")
 
+(defun my-make-wired-tn (prim-type-name sc-name offset)
+  (make-wired-tn (primitive-type-or-lose prim-type-name *backend*)
+		 (sc-number-or-lose sc-name *backend*)
+		 offset))
+
 (def-vm-support-routine make-call-out-nsp-tn ()
-  (make-wired-tn (primitive-type-or-lose 'positive-fixnum)
-		 (sc-number-or-lose 'any-reg)
-		 nsp-offset))
+  (my-make-wired-tn 'positive-fixnum 'any-reg nsp-offset))
 
 (def-vm-support-routine make-call-out-argument-tns (arg-types)
   (let ((stack-frame-size 0)
@@ -31,60 +34,58 @@
 	  (ecase name
 	    ((unsigned-byte port)
 	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-				     (sc-number-or-lose 'unsigned-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-				     (sc-number-or-lose 'unsigned-stack)
-				     stack-frame-size)))
+		 (tns (my-make-wired-tn 'unsigned-byte-32
+					'unsigned-reg
+					(+ stack-frame-size 4)))
+		 (tns (my-make-wired-tn 'unsigned-byte-32
+					'unsigned-stack
+					stack-frame-size)))
 	     (incf stack-frame-size)
 	     (setf did-int-arg t))
 	    (signed-byte
 	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-				     (sc-number-or-lose 'signed-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-				     (sc-number-or-lose 'signed-stack)
-				     stack-frame-size)))
+		 (tns (my-make-wired-tn 'signed-byte-32
+					'signed-reg
+					(+ stack-frame-size 4)))
+		 (tns (my-make-wired-tn 'signed-byte-32
+					'signed-stack
+					stack-frame-size)))
 	     (incf stack-frame-size)
 	     (setf did-int-arg t))
 	    (system-area-pointer
 	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose
-				      'system-area-pointer)
-				     (sc-number-or-lose 'sap-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose
-				      'system-area-pointer)
-				     (sc-number-or-lose 'sap-stack)
-				     stack-frame-size)))
+		 (tns (my-make-wired-tn 'system-area-pointer
+					'sap-reg
+					(+ stack-frame-size 4)))
+		 (tns (my-make-wired-tn 'system-area-pointer
+					'sap-stack
+					stack-frame-size)))
 	     (incf stack-frame-size)
 	     (setf did-int-arg t))
 	    (double-float
 	     ;; Round to a dual-word.
 	     (setf stack-frame-size (logandc2 (1+ stack-frame-size) 1))
 	     (cond ((>= stack-frame-size 4)
-		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
-					(sc-number-or-lose 'double-stack)
-					stack-frame-size)))
+		    (tns (my-make-wired-tn 'double-float
+					   'double-stack
+					   stack-frame-size)))
 		   ((and (not did-int-arg) (< float-args 2))
-		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
-					(sc-number-or-lose 'double-reg)
-					(+ (* float-args 2) 12))))
+		    (tns (my-make-wired-tn 'double-float
+					   'double-reg
+					   (+ (* float-args 2) 12))))
 		   (t
 		    (error "Can't put floats in int regs yet.")))
 	     (incf stack-frame-size 2)
 	     (incf float-args))
 	    (single-float
 	     (cond ((>= stack-frame-size 4)
-		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
-					(sc-number-or-lose 'single-stack)
-					stack-frame-size)))
+		    (tns (my-make-wired-tn 'single-float
+					   'single-stack
+					   stack-frame-size)))
 		   ((and (not did-int-arg) (< float-args 2))
-		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
-				   (sc-number-or-lose 'single-reg)
-				   (+ (* float-args 2) 12))))
+		    (tns (my-make-wired-tn 'single-float
+					   'single-reg
+					   (+ (* float-args 2) 12))))
 		   (t
 		    (error "Can't put floats in int regs yet.")))
 	     (incf stack-frame-size)
@@ -96,25 +97,16 @@
   (let ((name (if (consp type) (car type) type)))
     (ecase name
       ((unsigned-byte port)
-       (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-		      (sc-number-or-lose 'unsigned-reg)
-		      2))
+       (my-make-wired-tn 'unsigned-byte-32 'unsigned-reg 2))
       (signed-byte
-       (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-		      (sc-number-or-lose 'signed-reg)
-		      2))
+       (my-make-wired-tn 'signed-byte-32 'signed-reg 2))
       (system-area-pointer
-       (make-wired-tn (primitive-type-or-lose 'system-area-pointer)
-		      (sc-number-or-lose 'sap-reg)
-		      2))
+       (my-make-wired-tn 'system-area-pointer 'sap-reg 2))
       (double-float
-       (make-wired-tn (primitive-type-or-lose 'double-float)
-		      (sc-number-or-lose 'double-reg)
-		      0))
+       (my-make-wired-tn 'double-float 'double-reg 0))
       (single-float
-       (make-wired-tn (primitive-type-or-lose 'single-float)
-		      (sc-number-or-lose 'single-reg)
-		      0)))))
+       (my-make-wired-tn 'single-float 'single-reg 0)))))
+
 
 (define-vop (foreign-symbol-address)
   (:info foreign-symbol)

@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.37 1990/11/07 13:17:37 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/vm.lisp,v 1.38 1990/11/13 23:00:46 wlott Exp $
 ;;;
 ;;; This file contains the VM definition for the MIPS R2000 and the new
 ;;; object format.
@@ -297,32 +297,32 @@
 (def-vm-support-routine immediate-constant-sc (value)
   (typecase value
     ((integer 0 0)
-     (sc-number-or-lose 'zero))
+     (sc-number-or-lose 'zero *backend*))
     (null
-     (sc-number-or-lose 'null))
+     (sc-number-or-lose 'null *backend*))
     ((integer #x-1FFF #x-0001)
-     (sc-number-or-lose 'negative-immediate))
+     (sc-number-or-lose 'negative-immediate *backend*))
     ((integer 0 #x1FFE)
-     (sc-number-or-lose 'immediate))
+     (sc-number-or-lose 'immediate *backend*))
     ((integer #x1FFF #x3FFE)
-     (sc-number-or-lose 'unsigned-immediate))
+     (sc-number-or-lose 'unsigned-immediate *backend*))
     (symbol
      (if (vm:static-symbol-p value)
-	 (sc-number-or-lose 'random-immediate)
+	 (sc-number-or-lose 'random-immediate *backend*)
 	 nil))
     (#-new-compiler (signed-byte 30)
      #+new-compiler fixnum
-     (sc-number-or-lose 'random-immediate))
+     (sc-number-or-lose 'random-immediate *backend*))
     #+new-compiler
     (system-area-pointer
-     (sc-number-or-lose 'immediate-sap))
+     (sc-number-or-lose 'immediate-sap *backend*))
     (character
      #-new-compiler
      (if (string-char-p value)
-	 (sc-number-or-lose 'immediate-base-character)
+	 (sc-number-or-lose 'immediate-base-character *backend*)
 	 nil)
      #+new-compiler
-     (sc-number-or-lose 'immediate-base-character))))
+     (sc-number-or-lose 'immediate-base-character *backend*))))
 
 
 ;;;; Function Call Parameters
