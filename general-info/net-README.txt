@@ -4,12 +4,10 @@ is "as is", and has no warranty of any kind.  CMU and the authors assume no
 responsibility for the consequences of any use of this software.  See
 doc/release-notes.txt for a description of the state of the release you have.
 
-The CMU Common Lisp project's goal is to develop a high quality public domain
-system, so we want your bug reports, bug fixes and enhancements.  However,
-staff limitations prevent us from providing extensive support to people outside
-of CMU.  We are looking for university and industrial affiliates to help us
-with porting and maintenance for hardware and software that is not widely used
-at CMU.
+The CMU Common Lisp project is no longer funded, so only minimal support is
+being done at CMU.  There is a net community of CMU Common Lisp users and
+maintainers who communicate via comp.lang.lisp and the cmucl-bugs@cs.cmu.edu
+mailing list.
 
 See "man cmucl" (man/man1/cmucl.1) for other general information.
 
@@ -22,26 +20,36 @@ manpower to make tapes.  These are our distribution machines:
     lisp-rt2.slisp.cs.cmu.edu (128.2.217.10)
 
 Log in with the user "anonymous" and "username@host" as password (i.e. your
-EMAIL address.)  When you log in, cd to /pub (a symbolic link to the CMU CL
-release area.)  If you have any trouble with FTP access, please send mail to
-slisp@cs.cmu.edu.
+EMAIL address.)  When you log in, cd USING ONE SINGLE "cd" COMMAND to
+/afs/cs/project/clisp/release.  If you have any trouble with FTP access, please
+send mail to slisp@cs.cmu.edu.
 
-The most recent version is: 17e
+The most recent version is: 17f
 The old version is: 16f
 
 The currently supported platforms are:
-    sunos:
-        Sun SPARC machines running the the pre-Solaris BSD SunOS system,
-        version 4.x.
+    alpha_osf1:
+	DEC Alpha workstations running OSF1.
 
     hp700_ux90:
         HP 700 series machines (based on the HPPA architecture) running HP/UX
         9.x.
 
-The release area holds compressed tar files with names of the form:
-    <version>-<platform>.tar.Z
-    <version>-extra-<platform>.tar.Z
-    <version>-runtime-<platform>.tar.Z
+    sgi_52:
+	MIPS-based SGI workstations running Irix 5.x.
+
+    sun4c_411:
+        Sun SPARC machines running the the pre-Solaris BSD SunOS system,
+        version 4.x.
+
+    sun4c_53:
+	Sun SPARC machines running Solaris/SunOS 5.x.
+
+
+The release area holds gzip'ed tar files with names of the form:
+    <version>-<platform>.tar.gz
+    <version>-extra-<platform>.tar.gz
+    <version>-runtime-<platform>.tar.gz
 
  -- The first file holds binaries and documentation for the standard Common
     Lisp portion of CMU CL.  This includes our version of the PCL
@@ -52,21 +60,21 @@ The release area holds compressed tar files with names of the form:
     smaller substitute for lib/lisp.core.  See the "runtime distribution"
     section.
 
-The sizes of the configurations are approximately:
+The installed sizes of the configurations are approximately:
     Basic: 15 megabytes
     Basic+Extra: 24 megabytes
     Runtime: 5.3 megabytes
 
 For installation directions, see the section "site initialization".
 
-FTP compressed tar archives in binary mode.  To extract, "cd" to the
+FTP gzip'ed tar archives in binary mode.  To extract, "cd" to the
 directory that is to be the root of the tree, then type:
-    uncompress <file.tar.Z | tar xf - .
+    gzcat file.tar.gz | tar xf - .
 
-If poor network connections make it difficult to transfer a 7 meg file, the
+If poor network connections make it difficult to transfer a 5 meg file, the
 release is also available split into 2 megabyte chunks, suffixed `.0', `.1',
 etc.  To extract from multiple files, use:
-    cat file.tar.Z.* | uncompress | tar xf - .
+    cat file.tar.gz.* | gunzip | tar xf - .
 
 The release area also contains source distributions and other binary
 distributions.  A listing of the current contents of the release area is in
@@ -79,9 +87,13 @@ To run CMU CL, place bin/ in PATH and setenv CMUCLLIB to point to lib/.  The
 file lib/site-init.lisp contains site-specific initialization, such as setting
 of the site name.  Any site-specific initialization should be placed in this
 file; this file can be compiled.  See bin/sample-wrapper for a shell script
-template that sets up environment variables and then runs CMU CL.  You may
-want to have your EMACS maintainer place doc/cmu-user.info in the info root, or
-you can setenv INFOPATH to include the doc/ directory.
+template that sets up environment variables and then runs CMU CL.  CMUCLLIB now
+defaults to /usr/local/lib/cmucl/lib.
+
+You may want to have your EMACS maintainer place doc/cmu-user.info in the info
+root, or you can setenv INFOPATH to include the doc/ directory.  
+[NOTE: the Info version of the manual has become increasingly out of date
+because we can't find a working version of LaTexInfo.]
 
 To load in CLX, the Motif interface and windowing debugger, or Hemlock and save
 an augmented Lisp image, run lib/config.  This runs `lisp' on
@@ -91,14 +103,24 @@ library:lisp.core.  To avoid overwriting the running Lisp image, any existing
 image is renamed to `lisp.core.BAK'; this file may be manually deleted to save
 disk space.
 
-[NOTE: Motif server doesn't work on HP yet.]
 
-Note: In order to use Motif (and the graphical debugger) with X servers from
-non-OSF vendors (like Sun) you may need to set the environment variable
-XKEYSYMDB to point to the file lib/XKeySymDB.  Otherwise, you will get many
-error messages every time a new connection is opened to the CMU CL motifd.
-This file is read by the X11R5 Xt in order to augment the keysym database with
-certain OSF vendor keysyms that Motif wants to use.
+MOTIF NOTE:
+
+The Motif server doesn't work on Alpha/OSF1 yet.
+
+On all platforms, the Motif interface should be considered somewhat
+experimental.  The code has been compiled with type checking and debug info.
+If Motif is loaded, the graphical inspector/debugger becomes the default, but
+this can be disabled by:
+  (setf interface:*interface-style* :tty)
+
+In order to use Motif (and the graphical debugger) with X servers from non-OSF
+vendors (like Sun) you may need to set the environment variable XKEYSYMDB to
+point to the file lib/XKeysymDB.  The environment variable value should include
+the file name XKeysymDB, not just the path.  Otherwise, you will get many error
+messages every time a new connection is opened to the CMU CL motifd.  This file
+is read by the X11R5 Xt in order to augment the keysym database with certain
+OSF vendor keysyms that Motif wants to use.
 
 If you get errors about being unable to start the Motif server, try:
  -- Setting DISPLAY to the full hostname, like:
@@ -108,15 +130,16 @@ If you get errors about being unable to start the Motif server, try:
  -- Make sure CMUCLLIB points to the lib/ directory, and that motifd is 
     in the lib/ directory.
 
+
 Installation example (assuming the distribution files are in the cwd):
 
     % mkdir cmucl
     % cd cmucl
-    % zcat ../17c-sunos.tar.Z | tar xf -
-    % zcat ../17c-extra-sunos.tar.Z | tar xf -
+    % gzcat ../17c-sunos.tar.gz | tar xf -
+    % gzcat ../17c-extra-sunos.tar.gz | tar xf -
     % cd lib
     % setenv CMUCLLIB `pwd`
-    % setenv XKEYSYMDB `pwd`
+    % setenv XKEYSYMDB `pwd`/XKeysymDB
     % cd ../bin
     % setenv PATH $PATH":"`pwd`
 
@@ -159,7 +182,7 @@ Use config to load optional subsystems:
 
 Runtime distributions:
 
-The <version>-runtime-<platform>.tar.Z distribution contains a small alternate
+The <version>-runtime-<platform>.tar.gz distribution contains a small alternate
 version of lib/lisp.core called lib/runtime.core.  If you say:
     lisp -core lib/runtime.core
 
@@ -196,8 +219,8 @@ like in:
 
 SunOS/SPARC Notes:
 
-With this release, CMU CL should require no special effort to run on Sparc10's
-under SunOS.  Solaris >=2 is still not supported.
+With this release, there are now two Sun versions, one for SunOS 4.x and one
+for SunOS 5.x (Solaris.)
 
 At least 16 meg of memory is recommended, and more is better.  Your system
 maintainer may need to configure extra paging space for large Lisp
@@ -231,8 +254,20 @@ CMU CL only runs with HP/UX version 9.x.  Currently there are two major quirks:
     shell script, Lisp keeps trying to read from the terminal even though the
     shell is too.  Note that the CMUCLLIB environment variable is used to
     locate lisp.orig (the actual startup code.)
+ -- load-foreign does work now, but it only recognizes one particular object
+    file format (which is not the one used by the version of gcc we have.)  
+    "file foo.o" must print:
+	foo.o:		PA-RISC1.1 relocatable object
 
-Also, LOAD-FOREIGN is not implemented yet.
+
+Alpha/OSF1 and SGI/Irix notes:
+
+LOAD-FOREIGN has not been implemented for these platforms yet.  Feel free to
+add support to code/foreign.lisp (and let us know.)
+
+Motifd seems to work on Irix, but has not been tested.  Motifd does not run on
+Alpha/OSF1.  At a minimum, this would require fixing places that currently
+use "long" to mean 32 bits.
 
 
 Running CMU CL:
@@ -252,7 +287,7 @@ freely distributed without any licensing agreement or fee.
 
 The release area contains a source distribution, which is an image of all the
 source code files used to build the current version:
-    <version>-source.tar.Z (5 meg)
+    <version>-source.tar.gz (3 meg)
 
 A brief overview of the source tree:
     Totally machine-independent compiler code:
@@ -264,10 +299,11 @@ A brief overview of the source tree:
     particularly machine-dependent:
 	.../compiler/generic/*.lisp
 
-    Compiler back-end for the MIPS, SPARC and HPPA
+    Compiler back-end for the MIPS, SPARC, HPPA and Alpha
 	.../compiler/mips/*.lisp
 	.../compiler/sparc/*.lisp
 	.../compiler/hppa/*.lisp
+	.../compiler/alpha/*.lisp
 
     Miscellaneous Lisp run-time code:
 	.../code/*.lisp
@@ -277,13 +313,33 @@ A brief overview of the source tree:
 
 
 There is also a distribution of documentation sources:
-    documents.tar.Z
+    documents.tar.gz
 
-The contents of the ".../internals/" directory may be of interest.  This is
-A very drafty version of an internal design document: (160 pages) Some of
-the "tex" files may be more humanly readable, since many formatting
-commands need to be added.  There is some inaccurate (dated) material in
-the compiler description.
+The contents of the ".../internals/" directory in the document distribution may
+be of interest.  This is a very drafty 160 page version of an internal design
+document.  Some of the "tex" files may be more humanly readable, since many
+formatting commands need to be added.  There is some inaccurate (dated)
+material in the compiler description.
 
 See ".../internals/architecture.tex (the System Architecture chapter in the
 internals document) for more information on the source tree organization.
+
+
+Building from sources:
+
+Recompiling CMU CL is somewhat arcane, and also requires a machine with a
+working CMU CL and lots of memory and paging space.  The minimum amount of
+memory and paging space will depend on the platform, but 32meg of memory and
+100 meg of paging space is probably safe.  You will also need at least 100meg
+of free disk space for source and object files.
+
+The build procedure is somewhat involved.  In particular, some C header files
+are actually generated by the Lisp compilation process.  See
+internals/architecture.tex in the documents distribution for some discussion of
+building.  Also, see tools/build-and-install, a script that David Axmark
+developed for automating the process.
+
+Porting CMU CL to a new architecture requires much, much more than just
+recompilation, since it requires writing a new compiler backend.  Porting to a
+new Unix is easy in comparison, but still not very easy, since Lisp source code
+still needs to be modified.
