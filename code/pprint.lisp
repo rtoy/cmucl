@@ -20,21 +20,13 @@
 (export '(grindef))
 (in-package "LISP")
 
-#|
-(defun pprin1 (object &optional stream)
-  "Prettily outputs the Object to the Stream slashifying special characters."
-  (xp::prin1 object stream)
-  (values))
+(defvar *pprint-initialized* nil)
 
-(defun pprinc (object &optional stream)
-  "Prettily outputs the Object to the Stream without slashifying."
-  (xp::princ object stream)
-  (values))
-|#
 
 (defun pprint (object &optional stream)
   "Prettily outputs the Object preceded by a newline and followed by a space."
-  (xp::pprint object stream)
+  (let ((*print-pretty* t))
+    (output-pretty-object object stream))
   (values))
 
 ;;; OUTPUT-PRETTY-OBJECT is called by WRITE, PRIN1, PRINC, and their associated
@@ -45,12 +37,14 @@
 ;;;
 (defun output-pretty-object (object stream)
   (assert *print-pretty*)
-  (typecase object
-    #+nil
-    ((or list structure vector array)
-     (xp::basic-write object stream))
-    (t (let ((*print-pretty* nil))
-	 (output-object object stream)))))
+  (if (and *pprint-initialized*
+	   (typep object '(or list structure vector array)))
+      (xp::basic-write object stream)
+      (let ((*print-pretty* nil))
+	(output-object object stream))))
+
+
+#|
 
 (defun pretty-lambda-to-defun (name lambda &optional arglist)
   `(defun ,name ,(or arglist (cadr lambda))
@@ -72,6 +66,7 @@
 	   `(pprint '(setf (symbol-function ,function-name) ',stuff))))
      nil))
 
+|#
 
 ;;; Tab-Over prints the specified number of spaces on *Standard-Output*.
 ;;; Taken from the old pretty printer.  Needed by some function in filesys.
@@ -85,5 +80,7 @@
 
 ;;; Initialize Water's pretty printer.
 (defun pprint-init ()
-  (xp::install :package "XP" :shadow nil))
+  (xp::install :package "XP" :shadow nil)
+  (setf *pprint-initialized* t)
+  (setf *print-pretty* t))
 
