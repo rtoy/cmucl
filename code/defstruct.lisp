@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.11 1993/02/17 12:27:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.12 1993/02/17 17:10:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1089,7 +1089,10 @@
 				     (constructor 'make-structure-class))
 			  (dd-alternate-metaclass info)
 	(declare (ignore name))
-	(insured-find-class (dd-name info) (find-class class)
+	(insured-find-class (dd-name info)
+			    (if (eq class 'structure-class)
+				#'(lambda (x) (typep x 'structure-class))
+				#'(lambda (x) (typep x (find-class class))))
 			    (fdefinition constructor)))
     (let ((new-layout (make-layout :class class
 				   :inherits inherits
