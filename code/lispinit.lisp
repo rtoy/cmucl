@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.31 1992/02/29 02:29:50 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.32 1992/03/08 18:30:32 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -494,7 +494,10 @@
   ;; Many top-level forms call INFO, (SETF INFO).
   (print-and-call c::globaldb-init)
 
-  ;; Some of the random top-level forms call Make-Array, which calls Subtypep...
+  ;; Set up the fdefn database.
+  (print-and-call fdefn-init)
+
+  ;; Some of the random top-level forms call Make-Array, which calls Subtypep
   (print-and-call type-init)
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
