@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.37 1991/04/20 14:11:06 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.38 1991/05/31 14:18:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1291,13 +1291,15 @@
 ;;; Continuation-Function-Name  --  Interface
 ;;;
 ;;;    If Cont's only use is a non-notinline global function reference, then
-;;; return the referenced symbol, otherwise NIL.
+;;; return the referenced symbol, otherwise NIL.  If Notinline-OK is true, then
+;;; we don't care if the ref is notinline.
 ;;;
-(defun continuation-function-name (cont)
+(defun continuation-function-name (cont &optional notinline-ok)
   (declare (type continuation cont))
   (let ((use (continuation-use cont)))
     (if (and (ref-p use)
-	     (not (eq (ref-inlinep use) :notinline)))
+	     (or (not (eq (ref-inlinep use) :notinline))
+		 notinline-ok))
 	(let ((leaf (ref-leaf use)))
 	  (if (and (global-var-p leaf)
 		   (eq (global-var-kind leaf) :global-function))
