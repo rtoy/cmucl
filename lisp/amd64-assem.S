@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.2 2004/06/10 01:47:35 cwang Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/amd64-assem.S,v 1.3 2004/06/22 22:05:50 cwang Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -833,13 +833,17 @@ GNAME(resolve_linkage_tramp):
 	pushq	%rbp		# save old frame pointer
 	movq	%rsp,%rbp	# establish new frame
 	pushq	%rax
-	pushq	%rbx
+	# rbx is callee saved
 	pushq	%rcx
 	pushq	%rdx
 	pushq	%rdi
 	pushq	%rsi
-	/* maybe save r8-15 too */
-	
+	pushq	%r8
+	pushq	%r9
+	pushq	%r10
+	pushq	%r11
+	# r12-15 is callee saved
+		
 	/* calling location (plus offset) was on top of stack */
 	movq	8(%rbp), %rdi	# arg 1 for C function
 	call	GNAME(lazy_resolve_linkage)
@@ -848,12 +852,14 @@ GNAME(resolve_linkage_tramp):
 	 * registers!
 	 */
 	movq	%rax,8(%rbp)
-	/* maybe pop r8-15 too */
+	popq	%r11
+	popq	%r10
+	popq	%r9
+	popq	%r8
 	popq	%rsi
 	popq	%rdi
 	popq	%rdx
 	popq	%rcx
-	popq	%rbx
 	popq	%rax
 	popq	%rbp
 	ret			# jump to the real target
