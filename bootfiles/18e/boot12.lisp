@@ -9,11 +9,24 @@
 ;;;
 ;;; Move FDEFN-OR-LOSE to KERNEL and export it from there.
 ;;;
+
+(in-package :lisp)
+
+(unless (fboundp 'fdefn-or-lose)
+(defun fdefn-or-lose (name)
+  "Return the FDEFN of NAME.  Signal an error if there is none
+     or if it's function is null."
+       (let ((fdefn (fdefinition-object name nil)))
+           (unless (and fdefn (fdefn-function fdefn))
+	         (error 'undefined-function :name name))
+		     fdefn)))
+
+(in-package :user)
+
 (setf (fdefinition 'kernel::fdefn-or-lose)
       (fdefinition 'lisp::fdefn-or-lose))
 (unintern 'cl::fdefn-or-lose :cl)
 (export 'kernel::fdefn-or-lose :kernel)
-
 
 (in-package :profile)
 
