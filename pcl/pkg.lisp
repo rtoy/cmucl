@@ -121,7 +121,7 @@
 );eval-when 
 
 #-(or KCL IBCL)
-(export '#.*exports* *the-pcl-package*)
+(export *exports* *the-pcl-package*)
 
 #+(or KCL IBCL)
 (mapc 'export (list *exports*) (list *the-pcl-package*))
