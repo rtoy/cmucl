@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.44 2003/05/26 14:16:58 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.45 2004/04/22 12:12:04 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,9 +18,6 @@
 
 #+sparc (defconstant foreign-segment-start #xe0000000)
 #+sparc (defconstant foreign-segment-size  #x00100000)
-
-#+pmax (defconstant foreign-segment-start #x00C00000)
-#+pmax (defconstant foreign-segment-size  #x00400000)
 
 #+hppa (defconstant foreign-segment-start #x10C00000)
 #+hppa (defconstant foreign-segment-size  #x00400000)
@@ -69,7 +66,7 @@
     (trsize c-call:unsigned-long)
     (drsize c-call:unsigned-long)))
 
-#-(or OpenBSD linux svr4)
+#-(or linux bsd svr4)
 (defun allocate-space-in-foreign-segment (bytes)
   (let* ((pagesize-1 (1- (get-page-size)))
 	 (memory-needed (logandc2 (+ bytes pagesize-1) pagesize-1))
@@ -82,14 +79,14 @@
     addr))
 
 
-;;;
-;;;  Elf object file loading for statically linked CMUCL under
-;;;  FreeBSD.
+;;; ELF object file loading. Note that the conditionalization is
+;;; assuming that all of Linux/x86, Linux/Alpha, FreeBSD/x86,
+;;; OpenBSD/x86, and Solaris ports support ELF. 
 ;;;
 ;;; The following definitions are taken from
 ;;; /usr/include/sys/elf_common.h and /usr/include/sys/elf32.h.
 ;;;
-#+(or NetBSD (and FreeBSD elf (not FreeBSD4)))
+#+(or linux bsd svr4)
 (progn
 (alien:def-alien-type elf-address      (alien:unsigned 32))
 (alien:def-alien-type elf-half-word    (alien:unsigned 16))
@@ -197,9 +194,28 @@
     (t (format nil "Unknown ABI (~D)" id))))
 
 (defun elf-executable-p (n)
-  "Given a file type number, determine if the file is executable."
+  "Given a file type number, determine whether the file is executable."
   (= n et-executable))
 
+(defun file-shared-library-p (pathname)
+  (with-open-file (obj pathname
+                       :direction :input
+                       :element-type '(unsigned-byte 8))
+    (let ((fd (lisp::fd-stream-fd obj)))
+      (alien:with-alien ((header eheader))
+        (unix:unix-read fd (alien:alien-sap header) (alien:alien-size eheader :bytes))
+        (when (elf-p (alien:slot header 'elf-ident))
+          (eql et-shared-object (alien:slot header 'elf-type)))))))
+) ;; #+(or linux bsd svr4)
+
+
+
+;; "old-style" loading of foreign code. This involves calling a
+;; platform-specific script that is installed as
+;; library:load-foreign.csh to convert the object files into a form
+;; that is suitable for being stuffed into memory at runtime. 
+#-(or linux bsd svr4)
+(progn
 (defun load-object-file (name)
   ;; NAME designates a tempory file created by ld via "load-foreign.csh".
   ;; Its contents are in a form suitable for stuffing into memory for
@@ -273,8 +289,9 @@ to skip undefined symbols which don't have an address."
 		      symbol old-address address))
 	      (setf (gethash symbol symbol-table) address))))))
     (setf lisp::*foreign-symbols* symbol-table)))
-)
-
+) ;; #-(or linux bsd svr4)
+
+
 
 ;;; pw-- This seems to work for FreeBSD. The MAGIC field is not tested
 ;;; for correct file format so it may croak if ld fails to produce the
@@ -298,67 +315,6 @@ to skip undefined symbols which don't have an address."
 	    (unix:unix-read fd addr len-of-text-and-data)))
       (unix:unix-close fd))))
 
-
-#+pmax
-(alien:def-alien-type filehdr
-  (alien:struct nil
-    (magic c-call:unsigned-short)
-    (nscns c-call:unsigned-short)
-    (timdat c-call:long)
-    (symptr c-call:long)
-    (nsyms c-call:long)
-    (opthdr c-call:unsigned-short)
-    (flags c-call:unsigned-short)))
-
-#+pmax
-(alien:def-alien-type aouthdr
-  (alien:struct nil
-    (magic c-call:short)
-    (vstamp c-call:short)
-    (tsize c-call:long)
-    (dsize c-call:long)
-    (bsize c-call:long)
-    (entry c-call:long)
-    (text_start c-call:long)
-    (data_start c-call:long)))
-
-#+pmax
-(defconstant filhsz 20)
-#+pmax
-(defconstant aouthsz 56)
-#+pmax
-(defconstant scnhsz 40)
-
-#+pmax
-(defun load-object-file (name)
-  (format t ";;; Loading object file...~%")
-  (multiple-value-bind (fd errno) (unix:unix-open name unix:o_rdonly 0)
-    (unless fd
-      (error "Could not open ~S: ~A" name (unix:get-unix-error-msg errno)))
-    (unwind-protect
-	(alien:with-alien ((filehdr filehdr)
-			   (aouthdr aouthdr))
-	  (unix:unix-read fd
-			  (alien:alien-sap filehdr)
-			  (alien:alien-size filehdr :bytes))
-	  (unix:unix-read fd
-			  (alien:alien-sap aouthdr)
-			  (alien:alien-size aouthdr :bytes))
-	  (let* ((len-of-text-and-data
-		  (+ (alien:slot aouthdr 'tsize) (alien:slot aouthdr 'dsize)))
-		 (memory-needed
-		  (+ len-of-text-and-data (alien:slot aouthdr 'bsize)))
-		 (addr (allocate-space-in-foreign-segment memory-needed))
-		 (pad-size-1 (if (< (alien:slot aouthdr 'vstamp) 23) 7 15)))
-	    (unix:unix-lseek fd
-			     (logandc2 (+ filhsz aouthsz
-					  (* scnhsz
-					     (alien:slot filehdr 'nscns))
-					  pad-size-1)
-				       pad-size-1)
-			     unix:l_set)
-	    (unix:unix-read fd addr len-of-text-and-data)))
-      (unix:unix-close fd))))
 
 #+hppa
 (alien:def-alien-type nil
@@ -484,7 +440,8 @@ to skip undefined symbols which don't have an address."
             ))
       (unix:unix-close fd))))
 
-#-(or OpenBSD linux solaris irix NetBSD (and FreeBSD elf))
+#-(or linux bsd solaris irix)
+(progn
 (defun parse-symbol-table (name)
   (format t ";;; Parsing symbol table...~%")
   (let ((symbol-table (make-hash-table :test #'equal)))
@@ -504,7 +461,6 @@ to skip undefined symbols which don't have an address."
 	    (setf (gethash symbol symbol-table) address)))))
     (setf lisp::*foreign-symbols* symbol-table)))
 
-#-(or OpenBSD linux irix solaris)
 (defun load-foreign (files &key
 			   (libraries '("-lc"))
 			   (base-file
@@ -590,13 +546,15 @@ to skip undefined symbols which don't have an address."
 
 (export '(alternate-get-global-address))
 
-#-(or OpenBSD linux solaris irix)
 (defun alternate-get-global-address (symbol)
   (declare (type simple-string symbol)
 	   (ignore symbol))
   0)
+) ;; #-(or linux bsd solaris irix)
 
-#+(or OpenBSD linux solaris irix FreeBSD4)
+
+;; Modern dlopen()-based loading of shared libraries
+#+(or linux bsd solaris irix)
 (progn
 
 (defconstant rtld-lazy 1
@@ -622,7 +580,7 @@ to skip undefined symbols which don't have an address."
 
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
-  #+(or OpenBSD linux irix FreeBSD4) "/usr/bin/ld")
+  #-solaris "/usr/bin/ld")
 
 (alien:def-alien-routine dlopen system-area-pointer
   (file c-call:c-string) (mode c-call:int))
@@ -695,7 +653,7 @@ to skip undefined symbols which don't have an address."
 
 (defun alternate-get-global-address (symbol)
   (ensure-lisp-table-opened)
-  ;; find the symbol in any of the loaded obbjects,
+  ;; find the symbol in any of the loaded objects,
   ;; search in reverse order of loading, later loadings
   ;; take precedence
   (let ((result 0))
@@ -709,68 +667,80 @@ to skip undefined symbols which don't have an address."
 			   (base-file nil)
 			   (env ext:*environment-list*)
 		           (verbose *load-verbose*))
-  "Load-foreign loads a list of C object files into a running Lisp.  The files
-  argument should be a single file or a list of files.  The files may be
-  specified as namestrings or as pathnames.  The libraries argument should be a
-  list of library files as would be specified to ld.  They will be searched in
-  the order given.  The default is just \"-lc\", i.e., the C library.  The
-  base-file argument is used to specify a file to use as the starting place for
-  defined symbols.  The default is the C start up code for Lisp.  The env
-  argument is the Unix environment variable definitions for the invocation of
-  the linker.  The default is the environment passed to Lisp."
+  "Load C object files into the running Lisp. The FILES argument
+should be a single file or a list of files. The files may be specified
+as namestrings or as pathnames. The LIBRARIES argument should be a
+list of library files as would be specified to ld. They will be
+searched in the order given. The default is just \"-lc\", i.e., the C
+library. The BASE-FILE argument is used to specify a file to use as
+the starting place for defined symbols. The default is the C start up
+code for Lisp. The ENV argument is the Unix environment variable
+definitions for the invocation of the linker. The default is the
+environment passed to Lisp."
   ;; Note: dlopen remembers the name of an object, when dlopenin
   ;; the same name twice, the old objects is reused.
   (declare (ignore base-file))
-  (let ((output-file (pick-temporary-file-name
-		      (concatenate 'string "/tmp/~D~C" (string (gensym)))))
-	(error-output (make-string-output-stream)))
+  ;; if passed a single shared object that can be loaded directly via
+  ;; dlopen(), do that instead of using the linker
+  (cond ((and (atom files)
+              (probe-file files)
+              (file-shared-library-p files))
+         (when verbose
+           (format t ";;; Opening shared library ~A ...~%" files))
+         (load-object-file files)
+         (when verbose
+           (format t ";;; Done.~%")))
+        (t
+         (let ((output-file (pick-temporary-file-name
+                             (concatenate 'string "/tmp/~D~C" (string (gensym)))))
+               (error-output (make-string-output-stream)))
  
-    (when verbose
-      (format t ";;; Running ~A...~%" *dso-linker*)
-      (force-output))
+           (when verbose
+             (format t ";;; Running ~A...~%" *dso-linker*)
+             (force-output))
     
-    (let ((proc (ext:run-program
-		 *dso-linker*
-		 (list*
-		        #+(or solaris linux FreeBSD4) "-G"
-			#+(or OpenBSD irix) "-shared"
-			"-o"
-			output-file
-			;; Cause all specified libs to be loaded in full
-			#+(or OpenBSD linux FreeBSD4) "--whole-archive"
-			#+solaris "-z" #+solaris "allextract"
-			(append (mapcar
-				 #'(lambda (name)
-				     (or (unix-namestring name)
-					 (error 'simple-file-error
-						:pathname name
-						:format-control
-						"File does not exist: ~A."
-						:format-arguments
-						(list name))))
-				 (if (atom files)
-				     (list files)
-				     files))
-				;; Return to default ld behaviour for libs
-				(list
-				 #+(or OpenBSD linux FreeBSD4)
-				 "--no-whole-archive"
-				 #+solaris "-z" #+solaris "defaultextract")
-				libraries))
-		 :env env
-		 :input nil
-		 :output error-output
-		 :error :output)))
-      (unless proc
-       (error "Could not run ~A" *dso-linker*))
-      (unless (zerop (ext:process-exit-code proc))
-	(system:serve-all-events 0)
-        (error "~A failed:~%~A" *dso-linker*
-	       (get-output-stream-string error-output)))
-      (load-object-file output-file)
-      (unix:unix-unlink output-file)
-      ))
-  (when verbose
-    (format t ";;; Done.~%")
-    (force-output)))
-)
+           (let ((proc (ext:run-program
+                        *dso-linker*
+                        (list*
+                         #+(or solaris linux FreeBSD4) "-G"
+                         #+(or OpenBSD irix) "-shared"
+                         "-o"
+                         output-file
+                         ;; Cause all specified libs to be loaded in full
+                         #+(or OpenBSD linux FreeBSD4) "--whole-archive"
+                         #+solaris "-z" #+solaris "allextract"
+                         (append (mapcar
+                                  #'(lambda (name)
+                                      (or (unix-namestring name)
+                                          (error 'simple-file-error
+                                                 :pathname name
+                                                 :format-control
+                                                 "File does not exist: ~A."
+                                                 :format-arguments
+                                                 (list name))))
+                                  (if (atom files)
+                                      (list files)
+                                      files))
+                                 ;; Return to default ld behaviour for libs
+                                 (list
+                                  #+(or OpenBSD linux FreeBSD4)
+                                  "--no-whole-archive"
+                                  #+solaris "-z" #+solaris "defaultextract")
+                                 libraries))
+                        :env env
+                        :input nil
+                        :output error-output
+                        :error :output)))
+             (unless proc
+               (error "Could not run ~A" *dso-linker*))
+             (unless (zerop (ext:process-exit-code proc))
+               (system:serve-all-events 0)
+               (error "~A failed:~%~A" *dso-linker*
+                      (get-output-stream-string error-output)))
+             (load-object-file output-file)
+             (unix:unix-unlink output-file)))
+         (when verbose
+           (format t ";;; Done.~%")
+           (force-output)))))
+
+) ;; #+(or linux bsd solaris irix)
