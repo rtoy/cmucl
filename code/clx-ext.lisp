@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.12 1997/05/14 21:03:53 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.12.2.1 1997/07/21 16:14:05 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,18 +82,7 @@
 				 (setf screen-num
 				       (parse-integer string :start start
 						      :end second-dot)))))))))))
-      ;; CLX 5.2 adds support for authorization stuff. This breaks the
-      ;; use of "unix" as a host name because x-open-stream will by default
-      ;; attempt to get some authorization parameters and calls xlib::host-address
-      ;; which will try to resolve "unix" and fail, unless there is a valid 
-      ;; alias named "unix". I (pw) mis-diagnosed this originally and disabled
-      ;; "unix" as a default host (see above) which broke the AF_UNIX interface.
-      ;; The "fix" (lacking real support of authorization) is to set these data
-      ;; manually to what would have been returned by get-best-authorization.
-      (let ((display (xlib:open-display host-name
-					:display display-num
-					:authorization-name ""
-					:authorization-data "")))
+      (let ((display (xlib:open-display host-name :display display-num)))
 	(when screen-num
 	  (let* ((screens (xlib:display-roots display))
 		 (num-screens (length screens)))
