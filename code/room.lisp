@@ -1,23 +1,22 @@
 ;;; -*- Mode: Lisp; Package: VM -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; Spice Lisp is currently incomplete and under active development.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (Scott.Fahlman@CS.CMU.EDU). 
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
+;;;
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.4 1991/03/17 14:28:27 wlott Exp $")
+;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.3 1990/10/12 15:08:16 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.4 1991/03/17 14:28:27 wlott Exp $
 ;;; 
 ;;; Heap grovelling memory usage stuff.
 ;;; 
 (in-package "VM")
 (use-package "SYSTEM")
-(in-package "C")
-(import '(function-code-header make-lisp-obj dynamic-space-free-pointer
-	  code-code-size vector-length)
-	"VM")
 (in-package "LISP")
 (import '(
 	  dynamic-0-space-start dynamic-1-space-start read-only-space-start
@@ -25,6 +24,7 @@
 	  *static-space-free-pointer* *read-only-space-free-pointer*)
 	"VM")
 (in-package "VM")
+(import '(di::make-lisp-obj))
 
 
 ;;;; Type format database.
@@ -35,8 +35,9 @@
   (name nil :type symbol)
   ;;
   ;; Kind of type (how we determine length).
-  (kind nil :type (member :lowtag :fixed :header :vector
-			  :string :code :closure :structure))
+  (kind (required-argument)
+	:type (member :lowtag :fixed :header :vector
+		      :string :code :closure :structure))
   ;;
   ;; Length if fixed-length, shift amount for element size if :vector.
   (length nil :type (or fixnum null)))
@@ -137,7 +138,7 @@
 (proclaim '(inline vector-total-size))
 (defun vector-total-size (obj info)
   (let ((shift (room-info-length info))
-	(len (+ (vector-length obj)
+	(len (+ (length (the vector obj))
 		(ecase (room-info-kind info)
 		  (:vector 0)
 		  (:string 1)))))
@@ -189,6 +190,17 @@
 			     word-bytes))))
 	      (funcall fun obj header-type size)
 	      (setq current (sap+ current size))))
+	   ((eq (room-info-kind info) :structure)
+	    (let* ((obj (make-lisp-obj
+			 (logior (sap-int current) structure-pointer-type)))
+		   (size (round-to-dualword
+			  (* (+ (c::structure-length obj) 1) word-bytes))))
+	      (declare (fixnum size))
+	      (funcall fun obj header-type size)
+	      (assert (zerop (logand size lowtag-mask)))
+	      (when (> size 200000) (break "Implausible size, prev ~S" prev))
+	      (setq prev current)
+	      (setq current (sap+ current size))))
 	   (t
 	    (let* ((obj (make-lisp-obj
 			 (logior (sap-int current) other-pointer-type)))
@@ -201,9 +213,6 @@
 			     (* (room-info-length info) word-bytes)))
 			   ((:vector :string)
 			    (vector-total-size obj info))
-			   (:structure
-			    (round-to-dualword
-			     (* (+ (c::structure-length obj) 2) word-bytes)))
 			   (:header
 			    (round-to-dualword
 			     (* (1+ (get-header-data obj)) word-bytes)))
@@ -363,7 +372,8 @@
   (let ((code-words 0)
 	(no-ops 0)
 	(total-bytes 0))
-    (declare (fixnum code-words no-ops))
+    (declare (fixnum code-words no-ops)
+	     (type unsigned-byte total-bytes))
     (map-allocated-objects
      #'(lambda (obj type size)
  	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
@@ -385,6 +395,69 @@
   (values))
 
 
+;;; DESCRIPTOR-VS-NON-DESCRIPTOR-STORAGE  --  Public
+;;;
+(defun descriptor-vs-non-descriptor-storage (&rest spaces)
+  (let ((descriptor-words 0)
+	(non-descriptor-headers 0)
+	(non-descriptor-bytes 0))
+    (declare (type unsigned-byte descriptor-words non-descriptor-headers
+		   non-descriptor-bytes))
+    (dolist (space (or spaces '(:read-only :static :dynamic)))
+      (declare (inline map-allocated-objects))
+      (map-allocated-objects
+       #'(lambda (obj type size)
+	   (declare (fixnum size) (optimize (speed 3) (safety 0)))
+	   (case type
+	     (#.code-header-type
+	      (let ((inst-words
+		     (truly-the fixnum (%primitive code-code-size obj))))
+		(declare (type fixnum inst-words))
+		(incf non-descriptor-bytes (* inst-words word-bytes))
+		(incf descriptor-words
+		      (- (truncate size word-bytes) inst-words))))
+	     ((#.bignum-type
+	       #.single-float-type
+	       #.double-float-type
+	       #.simple-string-type
+	       #.simple-bit-vector-type
+	       #.simple-array-unsigned-byte-2-type
+	       #.simple-array-unsigned-byte-4-type
+	       #.simple-array-unsigned-byte-8-type
+	       #.simple-array-unsigned-byte-16-type
+	       #.simple-array-unsigned-byte-32-type
+	       #.simple-array-single-float-type
+	       #.simple-array-double-float-type)
+	      (incf non-descriptor-headers)
+	      (incf non-descriptor-bytes (- size word-bytes)))
+	     ((#.list-pointer-type
+	       #.structure-pointer-type
+	       #.ratio-type
+	       #.complex-type
+	       #.simple-array-type
+	       #.simple-vector-type
+	       #.complex-string-type
+	       #.complex-bit-vector-type
+	       #.complex-vector-type
+	       #.complex-array-type
+	       #.closure-header-type
+	       #.funcallable-instance-header-type
+	       #.value-cell-header-type
+	       #.symbol-header-type
+	       #.sap-type
+	       #.weak-pointer-type
+	       #.structure-header-type)
+	      (incf descriptor-words (truncate size word-bytes)))
+	     (t
+	      (error "Bogus type: ~D" type))))
+       space))
+    (format t "~:D words allocated for descriptor objects.~%"
+	    descriptor-words)
+    (format t "~:D bytes data/~:D words header for non-descriptor objects.~%"
+	    non-descriptor-bytes non-descriptor-headers)
+    (values)))
+
+
 ;;; STRUCTURE-USAGE  --  Public
 ;;;
 (defun structure-usage (space &key (top-n 15))
@@ -399,8 +472,7 @@
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
-	 (when (and (eql type simple-vector-type)
-		    (eql (get-header-data obj) vector-structure-subtype))
+	 (when (eql type structure-header-type)
 	   (incf total-objects)
 	   (incf total-bytes size)
 	   (let* ((name (svref obj 0))
