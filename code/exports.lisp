@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.104 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.105 1995/02/17 00:04:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -38,9 +38,9 @@
     (rename-package "EVAL" "EVAL" 'nil)
     (make-package "EVAL" :nicknames 'nil :use nil))
 #+pmax
-(if (find-package "MIPS")
-    (rename-package "MIPS" "MIPS" '("VM" "OLD-MIPS"))
-    (make-package "MIPS" :nicknames '("VM" "OLD-MIPS") :use nil))
+(if (find-package "PMAX")
+    (rename-package "PMAX" "PMAX" '("VM" "OLD-PMAX"))
+    (make-package "PMAX" :nicknames '("VM" "OLD-PMAX") :use nil))
 #+sparc
 (if (find-package "SPARC")
     (rename-package "SPARC" "SPARC" '("VM" "OLD-SPARC"))
