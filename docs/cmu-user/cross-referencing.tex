@@ -253,7 +253,11 @@ The cross-referencing database is not persistent: unless you save an
 image using \code{save-lisp}, the database will be empty each time
 \cmucl{} is restarted. There is no mechanism that saves
 cross-reference information in FASL files, so loading a system from
-compiled code will not populate the cross-reference database.
+compiled code will not populate the cross-reference database. The XREF
+database currently accumulates ``stale'' information: when compiling a
+file, it does not delete any cross-references that may have previously
+been generated for that file. This latter limitation will be removed
+in a future release. 
 
 The cross-referencing facility is only able to analyze the static
 dependencies in a program; it does not provide any information about
