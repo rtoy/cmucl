@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.142 2004/01/17 03:35:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.143 2004/01/19 20:15:28 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -344,10 +344,20 @@
 (defun interval-split (p x &optional close-lower close-upper)
   (declare (type number p)
 	   (type interval x))
-  (list (make-interval :low (copy-interval-limit (interval-low x))
-		       :high (if close-lower p (list p)))
-	(make-interval :low (if close-upper (list p) p)
-		       :high (copy-interval-limit (interval-high x)))))
+  ;; Need to be careful if the lower limit is -0.0 and the split point is 0.
+  (let ((low (interval-low x)))
+    (cond ((and (zerop p)
+		(floatp (bound-value low))
+		(member (bound-value low) '(-0f0 -0d0)))
+	   (list (make-interval :low (copy-interval-limit low)
+				:high (float -0d0 (bound-value low)))
+		 (make-interval :low (if close-upper (list p) p)
+				:high (copy-interval-limit (interval-high x)))))
+	  (t
+	   (list (make-interval :low (copy-interval-limit (interval-low x))
+				:high (if close-lower p (list p)))
+		 (make-interval :low (if close-upper (list p) p)
+				:high (copy-interval-limit (interval-high x))))))))
 
 ;;; INTERVAL-CLOSURE
 ;;;
@@ -367,12 +377,35 @@
 (defun interval-range-info (x &optional (point 0))
   (declare (type interval x))
   (labels ((signed->= (x y)
-	     (if (and (zerop x) (zerop y) (floatp x) (floatp y))
-		 (>= (float-sign x) (float-sign y))
+	     ;; If one of the args is a float, we need to do a float
+	     ;; comparison to get the correct value when testing for a
+	     ;; signed-zero.  That is, we want (>= -0.0 0) to be false.
+	     (if (and (zerop x) (zerop y)
+		      (or (floatp x) (floatp y)))
+		 (>= (float-sign (float x)) (float-sign (float y)))
 		 (>= x y))))
     (let ((lo (interval-low x))
 	  (hi (interval-high x)))
-      (cond ((and lo (signed->= (bound-value lo) point))
+      ;; FIXME!  We get confused if X is the interval -0d0 to 0d0.
+      ;; Special case that.  What else could we be missing?
+      (cond ((and (zerop point)
+		  (numberp (bound-value lo))
+		  (numberp (bound-value hi))
+		  (floatp (bound-value lo))
+		  (zerop (bound-value lo))
+		  (= (bound-value lo) (bound-value hi)))
+	     ;; At this point lo = hi = +/- 0.0.
+	     (cond ((eql (bound-value lo) (bound-value hi))
+		    ;; Both bounds are the same kind of signed 0.  The
+		    ;; sign of the zero tells us the sign of the
+		    ;; interval.
+		    (if (= (float-sign (bound-value lo)) -1)
+			'-
+			'+))
+		   (t
+		    ;; They have different signs
+		    nil)))
+	    ((and lo (signed->= (bound-value lo) point))
 	     '+)
 	    ((and hi (signed->= point (bound-value hi)))
 	     '-)
