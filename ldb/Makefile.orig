@@ -1,5 +1,5 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.25 1991/11/08 00:23:40 wlott Exp $ */
-INCLS = -I.
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/ldb/Attic/Makefile.orig,v 1.26 1991/11/08 00:27:25 wlott Exp $ */
+INCLS = -I. -I/usr/misc/.X11/include
 
 OBJS = ldb.o egets.o coreparse.o alloc.o monitor.o print.o \
 	os.o os-common.o arch.o vars.o assem.o parse.o interrupt.o test.o \
