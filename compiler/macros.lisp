@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.26 1991/11/12 14:13:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/macros.lisp,v 1.27 1991/12/05 06:04:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -789,7 +789,7 @@
   (declare (ignore indent))
   (write-string "  " stream)
   (when *print-pretty*
-    (xp:pprint-newline :linear stream))
+    (pprint-newline :linear stream))
   (princ name stream)
   (write-string "= " stream)
   (prin1 value stream))
@@ -798,7 +798,7 @@
   (declare (ignore indent))
   (write-string "  " stream)
   (when *print-pretty*
-    (xp:pprint-newline :linear stream))
+    (pprint-newline :linear stream))
   (princ name stream)
   (write-string "= " stream)
   (princ value stream))
@@ -851,32 +851,26 @@
 		     (error "Losing Defprinter option: ~S."
 			    (first option)))))))))
 	     
-	     `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
-		(flet ((do-prints ()
-			 ,@(prints)))
-		  (cond (*print-pretty*
-			 (xp:pprint-logical-block
-			     (stream nil :prefix "#<" :suffix ">")
-			   (prin1 ',name stream)
-			   (write-char #\space stream)
-			   (xp:pprint-indent :current 0 stream)
-			   (let ((*print-base* 16)
-				 (*print-radix* t))
-			     (prin1 (system:%primitive make-fixnum structure)
-				    stream))
-			   (unless (and *print-level*
-					(<= *print-level* (1+ depth)))
-			     (do-prints))))
-			(t
-			 (format stream "#<~S ~X"
-				 ',name
-				 (system:%primitive make-fixnum structure))
-			 (let ((*print-level*
-				(if *print-level* (- *print-level* depth 1))))
-			   (unless (and *print-level* (<= *print-level* 0))
-			     (do-prints)))
-			 (format stream ">"))))
-		nil))))
+      `(defun ,(symbolicate "%PRINT-" name) (structure stream depth)
+	 (flet ((do-prints ()
+		  ,@(prints)))
+	   (cond (*print-pretty*
+		     (pprint-logical-block
+		      (stream nil :prefix "#<" :suffix ">")
+		      (prin1 ',name stream)
+		      (write-char #\space stream)
+		      (pprint-indent :current 0 stream)
+		      (let ((*print-base* 16)
+			    (*print-radix* t))
+			(prin1 (get-lisp-obj-address structure) stream))
+		      (do-prints)))
+		 (t
+		     (format stream "#<~S ~X"
+			     ',name
+			     (get-lisp-obj-address structure))
+		     (do-prints)
+		     (format stream ">"))))
+	 nil))))
 
 
 ;;;; Boolean attribute utilities:
