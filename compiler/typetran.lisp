@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.5 1990/08/24 18:30:08 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/typetran.lisp,v 1.6 1990/09/24 18:10:04 wlott Exp $
 ;;;
 ;;;    This file contains stuff that implements the portable IR1 semantics of
 ;;; type tests.  The main thing we do is convert complex type tests into
@@ -281,7 +281,7 @@
 ;;; *TYPE-PREDICATES* that is a supertype of Type.
 ;;;
 (defun find-supertype-predicate (type)
-  (declare (type ctype ctype))
+  (declare (type ctype type))
   (let ((res nil)
 	(res-type nil))
     (dolist (x *type-predicates*)

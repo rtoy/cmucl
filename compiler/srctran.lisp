@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.12 1990/08/24 18:29:38 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.13 1990/09/24 18:09:36 wlott Exp $
 ;;;
 ;;;    This file contains macro-like source transformations which convert
 ;;; uses of certain functions into the canonical form desired within the
@@ -597,7 +597,7 @@
 ;;; NIL, false otherwise.
 ;;;
 (defun unsupplied-or-nil (arg)
-  (declare (type (or continuation null arg)))
+  (declare (type (or continuation null) arg))
   (or (not arg)
       (and (constant-continuation-p arg)
 	   (not (continuation-value arg)))))
