@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.44 1990/07/13 13:44:18 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.45 1990/07/19 18:40:28 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -630,7 +630,7 @@
 	  bignum-logical-and bignum-logical-ior bignum-logical-xor
 	  bignum-logical-not bignum-load-byte bignum-deposit-byte
 	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
-	  bignum-logcount))
+	  bignum-logcount bignum-index bignum-type bignum-element-type))
 
 
 (in-package "DEBUG")
