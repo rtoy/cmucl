@@ -60,7 +60,11 @@
 		      (or lucid::*compiler-message-string*
 			  ,(definition-name))))
        (eval-when ,times ,form))
-    #-(or Genera LCL3.0)
+    #+cmu
+    (if (member 'compile times)
+	`(eval-when ,times ,form)
+	form)
+    #-(or Genera LCL3.0 cmu)
     (make-progn `',name `(eval-when ,times ,form))))
 
 (defun make-progn (&rest forms)
