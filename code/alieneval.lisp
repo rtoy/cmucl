@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.16 1992/02/21 21:59:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.17 1992/02/22 02:54:51 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -478,7 +478,7 @@
 
 (def-alien-type-method (root :alien-rep) (type)
   (declare (ignore type))
-  nil)
+  '*)
 
 (def-alien-type-method (root :naturalize-gen) (type alien)
   (declare (ignore alien))
