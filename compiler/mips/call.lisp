@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.35 1990/11/21 12:39:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.36 1991/02/04 18:38:38 ram Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -293,12 +293,14 @@ default-value-8
       (progn
 	(move csp-tn old-fp-tn)
 	(inst nop)
+	(inst entry-point)
 	(inst compute-code-from-lra code-tn code-tn lra-label temp))
       (let ((regs-defaulted (gen-label))
 	    (defaulting-done (gen-label)))
 	;; Branch off to the MV case.
 	(inst b regs-defaulted)
 	(inst nop)
+	(inst entry-point)
 	
 	;; Do the single value calse.
 	(do ((i 1 (1+ i))
@@ -374,6 +376,7 @@ default-value-8
 	(done (gen-label)))
     (inst b variable-values)
     (inst nop)
+    (inst entry-point)
     
     (inst compute-code-from-lra code-tn code-tn lra-label temp)
     (inst addu csp-tn csp-tn 4)
