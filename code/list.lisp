@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.12 1992/05/15 19:25:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/list.lisp,v 1.13 1993/08/06 04:59:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -53,7 +53,6 @@
 
 (in-package "EXTENSIONS")
 (export '(assq memq delq))
-(proclaim '(inline assq memq))
 (proclaim '(maybe-inline delq))
 (in-package 'lisp)
 
