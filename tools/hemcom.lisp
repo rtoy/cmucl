@@ -30,13 +30,8 @@
 	    :nicknames '("ED")
 	    :use '("LISP" "HEMLOCK-INTERNALS" "EXTENSIONS" "SYSTEM"))
 ;;;
-(in-package "C")
-(export 'compile-from-stream)
+(export 'c::compile-from-stream (find-package "C"))
 
-;;; Hack...
-
-(dolist (x (apropos-list "key-event" "HI"))
-  (unintern x "HI"))
 
 (in-package "USER")
 
