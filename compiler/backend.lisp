@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.17 1992/03/22 17:29:20 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/backend.lisp,v 1.18 1992/03/22 17:59:26 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,6 +29,83 @@
 	  
 	  ;; The various backends need to call these support routines
 	  make-stack-pointer-tn primitive-type primitive-type-of))
+
+
+;;;; VM support routine stuff.
+
+(eval-when (compile eval)
+
+(defmacro def-vm-support-routines (&rest routines)
+  `(progn
+     (eval-when (compile load eval)
+       (defparameter vm-support-routines ',routines))
+     (defstruct (vm-support-routines
+		 (:print-function %print-vm-support-routines))
+       ,@(mapcar #'(lambda (routine)
+		     `(,routine nil :type (or function null)))
+		 routines))
+     ,@(mapcar
+	#'(lambda (name)
+	    `(defun ,name (&rest args)
+	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
+			   (backend-support-routines *backend*))
+			  (error "Machine specific support routine ~S ~
+				  undefined for ~S"
+				 ',name *backend*))
+		      args)))
+	routines)))
+
+); eval-when
+
+(def-vm-support-routines
+  ;; From VM.LISP
+  immediate-constant-sc
+  location-print-name
+  
+  ;; From PRIMTYPE.LISP
+  primitive-type-of
+  primitive-type
+  
+  ;; From C-CALL.LISP
+  make-call-out-tns
+  
+  ;; From CALL.LISP
+  standard-argument-location
+  make-return-pc-passing-location
+  make-old-fp-passing-location
+  make-old-fp-save-location
+  make-return-pc-save-location
+  make-argument-count-location
+  make-nfp-tn
+  make-stack-pointer-tn
+  make-number-stack-pointer-tn
+  make-unknown-values-locations
+  select-component-format
+  
+  ;; From NLX.LISP
+  make-nlx-sp-tn
+  make-dynamic-state-tns
+  
+  ;; From SUPPORT.LISP
+  generate-call-sequence
+  generate-return-sequence)
+
+(defprinter vm-support-routines)
+
+(defmacro def-vm-support-routine (name ll &body body)
+  (unless (member (intern (string name) (find-package "C"))
+		  vm-support-routines)
+    (warn "Unknown VM support routine: ~A" name))
+  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
+    `(progn
+       (defun ,local-name ,ll ,@body)
+       (setf (,(intern (concatenate 'simple-string
+				    "VM-SUPPORT-ROUTINES-"
+				    (string name))
+		       (find-package "C"))
+	      (backend-support-routines *target-backend*))
+	     #',local-name))))
+
 
 
 ;;;; The backend structure.
@@ -150,83 +227,6 @@
   "The backend we are attempting to compile.")
 (defvar *backend* *native-backend*
   "The backend we are using to compile with.")
-
-
-
-;;;; VM support routine stuff.
-
-(eval-when (compile eval)
-
-(defmacro def-vm-support-routines (&rest routines)
-  `(progn
-     (eval-when (compile load eval)
-       (defparameter vm-support-routines ',routines))
-     (defstruct (vm-support-routines
-		 (:print-function %print-vm-support-routines))
-       ,@(mapcar #'(lambda (routine)
-		     `(,routine nil :type (or function null)))
-		 routines))
-     ,@(mapcar
-	#'(lambda (name)
-	    `(defun ,name (&rest args)
-	       (apply (or (,(symbolicate "VM-SUPPORT-ROUTINES-" name)
-			   (backend-support-routines *backend*))
-			  (error "Machine specific support routine ~S ~
-				  undefined for ~S"
-				 ',name *backend*))
-		      args)))
-	routines)))
-
-); eval-when
-
-(def-vm-support-routines
-  ;; From VM.LISP
-  immediate-constant-sc
-  location-print-name
-  
-  ;; From PRIMTYPE.LISP
-  primitive-type-of
-  primitive-type
-  
-  ;; From C-CALL.LISP
-  make-call-out-tns
-  
-  ;; From CALL.LISP
-  standard-argument-location
-  make-return-pc-passing-location
-  make-old-fp-passing-location
-  make-old-fp-save-location
-  make-return-pc-save-location
-  make-argument-count-location
-  make-nfp-tn
-  make-stack-pointer-tn
-  make-number-stack-pointer-tn
-  make-unknown-values-locations
-  select-component-format
-  
-  ;; From NLX.LISP
-  make-nlx-sp-tn
-  make-dynamic-state-tns
-  
-  ;; From SUPPORT.LISP
-  generate-call-sequence
-  generate-return-sequence)
-
-(defprinter vm-support-routines)
-
-(defmacro def-vm-support-routine (name ll &body body)
-  (unless (member (intern (string name) (find-package "C"))
-		  vm-support-routines)
-    (warn "Unknown VM support routine: ~A" name))
-  (let ((local-name (symbolicate (backend-name *target-backend*) "-" name)))
-    `(progn
-       (defun ,local-name ,ll ,@body)
-       (setf (,(intern (concatenate 'simple-string
-				    "VM-SUPPORT-ROUTINES-"
-				    (string name))
-		       (find-package "C"))
-	      (backend-support-routines *target-backend*))
-	     #',local-name))))
 
 
 
