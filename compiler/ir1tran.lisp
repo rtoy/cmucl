@@ -1202,15 +1202,15 @@
 		     (keyword (arg-info-keyword info))
 		     (supplied-p (arg-info-supplied-p info))
 		     (n-value (gensym)))
+		(temps `(,n-value ,default))
 		(cond (supplied-p
 		       (let ((n-supplied (gensym)))
-			 (temps n-value n-supplied)
+			 (temps n-supplied)
 			 (arg-vals n-value n-supplied)
 			 (tests `((eq ,n-key ,keyword)
 				  (setq ,n-supplied t)
 				  (setq ,n-value ,n-value-temp)))))
 		      (t
-		       (temps `(,n-value ,default))
 		       (arg-vals n-value)
 		       (tests `((eq ,n-key ,keyword)
 				(setq ,n-value ,n-value-temp)))))))
@@ -1306,13 +1306,14 @@
 		      (supplied-temp (make-lambda-var :name n-supplied)))
 		 (unless supplied-p
 		   (setf (arg-info-supplied-p info) supplied-temp))
-		 (setf (arg-info-default info) nil)
+		 (when hairy-default
+		   (setf (arg-info-default info) nil))
 		 (main-vars supplied-temp)
 		 (cond (hairy-default
 			(main-vals nil nil)
 			(bind-vals `(if ,n-supplied ,n-val ,default)))
 		       (t
-			(main-vals (arg-info-default info) nil)
+			(main-vals default nil)
 			(bind-vals n-val)))
 		 (when supplied-p
 		   (bind-vars supplied-p)
