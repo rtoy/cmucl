@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.1 1992/07/13 03:48:15 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/arith.lisp,v 1.2 1992/08/04 14:14:12 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -246,7 +246,9 @@
   (:generator 1
     (cond ((< count 0)
 	   ;; It is a right shift.
-	   (inst sra number (min (- count) 31) result))
+	   (sc-case number
+	     (signed-reg (inst sra number (min (- count) 31) result))
+	     (unsigned-reg (inst srl number (min (- count) 31) result))))
 	  ((> count 0)
 	   ;; It is a left shift.
 	   (inst sll number (min count 31) result))
