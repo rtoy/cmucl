@@ -276,7 +276,7 @@
   (describe-function-compiled (%closure-function x))
   (format t "~&Its lexical environment is:")
   (indenting-further *standard-output* 8)
-  (dotimes (i (get-header-data x))
+  (dotimes (i (get-closure-length x))
     (format t "~&~D: ~S" i (%closure-index-ref x i))))
 
 
