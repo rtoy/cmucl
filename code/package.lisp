@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.11 1991/03/13 00:21:54 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.12 1991/05/28 17:27:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -824,7 +824,6 @@
 ;;;
 (defun rename-package (package name &optional (nicknames ()))
   "Changes the name and nicknames for a package."
-  (check-type package package)
   (let* ((package (package-or-lose package))
 	 (name (string name))
 	 (found (find-package name)))
