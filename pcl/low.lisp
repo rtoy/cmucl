@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.20 2002/11/21 21:24:14 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/low.lisp,v 1.21 2002/11/22 15:20:18 pmai Exp $")
 
 ;;; 
 ;;; This file contains optimized low-level constructs for PCL.
@@ -239,13 +239,6 @@ the compiler as completely as possible.  Currently this means that
 ;;; This doesn't work on structures, but is only called from sxhash which
 ;;; ensures it isn't called with a structure.
 (defmacro std-instance-hash-code (x) `(kernel:%instance-ref ,x 2))
-
-;;; Implement proper sxhashing of standard instances.
-(defun common-lisp::sxhash-instance (instance)
-  (cond
-    ((std-instance-p instance) (std-instance-hash-code instance))
-    ((fsc-instance-p instance) (fsc-instance-hash-code instance))
-    (t (error "What kind of instance is this?"))))
 
 ;;; Both of these operations "work" on structures, which allows the above
 ;;; weakening of std-instance-p.

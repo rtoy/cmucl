@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.17 2002/11/21 21:24:14 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/fin.lisp,v 1.18 2002/11/22 15:20:18 pmai Exp $")
 ;;;
 
   ;;   
@@ -166,3 +166,10 @@ explicitly marked saying who wrote it.
 
 (defmacro fsc-instance-slots (fin)
   `(kernel:%funcallable-instance-info ,fin 0))
+
+;;; Implement proper sxhashing of standard instances.
+(defun common-lisp::sxhash-instance (instance)
+  (cond
+    ((std-instance-p instance) (std-instance-hash-code instance))
+    ((fsc-instance-p instance) (fsc-instance-hash-code instance))
+    (t (error "What kind of instance is this?"))))
