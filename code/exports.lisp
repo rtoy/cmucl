@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.6 1990/04/03 03:53:03 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.7 1990/04/04 19:06:57 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -468,8 +468,10 @@
 	  unwind-block-current-cont-slot unwind-block-current-uwp-slot
 	  unwind-block-entry-pc-slot unwind-block-size
 	  value-cell-header-type value-cell-size value-cell-value-slot
-	  vector-data-offset vector-length-slot vm-version word-bits
-	  word-bytes word-shift))
+	  vector-data-offset vector-length-slot vector-normal-subtype
+	  vector-structure-subtype vector-valid-hashing-subtype
+	  vector-must-rehash-subtype vm-version word-bits word-bytes
+	  word-shift))
 
 
 (in-package "C")
