@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.1 1992/01/24 04:29:05 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.2 1992/01/24 05:07:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -46,9 +46,9 @@
 	  unix-getdtablesize unix-close unix-creat unix-dup unix-dup2
 	  unix-fcntl f-dupfd f-getfd f-setfd f-getfl f-setfl f-getown f-setown
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
-	  unix-mkdir unix-open o_rdonly o_wronly o_rdwr o_append o_creat
-	  o_trunc o_excl unix-pipe unix-read unix-readlink unix-rename
-	  unix-rmdir unix-select unix-sync unix-fsync unix-truncate
+	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
+	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
+	  unix-rename unix-rmdir unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase tty-cbreak
 	  tty-tandem TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
