@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.69 1992/04/02 03:35:04 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1tran.lisp,v 1.70 1992/04/04 01:28:07 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -185,6 +185,17 @@
 (defun ir1-convert-global-functoid (start cont form)
   (declare (type continuation start cont)
 	   (list form))
+  (unless *converting-for-interpreter*
+    (multiple-value-bind
+	(new-form expanded)
+	(handler-case
+	    (compiler-macroexpand-1 form *lexical-environment*)
+	  (error (cond)
+	    (compiler-warning "Compiler-Macroexpansion failed:~%~A" cond)
+	    (values nil nil)))
+      (when expanded
+	(return-from ir1-convert-global-functoid
+		     (ir1-convert start cont new-form)))))
   (let* ((fun (first form))
 	 (translator (info function ir1-convert fun)))
     (if translator
@@ -207,10 +218,8 @@
 (defun ir1-convert-macro (start cont fun form)
   (declare (type continuation start cont))
   (ir1-convert start cont
-	       (handler-case (funcall fun form
-				      #+new-compiler *lexical-environment*
-				      #-new-compiler
-				      (lexenv-functions *lexical-environment*))
+	       (handler-case (invoke-macroexpand-hook fun form
+						      *lexical-environment*)
 		 (error (condition)
 		   (compiler-error "(during macroexpansion)~%~A"
 				   condition)))))
@@ -2327,10 +2336,6 @@
 	    (when (< (length def) 3)
 	      (compiler-error
 	       "Local macro ~S is too short to be a legal definition." name))
-	    #-new-compiler
-	    (new-fenv `(,(first def) macro lambda
-			(,whole ,environment) ,@local-decs (block ,name ,body)))
-	    #+new-compiler
 	    (new-fenv `(,(first def) macro .
 			,(coerce `(lambda (,whole ,environment)
 				    ,@local-decs (block ,name ,body))
@@ -3272,8 +3277,7 @@
 
     (when *compile-time-define-macros*
       (setf (info function macro-function name)
-	    #+new-compiler (coerce def 'function)
-	    #-new-compiler def))
+	    (coerce def 'function)))
 
     (let* ((*current-path* (revert-source-path 'defmacro))
 	   (fun (ir1-convert-lambda def name 'defmacro)))
@@ -3282,6 +3286,33 @@
       (setf (functional-arg-documentation fun) (eval lambda-list))
 
       (ir1-convert start cont `(%%defmacro ',name ,fun ,doc)))
+
+    (when *compile-print*
+      (compiler-mumble "Converted ~S.~%" name))))
+
+
+(def-ir1-translator %define-compiler-macro ((name def lambda-list doc)
+					    start cont
+					    :kind :function)
+  (let ((name (eval name))
+	(def (second def))) ; Don't want to make a function just yet...
+
+    (when (eq (info function kind name) :special-form)
+      (compiler-error "Attempt to define a compiler-macro for special form ~S."
+		      name))
+
+    (when *compile-time-define-macros*
+      (setf (info function compiler-macro-function name)
+	    (coerce def 'function)))
+
+    (let* ((*current-path* (revert-source-path 'define-compiler-macro))
+	   (fun (ir1-convert-lambda def name 'define-compiler-macro)))
+      (setf (leaf-name fun)
+	    (let ((*print-case* :upcase))
+	      (format nil "DEFINE-COMPILER-MACRO ~S" name)))
+      (setf (functional-arg-documentation fun) (eval lambda-list))
+
+      (ir1-convert start cont `(%%define-compiler-macro ',name ,fun ,doc)))
 
     (when *compile-print*
       (compiler-mumble "Converted ~S.~%" name))))
