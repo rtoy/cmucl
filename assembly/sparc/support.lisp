@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.5 1992/05/21 22:36:26 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/support.lisp,v 1.6 1992/07/31 21:47:10 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,8 +40,9 @@
 	    (inst nop)
 	    (emit-return-pc lra-label)
 	    (note-this-location ,vop :single-value-return)
-	    (move csp-tn ocfp-tn)
-	    (inst nop)
+	    (without-scheduling ()
+	      (move csp-tn ocfp-tn)
+	      (inst nop))
 	    (inst compute-code-from-lra code-tn code-tn
 		  lra-label ,temp)
 	    (when cur-nfp
