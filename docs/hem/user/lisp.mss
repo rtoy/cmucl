@@ -277,9 +277,13 @@ skips over any prompt which may be present.
 @enddefcom
 
 @defhvar[var "Input Wait Alarm", val {:loud-message}]
-This variable determines what action is taken when a process goes into an input
-wait on a typescript that isn't currently displayed in any window.  These
-values are legal:
+@defhvar1[var "Slave GC Alarm", val {:message}]
+@hid[Input Wait Alarm] determines what action to take when a slave Lisp goes
+into an input wait on a typescript that isn't currently displayed in any
+window.  @hid[Slave GC Alarm] determines what action to take when a slave
+notifies that it is GC'ing.
+
+The following are legal values:
 @begin[description]
 @kwd[loud-message]@\Beep and display a message in the echo area indicating
 which buffer is waiting for input.
@@ -530,6 +534,116 @@ When this variable is true, the editor Lisp is used to determine definition
 editing information, otherwise the current eval server is used.  This variable
 is true in @hid[Eval] and @hid[Editor] modes.
 @enddefhvar
+
+
+@section[Debugging]
+These commands manipulate the slave when it is in the debugger and provide
+source editing based on the debugger's current frame.  These all affect the
+@hid[Current Eval Server].
+
+
+@subsection[Changing Frames]
+
+@defcom[com "Debug Down", bind (C-M-H-d)]
+This command moves down one debugger frame.
+@enddefcom
+
+@defcom[com "Debug Up", bind (C-M-H-u)]
+This command moves up one debugger frame.
+@enddefcom
+
+@defcom[com "Debug Top", bind (C-M-H-t)]
+This command moves to the top of the debugging stack.
+@enddefcom
+
+@defcom[com "Debug Bottom", bind (C-M-H-b)]
+This command moves to the bottom of the debugging stack.
+@enddefcom
+
+@defcom[com "Debug Frame", bind (C-M-H-f)]
+This command moves to the absolute debugger frame number indicated by the
+prefix argument.
+@enddefcom
+
+
+@subsection[Getting out of the Debugger]
+
+@defcom[com "Debug Quit", bind (C-M-H-q)]
+This command throws to top level out of the debugger in the @hid[Current Eval
+Server].
+@enddefcom
+
+@defcom[com "Debug Go", bind (C-M-H-g)]
+This command tries the @f[continue] restart in the @hid[Current Eval Server].
+@enddefcom
+
+@defcom[com "Debug Abort", bind (C-M-H-a)]
+This command executes the ABORT restart in the @hid[Current Eval Server].
+@enddefcom
+
+@defcom[com "Debug Restart", bind (C-M-H-r)]
+This command executes the restart indicated by the prefix argument in the
+@hid[Current Eval Server].  The debugger enumerates the restart cases upon
+entering it.
+@enddefcom
+
+
+@subsection[Getting Information]
+
+@defcom[com "Debug Help", bind (C-M-H-h)]
+This command in prints the debugger's help text.
+@enddefcom
+
+@defcom[com "Debug Error", bind (C-M-H-e)]
+This command prints the error condition and restart cases displayed upon
+entering the debugger.
+@enddefcom
+
+@defcom[com "Debug Backtrace", bind (C-M-H-B)]
+This command executes the debugger's @f[backtrace] command.
+@enddefcom
+
+@defcom[com "Debug Print", bind (C-M-H-p)]
+This command prints the debugger's current frame in the same fashion as the
+frame motion commands.
+@enddefcom
+
+@defcom[com "Debug Verbose Print", bind (C-M-H-P)]
+This command prints the debugger's current frame without elipsis.
+@enddefcom
+
+@defcom[com "Debug Source", bind (C-M-H-s)]
+This command prints the source form for the debugger's current frame.
+@enddefcom
+
+@defcom[com "Debug Verbose Source"]
+This command prints the source form for the debugger's current frame with
+surrounding forms for context.
+@enddefcom
+
+@defcom[com "Debug List Locals", bind (C-M-H-l)]
+This prints the local variables for the debugger's current frame.
+@enddefcom
+
+
+@subsection[Editing Sources]
+
+@defcom[com "Debug Edit Source", bind (C-M-H-S)]
+This command attempts to place you at the source location of the debugger's
+current frame.  Not all debugger frames represent function's that were compiled
+with the appropriate debug-info policy.  This beeps with a message if it is
+unsuccessful.
+@enddefcom
+
+
+@subsection[Miscellaneous]
+
+@defcom[com "Debug Flush Errors", bind (C-M-H-F)]
+This command toggles whether the debugger ignores errors or recursively enters
+itself.
+@enddefcom
+
+
 
 
 @section[Manipulating the Editor Process]

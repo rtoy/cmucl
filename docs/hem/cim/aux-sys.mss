@@ -663,6 +663,18 @@ arguments.
 @enddefvar
 
 
+@defun[fun {merge-relative-pathnames}, args {@i[pathname] @i[default-directory]}]
+This function merges @i[pathname] with @i[default-directory].  If @i[pathname]
+is not absolute, this assumes it is relative to @i[default-directory].  The
+result is always a directory pathname.
+@enddefun
+
+@defun[fun {directoryp}, args {@i[pathname]}]
+This function returns whether @i[pathname] names a directory: it has no name
+and no type fields.
+@enddefun
+
+
 @section (Beeping)
 
 @defun[fun {hemlock-beep}]

@@ -272,6 +272,10 @@ This command prompts for a buffer and a shell command line.  It then runs a
 shell, giving it the command line, in the buffer.
 @enddefcom
 
+@defcom[com "Set Current Shell"]
+This command sets the value of @hid[Current Shell].
+@enddefcom
+
 @defcom[com "Stop Main Process"]
 This command stops the process running in the current buffer by sending a
 @f[:SIGTSTP] to that process.  With an argument, stops the process using
@@ -283,12 +287,21 @@ If the process in the current buffer is stopped, this command continues it.
 @enddefcom
 
 @defcom[com "Kill Main Process"]
-This command kills the process running in the current buffer.
+@defhvar1[var "Kill Process Confirm", val {t}]
+This command prompts for confirmation and kills the process running in the
+current buffer.
+
+Setting this variable to @nil inhibits @hemlock's prompting for confirmation.
 @enddefcom
 
 @defcom[com "Stop Buffer Subprocess", stuff (bound to @bf[H-z] in @hid[Process] mode)]
 This command stops the foreground subprocess of the process in the current
 buffer, similar to the effect of @binding[C-Z] in a shell.
+@enddefcom
+
+@defcom[com "Kill Buffer Subprocess"]
+This command kills the foreground subprocess of the process in the current
+buffer.
 @enddefcom
 
 @defcom[com "Interrupt Buffer Subprocess", stuff (bound to  @bf[H-c] in @hid[Process] mode)]

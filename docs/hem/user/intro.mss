@@ -16,16 +16,19 @@ features and then goes on to tell how to make simple customizations.  For
 complete documentation of the @hemlock primitives with which commands are
 written, the @i[Hemlock Command Implementor's Manual] is also available.
 
+
+
 @section[The Point and The Cursor]
 
-@index[point]@index[cursor]The @i[point] is the current focus of editing
-activity.  Text typed in by the user is inserted at the point.  Nearly all
-commands use the point as a indication of what text to examine or modify.
-Textual positions in @hemlock are between characters.  This may seem a bit
-curious at first, but it is necessary since text must be inserted between
-characters.  Although the point points between characters, it is sometimes said
-to point @i[at] a character, in which case the character after the point is
-referred to.
+@index[point]
+@index[cursor]
+The @i[point] is the current focus of editing activity.  Text typed in by the
+user is inserted at the point.  Nearly all commands use the point as a
+indication of what text to examine or modify.  Textual positions in @hemlock
+are between characters.  This may seem a bit curious at first, but it is
+necessary since text must be inserted between characters.  Although the point
+points between characters, it is sometimes said to point @i[at] a character, in
+which case the character after the point is referred to.
 
 The @i[cursor] is the visible indication of the current focus of attention: a
 rectangular blotch under @windows, or the hardware cursor on a terminal.  The
@@ -327,6 +330,8 @@ screen, and the other is a @i[pop-up window].
 
 @subsection[Pop-Up Windows]
 @index[pop-up windows]
+@index[random typeout]
+@label[pop-up]
 Some commands print out information that is of little permanent value, and
 these commands use a @i[pop-up] window to display the information.  It is known
 as a @i[pop-up] window because it temporarily appears on the screen overlaying
@@ -351,7 +356,7 @@ are valid responses to this prompt:
 
 @bf[k]@\
  This is the same as @bf[!] or @bf[escape], but @hemlock makes a normal window
-over the pop-up window.
+over the pop-up window.  This only works on bitmap devices.
 @End[Description]
 Any other input causes the system to abort using the key-event to determine
 the next command to execute.
@@ -408,6 +413,31 @@ When the cursor is on a character with a multiple-character representation,
 @hemlock always displays the cursor on the first character.
 
 
+@subsection[Recentering Windows]
+@index[recentering windows]
+@index[windows, recentering]
+
+When redisplaying the current window, @hemlock makes sure the current point is
+visible.  This is the behavior you see when you are entering text near the
+bottom of the window, and suddenly redisplay shifts your position to the
+window's center.
+
+Some buffers receive input from streams and other processes, and you might have
+windows displaying these.  However, if those windows are not the current
+window, the output will run off the bottom of the windows, and you won't be
+able to see the output as it appears in the buffers.  You can change to a
+window in which you want to track output and invoke the following command to
+remedy this situation.
+
+@defcom[com "Track Buffer Point"]
+This command makes the current window track the buffer's point.  This means
+that each time Hemlock redisplays, it will make sure the buffer's point is
+visible in the window.  This is useful for windows that are not current and
+that display buffer's that receive output from streams coming from other
+processes.
+@enddefcom
+
+
 @subsection[Modelines]
 @label[modelines]
 @index[modeline]
@@ -457,12 +487,31 @@ you just received mail, etc.
 @section[Use with X Windows]
 @label[using-x]
 @index[X windows, use with]
+You should use @hemlock on a workstation with a bitmap display and a windowing
+system since @hemlock makes good use of a non-ASCII device, mouse, and the
+extra modifier keys typically associated with workstations.  This section
+discusses using @hemlock under X windows, the only supported windowing system.
+
+
+@subsection[Window Groups]
 @index[window management]
-It is preferable to use @hemlock on a workstation with a bitmap display and a
-window manager since @hemlock makes good use of the window manager and
-non-ASCII input devices such as the mouse and modifier keys.  This section
-deals with using @hemlock under X windows, which is currently the only
-supported window manager.
+@label[groups]
+@hemlock manages windows under X in groups.  This allows @hemlock to be more
+sophisticated in its window management without being rude in the X paradigm of
+screen usage.  With window groups, @hemlock can ignore where the groups are,
+but within a group, it can maintain the window creation and deletion behavior
+users expect in editors without any interference from window managers.
+
+Initially there are two groups, a main window and the @hid[Echo Area].  If you
+keep a pop-up display, see section @ref[pop-up], @hemlock puts the window it
+creates in its own group.  There are commands for creating new groups.
+
+@hemlock only links windows within a group for purposes of the @hid[Next
+Window], @hid[Previous Window], and @hid[Delete Next Window] commands.  To move
+between groups, you must use the @hid[Point to Here] command bound to the
+mouse.  
+
+Window manager commands can reshape and move groups on the screen.
 
 
 @subsection[Event Translation]
