@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.72 1993/05/18 23:39:25 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.73 1993/05/20 13:35:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -308,3 +308,101 @@
 
 (define-full-setter code-header-set * 0 other-pointer-type
   (descriptor-reg any-reg) * code-header-set)
+
+
+
+;;;; Mutator accessing.
+
+#+gengc (progn
+
+(define-vop (mutator-ub32-ref)
+  (:policy :fast-safe)
+  (:args)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:variant-vars slot)
+  (:generator 2
+    (loadw res mutator-tn slot)))
+
+(define-vop (mutator-descriptor-ref mutator-ub32-ref)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:result-types *))
+
+(define-vop (mutator-sap-ref mutator-ub32-ref)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer))
+
+
+(define-vop (mutator-ub32-set)
+  (:policy :fast-safe)
+  (:args (arg :scs (unsigned-reg) :target res))
+  (:arg-types unsigned-num)
+  (:results (res :scs (unsigned-reg)))
+  (:result-types unsigned-num)
+  (:variant-vars slot)
+  (:generator 2
+    (storew arg mutator-tn slot)
+    (move res arg)))
+
+(define-vop (mutator-descriptor-set mutator-ub32-set)
+  (:args (arg :scs (any-reg descriptor-reg) :target res))
+  (:arg-types *)
+  (:results (res :scs (any-reg descriptor-reg)))
+  (:result-types *))
+
+(define-vop (mutator-sap-set mutator-ub32-set)
+  (:args (arg :scs (sap-reg) :target res))
+  (:arg-types system-area-pointer)
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer))
+
+
+(eval-when (compile eval)
+  (defmacro define-mutator-accessors (slot type writable)
+    (let ((ref (symbolicate "MUTATOR-" slot "-REF"))
+	  (set (and writable (symbolicate "MUTATOR-" slot "-SET")))
+	  (offset (symbolicate "MUTATOR-" slot "-SLOT"))
+	  (fn
+	   (let ((*package* (find-package :kernel)))
+	     (symbolicate "MUTATOR-" slot))))
+      (multiple-value-bind
+	  (lisp-type ref-vop set-vop)
+	  (ecase type
+	    (:des
+	     (values t 'mutator-descriptor-ref 'mutator-descriptor-set))
+	    (:ub32
+	     (values '(unsigned-byte 32) 'mutator-ub32-ref 'mutator-ub32-set))
+	    (:sap
+	     (values 'system-area-pointer 'mutator-sap-ref 'mutator-sap-set)))
+      `(progn
+	 (export ',fn :kernel)
+	 (defknown ,fn () ,lisp-type (flushable))
+	 (define-vop (,ref ,ref-vop)
+	   (:translate ,fn)
+	   (:variant ,offset))
+	 ,@(when writable
+	     `((defknown ((setf ,fn)) (,lisp-type) ,lisp-type (unsafe))
+	       (define-vop (,set ,set-vop)
+		 (:translate (setf ,fn))
+		 (:variant ,offset)))))))))
+
+(define-mutator-accessors thread :des t)
+(define-mutator-accessors suspends-disabled-count :ub32 t)
+(define-mutator-accessors suspend-pending :ub32 t)
+(define-mutator-accessors control-stack-base :sap nil)
+(define-mutator-accessors control-stack-end :sap nil)
+(define-mutator-accessors current-unwind-protect :sap nil)
+(define-mutator-accessors current-catch-block :sap nil)
+(define-mutator-accessors binding-stack-base :sap nil)
+(define-mutator-accessors binding-stack-end :sap nil)
+(define-mutator-accessors number-stack-base :sap nil)
+(define-mutator-accessors number-stack-end :sap nil)
+(define-mutator-accessors eval-stack :des t)
+(define-mutator-accessors eval-stack-top :ub32 t)
+(define-mutator-accessors nursery-start :sap nil)
+(define-mutator-accessors nursery-end :sap nil)
+(define-mutator-accessors storebuf-start :sap nil)
+(define-mutator-accessors storebuf-end :sap nil)
+(define-mutator-accessors words-consed :ub32 nil)
+
+); #+gengc progn
