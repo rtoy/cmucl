@@ -244,13 +244,14 @@ _undefined_tramp:
 
 	b	1f
         unimp   trap_Cerror
-	.byte	4
-#ifdef type_LongFloat
-        .byte   24
-#else
-	.byte	23
-#endif
-	.byte	254, sc_DescriptorReg, 3
+        /* Number of argument bytes */
+        .byte	4
+        .byte	UNDEFINED_SYMBOL_ERROR
+        /* Escape to create 16bit BE number from following two values */
+        .byte	254
+        /* SC_OFFSET(sc_DescriptorReg,reg_FDEFN) */
+	.byte	sc_DescriptorReg
+	.byte	3
 	.align	4
 1:
 	ld	[reg_FDEFN+FDEFN_RAW_ADDR_OFFSET], reg_CODE

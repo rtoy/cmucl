@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.46 2002/04/07 00:14:13 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.47 2002/08/23 17:01:00 pmai Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2143,6 +2143,7 @@
 (defun emit-c-header-aux ()
   (format t "/*~% * Machine generated header file.  Do not edit.~% */~2%")
   (format t "#ifndef _INTERNALS_H_~%#define _INTERNALS_H_~2%")
+  ;; Write out various constants
   (let ((constants nil))
     (do-external-symbols (symbol (find-package "VM"))
       (when (constantp symbol)
@@ -2187,14 +2188,25 @@
 	  (terpri)
 	  (setf prev-priority (second const)))
 	(format t "#define ~A ~D~@[  /* ~A */~]~%"
-		(first const) (third const) (fourth const))))
-    (terpri)
-    (format t "#define ERRORS { \\~%")
-    (loop
-      for info across (c:backend-internal-errors c:*backend*)
-      do (format t "    ~S, \\~%" (cdr info)))
-    (format t "    NULL \\~%}~%")
-    (terpri))
+		(first const) (third const) (fourth const)))))
+
+  ;; Write out internal error codes and error descriptions
+  (terpri)
+  (loop for (error-name . rest) across (c:backend-internal-errors c:*backend*)
+        for error-code from 0
+	when error-name
+        do
+        (format t "#define ~A ~D~%"
+	        (substitute #\_ #\- (symbol-name error-name))
+		error-code))
+  (terpri)
+  (format t "#define ERRORS { \\~%")
+  (loop for info across (c:backend-internal-errors c:*backend*)
+        do (format t "    ~S, \\~%" (cdr info)))
+  (format t "    NULL \\~%}~%")
+
+  ;; Write out primitive object layouts
+  (terpri)
   (let ((structs (sort (copy-list vm:*primitive-objects*) #'string<
 		       :key #'(lambda (obj)
 				(symbol-name
@@ -2228,6 +2240,8 @@
 		    (- (* (vm:slot-offset slot) vm:word-bytes) lowtag)))
 	  (terpri))))
     (format t "#endif /* LANGUAGE_ASSEMBLY */~2%"))
+
+  ;; Write out static symbols
   (dolist (symbol (cons nil vm:static-symbols))
     (format t "#define ~A LISPOBJ(0x~X)~%"
 	    (nsubstitute #\_ #\-

@@ -1,6 +1,6 @@
 ### x86-assem.S -*- Mode: Asm; -*-
 /**
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.20 2002/01/28 20:17:12 pmai Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-assem.S,v 1.21 2002/08/23 17:01:02 pmai Exp $
  *
  * Authors:	Paul F. Werkowski <pw@snoopy.mv.com>
  *		Douglas T. Crosher
@@ -16,6 +16,7 @@
 	
 #define LANGUAGE_ASSEMBLY
 #include "internals.h"
+#include "lispregs.h"
 
 #if defined __FreeBSD__
 #include <osreldate.h>
@@ -268,13 +269,11 @@ GNAME(fpu_restore):
 GNAME(undefined_tramp):
 	int3
 	.byte	trap_Error
+        /* Number of argument bytes */
         .byte   2
-#ifdef type_LongFloat
-        .byte   24
-#else
-        .byte   23
-#endif
-        .byte   sc_DescriptorReg # EAX in the Descriptor-reg SC.
+	.byte	UNDEFINED_SYMBOL_ERROR
+        /* SC_OFFSET(sc_DescriptorReg,reg_EAX) */
+        .byte   SC_OFFSET(sc_DescriptorReg,0)
 	ret
 	.size	GNAME(undefined_tramp), .-GNAME(undefined_tramp)
 

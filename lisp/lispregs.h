@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.3 1994/07/05 16:10:38 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.4 2002/08/23 17:01:01 pmai Exp $ */
 
 #if defined(mips) || defined(irix)
 #include "mips-lispregs.h"
@@ -23,6 +23,9 @@
 #ifdef alpha
 #include "alpha-lispregs.h"
 #endif
+
+/* This matches the  definition of sc-offset in code/debug-info.lisp */
+#define SC_OFFSET(sc,offset) (((offset) << 5) | (sc))
 
 #ifndef LANGUAGE_ASSEMBLY
 extern char *lisp_register_names[];
