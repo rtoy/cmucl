@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.50 1993/03/13 09:17:02 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.51 1993/03/13 13:46:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -164,10 +164,8 @@
 
 (comf "target:code/serve-event")
 (comf "target:code/fd-stream")
-(with-compilation-unit ; Until this code is shaken down more...
-  (:optimize '(optimize (safety 2) (debug 2)))
-  (comf "target:code/pathname")
-  (comf "target:code/filesys"))
+(comf "target:code/pathname")
+(comf "target:code/filesys")
 (comf "target:code/load")
 (comf "target:code/module")
 
