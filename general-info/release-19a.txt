@@ -275,7 +275,9 @@ New in this release:
        Use sys:register-lisp-feature and
        sys:register-lisp-runtime-feature to set *features* and
        sys:*runtime-features*, respectively.
-      
+     - Pierre Mai's build-tools have been incorporated.  The scripts
+       are in the src/tools directory.  These are slightly modified
+       versions of his scripts.  Should make building CMUCL easier.
   * Deprecated features:
      - EXT:ENCAPSULATE and associated functions; use fwrappers instead.
 
