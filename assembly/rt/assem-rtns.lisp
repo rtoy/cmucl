@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.3 1991/04/01 13:43:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/rt/assem-rtns.lisp,v 1.4 1991/04/19 03:14:40 wlott Exp $
 ;;;
 
 (in-package "RT")
@@ -194,6 +194,11 @@
 			  (:temp srcstart any-reg lexenv-offset)
 			  (:temp dstend any-reg lra-offset)
 			  (:temp temp any-reg ocfp-offset))
+  ;; First, save count/src (the NFP) on the number stack.  We need to do this
+  ;; instead of with the other saves, because we need to use this register to
+  ;; figure out where to save the others.  We can't same them all there,
+  ;; because some of the others hold descriptor values.
+  (storew count/src nsp-tn -1)
   ;; How many more args are there to copy to the stack?
   (move count/src nargs-tn)
   (inst s count/src fixedargs)
@@ -259,6 +264,7 @@
   (loadw dstend csp-tn -2)
   (loadw temp csp-tn -1)
   (inst dec csp-tn (* 3 word-bytes))
+  (loadw count/src nsp-tn -1)
   (inst b lip-tn))
 
 
