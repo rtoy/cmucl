@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.29 1994/02/11 19:30:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.30 1994/04/06 17:06:24 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -82,22 +82,22 @@
 
 ;;; From sys/types.h
 
-(def-alien-type daddr-t long)
+(def-alien-type daddr-t #-alpha long #+alpha int)
 (def-alien-type caddr-t (* char))
-(def-alien-type ino-t unsigned-long)
+(def-alien-type ino-t #-alpha unsigned-long #+alpha unsigned-int)
 (def-alien-type swblk-t long)
-(def-alien-type size-t long)
-(def-alien-type time-t long)
-(def-alien-type dev-t short)
-(def-alien-type off-t long)
-(def-alien-type uid-t unsigned-short)
-(def-alien-type gid-t unsigned-short)
+(def-alien-type size-t #-alpha long #+alpha unsigned-long)
+(def-alien-type time-t #-alpha long #+alpha int)
+(def-alien-type dev-t #-alpha short #+alpha int)
+(def-alien-type off-t #-alpha long #+alpha unsigned-long)
+(def-alien-type uid-t #-alpha unsigned-short #+alpha unsigned-int)
+(def-alien-type gid-t #-alpha unsigned-short #+alpha unsigned-int)
 
-(defconstant FD-SETSIZE #-hpux 256 #+hpux 2048)
+(defconstant FD-SETSIZE #-(or hpux alpha) 256 #+hpux 2048 #+alpha 4096)
 
 (def-alien-type nil
   (struct fd-set
-    (fds-bits (array unsigned-long #.(/ fd-setsize 32)))))
+    (fds-bits (array #-alpha unsigned-long #+alpha int #.(/ fd-setsize 32)))))
 
 (defmacro fd-set (offset fd-set)
   (let ((word (gensym))
@@ -131,8 +131,8 @@
 
 (def-alien-type nil
   (struct timeval
-    (tv-sec long)		; seconds
-    (tv-usec long)))		; and microseconds
+    (tv-sec #-alpha long #+alpha int)		; seconds
+    (tv-usec #-alpha long #+alpha int)))		; and microseconds
 
 (def-alien-type nil
   (struct timezone
@@ -198,7 +198,7 @@
 (def-alien-type nil
   (struct direct
     #+sunos (d-off long)		; offset of next disk directory entry
-    (d-ino unsigned-long)		; inode number of entry
+    (d-ino #-alpha unsigned-long #+alpha unsigned-int); inode number of entry
     (d-reclen unsigned-short)		; length of this record
     (d-namlen unsigned-short)		; length of string in d-name
     (d-name (array char 256))))		; name must be no longer than this
@@ -209,8 +209,8 @@
   (struct stat
     (st-dev dev-t)
     (st-ino ino-t)
-    (st-mode unsigned-short)
-    (st-nlink short)
+    (st-mode #-alpha unsigned-short #+alpha unsigned-int)
+    (st-nlink #-alpha short #+alpha unsigned-short)
     (st-uid uid-t)
     (st-gid gid-t)
     (st-rdev dev-t)
@@ -221,8 +221,8 @@
     (st-spare2 int)
     (st-ctime time-t)
     (st-spare3 int)
-    (st-blksize long)
-    (st-blocks long)
+    (st-blksize #-alpha long #+alpha unsigned-int)
+    (st-blocks #-alpha long #+alpha int)
     (st-spare4 (array long 2))))
 
 (defconstant s-ifmt #o0170000)
@@ -262,8 +262,8 @@
 
 (def-alien-type nil
   (struct rlimit
-    (rlim-cur int)			; current (soft) limit
-    (rlim-max int)))			; maximum value for rlim-cur
+    (rlim-cur #-alpha int #+alpha unsigned-int)	 ; current (soft) limit
+    (rlim-max #-alpha int #+alpha unsigned-int))); maximum value for rlim-cur
 
 
 
@@ -411,9 +411,9 @@
 (deftype unix-pathname () 'simple-string)
 (deftype unix-file-mode () '(unsigned-byte 16))
 (deftype unix-fd () `(integer 0 ,most-positive-fixnum))
-(deftype unix-pid () '(unsigned-byte 16))
-(deftype unix-uid () '(unsigned-byte 16))
-(deftype unix-gid () '(unsigned-byte 16))
+(deftype unix-pid () #-alpha '(unsigned-byte 16) #+alpha '(signed-byte 32))
+(deftype unix-uid () '(unsigned-byte #-alpha 16 #+alpha 32))
+(deftype unix-gid () '(unsigned-byte #-alpha 16 #+alpha 32))
 
 
 
@@ -625,7 +625,7 @@
 
 ;;; File flags for F-GETFL and F-SETFL:
 
-(defconstant FNDELAY  #o0004   "Non-blocking reads")
+(defconstant FNDELAY  #-osf1 #o0004 #+osf1 #o100000 "Non-blocking reads")
 (defconstant FAPPEND  #o0010   "Append on each write")
 (defconstant FASYNC   #o0100   "Signal pgrp when data ready")
 (defconstant FCREAT   #-hpux #o1000 #+hpux #o0400  "Create if nonexistant")

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.14 1994/02/04 15:10:46 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/run-program.lisp,v 1.15 1994/04/06 17:05:39 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -310,7 +310,7 @@
   (let ((string-bytes 0)
 	;; We need an extra for the null, and an extra 'cause exect clobbers
 	;; argv[-1].
-	(vec-bytes (* 4 (+ (length string-list) 2))))
+	(vec-bytes (* #-alpha 4 #+alpha 8 (+ (length string-list) 2))))
     (declare (fixnum string-bytes vec-bytes))
     (dolist (s string-list)
       (check-type s simple-string)
@@ -320,7 +320,7 @@
     (let* ((total-bytes (+ string-bytes vec-bytes))
 	   (vec-sap (system:allocate-system-memory total-bytes))
 	   (string-sap (sap+ vec-sap vec-bytes))
-	   (i 4))
+	   (i #-alpha 4 #+alpha 8))
       (declare (type (and unsigned-byte fixnum) total-bytes i)
 	       (type system:system-area-pointer vec-sap string-sap))
       (dolist (s string-list)
@@ -336,10 +336,10 @@
 	  ;; Blast the pointer to the string into place
 	  (setf (sap-ref-sap vec-sap i) string-sap)
 	  (setf string-sap (sap+ string-sap (round-bytes-to-words (1+ n))))
-	  (incf i 4)))
+	  (incf i #-alpha 4 #+alpha 8)))
       ;; Blast in last null pointer
       (setf (sap-ref-sap vec-sap i) (int-sap 0))
-      (values vec-sap (sap+ vec-sap 4) total-bytes))))
+      (values vec-sap (sap+ vec-sap #-alpha 4 #+alpha 8) total-bytes))))
 
 
 (defmacro with-c-strvec ((var str-list) &body body)

@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.10 1993/08/31 21:56:53 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.11 1994/04/06 17:07:31 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -771,7 +771,8 @@
 				#.c:rt-fasl-file-implementation
 				#.c:rt-afpa-fasl-file-implementation
 				#.c:x86-fasl-file-implementation
-				#.c:hppa-fasl-file-implementation)
+				#.c:hppa-fasl-file-implementation
+				#.c:alpha-fasl-file-implementation)
 			       (lookup-foreign-symbol "undefined_tramp"))
 			      (#.c:sparc-fasl-file-implementation
 			       (lookup-foreign-symbol "_undefined_tramp"))))))
@@ -787,7 +788,8 @@
 		       #.c:rt-fasl-file-implementation
 		       #.c:rt-afpa-fasl-file-implementation
 		       #.c:x86-fasl-file-implementation
-		       #.c:hppa-fasl-file-implementation)
+		       #.c:hppa-fasl-file-implementation
+		       #.c:alpha-fasl-file-implementation)
 		      (ecase type
 			(#.vm:function-header-type
 			 (make-random-descriptor
@@ -1620,8 +1622,9 @@
 	      (if (string= "0x" line :end2 2)
 		  (values (parse-integer line :start 2 :end 10 :radix 16)
 			  (subseq line 13))
-		  (values (parse-integer line :end 8 :radix 16)
-			  (subseq line 11)))
+		  (values (parse-integer line :end #-alpha 8 #+alpha 16
+					 :radix 16)
+			  (subseq line #-alpha 11 #+alpha 19)))
 	    (multiple-value-bind
 		(old-value found)
 		(gethash name *cold-foreign-symbol-table*)
@@ -1760,7 +1763,32 @@
 		   (let ((bits (ldb (byte 9 2) value)))
 		     (assert (zerop (ldb (byte 2 0) value)))
 		     (logior (ash bits 3)
-			     (logand inst #xffe0e002)))))))))))
+			     (logand inst #xffe0e002)))))))))
+      (#.c:alpha-fasl-file-implementation
+       (ecase kind
+	 (:jmp-hint
+	  (assert (zerop (ldb (byte 2 0) value)))
+	  #+nil
+	  (setf (sap-ref-16 sap 0)
+		(logior (sap-ref-16 sap 0) (ldb (byte 14 0) (ash value -2)))))
+	 (:bits-63-48
+	  (let* ((value (if (logbitp 15 value) (+ value (ash 1 16)) value))
+		 (value (if (logbitp 31 value) (+ value (ash 1 32)) value))
+		 (value (if (logbitp 47 value) (+ value (ash 1 48)) value)))
+	    (setf (sap-ref-8 sap 0) (ldb (byte 8 48) value))
+	    (setf (sap-ref-8 sap 1) (ldb (byte 8 56) value))))
+	 (:bits-47-32
+	  (let* ((value (if (logbitp 15 value) (+ value (ash 1 16)) value))
+		 (value (if (logbitp 31 value) (+ value (ash 1 32)) value)))
+	    (setf (sap-ref-8 sap 0) (ldb (byte 8 32) value))
+	    (setf (sap-ref-8 sap 1) (ldb (byte 8 40) value))))
+	 (:ldah
+	  (let ((value (if (logbitp 15 value) (+ value (ash 1 16)) value)))
+	    (setf (sap-ref-8 sap 0) (ldb (byte 8 16) value))
+	    (setf (sap-ref-8 sap 1) (ldb (byte 8 24) value))))
+	 (:lda
+	  (setf (sap-ref-8 sap 0) (ldb (byte 8 0) value))
+	  (setf (sap-ref-8 sap 1) (ldb (byte 8 8) value)))))))
   (undefined-value))
 
 (defun linkage-info-to-core ()
@@ -2038,7 +2066,8 @@
 	       *fdefn-objects*)
       (format t "~%~|~%Initially defined functions:~2%")
       (dolist (info (sort funs #'< :key #'cdr))
-	(format t "#x~8,'0X: ~S~%" (cdr info) (car info)))
+	(format t "0x~8,'0X: ~S   #x~8,'0X~%" (cdr info) (car info) 
+		(- (cdr info) #x17)))
       (format t "~%~|~%Undefined function references:~2%")
       (labels ((key (name)
 		 (etypecase name

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.12 1993/03/14 00:05:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/primtype.lisp,v 1.13 1994/04/06 17:08:36 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -15,6 +15,7 @@
 ;;; representation and primitive types.
 ;;;
 ;;; Written by William Lott.
+;;; Alpha conversion by Sean Hallgren.
 ;;;
 (in-package "VM")
 
@@ -31,24 +32,40 @@
 ;;;
 (def-primitive-type positive-fixnum (any-reg signed-reg unsigned-reg)
   :type (unsigned-byte 29))
+#-alpha
 (def-primitive-type unsigned-byte-31 (signed-reg unsigned-reg descriptor-reg)
   :type (unsigned-byte 31))
+#-alpha
 (def-primitive-type unsigned-byte-32 (unsigned-reg descriptor-reg)
   :type (unsigned-byte 32))
+#+alpha
+(def-primitive-type unsigned-byte-63 (signed-reg unsigned-reg descriptor-reg)
+  :type (unsigned-byte 63))
+#+alpha
+(def-primitive-type unsigned-byte-64 (unsigned-reg descriptor-reg)
+  :type (unsigned-byte 64))
 (def-primitive-type fixnum (any-reg signed-reg)
   :type (signed-byte 30))
+#-alpha
 (def-primitive-type signed-byte-32 (signed-reg descriptor-reg)
   :type (signed-byte 32))
+#+alpha
+(def-primitive-type signed-byte-64 (signed-reg descriptor-reg)
+  :type (signed-byte 64))
 
 (defvar *fixnum-primitive-type* (primitive-type-or-lose 'fixnum))
 
 (def-primitive-type-alias tagged-num (:or positive-fixnum fixnum))
-(def-primitive-type-alias unsigned-num (:or unsigned-byte-32
-					    unsigned-byte-31
+(def-primitive-type-alias unsigned-num (:or #-alpha unsigned-byte-32
+					    #-alpha unsigned-byte-31
+					    #+alpha unsigned-byte-64
+					    #+alpha unsigned-byte-63
 					    positive-fixnum))
-(def-primitive-type-alias signed-num (:or signed-byte-32
+(def-primitive-type-alias signed-num (:or #-alpha signed-byte-32
+					  #+alpha signed-byte-64
 					  fixnum
-					  unsigned-byte-31
+					  #-alpha unsigned-byte-31
+					  #+alpha unsigned-byte-63
 					  positive-fixnum))
 
 ;;; Other primitive immediate types.
@@ -172,11 +189,21 @@
 	       (cond ((and hi lo)
 		      (dolist (spec
 			       '((positive-fixnum 0 #.(1- (ash 1 29)))
+				 #-alpha
 				 (unsigned-byte-31 0 #.(1- (ash 1 31)))
+				 #-alpha
 				 (unsigned-byte-32 0 #.(1- (ash 1 32)))
+				 #+alpha
+				 (unsigned-byte-63 0 #.(1- (ash 1 63)))
+				 #+alpha
+				 (unsigned-byte-64 0 #.(1- (ash 1 64)))
 				 (fixnum #.(ash -1 29) #.(1- (ash 1 29)))
+				 #-alpha
 				 (signed-byte-32 #.(ash -1 31)
-						 #.(1- (ash 1 31))))
+						 #.(1- (ash 1 31)))
+				 #+alpha
+				 (signed-byte-64 #.(ash -1 63)
+						 #.(1- (ash 1 63))))
 			       (if (or (< hi (ash -1 29))
 				       (> lo (1- (ash 1 29))))
 				   (part-of bignum)
@@ -264,4 +291,3 @@
 	   (part-of instance)))
       (ctype
        (any)))))
-

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.9 1992/03/02 02:23:17 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sap.lisp,v 1.10 1994/04/06 17:05:56 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 
 (export '(system-area-pointer sap-ref-8 sap-ref-16 sap-ref-32 sap-ref-sap
 	  signed-sap-ref-8 signed-sap-ref-16 signed-sap-ref-32
+	  #+alpha sap-ref-64 #+alpha signed-sap-ref-64
 	  sap+ sap- sap< sap<= sap= sap>= sap>
 	  allocate-system-memory allocate-system-memory-at
 	  reallocate-system-memory deallocate-system-memory))
@@ -25,7 +26,8 @@
 (export '(%set-sap-ref-sap %set-sap-ref-single %set-sap-ref-double
 	  %set-sap-ref-8 %set-signed-sap-ref-8
 	  %set-sap-ref-16 %set-signed-sap-ref-16
-	  %set-sap-ref-32 %set-signed-sap-ref-32))
+	  %set-sap-ref-32 %set-signed-sap-ref-32
+	  #+alpha %set-sap-ref-64 #+alpha %set-signed-sap-ref-64))
 (in-package "SYSTEM")
 
 (use-package "KERNEL")
@@ -79,7 +81,7 @@
 
 (defun int-sap (int)
   "Converts an integer into a System Area Pointer."
-  (declare (type (unsigned-byte #.vm:word-bits) int))
+  (declare (type (unsigned-byte #-alpha #.vm:word-bits #+alpha 64) int))
   (int-sap int))
 
 (defun sap-ref-8 (sap offset)
@@ -99,6 +101,13 @@
   (declare (type system-area-pointer sap)
 	   (type index offset))
   (sap-ref-32 sap offset))
+
+#+alpha
+(defun sap-ref-64 (sap offset)
+  "Returns the 64-bit quadword at OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (sap-ref-64 sap offset))
 
 (defun sap-ref-sap (sap offset)
   "Returns the 32-bit system-area-pointer at OFFSET bytes from SAP."
@@ -136,6 +145,13 @@
 	   (type index offset))
   (signed-sap-ref-32 sap offset))
 
+#+alpha
+(defun signed-sap-ref-64 (sap offset)
+  "Returns the signed 64-bit quadword at OFFSET bytes from SAP."
+  (declare (type system-area-pointer sap)
+	   (type index offset))
+  (signed-sap-ref-64 sap offset))
+
 (defun %set-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
@@ -154,6 +170,13 @@
 	   (type (unsigned-byte 32) new-value))
   (setf (sap-ref-32 sap offset) new-value))
 
+#+alpha
+(defun %set-sap-ref-64 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (unsigned-byte 64) new-value))
+  (setf (sap-ref-64 sap offset) new-value))
+
 (defun %set-signed-sap-ref-8 (sap offset new-value)
   (declare (type system-area-pointer sap)
 	   (type index offset)
@@ -171,6 +194,13 @@
 	   (type index offset)
 	   (type (signed-byte 32) new-value))
   (setf (signed-sap-ref-32 sap offset) new-value))
+
+#+alpha
+(defun %set-signed-sap-ref-64 (sap offset new-value)
+  (declare (type system-area-pointer sap)
+	   (type index offset)
+	   (type (signed-byte 64) new-value))
+  (setf (signed-sap-ref-64 sap offset) new-value))
 
 (defun %set-sap-ref-sap (sap offset new-value)
   (declare (type system-area-pointer sap new-value)

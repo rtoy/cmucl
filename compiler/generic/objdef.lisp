@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.35 1993/08/27 16:24:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.36 1994/04/06 17:08:08 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -174,7 +174,7 @@
 (define-primitive-object (bignum :lowtag other-pointer-type
 				 :header bignum-type
 				 :alloc-trans bignum::%allocate-bignum)
-  (digits :rest-p t :c-type "long"))
+  (digits :rest-p t :c-type #-alpha "long" #+alpha "u32"))
 
 (define-primitive-object (ratio :type ratio
 				:lowtag other-pointer-type
@@ -250,7 +250,7 @@
 				 :header t)
   (length :ref-trans c::vector-length
 	  :type index)
-  (data :rest-p t :c-type "unsigned long"))
+  (data :rest-p t :c-type #-alpha "unsigned long" #+alpha "u32"))
 
 (define-primitive-object (code :type code-component
 			       :lowtag other-pointer-type
@@ -276,7 +276,7 @@
 				:header fdefn-type)
   (name :ref-trans fdefn-name)
   (function :type (or function null) :ref-trans fdefn-function)
-  (raw-addr :c-type "char *"))
+  (raw-addr :c-type #-alpha "char *" #+alpha "u32"))
 
 (define-primitive-object (function :type function
 				   :lowtag function-pointer-type
@@ -337,6 +337,13 @@
 	 :ref-known (flushable)
 	 :init :arg))
 
+#+alpha
+(define-primitive-object (sap :lowtag other-pointer-type
+			      :header sap-type)
+  (padding)
+  (pointer :c-type "char *" :length 2))
+
+#-alpha
 (define-primitive-object (sap :lowtag other-pointer-type
 			      :header sap-type)
   (pointer :c-type "char *"))
@@ -351,7 +358,7 @@
   (broken :type (member t nil)
 	  :ref-trans c::%weak-pointer-broken :ref-known (flushable)
 	  :init :null)
-  (next :c-type "struct weak_pointer *"))
+  (next :c-type #-alpha "struct weak_pointer *" #+alpha "u32"))
 
 #+gengc
 (define-primitive-object (scavenger-hook :type scavenger-hook
@@ -372,18 +379,18 @@
   symbol)
 
 (define-primitive-object (unwind-block)
-  (current-uwp :c-type "struct unwind_block *")
-  (current-cont :c-type "lispobj *")
+  (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
+  (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
   current-code
   entry-pc)
 
 (define-primitive-object (catch-block)
-  (current-uwp :c-type "struct unwind_block *")
-  (current-cont :c-type "lispobj *")
+  (current-uwp :c-type #-alpha "struct unwind_block *" #+alpha "u32")
+  (current-cont :c-type #-alpha "lispobj *" #+alpha "u32")
   current-code
   entry-pc
   tag
-  (previous-catch :c-type "struct catch_block *")
+  (previous-catch :c-type #-alpha "struct catch_block *" #+alpha "u32")
   size)
 
 #+gengc
