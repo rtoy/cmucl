@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.22 1992/07/30 17:15:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.23 1992/08/05 19:59:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -57,7 +57,8 @@
 	  TIOCGLTC TIOCNOTTY TIOCSPGRP TIOCGPGRP TIOCGWINSZ TIOCSWINSZ
 	  KBDCGET KBDCSET KBDCRESET KBDCRST KBDCSSTD KBDSGET KBDGCLICK
 	  KBDSCLICK FIONREAD unix-exit unix-stat unix-lstat unix-fstat
-	  unix-getrusage rusage_self rusage_children unix-gettimeofday
+	  unix-getrusage unix-fast-getrusage rusage_self rusage_children
+	  unix-gettimeofday
 	  unix-utimes unix-setreuid unix-setregid unix-getpid unix-getppid
 	  unix-getgid unix-getegid unix-getpgrp unix-setpgrp unix-getuid
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
@@ -1124,7 +1125,22 @@
 (defconstant rusage_self 0 "The calling process.")
 (defconstant rusage_children -1 "Terminated child processes.")
 
-(declaim (inline unix-getrusage))
+(declaim (inline unix-fast-getrusage))
+(defun unix-fast-getrusage (who)
+  "Like call getrusage, but return only the system and user time, and returns
+   the seconds and microseconds as separate values."
+  (declare (values (member t)
+		   (unsigned-byte 31) (mod 1000000)
+		   (unsigned-byte 31) (mod 1000000)))
+  (with-alien ((usage (struct rusage)))
+    (syscall* ("getrusage" int (* (struct rusage)))
+	      (values t
+		      (slot (slot usage 'ru-utime) 'tv-sec)
+		      (slot (slot usage 'ru-utime) 'tv-usec)
+		      (slot (slot usage 'ru-stime) 'tv-sec)
+		      (slot (slot usage 'ru-stime) 'tv-usec))
+	      who (addr usage))))
+
 (defun unix-getrusage (who)
   "Unix-getrusage returns information about the resource usage
    of the process specified by who.  Who can be either the
