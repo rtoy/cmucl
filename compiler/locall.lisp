@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.56 2003/10/11 09:44:45 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/locall.lisp,v 1.57 2003/10/11 11:57:55 gerd Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -981,24 +981,31 @@
 	       (member (functional-kind fun) '(nil :assignment))
 	       (not (functional-entry-function fun)))
       (let* ((ref-cont (node-cont (first refs)))
-	     (dest (continuation-dest ref-cont)))
-	(when (and dest
-		   (basic-combination-p dest)
-		   (eq (basic-combination-fun dest) ref-cont)
-		   (eq (basic-combination-kind dest) :local)
-		   (not (block-delete-p (node-block dest)))
+	     (call (continuation-dest ref-cont)))
+	(when (and call
+		   (basic-combination-p call)
+		   (eq (basic-combination-fun call) ref-cont)
+		   (eq (basic-combination-kind call) :local)
+		   (not (block-delete-p (node-block call)))
+		   ;;
+		   ;; Gross hack.  Shouldn't happen that the call has
+		   ;; no successors, but it does happen when Python
+		   ;; eliminates dead code, and the interpreter doesn't
+		   ;; like if we don't let-convert in such a case.
+		   (or *converting-for-interpreter*
+		       (block-succ (node-block call)))
 		   (cond ((ok-initial-convert-p fun) t)
 			 (t
 			  (reoptimize-continuation ref-cont)
 			  nil)))
-	  (when (eq fun (node-home-lambda dest))
+	  (when (eq fun (node-home-lambda call))
 	    (delete-lambda fun)
 	    (return-from maybe-let-convert nil))
 	  (unless (eq (functional-kind fun) :assignment)
-	    (let-convert fun dest))
-	  (reoptimize-call dest)
+	    (let-convert fun call))
+	  (reoptimize-call call)
 	  (setf (functional-kind fun)
-		(if (mv-combination-p dest) :mv-let :let))))
+		(if (mv-combination-p call) :mv-let :let))))
       t)))
 
 
