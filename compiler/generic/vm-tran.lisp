@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.22 1991/01/13 23:37:26 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.23 1991/01/14 01:43:02 wlott Exp $
 ;;;
 ;;;    This file contains impelemtentation-dependent transforms.
 ;;;
@@ -272,27 +272,27 @@
 			 (%raw-bits bit-array-2 index)))))))
 
 (deftransform bit-not
-	      ((bit-array-1 result-bit-array)
+	      ((bit-array result-bit-array)
 	       (simple-bit-vector simple-bit-vector) *
 	       :node node  :policy (>= speed space))
   `(progn
      ,@(unless (policy node (zerop safety))
-	 '((unless (= (length bit-array-1) (length bit-array-2)
+	 '((unless (= (length bit-array)
 		      (length result-bit-array))
 	     (error "Argument and result bit arrays not the same length:~
 	     	     ~%  ~S~%  ~S"
-		    bit-array-1 result-bit-array))))
+		    bit-array result-bit-array))))
      (do ((index vm:vector-data-offset (1+ index))
 	  (end (+ vm:vector-data-offset
 		  (truncate (the index
-				 (+ (length bit-array-1)
-				    vm:word-bits -1))
+				 (+ (length bit-array)
+				    (1- vm:word-bits)))
 			    vm:word-bits))))
 	 ((= index end) result-bit-array)
        (declare (optimize (speed 3) (safety 0))
 		(type index index end))
        (setf (%raw-bits result-bit-array index)
-	     (32bit-logical-not (%raw-bits bit-array-1 index))))))
+	     (32bit-logical-not (%raw-bits bit-array index))))))
 
 
 ;;;; Primitive translator for byte-blt
