@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.9 1991/02/08 13:35:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.10 1991/02/14 18:47:57 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.9 1991/02/08 13:35:53 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.10 1991/02/14 18:47:57 ram Exp $
 ;;;
 ;;; Stream functions for Spice Lisp.
 ;;; Written by Skef Wholey and Rob MacLachlan.
@@ -94,7 +94,10 @@
 ;;; is passed a keyword which indicates the operation to perform.
 ;;; The following keywords are used:
 ;;;  :read-line		- Do a read-line.
-;;;  :listen 		- Return true if any input waiting.
+;;;  :listen 		- Return the following values:
+;;; 			     t if any input waiting.
+;;; 			     :eof if at eof.
+;;; 			     nil if no input is available and not at eof.
 ;;;  :unread		- Unread the character Arg.
 ;;;  :close		- Do any stream specific stuff to close the stream.
 ;;;			  The methods are set to closed-flame by the close
@@ -218,6 +221,7 @@
 	(funcall (stream-misc stream) stream :read-line eof-errorp
 		 eof-value))))
 
+
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
 ;;; so, except in this file, they are not inline by default, but they can be.
 ;;;
@@ -274,13 +278,18 @@
   "Returns T if a character is availible on the given Stream."
   (let ((stream (in-synonym-of stream)))
     (or (/= (the fixnum (stream-in-index stream)) in-buffer-length)
-	(funcall (stream-misc stream) stream :listen))))
+	;; Test for t explicitly since misc methods return :eof sometimes.
+	(eq (funcall (stream-misc stream) stream :listen) t))))
 
 (defun read-char-no-hang (&optional (stream *standard-input*)
 				    (eof-errorp t) eof-value recursive-p)
   "Returns the next character from the Stream if one is availible, or nil."
   (declare (ignore recursive-p))
-  (if (listen stream) (read-char stream eof-errorp eof-value) nil))
+  (let ((stream (in-synonym-of stream)))
+    (if (funcall (stream-misc stream) stream :listen)
+	;; On t or :eof get READ-CHAR to do the work.
+	(read-char stream eof-errorp eof-value)
+	nil)))
 
 (defun clear-input (&optional (stream *standard-input*))
   "Clears any buffered input associated with the Stream."
@@ -565,6 +574,7 @@
 
 (macrolet ((in-fun (name fun &rest args)
 	     `(defun ,name (stream ,@args)
+		(force-output (two-way-stream-output-stream stream))
 		(,fun (two-way-stream-input-stream stream) ,@args))))
   (in-fun two-way-in read-char eof-errorp eof-value)
   (in-fun two-way-bin read-byte eof-errorp eof-value)
@@ -578,7 +588,9 @@
     (case operation
       (:listen (or (/= (the fixnum (stream-in-index in)) in-buffer-length)
 		   (funcall in-method in :listen)))
-      (:read-line (read-line in arg1 arg2))
+      (:read-line
+       (force-output out)
+       (read-line in arg1 arg2))
       ((:finish-output :force-output :clear-output)
        (funcall out-method out operation arg1 arg2))
       ((:clear-input :unread)
@@ -672,8 +684,24 @@
 	  (let* ((current (car left))
 		 (misc (stream-misc current)))
 	    (case operation
-	      (:listen (or (/= (the fixnum (stream-in-index current)) in-buffer-length)
-			   (funcall misc current :listen)))
+	      (:listen
+	       (loop
+		 (let ((stuff (funcall misc current :listen)))
+		   (cond ((eq stuff :eof)
+			  ;; Advance current, and try again.
+			  (pop (concatenated-stream-current stream))
+			  (setf current
+				(car (concatenated-stream-current stream)))
+			  (unless current
+			    ;; No further streams.  EOF.
+			    (return :eof))
+			  (setf misc (stream-misc current)))
+			 (stuff
+			  ;; Stuff's available.
+			  (return t))
+			 (t
+			  ;; Nothing available yet.
+			  (return nil))))))
 	      (:close
 	       (dolist (stream (concatenated-stream-streams stream))
 		 (funcall (stream-misc stream) stream :close arg1))
@@ -765,7 +793,7 @@
 		      (in #'string-inch)
 		      (misc #'string-in-misc))
 	    (:print-function %print-string-input-stream)
-	    (:constructor nil)
+	    ;(:constructor nil)
 	    (:constructor internal-make-string-input-stream
 			  (string current end)))
   (string nil :type simple-string)
@@ -814,8 +842,9 @@
 		   (setf (string-input-stream-current stream) end)
 		   (values result t)))))))
     (:unread (decf (string-input-stream-current stream)))
-    (:listen (not (= (the fixnum (string-input-stream-current stream))
-		     (the fixnum (string-input-stream-end stream)))))
+    (:listen (or (/= (the fixnum (string-input-stream-current stream))
+		     (the fixnum (string-input-stream-end stream)))
+		 :eof))
     (:element-type 'string-char)))
   
 (defun make-string-input-stream (string &optional
