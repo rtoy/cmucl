@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.6 2000/07/09 14:03:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.50.2.7 2000/08/10 10:56:27 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -144,6 +144,34 @@
   name)
 
 
+
+;;;; DEFINE-SYMBOL-MACRO
+
+;;; define-symbol-macro  --  Public
+;;;
+(defmacro define-symbol-macro (name expansion)
+  `(eval-when (compile load eval)
+     (%define-symbol-macro ',name ',expansion)))
+;;;
+(defun %define-symbol-macro (name expansion)
+  (unless (symbolp name)
+    (error 'simple-type-error :datum name :expected-type 'symbol
+	   :format-control "Symbol macro name is not a symbol: ~S."
+	   :format-arguments (list name)))
+  (ecase (info variable kind name)
+    ((:macro :global nil)
+     (setf (info variable kind name) :macro)
+     (setf (info variable macro-expansion name) expansion))
+    (:special
+     (error 'simple-program-error
+	    :format-control "Symbol macro name already declared special: ~S."
+	    :format-arguments (list name)))
+    (:constant
+     (error 'simple-program-error
+	    :format-control "Symbol macro name already declared constant: ~S."
+	    :format-arguments (list name))))
+  name)
+    
 
 ;;; DEFTYPE is a lot like DEFMACRO.
 

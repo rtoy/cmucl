@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26.2.2 2000/05/23 16:36:23 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/eval.lisp,v 1.26.2.3 2000/08/10 10:56:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -167,7 +167,7 @@
 	  (values (info variable constant-value exp)))
 	 ((:special :global)
 	  (symbol-value exp))
-	 (:alien
+	 ((:alien :macro)
 	  (eval:internal-eval original-exp))))
       (list
        (let ((name (first exp))
@@ -402,10 +402,13 @@
 	((symbolp form)
 	 (let* ((venv (when env (c::lexenv-variables env)))
 		(local-def (cdr (assoc form venv))))
-	   (if (and (consp local-def)
-		    (eq (car local-def) 'macro))
-	       (values (cdr local-def) t)
-	       (values form nil))))
+	   (cond ((and (consp local-def)
+		       (eq (car local-def) 'macro))
+		  (values (cdr local-def) t))
+		 ((eq (info variable kind form) :macro)
+		  (values (info variable macro-expansion form) t))
+		 (t
+		  (values form nil)))))
 	(t
 	 (values form nil))))
 

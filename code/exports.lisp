@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.11 2000/08/08 13:41:46 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.12 2000/08/10 10:56:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -370,7 +370,8 @@
              "COUNT-IF-NOT" "CTYPECASE" "DEBUG" "DECF" "DECLAIM"
              "DECLARATION" "DECLARE" "DECODE-FLOAT" "DECODE-UNIVERSAL-TIME"
              "DEFCONSTANT" "DEFINE-COMPILER-MACRO" "DEFINE-CONDITION"
-             "DEFINE-MODIFY-MACRO" "DEFINE-SETF-METHOD" "DEFMACRO" "DEFPACKAGE"
+             "DEFINE-MODIFY-MACRO" "DEFINE-SETF-METHOD" "DEFINE-SYMBOL-MACRO"
+	     "DEFMACRO" "DEFPACKAGE"
              "DEFPARAMETER" "DEFSETF" "DEFSTRUCT" "DEFTYPE" "DEFUN" "DEFVAR"
              "DELETE" "DELETE-DUPLICATES" "DELETE-FILE" "DELETE-IF"
              "DELETE-IF-NOT" "DELETE-PACKAGE"
