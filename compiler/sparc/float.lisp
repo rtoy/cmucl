@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.14 1998/01/21 10:10:06 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/float.lisp,v 1.15 1998/01/24 03:12:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -277,11 +277,15 @@
 		  (:results (y :scs (,sc)))
 		  (:note "pointer to complex float coercion")
 		  (:generator 2
-		    (let ((real-tn (complex-double-reg-real-tn y)))
+		    (let ((real-tn ,(if double-p 
+					'(complex-double-reg-real-tn y)
+					'(complex-single-reg-real-tn y))))
 		      (inst ,(if double-p 'lddf 'ldf) real-tn x
 			    (- (* ,real-value vm:word-bytes)
 			       vm:other-pointer-type)))
-		    (let ((imag-tn (complex-double-reg-imag-tn y)))
+		    (let ((imag-tn ,(if double-p
+					'(complex-double-reg-imag-tn y)
+					'(complex-single-reg-imag-tn y))))
 		      (inst ,(if double-p 'lddf 'ldf) imag-tn x
 			    (- (* ,imag-value vm:word-bytes)
 			       vm:other-pointer-type)))))
@@ -290,6 +294,7 @@
 		complex-single-float-real-slot complex-single-float-imag-slot)
 	  (frob move-to-complex-double complex-double-reg t
 		complex-double-float-real-slot complex-double-float-imag-slot))
+
 ;;;
 ;;; Complex float move-argument vop
 ;;;
