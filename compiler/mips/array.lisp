@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.50 1998/07/24 17:22:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/array.lisp,v 1.51 1999/05/29 17:46:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -529,6 +529,7 @@
     (inst addu lip object index)
     (inst addu lip index)
     (inst addu lip index)
+    (inst addu lip index)
     (let ((real-tn (complex-double-reg-real-tn value)))
       (ld-double real-tn lip (- (* vector-data-offset word-bytes)
 				other-pointer-type)))
@@ -552,6 +553,7 @@
   (:temporary (:scs (interior-reg)) lip)
   (:generator 20
     (inst addu lip object index)
+    (inst addu lip index)
     (inst addu lip index)
     (inst addu lip index)
     (let ((value-real (complex-double-reg-real-tn value))
