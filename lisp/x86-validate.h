@@ -3,7 +3,7 @@
  * This code was written as part of the CMU Common Lisp project at
  * Carnegie Mellon University, and has been placed in the public domain.
  *
- *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.20 2004/07/07 15:03:12 rtoy Exp $
+ *  $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/x86-validate.h,v 1.21 2004/07/07 15:13:05 rtoy Exp $
  *
  */
 
@@ -22,7 +22,7 @@
  *      0xB0000000->0xB1000000       Foreign Linkage Table
  *	0xE0000000->            256M C stack - Alien stack.
  *
- *  OpenBSD and NetBSD:
+ *  OpenBSD:
  *	0x00000000->0x0E000000  224M C program and memory allocation.
  *	0x0E000000->0x10000000   32M Foreign segment.
  *	0x10000000->0x20000000  256M Read-Only Space.
@@ -31,6 +31,17 @@
  *	0x38000000->0x40000000  128M Control stack growing down.
  *	0x40000000->0x48000000  128M Reserved for shared libraries.
  *	0x48000000->0xB0000000 1664M Dynamic Space.
+ *      0xB0000000->0xB1000000   16M Foreign Linkage Table
+ *	0xE0000000->            256M C stack - Alien stack.
+ *
+ *  NetBSD:
+ *	0x00000000->0x0E000000  224M C program and memory allocation.
+ *	0x0E000000->0x10000000   32M Foreign segment.
+ *	0x10000000->0x20000000  256M Read-Only Space.
+ *	0x28000000->0x38000000  256M Static Space.
+ *	0x38000000->0x40000000  128M Binding stack growing up.
+ *	0x40000000->0x48000000  128M Control stack growing down.
+ *	0x48800000->0xB0000000 1656M Dynamic Space.
  *      0xB0000000->0xB1000000   16M Foreign Linkage Table
  *	0xE0000000->            256M C stack - Alien stack.
  *
@@ -123,7 +134,7 @@
 
 #define DYNAMIC_0_SPACE_START	(0x48800000)
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE	(0x67800000) /* 1.625GB */
+#define DYNAMIC_SPACE_SIZE	(0x67800000) /* 1.656GB */
 #else
 #define DYNAMIC_SPACE_SIZE	(0x04000000) /* 64MB */
 #endif
