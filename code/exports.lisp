@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.59 1990/11/21 10:35:54 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.60 1990/12/01 22:18:58 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -463,7 +463,7 @@
 	  primitive-object-slots primitive-object-variable-length
 	  ratio-denominator-slot ratio-numerator-slot ratio-size ratio-type
 	  return-pc-header-type return-pc-return-point-offset
-	  sap-pointer-slot sap-size sap-type sc-number-limit
+	  sap-pointer-slot sap-size sap-type
 	  simple-array-double-float-type simple-array-single-float-type
 	  simple-array-type simple-array-unsigned-byte-16-type
 	  simple-array-unsigned-byte-2-type
