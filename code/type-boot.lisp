@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.6.1.1 1993/01/23 14:30:29 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type-boot.lisp,v 1.6.1.2 1993/02/21 16:26:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,3 +21,22 @@
 
 (deftype boolean ()
   '(member t nil))
+
+(in-package "KERNEL")
+
+;;; Define this so that we can copy type-class structures before the defstruct
+;;; for type-class runs.
+;;;
+(defun copy-type-class (tc)
+  (let ((new (make-type-class)))
+    (dotimes (i (%instance-length tc))
+      (declare (type index i))
+      (setf (%instance-ref new i)
+	    (%instance-ref tc i)))
+    new))
+
+#-ns-boot
+;;; Define the STRUCTURE-OBJECT class as a subclass of INSTANCE.  This must be
+;;; the first DEFSTRUCT executed.
+;;;
+(defstruct (structure-object (:alternate-metaclass instance)))
