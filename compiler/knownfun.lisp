@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.16 1992/05/30 17:41:43 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/knownfun.lisp,v 1.17 1992/12/13 07:32:00 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,7 +18,7 @@
 ;;;
 ;;; Written by Rob MacLachlan
 ;;;
-(in-package 'c)
+(in-package :c)
 
 (export '(call unsafe unwind any foldable flushable movable predicate))
 
@@ -193,20 +193,21 @@
 ;;;    Make a function-info structure with the specified type, attributes and
 ;;; optimizers.
 ;;;
-(proclaim '(function %defknown (list list attributes &key (derive-type function)
-				     (optimizer function))))
+(proclaim '(function %defknown (list list attributes &key
+				(:derive-type (or function null))
+				(:optimizer (or function null)))))
 (defun %defknown (names type attributes &key derive-type optimizer)
   (let ((ctype (specifier-type type))
 	(info (make-function-info :attributes attributes
 				  :derive-type derive-type
 				  :optimizer optimizer))
-	(*info-environment* (or (backend-info-environment *target-backend*)
-				*info-environment*)))
+	(target-env (or (backend-info-environment *target-backend*)
+			*info-environment*)))
     (dolist (name names)
-      (setf (info function type name) ctype)
-      (setf (info function where-from name) :declared)
-      (setf (info function kind name) :function)
-      (setf (info function info name) info)))
+      (setf (info function type name target-env) ctype)
+      (setf (info function where-from name target-env) :declared)
+      (setf (info function kind name target-env) :function)
+      (setf (info function info name target-env) info)))
   names)
 
 
