@@ -868,11 +868,12 @@
 (register name 9)		; Name of function we are trying to call
 (register l3 10)		; Boxed Temporary
 (register old-fp 10)		; Fp to return to
+(register old-cont 10)		; Fp to return to (old name)
 (register l4 11)		; Boxed Temporary
 (register args 11)		; Pointer to stack arguments
 (register bs 12)		; Binding Stack Pointer
-(register fp 13)		; Active Frame Pointer (old name)
-(register fp 13)		; Current Fp
+(register fp 13)		; Frame Pointer 
+(register cont 13)		; Current Fp (old name)
 (register af 14)		; Active Function Pointer (old name)
 (register env 14)		; Current constant pool, called function.
 (register pc 15)		; PC, Return PC for misc-ops, and
