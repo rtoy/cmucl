@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.42 2003/08/27 21:09:27 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/insts.lisp,v 1.43 2003/09/09 18:00:06 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1288,6 +1288,59 @@ about function addresses and register values.")
   (:emitter (emit-format-3-immed segment #b10 (reg-tn-encoding dst) #b101000
 				 4 0 0)))
 
+;; Sparc-v9 Compare and Swap instructions
+(disassem:define-argument-type immediate-asi
+    :printer #'(lambda (value stream dstate)
+		 (declare (stream stream) (fixnum value) (ignore dstate))
+		 ;; Should we use symbolic values for known ASI values?
+		 (format stream "0x~2,'0x" value)))
+
+(defconstant compare-swap-asi-printer
+  `(:name :tab "[" rs1 "]" '%asi
+	  ", "
+	  rs2
+	  ", "
+	  rd))
+
+(defconstant compare-swap-immed-asi-printer
+  `(:name :tab "[" rs1 "]"
+	  asi
+	  ", "
+	  rs2
+	  ", "
+	  rd))
+	  
+(macrolet
+    ((cas (name op3)
+     `(define-instruction ,name (segment dst src1 src2 &key immed-asi)
+	(:declare (type tn dst src1 src2)
+		  (type (or null (unsigned-byte 8))))
+	(:printer format-3-reg
+		  ((op #b11) (op3 ,op3) (i 1) (asi nil))
+		  compare-swap-asi-printer
+		  )
+	(:printer format-3-reg
+		  ((op #b11) (op3 ,op3) (i 0) (asi nil :type 'immediate-asi))
+		  compare-swap-immed-asi-printer
+		  )
+	(:dependencies (reads src1)
+		       (reads src2)
+		       (reads dst)
+		       (reads :memory)
+		       (writes dst)
+		       (writes :memory))
+	(:delay 0)
+	(:emitter (emit-format-3-reg segment #b11 (reg-tn-encoding dst) ,op3
+				     (reg-tn-encoding src1)
+				     (if immed-asi 0 1)
+				     (or immed-asi 0)
+				     (reg-tn-encoding src2))))))
+  ;; 32-bit compre and swap
+  (cas casa  #b111100)
+  ;; 64-bit compare and swap
+  (cas casxa #b111110))
+
+
 (defun snarf-error-junk (sap offset &optional length-only)
   (let* ((length (system:sap-ref-8 sap offset))
          (vector (make-array length :element-type '(unsigned-byte 8))))
@@ -1721,8 +1774,11 @@ about function addresses and register values.")
 ;; exist on any Ultrasparc, but I only have a V9 manual.  The code in
 ;; float.lisp seems to indicate that they only existed on non-sun4
 ;; machines (sun3 68K machines?).
-(define-unary-fp-inst fstoir #b011000001 :reads :fsr)
-(define-unary-fp-inst fdtoir #b011000010 :reads :fsr)
+#-sparc
+(progn
+  (define-unary-fp-inst fstoir #b011000001 :reads :fsr)
+  (define-unary-fp-inst fdtoir #b011000010 :reads :fsr)
+)
 
 (define-unary-fp-inst fstoi #b011010001)
 (define-unary-fp-inst fdtoi #b011010010 :extended t)
