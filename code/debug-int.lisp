@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.54 1992/12/17 09:04:41 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.55 1993/01/15 02:25:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1004,7 +1004,8 @@
 			  0
 			  nil)))
 	    (find-escaped-frame caller))
-      (if (eq (kernel:%code-debug-info code) :bogus-lra)
+      (if (and (kernel:code-component-p code)
+	       (eq (kernel:%code-debug-info code) :bogus-lra))
 	  (let ((real-lra (kernel:code-header-ref code real-lra-slot)))
 	    (compute-calling-frame caller real-lra up-frame))
 	  (let ((d-fun (case code
