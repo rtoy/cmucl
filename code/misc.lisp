@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.5 1990/10/23 14:44:57 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/misc.lisp,v 1.6 1991/01/12 23:45:28 wlott Exp $
 ;;;
 ;;; Assorted miscellaneous functions for Spice Lisp.
 ;;;
@@ -117,17 +117,44 @@
 
 ;;;; Dribble stuff:
 
+;;; Each time we start dribbling to a new stream, we put it in
+;;; *dribble-stream*, and push a list of *dribble-stream*,
+;;; *standard-input*, and *standard-output* in *previous-streams*.
+;;; *standard-output* is changed to a broadcast stream that broadcasts
+;;; to *dribble-stream* and to the old value of *standard-output*.
+;;; *standard-input* is changed to an echo stream that echos input from
+;;; the old value of standard input to *dribble-stream*.
+;;;
+;;; When dribble is called with no arguments, *dribble-stream* is closed,
+;;; and the values of *dribble-stream*, *standard-input*, and
+;;; *standard-output* are poped from *previous-streams*.
+
+(defvar *previous-streams* nil)
+(defvar *dribble-stream* nil)
+
 (defun dribble (&optional pathname &key (if-exists :append))
   "With a file name as an argument, dribble opens the file and
-   sends a record of the output to that file.  Without an
-   argument, it closes the open dribble file."
-  (if pathname
-      (with-open-file (f pathname :direction :output  :if-exists if-exists
-			 :if-does-not-exist :create)
-	(catch 'dribble-punt
-	  (let ((*terminal-io*
-		 (make-two-way-stream
-		  (make-echo-stream *terminal-io* f)
-		  (make-broadcast-stream *terminal-io* f))))
-	    (%top-level))))
-      (throw 'dribble-punt nil)))
+   sends a record of further I/O to that file.  Without an
+   argument, it closes the dribble file, and quits logging."
+  (cond (pathname
+	 (let* ((new-dribble-stream
+		 (open pathname :direction :output :if-exists if-exists
+		       :if-does-not-exist :create))
+		(new-standard-output
+		 (make-broadcast-stream *standard-output* new-dribble-stream))
+		(new-standard-input
+		 (make-echo-stream *standard-input* new-dribble-stream)))
+	   (push (list *dribble-stream* *standard-input* *standard-output*)
+		 *previous-streams*)
+	   (setf *dribble-stream* new-dribble-stream)
+	   (setf *standard-input* new-standard-input)
+	   (setf *standard-output* new-standard-output)))
+	((null *dribble-stream*)
+	 (error "Not currently dribbling."))
+	(t
+	 (let ((old-streams (pop *previous-streams*)))
+	   (close *dribble-stream*)
+	   (setf *dribble-stream* (first old-streams))
+	   (setf *standard-input* (second old-streams))
+	   (setf *standard-output* (third old-streams)))))
+  (values))
