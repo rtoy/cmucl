@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.58 1993/08/19 13:10:04 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.59 1993/08/19 13:15:55 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -83,7 +83,8 @@
 (comf "target:code/error" :byte-compile nil)
 #+small
 (with-compilation-unit (:optimize '(optimize (speed 0)))
-  (comf "target:code/error" :byte-compile :maybe))
+  (comf "target:code/error" :byte-compile :maybe
+	:output-file "target:code/bc-error.fasl"))
 
 ;;; prevent deftypes from taking effect at compile time so that we don't
 ;;; install interpreted type expanders causing the compiler to infinitely
