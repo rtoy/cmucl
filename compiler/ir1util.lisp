@@ -817,6 +817,83 @@ inlines
   (undefined-value))
 
 
+(defvar *deletion-ignored-objects* '(t nil))
+
+;;; PRESENT-IN-FORM  --  Internal
+;;;
+;;;    Return true if we can find Obj in Form, NIL otherwise.  We bound our
+;;; recursion so that we don't get lost in circular structures.  We ignore the
+;;; car of forms if they are a symbol (to prevent confusing function
+;;; referencess with variables), and we also ignore anything inside ' or #'.
+;;;
+(defun present-in-form (obj form depth)
+  (declare (type (integer 0 20) depth))
+  (cond ((= depth 20) nil)
+	((eq obj form) t)
+	((atom form) nil)
+	(t
+	 (let ((first (car form))
+	       (depth (1+ depth)))
+	   (if (member first '(quote function))
+	       nil
+	       (or (and (not (symbolp first))
+			(present-in-form obj first depth))
+		   (do ((l (cdr form) (cdr l))
+			(n 0 (1+ n)))
+		       ((or (atom l) (> n 100))
+			nil)
+		     (declare (fixnum n))
+		     (when (present-in-form obj (car l) depth)
+		       (return t)))))))))
+
+
+;;; NOTE-BLOCK-DELETION  --  Internal
+;;;
+;;;    This function is called on a block immediately before we delete it.  We
+;;; check to see if any of the code about to die appeared in the original
+;;; source, and emit a note if so.
+;;;
+;;;    If the block was in a lambda is now deleted, but used to be a
+;;; optional-dispatch entry point or XEP, then we ignore the whole block.  We
+;;; also ignore the deletion of CRETURN nodes, since it is somewhat reasonable
+;;; for a function to not return, and there is a different note for that case
+;;; anyway.
+;;;
+;;;    If the actual source is an atom, then we use a bunch of heuristics to
+;;; guess whether this reference really appeared in the original source:
+;;; -- If a symbol, it must be interned.
+;;; -- It must not be an easily introduced constant (T or NIL).
+;;; -- The atom must be "present" in the original source form, and present in
+;;;    all intervening actual source forms.
+;;;
+(defun note-block-deletion (block)
+  (let ((home (block-home-lambda block)))
+    (unless (and (eq (functional-kind home) :deleted)
+		 (or (functional-entry-function home)
+		     (let ((od (lambda-optional-dispatch home)))
+		       (and od
+			    (not (eq (optional-dispatch-main-entry od)
+				     home))))))
+      (do-nodes (node cont block)
+	(let* ((path (node-source-path node))
+	       (first (first path)))
+	  (when (or (eq first 'original-source-start)
+		    (and (atom first)
+			 (or (not (symbolp first))
+			     (symbol-package first))
+			 (not (member first *deletion-ignored-objects*))
+			 (every #'(lambda (x)
+				    (present-in-form first x 0))
+				(source-path-forms path))
+			 (present-in-form first (find-original-source path)
+					  0)))
+	    (unless (return-p node)
+	      (let ((*compiler-error-context* node))
+		(compiler-note "Deleting unreachable code.")))
+	    (return))))))
+  (undefined-value))
+
+
 ;;; Delete-Block  --  Interface
 ;;;
 ;;;    This function does what is necessary to eliminate the code in it from
@@ -830,6 +907,7 @@ inlines
 (defun delete-block (block)
   (declare (type cblock block))
   (assert (block-component block) () "Block is already deleted.")
+  (note-block-deletion block)
   (setf (block-delete-p block) t)
 
   (let* ((last (block-last block))
