@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.14 2003/09/22 13:29:49 toy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-validate.h,v 1.15 2003/10/06 17:15:06 toy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -10,7 +10,8 @@
 /*
  * Address map:
  *
- *	0x00000000->0x10000000  256M C code and stuff(?)
+ *	0x00000000->0x0f800000  248M C code and stuff(?)
+ *      0x0f800000->0x10000000    8M for linkage table area
  *	0x10000000->0x20000000  256M Read-Only Space.
  *	0x20000000->0x28000000  128M Binding stack growing up.
  *	0x28000000->0x38000000  256M Static Space.
@@ -40,7 +41,12 @@
  * sunos-os.c.  If not, then mapping the holes causes segfaults in
  * initialization.)
  *
+ * Sparse block size must be larger than the system page size.
  */
+
+#define SPARSE_BLOCK_SIZE (1<<15)
+#define SPARSE_SIZE_MASK (SPARSE_BLOCK_SIZE-1)
+
 
 #ifdef LINKAGE_TABLE
 /*
@@ -56,21 +62,21 @@
  * long).  Hope that's enough!  Make sure this doesn't overlap the
  * READ_ONLY_SPACE_START!
  */
-#define FOREIGN_LINKAGE_SPACE_SIZE  (0x007f8000) /* 8 MB - 32 KB */
+#define FOREIGN_LINKAGE_SPACE_SIZE  (0x00800000 - SPARSE_BLOCK_SIZE) /* 8 MB - 32 KB */
 #endif
 
 
 #define READ_ONLY_SPACE_START	(0x10000000)
-#define READ_ONLY_SPACE_SIZE	(0x07ff8000) /* 128 MB - 32 KB, 256 MB max */
+#define READ_ONLY_SPACE_SIZE	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
   
 #define BINDING_STACK_START 	(0x20000000)
-#define BINDING_STACK_SIZE  	(0x07ff8000) /* 128 MB - 32 KB, 128 MB max */
+#define BINDING_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 
 #define STATIC_SPACE_START  	(0x28000000)
-#define STATIC_SPACE_SIZE   	(0x03ff8000) /* 128 MB - 32 KB, 256 MB max */
+#define STATIC_SPACE_SIZE   	(0x04000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 256 MB max */
 
 #define CONTROL_STACK_START 	(0x38000000)
-#define CONTROL_STACK_SIZE  	(0x07ff8000) /* 128 MB - 32 KB, 128 MB max */
+#define CONTROL_STACK_SIZE  	(0x08000000 - SPARSE_BLOCK_SIZE) /* 128 MB - 32 KB, 128 MB max */
 #define CONTROL_STACK_END       (CONTROL_STACK_START + CONTROL_STACK_SIZE)
 
 #define DYNAMIC_0_SPACE_START	(0x40000000)
@@ -78,11 +84,15 @@
 #define DYNAMIC_1_SPACE_START	(0x80000000)
 
 /* The default dynamic space to allocate */
-#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x0fff8000) /* 256 MB - 32 KB */
+#define DEFAULT_DYNAMIC_SPACE_SIZE  	(0x10000000 - SPARSE_BLOCK_SIZE) /* 256 MB - 32 KB */
 
 /* The maximum dynamic space that we can allocate */
 #ifdef GENCGC
-#define DYNAMIC_SPACE_SIZE      (0x3ff80000)    /* 1GB - 32 KB max */
+/*
+ * For GENCGC, we can use both dynamic spaces, so we get double the
+ * heap size.
+ */
+#define DYNAMIC_SPACE_SIZE      (0x80000000 - SPARSE_BLOCK_SIZE)    /* 2GB - 32 KB max */
 #else
-#define DYNAMIC_SPACE_SIZE      (0x3ff80000)    /* 1GB - 32 KB max */
+#define DYNAMIC_SPACE_SIZE      (0x40000000 - SPARSE_BLOCK_SIZE)    /* 1GB - 32 KB max */
 #endif
