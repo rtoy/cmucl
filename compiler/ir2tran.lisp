@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.64 1998/01/22 00:04:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.65 1998/01/26 15:54:20 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1144,10 +1144,12 @@
 	       (optional-dispatch-more-entry ef))
 	  ;; Special case the xep-allocate-frame + copy-more-arg case.
 	  (progn 
-	    (vop xep-allocate-frame node block start-label #+(or x86 sparc) t)
+	    (vop xep-allocate-frame node block start-label
+		 #+(or x86 sparc alpha) t)
 	    (vop copy-more-arg node block (optional-dispatch-max-args ef)))
 	;; No more args, so normal entry.
-	(vop xep-allocate-frame node block start-label #+(or x86 sparc) nil))
+	(vop xep-allocate-frame node block start-label
+	     #+(or x86 sparc alpha) nil))
       
       (if (ir2-environment-environment env)
 	  (let ((closure
@@ -1607,8 +1609,8 @@
 	 (2cont (continuation-info cont))
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
-	 (start-loc #-(or x86 sparc) (make-old-fp-passing-location t)
-		    #+(or x86 sparc) (make-nlx-entry-argument-start-location))
+	 (start-loc #-(or x86 sparc alpha) (make-old-fp-passing-location t)
+		    #+(or x86 sparc alpha) (make-nlx-entry-argument-start-location))
 	 (count-loc (make-argument-count-location))
 	 (target (ir2-nlx-info-target 2info)))
 

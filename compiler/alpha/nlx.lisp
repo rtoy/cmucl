@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/nlx.lisp,v 1.3 1998/01/21 19:28:44 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/nlx.lisp,v 1.4 1998/01/26 15:54:34 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -31,7 +31,6 @@
 ;;;    Make a TN for the argument count passing location for a
 ;;; non-local entry.
 ;;;
-#+nil
 (def-vm-support-routine make-nlx-entry-argument-start-location ()
   (make-wired-tn *fixnum-primitive-type* immediate-arg-scn ocfp-offset))
 

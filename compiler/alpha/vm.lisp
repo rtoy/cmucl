@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.3 1998/01/21 19:23:45 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/alpha/vm.lisp,v 1.4 1998/01/26 15:54:36 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,21 +219,21 @@
 
   ;; Non-Descriptor single-floats.
   (single-reg float-registers
-   :locations #.(loop for i from 4 to 31 collect i)
+   :locations #.(loop for i from 4 to 30 collect i)
    :constant-scs (fp-single-zero)
    :save-p t
    :alternate-scs (single-stack))
 
   ;; Non-Descriptor double-floats.
   (double-reg float-registers
-   :locations #.(loop for i from 4 to 31 collect i)
+   :locations #.(loop for i from 4 to 30 collect i)
    :constant-scs (fp-double-zero)
    :save-p t
    :alternate-scs (double-stack))
 
   #+complex-float
   (complex-single-reg float-registers
-   :locations #.(loop for i from 4 to 31 by 2 collect i)
+   :locations #.(loop for i from 4 to 28 by 2 collect i)
    :element-size 2
    :constant-scs ()
    :save-p t
@@ -241,7 +241,7 @@
 
   #+complex-float
   (complex-double-reg float-registers
-   :locations #.(loop for i from 4 to 31 by 2 collect i)
+   :locations #.(loop for i from 4 to 28 by 2 collect i)
    :element-size 2
    :constant-scs ()
    :save-p t
@@ -311,11 +311,11 @@
 	 (sc-number-or-lose 'immediate *backend*)
 	 nil))
     (single-float
-     (if (zerop value)
+     (if (eql value 0f0)
 	 (sc-number-or-lose 'fp-single-zero *backend*)
 	 nil))
     (double-float
-     (if (zerop value)
+     (if (eql value 0d0)
 	 (sc-number-or-lose 'fp-double-zero *backend*)
 	 nil))))
 
