@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.43 1997/05/16 17:03:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.44 1998/01/30 17:11:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1172,6 +1172,9 @@
 ;;; Ensure-Directories-Exist  --  Public
 ;;;
 (defun ensure-directories-exist (pathspec &key verbose (mode #o777))
+  "Tests whether the directories containing the specified file
+  actually exist, and attempts to create them if they do not.
+  Portable programs should avoid using the :MODE keyword argument."
   (let* ((pathname (pathname pathspec))
 	 (pathname (if (logical-pathname-p pathname)
 		       (translate-logical-pathname pathname)
