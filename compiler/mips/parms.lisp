@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.8 1990/02/20 18:19:04 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.9 1990/02/21 00:26:02 ch Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -22,13 +22,14 @@
 
 
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
-	  word-bytes target-byte-order lowtag-bits lowtag-mask type-bits
-	  type-mask pad-data-block even-fixnum-type function-pointer-type
-	  other-immediate-type list-pointer-type odd-fixnum-type
-	  structure-pointer-type other-pointer-type bignum-type ratio-type
-	  single-float-type double-float-type complex-type
-	  simple-array-type simple-string-type simple-bit-vector-type
-	  simple-vector-type simple-array-unsigned-byte-2-type
+	  word-bytes target-byte-order lowtag-bits lowtag-mask lowtag-limit
+	  type-bits type-mask pad-data-block even-fixnum-type
+	  function-pointer-type other-immediate-type list-pointer-type
+	  odd-fixnum-type structure-pointer-type other-pointer-type
+	  bignum-type ratio-type single-float-type double-float-type
+	  complex-type simple-array-type simple-string-type
+	  simple-bit-vector-type simple-vector-type
+	  simple-array-unsigned-byte-2-type 
 	  simple-array-unsigned-byte-4-type
 	  simple-array-unsigned-byte-8-type
 	  simple-array-unsigned-byte-16-type
@@ -85,7 +86,11 @@
   "Number of bits at the low end of a pointer used for type information.")
 
 (defconstant lowtag-mask (1- (ash 1 lowtag-bits))
-  "Mask to extract the lowtag bits from a pointer.")
+  "Mask to extract the low tag bits from a pointer.")
+  
+(defconstant lowtag-limit (ash 1 lowtag-bits)
+  "Exclusive upper bound on the value of the low tag bits from a
+  pointer.")
 
 (defconstant type-bits 8
   "Number of bits used in the header word of a data block for typeing.")
