@@ -190,12 +190,9 @@ sigtrap_handler(HANDLER_ARGS)
     __setfpucw(contextstruct.fpstate->cw);
 #endif
 
-  /* Don't disallow recursive breakpoint traps.  Otherwise, we can't */
-  /* use debugger breakpoints anywhere in here. */
   /*fprintf(stderr,"x86sigtrap: %8x %x\n", context->sc_pc, *(char*)(context->sc_pc-1));
    */
   DPRINTF(0,(stderr,"sigtrap(%d %d %x)\n",signal,code,context));
-  sigsetmask(context->sc_mask);
   SAVE_CONTEXT();
   /* this is just for info in case monitor wants to print an approx */
   current_control_stack_pointer = (unsigned long*)context->sc_sp;
