@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.75 1990/10/13 04:55:13 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.76 1990/10/13 16:16:05 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -99,9 +99,9 @@
 
 ;;; Where to put the different spaces.
 ;;; 
-(defparameter target-read-only-space-start #x20000000)
-(defparameter target-static-space-start #x30000000)
-(defparameter target-dynamic-space-start #x40000000)
+(defparameter target-read-only-space-start #x01000000)
+(defparameter target-static-space-start    #x04000000)
+(defparameter target-dynamic-space-start   #x06000000)
 
 
 ;;;; Type definitions:
