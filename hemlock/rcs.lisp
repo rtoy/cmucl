@@ -1,6 +1,6 @@
 ;;; -*- Package: HEMLOCK; Mode: Lisp -*-
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.12 1990/03/03 00:49:54 ch Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rcs.lisp,v 1.13 1990/03/03 01:03:55 ch Exp $
 ;;;
 ;;; Various commands for dealing with RCS under Hemlock.
 ;;; 
@@ -131,7 +131,8 @@
 		(change-to-buffer log-buffer)
 		(do-recursive-edit)
 	  
-		(message "Checking in ~A ..." (namestring pathname))
+		(message "Checking in ~A~:[~; keeping the lock~] ..."
+			 (namestring pathname) keep-lock)
 		(let ((log-stream (make-hemlock-region-stream
 				   (buffer-region log-buffer))))
 		  (sub-check-in-file pathname keep-lock log-stream))
@@ -227,7 +228,7 @@
     check-out-count))
 
 (defun rcs-check-out-file (buffer pathname lock)
-  (message "Checking out ~A ..." (namestring pathname))
+  (message "Checking out ~A~:[~; with a lock~] ..." (namestring pathname) lock)
   (in-directory pathname
     (let ((backup
 	   (if (probe-file pathname)
