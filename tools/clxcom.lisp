@@ -46,8 +46,8 @@
     (comf "target:clx/resource" :load t))
   (comf "target:code/clx-ext")
   (comf "target:hemlock/charmacs" :load t)
-  (comf "target:hemlock/key-event")
-  (comf "target:hemlock/keysym-defs")
+  (comf "target:hemlock/key-event" :load t)
+  (comf "target:hemlock/keysym-defs" :load t)
 
   #-no-pcl
   (comf "target:code/inspect"))
