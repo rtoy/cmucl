@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.19.1.1 1993/01/15 15:27:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.19.1.2 1993/02/10 23:39:48 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -716,7 +716,7 @@ The previous version is uglier, but it sets up unique run-time tags.
      (format stream "Layout-invalid error in ~S:~@
 		     type test of class ~S was passed obsolete instance:~%  ~S"
 	     (type-error-function-name condition)
-	     (class-proper-name (type-error-expected-type condition))
+	     (kernel:class-proper-name (type-error-expected-type condition))
 	     (type-error-datum condition)))))
 
 (define-condition case-failure (type-error)
