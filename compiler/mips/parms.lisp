@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.13 1990/02/22 23:41:47 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.14 1990/02/23 17:58:21 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM attributes for
 ;;; the MIPS.  This file is separate from other stuff so that it can be compiled
@@ -22,8 +22,11 @@
 
 
 (export '(sc-number-limit most-positive-cost word-bits byte-bits word-shift
-	  word-bytes target-byte-order lowtag-bits lowtag-mask lowtag-limit
-	  type-bits type-mask pad-data-block even-fixnum-type
+	  word-bytes target-byte-order target-read-only-space-start
+	  target-static-space-start target-dynamic-space-start
+	  target-control-stack-start target-binding-stack-start
+	  target-heap-start target-heap-length lowtag-bits lowtag-mask
+	  lowtag-limit type-bits type-mask pad-data-block even-fixnum-type
 	  function-pointer-type other-immediate-type list-pointer-type
 	  odd-fixnum-type structure-pointer-type other-pointer-type
 	  bignum-type ratio-type single-float-type double-float-type
@@ -36,12 +39,13 @@
 	  simple-array-unsigned-byte-32-type simple-array-single-float-type
 	  simple-array-double-float-type complex-string-type
 	  complex-bit-vector-type complex-vector-type complex-array-type
-	  code-header-type function-header-type closure-function-header-type
-	  return-pc-header-type closure-header-type value-cell-header-type
-	  symbol-header-type character-type SAP-type unbound-marker-type
-	  atomic-flag interrupted-flag fixnum initial-symbols
-	  initial-symbol-offset offset-initial-symbol
-	  *assembly-unit-length* target-fasl-code-format vm-version))
+	  code-header-type function-header-type
+	  closure-function-header-type return-pc-header-type
+	  closure-header-type value-cell-header-type symbol-header-type
+	  character-type SAP-type unbound-marker-type atomic-flag
+	  interrupted-flag fixnum initial-symbols initial-symbol-offset
+	  offset-initial-symbol *assembly-unit-length*
+	  target-fasl-code-format vm-version))
 	  
 
 (eval-when (compile load eval)
@@ -78,6 +82,21 @@
 (defconstant target-byte-order :little-endian
   "The byte order of the target machine.  :big-endian has the MSB first (RT)
   and :little-endian has the MSB last (VAX).")
+
+
+
+;;;; Description of the target address space.
+
+;;; Where to put the different spaces and stacks.
+(defconstant target-read-only-space-start #x20000000)
+(defconstant target-static-space-start #x30000000)
+(defconstant target-dynamic-space-start #x40000000)
+(defconstant target-control-stack-start #x50000000)
+(defconstant target-binding-stack-start #x60000000)
+
+;;; How much memory to validate for lisp.
+(defconstant target-heap-start #x20000000)
+(defconstant target-heap-length #x50000000)
 
 
 
