@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.18 1991/04/22 23:05:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/eval.lisp,v 1.19 1991/09/24 16:09:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -407,7 +407,8 @@
 		      (:local `(internal-apply
 				,lambda ,args-form
 				(compute-closure node ,lambda frame-ptr
-						 closure)))))
+						 closure)
+				nil))))
 	 (tailp-call-form
 	  (ecase call-type
 	    (:full `(return-from
@@ -423,7 +424,8 @@
 		       (eval-stack-set-top frame-ptr)
 		       (return-from
 			internal-apply-loop 
-			(internal-apply ,lambda ,args ,calling-closure)))))))
+			(internal-apply ,lambda ,args ,calling-closure
+					nil)))))))
     `(cond ((c::node-tail-p node)
 	    ,tailp-call-form)
 	   (t
@@ -754,21 +756,28 @@
 ;;; for this lambda's call frame.  Then store the args into locals on the
 ;;; stack.
 ;;;
-(defun internal-apply (lambda args closure)
+;;; Args is the list of arguments to apply to.  If IGNORE-UNUSED is true, then
+;;; values for un-read variables are present in the argument list, and must be
+;;; discarded (always true except in a local call.)  Args may run out of values
+;;; before vars runs out of variables (in the case of an XEP with optionals);
+;;; we just do CAR of nil and store nil.  This is not the proper defaulting
+;;; (which is done by explicit code in the XEP.)
+;;;
+(defun internal-apply (lambda args closure &optional (ignore-unused t))
   (let ((frame-ptr *eval-stack-top*))
     (eval-stack-extend (c:lambda-eval-info-frame-size (c::lambda-info lambda)))
     (do ((vars (c::lambda-vars lambda) (cdr vars))
-	 (args args (cdr args)))
+	 (args args))
 	((null vars))
-      ;; Args may run out of values before vars runs out of variables, so
-      ;; just do CAR of nil and store nil.
       (let ((var (car vars)))
-	(when (c::leaf-refs var)
-	  (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
-		(if (c::lambda-var-indirect var)
-		    (make-indirect-value-cell (car args))
-		    (car args))))))
-    (internal-apply-loop (c::lambda-bind lambda) frame-ptr lambda args closure)))
+	(cond ((c::leaf-refs var)
+	       (setf (eval-stack-local frame-ptr (c::lambda-var-info var))
+		     (if (c::lambda-var-indirect var)
+			 (make-indirect-value-cell (pop args))
+			 (pop args))))
+	      (ignore-unused (pop args)))))
+    (internal-apply-loop (c::lambda-bind lambda) frame-ptr lambda args
+			 closure)))
 
 ;;; INTERNAL-APPLY-LOOP -- Internal.
 ;;;
@@ -935,8 +944,7 @@
 		 (change-blocks))
 		(t
 		 ;; Cif nodes set the block for us, but other last nodes do not.
-		 (change-blocks (car (c::block-succ block)))))))
-    (eval-stack-set-top frame-ptr)))
+		 (change-blocks (car (c::block-succ block)))))))))
 
 ;;; REFERENCE-THIS-VAR-TO-KEEP-IT-ALIVE -- Internal.
 ;;;
