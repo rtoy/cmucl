@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.37 1992/09/04 11:16:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/type-vops.lisp,v 1.38 1992/12/05 21:54:24 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -29,9 +29,10 @@
   (list unbound-marker-type base-char-type))
 
 (defparameter function-header-types
-  (list funcallable-instance-header-type closure-header-type
+  (list funcallable-instance-header-type dylan-function-header-type
 	byte-code-function-type byte-code-closure-type
-	function-header-type closure-function-header-type))
+	function-header-type closure-function-header-type
+	closure-header-type))
 
 (defun canonicalize-headers (headers)
   (collect ((results))
@@ -339,6 +340,9 @@
 
 (def-type-vops funcallable-instance-p nil nil nil
   funcallable-instance-header-type)
+
+(def-type-vops dylan::dylan-function-p nil nil nil
+  dylan-function-header-type)
 
 (def-type-vops array-header-p nil nil nil
   simple-array-type complex-string-type complex-bit-vector-type
