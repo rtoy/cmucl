@@ -139,7 +139,7 @@
      (format nil "Instance ~a of Class ~a"
 	     object (pcl::class-name (pcl::class-of object))))
     (function (format nil "~a" object))
-    (structure
+    (structure-object
      (let ((default (format nil "~a" object)))
        (declare (simple-string default))
        (if (and (> (length default) 2)
@@ -237,7 +237,7 @@
   (typecase object
     (pcl::std-instance (display-clos-pane object))
     (function (display-function-pane object))
-    (structure (display-structure-pane object))
+    (structure-object (display-structure-pane object))
     (t
      (with-inspector-pane (object)
        (let ((label (create-label-gadget
@@ -309,8 +309,8 @@
 
 (defun display-structure-pane (s)
   (with-inspector-pane (s)
-    (let* ((dd (info type defined-structure-info (structure-ref s 0)))
-	   (dsds (c::dd-slots dd))
+    (let* ((dd (kernel:layout-info (kernel:%instance-layout s)))
+	   (dsds (kernel:dd-slots dd))
 	   (viewer (when (> (length dsds) *inspector-huge-object-threshold*)
 		     (create-scrolled-window form "structureViewer"
 					     :left-attachment :attach-form
@@ -324,8 +324,9 @@
       (dolist (dsd dsds)
 	(push
 	 (create-value-box rc (format nil "~A:"
-				      (string-capitalize (c::dsd-%name dsd)))
-			   (structure-ref s (c::dsd-index dsd))
+				      (string-capitalize
+				       (kernel:dsd-%name dsd)))
+			   (funcall (kernel:dsd-accessor dsd) s)
 			   :callback #'inspect-object-callback)
 	 widgets))
       (apply #'manage-children widgets)
