@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.8 1997/11/21 12:26:46 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/nlx.lisp,v 1.9 1997/12/03 15:30:22 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -240,8 +240,8 @@
 
     (inst lea esi (make-ea :dword :base source :disp (- word-bytes)))
     ;; The 'top' arg contains the %esp value saved at the time the
-    ;; catch block was created and and points to where the thrown
-    ;; values should sit.
+    ;; catch block was created and points to where the thrown values
+    ;; should sit.
     (move edi top)
     (move result edi)
 

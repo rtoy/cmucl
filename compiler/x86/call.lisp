@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.8 1997/11/22 18:26:27 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.9 1997/12/03 15:30:20 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1006,7 +1006,7 @@
 
 		(move ebp-tn new-fp)	; NB - now on new stack frame.
 		
-		;; Push the return address for backward compatability.
+		;; Push the return address.
 		#+x86-lra
 		(inst push (make-fixup nil :code-object return))
 ;		(inst push (make-ea :dword :base new-fp :disp -8))
