@@ -10,8 +10,6 @@
 
 (in-package "USER")
 
-(c::%proclaim ')
-
 (with-compiler-log-file
     ("target:compile-lisp.log"
      :optimize '(optimize (speed 2) (space 2) (inhibit-warnings 2)
