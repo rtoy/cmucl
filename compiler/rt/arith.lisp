@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.7 1991/04/21 19:47:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/arith.lisp,v 1.8 1991/04/22 07:29:42 wlott Exp $
 ;;;
 ;;; This file contains the VM definition arithmetic VOPs for the IBM RT.
 ;;;
@@ -219,41 +219,39 @@
 
 (define-vop (fast-ash)
   (:note "inline ASH")
-  (:args (number :scs (signed-reg unsigned-reg) :to :save)
-	 (amount :scs (signed-reg immediate)))
+  (:args (number :scs (signed-reg unsigned-reg) :to (:result 0) :target result)
+	 (amount-arg :scs (signed-reg immediate) :target amount))
   (:arg-types (:or signed-num unsigned-num) signed-num)
   (:results (result :scs (signed-reg unsigned-reg)))
   (:result-types (:or signed-num unsigned-num))
   (:translate ash)
   (:policy :fast-safe)
-  (:temporary (:sc non-descriptor-reg) ndesc)
+  (:temporary (:sc non-descriptor-reg :from (:argument 1)) amount)
   (:generator 12
-    (sc-case amount
+    (sc-case amount-arg
       (signed-reg
        (let ((positive (gen-label))
+	     (shift-right (gen-label))
 	     (done (gen-label)))
-	 (inst c amount 0)
-	 (inst bncx :lt positive)
-	 (inst neg ndesc amount)
-	 (inst c ndesc 32)
-	 ;; If less than 32, goto done while shifting.
-	 (inst bcx :lt done)
-	 (sc-case number
-	   (signed-reg
-	    (move result number)
-	    (inst sar result ndesc))
-	   (unsigned-reg
-	    (move result number)
-	    (inst sr result ndesc)))
-	 ;; 32 or greater case.
+	 ;; Copy the amount and check to see if it's positive.
+	 (inst oil amount amount-arg 0)
+	 (inst bnc :lt positive)
+
+	 ;; We want to shift to the right, so make the amount positive.
+	 (inst neg amount)
+	 (inst c amount 32)
+	 ;; If less than 32, do the shifting.
+	 (inst bc :lt shift-right)
+	 ;; 32 or greater, we just shift by 31.
+	 (inst li amount 31)
+	 (emit-label shift-right)
+	 (move result number)
 	 (inst bx done)
 	 (sc-case number
 	   (signed-reg
-	    (move result number)
-	    (inst sar result 31))
+	    (inst sar result amount))
 	   (unsigned-reg
-	    (move result number)
-	    (inst sr result 31)))
+	    (inst sr result amount)))
 
 	 (emit-label positive)
 	 ;; The result-type assures us that this shift will not overflow.
@@ -263,7 +261,7 @@
 	 (emit-label done)))
 
       (immediate
-       (let ((amount (tn-value amount)))
+       (let ((amount (tn-value amount-arg)))
 	 (cond ((minusp amount)
 		(sc-case number
 		  (unsigned-reg
