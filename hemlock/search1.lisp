@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/search1.lisp,v 1.1.1.3 1991/02/08 16:37:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/search1.lisp,v 1.1.1.4 1992/01/06 16:24:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -66,7 +66,6 @@
 ;;; is put on the search-pattern-documentation property of the kind
 ;;; keyword.
 ;;;
-(eval-when (compile eval)
 (defmacro define-search-kind (kind lambda-list documentation &body forms)
   (let ((dummy (gensym)))
     `(progn
@@ -75,7 +74,6 @@
 	(setf (gethash ,kind *search-pattern-experts*)
 	      #'(lambda ,lambda-list ,@forms)))
       (,dummy))))
-); eval-when (compile eval)
 
 ;;; new-search-pattern  --  Public
 ;;;
@@ -126,7 +124,6 @@
 ;;; match ocurred.  Something non-nil is returned if something is
 ;;; found and line and start are set to where it was found.
 ;;;
-(eval-when (compile eval)
 (defmacro search-once-forward-macro (line start search-fun &rest other-args)
   `(do* ((l ,line)
 	 (chars (line-chars l) (line-chars l))
@@ -163,7 +160,7 @@
        (return t))
      (setq l (line-previous l))
      (when (null l) (return nil))))
-); eval-when (compile eval)
+
 
 ;;;; String Searches.
 ;;;
