@@ -570,7 +570,7 @@ and load your system with:
     ;; 3.0 it's in the LUCID-COMMON-LISP package.
     ;;
     #+LUCID (or lucid::*source-pathname* (bad-time))
-    #-(or Lispm excl Xerox (and dec vax common) LUCID) nil))
+    #-(or CMU Lispm excl Xerox (and dec vax common) LUCID) nil))
 
 #-Symbolics
 (defvar *pcl-directory*
