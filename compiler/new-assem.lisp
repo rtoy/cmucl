@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.21 1992/11/23 13:42:36 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/new-assem.lisp,v 1.22 1993/03/12 15:35:35 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -28,7 +28,7 @@
 	  define-emitter define-instruction define-instruction-macro
 	  def-assembler-params branch flushable variable-length reads writes
 
-	  segment make-segment segment-name
+	  segment make-segment segment-name segment-collect-dynamic-statistics
 	  assemble align inst without-scheduling 
 	  label label-p gen-label emit-label label-position
 	  append-segment finalize-segment
@@ -114,7 +114,7 @@
   ;; The name of this segment.  Only using in trace files.
   (name "Unnamed" :type simple-base-string)
   ;;
-  ;; Wether or not run the scheduler.  Note: if the instruction defintions
+  ;; Whether or not run the scheduler.  Note: if the instruction defintions
   ;; were not compiled with the scheduler turned on, this has no effect.
   (run-scheduler nil)
   ;;
@@ -210,7 +210,11 @@
   (delayed nil :type list)
   ;;
   ;; The emittable insts again, except this time as a list sorted by depth.
-  (emittable-insts-queue nil :type list))
+  (emittable-insts-queue nil :type list)
+  ;;
+  ;; Whether or not to collect dynamic statistics.  This is just the same as
+  ;; *collect-dynamic-statistics* but is faster to reference.
+  (collect-dynamic-statistics nil))
 
 (c::defprinter segment name)
 
@@ -1637,6 +1641,7 @@
 	 (emitter nil)
 	 (decls nil)
 	 (attributes nil)
+	 (cost nil)
 	 (dependencies nil)
 	 (delay nil)
 	 (pinned nil)
@@ -1656,15 +1661,14 @@
 	   (setf decls (append decls args)))
 	  (:attributes
 	   (setf attributes (append attributes args)))
+	  (:cost
+	   (setf cost (first args)))
 	  (:dependencies
 	   (setf dependencies (append dependencies args)))
 	  (:delay
 	   (when delay
 	     (error "Can only specify delay once per instruction."))
 	   (setf delay args))
-	  ((:reads :writes)
-	   ;; ### Ignore them for now.
-	   nil)
 	  (:pinned
 	   (setf pinned t))
 	  (:vop-var
@@ -1703,6 +1707,16 @@
 	    emitter)
       (push `(dolist (postit ,postits)
 	       (emit-back-patch ,segment-name 0 postit))
+	    emitter)
+      (unless cost (setf cost 1))
+      (push `(when (segment-collect-dynamic-statistics ,segment-name)
+	       (let* ((info (c:ir2-component-dyncount-info
+			     (c:component-info c:*compile-component*)))
+		      (costs (c:dyncount-info-costs info))
+		      (block-number (c:block-number
+				     (c:ir2-block-block
+				      (c:vop-block ,vop-name)))))
+		 (incf (aref costs (1- block-number)) ,cost)))
 	    emitter)
       (when (assem-params-scheduler-p
 	     (c:backend-assembler-params c:*target-backend*))
