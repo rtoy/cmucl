@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.17 1992/03/06 11:29:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.18 1992/03/06 11:57:54 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1005,7 +1005,7 @@
    information."
   (declare (type unix-fd fd)
 	   (type (unsigned-byte 32) cmd))
-  (void-syscall ("ioctl" int int (* char)) fd cmd arg))
+  (void-syscall ("ioctl" int unsigned-int (* char)) fd cmd arg))
 
 (defun tcsetpgrp (fd pgrp)
   "Set the tty-process-group for the unix file-descriptor FD to PGRP."
