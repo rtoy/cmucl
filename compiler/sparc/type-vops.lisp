@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.4 1991/01/09 02:11:51 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/type-vops.lisp,v 1.5 1991/08/04 11:36:53 wlott Exp $
 ;;; 
 ;;; This file contains the VM definition of type testing and checking VOPs
 ;;; for the SPARC.
@@ -157,6 +157,12 @@
 
 (def-type-vops weak-pointer-p check-weak-pointer weak-pointer
   object-not-weak-pointer-error vm:weak-pointer-type)
+
+(def-type-vops code-component-p nil nil nil
+  vm:code-header-type)
+
+(def-type-vops lra-p nil nil nil
+  vm:return-pc-header-type)
 
 (def-type-vops array-header-p nil nil nil
   vm:simple-array-type vm:complex-string-type vm:complex-bit-vector-type
