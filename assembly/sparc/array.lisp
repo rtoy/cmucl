@@ -5,11 +5,11 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.8 2003/08/22 13:20:02 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.9 2004/04/05 18:51:06 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.8 2003/08/22 13:20:02 toy Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/sparc/array.lisp,v 1.9 2004/04/05 18:51:06 rtoy Exp $
 ;;;
 ;;;    This file contains the support routines for arrays and vectors.
 ;;;
@@ -83,6 +83,32 @@
   (loadw length string vm:vector-length-slot vm:other-pointer-type))
 
 
+;; Implement the one-at-a-time algorithm designed by Bob Jenkins
+;; (see <http://burtleburtle.net/bob/hash/doobs.html> for some
+;; more information).
+;;
+;; For completeness, here is the hash function, in C, from that web
+;; page.  ub4 is an unsigned 32-bit integer.
+
+#||
+ub4 one_at_a_time(char *key, ub4 len)
+{
+  ub4   hash, i;
+  for (hash=0, i=0; i<len; ++i)
+  {
+    hash += key[i];
+    hash += (hash << 10);
+    hash ^= (hash >> 6);
+  }
+  hash += (hash << 3);
+  hash ^= (hash >> 11);
+  hash += (hash << 15);
+  return (hash & mask);
+} 
+
+||#
+
+
 (define-assembly-routine (sxhash-simple-substring
 			  (:translate %sxhash-simple-substring)
 			  (:policy :fast-safe)
@@ -104,26 +130,37 @@
 
   LOOP
 
-  (inst xor accum data)
-  (inst sll temp accum 27)
-  (inst srl accum 5)
-  (inst or accum temp)
-  (inst add offset 4)
-
+  ;; hash += key[i]
+  (inst add accum data)
+  ;; hash += (hash << 10)
+  (inst slln temp accum 10)
+  (inst add accum temp)
+  ;; hash ^= (hash >> 6)
+  (inst srln temp accum 6)
+  (inst xor accum temp)
+  (inst add offset 1)
+  
   TEST
 
-  (inst subcc length (fixnumize 4))
+  (inst subcc length (fixnumize 1))
   (inst b :ge loop)
-  (inst ld data string offset)
+  (inst ldub data string offset)
 
-  (inst addcc length (fixnumize 4))
-  (inst b :eq done)
-  (inst neg length)
-  (inst sll length 1)
-  (inst srl data length)
-  (inst xor accum data)
+  ;; hash += (hash << 3)
+  (inst slln temp accum 3)
+  (inst add accum temp)
+  ;; hash ^= (hash >> 11)
+  (inst srln temp accum 11)
+  (inst xor accum temp)
+  ;; hash += (hash << 15)
+  (inst slln temp accum 15)
+  (inst add accum temp)
+  
+  ;;(inst li temp most-positive-fixnum)
+  ;;(inst and accum temp)
+  ;; Make it a fixnum result
 
-  DONE
-
-  (inst sll result accum 5)
-  (inst srl result result 3))
+  ;; Make the result a positive fixnum.  Shifting it left, then right
+  ;; does what we want, and extracts the bits we need.
+  (inst slln accum (1+ vm:fixnum-tag-bits))
+  (inst srln result accum 1))
