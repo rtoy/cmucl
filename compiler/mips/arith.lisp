@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.32 1990/07/12 12:43:08 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.33 1990/07/21 00:37:27 ram Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -508,7 +508,7 @@
   (:arg-types * tagged-num)
   (:note "inline fixnum comparison")
   (:translate eql)
-  (:generator 2
+  (:generator 3
     (if not-p
 	(inst bne x y target)
 	(inst beq x y target))
@@ -520,7 +520,7 @@
   (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y)
   (:translate eql)
-  (:generator 3
+  (:generator 2
     (let ((y (cond ((eql y 0) zero-tn)
 		   (t
 		    (inst li temp (fixnum y))
