@@ -6,7 +6,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.81 2004/06/02 14:46:08 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/filesys.lisp,v 1.82 2004/09/13 17:42:40 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -177,7 +177,10 @@
 	   (type index start end))
   (labels
       ((explicit-version (namestr start end)
-	 (cond ((or (< (- end start) 5)
+	 ;; Look for something like "~*~" at the end of the
+	 ;; namestring, where * can be #\* or some digits.  This
+	 ;; denotes a version.
+	 (cond ((or (< (- end start) 4)
 		    (char/= (schar namestr (1- end)) #\~))
 		;; No explicit version given, so return NIL to
 		;; indicate we don't want file versions, unless
@@ -186,10 +189,16 @@
 	       ((and (char= (schar namestr (- end 2)) #\*)
 		     (char= (schar namestr (- end 3)) #\~)
 		     (char= (schar namestr (- end 4)) #\.))
+		;; Found "~*~", so it's a wild version
 		(values :wild (- end 4)))
 	       (t
+		;; Look for a version number.  Start at the end, just
+		;; before the ~ and keep looking for digits.  If the
+		;; first non-digit is ~, we have a version number, so
+		;; get it.  If not, we didn't find a version number,
+		;; so we call it :newest
 		(do ((i (- end 2) (1- i)))
-		    ((< i (+ start 2)) (values :newest end))
+		    ((< i (+ start 1)) (values :newest end))
 		  (let ((char (schar namestr i)))
 		    (when (eql char #\~)
 		      (return (if (char= (schar namestr (1- i)) #\.)
@@ -438,6 +447,10 @@
 	  (error "Cannot specify the type without a file: ~S" pathname))
 	(strings ".")
 	(strings (unparse-unix-piece type)))
+      (when (and version (not name))
+	;; We don't want version without a name, because when we try
+	;; to read #p".~*~" back, the name is "", not NIL.
+	(error "Cannot specify a version without a file: ~S" pathname))
       (when version-supplied
 	(strings (if (eq version :wild)
 		     (if logical-p ".*" ".~*~")
