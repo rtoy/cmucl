@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.6 1991/08/30 17:09:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.7 1991/08/30 17:23:40 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -175,8 +175,8 @@
 
 (defun load-foreign (files &optional
 			   (libraries '("-lc"))
-			   (linker "/usr/misc/.cmucl/lib/load-foreign.csh")
-			   (base-file "/usr/misc/.cmucl/bin/lisp")
+			   (linker "library:load-foreign.csh")
+			   (base-file "path:lisp")
 			   (env ext:*environment-list*))
   "Load-foreign loads a list of C object files into a running Lisp.  The
   files argument should be a single file or a list of files.  The files
@@ -193,11 +193,12 @@
   (let ((output-file (pick-temporary-file-name))
 	(symbol-table-file (pick-temporary-file-name))
 	(error-output (make-string-output-stream)))
+
     (format t ";;; Running ~A...~%" linker)
     (force-output)
     (let ((proc (ext:run-program linker
 				 (list* (or *previous-linked-object-file*
-					    base-file)
+					    (namestring (truename base-file)))
 					(format nil "~X"
 						*foreign-segment-free-pointer*)
 					output-file
