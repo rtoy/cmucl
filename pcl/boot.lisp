@@ -25,7 +25,7 @@
 ;;; *************************************************************************
 
 (file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.67 2003/06/03 11:38:15 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.68 2003/06/05 08:33:45 gerd Exp $")
 
 (in-package :pcl)
 
@@ -2041,7 +2041,8 @@ work during bootstrapping.
 			     initargs
 			     ())))
     (when existing (remove-method gf existing))
-    (add-method gf new)))
+    (add-method gf new)
+    new))
 
 ;;;
 ;;; This is the early version of add-method.  Later this will become a
@@ -2059,7 +2060,8 @@ work during bootstrapping.
     (set-arg-info generic-function :new-method method)
     (unless (assoc (early-gf-name generic-function) *generic-function-fixups*
 		   :test #'equal)
-      (update-dfun generic-function)))
+      (update-dfun generic-function))
+    generic-function)
 
   ;;
   ;; This is the early version of remove method.
@@ -2074,7 +2076,8 @@ work during bootstrapping.
     (set-arg-info generic-function)
     (unless (assoc (early-gf-name generic-function) *generic-function-fixups*
 		   :test #'equal)
-      (update-dfun generic-function)))
+      (update-dfun generic-function))
+    generic-function)
 
   ;;
   ;; And the early version of get-method.

@@ -26,7 +26,7 @@
 ;;;
 
 (file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.37 2003/06/05 07:46:32 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/methods.lisp,v 1.38 2003/06/05 08:33:45 gerd Exp $")
 
 (in-package :pcl)
 
@@ -360,7 +360,8 @@
 		     :specializers specs
 		     :lambda-list lambda-list
 		     other-initargs)))
-    (add-method gf new)))
+    (add-method gf new)
+    new))
 
 	
 
