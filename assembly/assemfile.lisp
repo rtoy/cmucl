@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.24 1990/11/16 04:42:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/assemfile.lisp,v 1.25 1991/03/17 14:01:24 ram Exp $
 ;;;
 ;;; This file contains the extra code necessary to feed an entire file of
 ;;; assembly code to the assembler.
@@ -47,6 +47,7 @@
 				    *lap-output-file*)
 	  (assemble (*code-segment* nil)
 	    (insert-segment *elsewhere*))
+	  (expand-pseudo-instructions *code-segment*)
 	  (let ((length (finalize-segment *code-segment*)))
 	    (dump-assembler-routines *code-segment*
 				     length
