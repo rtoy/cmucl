@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.2 1990/02/27 11:30:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/alloc.lisp,v 1.3 1990/02/28 18:23:33 wlott Exp $
 ;;;
 ;;; Allocation VOPs for the MIPS port.
 ;;;
@@ -49,24 +49,24 @@
 	       (pseudo-atomic (ndescr)
 		 (inst addiu res alloc-tn vm:list-pointer-type)
 		 (inst addiu alloc-tn alloc-tn
-		       (* (vm:pad-data-block vm:cons-size) cons-cells)))
-	       (move ptr res)
-	       (dotimes (i (1- cons-cells))
+		       (* (vm:pad-data-block vm:cons-size) cons-cells))
+		 (move ptr res)
+		 (dotimes (i (1- cons-cells))
+		   (store-car (tn-ref-tn things) ptr)
+		   (setf things (tn-ref-across things))
+		   (inst addiu ptr ptr (vm:pad-data-block vm:cons-size))
+		   (storew ptr ptr
+			   (- vm:cons-cdr-slot vm:cons-size)
+			   vm:list-pointer-type))
 		 (store-car (tn-ref-tn things) ptr)
-		 (setf things (tn-ref-across things))
-		 (inst addiu ptr ptr (vm:pad-data-block vm:cons-size))
-		 (storew ptr ptr
-			 (- vm:cons-cdr-slot (vm:pad-data-block vm:cons-size))
-			 vm:list-pointer-type))
-	       (store-car (tn-ref-tn things) ptr)
-	       (cond (star
-		      (setf things (tn-ref-across things))
-		      (store-car (tn-ref-tn things) ptr vm:cons-cdr-slot))
-		     (t
-		      (storew null-tn ptr
-			      vm:cons-cdr-slot vm:list-pointer-type)))
-	       (assert (null (tn-ref-across things)))
-	       (move result res)))))))
+		 (cond (star
+			(setf things (tn-ref-across things))
+			(store-car (tn-ref-tn things) ptr vm:cons-cdr-slot))
+		       (t
+			(storew null-tn ptr
+				vm:cons-cdr-slot vm:list-pointer-type)))
+		 (assert (null (tn-ref-across things)))
+		 (move result res))))))))
 
 (define-vop (list list-or-list*)
   (:variant nil))
