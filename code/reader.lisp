@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.48 2004/06/09 15:01:20 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/reader.lisp,v 1.49 2004/10/22 16:42:02 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1672,7 +1672,7 @@ the end of the stream."
 (defvar read-from-string-spares ()
   "A resource of string streams for Read-From-String.")
 
-(defun read-from-string (string &optional eof-error-p eof-value
+(defun read-from-string (string &optional (eof-error-p t) eof-value
 				&key (start 0) end
 				preserve-whitespace)
   "The characters of string are successively given to the lisp reader
