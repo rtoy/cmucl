@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.29 1994/10/31 04:11:27 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.30 2000/01/13 16:53:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -870,16 +870,26 @@
        (single-float
 	(let ((bits (single-float-bits s-expr)))
 	  (ldb sxhash-bits-byte
-	       (logxor (ash bits (- sxmash-rotate-bits))
-		       bits))))
+	       (logxor (ash bits (- sxmash-rotate-bits)) bits))))
        (double-float
-	(let* ((val s-expr)
-	       (lo (double-float-low-bits val))
-	       (hi (ldb sxhash-bits-byte (double-float-high-bits val))))
+	(let ((lo (double-float-low-bits s-expr))
+	      (hi (double-float-high-bits s-expr)))
 	  (ldb sxhash-bits-byte
-	       (logxor (ash lo (- sxmash-rotate-bits))
-		       (ash hi (- sxmash-rotate-bits))
-		       lo hi))))
+	       (logxor (ash lo (- sxmash-rotate-bits)) lo
+		       (ldb sxhash-bits-byte
+			    (logxor (ash hi (- sxmash-rotate-bits)) hi))))))
+       #+long-float
+       (long-float
+	(let ((lo (long-float-low-bits s-expr))
+	      #+sparc (mid (long-float-mid-bits s-expr))
+	      (hi (long-float-high-bits s-expr))
+	      (exp (long-float-exp-bits s-expr)))
+	  (ldb sxhash-bits-byte
+	       (logxor (ash lo (- sxmash-rotate-bits)) lo
+		       #+sparc (ash mid (- sxmash-rotate-bits)) #+sparc mid
+		       (ash hi (- sxmash-rotate-bits)) hi
+		       (ldb sxhash-bits-byte
+			    (logxor (ash exp (- sxmash-rotate-bits)) exp))))))
        (ratio (logxor (internal-sxhash (numerator s-expr) 0)
 		      (internal-sxhash (denominator s-expr) 0)))
        (complex (logxor (internal-sxhash (realpart s-expr) 0)
