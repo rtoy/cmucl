@@ -342,7 +342,7 @@
   ;; a resource-id, and attempts to use it where a resource-id is required will
   ;; result in an invalid-font error.
   (declare (type gcontext gcontext)
-	   (type boolean metrics-p))
+	   (type generalized-boolean metrics-p))
   (declare (clx-values (or null font)))
   (access-gcontext (gcontext local-state)
     (let ((font (gcontext-internal-font-obj local-state)))
@@ -697,7 +697,7 @@
 	   (type (or null (member :unsorted :y-sorted :yx-sorted :yx-banded)) clip-ordering)
 	   (type (or null card8 sequence) dashes)
 	   (dynamic-extent options)
-	   (type boolean cache-p))
+	   (type generalized-boolean cache-p))
   (declare (clx-values gcontext))
   (let* ((display (drawable-display drawable))
 	 (gcontext (make-gcontext :display display :drawable drawable :cache-p cache-p))

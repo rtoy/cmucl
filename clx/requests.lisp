@@ -324,7 +324,7 @@
 	   (type (or null xatom) type)
 	   (type array-index start)
 	   (type (or null array-index) end)
-	   (type boolean delete-p)
+	   (type generalized-boolean delete-p)
 	   (type t result-type)			;a sequence type
 	   (type (or null (function (integer) t)) transform))
   (declare (clx-values data (or null type) format bytes-after))
@@ -465,7 +465,7 @@
   (declare (type (or window (member :pointer-window :input-focus)) window)
 	   (type event-key event-key)
 	   (type (or null event-mask) event-mask)
-	   (type boolean propagate-p)
+	   (type generalized-boolean propagate-p)
 	   (type (or null display) display)
 	   (dynamic-extent args))
   (unless event-mask (setq event-mask 0))
@@ -497,7 +497,7 @@
 		     &key owner-p sync-pointer-p sync-keyboard-p confine-to cursor time)
   (declare (type window window)
 	   (type pointer-event-mask event-mask)
-	   (type boolean owner-p sync-pointer-p sync-keyboard-p)
+	   (type generalized-boolean owner-p sync-pointer-p sync-keyboard-p)
 	   (type (or null window) confine-to)
 	   (type (or null cursor) cursor)
 	   (type timestamp time))
@@ -526,7 +526,7 @@
 	   (type (or (member :any) card8) button)
 	   (type modifier-mask modifiers)
 	   (type pointer-event-mask event-mask)
-	   (type boolean owner-p sync-pointer-p sync-keyboard-p)
+	   (type generalized-boolean owner-p sync-pointer-p sync-keyboard-p)
 	   (type (or null window) confine-to)
 	   (type (or null cursor) cursor))
   (with-buffer-request ((window-display window) *x-grabbutton*)
@@ -561,7 +561,7 @@
 
 (defun grab-keyboard (window &key owner-p sync-pointer-p sync-keyboard-p time)
   (declare (type window window)
-	   (type boolean owner-p sync-pointer-p sync-keyboard-p)
+	   (type generalized-boolean owner-p sync-pointer-p sync-keyboard-p)
 	   (type timestamp time))
   (declare (clx-values grab-status))
   (let ((display (window-display window)))
@@ -581,7 +581,7 @@
 
 (defun grab-key (window key &key (modifiers 0) owner-p sync-pointer-p sync-keyboard-p)
   (declare (type window window)
-	   (type boolean owner-p sync-pointer-p sync-keyboard-p)
+	   (type generalized-boolean owner-p sync-pointer-p sync-keyboard-p)
 	   (type (or (member :any) card8) key)
 	   (type modifier-mask modifiers))
   (with-buffer-request ((window-display window) *x-grabkey*)
@@ -810,7 +810,7 @@
   (declare (type window window)
 	   (type int16 x y)
 	   (type (or null card16) width height)
-	   (type boolean exposures-p))
+	   (type generalized-boolean exposures-p))
   (unless (or (eql width 0) (eql height 0))
     (with-buffer-request ((window-display window) *x-cleartobackground*)
       ((data boolean) exposures-p)
@@ -845,7 +845,7 @@
 (defun create-colormap (visual-info window &optional alloc-p)
   (declare (type (or visual-info resource-id) visual-info)
 	   (type window window)
-	   (type boolean alloc-p))
+	   (type generalized-boolean alloc-p))
   (declare (clx-values colormap))
   (let ((display (window-display window)))
     (when (typep visual-info 'resource-id)
@@ -942,7 +942,7 @@
 (defun alloc-color-cells (colormap colors &key (planes 0) contiguous-p (result-type 'list))
   (declare (type colormap colormap)
 	   (type card16 colors planes)
-	   (type boolean contiguous-p)
+	   (type generalized-boolean contiguous-p)
 	   (type t result-type)) ;; CL type
   (declare (clx-values (clx-sequence pixel) (clx-sequence mask)))
   (let ((display (colormap-display colormap)))
@@ -962,7 +962,7 @@
 			   contiguous-p (result-type 'list))
   (declare (type colormap colormap)
 	   (type card16 colors reds greens blues)
-	   (type boolean contiguous-p)
+	   (type generalized-boolean contiguous-p)
 	   (type t result-type)) ;; CL type
   (declare (clx-values (clx-sequence pixel) red-mask green-mask blue-mask))
   (let ((display (colormap-display colormap)))
@@ -990,7 +990,7 @@
   (declare (type colormap colormap)
 	   (type pixel pixel)
 	   (type (or stringable color) spec)
-	   (type boolean red-p green-p blue-p))
+	   (type generalized-boolean red-p green-p blue-p))
   (let ((display (colormap-display colormap))
 	(flags 0))
     (declare (type display display)
@@ -1025,7 +1025,7 @@
   ;; issued, or whether multiple StoreColors protocol requests are issued.
   (declare (type colormap colormap)
 	   (type sequence specs)
-	   (type boolean red-p green-p blue-p))
+	   (type generalized-boolean red-p green-p blue-p))
   (etypecase specs
     (list
       (do ((spec specs (cddr spec)))
@@ -1443,14 +1443,14 @@
 
 (defun access-control (display)
   (declare (type display display))
-  (declare (clx-values boolean)) ;; True when access-control is ENABLED
+  (declare (clx-values generalized-boolean)) ;; True when access-control is ENABLED
   (with-buffer-request-and-reply (display *x-listhosts* 2 :sizes 8)
        ()
     (boolean-get 1)))
   
 (defun set-access-control (display enabled-p)
   (declare (type display display)
-	   (type boolean enabled-p))
+	   (type generalized-boolean enabled-p))
   (with-buffer-request (display *x-changeaccesscontrol*)
     ((data boolean) enabled-p))
   enabled-p)

@@ -319,7 +319,7 @@
   (declare (type display display)
 	   (type mask16 state)
 	   (type list mapping))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   (flet
     ((modifiers->mask (display-mapping modifiers errorp &aux (mask 0))
        ;; Convert MODIFIERS, which is a modifier mask, or a list of state-mask-keys into a mask.
@@ -362,16 +362,14 @@
   ;; Returns a keysym-index for use with keycode->character
   (declare (clx-values card8))
   (macrolet ((keystate-p (state keyword)
-	       `(the boolean
-		     (logbitp ,(position keyword *state-mask-vector*)
-			      ,state))))
+	       `(logbitp ,(position keyword *state-mask-vector*) ,state)))
     (let* ((mapping (display-keyboard-mapping display))
 	   (keysyms-per-keycode (array-dimension mapping 1))
 	   (symbolp (and (> keysyms-per-keycode 2)
 			 (state-keysymp display state character-set-switch-keysym)))
 	   (result (if symbolp 2 0)))
       (declare (type (simple-array keysym (* *)) mapping)
-	       (type boolean symbolp)
+	       (type generalized-boolean symbolp)
 	       (type card8 keysyms-per-keycode result))
       (when (and (< result keysyms-per-keycode)
 		 (keysym-shift-p display state (keysym-uppercase-alphabetic-p
@@ -385,14 +383,12 @@
 			 '#.(list left-meta-keysym left-super-keysym left-hyper-keysym)))
   (declare (type display display)
 	   (type card16 state)
-	   (type boolean uppercase-alphabetic-p)
-	   (type boolean shift-lock-xors));;; If T, both SHIFT-LOCK and SHIFT is the same
+	   (type generalized-boolean uppercase-alphabetic-p)
+	   (type generalized-boolean shift-lock-xors));;; If T, both SHIFT-LOCK and SHIFT is the same
 	                                  ;;; as neither if the character is alphabetic.
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   (macrolet ((keystate-p (state keyword)
-	       `(the boolean
-		     (logbitp ,(position keyword *state-mask-vector*)
-			      ,state))))
+	       `(logbitp ,(position keyword *state-mask-vector*) ,state)))
     (let* ((controlp (or (keystate-p state :control)
 			 (dolist (modifier control-modifiers)
 			   (when (state-keysymp display state modifier)
@@ -402,7 +398,7 @@
 	   (alphap (or uppercase-alphabetic-p
 		       (not (state-keysymp display #.(make-state-mask :lock)
 					   caps-lock-keysym)))))
-      (declare (type boolean controlp shiftp lockp alphap))
+      (declare (type generalized-boolean controlp shiftp lockp alphap))
       ;; Control keys aren't affected by lock
       (unless controlp
 	;; Not a control character - check state of lock modifier
@@ -448,7 +444,7 @@
 	   (type card8 keycode)
 	   (type card16 state)
 	   (type (or null card8) keysym-index)
-	   (type (or null (function (base-char card16 boolean card8) card8))
+	   (type (or null (function (base-char card16 generalized-boolean card8) card8))
 		 keysym-index-function))
   (declare (clx-values (or null character)))
   (let* ((index (or keysym-index
@@ -481,7 +477,7 @@
   (declare (type display display)
 	   (type card16 state)
 	   (type keysym keysym))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   (let* ((mapping (get-display-modifier-mapping display))
 	 (mask (assoc keysym mapping)))
     (and mask (plusp (logand state (cdr mask))))))
@@ -505,7 +501,7 @@
   (declare (type display display)
 	   (type keysym keysym)
 	   (type (bit-vector 256) keymap))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   ;; The keysym may appear in the keymap more than once,
   ;; So we have to search the entire keysym map.
   (do* ((min (display-min-keycode display))
@@ -527,7 +523,7 @@
   (declare (type display display)
 	   (type character character)
 	   (type (bit-vector 256) keymap))
-  (declare (clx-values boolean))
+  (declare (clx-values generalized-boolean))
   ;; Check all one bits in keymap
   (do* ((min (display-min-keycode display))
 	(max (display-max-keycode display))

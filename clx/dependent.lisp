@@ -2110,8 +2110,8 @@
 				(integer integerp)))))
 	(cond (predicate
 	       `(,(second predicate) ,object))
-	      ((eq type 'boolean)
-	       't)			; Everything is a boolean.
+	      ((eq type 'generalized-boolean)
+	       't)			; Everything is a generalized-boolean.
 	      (*type-check?*
 	       `(locally (declare (optimize safety)) (typep ,object ',type)))
 	      (t
@@ -2136,7 +2136,7 @@
 
 (defun default-error-handler (display error-key &rest key-vals
 			      &key asynchronous &allow-other-keys)
-  (declare (type boolean asynchronous)
+  (declare (type generalized-boolean asynchronous)
 	   (dynamic-extent key-vals))
   ;; The default display-error-handler.
   ;; It signals the conditions listed in the DISPLAY file.
@@ -3272,7 +3272,7 @@
 	   (type card16 x y width height)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (unless (index= bits-per-pixel 24)
     (let ((pixarray-padded-bits-per-line
 	    (if (index= height 1) 0
@@ -3293,7 +3293,7 @@
 	      *image-unit* *computed-image-byte-lsb-first-p*
 	      *computed-image-bit-lsb-first-p*)
 	  (declare (type symbol image-swap-function)
-		   (type boolean image-swap-lsb-first-p))
+		   (type generalized-boolean image-swap-lsb-first-p))
 	  (with-underlying-simple-vector (dst card8 pixarray)
 	    (funcall
 	      (symbol-function image-swap-function) bbuf dst
@@ -3317,7 +3317,7 @@
 	   (type card16 x y width height)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (progn bbuf boffset pixarray x y width height padded-bytes-per-line
 	 bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (or
@@ -3533,7 +3533,7 @@
 	   (type array-index boffset padded-bytes-per-line)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (unless (index= bits-per-pixel 24)
     (let ((pixarray-padded-bits-per-line
 	    (if (index= height 1) 0
@@ -3557,7 +3557,7 @@
 	      *computed-image-bit-lsb-first-p*
 	      unit byte-lsb-first-p bit-lsb-first-p)
 	  (declare (type symbol image-swap-function)
-		   (type boolean image-swap-lsb-first-p))
+		   (type generalized-boolean image-swap-lsb-first-p))
 	  (with-underlying-simple-vector (src card8 pixarray)
 	    (funcall
 	      (symbol-function image-swap-function)
@@ -3576,7 +3576,7 @@
 	   (type array-index boffset padded-bytes-per-line)
 	   (type (member 1 4 8 16 24 32) bits-per-pixel)
 	   (type (member 8 16 32) unit)
-	   (type boolean byte-lsb-first-p bit-lsb-first-p))
+	   (type generalized-boolean byte-lsb-first-p bit-lsb-first-p))
   (progn bbuf boffset pixarray x y width height padded-bytes-per-line
 	 bits-per-pixel unit byte-lsb-first-p bit-lsb-first-p)
   (or
