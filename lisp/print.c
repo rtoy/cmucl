@@ -1,4 +1,4 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.1.1.1 1993/02/23 12:01:22 ram Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/print.c,v 1.2 1993/02/26 09:02:05 ram Exp $ */
 #include <stdio.h>
 
 #include "print.h"

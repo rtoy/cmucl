@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.17 1993/01/15 18:18:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldbuild.lisp,v 1.18 1993/02/26 08:59:59 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,9 +52,11 @@
     "target:code/type-boot"
     "target:code/struct"
     "target:code/error"
-    "target:compiler/type"
+    "target:code/typedefs"
+    "target:code/class"
+    "target:code/type"
     "target:compiler/generic/vm-type"
-    "target:compiler/type-init"
+    "target:code/type-init"
 
     "target:code/defstruct"
     "target:compiler/proclaim"

@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.4 1993/01/10 17:22:37 wlott Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.5 1993/02/26 09:02:06 ram Exp $ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -130,6 +130,18 @@ static lispobj ptrans_boxed(lispobj thing, lispobj header, boolean constant)
     return result;
 }
 
+/* need to look at the layout to see if it is a pure structure class, and
+   only then can we transport as constant.  If it is pure, we can
+   ALWAYS transport as a constant */
+
+static lispobj ptrans_instance(lispobj thing, lispobj header, boolean constant)
+{
+    lispobj layout = ((struct instance *)PTR(thing))->slots[0];
+    ptrans_boxed(thing, header,
+                 (((struct instance *)PTR(layout))->slots[15])
+		 != NIL);
+}
+    
 static lispobj ptrans_fdefn(lispobj thing, lispobj header)
 {
     int nwords;
@@ -507,8 +519,8 @@ static lispobj *pscav(lispobj *addr, int nwords, boolean constant)
                         thing = ptrans_list(thing, constant);
                         break;
                     
-                      case type_StructurePointer:
-                        thing = ptrans_boxed(thing, header, constant);
+                      case type_InstancePointer:
+                        thing = ptrans_instance(thing, header, constant);
                         break;
                     
                       case type_OtherPointer:

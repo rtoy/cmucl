@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.47 1992/12/16 10:57:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.48 1993/02/26 09:00:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -36,6 +36,7 @@
 
 ;;; these guys need to be first.
 (comf "target:code/struct") ; For structures.
+(comf "target:code/sysmacs")
 
 ;;; Assembly files.
 (when (c:backend-featurep :pmax)
@@ -83,9 +84,11 @@
 ;;; recurse.
 (defvar *original-%deftype* #'lisp::%deftype)
 (setf (fdefinition 'lisp::%deftype) #'list)
-(comf "target:compiler/type")
+(comf "target:code/typedefs")
+(comf "target:code/class")
+(comf "target:code/type")
 (comf "target:compiler/generic/vm-type")
-(comf "target:compiler/type-init")
+(comf "target:code/type-init")
 (comf "target:code/pred")
 (setf (fdefinition 'lisp::%deftype) *original-%deftype*)
 
@@ -176,7 +179,6 @@
 (comf "target:code/ntrace")
 (comf "target:code/profile")
 (comf "target:code/sort")
-(comf "target:code/sysmacs")
 (comf "target:code/time")
 (comf "target:code/weak")
 (comf "target:code/final")

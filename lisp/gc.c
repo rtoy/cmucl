@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.4 1993/01/10 17:20:12 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.5 1993/02/26 09:02:03 ram Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -521,8 +521,8 @@ void print_garbage(lispobj *from_space, lispobj *from_space_free_pointer)
 			case type_ListPointer:
 				nwords = 2;
 				break;
-			case type_StructurePointer:
-				printf("Don't know about structures yet!\n");
+			case type_InstancePointer:
+				printf("Don't know about instances yet!\n");
 				nwords = 1;
 				break;
 			case type_FunctionPointer:
@@ -825,10 +825,10 @@ trans_function_header(lispobj object)
 
 
 
-/* Structures */
+/* Instances */
 
 static int
-scav_structure_pointer(lispobj *where, lispobj object)
+scav_instance_pointer(lispobj *where, lispobj object)
 {
     if (from_space_p(object)) {
 	lispobj first, *first_pointer;
@@ -1641,7 +1641,7 @@ void gc_init(void)
 		/* OtherImmediate0 */
 		scavtab[type_ListPointer|(i<<3)] = scav_list_pointer;
 		scavtab[type_OddFixnum|(i<<3)] = scav_immediate;
-		scavtab[type_StructurePointer|(i<<3)] = scav_structure_pointer;
+		scavtab[type_InstancePointer|(i<<3)] = scav_instance_pointer;
 		/* OtherImmediate1 */
 		scavtab[type_OtherPointer|(i<<3)] = scav_other_pointer;
 	}
@@ -1689,7 +1689,7 @@ void gc_init(void)
 	scavtab[type_Sap] = scav_unboxed;
 	scavtab[type_UnboundMarker] = scav_immediate;
 	scavtab[type_WeakPointer] = scav_weak_pointer;
-        scavtab[type_StructureHeader] = scav_boxed;
+        scavtab[type_InstanceHeader] = scav_boxed;
 #ifndef sparc
         scavtab[type_Fdefn] = scav_fdefn;
 #else
@@ -1734,7 +1734,7 @@ void gc_init(void)
 	transother[type_Sap] = trans_unboxed;
 	transother[type_UnboundMarker] = trans_immediate;
 	transother[type_WeakPointer] = trans_weak_pointer;
-        transother[type_StructureHeader] = trans_vector;
+        transother[type_InstanceHeader] = trans_vector;
 	transother[type_Fdefn] = trans_boxed;
 
 	/* Size table */
@@ -1748,7 +1748,7 @@ void gc_init(void)
 		/* OtherImmediate0 */
 		sizetab[type_ListPointer|(i<<3)] = size_pointer;
 		sizetab[type_OddFixnum|(i<<3)] = size_immediate;
-		sizetab[type_StructurePointer|(i<<3)] = size_pointer;
+		sizetab[type_InstancePointer|(i<<3)] = size_pointer;
 		/* OtherImmediate1 */
 		sizetab[type_OtherPointer|(i<<3)] = size_pointer;
 	}
@@ -1788,7 +1788,7 @@ void gc_init(void)
 	sizetab[type_Sap] = size_unboxed;
 	sizetab[type_UnboundMarker] = size_immediate;
 	sizetab[type_WeakPointer] = size_weak_pointer;
-        sizetab[type_StructureHeader] = size_vector;
+        sizetab[type_InstanceHeader] = size_vector;
 	sizetab[type_Fdefn] = size_boxed;
 }
 
