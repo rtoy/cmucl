@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.15 1993/02/19 22:59:09 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/defstruct.lisp,v 1.37.1.16 1993/02/23 11:48:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -99,12 +99,6 @@
 ;;; This version of Defstruct is implemented using Defstruct, and is free of
 ;;; Maclisp compatability nonsense.  For bootstrapping, you're on your own.
 
-#-ns-boot
-;;; Define the STRUCTURE-OBJECT class as a subclass of INSTANCE.
-;;;
-(defstruct (structure-object (:alternate-metaclass instance)))
-
-
 ;;; The DEFSTRUCT-DESCRIPTION structure holds compile-time information about a
 ;;; structure type.
 ;;;
@@ -112,6 +106,7 @@
              (:conc-name dd-)
              (:print-function print-defstruct-description)
 	     (:make-load-form-fun :just-dump-it-normally)
+	     (:pure t)
 	     (:constructor make-defstruct-description (name)))
   ;;
   ;; name of the structure
@@ -181,8 +176,10 @@
   ;; The index of the raw data vector and the number of words in it.  NIL and 0
   ;; if not allocated yet.
   (raw-index nil :type (or index null))
-  (raw-length 0 :type index))
-
+  (raw-length 0 :type index)
+  ;;
+  ;; Value of the :PURE option, or :UNSPECIFIED.
+  (pure :unspecified :type (member t nil :unspecified)))
 
 ;;; DEFSTRUCT-SLOT-DESCRIPTION  holds compile-time information about structure
 ;;; slots.
@@ -190,6 +187,7 @@
 (defstruct (defstruct-slot-description
              (:conc-name dsd-)
              (:print-function print-defstruct-slot-description)
+	     (:pure t)
 	     (:make-load-form-fun :just-dump-it-normally))
   %name				; string name of slot
   ;;
@@ -256,7 +254,12 @@
 	      `((setf (structure-class-make-load-form-fun (find-class ',name))
 		      ,(if (symbolp mlff)
 			   `',mlff
-			   `#',mlff))))))))
+			   `#',mlff)))))
+	,@(let ((pure (dd-pure defstruct)))
+	    (when (eq pure 't)
+	      `((setf (layout-pure (class-layout (find-class ',name)))
+		      t)))))))
+
 
 ;;; DEFSTRUCT  --  Public
 ;;;
@@ -377,6 +380,9 @@
       (:make-load-form-fun
        (destructuring-bind (fun) args
 	 (setf (dd-make-load-form-fun defstruct) fun)))
+      (:pure
+       (destructuring-bind (fun) args
+	 (setf (dd-pure defstruct) fun)))
       (t (error "Unknown DEFSTRUCT option~%  ~S" option)))))
 
 
@@ -548,6 +554,8 @@
 	(unless (dd-make-load-form-fun defstruct)
 	  (setf (dd-make-load-form-fun defstruct)
 		(dd-make-load-form-fun included-structure)))
+	(when (eq (dd-pure defstruct) :unspecified)
+	  (setf (dd-pure defstruct) (dd-pure included-structure)))
 	(setf (dd-raw-index defstruct) (dd-raw-index included-structure))
 	(setf (dd-raw-length defstruct) (dd-raw-length included-structure)))
       
@@ -1025,9 +1033,7 @@
   (multiple-value-bind (class layout old-layout)
 		       (ensure-structure-class info inherits "current" "new")
     (cond ((not old-layout)
-	   (register-layout layout nil nil))
-	  ((eq layout old-layout)
-	   (when (not (class-layout class))
+	   (unless (eq (class-layout class) layout)
 	     (register-layout layout nil nil)))
 	  (t
 	   (let ((old-info (layout-info old-layout)))    
@@ -1080,9 +1086,9 @@
 ;;;
 ;;;    Called when we are about to define a structure class.  Returns a
 ;;; (possibly new) class object and the layout which should be used for the new
-;;; definition (may be the current layout.)  The third value is any old layout
-;;; for this class (may be NIL, and also might be an uninstalled forward
-;;; referenced layout.)
+;;; definition (may be the current layout, and also might be an uninstalled
+;;; forward referenced layout.)  The third value is true if this is an
+;;; incompatible redefinition, in which case it is the old layout.
 ;;;
 (defun ensure-structure-class (info inherits old-context new-context)
   (multiple-value-bind
@@ -1105,18 +1111,31 @@
       (when (and old-layout (not (layout-info old-layout)))
 	(setf (layout-info old-layout) info))
       (cond
+       ((not old-layout)
+	(values class new-layout nil))
        ((not *type-system-initialized*)
 	(setf (layout-info old-layout) info)
-	(values class old-layout old-layout))
-       ((or (not old-layout)
-	    (let ((old-info (layout-info old-layout)))
-	      (or (redefine-layout-warning old-layout old-context
-					   new-layout new-context)
-		  (not (defstruct-description-p old-info))
-		  (redefine-structure-warning class old-info info))))
+	(values class old-layout nil))
+       ((redefine-layout-warning old-layout old-context
+				 new-layout new-context)
 	(values class new-layout old-layout))
        (t
-	(values class old-layout old-layout))))))
+	(let ((old-info (layout-info old-layout)))
+	  (typecase old-info
+	    ((or defstruct-description)
+	     (cond ((redefine-structure-warning class old-info info)
+		    (values class new-layout old-layout))
+		   (t
+		    (setf (layout-info old-layout) info)
+		    (values class old-layout nil))))
+	    (null
+	     (setf (layout-info old-layout) info)
+	     (values class old-layout nil))
+	    (t
+	     (warn "Shouldn't happen!  Some strange thing in LAYOUT-INFO:~
+		    ~%  ~S"
+		   old-layout)
+	     (values class new-layout old-layout)))))))))
 	    
 
 ;;; COMPARE-SLOTS  --  Internal
@@ -1263,7 +1282,7 @@
 ;;;    This function is called by an EVAL-WHEN to do the compile-time-only
 ;;; actions for defining a structure type.  It installs the class in the type
 ;;; system in a similar way to %DEFSTRUCT, but is quieter and safer in the case
-;;; of redefinition.  This is not called at all for interpreted defstructs.
+;;; of redefinition.
 ;;;
 ;;;    Basically, this function avoids trashing the compiler by only actually
 ;;; defining the class if there is no current definition.  Instead, we just set
@@ -1286,7 +1305,8 @@
 	    (warn "Removing old subclasses of ~S:~%  ~S"
 		  (class-name class) (subs))))))
      (t
-      (register-layout layout nil nil)
+      (unless (eq (class-layout class) layout)
+	(register-layout layout nil nil))
       (setf (find-class (dd-name info)) class)))
     
     (setf (info type compiler-layout (dd-name info)) layout))
@@ -1343,12 +1363,12 @@
   (let* ((len (%instance-length structure))
 	 (res (%make-instance len))
 	 (layout (%instance-layout structure)))
-    (declare (type structure-index len))
+    (declare (type index len))
     (when (layout-invalid layout)
       (error "Copying an obsolete structure:~%  ~S" structure))
     
     (dotimes (i len)
-      (declare (type structure-index i))
+      (declare (type index i))
       (setf (%instance-ref res i)
 	    (%instance-ref structure i)))
     
