@@ -69,7 +69,7 @@ form appeared in the original source.]
 
 Note that form numbers have an interesting property: it is quite efficient to
 determine whether an arbitrary form is a subform of some other form, since the
-form number of B will be > than A's number and < A's next sibling's number iff
+form number of B will be \verb+>+ than A's number and \verb+<+ A's next sibling's number iff
 B is a subform of A.  
 
 This should be quite useful for doing the source=>pc mapping in the debugger,
@@ -85,6 +85,7 @@ like this:
 
 Then a compiled debug block is just a sequence of variable-length integers in a
 particular order, something like this:
+\begin{verbatim}
     number of successors
     ...offsets of each successor in the function's blocks vector...
     first PC
@@ -92,7 +93,7 @@ particular order, something like this:
     form number of first source form
     first live mask (length in bytes determined by number of VARIABLES)
     ...more <PC, top-level form offset, form-number, live-set> tuples...
-
+\end{verbatim}
 We determine the number of locations recorded in a block by the finding the
 start of the next compiled debug block in the blocks vector.
 
@@ -161,7 +162,7 @@ or letting the user choose.
 
 At the primitive level, I guess what this means is that the structure of source
 locations (i.e. source paths) must be known, and the source=>code operation
-should return a list of <source,code> pairs, rather than just a list of code
+should return a list of \verb+<source,code>+ pairs, rather than just a list of code
 locations.  This allows the debugger to resolve the ambiguity however it wants.
 
 I guess the formal definition of which source paths we would return is:

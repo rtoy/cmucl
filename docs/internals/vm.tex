@@ -522,12 +522,13 @@ put (symbol indicator value)
 
 cons
 
+\begin{example}
 list<n> (elt0 ... elt<n-1>) => list
 list (elt0 ... elt<n-1> more-elts) => list
     For some small N, we have fixed-arg versions of List.  For larger lists, we
     pass in additional elements in a stack TN (possibly required to be on stack
     top).  List* is similar.
-
+\end{example}
 
 These VOPs implement the corresponding \clisp functions:
 \begin{example}
@@ -606,7 +607,7 @@ if-= (x y)
 {small, fast} if-=/fixnum
 {small, fast} if-=/xxx-float
     Do numeric comparison of X and Y.  The codegen-info contains the
-    continuations to transfer to in the true and false cases.  Same for <, >.
+    continuations to transfer to in the true and false cases.  Same for $<$, $>$.
 
 + (x y) => z
 {small, fast} +/fixnum
@@ -765,8 +766,8 @@ aset1 (vector index new-value)
 {small, fast} aset1/simple-array-unsigned-byte (vector index new-value)
     Byte size is codegen info.
 
-aref<N> (array index0 ... index<n-1>) => value
-aset<N> (array index0 ... index<n-1> new-value)
+aref$<$N$>$ (array index0 ... index<n-1>) => value
+aset$<$N$>$ (array index0 ... index<n-1> new-value)
     For some small value of N.  Of course, higher dimensional arrays can also
     be specialized in seven different ways....  Multi-dimensional simple array
     reference with known dimensions can be open-coded using a transform (useful
@@ -863,14 +864,14 @@ If deep-bind, current special binding.  Format of binding frame assumed.
 
 Everything depends on the current environment, which is CONT.
 
-
+\begin{verbatim}
 PC
 OLD-CONT
 ENV
 A<n>
 CONT
 CS
-
+\end{verbatim}
 
 \section{Other Dynamic State}
 
@@ -1051,15 +1052,20 @@ Environment manipulation code is always emitted at the location of the Bind or
 Return node for a Lambda. 
 
 Implicit args to functions in IR2:
-  old-cont: cont to restore on return
-  return-pc: pc to return to
-  env: pointer to current closure (if heap)
-  closure<n>: closed values for current closure (if stack)
+\begin{description}
+\item[old-cont] cont to restore on return
+\item[return-pc] pc to return to
+\item[env] pointer to current closure (if heap)
+\item[closure$<$n$>$] closed values for current closure (if stack)
+\end{description}
 
 Other info needed for IR2 conversion of functions:
-    base pointers for all heap closures consed by this function
-    also have passing locs for each explicit arg
-    return strategy (known or unknown) and return locs
+\begin{itemize}
+\item base pointers for all heap closures consed by this function also
+  have passing locs for each explicit arg return strategy (known or
+  unknown) and return locs
+\end{itemize}
+
 
 All arguments including implicit ones must have both a passing TN and a
 permanent TN.  Passing locs for let calls can be the actual TN that holds the
@@ -1155,7 +1161,7 @@ in the called function.  Similarly, we pretend that a block ending in a return
 has no successors.
 
 call-local (arg*) "fun" => value
-multiple-call-local (arg*) "fun" => start end val0 ... val<n>
+multiple-call-local (arg*) "fun" =$>$ start end val0 ... val$<$n$>$
     Call-Local is used for calls to local functions that are forced to use the
     unknown-values passing convention.  Value is the first return value
     register; we don't really do anything to it, but we specify it as a result
@@ -1165,7 +1171,7 @@ multiple-call-local (arg*) "fun" => start end val0 ... val<n>
     unknown-values convention.  Default-Values may be used to receive a
     specific number of values.
 
-known-call-local (arg*) "fun" => value*
+known-call-local (arg*) "fun" =$>$ value*
     This VOP is used for local calls to functions where we can determine at
     compile time that the number of values returned is always the same.  In
     this case, we don't need to indicate the number of values, and can pass
@@ -1194,7 +1200,7 @@ Known values return causes no problems, since the callee knows how many values
 are wanted.  We store the values directly into the current frame, since it is
 also the caller's frame.
 
-known-call-simple () "fun" => return-pc
+known-call-simple () "fun" =$>$ return-pc
 known-return-simple (return-pc) "fun"
     Similar to the non-simple VOPs, but don't allocate or deallocate frames,
     and assume that argument and value passing is done with explicit Move VOPs.
@@ -1225,7 +1231,7 @@ Argument passing in full call is conceptually similar to local call, but the
 caller can't allocate the entire frame for the callee, since it doesn't know
 how much stack is needed.  Instead we allocate the frame in two parts.  The
 caller only allocates the beginning of the frame, which contains the stack
-arguments in fixed locations.  We leave the first <n> locations unused so that
+arguments in fixed locations.  We leave the first $<$n$>$ locations unused so that
 the called function can move register more args onto the stack without having
 to BLT down any stack arguments.
 
@@ -1255,12 +1261,12 @@ tail-recursive:
 
 
 In full call we must always use the unknown-values convention for return.  The
-first <n> values are passed in the standard argument registers.  The Old-Cont
+first $<$n$>$ values are passed in the standard argument registers.  The Old-Cont
 register holds the Start of the values block and SP points to the End.
 
 
-{small, fast} call (function arg0 ... arg<n>) "nargs" => value
-{small, fast} call-named (arg0 ... arg<n>) "nargs" "name" => value
+{small, fast} call (function arg0 ... arg$<$n$>$) "nargs" =$>$ value
+{small, fast} call-named (arg0 ... arg$<$n$>$) "nargs" "name" =$>$ value
     Call-Closure calls Function with the specified register arguments,
     returning the first value as the result.  "nargs" is the total number of
     arguments passed.  Only the register arguments actually passed should be
@@ -1269,27 +1275,27 @@ register holds the Start of the values block and SP points to the End.
     Call-Named is similar, but calls a global function specified at compile
     time by "name".
 
-{small, fast} tail-call (function pc arg0 ... arg<n>) "nargs"
-{small, fast} tail-call-named (pc arg0 ... arg<n>) "nargs" "name"
+{small, fast} tail-call (function pc arg0 ... arg$<$n$>$) "nargs"
+{small, fast} tail-call-named (pc arg0 ... arg$<$n$>$) "nargs" "name"
     Similar to the standard call VOPs, but passes PC as the return PC, rather
     than returning to the call site.  These VOPs have no results since they
     don't return.
 
-{small, fast} multiple-call (function arg0 ... arg<n>) "nargs"
-                                    => start end val0 ... val<n>
-{small, fast} multiple-call-named (arg0 ... arg<n>) "nargs" "name"
-                                  => start end val0 ... val<n>
+{small, fast} multiple-call (function arg0 ... arg$<$n$>$) "nargs"
+                                    =$>$ start end val0 ... val$<$n$>$
+{small, fast} multiple-call-named (arg0 ... arg$<$n$>$) "nargs" "name"
+                                  =$>$ start end val0 ... val$<$n$>$
     These VOPs are similar to the standard call VOPs, but allow any number of 
     values to be received by returning all the value passing registers as
     results.  A specific number of values may be received by using
     Default-Values. 
 
-call-unknown (function count arg0 ... arg<n>) => start end val0 ... val<n>
-tail-call-unknown (function pc count arg0 ... arg<n>)
+call-unknown (function count arg0 ... arg$<$n$>$) =$>$ start end val0 ... val$<$n$>$
+tail-call-unknown (function pc count arg0 ... arg$<$n$>$)
     Call a function with an unknown number of arguments.  Used for apply and
     hairy multiple-value-call.
 
-Function-Entry () "function" => env return-pc old-cont arg*
+Function-Entry () "function" =$>$ env return-pc old-cont arg*
     This marks the place where we jump into a component for an external
     entry point.  It represents whatever magic is necessary to do argument
     count checking and dispatching.  The external entry points for each
@@ -1312,17 +1318,17 @@ Function-Entry () "function" => env return-pc old-cont arg*
 
 
 return (return-pc value)
-multiple-return (return-pc start end val0 ... val<n>)
+multiple-return (return-pc start end val0 ... val$<$n$>$)
     Return Value from the current function, jumping back to the location
     specified by Return-PC. {Perhaps allow to return any fixed, known number
     of values.}
 
     Multiple-Return is similar, but allows an arbitrary number of values to be
     returned.  End - Start is the total number of values returned.  Start
-    points to the beginning of the block of return values, but the first <n>
-    values val0 ... val<n> are actually returned in registers.
+    points to the beginning of the block of return values, but the first $<$n$>$
+    values val0 ... val$<$n$>$ are actually returned in registers.
 
-default-values (start end val0 ... val<n>) => val0 ... val<j>
+default-values (start end val0 ... val$<$n$>$) =$>$ val0 ... val$<$j$>$
     This VOP is used when we want to receive exactly J values.  If fewer than J
     values were supplied, then missing values are defaulted to NIL.  As a
     side-effect, this VOP pops off any returned stack values.

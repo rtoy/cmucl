@@ -655,7 +655,7 @@ leaf.  Kind is a keyword indicating how the constant is computed, and What is
 some context.
 
 Some interesting load-time constants:
-
+\begin{verbatim}
     (:label . <label>)
         Is replaced with the byte offset of the label within the code-vector.
 
@@ -667,7 +667,7 @@ Some interesting load-time constants:
 	Is replaced by the function-entry structure for the specified function.
 	:Entry is how the top-level component gets a handle on the function
 	definitions so that it can set them up.
-
+\end{verbatim}
 We also need to remember the starting offset for each entry, although these
 don't in general appear as explicit constants.
 

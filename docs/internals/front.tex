@@ -117,12 +117,13 @@ Notinline declaration.  This shouldn't be a problem, since everyone should keep
 their hands off of Notinline calls.
 
 Some transformations:
-
+\begin{verbatim}
 Endp  ==>  (NULL (THE LIST ...))
 (NOT xxx) or (NULL xxx) => (IF xxx NIL T)
 
 (typep x '<simple type>) => (<simple predicate> x)
 (typep x '<complex type>) => ...composition of simpler operations...
+\end{verbatim}
 TYPEP of AND, OR and NOT types turned into conditionals over multiple TYPEP
 calls.  This makes hairy TYPEP calls more digestible to type constraint
 propagation, and also means that the TYPEP code generators don't have to deal
@@ -151,7 +152,7 @@ All specialized aref functions => (aref (the xxx) ...)
 Convert (ldb (byte ...) ...) into internal frob that takes size and position as
 separate args.  Other byte functions also...
 
-Change for-value primitive predicates into (if <pred> t nil).  This isn't
+Change for-value primitive predicates into \verb+(if <pred> t nil)+.  This isn't
 particularly useful during ICR phases, but makes life easy for VMR conversion.
 
 This last can't be a source transformation, since a source transform can't tell
@@ -646,6 +647,7 @@ If after ICR phases, we have a continuation with check-type set in a context
 where it seems likely a check will be emitted, and the type is too 
 hairy to be easily checked (i.e. no CHECK-xxx VOP), then we do a transformation
 on the ICR equivalent to:
+\begin{verbatim}
   (... (the hair <foo>) ...)
 ==>
   (... (funcall \#'(lambda (\#:val)
@@ -654,6 +656,7 @@ on the ICR equivalent to:
 			(%type-check-error \#:val 'hair)))
 		<foo>)
        ...)
+\end{verbatim}
 This way, we guarantee that VMR conversion never has to emit type checks for
 hairy types.
 
@@ -813,7 +816,7 @@ available from two predecessors, then we could infer that we have an (or a b c)
 constraint, but the above algorithm would come up with none.  This probably
 isn't a big problem.
 
-[\#\#\# Do we want to deal with (if (eq <var> '<foo>) ...) indicating singleton
+[\#\#\# Do we want to deal with \verb+(if (eq <var> '<foo>) ...)+ indicating singleton
 member type?]
 
 We detect explicit type tests by looking at type test annotation in the IF

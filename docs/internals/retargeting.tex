@@ -14,18 +14,18 @@ return point anyway.
 
 Have a way for template conversion to special-case constant arguments?  
 How about:
-    If an arg restriction is (:satisfies [<predicate function>]), and the
+    If an arg restriction is (:satisfies [$<$predicate function$>$]), and the
     corresponding argument is constant, with the constant value satisfying the
     predicate, then (if any other restrictions are satisfied), the template
     will be emitted with the literal value passed as an info argument.  If the
     predicate is omitted, then any constant will do.
 
-    We could sugar this up a bit by allowing (:member <object>*) for
-    (:satisfies (lambda (x) (member x '(<object>*))))
+    We could sugar this up a bit by allowing (:member $<$object$>$*) for
+    (:satisfies (lambda (x) (member x '($<$object$>$*))))
 
 We could allow this to be translated into a Lisp type by adding a new Constant
 type specifier.  This could only appear as an argument to a function type.
-To satisfy (Constant <type>), the argument must be a compile-time constant of
+To satisfy (Constant $<$type$>$), the argument must be a compile-time constant of
 the specified type.  Just Constant means any constant (i.e. (Constant *)).
 This would be useful for the type constraints on ICR transforms.
 
@@ -81,7 +81,7 @@ There are basically three levels of target dependence:
 
 
 \chapter{Storage bases and classes}
-New interface: instead of CURRENT-FRAME-SIZE, have CURRENT-SB-SIZE <name> which
+New interface: instead of CURRENT-FRAME-SIZE, have CURRENT-SB-SIZE \verb+<name>+ which
 returns the current element size of the named SB.
 
 How can we have primitive types that overlap, i.e. (UNSIGNED-BYTE 32),
@@ -203,6 +203,7 @@ There are SCs for non-immediate constants and for each significant kind of
 immediate operand in the architecture.  On the RT, 4, 8 and 20 bit integer SCs
 are probably worth having.
 
+\begin{verbatim}
 Non-packed SCs:
     Constant
     Immediate constant SCs:
@@ -211,7 +212,7 @@ Non-packed SCs:
 	String-Char
 	XXX-Float
 	Magic values: T, NIL, 0.
-
+\end{verbatim}
 
 \chapter{Type system parameterization}
 
@@ -299,16 +300,16 @@ The times within a VOP are the following:
     conflicts are concerned.  If load-TNs are allocated, then this is the
     beginning of their lives.
 
-(:Argument <n>)
+(:Argument $<$n$>$)
     The point at which the N'th argument is read for the last time (by this
     VOP).  If the argument is dead after this VOP, then the argument becomes
     dead at this time, and may be reused as a temporary or result load-TN.
 
-(:Eval <n>)
+(:Eval $<$n$>$)
     The N'th evaluation step.  There may be any number of evaluation steps, but
     it is unlikely that more than two are needed.
 
-(:Result <n>) 
+(:Result $<$n$>$) 
     The point at which the N'th result is first written into.  This is the
     point at which that result becomes live.
 
@@ -318,14 +319,15 @@ The times within a VOP are the following:
 
 In any of the list-style time specifications, the keyword by itself stands for
 the first such time, i.e.
+\begin{verbatim}
     :argument  <==>  (:argument 0)
-
+\end{verbatim}
 
 Note that argument/result read/write times don't actually have to be in the
 order specified, but they must *appear* to happen in that order as far as
 conflict analysis is concerned.  For example, the arguments can be read in any
 order as long no TN is written that has a life beginning at or after
-(:Argument <n>), where N is the number of an argument whose reading was
+(:Argument $<$n$>$), where N is the number of an argument whose reading was
 postponed.
 
 [\#\#\# (???)
@@ -392,42 +394,44 @@ emitted.
 \chapter{Writing Assembly Code}
 
 VOP writers expect:
-   MOVE
+\begin{Lentry}
+\item[MOVE]
       You write when you port the assembler.)
-   EMIT-LABEL
+\item[EMIT-LABEL]
       Assembler interface like INST.  Takes a label you made and says "stick it
       here."
-   GEN-LABEL
+   \item[GEN-LABEL]
       Returns a new label suitable for use with EMIT-LABEL exactly once and
       for referencing as often as necessary.
-   INST
+   \item[INST]
       Recognizes and dispatches to instructions you defined for assembler.
-   ALIGN
+   \item[ALIGN]
       This takes the number of zero bits you want in the low end of the address
       of the next instruction.
-   ASSEMBLE
-   ASSEMBLE-ELSEWHERE
+   \item[ASSEMBLE]
+   \item[ASSEMBLE-ELSEWHERE]
       Get ready for assembling stuff.  Takes a VOP and arbitrary PROGN-style
       body.  Wrap these around instruction emission code announcing the first
       pass of our assembler.
-   CURRENT-NFP-TN
+   \item[CURRENT-NFP-TN]
       This returns a TN for the NFP if the caller uses the number stack, or
       nil.
-   SB-ALLOCATED-SIZE
+   \item[SB-ALLOCATED-SIZE]
       This returns the size of some storage based used by the currently
       compiling component.
-   ...
-
+   \item[...]
+\end{Lentry}
 ;;;
 ;;; VOP idioms
 ;;;
 
-STORE-STACK-TN
-LOAD-STACK-TN
+\begin{Lentry}
+\item[STORE-STACK-TN]
+\item[LOAD-STACK-TN]
    These move a value from a register to the control stack, or from the
    control stack to a register.  They take care of checking the TN types,
    modifying offsets according to the address units per word, etc.
-
+\end{Lentry}
 
 \chapter{Required VOPS}
 
@@ -463,25 +467,28 @@ beginning of the current frame.
 
 Implement more args by BLT'ing the more args *on top* of the current frame.
 This solves two problems:
- -- Any register more arguments can be made uniformly accessibly by copying
+\begin{itemize}
+\item Any register more arguments can be made uniformly accessibly by copying
     them into memory.  [We can't store the registers in place, since the
     beginning of the frame gets double use for storing the old-cont, return-pc
     and env.]
- -- It solves the deallocation problem: the arguments will be deallocated when
+\item It solves the deallocation problem: the arguments will be deallocated when
     the frame is returned from or a tail full call is done out of it.  So
     keyword args will be properly tail-recursive without any special mechanism
     for squeezing out the more arg once the parsing is done.  Note that a tail
     local call won't blast the more arg, since in local call the callee just
     takes the frame it is given (in this case containing the more arg).
+\end{itemize}
 
 More args in local call???  Perhaps we should not attempt local call conversion
 in this case.  We already special-case keyword args in local call.  It seems
 that the main importance of more args is primarily related to full call: it is
 used for defining various kinds of frobs that need to take arbitrary arguments:
- -- Keyword arguments
- -- Interpreter stubs
- -- "Pass through" applications such as dispatch functions
-
+\begin{itemize}
+\item Keyword arguments
+\item Interpreter stubs
+\item "Pass through" applications such as dispatch functions
+\end{itemize}
 Given the marginal importance of more args in local call, it seems unworth
 going to any implementation difficulty.  In fact, it seems that it would cause
 complications both at the VMR level and also in the VM definition.  This being
@@ -593,7 +600,7 @@ Things that need to be done on XEP entry:
  5] Argument count checking and dispatching
 
 XEP VOPs:
-
+\begin{verbatim}
 Allocate-Frame
 Copy-More-Arg <nargs-tn> 'fixed {in a3} => <context>, <count>
 Setup-Environment
@@ -601,17 +608,20 @@ Setup-Closure-Environment => <closure>
 Verify-Argument-Count <nargs-tn> 'count {for fixed-arg lambdas}
 Argument-Count-Error <nargs-tn> {Drop-thru on hairy arg dispatching}
 Use fast-if-=/fixnum and fast-if-</fixnum for dispatching.
+\end{verbatim}
 
 Closure vops:
+\begin{verbatim}
 make-closure <fun entry> <slot count> => <closure>
 closure-init <closure> <values> 'slot
-
+\end{verbatim}
 
 Things that need to be done on all function entry:
- -- Move arguments to the variable home (consing value cells as necessary)
- -- Move environment values to the local home
- -- Move old-cont and return-pc to the save locations
-
+\begin{itemize}
+\item Move arguments to the variable home (consing value cells as necessary)
+\item Move environment values to the local home
+\item Move old-cont and return-pc to the save locations
+\end{itemize}
 
 \section{Calls}
 
@@ -700,7 +710,7 @@ A0 ... An
    These holds the first n+1 values, or NIL if there are less than n+1 values.
 
 CSP
-   Returner stores CSP to hold its CFP + NARGS * <address units per word>
+   Returner stores CSP to hold its CFP + NARGS * \verb+<address units per word>+
 
 OCFP
    Returner stores this as its CFP, so the returnee has a handle on either
@@ -712,8 +722,10 @@ ALLOCATE FULL CALL FRAME.
 If the number of call arguments (passed to the VOP as an info argument)
 indicates that there are stack arguments, then it makes some callee frame for
 arguments:
+\begin{verbatim}
    VOP-result <- CSP
    CSP <- CSP + value of VOP info arg times address units per word.
+\end{verbatim}
 
 In a call sequence, move some arguments to the right places.
 
@@ -722,7 +734,7 @@ There's a variety of MOVE-ARGUMENT VOP's.
 FULL CALL VOP'S
 (variations determined by whether it's named, it's a tail call, there
 is a variable arg count, etc.)
-
+\begin{verbatim}
   if variable number of arguments
     NARGS <- (CSP - value of VOP argument) shift right by address units per word.
     A0...An <- values off of VOP argument (just fill them all)
@@ -756,9 +768,10 @@ is a variable arg count, etc.)
   <default and move return values OR receive return values>
   when (current-nfp-tn VOP-self-pointer)
     NFP <- stack-temp
-
+\end{verbatim}
 Callee:
 
+\begin{verbatim}
 XEP-ALLOCATE-FRAME
   emit function header (maybe initializes offset back to component start,
   			but other pointers are set up at load-time.  Pads
@@ -767,13 +780,17 @@ XEP-ALLOCATE-FRAME
   if the function uses the number stack
     NFP <- NSP
     NSP <- NSP + compile-time determined constant (number stack frame size)
+\end{verbatim}
 
+\begin{verbatim}
 SETUP-ENVIRONMENT
 (either use this or the next one)
 
 CODE <- CODE - assembler-time determined offset from function-entry back to
 	       the code data-block address.
+\end{verbatim}
 
+\begin{verbatim}
 SETUP-CLOSURE-ENVIRONMENT
 (either use this or the previous one)
 After this the CLOSURE-REF VOP can reference closure variables.
@@ -781,6 +798,7 @@ After this the CLOSURE-REF VOP can reference closure variables.
 VOP-result <- LEXENV
 CODE <- CODE - assembler-time determined offset from function-entry back to
 	       the code data-block address.
+\end{verbatim}
 
 Return VOP's
 RETURN and RETURN-MULTIPLE are for the unknown-values return convention.
@@ -795,6 +813,7 @@ RETURN
 When compiler invokes VOP, all values are already where they should be;
 just get back to caller.
 
+\begin{verbatim}
 when (current-nfp-tn VOP-self-pointer)
   ;; The number stack grows down in memory.
   NSP <- NFP + number stack frame size for calls within the currently
@@ -815,6 +834,7 @@ else
   LIP <- calc target addr (CODE + skip over LRA header word)
 CFP <- value of VOP argument with OCFP
 jump and run off LIP
+\end{verbatim}
 
 RETURN-MULTIPLE
 (unknown number of values, used with the unknown-values convention in
@@ -822,6 +842,7 @@ RETURN-MULTIPLE
 When compiler invokes VOP, it gets TN's representing a pointer to the
 values on the stack and how many values were computed.
 
+\begin{verbatim}
 when (current-nfp-tn VOP-self-pointer)
   ;; The number stack grows down in memory.
   NSP <- NFP + number stack frame size for calls within the currently
@@ -839,7 +860,7 @@ CFP <- value of VOP argument with OCFP
 CODE <- value of VOP argument with LRA
 LIP <- calc target addr (CODE + skip over LRA header word)
 jump and run off LIP
-
+\end{verbatim}
 
 Returnee
 The call VOP's call DEFAULT-UNKNOWN-VALUES or RECEIVE-UNKNOWN-VALUES after
@@ -861,6 +882,7 @@ stack pointer to dump possible stack return values (move OCFP to CSP).
 Two, if the returnee wants more values than the number of return registers,
 and it starts at PC+N (got one value), then it sets up returnee state as if
 an unknown number of values came back:
+\begin{verbatim}
    A0 has the one value
    A1..An get nil
    NARGS gets 1
@@ -871,6 +893,7 @@ code which takes care of the following issues:
       values and move OCFP into CSP
    If k >= n, move OCFP into CSP
 This also restores CODE from LRA by subtracting an assemble-time constant.
+\end{verbatim}
 
 RECEIVE-UKNOWN-VALUES
 (I want whatever I get.)
@@ -900,6 +923,7 @@ ALLOCATE-FRAME
 If the number of call arguments (passed to the VOP as an info argument)
 indicates that there are stack arguments, then it makes some callee frame for
 arguments:
+\begin{verbatim}
    VOP-result1 <- CSP
    CSP <- CSP + control stack frame size for calls within the currently
    		   compiling component
@@ -912,7 +936,7 @@ arguments:
      		     compiling component
 		  times address units per word
      VOP-result2 <- NSP
-
+\end{verbatim}
 KNOWN-CALL-LOCAL, CALL-LOCAL, MULTIPLE-CALL-LOCAL
 KNOWN-CALL-LOCAL has no need to affect CODE since CODE is the same for the
 caller/returnee and the returner.  This uses KNOWN-RETURN.
@@ -924,6 +948,7 @@ will give us.  This could happen due to a tail full call to an unknown
 function, or because the callee had different return points that returned
 various numbers of values.
 
+\begin{verbatim}
 when (current-nfp-tn VOP-self-pointer)   ;Get VOP self-pointer with
 					 ;DEFINE-VOP switch :vop-var.
   stack-temp <- NFP
@@ -942,9 +967,10 @@ jump and run off VOP info arg holding start instruction for callee
 >
 when (current-nfp-tn VOP-self-pointer)   
   NFP <- stack-temp
+\end{verbatim}
 
 KNOWN-RETURN
-
+\begin{verbatim}
 CSP <- CFP
 when (current-nfp-tn VOP-self-pointer)
   ;; number stack grows down in memory.
@@ -955,7 +981,7 @@ LIP <- calc target addr (value of VOP arg + skip over LRA header word)
 CFP <- value of VOP arg
 jump and run off LIP
 
-
+\end{verbatim}
 
 
 \chapter{Standard Primitives}
@@ -1070,13 +1096,15 @@ for each of the first N values.
 
 Nearly all open-coded functions should be handled using standard template
 selection.  Some (all?) exceptions:
- -- List, List* and Vector take arbitrary numbers of arguments.  Could
+\begin{itemize}
+\item List, List* and Vector take arbitrary numbers of arguments.  Could
     implement Vector as a source transform.  Could even do List in a transform
-    if we explicitly represent the stack args using %More-Args or something.
- -- %Typep varies a lot depending on the type specifier.  We don't want to
-    transform it, since we want %Typep as a canonical form so that we can do
+    if we explicitly represent the stack args using \%More-Args or something.
+\item \%Typep varies a lot depending on the type specifier.  We don't want to
+    transform it, since we want \%Typep as a canonical form so that we can do
     type optimizations.
- -- Apply is weird.
- -- Funny functions emitted by the compiler: %Listify-Rest-Args, Arg,
-    %More-Args, %Special-Bind, %Catch, %Unknown-Values (?), %Unwind-Protect,
-    %Unwind, %%Primitive.
+\item Apply is weird.
+\item Funny functions emitted by the compiler: \%Listify-Rest-Args, Arg,
+    \%More-Args, \%Special-Bind, \%Catch, \%Unknown-Values (?), \%Unwind-Protect,
+    \%Unwind, \%\%Primitive.
+\end{itemize}

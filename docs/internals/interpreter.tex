@@ -32,9 +32,11 @@ single cell.
 The compiler can have some special frobs for making the interpreter efficient,
 such as a call operation that extracts arguments from the stack
 slots designated by a continuation list.  Perhaps 
+\begin{verbatim}
     (values-mapcar fun . lists)
 <==>
     (values-list (mapcar fun . lists))
+\end{verbatim}
 This would be used with MV-CALL.
 
 

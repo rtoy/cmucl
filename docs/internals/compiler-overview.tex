@@ -228,13 +228,13 @@ by watching for a change in the cleanup between two continuations.  We can't
 emit cleanup code during ICR conversion, since we don't know which exits will
 be local until after ICR optimizations are done.
 
-Special binding is represented by a call to the funny function %Special-Bind.
+Special binding is represented by a call to the funny function \%Special-Bind.
 The first argument is the Global-Var structure for the variable bound and the
 second argument is the value to bind it to.
 
 Some subprimitives are implemented using a macro-like mechanism for translating
-%PRIMITIVE forms into arbitrary lisp code.  Subprimitives special-cased by VMR
-conversion are represented by a call to the funny function %%Primitive.  The
+\%PRIMITIVE forms into arbitrary lisp code.  Subprimitives special-cased by VMR
+conversion are represented by a call to the funny function \%\%Primitive.  The
 corresponding Template structure is passed as the first argument.
 
 We check global function calls for syntactic legality with respect to any
@@ -341,12 +341,12 @@ where the default is a constant, we don't have to special-bind at all, since
 the computation of the default is not affected by and cannot affect any special
 bindings.
 
-Keyword and rest args are both implemented using a LEXPR-like "more args"
-convention.  The More-Entry takes two arguments in addition to the fixed and
-optional arguments: the argument context and count.  (ARG <context> <n>)
-accesses the N'th additional argument.  Keyword args are implemented directly
-using this mechanism.  Rest args are created by calling %Listify-Rest-Args with
-the context and count.
+Keyword and rest args are both implemented using a LEXPR-like "more
+args" convention.  The More-Entry takes two arguments in addition to
+the fixed and optional arguments: the argument context and count.
+\verb+(ARG <context> <n>)+ accesses the N'th additional argument.  Keyword
+args are implemented directly using this mechanism.  Rest args are
+created by calling \%Listify-Rest-Args with the context and count.
 
 The More-Entry parses the keyword arguments and passes the values to the main
 function as positional arguments.  If a keyword default is not constant, then
@@ -361,8 +361,10 @@ can figure out how to call the main entry.
 
 All exits are initially represented by EXIT nodes:
 How about an Exit node:
+\begin{verbatim}
     (defstruct (exit (:include node))
       value)
+\end{verbatim}
 The Exit node uses the continuation that is to receive the thrown Value.
 During optimization, if we discover that the Cont's home-lambda is the same is
 the exit node's, then we can delete the Exit node, substituting the Cont for
@@ -377,9 +379,10 @@ We ensure that all Exits that aren't for a NLX don't have any Value, so that
 local exits never require any value massaging.
 
 The Entry node marks the beginning of a block or tagbody:
+\begin{verbatim} 
     (defstruct (entry (:include node))
       (continuations nil :type list)) 
-
+\end{verbatim}
 It contains a list of all the continuations that the body could exit to.  The
 Entry node is used as a marker for the the place to snapshot state, including
 the control stack pointer.  Each lambda has a list of its Entries so
@@ -391,39 +394,42 @@ no-var let).
 
 We represent CATCH using the lexical exit mechanism.  We do a transformation
 like this:
+\begin{verbatim}
    (catch 'foo xxx)  ==>
    (block \#:foo
      (%catch \#'(lambda () (return-from \#:foo (%unknown-values))) 'foo)
      (%within-cleanup :catch
        xxx))
+\end{verbatim}
 
-%CATCH just sets up the catch frame which points to the exit function.  %Catch
+\%CATCH just sets up the catch frame which points to the exit function.  %Catch
 is an ordinary function as far as ICR is concerned.  The fact that the catcher
 needs to be cleaned up is expressed by the Cleanup slots in the continuations
-in the body.  %UNKNOWN-VALUES is a dummy function call which represents the
+in the body.  \%UNKNOWN-VALUES is a dummy function call which represents the
 fact that we don't know what values will be thrown.  
 
-%WITHIN-CLEANUP is a special special form that instantiates its first argument
+\%WITHIN-CLEANUP is a special special form that instantiates its first argument
 as the current cleanup when converting the body.  In reality, the lambda is
-also created by the special special form %ESCAPE-FUNCTION, which gives the
+also created by the special special form \%ESCAPE-FUNCTION, which gives the
 lambda a special :ESCAPE kind so that the back end knows not to generate any
 code for it.
 
 
 We use a similar hack in Unwind-Protect to represent the fact that the cleanup
 forms can be invoked at arbitrarily random times.
+\begin{verbatim}
     (unwind-protect p c)  ==>
     (flet ((\#:cleanup () c))
       (block \#:return
 	(multiple-value-bind
 	    (\#:next \#:start \#:count)
 	    (block \#:unwind
-	      (%unwind-protect \#'(lambda (x) (return-from \#:unwind x)))
-	      (%within-cleanup :unwind-protect
+              (\%unwind-protect \#'(lambda (x) (return-from \#:unwind x)))
+              (\%within-cleanup :unwind-protect
 		(return-from \#:return p)))
 	  (\#:cleanup)
-	  (%continue-unwind \#:next \#:start \#:count))))
-
+          (\%continue-unwind \#:next \#:start \#:count))))
+\end{verbatim}
 We use the block \#:unwind to represent the entry to cleanup code in the case
 where we are non-locally unwound.  Calling of the cleanup function in the
 drop-through case (or any local exit) is handled by cleanup generation.  We
@@ -473,7 +479,7 @@ Since we need to evaluate potentially arbitrary code in the XEP argument forms
 (for type checking), we can't leave the arguments in the wired passing
 locations.  Instead, it seems better to give the XEP max-args fixed arguments,
 with the passing locations being the true passing locations.  Instead of using
-%XEP-ARG, we reference the appropriate variable.
+\%XEP-ARG, we reference the appropriate variable.
 
 Also, it might be a good idea to do argument count checking and dispatching
 with explicit conditional code in the XEP.  This would simplify both the code
@@ -510,25 +516,27 @@ If an optional argument is unsupplied, the value passed into the XEP is
 undefined.  The XEP is responsible for doing argument count checking and
 dispatching.  
 
-In the case of a fixed-arg lambda, we emit a call to the %VERIFY-ARGUMENT-COUNT
+In the case of a fixed-arg lambda, we emit a call to the \%VERIFY-ARGUMENT-COUNT
 funny function (conditional on policy), then call the real function on the
 passed arguments.  Even in this simple case, we benefit several ways from
 having a separate XEP:
- -- The argument count checking is factored out, and only needs to be done in
-    full calls.
- -- Argument type checking happens automatically as a consequence of passing
-    the XEP arguments in a local call to the real function.  This type checking
-    is also only done in full calls.
- -- The real function may use a non-standard calling convention for the benefit
-    of recursive or block-compiled calls.  The XEP converts arguments/return
-    values to/from the standard convention.  This also requires little
-    special-casing of XEPs.
+\begin{itemize}
+\item The argument count checking is factored out, and only needs to
+  be done in full calls.
+\item Argument type checking happens automatically as a consequence of
+  passing the XEP arguments in a local call to the real function.
+  This type checking is also only done in full calls.
+\item The real function may use a non-standard calling convention for
+  the benefit of recursive or block-compiled calls.  The XEP converts
+  arguments/return values to/from the standard convention.  This also
+  requires little special-casing of XEPs.
+\end{itemize}
 
 If the function has variable argument count (represented by an
 OPTIONAL-DISPATCH), then the XEP contains a COND which dispatches off of the
 argument count, calling the appropriate entry-point function (which then does
 defaulting).  If there is a more entry (for keyword or rest args), then the XEP
-obtains the more arg context and count by calling the %MORE-ARG-CONTEXT funny
+obtains the more arg context and count by calling the \%MORE-ARG-CONTEXT funny
 function.
 
 All non-local-call references to functions are replaced with references to the
