@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.15 1990/11/20 18:37:13 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/globaldb.lisp,v 1.16 1991/01/02 19:15:35 ram Exp $
 ;;;
 ;;;    This file provides a functional interface to global information about
 ;;; named things in the system.  Information is considered to be global if it
@@ -1119,6 +1119,11 @@
 (define-info-type type structure-info (or defstruct-description null) nil)
 (define-info-type type defined-structure-info (or defstruct-description null)
   nil)
+
+;;; True if this type has been frozen with the FREEZE-TYPE declaration.  Only
+;;; interesting for structure types.
+;;;
+(define-info-type type frozen boolean nil)
 
 (define-info-type type documentation (or string null))
 
