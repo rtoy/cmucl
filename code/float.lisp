@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.18 1998/03/21 08:11:56 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/float.lisp,v 1.19 1999/11/11 14:46:25 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1041,13 +1041,11 @@ rounding modes & do ieee round-to-integer.
 	    (float most-positive-fixnum number))
 	 (truly-the fixnum (%unary-round number))
 	 (multiple-value-bind (bits exp)
-			      (integer-decode-float number)
+	     (integer-decode-float number)
 	   (let* ((shifted (ash bits exp))
 		  (rounded (if (and (minusp exp)
-				    (oddp shifted)
-				    (eql (logand bits
-						 (lognot (ash -1 (- exp))))
-					 (ash 1 (- -1 exp))))
+				    (not (zerop (logand bits
+							(ash 1 (- -1 exp))))))
 			       (1+ shifted)
 			       shifted)))
 	     (if (minusp number)
