@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.4 1993/02/14 12:27:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.5 1993/02/23 14:44:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -94,7 +94,7 @@
   ;; True if other keywords are allowed.
   (allowp nil :type boolean))
 
-(defstruct key-info
+(defstruct (key-info (:pure t))
   ;;
   ;; The keyword.
   (name (required-argument) :type keyword)
@@ -903,7 +903,8 @@
 (defstruct (hairy-type (:include ctype
 				 (:class-info (type-class-or-lose 'hairy))
 				 (:enumerable t))
-		       (:print-function %print-type))
+		       (:print-function %print-type)
+		       (:pure nil))
   ;;
   ;; The Common Lisp type-specifier.
   (specifier nil :type t))
@@ -1713,7 +1714,8 @@
 (defstruct (member-type (:include ctype
 				  (:class-info (type-class-or-lose 'member))
 				  (:enumerable t))
-			(:print-function %print-type))
+			(:print-function %print-type)
+			(:pure nil))
   ;;
   ;; The things in the set, with no duplications.
   (members nil :type list))
