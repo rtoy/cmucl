@@ -1,7 +1,7 @@
 /*
  * Stop and Copy GC based on Cheney's algorithm.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.15 1998/03/21 08:14:59 dtc Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gc.c,v 1.16 1998/07/26 00:05:31 dtc Exp $
  * 
  * Written by Christopher Hoover.
  */
@@ -1671,7 +1671,7 @@ trans_vector_long_float(lispobj object)
 	nwords = CEILING(length * 4 + 2, 2);
 #endif
 
-	return copy_large_unboxed_object(object, nwords);
+	return copy_object(object, nwords);
 }
 
 static int
@@ -1807,7 +1807,7 @@ trans_vector_complex_long_float(lispobj object)
 	nwords = CEILING(length * 8 + 2, 2);
 #endif
 
-	return copy_large_unboxed_object(object, nwords);
+	return copy_object(object, nwords);
 }
 
 static int
