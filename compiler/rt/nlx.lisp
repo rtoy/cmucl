@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.2 1991/04/23 01:21:42 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/nlx.lisp,v 1.3 1991/10/02 23:04:56 ram Exp $
 ;;;
 ;;; This file contains the definitions of VOPs used for non-local exit (throw,
 ;;; lexical exit, etc.)
@@ -60,8 +60,9 @@
     (load-symbol-value catch lisp::*current-catch-block*)
     (load-symbol-value special *binding-stack-pointer*)
     (let ((cur-nfp (current-nfp-tn vop)))
-      (when cur-nfp
-	(move nfp cur-nfp)))
+      (if cur-nfp
+	  (move nfp cur-nfp)
+	  (inst li nfp 0)))
     (move nsp nsp-tn)
     (load-symbol-value eval lisp::*eval-stack-top*)))
 
