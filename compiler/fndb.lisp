@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.57 1993/08/06 13:07:17 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/fndb.lisp,v 1.58 1993/08/20 18:46:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1025,11 +1025,18 @@
 (deftype optional-filename () '(or filename (member t nil)))
 
 (defknown compile-file
-  ((or optional-filename list) &key (:output-file optional-filename) (:error-file optional-filename)
+  ((or optional-filename list) &key (:output-file optional-filename)
+   (:error-file optional-filename)
    (:trace-file optional-filename) (:error-output t) (:load t) (:verbose t)
-   (:print t) (:progress t) (:block-compile t) (:entry-points list))
+   (:print t) (:progress t)
+   (:block-compile (member t nil :specified))
+   (:entry-points list)
+   (:byte-compile (member t nil :maybe)))
   (values (or pathname null) boolean boolean))
-(defknown disassemble (callable &optional stream) void)
+
+(defknown disassemble (callable &key (:stream stream) (:backend backend)
+				(:use-labels t))
+  void)
 
 (defknown documentation ((or symbol cons) symbol)
   (or string null)
