@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.33 1990/07/21 00:37:27 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/arith.lisp,v 1.34 1990/07/26 00:57:43 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition arithmetic VOPs for the MIPS.
 ;;;
@@ -379,6 +379,7 @@
   (:info target not-p)
   (:effects)
   (:affected)
+  (:temporary (:scs (non-descriptor-reg)) temp)
   (:policy :fast-safe))
 
 (deftype integer-with-a-bite-out (s bite)
@@ -393,40 +394,34 @@
   (:args (x :scs (any-reg))
 	 (y :scs (any-reg)))
   (:arg-types tagged-num tagged-num)
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline fixnum comparison"))
 
 (define-vop (fast-conditional-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg)))
   (:arg-types tagged-num (:constant (integer-with-a-bite-out 14 #.(fixnum 1))))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 (define-vop (fast-conditional/signed fast-conditional)
   (:args (x :scs (signed-reg))
 	 (y :scs (signed-reg)))
   (:arg-types signed-num signed-num)
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline (signed-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/signed fast-conditional/signed)
   (:args (x :scs (signed-reg)))
   (:arg-types signed-num (:constant (integer-with-a-bite-out 16 1)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 (define-vop (fast-conditional/unsigned fast-conditional)
   (:args (x :scs (unsigned-reg))
 	 (y :scs (unsigned-reg)))
   (:arg-types unsigned-num unsigned-num)
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:note "inline (unsigned-byte 32) comparison"))
 
 (define-vop (fast-conditional-c/unsigned fast-conditional/unsigned)
   (:args (x :scs (unsigned-reg)))
   (:arg-types unsigned-num (:constant (and (integer-with-a-bite-out 16 1)
 					   unsigned-byte)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y))
 
 
@@ -508,6 +503,7 @@
   (:arg-types * tagged-num)
   (:note "inline fixnum comparison")
   (:translate eql)
+  (:ignore temp)
   (:generator 3
     (if not-p
 	(inst bne x y target)
@@ -517,7 +513,6 @@
 (define-vop (fast-eql-c/fixnum fast-conditional/fixnum)
   (:args (x :scs (any-reg descriptor-reg)))
   (:arg-types * (:constant (signed-byte 14)))
-  (:temporary (:scs (non-descriptor-reg) :from (:argument 0)) temp)
   (:info target not-p y)
   (:translate eql)
   (:generator 2
