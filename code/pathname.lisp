@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.48 2001/03/27 20:23:45 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.49 2001/04/05 13:40:02 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -676,11 +676,12 @@ a host-structure or string."
 
     ;; A bit of sanity checking on user arguments.
     (flet ((check-component-validity (name name-or-type)
-	     (let ((unix-directory-separator #\/))
-	       (when (eq host (pathname-host *default-pathname-defaults*))
-		 (when (find unix-directory-separator name)
-		   (warn "Silly argument for a unix ~A: ~S"
-			 name-or-type name))))))
+	     (when (stringp name)
+	       (let ((unix-directory-separator #\/))
+		 (when (eq host (pathname-host *default-pathname-defaults*))
+		   (when (find unix-directory-separator name)
+		     (warn "Silly argument for a unix ~A: ~S"
+			   name-or-type name)))))))
       (check-component-validity name :pathname-name)
       (check-component-validity type :pathname-type))
     
