@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.174 2000/08/24 16:39:30 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.175 2000/11/30 05:33:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -952,7 +952,8 @@
 	     "MAKE-STREAM-COMMAND" "MAKE-WEAK-POINTER"
              "MAYBE-INLINE" "MEMQ" "NAME-KEYSYM" "NTOHL" "NTOHS"
              "OBJECT-SET-EVENT-HANDLER" "OLD-TRACE" "OLD-UNTRACE" "ONCE-ONLY"
-             "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE" "PARSE-TIME"
+             "OPEN-CLX-DISPLAY" "OPTIMIZE-INTERFACE"
+	     "PACKAGE-CHILDREN" "PACKAGE-PARENT" "PARSE-TIME"
              "PRINT-DIRECTORY" "PRINT-HERALD" "PRINT-PRETTY-KEY"
              "PRINT-PRETTY-KEY-EVENT" "PROCESS-ALIVE-P" "PROCESS-CLOSE"
              "PROCESS-CORE-DUMPED" "PROCESS-ERROR" "PROCESS-EXIT-CODE"

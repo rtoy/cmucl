@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.56 2000/07/06 06:39:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.57 2000/11/30 05:33:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -27,7 +27,7 @@
 
 (in-package "EXTENSIONS")
 (export '(*keyword-package* *lisp-package* *default-package-use-list*
-			    map-apropos))
+	  map-apropos package-children package-parent))
 
 (in-package "KERNEL")
 (export '(%in-package old-in-package %defpackage))
@@ -124,33 +124,178 @@
 (defvar *in-package-init* nil)
 (defvar *deferred-use-packages* nil)
 
-;;; Find-Package  --  Public
-;;;
-;;;
-(defun find-package (name)
-  "Find the package having the specified name."
-  (if (packagep name)
-      name
-      (values (gethash (string name) *package-names*))))
+(defun stringify-name (name kind)
+  (typecase name
+    (simple-string name)
+    (string (coerce name 'simple-string))
+    (symbol (symbol-name name))
+    (base-char
+     (let ((res (make-string 1)))
+       (setf (schar res 0) name)
+       res))
+    (t
+     (error "Bogus ~A name: ~S" kind name))))
 
-;;; Package-Listify  --  Internal
-;;;
-;;;    Return a list of packages given a package-or-string-or-symbol or
-;;; list thereof, or die trying.
-;;;
-(defun package-listify (thing)
-  (let ((res ()))
-    (dolist (thing (if (listp thing) thing (list thing)) res)
-      (push (package-or-lose thing) res))))
+(defun stringify-names (names kind)
+  (mapcar #'(lambda (name)
+	      (stringify-name name kind))
+	  names))
 
-;;; PACKAGE-NAMIFY  --  Internal
+;;; package-namify  --  Internal
 ;;;
 ;;;    Make a package name into a simple-string.
 ;;;
 (defun package-namify (n)
   (stringify-name n "package"))
 
-;;; Package-Or-Lose  --  Internal
+;;; package-namestring  --  Internal
+;;;
+;;;    Take a package-or-string-or-symbol and return a package name.
+;;;
+(defun package-namestring (thing)
+  (if (packagep thing)
+      (let ((name (package-%name thing)))
+	(or name
+	    (error "Can't do anything to a deleted package: ~S" thing)))
+      (package-namify thing)))
+
+;;; package-name-to-package  --  Internal
+;;;
+;;; Given a package name, a simple-string, do a package name lookup.
+;;;
+(defun package-name-to-package (name)
+  (declare (simple-string name))
+  (values (gethash name *package-names*)))
+
+;;; package-parent  --  Internal.
+;;;
+;;; Because this function is called via the reader, we want it to be as
+;;; fast as possible.
+;;;
+#+relative-package-names
+(defun package-parent (package-specifier)
+  "Given package-specifier, a package, symbol or string, return the
+  parent package.  If there is not a parent, signal an error."
+  (declare (optimize (speed 3)))
+  (flet ((find-last-dot (name)
+           (do* ((len (1- (length name)))
+		 (i len (1- i)))
+		((= i -1) nil)
+             (declare (fixnum len i))
+             (when (char= #\. (schar name i)) (return i)))))
+    (let* ((child (package-namestring package-specifier))
+           (dot-position (find-last-dot child)))
+      (cond (dot-position
+             (let ((parent (subseq child 0 dot-position)))
+               (or (package-name-to-package parent)
+		   (error "The parent of ~a does not exist." child))))
+            (t
+	     (error "There is no parent of ~a." child))))))
+
+
+;;; package-children  --  Internal.
+;;;
+;;; While this function is not called via the reader, we do want it to be
+;;; fast.
+;;;
+#+relative-package-names
+(defun package-children (package-specifier &key (recurse t))
+  "Given package-specifier, a package, symbol or string, return all the
+  packages which are in the hierarchy 'under' the given package.  If
+  :recurse is nil, then only return the immediate children of the package."
+  (declare (optimize (speed 3)))
+  (let ((res ())
+        (parent (package-namestring package-specifier)))
+    (labels
+        ((string-prefix-p (prefix string)
+	   (declare (simple-string prefix string))
+           ;; Return length of `prefix' if `string' starts with `prefix'.
+           ;; We don't use `search' because it does much more than we need
+           ;; and this version is about 10x faster than calling `search'.
+           (let ((prefix-len (length prefix))
+                 (seq-len (length string)))
+             (declare (type index prefix-len seq-len))
+             (when (>= prefix-len seq-len)
+               (return-from string-prefix-p nil))
+             (do ((i 0 (1+ i)))
+                 ((= i prefix-len) prefix-len)
+               (declare (type index i))
+               (unless (char= (schar prefix i) (schar string i))
+                 (return nil)))))
+         (test-package (package-name package)
+	   (declare (simple-string package-name)
+		    (type package package))
+           (let ((prefix
+                  (string-prefix-p (concatenate 'simple-string parent ".")
+                                   package-name)))
+             (cond (recurse
+		    (when prefix
+		      (pushnew package res)))
+                   (t
+		    (when (and prefix
+			       (not (find #\. package-name :start prefix)))
+		      (pushnew package res)))))))
+      (maphash #'test-package *package-names*)
+      res)))
+
+;;; relative-package-name-to-package  --  Internal
+;;;
+;;; Given a package name, a simple-string, do a relative package name lookup.
+;;; It is intended that this function will be called from find-package.
+;;;
+#+relative-package-names
+(defun relative-package-name-to-package (name)
+  (declare (simple-string name)
+	   (optimize (speed 3)))
+  (flet ((relative-to (package name)
+	   (declare (type package package)
+		    (simple-string name))
+           (if (string= "" name)
+	       package
+	       (let ((parent-name (package-%name package)))
+		 (unless parent-name
+		   (error "Can't do anything to a deleted package: ~S"
+			  package))
+		 (package-name-to-package
+		  (concatenate 'simple-string parent-name "." name)))))
+         (find-non-dot (name)
+           (do* ((len (length name))
+                 (i 0 (1+ i)))
+		((= i len) nil)
+             (declare (type index len i))
+             (when (char/= #\. (schar name i)) (return i)))))
+    (when (char= #\. (schar name 0))
+      (let* ((last-dot-position (or (find-non-dot name) (length name)))
+             (n-dots last-dot-position)
+             (name (subseq name last-dot-position)))
+        (cond ((= 1 n-dots)
+               ;; relative to current package
+               (relative-to *package* name))
+              (t
+               ;; relative to our (- n-dots 1)'th parent
+               (let ((package *package*)
+                     (tmp nil))
+                 (dotimes (i (1- n-dots))
+		   (declare (fixnum i))
+		   (setq tmp (package-parent package))
+                   (unless tmp
+		     (error "The parent of ~a does not exist." package))
+                   (setq package tmp))
+                 (relative-to package name))))))))
+
+;;; find-package  --  Public
+;;;
+;;;
+(defun find-package (name)
+  "Find the package having the specified name."
+  (if (packagep name)
+      name
+      (let ((name (package-namify name)))
+	(or (package-name-to-package name)
+	    #+relative-package-names
+	    (relative-package-name-to-package name)))))
+
+;;; package-or-lose  --  Internal
 ;;;
 ;;;    Take a package-or-string-or-symbol and return a package.
 ;;;
@@ -161,9 +306,9 @@
 	 thing)
 	(t
 	 (let ((thing (package-namify thing)))
-	   (cond ((gethash thing *package-names*))
+	   (cond ((package-name-to-package thing))
 		 (t
-		  ;; ANSI spec's TYPE-ERROR where this is called. But,
+		  ;; ANSI spec's type-error where this is called. But,
 		  ;; but the resulting message is somewhat unclear.
 		  ;; May need a new condition type?
 		  (with-simple-restart
@@ -172,6 +317,16 @@
 			   :datum thing
 			   :expected-type 'package))
 		  (make-package thing)))))))
+
+;;; package-listify  --  Internal
+;;;
+;;;    Return a list of packages given a package-or-string-or-symbol or
+;;; list thereof, or die trying.
+;;;
+(defun package-listify (thing)
+  (let ((res ()))
+    (dolist (thing (if (listp thing) thing (list thing)) res)
+      (push (package-or-lose thing) res))))
 
 
 ;;;; Package-Hashtables
@@ -748,20 +903,6 @@
 					but have common elements ~%   ~S"
 		       :format-arguments (list (car x)(car y) z)))))
 
-(defun stringify-name (name kind)
-  (typecase name
-    (simple-string name)
-    (string (coerce name 'simple-string))
-    (symbol (symbol-name name))
-    (base-char (string name))
-    (t
-     (error "Bogus ~A name: ~S" kind name))))
-
-(defun stringify-names (names kind)
-  (mapcar #'(lambda (name)
-	      (stringify-name name kind))
-	  names))
-
 (defun %defpackage (name nicknames size shadows shadowing-imports
 			 use imports interns exports doc-string)
   (declare (type simple-base-string name)
@@ -856,7 +997,7 @@
   (check-type nicknames list)
   (dolist (n nicknames)
     (let* ((n (package-namify n))
-	   (found (gethash n *package-names*)))
+	   (found (package-name-to-package n)))
       (cond ((not found)
 	     (setf (gethash n *package-names*) package)
 	     (push n (package-%nicknames package)))
@@ -1064,7 +1205,7 @@
 		 (add-symbol (package-internal-symbols package) symbol)))
 	  (values symbol nil)))))
 
-;;; Find-Symbol*  --  Internal
+;;; find-symbol*  --  Internal
 ;;;
 ;;;    Check internal and external symbols, then scan down the list
 ;;; of hashtables for inherited symbols.  When an inherited symbol
@@ -1094,9 +1235,9 @@
 	      (shiftf (cdr prev) (cdr table) (cdr head) table))
 	    (return-from find-symbol* (values symbol :inherited))))))))
 
-;;; Find-External-Symbol  --  Internal
+;;; find-external-symbol  --  Internal
 ;;;
-;;;    Similar to Find-Symbol, but only looks for an external symbol.
+;;;    Similar to find-symbol, but only looks for an external symbol.
 ;;; This is used for fast name-conflict checking in this file and symbol
 ;;; printing in the printer.
 ;;;
@@ -1110,7 +1251,7 @@
 			string length hash ehash)
       (values symbol found))))
 
-;;; Unintern  --  Public
+;;; unintern  --  Public
 ;;;
 ;;;    If we are uninterning a shadowing symbol, then a name conflict can
 ;;; result, otherwise just nuke the symbol.
