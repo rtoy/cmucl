@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.68 2003/06/10 16:52:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.69 2003/06/11 13:00:17 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -957,7 +957,7 @@
       (unless okay
 	(cerror "Go on as if nothing bad happened."
 		"Could not delete ~S during close of ~S: ~A"
-		original stream (unix:get-unix-error-msg err))))))
+		original filename (unix:get-unix-error-msg err))))))
 
 ;;; FD-STREAM-MISC-ROUTINE -- input
 ;;;
