@@ -1,7 +1,12 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.3 1994/03/27 15:26:25 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/coreparse.c,v 1.4 1994/07/05 16:06:45 hallgren Exp $ */
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/file.h>
+
+#ifdef irix
+#include <fcntl.h>
+#include <stdlib.h>
+#endif
 
 #include "os.h"
 #include "lisp.h"

@@ -1,6 +1,6 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.2 1994/03/27 15:20:39 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lispregs.h,v 1.3 1994/07/05 16:10:38 hallgren Exp $ */
 
-#ifdef mips
+#if defined(mips) || defined(irix)
 #include "mips-lispregs.h"
 #endif
 

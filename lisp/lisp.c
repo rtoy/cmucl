@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.6 1994/03/10 16:34:14 wlott Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.7 1994/07/05 16:10:16 hallgren Exp $
  *
  */
 
@@ -28,6 +28,11 @@
 #include "core.h"
 #include "save.h"
 #include "lispregs.h"
+
+#ifdef irix
+#include <string.h>
+#include "interr.h"
+#endif
 
 
 /* SIGINT handler that invokes the monitor. */
@@ -110,7 +115,9 @@ void main(int argc, char *argv[], char *envp[])
 	default_core = "lisp.core";
 
     if (core == NULL) {
+#ifndef irix
 	extern char *getenv(char *var);
+#endif
 	static char buf[MAXPATHLEN];
 	char *lib = getenv("CMUCLLIB");
 

@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.3 1994/03/27 15:24:12 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.4 1994/07/05 16:11:04 hallgren Exp $ */
 
 /* Pick up all the syscalls. */
 accept,
@@ -71,7 +71,7 @@ open,
 pipe,
 profil,
 ptrace,
-#if !defined(SUNOS) && !defined(parisc) && !defined(osf1)
+#if !defined(SUNOS) && !defined(parisc) && !defined(osf1) && !defined(irix)
 quota,
 #endif
 read,
@@ -96,7 +96,7 @@ sethostname,
 setitimer,
 setpgrp,
 setpriority,
-#if !defined(SUNOS) && !defined(parisc) && !defined(osf1)
+#if !defined(SUNOS) && !defined(parisc) && !defined(osf1) && !defined(irix)
 setquota,
 #endif
 #ifndef hpux
@@ -109,7 +109,7 @@ settimeofday,
 shutdown,
 sigblock,
 sigpause,
-#if !defined(ibmrt) && !defined(hpux)
+#if !defined(ibmrt) && !defined(hpux) && !defined(irix)
 sigreturn,
 #endif
 sigsetmask,
@@ -118,7 +118,9 @@ sigvec,
 socket,
 socketpair,
 stat,
+#ifndef irix
 swapon,
+#endif
 symlink,
 sync,
 syscall,
@@ -126,6 +128,8 @@ syscall,
 closedir,
 opendir,
 readdir,
+#endif
+#if defined(hpux) || defined(irix)
 tcgetattr,
 tcsetattr,
 #endif
@@ -138,7 +142,9 @@ unlink,
 #ifndef hpux
 utimes,
 #endif
+#ifndef irix
 vfork,
+#endif
 #ifndef osf1
 vhangup,
 #endif
@@ -187,3 +193,6 @@ gethostbyaddr,
 getwd,
 ttyname
 
+#ifdef irix
+,_getpty
+#endif

@@ -1,12 +1,14 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.3 1994/03/27 15:32:03 hallgren Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/interrupt.c,v 1.4 1994/07/05 16:08:03 hallgren Exp $ */
 
 /* Interrupt handing magic. */
 
 #include <stdio.h>
 
 #include <signal.h>
+#ifdef mach
 #ifdef mips
 #include <mips/cpu.h>
+#endif
 #endif
 
 #include "lisp.h"
