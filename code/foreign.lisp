@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.24 1997/08/23 15:59:59 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.25 1997/10/25 16:31:55 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -394,6 +394,12 @@
 (defconstant rtld-lazy 1)
 (defconstant rtld-now 2)
 (defconstant rtld-global #-irix #o400 #+irix 4)
+;; Dynamically loaded stuff isn't there upon restoring from a save--this is
+;;primarily for irix, which resolves tzname at runtime, resulting in
+;;*global-table* being set in the saved core image, resulting in havoc upon
+;;restart.
+(pushnew #'(lambda () (setq *global-table* nil))
+         ext:*after-save-initializations*)
 (defvar *global-table* NIL)
 (defvar *dso-linker*
   #+solaris "/usr/ccs/bin/ld"
@@ -407,7 +413,22 @@
 (alien:def-alien-routine dlclose void (lib system-area-pointer))
 (alien:def-alien-routine dlerror c-call:c-string)
 
+;; Ensure we've opened our own binary so can resolve global variables in the
+;;lisp image that come from libraries. This used to happen only in
+;;alternate-get-global-address, and only if no libraries were dlopened already,
+;;but that didn't work if something was dlopened before any problem global vars
+;;were used. So now we do this in any function that can add to the global-table,
+;;as well as in a-g-g-a.
+(defun ensure-lisp-table-opened ()
+  (unless *global-table*
+    ;; Prevent recursive call if dlopen isn't defined
+    (setf *global-table* (int-sap 0))
+    (setf *global-table* (list (dlopen nil rtld-lazy)))
+    (when (zerop (system:sap-int (car *global-table*)))
+      (error "Can't open global symbol table: ~S" (dlerror)))))
+
 (defun load-object-file (file)
+  (ensure-lisp-table-opened)
   ; rtld global: so it can find all the symbols previously loaded
   ; rtld now: that way dlopen will fail if not all symbols are defined.
   (let ((sap (dlopen file (logior rtld-now rtld-global))))
@@ -416,13 +437,7 @@
 	   (pushnew sap *global-table* :test #'sap=))))
 
 (defun alternate-get-global-address (symbol)
-  (unless *global-table*
-	  ;; Prevent recursive call when dlopen isn't defined.
-	  (setq *global-table* (int-sap 0))
-	  ;; Load standard object
-	  (setq *global-table* (list (dlopen nil rtld-lazy)))
-	  (if (zerop (system:sap-int (car *global-table*)))
-	      (error "Can't open global symbol table: ~S" (dlerror))))
+  (ensure-lisp-table-opened)
   ;; find the symbol in any of the loaded obbjects,
   ;; search in reverse order of loading, later loadings
   ;; take precedence

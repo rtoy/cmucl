@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.54 1997/10/08 21:03:34 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.55 1997/10/25 16:32:00 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1878,7 +1878,15 @@
     (def-alien-variable ("daylight" unix-daylight) int)
     (def-alien-variable ("timezone" unix-timezone) time-t)
     (def-alien-variable ("altzone" unix-altzone) time-t)
-    (def-alien-variable ("tzname" unix-tzname) (array c-string 2))
+    #-irix (def-alien-variable ("tzname" unix-tzname) (array c-string 2))
+    #+irix (defvar unix-tzname-addr nil)
+    #+irix (pushnew #'(lambda () (setq unix-tzname-addr nil))
+                    ext:*after-save-initializations*)
+    #+irix (declaim (notinline fakeout-compiler))
+    #+irix (defun fakeout-compiler (name dst)
+             (unless unix-tzname-addr
+               (setf unix-tzname-addr (system:foreign-symbol-address name)))
+              (deref (sap-alien unix-tzname-addr (array c-string 2)) dst))
     (def-alien-routine get-timezone c-call:void
 		       (when c-call:long :in)
 		       (minutes-west c-call:int :out)
@@ -1891,7 +1899,8 @@
     (defun unix-get-timezone (secs)
 	   (multiple-value-bind (ignore minutes dst) (get-timezone secs)
 				(declare (ignore ignore) (ignore minutes))
-				(values (deref unix-tzname (if dst 1 0)))
+                                (values #-irix (deref unix-tzname (if dst 1 0))
+                                        #+irix (fakeout-compiler "tzname" (if dst 1 0)))
 	    ) )
 )
 (declaim (inline unix-gettimeofday))
