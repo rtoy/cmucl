@@ -13,7 +13,9 @@
 ;;; Written by Jim Large and Rob MacLachlan
 ;;;
 ;;; **********************************************************************
-(in-package 'lisp)
+
+(in-package "LISP")
+
 (export '(pathname pathnamep *default-pathname-defaults* truename
 	  parse-namestring merge-pathnames make-pathname
 	  pathname-host pathname-device pathname-directory
@@ -28,7 +30,7 @@
 (in-package "EXTENSIONS")
 (export '(print-directory complete-file ambiguous-files default-directory
 			  file-writable))
-(in-package 'lisp)
+(in-package "LISP")
 
 
 ;;; Pathname structure
@@ -134,270 +136,103 @@
 
 
 
-;;;; FSM Compiler
-
-(eval-when (compile eval)
-;;; These macros are used in the code emitted by deflex.  They refer
-;;; to local vars in the defined function.
-
-(defmacro fsm-scan ()
-  '(progn
-    (incf pointer)
-    (setq current-char (if (>= pointer end)
-			   :end
-			   (char string pointer)))))
-
-;;; fsm-emit expands into a form which pushes FLAG onto *deflex-tokens* and
-;;;  then pushes a string containing the ACCUMULATED characters
-(defmacro fsm-emit (flag)
-  `(progn
-    (vector-push-extend ,flag *deflex-tokens*)
-    (vector-push-extend (subseq buffer 0 buffer-index) *deflex-tokens*)
-    (setq buffer-index 0)))
-
-;;; fsm-dotfix expands into a form which replaces the last EMITTED flag with
-;;;  FLAG, and the last EMITTED token with its self + "." + the ACCUMULATED
-;;;  characters.
-(defmacro fsm-dotfix (flag)
-  `(let ((prev-token (vector-pop *deflex-tokens*)))
-     (setf (aref *deflex-tokens* (1- (fill-pointer *deflex-tokens*))) ,flag)
-     (vector-push (concatenate 'simple-string
-			       prev-token
-			       "."
-			       (subseq buffer 0 buffer-index))
-		  *deflex-tokens*)
-     (setq buffer-index 0)))
-
-
-(defun deflex-arc (arc)
-  (do ((set (nth 0 arc))
-       (new-state (nth 2 arc))
-       (actions (nth 3 arc) (if (member (car actions) '(EMIT DOTFIX))
-				(cddr actions)
-				(cdr actions)))
-       (action-forms
-	()
-	(cons (case (car actions)
-		(ACCUMULATE '(progn 
-			      (setf (schar buffer buffer-index) current-char)
-			      (incf buffer-index)))
-		(SCAN '(fsm-scan))
-		(EMIT `(fsm-emit ,(nth 1 actions)))
-		(DOTFIX `(fsm-dotfix ,(nth 1 actions)))
-		(t (error "Illegal action ~s" (car actions))))
-	      action-forms)))
-      ((null actions)
-       `(when ,(cond ((eq set ':end) `(eq current-char ,set))
-		     ((eq set T) T)
-		     (t
-		      `(and (not (eq current-char :end))
-			    ,(if (characterp set)
-				 `(char= current-char ,set)
-				 `(find current-char
-					(the simple-string ,set))))))
-	  ,@(nreverse action-forms)
-	  (go ,new-state)))))
-
-
-(defun deflex-state (state)
-  (do ((state-name (car state))
-       (arc-list (cdr state) (cdr arc-list))
-       (form-list () (cons (deflex-arc (car arc-list)) form-list)))
-      ((null arc-list)
-       `(,state-name
-	 ,@(nreverse form-list)
-	 (go JAM)))))
-
-(defmacro deflex (name &rest states)
-  (do ((states states (cdr states))
-       (body-forms () (append body-forms (deflex-state (car states)))))
-      ((null states)
-       `(defun ,(concat-pnames 'lex- name)
-	       (string &optional (start 0) (end (length string)))
-	  (declare (simple-string string)
-		   (fixnum start end))
-	  (setf (fill-pointer *deflex-tokens*) 0)
-	  (prog ((current-char (if (> end start)
-				   (char string start) :end))
-		 (pointer start)
-		 (buffer *deflex-buffer*)
-		 (buffer-index 0))
-	    (declare (simple-string buffer))
-	    ,@body-forms
-	    
-	    WIN (return (values T pointer))
-	    JAM (return (values NIL pointer)))))))
-
-); eval-when (compile eval)
-
-
-(defvar *deflex-buffer* (make-string 100))
-(defvar *deflex-tokens* (make-array 20 :adjustable t :fill-pointer 0))
-
-
-
-;;;; FSM for lexing pathnames.
-
-(defconstant ses-name-char
-  "#@$-+*%0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~")
-
-(defconstant fs-whitespace ;whitespace in filenames
-  " 	
-")
-
-;;; Lex-ses-file-spec separates a sesame file name into its components
-;;;
-;;;  STRING -- the string containing the file spec.
-;;; &optional
-;;;  START  -- the first character to look at (defaults to 0)
-;;;  END    -- 1+ the last character to look at (defaluts to (length STRING))
-;;;
-;;; Returns multiple values.
-;;;  1st -- () for failure or a list of tokens.
-;;;  2nd -- the index of the character that stopped the parse
-;;;
-;;;    Tokens are represented by a keyword and a string in *deflex-tokens*.
-;;; The first token is of type :logical-name (string is log name) or :absolute.
-;;; Subsequent tokens are of type :directory-name, :file-name, :extension, or
-;;; the string being a pathname component.
-;;;
-(deflex ses-file-spec
-  ;;S1 waits for the first non whitespace character
-  (S1 (fs-whitespace --> S1 (SCAN))
-      (#\- --> JAM)			;- illegal as start of file name
-      (#\/ --> S3 (EMIT :absolute SCAN));/ starts an absolute pathname
-      (#\\ --> S2a (ACCUMULATE SCAN))   ;\ quotes char in name or logname
-      (#\. --> S5 (EMIT :file-name SCAN))     ;. maybe ends file name
-      (ses-name-char --> S2 (ACCUMULATE SCAN))  ;first char in a name or logname
-      (:end --> WIN)			; Null filename is legal.
-      )
-
-  ;;S2 accumulates chars in a file name, logical name, or directory name.
-  (S2 (#\: --> S3 (EMIT :logical-name SCAN))  ;: ends log-name, starts next name
-      (#\/ --> S3 (EMIT :directory-name SCAN));/ ends directory name,starts next
-      (#\\ --> S2a (ACCUMULATE SCAN))         ;\ quotes char in name
-      (#\. --> S5 (EMIT :file-name SCAN))     ;. maybe ends file name
-      (:end --> WIN (EMIT :file-name))
-      (ses-name-char --> S2 (ACCUMULATE SCAN))
-      (fs-whitespace --> S9 (EMIT :file-name SCAN))
-      (T --> JAM (EMIT :file-name))
-      )
-
-  ;;S2a waits for any char following a \ found in S2
-  (S2a (:END --> JAM)
-       (T --> S2 (ACCUMULATE SCAN)))
-
-  ;;S3 accumulates chars in a file name or directory name
-  (S3 (#\/ --> JAM)
-      (T --> S3b))
-  (S3b (#\/ --> S3 (EMIT :directory-name SCAN));/ ends directory name,starts next
-       (#\. --> S4 (EMIT :file-name SCAN))     ;. maybe ends file name
-       (#\\ --> S3a (ACCUMULATE SCAN))         ;\ quotes char in name
-       (:end --> WIN (EMIT :file-name))
-       (ses-name-char --> S3b (ACCUMULATE SCAN))
-       (fs-whitespace --> S9 (EMIT :file-name SCAN))
-       (T --> JAM (EMIT :file-name))
-       )
-
-  ;;S3a waits for any char following a \ found in S3
-  (S3a (:end --> JAM)
-       (T --> S3b (ACCUMULATE SCAN)))
-
-  ;;S4 waits for chars in a name following a dot.  If it encounters the end of
-  ;; the pathname, then the chars are the extension.  Otherwise, the chars are
-  ;; really part of the last token, so we mash them back on with dotfix.
-  (S4 (#\/ --> S3 (DOTFIX :directory-name SCAN))
-      (#\\ --> S4a (ACCUMULATE SCAN))
-      (#\. --> S4 (DOTFIX :file-name SCAN))
-      (:end --> WIN (EMIT :extension))
-      (fs-whitespace --> S9 (EMIT :extension SCAN))
-      (ses-name-char --> S4 (ACCUMULATE SCAN))
-      (T --> JAM (EMIT :extension))
-      )
-
-  ;;S4a waits for any char following a \ found in S4
-  (S4a (:end --> JAM)
-       (T --> S4 (ACCUMULATE SCAN)))
-
-  ;;S5 is the same as S4 but name may also be logical name
-  (S5 (#\/ --> S3 (DOTFIX :directory-name SCAN))
-      (#\: --> S3 (DOTFIX :logical-name SCAN))
-      (#\\ --> S5a (ACCUMULATE SCAN))
-      (#\. --> S5 (DOTFIX :file-name SCAN))
-      (:end --> WIN (EMIT :extension))
-      (fs-whitespace --> S9 (EMIT :extension SCAN))
-      (ses-name-char --> S5 (ACCUMULATE SCAN))
-      (T --> JAM (EMIT :extension))
-      )
-
-  ;;S5a waits for any char following a \ found in S5
-  (S5a (:end --> JAM)
-       (T --> S5 (ACCUMULATE SCAN)))
-
-  ;;S9 eats trailing whitespace.
-  (S9 (fs-whitespace --> S9 (SCAN))
-      (:end --> WIN)
-      (t --> JAM))
-  )
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;; ses-tokens->pathname converts the contents of *deflex-tokens* into a pathname
-;;; 
-(defun ses-tokens->pathname ()
-  (do ((end (fill-pointer *deflex-tokens*))
-       (result (make-pathname))
-       (dirlist ())
-       (token-val ())
-       (ix 0 (+ ix 2))
-       (default t))
-      ((>= ix end)
-       (setf (%pathname-directory result)
-	     (cond (dirlist
-		    (when default (setf (%pathname-device result) "Default"))
-		    (coerce (the list (nreverse dirlist)) 'simple-vector))
-		   (default nil)
-		   (t '#())))
-       result)
-    (declare (list dirlist)
-	     (fixnum ix end))
-    (setq token-val (aref *deflex-tokens* (1+ ix)))
-    (case (aref *deflex-tokens* ix)
-      (:ABSOLUTE
-       (setf (%pathname-device result) :ABSOLUTE)
-       (setq default nil))
-      (:LOGICAL-NAME
-       (setf (%pathname-device result) token-val)
-       (setq default nil))
-      (:DIRECTORY-NAME (push token-val dirlist))
-      (:FILE-NAME
-       (unless (zerop (length (the simple-string token-val)))
-	 (setf (%pathname-name result) token-val)))
-      (:EXTENSION (setf (%pathname-type result) token-val)))))
-
-
-
 ;;;; PARSE-NAMESTRING and PATHNAME.
 
-(defun parse-namestring (thing &optional host 
-			       (defaults *default-pathname-defaults*)
-			       &key (start 0) end (junk-allowed nil))
-  "Parses a string representation of a pathname into a pathname."
-  (declare (ignore host defaults))
-  (let* ((thing (typecase thing
-		  (string (coerce thing 'simple-string))
-		  (pathname (return-from parse-namestring (values thing start)))
-		  (stream (file-name thing))
-		  (symbol (symbol-name thing))
-		  (t (error "This thing is a bad thing for parse-namestring: ~S"
-			    thing))))
-	 (end (or end (length thing))))
-    (declare (simple-string thing))
-    (multiple-value-bind (won next-field)
-			 (lex-ses-file-spec thing start end)
-      (unless (or won junk-allowed)
-	(error "There's junk in this thing that you gave to parse-namestring:~%~
-		~4T\"~A\"~%~0,1,V,'.@A" thing (+ next-field 5) #\^))
-      (values (ses-tokens->pathname) next-field))))
+;;; SPLIT-FILENAME -- internal
+;;;
+;;; Splits the filename into the name and type.  If someone wants to change
+;;; this yet again, just change this.
+;;; 
+(defun split-filename (filename)
+  (declare (simple-string filename))
+  (let ((posn (position #\. filename :from-end t)))
+    (cond ((null posn)
+	   (values filename nil))
+	  ((or (zerop posn) (= posn (1- (length filename))))
+	   (values filename ""))
+	  (t
+	   (values (subseq filename 0 posn)
+		   (subseq filename (1+ posn)))))))
+
+;;; DO-FILENAME-PARSE -- internal
+;;;
+;;; Split string into a logical name, a vector of directories, a file name and
+;;; a file type.
+;;;
+(defun do-filename-parse (string &optional (start 0) end)
+  (declare (simple-string string))
+  (let ((end (or end (length string))))
+    (let* ((directories nil)
+	   (filename nil)
+	   (absolutep (and (> end start) (eql (schar string start) #\/)))
+	   (logical-name
+	    (cond (absolutep
+		   (setf start (position #\/ string :start start :end end
+					 :test-not #'char=))
+		   :absolute)
+		  ((find #\: string
+			 :start start
+			 :end (or (position #\/ string :start start :end end)
+				  end))
+		   (let ((posn (position #\: string :start start)))
+		     (prog1
+			 (subseq string start posn)
+		       (setf start (1+ posn))))))))
+      (loop
+	(unless (and start (> end start))
+	  (return))
+	(let ((next-slash (position #\/ string :start start :end end)))
+	  (cond (next-slash
+		 (push (subseq string start next-slash) directories)
+		 (setf start
+		       (position #\/ string :start next-slash :end end
+				 :test-not #'char=)))
+		(t
+		 (setf filename (subseq string start end))
+		 (return)))))
+      (multiple-value-bind (name type)
+			   (if filename (split-filename filename))
+	(values (cond (logical-name logical-name)
+		      (directories "Default"))
+		(if (or logical-name directories)
+		  (coerce (nreverse directories) 'vector))
+		name
+		type)))))
+
+(defun parse-namestring (thing &optional host
+			 (defaults *default-pathname-defaults*)
+			 &key (start 0) end junk-allowed)
+  "Convert THING (string, symbol, pathname, or stream) into a pathname."
+  (declare (ignore junk-allowed))
+  (let* ((host (or host (pathname-host defaults)))
+	 (pathname
+	  (etypecase thing
+	    ((or string symbol)
+	     (let ((string (coerce (string thing) 'simple-string)))
+	       (multiple-value-bind (device directories name type)
+				    (do-filename-parse string start end)
+		 (unless end (setf end (length string)))
+		 (make-pathname :host host
+				:device device
+				:directory directories
+				:name name
+				:type type))))
+	    (pathname
+	     (setf end start)
+	     thing)
+	    (stream
+	     (setf end start)
+	     (pathname (file-name thing))))))
+    (unless (or (null host)
+		(null (pathname-host pathname))
+		(string-equal host (pathname-host pathname)))
+      (cerror "Ignore it."
+	      "Host mismatch in ~S: ~S isn't ~S"
+	      'parse-namestring
+	      (pathname-host pathname)
+	      host))
+    (values pathname end)))
+
 
 (defun pathname (thing)
   "Turns thing into a pathname.  Thing may be a string, symbol, stream, or
@@ -509,7 +344,7 @@
     (when name
       (setq result (concatenate 'simple-string result 
 				(the simple-string name))))
-    (when type
+    (when (and type (not (zerop (length type))))
       (setq result (concatenate 'simple-string result "."
 				(the simple-string type))))
     result))
@@ -528,7 +363,7 @@
     (when name
       (setq result (concatenate 'simple-string result 
 				(the simple-string name))))
-    (when type
+    (when (and type (not (zerop (length type))))
       (setq result (concatenate 'simple-string result "."
 				(the simple-string type))))
     result))
@@ -543,7 +378,7 @@
 	 (type (%pathname-type pathname))
 	 (result (or name "")))
     (declare (simple-string result))
-    (if type
+    (if (and type (not (zerop (length type))))
 	(concatenate 'simple-string result "." type)
 	result)))
 
