@@ -165,6 +165,7 @@
   (with-ir1-environment (lambda-bind (main-entry fun))
     (let ((res (ir1-convert-lambda (make-xep-lambda fun))))
       (setf (functional-kind res) :external)
+      (setf (leaf-ever-used res) t)
       (setf (functional-entry-function res) fun)
       (setf (functional-entry-function fun) res)
       (setf (component-reanalyze *current-component*) t)
