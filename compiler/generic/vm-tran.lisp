@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.3 2000/09/14 14:35:43 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-tran.lisp,v 1.35.2.4 2000/10/21 13:09:15 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -75,6 +75,31 @@
 					 (%array-data-vector array))
 			      index))))))
 
+(deftransform data-vector-ref ((array index) (array t) *
+			       :node node  :policy (> speed space))
+  (let ((array-type (continuation-type array)))
+    (unless (and (array-type-p array-type) (array-type-complexp array-type)
+		 (not (eq (array-type-specialized-element-type array-type)
+			  *wild-type*)))
+      (give-up))
+    (delay-transform node :optimize)
+    (let* ((dims (array-type-dimensions array-type))
+	   (el-type (array-type-element-type array-type))
+	   (total-size (if (or (atom dims) (member '* dims))
+			   '*
+			   (reduce #'* dims)))
+	   (vector-type `(simple-array ,(type-specifier el-type)
+				       (,total-size))))
+      (if (and (consp dims) (> (length dims) 1))
+	  `(multiple-value-bind (vector index)
+	       (%with-array-data array index nil)
+	     (data-vector-ref (truly-the ,vector-type vector) index))
+	  `(multiple-value-bind (vector index)
+	       (if (array-header-p array)
+		   (%with-array-data array index nil)
+		   (values array index))
+	     (data-vector-ref (truly-the ,vector-type vector) index))))))
+
 (deftransform data-vector-set ((array index new-value)
 			       (simple-array t t))
   (let ((array-type (continuation-type array)))
@@ -98,6 +123,35 @@
 			      new-value)
 	    `(data-vector-set (truly-the ,vector-type
 					 (%array-data-vector array))
+			      index
+			      new-value))))))
+
+(deftransform data-vector-set ((array index new-value) (array t t) *
+			       :node node  :policy (> speed space))
+  (let ((array-type (continuation-type array)))
+    (unless (and (array-type-p array-type) (array-type-complexp array-type)
+		 (not (eq (array-type-specialized-element-type array-type)
+			  *wild-type*)))
+      (give-up))
+    (delay-transform node :optimize)
+    (let* ((dims (array-type-dimensions array-type))
+	   (el-type (array-type-element-type array-type))
+	   (total-size (if (or (atom dims) (member '* dims))
+			   '*
+			   (reduce #'* dims)))
+	   (vector-type `(simple-array ,(type-specifier el-type)
+				       (,total-size))))
+      (if (and (consp dims) (> (length dims) 1))
+	  `(multiple-value-bind (vector index)
+	       (%with-array-data array index nil)
+	     (data-vector-set (truly-the ,vector-type vector)
+			      index
+			      new-value))
+	  `(multiple-value-bind (vector index)
+	       (if (array-header-p array)
+		   (%with-array-data array index nil)
+		   (values array index))
+	     (data-vector-set (truly-the ,vector-type vector)
 			      index
 			      new-value))))))
 
