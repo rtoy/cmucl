@@ -7,6 +7,6 @@ NM = nm -gp
 UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
 ASSEM_SRC = mips-assem.S
 ARCH_SRC = mips-arch.c
-OS_SRC = mach-os.c
+OS_SRC = mach-os.c os-common.c
 OS_LINK_FLAGS=
 OS_LIBS=-lmach
