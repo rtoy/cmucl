@@ -10,18 +10,7 @@
 ;;;
 ;;; This file contains code to implement bignum support.
 ;;;
-
 (in-package "BIGNUM")
-(use-package "VM")
-
-(export '(add-bignums multiply-bignums negate-bignum subtract-bignum
-	  multiply-bignum-and-fixnum multiply-fixnums
-	  bignum-ashift-right bignum-ashift-left bignum-gcd
-	  bignum-to-float float-bignum-ratio bignum-integer-length
-	  bignum-logical-and bignum-logical-ior bignum-logical-xor
-	  bignum-logical-not bignum-load-byte bignum-deposit-byte
-	  bignum-truncate bignum-plus-p bignum-compare make-small-bignum
-	  bignum-logcount))
 
 
 ;;;; Notes.
