@@ -1,11 +1,11 @@
 \chapter{Introduction} % -*- Dictionary: design -*-
 
-(defun gvp (f)
-  (with-open-file (s f :direction :output :if-exists :supersede)
-    (maphash \#'(lambda (k v)
-		 (declare (ignore v))
-		 (format s "~A~%" k))
-	     (c::backend-template-names c::*backend*))))
+% (defun gvp (f)
+%   (with-open-file (s f :direction :output :if-exists :supersede)
+%     (maphash \#'(lambda (k v)
+% 		 (declare (ignore v))
+% 		 (format s "~A~%" k))
+% 	     (c::backend-template-names c::*backend*))))
 
 
 \section{Scope and Purpose}

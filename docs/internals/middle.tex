@@ -6,15 +6,19 @@
 
 \chapter{Global TN assignment}
 
-[\#\#\# Rename this phase so as not to be confused with the local/global TN
-representation.]
+% Rename this phase so as not to be confused with the local/global TN
+% representation.
 
 The basic mechanism for closing over values is to pass the values as additional
 implicit arguments in the function call.  This technique is only applicable
 when:
- -- the calling function knows which values the called function wants to close
+
+\begin{itemize}
+\item the calling function knows which values the called function wants to close
     over, and
- -- the values to be closed over are available in the calling environment.
+\item the values to be closed over are available in the calling
+  environment.
+\end{itemize}
 
 The first condition is always true of local function calls.  Environment
 analysis can guarantee that the second condition holds by closing over any
@@ -247,10 +251,15 @@ totally linearize the code here, allowing code generation to scan the blocks
 in the emit order.
 
 There are basically two aspects to this optimization:
- 1] Dynamically reducing the number of branches taken v.s. branches not
-    taken under the assumption that branches not taken are cheaper.
- 2] Statically minimizing the number of unconditional branches, saving space
-    and presumably time.
+
+\begin{enumerate}
+\item
+Dynamically reducing the number of branches taken v.s. branches not
+taken under the assumption that branches not taken are cheaper.
+\item
+Statically minimizing the number of unconditional branches, saving
+space and presumably time.
+\end{enumerate}
 
 These two goals can conflict, but if they do it seems pretty clear that the
 dynamic optimization should get preference.  The main dynamic optimization is
@@ -325,7 +334,11 @@ psetq, etc., since it would fail when one of the new values is random code
 
 Is this really a general problem with eager type checking?  It seems you could
 argue that there was no type error in this code:
-    (+ :foo (throw 'up nil))
+
+\begin{verbatim}
+      (+ :foo (throw 'up nil))
+\end{verbatim}
+
 But we would signal an error.
 
 
@@ -339,7 +352,7 @@ At continuation use time, we may in general have to do both a coerce-to-t and a
 type check, allocating two temporary TNs to hold the intermediate results.
 
 
-VMR Control representation:
+\section{VMR Control representation}
 
 We represent all control transfer explicitly.  In particular, :Conditional VOPs
 take a single Target continuation and a Not-P flag indicating whether the sense
@@ -641,11 +654,12 @@ since THROW will use truly unknown values.]
 
 On entry to a dynamic extent that has non-local-exists into it (always at an
 ENTRY node), we take a complete snapshot of the dynamic state:
-\begin{verbatim}
-    the top pointers for all stacks
-    current Catch and Unwind-Protect
-    current special binding (binding stack pointer in shallow binding)
-\end{verbatim}
+
+\begin{itemize}
+\item the top pointers for all stacks
+\item current Catch and Unwind-Protect
+\item current special binding (binding stack pointer in shallow binding)
+\end{itemize}
 
 We insert code at the re-entry point which restores the saved dynamic state.
 All TNs live at an NLX EP are forced onto the stack, so we don't have to restore

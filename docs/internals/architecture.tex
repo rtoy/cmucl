@@ -2,117 +2,10 @@
 
 \chapter{Package and File Structure}
 
-\section{RCS and build areas}
-
-The CMU CL sources are maintained using RCS in a hierarchical directory
-structure which supports:
-\begin{itemize}
-\item    shared RCS config file across a build area, 
-
-\item    frozen sources for multiple releases, and 
-
-\item    separate system build areas for different architectures.
-\end{itemize}
-
-Since this organization maintains multiple copies of the source, it is somewhat
-space intensive.  But it is easy to delete and later restore a copy of the
-source using RCS snapshots.
-
-There are three major subtrees of the root \verb|/afs/cs/project/clisp|:
-\begin{description}
-\item[rcs] holds the RCS source (suffix \verb|,v|) files.
-
-\item[src] holds ``checked out'' (but not locked) versions of the source files,
-and is subdivided by release.  Each release directory in the source tree has a
-symbolic link named ``{\tt RCS}'' which points to the RCS subdirectory of the
-corresponding directory in the ``{\tt rcs} tree.  At top-level in a source tree
-is the ``{\tt RCSconfig}'' file for that area.  All subdirectories also have a
-symbolic link to this RCSconfig file, allowing the configuration for an area to
-be easily changed.
-
-\item[build] compiled object files are placed in this tree, which is subdivided
-by machine type and version.  The CMU CL search-list mechanism is used to allow
-the source files to be located in a different tree than the object files.  C
-programs are compiled by using the \verb|tools/dupsrcs| command to make
-symbolic links to the corresponding source tree.
-\end{description}
-
-On order to modify an file in RCS, it must be checked out with a lock to
-produce a writable working file.  Each programmer checks out files into a
-personal ``play area'' subtree of \verb|clisp/hackers|.  These tree duplicate
-the structure of source trees, but are normally empty except for files actively
-being worked on.
-
-See \verb|/afs/cs/project/clisp/pmax_mach/alpha/tools/| for
-various tools we use for RCS hacking:
-\begin{description}
-\item[rcs.lisp] Hemlock (editor) commands for RCS file manipulation
-
-\item[rcsupdate.c] Program to check out all files in a tree that have been
-modified since last checkout.
-
-\item[updates] Shell script to produce a single listing of all RCS log
- entries in a tree since a date.
-
-\item[snapshot-update.lisp] Lisp program to generate a shell script which
-generates a listing of updates since a particular RCS snapshot ({\tt RCSSNAP})
-file was created.
-\end{description}
-
-You can easily operate on all RCS files in a subtree using:
-\begin{verbatim}
-find . -follow -name '*,v' -exec <some command> {} \;
-\end{verbatim}
-
-\subsection{Configuration Management}
-
-config files are useful, especially in combinarion with ``{\tt snapshot}''.  You
-can shapshot any particular version, giving an RCSconfig that designates that
-configuration.  You can also use config files to specify the system as of a
-particular date.  For example:
-\begin{verbatim}
-<3-jan-91
-\end{verbatim}
-in the the config file will cause the version as of that 3-jan-91 to be checked
-out, instead of the latest version.
-
-\subsection{RCS Branches}
-
-Branches and named revisions are used together to allow multiple paths of
-development to be supported.  Each separate development has a branch, and each
-branch has a name.  This project uses branches in two somewhat different cases
-of divergent development:
-\begin{itemize}
-\item For systems that we have imported from the outside, we generally assign a
-``{\tt cmu}'' branch for our local modifications.  When a new release comes
-along, we check it in on the trunk, and then merge our branch back in.
-
-\item For the early development and debugging of major system changes, where
-the development and debugging is expected to take long enough that we wouldn't
-want the trunk to be in an inconsistent state for that long.
-\end{itemize}
-
-\section{Releases}
-
-We name releases according to the normal alpha, beta, default convention.
-Alpha releases are frequent, intended primarily for internal use, and are thus
-not subject to as high high documentation and configuration management
-standards.  Alpha releases are designated by the date on which the system was
-built; the alpha releases for different systems may not be in exact
-correspondence, since they are built at different times.
-
-Beta and default releases are always based on a snapshot, ensuring that all
-systems are based on the same sources.  A release name is an integer and a
-letter, like ``15d''.  The integer is the name of the source tree which the
-system was built from, and the letter represents the release from that tree:
-``a'' is the first release, etc.  Generally the numeric part increases when
-there are major system changes, whereas changes in the letter represent
-bug-fixes and minor enhancements.
-
 \section{Source Tree Structure}
 
-A source tree (and the master ``{\tt rcs}'' tree) has subdirectories for each
-major subsystem:
+The CMUCL source tree has subdirectories for each major subsystem:
+
 \begin{description}
 \item[{\tt assembly/}] Holds the CMU CL source-file assembler, and has machine
 specific subdirectories holding assembly code for that architecture.
@@ -130,7 +23,7 @@ subdirectory holds code that is shared across most backends.
 
 \item[{\tt lisp/}] The C runtime system code and low-level Lisp debugger.
 
-\item[{\tt pcl/}] CMU version of the PCL implementation of CLOS.
+\item[{\tt pcl/}] CMUCL version of the PCL implementation of CLOS.
 
 \item[{\tt tools/}] System building command files and source management tools.
 \end{description}

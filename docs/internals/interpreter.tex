@@ -1,5 +1,7 @@
 %  					-*- Dictionary: design; Package: C -*-
 
+\chapter{The IR1 Interpreter}
+
 May be worth having a byte-code representation for interpreted code.  This way,
 an entire system could be compiled into byte-code for debugging (the
 "check-out" compiler?).
@@ -7,8 +9,6 @@ an entire system could be compiled into byte-code for debugging (the
 Given our current inclination for using a stack machine to interpret IR1, it
 would be straightforward to layer a byte-code interpreter on top of this.
 
-
-Interpreter:
 
 Instead of having no interpreter, or a more-or-less conventional interpreter,
 or byte-code interpreter, how about directly executing IR1?
@@ -32,11 +32,13 @@ single cell.
 The compiler can have some special frobs for making the interpreter efficient,
 such as a call operation that extracts arguments from the stack
 slots designated by a continuation list.  Perhaps 
+
 \begin{verbatim}
     (values-mapcar fun . lists)
 <==>
     (values-list (mapcar fun . lists))
 \end{verbatim}
+
 This would be used with MV-CALL.
 
 
@@ -180,14 +182,15 @@ but it would be much easier to use.  [It would be impossible for an evalhook
 stepper to do this.]
 
 
-%PRIMITIVE usage:
+\section{Use of \%PRIMITIVE}
 
-Note: %PRIMITIVE can only be used in compiled code.  It is a trapdoor into the
-compiler, not a general syntax for accessing "sub-primitives".  It's main use
-is in implementation-dependent compiler transforms.  It saves us the effort of
-defining a "phony function" (that is not really defined), and also allows
-direct communication with the code generator through codegen-info arguments.
+Note: \verb|%PRIMITIVE| can only be used in compiled code. It is a
+trapdoor into the compiler, not a general syntax for accessing
+"sub-primitives". It's main use is in implementation-dependent
+compiler transforms. It saves us the effort of defining a "phony
+function" (that is not really defined), and also allows direct
+communication with the code generator through codegen-info arguments.
 
-Some primitives may be exported from the VM so that %PRIMITIVE can be used to
-make it explicit that an escape routine or interpreter stub is assuming an
-operation is implemented by the compiler.
+Some primitives may be exported from the VM so that \verb|%PRIMITIVE|
+can be used to make it explicit that an escape routine or interpreter
+stub is assuming an operation is implemented by the compiler.

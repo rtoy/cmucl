@@ -1,6 +1,5 @@
 %  					-*- Dictionary: design; Package: C -*-
 
-\#|
 \chapter{Debugger Information}
 \index{debugger information}
 \label{debug-info}
@@ -35,7 +34,7 @@ would be used by the debugger, and also could be used by purify to delete parts
 of the debug-info even when the compiler dumps it in crunched form.
 [Note that this isn't terribly important if purify is smart about
 debug-info...]
-|\#
+
 
 
 Compiled source map representation:
@@ -79,6 +78,7 @@ are for subforms of the specified form.
 
 Assume a byte vector with a standard variable-length integer format, something
 like this:
+
 \begin{verbatim}
     0..253 => the integer
     254 => read next two bytes for integer
@@ -87,6 +87,7 @@ like this:
 
 Then a compiled debug block is just a sequence of variable-length integers in a
 particular order, something like this:
+
 \begin{verbatim}
     number of successors
     ...offsets of each successor in the function's blocks vector...
@@ -96,6 +97,7 @@ particular order, something like this:
     first live mask (length in bytes determined by number of VARIABLES)
     ...more <PC, top-level form offset, form-number, live-set> tuples...
 \end{verbatim}
+
 We determine the number of locations recorded in a block by finding the
 start of the next compiled debug block in the blocks vector.
 
@@ -226,7 +228,7 @@ the error should look the same to the debugger (or at least similar).
 
 
 
-;;;; Debugger interface:
+\subsection{Debugger Interface}
 
 How does the debugger interface to the "evaluator" (where the evaluator means
 all of native code, byte-code and interpreted IR1)?  It seems that it would be
@@ -288,7 +290,8 @@ Block:
 \end{verbatim}
 
 
-Variable maps:
+
+\subsection{Variable maps}
 
 There are about five things that the debugger might want to know about a
 variable:
@@ -426,7 +429,7 @@ same-name variables unique all by itself.
 
 
 
-Stack parsing:
+\subsection{Stack parsing}
 
 [\#\#\# Probably not worth trying to make the stack parseable from the bottom up.
 There are too many complications when we start having variable sized stuff on

@@ -680,10 +680,10 @@ return PC and the constant pool.
 
 \section{Memory Layout}
 
-CMU Common Lisp has four spaces, read-only, static, dynamic-0, and dynamic-1.
+\cmucl{} has four spaces, read-only, static, dynamic-0, and dynamic-1.
 Read-only contains objects that the system never modifies, moves, or reclaims.
 Static space contains some global objects necessary for the system's runtime or
-performance (since they are located at a known offset at a know address), and
+performance (since they are located at a known offset at a known address), and
 the system never moves or reclaims these.  However, GC does need to scan static
 space for references to moved objects.  Dynamic-0 and dynamic-1 are the two
 heap areas for stop-and-copy GC algorithms.

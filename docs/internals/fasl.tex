@@ -4,7 +4,7 @@
 The purpose of Fasload files is to allow concise storage and rapid
 loading of Lisp data, particularly function definitions.  The intent
 is that loading a Fasload file has the same effect as loading the
-ASCII file from which the Fasload file was compiled, but accomplishes
+source file from which the Fasload file was compiled, but accomplishes
 the tasks more efficiently.  One noticeable difference, of course, is
 that function definitions may be in compiled form rather than
 S-expression form.  Another is that Fasload files may specify in what
@@ -67,7 +67,7 @@ by one or more bytes of all ones \verb|#xFF|; this is called the
 of necessity begins with a byte other than \verb|#xFF|.  The body is
 terminated by the operation {\tt FOP-END-GROUP}.
 
-The first nine characters of the header must be "{\tt FASL FILE}" in
+The first nine characters of the header must be \verb|FASL FILE| in
 upper-case letters.  The rest may be any ASCII text, but by
 convention it is formatted in a certain way.  The header is divided
 into lines, which are grouped into paragraphs.  A paragraph begins

@@ -396,8 +396,8 @@ We represent CATCH using the lexical exit mechanism.  We do a transformation
 like this:
 \begin{verbatim}
    (catch 'foo xxx)  ==>
-   (block \#:foo
-     (%catch \#'(lambda () (return-from \#:foo (%unknown-values))) 'foo)
+   (block #:foo
+     (%catch #'(lambda () (return-from #:foo (%unknown-values))) 'foo)
      (%within-cleanup :catch
        xxx))
 \end{verbatim}
@@ -417,19 +417,21 @@ code for it.
 
 We use a similar hack in Unwind-Protect to represent the fact that the cleanup
 forms can be invoked at arbitrarily random times.
+
 \begin{verbatim}
     (unwind-protect p c)  ==>
-    (flet ((\#:cleanup () c))
-      (block \#:return
+    (flet ((#:cleanup () c))
+      (block #:return
 	(multiple-value-bind
-	    (\#:next \#:start \#:count)
-	    (block \#:unwind
-              (\%unwind-protect \#'(lambda (x) (return-from \#:unwind x)))
-              (\%within-cleanup :unwind-protect
-		(return-from \#:return p)))
-	  (\#:cleanup)
-          (\%continue-unwind \#:next \#:start \#:count))))
+	    (#:next #:start #:count)
+	    (block #:unwind
+              (%unwind-protect #'(lambda (x) (return-from #:unwind x)))
+              (%within-cleanup :unwind-protect
+		(return-from #:return p)))
+	  (#:cleanup)
+          (%continue-unwind #:next #:start #:count))))
 \end{verbatim}
+
 We use the block \#:unwind to represent the entry to cleanup code in the case
 where we are non-locally unwound.  Calling of the cleanup function in the
 drop-through case (or any local exit) is handled by cleanup generation.  We

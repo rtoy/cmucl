@@ -1,7 +1,6 @@
 \chapter{ICR conversion} % -*- Dictionary: design -*-
 
 
-
 \section{Canonical forms}
 
 \#|
@@ -26,16 +25,18 @@ sees one operand is a FIXNUM, it transforms to EQ, but the generator for EQ
 isn't expecting numbers, so it doesn't use an immediate compare.
 
 
-Array hackery:
+\subsection{Array hackery}
 
-
-Array type tests are transformed to %array-typep, separation of the
+Array type tests are transformed to \verb|%array-typep|, separation of the
 implementation-dependent array-type handling.  This way we can transform
 STRINGP to:
+
+\begin{verbatim}
      (or (simple-string-p x)
 	 (and (complex-array-p x)
 	      (= (array-rank x) 1)
-	      (simple-string-p (%array-data x))))
+	      (simple-string-p (%array-data x))))  
+\end{verbatim}
 
 In addition to the similar bit-vector-p, we also handle vectorp and any type
 tests on which the a dimension isn't wild.
@@ -46,13 +47,14 @@ These changes combine to convert hairy type checks into hairy typep's, and then
 convert hairyp typeps into simple typeps.
 
 
-Do we really need non-VOP templates?  It seems that we could get the desired
-effect through implementation-dependent ICR transforms.  The main risk would be
-of obscuring the type semantics of the code.  We could fairly easily retain all
-the type information present at the time the tranform is run, but if we
-discover new type information, then it won't be propagated unless the VM also
-supplies type inference methods for its internal frobs (precluding the use of
-%PRIMITIVE, since primitives don't have derive-type methods.)  
+Do we really need non-VOP templates? It seems that we could get the
+desired effect through implementation-dependent ICR transforms. The
+main risk would be of obscuring the type semantics of the code. We
+could fairly easily retain all the type information present at the
+time the tranform is run, but if we discover new type information,
+then it won't be propagated unless the VM also supplies type inference
+methods for its internal frobs (precluding the use of
+\verb|%PRIMITIVE|, since primitives don't have derive-type methods.)
 
 I guess one possibility would be to have the call still considered "known" even
 though it has been transformed.  But this doesn't work, since we start doing
@@ -62,21 +64,26 @@ LET optimizations that trash the arglist once the call has been transformed
 Actually, I guess the overhead for providing type inference methods for the
 internal frobs isn't that great, since we can usually borrow the inference
 method for a Common Lisp function.  For example, in our AREF case:
+
+\begin{verbatim}
     (aref x y)
 ==>
-    (let ((\#:len (array-dimension x 0)))
-      (%unchecked-aref x (%check-in-bounds y \#:len)))
+    (let ((#:len (array-dimension x 0)))
+      (%unchecked-aref x (%check-in-bounds y #:len)))  
+\end{verbatim}
 
-Now in this case, if we made %UNCHECKED-AREF have the same derive-type method
-as AREF, then if we discovered something new about X's element type, we could
-derive a new type for the entire expression.
+Now in this case, if we made \verb|%UNCHECKED-AREF| have the same
+derive-type method as AREF, then if we discovered something new about
+X's element type, we could derive a new type for the entire
+expression.
 
-Actually, it seems that baring this detail at the ICR level is beneficial,
-since it admits the possibly of optimizing away the bounds check using type
-information.  If we discover X's dimensions, then \#:LEN becomes a constant that
-can be substituted.  Then %CHECK-IN-BOUNDS can notice that the bound is
-constant and check it against the type for Y.  If Y is known to be in range,
-then we can optimize away the bounds check.
+Actually, it seems that baring this detail at the ICR level is
+beneficial, since it admits the possibly of optimizing away the bounds
+check using type information. If we discover X's dimensions, then
+\verb|#:LEN| becomes a constant that can be substituted. Then
+\verb|%CHECK-IN-BOUNDS| can notice that the bound is constant and
+check it against the type for Y. If Y is known to be in range, then we
+can optimize away the bounds check.
 
 Actually in this particular case, the best thing to do would be if we
 discovered the bound is constant, then replace the bounds check with an
@@ -124,6 +131,7 @@ Endp  ==>  (NULL (THE LIST ...))
 (typep x '<simple type>) => (<simple predicate> x)
 (typep x '<complex type>) => ...composition of simpler operations...
 \end{verbatim}
+
 TYPEP of AND, OR and NOT types turned into conditionals over multiple TYPEP
 calls.  This makes hairy TYPEP calls more digestible to type constraint
 propagation, and also means that the TYPEP code generators don't have to deal
@@ -406,14 +414,18 @@ Of course, this transformation also simplifies the ICR even when it doesn't
 discover interesting type assertions, so it makes sense to do it whenever
 possible.  This reduces the demands placed on register allocation, etc.
 
-|\#
 
 There are three dead-code flushing rules:
- 1] Refs with no DEST may be flushed.
- 2] Known calls with no dest that are flushable may be flushed.  We null the
-    DEST in all the args.
- 3] If a lambda-var has no refs, then it may be deleted.  The flushed argument
-    continuations have their DEST nulled.
+
+\begin{enumerate}
+\item Refs with no DEST may be flushed.
+
+\item Known calls with no dest that are flushable may be flushed.  We null the
+DEST in all the args.
+
+\item If a lambda-var has no refs, then it may be deleted. The flushed
+    argument continuations have their DEST nulled.
+\end{enumerate}
 
 These optimizations all enable one another.  We scan blocks backward, looking
 for nodes whose CONT has no DEST, then type-dispatching off of the node.  If we
@@ -485,10 +497,13 @@ termination only happens 2\% of the time.
 \section{Flow graph simplification}
 
 Things done:
-    Delete blocks with no predecessors.
-    Merge blocks that can be merged.
-    Convert local calls to Let calls.
-    Eliminate degenerate IFs.
+
+\begin{itemize}
+\item Delete blocks with no predecessors.
+\item Merge blocks that can be merged.
+\item Convert local calls to Let calls.
+\item Eliminate degenerate IFs.
+\end{itemize}
 
 We take care not to merge blocks that are in different functions or have
 different cleanups.  This guarantees that non-local exits are always at block
@@ -504,6 +519,7 @@ between predecessors.  IFs with identical branches would eventually be left
 with nothing in their branches.]
 
 We eliminate IF-IF constructs:
+
 \begin{verbatim}
     (IF (IF A B C) D E) ==>
     (IF A (IF B D E) (IF C D E))
@@ -566,7 +582,7 @@ We use type info from the function continuation to find result types for
 functions that don't have a derive-type method.
 
 
-ICR transformation:
+\subsection{ICR transformation}
 
 ICR transformation does "source to source" transformations on known global
 functions, taking advantage of semantic information such as argument types and
@@ -614,17 +630,15 @@ In the backward pass, we scan each block in reverse order, and
 eliminate any effectless nodes with unused values.  In ICR this is the
 only way that code is deleted other than the elimination of unreachable blocks.
 
-
+
 \chapter{Type checking}
 
-[\#\#\# Somehow split this section up into three parts:
- -- Conceptual: how we know a check is necessary, and who is responsible for
-    doing checks.
- -- Incremental: intersection of derived and asserted types, checking for
-    non-subtype relationship.
- -- Check generation phase.
-]
-
+%  Somehow split this section up into three parts:
+%  -- Conceptual: how we know a check is necessary, and who is responsible for
+%     doing checks.
+%  -- Incremental: intersection of derived and asserted types, checking for
+%     non-subtype relationship.
+%  -- Check generation phase.
 
 We need to do a pretty good job of guessing when a type check will ultimately
 need to be done.  Generic arithmetic, for example: In the absence of
@@ -654,6 +668,7 @@ If after ICR phases, we have a continuation with check-type set in a context
 where it seems likely a check will be emitted, and the type is too 
 hairy to be easily checked (i.e. no CHECK-xxx VOP), then we do a transformation
 on the ICR equivalent to:
+
 \begin{verbatim}
   (... (the hair <foo>) ...)
 ==>
@@ -725,7 +740,6 @@ arguments.  These arguments will be marked as needing to be checked.
 
 \chapter{Constraint propagation}
 
-\#|
 New lambda-var-slot:
 
 constraints: a list of all the constraints on this var for either X or Y.
@@ -798,15 +812,16 @@ isn't really that great, and the cost should be small compared to that of the
 flow analysis that we are preparing to do.  [Or we could punt on set
 variables...]
 
-A type constraint is a structure that includes sset-element and has the type
-and variable.  
-[\#\#\# Also a not-p flag indicating whether the sense is negated.]
-  Each variable has a list of its type constraints.  We create a
-type constraint when we see a type test or check.  If there is already a
-constraint for the same variable and type, then we just re-use it.  If there is
-already a weaker constraint, then we generate both the weak constraints and the
-strong constraint so that the weak constraints won't be lost even if the strong
-one is unavailable.
+A type constraint is a structure that includes sset-element and has
+the type and variable. [Also a not-p flag indicating whether the sense
+is negated.]
+
+Each variable has a list of its type constraints. We create a type
+constraint when we see a type test or check. If there is already a
+constraint for the same variable and type, then we just re-use it. If
+there is already a weaker constraint, then we generate both the weak
+constraints and the strong constraint so that the weak constraints
+won't be lost even if the strong one is unavailable.
 
 We find all the distinct type constraints for each variable during the pre-pass
 over the lambda nesting.  Each constraint has a list of the weaker constraints
@@ -863,9 +878,10 @@ We check each newly defined global function for compatibility with previously
 recorded type information.  If there is no :defined or :declared type, then we
 check for compatibility with any approximate function type inferred from
 previous uses.
-	
+
+
+
 \chapter{Environment analysis}
-\#|
 
 A related change would be to annotate ICR with information about tail-recursion
 relations.  What we would do is add a slot to the node structure that points to
