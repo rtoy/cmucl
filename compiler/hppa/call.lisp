@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.2 1992/10/13 13:15:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/call.lisp,v 1.3 1992/10/16 16:35:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -161,7 +161,7 @@
     (let ((nfp (current-nfp-tn vop)))
       (when nfp
 	(inst addi (- (bytes-needed-for-non-descriptor-stack-frame))
-	      val nfp)))))
+	      nfp val)))))
 
 (define-vop (xep-allocate-frame)
   (:info start-lab)
