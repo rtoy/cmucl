@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/print.lisp,v 1.1 2004/05/24 22:35:00 cwang Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/amd64/print.lisp,v 1.2 2004/10/19 19:15:31 cwang Rel $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -24,8 +24,15 @@
   (:temporary (:sc unsigned-reg :offset rax-offset :target result
 		   :from :eval :to :result) rax)
   (:temporary (:sc unsigned-reg :offset rdi-offset) rdi) ; from/to?
+  ;; c temporary register
+  (:temporary (:sc unsigned-reg :offset r10-offset
+		   :from :eval :to :result) r10)
+  ;; c temporary register
+  (:temporary (:sc unsigned-reg :offset r11-offset
+		   :from :eval :to :result) r11)
   (:results (result :scs (descriptor-reg)))
   (:save-p t)
+  (:ignore args r10 r11)
   (:generator 100
     (move rdi object) ;; C arg 1
     ;; LEA can't be used because it can only do sign-extended 32 bit argument.
