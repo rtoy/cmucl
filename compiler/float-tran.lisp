@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.36 1997/09/08 20:26:26 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.37 1997/09/20 11:51:08 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -557,28 +557,36 @@
 					       (float-infinity-p hi-lim))
 					  nil
 					  hi-lim)))))
+	((eq (numeric-type-complexp num) :complex)
+	 (copy-numeric-type num))
+	(default-type
+	    default-type)
 	(t
-	 default-type)))
+	 (let ((f-type (or (numeric-type-format num) 'float)))
+	   (specifier-type `(or ,f-type (complex ,f-type)))))))
 
 ;;; Same as ELFUN-DERIVE-TYPE-1 except we can handle simple
 ;;; NUMERIC-TYPEs and UNION-TYPEs.
 (defun elfun-derive-type-union
     (type cond limit-fun
-	  &optional (default-type
-			(specifier-type '(or float (complex float)))))
+	  &optional default-type)
   (cond ((union-type-p type)
 	 ;; For a UNION-TYPE, run down the list of unions and derive
 	 ;; the resulting type of each union and make a UNION-TYPE of
 	 ;; the results.
 	 (let ((result '()))
 	   (dolist (interval (union-type-types type))
-	     (push (elfun-derive-type-1 interval cond limit-fun default-type)
-		   result))
+	     (let ((derived-type (elfun-derive-type-1 interval cond limit-fun default-type)))
+	       (if (union-type-p derived-type)
+		   ;; Insert union types in to the result
+		   (dolist (item (union-type-types derived-type))
+		     (push item result))
+		   (push derived-type result))))
 	   (make-union-type (derive-merged-union-types result))))
 	((numeric-type-p type)
 	 (elfun-derive-type-1 type cond limit-fun default-type))
 	(t
-	 default-type)))
+	 (specifier-type 'number))))
 )  ; end progn
 
 #+propagate-fun-type
