@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.1 1993/01/15 15:26:33 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.2 1993/02/04 22:34:56 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -20,21 +20,32 @@
 
 (export '(layout layout-hash layout-hash-length layout-class layout-invalid
 		 layout-inherits layout-inheritance-depth layout-length
+		 layout-info
+		 layout-of structure-class-p
 		 structure-class-print-function
-		 structure-class-make-load-form-fun find-layout))
+		 structure-class-make-load-form-fun find-layout
+		 class-proper-name class-layout class-state class-subclasses
+		 class-init))
 
 (in-package "LISP")
-(export '(class structure-class class-name find-class))
+(export '(class structure-class class-name find-class class-of built-in-class))
 
 (in-package "KERNEL")
 
+(with-cold-load-init-forms)
+
 ;;; Table mapping class names to layouts for classes we have referenced but not
-;;; yet loaded.
-;;; 
-;;; ### Initialize to list of all layouts created by genesis.  Removed when we
-;;; actually see the definition in top-level code.
-;;; 
-(defvar *forward-referenced-layouts* (make-hash-table :test #'equal))
+;;; yet loaded.  This is initialized from an ALIST created by Genesis
+;;; describing the layouts it created at cold-load time.
+;;;
+(defvar *forward-referenced-layouts*)
+(cold-load-init
+  (setq *forward-referenced-layouts* (make-hash-table :test #'equal))
+#-ns-boot
+  (dolist (x lisp::*initial-layouts*)
+    (setf (gethash (car x) *forward-referenced-layouts*) (cdr x)))
+#-ns-boot
+  (makunbound 'lisp::*initial-layouts*))
 
 
 ;;;; Class definition structures:
@@ -55,7 +66,12 @@
 ;;; are used to create the LAYOUT if it doesn't exist yet (other slots left
 ;;; unitialized.)
 ;;;
-(defstruct (layout (:print-function %print-layout)
+(defstruct (layout (:print-function
+		    (lambda (s stream d)
+		      (declare (ignore d))
+		      (print-unreadable-object (s stream :identity t)
+			(format stream "Layout for ~S~@[, Invalid=~S~]"
+				(layout-class s) (layout-invalid s)))))
 		   (:make-load-form-fun :ignore-it))
   ;;
   ;; Some hash bits for this layout.  Sleazily accessed via STRUCTURE-REF, see
@@ -105,6 +121,7 @@
 ;;;
 (defstruct (class
 	    (:make-load-form-fun class-make-load-form-fun)
+	    (:print-function %print-class)
 	    (:include ctype
 		      (:class-info (type-class-or-lose 'class))))
   ;;
@@ -128,10 +145,16 @@
 (defun class-make-load-form-fun (class)
   (let ((name (class-name class)))
     (unless (and name (eq (find-class name nil) class))
-      (compiler-error
+      (error
        "Can't use anonymous or undefined class as constant:~%  ~S"
        class))
     `(find-class ',name)))
+;;;
+(defun %print-class (s stream d)
+  (declare (ignore d))
+  (print-unreadable-object (s stream :identity t :type t)
+    (format stream "~:[<anonymous>~;~:*~S~]~@[ (~(~A~))~]"
+	    (class-name s) (class-state s))))
 
 
 ;;; The UNDEFINED-CLASS is a cookie we make up to stick in forward referenced
@@ -144,20 +167,20 @@
 
 ;;; BUILT-IN-CLASS is used to represent the standard classes that aren't
 ;;; defined with DEFSTRUCT and other specially implemented primitve types whose
-;;; only attribute is their name.  Some standard classes are 
+;;; only attribute is their name.
 ;;;
-(defstruct (built-in-class
-	    (:include class))
+;;; Some BUILT-IN-CLASSes have a TRANSLATION, which means that they are
+;;; effectively DEFTYPE'd to some other type (usually a union of other classes
+;;; or a "primitive" type such as NUMBER, ARRAY, etc.)  This translation is
+;;; done when type specifiers are parsed.  Type system operations (union,
+;;; subtypep, etc.) should never encounter translated classes, only their
+;;; translation.
+;;;
+(defstruct (built-in-class (:include class))
   ;;
-  ;; Translation of this class to some other composite type (usually a union of
-  ;; other classes.)  This translation is done when type specifiers are parsed.
-  ;; Internally we should never encounter translated classes, only their
-  ;; translation.  If NIL, then this class stands on its own.  
-  (translation nil :type (or ctype null))
-  ;;
-  ;; List of names of type-classes which are subtypes of this class.  This is
-  ;; mutually exclusive with TRANSLATION.
-  (type-classes nil :type list))
+  ;; Type we translate to on parsing.  If NIL, then this class stands on its
+  ;; own.  Only :INITIALIZING during for a period during cold-load.  See below. 
+  (translation nil :type (or ctype (member nil :initializing))))
 
 
 ;;; STRUCTURE-CLASS represents what we need to know about structure classes.
@@ -182,6 +205,29 @@
 
 
 ;;;; Class namespace:
+  
+#+ns-boot
+(defun find-structure-class (name)
+  (let ((info (info type structure-info name)))
+    (when info
+      (let* ((res (setf (info type class name)
+			(make-structure-class :name name)))
+	     (includes (c::dd-includes info))
+	     (super (find-class
+		     (if includes
+			 (first includes)
+			 'structure-object)))
+	     (super-layout (class-layout super))
+	     (layout
+	      (find-layout name (c::dd-length info)
+			   (concatenate 'vector
+					(layout-inherits super-layout)
+					(vector super-layout))
+			   (1+ (layout-inheritance-depth super-layout)))))
+	(register-layout layout nil nil)
+	(setf (info type compiler-layout name) layout)
+	res))))
+
 
 ;;; FIND-CLASS  --  Public
 ;;;
@@ -189,7 +235,11 @@
   "Return the class with the specified Name.  If ERRORP is false, then NIL is
    returned when no such class exists."
   (declare (type symbol name) (ignore environment))
-  (let ((res (info type class name)))
+  (let ((res #-ns-boot
+	     (info type class name)
+	     #+ns-boot
+	     (or (info type class name)
+		 (find-structure-class name))))
     (if (or res (not errorp))
 	res
 	(error "Class not yet defined:~%  ~S" name))))
@@ -197,22 +247,22 @@
 (defun (setf find-class) (new-value name)
   (ecase (info type kind name)
     (nil)
-    (:structure
+    (#+ns-boot (:instance :structure) #-ns-boot :instance
      (let ((old (class-of (info type class name)))
 	   (new (class-of new-value)))
        (unless (eq old new)
-	 (compiler-warning "Changing meta-class of ~S from ~S to ~S."
-			   name (class-name old) (class-name new)))))
+	 (warn "Changing meta-class of ~S from ~S to ~S."
+	       name (class-name old) (class-name new)))))
     (:primitive
-     (compiler-error "Illegal to redefine standard type ~S." name))
+     (error "Illegal to redefine standard type ~S." name))
     (:defined
-     (compiler-warning "Redefining DEFTYPE type to be a class: ~S."
-		       name)
+     (warn "Redefining DEFTYPE type to be a class: ~S."
+	   name)
      (setf (info type expander name) nil)))
 
   (remhash name *forward-referenced-layouts*)
   (%note-type-defined name)
-  (setf (info type kind name) :structure)
+  (setf (info type kind name) :instance)
   (setf (info type class name) new-value))
 
 
@@ -223,8 +273,7 @@
 ;;; result is any existing layout for this name.
 ;;;
 (defun insured-find-class (name meta-class constructor)
-  (let* ((name (dd-name info))
-	 (old (info type class name))
+  (let* ((old (find-class name nil))
 	 (res (if (and old (eq (class-of old) meta-class))
 		  old
 		  (funcall constructor :name name)))
@@ -235,18 +284,36 @@
 
     (values res found)))
 
+
+;;; CLASS-PROPER-NAME  --  Exported
+;;;
+;;;    If the class has a proper name, return the name, otherwise return
+;;; the class.
+;;;
+(defun class-proper-name (class)
+  (let ((name (class-name class)))
+    (if (and name (eq (find-class name) class))
+	name
+	class)))
+
 
-;;;; Class type operations:
+;;;; CLASS type operations:
 
 (define-type-class class)
 
-(define-type-method (instance :simple-subtypep) (class1 class2)
-  (if (eq class1 class2)
-      (values t t)
-      (let ((subclasses (class-subclasses class2)))
-	(if (and subclasses (gethash class1 subclasses))
-	    (values t t)
-	    (values nil t)))))
+;;; Simple methods for TYPE= and SUBTYPEP should never be called when the two
+;;; classes are equal, since there are EQ checks in those operations.
+;;;
+(define-type-method (class :simple-=) (type1 type2)
+  (assert (not (eq type1 type2)))
+  (values nil t))
+
+(define-type-method (class :simple-subtypep) (class1 class2)
+  (assert (not (eq class1 class2)))
+  (let ((subclasses (class-subclasses class2)))
+    (if (and subclasses (gethash class1 subclasses))
+	(values t t)
+	(values nil t))))
 
 
 ;;; SEALED-CLASS-INTERSECTION  --  Internal
@@ -263,7 +330,7 @@
 	  (do-hash (subclass layout s-sub)
 	    (declare (ignore layout))
 	    (when (gethash subclass o-sub)
-	      (res (specifier-type class))))
+	      (res (specifier-type subclass))))
 	  (values (res) t))
 	(values *empty-type* t))))
 
@@ -273,15 +340,15 @@
 ;;; classes, since a subclass of both might be defined.  If either class is
 ;;; sealed, we can eliminate this possibility.
 ;;;
-(define-type-method (instance :simple-intersection) (class1 class2)
+(define-type-method (class :simple-intersection) (class1 class2)
   (declare (type class class1 class2))
-  (cond ((eq class1 class2) type1)
+  (cond ((eq class1 class2) class1)
 	((let ((subclasses (class-subclasses class2)))
 	   (and subclasses (gethash class1 subclasses)))
-	 (values type1 t))
+	 (values class1 t))
 	((let ((subclasses (class-subclasses class1)))
 	   (and subclasses (gethash class2 subclasses)))
-	 (values type2 t))
+	 (values class2 t))
 	((or (structure-class-p class1)
 	     (structure-class-p class2))
 	 (values *empty-type* t))
@@ -290,21 +357,186 @@
 	((eq (class-state class2) :sealed)
 	 (sealed-class-intersection class2 class1))
 	(t
-	 (values type1 nil))))
+	 (values class1 nil))))
 
-
-(define-type-method (instance :complex-subtypep-arg2) (type1 type2)
-  (declare (type instance-type type2))
-  (values (or (eq type1 *wild-type*)
-	      (and (eq (type-class-name (type-class-info type1)) 'alien)
-		   (eq (class-name type2) 'alien-value)))
-	  t))
-
-(define-type-method (instance :unparse) (type)
+(define-type-method (class :unparse) (type)
   (class-proper-name type))
 
-(define-type-method (instance :simple-=) (type1 type2)
-  (values (eq type1 type2) t))
+
+;;;; Built-in classes & class-of:
+
+(defvar built-in-classes)
+(cold-load-init
+  (setq built-in-classes
+	'((t :state :read-only)
+	  (character :enumerable t :codes (#.vm:base-char-type))
+	  
+	  (array :translation array
+		 :codes
+		 (#.vm:complex-array-type
+		  #.vm:simple-array-type
+		  #.vm:simple-array-double-float-type
+		  #.vm:simple-array-single-float-type
+		  #.vm:simple-array-unsigned-byte-2-type
+		  #.vm:simple-array-unsigned-byte-4-type
+		  #.vm:simple-array-unsigned-byte-8-type
+		  #.vm:simple-array-unsigned-byte-16-type
+		  #.vm:simple-array-unsigned-byte-32-type))
+	  (sequence :translation (or cons (member nil) vector))
+	  (symbol :codes (#.vm:symbol-header-type))
+	  
+	  (instance :state :read-only)
+	  #+ns-boot
+	  (structure-object :state :read-only :inherits (instance))
+
+	  (system-area-pointer)
+	  (weak-pointer)
+	  (scavenger-hook)
+	  (code-component)
+	  (lra)
+	  (fdefn)
+	  (random-class) ; Used for unknown type codes.
+	  
+	  (function
+	   :codes
+	   (#.vm:byte-code-closure-type
+	    #.vm:byte-code-function-type
+	    #.vm:closure-header-type  #.vm:function-header-type)
+	   :state :read-only)
+	  (generic-function :inherits (function)  :state :read-only
+			    :codes (#.vm:funcallable-instance-header-type))
+	  
+	  (vector :translation vector :inherits (array sequence)
+		  :hierarchical nil
+		  :codes (#.vm:complex-vector-type #.vm:simple-vector-type))
+	  (bit-vector
+	   :translation bit-vector  :inherits (vector array sequence)
+	   :hierarchical nil
+	   :codes (#.vm:complex-bit-vector-type #.vm:simple-bit-vector-type))
+	  (string
+	   :translation string  :inherits (vector array sequence)
+	   :hierarchical nil
+	   :codes (#.vm:complex-string-type #.vm:simple-string-type))
+	  
+	  (number :translation number)
+	  (complex :translation complex :inherits (number)
+		   :codes (#.vm:complex-type))
+	  (float :translation float :inherits (number))
+	  (single-float
+	   :translation single-float :inherits (float number)
+	   :codes (#.vm:single-float-type))
+	  (double-float
+	   :translation double-float  :inherits (float number)
+	   :codes (#.vm:double-float-type))
+	  (rational :translation rational :inherits (number))
+	  (ratio
+	   :translation (and rational (not integer))
+	   :inherits (rational number)
+	   :codes (#.vm:ratio-type))
+	  (integer
+	   :translation integer  :inherits (rational number))
+	  (fixnum
+	   :translation (integer #.vm:target-most-negative-fixnum
+				 #.vm:target-most-positive-fixnum)
+	   :inherits (integer rational number)
+	   :codes (#.vm:even-fixnum-type #.vm:odd-fixnum-type))
+	  (bignum
+	   :translation (and integer (not fixnum))
+	   :inherits (integer rational number)
+	   :codes (#.vm:bignum-type))
+	  
+	  (list :translation (or cons (member nil)) :inherits (sequence))
+	  (cons :inherits (list sequence) :codes (#.vm:list-pointer-type))
+	  (null :translation (member nil) :inherits (symbol list sequence)
+		:hierarchical nil))))
+
+;;; See also type-init.lisp where we finish setting up the translations for
+;;; built-in types.
+;;;
+(cold-load-init
+  (dolist (x built-in-classes)
+    (destructuring-bind (name &key (translation nil trans-p) inherits codes
+			      enumerable state (hierarchical t))
+			x
+      (declare (ignore codes state translation))
+      (let ((class (make-built-in-class
+		    :enumerable enumerable
+		    :name name
+		    :translation (if trans-p :initializing nil))))
+	(setf (info type kind name) :primitive)
+	(setf (info type class name) class)
+	(unless trans-p
+	  (setf (info type builtin name) class))
+	(register-layout
+	 (find-layout name 0
+		      (map 'vector
+			   #'(lambda (x)
+			       (class-layout (find-class x)))
+			   (if (eq name 't)
+			       ()
+			       (cons 't (reverse inherits))))
+		      (if hierarchical (1+ (length inherits)) -1))
+	 nil nil)))))
+
+
+;;; Now that we have set up the class heterarchy, seal the sealed classes.
+;;; This must be done after the subclasses have been set up.
+;;;
+(cold-load-init
+  (dolist (x built-in-classes)
+    (destructuring-bind (name &key (state :sealed) &allow-other-keys) x
+      (setf (class-state (find-class name)) state))))
+
+
+;;; A vector that maps type codes to layouts, used for quickly finding the
+;;; layouts of built-in classes.
+;;;
+(defvar built-in-class-codes)
+(cold-load-init
+  (setq built-in-class-codes
+	(let ((res (make-array 256 :initial-element
+			       (class-layout (find-class 'random-class)))))
+	  (dolist (x built-in-classes res)
+	    (destructuring-bind (name &key codes &allow-other-keys)
+				x
+	      (let ((layout (class-layout (find-class name))))
+		(dolist (code codes)
+		  (setf (svref res code) layout))))))))
+
+
+;;; LAYOUT-OF  --  Exported
+;;;
+;;;    Return the layout for an object.  This is the basic operation for
+;;; finding out the "type" of an object, and is used for generic function
+;;; dispatch.  The standard doesn't seem to say as much as it should about what
+;;; this returns for built-in objects.  For example, it seems that we must
+;;; return NULL rather than LIST when X is NIL so that GF's can specialize on
+;;; NULL.
+;;;
+;;; ### special-case funcallable-instance
+;;;
+#-ns-boot
+(declaim (inline layout-of))
+(defun layout-of (x)
+  (cond #-ns-boot
+	((%instancep x) (%instance-layout x))
+	#+ns-boot
+	((structurep x)
+	 (class-layout (find-class (structure-ref x 0))))
+	#-ns-boot
+	((null x) '#.(class-layout (find-class 'null)))
+	#+ns-boot
+	((null x) (class-layout (find-class 'null)))
+	(t (svref built-in-class-codes (get-type x)))))
+
+
+;;; CLASS-OF  --  Public
+;;;
+(declaim (inline class-of))
+(defun class-of (object)
+  "Return the class of the supplied object, which may be any Lisp object, not
+   just a CLOS STANDARD-OBJECT."
+  (layout-class (layout-of object)))
 
 
 ;;;; Class definition/redefinition:
@@ -358,18 +590,19 @@
 	(setf (class-subclasses class) nil)))
     
     (cond (destruct-p
-	   (setf (layout-invalid class-layout) (layout-invalid layout))
+	   (setf (layout-invalid class-layout) nil)
 	   (setf (layout-inherits class-layout) (layout-inherits layout))
 	   (setf (layout-inheritance-depth class-layout)
 		 (layout-inheritance-depth layout))
 	   (setf (layout-length class-layout) (layout-length layout))
 	   (setf (layout-info class-layout) (layout-info layout)))
 	  (t
+	   (setf (layout-invalid layout) nil)
 	   (setf (class-layout class) layout)))
 
     (let ((inherits (layout-inherits layout)))
       (dotimes (i (length inherits))
-	(let* ((super (svref inherits i))
+	(let* ((super (layout-class (svref inherits i)))
 	       (subclasses (or (class-subclasses super)
 			       (setf (class-subclasses super)
 				     (make-hash-table :test #'eq)))))
@@ -386,17 +619,8 @@
 
 ;;; LAYOUT-PROPER-NAME  --  Internal
 ;;;
-;;;    Return something we can print to unambiguously describe the class for a
-;;; layout.  If the class has a proper name, return the name, otherwise return
-;;; the class.
-;;;
-(defun layout-name (x)
-  (let* ((class (layout-class x))
-	 (name (class-name class)))
-    (if (and name (eq (find-class name) class))
-	name
-	class)))
-
+(defun layout-proper-name (layout)
+  (class-proper-name (layout-class layout)))
 
 ;;; REDEFINE-LAYOUT-WARNING  --  Interface
 ;;;
@@ -404,12 +628,12 @@
 ;;; warning and return T.
 ;;;
 (defun redefine-layout-warning (old old-context new new-context)
-  (assert (eq (layout-class old) (layout-class new) class))
+  (assert (eq (layout-class old) (layout-class new)))
   (let ((name (layout-proper-name old)))
     (or (let ((oldi (layout-inherits old))
 	      (newi (layout-inherits new)))
 	  (or (when (mismatch oldi newi :key #'layout-proper-name)
-		(compiler-warning
+		(warn
 		 "Change in superclasses of class ~S:~@  ~
 		  ~A superclasses: ~S~%  ~
 		  ~A superclasses: ~S"
@@ -419,28 +643,28 @@
 		t)
 	      (let ((diff (mismatch oldi newi)))
 		(when diff
-		  (compiler-warning
+		  (warn
 		   "In class ~S:~%  ~
 		    ~A definition of superclass ~S incompatible with ~
 		    ~A definition."
-		   name old-context (layout-name (svref oldi diff))
+		   name old-context (layout-proper-name (svref oldi diff))
 		   new-context)
 		  t))))
 	(let ((old-len (layout-length old))
 	      (new-len (layout-length new)))
 	  (unless (= old-len new-len)
-	    (compiler-warning "Change in instance length of class ~S:~%  ~
-			       ~A length: ~D~%  ~
-			       ~A length: ~D"
-			      name
-			      old-context old-len
-			      new-context new-len)
+	    (warn "Change in instance length of class ~S:~%  ~
+		   ~A length: ~D~%  ~
+		   ~A length: ~D"
+		  name
+		  old-context old-len
+		  new-context new-len)
 	    t))
 	(when (/= (layout-inheritance-depth old)
 		  (layout-inheritance-depth new))
-	  (compiler-warning "Change in the inheritance structure of class ~S~@
-			     between the ~A definition and the ~A definition."
-			    name old-context new-context)
+	  (warn "Change in the inheritance structure of class ~S~@
+		 between the ~A definition and the ~A definition."
+		name old-context new-context)
 	  t))))
 
 
@@ -458,7 +682,7 @@
 ;;; incompatible, we allow the layout to be replaced, altered or left alone.
 ;;;
 (defun find-layout (name length inherits depth)
-  (let* ((class (or (info type class name)
+  (let* ((class (or (find-class name nil)
 		    (make-undefined-class name)))
 	 (old (or (class-layout class)
 		  (gethash name *forward-referenced-layouts*)))
@@ -485,8 +709,8 @@
 	       (warn "Any old ~S instances will be in a bad way.~@
 		      I hope you know what you're doing..."
 		     name)
-	       (setf (layout-inherits-depth old) depth)
-	       (setf (layout-inheritance-depth old) inherits)
+	       (setf (layout-inherits old) inherits)
+	       (setf (layout-inheritance-depth old) depth)
 	       (setf (layout-length old) length)
 	       old)
 	     (use-current ()
@@ -499,109 +723,6 @@
 	  (t old))))
 
 
-;;;; Built-in classes:
+;;;; Cold loading initializations.
 
-;;; ### If any of these layouts are referenced as constants in the cold load,
-;;; then genesis must pre-intern the layouts, and we would actually create the
-;;; classes here.  Probably needs to be an init-function that runs before
-;;; top-level forms.
-
-;;; ### special-case instance, funcallable-instance, null for LAYOUT-OF
-;;;
-(defconstant built-in-classes
-  '((t :subclasses (number array member function structure alien))
-    (character :enumerable t)
-    (base-char :inherits (character) :codes (#.vm:base-char-type)
-	       :enumerable t)
-    (extended-char :inherits (character) :translation nil :enumerable t)
-    (standard-char :inherits (base-char character) :enumerable t)
-
-    (array :tranlation array
-	   :codes
-	   (#.vm:complex-array-type
-	    #.vm:simple-array-type
-	    #.vm:simple-array-double-float-type
-	    #.vm:simple-array-single-float-type
-	    #.vm:simple-array-unsigned-byte-2-type
-	    #.vm:simple-array-unsigned-byte-4-type
-	    #.vm:simple-array-unsigned-byte-8-type
-	    #.vm:simple-array-unsigned-byte-16-type
-	    #.vm:simple-array-unsigned-byte-32-type))
-    (sequence :translation (or cons (member nil) vector))
-    (symbol :codes (#.vm:symbol-header-type))
-    (keyword :inherits (symbol))
-    (system-area-pointer)
-    (weak-pointer)
-    (scavenger-hook)
-    (code-component)
-    (lra)
-    (fdefn)
-
-    (function
-     :codes
-     (#.vm:byte-code-closure-type #.vm:byte-code-function-type
-      #.vm:closure-header-type  #.vm:function-header-type)
-     :subclasses (function))
-    (generic-function :inherits (function)
-		      :subclasses (function)
-		      :codes (#.vm:funcallable-instance-header-type))
-
-    (vector :translation vector :inherits (array sequence)
-	    :codes (#.vm:complex-vector-type #.vm:simple-vector-type))
-    (bit-vector
-     :translation bit-vector  :inherits (vector array sequence)
-     :codes (#.vm:complex-bit-vector-type #.vm:simple-bit-vector-type))
-    (string
-     :translation string  :inherits (vector array sequence)
-     :codes (#.vm:complex-string-type #.vm:simple-string-type))
-
-    (number :translation number)
-    (complex :translation complex :inherits (number)
-	     :codes (#.vm:complex-type))
-    (float :translation float :inherits (number))
-    (single-float
-     :translation single-float :inherits (float number)
-     :codes (#.vm:single-float-type))
-    (double-float
-     :translation double-float  :inherits (float number)
-     :codes (#.vm:double-float-type))
-    (rational :translation rational :inherits (number))
-    (ratio
-     :translation (and rational (not integer))
-     :inherits (rational number)
-     :codes (#.vm:ratio-type))
-    (integer
-     :translation integer  :inherits (rational number)
-     :codes (#.vm:bignum-type  #.vm:even-fixnum-type #.vm:odd-fixnum-type))
-
-    (list :translation (or cons (member nil)) :inherits (sequence))
-    (cons :inherits (list sequence) :codes (#.vm:list-type))
-    (null :translation (member nil) :inherits (symbol list sequence))))
-
-(dolist (x built-in-classes)
-  (let* ((name (first x))
-	 (class (make-built-in-class name (specifier-type name)))
-	 (layout (make-layout
-		  :class class
-		  :inherits (map 'vector #'find-layout (reverse (rest x))))))
-    (register-layout layout nil nil)
-    (setf (info type class name) class)))
-
-(dolist (x built-in-classes)
-  (setf (class-state (find-class (first x))) :frozen))
-
-(defconstant built-in-class-codes
-  (let ((res (make-array 256 :initial-element nil)))
-    (dolist (x built-in-classes)
-      (let ((layout (class-layout (find-class (first x)))))
-	(dolist (code (third x))
-	  (setf (svref res code) layout))))))
-
-(defun layout-of (x)
-  (cond ((%instancep x) (%instance-layout x))
-	((null x) (load-time-value (class-layout (find-class 'null))))
-	((svref built-in-class-codes (vm:get-type x)))
-	(t
-	 (error "Some strange object: ~S" x))))
-
-(defun class-of (x) (class-layout (layout-of x)))
+(emit-cold-load-defuns "CLASS")
