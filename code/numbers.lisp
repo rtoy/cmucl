@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.36 2001/03/04 20:12:39 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/numbers.lisp,v 1.37 2001/04/10 22:35:09 pw Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -843,11 +843,15 @@
     ((double-float single-float)
      (,op x (coerce y 'double-float)))
     (((foreach single-float double-float #+long-float long-float) rational)
-     (if (eql y 0)
+     ;; Comparing infinity against any rational produces the same
+     ;; answer as comparing infinity against 0.
+     (if (float-infinity-p x)
 	 (,op x (coerce 0 '(dispatch-type x)))
 	 (,op (rational x) y)))
     (((foreach bignum fixnum ratio) float)
-     (,op x (rational y)))))
+     (if (float-infinity-p y)
+	 (,op (coerce 0 '(dispatch-type x)) y)
+	 (,op x (rational y))))))
 
 
 (defmacro two-arg-</> (name op ratio-arg1 ratio-arg2 &rest cases)
