@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.31 1992/07/10 17:44:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug.lisp,v 1.32 1992/08/03 13:55:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -587,29 +587,30 @@ See the CMU Common Lisp User's Manual for more information.
 ;;; printing the debug-function's name, and one indicates displaying call-like,
 ;;; one-liner format with argument values.
 ;;;
-(defun print-frame-call (frame &key (print-length *print-length*)
-			       (print-level *print-level*)
+(defun print-frame-call (frame &key
+			       ((:print-length *print-length*)
+				(or *debug-print-length* *print-length*))
+			       ((:print-level *print-level*)
+				(or *debug-print-level* *print-level*))
 			       (verbosity 1)
 			       (number nil))
-  (let ((*print-length* (or *debug-print-length* print-length))
-	(*print-level* (or *debug-print-level* print-level)))
-    (cond
-     ((zerop verbosity)
-      (when number
-	(format t "~&~S: " (di:frame-number frame)))
-      (format t "~S" frame))
-     (t
-      (when number
-	(format t "~&~S: " (di:frame-number frame)))
-      (print-frame-call-1 frame)))
-    (when (>= verbosity 2)
-      (let ((loc (di:frame-code-location frame)))
-	(handler-case
-	    (progn
-	      (di:code-location-debug-block loc)
-	      (format t "~%Source: ")
-	      (print-code-location-source-form loc 0))
-	  (di:debug-condition (ignore) ignore))))))
+  (cond
+   ((zerop verbosity)
+    (when number
+      (format t "~&~S: " (di:frame-number frame)))
+    (format t "~S" frame))
+   (t
+    (when number
+      (format t "~&~S: " (di:frame-number frame)))
+    (print-frame-call-1 frame)))
+  (when (>= verbosity 2)
+    (let ((loc (di:frame-code-location frame)))
+      (handler-case
+	  (progn
+	    (di:code-location-debug-block loc)
+	    (format t "~%Source: ")
+	    (print-code-location-source-form loc 0))
+	(di:debug-condition (ignore) ignore)))))
 
 
 ;;;; Invoke-debugger.
@@ -1198,7 +1199,7 @@ See the CMU Common Lisp User's Manual for more information.
   (let ((d-fun (di:frame-debug-function *current-frame*)))
     (if (di:debug-variable-info-available d-fun)
 	(let ((*print-level* (or *debug-print-level* *print-level*))
-	      (*print-length* (or *debug-print-length* *print-level*))
+	      (*print-length* (or *debug-print-length* *print-length*))
 	      (*standard-output* *debug-io*)
 	      (location (di:frame-code-location *current-frame*))
 	      (prefix (read-if-available nil))
