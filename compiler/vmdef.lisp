@@ -130,24 +130,43 @@
 ;;;
 ;;;
 (defmacro define-storage-class (name number sb-name &key (element-size '1) 
-				     locations)
+				     locations save-p alternate-scs
+				     constant-scs)
   "Define-Storage-Class Name Number Storage-Base {Key Value}*
   Define a storage class Name that uses the named Storage-Base.  Number is a
   small, non-negative integer that is used as an alias.  The following
   keywords are defined:
 
-  :Element-Size <Size>
+  :Element-Size Size
       The size of objects in this SC in whatever units the SB uses.  This
       defaults to 1.
 
-  :Locations
+  :Locations (Location*)
       If the SB is :Finite, then this is a list of the offsets within the SB
-      that are in this SC."
+      that are in this SC.
+
+  :Save-P {T | NIL}
+      If T, then values stored in this SC must be saved in one of the
+      non-save-p :Alternate-SCs across calls.
+
+  :Alternate-SCs (SC*)
+      Indicates other SCs that can be used to hold values from this SC across
+      calls or when storage in this SC is exhausted.  The SCs should be
+      specified in order of decreasing \"goodness\".  Unless this SC is only
+      used for restricted or wired TNs, then there must be a last SC in an
+      unbounded SB.
+
+  :Constant-SCs (SC*)
+      A list of the names of all the constant SCs that can be loaded into this
+      SC by a load function."
   
   (check-type name symbol)
   (check-type number sc-number)
   (check-type sb-name symbol)
   (check-type locations list)
+  (check-type save-p boolean)
+  (check-type alternate-scs list)
+  (check-type constant-scs list)
 
   (let ((sb (sb-or-lose sb-name)))
     (if (eq (sb-kind sb) :finite)
@@ -159,27 +178,150 @@
 	    (unless (<= 1 (+ el element-size) size)
 	      (error "SC element ~D out of bounds for ~S." el sb))))
 	(when locations
-	  (error ":Locations is meaningless in a ~S SB." (sb-kind sb)))))
+	  (error ":Locations is meaningless in a ~S SB." (sb-kind sb))))
 
+    (when (and (or alternate-scs constant-scs)
+	       (eq (sb-kind sb) :non-packed))
+      (error "Meaningless to specify alternate or constant SCs in a ~S SB."
+	     (sb-kind sb))))
+
+  (let ((nstack-p
+	 (if (or (eq sb-name 'number-stack)
+		 (find 'number-stack (mapcar #'sc-or-lose alternate-scs)
+		       :key #'(lambda (x)
+				(sb-name (sc-sb x)))))
+	     t nil)))
+    `(progn
+       (eval-when (compile load eval)
+	 (let ((res (make-sc :name ',name :number ',number
+			     :sb (sb-or-lose ',sb-name)
+			     :element-size ,element-size
+			     :locations ',locations
+			     :save-p ',save-p
+			     :number-stack-p ,nstack-p
+			     :alternate-scs (mapcar #'sc-or-lose
+						    ',alternate-scs)
+			     :constant-scs (mapcar #'sc-or-lose
+						   ',constant-scs))))
+	   (setf (gethash ',name *sc-names*) res)
+	   (setf (svref *meta-sc-numbers* ',number) res)
+	   (setf (svref (sc-load-costs res) ',number) 0)))
+       
+       (let ((old (svref *sc-numbers* ',number)))
+	 (when (and old (not (eq (sc-name old) ',name)))
+	   (warn "Redefining SC number ~D from ~S to ~S." ',number
+		 (sc-name old) ',name)))
+       
+       (setf (svref *sc-numbers* ',number) (sc-or-lose ',name))
+       ',name)))
+
+
+;;;; Move/coerce definition:
+
+
+;;; DO-SC-PAIRS  --  Internal
+;;;
+;;;    Given a list of paris of lists of SCs (as given to DEFINE-MOVE-VOP,
+;;; etc.), bind TO-SC and FROM-SC to all the combinations.
+;;;
+(eval-when (compile load eval)
+  (defmacro do-sc-pairs ((from-sc-var to-sc-var scs) &body body)
+    `(do ((froms ,scs (cddr froms))
+	  (tos (cdr ,scs) (cddr tos)))
+	 ((null froms))
+       (dolist (from (car froms))
+	 (let ((,from-sc-var (sc-or-lose from)))
+	   (dolist (to (car tos))
+	     (let ((,to-sc-var (sc-or-lose to)))
+	       ,@body)))))))
+
+
+;;; DEFINE-MOVE-FUNCTION  --  Public
+;;;
+(defmacro define-move-function ((name cost) lambda-list scs &body body)
+  "Define-Move-Function (Name Cost) lambda-list ({(From-SC*) (To-SC*)}*) form*
+  Define the function Name and note it as the function used for moving operands
+  from the From-SCs to the To-SCs.  Cost is the cost of this move operation.
+  The function is called with three arguments: the node (for source context),
+  and the source and destination TNs.  An ASSEMBLE form is wrapped around the
+  body.  All uses of DEFINE-MOVE-FUNCTION should be compiled before any uses of
+  DEFINE-VOP."
+  (when (or (oddp (length scs)) (null scs))
+    (error "Malformed SCs spec: ~S." scs))
+  (check-type cost index)
   `(progn
      (eval-when (compile load eval)
-       (setf (gethash ',name *sc-names*) 
-	     (make-sc :name ',name :number ',number
-		      :sb (sb-or-lose ',sb-name)
-		      :element-size ,element-size
-		      :locations ',locations)))
+       (do-sc-pairs (from-sc to-sc ',scs)
+	 (unless (eq from-sc to-sc)
+	   (let ((num (sc-number from-sc)))
+	     (setf (svref (sc-load-functions to-sc) num) ',name)
+	     (setf (svref (sc-load-costs to-sc) num) ',cost)))))
 
-     (eval-when (compile eval)
-       (setf (svref *meta-sc-numbers* ',number)
-	     (gethash ',name *sc-names*)))
+     (defun ,name ,lambda-list
+       (assemble ,(first lambda-list) ,@body))))
 
-     (let ((old (svref *sc-numbers* ',number)))
-       (when (and old (not (eq (sc-name old) ',name)))
-	 (warn "Redefining SC number ~D from ~S to ~S." ',number
-	       (sc-name old) ',name)))
 
-     (setf (svref *sc-numbers* ',number) (sc-or-lose ',name))
-     ',name))
+(defconstant sc-vop-slots '((:move . sc-move-vops)
+			    (:move-argument . sc-move-arg-vops)))
+
+
+;;; COMPUTE-MOVE-COSTS  --  Internal
+;;;
+;;;    Compute at meta-compile time the costs for moving between all SCs that
+;;; can be loaded from FROM-SC and to TO-SC given a base move cost Cost.
+;;;
+(defun compute-move-costs (from-sc to-sc cost)
+  (declare (type sc from-sc to-sc) (type index cost))
+  (let ((to-scn (sc-number to-sc))
+	(from-costs (sc-load-costs from-sc)))
+    (dolist (dest-sc (cons to-sc (sc-alternate-scs to-sc)))
+      (let ((vec (sc-move-costs dest-sc))
+	    (dest-costs (sc-load-costs dest-sc)))
+	(setf (svref vec (sc-number from-sc)) cost)
+	(dolist (sc (append (sc-alternate-scs from-sc)
+			    (sc-constant-scs from-sc)))
+	  (let* ((scn (sc-number sc))
+		 (total (+ (svref from-costs scn)
+			   (svref dest-costs to-scn)
+			   cost))
+		 (old (svref vec scn)))
+	    (unless (and old (< old total))
+	      (setf (svref vec scn) total))))))))
+    
+    
+;;; DEFINE-MOVE-VOP  --  Public
+;;;
+;;;    Note that we record the VOP in the Move[-Argument]-VOPS for all SCs that
+;;; we can move between (including implicit loading), whereas we only record
+;;; MOVE-COSTS for the explicitly specified SC pairs.
+;;;
+(defmacro define-move-vop (name kind &rest scs)
+  "Define-Move-VOP Name {:Move | :Move-Argument} {(From-SC*) (To-SC*)}*
+  Make Name be the VOP used to move values in the specified From-SCs to the
+  representation of the To-SCs.  If kind is :Move-Argument, then the VOP takes
+  an extra argument, which is the frame pointer of the frame to move into." 
+  (when (or (oddp (length scs)) (null scs))
+    (error "Malformed SCs spec: ~S." scs))
+  (let ((accessor (or (cdr (assoc kind sc-vop-slots))
+		      (error "Unknown kind ~S." kind))))
+    `(progn
+       ,@(when (eq kind :move)
+	   `((eval-when (compile load eval)
+	       (do-sc-pairs (from-sc to-sc ',scs)
+		 (compute-move-costs from-sc to-sc
+				     ,(vop-parse-cost
+				       (vop-parse-or-lose name)))))))
+       
+       (let ((vop (template-or-lose ',name)))
+	 (do-sc-pairs (from-sc to-sc ',scs)
+	   (dolist (dest-sc (cons to-sc (sc-alternate-scs to-sc)))
+	     (let ((vec (,accessor dest-sc)))
+	       (setf (svref vec (sc-number from-sc)) vop)
+	       (dolist (sc (append (sc-alternate-scs from-sc)
+				   (sc-constant-scs from-sc)))
+		 (let ((scn (sc-number sc)))
+		   (unless (svref vec scn) 
+		     (setf (svref vec scn) vop)))))))))))
 
 
 ;;;; Primitive type definition:
@@ -245,35 +387,9 @@
 	   (error "~S is not a defined primitive type." name))))
 
 
-;;; Primitive-Subtypep  --  Interface
-;;;
-;;;    Return true if the primitive type Type1 is a subtype of the primitive
-;;; type Type2.  This is only true if the types are identical or if Type2 is T.
-;;;
-(proclaim '(inline primitive-subtypep))
-(defun primitive-subtypep (type1 type2)
-  (declare (type primitive-type type1 type2))
-  (or (eq type1 type2) (eq type2 *any-primitive-type*)))
-
-
-;;; Primitive-Type-Union  --  Interface
-;;;
-;;;    Return the union of two primitive types.
-;;;
-(proclaim '(inline primitive-type-union))
-(defun primitive-type-union (type1 type2)
-  (declare (type primitive-type type1 type2))
-  (if (eq type1 type2)
-      type1
-      *any-primitive-type*))
-
-
 (eval-when (compile load eval)
   (defparameter primitive-type-slot-alist
-    '((:coerce-to-t . primitive-type-coerce-to-t)
-      (:coerce-from-t . primitive-type-coerce-from-t)
-      (:move . primitive-type-move)
-      (:check . primitive-type-check))))
+    '((:check . primitive-type-check))))
 
 
 ;;; Primitive-Type-Vop  --  Public
@@ -282,12 +398,6 @@
   "Primitive-Type-VOP Vop (Kind*) Type*
   Annotate all the specified primitive Types with the named VOP under each of
   the specified kinds:
-
-  :Coerce-To-T
-  :Coerce-From-T
-  :Move
-      One argument one result VOPs used for coercion between representations
-      and explicit moves.
 
   :Check
       A one argument one result VOP that moves the argument to the result,
@@ -307,108 +417,6 @@
 		    kinds)))
 	  types)
        nil)))
-
-
-;;;; Move cost definition:
-
-;;;
-;;; A 2-d array indexed by the source and destination SC number resulting in
-;;; the cost of doing that move.  If a cost for an entry wasn't specified, then
-;;; the entry is null.  This is initalized by a use of Define-Move-Costs in the
-;;; VM definition, and is used by Define-VOP at meta-compile time to fill in
-;;; the costs for SCs not explicitly handled.
-(defvar *move-costs*)
-
-;;; Define-Move-Costs  --  Public
-;;;
-;;;    Build the *move-costs* array, doing some basic consistency checking.
-;;;
-(defmacro define-move-costs (&rest specs)
-  "Define-Move-Costs {((Source-SC*) {(Cost Dest-SC*)}*)}*
-  This macro declares the cost of the implicit move operations needed to load
-  arguments and store results.  The format is somewhat similar to the costs
-  specifications in Define-VOP.  Each argument form gives the cost for moving
-  to all possible destination SCs from some collection of equivalent source
-  SCs.
-
-  This information is used only to compute the cost of moves from arguments to
-  Load TNs or from Load TNs to results.  It is not necessary to specify the
-  costs for moves between combinations of SCs impossible in this context."
-  (let ((res (make-array (list sc-number-limit sc-number-limit)
-			 :initial-element nil)))
-    (dolist (spec specs)
-      (unless (and (every #'listp spec)
-		   (>= (length spec) 2))
-	(error "Malformed move cost specification: ~S." spec))
-
-      (dolist (dest-spec (rest spec))
-	(unless (and (>= (length dest-spec) 2)
-		     (typep (first dest-spec) 'unsigned-byte))
-	  (error "Malformed move destination cost specification: ~S."
-		 dest-spec))
-	(let ((cost (first dest-spec)))
-	  (dolist (dest-sc (rest dest-spec))
-	    (let ((dest-scn (sc-number-or-lose dest-sc)))
-	      (dolist (source-sc (first spec))
-		(setf (aref res (sc-number-or-lose source-sc) dest-scn)
-		      cost)))))))
-
-    `(progn
-       (eval-when (compile load eval)
-	 (setq *move-costs* ',res))
-
-       (dotimes (i sc-number-limit)
-	 (dotimes (j sc-number-limit)
-	   (when (and (aref *move-costs* i j) (not (aref *move-costs* j i))
-		      (not (eq (sb-kind (sc-sb (svref *sc-numbers* i)))
-			       :non-packed)))
-	     (warn "Move possible from SC ~D to ~D, but not vice-versa."
-		   i j)))))))
-
-
-;;; A SC-Vector containing the SCs used for saving each SC, or NIL if the SC
-;;; isn't saved.
-;;;
-(defvar *save-scs* (make-array sc-number-limit :initial-element nil))
-
-;;; Cost vectors describing the costs of saving and restoring TNs in each SC.
-;;; Zero for SCs that aren't saved.
-;;;
-(defvar *save-costs*)
-(defvar *restore-costs*)
-
-;;; Define-Save-SCs  --  Interface
-;;;
-(defmacro define-save-scs (&rest specs)
-  "Define-Save-SCs {(save-sc saved-sc*)}*
-  This form is used to define which SCs must be saved on a function call.  The
-  Saved-SCs are SCs that must be saved.  The Save-SC a SC that is used in
-  combination with the defined move costs to determine the cost of saving."
-  (let ((save-costs (make-array sc-number-limit :initial-element 0))
-	(restore-costs (make-array sc-number-limit :initial-element 0)))
-    (collect ((scs)
-	      (saves))
-      (dolist (spec specs)
-	(let ((save-scn (sc-number-or-lose (first spec))))
-	  (dolist (sc (rest spec))
-	    (let ((saved-scn (sc-number-or-lose sc)))
-	      (when (member saved-scn (scs))
-		(error "SC ~S appears more than once." sc))
-	      (scs saved-scn)
-	      (saves save-scn)
-	      (setf (svref save-costs saved-scn)
-		    (aref *move-costs* saved-scn save-scn))
-	      (setf (svref restore-costs saved-scn)
-		    (aref *move-costs* save-scn saved-scn))))))
-
-      `(progn
-	 ,@(mapcar #'(lambda (scn save)
-		       `(setf (svref *save-scs* ,scn)
-			      (svref *sc-numbers* ,save)))
-		   (scs) (saves))
-	 (setq *save-costs* ',save-costs)
-	 (setq *restore-costs* ',restore-costs)
-	 nil))))
 
 
 ;;;; VOP definition structures:
@@ -497,7 +505,12 @@
   (policy :fast :type policies)
   ;;
   ;; Stuff used by life analysis.
-  (save-p nil :type (member t nil :compute-only :force-to-stack)))
+  (save-p nil :type (member t nil :compute-only :force-to-stack))
+  ;;
+  ;; Info about how to emit move-argument VOPs for the more operand in
+  ;; call/return VOPs.
+  (move-args nil :type (member nil :local-call :full-call :known-return)))
+
 
 (defprinter vop-parse
   name
@@ -520,8 +533,9 @@
   effects
   affected
   translate
-  policy)
-
+  policy
+  (save-p :test save-p)
+  (move-args :test move-args))
 
 ;;; The Operand-Parse structure contains stuff we need to know about and
 ;;; operand or temporary at meta-compile time.  Besides the obvious stuff, we
@@ -555,27 +569,30 @@
   ;; false, there is no restriction.
   (scs nil :type list)
   ;;
-  ;; True if automatic operand loading should be done when the SC restriction
-  ;; isn't met.  Meaningful only in arguments and results.
+  ;; Variable that is bound to the load TN allocated for this operand, or to
+  ;; NIL if no load-TN was allocated.
+  (load-tn (gensym) :type symbol)
+  ;;
+  ;; If true, automatic operand loading is inhibited and the operand name is
+  ;; always bound to the original TN.
   (load t :type boolean)
   ;;
-  ;; The primitive-type of a temporary.
-  (type t :type symbol)
-  ;;
-  ;; In a wired temporary this is the SC and offset it is wired to.
+  ;; In a wired or restricted temporary this is the SC the TN is to be packed
+  ;; in.  Null otherwise.
   (sc nil :type (or symbol null))
+  ;;
+  ;; If non-null, we are a temp wired to this offset in SC.
   (offset nil :type (or unsigned-byte null)))
 
 
 (defprinter operand-parse
   name
   kind
-  (type :test (not (eq type t)))
   (target :test target)
   born
   dies
   (scs :test scs)
-  load
+  (load :test load)
   (sc :test sc)
   (offset :test offset))
 
@@ -803,21 +820,16 @@
 ;;; Make-Temporary  --  Internal
 ;;;
 ;;;    Return a form that creates a TN as specified by Temp.  This requires
-;;; deciding whether the temp is wired, restricted or normal.
+;;; deciding whether the temp is wired or restricted.
 ;;;
 (defun make-temporary (temp)
   (declare (type operand-parse temp))
-  (let ((type (operand-parse-type temp)))
-    (cond ((operand-parse-sc temp)
-	   `(make-wired-tn (primitive-type-or-lose ',type)
-			   ,(sc-number-or-lose (operand-parse-sc temp))
-			   ,(operand-parse-offset temp)))
-	  ((operand-parse-scs temp)
-	   `(make-restricted-tn (primitive-type-or-lose ',type)
-				',(mapcar #'sc-number-or-lose
-					  (operand-parse-scs temp))))
-	  (t
-	   `(make-normal-tn (primitive-type-or-lose ',type))))))
+  (let ((sc (operand-parse-sc temp))
+	(offset (operand-parse-offset temp)))
+    (assert sc)
+    (if offset
+	`(make-wired-tn ,(sc-number-or-lose sc) ,offset)
+	`(make-restricted-tn ,(sc-number-or-lose sc)))))
 
   
 ;;; Allocate-Temporaries  --  Internal
@@ -946,6 +958,121 @@
 	     ,@(forms))))))
 
 
+;;;; Generator functions:
+
+;;; FIND-LOAD-FUNCTIONS  --  Internal
+;;;
+;;;    Return an alist that translates from lists of SCs we can load OP from to
+;;; the load function used for loading those SCs.  We quietly ignore
+;;; restrictions to :non-packed (constant) SCs, since we don't load into those
+;;; SCs.
+;;;
+(defun find-load-functions (op load-p)
+  (collect ((funs))
+    (dolist (sc-name (operand-parse-scs op))
+      (let* ((sc (sc-or-lose sc-name))
+	     (scn (sc-number sc))
+	     (load-scs (append (when load-p
+				 (sc-constant-scs sc))
+			       (sc-alternate-scs sc))))
+	(cond
+	 (load-scs
+	  (dolist (alt load-scs)
+	    (let* ((altn (sc-number alt))
+		   (name (if load-p
+			     (svref (sc-load-functions sc) altn)
+			     (svref (sc-load-functions alt) scn)))
+		   (found (or (assoc alt (funs) :test #'member)
+			      (rassoc name (funs)))))
+	      (unless name
+		(error "No load function defined to ~:[save~;load~] SC ~S~
+		        ~:[to~;from~] from SC ~S."
+		       load-p sc-name load-p (sc-name alt)))
+	      
+	      (cond (found
+		     (unless (eq (cdr found) name)
+		       (error "Can't tell whether to ~:[save~;load~] with ~S~@
+		               or ~S when operand is in SC ~S."
+			      load-p name (cdr found) (sc-name alt)))
+		     (pushnew alt (car found)))
+		    (t
+		     (funs (cons (list alt) name)))))))
+	 ((eq (sb-kind (sc-sb sc)) :non-packed))
+	 (t
+	  (error "SC ~S has no alternate~:[~; or constant~] SCs, yet it is~@
+	          mentioned in the restriction for operand ~S."
+		 sc-name load-p (operand-parse-name op))))))
+
+    (funs)))
+
+
+;;; CALL-LOAD-FUNCTION  --  Internal
+;;;
+;;;    Return a form to load/save the specified operand when it has a load TN.
+;;; For any given SC that we can load from, there must be a unique load
+;;; function.  If all SCs we can load from have the same load function, then we
+;;; just call that when there is a load TN.  If there are multiple possible
+;;; load functions, then we dispatch off of the operand TN's type to see which
+;;; load function to use.
+;;;
+(defun call-load-function (parse op load-p)
+  (let ((funs (find-load-functions op load-p))
+	(load-tn (operand-parse-load-tn op)))
+    (if funs
+	(let* ((tn `(tn-ref-tn ,(operand-parse-temp op)))
+	       (n-node (or (vop-parse-node-var parse)
+			   (setf (vop-parse-node-var parse) (gensym))))
+	       (form (if (rest funs)
+			 `(sc-case ,tn
+			    ,@(mapcar #'(lambda (x)
+					  `(,(mapcar #'sc-name (car x))
+					    ,(if load-p
+						 `(,(cdr x) ,n-node ,tn
+						   ,load-tn)
+						 `(,(cdr x) ,n-node ,load-tn
+						   ,tn))))
+				      funs))
+			 (if load-p
+			     `(,(cdr (first funs)) ,n-node ,tn ,load-tn)
+			     `(,(cdr (first funs)) ,n-node ,load-tn ,tn)))))
+	  (if (eq (operand-parse-load op) t)
+	      `(when ,load-tn ,form)
+	      `(when (eq ,load-tn ,(operand-parse-name op))
+		 ,form)))
+	`(when ,load-tn
+	   (error "Load TN allocated, but no load function?~@
+	           VM definition inconsistent, recompile and try again.")))))
+
+
+;;; DECIDE-TO-LOAD  --  Internal
+;;;
+;;;    Return the TN that we should bind to the operand's var in the generator
+;;; body.  In general, this involves evaluating the :LOAD-IF test expression.
+;;;
+(defun decide-to-load (parse op)
+  (let ((load (operand-parse-load op))
+	(load-tn (operand-parse-load-tn op))
+	(temp (operand-parse-temp op)))
+    (if (eq load t)
+	`(or ,load-tn (tn-ref-tn ,temp))
+	(collect ((binds)
+		  (ignores))
+	  (dolist (x (vop-parse-operands parse))
+	    (when (member (operand-parse-kind x) '(:argument :result))
+	      (let ((name (operand-parse-name x)))
+		(binds `(,name (tn-ref-tn ,(operand-parse-temp x))))
+		(ignores name))))
+	  `(if (and ,load-tn
+		    (let ,(binds)
+		      #+new-compiler
+		      (declare (ignorable ,@(ignores)))
+		      #-new-compiler
+		      (progn ,@(ignores))
+		      ,load))
+	       ,load-tn
+	       (tn-ref-tn ,temp))))))
+
+
 ;;; Make-Generator-Function  --  Internal
 ;;;
 ;;;    Make a lambda that parses the VOP TN-Refs, does automatic operand
@@ -956,10 +1083,23 @@
   (let ((n-vop (vop-parse-vop-var parse))
 	(operands (vop-parse-operands parse))
 	(n-info (gensym)) (n-variant (gensym)))
-    (collect ((binds))
+    (collect ((binds)
+	      (loads)
+	      (saves))
       (dolist (op operands)
 	(ecase (operand-parse-kind op)
-	  ((:argument :result :temporary)
+	  ((:argument :result)
+	   (let ((temp (operand-parse-temp op))
+		 (name (operand-parse-name op)))
+	     (binds `(,(operand-parse-load-tn op) (tn-ref-load-tn ,temp)))
+	     (cond ((and (operand-parse-load op) (operand-parse-scs op))
+		    (binds `(,name ,(decide-to-load parse op)))
+		    (if (eq (operand-parse-kind op) :argument)
+			(loads (call-load-function parse op t))
+			(saves (call-load-function parse op nil))))
+		   (t
+		    (binds `(,name (tn-ref-tn ,temp)))))))
+	  (:temporary
 	   (binds `(,(operand-parse-name op)
 		    (tn-ref-tn ,(operand-parse-temp op)))))
 	  ((:more-argument :more-result))))
@@ -985,8 +1125,10 @@
 		      `((,(vop-parse-node-var parse) (vop-node ,n-vop))))
 		  ,@(binds))
 	     (declare (ignore ,@(vop-parse-ignores parse)))
+	     ,@(loads)
 	     (assemble (vop-node ,n-vop)
-	       ,@(vop-parse-body parse)))))))
+		       ,@(vop-parse-body parse))
+	     ,@(saves))))))
 
 
 ;;; Parse-Operands  --  Internal
@@ -1023,22 +1165,38 @@
 	      (case (first key)
 		(:scs
 		 (check-type value list)
-		 (setf (operand-parse-scs res) value))
-		(:load
-		 (check-type value boolean)
+		 (setf (operand-parse-scs res) (remove-duplicates value)))
+		(:load-tn
+		 (check-type value symbol)
+		 (setf (operand-parse-load-tn res) value))
+		(:load-if
 		 (setf (operand-parse-load res) value))
 		(:more
 		 (check-type value boolean)
 		 (setf (operand-parse-kind res)
 		       (if (eq kind :argument) :more-argument :more-result))
+		 (setf (operand-parse-load res) nil)
 		 (setq more res))
 		(:target
 		 (check-type value symbol)
 		 (setf (operand-parse-target res) value))
+		(:from
+		 (unless (eq kind :result)
+		   (error "Can only specify :FROM in a result: ~S" spec))
+		 (setf (operand-parse-born res) (parse-time-spec value)))
+		(:to
+		 (unless (eq kind :argument)
+		   (error "Can only specify :TO in an argument: ~S" spec))
+		 (setf (operand-parse-dies res) (parse-time-spec value)))
 		(t
 		 (error "Unknown keyword in operand specifier: ~S." spec)))))
-	  (unless more
-	    (operands res))))
+
+	  (cond ((not more)
+		 (operands res))
+		((operand-parse-target more)
+		 (error "Cannot specify :TARGET in a :MORE operand."))
+		((operand-parse-load more)
+		 (error "Cannot specify :LOAD-IF in a :MORE operand.")))))
       (values (the list (operands)) more))))
 
 
@@ -1068,12 +1226,6 @@
 	    (:target
 	     (setf (operand-parse-target res)
 		   (vop-spec-arg opt 'symbol 1 nil)))
-	    (:type
-	     (setf (operand-parse-type res)
-		   (vop-spec-arg opt 'symbol 1 nil)))
-	    (:scs
-	     (setf (operand-parse-scs res)
-		   (vop-spec-arg opt 'list 1 nil)))
 	    (:sc
 	     (setf (operand-parse-sc res)
 		   (vop-spec-arg opt 'symbol 1 nil)))
@@ -1085,6 +1237,14 @@
 	     (setf (operand-parse-born res) (parse-time-spec (second opt))))
 	    (:to
 	     (setf (operand-parse-dies res) (parse-time-spec (second opt))))
+	    ;;
+	    ;; Backward compatibility...
+	    (:scs
+	     (let ((scs (vop-spec-arg opt 'list 1 nil)))
+	       (unless (= (length scs) 1)
+		 (error "Must specify exactly one SC for a temporary."))
+	       (setf (operand-parse-sc res) (first scs))))
+	    (:type)
 	    (t
 	     (error "Unknown temporary option: ~S." opt))))
 
@@ -1094,14 +1254,8 @@
 					   (operand-parse-dies res))))
 	  (error "Temporary lifetime doesn't begin before it ends: ~S." spec))
 
-	(when (if (operand-parse-sc res)
-		  (not (operand-parse-offset res))
-		  (operand-parse-offset res))
-	  (error "Must specify both :SC and :Offset or neither: ~S." spec))
-
-	(when (and (operand-parse-sc res)
-		   (operand-parse-scs res))
-	  (error "Cannot specify both :SC and :SCs: ~S." spec))
+	(unless (operand-parse-sc res)
+	  (error "Must specifiy :SC for all temporaries: ~S" spec))
 
 	(setf (vop-parse-temps parse)
 	      (cons res
@@ -1164,14 +1318,20 @@
        (setf (vop-parse-cost parse) (vop-spec-arg spec 'unsigned-byte)))
       (:vop-var
        (setf (vop-parse-vop-var parse) (vop-spec-arg spec 'symbol)))
+      (:move-args
+       (setf (vop-parse-move-args parse)
+	     (vop-spec-arg spec '(member nil :local-call :full-call
+					 :known-return))))
       (:node-var
        (setf (vop-parse-node-var parse) (vop-spec-arg spec 'symbol)))
       (:note
-       (setf (vop-parse-note parse) (vop-spec-arg spec 'string)))
+       (setf (vop-parse-note parse) (vop-spec-arg spec '(or string null))))
       (:arg-types
-       (setf (vop-parse-arg-types parse) (rest spec)))
+       (setf (vop-parse-arg-types parse)
+	     (parse-operand-types (rest spec) t)))
       (:result-types
-       (setf (vop-parse-result-types parse) (rest spec)))
+       (setf (vop-parse-result-types parse)
+	     (parse-operand-types (rest spec) nil)))
       (:translate
        (setf (vop-parse-translate parse) (rest spec)))
       (:guard
@@ -1189,91 +1349,152 @@
 
 ;;;; Make costs and restrictions:
 
-(defconstant no-restriction
-  (make-array sc-number-limit  :element-type 'bit  :initial-element 1))
+;;; Compute-Loading-Costs  --  Internal
+;;;
+;;; Given an operand, returns two values:
+;;; 1] A SC-vector of the cost for the operand being in that SC, including both
+;;;    the costs for load functions and coercion VOPs.
+;;; 2] A SC-vector holding the SC that we load into, for any SC that we can
+;;;    directly load from.
+;;;
+;;; In both vectors, unused entries are NIL.  Load-P specifies the direction:
+;;; if true, we are loading, if false we are saving.
+;;;
+(defun compute-loading-costs (op load-p)
+  (declare (type operand-parse op))
+  (let ((scs (operand-parse-scs op))
+	(costs (make-array sc-number-limit :initial-element nil))
+	(load-scs (make-array sc-number-limit :initial-element nil)))
+    (dolist (sc-name scs)
+      (let* ((load-sc (sc-or-lose sc-name))
+	     (load-scn (sc-number load-sc)))
+	(setf (svref costs load-scn) 0)
+	(setf (svref load-scs load-scn) load-scn)
+	(dolist (op-sc (append (when load-p
+				 (sc-constant-scs load-sc))
+			       (sc-alternate-scs load-sc)))
+	  (let* ((op-scn (sc-number op-sc))
+		 (load (if load-p
+			   (aref (sc-load-costs load-sc) op-scn)
+			   (aref (sc-load-costs op-sc) load-scn))))
+	    (unless load
+	      (error "No load function defined to move ~:[from~;to~] SC ~
+	              ~S~%~:[to~;from~] alternate or constant SC ~S."
+		     load-p sc-name load-p (sc-name op-sc)))
+	    
+	    (let ((op-cost (svref costs op-scn)))
+	      (when (or (not op-cost) (< load op-cost))
+		(setf (svref costs op-scn) load)))
+
+	    (setf (svref load-scs op-scn) load-scn)))
+
+	(dotimes (i sc-number-limit)
+	  (unless (svref costs i)
+	    (let ((op-sc (svref *meta-sc-numbers* i)))
+	      (when op-sc
+		(let ((cost (if load-p
+				(svref (sc-move-costs load-sc) i)
+				(svref (sc-move-costs op-sc) load-scn))))
+		  (when cost
+		    (setf (svref costs i) cost)))))))))
+
+    (values costs load-scs)))
+
 
 (defconstant no-costs
   (make-array sc-number-limit  :initial-element 0))
 
+(defconstant no-loads
+  (let ((res (make-array sc-number-limit)))
+    (dotimes (i sc-number-limit)
+      (setf (svref res i) i))
+    res))
 
-;;; Compute-Loading-Costs  --  Internal
+
+;;; COMPUTE-LOADING-COSTS-IF-ANY  --  Internal
 ;;;
-;;;    Given a operand, return a costs vector with costs filled in for all SCs
-;;; that we could load from.  When there are multiple SCs we can load into, we
-;;; use the one with the lowest aggregate cost.  Load-P specifies the
-;;; direction: if true, we are loading, if false we are saving.
+;;;    Pick off the case of operands with no restrictions.
 ;;;
-(defun compute-loading-costs (op load-p)
+(defun compute-loading-costs-if-any (op load-p)
   (declare (type operand-parse op))
-  (let ((scs (operand-parse-scs op)))
-    (if scs
-	(let ((res (make-array sc-number-limit :initial-element nil)))
-	  (dolist (sc-name scs)
-	    (let ((load-sc (sc-number-or-lose sc-name)))
-	      (setf (svref res load-sc) 0)
-	      (dotimes (op-sc sc-number-limit)
-		(let ((load (if load-p
-				(aref *move-costs* op-sc load-sc)
-				(aref *move-costs* load-sc op-sc))))
-		  (when load
-		    (let ((op-cost (svref res op-sc)))
-		      (when (or (not op-cost) (< load op-cost))
-			(setf (svref res op-sc) load))))))))
-	    res)
-	no-costs)))
+  (if (operand-parse-scs op)
+      (compute-loading-costs op load-p)
+      (values no-costs no-loads)))
+      
 
-
-;;; Compute-SC-Restrictions  --  Internal
+;;; COMPUTE-COSTS-AND-RESTRICTIONS-LIST  --  Internal
 ;;;
-;;;    Return the SC restriction bit-vector for Op.  If there are no
-;;; restrictions, or Load false, then return No-Restriction.
-;;;
-(defun compute-sc-restrictions (op)
-  (declare (type operand-parse op))
-  (let ((scs (operand-parse-scs op)))
-    (if (and scs (operand-parse-load op))
-	(let ((restr (make-array sc-number-limit :element-type 'bit
-				 :initial-element 0)))
-	  (dolist (name scs)
-	    (setf (sbit restr (sc-number-or-lose name)) 1))
-	  restr)
-	no-restriction)))
+(defun compute-costs-and-restrictions-list (ops load-p)
+  (declare (list ops))
+  (collect ((costs)
+	    (scs))
+    (dolist (op ops)
+      (multiple-value-bind (costs scs)
+			   (compute-loading-costs-if-any op load-p)
+	(costs costs)
+	(scs scs)))
+    (values (costs) (scs))))
 
 
 ;;; Make-Costs-And-Restrictions  --  Internal
 ;;;
 (defun make-costs-and-restrictions (parse)
-  `(
-    :cost ,(vop-parse-cost parse)
-    
-    :arg-costs
-    ',(mapcar #'(lambda (x)
-		  (compute-loading-costs x t))
-	      (vop-parse-args parse))
-    
-    :result-costs
-    ',(mapcar #'(lambda (x)
-		  (compute-loading-costs x nil))
-	      (vop-parse-results parse))
-    
-    :more-arg-costs
-    ',(if (vop-parse-more-args parse)
-	  (compute-loading-costs (vop-parse-more-args parse) t)
-	  nil)
-    
-    :more-result-costs
-    ',(if (vop-parse-more-results parse)
-	  (compute-loading-costs (vop-parse-more-results parse) nil)
-	  nil)
-    
-    :arg-restrictions
-    ',(mapcar #'compute-sc-restrictions (vop-parse-args parse))
-    
-    :result-restrictions
-    ',(mapcar #'compute-sc-restrictions (vop-parse-results parse))))
+  (multiple-value-bind
+      (arg-costs arg-scs)
+      (compute-costs-and-restrictions-list (vop-parse-args parse) t)
+    (multiple-value-bind
+	(result-costs result-scs)
+	(compute-costs-and-restrictions-list (vop-parse-results parse) nil)
+      `(
+	:cost ,(vop-parse-cost parse)
+	
+	:arg-costs ',arg-costs
+	:arg-load-scs ',arg-scs
+	:result-costs ',result-costs
+	:result-load-scs ',result-scs
+	
+	:more-arg-costs
+	',(if (vop-parse-more-args parse)
+	      (compute-loading-costs-if-any (vop-parse-more-args parse) t)
+	      nil)
+	
+	:more-result-costs
+	',(if (vop-parse-more-results parse)
+	      (compute-loading-costs-if-any (vop-parse-more-results parse) nil)
+	      nil)))))
 
 
 ;;;; Operand checking and stuff:
+
+;;; PARSE-OPERAND-TYPES  --  Internal
+;;;
+;;;    Given a list of arg/result restrictions, check for valid syntax and
+;;; convert to canonical form.
+;;;
+(defun parse-operand-types (specs args-p)
+  (declare (list specs))
+  (mapcar #'(lambda (spec)
+	      (cond ((eq spec '*) spec)
+		    ((symbolp spec)
+		     `(:or ,spec))
+		    ((atom spec)
+		     (error "Bad thing to be a operand type: ~S." spec))
+		    (t
+		     (case (first spec)
+		       (:or
+			(unless (every #'symbolp (rest spec))
+			  (error "Bad PRIMITIVE-TYPE name in ~S." spec))
+			spec)
+		       (:constant
+			(unless args-p
+			  (error "Can't :CONSTANT for a result."))
+			(unless (= (length spec) 2)
+			  (error "Bad :CONSTANT argument type spec: ~S." spec))
+			spec)
+		       (t
+			(error "Bad thing to be a operand type: ~S." spec))))))
+	  specs))
+
 
 ;;; Check-Operand-Types  --  Internal
 ;;;
@@ -1286,9 +1507,15 @@
 (defun check-operand-types (ops more-op types what)
   (declare (list ops) (type (or list (member :unspecified)) types)
 	   (type (or operand-parse null) more-op) (string what))
-  (let ((num (+ (length ops) (if more-op 1 0))))
-    (unless (or (eq types :unspecified) (= (length types) num))
-      (error "Expected ~D ~A type~P: ~S." num what types num)))
+  (unless (eq types :unspecified)
+    (let ((num (+ (length ops) (if more-op 1 0))))
+      (unless (= (length types) num)
+	(error "Expected ~D ~A type~P: ~S." num what types num)))
+    (when more-op
+      (let ((mtype (car (last types))))
+	(when (and (consp mtype) (eq (first mtype) :constant))
+	  (error "Can't use :CONSTANT on VOP more args.")))))
+  
   (undefined-value))
 
 
@@ -1365,17 +1592,32 @@
 
 ;;; Make-Operand-Type  --  Internal
 ;;;
+;;;    Return a form that can be evaluated to get the TEMPLATE operand type
+;;; restriction from the given specification.
+;;;
 (defun make-operand-type (type)
-  (if (eq type '*)
-      ''*
-      `(primitive-type-or-lose ',type)))
+  (cond ((eq type '*) ''*)
+	((symbolp type)
+	 ``(:or ,(primitive-type-or-lose ',type)))
+	(t
+	 (ecase (first type)
+	   (:or
+	    ``(:or ,,@(mapcar #'(lambda (type)
+				   `(primitive-type-or-lose ',type))
+			       (rest type))))
+	   (:constant
+	    ``(:constant ,#'(lambda (x)
+			      (typep x ',(second type)))
+			 ,',(second type)))))))
+
 
 ;;; Specify-Operand-Types  --  Internal
 ;;;
 (defun specify-operand-types (types ops more-ops)
   (if (eq types :unspecified)
-      (make-list (+ (length ops) (if more-ops 1 0)) :initial-element t)
+      (make-list (+ (length ops) (if more-ops 1 0)) :initial-element '*)
       types))
+
 
 ;;; Make-VOP-Info-Types  --  Internal
 ;;;
@@ -1463,6 +1705,7 @@
       :info-arg-count ,(length (vop-parse-info-args parse))
       :policy ',(vop-parse-policy parse)
       :save-p ',(vop-parse-save-p parse)
+      :move-args ',(vop-parse-move-args parse)
       :effects (vop-attributes ,@(vop-parse-effects parse))
       :affected (vop-attributes ,@(vop-parse-affected parse))
       ,@(make-costs-and-restrictions parse)
@@ -1494,7 +1737,13 @@
 	   (flet ((frob (x)
 		    (if (eq x '*)
 			't
-			(type-specifier (primitive-type-type x)))))
+			(ecase (first x)
+			  (:or `(or ,@(mapcar #'(lambda (type)
+						  (type-specifier
+						   (primitive-type-type
+						    type)))
+					      (rest x))))
+			  (:constant `(constant ,(third x)))))))
 	     `(,@(mapcar #'frob types)
 	       ,@(when more-types
 		   `(&rest ,(frob more-types)))))))
@@ -1532,11 +1781,21 @@
       VOP.  The following operand options are defined:
 
       :SCs (SC*)
-      :Load T-or-NIL
 	  :SCs specifies good SCs for this operand.  Other SCs will be
-	  penalized according to move costs.  If :Load is true (the default),
-	  then a load TN will be allocated if necessary, guaranteeing that the
-	  operand is always one of the specified SCs.
+	  penalized according to move costs.  A load TN will be allocated if
+	  necessary, guaranteeing that the operand is always one of the
+	  specified SCs.
+
+      :Load-TN Load-Name
+          Load-Name is bound to the load TN allocated for this operand, or to
+	  NIL if no load TN was allocated.
+
+      :Load-If Expression
+          Controls whether automatic operand loading is done.  Expression is
+	  evaluated with the fixed operand TNs bound.  If Expression is true,
+	  then loading is done and the variable is bound to the load TN in
+	  the generator body.  Otherwise, loading is not done, and the variable
+	  is bound to the actual operand.
 
       :More T-or-NIL
 	  If specified, Name is bound to the TN-Ref for the first argument or
@@ -1546,13 +1805,21 @@
       :Target Operand
 	  This operand is targeted to the named operand, indicating a desire to
 	  pack in the same location.  Not legal for results.
-  
+
+      :From Time-Spec
+      :To Time-Spec
+	  Specify the beginning or end of the operand's lifetime.  :From can
+	  only be used with results, and :To only with arguments.  The default
+	  for the N'th argument/result is (:ARGUMENT N)/(:RESULT N).  These
+	  options are necessary primarily when operands are read or written out
+	  of order.
+   
   :Conditional
-      This is used in place of :Results with conditional branch VOPs.  There
-      are no result values: the result is a transfer of control.  The
-      consequent and alternative continuations are passed as the first and
-      second :Info arguments.  A side-effect is to set the Predicate attribute
-      for functions in the :Translate option.
+      This is used in place of :RESULTS with conditional branch VOPs.  There
+      are no result values: the result is a transfer of control.  The target
+      label is passed as the first :INFO arg.  The second :INFO arg is true if
+      the sense of the test should be negated.  A side-effect is to set the
+      PREDICATE attribute for functions in the :TRANSLATE option.
   
   :Temporary ({Key Value}*) Name*
       Allocate a temporary TN for each Name, binding that variable to the TN
@@ -1560,26 +1827,22 @@
       is the same as for operands), the following options are
       defined:
 
-      :Type Type
-          Specify the primitive type for the temporary, default T.
-
       :SC SC-Name
       :Offset SB-Offset
 	  Force the temporary to be allocated in the specified SC with the
-	  specified offset.  Offset is evaluated at macroexpand time.
-
-      :SCs (SC*)
-	  Restrict the temporary to a subset of the SCs allowed by the type,
-	  possibly requiring packing in a finite SC.
+	  specified offset.  Offset is evaluated at macroexpand time.  If
+	  Offset is emitted, the register allocator chooses a free location in
+	  SC.  If both SC and Offset are omitted, then the temporary is packed
+	  according to its primitive type.
 
       :From Time-Spec
       :To Time-Spec
-	  Specify the beginning and end of the temporary's lives.  The defaults
-	  are :Load and :Save, i.e. the duration of the VOP.  The other
-	  intervening phases are :Argument, :Eval and :Result.  Non-zero
-	  sub-phases can be specified by a list, e.g. the second argument's
-	  life ends at (:Argument 1).
-  
+	  Similar to the argument/result option, this specifies the start and
+	  end of the temporarys' lives.  The defaults are :Load and :Save, i.e.
+	  the duration of the VOP.  The other intervening phases are :Argument,
+	  :Eval and :Result.  Non-zero sub-phases can be specified by a list,
+	  e.g. by default the second argument's life ends at (:Argument 1).
+ 
   :Generator Cost Form*
       Specifies the translation into assembly code. Cost is the estimated cost
       of the code emitted by this generator. The body is arbitrary Lisp code
@@ -1616,14 +1879,19 @@
       Specifies the cost of this VOP, overriding the cost of any inherited
       generator.
 
-  :Note String
+  :Note {String | NIL}
       A short noun-like phrase describing what this VOP \"does\", i.e. the
-      implementation strategy.  This is for use in efficiency notes.
+      implementation strategy.  If supplied, efficency notes will be generated
+      when type uncertainty prevents :TRANSLATE from working.  NIL inhibits any
+      efficency note.
 
-  :Arg-Types Type*
-  :Result-Types Type*
+  :Arg-Types    {* | PType | (:OR PType*) | (:CONSTANT Type)}*
+  :Result-Types {* | PType | (:OR PType*)}*
       Specify the template type restrictions used for automatic translation.
-      If there is a :More operand, the last type is the more type. 
+      If there is a :More operand, the last type is the more type.  :CONSTANT
+      specifies that the argument must be a compile-time constant of the
+      specified Lisp type.  The constant values of :CONSTANT arguments are
+      passed as additional :INFO arguments rather than as :ARGS.
   
   :Translate Name*
       This option causes the VOP template to be entered as an IR2 translation
@@ -1643,8 +1911,11 @@
       generated this VOP.
 
   :Save-P {NIL | T | :Compute-Only | :Force-To-Stack}
-      Indicates how a VOP wants live registers saved."
-  
+      Indicates how a VOP wants live registers saved.
+
+  :Move-Args {NIL | :Full-Call | :Local-Call | :Known-Return}
+      Indicates if and how the more args should be moved into a different
+      frame."
   (check-type name symbol)
   
   (let* ((iparse (when inherits
@@ -1919,6 +2190,13 @@
       `(block nil
 	 (flet ((,n-bod (,tn-var) ,@body))
 	   ;;
+	   ;; Do component-live TNs.
+	   (dolist (,tn-var (ir2-component-component-tns
+			     (component-info
+			      (block-component
+			       (ir2-block-block ,n-block)))))
+	     (,n-bod ,tn-var))
+	   ;;
 	   ;; Do environment-live TNs.
 	   (dolist (,tn-var (ir2-environment-live-tns
 			     (environment-info
@@ -1939,9 +2217,9 @@
 	     ;;
 	     ;; Do TNs locally live in the designated live set.
 	     (dotimes (,i (ir2-block-local-tn-count ,n-block) ,result)
-	       (let ((,tn-var (svref ,ltns ,i)))
-		 (when (and ,tn-var (not (eq ,tn-var :more)))
-		   (unless (zerop (sbit ,n-live ,i))
+	       (unless (zerop (sbit ,n-live ,i))
+		 (let ((,tn-var (svref ,ltns ,i)))
+		   (when (and ,tn-var (not (eq ,tn-var :more)))
 		     (,n-bod ,tn-var)))))))))))
 
 
@@ -1952,17 +2230,18 @@
   "DO-ENVIRONMENT-IR2-BLOCKS (Block-Var Env [Result]) Form*
   Iterate over all the IR2 blocks in the environment Env, in emit order."
   (once-only ((n-env env))
-    (once-only ((n-tail `(block-info
-			  (component-tail
-			   (block-component
-			    (node-block
-			     (lambda-bind (environment-function ,n-env))))))))
-      `(do ((,block-var (block-info (node-block (lambda-bind fun)))
-			(ir2-block-next ,block-var)))
-	   ((or (eq ,block-var ,n-tail)
-		(not (eq (ir2-block-environment ,block-var) ,n-env)))
-	    ,result)
-	 ,@body))))
+    (once-only ((n-first `(node-block
+			   (lambda-bind
+			    (environment-function ,n-env)))))
+      (once-only ((n-tail `(block-info
+			    (component-tail
+			     (block-component ,n-first)))))
+	`(do ((,block-var (block-info ,n-first)
+			  (ir2-block-next ,block-var)))
+	     ((or (eq ,block-var ,n-tail)
+		  (not (eq (ir2-block-environment ,block-var) ,n-env)))
+	      ,result)
+	   ,@body)))))
 
 
 ;;; NOTE-THIS-LOCATION  --  Interface
