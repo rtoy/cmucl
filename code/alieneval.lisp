@@ -7,11 +7,9 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.10 1991/02/08 13:30:36 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.11 1991/05/21 22:18:05 ram Exp $")
 ;;;
 ;;; **********************************************************************
-;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.10 1991/02/08 13:30:36 ram Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -537,17 +535,18 @@
 ;;; Bits, Bytes, Words, Long-Words  --  Public
 ;;;
 ;;;
-(macrolet ((frob (name n)
-	     `(progn
-		(proclaim '(inline ,name))
-		(defun ,name (n)
-		  (declare (type (integer 0 ,(truncate most-positive-fixnum n))
-				 n))
-		  (* n ,n)))))
-  (frob bits 1)
-  (frob bytes 8)
-  (frob words 16)
-  (frob long-words 32))
+(eval-when (compile eval)
+(defmacro def-words-frob (name n)
+  `(progn
+     (proclaim '(inline ,name))
+     (defun ,name (n)
+       (declare (type (integer 0 ,(truncate most-positive-fixnum n))
+		      n))
+       (* n ,n)))))
+(def-words-frob bits 1)
+(def-words-frob bytes 8)
+(def-words-frob words 16)
+(def-words-frob long-words 32)
 
 
 ;;;; General case versions of compiler internal functions:
