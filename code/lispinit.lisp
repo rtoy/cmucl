@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.34 1993/02/26 08:25:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.35 1993/05/22 14:01:25 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,12 +44,17 @@
 
 
 ;;; Must be initialized in %INITIAL-FUNCTION before the DEFVAR runs...
-(proclaim '(special *gc-inhibit* *already-maybe-gcing*
-		    *need-to-collect-garbage* *gc-verbose*
-		    *before-gc-hooks* *after-gc-hooks*
-		    unix::*interrupts-enabled*
-		    unix::*interrupt-pending*
-		    *type-system-initialized*))
+(declaim
+  #-gengc
+  (special *gc-inhibit* *already-maybe-gcing*
+	   *need-to-collect-garbage* *gc-verbose*
+	   *before-gc-hooks* *after-gc-hooks*
+	   unix::*interrupts-enabled*
+	   unix::*interrupt-pending*
+	   *type-system-initialized*)
+  #+gengc
+  (special *gc-verbose* *before-gc-hooks* *after-gc-hooks*
+	   *type-system-initialized*))
 
 
 ;;;; Random magic specials.
@@ -57,10 +62,14 @@
 
 ;;; These are filled in by Genesis.
 
+#-gengc
+(progn
+
 (defvar *current-catch-block*)
 (defvar *current-unwind-block*)
 (defvar *free-interrupt-context-index*)
 
+); #-gengc progn
 
 
 ;;; %Initial-Function is called when a cold system starts up.  First we zoom
@@ -82,14 +91,14 @@
 
 (defun %initial-function ()
   "Gives the world a shove and hopes it spins."
-  (setf *already-maybe-gcing* t)
-  (setf *gc-inhibit* t)
-  (setf *need-to-collect-garbage* nil)
-  (setf *gc-verbose* t)
+  #-gengc (setf *already-maybe-gcing* t)
+  #-gengc (setf *gc-inhibit* t)
+  #-gengc (setf *need-to-collect-garbage* nil)
+  (setf *gc-verbose* #-gengc t #+gengc nil)
   (setf *before-gc-hooks* nil)
   (setf *after-gc-hooks* nil)
-  (setf unix::*interrupts-enabled* t)
-  (setf unix::*interrupt-pending* nil)
+  #-gengc (setf unix::*interrupts-enabled* t)
+  #-gengc (setf unix::*interrupt-pending* nil)
   (setf *type-system-initialized* nil)
   (%primitive print "In initial-function, and running.")
 
@@ -159,7 +168,8 @@
 
   (%primitive print "Done initializing.")
 
-  (setf *already-maybe-gcing* nil)
+  #-gengc (setf *already-maybe-gcing* nil)
+  #+gengc (setf *gc-verbose* t)
   (terpri)
   (princ "CMU Common Lisp kernel core image ")
   (princ (lisp-implementation-version))
