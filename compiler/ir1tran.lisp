@@ -2576,10 +2576,12 @@
   Like the THE special form, except that it believes whatever you tell it.  It
   will never generate a type check, but will cause a warning if the compiler
   can prove the assertion is wrong."
-  (let ((type (specifier-type type)))
+  (let ((type (specifier-type type))
+	(old (find-uses cont)))
     (ir1-convert start cont value)
     (do-uses (use cont)
-      (derive-node-type use type))))
+      (unless (member use old)
+	(derive-node-type use type)))))
 
 
 ;;;; Setq
