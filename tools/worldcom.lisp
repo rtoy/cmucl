@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.67 1994/05/22 17:03:56 hallgren Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldcom.lisp,v 1.68 1994/05/22 20:03:05 hallgren Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,7 @@
 (when (eq c:*backend* c:*native-backend*)
   (load "target:assembly/assemfile"))
 
-(when (c:backend-featurep '(or :pmax :sgi))
+(when (c:backend-featurep :pmax)
   (comf "target:assembly/mips/assem-rtns" :assem t)
   (comf "target:assembly/mips/array" :assem t)
   (comf "target:assembly/mips/arith" :assem t)
@@ -83,6 +83,12 @@
   (comf "target:assembly/alpha/array" :assem t)
   (comf "target:assembly/alpha/arith" :assem t)
   (comf "target:assembly/alpha/alloc" :assem t))
+
+(when (c:backend-featurep :sgi)
+  (comf "target:assembly/mips/assem-rtns" :assem t)
+  (comf "target:assembly/mips/array" :assem t)
+  (comf "target:assembly/mips/arith" :assem t)
+  (comf "target:assembly/mips/alloc" :assem t))
 
 ;;; these guys can supposedly come in any order, but not really.
 ;;; some are put at the end so macros don't run interpreted and stuff.
