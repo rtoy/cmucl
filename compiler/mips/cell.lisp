@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.9 1990/02/20 18:21:28 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/cell.lisp,v 1.10 1990/02/20 19:34:59 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of various primitive memory access
 ;;; VOPs for the MIPS.
@@ -77,21 +77,26 @@
 	      (getf props :set-vop)
 	      (getf props :setf-vop)
 	      (getf props :set-trans)
-	      (getf props :docs)))))
+	      (getf props :docs)
+	      (getf props :init :zero)))))
 
-(defmacro defslots ((name &key (header t) (lowtag 0)) &rest slots)
+(defmacro defslots ((name &key header (lowtag 0) alloc-vop alloc-trans)
+		    &rest slots)
   (let ((compile-time nil)
 	(load-time nil)
 	(index (if header 1 0))
 	(slot-names (if header '(header)))
-	(did-rest nil))
+	(did-rest nil)
+	(init-forms nil)
+	(init-args nil)
+	(need-unbound-marker nil))
     (dolist (slot slots)
       (when did-rest
 	(error "Rest slot ~S in defslots of ~S is not the last one."
 	       did-rest name))
       (multiple-value-bind
 	  (slot-name rest boxed ref-vop ref-trans
-		     set-vop setf-vop set-trans docs)
+		     set-vop setf-vop set-trans docs init)
 	  (parse-slot slot)
 	(let ((const (intern (concatenate 'simple-string
 					  (string name)
@@ -115,60 +120,119 @@
 		     (:variant ,const ,lowtag)
 		     ,@(when ref-trans
 			 `((:translate ,ref-trans))))
-		  load-time)))
+		  load-time))
+	  (case init
+	    (:zero)
+	    (:null
+	     (push `(storew null-tn result ,const ,lowtag) init-forms))
+	    (:unbound
+	     (setf need-unbound-marker t)
+	     (push `(storew temp result ,const ,lowtag) init-forms))
+	    (:arg
+	     (push slot-name init-args)
+	     (push `(storew ,slot-name result ,const ,lowtag) init-forms))))
 	(push (if (or (not boxed) rest)
 		  `(,slot-name
 		    ,@(if (not boxed) '(:boxed nil))
 		    ,@(if rest '(:rest t)))
 		  slot-name)
 	      slot-names)
-	(when rest
-	  (setf did-rest slot-name)))
-      (incf index))
-    (unless did-rest
-      (push `(defconstant ,(intern (concatenate 'simple-string
-						(string name)
-						"-SIZE"))
-	       ,index
+	(if rest
+	    (setf did-rest slot-name)
+	    (incf index))))
+    (let ((size (intern (concatenate 'simple-string
+				     (string name)
+				     (if did-rest "-BASE-SIZE" "-SIZE")))))
+      (push `(defconstant ,size ,index
 	       ,(format nil
-		  "Number of slots used by each ~S~@[ including the header~]."
-		  name header))
-	    compile-time))
+			"Number of slots used by each ~S~
+			~@[ including the header~]~@[ excluding any data~]."
+			name header did-rest))
+	    compile-time)
+      (when alloc-vop
+	(push `(define-vop (,alloc-vop)
+		 (:args ,@(when did-rest
+			    `((extra-words :scs (any-reg descriptor-reg))))
+			,@(mapcar #'(lambda (name)
+				      `(,name :scs (any-reg descriptor-reg)))
+				  (nreverse init-args)))
+		 (:temporary (:scs (non-descriptor-reg) :type random)
+			     ndescr
+			     ,@(when (or need-unbound-marker header did-rest)
+				 '(temp)))
+		 (:temporary (:scs (descriptor-reg) :to (:result 0)
+				   :target real-result) result)
+		 (:results (real-result :scs (descriptor-reg)))
+		 (:policy fast-safe)
+		 ,@(when alloc-trans
+		     `((:translate ,alloc-trans)))
+		 (:generator 37
+		   (pseudo-atomic (ndescr)
+		     (inst addiu result alloc-tn ,lowtag)
+		     ,@(cond ((and header did-rest)
+			      `((inst addiu temp extra-words ,size)
+				(inst addu alloc-tn alloc-tn temp)
+				(inst sll temp temp
+				      (- vm:type-bits vm:word-bits))
+				(inst ori temp temp ,header)
+				(storew temp result 0 ,lowtag)
+				(inst addiu alloc-tn alloc-tn vm:lowtag-mask)
+				(loadi temp (lognot vm:lowtag-mask))
+				(inst and alloc-tn alloc-tn temp)))
+			     (did-rest
+			      (error ":REST T with no header in ~S?" name))
+			     (header
+			      `((inst addiu alloc-tn alloc-tn
+				      (vm:pad-data-block ,size))
+				(loadi temp (logior (ash ,size vm:type-bits)
+						    ,header))
+				(storew temp result 0 ,lowtag)))
+			     (t
+			      `((inst addiu alloc-tn alloc-tn
+				      (vm:pad-data-block ,size)))))
+		     ,@(when need-unbound-marker
+			 `((loadi temp vm:unbound-marker-type)))
+		     ,@(nreverse init-forms)
+		     (move real-results result))))
+	      load-time)))
     `(progn
        (eval-when (compile load eval)
 	 ,@(nreverse compile-time))
        ,@(nreverse load-time)
        (defconstant ,(intern (concatenate 'simple-string
-					   (string name)
-					   "-STRUCTURE"))
+					  (string name)
+					  "-STRUCTURE"))
 	 ',(reverse slot-names)))))
 
-(defslots (cons :lowtag list-pointer-type :header nil)
+(defslots (cons :lowtag list-pointer-type
+		:alloc-vop cons-vop :alloc-trans cons)
   (car :ref-vop car :ref-trans car
-       :setf-vop set-car :set-trans %rplaca)
+       :setf-vop set-car :set-trans %rplaca
+       :init :arg)
   (cdr :ref-vop cdr :ref-trans cdr
-       :setf-vop set-cdr :set-trans %rplacd))
+       :setf-vop set-cdr :set-trans %rplacd
+       :init :arg))
 
 
-(defslots (bignum :lowtag other-pointer-type)
+(defslots (bignum :lowtag other-pointer-type :header bignum-type)
   (digits :rest t :boxed nil))
 
-(defslots (ratio :lowtag other-pointer-type)
+(defslots (ratio :lowtag other-pointer-type :header ratio-type)
   numerator
   denominator)
 
-(defslots (single-float :lowtag other-pointer-type)
+(defslots (single-float :lowtag other-pointer-type :header single-float-type)
   value)
 
-(defslots (double-float :lowtag other-pointer-type)
+(defslots (double-float :lowtag other-pointer-type :header double-float-type)
   value
   more-value)
 
-(defslots (complex :lowtag other-pointer-type)
+(defslots (complex :lowtag other-pointer-type :header complex-type)
   real
   imag)
 
-(defslots (array :lowtag other-pointer-type)
+(defslots (array :lowtag other-pointer-type :header t)
   fill-pointer
   elements
   data
@@ -176,17 +240,18 @@
   displaced-p
   (dimensions :rest t))
 
-(defslots (vector :lowtag other-pointer-type)
+(defslots (vector :lowtag other-pointer-type :header t)
   length
   (data :rest t :boxed nil))
 
-(defslots (code :lowtag other-pointer-type)
+(defslots (code :lowtag other-pointer-type :header t)
   code-size
   entry-points
   debug-info
   (constants :rest t))
 
-(defslots (function-header :lowtag function-pointer-type)
+(defslots (function-header :lowtag function-pointer-type
+			   :header function-header-type)
   self
   next
   name
@@ -194,24 +259,29 @@
   type
   (code :rest t :boxed nil))
 
-(defslots (return-pc :lowtag other-pointer-type)
+(defslots (return-pc :lowtag other-pointer-type :header t)
   (return-point :boxed nil :rest t))
 
-(defslots (closure :lowtag function-pointer-type)
-  function
+(defslots (closure :lowtag function-pointer-type :header closure-header-type
+		   :alloc-vop make-closure)
+  (function :init :arg)
   (info :rest t :set-vop closure-init :ref-vop closure-ref))
 
-(defslots (value-cell :lowtag other-pointer-type)
-  (value :set-vop value-cell-set :ref-vop value-cell-ref))
+(defslots (value-cell :lowtag other-pointer-type :header value-cell-type
+		      :alloc-vop make-value-cell)
+  (value :set-vop value-cell-set :ref-vop value-cell-ref :init :arg))
 
-(defslots (symbol :lowtag other-pointer-type)
-  (value :setf-vop set :set-trans set)
-  (function :setf-vop set-symbol-function :set-trans %sp-set-definition)
+(defslots (symbol :lowtag other-pointer-type :header symbol-header-type
+		  :alloc-vop make-symbol-vop :alloc-trans %make-symbol)
+  (value :setf-vop set :set-trans set :init :unbound)
+  (function :setf-vop set-symbol-function :set-trans %sp-set-definition
+	    :init :unbound)
   (plist :ref-vop symbol-plist :ref-trans symbol-plist
-	 :setf-vop set-symbol-plist :set-trans %sp-set-plist)
-  (name :ref-vop symbol-name :ref-trans symbol-name)
+	 :setf-vop set-symbol-plist :set-trans %sp-set-plist
+	 :init :null)
+  (name :ref-vop symbol-name :ref-trans symbol-name :init :arg)
   (package :ref-vop symbol-package :ref-trans symbol-package
-	   :setf-vop set-package))
+	   :setf-vop set-package :init :null))
 
 
 
