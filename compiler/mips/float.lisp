@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.3 1990/07/05 09:56:03 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/float.lisp,v 1.4 1990/07/07 01:00:23 wlott Exp $
 ;;;
 ;;;    This file contains floating point support for the MIPS.
 ;;;
@@ -122,7 +122,8 @@
 			 ,@(when double-p
 			     '((inst swc1-odd x nfp
 				     (+ offset vm:word-bytes)))))))))
-		(define-move-vop ,name :move-argument (,sc) (,sc)))))
+		(define-move-vop ,name :move-argument
+		  (,sc descriptor-reg) (,sc)))))
   (frob move-single-float-argument single-reg single-stack :single nil)
   (frob move-double-float-argument double-reg double-stack :double t))
 
@@ -331,3 +332,38 @@
   (:generator 2
     (inst mfc1 lo-bits float)
     (inst nop)))
+
+
+;;;; SAP accessors/setters
+
+(define-vop (sap-ref-single sap-ref)
+  (:translate sap-ref-single)
+  (:results (result :scs (single-reg)))
+  (:result-types single-float)
+  (:variant :single nil))
+
+(define-vop (sap-set-single sap-set)
+  (:translate %set-sap-ref-single)
+  (:args (object :scs (sap-reg) :target sap)
+	 (offset :scs (any-reg negative-immediate zero immediate))
+	 (value :scs (single-reg) :target result))
+  (:arg-types system-area-pointer positive-fixnum single-float)
+  (:results (result :scs (single-reg)))
+  (:result-types single-float)
+  (:variant :single))
+
+(define-vop (sap-ref-double sap-ref)
+  (:translate sap-ref-double)
+  (:results (result :scs (double-reg)))
+  (:result-types double-float)
+  (:variant :double nil))
+
+(define-vop (sap-set-double sap-set)
+  (:translate %set-sap-ref-double)
+  (:args (object :scs (sap-reg) :target sap)
+	 (offset :scs (any-reg negative-immediate zero immediate))
+	 (value :scs (double-reg) :target result))
+  (:arg-types system-area-pointer positive-fixnum double-float)
+  (:results (result :scs (double-reg)))
+  (:result-types double-float)
+  (:variant :double))
