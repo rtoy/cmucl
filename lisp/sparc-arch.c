@@ -1,6 +1,6 @@
 /*
 
- $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.24 2004/08/06 17:23:23 rtoy Exp $
+ $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/sparc-arch.c,v 1.25 2004/09/14 17:08:24 rtoy Exp $
 
  This code was written as part of the CMU Common Lisp project at
  Carnegie Mellon University, and has been placed in the public domain.
@@ -470,6 +470,19 @@ static void sigill_handler(HANDLER_ARGS)
 	    break;
 
 	  case trap_Breakpoint:
+#ifdef GENCGC            
+            /*
+             * This eventually calls in to Lisp code, so we want to
+             * have at least SIGILL enabled so we can do allocations
+             * (gencgc).
+             */
+            {
+              sigset_t sigs;
+              sigemptyset(&sigs);
+              sigaddset(&sigs, SIGILL);
+              sigprocmask(SIG_UNBLOCK, &sigs, NULL);
+            }
+#endif            
 	    handle_breakpoint(signal, CODE(code), context);
 	    break;
 
