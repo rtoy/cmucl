@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.22 1991/03/12 17:45:29 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/debug-int.lisp,v 1.23 1991/04/09 10:45:53 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1892,7 +1892,6 @@
 	       (flags (prog1 (aref map i) (incf i)))
 	       (vars-p (logtest flags c::minimal-debug-function-variables-bit))
 	       (dfun (make-uncompacted-debug-fun)))
-	  (print dfun)
 	  (res code-start-pc)
 	  (res dfun)))
       
