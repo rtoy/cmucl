@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.25 1991/05/31 14:21:26 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ltn.lisp,v 1.26 1991/11/09 22:07:34 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -165,9 +165,9 @@
 ;;;
 ;;;    If TAIL-P is true, then we check to see if the call can really be a tail
 ;;; call by seeing if this function's return convention is :UNKNOWN.  If so, we
-;;; unlink the call from the return block (after ensuring that they are in
-;;; separate blocks.)  This allows the return to be deleted when there are no
-;;; non-tail uses.
+;;; move the call block succssor link from the return block to the component
+;;; tail (after ensuring that they are in separate blocks.)  This allows the
+;;; return to be deleted when there are no non-tail uses.
 ;;;
 (defun flush-full-call-tail-transfer (call)
   (declare (type basic-combination call))
@@ -176,7 +176,8 @@
       (cond ((eq (return-info-kind (tail-set-info tails)) :unknown)
 	     (node-ends-block call)
 	     (let ((block (node-block call)))
-	       (unlink-blocks block (first (block-succ block)))))
+	       (unlink-blocks block (first (block-succ block)))
+	       (link-blocks block (component-tail (block-component block)))))
 	    (t
 	     (setf (node-tail-p call) nil)))))
   (undefined-value))
