@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.1 1993/02/04 22:37:05 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/type.lisp,v 1.2 1993/02/08 22:22:18 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -217,6 +217,7 @@
   (declare (ignore type1 type2))
   (values nil t))
 
+
 ;;; The union or intersection of two FUNCTION types is FUNCTION.
 ;;;
 (define-type-method (function :simple-union) (type1 type2)
@@ -226,6 +227,9 @@
 (define-type-method (function :simple-intersection) (type1 type2)
   (declare (ignore type1 type2))
   (values (specifier-type 'function) t))
+
+(define-type-method (function :complex-intersection) (type1 type2)
+  (vanilla-intersection type1 type2))
 
 
 ;;; ### Not very real, but good enough for redefining transforms according to
@@ -690,10 +694,15 @@
   (declare (type ctype type1 type2))
   (if (eq type1 type2)
       type1
-      (or (invoke-type-method :simple-union :complex-union
-			      type1 type2
-			      :default nil)
-	  (make-union-type (list type1 type2)))))
+      (let ((res (invoke-type-method :simple-union :complex-union
+				     type1 type2
+				     :default :vanilla)))
+	(cond ((eq res :vanilla)
+	       (or (vanilla-union type1 type2)
+		   (make-union-type (list type1 type2))))
+	      (res)
+	      (t
+	       (make-union-type (list type1 type2)))))))
 
 
 ;;; Type-Intersection  --  Interface
@@ -837,82 +846,52 @@
 
 ;;;; Builtin types.
 
-;;; The NAMED-TYPE is used to represent * and NIL, which are the two non-class
-;;; primitive types.
+;;; The NAMED-TYPE is used to represent *, T and NIL.  These types must be
+;;; super or sub types of all types, not just classes and * & NIL aren't
+;;; classes anyway, so it wouldn't make much sense to make them built-in
+;;; classes.
 ;;;
-(defstruct (named-type (:include ctype)
+(defstruct (named-type (:include ctype
+				 (:class-info (type-class-or-lose 'named)))
 		       (:print-function %print-type))
   (name nil :type symbol))
 
-(define-type-class wild)
+(define-type-class named)
+
 (defvar *wild-type*)
-(cold-load-init
-  (setq *wild-type*
-	(make-named-type :name '* :class-info (type-class-or-lose 'wild)))
-  (setf (info type kind '*) :primitive)
-  (setf (info type builtin '*) *wild-type*))
-
-(define-type-method (wild :simple-subtypep :simple-intersection :simple-=)
-		    (type1 type2)
-  (declare (ignore type1 type2))
-  (error "Shouldn't happen."))
-
-(define-type-method (wild :complex-subtypep-arg1) (type1 type2)
-  (declare (ignore type1 type2))
-  (values nil t))
-
-(define-type-method (wild :complex-subtypep-arg2) (type1 type2)
-  (declare (ignore type1 type2))
-  (values t t))
-
-(define-type-method (wild :complex-union) (type1 type2)
-  (declare (ignore type1 type2))
-  (values *wild-type* t))
-
-(define-type-method (wild :complex-intersection) (type1 type2)
-  (declare (ignore type1))
-  (values type2 t))
-
-(define-type-method (wild :unparse) (x)
-  (declare (ignore x))
-  '*)
-
-(define-type-class bottom)
 (defvar *empty-type*)
-(cold-load-init
-  (setq *empty-type*
-	(make-named-type :class-info (type-class-or-lose 'bottom)
-			 :name 'nil))
-  (setf (info type kind nil) :primitive)
-  (setf (info type builtin nil) *empty-type*))
-
-(define-type-method (bottom :simple-subtypep :simple-intersection :simple-=)
-		    (type1 type2)
-  (declare (ignore type1 type2))
-  (error "Shouldn't happen."))
-
-(define-type-method (bottom :complex-subtypep-arg1) (type1 type2)
-  (declare (ignore type1 type2))
-  (values t t))
-
-(define-type-method (bottom :complex-subtypep-arg2) (type1 type2)
-  (declare (ignore type1 type2))
-  (values nil t))
-
-(define-type-method (bottom :complex-union) (type1 type2)
-  (declare (ignore type2))
-  (values type1 t))
-
-(define-type-method (bottom :complex-intersection) (type1 type2)
-  (declare (ignore type1 type2))
-  (values *empty-type* t))
-
-(define-type-method (bottom :unparse) (x)
-  (declare (ignore x))
-  'nil)
-
 (defvar *universal-type*)
-(cold-load-init (setq *universal-type* (specifier-type 't)))
+
+(cold-load-init
+ (macrolet ((frob (name var)
+	      `(progn
+		 (setq ,var (make-named-type :name ',name))
+		 (setf (info type kind ',name) :primitive)
+		 (setf (info type builtin ',name) ,var))))
+   (frob * *wild-type*)
+   (frob nil *empty-type*)
+   (frob t *universal-type*)))
+
+(define-type-method (named :simple-=) (type1 type2)
+  (eq type1 type2))
+
+(define-type-method (named :simple-subtypep) (type1 type2)
+  (values (or (eq type1 *empty-type*) (eq type2 *wild-type*)) t))
+
+(define-type-method (named :complex-subtypep-arg1) (type1 type2)
+  (assert (not (hairy-type-p type2)))
+  (values (eq type1 *empty-type*) t))
+
+(define-type-method (named :complex-subtypep-arg2) (type1 type2)
+  (if (hairy-type-p type1)
+      (values nil nil)
+      (values (not (eq type2 *empty-type*)) t)))
+
+(define-type-method (named :complex-intersection) (type1 type2)
+  (vanilla-intersection type1 type2))
+
+(define-type-method (named :unparse) (x)
+  (named-type-name x))
 
 
 ;;;; Hairy and unknown types:
@@ -1831,14 +1810,6 @@
 
 ;;;; Union types:
 
-#+reload
-(define-type-method (structure :simple-union) (t1 t2)
-  (vanilla-union t1 t2))
-
-#+reload
-(define-type-method (named :simple-union) (t1 t2)
-  (vanilla-union t1 t2))
-
 ;;; The Union-Type represents uses of the OR type specifier which can't be
 ;;; canonicalized to something simpler.  Canonical form:
 ;;;
@@ -2125,17 +2096,18 @@
 (defun ctypep (obj type)
   (declare (type ctype type))
   (etypecase type
-    ((or numeric-type named-type member-type array-type
-	 #+reload structure-type)
+    ((or numeric-type named-type member-type array-type built-in-class)
      (values (%typep obj type) t))
     (class
-     (if #-ns-boot(%instancep obj)
+     (if #-ns-boot(if (csubtypep type (specifier-type 'generic-function))
+		      (funcallable-instance-p obj)
+		      (%instancep obj))
 	 #+ns-boot(structurep obj)
 	 (if (eq (class-layout type)
 		 (info type compiler-layout (class-name type)))
 	     (values (typep obj type) t)
-	     (values nil nil)))
-     (values nil t))
+	     (values nil nil))
+	 (values nil t)))
     (union-type
      (dolist (mem (union-type-types type) (values nil t))
        (multiple-value-bind (val win)
@@ -2280,7 +2252,7 @@
 
 ;;;
 ;;; A type specifier.
-(deftype type-specifier () '(or list symbol))
+(deftype type-specifier () '(or list symbol class))
 ;;;
 ;;; An index into an array.   Also used for sequence index. 
 (deftype index () `(integer 0 (,array-dimension-limit)))
