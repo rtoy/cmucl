@@ -491,106 +491,6 @@
 	(alien-type-type return-type)
 	*universal-type*)))
 
-(defun make-call-out-nsp-tn ()
-  (make-wired-tn (primitive-type-or-lose 'positive-fixnum)
-		 (sc-number-or-lose 'any-reg)
-		 nsp-offset))
-
-(defun make-call-out-argument-tns (arg-types)
-  (let ((stack-frame-size 0)
-	(did-int-arg nil)
-	(float-args 0))
-    (collect ((tns))
-      (dolist (type arg-types)
-	(let ((name (if (consp type) (car type) type)))
-	  (ecase name
-	    ((unsigned-byte port)
-	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-				     (sc-number-or-lose 'unsigned-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-				     (sc-number-or-lose 'unsigned-stack)
-				     stack-frame-size)))
-	     (incf stack-frame-size)
-	     (setf did-int-arg t))
-	    (signed-byte
-	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-				     (sc-number-or-lose 'signed-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-				     (sc-number-or-lose 'signed-stack)
-				     stack-frame-size)))
-	     (incf stack-frame-size)
-	     (setf did-int-arg t))
-	    (system-area-pointer
-	     (if (< stack-frame-size 4)
-		 (tns (make-wired-tn (primitive-type-or-lose
-				      'system-area-pointer)
-				     (sc-number-or-lose 'sap-reg)
-				     (+ stack-frame-size 4)))
-		 (tns (make-wired-tn (primitive-type-or-lose
-				      'system-area-pointer)
-				     (sc-number-or-lose 'sap-stack)
-				     stack-frame-size)))
-	     (incf stack-frame-size)
-	     (setf did-int-arg t))
-	    (double-float
-	     ;; Round to a dual-word.
-	     (setf stack-frame-size (logandc2 (1+ stack-frame-size) 1))
-	     (cond ((>= stack-frame-size 4)
-		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
-					(sc-number-or-lose 'double-stack)
-					stack-frame-size)))
-		   ((and (not did-int-arg) (< float-args 2))
-		    (tns (make-wired-tn (primitive-type-or-lose 'double-float)
-					(sc-number-or-lose 'double-reg)
-					(+ (* float-args 2) 12))))
-		   (t
-		    (error "Can't put floats in int regs yet.")))
-	     (incf stack-frame-size 2)
-	     (incf float-args))
-	    (single-float
-	     (cond ((>= stack-frame-size 4)
-		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
-					(sc-number-or-lose 'single-stack)
-					stack-frame-size)))
-		   ((and (not did-int-arg) (< float-args 2))
-		    (tns (make-wired-tn (primitive-type-or-lose 'single-float)
-				   (sc-number-or-lose 'single-reg)
-				   (+ (* float-args 2) 12))))
-		   (t
-		    (error "Can't put floats in int regs yet.")))
-	     (incf stack-frame-size)
-	     (incf float-args)))))
-      (values (tns)
-	      (logandc2 (1+ stack-frame-size) 1)))))
-
-(defun make-call-out-result-tn (type)
-  (let ((name (if (consp type) (car type) type)))
-    (ecase name
-      ((unsigned-byte port)
-       (make-wired-tn (primitive-type-or-lose 'unsigned-byte-32)
-		      (sc-number-or-lose 'unsigned-reg)
-		      2))
-      (signed-byte
-       (make-wired-tn (primitive-type-or-lose 'signed-byte-32)
-		      (sc-number-or-lose 'signed-reg)
-		      2))
-      (system-area-pointer
-       (make-wired-tn (primitive-type-or-lose 'system-area-pointer)
-		      (sc-number-or-lose 'sap-reg)
-		      2))
-      (double-float
-       (make-wired-tn (primitive-type-or-lose 'double-float)
-		      (sc-number-or-lose 'double-reg)
-		      0))
-      (single-float
-       (make-wired-tn (primitive-type-or-lose 'single-float)
-		      (sc-number-or-lose 'single-reg)
-		      0)))))
-
 (defoptimizer (ext::call-foreign-function ltn-annotate)
 	      ((name return-type arg-types &rest args) node policy)
   (setf (basic-combination-info node) :funny)
@@ -954,7 +854,7 @@
       (let* ((high-bits (- 32 bits))
 	     (low-bits (- size high-bits)))
 	(multiple-value-bind (low-byte high-byte)
-			     (ecase vm:target-byte-order
+			     (ecase (backend-byte-order *backend*)
 			       (:little-endian
 				(values 'offset '(1+ offset)))
 			       (:big-endian
@@ -1008,7 +908,7 @@
       (let* ((high-bits (- 32 bits))
 	     (low-bits (- size high-bits)))
 	(multiple-value-bind (low-byte high-byte)
-			     (ecase vm:target-byte-order
+			     (ecase (backend-byte-order *backend*)
 			       (:little-endian
 				(values 'offset '(1+ offset)))
 			       (:big-endian
