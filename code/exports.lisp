@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.37 1990/07/02 16:44:57 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.38 1990/07/03 09:34:43 wlott Exp $
 ;;;
 ;;; All the stuff necessary to export various symbols from various packages.
 ;;;
@@ -467,10 +467,13 @@
 	  code-header-type complex-array-type complex-bit-vector-type
 	  complex-imag-slot complex-real-slot complex-size
 	  complex-string-type complex-type complex-vector-type
-	  cons-car-slot cons-cdr-slot cons-size 
-	  define-for-each-primitive-object double-float-size
-	  double-float-type double-float-value-slot error-trap
-	  even-fixnum-type exported-static-symbols fixnum
+	  cons-car-slot cons-cdr-slot cons-size
+	  define-for-each-primitive-object double-float-bias
+	  double-flaot-exponent-byte double-float-hidden-bit
+	  double-float-normal-exponent-min double-float-normal-exponent-max
+	  double-float-size double-float-significand-byte double-float-type
+	  double-float-value-slot error-trap even-fixnum-type
+	  exported-static-symbols fixnum float-sign-shift
 	  function-header-arglist-slot function-header-code-offset
 	  function-header-name-slot function-header-next-slot
 	  function-header-self-slot function-header-type
@@ -492,27 +495,29 @@
 	  simple-array-unsigned-byte-32-type
 	  simple-array-unsigned-byte-4-type
 	  simple-array-unsigned-byte-8-type simple-bit-vector-type
-	  simple-string-type simple-vector-type single-float-size
-	  single-float-type single-float-value-slot slot-docs slot-length
-	  slot-name slot-offset slot-options slot-rest-p
-	  static-symbol-offset static-symbol-p static-symbols
-	  structure-pointer-type symbol-function-slot symbol-header-type
-	  symbol-name-slot symbol-package-slot symbol-plist-slot
-	  symbol-size symbol-value-slot target-binding-stack-start
-	  target-byte-order target-control-stack-start
-	  target-dynamic-space-start target-fasl-code-format
-	  target-fasl-file-type target-heap-address-space
-	  target-most-negative-fixnum target-most-positive-fixnum
-	  target-read-only-space-start target-static-space-start type-bits
-	  type-mask unbound-marker-type unwind-block-current-code-slot
-	  unwind-block-current-cont-slot unwind-block-current-uwp-slot
-	  unwind-block-entry-pc-slot unwind-block-size
-	  value-cell-header-type value-cell-size value-cell-value-slot
-	  vector-data-offset vector-length-slot vector-normal-subtype
-	  vector-structure-subtype vector-valid-hashing-subtype
-	  vector-must-rehash-subtype vm-version word-bits word-bytes
-	  word-shift weak-pointer-type weak-pointer-size
-	  weak-pointer-value-slot weak-pointer-next-slot
+	  simple-string-type simple-vector-type single-float-bias
+	  single-float-exponent-byte single-float-hidden-bit
+	  single-float-normal-exponent-min single-float-normal-exponent-max
+	  single-float-size single-float-significand-byte single-float-type
+	  single-float-value-slot slot-docs slot-length slot-name
+	  slot-offset slot-options slot-rest-p static-symbol-offset
+	  static-symbol-p static-symbols structure-pointer-type
+	  symbol-function-slot symbol-header-type symbol-name-slot
+	  symbol-package-slot symbol-plist-slot symbol-size
+	  symbol-value-slot target-binding-stack-start target-byte-order
+	  target-control-stack-start target-dynamic-space-start
+	  target-fasl-code-format target-fasl-file-type
+	  target-heap-address-space target-most-negative-fixnum
+	  target-most-positive-fixnum target-read-only-space-start
+	  target-static-space-start type-bits type-mask unbound-marker-type
+	  unwind-block-current-code-slot unwind-block-current-cont-slot
+	  unwind-block-current-uwp-slot unwind-block-entry-pc-slot
+	  unwind-block-size value-cell-header-type value-cell-size
+	  value-cell-value-slot vector-data-offset vector-length-slot
+	  vector-normal-subtype vector-structure-subtype
+	  vector-valid-hashing-subtype vector-must-rehash-subtype
+	  vm-version word-bits word-bytes word-shift weak-pointer-type
+	  weak-pointer-size weak-pointer-value-slot weak-pointer-next-slot
 	  
 	  single-float-bias
 	  double-float-bias single-float-significand-byte
