@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.62 2003/06/10 16:52:36 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.63 2004/01/18 14:06:40 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -694,6 +694,14 @@ a host-structure or string."
 			   name-or-type name)))))))
       (check-component-validity name :pathname-name)
       (check-component-validity type :pathname-type))
+
+    ;; CLHS 19.2.2.4.3 says :absolute or :wild-inferiors immediately
+    ;; followed by :up or :back signals a file-error.
+
+    (let ((d (or (member :wild-inferiors dir)
+		 (member :absolute dir))))
+      (when (and d (rest d) (member (second d) '(:up :back)))
+	(error 'file-error)))
     
     (macrolet ((pick (var varp field)
 		 `(cond ((or (simple-string-p ,var)
@@ -1924,6 +1932,11 @@ a host-structure or string."
 	   (type list translations)
 	   (values list))
 
+  (let ((maybe-search-list-host (concatenate 'string host ":")))
+    (when (search-list-defined-p maybe-search-list-host)
+      (cerror "Clobber search-list host with logical pathname host"
+	      "~S names a CMUCL search-list"
+	      host)))
   (let ((host (intern-logical-host host)))
     (setf (logical-host-canon-transls host)
 	  (canonicalize-logical-pathname-translations translations host))
