@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.15 1992/02/21 22:00:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.16 1992/02/23 21:17:33 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -48,7 +48,8 @@
 	  fndelay fappend fasync fcreat ftrunc fexcl unix-link unix-lseek
 	  l_set l_incr l_xtnd unix-mkdir unix-open o_rdonly o_wronly o_rdwr
 	  o_append o_creat o_trunc o_excl unix-pipe unix-read unix-readlink
-	  unix-rename unix-rmdir unix-select unix-sync unix-fsync unix-truncate
+	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
+	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase tty-cbreak
 	  tty-tandem TIOCGETP TIOCSETP TIOCFLUSH TIOCSETC TIOCGETC TIOCSLTC
@@ -771,6 +772,28 @@
    an error number is returned if an error occured."
   (declare (type unix-pathname name))
   (void-syscall ("rmdir" c-string) name))
+
+;;; UNIX-FAST-SELECT -- public.
+;;;
+(declaim (inline unix-fast-select))
+;;;
+(defun unix-fast-select (num-descriptors read-fds write-fds exception-fds
+			 timeout-secs &optional (timeout-usecs 0))
+  "Perform the UNIX select(2) system call."
+  (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)
+	   (type (or (alien (* (struct fd-set))) null)
+		 read-fds write-fds exception-fds)
+	   (type (or null (unsigned-byte 32)) timeout-secs)
+	   (type (unsigned-byte 32) timeout-usecs)
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
+  (with-alien ((tv (struct timeval)))
+    (when timeout-secs
+      (setf (slot tv 'tv-sec) timeout-secs)
+      (setf (slot tv 'tv-usec) timeout-usecs))
+    (int-syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+		  (* (struct fd-set)) (* (struct timeval)))
+		 num-descriptors read-fds write-fds exception-fds
+		 (if timeout-secs (alien-sap (addr tv)) (int-sap 0)))))
 
 ;;; Unix-select accepts sets of file descriptors and waits for an event
 ;;; to happen on one of them or to time out.
