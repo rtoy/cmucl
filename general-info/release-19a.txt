@@ -188,6 +188,8 @@ New in this release:
      - ROOM should handle the large heaps now without overflowing
        internal counters or signaling type errors.  Columns should
        line up better too.
+     - READ-SEQUENCE was returning too soon when reading from files
+       into simple-strings even though there were data available.
 
   * Other changes:
      - CREATE-REQUEST-SERVER has an additional :reuse-address keyword
