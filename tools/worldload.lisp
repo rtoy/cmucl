@@ -6,7 +6,7 @@
 ;;; If you want to use this code or any part of CMU Common Lisp, please contact
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.72 1994/02/11 13:38:00 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.73 1994/02/11 15:20:07 ram Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -220,4 +220,4 @@
   ;;
   ;; Save the lisp.
   (save-lisp "lisp.core" :root-structures
-	     `(ed #-no-hemlock ,hi::*global-command-table*)))
+	     `(ed #-(or runtime no-hemlock) ,hi::*global-command-table*)))
