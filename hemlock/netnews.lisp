@@ -7,22 +7,23 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;; **********************************************************************
 ;;;
-;;;    Written by Blaine Burks
+;;; Written by Blaine Burks
 ;;;
-;;;  This file implements the reading of bulletin boards from within Hemlock
-;;;  via a known NNTP server.  Something should probably be done so that
-;;;  when the server is down Hemlock doesn't hang as I suspect it will.
+;;; This file implements the reading of bulletin boards from within Hemlock
+;;; via a known NNTP server.  Something should probably be done so that
+;;; when the server is down Hemlock doesn't hang as I suspect it will.
 ;;;
-;;;  Warning:    Throughout this file, it may appear I should have bound
-;;;              the nn-info-stream and nn-info-header-stream slots instead
-;;;              of making multiple structure accesses.  This was done on
-;;;              purpose because we don't find out if NNTP timed us out until
-;;;              we make an attempt to execute another command.  This code
-;;;              recovers by resetting the header-stream and stream slots in
-;;;              the nn-info structure to new streams.  If the structure
-;;;              access were not made again and NNTP had timed us out, we
-;;;              would be making requests on a defunct stream.
-;;; 
+;;; Warning:    Throughout this file, it may appear I should have bound
+;;;             the nn-info-stream and nn-info-header-stream slots instead
+;;;             of making multiple structure accesses.  This was done on
+;;;             purpose because we don't find out if NNTP timed us out until
+;;;             we make an attempt to execute another command.  This code
+;;;             recovers by resetting the header-stream and stream slots in
+;;;             the nn-info structure to new streams.  If the structure
+;;;             access were not made again and NNTP had timed us out, we
+;;;             would be making requests on a defunct stream.
+;;;
+
 (in-package "HEMLOCK")
 
 
@@ -50,7 +51,7 @@
   ;; The cache of header info for the current bboard.  Each element contains
   ;; an association list of header fields to contents of those fields.  Indexed
   ;; by id offset by the first message in the group.
-  (header-cache nil :type (or null vector))
+  (header-cache nil :type (or null simple-vector))
   ;;
   ;; The number of HEAD requests currently waiting on the header stream.
   (batch-count nil :type (or null fixnum))
@@ -442,19 +443,15 @@
 		       (cond ((> length (nn-info-array-length nn-info))
 			      (setf (nn-info-array-length nn-info) length)
 			      (values (make-array length :fill-pointer 0)
-				      (make-array length :fill-pointer 0
+				      (make-array length
 						  :initial-element nil)))
 			     (message-ids
-			      (unless (zerop (length header-cache))
-				(fill header-cache nil))
 			      (setf (fill-pointer message-ids) 0)
-			      (setf (fill-pointer header-cache) 0)
 			      (values message-ids header-cache))
 			     (t
 			      (values (make-array (nn-info-array-length nn-info)
 						  :fill-pointer 0)
 				      (make-array (nn-info-array-length nn-info)
-						  :fill-pointer 0
 						  :initial-element nil)))))
 		   (setf (nn-info-message-ids nn-info) message-ids)
 		   (setf (nn-info-header-cache nn-info) header-cache))
@@ -594,13 +591,14 @@
 	      (let* ((id (head-response-args response))
 		     (index (- id offset)))
 		(vector-push id message-ids)
+		(setf (svref cache index) nil)
 		(with-input-from-nntp (string stream)
 				      (let ((colonpos (position #\: string)))
 					(when colonpos
 					  (push (cons (subseq string 0 colonpos)
 						      (subseq string
 							      (+ colonpos 2)))
-						(aref cache index))))))
+						(svref cache index))))))
 	      (incf missing-message-count))))
       (when from-end-p
 	(when (plusp missing-message-count)
@@ -610,10 +608,10 @@
 	(setf (fill-pointer message-ids)
 	      (- (+ old-count howmany) missing-message-count))))))
 
-(defvar netnews-field-na "NA"
+(defconstant netnews-field-na "NA"
   "This string gets inserted when NNTP doesn't find a field.")
 
-(defvar netnews-field-na-length (length netnews-field-na)
+(defconstant netnews-field-na-length (length netnews-field-na)
   "The length of netnews-field-na")
 
 (defun nn-write-headers-to-mark (nn-info buffer &optional fetch-rest-p
@@ -658,7 +656,7 @@
 		 (end (1- (+ start howmany))))
 	    (do ((i start (1+ i)))
 		((> i end))
-	      (let ((assoc-list (aref cache i)))
+	      (let ((assoc-list (svref cache i)))
 		(unless (null assoc-list)
 		  (insert-string mark netnews-space-string
 				 0 (value netnews-before-date-field-pad))
@@ -860,7 +858,7 @@
 ;;; page of it.  Also check to make sure there is a message under the
 ;;; point.  If there is not, then get some more headers.  If there are no
 ;;; more headers, then go on to the next board.  I can read and write.  Hi
-;;; Bill.  Are you having fun grocking my code?  Hope so -- Dude.  Nothing
+;;; Bill.  Are you having fun grokking my code?  Hope so -- Dude.  Nothing
 ;;; like stream of consciousness is there?  Come to think of it, this is
 ;;; kind of like recursive stream of conscious because I'm writing down my
 ;;; stream of conscious which is about my stream of conscious. I think I'm
@@ -944,13 +942,24 @@
   field should be limited."
   :value nil)
 
+
+(defcommand "Netnews Show All Headers" (p)
+  "" ""
+  (declare (ignore p))
+  (let* ((headers-buffer (nn-get-headers-buffer))
+	 (nn-info (variable-value 'netnews-info :buffer headers-buffer))
+	 (buffer (nn-get-message-buffer nn-info)))
+    (with-writable-buffer (buffer)
+      (delete-region (buffer-region buffer))
+      (nn-put-article-in-buffer nn-info headers-buffer t))))
+
 ;;; NN-PUT-ARTICLE-IN-BUFFER puts the article under the point into the
 ;;; associated message buffer if it is not there already.  Uses value of
 ;;; "Netnews Message Header Fields" to determine what fields should appear
 ;;; in the message header.  Returns the number of the article under the
 ;;; point.
 ;;;
-(defun nn-put-article-in-buffer (nn-info headers-buffer)
+(defun nn-put-article-in-buffer (nn-info headers-buffer &optional override)
   (let ((stream (nn-info-stream nn-info))
 	(article-number (array-element-from-mark 
 			 (buffer-point headers-buffer)
@@ -959,7 +968,8 @@
     (setf (nm-info-message-number (variable-value 'netnews-message-info
 						  :buffer message-buffer))
 	  (1+ (- article-number (nn-info-first nn-info))))
-    (cond ((= (nn-info-current-displayed-message nn-info) article-number)
+    (cond ((and (= (nn-info-current-displayed-message nn-info) article-number)
+		(not override))
 	   (buffer-start (buffer-point message-buffer)))
 	  (t
 	   ;; Request article as soon as possible to avoid waiting for reply.
@@ -969,11 +979,12 @@
 	   (process-status-response stream nn-info)
 	   (with-writable-buffer (message-buffer)
 	     (let ((point (buffer-point message-buffer))
-		   (info (aref (nn-info-header-cache nn-info)
+		   (info (svref (nn-info-header-cache nn-info)
 				(- article-number (nn-info-first nn-info))))
 		   (message-fields (value netnews-message-header-fields))
 		   key field-length)
-	       (cond (message-fields
+	       (cond ((and message-fields
+			   (not override))
 		      (dolist (ele message-fields)
 			(etypecase ele
 			  (atom (setf key ele field-length nil))
@@ -1685,14 +1696,15 @@
 ;;; need to delete one of the current windows.
 ;;; 
 (defun nn-post-buffer-delete-hook (buffer)
-  (nn-reply-cleanup-split-windows buffer)
-  (let* ((post-info (variable-value 'post-info :buffer buffer))
-	 (message-buffer (post-info-message-buffer post-info)))
-    (close (post-info-stream post-info))
-    (when message-buffer
-      (setf (nm-info-post-buffer (variable-value 'netnews-message-info
-						 :buffer message-buffer))
-	    nil))))
+  (when (hemlock-bound-p 'post-info)
+    (nn-reply-cleanup-split-windows buffer)
+    (let* ((post-info (variable-value 'post-info :buffer buffer))
+	   (message-buffer (post-info-message-buffer post-info)))
+      (close (post-info-stream post-info))
+      (when message-buffer
+	(setf (nm-info-post-buffer (variable-value 'netnews-message-info
+						   :buffer message-buffer))
+	      nil)))))
 
 ;;; NN-REPLY-USING-CURRENT-WINDOW makes sure there is only one window for a
 ;;; normal reply.  *netnews-post-frob-windows-hook* is bound to this when
@@ -1898,7 +1910,7 @@
     (nn-post-message (nn-info-buffer nn-info) post-buffer)))
 
 (defun nn-get-one-field (nn-info field article)
-  (cdr (assoc field (aref (nn-info-header-cache nn-info)
+  (cdr (assoc field (svref (nn-info-header-cache nn-info)
 			  (- article (nn-info-first nn-info)))
 	      :test #'string-equal)))
 		     
