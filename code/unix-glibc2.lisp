@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.3 2000/07/31 09:54:20 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.2.2.4 2000/08/17 12:58:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2379,7 +2379,7 @@ in at a time in poll.")
    an event to occur; if TIMEOUT is -1, block until an event occurs.
    Returns the number of file descriptors with events, zero if timed out,
    or -1 for errors."
- (int-syscall ("pool" (* (struct pollfd)) long int)
+ (int-syscall ("poll" (* (struct pollfd)) long int)
 	      fds nfds timeout))
 
 ;;; sys/resource.h
