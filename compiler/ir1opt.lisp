@@ -46,6 +46,7 @@
 ;;;
 (proclaim '(function continuation-value (continuation) t))
 (defun continuation-value (cont)
+  (assert (constant-continuation-p cont))
   (constant-value (ref-leaf (continuation-use cont))))
 
 
