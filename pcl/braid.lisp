@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.16 2000/08/03 16:58:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.17 2000/08/06 19:11:13 dtc Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -507,17 +507,9 @@
 			:metaclass 'structure-class
 			:name symbol
 			:direct-superclasses
-			(cond ;; Handle the CMUCL structure based conditions.
-			      ((lisp:subtypep symbol 'condition)
-			       (mapcar #'lisp:class-name
-				       (kernel:class-direct-superclasses
-					(lisp:find-class symbol))))
-			      ;; Hack to add the stream class as a
-			      ;; mixin to the lisp-stream class.
-			      ((eq symbol 'sys:lisp-stream)
-			       '(structure-object stream))
-			      ((structure-type-included-type-name symbol)
-			       (list (structure-type-included-type-name symbol))))
+			(mapcar #'lisp:class-name
+				(kernel:class-direct-superclasses
+				 (lisp:find-class symbol)))
 			:direct-slots
 			(mapcar #'slot-initargs-from-structure-slotd
 				(structure-type-slot-description-list symbol)))))
