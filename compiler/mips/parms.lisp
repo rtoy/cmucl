@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.50 1990/05/25 12:28:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.51 1990/05/25 20:04:36 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -380,7 +380,7 @@
 
 (define-primitive-object (function-header :lowtag function-pointer-type
 					  :header function-header-type)
-  (self :ref-vop c::function-self)
+  (self :ref-vop c::function-self :set-vop c::set-function-self)
   (next :ref-vop c::function-next :set-vop c::set-function-next)
   (name :ref-vop c::function-name :set-vop c::set-function-name)
   (arglist :ref-vop c::function-arglist :set-vop c::set-function-arglist)
