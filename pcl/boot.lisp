@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.34 2002/10/09 15:32:27 pmai Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/boot.lisp,v 1.35 2002/10/11 16:15:55 pmai Exp $")
 
 (in-package :pcl)
 
@@ -920,15 +920,18 @@ work during bootstrapping.
 						      ,(cadr var)))))))
 		   (rest `((,var ,args-tail)))
 		   (key (cond ((not (consp var))
-			       `((,var (get-key-arg ,(make-keyword var)
-					            ,args-tail))))
+			       `((,var (car
+			                (get-key-arg-tail ,(make-keyword var)
+					                  ,args-tail)))))
 			      ((null (cddr var))
 			       (multiple-value-bind (keyword variable)
 				   (if (consp (car var))
 				       (values (caar var) (cadar var))
-				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ',keyword ,args-tail))
-				   (,variable (if (consp ,key)
+				       (values (make-keyword (car var))
+				               (car var)))
+				 `((,key (get-key-arg-tail ',keyword
+				                           ,args-tail))
+				   (,variable (if ,key
 						  (car ,key)
 						  ,(cadr var))))))
 			      (t
@@ -936,9 +939,10 @@ work during bootstrapping.
 				   (if (consp (car var))
 				       (values (caar var) (cadar var))
 				       (values (make-keyword (car var)) (car var)))
-				 `((,key (get-key-arg1 ',keyword ,args-tail))
+				 `((,key (get-key-arg-tail ',keyword
+				                           ,args-tail))
 				   (,(caddr var) ,key)
-				   (,variable (if (consp ,key)
+				   (,variable (if ,key
 						  (car ,key)
 						  ,(cadr var))))))))
 		   (aux `(,var))))))
@@ -948,15 +952,12 @@ work during bootstrapping.
 	   (declare (ignorable ,args-tail))
 	   ,@body)))))
 
-(defun get-key-arg (keyword list)
-  (loop (when (atom list) (return nil))
-	(when (eq (car list) keyword) (return (cadr list)))
-	(setq list (cddr list))))
-
-(defun get-key-arg1 (keyword list)
-  (loop (when (atom list) (return nil))
-	(when (eq (car list) keyword) (return (cdr list)))
-	(setq list (cddr list))))
+(defun get-key-arg-tail (keyword list)
+  (loop for (key . tail) on list by #'cddr
+	when (null tail) do
+	  (simple-program-error "Odd number of keyword arguments in ~S" list)
+	when (eq key keyword)
+	  return tail))
 
 (defun walk-method-lambda (method-lambda required-parameters env slots calls)
   (let ((call-next-method-p nil)   ;flag indicating that call-next-method
