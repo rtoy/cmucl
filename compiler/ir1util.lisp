@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.57 1992/08/03 12:32:11 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.58 1992/09/07 15:59:22 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 (in-package "EXTENSIONS")
 (export '(*error-print-level* *error-print-length* *error-print-lines*
 	  def-source-context *undefined-warning-limit*
-	  *enclosing-source-cutoff*))
+	  *enclosing-source-cutoff* *inline-expansion-limit*))
+
 (in-package "C")
 
 
@@ -190,6 +191,57 @@
     (setf (continuation-dest new) dest))
   (undefined-value))
 
+;;; Substitute-Continuation-Uses  --  Interface
+;;;
+;;;    Replace all uses of Old with uses of New, where New has an arbitary
+;;; number of uses.  If New will end up with more than one use, then we must
+;;; arrange for it to start a block if it doesn't already.
+;;;
+(defun substitute-continuation-uses (new old)
+  (declare (type continuation old new))
+  (unless (and (eq (continuation-kind new) :unused)
+	       (eq (continuation-kind old) :inside-block))
+    (ensure-block-start new))
+  
+  (do-uses (node old)
+    (delete-continuation-use node)
+    (add-continuation-use node new))
+
+  (reoptimize-continuation new)
+  (undefined-value))
+
+
+;;;; Block starting/creation:
+
+;;; Continuation-Starts-Block  --  Interface
+;;;
+;;;    Return the block that Continuation is the start of, making a block if
+;;; necessary.  This function is called by IR1 translators which may cause a
+;;; continuation to be used more than once.  Every continuation which may be
+;;; used more than once must start a block by the time that anyone does a
+;;; Use-Continuation on it.
+;;; 
+;;;    We also throw the block into the next/prev list for the
+;;; *current-component* so that we keep track of which blocks we have made.
+;;;
+(defun continuation-starts-block (cont)
+  (declare (type continuation cont))
+  (ecase (continuation-kind cont)
+    (:unused
+     (assert (not (continuation-block cont)))
+     (let* ((head (component-head *current-component*))
+	    (next (block-next head))
+	    (new-block (make-block cont)))
+       (setf (block-next new-block) next)
+       (setf (block-prev new-block) head)
+       (setf (block-prev next) new-block)
+       (setf (block-next head) new-block)
+       (setf (continuation-block cont) new-block)
+       (setf (continuation-use cont) nil)
+       (setf (continuation-kind cont) :block-start)
+       new-block))
+    (:block-start
+     (continuation-block cont))))
 
 ;;; Ensure-Block-Start  --  Interface
 ;;;
@@ -216,26 +268,6 @@
 		(setf (continuation-kind cont) :deleted-block-start))
 	       (t
 		(node-ends-block (continuation-use cont))))))))
-  (undefined-value))
-
-
-;;; Substitute-Continuation-Uses  --  Interface
-;;;
-;;;    Replace all uses of Old with uses of New, where New has an arbitary
-;;; number of uses.  If New will end up with more than one use, then we must
-;;; arrange for it to start a block if it doesn't already.
-;;;
-(defun substitute-continuation-uses (new old)
-  (declare (type continuation old new))
-  (unless (and (eq (continuation-kind new) :unused)
-	       (eq (continuation-kind old) :inside-block))
-    (ensure-block-start new))
-  
-  (do-uses (node old)
-    (delete-continuation-use node)
-    (add-continuation-use node new))
-
-  (reoptimize-continuation new)
   (undefined-value))
 
 
@@ -318,8 +350,8 @@
 ;;; TLF number last.)
 ;;; 
 (defun source-path-original-source (path)
-  (declare (list path))
-  (cddr (member 'original-source-start path)))
+  (declare (list path) (inline member))
+  (cddr (member 'original-source-start path :test #'eq)))
 
 
 ;;; SOURCE-PATH-FORM-NUMBER  --  Interface
@@ -329,8 +361,8 @@
 ;;; subforms of the top level source form.
 ;;;
 (defun source-path-form-number (path)
-  (declare (list path))
-  (cadr (member 'original-source-start path)))
+  (declare (list path) (inline member))
+  (cadr (member 'original-source-start path :test #'eq)))
 
 
 ;;; SOURCE-PATH-FORMS  --  Interface
@@ -376,7 +408,7 @@
 ;;; 
 (defun make-lexenv (&key (default *lexical-environment*)
 			 functions variables blocks tags type-restrictions
-			 inlines options
+			 options
 			 (lambda (lexenv-lambda default))
 			 (cleanup (lexenv-cleanup default))
 			 (cookie (lexenv-cookie default))
@@ -392,7 +424,6 @@
      (frob blocks lexenv-blocks)
      (frob tags lexenv-tags)
      (frob type-restrictions lexenv-type-restrictions)
-     (frob inlines lexenv-inlines)
      lambda cleanup cookie interface-cookie
      (frob options lexenv-options))))
 
@@ -421,12 +452,22 @@
 ;;;
 ;;;    Join Block1 and Block2.
 ;;;
+(declaim (inline link-blocks))
 (defun link-blocks (block1 block2)
   (declare (type cblock block1 block2))
-  (assert (not (member block2 (block-succ block1))))
-  (push block2 (block-succ block1))
+  (setf (block-succ block1)
+	(if (block-succ block1)
+	    (%link-blocks block1 block2)
+	    (list block2)))
   (push block1 (block-pred block2))
   (undefined-value))
+;;;
+(defun %link-blocks (block1 block2)
+  (declare (type cblock block1 block2) (inline member))
+  (let ((succ1 (block-succ block1)))
+    (assert (not (member block2 succ1 :test #'eq)))
+    (cons block2 succ1)))
+
 
 ;;; UNLINK-BLOCKS  --  Interface
 ;;;
@@ -437,11 +478,16 @@
 ;;;
 (defun unlink-blocks (block1 block2)
   (declare (type cblock block1 block2))
-  (assert (member block2 (block-succ block1)))
-  (setf (block-succ block1)
-	(delete block2 (block-succ block1)))
+  (let ((succ1 (block-succ block1)))
+    (if (eq block2 (car succ1))
+	(setf (block-succ block1) (cdr succ1))
+	(do ((succ (cdr succ1) (cdr succ))
+	     (prev succ1 succ))
+	    ((eq (car succ) block2)
+	     (setf (cdr prev) (cdr succ)))
+	  (assert succ))))
 
-  (let ((new-pred (delete block1 (block-pred block2))))
+  (let ((new-pred (delq block1 (block-pred block2))))
     (setf (block-pred block2) new-pred)
     (when (and new-pred (null (rest new-pred)))
       (let ((pred-block (first new-pred)))
@@ -459,10 +505,10 @@
 ;;; successor.
 ;;;
 (defun change-block-successor (block old new)
-  (declare (type cblock new old block))
+  (declare (type cblock new old block) (inline member))
   (unlink-blocks block old)
   (setf (component-reanalyze (block-component block)) t)
-  (unless (member new (block-succ block))
+  (unless (member new (block-succ block) :test #'eq)
     (link-blocks block new))
   
   (let ((last (block-last block)))
@@ -483,6 +529,7 @@
 ;;; Component.
 ;;;
 (proclaim '(function remove-from-dfo (cblock) void))
+(declaim (inline remove-from-dfo))
 (defun remove-from-dfo (block)
   (let ((next (block-next block))
 	(prev (block-prev block)))
@@ -495,6 +542,7 @@
 ;;;    Add Block to the next/prev chain following After.  We also set the
 ;;; Component to be the same as for After.
 ;;;
+(declaim (inline add-to-dfo))
 (defun add-to-dfo (block after)
   (declare (type cblock block after))
   (let ((next (block-next after))
@@ -586,6 +634,9 @@
 
 ;;;; Deleting stuff:
 
+(declaim (start-block delete-ref delete-functional flush-dest
+		      delete-continuation delete-block))
+
 ;;; Delete-Lambda-Var  --  Internal
 ;;;
 ;;;    Deal with deleting the last (read) reference to a lambda-var.  We
@@ -654,22 +705,6 @@
     (clambda (delete-lambda fun)))
   (undefined-value))
 
-
-;;; MAYBE-REMOVE-FREE-FUNCTION  --  Interface
-;;;
-;;;    This function is called when we let convert a function or blow away an
-;;; XEP, or otherwise do something that should prevent any new references to
-;;; Fun (or its optional-dispatch) from being created.
-;;;
-(defun maybe-remove-free-function (fun)
-  (declare (type functional fun))
-  (let* ((fun (etypecase fun
-		(clambda (or (lambda-optional-dispatch fun) fun))
-		(optional-dispatch fun)))
-	 (entry (gethash (leaf-name fun) *free-functions*)))
-    (when (eq entry fun)
-      (remhash (leaf-name fun) *free-functions*)))
-  (undefined-value))
 
 ;;; Delete-Lambda  --  Internal
 ;;;
@@ -753,7 +788,6 @@
 ;;;
 (defun delete-optional-dispatch (leaf)
   (declare (type optional-dispatch leaf))
-  (maybe-remove-free-function leaf)
   (let ((entry (functional-entry-function leaf)))
     (unless (and entry (leaf-refs entry))
       (assert (or (not entry) (eq (functional-kind entry) :deleted)))
@@ -821,35 +855,6 @@
   (undefined-value))
 
 
-;;; Delete-Return  --  Interface
-;;;
-;;;    Do stuff to indicate that the return node Node is being deleted.  We set
-;;; the RETURN to NIL.
-;;;
-(defun delete-return (node)
-  (declare (type creturn node))
-  (let ((fun (return-lambda node)))
-    (assert (lambda-return fun))
-    (setf (lambda-return fun) nil))
-  (undefined-value))
-
-
-;;; NOTE-UNREFERENCED-VARS  --  Interface
-;;;
-;;;    If any of the Vars in fun were never referenced and was not declared
-;;; IGNORE, then complain.
-;;;
-(defun note-unreferenced-vars (fun)
-  (declare (type clambda fun))
-  (dolist (var (lambda-vars fun))
-    (unless (or (leaf-ever-used var)
-		(lambda-var-ignorep var))
-      (let ((*compiler-error-context* (lambda-bind fun)))
-	(unless (policy *compiler-error-context* (= brevity 3))
-	  (compiler-warning "Variable ~S defined but never used."
-			    (leaf-name var)))
-	(setf (leaf-ever-used var) t))))
-  (undefined-value))
 
 
 ;;; Flush-Dest  --  Interface
@@ -946,81 +951,6 @@
   (undefined-value))
 
 
-(defvar *deletion-ignored-objects* '(t nil))
-
-;;; PRESENT-IN-FORM  --  Internal
-;;;
-;;;    Return true if we can find Obj in Form, NIL otherwise.  We bound our
-;;; recursion so that we don't get lost in circular structures.  We ignore the
-;;; car of forms if they are a symbol (to prevent confusing function
-;;; referencess with variables), and we also ignore anything inside ' or #'.
-;;;
-(defun present-in-form (obj form depth)
-  (declare (type (integer 0 20) depth))
-  (cond ((= depth 20) nil)
-	((eq obj form) t)
-	((atom form) nil)
-	(t
-	 (let ((first (car form))
-	       (depth (1+ depth)))
-	   (if (member first '(quote function))
-	       nil
-	       (or (and (not (symbolp first))
-			(present-in-form obj first depth))
-		   (do ((l (cdr form) (cdr l))
-			(n 0 (1+ n)))
-		       ((or (atom l) (> n 100))
-			nil)
-		     (declare (fixnum n))
-		     (when (present-in-form obj (car l) depth)
-		       (return t)))))))))
-
-
-;;; NOTE-BLOCK-DELETION  --  Internal
-;;;
-;;;    This function is called on a block immediately before we delete it.  We
-;;; check to see if any of the code about to die appeared in the original
-;;; source, and emit a note if so.
-;;;
-;;;    If the block was in a lambda is now deleted, then we ignore the whole
-;;; block, since this case is picked off in DELETE-LAMBDA.  We also ignore the
-;;; deletion of CRETURN nodes, since it is somewhat reasonable for a function
-;;; to not return, and there is a different note for that case anyway.
-;;;
-;;;    If the actual source is an atom, then we use a bunch of heuristics to
-;;; guess whether this reference really appeared in the original source:
-;;; -- If a symbol, it must be interned and not a keyword.
-;;; -- It must not be an easily introduced constant (T or NIL, a fixnum or a
-;;;    character.)
-;;; -- The atom must be "present" in the original source form, and present in
-;;;    all intervening actual source forms.
-;;;
-(defun note-block-deletion (block)
-  (let ((home (block-home-lambda block)))
-    (unless (eq (functional-kind home) :deleted)
-      (do-nodes (node cont block)
-	(let* ((path (node-source-path node))
-	       (first (first path)))
-	  (when (or (eq first 'original-source-start)
-		    (and (atom first)
-			 (or (not (symbolp first))
-			     (let ((pkg (symbol-package first)))
-			       (and pkg
-				    (not (eq pkg (symbol-package :end))))))
-			 (not (member first *deletion-ignored-objects*))
-			 (not (typep first '(or fixnum character)))
-			 (every #'(lambda (x)
-				    (present-in-form first x 0))
-				(source-path-forms path))
-			 (present-in-form first (find-original-source path)
-					  0)))
-	    (unless (return-p node)
-	      (let ((*compiler-error-context* node))
-		(compiler-note "Deleting unreachable code.")))
-	    (return))))))
-  (undefined-value))
-
-
 ;;; Delete-Block  --  Interface
 ;;;
 ;;;    This function does what is necessary to eliminate the code in it from
@@ -1098,6 +1028,114 @@
     (delete-continuation (node-prev node)))
 
   (remove-from-dfo block)
+  (undefined-value))
+
+(declaim (end-block))
+
+
+;;; Delete-Return  --  Interface
+;;;
+;;;    Do stuff to indicate that the return node Node is being deleted.  We set
+;;; the RETURN to NIL.
+;;;
+(defun delete-return (node)
+  (declare (type creturn node))
+  (let ((fun (return-lambda node)))
+    (assert (lambda-return fun))
+    (setf (lambda-return fun) nil))
+  (undefined-value))
+
+
+;;; NOTE-UNREFERENCED-VARS  --  Interface
+;;;
+;;;    If any of the Vars in fun were never referenced and was not declared
+;;; IGNORE, then complain.
+;;;
+(defun note-unreferenced-vars (fun)
+  (declare (type clambda fun))
+  (dolist (var (lambda-vars fun))
+    (unless (or (leaf-ever-used var)
+		(lambda-var-ignorep var))
+      (let ((*compiler-error-context* (lambda-bind fun)))
+	(unless (policy *compiler-error-context* (= brevity 3))
+	  (compiler-warning "Variable ~S defined but never used."
+			    (leaf-name var)))
+	(setf (leaf-ever-used var) t))))
+  (undefined-value))
+
+
+(defvar *deletion-ignored-objects* '(t nil))
+
+;;; PRESENT-IN-FORM  --  Internal
+;;;
+;;;    Return true if we can find Obj in Form, NIL otherwise.  We bound our
+;;; recursion so that we don't get lost in circular structures.  We ignore the
+;;; car of forms if they are a symbol (to prevent confusing function
+;;; referencess with variables), and we also ignore anything inside ' or #'.
+;;;
+(defun present-in-form (obj form depth)
+  (declare (type (integer 0 20) depth))
+  (cond ((= depth 20) nil)
+	((eq obj form) t)
+	((atom form) nil)
+	(t
+	 (let ((first (car form))
+	       (depth (1+ depth)))
+	   (if (member first '(quote function))
+	       nil
+	       (or (and (not (symbolp first))
+			(present-in-form obj first depth))
+		   (do ((l (cdr form) (cdr l))
+			(n 0 (1+ n)))
+		       ((or (atom l) (> n 100))
+			nil)
+		     (declare (fixnum n))
+		     (when (present-in-form obj (car l) depth)
+		       (return t)))))))))
+
+
+;;; NOTE-BLOCK-DELETION  --  Internal
+;;;
+;;;    This function is called on a block immediately before we delete it.  We
+;;; check to see if any of the code about to die appeared in the original
+;;; source, and emit a note if so.
+;;;
+;;;    If the block was in a lambda is now deleted, then we ignore the whole
+;;; block, since this case is picked off in DELETE-LAMBDA.  We also ignore the
+;;; deletion of CRETURN nodes, since it is somewhat reasonable for a function
+;;; to not return, and there is a different note for that case anyway.
+;;;
+;;;    If the actual source is an atom, then we use a bunch of heuristics to
+;;; guess whether this reference really appeared in the original source:
+;;; -- If a symbol, it must be interned and not a keyword.
+;;; -- It must not be an easily introduced constant (T or NIL, a fixnum or a
+;;;    character.)
+;;; -- The atom must be "present" in the original source form, and present in
+;;;    all intervening actual source forms.
+;;;
+(defun note-block-deletion (block)
+  (let ((home (block-home-lambda block)))
+    (unless (eq (functional-kind home) :deleted)
+      (do-nodes (node cont block)
+	(let* ((path (node-source-path node))
+	       (first (first path)))
+	  (when (or (eq first 'original-source-start)
+		    (and (atom first)
+			 (or (not (symbolp first))
+			     (let ((pkg (symbol-package first)))
+			       (and pkg
+				    (not (eq pkg (symbol-package :end))))))
+			 (not (member first *deletion-ignored-objects*))
+			 (not (typep first '(or fixnum character)))
+			 (every #'(lambda (x)
+				    (present-in-form first x 0))
+				(source-path-forms path))
+			 (present-in-form first (find-original-source path)
+					  0)))
+	    (unless (return-p node)
+	      (let ((*compiler-error-context* node))
+		(compiler-note "Deleting unreachable code.")))
+	    (return))))))
   (undefined-value))
 
 
@@ -1309,6 +1347,7 @@
 ;;; object is not in *constants*, then we create a new constant Leaf and
 ;;; enter it.
 ;;;
+(declaim (maybe-inline find-constant))
 (defun find-constant (object)
   (or (gethash object *constants*)
       (setf (gethash object *constants*)
@@ -1372,6 +1411,7 @@
 ;;;    Return true if function is an XEP.  This is true of normal XEPs
 ;;; (:External kind) and top-level lambdas (:Top-Level kind.)
 ;;;
+(declaim (inline external-entry-point-p))
 (defun external-entry-point-p (fun)
   (declare (type functional fun))
   (not (null (member (functional-kind fun) '(:external :top-level)))))
@@ -1381,17 +1421,18 @@
 ;;;
 ;;;    If Cont's only use is a non-notinline global function reference, then
 ;;; return the referenced symbol, otherwise NIL.  If Notinline-OK is true, then
-;;; we don't care if the ref is notinline.
+;;; we don't care if the leaf is notinline.
 ;;;
 (defun continuation-function-name (cont &optional notinline-ok)
   (declare (type continuation cont))
   (let ((use (continuation-use cont)))
-    (if (and (ref-p use)
-	     (or (not (eq (ref-inlinep use) :notinline))
-		 notinline-ok))
+    (if (ref-p use)
 	(let ((leaf (ref-leaf use)))
 	  (if (and (global-var-p leaf)
-		   (eq (global-var-kind leaf) :global-function))
+		   (eq (global-var-kind leaf) :global-function)
+		   (or (not (defined-function-p leaf))
+		       (not (eq (defined-function-inlinep leaf) :notinline))
+		       notinline-ok))
 	      (leaf-name leaf)
 	      nil))
 	nil)))
@@ -1422,10 +1463,35 @@
 ;;;
 ;;;    Return the LAMBDA that is called by the local Call.
 ;;;
+(declaim (inline combination-lambda))
 (defun combination-lambda (call)
   (declare (type basic-combination call))
   (assert (eq (basic-combination-kind call) :local))
   (ref-leaf (continuation-use (basic-combination-fun call))))
+
+
+(defvar *inline-expansion-limit* 20
+  "An upper limit on the number of inline function calls that will be expanded
+   in any given code object (single function or block compilation.)")
+
+
+;;; INLINE-EXPANSION-OK  --  Interface
+;;;
+;;;    Check if Node's component has exceeded its inline expansion limit, and
+;;; warn if so, returning NIL.
+;;;
+(defun inline-expansion-ok (node)
+  (let ((expanded (incf (component-inline-expansions
+			 (block-component
+			  (node-block node))))))
+    (cond ((> expanded *inline-expansion-limit*) nil)
+	  ((= expanded *inline-expansion-limit*)
+	   (let ((*compiler-error-context* node))
+	     (compiler-warning "*Inline-Expansion-Limit* (~D) exceeded, ~
+				probably trying to inline a recursive function."
+			       *inline-expansion-limit*))
+	   nil)
+	  (t t))))
 
 
 ;;;; Compiler error context determination:
