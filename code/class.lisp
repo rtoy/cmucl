@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.4 1993/02/10 23:20:19 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.5 1993/02/11 19:01:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -407,7 +407,7 @@
 (cold-load-init
   (setq built-in-classes
 	'((t :state :read-only :translation t)
-	  (character :enumerable t)
+	  (character :enumerable t :translation base-char)
 	  (base-char :enumerable t :inherits (character)
 		     :codes (#.vm:base-char-type))
 	  
@@ -685,7 +685,7 @@
 		(when diff
 		  (warn
 		   "In class ~S:~%  ~
-		    ~:(~A) definition of superclass ~S incompatible with~%  ~
+		    ~:(~A~) definition of superclass ~S incompatible with~%  ~
 		    ~A definition."
 		   name old-context (layout-proper-name (svref oldi diff))
 		   new-context)
