@@ -3,7 +3,7 @@
 ;;; This code was written by Douglas T. Crosher and has been placed in
 ;;; the Public domain, and is provided 'as is'.
 ;;;
-;;; $Id: multi-proc.lisp,v 1.6 1997/11/22 14:46:36 dtc Exp $
+;;; $Id: multi-proc.lisp,v 1.7 1997/12/28 04:33:01 dtc Exp $
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -818,6 +818,31 @@
 ;;; first element of this list.
 (defvar *remaining-processes* nil)
 
+;;; The idle process will only run when there are no other runnable
+;;; processes.
+(defvar *idle-process* nil)
+
+;;; Decide when the allow the idle process to run.
+(defun run-idle-process-p ()
+  ;; Check if there are any other runnable processes.
+  (dolist (process *all-processes* t)
+    (when (and (not (eq process *idle-process*))
+	       (process-active-p process)
+	       (not (process-wait-function process)))
+      (return nil))))
+
+;;; A useful idle process loop, waiting on events using the select
+;;; based event server, and yielding periodically.
+;;;
+;;; Timeout for the idle loop, something acceptable by
+;;; sever-all-events.
+(defvar *idle-loop-timeout* 1)
+;;;
+(defun idle-process-loop ()
+  (loop
+   (sys:serve-all-events *idle-loop-timeout*)
+   (process-yield)))
+
 ;;; Scheduler.
 (defun process-yield ()
   "Allow other processes to run."
@@ -837,60 +862,65 @@
        ;; Shouldn't see any :killed porcesses here.
        (assert (process-alive-p next))
        
-       ;; New process at the head of the queue?
-       (unless (eq next *current-process*)
-	 (cond
-	   ;; If the next process has pending interrupts then return
-	   ;; to it to execute these.
-	   ((process-interrupts next)
-	    (setf *current-process* next)
-	    (stack-group-resume (process-stack-group next)))
-	   (t
-	    ;; If not waiting then return.
-	    (let ((wait-fn (process-wait-function next)))
-	      (cond
-		((null wait-fn)
+       (cond
+	 ;; New process at the head of the queue?
+	 ((eq next *current-process*))
+	 ;; Ignore inactive processes.
+	 ((not (process-active-p next)))
+	 ;; If the next process has pending interrupts then return to
+	 ;; it to execute these.
+	 ((process-interrupts next)
+	  (setf *current-process* next)
+	  (stack-group-resume (process-stack-group next)))
+	 (t
+	  ;; If not waiting then return.
+	  (let ((wait-fn (process-wait-function next)))
+	    (cond
+	      ((null wait-fn)
+	       ;; Skip the idle process if there are other runnable
+	       ;; processes.
+	       (when (or (not (eq next *idle-process*))
+			 (run-idle-process-p))
 		 (setf *current-process* next)
-		 (stack-group-resume (process-stack-group next)))
-		(t
-		 ;; Check the wait function in the current context
-		 ;; saving a stack-group switch; although
-		 ;; *current-process* is setup.
-		 (let ((current-process *current-process*))
-		   (setf *current-process* next)
-		   ;; Predicate true?
-		   (let ((wait-return-value (funcall wait-fn)))
-		     (cond (wait-return-value
-			    ;; Flush the wait.
-			    (setf (process-wait-return-value next) 
-				  wait-return-value)
-			    (setf (process-wait-timeout next) nil)
-			    (setf (process-wait-function next) nil)
-			    (setf (process-%whostate next) nil)
-			    (stack-group-resume (process-stack-group next)))
-			   (t
-			    ;; Timeout?
-			    (let ((timeout (process-wait-timeout next)))
-			      (when (and timeout
-					 (> (the fixnum 
-						 (get-internal-real-time))
-					    timeout))
-				;; Flush the wait.
-				(setf (process-wait-return-value next) nil)
-				(setf (process-wait-timeout next) nil)
-				(setf (process-wait-function next) nil)
-				(setf (process-%whostate next) nil)
-				(stack-group-resume
-				 (process-stack-group next)))))))
-		   ;; Restore the *current-process*.
-		   (setf *current-process* current-process)))))))))
-     
+		 (stack-group-resume (process-stack-group next))))
+	      (t
+	       ;; Check the wait function in the current context
+	       ;; saving a stack-group switch; although
+	       ;; *current-process* is setup.
+	       (let ((current-process *current-process*))
+		 (setf *current-process* next)
+		 ;; Predicate true?
+		 (let ((wait-return-value (funcall wait-fn)))
+		   (cond (wait-return-value
+			  ;; Flush the wait.
+			  (setf (process-wait-return-value next) 
+				wait-return-value)
+			  (setf (process-wait-timeout next) nil)
+			  (setf (process-wait-function next) nil)
+			  (setf (process-%whostate next) nil)
+			  (stack-group-resume (process-stack-group next)))
+			 (t
+			  ;; Timeout?
+			  (let ((timeout (process-wait-timeout next)))
+			    (when (and timeout
+				       (> (the fixnum (get-internal-real-time))
+					  timeout))
+			      ;; Flush the wait.
+			      (setf (process-wait-return-value next) nil)
+			      (setf (process-wait-timeout next) nil)
+			      (setf (process-wait-function next) nil)
+			      (setf (process-%whostate next) nil)
+			      (stack-group-resume
+			       (process-stack-group next)))))))
+		 ;; Restore the *current-process*.
+		 (setf *current-process* current-process))))))))
+    
      ;; May have just returned, or have cycled the queue.
      (let ((next (first *remaining-processes*)))
        ;; Tolerate :killed processes on the *remaining-processes* list
        ;; saving their deletion from this list when killed; will be
-       ;; corrected when it cycle back to *all-processes*.
-       (when (and (process-alive-p next)
+       ;; corrected when it cycles back to *all-processes*.
+       (when (and (process-active-p next)
 		  ;; Current process at the head of the queue?
 		  (eq next *current-process*))
 	 ;; Run any pending interrupts.
@@ -921,7 +951,9 @@
 		  (let ((wait-fn (process-wait-function next)))
 		    (cond
 		      ((null wait-fn)
-		       (return))
+		       (when (or (not (eq next *idle-process*))
+				 (run-idle-process-p))
+			 (return)))
 		      (t
 		       ;; Predicate true?
 		       (let ((return-value (funcall wait-fn)))
