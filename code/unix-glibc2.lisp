@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.12 2000/08/25 09:59:06 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix-glibc2.lisp,v 1.13 2001/01/22 10:49:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -56,6 +56,7 @@
 	  unix-rename unix-rmdir unix-fast-select fd-setsize fd-set fd-clr
 	  fd-isset fd-zero unix-select unix-sync unix-fsync unix-truncate
 	  unix-ftruncate unix-symlink unix-unlink unix-write unix-ioctl
+	  unix-uname utsname
 	  tcsetpgrp tcgetpgrp tty-process-group
 	  terminal-speeds tty-raw tty-crmod tty-echo tty-lcase
 	  tty-cbreak
@@ -2147,6 +2148,29 @@ length LEN and type TYPE."
     (if (zerop (sap-int result))
 	nil
       result)))
+
+(def-alien-type nil
+  (struct utsname
+    (sysname (array char 65))
+    (nodename (array char 65))
+    (release (array char 65))
+    (version (array char 65))
+    (machine (array char 65))
+    (domainname (array char 65))))
+
+(defun unix-uname ()
+  "Unix-uname returns the name and information about the current kernel. The
+  values returned upon success are: sysname, nodename, release, version,
+  machine, and domainname. Upon failure, 'nil and the 'errno are returned."
+  (with-alien ((utsname (struct utsname)))
+    (syscall ("uname" (* (struct utsname)))
+	     (values (cast (slot utsname 'sysname) c-string)
+		     (cast (slot utsname 'nodename) c-string)
+		     (cast (slot utsname 'release) c-string)
+		     (cast (slot utsname 'version) c-string)
+		     (cast (slot utsname 'machine) c-string)
+		     (cast (slot utsname 'domainname) c-string))
+	     (addr utsname))))
 
 (defun unix-gethostname ()
   "Unix-gethostname returns the name of the host machine as a string."

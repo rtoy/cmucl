@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.176 2000/12/04 21:50:24 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.177 2001/01/22 10:49:43 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -224,8 +224,8 @@
 	     "UNIX-SEND" "UNIX-SETPGID" "UNIX-SETPGRP"
              "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SETSOCKOPT" "UNIX-SOCKET"
 	     "UNIX-STAT" "UNIX-SYMLINK" "UNIX-SYNC"
-	     "UNIX-TIMES" "UNIX-TRUNCATE" "UNIX-TTYNAME"
-             "UNIX-UID" "UNIX-UNLINK" "UNIX-UTIMES" "UNIX-WRITE" "WINSIZE"
+	     "UNIX-TIMES" "UNIX-TRUNCATE" "UNIX-TTYNAME" "UNIX-UID"
+	     "UNIX-UNAME" "UNIX-UNLINK" "UNIX-UTIMES" "UNIX-WRITE" "WINSIZE"
              "WRITEGRP" "WRITEOTH" "WRITEOWN" "WS-COL" "WS-ROW" "WS-XPIXEL"
              "WS-YPIXEL" "W_OK" "X_OK" "SIGSYS" "TCSETPGRP" "FD-ZERO"
              "SIGEMSG" "SIGQUIT" "SIGCHLD" "SIGSEGV" "FD-CLR" "SIGUSR2"
@@ -295,7 +295,8 @@
 	     "EPROTONOSUPPORT" "EPROTOTYPE" "EREMCHG" "EREMOTE"
 	     #+linux "EREMOTEIO" "ERESTART" "ESHUTDOWN" "ESOCKTNOSUPPORT"
 	     "ESRMNT" "ESTALE" "ESTRPIPE" "ETIME" "ETIMEDOUT" "ETOOMANYREFS"
-	     #+linux "EUCLEAN" "EUNATCH" "EUSERS" "EWOULDBLOCK" "EXFULL"))
+	     #+linux "EUCLEAN" "EUNATCH" "EUSERS" "EWOULDBLOCK" "EXFULL"
+	     "UTSNAME"))
   
 (defpackage "FORMAT")
 (defpackage "COMMON-LISP"
