@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.46 1992/05/22 19:12:15 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/tools/worldload.lisp,v 1.47 1992/05/25 21:17:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -98,9 +98,6 @@
 #-no-compiler
 (progn
   (load "c:loadcom.lisp")
-  (set 'compiler-version
-       (concatenate 'string compiler-version
-		    "(" *lisp-implementation-version* ")"))
   (setq *info-environment*
 	(list* (make-info-environment)
 	       (compact-info-environment (first *info-environment*)
