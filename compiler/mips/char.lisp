@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.10 1990/11/03 03:25:27 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/char.lisp,v 1.11 1991/02/14 20:46:11 ram Exp $
 ;;; 
 ;;; This file contains the RT VM definition of character operations.
 ;;;
@@ -23,26 +23,26 @@
 ;;; Move a tagged char to an untagged representation.
 ;;;
 (define-vop (move-to-base-character)
-  (:args (x :scs (any-reg)))
+  (:args (x :scs (any-reg descriptor-reg)))
   (:results (y :scs (base-character-reg)))
   (:generator 1
     (inst srl y x vm:type-bits)))
 ;;;
 (define-move-vop move-to-base-character :move
-  (any-reg) (base-character-reg))
+  (any-reg descriptor-reg) (base-character-reg))
 
 
 ;;; Move an untagged char to a tagged representation.
 ;;;
 (define-vop (move-from-base-character)
   (:args (x :scs (base-character-reg)))
-  (:results (y :scs (any-reg)))
+  (:results (y :scs (any-reg descriptor-reg)))
   (:generator 1
     (inst sll y x vm:type-bits)
     (inst or y y vm:base-character-type)))
 ;;;
 (define-move-vop move-from-base-character :move
-  (base-character-reg) (any-reg))
+  (base-character-reg) (any-reg descriptor-reg))
 
 ;;; Move untagged base-character values.
 ;;;
