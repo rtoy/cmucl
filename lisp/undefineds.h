@@ -1,5 +1,5 @@
 /* Routines that must be linked into the core for lisp to work. */
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.20 1998/01/29 07:39:07 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/undefineds.h,v 1.21 1998/04/08 16:26:05 pw Exp $ */
 
 /* Pick up all the syscalls. */
 F(accept)
@@ -78,7 +78,9 @@ F(lseek)
 F(lstat)
 F(mkdir)
 F(mknod)
+F(mmap)
 F(mount)
+F(munmap)
 F(open)
 F(pipe)
 F(profil)
