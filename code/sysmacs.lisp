@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.15 1993/08/06 13:02:53 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.16 1993/08/19 11:37:07 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -68,8 +68,6 @@
 (defmacro without-gcing (&rest body)
   "Executes the forms in the body without doing a garbage collection."
   `(without-interrupts ,@body))
-
-(defvar hi::*in-the-editor* nil)
 
 (defmacro without-hemlock (&body body)
   `(progn
