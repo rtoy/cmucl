@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.15 1992/06/23 14:56:58 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/gc.lisp,v 1.16 1993/02/26 08:25:31 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -101,8 +101,8 @@
 (defun room-maximal-info ()
   (room-minimal-info)
   (vm:memory-usage :count-spaces '(:static :dynamic))
-  (vm:structure-usage :dynamic :top-n 10)
-  (vm:structure-usage :static :top-n 10))
+  (vm:instance-usage :dynamic :top-n 10)
+  (vm:instance-usage :static :top-n 10))
 
 (defun room (&optional (verbosity :default))
   "Prints to *STANDARD-OUTPUT* information about the state of internal
@@ -111,7 +111,7 @@
   information.  If it is NIL, ROOM prints out a minimal amount of
   information.  If it is :DEFAULT or it is not supplied, ROOM prints out
   an intermediate amount of information.  See also VM:MEMORY-USAGE and
-  VM:STRUCTURE-USAGE for finer report control."
+  VM:INSTANCE-USAGE for finer report control."
   (fresh-line)
   (case verbosity
     ((t)

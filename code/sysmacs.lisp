@@ -7,13 +7,13 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.11 1992/03/26 03:15:22 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sysmacs.lisp,v 1.12 1993/02/26 08:26:19 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
 ;;;    Miscellaneous system hacking macros.
 ;;;
-(in-package "LISP" :use '("SYSTEM" "DEBUG"))
+(in-package "LISP")
 
 (in-package "SYSTEM")
 (export '(without-gcing without-hemlock))
@@ -128,7 +128,7 @@
 	  (%frc-method% (stream-in %frc-stream%))
 	  (%frc-buffer% (stream-in-buffer %frc-stream%))
 	  (%frc-index% (stream-in-index %frc-stream%)))
-     (declare (type (or simple-string null) %frc-buffer%) (fixnum %frc-index%))
+     (declare (type index %frc-index%))
      ,@forms))
 
 ;;; Done-With-Fast-Read-Char  --  Internal
@@ -146,12 +146,13 @@
 ;;;
 (defmacro fast-read-char (&optional (eof-errorp t) (eof-value ()))
   `(cond
+    ((not %frc-buffer%)
+     (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
     ((= %frc-index% in-buffer-length)
-     (setf (stream-in-index %frc-stream%) %frc-index%)
-     (prog1 (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value)
+     (prog1 (fast-read-char-refill %frc-stream% ,eof-errorp ,eof-value)
 	    (setq %frc-index% (stream-in-index %frc-stream%))))
     (t
-     (prog1 (aref %frc-buffer% %frc-index%)
+     (prog1 (code-char (aref %frc-buffer% %frc-index%))
 	    (incf %frc-index%)))))
 
 ;;;; And these for the fasloader...
@@ -166,17 +167,27 @@
 	  (%frc-method% (stream-bin %frc-stream%))
 	  (%frc-buffer% (stream-in-buffer %frc-stream%))
 	  (%frc-index% (stream-in-index %frc-stream%)))
-     (declare (type (or simple-array null) %frc-buffer%) (fixnum %frc-index%))
+     (declare (type index %frc-index%))
      ,@forms))
 
 ;;; Fast-Read-Byte, Done-With-Fast-Read-Byte  --  Internal
 ;;;
-;;;    Identical to the text versions, but we get some gratuitous
-;;; psuedo-generality by having different names.
+;;;    Similar to fast-read-char, but we use a different refill routine & don't
+;;; convert to characters.  If ANY-TYPE is true, then this can be used on any
+;;; integer streams, and we don't assert the result type.
+;;;
+(defmacro fast-read-byte (&optional (eof-errorp t) (eof-value ()) any-type)
+  `(truly-the
+    ,(if (and (eq eof-errorp 't) (not any-type)) '(unsigned-byte 8) 't)
+    (cond
+     ((not %frc-buffer%)
+      (funcall %frc-method% %frc-stream% ,eof-errorp ,eof-value))
+     ((= %frc-index% in-buffer-length)
+      (prog1 (fast-read-byte-refill %frc-stream% ,eof-errorp ,eof-value)
+	(setq %frc-index% (stream-in-index %frc-stream%))))
+     (t
+      (prog1 (aref %frc-buffer% %frc-index%)
+	(incf %frc-index%))))))
 ;;;
 (defmacro done-with-fast-read-byte ()
   `(done-with-fast-read-char))
-;;;
-(defmacro fast-read-byte (&rest stuff)
-  `(fast-read-char ,@stuff))
-

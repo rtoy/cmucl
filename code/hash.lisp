@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.21 1992/11/04 17:51:03 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/hash.lisp,v 1.22 1993/02/26 08:25:37 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,10 +52,12 @@
   ;;
   ;; How much to grow the hash table by when it fills up.  If an index, then
   ;; add that amount.  If a floating point number, then multiple it by that.
-  (rehash-size (required-argument) :type (or index (float (1.0))) :read-only t)
+  (rehash-size (required-argument) :type (or index (single-float (1.0)))
+	       :read-only t)
   ;;
   ;; How full the hash table has to get before we rehash.
-  (rehash-threshold (required-argument) :type (real 0 1) :read-only t)
+  (rehash-threshold (required-argument) :type (single-float (0.0) 1.0)
+		    :read-only t)
   ;;
   ;; (* rehash-threshold (length table)), saved here so we don't have to keep
   ;; recomputing it.
@@ -68,7 +70,7 @@
   (table (required-argument) :type simple-vector))
 ;;;
 (defun %print-hash-table (ht stream depth)
-  (declare (ignore depth))
+  (declare (ignore depth) (stream stream))
   (print-unreadable-object (ht stream :identity t)
     (format stream "~A hash table, ~D entr~@:P"
 	    (symbol-name (hash-table-test ht))
@@ -170,41 +172,45 @@
        point number (which must be greater than 1.0), multiple the size
        by that amount.
      :REHASH-THRESHOLD -- Indicates how dense the table can become before
-       forcing a rehash.  Can be any real number between 0 and 1 (inclusive)."
+       forcing a rehash.  Can be any positive number <= to 1, with density
+       approaching zero as the threshold approaches 0.  Density 1 means an
+       average of one entry per bucket."
   (declare (type (or function (member eq eql equal)) test)
-	   (type index size)
-	   (type (or index (float (1.0))) rehash-size)
-	   (type (real 0 1) rehash-threshold))
-  (multiple-value-bind
-      (test test-fun hash-fun)
-      (cond ((or (eq test #'eq) (eq test 'eq))
-	     (values 'eq #'eq #'eq-hash))
-	    ((or (eq test #'eql) (eq test 'eql))
-	     (values 'eql #'eql #'eql-hash))
-	    ((or (eq test #'equal) (eq test 'equal))
-	     (values 'equal #'equal #'equal-hash))
-	    (t
-	     (dolist (info *hash-table-tests*
-			   (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
-				  test))
-	       (destructuring-bind
-		   (test-name test-fun hash-fun)
-		   info
-		 (when (or (eq test test-name) (eq test test-fun))
-		   (return (values test-name test-fun hash-fun)))))))
-    (let* ((size (ceiling size rehash-threshold))
-	   (length (if (<= size 37) 37 (almost-primify size)))
-	   (vector (make-array length :initial-element nil)))
-      (declare (type index size length)
-	       (type simple-vector vector))
-      (%make-hash-table
-       :test test
-       :test-fun test-fun
-       :hash-fun hash-fun
-       :rehash-size rehash-size
-       :rehash-threshold rehash-threshold
-       :rehash-trigger (* size rehash-threshold)
-       :table vector))))
+	   (type index size))
+  (let ((rehash-size (if (integerp rehash-size)
+			 rehash-size
+			 (float rehash-size 1.0)))
+	(rehash-threshold (float rehash-threshold 1.0)))
+    (multiple-value-bind
+	(test test-fun hash-fun)
+	(cond ((or (eq test #'eq) (eq test 'eq))
+	       (values 'eq #'eq #'eq-hash))
+	      ((or (eq test #'eql) (eq test 'eql))
+	       (values 'eql #'eql #'eql-hash))
+	      ((or (eq test #'equal) (eq test 'equal))
+	       (values 'equal #'equal #'equal-hash))
+	      (t
+	       (dolist (info *hash-table-tests*
+			     (error "Unknown :TEST for MAKE-HASH-TABLE: ~S"
+				    test))
+		 (destructuring-bind
+		  (test-name test-fun hash-fun)
+		  info
+		  (when (or (eq test test-name) (eq test test-fun))
+		    (return (values test-name test-fun hash-fun)))))))
+      (let* ((scaled-size (round (/ (float size) rehash-threshold)))
+	     (length (if (<= scaled-size 37) 37 (almost-primify scaled-size)))
+	     (vector (make-array length :initial-element nil)))
+	(declare (type index scaled-size length)
+		 (type simple-vector vector))
+	(%make-hash-table
+	 :test test
+	 :test-fun test-fun
+	 :hash-fun hash-fun
+	 :rehash-size rehash-size
+	 :rehash-threshold rehash-threshold
+	 :rehash-trigger (round (* (float length) rehash-threshold))
+	 :table vector)))))
 
 (defun hash-table-count (hash-table)
   "Returns the number of entries in the given HASH-TABLE."
@@ -246,10 +252,12 @@
 		  (fixnum
 		   (+ rehash-size old-length))
 		  (float
-		   (ceiling (* rehash-size old-length)))))
+		   (the index (round (* rehash-size old-length))))))
 	      old-length))
 	 (new-vector (make-array new-length :initial-element nil)))
+    (declare (type index new-length))
     (dotimes (i old-length)
+      (declare (type index i))
       (do ((bucket (svref old-vector i) next)
 	   (next nil))
 	  ((null bucket))
@@ -262,6 +270,7 @@
 					   vm:vector-valid-hashing-subtype)
 			  (pointer-hash (hash-table-bucket-key bucket)))))
 	       (index (rem hashing new-length)))
+	  (declare (type index hashing index))
 	  (setf (hash-table-bucket-next bucket) (svref new-vector index))
 	  (setf (svref new-vector index) bucket)))
       ;; We clobber the old vector contents so that if it is living in
@@ -270,12 +279,8 @@
     (setf (hash-table-table table) new-vector)
     (unless (= new-length old-length)
       (setf (hash-table-rehash-trigger table)
-	    (let ((threshold (hash-table-rehash-threshold table)))
-	      ;; Optimize the threshold=1 case so we don't have to use
-	      ;; generic arithmetic in the most common case.
-	      (if (eql threshold 1)
-		  new-length
-		  (truncate (* threshold new-length)))))))
+	    (round (* (hash-table-rehash-threshold table)
+		      (float new-length))))))
   (undefined-value))
 
 ;;; GETHASH -- Public.
@@ -295,6 +300,7 @@
 	  (hashing (funcall (hash-table-hash-fun hash-table) key))
 	  (index (rem hashing length))
 	  (test-fun (hash-table-test-fun hash-table)))
+     (declare (type index hashing))
      (do ((bucket (svref vector index) (hash-table-bucket-next bucket)))
 	 ((null bucket) (values default nil))
        (let ((bucket-hashing (hash-table-bucket-hash bucket)))
@@ -319,11 +325,13 @@
    (multiple-value-bind
        (hashing eq-based)
        (funcall (hash-table-hash-fun hash-table) key)
+     (declare (type hash hashing))
      (let* ((vector (hash-table-table hash-table))
 	    (length (length vector))
 	    (index (rem hashing length))
 	    (first-bucket (svref vector index))
 	    (test-fun (hash-table-test-fun hash-table)))
+       (declare (type index index))
        (do ((bucket first-bucket (hash-table-bucket-next bucket)))
 	   ((null bucket)
 	    (when eq-based
@@ -361,6 +369,7 @@
 	  (hashing (funcall (hash-table-hash-fun hash-table) key))
 	  (index (rem hashing length))
 	  (test-fun (hash-table-test-fun hash-table)))
+     (declare (type index hashing index))
      (do ((prev nil bucket)
 	  (bucket (svref vector index) (hash-table-bucket-next bucket)))
 	 ((null bucket) nil)
@@ -406,6 +415,7 @@
 		(symbol-function map-function))))
 	(vector (hash-table-table hash-table)))
     (dotimes (i (length vector))
+      (declare (type index i))
       (do ((bucket (svref vector i) (hash-table-bucket-next bucket)))
 	  ((null bucket))
 	(funcall fun
@@ -461,15 +471,20 @@
 (defmacro sxmash (place with)
   (let ((n-with (gensym)))
     `(let ((,n-with ,with))
-       (declare (fixnum ,n-with))
+       (declare (type hash ,n-with))
        (setf ,place
-	     (logxor (ash ,n-with ,(- sxmash-rotate-bits sxmash-total-bits))
-		     (ash (logand ,n-with
-				  ,(1- (ash 1
-					    (- sxmash-total-bits
-					       sxmash-rotate-bits))))
-			  ,sxmash-rotate-bits)
-		     (the fixnum ,place))))))
+	     (logxor (truly-the hash
+				(ash ,n-with
+				     ,(- sxmash-rotate-bits
+					 sxmash-total-bits)))
+		     (truly-the hash
+				(ash (logand
+				      ,n-with
+				      ,(1- (ash 1
+						(- sxmash-total-bits
+						   sxmash-rotate-bits))))
+				     ,sxmash-rotate-bits))
+		     (truly-the hash ,place))))))
 
 (defmacro sxhash-simple-string (sequence)
   `(%sxhash-simple-string ,sequence))
@@ -478,7 +493,7 @@
   (let ((data (gensym))
 	(start (gensym))
 	(end (gensym)))
-    `(with-array-data ((,data ,sequence)
+    `(with-array-data ((,data (the string ,sequence))
 		       (,start)
 		       (,end))
        (if (zerop ,start)
@@ -506,13 +521,16 @@
 
 
 (defun internal-sxhash (s-expr depth)
+  (declare (type index depth) (values hash))
   (typecase s-expr
     ;; The pointers and immediate types.
     (list (sxhash-list s-expr depth))
-    (fixnum
-     (ldb sxhash-bits-byte s-expr))
-    (structure
-     (internal-sxhash (type-of s-expr) depth))
+    (fixnum (logand s-expr (1- most-positive-fixnum)))
+    (instance
+     (if (typep s-expr 'structure-object)
+	 (internal-sxhash (class-name (layout-class (%instance-layout s-expr)))
+			  depth)
+	 42))
     ;; Other-pointer types.
     (simple-string (sxhash-simple-string s-expr))
     (symbol (sxhash-simple-string (symbol-name s-expr)))
@@ -527,15 +545,15 @@
        (double-float
 	(let* ((val s-expr)
 	       (lo (double-float-low-bits val))
-	       (hi (double-float-high-bits val)))
+	       (hi (ldb sxhash-bits-byte (double-float-high-bits val))))
 	  (ldb sxhash-bits-byte
 	       (logxor (ash lo (- sxmash-rotate-bits))
 		       (ash hi (- sxmash-rotate-bits))
 		       lo hi))))
-       (ratio (the fixnum (+ (internal-sxhash (numerator s-expr) 0)
-			     (internal-sxhash (denominator s-expr) 0))))
-       (complex (the fixnum (+ (internal-sxhash (realpart s-expr) 0)
-			       (internal-sxhash (imagpart s-expr) 0))))))
+       (ratio (logxor (internal-sxhash (numerator s-expr) 0)
+		      (internal-sxhash (denominator s-expr) 0)))
+       (complex (logxor (internal-sxhash (realpart s-expr) 0)
+			(internal-sxhash (imagpart s-expr) 0)))))
     (array
      (typecase s-expr
        (string (sxhash-string s-expr))

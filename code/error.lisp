@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.19 1992/12/10 02:05:18 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/error.lisp,v 1.20 1993/02/26 08:25:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -18,6 +18,9 @@
 
 (in-package "CONDITIONS")
 (use-package "EXTENSIONS")
+
+(in-package "KERNEL")
+(export '(layout-invalid))
 
 (in-package "LISP")
 (export '(break error warn cerror
@@ -705,6 +708,16 @@ The previous version is uglier, but it sets up unique run-time tags.
    (format-arguments '()))
   (:conc-name internal-simple-type-error-)
   (:report simple-condition-printer))
+
+(define-condition kernel:layout-invalid (type-error)
+  ()
+  (:report
+   (lambda (condition stream)
+     (format stream "Layout-invalid error in ~S:~@
+		     Type test of class ~S was passed obsolete instance:~%  ~S"
+	     (type-error-function-name condition)
+	     (kernel:class-proper-name (type-error-expected-type condition))
+	     (type-error-datum condition)))))
 
 (define-condition case-failure (type-error)
   (name

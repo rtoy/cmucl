@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.17 1993/02/12 20:21:44 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/stream.lisp,v 1.18 1993/02/26 08:26:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,9 +37,16 @@
 	  *standard-input* *standard-output*
           *error-output* *query-io* *debug-io* *terminal-io* *trace-output*))
 
-(in-package 'system)
+(in-package "SYSTEM")
 (export '(make-indenting-stream read-n-bytes))
-(in-package 'lisp)
+
+(in-package "EXT")
+
+(export '(get-stream-command
+	  stream-command stream-command-p stream-command-name 
+	  stream-command-args make-stream-command make-case-frob-stream))
+
+(in-package "LISP")
 
 (deftype string-stream ()
   '(or string-input-stream string-output-stream
@@ -101,7 +108,6 @@
 ;;; are handled by just one function, the Misc method.  This function
 ;;; is passed a keyword which indicates the operation to perform.
 ;;; The following keywords are used:
-;;;  :read-line		- Do a read-line.
 ;;;  :listen 		- Return the following values:
 ;;; 			     t if any input waiting.
 ;;; 			     :eof if at eof.
@@ -115,7 +121,7 @@
 ;;;  :finish-output,
 ;;;  :force-output	- Cause output to happen
 ;;;  :clear-output	- Clear any undone output
-;;;  :element-type 	- Return the type of element the stream deals with.
+;;;  :element-type 	- Return the type of element the stream deals wit<h.
 ;;;  :line-length	- Return the length of a line of output.
 ;;;  :charpos		- Return current output position on the line.
 ;;;  :file-length	- Return the file length of a file stream.
@@ -153,6 +159,7 @@
 ;;;    If a stream does not have an In-Buffer, then the In-Buffer slot
 ;;; must be nil, and the In-Index must be In-Buffer-Length.  These are
 ;;; the default values for the slots. 
+
 
 ;;; Stream manipulation functions.
 
@@ -208,6 +215,38 @@
   (setf (stream-bout stream) #'closed-flame)
   (setf (stream-sout stream) #'closed-flame)
   (setf (stream-misc stream) #'closed-flame))
+
+
+;;;; File position and file length.
+
+;;; File-Position  --  Public
+;;;
+;;;    Call the misc method with the :file-position operation.
+;;;
+(defun file-position (stream &optional position)
+  "With one argument returns the current position within the file
+  File-Stream is open to.  If the second argument is supplied, then
+  this becomes the new file position.  The second argument may also
+  be :start or :end for the start and end of the file, respectively."
+  (declare (stream stream) (type (or index null) position))
+  (cond
+   (position
+    (setf (stream-in-index stream) in-buffer-length)
+    (funcall (stream-misc stream) stream :file-position position))
+   (t
+    (let ((res (funcall (stream-misc stream) stream :file-position nil)))
+      (when res (- res (- in-buffer-length (stream-in-index stream))))))))
+
+
+;;; File-Length  --  Public
+;;;
+;;;    Like File-Position, only use :file-length.
+;;;
+(defun file-length (stream)
+  "This function returns the length of the file that File-Stream is open to."
+  (declare (stream stream))
+  (funcall (stream-misc stream) stream :file-length))
+
 
 ;;; Input functions:
 
@@ -216,32 +255,30 @@
   "Returns a line of text read from the Stream as a string, discarding the
   newline character."
   (declare (ignore recursive-p))
-  (let* ((stream (in-synonym-of stream))
-	 (buffer (stream-in-buffer stream))
-	 (index (stream-in-index stream)))
-    (declare (fixnum index))
-    (if (simple-string-p buffer)
-	(let ((nl (%sp-find-character buffer index in-buffer-length
-				      #\newline)))
-	  (if nl
-	      (values (prog1 (subseq (the simple-string buffer) index nl)
-			     (setf (stream-in-index stream)
-				   (1+ (the fixnum nl))))
-		      nil)
-	      (multiple-value-bind (str eofp)
-				   (funcall (stream-misc stream) stream
-					    :read-line eof-errorp eof-value)
-		(if (= index in-buffer-length)
-		    (values str eofp)
-		    (let ((first (subseq buffer index in-buffer-length)))
-		      (setf (stream-in-index stream) in-buffer-length)
-		      (if (eq str eof-value)
-			  (values first t)
-			  (values (concatenate 'simple-string first
-					       (the simple-string str))
-				  eofp)))))))
-	(funcall (stream-misc stream) stream :read-line eof-errorp
-		 eof-value))))
+  (prepare-for-fast-read-char stream
+    (let ((res (make-string 80))
+	  (len 80)
+	  (index 0))
+      (loop
+	(let ((ch (fast-read-char nil nil)))
+	  (cond (ch
+		 (when (char= ch #\newline)
+		   (done-with-fast-read-char)
+		   (return (values (shrink-vector res index) nil)))
+		 (when (= index len)
+		   (setq len (* len 2))
+		   (let ((new (make-string len)))
+		     (replace new res)
+		     (setq res new)))
+		 (setf (schar res index) ch)
+		 (incf index))
+		((zerop index)
+		 (done-with-fast-read-char)
+		 (return (funcall (stream-in stream) stream
+				  eof-errorp eof-value)))
+		(t
+		 (done-with-fast-read-char)
+		 (return (values (shrink-vector res index) t)))))))))
 
 
 ;;; We proclaim them inline here, then proclaim them notinline at EOF,
@@ -252,25 +289,23 @@
 			    recursive-p)
   "Inputs a character from Stream and returns it."
   (declare (ignore recursive-p))
-  (let* ((stream (in-synonym-of stream))
-	 (index (stream-in-index stream)))
-    (declare (fixnum index))
-    (if (eql index in-buffer-length)
-	(funcall (stream-in stream) stream eof-errorp eof-value)
-	(prog1 (aref (stream-in-buffer stream) index)
-	       (setf (stream-in-index stream) (1+ index))))))
+  (prepare-for-fast-read-char stream
+    (prog1
+	(fast-read-char eof-errorp eof-value)
+      (done-with-fast-read-char))))
 
 (defun unread-char (character &optional (stream *standard-input*))
   "Puts the Character back on the front of the input Stream."
   (let* ((stream (in-synonym-of stream))
-	 (index (1- (the fixnum (stream-in-index stream))))
+	 (index (1- (stream-in-index stream)))
 	 (buffer (stream-in-buffer stream)))
     (declare (fixnum index))
     (when (minusp index) (error "Nothing to unread."))
-    (if buffer
-	(setf (aref (the simple-array buffer) index) character
-	      (stream-in-index stream) index)
-	(funcall (stream-misc stream) stream :unread character)))
+    (cond (buffer
+	   (setf (aref buffer index) (char-code character))
+	   (setf (stream-in-index stream) index))
+	  (t
+	   (funcall (stream-misc stream) stream :unread character))))
   nil)
 
 (defun peek-char (&optional (peek-type nil) (stream *standard-input*)
@@ -322,19 +357,17 @@
 
 (defun read-byte (stream &optional (eof-errorp t) eof-value)
   "Returns the next byte of the Stream."
-  (let* ((stream (in-synonym-of stream))
-	 (index (stream-in-index stream)))
-    (declare (fixnum index))
-    (if (eql index in-buffer-length)
-	(funcall (stream-bin stream) stream eof-errorp eof-value)
-	(prog1 (aref (stream-in-buffer stream) index)
-	       (setf (stream-in-index stream) (1+ index))))))
+  (prepare-for-fast-read-byte stream
+    (prog1
+	(fast-read-byte eof-errorp eof-value t)
+      (done-with-fast-read-byte))))
 
 (defun read-n-bytes (stream buffer start numbytes &optional (eof-errorp t))
   "Reads Numbytes bytes into the Buffer starting at Start, and returns
-  the number of bytes actually read if the end of file was hit before Numbytes
-  bytes were read (and Eof-Errorp is false)."
-  (declare (fixnum numbytes))
+   the number of bytes actually read if the end of file was hit before Numbytes
+   bytes were read (and Eof-Errorp is false)."
+  (declare (type index numbytes start)
+	   (type (or (simple-array * (*)) system-area-pointer) buffer))
   (let* ((stream (in-synonym-of stream))
 	 (in-buffer (stream-in-buffer stream))
 	 (index (stream-in-index stream))
@@ -342,10 +375,7 @@
     (declare (fixnum index num-buffered))
     (cond
      ((not in-buffer)
-      (with-in-stream stream stream-n-bin buffer start numbytes eof-errorp))
-     ((not (typep in-buffer
-		  '(or simple-string (simple-array (unsigned-byte 8) (*)))))
-      (error "N-Bin only works on 8-bit-like streams."))
+      (funcall (stream-n-bin stream) stream buffer start numbytes eof-errorp))
      ((<= numbytes num-buffered)
       (%primitive byte-blt in-buffer index buffer start (+ start numbytes))
       (setf (stream-in-index stream) (+ index numbytes))
@@ -354,10 +384,69 @@
       (let ((end (+ start num-buffered)))
 	(%primitive byte-blt in-buffer index buffer start end)
 	(setf (stream-in-index stream) in-buffer-length)
-	(+ (with-in-stream stream stream-n-bin buffer end
-				   (- numbytes num-buffered)
-				   eof-errorp)
+	(+ (funcall (stream-n-bin stream) stream buffer end
+		    (- numbytes num-buffered)
+		    eof-errorp)
 	   num-buffered))))))
+
+
+;;; Amount of space we leave at the start of the in-buffer for unreading.  4
+;;; instead of 1 to allow word-aligned copies.
+;;;
+(defconstant in-buffer-extra 4)
+
+;;; FAST-READ-CHAR-REFILL  --  Interface
+;;;
+;;;    This function is called by the fast-read-char expansion to refill the
+;;; in-buffer for text streams.  There is definitely an in-buffer, and hence
+;;; myst be an n-bin method.
+;;;
+(defun fast-read-char-refill (stream eof-errorp eof-value)
+  (let* ((ibuf (stream-in-buffer stream))
+	 (count (funcall (stream-n-bin stream) stream
+			 ibuf in-buffer-extra
+			 (- in-buffer-length in-buffer-extra)
+			 nil))
+	 (start (- in-buffer-length count)))
+    (declare (type index start count))
+    (cond ((zerop count)
+	   (setf (stream-in-index stream) in-buffer-length)
+	   (funcall (stream-in stream) stream eof-errorp eof-value))
+	  (t
+	   (when (/= start in-buffer-extra)
+	     (bit-bash-copy ibuf (+ (* in-buffer-extra vm:byte-bits)
+				    (* vm:vector-data-offset vm:word-bits))
+			    ibuf (+ (the index (* start vm:byte-bits))
+				    (* vm:vector-data-offset vm:word-bits))
+			    (* count vm:byte-bits)))
+	   (setf (stream-in-index stream) (1+ start))
+	   (code-char (aref ibuf start))))))
+
+
+;;; FAST-READ-BYTE-REFILL  --  Interface
+;;;
+;;;    Similar to FAST-READ-CHAR-REFILL, but we don't have to leave room for
+;;; unreading.
+;;;
+(defun fast-read-byte-refill (stream eof-errorp eof-value)
+  (let* ((ibuf (stream-in-buffer stream))
+	 (count (funcall (stream-n-bin stream) stream
+			 ibuf 0 in-buffer-length
+			 nil))
+	 (start (- in-buffer-length count)))
+    (declare (type index start count))
+    (cond ((zerop count)
+	   (setf (stream-in-index stream) in-buffer-length)
+	   (funcall (stream-bin stream) stream eof-errorp eof-value))
+	  (t
+	   (unless (zerop start)
+	     (bit-bash-copy ibuf (* vm:vector-data-offset vm:word-bits)
+			    ibuf (+ (the index (* start vm:byte-bits))
+				    (* vm:vector-data-offset vm:word-bits))
+			    (* count vm:byte-bits)))
+	   (setf (stream-in-index stream) (1+ start))
+	   (aref ibuf start)))))
+  
 
 ;;; Output functions:
 
@@ -555,7 +644,6 @@
   (let ((syn (symbol-value (synonym-stream-symbol stream)))
 	(*previous-stream* stream))
     (case operation
-      (:read-line (read-line syn))
       (:listen (or (/= (the fixnum (stream-in-index syn)) in-buffer-length)
 		   (funcall (stream-misc syn) syn :listen)))
       (t
@@ -613,9 +701,6 @@
     (case operation
       (:listen (or (/= (the fixnum (stream-in-index in)) in-buffer-length)
 		   (funcall in-method in :listen)))
-      (:read-line
-       (force-output out)
-       (read-line in arg1 arg2))
       ((:finish-output :force-output :clear-output)
        (funcall out-method out operation arg1 arg2))
       ((:clear-input :unread)
@@ -669,70 +754,37 @@
 		  (setf (concatenated-stream-current stream) current)))))
   (in-fun concatenated-in read-char)
   (in-fun concatenated-bin read-byte))
-
-;;;    Concatenated-Readline is somewhat hairy, since we may need to
-;;; do several readlines and concatenate the result if the lines are
-;;; terminated by eof.
-;;;
-(defun concatenated-readline (stream eof-errorp eof-value)
-  ;; Loop until we find a stream that will give us something or we error
-  ;; out.
-  (do ((current (concatenated-stream-current stream) (cdr current)))
-      ((null current)
-       (eof-or-lose stream eof-errorp eof-value))
-    (setf (concatenated-stream-current stream) current)
-    (let ((this (car current)))
-      (multiple-value-bind (result eofp)
-			   (read-line this nil :eof)
-	(declare (type (or simple-string (member :eof)) result))
-	;; Once we have found some input, we loop until we either find a 
-	;; line not terminated by eof or hit eof on the last stream.
-	(unless (eq result :eof)
-	  (do ((current (cdr current) (cdr current))
-	       (new ""))
-	      ((or (not eofp) (null current))
-	       (return-from concatenated-readline (values result eofp)))
-	    (declare (type (or simple-string (member :eof)) new))
-	    (setf (concatenated-stream-current stream) current)
-	    (let ((this (car current)))
-	      (multiple-value-setq (new eofp)
-		(read-line this nil :eof))
-	      (if (eq new :eof)
-		  (setq eofp t)
-		  (setq result (concatenate 'simple-string result new))))))))))
 
 (defun concatenated-misc (stream operation &optional arg1 arg2)
-  (if (eq operation :read-line)
-      (concatenated-readline stream arg1 arg2)
-      (let ((left (concatenated-stream-current stream)))
-	(when left
-	  (let* ((current (car left))
-		 (misc (stream-misc current)))
-	    (case operation
-	      (:listen
-	       (loop
-		 (let ((stuff (funcall misc current :listen)))
-		   (cond ((eq stuff :eof)
-			  ;; Advance current, and try again.
-			  (pop (concatenated-stream-current stream))
-			  (setf current
-				(car (concatenated-stream-current stream)))
-			  (unless current
-			    ;; No further streams.  EOF.
-			    (return :eof))
-			  (setf misc (stream-misc current)))
-			 (stuff
-			  ;; Stuff's available.
-			  (return t))
-			 (t
-			  ;; Nothing available yet.
-			  (return nil))))))
-	      (:close
-	       (dolist (stream (concatenated-stream-streams stream))
-		 (funcall (stream-misc stream) stream :close arg1))
-	       (set-closed-flame stream))
-	      (t
-	       (funcall misc current operation arg1 arg2))))))))
+  (let ((left (concatenated-stream-current stream)))
+    (when left
+      (let* ((current (car left))
+	     (misc (stream-misc current)))
+	(case operation
+	  (:listen
+	   (loop
+	     (let ((stuff (funcall misc current :listen)))
+	       (cond ((eq stuff :eof)
+		      ;; Advance current, and try again.
+		      (pop (concatenated-stream-current stream))
+		      (setf current
+			    (car (concatenated-stream-current stream)))
+		      (unless current
+			;; No further streams.  EOF.
+			(return :eof))
+		      (setf misc (stream-misc current)))
+		     (stuff
+		      ;; Stuff's available.
+		      (return t))
+		     (t
+		      ;; Nothing available yet.
+		      (return nil))))))
+	  (:close
+	   (dolist (stream (concatenated-stream-streams stream))
+	     (funcall (stream-misc stream) stream :close arg1))
+	   (set-closed-flame stream))
+	  (t
+	   (funcall misc current operation arg1 arg2)))))))
 
 ;;;; Echo Streams:
 
@@ -768,25 +820,6 @@
 		   (/= (the fixnum (stream-in-index in)) in-buffer-length)
 		   (funcall in-method in :listen)))
       (:unread (push arg1 (echo-stream-unread-stuff stream)))
-      (:read-line
-       (let* ((stuff (echo-stream-unread-stuff stream))
-	      (newline-pos (position #\newline stuff)))
-	 (if newline-pos
-	     (progn
-	       (setf (echo-stream-unread-stuff stream)
-		     (subseq stuff (1+ newline-pos)))
-	       (values (coerce (subseq stuff 0 newline-pos) 'simple-string)
-		       nil))
-	     (multiple-value-bind (result eofp)
-				  (read-line in arg1 arg2)
-	       (if eofp
-		   (write-string result out)
-		   (write-line result out))
-	       (setf (echo-stream-unread-stuff stream) nil)
-	       (values (if stuff
-			   (concatenate 'simple-string stuff result)
-			   result)
-		       eofp)))))
       (:element-type
        (let ((in-type (funcall in-method in :element-type))
 	     (out-type (funcall out-method out :element-type)))
@@ -840,32 +873,13 @@
 	   (aref string index)))))
 
 (defun string-in-misc (stream operation &optional arg1 arg2)
+  (declare (ignore arg2))
   (case operation
     (:file-position
      (if arg1
 	 (setf (string-input-stream-current stream) arg1)
 	 (string-input-stream-current stream)))
     (:file-length (length (string-input-stream-string stream)))
-    (:read-line
-     (let ((string (string-input-stream-string stream))
-	   (current (string-input-stream-current stream))
-	   (end (string-input-stream-end stream)))
-       (declare (simple-string string) (fixnum current end))
-       (if (= current end)
-	   (eof-or-lose stream arg1 arg2)
-	   (let ((pos (position #\newline string :start current :end end)))
-	     (if pos
-		 (let* ((res-length (- (the fixnum pos) current))
-			(result (make-string res-length)))
-		   (%primitive byte-blt string current result 0 res-length)
-		   (setf (string-input-stream-current stream)
-			 (1+ (the fixnum pos)))
-		   (values result nil))
-		 (let* ((res-length (- end current))
-			(result (make-string res-length)))
-		   (%primitive byte-blt string current result 0 res-length)
-		   (setf (string-input-stream-current stream) end)
-		   (values result t)))))))
     (:unread (decf (string-input-stream-current stream)))
     (:listen (or (/= (the fixnum (string-input-stream-current stream))
 		     (the fixnum (string-input-stream-end stream)))
@@ -878,7 +892,7 @@
   Start and End in order."
   (declare (type string string)
 	   (type index start)
-	   (or (index null) end))
+	   (type (or index null) end))
   (internal-make-string-input-stream (coerce string 'simple-string)
 				     start end))
 
@@ -1137,10 +1151,6 @@
 
 ;;;; Case frobbing streams, used by format ~(...~).
 
-(in-package "EXT")
-(export '(make-case-frob-stream))
-(in-package "LISP")
-
 (defstruct (case-frob-stream
 	    (:include stream
 		      (:misc #'case-frob-misc))
@@ -1344,14 +1354,8 @@
 	  (return))))
     (funcall (stream-sout target) target str 0 len)))
 
-
 
 ;;;; Public interface from "EXTENSIONS" package.
-
-(in-package "EXT")
-
-(export '(get-stream-command stream-command stream-command-p stream-command-name
-	  stream-command-args make-stream-command))
 
 (defstruct (stream-command (:print-function print-stream-command)
 			   (:constructor make-stream-command

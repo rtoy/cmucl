@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.47 1992/12/17 09:10:13 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.48 1993/02/26 08:25:47 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -64,10 +64,11 @@
 
 (defvar *load-depth* 0
   "Count of the number of recursive loads.")
-(defvar *fasl-file* ()
-  "The fasl file we're reading from.")
-(defvar *current-code-format*
-  "The code format that we think we are loading.")
+(declaim (type index *load-depth*))
+(defvar *fasl-file*)
+(declaim (type stream fasl-file))
+(defvar *current-code-format*)
+(declaim (type (or cons null) *current-code-format*))
 
 
 ;;; LOAD-FRESH-LINE -- internal.
@@ -82,6 +83,7 @@
       ((< count (length semicolons))
        (unless (zerop count)
 	 (write-string semicolons *standard-output* :end count)))
+    (declare (fixnum count))
     (write-string semicolons))
   (write-char #\space))
 
@@ -94,14 +96,17 @@
 (defvar *free-fop-tables* (list (make-array 1000))
   "List of free fop tables for the fasloader.")
 
-(defvar *current-fop-table* ()
-  "The current fop table.")
+;;; The current fop table.
+(defvar *current-fop-table*)
+(declaim (simple-vector *current-fop-table*))
 
-(defvar *current-fop-table-size* ()
-  "The length of the current fop table.")
+;;; The length of the current fop table.
+(defvar *current-fop-table-size*)
+(declaim (type index *current-fop-table-size*))
 
-(defvar *current-fop-table-index* ()
-  "Index in the fop-table of the next entry to be used.")
+;;; Index in the fop-table of the next entry to be used.
+(defvar *current-fop-table-index*)
+(declaim (type index *current-fop-table-index*))
 
 (defun grow-fop-table ()
   (let* ((new-size (* *current-fop-table-size* 2))
@@ -127,13 +132,15 @@
 ;;;
 (defvar *fop-stack* (make-array 100)
   "The fop stack (we only need one!).")
+(declaim (simple-vector *fop-stack*))
 
-(defvar *fop-stack-pointer* 100
-  "The index of the most recently pushed item on the fop-stack.")
+;;; The index of the most recently pushed item on the fop-stack.
+(defvar *fop-stack-pointer* 100)
 
-(defvar *fop-stack-pointer-on-entry* ()
-  "The current index into the fop stack when we last recursively entered LOAD.")
-
+;;; The current index into the fop stack when we last recursively entered
+;;; LOAD.
+(defvar *fop-stack-pointer-on-entry*)
+(declaim (type index *fop-stack-pointer* *fop-stack-pointer-on-entry*))
 
 (defun grow-fop-stack ()
   (let* ((size (length (the simple-vector *fop-stack*)))
@@ -157,7 +164,7 @@
 	(n-res (gensym)))
     `(let ((,n-stack *fop-stack*)
 	   (,n-index *fop-stack-pointer*))
-       (declare (simple-vector ,n-stack) (fixnum ,n-index))
+       (declare (simple-vector ,n-stack) (type index ,n-index))
        (macrolet ((pop-stack ()
 		    `(prog1
 		      (svref ,',n-stack ,',n-index)
@@ -165,6 +172,7 @@
 		  (call-with-popped-things (fun n)
 		    (let ((n-start (gensym)))
 		      `(let ((,n-start (+ ,',n-index ,n)))
+			 (declare (type index ,n-start))
 			 (setq ,',n-index ,n-start)
 			 (,fun ,@(make-list n :initial-element
 					    `(svref ,',n-stack
@@ -192,6 +200,7 @@
   "Vector indexed by a FaslOP that yields a function of 0 arguments which
   will perform the operation.")
 
+(declaim (simple-vector fop-codes fop-functions))
 
 ;;; Define-FOP  --  Internal
 ;;;
@@ -217,12 +226,12 @@
 ;;; argument can be accessed by using the Clone-Arg macro.
 ;;;
 (defmacro clone-fop ((name op &optional (pushp t))
-		      (small-name small-op) &rest forms)
+		     (small-name small-op) &rest forms)
   `(progn
-    (macrolet ((clone-arg () '(read-arg 4)))
-      (define-fop (,name ,op ,pushp) ,@forms))
-    (macrolet ((clone-arg () '(read-arg 1)))
-      (define-fop (,small-name ,small-op ,pushp) ,@forms))))
+     (macrolet ((clone-arg () '(read-arg 4)))
+       (define-fop (,name ,op ,pushp) ,@forms))
+     (macrolet ((clone-arg () '(read-arg 1)))
+       (define-fop (,small-name ,small-op ,pushp) ,@forms))))
 
 ;;;; Utilities for reading from the fasl file.
 
@@ -234,6 +243,7 @@
 ;;; fast-read-byte.
 ;;;
 (defmacro fast-read-u-integer (n)
+  (declare (optimize (speed 0)))
   (do ((res '(fast-read-byte)
 	    `(logior (fast-read-byte)
 		     (ash ,res 8)))
@@ -253,20 +263,22 @@
 	  (,n-res
 	   (fast-read-byte)
 	   (dpb (fast-read-byte) (byte 8 ,n-pos) ,n-res)))
-	 ((zerop ,n-cnt) ,n-res))))
+	 ((zerop ,n-cnt) ,n-res)
+       (declare (type index ,n-pos ,n-cnt)))))
 
 ;;; Fast-Read-S-Integer  --  Internal
 ;;;
 ;;;    Read a signed integer.
 ;;;
 (defmacro fast-read-s-integer (n)
+  (declare (optimize (speed 0)))
   (let ((n-last (gensym)))
     (do ((res `(let ((,n-last (fast-read-byte)))
 		 (if (zerop (logand ,n-last #x80))
 		     ,n-last
 		     (logior ,n-last #x-100)))
 	      `(logior (fast-read-byte)
-		       (ash ,res 8)))
+		       (ash (the (signed-byte ,(* cnt 8)) ,res) 8)))
 	 (cnt 1 (1+ cnt)))
 	((>= cnt n) res))))
 
@@ -275,8 +287,9 @@
 ;;;    Read an N-byte unsigned integer from the *fasl-file*
 ;;;
 (defmacro read-arg (n)
+  (declare (optimize (speed 0)))
   (if (= n 1)
-      `(read-byte *fasl-file*)
+      `(the (unsigned-byte 8) (read-byte *fasl-file*))
       `(prepare-for-fast-read-byte *fasl-file*
 	 (prog1
 	  (fast-read-u-integer ,n)
@@ -297,13 +310,9 @@
     (error "Attempt to load an empty FASL FILE:~%  ~S" (namestring stream)))
   (do-load-verbose stream)
   (let* ((*fasl-file* stream)
-	 (*current-fop-table* (pop *free-fop-tables*))
-	 (*current-fop-table-size* ())
+	 (*current-fop-table* (or (pop *free-fop-tables*) (make-array 1000)))
+	 (*current-fop-table-size* (length *current-fop-table*))
 	 (*fop-stack-pointer-on-entry* *fop-stack-pointer*))
-    (if (null *current-fop-table*)
-	(setq *current-fop-table* (make-array 1000)))
-    (setq *current-fop-table-size*
-	  (length (the simple-vector *current-fop-table*)))
     (unwind-protect 
       (do ((loaded-group (load-group stream) (load-group stream)))
 	  ((not loaded-group)))
@@ -383,6 +392,7 @@
 	      (terpri *trace-output*))
 	    (if (eql byte 3)
 		(let ((index *fop-stack-pointer*))
+		  (declare (type index index))
 		  (when (zerop index)
 		    (grow-fop-stack)
 		    (setq index *fop-stack-pointer*))
@@ -390,7 +400,7 @@
 		  (setq *fop-stack-pointer* index)
 		  (setf (svref *fop-stack* index)
 			(svref *current-fop-table* (read-byte file))))
-		(funcall (svref fop-functions byte)))))))))
+		(funcall (the function (svref fop-functions byte))))))))))
 
 
 ;;; Check-Header returns t if t succesfully read a header from the file,
@@ -404,7 +414,7 @@
 	   (do ((byte (read-byte file) (read-byte file))
 		(count 1 (1+ count)))
 	       ((= byte 255) t)
-	     (declare (fixnum byte))
+	     (declare (fixnum byte count))
 	     (if (and (< count 9)
 		      (not (eql byte (char-code (schar "FASL FILE" count)))))
 		 (error "Bad FASL file format."))))
@@ -414,7 +424,7 @@
 ;;; Load-S-Integer loads a signed integer Length bytes long from the File.
 
 (defun load-s-integer (length)  
-  (declare (fixnum length))
+  (declare (fixnum length) (optimize (inhibit-warnings 2)))
   (do* ((index length (1- index))
 	(byte 0 (read-byte *fasl-file*))
 	(result 0 (+ result (ash byte bits)))
@@ -570,7 +580,7 @@
 			   (read-line file nil))))
 	 (cond
 	  ((and first-line
-		(>= (length first-line) 9)
+		(>= (length (the simple-string first-line)) 9)
 		(string= first-line "FASL FILE" :end1 9))
 	   (internal-load pathname truename if-does-not-exist :binary))
 	  (t
@@ -660,13 +670,20 @@
 (clone-fop (fop-struct 48)
 	   (fop-small-struct 49)
   (let* ((size (clone-arg))
-	 (res (make-structure size)))
+	 (res (%make-instance size)))
     (declare (type index size))
     (do ((n (1- size) (1- n)))
 	((minusp n))
       (declare (type (integer -1 #.most-positive-fixnum) n))
-      (setf (structure-ref res n) (pop-stack)))
+      (setf (%instance-ref res n) (pop-stack)))
     res))
+
+(define-fop (fop-layout 45)
+  (let ((length (pop-stack))
+	(depth (pop-stack))
+	(inherits (pop-stack))
+	(name (pop-stack)))
+    (find-layout name length inherits depth)))
 
 (define-fop (fop-end-group 64 :nope) (throw 'group-end t))
 (define-fop (fop-end-header 255)
@@ -689,7 +706,9 @@
 ;;;; Loading symbols:
 
 (defvar *load-symbol-buffer* (make-string 100))
+(declaim (simple-string *load-symbol-buffer*))
 (defvar *load-symbol-buffer-size* 100)
+(declaim (type index *load-symbol-buffer-size*))
    
 (macrolet ((frob (name code name-size package)
 	     (let ((n-package (gensym))
@@ -746,6 +765,7 @@
     (prog1
      (fast-read-s-integer 4)
      (done-with-fast-read-byte))))
+
 (define-fop (fop-byte-integer 36)
   (prepare-for-fast-read-byte *fasl-file*
     (prog1
@@ -761,11 +781,16 @@
     (%make-complex (pop-stack) im)))
 
 (define-fop (fop-single-float 46)
-  (make-single-float (load-s-integer 4)))
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1 (make-single-float (fast-read-s-integer 4))
+      (done-with-fast-read-byte))))
 
 (define-fop (fop-double-float 47)
-  (let ((lo (ldb (byte 32 0) (load-s-integer 4))))
-    (make-double-float (load-s-integer 4) lo)))
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let ((lo (fast-read-u-integer 4)))
+	  (make-double-float (fast-read-s-integer 4) lo))
+      (done-with-fast-read-byte))))
 
 
 ;;;; Loading lists:
@@ -773,12 +798,14 @@
 (define-fop (fop-list 15)
   (do ((res () (cons (pop-stack) res))
        (n (read-arg 1) (1- n)))
-      ((zerop n) res)))
+      ((zerop n) res)
+    (declare (type index n))))
 
 (define-fop (fop-list* 16)
   (do ((res (pop-stack) (cons (pop-stack) res))
        (n (read-arg 1) (1- n)))
-      ((zerop n) res)))
+      ((zerop n) res)
+    (declare (type index n))))
 
 (macrolet ((frob (name op fun n)
 	     `(define-fop (,name ,op)
@@ -837,7 +864,8 @@
     (set-array-header res vec length length 0
 		      (do ((i rank (1- i))
 			   (dimensions () (cons (pop-stack) dimensions)))
-			  ((zerop i) dimensions))
+			  ((zerop i) dimensions)
+			(declare (type index i)))
 		      nil)
     res))
 
@@ -875,7 +903,8 @@
 		  (t (error "Losing i-vector element size: ~S" size)))))
       (declare (type index len))
       (done-with-fast-read-byte)
-      (read-n-bytes *fasl-file* res 0 (ceiling (* size len) vm:byte-bits))
+      (read-n-bytes *fasl-file* res 0
+		    (ceiling (the index (* size len)) vm:byte-bits))
       res)))
 
 
@@ -909,7 +938,8 @@
 	(funcall (pop-stack))
 	(do ((args () (cons (pop-stack) args))
 	     (n arg (1- n)))
-	    ((zerop n) (apply (pop-stack) args))))))
+	    ((zerop n) (apply (pop-stack) args))
+	  (declare (type index n))))))
 
 (define-fop (fop-funcall-for-effect 56 nil)
   (let ((arg (read-arg 1)))
@@ -917,7 +947,8 @@
 	(funcall (pop-stack))
 	(do ((args () (cons (pop-stack) args))
 	     (n arg (1- n)))
-	    ((zerop n) (apply (pop-stack) args))))))
+	    ((zerop n) (apply (pop-stack) args))
+	  (declare (type index n))))))
 
 ;;;; Fixing up circularities.
 (define-fop (fop-rplaca 200 nil)
@@ -938,13 +969,13 @@
 	 (obj (svref *current-fop-table* obi))
 	 (idx (read-arg 4))
 	 (val (pop-stack)))
-    (if (structurep obj)
-	(setf (c::structure-ref obj idx) val)
+    (if (%instancep obj)
+	(setf (%instance-ref obj idx) val)
 	(setf (svref obj idx) val))))
 
 (define-fop (fop-structset 204 nil)
-  (setf (c::structure-ref (svref *current-fop-table* (read-arg 4))
-			  (read-arg 4))
+  (setf (%instance-ref (svref *current-fop-table* (read-arg 4))
+		       (read-arg 4))
 	(pop-stack)))
 
 (define-fop (fop-nthcdr 203 t)
@@ -963,16 +994,17 @@
   `(if *current-code-format*
        (let ((implementation (car *current-code-format*))
 	     (version (cdr *current-code-format*)))
-	 (unless (= implementation
+	 (unless (eql implementation
 		    #.(c:backend-fasl-file-implementation c:*backend*))
 	   (error "~A was compiled for a ~A, but this is a ~A"
 		  *Fasl-file*
-		  (or (elt c:fasl-file-implementations implementation)
+		  (or (elt (the list c:fasl-file-implementations)
+			   implementation)
 		      "unknown machine")
-		  (or (elt c:fasl-file-implementations
+		  (or (elt (the list c:fasl-file-implementations)
 			   #.(c:backend-fasl-file-implementation c:*backend*))
 		      "unknown machine")))
-	 (unless (= version #.(c:backend-fasl-file-version c:*backend*))
+	 (unless (eql version #.(c:backend-fasl-file-version c:*backend*))
 	   (error "~A was compiled for fasl-file version ~A, ~
 	           but this is version ~A"
 	    *Fasl-file* version #.(c:backend-fasl-file-version c:*backend*)))
@@ -981,6 +1013,7 @@
 	   (declare (fixnum box-num code-length))
 	   (let ((code (%primitive allocate-code-object box-num code-length))
 		 (index (+ vm:code-trace-table-offset-slot box-num)))
+	     (declare (type index index))
 	     #-gengc (setf (%code-debug-info code) (pop-stack))
 	     (dotimes (i box-num)
 	       (declare (fixnum i))
@@ -1055,6 +1088,7 @@
 
 (defvar *assembler-routines* (make-hash-table :test #'eq))
 (defvar *foreign-symbols* (make-hash-table :test #'equal))
+(declaim (type hash-table *assembler-routines* *foreign-symbols*))
 
 (defun loader-init ()
   (dolist (routine *initial-assembler-routines*)

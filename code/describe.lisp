@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.22 1992/12/17 09:07:01 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/describe.lisp,v 1.23 1993/02/26 08:25:09 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,12 +92,9 @@
 	   (describe-aux x))
 	 (values))))
 
-;;; DESCRIBE-AUX does different things for each type.  The order of the
-;;; TYPECASE branches matters with respect to:
-;;;    - symbols and functions until the new standard makes them disjoint.
-;;;    - packages and structure since packages are structures.
-;;; We punt a given call if the current level is greater than *describe-level*,
-;;; or if we detect an object into which we have already descended.
+;;; DESCRIBE-AUX does different things for each type.  We punt a given call if
+;;; the current level is greater than *describe-level*, or if we detect an
+;;; object into which we have already descended.
 ;;;
 (defun describe-aux (x)
   (when (or (not (integerp *describe-level*))
@@ -113,7 +110,7 @@
     (function (describe-function x))
     (package (describe-package x))
     (hash-table (describe-hash-table x))
-    (structure (describe-structure x))
+    (instance (describe-instance x))
     (array (describe-array x))
     (fixnum (describe-fixnum x))
     (cons
@@ -142,12 +139,12 @@
 (defun default-describe (x)
   (format t "~&~S is a ~S." x (type-of x)))
 
-(defun describe-structure (x)
+(defun describe-instance (x)
   (cond ((and (fboundp 'pcl::std-instance-p)
 	      (pcl::std-instance-p x))
 	 (pcl::describe-object x *standard-output*))
 	(t
-	 (format t "~&~S is a structure of type ~A." x (c::structure-ref x 0))
+	 (format t "~&~S is a structure of type ~A." x (type-of x))
 	 (dolist (slot (cddr (inspect::describe-parts x)))
 	   (format t "~%~A: ~S." (car slot) (cdr slot))))))
 
@@ -184,7 +181,7 @@
 	  (hash-table-number-entries x)))
 
 (defun describe-package (x)
-  (describe-structure x)
+  (describe-instance x)
   (let* ((internal (package-internal-symbols x))
 	 (internal-count (- (package-hashtable-size internal)
 			    (package-hashtable-free internal)))

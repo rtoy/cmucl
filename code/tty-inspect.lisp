@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.11 1992/12/13 16:04:32 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/tty-inspect.lisp,v 1.12 1993/02/26 08:26:20 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -19,12 +19,12 @@
 (in-package "INSPECT")
 
 ;;; The Tty inspector views LISP objects as being composed of parts.  A list,
-;;; for example, would be divided into it's members, and a structure into its
+;;; for example, would be divided into it's members, and a instance into its
 ;;; slots.  These parts are stored in a list.  The first two elements of this
 ;;; list are for bookkeeping.  The first element is a preamble string that will
 ;;; be displayed before the object.  The second element is a boolean value that
 ;;; indicates whether a label will be printed in front of a value, or just the
-;;; value.  Symbols and structures need to display both a slot name and a
+;;; value.  Symbols and instances need to display both a slot name and a
 ;;; value, while lists, vectors, and atoms need only display a value.  If the
 ;;; second member of a parts list is t, then the third and successive members
 ;;; must be an association list of slot names and values.  When the second slot
@@ -149,7 +149,7 @@
 (defun describe-parts (object)
   (typecase object
     (symbol (describe-symbol-parts object))
-    (structure (describe-structure-parts object))
+    (instance (describe-instance-parts object))
     (function (describe-function-parts object))
     (vector (describe-vector-parts object))
     (array (describe-array-parts object))
@@ -167,16 +167,15 @@
 	(cons "Plist" (symbol-plist object))
 	(cons "Package" (symbol-package object))))
 
-(defun describe-structure-parts (object)
+(defun describe-instance-parts (object)
   (let ((dd-slots
-	 (c::dd-slots
-	  (ext:info type defined-structure-info (type-of object))))
+	 (dd-slots (layout-info (%instance-layout object))))
 	(parts-list ()))
     (push (format nil "~s is a structure.~%" object) parts-list)
     (push t parts-list)
     (dolist (dd-slot dd-slots (nreverse parts-list))
-      (push (cons (c::dsd-%name dd-slot)
-		  (funcall (c::dsd-accessor dd-slot) object))
+      (push (cons (dsd-%name dd-slot)
+		  (funcall (dsd-accessor dd-slot) object))
 	    parts-list))))
 
 (defun describe-function-parts (object)

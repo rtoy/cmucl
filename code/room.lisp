@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.18 1992/12/17 09:13:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/room.lisp,v 1.19 1993/02/26 08:26:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,7 +16,7 @@
 (in-package "VM")
 (use-package "SYSTEM")
 (export '(memory-usage count-no-ops descriptor-vs-non-descriptor-storage
-		       structure-usage find-holes print-allocated-objects
+		       instance-usage find-holes print-allocated-objects
 		       code-breakdown uninterned-symbol-count))
 (in-package "LISP")
 (import '(
@@ -37,7 +37,7 @@
   ;; Kind of type (how we determine length).
   (kind (required-argument)
 	:type (member :lowtag :fixed :header :vector
-		      :string :code :closure :structure))
+		      :string :code :closure :instance))
   ;;
   ;; Length if fixed-length, shift amount for element size if :vector.
   (length nil :type (or fixnum null)))
@@ -96,8 +96,8 @@
 (setf (svref *room-info* code-header-type)
       (make-room-info :name 'code  :kind :code))
 
-(setf (svref *room-info* structure-header-type)
-      (make-room-info :name 'structure :kind :structure))
+(setf (svref *room-info* instance-header-type)
+      (make-room-info :name 'instance :kind :instance))
 
 (deftype spaces () '(member :static :dynamic :read-only))
 
@@ -201,11 +201,11 @@
 			       word-bytes))))
 		(funcall fun obj header-type size)
 		(setq current (sap+ current size))))
-	     ((eq (room-info-kind info) :structure)
+	     ((eq (room-info-kind info) :instance)
 	      (let* ((obj (make-lisp-obj
-			   (logior (sap-int current) structure-pointer-type)))
+			   (logior (sap-int current) instance-pointer-type)))
 		     (size (round-to-dualword
-			    (* (+ (c::structure-length obj) 1) word-bytes))))
+			    (* (+ (%instance-length obj) 1) word-bytes))))
 		(declare (fixnum size))
 		(funcall fun obj header-type size)
 		(assert (zerop (logand size lowtag-mask)))
@@ -471,7 +471,7 @@
 	      (incf non-descriptor-headers)
 	      (incf non-descriptor-bytes (- size word-bytes)))
 	     ((#.list-pointer-type
-	       #.structure-pointer-type
+	       #.instance-pointer-type
 	       #.ratio-type
 	       #.complex-type
 	       #.simple-array-type
@@ -486,7 +486,7 @@
 	       #.symbol-header-type
 	       #.sap-type
 	       #.weak-pointer-type
-	       #.structure-header-type)
+	       #.instance-header-type)
 	      (incf descriptor-words (truncate size word-bytes)))
 	     (t
 	      (error "Bogus type: ~D" type))))
@@ -498,14 +498,14 @@
     (values)))
 
 
-;;; STRUCTURE-USAGE  --  Public
+;;; INSTANCE-USAGE  --  Public
 ;;;
-(defun structure-usage (space &key (top-n 15))
+(defun instance-usage (space &key (top-n 15))
   (declare (type spaces space) (type (or fixnum null) top-n))
-  "Print a breakdown by structure type of all the structures allocated in
+  "Print a breakdown by instance type of all the instances allocated in
   Space.  If TOP-N is true, print only information for the the TOP-N types with
   largest usage."
-  (format t "~2&~@[Top ~D ~]~(~A~) structure types:~%" top-n space)
+  (format t "~2&~@[Top ~D ~]~(~A~) instance types:~%" top-n space)
   (let ((totals (make-hash-table :test #'eq))
 	(total-objects 0)
 	(total-bytes 0))
@@ -513,21 +513,23 @@
     (map-allocated-objects
      #'(lambda (obj type size)
 	 (declare (fixnum size) (optimize (speed 3) (safety 0)))
-	 (when (eql type structure-header-type)
+	 (when (eql type instance-header-type)
 	   (incf total-objects)
 	   (incf total-bytes size)
-	   (let* ((name (structure-ref obj 0))
-		  (found (gethash name totals)))
+	   (let* ((class (layout-class (%instance-ref obj 0)))
+		  (found (gethash class totals)))
 	     (cond (found
 		    (incf (the fixnum (car found)))
 		    (incf (the fixnum (cdr found)) size))
 		   (t
-		    (setf (gethash name totals) (cons 1 size)))))))
+		    (setf (gethash class totals) (cons 1 size)))))))
      space)
 
     (collect ((totals-list))
-      (maphash #'(lambda (name what)
-		   (totals-list (cons name what)))
+      (maphash #'(lambda (class what)
+		   (totals-list (cons (prin1-to-string
+				       (class-proper-name class))
+				      what)))
 	       totals)
       (let ((sorted (sort (totals-list) #'> :key #'cddr))
 	    (printed-bytes 0)
@@ -540,7 +542,7 @@
 		(objects (cadr what)))
 	    (incf printed-bytes bytes)
 	    (incf printed-objects objects)
-	    (format t "  ~S: ~:D bytes, ~D object~:P.~%" (car what)
+	    (format t "  ~A: ~:D bytes, ~D object~:P.~%" (car what)
 		    bytes objects)))
 
 	(let ((residual-objects (- total-objects printed-objects))
@@ -549,7 +551,7 @@
 	    (format t "  Other types: ~:D bytes, ~D: object~:P.~%"
 		    residual-bytes residual-objects))))
 
-      (format t "  ~:(~A~) structure total: ~:D bytes, ~:D object~:P.~%"
+      (format t "  ~:(~A~) instance total: ~:D bytes, ~:D object~:P.~%"
 	      space total-bytes total-objects)))
 
   (values))
@@ -645,7 +647,7 @@
 		    (fresh-line stream)
 		    (let ((str (write-to-string obj :level 5 :length 10
 						:pretty nil)))
-		      (unless (eql type structure-header-type)
+		      (unless (eql type instance-header-type)
 			(format stream "~S: " (type-of obj)))
 		      (format stream "~A~%"
 			      (subseq str 0 (min (length str) 60))))))))))

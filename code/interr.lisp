@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.25 1992/04/15 02:24:02 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.26 1993/02/26 08:25:43 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -279,10 +279,19 @@
 	 :operands (list this that)))
 
 (deferr object-not-type-error (object type)
-  (error 'type-error
+  (error (if (and (%instancep object)
+		  (layout-invalid (%instance-layout object)))
+	     'layout-invalid
+	     'type-error)
 	 :function-name name
 	 :datum object
 	 :expected-type type))
+
+(deferr layout-invalid-error (object layout)
+  (error 'layout-invalid
+	 :function-name name
+	 :datum object
+	 :expected-type (layout-class layout)))
 
 (deferr odd-keyword-arguments-error ()
   (error 'simple-error
@@ -374,11 +383,11 @@
 	 :datum object
 	 :expected-type 'weak-pointer))
 
-(deferr object-not-structure-error (object)
+(deferr object-not-instance-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
-	 :expected-type 'structure))
+	 :expected-type 'instance))
 
 
 

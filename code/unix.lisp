@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.23 1992/08/05 19:59:22 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.24 1993/02/26 08:26:23 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -92,21 +92,20 @@
 
 (defmacro fd-set (offset fd-set)
   (let ((word (gensym))
-	(bit (gensym))
-	(temp (gensym)))
+	(bit (gensym)))
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
-       (let ((,temp (deref (slot ,fd-set 'fds-bits) ,word)))
-	 (setf (ldb (byte 1 ,bit) ,temp) 1)
-	 (setf (deref (slot ,fd-set 'fds-bits) ,word) ,temp)))))
+       (setf (deref (slot ,fd-set 'fds-bits) ,word)
+	     (logior (truly-the (unsigned-byte 32) (ash 1 ,bit))
+		     (deref (slot ,fd-set 'fds-bits) ,word))))))
 
 (defmacro fd-clr (offset fd-set)
   (let ((word (gensym))
-	(bit (gensym))
-	(temp (gensym)))
+	(bit (gensym)))
     `(multiple-value-bind (,word ,bit) (floor ,offset 32)
-       (let ((,temp (deref (slot ,fd-set 'fds-bits) ,word)))
-	 (setf (ldb (byte 1 ,bit) ,temp) 0)
-	 (setf (deref (slot ,fd-set 'fds-bits) ,word) ,temp)))))
+       (setf (deref (slot ,fd-set 'fds-bits) ,word)
+	     (logand (deref (slot ,fd-set 'fds-bits) ,word)
+		     (32bit-logical-not
+		      (truly-the (unsigned-byte 32) (ash 1 ,bit))))))))
 
 (defmacro fd-isset (offset fd-set)
   (let ((word (gensym))
@@ -788,27 +787,29 @@
   (declare (type unix-pathname name))
   (void-syscall ("rmdir" c-string) name))
 
+
 ;;; UNIX-FAST-SELECT -- public.
 ;;;
-(declaim (inline unix-fast-select))
-;;;
-(defun unix-fast-select (num-descriptors read-fds write-fds exception-fds
-			 timeout-secs &optional (timeout-usecs 0))
-  "Perform the UNIX select(2) system call."
+(defmacro unix-fast-select (num-descriptors
+			    read-fds write-fds exception-fds
+			    timeout-secs &optional (timeout-usecs 0))
+  "Perform the UNIX select(2) system call.
   (declare (type (integer 0 #.FD-SETSIZE) num-descriptors)
 	   (type (or (alien (* (struct fd-set))) null)
 		 read-fds write-fds exception-fds)
 	   (type (or null (unsigned-byte 31)) timeout-secs)
 	   (type (unsigned-byte 31) timeout-usecs)
-	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))
-  (with-alien ((tv (struct timeval)))
-    (when timeout-secs
-      (setf (slot tv 'tv-sec) timeout-secs)
-      (setf (slot tv 'tv-usec) timeout-usecs))
-    (int-syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
-		  (* (struct fd-set)) (* (struct timeval)))
-		 num-descriptors read-fds write-fds exception-fds
-		 (if timeout-secs (alien-sap (addr tv)) (int-sap 0)))))
+	   (optimize (speed 3) (safety 0) (inhibit-warnings 3)))"
+  `(let ((timeout-secs ,timeout-secs))
+     (with-alien ((tv (struct timeval)))
+       (when timeout-secs
+	 (setf (slot tv 'tv-sec) timeout-secs)
+	 (setf (slot tv 'tv-usec) ,timeout-usecs))
+       (int-syscall ("select" int (* (struct fd-set)) (* (struct fd-set))
+		     (* (struct fd-set)) (* (struct timeval)))
+		    ,num-descriptors ,read-fds ,write-fds ,exception-fds
+		    (if timeout-secs (alien-sap (addr tv)) (int-sap 0))))))
+
 
 ;;; Unix-select accepts sets of file descriptors and waits for an event
 ;;; to happen on one of them or to time out.

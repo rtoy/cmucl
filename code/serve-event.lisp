@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.19 1992/12/14 14:39:44 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/serve-event.lisp,v 1.20 1993/02/26 08:26:11 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -150,8 +150,12 @@
 (defstruct (handler
 	    (:print-function %print-handler)
 	    (:constructor make-handler (direction descriptor function)))
-  (direction nil :type (member :input :output)) ; Either :input or :output
-  (descriptor 0 :type (mod 32)) ; File descriptor this handler is tied to.
+  ;; Reading or writing...
+  (direction nil :type (member :input :output))
+  ;;
+  ;; File descriptor this handler is tied to.
+  (descriptor 0 :type (mod #.unix:fd-setsize))
+  
   active		      ; T iff this handler is running.
   (function nil :type function) ; Function to call.
   bogus			      ; T if this descriptor is bogus. 
@@ -167,7 +171,6 @@
 
 (defvar *descriptor-handlers* nil
   "List of all the currently active handlers for file descriptors")
-
 
 ;;; ADD-FD-HANDLER -- public
 ;;;
@@ -249,8 +252,7 @@
 
 ;;;; Serve-all-events, serve-event, and friends.
 
-(declaim (start-block wait-until-fd-usable start-block serve-event
-		      serve-all-events))
+(declaim (start-block wait-until-fd-usable serve-event serve-all-events))
 
 ;;; DECODE-TIMEOUT  --  Internal
 ;;;
@@ -362,6 +364,7 @@
 
 ;;; Check for any X displays with pending events.
 ;;;
+#+clx
 (defun handle-queued-clx-event ()
   (dolist (d/h *display-event-handlers*)
     (let* ((d (car d/h))
@@ -386,35 +389,58 @@
 	(return-from handle-queued-clx-event t)))))
 
 
+;;; These macros are chunks of code from SUB-SERVE-EVENT.  They randomly
+;;; reference the READ-FDS and WRITE-FDS Alien variables (which wold be consed
+;;; if passed as function arguments.)
+;;;
+(eval-when (compile eval)
+
+;;; CALC-MASKS -- Internal.
+;;;
+;;; Initialize the fd-sets for UNIX-SELECT and return the active descriptor
+;;; count.
+;;;
+(defmacro calc-masks ()
+  '(progn 
+     (unix:fd-zero read-fds)
+     (unix:fd-zero write-fds)
+     (let ((count 0))
+       (declare (type index count))
+       (dolist (handler *descriptor-handlers*)
+	 (unless (or (handler-active handler)
+		     (handler-bogus handler))
+	   (let ((fd (handler-descriptor handler)))
+	     (ecase (handler-direction handler)
+	       (:input (unix:fd-set fd read-fds))
+	       (:output (unix:fd-set fd write-fds)))
+	     (when (> fd count)
+	       (setf count fd)))))
+       (1+ count))))
+
+
 ;;; Call file descriptor handlers according to the readable and writable masks
 ;;; returned by select.
 ;;;
-(defun call-fd-handler (readable writeable)
-  (let ((result nil))
-    (dolist (handler *descriptor-handlers*)
-      (when (logbitp (handler-descriptor handler)
-		     (ecase (handler-direction handler)
-		       (:input readable)
-		       (:output writeable)))
-	(unwind-protect
-	    (progn
-	      ;; Doesn't work -- ACK
-	      ;(setf (handler-active handler) t)
-	      (funcall (handler-function handler)
-		       (handler-descriptor handler)))
-	  (setf (handler-active handler) nil))
-	(macrolet ((frob (var)
-		     `(setf ,var
-			    (logand (32bit-logical-not
-				     (ash 1
-					  (handler-descriptor
-					   handler)))
-				    ,var))))
-	  (ecase (handler-direction handler)
-	    (:input (frob readable))
-	    (:output (frob writeable))))
-	(setf result t)))
-    result))
+(defmacro call-fd-handler ()
+  '(let ((result nil))
+     (dolist (handler *descriptor-handlers*)
+       (let ((desc (handler-descriptor handler)))
+	 (when (ecase (handler-direction handler)
+		 (:input (unix:fd-isset desc read-fds))
+		 (:output (unix:fd-isset desc write-fds)))
+	   (unwind-protect
+	       (progn
+		 ;; Doesn't work -- ACK
+		 ;(setf (handler-active handler) t)
+		 (funcall (handler-function handler) desc))
+	     (setf (handler-active handler) nil))
+	   (ecase (handler-direction handler)
+	     (:input (unix:fd-clr desc read-fds))
+	     (:output (unix:fd-clr desc write-fds)))
+	   (setf result t)))
+       result)))
+
+); eval-when (compile eval)
 
 
 ;;; SUB-SERVE-EVENT  --  Internal
@@ -422,61 +448,28 @@
 ;;;    Takes timeout broken into seconds and microseconds.
 ;;;
 (defun sub-serve-event (to-sec to-usec)
-  (when (handle-queued-clx-event)
-    (return-from sub-serve-event t))
-
+  #+clx
+  (when (handle-queued-clx-event) (return-from sub-serve-event t))
+  
   ;; Next, wait for something to happen.
-  (multiple-value-bind
-      (value readable writeable)
-      (multiple-value-bind (count read-mask write-mask except-mask)
-			   (calc-masks)
-	;; Do the select.
-	(unix:unix-select count read-mask write-mask except-mask
-			  to-sec to-usec))
-    (declare (type (unsigned-byte 32) readable)
-	     (type (or (unsigned-byte 32) null) writeable))
-    ;; Now see what it was (if anything)
-    (cond ((fixnump value)
-	   (unless (zerop value)
-	     (call-fd-handler readable writeable)))
-	  ((eql readable unix:eintr)
-	   ;; We did an interrupt.
-	   t)
-	  (t
-	   ;; One of the file descriptors is bad.
-	   (handler-descriptors-error)
-	   nil))))
+  (alien:with-alien ((read-fds (alien:struct unix:fd-set))
+		     (write-fds (alien:struct unix:fd-set)))
+    (let ((count (calc-masks)))
+      (multiple-value-bind
+	  (value err)
+	  (unix:unix-fast-select
+	   count
+	   (alien:addr read-fds) (alien:addr write-fds)
+	   nil to-sec to-usec)
+	
+	;; Now see what it was (if anything)
+	(cond (value
+	       (unless (zerop value) (call-fd-handler)))
+	      ((eql err unix:eintr)
+	       ;; We did an interrupt.
+	       t)
+	      (t
+	       ;; One of the file descriptors is bad.
+	       (handler-descriptors-error)
+	       nil))))))
 
-
-;;; CALC-MASKS -- Internal.
-;;;
-;;; Return the correct masks to use for UNIX-SELECT.  The four return values
-;;; are: fd count, read mask, write mask, and exception mask.  The exception
-;;; mask is currently unused.
-;;;
-(defun calc-masks ()
-  (let ((count 0)
-	(read-mask 0)
-	(write-mask 0)
-	(except-mask 0))
-    (declare (type index count)
-	     (type (unsigned-byte 32) read-mask write-mask except-mask))
-    (dolist (handler *descriptor-handlers*)
-      (unless (or (handler-active handler)
-		  (handler-bogus handler))
-	(let ((fd (handler-descriptor handler)))
-	  (ecase (handler-direction handler)
-	    (:input
-	     (setf read-mask
-		   (logior read-mask
-			   (the (unsigned-byte 32) (ash 1 fd)))))
-	    (:output
-	     (setf write-mask
-		   (logior write-mask
-			   (the (unsigned-byte 32) (ash 1 fd))))))
-	  (when (> fd count)
-	    (setf count fd)))))
-    (values (1+ count)
-	    read-mask
-	    write-mask
-	    except-mask)))

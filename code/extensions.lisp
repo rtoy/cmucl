@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.14 1992/12/31 13:36:23 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/extensions.lisp,v 1.15 1993/02/26 08:25:25 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -396,7 +396,11 @@
 
 ;;; DEFINE-HASH-CACHE  --  Public
 ;;;
+;;;    :INIT-FORM passed as COLD-LOAD-INIT in type system definitions so that
+;;; caches can be created before top-level forms run.
+;;;
 (defmacro define-hash-cache (name args &key hash-function hash-bits default
+				  (init-form 'progn)
 				  (values 1))
   "DEFINE-HASH-CACHE Name ({(Arg-Name Test-Function)}*) {Key Value}*
   Define a hash cache that associates some number of argument values to a
@@ -433,7 +437,11 @@
       between 0 and (1- (expt 2 <hash-bits>)).
 
   :VALUES <n>
-      The number of values cached."
+      The number of values cached.
+
+   :INIT-FORM <name>
+      The DEFVAR for creating the cache is enclosed in a form with the
+      specified name.  Default PROGN."
       
   (let* ((var-name (symbolicate "*" name "-CACHE-VECTOR*"))
 	 (nargs (length args))
@@ -533,7 +541,10 @@
 	(forms `(,fun-name)))
       
       `(progn
-	 (defvar ,var-name (make-array ,total-size))
+	 (defvar ,var-name)
+	 (,init-form
+	  (unless (boundp ',var-name)
+	    (setq ,var-name (make-array ,total-size))))
 	 (proclaim '(type (simple-vector ,total-size) ,var-name))
 	 (proclaim '(inline ,@(inlines)))
 	 ,@(forms)

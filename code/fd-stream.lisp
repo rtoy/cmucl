@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.23 1993/02/17 16:30:39 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/fd-stream.lisp,v 1.24 1993/02/26 08:25:27 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -504,8 +504,7 @@
 
 ;;; INPUT-WRAPPER -- intenal
 ;;;
-;;;   Macro to wrap around all input routines to handle eof-error noise. This
-;;; should make provisions for filling stream-in-buffer.
+;;;   Macro to wrap around all input routines to handle eof-error noise.
 ;;;
 (defmacro input-wrapper ((stream bytes eof-error eof-value) &body read-forms)
   (let ((stream-var (gensym))
@@ -626,51 +625,6 @@
 			   (* length vm:byte-bits))
     string))
 
-;;; FD-STREAM-READ-LINE -- internal
-;;;
-;;;   Reads a line, returning a simple string. Note: this relies on the fact
-;;; that the input buffer does not change during do-input.
-;;;
-(defun fd-stream-read-line (stream eof-error-p eof-value)
-  (let ((eof t))
-    (values
-     (or (let ((sap (fd-stream-ibuf-sap stream))
-	       (results (when (fd-stream-unread stream)
-			  (prog1
-			      (list (string (fd-stream-unread stream)))
-			    (setf (fd-stream-unread stream) nil)
-			    (setf (fd-stream-listen stream) nil)))))
-	   (catch 'eof-input-catcher
-	     (loop
-	       (input-at-least stream 1)
-	       (let* ((head (fd-stream-ibuf-head stream))
-		      (tail (fd-stream-ibuf-tail stream))
-		      (newline (do ((index head (1+ index)))
-				   ((= index tail) nil)
-				 (when (= (sap-ref-8 sap index)
-					  (char-code #\newline))
-				   (return index))))
-		      (end (or newline tail)))
-		 (push (string-from-sap sap head end)
-		       results)
-
-		 (when newline
-		   (setf eof nil)
-		   (setf (fd-stream-ibuf-head stream)
-			 (1+ newline))
-		   (return))
-		 (setf (fd-stream-ibuf-head stream) end))))
-	   (cond ((null results)
-		  nil)
-		 ((null (cdr results))
-		  (car results))
-		 (t
-		  (apply #'concatenate 'simple-string (nreverse results)))))
-	 (if eof-error-p
-	     (error "EOF while reading ~S" stream)
-	     eof-value))
-     eof)))
-
 #|
 This version waits using server.  I changed to the non-server version because
 it allows this method to be used by CLX w/o confusing serve-event.  The
@@ -736,21 +690,18 @@ non-server method is also significantly more efficient for large reads.
 ;;; out.
 ;;;
 ;;;    We loop doing the reads until we either get enough bytes or hit EOF.  We
-;;; must loop because some streams (like pipes) may return a partial amount
-;;; without hitting EOF.
-;;; 
+;;; must loop when eof-errorp is T because some streams (like pipes) may return
+;;; a partial amount without hitting EOF.
+;;;
 (defun fd-stream-read-n-bytes (stream buffer start requested eof-error-p)
   (declare (type stream stream) (type index start requested))
   (let* ((sap (fd-stream-ibuf-sap stream))
-	 (elsize (fd-stream-element-size stream))
-	 (offset (* elsize start))
-	 (requested-bytes (* elsize requested))
+	 (offset start)
 	 (head (fd-stream-ibuf-head stream))
 	 (tail (fd-stream-ibuf-tail stream))
 	 (available (- tail head))
-	 (copy (min requested-bytes available)))
-    (declare (type index elsize offset requested-bytes head tail available
-		   copy))
+	 (copy (min requested available)))
+    (declare (type index offset head tail available copy))
     (unless (zerop copy)
       (if (typep buffer 'system-area-pointer)
 	  (system-area-copy sap (* head vm:byte-bits)
@@ -763,11 +714,14 @@ non-server method is also significantly more efficient for large reads.
 				 (* copy vm:byte-bits)))
       (incf (fd-stream-ibuf-head stream) copy))
     (cond
-     ((> requested-bytes available)
+     ((or (= copy requested)
+	  (and (not eof-error-p) (/= copy 0)))
+      copy)
+     (t
       (setf (fd-stream-ibuf-head stream) 0)
       (setf (fd-stream-ibuf-tail stream) 0)
       (setf (fd-stream-listen stream) nil)
-      (let ((now-needed (- requested-bytes copy))
+      (let ((now-needed (- requested copy))
 	    (len (fd-stream-ibuf-length stream)))
 	(declare (type index now-needed len))
 	(cond
@@ -786,10 +740,11 @@ non-server method is also significantly more efficient for large reads.
 		(unless count
 		  (error "Error reading ~S: ~A" stream
 			 (unix:get-unix-error-msg err)))
-		(when (zerop count)
+		(when (< count now-needed)
 		  (if eof-error-p
-		      (error "Unexpected eof on ~S." stream)
-		      (return (- requested (truncate now-needed elsize)))))
+		      (when (zerop count)
+			(error "Unexpected eof on ~S." stream))
+		      (return (- requested now-needed))))
 		(decf now-needed count)
 		(when (zerop now-needed) (return requested))
 		(incf offset count)))))
@@ -803,10 +758,11 @@ non-server method is also significantly more efficient for large reads.
 		(error "Error reading ~S: ~A" stream
 		       (unix:get-unix-error-msg err)))
 	      (incf (fd-stream-ibuf-tail stream) count)
-	      (when (zerop count)
+	      (when (< count now-needed)
 		(if eof-error-p
-		    (error "Unexpected eof on ~S." stream)
-		    (return (- requested (truncate now-needed elsize)))))
+		    (when (zerop count)
+		      (error "Unexpected eof on ~S." stream))
+		    (return (- requested now-needed))))
 	      (let* ((copy (min now-needed count))
 		     (copy-bits (* copy vm:byte-bits))
 		     (buffer-start-bits
@@ -824,20 +780,18 @@ non-server method is also significantly more efficient for large reads.
 		(incf (fd-stream-ibuf-head stream) copy)
 		(decf now-needed copy)
 		(when (zerop now-needed) (return requested))
-		(incf offset copy))))))))
-     (t
-      requested))))
+		(incf offset copy)))))))))))
 
 
 ;;;; Utility functions (misc routines, etc)
 
 ;;; SET-ROUTINES -- internal
 ;;;
-;;;   Fill in the various routine slots for the given type. Input-p and output-p
-;;; indicate what slots to fill. The buffering slot must be set prior to
-;;; calling this routine.
+;;;   Fill in the various routine slots for the given type. Input-p and
+;;; output-p indicate what slots to fill. The buffering slot must be set prior
+;;; to calling this routine.
 ;;;
-(defun set-routines (stream type input-p output-p)
+(defun set-routines (stream type input-p output-p buffer-p)
   (let ((target-type (case type
 		       ((:default unsigned-byte)
 			'(unsigned-byte 8))
@@ -868,11 +822,15 @@ non-server method is also significantly more efficient for large reads.
 	(setf (fd-stream-ibuf-tail stream) 0)
 	(if (subtypep type 'character)
 	    (setf (fd-stream-in stream) routine
-		  (fd-stream-bin stream) #'ill-bin
-		  (fd-stream-n-bin stream) #'ill-bin)
+		  (fd-stream-bin stream) #'ill-bin)
 	    (setf (fd-stream-in stream) #'ill-in
-		  (fd-stream-bin stream) routine
-		  (fd-stream-n-bin stream) #'fd-stream-read-n-bytes))
+		  (fd-stream-bin stream) routine))
+	(when (eql size 1)
+	  (setf (fd-stream-n-bin stream) #'fd-stream-read-n-bytes)
+	  (when buffer-p
+	    (setf (stream-in-buffer stream)
+		  (make-array in-buffer-length
+			      :element-type '(unsigned-byte 8)))))
 	(setf input-size size)
 	(setf input-type type)))
 
@@ -927,10 +885,9 @@ non-server method is also significantly more efficient for large reads.
 ;;;   Handle the various misc operations on fd-stream.
 ;;;
 (defun fd-stream-misc-routine (stream operation &optional arg1 arg2)
+  (declare (ignore arg2))
   (case operation
-    (:read-line
-     (fd-stream-read-line stream arg1 arg2))
-    (:listen
+    (:listen 
      (or (not (eql (fd-stream-ibuf-head stream)
 		   (fd-stream-ibuf-tail stream)))
 	 (fd-stream-listen stream)
@@ -1141,6 +1098,7 @@ non-server method is also significantly more efficient for large reads.
 		       file
 		       original
 		       delete-original
+		       input-buffer-p
 		       (name (if file
 				 (format nil "file ~S" file)
 				 (format nil "descriptor ~D" fd)))
@@ -1168,7 +1126,7 @@ non-server method is also significantly more efficient for large reads.
 				 :delete-original delete-original
 				 :buffering buffering
 				 :timeout timeout)))
-    (set-routines stream element-type input output)
+    (set-routines stream element-type input output input-buffer-p)
     (when (and auto-close (fboundp 'finalize))
       (finalize stream
 		#'(lambda ()
@@ -1176,6 +1134,7 @@ non-server method is also significantly more efficient for large reads.
 		    (format *terminal-io* "** Closed file descriptor ~D~%"
 			    fd))))
     stream))
+
 
 ;;; PICK-PACKUP-NAME -- internal
 ;;;
@@ -1373,6 +1332,7 @@ non-server method is also significantly more efficient for large reads.
 				       :file namestring
 				       :original original
 				       :delete-original delete-original
+				       :input-buffer-p t
 				       :auto-close t))
 		      (:probe
 		       (let ((stream
@@ -1473,31 +1433,6 @@ non-server method is also significantly more efficient for large reads.
   (funcall *beep-function* stream))
 
 
-;;;; File position and file length.
-
-;;; File-Position  --  Public
-;;;
-;;;    Call the misc method with the :file-position operation.
-;;;
-(defun file-position (stream &optional position)
-  "With one argument returns the current position within the file
-  File-Stream is open to.  If the second argument is supplied, then
-  this becomes the new file position.  The second argument may also
-  be :start or :end for the start and end of the file, respectively."
-  (unless (streamp stream)
-    (error "Argument ~S is not a stream." stream))
-  (funcall (stream-misc stream) stream :file-position position))
-
-;;; File-Length  --  Public
-;;;
-;;;    Like File-Position, only use :file-length.
-;;;
-(defun file-length (stream)
-  "This function returns the length of the file that File-Stream is open to."
-  (unless (streamp stream)
-    (error "Argument ~S is not a stream." stream))
-  (funcall (stream-misc stream) stream :file-length))
-
 ;;; File-Name  --  internal interface
 ;;;
 ;;;    Kind of like File-Position, but is an internal hack used by the filesys

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.48 1992/12/17 09:11:38 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/print.lisp,v 1.49 1993/02/26 08:25:58 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -465,11 +465,11 @@
 	   (print-it stream))
 	  ((or *circularity-hash-table*
 	       (consp object)
-	       (structurep object)
+	       (%instancep object)
 	       (typep object '(array t *)))
 	   ;; If we have already started circularity detection, this object
 	   ;; might be a sharded reference.  If we have not, then if it is
-	   ;; a cons, a structure, or an array of element type t it might
+	   ;; a cons, a instance, or an array of element type t it might
 	   ;; contain a circular reference to itself or multiple shared
 	   ;; references.
 	   (check-it stream))
@@ -490,8 +490,8 @@
      (if (null object)
 	 (output-symbol object stream)
 	 (output-list object stream)))
-    (structure
-     (output-structure object stream))
+    (instance
+     (output-instance object stream))
     (function
      (if (and (fboundp 'funcallable-instance-p)
 	      (funcallable-instance-p object))
@@ -1095,13 +1095,20 @@
     (print-unreadable-object (array stream :type t :identity t))))
 
 
-;;; Structure Printing.  These days we can always pass the buck to the
-;;; Defstruct code.
+;;; Instance Printing.  If it's a structure, call the structure printer.
+;;; Otherwise, call PCL if it's loaded.  If not, print unreadably.
 
-(defun output-structure (structure stream)
-  (funcall (or (info type printer (structure-ref structure 0))
-	       #'c::default-structure-print)
-	   structure stream *current-level*))
+(defun output-instance (instance stream)
+  (let ((class (layout-class (%instance-layout instance))))
+    (cond ((typep class 'structure-class)
+	   (funcall (or (structure-class-print-function class)
+			#'default-structure-print)
+		    instance stream *current-level*))
+	  ((fboundp 'pcl:print-object)
+	   (pcl:print-object instance))
+	  (t
+	   (print-unreadable-object (stream instance :identity t)
+	     (write-string "Unprintable Instance" stream))))))
 
 
 ;;;; Integer, ratio, and complex printing.  (i.e. everything but floats)
@@ -1742,7 +1749,7 @@
 	       (let ((*print-base* 16) (*print-radix* t))
 		 (output-integer type stream))))))
 	((#.vm:function-pointer-type
-	  #.vm:structure-pointer-type
+	  #.vm:instance-pointer-type
 	  #.vm:list-pointer-type)
 	 (write-string "Unknown Pointer Object, type=" stream))
 	(t

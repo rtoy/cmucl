@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.35 1992/09/01 17:41:52 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/macros.lisp,v 1.36 1993/02/26 08:25:51 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -166,12 +166,23 @@
 (defun %deftype (name expander &optional doc)
   (ecase (info type kind name)
     (:primitive
-     (error "Illegal to redefine standard type: ~S." name))
+     (when *type-system-initialized*
+       (error "Illegal to redefine standard type: ~S." name)))
+    #+ns-boot
     (:structure
      (warn "Redefining structure type ~S with DEFTYPE." name)
-     (c::undefine-structure (info type structure-info name)))
-    ((nil :defined)))
-  (setf (info type kind name) :defined)
+     (c::undefine-structure (info type structure-info name))
+     (setf (info type kind name) :defined))
+    (:instance
+     (warn "Redefining class ~S to be a DEFTYPE." name)
+     (undefine-structure (layout-info (class-layout (info type class name))))
+     (setf (info type class name) nil)
+     (setf (info type compiler-layout name) nil)
+     (setf (info type kind name) :defined))
+    (:defined)
+    ((nil)
+     (setf (info type kind name) :defined)))
+
   (setf (info type expander name) expander)
   (when doc
     (setf (documentation name 'type) doc))
@@ -531,8 +542,11 @@
 	  ;;
 	  ;; Local functions inhibit global setf methods...
 	  ((and environment
-		(c::leaf-p (cdr (assoc (car form)
-				       (c::lexenv-functions environment)))))
+		(let ((name (car form)))
+		  (dolist (x (c::lexenv-functions environment) nil)
+		    (when (and (eq (car x) name)
+			       (not (c::defined-function-p (cdr x))))
+		      (return t)))))
 	   (get-setf-method-inverse form `(funcall #'(setf ,(car form))) t))
 	  ((setq temp (info setf inverse (car form)))
 	   (get-setf-method-inverse form `(,temp) nil))
@@ -1030,35 +1044,25 @@
 	  ,v))
 
 
-;;; Evil hack invented by the gnomes of Vassar Street.  The function arg must
-;;; be constant.  Get a setf method for this function, pretending that the
-;;; final (list) arg to apply is just a normal arg.  If the setting and access
-;;; forms produced in this way reference this arg at the end, then just splice
-;;; the APPLY back onto the front and the right thing happens.
+;;; Evil hack invented by the gnomes of Vassar Street (though not as evil as
+;;; it used to be.)  The function arg must be constant, and is converted to an
+;;; APPLY of ther SETF function, which ought to exist.
 ;;;
-;;; We special-case uses functions in the Lisp package so that APPLY AREF works
-;;; even though %ASET takes the new-value last.  (there is (SETF AREF) as well
-;;; as a setf method, etc.)
-;;;
-(define-setf-method apply (function &rest args &environment env)
+(define-setf-method apply (function &rest args)
   (unless (and (listp function)
 	       (= (list-length function) 2)
 	       (eq (first function) 'function)
 	       (symbolp (second function)))
     (error "Setf of Apply is only defined for function args like #'symbol."))
-  (let ((function (second function)))
-    (multiple-value-bind
-	(dummies vals newval setter getter)
-	(if (eq (symbol-package function) (symbol-package 'aref))
-	    (get-setf-method-inverse (cons function args) `((setf ,function)) t)
-	    (get-setf-method (cons function args) env))
-      (unless (and (eq (car (last args)) (car (last vals)))
-		   (eq (car (last getter)) (car (last dummies)))
-		   (eq (car (last setter)) (car (last dummies))))
-	(error "Apply of ~S not understood as a location for Setf." function))
-      (values dummies vals newval
-	      `(apply (function ,(car setter)) ,@(cdr setter))
-	      `(apply (function ,(car getter)) ,@(cdr getter))))))
+  (let ((function (second function))
+	(new-var (gensym))
+	(vars nil))
+    (dolist (x args)
+      (declare (ignore x))
+      (push (gensym) vars))
+    (values vars args (list new-var)
+	    `(apply #'(setf ,function) ,new-var ,@vars)
+	    `(apply #',function ,@vars))))
 
 
 ;;; Special-case a BYTE bytespec so that the compiler can recognize it.

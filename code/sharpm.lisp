@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.10 1992/07/10 17:47:42 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/sharpm.lisp,v 1.11 1993/02/26 08:26:14 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -213,27 +213,22 @@
   (let ((body (if (char= (read-char stream t) #\( )
 		  (read-list stream nil)
 		  (%reader-error stream "Non-list following #S"))))
-    (cond ((listp body)
-	   (unless (symbolp (car body))
-	     (%reader-error stream
-			   "Structure type is not a symbol: ~S" (car body)))
-	   (let ((defstruct (info type defined-structure-info (car body))))
-	     (unless defstruct
-	       (%reader-error stream
-			     "~S is not a defined structure type."
-			     (car body)))
-	     (unless (c::dd-constructors defstruct)
-	       (%reader-error
-		stream "The ~S structure does not have a default constructor."
-		(car body)))
-	     (do ((arg (cdr body) (cddr arg))
-		  (res ()))
-		 ((endp arg)
-		  (apply (car (c::dd-constructors defstruct)) res))
-	       (push (cadr arg) res)
-	       (push (intern (string (car arg)) *keyword-package*) res))))
-	  (t (%reader-error stream "Non-list following #S: ~S" body)))))
-
+    (unless (listp body)
+      (%reader-error stream "Non-list following #S: ~S" body))
+    (unless (symbolp (car body))
+      (%reader-error stream "Structure type is not a symbol: ~S" (car body)))
+    (let ((class (find-class (car body) nil)))
+      (unless (typep class 'structure-class)
+	(%reader-error stream "~S is not a defined structure type."
+		       (car body)))
+      (let ((def-con (dd-default-constructor
+		      (layout-info
+		       (class-layout class)))))
+	(unless def-con
+	  (%reader-error
+	   stream "The ~S structure does not have a default constructor."
+	   (car body)))
+	(apply (fdefinition def-con) (rest body))))))
 
 
 ;;;; #=/##
@@ -247,16 +242,15 @@
 ;; alist of the things to be replaced assoc'd with the things to replace them.
 ;;
 (defun circle-subst (old-new-alist tree)
-  (cond ((not (typep tree '(or cons (array t) structure)))
+  (cond ((not (typep tree '(or cons (array t) structure-object)))
 	 (let ((entry (find tree old-new-alist :key #'second)))
 	   (if entry (third entry) tree)))
 	((null (gethash tree *sharp-equal-circle-table*))
 	 (setf (gethash tree *sharp-equal-circle-table*) t)
-	 (cond ((structurep tree)
-		(dotimes (i (structure-length tree) tree)
-		  (structure-set tree i
-				 (circle-subst old-new-alist
-					       (structure-ref tree i)))))
+	 (cond ((typep tree 'structure-object)
+		(dotimes (i (%instance-length tree) tree)
+		  (setf (%instance-ref tree i)
+			(circle-subst old-new-alist (%instance-ref tree i)))))
 	       ((arrayp tree)
 		(with-array-data ((data tree) (start) (end))
 		  (declare (fixnum start end))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.33 1992/04/12 00:24:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/lispinit.lisp,v 1.34 1993/02/26 08:25:45 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -49,7 +49,7 @@
 		    *before-gc-hooks* *after-gc-hooks*
 		    unix::*interrupts-enabled*
 		    unix::*interrupt-pending*
-		    c::*type-system-initialized*))
+		    *type-system-initialized*))
 
 
 ;;;; Random magic specials.
@@ -90,7 +90,7 @@
   (setf *after-gc-hooks* nil)
   (setf unix::*interrupts-enabled* t)
   (setf unix::*interrupt-pending* nil)
-  (setf c::*type-system-initialized* nil)
+  (setf *type-system-initialized* nil)
   (%primitive print "In initial-function, and running.")
 
   ;; Many top-level forms call INFO, (SETF INFO).
@@ -100,6 +100,8 @@
   (print-and-call fdefn-init)
 
   ;; Some of the random top-level forms call Make-Array, which calls Subtypep
+  (print-and-call typedef-init)
+  (print-and-call class-init)
   (print-and-call type-init)
 
   (let ((funs (nreverse *lisp-initialization-functions*)))
@@ -130,7 +132,7 @@
 
   ;; Only do this after top level forms have run, 'cause thats where
   ;; deftypes are.
-  (setf c::*type-system-initialized* t)
+  (setf *type-system-initialized* t)
 
   (print-and-call os-init)
   (print-and-call filesys-init)
@@ -152,6 +154,8 @@
   ;; This is necessary because some of the initial top level forms might
   ;; have changed the compliation policy in strange ways.
   (print-and-call c::proclaim-init)
+
+  (print-and-call kernel::class-finalize)
 
   (%primitive print "Done initializing.")
 
