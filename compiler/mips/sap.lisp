@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.10 1990/05/11 17:50:10 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/sap.lisp,v 1.11 1990/05/14 07:15:58 wlott Exp $
 ;;;
 ;;;    This file contains the MIPS VM definition of SAP operations.
 ;;;
@@ -241,7 +241,7 @@
   (:variant :long nil))
 
 (define-vop (sap-system-set sap-set)
-  (:translate (setf sap-ref-sap))
+  (:translate %set-sap-ref-sap)
   (:args (object :scs (sap-reg) :target sap)
 	 (offset :scs (descriptor-reg any-reg negative-immediate
 				      zero immediate))
@@ -261,7 +261,7 @@
   (:variant :long t))
 
 (define-vop (32bit-system-set sap-set)
-  (:translate (setf sap-ref-32))
+  (:translate %set-sap-ref-32)
   (:variant :long))
 
 
@@ -274,7 +274,7 @@
   (:variant :short t))
 
 (define-vop (16bit-system-set sap-set)
-  (:translate (setf sap-ref-16))
+  (:translate %set-sap-ref-16)
   (:variant :short))
 
 
@@ -287,7 +287,7 @@
   (:variant :byte t))
 
 (define-vop (8bit-system-set sap-set)
-  (:translate (setf sap-ref-8))
+  (:translate %set-sap-ref-8)
   (:variant :byte))
 
 
