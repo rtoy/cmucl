@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.148 2004/07/15 21:37:22 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.149 2004/07/19 17:54:58 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -2233,15 +2233,126 @@
 		(or (null min) (minusp min))))
       (values nil t t)))
 
+;;; From Hacker's Delight, by Henry S. Warren, Jr.
+
+;;; Let a <= x <= b and c <= y <= d, with X and Y both unsigned 32-bit
+;;; numbers.  (Mostly because that's what the routines support, but
+;;; they could be extended to any positive integer.)  MIN-AND and
+;;; MAX-AND compute reasonably tight bounds on x&y.  MIN-OR and MAX-OR
+;;; compute the bounds on x|y.
+
+(defun min-and (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (when (/= (logand m (lognot a) (lognot c)) 0)
+	 (let ((temp (logandc2 (logior a m) m)))
+	   (when (<= temp b)
+	     (setf a temp)
+	     (return)))
+	 (let ((temp (logandc2 (logior c m) m)))
+	   (when (<= temp d)
+	     (setf c temp)
+	     (return))))
+       (setf m (ash m -1)))
+    (logand a c)))
+
+(defun max-and (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (cond ((/= (logand b (lognot d) m) 0)
+	      (let ((temp (logior (logandc2 b m) (- m 1))))
+		(when (>= temp a)
+		  (setf b temp)
+		  (return))))
+	     ((/= (logand (lognot b) d m) 0)
+	      (let ((temp (logior (logandc2 d m) (- m 1))))
+		(when (>= temp c)
+		  (setf d temp)
+		  (return)))))
+       (setf m (ash m -1))))
+  (logand b d))
+
+(defun min-or (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (cond ((/= (logandc2 (logand c m) a) 0)
+	      (let ((temp (logand (logior a m)
+				  (1+ (lognot m)))))
+		(when (<= temp b)
+		  (setf a temp)
+		  (return))))
+	     ((/= (logandc1 c (logand a m)) 0)
+	      (let ((temp (logand (logior c m)
+				  (1+ (lognot m)))))
+		(when (<= temp d)
+		  (setf c temp)
+		  (return)))))
+       (setf m (ash m -1))))
+  (logior a c))
+
+(defun max-or (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (when (/= (logand m b d) 0)
+	 (let ((temp (logior (- b m)
+			     (- m 1))))
+	   (when (>= temp a)
+	     (setf b temp)
+	     (return)))
+	 (let ((temp (logior (- d m)
+			     (- m 1))))
+	   (when (>= temp c)
+	     (setf d temp)
+	     (return))))
+	 (setf m (ash m -1)))
+    (logior b d)))
+  
+(defun min-xor (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (cond ((/= (logandc2 (logand c m) a) 0)
+	      (let ((temp (logand (logior a m)
+				  (1+ (lognot m)))))
+		(when (<= temp b)
+		  (setf a temp))))
+	     ((/= (logandc1 c (logand a m)) 0)
+	      (let ((temp (logand (logior c m)
+				  (1+ (lognot m)))))
+		(when (<= temp d)
+		  (setf c temp)))))
+       (setf m (ash m -1))))
+  (logxor a c))
+
+(defun max-xor (a b c d)
+  (let ((m #x80000000))
+    (loop while (not (zerop m))
+       do
+       (when (/= (logand m b d) 0)
+	 (let ((temp (logior (- b m)
+			     (- m 1))))
+	   (if (>= temp a)
+	       (setf b temp)
+	       (let ((temp (logior (- d m)
+				   (- m 1))))
+		 (when (>= temp c)
+		   (setf d temp))))))
+       (setf m (ash m -1)))
+    (logxor b d)))
+  
 
 (defun logand-derive-type-aux (x y &optional same-leaf)
   (declare (ignore same-leaf))
   (multiple-value-bind
-      (x-len x-pos x-neg)
+	(x-len x-pos x-neg)
       (integer-type-length x)
     (declare (ignore x-pos))
     (multiple-value-bind
-	(y-len y-pos y-neg)
+	  (y-len y-pos y-neg)
 	(integer-type-length  y)
       (declare (ignore y-pos))
       (if (not x-neg)
@@ -2252,6 +2363,27 @@
 		     (specifier-type 'unsigned-byte))
 		    ((or (zerop x-len) (zerop y-len))
 		     (specifier-type '(integer 0 0)))
+		    ((and (<= x-len 32) (<= y-len 32))
+		     ;; If both args are unsigned 32-bit numbers, we
+		     ;; can compute better bounds, so we do.  But if
+		     ;; one arg is a constant and is a single bit, we
+		     ;; can do even better.
+		     ;;
+		     ;; What about the case where one arg is constant
+		     ;; and has several bits set?  We could compute
+		     ;; exact values by turning off each individual
+		     ;; bit and all combinations thereof.  Should we?
+		     (let ((xlo (numeric-type-low x))
+			   (xhi (numeric-type-high x))
+			   (ylo (numeric-type-low y))
+			   (yhi (numeric-type-high y)))
+		       (cond ((and (= xlo xhi) (= 1 (logcount xlo)))
+			      (specifier-type `(member 0 ,xlo)))
+			     ((and (= ylo yhi) (= 1 (logcount ylo)))
+			      (specifier-type `(member 0 ,ylo)))
+			     (t
+			      (specifier-type `(integer ,(min-and xlo xhi ylo yhi)
+							,(max-and xlo xhi ylo yhi)))))))
 		    (t
 		     (specifier-type `(unsigned-byte ,(min x-len y-len)))))
 	      ;; X is positive, but Y might be negative.
@@ -2281,47 +2413,54 @@
 (defun logior-derive-type-aux (x y &optional same-leaf)
   (declare (ignore same-leaf))
   (multiple-value-bind
-      (x-len x-pos x-neg)
+	(x-len x-pos x-neg)
       (integer-type-length x)
     (multiple-value-bind
-	(y-len y-pos y-neg)
+	  (y-len y-pos y-neg)
 	(integer-type-length y)
-      (cond
-       ((and (not x-neg) (not y-neg))
-	;; Both are positive.
-	(if (and x-len y-len (zerop x-len) (zerop y-len))
-	    (specifier-type '(integer 0 0))
-	    (specifier-type `(unsigned-byte ,(if (and x-len y-len)
-					     (max x-len y-len)
-					     '*)))))
-       ((not x-pos)
-	;; X must be negative.
-	(if (not y-pos)
-	    ;; Both are negative.  The result is going to be negative and be
-	    ;; the same length or shorter than the smaller.
-	    (if (and x-len y-len)
-		;; It's bounded.
-		(specifier-type `(integer ,(ash -1 (min x-len y-len)) -1))
-		;; It's unbounded.
-		(specifier-type '(integer * -1)))
-	    ;; X is negative, but we don't know about Y.  The result will be
-	    ;; negative, but no more negative than X.
-	    (specifier-type
-	     `(integer ,(or (numeric-type-low x) '*)
-		       -1))))
-       (t
-	;; X might be either positive or negative.
-	(if (not y-pos)
-	    ;; But Y is negative.  The result will be negative.
-	    (specifier-type
-	     `(integer ,(or (numeric-type-low y) '*)
-		       -1))
-	    ;; We don't know squat about either.  It won't get any bigger.
-	    (if (and x-len y-len)
-		;; Bounded.
-		(specifier-type `(signed-byte ,(1+ (max x-len y-len))))
-		;; Unbounded.
-		(specifier-type 'integer))))))))
+      (cond ((and (not x-neg) (not y-neg))
+	     ;; Both are positive.
+	     (cond ((or (null x-len) (null y-len))
+		    (specifier-type 'unsigned-byte))
+		   ((or (zerop x-len) (zerop y-len))
+		    (specifier-type '(integer 0 0)))
+		   ((and (<= x-len 32) (<= y-len 32))
+		    (let ((xlo (numeric-type-low x))
+			  (xhi (numeric-type-high x))
+			  (ylo (numeric-type-low y))
+			  (yhi (numeric-type-high y)))
+		      (specifier-type `(integer ,(min-or xlo xhi ylo yhi)
+						,(max-or xlo xhi ylo yhi)))))
+		   (t
+		    (specifier-type `(unsigned-byte ,(max x-len y-len))))))
+	    ((not x-pos)
+	     ;; X must be negative.
+	     (if (not y-pos)
+		 ;; Both are negative.  The result is going to be negative and be
+		 ;; the same length or shorter than the smaller.
+		 (if (and x-len y-len)
+		     ;; It's bounded.
+		     (specifier-type `(integer ,(ash -1 (min x-len y-len)) -1))
+		     ;; It's unbounded.
+		     (specifier-type '(integer * -1)))
+		 ;; X is negative, but we don't know about Y.  The result will be
+		 ;; negative, but no more negative than X.
+		 (specifier-type
+		  `(integer ,(or (numeric-type-low x) '*)
+			    -1))))
+	    (t
+	     ;; X might be either positive or negative.
+	     (if (not y-pos)
+		 ;; But Y is negative.  The result will be negative.
+		 (specifier-type
+		  `(integer ,(or (numeric-type-low y) '*)
+			    -1))
+		 ;; We don't know squat about either.  It won't get any bigger.
+		 (if (and x-len y-len)
+		     ;; Bounded.
+		     (specifier-type `(signed-byte ,(1+ (max x-len y-len))))
+		     ;; Unbounded.
+		     (specifier-type 'integer))))))))
 
 (defun logxor-derive-type-aux (x y &optional same-leaf)
   (declare (ignore same-leaf))
@@ -2332,15 +2471,29 @@
 	(y-len y-pos y-neg)
 	(integer-type-length y)
       (cond
-       ((or (and (not x-neg) (not y-neg))
-	    (and (not x-pos) (not y-pos)))
-	;; Either both are negative or both are positive.  The result will be
-	;; positive, and as long as the longer.
-	(if (and x-len y-len (zerop x-len) (zerop y-len))
-	    (specifier-type '(integer 0 0))
-	    (specifier-type `(unsigned-byte ,(if (and x-len y-len)
-					     (max x-len y-len)
-					     '*)))))
+	((and (not x-neg) (not y-neg))
+	 ;; Both are positive
+	 (cond ((or (null x-len) (null y-len))
+		(specifier-type 'unsigned-byte))
+	       ((or (zerop x-len) (zerop y-len))
+		(specifier-type '(integer 0 0)))
+	       ((and (<= x-len 32) (<= y-len 32))
+		(let ((xlo (numeric-type-low x))
+		      (xhi (numeric-type-high x))
+		      (ylo (numeric-type-low y))
+		      (yhi (numeric-type-high y)))
+		  (specifier-type `(integer ,(min-xor xlo xhi ylo yhi)
+					    ,(max-xor xlo xhi ylo yhi)))))
+	       (t
+		(specifier-type `(unsigned-byte ,(max x-len y-len))))))
+	((and x-neg y-neg)
+	 ;; Both are negative.  The result will be positive, and as
+	 ;; long as the longer.
+	 (if (and x-len y-len (zerop x-len) (zerop y-len))
+	     (specifier-type '(integer 0 0))
+	     (specifier-type `(unsigned-byte ,(if (and x-len y-len)
+						  (max x-len y-len)
+						  '*)))))	 
        ((or (and (not x-pos) (not y-neg))
 	    (and (not y-neg) (not y-pos)))
 	;; Either X is negative and Y is positive of vice-verca.  The result
