@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.20 1992/01/21 17:25:01 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.21 1992/01/21 23:41:15 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -593,7 +593,7 @@
 	    (numberp *current-error-depth*))
        (let ((*current-error-depth* (1+ *current-error-depth*)))
 	 (if (> *current-error-depth* *maximum-error-depth*)
-	     (error-error "Help! " *current-error-depth* " nested errors."
+	     (error-error "Help! " *current-error-depth* " nested errors.  "
 			  "KERNEL:*MAXIMUM-ERROR-DEPTH* exceeded.")
 	     (progn ,@forms)))
        (%primitive halt)))
@@ -636,8 +636,9 @@
        (throw 'lisp::top-level-catcher nil)))
 
     (with-standard-io-syntax
-      (dolist (item messages) (princ item *terminal-io*))
-      (debug:internal-debug))))
+      (let ((*print-readably* nil))
+	(dolist (item messages) (princ item *terminal-io*))
+	(debug:internal-debug)))))
 
 
 ;;;; Fetching errorful function name.
@@ -645,15 +646,15 @@
 ;;; Used to prevent infinite recursive lossage when we can't find the caller
 ;;; for some reason.
 ;;;
-(defvar *finding-caller* nil)
+(defvar *finding-name* nil)
 
 ;;; FIND-CALLER-NAME  --  Internal
 ;;;
 (defun find-caller-name ()
-  (if *finding-caller*
+  (if *finding-name*
       "<error finding name>"
       (handler-case
-	  (let ((*finding-caller* t))
+	  (let ((*finding-name* t))
 	    (di:debug-function-name
 	     (di:frame-debug-function
 	      (di:frame-down (di:frame-down (di:top-frame))))))
