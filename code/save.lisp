@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.12 1992/02/14 23:45:28 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/save.lisp,v 1.13 1992/03/03 08:18:39 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -156,7 +156,7 @@
     (dolist (f *after-save-initializations*) (funcall f))
     (reinit)
     (environment-init)
-    (when site-init (load site-init :if-does-not-exist nil))
+    (when site-init (load site-init :if-does-not-exist nil :verbose nil))
     (when process-command-line (ext::process-command-strings))
     (setf *editor-lisp-p* nil)
     (macrolet ((find-switch (name)
