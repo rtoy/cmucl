@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.8 1993/11/17 15:58:50 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.9 1994/01/25 15:35:14 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -158,16 +158,20 @@
 	 (out-buffer (or (getstring "Scribe Warnings" *buffer-names*)
 			 (make-buffer "Scribe Warnings")))
 	 (out-point (buffer-end (buffer-point out-buffer)))
-	 (stream (make-hemlock-output-stream out-point :line)))
+	 (stream (make-hemlock-output-stream out-point :line))
+	 (orig-cwd (default-directory)))
     (buffer-end out-point)
     (insert-character out-point #\newline)
     (insert-character out-point #\newline)
-    (ext:run-program (namestring (value scribe-utility))
-		     (list* (namestring pathname)
-			    (value scribe-utility-switches))
-     :output stream :error stream
-     :wait nil)))
-
+    (unwind-protect
+	(progn
+	  (setf (default-directory) (directory-namestring pathname))
+	  (ext:run-program (namestring (value scribe-utility))
+			   (list* (namestring pathname)
+				  (value scribe-utility-switches))
+			   :output stream :error stream
+			   :wait nil))
+      (setf (default-directory) orig-cwd))))
 
 
 ;;;; UNIX Filter Region
