@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.16 2002/10/24 20:38:58 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/c-call.lisp,v 1.17 2003/05/14 13:22:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -284,3 +284,213 @@
 	      (t
 	       (inst li temp delta)
 	       (inst add nsp-tn temp)))))))
+
+;;; Support for callbacks to Lisp.
+(export '(make-callback-trampoline callback-accessor-form))
+
+#+nil
+(defun compute-accessor (type sp offset)
+  (cond ((eq type 'double)
+	 ;; Due to sparc calling conventions, a double doesn't have to
+	 ;; be aligned on a double word boundary.  We have to get the
+	 ;; two words separately and create the double from them.
+	 `(kernel:make-double-float (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* int)))
+	                            (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset 4))
+						  (* c-call:unsigned-int)))))
+	(t
+	 `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
+
+(defun callback-accessor-form (type sp offset)
+  (cond ((eq type 'double)
+	 ;; Due to sparc calling conventions, a double doesn't have to
+	 ;; be aligned on a double word boundary.  We have to get the
+	 ;; two words separately and create the double from them.
+	 `(kernel:make-double-float (alien:deref (sap-alien (sys:sap+ ,sp ,offset) (* int)))
+	                            (alien:deref (sap-alien (sys:sap+ ,sp (+ ,offset 4))
+						  (* c-call:unsigned-int)))))
+	(t
+	 `(deref (sap-alien (sys:sap+ ,sp ,offset) (* ,type))))))
+
+#+nil
+(defmacro def-callback (name (return-type &rest arg-specs) &body body)
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
+
+Define a function which can be called by foreign code.  The pointer
+returned by (callback NAME), when called by foreign code, invokes the
+lisp function.  The lisp function expects alien arguments of the
+specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
+
+If (callback NAME) is already a callback function pointer, its value
+is not changed (though it's arranged that an updated version of the
+lisp callback function will be called).  This feature allows for
+incremental redefinition of callback functions."
+  (let ((sp-fixnum (gensym (string :sp-fixnum-)))
+	(ret-addr (gensym (string :ret-addr-)))
+	(sp (gensym (string :sp-)))
+	(ret (gensym (string :ret-))))
+    `(progn
+      (defun ,name (,sp-fixnum ,ret-addr)
+	(declare (type fixnum ,sp-fixnum ,ret-addr))
+	;; We assume sp-fixnum is word aligned and pass it untagged to
+	;; this function.  The shift compensates this.
+	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
+	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
+	  (declare (ignorable ,sp))
+	  ;; Copy all arguments to local variables.
+	  (with-alien ,(loop for offset = 0 then (+ offset 
+						    (alien::argument-size type))
+			     for (name type) in arg-specs
+			     collect `(,name ,type
+				       :local ,(compute-accessor type sp offset)))
+	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
+	    (values))))
+      (alien::define-callback-function 
+	  ',name #',name ',(alien::parse-return-type return-type)))))
+
+(defun make-callback-trampoline (index return-type)
+  "Cons up a piece of code which calls call-callback with INDEX and a
+pointer to the arguments."
+  (flet ((def-reg-tn (offset)
+	     (c:make-random-tn :kind :normal
+			     :sc (c:sc-or-lose 'vm::unsigned-reg)
+			     :offset offset)))
+    (let* ((segment (make-segment))
+	   ;; Window save area (16 registers)
+	   (window-save-size (* 16 vm:word-bytes))
+	   ;; Structure return pointer area (1 register)
+	   (struct-return-size vm:word-bytes)
+	   ;; Register save area (6 registers)
+	   (reg-save-area-size (* 6 vm:word-bytes))
+	   ;; Local var.  Should be large enough to hold a double-float or long
+	   (return-value-size (* 2 vm:word-bytes))
+	   ;; Frame size: the register window, the arg save area, the
+	   ;; structure return area, and return-value-area, all
+	   ;; rounded to a multiple of eight.
+	   (framesize (* 8 (ceiling (+ window-save-size struct-return-size reg-save-area-size
+				       return-value-size)
+				    8)))
+	   ;; Offset from FP where the first arg is located.
+	   (arg0-save-offset (+ window-save-size struct-return-size))
+	   ;; Establish the registers we need
+	   (%g0 (def-reg-tn vm::zero-offset))
+	   (%o0 (def-reg-tn vm::nl0-offset))
+	   (%o1 (def-reg-tn vm::nl1-offset))
+	   (%o2 (def-reg-tn vm::nl2-offset))
+	   (%o3 (def-reg-tn vm::nl3-offset))
+	   (%o7 (def-reg-tn vm::nargs-offset))
+	   (%sp (def-reg-tn vm::nsp-offset)) ; aka %o6
+	   (%l0 (def-reg-tn vm::a0-offset))
+	   (%i0 (def-reg-tn vm::cname-offset))
+	   (%i1 (def-reg-tn vm::lexenv-offset))
+	   (%i2 (def-reg-tn vm::l0-offset))
+	   (%i3 (def-reg-tn vm::nfp-offset))
+	   (%i4 (def-reg-tn vm::cfunc-offset))
+	   (%i5 (def-reg-tn vm::code-offset))
+	   (%fp (def-reg-tn 30 #+nil vm::fp-offset))
+	   (%i7 (def-reg-tn vm::lip-offset))
+	   (f0-s (c:make-random-tn :kind :normal
+				   :sc (c:sc-or-lose 'vm::single-reg)
+				   :offset 0))
+	   (f0-d (c:make-random-tn :kind :normal
+				   :sc (c:sc-or-lose 'vm::double-reg)
+				   :offset 0))
+	   )
+      ;; The generated assembly roughly corresponds to this C code:
+      ;;
+      ;;        tramp(int a0, int a1, int a2, int a3, int a4, int a5, ...)
+      ;;	{
+      ;;	  double result;
+      ;;	  funcall3(call-callback, <index>, &a0, &result);
+      ;;	  return <cast> result;
+      ;;	}
+      ;;
+      ;; Except, of course, the result is the appropriate result type
+      ;; for the trampoline.
+      ;;	       
+      (assemble (segment)
+		;; Save old %fp, etc. establish our call frame with local vars
+		;; %i contains the input args
+		(inst save %sp %sp (- framesize))
+		;; The stack frame now looks like
+		;;
+		;; TOP (high memory)
+		;;
+		;; argn
+		;; ...
+		;; arg6
+		;; arg5
+		;; arg4
+		;; arg3
+		;; arg2
+		;; arg1
+		;; arg0
+		;; struct_return
+		;; window-save-area	<- %fp + 64
+		;;			<- %fp
+		;; local-vars-extra-args	(8-bytes)
+		;; arg5-save
+		;; arg4-save
+		;; arg3-save
+		;; arg2-save
+		;; arg1-save
+		;; arg0-save
+		;; struct_return		
+		;; window-save-area
+		;;			<- %sp
+
+		;; Save all %i arg register values on the stack.  (We
+		;; might not always need to save all, but this is safe
+		;; and easy.)
+		(inst st %i0 %fp (+ arg0-save-offset (* 0 vm:word-bytes)))
+		(inst st %i1 %fp (+ arg0-save-offset (* 1 vm:word-bytes)))
+		(inst st %i2 %fp (+ arg0-save-offset (* 2 vm:word-bytes)))
+		(inst st %i3 %fp (+ arg0-save-offset (* 3 vm:word-bytes)))
+		(inst st %i4 %fp (+ arg0-save-offset (* 4 vm:word-bytes)))
+		(inst st %i5 %fp (+ arg0-save-offset (* 5 vm:word-bytes)))
+
+		;; Set up our args to call funcall3
+		;;
+		;; %o0 = address of call-callback
+		;; %o1 = index
+		;; %o2 = pointer to the arguments of the caller (address
+		;;       of arg0 above)
+		;; %o3 = pointer to return area
+
+		(inst li %o0 (alien::address-of-call-callback))
+		(inst li %o1 (ash index vm:fixnum-tag-bits))
+		(inst add %o2 %fp arg0-save-offset)
+		(inst add %o3 %fp (- return-value-size))
+
+		;; And away we go to funcall3!
+		(let ((addr (alien::address-of-funcall3)))
+		  (inst sethi %l0 (ldb (byte 22 10) addr))
+		  (inst jal %o7 %l0 (ldb (byte 10 0) addr))
+		;;(inst li %l0 (address-of-funcall3))
+		;;(inst jal %o7 %l0)
+		(inst nop)
+		)
+
+		;; Ok, we're back.  The value returned is actually stored in the args
+		(etypecase return-type
+		  (alien::integer-64$
+		   ;; A 64-bit bignum.
+		   )
+		  ((or alien::integer$ alien::pointer$ alien::sap$)
+		   (inst ld %i0 %fp (- return-value-size)))
+		  (alien::single$
+		   ;; Get the FP value into F0
+		   (inst ldf f0-s %fp (- return-value-size))
+		   )
+		  (alien::double$
+		   (inst lddf f0-d %fp (- return-value-size)))
+		  (alien::void$
+		   ))
+
+		(inst jal %g0 %i7 8)
+		(inst restore %g0 %g0 %g0)
+		)
+      (let ((length (finalize-segment segment)))
+	(prog1 (alien::segment-to-trampoline segment length)
+	  (release-segment segment))))))
+
+

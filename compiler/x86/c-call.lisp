@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.12 2002/08/27 22:18:28 moore Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/c-call.lisp,v 1.13 2003/05/14 13:22:17 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -299,3 +299,94 @@
 				    (ash symbol-value-slot word-shift)
 				    (- other-pointer-type)))
 	      delta)))))
+
+;;; Support for callbacks to Lisp.
+(export '(make-callback-trampoline callback-accessor-form))
+
+(defun callback-accessor-form (type sp offset)
+  `(alien:deref (sap-alien 
+		 (sys:sap+ ,sp ,offset)
+		 (* ,type))))
+
+#+nil
+(defmacro def-callback (name (return-type &rest arg-specs) &body body)
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
+
+Define a function which can be called by foreign code.  The pointer
+returned by (callback NAME), when called by foreign code, invokes the
+lisp function.  The lisp function expects alien arguments of the
+specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
+
+If (callback NAME) is already a callback function pointer, its value
+is not changed (though it's arranged that an updated version of the
+lisp callback function will be called).  This feature allows for
+incremental redefinition of callback functions."
+  (let ((sp-fixnum (gensym (string :sp-fixnum-)))
+	(ret-addr (gensym (string :ret-addr-)))
+	(sp (gensym (string :sp-)))
+	(ret (gensym (string :ret-))))
+    `(progn
+      (defun ,name (,sp-fixnum ,ret-addr)
+	(declare (type fixnum ,sp-fixnum)
+		 (type fixnum ,ret-addr))
+	;; We assume sp-fixnum is word aligned and pass it untagged to
+	;; this function.  The shift compensates this.
+	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
+	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
+	  (declare (ignorable ,sp))
+	  ;; Copy all arguments to local variables.
+	  (with-alien ,(loop for offset = 0 then (+ offset 
+						    (alien::argument-size type))
+			     for (name type) in arg-specs
+			     collect `(,name ,type
+				       :local (alien:deref (sap-alien 
+							    (sys:sap+ ,sp ,offset)
+							    (* ,type)))))
+	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
+	    (values))))
+      (alien::define-callback-function 
+	  ',name #',name ',(alien::parse-return-type return-type)))))
+
+
+(defun make-callback-trampoline (index return-type)
+  "Cons up a piece of code which calls call-callback with INDEX and a
+pointer to the arguments."
+  (let* ((segment (make-segment))
+	 (eax x86::eax-tn)
+	 (edx x86::edx-tn)
+	 (ebp x86::ebp-tn)
+	 (esp x86::esp-tn)
+	 ([ebp-8] (x86::make-ea :dword :base ebp :disp -8))
+	 ([ebp-4] (x86::make-ea :dword :base ebp :disp -4)))
+    (assemble (segment)
+	      (inst push ebp)			    ; save old frame pointer
+	      (inst mov  ebp esp)		    ; establish new frame
+	      (inst mov  eax esp)		    ; 
+	      (inst sub  eax 8)		            ; place for result 
+	      (inst push eax)			    ; arg2
+	      (inst add  eax 16)		    ; arguments  
+	      (inst push eax)			    ; arg1
+	      (inst push (ash index 2))		    ; arg0
+	      (inst push (alien::address-of-call-callback))     ; function
+	      (inst mov  eax (alien::address-of-funcall3))
+	      (inst call eax)
+	      ;; now put the result into the right register
+	      (etypecase return-type
+		(alien::integer-64$
+		 (inst mov eax [ebp-8])
+		 (inst mov edx [ebp-4]))
+		((or alien::integer$ alien::pointer$ alien::sap$)
+		 (inst mov eax [ebp-8]))
+		(alien::single$
+		 (inst fld  [ebp-8]))
+		(alien::double$
+		 (inst fldd [ebp-8]))
+		(alien::void$ ))
+	      (inst mov esp ebp)		   ; discard frame
+	      (inst pop ebp)			   ; restore frame pointer
+	      (inst ret))
+    (let* ((length (finalize-segment segment)))
+      (prog1 (alien::segment-to-trampoline segment length)
+	(release-segment segment)))))
+
+

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.53 2003/01/23 21:05:33 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.54 2003/05/14 13:22:16 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -21,7 +21,8 @@
 	  system-area-pointer def-alien-type def-alien-variable sap-alien
 	  extern-alien with-alien slot deref addr cast alien-sap alien-size
 	  alien-funcall def-alien-routine make-alien free-alien
-	  null-alien))
+	  null-alien
+	  def-callback callback))
 
 (in-package "ALIEN-INTERNALS")
 (in-package "ALIEN")
@@ -2034,3 +2035,320 @@
 		       (values ,@temps ,@(results))))
 		  `(values (alien-funcall ,lisp-name ,@(alien-args))
 			   ,@(results))))))))
+
+;;;; Alien callback support
+;;;;
+;;;; This is basically the implementation posted by Helmut Eller,
+;;;; posted to cmucl-imp on 04/13/2003.  It has been modified to live
+;;;; in the ALIEN package and to fit the same style as the ALIEN
+;;;; package.
+
+;;; This package provides a mechanism for defining callbacks: lisp
+;;; functions which can be called from foreign code.  The user
+;;; interface consists of the macros DEFCALLBACK and CALLBACK.  (See
+;;; the doc-strings for details.)
+;;;
+;;; Below are two examples.  The first example defines a callback FOO
+;;; and calls it with alien-funcall.  The second illustrates the use
+;;; of the libc qsort function.
+;;;
+;;; The implementation generates a piece machine code -- a
+;;; "trampoline" -- for each callback function.  A pointer to this
+;;; trampoline can then be passed to foreign code.  The trampoline is
+;;; allocated with malloc and is not moved by the GC.
+;;;
+;;; When called, the trampoline passes a pointer to the arguments
+;;; (essentially the stack pointer) together with an index to
+;;; CALL-CALLACK.  CALL-CALLBACK uses the index to find the
+;;; corresponding lisp function and calls this function with the
+;;; argument pointer.  The lisp function uses the pointer to copy the
+;;; arguments form the stack to local variables.  On return, the lisp
+;;; function stores the result into the location given by the argument
+;;; pointer, and the trampoline code copies the return value from
+;;; there into the right return register.
+;;;
+;;; The address of CALL-CALLBACK is used in every trampoline and must
+;;; not be moved by the gc.  It is therefore necessary to either
+;;; include this package into the image (core) or to purify before
+;;; creating any trampolines (or to invent some other trick).
+;;;
+;;; Examples: 
+
+#|
+;;; Example 1:
+
+(defcallback foo (int (arg1 int) (arg2 int))
+  (format t "~&foo: ~S, ~S~%" arg1 arg2)
+  (+ arg1 arg2))
+
+(alien-funcall (sap-alien (callback foo) (function int int int))
+	       555 444444)
+
+;;; Example 2:
+
+(def-alien-routine qsort void
+  (base (* t))
+  (nmemb int)
+  (size int)
+  (compar (* (function int (* t) (* t)))))
+
+(defcallback my< (int (arg1 (* double))
+		      (arg2 (* double)))
+  (let ((a1 (deref arg1))
+	(a2 (deref arg2)))
+    (cond ((= a1 a2)  0)
+	  ((< a1 a2) -1)
+	  (t         +1))))
+
+(let ((a (make-array 10 :element-type 'double-float
+		     :initial-contents '(0.1d0 0.5d0 0.2d0 1.2d0 1.5d0
+					 2.5d0 0.0d0 0.1d0 0.2d0 0.3d0))))
+  (print a)
+  (qsort (sys:vector-sap a)
+	 (length a)
+	 (alien-size double :bytes)
+	 (callback my<))
+  (print a))
+
+|#
+
+(defstruct (callback 
+	     (:constructor make-callback (trampoline lisp-fn return-type)))
+  "A callback consists of a piece assembly code -- the trampoline --
+and a lisp function.  We store the return-type, so we can detect
+incompatible redefinitions."
+  (trampoline (required-argument) :type system-area-pointer)
+  (lisp-fn (required-argument) :type (function (fixnum) (values)))
+  (return-type (required-argument) :type alien::alien-type))
+
+(declaim (type (vector callback) *callbacks*))
+(defvar *callbacks* (make-array 10 :element-type 'callback
+				:fill-pointer 0 :adjustable t)
+  "Vector of all callbacks.")
+
+(defun call-callback (index sp-fixnum ret-addr)
+  (declare (type fixnum index sp-fixnum ret-addr)
+	   (optimize speed))
+  (funcall (callback-lisp-fn (aref *callbacks* index))
+	   sp-fixnum ret-addr))
+
+(defun create-callback (lisp-fn return-type)
+  (let* ((index (fill-pointer *callbacks*))
+	 (tramp (vm:make-callback-trampoline index return-type))
+	 (cb (make-callback tramp lisp-fn return-type)))
+    (vector-push-extend cb *callbacks*)
+    cb))
+
+#+nil
+(defun address-of-call-into-lisp ()
+  (sys:sap-int (alien-sap (extern-alien "call_into_lisp" (function (* t))))))
+
+(defun address-of-call-callback ()
+  (kernel:get-lisp-obj-address #'call-callback))
+
+(defun address-of-funcall3 ()
+  (sys:sap-int (alien-sap (extern-alien "funcall3" (function (* t))))))
+
+;;; Some abbreviations for alien-type classes.  The $ suffix is there
+;;; to prevent name clashes.
+
+(deftype void$ () '(satisfies alien-void-type-p))
+(deftype integer$ () 'alien::alien-integer-type)
+(deftype integer-64$ () '(satisfies alien-integer-64-type-p))
+(deftype signed-integer$ () '(satisfies alien-signed-integer-type-p))
+(deftype pointer$ () 'alien::alien-pointer-type)
+(deftype single$ () 'alien::alien-single-float-type)
+(deftype double$ () 'alien::alien-double-float-type)
+(deftype sap$ () '(satisfies alien-sap-type=))
+
+(defun alien-sap-type= (type)
+  (alien::alien-type-= type 
+		       (alien::parse-alien-type 'system-area-pointer)))
+
+(defun alien-void-type-p (type)
+  (and (alien::alien-values-type-p type)
+       (null (alien::alien-values-type-values type))))
+
+(defun alien-integer-64-type-p (type)
+  (and (alien::alien-integer-type-p type)
+       (= (alien::alien-type-bits type) 64)))
+
+(defun alien-signed-integer-type-p (type)
+  (and (alien::alien-integer-type-p type)
+       (alien::alien-integer-type-signed type)))
+
+(defun segment-to-trampoline (segment length)
+  (let* ((code (alien-funcall 
+		(extern-alien "malloc" (function system-area-pointer unsigned))
+		length))
+	 (fill-pointer code))
+    (new-assem:segment-map-output segment
+				  (lambda (sap length)
+				    (kernel:system-area-copy sap 0 fill-pointer 0
+							     (* length vm:byte-bits))
+				    (setf fill-pointer (sys:sap+ fill-pointer length))))
+    code))
+
+(defun symbol-trampoline (symbol)
+  (callback-trampoline (symbol-value symbol)))
+
+(defmacro callback (name)
+  "Return the trampoline pointer for the callback NAME."
+  `(symbol-trampoline ',name))
+
+(defun compatible-return-types-p (type1 type2)
+  (flet ((machine-rep (type)
+	   (etypecase type
+	     (integer-64$ :dword)
+	     ((or integer$ pointer$ sap$) :word)
+	     (single$ :single)
+	     (double$ :double)
+	     (void$ :void))))
+    (eq (machine-rep type1) (machine-rep type2))))
+	       
+(defun define-callback-function (name lisp-fn return-type)
+  (declare (type symbol name)
+	   (type function lisp-fn))
+  (flet ((register-new-callback () 
+	   (setf (symbol-value name)
+		 (create-callback lisp-fn return-type))))
+    (if (and (boundp name)
+	     (callback-p (symbol-value name)))
+	;; try do redefine the existing callback
+	(let ((callback (find (symbol-trampoline name) *callbacks*
+			      :key #'callback-trampoline :test #'sys:sap=)))
+	  (cond (callback
+		 (let ((old-type (callback-return-type callback)))
+		   (cond ((compatible-return-types-p old-type return-type)
+			  ;; (format t "~&; Redefining callback ~A~%" name)
+			  (setf (callback-lisp-fn callback) lisp-fn)
+			  (setf (callback-return-type callback) return-type)
+			  callback)
+			 (t
+			  (let ((e (format nil "~
+Attempt to redefine callback with incompatible return type.
+   Old type was: ~A 
+    New type is: ~A" old-type return-type))
+				(c (format nil "~
+Create new trampoline (old trampoline calls old lisp function).")))
+			    (cerror c e)
+			    (register-new-callback))))))
+		(t (register-new-callback))))
+	(register-new-callback))))
+
+(defun word-aligned-bits (type)
+  (alien::align-offset (alien::alien-type-bits type) vm:word-bits))
+
+(defun argument-size (spec)
+  (let ((type (alien::parse-alien-type spec)))
+    (typecase type
+      ((or integer$ single$ double$ pointer$ sap$)
+       (ceiling (word-aligned-bits type) vm:byte-bits))
+      (t (error "Unsupported argument type: ~A" spec)))))
+
+(defun parse-return-type (spec)
+  (let ((alien::*values-type-okay* t))
+    (alien::parse-alien-type spec)))
+
+(defun return-exp (spec sap body)
+  (flet ((store (spec) `(setf (deref (sap-alien ,sap (* ,spec))) ,body)))
+    (let ((type (parse-return-type spec)))
+      (typecase type
+	(void$ body)
+	(signed-integer$ 
+	 (store `(signed ,(word-aligned-bits type))))
+	(integer$
+	 (store `(unsigned ,(word-aligned-bits type))))
+	((or single$ double$ pointer$ sap$)
+	 (store spec))
+	(t (error "Unsupported return type: ~A" spec))))))
+
+#+nil
+(defmacro def-callback (name (return-type &rest arg-specs) &body body)
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
+
+Define a function which can be called by foreign code.  The pointer
+returned by (callback NAME), when called by foreign code, invokes the
+lisp function.  The lisp function expects alien arguments of the
+specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
+
+If (callback NAME) is already a callback function pointer, its value
+is not changed (though it's arranged that an updated version of the
+lisp callback function will be called).  This feature allows for
+incremental redefinition of callback functions."
+  (let ((sp-fixnum (gensym (string :sp-fixnum)))
+	(ret-addr (gensym (string :ret-addr)))
+	(sp (gensym (string :sp))))
+    `(progn
+      (defun ,name (,sp-fixnum ,ret-addr)
+	(declare (type fixnum ,sp-fixnum)
+		 (type fixnum ,ret-addr))
+	;; We assume sp-fixnum is word aligned and pass it untagged to
+	;; this function.  The shift compensates this.
+	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2)))))
+	  (declare (ignorable ,sp))
+	  ;; Copy all arguments to local variables.
+	  (with-alien ,(loop for offset = 0 then (+ offset 
+						    (argument-size type))
+			     for (name type) in arg-specs
+			     collect `(,name ,type
+				       :local (deref (sap-alien 
+						      (sys:sap+ ,sp ,offset)
+						      (* ,type)))))
+	    ,(return-exp return-type `(sys:sap+ ,ret-addr 0) `(progn ,@body))
+	    (values))))
+      (define-callback-function 
+	  ',name #',name ',(parse-return-type return-type)))))
+
+(defmacro def-callback (name (return-type &rest arg-specs) &body body)
+  "(defcallback NAME (RETURN-TYPE {(ARG-NAME ARG-TYPE)}*) {FORM}*)
+
+Define a function which can be called by foreign code.  The pointer
+returned by (callback NAME), when called by foreign code, invokes the
+lisp function.  The lisp function expects alien arguments of the
+specified ARG-TYPEs and returns an alien of type RETURN-TYPE.
+
+If (callback NAME) is already a callback function pointer, its value
+is not changed (though it's arranged that an updated version of the
+lisp callback function will be called).  This feature allows for
+incremental redefinition of callback functions."
+  (let ((sp-fixnum (gensym (string :sp-fixnum-)))
+	(ret-addr (gensym (string :ret-addr-)))
+	(sp (gensym (string :sp-)))
+	(ret (gensym (string :ret-))))
+    `(progn
+      (defun ,name (,sp-fixnum ,ret-addr)
+	(declare (type fixnum ,sp-fixnum ,ret-addr))
+	;; We assume sp-fixnum is word aligned and pass it untagged to
+	;; this function.  The shift compensates this.
+	(let ((,sp (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,sp-fixnum 2))))
+	      (,ret (sys:int-sap (ldb (byte vm:word-bits 0) (ash ,ret-addr 2)))))
+	  (declare (ignorable ,sp))
+	  ;; Copy all arguments to local variables.
+	  (with-alien ,(loop for offset = 0 then (+ offset 
+						    (alien::argument-size type))
+			     for (name type) in arg-specs
+			     collect `(,name ,type
+				       :local ,(vm:callback-accessor-form type sp offset)))
+	    ,(alien::return-exp return-type `(sys:sap+ ,ret 0) `(progn ,@body))
+	    (values))))
+      (alien::define-callback-function 
+	  ',name #',name ',(alien::parse-return-type return-type)))))
+
+;;; dumping support
+
+(defun restore-callbacks ()
+  ;; Create new trampolines on reload.
+  (loop for cb across *callbacks*
+	for i from 0
+	do (setf (callback-trampoline cb)
+		 (vm:make-callback-trampoline i (callback-return-type cb)))))
+
+;; *after-save-initializations* contains
+;; new-assem::forget-output-blocks, and the assembler may not work
+;; before forget-output-blocks was called.  We add 'restore-callback at
+;; the end of *after-save-initializations* to sidestep this problem.
+(setf *after-save-initializations*
+      (append *after-save-initializations* (list 'restore-callbacks)))
+
+;;; callback.lisp ends here
