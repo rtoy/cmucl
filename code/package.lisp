@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.18 1992/05/15 17:44:12 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/package.lisp,v 1.19 1992/05/15 18:47:48 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -808,7 +808,7 @@
 	 `(old-in-package ,package ,@noise))
 	(t
 	 `(eval-when (compile load eval)
-	    (%in-package ',(stringify-name package))))))
+	    (%in-package ',(stringify-name package "package"))))))
 ;;;
 (defun %in-package (name)
   (setf *package* (package-or-lose name)))
