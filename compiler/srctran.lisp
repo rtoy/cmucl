@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.122 2003/07/01 18:44:18 toy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.123 2003/07/03 17:11:21 toy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1648,7 +1648,8 @@
 	     (rem (one-arg-derive-type number
 				       #'(lambda (n)
 					   (truncate-derive-type-rem-aux n div nil))
-				       #'rem)))
+				       #'(lambda (x)
+					   (rem x 1)))))
 	(when (and quot rem)
 	  (make-values-type :required (list quot rem))))))
 
