@@ -173,6 +173,7 @@ New in this release:
         the union is long enough, we give up and just return the
         smallest new interval that contains all of the disjoint
         intervals.  (This needs a better fix.)
+      - The :WHEREIN option to TRACE handles methods now.
 
   * Other changes:
       - Infinite loops in map and friends caused by specifying
