@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.41 1991/09/26 17:50:58 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/pack.lisp,v 1.42 1991/09/28 12:38:00 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1132,13 +1132,14 @@
 	     (is-op (ops)
 	       (do ((ops ops (tn-ref-across ops)))
 		   ((null ops) nil)
-		 (when (and (same ops)
-			    (not (eq ops op)))
-		   (return (tn-ref-tn ops)))))
+		 (let ((found (same ops)))
+		   (when (and found (not (eq ops op)))
+		     (return found)))))
 	     (is-ref (refs end)
 	       (do ((refs refs (tn-ref-next-ref refs)))
 		   ((eq refs end) nil)
-		 (when (same refs) (return (tn-ref-tn refs))))))
+		 (let ((found (same refs)))
+		 (when found (return found))))))
       (declare (inline is-op is-ref tn-overlaps))
       (if (tn-ref-write-p op)
 	  (or (is-op (vop-results vop))
