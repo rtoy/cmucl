@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.27 1997/11/04 14:50:25 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.28 1997/11/04 15:36:56 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1487,7 +1487,9 @@
 	     (round-up raw-header-size 2))
 	    (des (allocate-descriptor
 		  (if (c:backend-featurep :x86)
-		      *static*
+		      (if (c:backend-featurep :gencgc)
+			  *read-only*
+			*static*)
 		    *dynamic*)
 		  (+ (ash header-size vm:word-shift) size)
 		  vm:other-pointer-type)))
