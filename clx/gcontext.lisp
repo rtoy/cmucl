@@ -43,7 +43,7 @@
 ;;;	environment.
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/gcontext.lisp,v 1.6 1998/12/19 15:21:17 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/gcontext.lisp,v 1.7 2004/03/24 13:35:04 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -321,12 +321,15 @@
   (declare (type gcontext gcontext)
 	   (type (or card8 sequence) dashes))
   (multiple-value-bind (dashes dash)
-      (if (type? dashes 'sequence)
-	  (if (zerop (length dashes))
-	      (x-type-error dashes '(or card8 sequence) "non-empty sequence")
-	    (values nil (or (copy-seq dashes) (vector))))
-	(values (encode-type card8 dashes) nil))
-    (modify-gcontext (gcontext local-state)
+      (cond ((type? dashes 'sequence)
+             (if (zerop (length dashes))
+                 (x-type-error dashes '(or card8 sequence) "non-empty sequence")
+                 (values nil (or (copy-seq dashes) (vector)))))
+            ((eql dashes 0)
+             (x-type-error dashes '(or card8 sequence) "non-zero card8"))
+            (t
+             (values (encode-type card8 dashes) nil)))
+   (modify-gcontext (gcontext local-state)
       (let ((server-state (gcontext-server-state gcontext)))
 	(declare (type gcontext-state server-state))
 	(without-interrupts
