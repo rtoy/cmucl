@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.70 2004/10/09 14:41:01 rtoy Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/pathname.lisp,v 1.71 2004/10/22 18:30:32 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -826,7 +826,7 @@ a host-structure or string."
 	  (namestring-parse-error-namestring condition)
 	  (namestring-parse-error-offset condition)))
 
-(define-condition namestring-parse-error (parse-error)
+(define-condition namestring-parse-error (parse-error type-error)
   ((complaint :reader namestring-parse-error-complaint :initarg :complaint)
    (arguments :reader namestring-parse-error-arguments :initarg :arguments
 	      :initform nil)
@@ -1827,6 +1827,10 @@ a host-structure or string."
 	   :format-arguments (list pathspec)
 	   :datum pathspec
 	   :expected-type '(satisfies logical-pathname-namestring-p)))
+	;; Make sure the result is a logical pathname.  This can
+	;; happen if the pathspec is stream, and the stream was opened
+	;; with a pathname instead of a logical-pathname.
+	(check-type res logical-pathname)
 	res)))
 
 
