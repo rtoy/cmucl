@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.24 1990/07/03 06:31:02 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.25 1990/07/10 18:28:04 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -427,9 +427,9 @@ default-value-5
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
+      (move fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
@@ -461,9 +461,9 @@ default-value-5
   (:generator 20
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
+      (move fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
@@ -498,9 +498,9 @@ default-value-5
   (:generator 5
     (let ((label (gen-label))
 	  (cur-nfp (current-nfp-tn vop)))
-      (move fp-tn fp)
       (when cur-nfp
 	(store-stack-tn nfp-save cur-nfp))
+      (move fp-tn fp)
       (let ((callee-nfp (callee-nfp-tn callee)))
 	(when callee-nfp
 	  (move callee-nfp nfp)))
