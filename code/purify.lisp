@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.13 1992/03/26 03:18:51 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/purify.lisp,v 1.14 1994/02/14 12:27:03 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -16,13 +16,21 @@
 ;;;
 ;;; Rewritten in C by William Lott.
 ;;;
-(in-package 'lisp)
+(in-package "LISP")
+(export 'ext::purify "EXT")
 
 (alien:def-alien-routine ("purify" %purify) c-call:void
   (static-roots c-call:unsigned-long)
   (read-only-roots c-call:unsigned-long))
 
-(defun purify (&key root-structures constants)
+(defun purify (&key root-structures)
+  "This function optimizes garbage collection by moving all currently live
+   objects into non-collected storage.  ROOT-STRUCTURES is an optional list of
+   objects which should be copied first to maximize locality.
+
+   DEFSTRUCT structures defined with the (:PURE T) option are moved into
+   read-only storage, further reducing GC cost.  List and vector slots of pure
+   structures are also moved into read-only storage."
   (let ((*gc-notify-before*
 	 #'(lambda (bytes-in-use)
 	     (declare (ignore bytes-in-use))
@@ -31,11 +39,10 @@
 	(*internal-gc*
 	 #'(lambda ()
 	     (%purify (get-lisp-obj-address root-structures)
-		      (get-lisp-obj-address constants))))
+		      (get-lisp-obj-address nil))))
 	(*gc-notify-after*
 	 #'(lambda (&rest ignore)
 	     (declare (ignore ignore))
 	     (write-line "Done.]"))))
     (gc t))
   nil)
-
