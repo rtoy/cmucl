@@ -1,19 +1,7 @@
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.5 1999/02/20 15:54:44 pw Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.h,v 1.6 1999/02/22 11:45:59 dtc Exp $ */
 
 #ifndef _LISP_H_
 #define _LISP_H_
-
-/* sigh */
-#ifdef __alpha__
-#ifndef alpha
-#define alpha
-#endif
-#endif
-#ifdef alpha
-#ifndef __alpha__
-#define __alpha__
-#endif
-#endif
 
 #define lowtag_Bits 3
 #define lowtag_Mask ((1<<lowtag_Bits)-1)
