@@ -7,11 +7,11 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.43 1992/04/01 19:56:11 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.44 1992/04/27 20:03:15 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.43 1992/04/01 19:56:11 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/call.lisp,v 1.44 1992/04/27 20:03:15 wlott Exp $
 ;;;
 ;;;    This file contains the VM definition of function call for the MIPS.
 ;;;
@@ -914,6 +914,29 @@ default-value-8
 
 
 ;;;; Unknown values return:
+
+;;; Return a single value using the unknown-values convention.
+;;; 
+(define-vop (return-single)
+  (:args (old-fp :scs (any-reg))
+	 (return-pc :scs (descriptor-reg))
+	 (value))
+  (:ignore value)
+  (:temporary (:scs (interior-reg)) lip)
+  (:vop-var vop)
+  (:generator 6
+    ;; Clear the number stack.
+    (trace-table-entry trace-table-function-epilogue)
+    (let ((cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(inst addu nsp-tn cur-nfp
+	      (bytes-needed-for-non-descriptor-stack-frame))))
+    ;; Clear the control stack, and restore the frame pointer.
+    (move csp-tn cfp-tn)
+    (move cfp-tn old-fp)
+    ;; Out of here.
+    (lisp-return return-pc lip :offset 2)
+    (trace-table-entry trace-table-normal)))
 
 
 ;;; Do unknown-values return of a fixed number of values.  The Values are

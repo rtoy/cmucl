@@ -1,13 +1,15 @@
 ;;; -*- Package: SPARC -*-
 ;;;
 ;;; **********************************************************************
-;;; This code was written as part of the Spice Lisp project at
-;;; Carnegie-Mellon University, and has been placed in the public domain.
-;;; If you want to use this code or any part of Spice Lisp, please contact
-;;; Scott Fahlman (FAHLMAN@CMUC). 
-;;; **********************************************************************
+;;; This code was written as part of the CMU Common Lisp project at
+;;; Carnegie Mellon University, and has been placed in the public domain.
+;;; If you want to use this code or any part of CMU Common Lisp, please contact
+;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.10 1992/04/01 20:11:48 wlott Exp $
+(ext:file-comment
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/call.lisp,v 1.11 1992/04/27 20:03:45 wlott Exp $")
+;;;
+;;; **********************************************************************
 ;;;
 ;;; This file contains the VM definition of function call for the SPARC.
 ;;;
@@ -895,6 +897,29 @@ default-value-8
 
 ;;;; Unknown values return:
 
+
+;;; Return a single value using the unknown-values convention.
+;;; 
+(define-vop (return-single)
+  (:args (old-fp :scs (any-reg))
+	 (return-pc :scs (descriptor-reg))
+	 (value))
+  (:ignore value)
+  (:vop-var vop)
+  (:generator 6
+    (trace-table-entry trace-table-function-epilogue)
+    ;; Clear the number stack.
+    (let ((cur-nfp (current-nfp-tn vop)))
+      (when cur-nfp
+	(inst add nsp-tn cur-nfp
+	      (- (bytes-needed-for-non-descriptor-stack-frame)
+		 number-stack-displacement))))
+    ;; Clear the control stack, and restore the frame pointer.
+    (move csp-tn cfp-tn)
+    (move cfp-tn old-fp)
+    ;; Out of here.
+    (lisp-return return-pc :offset 2)))
+    (trace-table-entry trace-table-normal)))
 
 ;;; Do unknown-values return of a fixed number of values.  The Values are
 ;;; required to be set up in the standard passing locations.  Nvals is the
