@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.1 1997/01/18 14:31:21 ram Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.2 1997/02/23 09:42:02 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -17,6 +17,7 @@
 ;;; Written by William Lott.
 ;;;
 ;;; Debugged by Paul F. Werkowski Spring/Summer 1995.
+;;; Enhancements/debugging by Douglas T. Crosher 1996.
 ;;;
 (in-package :x86)
 
@@ -47,20 +48,10 @@
   ((immediate) (sap-reg))
   (inst mov y (sap-int (tn-value x))))
 
-#+nil ;; original
-(define-move-function (load-constant 5) (vop x y)
-  ((constant) (descriptor-reg))
-  (inst mov y x))
-
 (define-move-function (load-constant 5) (vop x y)
   ;; pfw adds any-reg to no effect
   ((constant) (descriptor-reg any-reg))
   (inst mov y x))
-
-#+nil ;; not sure this will work -- need test case
-(define-move-function (load-constant 5) (vop x y)
-  ((constant) (descriptor-reg any-reg))
-  (inst mov y (make-fixup nil :code-object (tn-offset x))))
 
 (define-move-function (load-stack 5) (vop x y)
   ((descriptor-stack) (descriptor-reg)
@@ -93,20 +84,11 @@
 		      ((descriptor-reg) (immediate-stack))
   (inst mov x y))
 
-;;; zzzzz seem to need this one for the verify-argument-count vop???
-;(define-move-function (move-unsigned-to-any 5) (vop x y)
-;		      ((unsigned-reg) (any-reg))
-;  (inst mov y x)
-;  (inst shl y 2))
-
-
 
 ;;;; The Move VOP:
 ;;;
 (define-vop (move)
-  (:args (x :target y
-	    :scs (any-reg immediate-stack descriptor-reg descriptor-stack
-			  immediate)
+  (:args (x :scs (any-reg descriptor-reg immediate) :target y
 	    :load-if (not (location= x y))))
   (:results (y :scs (any-reg descriptor-reg)
 	       :load-if
@@ -132,7 +114,7 @@
       (move y x))))
 
 (define-move-vop move :move
-  (any-reg immediate-stack descriptor-reg descriptor-stack immediate)
+  (any-reg descriptor-reg immediate)
   (any-reg descriptor-reg))
 
 
@@ -149,8 +131,7 @@
 ;;; to another frame, except if the destination is a register and in
 ;;; this case the loading works out.
 (define-vop (move-argument)
-  (:args (x :target y
-	    :scs (any-reg descriptor-reg immediate)
+  (:args (x :scs (any-reg descriptor-reg immediate) :target y
 	    :load-if (not (and (sc-is y any-reg descriptor-reg)
 			       (sc-is x immediate-stack))))
 	 (fp :scs (any-reg)
@@ -239,8 +220,10 @@
 ;;; possible arg SCs (control-stack) overlap with possible bignum arg SCs.
 ;;;
 (define-vop (move-to-word/fixnum)
-  (:args (x :scs (any-reg immediate-stack descriptor-reg descriptor-stack)))
-  (:results (y :scs (signed-reg unsigned-reg)))
+  (:args (x :scs (any-reg descriptor-reg) :target y
+	    :load-if (not (location= x y))))
+  (:results (y :scs (signed-reg unsigned-reg)
+	       :load-if (not (location= x y))))
   (:arg-types tagged-num)
   (:note "fixnum untagging")
   (:generator 1
@@ -289,19 +272,21 @@
 ;;; restriction because of the control-stack ambiguity noted above.
 ;;;
 (define-vop (move-from-word/fixnum)
-  (:args (x :scs (signed-reg signed-stack unsigned-reg unsigned-stack)))
-  (:results (y :scs (any-reg descriptor-reg)))
+  (:args (x :scs (signed-reg unsigned-reg) :target y
+	    :load-if (not (location= x y))))
+  (:results (y :scs (any-reg descriptor-reg)
+	       :load-if (not (location= x y))))
   (:result-types tagged-num)
   (:note "fixnum tagging")
   (:generator 1
-    (if (and (sc-is x signed-reg unsigned-reg)
-	     (not (location= x y)))
-	;; Uses 7 bytes, but faster on the Pentium
-	(inst lea y (make-ea :dword :index x :scale 4))
-      (progn
-	;; Uses: If x is a reg 2 + 3; if x = y uses only 3 bytes
-	(move y x)
-	(inst shl y 2)))))
+    (cond ((and (sc-is x signed-reg unsigned-reg)
+		(not (location= x y)))
+	   ;; Uses 7 bytes, but faster on the Pentium
+	   (inst lea y (make-ea :dword :index x :scale 4)))
+	  (t
+	   ;; Uses: If x is a reg 2 + 3; if x = y uses only 3 bytes
+	   (move y x)
+	   (inst shl y 2)))))
 ;;;
 (define-move-vop move-from-word/fixnum :move
   (signed-reg unsigned-reg) (any-reg descriptor-reg))
@@ -324,8 +309,9 @@
     (move eax x)
     (inst call (make-fixup 'move-from-signed :assembly-routine))
     (move y ebx)))
-
-#+notyet ;; new from dtc -- need to test
+;;;
+;;; Faster inline version,
+#+nil
 (define-vop (move-from-signed)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc dword-reg) alloc)
@@ -374,8 +360,9 @@
     (move eax x)
     (inst call (make-fixup 'move-from-unsigned :assembly-routine))
     (move y ebx)))
-
-#+notyet ;; from dtc -- need to test this
+;;;
+;;; Faster inline version.
+#+nil
 (define-vop (move-from-unsigned)
   (:args (x :scs (signed-reg unsigned-reg) :to :save))
   (:temporary (:sc dword-reg) alloc)
@@ -411,10 +398,10 @@
 	 (inst mov y (logior (ash (1- (+ bignum-digits-offset 1)) vm:type-bits)
 			     bignum-type))
 	 (emit-label l1)
-	 (with-cgc-allocation
-	  (alloc (pad-data-block (+ bignum-digits-offset 2)))
-	  (storew y alloc)
-	  (inst lea y (make-ea :byte :base alloc :disp other-pointer-type)))
+	 (with-cgc-allocation 
+	  (alloc (pad-data-block (+ bignum-digits-offset 2))))
+	 (storew y alloc)
+	 (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
 	 (storew x y bignum-digits-offset other-pointer-type)
 	 (inst jmp done)))))
 ;;;
@@ -425,8 +412,7 @@
 ;;; Move untagged numbers.
 ;;;
 (define-vop (word-move)
-  (:args (x :target y
-	    :scs (signed-reg unsigned-reg signed-stack unsigned-stack)
+  (:args (x :scs (signed-reg unsigned-reg) :target y
 	    :load-if (not (location= x y))))
   (:results (y :scs (signed-reg unsigned-reg)
 	       :load-if
@@ -445,10 +431,8 @@
 ;;; Move untagged number arguments/return-values.
 ;;;
 (define-vop (move-word-argument)
-  (:args (x :target y
-	    :scs (signed-reg unsigned-reg))
-	 (fp :scs (any-reg)
-	     :load-if (not (sc-is y sap-reg))))
+  (:args (x :scs (signed-reg unsigned-reg) :target y)
+	 (fp :scs (any-reg) :load-if (not (sc-is y sap-reg))))
   (:results (y))
   (:note "word integer argument move")
   (:generator 0
