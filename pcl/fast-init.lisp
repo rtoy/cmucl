@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.7 2002/04/13 22:40:07 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/fast-init.lisp,v 1.8 2002/08/26 02:23:13 pmai Exp $")
 ;;;
 ;;; This file defines the optimized make-instance functions.
 ;;; 
@@ -59,7 +59,7 @@
 			 (return nil))		       
 		       (setq key (eval (pop initargs-tail)))
 		       (setq value (pop initargs-tail))
-		       (when (eq ':allow-other-keys key)
+		       (when (eq :allow-other-keys key)
 			 (setq allow-other-keys-p value))
 		       (push key keys))))
       (let* ((class (eval class))
@@ -88,15 +88,15 @@
 	  
 (defmacro expanding-make-instance (&rest forms &environment env)
   `(progn
-     ,@(mapcar #'(lambda (form)
-		   (walk-form form env 
-			      #'(lambda (subform context env)
-				  (declare (ignore env))
-				  (or (and (eq context ':eval)
-					   (consp subform)
-					   (eq (car subform) 'make-instance)
-					   (expand-make-instance-form subform))
-				      subform))))
+     ,@(mapcar (lambda (form)
+		 (walk-form form env 
+			    (lambda (subform context env)
+			      (declare (ignore env))
+			      (or (and (eq context :eval)
+				       (consp subform)
+				       (eq (car subform) 'make-instance)
+				       (expand-make-instance-form subform))
+				  subform))))
 	       forms)))
 
 (defmacro defconstructor
@@ -146,7 +146,7 @@
 	(cached-name (intern (format nil "~A-CACHED-~A" type name))))
     `(defmacro ,reader-name (info)
        `(let ((value (,',cached-name ,info)))
-	  (if (eq value ':unknown)
+	  (if (eq value :unknown)
 	      (progn
 		(,',trap ,info ',',name)
 		(,',cached-name ,info))
@@ -168,35 +168,35 @@
 
 (defmacro define-initialize-info ()
   (let ((cached-slot-names 
-	 (mapcar #'(lambda (name)
-		     (intern (format nil "CACHED-~A" name)))
+	 (mapcar (lambda (name)
+		   (intern (format nil "CACHED-~A" name)))
 		 initialize-info-cached-slots))
 	(cached-names
-	 (mapcar #'(lambda (name)
-		     (intern (format nil "~A-CACHED-~A" 
-				     'initialize-info name)))
+	 (mapcar (lambda (name)
+		   (intern (format nil "~A-CACHED-~A" 
+				   'initialize-info name)))
 		 initialize-info-cached-slots)))
     `(progn
        (defstruct initialize-info 
 	 key wrapper 
-	 ,@(mapcar #'(lambda (name)
-		       `(,name :unknown))
+	 ,@(mapcar (lambda (name)
+		     `(,name :unknown))
 		   cached-slot-names))
        (defmacro reset-initialize-info-internal (info)
 	 `(progn 
-	    ,@(mapcar #'(lambda (cname)
-			  `(setf (,cname ,info) ':unknown))
+	    ,@(mapcar (lambda (cname)
+			`(setf (,cname ,info) :unknown))
 		      ',cached-names)))
        (defun initialize-info-bound-slots (info)
 	 (let ((slots nil))
-	   ,@(mapcar #'(lambda (name cached-name)
-			 `(unless (eq ':unknown (,cached-name info))
-			    (push ',name slots)))
+	   ,@(mapcar (lambda (name cached-name)
+		       `(unless (eq :unknown (,cached-name info))
+			  (push ',name slots)))
 		     initialize-info-cached-slots cached-names)
 	   slots))
-      ,@(mapcar #'(lambda (name)
-		    `(define-cached-reader initialize-info ,name 
-		      update-initialize-info-internal))
+      ,@(mapcar (lambda (name)
+		  `(define-cached-reader initialize-info ,name 
+		     update-initialize-info-internal))
 	        initialize-info-cached-slots))))
 
 (define-initialize-info)
@@ -356,7 +356,7 @@
       (setq class (find-class class)))
     (when (classp class)
       (unless (class-finalized-p class) (finalize-inheritance class)))
-    (let* ((initargs (mapcan #'(lambda (key) (list key nil)) keys))
+    (let* ((initargs (mapcan (lambda (key) (list key nil)) keys))
 	   (class-and-initargs (list* class initargs))
 	   (make-instance (gdefinition 'make-instance))
 	   (make-instance-methods
@@ -377,8 +377,8 @@
 					  (list* proto t initargs)))))
       (when (null make-instance-methods)
 	(return-from get-make-instance-function
-	  #'(lambda (class initargs)
-	      (apply #'no-applicable-method make-instance class initargs))))
+	  (lambda (class initargs)
+	    (apply #'no-applicable-method make-instance class initargs))))
       (unless (and (null (cdr make-instance-methods))
 		   (eq (car make-instance-methods) std-mi-meth)
 		   (null (cdr default-initargs-methods))
@@ -390,8 +390,8 @@
 				  (eq (car (method-specializers meth))
 				      *the-class-slot-object*)
 				  (and (null (cdr quals))
-				       (or (eq (car quals) ':before)
-					   (eq (car quals) ':after)))))))
+				       (or (eq (car quals) :before)
+					   (eq (car quals) :after)))))))
 		     (and (every #'check-meth initialize-instance-methods)
 			  (every #'check-meth shared-initialize-methods))))
 	(return-from get-make-instance-function nil))
@@ -430,7 +430,7 @@
 (defun complicated-instance-creation-method (m)
   (let ((qual (method-qualifiers m)))
     (if qual 
-	(not (and (null (cdr qual)) (eq (car qual) ':after)))
+	(not (and (null (cdr qual)) (eq (car qual) :after)))
 	(let ((specl (car (method-specializers m))))
 	  (or (not (classp specl))
 	      (not (eq 'slot-object (class-name specl))))))))
@@ -472,36 +472,36 @@
 	   (std-si-meth (find-standard-ii-method shared-initialize-methods
 						 'slot-object))
 	   (shared-initfns
-	    (nreverse (mapcar #'(lambda (method)
-				  (make-effective-method-function
-				   #'shared-initialize
-				   `(call-method ,method nil)
-				   nil lwrapper))
+	    (nreverse (mapcar (lambda (method)
+				(make-effective-method-function
+				 #'shared-initialize
+				 `(call-method ,method nil)
+				 nil lwrapper))
 			      (remove std-si-meth shared-initialize-methods))))
 	   (std-ii-meth (find-standard-ii-method initialize-instance-methods
 						 'slot-object))
 	   (initialize-initfns 
-	    (nreverse (mapcar #'(lambda (method)
-				  (make-effective-method-function
-				   #'initialize-instance
-				   `(call-method ,method nil)
-				   nil lwrapper))
+	    (nreverse (mapcar (lambda (method)
+				(make-effective-method-function
+				 #'initialize-instance
+				 `(call-method ,method nil)
+				 nil lwrapper))
 			      (remove std-ii-meth
 				      initialize-instance-methods)))))
-      #'(lambda (class1 initargs)
-	  (if (not (eq wrapper (class-wrapper class)))
-	      (let* ((info (initialize-info (coerce-to-class class1) initargs))
-		     (fn (initialize-info-make-instance-function info)))
-		(declare (type function fn))
-		(funcall fn class1 initargs))
-	      (let* ((instance (funcall allocate-function wrapper constants))
-		     (initargs (call-initialize-function initialize-function
-							 instance initargs)))
-		(dolist (fn shared-initfns)
-		  (invoke-effective-method-function fn t instance t initargs))
-		(dolist (fn initialize-initfns)
-		  (invoke-effective-method-function fn t instance initargs))
-		instance))))))
+      (lambda (class1 initargs)
+	(if (not (eq wrapper (class-wrapper class)))
+	    (let* ((info (initialize-info (coerce-to-class class1) initargs))
+		   (fn (initialize-info-make-instance-function info)))
+	      (declare (type function fn))
+	      (funcall fn class1 initargs))
+	    (let* ((instance (funcall allocate-function wrapper constants))
+		   (initargs (call-initialize-function initialize-function
+						       instance initargs)))
+	      (dolist (fn shared-initfns)
+		(invoke-effective-method-function fn t instance t initargs))
+	      (dolist (fn initialize-initfns)
+		(invoke-effective-method-function fn t instance initargs))
+	      instance))))))
 
 (defun make-instance-function-complex (key class keys
 					   initialize-instance-methods
@@ -514,35 +514,35 @@
 	     #'shared-initialize shared-initialize-methods
 	     `((class-eq ,class) t t)
 	     `((,(find-standard-ii-method shared-initialize-methods 'slot-object)
-		,#'(lambda (instance init-type &rest initargs)
-		     (declare (ignore init-type))
-		     #+copy-&rest-arg (setq initargs (copy-list initargs))
-		     (call-initialize-function initialize-function 
-					       instance initargs)
-		     instance)))
+		,(lambda (instance init-type &rest initargs)
+		    (declare (ignore init-type))
+		    #+copy-&rest-arg (setq initargs (copy-list initargs))
+		    (call-initialize-function initialize-function 
+					      instance initargs)
+		    instance)))
 	     (list wrapper *the-wrapper-of-t* *the-wrapper-of-t*)))
 	   (initialize-instance
 	    (get-secondary-dispatch-function
 	     #'initialize-instance initialize-instance-methods
 	     `((class-eq ,class) t)
 	     `((,(find-standard-ii-method initialize-instance-methods 'slot-object)
-		,#'(lambda (instance &rest initargs)
-		     #+copy-&rest-arg (setq initargs (copy-list initargs))
-		     (invoke-effective-method-function
-		      shared-initialize t instance t initargs))))
+		,(lambda (instance &rest initargs)
+		   #+copy-&rest-arg (setq initargs (copy-list initargs))
+		   (invoke-effective-method-function
+		    shared-initialize t instance t initargs))))
 	     (list wrapper *the-wrapper-of-t*))))
-      #'(lambda (class1 initargs)
-	  (if (not (eq wrapper (class-wrapper class)))
-	      (let* ((info (initialize-info (coerce-to-class class1) initargs))
-		     (fn (initialize-info-make-instance-function info)))
-		(declare (type function fn))
-		(funcall fn class1 initargs))
-	      (let* ((initargs (call-initialize-function initargs-function 
-							 nil initargs))
-		     (instance (apply #'allocate-instance class initargs)))
-		(invoke-effective-method-function
-		 initialize-instance t instance initargs)
-		instance))))))
+      (lambda (class1 initargs)
+	(if (not (eq wrapper (class-wrapper class)))
+	    (let* ((info (initialize-info (coerce-to-class class1) initargs))
+		   (fn (initialize-info-make-instance-function info)))
+	      (declare (type function fn))
+	      (funcall fn class1 initargs))
+	    (let* ((initargs (call-initialize-function initargs-function 
+						       nil initargs))
+		   (instance (apply #'allocate-instance class initargs)))
+	      (invoke-effective-method-function
+	       initialize-instance t instance initargs)
+	      instance))))))
 
 (defun get-simple-initialization-function (class keys &optional allow-other-keys-arg)
   (let ((info (initialize-info class keys nil allow-other-keys-arg)))
@@ -575,10 +575,10 @@
 	(default-initargs (class-default-initargs class))
 	(nkeys keys)
 	(slots-alist
-	 (mapcan #'(lambda (slot)
-		     (mapcar #'(lambda (arg)
-				 (cons arg slot))
-			     (slot-definition-initargs slot)))
+	 (mapcan (lambda (slot)
+		   (mapcar (lambda (arg)
+			     (cons arg slot))
+			   (slot-definition-initargs slot)))
 		 (class-slots class)))
 	(nslots nil))
     (dolist (key nkeys)
@@ -612,15 +612,15 @@
 	 (wrapper (class-wrapper class))
 	 (constants (when simple-p
 		      (make-list (wrapper-no-of-instance-slots wrapper)
-				 ':initial-element *slot-unbound*)))
+				 :initial-element *slot-unbound*)))
 	 (slots (class-slots class))
 	 (slot-names (mapcar #'slot-definition-name slots))
-	 (slots-key (mapcar #'(lambda (slot)
-				(let ((index most-positive-fixnum))
-				  (dolist (key (slot-definition-initargs slot))
-				    (let ((pos (position key keys)))
-				      (when pos (setq index (min index pos)))))
-				  (cons slot index)))
+	 (slots-key (mapcar (lambda (slot)
+			      (let ((index most-positive-fixnum))
+				(dolist (key (slot-definition-initargs slot))
+				  (let ((pos (position key keys)))
+				    (when pos (setq index (min index pos)))))
+				(cons slot index)))
 			    slots))
 	 (slots (stable-sort slots-key #'< :key #'cdr)))
     (let ((n-popped 0))
@@ -639,7 +639,7 @@
       (let* ((slot (car slot+index))
 	     (name (slot-definition-name slot)))
 	(when (and (eql (cdr slot+index) most-positive-fixnum)
-		   (or (eq si-slot-names 't)
+		   (or (eq si-slot-names t)
 		       (member name si-slot-names)))
 	  (let* ((initform (slot-definition-initform slot))
 		 (initfunction (slot-definition-initfunction slot))
@@ -710,7 +710,7 @@
 		(apply (the function (cadr entry)) args)
 		`(call-initialize-instance-simple ,pv-cell ,form-list))))
 	#||
-	#'(lambda (instance initargs)
+	(lambda (instance initargs)
 	    (initialize-instance-simple pv-cell form-list instance initargs))
 	||#
 	`(call-initialize-instance-simple ,pv-cell ,form-list))))
@@ -733,12 +733,14 @@
 (defmacro precompile-iis-functions (&optional system)
   (let ((index -1))
     `(progn
-      ,@(gathering1 (collecting)
-	 (dolist (iis-entry *initialize-instance-simple-alist*)
+      ,@(let ((collected ()))
+	 (dolist (iis-entry *initialize-instance-simple-alist*
+		  (nreverse collected))
 	   (when (or (null (caddr iis-entry))
 		     (eq (caddr iis-entry) system))
-	     (when system (setf (caddr iis-entry) system))
-	     (gather1
+	     (when system
+	       (setf (caddr iis-entry) system))
+	     (push
 	      (make-top-level-form
 	       `(precompile-initialize-instance-simple ,system ,(incf index))
 	       '(load)
@@ -746,7 +748,8 @@
 		 ',(car iis-entry)
 		 #',(car iis-entry)
 		 ',system
-		 ',(cdddr iis-entry))))))))))
+		 ',(cdddr iis-entry)))
+	      collected)))))))
 
 (defun compile-iis-functions (after-p)
   (let ((*compile-make-instance-functions-p* t)
@@ -849,9 +852,9 @@
 	       `((instance-write-internal pv slots ,(const pv-offset) value
 		  ,default
 		  ,(typecase location
-		     (fixnum ':instance)
-		     (cons ':class)
-		     (t ':default)))))))
+		     (fixnum :instance)
+		     (cons :class)
+		     (t :default)))))))
 	(skip-when-instance-boundp
 	 (let* ((pv-offset (cadr form))
 		(location (pvref pv pv-offset))
@@ -866,9 +869,9 @@
 			  `(instance-boundp-internal pv slots ,(const pv-offset)
 			    ,default
 			    ,(typecase (pvref pv pv-offset)
-			       (fixnum ':instance)
-			       (cons ':class)
-			       (t ':default))))
+			       (fixnum :instance)
+			       (cons :class)
+			       (t :default))))
 	       ,@(let ((sforms (cons nil nil)))
 		   (dotimes (i (cadddr form) (car sforms))
 		     (add-forms (first-form-to-lisp forms cvector pv) sforms)))))))
@@ -903,10 +906,10 @@
     (values
      `(lambda (pv-cell cvector)
         (declare (type ,cvector-type cvector))
-        #'(lambda (instance initargs)
-	    (declare #.*optimize-speed*)
-	    (iis-body ,@body)
-	    initargs))
+        (lambda (instance initargs)
+	  (declare #.*optimize-speed*)
+	  (iis-body ,@body)
+	  initargs))
      (list pv-cell (coerce cvector cvector-type)))))
 
 

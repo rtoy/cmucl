@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.14 2002/06/05 23:00:11 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/env.lisp,v 1.15 2002/08/26 02:23:13 pmai Exp $")
 ;;;
 ;;; Basic environmental stuff.
 ;;;
@@ -334,10 +334,10 @@
 
 (macrolet ((frob (&rest names)
 	     `(progn
-		,@(mapcar #'(lambda (name)
-			      `(defmethod ,name ((class lisp:class))
-				 (funcall #',name
-					  (coerce-to-pcl-class class))))
+		,@(mapcar (lambda (name)
+			    `(defmethod ,name ((class lisp:class))
+			      (funcall #',name
+			       (coerce-to-pcl-class class))))
 			  names))))
   (frob
     class-direct-slots

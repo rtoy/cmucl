@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.21 2001/05/05 23:34:47 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/walk.lisp,v 1.22 2002/08/26 02:23:16 pmai Exp $")
 ;;;
 ;;; A simple code walker, based IN PART on: (roll the credits)
 ;;;   Larry Masinter's Masterscope
@@ -182,12 +182,12 @@
       :default env
       :variables variables
       :functions
-      (append (mapcar #'(lambda (f)
-			  (cons (car f) (c::make-functional :lexenv env)))
+      (append (mapcar (lambda (f)
+			(cons (car f) (c::make-functional :lexenv env)))
 		      functions)
-	      (mapcar #'(lambda (m)
-			  (list* (car m) 'c::macro
-				 (coerce (cadr m) 'function)))
+	      (mapcar (lambda (m)
+			(list* (car m) 'c::macro
+			       (coerce (cadr m) 'function)))
 		      macros)))))
 
 (defun environment-function (env fn)
@@ -470,9 +470,9 @@
 (defun WALK-FORM (form
 		  &optional environment
 			    (walk-function
-			      #'(lambda (subform context env)
-				  (declare (ignore context env))
-				  subform)))
+			      (lambda (subform context env)
+				(declare (ignore context env))
+				subform)))
   (walker-environment-bind (new-env environment :walk-function walk-function)
     (walk-form-internal form :eval new-env)))
 
@@ -499,48 +499,48 @@
 			 form
 			 &optional environment
 				   (walk-function
-				     #'(lambda (subform context env)
-					 (declare (ignore context env))
-					 subform)))
+				     (lambda (subform context env)
+				       (declare (ignore context env))
+				       subform)))
   (if (eq whole (env-walk-form environment))
       (let ((outer-walk-function (env-walk-function environment)))
 	(throw whole
 	  (walk-form
 	    form
 	    environment
-	    #'(lambda (f c e)
-		;; First loop to make sure the inner walk function
-		;; has done all it wants to do with this form.
-		;; Basically, what we are doing here is providing
-		;; the same contract walk-form-internal normally
-		;; provides to the inner walk function.
-		(let ((inner-result nil)
-		      (inner-no-more-p nil)
-		      (outer-result nil)
-		      (outer-no-more-p nil))
-		  (loop
-		    (multiple-value-setq (inner-result inner-no-more-p)
-					 (funcall walk-function f c e))
-		    (cond (inner-no-more-p (return))
-			  ((not (eq inner-result f)))
-			  ((not (consp inner-result)) (return))
-			  ((get-walker-template (car inner-result)) (return))
-			  (t
-			   (multiple-value-bind (expansion macrop)
-			       (walker-environment-bind
-				     (new-env e :walk-form inner-result)
-				 (macroexpand-1 inner-result new-env))
-			     (if macrop
-				 (setq inner-result expansion)
-				 (return)))))
-		    (setq f inner-result))
-		  (multiple-value-setq (outer-result outer-no-more-p)
-				       (funcall outer-walk-function
-						inner-result
-						c
-						e))
-		  (values outer-result
-			  (and inner-no-more-p outer-no-more-p)))))))
+	    (lambda (f c e)
+	      ;; First loop to make sure the inner walk function
+	      ;; has done all it wants to do with this form.
+	      ;; Basically, what we are doing here is providing
+	      ;; the same contract walk-form-internal normally
+	      ;; provides to the inner walk function.
+	      (let ((inner-result nil)
+		    (inner-no-more-p nil)
+		    (outer-result nil)
+		    (outer-no-more-p nil))
+		(loop
+		 (multiple-value-setq (inner-result inner-no-more-p)
+		   (funcall walk-function f c e))
+		 (cond (inner-no-more-p (return))
+		       ((not (eq inner-result f)))
+		       ((not (consp inner-result)) (return))
+		       ((get-walker-template (car inner-result)) (return))
+		       (t
+			(multiple-value-bind (expansion macrop)
+			    (walker-environment-bind
+			     (new-env e :walk-form inner-result)
+			     (macroexpand-1 inner-result new-env))
+			  (if macrop
+			      (setq inner-result expansion)
+			      (return)))))
+		 (setq f inner-result))
+		(multiple-value-setq (outer-result outer-no-more-p)
+		  (funcall outer-walk-function
+			   inner-result
+			   c
+			   e))
+		(values outer-result
+			(and inner-no-more-p outer-no-more-p)))))))
       (walk-form form environment walk-function)))
 
 ;;;
@@ -712,7 +712,7 @@
       (relist-internal x args nil)))
 
 (defun relist* (x &rest args)
-  (relist-internal x args 't))
+  (relist-internal x args t))
 
 (defun relist-internal (x args *p)
   (if (null (cdr args))
@@ -874,8 +874,8 @@
 	       (walked-body
 		 (walk-declarations 
 		   body
-		   #'(lambda (real-body real-env)
-		       (walk-tagbody-1 real-body context real-env))
+		   (lambda (real-body real-env)
+		     (walk-tagbody-1 real-body context real-env))
 		   new-env)))
 	  (if block-name
 	      (relist*
@@ -908,7 +908,7 @@
 	(body (cdddr form)))
     (walk-form-internal
       `(let ()
-	 (declare (special ,@(mapcar #'(lambda (x) (if (listp x) (car x) x))
+	 (declare (special ,@(mapcar (lambda (x) (if (listp x) (car x) x))
 				     bindings)))
 	 (flet ((.let-if-dummy. () ,@body))
 	   (if ,test
@@ -919,11 +919,11 @@
 
 (defun walk-multiple-value-setq (form context env)
   (let ((vars (cadr form)))
-    (if (some #'(lambda (var)
-		  (variable-symbol-macro-p var env))
+    (if (some (lambda (var)
+		(variable-symbol-macro-p var env))
 	      vars)
-	(let* ((temps (mapcar #'(lambda (var) (declare (ignore var)) (gensym)) vars))
-	       (sets (mapcar #'(lambda (var temp) `(setq ,var ,temp)) vars temps))
+	(let* ((temps (mapcar (lambda (var) (declare (ignore var)) (gensym)) vars))
+	       (sets (mapcar (lambda (var temp) `(setq ,var ,temp)) vars temps))
 	       (expanded `(multiple-value-bind ,temps 
 			       ,(caddr form)
 			     ,@sets))
@@ -943,14 +943,14 @@
 	   (walked-body
 	     (walk-declarations 
 	       body
-	       #'(lambda (real-body real-env)
-		   (setq walked-bindings
-			 (walk-bindings-1 bindings
-					  old-env
-					  new-env
-					  context
-					  nil))
-		   (walk-repeat-eval real-body real-env))
+	       (lambda (real-body real-env)
+		 (setq walked-bindings
+		       (walk-bindings-1 bindings
+					old-env
+					new-env
+					context
+					nil))
+		 (walk-repeat-eval real-body real-env))
 	       new-env)))
       (relist* form mvb walked-bindings mv-form walked-body))))
 
@@ -1055,9 +1055,9 @@
     (walker-environment-bind
 	(new-env old-env
 		 :lexical-variables
-		 (append (mapcar #'(lambda (binding)
-				     `(,(car binding)
-				       :macro . ,(cadr binding)))
+		 (append (mapcar (lambda (binding)
+				   `(,(car binding)
+				     :macro . ,(cadr binding)))
 				 bindings)
 			 (env-lexical-variables old-env)))
       (relist* form 'symbol-macrolet bindings
@@ -1220,21 +1220,21 @@
   (terpri)
   (let ((copy-of-form (copy-tree form))
 	(result (walk-form form nil
-		  #'(lambda (x y env)
-		      (format t "~&Form: ~S ~3T Context: ~A" x y)
-		      (when (symbolp x)
-			(let ((lexical (variable-lexical-p x env))
-			      (special (variable-special-p x env)))
-			  (when lexical
-			    (format t ";~3T")
-			    (format t "lexically bound"))
-			  (when special
-			    (format t ";~3T")
-			    (format t "declared special"))
-			  (when (boundp x)
-			    (format t ";~3T")
-			    (format t "bound: ~S " (eval x)))))
-		      x))))
+		  (lambda (x y env)
+		    (format t "~&Form: ~S ~3T Context: ~A" x y)
+		    (when (symbolp x)
+		      (let ((lexical (variable-lexical-p x env))
+			    (special (variable-special-p x env)))
+			(when lexical
+			  (format t ";~3T")
+			  (format t "lexically bound"))
+			(when special
+			  (format t ";~3T")
+			  (format t "declared special"))
+			(when (boundp x)
+			  (format t ";~3T")
+			  (format t "bound: ~S " (eval x)))))
+		    x))))
     (cond ((not (equal result copy-of-form))
 	   (format t "~%Warning: Result not EQUAL to copy of start."))
 	  ((not (eq result form))
@@ -1412,13 +1412,13 @@
 
 (let ((the-lexical-variables ()))
   (walk-form '(let ((a 1) (b 2))
-		#'(lambda (x) (list a b x y)))
+		(lambda (x) (list a b x y)))
 	     ()
-	     #'(lambda (form context env)
-		 (when (and (symbolp form)
-			    (variable-lexical-p form env))
-		   (push form the-lexical-variables))
-		 form))
+	     (lambda (form context env)
+	       (when (and (symbolp form)
+			  (variable-lexical-p form env))
+		 (push form the-lexical-variables))
+	       form))
   (or (and (= (length the-lexical-variables) 3)
 	   (member 'a the-lexical-variables)
 	   (member 'b the-lexical-variables)

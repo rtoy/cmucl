@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.19 2002/08/24 16:20:25 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/pkg.lisp,v 1.20 2002/08/26 02:23:15 pmai Exp $")
 ;;;
 ;;; CMUCL 18a: Jan-1998 -- Changing to DEFPACKAGE.
 
@@ -42,14 +42,7 @@
 	   "VARIABLE-DECLARATION"
 	   "MACROEXPAND-ALL"))
 
-(defpackage "ITERATE" (:use :common-lisp :walker)
-  (:export "ITERATE" "ITERATE*" "GATHERING" "GATHER" "WITH-GATHERING"
-	   "INTERVAL" "ELEMENTS" "LIST-ELEMENTS" "LIST-TAILS"
-	   "PLIST-ELEMENTS" "EACHTIME" "WHILE" "UNTIL"
-	   "COLLECTING" "JOINING" "MAXIMIZING" "MINIMIZING" "SUMMING"
-	   "*ITERATE-WARNINGS*"))
-
-(defpackage "PCL" (:use :common-lisp :walker :iterate)
+(defpackage "PCL" (:use :common-lisp :walker)
   (:shadow "FIND-CLASS" "CLASS-NAME" "CLASS-OF"
 	   "CLASS" "BUILT-IN-CLASS" "STRUCTURE-CLASS"
 	   "STANDARD-CLASS")

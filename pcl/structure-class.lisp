@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/structure-class.lisp,v 1.3 1999/05/30 23:14:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/structure-class.lisp,v 1.4 2002/08/26 02:23:15 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -123,9 +123,9 @@
     (setq direct-slots
           (if direct-slots-p
 	      (setf (slot-value class 'direct-slots)
-		    (mapcar #'(lambda (pl)
-                                (apply #'make-direct-slotd class
-                                        :conc-name conc-name pl))
+		    (mapcar (lambda (pl)
+			      (apply #'make-direct-slotd class
+				     :conc-name conc-name pl))
 			    direct-slots))
 	      (slot-value class 'direct-slots)))
     (when from-defclass-p
@@ -192,37 +192,37 @@
                (remove-if #'slot-definition-internal-reader-function
                           direct-slots)))
 	 (reader-names
-           (mapcar #'(lambda (slotd)
-		       (intern (format nil "~A~A reader" conc-name
-				       (slot-definition-name slotd))
-                                package))
+           (mapcar (lambda (slotd)
+		     (intern (format nil "~A~A reader" conc-name
+				     (slot-definition-name slotd))
+			     package))
 		   direct-slots-needing-internals))
 	 (writer-names
-           (mapcar #'(lambda (slotd)
-		       (intern (format nil "~A~A writer" conc-name 
-				       (slot-definition-name slotd))
-                               package))
+           (mapcar (lambda (slotd)
+		     (intern (format nil "~A~A writer" conc-name 
+				     (slot-definition-name slotd))
+			     package))
 		   direct-slots-needing-internals))
          (defstruct-accessor-names
            (mapcar #'slot-definition-defstruct-accessor-symbol
                    direct-slots-needing-internals))
 	 (readers-init
-	   (mapcar #'(lambda (defstruct-accessor reader-name)
-		       `(progn
-                          (force-compile ',defstruct-accessor)
-                          (defun ,reader-name (obj)
-		            (declare (type ,name obj) #.*optimize-speed*)
-			    (,defstruct-accessor obj))
-                          (force-compile ',reader-name)))
+	   (mapcar (lambda (defstruct-accessor reader-name)
+		     `(progn
+		       (force-compile ',defstruct-accessor)
+		       (defun ,reader-name (obj)
+			 (declare (type ,name obj) #.*optimize-speed*)
+			 (,defstruct-accessor obj))
+		       (force-compile ',reader-name)))
 		   defstruct-accessor-names reader-names))
 	 (writers-init
-	   (mapcar #'(lambda (defstruct-accessor writer-name)
-		       `(progn
-                          (force-compile ',defstruct-accessor)
-                          (defun ,writer-name (nv obj)
-			    (declare (type ,name obj) #.*optimize-speed*)
-			    (setf (,defstruct-accessor obj) nv))
-                          (force-compile ',writer-name)))
+	   (mapcar (lambda (defstruct-accessor writer-name)
+		     `(progn
+		       (force-compile ',defstruct-accessor)
+		       (defun ,writer-name (nv obj)
+			 (declare (type ,name obj) #.*optimize-speed*)
+			 (setf (,defstruct-accessor obj) nv))
+		       (force-compile ',writer-name)))
 		   defstruct-accessor-names writer-names))
 	 (defstruct-extras-form
 	   `(progn
@@ -234,19 +234,19 @@
               ,@writers-init)))
     (declare (type package package))
     (eval defstruct-extras-form)
-    (mapc #'(lambda (dslotd reader-name writer-name)
-	      (setf (slot-value dslotd 'internal-reader-function)
-                    (gdefinition reader-name))
-	      (setf (slot-value dslotd 'internal-writer-function)
-                    (gdefinition writer-name)))
+    (mapc (lambda (dslotd reader-name writer-name)
+	    (setf (slot-value dslotd 'internal-reader-function)
+		  (gdefinition reader-name))
+	    (setf (slot-value dslotd 'internal-writer-function)
+		  (gdefinition writer-name)))
 	  direct-slots-needing-internals reader-names writer-names)))
 
 (defmethod reinitialize-instance :after ((class structure-class)
 					 &rest initargs
 					 &key)
   (map-dependents class
-		  #'(lambda (dependent)
-		      (apply #'update-dependent class dependent initargs))))
+		  (lambda (dependent)
+		    (apply #'update-dependent class dependent initargs))))
 
 (defmethod direct-slot-definition-class ((class structure-class) initargs)
   (declare (ignore initargs))
@@ -261,11 +261,11 @@
 
 
 (defmethod compute-slots ((class structure-class))
-  (mapcan #'(lambda (superclass)
-	      (mapcar #'(lambda (dslotd)
-			  (compute-effective-slot-definition
-			     class (slot-definition-name dslotd) (list dslotd)))
-		      (class-direct-slots superclass)))
+  (mapcan (lambda (superclass)
+	    (mapcar (lambda (dslotd)
+		      (compute-effective-slot-definition
+		       class (slot-definition-name dslotd) (list dslotd)))
+		    (class-direct-slots superclass)))
 	  (reverse (slot-value class 'class-precedence-list))))
 
 (defmethod compute-slots :around ((class structure-class))
@@ -320,18 +320,18 @@
 
 (defun make-structure-instance-reader-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (structure-instance-slot-value instance slot-name)))
+  (lambda (instance)
+    (structure-instance-slot-value instance slot-name)))
 
 (defun make-structure-instance-writer-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (nv instance)
-      (setf (structure-instance-slot-value instance slot-name) nv)))
+  (lambda (nv instance)
+    (setf (structure-instance-slot-value instance slot-name) nv)))
 
 (defun make-structure-instance-boundp-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (structure-instance-slot-boundp instance slot-name)))
+  (lambda (instance)
+    (structure-instance-slot-boundp instance slot-name)))
 
 (defmethod wrapper-fetcher ((class structure-class))
   'wrapper-for-structure)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.12 2002/08/23 18:31:06 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/init.lisp,v 1.13 2002/08/26 02:23:14 pmai Exp $")
 ;;;
 ;;; This file defines the initialization and related protocols.
 ;;; 
@@ -115,7 +115,7 @@
 				     (class-slots (class-of previous)))))
     (dolist (slotd current-slotds)
       (if (and (not (memq (slot-definition-name slotd) previous-slot-names))
-	       (eq (slot-definition-allocation slotd) ':instance))
+	       (eq (slot-definition-allocation slotd) :instance))
 	  (push (slot-definition-name slotd) added-slots)))
     (check-initargs-1
      (class-of current) initargs
@@ -137,7 +137,7 @@
 
 (defmethod shared-initialize
     ((instance slot-object) slot-names &rest initargs)
-  (when (eq slot-names 't)
+  (when (eq slot-names t)
     (return-from shared-initialize
       (call-initialize-function
        (initialize-info-shared-initialize-t-function
@@ -182,12 +182,12 @@
 			   (when (memq initarg slot-initargs)
 			     (setf (slot-value-using-class class instance slotd)
 				   val)
-			     (return 't))))
+			     (return t))))
 	  ;; Try to initialize the slot from its initform.
 	  (if (and slot-names
-		   (or (eq slot-names 't)
+		   (or (eq slot-names t)
 		       (memq slot-name slot-names))
-		   (or (and (not std-p) (eq slot-names 't))
+		   (or (and (not std-p) (eq slot-names t))
 		       (not (slot-boundp-using-class class instance slotd))))
 	      (let ((initfunction (slot-definition-initfunction slotd)))
 		(when initfunction
@@ -208,12 +208,12 @@
 	  (check-initargs-2-list initargs class legal error-p)))))
 
 (defun check-initargs-values (class call-list)
-  (let ((methods (mapcan #'(lambda (call)
-			     (if (consp call)
-				 (copy-list (compute-applicable-methods
-					     (gdefinition (car call))
-					     (cdr call)))
-				 (list call)))
+  (let ((methods (mapcan (lambda (call)
+			   (if (consp call)
+			       (copy-list (compute-applicable-methods
+					   (gdefinition (car call))
+					   (cdr call)))
+			       (list call)))
 			 call-list))
 	(legal (apply #'append (mapcar #'slot-definition-initargs
 				       (class-slots class)))))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.17 2002/08/24 13:46:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/macros.lisp,v 1.18 2002/08/26 02:23:14 pmai Exp $")
 ;;;
 ;;; Macros global variable definitions, and other random support stuff used
 ;;; by the rest of the system.
@@ -113,7 +113,7 @@
 		(loop (cond ((not (listp form))
 			     (return-from outer nil))
 			    ((eq (car form) 'declare)
-			     (return-from inner 't))
+			     (return-from inner t))
 			    (t
 			     (multiple-value-bind (newform macrop)
 				  (macroexpand-1 form environment)
@@ -165,17 +165,6 @@
     `(or (assq ,key ,alist)
 	 (progn (setf ,alist (cons (,make-entry-fn ,key) ,alist))
 		(car ,alist)))))
-
-(defmacro collecting-once (&key initial-value)
-   `(let* ((head ,initial-value)
-           (tail ,(and initial-value `(last head))))
-          (values #'(lambda (value)
-                           (if (null head)
-                               (setq head (setq tail (list value)))
-			       (unless (memq value head)
-				 (setq tail
-				       (cdr (rplacd tail (list value)))))))
-		  #'(lambda nil head))))
 
 (defmacro doplist ((key val) plist &body body &environment env)
   (multiple-value-bind (doc decls bod)
@@ -352,33 +341,6 @@
       (setf (find-class-cell-predicate (find-class-cell symbol)) new-value)
       (error "~S is not a legal class name." symbol)))
 
-(defmacro gathering1 (gatherer &body body)
-  `(gathering ((.gathering1. ,gatherer))
-     (macrolet ((gather1 (x) `(gather ,x .gathering1.)))
-       ,@body)))
-
-
-;;;
-;;; These are augmented definitions of list-elements and list-tails from
-;;; iterate.lisp.  These versions provide the extra :by keyword which can
-;;; be used to specify the step function through the list.
-;;;
-(defmacro *list-elements (list &key (by #'cdr))
-  `(let ((tail ,list))
-     #'(lambda (finish)
-	 (if (endp tail)
-	     (funcall finish)
-	     (prog1 (car tail)
-	            (setq tail (funcall ,by tail)))))))
-
-(defmacro *list-tails (list &key (by #'cdr))
-   `(let ((tail ,list))
-      #'(lambda (finish)
-          (prog1 (if (endp tail)
-		     (funcall finish)
-		     tail)
-	         (setq tail (funcall ,by tail))))))
-
 (defmacro function-funcall (form &rest args)
   `(funcall (the function ,form) ,@args))
 
@@ -391,7 +353,7 @@
 (defvar *redefined-functions* nil)
 
 (defmacro original-definition (name)
-  `(get ,name ':definition-before-pcl))
+  `(get ,name :definition-before-pcl))
 
 (defun redefine-function (name new)
   (pushnew name *redefined-functions*)

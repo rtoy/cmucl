@@ -148,8 +148,8 @@
 
 ;;; interface
 (defun type-from-specializer (specl)
-  (cond ((eq specl 't)
-	 't)
+  (cond ((eq specl t)
+	 t)
 	((consp specl)
          (unless (member (car specl) '(class prototype class-eq eql))
            (error "~S is not a legal specializer type" specl))
@@ -168,7 +168,7 @@
   (declare (special *the-class-t*))
   (setq type (type-from-specializer type))
   (if (atom type)
-      (if (eq type 't)
+      (if (eq type t)
 	  *the-class-t*
 	  (error "bad argument to type-class"))
       (case (car type)
@@ -199,10 +199,10 @@
 
 (defun make-class-eq-predicate (class)
   (when (symbolp class) (setq class (find-class class)))
-  #'(lambda (object) (eq class (class-of object))))
+  (lambda (object) (eq class (class-of object))))
 
 (defun make-eql-predicate (eql-object)
-  #'(lambda (object) (eql eql-object object)))
+  (lambda (object) (eql eql-object object)))
 
 
 ;;; Internal to this file.
@@ -331,7 +331,7 @@
 (defmacro define-gf-predicate (predicate-name &rest classes)
   `(progn 
      (defmethod ,predicate-name ((x t)) nil)
-     ,@(mapcar #'(lambda (c) `(defmethod ,predicate-name ((x ,c)) t))
+     ,@(mapcar (lambda (c) `(defmethod ,predicate-name ((x ,c)) t))
 	       classes)))
 
 (defun make-class-predicate-name (name)
@@ -416,8 +416,8 @@
 	  (res `(,name
 		 ,(mapcar #'lisp:class-name (direct-supers class))
 		 ,(mapcar #'lisp:class-name (direct-subs class))
-		 ,(map 'list #'(lambda (x)
-				 (lisp:class-name (kernel:layout-class x)))
+		 ,(map 'list (lambda (x)
+			       (lisp:class-name (kernel:layout-class x)))
 		       (reverse
 			(kernel:layout-inherits
 			 (kernel:class-layout class))))
@@ -662,11 +662,11 @@
   ())
 
 (defclass effective-slot-definition (slot-definition)
-  ((reader-function ; #'(lambda (object) ...)
+  ((reader-function ; (lambda (object) ...)
     :accessor slot-definition-reader-function)
-   (writer-function ; #'(lambda (new-value object) ...)
+   (writer-function ; (lambda (new-value object) ...)
     :accessor slot-definition-writer-function)
-   (boundp-function ; #'(lambda (object) ...)
+   (boundp-function ; (lambda (object) ...)
     :accessor slot-definition-boundp-function)
    (accessor-flags
     :initform 0)))

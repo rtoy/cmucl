@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.24 2001/04/10 22:37:21 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defsys.lisp,v 1.25 2002/08/26 02:23:12 pmai Exp $")
 ;;;
 ;;; Some support stuff for compiling and loading PCL.  It would be nice if
 ;;; there was some portable make-system we could all agree to share for a
@@ -57,19 +57,8 @@
 (in-package :user)
 
 (defpackage "WALKER" (:use :common-lisp))
-(defpackage "ITERATE" (:use :common-lisp :walker)(:export "ITERATE"))
-(defpackage "PCL" (:use :walker :iterate :common-lisp))
+(defpackage "PCL" (:use :walker :common-lisp))
 (in-package "PCL")
-
-;;(in-package :walker :use '(:lisp))
-;;(in-package :iterate :use '(:lisp :walker))
-;;(in-package :pcl :use '(:walker :iterate :lisp))
-#+nil
-(export (intern (symbol-name :iterate)		;Have to do this here,
-		(find-package :iterate))	;because in the defsystem
-	(find-package :iterate))		;(later in this file)
-						;we use the symbol iterate
-						;to name the file
 
 ;;;
 ;;; Sure, its weird for this to be here, but in order to follow the rules
@@ -187,7 +176,7 @@ and load your system with:
   (setf (get name 'system-definition) new-value))
 
 (defmacro defsystem (name directory files)
-  `(set-system ',name (list #'(lambda () ,directory)
+  `(set-system ',name (list (lambda () ,directory)
 			    (make-modules ',files)
 			    ',(mapcar #'car files))))
 
@@ -214,13 +203,13 @@ and load your system with:
                    (progn (setq modules (cons (make-module name) modules))
                           (car modules))))
              (parse-spec (spec)
-               (if (eq spec 't)
+               (if (eq spec t)
                    (reverse (cdr modules))
 		   (case (car spec)
 		     (+ (append (reverse (cdr modules))
 				(mapcar #'get-module (cdr spec))))
 		     (- (let ((rem (mapcar #'get-module (cdr spec))))
-			  (remove-if #'(lambda (m) (member m rem))
+			  (remove-if (lambda (m) (member m rem))
 				     (reverse (cdr modules)))))
 		     (otherwise (mapcar #'get-module spec))))))
       (dolist (file system-description)
@@ -234,8 +223,8 @@ and load your system with:
                   (module-comp-env module) (parse-spec (caddr file))
                   (module-recomp-reasons module) (parse-spec (cadddr file))))))
       (let ((filenames (mapcar #'car system-description)))
-	(sort modules #'(lambda (name1 name2)
-			  (member name2 (member name1 filenames)))
+	(sort modules (lambda (name1 name2)
+			(member name2 (member name1 filenames)))
 	      :key #'module-name)))))
 
 
@@ -248,13 +237,13 @@ and load your system with:
 
 (defun make-compile-transformation (module transforms)
   (unless (dolist (trans transforms)
-	    (and (eq (car trans) ':compile)
+	    (and (eq (car trans) :compile)
 		 (eq (cadr trans) module)
 		 (return t)))
     (dolist (c (module-comp-env module)) (make-load-transformation c transforms))
     (setf (cdr transforms)
-	  (remove-if #'(lambda (trans) (and (eq (car trans) :load)
-					    (eq (cadr trans) module)))
+	  (remove-if (lambda (trans) (and (eq (car trans) :load)
+					  (eq (cadr trans) module)))
 		     (cdr transforms)))
     (push `(:compile ,module) (cdr transforms))))
 
@@ -266,7 +255,7 @@ and load your system with:
       (let ((*being-loaded* (cons (cons module (cdr transforms)) *being-loaded*)))
 	(catch module
 	  (unless (dolist (trans transforms)
-		    (when (and (eq (car trans) ':load)
+		    (when (and (eq (car trans) :load)
 			       (eq (cadr trans) module))
 		      (return t)))
 	    (dolist (l (module-load-env module))
@@ -275,7 +264,7 @@ and load your system with:
 
 (defun make-load-without-dependencies-transformation (module transforms)
   (unless (dolist (trans transforms)
-            (and (eq (car trans) ':load)
+            (and (eq (car trans) :load)
                  (eq (cadr trans) module)
                  (return trans)))
     (push `(:load ,module) (cdr transforms))))
@@ -283,7 +272,7 @@ and load your system with:
 (defun compile-filter (module transforms)
   (or (dolist (r (module-recomp-reasons module))
         (when (dolist (transform transforms)
-                (when (and (eq (car transform) ':compile)
+                (when (and (eq (car transform) :compile)
                            (eq (cadr transform) r))
                   (return t)))
           (return t)))
@@ -317,9 +306,9 @@ and load your system with:
 	  ;; been recompiled.
 	  (make-transformations
 	   modules
-	   #'(lambda (m transforms)
-	       (or (member (module-name m) arg)
-		   (compile-filter m transforms)))
+	   (lambda (m transforms)
+	     (or (member (module-name m) arg)
+		 (compile-filter m transforms)))
 	   #'make-compile-transformation))
 	(:query-compile
 	  ;; Ask the user which files to compile.  Compile those
@@ -327,20 +316,20 @@ and load your system with:
 	  ;; another file has been recompiled.
 	  (make-transformations
 	   modules
-	   #'(lambda (m transforms)
-	       (or (compile-filter m transforms)
-		   (y-or-n-p "Compile ~A?"
-			     (module-name m))))
+	   (lambda (m transforms)
+	     (or (compile-filter m transforms)
+		 (y-or-n-p "Compile ~A?"
+			   (module-name m))))
 	   #'make-compile-transformation))
 	(:confirm-compile
 	  ;; Offer the user a chance to prevent a file from being
 	  ;; recompiled.
 	  (make-transformations
 	   modules
-	   #'(lambda (m transforms)
-	       (and (compile-filter m transforms)
-		    (y-or-n-p "Go ahead and compile ~A?"
-			      (module-name m))))
+	   (lambda (m transforms)
+	     (and (compile-filter m transforms)
+		  (y-or-n-p "Go ahead and compile ~A?"
+			    (module-name m))))
 	   #'make-compile-transformation))
 	(:load
 	  ;; Load the whole system.
@@ -352,16 +341,16 @@ and load your system with:
 	  ;; Load only those files the user says to load.
 	  (make-transformations
 	   modules
-	   #'(lambda (m transforms)
-	       (declare (ignore transforms))
-	       (y-or-n-p "Load ~A?" (module-name m)))
+	   (lambda (m transforms)
+	     (declare (ignore transforms))
+	     (y-or-n-p "Load ~A?" (module-name m)))
 	   #'make-load-without-dependencies-transformation))))))
 
 (defun true (&rest ignore)
   (declare (ignore ignore))
-  't)
+  t)
 
-(defparameter *byte-files* '(defclass defcombin iterate env))
+(defparameter *byte-files* '(defclass defcombin env))
 
 (defun operate-on-system (name mode &optional arg print-only)
   (let ((system (get-system name)))
@@ -425,8 +414,8 @@ and load your system with:
     (unless system (error "Can't find system with name ~S." name))
     (let ((*system-directory* (funcall (the function (car system))))
 	  (modules (cadr system)))
-      (mapcar #'(lambda (module)
-		  (make-source-pathname (module-name module)))
+      (mapcar (lambda (module)
+		(make-source-pathname (module-name module)))
 	      modules))))
 
 (defun system-binary-files (name)
@@ -434,8 +423,8 @@ and load your system with:
     (unless system (error "Can't find system with name ~S." name))
     (let ((*system-directory* (funcall (the function (car system))))
 	  (modules (cadr system)))
-      (mapcar #'(lambda (module)
-		  (make-binary-pathname (module-name module)))
+      (mapcar (lambda (module)
+		(make-binary-pathname (module-name module)))
 	      modules))))
 
 ;;; ***                SITE SPECIFIC PCL DIRECTORY                        ***
@@ -475,13 +464,12 @@ and load your system with:
   (
    (pkg             t            t            ())
    (walk            (pkg)        (pkg)        ())
-   (iterate         t            t            ())
    (macros          t            t            ())
    (low             (pkg macros) t            (macros))
    
    (fin         t                                   t (low))
    (defclass    t                                   t (low))
-   (defs        t                                   t (defclass macros iterate))
+   (defs        t                                   t (defclass macros))
    (fngen       t                                   t (low))
    (cache       t                                   t (low defs))
    (dlisp       t                                   t (defs low fin cache))
@@ -535,7 +523,7 @@ and load your system with:
 	 (operate-on-system 'pcl :query-compile))
 	((eq m :confirm)
 	 (operate-on-system 'pcl :confirm-compile))
-	((eq m 't)
+	((eq m t)
 	 (operate-on-system 'pcl :recompile)
 	 (operate-on-system 'gray-streams :recompile))
 	((listp m)
@@ -588,13 +576,13 @@ and load your system with:
 	  (fmakunbound sym)
 	  (setf (symbol-plist sym) nil))))
     (let ((pcl (find-package "PCL")))
-      (mapcar #'(lambda (name value)
-		  (let ((var (intern name pcl)))
-		    (proclaim `(special ,var))
-		    (set var value)))
+      (mapcar (lambda (name value)
+		(let ((var (intern name pcl)))
+		  (proclaim `(special ,var))
+		  (set var value)))
 	      names values))      
     (dolist (sym *redefined-functions*)
-      (setf (symbol-function sym) (get sym ':definition-before-pcl)))
+      (setf (symbol-function sym) (get sym :definition-before-pcl)))
     nil))
 
 (defun reset-package (&optional (package-name "PCL"))

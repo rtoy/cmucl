@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.7 1999/05/30 23:13:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp2.lisp,v 1.8 2002/08/26 02:23:13 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -93,46 +93,46 @@
     (cached-emf-p return-value-p metatypes applyp)
   (declare (ignore applyp))
   (if cached-emf-p
-      #'(lambda (cache miss-fn)
-	  (declare (type function miss-fn))
-	  #'(kernel:instance-lambda (&rest args)
-	      (declare #.*optimize-speed*)
-	      #+copy-&rest-arg (setq args (copy-list args))
-	      (with-dfun-wrappers (args metatypes)
-		(dfun-wrappers invalid-wrapper-p)
-		(apply miss-fn args)
-		(if invalid-wrapper-p
-		    (apply miss-fn args)
-		    (let ((emf (probe-cache cache dfun-wrappers not-in-cache)))
-		      (if (eq emf not-in-cache)
-			  (apply miss-fn args)
-			  (if return-value-p
-			      emf
-			      (invoke-emf emf args))))))))
-      #'(lambda (cache emf miss-fn)
-	  (declare (type function miss-fn))
-	  #'(kernel:instance-lambda (&rest args)
-	      (declare #.*optimize-speed*)
-	      #+copy-&rest-arg (setq args (copy-list args))
-	      (with-dfun-wrappers (args metatypes)
-		(dfun-wrappers invalid-wrapper-p)
-		(apply miss-fn args)
-		(if invalid-wrapper-p
-		    (apply miss-fn args)
-		    (let ((found-p (not (eq not-in-cache
-					    (probe-cache cache dfun-wrappers
-							 not-in-cache)))))
-		      (if found-p
-			  (invoke-emf emf args)
-			  (if return-value-p
-			      t
-			      (apply miss-fn args))))))))))
+      (lambda (cache miss-fn)
+	(declare (type function miss-fn))
+	#'(kernel:instance-lambda (&rest args)
+            (declare #.*optimize-speed*)
+	    #+copy-&rest-arg (setq args (copy-list args))
+	    (with-dfun-wrappers (args metatypes)
+	      (dfun-wrappers invalid-wrapper-p)
+	      (apply miss-fn args)
+	      (if invalid-wrapper-p
+		  (apply miss-fn args)
+		  (let ((emf (probe-cache cache dfun-wrappers not-in-cache)))
+		    (if (eq emf not-in-cache)
+			(apply miss-fn args)
+			(if return-value-p
+			    emf
+			    (invoke-emf emf args))))))))
+      (lambda (cache emf miss-fn)
+	(declare (type function miss-fn))
+	#'(kernel:instance-lambda (&rest args)
+	    (declare #.*optimize-speed*)
+	    #+copy-&rest-arg (setq args (copy-list args))
+	    (with-dfun-wrappers (args metatypes)
+	      (dfun-wrappers invalid-wrapper-p)
+	      (apply miss-fn args)
+	      (if invalid-wrapper-p
+		  (apply miss-fn args)
+		  (let ((found-p (not (eq not-in-cache
+					  (probe-cache cache dfun-wrappers
+						       not-in-cache)))))
+		    (if found-p
+			(invoke-emf emf args)
+			(if return-value-p
+			    t
+			    (apply miss-fn args))))))))))
 
 
 (defun emit-default-only-function (metatypes applyp)
   (declare (ignore metatypes applyp))
-  (values #'(lambda (emf)
-	      #'(lambda (&rest args)
-		  #+copy-&rest-arg (setq args (copy-list args))
-		  (invoke-emf emf args)))
+  (values (lambda (emf)
+	    (lambda (&rest args)
+	      #+copy-&rest-arg (setq args (copy-list args))
+	      (invoke-emf emf args)))
 	  t))

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.12 1999/05/30 23:13:54 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/construct.lisp,v 1.13 2002/08/26 02:23:11 pmai Exp $")
 ;;;
 ;;; This file defines the defconstructor and other make-instance optimization
 ;;; mechanisms.
@@ -117,10 +117,8 @@
 
 (defun expand-defconstructor (class-name name lambda-list supplied-initargs)
   (let ((class (find-class class-name nil))
-	(supplied-initarg-names
-	  (gathering1 (collecting)
-	    (iterate ((name (*list-elements supplied-initargs :by #'cddr)))
-	      (gather1 name)))))
+	(supplied-initarg-names (loop for name in supplied-initargs by #'cddr
+				      collect name)))
     (when (null class)
       (error "defconstructor form being compiled (or evaluated) before~@
               class ~S is defined."
@@ -241,9 +239,10 @@
             Other possible code types are ~S."
 	  constructor (constructor-class constructor)
 	  (constructor-code-type constructor)
-	  (gathering1 (collecting)
+	  (let ((collected ()))
 	    (doplist (key val) (constructor-code-generators constructor)
-	      (gather1 key)))))
+	      (push key collected))
+	    (nreverse collected))))
 
 ;;;
 ;;; I am not in a hairy enough mood to make this implementation be metacircular
@@ -405,15 +404,14 @@
 	   ((class slot-class)
 	    name lambda-list supplied-initarg-names supplied-initargs)
   (cons 'list
-	(gathering1 (collecting)
-	  (dolist (entry *constructor-code-types*)
-	    (let ((generator
-		    (funcall (cadr entry) class name lambda-list 
-					  supplied-initarg-names
-					  supplied-initargs)))
-	      (when generator
-		(gather1 `',(car entry))
-		(gather1 generator)))))))
+	(loop for (type generator-generator) in *constructor-code-types*
+	      for generator = (funcall generator-generator
+				       class name lambda-list
+				       supplied-initarg-names
+				       supplied-initargs)
+	      when generator
+	        collect `',type
+	        and collect generator)))
 
 (defmethod compute-constructor-code ((class slot-class)
 				     (constructor constructor))
@@ -477,7 +475,7 @@
 		 (funcall fn constructor))
 	       (dolist (subclass (class-direct-subclasses class))
 		 (recurse subclass))))
-      (recurse (find-class 't))
+      (recurse (find-class t))
       (values nclasses nconstructors))))
 
 (defun reset-constructors ()
@@ -488,15 +486,15 @@
 (defun disable-constructors ()
   (multiple-value-bind (nclass ncons)
       (map-constructors
-	#'(lambda (c)
-	    (let ((gen (getf (constructor-code-generators c) 'fallback)))
-	      (if (null gen)
-		  (error "No fallback constructor for ~S." c)
-		  (set-constructor-code c
-					(funcall gen
-						 (constructor-class c)
-						 () () () ())
-					'fallback)))))
+	(lambda (c)
+	  (let ((gen (getf (constructor-code-generators c) 'fallback)))
+	    (if (null gen)
+		(error "No fallback constructor for ~S." c)
+		(set-constructor-code c
+				      (funcall gen
+					       (constructor-class c)
+					       () () () ())
+				      'fallback)))))
     (format t "~&~D classes, ~D constructors." nclass ncons)))
 
 (defun enable-constructors ()
@@ -519,21 +517,21 @@
 		    (list *the-class-slot-object* *the-class-t*)))
 
 (defun non-pcl-initialize-instance-methods-p (methods)
-  (notevery #'(lambda (m) (eq m *standard-initialize-instance-method*))
+  (notevery (lambda (m) (eq m *standard-initialize-instance-method*))
 	    methods))
 
 (defun non-pcl-shared-initialize-methods-p (methods)
-  (notevery #'(lambda (m) (eq m *standard-shared-initialize-method*))
+  (notevery (lambda (m) (eq m *standard-shared-initialize-method*))
 	    methods))
 
 (defun non-pcl-or-after-initialize-instance-methods-p (methods)
-  (notevery #'(lambda (m) (or (eq m *standard-initialize-instance-method*)
-			      (equal '(:after) (method-qualifiers m))))
+  (notevery (lambda (m) (or (eq m *standard-initialize-instance-method*)
+			    (equal '(:after) (method-qualifiers m))))
 	    methods))
 
 (defun non-pcl-or-after-shared-initialize-methods-p (methods)
-  (notevery #'(lambda (m) (or (eq m *standard-shared-initialize-method*)
-			      (equal '(:after) (method-qualifiers m))))
+  (notevery (lambda (m) (or (eq m *standard-shared-initialize-method*)
+			    (equal '(:after) (method-qualifiers m))))
 	    methods))
 
 ;;;
@@ -563,13 +561,13 @@
 	       (push (cons name *slot-unbound*) constants))
 	      ((constantp initform)
 	       (push (cons name (eval initform)) constants)
-	       (when (eq flag ':unsupplied) (setq flag ':constants)))
+	       (when (eq flag :unsupplied) (setq flag :constants)))
 	      (t
 	       (push (cons name *slot-unbound*) constants)
-	       (setq flag 't)))))
-    (let* ((constants-alist (sort constants #'(lambda (x y)
-						(memq (car y)
-						      (memq (car x) layout)))))
+	       (setq flag t)))))
+    (let* ((constants-alist (sort constants (lambda (x y)
+					      (memq (car y)
+						    (memq (car x) layout)))))
 	   (constants-list (mapcar #'cdr constants-alist)))
     (values constants-list flag))))
 
@@ -584,34 +582,30 @@
 ;;;
 (defun compute-initarg-positions (class initarg-names)
   (let* ((layout (wrapper-instance-slots-layout (class-wrapper class)))
-	 (positions
-	   (gathering1 (collecting)
-	     (iterate ((slot-name (list-elements layout))
-		       (position (interval :from 0)))
-	       (gather1 (cons slot-name position)))))
-	 (slot-initargs
-	   (mapcar #'(lambda (slotd)
-		       (list (slot-definition-initargs slotd)
-			     (or (cdr (assq (slot-definition-name slotd) positions))
-				 ':class)))
-		   (class-slots class))))
-    ;; Go through each of the initargs, and figure out what position
-    ;; it fills by replacing the entries in slot-initargs it fills.
+	 (positions (loop for position from 0 and slot-name in layout
+			  collect (cons slot-name position)))
+	 (slot-initargs-positions
+	   (loop for slotd in (class-slots class)
+	         collect
+		 (list (slot-definition-initargs slotd)
+		       (or (cdr (assq (slot-definition-name slotd) positions))
+			   :class)))))
+    ;; Go through each of the initargs, and figure out what position it
+    ;; fills by replacing the entries in slot-initargs-positions it fills.
     (dolist (initarg initarg-names)
-      (dolist (slot-entry slot-initargs)
+      (dolist (slot-entry slot-initargs-positions)
 	(let ((slot-initargs (car slot-entry)))
 	  (when (and (listp slot-initargs)
 		     (not (null slot-initargs))
 		     (memq initarg slot-initargs))
 	    (setf (car slot-entry) initarg)))))
-    (gathering1 (collecting)
-      (dolist (initarg initarg-names)
-	(let ((positions (gathering1 (collecting)
-			   (dolist (slot-entry slot-initargs)
-			     (when (eq (car slot-entry) initarg)
-			       (gather1 (cadr slot-entry)))))))
-	  (when positions
-	    (gather1 (cons initarg positions))))))))
+    ;; Now collect all possible positions for each initarg
+    (loop for initarg in initarg-names
+	  for positions = (loop for (arg position) in slot-initargs-positions
+				when (eq arg initarg)
+				  collect position)
+	  when positions
+	    collect (cons initarg positions))))
 
 
 ;;;
@@ -630,10 +624,10 @@
 	 (kernel:instance-lambda ,arglist
 	   (make-instance
 	     ',(class-name class)
-	     ,@(gathering1 (collecting)
-		 (iterate ((tail (*list-tails supplied-initargs :by #'cddr)))
-		   (gather1 `',(car tail))
-		   (gather1 (cadr tail))))))))))
+	     ,@(loop for (name value) on supplied-initargs by #'cddr
+		     collect `',name
+		     collect value)))))))
+
 
 ;;;
 ;;; The GENERAL case allows:
@@ -686,15 +680,17 @@
 		       (dolist (pos (cddr entry))
 			 (setf (%instance-ref .slots. pos) val))))
 
-		   ,@(gathering1 (collecting)
+		   ,@(let ((collected ()))
 		       (doplist (initarg value) supplied-initargs
 			 (unless (constantp value)
-			   (gather1 `(let ((.value. ,value))
-				       (push .value. .initargs.)
-				       (push ',initarg .initargs.)
-				       (dolist (.p. (pop .positions.))
-					 (setf (%instance-ref .slots. .p.)
-					       .value.)))))))
+			   (push `(let ((.value. ,value))
+				    (push .value. .initargs.)
+				    (push ',initarg .initargs.)
+				    (dolist (.p. (pop .positions.))
+				      (setf (%instance-ref .slots. .p.)
+					    .value.)))
+				 collected)))
+		       (nreverse collected))
 
 		   (dolist (fn .shared-initfns.)
 		     (apply fn .instance. t .initargs.))
@@ -840,14 +836,16 @@
 		     (let ((val (funcall (car entry))))
 		       (dolist (pos (cdr entry))
 			 (setf (%instance-ref .slots. pos) val))))
-		 
-		   ,@(gathering1 (collecting)
+
+		   ,@(let ((collected ()))
 		       (doplist (initarg value) supplied-initargs
 			 (unless (constantp value)
-			   (gather1
-			     `(let ((.value. ,value))
-				(dolist (.p. (pop .positions.))
-				  (setf (%instance-ref .slots. .p.) .value.)))))))
+			   (push `(let ((.value. ,value))
+				     (dolist (.p. (pop .positions.))
+				       (setf (%instance-ref .slots. .p.)
+					     .value.)))
+				 collected)))
+		       (nreverse collected))
 		     
 		   .instance.))))))))
 
@@ -969,14 +967,16 @@
 			  (.slots. (,slots-fetcher .instance.))
 			  (.positions. .supplied-initarg-positions.))
 		     .positions.
-		 
-		     ,@(gathering1 (collecting)
+
+		     ,@(let ((collected ()))
 			 (doplist (initarg value) supplied-initargs
 			   (unless (constantp value)
-			     (gather1
-			       `(let ((.value. ,value))
-				  (dolist (.p. (pop .positions.))
-				    (setf (%instance-ref .slots. .p.) .value.)))))))
+			     (push `(let ((.value. ,value))
+				      (dolist (.p. (pop .positions.))
+					(setf (%instance-ref .slots. .p.)
+					      .value.)))
+				   collected)))
+			 (nreverse collected))
 		     
 		     .instance.))))))))))
 

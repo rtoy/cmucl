@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.7 1999/05/30 23:13:58 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/dlisp.lisp,v 1.8 2002/08/26 02:23:13 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -257,13 +257,13 @@
 
 (defun emit-dlap (args metatypes hit miss value-reg &optional slot-regs)
   (let* ((index -1)
-	 (wrapper-bindings (mapcan #'(lambda (arg mt)
-				       (unless (eq mt 't)
-					 (incf index)
-					 `((,(intern (format nil "WRAPPER-~D" index)
-					             *the-pcl-package*)
-					    ,(emit-fetch-wrapper mt arg 'miss
-					      (pop slot-regs))))))
+	 (wrapper-bindings (mapcan (lambda (arg mt)
+				     (unless (eq mt t)
+				       (incf index)
+				       `((,(intern (format nil "WRAPPER-~D" index)
+						   *the-pcl-package*)
+					  ,(emit-fetch-wrapper mt arg 'miss
+							       (pop slot-regs))))))
 				   args metatypes))
 	 (wrappers (mapcar #'car wrapper-bindings)))
     (declare (fixnum index))
@@ -345,11 +345,11 @@
 	   (block search
 	     (loop (setq next-location (the fixnum (+ location ,cache-line-size)))
 		   (when (and ,@(mapcar
-				 #'(lambda (wrapper)
-				     `(eq ,wrapper 
-				       (cache-vector-ref cache-vector
-					(setq location
-					 (the fixnum (+ location 1))))))
+				 (lambda (wrapper)
+				   `(eq ,wrapper 
+				     (cache-vector-ref cache-vector
+				      (setq location
+				       (the fixnum (+ location 1))))))
 				 wrappers))
 		     ,@(when value
 			 `((setq location (the fixnum (+ location 1)))
@@ -361,8 +361,8 @@
 		   (when (= location primary)
 		     (dolist (entry overflow)
 		       (let ((entry-wrappers (car entry)))
-			 (when (and ,@(mapcar #'(lambda (wrapper)
-						  `(eq ,wrapper (pop entry-wrappers)))
+			 (when (and ,@(mapcar (lambda (wrapper)
+						`(eq ,wrapper (pop entry-wrappers)))
 					      wrappers))
 			   ,@(when value
 			       `((setq ,value (cdr entry))))
@@ -386,19 +386,19 @@
   `(progn
      ,@(let ((adds 0) (len (length wrappers)))
 	 (declare (fixnum adds len))
-	 (mapcar #'(lambda (wrapper)
-		     `(let ((wrapper-cache-no (wrapper-cache-number-vector-ref 
-					       ,wrapper field)))
-		        (declare (fixnum wrapper-cache-no))
-		        (when (zerop wrapper-cache-no) (go ,miss-label))
-		        (setq primary (the fixnum (+ primary wrapper-cache-no)))
-		        ,@(progn
-			    (incf adds)
-			    (when (or (zerop (mod adds wrapper-cache-number-adds-ok))
-				      (eql adds len))
-			      `((setq primary
-				      ,(let ((form `(logand primary mask)))
-					 `(the fixnum ,form))))))))
+	 (mapcar (lambda (wrapper)
+		   `(let ((wrapper-cache-no (wrapper-cache-number-vector-ref 
+					     ,wrapper field)))
+		     (declare (fixnum wrapper-cache-no))
+		     (when (zerop wrapper-cache-no) (go ,miss-label))
+		     (setq primary (the fixnum (+ primary wrapper-cache-no)))
+		     ,@(progn
+			(incf adds)
+			(when (or (zerop (mod adds wrapper-cache-number-adds-ok))
+				  (eql adds len))
+			  `((setq primary
+			     ,(let ((form `(logand primary mask)))
+				   `(the fixnum ,form))))))))
 		 wrappers))))
      
 ;;; cmu17 note: since std-instance-p is weakened, that branch may run

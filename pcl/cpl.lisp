@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.9 1999/05/30 23:13:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cpl.lisp,v 1.10 2002/08/26 02:23:11 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -266,21 +266,21 @@
 		 (format nil "named ~S" (class-name class))
 		 class))))
     (mapcar
-      #'(lambda (reason)
-	  (ecase (caddr reason)
-	    (:super
-	      (format
-		nil
-		"the class ~A appears in the supers of the class ~A"
-		(class-or-name (cadr reason))
-		(class-or-name (car reason))))
-	    (:in-supers
-	      (format
-		nil
-		"the class ~A follows the class ~A in the supers of the class ~A"
-		(class-or-name (cadr reason))
-		(class-or-name (car reason))
-		(class-or-name (cadddr reason))))))      
+      (lambda (reason)
+	(ecase (caddr reason)
+	  (:super
+	   (format
+	    nil
+	    "the class ~A appears in the supers of the class ~A"
+	    (class-or-name (cadr reason))
+	    (class-or-name (car reason))))
+	  (:in-supers
+	   (format
+	    nil
+	    "the class ~A follows the class ~A in the supers of the class ~A"
+	    (class-or-name (cadr reason))
+	    (class-or-name (car reason))
+	    (class-or-name (cadddr reason))))))      
       reasons)))
 
 (defun find-cycle-reasons (all-cpds)

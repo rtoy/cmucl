@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.21 2002/07/03 10:57:17 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/braid.lisp,v 1.22 2002/08/26 02:23:11 pmai Exp $")
 ;;;
 ;;; Bootstrapping the meta-braid.
 ;;;
@@ -101,20 +101,20 @@
 ;;;   
 (defmacro initial-classes-and-wrappers (&rest classes)
   `(progn
-     ,@(mapcar #'(lambda (class)
-		   (let ((wr (intern (format nil "~A-WRAPPER" class) 
-				     *the-pcl-package*)))
-		     `(setf ,wr ,(if (eq class 'standard-generic-function)
-				     '*sgf-wrapper*
-				     `(boot-make-wrapper
-				       (early-class-size ',class)
-				       ',class))
-		            ,class (allocate-standard-instance
-				    ,(if (eq class 'standard-generic-function)
-					 'funcallable-standard-class-wrapper
-					 'standard-class-wrapper))
-		            (wrapper-class ,wr) ,class
-		            (find-class ',class) ,class)))
+     ,@(mapcar (lambda (class)
+		 (let ((wr (intern (format nil "~A-WRAPPER" class) 
+				   *the-pcl-package*)))
+		   `(setf ,wr ,(if (eq class 'standard-generic-function)
+				   '*sgf-wrapper*
+				   `(boot-make-wrapper
+				     (early-class-size ',class)
+				     ',class))
+			  ,class (allocate-standard-instance
+				  ,(if (eq class 'standard-generic-function)
+				       'funcallable-standard-class-wrapper
+				       'standard-class-wrapper))
+			  (wrapper-class ,wr) ,class
+			  (find-class ',class) ,class)))
 	      classes)))		        
 
 (defun bootstrap-meta-braid ()
@@ -192,7 +192,7 @@
 				  (t
 				   (boot-make-wrapper (length slots) name))))
 		   (proto nil))
-	      (when (eq name 't) (setq *the-wrapper-of-t* wrapper))
+	      (when (eq name t) (setq *the-wrapper-of-t* wrapper))
 	      (set (intern (format nil "*THE-CLASS-~A*" (symbol-name name))
 			   *the-pcl-package*)
 		   class)
@@ -265,7 +265,7 @@
 	   (bootstrap-set-slot metaclass-name class slot-name value)))
     (set-slot 'name name)
     (set-slot 'source source)
-    (set-slot 'type (if (eq class (find-class 't))
+    (set-slot 'type (if (eq class (find-class t))
 			t
 			`(class ,class)))
     (set-slot 'class-eq-specializer 
@@ -309,10 +309,10 @@
 
 (defun bootstrap-make-slot-definitions (name class slots wrapper effective-p)
   (let ((index -1))
-    (mapcar #'(lambda (slot)
-		(incf index)
-		(bootstrap-make-slot-definition
-		  name class slot wrapper effective-p index))
+    (mapcar (lambda (slot)
+	      (incf index)
+	      (bootstrap-make-slot-definition
+	       name class slot wrapper effective-p index))
 	    slots)))
 
 (defun bootstrap-make-slot-definition (name class slot wrapper effective-p index)  
@@ -381,7 +381,7 @@
 			(list class-name) (list class-name)
 			"automatically generated reader method"))
 	(writer (values 'standard-writer-method #'make-std-writer-method-function
-			(list 'new-value class-name) (list 't class-name)
+			(list 'new-value class-name) (list t class-name)
 			"automatically generated writer method"))
 	(boundp (values 'standard-boundp-method #'make-std-boundp-method-function
 			(list class-name) (list class-name)
@@ -429,7 +429,7 @@
   ;; 
   (dolist (e *built-in-classes*)
     (dolist (super (cadr e))
-      (unless (or (eq super 't)
+      (unless (or (eq super t)
 		  (assq super *built-in-classes*))
 	(error "In *built-in-classes*: ~S has ~S as a super,~%~
                 but ~S is not itself a class in *built-in-classes*."
@@ -488,7 +488,7 @@
 (defvar find-structure-class nil)
 
 (defun eval-form (form)
-  #'(lambda () (eval form)))
+  (lambda () (eval form)))
 
 (defun slot-initargs-from-structure-slotd (slotd)
   `(:name ,(structure-slotd-name slotd)

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.31 2002/08/19 16:43:15 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/std-class.lisp,v 1.32 2002/08/26 02:23:15 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -233,10 +233,11 @@
   (with-slots (direct-methods) specializer
     (or (cdr direct-methods)
 	(setf (cdr direct-methods)
-	      (gathering1 (collecting-once)
-		(dolist (m (car direct-methods))
-		  (gather1 (method-generic-function m))))))))
-
+	      (loop for method in (car direct-methods)
+		    for generic-function = (method-generic-function method)
+		    unless (member generic-function collected :test #'eq)
+ 		      collect generic-function into collected
+		    finally (return collected))))))
 
 
 ;;;
@@ -282,31 +283,33 @@
     (when entry
       (or (cdr entry)
 	  (setf (cdr entry)
-		(gathering1 (collecting-once)
-		  (dolist (m (car entry))
-		    (gather1 (method-generic-function m)))))))))
+		(loop for method in (car entry)
+		      for generic-function = (method-generic-function method)
+		      unless (member generic-function collected :test #'eq)
+		      collect generic-function into collected
+		      finally (return collected)))))))
 
 (defun map-specializers (function)
-  (map-all-classes #'(lambda (class)
-		       (funcall function (class-eq-specializer class))
-		       (funcall function class)))
-  (maphash #'(lambda (object methods)
-	       (declare (ignore methods))
-	       (intern-eql-specializer object))
+  (map-all-classes (lambda (class)
+		     (funcall function (class-eq-specializer class))
+		     (funcall function class)))
+  (maphash (lambda (object methods)
+	     (declare (ignore methods))
+	     (intern-eql-specializer object))
 	   *eql-specializer-methods*)
-  (maphash #'(lambda (object specl)
-	       (declare (ignore object))
-	       (funcall function specl))
+  (maphash (lambda (object specl)
+	     (declare (ignore object))
+	     (funcall function specl))
 	   *eql-specializer-table*)
   nil)
 
 (defun map-all-generic-functions (function)
   (let ((all-generic-functions (make-hash-table :test 'eq)))
-    (map-specializers #'(lambda (specl)
-			  (dolist (gf (specializer-direct-generic-functions specl))
-			    (unless (gethash gf all-generic-functions)
-			      (setf (gethash gf all-generic-functions) t)
-			      (funcall function gf))))))
+    (map-specializers (lambda (specl)
+			(dolist (gf (specializer-direct-generic-functions specl))
+			  (unless (gethash gf all-generic-functions)
+			    (setf (gethash gf all-generic-functions) t)
+			    (funcall function gf))))))
   nil)
 
 (defmethod shared-initialize :after ((specl class-eq-specializer) slot-names &key)
@@ -465,20 +468,21 @@
   (setq direct-slots
 	(if direct-slots-p
 	    (setf (slot-value class 'direct-slots)
-		  (mapcar #'(lambda (pl) (make-direct-slotd class pl)) direct-slots))
+		  (mapcar (lambda (pl) (make-direct-slotd class pl)) direct-slots))
 	    (slot-value class 'direct-slots)))
   (if direct-default-initargs-p
       (setf (plist-value class 'direct-default-initargs) direct-default-initargs)
       (setq direct-default-initargs (plist-value class 'direct-default-initargs)))
   (setf (plist-value class 'class-slot-cells)
-	(gathering1 (collecting)
-	  (dolist (dslotd direct-slots)
+	(let ((collected ()))
+	  (dolist (dslotd direct-slots (nreverse collected))
 	    (when (eq (slot-definition-allocation dslotd) class)
 	      (let ((initfunction (slot-definition-initfunction dslotd)))
-		(gather1 (cons (slot-definition-name dslotd)
-			       (if initfunction 
-				   (funcall initfunction)
-				   *slot-unbound*))))))))
+		(push (cons (slot-definition-name dslotd)
+			    (if initfunction 
+				(funcall initfunction)
+				*slot-unbound*))
+		      collected))))))
   (setq predicate-name (if predicate-name-p
 			   (setf (slot-value class 'predicate-name)
 				 (car predicate-name))
@@ -505,8 +509,8 @@
 					 &rest initargs
 					 &key)
   (map-dependents class
-		  #'(lambda (dependent)
-		      (apply #'update-dependent class dependent initargs))))
+		  (lambda (dependent)
+		    (apply #'update-dependent class dependent initargs))))
 
 (defmethod shared-initialize :after 
       ((class structure-class)
@@ -529,15 +533,15 @@
     (if direct-slots-p
 	(setf (slot-value class 'direct-slots)
 	      (setq direct-slots
-		    (mapcar #'(lambda (pl)
-				(when defstruct-p
-				  (let* ((slot-name (getf pl :name))
-					 (acc-name (format nil "~s structure class ~a" 
-							   name slot-name))
-					 (accessor (intern acc-name)))
-				    (setq pl (list* :defstruct-accessor-symbol accessor
-						    pl))))
-				(make-direct-slotd class pl))
+		    (mapcar (lambda (pl)
+			      (when defstruct-p
+				(let* ((slot-name (getf pl :name))
+				       (acc-name (format nil "~s structure class ~a" 
+							 name slot-name))
+				       (accessor (intern acc-name)))
+				  (setq pl (list* :defstruct-accessor-symbol accessor
+						  pl))))
+			      (make-direct-slotd class pl))
 			    direct-slots)))
 	(setq direct-slots (slot-value class 'direct-slots)))
     (when defstruct-p
@@ -550,45 +554,45 @@
 				      (:predicate nil)
 				      (:conc-name ,conc-name)
 				      (:constructor ,constructor ()))
-			   ,@(mapcar #'(lambda (slot)
-					 `(,(slot-definition-name slot)
-					   *slot-unbound*))
+			   ,@(mapcar (lambda (slot)
+				       `(,(slot-definition-name slot)
+					 *slot-unbound*))
 			             direct-slots)))
-	     (reader-names (mapcar #'(lambda (slotd)
-				       (intern (format nil "~A~A reader" conc-name 
-						       (slot-definition-name slotd))))
+	     (reader-names (mapcar (lambda (slotd)
+				     (intern (format nil "~A~A reader" conc-name 
+						     (slot-definition-name slotd))))
 				   direct-slots))
-	     (writer-names (mapcar #'(lambda (slotd)
-				       (intern (format nil "~A~A writer" conc-name 
-						       (slot-definition-name slotd))))
+	     (writer-names (mapcar (lambda (slotd)
+				     (intern (format nil "~A~A writer" conc-name 
+						     (slot-definition-name slotd))))
 				   direct-slots))
 	     (readers-init 
-	      (mapcar #'(lambda (slotd reader-name)
-			  (let ((accessor 
-				 (slot-definition-defstruct-accessor-symbol slotd)))
-			    `(defun ,reader-name (obj)
-			       (declare (type ,name obj))
-			       (,accessor obj))))
+	      (mapcar (lambda (slotd reader-name)
+			(let ((accessor 
+			       (slot-definition-defstruct-accessor-symbol slotd)))
+			  `(defun ,reader-name (obj)
+			     (declare (type ,name obj))
+			     (,accessor obj))))
 		      direct-slots reader-names))
 	     (writers-init 
-	      (mapcar #'(lambda (slotd writer-name)
-			  (let ((accessor 
-				 (slot-definition-defstruct-accessor-symbol slotd)))
-			    `(defun ,writer-name (nv obj)
-			       (declare (type ,name obj))
-			       (setf (,accessor obj) nv))))
+	      (mapcar (lambda (slotd writer-name)
+			(let ((accessor 
+			       (slot-definition-defstruct-accessor-symbol slotd)))
+			  `(defun ,writer-name (nv obj)
+			     (declare (type ,name obj))
+			     (setf (,accessor obj) nv))))
 		      direct-slots writer-names))
 	     (defstruct-form
 	       `(progn
 		  ,defstruct
 		  ,@readers-init ,@writers-init)))
 	(unless (structure-type-p name) (eval defstruct-form))
-	(mapc #'(lambda (dslotd reader-name writer-name)
-		  (let* ((reader (gdefinition reader-name))
-			 (writer (when (fboundp writer-name)
-				   (gdefinition writer-name))))
-		    (setf (slot-value dslotd 'internal-reader-function) reader)
-		    (setf (slot-value dslotd 'internal-writer-function) writer)))
+	(mapc (lambda (dslotd reader-name writer-name)
+		(let* ((reader (gdefinition reader-name))
+		       (writer (when (fboundp writer-name)
+				 (gdefinition writer-name))))
+		  (setf (slot-value dslotd 'internal-reader-function) reader)
+		  (setf (slot-value dslotd 'internal-writer-function) writer)))
 	      direct-slots reader-names writer-names)
 	(setf (slot-value class 'defstruct-form) defstruct-form)
 	(setf (slot-value class 'defstruct-constructor) constructor))))
@@ -718,10 +722,8 @@
 	    (cond ((null owrapper)
 		   (make-wrapper nslots class))
 		  ((and (equal nlayout olayout)
-			(not
-			 (iterate ((o (list-elements owrapper-class-slots))
-				   (n (list-elements nwrapper-class-slots)))
-				  (unless (eq (car o) (car n)) (return t)))))
+			(every (lambda (o n) (eq (car o) (car n)))
+			       owrapper-class-slots nwrapper-class-slots))
 		   owrapper)
 		  (t
 		   ;;
@@ -745,18 +747,15 @@
 	(update-pv-table-cache-info class)))))
 
 (defun compute-class-slots (eslotds)
-  (gathering1 (collecting)
-    (dolist (eslotd eslotds)
-      (gather1
-	(assoc (slot-definition-name eslotd)
-	       (class-slot-cells (slot-definition-allocation eslotd)))))))
+  (loop for eslotd in eslotds
+	for name = (slot-definition-name eslotd)
+	and allocation = (slot-definition-allocation eslotd)
+	collect (assoc name (class-slot-cells allocation))))
 
 (defun compute-layout (cpl instance-eslotds)
-  (let* ((names
-	   (gathering1 (collecting)
-	     (dolist (eslotd instance-eslotds)
-	       (when (eq (slot-definition-allocation eslotd) :instance)
-		 (gather1 (slot-definition-name eslotd))))))
+  (let* ((names (loop for eslotd in instance-eslotds
+		      when (eq (slot-definition-allocation eslotd) :instance)
+		      collect (slot-definition-name eslotd)))
 	 (order ()))
     (labels ((rwalk (tail)
 	       (when tail
@@ -782,9 +781,9 @@
 		   (setf (gethash gf gf-table) t))
 		 (mapc #'collect-gfs (class-direct-superclasses class))))
 	(collect-gfs class)
-	(maphash #'(lambda (gf ignore)
-		     (declare (ignore ignore))
-		     (update-gf-dfun class gf))
+	(maphash (lambda (gf ignore)
+		   (declare (ignore ignore))
+		   (update-gf-dfun class gf))
 		 gf-table)))))
 
 (defun update-inits (class inits)
@@ -842,9 +841,9 @@
 	    (if entry
 		(push d (cdr entry))
 		(push (list name d) name-dslotds-alist))))))
-    (mapcar #'(lambda (direct)
-		(compute-effective-slot-definition class
-						   (nreverse (cdr direct))))
+    (mapcar (lambda (direct)
+	      (compute-effective-slot-definition class
+						 (nreverse (cdr direct))))
 	    name-dslotds-alist)))
 
 (defmethod compute-slots :around ((class std-class))
@@ -868,11 +867,10 @@
     eslotds))
 
 (defmethod compute-slots ((class structure-class))
-  (mapcan #'(lambda (superclass)
-	      (mapcar #'(lambda (dslotd)
-			  (compute-effective-slot-definition class
-							     (list dslotd)))
-		      (class-direct-slots superclass)))
+  (mapcan (lambda (superclass)
+	    (mapcar (lambda (dslotd)
+		      (compute-effective-slot-definition class (list dslotd)))
+		    (class-direct-slots superclass)))
 	  (reverse (slot-value class 'class-precedence-list))))
 
 (defmethod compute-slots :around ((class structure-class))
@@ -920,7 +918,7 @@
 		allocp t))
 	(setq initargs (append (slot-definition-initargs slotd) initargs))
 	(let ((slotd-type (slot-definition-type slotd)))
-	  (setq type (cond ((eq type 't) slotd-type)
+	  (setq type (cond ((eq type t) slotd-type)
 			   ((*subtypep type slotd-type) type)
 			   (t `(and ,type ,slotd-type)))))))
     (list :name name
@@ -1069,7 +1067,7 @@
     ;; sure we never change an OBSOLETE into a FLUSH since OBSOLETE
     ;; means do what FLUSH does and then some.
     ;; 
-    (when (eq state 't)
+    (when (eq state t)
       (let ((nwrapper (make-wrapper (wrapper-no-of-instance-slots owrapper)
 				    class)))
 	(setf (wrapper-instance-slots-layout nwrapper)
@@ -1079,7 +1077,7 @@
 	(without-interrupts
 	  (update-lisp-class-layout class nwrapper)
 	  (setf (slot-value class 'wrapper) nwrapper)
-	  (invalidate-wrapper owrapper ':flush nwrapper))))))
+	  (invalidate-wrapper owrapper :flush nwrapper))))))
 
 (defun flush-cache-trap (owrapper nwrapper instance)
   (declare (ignore owrapper))
@@ -1103,7 +1101,7 @@
       (without-interrupts
 	(update-lisp-class-layout class nwrapper)
 	(setf (slot-value class 'wrapper) nwrapper)
-	(invalidate-wrapper owrapper ':obsolete nwrapper)
+	(invalidate-wrapper owrapper :obsolete nwrapper)
 	class)))
 
 (defmethod make-instances-obsolete ((class symbol))
@@ -1179,28 +1177,28 @@
 	;;  --    --> shared        --
 	;;
 	;; Go through all the old local slots.
-	;; 
-	(iterate ((name (list-elements olayout))
-		  (opos (interval :from 0)))
-	  (let ((npos (posq name nlayout)))
-	    (if npos
-		(setf (instance-ref nslots npos) (instance-ref oslots opos))
-		(progn
-		  (push name discarded)
-		  (unless (eq (instance-ref oslots opos) *slot-unbound*)
-		    (setf (getf plist name) (instance-ref oslots opos)))))))
+	;;
+	(loop for name in olayout and opos from 0
+	      as npos = (posq name nlayout)
+	      if npos do
+	        (setf (instance-ref nslots npos)
+		      (instance-ref oslots opos))
+	      else do
+		(push name discarded)
+		(unless (eq (instance-ref oslots opos) *slot-unbound*)
+		  (setf (getf plist name)
+			(instance-ref oslots opos))))
 	;;
 	;; Go through all the old shared slots.
 	;;
-	(iterate ((oclass-slot-and-val (list-elements oclass-slots)))
-	  (let ((name (car oclass-slot-and-val))
-		(val (cdr oclass-slot-and-val)))
-	    (let ((npos (posq name nlayout)))
-	      (if npos
-		  (setf (instance-ref nslots npos) (cdr oclass-slot-and-val))
-		  (progn (push name discarded)
-			 (unless (eq val *slot-unbound*)
-			   (setf (getf plist name) val)))))))
+	(loop for (name . val) in oclass-slots
+	      for npos = (posq name nlayout)
+	      if npos do
+	        (setf (instance-ref nslots npos) val)
+	      else do
+	        (push name discarded)
+		(unless (eq val *slot-unbound*)
+		  (setf (getf plist name) val)))
 	;;
 	;; Go through all the new local slots to compute the added slots.
 	;; 
@@ -1245,22 +1243,20 @@
     ;; "The values of local slots specified by both the class Cto and
     ;; Cfrom are retained.  If such a local slot was unbound, it remains
     ;; unbound."
-    ;;     
-    (iterate ((new-slot (list-elements new-layout))
-	      (new-position (interval :from 0)))
-      (let ((old-position (posq new-slot old-layout)))
-	(when old-position
-	  (setf (instance-ref new-slots new-position)
-		(instance-ref old-slots old-position)))))
-
+    ;;
+    (loop for new-slot in new-layout and new-position from 0
+	  for old-position = (posq new-slot old-layout)
+	  when old-position do
+	    (setf (instance-ref new-slots new-position)
+		  (instance-ref old-slots old-position)))
     ;;
     ;; "The values of slots specified as shared in the class Cfrom and
     ;; as local in the class Cto are retained."
     ;;
-    (iterate ((slot-and-val (list-elements old-class-slots)))
-      (let ((position (posq (car slot-and-val) new-layout)))
-	(when position
-	  (setf (instance-ref new-slots position) (cdr slot-and-val)))))
+    (loop for (name . val) in old-class-slots
+	  for new-position = (posq name new-layout)
+	  when new-position do
+	    (setf (instance-ref new-slots new-position) val))
 
     ;; Make the copy point to the old instance's storage, and make the
     ;; old instance point to the new storage.
@@ -1331,7 +1327,7 @@
 
 (defmethod validate-superclass ((c slot-class)
 				(f forward-referenced-class))
-  't)
+  t)
 
 
 ;;;

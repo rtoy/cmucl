@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.14 2000/07/06 08:15:02 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cache.lisp,v 1.15 2002/08/26 02:23:11 pmai Exp $")
 ;;;
 ;;; The basics of the PCL wrapper cache mechanism.
 ;;;
@@ -210,7 +210,7 @@
 ;;; 
 (defun show-free-cache-vectors ()
   (let ((elements ()))
-    (maphash #'(lambda (s e) (push (list s e) elements)) *free-cache-vectors*)
+    (maphash (lambda (s e) (push (list s e) elements)) *free-cache-vectors*)
     (setq elements (sort elements #'< :key #'car))
     (dolist (e elements)
       (let* ((size (car e))
@@ -329,7 +329,7 @@
 
 (defun (setf wrapper-state) (new-value wrapper)
   (setf (kernel:layout-invalid wrapper)
-	(if (eq new-value 't)
+	(if (eq new-value t)
 	    nil
 	  new-value)))
 
@@ -449,7 +449,7 @@
 ;;; 
 
 (defmacro invalid-wrapper-p (wrapper)
-  `(neq (wrapper-state ,wrapper) 't))
+  `(neq (wrapper-state ,wrapper) t))
 
 (defvar *previous-nwrappers* (make-hash-table))
 
@@ -467,15 +467,16 @@
        ;; kind of transitivity of wrapper updates.
        ;; 
        (dolist (previous (gethash owrapper *previous-nwrappers*))
-	 (when (eq state ':obsolete)
-	   (setf (car previous) ':obsolete))
+	 (when (eq state :obsolete)
+	   (setf (car previous) :obsolete))
 	 (setf (cadr previous) nwrapper)
 	 (push previous new-previous))
+
+       (loop with ocnv = (wrapper-cache-number-vector owrapper)
+	     for type in wrapper-layout and i from 0
+	     when (eq type 'number) do
+	       (setf (cache-number-vector-ref ocnv i) 0))
        
-       (let ((ocnv (wrapper-cache-number-vector owrapper)))
-	 (iterate ((type (list-elements wrapper-layout))
-		   (i (interval :from 0)))
-           (when (eq type 'number) (setf (cache-number-vector-ref ocnv i) 0))))
        (push (setf (wrapper-state owrapper) (list state nwrapper))
 	     new-previous)
        
@@ -485,7 +486,7 @@
 (defun check-wrapper-validity (instance)
   (let* ((owrapper (wrapper-of instance))
 	 (state (wrapper-state owrapper)))
-    (if (eq state  't)
+    (if (eq state  t)
 	owrapper
 	(let ((nwrapper
 		(ecase (car state)
@@ -763,8 +764,8 @@
 	      (wrapper nil)
 	      ,@(when wrappers
 		  `((class *the-class-t*)
-		    (type 't))))
-	 (unless (eq mt 't)
+		    (type t))))
+	 (unless (eq mt t)
 	   (setq wrapper (wrapper-of arg))
 	   (when (invalid-wrapper-p wrapper)
 	     (setq ,invalid-wrapper-p t)
@@ -790,8 +791,8 @@
 	 (let* (,@(when wrappers
 		    `((,wrappers (nreverse wrappers-rev))
 		      (,classes (nreverse classes-rev))
-		      (,types (mapcar #'(lambda (class)
-					  `(class-eq ,class))
+		      (,types (mapcar (lambda (class)
+					`(class-eq ,class))
 			              ,classes)))))
 	   ,@body))))
 
@@ -809,6 +810,10 @@
   (or (nth arg-number (the list *dfun-arg-symbols*))
       (intern (format nil ".ARG~A." arg-number) *the-pcl-package*)))
 
+(defun dfun-arg-symbol-list (metatypes)
+  (loop for i from 0 and s in metatypes
+        collect (dfun-arg-symbol i)))
+
 (defvar *slot-vector-symbols* '(.SLOTS0. .SLOTS1. .SLOTS2. .SLOTS3.))
 
 (defun slot-vector-symbol (arg-number)
@@ -816,68 +821,39 @@
       (intern (format nil ".SLOTS~A." arg-number) *the-pcl-package*)))
 
 (defun make-dfun-lambda-list (metatypes applyp)
-  (gathering1 (collecting)
-    (iterate ((i (interval :from 0))
-	      (s (list-elements metatypes)))
-      (progn s)
-      (gather1 (dfun-arg-symbol i)))
-    (when applyp
-      (gather1 '&rest)
-      (gather1 '.dfun-rest-arg.))))
+  (if applyp
+      (nconc (dfun-arg-symbol-list metatypes) (list '&rest '.dfun-rest-arg.))
+      (dfun-arg-symbol-list metatypes)))
 
 (defun make-dlap-lambda-list (metatypes applyp)
-  (gathering1 (collecting)
-    (iterate ((i (interval :from 0))
-	      (s (list-elements metatypes)))
-      (progn s)
-      (gather1 (dfun-arg-symbol i)))
-    (when applyp
-      (gather1 '&rest))))
+  (if applyp
+      (nconc (dfun-arg-symbol-list metatypes) (list '&rest))
+      (dfun-arg-symbol-list metatypes)))
 
 (defun make-emf-call (metatypes applyp fn-variable &optional emf-type)
-  (let ((required
-	 (gathering1 (collecting)
-	    (iterate ((i (interval :from 0))
-		      (s (list-elements metatypes)))
-	      (progn s)
-	      (gather1 (dfun-arg-symbol i))))))
+  (let ((required (dfun-arg-symbol-list metatypes)))
     `(,(if (eq emf-type 'fast-method-call)
 	   'invoke-effective-method-function-fast
 	   'invoke-effective-method-function)
       ,fn-variable ,applyp ,@required ,@(when applyp `(.dfun-rest-arg.)))))
 
 (defun make-dfun-call (metatypes applyp fn-variable)
-  (let ((required
-	  (gathering1 (collecting)
-	    (iterate ((i (interval :from 0))
-		      (s (list-elements metatypes)))
-	      (progn s)
-	      (gather1 (dfun-arg-symbol i))))))
+  (let ((required (dfun-arg-symbol-list metatypes)))
     (if applyp
 	`(function-apply   ,fn-variable ,@required .dfun-rest-arg.)
 	`(function-funcall ,fn-variable ,@required))))
 
 (defun make-dfun-arg-list (metatypes applyp)
-  (let ((required
-	  (gathering1 (collecting)
-	    (iterate ((i (interval :from 0))
-		      (s (list-elements metatypes)))
-	      (progn s)
-	      (gather1 (dfun-arg-symbol i))))))
+  (let ((required (dfun-arg-symbol-list metatypes)))
     (if applyp
 	`(list* ,@required .dfun-rest-arg.)
 	`(list ,@required))))
 
 (defun make-fast-method-call-lambda-list (metatypes applyp)
-  (gathering1 (collecting)
-    (gather1 '.pv-cell.)
-    (gather1 '.next-method-call.)
-    (iterate ((i (interval :from 0))
-	      (s (list-elements metatypes)))
-      (progn s)
-      (gather1 (dfun-arg-symbol i)))
-    (when applyp
-      (gather1 '.dfun-rest-arg.))))
+  (nconc (list '.pv-cell. '.next-method-call.)
+	 (dfun-arg-symbol-list metatypes)
+	 (when applyp
+	   (list '.dfun-rest-arg.))))
 
 
 ;;;
@@ -1077,12 +1053,12 @@
 (defmacro with-local-cache-functions ((cache) &body body)
   `(let ((.cache. ,cache))
      (declare (type cache .cache.))
-     (macrolet ,(mapcar #'(lambda (fn)
-			    `(,(car fn) ,(cadr fn)
-			        `(let (,,@(mapcar #'(lambda (var)
-						      ``(,',var ,,var))
-					          (cadr fn)))
-				    ,@',(cddr fn))))
+     (macrolet ,(mapcar (lambda (fn)
+			  `(,(car fn) ,(cadr fn)
+			     `(let (,,@(mapcar (lambda (var)
+						 ``(,',var ,,var))
+					       (cadr fn)))
+				,@',(cddr fn))))
 			*local-cache-functions*)
        ,@body)))
 
@@ -1423,8 +1399,8 @@
 
 (defun caches-to-allocate ()
   (sort (let ((l nil))
-	  (maphash #'(lambda (size entry)
-		       (push (list (car entry) size) l))
+	  (maphash (lambda (size entry)
+		     (push (list (car entry) size) l))
 		   pcl::*free-caches*)
 	  l)
 	#'> :key #'cadr))

@@ -20,7 +20,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.3 1999/05/30 23:14:09 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/user-instances.lisp,v 1.4 2002/08/26 02:23:16 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -284,39 +284,39 @@
 
 (defun make-user-vector-instance-reader-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (user-instance-slot-value instance slot-name)))
+  (lambda (instance)
+    (user-instance-slot-value instance slot-name)))
 
 (defun make-user-vector-instance-writer-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (nv instance)
-      (setf (user-instance-slot-value instance slot-name) nv)))
+  (lambda (nv instance)
+    (setf (user-instance-slot-value instance slot-name) nv)))
 
 (defun make-user-vector-instance-boundp-method-function (slot-name)
   (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (user-instance-slot-boundp instance slot-name)))
+  (lambda (instance)
+    (user-instance-slot-boundp instance slot-name)))
 
 
 (defun make-optimized-user-reader-method-function (slot-name index)
   (declare #.*optimize-speed*)
   (progn slot-name)
-  #'(lambda (instance)
-      (let ((value (%svref (user-vector-instance-slots instance) index)))
-        (if (eq value *slot-unbound*)
-            (slot-unbound (class-of instance) instance slot-name)
-            value))))
+  (lambda (instance)
+    (let ((value (%svref (user-vector-instance-slots instance) index)))
+      (if (eq value *slot-unbound*)
+	  (slot-unbound (class-of instance) instance slot-name)
+	  value))))
 
 (defun make-optimized-user-writer-method-function (index)
   (declare #.*optimize-speed*)
-  #'(lambda (nv instance)
-      (setf (%svref (user-vector-instance-slots instance) index) nv)))
+  (lambda (nv instance)
+    (setf (%svref (user-vector-instance-slots instance) index) nv)))
 
 (defun make-optimized-user-boundp-method-function (index)
   (declare #.*optimize-speed*)
-  #'(lambda (instance)
-      (not (eq (%svref (user-vector-instance-slots instance) index)
-               *slot-unbound*))))
+  (lambda (instance)
+    (not (eq (%svref (user-vector-instance-slots instance) index)
+	     *slot-unbound*))))
 
 
 
@@ -443,11 +443,11 @@
             (declare (type index first-dimension))
             (walk-dimensions
               (mapcar #'min (cdr new-dimensions) (cdr old-dimensions))
-              #'(lambda (post-indices)
-                 (copy-array-contents old-array new-array
-                                      :key key
-                                      :length first-dimension
-                                      :post-indices post-indices)))))
+              (lambda (post-indices)
+		(copy-array-contents old-array new-array
+				     :key key
+				     :length first-dimension
+				     :post-indices post-indices)))))
        new-array))))
 
 (defun copy-array-contents
@@ -620,11 +620,11 @@
                    (copy-any-array
                      item
                      :key
-                     #'(lambda (item)
-                         (if (user-vector-instance-p item)
-                             (let ((dummy (dummy-print-instance-of item)))
-                               (push dummy dummy-print-instances-used)
-                               dummy)
+                     (lambda (item)
+		       (if (user-vector-instance-p item)
+			   (let ((dummy (dummy-print-instance-of item)))
+			     (push dummy dummy-print-instances-used)
+			     dummy)
                            item))
                      :dimensions
                        (mapcar #'1+ (array-dimensions item)))

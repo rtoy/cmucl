@@ -18,7 +18,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.4 2002/08/24 13:46:52 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/Attic/extensions.lisp,v 1.5 2002/08/26 02:23:13 pmai Exp $")
 ;;;
 
 (in-package 'pcl)
@@ -67,12 +67,12 @@
     updater))
 
 
-(defun finalize-all-classes (&optional (root-name 't))
+(defun finalize-all-classes (&optional (root-name t))
   "Makes sure that all classes are finalized.  If Root-Name is supplied,
    then finalizes Root-Name and all of its subclasses and their subclasses."
-  (map-all-classes #'(lambda (class)
-                       (unless (class-finalized-p class)
-                         (finalize-inheritance class)))
+  (map-all-classes (lambda (class)
+		     (unless (class-finalized-p class)
+		       (finalize-inheritance class)))
                    root-name))
 
 
@@ -111,7 +111,7 @@
   (cond
    ((consp wrapper)
     `(let ((wrapper ,wrapper))
-       (unless (eq (wrapper-state wrapper) 't)
+       (unless (eq (wrapper-state wrapper) t)
          (setf wrapper (wrapper-state-trap wrapper ,instance)))
        (with-slots-slot-value-from-index
          ,instance wrapper ,slot-name ,slots ,index ,variable-instance)))
@@ -127,7 +127,7 @@
   (cond
    ((consp wrapper)
     `(let ((wrapper ,wrapper))
-       (unless (eq (wrapper-state wrapper) 't)
+       (unless (eq (wrapper-state wrapper) t)
          (setf wrapper (wrapper-state-trap wrapper ,instance)))
        (set-with-slots-slot-value-from-index
          ,instance wrapper ,slot-name ,slots ,index ,variable-instance
@@ -153,7 +153,7 @@
    ((consp wrapper)
     `(if *safe-to-use-slot-value-wrapper-optimizations-p*
          (let ((wrapper ,wrapper))
-           (unless (eq (wrapper-state wrapper) 't)
+           (unless (eq (wrapper-state wrapper) t)
              (setf wrapper (wrapper-state-trap wrapper ,instance)))
            (slot-value-from-wrapper-and-slots ,instance ,slot-name
              wrapper ,slots-layout ,slots NIL))
@@ -174,7 +174,7 @@
    ((consp wrapper)
     `(if *safe-to-use-set-slot-value-wrapper-optimizations-p*
          (let ((wrapper ,wrapper))
-           (unless (eq (wrapper-state wrapper) 't)
+           (unless (eq (wrapper-state wrapper) t)
              (setf wrapper (wrapper-state-trap wrapper ,instance)))
            (setf (slot-value-from-wrapper-and-slots ,instance ,slot-name
                     wrapper ,slots-layout ,slots NIL)
@@ -299,16 +299,16 @@
          #+pcl-user-instances
          (type-var-user 3)
          (slot-index-vars
-           (mapcar #'(lambda (slot-entry)
-                         (list (car slot-entry)
-                               (cdr slot-entry)
-                               (gensym (concatenate
-                                         'simple-string
-                                         (if (string= instance-string "")
-                                             "INSTANCE-FORM-"
-                                           instance-string)
-                                         (symbol-name (cdr slot-entry))
-                                         "-INDEX"))))
+           (mapcar (lambda (slot-entry)
+		     (list (car slot-entry)
+			   (cdr slot-entry)
+			   (gensym (concatenate
+				    'simple-string
+				    (if (string= instance-string "")
+					"INSTANCE-FORM-"
+					instance-string)
+				    (symbol-name (cdr slot-entry))
+				    "-INDEX"))))
                    (remove-duplicates hard-accessors :key #'cdr)))
          (slots-layout-var
            (gensym (concatenate 'simple-string "SLOTS-LAYOUT-" instance-string)))
@@ -394,33 +394,33 @@
                        prototype-form slot-index-vars)))))
        (symbol-macrolet
          (,@(mapcar
-              #'(lambda (slot-cons)
-                  `(,(car slot-cons)
-                     (with-slots-slot-value-from-index
-                        ,instance-form-var
-                        ,runtime-wrapper-form
-                        ',(cdr slot-cons)
-                        ,runtime-slots-form
-                        ,(third (assoc (car slot-cons) slot-index-vars
-                                       :test #'eq))
-                        ,(when (and variable-instance
-                                    (not (eq variable-instance
-                                             instance-form-var)))
+              (lambda (slot-cons)
+		`(,(car slot-cons)
+		  (with-slots-slot-value-from-index
+		      ,instance-form-var
+		    ,runtime-wrapper-form
+		    ',(cdr slot-cons)
+		    ,runtime-slots-form
+		    ,(third (assoc (car slot-cons) slot-index-vars
+				   :test #'eq))
+		    ,(when (and variable-instance
+				(not (eq variable-instance
+					 instance-form-var)))
                            variable-instance))))
               hard-accessors)
           ,@(mapcar
-              #'(lambda (variable-cons)
-                  `(,(car variable-cons)
-                    (with-slots-slot-value-from-wrapper-and-slots
+              (lambda (variable-cons)
+		`(,(car variable-cons)
+		  (with-slots-slot-value-from-wrapper-and-slots
                       ,instance-form-var
-                      ,(second variable-cons)
-                      ,runtime-wrapper-form
-                      ,slots-layout-var
-                      ,runtime-slots-form
-                      ,(when (and variable-instance
-                                  (not (eq variable-instance
-                                           instance-form-var)))
-                         variable-instance))))
+		    ,(second variable-cons)
+		    ,runtime-wrapper-form
+		    ,slots-layout-var
+		    ,runtime-slots-form
+		    ,(when (and variable-instance
+				(not (eq variable-instance
+					 instance-form-var)))
+			   variable-instance))))
               variable-accessors))
          ,@body))))
 
@@ -428,16 +428,16 @@
                                       prototype-form
                                       slot-index-vars)
   (declare (type list slot-index-vars))
-  `((unless (eq (wrapper-state ,wrapper-var) 't)
+  `((unless (eq (wrapper-state ,wrapper-var) t)
       (setf ,wrapper-var
             (wrapper-state-trap ,wrapper-var ,prototype-form)))
     (setf ,slots-layout-var (wrapper-instance-slots-layout ,wrapper-var))
     ,@(if (<= (length slot-index-vars) 2)
           (mapcar
-            #'(lambda (slot-cons)
-                `(setf ,(third slot-cons)
-                       (instance-slot-index-from-slots-layout
-                         ,slots-layout-var ',(second slot-cons))))
+            (lambda (slot-cons)
+	      `(setf ,(third slot-cons)
+		(instance-slot-index-from-slots-layout
+		 ,slots-layout-var ',(second slot-cons))))
             slot-index-vars)
           ;; More than two slots, so more efficient to search slots-layout-var
           ;; only once, rather than once for each with instance-slot-index.
@@ -478,16 +478,16 @@
             `((,instance-form-var ,instance-form))))
      (symbol-macrolet
        (,@(mapcar
-            #'(lambda (slot-cons)
-                `(,(car slot-cons)
-                  (accessor-slot-value ,instance-form-var
-                                       ',(cdr slot-cons))))
+            (lambda (slot-cons)
+	      `(,(car slot-cons)
+		(accessor-slot-value ,instance-form-var
+		 ',(cdr slot-cons))))
             hard-accessors)
         ,@(mapcar
-            #'(lambda (variable-cons)
-                `(,(car variable-cons)
-                  (accessor-slot-value ,instance-form-var
-                                       ,(second variable-cons))))
+            (lambda (variable-cons)
+	      `(,(car variable-cons)
+		(accessor-slot-value ,instance-form-var
+		 ,(second variable-cons))))
             variable-accessors))
        ,@body))))
 

@@ -26,7 +26,7 @@
 ;;;
 
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.20 2002/08/13 21:13:58 pmai Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/defclass.lisp,v 1.21 2002/08/26 02:23:12 pmai Exp $")
 ;;;
 
 (in-package :pcl)
@@ -155,12 +155,12 @@
 	  (*slots* ()))
       (declare (special *initfunctions* *readers* *writers* *slots*))
       (let ((canonical-slots
-	      (mapcar #'(lambda (spec)
-			  (canonicalize-slot-specification name spec))
+	      (mapcar (lambda (spec)
+			(canonicalize-slot-specification name spec))
 		      slots))
 	    (other-initargs
-	      (mapcar #'(lambda (option)
-			  (canonicalize-defclass-option name option))
+	      (mapcar (lambda (option)
+			(canonicalize-defclass-option name option))
 		      options))
 	    (defstruct-p (and (eq *boot-state* 'complete)
 			      (let ((mclass (find-class metaclass nil)))
@@ -171,18 +171,18 @@
                  (make-top-level-form `(defclass ,name)
                    (if defstruct-p '(load eval) *defclass-times*)
 		   `(progn
-		      ,@(mapcar #'(lambda (x)
-				    `(declaim (ftype (function (t) t) ,x)))
+		      ,@(mapcar (lambda (x)
+				  `(declaim (ftype (function (t) t) ,x)))
 				*readers*)
-		      ,@(mapcar #'(lambda (x)
-				    `(declaim (ftype (function (t t) t) ,x)))
+		      ,@(mapcar (lambda (x)
+				  `(declaim (ftype (function (t t) t) ,x)))
 				*writers*)
-		      ,@(mapcar #'(lambda (x)
-		                    `(declaim (ftype (function (t) t)
-				                     ,(slot-reader-symbol x)
-						     ,(slot-boundp-symbol x))
-					      (ftype (function (t t) t)
-					             ,(slot-writer-symbol x))))
+		      ,@(mapcar (lambda (x)
+				  `(declaim (ftype (function (t) t)
+						   ,(slot-reader-symbol x)
+						   ,(slot-boundp-symbol x))
+					    (ftype (function (t t) t)
+						   ,(slot-writer-symbol x))))
 				*slots*)
 		      (let ,(mapcar #'cdr *initfunctions*)
 			(load-defclass ',name
@@ -210,13 +210,13 @@
 
 (defun make-initfunction (initform)
   (declare (special *initfunctions*))
-  (cond ((or (eq initform 't)
+  (cond ((or (eq initform t)
 	     (equal initform ''t))
 	 '(function true))
-	((or (eq initform 'nil)
+	((or (eq initform nil)
 	     (equal initform ''nil))
 	 '(function false))
-	((or (eql initform '0)
+	((or (eql initform 0)
 	     (equal initform ''0))
 	 '(function zero))
 	(t
@@ -344,10 +344,9 @@
     (values (early-collect-slots cpl)
 	    cpl
 	    (early-collect-default-initargs cpl)
-	    (gathering1 (collecting)
-	      (dolist (definition *early-class-definitions*)
-		(when (memq class-name (ecd-superclass-names definition))
-		  (gather1 (ecd-class-name definition))))))))
+	    (loop for definition in *early-class-definitions*
+		  when (memq class-name (ecd-superclass-names definition))
+		    collect (ecd-class-name definition)))))
 
 (defun early-collect-slots (cpl)
   (let* ((definitions (mapcar #'early-class-definition cpl))
