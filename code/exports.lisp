@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.8 2000/05/23 16:36:24 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/exports.lisp,v 1.119.2.9 2000/07/31 09:54:19 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -215,15 +215,15 @@
              "UNIX-FSYNC" "UNIX-FTRUNCATE" "UNIX-GETDTABLESIZE" "UNIX-GETEGID"
              "UNIX-GETGID" "UNIX-GETHOSTID" "UNIX-GETHOSTNAME"
              "UNIX-GETPAGESIZE"  "UNIX-GETPEERNAME" "UNIX-GETPGRP"
-	     "UNIX-GETPID" "UNIX-GETPPID" "UNIX-GETRUSAGE"
-	     "UNIX-GETSOCKNAME" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-GID"
+	     "UNIX-GETPID" "UNIX-GETPPID" "UNIX-GETRUSAGE" "UNIX-GETSOCKNAME"
+	     "UNIX-GETSOCKOPT" "UNIX-GETTIMEOFDAY" "UNIX-GETUID" "UNIX-GID"
              "UNIX-IOCTL" "UNIX-ISATTY" "UNIX-LINK" "UNIX-LISTEN" "UNIX-LSEEK"
              "UNIX-LSTAT" "UNIX-MKDIR" "UNIX-OPEN" "UNIX-PATHNAME" "UNIX-PID"
              "UNIX-PIPE" "UNIX-READ" "UNIX-READLINK" "UNIX-RECV" "UNIX-RENAME"
-             "UNIX-RMDIR" "UNIX-SCHED-YIELD" "UNIX-SELECT" "UNIX-SEND"
-	     "UNIX-SETPGID" "UNIX-SETPGRP"
-             "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SOCKET" "UNIX-STAT"
-             "UNIX-SYMLINK" "UNIX-SYNC"
+             "UNIX-RMDIR" "UNIX-SCHED-YIELD" "UNIX-SELECT"
+	     "UNIX-SEND" "UNIX-SETPGID" "UNIX-SETPGRP"
+             "UNIX-SETREGID" "UNIX-SETREUID" "UNIX-SETSOCKOPT" "UNIX-SOCKET"
+	     "UNIX-STAT" "UNIX-SYMLINK" "UNIX-SYNC"
 	     "UNIX-TIMES" "UNIX-TRUNCATE" "UNIX-TTYNAME"
              "UNIX-UID" "UNIX-UNLINK" "UNIX-UTIMES" "UNIX-WRITE" "WINSIZE"
              "WRITEGRP" "WRITEOTH" "WRITEOWN" "WS-COL" "WS-ROW" "WS-XPIXEL"

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.4 2000/05/23 16:36:55 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/unix.lisp,v 1.48.2.5 2000/07/31 09:54:21 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -162,7 +162,8 @@
 	  unix-getpagesize unix-gethostname unix-gethostid unix-fork
 	  unix-current-directory unix-isatty unix-ttyname unix-execve
 	  unix-socket unix-connect unix-bind unix-listen unix-accept
-	  unix-recv unix-send unix-getpeername unix-getsockname))
+	  unix-recv unix-send unix-getpeername unix-getsockname
+	  unix-getsockopt unix-setsockopt))
 
 (pushnew :unix *features*)
 
@@ -2550,6 +2551,20 @@
   (socket int)
   (sockaddr (* t))
   (len (* unsigned)))
+
+(def-alien-routine ("getsockopt" unix-getsockopt) int
+  (socket int)
+  (level int)
+  (optname int)
+  (optval (* t))
+  (optlen unsigned :in-out))
+
+(def-alien-routine ("setsockopt" unix-setsockopt) int
+  (socket int)
+  (level int)
+  (optname int)
+  (optval (* t))
+  (optlen unsigned))
 
 
 ;;;
