@@ -1,0 +1,12 @@
+CPPFLAGS = -I. -I/usr/misc/.X11/include -Dirix
+CC = cc # -Wall -Wstrict-prototypes -Wmissing-prototypes
+CPP = cpp
+CFLAGS = -Dirix -D_BSD_SIGNALS -non_shared -g
+ASFLAGS = -g -Dirix -non_shared
+NM = irix-nm
+UNDEFSYMPATTERN=-Xlinker -u -Xlinker &
+ASSEM_SRC = mips-assem.S
+ARCH_SRC = mips-arch.c
+OS_SRC = irix-os.c os-common.c
+OS_LINK_FLAGS= -non_shared
+OS_LIBS=
