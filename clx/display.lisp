@@ -19,7 +19,7 @@
 ;;;
 #+cmu
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.11 2003/08/29 09:17:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/clx/display.lisp,v 1.12 2004/08/13 12:24:30 emarsden Exp $")
 
 (in-package :xlib)
 
@@ -312,29 +312,37 @@
 		      ,@(and timeout `(:timeout ,timeout)))
 	 ,@body))))
 
-(defun open-display (host &key (display 0) protocol authorization-name authorization-data)
+(defun open-display (host &key (display 0) (protocol :tcp) authorization-name authorization-data)
   ;; Implementation specific routine to setup the buffer for a specific host and display.
   ;; This must interface with the local network facilities, and will probably do special
-  ;; things to circumvent the nework when displaying on the local host.
+  ;; things to circumvent the network when displaying on the local host.
   ;;
   ;; A string must be acceptable as a host, but otherwise the possible types
   ;; for host and protocol are not constrained, and will likely be very
-  ;; system dependent.  The default protocol is system specific.  Authorization,
-  ;; if any, is assumed to come from the environment somehow.
+  ;; system dependent.  The default protocol is system specific.
   (declare (type integer display))
   (declare (clx-values display))
-  ;; Get the authorization mechanism from the environment.  Handle the
-  ;; special case of a host name of "" and "unix" which means the
-  ;; protocol is :unix
-  (let ((actual-protocol (if (member host '("" "unix") :test #'equal) 
-			     :unix
-			     protocol)))
+  ;; If the HOST argument is empty (for instance the $DISPLAY environment variable was
+  ;; ":0") or if it is the special case of "unix", we connect to the X server using
+  ;; the :unix protocol. This is the most efficient transport to the local host, most
+  ;; often a Unix-domain socket. In this case, X11 does not store authorization data
+  ;; under the name "localhost", since that would make it impossible to store
+  ;; authorization data for concurrent X11 sessions on different hosts in the same
+  ;; $XAUTHORITY file. Rather, the authorization data is stored under the local host's
+  ;; hostname.
+  (let ((auth-host host))
+    (when (or (equal host "") (equal host "unix"))
+      (setf protocol :unix)
+      (setf auth-host (machine-instance)))
+    ;; If no authorization data was specified by the user, attempt to extract
+    ;; authorization data from the environment.
     (when (null authorization-name)
       (multiple-value-setq (authorization-name authorization-data)
-	(get-best-authorization host display actual-protocol)))
-    ;; PROTOCOL is the network protocol (something like :TCP or :UNIX).
-    (let* ((stream (open-x-stream host display actual-protocol))
-	   (disp (make-buffer *output-buffer-size* #'make-display-internal
+        (get-best-authorization auth-host display protocol)))
+    ;; PROTOCOL is the network protocol used to connect to the server
+    ;; (either :TCP or :UNIX).
+    (let* ((stream (open-x-stream host display protocol))
+           (disp (make-buffer *output-buffer-size* #'make-display-internal
 			      :host host :display display
 			      :output-stream stream :input-stream stream))
 	   (ok-p nil))

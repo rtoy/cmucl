@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.18 2003/08/29 09:17:50 gerd Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.19 2004/08/13 12:24:30 emarsden Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,19 +40,16 @@
 (defun open-clx-display (&optional (string (cdr (assoc :display
 						       *environment-list*
 						       :test #'eq))))
-  "Parses a display specification including display and screen numbers.
-   This returns nil when there is no DISPLAY environment variable.  If string
+  "Parses the display specifier STRING, including display and screen numbers.
+   STRING defaults to the value of the  DISPLAY environment variable.  If STRING
    is non-nil, and any fields are missing in the specification, this signals an
    error.  If you specify a screen, then this sets XLIB:DISPLAY-DEFAULT-SCREEN
    to that screen since CLX initializes this form to the first of
-   XLIB:SCREEN-ROOTS.  This returns the display and screen objects."
+   XLIB:SCREEN-ROOTS.  Return the display and screen objects."
   (when string
     (let* ((string (coerce string 'simple-string))
 	   (length (length string))
 	   (host-name "")
-	   (protocol :tcp)
-	   (auth-name nil)
-	   (auth-data nil)
 	   (display-num nil)
 	   (screen-num nil))
       (declare (simple-string string))
@@ -82,20 +79,7 @@
 				 (setf screen-num
 				       (parse-integer string :start start
 						      :end second-dot)))))))))))
-      ;; If the $DISPLAY does not specify a hostname (for instance
-      ;; ":0"), or if the hostname is the special case of "unix", we
-      ;; connect to the X server using the :unix protocol. This is the
-      ;; most efficient transport to the local host, most often a Unix
-      ;; domain socket. In all other cases, we use the :tcp protocol. 
-      (when (or (equal host-name "") (equal host-name "unix"))
-        (setq protocol :unix)
-        (multiple-value-setq (auth-name auth-data)
-          (xlib::get-best-authorization (machine-instance) display-num :tcp)))
-      (let ((display (xlib:open-display host-name
-                                      :display display-num
-				      :protocol protocol
-                                      :authorization-name auth-name
-                                      :authorization-data auth-data)))
+      (let ((display (xlib:open-display host-name :display display-num)))
 	(when screen-num
 	  (let* ((screens (xlib:display-roots display))
 		 (num-screens (length screens)))
