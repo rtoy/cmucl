@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.2 1991/02/08 16:39:03 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/unixcoms.lisp,v 1.3 1991/07/29 11:23:34 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -221,3 +221,35 @@
 	  (return))
 	(setf lastpos (1+ pos))))
     (nreverse result)))
+
+
+
+;;;; Man pages.
+
+(defcommand "Manual Page" (p)
+  "Read the Unix manual pages in a View buffer.
+   If given an argument, this will put the man page in a Po-pup display."
+  "Read the Unix manual pages in a View buffer.
+   If given an argument, this will put the man page in a Pop-up display."
+  (let ((topic (prompt-for-string :prompt "Read what man page: ")))
+    (if p
+	(with-pop-up-display (stream)
+	  (execute-man topic stream))
+	(let* ((buf-name (format nil "Man Page ~a" topic))
+	       (new-buffer (make-buffer buf-name
+					:modes '("Fundamental" "View")))
+	       (buffer (or new-buffer
+			   (getstring buf-name *buffer-names*)))
+	       (point (buffer-point buffer)))
+	  (when new-buffer
+	    (setf (variable-value 'view-return-function :buffer buffer)
+		  #'(lambda ()))
+	    (with-writable-buffer (buffer)
+	      (ext:run-program
+	       "/bin/sh"
+	       (list "-c"
+		     (format nil "man ~a|cat -s|sed -e 's/_//g' -e 's/o//g'"
+			     topic))
+	       :output (make-hemlock-output-stream point :full))))
+	  (buffer-start point buffer)
+	  (change-to-buffer buffer)))))
