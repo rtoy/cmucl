@@ -1,3 +1,72 @@
+11/25/19 to 11/27/91
+
+Code:
+
+Made TRACE and UNTRACE handle function objects as well as function names.
+
+Made calling UNTRACE while with a BREAK from TRACE'ing work fine.  No output
+occurs at the end of the call even though there was TRACE output at the
+beginning of the call before going into the BREAK loop.
+
+Modified HANDLE-BREAKPOINT-AUX to test whether any user hook deactivated any
+breakpoints at the current code location.  When there are no longer any
+breakpoints at this location, it foregoes setting an after breakpoint to
+re-establish the break instruction at this code location.  There is no reason
+to plan to re-establish the break instruction since there are no longer any
+active breakpoints at the location.
+
+Modified SUB-DEACTIVATE-BREAKPOINT to only remove the break instruction from
+the code when there are no longer any active breakpoints at the code location.
+
+
+Compiler:
+
+Picked up a large number of changes for Miles' disassembler.
+
+Miles' disassembler is now used on the PMAX in addition to the SPARC.
+
+Fixed named constant dumping to allow direct references to interned symbols.
+
+
+
+11/19/91 to 11/25/91
+
+Compiler:
+
+The new special form LOAD-TIME-VALUE now exists.  See CLtL2 for information
+on how to use it.
+
+Handling of constants has been cleaned up.  When using COMPILE and
+COMPILE-FROM-STREAM, anything is allowed as a constant.  When using
+COMPILE-FILE, dumping of arrays has been brought up to spec with respect to
+X3J13.  Specifically:
+ - displaced or adjustable arrays and vectors with fill pointers are
+converted to a simple-array duplicate during the dump.
+ - arrays of floats are left as arrays of floats instead of being converted
+into arrays of element-type T that just so happen to hold a bunch of
+floats.
+
+The type declarations for DOCUMENTATION and (SETF DOCUMENTATION) have been
+fixed to allow any symbol for the document kind.
+
+If we see a reference to a named constant that isn't a number or charcter,
+then convert it as SYMBOL-VALUE.  This is so that DEFCONSTANT'ed values
+remain EQL.
+
+
+Hemlock:
+
+Added wm-hints for pop-up display windows.  This will be necessary to receive
+input in OpenLook windowing systems, but we also thought this might be be MWM
+bug that prevents pop-up windows from receiving input.  It was unlikely this
+was the problem since other Hemlock windows could receive input without the new
+wm-hint we set to get input in OpenLook windowing systems.
+
+Delete SET-WINDOW-ROOT-Y since it is no longer used since we installed window
+groups.
+
+
+
 10/14/91 to 11/19/91
 
 CLX: updated to CLX R5.  Please report any new X lossage.  X applications
