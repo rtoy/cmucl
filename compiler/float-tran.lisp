@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.6 1990/10/24 16:44:14 ram Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/float-tran.lisp,v 1.7 1990/12/01 16:32:28 wlott Exp $
 ;;;
 ;;; This file contains floating-point specific transforms, and may be somewhat
 ;;; implementation dependent in its assumptions of what the formats are.
@@ -104,41 +104,41 @@
 ;;;
 
 (defconstant single-float-digits
-  (1+ (byte-size single-float-significand-byte)))
+  (1+ (byte-size vm:single-float-significand-byte)))
 
 (defconstant double-float-digits
-  (+ (byte-size double-float-significand-byte)
-			vm:word-bits
-			1))
+  (+ (byte-size vm:double-float-significand-byte)
+     vm:word-bits
+     1))
 
 (deftype single-float-exponent ()
-  `(integer ,(- single-float-normal-exponent-min single-float-bias
-		single-float-digits)
-	    ,(- single-float-normal-exponent-max single-float-bias)))
+  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		vm:single-float-digits)
+	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias)))
 
 (deftype double-float-exponent ()
-  `(integer ,(- double-float-normal-exponent-min double-float-bias
-		double-float-digits)
-	    ,(- double-float-normal-exponent-max double-float-bias)))
+  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		vm:double-float-digits)
+	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias)))
 
 
 (deftype single-float-int-exponent ()
-  `(integer ,(- single-float-normal-exponent-min single-float-bias
-		(* single-float-digits 2))
-	    ,(- single-float-normal-exponent-max single-float-bias
-		single-float-digits)))
+  `(integer ,(- vm:single-float-normal-exponent-min vm:single-float-bias
+		(* vm:single-float-digits 2))
+	    ,(- vm:single-float-normal-exponent-max vm:single-float-bias
+		vm:single-float-digits)))
 
 (deftype double-float-int-exponent ()
-  `(integer ,(- double-float-normal-exponent-min double-float-bias
-		(* double-float-digits 2))
-	    ,(- double-float-normal-exponent-max double-float-bias
-		double-float-digits)))
+  `(integer ,(- vm:double-float-normal-exponent-min vm:double-float-bias
+		(* vm:double-float-digits 2))
+	    ,(- vm:double-float-normal-exponent-max vm:double-float-bias
+		vm:double-float-digits)))
 
 (deftype single-float-significand ()
-  `(integer 0 (,(ash 1 single-float-digits))))
+  `(integer 0 (,(ash 1 vm:single-float-digits))))
 
 (deftype double-float-significand ()
-  `(integer 0 (,(ash 1 double-float-digits))))
+  `(integer 0 (,(ash 1 vm:double-float-digits))))
 
 (defknown decode-single-float (single-float)
   (values single-float single-float-exponent (single-float -1f0 1f0))
