@@ -7,7 +7,7 @@
 ;;; Lisp, please contact Scott Fahlman (Scott.Fahlman@CS.CMU.EDU)
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.6 1992/03/10 09:39:59 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/rt/c-call.lisp,v 1.7 1992/03/10 12:24:36 wlott Exp $
 ;;;
 ;;; This file contains the VOPs and other necessary machine specific support
 ;;; routines for call-out to C.
@@ -31,20 +31,20 @@
 
 
 (defstruct arg-state
-  (stack-frame-size 0))
+  (offset 0))
 
 (defun int-arg (state prim-type stack-sc)
   ;; C expects 4 register args and the 5th arg at the top of the stack.
   ;; We can't put args in registers, because we need those registers
   ;; for something else.  So we put them just beyond the end of the
   ;; stack and the trampoline code will move them into place.
-  (let ((frame-size (arg-state-stack-frame-size state)))
-    (setf (arg-state-stack-frame-size state) (1+ frame-size))
+  (let ((frame-size (arg-state-offset state)))
+    (setf (arg-state-offset state) (1+ frame-size))
     (c-call-wired-tn prim-type stack-sc frame-size)))
 
 (defun int-result (state prim-type reg-sc)
-  (let ((reg-num (arg-state-stack-frame-size state)))
-    (setf (arg-state-stack-frame-size state) (1+ reg-num))
+  (let ((reg-num (arg-state-offset state)))
+    (setf (arg-state-offset state) (1+ reg-num))
     (c-call-wired-tn prim-type reg-sc reg-num)))
 
 (def-alien-type-method (integer :arg-tn) (type state)
@@ -57,11 +57,11 @@
       (int-result state 'signed-byte-32 'signed-reg)
       (int-result state 'unsigned-byte-32 'unsigned-reg)))
 
-(def-alien-type-method (alien::sap :arg-tn) (type state)
+(def-alien-type-method (sap :arg-tn) (type state)
   (declare (ignore type))
   (int-arg state 'system-area-pointer 'sap-stack))
 
-(def-alien-type-method (alien::sap :result-tn) (type state)
+(def-alien-type-method (sap :result-tn) (type state)
   (declare (ignore type))
   (int-result state 'system-area-pointer 'sap-reg))
 
@@ -77,12 +77,12 @@
       (dolist (arg-type (alien-function-type-arg-types type))
 	(arg-tns (invoke-alien-type-method :arg-tn arg-type arg-state)))
       (values (c-call-wired-tn 'positive-fixnum 'word-pointer-reg nsp-offset)
-	      (* (arg-state-stack-frame-size arg-state) word-bytes)
+	      (* (arg-state-offset arg-state) word-bytes)
 	      (arg-tns)
 	      (invoke-alien-type-method
 	       :result-tn
 	       (alien-function-type-result-type type)
-	       (make-arg-state :frame-size nl0-offset))))))
+	       (make-arg-state :offset nl0-offset))))))
 
 
 ;;;; Deftransforms to convert uses of %alien-funcall into cononical form.
@@ -94,13 +94,13 @@
 	 (arg-types (alien-function-type-arg-types type))
 	 (result-type (alien-function-type-result-type type)))
     (assert (= (length arg-types) (length args)))
-    (if (some #'alien::alien-double-float-type-p arg-types)
+    (if (some #'alien-double-float-type-p arg-types)
 	(collect ((new-args) (lambda-vars) (new-arg-types))
 	  (dolist (type arg-types)
 	    (let ((arg (gensym)))
 	      (lambda-vars arg)
 	      (typecase type
-		(alien::alien-double-float-type
+		(alien-double-float-type
 		 (new-args `(double-float-high-bits ,arg))
 		 (new-args `(double-float-low-bits ,arg))
 		 (new-arg-types (parse-alien-type '(signed 32)))
@@ -111,7 +111,7 @@
 	  `(lambda (function type ,@(lambda-vars))
 	     (declare (ignore type))
 	     (%alien-funcall function
-			     ',(alien::make-alien-function-type
+			     ',(make-alien-function-type
 				:arg-types (new-arg-types)
 				:result-type result-type)
 			     ,@(new-args))))
@@ -128,20 +128,23 @@
 	     (mapcar #'(lambda (x) (declare (ignore x)) (gensym))
 		     arg-types)))
       (typecase result-type
-	(alien::alien-double-float-type
+	(alien-double-float-type
 	 (let ((arg-names (make-arg-name-list)))
 	   `(lambda (function type ,@arg-names)
 	      (declare (ignore type))
 	      (multiple-value-bind
 		  (hi lo)
 		  (%alien-funcall function
-				  ',(parse-alien-type
-				     `(function (values (signed 32)
-							(unsigned 32))
-						,@arg-types))
+				  (make-alien-function-type
+				   :arg-types arg-types
+				   :result-type
+				   (let ((*values-type-okay*))
+				     (parse-alien-type
+				      '(values (signed 32)
+					       (unsigned 32)))))
 				  ,@arg-names)
 	      (make-double-float hi lo)))))
-	(alien::alien-single-float-type
+	(alien-single-float-type
 	 (let ((arg-names (make-arg-name-list)))
 	   `(lambda (function type ,@arg-names)
 	      (declare (ignore type))
