@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.36 1991/04/04 14:11:30 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir1util.lisp,v 1.37 1991/04/20 14:11:06 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -352,7 +352,8 @@
 			 inlines
 			 (lambda (lexenv-lambda default))
 			 (cleanup (lexenv-cleanup default))
-			 (cookie (lexenv-cookie default)))
+			 (cookie (lexenv-cookie default))
+			 (interface-cookie (lexenv-interface-cookie default)))
   (macrolet ((frob (var slot)
 	       `(let ((old (,slot default)))
 		  (if ,var
@@ -365,15 +366,25 @@
      (frob tags lexenv-tags)
      (frob type-restrictions lexenv-type-restrictions)
      (frob inlines lexenv-inlines)
-     lambda cleanup cookie)))
-#|
-functions
-variables
-blocks
-tags
-type-restrictions
-inlines
-|#
+     lambda cleanup cookie interface-cookie)))
+
+
+;;; MAKE-INTERFACE-COOKIE  --  Interface
+;;;
+;;;    Return a cookie that defaults any unsupplied optimize qualities in the
+;;; Interface-Cookie with the corresponding ones from the Cookie.
+;;;
+(defun make-interface-cookie (lexenv)
+  (declare (type lexenv lexenv))
+  (let ((icookie (lexenv-interface-cookie lexenv))
+	(cookie (lexenv-cookie lexenv)))
+    (make-cookie
+     :speed (or (cookie-speed icookie) (cookie-speed cookie))
+     :space (or (cookie-space icookie) (cookie-space cookie))
+     :safety (or (cookie-safety icookie) (cookie-safety cookie))
+     :cspeed (or (cookie-cspeed icookie) (cookie-cspeed cookie))
+     :brevity (or (cookie-brevity icookie) (cookie-brevity cookie))
+     :debug (or (cookie-debug icookie) (cookie-debug cookie)))))
 			   
 
 ;;;; Flow/DFO/Component hackery:
