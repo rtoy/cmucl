@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.31 2000/09/27 11:10:00 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/foreign.lisp,v 1.32 2001/01/05 05:43:47 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -503,9 +503,17 @@ to skip undefined symbols which don't have an address."
 				*foreign-segment-free-pointer*)
 			output-file
 			symbol-table-file
-			(append (mapcar #'(lambda (name)
-					    (unix-namestring name))
-					files)
+			(append (mapcar
+				 #'(lambda (name)
+				     (or (unix-namestring name)
+					 (error 'simple-file-error
+						:pathname name
+						:format-control
+						"File does not exist: ~A."
+						:format-arguments
+						(list name))))
+				 
+				 files)
 				libraries))
 		 :env env
 		 :input nil
@@ -633,11 +641,18 @@ to skip undefined symbols which don't have an address."
 		        #+(or solaris linux) "-G" #+irix "-shared"
 			"-o"
 			output-file
-			(append (mapcar #'(lambda (name)
-					    (unix-namestring name))
-					(if (atom files)
-					    (list files)
-					    files))
+			(append (mapcar
+				 #'(lambda (name)
+				     (or (unix-namestring name)
+					 (error 'simple-file-error
+						:pathname name
+						:format-control
+						"File does not exist: ~A."
+						:format-arguments
+						(list name))))
+				 (if (atom files)
+				     (list files)
+				     files))
 				libraries))
 		 :env env
 		 :input nil
