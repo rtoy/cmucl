@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.16 1990/07/03 06:31:15 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/subprim.lisp,v 1.17 1990/07/20 00:42:03 wlott Exp $
 ;;;
 ;;;    Linkage information for standard static functions, and random vops.
 ;;;
@@ -70,11 +70,11 @@
 
 (define-vop (call-out)
   (:args (args :more t))
-  (:ignore args)
+  (:results (results :more t))
+  (:ignore args results)
   (:save-p t)
   (:info function)
-  (:results (result :scs (sap-reg signed-reg unsigned-reg)))
-  (:temporary (:sc any-reg :offset 2) v0)
+  (:temporary (:sc any-reg :offset 2 :to (:result 0)) v0)
   (:temporary (:sc any-reg :offset lra-offset) lra)
   (:temporary (:sc any-reg :offset code-offset) code)
   (:temporary (:scs (non-descriptor-reg)) temp)
@@ -95,13 +95,12 @@
       (emit-label lra-label)
       (inst lra-header-word)
       (when cur-nfp
-	(load-stack-tn cur-nfp nfp-save))
-      (move result v0))))
+	(load-stack-tn cur-nfp nfp-save)))))
 
 
 (define-vop (alloc-number-stack-space)
   (:info amount)
-  (:results (result :scs (sap-reg)))
+  (:results (result :scs (sap-reg any-reg)))
   (:generator 0
     (inst addu nsp-tn nsp-tn (- (logandc2 (+ amount 7) 7)))
     (move result nsp-tn)))
