@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.37 1998/07/24 17:22:32 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-type.lisp,v 1.38 2000/01/10 14:47:45 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -157,6 +157,7 @@
   (dolist (type '(fixnum
 		  (signed-byte 32)
 		  (unsigned-byte 32)
+		  bignum
 		  integer)
 		(error "~S isn't an integer type?" subtype))
     (when (csubtypep subtype (specifier-type type))
@@ -184,6 +185,10 @@
 	   ((type= type (specifier-type '(unsigned-byte 32)))
 	    'c:check-unsigned-byte-32)
 	   (t nil)))
+    (union-type
+     (if (type= type (specifier-type 'bignum))
+	 'c:check-bignum
+	 nil))
     (function-type
      'c:check-function)
     (t
