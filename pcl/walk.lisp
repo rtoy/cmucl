@@ -853,7 +853,7 @@
     (let ((entry (assoc macro (c::lexenv-functions env) :test #'eq)))
       (and entry 
 	   (eq (cadr entry) 'c::macro)
-	   (cddr entry)))))
+	   (function-lambda-expression (cddr entry))))))
 
 ); end of #+:CMU
 
