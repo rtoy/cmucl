@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.4 1991/02/08 13:31:25 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/clx-ext.lisp,v 1.5 1991/03/25 15:51:13 chiles Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,7 +45,9 @@
   "Parses a display specification including display and screen numbers.
    This returns nil when there is no DISPLAY environment variable.  If string
    is non-nil, and any fields are missing in the specification, this signals an
-   error.  This returns the display and screen objects."
+   error.  If you specify a screen, then this sets XLIB:DISPLAY-DEFAULT-SCREEN
+   to that screen since CLX initializes this form to the first of
+   XLIB:SCREEN-ROOTS.  This returns the display and screen objects."
   (when string
     (let* ((string (coerce string 'simple-string))
 	   (length (length string))
@@ -80,15 +82,16 @@
 				       (parse-integer string :start start
 						      :end second-dot)))))))))))
       (let ((display (xlib:open-display host-name :display display-num)))
-	(cond (screen-num
-	       (let* ((screens (xlib:display-roots display))
-		      (num-screens (length screens)))
-		 (when (>= screen-num num-screens)
-		   (xlib:close-display display)
-		   (error "No such screen number (~D)." screen-num))
-		 (values display (elt screens screen-num))))
-	      (t
-	       (values display (xlib:display-default-screen display))))))))
+	(when screen-num
+	  (let* ((screens (xlib:display-roots display))
+		 (num-screens (length screens)))
+	    (when (>= screen-num num-screens)
+	      (xlib:close-display display)
+	      (error "No such screen number (~D)." screen-num))
+	    (setf (xlib:display-default-screen display)
+		  (elt screens screen-num))))
+	(values display (xlib:display-default-screen display))))))
+
 
 
 ;;;; Font Path Manipulation
