@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.49 1990/05/18 00:55:23 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/mips/parms.lisp,v 1.50 1990/05/25 12:28:15 wlott Exp $
 ;;;
 ;;;    This file contains some parameterizations of various VM
 ;;; attributes for the MIPS.  This file is separate from other stuff so 
@@ -371,17 +371,20 @@
 
 (define-primitive-object (code :lowtag other-pointer-type :header t)
   code-size
-  entry-points
-  debug-info
+  (entry-points :ref-vop c::code-entry-points
+		:set-vop c::set-code-entry-points)
+  (debug-info :type t
+	      :ref-trans di::code-debug-info
+	      :ref-known (c::flushable))
   (constants :rest-p t))
 
 (define-primitive-object (function-header :lowtag function-pointer-type
 					  :header function-header-type)
   (self :ref-vop c::function-self)
-  (next :ref-vop c::function-next)
-  (name :ref-vop c::function-name)
-  (arglist :ref-vop c::function-arglist)
-  (type :ref-vop c::function-type)
+  (next :ref-vop c::function-next :set-vop c::set-function-next)
+  (name :ref-vop c::function-name :set-vop c::set-function-name)
+  (arglist :ref-vop c::function-arglist :set-vop c::set-function-arglist)
+  (type :ref-vop c::function-type :set-vop c::set-function-type)
   (code :rest-p t :c-type "unsigned char"))
 
 (define-primitive-object (return-pc :lowtag other-pointer-type :header t)
