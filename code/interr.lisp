@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.30 1997/04/01 19:23:47 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/interr.lisp,v 1.31 1997/11/01 22:58:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -397,11 +397,39 @@
 	 :datum object
 	 :expected-type '(simple-array double-float (*))))
 
+#+complex-float
+(deferr object-not-simple-array-complex-single-float-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (complex single-float) (*))))
+
+#+complex-float
+(deferr object-not-simple-array-complex-double-float-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(simple-array (complex double-float) (*))))
+
 (deferr object-not-complex-error (object)
   (error 'type-error
 	 :function-name name
 	 :datum object
 	 :expected-type 'complex))
+
+#+complex-float
+(deferr object-not-complex-single-float-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(complex single-float)))
+
+#+complex-float
+(deferr object-not-complex-double-float-error (object)
+  (error 'type-error
+	 :function-name name
+	 :datum object
+	 :expected-type '(complex double-float)))
 
 (deferr object-not-weak-pointer-error (object)
   (error 'type-error

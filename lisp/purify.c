@@ -1,6 +1,6 @@
 /* Purify. */
 
-/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.10 1997/04/09 17:49:36 dtc Exp $ */
+/* $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/purify.c,v 1.11 1997/11/01 22:58:04 dtc Exp $ */
 
 /* This file has been hacked a bunch by Werkowski as part of
  * the x86 port. Stack direction changes as well as more conservative
@@ -558,6 +558,12 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
       case type_Bignum:
       case type_SingleFloat:
       case type_DoubleFloat:
+#ifdef type_ComplexSingleFloat
+      case type_ComplexSingleFloat:
+#endif
+#ifdef type_ComplexDoubleFloat
+      case type_ComplexDoubleFloat:
+#endif
       case type_Sap:
         return ptrans_unboxed(thing, header);
 
@@ -617,6 +623,15 @@ static lispobj ptrans_otherptr(lispobj thing, lispobj header, boolean constant)
 
       case type_SimpleArrayDoubleFloat:
         return ptrans_vector(thing, 64, 0, FALSE, constant);
+
+#ifdef type_SimpleArrayComplexSingleFloat
+      case type_SimpleArrayComplexSingleFloat:
+        return ptrans_vector(thing, 64, 0, FALSE, constant);
+#endif
+#ifdef type_SimpleArrayComplexDoubleFloat
+      case type_SimpleArrayComplexDoubleFloat:
+        return ptrans_vector(thing, 128, 0, FALSE, constant);
+#endif
 
       case type_CodeHeader:
         return ptrans_code(thing);

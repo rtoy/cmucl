@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.5 1997/10/05 16:40:20 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.6 1997/11/01 22:58:42 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -492,6 +492,341 @@
 			  (inst fstd result))
 		  (inst fxch value)))))))
 
+
+;;; Complex float variants.
+#+complex-float
+(progn
+(define-vop (data-vector-ref/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-single-float positive-fixnum)
+  (:results (value :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:generator 5
+    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				   :offset (tn-offset value))))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fld (make-ea :dword :base object :index index :scale 2
+			   :disp (- (* vm:vector-data-offset vm:word-bytes)
+				    vm:other-pointer-type)))))
+    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				   :offset (1+ (tn-offset value)))))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fld (make-ea :dword :base object :index index :scale 2
+			   :disp (- (* (1+ vm:vector-data-offset)
+				       vm:word-bytes)
+				    vm:other-pointer-type)))))))
+
+(define-vop (data-vector-ref-c/simple-array-complex-single-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-complex-single-float (:constant (signed-byte 30)))
+  (:results (value :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:generator 4
+    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				   :offset (tn-offset value))))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fld (make-ea :dword :base object
+			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				       (* 8 index))
+				    vm:other-pointer-type)))))
+    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+				   :offset (1+ (tn-offset value)))))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fld (make-ea :dword :base object
+			   :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				       (* 8 index) 4)
+				    vm:other-pointer-type)))))))
+
+(define-vop (data-vector-set/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-single-reg) :target result))
+  (:arg-types simple-array-complex-single-float positive-fixnum
+	      complex-single-float)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:generator 5
+    (let ((value-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (tn-offset value)))
+	  (result-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (tn-offset result))))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fst (make-ea :dword :base object :index index :scale 2
+				:disp (- (* vm:vector-data-offset
+					    vm:word-bytes)
+					 vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fst result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fst (make-ea :dword :base object :index index :scale 2
+				:disp (- (* vm:vector-data-offset
+					    vm:word-bytes)
+					 vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fst value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fst result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (1+ (tn-offset value))))
+	  (result-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (1+ (tn-offset result)))))
+      (inst fxch value-imag)
+      (inst fst (make-ea :dword :base object :index index :scale 2
+			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				     4)
+				  vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fst result-imag))
+      (inst fxch value-imag))))
+
+(define-vop (data-vector-set-c/simple-array-complex-single-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (complex-single-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-complex-single-float (:constant (signed-byte 30))
+	      complex-single-float)
+  (:results (result :scs (complex-single-reg)))
+  (:result-types complex-single-float)
+  (:generator 4
+    (let ((value-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (tn-offset value)))
+	  (result-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (tn-offset result))))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fst (make-ea :dword :base object
+				:disp (- (+ (* vm:vector-data-offset
+					       vm:word-bytes)
+					    (* 8 index))
+					 vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fst result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fst (make-ea :dword :base object
+				:disp (- (+ (* vm:vector-data-offset
+					       vm:word-bytes)
+					    (* 8 index))
+					 vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fst value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fst result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (1+ (tn-offset value))))
+	  (result-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
+			   :offset (1+ (tn-offset result)))))
+      (inst fxch value-imag)
+      (inst fst (make-ea :dword :base object
+			 :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				     (* 8 index) 4)
+				  vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fst result-imag))
+      (inst fxch value-imag))))
+
+
+(define-vop (data-vector-ref/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg)))
+  (:arg-types simple-array-complex-double-float positive-fixnum)
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:generator 7
+    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				   :offset (tn-offset value))))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 4
+			    :disp (- (* vm:vector-data-offset vm:word-bytes)
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				   :offset (1+ (tn-offset value)))))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldd (make-ea :dword :base object :index index :scale 4
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					8)
+				     vm:other-pointer-type)))))))
+
+(define-vop (data-vector-ref-c/simple-array-complex-double-float)
+  (:note "inline array access")
+  (:translate data-vector-ref)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg)))
+  (:info index)
+  (:arg-types simple-array-complex-double-float (:constant (signed-byte 30)))
+  (:results (value :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:generator 6
+    (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				   :offset (tn-offset value))))
+      (with-empty-tn@fp-top (real-tn)
+	(inst fldd (make-ea :dword :base object
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					(* 16 index))
+				     vm:other-pointer-type)))))
+    (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+				   :offset (1+ (tn-offset value)))))
+      (with-empty-tn@fp-top (imag-tn)
+	(inst fldd (make-ea :dword :base object
+			    :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+					(* 16 index) 8)
+				     vm:other-pointer-type)))))))
+
+(define-vop (data-vector-set/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (index :scs (any-reg))
+	 (value :scs (complex-double-reg) :target result))
+  (:arg-types simple-array-complex-double-float positive-fixnum
+	      complex-double-float)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:generator 20
+    (let ((value-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (tn-offset value)))
+	  (result-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (tn-offset result))))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fstd (make-ea :dword :base object :index index :scale 4
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fstd (make-ea :dword :base object :index index :scale 4
+				 :disp (- (* vm:vector-data-offset
+					     vm:word-bytes)
+					  vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (1+ (tn-offset value))))
+	  (result-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (1+ (tn-offset result)))))
+      (inst fxch value-imag)
+      (inst fstd (make-ea :dword :base object :index index :scale 4
+			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				      8)
+				   vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
+
+(define-vop (data-vector-set-c/simple-array-complex-double-float)
+  (:note "inline array store")
+  (:translate data-vector-set)
+  (:policy :fast-safe)
+  (:args (object :scs (descriptor-reg))
+	 (value :scs (complex-double-reg) :target result))
+  (:info index)
+  (:arg-types simple-array-complex-double-float (:constant (signed-byte 30))
+	      complex-double-float)
+  (:results (result :scs (complex-double-reg)))
+  (:result-types complex-double-float)
+  (:generator 19
+    (let ((value-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (tn-offset value)))
+	  (result-real
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (tn-offset result))))
+      (cond ((zerop (tn-offset value-real))
+	     ;; Value is in ST0
+	     (inst fstd (make-ea :dword :base object
+				 :disp (- (+ (* vm:vector-data-offset
+						vm:word-bytes)
+					     (* 16 index))
+					  vm:other-pointer-type)))
+	     (unless (zerop (tn-offset result-real))
+	       ;; Value is in ST0 but not result.
+	       (inst fstd result-real)))
+	    (t
+	     ;; Value is not in ST0.
+	     (inst fxch value-real)
+	     (inst fstd (make-ea :dword :base object
+				 :disp (- (+ (* vm:vector-data-offset
+						vm:word-bytes)
+					     (* 16 index))
+					  vm:other-pointer-type)))
+	     (cond ((zerop (tn-offset result-real))
+		    ;; The result is in ST0.
+		    (inst fstd value-real))
+		   (t
+		    ;; Neither value or result are in ST0
+		    (unless (location= value-real result-real)
+		      (inst fstd result-real))
+		    (inst fxch value-real))))))
+    (let ((value-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (1+ (tn-offset value))))
+	  (result-imag
+	   (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
+			   :offset (1+ (tn-offset result)))))
+      (inst fxch value-imag)
+      (inst fstd (make-ea :dword :base object
+			  :disp (- (+ (* vm:vector-data-offset vm:word-bytes)
+				      (* 16 index) 8)
+				   vm:other-pointer-type)))
+      (unless (location= value-imag result-imag)
+	(inst fstd result-imag))
+      (inst fxch value-imag))))
+) ; complex-float
 
 ;;; These VOPs are used for implementing float slots in structures (whose raw
 ;;; data is an unsigned-32 vector.

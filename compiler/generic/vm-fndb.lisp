@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.54 1997/04/01 19:24:07 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/vm-fndb.lisp,v 1.55 1997/11/01 22:58:37 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -47,7 +47,8 @@
 ;;; into non-standard unary predicates.
 
 (defknown (fixnump bignump ratiop short-float-p single-float-p double-float-p
-	   long-float-p base-char-p %string-char-p %standard-char-p %instancep
+	   long-float-p complex-single-float-p complex-double-float-p
+	   base-char-p %string-char-p %standard-char-p %instancep
 	   array-header-p simple-array-p simple-array-unsigned-byte-2-p
 	   simple-array-unsigned-byte-4-p simple-array-unsigned-byte-8-p
 	   simple-array-unsigned-byte-16-p simple-array-unsigned-byte-32-p
@@ -56,6 +57,8 @@
 	   #+signed-array simple-array-signed-byte-30-p
 	   #+signed-array simple-array-signed-byte-32-p
 	   simple-array-single-float-p simple-array-double-float-p
+	   #+complex-float simple-array-complex-single-float-p
+	   #+complex-float simple-array-complex-double-float-p
 	   system-area-pointer-p realp unsigned-byte-32-p signed-byte-32-p
 	   weak-pointer-p scavenger-hook-p code-component-p lra-p
 	   funcallable-instance-p dylan::dylan-function-p)

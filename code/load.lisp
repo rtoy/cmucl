@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.64 1997/08/23 16:00:01 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/load.lisp,v 1.65 1997/11/01 22:58:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -782,6 +782,27 @@
 (define-fop (fop-complex 71)
   (let ((im (pop-stack)))
     (%make-complex (pop-stack) im)))
+
+#+complex-float
+(define-fop (fop-complex-single-float 72)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(complex (make-single-float (fast-read-s-integer 4))
+		 (make-single-float (fast-read-s-integer 4)))
+      (done-with-fast-read-byte))))
+
+#+complex-float
+(define-fop (fop-complex-double-float 73)
+  (prepare-for-fast-read-byte *fasl-file*
+    (prog1
+	(let* ((re-lo (fast-read-u-integer 4))
+	       (re-hi (fast-read-u-integer 4))
+	       (re (make-double-float re-hi re-lo))
+	       (im-lo (fast-read-u-integer 4))
+	       (im-hi (fast-read-u-integer 4))
+	       (im (make-double-float im-hi im-lo)))
+	  (complex re im))
+      (done-with-fast-read-byte))))
 
 (define-fop (fop-single-float 46)
   (prepare-for-fast-read-byte *fasl-file*

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.23 1997/04/01 19:23:31 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/array.lisp,v 1.24 1997/11/01 22:58:07 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -138,6 +138,12 @@
 		    (values #.vm:simple-array-signed-byte-32-type 32))
     (single-float (values #.vm:simple-array-single-float-type 32))
     (double-float (values #.vm:simple-array-double-float-type 64))
+    #+complex-float
+    ((complex single-float)
+     (values #.vm:simple-array-complex-single-float-type 64))
+    #+complex-float
+    ((complex double-float)
+     (values #.vm:simple-array-complex-double-float-type 128))
     (t (values #.vm:simple-vector-type #.vm:word-bits))))
 
 (defun %complex-vector-type-code (type)
@@ -329,7 +335,9 @@
        #+signed-array (signed-byte 30)
        #+signed-array (signed-byte 32)
        single-float
-       double-float))))
+       double-float
+       #+complex-float (complex single-float)
+       #+complex-float (complex double-float)))))
 
 (defun data-vector-set (array index new-value)
   (with-array-data ((vector array) (index index) (end))
@@ -357,7 +365,9 @@
        #+signed-array (signed-byte 30)
        #+signed-array (signed-byte 32)
        single-float
-       double-float))))
+       double-float
+       #+complex-float (complex single-float)
+       #+complex-float (complex double-float)))))
 
 
 
@@ -516,6 +526,10 @@
        #+signed-array (vm:simple-array-signed-byte-32-type '(signed-byte 32))
        (vm:simple-array-single-float-type 'single-float)
        (vm:simple-array-double-float-type 'double-float)
+       #+complex-float
+       (vm:simple-array-complex-single-float-type '(complex single-float))
+       #+complex-float
+       (vm:simple-array-complex-double-float-type '(complex double-float))
        ((vm:simple-array-type vm:complex-vector-type vm:complex-array-type)
 	(with-array-data ((array array) (start) (end))
 	  (declare (ignore start end))
@@ -807,7 +821,13 @@
 	#+signed-array ((simple-array (signed-byte 30) (*)) 0)
 	#+signed-array ((simple-array (signed-byte 32) (*)) 0)
 	((simple-array single-float (*)) (coerce 0 'single-float))
-	((simple-array double-float (*)) (coerce 0 'double-float)))))
+	((simple-array double-float (*)) (coerce 0 'double-float))
+	#+complex-float
+	((simple-array (complex single-float) (*))
+	 (coerce 0 '(complex single-float)))
+	#+complex-float
+	((simple-array (complex double-float) (*))
+	 (coerce 0 '(complex double-float))))))
   ;; Only arrays have fill-pointers, but vectors have their length parameter
   ;; in the same place.
   (setf (%array-fill-pointer vector) new-size)

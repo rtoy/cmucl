@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.3 1997/07/26 17:05:10 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/vm.lisp,v 1.4 1997/11/01 22:58:46 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -186,7 +186,11 @@
   (base-char-stack stack)		; non-descriptor characters.
   (sap-stack stack)			; System area pointers.
   (single-stack stack)			; single-floats
-  (double-stack stack :element-size 2)	; double floats.
+  (double-stack stack :element-size 2)	; double-floats.
+  #+complex-float
+  (complex-single-stack stack :element-size 2)	; complex-single-floats
+  #+complex-float
+  (complex-double-stack stack :element-size 4)	; complex-double-floats.
 
   ;; **** Magic SCs.
 
@@ -288,6 +292,22 @@
 	      :constant-scs (fp-double-constant)
 	      :save-p t
 	      :alternate-scs (double-stack))
+
+  #+complex-float
+  (complex-single-reg float-registers
+		      :locations (0 2 4 6)
+		      :element-size 2
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-single-stack))
+
+  #+complex-float
+  (complex-double-reg float-registers
+		      :locations (0 2 4 6)
+		      :element-size 2
+		      :constant-scs ()
+		      :save-p t
+		      :alternate-scs (complex-double-stack))
 
   ;; A catch or unwind block.
   (catch-block stack :element-size vm:catch-block-size)

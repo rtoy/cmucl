@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.38 1997/04/01 19:24:03 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.39 1997/11/01 22:58:35 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -40,7 +40,10 @@
 	  instance-header-type funcallable-instance-header-type
 	  fdefn-type vector-normal-subtype
 	  vector-valid-hashing-subtype vector-must-rehash-subtype
-	  forwarding-pointer-type scavenger-hook-type))
+	  forwarding-pointer-type scavenger-hook-type
+	  complex-single-float-type complex-double-float-type
+	  simple-array-complex-single-float-type
+	  simple-array-complex-double-float-type))
 
 (in-package "KERNEL")
 (export '(%make-funcallable-instance
@@ -110,6 +113,8 @@
   single-float
   double-float
   complex
+  #+complex-float complex-single-float
+  #+complex-float complex-double-float
   
   simple-array
   simple-string
@@ -126,6 +131,8 @@
   #+signed-array simple-array-signed-byte-32
   simple-array-single-float
   simple-array-double-float
+  #+complex-float simple-array-complex-single-float
+  #+complex-float simple-array-complex-double-float
   complex-string
   complex-bit-vector
   complex-vector
@@ -460,3 +467,18 @@
   (package :ref-trans symbol-package
 	   :set-trans %set-symbol-package
 	   :init :null))
+
+#+complex-float
+(define-primitive-object (complex-single-float
+			  :lowtag other-pointer-type
+			  :header complex-single-float-type)
+  (real :c-type "float")
+  (imag :c-type "float"))
+
+#+complex-float
+(define-primitive-object (complex-double-float
+			  :lowtag other-pointer-type
+			  :header complex-double-float-type)
+  (filler)
+  (real :c-type "double" :length 2)
+  (imag :c-type "double" :length 2))

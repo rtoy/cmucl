@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.64 1997/04/01 19:23:58 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/dump.lisp,v 1.65 1997/11/01 22:58:28 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1046,6 +1046,29 @@
 
 ;;; Or a complex...
 
+#+complex-float
+(defun dump-complex (x file)
+  (typecase x
+    ((complex single-float)
+     (dump-fop 'lisp::fop-complex-single-float file)
+     (dump-var-signed (single-float-bits (realpart x)) 4 file)
+     (dump-var-signed (single-float-bits (imagpart x)) 4 file))
+    ((complex double-float)
+     (dump-fop 'lisp::fop-complex-double-float file)
+     (let ((re (realpart x)))
+       (declare (double-float re))
+       (dump-unsigned-32 (double-float-low-bits re) file)
+       (dump-var-signed (double-float-high-bits re) 4 file))
+     (let ((im (imagpart x)))
+       (declare (double-float im))
+       (dump-unsigned-32 (double-float-low-bits im) file)
+       (dump-var-signed (double-float-high-bits im) 4 file)))
+    (t
+     (sub-dump-object (realpart x) file)
+     (sub-dump-object (imagpart x) file)
+     (dump-fop 'lisp::fop-complex file))))
+
+#-complex-float
 (defun dump-complex (x file)
   (sub-dump-object (realpart x) file)
   (sub-dump-object (imagpart x) file)

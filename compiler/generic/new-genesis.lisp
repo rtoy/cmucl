@@ -4,7 +4,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.24 1997/08/23 16:00:08 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/new-genesis.lisp,v 1.25 1997/11/01 22:58:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -439,6 +439,46 @@
 	  (write-indexed des (1+ vm:double-float-value-slot) low-bits)))
        des))))
 
+#+complex-float
+(defun complex-single-float-to-core (num)
+  (declare (type (complex single-float) num))
+  (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+				      (1- vm:complex-single-float-size)
+				      vm:complex-single-float-type)))
+    (write-indexed des vm:complex-single-float-real-slot
+		   (make-random-descriptor (single-float-bits (realpart num))))
+    (write-indexed des vm:complex-single-float-imag-slot
+		   (make-random-descriptor (single-float-bits (imagpart num))))
+    des))
+
+#+complex-float
+(defun complex-double-float-to-core (num)
+  (declare (type (complex double-float) num))
+  (let ((des (allocate-unboxed-object *dynamic* vm:word-bits
+				      (1- vm:complex-double-float-size)
+				      vm:complex-double-float-type)))
+    (let* ((real (realpart num))
+	   (high-bits (make-random-descriptor (double-float-high-bits real)))
+	   (low-bits (make-random-descriptor (double-float-low-bits real))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-float-real-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-float-real-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-float-real-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-float-real-slot) low-bits))))
+    (let* ((imag (imagpart num))
+	   (high-bits (make-random-descriptor (double-float-high-bits imag)))
+	   (low-bits (make-random-descriptor (double-float-low-bits imag))))
+      (ecase (c:backend-byte-order c:*backend*)
+	(:little-endian
+	 (write-indexed des vm:complex-double-float-imag-slot low-bits)
+	 (write-indexed des (1+ vm:complex-double-float-imag-slot) high-bits))
+	(:big-endian
+	 (write-indexed des vm:complex-double-float-imag-slot high-bits)
+	 (write-indexed des (1+ vm:complex-double-float-imag-slot) low-bits))))
+    des))
+
 (defun number-to-core (number)
   "Copy the given number to the core, or flame out if we can't deal with it."
   (typecase number
@@ -448,6 +488,10 @@
     (ratio (number-pair-to-core (number-to-core (numerator number))
 				(number-to-core (denominator number))
 				vm:ratio-type))
+    #+complex-float
+    ((complex single-float) (complex-single-float-to-core number))
+    #+complex-float
+    ((complex double-float) (complex-double-float-to-core number))
     (complex (number-pair-to-core (number-to-core (realpart number))
 				  (number-to-core (imagpart number))
 				  vm:complex-type))
@@ -1294,6 +1338,8 @@
 (cold-number fop-small-integer)
 (cold-number fop-word-integer)
 (cold-number fop-byte-integer)
+#+complex-float (cold-number fop-complex-single-float)
+#+complex-float (cold-number fop-complex-double-float)
 
 (define-cold-fop (fop-ratio)
   (let ((den (pop-stack)))

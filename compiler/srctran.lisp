@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.59 1997/10/09 21:21:41 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/srctran.lisp,v 1.60 1997/11/01 22:58:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -219,12 +219,14 @@
 	 (%denominator ,n-num)
 	 1)))
 ;;;
+#-complex-float
 (def-source-transform realpart (num)
   (once-only ((n-num num))
     `(if (complexp ,n-num)
 	 (%realpart ,n-num)
 	 ,n-num)))
 ;;;
+#-complex-float
 (def-source-transform imagpart (num)
   (once-only ((n-num num))
     `(cond ((complexp ,n-num)
@@ -233,6 +235,34 @@
 	    (float 0 ,n-num))
 	   (t
 	    0))))
+;;;
+#+complex-float
+(def-source-transform realpart (num)
+  (once-only ((n-num num))
+    `(cond
+      ((kernel:complex-double-float-p ,n-num)
+       (vm::complex-double-float-real ,n-num))
+      ((kernel:complex-single-float-p ,n-num)
+       (vm::complex-single-float-real ,n-num))
+      ((complexp ,n-num)
+       (kernel:%realpart ,n-num))
+      (t
+       ,n-num))))
+;;;
+#+complex-float
+(def-source-transform imagpart (num)
+  (once-only ((n-num num))
+    `(cond
+      ((kernel:complex-double-float-p ,n-num)
+       (vm::complex-double-float-imag ,n-num))
+      ((kernel:complex-single-float-p ,n-num)
+       (vm::complex-single-float-imag ,n-num))
+      ((complexp ,n-num)
+       (kernel:%imagpart ,n-num))
+      ((floatp ,n-num)
+       (float 0 ,n-num))
+      (t
+       0))))
 
 
 ;;;; Interval arithmetic for computing bounds

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.23 1997/09/08 00:17:42 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/irrat.lisp,v 1.24 1997/11/01 22:58:14 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -292,7 +292,7 @@
 				    (let ((y*pi (* y pi)))
 				      (declare (double-float y*pi))
 				      (return-from real-expt
-				        (kernel::%make-complex
+				        (complex
 					 (coerce (%cos y*pi) rtype)
 					 (coerce (%sin y*pi) rtype)))))
 				   ((= yisint 1)
@@ -314,7 +314,7 @@
 			       (t ; Non-integer
 				(let ((y*pi (* y pi)))
 				  (declare (double-float y*pi))
-				  (kernel::%make-complex
+				  (complex
 				   (coerce (* pow (%cos y*pi)) rtype)
 				   (coerce (* pow (%sin y*pi)) rtype)))))))))))))
       (declare (inline real-expt))

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.5 1997/04/01 19:24:01 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/interr.lisp,v 1.6 1997/11/01 22:58:31 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -153,8 +153,20 @@
    "Object is not of type (SIMPLE-ARRAY SINGLE-FLOAT (*)).")
   (object-not-simple-array-double-float
    "Object is not of type (SIMPLE-ARRAY DOUBLE-FLOAT (*)).")
+  #+complex-float
+  (object-not-simple-array-complex-single-float
+   "Object is not of type (SIMPLE-ARRAY (COMPLEX SINGLE-FLOAT) (*)).")
+  #+complex-float
+  (object-not-simple-array-complex-double-float
+   "Object is not of type (SIMPLE-ARRAY (COMPLEX DOUBLE-FLOAT) (*)).")
   (object-not-complex
    "Object is not of type COMPLEX.")
+  #+complex-float
+  (object-not-complex-single-float
+   "Object is not of type (COMPLEX SINGLE-FLOAT).")
+  #+complex-float
+  (object-not-complex-double-float
+   "Object is not of type (COMPLEX DOUBLE-FLOAT).")
   (object-not-weak-pointer
    "Object is not a WEAK-POINTER.")
   (object-not-instance

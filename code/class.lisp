@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.36 1997/04/09 17:49:38 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/class.lisp,v 1.37 1997/11/01 22:58:09 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -650,6 +650,22 @@
 	   :inherits (vector simple-array array sequence generic-vector
 		      generic-array mutable-sequence mutable-collection
 		      generic-sequence collection))
+	  #+complex-float
+	  (simple-array-complex-single-float
+	   :translation (simple-array (complex single-float) (*))
+	   :codes (#.vm:simple-array-complex-single-float-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
+	  #+complex-float
+	  (simple-array-complex-double-float
+	   :translation (simple-array (complex double-float) (*))
+	   :codes (#.vm:simple-array-complex-double-float-type)
+	   :direct-superclasses (vector simple-array)
+	   :inherits (vector simple-array array sequence generic-vector
+		      generic-array mutable-sequence mutable-collection
+		      generic-sequence collection))
 	  (generic-string
 	   :state :read-only
 	   :inherits (mutable-sequence mutable-collection generic-sequence
@@ -671,6 +687,16 @@
 	  (number :translation number :inherits (generic-number))
 	  (complex :translation complex :inherits (number generic-number)
 		   :codes (#.vm:complex-type))
+	  #+complex-float
+	  (complex-single-float
+	   :translation (complex single-float)
+	   :inherits (complex number generic-number)
+	   :codes (#.vm:complex-single-float-type))
+	  #+complex-float
+	  (complex-double-float
+	   :translation (complex double-float)
+	   :inherits (complex number generic-number)
+	   :codes (#.vm:complex-double-float-type))
 	  (real :translation real :inherits (number generic-number))
 	  (float :translation float :inherits (real number generic-number))
 	  (single-float
