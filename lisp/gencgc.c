@@ -7,7 +7,7 @@
  *
  * Douglas Crosher, 1996, 1997, 1998, 1999.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.33 2003/08/22 13:20:03 toy Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/gencgc.c,v 1.34 2003/08/27 16:00:35 toy Exp $
  *
  */
 
@@ -3509,19 +3509,19 @@ scav_hash_vector (lispobj *where, lispobj object)
    * on Sparc/gencgc.  I (RLT) don't know why that is.  So turn it off
    * for now.  I leave these printfs here so I can see it happening,
    * just in case.
+   *
+   * Some checks using an *after-gc-hooks* to check hash tables
+   * indicates that the invariant we're testing is actually still
+   * true.  It appears that it just happens not to be true when we're
+   * scavenging the hash vector.  I don't know why.
    */
-#ifdef sparc
+#if 0 && defined(sparc)
   if (where != (lispobj *) PTR (hash_table->table))
     {
       fprintf(stderr, "Hash table invariant failed during scavenging!\n");
       fprintf(stderr, " *** where = %lx\n", where);
       fprintf(stderr, " *** hash_table = %lx\n", hash_table);
       fprintf(stderr, " *** hash_table->table = %lx\n", PTR(hash_table->table));
-#if 0
-      reset_printer();
-      print(object);
-      abort();
-#endif
     }
 #endif  
 
