@@ -7,7 +7,7 @@
 ;;; Scott Fahlman (FAHLMAN@CMUC). 
 ;;; **********************************************************************
 ;;;
-;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.17 1990/06/11 01:18:06 wlott Exp $
+;;; $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/alieneval.lisp,v 1.1.1.18 1990/06/11 02:25:52 wlott Exp $
 ;;;
 ;;;    This file contains any the part of the Alien implementation that
 ;;; is not part of the compiler.
@@ -574,7 +574,7 @@
 				   (- (- 32 low-bits))))))
 	  (if (and signed (logbitp value (1- size)))
 	      (logior value (ash -1 size))
-	      value))))))
+	      value)))))))
 
 
 #+new-compiler
