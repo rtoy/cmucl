@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.21 1992/02/16 15:56:49 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/hemlock/rompsite.lisp,v 1.1.1.22 1992/02/16 16:50:19 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -886,26 +886,23 @@
   (cdr (assoc :termcap *environment-list* :test #'eq)))
 
 
-
-(defvar *editor-buffer* (make-string 256))
-
 ;;; GET-EDITOR-TTY-INPUT reads from stream's Unix file descriptor queuing events
 ;;; in the stream's queue.
 ;;;
 (defun get-editor-tty-input (fd)
-  (let* ((buf *editor-buffer*)
-	 (len (unix:unix-read fd buf 256))
-	 (i 0))
-    (declare (simple-string buf)
-	     (type (or null fixnum) len)
-	     (fixnum i))
-    (unless len
-      (error "Problem with tty input: ~S" (unix:get-unix-error-msg)))
-    (loop
-      (when (>= i len) (return t))
-      (q-event *real-editor-input*
-	       (ext:char-key-event (schar buf i)))
-      (incf i))))
+  (alien:with-alien ((buf (alien:array c-call:char 256)))
+    (multiple-value-bind
+	(len errno)
+	(unix:unix-read fd
+			(alien:alien-sap buf)
+			(alien:alien-size buf :bytes))
+      (type (or null fixnum) len)
+      (unless len
+	(error "Problem with tty input: ~S"
+	       (unix:get-unix-error-msg errno)))
+      (dotimes (i len t)
+	(q-event *real-editor-input*
+		 (ext:char-key-event (code-char (alien:deref buf i))))))))
 
 (defun editor-tty-listen (stream)
   (alien:with-alien ((nc c-call:int))
