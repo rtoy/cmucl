@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.65 1998/01/26 15:54:20 pw Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/ir2tran.lisp,v 1.66 1998/03/04 14:53:24 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -1140,17 +1140,13 @@
   (let ((start-label (entry-info-offset (leaf-info fun)))
 	(env (environment-info (node-environment node))))
     (let ((ef (functional-entry-function fun)))
-      (if (and (optional-dispatch-p ef)
-	       (optional-dispatch-more-entry ef))
-	  ;; Special case the xep-allocate-frame + copy-more-arg case.
-	  (progn 
-	    (vop xep-allocate-frame node block start-label
-		 #+(or x86 sparc alpha) t)
-	    (vop copy-more-arg node block (optional-dispatch-max-args ef)))
-	;; No more args, so normal entry.
-	(vop xep-allocate-frame node block start-label
-	     #+(or x86 sparc alpha) nil))
-      
+      (cond ((and (optional-dispatch-p ef) (optional-dispatch-more-entry ef))
+	     ;; Special case the xep-allocate-frame + copy-more-arg case.
+	     (vop xep-allocate-frame node block start-label t)
+	     (vop copy-more-arg node block (optional-dispatch-max-args ef)))
+	    (t
+	     ;; No more args, so normal entry.
+	     (vop xep-allocate-frame node block start-label nil)))
       (if (ir2-environment-environment env)
 	  (let ((closure
 		 (make-normal-tn (backend-any-primitive-type *backend*))))
@@ -1609,8 +1605,7 @@
 	 (2cont (continuation-info cont))
 	 (2info (nlx-info-info info))
 	 (top-loc (ir2-nlx-info-save-sp 2info))
-	 (start-loc #-(or x86 sparc alpha) (make-old-fp-passing-location t)
-		    #+(or x86 sparc alpha) (make-nlx-entry-argument-start-location))
+	 (start-loc (make-nlx-entry-argument-start-location))
 	 (count-loc (make-argument-count-location))
 	 (target (ir2-nlx-info-target 2info)))
 

@@ -5,7 +5,7 @@
 ;;; Carnegie Mellon University, and has been placed in the public domain.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.3 1994/10/31 04:42:45 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/hppa/nlx.lisp,v 1.4 1998/03/04 14:53:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -25,6 +25,13 @@
    (make-representation-tn *fixnum-primitive-type* immediate-arg-scn)
    env))
 
+;;; Make-NLX-Entry-Argument-Start-Location  --  Interface
+;;;
+;;;    Make a TN for the argument count passing location for a
+;;; non-local entry.
+;;;
+(def-vm-support-routine make-nlx-entry-argument-start-location ()
+  (make-wired-tn *fixnum-primitive-type* immediate-arg-scn ocfp-offset))
 
 
 ;;; Save and restore dynamic environment.
