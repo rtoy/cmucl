@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.4 1992/02/25 19:45:23 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/sparc/sap.lisp,v 1.5 1992/04/27 20:04:06 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -124,17 +124,24 @@
 (define-vop (pointer+)
   (:translate sap+)
   (:args (ptr :scs (sap-reg))
-	 (offset :scs (signed-reg immediate)))
+	 (offset :scs (signed-reg)))
   (:arg-types system-area-pointer signed-num)
   (:results (res :scs (sap-reg)))
   (:result-types system-area-pointer)
   (:policy :fast-safe)
+  (:generator 2
+    (inst add res ptr offset)))
+
+(define-vop (pointer+-c)
+  (:translate sap+)
+  (:args (ptr :scs (sap-reg)))
+  (:info offset)
+  (:arg-types system-area-pointer (:constant (signed-byte 13)))
+  (:results (res :scs (sap-reg)))
+  (:result-types system-area-pointer)
+  (:policy :fast-safe)
   (:generator 1
-    (sc-case offset
-      (signed-reg
-       (inst add res ptr offset))
-      (immediate
-       (inst add res ptr (tn-value offset))))))
+    (inst add res ptr offset)))
 
 (define-vop (pointer-)
   (:translate sap-)
