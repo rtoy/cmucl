@@ -1,4 +1,4 @@
-;;; -*- Mode: LISP; Syntax: Common-lisp; Base: 10; Lowercase: T;  -*-
+;;; -*- Mode: Lisp; Package: Xlib; Log: clx.log -*-
 
 ;;;
 ;;;			 TEXAS INSTRUMENTS INCORPORATED
@@ -40,8 +40,13 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (setf *readtable* si:*ansi-common-lisp-readtable*))
 
-#-clx-ansi-common-lisp 
+#-(or clx-ansi-common-lisp cmu)
 (lisp:in-package :user)
+
+#+cmu
+(lisp:in-package "XLIB")
+#+cmu
+(export 'load-clx)
 
 #+clx-ansi-common-lisp
 (common-lisp:in-package :common-lisp-user)
@@ -311,7 +316,7 @@
 ;;;   lucid2.0/hp9000s300
 ;;;     must uudecode the file make-sequence-patch.uu
 
-#+(or lucid kcl ibcl)
+#+(or lucid kcl ibcl cmu)
 (defun clx-foreign-files (binary-path)
 
   #+(and lucid (not lcl3.0) (or mc68000 mc68020))
@@ -326,6 +331,14 @@
   (lucid::load-foreign-files
     (list (namestring (merge-pathnames "socket.o" binary-path)))
     '("-lc"))
+
+  #+cmu
+  (declare (ignore binary-path))
+  #+cmu
+  (alien:def-alien-routine ("connect_to_server" xlib::connect-to-server)
+			   c-call:int
+    (host c-call:c-string)
+    (port c-call:int))
 
   #+(or kcl ibcl)
   (progn
@@ -504,7 +517,7 @@
 	       (load binary))))
 
       (load-binary "package")
-      #+(or lucid kcl ibcl) (clx-foreign-files binary-path)
+      #+(or lucid kcl ibcl cmu) (clx-foreign-files binary-path)
       #+excl (load-binary "excldep")
       (load-binary "depdefs")
       (load-binary "clx")

@@ -519,7 +519,7 @@
 	  (index 0 (index+ index 1)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (read-card8 index)))))
 
 (defun read-list-card8-with-transform (reply-buffer nitems data transform start index)
@@ -537,7 +537,7 @@
 	  (index 0 (index+ index 1)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (funcall transform (read-card8 index))))))
 
 #-lispm
@@ -668,7 +668,7 @@
 	  (index 0 (index+ index 2)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (read-card16 index)))))
 
 (defun read-list-card16-with-transform (reply-buffer nitems data transform start index)
@@ -686,7 +686,7 @@
 	  (index 0 (index+ index 2)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (funcall transform (read-card16 index))))))
 
 #-lispm
@@ -827,7 +827,7 @@
 	  (index 0 (index+ index 4)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (read-card32 index)))))
 
 (defun read-list-card32-with-transform (reply-buffer nitems data transform start index)
@@ -845,7 +845,7 @@
 	  (index 0 (index+ index 4)))
 	 ((index-zerop j))
       (declare (type array-index j index)
-	       (type cons lst))
+	       (list lst))
       (setf (car lst) (funcall transform (read-card32 index))))))
 
 #-lispm

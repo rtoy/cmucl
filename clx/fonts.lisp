@@ -45,7 +45,7 @@
 
 ;; Note: char16-<metric> accessors could be defined to accept two-byte indexes.
 
-(deftype char-info-vec () '(simple-array int16 (6)))
+(deftype char-info-vec () '(simple-array int16 (*)))
 
 (macrolet ((def-char-info-accessors (useless-name &body fields)
 	    `(within-definition (,useless-name def-char-info-accessors)

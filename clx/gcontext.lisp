@@ -553,7 +553,7 @@
 	   (declare (type gcontext ,gc)
 		    (type gcontext-state ,saved-state)
 		    (type xgcmask ,temp-mask)
-		    (type (or null resource-id) ,temp-gc))
+		    (type (or null gcontext) ,temp-gc))
 	   (with-gcontext-bindings (,gc ,saved-state
 					,(append indexes extension-indexes)
 				    ,ts-index ,temp-mask ,temp-gc)

@@ -305,7 +305,7 @@
   (error-handler 'default-error-handler)	; Error handler function
   (close-down-mode :destroy)  			; Close down mode saved by Set-Close-Down-Mode
   (authorization-name "" :type string)
-  (authorization-data "" :type string)
+  (authorization-data "" :type (or (array (unsigned-byte 8)) string))
   (last-width nil :type (or null card29))	; Accumulated width of last string
   (keysym-mapping nil				; Keysym mapping cached from server
 		  :type (or null (array * (* *))))

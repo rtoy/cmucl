@@ -505,7 +505,9 @@
 				    :start i :end end))
 	       (when (string-equal string "#INCLUDE" :start1 i :end1 term) 
 		 (let ((path (merge-pathnames
-			       (subseq string (1+ term)) (truename stream))))
+			      (string-trim '(#\tab #\space #\")
+					   (subseq string (1+ term)))
+			      (truename stream))))
 		   (read-resources database path
 				   :key key :test test :test-not test-not))))
 	      (otherwise

@@ -387,7 +387,11 @@
 ;;; Pseudo-class mechanism.
 
 (eval-when (eval compile load)
-(defvar *def-clx-class-use-defclass* #+Genera t #-Genera nil
+(defvar *def-clx-class-use-defclass*
+  #+Genera t
+  #+(and cmu pcl) '(XLIB:DRAWABLE XLIB:WINDOW XLIB:PIXMAP)
+  #+(and cmu (not pcl)) nil
+  #-(or Genera cmu) nil
   "Controls whether DEF-CLX-CLASS uses DEFCLASS.  
    If it is a list, it is interpreted by DEF-CLX-CLASS to be a list of type names
    for which DEFCLASS should be used. 
