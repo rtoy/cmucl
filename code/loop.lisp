@@ -49,7 +49,7 @@
 
 #+cmu
 (ext:file-comment
- "$Header $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/loop.lisp,v 1.6 1998/02/03 19:15:56 dtc Exp $")
 
 ;;;; LOOP Iteration Macro
 
