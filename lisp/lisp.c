@@ -1,7 +1,7 @@
 /*
  * main() entry point for a stand alone lisp image.
  *
- * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.31 2003/04/28 23:07:38 cracauer Exp $
+ * $Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/lisp/lisp.c,v 1.32 2003/07/28 18:52:15 toy Exp $
  *
  */
 
@@ -37,6 +37,10 @@
 #ifdef irix
 #include <string.h>
 #include "interr.h"
+#endif
+
+#ifdef sparc
+#include <string.h>
 #endif
 
 
