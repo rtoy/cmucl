@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.28 1992/05/21 22:48:47 wlott Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/debug-dump.lisp,v 1.29 1992/05/21 23:16:29 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -195,7 +195,7 @@
 (defun dump-block-locations (block locations tlf-num var-locs)
   (declare (type cblock block) (list locations))
   (if (and locations
-	   (eq (location-kind (first locations))
+	   (eq (location-info-kind (first locations))
 	       :non-local-entry))
       (write-var-integer (length locations) *byte-buffer*)
       (let ((2block (block-info block)))
