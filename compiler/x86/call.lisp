@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.19 2003/08/05 14:04:51 gerd Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/call.lisp,v 1.20 2004/10/04 02:39:18 rtoy Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -208,9 +208,9 @@
   (:info start-lab copy-more-arg-follows)
   (:vop-var vop)
   (:generator 1
-    ;; Make sure the function is aligned, and drop a label pointing to this
-    ;; function header.
-    (align lowtag-bits)
+    ;; Make sure the function is aligned (using NOPs), and drop a
+    ;; label pointing to this function header.
+    (align lowtag-bits #x90)
     (trace-table-entry trace-table-function-prologue)
     (emit-label start-lab)
     ;; Skip space for the function header.
