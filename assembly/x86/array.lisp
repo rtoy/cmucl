@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.4 1997/11/05 14:59:40 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/array.lisp,v 1.5 1997/11/19 02:57:17 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -37,10 +37,11 @@
 		      (* vector-data-offset word-bytes)))
   (inst add result words)
   (inst and result (lognot vm:lowtag-mask))
-  (allocation result result)
-  (inst lea result (make-ea :byte :base result :disp other-pointer-type))
-  (storew type result 0 other-pointer-type)
-  (storew length result vector-length-slot other-pointer-type)
+  (pseudo-atomic
+   (allocation result result)
+   (inst lea result (make-ea :byte :base result :disp other-pointer-type))
+   (storew type result 0 other-pointer-type)
+   (storew length result vector-length-slot other-pointer-type))
   (inst ret))
 
 

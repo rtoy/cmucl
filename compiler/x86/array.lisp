@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.8 1997/11/05 14:59:52 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/array.lisp,v 1.9 1997/11/19 03:00:33 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -45,9 +45,10 @@
     (inst shl header type-bits)
     (inst or  header type)
     (inst shr header 2)
-    (allocation result bytes node)
-    (inst lea result (make-ea :dword :base result :disp other-pointer-type))
-    (storew header result 0 other-pointer-type)))
+    (pseudo-atomic
+     (allocation result bytes node)
+     (inst lea result (make-ea :dword :base result :disp other-pointer-type))
+     (storew header result 0 other-pointer-type))))
 
 
 ;;;; Additional accessors and setters for the array header.

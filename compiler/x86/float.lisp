@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.15 1997/11/16 14:00:05 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/float.lisp,v 1.16 1997/11/19 03:00:36 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -300,9 +300,9 @@
   (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:single-float-type vm:single-float-size node)
-     (with-tn@fp-top(x)
-       (inst fst (ea-for-sf-desc y)))))
+     (with-fixed-allocation (y vm:single-float-type vm:single-float-size node)
+       (with-tn@fp-top(x)
+	 (inst fst (ea-for-sf-desc y))))))
 (define-move-vop move-from-single :move
   (single-reg) (descriptor-reg))
 
@@ -322,9 +322,9 @@
   (:node-var node)
   (:note "float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:double-float-type vm:double-float-size node)
-     (with-tn@fp-top(x)
-       (inst fstd (ea-for-df-desc y)))))
+     (with-fixed-allocation (y vm:double-float-type vm:double-float-size node)
+       (with-tn@fp-top(x)
+	 (inst fstd (ea-for-df-desc y))))))
 (define-move-vop move-from-double :move
   (double-reg) (descriptor-reg))
 
@@ -369,16 +369,18 @@
   (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:complex-single-float-type
-		       vm:complex-single-float-size node)
-     (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				    :offset (tn-offset x))))
-       (with-tn@fp-top(real-tn)
-	 (inst fst (ea-for-csf-real-desc y))))
-     (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'single-reg)
-				    :offset (1+ (tn-offset x)))))
-       (with-tn@fp-top(imag-tn)
-	 (inst fst (ea-for-csf-imag-desc y))))))
+     (with-fixed-allocation (y vm:complex-single-float-type
+			       vm:complex-single-float-size node)
+       (let ((real-tn (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg)
+				      :offset (tn-offset x))))
+	 (with-tn@fp-top(real-tn)
+	   (inst fst (ea-for-csf-real-desc y))))
+       (let ((imag-tn (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'single-reg)
+				      :offset (1+ (tn-offset x)))))
+	 (with-tn@fp-top(imag-tn)
+	   (inst fst (ea-for-csf-imag-desc y)))))))
 (define-move-vop move-from-complex-single :move
   (complex-single-reg) (descriptor-reg))
 
@@ -388,16 +390,18 @@
   (:node-var node)
   (:note "complex float to pointer coercion")
   (:generator 13
-     (fixed-allocation y vm:complex-double-float-type
-		       vm:complex-double-float-size node)
-     (let ((real-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				    :offset (tn-offset x))))
-       (with-tn@fp-top(real-tn)
-	 (inst fstd (ea-for-cdf-real-desc y))))
-     (let ((imag-tn (make-random-tn :kind :normal :sc (sc-or-lose 'double-reg)
-				    :offset (1+ (tn-offset x)))))
-       (with-tn@fp-top(imag-tn)
-	 (inst fstd (ea-for-cdf-imag-desc y))))))
+     (with-fixed-allocation (y vm:complex-double-float-type
+			       vm:complex-double-float-size node)
+       (let ((real-tn (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'double-reg)
+				      :offset (tn-offset x))))
+	 (with-tn@fp-top(real-tn)
+	   (inst fstd (ea-for-cdf-real-desc y))))
+       (let ((imag-tn (make-random-tn :kind :normal
+				      :sc (sc-or-lose 'double-reg)
+				      :offset (1+ (tn-offset x)))))
+	 (with-tn@fp-top(imag-tn)
+	   (inst fstd (ea-for-cdf-imag-desc y)))))))
 (define-move-vop move-from-complex-double :move
   (complex-double-reg) (descriptor-reg))
 
@@ -1363,22 +1367,23 @@
 		   '((note-this-location vop :internal-error)
 		     ;; Catch any pending FPE exceptions.
 		     (inst wait)))
-		;; normal mode (for now) is "round to best"
-		(with-tn@fp-top(x)
-		  ,@(unless round-p
-		    '((inst fnstcw scw)	; save current control word
-		      (move rcw scw)	; into 16-bit register
-		      (inst or rcw (ash #b11 10)) ; CHOP
-		      (move stack-temp rcw)
-		      (inst fldcw stack-temp)))
-		  (sc-case y
-		    (signed-stack
-		     (inst fist y))
-		    (signed-reg
-		     (inst fist stack-temp)
-		     (inst mov y stack-temp)))
-		  ,@(unless round-p
-		     '((inst fldcw scw))))))))
+		(,(if round-p 'progn 'pseudo-atomic)
+		 ;; normal mode (for now) is "round to best"
+		 (with-tn@fp-top(x)
+		   ,@(unless round-p
+		     '((inst fnstcw scw)	; save current control word
+		       (move rcw scw)	; into 16-bit register
+		       (inst or rcw (ash #b11 10)) ; CHOP
+		       (move stack-temp rcw)
+		       (inst fldcw stack-temp)))
+		   (sc-case y
+		     (signed-stack
+		      (inst fist y))
+		     (signed-reg
+		      (inst fist stack-temp)
+		      (inst mov y stack-temp)))
+		   ,@(unless round-p
+		      '((inst fldcw scw)))))))))
   (frob %unary-truncate single-reg single-float nil)
   (frob %unary-truncate double-reg double-float nil)
   (frob %unary-round single-reg single-float t)

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.3 1997/11/04 09:10:35 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/assembly/x86/alloc.lisp,v 1.4 1997/11/19 02:57:16 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -35,8 +35,8 @@
   (inst ret)
   BIGNUM
 
-  (fixed-allocation ebx bignum-type (+ bignum-digits-offset 1))
-  (storew eax ebx bignum-digits-offset other-pointer-type)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
+    (storew eax ebx bignum-digits-offset other-pointer-type))
 
   (inst ret))
 
@@ -64,11 +64,11 @@
   (inst mov ebx eax)
 
   ;; Two word bignum
-  (fixed-allocation ebx bignum-type (+ bignum-digits-offset 2))
-  (storew eax ebx bignum-digits-offset other-pointer-type)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 2))
+    (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret)
   
   ONE-WORD-BIGNUM
-  (fixed-allocation ebx bignum-type (+ bignum-digits-offset 1))
-    (storew eax ebx bignum-digits-offset other-pointer-type)
+  (with-fixed-allocation (ebx bignum-type (+ bignum-digits-offset 1))
+    (storew eax ebx bignum-digits-offset other-pointer-type))
   (inst ret))

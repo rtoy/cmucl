@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.5 1997/11/05 14:59:59 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/sap.lisp,v 1.6 1997/11/19 03:00:39 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -44,8 +44,8 @@
   (:note "SAP to pointer coercion") 
   (:node-var node)
   (:generator 20
-    (fixed-allocation res sap-type sap-size node)
-    (storew sap res sap-pointer-slot other-pointer-type)))
+    (with-fixed-allocation (res sap-type sap-size node)
+      (storew sap res sap-pointer-slot other-pointer-type))))
 	   
 ;;;
 (define-move-vop move-from-sap :move

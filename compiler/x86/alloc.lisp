@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.5 1997/11/18 10:53:17 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/alloc.lisp,v 1.6 1997/11/19 03:00:32 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -50,24 +50,26 @@
 			     temp))))
 		     (storew reg ,list ,slot vm:list-pointer-type))))
 	     (let ((cons-cells (if star (1- num) num)))
-	       (allocation res (* (pad-data-block cons-size) cons-cells) node)
-	       (inst lea res (make-ea :byte :base res :disp list-pointer-type))
-	       (move ptr res)
-	       (dotimes (i (1- cons-cells))
-		 (store-car (tn-ref-tn things) ptr)
-		 (setf things (tn-ref-across things))
-		 (inst add ptr (pad-data-block cons-size))
-		 (storew ptr ptr (- cons-cdr-slot cons-size)
-			 list-pointer-type))
-	       (store-car (tn-ref-tn things) ptr)
-	       (cond (star
-		      (setf things (tn-ref-across things))
-		      (store-car (tn-ref-tn things) ptr cons-cdr-slot))
-		     (t
-		      (storew nil-value ptr cons-cdr-slot
-			      list-pointer-type)))
-	       (assert (null (tn-ref-across things)))))
-	   (move result res)))))
+	       (pseudo-atomic
+		(allocation res (* (pad-data-block cons-size) cons-cells) node)
+		(inst lea res
+		      (make-ea :byte :base res :disp list-pointer-type))
+		(move ptr res)
+		(dotimes (i (1- cons-cells))
+		  (store-car (tn-ref-tn things) ptr)
+		  (setf things (tn-ref-across things))
+		  (inst add ptr (pad-data-block cons-size))
+		  (storew ptr ptr (- cons-cdr-slot cons-size)
+			  list-pointer-type))
+		(store-car (tn-ref-tn things) ptr)
+		(cond (star
+		       (setf things (tn-ref-across things))
+		       (store-car (tn-ref-tn things) ptr cons-cdr-slot))
+		      (t
+		       (storew nil-value ptr cons-cdr-slot
+			       list-pointer-type)))
+		(assert (null (tn-ref-across things)))))
+	     (move result res))))))
 
 (define-vop (list list-or-list*)
   (:variant nil))
@@ -93,19 +95,19 @@
     (inst shr unboxed word-shift)
     (inst add unboxed lowtag-mask)
     (inst and unboxed (lognot lowtag-mask))
-    ;; now loading code into static space cause it can't move
-    (load-symbol-value temp lisp::*static-space-free-pointer*)
-    (inst lea result (make-ea :byte :base temp :disp other-pointer-type))
-    (inst add temp boxed)
-    (inst add temp unboxed)
-    (store-symbol-value temp lisp::*static-space-free-pointer*)
-    (inst shl boxed (- type-bits word-shift))
-    (inst or boxed code-header-type)
-    (storew boxed result 0 other-pointer-type)
-    (storew unboxed result code-code-size-slot other-pointer-type)
-    ;; (move temp nil-value)
-    (inst mov temp nil-value)
-    (storew temp result code-entry-points-slot other-pointer-type)
+    (pseudo-atomic
+     ;; now loading code into static space cause it can't move
+     (load-symbol-value temp lisp::*static-space-free-pointer*)
+     (inst lea result (make-ea :byte :base temp :disp other-pointer-type))
+     (inst add temp boxed)
+     (inst add temp unboxed)
+     (store-symbol-value temp lisp::*static-space-free-pointer*)
+     (inst shl boxed (- type-bits word-shift))
+     (inst or boxed code-header-type)
+     (storew boxed result 0 other-pointer-type)
+     (storew unboxed result code-code-size-slot other-pointer-type)
+     (inst mov temp nil-value)
+     (storew temp result code-entry-points-slot other-pointer-type))
     (storew temp result code-debug-info-slot other-pointer-type)))
 
 
@@ -126,13 +128,14 @@
     (inst and unboxed (lognot lowtag-mask))
     (inst mov result boxed)
     (inst add result unboxed)
-    (allocation result result node)
-    (inst lea result (make-ea :byte :base result :disp other-pointer-type))
-    (inst shl boxed (- type-bits word-shift))
-    (inst or boxed code-header-type)
-    (storew boxed result 0 other-pointer-type)
-    (storew unboxed result code-code-size-slot other-pointer-type)
-    (storew nil-value result code-entry-points-slot other-pointer-type)
+    (pseudo-atomic
+     (allocation result result node)
+     (inst lea result (make-ea :byte :base result :disp other-pointer-type))
+     (inst shl boxed (- type-bits word-shift))
+     (inst or boxed code-header-type)
+     (storew boxed result 0 other-pointer-type)
+     (storew unboxed result code-code-size-slot other-pointer-type)
+     (storew nil-value result code-entry-points-slot other-pointer-type))
     (storew nil-value result code-debug-info-slot other-pointer-type)))
 
 
@@ -143,11 +146,11 @@
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
   (:generator 37
-    (fixed-allocation result fdefn-type fdefn-size node)
-    (storew name result fdefn-name-slot other-pointer-type)
-    (storew nil-value result fdefn-function-slot other-pointer-type)
-    (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign) result
-	    fdefn-raw-addr-slot other-pointer-type)))
+    (with-fixed-allocation (result fdefn-type fdefn-size node)
+      (storew name result fdefn-name-slot other-pointer-type)
+      (storew nil-value result fdefn-function-slot other-pointer-type)
+      (storew (make-fixup (extern-alien-name "undefined_tramp") :foreign)
+	      result fdefn-raw-addr-slot other-pointer-type))))
 
 
 (define-vop (make-closure)
@@ -157,13 +160,15 @@
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 10
-   (let ((size (+ length closure-info-offset)))
-     (allocation result (pad-data-block size) node)
-     (inst lea result (make-ea :byte :base result :disp function-pointer-type))
-     (storew (logior (ash (1- size) type-bits) closure-header-type)
-	     result 0 function-pointer-type))
-   (loadw temp function closure-function-slot function-pointer-type)
-   (storew temp result closure-function-slot function-pointer-type)))
+   (pseudo-atomic
+    (let ((size (+ length closure-info-offset)))
+      (allocation result (pad-data-block size) node)
+      (inst lea result
+	    (make-ea :byte :base result :disp function-pointer-type))
+      (storew (logior (ash (1- size) type-bits) closure-header-type)
+	      result 0 function-pointer-type))
+    (loadw temp function closure-function-slot function-pointer-type)
+    (storew temp result closure-function-slot function-pointer-type))))
 
 ;;; The compiler likes to be able to directly make value cells.
 ;;; 
@@ -172,7 +177,8 @@
   (:results (result :scs (descriptor-reg) :from :eval))
   (:node-var node)
   (:generator 10
-    (fixed-allocation result value-cell-header-type value-cell-size node)
+    (with-fixed-allocation
+	(result value-cell-header-type value-cell-size node))
     (storew value result value-cell-value-slot other-pointer-type)))
 
 
@@ -192,10 +198,11 @@
   (:results (result :scs (descriptor-reg)))
   (:node-var node)
   (:generator 50
-    (allocation result (pad-data-block words) node)
-    (inst lea result (make-ea :byte :base result :disp lowtag))
-    (when type
-      (storew (logior (ash (1- words) type-bits) type) result 0 lowtag))))
+    (pseudo-atomic
+     (allocation result (pad-data-block words) node)
+     (inst lea result (make-ea :byte :base result :disp lowtag))
+     (when type
+       (storew (logior (ash (1- words) type-bits) type) result 0 lowtag)))))
 
 (define-vop (var-alloc)
   (:args (extra :scs (any-reg)))
@@ -215,9 +222,10 @@
     (inst lea header			; (w-1 << 8) | type
 	  (make-ea :dword :base header :disp (+ (ash -2 type-bits) type)))
     (inst and bytes (lognot lowtag-mask))
-    (allocation result bytes node)
-    (inst lea result (make-ea :byte :base result :disp lowtag))
-    (storew header result 0 lowtag)))
+    (pseudo-atomic
+     (allocation result bytes node)
+     (inst lea result (make-ea :byte :base result :disp lowtag))
+     (storew header result 0 lowtag))))
 
 
 
@@ -229,20 +237,20 @@
   (:results (result :scs (descriptor-reg) :from :argument))
   (:node-var node)
   (:generator 37
-    (fixed-allocation result symbol-header-type symbol-size node)
-    (storew name result symbol-name-slot other-pointer-type)
-    (storew unbound-marker-type result symbol-value-slot other-pointer-type)
-    ;; Setup a random hash value for the symbol.  Perhaps the object
-    ;; address could be used for even faster and smaller code!
-    (inst imul temp
-	  (make-fixup (extern-alien-name "fast_random_state") :foreign)
-	  1103515245)
-    (inst add temp 12345)
-    (inst mov (make-fixup (extern-alien-name "fast_random_state") :foreign)
-	  temp)
-    ;; Want a positive fixnum for the hash value, discard the LS bits.
-    (inst shr temp 1)
-    (inst and temp #xfffffffc)
-    (storew temp result symbol-hash-slot other-pointer-type)
-    (storew nil-value result symbol-plist-slot other-pointer-type)
-    (storew nil-value result symbol-package-slot other-pointer-type)))
+    (with-fixed-allocation (result symbol-header-type symbol-size node)
+      (storew name result symbol-name-slot other-pointer-type)
+      (storew unbound-marker-type result symbol-value-slot other-pointer-type)
+      ;; Setup a random hash value for the symbol.  Perhaps the object
+      ;; address could be used for even faster and smaller code!
+      (inst imul temp
+	    (make-fixup (extern-alien-name "fast_random_state") :foreign)
+	    1103515245)
+      (inst add temp 12345)
+      (inst mov (make-fixup (extern-alien-name "fast_random_state") :foreign)
+	    temp)
+      ;; Want a positive fixnum for the hash value, discard the LS bits.
+      (inst shr temp 1)
+      (inst and temp #xfffffffc)
+      (storew temp result symbol-hash-slot other-pointer-type)
+      (storew nil-value result symbol-plist-slot other-pointer-type)
+      (storew nil-value result symbol-package-slot other-pointer-type))))

@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
- "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.5 1997/11/18 10:53:23 dtc Exp $")
+ "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/x86/move.lisp,v 1.6 1997/11/19 03:00:38 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -314,8 +314,9 @@
 
        (assemble (*elsewhere*)
           (emit-label bignum)
-	  (fixed-allocation y bignum-type (+ bignum-digits-offset 1) node)
-	  (storew x y bignum-digits-offset other-pointer-type)
+	  (with-fixed-allocation
+	      (y bignum-type (+ bignum-digits-offset 1) node)
+	    (storew x y bignum-digits-offset other-pointer-type))
 	  (inst jmp done)))))
 ;;;
 (define-move-vop move-from-signed :move
@@ -379,10 +380,11 @@
 	 (inst mov y (logior (ash (1- (+ bignum-digits-offset 1)) vm:type-bits)
 			     bignum-type))
 	 (emit-label l1)
-	 (allocation alloc (pad-data-block (+ bignum-digits-offset 2)) node)
-	 (storew y alloc)
-	 (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
-	 (storew x y bignum-digits-offset other-pointer-type)
+	 (pseudo-atomic
+	  (allocation alloc (pad-data-block (+ bignum-digits-offset 2)) node)
+	  (storew y alloc)
+	  (inst lea y (make-ea :byte :base alloc :disp other-pointer-type))
+	  (storew x y bignum-digits-offset other-pointer-type))
 	 (inst jmp done)))))
 ;;;
 (define-move-vop move-from-unsigned :move
