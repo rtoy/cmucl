@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.31 1993/05/13 13:09:00 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/compiler/generic/objdef.lisp,v 1.32 1993/05/18 19:18:28 wlott Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -52,7 +52,7 @@
 (export '(%numerator %denominator %realpart %imagpart
 	  %code-code-size %code-entry-points %code-debug-info
 	  %function-self %function-next %function-name %function-arglist
-	  %function-type))
+	  %function-type %make-symbol symbol-hash))
 
 (in-package "VM")
 
@@ -337,20 +337,6 @@
 	 :ref-known (flushable)
 	 :init :arg))
 
-(define-primitive-object (symbol :lowtag other-pointer-type
-				 :header symbol-header-type
-				 :alloc-trans make-symbol)
-  (value :set-trans %set-symbol-value
-	 :init :unbound)
-  unused
-  (plist :ref-trans symbol-plist
-	 :set-trans %set-symbol-plist
-	 :init :null)
-  (name :ref-trans symbol-name :init :arg)
-  (package :ref-trans symbol-package
-	   :set-trans %set-symbol-package
-	   :init :null))
-
 (define-primitive-object (sap :lowtag other-pointer-type
 			      :header sap-type)
   (pointer :c-type "char *"))
@@ -431,3 +417,32 @@
   (storebuf-fill-pointer :c-type "lispobj **")
   (storebuf-end :c-type "lispobj **")
   (words-consed :c-type "unsigned long"))
+
+
+
+;;;; Symbols
+
+#+gengc
+(defknown %make-symbol (index simple-string) symbol
+  (flushable movable))
+
+#+gengc
+(defknown symbol-hash (symbol) index
+  (flushable movable))
+
+(define-primitive-object (symbol :lowtag other-pointer-type
+				 :header symbol-header-type
+				 :alloc-trans
+				 #-gengc make-symbol
+				 #+gengc %make-symbol)
+  (value :set-trans %set-symbol-value
+	 :init :unbound)
+  #-gengc unused
+  #+gengc (hash :init :arg)
+  (plist :ref-trans symbol-plist
+	 :set-trans %set-symbol-plist
+	 :init :null)
+  (name :ref-trans symbol-name :init :arg)
+  (package :ref-trans symbol-package
+	   :set-trans %set-symbol-package
+	   :init :null))
