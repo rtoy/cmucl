@@ -4,7 +4,7 @@
 ;;; the public domain, and is provided 'as is'.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.4 1997/09/10 04:23:21 dtc Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/pcl/cmucl-documentation.lisp,v 1.5 1997/09/16 17:12:13 dtc Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -107,7 +107,8 @@
 (defmethod (setf documentation) (new-value (x symbol) (doc-type (eql 'variable)))
   (setf (ext:info variable documentation x) new-value))
 
-;;; CMUCL random documentation.
+;;; CMUCL random documentation. Compiler-macro documentation is stored
+;;; as random-documentation and handled here.
 (defmethod documentation ((x symbol) (doc-type symbol))
   (cdr (assoc doc-type
 	      (values (ext:info random-documentation stuff x)))))
