@@ -1,3 +1,48 @@
+11/27/91 to 12/5/91
+
+Code:
+
+Almost all of the printing code has been rewritten/restructured to support
+all of the printing features added to the language.  Some highlights:
+
+    *PRINT-READABLY* is now supported.
+
+    *PRINT-CIRCLE* works irrespective of *PRINT-PRETTY*.
+
+    *PRINT-LEVEL* abbreviation now works automatically inside structure
+    printers.
+
+    XP has been replaced with a native pretty printer that is fully
+    integrated with the rest of the system.
+
+    The macros WITH-STANDARD-IO-SYNTAX and PRINT-UNREADABLE-OBJECT have
+    been added.
+
+    The FORMATTER macro has been written, and FORMAT extended to accept
+    a function instead of a control string.
+
+DATA-VECTOR-SET, the internal function responsible for doing the work of
+(SETF (AREF ...) ...), has been fixed to type-check the value.
+
+The FASL loader has been changed so that you can concatenate fasl files
+together and load the result.
+
+Added *READ-EVAL*, which when set to NIL causes #. to signal an error
+instead of evaluating the next form.
+
+
+Compiler:
+
+You can now (DECLARE (IGNORE #'FUN)) as per an ANSI cleanup.
+
+IGNORABLE, as in (DECLARE (IGNORABLE ...)) is now exported from the LISP
+package as ANSI adopted it.
+
+Fixed TYPES-INTERSECT to consider any supertype of T to definitely intersect
+with anything.
+
+
+
 11/25/19 to 11/27/91
 
 Code:
