@@ -7,7 +7,7 @@
 ;;; Scott Fahlman or slisp-group@cs.cmu.edu.
 ;;;
 (ext:file-comment
-  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.4 1993/03/01 20:02:31 ram Exp $")
+  "$Header: /Volumes/share2/src/cmucl/cvs2git/cvsroot/src/code/byte-interp.lisp,v 1.5 1993/05/11 13:47:41 ram Exp $")
 ;;;
 ;;; **********************************************************************
 ;;;
@@ -33,6 +33,63 @@
 (deftype return-pc ()
   `(integer ,(- max-pc) ,max-pc))
 
+
+;;;; Byte functions:
+
+(defstruct (byte-function
+	    (:print-function %print-byte-function))
+  ;;
+  ;; Debug name of this function.
+  (name nil)
+  ;;
+  ;; The component that this XEP is an entry point into.  NIL until
+  ;; LOAD or MAKE-CORE-BYTE-COMPONENT fills it in.  We also allow
+  ;; cons so that the dumper can stick in a unique cons cell to
+  ;; identify what component it is trying to dump.  What a hack.
+  (component nil :type (or null kernel:code-component cons)))
+
+(defstruct (simple-byte-function (:include byte-function))
+  ;;
+  ;; The number of arguments expected.
+  (num-args 0 :type (integer 0 #.call-arguments-limit))
+  ;;
+  ;; The start of the function.
+  (entry-point 0 :type index))
+
+(defstruct (hairy-byte-function (:include byte-function))
+  ;;
+  ;; The minimum and maximum number of args, ignoring &rest and &key.
+  (min-args 0 :type (integer 0 #.call-arguments-limit))
+  (max-args 0 :type (integer 0 #.call-arguments-limit))
+  ;;
+  ;; List of the entry points for min-args, min-args+1, ... max-args.
+  (entry-points nil :type list)
+  ;;
+  ;; The entry point to use when there are more than max-args.  Only filled
+  ;; in where okay.  In other words, only when &rest or &key is specified.
+  (more-args-entry-point nil :type (or null (unsigned-byte 24)))
+  ;;
+  ;; The number of ``more-arg'' args.
+  (num-more-args 0 :type (integer 0 #.call-arguments-limit))
+  ;;
+  ;; True if there is a rest-arg.
+  (rest-arg-p nil :type (member t nil))
+  ;;
+  ;; True if there are keywords.  Note: keywords might still be NIL because
+  ;; having &key with no keywords is valid and should result in
+  ;; allow-other-keys processing.  If :allow-others, then allow other keys.
+  (keywords-p nil :type (member t nil :allow-others))
+  ;;
+  ;; List of keyword arguments.  Each element is a list of:
+  ;;   key, default, supplied-p.
+  (keywords nil :type list))
+
+(defun %print-byte-function (s stream d)
+  (declare (ignore d))
+  (print-unreadable-object (s stream :identity t)
+    (format stream "Byte function ~S" (byte-function-name s))))
+
+(declaim (freeze-type byte-function))
 
 
 ;;;; The stack.
@@ -68,6 +125,22 @@
     (setf (current-stack-pointer) (1+ sp))
     (setf (eval-stack-ref sp) value)))
 
+(defun allocate-eval-stack (amount)
+  (let* ((len (length (the simple-vector eval::*eval-stack*)))
+	 (sp (current-stack-pointer))
+	 (new-sp (+ sp amount)))
+    (declare (type index sp new-sp))
+    (when (>= new-sp len)
+      (let ((new-stack (make-array (ash new-sp 1))))
+	(replace new-stack eval::*eval-stack* :end1 len :end2 len)
+	(setf eval::*eval-stack* new-stack)))
+    (setf (current-stack-pointer) new-sp)
+    (let ((stack eval::*eval-stack*))
+      (do ((i sp (1+ i)))
+	  ((= i new-sp))
+	(setf (svref stack i) '#:uninitialized))))
+  (undefined-value))
+
 (defun pop-eval-stack ()
   (let* ((new-sp (1- (current-stack-pointer)))
 	 (value (eval-stack-ref new-sp)))
@@ -100,7 +173,6 @@
     (setf (eval-stack-ref dest) (eval-stack-ref src))
     (incf dest)
     (incf src)))
-
 
 
 ;;;; Component access magic.
@@ -192,7 +264,7 @@
 ;;;; Byte compiled function constructors/extractors.
 
 (defun make-byte-compiled-function (xep)
-  (declare (type byte-xep xep))
+  (declare (type byte-function xep))
   (set-function-subtype
    #'(lambda (&rest args)
        (let ((old-sp (current-stack-pointer))
@@ -205,12 +277,12 @@
 
 (defun byte-compiled-function-xep (function)
   (declare (type function function)
-	   (values byte-xep))
-  (or (system:find-if-in-closure #'byte-xep-p function)
+	   (values byte-function))
+  (or (system:find-if-in-closure #'byte-function-p function)
       (error "Couldn't find the XEP in ~S" function)))
 
 (defun make-byte-compiled-closure (xep closure-vars)
-  (declare (type byte-xep xep)
+  (declare (type byte-function xep)
 	   (type simple-vector closure-vars))
   (set-function-subtype
    #'(lambda (&rest args)
@@ -224,8 +296,8 @@
 
 (defun byte-compiled-closure-xep (closure)
   (declare (type function closure)
-	   (values byte-xep))
-  (or (system:find-if-in-closure #'byte-xep-p closure)
+	   (values byte-function))
+  (or (system:find-if-in-closure #'byte-function-p closure)
       (error "Couldn't find the XEP in ~S" closure)))
 
 (defun byte-compiled-closure-closure-vars (closure)
@@ -775,7 +847,8 @@
 	   (type (unsigned-byte 8) byte))
   (locally (declare (optimize (inhibit-warnings 3)))
     (when *byte-trace*
-      (format *trace-output* "pc=~D, fp=~D, sp=~D, byte=#b~8,'0B, frame=~S~%"
+      (format *trace-output*
+	      "pc=~D, fp=~D, sp=~D, byte=#b~8,'0B, frame:~%    ~S~%"
 	      pc fp (current-stack-pointer) byte
 	      (subseq eval::*eval-stack* fp (current-stack-pointer)))))
   (if (zerop (logand byte #x80))
@@ -941,7 +1014,7 @@
 	    (values (* byte 2) (1+ target))))
     (declare (type pc entry-pc))
     (let ((fp (current-stack-pointer)))
-      (setf (current-stack-pointer) (+ fp stack-frame-size))
+      (allocate-eval-stack stack-frame-size)
       (byte-interpret component entry-pc fp))))
 
 
@@ -1052,12 +1125,10 @@
     (case (function-subtype function)
       (#.vm:byte-code-function-type
        (stack-copy old-sp start-of-args num-args)
-       (setf (current-stack-pointer) (+ old-sp num-args))
        (invoke-xep old-component old-pc old-sp old-fp num-args
 		   (byte-compiled-function-xep function)))
       (#.vm:byte-code-closure-type
        (stack-copy old-sp start-of-args num-args)
-       (setf (current-stack-pointer) (+ old-sp num-args))
        (invoke-xep old-component old-pc old-sp old-fp num-args
 		   (byte-compiled-closure-xep function)
 		   (byte-compiled-closure-closure-vars function)))
@@ -1092,97 +1163,104 @@
 	   (type index num-args)
 	   (type return-pc ret-pc)
 	   (type stack-pointer old-sp old-fp)
-	   (type byte-xep xep)
+	   (type byte-function xep)
 	   (type (or null simple-vector) closure-vars))
   (let ((entry-point
-	 (let ((min (byte-xep-min-args xep))
-	       (max (byte-xep-max-args xep)))
-	   (cond
-	    ((< num-args min)
-	     ;; ### Flame out point.
-	     (error "Not enough arguments."))
-	    ((<= num-args max)
-	     (nth (- num-args min) (byte-xep-entry-points xep)))
-	    ((null (byte-xep-more-args-entry-point xep))
-	     ;; ### Flame out point.
-	     (error "Too many arguments."))
-	    (t
-	     (let* ((more-args-supplied (- num-args max))
-		    (sp (current-stack-pointer))
-		    (more-args-start (- sp more-args-supplied))
-		    (restp (byte-xep-rest-arg-p xep))
-		    (rest (and restp
-			       (do ((index (1- sp) (1- index))
-				    (result nil
-					    (cons (eval-stack-ref index)
-						  result)))
-				   ((< index more-args-start) result)
-				 (declare (type index index))))))
-	       (declare (type index more-args-supplied)
-			(type stack-pointer more-args-start))
-	       (cond
-		((not (byte-xep-keywords-p xep))
-		 (assert restp)
-		 (setf (current-stack-pointer) (1+ more-args-start))
-		 (setf (eval-stack-ref more-args-start) rest))
-		(t
-		 (unless (evenp more-args-supplied)
-		   ;; ### Flame out.
-		   (error "Odd number of keyword arguments."))
-		 (let* ((num-more-args (byte-xep-num-more-args xep))
-			(new-sp (+ more-args-start num-more-args))
-			(temp (max sp new-sp))
-			(temp-sp (+ temp more-args-supplied))
-			(keywords (byte-xep-keywords xep)))
-		   (declare (type index temp)
-			    (type stack-pointer new-sp temp-sp))
-		   (setf (current-stack-pointer) temp-sp)
-		   (stack-copy temp more-args-start more-args-supplied)
-		   (when restp
-		     (setf (eval-stack-ref more-args-start) rest)
-		     (incf more-args-start))
-		   (let ((index more-args-start))
-		     (dolist (keyword keywords)
-		       (setf (eval-stack-ref index) (cadr keyword))
-		       (incf index)
-		       (when (caddr keyword)
-			 (setf (eval-stack-ref index) nil)
-			 (incf index))))
-		   (let ((index temp-sp)
-			 (allow (eq (byte-xep-keywords-p xep) :allow-others))
-			 (bogus-key nil)
-			 (bogus-key-p nil))
-		     (declare (type stack-pointer index))
-		     (loop
-		       (decf index 2)
-		       (when (< index more-args-start)
-			 (return))
-		       (let ((key (eval-stack-ref index))
-			     (value (eval-stack-ref (1+ index))))
-			 (if (eq key :allow-other-keys)
-			     (setf allow value)
-			     (let ((target more-args-start))
-			       (declare (type stack-pointer target))
-			       (dolist (keyword keywords
-						(setf bogus-key key
-						      bogus-key-p t))
-				 (cond ((eq (car keyword) key)
-					(setf (eval-stack-ref target) value)
-					(when (caddr keyword)
-					  (setf (eval-stack-ref (1+ target))
-						t))
-					(return))
-				       ((caddr keyword)
-					(incf target 2))
-				       (t
-					(incf target))))))))
-		     (when (and bogus-key-p (not allow))
-		       ;; ### Flame out.
-		       (error "Unknown keyword: ~S" bogus-key)))
-		   (setf (current-stack-pointer) new-sp)))))
-	     (byte-xep-more-args-entry-point xep))))))
+	 (cond
+	  ((typep xep 'simple-byte-function)
+	   (unless (eql (simple-byte-function-num-args xep) num-args)
+	     ;;; ### flame out point.
+	     (error "Wrong number of arguments."))
+	   (simple-byte-function-entry-point xep))
+	  (t
+	   (let ((min (hairy-byte-function-min-args xep))
+		 (max (hairy-byte-function-max-args xep)))
+	     (cond
+	      ((< num-args min)
+	       ;; ### Flame out point.
+	       (error "Not enough arguments."))
+	      ((<= num-args max)
+	       (nth (- num-args min) (hairy-byte-function-entry-points xep)))
+	      ((null (hairy-byte-function-more-args-entry-point xep))
+	       ;; ### Flame out point.
+	       (error "Too many arguments."))
+	      (t
+	       (let* ((more-args-supplied (- num-args max))
+		      (sp (current-stack-pointer))
+		      (more-args-start (- sp more-args-supplied))
+		      (restp (hairy-byte-function-rest-arg-p xep))
+		      (rest (and restp
+				 (do ((index (1- sp) (1- index))
+				      (result nil
+					      (cons (eval-stack-ref index)
+						    result)))
+				     ((< index more-args-start) result)
+				   (declare (type index index))))))
+		 (declare (type index more-args-supplied)
+			  (type stack-pointer more-args-start))
+		 (cond
+		  ((not (hairy-byte-function-keywords-p xep))
+		   (assert restp)
+		   (setf (current-stack-pointer) (1+ more-args-start))
+		   (setf (eval-stack-ref more-args-start) rest))
+		  (t
+		   (unless (evenp more-args-supplied)
+		     ;; ### Flame out.
+		     (error "Odd number of keyword arguments."))
+		   (let* ((num-more-args (hairy-byte-function-num-more-args xep))
+			  (new-sp (+ more-args-start num-more-args))
+			  (temp (max sp new-sp))
+			  (temp-sp (+ temp more-args-supplied))
+			  (keywords (hairy-byte-function-keywords xep)))
+		     (declare (type index temp)
+			      (type stack-pointer new-sp temp-sp))
+		     (allocate-eval-stack (- temp-sp sp))
+		     (stack-copy temp more-args-start more-args-supplied)
+		     (when restp
+		       (setf (eval-stack-ref more-args-start) rest)
+		       (incf more-args-start))
+		     (let ((index more-args-start))
+		       (dolist (keyword keywords)
+			 (setf (eval-stack-ref index) (cadr keyword))
+			 (incf index)
+			 (when (caddr keyword)
+			   (setf (eval-stack-ref index) nil)
+			   (incf index))))
+		     (let ((index temp-sp)
+			   (allow (eq (hairy-byte-function-keywords-p xep) :allow-others))
+			   (bogus-key nil)
+			   (bogus-key-p nil))
+		       (declare (type stack-pointer index))
+		       (loop
+			 (decf index 2)
+			 (when (< index more-args-start)
+			   (return))
+			 (let ((key (eval-stack-ref index))
+			       (value (eval-stack-ref (1+ index))))
+			   (if (eq key :allow-other-keys)
+			       (setf allow value)
+			       (let ((target more-args-start))
+				 (declare (type stack-pointer target))
+				 (dolist (keyword keywords
+						  (setf bogus-key key
+							bogus-key-p t))
+				   (cond ((eq (car keyword) key)
+					  (setf (eval-stack-ref target) value)
+					  (when (caddr keyword)
+					    (setf (eval-stack-ref (1+ target))
+						  t))
+					  (return))
+					 ((caddr keyword)
+					  (incf target 2))
+					 (t
+					  (incf target))))))))
+		       (when (and bogus-key-p (not allow))
+			 ;; ### Flame out.
+			 (error "Unknown keyword: ~S" bogus-key)))
+		     (setf (current-stack-pointer) new-sp)))))
+	       (hairy-byte-function-more-args-entry-point xep))))))))
     (declare (type pc entry-point))
-    (invoke-local-entry-point (byte-xep-component xep) entry-point
+    (invoke-local-entry-point (byte-function-component xep) entry-point
 			      old-component ret-pc old-sp old-fp
 			      closure-vars)))
 
@@ -1238,185 +1316,4 @@
 	  (byte-interpret old-component (- old-pc) old-fp)))))
 
 ;(declaim (end-block byte-interpret byte-interpret-byte invoke-xep))
-
-
-;;;; Random testing noise.
-
-(defun dump-byte-fun (fun)
-  (declare (optimize (inhibit-warnings 3)))
-  (let* ((xep (system:find-if-in-closure #'byte-xep-p fun))
-	 (component (byte-xep-component xep))
-	 (bytes (* (code-header-ref component vm:code-code-size-slot)
-		   vm:word-bytes)))
-    (dotimes (index bytes)
-      (format t "~3D: #b~8,'0B~%" index (component-ref component index)))))
-
-
-(defun disassem-byte-fun (fun)
-  (declare (optimize (inhibit-warnings 3)))
-  (let* ((xep (system:find-if-in-closure #'byte-xep-p fun))
-	 (component (byte-xep-component xep))
-	 (bytes (* (code-header-ref component vm:code-code-size-slot)
-		   vm:word-bytes))
-	 (index 0))
-    (labels ((newline ()
-	       (format t "~&~4D:" index))
-	     (next-byte ()
-	       (let ((byte (component-ref component index)))
-		 (format t " ~2,'0X" byte)
-		 (incf index)
-		 byte))
-	     (extract-24-bits ()
-	       (logior (ash (next-byte) 16)
-		       (ash (next-byte) 8)
-		       (next-byte)))
-	     (extract-extended-op ()
-	       (let ((byte (next-byte)))
-		 (if (= byte 255)
-		     (extract-24-bits)
-		     byte)))       
-	     (extract-4-bit-op (byte)
-	       (let ((4-bits (ldb (byte 4 0) byte)))
-		 (if (= 4-bits 15)
-		     (extract-extended-op)
-		     4-bits)))
-	     (extract-3-bit-op (byte)
-	       (let ((3-bits (ldb (byte 3 0) byte)))
-		 (if (= 3-bits 7)
-		     :var
-		     3-bits)))
-	     (extract-branch-target (byte)
-	       (if (logbitp 0 byte)
-		   (let ((disp (next-byte)))
-		     (if (logbitp 7 disp)
-			 (+ index disp -256)
-			 (+ index disp)))
-		   (extract-24-bits)))
-	     (note (string &rest noise)
-	       (format t "~12T~?" string noise))
-	     (get-constant (index)
-	       (let ((index (+ index vm:code-constants-offset)))
-		 (if (< (1- vm:code-constants-offset)
-			index
-			(get-header-data component))
-		     (code-header-ref component index)
-		     "<bogus index>"))))
-
-      (newline)
-      (let ((frame-size
-	     (let ((byte (next-byte)))
-	       (if (< byte 255)
-		   (* byte 2)
-		   (logior (ash (next-byte) 16)
-			   (ash (next-byte) 8)
-			   (next-byte))))))
-	(note "Entry point, frame-size=~D~%" frame-size))
-      (loop
-	(unless (< index bytes)
-	  (return))
-	(newline)
-	(let ((byte (next-byte)))
-	  (macrolet ((dispatch (&rest clauses)
-		       `(cond ,@(mapcar #'(lambda (clause)
-					    `((= (logand byte ,(caar clause))
-						 ,(cadar clause))
-					      ,@(cdr clause)))
-					clauses))))
-	    (dispatch
-	     ((#b11110000 #b00000000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "push-local ~D" op)))
-	     ((#b11110000 #b00010000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "push-arg ~D" op)))
-	     ((#b11110000 #b00100000)
-	      (let ((index (+ (extract-4-bit-op byte)
-			      vm:code-constants-offset))
-		    (*print-level* 3)
-		    (*print-lines* 2))
-		(note "push-const ~S"
-		      (if (< (1- vm:code-constants-offset)
-			     index
-			     (get-header-data component))
-			  (code-header-ref component index)
-			  "<bogus index>"))))
-	     ((#b11110000 #b00110000)
-	      (let ((op (extract-4-bit-op byte))
-		    (*print-level* 3)
-		    (*print-lines* 2))
-		(note "push-sys-const ~S"
-		      (svref system-constants op))))
-	     ((#b11110000 #b01000000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "push-int ~D" op)))
-	     ((#b11110000 #b01010000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "push-neg-int ~D" (- (1+ op)))))
-	     ((#b11110000 #b01100000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "pop-local ~D" op)))
-	     ((#b11110000 #b01110000)
-	      (let ((op (extract-4-bit-op byte)))
-		(note "pop-n ~D" op)))
-	     ((#b11110000 #b10000000)
-	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]call, ~D args"
-		      (logbitp 3 byte) op)))
-	     ((#b11110000 #b10010000)
-	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]tail-call, ~D args"
-		      (logbitp 3 byte) op)))
-	     ((#b11110000 #b10100000)
-	      (let ((op (extract-3-bit-op byte)))
-		(note "~:[~;named-~]multiple-call, ~D args"
-		      (logbitp 3 byte) op)))
-	     ((#b11111000 #b10110000)
-	      ;; local call
-	      (let ((op (extract-3-bit-op byte))
-		    (target (extract-24-bits)))
-		(note "local call ~D, ~D args" target op)))
-	     ((#b11111000 #b10111000)
-	      ;; local tail-call
-	      (let ((op (extract-3-bit-op byte))
-		    (target (extract-24-bits)))
-		(note "local tail-call ~D, ~D args" target op)))
-	     ((#b11111000 #b11000000)
-	      ;; local-multiple-call
-	      (let ((op (extract-3-bit-op byte))
-		    (target (extract-24-bits)))
-		(note "local multiple-call ~D, ~D args" target op)))
-	     ((#b11111000 #b11001000)
-	      ;; return
-	      (let ((op (extract-3-bit-op byte)))
-		(note "return, ~D vals" op)))
-	     ((#b11111110 #b11010000)
-	      ;; branch
-	      (note "branch ~D" (extract-branch-target byte)))
-	     ((#b11111110 #b11010010)
-	      ;; if-true
-	      (note "if-true ~D" (extract-branch-target byte)))
-	     ((#b11111110 #b11010100)
-	      ;; if-false
-	      (note "if-false ~D" (extract-branch-target byte)))
-	     ((#b11111110 #b11010110)
-	      ;; if-eq
-	      (note "if-eq ~D" (extract-branch-target byte)))
-	     ((#b11111000 #b11011000)
-	      ;; XOP
-	      (let* ((low-3-bits (extract-3-bit-op byte))
-		     (xop (nth (if (eq low-3-bits :var) (next-byte) low-3-bits)
-			       *xop-names*)))
-		(note "xop ~A~@[ ~D~]"
-		      xop
-		      (case xop
-			((catch go unwind-protect)
-			 (extract-24-bits))
-			(type-check
-			 (get-constant (extract-extended-op)))))))
-			 
-	     ((#b11100000 #b11100000)
-	      ;; inline
-	      (note "inline ~A"
-		    (inline-function-info-function
-		     (nth (ldb (byte 5 0) byte) *inline-functions*)))))))))))
 
